@@ -1,0 +1,41 @@
+# Copyright © 2025 Wenze Wei. All Rights Reserved.
+#
+# This file is part of DMS.
+# The DMS project belongs to the Dunimd Team.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# You may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+[package]
+name = "DMS"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+name = "DMS"
+path = "src/lib.rs"
+
+[dependencies]
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+rand = "0.8"
+notify = "6.1"
+chrono = { version = "0.4", features = ["serde"] }
+uuid = { version = "1.0", features = ["v4", "serde"] }
+tokio = { version = "1", features = ["full"] }
+async-trait = "0.1"
+prometheus = "0.13"
+dashmap = "5.5"
+redis = { version = "0.24", features = ["tokio-comp", "connection-manager"] }
+hyper = { version = "0.14", features = ["full"] }
+lapin = { version = "2.3", features = ["rustls"] }
+futures = "0.3"
