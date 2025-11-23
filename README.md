@@ -1,11 +1,5 @@
 <div align="center">
 
-# ⚠️ Compliance Notice
-
-**According to relevant laws and regulations of various countries (including but not limited to China's "Interim Measures for the Management of Generative AI Services", the EU's "AI Act", the US "AI Risk Management Framework", Japan's "AI Principles", etc.), developers or users must bear their own compliance responsibilities. Failure to fulfill relevant obligations may result in service suspension, regulatory penalties, or legal liability.**
-
----
-
 # DMS (Dunimd Middleware Service)
 
 [English](README.md) | [简体中文](README.zh.md)
@@ -190,7 +184,7 @@ resource:
 
 <h2 align="center">📄 License</h2>
 
-This project adopts [MIT License](LICENSE) - see [LICENSE](LICENSE) file for details
+This project adopts [Apache License 2.0](LICENSE) - see [LICENSE](LICENSE) file for details
 
 ---
 
@@ -200,11 +194,3 @@ This project adopts [MIT License](LICENSE) - see [LICENSE](LICENSE) file for det
 - **Enterprise Quality**: Production environment deployment ready
 - **Modular Design**: Supports on-demand composition and extension
 - **Performance Optimization**: Release build optimization complete
-
----
-
-<div align="center">
-
-**DMS** - *Providing solid technical foundation for every Dunimd service* 🦀✨
-
-</div>

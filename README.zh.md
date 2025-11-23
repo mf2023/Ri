@@ -1,11 +1,5 @@
 <div align="center">
 
-# ⚠️ 合规提示
-
-**根据各国相关法律法规（包括但不限于中国《生成式人工智能服务管理暂行办法》、欧盟《人工智能法案》、美国《AI风险管理框架》、日本《AI指导原则》等），开发者或使用者需自行承担合规责任，未履行相关义务可能导致服务被叫停、面临监管处罚或承担法律责任。**
-
----
-
 # DMS (Dunimd Middleware Service)
 
 [English](README.md) | [简体中文](README.zh.md)
@@ -190,7 +184,7 @@ resource:
 
 <h2 align="center">📄 许可证</h2>
 
-本项目采用 [MIT许可证](LICENSE) - 详见 [LICENSE](LICENSE) 文件
+本项目采用 [Apache License 2.0](LICENSE) - 详见 [LICENSE](LICENSE) 文件
 
 ---
 
@@ -200,11 +194,3 @@ resource:
 - **企业级质量**: 支持生产环境部署
 - **模块化设计**: 支持按需组合和扩展
 - **性能优化**: Release构建优化完成
-
----
-
-<div align="center">
-
-**DMS** - *为Dunimd的每一个服务提供坚实的技术基础* 🦀✨
-
-</div>
