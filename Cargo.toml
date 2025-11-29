@@ -16,7 +16,7 @@
 # limitations under the License.
 
 [package]
-name = "DMS"
+name = "DMSCore"
 version = "0.1.0"
 edition = "2021"
 authors = ["Dunimd Team"]
@@ -28,7 +28,7 @@ categories = ["asynchronous", "web-programming", "network-programming"]
 license = "Apache-2.0"
 
 [lib]
-name = "DMS"
+name = "DMSCore"
 path = "src/lib.rs"
 
 [dependencies]
