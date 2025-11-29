@@ -22,6 +22,9 @@ use std::time::{Duration, SystemTime};
 use tokio::sync::RwLock;
 use tokio::task::JoinHandle;
 
+#[cfg(feature = "etcd")]
+use etcd_client::{Client, PutOptions};
+
 use crate::core::{DMSResult, DMSError};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -49,17 +52,39 @@ pub enum DMSServiceStatus {
 pub struct DMSServiceRegistry {
     services: Arc<RwLock<HashMap<String, Vec<DMSServiceInstance>>>>,
     instance_index: Arc<RwLock<HashMap<String, DMSServiceInstance>>>,
+    #[cfg(feature = "etcd")]
+    etcd_client: Option<Arc<Client>>,
+    _etcd_prefix: String,
+}
+
+impl Default for DMSServiceRegistry {
+    fn default() -> Self {
+        Self::new(None, "/dms/services".to_string())
+    }
 }
 
 impl DMSServiceRegistry {
-    pub fn new() -> Self {
+    #[cfg(feature = "etcd")]
+    pub fn new(etcd_client: Option<Client>, etcd_prefix: String) -> Self {
         Self {
             services: Arc::new(RwLock::new(HashMap::new())),
             instance_index: Arc::new(RwLock::new(HashMap::new())),
+            etcd_client: etcd_client.map(Arc::new),
+            _etcd_prefix: etcd_prefix,
+        }
+    }
+    
+    #[cfg(not(feature = "etcd"))]
+    pub fn new(_etcd_client: Option<()>, etcd_prefix: String) -> Self {
+        Self {
+            services: Arc::new(RwLock::new(HashMap::new())),
+            instance_index: Arc::new(RwLock::new(HashMap::new())),
+            _etcd_prefix: etcd_prefix,
         }
     }
 
     pub async fn register_service(&self, instance: DMSServiceInstance) -> DMSResult<()> {
+        // Update in-memory registry
         let mut services = self.services.write().await;
         let mut instance_index = self.instance_index.write().await;
 
@@ -67,7 +92,19 @@ impl DMSServiceRegistry {
             .or_insert_with(Vec::new)
             .push(instance.clone());
 
-        instance_index.insert(instance.id.clone(), instance);
+        instance_index.insert(instance.id.clone(), instance.clone());
+        
+        // Persist to etcd if client is available
+        #[cfg(feature = "etcd")]
+        if let Some(_client) = &self.etcd_client {
+            let key = format!("{}/{}/{}", self.etcd_prefix, instance.service_name, instance.id);
+            let value = serde_json::to_string(&instance)?;
+            
+            // Set with TTL of 5 minutes (300 seconds)
+            Arc::make_mut(&mut self.etcd_client.as_ref().unwrap()).put(key, value, Some(PutOptions::new().with_lease(300)))
+                .await
+                .map_err(|e| DMSError::ServiceMesh(format!("Failed to register service in etcd: {}", e)))?;
+        }
 
         Ok(())
     }
@@ -76,6 +113,7 @@ impl DMSServiceRegistry {
         let mut instance_index = self.instance_index.write().await;
         
         if let Some(instance) = instance_index.remove(instance_id) {
+            // Update in-memory registry
             let mut services = self.services.write().await;
             if let Some(instances) = services.get_mut(&instance.service_name) {
                 instances.retain(|inst| inst.id != instance_id);
@@ -83,6 +121,15 @@ impl DMSServiceRegistry {
                 if instances.is_empty() {
                     services.remove(&instance.service_name);
                 }
+            }
+            
+            // Remove from etcd if client is available
+            #[cfg(feature = "etcd")]
+            if let Some(_client) = &self.etcd_client {
+                let key = format!("{}/{}/{}", self.etcd_prefix, instance.service_name, instance_id);
+                Arc::make_mut(&mut self.etcd_client.as_ref().unwrap()).delete(key, None)
+                    .await
+                    .map_err(|e| DMSError::ServiceMesh(format!("Failed to deregister service in etcd: {}", e)))?;
             }
         }
 
@@ -110,6 +157,16 @@ impl DMSServiceRegistry {
         if let Some(instance) = instance_index.get_mut(instance_id) {
             instance.status = status;
             instance.last_heartbeat = SystemTime::now();
+            
+            // Update in etcd if client is available
+            #[cfg(feature = "etcd")]
+            if let Some(_client) = &self.etcd_client {
+                let key = format!("{}/{}/{}", self.etcd_prefix, instance.service_name, instance_id);
+                let value = serde_json::to_string(instance)?;
+                Arc::make_mut(&mut self.etcd_client.as_ref().unwrap()).put(key, value, None)
+                    .await
+                    .map_err(|e| DMSError::ServiceMesh(format!("Failed to update service status in etcd: {}", e)))?;
+            }
         }
 
         Ok(())
@@ -146,23 +203,150 @@ impl DMSServiceRegistry {
 
         Ok(())
     }
+    
+    /// Sync registry from etcd
+    #[cfg(feature = "etcd")]
+    pub async fn sync_from_etcd(&self) -> DMSResult<()> {
+        if let Some(client) = &self.etcd_client {
+            // List all services from etcd
+            let prefix = format!("{}/", self.etcd_prefix);
+            let response = client.get(prefix, Some(etcd_client::GetOptions::new().with_prefix()))
+                .await
+                .map_err(|e| DMSError::ServiceMesh(format!("Failed to sync from etcd: {}", e)))?;
+            
+            // Clear current in-memory registry
+            let mut services = self.services.write().await;
+            let mut instance_index = self.instance_index.write().await;
+            services.clear();
+            instance_index.clear();
+            
+            // Reconstruct from etcd data
+            for kv in response.kvs() {
+                let instance: DMSServiceInstance = serde_json::from_slice(kv.value())?;
+                
+                services.entry(instance.service_name.clone())
+                    .or_insert_with(Vec::new)
+                    .push(instance.clone());
+                
+                instance_index.insert(instance.id.clone(), instance);
+            }
+        }
+        
+        Ok(())
+    }
+    
+    /// Start etcd watcher to sync changes in real-time
+    #[cfg(feature = "etcd")]
+    pub async fn start_etcd_watcher(&self) -> DMSResult<JoinHandle<()>> {
+        if let Some(client) = &self.etcd_client {
+            let client = client.clone();
+            let prefix = self.etcd_prefix.clone();
+            let registry = self.clone();
+            
+            let handle = tokio::spawn(async move {
+                let prefix = format!("{}/", prefix);
+                
+                loop {
+                    let mut watcher = client.watch(prefix, Some(etcd_client::WatchOptions::new().with_prefix()))
+                        .await
+                        .expect("Failed to start etcd watcher");
+                    
+                    while let Some(res) = watcher.message().await {
+                        match res {
+                            Ok(watch_response) => {
+                                for event in watch_response.events() {
+                                    match event.kind() {
+                                        etcd_client::EventKind::Put(kv) => {
+                                            // Update or add instance
+                                            if let Ok(instance) = serde_json::from_slice(kv.value()) {
+                                                let _ = registry.register_service(instance).await;
+                                            }
+                                        },
+                                        etcd_client::EventKind::Delete(_) => {
+                                            // Delete instance - we'd need to parse the key to get instance ID
+                                            // This is simplified for now
+                                        },
+                                    }
+                                }
+                            },
+                            Err(e) => {
+                                eprintln!("Etcd watch error: {}", e);
+                                // Sleep and retry
+                                tokio::time::sleep(Duration::from_secs(1)).await;
+                                break;
+                            },
+                        }
+                    }
+                }
+            });
+            
+            Ok(handle)
+        } else {
+            Err(DMSError::ServiceMesh("No etcd client available".to_string()))
+        }
+    }
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DMSEtcdConfig {
+    pub endpoints: Vec<String>,
+    pub username: Option<String>,
+    pub password: Option<String>,
+    pub prefix: String,
+}
+
+impl Default for DMSEtcdConfig {
+    fn default() -> Self {
+        Self {
+            endpoints: vec!["http://localhost:2379".to_string()],
+            username: None,
+            password: None,
+            prefix: "/dms/services".to_string(),
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
 pub struct DMSServiceDiscovery {
     enabled: bool,
     registry: Arc<DMSServiceRegistry>,
     background_tasks: Arc<RwLock<Vec<JoinHandle<()>>>>,
     cleanup_interval: Duration,
+    _etcd_config: Option<DMSEtcdConfig>,
 }
 
 impl DMSServiceDiscovery {
     pub fn _Fnew(enabled: bool) -> Self {
         Self {
             enabled,
-            registry: Arc::new(DMSServiceRegistry::new()),
+            registry: Arc::new(DMSServiceRegistry::new(None::<()>, "/dms/services".to_string())),
             background_tasks: Arc::new(RwLock::new(Vec::new())),
             cleanup_interval: Duration::from_secs(60),
+            _etcd_config: None,
         }
+    }
+    
+    #[cfg(feature = "etcd")]
+    pub async fn _Fnew_with_etcd(enabled: bool, etcd_config: DMSEtcdConfig) -> DMSResult<Self> {
+        // Create etcd client
+        let client = Client::connect(etcd_config.endpoints.clone(), None)
+            .await
+            .map_err(|e| DMSError::ServiceMesh(format!("Failed to connect to etcd: {}", e)))?;
+        
+        let registry = Arc::new(DMSServiceRegistry::new(Some(client), etcd_config.prefix.clone()));
+        
+        let discovery = Self {
+            enabled,
+            registry,
+            background_tasks: Arc::new(RwLock::new(Vec::new())),
+            cleanup_interval: Duration::from_secs(60),
+            _etcd_config: Some(etcd_config),
+        };
+        
+        // Sync from etcd on startup
+        discovery.registry.sync_from_etcd().await?;
+        
+        Ok(discovery)
     }
 
     pub async fn register_service(
@@ -176,7 +360,7 @@ impl DMSServiceDiscovery {
             return Err(DMSError::ServiceMesh("Service discovery is disabled".to_string()));
         }
 
-        let instance_id = format!("{}:{}:{}", service_name, host, port);
+        let instance_id = format!("{service_name}:{host}:{port}");
         let instance = DMSServiceInstance {
             id: instance_id.clone(),
             service_name: service_name.to_string(),
@@ -241,18 +425,39 @@ impl DMSServiceDiscovery {
 
         let cleanup_interval = self.cleanup_interval;
 
+        // Start cleanup task
         let cleanup_task = tokio::spawn(async move {
             let mut interval = tokio::time::interval(cleanup_interval);
             loop {
                 interval.tick().await;
                 if let Err(e) = registry_clone.cleanup_expired_instances(Duration::from_secs(300)).await {
-                    eprintln!("Failed to cleanup expired instances: {}", e);
+                    eprintln!("Failed to cleanup expired instances: {e}");
                 }
             }
         });
 
         let mut tasks = self.background_tasks.write().await;
         tasks.push(cleanup_task);
+        
+        // Start etcd watcher if etcd is configured
+        #[cfg(feature = "etcd")]
+        if self.etcd_config.is_some() {
+            let watcher_task = self.registry.start_etcd_watcher().await?;
+            tasks.push(watcher_task);
+            
+            // Start periodic sync from etcd (every 30 seconds)
+            let registry_clone = Arc::clone(&self.registry);
+            let sync_task = tokio::spawn(async move {
+                let mut interval = tokio::time::interval(Duration::from_secs(30));
+                loop {
+                    interval.tick().await;
+                    if let Err(e) = registry_clone.sync_from_etcd().await {
+                        eprintln!("Failed to sync from etcd: {e}");
+                    }
+                }
+            });
+            tasks.push(sync_task);
+        }
 
         Ok(())
     }

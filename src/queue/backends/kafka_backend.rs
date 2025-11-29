@@ -17,6 +17,65 @@
 
 #![allow(non_snake_case)]
 
+//! # Kafka Queue Backend
+//! 
+//! This module provides a Kafka implementation for the DMS queue system. It allows
+//! sending and receiving messages using Apache Kafka as the underlying message broker.
+//! 
+//! ## Key Components
+//! 
+//! - **DMSKafkaQueue**: Main Kafka queue implementation
+//! - **KafkaProducer**: Kafka producer implementation
+//! - **KafkaConsumer**: Kafka consumer implementation
+//! 
+//! ## Design Principles
+//! 
+//! 1. **Async Trait Implementation**: Implements the DMSQueue, DMSQueueProducer, and DMSQueueConsumer traits
+//! 2. **Kafka Integration**: Uses the rdkafka crate for Kafka connectivity
+//! 3. **Thread Safety**: Uses Arc for safe sharing of producers and consumers
+//! 4. **Future-based API**: Leverages async/await for non-blocking operations
+//! 5. **Auto-commit**: Configured with auto-commit for consumer offset management
+//! 6. **Error Handling**: Comprehensive error handling with DMSResult
+//! 7. **Stream-based Consumer**: Uses StreamConsumer for efficient message processing
+//! 8. **Batch Support**: Provides batch sending functionality
+//! 
+//! ## Usage
+//! 
+//! ```rust
+//! use dms::prelude::*;
+//! 
+//! async fn example() -> DMSResult<()> {
+//!     // Create a new Kafka queue
+//!     let queue = DMSKafkaQueue::_Fnew("test-topic", "localhost:9092").await?;
+//!     
+//!     // Create a producer
+//!     let producer = queue._Fcreate_producer().await?;
+//!     
+//!     // Create a message
+//!     let message = DMSQueueMessage {
+//!         id: "12345".to_string(),
+//!         payload: b"Hello, Kafka!".to_vec(),
+//!         headers: vec![("key1".to_string(), "value1".to_string())],
+//!         timestamp: chrono::Utc::now().timestamp_millis() as u64,
+//!         priority: 0,
+//!     };
+//!     
+//!     // Send the message
+//!     producer._Fsend(message).await?;
+//!     
+//!     // Create a consumer
+//!     let consumer = queue._Fcreate_consumer("test-group").await?;
+//!     
+//!     // Receive messages
+//!     if let Some(received_message) = consumer._Freceive().await? {
+//!         println!("Received message: {:?}", received_message);
+//!         consumer._Fack(&received_message.id).await?;
+//!     }
+//!     
+//!     Ok(())
+//! }
+//! ```
+
 use async_trait::async_trait;
 use rdkafka::config::ClientConfig;
 use rdkafka::producer::{FutureProducer, FutureRecord};
@@ -27,13 +86,30 @@ use tokio::sync::Mutex;
 use crate::core::DMSResult;
 use crate::queue::{DMSQueue, DMSQueueMessage, DMSQueueProducer, DMSQueueConsumer, QueueStats};
 
+/// Kafka queue implementation for the DMS queue system.
+///
+/// This struct provides a Kafka implementation of the DMSQueue trait, allowing
+/// sending and receiving messages using Apache Kafka.
 pub struct DMSKafkaQueue {
+    /// Queue name (Kafka topic)
     name: String,
+    /// Kafka producer for sending messages
     producer: Arc<FutureProducer>,
+    /// Kafka consumer for receiving messages
     consumer: Arc<StreamConsumer>,
 }
 
 impl DMSKafkaQueue {
+    /// Creates a new Kafka queue instance.
+    ///
+    /// # Parameters
+    ///
+    /// - `name`: The name of the Kafka topic
+    /// - `connection_string`: The Kafka bootstrap servers connection string
+    ///
+    /// # Returns
+    ///
+    /// A new DMSKafkaQueue instance wrapped in DMSResult
     pub async fn _Fnew(name: &str, connection_string: &str) -> DMSResult<Self> {
         let producer: FutureProducer = ClientConfig::new()
             .set("bootstrap.servers", connection_string)
@@ -58,6 +134,11 @@ impl DMSKafkaQueue {
 
 #[async_trait]
 impl DMSQueue for DMSKafkaQueue {
+    /// Creates a new producer for the Kafka queue.
+    ///
+    /// # Returns
+    ///
+    /// A new DMSQueueProducer instance wrapped in DMSResult
     async fn _Fcreate_producer(&self) -> DMSResult<Box<dyn DMSQueueProducer>> {
         Ok(Box::new(KafkaProducer {
             producer: self.producer.clone(),
@@ -65,6 +146,15 @@ impl DMSQueue for DMSKafkaQueue {
         }))
     }
 
+    /// Creates a new consumer for the Kafka queue.
+    ///
+    /// # Parameters
+    ///
+    /// - `_consumer_group`: The consumer group name (ignored in this implementation)
+    ///
+    /// # Returns
+    ///
+    /// A new DMSQueueConsumer instance wrapped in DMSResult
     async fn _Fcreate_consumer(&self, _consumer_group: &str) -> DMSResult<Box<dyn DMSQueueConsumer>> {
         Ok(Box::new(KafkaConsumer {
             consumer: self.consumer.clone(),
@@ -72,6 +162,14 @@ impl DMSQueue for DMSKafkaQueue {
         }))
     }
 
+    /// Gets statistics for the Kafka queue.
+    ///
+    /// Note: This implementation returns basic stats since Kafka provides detailed metrics
+    /// through JMX or admin client API, which is not implemented here.
+    ///
+    /// # Returns
+    ///
+    /// QueueStats containing basic queue statistics wrapped in DMSResult
     async fn _Fget_stats(&self) -> DMSResult<QueueStats> {
         // Kafka provides metrics through JMX or admin client
         // For now, return basic stats
@@ -86,12 +184,28 @@ impl DMSQueue for DMSKafkaQueue {
         })
     }
 
+    /// Purges all messages from the Kafka queue.
+    ///
+    /// Note: Kafka doesn't support purging topics directly through the client API.
+    /// This would require admin operations, which are not implemented here.
+    ///
+    /// # Returns
+    ///
+    /// DMSResult indicating success or failure
     async fn _Fpurge(&self) -> DMSResult<()> {
         // Kafka doesn't support purging topics directly
         // This would require admin operations
         Ok(())
     }
 
+    /// Deletes the Kafka queue.
+    ///
+    /// Note: Kafka doesn't support deleting topics through the client API.
+    /// This would require admin operations, which are not implemented here.
+    ///
+    /// # Returns
+    ///
+    /// DMSResult indicating success or failure
     async fn _Fdelete(&self) -> DMSResult<()> {
         // Kafka doesn't support deleting topics through client API
         // This would require admin operations
@@ -99,13 +213,28 @@ impl DMSQueue for DMSKafkaQueue {
     }
 }
 
+/// Kafka producer implementation.
+///
+/// This struct provides a Kafka implementation of the DMSQueueProducer trait,
+/// allowing sending messages to Kafka topics.
 struct KafkaProducer {
+    /// Kafka future producer
     producer: Arc<FutureProducer>,
+    /// Kafka topic to send messages to
     topic: String,
 }
 
 #[async_trait]
 impl DMSQueueProducer for KafkaProducer {
+    /// Sends a single message to the Kafka topic.
+    ///
+    /// # Parameters
+    ///
+    /// - `message`: The message to send
+    ///
+    /// # Returns
+    ///
+    /// DMSResult indicating success or failure
     async fn _Fsend(&self, message: DMSQueueMessage) -> DMSResult<()> {
         let payload = serde_json::to_vec(&message)?;
         
@@ -117,6 +246,15 @@ impl DMSQueueProducer for KafkaProducer {
         Ok(())
     }
 
+    /// Sends multiple messages to the Kafka topic.
+    ///
+    /// # Parameters
+    ///
+    /// - `messages`: A vector of messages to send
+    ///
+    /// # Returns
+    ///
+    /// DMSResult indicating success or failure
     async fn _Fsend_batch(&self, messages: Vec<DMSQueueMessage>) -> DMSResult<()> {
         for message in messages {
             self._Fsend(message).await?;
@@ -125,13 +263,24 @@ impl DMSQueueProducer for KafkaProducer {
     }
 }
 
+/// Kafka consumer implementation.
+///
+/// This struct provides a Kafka implementation of the DMSQueueConsumer trait,
+/// allowing receiving messages from Kafka topics.
 struct KafkaConsumer {
+    /// Kafka stream consumer
     consumer: Arc<StreamConsumer>,
+    /// Flag indicating if the consumer is paused
     paused: Arc<Mutex<bool>>,
 }
 
 #[async_trait]
 impl DMSQueueConsumer for KafkaConsumer {
+    /// Receives a message from the Kafka topic.
+    ///
+    /// # Returns
+    ///
+    /// An Option containing the received message, or None if the consumer is paused
     async fn _Freceive(&self) -> DMSResult<Option<DMSQueueMessage>> {
         let paused = *self.paused.lock().await;
         if paused {
@@ -148,22 +297,56 @@ impl DMSQueueConsumer for KafkaConsumer {
         }
     }
 
+    /// Acknowledges a message.
+    ///
+    /// Note: Kafka is configured with auto-commit, so acknowledgment is automatic.
+    /// This method is a no-op in this implementation.
+    ///
+    /// # Parameters
+    ///
+    /// - `_message_id`: The message ID to acknowledge (ignored in this implementation)
+    ///
+    /// # Returns
+    ///
+    /// DMSResult indicating success or failure
     async fn _Fack(&self, _message_id: &str) -> DMSResult<()> {
         // Kafka auto-commit is enabled, so acknowledgment is automatic
         Ok(())
     }
 
+    /// Negatively acknowledges a message.
+    ///
+    /// Note: In Kafka, negative acknowledgment typically means seeking back to the
+    /// message offset, which is not implemented here.
+    ///
+    /// # Parameters
+    ///
+    /// - `_message_id`: The message ID to negatively acknowledge (ignored in this implementation)
+    ///
+    /// # Returns
+    ///
+    /// DMSResult indicating success or failure
     async fn _Fnack(&self, _message_id: &str) -> DMSResult<()> {
         // In Kafka, negative acknowledgment typically means seeking back
         Ok(())
     }
 
+    /// Pauses the consumer.
+    ///
+    /// # Returns
+    ///
+    /// DMSResult indicating success or failure
     async fn _Fpause(&self) -> DMSResult<()> {
         let mut paused = self.paused.lock().await;
         *paused = true;
         Ok(())
     }
 
+    /// Resumes the consumer.
+    ///
+    /// # Returns
+    ///
+    /// DMSResult indicating success or failure
     async fn _Fresume(&self) -> DMSResult<()> {
         let mut paused = self.paused.lock().await;
         *paused = false;

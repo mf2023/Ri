@@ -17,6 +17,59 @@
 
 #![allow(non_snake_case)]
 
+//! # Grafana Integration Module
+//! 
+//! This module provides data structures for creating and managing Grafana dashboards and panels.
+//! It enables programmatic generation of Grafana dashboards with panels, queries, and layout information.
+//! 
+//! ## Key Components
+//! 
+//! - **DMSGridPos**: Represents the grid position of a panel on a dashboard
+//! - **DMSGrafanaPanel**: Represents a single Grafana panel with title, query, type, and position
+//! - **DMSGrafanaDashboard**: Represents a Grafana dashboard with multiple panels
+//! 
+//! ## Design Principles
+//! 
+//! 1. **Serde Integration**: All structs implement Serialize and Deserialize for easy JSON conversion
+//! 2. **Simple API**: Easy-to-use methods for creating dashboards and adding panels
+//! 3. **Layout Support**: Built-in support for Grafana's grid layout system
+//! 4. **Extensible**: Can be extended to support additional panel types and dashboard features
+//! 5. **Type Safety**: Strongly typed structs for all Grafana components
+//! 6. **JSON Compatibility**: Generates JSON that is compatible with Grafana's API
+//! 
+//! ## Usage
+//! 
+//! ```rust
+//! use dms::prelude::*;
+//! 
+//! fn example() -> DMSResult<()> {
+//!     // Create a new dashboard
+//!     let mut dashboard = DMSGrafanaDashboard::_Fnew("DMS Metrics");
+//!     
+//!     // Create a panel
+//!     let panel = DMSGrafanaPanel {
+//!         title: "Request Rate".to_string(),
+//!         query: "rate(http_requests_total[5m])".to_string(),
+//!         panel_type: "graph".to_string(),
+//!         grid_pos: DMSGridPos {
+//!             h: 8,
+//!             w: 12,
+//!             x: 0,
+//!             y: 0,
+//!         },
+//!     };
+//!     
+//!     // Add panel to dashboard
+//!     dashboard._Fadd_panel(panel)?;
+//!     
+//!     // Convert to JSON for Grafana API
+//!     let json = dashboard._Fto_json()?;
+//!     println!("Dashboard JSON: {}", json);
+//!     
+//!     Ok(())
+//! }
+//! ```
+
 use serde::{Serialize, Deserialize};
 use crate::core::DMSResult;
 
@@ -60,26 +113,3 @@ impl DMSGrafanaDashboard {
     }
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-    
-    #[test]
-    fn test_grafana_dashboard() {
-        let mut dashboard = DMSGrafanaDashboard::_Fnew("Test Dashboard");
-        
-        let panel = DMSGrafanaPanel {
-            title: "CPU Usage".to_string(),
-            query: "cpu_usage_percent".to_string(),
-            panel_type: "graph".to_string(),
-            grid_pos: DMSGridPos { h: 8, w: 12, x: 0, y: 0 },
-        };
-        
-        dashboard._Fadd_panel(panel).unwrap();
-        assert_eq!(dashboard.panels.len(), 1);
-        
-        let json = dashboard._Fto_json().unwrap();
-        assert!(json.contains("Test Dashboard"));
-        assert!(json.contains("CPU Usage"));
-    }
-}

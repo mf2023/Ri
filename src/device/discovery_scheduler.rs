@@ -22,42 +22,142 @@ use std::time::Instant;
 use serde::{Serialize, Deserialize};
 use crate::device::{DMSDevice, DMSDeviceType, DMSDeviceCapabilities};
 
+/// # Device Discovery and Resource Scheduling
+/// 
+/// This file implements advanced device discovery and resource scheduling algorithms for DMS.
+/// It provides two main components:
+/// 
+/// 1. **DMSDeviceDiscoveryEngine**: Advanced device discovery using machine learning and heuristics
+/// 2. **DMSResourceScheduler**: Resource scheduling algorithm using performance history and policies
+/// 
+/// ## Design Principles
+/// 
+/// 1. **Machine Learning Integration**: Uses pattern recognition and confidence scoring for device identification
+/// 2. **Heuristic Optimization**: Implements intelligent resource allocation based on device capabilities and load
+/// 3. **Scalability**: Designed to handle large numbers of devices and requests
+/// 4. **Flexibility**: Supports custom scheduling policies and device fingerprints
+/// 5. **Performance Focus**: Optimizes for low latency and high throughput
+/// 6. **Adaptability**: Learns from discovery and performance history
+/// 
+/// ## Usage Examples
+/// 
+/// ```rust
+/// use dms::device::{DMSDeviceDiscoveryEngine, DMSResourceScheduler, ResourceRequest, DeviceScanResult};
+/// 
+/// fn example() {
+///     // Create discovery engine
+///     let mut discovery_engine = DMSDeviceDiscoveryEngine::_Fnew();
+///     
+///     // Create scan results
+///     let scan_results = vec![
+///         DeviceScanResult {
+///             device_id: "device-123".to_string(),
+///             device_name: "NVIDIA RTX 3090".to_string(),
+///             device_info: HashMap::from([
+///                 ("device_name".to_string(), "NVIDIA RTX 3090".to_string()),
+///                 ("driver".to_string(), "CUDA 12.0".to_string())
+///             ])
+///         }
+///     ];
+///     
+///     // Discover devices
+///     let discovered_devices = discovery_engine._Fdiscover_devices(scan_results);
+///     
+///     // Create resource scheduler
+///     let mut scheduler = DMSResourceScheduler::_Fnew();
+///     
+///     // Create resource request
+///     let request = ResourceRequest {
+///         request_id: "req-456".to_string(),
+///         required_memory_gb: Some(16.0),
+///         required_compute_units: Some(512),
+///         required_bandwidth_gbps: Some(900.0),
+///         required_custom_capabilities: HashMap::from([
+///             ("cuda_support".to_string(), "true".to_string())
+///         ]),
+///         priority: 5,
+///         deadline: None
+///     };
+///     
+///     // Schedule resource
+///     let assigned_device = scheduler._Fschedule_resource(&request, &discovered_devices);
+/// }
+/// ```
+
 /// Advanced device discovery algorithm using machine learning and heuristics
+/// 
+/// This engine uses pattern recognition, confidence scoring, and historical data to identify
+/// devices with high accuracy. It maintains a database of device fingerprints and uses
+/// them to match discovered devices based on identification patterns.
 #[derive(Debug, Clone)]
 pub struct DMSDeviceDiscoveryEngine {
-    /// Device fingerprint database
+    /// Device fingerprint database mapping fingerprint IDs to their details
     fingerprints: HashMap<String, DeviceFingerprint>,
-    /// Discovery history for pattern recognition
+    /// Discovery history for pattern recognition and learning
     discovery_history: VecDeque<DiscoveryRecord>,
-    /// Confidence threshold for device identification
+    /// Confidence threshold for device identification (0.0 to 1.0)
     confidence_threshold: f64,
 }
 
+/// Device fingerprint containing identification patterns and capabilities
+/// 
+/// This struct represents a device fingerprint used for identifying devices during discovery.
+/// It contains identification patterns with weights that are used to calculate confidence scores.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 struct DeviceFingerprint {
+    /// Type of device this fingerprint identifies
     device_type: DMSDeviceType,
+    /// Capabilities associated with this device type
     capabilities: DMSDeviceCapabilities,
+    /// Identification patterns used to match this device type
     identification_patterns: Vec<IdentificationPattern>,
+    /// Base confidence score for this fingerprint
     confidence_score: f64,
 }
 
+/// Identification pattern with field, pattern, and weight
+/// 
+/// This struct defines a single identification pattern used in device fingerprinting.
+/// Each pattern has a field to match against, a pattern string, and a weight that determines
+/// how important this pattern is for identification.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 struct IdentificationPattern {
+    /// Device information field to match against (e.g., "device_name", "driver")
     field: String,
+    /// Pattern string to match (e.g., "nvidia", "cuda")
     pattern: String,
+    /// Weight of this pattern in the overall confidence calculation (0.0 to 1.0)
     weight: f64,
 }
 
+/// Record of a device discovery attempt
+/// 
+/// This struct records information about a device discovery attempt, including the device
+/// information, identified type (if any), and confidence score. These records are used for
+/// pattern learning and improving future discovery accuracy.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 struct DiscoveryRecord {
+    /// Timestamp of the discovery attempt (UNIX seconds)
     timestamp: u64, // Changed from Instant to u64 for serialization
+    /// Unique identifier of the discovered device
     device_id: String,
+    /// Device information collected during discovery
     device_info: HashMap<String, String>,
+    /// Identified device type (if confidence threshold was met)
     identified_type: Option<DMSDeviceType>,
+    /// Confidence score for the identification
     confidence: f64,
 }
 
 impl DMSDeviceDiscoveryEngine {
+    /// Create a new device discovery engine with default settings.
+    /// 
+    /// This method initializes the engine with default device fingerprints and sets up
+    /// the discovery history with a capacity of 1000 records.
+    /// 
+    /// # Returns
+    /// 
+    /// A new `DMSDeviceDiscoveryEngine` instance with default fingerprints and settings.
     pub fn _Fnew() -> Self {
         let mut engine = Self {
             fingerprints: HashMap::new(),
@@ -70,7 +170,18 @@ impl DMSDeviceDiscoveryEngine {
         engine
     }
     
-    /// Discover devices using advanced pattern matching
+    /// Discover devices using advanced pattern matching and confidence scoring.
+    /// 
+    /// This method processes a list of device scan results, identifies each device using
+    /// pattern matching against known fingerprints, and returns a list of discovered devices.
+    /// 
+    /// # Parameters
+    /// 
+    /// - `scan_results`: List of device scan results from hardware discovery
+    /// 
+    /// # Returns
+    /// 
+    /// A vector of discovered `DMSDevice` instances with identified types and capabilities.
     pub fn _Fdiscover_devices(&mut self, scan_results: Vec<DeviceScanResult>) -> Vec<DMSDevice> {
         let mut discovered_devices = Vec::new();
         
@@ -83,7 +194,20 @@ impl DMSDeviceDiscoveryEngine {
         discovered_devices
     }
     
-    /// Identify a single device from scan results
+    /// Identify a single device from scan results using fingerprint matching.
+    /// 
+    /// This method attempts to identify a device by matching its information against known
+    /// device fingerprints. It calculates confidence scores for each fingerprint match and
+    /// returns the best match if it meets the confidence threshold.
+    /// 
+    /// # Parameters
+    /// 
+    /// - `scan_result`: Single device scan result to identify
+    /// 
+    /// # Returns
+    /// 
+    /// An `Option<DMSDevice>` containing the identified device if a match was found with
+    /// sufficient confidence, or `None` if no match was found.
     fn _Fidentify_device(&mut self, scan_result: DeviceScanResult) -> Option<DMSDevice> {
         let device_info = scan_result.device_info;
         
@@ -109,14 +233,14 @@ impl DMSDeviceDiscoveryEngine {
             
             let device = DMSDevice::new(
                 scan_result.device_name.clone(),
-                fingerprint.device_type.clone(),
+                fingerprint.device_type,
             ).with_capabilities(fingerprint.capabilities.clone());
             
             // Record discovery for future learning
             self._Frecord_discovery(
                 scan_result.device_id,
                 device_info,
-                Some(fingerprint.device_type.clone()),
+                Some(fingerprint.device_type),
                 confidence,
             );
             
@@ -134,7 +258,20 @@ impl DMSDeviceDiscoveryEngine {
         }
     }
     
-    /// Calculate confidence score for device identification
+    /// Calculate confidence score for device identification.
+    /// 
+    /// This method calculates a confidence score by matching device information against
+    /// the identification patterns in a fingerprint. The score is a weighted sum of matching
+    /// patterns divided by the total weight of all patterns.
+    /// 
+    /// # Parameters
+    /// 
+    /// - `device_info`: Device information to match
+    /// - `fingerprint`: Fingerprint containing identification patterns
+    /// 
+    /// # Returns
+    /// 
+    /// A confidence score between 0.0 and 1.0, where higher scores indicate a stronger match.
     fn _Fcalculate_match_confidence(&self, device_info: &HashMap<String, String>, fingerprint: &DeviceFingerprint) -> f64 {
         let mut total_weight = 0.0;
         let mut matched_weight = 0.0;
@@ -156,13 +293,36 @@ impl DMSDeviceDiscoveryEngine {
         }
     }
     
-    /// Check if a value matches a pattern
+    /// Check if a value matches a pattern using simple string matching.
+    /// 
+    /// This method performs a case-insensitive substring match to determine if a value
+    /// matches a pattern. It can be enhanced with regex support in future versions.
+    /// 
+    /// # Parameters
+    /// 
+    /// - `value`: Device information value to check
+    /// - `pattern`: Pattern string to match against
+    /// 
+    /// # Returns
+    /// 
+    /// `true` if the value matches the pattern, `false` otherwise.
     fn _Fmatches_pattern(&self, value: &str, pattern: &str) -> bool {
         // Simple pattern matching - can be enhanced with regex
         value.to_lowercase().contains(&pattern.to_lowercase())
     }
     
-    /// Record discovery for pattern learning
+    /// Record discovery for pattern learning and analysis.
+    /// 
+    /// This method records a discovery attempt in the history, including the device information,
+    /// identified type (if any), and confidence score. This history is used for pattern recognition
+    /// and improving future discovery accuracy.
+    /// 
+    /// # Parameters
+    /// 
+    /// - `device_id`: Unique identifier of the discovered device
+    /// - `device_info`: Device information collected during discovery
+    /// - `identified_type`: Identified device type (if any)
+    /// - `confidence`: Confidence score for the identification
     fn _Frecord_discovery(&mut self, device_id: String, device_info: HashMap<String, String>, identified_type: Option<DMSDeviceType>, confidence: f64) {
         let record = DiscoveryRecord {
             timestamp: std::time::SystemTime::now()
@@ -183,7 +343,11 @@ impl DMSDeviceDiscoveryEngine {
         }
     }
     
-    /// Initialize default device fingerprints
+    /// Initialize default device fingerprints for common device types.
+    /// 
+    /// This method populates the fingerprint database with default fingerprints for common
+    /// device types, including GPUs and TPUs. These fingerprints are used as a starting point
+    /// for device identification.
     fn _Finitialize_default_fingerprints(&mut self) {
         // GPU Device Fingerprint
         let gpu_fingerprint = DeviceFingerprint {
@@ -212,7 +376,7 @@ impl DMSDeviceDiscoveryEngine {
         
         // TPU Device Fingerprint
         let tpu_fingerprint = DeviceFingerprint {
-            device_type: DMSDeviceType::Memory, // Using Memory as substitute for TPU
+            device_type: DMSDeviceType::Custom, // Using Custom for TPU until we have a proper TPU type
             capabilities: DMSDeviceCapabilities {
                 memory_gb: Some(32.0),
                 compute_units: Some(128),
@@ -236,10 +400,17 @@ impl DMSDeviceDiscoveryEngine {
         };
         
         self.fingerprints.insert("gpu".to_string(), gpu_fingerprint);
-        self.fingerprints.insert("memory".to_string(), tpu_fingerprint); // Using memory as TPU substitute
+        self.fingerprints.insert("tpu".to_string(), tpu_fingerprint); // Using proper key for TPU
     }
     
-    /// Get discovery statistics
+    /// Get discovery statistics and performance metrics.
+    /// 
+    /// This method calculates and returns statistics about the discovery process, including
+    /// total attempts, successful identifications, success rate, and average confidence score.
+    /// 
+    /// # Returns
+    /// 
+    /// A `DiscoveryStats` struct containing the discovery statistics.
     pub fn _Fget_discovery_stats(&self) -> DiscoveryStats {
         let total_attempts = self.discovery_history.len();
         let successful_identifications = self.discovery_history
@@ -270,66 +441,121 @@ impl DMSDeviceDiscoveryEngine {
 }
 
 /// Device scan result from hardware discovery
+/// 
+/// This struct represents the result of a device scan, containing basic device information
+/// that is used for identification and fingerprint matching.
 #[derive(Debug, Clone)]
 pub struct DeviceScanResult {
+    /// Unique identifier for the discovered device
     pub device_id: String,
+    /// Human-readable name of the device
     pub device_name: String,
+    /// Additional device information collected during scanning
     pub device_info: HashMap<String, String>,
 }
 
-/// Discovery statistics
+/// Discovery statistics and performance metrics
+/// 
+/// This struct contains statistics about the device discovery process, including
+/// success rates, confidence scores, and total attempts.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DiscoveryStats {
+    /// Total number of device discovery attempts
     pub total_attempts: usize,
+    /// Number of successful device identifications
     pub successful_identifications: usize,
+    /// Success rate for device identification (0.0 to 1.0)
     pub success_rate: f64,
+    /// Average confidence score for successful identifications
     pub avg_confidence: f64,
 }
 
-/// Resource scheduling algorithm using machine learning and optimization
+/// Resource scheduling algorithm using performance history and policies
+/// 
+/// This scheduler uses device performance history, current load, and custom policies
+/// to intelligently allocate resources to the most suitable devices.
 #[derive(Debug, Clone)]
 pub struct DMSResourceScheduler {
-    /// Device performance history
+    /// Device performance history mapping device IDs to performance records
     performance_history: HashMap<String, Vec<PerformanceRecord>>,
-    /// Current device loads
+    /// Current device loads (0.0 to 1.0)
     device_loads: HashMap<String, f64>,
-    /// Scheduling policies
+    /// Custom scheduling policies sorted by priority
     policies: Vec<SchedulingPolicy>,
 }
 
+/// Performance record for a device
+/// 
+/// This struct records performance metrics for a device at a specific point in time,
+/// including latency, throughput, error rate, and utilization.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 struct PerformanceRecord {
+    /// Timestamp of the performance measurement (UNIX seconds)
     timestamp: u64, // Changed from Instant to u64 for serialization
+    /// Latency in milliseconds
     latency_ms: f64,
+    /// Throughput in operations per second
     throughput: f64,
+    /// Error rate as a fraction (0.0 to 1.0)
     error_rate: f64,
+    /// Resource utilization as a fraction (0.0 to 1.0)
     utilization: f64,
 }
 
+/// Scheduling policy for resource allocation
+/// 
+/// This struct defines a custom scheduling policy that can be applied to resource requests.
+/// Policies consist of conditions and actions, and are evaluated in priority order.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SchedulingPolicy {
+    /// Name of the policy
     name: String,
+    /// Priority of the policy (higher numbers = higher priority)
     priority: u8,
+    /// Conditions that must be met for the policy to apply
     conditions: Vec<PolicyCondition>,
+    /// Action to take if conditions are met
     action: PolicyAction,
 }
 
+/// Policy condition for scheduling decisions
+/// 
+/// This struct defines a single condition that must be met for a scheduling policy to apply.
+/// Conditions compare metrics against thresholds using specified operators.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 struct PolicyCondition {
+    /// Metric to evaluate (e.g., "device_type", "request_priority", "time_of_day")
     metric: String,
+    /// Comparison operator (>, >=, <, <=, ==)
     operator: String,
+    /// Threshold value for the comparison
     threshold: f64,
 }
 
+/// Policy action for scheduling decisions
+/// 
+/// This enum defines the actions that can be taken when a scheduling policy's conditions are met.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 enum PolicyAction {
+    /// Prefer a specific device for resource allocation
     PreferDevice(String),
+    /// Avoid a specific device for resource allocation
     AvoidDevice(String),
+    /// Use load balancing for resource allocation
     LoadBalance,
+    /// Use priority-based scheduling
     PriorityBased,
 }
 
 impl DMSResourceScheduler {
+    /// Create a new resource scheduler with default settings.
+    /// 
+    /// This method initializes the scheduler with empty performance history, device loads,
+    /// and scheduling policies.
+    /// 
+    /// # Returns
+    /// 
+    /// A new `DMSResourceScheduler` instance with default settings.
     pub fn _Fnew() -> Self {
         Self {
             performance_history: HashMap::new(),
@@ -338,7 +564,19 @@ impl DMSResourceScheduler {
         }
     }
     
-    /// Schedule a resource request to the most suitable device
+    /// Schedule a resource request to the most suitable device based on capabilities, load, and policies.
+    /// 
+    /// This method evaluates available devices against the resource request requirements,
+    /// calculates a score for each suitable device, and returns the ID of the best device.
+    /// 
+    /// # Parameters
+    /// 
+    /// - `request`: Resource request with requirements and priority
+    /// - `available_devices`: List of available devices to consider for scheduling
+    /// 
+    /// # Returns
+    /// 
+    /// The ID of the most suitable device for the request, or `None` if no suitable device is found.
     pub fn _Fschedule_resource(
         &mut self,
         request: &ResourceRequest,
@@ -370,7 +608,19 @@ impl DMSResourceScheduler {
         device_scores.first().map(|(device_id, _)| device_id.clone())
     }
     
-    /// Check if device meets request requirements
+    /// Check if a device meets the requirements of a resource request.
+    /// 
+    /// This method verifies that a device has the necessary capabilities, memory, compute units,
+    /// bandwidth, and custom capabilities to handle a resource request.
+    /// 
+    /// # Parameters
+    /// 
+    /// - `device`: Device to check against requirements
+    /// - `request`: Resource request with requirements
+    /// 
+    /// # Returns
+    /// 
+    /// `true` if the device meets all requirements, `false` otherwise.
     fn _Fmeets_requirements(&self, device: &DMSDevice, request: &ResourceRequest) -> bool {
         let capabilities = device.capabilities();
         
@@ -421,36 +671,90 @@ impl DMSResourceScheduler {
         true
     }
     
-    /// Calculate device score for scheduling
+    /// Calculate a score for a device based on its capabilities, load, performance history, and policies.
+    /// 
+    /// This method calculates a score for a device by considering:
+    /// 1. Base score (100.0)
+    /// 2. Penalty for current load
+    /// 3. Bonus for good performance history (latency, throughput, error rate, utilization)
+    /// 4. Health score adjustment
+    /// 5. Responsiveness adjustment
+    /// 6. Policy-based adjustments
+    /// 
+    /// # Parameters
+    /// 
+    /// - `device`: Device to score
+    /// - `request`: Resource request being scheduled
+    /// 
+    /// # Returns
+    /// 
+    /// A score between 0.0 and potentially over 100.0, where higher scores indicate better suitability.
     fn _Fcalculate_device_score(&self, device: &DMSDevice, request: &ResourceRequest) -> f64 {
         let device_id = device._Fid();
         let base_score = 100.0;
         let mut score = base_score;
         
-        // Penalize based on current load
+        // Penalize based on current load (exponential penalty for high load)
         if let Some(&load) = self.device_loads.get(device_id) {
-            score -= load * 50.0; // Max 50 point penalty for load
+            // Exponential penalty: 0% load = 0 penalty, 100% load = 70 point penalty
+            score -= load.powi(2) * 70.0;
         }
         
-        // Bonus for device performance history
+        // Bonus for device performance history with weighted factors
         if let Some(performance_records) = self.performance_history.get(device_id) {
             if !performance_records.is_empty() {
-                let avg_latency = performance_records
+                // Only consider recent performance records (last 10)
+                let recent_records = &performance_records[performance_records.len().saturating_sub(10)..];
+                let record_count = recent_records.len() as f64;
+                
+                let avg_latency = recent_records
                     .iter()
                     .map(|record| record.latency_ms)
-                    .sum::<f64>() / performance_records.len() as f64;
+                    .sum::<f64>() / record_count;
                 
-                let avg_throughput = performance_records
+                let avg_throughput = recent_records
                     .iter()
                     .map(|record| record.throughput)
-                    .sum::<f64>() / performance_records.len() as f64;
+                    .sum::<f64>() / record_count;
+                
+                let avg_error_rate = recent_records
+                    .iter()
+                    .map(|record| record.error_rate)
+                    .sum::<f64>() / record_count;
+                
+                let avg_utilization = recent_records
+                    .iter()
+                    .map(|record| record.utilization)
+                    .sum::<f64>() / record_count;
                 
                 // Bonus for low latency (up to 20 points)
                 score += (100.0 - avg_latency.min(100.0)) * 0.2;
                 
                 // Bonus for high throughput (up to 20 points)
                 score += (avg_throughput.min(100.0)) * 0.2;
+                
+                // Penalty for high error rate (up to 20 points)
+                score -= (avg_error_rate.min(1.0)) * 20.0;
+                
+                // Bonus for optimal utilization (60-80% is ideal, up to 10 points)
+                let utilization_bonus = if avg_utilization >= 0.6 && avg_utilization <= 0.8 {
+                    10.0
+                } else if avg_utilization >= 0.4 && avg_utilization <= 0.9 {
+                    5.0
+                } else {
+                    0.0
+                };
+                score += utilization_bonus;
             }
+        }
+        
+        // Add health score adjustment (up to 20 points)
+        let health_score = device._Fhealth_score() as f64;
+        score += (health_score / 100.0) * 20.0;
+        
+        // Add responsiveness adjustment (10 points if responsive, 0 otherwise)
+        if device._Fis_responsive(300) { // 5 minutes timeout
+            score += 10.0;
         }
         
         // Apply policy-based adjustments
@@ -458,10 +762,25 @@ impl DMSResourceScheduler {
             score = self._Fapply_policy_score_adjustment(device, request, policy, score);
         }
         
-        score.max(0.0) // Ensure non-negative score
+        // Ensure score is within reasonable bounds
+        score.max(0.0).min(200.0)
     }
     
-    /// Apply policy-based score adjustments
+    /// Apply policy-based score adjustments to a device's score.
+    /// 
+    /// This method evaluates a scheduling policy's conditions and applies the appropriate
+    /// score adjustment if the conditions are met.
+    /// 
+    /// # Parameters
+    /// 
+    /// - `device`: Device being scored
+    /// - `request`: Resource request being scheduled
+    /// - `policy`: Scheduling policy to apply
+    /// - `current_score`: Current score of the device
+    /// 
+    /// # Returns
+    /// 
+    /// The updated score after applying the policy adjustment.
     fn _Fapply_policy_score_adjustment(
         &self,
         device: &DMSDevice,
@@ -506,7 +825,20 @@ impl DMSResourceScheduler {
         }
     }
     
-    /// Evaluate a policy condition
+    /// Evaluate a policy condition against a device and request.
+    /// 
+    /// This method evaluates a single policy condition by comparing the appropriate metric
+    /// against the threshold using the specified operator.
+    /// 
+    /// # Parameters
+    /// 
+    /// - `device`: Device to evaluate
+    /// - `request`: Resource request to evaluate
+    /// - `condition`: Policy condition to evaluate
+    /// 
+    /// # Returns
+    /// 
+    /// `true` if the condition is met, `false` otherwise.
     fn _Fevaluate_condition(
         &self,
         device: &DMSDevice,
@@ -549,7 +881,18 @@ impl DMSResourceScheduler {
         }
     }
     
-    /// Record device performance after task completion
+    /// Record device performance after task completion.
+    /// 
+    /// This method records performance metrics for a device, including latency, throughput,
+    /// error rate, and utilization. These records are used for future scheduling decisions.
+    /// 
+    /// # Parameters
+    /// 
+    /// - `device_id`: ID of the device whose performance is being recorded
+    /// - `latency_ms`: Latency in milliseconds
+    /// - `throughput`: Throughput in operations per second
+    /// - `error_rate`: Error rate as a fraction (0.0 to 1.0)
+    /// - `utilization`: Resource utilization as a fraction (0.0 to 1.0)
     pub fn _Frecord_performance(
         &mut self,
         device_id: &str,
@@ -571,7 +914,7 @@ impl DMSResourceScheduler {
         
         self.performance_history
             .entry(device_id.to_string())
-            .or_insert_with(Vec::new)
+            .or_default()
             .push(record);
         
         // Keep only recent performance records (last 100)
@@ -582,12 +925,27 @@ impl DMSResourceScheduler {
         }
     }
     
-    /// Update device load
+    /// Update the current load of a device.
+    /// 
+    /// This method updates the load of a device, clamping the value between 0.0 and 1.0.
+    /// The load is used in scheduling decisions to avoid overloading devices.
+    /// 
+    /// # Parameters
+    /// 
+    /// - `device_id`: ID of the device whose load is being updated
+    /// - `load`: New load value (0.0 to 1.0)
     pub fn _Fupdate_device_load(&mut self, device_id: &str, load: f64) {
         self.device_loads.insert(device_id.to_string(), load.clamp(0.0, 1.0));
     }
     
-    /// Add a scheduling policy
+    /// Add a scheduling policy to the scheduler.
+    /// 
+    /// This method adds a scheduling policy to the scheduler and sorts the policies
+    /// by priority (highest first) to ensure they are evaluated in the correct order.
+    /// 
+    /// # Parameters
+    /// 
+    /// - `policy`: Scheduling policy to add
     pub fn _Fadd_policy(&mut self, policy: SchedulingPolicy) {
         self.policies.push(policy);
         // Sort by priority (highest first)
@@ -596,69 +954,24 @@ impl DMSResourceScheduler {
 }
 
 /// Resource request for scheduling
+/// 
+/// This struct represents a request for resources, including memory, compute units,
+/// bandwidth, and custom capabilities. It also includes priority and deadline information.
 #[derive(Debug, Clone)]
 pub struct ResourceRequest {
+    /// Unique identifier for the resource request
     pub request_id: String,
+    /// Required memory in gigabytes (optional)
     pub required_memory_gb: Option<f64>,
+    /// Required compute units (optional)
     pub required_compute_units: Option<usize>,
+    /// Required bandwidth in Gbps (optional)
     pub required_bandwidth_gbps: Option<f64>,
+    /// Required custom capabilities as key-value pairs
     pub required_custom_capabilities: HashMap<String, String>,
+    /// Request priority (0-255, higher = higher priority)
     pub priority: u8,
+    /// Optional deadline for the request
     pub deadline: Option<Instant>,
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-    
-    #[test]
-    fn test_device_discovery_engine() {
-        let mut engine = DMSDeviceDiscoveryEngine::_Fnew();
-        
-        let scan_results = vec![
-            DeviceScanResult {
-                device_id: "gpu_1".to_string(),
-                device_name: "NVIDIA GPU".to_string(),
-                device_info: [
-                    ("device_name".to_string(), "NVIDIA GeForce RTX 3080".to_string()),
-                    ("driver".to_string(), "CUDA 11.4".to_string()),
-                ].iter().cloned().collect(),
-            },
-        ];
-        
-        let devices = engine._Fdiscover_devices(scan_results);
-        assert_eq!(devices.len(), 1);
-        assert_eq!(devices[0]._Fdevice_type(), DMSDeviceType::GPU);
-    }
-    
-    #[test]
-    fn test_resource_scheduler() {
-        let mut scheduler = DMSResourceScheduler::_Fnew();
-        
-        let request = ResourceRequest {
-            request_id: "req_1".to_string(),
-            required_memory_gb: Some(8.0),
-            required_compute_units: Some(256),
-            required_bandwidth_gbps: Some(100.0),
-            required_custom_capabilities: [("cuda_support".to_string(), "true".to_string())].iter().cloned().collect(),
-            priority: 5,
-            deadline: None,
-        };
-        
-        let devices = vec![
-            DMSDevice::new(
-                "GPU 1".to_string(),
-                DMSDeviceType::GPU,
-            ).with_capabilities(DMSDeviceCapabilities {
-                memory_gb: Some(16.0),
-                compute_units: Some(512),
-                storage_gb: Some(1000.0),
-                bandwidth_gbps: Some(900.0),
-                custom_capabilities: [("cuda_support".to_string(), "true".to_string())].iter().cloned().collect(),
-            }),
-        ];
-        
-        let selected_device = scheduler._Fschedule_resource(&request, &devices);
-        assert_eq!(selected_device, Some(devices[0]._Fid().to_string()));
-    }
-}

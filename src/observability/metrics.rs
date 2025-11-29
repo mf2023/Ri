@@ -17,6 +17,69 @@
 
 #![allow(non_snake_case)]
 
+//! # Metrics Collection and Aggregation Module
+//! 
+//! This module provides a comprehensive metrics collection and aggregation system for DMS.
+//! It supports various metric types, sliding window aggregation, and Prometheus-compatible export.
+//! 
+//! ## Key Components
+//! 
+//! - **DMSMetricType**: Enum defining supported metric types (Counter, Gauge, Histogram, Summary)
+//! - **DMSMetricSample**: Represents a single metric sample with timestamp, value, and labels
+//! - **DMSMetricConfig**: Configuration for creating metrics
+//! - **DMSSlidingWindow**: Internal sliding time window for metric aggregation
+//! - **DMSWindowStats**: Aggregated statistics from the sliding window
+//! - **DMSMetric**: Individual metric with sliding window aggregation
+//! - **DMSMetricsRegistry**: Registry for managing multiple metrics
+//! 
+//! ## Design Principles
+//! 
+//! 1. **Multiple Metric Types**: Supports Counter, Gauge, Histogram, and Summary metrics
+//! 2. **Sliding Window Aggregation**: Efficiently aggregates metrics over configurable time windows
+//! 3. **Thread Safety**: Uses Arc and RwLock for safe concurrent access
+//! 4. **Prometheus Compatible**: Exports metrics in Prometheus format
+//! 5. **Label Support**: Allows adding custom labels to metric samples
+//! 6. **Configurable**: Supports custom window sizes, bucket sizes, and other parameters
+//! 7. **Type Safety**: Strongly typed metrics with compile-time checks
+//! 8. **Efficient Memory Usage**: Automatically rotates and prunes old metric data
+//! 
+//! ## Usage
+//! 
+//! ```rust
+//! use dms::prelude::*;
+//! use std::time::Duration;
+//! 
+//! fn example() -> DMSResult<()> {
+//!     // Create a metrics registry
+//!     let registry = DMSMetricsRegistry::_Fnew();
+//!     
+//!     // Configure a counter metric
+//!     let counter_config = DMSMetricConfig {
+//!         metric_type: DMSMetricType::Counter,
+//!         name: "http_requests_total".to_string(),
+//!         help: "Total number of HTTP requests".to_string(),
+//!         buckets: Vec::new(),
+//!         quantiles: Vec::new(),
+//!         max_age: Duration::from_secs(300),
+//!         age_buckets: 5,
+//!     };
+//!     
+//!     // Create and register the metric
+//!     let counter = Arc::new(DMSMetric::_Fnew(counter_config));
+//!     registry._Fregister(counter.clone())?;
+//!     
+//!     // Record some metrics
+//!     counter._Frecord(1.0, vec![("method".to_string(), "GET".to_string())])?;
+//!     counter._Frecord(1.0, vec![("method".to_string(), "POST".to_string())])?;
+//!     
+//!     // Export metrics in Prometheus format
+//!     let prometheus_output = registry._Fexport_prometheus();
+//!     println!("{}", prometheus_output);
+//!     
+//!     Ok(())
+//! }
+//! ```
+
 use std::collections::{VecDeque, HashMap};
 use std::sync::{Arc, RwLock};
 use std::time::{SystemTime, UNIX_EPOCH, Duration};
@@ -64,7 +127,7 @@ struct DMSSlidingWindow {
 
 impl DMSSlidingWindow {
     fn new(window_size: Duration, bucket_size: Duration) -> Self {
-        let bucket_count = (window_size.as_secs() + bucket_size.as_secs() - 1) / bucket_size.as_secs();
+        let bucket_count = window_size.as_secs().div_ceil(bucket_size.as_secs());
         
         Self {
             window_size,
@@ -93,7 +156,7 @@ impl DMSSlidingWindow {
                 self.buckets.push_back(std::mem::take(&mut self.current_bucket));
                 
                 // Remove old buckets outside window
-                let max_buckets = (self.window_size.as_secs() + self.bucket_size.as_secs() - 1) / self.bucket_size.as_secs();
+                let max_buckets = self.window_size.as_secs().div_ceil(self.bucket_size.as_secs());
                 while self.buckets.len() > max_buckets as usize {
                     self.buckets.pop_front();
                 }

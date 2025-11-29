@@ -17,6 +17,26 @@
 
 #![allow(non_snake_case)]
 
+//! # Log Analytics Module
+//! 
+//! This module provides logging analytics functionality for DMS, tracking hook events and generating
+//! comprehensive analytics reports. It implements a service module that monitors the application
+//! lifecycle and generates JSON reports with event statistics.
+//! 
+//! ## Key Components
+//! 
+//! - **DMSLogAnalyticsModule**: Main analytics module that implements `_CServiceModule`
+//! - **_CAnalyticsState**: Internal struct for tracking analytics data
+//! 
+//! ## Design Principles
+//! 
+//! 1. **Non-Intrusive**: Operates by listening to hook events without modifying core functionality
+//! 2. **Performance-Focused**: Uses efficient data structures for event tracking
+//! 3. **Configurable**: Can be enabled/disabled through configuration
+//! 4. **Comprehensive**: Tracks events by kind, phase, and module
+//! 5. **Persistent**: Generates JSON reports that can be analyzed later
+//! 6. **Non-Critical**: Fails gracefully if analytics operations encounter errors
+
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 use std::time::{SystemTime, UNIX_EPOCH};
@@ -25,20 +45,52 @@ use crate::core::{DMSResult, DMSServiceContext, DMSError, _CServiceModule};
 use crate::hooks::{DMSHookBus, DMSHookEvent, DMSHookKind};
 use serde_json::json;
 
+/// Internal analytics state struct.
+/// 
+/// This struct tracks various metrics about hook events, including:
+/// - Total number of events
+/// - Events per hook kind
+/// - Events per module phase
+/// - Events per module name
 #[derive(Default)]
 struct _CAnalyticsState {
+    /// Total number of hook events processed
     total_events: u64,
+    /// Number of events per hook kind
     per_kind: HashMap<String, u64>,
+    /// Number of events per module phase
     per_phase: HashMap<String, u64>,
+    /// Number of events per module name
     per_module: HashMap<String, u64>,
 }
 
+/// Log analytics module for DMS.
+/// 
+/// This module implements the `_CServiceModule` trait and provides analytics functionality
+/// by listening to hook events and generating comprehensive reports.
+/// 
+/// ## Usage
+/// 
+/// The module is automatically added by the `DMSAppBuilder` and doesn't need to be explicitly
+/// configured in most cases. It can be enabled/disabled through the configuration file.
+/// 
+/// ## Configuration
+/// 
+/// ```yaml
+/// analytics:
+///   enabled: true  # Enable or disable analytics
+/// ```
 pub struct DMSLogAnalyticsModule {
+    /// Shared analytics state protected by a mutex
     state: Arc<Mutex<_CAnalyticsState>>,
+    /// Whether analytics is enabled
     enabled: bool,
 }
 
 impl DMSLogAnalyticsModule {
+    /// Creates a new instance of the log analytics module.
+    /// 
+    /// Returns a new `DMSLogAnalyticsModule` with default settings.
     pub fn _Fnew() -> Self {
         DMSLogAnalyticsModule {
             state: Arc::new(Mutex::new(_CAnalyticsState::default())),
@@ -46,6 +98,10 @@ impl DMSLogAnalyticsModule {
         }
     }
 
+    /// Returns all hook kinds that the analytics module tracks.
+    /// 
+    /// This method returns a static slice of all hook kinds that the analytics module
+    /// registers handlers for.
     fn _Fall_kinds() -> &'static [DMSHookKind] {
         use DMSHookKind::*;
         const KINDS: [DMSHookKind; 8] = [
@@ -61,6 +117,17 @@ impl DMSLogAnalyticsModule {
         &KINDS
     }
 
+    /// Returns a string label for the given hook kind.
+    /// 
+    /// This method converts a `DMSHookKind` enum variant to a human-readable string.
+    /// 
+    /// # Parameters
+    /// 
+    /// - `kind`: The hook kind to get a label for
+    /// 
+    /// # Returns
+    /// 
+    /// A static string label for the hook kind
     fn _Fkind_label(kind: DMSHookKind) -> &'static str {
         match kind {
             DMSHookKind::Startup => "Startup",
@@ -74,6 +141,14 @@ impl DMSLogAnalyticsModule {
         }
     }
 
+    /// Registers hook handlers for all tracked hook kinds.
+    /// 
+    /// This method registers a handler for each hook kind that updates the analytics state
+    /// whenever a hook event is triggered.
+    /// 
+    /// # Parameters
+    /// 
+    /// - `hooks`: The hook bus to register handlers with
     fn _Fregister_handlers(&self, hooks: &mut DMSHookBus) {
         for kind in Self::_Fall_kinds() {
             let state = self.state.clone();
@@ -86,7 +161,7 @@ impl DMSLogAnalyticsModule {
                 let kind_label = Self::_Fkind_label(event.kind).to_string();
                 *guard.per_kind.entry(kind_label).or_insert(0) += 1;
                 if let Some(phase) = &event.phase {
-                    *guard.per_phase.entry(phase.clone()).or_insert(0) += 1;
+                    *guard.per_phase.entry(phase.as_str().to_string()).or_insert(0) += 1;
                 }
                 if let Some(module) = &event.module {
                     *guard.per_module.entry(module.clone()).or_insert(0) += 1;
@@ -96,6 +171,18 @@ impl DMSLogAnalyticsModule {
         }
     }
 
+    /// Flushes the analytics summary to a JSON file.
+    /// 
+    /// This method generates a JSON summary of the analytics state and writes it to a file
+    /// in the observability directory.
+    /// 
+    /// # Parameters
+    /// 
+    /// - `ctx`: The service context to use for file operations and logging
+    /// 
+    /// # Returns
+    /// 
+    /// A `DMSResult` indicating success or failure
     fn _Fflush_summary(&self, ctx: &mut DMSServiceContext) -> DMSResult<()> {
         let snapshot = {
             let guard = self
@@ -124,14 +211,35 @@ impl DMSLogAnalyticsModule {
 }
 
 impl _CServiceModule for DMSLogAnalyticsModule {
+    /// Returns the name of the analytics module.
+    /// 
+    /// This name is used for identification, logging, and dependency resolution.
     fn _Fname(&self) -> &str {
         "DMS.LogAnalytics"
     }
 
+    /// Indicates if the analytics module is critical to the operation of the system.
+    /// 
+    /// The analytics module is non-critical, meaning it can fail without causing the entire
+    /// system to fail.
     fn _Fis_critical(&self) -> bool {
         false
     }
 
+    /// Initializes the analytics module.
+    /// 
+    /// This method:
+    /// 1. Reads the analytics configuration from the service context
+    /// 2. Enables or disables the module based on configuration
+    /// 3. Registers hook handlers if the module is enabled
+    /// 
+    /// # Parameters
+    /// 
+    /// - `ctx`: The service context containing configuration and hooks
+    /// 
+    /// # Returns
+    /// 
+    /// A `DMSResult` indicating success or failure
     fn _Finit(&mut self, ctx: &mut DMSServiceContext) -> DMSResult<()> {
         let cfg = ctx._Fconfig()._Fconfig();
         self.enabled = cfg._Fget_bool("analytics.enabled").unwrap_or(true);
@@ -143,6 +251,18 @@ impl _CServiceModule for DMSLogAnalyticsModule {
         Ok(())
     }
 
+    /// Flushes analytics data after the application has shutdown.
+    /// 
+    /// This method generates a final analytics report and writes it to a file after
+    /// all modules have been shutdown.
+    /// 
+    /// # Parameters
+    /// 
+    /// - `ctx`: The service context containing file system and logging capabilities
+    /// 
+    /// # Returns
+    /// 
+    /// A `DMSResult` indicating success or failure
     fn _Fafter_shutdown(&mut self, ctx: &mut DMSServiceContext) -> DMSResult<()> {
         if !self.enabled {
             return Ok(());

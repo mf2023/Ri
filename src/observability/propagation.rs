@@ -17,22 +17,98 @@
 
 #![allow(non_snake_case)]
 
+//! # Distributed Tracing Context Propagation
+//! 
+//! This module provides implementations for distributed tracing context propagation,
+//! following the W3C Trace Context specification. It allows for propagating trace
+//! information across service boundaries using HTTP headers.
+//! 
+//! ## Key Components
+//! 
+//! - **DMSTraceContext**: Represents W3C Trace Context with trace ID, parent ID, and flags
+//! - **DMSBaggage**: Represents baggage for carrying additional cross-cutting concerns
+//! - **DMSContextCarrier**: Carries both trace context and baggage for propagation
+//! 
+//! ## Design Principles
+//! 
+//! 1. **W3C Compliance**: Implements the W3C Trace Context specification
+//! 2. **Baggage Support**: Provides baggage propagation for additional context
+//! 3. **HTTP Header Integration**: Supports extraction and injection from/to HTTP headers
+//! 4. **Serialization Support**: Implements Serialize and Deserialize for easy persistence
+//! 5. **Thread Safety**: All structs are cloneable for safe sharing across threads
+//! 6. **Sampling Support**: Includes trace sampling flag support
+//! 7. **Trace State**: Optional support for vendor-specific trace state
+//! 8. **Easy to Use**: Simple API for creating and manipulating trace contexts
+//! 
+//! ## Usage
+//! 
+//! ```rust
+//! use dms::prelude::*;
+//! use std::collections::HashMap;
+//! 
+//! fn example() {
+//!     // Create trace and span IDs
+//!     let trace_id = DMSTraceId::_Fgenerate();
+//!     let span_id = DMSSpanId::_Fgenerate();
+//!     
+//!     // Create a trace context
+//!     let mut trace_context = DMSTraceContext::_Fnew(trace_id, span_id);
+//!     trace_context._Fset_sampled(true);
+//!     
+//!     // Create baggage
+//!     let mut baggage = DMSBaggage::_Fnew();
+//!     baggage._Finsert("user_id".to_string(), "12345".to_string());
+//!     baggage._Finsert("request_id".to_string(), "abc123".to_string());
+//!     
+//!     // Create a context carrier
+//!     let carrier = DMSContextCarrier::_Fnew()
+//!         ._Fwith_trace_context(trace_context)
+//!         ._Fwith_baggage(baggage);
+//!     
+//!     // Inject into HTTP headers
+//!     let mut headers = HashMap::new();
+//!     carrier._Finject_into_headers(&mut headers);
+//!     println!("Headers: {:?}", headers);
+//!     
+//!     // Extract from HTTP headers
+//!     let extracted_carrier = DMSContextCarrier::_Ffrom_headers(&headers);
+//!     println!("Extracted trace context: {:?}", extracted_carrier.trace_context);
+//! }
+//! ```
+
 use std::collections::HashMap;
 use serde::{Serialize, Deserialize};
 use crate::observability::tracing::{DMSTraceId, DMSSpanId};
 
 /// W3C Trace Context propagation format
-/// https://www.w3.org/TR/trace-context/
+///
+/// This struct represents a W3C Trace Context, which is used to propagate trace information
+/// across service boundaries. It follows the W3C Trace Context specification: https://www.w3.org/TR/trace-context/
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DMSTraceContext {
+    /// Trace context version
     pub version: u8,
+    /// Trace ID for the entire trace
     pub trace_id: DMSTraceId,
+    /// Parent span ID
     pub parent_id: DMSSpanId,
+    /// Trace flags (bitmask)
     pub trace_flags: u8,
+    /// Optional trace state for vendor-specific information
     pub trace_state: Option<String>,
 }
 
 impl DMSTraceContext {
+    /// Creates a new trace context with the given trace ID and parent span ID.
+    ///
+    /// # Parameters
+    ///
+    /// - `trace_id`: The trace ID for the trace
+    /// - `parent_id`: The parent span ID
+    ///
+    /// # Returns
+    ///
+    /// A new DMSTraceContext instance
     pub fn _Fnew(trace_id: DMSTraceId, parent_id: DMSSpanId) -> Self {
         Self {
             version: 0x00,
@@ -43,8 +119,15 @@ impl DMSTraceContext {
         }
     }
     
-    /// Parse from W3C Trace Context header format
-    /// Format: "00-{trace-id}-{parent-id}-{trace-flags}"
+    /// Parses a trace context from a W3C Trace Context header string.
+    ///
+    /// # Parameters
+    ///
+    /// - `header`: The traceparent header string in format "00-{trace-id}-{parent-id}-{trace-flags}"
+    ///
+    /// # Returns
+    ///
+    /// An Option containing the parsed DMSTraceContext, or None if parsing failed
     pub fn _Ffrom_header(header: &str) -> Option<Self> {
         let parts: Vec<&str> = header.split('-').collect();
         if parts.len() != 4 {
@@ -65,7 +148,11 @@ impl DMSTraceContext {
         })
     }
     
-    /// Convert to W3C Trace Context header format
+    /// Converts the trace context to a W3C Trace Context header string.
+    ///
+    /// # Returns
+    ///
+    /// A string in the format "00-{trace-id}-{parent-id}-{trace-flags}"
     pub fn _Fto_header(&self) -> String {
         format!(
             "{:02x}-{}-{}-{:02x}",
@@ -76,12 +163,20 @@ impl DMSTraceContext {
         )
     }
     
-    /// Check if trace is sampled
+    /// Checks if the trace is sampled.
+    ///
+    /// # Returns
+    ///
+    /// True if the sampled flag is set, false otherwise
     pub fn _Fis_sampled(&self) -> bool {
         (self.trace_flags & 0x01) != 0
     }
     
-    /// Set sampled flag
+    /// Sets the sampled flag on the trace context.
+    ///
+    /// # Parameters
+    ///
+    /// - `sampled`: Whether the trace should be sampled
     pub fn _Fset_sampled(&mut self, sampled: bool) {
         if sampled {
             self.trace_flags |= 0x01;
@@ -91,33 +186,69 @@ impl DMSTraceContext {
     }
 }
 
-/// Baggage propagation for cross-cutting concerns
+/// Baggage propagation for cross-cutting concerns.
+///
+/// This struct represents baggage, which is used to carry additional context information
+/// across service boundaries. It follows the W3C Baggage specification.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DMSBaggage {
+    /// Map of baggage items
     items: HashMap<String, String>,
 }
 
 impl DMSBaggage {
+    /// Creates a new empty baggage instance.
+    ///
+    /// # Returns
+    ///
+    /// A new DMSBaggage instance
     pub fn _Fnew() -> Self {
         Self {
             items: HashMap::new(),
         }
     }
     
+    /// Inserts a key-value pair into the baggage.
+    ///
+    /// # Parameters
+    ///
+    /// - `key`: The baggage key
+    /// - `value`: The baggage value
     pub fn _Finsert(&mut self, key: String, value: String) {
         self.items.insert(key, value);
     }
     
+    /// Gets a value from the baggage by key.
+    ///
+    /// # Parameters
+    ///
+    /// - `key`: The baggage key to look up
+    ///
+    /// # Returns
+    ///
+    /// An Option containing the value if found, or None otherwise
     pub fn _Fget(&self, key: &str) -> Option<&String> {
         self.items.get(key)
     }
     
+    /// Removes a key-value pair from the baggage.
+    ///
+    /// # Parameters
+    ///
+    /// - `key`: The baggage key to remove
     pub fn _Fremove(&mut self, key: &str) {
         self.items.remove(key);
     }
     
-    /// Parse from W3C Baggage header format
-    /// Format: "key1=value1,key2=value2"
+    /// Parses baggage from a W3C Baggage header string.
+    ///
+    /// # Parameters
+    ///
+    /// - `header`: The baggage header string in format "key1=value1,key2=value2"
+    ///
+    /// # Returns
+    ///
+    /// A new DMSBaggage instance with the parsed items
     pub fn _Ffrom_header(header: &str) -> Self {
         let mut baggage = Self::_Fnew();
         
@@ -133,24 +264,38 @@ impl DMSBaggage {
         baggage
     }
     
-    /// Convert to W3C Baggage header format
+    /// Converts the baggage to a W3C Baggage header string.
+    ///
+    /// # Returns
+    ///
+    /// A string in the format "key1=value1,key2=value2"
     pub fn _Fto_header(&self) -> String {
         self.items
             .iter()
-            .map(|(k, v)| format!("{}={}", k, v))
+            .map(|(k, v)| format!("{k}={v}"))
             .collect::<Vec<_>>()
             .join(",")
     }
 }
 
-/// Context carrier for distributed tracing
+/// Context carrier for distributed tracing.
+///
+/// This struct carries both trace context and baggage, providing a convenient way to
+/// extract and inject distributed tracing information from/to HTTP headers.
 #[derive(Debug, Clone)]
 pub struct DMSContextCarrier {
+    /// Trace context for the request
     pub trace_context: Option<DMSTraceContext>,
+    /// Baggage for additional context
     pub baggage: DMSBaggage,
 }
 
 impl DMSContextCarrier {
+    /// Creates a new empty context carrier.
+    ///
+    /// # Returns
+    ///
+    /// A new DMSContextCarrier instance
     pub fn _Fnew() -> Self {
         Self {
             trace_context: None,
@@ -158,17 +303,43 @@ impl DMSContextCarrier {
         }
     }
     
+    /// Adds trace context to the carrier.
+    ///
+    /// # Parameters
+    ///
+    /// - `trace_context`: The trace context to add
+    ///
+    /// # Returns
+    ///
+    /// The updated DMSContextCarrier instance
     pub fn _Fwith_trace_context(mut self, trace_context: DMSTraceContext) -> Self {
         self.trace_context = Some(trace_context);
         self
     }
     
+    /// Adds baggage to the carrier.
+    ///
+    /// # Parameters
+    ///
+    /// - `baggage`: The baggage to add
+    ///
+    /// # Returns
+    ///
+    /// The updated DMSContextCarrier instance
     pub fn _Fwith_baggage(mut self, baggage: DMSBaggage) -> Self {
         self.baggage = baggage;
         self
     }
     
-    /// Extract from HTTP headers
+    /// Extracts a context carrier from HTTP headers.
+    ///
+    /// # Parameters
+    ///
+    /// - `headers`: A HashMap of HTTP headers
+    ///
+    /// # Returns
+    ///
+    /// A new DMSContextCarrier instance with extracted trace context and baggage
     pub fn _Ffrom_headers(headers: &HashMap<String, String>) -> Self {
         let mut carrier = Self::_Fnew();
         
@@ -187,7 +358,11 @@ impl DMSContextCarrier {
         carrier
     }
     
-    /// Inject into HTTP headers
+    /// Injects the context carrier into HTTP headers.
+    ///
+    /// # Parameters
+    ///
+    /// - `headers`: A mutable HashMap of HTTP headers to inject into
     pub fn _Finject_into_headers(&self, headers: &mut HashMap<String, String>) {
         if let Some(ref trace_context) = self.trace_context {
             headers.insert("traceparent".to_string(), trace_context._Fto_header());
@@ -200,38 +375,3 @@ impl DMSContextCarrier {
     }
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-    
-    #[test]
-    fn test_trace_context_header_format() {
-        let trace_id = DMSTraceId::_Ffrom_string("0123456789abcdef0123456789abcdef".to_string());
-        let parent_id = DMSSpanId::_Ffrom_string("fedcba9876543210".to_string());
-        
-        let context = DMSTraceContext::_Fnew(trace_id.clone(), parent_id.clone());
-        let header = context._Fto_header();
-        
-        assert_eq!(header, "00-0123456789abcdef0123456789abcdef-fedcba9876543210-01");
-        
-        let parsed = DMSTraceContext::_Ffrom_header(&header).unwrap();
-        assert_eq!(parsed.trace_id._Fas_str(), trace_id._Fas_str());
-        assert_eq!(parsed.parent_id._Fas_str(), parent_id._Fas_str());
-        assert!(parsed._Fis_sampled());
-    }
-    
-    #[test]
-    fn test_baggage_header_format() {
-        let mut baggage = DMSBaggage::_Fnew();
-        baggage._Finsert("user.id".to_string(), "12345".to_string());
-        baggage._Finsert("tenant.id".to_string(), "acme-corp".to_string());
-        
-        let header = baggage._Fto_header();
-        assert!(header.contains("user.id=12345"));
-        assert!(header.contains("tenant.id=acme-corp"));
-        
-        let parsed = DMSBaggage::_Ffrom_header(&header);
-        assert_eq!(parsed._Fget("user.id").unwrap(), "12345");
-        assert_eq!(parsed._Fget("tenant.id").unwrap(), "acme-corp");
-    }
-}

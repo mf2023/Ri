@@ -17,6 +17,94 @@
 
 #![allow(non_snake_case)]
 
+//! # Queue Module
+//! 
+//! This module provides a comprehensive queueing system for DMS, offering a unified interface
+//! with support for multiple backend implementations. It enables reliable message passing and
+//! task scheduling across distributed systems.
+//! 
+//! ## Key Components
+//! 
+//! - **DMSQueueModule**: Main queue module implementing service module traits
+//! - **DMSQueueManager**: Central queue management component
+//! - **DMSQueue**: Unified queue interface implemented by all backends
+//! - **DMSQueueConfig**: Configuration for queue behavior
+//! - **DMSQueueMessage**: Message structure for queue operations
+//! - **DMSQueueConsumer**: Interface for consuming messages from queues
+//! - **DMSQueueProducer**: Interface for producing messages to queues
+//! - **QueueBackendType**: Enum defining supported queue backends
+//! - **QueueStats**: Statistics for queue monitoring
+//! 
+//! ## Design Principles
+//! 
+//! 1. **Unified Interface**: Consistent API across all backend implementations
+//! 2. **Multiple Backends**: Support for different queue storage options
+//! 3. **Async Support**: Full async/await compatibility
+//! 4. **Reliable Delivery**: Ensures messages are delivered reliably
+//! 5. **Configurable**: Highly configurable queue behavior
+//! 6. **Service Module Integration**: Implements service module traits for seamless integration
+//! 7. **Thread-safe**: Safe for concurrent use across multiple threads
+//! 8. **Statistics Collection**: Built-in queue statistics for monitoring
+//! 
+//! ## Usage
+//! 
+//! ```rust
+//! use dms::prelude::*;
+//! use serde::{Serialize, Deserialize};
+//! 
+//! #[derive(Debug, Serialize, Deserialize)]
+//! struct Task {
+//!     id: String,
+//!     data: String,
+//! }
+//! 
+//! async fn example() -> DMSResult<()> {
+//!     // Create queue configuration
+//!     let queue_config = DMSQueueConfig {
+//!         enabled: true,
+//!         backend_type: QueueBackendType::Memory,
+//!         default_queue_name: "default".to_string(),
+//!         max_retry_count: 3,
+//!         retry_delay_ms: 1000,
+//!         queue_url: "".to_string(), // Not needed for memory backend
+//!     };
+//!     
+//!     // Create queue module
+//!     let queue_module = DMSQueueModule::_Fnew(queue_config);
+//!     
+//!     // Get queue manager
+//!     let queue_manager = queue_module._Fqueue_manager();
+//!     
+//!     // Get queue instance
+//!     let queue = queue_manager.read().await._Fqueue("example_queue").await?;
+//!     
+//!     // Create producer and consumer
+//!     let producer = queue._Fproducer().await?;
+//!     let consumer = queue._Fconsumer().await?;
+//!     
+//!     // Create a task message
+//!     let task = Task {
+//!         id: "task-123".to_string(),
+//!         data: "Hello, DMS Queue!" .to_string(),
+//!     };
+//!     
+//!     // Send message to queue
+//!     let message_id = producer._Fsend(&task).await?;
+//!     println!("Sent message with ID: {}", message_id);
+//!     
+//!     // Receive message from queue
+//!     if let Some(message) = consumer._Freceive().await? {
+//!         let received_task: Task = message._Fdeserialize()?;
+//!         println!("Received task: {:?}", received_task);
+//!         
+//!         // Acknowledge message
+//!         message._Fack().await?;
+//!     }
+//!     
+//!     Ok(())
+//! }
+//! ```
+
 pub mod queue;
 pub mod backends;
 pub mod config;

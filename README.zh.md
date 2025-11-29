@@ -2,126 +2,154 @@
 
 # DMS (Dunimd Middleware Service)
 
-[English](README.md) | [简体中文](README.zh.md)
+[English](README.md) | 简体中文
 
-<a href="https://github.com/dunimd/dms" target="_blank">
-    <img alt="GitHub" src="https://img.shields.io/badge/GitHub-DMS-181717?style=flat-square&logo=github"/>
+<a href="https://space.bilibili.com/3493284091529457" target="_blank">
+    <img alt="BiliBili" src="https://img.shields.io/badge/BiliBili-Dunimd-00A1D6?style=flat-square&logo=bilibili"/>
 </a>
 <a href="https://gitee.com/dunimd" target="_blank">
     <img alt="Gitee" src="https://img.shields.io/badge/Gitee-Dunimd-C71D23?style=flat-square&logo=gitee"/>
+</a>
+<a href="https://github.com/dunimd/dms" target="_blank">
+    <img alt="GitHub" src="https://img.shields.io/badge/GitHub-DMS-181717?style=flat-square&logo=github"/>
 </a>
 <a href="https://crates.io/crates/DMS" target="_blank">
     <img alt="Crates.io" src="https://img.shields.io/badge/Crates-DMS-000000?style=flat-square&logo=rust"/>
 </a>
 
-企业级Rust服务框架，为Dunimd团队所有项目提供统一的基础设施支撑。DMS将原本分散的Python utils工具集重构为现代化、企业级的Rust服务框架，类似于GMS/HMS的定位，为所有后端服务提供统一的基础设施能力。
+**DMS (Dunimd Middleware Service)** — 一个高性能的 Rust 中间件框架，统一后端基础设施。专为企业级规模构建，具有模块化架构、内置可观测性和分布式系统支持。
 
 </div>
 
-<h2 align="center">🚀 核心架构</h2>
+<h2 align="center">🏗️ 核心架构</h2>
 
-### 🌐 分布式链路追踪系统
-实现W3C Trace Context标准，支持全链路TraceID/SpanID传播，业务上下文信息Baggage数据透传，标准化追踪上下文载体机制，支持与Java、Go、Python等异构系统的多语言兼容集成。
+### 📐 模块化设计
+DMS 采用高度模块化的架构，拥有 12 个核心模块，支持按需组合和无缝扩展：
 
-### 📊 企业级可观测性平台
-原生Prometheus指标导出，支持Counter、Gauge、Histogram、Summary类型，开箱即用的Grafana仪表板集成，高性能滑动窗口算法实现实时数据收集（DMSSlidingWindow），精确的分位数计算用于性能统计分析（DMSQuantileCalculator），CPU、内存、I/O、网络等全栈指标的多维度监控。
+<div align="center">
 
-### 🤖 智能设备控制与调度
-智能设备自动发现和注册，高效的设备资源池管理与分配回收，基于优先级的策略化智能调度算法，动态设备负载均衡，以及包含设备状态监控和维护的完整生命周期管理。
+| 模块 | 描述 |
+|:--------|:-------------|
+| **auth** | 认证与授权（JWT、OAuth、权限） |
+| **cache** | 多后端缓存抽象（内存、Redis、混合） |
+| **config** | 多源配置管理与热重载 |
+| **core** | 运行时、错误处理和服务上下文 |
+| **device** | 设备控制、发现和智能调度 |
+| **fs** | 安全的文件系统操作和管理 |
+| **gateway** | API 网关，支持负载均衡、限流和熔断 |
+| **hooks** | 生命周期事件钩子（启动、关闭等） |
+| **log** | 结构化日志与追踪上下文集成 |
+| **observability** | 指标、追踪和 Grafana 集成 |
+| **queue** | 分布式队列抽象（Kafka、RabbitMQ、Redis、内存） |
+| **service_mesh** | 服务发现、健康检查和流量管理 |
 
-### 📝 企业级日志系统
-支持JSON和文本格式的结构化日志输出，可配置采样率避免性能影响，基于文件大小的智能日志轮转，自动包含追踪上下文信息，DEBUG/INFO/WARN/ERROR四级日志的多级别支持。
+</div>
 
-### ⚙️ 配置管理与扩展性
-配置文件、环境变量、运行时参数的多源配置加载，运行时动态更新的热配置能力，7大核心模块的模块化架构支持按需组合，Startup、Shutdown等关键事件的生命周期钩子，以及支持自定义模块和扩展点的插件化扩展机制。
+### 🚀 核心特性
 
-### 📁 文件系统与数据管理
-统一的项目根目录管理实现文件系统命名空间，保证数据一致性的原子文件操作，分离日志、缓存、报告、观测性、临时目录的分类目录管理，复杂数据结构序列化的JSON数据持久化，以及防止路径穿越和权限问题的安全目录创建。
+#### 🔍 分布式追踪
+- W3C 追踪上下文标准实现
+- 全链路 TraceID/SpanID 传播
+- 业务上下文的数据传输
+- 多语言兼容性（Java、Go、Python）
 
-### 🔧 模块化架构
+#### 📊 企业级可观测性
+- 原生 Prometheus 指标导出
+- Counter、Gauge、Histogram、Summary 指标类型
+- 开箱即用的 Grafana 仪表板集成
+- 实时性能统计与分位数计算
+- 全栈指标（CPU、内存、I/O、网络）
 
-```
-DMS Framework
-├── dms-core          # 核心运行时与错误处理
-├── dms-config        # 统一配置管理
-├── dms-log           # 企业级日志系统
-├── dms-observability # 可观测性平台
-├── dms-hooks         # 生命周期钩子
-├── dms-cache         # 缓存抽象层
-├── dms-fs            # 文件系统封装
-├── dms-resource      # 资源管理（泛化设备）
-└── dms-extension-api # 扩展能力定义
-```
+#### 🤖 智能设备管理
+- 自动发现和注册
+- 高效的资源池管理
+- 基于策略的调度与优先级支持
+- 动态负载均衡
+- 完整的设备生命周期管理
 
-### 🎯 核心组件
+#### 📝 结构化日志
+- 支持 JSON 和文本格式
+- 可配置的采样率
+- 智能日志轮转
+- 自动包含追踪上下文
+- DEBUG/INFO/WARN/ERROR 日志级别
 
-- **ServiceRuntime**: 统一服务运行时
-- **ServiceContext**: 服务上下文，集成所有基础设施
-- **AppBuilder**: 声明式服务构建器
-- **DMSModule**: 模块化扩展接口
+#### ⚙️ 灵活配置
+- 多源加载（文件、环境变量、运行时）
+- 热配置更新
+- 模块化架构支持按需组合
+- 基于插件的扩展机制
 
----
+#### 📁 安全文件系统
+- 统一项目根目录管理
+- 原子文件操作
+- 分类目录结构
+- JSON 数据持久化
+- 安全路径处理
 
-<h2 align="center">⚡ 快速开始</h2>
+<h2 align="center">🛠️ 安装与环境</h2>
 
-### **1. 添加依赖**
+### 前置要求
+- **Rust**: 1.65+ (2021 版本)
+- **Cargo**: 1.65+
+- **平台**: Linux、macOS、Windows
+
+### 快速设置
+
+将 DMS 添加到您项目的 `Cargo.toml`：
 
 ```toml
 [dependencies]
-DMS = { git = "https://github.com/dunimd/dms" }
+DMS = { git = "https://gitee.com/dunimd/dms" }
 ```
 
-### **2. 创建服务**
+或者使用 cargo add：
+
+```bash
+cargo add DMS --git https://gitee.com/dunimd/dms
+```
+
+<h2 align="center">⚡ 快速开始</h2>
+
+### 核心 API 使用
 
 ```rust
-use DMS::prelude::*;
+use dms::prelude::*;
 
 #[tokio::main]
 async fn main() -> DMSResult<()> {
     // 构建服务运行时
-    let app = DMSAppBuilder::new()
-        .with_config("config.yaml")?
-        .with_logging(LoggingConfig::default())?
-        .with_observability(ObservabilityConfig::default())?
-        .build()?;
+    let app = DMSAppBuilder::_Fnew()
+        ._Fwith_config("config.yaml")?
+        ._Fwith_logging(DMSLogConfig::default())?
+        ._Fwith_observability(DMSObservabilityConfig::default())?
+        ._Fbuild()?;
     
     // 运行业务逻辑
-    app.run(|ctx: &DMSServiceContext| async move {
-        ctx.logger().info("service", "DMS service started")?;
-        // 您的业务代码
+    app._Frun(|ctx: &DMSServiceContext| async move {
+        ctx._Flogger()._Finfo("service", "DMS service started")?;
+        // 您的业务代码在这里
         Ok(())
     }).await
 }
 ```
 
-### **3. 使用观测性**
+### 可观测性示例
 
 ```rust
-use DMS::observability::*;
+use dms::observability::*;
 
 #[traced(name = "user_service")]
 async fn get_user(ctx: &DMSServiceContext, user_id: u64) -> DMSResult<User> {
-    // 自动记录追踪信息和指标
+    // 自动记录追踪和指标
     let user = fetch_user_from_db(user_id).await?;
     Ok(user)
 }
 ```
 
----
+<h2 align="center">🔧 配置</h2>
 
-<h2 align="center">📈 性能指标</h2>
-
-| 指标 | 数值 |
-|--------|-------|
-| **编译时间** | Release构建 < 15秒 |
-| **内存占用** | 基础运行时 < 10MB |
-| **零成本抽象** | 编译时优化，无运行时开销 |
-| **线程安全** | Rust所有权系统保证内存安全 |
-| **构建状态** | 零警告，零错误 |
-
----
-
-<h2 align="center">🔧 配置示例</h2>
+### 配置示例
 
 ```yaml
 # config.yaml
@@ -145,52 +173,88 @@ resource:
   scheduling_policy: "priority_based"
 ```
 
----
+### 配置源
 
-<h2 align="center">🧪 开发状态</h2>
+DMS 支持多种配置源，按优先级排序（从高到低）：
+1. 运行时参数
+2. 环境变量（以 `DMS_` 为前缀）
+3. 配置文件（YAML、TOML、JSON）
+4. 默认值
 
-| 模块 | 状态 | 描述 |
-|--------|--------|-------------|
-| **核心模块** | ✅ 完成 | 全部7个核心模块已完成 |
-| **扩展机制** | ✅ 已支持 | 插件化架构已就绪 |
-| **示例项目** | ✅ 已提供 | 可用示例已提供 |
-| **文档** | ✅ 完整 | 完整API文档 |
-| **测试** | ✅ 覆盖 | 单元测试覆盖 |
-| **CI/CD** | ✅ 自动化 | 自动化构建流水线 |
+<h2 align="center">🧪 开发与测试</h2>
 
----
+### 运行测试
 
-<h2 align="center">📚 模块文档</h2>
+```bash
+# 运行所有测试
+cargo test
 
-- [核心模块](src/core/) - 运行时与错误处理
-- [配置管理](src/config/) - 统一配置接口
-- [日志系统](src/log/) - 结构化日志
-- [可观测性](src/observability/) - 指标与追踪
-- [设备控制](src/device/) - 资源调度管理
-- [文件系统](src/fs/) - 安全文件操作
-- [生命周期钩子](src/hooks/) - 事件系统
+# 运行特定测试模块
+cargo test cache
 
----
+# 带详细输出运行
+cargo test -- --nocapture
+```
 
-<h2 align="center">🤝 贡献指南</h2>
+<h2 align="center">❓ 常见问题</h2>
 
-1. Fork项目
-2. 创建特性分支 (`git checkout -b feature/amazing-feature`)
-3. 提交更改 (`git commit -m 'Add some amazing feature'`)
-4. 推送到分支 (`git push origin feature/amazing-feature`)
-5. 创建Pull Request
+**Q: 如何添加新模块？**
+A: 实现 `DMSModule` trait 并通过 `DMSAppBuilder::_Fwith_module` 注册。
 
----
+**Q: 如何配置日志级别？**
+A: 在配置文件中设置 `logging.level`，支持 DEBUG/INFO/WARN/ERROR 级别。
 
-<h2 align="center">📄 许可证</h2>
+**Q: 如何启用指标导出？**
+A: 在配置文件中设置 `observability.metrics_enabled: true` 并配置 `prometheus_port`。
 
-本项目采用 [Apache License 2.0](LICENSE) - 详见 [LICENSE](LICENSE) 文件
+**Q: 如何扩展配置源？**
+A: 实现自定义配置加载器并用 `DMSConfigManager` 注册。
 
----
+**Q: 如何处理异步任务？**
+A: 使用 `DMSAppBuilder::_Fwith_async_module` 添加异步模块，框架自动处理异步生命周期。
 
-<h2 align="center">🏆 成就</h2>
+<h2 align="center">🌏 社区与引用</h2>
 
-- **零警告零错误**: 通过`cargo check --quiet`验证
-- **企业级质量**: 支持生产环境部署
-- **模块化设计**: 支持按需组合和扩展
-- **性能优化**: Release构建优化完成
+- 欢迎提交 Issues 和 PRs！
+- Gitee: https://gitee.com/dunimd/dms.git
+
+
+<div align="center">
+
+## 📄 许可证与开源协议
+
+### 🏛️ 项目许可证
+
+<p align="center">
+  <a href="LICENSE">
+    <img src="https://img.shields.io/badge/License-Apache%202.0-blue.svg" alt="Apache License 2.0">
+  </a>
+</p>
+
+本项目使用 **Apache License 2.0** 开源协议，详见 [LICENSE](LICENSE) 文件。
+
+### 📋 依赖包开源协议
+
+本项目使用的开源包及其协议信息：
+
+### 依赖许可证
+
+<div align="center">
+
+| 📦 包 | 📜 许可证 |
+|:-----------|:-----------|
+| serde | Apache 2.0 |
+| tokio | MIT |
+| prometheus | Apache 2.0 |
+| redis | MIT |
+| hyper | MIT |
+| lapin | Apache 2.0 |
+| futures | MIT |
+| yaml-rust | MIT |
+| toml | MIT |
+| etcd-client | MIT |
+| sysinfo | MIT |
+
+</div>
+
+</div>

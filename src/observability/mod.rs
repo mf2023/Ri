@@ -17,6 +17,62 @@
 
 #![allow(non_snake_case)]
 
+//! # Observability Module
+//! 
+//! This module provides comprehensive observability capabilities for DMS, including distributed tracing
+//! and metrics collection. It follows modern observability best practices to help monitor, debug, and
+//! optimize DMS applications.
+//! 
+//! ## Key Components
+//! 
+//! - **DMSObservabilityModule**: Main observability module
+//! - **DMSTracer**: Distributed tracing implementation
+//! - **DMSMetricsRegistry**: Metrics collection and aggregation
+//! - **DMSObservabilityConfig**: Configuration for observability features
+//! - **DMSObservabilityData**: Exported observability data structure
+//! 
+//! ## Design Principles
+//! 
+//! 1. **Separation of Concerns**: Tracing and metrics are separate but integrated components
+//! 2. **Configurable**: All features can be enabled/disabled and configured at runtime
+//! 3. **Non-intrusive**: Designed to be easy to integrate without disrupting application logic
+//! 4. **Performance-focused**: Optimized for low overhead in production environments
+//! 5. **Standard-compliant**: Follows W3C Trace Context standard for distributed tracing
+//! 6. **Prometheus-compatible**: Metrics are exported in Prometheus format
+//! 7. **Service Module Integration**: Implements the `_CServiceModule` trait for seamless integration
+//! 
+//! ## Usage
+//! 
+//! ```rust
+//! use dms::prelude::*;
+//! 
+//! fn example() -> DMSResult<()> {
+//!     // Create a DMS app builder
+//!     let mut builder = DMSAppBuilder::new();
+//!     
+//!     // Configure observability
+//!     let observability_config = DMSObservabilityConfig {
+//!         tracing_enabled: true,
+//!         metrics_enabled: true,
+//!         tracing_sampling_rate: 0.5, // 50% sampling rate
+//!         metrics_window_size_secs: 300,
+//!         metrics_bucket_size_secs: 10,
+//!     };
+//!     
+//!     // Add observability module to the app
+//!     let observability_module = DMSObservabilityModule::_Fnew()
+//!         ._Fwith_config(observability_config);
+//!     
+//!     builder._Fadd_module(Box::new(observability_module));
+//!     
+//!     // Build and run the app
+//!     let mut app = builder._Fbuild()?;
+//!     app._Frun()?;
+//!     
+//!     Ok(())
+//! }
+//! ```
+
 pub mod metrics;
 pub mod tracing;
 pub mod propagation;
@@ -33,23 +89,46 @@ pub use metrics::{DMSMetricsRegistry, DMSMetric, DMSMetricConfig, DMSMetricType,
 use crate::core::{DMSResult, DMSServiceContext};
 
 
-/// Observability module for DMS - provides distributed tracing and metrics collection
+/// Main observability module for DMS.
+/// 
+/// This module provides distributed tracing and metrics collection capabilities, following modern
+/// observability best practices. It implements the `_CServiceModule` trait for seamless integration
+/// with the DMS application lifecycle.
 pub struct DMSObservabilityModule {
+    /// Distributed tracer instance
     tracer: Option<Arc<DMSTracer>>,
+    /// Metrics registry for collecting and aggregating metrics
     metrics_registry: Option<Arc<DMSMetricsRegistry>>,
+    /// Configuration for observability features
     config: DMSObservabilityConfig,
 }
 
+/// Configuration for the observability module.
+/// 
+/// This struct defines the configuration options for tracing and metrics collection in DMS.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DMSObservabilityConfig {
+    /// Whether distributed tracing is enabled
     pub tracing_enabled: bool,
+    /// Whether metrics collection is enabled
     pub metrics_enabled: bool,
+    /// Sampling rate for distributed tracing (0.0 to 1.0)
     pub tracing_sampling_rate: f64,
+    /// Window size for metrics aggregation in seconds
     pub metrics_window_size_secs: u64,
+    /// Bucket size for metrics aggregation in seconds
     pub metrics_bucket_size_secs: u64,
 }
 
 impl Default for DMSObservabilityConfig {
+    /// Returns the default configuration for observability.
+    /// 
+    /// Default values:
+    /// - tracing_enabled: true
+    /// - metrics_enabled: true
+    /// - tracing_sampling_rate: 0.1 (10% sampling)
+    /// - metrics_window_size_secs: 300 (5 minutes)
+    /// - metrics_bucket_size_secs: 10 (10 seconds)
     fn default() -> Self {
         Self {
             tracing_enabled: true,
@@ -62,6 +141,11 @@ impl Default for DMSObservabilityConfig {
 }
 
 impl DMSObservabilityModule {
+    /// Creates a new observability module with default configuration.
+    /// 
+    /// # Returns
+    /// 
+    /// A new `DMSObservabilityModule` instance with default configuration
     pub fn _Fnew() -> Self {
         Self {
             tracer: None,
@@ -70,12 +154,23 @@ impl DMSObservabilityModule {
         }
     }
     
+    /// Configures the observability module with custom settings.
+    /// 
+    /// # Parameters
+    /// 
+    /// - `config`: The custom configuration to apply
+    /// 
+    /// # Returns
+    /// 
+    /// The updated `DMSObservabilityModule` instance
     pub fn _Fwith_config(mut self, config: DMSObservabilityConfig) -> Self {
         self.config = config;
         self
     }
     
-    /// Initialize tracing with configured sampling rate
+    /// Initializes tracing with the configured sampling rate.
+    /// 
+    /// This method sets up the distributed tracer with the specified sampling rate.
     fn _Finit_tracing(&mut self) {
         if self.config.tracing_enabled {
             _Finit_tracer(self.config.tracing_sampling_rate);
@@ -84,7 +179,9 @@ impl DMSObservabilityModule {
         }
     }
     
-    /// Initialize metrics registry
+    /// Initializes the metrics registry.
+    /// 
+    /// This method creates and configures the metrics registry for collecting and aggregating metrics.
     fn _Finit_metrics(&mut self) {
         if self.config.metrics_enabled {
             let registry = Arc::new(DMSMetricsRegistry::_Fnew());
@@ -92,7 +189,17 @@ impl DMSObservabilityModule {
         }
     }
     
-    /// Create common service metrics
+    /// Creates common service metrics.
+    /// 
+    /// This method registers standard service metrics including:
+    /// - Request duration histogram
+    /// - Request counter
+    /// - Error counter
+    /// - Active connections gauge
+    /// 
+    /// # Returns
+    /// 
+    /// A `DMSResult<()>` indicating success or failure
     fn _Fcreate_service_metrics(&self) -> DMSResult<()> {
         if let Some(registry) = &self.metrics_registry {
             // Request duration histogram
@@ -155,7 +262,14 @@ impl DMSObservabilityModule {
         Ok(())
     }
     
-    /// Export observability data
+    /// Exports observability data.
+    /// 
+    /// This method collects and returns the current observability data, including metrics in Prometheus
+    /// format and information about active traces and spans.
+    /// 
+    /// # Returns
+    /// 
+    /// A `DMSObservabilityData` struct containing the exported observability data
     pub fn _Fexport_data(&self) -> DMSObservabilityData {
         DMSObservabilityData {
             metrics: self.metrics_registry.as_ref().map(|r| r._Fexport_prometheus()).unwrap_or_default(),
@@ -165,23 +279,60 @@ impl DMSObservabilityModule {
     }
 }
 
-/// Observability data export
+/// Exported observability data structure.
+/// 
+/// This struct represents the observability data that can be exported from the DMS system,
+/// including metrics in Prometheus format and information about active traces and spans.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DMSObservabilityData {
+    /// Metrics data in Prometheus format
     pub metrics: String,
+    /// Number of active traces
     pub active_traces: usize,
+    /// Number of active spans
     pub active_spans: usize,
 }
 
 impl crate::core::_CServiceModule for DMSObservabilityModule {
+    /// Returns the name of the observability module.
+    /// 
+    /// # Returns
+    /// 
+    /// The module name as a string
     fn _Fname(&self) -> &str {
         "DMS.Observability"
     }
     
+    /// Indicates whether the observability module is critical.
+    /// 
+    /// The observability module is non-critical, meaning that if it fails to initialize or operate,
+    /// it should not break the entire application. This allows the core functionality to continue
+    /// even if observability features are unavailable.
+    /// 
+    /// # Returns
+    /// 
+    /// `false` since observability is non-critical
     fn _Fis_critical(&self) -> bool {
         false // Non-critical, should not break the app if observability fails
     }
     
+    /// Initializes the observability module.
+    /// 
+    /// This method performs the following steps:
+    /// 1. Loads configuration from the service context
+    /// 2. Initializes tracing with the configured sampling rate
+    /// 3. Initializes the metrics registry
+    /// 4. Creates common service metrics
+    /// 5. Registers lifecycle hooks for automatic metrics collection
+    /// 6. Logs initialization completion
+    /// 
+    /// # Parameters
+    /// 
+    /// - `ctx`: The service context containing configuration and other services
+    /// 
+    /// # Returns
+    /// 
+    /// A `DMSResult<()>` indicating success or failure
     fn _Finit(&mut self, ctx: &mut DMSServiceContext) -> DMSResult<()> {
         // Load configuration
         let cfg = ctx._Fconfig()._Fconfig();
@@ -218,6 +369,18 @@ impl crate::core::_CServiceModule for DMSObservabilityModule {
         Ok(())
     }
     
+    /// Performs cleanup after the application has shut down.
+    /// 
+    /// This method exports the final observability data and logs information about active traces
+    /// and spans at the time of shutdown.
+    /// 
+    /// # Parameters
+    /// 
+    /// - `ctx`: The service context containing the logger service
+    /// 
+    /// # Returns
+    /// 
+    /// A `DMSResult<()>` indicating success or failure
     fn _Fafter_shutdown(&mut self, ctx: &mut DMSServiceContext) -> DMSResult<()> {
         // Export final observability data
         let data = self._Fexport_data();

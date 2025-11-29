@@ -17,33 +17,80 @@
 
 #![allow(non_snake_case)]
 
+//! # Lifecycle Observer
+//! 
+//! This module provides a lifecycle observer that logs all hook events in the DMS application.
+//! It implements the `_CServiceModule` trait and registers handlers for all hook kinds to provide
+//! comprehensive lifecycle logging.
+//! 
+//! ## Key Components
+//! 
+//! - **DMSLifecycleObserver**: Service module that logs all hook events
+//! 
+//! ## Design Principles
+//! 
+//! 1. **Comprehensive Logging**: Logs all hook events with detailed information
+//! 2. **Non-Intrusive**: Operates by listening to hook events without modifying core functionality
+//! 3. **Non-Critical**: Can fail without causing the entire system to fail
+//! 4. **Detailed Context**: Provides module, phase, and kind information for each event
+
 use crate::core::{DMSResult, DMSServiceContext, _CServiceModule};
 use crate::hooks::{DMSHookBus, DMSHookEvent, DMSHookKind};
 
+/// Lifecycle observer module for DMS.
+/// 
+/// This module logs all hook events in the DMS application, providing comprehensive
+/// visibility into the application lifecycle.
 pub struct DMSLifecycleObserver;
 
 impl DMSLifecycleObserver {
+    /// Creates a new instance of the lifecycle observer.
+    /// 
+    /// Returns a new `DMSLifecycleObserver` instance.
     pub fn _Fnew() -> Self {
         DMSLifecycleObserver
     }
 }
 
 impl _CServiceModule for DMSLifecycleObserver {
+    /// Returns the name of the lifecycle observer module.
+    /// 
+    /// This name is used for identification, logging, and dependency resolution.
     fn _Fname(&self) -> &str {
         "DMS.LifecycleObserver"
     }
 
+    /// Indicates if the lifecycle observer is critical to the operation of the system.
+    /// 
+    /// The lifecycle observer is non-critical, meaning it can fail without causing the entire
+    /// system to fail.
     fn _Fis_critical(&self) -> bool {
         false
     }
 
+    /// Initializes the lifecycle observer.
+    /// 
+    /// This method registers handlers for all hook kinds to log lifecycle events.
+    /// Each handler logs detailed information about the event, including:
+    /// - Hook kind
+    /// - Module name (if applicable)
+    /// - Module phase (if applicable)
+    /// 
+    /// # Parameters
+    /// 
+    /// - `ctx`: The service context containing the hook bus
+    /// 
+    /// # Returns
+    /// 
+    /// A `DMSResult` indicating success or failure
     fn _Finit(&mut self, ctx: &mut DMSServiceContext) -> DMSResult<()> {
         let hooks: &mut DMSHookBus = ctx._Fhooks_mut();
 
+        // Register handler for Startup events
         hooks._Fregister(DMSHookKind::Startup, "dms.lifecycle.startup".to_string(), |_ctx, event: &DMSHookEvent| {
             let logger = _ctx._Flogger();
             let module = event.module.as_deref().unwrap_or("-");
-            let phase = event.phase.as_deref().unwrap_or("-");
+            let phase = event.phase.map(|p| p.as_str()).unwrap_or("-");
             let kind = match event.kind {
                 DMSHookKind::Startup => "Startup",
                 DMSHookKind::Shutdown => "Shutdown",
@@ -54,15 +101,16 @@ impl _CServiceModule for DMSLifecycleObserver {
                 DMSHookKind::BeforeModulesShutdown => "BeforeModulesShutdown",
                 DMSHookKind::AfterModulesShutdown => "AfterModulesShutdown",
             };
-            let message = format!("kind={} module={} phase={}", kind, module, phase);
+            let message = format!("kind={kind} module={module} phase={phase}");
             let _ = logger._Finfo("DMS.Lifecycle", message);
             Ok(())
         });
 
+        // Register handler for Shutdown events
         hooks._Fregister(DMSHookKind::Shutdown, "dms.lifecycle.shutdown".to_string(), |_ctx, event: &DMSHookEvent| {
             let logger = _ctx._Flogger();
             let module = event.module.as_deref().unwrap_or("-");
-            let phase = event.phase.as_deref().unwrap_or("-");
+            let phase = event.phase.map(|p| p.as_str()).unwrap_or("-");
             let kind = match event.kind {
                 DMSHookKind::Startup => "Startup",
                 DMSHookKind::Shutdown => "Shutdown",
@@ -73,15 +121,16 @@ impl _CServiceModule for DMSLifecycleObserver {
                 DMSHookKind::BeforeModulesShutdown => "BeforeModulesShutdown",
                 DMSHookKind::AfterModulesShutdown => "AfterModulesShutdown",
             };
-            let message = format!("kind={} module={} phase={}", kind, module, phase);
+            let message = format!("kind={kind} module={module} phase={phase}");
             let _ = logger._Finfo("DMS.Lifecycle", message);
             Ok(())
         });
 
+        // Register handler for BeforeModulesInit events
         hooks._Fregister(DMSHookKind::BeforeModulesInit, "dms.lifecycle.before_init".to_string(), |_ctx, event: &DMSHookEvent| {
             let logger = _ctx._Flogger();
             let module = event.module.as_deref().unwrap_or("-");
-            let phase = event.phase.as_deref().unwrap_or("-");
+            let phase = event.phase.map(|p| p.as_str()).unwrap_or("-");
             let kind = match event.kind {
                 DMSHookKind::Startup => "Startup",
                 DMSHookKind::Shutdown => "Shutdown",
@@ -92,15 +141,16 @@ impl _CServiceModule for DMSLifecycleObserver {
                 DMSHookKind::BeforeModulesShutdown => "BeforeModulesShutdown",
                 DMSHookKind::AfterModulesShutdown => "AfterModulesShutdown",
             };
-            let message = format!("kind={} module={} phase={}", kind, module, phase);
+            let message = format!("kind={kind} module={module} phase={phase}");
             let _ = logger._Finfo("DMS.Lifecycle", message);
             Ok(())
         });
 
+        // Register handler for AfterModulesInit events
         hooks._Fregister(DMSHookKind::AfterModulesInit, "dms.lifecycle.after_init".to_string(), |_ctx, event: &DMSHookEvent| {
             let logger = _ctx._Flogger();
             let module = event.module.as_deref().unwrap_or("-");
-            let phase = event.phase.as_deref().unwrap_or("-");
+            let phase = event.phase.map(|p| p.as_str()).unwrap_or("-");
             let kind = match event.kind {
                 DMSHookKind::Startup => "Startup",
                 DMSHookKind::Shutdown => "Shutdown",
@@ -111,15 +161,16 @@ impl _CServiceModule for DMSLifecycleObserver {
                 DMSHookKind::BeforeModulesShutdown => "BeforeModulesShutdown",
                 DMSHookKind::AfterModulesShutdown => "AfterModulesShutdown",
             };
-            let message = format!("kind={} module={} phase={}", kind, module, phase);
+            let message = format!("kind={kind} module={module} phase={phase}");
             let _ = logger._Finfo("DMS.Lifecycle", message);
             Ok(())
         });
 
+        // Register handler for BeforeModulesStart events
         hooks._Fregister(DMSHookKind::BeforeModulesStart, "dms.lifecycle.before_start".to_string(), |_ctx, event: &DMSHookEvent| {
             let logger = _ctx._Flogger();
             let module = event.module.as_deref().unwrap_or("-");
-            let phase = event.phase.as_deref().unwrap_or("-");
+            let phase = event.phase.map(|p| p.as_str()).unwrap_or("-");
             let kind = match event.kind {
                 DMSHookKind::Startup => "Startup",
                 DMSHookKind::Shutdown => "Shutdown",
@@ -130,15 +181,16 @@ impl _CServiceModule for DMSLifecycleObserver {
                 DMSHookKind::BeforeModulesShutdown => "BeforeModulesShutdown",
                 DMSHookKind::AfterModulesShutdown => "AfterModulesShutdown",
             };
-            let message = format!("kind={} module={} phase={}", kind, module, phase);
+            let message = format!("kind={kind} module={module} phase={phase}");
             let _ = logger._Finfo("DMS.Lifecycle", message);
             Ok(())
         });
 
+        // Register handler for AfterModulesStart events
         hooks._Fregister(DMSHookKind::AfterModulesStart, "dms.lifecycle.after_start".to_string(), |_ctx, event: &DMSHookEvent| {
             let logger = _ctx._Flogger();
             let module = event.module.as_deref().unwrap_or("-");
-            let phase = event.phase.as_deref().unwrap_or("-");
+            let phase = event.phase.map(|p| p.as_str()).unwrap_or("-");
             let kind = match event.kind {
                 DMSHookKind::Startup => "Startup",
                 DMSHookKind::Shutdown => "Shutdown",
@@ -149,15 +201,16 @@ impl _CServiceModule for DMSLifecycleObserver {
                 DMSHookKind::BeforeModulesShutdown => "BeforeModulesShutdown",
                 DMSHookKind::AfterModulesShutdown => "AfterModulesShutdown",
             };
-            let message = format!("kind={} module={} phase={}", kind, module, phase);
+            let message = format!("kind={kind} module={module} phase={phase}");
             let _ = logger._Finfo("DMS.Lifecycle", message);
             Ok(())
         });
 
+        // Register handler for BeforeModulesShutdown events
         hooks._Fregister(DMSHookKind::BeforeModulesShutdown, "dms.lifecycle.before_shutdown".to_string(), |_ctx, event: &DMSHookEvent| {
             let logger = _ctx._Flogger();
             let module = event.module.as_deref().unwrap_or("-");
-            let phase = event.phase.as_deref().unwrap_or("-");
+            let phase = event.phase.map(|p| p.as_str()).unwrap_or("-");
             let kind = match event.kind {
                 DMSHookKind::Startup => "Startup",
                 DMSHookKind::Shutdown => "Shutdown",
@@ -168,15 +221,16 @@ impl _CServiceModule for DMSLifecycleObserver {
                 DMSHookKind::BeforeModulesShutdown => "BeforeModulesShutdown",
                 DMSHookKind::AfterModulesShutdown => "AfterModulesShutdown",
             };
-            let message = format!("kind={} module={} phase={}", kind, module, phase);
+            let message = format!("kind={kind} module={module} phase={phase}");
             let _ = logger._Finfo("DMS.Lifecycle", message);
             Ok(())
         });
 
+        // Register handler for AfterModulesShutdown events
         hooks._Fregister(DMSHookKind::AfterModulesShutdown, "dms.lifecycle.after_shutdown".to_string(), |_ctx, event: &DMSHookEvent| {
             let logger = _ctx._Flogger();
             let module = event.module.as_deref().unwrap_or("-");
-            let phase = event.phase.as_deref().unwrap_or("-");
+            let phase = event.phase.map(|p| p.as_str()).unwrap_or("-");
             let kind = match event.kind {
                 DMSHookKind::Startup => "Startup",
                 DMSHookKind::Shutdown => "Shutdown",
@@ -187,7 +241,7 @@ impl _CServiceModule for DMSLifecycleObserver {
                 DMSHookKind::BeforeModulesShutdown => "BeforeModulesShutdown",
                 DMSHookKind::AfterModulesShutdown => "AfterModulesShutdown",
             };
-            let message = format!("kind={} module={} phase={}", kind, module, phase);
+            let message = format!("kind={kind} module={module} phase={phase}");
             let _ = logger._Finfo("DMS.Lifecycle", message);
             Ok(())
         });

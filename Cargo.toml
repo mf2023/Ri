@@ -19,6 +19,13 @@
 name = "DMS"
 version = "0.1.0"
 edition = "2021"
+authors = ["Dunimd Team"]
+description = "Dunimd Middleware Service - A high-performance Rust middleware framework with modular architecture"
+repository = "https://gitee.com/dunimd/dms"
+readme = "README.md"
+keywords = ["middleware", "framework", "distributed", "async", "microservices"]
+categories = ["asynchronous", "web-programming", "network-programming"]
+license = "Apache-2.0"
 
 [lib]
 name = "DMS"
@@ -29,7 +36,7 @@ serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 rand = "0.8"
 notify = "6.1"
-chrono = { version = "0.4", features = ["serde"] }
+chrono = { version = "0.4", features = ["serde", "std"] }
 uuid = { version = "1.0", features = ["v4", "serde"] }
 tokio = { version = "1", features = ["full"] }
 async-trait = "0.1"
@@ -39,3 +46,19 @@ redis = { version = "0.24", features = ["tokio-comp", "connection-manager"] }
 hyper = { version = "0.14", features = ["full"] }
 lapin = { version = "2.3", features = ["rustls"] }
 futures = "0.3"
+yaml-rust = "0.4"
+toml = "0.8"
+sysinfo = "0.29"
+jsonwebtoken = "8"
+reqwest = { version = "0.11", features = ["json"] }
+urlencoding = "2"
+
+# Optional dependencies
+etcd-client = { version = "0.11", features = ["tls"], optional = true }
+
+[features]
+default = []
+etcd = ["dep:etcd-client"]
+
+[dev-dependencies]
+tempfile = "3"

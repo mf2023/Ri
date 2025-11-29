@@ -2,126 +2,154 @@
 
 # DMS (Dunimd Middleware Service)
 
-[English](README.md) | [简体中文](README.zh.md)
+English | [简体中文](README.zh.md)
 
-<a href="https://github.com/dunimd/dms" target="_blank">
-    <img alt="GitHub" src="https://img.shields.io/badge/GitHub-DMS-181717?style=flat-square&logo=github"/>
+<a href="https://space.bilibili.com/3493284091529457" target="_blank">
+    <img alt="BiliBili" src="https://img.shields.io/badge/BiliBili-Dunimd-00A1D6?style=flat-square&logo=bilibili"/>
 </a>
 <a href="https://gitee.com/dunimd" target="_blank">
     <img alt="Gitee" src="https://img.shields.io/badge/Gitee-Dunimd-C71D23?style=flat-square&logo=gitee"/>
+</a>
+<a href="https://github.com/dunimd/dms" target="_blank">
+    <img alt="GitHub" src="https://img.shields.io/badge/GitHub-DMS-181717?style=flat-square&logo=github"/>
 </a>
 <a href="https://crates.io/crates/DMS" target="_blank">
     <img alt="Crates.io" src="https://img.shields.io/badge/Crates-DMS-000000?style=flat-square&logo=rust"/>
 </a>
 
-An enterprise-grade Rust service framework that provides unified infrastructure support for all Dunimd team projects. DMS transforms the originally scattered Python utils toolkit into a modern, enterprise-level Rust service framework, similar to GMS/HMS positioning, providing unified infrastructure capabilities for all backend services.
+**DMS (Dunimd Middleware Service)** — A high-performance Rust middleware framework that unifies backend infrastructure. Built for enterprise-scale with modular architecture, built-in observability, and distributed systems support.
 
 </div>
 
-<h2 align="center">🚀 Core Architecture</h2>
+<h2 align="center">🏗️ Core Architecture</h2>
 
-### 🌐 Distributed Tracing System
-Implements W3C Trace Context standard with full-chain TraceID/SpanID propagation, Baggage data transmission for business context information, standardized context carrier mechanisms, and multi-language compatibility for integration with Java, Go, Python and other heterogeneous systems.
+### 📐 Modular Design
+DMS adopts a highly modular architecture with 12 core modules, enabling on-demand composition and seamless extension:
 
-### 📊 Enterprise Observability Platform
-Native Prometheus metrics export supporting Counter, Gauge, Histogram, Summary types, out-of-the-box Grafana dashboard integration, high-performance sliding window algorithms for real-time data collection (DMSSlidingWindow), precise quantile calculations for performance statistics (DMSQuantileCalculator), and comprehensive multi-dimensional monitoring for CPU, memory, I/O, network and other full-stack metrics.
+<div align="center">
 
-### 🤖 Intelligent Device Control & Scheduling
-Intelligent device auto-discovery and registration, efficient resource pool management for allocation and recycling, policy-based intelligent scheduling algorithms with priority support, dynamic device load balancing, and complete lifecycle management with device state monitoring and maintenance.
+| Module | Description |
+|:--------|:-------------|
+| **auth** | Authentication & authorization (JWT, OAuth, permissions) |
+| **cache** | Multi-backend cache abstraction (Memory, Redis, Hybrid) |
+| **config** | Multi-source configuration management with hot reload |
+| **core** | Runtime, error handling, and service context |
+| **device** | Device control, discovery, and intelligent scheduling |
+| **fs** | Secure file system operations and management |
+| **gateway** | API gateway with load balancing, rate limiting, and circuit breaking |
+| **hooks** | Lifecycle event hooks (Startup, Shutdown, etc.) |
+| **log** | Structured logging with tracing context integration |
+| **observability** | Metrics, tracing, and Grafana integration |
+| **queue** | Distributed queue abstraction (Kafka, RabbitMQ, Redis, Memory) |
+| **service_mesh** | Service discovery, health checking, and traffic management |
 
-### 📝 Enterprise Logging System
-Structured log output supporting both JSON and text formats, configurable sampling rates to avoid performance impact, intelligent log rotation based on file size, automatic inclusion of tracing context information, and multi-level support for DEBUG/INFO/WARN/ERROR log levels.
+</div>
 
-### ⚙️ Configuration Management & Extensibility
-Multi-source configuration loading from files, environment variables, and runtime parameters, hot configuration capabilities for runtime dynamic updates, modular architecture with 7 core modules for on-demand composition, lifecycle hooks for Startup, Shutdown and other critical events, and plugin-based extensions supporting custom modules and extension points.
+### 🚀 Key Features
 
-### 📁 File System & Data Management
-Unified project root directory management for file system namespace, atomic file operations ensuring data consistency, categorized directory management separating logs, cache, reports, observability, and temporary directories, JSON data persistence for complex data structure serialization, and secure directory creation preventing path traversal and permission issues.
+#### 🔍 Distributed Tracing
+- W3C Trace Context standard implementation
+- Full-chain TraceID/SpanID propagation
+- Baggage data transmission for business context
+- Multi-language compatibility (Java, Go, Python)
 
-### 🔧 Modular Architecture
+#### 📊 Enterprise Observability
+- Native Prometheus metrics export
+- Counter, Gauge, Histogram, Summary metric types
+- Out-of-the-box Grafana dashboard integration
+- Real-time performance statistics with quantile calculation
+- Full-stack metrics (CPU, memory, I/O, network)
 
-```
-DMS Framework
-├── dms-core          # Core runtime and error handling
-├── dms-config        # Unified configuration management
-├── dms-log           # Enterprise logging system
-├── dms-observability # Observability platform
-├── dms-hooks         # Lifecycle hooks
-├── dms-cache         # Cache abstraction layer
-├── dms-fs            # File system encapsulation
-├── dms-resource      # Resource management (generalized devices)
-└── dms-extension-api # Extension capability definitions
-```
+#### 🤖 Intelligent Device Management
+- Auto-discovery and registration
+- Efficient resource pool management
+- Policy-based scheduling with priority support
+- Dynamic load balancing
+- Complete device lifecycle management
 
-### 🎯 Core Components
+#### 📝 Structured Logging
+- JSON and text format support
+- Configurable sampling rates
+- Intelligent log rotation
+- Automatic tracing context inclusion
+- DEBUG/INFO/WARN/ERROR log levels
 
-- **ServiceRuntime**: Unified service runtime
-- **ServiceContext**: Service context integrating all infrastructure
-- **AppBuilder**: Declarative service builder
-- **DMSModule**: Modular extension interface
+#### ⚙️ Flexible Configuration
+- Multi-source loading (files, environment variables, runtime)
+- Hot configuration updates
+- Modular architecture for on-demand composition
+- Plugin-based extension mechanism
 
----
+#### 📁 Secure File System
+- Unified project root directory management
+- Atomic file operations
+- Categorized directory structure
+- JSON data persistence
+- Secure path handling
 
-<h2 align="center">⚡ Quick Start</h2>
+<h2 align="center">🛠️ Installation & Environment</h2>
 
-### **1. Add Dependency**
+### Prerequisites
+- **Rust**: 1.65+ (2021 Edition)
+- **Cargo**: 1.65+
+- **Platforms**: Linux, macOS, Windows
+
+### Quick Setup
+
+Add DMS to your project's `Cargo.toml`:
 
 ```toml
 [dependencies]
-DMS = { git = "https://github.com/dunimd/dms" }
+DMS = { git = "https://gitee.com/dunimd/dms" }
 ```
 
-### **2. Create Service**
+Or use cargo add:
+
+```bash
+cargo add DMS --git https://gitee.com/dunimd/dms
+```
+
+<h2 align="center">⚡ Quick Start</h2>
+
+### Core API Usage
 
 ```rust
-use DMS::prelude::*;
+use dms::prelude::*;
 
 #[tokio::main]
 async fn main() -> DMSResult<()> {
     // Build service runtime
-    let app = DMSAppBuilder::new()
-        .with_config("config.yaml")?
-        .with_logging(LoggingConfig::default())?
-        .with_observability(ObservabilityConfig::default())?
-        .build()?;
+    let app = DMSAppBuilder::_Fnew()
+        ._Fwith_config("config.yaml")?
+        ._Fwith_logging(DMSLogConfig::default())?
+        ._Fwith_observability(DMSObservabilityConfig::default())?
+        ._Fbuild()?;
     
     // Run business logic
-    app.run(|ctx: &DMSServiceContext| async move {
-        ctx.logger().info("service", "DMS service started")?;
-        // Your business code
+    app._Frun(|ctx: &DMSServiceContext| async move {
+        ctx._Flogger()._Finfo("service", "DMS service started")?;
+        // Your business code here
         Ok(())
     }).await
 }
 ```
 
-### **3. Use Observability**
+### Observability Example
 
 ```rust
-use DMS::observability::*;
+use dms::observability::*;
 
 #[traced(name = "user_service")]
 async fn get_user(ctx: &DMSServiceContext, user_id: u64) -> DMSResult<User> {
-    // Automatically record tracing information and metrics
+    // Automatically records tracing and metrics
     let user = fetch_user_from_db(user_id).await?;
     Ok(user)
 }
 ```
 
----
+<h2 align="center">🔧 Configuration</h2>
 
-<h2 align="center">📈 Performance Metrics</h2>
-
-| Metric | Value |
-|--------|-------|
-| **Compilation Time** | Release build < 15 seconds |
-| **Memory Usage** | Base runtime < 10MB |
-| **Zero-Cost Abstraction** | Compile-time optimization, no runtime overhead |
-| **Thread Safety** | Rust ownership system guarantees memory safety |
-| **Build Status** | Zero warnings, zero errors |
-
----
-
-<h2 align="center">🔧 Configuration Example</h2>
+### Configuration Example
 
 ```yaml
 # config.yaml
@@ -145,52 +173,88 @@ resource:
   scheduling_policy: "priority_based"
 ```
 
----
+### Configuration Sources
 
-<h2 align="center">🧪 Development Status</h2>
+DMS supports multiple configuration sources in order of priority (highest to lowest):
+1. Runtime parameters
+2. Environment variables (prefixed with `DMS_`)
+3. Configuration files (YAML, TOML, JSON)
+4. Default values
 
-| Module | Status | Description |
-|--------|--------|-------------|
-| **Core Modules** | ✅ Complete | All 7 core modules finished |
-| **Extension Mechanism** | ✅ Supported | Plugin-based architecture ready |
-| **Example Projects** | ✅ Provided | Working examples available |
-| **Documentation** | ✅ Complete | Full API documentation |
-| **Testing** | ✅ Coverage | Unit test coverage |
-| **CI/CD** | ✅ Automated | Automated build pipeline |
+<h2 align="center">🧪 Development & Testing</h2>
 
----
+### Running Tests
 
-<h2 align="center">📚 Module Documentation</h2>
+```bash
+# Run all tests
+cargo test
 
-- [Core Module](src/core/) - Runtime and error handling
-- [Configuration Management](src/config/) - Unified configuration interface
-- [Logging System](src/log/) - Structured logging
-- [Observability](src/observability/) - Metrics and tracing
-- [Device Control](src/device/) - Resource scheduling and management
-- [File System](src/fs/) - Secure file operations
-- [Lifecycle Hooks](src/hooks/) - Event system
+# Run specific test module
+cargo test cache
 
----
+# Run with verbose output
+cargo test -- --nocapture
+```
 
-<h2 align="center">🤝 Contributing Guidelines</h2>
+<h2 align="center">❓ Frequently Asked Questions</h2>
 
-1. Fork the project
-2. Create feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit changes (`git commit -m 'Add some amazing feature'`)
-4. Push to branch (`git push origin feature/amazing-feature`)
-5. Create Pull Request
+**Q: How to add a new module?**
+A: Implement the `DMSModule` trait and register it via `DMSAppBuilder::_Fwith_module`.
 
----
+**Q: How to configure logging level?**
+A: Set `logging.level` in the configuration file, supporting DEBUG/INFO/WARN/ERROR levels.
 
-<h2 align="center">📄 License</h2>
+**Q: How to enable metrics export?**
+A: Set `observability.metrics_enabled: true` and configure `prometheus_port` in the configuration file.
 
-This project adopts [Apache License 2.0](LICENSE) - see [LICENSE](LICENSE) file for details
+**Q: How to extend configuration sources?**
+A: Implement a custom configuration loader and register it with `DMSConfigManager`.
 
----
+**Q: How to handle asynchronous tasks?**
+A: Use `DMSAppBuilder::_Fwith_async_module` to add async modules, the framework handles async lifecycle automatically.
 
-<h2 align="center">🏆 Achievements</h2>
+<h2 align="center">🌏 Community & Citation</h2>
 
-- **Zero Warnings Zero Errors**: Verified through `cargo check --quiet`
-- **Enterprise Quality**: Production environment deployment ready
-- **Modular Design**: Supports on-demand composition and extension
-- **Performance Optimization**: Release build optimization complete
+- Welcome to submit Issues and PRs!
+- Gitee: https://gitee.com/dunimd/dms.git
+
+
+<div align="center">
+
+## 📄 License & Open Source Agreements
+
+### 🏛️ Project License
+
+<p align="center">
+  <a href="LICENSE">
+    <img src="https://img.shields.io/badge/License-Apache%202.0-blue.svg" alt="Apache License 2.0">
+  </a>
+</p>
+
+This project uses **Apache License 2.0** open source agreement, see [LICENSE](LICENSE) file.
+
+### 📋 Dependency Package Open Source Agreements
+
+Open source packages and their agreement information used by this project:
+
+### Dependencies License
+
+<div align="center">
+
+| 📦 Package | 📜 License |
+|:-----------|:-----------|
+| serde | Apache 2.0 |
+| tokio | MIT |
+| prometheus | Apache 2.0 |
+| redis | MIT |
+| hyper | MIT |
+| lapin | Apache 2.0 |
+| futures | MIT |
+| yaml-rust | MIT |
+| toml | MIT |
+| etcd-client | MIT |
+| sysinfo | MIT |
+
+</div>
+
+</div>

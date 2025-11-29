@@ -17,18 +17,86 @@
 
 #![allow(non_snake_case)]
 
-// Logging context for DMS, similar to MDC.
+//! # Log Context
+//! 
+//! This module provides a thread-local logging context for DMS, similar to MDC (Mapped Diagnostic Context)
+//! with built-in support for distributed tracing. It allows adding contextual information to logs
+//! that will be automatically included in all log messages from the same thread.
+//! 
+//! ## Key Features
+//! 
+//! - **Thread-Local Storage**: Context is stored per-thread, ensuring thread safety
+//! - **Distributed Tracing**: Built-in support for trace IDs, span IDs, and parent span IDs
+//! - **Flexible Context**: Can store arbitrary key-value pairs
+//! - **Easy API**: Simple methods for putting, getting, and removing context values
+//! 
+//! ## Design Principles
+//! 
+//! 1. **Thread Safety**: Uses thread-local storage to ensure thread safety
+//! 2. **Performance**: Efficient access to context values with minimal overhead
+//! 3. **Distributed Tracing Integration**: Built-in support for W3C Trace Context standard
+//! 4. **Flexibility**: Can be extended to support additional context types
+//! 5. **Simplicity**: Easy-to-use API for adding and removing context values
+//! 
+//! ## Usage
+//! 
+//! ```rust
+//! use dms::prelude::*;
+//! 
+//! fn example() {
+//!     // Set a context value
+//!     DMSLogContext::_Fput("user_id", "12345");
+//!     
+//!     // Set distributed tracing context
+//!     DMSLogContext::_Fset_trace_id(DMSLogContext::_Fgenerate_trace_id());
+//!     DMSLogContext::_Fset_span_id(DMSLogContext::_Fgenerate_span_id());
+//!     
+//!     // Get a context value
+//!     if let Some(user_id) = DMSLogContext::_Fget("user_id") {
+//!         println!("User ID: {}", user_id);
+//!     }
+//!     
+//!     // Get all context values
+//!     let all_ctx = DMSLogContext::_Fget_all();
+//!     println!("All context: {:?}", all_ctx);
+//!     
+//!     // Remove a context value
+//!     DMSLogContext::_Fremove("user_id");
+//!     
+//!     // Clear all context values
+//!     DMSLogContext::_Fclear();
+//! }
+//! ```
+
+// Logging context for DMS, similar to MDC with distributed tracing support.
 
 use std::cell::RefCell;
 use std::collections::HashMap;
+use uuid::Uuid;
 
+// Thread-local logging context storage.
+// 
+// This thread-local variable stores the logging context for each thread, allowing
+// contextual information to be added to logs without passing it explicitly through
+// all function calls.
 thread_local! {
     static _CLOG_CONTEXT: RefCell<HashMap<String, String>> = RefCell::new(HashMap::new());
 }
 
+/// Log context for DMS, similar to MDC with distributed tracing support.
+/// 
+/// This struct provides a thread-local logging context that can be used to add
+/// contextual information to logs. It includes built-in support for distributed tracing
+/// with trace IDs, span IDs, and parent span IDs.
 pub struct DMSLogContext;
 
 impl DMSLogContext {
+    /// Puts a key-value pair into the log context.
+    /// 
+    /// # Parameters
+    /// 
+    /// - `key`: The context key
+    /// - `value`: The context value
     pub fn _Fput(key: impl Into<String>, value: impl Into<String>) {
         let k = key.into();
         let v = value.into();
@@ -37,11 +105,127 @@ impl DMSLogContext {
         });
     }
 
+    /// Puts multiple key-value pairs into the log context.
+    /// 
+    /// # Parameters
+    /// 
+    /// - `values`: A HashMap of key-value pairs to add to the context
+    pub fn _Fput_all(values: HashMap<String, String>) {
+        _CLOG_CONTEXT.with(|ctx| {
+            let mut ctx = ctx.borrow_mut();
+            for (k, v) in values {
+                ctx.insert(k, v);
+            }
+        });
+    }
+
+    /// Gets a value from the log context.
+    /// 
+    /// # Parameters
+    /// 
+    /// - `key`: The context key to look up
+    /// 
+    /// # Returns
+    /// 
+    /// An `Option<String>` containing the value if it exists
+    pub fn _Fget(key: &str) -> Option<String> {
+        _CLOG_CONTEXT.with(|ctx| ctx.borrow().get(key).cloned())
+    }
+
+    /// Removes a key-value pair from the log context.
+    /// 
+    /// # Parameters
+    /// 
+    /// - `key`: The context key to remove
+    pub fn _Fremove(key: &str) {
+        _CLOG_CONTEXT.with(|ctx| {
+            ctx.borrow_mut().remove(key);
+        });
+    }
+
+    /// Gets all key-value pairs from the log context.
+    /// 
+    /// # Returns
+    /// 
+    /// A HashMap containing all key-value pairs in the context
     pub fn _Fget_all() -> HashMap<String, String> {
         _CLOG_CONTEXT.with(|ctx| ctx.borrow().clone())
     }
 
+    /// Clears all key-value pairs from the log context.
     pub fn _Fclear() {
         _CLOG_CONTEXT.with(|ctx| ctx.borrow_mut().clear());
+    }
+
+    /// Sets the trace ID in the log context.
+    /// 
+    /// # Parameters
+    /// 
+    /// - `trace_id`: The trace ID to set
+    pub fn _Fset_trace_id(trace_id: impl Into<String>) {
+        Self::_Fput("trace_id", trace_id);
+    }
+
+    /// Gets the trace ID from the log context.
+    /// 
+    /// # Returns
+    /// 
+    /// An `Option<String>` containing the trace ID if it exists
+    pub fn _Fget_trace_id() -> Option<String> {
+        Self::_Fget("trace_id")
+    }
+
+    /// Generates a new trace ID.
+    /// 
+    /// # Returns
+    /// 
+    /// A new UUID string suitable for use as a trace ID
+    pub fn _Fgenerate_trace_id() -> String {
+        Uuid::new_v4().to_string()
+    }
+
+    /// Sets the span ID in the log context.
+    /// 
+    /// # Parameters
+    /// 
+    /// - `span_id`: The span ID to set
+    pub fn _Fset_span_id(span_id: impl Into<String>) {
+        Self::_Fput("span_id", span_id);
+    }
+
+    /// Gets the span ID from the log context.
+    /// 
+    /// # Returns
+    /// 
+    /// An `Option<String>` containing the span ID if it exists
+    pub fn _Fget_span_id() -> Option<String> {
+        Self::_Fget("span_id")
+    }
+
+    /// Generates a new span ID.
+    /// 
+    /// # Returns
+    /// 
+    /// A new UUID string suitable for use as a span ID
+    pub fn _Fgenerate_span_id() -> String {
+        Uuid::new_v4().to_string()
+    }
+
+    /// Sets the parent span ID in the log context.
+    /// 
+    /// # Parameters
+    /// 
+    /// - `parent_span_id`: The parent span ID to set
+    pub fn _Fset_parent_span_id(parent_span_id: impl Into<String>) {
+        Self::_Fput("parent_span_id", parent_span_id);
+    }
+
+    /// Gets the parent span ID from the log context.
+    /// 
+    /// # Returns
+    /// 
+    /// An `Option<String>` containing the parent span ID if it exists
+    pub fn _Fget_parent_span_id() -> Option<String> {
+        Self::_Fget("parent_span_id")
     }
 }

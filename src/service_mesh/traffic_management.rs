@@ -15,6 +15,94 @@
 //! See the License for the specific language governing permissions and
 //! limitations under the License.
 
+//! # Traffic Management Module
+//! 
+//! This module provides traffic management functionality for the DMS service mesh. It allows
+//! configuring and managing traffic routes, traffic splits, circuit breakers, rate limits,
+//! and fault injection for services in the mesh.
+//! 
+//! ## Key Components
+//! 
+//! - **DMSTrafficRoute**: Configuration for routing traffic between services
+//! - **DMSMatchCriteria**: Criteria for matching requests to routes
+//! - **DMSRouteAction**: Action to take for matched requests
+//! - **DMSWeightedDestination**: Weighted destination for traffic splitting
+//! - **DMSRetryPolicy**: Configuration for request retries
+//! - **DMSFaultInjection**: Configuration for fault injection
+//! - **DMSTrafficSplit**: Configuration for splitting traffic between service subsets
+//! - **DMSSubset**: Service subset definition for traffic splitting
+//! - **DMSTrafficManager**: Main traffic management service
+//! - **DMSCircuitBreakerConfig**: Configuration for circuit breakers
+//! - **DMSRateLimitConfig**: Configuration for rate limiting
+//! 
+//! ## Design Principles
+//! 
+//! 1. **Declarative Configuration**: Traffic rules are defined declaratively
+//! 2. **Flexible Routing**: Supports multiple routing actions (route, redirect, direct response)
+//! 3. **Traffic Splitting**: Weighted traffic splitting between service subsets
+//! 4. **Resilience**: Built-in retry policies and circuit breakers
+//! 5. **Fault Injection**: Support for fault injection for testing resilience
+//! 6. **Rate Limiting**: Protection against excessive traffic
+//! 7. **Timeout Management**: Configurable request timeouts
+//! 8. **Thread-safe**: Uses Arc and RwLock for safe concurrent access
+//! 9. **Graceful Shutdown**: Proper cleanup of background tasks
+//! 10. **Extensible**: Easy to add new traffic management features
+//! 
+//! ## Usage
+//! 
+//! ```rust
+//! use dms::prelude::*;
+//! use std::time::Duration;
+//! 
+//! async fn example() -> DMSResult<()> {
+//!     // Create a traffic manager
+//!     let traffic_manager = DMSTrafficManager::_Fnew(true);
+//!     
+//!     // Create a traffic route
+//!     let route = DMSTrafficRoute {
+//!         name: "http-route".to_string(),
+//!         source_service: "gateway".to_string(),
+//!         destination_service: "backend".to_string(),
+//!         match_criteria: DMSMatchCriteria {
+//!             path_prefix: Some("/api".to_string()),
+//!             headers: HashMap::new(),
+//!             method: Some("GET".to_string()),
+//!             query_parameters: HashMap::new(),
+//!         },
+//!         route_action: DMSRouteAction::Route(vec![DMSWeightedDestination {
+//!             service: "backend-v1".to_string(),
+//!             weight: 80,
+//!             subset: None,
+//!         }, DMSWeightedDestination {
+//!             service: "backend-v2".to_string(),
+//!             weight: 20,
+//!             subset: None,
+//!         }]),
+//!         retry_policy: Some(DMSRetryPolicy {
+//!             attempts: 3,
+//!             per_try_timeout: Duration::from_secs(1),
+//!             retry_on: vec!["5xx".to_string()],
+//!         }),
+//!         timeout: Some(Duration::from_secs(5)),
+//!         fault_injection: None,
+//!     };
+//!     
+//!     // Add the route
+//!     traffic_manager.add_traffic_route(route).await?;
+//!     
+//!     // Set a circuit breaker
+//!     let cb_config = DMSCircuitBreakerConfig {
+//!         consecutive_errors: 5,
+//!         interval: Duration::from_secs(10),
+//!         base_ejection_time: Duration::from_secs(30),
+//!         max_ejection_percent: 50.0,
+//!     };
+//!     traffic_manager.set_circuit_breaker_config("backend", cb_config).await?;
+//!     
+//!     Ok(())
+//! }
+//! ```
+
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::Arc;
