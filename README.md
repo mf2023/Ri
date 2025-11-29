@@ -100,7 +100,7 @@ Add DMS to your project's `Cargo.toml`:
 
 ```toml
 [dependencies]
-DMS = { git = "https://gitee.com/dunimd/dms" }
+dms_core = { git = "https://gitee.com/dunimd/dms" }
 ```
 
 Or use cargo add:
@@ -114,20 +114,20 @@ cargo add DMS --git https://gitee.com/dunimd/dms
 ### Core API Usage
 
 ```rust
-use dms::prelude::*;
+use dms_core::prelude::*;
 
 #[tokio::main]
 async fn main() -> DMSResult<()> {
     // Build service runtime
-    let app = DMSAppBuilder::_Fnew()
-        ._Fwith_config("config.yaml")?
-        ._Fwith_logging(DMSLogConfig::default())?
-        ._Fwith_observability(DMSObservabilityConfig::default())?
-        ._Fbuild()?;
+    let app = DMSAppBuilder::new()
+        .with_config("config.yaml")?
+        .with_logging(DMSLogConfig::default())?
+        .with_observability(DMSObservabilityConfig::default())?
+        .build()?;
     
     // Run business logic
-    app._Frun(|ctx: &DMSServiceContext| async move {
-        ctx._Flogger()._Finfo("service", "DMS service started")?;
+    app.run(|ctx: &DMSServiceContext| async move {
+        ctx.logger().info("service", "DMS service started")?;
         // Your business code here
         Ok(())
     }).await
@@ -137,11 +137,11 @@ async fn main() -> DMSResult<()> {
 ### Observability Example
 
 ```rust
-use dms::observability::*;
+use dms_core::observability::*;
 
 #[traced(name = "user_service")]
 async fn get_user(ctx: &DMSServiceContext, user_id: u64) -> DMSResult<User> {
-    // Automatically records tracing and metrics
+    // Automatically record traces and metrics
     let user = fetch_user_from_db(user_id).await?;
     Ok(user)
 }

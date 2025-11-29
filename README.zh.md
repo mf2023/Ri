@@ -100,13 +100,13 @@ DMS 采用高度模块化的架构，拥有 12 个核心模块，支持按需组
 
 ```toml
 [dependencies]
-DMS = { git = "https://gitee.com/dunimd/dms" }
+dms_core = { git = "https://gitee.com/dunimd/dms" }
 ```
 
 或者使用 cargo add：
 
 ```bash
-cargo add DMS --git https://gitee.com/dunimd/dms
+cargo add dms-core --git https://gitee.com/dunimd/dms
 ```
 
 <h2 align="center">⚡ 快速开始</h2>
@@ -114,20 +114,20 @@ cargo add DMS --git https://gitee.com/dunimd/dms
 ### 核心 API 使用
 
 ```rust
-use dms::prelude::*;
+use dms_core::prelude::*;
 
 #[tokio::main]
 async fn main() -> DMSResult<()> {
     // 构建服务运行时
-    let app = DMSAppBuilder::_Fnew()
-        ._Fwith_config("config.yaml")?
-        ._Fwith_logging(DMSLogConfig::default())?
-        ._Fwith_observability(DMSObservabilityConfig::default())?
-        ._Fbuild()?;
+    let app = DMSAppBuilder::new()
+        .with_config("config.yaml")?
+        .with_logging(DMSLogConfig::default())?
+        .with_observability(DMSObservabilityConfig::default())?
+        .build()?;
     
     // 运行业务逻辑
-    app._Frun(|ctx: &DMSServiceContext| async move {
-        ctx._Flogger()._Finfo("service", "DMS service started")?;
+    app.run(|ctx: &DMSServiceContext| async move {
+        ctx.logger().info("service", "DMS service started")?;
         // 您的业务代码在这里
         Ok(())
     }).await
@@ -137,7 +137,7 @@ async fn main() -> DMSResult<()> {
 ### 可观测性示例
 
 ```rust
-use dms::observability::*;
+use dms_core::observability::*;
 
 #[traced(name = "user_service")]
 async fn get_user(ctx: &DMSServiceContext, user_id: u64) -> DMSResult<User> {
