@@ -21,7 +21,7 @@ build-backend = "maturin"
 
 [project]
 name = "dms_core"
-version = "0.1.0"
+version = "0.1.1"
 description = "Dunimd Middleware Service - A high-performance Rust middleware framework with modular architecture"
 readme = "README.md"
 authors = [{ name = "Dunimd Team" }]
