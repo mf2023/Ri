@@ -147,6 +147,8 @@ struct _CModuleSlot {
 ///     }).await
 /// }
 /// ```
+
+#[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 pub struct DMSAppRuntime {
     /// Service context providing access to core functionalities
     ctx: DMSServiceContext,
@@ -758,6 +760,7 @@ impl DMSAppRuntime {
 ///     }).await
 /// }
 /// ```
+#[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 pub struct DMSAppBuilder {
     /// Vector of modules with their state, including both sync and async modules
     modules: Vec<_CModuleSlot>, 
@@ -964,6 +967,8 @@ impl DMSAppBuilder {
         Ok(DMSServiceContext::_Fnew_with(fs, logger, config_manager, hooks))
     }
 }
+
+// Python bindings for DMSAppBuilder are handled in src/lib.rs
 
 /// Sort modules based on dependencies and priority
 /// Uses topological sort to handle dependencies, and sorts by priority within the same dependency level

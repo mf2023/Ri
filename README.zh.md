@@ -10,9 +10,6 @@
 <a href="https://gitee.com/dunimd" target="_blank">
     <img alt="Gitee" src="https://img.shields.io/badge/Gitee-Dunimd-C71D23?style=flat-square&logo=gitee"/>
 </a>
-<a href="https://github.com/dunimd/dms" target="_blank">
-    <img alt="GitHub" src="https://img.shields.io/badge/GitHub-DMS-181717?style=flat-square&logo=github"/>
-</a>
 <a href="https://crates.io/crates/DMS" target="_blank">
     <img alt="Crates.io" src="https://img.shields.io/badge/Crates-DMS-000000?style=flat-square&logo=rust"/>
 </a>

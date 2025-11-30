@@ -120,3 +120,51 @@ pub mod prelude {
     /// Hook kind enum
     pub use crate::hooks::DMSHookKind;
 }
+
+/// Python bindings for DMS
+#[cfg(feature = "pyo3")]
+pub mod py {
+    use pyo3::prelude::*;
+    use pyo3::types::PyModule;
+    use crate::prelude::*;
+    
+    /// Initialize the Python module
+    #[pymodule]
+    pub fn dms_core(m: &Bound<'_, PyModule>) -> PyResult<()> {
+        // Add functions
+        m.add_function(wrap_pyfunction!(new_app_builder, m)?)?;
+        
+        // Add core types that implement PyClass
+        m.add_class::<DMSAppBuilder>()?;
+        
+        // Create and add submodules
+        let log_module = PyModule::new(m.py(), "log")?;
+        m.add_submodule(&log_module)?;
+        
+        let config_module = PyModule::new(m.py(), "config")?;
+        m.add_submodule(&config_module)?;
+        
+        let device_module = PyModule::new(m.py(), "device")?;
+        m.add_submodule(&device_module)?;
+        
+        let cache_module = PyModule::new(m.py(), "cache")?;
+        m.add_submodule(&cache_module)?;
+        
+        let fs_module = PyModule::new(m.py(), "fs")?;
+        m.add_submodule(&fs_module)?;
+        
+        let hooks_module = PyModule::new(m.py(), "hooks")?;
+        m.add_submodule(&hooks_module)?;
+        
+        let observability_module = PyModule::new(m.py(), "observability")?;
+        m.add_submodule(&observability_module)?;
+        
+        Ok(())
+    }
+    
+    /// Create a new DMSAppBuilder
+    #[pyfunction]
+    pub fn new_app_builder() -> PyResult<DMSAppBuilder> {
+        Ok(DMSAppBuilder::_Fnew())
+    }
+}

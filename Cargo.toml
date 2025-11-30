@@ -30,8 +30,12 @@ license = "Apache-2.0"
 [lib]
 name = "dms_core"
 path = "src/lib.rs"
+crate-type = ["cdylib", "rlib"]
 
 [dependencies]
+pyo3 = { version = "0.27", features = ["extension-module"] }
+
+# DMS core dependencies
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 rand = "0.8"
@@ -57,8 +61,9 @@ urlencoding = "2"
 etcd-client = { version = "0.11", features = ["tls"], optional = true }
 
 [features]
-default = []
+default = ["pyo3"]
 etcd = ["dep:etcd-client"]
+pyo3 = []
 
 [dev-dependencies]
 tempfile = "3"
