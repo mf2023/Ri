@@ -48,7 +48,7 @@ async fn test_gateway_request_new() {
     let body = None;
     let remote_addr = "127.0.0.1:12345".to_string();
     
-    let request = DMSGatewayRequest::_Fnew(method.clone(), path.clone(), headers.clone(), query_params.clone(), body, remote_addr.clone());
+    let request = DMSGatewayRequest::new(method.clone(), path.clone(), headers.clone(), query_params.clone(), body, remote_addr.clone());
     
     assert!(!request.id.is_empty());
     assert_eq!(request.method, method);
@@ -81,7 +81,7 @@ async fn test_gateway_response_with_header() {
     let request_id = "test_request_id".to_string();
     
     let response = DMSGatewayResponse::new(status_code, body.clone(), request_id.clone())
-        ._Fwith_header("Custom-Header".to_string(), "Custom-Value".to_string());
+        .with_header("Custom-Header".to_string(), "Custom-Value".to_string());
     
     assert_eq!(response.headers.get("Custom-Header"), Some(&"Custom-Value".to_string()));
 }
@@ -93,7 +93,7 @@ async fn test_gateway_response_json() {
     
     let data = serde_json::json!({"key": "value"});
     
-    let response = DMSGatewayResponse::_Fjson(status_code, &data, request_id.clone()).unwrap();
+    let response = DMSGatewayResponse::json(status_code, &data, request_id.clone()).unwrap();
     
     assert_eq!(response.status_code, status_code);
     assert_eq!(response.request_id, request_id);
@@ -107,7 +107,7 @@ async fn test_gateway_response_error() {
     let message = "Not Found".to_string();
     let request_id = "test_request_id".to_string();
     
-    let response = DMSGatewayResponse::_Ferror(status_code, message.clone(), request_id.clone());
+    let response = DMSGatewayResponse::error(status_code, message.clone(), request_id.clone());
     
     assert_eq!(response.status_code, status_code);
     assert_eq!(response.request_id, request_id);
@@ -117,17 +117,17 @@ async fn test_gateway_response_error() {
 
 #[tokio::test]
 async fn test_gateway_new() {
-    let gateway = DMSGateway::_Fnew();
+    let gateway = DMSGateway::new();
     
     // Verify gateway components are created
-    assert!(gateway._Frouter().is_some());
-    assert!(gateway._Fmiddleware_chain().is_some());
+    assert!(gateway.router().is_some());
+    assert!(gateway.middleware_chain().is_some());
 }
 
 #[tokio::test]
 async fn test_gateway_router() {
-    let gateway = DMSGateway::_Fnew();
-    let router = gateway._Frouter();
+    let gateway = DMSGateway::new();
+    let router = gateway.router();
     
     // Test adding a route
     let route = DMSRoute {
@@ -140,17 +140,17 @@ async fn test_gateway_router() {
         }),
     };
     
-    router._Fadd_route(route).await.unwrap();
+    router.add_route(route).await.unwrap();
     
     // Test getting routes
-    let routes = router._Fget_routes().await;
+    let routes = router.get_routes().await;
     assert_eq!(routes.len(), 1);
 }
 
 #[tokio::test]
 async fn test_gateway_middleware_chain() {
-    let gateway = DMSGateway::_Fnew();
-    let middleware_chain = gateway._Fmiddleware_chain();
+    let gateway = DMSGateway::new();
+    let middleware_chain = gateway.middleware_chain();
     
     // Test adding middleware
     let middleware = Box::new(|| {
@@ -162,16 +162,16 @@ async fn test_gateway_middleware_chain() {
         })
     });
     
-    middleware_chain._Fadd(middleware).await;
+    middleware_chain.add(middleware).await;
     
     // Test middleware count
-    assert_eq!(middleware_chain._Fcount().await, 1);
+    assert_eq!(middleware_chain.count().await, 1);
 }
 
 #[tokio::test]
 async fn test_gateway_handle_request() {
-    let gateway = DMSGateway::_Fnew();
-    let router = gateway._Frouter();
+    let gateway = DMSGateway::new();
+    let router = gateway.router();
     
     // Add a test route
     let route = DMSRoute {
@@ -184,10 +184,10 @@ async fn test_gateway_handle_request() {
         }),
     };
     
-    router._Fadd_route(route).await.unwrap();
+    router.add_route(route).await.unwrap();
     
     // Create a test request
-    let request = DMSGatewayRequest::_Fnew(
+    let request = DMSGatewayRequest::new(
         "GET".to_string(),
         "/test".to_string(),
         std::collections::HashMap::new(),
@@ -197,7 +197,7 @@ async fn test_gateway_handle_request() {
     );
     
     // Handle the request
-    let response = gateway._Fhandle_request(request).await;
+    let response = gateway.handle_request(request).await;
     
     // Verify the response
     assert_eq!(response.status_code, 200);
@@ -206,10 +206,10 @@ async fn test_gateway_handle_request() {
 
 #[tokio::test]
 async fn test_gateway_handle_request_not_found() {
-    let gateway = DMSGateway::_Fnew();
+    let gateway = DMSGateway::new();
     
     // Create a test request to a non-existent route
-    let request = DMSGatewayRequest::_Fnew(
+    let request = DMSGatewayRequest::new(
         "GET".to_string(),
         "/non_existent_route".to_string(),
         std::collections::HashMap::new(),
@@ -219,7 +219,7 @@ async fn test_gateway_handle_request_not_found() {
     );
     
     // Handle the request
-    let response = gateway._Fhandle_request(request).await;
+    let response = gateway.handle_request(request).await;
     
     // Verify the response is 404
     assert_eq!(response.status_code, 404);
@@ -227,18 +227,18 @@ async fn test_gateway_handle_request_not_found() {
 
 #[tokio::test]
 async fn test_load_balancer_new() {
-    let load_balancer = DMSLoadBalancer::_Fnew(DMSLoadBalancerStrategy::RoundRobin);
+    let load_balancer = DMSLoadBalancer::new(DMSLoadBalancerStrategy::RoundRobin);
     
     // Test adding targets
-    load_balancer._Fadd_target("http://localhost:8001".to_string()).await;
-    load_balancer._Fadd_target("http://localhost:8002".to_string()).await;
+    load_balancer.add_target("http://localhost:8001".to_string()).await;
+    load_balancer.add_target("http://localhost:8002".to_string()).await;
     
     // Test getting targets
-    let targets = load_balancer._Fget_targets().await;
+    let targets = load_balancer.get_targets().await;
     assert_eq!(targets.len(), 2);
     
     // Test selecting a target
-    let target = load_balancer._Fselect_target().await;
+    let target = load_balancer.select_target().await;
     assert!(target.is_some());
 }
 
@@ -250,10 +250,10 @@ async fn test_rate_limiter_new() {
         window_seconds: 1,
     };
     
-    let rate_limiter = DMSRateLimiter::_Fnew(config);
+    let rate_limiter = DMSRateLimiter::new(config);
     
     // Test checking a request
-    let request = DMSGatewayRequest::_Fnew(
+    let request = DMSGatewayRequest::new(
         "GET".to_string(),
         "/test".to_string(),
         std::collections::HashMap::new(),
@@ -262,7 +262,7 @@ async fn test_rate_limiter_new() {
         "127.0.0.1:12345".to_string(),
     );
     
-    let allowed = rate_limiter._Fcheck_request(&request).await;
+    let allowed = rate_limiter.check_request(&request).await;
     assert!(allowed);
 }
 
@@ -274,15 +274,15 @@ async fn test_circuit_breaker_new() {
         timeout_seconds: 30,
     };
     
-    let circuit_breaker = DMSCircuitBreaker::_Fnew(config);
+    let circuit_breaker = DMSCircuitBreaker::new(config);
     
     // Test allowing requests initially
-    let allowed = circuit_breaker._Fallow_request().await;
+    let allowed = circuit_breaker.allow_request().await;
     assert!(allowed);
     
     // Test reporting success
-    circuit_breaker._Freport_success().await;
+    circuit_breaker.report_success().await;
     
     // Test reporting failure
-    circuit_breaker._Freport_failure().await;
+    circuit_breaker.report_failure().await;
 }

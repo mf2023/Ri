@@ -196,7 +196,7 @@ cargo test -- --nocapture
 <h2 align="center">❓ 常见问题</h2>
 
 **Q: 如何添加新模块？**
-A: 实现 `DMSModule` trait 并通过 `DMSAppBuilder::_Fwith_module` 注册。
+A: 实现 `DMSModule` trait 并通过 `DMSAppBuilder::with_module` 注册。
 
 **Q: 如何配置日志级别？**
 A: 在配置文件中设置 `logging.level`，支持 DEBUG/INFO/WARN/ERROR 级别。
@@ -208,7 +208,7 @@ A: 在配置文件中设置 `observability.metrics_enabled: true` 并配置 `pro
 A: 实现自定义配置加载器并用 `DMSConfigManager` 注册。
 
 **Q: 如何处理异步任务？**
-A: 使用 `DMSAppBuilder::_Fwith_async_module` 添加异步模块，框架自动处理异步生命周期。
+A: 使用 `DMSAppBuilder::with_async_module` 添加异步模块，框架自动处理异步生命周期。
 
 <h2 align="center">🌏 社区与引用</h2>
 

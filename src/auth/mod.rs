@@ -15,7 +15,7 @@
 //! See the License for the specific language governing permissions and
 //! limitations under the License.
 
-#![allow(non_snake_case)]
+
 
 //! # Authentication Module
 //! 
@@ -30,8 +30,8 @@
 //! - **DMSSessionManager**: Session management for stateful authentication
 //! - **DMSPermissionManager**: Permission and role management
 //! - **DMSOAuthManager**: OAuth provider integration
-//! - **JWTClaims**: JWT token claims structure
-//! - **JWTValidationOptions**: JWT validation options
+//! - **DMSJWTClaims**: JWT token claims structure
+//! - **DMSJWTValidationOptions**: JWT validation options
 //! - **DMSOAuthProvider**: OAuth provider interface
 //! - **DMSOAuthToken**: OAuth token structure
 //! - **DMSOAuthUserInfo**: OAuth user information
@@ -56,7 +56,7 @@
 //! 
 //! ```rust
 //! use dms::prelude::*;
-//! use dms::auth::{DMSAuthConfig, DMSJWTManager, JWTClaims};
+//! use dms::auth::{DMSAuthConfig, DMSJWTManager, DMSJWTClaims};
 //! use serde_json::json;
 //! 
 //! async fn example() -> DMSResult<()> {
@@ -72,13 +72,13 @@
 //!     };
 //!     
 //!     // Create auth module
-//!     let auth_module = DMSAuthModule::_Fnew(auth_config);
+//!     let auth_module = DMSAuthModule::new(auth_config);
 //!     
 //!     // Get JWT manager
-//!     let jwt_manager = auth_module._Fjwt_manager();
+//!     let jwt_manager = auth_module.jwt_manager();
 //!     
 //!     // Create JWT claims
-//!     let claims = JWTClaims {
+//!     let claims = DMSJWTClaims {
 //!         sub: "user-123".to_string(),
 //!         email: "user@example.com".to_string(),
 //!         roles: vec!["user".to_string()],
@@ -87,33 +87,33 @@
 //!     };
 //!     
 //!     // Generate JWT token
-//!     let token = jwt_manager._Fgenerate_token(claims)?;
+//!     let token = jwt_manager.generate_token(claims)?;
 //!     println!("Generated JWT token: {}", token);
 //!     
 //!     // Validate JWT token
-//!     let validated_claims = jwt_manager._Fvalidate_token(&token)?;
+//!     let validated_claims = jwt_manager.validate_token(&token)?;
 //!     println!("Validated claims: {:?}", validated_claims);
 //!     
 //!     // Get session manager
-//!     let session_manager = auth_module._Fsession_manager();
+//!     let session_manager = auth_module.session_manager();
 //!     
 //!     // Create a session
-//!     let session = session_manager.write().await._Fcreate_session("user-123").await?;
+//!     let session = session_manager.write().await.create_session("user-123").await?;
 //!     println!("Created session: {}", session.id);
 //!     
 //!     Ok(())
 //! }
 //! ```
 
-pub mod jwt;
-pub mod oauth;
-pub mod permissions;
-pub mod session;
+mod jwt;
+mod oauth;
+mod permissions;
+mod session;
 
-pub use jwt::{DMSJWTManager, JWTClaims, JWTValidationOptions};
-pub use oauth::{DMSOAuthManager, DMSOAuthProvider, DMSOAuthToken, DMSOAuthUserInfo};
-pub use permissions::{DMSPermission, DMSPermissionManager, DMSRole};
-pub use session::{DMSSession, DMSSessionManager};
+pub use jwt::DMSJWTManager;
+pub use oauth::DMSOAuthManager;
+pub use permissions::DMSPermissionManager;
+pub use session::DMSSessionManager;
 
 use crate::core::{DMSResult, DMSServiceContext};
 use serde::Deserialize;
@@ -194,12 +194,12 @@ impl DMSAuthModule {
     /// # Returns
     /// 
     /// A new `DMSAuthModule` instance
-    pub fn _Fnew(config: DMSAuthConfig) -> Self {
-        let jwt_manager = Arc::new(DMSJWTManager::_Fnew(config.jwt_secret.clone(), config.jwt_expiry_secs));
-        let session_manager = Arc::new(RwLock::new(DMSSessionManager::_Fnew(config.session_timeout_secs)));
-        let permission_manager = Arc::new(RwLock::new(DMSPermissionManager::_Fnew()));
-        let cache = Arc::new(crate::cache::backends::memory_backend::DMSMemoryCache::_Fnew());
-        let oauth_manager = Arc::new(RwLock::new(DMSOAuthManager::_Fnew(cache)));
+    pub fn new(config: DMSAuthConfig) -> Self {
+        let jwt_manager = Arc::new(DMSJWTManager::new(config.jwt_secret.clone(), config.jwt_expiry_secs));
+        let session_manager = Arc::new(RwLock::new(DMSSessionManager::new(config.session_timeout_secs)));
+        let permission_manager = Arc::new(RwLock::new(DMSPermissionManager::new()));
+        let cache = Arc::new(crate::cache::DMSMemoryCache::new());
+        let oauth_manager = Arc::new(RwLock::new(DMSOAuthManager::new(cache)));
 
         Self {
             config,
@@ -215,7 +215,7 @@ impl DMSAuthModule {
     /// # Returns
     /// 
     /// An Arc<DMSJWTManager> providing thread-safe access to the JWT manager
-    pub fn _Fjwt_manager(&self) -> Arc<DMSJWTManager> {
+    pub fn jwt_manager(&self) -> Arc<DMSJWTManager> {
         self.jwt_manager.clone()
     }
 
@@ -224,7 +224,7 @@ impl DMSAuthModule {
     /// # Returns
     /// 
     /// An Arc<RwLock<DMSSessionManager>> providing thread-safe access to the session manager
-    pub fn _Fsession_manager(&self) -> Arc<RwLock<DMSSessionManager>> {
+    pub fn session_manager(&self) -> Arc<RwLock<DMSSessionManager>> {
         self.session_manager.clone()
     }
 
@@ -233,7 +233,7 @@ impl DMSAuthModule {
     /// # Returns
     /// 
     /// An Arc<RwLock<DMSPermissionManager>> providing thread-safe access to the permission manager
-    pub fn _Fpermission_manager(&self) -> Arc<RwLock<DMSPermissionManager>> {
+    pub fn permission_manager(&self) -> Arc<RwLock<DMSPermissionManager>> {
         self.permission_manager.clone()
     }
 
@@ -242,19 +242,19 @@ impl DMSAuthModule {
     /// # Returns
     /// 
     /// An Arc<RwLock<DMSOAuthManager>> providing thread-safe access to the OAuth manager
-    pub fn _Foauth_manager(&self) -> Arc<RwLock<DMSOAuthManager>> {
+    pub fn oauth_manager(&self) -> Arc<RwLock<DMSOAuthManager>> {
         self.oauth_manager.clone()
     }
 }
 
 #[async_trait::async_trait]
-impl crate::core::_CAsyncServiceModule for DMSAuthModule {
+impl crate::core::DMSModule for DMSAuthModule {
     /// Returns the name of the authentication module.
     /// 
     /// # Returns
     /// 
     /// The module name as a string
-    fn _Fname(&self) -> &str {
+    fn name(&self) -> &str {
         "DMS.Auth"
     }
 
@@ -267,7 +267,7 @@ impl crate::core::_CAsyncServiceModule for DMSAuthModule {
     /// # Returns
     /// 
     /// `false` since authentication is non-critical
-    fn _Fis_critical(&self) -> bool {
+    fn is_critical(&self) -> bool {
         false // Auth failures should not break the application
     }
 
@@ -286,20 +286,20 @@ impl crate::core::_CAsyncServiceModule for DMSAuthModule {
     /// # Returns
     /// 
     /// A `DMSResult<()>` indicating success or failure
-    async fn _Finit(&mut self, ctx: &mut DMSServiceContext) -> DMSResult<()> {
+    async fn init(&mut self, ctx: &mut DMSServiceContext) -> DMSResult<()> {
         println!("Initializing DMS Auth Module");
 
         // Load configuration
-        let cfg = ctx._Fconfig()._Fconfig();
+        let cfg = ctx.config().config();
         
         // Update configuration if provided
-        if let Some(auth_config) = cfg._Fget("auth") {
+        if let Some(auth_config) = cfg.get("auth") {
             self.config = serde_json::from_str(auth_config)
                 .unwrap_or_else(|_| DMSAuthConfig::default());
         }
 
         // Initialize JWT manager with new config
-        self.jwt_manager = Arc::new(DMSJWTManager::_Fnew(self.config.jwt_secret.clone(), self.config.jwt_expiry_secs));
+        self.jwt_manager = Arc::new(DMSJWTManager::new(self.config.jwt_secret.clone(), self.config.jwt_expiry_secs));
 
         // Initialize OAuth providers if configured
         if !self.config.oauth_providers.is_empty() {
@@ -325,68 +325,14 @@ impl crate::core::_CAsyncServiceModule for DMSAuthModule {
     /// # Returns
     /// 
     /// A `DMSResult<()>` indicating success or failure
-    async fn _Fafter_shutdown(&mut self, _ctx: &mut DMSServiceContext) -> DMSResult<()> {
+    async fn after_shutdown(&mut self, _ctx: &mut DMSServiceContext) -> DMSResult<()> {
         println!("Cleaning up DMS Auth Module");
         
         // Cleanup sessions
         let session_mgr = self.session_manager.write().await;
-        session_mgr._Fcleanup_all().await?;
+        session_mgr.cleanup_all().await?;
         
         println!("DMS Auth Module cleanup completed");
-        Ok(())
-    }
-}
-
-impl crate::core::_CServiceModule for DMSAuthModule {
-    /// Returns the name of the authentication module.
-    /// 
-    /// # Returns
-    /// 
-    /// The module name as a string
-    fn _Fname(&self) -> &str {
-        "DMS.Auth"
-    }
-
-    /// Indicates whether the authentication module is critical.
-    /// 
-    /// # Returns
-    /// 
-    /// `false` since authentication is non-critical
-    fn _Fis_critical(&self) -> bool {
-        false
-    }
-
-    /// Initializes the authentication module synchronously.
-    /// 
-    /// This method is a no-op for the authentication module, as all actual initialization is handled
-    /// in the async `_Finit` method.
-    /// 
-    /// # Parameters
-    /// 
-    /// - `_ctx`: The service context (not used in this implementation)
-    /// 
-    /// # Returns
-    /// 
-    /// A `DMSResult<()>` indicating success
-    fn _Finit(&mut self, _ctx: &mut DMSServiceContext) -> DMSResult<()> {
-        // Async initialization is handled in _Finit
-        Ok(())
-    }
-
-    /// Performs synchronous cleanup after the application has shut down.
-    /// 
-    /// This method is a no-op for the authentication module, as all actual cleanup is handled
-    /// in the async `_Fafter_shutdown` method.
-    /// 
-    /// # Parameters
-    /// 
-    /// - `_ctx`: The service context (not used in this implementation)
-    /// 
-    /// # Returns
-    /// 
-    /// A `DMSResult<()>` indicating success
-    fn _Fafter_shutdown(&mut self, _ctx: &mut DMSServiceContext) -> DMSResult<()> {
-        // Async cleanup is handled in _Fafter_shutdown
         Ok(())
     }
 }

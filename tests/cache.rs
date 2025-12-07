@@ -25,10 +25,10 @@ fn test_cached_value_new() {
     let data = serde_json::json!("test_value");
     let ttl = Some(Duration::from_secs(60));
     
-    let cached_value = CachedValue::_Fnew(data.clone(), ttl);
+    let cached_value = CachedValue::new(data.clone(), ttl);
     
-    assert_eq!(cached_value._Fget_data(), &data);
-    assert!(!cached_value._Fis_expired());
+    assert_eq!(cached_value.get_data(), &data);
+    assert!(!cached_value.is_expired());
     assert_eq!(cached_value.access_count, 0);
     assert!(cached_value.expires_at.is_some());
 }
@@ -38,11 +38,11 @@ fn test_cached_value_touch() {
     let data = serde_json::json!("test_value");
     let ttl = Some(Duration::from_secs(60));
     
-    let mut cached_value = CachedValue::_Fnew(data.clone(), ttl);
+    let mut cached_value = CachedValue::new(data.clone(), ttl);
     let initial_access_count = cached_value.access_count;
     
     // Touch the value
-    cached_value._Ftouch();
+    cached_value.touch();
     
     // Verify access count increased
     assert_eq!(cached_value.access_count, initial_access_count + 1);
@@ -54,16 +54,16 @@ fn test_cached_value_expired() {
     
     // Create a value with a very short TTL
     let ttl = Some(Duration::from_millis(10));
-    let mut cached_value = CachedValue::_Fnew(data.clone(), ttl);
+    let mut cached_value = CachedValue::new(data.clone(), ttl);
     
     // Should not be expired immediately
-    assert!(!cached_value._Fis_expired());
+    assert!(!cached_value.is_expired());
     
     // Simulate expiration by manually setting a past expires_at
     cached_value.expires_at = Some(0); // 1970-01-01 00:00:00 UTC
     
     // Should be expired now
-    assert!(cached_value._Fis_expired());
+    assert!(cached_value.is_expired());
 }
 
 #[test]
@@ -71,14 +71,14 @@ fn test_cached_value_deserialize() {
     let data = serde_json::json!("test_value");
     let ttl = Some(Duration::from_secs(60));
     
-    let cached_value = CachedValue::_Fnew(data.clone(), ttl);
+    let cached_value = CachedValue::new(data.clone(), ttl);
     
     // Test deserialization to string
-    let result: String = cached_value._Fdeserialize().unwrap();
+    let result: String = cached_value.deserialize().unwrap();
     assert_eq!(result, "test_value");
     
     // Test deserialization to a different type should fail
-    let result: Result<u32, _> = cached_value._Fdeserialize();
+    let result: Result<u32, _> = cached_value.deserialize();
     assert!(result.is_err());
 }
 
@@ -124,100 +124,100 @@ fn test_cache_backend_type_from_str() {
 
 #[tokio::test]
 async fn test_memory_cache_get_set() {
-    let cache = DMSMemoryCache::_Fnew();
+    let cache = DMSMemoryCache::new();
     
     // Test set and get
     let key = "test_key";
-    let value = CachedValue::_Fnew(serde_json::json!("test_value"), Some(Duration::from_secs(60)));
+    let value = CachedValue::new(serde_json::json!("test_value"), Some(Duration::from_secs(60)));
     
-    cache._Fset(key, value.clone()).await.unwrap();
-    let retrieved = cache._Fget(key).await;
+    cache.set(key, value.clone()).await.unwrap();
+    let retrieved = cache.get(key).await;
     
     assert!(retrieved.is_some());
-    assert_eq!(retrieved.unwrap()._Fget_data(), value._Fget_data());
+    assert_eq!(retrieved.unwrap().get_data(), value.get_data());
     
     // Test non-existent key
-    let retrieved_none = cache._Fget("non_existent_key").await;
+    let retrieved_none = cache.get("non_existent_key").await;
     assert!(retrieved_none.is_none());
 }
 
 #[tokio::test]
 async fn test_memory_cache_delete() {
-    let cache = DMSMemoryCache::_Fnew();
+    let cache = DMSMemoryCache::new();
     
     // Test set, delete, and get
     let key = "test_key";
-    let value = CachedValue::_Fnew(serde_json::json!("test_value"), Some(Duration::from_secs(60)));
+    let value = CachedValue::new(serde_json::json!("test_value"), Some(Duration::from_secs(60)));
     
-    cache._Fset(key, value.clone()).await.unwrap();
-    assert!(cache._Fget(key).await.is_some());
+    cache.set(key, value.clone()).await.unwrap();
+    assert!(cache.get(key).await.is_some());
     
-    cache._Fdelete(key).await.unwrap();
-    assert!(cache._Fget(key).await.is_none());
+    cache.delete(key).await.unwrap();
+    assert!(cache.get(key).await.is_none());
 }
 
 #[tokio::test]
 async fn test_memory_cache_exists() {
-    let cache = DMSMemoryCache::_Fnew();
+    let cache = DMSMemoryCache::new();
     
     // Test exists
     let key = "test_key";
-    let value = CachedValue::_Fnew(serde_json::json!("test_value"), Some(Duration::from_secs(60)));
+    let value = CachedValue::new(serde_json::json!("test_value"), Some(Duration::from_secs(60)));
     
-    assert!(!cache._Fexists(key).await);
+    assert!(!cache.exists(key).await);
     
-    cache._Fset(key, value.clone()).await.unwrap();
-    assert!(cache._Fexists(key).await);
+    cache.set(key, value.clone()).await.unwrap();
+    assert!(cache.exists(key).await);
     
-    cache._Fdelete(key).await.unwrap();
-    assert!(!cache._Fexists(key).await);
+    cache.delete(key).await.unwrap();
+    assert!(!cache.exists(key).await);
 }
 
 #[tokio::test]
 async fn test_memory_cache_clear() {
-    let cache = DMSMemoryCache::_Fnew();
+    let cache = DMSMemoryCache::new();
     
     // Set multiple keys
-    let value = CachedValue::_Fnew(serde_json::json!("test_value"), Some(Duration::from_secs(60)));
+    let value = CachedValue::new(serde_json::json!("test_value"), Some(Duration::from_secs(60)));
     
-    cache._Fset("key1", value.clone()).await.unwrap();
-    cache._Fset("key2", value.clone()).await.unwrap();
-    cache._Fset("key3", value.clone()).await.unwrap();
+    cache.set("key1", value.clone()).await.unwrap();
+    cache.set("key2", value.clone()).await.unwrap();
+    cache.set("key3", value.clone()).await.unwrap();
     
     // Verify keys exist
-    assert!(cache._Fexists("key1").await);
-    assert!(cache._Fexists("key2").await);
-    assert!(cache._Fexists("key3").await);
+    assert!(cache.exists("key1").await);
+    assert!(cache.exists("key2").await);
+    assert!(cache.exists("key3").await);
     
     // Clear cache
-    cache._Fclear().await.unwrap();
+    cache.clear().await.unwrap();
     
     // Verify all keys are gone
-    assert!(!cache._Fexists("key1").await);
-    assert!(!cache._Fexists("key2").await);
-    assert!(!cache._Fexists("key3").await);
+    assert!(!cache.exists("key1").await);
+    assert!(!cache.exists("key2").await);
+    assert!(!cache.exists("key3").await);
 }
 
 #[tokio::test]
 async fn test_memory_cache_stats() {
-    let cache = DMSMemoryCache::_Fnew();
+    let cache = DMSMemoryCache::new();
     
     // Get initial stats
-    let initial_stats = cache._Fstats().await;
+    let initial_stats = cache.stats().await;
     
     // Set a key
     let key = "test_key";
-    let value = CachedValue::_Fnew(serde_json::json!("test_value"), Some(Duration::from_secs(60)));
-    cache._Fset(key, value.clone()).await.unwrap();
+    let value = CachedValue::new(serde_json::json!("test_value"), Some(Duration::from_secs(60)));
+    cache.set(key, value.clone()).await.unwrap();
     
     // Get the key (should be a hit)
-    cache._Fget(key).await;
+    cache.get(key).await;
     
     // Get a non-existent key (should be a miss)
-    cache._Fget("non_existent_key").await;
+    cache.get("non_existent_key").await;
     
     // Get updated stats
-    let updated_stats = cache._Fstats().await;
+    let updated_stats = cache.stats().await;
     
     // Verify stats changed
     assert_eq!(updated_stats.total_keys, initial_stats.total_keys + 1);
@@ -227,40 +227,40 @@ async fn test_memory_cache_stats() {
 
 #[tokio::test]
 async fn test_memory_cache_cleanup_expired() {
-    let cache = DMSMemoryCache::_Fnew();
+    let cache = DMSMemoryCache::new();
     
     // Set a key with a very short TTL
     let key = "expiring_key";
-    let mut value = CachedValue::_Fnew(serde_json::json!("test_value"), Some(Duration::from_millis(10)));
+    let mut value = CachedValue::new(serde_json::json!("test_value"), Some(Duration::from_millis(10)));
     
     // Manually set the expires_at to a past time
     value.expires_at = Some(0); // 1970-01-01 00:00:00 UTC
     
-    cache._Fset(key, value.clone()).await.unwrap();
-    assert!(cache._Fexists(key).await);
+    cache.set(key, value.clone()).await.unwrap();
+    assert!(cache.exists(key).await);
     
     // Cleanup expired entries
-    let cleaned = cache._Fcleanup_expired().await.unwrap();
+    let cleaned = cache.cleanup_expired().await.unwrap();
     
     // Verify the entry was cleaned up
     assert_eq!(cleaned, 1);
-    assert!(!cache._Fexists(key).await);
+    assert!(!cache.exists(key).await);
 }
 
 #[tokio::test]
 async fn test_cache_manager_get_set() {
     // Create a memory cache backend
-    let backend = std::sync::Arc::new(DMSMemoryCache::_Fnew());
+    let backend = std::sync::Arc::new(DMSMemoryCache::new());
     
     // Create a cache manager
-    let manager = DMSCacheManager::_Fnew(backend);
+    let manager = DMSCacheManager::new(backend);
     
     // Test set and get with string value
     let key = "test_key";
     let value = "test_value";
     
-    manager._Fset(key, &value, Some(60)).await.unwrap();
-    let retrieved = manager._Fget::<String>(key).await.unwrap();
+    manager.set(key, &value, Some(60)).await.unwrap();
+    let retrieved = manager.get::<String>(key).await.unwrap();
     
     assert!(retrieved.is_some());
     assert_eq!(retrieved.unwrap(), value);
@@ -269,8 +269,8 @@ async fn test_cache_manager_get_set() {
     let key = "test_key_int";
     let value = 42;
     
-    manager._Fset(key, &value, Some(60)).await.unwrap();
-    let retrieved = manager._Fget::<i32>(key).await.unwrap();
+    manager.set(key, &value, Some(60)).await.unwrap();
+    let retrieved = manager.get::<i32>(key).await.unwrap();
     
     assert!(retrieved.is_some());
     assert_eq!(retrieved.unwrap(), value);
@@ -279,60 +279,60 @@ async fn test_cache_manager_get_set() {
 #[tokio::test]
 async fn test_cache_manager_delete() {
     // Create a memory cache backend
-    let backend = std::sync::Arc::new(DMSMemoryCache::_Fnew());
+    let backend = std::sync::Arc::new(DMSMemoryCache::new());
     
     // Create a cache manager
-    let manager = DMSCacheManager::_Fnew(backend);
+    let manager = DMSCacheManager::new(backend);
     
     // Test set, delete, and get
     let key = "test_key";
     let value = "test_value";
     
-    manager._Fset(key, &value, Some(60)).await.unwrap();
-    assert!(manager._Fget::<String>(key).await.unwrap().is_some());
+    manager.set(key, &value, Some(60)).await.unwrap();
+    assert!(manager.get::<String>(key).await.unwrap().is_some());
     
-    manager._Fdelete(key).await.unwrap();
-    assert!(manager._Fget::<String>(key).await.unwrap().is_none());
+    manager.delete(key).await.unwrap();
+    assert!(manager.get::<String>(key).await.unwrap().is_none());
 }
 
 #[tokio::test]
 async fn test_cache_manager_exists() {
     // Create a memory cache backend
-    let backend = std::sync::Arc::new(DMSMemoryCache::_Fnew());
+    let backend = std::sync::Arc::new(DMSMemoryCache::new());
     
     // Create a cache manager
-    let manager = DMSCacheManager::_Fnew(backend);
+    let manager = DMSCacheManager::new(backend);
     
     // Test exists
     let key = "test_key";
     let value = "test_value";
     
-    assert!(!manager._Fexists(key).await);
+    assert!(!manager.exists(key).await);
     
-    manager._Fset(key, &value, Some(60)).await.unwrap();
-    assert!(manager._Fexists(key).await);
+    manager.set(key, &value, Some(60)).await.unwrap();
+    assert!(manager.exists(key).await);
     
-    manager._Fdelete(key).await.unwrap();
-    assert!(!manager._Fexists(key).await);
+    manager.delete(key).await.unwrap();
+    assert!(!manager.exists(key).await);
 }
 
 #[tokio::test]
 async fn test_cache_manager_get_or_set() {
     // Create a memory cache backend
-    let backend = std::sync::Arc::new(DMSMemoryCache::_Fnew());
+    let backend = std::sync::Arc::new(DMSMemoryCache::new());
     
     // Create a cache manager
-    let manager = DMSCacheManager::_Fnew(backend);
+    let manager = DMSCacheManager::new(backend);
     
     // Test get_or_set
     let key = "test_key";
     let value = "test_value";
     
     // First call should generate the value
-    let result1 = manager._Fget_or_set(key, Some(60), || Ok(value)).await.unwrap();
+    let result1 = manager.get_or_set(key, Some(60), || Ok(value)).await.unwrap();
     assert_eq!(result1, value);
     
     // Second call should get from cache
-    let result2 = manager._Fget_or_set(key, Some(60), || Ok("different_value")).await.unwrap();
+    let result2 = manager.get_or_set(key, Some(60), || Ok("different_value")).await.unwrap();
     assert_eq!(result2, value); // Should still be the original value
 }

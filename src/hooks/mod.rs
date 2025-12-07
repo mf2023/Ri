@@ -46,19 +46,19 @@
 //! 
 //! fn example() -> DMSResult<()> {
 //!     // Create a hook bus
-//!     let mut hook_bus = DMSHookBus::_Fnew();
+//!     let mut hook_bus = DMSHookBus::new();
 //!     
 //!     // Register a hook handler
-//!     hook_bus._Fregister(DMSHookKind::Startup, "example.startup".to_string(), |ctx, event| {
+//!     hook_bus.register(DMSHookKind::Startup, "example.startup".to_string(), |ctx, event| {
 //!         // Handle startup event
 //!         Ok(())
 //!     });
 //!     
 //!     // Create a service context (usually provided by the runtime)
-//!     let ctx = DMSServiceContext::_Fnew();
+//!     let ctx = DMSServiceContext::new();
 //!     
 //!     // Emit a hook event
-//!     hook_bus._Femit(&DMSHookKind::Startup, &ctx)?;
+//!     hook_bus.emit(&DMSHookKind::Startup, &ctx)?;
 //!     
 //!     Ok(())
 //! }
@@ -184,7 +184,7 @@ impl DMSHookBus {
     /// Creates a new hook bus instance.
     /// 
     /// Returns a new `DMSHookBus` instance with no registered handlers.
-    pub fn _Fnew() -> Self {
+    pub fn new() -> Self {
         DMSHookBus { handlers: HashMap::new() }
     }
 
@@ -197,7 +197,7 @@ impl DMSHookBus {
     /// - `handler`: The handler function to execute when the hook is emitted
     /// 
     /// The handler function takes a `DMSServiceContext` and a `DMSHookEvent` and returns a `DMSResult<()>`. 
-    pub fn _Fregister<F>(&mut self, kind: DMSHookKind, id: DMSHookId, handler: F)
+    pub fn register<F>(&mut self, kind: DMSHookKind, id: DMSHookId, handler: F)
     where
         F: Fn(&DMSServiceContext, &DMSHookEvent) -> DMSResult<()> + Send + Sync + 'static,
     {
@@ -214,8 +214,8 @@ impl DMSHookBus {
     /// # Returns
     /// 
     /// A `DMSResult<()>` indicating success or failure
-    pub fn _Femit(&self, kind: &DMSHookKind, ctx: &DMSServiceContext) -> DMSResult<()> {
-        self._Femit_with(kind, ctx, None, None)
+    pub fn emit(&self, kind: &DMSHookKind, ctx: &DMSServiceContext) -> DMSResult<()> {
+        self.emit_with(kind, ctx, None, None)
     }
 
     /// Emits a hook event with additional contextual information.
@@ -230,7 +230,7 @@ impl DMSHookBus {
     /// # Returns
     /// 
     /// A `DMSResult<()>` indicating success or failure
-    pub fn _Femit_with(
+    pub fn emit_with(
         &self,
         kind: &DMSHookKind,
         ctx: &DMSServiceContext,

@@ -21,19 +21,19 @@ use dms::core::{DMSAppBuilder, DMSServiceContext, DMSError, DMSResult};
 
 #[test]
 fn test_dms_error() {
-    let error = DMSError::_Fnew("Test error message");
+    let error = DMSError::new("Test error message");
     assert_eq!(error.message, "Test error message");
 }
 
 #[test]
 fn test_service_context_new() {
-    let ctx = DMSServiceContext::_Fnew_default().unwrap();
-    assert!(ctx._Ffs()._Fproject_root().exists());
+    let ctx = DMSServiceContext::new_default().unwrap();
+    assert!(ctx.fs().project_root().exists());
 }
 
 #[test]
 fn test_app_builder_new() {
-    let builder = DMSAppBuilder::_Fnew();
-    let runtime = builder._Fbuild().unwrap();
-    assert!(runtime._Frun().await.is_ok());
+    let builder = DMSAppBuilder::new();
+    let runtime = builder.build().unwrap();
+    assert!(runtime.run().await.is_ok());
 }

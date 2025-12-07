@@ -51,30 +51,30 @@
 //! 
 //! async fn example() -> DMSResult<()> {
 //!     // Create a new in-memory cache
-//!     let cache = DMSMemoryCache::_Fnew();
+//!     let cache = DMSMemoryCache::new();
 //!     
 //!     // Create a cached value with 1-hour expiration
 //!     let value = CachedValue::new(b"test_value".to_vec(), Duration::from_secs(3600));
 //!     
 //!     // Set the value in the cache
-//!     cache._Fset("test_key", value).await?;
+//!     cache.set("test_key", value).await?;
 //!     
 //!     // Get the value from the cache
-//!     if let Some(retrieved_value) = cache._Fget("test_key").await {
+//!     if let Some(retrieved_value) = cache.get("test_key").await {
 //!         println!("Retrieved value: {:?}", retrieved_value.payload);
 //!     }
 //!     
 //!     // Check if a key exists
-//!     if cache._Fexists("test_key").await {
+//!     if cache.exists("test_key").await {
 //!         println!("Key exists in cache");
 //!     }
 //!     
 //!     // Get cache statistics
-//!     let stats = cache._Fstats().await;
+//!     let stats = cache.stats().await;
 //!     println!("Cache hit rate: {:.2}%", stats.avg_hit_rate * 100.0);
 //!     
 //!     // Cleanup expired entries
-//!     let cleaned = cache._Fcleanup_expired().await?;
+//!     let cleaned = cache.cleanup_expired().await?;
 //!     println!("Cleaned up {} expired entries", cleaned);
 //!     
 //!     Ok(())
@@ -85,6 +85,7 @@ use dashmap::DashMap;
 use std::sync::Arc;
 use std::ops::AddAssign;
 use crate::cache::{DMSCache, CachedValue, CacheStats};
+use crate::core::DMSResult;
 
 /// In-memory cache implementation using DashMap for high performance and thread safety.
 ///
@@ -103,7 +104,7 @@ impl DMSMemoryCache {
     /// # Returns
     ///
     /// A new DMSMemoryCache instance
-    pub fn _Fnew() -> Self {
+    pub fn new() -> Self {
         let stats = DashMap::new();
         stats.insert("hit_count", 0);
         stats.insert("miss_count", 0);
@@ -131,25 +132,24 @@ impl DMSCache for DMSMemoryCache {
     /// # Returns
     ///
     /// An `Option<CachedValue>` containing the value if it exists and is not expired, or None otherwise
-    async fn _Fget(&self, key: &str) -> Option<CachedValue> {
+    async fn get(&self, key: &str) -> DMSResult<Option<String>> {
         match self.store.get(key) {
             Some(entry) => {
-                let mut value = entry.clone();
-                if value._Fis_expired() {
+                let value = entry.clone();
+                if value.is_expired() {
                     drop(entry);
                     self.store.remove(key);
                     self.stats.get_mut("eviction_count").unwrap().value_mut().add_assign(1);
                     self.stats.get_mut("miss_count").unwrap().value_mut().add_assign(1);
-                    None
+                    Ok(None)
                 } else {
-                    value._Ftouch();
                     self.stats.get_mut("hit_count").unwrap().value_mut().add_assign(1);
-                    Some(value)
+                    Ok(Some(value.value))
                 }
             }
             None => {
                 self.stats.get_mut("miss_count").unwrap().value_mut().add_assign(1);
-                None
+                Ok(None)
             }
         }
     }
@@ -164,8 +164,12 @@ impl DMSCache for DMSMemoryCache {
     /// # Returns
     ///
     /// A `DMSResult<()>` indicating success or failure
-    async fn _Fset(&self, key: &str, value: CachedValue) -> crate::core::DMSResult<()> {
-        self.store.insert(key.to_string(), value);
+    async fn set(&self, key: &str, value: &str, ttl_seconds: Option<u64>) -> crate::core::DMSResult<()> {
+        let cached_value = CachedValue {
+            value: value.to_string(),
+            expires_at: ttl_seconds,
+        };
+        self.store.insert(key.to_string(), cached_value);
         Ok(())
     }
     
@@ -177,10 +181,9 @@ impl DMSCache for DMSMemoryCache {
     ///
     /// # Returns
     ///
-    /// A `DMSResult<()>` indicating success or failure
-    async fn _Fdelete(&self, key: &str) -> crate::core::DMSResult<()> {
-        self.store.remove(key);
-        Ok(())
+    /// A `DMSResult<bool>` indicating whether the key was found and deleted
+    async fn delete(&self, key: &str) -> crate::core::DMSResult<bool> {
+        Ok(self.store.remove(key).is_some())
     }
     
     /// Checks if a key exists in the cache and is not expired.
@@ -194,9 +197,9 @@ impl DMSCache for DMSMemoryCache {
     /// # Returns
     ///
     /// `true` if the key exists and is not expired, `false` otherwise
-    async fn _Fexists(&self, key: &str) -> bool {
+    async fn exists(&self, key: &str) -> bool {
         if let Some(entry) = self.store.get(key) {
-            if entry._Fis_expired() {
+            if entry.is_expired() {
                 drop(entry);
                 self.store.remove(key);
                 false
@@ -213,7 +216,7 @@ impl DMSCache for DMSMemoryCache {
     /// # Returns
     ///
     /// A `DMSResult<()>` indicating success or failure
-    async fn _Fclear(&self) -> crate::core::DMSResult<()> {
+    async fn clear(&self) -> crate::core::DMSResult<()> {
         self.store.clear();
         Ok(())
     }
@@ -223,7 +226,7 @@ impl DMSCache for DMSMemoryCache {
     /// # Returns
     ///
     /// A `CacheStats` struct containing cache statistics
-    async fn _Fstats(&self) -> CacheStats {
+    async fn stats(&self) -> CacheStats {
         let total_keys = self.store.len();
         let hit_count = *self.stats.get("hit_count").unwrap().value();
         let miss_count = *self.stats.get("miss_count").unwrap().value();
@@ -240,12 +243,14 @@ impl DMSCache for DMSMemoryCache {
         let memory_usage_bytes = total_keys * 100; // Rough estimate per entry
         
         CacheStats {
-            total_keys,
+            hits: hit_count,
+            misses: miss_count,
+            entries: total_keys,
             memory_usage_bytes,
+            avg_hit_rate,
             hit_count,
             miss_count,
             eviction_count,
-            avg_hit_rate,
         }
     }
     
@@ -254,13 +259,13 @@ impl DMSCache for DMSMemoryCache {
     /// # Returns
     ///
     /// A `DMSResult<usize>` containing the number of expired entries cleaned up
-    async fn _Fcleanup_expired(&self) -> crate::core::DMSResult<usize> {
+    async fn cleanup_expired(&self) -> crate::core::DMSResult<usize> {
         let mut cleaned = 0;
         let keys: Vec<String> = self.store.iter().map(|entry| entry.key().clone()).collect();
         
         for key in keys {
             if let Some(entry) = self.store.get(&key) {
-                if entry._Fis_expired() {
+                if entry.is_expired() {
                     drop(entry);
                     self.store.remove(&key);
                     cleaned += 1;

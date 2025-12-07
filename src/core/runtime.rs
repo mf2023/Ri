@@ -27,8 +27,8 @@
 //! 
 //! - **DMSAppBuilder**: Fluent API for configuring and building DMS applications
 //! - **DMSAppRuntime**: Manages the application lifecycle and module execution
-//! - **_CModuleType**: Internal enum for distinguishing between sync and async modules
-//! - **_CModuleSlot**: Internal struct for tracking module state
+//! - **ModuleType**: Internal enum for distinguishing between sync and async modules
+//! - **ModuleSlot**: Internal struct for tracking module state
 //! 
 //! ## Design Principles
 //! 
@@ -40,7 +40,7 @@
 
 use crate::core::{DMSResult, DMSServiceContext};
 use crate::hooks::DMSModulePhase;
-use crate::core::{_CServiceModule, _CAsyncServiceModule};
+use crate::core::{ServiceModule, AsyncServiceModule};
 use super::lifecycle::DMSLifecycleObserver;
 use super::analytics::DMSLogAnalyticsModule;
 use crate::hooks::DMSHookKind;
@@ -52,23 +52,23 @@ use std::collections::HashMap;
 /// 
 /// This enum allows the runtime to handle both sync and async modules in a unified way,
 /// while still respecting their different execution requirements.
-enum _CModuleType {
-    /// Synchronous module that implements `_CServiceModule`
-    Sync(Box<dyn _CServiceModule>),
-    /// Asynchronous module that implements `_CAsyncServiceModule`
-    Async(Box<dyn _CAsyncServiceModule>),
+enum ModuleType {
+    /// Synchronous module that implements `ServiceModule`
+    Sync(Box<dyn ServiceModule>),
+    /// Asynchronous module that implements `AsyncServiceModule`
+    Async(Box<dyn AsyncServiceModule>),
 }
 
-impl _CModuleType {
+impl ModuleType {
     /// Get the name of the module.
     /// 
     /// # Returns
     /// 
     /// The name of the module as a string slice.
-    fn _Fname(&self) -> &str {
+    fn name(&self) -> &str {
         match self {
-            _CModuleType::Sync(module) => module._Fname(),
-            _CModuleType::Async(module) => module._Fname(),
+            ModuleType::Sync(module) => module.name(),
+            ModuleType::Async(module) => module.name(),
         }
     }
 
@@ -79,10 +79,10 @@ impl _CModuleType {
     /// # Returns
     /// 
     /// `true` if the module is critical, `false` otherwise.
-    fn _Fis_critical(&self) -> bool {
+    fn is_critical(&self) -> bool {
         match self {
-            _CModuleType::Sync(module) => module._Fis_critical(),
-            _CModuleType::Async(module) => module._Fis_critical(),
+            ModuleType::Sync(module) => module.is_critical(),
+            ModuleType::Async(module) => module.is_critical(),
         }
     }
 
@@ -93,10 +93,10 @@ impl _CModuleType {
     /// # Returns
     /// 
     /// The priority of the module as an integer.
-    fn _Fpriority(&self) -> i32 {
+    fn priority(&self) -> i32 {
         match self {
-            _CModuleType::Sync(module) => module._Fpriority(),
-            _CModuleType::Async(module) => module._Fpriority(),
+            ModuleType::Sync(module) => module.priority(),
+            ModuleType::Async(module) => module.priority(),
         }
     }
 
@@ -107,10 +107,10 @@ impl _CModuleType {
     /// # Returns
     /// 
     /// A vector of dependency module names.
-    fn _Fdependencies(&self) -> Vec<&str> {
+    fn dependencies(&self) -> Vec<&str> {
         match self {
-            _CModuleType::Sync(module) => module._Fdependencies(),
-            _CModuleType::Async(module) => module._Fdependencies(),
+            ModuleType::Sync(module) => module.dependencies(),
+            ModuleType::Async(module) => module.dependencies(),
         }
     }
 }
@@ -118,9 +118,9 @@ impl _CModuleType {
 /// Internal struct for tracking module state.
 /// 
 /// This struct wraps a module and tracks whether it has failed during execution.
-struct _CModuleSlot {
+struct ModuleSlot {
     /// The module itself, either sync or async
-    module: _CModuleType,
+    module: ModuleType,
     /// Whether the module has failed during execution
     failed: bool,
 }
@@ -137,12 +137,12 @@ struct _CModuleSlot {
 /// 
 /// #[tokio::main]
 /// async fn main() -> DMSResult<()> {
-///     let app = DMSAppBuilder::_Fnew()
-///         ._Fwith_config("config.yaml")?
-///         ._Fbuild()?;
+///     let app = DMSAppBuilder::new()
+///         .with_config("config.yaml")?
+///         .build()?;
 ///     
-///     app._Frun(|ctx| async move {
-///         ctx._Flogger()._Finfo("service", "DMS service started")?;
+///     app.run(|ctx| async move {
+///         ctx.logger().info("service", "DMS service started")?;
 ///         Ok(())
 ///     }).await
 /// }
@@ -153,7 +153,7 @@ pub struct DMSAppRuntime {
     /// Service context providing access to core functionalities
     ctx: DMSServiceContext,
     /// Vector of modules with their state, protected by an async RwLock
-    modules: Arc<AsyncRwLock<Vec<_CModuleSlot>>>,
+    modules: Arc<AsyncRwLock<Vec<ModuleSlot>>>,
 }
 
 impl DMSAppRuntime {
@@ -164,10 +164,16 @@ impl DMSAppRuntime {
     /// 2. Initializing synchronous modules
     /// 3. Starting synchronous modules
     /// 4. Initializing and starting asynchronous modules
-    /// 5. Running the application business logic
+    /// 5. Running the application business logic via the provided closure
     /// 6. Shutting down asynchronous modules
     /// 7. Shutting down synchronous modules
     /// 8. Emitting shutdown hooks
+    /// 
+    /// # Parameters
+    /// 
+    /// - `f`: A closure that takes a `DMSServiceContext` and returns a `DMSResult<()>`. 
+    ///   This closure contains the application's business logic and is executed after all
+    ///   modules have been initialized and started, but before any modules are shut down.
     /// 
     /// # Returns
     /// 
@@ -175,547 +181,438 @@ impl DMSAppRuntime {
     /// 
     /// # Errors
     /// 
-    /// Returns an error if a critical module fails during execution.
-    pub async fn _Frun(mut self) -> DMSResult<()> {
+    /// Returns an error if:
+    /// - A critical module fails during execution
+    /// - The provided closure returns an error
+    pub async fn run<F, Fut>(mut self, f: F) -> DMSResult<()> 
+    where
+        F: FnOnce(&DMSServiceContext) -> Fut,
+        Fut: std::future::Future<Output = DMSResult<()>>,
+    {
         // Emit startup hook
-        self.ctx._Fhooks()._Femit_with(&DMSHookKind::Startup, &self.ctx, None, None)?;
+        self.ctx.hooks().emit_with(&DMSHookKind::Startup, &self.ctx, None, None)?;
 
         // Emit before modules init hook
-        self.ctx._Fhooks()._Femit_with(&DMSHookKind::BeforeModulesInit, &self.ctx, None, None)?;
+        self.ctx.hooks().emit_with(&DMSHookKind::BeforeModulesInit, &self.ctx, None, None)?;
         
         // Get module count
         let modules_guard = self.modules.read().await;
         let module_len = modules_guard.len();
         drop(modules_guard); // Release lock early
         
-        // Initialize synchronous modules
-        for idx in 0..module_len {
-            let mut error: Option<crate::core::DMSError> = None;
-            let critical;
-            let module_name;
-            let skip;
-            
-            // Check module state
+        // Collect module states first to avoid repeated lock acquisitions
+        let mut module_states = Vec::new();
+        {
             let modules_guard = self.modules.read().await;
-            if idx < modules_guard.len() {
-                let slot = &modules_guard[idx];
-                skip = slot.failed;
-                if !skip {
-                    module_name = slot.module._Fname().to_string();
-                    critical = slot.module._Fis_critical();
+            for idx in 0..module_len {
+                if idx < modules_guard.len() {
+                    let slot = &modules_guard[idx];
+                    module_states.push((
+                        idx,
+                        !slot.failed,
+                        if !slot.failed {
+                            slot.module.name().to_string()
+                        } else {
+                            String::new()
+                        },
+                        if !slot.failed {
+                            slot.module.is_critical()
+                        } else {
+                            false
+                        },
+                    ));
                 } else {
-                    module_name = String::new();
-                    critical = false;
+                    module_states.push((idx, false, String::new(), false));
                 }
-            } else {
-                skip = true;
-                module_name = String::new();
-                critical = false;
             }
-            drop(modules_guard);
-            
+        }
+
+        // Initialize synchronous modules
+        for (idx, skip, module_name, critical) in module_states.iter().cloned() {
             if !skip {
                 // Emit before module init hook
-                self.ctx._Fhooks()._Femit_with(&DMSHookKind::BeforeModulesInit, &self.ctx, Some(&module_name), Some(DMSModulePhase::Init))?;
+                self.ctx.hooks().emit_with(&DMSHookKind::BeforeModulesInit, &self.ctx, Some(&module_name), Some(DMSModulePhase::Init))?;
                 
-                // Initialize module
-                let mut modules_guard = self.modules.write().await;
-                if idx < modules_guard.len() {
-                    match &mut modules_guard[idx].module {
-                        _CModuleType::Sync(_module) => {
-                            if let Err(err) = _module._Finit(&mut self.ctx) {
-                                error = Some(err);
+                // Initialize module with single write lock acquisition
+                let mut error = None;
+                {
+                    let mut modules_guard = self.modules.write().await;
+                    if idx < modules_guard.len() {
+                        match &mut modules_guard[idx].module {
+                            ModuleType::Sync(_module) => {
+                                if let Err(err) = _module.init(&mut self.ctx) {
+                                    error = Some(err);
+                                }
                             }
-                        }
-                        _CModuleType::Async(_module) => {
-                            // Async modules are handled separately in the async phase
+                            ModuleType::Async(_module) => {
+                                // Async modules are handled separately in the async phase
+                            }
                         }
                     }
                 }
-                drop(modules_guard);
-            }
-            
-            // Handle module initialization error
-            if let Some(err) = error {
-                self._Flog_module_error("init", &module_name, &err);
-                if critical {
-                    return Err(err);
-                } else {
-                    // Mark module as failed
-                    let mut modules_guard = self.modules.write().await;
-                    if idx < modules_guard.len() {
-                        modules_guard[idx].failed = true;
+                
+                // Handle module initialization error
+                if let Some(err) = error {
+                    self.log_module_error("init", &module_name, &err);
+                    if critical {
+                        return Err(err);
+                    } else {
+                        // Mark module as failed with single write lock acquisition
+                        let mut modules_guard = self.modules.write().await;
+                        if idx < modules_guard.len() {
+                            modules_guard[idx].failed = true;
+                        }
                     }
                 }
             }
         }
         
         // Emit after modules init hook
-        self.ctx._Fhooks()._Femit_with(&DMSHookKind::AfterModulesInit, &self.ctx, None, None)?;
+        self.ctx.hooks().emit_with(&DMSHookKind::AfterModulesInit, &self.ctx, None, None)?;
 
         // Emit before modules start hook
-        self.ctx._Fhooks()._Femit_with(&DMSHookKind::BeforeModulesStart, &self.ctx, None, None)?;
+        self.ctx.hooks().emit_with(&DMSHookKind::BeforeModulesStart, &self.ctx, None, None)?;
         
-        // Start synchronous modules
-        for idx in 0..module_len {
-            let mut error: Option<crate::core::DMSError> = None;
-            let mut err_phase = "start";
-            let critical;
-            let module_name;
-            let skip;
-            
-            // Check module state
-            let modules_guard = self.modules.read().await;
-            if idx < modules_guard.len() {
-                let slot = &modules_guard[idx];
-                skip = slot.failed;
-                if !skip {
-                    module_name = slot.module._Fname().to_string();
-                    critical = slot.module._Fis_critical();
-                } else {
-                    module_name = String::new();
-                    critical = false;
-                }
-            } else {
-                skip = true;
-                module_name = String::new();
-                critical = false;
-            }
-            drop(modules_guard);
-            
+        // Start synchronous modules with optimized locking
+        for (idx, skip, module_name, critical) in module_states.iter().cloned() {
             if !skip {
-                // Emit before module before_start hook
-                self.ctx._Fhooks()._Femit_with(&DMSHookKind::BeforeModulesStart, &self.ctx, Some(&module_name), Some(DMSModulePhase::BeforeStart))?;
+                let mut err_phase = "start";
                 
-                // Execute before_start
-                let mut modules_guard = self.modules.write().await;
-                if idx < modules_guard.len() {
-                    match &mut modules_guard[idx].module {
-                        _CModuleType::Sync(_module) => {
-                            if let Err(err) = _module._Fbefore_start(&mut self.ctx) {
-                                err_phase = "before_start";
-                                error = Some(err);
-                            }
-                        }
-                        _CModuleType::Async(_module) => {
-                            // Async modules are handled separately in the async phase
-                        }
-                    }
-                }
-                drop(modules_guard);
-                
-                if error.is_none() {
-                    // Emit before module start hook
-                    self.ctx._Fhooks()._Femit_with(&DMSHookKind::BeforeModulesStart, &self.ctx, Some(&module_name), Some(DMSModulePhase::Start))?;
-                    
-                    // Execute start
+                // Execute all sync module phases with single write lock acquisition
+                let mut error = None;
+                {
                     let mut modules_guard = self.modules.write().await;
                     if idx < modules_guard.len() {
                         match &mut modules_guard[idx].module {
-                            _CModuleType::Sync(_module) => {
-                                if let Err(err) = _module._Fstart(&mut self.ctx) {
-                                    err_phase = "start";
+                            ModuleType::Sync(_module) => {
+                                // Execute before_start phase
+                                if let Err(err) = _module.before_start(&mut self.ctx) {
+                                    err_phase = "before_start";
                                     error = Some(err);
                                 }
+                                
+                                // Execute start phase if no error
+                                if error.is_none() {
+                                    if let Err(err) = _module.start(&mut self.ctx) {
+                                        err_phase = "start";
+                                        error = Some(err);
+                                    }
+                                }
+                                
+                                // Execute after_start phase if no error
+                                if error.is_none() {
+                                    if let Err(err) = _module.after_start(&mut self.ctx) {
+                                        err_phase = "after_start";
+                                        error = Some(err);
+                                    }
+                                }
                             }
-                            _CModuleType::Async(_module) => {
-                            // Async modules are handled separately in the async phase
-                        }
+                            ModuleType::Async(_module) => {
+                                // Async modules are handled separately in the async phase
+                            }
                         }
                     }
-                    drop(modules_guard);
                 }
                 
+                // Emit hooks outside of lock to avoid potential deadlocks
                 if error.is_none() {
-                    // Emit before module after_start hook
-                    self.ctx._Fhooks()._Femit_with(&DMSHookKind::BeforeModulesStart, &self.ctx, Some(&module_name), Some(DMSModulePhase::AfterStart))?;
-                    
-                    // Execute after_start
-                    let mut modules_guard = self.modules.write().await;
-                    if idx < modules_guard.len() {
-                        match &mut modules_guard[idx].module {
-                            _CModuleType::Sync(_module) => {
-                                if let Err(err) = _module._Fafter_start(&mut self.ctx) {
-                                    err_phase = "after_start";
-                                    error = Some(err);
-                                }
-                            }
-                            _CModuleType::Async(_module) => {
-                            // Async modules are handled separately in the async phase
-                        }
-                        }
-                    }
-                    drop(modules_guard);
+                    self.ctx.hooks().emit_with(&DMSHookKind::BeforeModulesStart, &self.ctx, Some(&module_name), Some(DMSModulePhase::BeforeStart))?;
+                    self.ctx.hooks().emit_with(&DMSHookKind::BeforeModulesStart, &self.ctx, Some(&module_name), Some(DMSModulePhase::Start))?;
+                    self.ctx.hooks().emit_with(&DMSHookKind::BeforeModulesStart, &self.ctx, Some(&module_name), Some(DMSModulePhase::AfterStart))?;
                 }
-            }
-            
-            // Handle module start error
-            if let Some(err) = error {
-                self._Flog_module_error(err_phase, &module_name, &err);
-                if critical {
-                    return Err(err);
-                } else {
-                    // Mark module as failed
-                    let mut modules_guard = self.modules.write().await;
-                    if idx < modules_guard.len() {
-                        modules_guard[idx].failed = true;
+                
+                // Handle module start error
+                if let Some(err) = error {
+                    self.log_module_error(err_phase, &module_name, &err);
+                    if critical {
+                        return Err(err);
+                    } else {
+                        // Mark module as failed with single write lock acquisition
+                        let mut modules_guard = self.modules.write().await;
+                        if idx < modules_guard.len() {
+                            modules_guard[idx].failed = true;
+                        }
                     }
                 }
             }
         }
         
         // Emit after modules start hook
-        self.ctx._Fhooks()._Femit_with(&DMSHookKind::AfterModulesStart, &self.ctx, None, None)?;
+        self.ctx.hooks().emit_with(&DMSHookKind::AfterModulesStart, &self.ctx, None, None)?;
 
-        // Initialize and start asynchronous modules
-        self.ctx._Fhooks()._Femit_with(&DMSHookKind::BeforeModulesStart, &self.ctx, None, None)?;
-        
+        // Initialize and start asynchronous modules with optimized locking
         for idx in 0..module_len {
-            let mut error: Option<crate::core::DMSError> = None;
             let mut err_phase = "async_start";
-            let critical;
-            let module_name;
-            let mut skip;
             
-            // Check module state for async modules
-            let modules_guard = self.modules.read().await;
-            if idx < modules_guard.len() {
-                let slot = &modules_guard[idx];
-                skip = slot.failed;
-                if !skip {
-                    match &slot.module {
-                        _CModuleType::Async(module) => {
-                            module_name = module._Fname().to_string();
-                            critical = module._Fis_critical();
+            // Check if this is an async module and get its state
+            let (skip, module_name, critical) = {
+                let modules_guard = self.modules.read().await;
+                if idx < modules_guard.len() {
+                    let slot = &modules_guard[idx];
+                    if !slot.failed {
+                        match &slot.module {
+                            ModuleType::Async(module) => (
+                                false,
+                                module.name().to_string(),
+                                module.is_critical(),
+                            ),
+                            ModuleType::Sync(_) => (true, String::new(), false),
                         }
-                        _CModuleType::Sync(_) => {
-                            skip = true;
-                            module_name = String::new();
-                            critical = false;
-                        }
+                    } else {
+                        (true, String::new(), false)
                     }
                 } else {
-                    module_name = String::new();
-                    critical = false;
+                    (true, String::new(), false)
                 }
-            } else {
-                skip = true;
-                module_name = String::new();
-                critical = false;
-            }
-            drop(modules_guard);
+            };
             
             if !skip {
-                // Emit before async module init hook
-                self.ctx._Fhooks()._Femit_with(&DMSHookKind::BeforeModulesStart, &self.ctx, Some(&module_name), Some(DMSModulePhase::AsyncInit))?;
-                
-                // Execute async init
-                let mut modules_guard = self.modules.write().await;
-                if idx < modules_guard.len() {
-                    if let _CModuleType::Async(module) = &mut modules_guard[idx].module {
-                        if let Err(err) = module._Finit(&mut self.ctx).await {
-                            err_phase = "async_init";
-                            error = Some(err);
-                        }
-                    }
-                }
-                drop(modules_guard);
-                
-                if error.is_none() {
-                    // Emit before async module before_start hook
-                    self.ctx._Fhooks()._Femit_with(&DMSHookKind::BeforeModulesStart, &self.ctx, Some(&module_name), Some(DMSModulePhase::AsyncBeforeStart))?;
-                    
-                    // Execute async before_start
+                // Execute all async module phases with single write lock acquisition
+                let mut error = None;
+                {
                     let mut modules_guard = self.modules.write().await;
                     if idx < modules_guard.len() {
-                        if let _CModuleType::Async(module) = &mut modules_guard[idx].module {
-                            if let Err(err) = module._Fbefore_start(&mut self.ctx).await {
-                                err_phase = "async_before_start";
+                        if let ModuleType::Async(_module) = &mut modules_guard[idx].module {
+                            // Execute async init phase
+                            if let Err(err) = _module.init(&mut self.ctx).await {
+                                err_phase = "async_init";
                                 error = Some(err);
+                            }
+                            
+                            // Execute async before_start phase if no error
+                            if error.is_none() {
+                                if let Err(err) = _module.before_start(&mut self.ctx).await {
+                                    err_phase = "async_before_start";
+                                    error = Some(err);
+                                }
+                            }
+                            
+                            // Execute async start phase if no error
+                            if error.is_none() {
+                                if let Err(err) = _module.start(&mut self.ctx).await {
+                                    err_phase = "async_start";
+                                    error = Some(err);
+                                }
+                            }
+                            
+                            // Execute async after_start phase if no error
+                            if error.is_none() {
+                                if let Err(err) = _module.after_start(&mut self.ctx).await {
+                                    err_phase = "async_after_start";
+                                    error = Some(err);
+                                }
                             }
                         }
                     }
-                    drop(modules_guard);
                 }
                 
+                // Emit hooks outside of lock to avoid potential deadlocks
                 if error.is_none() {
-                    // Emit before async module start hook
-                    self.ctx._Fhooks()._Femit_with(&DMSHookKind::BeforeModulesStart, &self.ctx, Some(&module_name), Some(DMSModulePhase::AsyncStart))?;
-                    
-                    // Execute async start
-                    let mut modules_guard = self.modules.write().await;
-                    if idx < modules_guard.len() {
-                        if let _CModuleType::Async(module) = &mut modules_guard[idx].module {
-                            if let Err(err) = module._Fstart(&mut self.ctx).await {
-                                err_phase = "async_start";
-                                error = Some(err);
-                            }
-                        }
-                    }
-                    drop(modules_guard);
+                    self.ctx.hooks().emit_with(&DMSHookKind::BeforeModulesStart, &self.ctx, Some(&module_name), Some(DMSModulePhase::AsyncInit))?;
+                    self.ctx.hooks().emit_with(&DMSHookKind::BeforeModulesStart, &self.ctx, Some(&module_name), Some(DMSModulePhase::AsyncBeforeStart))?;
+                    self.ctx.hooks().emit_with(&DMSHookKind::BeforeModulesStart, &self.ctx, Some(&module_name), Some(DMSModulePhase::AsyncStart))?;
+                    self.ctx.hooks().emit_with(&DMSHookKind::BeforeModulesStart, &self.ctx, Some(&module_name), Some(DMSModulePhase::AsyncAfterStart))?;
                 }
                 
-                if error.is_none() {
-                    // Emit before async module after_start hook
-                    self.ctx._Fhooks()._Femit_with(&DMSHookKind::BeforeModulesStart, &self.ctx, Some(&module_name), Some(DMSModulePhase::AsyncAfterStart))?;
-                    
-                    // Execute async after_start
-                    let mut modules_guard = self.modules.write().await;
-                    if idx < modules_guard.len() {
-                        if let _CModuleType::Async(module) = &mut modules_guard[idx].module {
-                            if let Err(err) = module._Fafter_start(&mut self.ctx).await {
-                                err_phase = "async_after_start";
-                                error = Some(err);
-                            }
+                // Handle async module error
+                if let Some(err) = error {
+                    self.log_module_error(err_phase, &module_name, &err);
+                    if critical {
+                        return Err(err);
+                    } else {
+                        // Mark module as failed with single write lock acquisition
+                        let mut modules_guard = self.modules.write().await;
+                        if idx < modules_guard.len() {
+                            modules_guard[idx].failed = true;
                         }
-                    }
-                    drop(modules_guard);
-                }
-            }
-            
-            // Handle async module error
-            if let Some(err) = error {
-                self._Flog_module_error(err_phase, &module_name, &err);
-                if critical {
-                    return Err(err);
-                } else {
-                    // Mark module as failed
-                    let mut modules_guard = self.modules.write().await;
-                    if idx < modules_guard.len() {
-                        modules_guard[idx].failed = true;
                     }
                 }
             }
         }
         
         // Emit after async modules start hook
-        self.ctx._Fhooks()._Femit_with(&DMSHookKind::AfterModulesStart, &self.ctx, None, None)?;
-
-        // Emit before modules shutdown hook
-        self.ctx._Fhooks()._Femit_with(&DMSHookKind::BeforeModulesShutdown, &self.ctx, None, None)?;
+        self.ctx.hooks().emit_with(&DMSHookKind::AfterModulesStart, &self.ctx, None, None)?;
         
-        // Shutdown synchronous modules in reverse order
+        // Run the application business logic (provided closure)
+        let result = f(&self.ctx).await;
+        
+        // Emit before modules shutdown hook
+        // Note: We're using a new context here since we've moved the original to the closure
+        let _ = self.ctx.hooks().emit_with(&DMSHookKind::BeforeModulesShutdown, &self.ctx, None, None);
+        
+        // Shutdown synchronous modules in reverse order with optimized locking
         for idx in (0..module_len).rev() {
-            let mut error: Option<crate::core::DMSError> = None;
-            let mut err_phase = "shutdown";
-            let critical;
-            let module_name;
-            let skip;
-            
-            // Check module state
-            let modules_guard = self.modules.read().await;
-            if idx < modules_guard.len() {
-                let slot = &modules_guard[idx];
-                skip = slot.failed;
-                if !skip {
-                    module_name = slot.module._Fname().to_string();
-                    critical = slot.module._Fis_critical();
+            // Check if this is a sync module and get its state
+            let (skip, module_name, critical) = {
+                let modules_guard = self.modules.read().await;
+                if idx < modules_guard.len() {
+                    let slot = &modules_guard[idx];
+                    if !slot.failed {
+                        match &slot.module {
+                            ModuleType::Sync(module) => (
+                                false,
+                                module.name().to_string(),
+                                module.is_critical(),
+                            ),
+                            ModuleType::Async(_) => (true, String::new(), false),
+                        }
+                    } else {
+                        (true, String::new(), false)
+                    }
                 } else {
-                    module_name = String::new();
-                    critical = false;
+                    (true, String::new(), false)
                 }
-            } else {
-                skip = true;
-                module_name = String::new();
-                critical = false;
-            }
-            drop(modules_guard);
+            };
             
             if !skip {
-                // Emit before module before_shutdown hook
-                self.ctx._Fhooks()._Femit_with(&DMSHookKind::BeforeModulesShutdown, &self.ctx, Some(&module_name), Some(DMSModulePhase::BeforeShutdown))?;
-                
-                // Execute before_shutdown
-                let mut modules_guard = self.modules.write().await;
-                if idx < modules_guard.len() {
-                    match &mut modules_guard[idx].module {
-                        _CModuleType::Sync(module) => {
-                            if let Err(err) = module._Fbefore_shutdown(&mut self.ctx) {
+                // Execute all sync module shutdown phases with single write lock acquisition
+                let mut err_phase = "shutdown";
+                let mut error = None;
+                {
+                    let mut modules_guard = self.modules.write().await;
+                    if idx < modules_guard.len() {
+                        if let ModuleType::Sync(_module) = &mut modules_guard[idx].module {
+                            // Execute before_shutdown phase
+                            if let Err(err) = _module.before_shutdown(&mut self.ctx) {
                                 err_phase = "before_shutdown";
                                 error = Some(err);
                             }
-                        }
-                        _CModuleType::Async(_module) => {
-                            // Async modules are handled separately in the async phase
-                        }
-                    }
-                }
-                drop(modules_guard);
-                
-                if error.is_none() {
-                    // Emit before module shutdown hook
-                    self.ctx._Fhooks()._Femit_with(&DMSHookKind::BeforeModulesShutdown, &self.ctx, Some(&module_name), Some(DMSModulePhase::Shutdown))?;
-                    
-                    // Execute shutdown
-                    let mut modules_guard = self.modules.write().await;
-                    if idx < modules_guard.len() {
-                        match &mut modules_guard[idx].module {
-                            _CModuleType::Sync(_module) => {
-                                if let Err(err) = _module._Fshutdown(&mut self.ctx) {
+                            
+                            // Execute shutdown phase if no error
+                            if error.is_none() {
+                                if let Err(err) = _module.shutdown(&mut self.ctx) {
                                     err_phase = "shutdown";
                                     error = Some(err);
                                 }
                             }
-                            _CModuleType::Async(_module) => {
-                            // Async modules are handled separately in the async phase
-                        }
-                        }
-                    }
-                    drop(modules_guard);
-                }
-                
-                if error.is_none() {
-                    // Emit before module after_shutdown hook
-                    self.ctx._Fhooks()._Femit_with(&DMSHookKind::BeforeModulesShutdown, &self.ctx, Some(&module_name), Some(DMSModulePhase::AfterShutdown))?;
-                    
-                    // Execute after_shutdown
-                    let mut modules_guard = self.modules.write().await;
-                    if idx < modules_guard.len() {
-                        match &mut modules_guard[idx].module {
-                            _CModuleType::Sync(_module) => {
-                                if let Err(err) = _module._Fafter_shutdown(&mut self.ctx) {
+                            
+                            // Execute after_shutdown phase if no error
+                            if error.is_none() {
+                                if let Err(err) = _module.after_shutdown(&mut self.ctx) {
                                     err_phase = "after_shutdown";
                                     error = Some(err);
                                 }
                             }
-                            _CModuleType::Async(_module) => {
-                            // Async modules are handled separately in the async phase
-                        }
                         }
                     }
-                    drop(modules_guard);
                 }
-            }
-            
-            // Handle module shutdown error
-            if let Some(err) = error {
-                self._Flog_module_error(err_phase, &module_name, &err);
-                if critical {
-                    return Err(err);
-                } else {
-                    // Mark module as failed
-                    let mut modules_guard = self.modules.write().await;
-                    if idx < modules_guard.len() {
-                        modules_guard[idx].failed = true;
+                
+                // Emit hooks outside of lock to avoid potential deadlocks
+                if error.is_none() {
+                    self.ctx.hooks().emit_with(&DMSHookKind::BeforeModulesShutdown, &self.ctx, Some(&module_name), Some(DMSModulePhase::BeforeShutdown))?;
+                    self.ctx.hooks().emit_with(&DMSHookKind::BeforeModulesShutdown, &self.ctx, Some(&module_name), Some(DMSModulePhase::Shutdown))?;
+                    self.ctx.hooks().emit_with(&DMSHookKind::BeforeModulesShutdown, &self.ctx, Some(&module_name), Some(DMSModulePhase::AfterShutdown))?;
+                }
+                
+                // Handle module shutdown error
+                if let Some(err) = error {
+                    self.log_module_error(err_phase, &module_name, &err);
+                    if critical {
+                        return Err(err);
+                    } else {
+                        // Mark module as failed
+                        let mut modules_guard = self.modules.write().await;
+                        if idx < modules_guard.len() {
+                            modules_guard[idx].failed = true;
+                        }
                     }
                 }
             }
         }
         
         // Emit after modules shutdown hook
-        self.ctx._Fhooks()._Femit_with(&DMSHookKind::AfterModulesShutdown, &self.ctx, None, None)?;
+        self.ctx.hooks().emit_with(&DMSHookKind::AfterModulesShutdown, &self.ctx, None, None)?;
 
-        // Shutdown asynchronous modules in reverse order
-        self.ctx._Fhooks()._Femit_with(&DMSHookKind::BeforeModulesShutdown, &self.ctx, None, None)?;
+        // Shutdown asynchronous modules in reverse order with optimized locking
+        self.ctx.hooks().emit_with(&DMSHookKind::BeforeModulesShutdown, &self.ctx, None, None)?;
         
         for idx in (0..module_len).rev() {
-            let mut error: Option<crate::core::DMSError> = None;
-            let mut err_phase = "async_shutdown";
-            let critical;
-            let module_name;
-            let mut skip;
-            
-            // Check module state for async modules
-            let modules_guard = self.modules.read().await;
-            if idx < modules_guard.len() {
-                let slot = &modules_guard[idx];
-                skip = slot.failed;
-                if !skip {
-                    match &slot.module {
-                        _CModuleType::Async(module) => {
-                            module_name = module._Fname().to_string();
-                            critical = module._Fis_critical();
+            // Check if this is an async module and get its state
+            let (skip, module_name, critical) = {
+                let modules_guard = self.modules.read().await;
+                if idx < modules_guard.len() {
+                    let slot = &modules_guard[idx];
+                    if !slot.failed {
+                        match &slot.module {
+                            ModuleType::Async(module) => (
+                                false,
+                                module.name().to_string(),
+                                module.is_critical(),
+                            ),
+                            ModuleType::Sync(_) => (true, String::new(), false),
                         }
-                        _CModuleType::Sync(_) => {
-                            skip = true;
-                            module_name = String::new();
-                            critical = false;
-                        }
+                    } else {
+                        (true, String::new(), false)
                     }
                 } else {
-                    module_name = String::new();
-                    critical = false;
+                    (true, String::new(), false)
                 }
-            } else {
-                skip = true;
-                module_name = String::new();
-                critical = false;
-            }
-            drop(modules_guard);
+            };
             
             if !skip {
-                // Emit before async module before_shutdown hook
-                self.ctx._Fhooks()._Femit_with(&DMSHookKind::BeforeModulesShutdown, &self.ctx, Some(&module_name), Some(DMSModulePhase::AsyncBeforeShutdown))?;
-                
-                // Execute async before_shutdown
-                let mut modules_guard = self.modules.write().await;
-                if idx < modules_guard.len() {
-                    if let _CModuleType::Async(module) = &mut modules_guard[idx].module {
-                        if let Err(err) = module._Fbefore_shutdown(&mut self.ctx).await {
-                            err_phase = "async_before_shutdown";
-                            error = Some(err);
-                        }
-                    }
-                }
-                drop(modules_guard);
-                
-                if error.is_none() {
-                    // Emit before async module shutdown hook
-                    self.ctx._Fhooks()._Femit_with(&DMSHookKind::BeforeModulesShutdown, &self.ctx, Some(&module_name), Some(DMSModulePhase::AsyncShutdown))?;
-                    
-                    // Execute async shutdown
+                // Execute all async module shutdown phases with single write lock acquisition
+                let mut err_phase = "async_shutdown";
+                let mut error = None;
+                {
                     let mut modules_guard = self.modules.write().await;
                     if idx < modules_guard.len() {
-                        if let _CModuleType::Async(module) = &mut modules_guard[idx].module {
-                            if let Err(err) = module._Fshutdown(&mut self.ctx).await {
-                                err_phase = "async_shutdown";
+                        if let ModuleType::Async(_module) = &mut modules_guard[idx].module {
+                            // Execute async before_shutdown phase
+                            if let Err(err) = _module.before_shutdown(&mut self.ctx).await {
+                                err_phase = "async_before_shutdown";
                                 error = Some(err);
+                            }
+                            
+                            // Execute async shutdown phase if no error
+                            if error.is_none() {
+                                if let Err(err) = _module.shutdown(&mut self.ctx).await {
+                                    err_phase = "async_shutdown";
+                                    error = Some(err);
+                                }
+                            }
+                            
+                            // Execute async after_shutdown phase if no error
+                            if error.is_none() {
+                                if let Err(err) = _module.after_shutdown(&mut self.ctx).await {
+                                    err_phase = "async_after_shutdown";
+                                    error = Some(err);
+                                }
                             }
                         }
                     }
-                    drop(modules_guard);
                 }
                 
+                // Emit hooks outside of lock to avoid potential deadlocks
                 if error.is_none() {
-                    // Emit before async module after_shutdown hook
-                    self.ctx._Fhooks()._Femit_with(&DMSHookKind::BeforeModulesShutdown, &self.ctx, Some(&module_name), Some(DMSModulePhase::AsyncAfterShutdown))?;
-                    
-                    // Execute async after_shutdown
-                    let mut modules_guard = self.modules.write().await;
-                    if idx < modules_guard.len() {
-                        if let _CModuleType::Async(module) = &mut modules_guard[idx].module {
-                            if let Err(err) = module._Fafter_shutdown(&mut self.ctx).await {
-                                err_phase = "async_after_shutdown";
-                                error = Some(err);
-                            }
-                        }
-                    }
-                    drop(modules_guard);
+                    self.ctx.hooks().emit_with(&DMSHookKind::BeforeModulesShutdown, &self.ctx, Some(&module_name), Some(DMSModulePhase::AsyncBeforeShutdown))?;
+                    self.ctx.hooks().emit_with(&DMSHookKind::BeforeModulesShutdown, &self.ctx, Some(&module_name), Some(DMSModulePhase::AsyncShutdown))?;
+                    self.ctx.hooks().emit_with(&DMSHookKind::BeforeModulesShutdown, &self.ctx, Some(&module_name), Some(DMSModulePhase::AsyncAfterShutdown))?;
                 }
-            }
-            
-            // Handle async module shutdown error
-            if let Some(err) = error {
-                self._Flog_module_error(err_phase, &module_name, &err);
-                if critical {
-                    return Err(err);
-                } else {
-                    // Mark module as failed
-                    let mut modules_guard = self.modules.write().await;
-                    if idx < modules_guard.len() {
-                        modules_guard[idx].failed = true;
+                
+                // Handle async module shutdown error
+                if let Some(err) = error {
+                    self.log_module_error(err_phase, &module_name, &err);
+                    if critical {
+                        return Err(err);
+                    } else {
+                        // Mark module as failed with single write lock acquisition
+                        let mut modules_guard = self.modules.write().await;
+                        if idx < modules_guard.len() {
+                            modules_guard[idx].failed = true;
+                        }
                     }
                 }
             }
         }
         
         // Emit after async modules shutdown hook
-        self.ctx._Fhooks()._Femit_with(&DMSHookKind::AfterModulesShutdown, &self.ctx, None, None)?;
+        self.ctx.hooks().emit_with(&DMSHookKind::AfterModulesShutdown, &self.ctx, None, None)?;
 
         // Emit shutdown hook
-        self.ctx._Fhooks()._Femit_with(&DMSHookKind::Shutdown, &self.ctx, None, None)?;
+        self.ctx.hooks().emit_with(&DMSHookKind::Shutdown, &self.ctx, None, None)?;
 
-        Ok(())
+        // Return the result of the closure execution
+        result
     }
 
     /// Log a module error.
@@ -728,10 +625,10 @@ impl DMSAppRuntime {
     /// - `phase`: The lifecycle phase during which the error occurred
     /// - `module_name`: The name of the module that failed
     /// - `err`: The error that occurred
-    fn _Flog_module_error(&self, phase: &str, module_name: &str, err: &crate::core::DMSError) {
-        let logger = self.ctx._Flogger();
+    fn log_module_error(&self, phase: &str, module_name: &str, err: &crate::core::DMSError) {
+        let logger = self.ctx.logger();
         let message = format!("module={module_name} phase={phase} error={err}");
-        let _ = logger._Ferror("DMS.Runtime", message);
+        let _ = logger.error("DMS.Runtime", message);
     }
 }
 
@@ -748,14 +645,14 @@ impl DMSAppRuntime {
 /// 
 /// #[tokio::main]
 /// async fn main() -> DMSResult<()> {
-///     let app = DMSAppBuilder::_Fnew()
-///         ._Fwith_config("config.yaml")?
-///         ._Fwith_module(Box::new(MySyncModule::new()))
-///         ._Fwith_async_module(Box::new(MyAsyncModule::new()))
-///         ._Fbuild()?;
+///     let app = DMSAppBuilder::new()
+///         .with_config("config.yaml")?
+///         .with_module(Box::new(MySyncModule::new()))
+///         .with_async_module(Box::new(MyAsyncModule::new()))
+///         .build()?;
 ///     
-///     app._Frun(|ctx| async move {
-///         ctx._Flogger()._Finfo("service", "DMS service started")?;
+///     app.run(|ctx| async move {
+///         ctx.logger().info("service", "DMS service started")?;
 ///         Ok(())
 ///     }).await
 /// }
@@ -763,7 +660,7 @@ impl DMSAppRuntime {
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 pub struct DMSAppBuilder {
     /// Vector of modules with their state, including both sync and async modules
-    modules: Vec<_CModuleSlot>, 
+    modules: Vec<ModuleSlot>, 
     /// Configuration file paths to load
     config_paths: Vec<String>, 
     /// Custom logging configuration (optional)
@@ -778,7 +675,7 @@ impl DMSAppBuilder {
     /// # Returns
     /// 
     /// A new `DMSAppBuilder` instance with default settings.
-    pub fn _Fnew() -> Self {
+    pub fn new() -> Self {
         DMSAppBuilder {
             modules: Vec::new(),
             config_paths: Vec::new(),
@@ -791,13 +688,13 @@ impl DMSAppBuilder {
     /// 
     /// # Parameters
     /// 
-    /// - `module`: A boxed synchronous module implementing `_CServiceModule`
+    /// - `module`: A boxed synchronous module implementing `ServiceModule`
     /// 
     /// # Returns
     /// 
     /// The updated `DMSAppBuilder` instance for method chaining.
-    pub fn _Fwith_module(mut self, module: Box<dyn _CServiceModule>) -> Self {
-        self.modules.push(_CModuleSlot { module: _CModuleType::Sync(module), failed: false });
+    pub fn with_module(mut self, module: Box<dyn ServiceModule>) -> Self {
+        self.modules.push(ModuleSlot { module: ModuleType::Sync(module), failed: false });
         self
     }
 
@@ -805,13 +702,134 @@ impl DMSAppBuilder {
     /// 
     /// # Parameters
     /// 
-    /// - `module`: A boxed asynchronous module implementing `_CAsyncServiceModule`
+    /// - `module`: A boxed asynchronous module implementing `AsyncServiceModule`
     /// 
     /// # Returns
     /// 
     /// The updated `DMSAppBuilder` instance for method chaining.
-    pub fn _Fwith_async_module(mut self, module: Box<dyn _CAsyncServiceModule>) -> Self {
-        self.modules.push(_CModuleSlot { module: _CModuleType::Async(module), failed: false });
+    pub fn with_async_module(mut self, module: Box<dyn AsyncServiceModule>) -> Self {
+        self.modules.push(ModuleSlot { module: ModuleType::Async(module), failed: false });
+        self
+    }
+
+    /// Add a DMS module to the application.
+    /// 
+    /// This method adds a module implementing the public `DMSModule` trait to the application.
+    /// The module will be treated as an asynchronous module.
+    /// 
+    /// # Parameters
+    /// 
+    /// - `module`: A boxed module implementing `DMSModule`
+    /// 
+    /// # Returns
+    /// 
+    /// The updated `DMSAppBuilder` instance for method chaining.
+    pub fn with_dms_module(mut self, module: Box<dyn crate::core::DMSModule>) -> Self {
+        // Wrap DMSModule into AsyncServiceModule adapter
+        struct DMSModuleAdapter(Box<dyn crate::core::DMSModule + Send + Sync + 'static>);
+        
+        #[async_trait::async_trait]
+        impl AsyncServiceModule for DMSModuleAdapter {
+            fn name(&self) -> &str {
+                self.0.name()
+            }
+            
+            fn is_critical(&self) -> bool {
+                self.0.is_critical()
+            }
+            
+            fn priority(&self) -> i32 {
+                self.0.priority()
+            }
+            
+            fn dependencies(&self) -> Vec<&str> {
+                self.0.dependencies()
+            }
+            
+            async fn init(&mut self, ctx: &mut DMSServiceContext) -> DMSResult<()> {
+                self.0.init(ctx).await
+            }
+            
+            async fn before_start(&mut self, ctx: &mut DMSServiceContext) -> DMSResult<()> {
+                self.0.before_start(ctx).await
+            }
+            
+            async fn start(&mut self, ctx: &mut DMSServiceContext) -> DMSResult<()> {
+                self.0.start(ctx).await
+            }
+            
+            async fn after_start(&mut self, ctx: &mut DMSServiceContext) -> DMSResult<()> {
+                self.0.after_start(ctx).await
+            }
+            
+            async fn before_shutdown(&mut self, ctx: &mut DMSServiceContext) -> DMSResult<()> {
+                self.0.before_shutdown(ctx).await
+            }
+            
+            async fn shutdown(&mut self, ctx: &mut DMSServiceContext) -> DMSResult<()> {
+                self.0.shutdown(ctx).await
+            }
+            
+            async fn after_shutdown(&mut self, ctx: &mut DMSServiceContext) -> DMSResult<()> {
+                self.0.after_shutdown(ctx).await
+            }
+        }
+        
+        self.modules.push(ModuleSlot { 
+            module: ModuleType::Async(Box::new(DMSModuleAdapter(module))), 
+            failed: false 
+        });
+        self
+    }
+
+    /// Add multiple synchronous modules to the application.
+    /// 
+    /// # Parameters
+    /// 
+    /// - `modules`: A vector of boxed synchronous modules implementing `ServiceModule`
+    /// 
+    /// # Returns
+    /// 
+    /// The updated `DMSAppBuilder` instance for method chaining.
+    pub fn with_modules(mut self, modules: Vec<Box<dyn ServiceModule>>) -> Self {
+        for module in modules {
+            self.modules.push(ModuleSlot { module: ModuleType::Sync(module), failed: false });
+        }
+        self
+    }
+
+    /// Add multiple asynchronous modules to the application.
+    /// 
+    /// # Parameters
+    /// 
+    /// - `modules`: A vector of boxed asynchronous modules implementing `AsyncServiceModule`
+    /// 
+    /// # Returns
+    /// 
+    /// The updated `DMSAppBuilder` instance for method chaining.
+    pub fn with_async_modules(mut self, modules: Vec<Box<dyn AsyncServiceModule>>) -> Self {
+        for module in modules {
+            self.modules.push(ModuleSlot { module: ModuleType::Async(module), failed: false });
+        }
+        self
+    }
+    
+    /// Add multiple DMS modules to the application.
+    /// 
+    /// This method adds multiple modules implementing the public `DMSModule` trait to the application.
+    /// Each module will be treated as an asynchronous module.
+    /// 
+    /// # Parameters
+    /// 
+    /// - `modules`: A vector of boxed modules implementing `DMSModule`
+    /// 
+    /// # Returns
+    /// 
+    /// The updated `DMSAppBuilder` instance for method chaining.
+    pub fn with_dms_modules(mut self, modules: Vec<Box<dyn crate::core::DMSModule>>) -> Self {
+        for module in modules {
+            self = self.with_dms_module(module);
+        }
         self
     }
 
@@ -823,10 +841,15 @@ impl DMSAppBuilder {
     /// 
     /// # Returns
     /// 
-    /// The updated `DMSAppBuilder` instance for method chaining.
-    pub fn _Fwith_config(mut self, config_path: impl Into<String>) -> Self {
+    /// A `DMSResult` containing the updated `DMSAppBuilder` instance for method chaining.
+    /// 
+    /// # Errors
+    /// 
+    /// This method currently never returns an error, but returns `DMSResult` for consistency
+    /// with other builder methods and to allow for future error handling.
+    pub fn with_config(mut self, config_path: impl Into<String>) -> DMSResult<Self> {
         self.config_paths.push(config_path.into());
-        self
+        Ok(self)
     }
 
     /// Set custom logging configuration for the application.
@@ -837,10 +860,15 @@ impl DMSAppBuilder {
     /// 
     /// # Returns
     /// 
-    /// The updated `DMSAppBuilder` instance for method chaining.
-    pub fn _Fwith_logging(mut self, logging_config: crate::log::DMSLogConfig) -> Self {
+    /// A `DMSResult` containing the updated `DMSAppBuilder` instance for method chaining.
+    /// 
+    /// # Errors
+    /// 
+    /// This method currently never returns an error, but returns `DMSResult` for consistency
+    /// with other builder methods and to allow for future error handling.
+    pub fn with_logging(mut self, logging_config: crate::log::DMSLogConfig) -> DMSResult<Self> {
         self.logging_config = Some(logging_config);
-        self
+        Ok(self)
     }
 
     /// Set custom observability configuration for the application.
@@ -851,10 +879,15 @@ impl DMSAppBuilder {
     /// 
     /// # Returns
     /// 
-    /// The updated `DMSAppBuilder` instance for method chaining.
-    pub fn _Fwith_observability(mut self, observability_config: crate::observability::DMSObservabilityConfig) -> Self {
+    /// A `DMSResult` containing the updated `DMSAppBuilder` instance for method chaining.
+    /// 
+    /// # Errors
+    /// 
+    /// This method currently never returns an error, but returns `DMSResult` for consistency
+    /// with other builder methods and to allow for future error handling.
+    pub fn with_observability(mut self, observability_config: crate::observability::DMSObservabilityConfig) -> DMSResult<Self> {
         self.observability_config = Some(observability_config);
-        self
+        Ok(self)
     }
 
     /// Build the application runtime.
@@ -876,13 +909,13 @@ impl DMSAppBuilder {
     /// - If configuration loading fails
     /// - If service context creation fails
     /// - If module sorting fails due to circular dependencies
-    pub fn _Fbuild(mut self) -> DMSResult<DMSAppRuntime> {
+    pub fn build(mut self) -> DMSResult<DMSAppRuntime> {
         // Create config manager with specified config paths
-        let mut config_manager = crate::config::DMSConfigManager::_Fnew();
+        let mut config_manager = crate::config::DMSConfigManager::new();
         
         // Add specified config files
         for path in &self.config_paths {
-            config_manager._Fadd_file_source(path);
+            config_manager.add_file_source(path);
         }
         
         // Add default config sources if no paths specified
@@ -891,28 +924,28 @@ impl DMSAppBuilder {
                 let config_dir = cwd.join("config");
                 
                 // Add all supported config files in order of priority (lowest to highest)
-                config_manager._Fadd_file_source(config_dir.join("dms.yaml"));
-                config_manager._Fadd_file_source(config_dir.join("dms.yml"));
-                config_manager._Fadd_file_source(config_dir.join("dms.toml"));
-                config_manager._Fadd_file_source(config_dir.join("dms.json"));
+                config_manager.add_file_source(config_dir.join("dms.yaml"));
+                config_manager.add_file_source(config_dir.join("dms.yml"));
+                config_manager.add_file_source(config_dir.join("dms.toml"));
+                config_manager.add_file_source(config_dir.join("dms.json"));
             }
         }
         
         // Add environment variables as highest priority
-        config_manager._Fadd_environment_source();
+        config_manager.add_environment_source();
         
         // Load configuration
-        config_manager._Fload()?;
+        config_manager.load()?;
 
         // Create service context with custom configuration
-        let ctx = self._Fcreate_service_context(config_manager)?;
+        let ctx = self.create_service_context(config_manager)?;
         
         // Add core modules
-        self.modules.push(_CModuleSlot { module: _CModuleType::Sync(Box::new(DMSLogAnalyticsModule::_Fnew())), failed: false });
-        self.modules.push(_CModuleSlot { module: _CModuleType::Sync(Box::new(DMSLifecycleObserver::_Fnew())), failed: false });
+        self.modules.push(ModuleSlot { module: ModuleType::Sync(Box::new(DMSLogAnalyticsModule::new())), failed: false });
+        self.modules.push(ModuleSlot { module: ModuleType::Sync(Box::new(DMSLifecycleObserver::new())), failed: false });
         
         // Sort modules based on dependencies and priority
-        self.modules = _Fsort_modules(self.modules)?;
+        self.modules = sort_modules(self.modules)?;
         
         let runtime = DMSAppRuntime {
             ctx,
@@ -920,6 +953,8 @@ impl DMSAppBuilder {
         };
         Ok(runtime)
     }
+    
+
 
     /// Create the service context with the given configuration manager.
     /// 
@@ -942,29 +977,29 @@ impl DMSAppBuilder {
     /// - If project root directory detection fails
     /// - If file system creation fails
     /// - If logger creation fails
-    fn _Fcreate_service_context(&self, config_manager: crate::config::DMSConfigManager) -> DMSResult<DMSServiceContext> {
-        let cfg = config_manager._Fconfig();
+    fn create_service_context(&self, config_manager: crate::config::DMSConfigManager) -> DMSResult<DMSServiceContext> {
+        let cfg = config_manager.config();
 
         let project_root = std::env::current_dir()
             .map_err(|e| crate::core::DMSError::Other(format!("detect project root failed: {e}")))?;
-        let app_data_root = if let Some(root_str) = cfg._Fget_str("fs.app_data_root") {
+        let app_data_root = if let Some(root_str) = cfg.get_str("fs.app_data_root") {
             project_root.join(root_str)
         } else {
             project_root.join(".dms")
         };
 
-        let fs = crate::fs::DMSFileSystem::_Fnew_with_roots(project_root, app_data_root);
+        let fs = crate::fs::DMSFileSystem::new_with_roots(project_root, app_data_root);
 
         // Use custom logging config if provided, otherwise create from config
         let log_config: crate::log::DMSLogConfig = if let Some(log_config) = &self.logging_config {
             log_config.clone()
         } else {
-            crate::log::DMSLogConfig::_Ffrom_config(cfg)
+            crate::log::DMSLogConfig::from_config(cfg)
         };
-        let logger = crate::log::DMSLogger::_Fnew(&log_config, fs.clone());
-        let hooks = crate::hooks::DMSHookBus::_Fnew();
+        let logger = crate::log::DMSLogger::new(&log_config, fs.clone());
+        let hooks = crate::hooks::DMSHookBus::new();
         
-        Ok(DMSServiceContext::_Fnew_with(fs, logger, config_manager, hooks))
+        Ok(DMSServiceContext::new_with(fs, logger, config_manager, hooks))
     }
 }
 
@@ -972,8 +1007,8 @@ impl DMSAppBuilder {
 
 /// Sort modules based on dependencies and priority
 /// Uses topological sort to handle dependencies, and sorts by priority within the same dependency level
-fn _Fsort_modules(mut modules: Vec<_CModuleSlot>) -> DMSResult<Vec<_CModuleSlot>> {
-    let mut result: Vec<_CModuleSlot> = Vec::with_capacity(modules.len());
+fn sort_modules(mut modules: Vec<ModuleSlot>) -> DMSResult<Vec<ModuleSlot>> {
+    let mut result: Vec<ModuleSlot> = Vec::with_capacity(modules.len());
     
     // Create a priority queue that holds (priority, module_index)
     // Higher priority comes first
@@ -986,14 +1021,14 @@ fn _Fsort_modules(mut modules: Vec<_CModuleSlot>) -> DMSResult<Vec<_CModuleSlot>
         let name_to_index: HashMap<&str, usize> = modules
             .iter()
             .enumerate()
-            .map(|(i, slot)| (slot.module._Fname(), i))
+            .map(|(i, slot)| (slot.module.name(), i))
             .collect();
         
         // Calculate in-degree for each module
         let mut in_degree: Vec<usize> = vec![0; modules.len()];
         
         for (i, slot) in modules.iter().enumerate() {
-            let dependencies = slot.module._Fdependencies();
+            let dependencies = slot.module.dependencies();
             for dep_name in dependencies {
                 // Check if dependency exists in remaining modules
                 if let Some(_dep_index) = name_to_index.get(dep_name) {
@@ -1001,10 +1036,10 @@ fn _Fsort_modules(mut modules: Vec<_CModuleSlot>) -> DMSResult<Vec<_CModuleSlot>
                     in_degree[i] += 1;
                 } else {
                     // Dependency not found, check if it's already in result
-                    let dep_in_result = result.iter().any(|slot| slot.module._Fname() == dep_name);
+                    let dep_in_result = result.iter().any(|slot| slot.module.name() == dep_name);
                     if !dep_in_result {
                         return Err(crate::core::DMSError::MissingDependency { 
-                            module_name: slot.module._Fname().to_string(), 
+                            module_name: slot.module.name().to_string(), 
                             dependency: dep_name.to_string() 
                         });
                     }
@@ -1015,7 +1050,7 @@ fn _Fsort_modules(mut modules: Vec<_CModuleSlot>) -> DMSResult<Vec<_CModuleSlot>
         // Add all modules with in-degree 0 to the queue
         for (i, &degree) in in_degree.iter().enumerate() {
             if degree == 0 {
-                let priority = modules[i].module._Fpriority();
+                let priority = modules[i].module.priority();
                 queue.push((priority, i));
             }
         }
@@ -1023,7 +1058,7 @@ fn _Fsort_modules(mut modules: Vec<_CModuleSlot>) -> DMSResult<Vec<_CModuleSlot>
         // If no modules with in-degree 0, we have a circular dependency
         if queue.is_empty() {
             return Err(crate::core::DMSError::CircularDependency { 
-                modules: modules.iter().map(|slot| slot.module._Fname().to_string()).collect() 
+                modules: modules.iter().map(|slot| slot.module.name().to_string()).collect() 
             });
         }
         
@@ -1040,3 +1075,6 @@ fn _Fsort_modules(mut modules: Vec<_CModuleSlot>) -> DMSResult<Vec<_CModuleSlot>
     
     Ok(result)
 }
+
+
+

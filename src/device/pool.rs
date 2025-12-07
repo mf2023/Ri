@@ -53,7 +53,7 @@
 //! 
 //! fn example() -> DMSResult<()> {
 //!     // Create a resource pool manager
-//!     let mut manager = DMSResourcePoolManager::_Fnew();
+//!     let mut manager = DMSResourcePoolManager::new();
 //!     
 //!     // Create a resource pool configuration
 //!     let config = DMSResourcePoolConfig {
@@ -65,30 +65,32 @@
 //!     };
 //!     
 //!     // Create a resource pool
-//!     let pool = manager._Fcreate_pool(config);
+//!     let pool = manager.create_pool(config);
 //!     
 //!     // Get pool statistics
-//!     let stats = pool._Fget_statistics();
+//!     let stats = pool.get_statistics();
 //!     println!("Pool has {} devices, utilization: {:.2}%", 
 //!              stats.total_devices, stats.utilization_rate * 100.0);
 //!     
 //!     // Get all pools by device type
-//!     let cpu_pools = manager._Fget_pools_by_type(DMSDeviceType::CPU);
+//!     let cpu_pools = manager.get_pools_by_type(DMSDeviceType::CPU);
 //!     println!("Found {} CPU pools", cpu_pools.len());
 //!     
 //!     // Get overall statistics
-//!     let overall_stats = manager._Fget_overall_statistics();
+//!     let overall_stats = manager.get_overall_statistics();
 //!     println!("Total devices across all pools: {}", overall_stats.total_devices);
 //!     
 //!     Ok(())
 //! }
 //! ```
 
-use std::sync::Arc;
+use std::sync::{Arc, RwLock};
 use std::collections::HashMap;
+use std::time::Duration;
 use serde::{Serialize, Deserialize};
 
 use super::device::{DMSDevice, DMSDeviceType};
+
 
 /// Resource pool for managing multiple similar devices
 /// 
@@ -126,6 +128,8 @@ pub struct DMSResourcePool {
     available_storage_gb: f64,
     /// Available bandwidth in Gbps (not allocated)
     available_bandwidth_gbps: f64,
+    /// Connection pool state for lifecycle management
+    connection_pool: Arc<RwLock<DMSConnectionPool>>,
 }
 
 /// Configuration for a resource pool
@@ -156,7 +160,13 @@ impl DMSResourcePool {
     /// # Returns
     /// 
     /// A new `DMSResourcePool` instance with the specified configuration
-    pub fn _Fnew(config: DMSResourcePoolConfig) -> Self {
+    pub fn new(config: DMSResourcePoolConfig) -> Self {
+        let connection_pool = Arc::new(RwLock::new(DMSConnectionPool::new(
+            config.max_concurrent_allocations,
+            Duration::from_secs(config.allocation_timeout_secs),
+            Duration::from_secs(config.health_check_interval_secs),
+        )));
+        
         Self {
             name: config.name,
             device_type: config.device_type,
@@ -173,6 +183,7 @@ impl DMSResourcePool {
             available_memory_gb: 0.0,
             available_storage_gb: 0.0,
             available_bandwidth_gbps: 0.0,
+            connection_pool,
         }
     }
     
@@ -188,13 +199,13 @@ impl DMSResourcePool {
     /// # Returns
     /// 
     /// `true` if the device was successfully added, `false` otherwise
-    pub fn _Fadd_device(&mut self, device: Arc<DMSDevice>) -> bool {
+    pub fn add_device(&mut self, device: Arc<DMSDevice>) -> bool {
         // Check if device type matches pool device type
-        if device._Fdevice_type() != self.device_type {
+        if device.device_type() != self.device_type {
             return false;
         }
         
-        let device_id = device._Fid().to_string();
+        let device_id = device.id().to_string();
         // Check if device is already in the pool
         if self.devices.contains_key(&device_id) {
             return false;
@@ -240,7 +251,7 @@ impl DMSResourcePool {
     /// # Returns
     /// 
     /// `true` if the device was successfully removed, `false` otherwise
-    pub fn _Fremove_device(&mut self, device_id: &str) -> bool {
+    pub fn remove_device(&mut self, device_id: &str) -> bool {
         if let Some(device) = self.devices.remove(device_id) {
             // Get device capabilities
             let capabilities = device.capabilities();
@@ -249,7 +260,7 @@ impl DMSResourcePool {
             self.total_capacity -= 1;
             
             // Update available or allocated capacity based on device status
-            if device._Fis_available() {
+            if device.is_available() {
                 self.available_capacity -= 1;
                 
                 // Update available resource counters
@@ -257,7 +268,7 @@ impl DMSResourcePool {
                 self.available_memory_gb -= capabilities.memory_gb.unwrap_or(0.0);
                 self.available_storage_gb -= capabilities.storage_gb.unwrap_or(0.0);
                 self.available_bandwidth_gbps -= capabilities.bandwidth_gbps.unwrap_or(0.0);
-            } else if device._Fis_allocated() {
+            } else if device.is_allocated() {
                 self.allocated_capacity -= 1;
                 
                 // Update allocated resource counters indirectly by updating total
@@ -287,7 +298,7 @@ impl DMSResourcePool {
     /// # Returns
     /// 
     /// An `Option<Arc<DMSDevice>>` containing the allocated device if successful, `None` otherwise
-    pub fn _Fallocate(&mut self, _allocation_id: &str) -> Option<Arc<DMSDevice>> {
+    pub fn allocate(&mut self, _allocation_id: &str) -> Option<Arc<DMSDevice>> {
         // Check if there's available capacity
         if self.available_capacity == 0 {
             return None;
@@ -297,7 +308,7 @@ impl DMSResourcePool {
         for device in self.devices.values() {
             // This is a simplified allocation - in a real implementation, 
             // we'd need to lock the device and check its status atomically
-            if device._Fis_available() {
+            if device.is_available() {
                 // Get device capabilities
                 let capabilities = device.capabilities();
                 
@@ -311,6 +322,10 @@ impl DMSResourcePool {
                 self.available_memory_gb -= capabilities.memory_gb.unwrap_or(0.0);
                 self.available_storage_gb -= capabilities.storage_gb.unwrap_or(0.0);
                 self.available_bandwidth_gbps -= capabilities.bandwidth_gbps.unwrap_or(0.0);
+                
+                // Add connection to pool
+                let mut pool = self.connection_pool.write().unwrap();
+                let _ = pool.add_connection(device.id().to_string(), device.id().to_string());
                 
                 return Some(device.clone());
             }
@@ -330,10 +345,10 @@ impl DMSResourcePool {
     /// # Returns
     /// 
     /// `true` if the device was successfully released, `false` otherwise
-    pub fn _Frelease(&mut self, allocation_id: &str) -> bool {
+    pub fn release(&mut self, allocation_id: &str) -> bool {
         // Find the allocated device by allocation ID
         for device in self.devices.values() {
-            if let Some(current_allocation) = device._Fget_allocation_id() {
+            if let Some(current_allocation) = device.get_allocation_id() {
                 if current_allocation == allocation_id {
                     // Get device capabilities
                     let capabilities = device.capabilities();
@@ -348,6 +363,10 @@ impl DMSResourcePool {
                     self.available_memory_gb += capabilities.memory_gb.unwrap_or(0.0);
                     self.available_storage_gb += capabilities.storage_gb.unwrap_or(0.0);
                     self.available_bandwidth_gbps += capabilities.bandwidth_gbps.unwrap_or(0.0);
+                    
+                    // Remove connection from pool
+                    let mut pool = self.connection_pool.write().unwrap();
+                    pool.remove_connection(&device.id().to_string());
                     
                     return true;
                 }
@@ -365,7 +384,7 @@ impl DMSResourcePool {
     /// # Returns
     /// 
     /// A `DMSResourcePoolStatus` struct with the current pool status
-    pub fn _Fget_status(&self) -> super::DMSResourcePoolStatus {
+    pub fn get_status(&self) -> super::DMSResourcePoolStatus {
         super::DMSResourcePoolStatus {
             total_capacity: self.total_capacity,
             available_capacity: self.available_capacity,
@@ -384,7 +403,7 @@ impl DMSResourcePool {
     /// # Returns
     /// 
     /// The pool name as a string slice
-    pub fn _Fname(&self) -> &str {
+    pub fn name(&self) -> &str {
         &self.name
     }
     
@@ -393,7 +412,7 @@ impl DMSResourcePool {
     /// # Returns
     /// 
     /// The device type as a `DMSDeviceType` enum
-    pub fn _Fdevice_type(&self) -> DMSDeviceType {
+    pub fn device_type(&self) -> DMSDeviceType {
         self.device_type
     }
     
@@ -402,7 +421,7 @@ impl DMSResourcePool {
     /// # Returns
     /// 
     /// A vector of `Arc<DMSDevice>` containing all devices in the pool
-    pub fn _Fget_devices(&self) -> Vec<Arc<DMSDevice>> {
+    pub fn get_devices(&self) -> Vec<Arc<DMSDevice>> {
         self.devices.values().cloned().collect()
     }
     
@@ -411,9 +430,9 @@ impl DMSResourcePool {
     /// # Returns
     /// 
     /// A vector of `Arc<DMSDevice>` containing only available devices
-    pub fn _Fget_available_devices(&self) -> Vec<Arc<DMSDevice>> {
+    pub fn get_available_devices(&self) -> Vec<Arc<DMSDevice>> {
         self.devices.values()
-            .filter(|device| device._Fis_available())
+            .filter(|device| device.is_available())
             .cloned()
             .collect()
     }
@@ -423,9 +442,9 @@ impl DMSResourcePool {
     /// # Returns
     /// 
     /// A vector of `Arc<DMSDevice>` containing only allocated devices
-    pub fn _Fget_allocated_devices(&self) -> Vec<Arc<DMSDevice>> {
+    pub fn get_allocated_devices(&self) -> Vec<Arc<DMSDevice>> {
         self.devices.values()
-            .filter(|device| device._Fis_allocated())
+            .filter(|device| device.is_allocated())
             .cloned()
             .collect()
     }
@@ -435,7 +454,7 @@ impl DMSResourcePool {
     /// # Returns
     /// 
     /// `true` if the pool has available devices, `false` otherwise
-    pub fn _Fhas_available_capacity(&self) -> bool {
+    pub fn has_available_capacity(&self) -> bool {
         self.available_capacity > 0
     }
     
@@ -444,7 +463,7 @@ impl DMSResourcePool {
     /// # Returns
     /// 
     /// The utilization rate as a floating-point number between 0.0 and 1.0
-    pub fn _Futilization_rate(&self) -> f64 {
+    pub fn utilization_rate(&self) -> f64 {
         if self.total_capacity > 0 {
             self.allocated_capacity as f64 / self.total_capacity as f64
         } else {
@@ -459,7 +478,7 @@ impl DMSResourcePool {
     /// # Returns
     /// 
     /// `true` if the pool is healthy, `false` otherwise
-    pub fn _Fis_healthy(&self) -> bool {
+    pub fn is_healthy(&self) -> bool {
         self.available_capacity > 0 || self.allocated_capacity > 0
     }
     
@@ -471,53 +490,360 @@ impl DMSResourcePool {
     /// # Returns
     /// 
     /// A `DMSResourcePoolStatistics` struct with comprehensive pool statistics
-    pub fn _Fget_statistics(&self) -> DMSResourcePoolStatistics {
-        let devices = self._Fget_devices();
-        let available_devices = self._Fget_available_devices();
-        let allocated_devices = self._Fget_allocated_devices();
-        
+    pub fn get_statistics(&self) -> DMSResourcePoolStatistics {
+        let devices = self.get_devices();
+        let available_devices = self.get_available_devices();
+        let allocated_devices = self.get_allocated_devices();
+
         // Calculate total compute units across all devices
         let total_compute_units: usize = devices.iter()
             .filter_map(|d| d.capabilities().compute_units)
             .sum();
-        
+
         // Calculate total memory across all devices
         let total_memory_gb: f64 = devices.iter()
             .filter_map(|d| d.capabilities().memory_gb)
             .sum();
-        
+
         // Calculate total storage across all devices
         let total_storage_gb: f64 = devices.iter()
             .filter_map(|d| d.capabilities().storage_gb)
             .sum();
-        
+
         // Calculate total bandwidth across all devices
         let total_bandwidth_gbps: f64 = devices.iter()
             .filter_map(|d| d.capabilities().bandwidth_gbps)
             .sum();
-        
+
         // Calculate average health score across all devices
         let average_health_score: f64 = if !devices.is_empty() {
             devices.iter()
-                .map(|d| d._Fhealth_score() as f64)
+                .map(|d| d.health_score() as f64)
                 .sum::<f64>() / devices.len() as f64
         } else {
             0.0
         };
-        
+
+        // Get connection pool statistics
+        let connection_pool_stats = {
+            let pool = self.connection_pool.read().unwrap();
+            Some(pool.get_statistics())
+        };
+
         DMSResourcePoolStatistics {
             total_devices: devices.len(),
             available_devices: available_devices.len(),
             allocated_devices: allocated_devices.len(),
-            utilization_rate: self._Futilization_rate(),
+            utilization_rate: self.utilization_rate(),
             total_compute_units,
             total_memory_gb,
             total_storage_gb,
             total_bandwidth_gbps,
             average_health_score,
             device_type: self.device_type,
+            connection_pool_stats: connection_pool_stats,
         }
     }
+}
+
+/// Connection pool for managing device connections with lifecycle and health monitoring
+#[derive(Debug, Clone)]
+#[allow(dead_code)]
+pub struct DMSConnectionPool {
+    /// Active connections with their metadata
+    connections: HashMap<String, DMSConnectionInfo>,
+    /// Maximum number of connections allowed
+    max_connections: usize,
+    /// Connection timeout duration
+    connection_timeout: Duration,
+    /// Health check interval
+    health_check_interval: Duration,
+    /// Last health check timestamp (seconds since Unix epoch)
+    last_health_check_secs: u64,
+    /// Number of active connections
+    pub active_connections: usize,
+    /// Number of failed connections
+    pub failed_connections: usize,
+    /// Total number of errors
+    pub total_errors: usize,
+}
+
+/// Connection information for tracking individual connections
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DMSConnectionInfo {
+    /// Connection ID
+    pub connection_id: String,
+    /// Device ID this connection is associated with
+    pub device_id: String,
+    /// Remote address or endpoint
+    pub address: String,
+    /// Connection establishment timestamp (seconds since Unix epoch)
+    pub established_at_secs: u64,
+    /// Last activity timestamp (seconds since Unix epoch)
+    pub last_activity_secs: u64,
+    /// Connection state
+    pub state: DMSConnectionState,
+    /// Connection health metrics
+    pub health_metrics: DMSConnectionHealthMetrics,
+}
+
+/// Connection state enumeration
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub enum DMSConnectionState {
+    /// Connection is establishing
+    Connecting,
+    /// Connection is active and healthy
+    Active,
+    /// Connection is idle (no recent activity)
+    Idle,
+    /// Connection is unhealthy
+    Unhealthy,
+    /// Connection is being closed
+    Closing,
+    /// Connection is closed
+    Closed,
+}
+
+/// Connection health metrics
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct DMSConnectionHealthMetrics {
+    /// Number of successful operations
+    pub successful_operations: u64,
+    /// Number of failed operations
+    pub failed_operations: u64,
+    /// Average response time in milliseconds
+    pub average_response_time_ms: f64,
+    /// Last error timestamp (seconds since Unix epoch)
+    pub last_error_secs: Option<u64>,
+    /// Connection uptime percentage
+    pub uptime_percentage: f64,
+}
+
+#[allow(dead_code)]
+impl DMSConnectionPool {
+    /// Creates a new connection pool
+    pub fn new(max_connections: usize, connection_timeout: Duration, health_check_interval: Duration) -> Self {
+        Self {
+            connections: HashMap::new(),
+            max_connections,
+            connection_timeout,
+            health_check_interval,
+            last_health_check_secs: std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap_or(Duration::from_secs(0))
+                .as_secs(),
+            active_connections: 0,
+            failed_connections: 0,
+            total_errors: 0,
+        }
+    }
+    
+    /// Adds a new connection to the pool
+    pub fn add_connection(&mut self, device_id: String, address: String) {
+        let connection_info = DMSConnectionInfo {
+            connection_id: device_id.clone(),
+            device_id: device_id.clone(),
+            address,
+            established_at_secs: std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap_or_default()
+                .as_secs(),
+            last_activity_secs: std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap_or_default()
+                .as_secs(),
+            state: DMSConnectionState::Active,
+            health_metrics: DMSConnectionHealthMetrics::default(),
+        };
+        
+        self.connections.insert(device_id, connection_info);
+        self.active_connections += 1;
+    }
+    
+    /// Removes a connection from the pool
+    pub fn remove_connection(&mut self, connection_id: &str) -> bool {
+        self.connections.remove(connection_id).is_some()
+    }
+    
+    /// Gets connection information
+    pub fn get_connection(&self, connection_id: &str) -> Option<&DMSConnectionInfo> {
+        self.connections.get(connection_id)
+    }
+    
+    /// Updates connection activity
+    pub fn update_activity(&mut self, connection_id: &str) -> bool {
+        if let Some(connection) = self.connections.get_mut(connection_id) {
+            connection.last_activity_secs = std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap_or(Duration::from_secs(0))
+                .as_secs();
+            if connection.state == DMSConnectionState::Idle {
+                connection.state = DMSConnectionState::Active;
+            }
+            true
+        } else {
+            false
+        }
+    }
+    
+    /// Updates connection health metrics
+    pub fn update_health_metrics(&mut self, connection_id: &str, success: bool, response_time_ms: f64) -> bool {
+        if let Some(connection) = self.connections.get_mut(connection_id) {
+            if success {
+                connection.health_metrics.successful_operations += 1;
+            } else {
+                connection.health_metrics.failed_operations += 1;
+                connection.health_metrics.last_error_secs = Some(
+                    std::time::SystemTime::now()
+                        .duration_since(std::time::UNIX_EPOCH)
+                        .unwrap_or(Duration::from_secs(0))
+                        .as_secs()
+                );
+            }
+            
+            // Update average response time
+            let total_ops = connection.health_metrics.successful_operations + connection.health_metrics.failed_operations;
+            connection.health_metrics.average_response_time_ms = 
+                (connection.health_metrics.average_response_time_ms * (total_ops - 1) as f64 + response_time_ms) / total_ops as f64;
+            
+            // Update uptime percentage
+            let total_ops = connection.health_metrics.successful_operations + connection.health_metrics.failed_operations;
+            connection.health_metrics.uptime_percentage = 
+                (connection.health_metrics.successful_operations as f64 / total_ops as f64) * 100.0;
+            
+            true
+        } else {
+            false
+        }
+    }
+    
+    /// Performs health check on all connections
+    pub fn perform_health_check(&mut self) {
+        self.last_health_check_secs = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap_or(Duration::from_secs(0))
+            .as_secs();
+        
+        for connection in self.connections.values_mut() {
+            // Check for idle connections
+            let current_time = std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap_or_default()
+                .as_secs();
+            let elapsed_secs = current_time.saturating_sub(connection.last_activity_secs);
+            
+            if connection.state == DMSConnectionState::Active && elapsed_secs > self.connection_timeout.as_secs() {
+                connection.state = DMSConnectionState::Idle;
+            }
+            
+            // Check for unhealthy connections
+            if connection.health_metrics.uptime_percentage < 90.0 {
+                connection.state = DMSConnectionState::Unhealthy;
+            } else if let Some(last_error_secs) = connection.health_metrics.last_error_secs {
+                let current_secs = std::time::SystemTime::now()
+                    .duration_since(std::time::UNIX_EPOCH)
+                    .unwrap_or(Duration::from_secs(0))
+                    .as_secs();
+                if current_secs.saturating_sub(last_error_secs) < 60 {
+                    connection.state = DMSConnectionState::Unhealthy;
+                }
+            }
+            
+            // Close connections that have been unhealthy for too long
+            if connection.state == DMSConnectionState::Unhealthy &&
+               connection.health_metrics.failed_operations > 10 {
+                connection.state = DMSConnectionState::Closing;
+            }
+        }
+        
+        // Remove closed connections
+        self.connections.retain(|_, conn| conn.state != DMSConnectionState::Closed);
+    }
+    
+    /// Gets the number of active connections
+    pub fn active_connections(&self) -> usize {
+        self.connections.values()
+            .filter(|conn| conn.state == DMSConnectionState::Active)
+            .count()
+    }
+    
+    /// Gets the number of idle connections
+    pub fn idle_connections(&self) -> usize {
+        self.connections.values()
+            .filter(|conn| conn.state == DMSConnectionState::Idle)
+            .count()
+    }
+    
+    /// Gets the number of unhealthy connections
+    pub fn unhealthy_connections(&self) -> usize {
+        self.connections.values()
+            .filter(|conn| conn.state == DMSConnectionState::Unhealthy)
+            .count()
+    }
+    
+    /// Gets overall connection pool statistics
+    pub fn get_statistics(&self) -> DMSConnectionPoolStatistics {
+        let total_connections = self.connections.len();
+        let active_connections = self.active_connections();
+        let idle_connections = self.idle_connections();
+        let unhealthy_connections = self.unhealthy_connections();
+        
+        let total_successful_ops: u64 = self.connections.values()
+            .map(|conn| conn.health_metrics.successful_operations)
+            .sum();
+        let total_failed_ops: u64 = self.connections.values()
+            .map(|conn| conn.health_metrics.failed_operations)
+            .sum();
+        
+        let avg_response_time = if !self.connections.is_empty() {
+            let total_response_time: f64 = self.connections.values()
+                .map(|conn| conn.health_metrics.average_response_time_ms)
+                .sum();
+            total_response_time / self.connections.len() as f64
+        } else {
+            0.0
+        };
+        
+        let last_health_check_secs = self.last_health_check_secs;
+        
+        DMSConnectionPoolStatistics {
+            total_connections,
+            active_connections,
+            idle_connections,
+            unhealthy_connections,
+            available_slots: self.max_connections.saturating_sub(total_connections),
+            total_successful_operations: total_successful_ops,
+            total_failed_operations: total_failed_ops,
+            average_response_time_ms: avg_response_time,
+            health_check_interval_secs: self.health_check_interval.as_secs(),
+            last_health_check_secs,
+        }
+    }
+}
+
+/// Connection pool statistics
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DMSConnectionPoolStatistics {
+    /// Total number of connections
+    pub total_connections: usize,
+    /// Number of active connections
+    pub active_connections: usize,
+    /// Number of idle connections
+    pub idle_connections: usize,
+    /// Number of unhealthy connections
+    pub unhealthy_connections: usize,
+    /// Number of available connection slots
+    pub available_slots: usize,
+    /// Total successful operations across all connections
+    pub total_successful_operations: u64,
+    /// Total failed operations across all connections
+    pub total_failed_operations: u64,
+    /// Average response time across all connections
+    pub average_response_time_ms: f64,
+    /// Health check interval in seconds
+    pub health_check_interval_secs: u64,
+    /// Last health check timestamp (seconds since Unix epoch)
+    pub last_health_check_secs: u64,
 }
 
 /// Resource pool statistics structure
@@ -546,6 +872,8 @@ pub struct DMSResourcePoolStatistics {
     pub average_health_score: f64,
     /// Type of devices in the pool
     pub device_type: DMSDeviceType,
+    /// Connection pool statistics
+    pub connection_pool_stats: Option<DMSConnectionPoolStatistics>,
 }
 
 /// Resource pool manager for managing multiple resource pools
@@ -563,7 +891,7 @@ impl DMSResourcePoolManager {
     /// # Returns
     /// 
     /// A new `DMSResourcePoolManager` instance
-    pub fn _Fnew() -> Self {
+    pub fn new() -> Self {
         Self {
             pools: HashMap::new(),
         }
@@ -580,9 +908,9 @@ impl DMSResourcePoolManager {
     /// # Returns
     /// 
     /// An `Arc<DMSResourcePool>` to the newly created pool
-    pub fn _Fcreate_pool(&mut self, config: DMSResourcePoolConfig) -> Arc<DMSResourcePool> {
-        let pool = Arc::new(DMSResourcePool::_Fnew(config));
-        self.pools.insert(pool._Fname().to_string(), pool.clone());
+    pub fn create_pool(&mut self, config: DMSResourcePoolConfig) -> Arc<DMSResourcePool> {
+        let pool = Arc::new(DMSResourcePool::new(config));
+        self.pools.insert(pool.name().to_string(), pool.clone());
         pool
     }
     
@@ -595,7 +923,7 @@ impl DMSResourcePoolManager {
     /// # Returns
     /// 
     /// An `Option<Arc<DMSResourcePool>>` containing the pool if found, `None` otherwise
-    pub fn _Fget_pool(&self, name: &str) -> Option<Arc<DMSResourcePool>> {
+    pub fn get_pool(&self, name: &str) -> Option<Arc<DMSResourcePool>> {
         self.pools.get(name).cloned()
     }
     
@@ -608,7 +936,7 @@ impl DMSResourcePoolManager {
     /// # Returns
     /// 
     /// An `Option<Arc<DMSResourcePool>>` containing the removed pool if found, `None` otherwise
-    pub fn _Fremove_pool(&mut self, name: &str) -> Option<Arc<DMSResourcePool>> {
+    pub fn remove_pool(&mut self, name: &str) -> Option<Arc<DMSResourcePool>> {
         self.pools.remove(name)
     }
     
@@ -617,7 +945,7 @@ impl DMSResourcePoolManager {
     /// # Returns
     /// 
     /// A vector of `Arc<DMSResourcePool>` containing all resource pools
-    pub fn _Fget_all_pools(&self) -> Vec<Arc<DMSResourcePool>> {
+    pub fn get_all_pools(&self) -> Vec<Arc<DMSResourcePool>> {
         self.pools.values().cloned().collect()
     }
     
@@ -630,9 +958,9 @@ impl DMSResourcePoolManager {
     /// # Returns
     /// 
     /// A vector of `Arc<DMSResourcePool>` containing all pools of the specified device type
-    pub fn _Fget_pools_by_type(&self, device_type: DMSDeviceType) -> Vec<Arc<DMSResourcePool>> {
+    pub fn get_pools_by_type(&self, device_type: DMSDeviceType) -> Vec<Arc<DMSResourcePool>> {
         self.pools.values()
-            .filter(|pool| pool._Fdevice_type() == device_type)
+            .filter(|pool| pool.device_type() == device_type)
             .cloned()
             .collect()
     }
@@ -645,28 +973,50 @@ impl DMSResourcePoolManager {
     /// # Returns
     /// 
     /// A `DMSResourcePoolStatistics` struct with overall statistics for all pools
-    pub fn _Fget_overall_statistics(&self) -> DMSResourcePoolStatistics {
-        let pools = self._Fget_all_pools();
+    pub fn get_overall_statistics(&self) -> DMSResourcePoolStatistics {
+        let pools = self.get_all_pools();
         
         // Calculate total devices and allocated devices across all pools
-        let total_devices: usize = pools.iter().map(|p| p._Fget_statistics().total_devices).sum();
-        let allocated_devices: usize = pools.iter().map(|p| p._Fget_statistics().allocated_devices).sum();
+        let total_devices: usize = pools.iter().map(|p| p.get_statistics().total_devices).sum();
+        let allocated_devices: usize = pools.iter().map(|p| p.get_statistics().allocated_devices).sum();
         
         // Calculate total compute units across all devices in all pools
         let total_compute_units: usize = pools.iter()
-            .flat_map(|p| p._Fget_devices())
+            .flat_map(|p| p.get_devices())
             .filter_map(|d| d.capabilities().compute_units)
             .sum();
         
         // Calculate total memory across all devices in all pools
         let total_memory_gb: f64 = pools.iter()
-            .flat_map(|p| p._Fget_devices())
+            .flat_map(|p| p.get_devices())
             .filter_map(|d| d.capabilities().memory_gb)
+            .sum();
+        
+        // Calculate total storage across all devices in all pools
+        let total_storage_gb: f64 = pools.iter()
+            .flat_map(|p| p.get_devices())
+            .filter_map(|d| d.capabilities().storage_gb)
+            .sum();
+        
+        // Calculate total bandwidth across all devices in all pools
+        let total_bandwidth_gbps: f64 = pools.iter()
+            .flat_map(|p| p.get_devices())
+            .filter_map(|d| d.capabilities().bandwidth_gbps)
             .sum();
         
         // Calculate overall utilization rate
         let overall_utilization = if total_devices > 0 {
             allocated_devices as f64 / total_devices as f64
+        } else {
+            0.0
+        };
+        
+        // Calculate average health score across all pools
+        let total_health_score: f64 = pools.iter()
+            .map(|p| p.get_statistics().average_health_score)
+            .sum();
+        let average_health_score = if !pools.is_empty() {
+            total_health_score / pools.len() as f64
         } else {
             0.0
         };
@@ -678,10 +1028,11 @@ impl DMSResourcePoolManager {
             utilization_rate: overall_utilization,
             total_compute_units,
             total_memory_gb,
-            total_storage_gb: 0.0, // Simplified: would sum across all pools in a real implementation
-            total_bandwidth_gbps: 0.0, // Simplified: would sum across all pools in a real implementation
-            average_health_score: 0.0, // Simplified: would calculate across all pools in a real implementation
+            total_storage_gb,
+            total_bandwidth_gbps,
+            average_health_score,
             device_type: DMSDeviceType::Custom, // Multiple device types across pools
+            connection_pool_stats: None, // No aggregated connection stats at manager level
         }
     }
 }

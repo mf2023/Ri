@@ -15,7 +15,7 @@
 //! See the License for the specific language governing permissions and
 //! limitations under the License.
 
-#![allow(non_snake_case)]
+
 
 //! # Observability Module
 //! 
@@ -39,7 +39,7 @@
 //! 4. **Performance-focused**: Optimized for low overhead in production environments
 //! 5. **Standard-compliant**: Follows W3C Trace Context standard for distributed tracing
 //! 6. **Prometheus-compatible**: Metrics are exported in Prometheus format
-//! 7. **Service Module Integration**: Implements the `_CServiceModule` trait for seamless integration
+//! 7. **Service Module Integration**: Implements the `ServiceModule` trait for seamless integration
 //! 
 //! ## Usage
 //! 
@@ -60,30 +60,30 @@
 //!     };
 //!     
 //!     // Add observability module to the app
-//!     let observability_module = DMSObservabilityModule::_Fnew()
-//!         ._Fwith_config(observability_config);
+//!     let observability_module = DMSObservabilityModule::new()
+//!         .with_config(observability_config);
 //!     
-//!     builder._Fadd_module(Box::new(observability_module));
+//!     builder.add_module(Box::new(observability_module));
 //!     
 //!     // Build and run the app
-//!     let mut app = builder._Fbuild()?;
-//!     app._Frun()?;
+//!     let mut app = builder.build()?;
+//!     app.run()?;
 //!     
 //!     Ok(())
 //! }
 //! ```
 
-pub mod metrics;
-pub mod tracing;
-pub mod propagation;
-pub mod prometheus;
-pub mod metrics_collector;
-pub mod grafana;
+mod metrics;
+mod tracing;
+mod propagation;
+mod prometheus;
+mod metrics_collector;
+mod grafana;
 
 use std::sync::Arc;
 use serde::{Serialize, Deserialize};
 
-pub use tracing::{DMSTracer, DMSTraceId, DMSSpanId, DMSSpan, DMSSpanKind, DMSSpanStatus, DMSTracingContext, _Finit_tracer, _Ftracer};
+pub use tracing::{DMSTracer, DMSTraceId, DMSSpanId, DMSSpan, DMSSpanKind, DMSSpanStatus, DMSTracingContext};
 pub use metrics::{DMSMetricsRegistry, DMSMetric, DMSMetricConfig, DMSMetricType, DMSWindowStats};
 
 use crate::core::{DMSResult, DMSServiceContext};
@@ -92,7 +92,7 @@ use crate::core::{DMSResult, DMSServiceContext};
 /// Main observability module for DMS.
 /// 
 /// This module provides distributed tracing and metrics collection capabilities, following modern
-/// observability best practices. It implements the `_CServiceModule` trait for seamless integration
+/// observability best practices. It implements the `ServiceModule` trait for seamless integration
 /// with the DMS application lifecycle.
 pub struct DMSObservabilityModule {
     /// Distributed tracer instance
@@ -146,7 +146,7 @@ impl DMSObservabilityModule {
     /// # Returns
     /// 
     /// A new `DMSObservabilityModule` instance with default configuration
-    pub fn _Fnew() -> Self {
+    pub fn new() -> Self {
         Self {
             tracer: None,
             metrics_registry: None,
@@ -163,7 +163,7 @@ impl DMSObservabilityModule {
     /// # Returns
     /// 
     /// The updated `DMSObservabilityModule` instance
-    pub fn _Fwith_config(mut self, config: DMSObservabilityConfig) -> Self {
+    pub fn with_config(mut self, config: DMSObservabilityConfig) -> Self {
         self.config = config;
         self
     }
@@ -171,9 +171,9 @@ impl DMSObservabilityModule {
     /// Initializes tracing with the configured sampling rate.
     /// 
     /// This method sets up the distributed tracer with the specified sampling rate.
-    fn _Finit_tracing(&mut self) {
+    fn init_tracing(&mut self) {
         if self.config.tracing_enabled {
-            _Finit_tracer(self.config.tracing_sampling_rate);
+            tracing::init_tracer(self.config.tracing_sampling_rate);
             // Note: In a real implementation, we'd store the Arc properly
             // This is simplified for demonstration
         }
@@ -182,9 +182,9 @@ impl DMSObservabilityModule {
     /// Initializes the metrics registry.
     /// 
     /// This method creates and configures the metrics registry for collecting and aggregating metrics.
-    fn _Finit_metrics(&mut self) {
+    fn init_metrics(&mut self) {
         if self.config.metrics_enabled {
-            let registry = Arc::new(DMSMetricsRegistry::_Fnew());
+            let registry = Arc::new(DMSMetricsRegistry::new());
             self.metrics_registry = Some(registry);
         }
     }
@@ -200,7 +200,7 @@ impl DMSObservabilityModule {
     /// # Returns
     /// 
     /// A `DMSResult<()>` indicating success or failure
-    fn _Fcreate_service_metrics(&self) -> DMSResult<()> {
+    fn create_service_metrics(&self) -> DMSResult<()> {
         if let Some(registry) = &self.metrics_registry {
             // Request duration histogram
             let request_duration_config = DMSMetricConfig {
@@ -213,8 +213,8 @@ impl DMSObservabilityModule {
                 age_buckets: 5,
             };
             
-            let request_duration_metric = Arc::new(DMSMetric::_Fnew(request_duration_config));
-            registry._Fregister(request_duration_metric)?;
+            let request_duration_metric = Arc::new(DMSMetric::new(request_duration_config));
+            registry.register(request_duration_metric)?;
             
             // Request counter
             let request_counter_config = DMSMetricConfig {
@@ -227,8 +227,8 @@ impl DMSObservabilityModule {
                 age_buckets: 0,
             };
             
-            let request_counter_metric = Arc::new(DMSMetric::_Fnew(request_counter_config));
-            registry._Fregister(request_counter_metric)?;
+            let request_counter_metric = Arc::new(DMSMetric::new(request_counter_config));
+            registry.register(request_counter_metric)?;
             
             // Error counter
             let error_counter_config = DMSMetricConfig {
@@ -241,8 +241,8 @@ impl DMSObservabilityModule {
                 age_buckets: 0,
             };
             
-            let error_counter_metric = Arc::new(DMSMetric::_Fnew(error_counter_config));
-            registry._Fregister(error_counter_metric)?;
+            let error_counter_metric = Arc::new(DMSMetric::new(error_counter_config));
+            registry.register(error_counter_metric)?;
             
             // Active connections gauge
             let connections_gauge_config = DMSMetricConfig {
@@ -255,8 +255,8 @@ impl DMSObservabilityModule {
                 age_buckets: 0,
             };
             
-            let connections_gauge_metric = Arc::new(DMSMetric::_Fnew(connections_gauge_config));
-            registry._Fregister(connections_gauge_metric)?;
+            let connections_gauge_metric = Arc::new(DMSMetric::new(connections_gauge_config));
+            registry.register(connections_gauge_metric)?;
         }
         
         Ok(())
@@ -270,11 +270,11 @@ impl DMSObservabilityModule {
     /// # Returns
     /// 
     /// A `DMSObservabilityData` struct containing the exported observability data
-    pub fn _Fexport_data(&self) -> DMSObservabilityData {
+    pub fn export_data(&self) -> DMSObservabilityData {
         DMSObservabilityData {
-            metrics: self.metrics_registry.as_ref().map(|r| r._Fexport_prometheus()).unwrap_or_default(),
-            active_traces: self.tracer.as_ref().map(|_| _Ftracer()._Factive_trace_count()).unwrap_or(0),
-            active_spans: self.tracer.as_ref().map(|_| _Ftracer()._Factive_span_count()).unwrap_or(0),
+            metrics: self.metrics_registry.as_ref().map(|r| r.export_prometheus()).unwrap_or_default(),
+            active_traces: self.tracer.as_ref().map(|_| tracing::tracer().active_trace_count()).unwrap_or(0),
+            active_spans: self.tracer.as_ref().map(|_| tracing::tracer().active_span_count()).unwrap_or(0),
         }
     }
 }
@@ -293,13 +293,14 @@ pub struct DMSObservabilityData {
     pub active_spans: usize,
 }
 
-impl crate::core::_CServiceModule for DMSObservabilityModule {
+#[async_trait::async_trait]
+impl crate::core::DMSModule for DMSObservabilityModule {
     /// Returns the name of the observability module.
     /// 
     /// # Returns
     /// 
     /// The module name as a string
-    fn _Fname(&self) -> &str {
+    fn name(&self) -> &str {
         "DMS.Observability"
     }
     
@@ -312,7 +313,7 @@ impl crate::core::_CServiceModule for DMSObservabilityModule {
     /// # Returns
     /// 
     /// `false` since observability is non-critical
-    fn _Fis_critical(&self) -> bool {
+    fn is_critical(&self) -> bool {
         false // Non-critical, should not break the app if observability fails
     }
     
@@ -333,28 +334,28 @@ impl crate::core::_CServiceModule for DMSObservabilityModule {
     /// # Returns
     /// 
     /// A `DMSResult<()>` indicating success or failure
-    fn _Finit(&mut self, ctx: &mut DMSServiceContext) -> DMSResult<()> {
+    async fn init(&mut self, ctx: &mut DMSServiceContext) -> DMSResult<()> {
         // Load configuration
-        let cfg = ctx._Fconfig()._Fconfig();
+        let cfg = ctx.config().config();
         
         self.config = DMSObservabilityConfig {
-            tracing_enabled: cfg._Fget_bool("observability.tracing_enabled").unwrap_or(true),
-            metrics_enabled: cfg._Fget_bool("observability.metrics_enabled").unwrap_or(true),
-            tracing_sampling_rate: cfg._Fget_f32("observability.tracing_sampling_rate").unwrap_or(0.1) as f64,
-            metrics_window_size_secs: cfg._Fget_u64("observability.metrics_window_size_secs").unwrap_or(300),
-            metrics_bucket_size_secs: cfg._Fget_u64("observability.metrics_bucket_size_secs").unwrap_or(10),
+            tracing_enabled: cfg.get_bool("observability.tracing_enabled").unwrap_or(true),
+            metrics_enabled: cfg.get_bool("observability.metrics_enabled").unwrap_or(true),
+            tracing_sampling_rate: cfg.get_f32("observability.tracing_sampling_rate").unwrap_or(0.1) as f64,
+            metrics_window_size_secs: cfg.get_u64("observability.metrics_window_size_secs").unwrap_or(300),
+            metrics_bucket_size_secs: cfg.get_u64("observability.metrics_bucket_size_secs").unwrap_or(10),
         };
         
         // Initialize components
-        self._Finit_tracing();
-        self._Finit_metrics();
-        self._Fcreate_service_metrics()?;
+        self.init_tracing();
+        self.init_metrics();
+        self.create_service_metrics()?;
         
         // Register lifecycle hooks
-        let hooks: &mut crate::hooks::DMSHookBus = ctx._Fhooks_mut();
+        let hooks: &mut crate::hooks::DMSHookBus = ctx.hooks_mut();
         
         // Hook into request lifecycle for automatic metrics collection
-        hooks._Fregister(
+        hooks.register(
             crate::hooks::DMSHookKind::Startup,
             "dms.observability.lifecycle".to_string(),
             |_ctx, _event: &crate::hooks::DMSHookEvent| {
@@ -363,8 +364,8 @@ impl crate::core::_CServiceModule for DMSObservabilityModule {
             },
         );
         
-        let logger = ctx._Flogger();
-        logger._Finfo("DMS.Observability", "Observability module initialized")?;
+        let logger = ctx.logger();
+        logger.info("DMS.Observability", "Observability module initialized")?;
         
         Ok(())
     }
@@ -381,12 +382,12 @@ impl crate::core::_CServiceModule for DMSObservabilityModule {
     /// # Returns
     /// 
     /// A `DMSResult<()>` indicating success or failure
-    fn _Fafter_shutdown(&mut self, ctx: &mut DMSServiceContext) -> DMSResult<()> {
+    async fn after_shutdown(&mut self, ctx: &mut DMSServiceContext) -> DMSResult<()> {
         // Export final observability data
-        let data = self._Fexport_data();
+        let data = self.export_data();
         
-        let logger = ctx._Flogger();
-        logger._Finfo("DMS.Observability", format!("Final observability data: {} active traces, {} active spans", 
+        let logger = ctx.logger();
+        logger.info("DMS.Observability", format!("Final observability data: {} active traces, {} active spans", 
             data.active_traces, data.active_spans))?;
         
         Ok(())

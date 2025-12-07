@@ -1,240 +1,207 @@
-//! Copyright © 2025 Wenze Wei. All Rights Reserved.
-//! 
-//! This file is part of DMS.
-//! The DMS project belongs to the Dunimd Team.
-//! 
-//! Licensed under the Apache License, Version 2.0 (the "License");
-//! You may not use this file except in compliance with the License.
-//! You may obtain a copy of the License at
-//! 
-//!     http://www.apache.org/licenses/LICENSE-2.0
-//! 
-//! Unless required by applicable law or agreed to in writing, software
-//! distributed under the License is distributed on an "AS IS" BASIS,
-//! WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-//! See the License for the specific language governing permissions and
-//! limitations under the License.
+//! Cache implementation for DMS Core
 
-//! Core cache abstractions and data structures for DMS.
-//! 
-//! This module defines the core cache interface and data structures used across all
-//! cache implementations in DMS. It provides a unified API for cache operations
-//! and standardizes how cached values and statistics are represented.
-//! 
-//! # Design Principles
-//! - **Unified Interface**: Single trait for all cache implementations
-//! - **Type Safety**: Strongly typed cached values with JSON serialization
-//! - **Expiration Support**: Built-in TTL (Time-To-Live) mechanism
-//! - **Statistics Tracking**: Comprehensive cache statistics
-//! - **Async Operations**: Fully asynchronous API
-//! - **Extensibility**: Easy to add new cache backends
-//! - **Serialization Support**: Built-in JSON serialization/deserialization
-//! - **Access Tracking**: Tracks access count and last accessed time
-//! 
-//! # Usage Examples
-//! ```rust
-//! // Create a cached value with 1-hour TTL
-//! let data = serde_json::json!("test_data");
-//! let cached_value = CachedValue::_Fnew(data, Some(Duration::from_secs(3600)));
-//! 
-//! // Check if value is expired
-//! let is_expired = cached_value._Fis_expired();
-//! 
-//! // Update access statistics
-//! let mut mutable_value = cached_value.clone();
-//! mutable_value._Ftouch();
-//! 
-//! // Deserialize cached data
-//! let deserialized: String = mutable_value._Fdeserialize()?;
-//! 
-//! // Get cache statistics
-//! let stats = cache._Fstats().await;
-//! ```
-
-#![allow(non_snake_case)]
-
+use crate::core::DMSResult;
+use std::collections::HashMap;
+use std::sync::Arc;
+use tokio::sync::RwLock;
+use std::time::{SystemTime, UNIX_EPOCH};
 use serde::{Serialize, Deserialize};
-use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
-/// Represents a cached value with metadata and expiration tracking.
-/// 
-/// This struct encapsulates the data being cached along with metadata such as
-/// creation time, expiration time, access count, and last accessed time.
+/// Cache trait for DMS cache implementations
+#[async_trait::async_trait]
+pub trait DMSCache: Send + Sync {
+    async fn get(&self, key: &str) -> DMSResult<Option<String>>;
+    async fn set(&self, key: &str, value: &str, ttl_seconds: Option<u64>) -> DMSResult<()>;
+    async fn delete(&self, key: &str) -> DMSResult<bool>;
+    async fn clear(&self) -> DMSResult<()>;
+    async fn stats(&self) -> CacheStats;
+    async fn cleanup_expired(&self) -> DMSResult<usize>;
+    async fn exists(&self, key: &str) -> bool;
+}
+
+/// Cache statistics
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+pub struct CacheStats {
+    pub hits: u64,
+    pub misses: u64,
+    pub entries: usize,
+    pub memory_usage_bytes: usize,
+    pub avg_hit_rate: f64,
+    pub hit_count: u64,
+    pub miss_count: u64,
+    pub eviction_count: u64,
+}
+
+impl Default for CacheStats {
+    fn default() -> Self {
+        Self {
+            hits: 0,
+            misses: 0,
+            entries: 0,
+            memory_usage_bytes: 0,
+            avg_hit_rate: 0.0,
+            hit_count: 0,
+            miss_count: 0,
+            eviction_count: 0,
+        }
+    }
+}
+
+/// Cached value wrapper
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CachedValue {
-    pub data: serde_json::Value,      // The actual cached data in JSON format
-    pub created_at: u64,              // Creation time (UNIX timestamp)
-    pub expires_at: Option<u64>,      // Expiration time (UNIX timestamp, optional)
-    pub access_count: u64,            // Number of times the value has been accessed
-    pub last_accessed: u64,           // Last access time (UNIX timestamp)
+    pub value: String,
+    pub expires_at: Option<u64>,
 }
 
 impl CachedValue {
-    /// Creates a new cached value with the specified data and TTL.
-    /// 
-    /// # Parameters
-    /// - `data`: The data to cache, serialized as JSON
-    /// - `ttl`: Optional time-to-live duration
-    /// 
-    /// # Returns
-    /// A new instance of `CachedValue`
-    pub fn _Fnew(data: serde_json::Value, ttl: Option<Duration>) -> Self {
-        let now = SystemTime::now()
-            .duration_since(UNIX_EPOCH)
-            .unwrap()
-            .as_secs();
-        
-        Self {
-            data,
-            created_at: now,
-            expires_at: ttl.map(|duration| now + duration.as_secs()),
-            access_count: 0,
-            last_accessed: now,
-        }
+    pub fn new(value: String, expires_at: Option<u64>) -> Self {
+        Self { value, expires_at }
     }
     
-    /// Checks if the cached value has expired.
-    /// 
-    /// # Returns
-    /// `true` if the value has expired, otherwise `false`
-    /// 
-    /// # Notes
-    /// - Values without an expiration time never expire
-    /// - Expiration is checked against the current system time
-    pub fn _Fis_expired(&self) -> bool {
+    pub fn deserialize<T: serde::de::DeserializeOwned>(&self) -> crate::core::DMSResult<T> {
+        serde_json::from_str(&self.value)
+            .map_err(|e| crate::core::DMSError::Other(format!("Deserialization error: {e}")))
+    }
+    
+    pub fn is_expired(&self) -> bool {
         if let Some(expires_at) = self.expires_at {
-            let now = SystemTime::now()
-                .duration_since(UNIX_EPOCH)
+            let now = std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
                 .unwrap()
                 .as_secs();
-            now > expires_at
+            now >= expires_at
         } else {
             false
         }
     }
     
-    /// Updates the access statistics for the cached value.
-    /// 
-    /// Increments the access count and updates the last accessed time to the current time.
-    pub fn _Ftouch(&mut self) {
-        self.access_count += 1;
-        self.last_accessed = SystemTime::now()
-            .duration_since(UNIX_EPOCH)
-            .unwrap()
-            .as_secs();
-    }
-    
-    /// Gets a reference to the cached data.
-    /// 
-    /// # Returns
-    /// A reference to the `serde_json::Value` containing the cached data
-    pub fn _Fget_data(&self) -> &serde_json::Value {
-        &self.data
-    }
-
-    /// Deserializes the cached data into the specified type.
-    /// 
-    /// # Type Parameters
-    /// - `T`: The type to deserialize into
-    /// 
-    /// # Returns
-    /// `Ok(T)` if deserialization succeeds, otherwise an error
-    pub fn _Fdeserialize<T: serde::de::DeserializeOwned>(&self) -> crate::core::DMSResult<T> {
-        serde_json::from_value(self.data.clone())
-            .map_err(|e| crate::core::DMSError::Other(format!("Deserialization error: {e}")))
+    pub fn touch(&mut self) {
+        // Update last access time if needed, for now just a placeholder
     }
 }
 
-/// Cache statistics for monitoring cache performance.
-/// 
-/// This struct contains comprehensive statistics about cache performance,
-/// including hit/miss rates, memory usage, and eviction counts.
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct CacheStats {
-    pub total_keys: usize,           // Total number of keys in the cache
-    pub memory_usage_bytes: usize,   // Estimated memory usage in bytes
-    pub hit_count: u64,              // Number of cache hits
-    pub miss_count: u64,             // Number of cache misses
-    pub eviction_count: u64,         // Number of cache evictions
-    pub avg_hit_rate: f64,           // Average hit rate (0.0 to 1.0)
+/// In-memory cache implementation
+pub struct DMSCacheImpl {
+    data: Arc<RwLock<HashMap<String, (String, u64)>>>, // (value, expires_at)
+    stats: Arc<RwLock<CacheStats>>,
 }
 
-impl Default for CacheStats {
-    /// Creates default cache statistics with all values initialized to zero.
-    /// 
-    /// # Returns
-    /// A new `CacheStats` instance with default values
-    fn default() -> Self {
+impl DMSCacheImpl {
+    /// Create a new cache
+    pub fn new() -> Self {
         Self {
-            total_keys: 0,
-            memory_usage_bytes: 0,
-            hit_count: 0,
-            miss_count: 0,
-            eviction_count: 0,
-            avg_hit_rate: 0.0,
+            data: Arc::new(RwLock::new(HashMap::new())),
+            stats: Arc::new(RwLock::new(CacheStats {
+                hits: 0,
+                misses: 0,
+                entries: 0,
+                memory_usage_bytes: 0,
+                avg_hit_rate: 0.0,
+                hit_count: 0,
+                miss_count: 0,
+                eviction_count: 0,
+            })),
         }
     }
 }
 
-/// Core cache interface for all cache implementations.
-/// 
-/// This trait defines the standard interface that all cache backends must implement.
-/// It provides methods for getting, setting, deleting, and managing cached values,
-/// as well as for retrieving statistics and cleaning up expired entries.
+impl Default for DMSCacheImpl {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 #[async_trait::async_trait]
-pub trait DMSCache: Send + Sync {
-    /// Gets a value from the cache.
-    /// 
-    /// # Parameters
-    /// - `key`: The cache key to retrieve
-    /// 
-    /// # Returns
-    /// `Some(CachedValue)` if the key exists and the value is not expired, otherwise `None`
-    async fn _Fget(&self, key: &str) -> Option<CachedValue>;
-    
-    /// Sets a value in the cache.
-    /// 
-    /// # Parameters
-    /// - `key`: The cache key to set
-    /// - `value`: The `CachedValue` to store
-    /// 
-    /// # Returns
-    /// `Ok(())` if the value was successfully set, otherwise an error
-    async fn _Fset(&self, key: &str, value: CachedValue) -> crate::core::DMSResult<()>;
-    
-    /// Deletes a value from the cache.
-    /// 
-    /// # Parameters
-    /// - `key`: The cache key to delete
-    /// 
-    /// # Returns
-    /// `Ok(())` if the value was successfully deleted, otherwise an error
-    async fn _Fdelete(&self, key: &str) -> crate::core::DMSResult<()>;
-    
-    /// Checks if a key exists in the cache.
-    /// 
-    /// # Parameters
-    /// - `key`: The cache key to check
-    /// 
-    /// # Returns
-    /// `true` if the key exists, otherwise `false`
-    async fn _Fexists(&self, key: &str) -> bool;
-    
-    /// Clears all entries from the cache.
-    /// 
-    /// # Returns
-    /// `Ok(())` if the cache was successfully cleared, otherwise an error
-    async fn _Fclear(&self) -> crate::core::DMSResult<()>;
-    
-    /// Gets statistics about the cache.
-    /// 
-    /// # Returns
-    /// A `CacheStats` struct containing cache statistics
-    async fn _Fstats(&self) -> CacheStats;
-    
-    /// Cleans up expired entries from the cache.
-    /// 
-    /// # Returns
-    /// The number of expired entries that were removed
-    async fn _Fcleanup_expired(&self) -> crate::core::DMSResult<usize>;
+impl DMSCache for DMSCacheImpl {
+    async fn get(&self, key: &str) -> DMSResult<Option<String>> {
+        let mut stats = self.stats.write().await;
+        let data = self.data.read().await;
+        
+        if let Some((value, expires_at)) = data.get(key) {
+            let now = SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .unwrap()
+                .as_secs();
+            
+            if now < *expires_at {
+                stats.hits += 1;
+                return Ok(Some(value.clone()));
+            }
+        }
+        
+        stats.misses += 1;
+        Ok(None)
+    }
+
+    async fn set(&self, key: &str, value: &str, ttl_seconds: Option<u64>) -> DMSResult<()> {
+        let expires_at = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap()
+            .as_secs() + ttl_seconds.unwrap_or(3600);
+        
+        let mut data = self.data.write().await;
+        data.insert(key.to_string(), (value.to_string(), expires_at));
+        
+        let mut stats = self.stats.write().await;
+        stats.entries = data.len();
+        
+        Ok(())
+    }
+
+    async fn delete(&self, key: &str) -> DMSResult<bool> {
+        let mut data = self.data.write().await;
+        let removed = data.remove(key).is_some();
+        
+        if removed {
+            let mut stats = self.stats.write().await;
+            stats.entries = data.len();
+        }
+        
+        Ok(removed)
+    }
+
+    async fn clear(&self) -> DMSResult<()> {
+        let mut data = self.data.write().await;
+        data.clear();
+        
+        let mut stats = self.stats.write().await;
+        stats.entries = 0;
+        
+        Ok(())
+    }
+
+    async fn stats(&self) -> CacheStats {
+        *self.stats.read().await
+    }
+
+    async fn cleanup_expired(&self) -> DMSResult<usize> {
+        let mut data = self.data.write().await;
+        let now = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap()
+            .as_secs();
+        
+        let initial_count = data.len();
+        data.retain(|_, (_, expires_at)| now < *expires_at);
+        let cleaned = initial_count - data.len();
+        
+        let mut stats = self.stats.write().await;
+        stats.entries = data.len();
+        
+        Ok(cleaned)
+    }
+
+    async fn exists(&self, key: &str) -> bool {
+        let data = self.data.read().await;
+        if let Some((_, expires_at)) = data.get(key) {
+            let now = SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .unwrap()
+                .as_secs();
+            now < *expires_at
+        } else {
+            false
+        }
+    }
 }

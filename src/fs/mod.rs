@@ -25,7 +25,7 @@
 //! ## Key Components
 //! 
 //! - **DMSFileSystem**: Public-facing file system class
-//! - **_CFileSystemImpl**: Internal file system implementation
+//! - **FileSystemImpl**: Internal file system implementation
 //! 
 //! ## Design Principles
 //! 
@@ -46,25 +46,25 @@
 //! fn example() -> DMSResult<()> {
 //!     // Create a file system with a project root
 //!     let project_root = PathBuf::from(".");
-//!     let fs = DMSFileSystem::_Fnew_with_root(project_root);
+//!     let fs = DMSFileSystem::new_with_root(project_root);
 //!     
 //!     // Write text to a file
-//!     fs._Fatomic_write_text("example.txt", "Hello, DMS!")?;
+//!     fs.atomic_write_text("example.txt", "Hello, DMS!")?;
 //!     
 //!     // Read text from a file
-//!     let content = fs._Fread_text("example.txt")?;
+//!     let content = fs.read_text("example.txt")?;
 //!     println!("File content: {}", content);
 //!     
 //!     // Write JSON to a file
 //!     let data = json!({"key": "value"});
-//!     fs._Fwrite_json("example.json", &data)?;
+//!     fs.write_json("example.json", &data)?;
 //!     
 //!     // Read JSON from a file
-//!     let read_data: serde_json::Value = fs._Fread_json("example.json")?;
+//!     let read_data: serde_json::Value = fs.read_json("example.json")?;
 //!     println!("JSON data: {:?}", read_data);
 //!     
 //!     // Get category directories
-//!     let logs_dir = fs._Flogs_dir();
+//!     let logs_dir = fs.logs_dir();
 //!     println!("Logs directory: {:?}", logs_dir);
 //!     
 //!     Ok(())
@@ -86,14 +86,14 @@ use serde::Serialize;
 /// This struct provides the internal implementation of the file system functionality, including
 /// directory management, file operations, and category-based organization.
 #[derive(Clone)]
-struct _CFileSystemImpl {
+struct FileSystemImpl {
     /// Project root directory
     project_root: PathBuf,
     /// Application data root directory
     app_data_root: PathBuf,
 }
 
-impl _CFileSystemImpl {
+impl FileSystemImpl {
     /// Creates a new internal file system implementation with specified roots.
     /// 
     /// # Parameters
@@ -103,9 +103,9 @@ impl _CFileSystemImpl {
     /// 
     /// # Returns
     /// 
-    /// A new `_CFileSystemImpl` instance
-    fn _Fnew_with_roots(project_root: PathBuf, app_data_root: PathBuf) -> Self {
-        _CFileSystemImpl { project_root, app_data_root }
+    /// A new `FileSystemImpl` instance
+    fn new_with_roots(project_root: PathBuf, app_data_root: PathBuf) -> Self {
+        FileSystemImpl { project_root, app_data_root }
     }
 
     /// Creates a new internal file system implementation with a project root and default app data root.
@@ -118,11 +118,11 @@ impl _CFileSystemImpl {
     /// 
     /// # Returns
     /// 
-    /// A new `_CFileSystemImpl` instance
-    fn _Fnew_with_root(project_root: PathBuf) -> Self {
+    /// A new `FileSystemImpl` instance
+    fn new_with_root(project_root: PathBuf) -> Self {
         // Default app data root under project root; can be overridden by core/config.
         let app_data_root = project_root.join(".dms");
-        _CFileSystemImpl::_Fnew_with_roots(project_root, app_data_root)
+        FileSystemImpl::new_with_roots(project_root, app_data_root)
     }
 
     /// Returns the project root directory.
@@ -130,7 +130,7 @@ impl _CFileSystemImpl {
     /// # Returns
     /// 
     /// A reference to the project root path
-    fn _Fproject_root(&self) -> &Path {
+    fn project_root(&self) -> &Path {
         &self.project_root
     }
 
@@ -143,7 +143,7 @@ impl _CFileSystemImpl {
     /// # Returns
     /// 
     /// A `DMSResult<PathBuf>` containing the created directory path
-    fn _Fsafe_mkdir(&self, path: &Path) -> DMSResult<PathBuf> {
+    fn safe_mkdir(&self, path: &Path) -> DMSResult<PathBuf> {
         fs::create_dir_all(path).map_err(|e| crate::core::DMSError::Other(format!("safe_mkdir failed: {e}")))?;
         Ok(path.to_path_buf())
     }
@@ -157,9 +157,9 @@ impl _CFileSystemImpl {
     /// # Returns
     /// 
     /// A `DMSResult<PathBuf>` containing the parent directory path
-    fn _Fensure_parent_dir(&self, path: &Path) -> DMSResult<PathBuf> {
+    fn ensure_parent_dir(&self, path: &Path) -> DMSResult<PathBuf> {
         if let Some(parent) = path.parent() {
-            self._Fsafe_mkdir(parent)
+            self.safe_mkdir(parent)
         } else {
             Ok(self.project_root.clone())
         }
@@ -178,8 +178,8 @@ impl _CFileSystemImpl {
     /// # Returns
     /// 
     /// A `DMSResult<()>` indicating success or failure
-    fn _Fatomic_write_text(&self, path: &Path, text: &str) -> DMSResult<()> {
-        self._Fensure_parent_dir(path)?;
+    fn atomic_write_text(&self, path: &Path, text: &str) -> DMSResult<()> {
+        self.ensure_parent_dir(path)?;
         let dir = path.parent().unwrap_or_else(|| Path::new("."));
         let ts = SystemTime::now()
             .duration_since(SystemTime::UNIX_EPOCH)
@@ -219,8 +219,8 @@ impl _CFileSystemImpl {
     /// # Returns
     /// 
     /// A `DMSResult<()>` indicating success or failure
-    fn _Fatomic_write_bytes(&self, path: &Path, data: &[u8]) -> DMSResult<()> {
-        self._Fensure_parent_dir(path)?;
+    fn atomic_write_bytes(&self, path: &Path, data: &[u8]) -> DMSResult<()> {
+        self.ensure_parent_dir(path)?;
         let dir = path.parent().unwrap_or_else(|| Path::new("."));
         let ts = SystemTime::now()
             .duration_since(SystemTime::UNIX_EPOCH)
@@ -256,7 +256,7 @@ impl _CFileSystemImpl {
     /// # Returns
     /// 
     /// A `DMSResult<String>` containing the file content
-    fn _Fread_text(&self, path: &Path) -> DMSResult<String> {
+    fn read_text(&self, path: &Path) -> DMSResult<String> {
         let mut file = OpenOptions::new()
             .read(true)
             .open(path)
@@ -274,7 +274,7 @@ impl _CFileSystemImpl {
     /// # Returns
     /// 
     /// The application data directory path
-    fn _Fapp_dir(&self) -> PathBuf {
+    fn app_dir(&self) -> PathBuf {
         let _ = fs::create_dir_all(&self.app_data_root);
         self.app_data_root.clone()
     }
@@ -290,8 +290,8 @@ impl _CFileSystemImpl {
     /// # Returns
     /// 
     /// The category directory path
-    fn _Fcategory_dir(&self, name: &str) -> PathBuf {
-        let dir = self._Fapp_dir().join(name);
+    fn category_dir(&self, name: &str) -> PathBuf {
+        let dir = self.app_dir().join(name);
         let _ = fs::create_dir_all(&dir);
         dir
     }
@@ -304,7 +304,7 @@ impl _CFileSystemImpl {
 #[derive(Clone)]
 pub struct DMSFileSystem {
     /// Internal file system implementation
-    inner: _CFileSystemImpl,
+    inner: FileSystemImpl,
 }
 
 impl DMSFileSystem {
@@ -317,8 +317,8 @@ impl DMSFileSystem {
     /// # Returns
     /// 
     /// A new `DMSFileSystem` instance
-    pub fn _Fnew_with_root(project_root: PathBuf) -> Self {
-        let inner = _CFileSystemImpl::_Fnew_with_root(project_root);
+    pub fn new_with_root(project_root: PathBuf) -> Self {
+        let inner = FileSystemImpl::new_with_root(project_root);
         DMSFileSystem { inner }
     }
 
@@ -332,8 +332,8 @@ impl DMSFileSystem {
     /// # Returns
     /// 
     /// A new `DMSFileSystem` instance
-    pub fn _Fnew_with_roots(project_root: PathBuf, app_data_root: PathBuf) -> Self {
-        let inner = _CFileSystemImpl::_Fnew_with_roots(project_root, app_data_root);
+    pub fn new_with_roots(project_root: PathBuf, app_data_root: PathBuf) -> Self {
+        let inner = FileSystemImpl::new_with_roots(project_root, app_data_root);
         DMSFileSystem { inner }
     }
 
@@ -342,10 +342,10 @@ impl DMSFileSystem {
     /// # Returns
     /// 
     /// A `DMSResult<Self>` containing the new `DMSFileSystem` instance
-    pub fn _Fnew_auto_root() -> DMSResult<Self> {
+    pub fn new_auto_root() -> DMSResult<Self> {
         let cwd = std::env::current_dir()
             .map_err(|e| crate::core::DMSError::Other(format!("detect project root failed: {e}")))?;
-        Ok(Self::_Fnew_with_root(cwd))
+        Ok(Self::new_with_root(cwd))
     }
 
     /// Returns the project root directory.
@@ -353,8 +353,8 @@ impl DMSFileSystem {
     /// # Returns
     /// 
     /// A reference to the project root path
-    pub fn _Fproject_root(&self) -> &Path {
-        self.inner._Fproject_root()
+    pub fn project_root(&self) -> &Path {
+        self.inner.project_root()
     }
 
     /// Safely creates a directory and all its parent directories if they don't exist.
@@ -366,8 +366,8 @@ impl DMSFileSystem {
     /// # Returns
     /// 
     /// A `DMSResult<PathBuf>` containing the created directory path
-    pub fn _Fsafe_mkdir<P: AsRef<Path>>(&self, path: P) -> DMSResult<PathBuf> {
-        self.inner._Fsafe_mkdir(path.as_ref())
+    pub fn safe_mkdir<P: AsRef<Path>>(&self, path: P) -> DMSResult<PathBuf> {
+        self.inner.safe_mkdir(path.as_ref())
     }
 
     /// Ensures that the parent directory of a given path exists.
@@ -379,8 +379,8 @@ impl DMSFileSystem {
     /// # Returns
     /// 
     /// A `DMSResult<PathBuf>` containing the parent directory path
-    pub fn _Fensure_parent_dir<P: AsRef<Path>>(&self, path: P) -> DMSResult<PathBuf> {
-        self.inner._Fensure_parent_dir(path.as_ref())
+    pub fn ensure_parent_dir<P: AsRef<Path>>(&self, path: P) -> DMSResult<PathBuf> {
+        self.inner.ensure_parent_dir(path.as_ref())
     }
 
     /// Atomically writes text to a file.
@@ -396,8 +396,8 @@ impl DMSFileSystem {
     /// # Returns
     /// 
     /// A `DMSResult<()>` indicating success or failure
-    pub fn _Fatomic_write_text<P: AsRef<Path>>(&self, path: P, text: &str) -> DMSResult<()> {
-        self.inner._Fatomic_write_text(path.as_ref(), text)
+    pub fn atomic_write_text<P: AsRef<Path>>(&self, path: P, text: &str) -> DMSResult<()> {
+        self.inner.atomic_write_text(path.as_ref(), text)
     }
 
     /// Atomically writes bytes to a file.
@@ -413,8 +413,8 @@ impl DMSFileSystem {
     /// # Returns
     /// 
     /// A `DMSResult<()>` indicating success or failure
-    pub fn _Fatomic_write_bytes<P: AsRef<Path>>(&self, path: P, data: &[u8]) -> DMSResult<()> {
-        self.inner._Fatomic_write_bytes(path.as_ref(), data)
+    pub fn atomic_write_bytes<P: AsRef<Path>>(&self, path: P, data: &[u8]) -> DMSResult<()> {
+        self.inner.atomic_write_bytes(path.as_ref(), data)
     }
 
     /// Reads text from a file.
@@ -426,8 +426,8 @@ impl DMSFileSystem {
     /// # Returns
     /// 
     /// A `DMSResult<String>` containing the file content
-    pub fn _Fread_text<P: AsRef<Path>>(&self, path: P) -> DMSResult<String> {
-        self.inner._Fread_text(path.as_ref())
+    pub fn read_text<P: AsRef<Path>>(&self, path: P) -> DMSResult<String> {
+        self.inner.read_text(path.as_ref())
     }
 
     /// Reads JSON from a file and deserializes it into a type.
@@ -443,8 +443,8 @@ impl DMSFileSystem {
     /// # Returns
     /// 
     /// A `DMSResult<T>` containing the deserialized data
-    pub fn _Fread_json<P: AsRef<Path>, T: DeserializeOwned>(&self, path: P) -> DMSResult<T> {
-        let text = self._Fread_text(path)?;
+    pub fn read_json<P: AsRef<Path>, T: DeserializeOwned>(&self, path: P) -> DMSResult<T> {
+        let text = self.read_text(path)?;
         serde_json::from_str(&text)
             .map_err(|e| crate::core::DMSError::Other(format!("json read failed: {e}")))
     }
@@ -458,7 +458,7 @@ impl DMSFileSystem {
     /// # Returns
     /// 
     /// `true` if the path exists, `false` otherwise
-    pub fn _Fexists<P: AsRef<Path>>(&self, path: P) -> bool {
+    pub fn exists<P: AsRef<Path>>(&self, path: P) -> bool {
         path.as_ref().exists()
     }
 
@@ -471,7 +471,7 @@ impl DMSFileSystem {
     /// # Returns
     /// 
     /// A `DMSResult<()>` indicating success or failure
-    pub fn _Fremove_file<P: AsRef<Path>>(&self, path: P) -> DMSResult<()> {
+    pub fn remove_file<P: AsRef<Path>>(&self, path: P) -> DMSResult<()> {
         let p = path.as_ref();
         match fs::remove_file(p) {
             Ok(()) => Ok(()),
@@ -489,7 +489,7 @@ impl DMSFileSystem {
     /// # Returns
     /// 
     /// A `DMSResult<()>` indicating success or failure
-    pub fn _Fremove_dir_all<P: AsRef<Path>>(&self, path: P) -> DMSResult<()> {
+    pub fn remove_dir_all<P: AsRef<Path>>(&self, path: P) -> DMSResult<()> {
         let p = path.as_ref();
         match fs::remove_dir_all(p) {
             Ok(()) => Ok(()),
@@ -508,11 +508,11 @@ impl DMSFileSystem {
     /// # Returns
     /// 
     /// A `DMSResult<()>` indicating success or failure
-    pub fn _Fcopy_file<P: AsRef<Path>, Q: AsRef<Path>>(&self, from: P, to: Q) -> DMSResult<()> {
+    pub fn copy_file<P: AsRef<Path>, Q: AsRef<Path>>(&self, from: P, to: Q) -> DMSResult<()> {
         let src = from.as_ref();
         let dst = to.as_ref();
         if let Some(parent) = dst.parent() {
-            self._Fsafe_mkdir(parent)?;
+            self.safe_mkdir(parent)?;
         }
         fs::copy(src, dst)
             .map_err(|e| crate::core::DMSError::Other(format!("copy_file failed: {e}")))?;
@@ -529,11 +529,11 @@ impl DMSFileSystem {
     /// # Returns
     /// 
     /// A `DMSResult<()>` indicating success or failure
-    pub fn _Fappend_text<P: AsRef<Path>>(&self, path: P, text: &str) -> DMSResult<()> {
+    pub fn append_text<P: AsRef<Path>>(&self, path: P, text: &str) -> DMSResult<()> {
         use std::io::Write as _;
 
         let path_ref = path.as_ref();
-        self._Fensure_parent_dir(path_ref)?;
+        self.ensure_parent_dir(path_ref)?;
         let mut file = OpenOptions::new()
             .create(true)
             .append(true)
@@ -560,10 +560,10 @@ impl DMSFileSystem {
     /// # Returns
     /// 
     /// A `DMSResult<()>` indicating success or failure
-    pub fn _Fwrite_json<P: AsRef<Path>, T: Serialize>(&self, path: P, value: &T) -> DMSResult<()> {
+    pub fn write_json<P: AsRef<Path>, T: Serialize>(&self, path: P, value: &T) -> DMSResult<()> {
         let text = serde_json::to_string_pretty(value)
             .map_err(|e| crate::core::DMSError::Other(format!("json serialize failed: {e}")))?;
-        self._Fatomic_write_text(path, &text)
+        self.atomic_write_text(path, &text)
     }
 
     /// Returns the application data directory.
@@ -571,8 +571,8 @@ impl DMSFileSystem {
     /// # Returns
     /// 
     /// The application data directory path
-    pub fn _Fapp_dir(&self) -> PathBuf {
-        self.inner._Fapp_dir()
+    pub fn app_dir(&self) -> PathBuf {
+        self.inner.app_dir()
     }
 
     /// Returns the logs directory.
@@ -580,8 +580,8 @@ impl DMSFileSystem {
     /// # Returns
     /// 
     /// The logs directory path
-    pub fn _Flogs_dir(&self) -> PathBuf {
-        self.inner._Fcategory_dir("logs")
+    pub fn logs_dir(&self) -> PathBuf {
+        self.inner.category_dir("logs")
     }
 
     /// Returns the cache directory.
@@ -589,8 +589,8 @@ impl DMSFileSystem {
     /// # Returns
     /// 
     /// The cache directory path
-    pub fn _Fcache_dir(&self) -> PathBuf {
-        self.inner._Fcategory_dir("cache")
+    pub fn cache_dir(&self) -> PathBuf {
+        self.inner.category_dir("cache")
     }
 
     /// Returns the reports directory.
@@ -598,8 +598,8 @@ impl DMSFileSystem {
     /// # Returns
     /// 
     /// The reports directory path
-    pub fn _Freports_dir(&self) -> PathBuf {
-        self.inner._Fcategory_dir("reports")
+    pub fn reports_dir(&self) -> PathBuf {
+        self.inner.category_dir("reports")
     }
 
     /// Returns the observability directory.
@@ -607,8 +607,8 @@ impl DMSFileSystem {
     /// # Returns
     /// 
     /// The observability directory path
-    pub fn _Fobservability_dir(&self) -> PathBuf {
-        self.inner._Fcategory_dir("observability")
+    pub fn observability_dir(&self) -> PathBuf {
+        self.inner.category_dir("observability")
     }
 
     /// Returns the temporary directory.
@@ -616,8 +616,8 @@ impl DMSFileSystem {
     /// # Returns
     /// 
     /// The temporary directory path
-    pub fn _Ftemp_dir(&self) -> PathBuf {
-        self.inner._Fcategory_dir("tmp")
+    pub fn temp_dir(&self) -> PathBuf {
+        self.inner.category_dir("tmp")
     }
 
     /// Ensures a path exists under a specific category directory.
@@ -630,14 +630,14 @@ impl DMSFileSystem {
     /// # Returns
     /// 
     /// The full path to the ensured file or directory
-    pub fn _Fensure_category_path<S: AsRef<str>, P: AsRef<Path>>(&self, category: S, path_or_name: P) -> PathBuf {
+    pub fn ensure_category_path<S: AsRef<str>, P: AsRef<Path>>(&self, category: S, path_or_name: P) -> PathBuf {
         let base = match category.as_ref() {
-            "logs" => self._Flogs_dir(),
-            "cache" => self._Fcache_dir(),
-            "reports" => self._Freports_dir(),
-            "observability" => self._Fobservability_dir(),
-            "tmp" => self._Ftemp_dir(),
-            _ => self._Fapp_dir(),
+            "logs" => self.logs_dir(),
+            "cache" => self.cache_dir(),
+            "reports" => self.reports_dir(),
+            "observability" => self.observability_dir(),
+            "tmp" => self.temp_dir(),
+            _ => self.app_dir(),
         };
 
         let target = base.join(path_or_name.as_ref());
@@ -655,8 +655,8 @@ impl DMSFileSystem {
     /// # Returns
     /// 
     /// The full path to the normalized file or directory
-    pub fn _Fnormalize_under_category<S: AsRef<str>, P: AsRef<Path>>(&self, category: S, path_or_name: P) -> PathBuf {
+    pub fn normalize_under_category<S: AsRef<str>, P: AsRef<Path>>(&self, category: S, path_or_name: P) -> PathBuf {
         let name = path_or_name.as_ref().file_name().unwrap_or_else(|| std::ffi::OsStr::new(""));
-        self._Fensure_category_path(category, PathBuf::from(name))
+        self.ensure_category_path(category, PathBuf::from(name))
     }
 }

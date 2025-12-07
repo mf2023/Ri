@@ -48,17 +48,17 @@
 //! async fn example() -> DMSResult<()> {
 //!     // Create a circuit breaker with default configuration
 //!     let cb_config = DMSCircuitBreakerConfig::default();
-//!     let cb = DMSCircuitBreaker::_Fnew(cb_config);
+//!     let cb = DMSCircuitBreaker::new(cb_config);
 //!     
 //!     // Execute a risky operation with circuit breaker protection
-//!     let result = cb._Fexecute(async || {
+//!     let result = cb.execute(async || {
 //!         // This could be a network request, database operation, etc.
 //!         Ok("Success!")
 //!     }).await;
 //!     
 //!     // Get circuit breaker state and metrics
-//!     let state = cb._Fget_state().await;
-//!     let metrics = cb._Fget_stats();
+//!     let state = cb.get_state().await;
+//!     let metrics = cb.get_stats();
 //!     
 //!     println!("Circuit breaker state: {:?}", state);
 //!     println!("Circuit breaker metrics: {:?}", metrics);
@@ -135,7 +135,7 @@ impl Default for DMSCircuitBreakerConfig {
 /// This struct tracks all the metrics and state transitions for a circuit breaker instance.
 /// It is designed to be thread-safe for use in multi-threaded environments.
 #[derive(Debug)]
-struct _CCircuitBreakerStats {
+struct CircuitBreakerStats {
     /// Current state of the circuit breaker (Closed, Open, HalfOpen)
     state: RwLock<DMSCircuitBreakerState>,
     
@@ -158,11 +158,11 @@ struct _CCircuitBreakerStats {
     consecutive_successes: AtomicUsize,
 }
 
-impl _CCircuitBreakerStats {
+impl CircuitBreakerStats {
     /// Creates a new circuit breaker statistics instance with default values.
     /// 
     /// Initial state is Closed, with all counters set to zero.
-    fn _Fnew() -> Self {
+    fn new() -> Self {
         Self {
             state: RwLock::new(DMSCircuitBreakerState::Closed),
             failure_count: AtomicUsize::new(0),
@@ -180,7 +180,7 @@ impl _CCircuitBreakerStats {
     /// - Resets consecutive failure count
     /// - Increments consecutive success count
     /// - Transitions from HalfOpen to Closed if success threshold is met
-    async fn _Frecord_success(&self) {
+    async fn record_success(&self) {
         self.success_count.fetch_add(1, Ordering::Relaxed);
         self.consecutive_failures.store(0, Ordering::Relaxed);
         self.consecutive_successes.fetch_add(1, Ordering::Relaxed);
@@ -215,7 +215,7 @@ impl _CCircuitBreakerStats {
     /// - Updates last failure time
     /// - Transitions from Closed to Open if failure threshold is met
     /// - Transitions from HalfOpen to Open on any failure
-    async fn _Frecord_failure(&self, config: &DMSCircuitBreakerConfig) {
+    async fn record_failure(&self, config: &DMSCircuitBreakerConfig) {
         self.failure_count.fetch_add(1, Ordering::Relaxed);
         self.consecutive_successes.store(0, Ordering::Relaxed);
         self.consecutive_failures.fetch_add(1, Ordering::Relaxed);
@@ -257,7 +257,7 @@ impl _CCircuitBreakerStats {
     /// # Returns
     /// 
     /// `true` if the timeout has elapsed and a reset should be attempted, `false` otherwise
-    async fn _Fshould_attempt_reset(&self, config: &DMSCircuitBreakerConfig) -> bool {
+    async fn should_attempt_reset(&self, config: &DMSCircuitBreakerConfig) -> bool {
         let state = self.state.read().await;
         if let DMSCircuitBreakerState::Open = *state {
             let last_change = *self.last_state_change.read().await;
@@ -271,7 +271,7 @@ impl _CCircuitBreakerStats {
     /// 
     /// This method is called when the timeout period has elapsed and the circuit breaker
     /// should test if the service has recovered.
-    async fn _Ftransition_to_half_open(&self) {
+    async fn transition_to_half_open(&self) {
         let mut state = self.state.write().await;
         *state = DMSCircuitBreakerState::HalfOpen;
         *self.last_state_change.write().await = Instant::now();
@@ -282,21 +282,21 @@ impl _CCircuitBreakerStats {
     /// # Returns
     /// 
     /// The current `DMSCircuitBreakerState` (Closed, Open, or HalfOpen)
-    async fn _Fget_state(&self) -> DMSCircuitBreakerState {
+    async fn get_state(&self) -> DMSCircuitBreakerState {
         self.state.read().await.clone()
     }
 
     /// Gets the current metrics for the circuit breaker.
     /// 
     /// Note: The state field in the returned metrics is a placeholder and should be
-    /// obtained separately using `_Fget_state()` since it requires async access.
+    /// obtained separately using `get_state()` since it requires async access.
     /// 
     /// # Returns
     /// 
     /// A `CircuitBreakerMetrics` struct containing the current statistics
-    fn _Fget_stats(&self) -> CircuitBreakerMetrics {
+    fn get_stats(&self) -> CircuitBreakerMetrics {
         CircuitBreakerMetrics {
-            state: "Unknown".to_string(), // Placeholder - use _Fget_state() for actual state
+            state: "Unknown".to_string(), // Placeholder - use get_state() for actual state
             failure_count: self.failure_count.load(Ordering::Relaxed),
             success_count: self.success_count.load(Ordering::Relaxed),
             consecutive_failures: self.consecutive_failures.load(Ordering::Relaxed),
@@ -337,7 +337,7 @@ pub struct DMSCircuitBreaker {
     config: DMSCircuitBreakerConfig,
     
     /// Internal statistics and state management
-    stats: Arc<_CCircuitBreakerStats>,
+    stats: Arc<CircuitBreakerStats>,
 }
 
 impl DMSCircuitBreaker {
@@ -350,10 +350,10 @@ impl DMSCircuitBreaker {
     /// # Returns
     /// 
     /// A new `DMSCircuitBreaker` instance
-    pub fn _Fnew(config: DMSCircuitBreakerConfig) -> Self {
+    pub fn new(config: DMSCircuitBreakerConfig) -> Self {
         Self {
             config,
-            stats: Arc::new(_CCircuitBreakerStats::_Fnew()),
+            stats: Arc::new(CircuitBreakerStats::new()),
         }
     }
 
@@ -366,14 +366,14 @@ impl DMSCircuitBreaker {
     /// # Returns
     /// 
     /// `true` if the request should be allowed, `false` otherwise
-    pub async fn _Fallow_request(&self) -> bool {
-        let state = self.stats._Fget_state().await;
+    pub async fn allow_request(&self) -> bool {
+        let state = self.stats.get_state().await;
         
         match state {
             DMSCircuitBreakerState::Closed => true,
             DMSCircuitBreakerState::Open => {
-                if self.stats._Fshould_attempt_reset(&self.config).await {
-                    self.stats._Ftransition_to_half_open().await;
+                if self.stats.should_attempt_reset(&self.config).await {
+                    self.stats.transition_to_half_open().await;
                     true
                 } else {
                     false
@@ -384,13 +384,13 @@ impl DMSCircuitBreaker {
     }
 
     /// Records a successful operation and updates the circuit breaker state if necessary.
-    pub async fn _Frecord_success(&self) {
-        self.stats._Frecord_success().await;
+    pub async fn record_success(&self) {
+        self.stats.record_success().await;
     }
 
     /// Records a failed operation and updates the circuit breaker state if necessary.
-    pub async fn _Frecord_failure(&self) {
-        self.stats._Frecord_failure(&self.config).await;
+    pub async fn record_failure(&self) {
+        self.stats.record_failure(&self.config).await;
     }
 
     /// Executes an operation with circuit breaker protection.
@@ -410,21 +410,21 @@ impl DMSCircuitBreaker {
     /// # Returns
     /// 
     /// The result of the operation, or an error if the circuit breaker is open
-    pub async fn _Fexecute<F, R>(&self, operation: F) -> DMSResult<R>
+    pub async fn execute<F, R>(&self, operation: F) -> DMSResult<R>
     where
         F: std::future::Future<Output = DMSResult<R>>,
     {
-        if !self._Fallow_request().await {
+        if !self.allow_request().await {
             return Err(crate::core::DMSError::ServiceMesh("Circuit breaker is open".to_string()));
         }
 
         match operation.await {
             Ok(result) => {
-                self._Frecord_success().await;
+                self.record_success().await;
                 Ok(result)
             }
             Err(error) => {
-                self._Frecord_failure().await;
+                self.record_failure().await;
                 Err(error)
             }
         }
@@ -435,8 +435,8 @@ impl DMSCircuitBreaker {
     /// # Returns
     /// 
     /// The current `DMSCircuitBreakerState` (Closed, Open, or HalfOpen)
-    pub async fn _Fget_state(&self) -> DMSCircuitBreakerState {
-        self.stats._Fget_state().await
+    pub async fn get_state(&self) -> DMSCircuitBreakerState {
+        self.stats.get_state().await
     }
 
     /// Gets the current metrics for the circuit breaker.
@@ -444,8 +444,8 @@ impl DMSCircuitBreaker {
     /// # Returns
     /// 
     /// A `CircuitBreakerMetrics` struct containing the current statistics
-    pub fn _Fget_stats(&self) -> CircuitBreakerMetrics {
-        self.stats._Fget_stats()
+    pub fn get_stats(&self) -> CircuitBreakerMetrics {
+        self.stats.get_stats()
     }
 
     /// Gets the configuration for the circuit breaker.
@@ -453,14 +453,14 @@ impl DMSCircuitBreaker {
     /// # Returns
     /// 
     /// A reference to the `DMSCircuitBreakerConfig` used by this circuit breaker
-    pub fn _Fget_config(&self) -> &DMSCircuitBreakerConfig {
+    pub fn get_config(&self) -> &DMSCircuitBreakerConfig {
         &self.config
     }
 
     /// Resets the circuit breaker to its initial state (Closed).
     /// 
     /// This method resets all counters and transitions the circuit breaker to Closed state.
-    pub async fn _Freset(&self) {
+    pub async fn reset(&self) {
         let mut state = self.stats.state.write().await;
         *state = DMSCircuitBreakerState::Closed;
         self.stats.failure_count.store(0, Ordering::Relaxed);
@@ -473,7 +473,7 @@ impl DMSCircuitBreaker {
     /// Forces the circuit breaker to transition to Open state.
     /// 
     /// This method immediately opens the circuit breaker, rejecting all requests until the timeout elapses.
-    pub async fn _Fforce_open(&self) {
+    pub async fn force_open(&self) {
         let mut state = self.stats.state.write().await;
         *state = DMSCircuitBreakerState::Open;
         *self.stats.last_state_change.write().await = Instant::now();
@@ -482,7 +482,7 @@ impl DMSCircuitBreaker {
     /// Forces the circuit breaker to transition to Closed state.
     /// 
     /// This method immediately closes the circuit breaker, allowing all requests to proceed.
-    pub async fn _Fforce_close(&self) {
+    pub async fn force_close(&self) {
         let mut state = self.stats.state.write().await;
         *state = DMSCircuitBreakerState::Closed;
         *self.stats.last_state_change.write().await = Instant::now();
@@ -498,10 +498,10 @@ pub struct DMSAdvancedCircuitBreaker {
     config: DMSCircuitBreakerConfig,
     
     /// Error-type specific statistics and state management
-    stats_by_error: RwLock<HashMap<String, Arc<_CCircuitBreakerStats>>>,
+    stats_by_error: RwLock<HashMap<String, Arc<CircuitBreakerStats>>>,
     
     /// Default statistics for unclassified errors
-    default_stats: Arc<_CCircuitBreakerStats>,
+    default_stats: Arc<CircuitBreakerStats>,
 }
 
 impl DMSAdvancedCircuitBreaker {
@@ -514,11 +514,11 @@ impl DMSAdvancedCircuitBreaker {
     /// # Returns
     /// 
     /// A new `DMSAdvancedCircuitBreaker` instance
-    pub fn _Fnew(config: DMSCircuitBreakerConfig) -> Self {
+    pub fn new(config: DMSCircuitBreakerConfig) -> Self {
         Self {
             config,
             stats_by_error: RwLock::new(HashMap::new()),
-            default_stats: Arc::new(_CCircuitBreakerStats::_Fnew()),
+            default_stats: Arc::new(CircuitBreakerStats::new()),
         }
     }
 
@@ -530,13 +530,13 @@ impl DMSAdvancedCircuitBreaker {
     /// 
     /// # Returns
     /// 
-    /// An `Arc<_CCircuitBreakerStats>` instance for the specified error type
-    async fn _Fget_stats_for_error(&self, error_type: Option<&str>) -> Arc<_CCircuitBreakerStats> {
+    /// An `Arc<CircuitBreakerStats>` instance for the specified error type
+    async fn get_stats_for_error(&self, error_type: Option<&str>) -> Arc<CircuitBreakerStats> {
         match error_type {
             Some(error_type) => {
                 let mut stats_map = self.stats_by_error.write().await;
                 stats_map.entry(error_type.to_string())
-                    .or_insert_with(|| Arc::new(_CCircuitBreakerStats::_Fnew()))
+                    .or_insert_with(|| Arc::new(CircuitBreakerStats::new()))
                     .clone()
             }
             None => self.default_stats.clone(),
@@ -548,9 +548,9 @@ impl DMSAdvancedCircuitBreaker {
     /// # Parameters
     /// 
     /// - `error_type`: The error type identifier, or `None` for default statistics
-    pub async fn _Frecord_success_with_type(&self, error_type: Option<&str>) {
-        let stats = self._Fget_stats_for_error(error_type).await;
-        stats._Frecord_success().await;
+    pub async fn record_success_with_type(&self, error_type: Option<&str>) {
+        let stats = self.get_stats_for_error(error_type).await;
+        stats.record_success().await;
     }
 
     /// Records a failed operation for a specific error type and updates the circuit breaker state if necessary.
@@ -558,9 +558,9 @@ impl DMSAdvancedCircuitBreaker {
     /// # Parameters
     /// 
     /// - `error_type`: The error type identifier, or `None` for default statistics
-    pub async fn _Frecord_failure_with_type(&self, error_type: Option<&str>) {
-        let stats = self._Fget_stats_for_error(error_type).await;
-        stats._Frecord_failure(&self.config).await;
+    pub async fn record_failure_with_type(&self, error_type: Option<&str>) {
+        let stats = self.get_stats_for_error(error_type).await;
+        stats.record_failure(&self.config).await;
     }
 
     /// Determines if a request should be allowed to proceed for a specific error type.
@@ -572,15 +572,15 @@ impl DMSAdvancedCircuitBreaker {
     /// # Returns
     /// 
     /// `true` if the request should be allowed, `false` otherwise
-    pub async fn _Fallow_request_for_type(&self, error_type: Option<&str>) -> bool {
-        let stats = self._Fget_stats_for_error(error_type).await;
-        let state = stats._Fget_state().await;
+    pub async fn allow_request_for_type(&self, error_type: Option<&str>) -> bool {
+        let stats = self.get_stats_for_error(error_type).await;
+        let state = stats.get_state().await;
         
         match state {
             DMSCircuitBreakerState::Closed => true,
             DMSCircuitBreakerState::Open => {
-                if stats._Fshould_attempt_reset(&self.config).await {
-                    stats._Ftransition_to_half_open().await;
+                if stats.should_attempt_reset(&self.config).await {
+                    stats.transition_to_half_open().await;
                     true
                 } else {
                     false

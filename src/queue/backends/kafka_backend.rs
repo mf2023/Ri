@@ -46,10 +46,10 @@
 //! 
 //! async fn example() -> DMSResult<()> {
 //!     // Create a new Kafka queue
-//!     let queue = DMSKafkaQueue::_Fnew("test-topic", "localhost:9092").await?;
+//!     let queue = DMSKafkaQueue::new("test-topic", "localhost:9092").await?;
 //!     
 //!     // Create a producer
-//!     let producer = queue._Fcreate_producer().await?;
+//!     let producer = queue.create_producer().await?;
 //!     
 //!     // Create a message
 //!     let message = DMSQueueMessage {
@@ -61,15 +61,15 @@
 //!     };
 //!     
 //!     // Send the message
-//!     producer._Fsend(message).await?;
+//!     producer.send(message).await?;
 //!     
 //!     // Create a consumer
-//!     let consumer = queue._Fcreate_consumer("test-group").await?;
+//!     let consumer = queue.create_consumer("test-group").await?;
 //!     
 //!     // Receive messages
-//!     if let Some(received_message) = consumer._Freceive().await? {
+//!     if let Some(received_message) = consumer.receive().await? {
 //!         println!("Received message: {:?}", received_message);
-//!         consumer._Fack(&received_message.id).await?;
+//!         consumer.ack(&received_message.id).await?;
 //!     }
 //!     
 //!     Ok(())
@@ -110,7 +110,7 @@ impl DMSKafkaQueue {
     /// # Returns
     ///
     /// A new DMSKafkaQueue instance wrapped in DMSResult
-    pub async fn _Fnew(name: &str, connection_string: &str) -> DMSResult<Self> {
+    pub async fn new(name: &str, connection_string: &str) -> DMSResult<Self> {
         let producer: FutureProducer = ClientConfig::new()
             .set("bootstrap.servers", connection_string)
             .set("message.timeout.ms", "5000")
@@ -139,7 +139,7 @@ impl DMSQueue for DMSKafkaQueue {
     /// # Returns
     ///
     /// A new DMSQueueProducer instance wrapped in DMSResult
-    async fn _Fcreate_producer(&self) -> DMSResult<Box<dyn DMSQueueProducer>> {
+    async fn create_producer(&self) -> DMSResult<Box<dyn DMSQueueProducer>> {
         Ok(Box::new(KafkaProducer {
             producer: self.producer.clone(),
             topic: self.name.clone(),
@@ -155,7 +155,7 @@ impl DMSQueue for DMSKafkaQueue {
     /// # Returns
     ///
     /// A new DMSQueueConsumer instance wrapped in DMSResult
-    async fn _Fcreate_consumer(&self, _consumer_group: &str) -> DMSResult<Box<dyn DMSQueueConsumer>> {
+    async fn create_consumer(&self, _consumer_group: &str) -> DMSResult<Box<dyn DMSQueueConsumer>> {
         Ok(Box::new(KafkaConsumer {
             consumer: self.consumer.clone(),
             paused: Arc::new(Mutex::new(false)),
@@ -170,7 +170,7 @@ impl DMSQueue for DMSKafkaQueue {
     /// # Returns
     ///
     /// QueueStats containing basic queue statistics wrapped in DMSResult
-    async fn _Fget_stats(&self) -> DMSResult<QueueStats> {
+    async fn get_stats(&self) -> DMSResult<QueueStats> {
         // Kafka provides metrics through JMX or admin client
         // For now, return basic stats
         Ok(QueueStats {
@@ -192,7 +192,7 @@ impl DMSQueue for DMSKafkaQueue {
     /// # Returns
     ///
     /// DMSResult indicating success or failure
-    async fn _Fpurge(&self) -> DMSResult<()> {
+    async fn purge(&self) -> DMSResult<()> {
         // Kafka doesn't support purging topics directly
         // This would require admin operations
         Ok(())
@@ -206,7 +206,7 @@ impl DMSQueue for DMSKafkaQueue {
     /// # Returns
     ///
     /// DMSResult indicating success or failure
-    async fn _Fdelete(&self) -> DMSResult<()> {
+    async fn delete(&self) -> DMSResult<()> {
         // Kafka doesn't support deleting topics through client API
         // This would require admin operations
         Ok(())
@@ -235,7 +235,7 @@ impl DMSQueueProducer for KafkaProducer {
     /// # Returns
     ///
     /// DMSResult indicating success or failure
-    async fn _Fsend(&self, message: DMSQueueMessage) -> DMSResult<()> {
+    async fn send(&self, message: DMSQueueMessage) -> DMSResult<()> {
         let payload = serde_json::to_vec(&message)?;
         
         let record = FutureRecord::to(&self.topic)
@@ -255,9 +255,9 @@ impl DMSQueueProducer for KafkaProducer {
     /// # Returns
     ///
     /// DMSResult indicating success or failure
-    async fn _Fsend_batch(&self, messages: Vec<DMSQueueMessage>) -> DMSResult<()> {
+    async fn send_batch(&self, messages: Vec<DMSQueueMessage>) -> DMSResult<()> {
         for message in messages {
-            self._Fsend(message).await?;
+            self.send(message).await?;
         }
         Ok(())
     }
@@ -281,7 +281,7 @@ impl DMSQueueConsumer for KafkaConsumer {
     /// # Returns
     ///
     /// An Option containing the received message, or None if the consumer is paused
-    async fn _Freceive(&self) -> DMSResult<Option<DMSQueueMessage>> {
+    async fn receive(&self) -> DMSResult<Option<DMSQueueMessage>> {
         let paused = *self.paused.lock().await;
         if paused {
             return Ok(None);
@@ -309,7 +309,7 @@ impl DMSQueueConsumer for KafkaConsumer {
     /// # Returns
     ///
     /// DMSResult indicating success or failure
-    async fn _Fack(&self, _message_id: &str) -> DMSResult<()> {
+    async fn ack(&self, _message_id: &str) -> DMSResult<()> {
         // Kafka auto-commit is enabled, so acknowledgment is automatic
         Ok(())
     }
@@ -326,7 +326,7 @@ impl DMSQueueConsumer for KafkaConsumer {
     /// # Returns
     ///
     /// DMSResult indicating success or failure
-    async fn _Fnack(&self, _message_id: &str) -> DMSResult<()> {
+    async fn nack(&self, _message_id: &str) -> DMSResult<()> {
         // In Kafka, negative acknowledgment typically means seeking back
         Ok(())
     }
@@ -336,7 +336,7 @@ impl DMSQueueConsumer for KafkaConsumer {
     /// # Returns
     ///
     /// DMSResult indicating success or failure
-    async fn _Fpause(&self) -> DMSResult<()> {
+    async fn pause(&self) -> DMSResult<()> {
         let mut paused = self.paused.lock().await;
         *paused = true;
         Ok(())
@@ -347,7 +347,7 @@ impl DMSQueueConsumer for KafkaConsumer {
     /// # Returns
     ///
     /// DMSResult indicating success or failure
-    async fn _Fresume(&self) -> DMSResult<()> {
+    async fn resume(&self) -> DMSResult<()> {
         let mut paused = self.paused.lock().await;
         *paused = false;
         Ok(())

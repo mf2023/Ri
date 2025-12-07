@@ -196,7 +196,7 @@ cargo test -- --nocapture
 <h2 align="center">❓ Frequently Asked Questions</h2>
 
 **Q: How to add a new module?**
-A: Implement the `DMSModule` trait and register it via `DMSAppBuilder::_Fwith_module`.
+A: Implement the `DMSModule` trait and register it via `DMSAppBuilder::with_module`.
 
 **Q: How to configure logging level?**
 A: Set `logging.level` in the configuration file, supporting DEBUG/INFO/WARN/ERROR levels.
@@ -208,7 +208,7 @@ A: Set `observability.metrics_enabled: true` and configure `prometheus_port` in 
 A: Implement a custom configuration loader and register it with `DMSConfigManager`.
 
 **Q: How to handle asynchronous tasks?**
-A: Use `DMSAppBuilder::_Fwith_async_module` to add async modules, the framework handles async lifecycle automatically.
+A: Use `DMSAppBuilder::with_async_module` to add async modules, the framework handles async lifecycle automatically.
 
 <h2 align="center">🌏 Community & Citation</h2>
 

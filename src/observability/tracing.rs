@@ -53,36 +53,36 @@
 //! ## Usage
 //!
 //! ```rust
-//! use dms::observability::{_Finit_tracer, _Ftracer, DMSSpanKind, DMSSpanStatus};
+//! use dms::observability::{init_tracer, tracer, DMSSpanKind, DMSSpanStatus};
 //! use dms::core::DMSResult;
 //!
 //! async fn example() -> DMSResult<()> {
 //!     // Initialize the global tracer with 100% sampling rate
-//!     _Finit_tracer(1.0);
+//!     init_tracer(1.0);
 //!     
 //!     // Get the global tracer
-//!     let tracer = _Ftracer();
+//!     let tracer = tracer();
 //!     
 //!     // Start a new trace
-//!     let trace_id = tracer._Fstart_trace("example_trace").unwrap();
+//!     let trace_id = tracer.start_trace("example_trace").unwrap();
 //!     
 //!     // Start a child span
-//!     let span_id = tracer._Fstart_span_from_context("child_span", DMSSpanKind::Internal).unwrap();
+//!     let span_id = tracer.start_span_from_context("child_span", DMSSpanKind::Internal).unwrap();
 //!     
 //!     // Add an attribute to the span
-//!     tracer._Fspan_mut(&span_id, |span| {
-//!         span._Fset_attribute("key".to_string(), "value".to_string());
+//!     tracer.span_mut(&span_id, |span| {
+//!         span.set_attribute("key".to_string(), "value".to_string());
 //!     })?;
 //!     
 //!     // Add an event to the span
-//!     tracer._Fspan_mut(&span_id, |span| {
+//!     tracer.span_mut(&span_id, |span| {
 //!         let mut attributes = std::collections::HashMap::new();
 //!         attributes.insert("event_key".to_string(), "event_value".to_string());
-//!         span._Fadd_event("example_event".to_string(), attributes);
+//!         span.add_event("example_event".to_string(), attributes);
 //!     })?;
 //!     
 //!     // End the child span with OK status
-//!     tracer._Fend_span(&span_id, DMSSpanStatus::Ok)?;
+//!     tracer.end_span(&span_id, DMSSpanStatus::Ok)?;
 //!     
 //!     Ok(())
 //! }
@@ -102,15 +102,15 @@ use crate::core::DMSResult;
 pub struct DMSSpanId(String);
 
 impl DMSSpanId {
-    pub fn _Fnew() -> Self {
+    pub fn new() -> Self {
         Self(Uuid::new_v4().to_string())
     }
 
-    pub fn _Ffrom_string(s: String) -> Self {
+    pub fn from_string(s: String) -> Self {
         Self(s)
     }
 
-    pub fn _Fas_str(&self) -> &str {
+    pub fn as_str(&self) -> &str {
         &self.0
     }
 }
@@ -120,15 +120,15 @@ impl DMSSpanId {
 pub struct DMSTraceId(String);
 
 impl DMSTraceId {
-    pub fn _Fnew() -> Self {
+    pub fn new() -> Self {
         Self(Uuid::new_v4().to_string())
     }
 
-    pub fn _Ffrom_string(s: String) -> Self {
+    pub fn from_string(s: String) -> Self {
         Self(s)
     }
 
-    pub fn _Fas_str(&self) -> &str {
+    pub fn as_str(&self) -> &str {
         &self.0
     }
 }
@@ -167,7 +167,7 @@ pub struct DMSSpan {
 }
 
 impl DMSSpan {
-    pub fn _Fnew(
+    pub fn new(
         trace_id: DMSTraceId,
         parent_span_id: Option<DMSSpanId>,
         name: String,
@@ -180,7 +180,7 @@ impl DMSSpan {
 
         Self {
             trace_id,
-            span_id: DMSSpanId::_Fnew(),
+            span_id: DMSSpanId::new(),
             parent_span_id,
             name,
             kind,
@@ -192,11 +192,11 @@ impl DMSSpan {
         }
     }
 
-    pub fn _Fset_attribute(&mut self, key: String, value: String) {
+    pub fn set_attribute(&mut self, key: String, value: String) {
         self.attributes.insert(key, value);
     }
 
-    pub fn _Fadd_event(&mut self, name: String, attributes: HashMap<String, String>) {
+    pub fn add_event(&mut self, name: String, attributes: HashMap<String, String>) {
         let timestamp = SystemTime::now()
             .duration_since(UNIX_EPOCH)
             .unwrap_or_default()
@@ -209,7 +209,7 @@ impl DMSSpan {
         });
     }
 
-    pub fn _Fend(&mut self, status: DMSSpanStatus) {
+    pub fn end(&mut self, status: DMSSpanStatus) {
         let end_time = SystemTime::now()
             .duration_since(UNIX_EPOCH)
             .unwrap_or_default()
@@ -219,7 +219,7 @@ impl DMSSpan {
         self.status = status;
     }
 
-    pub fn _Fduration(&self) -> Option<Duration> {
+    pub fn duration(&self) -> Option<Duration> {
         if let Some(end_time) = self.end_time {
             let duration_micros = end_time.saturating_sub(self.start_time);
             Some(Duration::from_micros(duration_micros))
@@ -247,11 +247,11 @@ pub struct DMSTracingContext {
 
 // Thread-local storage for tracing context
 thread_local! {
-    static CURRENT_CONTEXT: RefCell<Option<DMSTracingContext>> = RefCell::new(None);
+    static CURRENTONTEXT: RefCell<Option<DMSTracingContext>> = RefCell::new(None);
 }
 
 impl DMSTracingContext {
-    pub fn _Fnew() -> Self {
+    pub fn new() -> Self {
         Self {
             current_trace_id: None,
             current_span_id: None,
@@ -259,48 +259,48 @@ impl DMSTracingContext {
         }
     }
 
-    pub fn _Fwith_trace_id(mut self, trace_id: DMSTraceId) -> Self {
+    pub fn with_trace_id(mut self, trace_id: DMSTraceId) -> Self {
         self.current_trace_id = Some(trace_id);
         self
     }
 
-    pub fn _Fwith_span_id(mut self, span_id: DMSSpanId) -> Self {
+    pub fn with_span_id(mut self, span_id: DMSSpanId) -> Self {
         self.current_span_id = Some(span_id);
         self
     }
 
-    pub fn _Fset_baggage(&mut self, key: String, value: String) {
+    pub fn set_baggage(&mut self, key: String, value: String) {
         self.baggage.insert(key, value);
     }
 
-    pub fn _Fget_baggage(&self, key: &str) -> Option<&String> {
+    pub fn get_baggage(&self, key: &str) -> Option<&String> {
         self.baggage.get(key)
     }
 
-    pub fn _Ftrace_id(&self) -> Option<&DMSTraceId> {
+    pub fn trace_id(&self) -> Option<&DMSTraceId> {
         self.current_trace_id.as_ref()
     }
 
-    pub fn _Fspan_id(&self) -> Option<&DMSSpanId> {
+    pub fn span_id(&self) -> Option<&DMSSpanId> {
         self.current_span_id.as_ref()
     }
 
     /// Set this context as the current thread-local context
-    pub fn _Fset_as_current(&self) {
-        CURRENT_CONTEXT.with(|ctx| {
+    pub fn set_as_current(&self) {
+        CURRENTONTEXT.with(|ctx| {
             *ctx.borrow_mut() = Some(self.clone());
         });
     }
 
     /// Get the current tracing context from thread-local storage
-    pub fn _Fcurrent() -> Option<Self> {
-        CURRENT_CONTEXT.with(|ctx| {
+    pub fn current() -> Option<Self> {
+        CURRENTONTEXT.with(|ctx| {
             ctx.borrow().clone()
         })
     }
 
     /// Create a new context with the same trace ID but new span ID
-    pub fn _Fnew_child(&self, span_id: DMSSpanId) -> Self {
+    pub fn new_child(&self, span_id: DMSSpanId) -> Self {
         Self {
             current_trace_id: self.current_trace_id.clone(),
             current_span_id: Some(span_id),
@@ -317,7 +317,7 @@ pub struct DMSTracer {
 }
 
 impl DMSTracer {
-    pub fn _Fnew(sampling_rate: f64) -> Self {
+    pub fn new(sampling_rate: f64) -> Self {
         Self {
             spans: Arc::new(RwLock::new(HashMap::new())),
             active_spans: Arc::new(RwLock::new(HashMap::new())),
@@ -326,13 +326,13 @@ impl DMSTracer {
     }
 
     /// Start a new trace and set it as current context
-    pub fn _Fstart_trace(&self, name: String) -> Option<DMSTraceId> {
-        if !self._Fshould_sample() {
+    pub fn start_trace(&self, name: String) -> Option<DMSTraceId> {
+        if !self.should_sample() {
             return None;
         }
 
-        let trace_id = DMSTraceId::_Fnew();
-        let span = DMSSpan::_Fnew(trace_id.clone(), None, name, DMSSpanKind::Server);
+        let trace_id = DMSTraceId::new();
+        let span = DMSSpan::new(trace_id.clone(), None, name, DMSSpanKind::Server);
 
         let span_id = span.span_id.clone();
         self.active_spans
@@ -345,16 +345,16 @@ impl DMSTracer {
             .insert(trace_id.clone(), Vec::new());
 
         // Set current context
-        let context = DMSTracingContext::_Fnew()
-            ._Fwith_trace_id(trace_id.clone())
-            ._Fwith_span_id(span_id);
-        context._Fset_as_current();
+        let context = DMSTracingContext::new()
+            .with_trace_id(trace_id.clone())
+            .with_span_id(span_id);
+        context.set_as_current();
 
         Some(trace_id)
     }
 
     /// Start a new span in existing trace, using current context if available
-    pub fn _Fstart_span(
+    pub fn start_span(
         &self,
         trace_id: Option<&DMSTraceId>,
         parent_span_id: Option<DMSSpanId>,
@@ -365,8 +365,8 @@ impl DMSTracer {
         let resolved_trace_id = match trace_id {
             Some(id) => id.clone(),
             None => {
-                if let Some(context) = DMSTracingContext::_Fcurrent() {
-                    if let Some(id) = context._Ftrace_id() {
+                if let Some(context) = DMSTracingContext::current() {
+                    if let Some(id) = context.trace_id() {
                         id.clone()
                     } else {
                         return None;
@@ -380,14 +380,14 @@ impl DMSTracer {
         // Try to get parent_span_id from current context if not provided
         let resolved_parent_span_id = match parent_span_id {
             Some(id) => Some(id.clone()),
-            None => DMSTracingContext::_Fcurrent().and_then(|context| context._Fspan_id().cloned()),
+            None => DMSTracingContext::current().and_then(|context| context.span_id().cloned()),
         };
 
         if !self.spans.read().unwrap().contains_key(&resolved_trace_id) {
             return None;
         }
 
-        let span = DMSSpan::_Fnew(
+        let span = DMSSpan::new(
             resolved_trace_id.clone(),
             resolved_parent_span_id,
             name,
@@ -401,31 +401,31 @@ impl DMSTracer {
             .insert(span_id.clone(), span);
 
         // Update current context with new span
-        if let Some(context) = DMSTracingContext::_Fcurrent() {
-            let new_context = context._Fnew_child(span_id.clone());
-            new_context._Fset_as_current();
+        if let Some(context) = DMSTracingContext::current() {
+            let new_context = context.new_child(span_id.clone());
+            new_context.set_as_current();
         } else {
             // Create new context if none exists
-            let context = DMSTracingContext::_Fnew()
-                ._Fwith_trace_id(resolved_trace_id)
-                ._Fwith_span_id(span_id.clone());
-            context._Fset_as_current();
+            let context = DMSTracingContext::new()
+                .with_trace_id(resolved_trace_id)
+                .with_span_id(span_id.clone());
+            context.set_as_current();
         }
 
         Some(span_id)
     }
 
     /// Start a new span using current context
-    pub fn _Fstart_span_from_context(&self, name: String, kind: DMSSpanKind) -> Option<DMSSpanId> {
-        self._Fstart_span(None, None, name, kind)
+    pub fn start_span_from_context(&self, name: String, kind: DMSSpanKind) -> Option<DMSSpanId> {
+        self.start_span(None, None, name, kind)
     }
 
     /// End a span and restore parent span context if available
-    pub fn _Fend_span(&self, span_id: &DMSSpanId, status: DMSSpanStatus) -> DMSResult<()> {
+    pub fn end_span(&self, span_id: &DMSSpanId, status: DMSSpanStatus) -> DMSResult<()> {
         let mut active_spans = self.active_spans.write().unwrap();
 
         if let Some(mut span) = active_spans.remove(span_id) {
-            span._Fend(status);
+            span.end(status);
 
             let trace_id = span.trace_id.clone();
             if let Some(spans) = self.spans.write().unwrap().get_mut(&trace_id) {
@@ -436,15 +436,15 @@ impl DMSTracer {
             if let Some(parent_span_id) = span.parent_span_id.clone() {
                 // Try to find parent span in active spans
                 if active_spans.get(&parent_span_id).is_some() {
-                    let context = DMSTracingContext::_Fnew()
-                        ._Fwith_trace_id(trace_id)
-                        ._Fwith_span_id(parent_span_id);
-                    context._Fset_as_current();
+                    let context = DMSTracingContext::new()
+                        .with_trace_id(trace_id)
+                        .with_span_id(parent_span_id);
+                    context.set_as_current();
                 }
             } else {
                 // No parent span, clear context
-                let context = DMSTracingContext::_Fnew();
-                context._Fset_as_current();
+                let context = DMSTracingContext::new();
+                context.set_as_current();
             }
         }
 
@@ -452,7 +452,7 @@ impl DMSTracer {
     }
 
     /// Get span for modification
-    pub fn _Fspan_mut<F>(&self, span_id: &DMSSpanId, f: F) -> DMSResult<()>
+    pub fn span_mut<F>(&self, span_id: &DMSSpanId, f: F) -> DMSResult<()>
     where
         F: FnOnce(&mut DMSSpan),
     {
@@ -467,21 +467,21 @@ impl DMSTracer {
     }
 
     /// Export completed traces
-    pub fn _Fexport_traces(&self) -> HashMap<DMSTraceId, Vec<DMSSpan>> {
+    pub fn export_traces(&self) -> HashMap<DMSTraceId, Vec<DMSSpan>> {
         self.spans.read().unwrap().clone()
     }
 
     /// Get active traces count
-    pub fn _Factive_trace_count(&self) -> usize {
+    pub fn active_trace_count(&self) -> usize {
         self.spans.read().unwrap().len()
     }
 
     /// Get active span count
-    pub fn _Factive_span_count(&self) -> usize {
+    pub fn active_span_count(&self) -> usize {
         self.active_spans.read().unwrap().len()
     }
 
-    fn _Fshould_sample(&self) -> bool {
+    fn should_sample(&self) -> bool {
         if self.sampling_rate >= 1.0 {
             true
         } else if self.sampling_rate <= 0.0 {
@@ -501,25 +501,26 @@ pub struct DMSTracerManager {
 }
 
 impl DMSTracerManager {
-    pub fn _Fnew() -> Self {
+    pub fn new() -> Self {
         Self {
             tracers: HashMap::new(),
             default_tracer: None,
         }
     }
 
-    pub fn _Fregister_tracer(&mut self, name: &str, tracer: Arc<DMSTracer>) {
+    pub fn register_tracer(&mut self, name: &str, tracer: Arc<DMSTracer>) {
         self.tracers.insert(name.to_string(), tracer);
         if self.default_tracer.is_none() {
             self.default_tracer = Some(name.to_string());
         }
     }
 
-    pub fn _Fget_tracer(&self, name: &str) -> Option<&Arc<DMSTracer>> {
+    #[allow(dead_code)]
+    pub fn get_tracer(&self, name: &str) -> Option<&Arc<DMSTracer>> {
         self.tracers.get(name)
     }
 
-    pub fn _Fget_default_tracer(&self) -> Option<&Arc<DMSTracer>> {
+    pub fn get_default_tracer(&self) -> Option<&Arc<DMSTracer>> {
         if let Some(default_name) = &self.default_tracer {
             self.tracers.get(default_name)
         } else {
@@ -527,7 +528,8 @@ impl DMSTracerManager {
         }
     }
 
-    pub fn _Fset_default_tracer(&mut self, name: &str) -> bool {
+    #[allow(dead_code)]
+    pub fn set_default_tracer(&mut self, name: &str) -> bool {
         if self.tracers.contains_key(name) {
             self.default_tracer = Some(name.to_string());
             true
@@ -536,7 +538,8 @@ impl DMSTracerManager {
         }
     }
 
-    pub fn _Fremove_tracer(&mut self, name: &str) -> bool {
+    #[allow(dead_code)]
+    pub fn remove_tracer(&mut self, name: &str) -> bool {
         let removed = self.tracers.remove(name).is_some();
         if let Some(default_name) = &self.default_tracer {
             if default_name == name {
@@ -555,40 +558,44 @@ pub struct DefaultTracerManager {
 impl Default for DefaultTracerManager {
     fn default() -> Self {
         Self {
-            inner: Arc::new(RwLock::new(DMSTracerManager::_Fnew())),
+            inner: Arc::new(RwLock::new(DMSTracerManager::new())),
         }
     }
 }
 
 impl DefaultTracerManager {
-    pub fn _Fnew() -> Self {
+    #[allow(dead_code)]
+    pub fn new() -> Self {
         Default::default()
     }
 
-    pub async fn _Fregister_tracer(&self, name: &str, sampling_rate: f64) {
-        let tracer = Arc::new(DMSTracer::_Fnew(sampling_rate));
+    pub async fn register_tracer(&self, name: &str, sampling_rate: f64) {
+        let tracer = Arc::new(DMSTracer::new(sampling_rate));
         let mut manager = self.inner.write().unwrap();
-        manager._Fregister_tracer(name, tracer);
+        manager.register_tracer(name, tracer);
     }
 
-    pub async fn _Fget_tracer(&self, name: &str) -> Option<Arc<DMSTracer>> {
+    #[allow(dead_code)]
+    pub async fn get_tracer(&self, name: &str) -> Option<Arc<DMSTracer>> {
         let manager = self.inner.read().unwrap();
-        manager._Fget_tracer(name).cloned()
+        manager.get_tracer(name).cloned()
     }
 
-    pub async fn _Fget_default_tracer(&self) -> Option<Arc<DMSTracer>> {
+    pub async fn get_default_tracer(&self) -> Option<Arc<DMSTracer>> {
         let manager = self.inner.read().unwrap();
-        manager._Fget_default_tracer().cloned()
+        manager.get_default_tracer().cloned()
     }
 
-    pub async fn _Fset_default_tracer(&self, name: &str) -> bool {
+    #[allow(dead_code)]
+    pub async fn set_default_tracer(&self, name: &str) -> bool {
         let mut manager = self.inner.write().unwrap();
-        manager._Fset_default_tracer(name)
+        manager.set_default_tracer(name)
     }
 
-    pub async fn _Fremove_tracer(&self, name: &str) -> bool {
+    #[allow(dead_code)]
+    pub async fn remove_tracer(&self, name: &str) -> bool {
         let mut manager = self.inner.write().unwrap();
-        manager._Fremove_tracer(name)
+        manager.remove_tracer(name)
     }
 }
 
@@ -596,27 +603,27 @@ impl DefaultTracerManager {
 pub static DEFAULT_TRACER_MANAGER: std::sync::LazyLock<DefaultTracerManager> = std::sync::LazyLock::new(|| DefaultTracerManager::default());
 
 /// Initialize global tracer (backward compatibility)
-pub fn _Finit_tracer(sampling_rate: f64) {
+pub fn init_tracer(sampling_rate: f64) {
     tokio::runtime::Builder::new_current_thread()
         .enable_all()
         .build()
         .unwrap()
         .block_on(async {
             DEFAULT_TRACER_MANAGER
-                ._Fregister_tracer("default", sampling_rate)
+                .register_tracer("default", sampling_rate)
                 .await;
         });
 }
 
 /// Get global tracer (backward compatibility)
-pub fn _Ftracer() -> Arc<DMSTracer> {
+pub fn tracer() -> Arc<DMSTracer> {
     tokio::runtime::Builder::new_current_thread()
         .enable_all()
         .build()
         .unwrap()
         .block_on(async {
             DEFAULT_TRACER_MANAGER
-                ._Fget_default_tracer()
+                .get_default_tracer()
                 .await
                 .expect("Tracer not initialized")
         })

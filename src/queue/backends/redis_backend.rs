@@ -48,10 +48,10 @@
 //! 
 //! async fn example() -> DMSResult<()> {
 //!     // Create a new Redis queue
-//!     let queue = DMSRedisQueue::_Fnew("test-queue", "redis://localhost:6379").await?;
+//!     let queue = DMSRedisQueue::new("test-queue", "redis://localhost:6379").await?;
 //!     
 //!     // Create a producer
-//!     let producer = queue._Fcreate_producer().await?;
+//!     let producer = queue.create_producer().await?;
 //!     
 //!     // Create a message
 //!     let message = DMSQueueMessage {
@@ -63,15 +63,15 @@
 //!     };
 //!     
 //!     // Send the message
-//!     producer._Fsend(message).await?;
+//!     producer.send(message).await?;
 //!     
 //!     // Create a consumer
-//!     let consumer = queue._Fcreate_consumer("test-consumer-group").await?;
+//!     let consumer = queue.create_consumer("test-consumer-group").await?;
 //!     
 //!     // Receive messages
-//!     if let Some(received_message) = consumer._Freceive().await? {
+//!     if let Some(received_message) = consumer.receive().await? {
 //!         println!("Received message: {:?}", received_message);
-//!         consumer._Fack(&received_message.id).await?;
+//!         consumer.ack(&received_message.id).await?;
 //!     }
 //!     
 //!     Ok(())
@@ -107,7 +107,7 @@ impl DMSRedisQueue {
     /// # Returns
     ///
     /// A new DMSRedisQueue instance wrapped in DMSResult
-    pub async fn _Fnew(name: &str, connection_string: &str) -> DMSResult<Self> {
+    pub async fn new(name: &str, connection_string: &str) -> DMSResult<Self> {
         let client = Client::open(connection_string)?;
         
         Ok(Self {
@@ -124,7 +124,7 @@ impl DMSQueue for DMSRedisQueue {
     /// # Returns
     ///
     /// A new DMSQueueProducer instance wrapped in DMSResult
-    async fn _Fcreate_producer(&self) -> DMSResult<Box<dyn DMSQueueProducer>> {
+    async fn create_producer(&self) -> DMSResult<Box<dyn DMSQueueProducer>> {
         let conn = self.client.get_async_connection().await?;
         
         Ok(Box::new(RedisQueueProducer {
@@ -142,7 +142,7 @@ impl DMSQueue for DMSRedisQueue {
     /// # Returns
     ///
     /// A new DMSQueueConsumer instance wrapped in DMSResult
-    async fn _Fcreate_consumer(&self, _consumer_group: &str) -> DMSResult<Box<dyn DMSQueueConsumer>> {
+    async fn create_consumer(&self, _consumer_group: &str) -> DMSResult<Box<dyn DMSQueueConsumer>> {
         let conn = self.client.get_async_connection().await?;
         
         Ok(Box::new(RedisQueueConsumer {
@@ -157,7 +157,7 @@ impl DMSQueue for DMSRedisQueue {
     /// # Returns
     ///
     /// QueueStats containing queue statistics wrapped in DMSResult
-    async fn _Fget_stats(&self) -> DMSResult<QueueStats> {
+    async fn get_stats(&self) -> DMSResult<QueueStats> {
         let mut conn = self.client.get_async_connection().await?;
         let len: i64 = conn.llen(&self.name).await?;
         
@@ -177,7 +177,7 @@ impl DMSQueue for DMSRedisQueue {
     /// # Returns
     ///
     /// DMSResult indicating success or failure
-    async fn _Fpurge(&self) -> DMSResult<()> {
+    async fn purge(&self) -> DMSResult<()> {
         let mut conn = self.client.get_async_connection().await?;
         conn.del::<_, ()>(&self.name).await?;
         Ok(())
@@ -191,8 +191,8 @@ impl DMSQueue for DMSRedisQueue {
     /// # Returns
     ///
     /// DMSResult indicating success or failure
-    async fn _Fdelete(&self) -> DMSResult<()> {
-        self._Fpurge().await
+    async fn delete(&self) -> DMSResult<()> {
+        self.purge().await
     }
 }
 
@@ -218,7 +218,7 @@ impl DMSQueueProducer for RedisQueueProducer {
     /// # Returns
     ///
     /// DMSResult indicating success or failure
-    async fn _Fsend(&self, message: DMSQueueMessage) -> DMSResult<()> {
+    async fn send(&self, message: DMSQueueMessage) -> DMSResult<()> {
         let mut conn = self.connection.lock().await;
         let payload = serde_json::to_vec(&message)?;
         
@@ -235,7 +235,7 @@ impl DMSQueueProducer for RedisQueueProducer {
     /// # Returns
     ///
     /// DMSResult indicating success or failure
-    async fn _Fsend_batch(&self, messages: Vec<DMSQueueMessage>) -> DMSResult<()> {
+    async fn send_batch(&self, messages: Vec<DMSQueueMessage>) -> DMSResult<()> {
         let mut conn = self.connection.lock().await;
         
         for message in messages {
@@ -267,7 +267,7 @@ impl DMSQueueConsumer for RedisQueueConsumer {
     ///
     /// An Option containing the received message, or None if the consumer is paused
     /// or the BLPOP operation timed out
-    async fn _Freceive(&self) -> DMSResult<Option<DMSQueueMessage>> {
+    async fn receive(&self) -> DMSResult<Option<DMSQueueMessage>> {
         let paused = *self.paused.lock().await;
         if paused {
             return Ok(None);
@@ -298,7 +298,7 @@ impl DMSQueueConsumer for RedisQueueConsumer {
     /// # Returns
     ///
     /// DMSResult indicating success or failure
-    async fn _Fack(&self, _message_id: &str) -> DMSResult<()> {
+    async fn ack(&self, _message_id: &str) -> DMSResult<()> {
         // In Redis list-based queue, acknowledgment is implicit when message is popped
         Ok(())
     }
@@ -315,7 +315,7 @@ impl DMSQueueConsumer for RedisQueueConsumer {
     /// # Returns
     ///
     /// DMSResult indicating success or failure
-    async fn _Fnack(&self, _message_id: &str) -> DMSResult<()> {
+    async fn nack(&self, _message_id: &str) -> DMSResult<()> {
         // Put the message back in the queue for retry
         // For simplicity, we'll create a new message with incremented retry count
         // In a real implementation, you'd track the original message
@@ -327,7 +327,7 @@ impl DMSQueueConsumer for RedisQueueConsumer {
     /// # Returns
     ///
     /// DMSResult indicating success or failure
-    async fn _Fpause(&self) -> DMSResult<()> {
+    async fn pause(&self) -> DMSResult<()> {
         let mut paused = self.paused.lock().await;
         *paused = true;
         Ok(())
@@ -338,7 +338,7 @@ impl DMSQueueConsumer for RedisQueueConsumer {
     /// # Returns
     ///
     /// DMSResult indicating success or failure
-    async fn _Fresume(&self) -> DMSResult<()> {
+    async fn resume(&self) -> DMSResult<()> {
         let mut paused = self.paused.lock().await;
         *paused = false;
         Ok(())

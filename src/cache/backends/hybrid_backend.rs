@@ -35,7 +35,7 @@
 //! # Usage Examples
 //! ```rust
 //! // Create a hybrid cache with Redis connection
-//! let hybrid_cache = DMSHybridCache::_Fnew("redis://localhost:6379").await?;
+//! let hybrid_cache = DMSHybridCache::new("redis://localhost:6379").await?;
 //! 
 //! // Set a value (stored in both memory and Redis)
 //! let cached_value = CachedValue {
@@ -43,19 +43,20 @@
 //!     expires_at: Some(SystemTime::now() + Duration::from_secs(3600)),
 //!     metadata: HashMap::new(),
 //! };
-//! hybrid_cache._Fset("test_key", cached_value).await?;
+//! hybrid_cache.set("test_key", cached_value).await?;
 //! 
 //! // Get a value (checked in memory first, then Redis)
-//! let value = hybrid_cache._Fget("test_key").await;
+//! let value = hybrid_cache.get("test_key").await;
 //! 
 //! // Delete a value (removed from both caches)
-//! hybrid_cache._Fdelete("test_key").await?;
+//! hybrid_cache.delete("test_key").await?;
 //! ```
 
 #![allow(non_snake_case)]
 
 use std::sync::Arc;
-use crate::cache::{DMSCache, CachedValue, CacheStats};
+use crate::cache::{DMSCache, CacheStats};
+use crate::core::DMSResult;
 
 /// Hybrid cache implementation combining memory and Redis backends.
 /// 
@@ -74,9 +75,9 @@ impl DMSHybridCache {
     /// 
     /// # Returns
     /// A new instance of `DMSHybridCache`
-    pub async fn _Fnew(redis_url: &str) -> crate::core::DMSResult<Self> {
-        let memory_cache = Arc::new(crate::cache::backends::DMSMemoryCache::_Fnew());
-        let redis_cache = Arc::new(crate::cache::backends::DMSRedisCache::_Fnew(redis_url).await?);
+    pub async fn new(redis_url: &str) -> crate::core::DMSResult<Self> {
+        let memory_cache = Arc::new(crate::cache::backends::DMSMemoryCache::new());
+        let redis_cache = Arc::new(crate::cache::backends::DMSRedisCache::new(redis_url).await?);
         
         Ok(Self {
             memory_cache,
@@ -99,20 +100,20 @@ impl DMSCache for DMSHybridCache {
     /// 
     /// # Returns
     /// `Some(CachedValue)` if the key exists in either cache, otherwise `None`
-    async fn _Fget(&self, key: &str) -> Option<CachedValue> {
+    async fn get(&self, key: &str) -> DMSResult<Option<String>> {
         // First check memory cache
-        if let Some(value) = self.memory_cache._Fget(key).await {
-            return Some(value);
+        if let Ok(Some(value)) = self.memory_cache.get(key).await {
+            return Ok(Some(value));
         }
         
         // If not in memory, check Redis
-        if let Some(value) = self.redis_cache._Fget(key).await {
+        if let Ok(Some(value)) = self.redis_cache.get(key).await {
             // Store in memory cache for future requests
-            let _ = self.memory_cache._Fset(key, value.clone()).await;
-            return Some(value);
+            let _ = self.memory_cache.set(key, &value, Some(3600)).await;
+            return Ok(Some(value));
         }
         
-        None
+        Ok(None)
     }
     
     /// Sets a value in both caches.
@@ -126,10 +127,10 @@ impl DMSCache for DMSHybridCache {
     /// 
     /// # Returns
     /// `Ok(())` if the value was successfully set in both caches
-    async fn _Fset(&self, key: &str, value: CachedValue) -> crate::core::DMSResult<()> {
+    async fn set(&self, key: &str, value: &str, ttl_seconds: Option<u64>) -> crate::core::DMSResult<()> {
         // Set in both caches
-        self.memory_cache._Fset(key, value.clone()).await?;
-        self.redis_cache._Fset(key, value).await?;
+        self.memory_cache.set(key, value, ttl_seconds).await?;
+        self.redis_cache.set(key, value, ttl_seconds).await?;
         Ok(())
     }
     
@@ -143,11 +144,11 @@ impl DMSCache for DMSHybridCache {
     /// 
     /// # Returns
     /// `Ok(())` if the value was successfully deleted from both caches
-    async fn _Fdelete(&self, key: &str) -> crate::core::DMSResult<()> {
+    async fn delete(&self, key: &str) -> crate::core::DMSResult<bool> {
         // Delete from both caches
-        self.memory_cache._Fdelete(key).await?;
-        self.redis_cache._Fdelete(key).await?;
-        Ok(())
+        let memory_deleted = self.memory_cache.delete(key).await?;
+        let redis_deleted = self.redis_cache.delete(key).await?;
+        Ok(memory_deleted || redis_deleted)
     }
     
     /// Checks if a key exists in either cache.
@@ -159,9 +160,9 @@ impl DMSCache for DMSHybridCache {
     /// 
     /// # Returns
     /// `true` if the key exists in either cache, otherwise `false`
-    async fn _Fexists(&self, key: &str) -> bool {
+    async fn exists(&self, key: &str) -> bool {
         // Check memory first, then Redis
-        self.memory_cache._Fexists(key).await || self.redis_cache._Fexists(key).await
+        self.memory_cache.exists(key).await || self.redis_cache.exists(key).await
     }
     
     /// Clears both caches.
@@ -170,10 +171,10 @@ impl DMSCache for DMSHybridCache {
     /// 
     /// # Returns
     /// `Ok(())` if both caches were successfully cleared
-    async fn _Fclear(&self) -> crate::core::DMSResult<()> {
+    async fn clear(&self) -> crate::core::DMSResult<()> {
         // Clear both caches
-        self.memory_cache._Fclear().await?;
-        self.redis_cache._Fclear().await?;
+        self.memory_cache.clear().await?;
+        self.redis_cache.clear().await?;
         Ok(())
     }
     
@@ -184,17 +185,19 @@ impl DMSCache for DMSHybridCache {
     /// 
     /// # Returns
     /// A `CacheStats` struct containing combined statistics from both caches
-    async fn _Fstats(&self) -> CacheStats {
-        let memory_stats = self.memory_cache._Fstats().await;
-        let redis_stats = self.redis_cache._Fstats().await;
+    async fn stats(&self) -> CacheStats {
+        let memory_stats = self.memory_cache.stats().await;
+        let redis_stats = self.redis_cache.stats().await;
         
         CacheStats {
-            total_keys: memory_stats.total_keys + redis_stats.total_keys,
+            hits: memory_stats.hits + redis_stats.hits,
+            misses: memory_stats.misses + redis_stats.misses,
+            entries: memory_stats.entries + redis_stats.entries,
             memory_usage_bytes: memory_stats.memory_usage_bytes + redis_stats.memory_usage_bytes,
+            avg_hit_rate: (memory_stats.avg_hit_rate + redis_stats.avg_hit_rate) / 2.0,
             hit_count: memory_stats.hit_count + redis_stats.hit_count,
             miss_count: memory_stats.miss_count + redis_stats.miss_count,
             eviction_count: memory_stats.eviction_count + redis_stats.eviction_count,
-            avg_hit_rate: (memory_stats.avg_hit_rate + redis_stats.avg_hit_rate) / 2.0,
         }
     }
     
@@ -204,9 +207,9 @@ impl DMSCache for DMSHybridCache {
     /// 
     /// # Returns
     /// The total number of expired entries cleaned up from both caches
-    async fn _Fcleanup_expired(&self) -> crate::core::DMSResult<usize> {
-        let memory_cleaned = self.memory_cache._Fcleanup_expired().await?;
-        let redis_cleaned = self.redis_cache._Fcleanup_expired().await?;
+    async fn cleanup_expired(&self) -> crate::core::DMSResult<usize> {
+        let memory_cleaned = self.memory_cache.cleanup_expired().await?;
+        let redis_cleaned = self.redis_cache.cleanup_expired().await?;
         Ok(memory_cleaned + redis_cleaned)
     }
 }

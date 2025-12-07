@@ -21,23 +21,23 @@ use dms::observability::prometheus::DMSPrometheusExporter;
 
 #[test]
 fn test_prometheus_exporter() {
-    let exporter = DMSPrometheusExporter::_Fnew().unwrap();
+    let exporter = DMSPrometheusExporter::new().unwrap();
     
-    exporter._Fregister_counter("test_counter", "A test counter").unwrap();
-    exporter._Fincrement_counter("test_counter", 1.0).unwrap();
+    exporter.register_counter("test_counter", "A test counter").unwrap();
+    exporter.increment_counter("test_counter", 1.0).unwrap();
     
-    exporter._Fregister_gauge("test_gauge", "A test gauge").unwrap();
-    exporter._Fset_gauge("test_gauge", 42.0).unwrap();
+    exporter.register_gauge("test_gauge", "A test gauge").unwrap();
+    exporter.set_gauge("test_gauge", 42.0).unwrap();
     
-    let output = exporter._Frender().unwrap();
+    let output = exporter.render().unwrap();
     assert!(output.contains("test_counter"));
     assert!(output.contains("test_gauge"));
 }
 
 #[test]
 fn test_grafana_dashboard_generation() {
-    let exporter = DMSPrometheusExporter::_Fnew().unwrap();
-    let dashboard = exporter._Fgenerate_default_dashboard().unwrap();
+    let exporter = DMSPrometheusExporter::new().unwrap();
+    let dashboard = exporter.generate_default_dashboard().unwrap();
     
     assert_eq!(dashboard.title, "DMS Metrics Dashboard");
     assert_eq!(dashboard.panels.len(), 3);

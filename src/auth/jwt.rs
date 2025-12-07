@@ -31,24 +31,24 @@
 //! # Usage Examples
 //! ```rust
 //! // Create a JWT manager with a secret key and 1-hour expiry
-//! let jwt_manager = DMSJWTManager::_Fnew("secret_key".to_string(), 3600);
+//! let jwt_manager = DMSJWTManager::new("secret_key".to_string(), 3600);
 //! 
 //! // Generate a token for a user with roles and permissions
-//! let token = jwt_manager._Fgenerate_token(
+//! let token = jwt_manager.generate_token(
 //!     "user123",
 //!     vec!["admin".to_string()],
 //!     vec!["read", "write"].iter().map(|s| s.to_string()).collect()
 //! )?;
 //! 
 //! // Validate the token
-//! let claims = jwt_manager._Fvalidate_token(&token)?;
+//! let claims = jwt_manager.validate_token(&token)?;
 //! 
 //! // Validate with custom options
 //! let options = JWTValidationOptions {
 //!     required_roles: vec!["admin"].iter().map(|s| s.to_string()).collect(),
 //!     ..Default::default()
 //! };
-//! let claims = jwt_manager._Fvalidate_token_with_options(&token, options)?;
+//! let claims = jwt_manager.validate_token_with_options(&token, options)?;
 //! ```
 
 #![allow(non_snake_case)]
@@ -120,7 +120,7 @@ impl DMSJWTManager {
     /// 
     /// # Returns
     /// A new instance of `DMSJWTManager`
-    pub fn _Fnew(secret: String, expiry_secs: u64) -> Self {
+    pub fn new(secret: String, expiry_secs: u64) -> Self {
         let encoding_key = EncodingKey::from_secret(secret.as_bytes());
         let decoding_key = DecodingKey::from_secret(secret.as_bytes());
         
@@ -141,7 +141,7 @@ impl DMSJWTManager {
     /// 
     /// # Returns
     /// A signed JWT token string if successful, otherwise an error
-    pub fn _Fgenerate_token(&self, user_id: &str, roles: Vec<String>, permissions: Vec<String>) -> crate::core::DMSResult<String> {
+    pub fn generate_token(&self, user_id: &str, roles: Vec<String>, permissions: Vec<String>) -> crate::core::DMSResult<String> {
         let now = SystemTime::now()
             .duration_since(UNIX_EPOCH)
             .unwrap()
@@ -166,7 +166,7 @@ impl DMSJWTManager {
     /// 
     /// # Returns
     /// The decoded claims if the token is valid, otherwise an error
-    pub fn _Fvalidate_token(&self, token: &str) -> crate::core::DMSResult<JWTClaims> {
+    pub fn validate_token(&self, token: &str) -> crate::core::DMSResult<JWTClaims> {
         let validation = Validation::default();
         
         decode::<JWTClaims>(token, &self.decoding_key, &validation)
@@ -182,8 +182,8 @@ impl DMSJWTManager {
     /// 
     /// # Returns
     /// The decoded claims if the token is valid, otherwise an error
-    pub fn _Fvalidate_token_with_options(&self, token: &str, options: JWTValidationOptions) -> crate::core::DMSResult<JWTClaims> {
-        let claims = self._Fvalidate_token(token)?;
+    pub fn validate_token_with_options(&self, token: &str, options: JWTValidationOptions) -> crate::core::DMSResult<JWTClaims> {
+        let claims = self.validate_token(token)?;
 
         if options.validate_exp {
             let now = SystemTime::now()
@@ -231,18 +231,18 @@ impl DMSJWTManager {
     /// 
     /// # Returns
     /// A new JWT token with the same claims but updated expiration time
-    pub fn _Frefresh_token(&self, token: &str) -> crate::core::DMSResult<String> {
-        let claims = self._Fvalidate_token(token)?;
+    pub fn refresh_token(&self, token: &str) -> crate::core::DMSResult<String> {
+        let claims = self.validate_token(token)?;
         
         // Generate new token with same user info
-        self._Fgenerate_token(&claims.sub, claims.roles, claims.permissions)
+        self.generate_token(&claims.sub, claims.roles, claims.permissions)
     }
 
     /// Gets the default token expiry time in seconds.
     /// 
     /// # Returns
     /// The default token expiry time in seconds
-    pub fn _Fget_token_expiry(&self) -> u64 {
+    pub fn get_token_expiry(&self) -> u64 {
         self.expiry_secs
     }
 
@@ -250,7 +250,7 @@ impl DMSJWTManager {
     /// 
     /// # Returns
     /// A reference to the secret key string
-    pub fn _Fget_secret(&self) -> &str {
+    pub fn get_secret(&self) -> &str {
         &self.secret
     }
 }

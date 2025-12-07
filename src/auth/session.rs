@@ -35,28 +35,28 @@
 //! # Usage Examples
 //! ```rust
 //! // Create a session manager with 30-minute timeout
-//! let session_manager = DMSSessionManager::_Fnew(1800);
+//! let session_manager = DMSSessionManager::new(1800);
 //! 
 //! // Create a new session for a user
-//! let session_id = session_manager._Fcreate_session(
+//! let session_id = session_manager.create_session(
 //!     "user123".to_string(),
 //!     Some("192.168.1.1".to_string()),
 //!     Some("Mozilla/5.0".to_string())
 //! ).await?;
 //! 
 //! // Get session data
-//! let session = session_manager._Fget_session(&session_id).await?;
+//! let session = session_manager.get_session(&session_id).await?;
 //! 
 //! // Update session data
 //! let mut data = HashMap::new();
 //! data.insert("theme".to_string(), "dark".to_string());
-//! session_manager._Fupdate_session(&session_id, data).await?;
+//! session_manager.update_session(&session_id, data).await?;
 //! 
 //! // Destroy a session
-//! session_manager._Fdestroy_session(&session_id).await?;
+//! session_manager.destroy_session(&session_id).await?;
 //! 
 //! // Cleanup expired sessions
-//! let cleaned_count = session_manager._Fcleanup_expired().await?;
+//! let cleaned_count = session_manager.cleanup_expired().await?;
 //! ```
 
 #![allow(non_snake_case)]
@@ -94,7 +94,7 @@ impl DMSSession {
     /// 
     /// # Returns
     /// A new instance of `DMSSession`
-    pub fn _Fnew(user_id: String, timeout_secs: u64, ip_address: Option<String>, user_agent: Option<String>) -> Self {
+    pub fn new(user_id: String, timeout_secs: u64, ip_address: Option<String>, user_agent: Option<String>) -> Self {
         let now = SystemTime::now()
             .duration_since(UNIX_EPOCH)
             .unwrap()
@@ -116,7 +116,7 @@ impl DMSSession {
     /// 
     /// # Returns
     /// `true` if the session has expired, otherwise `false`
-    pub fn _Fis_expired(&self) -> bool {
+    pub fn is_expired(&self) -> bool {
         let now = SystemTime::now()
             .duration_since(UNIX_EPOCH)
             .unwrap()
@@ -128,7 +128,7 @@ impl DMSSession {
     /// 
     /// This method is called when a session is accessed to update its
     /// last accessed timestamp, which can be used for session activity tracking.
-    pub fn _Ftouch(&mut self) {
+    pub fn touch(&mut self) {
         let now = SystemTime::now()
             .duration_since(UNIX_EPOCH)
             .unwrap()
@@ -140,7 +140,7 @@ impl DMSSession {
     /// 
     /// # Parameters
     /// - `timeout_secs`: New timeout in seconds from the current time
-    pub fn _Fextend(&mut self, timeout_secs: u64) {
+    pub fn extend(&mut self, timeout_secs: u64) {
         let now = SystemTime::now()
             .duration_since(UNIX_EPOCH)
             .unwrap()
@@ -155,7 +155,7 @@ impl DMSSession {
     /// 
     /// # Returns
     /// `Some(&String)` if the key exists, otherwise `None`
-    pub fn _Fget_data(&self, key: &str) -> Option<&String> {
+    pub fn get_data(&self, key: &str) -> Option<&String> {
         self.data.get(key)
     }
 
@@ -164,7 +164,7 @@ impl DMSSession {
     /// # Parameters
     /// - `key`: Key to set in the session data
     /// - `value`: Value to associate with the key
-    pub fn _Fset_data(&mut self, key: String, value: String) {
+    pub fn set_data(&mut self, key: String, value: String) {
         self.data.insert(key, value);
     }
 
@@ -175,7 +175,7 @@ impl DMSSession {
     /// 
     /// # Returns
     /// `Some(String)` if the key existed and was removed, otherwise `None`
-    pub fn _Fremove_data(&mut self, key: &str) -> Option<String> {
+    pub fn remove_data(&mut self, key: &str) -> Option<String> {
         self.data.remove(key)
     }
 }
@@ -201,7 +201,7 @@ impl DMSSessionManager {
     /// 
     /// # Notes
     /// - Default maximum sessions per user is 5
-    pub fn _Fnew(timeout_secs: u64) -> Self {
+    pub fn new(timeout_secs: u64) -> Self {
         Self {
             sessions: RwLock::new(HashMap::new()),
             timeout_secs,
@@ -221,12 +221,12 @@ impl DMSSessionManager {
     /// 
     /// # Notes
     /// - If the user has reached the maximum number of sessions, the oldest session is removed
-    pub async fn _Fcreate_session(&self, user_id: String, ip_address: Option<String>, user_agent: Option<String>) -> crate::core::DMSResult<String> {
+    pub async fn create_session(&self, user_id: String, ip_address: Option<String>, user_agent: Option<String>) -> crate::core::DMSResult<String> {
         let mut sessions = self.sessions.write().await;
         
         // Check if user has too many sessions
         let user_sessions: Vec<String> = sessions.values()
-            .filter(|s| s.user_id == user_id && !s._Fis_expired())
+            .filter(|s| s.user_id == user_id && !s.is_expired())
             .map(|s| s.id.clone())
             .collect();
         
@@ -238,7 +238,7 @@ impl DMSSessionManager {
         }
 
         // Create new session
-        let session = DMSSession::_Fnew(user_id, self.timeout_secs, ip_address, user_agent);
+        let session = DMSSession::new(user_id, self.timeout_secs, ip_address, user_agent);
         let session_id = session.id.clone();
         sessions.insert(session_id.clone(), session);
         
@@ -256,15 +256,15 @@ impl DMSSessionManager {
     /// # Notes
     /// - Expired sessions are automatically removed and return `None`
     /// - The session's last accessed time is updated when retrieved
-    pub async fn _Fget_session(&self, session_id: &str) -> crate::core::DMSResult<Option<DMSSession>> {
+    pub async fn get_session(&self, session_id: &str) -> crate::core::DMSResult<Option<DMSSession>> {
         let mut sessions = self.sessions.write().await;
         
         if let Some(session) = sessions.get_mut(session_id) {
-            if session._Fis_expired() {
+            if session.is_expired() {
                 sessions.remove(session_id);
                 Ok(None)
             } else {
-                session._Ftouch();
+                session.touch();
                 Ok(Some(session.clone()))
             }
         } else {
@@ -283,18 +283,18 @@ impl DMSSessionManager {
     /// 
     /// # Notes
     /// - The session's last accessed time is updated when modified
-    pub async fn _Fupdate_session(&self, session_id: &str, data: HashMap<String, String>) -> crate::core::DMSResult<bool> {
+    pub async fn update_session(&self, session_id: &str, data: HashMap<String, String>) -> crate::core::DMSResult<bool> {
         let mut sessions = self.sessions.write().await;
         
         if let Some(session) = sessions.get_mut(session_id) {
-            if session._Fis_expired() {
+            if session.is_expired() {
                 sessions.remove(session_id);
                 Ok(false)
             } else {
                 for (key, value) in data {
-                    session._Fset_data(key, value);
+                    session.set_data(key, value);
                 }
-                session._Ftouch();
+                session.touch();
                 Ok(true)
             }
         } else {
@@ -309,15 +309,15 @@ impl DMSSessionManager {
     /// 
     /// # Returns
     /// `true` if the session was extended successfully, `false` if the session doesn't exist or is expired
-    pub async fn _Fextend_session(&self, session_id: &str) -> crate::core::DMSResult<bool> {
+    pub async fn extend_session(&self, session_id: &str) -> crate::core::DMSResult<bool> {
         let mut sessions = self.sessions.write().await;
         
         if let Some(session) = sessions.get_mut(session_id) {
-            if session._Fis_expired() {
+            if session.is_expired() {
                 sessions.remove(session_id);
                 Ok(false)
             } else {
-                session._Fextend(self.timeout_secs);
+                session.extend(self.timeout_secs);
                 Ok(true)
             }
         } else {
@@ -332,7 +332,7 @@ impl DMSSessionManager {
     /// 
     /// # Returns
     /// `true` if the session was destroyed successfully, `false` if the session doesn't exist
-    pub async fn _Fdestroy_session(&self, session_id: &str) -> crate::core::DMSResult<bool> {
+    pub async fn destroy_session(&self, session_id: &str) -> crate::core::DMSResult<bool> {
         let mut sessions = self.sessions.write().await;
         Ok(sessions.remove(session_id).is_some())
     }
@@ -344,7 +344,7 @@ impl DMSSessionManager {
     /// 
     /// # Returns
     /// The number of sessions destroyed
-    pub async fn _Fdestroy_user_sessions(&self, user_id: &str) -> crate::core::DMSResult<usize> {
+    pub async fn destroy_user_sessions(&self, user_id: &str) -> crate::core::DMSResult<usize> {
         let mut sessions = self.sessions.write().await;
         let mut count = 0;
         
@@ -367,11 +367,11 @@ impl DMSSessionManager {
     /// 
     /// # Returns
     /// A vector of active sessions for the user
-    pub async fn _Fget_user_sessions(&self, user_id: &str) -> crate::core::DMSResult<Vec<DMSSession>> {
+    pub async fn get_user_sessions(&self, user_id: &str) -> crate::core::DMSResult<Vec<DMSSession>> {
         let sessions = self.sessions.read().await;
         
         let user_sessions: Vec<DMSSession> = sessions.values()
-            .filter(|s| s.user_id == user_id && !s._Fis_expired())
+            .filter(|s| s.user_id == user_id && !s.is_expired())
             .cloned()
             .collect();
         
@@ -382,12 +382,12 @@ impl DMSSessionManager {
     /// 
     /// # Returns
     /// The number of expired sessions cleaned up
-    pub async fn _Fcleanup_expired(&self) -> crate::core::DMSResult<usize> {
+    pub async fn cleanup_expired(&self) -> crate::core::DMSResult<usize> {
         let mut sessions = self.sessions.write().await;
         let mut count = 0;
         
         sessions.retain(|_, session| {
-            if session._Fis_expired() {
+            if session.is_expired() {
                 count += 1;
                 false
             } else {
@@ -401,7 +401,7 @@ impl DMSSessionManager {
     /// Cleans up all sessions.
     /// 
     /// This method removes all sessions, regardless of their expiration status.
-    pub async fn _Fcleanup_all(&self) -> crate::core::DMSResult<()> {
+    pub async fn cleanup_all(&self) -> crate::core::DMSResult<()> {
         let mut sessions = self.sessions.write().await;
         sessions.clear();
         Ok(())
@@ -411,7 +411,7 @@ impl DMSSessionManager {
     /// 
     /// # Returns
     /// The default session timeout in seconds
-    pub fn _Fget_timeout(&self) -> u64 {
+    pub fn get_timeout(&self) -> u64 {
         self.timeout_secs
     }
 
@@ -419,7 +419,7 @@ impl DMSSessionManager {
     /// 
     /// # Parameters
     /// - `timeout_secs`: New default session timeout in seconds
-    pub fn _Fset_timeout(&mut self, timeout_secs: u64) {
+    pub fn set_timeout(&mut self, timeout_secs: u64) {
         self.timeout_secs = timeout_secs;
     }
 }

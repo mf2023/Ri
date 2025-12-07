@@ -33,11 +33,11 @@ fn test_device_capabilities_new() {
 #[test]
 fn test_device_capabilities_builder() {
     let capabilities = DMSDeviceCapabilities::new()
-        ._Fwith_compute_units(8)
-        ._Fwith_memory_gb(16.0)
-        ._Fwith_storage_gb(512.0)
-        ._Fwith_bandwidth_gbps(10.0)
-        ._Fwith_custom_capability("feature".to_string(), "value".to_string());
+        .with_compute_units(8)
+        .with_memory_gb(16.0)
+        .with_storage_gb(512.0)
+        .with_bandwidth_gbps(10.0)
+        .with_custom_capability("feature".to_string(), "value".to_string());
     
     assert_eq!(capabilities.compute_units, Some(8));
     assert_eq!(capabilities.memory_gb, Some(16.0));
@@ -50,34 +50,34 @@ fn test_device_capabilities_builder() {
 fn test_device_capabilities_meets_requirements() {
     // Test device with sufficient capabilities
     let device_capabilities = DMSDeviceCapabilities::new()
-        ._Fwith_compute_units(8)
-        ._Fwith_memory_gb(16.0);
+        .with_compute_units(8)
+        .with_memory_gb(16.0);
     
     // Test requirements that are met
     let requirements = DMSDeviceCapabilities::new()
-        ._Fwith_compute_units(4)
-        ._Fwith_memory_gb(8.0);
+        .with_compute_units(4)
+        .with_memory_gb(8.0);
     
     assert!(device_capabilities.meets_requirements(&requirements));
     
     // Test requirements that are not met
     let high_requirements = DMSDeviceCapabilities::new()
-        ._Fwith_compute_units(16) // More than available
-        ._Fwith_memory_gb(8.0);
+        .with_compute_units(16) // More than available
+        .with_memory_gb(8.0);
     
     assert!(!device_capabilities.meets_requirements(&high_requirements));
     
     // Test with custom capabilities
     let device_capabilities_with_custom = DMSDeviceCapabilities::new()
-        ._Fwith_custom_capability("feature1".to_string(), "value1".to_string());
+        .with_custom_capability("feature1".to_string(), "value1".to_string());
     
     let requirements_with_custom = DMSDeviceCapabilities::new()
-        ._Fwith_custom_capability("feature1".to_string(), "value1".to_string());
+        .with_custom_capability("feature1".to_string(), "value1".to_string());
     
     assert!(device_capabilities_with_custom.meets_requirements(&requirements_with_custom));
     
     let requirements_with_wrong_custom = DMSDeviceCapabilities::new()
-        ._Fwith_custom_capability("feature1".to_string(), "wrong_value".to_string());
+        .with_custom_capability("feature1".to_string(), "wrong_value".to_string());
     
     assert!(!device_capabilities_with_custom.meets_requirements(&requirements_with_wrong_custom));
 }
@@ -86,12 +86,12 @@ fn test_device_capabilities_meets_requirements() {
 fn test_device_new() {
     let device = DMSDevice::new("test_device".to_string(), DMSDeviceType::CPU);
     
-    assert!(!device._Fid().is_empty());
-    assert_eq!(device._Fname(), "test_device");
-    assert_eq!(device._Fdevice_type(), DMSDeviceType::CPU);
-    assert_eq!(device._Fstatus(), DMSDeviceStatus::Unknown);
-    assert!(device._Fis_available());
-    assert!(!device._Fis_allocated());
+    assert!(!device.id().is_empty());
+    assert_eq!(device.name(), "test_device");
+    assert_eq!(device.device_type(), DMSDeviceType::CPU);
+    assert_eq!(device.status(), DMSDeviceStatus::Unknown);
+    assert!(device.is_available());
+    assert!(!device.is_allocated());
 }
 
 #[test]
@@ -99,23 +99,23 @@ fn test_device_allocation() {
     let mut device = DMSDevice::new("test_device".to_string(), DMSDeviceType::CPU);
     
     // Test initial state
-    assert!(device._Fis_available());
-    assert!(!device._Fis_allocated());
+    assert!(device.is_available());
+    assert!(!device.is_allocated());
     
     // Test allocation
     let allocation_id = "test_allocation_id";
-    assert!(device._Fallocate(allocation_id));
-    assert!(!device._Fis_available());
-    assert!(device._Fis_allocated());
-    assert_eq!(device._Fget_allocation_id(), Some(allocation_id));
-    assert_eq!(device._Fstatus(), DMSDeviceStatus::Busy);
+    assert!(device.allocate(allocation_id));
+    assert!(!device.is_available());
+    assert!(device.is_allocated());
+    assert_eq!(device.get_allocation_id(), Some(allocation_id));
+    assert_eq!(device.status(), DMSDeviceStatus::Busy);
     
     // Test release
-    device._Frelease();
-    assert!(device._Fis_available());
-    assert!(!device._Fis_allocated());
-    assert_eq!(device._Fget_allocation_id(), None);
-    assert_eq!(device._Fstatus(), DMSDeviceStatus::Available);
+    device.release();
+    assert!(device.is_available());
+    assert!(!device.is_allocated());
+    assert_eq!(device.get_allocation_id(), None);
+    assert_eq!(device.status(), DMSDeviceStatus::Available);
 }
 
 #[test]
@@ -123,14 +123,14 @@ fn test_device_status() {
     let mut device = DMSDevice::new("test_device".to_string(), DMSDeviceType::CPU);
     
     // Test status change
-    device._Fset_status(DMSDeviceStatus::Available);
-    assert_eq!(device._Fstatus(), DMSDeviceStatus::Available);
+    device.set_status(DMSDeviceStatus::Available);
+    assert_eq!(device.status(), DMSDeviceStatus::Available);
     
-    device._Fset_status(DMSDeviceStatus::Busy);
-    assert_eq!(device._Fstatus(), DMSDeviceStatus::Busy);
+    device.set_status(DMSDeviceStatus::Busy);
+    assert_eq!(device.status(), DMSDeviceStatus::Busy);
     
-    device._Fset_status(DMSDeviceStatus::Error);
-    assert_eq!(device._Fstatus(), DMSDeviceStatus::Error);
+    device.set_status(DMSDeviceStatus::Error);
+    assert_eq!(device.status(), DMSDeviceStatus::Error);
 }
 
 #[test]
@@ -138,23 +138,23 @@ fn test_device_health_score() {
     let mut device = DMSDevice::new("test_device".to_string(), DMSDeviceType::CPU);
     
     // Test health score for different statuses
-    device._Fset_status(DMSDeviceStatus::Available);
-    assert_eq!(device._Fhealth_score(), 100);
+    device.set_status(DMSDeviceStatus::Available);
+    assert_eq!(device.health_score(), 100);
     
-    device._Fset_status(DMSDeviceStatus::Busy);
-    assert_eq!(device._Fhealth_score(), 80);
+    device.set_status(DMSDeviceStatus::Busy);
+    assert_eq!(device.health_score(), 80);
     
-    device._Fset_status(DMSDeviceStatus::Maintenance);
-    assert_eq!(device._Fhealth_score(), 60);
+    device.set_status(DMSDeviceStatus::Maintenance);
+    assert_eq!(device.health_score(), 60);
     
-    device._Fset_status(DMSDeviceStatus::Offline);
-    assert_eq!(device._Fhealth_score(), 20);
+    device.set_status(DMSDeviceStatus::Offline);
+    assert_eq!(device.health_score(), 20);
     
-    device._Fset_status(DMSDeviceStatus::Error);
-    assert_eq!(device._Fhealth_score(), 10);
+    device.set_status(DMSDeviceStatus::Error);
+    assert_eq!(device.health_score(), 10);
     
-    device._Fset_status(DMSDeviceStatus::Unknown);
-    assert_eq!(device._Fhealth_score(), 0);
+    device.set_status(DMSDeviceStatus::Unknown);
+    assert_eq!(device.health_score(), 0);
 }
 
 #[test]
@@ -170,16 +170,16 @@ fn test_device_control_config_default() {
 
 #[tokio::test]
 async fn test_device_control_module_new() {
-    let module = DMSDeviceControlModule::_Fnew();
+    let module = DMSDeviceControlModule::new();
     // Just test that creation works without panicking
 }
 
 #[tokio::test]
 async fn test_device_control_module_discover_devices() {
-    let module = DMSDeviceControlModule::_Fnew();
+    let module = DMSDeviceControlModule::new();
     
     // Test device discovery
-    let result = module._Fdiscover_devices().await.unwrap();
+    let result = module.discover_devices().await.unwrap();
     
     // Should return some devices (mock devices added in init)
     assert!(result.discovered_devices.len() > 0);
@@ -187,10 +187,10 @@ async fn test_device_control_module_discover_devices() {
 
 #[tokio::test]
 async fn test_device_control_module_get_device_status() {
-    let module = DMSDeviceControlModule::_Fnew();
+    let module = DMSDeviceControlModule::new();
     
     // Test getting device status
-    let devices = module._Fget_device_status().await.unwrap();
+    let devices = module.get_device_status().await.unwrap();
     
     // Should return some devices (mock devices added in init)
     assert!(devices.len() > 0);
@@ -198,36 +198,36 @@ async fn test_device_control_module_get_device_status() {
 
 #[tokio::test]
 async fn test_device_control_module_allocate_resource() {
-    let module = DMSDeviceControlModule::_Fnew();
+    let module = DMSDeviceControlModule::new();
     
     // Test resource allocation
     let request = DMSResourceRequest {
         request_id: "test_request_id".to_string(),
         device_type: DMSDeviceType::CPU,
         required_capabilities: DMSDeviceCapabilities::new()
-            ._Fwith_compute_units(1)
-            ._Fwith_memory_gb(1.0),
+            .with_compute_units(1)
+            .with_memory_gb(1.0),
         priority: 5,
         timeout_secs: 60,
     };
     
-    let allocation = module._Fallocate_resource(request).await.unwrap();
+    let allocation = module.allocate_resource(request).await.unwrap();
     
     // Should return an allocation if a suitable device is found
     assert!(allocation.is_some());
     
     if let Some(allocation) = allocation {
         // Test releasing the resource
-        module._Frelease_resource(&allocation.allocation_id).await.unwrap();
+        module.release_resource(&allocation.allocation_id).await.unwrap();
     }
 }
 
 #[tokio::test]
 async fn test_device_control_module_get_resource_pool_status() {
-    let module = DMSDeviceControlModule::_Fnew();
+    let module = DMSDeviceControlModule::new();
     
     // Test getting resource pool status
-    let pool_status = module._Fget_resource_pool_status();
+    let pool_status = module.get_resource_pool_status();
     
     // Should return a HashMap (might be empty if no resource pools are created)
     assert!(pool_status.is_empty() || pool_status.len() > 0);

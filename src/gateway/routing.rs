@@ -47,7 +47,7 @@
 //! 
 //! async fn example() -> DMSResult<()> {
 //!     // Create a router
-//!     let router = Arc::new(DMSRouter::_Fnew());
+//!     let router = Arc::new(DMSRouter::new());
 //!     
 //!     // Create a simple handler
 //!     let hello_handler = Arc::new(|req| {
@@ -61,14 +61,14 @@
 //!     });
 //!     
 //!     // Add routes
-//!     router._Fget("/hello", hello_handler.clone());
-//!     router._Fpost("/api/v1/users", hello_handler.clone());
+//!     router.get("/hello", hello_handler.clone());
+//!     router.post("/api/v1/users", hello_handler.clone());
 //!     
 //!     // Add route with middleware
-//!     let auth_middleware = Arc::new(DMSAuthMiddleware::_Fnew("Authorization".to_string()));
-//!     let protected_route = DMSRoute::_Fnew("GET".to_string(), "/api/v1/protected".to_string(), hello_handler)
-//!         ._Fwith_middleware(auth_middleware);
-//!     router._Fadd_route(protected_route);
+//!     let auth_middleware = Arc::new(DMSAuthMiddleware::new("Authorization".to_string()));
+//!     let protected_route = DMSRoute::new("GET".to_string(), "/api/v1/protected".to_string(), hello_handler)
+//!         .with_middleware(auth_middleware);
+//!     router.add_route(protected_route);
 //!     
 //!     Ok(())
 //! }
@@ -120,7 +120,7 @@ impl DMSRoute {
     /// # Returns
     /// 
     /// A new `DMSRoute` instance with no middleware attached
-    pub fn _Fnew(
+    pub fn new(
         method: String,
         path: String,
         handler: DMSRouteHandler,
@@ -144,7 +144,7 @@ impl DMSRoute {
     /// # Returns
     /// 
     /// A new `DMSRoute` instance with the middleware attached
-    pub fn _Fwith_middleware(mut self, middleware: Arc<dyn DMSMiddleware>) -> Self {
+    pub fn with_middleware(mut self, middleware: Arc<dyn DMSMiddleware>) -> Self {
         self.middleware.push(middleware);
         self
     }
@@ -167,7 +167,7 @@ impl DMSRouter {
     /// # Returns
     /// 
     /// A new `DMSRouter` instance with empty routes and cache
-    pub fn _Fnew() -> Self {
+    pub fn new() -> Self {
         Self {
             routes: std::sync::RwLock::new(Vec::new()),
             route_cache: std::sync::RwLock::new(HashMap::new()),
@@ -181,7 +181,7 @@ impl DMSRouter {
     /// # Parameters
     /// 
     /// - `route`: The route to add to the router
-    pub fn _Fadd_route(&self, route: DMSRoute) {
+    pub fn add_route(&self, route: DMSRoute) {
         let mut routes = self.routes.write().unwrap();
         routes.push(route);
         
@@ -196,9 +196,9 @@ impl DMSRouter {
     /// 
     /// - `path`: Path pattern for the route
     /// - `handler`: Request handler for the route
-    pub fn _Fget(&self, path: &str, handler: DMSRouteHandler) {
-        let route = DMSRoute::_Fnew("GET".to_string(), path.to_string(), handler);
-        self._Fadd_route(route);
+    pub fn get(&self, path: &str, handler: DMSRouteHandler) {
+        let route = DMSRoute::new("GET".to_string(), path.to_string(), handler);
+        self.add_route(route);
     }
 
     /// Adds a POST route to the router.
@@ -207,9 +207,9 @@ impl DMSRouter {
     /// 
     /// - `path`: Path pattern for the route
     /// - `handler`: Request handler for the route
-    pub fn _Fpost(&self, path: &str, handler: DMSRouteHandler) {
-        let route = DMSRoute::_Fnew("POST".to_string(), path.to_string(), handler);
-        self._Fadd_route(route);
+    pub fn post(&self, path: &str, handler: DMSRouteHandler) {
+        let route = DMSRoute::new("POST".to_string(), path.to_string(), handler);
+        self.add_route(route);
     }
 
     /// Adds a PUT route to the router.
@@ -218,9 +218,9 @@ impl DMSRouter {
     /// 
     /// - `path`: Path pattern for the route
     /// - `handler`: Request handler for the route
-    pub fn _Fput(&self, path: &str, handler: DMSRouteHandler) {
-        let route = DMSRoute::_Fnew("PUT".to_string(), path.to_string(), handler);
-        self._Fadd_route(route);
+    pub fn put(&self, path: &str, handler: DMSRouteHandler) {
+        let route = DMSRoute::new("PUT".to_string(), path.to_string(), handler);
+        self.add_route(route);
     }
 
     /// Adds a DELETE route to the router.
@@ -229,9 +229,9 @@ impl DMSRouter {
     /// 
     /// - `path`: Path pattern for the route
     /// - `handler`: Request handler for the route
-    pub fn _Fdelete(&self, path: &str, handler: DMSRouteHandler) {
-        let route = DMSRoute::_Fnew("DELETE".to_string(), path.to_string(), handler);
-        self._Fadd_route(route);
+    pub fn delete(&self, path: &str, handler: DMSRouteHandler) {
+        let route = DMSRoute::new("DELETE".to_string(), path.to_string(), handler);
+        self.add_route(route);
     }
 
     /// Adds a PATCH route to the router.
@@ -240,9 +240,9 @@ impl DMSRouter {
     /// 
     /// - `path`: Path pattern for the route
     /// - `handler`: Request handler for the route
-    pub fn _Fpatch(&self, path: &str, handler: DMSRouteHandler) {
-        let route = DMSRoute::_Fnew("PATCH".to_string(), path.to_string(), handler);
-        self._Fadd_route(route);
+    pub fn patch(&self, path: &str, handler: DMSRouteHandler) {
+        let route = DMSRoute::new("PATCH".to_string(), path.to_string(), handler);
+        self.add_route(route);
     }
 
     /// Adds an OPTIONS route to the router.
@@ -251,9 +251,9 @@ impl DMSRouter {
     /// 
     /// - `path`: Path pattern for the route
     /// - `handler`: Request handler for the route
-    pub fn _Foptions(&self, path: &str, handler: DMSRouteHandler) {
-        let route = DMSRoute::_Fnew("OPTIONS".to_string(), path.to_string(), handler);
-        self._Fadd_route(route);
+    pub fn options(&self, path: &str, handler: DMSRouteHandler) {
+        let route = DMSRoute::new("OPTIONS".to_string(), path.to_string(), handler);
+        self.add_route(route);
     }
 
     /// Finds a matching route for the given request.
@@ -268,7 +268,7 @@ impl DMSRouter {
     /// # Returns
     /// 
     /// A `DMSResult<DMSRouteHandler>` with the matching handler, or an error if no route is found
-    pub async fn _Froute(&self, request: &DMSGatewayRequest) -> DMSResult<DMSRouteHandler> {
+    pub async fn route(&self, request: &DMSGatewayRequest) -> DMSResult<DMSRouteHandler> {
         let cache_key = format!("{}:{}", request.method, request.path);
         
         // Check cache first
@@ -282,7 +282,7 @@ impl DMSRouter {
         // Find matching route
         let routes = self.routes.read().unwrap();
         for route in routes.iter() {
-            if self._Fmatches_route(&route.method, &route.path, &request.method, &request.path) {
+            if self.matches_route(&route.method, &route.path, &request.method, &request.path) {
                 // Cache the result
                 let mut cache = self.route_cache.write().unwrap();
                 cache.insert(cache_key.clone(), route.clone());
@@ -312,7 +312,7 @@ impl DMSRouter {
     /// # Returns
     /// 
     /// `true` if the route matches the request, `false` otherwise
-    fn _Fmatches_route(&self, route_method: &str, route_path: &str, request_method: &str, request_path: &str) -> bool {
+    fn matches_route(&self, route_method: &str, route_path: &str, request_method: &str, request_path: &str) -> bool {
         // Check method
         if route_method != request_method {
             return false;
@@ -358,7 +358,7 @@ impl DMSRouter {
     /// 
     /// - `prefix`: The prefix to prepend to all mounted routes
     /// - `router`: The router to mount
-    pub fn _Fmount(&self, prefix: &str, router: &DMSRouter) {
+    pub fn mount(&self, prefix: &str, router: &DMSRouter) {
         let routes = router.routes.read().unwrap();
         for route in routes.iter() {
             let mounted_path = if prefix.ends_with('/') && route.path.starts_with('/') {
@@ -371,14 +371,14 @@ impl DMSRouter {
 
             let mut mounted_route = route.clone();
             mounted_route.path = mounted_path;
-            self._Fadd_route(mounted_route);
+            self.add_route(mounted_route);
         }
     }
 
     /// Clears all routes from the router.
     /// 
     /// This method removes all routes from the router and clears the route cache.
-    pub fn _Fclear_routes(&self) {
+    pub fn clear_routes(&self) {
         let mut routes = self.routes.write().unwrap();
         let mut cache = self.route_cache.write().unwrap();
         routes.clear();
@@ -390,7 +390,7 @@ impl DMSRouter {
     /// # Returns
     /// 
     /// The number of routes registered in the router
-    pub fn _Froute_count(&self) -> usize {
+    pub fn route_count(&self) -> usize {
         self.routes.read().unwrap().len()
     }
 }

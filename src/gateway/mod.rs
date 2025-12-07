@@ -78,31 +78,31 @@
 //!     };
 //!     
 //!     // Create gateway instance
-//!     let gateway = DMSGateway::_Fnew();
+//!     let gateway = DMSGateway::new();
 //!     
 //!     // Get router and add routes
-//!     let router = gateway._Frouter();
+//!     let router = gateway.router();
 //!     
 //!     // Add a simple GET route
-//!     router._Fadd_route(DMSRoute {
+//!     router.add_route(DMSRoute {
 //!         path: "/api/v1/health".to_string(),
 //!         method: "GET".to_string(),
 //!         handler: Arc::new(|req| Box::pin(async move {
-//!             Ok(DMSGatewayResponse::_Fjson(200, &serde_json::json!({ "status": "ok" }), req.id.clone())?)
+//!             Ok(DMSGatewayResponse::json(200, &serde_json::json!({ "status": "ok" }), req.id.clone())?)
 //!         })),
 //!         ..Default::default()
 //!     }).await?;
 //!     
 //!     // Add middleware
-//!     let middleware_chain = gateway._Fmiddleware_chain();
-//!     middleware_chain._Fadd_middleware(Arc::new(|req, next| Box::pin(async move {
+//!     let middleware_chain = gateway.middleware_chain();
+//!     middleware_chain.add_middleware(Arc::new(|req, next| Box::pin(async move {
 //!         // Log request
 //!         println!("Request: {} {}", req.method, req.path);
 //!         next(req).await
 //!     }))).await;
 //!     
 //!     // Handle a sample request
-//!     let sample_request = DMSGatewayRequest::_Fnew(
+//!     let sample_request = DMSGatewayRequest::new(
 //!         "GET".to_string(),
 //!         "/api/v1/health".to_string(),
 //!         HashMap::new(),
@@ -111,7 +111,7 @@
 //!         "127.0.0.1:12345".to_string(),
 //!     );
 //!     
-//!     let response = gateway._Fhandle_request(sample_request).await;
+//!     let response = gateway.handle_request(sample_request).await;
 //!     println!("Response: {} {}", response.status_code, String::from_utf8_lossy(&response.body));
 //!     
 //!     Ok(())
@@ -245,7 +245,7 @@ impl DMSGatewayRequest {
     /// # Returns
     /// 
     /// A new `DMSGatewayRequest` instance
-    pub fn _Fnew(
+    pub fn new(
         method: String,
         path: String,
         headers: HashMap<String, String>,
@@ -317,7 +317,7 @@ impl DMSGatewayResponse {
     /// # Returns
     /// 
     /// The updated `DMSGatewayResponse` instance
-    pub fn _Fwith_header(mut self, key: String, value: String) -> Self {
+    pub fn with_header(mut self, key: String, value: String) -> Self {
         self.headers.insert(key, value);
         self
     }
@@ -333,7 +333,7 @@ impl DMSGatewayResponse {
     /// # Returns
     /// 
     /// A `DMSResult<Self>` containing the JSON response
-    pub fn _Fjson<T: serde::Serialize>(status_code: u16, data: &T, request_id: String) -> crate::core::DMSResult<Self> {
+    pub fn json<T: serde::Serialize>(status_code: u16, data: &T, request_id: String) -> crate::core::DMSResult<Self> {
         let body = serde_json::to_vec(data)?;
         Ok(Self::new(status_code, body, request_id))
     }
@@ -349,7 +349,7 @@ impl DMSGatewayResponse {
     /// # Returns
     /// 
     /// A new `DMSGatewayResponse` instance with error information
-    pub fn _Ferror(status_code: u16, message: String, request_id: String) -> Self {
+    pub fn error(status_code: u16, message: String, request_id: String) -> Self {
         let error_body = serde_json::json!({
             "error": message,
             "request_id": request_id
@@ -386,25 +386,25 @@ impl DMSGateway {
     /// # Returns
     /// 
     /// A new `DMSGateway` instance
-    pub fn _Fnew() -> Self {
+    pub fn new() -> Self {
         let config = DMSGatewayConfig::default();
-        let router = Arc::new(DMSRouter::_Fnew());
-        let middleware_chain = Arc::new(DMSMiddlewareChain::_Fnew());
+        let router = Arc::new(DMSRouter::new());
+        let middleware_chain = Arc::new(DMSMiddlewareChain::new());
         
         let rate_limiter = if config.enable_rate_limiting {
-            Some(Arc::new(DMSRateLimiter::_Fnew(DMSRateLimitConfig::default())))
+            Some(Arc::new(DMSRateLimiter::new(DMSRateLimitConfig::default())))
         } else {
             None
         };
         
         let circuit_breaker = if config.enable_circuit_breaker {
-            Some(Arc::new(DMSCircuitBreaker::_Fnew(DMSCircuitBreakerConfig::default())))
+            Some(Arc::new(DMSCircuitBreaker::new(DMSCircuitBreakerConfig::default())))
         } else {
             None
         };
         
         let load_balancer = if config.enable_load_balancing {
-            Some(Arc::new(DMSLoadBalancer::_Fnew(DMSLoadBalancerStrategy::RoundRobin)))
+            Some(Arc::new(DMSLoadBalancer::new(DMSLoadBalancerStrategy::RoundRobin)))
         } else {
             None
         };
@@ -424,7 +424,7 @@ impl DMSGateway {
     /// # Returns
     /// 
     /// An Arc<DMSRouter> providing thread-safe access to the router
-    pub fn _Frouter(&self) -> Arc<DMSRouter> {
+    pub fn router(&self) -> Arc<DMSRouter> {
         self.router.clone()
     }
 
@@ -433,7 +433,7 @@ impl DMSGateway {
     /// # Returns
     /// 
     /// An Arc<DMSMiddlewareChain> providing thread-safe access to the middleware chain
-    pub fn _Fmiddleware_chain(&self) -> Arc<DMSMiddlewareChain> {
+    pub fn middleware_chain(&self) -> Arc<DMSMiddlewareChain> {
         self.middleware_chain.clone()
     }
 
@@ -453,29 +453,29 @@ impl DMSGateway {
     /// # Returns
     /// 
     /// A `DMSGatewayResponse` containing the response to the request
-    pub async fn _Fhandle_request(&self, request: DMSGatewayRequest) -> DMSGatewayResponse {
+    pub async fn handle_request(&self, request: DMSGatewayRequest) -> DMSGatewayResponse {
         let request_id = request.id.clone();
         
         // Apply rate limiting
         if let Some(rate_limiter) = &self.rate_limiter {
-            if !rate_limiter._Fcheck_request(&request).await {
+            if !rate_limiter.check_request(&request).await {
                 return DMSGatewayResponse::new(429, "Rate limit exceeded".to_string().into_bytes(), request_id);
             }
         }
 
         // Apply circuit breaker
         if let Some(circuit_breaker) = &self.circuit_breaker {
-            if !circuit_breaker._Fallow_request().await {
+            if !circuit_breaker.allow_request().await {
                 return DMSGatewayResponse::new(503, "Service temporarily unavailable".to_string().into_bytes(), request_id);
             }
         }
 
         // Apply middleware chain
         let mut request = request;
-        match self.middleware_chain._Fexecute(&mut request).await {
+        match self.middleware_chain.execute(&mut request).await {
             Ok(()) => {
                 // Route the request
-                match self.router._Froute(&request).await {
+                match self.router.route(&request).await {
                     Ok(route_handler) => {
                         // Execute the route handler
                         match route_handler(request).await {
@@ -518,16 +518,16 @@ impl DMSModule for DMSGateway {
     /// 
     /// A `DMSResult<()>` indicating success or failure
     async fn init(&mut self, ctx: &mut DMSServiceContext) -> crate::core::DMSResult<()> {
-        let logger = ctx._Flogger();
-        logger._Finfo("DMS.Gateway", "Initializing API gateway module")?;
+        let logger = ctx.logger();
+        logger.info("DMS.Gateway", "Initializing API gateway module")?;
 
         let config = self.config.read().await;
-        logger._Finfo(
+        logger.info(
             "DMS.Gateway",
             format!("Gateway will listen on {}:{}", config.listen_address, config.listen_port)
         )?;
 
-        logger._Finfo("DMS.Gateway", "API gateway module initialized successfully")?;
+        logger.info("DMS.Gateway", "API gateway module initialized successfully")?;
         Ok(())
     }
 

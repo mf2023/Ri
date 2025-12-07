@@ -47,25 +47,25 @@
 //! 
 //! async fn example() {
 //!     // Create a rate limiter with default configuration
-//!     let mut limiter = DMSRateLimiter::_Fnew(DMSRateLimitConfig::default());
+//!     let mut limiter = DMSRateLimiter::new(DMSRateLimitConfig::default());
 //!     
 //!     // Check if a request should be allowed
 //!     let client_ip = "192.168.1.1";
-//!     if limiter._Fcheck_rate_limit(client_ip, 1).await {
+//!     if limiter.check_rate_limit(client_ip, 1).await {
 //!         println!("Request allowed");
 //!     } else {
 //!         println!("Request rate limited");
 //!     }
 //!     
 //!     // Get rate limit stats for a client
-//!     if let Some(stats) = limiter._Fget_stats(client_ip).await {
+//!     if let Some(stats) = limiter.get_stats(client_ip).await {
 //!         println!("Current tokens: {}, Total requests: {}", 
 //!             stats.current_tokens, stats.total_requests);
 //!     }
 //!     
 //!     // Create a sliding window rate limiter
-//!     let sliding_limiter = DMSSlidingWindowRateLimiter::_Fnew(100, 60);
-//!     if sliding_limiter._Fallow_request().await {
+//!     let sliding_limiter = DMSSlidingWindowRateLimiter::new(100, 60);
+//!     if sliding_limiter.allow_request().await {
 //!         println!("Sliding window request allowed");
 //!     }
 //! }
@@ -114,7 +114,7 @@ impl Default for DMSRateLimitConfig {
 /// This struct implements the token bucket algorithm for rate limiting, tracking
 /// available tokens, last update time, and request count.
 #[derive(Debug)]
-struct _CRateLimitBucket {
+struct RateLimitBucket {
     /// Current number of available tokens in the bucket
     tokens: AtomicUsize,
     
@@ -125,7 +125,7 @@ struct _CRateLimitBucket {
     request_count: AtomicUsize,
 }
 
-impl _CRateLimitBucket {
+impl RateLimitBucket {
     /// Creates a new token bucket with the specified initial tokens.
     /// 
     /// # Parameters
@@ -134,8 +134,8 @@ impl _CRateLimitBucket {
     /// 
     /// # Returns
     /// 
-    /// A new `_CRateLimitBucket` instance
-    fn _Fnew(tokens: usize) -> Self {
+    /// A new `RateLimitBucket` instance
+    fn new(tokens: usize) -> Self {
         Self {
             tokens: AtomicUsize::new(tokens),
             last_update: RwLock::new(Instant::now()),
@@ -156,7 +156,7 @@ impl _CRateLimitBucket {
     /// # Returns
     /// 
     /// `true` if tokens were successfully consumed, `false` otherwise
-    async fn _Ftry_consume(&self, tokens: usize, config: &DMSRateLimitConfig) -> bool {
+    async fn try_consume(&self, tokens: usize, config: &DMSRateLimitConfig) -> bool {
         let now = Instant::now();
         let mut last_update = self.last_update.write().await;
         
@@ -187,7 +187,7 @@ impl _CRateLimitBucket {
     /// # Returns
     /// 
     /// A `RateLimitStats` struct containing current tokens and total requests
-    fn _Fget_stats(&self) -> RateLimitStats {
+    fn get_stats(&self) -> RateLimitStats {
         RateLimitStats {
             current_tokens: self.tokens.load(Ordering::Relaxed),
             total_requests: self.request_count.load(Ordering::Relaxed),
@@ -217,7 +217,7 @@ pub struct DMSRateLimiter {
     config: DMSRateLimitConfig,
     
     /// Map of key to token bucket instances
-    buckets: RwLock<HashMap<String, Arc<_CRateLimitBucket>>>,
+    buckets: RwLock<HashMap<String, Arc<RateLimitBucket>>>,
 }
 
 impl DMSRateLimiter {
@@ -230,7 +230,7 @@ impl DMSRateLimiter {
     /// # Returns
     /// 
     /// A new `DMSRateLimiter` instance
-    pub fn _Fnew(config: DMSRateLimitConfig) -> Self {
+    pub fn new(config: DMSRateLimitConfig) -> Self {
         Self {
             config,
             buckets: RwLock::new(HashMap::new()),
@@ -248,10 +248,10 @@ impl DMSRateLimiter {
     /// # Returns
     /// 
     /// `true` if the request should be allowed, `false` otherwise
-    pub async fn _Fcheck_request(&self, request: &crate::gateway::DMSGatewayRequest) -> bool {
+    pub async fn check_request(&self, request: &crate::gateway::DMSGatewayRequest) -> bool {
         // Use client IP as the key for rate limiting
         let key = request.remote_addr.clone();
-        self._Fcheck_rate_limit(&key, 1).await
+        self.check_rate_limit(&key, 1).await
     }
 
     /// Checks if a request with a custom key should be allowed based on rate limiting.
@@ -267,11 +267,11 @@ impl DMSRateLimiter {
     /// # Returns
     /// 
     /// `true` if the request should be allowed, `false` otherwise
-    pub async fn _Fcheck_rate_limit(&self, key: &str, tokens: usize) -> bool {
+    pub async fn check_rate_limit(&self, key: &str, tokens: usize) -> bool {
         let buckets = self.buckets.read().await;
         
         if let Some(bucket) = buckets.get(key) {
-            bucket._Ftry_consume(tokens, &self.config).await
+            bucket.try_consume(tokens, &self.config).await
         } else {
             // Create new bucket
             drop(buckets);
@@ -279,10 +279,10 @@ impl DMSRateLimiter {
             
             // Check again in case another thread created it
             if let Some(bucket) = buckets.get(key) {
-                bucket._Ftry_consume(tokens, &self.config).await
+                bucket.try_consume(tokens, &self.config).await
             } else {
-                let bucket = Arc::new(_CRateLimitBucket::_Fnew(self.config.burst_size as usize));
-                let result = bucket._Ftry_consume(tokens, &self.config).await;
+                let bucket = Arc::new(RateLimitBucket::new(self.config.burst_size as usize));
+                let result = bucket.try_consume(tokens, &self.config).await;
                 buckets.insert(key.to_string(), bucket);
                 result
             }
@@ -298,9 +298,9 @@ impl DMSRateLimiter {
     /// # Returns
     /// 
     /// An `Option<RateLimitStats>` with the statistics, or `None` if no bucket exists for the key
-    pub async fn _Fget_stats(&self, key: &str) -> Option<RateLimitStats> {
+    pub async fn get_stats(&self, key: &str) -> Option<RateLimitStats> {
         let buckets = self.buckets.read().await;
-        buckets.get(key).map(|bucket| bucket._Fget_stats())
+        buckets.get(key).map(|bucket| bucket.get_stats())
     }
 
     /// Gets rate limit statistics for all keys.
@@ -308,12 +308,12 @@ impl DMSRateLimiter {
     /// # Returns
     /// 
     /// A `HashMap<String, RateLimitStats>` with statistics for all keys
-    pub async fn _Fget_all_stats(&self) -> HashMap<String, RateLimitStats> {
+    pub async fn get_all_stats(&self) -> HashMap<String, RateLimitStats> {
         let buckets = self.buckets.read().await;
         let mut stats = HashMap::new();
         
         for (key, bucket) in buckets.iter() {
-            stats.insert(key.clone(), bucket._Fget_stats());
+            stats.insert(key.clone(), bucket.get_stats());
         }
         
         stats
@@ -326,7 +326,7 @@ impl DMSRateLimiter {
     /// # Parameters
     /// 
     /// - `key`: The key to reset the bucket for
-    pub async fn _Freset_bucket(&self, key: &str) {
+    pub async fn reset_bucket(&self, key: &str) {
         let mut buckets = self.buckets.write().await;
         buckets.remove(key);
     }
@@ -334,7 +334,7 @@ impl DMSRateLimiter {
     /// Clears all rate limit buckets.
     /// 
     /// This method removes all buckets, effectively resetting rate limits for all keys.
-    pub async fn _Fclear_all_buckets(&self) {
+    pub async fn clear_all_buckets(&self) {
         let mut buckets = self.buckets.write().await;
         buckets.clear();
     }
@@ -344,7 +344,7 @@ impl DMSRateLimiter {
     /// # Returns
     /// 
     /// A reference to the current `DMSRateLimitConfig`
-    pub fn _Fget_config(&self) -> &DMSRateLimitConfig {
+    pub fn get_config(&self) -> &DMSRateLimitConfig {
         &self.config
     }
 
@@ -355,7 +355,7 @@ impl DMSRateLimiter {
     /// # Parameters
     /// 
     /// - `config`: The new rate limit configuration
-    pub async fn _Fupdate_config(&mut self, config: DMSRateLimitConfig) {
+    pub async fn update_config(&mut self, config: DMSRateLimitConfig) {
         self.config = config;
         
         // Reset all buckets with new configuration
@@ -388,7 +388,7 @@ impl DMSSlidingWindowRateLimiter {
     /// # Returns
     /// 
     /// A new `DMSSlidingWindowRateLimiter` instance
-    pub fn _Fnew(max_requests: u32, window_seconds: u64) -> Self {
+    pub fn new(max_requests: u32, window_seconds: u64) -> Self {
         Self {
             max_requests,
             window_duration: Duration::from_secs(window_seconds),
@@ -404,7 +404,7 @@ impl DMSSlidingWindowRateLimiter {
     /// # Returns
     /// 
     /// `true` if the request should be allowed, `false` otherwise
-    pub async fn _Fallow_request(&self) -> bool {
+    pub async fn allow_request(&self) -> bool {
         let mut requests = self.requests.write().await;
         let now = Instant::now();
         
@@ -428,7 +428,7 @@ impl DMSSlidingWindowRateLimiter {
     /// # Returns
     /// 
     /// The number of requests within the current window
-    pub async fn _Fget_current_count(&self) -> usize {
+    pub async fn get_current_count(&self) -> usize {
         let mut requests = self.requests.write().await;
         let now = Instant::now();
         
@@ -439,7 +439,7 @@ impl DMSSlidingWindowRateLimiter {
     }
 
     /// Resets the sliding window by clearing all request timestamps.
-    pub async fn _Freset(&self) {
+    pub async fn reset(&self) {
         let mut requests = self.requests.write().await;
         requests.clear();
     }

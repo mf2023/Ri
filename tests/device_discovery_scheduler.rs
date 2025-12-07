@@ -22,7 +22,7 @@ use dms::device::discovery_scheduler::{DMSDeviceDiscoveryEngine, DMSResourceSche
 
 #[test]
 fn test_device_discovery_engine() {
-    let mut engine = DMSDeviceDiscoveryEngine::_Fnew();
+    let mut engine = DMSDeviceDiscoveryEngine::new();
     
     let scan_results = vec![
         DeviceScanResult {
@@ -35,14 +35,14 @@ fn test_device_discovery_engine() {
         },
     ];
     
-    let devices = engine._Fdiscover_devices(scan_results);
+    let devices = engine.discover_devices(scan_results);
     assert_eq!(devices.len(), 1);
-    assert_eq!(devices[0]._Fdevice_type(), DMSDeviceType::GPU);
+    assert_eq!(devices[0].device_type(), DMSDeviceType::GPU);
 }
 
 #[test]
 fn test_resource_scheduler() {
-    let mut scheduler = DMSResourceScheduler::_Fnew();
+    let mut scheduler = DMSResourceScheduler::new();
     
     let request = ResourceRequest {
         request_id: "req_1".to_string(),
@@ -67,6 +67,6 @@ fn test_resource_scheduler() {
         }),
     ];
     
-    let selected_device = scheduler._Fschedule_resource(&request, &devices);
-    assert_eq!(selected_device, Some(devices[0]._Fid().to_string()));
+    let selected_device = scheduler.schedule_resource(&request, &devices);
+    assert_eq!(selected_device, Some(devices[0].id().to_string()));
 }

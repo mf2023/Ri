@@ -48,26 +48,26 @@ fn test_module_phase_as_str() {
 
 #[test]
 fn test_hook_bus_new() {
-    let hook_bus = DMSHookBus::_Fnew();
+    let hook_bus = DMSHookBus::new();
     // Just test that creation works without panicking
 }
 
 #[test]
 fn test_hook_bus_register_emit() {
-    let mut hook_bus = DMSHookBus::_Fnew();
-    let ctx = DMSServiceContext::_Fnew_default().unwrap();
+    let mut hook_bus = DMSHookBus::new();
+    let ctx = DMSServiceContext::new_default().unwrap();
     
     // Test registration and emission
     let called = Arc::new(AtomicBool::new(false));
     let called_handle = Arc::clone(&called);
     
-    hook_bus._Fregister(DMSHookKind::Startup, "test_hook".to_string(), move |_ctx, _event| {
+    hook_bus.register(DMSHookKind::Startup, "test_hook".to_string(), move |_ctx, _event| {
         called_handle.store(true, Ordering::SeqCst);
         Ok(())
     });
     
     // Emit the hook
-    hook_bus._Femit(&DMSHookKind::Startup, &ctx).unwrap();
+    hook_bus.emit(&DMSHookKind::Startup, &ctx).unwrap();
     
     // Verify the hook was called
     assert!(called.load(Ordering::SeqCst));
@@ -75,8 +75,8 @@ fn test_hook_bus_register_emit() {
 
 #[test]
 fn test_hook_bus_register_emit_with() {
-    let mut hook_bus = DMSHookBus::_Fnew();
-    let ctx = DMSServiceContext::_Fnew_default().unwrap();
+    let mut hook_bus = DMSHookBus::new();
+    let ctx = DMSServiceContext::new_default().unwrap();
     
     // Test registration and emission with module and phase
     let called = Arc::new(AtomicBool::new(false));
@@ -84,14 +84,14 @@ fn test_hook_bus_register_emit_with() {
     let called_handle = Arc::clone(&called);
     let captured_handle = Arc::clone(&captured_event);
     
-    hook_bus._Fregister(DMSHookKind::Startup, "test_hook".to_string(), move |_ctx, event| {
+    hook_bus.register(DMSHookKind::Startup, "test_hook".to_string(), move |_ctx, event| {
         called_handle.store(true, Ordering::SeqCst);
         *captured_handle.lock().unwrap() = Some(event.clone());
         Ok(())
     });
     
     // Emit the hook with module and phase
-    hook_bus._Femit_with(
+    hook_bus.emit_with(
         &DMSHookKind::Startup, 
         &ctx, 
         Some("test_module"), 
@@ -113,8 +113,8 @@ fn test_hook_bus_register_emit_with() {
 
 #[test]
 fn test_hook_bus_multiple_handlers() {
-    let mut hook_bus = DMSHookBus::_Fnew();
-    let ctx = DMSServiceContext::_Fnew_default().unwrap();
+    let mut hook_bus = DMSHookBus::new();
+    let ctx = DMSServiceContext::new_default().unwrap();
     
     // Test multiple handlers for the same hook kind
     let called1 = Arc::new(AtomicBool::new(false));
@@ -122,18 +122,18 @@ fn test_hook_bus_multiple_handlers() {
     let called1_handle = Arc::clone(&called1);
     let called2_handle = Arc::clone(&called2);
     
-    hook_bus._Fregister(DMSHookKind::Startup, "test_hook1".to_string(), move |_ctx, _event| {
+    hook_bus.register(DMSHookKind::Startup, "test_hook1".to_string(), move |_ctx, _event| {
         called1_handle.store(true, Ordering::SeqCst);
         Ok(())
     });
     
-    hook_bus._Fregister(DMSHookKind::Startup, "test_hook2".to_string(), move |_ctx, _event| {
+    hook_bus.register(DMSHookKind::Startup, "test_hook2".to_string(), move |_ctx, _event| {
         called2_handle.store(true, Ordering::SeqCst);
         Ok(())
     });
     
     // Emit the hook
-    hook_bus._Femit(&DMSHookKind::Startup, &ctx).unwrap();
+    hook_bus.emit(&DMSHookKind::Startup, &ctx).unwrap();
     
     // Verify both hooks were called
     assert!(called1.load(Ordering::SeqCst));
@@ -142,8 +142,8 @@ fn test_hook_bus_multiple_handlers() {
 
 #[test]
 fn test_hook_bus_different_hook_kinds() {
-    let mut hook_bus = DMSHookBus::_Fnew();
-    let ctx = DMSServiceContext::_Fnew_default().unwrap();
+    let mut hook_bus = DMSHookBus::new();
+    let ctx = DMSServiceContext::new_default().unwrap();
     
     // Test different hook kinds
     let startup_called = Arc::new(AtomicBool::new(false));
@@ -151,25 +151,25 @@ fn test_hook_bus_different_hook_kinds() {
     let startup_handle = Arc::clone(&startup_called);
     let shutdown_handle = Arc::clone(&shutdown_called);
     
-    hook_bus._Fregister(DMSHookKind::Startup, "startup_hook".to_string(), move |_ctx, _event| {
+    hook_bus.register(DMSHookKind::Startup, "startup_hook".to_string(), move |_ctx, _event| {
         startup_handle.store(true, Ordering::SeqCst);
         Ok(())
     });
     
-    hook_bus._Fregister(DMSHookKind::Shutdown, "shutdown_hook".to_string(), move |_ctx, _event| {
+    hook_bus.register(DMSHookKind::Shutdown, "shutdown_hook".to_string(), move |_ctx, _event| {
         shutdown_handle.store(true, Ordering::SeqCst);
         Ok(())
     });
     
     // Emit startup hook
-    hook_bus._Femit(&DMSHookKind::Startup, &ctx).unwrap();
+    hook_bus.emit(&DMSHookKind::Startup, &ctx).unwrap();
     
     // Verify only startup hook was called
     assert!(startup_called.load(Ordering::SeqCst));
     assert!(!shutdown_called.load(Ordering::SeqCst));
     
     // Emit shutdown hook
-    hook_bus._Femit(&DMSHookKind::Shutdown, &ctx).unwrap();
+    hook_bus.emit(&DMSHookKind::Shutdown, &ctx).unwrap();
     
     // Verify both hooks were called
     assert!(startup_called.load(Ordering::SeqCst));

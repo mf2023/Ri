@@ -99,6 +99,8 @@ pub enum DMSError {
     Other(String),
     /// External error. Contains a descriptive error message for external service errors.
     ExternalError(String),
+    /// Pool error. Contains a descriptive error message for connection pool errors.
+    PoolError(String),
 }
 
 /// Result type alias for DMS operations. Used throughout the library.
@@ -143,6 +145,7 @@ impl std::fmt::Display for DMSError {
             }
             DMSError::Other(msg) => write!(f, "{msg}"),
             DMSError::ExternalError(msg) => write!(f, "External error: {msg}"),
+            DMSError::PoolError(msg) => write!(f, "Pool error: {msg}"),
         }
     }
 }

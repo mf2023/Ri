@@ -21,7 +21,7 @@ use dms::observability::grafana::{DMSGrafanaDashboard, DMSGrafanaPanel, DMSGridP
 
 #[test]
 fn test_grafana_dashboard() {
-    let mut dashboard = DMSGrafanaDashboard::_Fnew("Test Dashboard");
+    let mut dashboard = DMSGrafanaDashboard::new("Test Dashboard");
     
     let panel = DMSGrafanaPanel {
         title: "CPU Usage".to_string(),
@@ -30,10 +30,10 @@ fn test_grafana_dashboard() {
         grid_pos: DMSGridPos { h: 8, w: 12, x: 0, y: 0 },
     };
     
-    dashboard._Fadd_panel(panel).unwrap();
+    dashboard.add_panel(panel).unwrap();
     assert_eq!(dashboard.panels.len(), 1);
     
-    let json = dashboard._Fto_json().unwrap();
+    let json = dashboard.to_json().unwrap();
     assert!(json.contains("Test Dashboard"));
     assert!(json.contains("CPU Usage"));
 }

@@ -316,7 +316,7 @@ pub struct DMSServiceDiscovery {
 }
 
 impl DMSServiceDiscovery {
-    pub fn _Fnew(enabled: bool) -> Self {
+    pub fn new(enabled: bool) -> Self {
         Self {
             enabled,
             registry: Arc::new(DMSServiceRegistry::new(None::<()>, "/dms/services".to_string())),
@@ -327,7 +327,7 @@ impl DMSServiceDiscovery {
     }
     
     #[cfg(feature = "etcd")]
-    pub async fn _Fnew_with_etcd(enabled: bool, etcd_config: DMSEtcdConfig) -> DMSResult<Self> {
+    pub async fn new_with_etcd(enabled: bool, etcd_config: DMSEtcdConfig) -> DMSResult<Self> {
         // Create etcd client
         let client = Client::connect(etcd_config.endpoints.clone(), None)
             .await
@@ -470,7 +470,7 @@ impl DMSServiceDiscovery {
         Ok(())
     }
 
-    pub async fn _Fhealth_check(&self) -> DMSResult<bool> {
+    pub async fn health_check(&self) -> DMSResult<bool> {
         Ok(self.enabled)
     }
 }

@@ -49,34 +49,34 @@
 //! 
 //! async fn example() -> DMSResult<()> {
 //!     // Create a load balancer with Round Robin strategy
-//!     let lb = Arc::new(DMSLoadBalancer::_Fnew(DMSLoadBalancerStrategy::RoundRobin));
+//!     let lb = Arc::new(DMSLoadBalancer::new(DMSLoadBalancerStrategy::RoundRobin));
 //!     
 //!     // Add backend servers
-//!     lb._Fadd_server(DMSBackendServer::_Fnew("server1".to_string(), "http://localhost:8081".to_string())
-//!         ._Fwith_weight(2)
-//!         ._Fwith_max_connections(200))
+//!     lb.add_server(DMSBackendServer::new("server1".to_string(), "http://localhost:8081".to_string())
+//!         .with_weight(2)
+//!         .with_max_connections(200))
 //!         .await;
 //!     
-//!     lb._Fadd_server(DMSBackendServer::_Fnew("server2".to_string(), "http://localhost:8082".to_string())
-//!         ._Fwith_weight(1)
-//!         ._Fwith_max_connections(100))
+//!     lb.add_server(DMSBackendServer::new("server2".to_string(), "http://localhost:8082".to_string())
+//!         .with_weight(1)
+//!         .with_max_connections(100))
 //!         .await;
 //!     
 //!     // Start periodic health checks every 30 seconds
-//!     lb.clone()._Fstart_health_checks(30).await;
+//!     lb.clone().start_health_checks(30).await;
 //!     
 //!     // Select a server for a client request
-//!     let server = lb._Fselect_server(Some("192.168.1.1")).await?;
+//!     let server = lb.select_server(Some("192.168.1.1")).await?;
 //!     println!("Selected server: {}", server.url);
 //!     
 //!     // Record response time when done
-//!     lb._Frecord_response_time(&server.id, 150).await;
+//!     lb.record_response_time(&server.id, 150).await;
 //!     
 //!     // Release the server when the request is complete
-//!     lb._Frelease_server(&server.id).await;
+//!     lb.release_server(&server.id).await;
 //!     
 //!     // Get server statistics
-//!     let stats = lb._Fget_all_stats().await;
+//!     let stats = lb.get_all_stats().await;
 //!     println!("Server stats: {:?}", stats);
 //!     
 //!     Ok(())
@@ -159,7 +159,7 @@ impl DMSBackendServer {
     /// 
     /// A new `DMSBackendServer` instance with default settings
     /// (weight = 1, max_connections = 100, health_check_path = "/health", is_healthy = true)
-    pub fn _Fnew(id: String, url: String) -> Self {
+    pub fn new(id: String, url: String) -> Self {
         Self {
             id,
             url,
@@ -179,7 +179,7 @@ impl DMSBackendServer {
     /// # Returns
     /// 
     /// The modified `DMSBackendServer` instance for method chaining
-    pub fn _Fwith_weight(mut self, weight: u32) -> Self {
+    pub fn with_weight(mut self, weight: u32) -> Self {
         self.weight = weight;
         self
     }
@@ -193,7 +193,7 @@ impl DMSBackendServer {
     /// # Returns
     /// 
     /// The modified `DMSBackendServer` instance for method chaining
-    pub fn _Fwith_max_connections(mut self, max_connections: usize) -> Self {
+    pub fn with_max_connections(mut self, max_connections: usize) -> Self {
         self.max_connections = max_connections;
         self
     }
@@ -207,7 +207,7 @@ impl DMSBackendServer {
     /// # Returns
     /// 
     /// The modified `DMSBackendServer` instance for method chaining
-    pub fn _Fwith_health_check_path(mut self, path: String) -> Self {
+    pub fn with_health_check_path(mut self, path: String) -> Self {
         self.health_check_path = path;
         self
     }
@@ -219,7 +219,7 @@ impl DMSBackendServer {
 /// request counts, failures, and response times. It is designed to be thread-safe for use in
 /// multi-threaded environments.
 #[derive(Debug)]
-struct _CServerStats {
+struct ServerStats {
     /// Number of currently active connections to the server
     active_connections: AtomicUsize,
     
@@ -236,15 +236,15 @@ struct _CServerStats {
     last_used: RwLock<Instant>,
 }
 
-impl _CServerStats {
+impl ServerStats {
     /// Creates a new server statistics instance with default values.
     /// 
     /// Initializes all counters to zero and sets the last used time to now.
     /// 
     /// # Returns
     /// 
-    /// A new `_CServerStats` instance with default values
-    fn _Fnew() -> Self {
+    /// A new `ServerStats` instance with default values
+    fn new() -> Self {
         Self {
             active_connections: AtomicUsize::new(0),
             total_requests: AtomicUsize::new(0),
@@ -259,7 +259,7 @@ impl _CServerStats {
     /// # Returns
     /// 
     /// The number of active connections as a `usize`
-    fn _Fget_active_connections(&self) -> usize {
+    fn get_active_connections(&self) -> usize {
         self.active_connections.load(Ordering::Relaxed)
     }
 
@@ -270,7 +270,7 @@ impl _CServerStats {
     /// - Increments active_connections by 1
     /// - Increments total_requests by 1
     /// - Updates last_used to the current time
-    fn _Fincrement_connections(&self) {
+    fn increment_connections(&self) {
         self.active_connections.fetch_add(1, Ordering::Relaxed);
         self.total_requests.fetch_add(1, Ordering::Relaxed);
         let mut last_used = self.last_used.blocking_write();
@@ -280,7 +280,7 @@ impl _CServerStats {
     /// Decrements the active connection count.
     /// 
     /// This method should be called when a connection to the server is closed.
-    fn _Fdecrement_connections(&self) {
+    fn decrement_connections(&self) {
         self.active_connections.fetch_sub(1, Ordering::Relaxed);
     }
 
@@ -290,9 +290,9 @@ impl _CServerStats {
     /// 
     /// - Increments failed_requests by 1
     /// - Decrements active_connections by 1 (since the connection failed)
-    fn _Frecord_failure(&self) {
+    fn record_failure(&self) {
         self.failed_requests.fetch_add(1, Ordering::Relaxed);
-        self._Fdecrement_connections();
+        self.decrement_connections();
     }
 
     /// Records the response time for a successful request.
@@ -302,7 +302,7 @@ impl _CServerStats {
     /// # Parameters
     /// 
     /// - `response_time_ms`: Response time in milliseconds
-    fn _Frecord_response_time(&self, response_time_ms: u64) {
+    fn record_response_time(&self, response_time_ms: u64) {
         self.response_time_ms.store(response_time_ms as usize, Ordering::Relaxed);
     }
 
@@ -313,9 +313,9 @@ impl _CServerStats {
     /// # Returns
     /// 
     /// A `LoadBalancerServerStats` struct containing the current statistics
-    fn _Fget_stats(&self) -> LoadBalancerServerStats {
+    fn get_stats(&self) -> LoadBalancerServerStats {
         LoadBalancerServerStats {
-            active_connections: self._Fget_active_connections(),
+            active_connections: self.get_active_connections(),
             total_requests: self.total_requests.load(Ordering::Relaxed),
             failed_requests: self.failed_requests.load(Ordering::Relaxed),
             response_time_ms: self.response_time_ms.load(Ordering::Relaxed),
@@ -354,7 +354,7 @@ pub struct DMSLoadBalancer {
     servers: RwLock<Vec<DMSBackendServer>>,
     
     /// Statistics for each backend server
-    server_stats: RwLock<HashMap<String, Arc<_CServerStats>>>,
+    server_stats: RwLock<HashMap<String, Arc<ServerStats>>>,
     
     /// Counter for round robin scheduling
     round_robin_counter: AtomicUsize,
@@ -385,7 +385,7 @@ impl DMSLoadBalancer {
     /// # Returns
     /// 
     /// A new `DMSLoadBalancer` instance with the specified strategy
-    pub fn _Fnew(strategy: DMSLoadBalancerStrategy) -> Self {
+    pub fn new(strategy: DMSLoadBalancerStrategy) -> Self {
         Self {
             strategy,
             servers: RwLock::new(Vec::new()),
@@ -399,12 +399,12 @@ impl DMSLoadBalancer {
     /// # Parameters
     /// 
     /// - `server`: The backend server to add
-    pub async fn _Fadd_server(&self, server: DMSBackendServer) {
+    pub async fn add_server(&self, server: DMSBackendServer) {
         let mut servers = self.servers.write().await;
         let mut stats = self.server_stats.write().await;
         
         servers.push(server.clone());
-        stats.insert(server.id.clone(), Arc::new(_CServerStats::_Fnew()));
+        stats.insert(server.id.clone(), Arc::new(ServerStats::new()));
     }
 
     /// Removes a backend server from the load balancer.
@@ -416,7 +416,7 @@ impl DMSLoadBalancer {
     /// # Returns
     /// 
     /// `true` if the server was removed, `false` otherwise
-    pub async fn _Fremove_server(&self, server_id: &str) -> bool {
+    pub async fn remove_server(&self, server_id: &str) -> bool {
         let mut servers = self.servers.write().await;
         let mut stats = self.server_stats.write().await;
         
@@ -432,7 +432,7 @@ impl DMSLoadBalancer {
     /// # Returns
     /// 
     /// A vector of healthy `DMSBackendServer` instances
-    pub async fn _Fget_healthy_servers(&self) -> Vec<DMSBackendServer> {
+    pub async fn get_healthy_servers(&self) -> Vec<DMSBackendServer> {
         let servers = self.servers.read().await;
         servers.iter()
             .filter(|s| s.is_healthy)
@@ -452,8 +452,8 @@ impl DMSLoadBalancer {
     /// # Returns
     /// 
     /// A `DMSResult<DMSBackendServer>` with the selected server, or an error if no servers are available
-    pub async fn _Fselect_server(&self, client_ip: Option<&str>) -> DMSResult<DMSBackendServer> {
-        let healthy_servers = self._Fget_healthy_servers().await;
+    pub async fn select_server(&self, client_ip: Option<&str>) -> DMSResult<DMSBackendServer> {
+        let healthy_servers = self.get_healthy_servers().await;
         
         if healthy_servers.is_empty() {
             return Err(crate::core::DMSError::Other("No healthy servers available".to_string()));
@@ -465,7 +465,7 @@ impl DMSLoadBalancer {
         let available_servers: Vec<DMSBackendServer> = healthy_servers.into_iter()
             .filter(|server| {
                 if let Some(server_stats) = stats.get(&server.id) {
-                    let connections = server_stats._Fget_active_connections();
+                    let connections = server_stats.get_active_connections();
                     connections < server.max_connections
                 } else {
                     true // If no stats, assume server is available
@@ -478,17 +478,17 @@ impl DMSLoadBalancer {
         }
 
         let server = match self.strategy {
-            DMSLoadBalancerStrategy::RoundRobin => self._Fselect_round_robin(&available_servers).await,
-            DMSLoadBalancerStrategy::WeightedRoundRobin => self._Fselect_weighted_round_robin(&available_servers).await,
-            DMSLoadBalancerStrategy::LeastConnections => self._Fselect_least_connections(&available_servers).await,
-            DMSLoadBalancerStrategy::Random => self._Fselect_random(&available_servers),
-            DMSLoadBalancerStrategy::IpHash => self._Fselect_ip_hash(&available_servers, client_ip),
+            DMSLoadBalancerStrategy::RoundRobin => self.select_round_robin(&available_servers).await,
+            DMSLoadBalancerStrategy::WeightedRoundRobin => self.select_weighted_round_robin(&available_servers).await,
+            DMSLoadBalancerStrategy::LeastConnections => self.select_least_connections(&available_servers).await,
+            DMSLoadBalancerStrategy::Random => self.select_random(&available_servers),
+            DMSLoadBalancerStrategy::IpHash => self.select_ip_hash(&available_servers, client_ip),
         };
 
         if let Some(server) = server {
             // Increment connection count
             if let Some(stats) = self.server_stats.read().await.get(&server.id) {
-                stats._Fincrement_connections();
+                stats.increment_connections();
             }
             Ok(server)
         } else {
@@ -507,7 +507,7 @@ impl DMSLoadBalancer {
     /// # Returns
     /// 
     /// The selected server, or `None` if no servers are available
-    async fn _Fselect_round_robin(&self, servers: &[DMSBackendServer]) -> Option<DMSBackendServer> {
+    async fn select_round_robin(&self, servers: &[DMSBackendServer]) -> Option<DMSBackendServer> {
         let counter = self.round_robin_counter.fetch_add(1, Ordering::Relaxed);
         let index = counter % servers.len();
         servers.get(index).cloned()
@@ -525,7 +525,7 @@ impl DMSLoadBalancer {
     /// # Returns
     /// 
     /// The selected server, or `None` if no servers are available
-    async fn _Fselect_weighted_round_robin(&self, servers: &[DMSBackendServer]) -> Option<DMSBackendServer> {
+    async fn select_weighted_round_robin(&self, servers: &[DMSBackendServer]) -> Option<DMSBackendServer> {
         // Simple weighted round robin implementation
         let total_weight: u32 = servers.iter().map(|s| s.weight).sum();
         let counter = self.round_robin_counter.fetch_add(1, Ordering::Relaxed);
@@ -552,7 +552,7 @@ impl DMSLoadBalancer {
     /// # Returns
     /// 
     /// The selected server, or `None` if no servers are available
-    async fn _Fselect_least_connections(&self, servers: &[DMSBackendServer]) -> Option<DMSBackendServer> {
+    async fn select_least_connections(&self, servers: &[DMSBackendServer]) -> Option<DMSBackendServer> {
         let stats = self.server_stats.read().await;
         
         let mut best_server = None;
@@ -560,7 +560,7 @@ impl DMSLoadBalancer {
         
         for server in servers {
             if let Some(server_stats) = stats.get(&server.id) {
-                let connections = server_stats._Fget_active_connections();
+                let connections = server_stats.get_active_connections();
                 if connections < min_connections && connections < server.max_connections {
                     min_connections = connections;
                     best_server = Some(server.clone());
@@ -582,7 +582,7 @@ impl DMSLoadBalancer {
     /// # Returns
     /// 
     /// The selected server, or `None` if no servers are available
-    fn _Fselect_random(&self, servers: &[DMSBackendServer]) -> Option<DMSBackendServer> {
+    fn select_random(&self, servers: &[DMSBackendServer]) -> Option<DMSBackendServer> {
         use rand::Rng;
         let mut rng = rand::thread_rng();
         let index = rng.gen_range(0..servers.len());
@@ -602,13 +602,13 @@ impl DMSLoadBalancer {
     /// # Returns
     /// 
     /// The selected server, or `None` if no servers are available
-    fn _Fselect_ip_hash(&self, servers: &[DMSBackendServer], client_ip: Option<&str>) -> Option<DMSBackendServer> {
+    fn select_ip_hash(&self, servers: &[DMSBackendServer], client_ip: Option<&str>) -> Option<DMSBackendServer> {
         if let Some(ip) = client_ip {
-            let hash = self._Fhash_ip(ip);
+            let hash = self.hash_ip(ip);
             let index = hash as usize % servers.len();
             servers.get(index).cloned()
         } else {
-            self._Fselect_random(servers)
+            self.select_random(servers)
         }
     }
 
@@ -621,7 +621,7 @@ impl DMSLoadBalancer {
     /// # Returns
     /// 
     /// A 64-bit hash value of the IP address
-    fn _Fhash_ip(&self, ip: &str) -> u64 {
+    fn hash_ip(&self, ip: &str) -> u64 {
         use std::collections::hash_map::DefaultHasher;
         use std::hash::{Hash, Hasher};
         
@@ -637,9 +637,9 @@ impl DMSLoadBalancer {
     /// # Parameters
     /// 
     /// - `server_id`: ID of the server to release
-    pub async fn _Frelease_server(&self, server_id: &str) {
+    pub async fn release_server(&self, server_id: &str) {
         if let Some(stats) = self.server_stats.read().await.get(server_id) {
-            stats._Fdecrement_connections();
+            stats.decrement_connections();
         }
     }
 
@@ -651,9 +651,9 @@ impl DMSLoadBalancer {
     /// # Parameters
     /// 
     /// - `server_id`: ID of the server that failed
-    pub async fn _Frecord_server_failure(&self, server_id: &str) {
+    pub async fn record_server_failure(&self, server_id: &str) {
         if let Some(stats) = self.server_stats.read().await.get(server_id) {
-            stats._Frecord_failure();
+            stats.record_failure();
         }
         
         // Mark server as unhealthy if too many failures
@@ -677,9 +677,9 @@ impl DMSLoadBalancer {
     /// 
     /// - `server_id`: ID of the server that handled the request
     /// - `response_time_ms`: Response time in milliseconds
-    pub async fn _Frecord_response_time(&self, server_id: &str, response_time_ms: u64) {
+    pub async fn record_response_time(&self, server_id: &str, response_time_ms: u64) {
         if let Some(stats) = self.server_stats.read().await.get(server_id) {
-            stats._Frecord_response_time(response_time_ms);
+            stats.record_response_time(response_time_ms);
         }
     }
 
@@ -692,10 +692,10 @@ impl DMSLoadBalancer {
     /// # Returns
     /// 
     /// An `Option<LoadBalancerServerStats>` with the server statistics, or `None` if the server doesn't exist
-    pub async fn _Fget_server_stats(&self, server_id: &str) -> Option<LoadBalancerServerStats> {
+    pub async fn get_server_stats(&self, server_id: &str) -> Option<LoadBalancerServerStats> {
         self.server_stats.read().await
             .get(server_id)
-            .map(|stats| stats._Fget_stats())
+            .map(|stats| stats.get_stats())
     }
 
     /// Gets statistics for all servers.
@@ -703,12 +703,12 @@ impl DMSLoadBalancer {
     /// # Returns
     /// 
     /// A `HashMap<String, LoadBalancerServerStats>` with statistics for all servers
-    pub async fn _Fget_all_stats(&self) -> HashMap<String, LoadBalancerServerStats> {
+    pub async fn get_all_stats(&self) -> HashMap<String, LoadBalancerServerStats> {
         let stats = self.server_stats.read().await;
         let mut result = HashMap::new();
         
         for (server_id, server_stats) in stats.iter() {
-            result.insert(server_id.clone(), server_stats._Fget_stats());
+            result.insert(server_id.clone(), server_stats.get_stats());
         }
         
         result
@@ -720,7 +720,7 @@ impl DMSLoadBalancer {
     /// 
     /// - `server_id`: ID of the server to update
     /// - `healthy`: New health status (true = healthy, false = unhealthy)
-    pub async fn _Fmark_server_healthy(&self, server_id: &str, healthy: bool) {
+    pub async fn mark_server_healthy(&self, server_id: &str, healthy: bool) {
         let mut servers = self.servers.write().await;
         if let Some(server) = servers.iter_mut().find(|s| s.id == server_id) {
             server.is_healthy = healthy;
@@ -739,7 +739,7 @@ impl DMSLoadBalancer {
     /// # Returns
     /// 
     /// `true` if the server is healthy, `false` otherwise
-    pub async fn _Fperform_health_check(&self, server_id: &str) -> bool {
+    pub async fn perform_health_check(&self, server_id: &str) -> bool {
         let servers = self.servers.read().await;
         
         if let Some(server) = servers.iter().find(|s| s.id == server_id) {
@@ -770,7 +770,7 @@ impl DMSLoadBalancer {
     /// # Returns
     /// 
     /// A `tokio::task::JoinHandle` for the background health check task
-    pub async fn _Fstart_health_checks(self: Arc<Self>, interval_secs: u64) -> tokio::task::JoinHandle<()> {
+    pub async fn start_health_checks(self: Arc<Self>, interval_secs: u64) -> tokio::task::JoinHandle<()> {
         let this = self.clone();
         
         tokio::spawn(async move {
@@ -783,12 +783,12 @@ impl DMSLoadBalancer {
                 let server_ids: Vec<String> = servers.iter().map(|s| s.id.clone()).collect();
                 
                 for server_id in server_ids {
-                    let is_healthy = this._Fperform_health_check(&server_id).await;
-                    let _ = this._Fmark_server_healthy(&server_id, is_healthy).await;
+                    let is_healthy = this.perform_health_check(&server_id).await;
+                    let _ = this.mark_server_healthy(&server_id, is_healthy).await;
                     
                     // If server is unhealthy, record the failure
                     if !is_healthy {
-                        let _ = this._Frecord_server_failure(&server_id).await;
+                        let _ = this.record_server_failure(&server_id).await;
                     }
                 }
             }
@@ -800,7 +800,7 @@ impl DMSLoadBalancer {
     /// # Returns
     /// 
     /// A reference to the current `DMSLoadBalancerStrategy`
-    pub fn _Fget_strategy(&self) -> &DMSLoadBalancerStrategy {
+    pub fn get_strategy(&self) -> &DMSLoadBalancerStrategy {
         &self.strategy
     }
 
@@ -809,7 +809,7 @@ impl DMSLoadBalancer {
     /// # Parameters
     /// 
     /// - `strategy`: The new load balancing strategy to use
-    pub async fn _Fset_strategy(&mut self, strategy: DMSLoadBalancerStrategy) {
+    pub async fn set_strategy(&mut self, strategy: DMSLoadBalancerStrategy) {
         self.strategy = strategy;
     }
 
@@ -818,7 +818,7 @@ impl DMSLoadBalancer {
     /// # Returns
     /// 
     /// The total number of servers in the load balancer
-    pub async fn _Fget_server_count(&self) -> usize {
+    pub async fn get_server_count(&self) -> usize {
         self.servers.read().await.len()
     }
 
@@ -827,7 +827,7 @@ impl DMSLoadBalancer {
     /// # Returns
     /// 
     /// The number of healthy servers in the load balancer
-    pub async fn _Fget_healthy_server_count(&self) -> usize {
-        self._Fget_healthy_servers().await.len()
+    pub async fn get_healthy_server_count(&self) -> usize {
+        self.get_healthy_servers().await.len()
     }
 }

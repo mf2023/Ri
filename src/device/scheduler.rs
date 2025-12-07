@@ -52,13 +52,13 @@ use std::sync::{Arc, Mutex};
 /// 
 /// fn example() {
 ///     // Create resource pool manager
-///     let pool_manager = Arc::new(Mutex::new(DMSResourcePoolManager::_Fnew()));
+///     let pool_manager = Arc::new(Mutex::new(DMSResourcePoolManager::new()));
 ///     
 ///     // Create device scheduler
-///     let mut scheduler = DMSDeviceScheduler::_Fnew(pool_manager);
+///     let mut scheduler = DMSDeviceScheduler::new(pool_manager);
 ///     
 ///     // Set scheduling policy for GPUs
-///     scheduler._Fset_policy(DMSDeviceType::GPU, dms::device::DMSSchedulingPolicy::PriorityBased);
+///     scheduler.set_policy(DMSDeviceType::GPU, dms::device::DMSSchedulingPolicy::PriorityBased);
 ///     
 ///     // Create allocation request
 ///     let request = DMSAllocationRequest {
@@ -75,15 +75,15 @@ use std::sync::{Arc, Mutex};
 ///     };
 ///     
 ///     // Allocate device
-///     if let Some(allocation_id) = scheduler._Fallocate(&request) {
+///     if let Some(allocation_id) = scheduler.allocate(&request) {
 ///         println!("Allocated device with ID: {}", allocation_id);
 ///         
 ///         // Record release when done
-///         scheduler._Frecord_release(&allocation_id);
+///         scheduler.record_release(&allocation_id);
 ///     }
 ///     
 ///     // Get statistics
-///     let stats = scheduler._Fget_statistics();
+///     let stats = scheduler.get_statistics();
 ///     println!("Total allocations: {}", stats.total_allocations);
 /// }
 /// ```
@@ -152,7 +152,9 @@ pub struct DMSAllocationRecord {
 /// Allocation request - request for device resources
 /// 
 /// This struct represents a request for device resources, including the device type,
-/// required capabilities, priority, and timeout.
+/// required capabilities, priority, timeout, and additional scheduling hints such as
+/// SLA class, resource weights, and affinity rules. These extra fields are optional
+/// and are used only by advanced scheduling logic.
 #[derive(Debug, Clone)]
 pub struct DMSAllocationRequest {
     /// Type of device requested
@@ -163,6 +165,14 @@ pub struct DMSAllocationRequest {
     pub priority: u32,
     /// Timeout in seconds for this request
     pub timeout_secs: u64,
+    /// Optional SLA class propagated from the external resource request
+    pub sla_class: Option<super::DMSRequestSlaClass>,
+    /// Optional resource weights propagated from the external resource request
+    pub resource_weights: Option<super::DMSResourceWeights>,
+    /// Optional affinity rules propagated from the external resource request
+    pub affinity: Option<super::DMSAffinityRules>,
+    /// Optional anti-affinity rules propagated from the external resource request
+    pub anti_affinity: Option<super::DMSAffinityRules>,
 }
 
 impl DMSDeviceScheduler {
@@ -178,7 +188,7 @@ impl DMSDeviceScheduler {
     /// # Returns
     /// 
     /// A new `DMSDeviceScheduler` instance with default policies and settings.
-    pub fn _Fnew(resource_pool_manager: Arc<Mutex<DMSResourcePoolManager>>) -> Self {
+    pub fn new(resource_pool_manager: Arc<Mutex<DMSResourcePoolManager>>) -> Self {
         let mut scheduling_policies = HashMap::new();
         
         // Set default policies for different device types
@@ -211,7 +221,7 @@ impl DMSDeviceScheduler {
     /// # Returns
     /// 
     /// A reference to the `DMSSchedulingPolicy` for the specified device type.
-    pub fn _Fget_policy(&self, device_type: &DMSDeviceType) -> &DMSSchedulingPolicy {
+    pub fn get_policy(&self, device_type: &DMSDeviceType) -> &DMSSchedulingPolicy {
         self.scheduling_policies.get(device_type).unwrap_or(&DMSSchedulingPolicy::FirstFit)
     }
     
@@ -223,7 +233,7 @@ impl DMSDeviceScheduler {
     /// 
     /// - `device_type`: Device type to set the policy for
     /// - `policy`: Scheduling policy to use for this device type
-    pub fn _Fset_policy(&mut self, device_type: DMSDeviceType, policy: DMSSchedulingPolicy) {
+    pub fn set_policy(&mut self, device_type: DMSDeviceType, policy: DMSSchedulingPolicy) {
         self.scheduling_policies.insert(device_type, policy);
     }
     
@@ -242,46 +252,213 @@ impl DMSDeviceScheduler {
     /// # Returns
     /// 
     /// An `Arc<DMSDevice>` if a suitable device was found, or `None` if no device meets the requirements.
-    pub fn _Fselect_device(&mut self, request: &DMSAllocationRequest) -> Option<Arc<DMSDevice>> {
+    pub fn select_device(&mut self, request: &DMSAllocationRequest) -> Option<Arc<DMSDevice>> {
         // Get policy first to avoid borrow conflicts
-        let policy = self._Fget_policy(&request.device_type);
-        
-        // Collect available devices while holding the lock
+        let policy = self.get_policy(&request.device_type);
+
+        // Collect all available devices from all pools while holding the lock
         let available_devices = {
             let pool_manager = self.resource_pool_manager.lock().unwrap();
-            let pools = pool_manager._Fget_pools_by_type(request.device_type);
-            
+            let pools = pool_manager.get_pools_by_type(request.device_type);
+
             if pools.is_empty() {
                 return None;
             }
-            
+
             let mut devices: Vec<Arc<DMSDevice>> = Vec::new();
-            
-            // Collect all available devices from all pools
+
             for pool in &pools {
-                let pool_devices = pool._Fget_available_devices();
-                devices.extend(pool_devices.into_iter()
-                    .filter(|device| device.capabilities().meets_requirements(&request.capabilities)));
+                let pool_devices = pool.get_available_devices();
+                devices.extend(pool_devices.into_iter());
             }
-            
+
             devices
         };
-        
-        if available_devices.is_empty() {
+
+        // Stage 1: filter candidates according to basic requirements.
+        // This currently replicates the original capabilities-based filtering
+        // and will be extended with SLA / affinity rules in future iterations.
+        let filtered = self.filter_candidates(available_devices, request);
+        if filtered.is_empty() {
             return None;
         }
-        
-        // Apply scheduling policy after releasing the lock
+
+        // Stage 2: scoring hook. For now this is effectively a no-op that
+        // preserves the original behavior. Later we will use this hook to
+        // incorporate SLA, resource weights and affinity into scoring.
+        let scored = self.score_candidates(&filtered, request);
+
+        // Stage 3: apply scheduling policy using the (optionally) scored list.
         match policy {
-            DMSSchedulingPolicy::FirstFit => self._Ffirst_fit(&available_devices),
-            DMSSchedulingPolicy::BestFit => self._Fbest_fit(&available_devices, &request.capabilities),
-            DMSSchedulingPolicy::WorstFit => self._Fworst_fit(&available_devices, &request.capabilities),
-            DMSSchedulingPolicy::RoundRobin => self._Fround_robin(&available_devices, request.device_type),
-            DMSSchedulingPolicy::PriorityBased => self._Fpriority_based(&available_devices, request.priority),
-            DMSSchedulingPolicy::LoadBalanced => self._Fload_balanced(&available_devices),
+            DMSSchedulingPolicy::FirstFit => self.first_fit(&scored),
+            DMSSchedulingPolicy::BestFit => self.best_fit(&scored, &request.capabilities),
+            DMSSchedulingPolicy::WorstFit => self.worst_fit(&scored, &request.capabilities),
+            DMSSchedulingPolicy::RoundRobin => self.round_robin(&scored, request.device_type),
+            DMSSchedulingPolicy::PriorityBased => self.priority_based(&scored, request.priority),
+            DMSSchedulingPolicy::LoadBalanced => self.load_balanced(&scored),
         }
     }
-    
+
+    /// Filters raw available devices into scheduling candidates.
+    ///
+    /// Currently this only applies basic capability checks to preserve the
+    /// original behavior. In future iterations, SLA and affinity rules from
+    /// the allocation request can be incorporated here.
+    fn filter_candidates(
+        &self,
+        devices: Vec<Arc<DMSDevice>>,
+        request: &DMSAllocationRequest,
+    ) -> Vec<Arc<DMSDevice>> {
+        devices
+            .into_iter()
+            .filter(|device| device.capabilities().meets_requirements(&request.capabilities))
+            .filter(|device| {
+                // Apply hard affinity / anti-affinity rules when present
+                if let Some(rules) = &request.affinity {
+                    // required_labels: all must match
+                    for (key, val) in &rules.required_labels {
+                        match device.metadata().get(key) {
+                            Some(v) if v == val => {}
+                            _ => return false,
+                        }
+                    }
+                }
+
+                if let Some(rules) = &request.anti_affinity {
+                    // forbidden_labels: none may match
+                    for (key, val) in &rules.forbidden_labels {
+                        if let Some(v) = device.metadata().get(key) {
+                            if v == val {
+                                return false;
+                            }
+                        }
+                    }
+                }
+
+                true
+            })
+            .collect()
+    }
+
+    /// Scores candidates for advanced scheduling.
+    ///
+    /// This function computes a composite score per device based on:
+    /// - resource fitness (how well the device matches requested capabilities)
+    /// - remaining capacity
+    /// - device health
+    /// - optional multi-dimensional resource weights
+    /// - optional SLA class
+    ///
+    /// The list is then sorted in descending order of score so that subsequent
+    /// policy functions (FirstFit/BestFit/etc.) operate on a preference-ordered
+    /// candidate set.
+    fn score_candidates(
+        &self,
+        candidates: &[Arc<DMSDevice>],
+        request: &DMSAllocationRequest,
+    ) -> Vec<Arc<DMSDevice>> {
+        if candidates.is_empty() {
+            return Vec::new();
+        }
+
+        // Derive SLA multiplier
+        let sla_multiplier: f64 = match request.sla_class {
+            Some(super::DMSRequestSlaClass::Critical) => 1.5,
+            Some(super::DMSRequestSlaClass::High) => 1.2,
+            Some(super::DMSRequestSlaClass::Medium) => 1.0,
+            Some(super::DMSRequestSlaClass::Low) => 0.8,
+            None => 1.0,
+        };
+
+        // Resource dimension weights (fallback to 1.0 if not provided)
+        let (compute_weight, memory_weight, storage_weight, bandwidth_weight) =
+            match &request.resource_weights {
+                Some(w) => (w.compute_weight, w.memory_weight, w.storage_weight, w.bandwidth_weight),
+                None => (1.0, 1.0, 1.0, 1.0),
+            };
+
+        let mut scored: Vec<(Arc<DMSDevice>, f64)> = candidates
+            .iter()
+            .cloned()
+            .map(|device| {
+                let caps = device.capabilities();
+
+                // Base fitness: lower is better; convert to [0,1] where 1 is best.
+                let fitness = self.calculate_fitness_score(caps, &request.capabilities);
+                let fitness_score = 1.0 / (1.0 + fitness.max(0.0));
+
+                // Remaining capacity score: already higher-is-better.
+                let remaining = self.calculate_remaining_capacity_score(caps);
+
+                // Health score normalized to [0,1].
+                let health = device.health_score() as f64 / 100.0;
+
+                // Dimension-specific ratios for weighting.
+                let mut dim_score = 0.0;
+
+                if let (Some(req), Some(avail)) = (request.capabilities.compute_units, caps.compute_units) {
+                    if avail > 0 {
+                        let ratio = req as f64 / avail as f64;
+                        dim_score += compute_weight * (1.0 / (1.0 + ratio.max(0.0)));
+                    }
+                }
+
+                if let (Some(req), Some(avail)) = (request.capabilities.memory_gb, caps.memory_gb) {
+                    if avail > 0.0 {
+                        let ratio = req / avail;
+                        dim_score += memory_weight * (1.0 / (1.0 + ratio.max(0.0)));
+                    }
+                }
+
+                if let (Some(req), Some(avail)) = (request.capabilities.storage_gb, caps.storage_gb) {
+                    if avail > 0.0 {
+                        let ratio = req / avail;
+                        dim_score += storage_weight * (1.0 / (1.0 + ratio.max(0.0)));
+                    }
+                }
+
+                if let (Some(req), Some(avail)) = (request.capabilities.bandwidth_gbps, caps.bandwidth_gbps) {
+                    if avail > 0.0 {
+                        let ratio = req / avail;
+                        dim_score += bandwidth_weight * (1.0 / (1.0 + ratio.max(0.0)));
+                    }
+                }
+
+                // Normalize remaining capacity to a softer influence.
+                let remaining_score = (remaining / (1.0 + remaining.abs())).max(0.0);
+
+                // Affinity preference bonus: reward preferred label matches when defined
+                let mut affinity_bonus = 0.0;
+                if let Some(rules) = &request.affinity {
+                    for (key, val) in &rules.preferred_labels {
+                        if let Some(v) = device.metadata().get(key) {
+                            if v == val {
+                                affinity_bonus += 0.05;
+                            }
+                        }
+                    }
+                }
+
+                // Composite score
+                let score = sla_multiplier
+                    * (
+                        0.4 * fitness_score   // how tightly it matches requirements
+                        + 0.3 * dim_score     // per-dimension weighted match
+                        + 0.2 * remaining_score
+                        + 0.1 * health
+                        + affinity_bonus
+                    );
+
+                (device, score)
+            })
+            .collect();
+
+        // Sort descending by score (best first)
+        scored.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap_or(std::cmp::Ordering::Equal));
+
+        scored.into_iter().map(|(device, _)| device).collect()
+    }
+
     /// First Fit algorithm: select the first device that meets requirements.
     /// 
     /// This algorithm selects the first device in the list that meets the requirements.
@@ -294,7 +471,7 @@ impl DMSDeviceScheduler {
     /// # Returns
     /// 
     /// The first device in the list, or `None` if the list is empty.
-    fn _Ffirst_fit(&self, devices: &[Arc<DMSDevice>]) -> Option<Arc<DMSDevice>> {
+    fn first_fit(&self, devices: &[Arc<DMSDevice>]) -> Option<Arc<DMSDevice>> {
         devices.first().cloned()
     }
     
@@ -312,13 +489,13 @@ impl DMSDeviceScheduler {
     /// # Returns
     /// 
     /// The device with the best fitness score, or `None` if no devices meet the requirements.
-    fn _Fbest_fit(&self, devices: &[Arc<DMSDevice>], requirements: &DMSDeviceCapabilities) -> Option<Arc<DMSDevice>> {
+    fn best_fit(&self, devices: &[Arc<DMSDevice>], requirements: &DMSDeviceCapabilities) -> Option<Arc<DMSDevice>> {
         devices.iter()
             .filter(|device| device.capabilities().meets_requirements(requirements))
             .min_by(|a, b| {
                 // Calculate fitness score based on resource usage ratios
-                let a_fitness = self._Fcalculate_fitness_score(a.capabilities(), requirements);
-                let b_fitness = self._Fcalculate_fitness_score(b.capabilities(), requirements);
+                let a_fitness = self.calculate_fitness_score(a.capabilities(), requirements);
+                let b_fitness = self.calculate_fitness_score(b.capabilities(), requirements);
                 a_fitness.partial_cmp(&b_fitness).unwrap_or(std::cmp::Ordering::Equal)
             })
             .cloned()
@@ -337,13 +514,13 @@ impl DMSDeviceScheduler {
     /// # Returns
     /// 
     /// The device with the highest remaining capacity score, or `None` if no devices meet the requirements.
-    fn _Fworst_fit(&self, devices: &[Arc<DMSDevice>], requirements: &DMSDeviceCapabilities) -> Option<Arc<DMSDevice>> {
+    fn worst_fit(&self, devices: &[Arc<DMSDevice>], requirements: &DMSDeviceCapabilities) -> Option<Arc<DMSDevice>> {
         devices.iter()
             .filter(|device| device.capabilities().meets_requirements(requirements))
             .max_by(|a, b| {
                 // Calculate remaining capacity score
-                let a_score = self._Fcalculate_remaining_capacity_score(a.capabilities());
-                let b_score = self._Fcalculate_remaining_capacity_score(b.capabilities());
+                let a_score = self.calculate_remaining_capacity_score(a.capabilities());
+                let b_score = self.calculate_remaining_capacity_score(b.capabilities());
                 a_score.partial_cmp(&b_score).unwrap_or(std::cmp::Ordering::Equal)
             })
             .cloned()
@@ -362,7 +539,7 @@ impl DMSDeviceScheduler {
     /// # Returns
     /// 
     /// The next device in the rotation, or `None` if no devices meet the requirements.
-    fn _Fround_robin(&mut self, devices: &[Arc<DMSDevice>], device_type: DMSDeviceType) -> Option<Arc<DMSDevice>> {
+    fn round_robin(&mut self, devices: &[Arc<DMSDevice>], device_type: DMSDeviceType) -> Option<Arc<DMSDevice>> {
         let counter = self.round_robin_counters.entry(device_type)
             .or_insert(0);
         
@@ -385,12 +562,12 @@ impl DMSDeviceScheduler {
     /// # Returns
     /// 
     /// The device with the highest priority-weighted health score, or `None` if no devices meet the requirements.
-    fn _Fpriority_based(&self, devices: &[Arc<DMSDevice>], priority: u32) -> Option<Arc<DMSDevice>> {
+    fn priority_based(&self, devices: &[Arc<DMSDevice>], priority: u32) -> Option<Arc<DMSDevice>> {
         // For higher priority requests, select devices with higher health scores
         devices.iter()
             .max_by(|a, b| {
-                let a_score = a._Fhealth_score() as u32 * priority;
-                let b_score = b._Fhealth_score() as u32 * priority;
+                let a_score = a.health_score() as u32 * priority;
+                let b_score = b.health_score() as u32 * priority;
                 a_score.cmp(&b_score)
             })
             .cloned()
@@ -408,11 +585,11 @@ impl DMSDeviceScheduler {
     /// # Returns
     /// 
     /// The device with the lowest load (highest health score), or `None` if no devices meet the requirements.
-    fn _Fload_balanced(&self, devices: &[Arc<DMSDevice>]) -> Option<Arc<DMSDevice>> {
+    fn load_balanced(&self, devices: &[Arc<DMSDevice>]) -> Option<Arc<DMSDevice>> {
         devices.iter()
             .min_by(|a, b| {
                 // Use health score as a proxy for load (inverse relationship)
-                a._Fhealth_score().cmp(&b._Fhealth_score()).reverse()
+                a.health_score().cmp(&b.health_score()).reverse()
             })
             .cloned()
     }
@@ -430,7 +607,7 @@ impl DMSDeviceScheduler {
     /// # Returns
     /// 
     /// A fitness score between 0.0 and potentially over 1.0, where lower scores indicate better fit.
-    fn _Fcalculate_fitness_score(&self, device_cap: &DMSDeviceCapabilities, requirements: &DMSDeviceCapabilities) -> f64 {
+    fn calculate_fitness_score(&self, device_cap: &DMSDeviceCapabilities, requirements: &DMSDeviceCapabilities) -> f64 {
         let mut score = 0.0;
         
         // Calculate memory fitness
@@ -466,7 +643,7 @@ impl DMSDeviceScheduler {
     /// # Returns
     /// 
     /// A score representing the remaining capacity, where higher scores indicate more capacity.
-    fn _Fcalculate_remaining_capacity_score(&self, device_cap: &DMSDeviceCapabilities) -> f64 {
+    fn calculate_remaining_capacity_score(&self, device_cap: &DMSDeviceCapabilities) -> f64 {
         let mut score = 0.0;
         
         // Add memory capacity
@@ -498,8 +675,8 @@ impl DMSDeviceScheduler {
     /// # Returns
     /// 
     /// An allocation ID if successful, or `None` if no suitable device was found.
-    pub fn _Fallocate(&mut self, request: &DMSAllocationRequest) -> Option<String> {
-        if let Some(device) = self._Fselect_device(request) {
+    pub fn allocate(&mut self, request: &DMSAllocationRequest) -> Option<String> {
+        if let Some(device) = self.select_device(request) {
             // Generate unique allocation ID
             let allocation_id = uuid::Uuid::new_v4().to_string();
             
@@ -507,7 +684,7 @@ impl DMSDeviceScheduler {
             // This is simplified for demonstration
             
             // Record the allocation
-            self._Frecord_allocation(allocation_id.clone(), device._Fid().to_string(), device._Fdevice_type(), request.capabilities.clone());
+            self.record_allocation(allocation_id.clone(), device.id().to_string(), device.device_type(), request.capabilities.clone());
             
             Some(allocation_id)
         } else {
@@ -526,7 +703,7 @@ impl DMSDeviceScheduler {
     /// - `device_id`: ID of the allocated device
     /// - `device_type`: Type of the allocated device
     /// - `capabilities_required`: Capabilities required for this allocation
-    pub fn _Frecord_allocation(&mut self, allocation_id: String, device_id: String, device_type: DMSDeviceType, capabilities_required: DMSDeviceCapabilities) {
+    pub fn record_allocation(&mut self, allocation_id: String, device_id: String, device_type: DMSDeviceType, capabilities_required: DMSDeviceCapabilities) {
         let record = DMSAllocationRecord {
             allocation_id,
             device_id,
@@ -554,7 +731,7 @@ impl DMSDeviceScheduler {
     /// # Parameters
     /// 
     /// - `allocation_id`: ID of the allocation to release
-    pub fn _Frecord_release(&mut self, allocation_id: &str) {
+    pub fn record_release(&mut self, allocation_id: &str) {
         if let Some(record) = self.allocation_history.iter_mut().find(|r| r.allocation_id == allocation_id) {
             record.released_at = Some(Utc::now());
             
@@ -575,7 +752,7 @@ impl DMSDeviceScheduler {
     /// # Returns
     /// 
     /// A `DMSAllocationStatistics` struct containing comprehensive allocation statistics.
-    pub fn _Fget_statistics(&self) -> DMSAllocationStatistics {
+    pub fn get_statistics(&self) -> DMSAllocationStatistics {
         let total_allocations = self.allocation_history.len();
         let successful_allocations = self.allocation_history.iter().filter(|r| r.success).count();
         let failed_allocations = total_allocations - successful_allocations;
@@ -654,7 +831,7 @@ impl DMSDeviceScheduler {
     /// # Returns
     /// 
     /// A vector of `DMSSchedulingRecommendation` sorted by priority (highest first).
-    pub fn _Fget_recommendations(&self, device_type: &DMSDeviceType) -> Vec<DMSSchedulingRecommendation> {
+    pub fn get_recommendations(&self, device_type: &DMSDeviceType) -> Vec<DMSSchedulingRecommendation> {
         let mut recommendations = Vec::new();
         
         // Analyze recent allocation patterns for this device type

@@ -45,26 +45,26 @@
 //! 
 //! fn example() {
 //!     // Set a context value
-//!     DMSLogContext::_Fput("user_id", "12345");
+//!     DMSLogContext::put("user_id", "12345");
 //!     
 //!     // Set distributed tracing context
-//!     DMSLogContext::_Fset_trace_id(DMSLogContext::_Fgenerate_trace_id());
-//!     DMSLogContext::_Fset_span_id(DMSLogContext::_Fgenerate_span_id());
+//!     DMSLogContext::set_trace_id(DMSLogContext::generate_trace_id());
+//!     DMSLogContext::set_span_id(DMSLogContext::generate_span_id());
 //!     
 //!     // Get a context value
-//!     if let Some(user_id) = DMSLogContext::_Fget("user_id") {
+//!     if let Some(user_id) = DMSLogContext::get("user_id") {
 //!         println!("User ID: {}", user_id);
 //!     }
 //!     
 //!     // Get all context values
-//!     let all_ctx = DMSLogContext::_Fget_all();
+//!     let all_ctx = DMSLogContext::get_all();
 //!     println!("All context: {:?}", all_ctx);
 //!     
 //!     // Remove a context value
-//!     DMSLogContext::_Fremove("user_id");
+//!     DMSLogContext::remove("user_id");
 //!     
 //!     // Clear all context values
-//!     DMSLogContext::_Fclear();
+//!     DMSLogContext::clear();
 //! }
 //! ```
 
@@ -80,7 +80,7 @@ use uuid::Uuid;
 // contextual information to be added to logs without passing it explicitly through
 // all function calls.
 thread_local! {
-    static _CLOG_CONTEXT: RefCell<HashMap<String, String>> = RefCell::new(HashMap::new());
+    static LOGONTEXT: RefCell<HashMap<String, String>> = RefCell::new(HashMap::new());
 }
 
 /// Log context for DMS, similar to MDC with distributed tracing support.
@@ -97,10 +97,10 @@ impl DMSLogContext {
     /// 
     /// - `key`: The context key
     /// - `value`: The context value
-    pub fn _Fput(key: impl Into<String>, value: impl Into<String>) {
+    pub fn put(key: impl Into<String>, value: impl Into<String>) {
         let k = key.into();
         let v = value.into();
-        _CLOG_CONTEXT.with(|ctx| {
+        LOGONTEXT.with(|ctx| {
             ctx.borrow_mut().insert(k, v);
         });
     }
@@ -110,8 +110,8 @@ impl DMSLogContext {
     /// # Parameters
     /// 
     /// - `values`: A HashMap of key-value pairs to add to the context
-    pub fn _Fput_all(values: HashMap<String, String>) {
-        _CLOG_CONTEXT.with(|ctx| {
+    pub fn put_all(values: HashMap<String, String>) {
+        LOGONTEXT.with(|ctx| {
             let mut ctx = ctx.borrow_mut();
             for (k, v) in values {
                 ctx.insert(k, v);
@@ -128,8 +128,8 @@ impl DMSLogContext {
     /// # Returns
     /// 
     /// An `Option<String>` containing the value if it exists
-    pub fn _Fget(key: &str) -> Option<String> {
-        _CLOG_CONTEXT.with(|ctx| ctx.borrow().get(key).cloned())
+    pub fn get(key: &str) -> Option<String> {
+        LOGONTEXT.with(|ctx| ctx.borrow().get(key).cloned())
     }
 
     /// Removes a key-value pair from the log context.
@@ -137,8 +137,8 @@ impl DMSLogContext {
     /// # Parameters
     /// 
     /// - `key`: The context key to remove
-    pub fn _Fremove(key: &str) {
-        _CLOG_CONTEXT.with(|ctx| {
+    pub fn remove(key: &str) {
+        LOGONTEXT.with(|ctx| {
             ctx.borrow_mut().remove(key);
         });
     }
@@ -148,13 +148,13 @@ impl DMSLogContext {
     /// # Returns
     /// 
     /// A HashMap containing all key-value pairs in the context
-    pub fn _Fget_all() -> HashMap<String, String> {
-        _CLOG_CONTEXT.with(|ctx| ctx.borrow().clone())
+    pub fn get_all() -> HashMap<String, String> {
+        LOGONTEXT.with(|ctx| ctx.borrow().clone())
     }
 
     /// Clears all key-value pairs from the log context.
-    pub fn _Fclear() {
-        _CLOG_CONTEXT.with(|ctx| ctx.borrow_mut().clear());
+    pub fn clear() {
+        LOGONTEXT.with(|ctx| ctx.borrow_mut().clear());
     }
 
     /// Sets the trace ID in the log context.
@@ -162,8 +162,8 @@ impl DMSLogContext {
     /// # Parameters
     /// 
     /// - `trace_id`: The trace ID to set
-    pub fn _Fset_trace_id(trace_id: impl Into<String>) {
-        Self::_Fput("trace_id", trace_id);
+    pub fn set_trace_id(trace_id: impl Into<String>) {
+        Self::put("trace_id", trace_id);
     }
 
     /// Gets the trace ID from the log context.
@@ -171,8 +171,8 @@ impl DMSLogContext {
     /// # Returns
     /// 
     /// An `Option<String>` containing the trace ID if it exists
-    pub fn _Fget_trace_id() -> Option<String> {
-        Self::_Fget("trace_id")
+    pub fn get_trace_id() -> Option<String> {
+        Self::get("trace_id")
     }
 
     /// Generates a new trace ID.
@@ -180,7 +180,7 @@ impl DMSLogContext {
     /// # Returns
     /// 
     /// A new UUID string suitable for use as a trace ID
-    pub fn _Fgenerate_trace_id() -> String {
+    pub fn generate_trace_id() -> String {
         Uuid::new_v4().to_string()
     }
 
@@ -189,8 +189,8 @@ impl DMSLogContext {
     /// # Parameters
     /// 
     /// - `span_id`: The span ID to set
-    pub fn _Fset_span_id(span_id: impl Into<String>) {
-        Self::_Fput("span_id", span_id);
+    pub fn set_span_id(span_id: impl Into<String>) {
+        Self::put("span_id", span_id);
     }
 
     /// Gets the span ID from the log context.
@@ -198,8 +198,8 @@ impl DMSLogContext {
     /// # Returns
     /// 
     /// An `Option<String>` containing the span ID if it exists
-    pub fn _Fget_span_id() -> Option<String> {
-        Self::_Fget("span_id")
+    pub fn get_span_id() -> Option<String> {
+        Self::get("span_id")
     }
 
     /// Generates a new span ID.
@@ -207,7 +207,7 @@ impl DMSLogContext {
     /// # Returns
     /// 
     /// A new UUID string suitable for use as a span ID
-    pub fn _Fgenerate_span_id() -> String {
+    pub fn generate_span_id() -> String {
         Uuid::new_v4().to_string()
     }
 
@@ -216,8 +216,8 @@ impl DMSLogContext {
     /// # Parameters
     /// 
     /// - `parent_span_id`: The parent span ID to set
-    pub fn _Fset_parent_span_id(parent_span_id: impl Into<String>) {
-        Self::_Fput("parent_span_id", parent_span_id);
+    pub fn set_parent_span_id(parent_span_id: impl Into<String>) {
+        Self::put("parent_span_id", parent_span_id);
     }
 
     /// Gets the parent span ID from the log context.
@@ -225,7 +225,7 @@ impl DMSLogContext {
     /// # Returns
     /// 
     /// An `Option<String>` containing the parent span ID if it exists
-    pub fn _Fget_parent_span_id() -> Option<String> {
-        Self::_Fget("parent_span_id")
+    pub fn get_parent_span_id() -> Option<String> {
+        Self::get("parent_span_id")
     }
 }

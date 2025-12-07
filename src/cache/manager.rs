@@ -21,7 +21,7 @@ use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use std::collections::HashMap;
 use tokio::sync::{RwLock, broadcast};
-use crate::cache::{DMSCache, CachedValue, CacheStats};
+use crate::cache::cache::{DMSCache, CacheStats};
 
 /// # DMS Cache Manager
 /// 
@@ -108,7 +108,7 @@ impl DMSCacheManager {
     /// 
     /// **Returns:**
     /// - A new instance of `DMSCacheManager`
-    pub fn _Fnew(backend: Arc<dyn DMSCache + Send + Sync>) -> Self {
+    pub fn new(backend: Arc<dyn DMSCache + Send + Sync>) -> Self {
         let (sender, receiver) = broadcast::channel(100);
         
         Self {
@@ -127,7 +127,7 @@ impl DMSCacheManager {
     /// 
     /// **Returns:**
     /// - A `JoinHandle` for the background task
-    pub async fn _Fstart_consistency_listener(&mut self) -> tokio::task::JoinHandle<()> {
+    pub async fn start_consistency_listener(&mut self) -> tokio::task::JoinHandle<()> {
         let backend = self.backend.clone();
         let mut receiver = self.event_receiver.take().expect("Already started");
         
@@ -135,7 +135,7 @@ impl DMSCacheManager {
             while let Ok(event) = receiver.recv().await {
                 match event {
                     DMSCacheEvent::Invalidate { key } => {
-                        if let Err(e) = backend._Fdelete(&key).await {
+                        if let Err(e) = backend.delete(&key).await {
                             eprintln!("Failed to invalidate cache key {}: {}", key, e);
                         }
                     },
@@ -145,7 +145,7 @@ impl DMSCacheManager {
                         eprintln!("Invalidate pattern not implemented: {}", pattern);
                     },
                     DMSCacheEvent::Clear => {
-                        if let Err(e) = backend._Fclear().await {
+                        if let Err(e) = backend.clear().await {
                             eprintln!("Failed to clear cache: {}", e);
                         }
                     },
@@ -161,7 +161,7 @@ impl DMSCacheManager {
     /// 
     /// **Returns:**
     /// - A broadcast receiver for cache events
-    pub fn _Fsubscribe(&self) -> broadcast::Receiver<DMSCacheEvent> {
+    pub fn subscribe(&self) -> broadcast::Receiver<DMSCacheEvent> {
         self.event_sender.subscribe()
     }
     
@@ -172,7 +172,7 @@ impl DMSCacheManager {
     /// 
     /// **Parameters:**
     /// - `event`: The cache event to publish
-    pub fn _Fpublish_event(&self, event: DMSCacheEvent) {
+    pub fn publish_event(&self, event: DMSCacheEvent) {
         let _ = self.event_sender.send(event);
     }
     
@@ -189,13 +189,12 @@ impl DMSCacheManager {
     /// - `Ok(Some(T))` if the key exists and the value is valid
     /// - `Ok(None)` if the key does not exist
     /// - `Err(DMSError)` if an error occurs during retrieval or deserialization
-    pub async fn _Fget<T: serde::de::DeserializeOwned>(&self, key: &str) -> crate::core::DMSResult<Option<T>> {
-        match self.backend._Fget(key).await {
+    pub async fn get<T: serde::de::DeserializeOwned>(&self, key: &str) -> crate::core::DMSResult<Option<T>> {
+        match self.backend.get(key).await? {
             Some(cached_value) => {
-                match cached_value._Fdeserialize::<T>() {
-                    Ok(value) => Ok(Some(value)),
-                    Err(e) => Err(e),
-                }
+                let value = serde_json::from_str(&cached_value)
+                    .map_err(|e| crate::core::DMSError::Other(format!("Deserialization error: {e}")))?;
+                Ok(Some(value))
             }
             None => Ok(None),
         }
@@ -214,15 +213,14 @@ impl DMSCacheManager {
     /// **Returns:**
     /// - `Ok(())` if the value was successfully stored
     /// - `Err(DMSError)` if an error occurs during serialization or storage
-    pub async fn _Fset<T: serde::Serialize>(&self, key: &str, value: &T, ttl_seconds: Option<u64>) -> crate::core::DMSResult<()> {
+    pub async fn set<T: serde::Serialize>(&self, key: &str, value: &T, ttl_seconds: Option<u64>) -> crate::core::DMSResult<()> {
         let serialized = serde_json::to_string(value)
             .map_err(|e| crate::core::DMSError::Other(format!("Serialization error: {e}")))?;
         
-        let cached_value = CachedValue::_Fnew(serde_json::Value::String(serialized), ttl_seconds.map(std::time::Duration::from_secs));
-        let result = self.backend._Fset(key, cached_value).await;
+        let result = self.backend.set(key, &serialized, ttl_seconds).await;
         
         // Publish invalidate event to ensure consistency across instances
-        self._Fpublish_event(DMSCacheEvent::Invalidate { key: key.to_string() });
+        self.publish_event(DMSCacheEvent::Invalidate { key: key.to_string() });
         
         result
     }
@@ -236,13 +234,14 @@ impl DMSCacheManager {
     /// - `key`: The cache key to delete
     /// 
     /// **Returns:**
-    /// - `Ok(())` if the value was successfully deleted
+    /// - `Ok(true)` if the key was found and deleted
+    /// - `Ok(false)` if the key didn't exist
     /// - `Err(DMSError)` if an error occurs during deletion
-    pub async fn _Fdelete(&self, key: &str) -> crate::core::DMSResult<()> {
-        let result = self.backend._Fdelete(key).await;
+    pub async fn delete(&self, key: &str) -> crate::core::DMSResult<bool> {
+        let result = self.backend.delete(key).await;
         
         // Publish invalidate event to ensure consistency across instances
-        self._Fpublish_event(DMSCacheEvent::Invalidate { key: key.to_string() });
+        self.publish_event(DMSCacheEvent::Invalidate { key: key.to_string() });
         
         result
     }
@@ -256,8 +255,8 @@ impl DMSCacheManager {
     /// 
     /// **Returns:**
     /// - `true` if the key exists, `false` otherwise
-    pub async fn _Fexists(&self, key: &str) -> bool {
-        self.backend._Fexists(key).await
+    pub async fn exists(&self, key: &str) -> bool {
+        self.backend.exists(key).await
     }
     
     /// Clear all cache entries
@@ -268,11 +267,11 @@ impl DMSCacheManager {
     /// **Returns:**
     /// - `Ok(())` if the cache was successfully cleared
     /// - `Err(DMSError)` if an error occurs during clearing
-    pub async fn _Fclear(&self) -> crate::core::DMSResult<()> {
-        let result = self.backend._Fclear().await;
+    pub async fn clear(&self) -> crate::core::DMSResult<()> {
+        let result = self.backend.clear().await;
         
         // Publish clear event to ensure consistency across instances
-        self._Fpublish_event(DMSCacheEvent::Clear);
+        self.publish_event(DMSCacheEvent::Clear);
         
         result
     }
@@ -287,9 +286,9 @@ impl DMSCacheManager {
     /// 
     /// **Returns:**
     /// - `Ok(())` if the invalidation event was successfully published
-    pub async fn _Finvalidate_pattern(&self, pattern: &str) -> crate::core::DMSResult<()> {
+    pub async fn invalidate_pattern(&self, pattern: &str) -> crate::core::DMSResult<()> {
         // Publish invalidate pattern event to ensure consistency across instances
-        self._Fpublish_event(DMSCacheEvent::InvalidatePattern { pattern: pattern.to_string() });
+        self.publish_event(DMSCacheEvent::InvalidatePattern { pattern: pattern.to_string() });
         
         Ok(())
     }
@@ -301,8 +300,8 @@ impl DMSCacheManager {
     /// 
     /// **Returns:**
     /// - A `CacheStats` struct containing the cache statistics
-    pub async fn _Fstats(&self) -> CacheStats {
-        self.backend._Fstats().await
+    pub async fn stats(&self) -> CacheStats {
+        self.backend.stats().await
     }
     
     /// Cleanup expired cache entries
@@ -312,8 +311,8 @@ impl DMSCacheManager {
     /// **Returns:**
     /// - `Ok(usize)` with the number of expired entries cleaned up
     /// - `Err(DMSError)` if an error occurs during cleanup
-    pub async fn _Fcleanup_expired(&self) -> crate::core::DMSResult<usize> {
-        self.backend._Fcleanup_expired().await
+    pub async fn cleanup_expired(&self) -> crate::core::DMSResult<usize> {
+        self.backend.cleanup_expired().await
     }
     
     /// Get a value from cache or set it if it doesn't exist
@@ -331,13 +330,13 @@ impl DMSCacheManager {
     /// **Returns:**
     /// - `Ok(T)` with the retrieved or generated value
     /// - `Err(DMSError)` if an error occurs during retrieval, generation, or storage
-    pub async fn _Fget_or_set<T, F>(&self, key: &str, ttl_seconds: Option<u64>, factory: F) -> crate::core::DMSResult<T>
+    pub async fn get_or_set<T, F>(&self, key: &str, ttl_seconds: Option<u64>, factory: F) -> crate::core::DMSResult<T>
     where
         T: serde::Serialize + serde::de::DeserializeOwned + Clone,
         F: FnOnce() -> crate::core::DMSResult<T>,
     {
         // Try to get from cache first
-        if let Some(value) = self._Fget::<T>(key).await? {
+        if let Some(value) = self.get::<T>(key).await? {
             return Ok(value);
         }
         
@@ -345,7 +344,7 @@ impl DMSCacheManager {
         let value = factory()?;
         
         // Store in cache
-        self._Fset(key, &value, ttl_seconds).await?;
+        self.set(key, &value, ttl_seconds).await?;
         
         Ok(value)
     }

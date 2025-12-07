@@ -33,7 +33,7 @@
 //! # Usage Examples
 //! ```rust
 //! // Create a Redis cache instance
-//! let redis_cache = DMSRedisCache::_Fnew("redis://localhost:6379").await?;
+//! let redis_cache = DMSRedisCache::new("redis://localhost:6379").await?;
 //! 
 //! // Set a value with expiration
 //! let cached_value = CachedValue {
@@ -41,19 +41,19 @@
 //!     expires_at: Some(SystemTime::now() + Duration::from_secs(3600)),
 //!     metadata: HashMap::new(),
 //! };
-//! redis_cache._Fset("test_key", cached_value).await?;
+//! redis_cache.set("test_key", cached_value).await?;
 //! 
 //! // Get a value
-//! let value = redis_cache._Fget("test_key").await;
+//! let value = redis_cache.get("test_key").await;
 //! 
 //! // Check if a key exists
-//! let exists = redis_cache._Fexists("test_key").await;
+//! let exists = redis_cache.exists("test_key").await;
 //! 
 //! // Delete a value
-//! redis_cache._Fdelete("test_key").await?;
+//! redis_cache.delete("test_key").await?;
 //! 
 //! // Get cache statistics
-//! let stats = redis_cache._Fstats().await;
+//! let stats = redis_cache.stats().await;
 //! ```
 
 #![allow(non_snake_case)]
@@ -63,6 +63,7 @@ use redis::aio::ConnectionManager;
 use std::sync::Arc;
 use std::ops::AddAssign;
 use crate::cache::{DMSCache, CachedValue, CacheStats};
+use crate::core::DMSResult;
 
 /// Redis cache implementation.
 /// 
@@ -84,7 +85,7 @@ impl DMSRedisCache {
     /// 
     /// # Errors
     /// Returns an error if the Redis client cannot be created or if the connection fails
-    pub async fn _Fnew(redis_url: &str) -> crate::core::DMSResult<Self> {
+    pub async fn new(redis_url: &str) -> crate::core::DMSResult<Self> {
         let client = Client::open(redis_url)
             .map_err(|e| crate::core::DMSError::Other(format!("Redis client error: {e}")))?;
         
@@ -119,34 +120,31 @@ impl DMSCache for DMSRedisCache {
     /// 3. Checks if the value is expired
     /// 4. If expired, deletes the key from Redis and returns `None`
     /// 5. Otherwise, updates hit count and returns the value
-    async fn _Fget(&self, key: &str) -> Option<CachedValue> {
+    async fn get(&self, key: &str) -> DMSResult<Option<String>> {
         let mut conn = (*self.connection).clone();
         
         let result: redis::RedisResult<String> = conn.get(key).await;
         match result {
             Ok(json_str) => {
                 let json_str_owned = json_str.to_owned();
-                match serde_json::from_str::<CachedValue>(&json_str_owned) {
-                    Ok(value) => {
-                        if value._Fis_expired() {
-                            let _: redis::RedisResult<()> = conn.del::<_, ()>(key).await;
-                            self.stats.get_mut("eviction_count").unwrap().value_mut().add_assign(1);
-                            self.stats.get_mut("miss_count").unwrap().value_mut().add_assign(1);
-                            None
-                        } else {
-                            self.stats.get_mut("hit_count").unwrap().value_mut().add_assign(1);
-                            Some(value)
-                        }
-                    }
-                    Err(_) => {
+                // Try to parse as simple string first, then as JSON if that fails
+                if let Ok(value) = serde_json::from_str::<serde_json::Value>(&json_str_owned) {
+                    if let Some(str_value) = value.as_str() {
+                        self.stats.get_mut("hit_count").unwrap().value_mut().add_assign(1);
+                        Ok(Some(str_value.to_string()))
+                    } else {
                         self.stats.get_mut("error_count").unwrap().value_mut().add_assign(1);
-                        None
+                        Ok(None)
                     }
+                } else {
+                    // If not valid JSON, treat as plain string
+                    self.stats.get_mut("hit_count").unwrap().value_mut().add_assign(1);
+                    Ok(Some(json_str_owned))
                 }
             }
             Err(_) => {
                 self.stats.get_mut("miss_count").unwrap().value_mut().add_assign(1);
-                None
+                Ok(None)
             }
         }
     }
@@ -156,40 +154,30 @@ impl DMSCache for DMSRedisCache {
     /// # Parameters
     /// - `key`: Cache key to set
     /// - `value`: Value to store in the cache
+    /// - `ttl_seconds`: Optional TTL in seconds
     /// 
     /// # Returns
     /// `Ok(())` if the value was successfully set, otherwise an error
     /// 
     /// # Implementation Details
-    /// 1. Serializes the `CachedValue` to JSON
-    /// 2. Calculates the TTL (Time-To-Live) based on the `expires_at` field
-    /// 3. Uses `SET` or `SETEX` command depending on whether TTL is specified
-    async fn _Fset(&self, key: &str, value: CachedValue) -> crate::core::DMSResult<()> {
+    /// 1. Creates a CachedValue from the string value
+    /// 2. Serializes the CachedValue to JSON
+    /// 3. Calculates the TTL (Time-To-Live) based on the ttl_seconds parameter
+    /// 4. Uses `SET` or `SETEX` command depending on whether TTL is specified
+    async fn set(&self, key: &str, value: &str, ttl_seconds: Option<u64>) -> crate::core::DMSResult<()> {
         let mut conn = (*self.connection).clone();
         
-        let json_str = serde_json::to_string(&value)
-            .map_err(|e| crate::core::DMSError::Other(format!("Serialization error: {e}")))?;
-        
-        let ttl = if let Some(expires_at) = value.expires_at {
-            let now = std::time::SystemTime::now()
-                .duration_since(std::time::UNIX_EPOCH)
-                .unwrap()
-                .as_secs();
-            if expires_at > now {
-                Some(expires_at - now)
-            } else {
-                Some(1) // Minimum TTL
-            }
-        } else {
-            None
+        let cached_value = CachedValue {
+            value: value.to_string(),
+            expires_at: ttl_seconds,
         };
         
-        let result: redis::RedisResult<()> = match ttl {
+        let result: redis::RedisResult<()> = match ttl_seconds {
             Some(ttl_secs) => {
-                conn.set_ex(key, json_str, ttl_secs).await
+                conn.set_ex(key, cached_value.value, ttl_secs).await
             }
             None => {
-                conn.set(key, json_str).await
+                conn.set(key, cached_value.value).await
             }
         };
         
@@ -203,12 +191,11 @@ impl DMSCache for DMSRedisCache {
     /// - `key`: Cache key to delete
     /// 
     /// # Returns
-    /// `Ok(())` if the value was successfully deleted, otherwise an error
-    async fn _Fdelete(&self, key: &str) -> crate::core::DMSResult<()> {
+    /// `Ok(true)` if the key was found and deleted, `Ok(false)` if the key didn't exist
+    async fn delete(&self, key: &str) -> crate::core::DMSResult<bool> {
         let mut conn = (*self.connection).clone();
-        let result: redis::RedisResult<()> = conn.del(key).await;
-        result.map_err(|e| crate::core::DMSError::Other(format!("Redis delete error: {e}")))?;
-        Ok(())
+        let result: redis::RedisResult<bool> = conn.del(key).await;
+        result.map_err(|e| crate::core::DMSError::Other(format!("Redis delete error: {e}")))
     }
     
     /// Checks if a key exists in Redis cache.
@@ -218,7 +205,7 @@ impl DMSCache for DMSRedisCache {
     /// 
     /// # Returns
     /// `true` if the key exists, otherwise `false`
-    async fn _Fexists(&self, key: &str) -> bool {
+    async fn exists(&self, key: &str) -> bool {
         let mut conn = (*self.connection).clone();
         
         let result: redis::RedisResult<bool> = conn.exists(key).await;
@@ -233,7 +220,7 @@ impl DMSCache for DMSRedisCache {
     /// # Notes
     /// - Uses the pattern "dms:cache:*" to avoid clearing all Redis data
     /// - Only clears keys matching the DMS cache pattern
-    async fn _Fclear(&self) -> crate::core::DMSResult<()> {
+    async fn clear(&self) -> crate::core::DMSResult<()> {
         let mut conn = (*self.connection).clone();
         
         // Use a specific pattern to avoid clearing all Redis data
@@ -261,7 +248,7 @@ impl DMSCache for DMSRedisCache {
     /// - Error count (used as eviction count)
     /// - Average hit rate
     /// - Memory usage (always 0 as Redis manages memory)
-    async fn _Fstats(&self) -> CacheStats {
+    async fn stats(&self) -> CacheStats {
         let hit_count = *self.stats.get("hit_count").unwrap().value();
         let miss_count = *self.stats.get("miss_count").unwrap().value();
         let error_count = *self.stats.get("error_count").unwrap().value();
@@ -280,12 +267,14 @@ impl DMSCache for DMSRedisCache {
         };
         
         CacheStats {
-            total_keys,
+            hits: hit_count,
+            misses: miss_count,
+            entries: total_keys,
             memory_usage_bytes: 0, // Redis manages memory
+            avg_hit_rate,
             hit_count,
             miss_count,
             eviction_count: error_count,
-            avg_hit_rate,
         }
     }
     
@@ -296,7 +285,7 @@ impl DMSCache for DMSRedisCache {
     /// 
     /// # Notes
     /// Redis uses an active expiration policy with lazy deletion, so no manual cleanup is needed
-    async fn _Fcleanup_expired(&self) -> crate::core::DMSResult<usize> {
+    async fn cleanup_expired(&self) -> crate::core::DMSResult<usize> {
         // Redis automatically handles expiration
         Ok(0)
     }

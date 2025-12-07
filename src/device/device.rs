@@ -52,17 +52,17 @@
 //! 
 //! // Configure device capabilities
 //! let capabilities = DMSDeviceCapabilities::new()
-//!     ._Fwith_compute_units(16)
-//!     ._Fwith_memory_gb(32.0)
-//!     ._Fwith_storage_gb(1024.0)
-//!     ._Fwith_bandwidth_gbps(10.0);
+//!     .with_compute_units(16)
+//!     .with_memory_gb(32.0)
+//!     .with_storage_gb(1024.0)
+//!     .with_bandwidth_gbps(10.0);
 //! 
 //! // Set device capabilities and status
 //! device = device.with_capabilities(capabilities);
-//! device._Fset_status(dms::device::DMSDeviceStatus::Available);
+//! device.set_status(dms::device::DMSDeviceStatus::Available);
 //! 
 //! // Check if device meets requirements
-//! let requirements = DMSDeviceCapabilities::new()._Fwith_compute_units(8);
+//! let requirements = DMSDeviceCapabilities::new().with_compute_units(8);
 //! if device.capabilities().meets_requirements(&requirements) {
 //!     println!("Device meets requirements");
 //! }
@@ -146,7 +146,7 @@ impl DMSDeviceCapabilities {
     /// # Returns
     /// 
     /// The updated `DMSDeviceCapabilities` instance
-    pub fn _Fwith_compute_units(mut self, units: usize) -> Self {
+    pub fn with_compute_units(mut self, units: usize) -> Self {
         self.compute_units = Some(units);
         self
     }
@@ -160,7 +160,7 @@ impl DMSDeviceCapabilities {
     /// # Returns
     /// 
     /// The updated `DMSDeviceCapabilities` instance
-    pub fn _Fwith_memory_gb(mut self, memory: f64) -> Self {
+    pub fn with_memory_gb(mut self, memory: f64) -> Self {
         self.memory_gb = Some(memory);
         self
     }
@@ -174,7 +174,7 @@ impl DMSDeviceCapabilities {
     /// # Returns
     /// 
     /// The updated `DMSDeviceCapabilities` instance
-    pub fn _Fwith_storage_gb(mut self, storage: f64) -> Self {
+    pub fn with_storage_gb(mut self, storage: f64) -> Self {
         self.storage_gb = Some(storage);
         self
     }
@@ -188,7 +188,7 @@ impl DMSDeviceCapabilities {
     /// # Returns
     /// 
     /// The updated `DMSDeviceCapabilities` instance
-    pub fn _Fwith_bandwidth_gbps(mut self, bandwidth: f64) -> Self {
+    pub fn with_bandwidth_gbps(mut self, bandwidth: f64) -> Self {
         self.bandwidth_gbps = Some(bandwidth);
         self
     }
@@ -203,7 +203,7 @@ impl DMSDeviceCapabilities {
     /// # Returns
     /// 
     /// The updated `DMSDeviceCapabilities` instance
-    pub fn _Fwith_custom_capability(mut self, key: String, value: String) -> Self {
+    pub fn with_custom_capability(mut self, key: String, value: String) -> Self {
         self.custom_capabilities.insert(key, value);
         self
     }
@@ -390,7 +390,7 @@ impl DMSDevice {
     /// # Returns
     /// 
     /// The device ID as a string slice
-    pub fn _Fid(&self) -> &str {
+    pub fn id(&self) -> &str {
         &self.id
     }
     
@@ -399,7 +399,7 @@ impl DMSDevice {
     /// # Returns
     /// 
     /// The device name as a string slice
-    pub fn _Fname(&self) -> &str {
+    pub fn name(&self) -> &str {
         &self.name
     }
     
@@ -408,7 +408,7 @@ impl DMSDevice {
     /// # Returns
     /// 
     /// The device type as a `DMSDeviceType` enum
-    pub fn _Fdevice_type(&self) -> DMSDeviceType {
+    pub fn device_type(&self) -> DMSDeviceType {
         self.device_type
     }
     
@@ -417,7 +417,7 @@ impl DMSDevice {
     /// # Returns
     /// 
     /// The device status as a `DMSDeviceStatus` enum
-    pub fn _Fstatus(&self) -> DMSDeviceStatus {
+    pub fn status(&self) -> DMSDeviceStatus {
         self.status
     }
     
@@ -444,7 +444,7 @@ impl DMSDevice {
     /// # Parameters
     /// 
     /// - `status`: The new status to set
-    pub fn _Fset_status(&mut self, status: DMSDeviceStatus) {
+    pub fn set_status(&mut self, status: DMSDeviceStatus) {
         self.status = status;
         self.last_seen = chrono::Utc::now();
     }
@@ -454,13 +454,13 @@ impl DMSDevice {
     /// # Parameters
     /// 
     /// - `metrics`: The new health metrics to set
-    pub fn _Fupdate_health_metrics(&mut self, metrics: DMSDeviceHealthMetrics) {
+    pub fn update_health_metrics(&mut self, metrics: DMSDeviceHealthMetrics) {
         self.health_metrics = metrics;
         self.last_seen = chrono::Utc::now();
     }
     
     /// Increments the device error count and updates the last seen timestamp
-    pub fn _Fincrement_error_count(&mut self) {
+    pub fn increment_error_count(&mut self) {
         self.health_metrics.error_count += 1;
         self.last_seen = chrono::Utc::now();
     }
@@ -470,7 +470,7 @@ impl DMSDevice {
     /// # Parameters
     /// 
     /// - `throughput`: The new throughput value in operations per second
-    pub fn _Fupdate_throughput(&mut self, throughput: u64) {
+    pub fn update_throughput(&mut self, throughput: u64) {
         self.health_metrics.throughput = throughput;
         self.last_seen = chrono::Utc::now();
     }
@@ -494,7 +494,7 @@ impl DMSDevice {
     /// # Parameters
     /// 
     /// - `location`: The physical location of the device
-    pub fn _Fset_location(&mut self, location: String) {
+    pub fn set_location(&mut self, location: String) {
         self.location = Some(location);
     }
     
@@ -504,12 +504,12 @@ impl DMSDevice {
     /// 
     /// - `key`: Metadata key
     /// - `value`: Metadata value
-    pub fn _Fadd_metadata(&mut self, key: String, value: String) {
+    pub fn add_metadata(&mut self, key: String, value: String) {
         self.metadata.insert(key, value);
     }
     
     /// Updates the last seen timestamp to the current time
-    pub fn _Fupdate_last_seen(&mut self) {
+    pub fn update_last_seen(&mut self) {
         self.last_seen = chrono::Utc::now();
     }
     
@@ -518,7 +518,7 @@ impl DMSDevice {
     /// # Returns
     /// 
     /// The last seen timestamp as a `chrono::DateTime<chrono::Utc>`
-    pub fn _Flast_seen(&self) -> chrono::DateTime<chrono::Utc> {
+    pub fn last_seen(&self) -> chrono::DateTime<chrono::Utc> {
         self.last_seen
     }
     
@@ -529,7 +529,7 @@ impl DMSDevice {
     /// # Returns
     /// 
     /// `true` if the device is available, `false` otherwise
-    pub fn _Fis_available(&self) -> bool {
+    pub fn is_available(&self) -> bool {
         self.status == DMSDeviceStatus::Available && self.current_allocation_id.is_none()
     }
     
@@ -538,7 +538,7 @@ impl DMSDevice {
     /// # Returns
     /// 
     /// `true` if the device is allocated, `false` otherwise
-    pub fn _Fis_allocated(&self) -> bool {
+    pub fn is_allocated(&self) -> bool {
         self.current_allocation_id.is_some()
     }
     
@@ -553,8 +553,8 @@ impl DMSDevice {
     /// # Returns
     /// 
     /// `true` if the device was successfully allocated, `false` if it was already in use
-    pub fn _Fallocate(&mut self, allocation_id: &str) -> bool {
-        if self._Fis_available() {
+    pub fn allocate(&mut self, allocation_id: &str) -> bool {
+        if self.is_available() {
             self.current_allocation_id = Some(allocation_id.to_string());
             self.status = DMSDeviceStatus::Busy;
             true
@@ -566,7 +566,7 @@ impl DMSDevice {
     /// Releases the device from its current allocation
     /// 
     /// This method clears the allocation ID and sets the device status to Available if it was Busy.
-    pub fn _Frelease(&mut self) {
+    pub fn release(&mut self) {
         self.current_allocation_id = None;
         if self.status == DMSDeviceStatus::Busy {
             self.status = DMSDeviceStatus::Available;
@@ -578,7 +578,7 @@ impl DMSDevice {
     /// # Returns
     /// 
     /// An `Option<&str>` containing the allocation ID if the device is allocated, `None` otherwise
-    pub fn _Fget_allocation_id(&self) -> Option<&str> {
+    pub fn get_allocation_id(&self) -> Option<&str> {
         self.current_allocation_id.as_deref()
     }
     
@@ -589,7 +589,7 @@ impl DMSDevice {
     /// # Returns
     /// 
     /// A health score between 0 (worst) and 100 (best)
-    pub fn _Fhealth_score(&self) -> u8 {
+    pub fn health_score(&self) -> u8 {
         match self.status {
             DMSDeviceStatus::Available => 100,
             DMSDeviceStatus::Busy => 80,
@@ -609,7 +609,7 @@ impl DMSDevice {
     /// # Returns
     /// 
     /// `true` if the device is responsive, `false` otherwise
-    pub fn _Fis_responsive(&self, timeout_secs: i64) -> bool {
+    pub fn is_responsive(&self, timeout_secs: i64) -> bool {
         let elapsed = chrono::Utc::now() - self.last_seen;
         elapsed.num_seconds() < timeout_secs
     }
@@ -626,8 +626,8 @@ impl DMSDevice {
     /// # Returns
     /// 
     /// A dynamic health score between 0 (worst) and 100 (best)
-    pub fn _Fdynamic_health_score(&self, health_metrics: &DMSDeviceHealthMetrics) -> u8 {
-        let mut score = self._Fhealth_score() as f64;
+    pub fn dynamic_health_score(&self, health_metrics: &DMSDeviceHealthMetrics) -> u8 {
+        let mut score = self.health_score() as f64;
         
         // Adjust score based on CPU usage
         let cpu_penalty = (health_metrics.cpu_usage_percent / 100.0) * 20.0;
@@ -666,10 +666,19 @@ impl DMSDevice {
     /// # Returns
     /// 
     /// `true` if the device is healthy, `false` otherwise
-    pub fn _Fis_healthy(&self, health_metrics: &DMSDeviceHealthMetrics, timeout_secs: i64) -> bool {
-        self._Fis_responsive(timeout_secs) && 
-        self._Fdynamic_health_score(health_metrics) > 50 && 
+    pub fn is_healthy(&self, health_metrics: &DMSDeviceHealthMetrics, timeout_secs: i64) -> bool {
+        self.is_responsive(timeout_secs) && 
+        self.dynamic_health_score(health_metrics) > 50 && 
         self.status != DMSDeviceStatus::Error && 
         self.status != DMSDeviceStatus::Offline
+    }
+
+    /// Gets a reference to the device metadata
+    /// 
+    /// # Returns
+    /// 
+    /// A reference to the metadata HashMap
+    pub fn metadata(&self) -> &HashMap<String, String> {
+        &self.metadata
     }
 }

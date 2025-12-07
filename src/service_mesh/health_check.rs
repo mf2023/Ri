@@ -54,7 +54,7 @@
 //! 
 //! async fn example() -> DMSResult<()> {
 //!     // Create a health checker with 30-second intervals
-//!     let health_checker = DMSHealthChecker::_Fnew(Duration::from_secs(30));
+//!     let health_checker = DMSHealthChecker::new(Duration::from_secs(30));
 //!     
 //!     // Register a health check for a service
 //!     let config = DMSHealthCheckConfig {
@@ -339,7 +339,7 @@ impl DMSHealthChecker {
     /// # Returns
     ///
     /// A new `DMSHealthChecker` instance
-    pub fn _Fnew(check_interval: Duration) -> Self {
+    pub fn new(check_interval: Duration) -> Self {
         let mut providers: HashMap<DMSHealthCheckType, Box<dyn DMSHealthCheckProvider>> = HashMap::new();
         providers.insert(DMSHealthCheckType::Http, Box::new(DMSHttpHealthCheckProvider));
         providers.insert(DMSHealthCheckType::Tcp, Box::new(DMSTcpHealthCheckProvider));
@@ -351,6 +351,8 @@ impl DMSHealthChecker {
             background_tasks: Arc::new(RwLock::new(Vec::new())),
         }
     }
+    
+
 
     /// Registers a health check for a service.
     ///
@@ -545,7 +547,7 @@ impl DMSHealthChecker {
     /// # Returns
     ///
     /// A `DMSResult<bool>` indicating whether the health checker is healthy
-    pub async fn _Fhealth_check(&self) -> DMSResult<bool> {
+    pub async fn health_check(&self) -> DMSResult<bool> {
         Ok(true)
     }
 }

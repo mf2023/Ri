@@ -22,47 +22,47 @@ use dms::observability::metrics_collector::{DMSSlidingWindow, DMSQuantileCalcula
 
 #[test]
 fn test_sliding_window() {
-    let mut window = DMSSlidingWindow::<i32>::_Fnew(
+    let mut window = DMSSlidingWindow::<i32>::new(
         Duration::from_secs(10),
         Duration::from_secs(1),
     );
     
-    window._Fadd(1);
-    window._Fadd(2);
-    window._Fadd(3);
+    window.add(1);
+    window.add(2);
+    window.add(3);
     
-    let data_points = window._Fget_data_points();
+    let data_points = window.get_data_points();
     assert_eq!(data_points.len(), 3);
 }
 
 #[test]
 fn test_quantile_calculator() {
-    let mut calc = DMSQuantileCalculator::_Fnew();
+    let mut calc = DMSQuantileCalculator::new();
     
-    calc._Fadd(1.0);
-    calc._Fadd(2.0);
-    calc._Fadd(3.0);
-    calc._Fadd(4.0);
-    calc._Fadd(5.0);
+    calc.add(1.0);
+    calc.add(2.0);
+    calc.add(3.0);
+    calc.add(4.0);
+    calc.add(5.0);
     
-    assert_eq!(calc._Fquantile(0.0), Some(1.0));
-    assert_eq!(calc._Fquantile(0.5), Some(3.0));
-    assert_eq!(calc._Fquantile(1.0), Some(5.0));
+    assert_eq!(calc.quantile(0.0), Some(1.0));
+    assert_eq!(calc.quantile(0.5), Some(3.0));
+    assert_eq!(calc.quantile(1.0), Some(5.0));
 }
 
 #[test]
 fn test_performance_collector() {
-    let mut collector = DMSPerformanceCollector::_Fnew(
+    let mut collector = DMSPerformanceCollector::new(
         Duration::from_secs(60),
         Duration::from_secs(5),
     );
     
     // Record some requests
-    collector._Frecord_request(100.0, false);
-    collector._Frecord_request(200.0, false);
-    collector._Frecord_request(300.0, true); // error
+    collector.record_request(100.0, false);
+    collector.record_request(200.0, false);
+    collector.record_request(300.0, true); // error
     
-    let metrics = collector._Fget_metrics();
+    let metrics = collector.get_metrics();
     assert_eq!(metrics.total_requests, 3);
     assert!((metrics.error_rate - 0.33).abs() < 0.01);
 }

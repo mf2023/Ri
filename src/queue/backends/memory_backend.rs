@@ -54,32 +54,32 @@
 //!
 //! async fn example() -> DMSResult<()> {
 //!     // Create a basic in-memory queue
-//!     let queue = DMSMemoryQueue::_Fnew("example_queue");
+//!     let queue = DMSMemoryQueue::new("example_queue");
 //!     
 //!     // Or create a queue with disk persistence
-//!     // let queue = DMSMemoryQueue::_Fwith_persistence("example_queue", "/tmp/queue_persistence");
+//!     // let queue = DMSMemoryQueue::with_persistence("example_queue", "/tmp/queue_persistence");
 //!     
 //!     // Create a producer
-//!     let producer = queue._Fcreate_producer().await?;
+//!     let producer = queue.create_producer().await?;
 //!     
 //!     // Create a message
 //!     let payload = json!({ "key": "value" }).to_string().into_bytes();
-//!     let message = DMSQueueMessage::_Fnew(payload);
+//!     let message = DMSQueueMessage::new(payload);
 //!     
 //!     // Send the message
-//!     producer._Fsend(message).await?;
+//!     producer.send(message).await?;
 //!     
 //!     // Create a consumer
-//!     let consumer = queue._Fcreate_consumer("consumer_group_1").await?;
+//!     let consumer = queue.create_consumer("consumer_group_1").await?;
 //!     
 //!     // Receive a message
-//!     if let Some(message) = consumer._Freceive().await? {
+//!     if let Some(message) = consumer.receive().await? {
 //!         // Process the message
 //!         let payload = String::from_utf8_lossy(&message.payload);
 //!         println!("Received message: {}", payload);
 //!         
 //!         // Acknowledge the message
-//!         consumer._Fack(&message.id).await?;
+//!         consumer.ack(&message.id).await?;
 //!     }
 //!     
 //!     Ok(())
@@ -114,7 +114,7 @@ impl MemoryQueueState {
     /// # Returns
     ///
     /// A new MemoryQueueState instance
-    fn _Fnew() -> Self {
+    fn new() -> Self {
         Self {
             messages: VecDeque::new(),
             consumers: HashMap::new(),
@@ -135,6 +135,7 @@ pub struct DMSMemoryQueue {
     persistence_path: Option<String>,
 }
 
+#[allow(dead_code)]
 impl DMSMemoryQueue {
     /// Creates a new in-memory queue without persistence.
     ///
@@ -145,10 +146,10 @@ impl DMSMemoryQueue {
     /// # Returns
     ///
     /// A new DMSMemoryQueue instance
-    pub fn _Fnew(name: &str) -> Self {
+    pub fn new(name: &str) -> Self {
         Self {
             name: name.to_string(),
-            state: Arc::new(RwLock::new(MemoryQueueState::_Fnew())),
+            state: Arc::new(RwLock::new(MemoryQueueState::new())),
             persistence_path: None,
         }
     }
@@ -163,15 +164,15 @@ impl DMSMemoryQueue {
     /// # Returns
     ///
     /// A new DMSMemoryQueue instance with persistence enabled
-    pub fn _Fwith_persistence(name: &str, persistence_path: &str) -> Self {
+    pub fn with_persistence(name: &str, persistence_path: &str) -> Self {
         let queue = Self {
             name: name.to_string(),
-            state: Arc::new(RwLock::new(MemoryQueueState::_Fnew())),
+            state: Arc::new(RwLock::new(MemoryQueueState::new())),
             persistence_path: Some(persistence_path.to_string()),
         };
 
         // Load messages from disk if persistence is enabled
-        queue._Fload_messages().unwrap_or(());
+        queue.load_messages().unwrap_or(());
 
         queue
     }
@@ -181,7 +182,7 @@ impl DMSMemoryQueue {
     /// # Returns
     ///
     /// A `DMSResult<()>` indicating success or failure
-    fn _Fload_messages(&self) -> DMSResult<()> {
+    fn load_messages(&self) -> DMSResult<()> {
         if let Some(path) = &self.persistence_path {
             if Path::new(path).exists() {
                 let mut file = File::open(path)?;
@@ -203,7 +204,7 @@ impl DMSMemoryQueue {
     /// # Returns
     ///
     /// A `DMSResult<()>` indicating success or failure
-    fn _Fsave_messages(&self) -> DMSResult<()> {
+    fn save_messages(&self) -> DMSResult<()> {
         if let Some(path) = &self.persistence_path {
             let state = self.state.blocking_read();
             let content = serde_json::to_string(&state.messages)?;
@@ -227,7 +228,7 @@ impl DMSQueue for DMSMemoryQueue {
     /// # Returns
     ///
     /// A `DMSResult<Box<dyn DMSQueueProducer>>` containing the producer
-    async fn _Fcreate_producer(&self) -> DMSResult<Box<dyn DMSQueueProducer>> {
+    async fn create_producer(&self) -> DMSResult<Box<dyn DMSQueueProducer>> {
         Ok(Box::new(MemoryQueueProducer {
             state: self.state.clone(),
             persistence_path: self.persistence_path.clone(),
@@ -243,7 +244,7 @@ impl DMSQueue for DMSMemoryQueue {
     /// # Returns
     ///
     /// A `DMSResult<Box<dyn DMSQueueConsumer>>` containing the consumer
-    async fn _Fcreate_consumer(
+    async fn create_consumer(
         &self,
         consumer_group: &str,
     ) -> DMSResult<Box<dyn DMSQueueConsumer>> {
@@ -260,7 +261,7 @@ impl DMSQueue for DMSMemoryQueue {
     /// # Returns
     ///
     /// A `DMSResult<QueueStats>` containing the queue statistics
-    async fn _Fget_stats(&self) -> DMSResult<QueueStats> {
+    async fn get_stats(&self) -> DMSResult<QueueStats> {
         let state = self.state.read().await;
         Ok(QueueStats {
             queue_name: self.name.clone(),
@@ -278,7 +279,7 @@ impl DMSQueue for DMSMemoryQueue {
     /// # Returns
     ///
     /// A `DMSResult<()>` indicating success or failure
-    async fn _Fpurge(&self) -> DMSResult<()> {
+    async fn purge(&self) -> DMSResult<()> {
         let mut state = self.state.write().await;
         state.messages.clear();
         state.consumers.clear();
@@ -303,8 +304,8 @@ impl DMSQueue for DMSMemoryQueue {
     /// # Returns
     ///
     /// A `DMSResult<()>` indicating success or failure
-    async fn _Fdelete(&self) -> DMSResult<()> {
-        self._Fpurge().await
+    async fn delete(&self) -> DMSResult<()> {
+        self.purge().await
     }
 }
 
@@ -329,7 +330,7 @@ impl DMSQueueProducer for MemoryQueueProducer {
     /// # Returns
     ///
     /// A `DMSResult<()>` indicating success or failure
-    async fn _Fsend(&self, message: DMSQueueMessage) -> DMSResult<()> {
+    async fn send(&self, message: DMSQueueMessage) -> DMSResult<()> {
         let mut state = self.state.write().await;
         state.messages.push_back(message);
 
@@ -364,7 +365,7 @@ impl DMSQueueProducer for MemoryQueueProducer {
     /// # Returns
     ///
     /// A `DMSResult<()>` indicating success or failure
-    async fn _Fsend_batch(&self, messages: Vec<DMSQueueMessage>) -> DMSResult<()> {
+    async fn send_batch(&self, messages: Vec<DMSQueueMessage>) -> DMSResult<()> {
         let mut state = self.state.write().await;
         for message in messages {
             state.messages.push_back(message);
@@ -414,7 +415,7 @@ impl DMSQueueConsumer for MemoryQueueConsumer {
     /// # Returns
     ///
     /// A `DMSResult<Option<DMSQueueMessage>>` containing the message if available, or None if no message is available
-    async fn _Freceive(&self) -> DMSResult<Option<DMSQueueMessage>> {
+    async fn receive(&self) -> DMSResult<Option<DMSQueueMessage>> {
         let paused = *self.paused.lock().await;
         if paused {
             return Ok(None);
@@ -473,7 +474,7 @@ impl DMSQueueConsumer for MemoryQueueConsumer {
     /// # Returns
     ///
     /// A `DMSResult<()>` indicating success or failure
-    async fn _Fack(&self, _message_id: &str) -> DMSResult<()> {
+    async fn ack(&self, _message_id: &str) -> DMSResult<()> {
         // In memory queue, acknowledgment is implicit when message is received
         Ok(())
     }
@@ -487,7 +488,7 @@ impl DMSQueueConsumer for MemoryQueueConsumer {
     /// # Returns
     ///
     /// A `DMSResult<()>` indicating success or failure
-    async fn _Fnack(&self, message_id: &str) -> DMSResult<()> {
+    async fn nack(&self, message_id: &str) -> DMSResult<()> {
         // Find the message in consumer queue and put it back in main queue
         let mut state = self.state.write().await;
 
@@ -508,7 +509,7 @@ impl DMSQueueConsumer for MemoryQueueConsumer {
             // If found, remove from consumer queue and put back in main queue
             if let Some(mut message) = message_to_requeue {
                 consumer_queue.remove(index);
-                message._Fincrement_retry();
+                message.increment_retry();
                 state.messages.push_back(message);
 
                 // Save to disk if persistence is enabled
@@ -540,7 +541,7 @@ impl DMSQueueConsumer for MemoryQueueConsumer {
     /// # Returns
     ///
     /// A `DMSResult<()>` indicating success or failure
-    async fn _Fpause(&self) -> DMSResult<()> {
+    async fn pause(&self) -> DMSResult<()> {
         let mut paused = self.paused.lock().await;
         *paused = true;
         Ok(())
@@ -551,7 +552,7 @@ impl DMSQueueConsumer for MemoryQueueConsumer {
     /// # Returns
     ///
     /// A `DMSResult<()>` indicating success or failure
-    async fn _Fresume(&self) -> DMSResult<()> {
+    async fn resume(&self) -> DMSResult<()> {
         let mut paused = self.paused.lock().await;
         *paused = false;
         Ok(())

@@ -51,7 +51,7 @@
 //! 
 //! fn example() -> DMSResult<()> {
 //!     // Create a metrics registry
-//!     let registry = DMSMetricsRegistry::_Fnew();
+//!     let registry = DMSMetricsRegistry::new();
 //!     
 //!     // Configure a counter metric
 //!     let counter_config = DMSMetricConfig {
@@ -65,15 +65,15 @@
 //!     };
 //!     
 //!     // Create and register the metric
-//!     let counter = Arc::new(DMSMetric::_Fnew(counter_config));
-//!     registry._Fregister(counter.clone())?;
+//!     let counter = Arc::new(DMSMetric::new(counter_config));
+//!     registry.register(counter.clone())?;
 //!     
 //!     // Record some metrics
-//!     counter._Frecord(1.0, vec![("method".to_string(), "GET".to_string())])?;
-//!     counter._Frecord(1.0, vec![("method".to_string(), "POST".to_string())])?;
+//!     counter.record(1.0, vec![("method".to_string(), "GET".to_string())])?;
+//!     counter.record(1.0, vec![("method".to_string(), "POST".to_string())])?;
 //!     
 //!     // Export metrics in Prometheus format
-//!     let prometheus_output = registry._Fexport_prometheus();
+//!     let prometheus_output = registry.export_prometheus();
 //!     println!("{}", prometheus_output);
 //!     
 //!     Ok(())
@@ -117,11 +117,15 @@ pub struct DMSMetricConfig {
 }
 
 /// Sliding time window for metric aggregation
+#[allow(dead_code)]
 struct DMSSlidingWindow {
+    #[allow(dead_code)]
     window_size: Duration,
+    #[allow(dead_code)]
     bucket_size: Duration,
     buckets: VecDeque<Vec<DMSMetricSample>>,
     current_bucket: Vec<DMSMetricSample>,
+    #[allow(dead_code)]
     last_rotation: u64,
 }
 
@@ -134,19 +138,21 @@ impl DMSSlidingWindow {
             bucket_size,
             buckets: VecDeque::with_capacity(bucket_count as usize),
             current_bucket: Vec::new(),
-            last_rotation: Self::_Fcurrent_timestamp(),
+            last_rotation: Self::current_timestamp(),
         }
     }
     
-    fn _Fcurrent_timestamp() -> u64 {
+    #[allow(dead_code)]
+    fn current_timestamp() -> u64 {
         SystemTime::now()
             .duration_since(UNIX_EPOCH)
             .unwrap_or_default()
             .as_secs()
     }
     
-    fn _Frotate_if_needed(&mut self) {
-        let now = Self::_Fcurrent_timestamp();
+    #[allow(dead_code)]
+    fn rotate_if_needed(&mut self) {
+        let now = Self::current_timestamp();
         let elapsed = now.saturating_sub(self.last_rotation);
         
         if elapsed >= self.bucket_size.as_secs() {
@@ -166,12 +172,13 @@ impl DMSSlidingWindow {
         }
     }
     
-    fn _Fadd_sample(&mut self, sample: DMSMetricSample) {
-        self._Frotate_if_needed();
+    #[allow(dead_code)]
+    fn add_sample(&mut self, sample: DMSMetricSample) {
+        self.rotate_if_needed();
         self.current_bucket.push(sample);
     }
     
-    fn _Fget_samples(&self) -> Vec<DMSMetricSample> {
+    fn get_samples(&self) -> Vec<DMSMetricSample> {
         let mut all_samples = Vec::new();
         
         for bucket in &self.buckets {
@@ -182,8 +189,8 @@ impl DMSSlidingWindow {
         all_samples
     }
     
-    fn _Fget_window_stats(&self) -> DMSWindowStats {
-        let samples = self._Fget_samples();
+    fn get_window_stats(&self) -> DMSWindowStats {
+        let samples = self.get_samples();
         
         if samples.is_empty() {
             return DMSWindowStats::default();
@@ -206,10 +213,10 @@ impl DMSSlidingWindow {
         let stddev = variance.sqrt();
         
         // Calculate quantiles
-        let p50 = Self::_Fquantile(&sorted_values, 0.50);
-        let p90 = Self::_Fquantile(&sorted_values, 0.90);
-        let p95 = Self::_Fquantile(&sorted_values, 0.95);
-        let p99 = Self::_Fquantile(&sorted_values, 0.99);
+        let p50 = Self::quantile(&sorted_values, 0.50);
+        let p90 = Self::quantile(&sorted_values, 0.90);
+        let p95 = Self::quantile(&sorted_values, 0.95);
+        let p99 = Self::quantile(&sorted_values, 0.99);
         
         DMSWindowStats {
             count: count as u64,
@@ -225,7 +232,7 @@ impl DMSSlidingWindow {
         }
     }
     
-    fn _Fquantile(sorted_values: &[f64], q: f64) -> f64 {
+    fn quantile(sorted_values: &[f64], q: f64) -> f64 {
         if sorted_values.is_empty() {
             return 0.0;
         }
@@ -280,11 +287,12 @@ pub struct DMSMetric {
     config: DMSMetricConfig,
     sliding_window: RwLock<DMSSlidingWindow>,
     total_count: RwLock<u64>,
+    #[allow(dead_code)]
     total_sum: RwLock<f64>,
 }
 
 impl DMSMetric {
-    pub fn _Fnew(config: DMSMetricConfig) -> Self {
+    pub fn new(config: DMSMetricConfig) -> Self {
         let sliding_window = DMSSlidingWindow::new(
             Duration::from_secs(300), // 5 minute window
             Duration::from_secs(10),  // 10 second buckets
@@ -298,16 +306,17 @@ impl DMSMetric {
         }
     }
     
-    pub fn _Frecord(&self, value: f64, labels: Vec<(String, String)>) -> DMSResult<()> {
+    #[allow(dead_code)]
+    fn record(&self, value: f64, labels: Vec<(String, String)>) -> DMSResult<()> {
         let sample = DMSMetricSample {
-            timestamp: Self::_Fcurrent_timestamp(),
+            timestamp: Self::current_timestamp(),
             value,
             labels,
         };
         
         {
             let mut window = self.sliding_window.write().unwrap();
-            window._Fadd_sample(sample);
+            window.add_sample(sample);
         }
         
         *self.total_count.write().unwrap() += 1;
@@ -316,23 +325,25 @@ impl DMSMetric {
         Ok(())
     }
     
-    pub fn _Fget_stats(&self) -> DMSWindowStats {
-        self.sliding_window.read().unwrap()._Fget_window_stats()
+    fn get_stats(&self) -> DMSWindowStats {
+        self.sliding_window.read().unwrap().get_window_stats()
     }
     
-    pub fn _Fget_total_count(&self) -> u64 {
+    fn get_total_count(&self) -> u64 {
         *self.total_count.read().unwrap()
     }
     
-    pub fn _Fget_total_sum(&self) -> f64 {
+    #[allow(dead_code)]
+    fn get_total_sum(&self) -> f64 {
         *self.total_sum.read().unwrap()
     }
     
-    pub fn _Fget_config(&self) -> &DMSMetricConfig {
+    fn get_config(&self) -> &DMSMetricConfig {
         &self.config
     }
     
-    fn _Fcurrent_timestamp() -> u64 {
+    #[allow(dead_code)]
+    fn current_timestamp() -> u64 {
         SystemTime::now()
             .duration_since(UNIX_EPOCH)
             .unwrap_or_default()
@@ -346,43 +357,43 @@ pub struct DMSMetricsRegistry {
 }
 
 impl DMSMetricsRegistry {
-    pub fn _Fnew() -> Self {
+    pub fn new() -> Self {
         Self {
             metrics: Arc::new(RwLock::new(HashMap::new())),
         }
     }
     
-    pub fn _Fregister(&self, metric: Arc<DMSMetric>) -> DMSResult<()> {
-        let name = metric._Fget_config().name.clone();
+    pub fn register(&self, metric: Arc<DMSMetric>) -> DMSResult<()> {
+        let name = metric.get_config().name.clone();
         self.metrics.write().unwrap().insert(name, metric);
         Ok(())
     }
     
-    pub fn _Fget_metric(&self, name: &str) -> Option<Arc<DMSMetric>> {
+    pub fn get_metric(&self, name: &str) -> Option<Arc<DMSMetric>> {
         self.metrics.read().unwrap().get(name).cloned()
     }
     
-    pub fn _Fget_all_metrics(&self) -> HashMap<String, Arc<DMSMetric>> {
+    pub fn get_all_metrics(&self) -> HashMap<String, Arc<DMSMetric>> {
         self.metrics.read().unwrap().clone()
     }
     
     /// Export metrics in Prometheus format
-    pub fn _Fexport_prometheus(&self) -> String {
+    pub fn export_prometheus(&self) -> String {
         let mut output = String::new();
         let metrics = self.metrics.read().unwrap();
         
         for (name, metric) in metrics.iter() {
-            let config = metric._Fget_config();
+            let config = metric.get_config();
             
             // Write help and type
             output.push_str(&format!("# HELP {} {}\n", name, config.help));
             output.push_str(&format!("# TYPE {} {:?}\n", name, config.metric_type));
             
             // Write metric value
-            let stats = metric._Fget_stats();
+            let stats = metric.get_stats();
             match config.metric_type {
                 DMSMetricType::Counter => {
-                    output.push_str(&format!("{} {}\n", name, metric._Fget_total_count()));
+                    output.push_str(&format!("{} {}\n", name, metric.get_total_count()));
                 }
                 DMSMetricType::Gauge => {
                     output.push_str(&format!("{} {}\n", name, stats.mean));

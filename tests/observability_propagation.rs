@@ -22,31 +22,31 @@ use dms::observability::tracing::{DMSTraceId, DMSSpanId};
 
 #[test]
 fn test_trace_context_header_format() {
-    let trace_id = DMSTraceId::_Ffrom_string("0123456789abcdef0123456789abcdef".to_string());
-    let parent_id = DMSSpanId::_Ffrom_string("fedcba9876543210".to_string());
+    let trace_id = DMSTraceId::from_string("0123456789abcdef0123456789abcdef".to_string());
+    let parent_id = DMSSpanId::from_string("fedcba9876543210".to_string());
     
-    let context = DMSTraceContext::_Fnew(trace_id.clone(), parent_id.clone());
-    let header = context._Fto_header();
+    let context = DMSTraceContext::new(trace_id.clone(), parent_id.clone());
+    let header = context.to_header();
     
     assert_eq!(header, "00-0123456789abcdef0123456789abcdef-fedcba9876543210-01");
     
-    let parsed = DMSTraceContext::_Ffrom_header(&header).unwrap();
-    assert_eq!(parsed.trace_id._Fas_str(), trace_id._Fas_str());
-    assert_eq!(parsed.parent_id._Fas_str(), parent_id._Fas_str());
-    assert!(parsed._Fis_sampled());
+    let parsed = DMSTraceContext::from_header(&header).unwrap();
+    assert_eq!(parsed.trace_id.as_str(), trace_id.as_str());
+    assert_eq!(parsed.parent_id.as_str(), parent_id.as_str());
+    assert!(parsed.is_sampled());
 }
 
 #[test]
 fn test_baggage_header_format() {
-    let mut baggage = DMSBaggage::_Fnew();
-    baggage._Finsert("user.id".to_string(), "12345".to_string());
-    baggage._Finsert("tenant.id".to_string(), "acme-corp".to_string());
+    let mut baggage = DMSBaggage::new();
+    baggage.insert("user.id".to_string(), "12345".to_string());
+    baggage.insert("tenant.id".to_string(), "acme-corp".to_string());
     
-    let header = baggage._Fto_header();
+    let header = baggage.to_header();
     assert!(header.contains("user.id=12345"));
     assert!(header.contains("tenant.id=acme-corp"));
     
-    let parsed = DMSBaggage::_Ffrom_header(&header);
-    assert_eq!(parsed._Fget("user.id").unwrap(), "12345");
-    assert_eq!(parsed._Fget("tenant.id").unwrap(), "acme-corp");
+    let parsed = DMSBaggage::from_header(&header);
+    assert_eq!(parsed.get("user.id").unwrap(), "12345");
+    assert_eq!(parsed.get("tenant.id").unwrap(), "acme-corp");
 }

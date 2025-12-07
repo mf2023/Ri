@@ -49,27 +49,27 @@
 //! 
 //! async fn example(queue: &dyn DMSQueue) -> DMSResult<()> {
 //!     // Create a producer
-//!     let producer = queue._Fcreate_producer().await?;
+//!     let producer = queue.create_producer().await?;
 //!     
 //!     // Create a message
 //!     let payload = json!({ "key": "value" }).to_string().into_bytes();
-//!     let message = DMSQueueMessage::_Fnew(payload)
-//!         ._Fwith_max_retries(5);
+//!     let message = DMSQueueMessage::new(payload)
+//!         .with_max_retries(5);
 //!     
 //!     // Send the message
-//!     producer._Fsend(message).await?;
+//!     producer.send(message).await?;
 //!     
 //!     // Create a consumer
-//!     let consumer = queue._Fcreate_consumer("consumer_group_1").await?;
+//!     let consumer = queue.create_consumer("consumer_group_1").await?;
 //!     
 //!     // Receive a message
-//!     if let Some(message) = consumer._Freceive().await? {
+//!     if let Some(message) = consumer.receive().await? {
 //!         // Process the message
 //!         let payload = String::from_utf8_lossy(&message.payload);
 //!         println!("Received message: {}", payload);
 //!         
 //!         // Acknowledge the message
-//!         consumer._Fack(&message.id).await?;
+//!         consumer.ack(&message.id).await?;
 //!     }
 //!     
 //!     Ok(())
@@ -112,7 +112,7 @@ impl DMSQueueMessage {
     /// # Returns
     /// 
     /// A new `DMSQueueMessage` instance
-    pub fn _Fnew(payload: Vec<u8>) -> Self {
+    pub fn new(payload: Vec<u8>) -> Self {
         Self {
             id: uuid::Uuid::new_v4().to_string(),
             payload,
@@ -132,7 +132,7 @@ impl DMSQueueMessage {
     /// # Returns
     /// 
     /// The updated `DMSQueueMessage` instance
-    pub fn _Fwith_headers(mut self, headers: HashMap<String, String>) -> Self {
+    pub fn with_headers(mut self, headers: HashMap<String, String>) -> Self {
         self.headers = headers;
         self
     }
@@ -146,13 +146,13 @@ impl DMSQueueMessage {
     /// # Returns
     /// 
     /// The updated `DMSQueueMessage` instance
-    pub fn _Fwith_max_retries(mut self, max_retries: u32) -> Self {
+    pub fn with_max_retries(mut self, max_retries: u32) -> Self {
         self.max_retries = max_retries;
         self
     }
 
     /// Increments the retry count for this message.
-    pub fn _Fincrement_retry(&mut self) {
+    pub fn increment_retry(&mut self) {
         self.retry_count += 1;
     }
 
@@ -161,7 +161,7 @@ impl DMSQueueMessage {
     /// # Returns
     /// 
     /// `true` if the message can be retried, `false` otherwise
-    pub fn _Fcan_retry(&self) -> bool {
+    pub fn can_retry(&self) -> bool {
         self.retry_count < self.max_retries
     }
 }
@@ -202,7 +202,7 @@ pub trait DMSQueueProducer: Send + Sync {
     /// # Returns
     /// 
     /// A `DMSResult<()>` indicating success or failure
-    async fn _Fsend(&self, message: DMSQueueMessage) -> DMSResult<()>;
+    async fn send(&self, message: DMSQueueMessage) -> DMSResult<()>;
     
     /// Sends multiple messages to the queue in a batch.
     /// 
@@ -213,7 +213,7 @@ pub trait DMSQueueProducer: Send + Sync {
     /// # Returns
     /// 
     /// A `DMSResult<()>` indicating success or failure
-    async fn _Fsend_batch(&self, messages: Vec<DMSQueueMessage>) -> DMSResult<()>;
+    async fn send_batch(&self, messages: Vec<DMSQueueMessage>) -> DMSResult<()>;
 }
 
 /// Trait for consuming messages from queues.
@@ -226,7 +226,7 @@ pub trait DMSQueueConsumer: Send + Sync {
     /// # Returns
     /// 
     /// A `DMSResult<Option<DMSQueueMessage>>` containing the message if available, or None if no message is available
-    async fn _Freceive(&self) -> DMSResult<Option<DMSQueueMessage>>;
+    async fn receive(&self) -> DMSResult<Option<DMSQueueMessage>>;
     
     /// Acknowledges a message, indicating it has been successfully processed.
     /// 
@@ -237,7 +237,7 @@ pub trait DMSQueueConsumer: Send + Sync {
     /// # Returns
     /// 
     /// A `DMSResult<()>` indicating success or failure
-    async fn _Fack(&self, message_id: &str) -> DMSResult<()>;
+    async fn ack(&self, message_id: &str) -> DMSResult<()>;
     
     /// Negatively acknowledges a message, indicating it failed to process and should be retried.
     /// 
@@ -248,21 +248,21 @@ pub trait DMSQueueConsumer: Send + Sync {
     /// # Returns
     /// 
     /// A `DMSResult<()>` indicating success or failure
-    async fn _Fnack(&self, message_id: &str) -> DMSResult<()>;
+    async fn nack(&self, message_id: &str) -> DMSResult<()>;
     
     /// Pauses message consumption.
     /// 
     /// # Returns
     /// 
     /// A `DMSResult<()>` indicating success or failure
-    async fn _Fpause(&self) -> DMSResult<()>;
+    async fn pause(&self) -> DMSResult<()>;
     
     /// Resumes message consumption after pausing.
     /// 
     /// # Returns
     /// 
     /// A `DMSResult<()>` indicating success or failure
-    async fn _Fresume(&self) -> DMSResult<()>;
+    async fn resume(&self) -> DMSResult<()>;
 }
 
 /// Main queue trait defining queue operations.
@@ -276,7 +276,7 @@ pub trait DMSQueue: Send + Sync {
     /// # Returns
     /// 
     /// A `DMSResult<Box<dyn DMSQueueProducer>>` containing the producer
-    async fn _Fcreate_producer(&self) -> DMSResult<Box<dyn DMSQueueProducer>>;
+    async fn create_producer(&self) -> DMSResult<Box<dyn DMSQueueProducer>>;
     
     /// Creates a new consumer for this queue with the given consumer group.
     /// 
@@ -287,26 +287,26 @@ pub trait DMSQueue: Send + Sync {
     /// # Returns
     /// 
     /// A `DMSResult<Box<dyn DMSQueueConsumer>>` containing the consumer
-    async fn _Fcreate_consumer(&self, consumer_group: &str) -> DMSResult<Box<dyn DMSQueueConsumer>>;
+    async fn create_consumer(&self, consumer_group: &str) -> DMSResult<Box<dyn DMSQueueConsumer>>;
     
     /// Gets statistics for this queue.
     /// 
     /// # Returns
     /// 
     /// A `DMSResult<QueueStats>` containing the queue statistics
-    async fn _Fget_stats(&self) -> DMSResult<QueueStats>;
+    async fn get_stats(&self) -> DMSResult<QueueStats>;
     
     /// Purges all messages from this queue.
     /// 
     /// # Returns
     /// 
     /// A `DMSResult<()>` indicating success or failure
-    async fn _Fpurge(&self) -> DMSResult<()>;
+    async fn purge(&self) -> DMSResult<()>;
     
     /// Deletes this queue.
     /// 
     /// # Returns
     /// 
     /// A `DMSResult<()>` indicating success or failure
-    async fn _Fdelete(&self) -> DMSResult<()>;
+    async fn delete(&self) -> DMSResult<()>;
 }

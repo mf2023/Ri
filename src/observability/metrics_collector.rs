@@ -56,25 +56,25 @@
 //!
 //! fn example() {
 //!     // Create a performance collector with a 1-minute window and 5-second buckets
-//!     let mut perf_collector = DMSPerformanceCollector::_Fnew(
+//!     let mut perf_collector = DMSPerformanceCollector::new(
 //!         Duration::from_secs(60),
 //!         Duration::from_secs(5)
 //!     );
 //!     
 //!     // Record a request
-//!     perf_collector._Frecord_request(12.5, false);
+//!     perf_collector.record_request(12.5, false);
 //!     
 //!     // Get performance metrics
-//!     let perf_metrics = perf_collector._Fget_metrics();
+//!     let perf_metrics = perf_collector.get_metrics();
 //!     println!("P50 latency: {}ms", perf_metrics.p50_latency_ms);
 //!     println!("Throughput: {} rps", perf_metrics.throughput_rps);
 //!     println!("Error rate: {:.2}%", perf_metrics.error_rate * 100.0);
 //!     
 //!     // Create a system metrics collector
-//!     let mut sys_collector = DMSSystemMetricsCollector::_Fnew();
+//!     let mut sys_collector = DMSSystemMetricsCollector::new();
 //!     
 //!     // Collect system metrics
-//!     let sys_metrics = sys_collector._Fcollect();
+//!     let sys_metrics = sys_collector.collect();
 //!     println!("CPU usage: {:.2}%", sys_metrics.cpu.total_usage_percent);
 //!     println!("Memory usage: {:.2}%", sys_metrics.memory.usage_percent);
 //!     println!("Network received: {} bytes/s", sys_metrics.network.received_bytes_per_sec);
@@ -91,6 +91,7 @@ use sysinfo::{CpuExt, DiskExt, NetworkExt, System, SystemExt};
 /// This struct implements a sliding window for efficient time-series data collection. It divides
 /// the window into buckets and automatically advances the window as time passes, removing old
 /// data points.
+#[allow(dead_code)]
 #[derive(Debug, Clone)]
 pub struct DMSSlidingWindow<T> {
     /// Total size of the sliding window
@@ -107,6 +108,7 @@ pub struct DMSSlidingWindow<T> {
 ///
 /// This struct represents a single bucket within the sliding window, containing a collection
 /// of data points for a specific time interval.
+#[allow(dead_code)]
 #[derive(Debug, Clone)]
 struct WindowBucket<T> {
     /// Start time of the bucket
@@ -117,6 +119,7 @@ struct WindowBucket<T> {
     data_points: Vec<T>,
 }
 
+#[allow(dead_code)]
 impl<T> DMSSlidingWindow<T> {
     /// Creates a new sliding window with the specified window size and bucket size.
     ///
@@ -128,7 +131,7 @@ impl<T> DMSSlidingWindow<T> {
     /// # Returns
     ///
     /// A new DMSSlidingWindow instance
-    pub fn _Fnew(window_size: Duration, bucket_size: Duration) -> Self {
+    pub fn new(window_size: Duration, bucket_size: Duration) -> Self {
         let bucket_count = (window_size.as_millis() / bucket_size.as_millis()).max(1) as usize;
         let mut buckets = VecDeque::with_capacity(bucket_count);
 
@@ -156,8 +159,8 @@ impl<T> DMSSlidingWindow<T> {
     /// # Parameters
     ///
     /// - `value`: The data point to add
-    pub fn _Fadd(&mut self, value: T) {
-        self._Fadvance_window();
+    pub fn add(&mut self, value: T) {
+        self.advance_window();
 
         if let Some(current_bucket) = self.buckets.back_mut() {
             current_bucket.data_points.push(value);
@@ -169,7 +172,7 @@ impl<T> DMSSlidingWindow<T> {
     /// # Returns
     ///
     /// A vector of references to all data points in the current window
-    pub fn _Fget_data_points(&self) -> Vec<&T> {
+    pub fn get_data_points(&self) -> Vec<&T> {
         self.buckets
             .iter()
             .flat_map(|bucket| &bucket.data_points)
@@ -181,7 +184,7 @@ impl<T> DMSSlidingWindow<T> {
     /// # Returns
     ///
     /// The number of data points in the current window
-    pub fn _Fcount(&self) -> usize {
+    pub fn count(&self) -> usize {
         self.buckets
             .iter()
             .map(|bucket| bucket.data_points.len())
@@ -189,7 +192,7 @@ impl<T> DMSSlidingWindow<T> {
     }
 
     /// Advances the window to the current time, removing old buckets.
-    fn _Fadvance_window(&mut self) {
+    fn advance_window(&mut self) {
         let now = Instant::now();
         let elapsed = now.duration_since(self.current_time);
 
@@ -216,19 +219,21 @@ impl<T> DMSSlidingWindow<T> {
 ///
 /// This struct provides methods for calculating quantiles (percentiles) from a set of data points.
 /// It sorts the data and uses linear interpolation for non-integer indices.
+#[allow(dead_code)]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DMSQuantileCalculator {
     /// Sorted list of data points
     sorted_data: Vec<f64>,
 }
 
+#[allow(dead_code)]
 impl DMSQuantileCalculator {
     /// Creates a new quantile calculator.
     ///
     /// # Returns
     ///
     /// A new DMSQuantileCalculator instance
-    pub fn _Fnew() -> Self {
+    pub fn new() -> Self {
         Self {
             sorted_data: Vec::new(),
         }
@@ -239,7 +244,7 @@ impl DMSQuantileCalculator {
     /// # Parameters
     ///
     /// - `value`: The data point to add
-    pub fn _Fadd(&mut self, value: f64) {
+    pub fn add(&mut self, value: f64) {
         self.sorted_data.push(value);
     }
 
@@ -252,7 +257,7 @@ impl DMSQuantileCalculator {
     /// # Returns
     ///
     /// An `Option<f64>` containing the calculated quantile, or None if the data is empty or q is out of range
-    pub fn _Fquantile(&mut self, q: f64) -> Option<f64> {
+    pub fn quantile(&mut self, q: f64) -> Option<f64> {
         if self.sorted_data.is_empty() || !(0.0..=1.0).contains(&q) {
             return None;
         }
@@ -283,8 +288,8 @@ impl DMSQuantileCalculator {
     /// # Returns
     ///
     /// A vector of `Option<f64>` containing the calculated quantiles
-    pub fn _Fquantiles(&mut self, quantiles: &[f64]) -> Vec<Option<f64>> {
-        quantiles.iter().map(|&q| self._Fquantile(q)).collect()
+    pub fn quantiles(&mut self, quantiles: &[f64]) -> Vec<Option<f64>> {
+        quantiles.iter().map(|&q| self.quantile(q)).collect()
     }
 
     /// Gets the minimum value in the data set.
@@ -292,7 +297,7 @@ impl DMSQuantileCalculator {
     /// # Returns
     ///
     /// An `Option<f64>` containing the minimum value, or None if the data is empty
-    pub fn _Fmin(&self) -> Option<f64> {
+    pub fn min(&self) -> Option<f64> {
         self.sorted_data.iter().fold(None, |min, &val| match min {
             None => Some(val),
             Some(m) => Some(m.min(val)),
@@ -304,7 +309,7 @@ impl DMSQuantileCalculator {
     /// # Returns
     ///
     /// An `Option<f64>` containing the maximum value, or None if the data is empty
-    pub fn _Fmax(&self) -> Option<f64> {
+    pub fn max(&self) -> Option<f64> {
         self.sorted_data.iter().fold(None, |max, &val| match max {
             None => Some(val),
             Some(m) => Some(m.max(val)),
@@ -316,7 +321,7 @@ impl DMSQuantileCalculator {
     /// # Returns
     ///
     /// An `Option<f64>` containing the mean value, or None if the data is empty
-    pub fn _Fmean(&self) -> Option<f64> {
+    pub fn mean(&self) -> Option<f64> {
         if self.sorted_data.is_empty() {
             return None;
         }
@@ -330,8 +335,8 @@ impl DMSQuantileCalculator {
     /// # Returns
     ///
     /// An `Option<f64>` containing the standard deviation, or None if the data is empty
-    pub fn _Fstd_dev(&self) -> Option<f64> {
-        let mean = self._Fmean()?;
+    pub fn std_dev(&self) -> Option<f64> {
+        let mean = self.mean()?;
         if self.sorted_data.len() <= 1 {
             return Some(0.0);
         }
@@ -347,7 +352,7 @@ impl DMSQuantileCalculator {
     }
 
     /// Clears all data from the calculator.
-    pub fn _Fclear(&mut self) {
+    pub fn clear(&mut self) {
         self.sorted_data.clear();
     }
 }
@@ -356,6 +361,7 @@ impl DMSQuantileCalculator {
 ///
 /// This struct collects performance metrics using sliding windows and provides quantile-based
 /// performance analysis.
+#[allow(dead_code)]
 pub struct DMSPerformanceCollector {
     /// Sliding window for latency data
     latency_window: DMSSlidingWindow<f64>,
@@ -367,6 +373,7 @@ pub struct DMSPerformanceCollector {
     quantile_calculator: DMSQuantileCalculator,
 }
 
+#[allow(dead_code)]
 impl DMSPerformanceCollector {
     /// Creates a new performance collector with the specified window size and bucket size.
     ///
@@ -378,12 +385,12 @@ impl DMSPerformanceCollector {
     /// # Returns
     ///
     /// A new DMSPerformanceCollector instance
-    pub fn _Fnew(window_size: Duration, bucket_size: Duration) -> Self {
+    pub fn new(window_size: Duration, bucket_size: Duration) -> Self {
         Self {
-            latency_window: DMSSlidingWindow::_Fnew(window_size, bucket_size),
-            throughput_window: DMSSlidingWindow::_Fnew(window_size, bucket_size),
-            error_rate_window: DMSSlidingWindow::_Fnew(window_size, bucket_size),
-            quantile_calculator: DMSQuantileCalculator::_Fnew(),
+            latency_window: DMSSlidingWindow::new(window_size, bucket_size),
+            throughput_window: DMSSlidingWindow::new(window_size, bucket_size),
+            error_rate_window: DMSSlidingWindow::new(window_size, bucket_size),
+            quantile_calculator: DMSQuantileCalculator::new(),
         }
     }
 
@@ -393,10 +400,10 @@ impl DMSPerformanceCollector {
     ///
     /// - `latency_ms`: The request latency in milliseconds
     /// - `is_error`: Whether the request resulted in an error
-    pub fn _Frecord_request(&mut self, latency_ms: f64, is_error: bool) {
-        self.latency_window._Fadd(latency_ms);
-        self.throughput_window._Fadd(1);
-        self.error_rate_window._Fadd(is_error);
+    pub fn record_request(&mut self, latency_ms: f64, is_error: bool) {
+        self.latency_window.add(latency_ms);
+        self.throughput_window.add(1);
+        self.error_rate_window.add(is_error);
     }
 
     /// Gets the current performance metrics.
@@ -404,27 +411,27 @@ impl DMSPerformanceCollector {
     /// # Returns
     ///
     /// A DMSPerformanceMetrics instance containing the current performance metrics
-    pub fn _Fget_metrics(&mut self) -> DMSPerformanceMetrics {
+    pub fn get_metrics(&mut self) -> DMSPerformanceMetrics {
         let latencies: Vec<f64> = self
             .latency_window
-            ._Fget_data_points()
+            .get_data_points()
             .iter()
             .map(|&&x| x)
             .collect();
 
         // Update quantile calculator with current data
-        self.quantile_calculator._Fclear();
+        self.quantile_calculator.clear();
         for &latency in &latencies {
-            self.quantile_calculator._Fadd(latency);
+            self.quantile_calculator.add(latency);
         }
 
-        let p50 = self.quantile_calculator._Fquantile(0.5).unwrap_or(0.0);
-        let p95 = self.quantile_calculator._Fquantile(0.95).unwrap_or(0.0);
-        let p99 = self.quantile_calculator._Fquantile(0.99).unwrap_or(0.0);
+        let p50 = self.quantile_calculator.quantile(0.5).unwrap_or(0.0);
+        let p95 = self.quantile_calculator.quantile(0.95).unwrap_or(0.0);
+        let p99 = self.quantile_calculator.quantile(0.99).unwrap_or(0.0);
 
         let errors: Vec<bool> = self
             .error_rate_window
-            ._Fget_data_points()
+            .get_data_points()
             .iter()
             .map(|&&x| x)
             .collect();
@@ -441,10 +448,10 @@ impl DMSPerformanceCollector {
             p50_latency_ms: p50,
             p95_latency_ms: p95,
             p99_latency_ms: p99,
-            mean_latency_ms: self.quantile_calculator._Fmean().unwrap_or(0.0),
-            min_latency_ms: self.quantile_calculator._Fmin().unwrap_or(0.0),
-            max_latency_ms: self.quantile_calculator._Fmax().unwrap_or(0.0),
-            throughput_rps: self.throughput_window._Fcount() as f64,
+            mean_latency_ms: self.quantile_calculator.mean().unwrap_or(0.0),
+            min_latency_ms: self.quantile_calculator.min().unwrap_or(0.0),
+            max_latency_ms: self.quantile_calculator.max().unwrap_or(0.0),
+            throughput_rps: self.throughput_window.count() as f64,
             error_rate,
             total_requests: total_requests as u64,
         }
@@ -581,6 +588,7 @@ pub struct DMSSystemMetrics {
 ///
 /// This struct collects system metrics using the sysinfo crate, providing cross-platform
 /// system monitoring capabilities.
+#[allow(dead_code)]
 pub struct DMSSystemMetricsCollector {
     /// sysinfo System instance for collecting metrics
     system: System,
@@ -596,18 +604,19 @@ pub struct DMSSystemMetricsCollector {
     last_network_time: Instant,
 }
 
+#[allow(dead_code)]
 impl DMSSystemMetricsCollector {
     /// Creates a new system metrics collector.
     ///
     /// # Returns
     ///
     /// A new DMSSystemMetricsCollector instance
-    pub fn _Fnew() -> Self {
+    pub fn new() -> Self {
         let mut system = System::new_all();
         system.refresh_all();
 
         let (received_bytes, transmitted_bytes, received_packets, transmitted_packets) =
-            Self::_Fget_network_total(&system);
+            Self::get_network_total(&system);
 
         Self {
             system,
@@ -624,13 +633,13 @@ impl DMSSystemMetricsCollector {
     /// # Returns
     ///
     /// A DMSSystemMetrics instance containing the current system metrics
-    pub fn _Fcollect(&mut self) -> DMSSystemMetrics {
+    pub fn collect(&mut self) -> DMSSystemMetrics {
         self.system.refresh_all();
 
-        let cpu = self._Fget_cpu_metrics();
-        let memory = self._Fget_memory_metrics();
-        let disk = self._Fget_disk_metrics();
-        let network = self._Fget_network_metrics();
+        let cpu = self.get_cpu_metrics();
+        let memory = self.get_memory_metrics();
+        let disk = self.get_disk_metrics();
+        let network = self.get_network_metrics();
 
         let timestamp = chrono::Utc::now().timestamp_millis() as u64;
         
@@ -648,7 +657,7 @@ impl DMSSystemMetricsCollector {
     /// # Returns
     ///
     /// A DMSCPUMetrics instance containing the CPU metrics
-    fn _Fget_cpu_metrics(&self) -> DMSCPUMetrics {
+    fn get_cpu_metrics(&self) -> DMSCPUMetrics {
         let total_usage = self.system.global_cpu_info().cpu_usage();
         let per_core_usage: Vec<f64> = self
             .system
@@ -672,7 +681,7 @@ impl DMSSystemMetricsCollector {
     /// # Returns
     ///
     /// A DMSMemoryMetrics instance containing the memory metrics
-    fn _Fget_memory_metrics(&self) -> DMSMemoryMetrics {
+    fn get_memory_metrics(&self) -> DMSMemoryMetrics {
         let total = self.system.total_memory();
         let used = self.system.used_memory();
         let free = self.system.free_memory();
@@ -704,7 +713,7 @@ impl DMSSystemMetricsCollector {
     /// # Returns
     ///
     /// A DMSDiskMetrics instance containing the disk metrics
-    fn _Fget_disk_metrics(&self) -> DMSDiskMetrics {
+    fn get_disk_metrics(&self) -> DMSDiskMetrics {
         // Get first disk for now
         if let Some(disk) = self.system.disks().first() {
             let total = disk.total_space();
@@ -743,9 +752,9 @@ impl DMSSystemMetricsCollector {
     /// # Returns
     ///
     /// A DMSNetworkMetrics instance containing the network metrics
-    fn _Fget_network_metrics(&mut self) -> DMSNetworkMetrics {
+    fn get_network_metrics(&mut self) -> DMSNetworkMetrics {
         let (received_bytes, transmitted_bytes, received_packets, transmitted_packets) =
-            Self::_Fget_network_total(&self.system);
+            Self::get_network_total(&self.system);
 
         let now = Instant::now();
         let elapsed = now
@@ -790,7 +799,7 @@ impl DMSSystemMetricsCollector {
     /// # Returns
     ///
     /// A tuple containing (received_bytes, transmitted_bytes, received_packets, transmitted_packets)
-    fn _Fget_network_total(system: &System) -> (u64, u64, u64, u64) {
+    fn get_network_total(system: &System) -> (u64, u64, u64, u64) {
         let mut received_bytes = 0;
         let mut transmitted_bytes = 0;
         let mut received_packets = 0;

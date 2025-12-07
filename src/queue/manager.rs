@@ -25,7 +25,7 @@
 //! 
 //! ## Key Components
 //! 
-//! - **DMSQueueModule**: Main queue module implementing the `_CAsyncServiceModule` trait
+//! - **DMSQueueModule**: Main queue module implementing the `AsyncServiceModule` trait
 //! - **DMSQueueManager**: Central queue management component responsible for queue lifecycle
 //! 
 //! ## Design Principles
@@ -58,16 +58,16 @@
 //!     };
 //!     
 //!     // Create queue module
-//!     let queue_module = DMSQueueModule::_Fnew(queue_config).await?;
-//!     
-//!     // Get queue manager
-//!     let queue_manager = queue_module._Fqueue_manager();
-//!     
-//!     // Create or get a queue
-//!     let queue = queue_manager._Fcreate_queue("example_queue").await?;
-//!     
-//!     // List all queues
-//!     let queues = queue_manager._Flist_queues().await;
+//!     let queue_module = DMSQueueModule::new(queue_config).await?;
+    //!     
+    //!     // Get queue manager
+    //!     let queue_manager = queue_module.queue_manager();
+    //!     
+    //!     // Create or get a queue
+    //!     let queue = queue_manager.create_queue("example_queue").await?;
+    //!     
+    //!     // List all queues
+    //!     let queues = queue_manager.list_queues().await;
 //!     println!("Available queues: {:?}", queues);
 //!     
 //!     Ok(())
@@ -78,7 +78,7 @@ use std::sync::Arc;
 use std::collections::HashMap;
 use tokio::sync::RwLock;
 use async_trait::async_trait;
-use crate::core::{DMSResult, _CAsyncServiceModule, DMSServiceContext};
+use crate::core::{DMSResult, AsyncServiceModule, DMSServiceContext};
 use crate::queue::{DMSQueue, DMSQueueConfig, QueueBackendType};
 
 /// Main queue module implementing the async service module trait.
@@ -100,8 +100,8 @@ impl DMSQueueModule {
     /// # Returns
     /// 
     /// A `DMSResult<Self>` containing the new queue module instance
-    pub async fn _Fnew(config: DMSQueueConfig) -> DMSResult<Self> {
-        let queue_manager = Arc::new(DMSQueueManager::_Fnew(config).await?);
+    pub async fn new(config: DMSQueueConfig) -> DMSResult<Self> {
+        let queue_manager = Arc::new(DMSQueueManager::new(config).await?);
         Ok(Self { queue_manager })
     }
 
@@ -110,13 +110,13 @@ impl DMSQueueModule {
     /// # Returns
     /// 
     /// An Arc<DMSQueueManager> providing thread-safe access to the queue manager
-    pub fn _Fqueue_manager(&self) -> Arc<DMSQueueManager> {
+    pub fn queue_manager(&self) -> Arc<DMSQueueManager> {
         self.queue_manager.clone()
     }
 }
 
 #[async_trait]
-impl _CAsyncServiceModule for DMSQueueModule {
+impl AsyncServiceModule for DMSQueueModule {
     /// Initializes the queue module.
     /// 
     /// This method delegates to the queue manager's initialization method.
@@ -128,8 +128,8 @@ impl _CAsyncServiceModule for DMSQueueModule {
     /// # Returns
     /// 
     /// A `DMSResult<()>` indicating success or failure
-    async fn _Finit(&mut self, _ctx: &mut DMSServiceContext) -> DMSResult<()> {
-        self.queue_manager._Finit().await
+    async fn init(&mut self, _ctx: &mut DMSServiceContext) -> DMSResult<()> {
+        self.queue_manager.init().await
     }
 
     /// Performs cleanup after the application has shut down.
@@ -143,8 +143,8 @@ impl _CAsyncServiceModule for DMSQueueModule {
     /// # Returns
     /// 
     /// A `DMSResult<()>` indicating success or failure
-    async fn _Fafter_shutdown(&mut self, _ctx: &mut DMSServiceContext) -> DMSResult<()> {
-        self.queue_manager._Fshutdown().await
+    async fn after_shutdown(&mut self, _ctx: &mut DMSServiceContext) -> DMSResult<()> {
+        self.queue_manager.shutdown().await
     }
 
     /// Returns the name of the queue module.
@@ -152,7 +152,7 @@ impl _CAsyncServiceModule for DMSQueueModule {
     /// # Returns
     /// 
     /// The module name as a string
-    fn _Fname(&self) -> &str {
+    fn name(&self) -> &str {
         "dms-queue"
     }
 
@@ -164,7 +164,7 @@ impl _CAsyncServiceModule for DMSQueueModule {
     /// # Returns
     /// 
     /// `false` since queue is non-critical
-    fn _Fis_critical(&self) -> bool {
+    fn is_critical(&self) -> bool {
         false
     }
 }
@@ -190,12 +190,14 @@ impl DMSQueueManager {
     /// # Returns
     /// 
     /// A `DMSResult<Self>` containing the new queue manager instance
-    pub async fn _Fnew(config: DMSQueueConfig) -> DMSResult<Self> {
+    pub async fn new(config: DMSQueueConfig) -> DMSResult<Self> {
         Ok(Self {
             config,
             queues: Arc::new(RwLock::new(HashMap::new())),
         })
     }
+    
+
 
     /// Initializes the queue manager.
     /// 
@@ -205,7 +207,7 @@ impl DMSQueueManager {
     /// # Returns
     /// 
     /// A `DMSResult<()>` indicating success or failure
-    pub async fn _Finit(&self) -> DMSResult<()> {
+    pub async fn init(&self) -> DMSResult<()> {
         // Initialize queue connections based on backend type
         match self.config.backend_type {
             QueueBackendType::Memory => {
@@ -230,14 +232,14 @@ impl DMSQueueManager {
     /// # Returns
     /// 
     /// A `DMSResult<Arc<dyn DMSQueue>>` containing the queue instance
-    pub async fn _Fcreate_queue(&self, name: &str) -> DMSResult<Arc<dyn DMSQueue>> {
+    pub async fn create_queue(&self, name: &str) -> DMSResult<Arc<dyn DMSQueue>> {
         let mut queues = self.queues.write().await;
         
         if let Some(queue) = queues.get(name) {
             return Ok(queue.clone());
         }
 
-        let queue = self._Fcreate_backend_queue(name).await?;
+        let queue = self.create_backend_queue(name).await?;
         queues.insert(name.to_string(), queue.clone());
         
         Ok(queue)
@@ -255,19 +257,19 @@ impl DMSQueueManager {
     /// # Returns
     /// 
     /// A `DMSResult<Arc<dyn DMSQueue>>` containing the created queue instance
-    async fn _Fcreate_backend_queue(&self, name: &str) -> DMSResult<Arc<dyn DMSQueue>> {
+    async fn create_backend_queue(&self, name: &str) -> DMSResult<Arc<dyn DMSQueue>> {
         match self.config.backend_type {
             QueueBackendType::Memory => {
-                Ok(Arc::new(crate::queue::backends::DMSMemoryQueue::_Fnew(name)))
+                Ok(Arc::new(crate::queue::backends::DMSMemoryQueue::new(name)))
             }
             QueueBackendType::RabbitMQ => {
-                Ok(Arc::new(crate::queue::backends::DMSRabbitMQQueue::_Fnew(name, &self.config.connection_string).await?))
+                Ok(Arc::new(crate::queue::backends::DMSRabbitMQQueue::new(name, &self.config.connection_string).await?))
             }
             QueueBackendType::Kafka => {
                 Err(crate::core::DMSError::Config("Kafka support temporarily disabled due to build dependencies".to_string()))
             }
             QueueBackendType::Redis => {
-                Ok(Arc::new(crate::queue::backends::DMSRedisQueue::_Fnew(name, &self.config.connection_string).await?))
+                Ok(Arc::new(crate::queue::backends::DMSRedisQueue::new(name, &self.config.connection_string).await?))
             }
         }
     }
@@ -281,7 +283,7 @@ impl DMSQueueManager {
     /// # Returns
     /// 
     /// An `Option<Arc<dyn DMSQueue>>` containing the queue instance if it exists, or None otherwise
-    pub async fn _Fget_queue(&self, name: &str) -> Option<Arc<dyn DMSQueue>> {
+    pub async fn get_queue(&self, name: &str) -> Option<Arc<dyn DMSQueue>> {
         let queues = self.queues.read().await;
         queues.get(name).cloned()
     }
@@ -291,7 +293,7 @@ impl DMSQueueManager {
     /// # Returns
     /// 
     /// A `Vec<String>` containing the names of all created queues
-    pub async fn _Flist_queues(&self) -> Vec<String> {
+    pub async fn list_queues(&self) -> Vec<String> {
         let queues = self.queues.read().await;
         queues.keys().cloned().collect()
     }
@@ -308,10 +310,10 @@ impl DMSQueueManager {
     /// # Returns
     /// 
     /// A `DMSResult<()>` indicating success or failure
-    pub async fn _Fdelete_queue(&self, name: &str) -> DMSResult<()> {
+    pub async fn delete_queue(&self, name: &str) -> DMSResult<()> {
         let mut queues = self.queues.write().await;
         if let Some(queue) = queues.remove(name) {
-            queue._Fdelete().await?;
+            queue.delete().await?;
         }
         Ok(())
     }
@@ -323,11 +325,11 @@ impl DMSQueueManager {
     /// # Returns
     /// 
     /// A `DMSResult<()>` indicating success or failure
-    pub async fn _Fshutdown(&self) -> DMSResult<()> {
+    pub async fn shutdown(&self) -> DMSResult<()> {
         let mut queues = self.queues.write().await;
         for (_, queue) in queues.drain() {
             // Cleanup each queue
-            let _ = queue._Fpurge().await;
+            let _ = queue.purge().await;
         }
         Ok(())
     }

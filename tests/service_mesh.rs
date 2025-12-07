@@ -31,8 +31,8 @@ use dms::service_mesh::{DMSServiceInstance, DMSServiceStatus};
 use dms::service_mesh::{DMSHealthCheckResult, DMSHealthSummary, DMSHealthStatus};
 use dms::service_mesh::{DMSTrafficRoute, DMSMatchCriteria, DMSRouteAction};
 
-#[tokio::test]
-async fn test_service_mesh_config_default() {
+#[test]
+fn test_service_mesh_config_default() {
     let config = DMSServiceMeshConfig::default();
     
     assert!(config.enable_service_discovery);
@@ -43,8 +43,8 @@ async fn test_service_mesh_config_default() {
     assert_eq!(config.retry_timeout.as_secs(), 5);
 }
 
-#[tokio::test]
-async fn test_service_mesh_new() {
+#[test]
+fn test_service_mesh_new() {
     let config = DMSServiceMeshConfig::default();
     
     let service_mesh = DMSServiceMesh::new(config).unwrap();
@@ -108,8 +108,8 @@ async fn test_service_mesh_update_service_health() {
     assert!(endpoints.is_err());
 }
 
-#[tokio::test]
-async fn test_service_instance_new() {
+#[test]
+fn test_service_instance_new() {
     let instance = DMSServiceInstance {
         id: "test_instance".to_string(),
         service_name: "test_service".to_string(),
@@ -128,8 +128,8 @@ async fn test_service_instance_new() {
     assert_eq!(instance.status, DMSServiceStatus::Running);
 }
 
-#[tokio::test]
-async fn test_health_check_result_new() {
+#[test]
+fn test_health_check_result_new() {
     let result = DMSHealthCheckResult {
         service_id: "test_service".to_string(),
         instance_id: "test_instance".to_string(),
@@ -145,8 +145,8 @@ async fn test_health_check_result_new() {
     assert_eq!(result.details, "All checks passed");
 }
 
-#[tokio::test]
-async fn test_health_summary_new() {
+#[test]
+fn test_health_summary_new() {
     let summary = DMSHealthSummary {
         total_services: 10,
         healthy_services: 8,
@@ -167,8 +167,8 @@ async fn test_health_summary_new() {
     assert_eq!(summary.unhealthy_instances, 4);
 }
 
-#[tokio::test]
-async fn test_traffic_route_new() {
+#[test]
+fn test_traffic_route_new() {
     let match_criteria = DMSMatchCriteria {
         path: Some("/api/v1/*".to_string()),
         method: Some("GET".to_string()),
@@ -198,8 +198,8 @@ async fn test_traffic_route_new() {
     assert_eq!(route.priority, 100);
 }
 
-#[tokio::test]
-async fn test_service_health_status() {
+#[test]
+fn test_service_health_status() {
     // Test all health status variants
     assert_eq!(DMSServiceHealthStatus::Healthy.to_string(), "Healthy");
     assert_eq!(DMSServiceHealthStatus::Unhealthy.to_string(), "Unhealthy");

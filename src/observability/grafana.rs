@@ -44,7 +44,7 @@
 //! 
 //! fn example() -> DMSResult<()> {
 //!     // Create a new dashboard
-//!     let mut dashboard = DMSGrafanaDashboard::_Fnew("DMS Metrics");
+//!     let mut dashboard = DMSGrafanaDashboard::new("DMS Metrics");
 //!     
 //!     // Create a panel
 //!     let panel = DMSGrafanaPanel {
@@ -60,10 +60,10 @@
 //!     };
 //!     
 //!     // Add panel to dashboard
-//!     dashboard._Fadd_panel(panel)?;
+//!     dashboard.add_panel(panel)?;
 //!     
 //!     // Convert to JSON for Grafana API
-//!     let json = dashboard._Fto_json()?;
+//!     let json = dashboard.to_json()?;
 //!     println!("Dashboard JSON: {}", json);
 //!     
 //!     Ok(())
@@ -95,20 +95,21 @@ pub struct DMSGrafanaDashboard {
     pub panels: Vec<DMSGrafanaPanel>,
 }
 
+#[allow(dead_code)]
 impl DMSGrafanaDashboard {
-    pub fn _Fnew(title: &str) -> Self {
+    pub fn new(title: &str) -> Self {
         DMSGrafanaDashboard {
             title: title.to_string(),
             panels: Vec::new(),
         }
     }
     
-    pub fn _Fadd_panel(&mut self, panel: DMSGrafanaPanel) -> DMSResult<()> {
+    pub fn add_panel(&mut self, panel: DMSGrafanaPanel) -> DMSResult<()> {
         self.panels.push(panel);
         Ok(())
     }
     
-    pub fn _Fto_json(&self) -> DMSResult<String> {
+    pub fn to_json(&self) -> DMSResult<String> {
         serde_json::to_string(self).map_err(|e| crate::core::DMSError::Serde(e.to_string()))
     }
 }

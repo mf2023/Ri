@@ -15,7 +15,7 @@
 //! See the License for the specific language governing permissions and
 //! limitations under the License.
 
-#![allow(non_snake_case)]
+
 
 //! # Service Mesh Module
 //! 
@@ -104,12 +104,12 @@ use std::time::{Duration, SystemTime};
 use tokio::sync::RwLock;
 
 use crate::core::{DMSModule, DMSResult, DMSError};
-use crate::gateway::circuit_breaker::{DMSCircuitBreaker, DMSCircuitBreakerConfig};
-use crate::gateway::load_balancer::{DMSLoadBalancer, DMSLoadBalancerStrategy, DMSBackendServer};
+use crate::gateway::{DMSCircuitBreaker, DMSCircuitBreakerConfig, DMSLoadBalancer, DMSLoadBalancerStrategy};
+use crate::gateway::load_balancer::DMSBackendServer;
 
-pub mod service_discovery;
-pub mod health_check;
-pub mod traffic_management;
+mod service_discovery;
+mod health_check;
+mod traffic_management;
 
 use service_discovery::DMSServiceDiscovery;
 use health_check::DMSHealthChecker;
@@ -234,11 +234,11 @@ impl DMSServiceMesh {
     /// 
     /// A `DMSResult<Self>` containing the new service mesh instance
     pub fn new(config: DMSServiceMeshConfig) -> DMSResult<Self> {
-        let service_discovery = Arc::new(DMSServiceDiscovery::_Fnew(config.enable_service_discovery));
-        let health_checker = Arc::new(DMSHealthChecker::_Fnew(config.health_check_interval));
-        let traffic_manager = Arc::new(DMSTrafficManager::_Fnew(config.enable_traffic_management));
-        let circuit_breaker = Arc::new(DMSCircuitBreaker::_Fnew(config.circuit_breaker_config.clone()));
-        let load_balancer = Arc::new(DMSLoadBalancer::_Fnew(config.load_balancer_strategy.clone()));
+        let service_discovery = Arc::new(DMSServiceDiscovery::new(config.enable_service_discovery));
+        let health_checker = Arc::new(DMSHealthChecker::new(config.health_check_interval));
+        let traffic_manager = Arc::new(DMSTrafficManager::new(config.enable_traffic_management));
+        let circuit_breaker = Arc::new(DMSCircuitBreaker::new(config.circuit_breaker_config.clone()));
+        let load_balancer = Arc::new(DMSLoadBalancer::new(config.load_balancer_strategy.clone()));
         
         Ok(Self {
             config,
@@ -347,12 +347,12 @@ impl DMSServiceMesh {
             })
             .collect();
 
-        let selected_server = match self.load_balancer._Fselect_server(None).await {
+        let selected_server = match self.load_balancer.select_server(None).await {
             Ok(server) => server,
             Err(_) => return Err(DMSError::ServiceMesh("No available backend server".to_string())),
         };
 
-        if !self.circuit_breaker._Fallow_request().await {
+        if !self.circuit_breaker.allow_request().await {
             return Err(DMSError::ServiceMesh("Circuit breaker is open".to_string()));
         }
 
@@ -360,10 +360,10 @@ impl DMSServiceMesh {
 
         match &result {
             Ok(_) => {
-                self.circuit_breaker._Frecord_success().await;
+                self.circuit_breaker.record_success().await;
             }
             Err(_) => {
-                self.circuit_breaker._Frecord_failure().await;
+                self.circuit_breaker.record_failure().await;
             }
         }
 

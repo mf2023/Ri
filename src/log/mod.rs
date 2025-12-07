@@ -29,7 +29,7 @@
 //! - **DMSLogConfig**: Configuration struct for logging behavior
 //! - **DMSLogContext**: Thread-local context for adding contextual information to logs
 //! - **DMSLogger**: Public-facing logger class for application use
-//! - **_CLoggerImpl**: Internal logger implementation
+//! - **LoggerImpl**: Internal logger implementation
 //! 
 //! ## Design Principles
 //! 
@@ -48,19 +48,19 @@
 //! 
 //! fn example() -> DMSResult<()> {
 //!     // Create a default log configuration
-//!     let log_config = DMSLogConfig::_Fdefault();
+//!     let log_config = DMSLogConfig::default();
 //!     
 //!     // Create a file system instance (usually provided by the service context)
-//!     let fs = DMSFileSystem::_Fnew();
+//!     let fs = DMSFileSystem::new();
 //!     
 //!     // Create a logger
-//!     let logger = DMSLogger::_Fnew(&log_config, fs);
+//!     let logger = DMSLogger::new(&log_config, fs);
 //!     
 //!     // Log messages at different levels
-//!     logger._Fdebug("example", "Debug message")?;
-//!     logger._Finfo("example", "Info message")?;
-//!     logger._Fwarn("example", "Warning message")?;
-//!     logger._Ferror("example", "Error message")?;
+//!     logger.debug("example", "Debug message")?;
+//!     logger.info("example", "Info message")?;
+//!     logger.warn("example", "Warning message")?;
+//!     logger.error("example", "Error message")?;
 //!     
 //!     Ok(())
 //! }
@@ -106,7 +106,7 @@ impl DMSLogLevel {
     /// # Returns
     /// 
     /// A static string representing the log level ("DEBUG", "INFO", "WARN", or "ERROR")
-    pub fn _Fas_str(&self) -> &'static str {
+    pub fn as_str(&self) -> &'static str {
         match self {
             DMSLogLevel::Debug => "DEBUG",
             DMSLogLevel::Info => "INFO",
@@ -152,7 +152,7 @@ impl DMSLogConfig {
     /// - json_format: false
     /// - rotate_when: "size"
     /// - max_bytes: 10 MB
-    pub fn _Fdefault() -> Self {
+    pub fn default() -> Self {
         DMSLogConfig {
             level: DMSLogLevel::Info,
             console_enabled: true,
@@ -184,10 +184,10 @@ impl DMSLogConfig {
     /// # Returns
     /// 
     /// A `DMSLogConfig` instance with configuration from the given `DMSConfig`
-    pub fn _Ffrom_config(config: &crate::config::DMSConfig) -> Self {
-        let mut base = DMSLogConfig::_Fdefault();
+    pub fn from_config(config: &crate::config::DMSConfig) -> Self {
+        let mut base = DMSLogConfig::default();
 
-        if let Some(level_str) = config._Fget_str("log.level") {
+        if let Some(level_str) = config.get_str("log.level") {
             base.level = match level_str {
                 "DEBUG" | "debug" => DMSLogLevel::Debug,
                 "INFO" | "info" => DMSLogLevel::Info,
@@ -197,40 +197,40 @@ impl DMSLogConfig {
             };
         }
 
-        if let Some(v) = config._Fget_f32("log.sampling_default") {
+        if let Some(v) = config.get_f32("log.sampling_default") {
             base.sampling_default = v.clamp(0.0, 1.0);
         }
 
-        if let Some(file_name) = config._Fget_str("log.file_name") {
+        if let Some(file_name) = config.get_str("log.file_name") {
             if !file_name.is_empty() {
                 base.file_name = file_name.to_string();
             }
         }
 
-        if let Some(fmt) = config._Fget_str("log.file_format") {
+        if let Some(fmt) = config.get_str("log.file_format") {
             // Accept "json"/"JSON" to enable JSON file output, others default to text
             if fmt.eq_ignore_ascii_case("json") {
                 base.json_format = true;
             }
         }
 
-        if let Some(rotate) = config._Fget_str("log.rotate_when") {
+        if let Some(rotate) = config.get_str("log.rotate_when") {
             if !rotate.is_empty() {
                 base.rotate_when = rotate.to_string();
             }
         }
 
-        if let Some(v) = config._Fget_u64("log.max_bytes") {
+        if let Some(v) = config.get_u64("log.max_bytes") {
             if v > 0 {
                 base.max_bytes = v;
             }
         }
 
-        if let Some(v) = config._Fget_bool("log.console_enabled") {
+        if let Some(v) = config.get_bool("log.console_enabled") {
             base.console_enabled = v;
         }
 
-        if let Some(v) = config._Fget_bool("log.file_enabled") {
+        if let Some(v) = config.get_bool("log.file_enabled") {
             base.file_enabled = v;
         }
 
@@ -251,7 +251,7 @@ struct LogEntry {
 /// 
 /// This struct contains the internal implementation of the logging system, including
 /// log level checking, sampling, log message formatting, and caching.
-struct _CLoggerImpl {
+struct LoggerImpl {
     /// Minimum log level to be logged
     level: DMSLogLevel,
     /// File system instance for writing log files
@@ -289,7 +289,7 @@ struct _CLoggerImpl {
     shutdown_flag: Arc<Mutex<bool>>,
 }
 
-impl _CLoggerImpl {
+impl LoggerImpl {
     /// Creates a new internal logger implementation.
     /// 
     /// # Parameters
@@ -299,8 +299,8 @@ impl _CLoggerImpl {
     /// 
     /// # Returns
     /// 
-    /// A new `_CLoggerImpl` instance
-    fn _Fnew(config: &DMSLogConfig, fs: DMSFileSystem) -> Self {
+    /// A new `LoggerImpl` instance
+    fn new(config: &DMSLogConfig, fs: DMSFileSystem) -> Self {
         let log_cache = Arc::new((Mutex::new(VecDeque::new()), Condvar::new()));
         let shutdown_flag = Arc::new(Mutex::new(false));
         let cache_size_limit = 1000;
@@ -324,7 +324,7 @@ impl _CLoggerImpl {
                 // Check if we should shutdown
                 if *bg_shutdown_flag.lock().unwrap() {
                     // Flush remaining logs before shutting down
-                    Self::_Fflush_cache(
+                    Self::flush_cache(
                         &bg_log_cache,
                         &bg_fs,
                         &bg_file_name,
@@ -343,7 +343,7 @@ impl _CLoggerImpl {
                 let cache_len = bg_log_cache.0.lock().unwrap().len();
                 
                 if time_since_last_flush >= Duration::from_millis(flush_interval_ms) || cache_len >= cache_size_limit {
-                    Self::_Fflush_cache(
+                    Self::flush_cache(
                         &bg_log_cache,
                         &bg_fs,
                         &bg_file_name,
@@ -361,7 +361,7 @@ impl _CLoggerImpl {
             }
         });
         
-        _CLoggerImpl {
+        LoggerImpl {
             level: config.level,
             fs,
             sampling_default: config.sampling_default,
@@ -393,7 +393,7 @@ impl _CLoggerImpl {
     /// # Returns
     /// 
     /// A `DMSResult` indicating success or failure
-    fn _Fflush_cache(
+    fn flush_cache(
         log_cache: &Arc<(Mutex<VecDeque<LogEntry>>, Condvar)>,
         fs: &DMSFileSystem,
         file_name: &str,
@@ -447,7 +447,7 @@ impl _CLoggerImpl {
                 format!(
                     "{} [{}] {} event={}{} - {}{}",
                     log_entry.timestamp,
-                    log_entry.level._Fas_str(),
+                    log_entry.level.as_str(),
                     log_entry.target,
                     log_entry.target, // Using target as event for simplicity
                     trace_str,
@@ -475,7 +475,7 @@ impl _CLoggerImpl {
         
         // Write to file in batch
         if !file_logs.is_empty() {
-            let log_file = fs._Flogs_dir().join(file_name);
+            let log_file = fs.logs_dir().join(file_name);
             
             // Simple size-based rotation if enabled
             if rotate_when.eq_ignore_ascii_case("size") && max_bytes > 0 {
@@ -495,7 +495,7 @@ impl _CLoggerImpl {
             
             // Batch write to file
             let content = file_logs.join("\n") + "\n";
-            fs._Fappend_text(&log_file, &content)?;
+            fs.append_text(&log_file, &content)?;
         }
         
         Ok(())
@@ -510,7 +510,7 @@ impl _CLoggerImpl {
     /// # Returns
     /// 
     /// `true` if the message should be logged, `false` otherwise
-    fn _Fshould_log(&self, level: DMSLogLevel) -> bool {
+    fn should_log(&self, level: DMSLogLevel) -> bool {
         (level as u8) >= (self.level as u8)
     }
 
@@ -523,7 +523,7 @@ impl _CLoggerImpl {
     /// # Returns
     /// 
     /// `true` if the event should be logged, `false` otherwise
-    fn _Fshould_log_event(&self, _event: &str) -> bool {
+    fn should_log_event(&self, _event: &str) -> bool {
         // Placeholder: simple sampling based on sampling_default; can be extended per-event.
         if self.sampling_default >= 1.0 {
             true
@@ -540,7 +540,7 @@ impl _CLoggerImpl {
     /// # Returns
     /// 
     /// A string representing the current timestamp in ISO 8601 format (e.g., "1630000000.123Z")
-    fn _Fnow_timestamp() -> String {
+    fn now_timestamp() -> String {
         match SystemTime::now().duration_since(UNIX_EPOCH) {
             Ok(dur) => {
                 let secs = dur.as_secs();
@@ -569,36 +569,36 @@ impl _CLoggerImpl {
     /// # Returns
     /// 
     /// A `DMSResult` indicating success or failure
-    fn _Flog_message<T: Debug>(&self, level: DMSLogLevel, target: &str, message: T) -> DMSResult<()> {
-        if !self._Fshould_log(level) {
+    fn log_message<T: Debug>(&self, level: DMSLogLevel, target: &str, message: T) -> DMSResult<()> {
+        if !self.should_log(level) {
             return Ok(());
         }
 
         let event = target; // simple default; can be extended to accept explicit event names.
-        if !self._Fshould_log_event(event) {
+        if !self.should_log_event(event) {
             return Ok(());
         }
 
-        let ts = Self::_Fnow_timestamp();
+        let ts = Self::now_timestamp();
         let message_str = format!("{:?}", message);
-        let ctx_kv = DMSLogContext::_Fget_all();
+        let ctx_kv = DMSLogContext::get_all();
 
         // Create log entry with structured data
         let mut log_entry_context = serde_json::Map::new();
         log_entry_context.insert("timestamp".to_string(), json!(ts));
-        log_entry_context.insert("level".to_string(), json!(level._Fas_str()));
+        log_entry_context.insert("level".to_string(), json!(level.as_str()));
         log_entry_context.insert("target".to_string(), json!(target));
         log_entry_context.insert("event".to_string(), json!(event));
         log_entry_context.insert("message".to_string(), json!(message_str));
         
         // Add distributed tracing fields if present
-        if let Some(trace_id) = DMSLogContext::_Fget_trace_id() {
+        if let Some(trace_id) = DMSLogContext::get_trace_id() {
             log_entry_context.insert("trace_id".to_string(), json!(trace_id));
         }
-        if let Some(span_id) = DMSLogContext::_Fget_span_id() {
+        if let Some(span_id) = DMSLogContext::get_span_id() {
             log_entry_context.insert("span_id".to_string(), json!(span_id));
         }
-        if let Some(parent_span_id) = DMSLogContext::_Fget_parent_span_id() {
+        if let Some(parent_span_id) = DMSLogContext::get_parent_span_id() {
             log_entry_context.insert("parent_span_id".to_string(), json!(parent_span_id));
         }
         
@@ -634,10 +634,10 @@ impl _CLoggerImpl {
 
 /// Public-facing logger class.
 /// 
-/// This struct provides the public API for logging in DMS, wrapping the internal `_CLoggerImpl`.
+/// This struct provides the public API for logging in DMS, wrapping the internal `LoggerImpl`.
 pub struct DMSLogger {
     /// Internal logger implementation
-    inner: _CLoggerImpl,
+    inner: LoggerImpl,
 }
 
 impl DMSLogger {
@@ -651,8 +651,8 @@ impl DMSLogger {
     /// # Returns
     /// 
     /// A new `DMSLogger` instance
-    pub fn _Fnew(config: &DMSLogConfig, fs: DMSFileSystem) -> Self {
-        let inner = _CLoggerImpl::_Fnew(config, fs);
+    pub fn new(config: &DMSLogConfig, fs: DMSFileSystem) -> Self {
+        let inner = LoggerImpl::new(config, fs);
         DMSLogger { inner }
     }
 
@@ -666,8 +666,8 @@ impl DMSLogger {
     /// # Returns
     /// 
     /// A `DMSResult` indicating success or failure
-    pub fn _Fdebug<T: Debug>(&self, target: &str, message: T) -> DMSResult<()> {
-        self.inner._Flog_message(DMSLogLevel::Debug, target, message)
+    pub fn debug<T: Debug>(&self, target: &str, message: T) -> DMSResult<()> {
+        self.inner.log_message(DMSLogLevel::Debug, target, message)
     }
 
     /// Logs an info message.
@@ -680,8 +680,8 @@ impl DMSLogger {
     /// # Returns
     /// 
     /// A `DMSResult` indicating success or failure
-    pub fn _Finfo<T: Debug>(&self, target: &str, message: T) -> DMSResult<()> {
-        self.inner._Flog_message(DMSLogLevel::Info, target, message)
+    pub fn info<T: Debug>(&self, target: &str, message: T) -> DMSResult<()> {
+        self.inner.log_message(DMSLogLevel::Info, target, message)
     }
 
     /// Logs a warning message.
@@ -694,8 +694,8 @@ impl DMSLogger {
     /// # Returns
     /// 
     /// A `DMSResult` indicating success or failure
-    pub fn _Fwarn<T: Debug>(&self, target: &str, message: T) -> DMSResult<()> {
-        self.inner._Flog_message(DMSLogLevel::Warn, target, message)
+    pub fn warn<T: Debug>(&self, target: &str, message: T) -> DMSResult<()> {
+        self.inner.log_message(DMSLogLevel::Warn, target, message)
     }
 
     /// Logs an error message.
@@ -708,7 +708,7 @@ impl DMSLogger {
     /// # Returns
     /// 
     /// A `DMSResult` indicating success or failure
-    pub fn _Ferror<T: Debug>(&self, target: &str, message: T) -> DMSResult<()> {
-        self.inner._Flog_message(DMSLogLevel::Error, target, message)
+    pub fn error<T: Debug>(&self, target: &str, message: T) -> DMSResult<()> {
+        self.inner.log_message(DMSLogLevel::Error, target, message)
     }
 }

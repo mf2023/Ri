@@ -47,20 +47,20 @@
 //! 
 //! async fn example() -> DMSResult<()> {
 //!     // Create a middleware chain
-//!     let mut chain = DMSMiddlewareChain::_Fnew();
+//!     let mut chain = DMSMiddlewareChain::new();
 //!     
 //!     // Add built-in middleware
-//!     chain._Fadd(Arc::new(DMSLoggingMiddleware::_Fnew("info".to_string())));
-//!     chain._Fadd(Arc::new(DMSAuthMiddleware::_Fnew("Authorization".to_string())));
-//!     chain._Fadd(Arc::new(DMSCorsMiddleware::_Fnew(
+//!     chain.add(Arc::new(DMSLoggingMiddleware::new("info".to_string())));
+//!     chain.add(Arc::new(DMSAuthMiddleware::new("Authorization".to_string())));
+//!     chain.add(Arc::new(DMSCorsMiddleware::new(
 //!         vec!["*".to_string()],
 //!         vec!["GET".to_string(), "POST".to_string()],
 //!         vec!["Content-Type".to_string(), "Authorization".to_string()]
 //!     )));
 //!     
 //!     // Create a request and execute the middleware chain
-//!     let mut request = DMSGatewayRequest::_Fnew("GET".to_string(), "/api/v1/resource".to_string());
-//!     chain._Fexecute(&mut request).await?;
+//!     let mut request = DMSGatewayRequest::new("GET".to_string(), "/api/v1/resource".to_string());
+//!     chain.execute(&mut request).await?;
 //!     
 //!     Ok(())
 //! }
@@ -89,7 +89,7 @@ pub trait DMSMiddleware: Send + Sync {
     /// # Returns
     /// 
     /// A `DMSResult<()>` indicating success or failure
-    async fn _Fexecute(&self, request: &mut DMSGatewayRequest) -> DMSResult<()>;
+    async fn execute(&self, request: &mut DMSGatewayRequest) -> DMSResult<()>;
     
     /// Gets the name of the middleware.
     /// 
@@ -99,7 +99,7 @@ pub trait DMSMiddleware: Send + Sync {
     /// # Returns
     /// 
     /// A static string containing the middleware name
-    fn _Fname(&self) -> &'static str;
+    fn name(&self) -> &'static str;
 }
 
 /// Manages a chain of middleware components.
@@ -117,7 +117,7 @@ impl DMSMiddlewareChain {
     /// # Returns
     /// 
     /// A new `DMSMiddlewareChain` instance with no middleware
-    pub fn _Fnew() -> Self {
+    pub fn new() -> Self {
         Self {
             middlewares: Vec::new(),
         }
@@ -128,7 +128,7 @@ impl DMSMiddlewareChain {
     /// # Parameters
     /// 
     /// - `middleware`: The middleware to add to the chain
-    pub fn _Fadd(&mut self, middleware: Arc<dyn DMSMiddleware>) {
+    pub fn add(&mut self, middleware: Arc<dyn DMSMiddleware>) {
         self.middlewares.push(middleware);
     }
 
@@ -144,15 +144,15 @@ impl DMSMiddlewareChain {
     /// # Returns
     /// 
     /// A `DMSResult<()>` indicating success or failure
-    pub async fn _Fexecute(&self, request: &mut DMSGatewayRequest) -> DMSResult<()> {
+    pub async fn execute(&self, request: &mut DMSGatewayRequest) -> DMSResult<()> {
         for middleware in &self.middlewares {
-            middleware._Fexecute(request).await?;
+            middleware.execute(request).await?;
         }
         Ok(())
     }
 
     /// Clears all middleware from the chain.
-    pub fn _Fclear(&mut self) {
+    pub fn clear(&mut self) {
         self.middlewares.clear();
     }
 
@@ -161,7 +161,7 @@ impl DMSMiddlewareChain {
     /// # Returns
     /// 
     /// The number of middleware in the chain
-    pub fn _Flen(&self) -> usize {
+    pub fn len(&self) -> usize {
         self.middlewares.len()
     }
 }
@@ -186,7 +186,7 @@ impl DMSAuthMiddleware {
     /// # Returns
     /// 
     /// A new `DMSAuthMiddleware` instance
-    pub fn _Fnew(auth_header: String) -> Self {
+    pub fn new(auth_header: String) -> Self {
         Self { auth_header }
     }
 }
@@ -205,7 +205,7 @@ impl DMSMiddleware for DMSAuthMiddleware {
     /// # Returns
     /// 
     /// A `DMSResult<()>` indicating success or failure
-    async fn _Fexecute(&self, request: &mut DMSGatewayRequest) -> DMSResult<()> {
+    async fn execute(&self, request: &mut DMSGatewayRequest) -> DMSResult<()> {
         // Check for authorization header
         if let Some(auth_header) = request.headers.get(&self.auth_header) {
             // Basic auth validation - in a real implementation, this would validate JWT tokens
@@ -229,7 +229,7 @@ impl DMSMiddleware for DMSAuthMiddleware {
     /// # Returns
     /// 
     /// The string "AuthMiddleware"
-    fn _Fname(&self) -> &'static str {
+    fn name(&self) -> &'static str {
         "AuthMiddleware"
     }
 }
@@ -260,7 +260,7 @@ impl DMSCorsMiddleware {
     /// # Returns
     /// 
     /// A new `DMSCorsMiddleware` instance
-    pub fn _Fnew(
+    pub fn new(
         allowed_origins: Vec<String>,
         allowed_methods: Vec<String>,
         allowed_headers: Vec<String>,
@@ -281,7 +281,7 @@ impl DMSCorsMiddleware {
     /// # Returns
     /// 
     /// `true` if the origin is allowed, `false` otherwise
-    fn _Fis_origin_allowed(&self, origin: &str) -> bool {
+    fn is_origin_allowed(&self, origin: &str) -> bool {
         self.allowed_origins.contains(&"*".to_string()) || 
         self.allowed_origins.iter().any(|allowed| allowed == origin)
     }
@@ -300,12 +300,12 @@ impl DMSMiddleware for DMSCorsMiddleware {
     /// # Returns
     /// 
     /// A `DMSResult<()>` indicating success or failure
-    async fn _Fexecute(&self, request: &mut DMSGatewayRequest) -> DMSResult<()> {
+    async fn execute(&self, request: &mut DMSGatewayRequest) -> DMSResult<()> {
         // CORS preflight handling would be done at the response level
         // This middleware just validates the request
         
         if let Some(origin) = request.headers.get("origin") {
-            if !self._Fis_origin_allowed(origin) {
+            if !self.is_origin_allowed(origin) {
                 return Err(crate::core::DMSError::Other("Origin not allowed".to_string()));
             }
         }
@@ -318,7 +318,7 @@ impl DMSMiddleware for DMSCorsMiddleware {
     /// # Returns
     /// 
     /// The string "CorsMiddleware"
-    fn _Fname(&self) -> &'static str {
+    fn name(&self) -> &'static str {
         "CorsMiddleware"
     }
 }
@@ -342,7 +342,7 @@ impl DMSLoggingMiddleware {
     /// # Returns
     /// 
     /// A new `DMSLoggingMiddleware` instance
-    pub fn _Fnew(log_level: String) -> Self {
+    pub fn new(log_level: String) -> Self {
         Self { log_level }
     }
 }
@@ -361,7 +361,7 @@ impl DMSMiddleware for DMSLoggingMiddleware {
     /// # Returns
     /// 
     /// A `DMSResult<()>` indicating success or failure
-    async fn _Fexecute(&self, request: &mut DMSGatewayRequest) -> DMSResult<()> {
+    async fn execute(&self, request: &mut DMSGatewayRequest) -> DMSResult<()> {
         // In a real implementation, this would log the request details
         // For now, we'll just allow it through
         println!("[{}] {} {} from {}", 
@@ -378,7 +378,7 @@ impl DMSMiddleware for DMSLoggingMiddleware {
     /// # Returns
     /// 
     /// The string "LoggingMiddleware"
-    fn _Fname(&self) -> &'static str {
+    fn name(&self) -> &'static str {
         "LoggingMiddleware"
     }
 }
@@ -395,7 +395,7 @@ impl DMSRequestIdMiddleware {
     /// # Returns
     /// 
     /// A new `DMSRequestIdMiddleware` instance
-    pub fn _Fnew() -> Self {
+    pub fn new() -> Self {
         Self
     }
 }
@@ -414,7 +414,7 @@ impl DMSMiddleware for DMSRequestIdMiddleware {
     /// # Returns
     /// 
     /// A `DMSResult<()>` indicating success or failure
-    async fn _Fexecute(&self, _request: &mut DMSGatewayRequest) -> DMSResult<()> {
+    async fn execute(&self, _request: &mut DMSGatewayRequest) -> DMSResult<()> {
         // Request ID is already generated in DMSGatewayRequest::new
         // This middleware can be used for additional request ID processing
         Ok(())
@@ -425,7 +425,7 @@ impl DMSMiddleware for DMSRequestIdMiddleware {
     /// # Returns
     /// 
     /// The string "RequestIdMiddleware"
-    fn _Fname(&self) -> &'static str {
+    fn name(&self) -> &'static str {
         "RequestIdMiddleware"
     }
 }
@@ -453,7 +453,7 @@ impl DMSRateLimitMiddleware {
     /// # Returns
     /// 
     /// A new `DMSRateLimitMiddleware` instance
-    pub fn _Fnew(max_requests: u32, window_seconds: u64) -> Self {
+    pub fn new(max_requests: u32, window_seconds: u64) -> Self {
         Self {
             max_requests,
             window_seconds,
@@ -475,7 +475,7 @@ impl DMSMiddleware for DMSRateLimitMiddleware {
     /// # Returns
     /// 
     /// A `DMSResult<()>` indicating success or failure
-    async fn _Fexecute(&self, _request: &mut DMSGatewayRequest) -> DMSResult<()> {
+    async fn execute(&self, _request: &mut DMSGatewayRequest) -> DMSResult<()> {
         // Basic rate limiting logic - in a real implementation, this would use the DMSRateLimiter
         // For now, we'll just allow it through
         Ok(())
@@ -486,7 +486,7 @@ impl DMSMiddleware for DMSRateLimitMiddleware {
     /// # Returns
     /// 
     /// The string "RateLimitMiddleware"
-    fn _Fname(&self) -> &'static str {
+    fn name(&self) -> &'static str {
         "RateLimitMiddleware"
     }
 }

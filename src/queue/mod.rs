@@ -15,8 +15,6 @@
 //! See the License for the specific language governing permissions and
 //! limitations under the License.
 
-#![allow(non_snake_case)]
-
 //! # Queue Module
 //! 
 //! This module provides a comprehensive queueing system for DMS, offering a unified interface
@@ -70,45 +68,45 @@
 //!     };
 //!     
 //!     // Create queue module
-//!     let queue_module = DMSQueueModule::_Fnew(queue_config);
+//!     let queue_module = DMSQueueModule::new(queue_config);
 //!     
 //!     // Get queue manager
-//!     let queue_manager = queue_module._Fqueue_manager();
+//!     let queue_manager = queue_module.queue_manager();
 //!     
 //!     // Get queue instance
-//!     let queue = queue_manager.read().await._Fqueue("example_queue").await?;
+//!     let queue = queue_manager.read().await.queue("example_queue").await?;
 //!     
 //!     // Create producer and consumer
-//!     let producer = queue._Fproducer().await?;
-//!     let consumer = queue._Fconsumer().await?;
+//!     let producer = queue.producer().await?;
+//!     let consumer = queue.consumer().await?;
 //!     
 //!     // Create a task message
 //!     let task = Task {
 //!         id: "task-123".to_string(),
-//!         data: "Hello, DMS Queue!" .to_string(),
+//!         data: "Hello, DMS Queue!".to_string(),
 //!     };
 //!     
 //!     // Send message to queue
-//!     let message_id = producer._Fsend(&task).await?;
+//!     let message_id = producer.send(&task).await?;
 //!     println!("Sent message with ID: {}", message_id);
 //!     
 //!     // Receive message from queue
-//!     if let Some(message) = consumer._Freceive().await? {
-//!         let received_task: Task = message._Fdeserialize()?;
+//!     if let Some(message) = consumer.receive().await? {
+//!         let received_task: Task = message.deserialize()?;
 //!         println!("Received task: {:?}", received_task);
 //!         
 //!         // Acknowledge message
-//!         message._Fack().await?;
+//!         message.ack().await?;
 //!     }
 //!     
 //!     Ok(())
 //! }
 //! ```
 
-pub mod queue;
-pub mod backends;
-pub mod config;
-pub mod manager;
+mod queue;
+mod backends;
+mod config;
+mod manager;
 
 pub use queue::{DMSQueue, DMSQueueMessage, DMSQueueConsumer, DMSQueueProducer, QueueStats};
 pub use config::{DMSQueueConfig, QueueBackendType};

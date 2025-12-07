@@ -40,29 +40,32 @@
 //! 4. **Error Handling**: A unified error type simplifies error management across modules
 //! 5. **Async First**: Full support for asynchronous operations
 
-#![allow(non_snake_case)]
+
 
 /// Error handling with custom error types and result aliases
-mod error;
+pub mod error;
 /// Service context for accessing core functionalities
-mod context;
+pub mod context;
 /// Module system for extending DMS with custom functionality
-mod module;
+pub mod module;
 /// Application runtime and builder for constructing DMS applications
-mod runtime;
+pub mod runtime;
 /// Lifecycle management for modules
-mod lifecycle;
+pub mod lifecycle;
 /// Basic analytics and telemetry support
-mod analytics;
+pub mod analytics;
+/// Health checks for modules and services
+pub mod health;
+/// Error chain utilities
+pub mod error_chain;
 
 /// Main error type for DMS operations
 pub use error::{DMSError, DMSResult};
 /// Service context providing access to core functionalities
 pub use context::DMSServiceContext;
 /// Module traits for extending DMS functionality
-pub use module::{_CServiceModule, _CAsyncServiceModule, DMSModule};
+pub use module::DMSModule;
 /// Application builder and runtime for constructing DMS applications
 pub use runtime::{DMSAppBuilder, DMSAppRuntime};
-
-/// Re-export additional error variants for convenient access
-pub use error::DMSError::{DeviceNotFound, DeviceAllocationFailed, AllocationNotFound};
+/// Internal module traits
+pub(crate) use module::{ServiceModule, AsyncServiceModule};

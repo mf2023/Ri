@@ -46,10 +46,10 @@
 //! 
 //! async fn example() -> DMSResult<()> {
 //!     // Create a new RabbitMQ queue
-//!     let queue = DMSRabbitMQQueue::_Fnew("test-queue", "amqp://guest:guest@localhost:5672/%2f").await?;
+//!     let queue = DMSRabbitMQQueue::new("test-queue", "amqp://guest:guest@localhost:5672/%2f").await?;
 //!     
 //!     // Create a producer
-//!     let producer = queue._Fcreate_producer().await?;
+//!     let producer = queue.create_producer().await?;
 //!     
 //!     // Create a message
 //!     let message = DMSQueueMessage {
@@ -61,15 +61,15 @@
 //!     };
 //!     
 //!     // Send the message
-//!     producer._Fsend(message).await?;
+//!     producer.send(message).await?;
 //!     
 //!     // Create a consumer
-//!     let consumer = queue._Fcreate_consumer("test-consumer-group").await?;
+//!     let consumer = queue.create_consumer("test-consumer-group").await?;
 //!     
 //!     // Receive messages
-//!     if let Some(received_message) = consumer._Freceive().await? {
+//!     if let Some(received_message) = consumer.receive().await? {
 //!         println!("Received message: {:?}", received_message);
-//!         consumer._Fack(&received_message.id).await?;
+//!         consumer.ack(&received_message.id).await?;
 //!     }
 //!     
 //!     Ok(())
@@ -114,7 +114,7 @@ impl DMSRabbitMQQueue {
     /// # Returns
     ///
     /// A new DMSRabbitMQQueue instance wrapped in DMSResult
-    pub async fn _Fnew(name: &str, connection_string: &str) -> DMSResult<Self> {
+    pub async fn new(name: &str, connection_string: &str) -> DMSResult<Self> {
         let connection = Connection::connect(connection_string, ConnectionProperties::default()).await?;
         let channel = connection.create_channel().await?;
         
@@ -145,7 +145,7 @@ impl DMSQueue for DMSRabbitMQQueue {
     /// # Returns
     ///
     /// A new DMSQueueProducer instance wrapped in DMSResult
-    async fn _Fcreate_producer(&self) -> DMSResult<Box<dyn DMSQueueProducer>> {
+    async fn create_producer(&self) -> DMSResult<Box<dyn DMSQueueProducer>> {
         Ok(Box::new(RabbitMQProducer {
             channel: self.channel.clone(),
             queue_name: self.name.clone(),
@@ -161,7 +161,7 @@ impl DMSQueue for DMSRabbitMQQueue {
     /// # Returns
     ///
     /// A new DMSQueueConsumer instance wrapped in DMSResult
-    async fn _Fcreate_consumer(&self, consumer_group: &str) -> DMSResult<Box<dyn DMSQueueConsumer>> {
+    async fn create_consumer(&self, consumer_group: &str) -> DMSResult<Box<dyn DMSQueueConsumer>> {
         let consumer = self.channel
             .basic_consume(
                 &self.name,
@@ -185,7 +185,7 @@ impl DMSQueue for DMSRabbitMQQueue {
     /// # Returns
     ///
     /// QueueStats containing basic queue statistics wrapped in DMSResult
-    async fn _Fget_stats(&self) -> DMSResult<QueueStats> {
+    async fn get_stats(&self) -> DMSResult<QueueStats> {
         // RabbitMQ provides queue statistics through management API
         // For now, return basic stats
         Ok(QueueStats {
@@ -204,7 +204,7 @@ impl DMSQueue for DMSRabbitMQQueue {
     /// # Returns
     ///
     /// DMSResult indicating success or failure
-    async fn _Fpurge(&self) -> DMSResult<()> {
+    async fn purge(&self) -> DMSResult<()> {
         self.channel.queue_purge(&self.name, Default::default()).await?;
         Ok(())
     }
@@ -214,7 +214,7 @@ impl DMSQueue for DMSRabbitMQQueue {
     /// # Returns
     ///
     /// DMSResult indicating success or failure
-    async fn _Fdelete(&self) -> DMSResult<()> {
+    async fn delete(&self) -> DMSResult<()> {
         self.channel.queue_delete(&self.name, Default::default()).await?;
         Ok(())
     }
@@ -242,7 +242,7 @@ impl DMSQueueProducer for RabbitMQProducer {
     /// # Returns
     ///
     /// DMSResult indicating success or failure
-    async fn _Fsend(&self, message: DMSQueueMessage) -> DMSResult<()> {
+    async fn send(&self, message: DMSQueueMessage) -> DMSResult<()> {
         let payload = serde_json::to_vec(&message)?;
         
         self.channel
@@ -267,9 +267,9 @@ impl DMSQueueProducer for RabbitMQProducer {
     /// # Returns
     ///
     /// DMSResult indicating success or failure
-    async fn _Fsend_batch(&self, messages: Vec<DMSQueueMessage>) -> DMSResult<()> {
+    async fn send_batch(&self, messages: Vec<DMSQueueMessage>) -> DMSResult<()> {
         for message in messages {
-            self._Fsend(message).await?;
+            self.send(message).await?;
         }
         Ok(())
     }
@@ -293,7 +293,7 @@ impl DMSQueueConsumer for RabbitMQConsumer {
     /// # Returns
     ///
     /// An Option containing the received message, or None if the consumer is paused
-    async fn _Freceive(&self) -> DMSResult<Option<DMSQueueMessage>> {
+    async fn receive(&self) -> DMSResult<Option<DMSQueueMessage>> {
         let paused = *self.paused.lock().await;
         if paused {
             return Ok(None);
@@ -324,7 +324,7 @@ impl DMSQueueConsumer for RabbitMQConsumer {
     /// # Returns
     ///
     /// DMSResult indicating success or failure
-    async fn _Fack(&self, _message_id: &str) -> DMSResult<()> {
+    async fn ack(&self, _message_id: &str) -> DMSResult<()> {
         // In a real implementation, you'd track the delivery tag
         // For now, this is a placeholder
         Ok(())
@@ -342,7 +342,7 @@ impl DMSQueueConsumer for RabbitMQConsumer {
     /// # Returns
     ///
     /// DMSResult indicating success or failure
-    async fn _Fnack(&self, _message_id: &str) -> DMSResult<()> {
+    async fn nack(&self, _message_id: &str) -> DMSResult<()> {
         // In a real implementation, you'd track the delivery tag and use BasicNack
         Ok(())
     }
@@ -352,7 +352,7 @@ impl DMSQueueConsumer for RabbitMQConsumer {
     /// # Returns
     ///
     /// DMSResult indicating success or failure
-    async fn _Fpause(&self) -> DMSResult<()> {
+    async fn pause(&self) -> DMSResult<()> {
         let mut paused = self.paused.lock().await;
         *paused = true;
         Ok(())
@@ -363,7 +363,7 @@ impl DMSQueueConsumer for RabbitMQConsumer {
     /// # Returns
     ///
     /// DMSResult indicating success or failure
-    async fn _Fresume(&self) -> DMSResult<()> {
+    async fn resume(&self) -> DMSResult<()> {
         let mut paused = self.paused.lock().await;
         *paused = false;
         Ok(())

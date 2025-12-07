@@ -31,8 +31,8 @@
 //! # Usage Examples
 //! ```rust
 //! // Create an OAuth manager with a cache
-//! let cache = Arc::new(crate::cache::backends::memory_backend::DMSMemoryCache::_Fnew());
-//! let oauth_manager = DMSOAuthManager::_Fnew(cache);
+//! let cache = Arc::new(crate::cache::backends::memory_backend::DMSMemoryCache::new());
+//! let oauth_manager = DMSOAuthManager::new(cache);
 //! 
 //! // Register a Google OAuth provider
 //! let google_provider = DMSOAuthProvider {
@@ -46,13 +46,13 @@
 //!     scopes: vec!["openid", "email", "profile"].iter().map(|s| s.to_string()).collect(),
 //!     enabled: true,
 //! };
-//! oauth_manager._Fregister_provider(google_provider).await?;
+//! oauth_manager.register_provider(google_provider).await?;
 //! 
 //! // Get authentication URL for a provider
-//! let auth_url = oauth_manager._Fget_auth_url("google", "state123").await?;
+//! let auth_url = oauth_manager.get_auth_url("google", "state123").await?;
 //! 
 //! // Exchange authorization code for token
-//! let token = oauth_manager._Fexchange_code_for_token(
+//! let token = oauth_manager.exchange_code_for_token(
 //!     "google",
 //!     "auth_code",
 //!     "http://localhost:8080/auth/callback"
@@ -60,7 +60,7 @@
 //! 
 //! // Get user information
 //! if let Some(token) = token {
-//!     let user_info = oauth_manager._Fget_user_info("google", &token.access_token).await?;
+//!     let user_info = oauth_manager.get_user_info("google", &token.access_token).await?;
 //! }
 //! ```
 
@@ -130,7 +130,7 @@ impl DMSOAuthManager {
     /// 
     /// # Returns
     /// A new instance of `DMSOAuthManager`
-    pub fn _Fnew(cache: Arc<dyn crate::cache::DMSCache>) -> Self {
+    pub fn new(cache: Arc<dyn crate::cache::DMSCache>) -> Self {
         Self {
             providers: RwLock::new(HashMap::new()),
             _token_cache: cache,
@@ -144,7 +144,7 @@ impl DMSOAuthManager {
     /// 
     /// # Returns
     /// `Ok(())` if the provider was successfully registered
-    pub async fn _Fregister_provider(&self, provider: DMSOAuthProvider) -> crate::core::DMSResult<()> {
+    pub async fn register_provider(&self, provider: DMSOAuthProvider) -> crate::core::DMSResult<()> {
         let mut providers = self.providers.write().await;
         providers.insert(provider.id.clone(), provider);
         Ok(())
@@ -157,7 +157,7 @@ impl DMSOAuthManager {
     /// 
     /// # Returns
     /// `Some(DMSOAuthProvider)` if the provider exists, otherwise `None`
-    pub async fn _Fget_provider(&self, provider_id: &str) -> crate::core::DMSResult<Option<DMSOAuthProvider>> {
+    pub async fn get_provider(&self, provider_id: &str) -> crate::core::DMSResult<Option<DMSOAuthProvider>> {
         let providers = self.providers.read().await;
         Ok(providers.get(provider_id).cloned())
     }
@@ -170,7 +170,7 @@ impl DMSOAuthManager {
     /// 
     /// # Returns
     /// `Some(String)` containing the authentication URL if the provider is enabled, otherwise `None`
-    pub async fn _Fget_auth_url(&self, provider_id: &str, state: &str) -> crate::core::DMSResult<Option<String>> {
+    pub async fn get_auth_url(&self, provider_id: &str, state: &str) -> crate::core::DMSResult<Option<String>> {
         let providers = self.providers.read().await;
         
         if let Some(provider) = providers.get(provider_id) {
@@ -202,7 +202,7 @@ impl DMSOAuthManager {
     /// 
     /// # Returns
     /// `Some(DMSOAuthToken)` if the code exchange was successful, otherwise `None`
-    pub async fn _Fexchange_code_for_token(
+    pub async fn exchange_code_for_token(
         &self,
         provider_id: &str,
         code: &str,
@@ -266,7 +266,7 @@ impl DMSOAuthManager {
     /// 
     /// # Returns
     /// `Some(DMSOAuthUserInfo)` if the user information was successfully retrieved, otherwise `None`
-    pub async fn _Fget_user_info(
+    pub async fn get_user_info(
         &self,
         provider_id: &str,
         access_token: &str,
@@ -321,7 +321,7 @@ impl DMSOAuthManager {
     /// 
     /// # Returns
     /// `Some(DMSOAuthToken)` if the token refresh was successful, otherwise `None`
-    pub async fn _Frefresh_token(
+    pub async fn refresh_token(
         &self,
         provider_id: &str,
         refresh_token: &str,
@@ -383,7 +383,7 @@ impl DMSOAuthManager {
     /// 
     /// # Returns
     /// `true` if the token was successfully revoked, otherwise `false`
-    pub async fn _Frevoke_token(
+    pub async fn revoke_token(
         &self,
         provider_id: &str,
         access_token: &str,
@@ -419,7 +419,7 @@ impl DMSOAuthManager {
     /// 
     /// # Returns
     /// A vector of all registered OAuth providers
-    pub async fn _Flist_providers(&self) -> crate::core::DMSResult<Vec<DMSOAuthProvider>> {
+    pub async fn list_providers(&self) -> crate::core::DMSResult<Vec<DMSOAuthProvider>> {
         let providers = self.providers.read().await;
         Ok(providers.values().cloned().collect())
     }
@@ -431,7 +431,7 @@ impl DMSOAuthManager {
     /// 
     /// # Returns
     /// `true` if the provider was successfully disabled, otherwise `false`
-    pub async fn _Fdisable_provider(&self, provider_id: &str) -> crate::core::DMSResult<bool> {
+    pub async fn disable_provider(&self, provider_id: &str) -> crate::core::DMSResult<bool> {
         let mut providers = self.providers.write().await;
         
         if let Some(provider) = providers.get_mut(provider_id) {
@@ -449,7 +449,7 @@ impl DMSOAuthManager {
     /// 
     /// # Returns
     /// `true` if the provider was successfully enabled, otherwise `false`
-    pub async fn _Fenable_provider(&self, provider_id: &str) -> crate::core::DMSResult<bool> {
+    pub async fn enable_provider(&self, provider_id: &str) -> crate::core::DMSResult<bool> {
         let mut providers = self.providers.write().await;
         
         if let Some(provider) = providers.get_mut(provider_id) {

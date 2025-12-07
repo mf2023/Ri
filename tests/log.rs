@@ -24,15 +24,15 @@ use tempfile::tempdir;
 
 #[test]
 fn test_log_level_as_str() {
-    assert_eq!(DMSLogLevel::Debug._Fas_str(), "DEBUG");
-    assert_eq!(DMSLogLevel::Info._Fas_str(), "INFO");
-    assert_eq!(DMSLogLevel::Warn._Fas_str(), "WARN");
-    assert_eq!(DMSLogLevel::Error._Fas_str(), "ERROR");
+    assert_eq!(DMSLogLevel::Debug.as_str(), "DEBUG");
+    assert_eq!(DMSLogLevel::Info.as_str(), "INFO");
+    assert_eq!(DMSLogLevel::Warn.as_str(), "WARN");
+    assert_eq!(DMSLogLevel::Error.as_str(), "ERROR");
 }
 
 #[test]
 fn test_log_config_default() {
-    let config = DMSLogConfig::_Fdefault();
+    let config = DMSLogConfig::default();
     assert_eq!(config.level, DMSLogLevel::Info);
     assert!(config.console_enabled);
     assert!(config.file_enabled);
@@ -46,43 +46,43 @@ fn test_log_config_default() {
 #[test]
 fn test_log_context_put_get() {
     // Clear any existing context first
-    DMSLogContext::_Fclear();
+    DMSLogContext::clear();
     
     // Test put and get
-    DMSLogContext::_Fput("test_key", "test_value");
-    assert_eq!(DMSLogContext::_Fget("test_key"), Some("test_value".to_string()));
+    DMSLogContext::put("test_key", "test_value");
+    assert_eq!(DMSLogContext::get("test_key"), Some("test_value".to_string()));
     
     // Test non-existent key
-    assert_eq!(DMSLogContext::_Fget("non_existent_key"), None);
+    assert_eq!(DMSLogContext::get("non_existent_key"), None);
     
     // Test remove
-    DMSLogContext::_Fremove("test_key");
-    assert_eq!(DMSLogContext::_Fget("test_key"), None);
+    DMSLogContext::remove("test_key");
+    assert_eq!(DMSLogContext::get("test_key"), None);
 }
 
 #[test]
 fn test_log_context_put_all() {
     // Clear any existing context first
-    DMSLogContext::_Fclear();
+    DMSLogContext::clear();
     
     let mut values = std::collections::HashMap::new();
     values.insert("key1".to_string(), "value1".to_string());
     values.insert("key2".to_string(), "value2".to_string());
     
-    DMSLogContext::_Fput_all(values);
-    assert_eq!(DMSLogContext::_Fget("key1"), Some("value1".to_string()));
-    assert_eq!(DMSLogContext::_Fget("key2"), Some("value2".to_string()));
+    DMSLogContext::put_all(values);
+    assert_eq!(DMSLogContext::get("key1"), Some("value1".to_string()));
+    assert_eq!(DMSLogContext::get("key2"), Some("value2".to_string()));
 }
 
 #[test]
 fn test_log_context_get_all() {
     // Clear any existing context first
-    DMSLogContext::_Fclear();
+    DMSLogContext::clear();
     
-    DMSLogContext::_Fput("key1", "value1");
-    DMSLogContext::_Fput("key2", "value2");
+    DMSLogContext::put("key1", "value1");
+    DMSLogContext::put("key2", "value2");
     
-    let all = DMSLogContext::_Fget_all();
+    let all = DMSLogContext::get_all();
     assert_eq!(all.get("key1"), Some(&"value1".to_string()));
     assert_eq!(all.get("key2"), Some(&"value2".to_string()));
     assert_eq!(all.len(), 2);
@@ -91,113 +91,113 @@ fn test_log_context_get_all() {
 #[test]
 fn test_log_context_clear() {
     // Clear any existing context first
-    DMSLogContext::_Fclear();
+    DMSLogContext::clear();
     
-    DMSLogContext::_Fput("key1", "value1");
-    DMSLogContext::_Fput("key2", "value2");
-    assert_eq!(DMSLogContext::_Fget_all().len(), 2);
+    DMSLogContext::put("key1", "value1");
+    DMSLogContext::put("key2", "value2");
+    assert_eq!(DMSLogContext::get_all().len(), 2);
     
-    DMSLogContext::_Fclear();
-    assert_eq!(DMSLogContext::_Fget_all().len(), 0);
+    DMSLogContext::clear();
+    assert_eq!(DMSLogContext::get_all().len(), 0);
 }
 
 #[test]
 fn test_log_context_tracing_support() {
     // Clear any existing context first
-    DMSLogContext::_Fclear();
+    DMSLogContext::clear();
     
     // Test trace id
     let trace_id = "test-trace-id-123";
-    DMSLogContext::_Fset_trace_id(trace_id);
-    assert_eq!(DMSLogContext::_Fget_trace_id(), Some(trace_id.to_string()));
+    DMSLogContext::set_trace_id(trace_id);
+    assert_eq!(DMSLogContext::get_trace_id(), Some(trace_id.to_string()));
     
     // Test span id
     let span_id = "test-span-id-456";
-    DMSLogContext::_Fset_span_id(span_id);
-    assert_eq!(DMSLogContext::_Fget_span_id(), Some(span_id.to_string()));
+    DMSLogContext::set_span_id(span_id);
+    assert_eq!(DMSLogContext::get_span_id(), Some(span_id.to_string()));
     
     // Test parent span id
     let parent_span_id = "test-parent-span-id-789";
-    DMSLogContext::_Fset_parent_span_id(parent_span_id);
-    assert_eq!(DMSLogContext::_Fget_parent_span_id(), Some(parent_span_id.to_string()));
+    DMSLogContext::set_parent_span_id(parent_span_id);
+    assert_eq!(DMSLogContext::get_parent_span_id(), Some(parent_span_id.to_string()));
     
     // Test generate trace id
-    let generated_trace_id = DMSLogContext::_Fgenerate_trace_id();
+    let generated_trace_id = DMSLogContext::generate_trace_id();
     assert!(!generated_trace_id.is_empty());
     
     // Test generate span id
-    let generated_span_id = DMSLogContext::_Fgenerate_span_id();
+    let generated_span_id = DMSLogContext::generate_span_id();
     assert!(!generated_span_id.is_empty());
 }
 
 #[test]
 fn test_logger_creation() {
     let temp_dir = tempdir().unwrap();
-    let fs = DMSFileSystem::_Fnew_with_root(temp_dir.path().to_path_buf());
-    let config = DMSLogConfig::_Fdefault();
-    let logger = DMSLogger::_Fnew(&config, fs);
+    let fs = DMSFileSystem::new_with_root(temp_dir.path().to_path_buf());
+    let config = DMSLogConfig::default();
+    let logger = DMSLogger::new(&config, fs);
     // Just test that creation works without panicking
-    assert!(logger._Finfo("test_target", "test_message").is_ok());
+    assert!(logger.info("test_target", "test_message").is_ok());
 }
 
 #[test]
 fn test_logger_different_levels() {
     let temp_dir = tempdir().unwrap();
-    let fs = DMSFileSystem::_Fnew_with_root(temp_dir.path().to_path_buf());
+    let fs = DMSFileSystem::new_with_root(temp_dir.path().to_path_buf());
     
     // Test with Info level
-    let mut config = DMSLogConfig::_Fdefault();
+    let mut config = DMSLogConfig::default();
     config.level = DMSLogLevel::Info;
     config.console_enabled = false; // Disable console output for tests
-    let logger = DMSLogger::_Fnew(&config, fs.clone());
+    let logger = DMSLogger::new(&config, fs.clone());
     
     // All levels should work without errors
-    assert!(logger._Fdebug("test_target", "debug_message").is_ok());
-    assert!(logger._Finfo("test_target", "info_message").is_ok());
-    assert!(logger._Fwarn("test_target", "warn_message").is_ok());
-    assert!(logger._Ferror("test_target", "error_message").is_ok());
+    assert!(logger.debug("test_target", "debug_message").is_ok());
+    assert!(logger.info("test_target", "info_message").is_ok());
+    assert!(logger.warn("test_target", "warn_message").is_ok());
+    assert!(logger.error("test_target", "error_message").is_ok());
     
     // Test with Error level
     config.level = DMSLogLevel::Error;
-    let logger = DMSLogger::_Fnew(&config, fs);
+    let logger = DMSLogger::new(&config, fs);
     
     // All levels should still work without errors
-    assert!(logger._Fdebug("test_target", "debug_message").is_ok());
-    assert!(logger._Finfo("test_target", "info_message").is_ok());
-    assert!(logger._Fwarn("test_target", "warn_message").is_ok());
-    assert!(logger._Ferror("test_target", "error_message").is_ok());
+    assert!(logger.debug("test_target", "debug_message").is_ok());
+    assert!(logger.info("test_target", "info_message").is_ok());
+    assert!(logger.warn("test_target", "warn_message").is_ok());
+    assert!(logger.error("test_target", "error_message").is_ok());
 }
 
 #[test]
 fn test_logger_with_json_format() {
     let temp_dir = tempdir().unwrap();
-    let fs = DMSFileSystem::_Fnew_with_root(temp_dir.path().to_path_buf());
+    let fs = DMSFileSystem::new_with_root(temp_dir.path().to_path_buf());
     
-    let mut config = DMSLogConfig::_Fdefault();
+    let mut config = DMSLogConfig::default();
     config.json_format = true;
     config.console_enabled = false; // Disable console output for tests
-    let logger = DMSLogger::_Fnew(&config, fs);
+    let logger = DMSLogger::new(&config, fs);
     
     // Should work without errors
-    assert!(logger._Finfo("test_target", "test_message").is_ok());
+    assert!(logger.info("test_target", "test_message").is_ok());
 }
 
 #[test]
 fn test_logger_with_context() {
     let temp_dir = tempdir().unwrap();
-    let fs = DMSFileSystem::_Fnew_with_root(temp_dir.path().to_path_buf());
+    let fs = DMSFileSystem::new_with_root(temp_dir.path().to_path_buf());
     
-    let config = DMSLogConfig::_Fdefault();
+    let config = DMSLogConfig::default();
     config.console_enabled = false; // Disable console output for tests
-    let logger = DMSLogger::_Fnew(&config, fs);
+    let logger = DMSLogger::new(&config, fs);
     
     // Clear any existing context first
-    DMSLogContext::_Fclear();
+    DMSLogContext::clear();
     
     // Set context and log
-    DMSLogContext::_Fput("test_context_key", "test_context_value");
-    assert!(logger._Finfo("test_target", "test_message").is_ok());
+    DMSLogContext::put("test_context_key", "test_context_value");
+    assert!(logger.info("test_target", "test_message").is_ok());
     
     // Clear context
-    DMSLogContext::_Fclear();
+    DMSLogContext::clear();
 }

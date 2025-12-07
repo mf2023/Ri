@@ -15,7 +15,7 @@
 //! See the License for the specific language governing permissions and
 //! limitations under the License.
 
-#![allow(non_snake_case)]
+
 
 //! # Configuration Management
 //! 
@@ -44,19 +44,19 @@
 //! 
 //! fn example() -> DMSResult<()> {
 //!     // Create a new config manager
-//!     let mut config_manager = DMSConfigManager::_Fnew();
+//!     let mut config_manager = DMSConfigManager::new();
 //!     
 //!     // Add configuration sources
-//!     config_manager._Fadd_file_source("config.yaml");
-//!     config_manager._Fadd_environment_source();
+//!     config_manager.add_file_source("config.yaml");
+//!     config_manager.add_environment_source();
 //!     
 //!     // Load configuration
-//!     config_manager._Fload()?;
+//!     config_manager.load()?;
 //!     
 //!     // Access configuration values
-//!     let config = config_manager._Fconfig();
-//!     let port = config._Fget_u64("server.port").unwrap_or(8080);
-//!     let debug = config._Fget_bool("app.debug").unwrap_or(false);
+//!     let config = config_manager.config();
+//!     let port = config.get_u64("server.port").unwrap_or(8080);
+//!     let debug = config.get_bool("app.debug").unwrap_or(false);
 //!     
 //!     Ok(())
 //! }
@@ -80,7 +80,7 @@ impl DMSConfig {
     /// Creates a new empty configuration.
     /// 
     /// Returns a new `DMSConfig` instance with an empty key-value store.
-    pub fn _Fnew() -> Self {
+    pub fn new() -> Self {
         DMSConfig { values: HashMap::new() }
     }
 
@@ -90,7 +90,7 @@ impl DMSConfig {
     /// 
     /// - `key`: The configuration key (typically using dot notation, e.g., "server.port")
     /// - `value`: The configuration value as a string
-    pub fn _Fset(&mut self, key: impl Into<String>, value: impl Into<String>) {
+    pub fn set(&mut self, key: impl Into<String>, value: impl Into<String>) {
         self.values.insert(key.into(), value.into());
     }
 
@@ -103,7 +103,7 @@ impl DMSConfig {
     /// # Returns
     /// 
     /// An `Option<&String>` containing the value if it exists
-    pub fn _Fget(&self, key: &str) -> Option<&String> {
+    pub fn get(&self, key: &str) -> Option<&String> {
         self.values.get(key)
     }
 
@@ -116,7 +116,7 @@ impl DMSConfig {
     /// # Returns
     /// 
     /// An `Option<&str>` containing the value if it exists
-    pub fn _Fget_str(&self, key: &str) -> Option<&str> {
+    pub fn get_str(&self, key: &str) -> Option<&str> {
         self.values.get(key).map(|s| s.as_str())
     }
 
@@ -132,7 +132,7 @@ impl DMSConfig {
     /// # Returns
     /// 
     /// An `Option<bool>` containing the parsed boolean value if the key exists and can be parsed
-    pub fn _Fget_bool(&self, key: &str) -> Option<bool> {
+    pub fn get_bool(&self, key: &str) -> Option<bool> {
         self.values.get(key).and_then(|s| {
             let v = s.trim().to_ascii_lowercase();
             match v.as_str() {
@@ -152,7 +152,7 @@ impl DMSConfig {
     /// # Returns
     /// 
     /// An `Option<i64>` containing the parsed integer value if the key exists and can be parsed
-    pub fn _Fget_i64(&self, key: &str) -> Option<i64> {
+    pub fn get_i64(&self, key: &str) -> Option<i64> {
         self.values.get(key).and_then(|s| s.trim().parse::<i64>().ok())
     }
 
@@ -165,7 +165,7 @@ impl DMSConfig {
     /// # Returns
     /// 
     /// An `Option<u64>` containing the parsed integer value if the key exists and can be parsed
-    pub fn _Fget_u64(&self, key: &str) -> Option<u64> {
+    pub fn get_u64(&self, key: &str) -> Option<u64> {
         self.values.get(key).and_then(|s| s.trim().parse::<u64>().ok())
     }
 
@@ -178,7 +178,7 @@ impl DMSConfig {
     /// # Returns
     /// 
     /// An `Option<f32>` containing the parsed float value if the key exists and can be parsed
-    pub fn _Fget_f32(&self, key: &str) -> Option<f32> {
+    pub fn get_f32(&self, key: &str) -> Option<f32> {
         self.values.get(key).and_then(|s| s.trim().parse::<f32>().ok())
     }
 
@@ -189,7 +189,7 @@ impl DMSConfig {
     /// # Parameters
     /// 
     /// - `other`: The other configuration to merge into this one
-    pub fn _Fmerge(&mut self, other: &DMSConfig) {
+    pub fn merge(&mut self, other: &DMSConfig) {
         for (k, v) in &other.values {
             self.values.insert(k.clone(), v.clone());
         }
@@ -198,7 +198,7 @@ impl DMSConfig {
     /// Clears all configuration values.
     /// 
     /// Removes all key-value pairs from the configuration.
-    pub fn _Fclear(&mut self) {
+    pub fn clear(&mut self) {
         self.values.clear();
     }
 }
@@ -231,9 +231,9 @@ impl DMSConfigManager {
     /// Creates a new empty configuration manager.
     /// 
     /// Returns a new `DMSConfigManager` instance with no configuration sources.
-    pub fn _Fnew() -> Self {
+    pub fn new() -> Self {
         DMSConfigManager {
-            config: DMSConfig::_Fnew(),
+            config: DMSConfig::new(),
             sources: Vec::new(),
         }
     }
@@ -245,7 +245,7 @@ impl DMSConfigManager {
     /// - `path`: The path to the configuration file
     /// 
     /// Supported file formats: JSON, YAML, TOML
-    pub fn _Fadd_file_source(&mut self, path: impl AsRef<Path>) {
+    pub fn add_file_source(&mut self, path: impl AsRef<Path>) {
         self.sources.push(DMSConfigSource::File(path.as_ref().to_path_buf()));
     }
 
@@ -254,7 +254,7 @@ impl DMSConfigManager {
     /// Environment variables with the prefix `DMS_` are loaded as configuration values.
     /// Double underscores (`__`) in environment variable names are converted to dots.
     /// For example, `DMS_SERVER__PORT=8080` becomes `server.port=8080`.
-    pub fn _Fadd_environment_source(&mut self) {
+    pub fn add_environment_source(&mut self) {
         self.sources.push(DMSConfigSource::Environment);
     }
 
@@ -266,16 +266,16 @@ impl DMSConfigManager {
     /// # Returns
     /// 
     /// A `Result<(), DMSError>` indicating success or failure
-    pub fn _Fload(&mut self) -> Result<(), crate::core::DMSError> {
-        let mut cfg = DMSConfig::_Fnew();
+    pub fn load(&mut self) -> Result<(), crate::core::DMSError> {
+        let mut cfg = DMSConfig::new();
 
         for source in &self.sources {
             match source {
                 DMSConfigSource::File(path) => {
-                    self._Fload_file(path, &mut cfg)?;
+                    self.load_file(path, &mut cfg)?;
                 }
                 DMSConfigSource::Environment => {
-                    self._Fload_environment(&mut cfg);
+                    self.load_environment(&mut cfg);
                 }
             }
         }
@@ -295,25 +295,25 @@ impl DMSConfigManager {
     /// # Returns
     /// 
     /// A new `DMSConfigManager` instance with default sources and loaded configuration
-    pub fn _Fnew_default() -> Self {
-        let mut manager = Self::_Fnew();
+    pub fn new_default() -> Self {
+        let mut manager = Self::new();
         
         // Add default configuration sources
         if let Ok(cwd) = std::env::current_dir() {
             let config_dir = cwd.join("config");
             
             // Add all supported config files in order of priority (lowest to highest)
-            manager._Fadd_file_source(config_dir.join("dms.yaml"));
-            manager._Fadd_file_source(config_dir.join("dms.yml"));
-            manager._Fadd_file_source(config_dir.join("dms.toml"));
-            manager._Fadd_file_source(config_dir.join("dms.json"));
+            manager.add_file_source(config_dir.join("dms.yaml"));
+            manager.add_file_source(config_dir.join("dms.yml"));
+            manager.add_file_source(config_dir.join("dms.toml"));
+            manager.add_file_source(config_dir.join("dms.json"));
         }
         
         // Add environment variables as highest priority
-        manager._Fadd_environment_source();
+        manager.add_environment_source();
         
         // Load configuration immediately
-        let _ = manager._Fload();
+        let _ = manager.load();
         
         manager
     }
@@ -331,7 +331,7 @@ impl DMSConfigManager {
     /// # Returns
     /// 
     /// A `Result<(), DMSError>` indicating success or failure
-    fn _Fload_file(&self, path: &Path, cfg: &mut DMSConfig) -> Result<(), crate::core::DMSError> {
+    fn load_file(&self, path: &Path, cfg: &mut DMSConfig) -> Result<(), crate::core::DMSError> {
         if !path.exists() {
             return Ok(());
         }
@@ -342,19 +342,19 @@ impl DMSConfigManager {
         match extension.to_lowercase().as_str() {
             "json" => {
                 if let Ok(map) = serde_json::from_str::<serde_json::Value>(&text) {
-                    self._Fflatten_json(&map, "", cfg);
+                    self.flatten_json(&map, "", cfg);
                 }
             }
             "yaml" | "yml" => {
                 if let Ok(yaml_docs) = YamlLoader::load_from_str(&text) {
                     for doc in yaml_docs {
-                        self._Fflatten_yaml(&doc, "", cfg);
+                        self.flatten_yaml(&doc, "", cfg);
                     }
                 }
             }
             "toml" => {
                 if let Ok(toml) = toml::from_str(&text) {
-                    self._Fflatten_toml(&toml, "", cfg);
+                    self.flatten_toml(&toml, "", cfg);
                 }
             }
             _ => {
@@ -374,11 +374,11 @@ impl DMSConfigManager {
     /// - `value`: The JSON value to flatten
     /// - `prefix`: The current prefix for keys (used for recursion)
     /// - `cfg`: The configuration object to load values into
-    fn _Fflatten_json(&self, value: &serde_json::Value, prefix: &str, cfg: &mut DMSConfig) {
-        Self::_Fflatten_json_static(value, prefix, cfg);
+    fn flatten_json(&self, value: &serde_json::Value, prefix: &str, cfg: &mut DMSConfig) {
+        Self::flatten_json_static(value, prefix, cfg);
     }
 
-    /// Static version of `_Fflatten_json` for recursion.
+    /// Static version of `flatten_json` for recursion.
     /// 
     /// This static method is used for recursion to avoid the "parameter is only used in recursion" warning.
     /// 
@@ -387,7 +387,7 @@ impl DMSConfigManager {
     /// - `value`: The JSON value to flatten
     /// - `prefix`: The current prefix for keys (used for recursion)
     /// - `cfg`: The configuration object to load values into
-    fn _Fflatten_json_static(value: &serde_json::Value, prefix: &str, cfg: &mut DMSConfig) {
+    fn flatten_json_static(value: &serde_json::Value, prefix: &str, cfg: &mut DMSConfig) {
         match value {
             serde_json::Value::Object(map) => {
                 for (k, v) in map {
@@ -396,26 +396,26 @@ impl DMSConfigManager {
                     } else {
                         format!("{prefix}.{k}")
                     };
-                    Self::_Fflatten_json_static(v, &new_prefix, cfg);
+                    Self::flatten_json_static(v, &new_prefix, cfg);
                 }
             }
             serde_json::Value::Array(arr) => {
                 for (i, v) in arr.iter().enumerate() {
                     let new_prefix = format!("{prefix}.{i}");
-                    Self::_Fflatten_json_static(v, &new_prefix, cfg);
+                    Self::flatten_json_static(v, &new_prefix, cfg);
                 }
             }
             serde_json::Value::String(s) => {
-                cfg._Fset(prefix, s);
+                cfg.set(prefix, s);
             }
             serde_json::Value::Number(n) => {
-                cfg._Fset(prefix, n.to_string());
+                cfg.set(prefix, n.to_string());
             }
             serde_json::Value::Bool(b) => {
-                cfg._Fset(prefix, b.to_string());
+                cfg.set(prefix, b.to_string());
             }
             serde_json::Value::Null => {
-                cfg._Fset(prefix, "");
+                cfg.set(prefix, "");
             }
         }
     }
@@ -429,11 +429,11 @@ impl DMSConfigManager {
     /// - `value`: The YAML value to flatten
     /// - `prefix`: The current prefix for keys (used for recursion)
     /// - `cfg`: The configuration object to load values into
-    fn _Fflatten_yaml(&self, value: &Yaml, prefix: &str, cfg: &mut DMSConfig) {
-        Self::_Fflatten_yaml_static(value, prefix, cfg);
+    fn flatten_yaml(&self, value: &Yaml, prefix: &str, cfg: &mut DMSConfig) {
+        Self::flatten_yaml_static(value, prefix, cfg);
     }
 
-    /// Static version of `_Fflatten_yaml` for recursion.
+    /// Static version of `flatten_yaml` for recursion.
     /// 
     /// This static method is used for recursion to avoid the "parameter is only used in recursion" warning.
     /// 
@@ -442,7 +442,7 @@ impl DMSConfigManager {
     /// - `value`: The YAML value to flatten
     /// - `prefix`: The current prefix for keys (used for recursion)
     /// - `cfg`: The configuration object to load values into
-    fn _Fflatten_yaml_static(value: &Yaml, prefix: &str, cfg: &mut DMSConfig) {
+    fn flatten_yaml_static(value: &Yaml, prefix: &str, cfg: &mut DMSConfig) {
         match value {
             Yaml::Hash(map) => {
                 for (k, v) in map {
@@ -452,30 +452,30 @@ impl DMSConfigManager {
                         } else {
                             format!("{prefix}.{key}")
                         };
-                        Self::_Fflatten_yaml_static(v, &new_prefix, cfg);
+                        Self::flatten_yaml_static(v, &new_prefix, cfg);
                     }
                 }
             }
             Yaml::Array(arr) => {
                 for (i, v) in arr.iter().enumerate() {
                     let new_prefix = format!("{prefix}.{i}");
-                    Self::_Fflatten_yaml_static(v, &new_prefix, cfg);
+                    Self::flatten_yaml_static(v, &new_prefix, cfg);
                 }
             }
             Yaml::String(s) => {
-                cfg._Fset(prefix, s);
+                cfg.set(prefix, s);
             }
             Yaml::Integer(n) => {
-                cfg._Fset(prefix, n.to_string());
+                cfg.set(prefix, n.to_string());
             }
             Yaml::Real(r) => {
-                cfg._Fset(prefix, r);
+                cfg.set(prefix, r);
             }
             Yaml::Boolean(b) => {
-                cfg._Fset(prefix, b.to_string());
+                cfg.set(prefix, b.to_string());
             }
             Yaml::Null => {
-                cfg._Fset(prefix, "");
+                cfg.set(prefix, "");
             }
             _ => {
                 // Ignore other YAML types
@@ -492,11 +492,11 @@ impl DMSConfigManager {
     /// - `value`: The TOML value to flatten
     /// - `prefix`: The current prefix for keys (used for recursion)
     /// - `cfg`: The configuration object to load values into
-    fn _Fflatten_toml(&self, value: &toml::Value, prefix: &str, cfg: &mut DMSConfig) {
-        Self::_Fflatten_toml_static(value, prefix, cfg);
+    fn flatten_toml(&self, value: &toml::Value, prefix: &str, cfg: &mut DMSConfig) {
+        Self::flatten_toml_static(value, prefix, cfg);
     }
 
-    /// Static version of `_Fflatten_toml` for recursion.
+    /// Static version of `flatten_toml` for recursion.
     /// 
     /// This static method is used for recursion to avoid the "parameter is only used in recursion" warning.
     /// 
@@ -505,7 +505,7 @@ impl DMSConfigManager {
     /// - `value`: The TOML value to flatten
     /// - `prefix`: The current prefix for keys (used for recursion)
     /// - `cfg`: The configuration object to load values into
-    fn _Fflatten_toml_static(value: &toml::Value, prefix: &str, cfg: &mut DMSConfig) {
+    fn flatten_toml_static(value: &toml::Value, prefix: &str, cfg: &mut DMSConfig) {
         match value {
             toml::Value::Table(table) => {
                 for (k, v) in table {
@@ -514,29 +514,29 @@ impl DMSConfigManager {
                     } else {
                         format!("{prefix}.{k}")
                     };
-                    Self::_Fflatten_toml_static(v, &new_prefix, cfg);
+                    Self::flatten_toml_static(v, &new_prefix, cfg);
                 }
             }
             toml::Value::Array(arr) => {
                 for (i, v) in arr.iter().enumerate() {
                     let new_prefix = format!("{prefix}.{i}");
-                    Self::_Fflatten_toml_static(v, &new_prefix, cfg);
+                    Self::flatten_toml_static(v, &new_prefix, cfg);
                 }
             }
             toml::Value::String(s) => {
-                cfg._Fset(prefix, s);
+                cfg.set(prefix, s);
             }
             toml::Value::Integer(n) => {
-                cfg._Fset(prefix, n.to_string());
+                cfg.set(prefix, n.to_string());
             }
             toml::Value::Float(f) => {
-                cfg._Fset(prefix, f.to_string());
+                cfg.set(prefix, f.to_string());
             }
             toml::Value::Boolean(b) => {
-                cfg._Fset(prefix, b.to_string());
+                cfg.set(prefix, b.to_string());
             }
             toml::Value::Datetime(dt) => {
-                cfg._Fset(prefix, dt.to_string());
+                cfg.set(prefix, dt.to_string());
             }
         }
     }
@@ -549,7 +549,7 @@ impl DMSConfigManager {
     /// # Parameters
     /// 
     /// - `cfg`: The configuration object to load values into
-    fn _Fload_environment(&self, cfg: &mut DMSConfig) {
+    fn load_environment(&self, cfg: &mut DMSConfig) {
         for (name, value) in std::env::vars() {
             if let Some(rest) = name.strip_prefix("DMS_") {
                 let key_parts: Vec<String> = rest
@@ -558,7 +558,7 @@ impl DMSConfigManager {
                     .collect();
                 let key = key_parts.join(".");
                 if !key.is_empty() {
-                    cfg._Fset(key, value);
+                    cfg.set(key, value);
                 }
             }
         }
@@ -572,7 +572,7 @@ impl DMSConfigManager {
     /// # Returns
     /// 
     /// A `Result<(), DMSError>` indicating success or failure
-    pub async fn _Fstart_watcher(&mut self) -> Result<(), crate::core::DMSError> {
+    pub async fn start_watcher(&mut self) -> Result<(), crate::core::DMSError> {
         // Watcher implementation is simplified for now
         // Full hot reload support will be implemented in a future update
         Ok(())
@@ -583,7 +583,7 @@ impl DMSConfigManager {
     /// # Returns
     /// 
     /// A `&DMSConfig` reference to the loaded configuration
-    pub fn _Fconfig(&self) -> &DMSConfig {
+    pub fn config(&self) -> &DMSConfig {
         &self.config
     }
 
@@ -592,7 +592,7 @@ impl DMSConfigManager {
     /// # Returns
     /// 
     /// A `&mut DMSConfig` reference to the loaded configuration
-    pub fn _Fconfig_mut(&mut self) -> &mut DMSConfig {
+    pub fn config_mut(&mut self) -> &mut DMSConfig {
         &mut self.config
     }
 }

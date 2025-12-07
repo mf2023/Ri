@@ -36,7 +36,7 @@
 //! # Usage Examples
 //! ```rust
 //! // Create a permission manager
-//! let permission_manager = DMSPermissionManager::_Fnew();
+//! let permission_manager = DMSPermissionManager::new();
 //! 
 //! // Create a permission
 //! let read_device_perm = DMSPermission {
@@ -46,22 +46,22 @@
 //!     resource: "device".to_string(),
 //!     action: "read".to_string(),
 //! };
-//! permission_manager._Fcreate_permission(read_device_perm).await?;
+//! permission_manager.create_permission(read_device_perm).await?;
 //! 
 //! // Create a role
-//! let device_admin_role = DMSRole::_Fnew(
+//! let device_admin_role = DMSRole::new(
 //!     "device_admin".to_string(),
 //!     "Device Administrator".to_string(),
 //!     "Manages devices".to_string(),
 //!     vec!["read:device", "write:device"].iter().map(|s| s.to_string()).collect()
 //! );
-//! permission_manager._Fcreate_role(device_admin_role).await?;
+//! permission_manager.create_role(device_admin_role).await?;
 //! 
 //! // Assign role to user
-//! permission_manager._Fassign_role_to_user("user123".to_string(), "device_admin".to_string()).await?;
+//! permission_manager.assign_role_to_user("user123".to_string(), "device_admin".to_string()).await?;
 //! 
 //! // Check if user has permission
-//! let has_perm = permission_manager._Fhas_permission("user123", "read:device").await?;
+//! let has_perm = permission_manager.has_permission("user123", "read:device").await?;
 //! ```
 
 #![allow(non_snake_case)]
@@ -107,7 +107,7 @@ impl DMSRole {
     /// 
     /// # Returns
     /// A new instance of `DMSRole`
-    pub fn _Fnew(id: String, name: String, description: String, permissions: HashSet<String>) -> Self {
+    pub fn new(id: String, name: String, description: String, permissions: HashSet<String>) -> Self {
         Self {
             id,
             name,
@@ -124,7 +124,7 @@ impl DMSRole {
     /// 
     /// # Returns
     /// `true` if the role has the permission, otherwise `false`
-    pub fn _Fhas_permission(&self, permission_id: &str) -> bool {
+    pub fn has_permission(&self, permission_id: &str) -> bool {
         self.permissions.contains(permission_id)
     }
 
@@ -132,7 +132,7 @@ impl DMSRole {
     /// 
     /// # Parameters
     /// - `permission_id`: Permission ID to add
-    pub fn _Fadd_permission(&mut self, permission_id: String) {
+    pub fn add_permission(&mut self, permission_id: String) {
         self.permissions.insert(permission_id);
     }
 
@@ -140,7 +140,7 @@ impl DMSRole {
     /// 
     /// # Parameters
     /// - `permission_id`: Permission ID to remove
-    pub fn _Fremove_permission(&mut self, permission_id: &str) {
+    pub fn remove_permission(&mut self, permission_id: &str) {
         self.permissions.remove(permission_id);
     }
 }
@@ -167,7 +167,7 @@ impl DMSPermissionManager {
     /// 
     /// # Returns
     /// A new instance of `DMSPermissionManager`
-    pub fn _Fnew() -> Self {
+    pub fn new() -> Self {
         let mut manager = Self {
             permissions: RwLock::new(HashMap::new()),
             roles: RwLock::new(HashMap::new()),
@@ -175,7 +175,7 @@ impl DMSPermissionManager {
         };
         
         // Initialize with default system roles
-        manager._Finitialize_default_roles();
+        manager.initialize_default_roles();
         manager
     }
 
@@ -184,7 +184,7 @@ impl DMSPermissionManager {
     /// This method is called during construction to create the default admin
     /// and user roles. It uses `blocking_write` because it's called from a
     /// non-async context.
-    fn _Finitialize_default_roles(&mut self) {
+    fn initialize_default_roles(&mut self) {
         // This would be called in blocking context, so we use blocking_write
         let mut roles = self.roles.blocking_write();
         
@@ -228,7 +228,7 @@ impl DMSPermissionManager {
     /// 
     /// # Returns
     /// `Ok(())` if the permission was successfully created
-    pub async fn _Fcreate_permission(&self, permission: DMSPermission) -> crate::core::DMSResult<()> {
+    pub async fn create_permission(&self, permission: DMSPermission) -> crate::core::DMSResult<()> {
         let mut permissions = self.permissions.write().await;
         permissions.insert(permission.id.clone(), permission);
         Ok(())
@@ -241,7 +241,7 @@ impl DMSPermissionManager {
     /// 
     /// # Returns
     /// `Some(DMSPermission)` if the permission exists, otherwise `None`
-    pub async fn _Fget_permission(&self, permission_id: &str) -> crate::core::DMSResult<Option<DMSPermission>> {
+    pub async fn get_permission(&self, permission_id: &str) -> crate::core::DMSResult<Option<DMSPermission>> {
         let permissions = self.permissions.read().await;
         Ok(permissions.get(permission_id).cloned())
     }
@@ -253,7 +253,7 @@ impl DMSPermissionManager {
     /// 
     /// # Returns
     /// `Ok(())` if the role was successfully created
-    pub async fn _Fcreate_role(&self, role: DMSRole) -> crate::core::DMSResult<()> {
+    pub async fn create_role(&self, role: DMSRole) -> crate::core::DMSResult<()> {
         let mut roles = self.roles.write().await;
         roles.insert(role.id.clone(), role);
         Ok(())
@@ -266,7 +266,7 @@ impl DMSPermissionManager {
     /// 
     /// # Returns
     /// `Some(DMSRole)` if the role exists, otherwise `None`
-    pub async fn _Fget_role(&self, role_id: &str) -> crate::core::DMSResult<Option<DMSRole>> {
+    pub async fn get_role(&self, role_id: &str) -> crate::core::DMSResult<Option<DMSRole>> {
         let roles = self.roles.read().await;
         Ok(roles.get(role_id).cloned())
     }
@@ -279,7 +279,7 @@ impl DMSPermissionManager {
     /// 
     /// # Returns
     /// `true` if the role was successfully assigned, `false` if the role doesn't exist
-    pub async fn _Fassign_role_to_user(&self, user_id: String, role_id: String) -> crate::core::DMSResult<bool> {
+    pub async fn assign_role_to_user(&self, user_id: String, role_id: String) -> crate::core::DMSResult<bool> {
         // Check if role exists
         let roles = self.roles.read().await;
         if !roles.contains_key(&role_id) {
@@ -301,7 +301,7 @@ impl DMSPermissionManager {
     /// 
     /// # Returns
     /// `true` if the role was successfully removed, `false` if the user didn't have the role
-    pub async fn _Fremove_role_from_user(&self, user_id: &str, role_id: &str) -> crate::core::DMSResult<bool> {
+    pub async fn remove_role_from_user(&self, user_id: &str, role_id: &str) -> crate::core::DMSResult<bool> {
         let mut user_roles = self.user_roles.write().await;
         
         if let Some(user_role_set) = user_roles.get_mut(user_id) {
@@ -322,7 +322,7 @@ impl DMSPermissionManager {
     /// 
     /// # Returns
     /// A vector of `DMSRole` objects assigned to the user
-    pub async fn _Fget_user_roles(&self, user_id: &str) -> crate::core::DMSResult<Vec<DMSRole>> {
+    pub async fn get_user_roles(&self, user_id: &str) -> crate::core::DMSResult<Vec<DMSRole>> {
         let user_roles = self.user_roles.read().await;
         let roles = self.roles.read().await;
         
@@ -351,7 +351,7 @@ impl DMSPermissionManager {
     /// # Notes
     /// - Users with the wildcard permission ("*") have all permissions
     /// - Permission checking is done by examining all roles assigned to the user
-    pub async fn _Fhas_permission(&self, user_id: &str, permission_id: &str) -> crate::core::DMSResult<bool> {
+    pub async fn has_permission(&self, user_id: &str, permission_id: &str) -> crate::core::DMSResult<bool> {
         let user_roles = self.user_roles.read().await;
         let roles = self.roles.read().await;
         
@@ -381,9 +381,9 @@ impl DMSPermissionManager {
     /// 
     /// # Returns
     /// `true` if the user has at least one of the permissions, otherwise `false`
-    pub async fn _Fhas_any_permission(&self, user_id: &str, permissions: &[String]) -> crate::core::DMSResult<bool> {
+    pub async fn has_any_permission(&self, user_id: &str, permissions: &[String]) -> crate::core::DMSResult<bool> {
         for permission in permissions {
-            if self._Fhas_permission(user_id, permission).await? {
+            if self.has_permission(user_id, permission).await? {
                 return Ok(true);
             }
         }
@@ -398,9 +398,9 @@ impl DMSPermissionManager {
     /// 
     /// # Returns
     /// `true` if the user has all of the permissions, otherwise `false`
-    pub async fn _Fhas_all_permissions(&self, user_id: &str, permissions: &[String]) -> crate::core::DMSResult<bool> {
+    pub async fn has_all_permissions(&self, user_id: &str, permissions: &[String]) -> crate::core::DMSResult<bool> {
         for permission in permissions {
-            if !self._Fhas_permission(user_id, permission).await? {
+            if !self.has_permission(user_id, permission).await? {
                 return Ok(false);
             }
         }
@@ -414,7 +414,7 @@ impl DMSPermissionManager {
     /// 
     /// # Returns
     /// A set of permission IDs assigned to the user
-    pub async fn _Fget_user_permissions(&self, user_id: &str) -> crate::core::DMSResult<HashSet<String>> {
+    pub async fn get_user_permissions(&self, user_id: &str) -> crate::core::DMSResult<HashSet<String>> {
         let user_roles = self.user_roles.read().await;
         let roles = self.roles.read().await;
         
@@ -438,7 +438,7 @@ impl DMSPermissionManager {
     /// 
     /// # Returns
     /// `true` if the permission was successfully deleted, otherwise `false`
-    pub async fn _Fdelete_permission(&self, permission_id: &str) -> crate::core::DMSResult<bool> {
+    pub async fn delete_permission(&self, permission_id: &str) -> crate::core::DMSResult<bool> {
         let mut permissions = self.permissions.write().await;
         Ok(permissions.remove(permission_id).is_some())
     }
@@ -454,7 +454,7 @@ impl DMSPermissionManager {
     /// # Notes
     /// - System roles cannot be deleted
     /// - If the role is deleted, it is removed from all users
-    pub async fn _Fdelete_role(&self, role_id: &str) -> crate::core::DMSResult<bool> {
+    pub async fn delete_role(&self, role_id: &str) -> crate::core::DMSResult<bool> {
         // Don't delete system roles
         let roles = self.roles.read().await;
         if let Some(role) = roles.get(role_id) {
@@ -482,7 +482,7 @@ impl DMSPermissionManager {
     /// 
     /// # Returns
     /// A vector of all registered permissions
-    pub async fn _Flist_permissions(&self) -> crate::core::DMSResult<Vec<DMSPermission>> {
+    pub async fn list_permissions(&self) -> crate::core::DMSResult<Vec<DMSPermission>> {
         let permissions = self.permissions.read().await;
         Ok(permissions.values().cloned().collect())
     }
@@ -491,7 +491,7 @@ impl DMSPermissionManager {
     /// 
     /// # Returns
     /// A vector of all registered roles
-    pub async fn _Flist_roles(&self) -> crate::core::DMSResult<Vec<DMSRole>> {
+    pub async fn list_roles(&self) -> crate::core::DMSResult<Vec<DMSRole>> {
         let roles = self.roles.read().await;
         Ok(roles.values().cloned().collect())
     }

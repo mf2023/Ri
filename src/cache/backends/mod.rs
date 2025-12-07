@@ -47,13 +47,13 @@
 //! 
 //! async fn example() -> DMSResult<()> {
 //!     // Create an in-memory cache
-//!     let memory_cache = DMSMemoryCache::_Fnew();
+//!     let memory_cache = DMSMemoryCache::new();
 //!     
 //!     // Create a Redis cache
-//!     let redis_cache = DMSRedisCache::_Fnew("redis://localhost:6379").await?;
+//!     let redis_cache = DMSRedisCache::new("redis://localhost:6379").await?;
 //!     
 //!     // Create a hybrid cache
-//!     let hybrid_cache = DMSHybridCache::_Fnew("redis://localhost:6379").await?;
+//!     let hybrid_cache = DMSHybridCache::new("redis://localhost:6379").await?;
 //!     
 //!     Ok(())
 //! }

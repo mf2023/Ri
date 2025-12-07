@@ -42,7 +42,7 @@
 //! The `prelude` module re-exports commonly used types and traits for convenient access,
 //! allowing users to import all essential components with a single `use dms::prelude::*;` statement.
 
-#![allow(non_snake_case)]
+
 
 /// Core runtime, application builder, and service context
 pub mod core;
@@ -81,44 +81,101 @@ pub mod auth;
 /// 
 /// #[tokio::main]
 /// async fn main() -> DMSResult<()> {
-///     let app = DMSAppBuilder::_Fnew()
-///         ._Fwith_config("config.yaml")?
-///         ._Fbuild()?;
+///     let app = DMSAppBuilder::new()
+///         .with_config("config.yaml")?
+///         .build()?;
 ///     
-///     app._Frun(|ctx| async move {
-///         ctx._Flogger()._Finfo("service", "DMS service started")?;
+///     app.run(|ctx| async move {
+///         ctx.logger().info("service", "DMS service started")?;
 ///         Ok(())
 ///     }).await
 /// }
 /// ```
 pub mod prelude {
     // Re-export commonly used public classes here.
+    // Only DMSXxxXxx format classes are exposed in prelude
+    
     /// Application builder for constructing DMS applications
-    pub use crate::core::DMSAppBuilder;
+    pub use crate::core::{DMSAppBuilder, DMSAppRuntime};
     /// Service context providing access to application resources
     pub use crate::core::DMSServiceContext;
+    /// Module traits for extending DMS functionality
+    pub use crate::core::DMSModule;
     /// Error type used throughout DMS
     pub use crate::core::DMSError;
     /// Result type alias using DMSError
     pub use crate::core::DMSResult;
+    
     /// Secure file system operations
     pub use crate::fs::DMSFileSystem;
+    
     /// Structured logger with tracing integration
     pub use crate::log::DMSLogger;
     /// Log configuration structure
     pub use crate::log::DMSLogConfig;
     /// Log level enum
     pub use crate::log::DMSLogLevel;
+    
     /// Configuration management
     pub use crate::config::DMSConfig;
     /// Configuration manager for multi-source configuration
     pub use crate::config::DMSConfigManager;
+    
     /// Hook bus for managing lifecycle events
     pub use crate::hooks::DMSHookBus;
     /// Hook event structure
     pub use crate::hooks::DMSHookEvent;
     /// Hook kind enum
     pub use crate::hooks::DMSHookKind;
+    /// Module lifecycle phase definition
+    pub use crate::hooks::DMSModulePhase;
+    
+    /// Main cache module for DMS
+    pub use crate::cache::DMSCacheModule;
+    /// Cache configuration structure
+    pub use crate::cache::DMSCacheConfig;
+    
+    /// Main queue module for DMS
+    pub use crate::queue::DMSQueueModule;
+    /// Queue configuration structure
+    pub use crate::queue::DMSQueueConfig;
+    
+    /// Main gateway struct implementing the DMSModule trait
+    pub use crate::gateway::DMSGateway;
+    /// Configuration for the DMS Gateway
+    pub use crate::gateway::DMSGatewayConfig;
+    /// Route definition for API endpoints
+    pub use crate::gateway::DMSRoute;
+    /// Router for handling request routing
+    pub use crate::gateway::DMSRouter;
+    
+    /// Main device control module for DMS
+    pub use crate::device::DMSDeviceControlModule;
+    /// Configuration for the device control module
+    pub use crate::device::DMSDeviceControlConfig;
+    /// Device representation with type, status, and capabilities
+    pub use crate::device::DMSDevice;
+    /// Enum defining supported device types
+    pub use crate::device::DMSDeviceType;
+    
+    /// Main authentication module for DMS
+    pub use crate::auth::DMSAuthModule;
+    /// Configuration for the authentication module
+    pub use crate::auth::DMSAuthConfig;
+    
+    /// Main service mesh struct implementing the DMSModule trait
+    pub use crate::service_mesh::DMSServiceMesh;
+    /// Configuration for the service mesh
+    pub use crate::service_mesh::DMSServiceMeshConfig;
+    
+    /// Main observability module for DMS
+    pub use crate::observability::DMSObservabilityModule;
+    /// Configuration for the observability module
+    pub use crate::observability::DMSObservabilityConfig;
+    /// Distributed tracing implementation
+    pub use crate::observability::DMSTracer;
+    /// Metrics collection and aggregation
+    pub use crate::observability::DMSMetricsRegistry;
 }
 
 /// Python bindings for DMS
@@ -131,9 +188,6 @@ pub mod py {
     /// Initialize the Python module
     #[pymodule]
     pub fn dms_core(m: &Bound<'_, PyModule>) -> PyResult<()> {
-        // Add functions
-        m.add_function(wrap_pyfunction!(new_app_builder, m)?)?;
-        
         // Add core types that implement PyClass
         m.add_class::<DMSAppBuilder>()?;
         
@@ -160,11 +214,5 @@ pub mod py {
         m.add_submodule(&observability_module)?;
         
         Ok(())
-    }
-    
-    /// Create a new DMSAppBuilder
-    #[pyfunction]
-    pub fn new_app_builder() -> PyResult<DMSAppBuilder> {
-        Ok(DMSAppBuilder::_Fnew())
     }
 }

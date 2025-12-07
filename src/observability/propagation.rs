@@ -48,30 +48,30 @@
 //! 
 //! fn example() {
 //!     // Create trace and span IDs
-//!     let trace_id = DMSTraceId::_Fgenerate();
-//!     let span_id = DMSSpanId::_Fgenerate();
+//!     let trace_id = DMSTraceId::generate();
+//!     let span_id = DMSSpanId::generate();
 //!     
 //!     // Create a trace context
-//!     let mut trace_context = DMSTraceContext::_Fnew(trace_id, span_id);
-//!     trace_context._Fset_sampled(true);
+//!     let mut trace_context = DMSTraceContext::new(trace_id, span_id);
+//!     trace_context.set_sampled(true);
 //!     
 //!     // Create baggage
-//!     let mut baggage = DMSBaggage::_Fnew();
-//!     baggage._Finsert("user_id".to_string(), "12345".to_string());
-//!     baggage._Finsert("request_id".to_string(), "abc123".to_string());
+//!     let mut baggage = DMSBaggage::new();
+//!     baggage.insert("user_id".to_string(), "12345".to_string());
+//!     baggage.insert("request_id".to_string(), "abc123".to_string());
 //!     
 //!     // Create a context carrier
-//!     let carrier = DMSContextCarrier::_Fnew()
-//!         ._Fwith_trace_context(trace_context)
-//!         ._Fwith_baggage(baggage);
+//!     let carrier = DMSContextCarrier::new()
+//!         .with_trace_context(trace_context)
+//!         .with_baggage(baggage);
 //!     
 //!     // Inject into HTTP headers
 //!     let mut headers = HashMap::new();
-//!     carrier._Finject_into_headers(&mut headers);
+//!     carrier.inject_into_headers(&mut headers);
 //!     println!("Headers: {:?}", headers);
 //!     
 //!     // Extract from HTTP headers
-//!     let extracted_carrier = DMSContextCarrier::_Ffrom_headers(&headers);
+//!     let extracted_carrier = DMSContextCarrier::from_headers(&headers);
 //!     println!("Extracted trace context: {:?}", extracted_carrier.trace_context);
 //! }
 //! ```
@@ -109,7 +109,8 @@ impl DMSTraceContext {
     /// # Returns
     ///
     /// A new DMSTraceContext instance
-    pub fn _Fnew(trace_id: DMSTraceId, parent_id: DMSSpanId) -> Self {
+    #[allow(dead_code)]
+    pub fn new(trace_id: DMSTraceId, parent_id: DMSSpanId) -> Self {
         Self {
             version: 0x00,
             trace_id,
@@ -128,15 +129,16 @@ impl DMSTraceContext {
     /// # Returns
     ///
     /// An Option containing the parsed DMSTraceContext, or None if parsing failed
-    pub fn _Ffrom_header(header: &str) -> Option<Self> {
+    #[allow(dead_code)]
+    pub fn from_header(header: &str) -> Option<Self> {
         let parts: Vec<&str> = header.split('-').collect();
         if parts.len() != 4 {
             return None;
         }
         
         let version = u8::from_str_radix(parts[0], 16).ok()?;
-        let trace_id = DMSTraceId::_Ffrom_string(parts[1].to_string());
-        let parent_id = DMSSpanId::_Ffrom_string(parts[2].to_string());
+        let trace_id = DMSTraceId::from_string(parts[1].to_string());
+        let parent_id = DMSSpanId::from_string(parts[2].to_string());
         let trace_flags = u8::from_str_radix(parts[3], 16).ok()?;
         
         Some(Self {
@@ -153,12 +155,13 @@ impl DMSTraceContext {
     /// # Returns
     ///
     /// A string in the format "00-{trace-id}-{parent-id}-{trace-flags}"
-    pub fn _Fto_header(&self) -> String {
+    #[allow(dead_code)]
+    pub fn to_header(&self) -> String {
         format!(
             "{:02x}-{}-{}-{:02x}",
             self.version,
-            self.trace_id._Fas_str(),
-            self.parent_id._Fas_str(),
+            self.trace_id.as_str(),
+            self.parent_id.as_str(),
             self.trace_flags
         )
     }
@@ -168,7 +171,8 @@ impl DMSTraceContext {
     /// # Returns
     ///
     /// True if the sampled flag is set, false otherwise
-    pub fn _Fis_sampled(&self) -> bool {
+    #[allow(dead_code)]
+    pub fn is_sampled(&self) -> bool {
         (self.trace_flags & 0x01) != 0
     }
     
@@ -177,7 +181,8 @@ impl DMSTraceContext {
     /// # Parameters
     ///
     /// - `sampled`: Whether the trace should be sampled
-    pub fn _Fset_sampled(&mut self, sampled: bool) {
+    #[allow(dead_code)]
+    pub fn set_sampled(&mut self, sampled: bool) {
         if sampled {
             self.trace_flags |= 0x01;
         } else {
@@ -202,7 +207,8 @@ impl DMSBaggage {
     /// # Returns
     ///
     /// A new DMSBaggage instance
-    pub fn _Fnew() -> Self {
+    #[allow(dead_code)]
+    pub fn new() -> Self {
         Self {
             items: HashMap::new(),
         }
@@ -214,7 +220,8 @@ impl DMSBaggage {
     ///
     /// - `key`: The baggage key
     /// - `value`: The baggage value
-    pub fn _Finsert(&mut self, key: String, value: String) {
+    #[allow(dead_code)]
+    pub fn insert(&mut self, key: String, value: String) {
         self.items.insert(key, value);
     }
     
@@ -227,7 +234,8 @@ impl DMSBaggage {
     /// # Returns
     ///
     /// An Option containing the value if found, or None otherwise
-    pub fn _Fget(&self, key: &str) -> Option<&String> {
+    #[allow(dead_code)]
+    pub fn get(&self, key: &str) -> Option<&String> {
         self.items.get(key)
     }
     
@@ -236,7 +244,8 @@ impl DMSBaggage {
     /// # Parameters
     ///
     /// - `key`: The baggage key to remove
-    pub fn _Fremove(&mut self, key: &str) {
+    #[allow(dead_code)]
+    pub fn remove(&mut self, key: &str) {
         self.items.remove(key);
     }
     
@@ -249,15 +258,16 @@ impl DMSBaggage {
     /// # Returns
     ///
     /// A new DMSBaggage instance with the parsed items
-    pub fn _Ffrom_header(header: &str) -> Self {
-        let mut baggage = Self::_Fnew();
+    #[allow(dead_code)]
+    pub fn from_header(header: &str) -> Self {
+        let mut baggage = Self::new();
         
         for item in header.split(',') {
             let item = item.trim();
             if let Some(eq_pos) = item.find('=') {
                 let key = item[..eq_pos].trim().to_string();
                 let value = item[eq_pos + 1..].trim().to_string();
-                baggage._Finsert(key, value);
+                baggage.insert(key, value);
             }
         }
         
@@ -269,7 +279,8 @@ impl DMSBaggage {
     /// # Returns
     ///
     /// A string in the format "key1=value1,key2=value2"
-    pub fn _Fto_header(&self) -> String {
+    #[allow(dead_code)]
+    pub fn to_header(&self) -> String {
         self.items
             .iter()
             .map(|(k, v)| format!("{k}={v}"))
@@ -282,6 +293,7 @@ impl DMSBaggage {
 ///
 /// This struct carries both trace context and baggage, providing a convenient way to
 /// extract and inject distributed tracing information from/to HTTP headers.
+#[allow(dead_code)]
 #[derive(Debug, Clone)]
 pub struct DMSContextCarrier {
     /// Trace context for the request
@@ -296,10 +308,11 @@ impl DMSContextCarrier {
     /// # Returns
     ///
     /// A new DMSContextCarrier instance
-    pub fn _Fnew() -> Self {
+    #[allow(dead_code)]
+    pub fn new() -> Self {
         Self {
             trace_context: None,
-            baggage: DMSBaggage::_Fnew(),
+            baggage: DMSBaggage::new(),
         }
     }
     
@@ -312,7 +325,8 @@ impl DMSContextCarrier {
     /// # Returns
     ///
     /// The updated DMSContextCarrier instance
-    pub fn _Fwith_trace_context(mut self, trace_context: DMSTraceContext) -> Self {
+    #[allow(dead_code)]
+    pub fn with_trace_context(mut self, trace_context: DMSTraceContext) -> Self {
         self.trace_context = Some(trace_context);
         self
     }
@@ -326,7 +340,8 @@ impl DMSContextCarrier {
     /// # Returns
     ///
     /// The updated DMSContextCarrier instance
-    pub fn _Fwith_baggage(mut self, baggage: DMSBaggage) -> Self {
+    #[allow(dead_code)]
+    pub fn with_baggage(mut self, baggage: DMSBaggage) -> Self {
         self.baggage = baggage;
         self
     }
@@ -340,19 +355,20 @@ impl DMSContextCarrier {
     /// # Returns
     ///
     /// A new DMSContextCarrier instance with extracted trace context and baggage
-    pub fn _Ffrom_headers(headers: &HashMap<String, String>) -> Self {
-        let mut carrier = Self::_Fnew();
+    #[allow(dead_code)]
+    pub fn from_headers(headers: &HashMap<String, String>) -> Self {
+        let mut carrier = Self::new();
         
         // Extract trace context from traceparent header
         if let Some(traceparent) = headers.get("traceparent") {
-            if let Some(trace_context) = DMSTraceContext::_Ffrom_header(traceparent) {
+            if let Some(trace_context) = DMSTraceContext::from_header(traceparent) {
                 carrier.trace_context = Some(trace_context);
             }
         }
         
         // Extract baggage from baggage header
         if let Some(baggage_header) = headers.get("baggage") {
-            carrier.baggage = DMSBaggage::_Ffrom_header(baggage_header);
+            carrier.baggage = DMSBaggage::from_header(baggage_header);
         }
         
         carrier
@@ -363,12 +379,13 @@ impl DMSContextCarrier {
     /// # Parameters
     ///
     /// - `headers`: A mutable HashMap of HTTP headers to inject into
-    pub fn _Finject_into_headers(&self, headers: &mut HashMap<String, String>) {
+    #[allow(dead_code)]
+    pub fn inject_into_headers(&self, headers: &mut HashMap<String, String>) {
         if let Some(ref trace_context) = self.trace_context {
-            headers.insert("traceparent".to_string(), trace_context._Fto_header());
+            headers.insert("traceparent".to_string(), trace_context.to_header());
         }
         
-        let baggage_header = self.baggage._Fto_header();
+        let baggage_header = self.baggage.to_header();
         if !baggage_header.is_empty() {
             headers.insert("baggage".to_string(), baggage_header);
         }

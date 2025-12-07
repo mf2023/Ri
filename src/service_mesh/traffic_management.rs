@@ -56,7 +56,7 @@
 //! 
 //! async fn example() -> DMSResult<()> {
 //!     // Create a traffic manager
-//!     let traffic_manager = DMSTrafficManager::_Fnew(true);
+//!     let traffic_manager = DMSTrafficManager::new(true);
 //!     
 //!     // Create a traffic route
 //!     let route = DMSTrafficRoute {
@@ -210,7 +210,7 @@ pub struct DMSRateLimitConfig {
 }
 
 impl DMSTrafficManager {
-    pub fn _Fnew(enabled: bool) -> Self {
+    pub fn new(enabled: bool) -> Self {
         Self {
             enabled,
             routes: Arc::new(RwLock::new(HashMap::new())),
@@ -398,7 +398,7 @@ impl DMSTrafficManager {
         Ok(())
     }
 
-    pub async fn _Fhealth_check(&self) -> DMSResult<bool> {
+    pub async fn health_check(&self) -> DMSResult<bool> {
         Ok(self.enabled)
     }
 }
