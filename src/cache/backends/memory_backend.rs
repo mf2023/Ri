@@ -83,7 +83,7 @@
 
 use dashmap::DashMap;
 use std::sync::Arc;
-use std::ops::AddAssign;
+use tokio::sync::RwLock;
 use crate::cache::{DMSCache, CachedValue, CacheStats};
 use crate::core::DMSResult;
 
@@ -95,7 +95,13 @@ pub struct DMSMemoryCache {
     /// Underlying storage using DashMap for concurrent access
     store: Arc<DashMap<String, CachedValue>>,
     /// Cache statistics tracking hit count, miss count, and eviction count
-    stats: Arc<dashmap::DashMap<&'static str, u64>>,
+    stats: Arc<RwLock<CacheStats>>,
+}
+
+impl Default for DMSMemoryCache {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl DMSMemoryCache {
@@ -105,14 +111,9 @@ impl DMSMemoryCache {
     ///
     /// A new DMSMemoryCache instance
     pub fn new() -> Self {
-        let stats = DashMap::new();
-        stats.insert("hit_count", 0);
-        stats.insert("miss_count", 0);
-        stats.insert("eviction_count", 0);
-        
-        Self {
+        DMSMemoryCache {
             store: Arc::new(DashMap::new()),
-            stats: Arc::new(stats),
+            stats: Arc::new(RwLock::new(CacheStats::default())),
         }
     }
 }
@@ -139,16 +140,19 @@ impl DMSCache for DMSMemoryCache {
                 if value.is_expired() {
                     drop(entry);
                     self.store.remove(key);
-                    self.stats.get_mut("eviction_count").unwrap().value_mut().add_assign(1);
-                    self.stats.get_mut("miss_count").unwrap().value_mut().add_assign(1);
+                    let mut stats = self.stats.write().await;
+                stats.misses += 1;
+                
                     Ok(None)
                 } else {
-                    self.stats.get_mut("hit_count").unwrap().value_mut().add_assign(1);
+                    let mut stats = self.stats.write().await;
+                stats.hits += 1;
                     Ok(Some(value.value))
                 }
             }
             None => {
-                self.stats.get_mut("miss_count").unwrap().value_mut().add_assign(1);
+                let mut stats = self.stats.write().await;
+                stats.misses += 1;
                 Ok(None)
             }
         }
@@ -165,10 +169,7 @@ impl DMSCache for DMSMemoryCache {
     ///
     /// A `DMSResult<()>` indicating success or failure
     async fn set(&self, key: &str, value: &str, ttl_seconds: Option<u64>) -> crate::core::DMSResult<()> {
-        let cached_value = CachedValue {
-            value: value.to_string(),
-            expires_at: ttl_seconds,
-        };
+        let cached_value = CachedValue::new(value.to_string(), ttl_seconds);
         self.store.insert(key.to_string(), cached_value);
         Ok(())
     }
@@ -227,31 +228,7 @@ impl DMSCache for DMSMemoryCache {
     ///
     /// A `CacheStats` struct containing cache statistics
     async fn stats(&self) -> CacheStats {
-        let total_keys = self.store.len();
-        let hit_count = *self.stats.get("hit_count").unwrap().value();
-        let miss_count = *self.stats.get("miss_count").unwrap().value();
-        let eviction_count = *self.stats.get("eviction_count").unwrap().value();
-        
-        let total_requests = hit_count + miss_count;
-        let avg_hit_rate = if total_requests > 0 {
-            hit_count as f64 / total_requests as f64
-        } else {
-            0.0
-        };
-        
-        // Estimate memory usage (simplified)
-        let memory_usage_bytes = total_keys * 100; // Rough estimate per entry
-        
-        CacheStats {
-            hits: hit_count,
-            misses: miss_count,
-            entries: total_keys,
-            memory_usage_bytes,
-            avg_hit_rate,
-            hit_count,
-            miss_count,
-            eviction_count,
-        }
+        *self.stats.read().await
     }
     
     /// Cleans up all expired entries from the cache.

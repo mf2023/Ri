@@ -15,10 +15,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-extern crate dms;
-
-use dms::device::{DMSDevice, DMSDeviceType, DMSDeviceCapabilities};
-use dms::device::discovery_scheduler::{DMSDeviceDiscoveryEngine, DMSResourceScheduler, DeviceScanResult, ResourceRequest};
+use dms_core::device::{DMSDevice, DMSDeviceType, DMSDeviceCapabilities};
+use dms_core::device::discovery_scheduler::{DMSDeviceDiscoveryEngine, DMSResourceScheduler, DeviceScanResult, ResourceRequest};
 
 #[test]
 fn test_device_discovery_engine() {

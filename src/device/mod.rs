@@ -113,23 +113,23 @@
 //! }
 //! ```
 
-mod device;
+mod core;
 mod controller;
 mod scheduler;
 mod pool;
-mod discovery_scheduler;
+pub mod discovery_scheduler;
 
 use std::sync::Arc;
 
 use serde::{Serialize, Deserialize};
 use tokio::sync::RwLock;
 use std::collections::HashMap;
-use std::sync::Mutex;
+use parking_lot::RwLock as ParkingRwLock;
 
 use crate::observability::{DMSMetricsRegistry, DMSMetric, DMSMetricConfig, DMSMetricType};
 
 
-pub use device::{DMSDevice, DMSDeviceType, DMSDeviceCapabilities};
+pub use core::{DMSDevice, DMSDeviceType, DMSDeviceStatus, DMSDeviceCapabilities, DMSDeviceControlConfig, DMSDeviceConfig, NetworkDeviceInfo};
 pub use controller::DMSDeviceController;
 pub use pool::{DMSResourcePool, DMSResourcePoolManager};
 pub use scheduler::DMSDeviceScheduler;
@@ -155,15 +155,14 @@ pub struct DMSDeviceControlModule {
     config: DMSDeviceControlConfig,
     /// Metrics registry for device management metrics
     #[allow(dead_code)]
-    metrics_registry: Arc<Mutex<Option<Arc<DMSMetricsRegistry>>>>,
+    metrics_registry: Arc<ParkingRwLock<Option<Arc<DMSMetricsRegistry>>>>,
 }
 
-/// Configuration for the device control module.
+/// Configuration for device control module (legacy)
 /// 
-/// This struct defines the configuration options for device control behavior, including discovery,
-/// scheduling, and resource allocation settings.
+/// This struct is deprecated. Use `DMSDeviceControlConfig` from the device module instead.
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct DMSDeviceControlConfig {
+pub struct DMSDeviceControlConfigLegacy {
     /// Whether device discovery is enabled
     pub discovery_enabled: bool,
     /// Interval between device discovery scans in seconds
@@ -176,7 +175,7 @@ pub struct DMSDeviceControlConfig {
     pub resource_allocation_timeout_secs: u64,
 }
 
-impl Default for DMSDeviceControlConfig {
+impl Default for DMSDeviceControlConfigLegacy {
     /// Returns the default configuration for device control.
     /// 
     /// Default values:
@@ -306,6 +305,12 @@ pub struct DMSResourceAllocation {
     pub request: DMSResourceRequest,
 }
 
+impl Default for DMSDeviceControlModule {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl DMSDeviceControlModule {
     /// Creates a new device control module with default configuration.
     /// 
@@ -314,7 +319,7 @@ impl DMSDeviceControlModule {
     /// A new `DMSDeviceControlModule` instance with default configuration
     pub fn new() -> Self {
         let controller = Arc::new(RwLock::new(DMSDeviceController::new()));
-        let resource_pool_manager = Arc::new(Mutex::new(DMSResourcePoolManager::new()));
+        let resource_pool_manager = Arc::new(ParkingRwLock::new(DMSResourcePoolManager::new()));
         let scheduler = Arc::new(RwLock::new(DMSDeviceScheduler::new(resource_pool_manager)));
         let discovery_engine = Arc::new(RwLock::new(DMSResourceScheduler::new()));
         
@@ -323,8 +328,8 @@ impl DMSDeviceControlModule {
             scheduler,
             discovery_engine,
             resource_pools: HashMap::new(),
-            config: DMSDeviceControlConfig::default(),
-            metrics_registry: Arc::new(Mutex::new(None)),
+            config: crate::device::core::DMSDeviceControlConfig::default(),
+            metrics_registry: Arc::new(ParkingRwLock::new(None)),
         }
     }
     
@@ -337,7 +342,7 @@ impl DMSDeviceControlModule {
     /// # Returns
     /// 
     /// The updated `DMSDeviceControlModule` instance
-    pub fn with_config(mut self, config: DMSDeviceControlConfig) -> Self {
+    pub fn with_config(mut self, config: crate::device::core::DMSDeviceControlConfig) -> Self {
         self.config = config;
         self
     }
@@ -351,7 +356,9 @@ impl DMSDeviceControlModule {
     /// 
     /// A `DMSResult<DMSDiscoveryResult>` containing the discovery results
     pub async fn discover_devices(&self) -> DMSResult<DMSDiscoveryResult> {
-        if !self.config.discovery_enabled {
+        if !self.config.enable_cpu_discovery && !self.config.enable_gpu_discovery && 
+           !self.config.enable_memory_discovery && !self.config.enable_storage_discovery && 
+           !self.config.enable_network_discovery {
             return Ok(DMSDiscoveryResult {
                 discovered_devices: vec![],
                 updated_devices: vec![],
@@ -378,7 +385,17 @@ impl DMSDeviceControlModule {
     /// A `DMSResult<Option<DMSResourceAllocation>>` containing the allocation result if successful,
     /// or None if allocation failed or auto-scheduling is disabled
     pub async fn allocate_resource(&self, request: DMSResourceRequest) -> DMSResult<Option<DMSResourceAllocation>> {
-        if !self.config.auto_scheduling_enabled {
+        // Check if any device type scheduling is enabled
+        let scheduling_enabled = match request.device_type {
+            DMSDeviceType::CPU => self.config.enable_cpu_discovery,
+            DMSDeviceType::GPU => self.config.enable_gpu_discovery,
+            DMSDeviceType::Memory => self.config.enable_memory_discovery,
+            DMSDeviceType::Storage => self.config.enable_storage_discovery,
+            DMSDeviceType::Network => self.config.enable_network_discovery,
+            _ => true, // Default to enabled for unknown types
+        };
+        
+        if !scheduling_enabled {
             return Ok(None);
         }
 
@@ -630,28 +647,42 @@ impl crate::core::DMSModule for DMSDeviceControlModule {
     /// 
     /// This method performs the following steps:
     /// 1. Loads configuration from the service context
+    /// 2. Initializes real device discovery based on system hardware
+    /// 3. Sets up resource scheduling and management
     async fn init(&mut self, ctx: &mut DMSServiceContext) -> DMSResult<()> {
-        // Initialize device controller with mock devices for demonstration
+        // Load configuration
+        let binding = ctx.config();
+        let cfg = binding.config();
+        let mut device_config = crate::device::core::DMSDeviceControlConfig::default();
+        
+        if let Some(config_str) = cfg.get("device") {
+            device_config = serde_json::from_str(config_str)
+                .unwrap_or_else(|_| crate::device::core::DMSDeviceControlConfig::default());
+        }
+        
+        // Initialize device controller with real system hardware discovery
         let mut controller = self.controller.write().await;
-        controller.add_mock_devices()?;
+        
+        // Discover real system devices instead of mock devices
+        controller.discover_system_devices(&device_config).await?;
         drop(controller);
         
-        // Create a discovery engine  
+        // Create and configure discovery engine
         let discovery_engine = DMSResourceScheduler::new();
         
         // Store them for later use
         let mut discovery_guard = self.discovery_engine.write().await;
         *discovery_guard = discovery_engine;
         
-        // Note: Metrics registry integration will be added in a future update
-        // The get_metrics_registry method is not available yet in the service context
+        // Initialize metrics if observability is available
+        if let Some(metrics_registry) = ctx.metrics_registry() {
+            let mut controller = self.controller.write().await;
+            controller.initialize_metrics(&metrics_registry)?;
+            drop(controller);
+        }
         
         let logger = ctx.logger();
-        logger.info("DMS.DeviceControl", "Device control module initialized")?;
+        logger.info("DMS.DeviceControl", "Device control module initialized with real hardware discovery")?;
         Ok(())
     }
 }
-
-
-
-

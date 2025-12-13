@@ -15,8 +15,6 @@
 //! See the License for the specific language governing permissions and
 //! limitations under the License.
 
-
-
 //! # Service Mesh Module
 //! 
 //! This module provides a comprehensive service mesh implementation for DMS, offering service discovery,
@@ -103,26 +101,29 @@ use std::sync::Arc;
 use std::time::{Duration, SystemTime};
 use tokio::sync::RwLock;
 
+#[cfg(feature = "pyo3")]
+use pyo3::PyResult;
+
 use crate::core::{DMSModule, DMSResult, DMSError};
 use crate::gateway::{DMSCircuitBreaker, DMSCircuitBreakerConfig, DMSLoadBalancer, DMSLoadBalancerStrategy};
 use crate::gateway::load_balancer::DMSBackendServer;
 
-mod service_discovery;
-mod health_check;
-mod traffic_management;
+pub mod service_discovery;
+pub mod health_check;
+pub mod traffic_management;
 
-use service_discovery::DMSServiceDiscovery;
 use health_check::DMSHealthChecker;
 use traffic_management::DMSTrafficManager;
 
-pub use service_discovery::{DMSServiceInstance, DMSServiceStatus};
-pub use health_check::{DMSHealthCheckResult, DMSHealthSummary, DMSHealthStatus};
-pub use traffic_management::{DMSTrafficRoute, DMSMatchCriteria, DMSRouteAction};
+pub use service_discovery::{DMSServiceDiscovery, DMSServiceInstance, DMSServiceStatus};
+pub use health_check::{DMSHealthCheckResult, DMSHealthSummary, DMSHealthStatus};    
+pub use traffic_management::{DMSTrafficRoute, DMSMatchCriteria, DMSRouteAction, DMSWeightedDestination};
 
 /// Configuration for the service mesh.
 /// 
 /// This struct defines the configuration options for the service mesh, including service discovery,
 /// health checking, traffic management, circuit breaking, and load balancing settings.
+#[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DMSServiceMeshConfig {
     /// Whether to enable service discovery
@@ -173,6 +174,7 @@ impl Default for DMSServiceMeshConfig {
 /// 
 /// This struct represents a service endpoint with its name, URL, weight, metadata, health status,
 /// and last health check time.
+#[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 #[derive(Debug, Clone)]
 pub struct DMSServiceEndpoint {
     /// Name of the service
@@ -192,6 +194,7 @@ pub struct DMSServiceEndpoint {
 /// Service health status enum.
 /// 
 /// This enum defines the possible health statuses for a service endpoint.
+#[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 #[derive(Debug, Clone, PartialEq)]
 pub enum DMSServiceHealthStatus {
     /// Service is healthy and available
@@ -206,6 +209,7 @@ pub enum DMSServiceHealthStatus {
 /// 
 /// This struct provides comprehensive service mesh functionality, including service discovery,
 /// health checking, traffic management, load balancing, and circuit breaking.
+#[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 pub struct DMSServiceMesh {
     /// Service mesh configuration
     config: DMSServiceMeshConfig,
@@ -335,17 +339,24 @@ impl DMSServiceMesh {
     pub async fn call_service(&self, service_name: &str, request_data: Vec<u8>) -> DMSResult<Vec<u8>> {
         let endpoints = self.discover_service(service_name).await?;
         
-        let _backend_servers: Vec<DMSBackendServer> = endpoints
-            .iter()
-            .map(|ep| DMSBackendServer {
-                id: format!("{}-{}", service_name, ep.endpoint),
-                url: ep.endpoint.clone(),
-                weight: ep.weight,
-                max_connections: 100,
-                health_check_path: "/health".to_string(),
-                is_healthy: ep.health_status == DMSServiceHealthStatus::Healthy,
-            })
-            .collect();
+        // Clear existing servers for this service and add discovered endpoints
+        let mut existing_servers = self.load_balancer.get_healthy_servers().await;
+        existing_servers.retain(|s| !s.id.starts_with(&format!("{}-", service_name)));
+        
+        // Add discovered endpoints as backend servers
+        for ep in &endpoints {
+            if ep.health_status == DMSServiceHealthStatus::Healthy {
+                let server = DMSBackendServer {
+                    id: format!("{}-{}", service_name, ep.endpoint),
+                    url: ep.endpoint.clone(),
+                    weight: ep.weight,
+                    max_connections: 100,
+                    health_check_path: "/health".to_string(),
+                    is_healthy: true,
+                };
+                self.load_balancer.add_server(server).await;
+            }
+        }
 
         let selected_server = match self.load_balancer.select_server(None).await {
             Ok(server) => server,
@@ -472,6 +483,38 @@ impl DMSServiceMesh {
     }
 }
 
+#[cfg(feature = "pyo3")]
+/// Python bindings for DMSServiceMesh
+#[pyo3::prelude::pymethods]
+impl DMSServiceMesh {
+    #[new]
+    fn py_new(config: DMSServiceMeshConfig) -> PyResult<Self> {
+        match Self::new(config) {
+            Ok(mesh) => Ok(mesh),
+            Err(e) => Err(pyo3::exceptions::PyRuntimeError::new_err(format!("Failed to create service mesh: {}", e))),
+        }
+    }
+    
+    /// Register a service from Python
+    fn register_service_py(&self, _service_name: String, _endpoint: String, _weight: u32) -> PyResult<()> {
+        // For now, we'll return an error since we can't easily run async code from Python
+        // In a real implementation, you'd want to integrate with Python's async runtime
+        Err(pyo3::exceptions::PyRuntimeError::new_err("Async service registration not supported from Python yet"))
+    }
+    
+    /// Discover services from Python
+    fn discover_service_py(&self, _service_name: String) -> PyResult<Vec<DMSServiceEndpoint>> {
+        // For now, we'll return an error since we can't easily run async code from Python
+        // In a real implementation, you'd want to integrate with Python's async runtime
+        Err(pyo3::exceptions::PyRuntimeError::new_err("Async service discovery not supported from Python yet"))
+    }
+    
+    /// Get the service mesh configuration
+    fn get_config(&self) -> DMSServiceMeshConfig {
+        self.config.clone()
+    }
+}
+
 #[async_trait]
 impl DMSModule for DMSServiceMesh {
     /// Returns the name of the service mesh module.
@@ -480,7 +523,7 @@ impl DMSModule for DMSServiceMesh {
     /// 
     /// The module name as a string
     fn name(&self) -> &str {
-        "service-mesh"
+        "DMS.ServiceMesh"
     }
 
     /// Indicates whether the service mesh module is critical.

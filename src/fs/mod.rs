@@ -301,6 +301,7 @@ impl FileSystemImpl {
 /// 
 /// This struct provides a comprehensive file system abstraction for DMS, offering safe and reliable
 /// file operations with support for atomic writes, directory management, and structured data formats.
+#[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 #[derive(Clone)]
 pub struct DMSFileSystem {
     /// Internal file system implementation

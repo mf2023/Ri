@@ -1,4 +1,21 @@
-use std::time::Instant;
+//! Copyright © 2025 Wenze Wei. All Rights Reserved.
+//! 
+//! This file is part of DMS.
+//! The DMS project belongs to the Dunimd Team.
+//! 
+//! Licensed under the Apache License, Version 2.0 (the "License");
+//! You may not use this file except in compliance with the License.
+//! You may obtain a copy of the License at
+//! 
+//!     http://www.apache.org/licenses/LICENSE-2.0
+//! 
+//! Unless required by applicable law or agreed to in writing, software
+//! distributed under the License is distributed on an "AS IS" BASIS,
+//! WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+//! See the License for the specific language governing permissions and
+//! limitations under the License.
+
+use std::time::{Instant, Duration};
 use std::collections::{HashMap, VecDeque};
 use serde::{Serialize, Deserialize};
 use crate::device::{DMSDevice, DMSDeviceType, DMSDeviceCapabilities};
@@ -128,6 +145,12 @@ struct DiscoveryRecord {
     identified_type: Option<DMSDeviceType>,
     /// Confidence score for the identification
     confidence: f64,
+}
+
+impl Default for DMSDeviceDiscoveryEngine {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl DMSDeviceDiscoveryEngine {
@@ -308,7 +331,7 @@ impl DMSDeviceDiscoveryEngine {
         let record = DiscoveryRecord {
             timestamp: std::time::SystemTime::now()
                 .duration_since(std::time::UNIX_EPOCH)
-                .unwrap_or_default()
+                .unwrap_or(Duration::from_secs(0))
                 .as_secs(),
             device_id,
             device_info,
@@ -528,6 +551,12 @@ enum PolicyAction {
     PriorityBased,
 }
 
+impl Default for DMSResourceScheduler {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl DMSResourceScheduler {
     /// Create a new resource scheduler with default settings.
     /// 
@@ -718,9 +747,9 @@ impl DMSResourceScheduler {
                 score -= (avg_error_rate.min(1.0)) * 20.0;
                 
                 // Bonus for optimal utilization (60-80% is ideal, up to 10 points)
-                let utilization_bonus = if avg_utilization >= 0.6 && avg_utilization <= 0.8 {
+                let utilization_bonus = if (0.6..=0.8).contains(&avg_utilization) {
                     10.0
-                } else if avg_utilization >= 0.4 && avg_utilization <= 0.9 {
+                } else if (0.4..=0.9).contains(&avg_utilization) {
                     5.0
                 } else {
                     0.0

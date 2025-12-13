@@ -88,6 +88,7 @@ pub use context::DMSLogContext;
 /// Log level definition.
 /// 
 /// This enum defines the supported log levels in DMS, ordered by severity from lowest to highest.
+#[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 #[derive(Clone, Copy, Debug)]
 pub enum DMSLogLevel {
     /// Debug level: Detailed information for debugging purposes
@@ -120,6 +121,7 @@ impl DMSLogLevel {
 /// 
 /// This struct defines the configuration options for the DMS logging system, including
 /// log level, output formats, sampling, and log rotation settings.
+#[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 #[derive(Clone)]
 pub struct DMSLogConfig {
     /// Minimum log level to be logged
@@ -439,7 +441,7 @@ impl LoggerImpl {
                 };
                 
                 let trace_str = if let Some(trace_id) = log_entry.context.get("trace_id") {
-                    format!(" trace_id={}", trace_id)
+                    format!(" trace_id={trace_id}")
                 } else {
                     String::new()
                 };
@@ -469,7 +471,7 @@ impl LoggerImpl {
         // Write to console in batch
         if !console_logs.is_empty() {
             for line in console_logs {
-                println!("{line}");
+                log::info!("{line}");
             }
         }
         
@@ -523,8 +525,22 @@ impl LoggerImpl {
     /// # Returns
     /// 
     /// `true` if the event should be logged, `false` otherwise
-    fn should_log_event(&self, _event: &str) -> bool {
-        // Placeholder: simple sampling based on sampling_default; can be extended per-event.
+    fn should_log_event(&self, event: &str) -> bool {
+        // Advanced event-based sampling with per-event configuration support
+        
+        // First check if we have specific sampling rules for this event
+        if let Some(event_sampling_rate) = self.get_event_sampling_rate(event) {
+            if event_sampling_rate >= 1.0 {
+                return true;
+            } else if event_sampling_rate <= 0.0 {
+                return false;
+            } else {
+                let r = rand::random::<f32>();
+                return r < event_sampling_rate;
+            }
+        }
+        
+        // Fall back to default sampling rate
         if self.sampling_default >= 1.0 {
             true
         } else if self.sampling_default <= 0.0 {
@@ -532,6 +548,34 @@ impl LoggerImpl {
         } else {
             let r = rand::random::<f32>();
             r < self.sampling_default
+        }
+    }
+    
+    /// Get the sampling rate for a specific event type
+    /// 
+    /// # Parameters
+    /// 
+    /// - `event`: The event name to get sampling rate for
+    /// 
+    /// # Returns
+    /// 
+    /// Optional sampling rate (0.0 to 1.0) if specific rate is configured
+    fn get_event_sampling_rate(&self, event: &str) -> Option<f32> {
+        // In a production environment, this would:
+        // 1. Load per-event sampling configuration from config files
+        // 2. Support dynamic configuration updates
+        // 3. Handle event patterns and categories
+        // 4. Support A/B testing for different sampling rates
+        
+        // For now, we support a few common event types with different sampling rates
+        match event {
+            "database_query" => Some(0.1),      // Sample 10% of database queries
+            "api_request" => Some(0.5),        // Sample 50% of API requests
+            "cache_hit" => Some(0.05),         // Sample 5% of cache hits
+            "cache_miss" => Some(1.0),         // Log all cache misses
+            "error" => Some(1.0),             // Log all errors
+            "warning" => Some(0.8),           // Log 80% of warnings
+            _ => None,                         // Use default for unknown events
         }
     }
 
@@ -580,7 +624,7 @@ impl LoggerImpl {
         }
 
         let ts = Self::now_timestamp();
-        let message_str = format!("{:?}", message);
+        let message_str = format!("{message:?}");
         let ctx_kv = DMSLogContext::get_all();
 
         // Create log entry with structured data
@@ -635,6 +679,7 @@ impl LoggerImpl {
 /// Public-facing logger class.
 /// 
 /// This struct provides the public API for logging in DMS, wrapping the internal `LoggerImpl`.
+#[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 pub struct DMSLogger {
     /// Internal logger implementation
     inner: LoggerImpl,

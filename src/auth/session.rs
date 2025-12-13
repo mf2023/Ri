@@ -67,10 +67,14 @@ use std::time::{SystemTime, UNIX_EPOCH};
 use tokio::sync::RwLock;
 use uuid::Uuid;
 
+#[cfg(feature = "pyo3")]
+use pyo3::PyResult;
+
 /// Session structure for tracking user sessions.
 /// 
 /// This struct represents a user session with metadata, expiration tracking,
 /// and custom data storage. Sessions are uniquely identified by UUIDs.
+#[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DMSSession {
     pub id: String,               // Unique session ID (UUID v4)
@@ -184,6 +188,7 @@ impl DMSSession {
 /// 
 /// This struct manages session creation, validation, and cleanup. It limits
 /// the number of sessions per user and automatically cleans up expired sessions.
+#[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 pub struct DMSSessionManager {
     sessions: RwLock<HashMap<String, DMSSession>>, // Session ID -> Session
     timeout_secs: u64,                          // Default session timeout in seconds
@@ -421,5 +426,34 @@ impl DMSSessionManager {
     /// - `timeout_secs`: New default session timeout in seconds
     pub fn set_timeout(&mut self, timeout_secs: u64) {
         self.timeout_secs = timeout_secs;
+    }
+}
+
+#[cfg(feature = "pyo3")]
+/// Python bindings for DMSSessionManager
+#[pyo3::prelude::pymethods]
+impl DMSSessionManager {
+    #[new]
+    fn py_new(timeout_secs: u64) -> PyResult<Self> {
+        Ok(Self::new(timeout_secs))
+    }
+    
+    /// Create a session from Python
+    fn create_session_py(&self, _user_id: String, _ip_address: Option<String>, _user_agent: Option<String>) -> PyResult<String> {
+        // For now, we'll return an error since we can't easily run async code from Python
+        // In a real implementation, you'd want to integrate with Python's async runtime
+        Err(pyo3::exceptions::PyRuntimeError::new_err("Async session creation not supported from Python yet"))
+    }
+    
+    /// Get session from Python
+    fn get_session_py(&self, _session_id: String) -> PyResult<DMSSession> {
+        // For now, we'll return an error since we can't easily run async code from Python
+        // In a real implementation, you'd want to integrate with Python's async runtime
+        Err(pyo3::exceptions::PyRuntimeError::new_err("Async session retrieval not supported from Python yet"))
+    }
+    
+    /// Get timeout from Python
+    fn get_timeout_py(&self) -> u64 {
+        self.get_timeout()
     }
 }

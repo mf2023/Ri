@@ -85,6 +85,7 @@ use std::str::FromStr;
 /// This structure contains all the configuration options for the queue system, including
 /// backend selection, connection settings, timeouts, retry policies, and dead letter queue
 /// configuration.
+#[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DMSQueueConfig {
     /// Whether the queue system is enabled
@@ -212,4 +213,34 @@ pub struct DeadLetterConfig {
     pub dead_letter_queue_name: String,
     /// Time-to-live for messages in the dead letter queue in hours
     pub ttl_hours: u32,
+}
+
+#[cfg(feature = "pyo3")]
+/// Python bindings for DMSQueueConfig
+#[pyo3::prelude::pymethods]
+impl DMSQueueConfig {
+    #[new]
+    fn py_new() -> Self {
+        Self::default()
+    }
+    
+    #[staticmethod]
+    fn py_new_with_memory_backend() -> Self {
+        Self {
+            enabled: true,
+            backend_type: QueueBackendType::Memory,
+            connection_string: "memory://localhost".to_string(),
+            ..Self::default()
+        }
+    }
+    
+    #[staticmethod]
+    fn py_new_with_redis_backend(connection_string: String) -> Self {
+        Self {
+            enabled: true,
+            backend_type: QueueBackendType::Redis,
+            connection_string,
+            ..Self::default()
+        }
+    }
 }

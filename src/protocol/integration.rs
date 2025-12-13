@@ -99,6 +99,7 @@ use std::time::{Duration, Instant};
 use async_trait::async_trait;
 use tokio::sync::{RwLock, broadcast, mpsc};
 use uuid::Uuid;
+use log::{info, warn, debug, error};
 
 use crate::core::{DMSResult, DMSError};
 use super::{DMSProtocolType, DMSProtocol, DMSProtocolConnection, DMSProtocolAdapter, 
@@ -1065,6 +1066,33 @@ impl DMSGlobalSystemIntegration {
         Ok(())
     }
     
+    /// Select optimal protocol for target device.
+    pub async fn select_protocol_for_device(
+        &self,
+        target_device: &str,
+        strategy: DMSProtocolStrategy,
+    ) -> DMSResult<DMSProtocolType> {
+        // Check routing table first
+        let routing_table = self.connection_coordinator.routing_table.read().await;
+        if let Some(entry) = routing_table.entries.get(target_device) {
+            // Check if preferred protocol is available
+            let protocols = self.protocol_registry.read().await;
+            if protocols.contains_key(&entry.preferred_protocol) {
+                return Ok(entry.preferred_protocol);
+            }
+            
+            // Check alternative protocols
+            for alt_protocol in &entry.alternative_protocols {
+                if protocols.contains_key(alt_protocol) {
+                    return Ok(*alt_protocol);
+                }
+            }
+        }
+        
+        // Use protocol adapter to select optimal protocol
+        self.protocol_adapter.select_optimal_protocol(&strategy).await
+    }
+    
     /// Send cross-protocol message.
     pub async fn send_cross_protocol_message(
         &self,
@@ -1146,22 +1174,87 @@ impl DMSGlobalSystemIntegration {
     
     /// Start connection health monitoring.
     async fn start_connection_health_monitoring(&self) -> DMSResult<()> {
-        // This would start background tasks for health monitoring
-        // Implementation depends on specific requirements
+        let connections = Arc::clone(&self.connection_coordinator.connections);
+        let config = self.config.read().await;
+        let health_check_interval = config.health_check_interval;
+        drop(config);
+        
+        // Start background task for health monitoring
+        tokio::spawn(async move {
+            let mut interval = tokio::time::interval(health_check_interval);
+            loop {
+                interval.tick().await;
+                
+                let mut connections = connections.write().await;
+                let now = Instant::now();
+                
+                // Check each connection for timeout
+                let mut to_remove = Vec::new();
+                for (connection_id, connection) in connections.iter() {
+                    if now.duration_since(connection.last_activity) > Duration::from_secs(300) { // 5 minutes timeout
+                        to_remove.push(connection_id.clone());
+                    }
+                }
+                
+                // Remove timed out connections
+                for connection_id in to_remove {
+                    connections.remove(&connection_id);
+                }
+            }
+        });
+        
         Ok(())
     }
     
     /// Start state synchronization.
     async fn start_state_synchronization(&self) -> DMSResult<()> {
-        // This would start background tasks for state synchronization
-        // Implementation depends on specific requirements
+        let state_manager = Arc::clone(&self.state_manager);
+        let config = self.config.read().await;
+        let state_sync_interval = config.state_sync_interval;
+        drop(config);
+        
+        // Start background task for state synchronization
+        tokio::spawn(async move {
+            let mut interval = tokio::time::interval(state_sync_interval);
+            loop {
+                interval.tick().await;
+                
+                // Sync state across all protocols
+                if let Err(e) = state_manager.sync_all_states().await {
+                    error!("State synchronization error: {}", e);
+                }
+            }
+        });
+        
         Ok(())
     }
     
     /// Start performance monitoring.
     async fn start_performance_monitoring(&self) -> DMSResult<()> {
-        // This would start background tasks for performance monitoring
-        // Implementation depends on specific requirements
+        let stats = Arc::clone(&self.stats);
+        let event_bus = Arc::clone(&self.event_bus);
+        
+        // Start background task for performance monitoring
+        tokio::spawn(async move {
+            let mut interval = tokio::time::interval(Duration::from_secs(60)); // 1 minute
+            loop {
+                interval.tick().await;
+                
+                let stats = stats.read().await;
+                let event_data = HashMap::from([
+                    ("total_cross_protocol_messages".to_string(), stats.total_cross_protocol_messages.to_string()),
+                    ("successful_cross_protocol_messages".to_string(), stats.successful_cross_protocol_messages.to_string()),
+                    ("avg_cross_protocol_latency_ms".to_string(), stats.avg_cross_protocol_latency_ms.to_string()),
+                ]);
+                drop(stats);
+                
+                // Publish performance metrics event
+                if let Err(e) = event_bus.publish_event(DMSIntegrationEventType::PerformanceMetrics, event_data).await {
+                    error!("Failed to publish performance metrics: {}", e);
+                }
+            }
+        });
+        
         Ok(())
     }
     
@@ -1217,8 +1310,140 @@ impl DMSSecurityCoordinator {
         target_protocol: DMSProtocolType,
         message: &[u8],
     ) -> DMSResult<()> {
-        // This would implement security enforcement logic
-        // Implementation depends on specific security requirements
+        debug!("Enforcing cross-protocol security: {:?} -> {:?}, message size: {} bytes", 
+               source_protocol, target_protocol, message.len());
+        
+        // Check if protocols are compatible for cross-protocol communication
+        let compatible_pairs = vec![
+            (DMSProtocolType::Global, DMSProtocolType::Private),
+            (DMSProtocolType::Private, DMSProtocolType::Global),
+            (DMSProtocolType::Global, DMSProtocolType::Hybrid),
+            (DMSProtocolType::Hybrid, DMSProtocolType::Global),
+            (DMSProtocolType::Private, DMSProtocolType::Hybrid),
+            (DMSProtocolType::Hybrid, DMSProtocolType::Private),
+        ];
+        
+        if !compatible_pairs.contains(&(source_protocol, target_protocol)) {
+            error!("Incompatible protocol pair detected: {:?} -> {:?}", source_protocol, target_protocol);
+            return Err(DMSError::SecurityViolation(format!(
+                "Incompatible protocol pair: {:?} -> {:?}",
+                source_protocol, target_protocol
+            )));
+        }
+        
+        // Validate message size limits
+        const MAX_MESSAGE_SIZE: usize = 10 * 1024 * 1024; // 10MB
+        if message.len() > MAX_MESSAGE_SIZE {
+            error!("Message size {} exceeds maximum allowed size {}", message.len(), MAX_MESSAGE_SIZE);
+            return Err(DMSError::SecurityViolation(format!(
+                "Message size {} exceeds maximum allowed size {}",
+                message.len(), MAX_MESSAGE_SIZE
+            )));
+        }
+        
+        // Enhanced message content validation - check for potential injection patterns and malicious content
+        let message_str = String::from_utf8_lossy(message);
+        let dangerous_patterns = vec![
+            "<script>", "</script>", "javascript:", "data:",
+            "<?php", "<%", "${", "#{", "eval(", "exec(",
+            "onload=", "onerror=", "onclick=", "onmouseover=",
+            "vbscript:", "mocha:", "livescript:", "ms-its:",
+        ];
+        
+        for pattern in dangerous_patterns {
+            if message_str.to_lowercase().contains(pattern) {
+                error!("Potentially dangerous content detected: {}", pattern);
+                return Err(DMSError::SecurityViolation(format!(
+                    "Potentially dangerous content detected: {}",
+                    pattern
+                )));
+            }
+        }
+        
+        // Additional validation: check for binary content that might be executable
+        if message.len() > 2 {
+            // Check for common executable file signatures
+            let executable_signatures = vec![
+                b"\x4D\x5A", // MZ (DOS/Windows executable)
+                b"\x7F\x45\x4C\x46", // ELF (Unix executable)
+                b"\xFE\xED\xFA", // Mach-O (macOS executable)
+                b"\xCA\xFE\xBA\xBE", // Mach-O universal binary
+            ];
+            
+            for signature in executable_signatures {
+                if message.starts_with(signature) {
+                    error!("Executable file signature detected in message");
+                    return Err(DMSError::SecurityViolation(
+                        "Executable content detected in message".to_string()
+                    ));
+                }
+            }
+        }
+        
+        // Validate protocol-specific security requirements with enhanced rules
+        match (source_protocol, target_protocol) {
+            (DMSProtocolType::Global, DMSProtocolType::Private) => {
+                // Global to Private requires additional validation - strictest rules
+                info!("Applying Global->Private security validation");
+                
+                if message.len() < 10 {
+                    error!("Global to Private message too small: {} bytes (minimum: 10)", message.len());
+                    return Err(DMSError::SecurityViolation(
+                        "Global to Private messages must be at least 10 bytes".to_string()
+                    ));
+                }
+                
+                // Additional validation for Global->Private: check for sensitive data patterns
+                let sensitive_patterns = vec![
+                    "password", "secret", "key", "token", "credential",
+                    "ssn", "social security", "credit card", "bank account",
+                ];
+                
+                for pattern in sensitive_patterns {
+                    if message_str.to_lowercase().contains(pattern) {
+                        warn!("Potential sensitive data detected in Global->Private message: {}", pattern);
+                        // Note: This is a warning, not an error - sensitive data might be legitimate
+                    }
+                }
+            },
+            (DMSProtocolType::Private, DMSProtocolType::Global) => {
+                // Private to Global requires sanitization check - prevent data leakage
+                info!("Applying Private->Global security validation");
+                
+                let private_prefixes = vec!["private:", "internal:", "confidential:", "restricted:"];
+                for prefix in private_prefixes {
+                    if message_str.contains(prefix) {
+                        error!("Private data prefix '{}' detected in Private->Global message", prefix);
+                        return Err(DMSError::SecurityViolation(
+                            format!("Private to Global messages cannot contain '{}' prefixes", prefix)
+                        ));
+                    }
+                }
+                
+                // Additional check: prevent potential data exfiltration patterns
+                if message.len() > 1024 * 1024 { // 1MB threshold for large data
+                    warn!("Large data transfer detected in Private->Global message: {} bytes", message.len());
+                }
+            },
+            (DMSProtocolType::Hybrid, _) | (_, DMSProtocolType::Hybrid) => {
+                // Hybrid protocol combinations require balanced validation
+                info!("Applying Hybrid protocol security validation");
+                
+                // Hybrid protocols should not carry overly sensitive data
+                if message.len() > 5 * 1024 * 1024 { // 5MB limit for hybrid
+                    error!("Hybrid protocol message too large: {} bytes (maximum: 5MB)", message.len());
+                    return Err(DMSError::SecurityViolation(
+                        "Hybrid protocol messages cannot exceed 5MB".to_string()
+                    ));
+                }
+            },
+            _ => {
+                // Other combinations use standard validation (already handled above)
+                debug!("Applying standard security validation for protocol combination");
+            }
+        }
+        
+        info!("Cross-protocol security validation passed for {:?} -> {:?}", source_protocol, target_protocol);
         Ok(())
     }
 }

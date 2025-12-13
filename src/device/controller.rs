@@ -93,8 +93,9 @@ use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::RwLock;
 
-use super::device::{DMSDevice, DMSDeviceCapabilities, DMSDeviceStatus, DMSDeviceType};
-use crate::core::DMSResult;
+use super::core::{DMSDevice, DMSDeviceCapabilities, DMSDeviceStatus, DMSDeviceType, DMSDeviceControlConfig, NetworkDeviceInfo};
+use crate::core::{DMSResult, DMSError};
+use crate::prelude::DMSMetricsRegistry;
 // use super::scheduler::DMSDeviceScheduler;
 
 /// Device controller - manages device lifecycle and state
@@ -102,6 +103,12 @@ pub struct DMSDeviceController {
     devices: HashMap<String, Arc<RwLock<DMSDevice>>>,
     device_type_index: HashMap<DMSDeviceType, Vec<String>>,
     allocation_map: HashMap<String, String>, // allocation_id -> device_id
+}
+
+impl Default for DMSDeviceController {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl DMSDeviceController {
@@ -134,7 +141,7 @@ impl DMSDeviceController {
                     // Log retry attempt
                     let error_msg = format!("Device discovery attempt {} failed: {}, retrying in {}ms", 
                                           attempt + 1, e, retry_delay.as_millis());
-                    eprintln!("{}", error_msg);
+                    log::warn!("{error_msg}");
                     
                     // Wait before retrying
                     tokio::time::sleep(retry_delay).await;
@@ -182,7 +189,7 @@ impl DMSDeviceController {
         // Occasionally add new mock devices
         if rand::random::<f64>() < 0.1 {
             // 10% chance
-            let new_device = self.create_mock_device();
+            let new_device = self.create_mock_device_for_discovery();
             let device_id = new_device.id().to_string();
 
             self.devices
@@ -227,85 +234,489 @@ impl DMSDeviceController {
         })
     }
 
-    /// Add mock devices for demonstration
-    pub fn add_mock_devices(&mut self) -> DMSResult<()> {
-        // CPU devices
-        let cpu1 = DMSDevice::new("CPU-1".to_string(), DMSDeviceType::CPU).with_capabilities(
-            DMSDeviceCapabilities::new()
-                .with_compute_units(8)
-                .with_memory_gb(16.0),
-        );
-
-        let cpu2 = DMSDevice::new("CPU-2".to_string(), DMSDeviceType::CPU).with_capabilities(
-            DMSDeviceCapabilities::new()
-                .with_compute_units(16)
-                .with_memory_gb(32.0),
-        );
-
-        // GPU devices
-        let gpu1 = DMSDevice::new("GPU-1".to_string(), DMSDeviceType::GPU).with_capabilities(
-            DMSDeviceCapabilities::new()
-                .with_compute_units(2560)
-                .with_memory_gb(24.0)
-                .with_custom_capability("cuda_version".to_string(), "11.8".to_string()),
-        );
-
-        // Memory devices
-        let memory1 = DMSDevice::new("Memory-1".to_string(), DMSDeviceType::Memory)
-            .with_capabilities(
-                DMSDeviceCapabilities::new()
-                    .with_memory_gb(128.0)
-                    .with_bandwidth_gbps(25.6),
-            );
-
-        // Storage devices
-        let storage1 = DMSDevice::new("Storage-1".to_string(), DMSDeviceType::Storage)
-            .with_capabilities(
-                DMSDeviceCapabilities::new()
-                    .with_storage_gb(1000.0)
-                    .with_bandwidth_gbps(6.0),
-            );
-
-        // Network devices
-        let network1 = DMSDevice::new("Network-1".to_string(), DMSDeviceType::Network)
-            .with_capabilities(
-                DMSDeviceCapabilities::new()
-                    .with_bandwidth_gbps(10.0)
-                    .with_custom_capability("protocol".to_string(), "ethernet".to_string()),
-            );
-
-        // Add devices to controller
-        let devices = vec![cpu1, cpu2, gpu1, memory1, storage1, network1];
-        for mut device in devices {
-            device.set_status(DMSDeviceStatus::Available);
-            device.set_location("Local System".to_string());
-
-            let device_id = device.id().to_string();
-            let device_type = device.device_type();
-
-            self.devices
-                .insert(device_id.clone(), Arc::new(RwLock::new(device)));
-            self.device_type_index
-                .entry(device_type)
-                .or_default()
-                .push(device_id);
+    /// Discover real system devices based on configuration
+    pub async fn discover_system_devices(&mut self, config: &DMSDeviceControlConfig) -> DMSResult<()> {
+        // Discover CPU devices
+        self.discover_cpu_devices(config).await?;
+        
+        // Discover GPU devices
+        self.discover_gpu_devices(config).await?;
+        
+        // Discover memory devices
+        self.discover_memory_devices(config).await?;
+        
+        // Discover storage devices
+        self.discover_storage_devices(config).await?;
+        
+        // Discover network devices
+        self.discover_network_devices(config).await?;
+        
+        Ok(())
+    }
+    
+    /// Discover GPU devices from system
+    async fn discover_gpu_devices(&mut self, _config: &DMSDeviceControlConfig) -> DMSResult<()> {
+        #[cfg(target_os = "windows")]
+        {
+            // Try NVIDIA GPU discovery first
+            if let Ok(nvidia_output) = std::process::Command::new("nvidia-smi")
+                .args(["--query-gpu=name,memory.total", "--format=csv,noheader"])
+                .output() 
+            {
+                let gpu_info = String::from_utf8_lossy(&nvidia_output.stdout);
+                
+                for (index, line) in gpu_info.lines().enumerate() {
+                    let parts: Vec<&str> = line.split(',').collect();
+                    if parts.len() >= 2 {
+                        let name = parts[0].trim();
+                        let memory_mb = parts[1].trim().replace(" MiB", "").parse::<f64>().unwrap_or(0.0);
+                        let memory_gb = memory_mb / 1024.0;
+                        
+                        let gpu_device = DMSDevice::new(
+                            format!("GPU-{}-{}", index + 1, name), 
+                            DMSDeviceType::GPU
+                        ).with_capabilities(
+                            DMSDeviceCapabilities::new()
+                                .with_compute_units(1000) // Estimate
+                                .with_memory_gb(memory_gb)
+                        );
+                        
+                        self.add_device(gpu_device, "NVIDIA GPU".to_string()).await?;
+                    }
+                }
+            }
         }
-
+        
+        #[cfg(target_os = "linux")]
+        {
+            // Try NVIDIA GPU discovery
+            if let Ok(nvidia_output) = std::process::Command::new("nvidia-smi")
+                .args(&["--query-gpu=name,memory.total", "--format=csv,noheader"])
+                .output()
+            {
+                let gpu_info = String::from_utf8_lossy(&nvidia_output.stdout);
+                
+                for (index, line) in gpu_info.lines().enumerate() {
+                    let parts: Vec<&str> = line.split(',').collect();
+                    if parts.len() >= 2 {
+                        let name = parts[0].trim();
+                        let memory_mb = parts[1].trim().replace(" MiB", "").parse::<f64>().unwrap_or(0.0);
+                        let memory_gb = memory_mb / 1024.0;
+                        
+                        let gpu_device = DMSDevice::new(
+                            format!("GPU-{}-{}", index + 1, name), 
+                            DMSDeviceType::GPU
+                        ).with_capabilities(
+                            DMSDeviceCapabilities::new()
+                                .with_compute_units(1000) // Estimate
+                                .with_memory_gb(memory_gb)
+                        );
+                        
+                        self.add_device(gpu_device, "NVIDIA GPU".to_string()).await?;
+                    }
+                }
+            }
+        }
+        
+        Ok(())
+    }
+    
+    /// Discover storage devices from system
+    #[allow(dead_code)]
+    async fn discover_storage_devices_impl(&mut self, _config: &DMSDeviceControlConfig) -> DMSResult<Vec<DMSDevice>> {
+        #[cfg(target_os = "windows")]
+        {
+            // Try NVIDIA GPU discovery first
+            if let Ok(nvidia_output) = std::process::Command::new("nvidia-smi")
+                .args(["--query-gpu=name,memory.total", "--format=csv,noheader"])
+                .output() 
+            {
+                let gpu_info = String::from_utf8_lossy(&nvidia_output.stdout);
+                
+                for (index, line) in gpu_info.lines().enumerate() {
+                    let parts: Vec<&str> = line.split(',').collect();
+                    if parts.len() >= 2 {
+                        let name = parts[0].trim();
+                        let memory_mb = parts[1].trim().replace(" MiB", "").parse::<f64>().unwrap_or(0.0);
+                        let memory_gb = memory_mb / 1024.0;
+                        
+                        let gpu_device = DMSDevice::new(
+                            format!("GPU-{}-{}", index + 1, name), 
+                            DMSDeviceType::GPU
+                        ).with_capabilities(
+                            DMSDeviceCapabilities::new()
+                                .with_compute_units(1000) // Estimate
+                                .with_memory_gb(memory_gb)
+                        );
+                        
+                        self.add_device(gpu_device, "NVIDIA GPU".to_string()).await?;
+                    }
+                }
+            }
+        }
+        
+        #[cfg(target_os = "linux")]
+        {
+            // Try NVIDIA GPU discovery
+            if let Ok(nvidia_output) = std::process::Command::new("nvidia-smi")
+                .args(&["--query-gpu=name,memory.total", "--format=csv,noheader"])
+                .output()
+            {
+                let gpu_info = String::from_utf8_lossy(&nvidia_output.stdout);
+                
+                for (index, line) in gpu_info.lines().enumerate() {
+                    let parts: Vec<&str> = line.split(',').collect();
+                    if parts.len() >= 2 {
+                        let name = parts[0].trim();
+                        let memory_mb = parts[1].trim().replace(" MiB", "").parse::<f64>().unwrap_or(0.0);
+                        let memory_gb = memory_mb / 1024.0;
+                        
+                        let gpu_device = DMSDevice::new(
+                            format!("GPU-{}-{}", index + 1, name), 
+                            DMSDeviceType::GPU
+                        ).with_capabilities(
+                            DMSDeviceCapabilities::new()
+                                .with_compute_units(1000) // Estimate
+                                .with_memory_gb(memory_gb)
+                        );
+                        
+                        self.add_device(gpu_device, "NVIDIA GPU".to_string()).await?;
+                    }
+                }
+            }
+        }
+        
+        Ok(vec![])
+    }
+    
+    /// Discover memory devices from system
+    async fn discover_memory_devices(&mut self, _config: &DMSDeviceControlConfig) -> DMSResult<()> {
+        #[cfg(target_os = "windows")]
+        {
+            let output = std::process::Command::new("wmic")
+                .args(["memorychip", "get", "Capacity,Speed", "/format:list"])
+                .output()
+                .map_err(|e| DMSError::DeviceError(format!("Failed to query memory info: {e}")))?;
+                
+            let memory_info = String::from_utf8_lossy(&output.stdout);
+            
+            let mut total_capacity_gb = 0.0;
+            let mut memory_modules = 0;
+            
+            for line in memory_info.lines() {
+                if line.starts_with("Capacity=") {
+                    if let Some(capacity_bytes) = line.split('=').nth(1).and_then(|s| s.trim().parse::<u64>().ok()) {
+                        total_capacity_gb += capacity_bytes as f64 / (1024.0 * 1024.0 * 1024.0);
+                        memory_modules += 1;
+                    }
+                }
+            }
+            
+            if memory_modules > 0 {
+                let memory_device = DMSDevice::new(
+                    format!("Memory-{}GB-total", total_capacity_gb.round() as u32), 
+                    DMSDeviceType::Memory
+                ).with_capabilities(
+                    DMSDeviceCapabilities::new()
+                        .with_memory_gb(total_capacity_gb)
+                        .with_bandwidth_gbps(25.6) // Estimate for DDR4
+                );
+                
+                self.add_device(memory_device, "System Memory".to_string()).await?;
+            }
+        }
+        
+        #[cfg(target_os = "linux")]
+        {
+            if let Ok(meminfo) = std::fs::read_to_string("/proc/meminfo") {
+                for line in meminfo.lines() {
+                    if line.starts_with("MemTotal:") {
+                        if let Some(kb_str) = line.split_whitespace().nth(1) {
+                            if let Ok(kb) = kb_str.parse::<f64>() {
+                                let total_gb = kb / (1024.0 * 1024.0);
+                                
+                                let memory_device = DMSDevice::new(
+                                    format!("Memory-{}GB-total", total_gb.round() as u32), 
+                                    DMSDeviceType::Memory
+                                ).with_capabilities(
+                                    DMSDeviceCapabilities::new()
+                                        .with_memory_gb(total_gb)
+                                        .with_bandwidth_gbps(25.6) // Estimate for DDR4
+                                );
+                                
+                                self.add_device(memory_device, "System Memory".to_string()).await?;
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        
+        Ok(())
+    }
+    
+    /// Discover CPU devices from system
+    async fn discover_cpu_devices(&mut self, _config: &DMSDeviceControlConfig) -> DMSResult<()> {
+        #[cfg(target_os = "windows")]
+        {
+            let output = std::process::Command::new("wmic")
+                .args(["cpu", "get", "Name,NumberOfCores,NumberOfLogicalProcessors", "/format:list"])
+                .output()
+                .map_err(|e| DMSError::DeviceError(format!("Failed to query CPU info: {e}")))?;
+                
+            let cpu_info = String::from_utf8_lossy(&output.stdout);
+            
+            let mut cpu_count = 0;
+            let mut total_cores = 0;
+            let mut total_threads = 0;
+            
+            for line in cpu_info.lines() {
+                if line.starts_with("Name=") {
+                    cpu_count += 1;
+                } else if line.starts_with("NumberOfCores=") {
+                    if let Some(cores) = line.split('=').nth(1).and_then(|s| s.trim().parse::<usize>().ok()) {
+                        total_cores += cores;
+                    }
+                } else if line.starts_with("NumberOfLogicalProcessors=") {
+                    if let Some(threads) = line.split('=').nth(1).and_then(|s| s.trim().parse::<usize>().ok()) {
+                        total_threads += threads;
+                    }
+                }
+            }
+            
+            if cpu_count > 0 {
+                let cpu_device = DMSDevice::new(
+                    format!("CPU-{total_cores}-cores-{total_threads}-threads"), 
+                    DMSDeviceType::CPU
+                ).with_capabilities(
+                    DMSDeviceCapabilities::new()
+                        .with_compute_units(total_cores)
+                        .with_memory_gb(0.0)
+                );
+                
+                self.add_device(cpu_device, "System Hardware".to_string()).await?;
+            }
+        }
+        
+        #[cfg(target_os = "linux")]
+        {
+            // Linux CPU discovery using /proc/cpuinfo
+            let cpu_info = std::fs::read_to_string("/proc/cpuinfo")
+                .map_err(|e| DMSError::DeviceError(format!("Failed to read cpuinfo: {}", e)))?;
+                
+            let mut cpu_count = 0;
+            let mut total_cores = 0;
+            let mut total_threads = 0;
+            
+            for line in cpu_info.lines() {
+                if line.starts_with("processor\t") {
+                    cpu_count += 1;
+                } else if line.starts_with("cpu cores\t") {
+                    if let Some(cores) = line.split(':').nth(1).and_then(|s| s.trim().parse::<usize>().ok()) {
+                        total_cores = cores;
+                    }
+                }
+            }
+            
+            total_threads = cpu_count; // In Linux, processor count equals thread count
+            
+            if cpu_count > 0 {
+                let cpu_device = DMSDevice::new(
+                    format!("CPU-{}-cores-{}-threads", total_cores, total_threads), 
+                    DMSDeviceType::CPU
+                ).with_capabilities(
+                    DMSDeviceCapabilities::new()
+                        .with_compute_units(total_cores)
+                        .with_memory_gb(0.0)
+                );
+                
+                self.add_device(cpu_device, "System Hardware".to_string()).await?;
+            }
+        }
+        
+        Ok(())
+    }
+    
+    /// Discover storage devices from system
+    async fn discover_storage_devices(&mut self, config: &DMSDeviceControlConfig) -> DMSResult<()> {
+        // Call the implementation
+        self.discover_storage_devices_impl2(config).await
+    }
+    
+    /// Discover storage devices from system (implementation)
+    async fn discover_storage_devices_impl2(&mut self, _config: &DMSDeviceControlConfig) -> DMSResult<()> {
+        #[cfg(target_os = "windows")]
+        {
+            let output = std::process::Command::new("wmic")
+                .args(["diskdrive", "get", "Model,Size", "/format:list"])
+                .output()
+                .map_err(|e| DMSError::DeviceError(format!("Failed to query disk info: {e}")))?;
+                
+            let disk_info = String::from_utf8_lossy(&output.stdout);
+            
+            let mut disk_index = 0;
+            for line in disk_info.lines() {
+                if line.starts_with("Model=") {
+                    let model = line.split('=').nth(1).unwrap_or("Unknown").trim();
+                    
+                    // Look for the size in the next line
+                    if let Some(size_line) = disk_info.lines().skip(disk_index + 1).find(|l| l.starts_with("Size=")) {
+                        if let Some(size_bytes) = size_line.split('=').nth(1).and_then(|s| s.trim().parse::<u64>().ok()) {
+                            let size_gb = size_bytes as f64 / (1024.0 * 1024.0 * 1024.0);
+                            
+                            let storage_device = DMSDevice::new(
+                                format!("Storage-{}-{}", disk_index + 1, model), 
+                                DMSDeviceType::Storage
+                            ).with_capabilities(
+                                DMSDeviceCapabilities::new()
+                                    .with_storage_gb(size_gb)
+                                    .with_bandwidth_gbps(6.0) // SATA III estimate
+                            );
+                            
+                            self.add_device(storage_device, "System Storage".to_string()).await?;
+                        }
+                    }
+                }
+                disk_index += 1;
+            }
+        }
+        
+        #[cfg(target_os = "linux")]
+        {
+            // Read block devices from /sys/block
+            if let Ok(entries) = std::fs::read_dir("/sys/block") {
+                for (index, entry) in entries.enumerate() {
+                    if let Ok(entry) = entry {
+                        let device_name = entry.file_name().to_string_lossy().to_string();
+                        
+                        // Skip loop devices and ram disks
+                        if device_name.starts_with("loop") || device_name.starts_with("ram") {
+                            continue;
+                        }
+                        
+                        // Try to read size
+                        let size_path = entry.path().join("size");
+                        if let Ok(size_str) = std::fs::read_to_string(&size_path) {
+                            if let Ok(size_sectors) = size_str.trim().parse::<u64>() {
+                                let size_gb = (size_sectors * 512) as f64 / (1024.0 * 1024.0 * 1024.0);
+                                
+                                let storage_device = DMSDevice::new(
+                                    format!("Storage-{}-{}", index + 1, device_name), 
+                                    DMSDeviceType::Storage
+                                ).with_capabilities(
+                                    DMSDeviceCapabilities::new()
+                                        .with_storage_gb(size_gb)
+                                        .with_bandwidth_gbps(6.0) // SATA III estimate
+                                );
+                                
+                                self.add_device(storage_device, "System Storage".to_string()).await?;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        
+        Ok(())
+    }
+    
+    /// Discover network devices from system
+    async fn discover_network_devices(&mut self, _config: &DMSDeviceControlConfig) -> DMSResult<()> {
+        #[cfg(target_os = "windows")]
+        {
+            let output = std::process::Command::new("wmic")
+                .args(["nic", "where", "NetEnabled=true", "get", "Name,Speed", "/format:list"])
+                .output()
+                .map_err(|e| DMSError::DeviceError(format!("Failed to query network info: {e}")))?;
+                
+            let network_info = String::from_utf8_lossy(&output.stdout);
+            
+            let mut network_index = 0;
+            for line in network_info.lines() {
+                if line.starts_with("Name=") {
+                    let name = line.split('=').nth(1).unwrap_or("Unknown").trim();
+                    
+                    // Look for speed in next lines
+                    if let Some(speed_line) = network_info.lines().skip(network_index + 1).find(|l| l.starts_with("Speed=")) {
+                        if let Some(speed_bps) = speed_line.split('=').nth(1).and_then(|s| s.trim().parse::<u64>().ok()) {
+                            let speed_gbps = speed_bps as f64 / (1000.0 * 1000.0 * 1000.0);
+                            
+                            let network_device = DMSDevice::new(
+                                format!("Network-{}-{}", network_index + 1, name), 
+                                DMSDeviceType::Network
+                            ).with_capabilities(
+                                DMSDeviceCapabilities::new()
+                                    .with_bandwidth_gbps(speed_gbps)
+                            );
+                            
+                            self.add_device(network_device, "System Network".to_string()).await?;
+                        }
+                    }
+                }
+                network_index += 1;
+            }
+        }
+        
+        #[cfg(target_os = "linux")]
+        {
+            // Read network interfaces from /sys/class/net
+            if let Ok(entries) = std::fs::read_dir("/sys/class/net") {
+                for (index, entry) in entries.enumerate() {
+                    if let Ok(entry) = entry {
+                        let interface_name = entry.file_name().to_string_lossy().to_string();
+                        
+                        // Skip loopback interface
+                        if interface_name == "lo" {
+                            continue;
+                        }
+                        
+                        // Try to read speed
+                        let speed_path = entry.path().join("speed");
+                        if let Ok(speed_str) = std::fs::read_to_string(&speed_path) {
+                            if let Ok(speed_mbps) = speed_str.trim().parse::<f64>() {
+                                let speed_gbps = speed_mbps / 1000.0;
+                                
+                                let network_device = DMSDevice::new(
+                                    format!("Network-{}-{}", index + 1, interface_name), 
+                                    DMSDeviceType::Network
+                                ).with_capabilities(
+                                    DMSDeviceCapabilities::new()
+                                        .with_bandwidth_gbps(speed_gbps)
+                                );
+                                
+                                self.add_device(network_device, "System Network".to_string()).await?;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        
+        Ok(())
+    }
+    
+    /// Helper method to add a discovered device
+    async fn add_device(&mut self, mut device: DMSDevice, location: String) -> DMSResult<()> {
+        device.set_status(DMSDeviceStatus::Available);
+        device.set_location(location);
+        
+        let device_id = device.id().to_string();
+        let device_type = device.device_type();
+        
+        self.devices.insert(device_id.clone(), Arc::new(RwLock::new(device)));
+        self.device_type_index
+            .entry(device_type)
+            .or_default()
+            .push(device_id);
+            
         Ok(())
     }
 
-    fn create_mock_device(&self) -> DMSDevice {
-        // Create a random mock device
-        let device_types = [
-            "CPU".to_string(),
-            "GPU".to_string(),
-            "Memory".to_string(),
-            "Storage".to_string(),
-            "Network".to_string(),
-        ];
-        let device_type = device_types[rand::random::<usize>() % device_types.len()].clone();
-
-        let device_type_enum = match device_type.as_str() {
+    /// Create a device from network discovery (for remote devices)
+    #[allow(dead_code)]
+    fn create_discovered_device(&self, device_info: &NetworkDeviceInfo) -> DMSDevice {
+        let device_type_enum = match device_info.device_type.as_str() {
             "CPU" => DMSDeviceType::CPU,
             "GPU" => DMSDeviceType::GPU,
             "Memory" => DMSDeviceType::Memory,
@@ -313,43 +724,44 @@ impl DMSDeviceController {
             "Network" => DMSDeviceType::Network,
             _ => DMSDeviceType::Custom,
         };
-        let name = format!("Mock-{}-{}", device_type, rand::random::<u16>());
+        
+        let name = format!("Discovered-{}-{}", device_info.device_type, device_info.id);
         let mut device = DMSDevice::new(name, device_type_enum);
 
-        // Add random capabilities
+        // Add discovered capabilities
         let mut capabilities = DMSDeviceCapabilities::new();
 
         match device_type_enum {
             DMSDeviceType::CPU => {
                 capabilities = capabilities
-                    .with_compute_units(rand::random::<usize>() % 32 + 1)
-                    .with_memory_gb(rand::random::<f64>() * 64.0 + 4.0);
+                    .with_compute_units(device_info.compute_units.unwrap_or(8))
+                    .with_memory_gb(device_info.memory_gb.unwrap_or(16.0));
             }
             DMSDeviceType::GPU => {
                 capabilities = capabilities
-                    .with_compute_units(rand::random::<usize>() % 10000 + 100)
-                    .with_memory_gb(rand::random::<f64>() * 32.0 + 2.0);
+                    .with_compute_units(device_info.compute_units.unwrap_or(1000))
+                    .with_memory_gb(device_info.memory_gb.unwrap_or(8.0));
             }
             DMSDeviceType::Memory => {
                 capabilities = capabilities
-                    .with_memory_gb(rand::random::<f64>() * 256.0 + 8.0)
-                    .with_bandwidth_gbps(rand::random::<f64>() * 50.0 + 5.0);
+                    .with_memory_gb(device_info.memory_gb.unwrap_or(64.0))
+                    .with_bandwidth_gbps(device_info.bandwidth_gbps.unwrap_or(25.6));
             }
             DMSDeviceType::Storage => {
                 capabilities = capabilities
-                    .with_storage_gb(rand::random::<f64>() * 10000.0 + 100.0)
-                    .with_bandwidth_gbps(rand::random::<f64>() * 20.0 + 1.0);
+                    .with_storage_gb(device_info.storage_gb.unwrap_or(1000.0))
+                    .with_bandwidth_gbps(device_info.bandwidth_gbps.unwrap_or(6.0));
             }
             DMSDeviceType::Network => {
-                capabilities =
-                    capabilities.with_bandwidth_gbps(rand::random::<f64>() * 100.0 + 1.0);
+                capabilities = capabilities
+                    .with_bandwidth_gbps(device_info.bandwidth_gbps.unwrap_or(1.0));
             }
             _ => {}
         }
 
         device = device.with_capabilities(capabilities);
         device.set_status(DMSDeviceStatus::Available);
-        device.set_location("Discovered Network".to_string());
+        device.set_location(format!("Network Discovery: {}", device_info.source));
 
         device
     }
@@ -386,6 +798,42 @@ impl DMSDeviceController {
         }
 
         Ok(best_device)
+    }
+    
+    /// Initialize metrics for device monitoring
+    pub fn initialize_metrics(&mut self, metrics_registry: &DMSMetricsRegistry) -> DMSResult<()> {
+        use crate::observability::{DMSMetric, DMSMetricConfig, DMSMetricType};
+        use std::sync::Arc;
+        
+        // Register device count metric
+        let device_total_config = DMSMetricConfig {
+            metric_type: DMSMetricType::Gauge,
+            name: "dms_devices_total".to_string(),
+            help: "Total number of discovered devices".to_string(),
+            buckets: vec![],
+            quantiles: vec![],
+            max_age: std::time::Duration::from_secs(300),
+            age_buckets: 5,
+        };
+        let device_total_metric = Arc::new(DMSMetric::new(device_total_config));
+        metrics_registry.register(device_total_metric.clone())?;
+        
+        // Register device type metrics
+        for device_type in self.device_type_index.keys() {
+            let device_type_config = DMSMetricConfig {
+                metric_type: DMSMetricType::Gauge,
+                name: format!("dms_devices_{}_total", device_type.to_string().to_lowercase()),
+                help: format!("Total number of {} devices", device_type),
+                buckets: vec![],
+                quantiles: vec![],
+                max_age: std::time::Duration::from_secs(300),
+                age_buckets: 5,
+            };
+            let device_type_metric = Arc::new(DMSMetric::new(device_type_config));
+            metrics_registry.register(device_type_metric.clone())?;
+        }
+        
+        Ok(())
     }
 
     fn calculate_device_score(&self, device: &DMSDevice) -> u32 {
@@ -612,7 +1060,7 @@ impl DMSDeviceController {
     pub async fn get_device_health(
         &self,
         device_id: &str,
-    ) -> DMSResult<super::device::DMSDeviceHealthMetrics> {
+    ) -> DMSResult<super::core::DMSDeviceHealthMetrics> {
         if let Some(device_lock) = self.devices.get(device_id) {
             let device = device_lock.read().await;
             Ok(device.health_metrics().clone())
@@ -626,7 +1074,7 @@ impl DMSDeviceController {
     /// Get all device health metrics
     pub async fn get_all_device_health(
         &self,
-    ) -> DMSResult<HashMap<String, super::device::DMSDeviceHealthMetrics>> {
+    ) -> DMSResult<HashMap<String, super::core::DMSDeviceHealthMetrics>> {
         let mut health_map = HashMap::new();
 
         for (device_id, device_lock) in &self.devices {
@@ -636,5 +1084,35 @@ impl DMSDeviceController {
 
         Ok(health_map)
     }
+
+    /// Create a mock device for discovery simulation
+    fn create_mock_device_for_discovery(&self) -> DMSDevice {
+        use super::core::{DMSDeviceCapabilities, DMSDeviceType};
+        
+        let device_types = [DMSDeviceType::CPU,
+            DMSDeviceType::GPU,
+            DMSDeviceType::Memory,
+            DMSDeviceType::Storage,
+            DMSDeviceType::Network];
+        
+        let device_type = device_types[rand::random::<usize>() % device_types.len()];
+        
+        let device_name = match device_type {
+            DMSDeviceType::CPU => format!("CPU-{}-cores", rand::random::<usize>() % 32 + 1),
+            DMSDeviceType::GPU => format!("GPU-{}-GB", rand::random::<usize>() % 24 + 1),
+            DMSDeviceType::Memory => format!("Memory-{}-GB", rand::random::<usize>() % 64 + 1),
+            DMSDeviceType::Storage => format!("Storage-{}-TB", rand::random::<usize>() % 10 + 1),
+            DMSDeviceType::Network => format!("Network-{}-Gbps", rand::random::<usize>() % 100 + 1),
+            DMSDeviceType::Sensor => format!("Sensor-{}-units", rand::random::<usize>() % 100 + 1),
+            DMSDeviceType::Actuator => format!("Actuator-{}-actions", rand::random::<usize>() % 50 + 1),
+            DMSDeviceType::Custom => format!("Custom-{}-device", rand::random::<usize>() % 1000 + 1),
+        };
+        
+        let capabilities = DMSDeviceCapabilities::new()
+            .with_compute_units(rand::random::<usize>() % 1000 + 100)
+            .with_memory_gb(rand::random::<f64>() * 64.0 + 1.0);
+        
+        DMSDevice::new(device_name, device_type)
+            .with_capabilities(capabilities)
+    }
 }
-

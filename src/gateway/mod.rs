@@ -140,6 +140,7 @@ pub use circuit_breaker::{DMSCircuitBreaker, DMSCircuitBreakerConfig};
 /// 
 /// This struct defines the configuration options for the API gateway, including network settings,
 /// feature toggles, and CORS configuration.
+#[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DMSGatewayConfig {
     /// Address to listen on
@@ -168,6 +169,25 @@ pub struct DMSGatewayConfig {
     pub enable_logging: bool,
     /// Log level for gateway operations
     pub log_level: String,
+}
+
+#[cfg(feature = "pyo3")]
+/// Python bindings for DMSGatewayConfig
+#[pyo3::prelude::pymethods]
+impl DMSGatewayConfig {
+    #[new]
+    fn py_new() -> Self {
+        Self::default()
+    }
+    
+    #[staticmethod]
+    fn py_new_with_address(listen_address: String, listen_port: u16) -> Self {
+        Self {
+            listen_address,
+            listen_port,
+            ..Self::default()
+        }
+    }
 }
 
 impl Default for DMSGatewayConfig {
@@ -364,6 +384,7 @@ impl DMSGatewayResponse {
 /// 
 /// This struct provides the core gateway functionality, including request handling,
 /// routing, middleware execution, rate limiting, and circuit breaking.
+#[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 pub struct DMSGateway {
     /// Gateway configuration, protected by a RwLock for thread-safe access
     config: RwLock<DMSGatewayConfig>,
@@ -378,6 +399,12 @@ pub struct DMSGateway {
     /// Load balancer for distributing requests across services
     #[allow(dead_code)]
     load_balancer: Option<Arc<DMSLoadBalancer>>,
+}
+
+impl Default for DMSGateway {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl DMSGateway {
@@ -541,7 +568,17 @@ impl DMSModule for DMSGateway {
     /// 
     /// A `DMSResult<()>` indicating success or failure
     async fn after_shutdown(&mut self, _ctx: &mut DMSServiceContext) -> crate::core::DMSResult<()> {
-        // Cleanup gateway resources
+        ///// Cleanup gateway resources
         Ok(())
+    }
+}
+
+#[cfg(feature = "pyo3")]
+/// Python bindings for DMSGateway
+#[pyo3::prelude::pymethods]
+impl DMSGateway {
+    #[new]
+    fn py_new() -> Self {
+        Self::new()
     }
 }

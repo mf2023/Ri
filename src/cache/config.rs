@@ -109,7 +109,7 @@ impl Default for DMSCacheConfig {
 /// Cache backend type enumeration.
 /// 
 /// Defines the different cache backend types supported by DMS.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub enum CacheBackendType {
     Memory,  // In-memory cache (fast, non-persistent)
     Redis,   // Redis cache (persistent, distributed)

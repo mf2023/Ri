@@ -15,10 +15,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-extern crate dms;
-
-use dms::config::{DMSConfig, DMSConfigManager};
-use std::path::PathBuf;
+use dms_core::config::{DMSConfig, DMSConfigManager};
 use tempfile::tempdir;
 
 #[test]

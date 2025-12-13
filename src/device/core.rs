@@ -72,6 +72,91 @@ use serde::{Serialize, Deserialize};
 use std::collections::HashMap;
 use uuid::Uuid;
 
+/// Configuration for device control module
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DMSDeviceControlConfig {
+    /// Enable CPU discovery
+    pub enable_cpu_discovery: bool,
+    /// Enable GPU discovery  
+    pub enable_gpu_discovery: bool,
+    /// Enable memory discovery
+    pub enable_memory_discovery: bool,
+    /// Enable storage discovery
+    pub enable_storage_discovery: bool,
+    /// Enable network discovery
+    pub enable_network_discovery: bool,
+    /// Network discovery timeout in seconds
+    pub discovery_timeout_secs: u64,
+    /// Maximum number of devices to discover per type
+    pub max_devices_per_type: usize,
+}
+
+impl Default for DMSDeviceControlConfig {
+    fn default() -> Self {
+        Self {
+            enable_cpu_discovery: true,
+            enable_gpu_discovery: true,
+            enable_memory_discovery: true,
+            enable_storage_discovery: true,
+            enable_network_discovery: true,
+            discovery_timeout_secs: 30,
+            max_devices_per_type: 100,
+        }
+    }
+}
+
+/// Configuration for device module
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DMSDeviceConfig {
+    /// Enable CPU discovery
+    pub enable_cpu_discovery: bool,
+    /// Enable GPU discovery  
+    pub enable_gpu_discovery: bool,
+    /// Enable memory discovery
+    pub enable_memory_discovery: bool,
+    /// Enable storage discovery
+    pub enable_storage_discovery: bool,
+    /// Enable network discovery
+    pub enable_network_discovery: bool,
+    /// Network discovery timeout in seconds
+    pub discovery_timeout_secs: u64,
+    /// Maximum number of devices to discover per type
+    pub max_devices_per_type: usize,
+}
+
+impl Default for DMSDeviceConfig {
+    fn default() -> Self {
+        Self {
+            enable_cpu_discovery: true,
+            enable_gpu_discovery: true,
+            enable_memory_discovery: true,
+            enable_storage_discovery: true,
+            enable_network_discovery: true,
+            discovery_timeout_secs: 30,
+            max_devices_per_type: 100,
+        }
+    }
+}
+
+/// Network device information for remote device discovery
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct NetworkDeviceInfo {
+    /// Unique device identifier
+    pub id: String,
+    /// Device type (CPU, GPU, Memory, Storage, Network)
+    pub device_type: String,
+    /// Source system identifier
+    pub source: String,
+    /// Number of compute units (for CPU/GPU)
+    pub compute_units: Option<usize>,
+    /// Memory capacity in GB
+    pub memory_gb: Option<f64>,
+    /// Storage capacity in GB
+    pub storage_gb: Option<f64>,
+    /// Bandwidth in Gbps
+    pub bandwidth_gbps: Option<f64>,
+}
+
 /// Device type enumeration
 /// 
 /// This enum defines the different types of devices supported by DMS. Each device type
@@ -94,6 +179,21 @@ pub enum DMSDeviceType {
     Actuator,
     /// Custom - User-defined device types
     Custom,
+}
+
+impl std::fmt::Display for DMSDeviceType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            DMSDeviceType::CPU => write!(f, "CPU"),
+            DMSDeviceType::GPU => write!(f, "GPU"),
+            DMSDeviceType::Memory => write!(f, "Memory"),
+            DMSDeviceType::Storage => write!(f, "Storage"),
+            DMSDeviceType::Network => write!(f, "Network"),
+            DMSDeviceType::Sensor => write!(f, "Sensor"),
+            DMSDeviceType::Actuator => write!(f, "Actuator"),
+            DMSDeviceType::Custom => write!(f, "Custom"),
+        }
+    }
 }
 
 /// Device capabilities structure

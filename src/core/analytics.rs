@@ -87,6 +87,12 @@ pub struct DMSLogAnalyticsModule {
     enabled: bool,
 }
 
+impl Default for DMSLogAnalyticsModule {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl DMSLogAnalyticsModule {
     /// Creates a new instance of the log analytics module.
     /// 
@@ -241,7 +247,8 @@ impl ServiceModule for DMSLogAnalyticsModule {
     /// 
     /// A `DMSResult` indicating success or failure
     fn init(&mut self, ctx: &mut DMSServiceContext) -> DMSResult<()> {
-        let cfg = ctx.config().config();
+        let binding = ctx.config();
+        let cfg = binding.config();
         self.enabled = cfg.get_bool("analytics.enabled").unwrap_or(true);
         if !self.enabled {
             return Ok(());

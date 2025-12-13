@@ -15,10 +15,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-extern crate dms;
-
-use dms::queue::{DMSQueueMessage, DMSQueue, DMSQueueConfig, QueueBackendType, DMSQueueManager, DMSQueueModule};
-use dms::queue::backends::DMSMemoryQueue;
+use dms_core::queue::{DMSQueueMessage, DMSQueue, DMSQueueConfig, QueueBackendType, DMSQueueManager, DMSQueueModule};
+use dms_core::queue::backends::DMSMemoryQueue;
 
 #[test]
 fn test_queue_message_new() {
@@ -325,7 +323,7 @@ async fn test_queue_module_new() {
     queue_manager.create_queue("test_queue").await.unwrap();
 }
 
-#[test]
+#[tokio::test]
 async fn test_queue_config_default() {
     let config = DMSQueueConfig::default();
     
@@ -343,7 +341,7 @@ async fn test_queue_config_default() {
     assert!(config.dead_letter_config.is_none());
 }
 
-#[test]
+#[tokio::test]
 async fn test_queue_backend_type_from_str() {
     // Test valid backend types
     assert_eq!("memory".parse::<QueueBackendType>().unwrap(), QueueBackendType::Memory);

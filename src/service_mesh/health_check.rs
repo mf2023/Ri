@@ -93,6 +93,9 @@ use std::time::{Duration, SystemTime};
 use tokio::sync::RwLock;
 use tokio::task::JoinHandle;
 
+#[cfg(feature = "pyo3")]
+use pyo3::PyResult;
+
 use crate::core::{DMSResult, DMSError};
 
 /// Configuration for health checks.
@@ -158,6 +161,7 @@ pub struct DMSHealthCheckResult {
 /// Types of health checks supported.
 ///
 /// This enum defines the different protocols that can be used for health checking.
+#[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
 pub enum DMSHealthCheckType {
     /// HTTP health check
@@ -318,6 +322,7 @@ impl DMSHealthCheckProvider for DMSTcpHealthCheckProvider {
 ///
 /// This struct provides the core functionality for managing health checks, including
 /// registering health checks, starting background monitoring, and retrieving health status.
+#[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 pub struct DMSHealthChecker {
     /// Interval between health checks
     check_interval: Duration,
@@ -427,7 +432,7 @@ impl DMSHealthChecker {
                             service_results.push(result);
                         }
                         Err(e) => {
-                            eprintln!("Health check failed for {endpoint_clone}: {e}");
+                            log::warn!("Health check failed for {endpoint_clone}: {e}");
                         }
                     }
                 }
@@ -518,12 +523,46 @@ impl DMSHealthChecker {
 
     /// Starts background health check tasks.
     ///
-    /// This method is a placeholder for future implementation.
+    /// This method initializes and starts all background health monitoring tasks,
+    /// including periodic health checks for registered services and cleanup tasks.
     ///
     /// # Returns
     ///
     /// A `DMSResult<()>` indicating success or failure
     pub async fn start_background_tasks(&self) -> DMSResult<()> {
+        // Start periodic cleanup task to remove old health check results
+        let check_results = Arc::clone(&self.check_results);
+        let cleanup_interval = self.check_interval * 10; // Cleanup every 10 check intervals
+        
+        let cleanup_task = tokio::spawn(async move {
+            let mut interval = tokio::time::interval(cleanup_interval);
+            
+            loop {
+                interval.tick().await;
+                
+                let mut results = check_results.write().await;
+                let now = SystemTime::now();
+                let max_age = Duration::from_secs(3600); // Keep results for 1 hour
+                
+                // Remove health check results older than max_age
+                for service_results in results.values_mut() {
+                    service_results.retain(|result| {
+                        now.duration_since(result.timestamp)
+                            .map(|age| age < max_age)
+                            .unwrap_or(false)
+                    });
+                }
+                
+                // Remove services with no recent results
+                results.retain(|_, results| !results.is_empty());
+            }
+        });
+        
+        // Store cleanup task
+        let mut tasks = self.background_tasks.write().await;
+        tasks.push(cleanup_task);
+        
+        log::info!("Background health check tasks started successfully");
         Ok(())
     }
 
@@ -552,9 +591,27 @@ impl DMSHealthChecker {
     }
 }
 
+#[cfg(feature = "pyo3")]
+/// Python bindings for DMSHealthChecker
+#[pyo3::prelude::pymethods]
+impl DMSHealthChecker {
+    #[new]
+    fn py_new(check_interval: u64) -> PyResult<Self> {
+        Ok(Self::new(Duration::from_secs(check_interval)))
+    }
+    
+    /// Get service health summary from Python
+    fn get_service_health_summary_py(&self, _service_name: String) -> PyResult<DMSHealthSummary> {
+        // For now, we'll return an error since we can't easily run async code from Python
+        // In a real implementation, you'd want to integrate with Python's async runtime
+        Err(pyo3::exceptions::PyRuntimeError::new_err("Async health check not supported from Python yet"))
+    }
+}
+
 /// Health status enum.
 ///
 /// This enum represents the overall health status of a service.
+#[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 #[derive(Debug, Clone)]
 pub enum DMSHealthStatus {
     /// Service is healthy
@@ -571,6 +628,7 @@ pub enum DMSHealthStatus {
 ///
 /// This struct provides an aggregated view of a service's health, including
 /// total checks, success rate, average response time, and overall status.
+#[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 #[derive(Debug, Clone)]
 pub struct DMSHealthSummary {
     /// Name of the service

@@ -15,15 +15,29 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-extern crate dms;
-
-use dms::gateway::{DMSGatewayConfig, DMSGatewayRequest, DMSGatewayResponse, DMSGateway};
-use dms::gateway::{DMSRoute, DMSRouter, DMSMiddleware, DMSMiddlewareChain};
-use dms::gateway::{DMSLoadBalancer, DMSLoadBalancerStrategy, DMSRateLimiter, DMSRateLimitConfig};
-use dms::gateway::{DMSCircuitBreaker, DMSCircuitBreakerConfig};
+use dms_core::gateway::{
+    DMSGatewayConfig,
+    DMSGatewayRequest,
+    DMSGatewayResponse,
+    DMSGateway,
+    DMSRoute,
+    DMSRouter,
+    DMSMiddleware,
+    DMSMiddlewareChain,
+    DMSLoadBalancer,
+    DMSLoadBalancerStrategy,
+    DMSRateLimiter,
+    DMSRateLimitConfig,
+    DMSCircuitBreaker,
+    DMSCircuitBreakerConfig,
+};
+use dms_core::gateway::load_balancer::DMSBackendServer;
+use dms_core::prelude::DMSResult;
+use std::collections::HashMap;
+use std::sync::Arc;
 
 #[test]
-async fn test_gateway_config_default() {
+fn test_gateway_config_default() {
     let config = DMSGatewayConfig::default();
     
     assert_eq!(config.listen_address, "0.0.0.0");
@@ -40,15 +54,22 @@ async fn test_gateway_config_default() {
 }
 
 #[test]
-async fn test_gateway_request_new() {
+fn test_gateway_request_new() {
     let method = "GET".to_string();
     let path = "/test".to_string();
     let headers = std::collections::HashMap::new();
     let query_params = std::collections::HashMap::new();
-    let body = None;
+    let body = None::<Vec<u8>>;
     let remote_addr = "127.0.0.1:12345".to_string();
     
-    let request = DMSGatewayRequest::new(method.clone(), path.clone(), headers.clone(), query_params.clone(), body, remote_addr.clone());
+    let request = DMSGatewayRequest::new(
+        method.clone(),
+        path.clone(),
+        headers.clone(),
+        query_params.clone(),
+        body.clone(),
+        remote_addr.clone(),
+    );
     
     assert!(!request.id.is_empty());
     assert_eq!(request.method, method);
@@ -60,7 +81,7 @@ async fn test_gateway_request_new() {
 }
 
 #[test]
-async fn test_gateway_response_new() {
+fn test_gateway_response_new() {
     let status_code = 200;
     let body = b"test_body".to_vec();
     let request_id = "test_request_id".to_string();
@@ -75,7 +96,7 @@ async fn test_gateway_response_new() {
 }
 
 #[test]
-async fn test_gateway_response_with_header() {
+fn test_gateway_response_with_header() {
     let status_code = 200;
     let body = b"test_body".to_vec();
     let request_id = "test_request_id".to_string();
@@ -87,7 +108,7 @@ async fn test_gateway_response_with_header() {
 }
 
 #[test]
-async fn test_gateway_response_json() {
+fn test_gateway_response_json() {
     let status_code = 200;
     let request_id = "test_request_id".to_string();
     
@@ -102,7 +123,7 @@ async fn test_gateway_response_json() {
 }
 
 #[test]
-async fn test_gateway_response_error() {
+fn test_gateway_response_error() {
     let status_code = 404;
     let message = "Not Found".to_string();
     let request_id = "test_request_id".to_string();
@@ -120,52 +141,77 @@ async fn test_gateway_new() {
     let gateway = DMSGateway::new();
     
     // Verify gateway components are created
-    assert!(gateway.router().is_some());
-    assert!(gateway.middleware_chain().is_some());
+    assert_eq!(gateway.router().route_count(), 0);
+    assert_eq!(gateway.middleware_chain().len(), 0);
 }
 
 #[tokio::test]
 async fn test_gateway_router() {
-    let gateway = DMSGateway::new();
-    let router = gateway.router();
+    let router = DMSRouter::new();
     
     // Test adding a route
-    let route = DMSRoute {
-        path: "/test".to_string(),
-        method: "GET".to_string(),
-        handler: Box::new(|request| {
-            Box::pin(async move {
-                Ok(DMSGatewayResponse::new(200, b"test_response".to_vec(), request.id))
-            })
-        }),
-    };
-    
-    router.add_route(route).await.unwrap();
-    
-    // Test getting routes
-    let routes = router.get_routes().await;
-    assert_eq!(routes.len(), 1);
+    let handler = Arc::new(|request: DMSGatewayRequest| {
+        Box::pin(async move {
+            Ok(DMSGatewayResponse::new(
+                200,
+                b"test_response".to_vec(),
+                request.id,
+            ))
+        }) as std::pin::Pin<Box<dyn std::future::Future<Output = DMSResult<DMSGatewayResponse>> + Send>>
+    });
+
+    let route = DMSRoute::new(
+        "GET".to_string(),
+        "/test".to_string(),
+        handler,
+    );
+
+    router.add_route(route);
+
+    assert_eq!(router.route_count(), 1);
 }
 
 #[tokio::test]
 async fn test_gateway_middleware_chain() {
-    let gateway = DMSGateway::new();
-    let middleware_chain = gateway.middleware_chain();
-    
-    // Test adding middleware
-    let middleware = Box::new(|| {
-        Box::pin(async move |request, next| {
-            // Add a custom header
-            let mut request = request;
-            request.headers.insert("X-Custom-Middleware".to_string(), "applied".to_string());
-            next(request).await
-        })
-    });
-    
-    middleware_chain.add(middleware).await;
-    
-    // Test middleware count
-    assert_eq!(middleware_chain.count().await, 1);
+    struct TestMiddleware;
+
+    #[async_trait::async_trait]
+    impl DMSMiddleware for TestMiddleware {
+        async fn execute(
+            &self,
+            request: &mut DMSGatewayRequest,
+        ) -> DMSResult<()> {
+            request
+                .headers
+                .insert("X-Custom-Middleware".to_string(), "applied".to_string());
+            Ok(())
+        }
+
+        fn name(&self) -> &'static str {
+            "TestMiddleware"
+        }
+    }
+
+    let mut middleware_chain = DMSMiddlewareChain::new();
+
+    middleware_chain.add(Arc::new(TestMiddleware));
+
+    let mut request = DMSGatewayRequest::new(
+        "GET".to_string(),
+        "/test".to_string(),
+        HashMap::new(),
+        HashMap::new(),
+        None,
+        "127.0.0.1:12345".to_string(),
+    );
+
+    middleware_chain.execute(&mut request).await.unwrap();
+
+    assert_eq!(
+        request.headers.get("X-Custom-Middleware"),
+        Some(&"applied".to_string())
+    );
+    assert_eq!(middleware_chain.len(), 1);
 }
 
 #[tokio::test]
@@ -174,17 +220,23 @@ async fn test_gateway_handle_request() {
     let router = gateway.router();
     
     // Add a test route
-    let route = DMSRoute {
-        path: "/test".to_string(),
-        method: "GET".to_string(),
-        handler: Box::new(|request| {
-            Box::pin(async move {
-                Ok(DMSGatewayResponse::new(200, b"test_response".to_vec(), request.id))
-            })
-        }),
-    };
-    
-    router.add_route(route).await.unwrap();
+    let handler = Arc::new(|request: DMSGatewayRequest| {
+        Box::pin(async move {
+            Ok(DMSGatewayResponse::new(
+                200,
+                b"test_response".to_vec(),
+                request.id,
+            ))
+        }) as std::pin::Pin<Box<dyn std::future::Future<Output = DMSResult<DMSGatewayResponse>> + Send>>
+    });
+
+    let route = DMSRoute::new(
+        "GET".to_string(),
+        "/test".to_string(),
+        handler,
+    );
+
+    router.add_route(route);
     
     // Create a test request
     let request = DMSGatewayRequest::new(
@@ -230,16 +282,25 @@ async fn test_load_balancer_new() {
     let load_balancer = DMSLoadBalancer::new(DMSLoadBalancerStrategy::RoundRobin);
     
     // Test adding targets
-    load_balancer.add_target("http://localhost:8001".to_string()).await;
-    load_balancer.add_target("http://localhost:8002".to_string()).await;
+    let server1 = DMSBackendServer::new(
+        "server1".to_string(),
+        "http://localhost:8001".to_string(),
+    );
+    let server2 = DMSBackendServer::new(
+        "server2".to_string(),
+        "http://localhost:8002".to_string(),
+    );
+
+    load_balancer.add_server(server1).await;
+    load_balancer.add_server(server2).await;
     
     // Test getting targets
-    let targets = load_balancer.get_targets().await;
+    let targets = load_balancer.get_healthy_servers().await;
     assert_eq!(targets.len(), 2);
     
     // Test selecting a target
-    let target = load_balancer.select_target().await;
-    assert!(target.is_some());
+    let target = load_balancer.select_server(None).await.unwrap();
+    assert!(target.url.starts_with("http://localhost"));
 }
 
 #[tokio::test]
@@ -272,6 +333,7 @@ async fn test_circuit_breaker_new() {
         failure_threshold: 5,
         success_threshold: 3,
         timeout_seconds: 30,
+        monitoring_period_seconds: 30,
     };
     
     let circuit_breaker = DMSCircuitBreaker::new(config);
@@ -280,9 +342,9 @@ async fn test_circuit_breaker_new() {
     let allowed = circuit_breaker.allow_request().await;
     assert!(allowed);
     
-    // Test reporting success
-    circuit_breaker.report_success().await;
+    // Test recording success
+    circuit_breaker.record_success().await;
     
-    // Test reporting failure
-    circuit_breaker.report_failure().await;
+    // Test recording failure
+    circuit_breaker.record_failure().await;
 }

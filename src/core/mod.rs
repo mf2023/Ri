@@ -40,8 +40,6 @@
 //! 4. **Error Handling**: A unified error type simplifies error management across modules
 //! 5. **Async First**: Full support for asynchronous operations
 
-
-
 /// Error handling with custom error types and result aliases
 pub mod error;
 /// Service context for accessing core functionalities
@@ -50,6 +48,14 @@ pub mod context;
 pub mod module;
 /// Application runtime and builder for constructing DMS applications
 pub mod runtime;
+/// Application builder for constructing DMS applications
+pub mod app_builder;
+/// Application runtime for managing DMS application lifecycle
+pub mod app_runtime;
+/// Module types for distinguishing between sync and async modules
+pub mod module_types;
+/// Module sorter for sorting modules based on dependencies and priority
+pub mod module_sorter;
 /// Lifecycle management for modules
 pub mod lifecycle;
 /// Basic analytics and telemetry support

@@ -20,10 +20,33 @@
 use serde::{Serialize, Deserialize};
 use std::collections::HashMap;
 use chrono::{DateTime, Utc};
+use crate::device::DMSResourceAllocation;
+use tokio::sync::RwLock;
+use parking_lot::RwLock as ParkingRwLock;
 
-use super::device::{DMSDevice, DMSDeviceType, DMSDeviceCapabilities};
+use super::core::{DMSDevice, DMSDeviceType, DMSDeviceCapabilities};
 use super::pool::DMSResourcePoolManager;
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
+
+/// Resource scheduler for device management
+#[allow(dead_code)]
+pub struct DMSResourceScheduler {
+    /// Active allocations
+    allocations: Arc<RwLock<HashMap<String, DMSResourceAllocation>>>,
+    /// Allocation history for analytics
+    allocation_history: Arc<RwLock<Vec<DMSResourceAllocation>>>,
+}
+
+impl DMSResourceScheduler {
+    /// Creates a new resource scheduler
+    #[allow(dead_code)]
+    pub fn new() -> Self {
+        Self {
+            allocations: Arc::new(RwLock::new(HashMap::new())),
+            allocation_history: Arc::new(RwLock::new(Vec::new())),
+        }
+    }
+}
 
 /// # Device Scheduler
 /// 
@@ -100,7 +123,7 @@ pub struct DMSDeviceScheduler {
     /// History of all allocations
     allocation_history: Vec<DMSAllocationRecord>,
     /// Resource pool manager for accessing available devices
-    resource_pool_manager: Arc<Mutex<DMSResourcePoolManager>>,
+    resource_pool_manager: Arc<ParkingRwLock<DMSResourcePoolManager>>,
     /// Round-robin counters per device type
     round_robin_counters: HashMap<DMSDeviceType, usize>,
 }
@@ -188,7 +211,7 @@ impl DMSDeviceScheduler {
     /// # Returns
     /// 
     /// A new `DMSDeviceScheduler` instance with default policies and settings.
-    pub fn new(resource_pool_manager: Arc<Mutex<DMSResourcePoolManager>>) -> Self {
+    pub fn new(resource_pool_manager: Arc<ParkingRwLock<DMSResourcePoolManager>>) -> Self {
         let mut scheduling_policies = HashMap::new();
         
         // Set default policies for different device types
@@ -258,7 +281,7 @@ impl DMSDeviceScheduler {
 
         // Collect all available devices from all pools while holding the lock
         let available_devices = {
-            let pool_manager = self.resource_pool_manager.lock().unwrap();
+            let pool_manager = self.resource_pool_manager.read();
             let pools = pool_manager.get_pools_by_type(request.device_type);
 
             if pools.is_empty() {

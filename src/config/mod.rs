@@ -15,8 +15,6 @@
 //! See the License for the specific language governing permissions and
 //! limitations under the License.
 
-
-
 //! # Configuration Management
 //! 
 //! This module provides a comprehensive configuration management system for DMS, supporting
@@ -71,9 +69,17 @@ use yaml_rust::{YamlLoader, Yaml};
 /// 
 /// This struct provides a simple key-value store for configuration values, with
 /// type-safe methods for accessing values as different types.
+#[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
+#[derive(Clone)]
 pub struct DMSConfig {
     /// Internal storage for configuration values
     values: HashMap<String, String>,
+}
+
+impl Default for DMSConfig {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl DMSConfig {
@@ -203,6 +209,26 @@ impl DMSConfig {
     }
 }
 
+#[cfg(feature = "pyo3")]
+/// Python constructor for DMSConfig
+#[pyo3::prelude::pymethods]
+impl DMSConfig {
+    #[new]
+    fn py_new() -> Self {
+        Self::new()
+    }
+    
+    /// Sets a configuration value from Python
+    fn set_py(&mut self, key: String, value: String) {
+        self.set(key, value);
+    }
+    
+    /// Gets a configuration value as string from Python
+    fn get_py(&self, key: String) -> Option<String> {
+        self.get(&key).cloned()
+    }
+}
+
 /// Internal enum for different configuration source types.
 /// 
 /// This enum represents the different types of configuration sources that the
@@ -220,11 +246,19 @@ enum DMSConfigSource {
 /// This struct manages multiple configuration sources, loads configuration values,
 /// and provides access to the configuration. It supports hot reload and multiple
 /// configuration formats.
+#[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
+#[derive(Clone)]
 pub struct DMSConfigManager {
     /// Internal configuration storage
     config: DMSConfig,
     /// List of configuration sources to load from
     sources: Vec<DMSConfigSource>,
+}
+
+impl Default for DMSConfigManager {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl DMSConfigManager {
@@ -594,5 +628,30 @@ impl DMSConfigManager {
     /// A `&mut DMSConfig` reference to the loaded configuration
     pub fn config_mut(&mut self) -> &mut DMSConfig {
         &mut self.config
+    }
+}
+
+#[cfg(feature = "pyo3")]
+/// Python constructor for DMSConfigManager
+#[pyo3::prelude::pymethods]
+impl DMSConfigManager {
+    #[new]
+    fn py_new() -> Self {
+        Self::new()
+    }
+    
+    /// Adds a file-based configuration source from Python
+    fn add_file_source_py(&mut self, path: String) {
+        self.add_file_source(path);
+    }
+    
+    /// Adds environment variables as a configuration source from Python
+    fn add_environment_source_py(&mut self) {
+        self.add_environment_source();
+    }
+    
+    /// Gets the configuration value as string from Python
+    fn get_config_py(&self, key: String) -> Option<String> {
+        self.config().get_py(key)
     }
 }

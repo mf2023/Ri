@@ -28,20 +28,25 @@ use crate::log::{DMSLogConfig, DMSLogger};
 use crate::config::DMSConfigManager;
 use crate::hooks::DMSHookBus;
 use crate::core::DMSResult;
+use crate::observability::DMSMetricsRegistry;
+use std::sync::Arc;
 
 /// Internal service context implementation. Not exposed directly to users.
 /// 
 /// This struct contains all the core components of the service context,
 /// but is wrapped by `DMSServiceContext` for controlled access.
+#[derive(Clone)]
 pub struct ServiceContextInner {
     /// File system accessor for secure file operations
     pub fs: DMSFileSystem,
     /// Logger for structured logging
-    pub logger: DMSLogger,
+    pub logger: Arc<DMSLogger>,
     /// Configuration manager for accessing application settings
-    pub config: DMSConfigManager,
+    pub config: Arc<DMSConfigManager>,
     /// Hook bus for emitting and handling lifecycle events
-    pub hooks: DMSHookBus,
+    pub hooks: Arc<DMSHookBus>,
+    /// Metrics registry for observability (optional)
+    pub metrics_registry: Option<Arc<DMSMetricsRegistry>>,
 }
 
 impl ServiceContextInner {
@@ -53,12 +58,19 @@ impl ServiceContextInner {
     /// - `logger`: Structured logger
     /// - `config`: Configuration manager
     /// - `hooks`: Hook bus for lifecycle events
+    /// - `metrics_registry`: Optional metrics registry for observability
     /// 
     /// # Returns
     /// 
     /// A new `ServiceContextInner` instance.
-    pub fn new(fs: DMSFileSystem, logger: DMSLogger, config: DMSConfigManager, hooks: DMSHookBus) -> Self {
-        ServiceContextInner { fs, logger, config, hooks }
+    pub fn new(fs: DMSFileSystem, logger: DMSLogger, config: DMSConfigManager, hooks: DMSHookBus, metrics_registry: Option<Arc<DMSMetricsRegistry>>) -> Self {
+        ServiceContextInner { 
+            fs, 
+            logger: Arc::new(logger), 
+            config: Arc::new(config), 
+            hooks: Arc::new(hooks), 
+            metrics_registry 
+        }
     }
     
 
@@ -94,6 +106,7 @@ impl ServiceContextInner {
 ///     Ok(())
 /// }
 /// ```
+#[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 pub struct DMSServiceContext {
     /// Internal implementation details
     inner: ServiceContextInner,
@@ -111,12 +124,13 @@ impl DMSServiceContext {
     /// - `logger`: Structured logger
     /// - `config`: Configuration manager
     /// - `hooks`: Hook bus for lifecycle events
+    /// - `metrics_registry`: Optional metrics registry for observability
     /// 
     /// # Returns
     /// 
     /// A new `DMSServiceContext` instance.
-    pub fn new_with(fs: DMSFileSystem, logger: DMSLogger, config: DMSConfigManager, hooks: DMSHookBus) -> Self {
-        let inner = ServiceContextInner::new(fs, logger, config, hooks);
+    pub fn new_with(fs: DMSFileSystem, logger: DMSLogger, config: DMSConfigManager, hooks: DMSHookBus, metrics_registry: Option<Arc<DMSMetricsRegistry>>) -> Self {
+        let inner = ServiceContextInner::new(fs, logger, config, hooks, metrics_registry);
         DMSServiceContext { inner }
     }
     
@@ -161,7 +175,7 @@ impl DMSServiceContext {
         // Initialize hook bus
         let hooks = DMSHookBus::new();
         
-        Ok(DMSServiceContext::new_with(fs, logger, config, hooks))
+        Ok(DMSServiceContext::new_with(fs, logger, config, hooks, None))
     }
 
     /// Get a reference to the file system accessor.
@@ -181,7 +195,7 @@ impl DMSServiceContext {
     /// 
     /// A reference to the `DMSLogger` instance.
     pub fn logger(&self) -> &DMSLogger {
-        &self.inner.logger
+        self.inner.logger.as_ref()
     }
     
 
@@ -191,8 +205,8 @@ impl DMSServiceContext {
     /// # Returns
     /// 
     /// A reference to the `DMSConfigManager` instance.
-    pub fn config(&self) -> &DMSConfigManager {
-        &self.inner.config
+    pub fn config(&self) -> Arc<DMSConfigManager> {
+        self.inner.config.clone()
     }
     
 
@@ -202,8 +216,8 @@ impl DMSServiceContext {
     /// # Returns
     /// 
     /// A reference to the `DMSHookBus` instance.
-    pub fn hooks(&self) -> &DMSHookBus {
-        &self.inner.hooks
+    pub fn hooks(&self) -> Arc<DMSHookBus> {
+        self.inner.hooks.clone()
     }
     
 
@@ -214,7 +228,7 @@ impl DMSServiceContext {
     /// 
     /// A mutable reference to the `DMSHookBus` instance.
     pub fn hooks_mut(&mut self) -> &mut DMSHookBus {
-        &mut self.inner.hooks
+        Arc::get_mut(&mut self.inner.hooks).expect("Cannot get mutable reference to hooks - shared ownership")
     }
 
     /// Get a mutable reference to the configuration manager.
@@ -223,7 +237,7 @@ impl DMSServiceContext {
     /// 
     /// A mutable reference to the `DMSConfigManager` instance.
     pub fn config_mut(&mut self) -> &mut DMSConfigManager {
-        &mut self.inner.config
+        Arc::get_mut(&mut self.inner.config).expect("Cannot get mutable reference to config - shared ownership")
     }
 
     /// Get a mutable reference to the file system accessor.
@@ -241,6 +255,15 @@ impl DMSServiceContext {
     /// 
     /// A mutable reference to the `DMSLogger` instance.
     pub fn logger_mut(&mut self) -> &mut DMSLogger {
-        &mut self.inner.logger
+        Arc::get_mut(&mut self.inner.logger).expect("Cannot get mutable reference to logger - shared ownership")
+    }
+
+    /// Get a reference to the metrics registry if available.
+    /// 
+    /// # Returns
+    /// 
+    /// An optional reference to the `DMSMetricsRegistry` instance.
+    pub fn metrics_registry(&self) -> Option<Arc<DMSMetricsRegistry>> {
+        self.inner.metrics_registry.clone()
     }
 }

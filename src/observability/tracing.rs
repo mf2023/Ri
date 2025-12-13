@@ -101,6 +101,12 @@ use crate::core::DMSResult;
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct DMSSpanId(String);
 
+impl Default for DMSSpanId {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl DMSSpanId {
     pub fn new() -> Self {
         Self(Uuid::new_v4().to_string())
@@ -118,6 +124,12 @@ impl DMSSpanId {
 /// Distributed tracing trace ID
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct DMSTraceId(String);
+
+impl Default for DMSTraceId {
+    fn default() -> Self {
+        Self::new()
+    }
+}
 
 impl DMSTraceId {
     pub fn new() -> Self {
@@ -175,7 +187,7 @@ impl DMSSpan {
     ) -> Self {
         let start_time = SystemTime::now()
             .duration_since(UNIX_EPOCH)
-            .unwrap_or_default()
+            .unwrap_or(Duration::from_secs(0))
             .as_micros() as u64;
 
         Self {
@@ -199,7 +211,7 @@ impl DMSSpan {
     pub fn add_event(&mut self, name: String, attributes: HashMap<String, String>) {
         let timestamp = SystemTime::now()
             .duration_since(UNIX_EPOCH)
-            .unwrap_or_default()
+            .unwrap_or(Duration::from_secs(0))
             .as_micros() as u64;
 
         self.events.push(DMSSpanEvent {
@@ -212,7 +224,7 @@ impl DMSSpan {
     pub fn end(&mut self, status: DMSSpanStatus) {
         let end_time = SystemTime::now()
             .duration_since(UNIX_EPOCH)
-            .unwrap_or_default()
+            .unwrap_or(Duration::from_secs(0))
             .as_micros() as u64;
 
         self.end_time = Some(end_time);
@@ -247,7 +259,13 @@ pub struct DMSTracingContext {
 
 // Thread-local storage for tracing context
 thread_local! {
-    static CURRENTONTEXT: RefCell<Option<DMSTracingContext>> = RefCell::new(None);
+    static CURRENTONTEXT: RefCell<Option<DMSTracingContext>> = const { RefCell::new(None) };
+}
+
+impl Default for DMSTracingContext {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl DMSTracingContext {
@@ -600,7 +618,7 @@ impl DefaultTracerManager {
 }
 
 /// Global tracer manager instance
-pub static DEFAULT_TRACER_MANAGER: std::sync::LazyLock<DefaultTracerManager> = std::sync::LazyLock::new(|| DefaultTracerManager::default());
+pub static DEFAULT_TRACER_MANAGER: std::sync::LazyLock<DefaultTracerManager> = std::sync::LazyLock::new(DefaultTracerManager::default);
 
 /// Initialize global tracer (backward compatibility)
 pub fn init_tracer(sampling_rate: f64) {

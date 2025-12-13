@@ -71,10 +71,14 @@ use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::RwLock;
 
+#[cfg(feature = "pyo3")]
+use pyo3::PyResult;
+
 /// OAuth provider configuration.
 /// 
 /// This struct defines the configuration for an OAuth identity provider,
 /// including client credentials, endpoints, and scopes.
+#[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DMSOAuthProvider {
     pub id: String,                  // Unique identifier for the provider
@@ -92,6 +96,7 @@ pub struct DMSOAuthProvider {
 /// 
 /// This struct represents the token response from an OAuth provider,
 /// including access token, refresh token, and expiration information.
+#[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DMSOAuthToken {
     pub access_token: String,        // Access token for API requests
@@ -105,6 +110,7 @@ pub struct DMSOAuthToken {
 /// 
 /// This struct represents the user information retrieved from an OAuth provider,
 /// including user ID, email, name, and profile information.
+#[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DMSOAuthUserInfo {
     pub id: String,                  // Unique user ID from the provider
@@ -117,6 +123,7 @@ pub struct DMSOAuthUserInfo {
 /// OAuth manager for handling multiple identity providers.
 /// 
 /// This struct manages OAuth providers, handles token exchange, and retrieves user information.
+#[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 pub struct DMSOAuthManager {
     providers: RwLock<HashMap<String, DMSOAuthProvider>>, // Registered OAuth providers
     _token_cache: Arc<dyn crate::cache::DMSCache>,        // Cache for storing tokens
@@ -403,7 +410,7 @@ impl DMSOAuthManager {
             ];
 
             let response = client
-                .post(&format!("{}/revoke", provider.token_url))
+                .post(format!("{}/revoke", provider.token_url))
                 .form(&params)
                 .send()
                 .await
@@ -458,5 +465,87 @@ impl DMSOAuthManager {
         } else {
             Ok(false)
         }
+    }
+}
+
+#[cfg(feature = "pyo3")]
+/// Python bindings for DMSOAuthManager
+#[pyo3::prelude::pymethods]
+impl DMSOAuthManager {
+    #[new]
+    fn py_new() -> PyResult<Self> {
+        // Create a simple memory cache for Python usage
+        let cache = Arc::new(crate::cache::DMSMemoryCache::new());
+        Ok(Self::new(cache))
+    }
+    
+    /// Register a provider from Python
+    fn register_provider_py(&self, _provider: DMSOAuthProvider) -> PyResult<()> {
+        // For now, we'll return an error since we can't easily run async code from Python
+        // In a real implementation, you'd want to integrate with Python's async runtime
+        Err(pyo3::exceptions::PyRuntimeError::new_err("Async provider registration not supported from Python yet"))
+    }
+    
+    /// Get a provider from Python
+    fn get_provider_py(&self, _provider_id: String) -> PyResult<Option<DMSOAuthProvider>> {
+        // For now, we'll return an error since we can't easily run async code from Python
+        // In a real implementation, you'd want to integrate with Python's async runtime
+        Err(pyo3::exceptions::PyRuntimeError::new_err("Async provider retrieval not supported from Python yet"))
+    }
+    
+    /// Get auth URL from Python
+    fn get_auth_url_py(&self, _provider_id: String, _state: String) -> PyResult<Option<String>> {
+        // For now, we'll return an error since we can't easily run async code from Python
+        // In a real implementation, you'd want to integrate with Python's async runtime
+        Err(pyo3::exceptions::PyRuntimeError::new_err("Async auth URL generation not supported from Python yet"))
+    }
+    
+    /// Exchange code for token from Python
+    fn exchange_code_for_token_py(&self, _provider_id: String, _code: String, _redirect_uri: String) -> PyResult<Option<DMSOAuthToken>> {
+        // For now, we'll return an error since we can't easily run async code from Python
+        // In a real implementation, you'd want to integrate with Python's async runtime
+        Err(pyo3::exceptions::PyRuntimeError::new_err("Async token exchange not supported from Python yet"))
+    }
+    
+    /// Get user info from Python
+    fn get_user_info_py(&self, _provider_id: String, _access_token: String) -> PyResult<Option<DMSOAuthUserInfo>> {
+        // For now, we'll return an error since we can't easily run async code from Python
+        // In a real implementation, you'd want to integrate with Python's async runtime
+        Err(pyo3::exceptions::PyRuntimeError::new_err("Async user info retrieval not supported from Python yet"))
+    }
+    
+    /// Refresh token from Python
+    fn refresh_token_py(&self, _provider_id: String, _refresh_token: String) -> PyResult<Option<DMSOAuthToken>> {
+        // For now, we'll return an error since we can't easily run async code from Python
+        // In a real implementation, you'd want to integrate with Python's async runtime
+        Err(pyo3::exceptions::PyRuntimeError::new_err("Async token refresh not supported from Python yet"))
+    }
+    
+    /// Revoke token from Python
+    fn revoke_token_py(&self, _provider_id: String, _access_token: String) -> PyResult<bool> {
+        // For now, we'll return an error since we can't easily run async code from Python
+        // In a real implementation, you'd want to integrate with Python's async runtime
+        Err(pyo3::exceptions::PyRuntimeError::new_err("Async token revocation not supported from Python yet"))
+    }
+    
+    /// List providers from Python
+    fn list_providers_py(&self) -> PyResult<Vec<DMSOAuthProvider>> {
+        // For now, we'll return an error since we can't easily run async code from Python
+        // In a real implementation, you'd want to integrate with Python's async runtime
+        Err(pyo3::exceptions::PyRuntimeError::new_err("Async provider listing not supported from Python yet"))
+    }
+    
+    /// Disable provider from Python
+    fn disable_provider_py(&self, _provider_id: String) -> PyResult<bool> {
+        // For now, we'll return an error since we can't easily run async code from Python
+        // In a real implementation, you'd want to integrate with Python's async runtime
+        Err(pyo3::exceptions::PyRuntimeError::new_err("Async provider disable not supported from Python yet"))
+    }
+    
+    /// Enable provider from Python
+    fn enable_provider_py(&self, _provider_id: String) -> PyResult<bool> {
+        // For now, we'll return an error since we can't easily run async code from Python
+        // In a real implementation, you'd want to integrate with Python's async runtime
+        Err(pyo3::exceptions::PyRuntimeError::new_err("Async provider enable not supported from Python yet"))
     }
 }

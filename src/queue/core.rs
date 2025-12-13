@@ -86,6 +86,7 @@ use crate::core::DMSResult;
 /// 
 /// This struct represents a message that can be sent to and received from queues. It includes
 /// a unique ID, payload, headers, timestamp, and retry information.
+#[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DMSQueueMessage {
     /// Unique message ID
@@ -166,11 +167,35 @@ impl DMSQueueMessage {
     }
 }
 
+#[cfg(feature = "pyo3")]
+/// Python bindings for DMSQueueMessage
+#[pyo3::prelude::pymethods]
+impl DMSQueueMessage {
+    #[new]
+    fn py_new(payload: Vec<u8>) -> Self {
+        Self::new(payload)
+    }
+    
+    #[staticmethod]
+    fn py_new_with_string(payload: String) -> Self {
+        Self::new(payload.into_bytes())
+    }
+    
+    fn get_payload_string(&self) -> String {
+        String::from_utf8_lossy(&self.payload).to_string()
+    }
+    
+    fn get_id(&self) -> String {
+        self.id.clone()
+    }
+}
+
 /// Statistics for queue monitoring.
 /// 
 /// This struct contains comprehensive statistics about a queue's performance and usage.
+#[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 #[derive(Debug, Clone)]
-pub struct QueueStats {
+pub struct DMSQueueStats {
     /// Name of the queue
     pub queue_name: String,
     /// Current number of messages in the queue
@@ -185,6 +210,24 @@ pub struct QueueStats {
     pub failed_messages: u64,
     /// Average processing time in milliseconds
     pub avg_processing_time_ms: f64,
+}
+
+#[cfg(feature = "pyo3")]
+/// Python bindings for DMSQueueStats
+#[pyo3::prelude::pymethods]
+impl DMSQueueStats {
+    #[new]
+    fn py_new(queue_name: String) -> Self {
+        Self {
+            queue_name,
+            message_count: 0,
+            consumer_count: 0,
+            producer_count: 0,
+            processed_messages: 0,
+            failed_messages: 0,
+            avg_processing_time_ms: 0.0,
+        }
+    }
 }
 
 /// Trait for producing messages to queues.
@@ -293,8 +336,8 @@ pub trait DMSQueue: Send + Sync {
     /// 
     /// # Returns
     /// 
-    /// A `DMSResult<QueueStats>` containing the queue statistics
-    async fn get_stats(&self) -> DMSResult<QueueStats>;
+    /// A `DMSResult<DMSQueueStats>` containing the queue statistics
+    async fn get_stats(&self) -> DMSResult<DMSQueueStats>;
     
     /// Purges all messages from this queue.
     /// 

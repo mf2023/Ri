@@ -63,6 +63,7 @@
 /// This enum provides a comprehensive set of error variants, each tailored to a specific
 /// error scenario encountered in DMS. It includes variants for I/O errors, serialization errors,
 /// configuration errors, module errors, and more.
+#[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum DMSError {
     /// I/O operation failed. Contains a descriptive error message.
@@ -101,6 +102,8 @@ pub enum DMSError {
     ExternalError(String),
     /// Pool error. Contains a descriptive error message for connection pool errors.
     PoolError(String),
+    /// Device error. Contains a descriptive error message for device-related errors.
+    DeviceError(String),
 }
 
 /// Result type alias for DMS operations. Used throughout the library.
@@ -146,6 +149,7 @@ impl std::fmt::Display for DMSError {
             DMSError::Other(msg) => write!(f, "{msg}"),
             DMSError::ExternalError(msg) => write!(f, "External error: {msg}"),
             DMSError::PoolError(msg) => write!(f, "Pool error: {msg}"),
+            DMSError::DeviceError(msg) => write!(f, "Device error: {msg}"),
         }
     }
 }
@@ -176,6 +180,7 @@ impl From<redis::RedisError> for DMSError {
     }
 }
 
+#[cfg(feature = "rabbitmq")]
 impl From<lapin::Error> for DMSError {
     fn from(error: lapin::Error) -> Self {
         DMSError::Other(format!("RabbitMQ error: {error}"))

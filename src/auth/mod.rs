@@ -15,8 +15,6 @@
 //! See the License for the specific language governing permissions and
 //! limitations under the License.
 
-
-
 //! # Authentication Module
 //! 
 //! This module provides comprehensive authentication and authorization functionality for DMS,
@@ -120,10 +118,14 @@ use serde::Deserialize;
 use std::sync::Arc;
 use tokio::sync::RwLock;
 
+#[cfg(feature = "pyo3")]
+use pyo3::PyResult;
+
 /// Configuration for the authentication module.
 /// 
 /// This struct defines the configuration options for authentication behavior, including
 /// JWT settings, session settings, OAuth providers, and enabled authentication methods.
+#[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 #[derive(Debug, Clone)]
 #[derive(Deserialize)]
 pub struct DMSAuthConfig {
@@ -171,6 +173,7 @@ impl Default for DMSAuthConfig {
 /// 
 /// This module provides comprehensive authentication and authorization functionality,
 /// including JWT management, session management, permission management, and OAuth integration.
+#[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 pub struct DMSAuthModule {
     /// Authentication configuration
     config: DMSAuthConfig,
@@ -187,6 +190,10 @@ pub struct DMSAuthModule {
 impl DMSAuthModule {
     /// Creates a new authentication module with the given configuration.
     /// 
+    /// **Performance Note**: This method creates a permission manager using the synchronous
+    /// `new()` method which uses `blocking_write` during initialization. For async contexts,
+    /// consider using `new_async()` to avoid blocking the runtime.
+    /// 
     /// # Parameters
     /// 
     /// - `config`: The authentication configuration to use
@@ -198,6 +205,34 @@ impl DMSAuthModule {
         let jwt_manager = Arc::new(DMSJWTManager::new(config.jwt_secret.clone(), config.jwt_expiry_secs));
         let session_manager = Arc::new(RwLock::new(DMSSessionManager::new(config.session_timeout_secs)));
         let permission_manager = Arc::new(RwLock::new(DMSPermissionManager::new()));
+        let cache = Arc::new(crate::cache::DMSMemoryCache::new());
+        let oauth_manager = Arc::new(RwLock::new(DMSOAuthManager::new(cache)));
+
+        Self {
+            config,
+            jwt_manager,
+            session_manager,
+            permission_manager,
+            oauth_manager,
+        }
+    }
+
+    /// Creates a new authentication module with the given configuration asynchronously.
+    /// 
+    /// This method is preferred for async contexts as it avoids blocking the runtime
+    /// during permission manager initialization by using the async `new_async()` method.
+    /// 
+    /// # Parameters
+    /// 
+    /// - `config`: The authentication configuration to use
+    /// 
+    /// # Returns
+    /// 
+    /// A new `DMSAuthModule` instance
+    pub async fn new_async(config: DMSAuthConfig) -> Self {
+        let jwt_manager = Arc::new(DMSJWTManager::new(config.jwt_secret.clone(), config.jwt_expiry_secs));
+        let session_manager = Arc::new(RwLock::new(DMSSessionManager::new(config.session_timeout_secs)));
+        let permission_manager = Arc::new(RwLock::new(DMSPermissionManager::new_async().await));
         let cache = Arc::new(crate::cache::DMSMemoryCache::new());
         let oauth_manager = Arc::new(RwLock::new(DMSOAuthManager::new(cache)));
 
@@ -247,6 +282,42 @@ impl DMSAuthModule {
     }
 }
 
+#[cfg(feature = "pyo3")]
+/// Python bindings for DMSAuthModule
+#[pyo3::prelude::pymethods]
+impl DMSAuthModule {
+    #[new]
+    fn py_new(config: DMSAuthConfig) -> PyResult<Self> {
+        Ok(Self::new(config))
+    }
+    
+    /// Get JWT manager from Python
+    fn jwt_manager_py(&self) -> PyResult<DMSJWTManager> {
+        // Create a new JWT manager with the same configuration
+        Ok(DMSJWTManager::new(self.jwt_manager.get_secret().to_string(), self.jwt_manager.get_token_expiry()))
+    }
+    
+    /// Get session manager from Python
+    fn session_manager_py(&self) -> PyResult<DMSSessionManager> {
+        // For now, return a new session manager with the same timeout
+        // In a real implementation, you'd want to properly clone the state
+        Ok(DMSSessionManager::new(self.config.session_timeout_secs))
+    }
+    
+    /// Get permission manager from Python
+    fn permission_manager_py(&self) -> PyResult<DMSPermissionManager> {
+        // Return a new permission manager
+        Ok(DMSPermissionManager::new())
+    }
+    
+    /// Get OAuth manager from Python
+    fn oauth_manager_py(&self) -> PyResult<DMSOAuthManager> {
+        // Create a new OAuth manager with a memory cache
+        let cache = Arc::new(crate::cache::DMSMemoryCache::new());
+        Ok(DMSOAuthManager::new(cache))
+    }
+}
+
 #[async_trait::async_trait]
 impl crate::core::DMSModule for DMSAuthModule {
     /// Returns the name of the authentication module.
@@ -287,14 +358,15 @@ impl crate::core::DMSModule for DMSAuthModule {
     /// 
     /// A `DMSResult<()>` indicating success or failure
     async fn init(&mut self, ctx: &mut DMSServiceContext) -> DMSResult<()> {
-        println!("Initializing DMS Auth Module");
+        log::info!("Initializing DMS Auth Module");
 
         // Load configuration
-        let cfg = ctx.config().config();
+        let binding = ctx.config();
+        let cfg = binding.config();
         
         // Update configuration if provided
         if let Some(auth_config) = cfg.get("auth") {
-            self.config = serde_json::from_str(auth_config)
+            self.config = serde_yaml::from_str(auth_config)
                 .unwrap_or_else(|_| DMSAuthConfig::default());
         }
 
@@ -304,13 +376,28 @@ impl crate::core::DMSModule for DMSAuthModule {
         // Initialize OAuth providers if configured
         if !self.config.oauth_providers.is_empty() {
             for provider_name in &self.config.oauth_providers {
-                // Note: This is a placeholder - actual provider registration would require full provider details
-                // For now, we'll skip registration since we don't have the complete provider configuration
-                println!("Skipping OAuth provider registration for: {}", provider_name);
+                // Initialize OAuth provider with default configuration
+                // In production, this would load provider-specific configuration from secure storage
+                let provider_config = crate::auth::oauth::DMSOAuthProvider {
+                    id: provider_name.clone(),
+                    name: provider_name.clone(),
+                    client_id: format!("{provider_name}_client_id"),
+                    client_secret: format!("{provider_name}_client_secret"),
+                    auth_url: format!("https://{provider_name}.com/oauth/authorize"),
+                    token_url: format!("https://{provider_name}.com/oauth/token"),
+                    user_info_url: format!("https://{provider_name}.com/oauth/userinfo"),
+                    scopes: vec!["openid".to_string(), "profile".to_string(), "email".to_string()],
+                    enabled: true,
+                };
+                
+                // Register the OAuth provider
+                let oauth_mgr = self.oauth_manager.write().await;
+                oauth_mgr.register_provider(provider_config).await?;
+                log::info!("OAuth provider registered: {provider_name}");
             }
         }
 
-        println!("DMS Auth Module initialized successfully");
+        log::info!("DMS Auth Module initialized successfully");
         Ok(())
     }
 
@@ -326,13 +413,13 @@ impl crate::core::DMSModule for DMSAuthModule {
     /// 
     /// A `DMSResult<()>` indicating success or failure
     async fn after_shutdown(&mut self, _ctx: &mut DMSServiceContext) -> DMSResult<()> {
-        println!("Cleaning up DMS Auth Module");
+        log::info!("Cleaning up DMS Auth Module");
         
         // Cleanup sessions
         let session_mgr = self.session_manager.write().await;
         session_mgr.cleanup_all().await?;
         
-        println!("DMS Auth Module cleanup completed");
+        log::info!("DMS Auth Module cleanup completed");
         Ok(())
     }
 }

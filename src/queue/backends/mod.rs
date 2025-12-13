@@ -18,9 +18,16 @@
 #![allow(non_snake_case)]
 
 pub mod memory_backend;
+#[cfg(feature = "rabbitmq")]
 pub mod rabbitmq_backend;
 pub mod redis_backend;
 
 pub use memory_backend::DMSMemoryQueue;
+#[cfg(feature = "rabbitmq")]
 pub use rabbitmq_backend::DMSRabbitMQQueue;
 pub use redis_backend::DMSRedisQueue;
+
+#[cfg(feature = "kafka")]
+pub mod kafka_backend;
+#[cfg(feature = "kafka")]
+pub use kafka_backend::DMSKafkaQueue;

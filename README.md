@@ -4,14 +4,19 @@
 
 English | [简体中文](README.zh.md)
 
+[Help Documentation](doc\index.md)
+
 <a href="https://space.bilibili.com/3493284091529457" target="_blank">
     <img alt="BiliBili" src="https://img.shields.io/badge/BiliBili-Dunimd-00A1D6?style=flat-square&logo=bilibili"/>
 </a>
 <a href="https://gitee.com/dunimd" target="_blank">
     <img alt="Gitee" src="https://img.shields.io/badge/Gitee-Dunimd-C71D23?style=flat-square&logo=gitee"/>
 </a>
-<a href="https://crates.io/crates/DMS" target="_blank">
+<a href="https://crates.io/crates/dms_core" target="_blank">
     <img alt="Crates.io" src="https://img.shields.io/badge/Crates-DMS-000000?style=flat-square&logo=rust"/>
+</a>
+<a href="https://pypi.org/project/dms-core/" target="_blank">
+    <img alt="PyPI" src="https://img.shields.io/badge/PyPI-DMS-3775A9?style=flat-square&logo=pypi"/>
 </a>
 
 **DMS (Dunimd Middleware Service)** — A high-performance Rust middleware framework that unifies backend infrastructure. Built for enterprise-scale with modular architecture, built-in observability, and distributed systems support.
@@ -241,6 +246,8 @@ Open source packages and their agreement information used by this project:
 | 📦 Package | 📜 License |
 |:-----------|:-----------|
 | serde | Apache 2.0 |
+| serde_json | MIT |
+| serde_yaml | MIT |
 | tokio | MIT |
 | prometheus | Apache 2.0 |
 | redis | MIT |
@@ -251,6 +258,19 @@ Open source packages and their agreement information used by this project:
 | toml | MIT |
 | etcd-client | MIT |
 | sysinfo | MIT |
+| async-trait | MIT |
+| dashmap | MIT |
+| chrono | MIT |
+| uuid | Apache 2.0 |
+| rand | MIT |
+| notify | MIT |
+| jsonwebtoken | MIT |
+| reqwest | MIT |
+| urlencoding | MIT |
+| parking_lot | MIT |
+| log | MIT |
+| pyo3 | Apache 2.0 |
+| tempfile | MIT |
 
 </div>
 

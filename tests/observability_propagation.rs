@@ -15,10 +15,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-extern crate dms;
-
-use dms::observability::propagation::{DMSTraceContext, DMSBaggage, DMSContextCarrier};
-use dms::observability::tracing::{DMSTraceId, DMSSpanId};
+use dms_core::observability::propagation::{DMSTraceContext, DMSBaggage, DMSContextCarrier};
+use dms_core::observability::tracing::{DMSTraceId, DMSSpanId};
 
 #[test]
 fn test_trace_context_header_format() {

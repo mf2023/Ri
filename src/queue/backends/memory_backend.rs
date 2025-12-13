@@ -87,7 +87,7 @@
 //! ```
 
 use crate::core::DMSResult;
-use crate::queue::{DMSQueue, DMSQueueConsumer, DMSQueueMessage, DMSQueueProducer, QueueStats};
+use crate::queue::{DMSQueue, DMSQueueConsumer, DMSQueueMessage, DMSQueueProducer, DMSQueueStats};
 use async_trait::async_trait;
 use std::collections::{HashMap, VecDeque};
 use std::fs::{File, OpenOptions};
@@ -172,7 +172,9 @@ impl DMSMemoryQueue {
         };
 
         // Load messages from disk if persistence is enabled
-        queue.load_messages().unwrap_or(());
+        if let Err(e) = queue.load_messages() {
+            log::warn!("Failed to load persisted messages for queue '{}': {}", name, e);
+        }
 
         queue
     }
@@ -260,10 +262,10 @@ impl DMSQueue for DMSMemoryQueue {
     ///
     /// # Returns
     ///
-    /// A `DMSResult<QueueStats>` containing the queue statistics
-    async fn get_stats(&self) -> DMSResult<QueueStats> {
+    /// A `DMSResult<DMSQueueStats>` containing the queue statistics
+    async fn get_stats(&self) -> DMSResult<DMSQueueStats> {
         let state = self.state.read().await;
-        Ok(QueueStats {
+        Ok(DMSQueueStats {
             queue_name: self.name.clone(),
             message_count: state.messages.len() as u64,
             consumer_count: state.consumers.len() as u32,
@@ -289,11 +291,16 @@ impl DMSQueue for DMSMemoryQueue {
             let path_clone = path.clone();
             spawn_blocking(move || {
                 if Path::new(&path_clone).exists() {
-                    std::fs::remove_file(&path_clone).unwrap();
+                    if let Err(e) = std::fs::remove_file(&path_clone) {
+                        log::warn!("Failed to remove persistence file '{}': {}", path_clone, e);
+                    }
                 }
             })
             .await
-            .unwrap();
+            .map_err(|e| {
+                log::error!("Failed to execute persistence file removal: {}", e);
+                crate::core::DMSError::Other(format!("Failed to clear persistence: {}", e))
+            })?;
         }
 
         Ok(())
@@ -339,18 +346,33 @@ impl DMSQueueProducer for MemoryQueueProducer {
             let messages_clone = state.messages.clone();
             let path_clone = path.clone();
 
-            spawn_blocking(move || {
-                let content = serde_json::to_string(&messages_clone).unwrap();
-                let mut file = OpenOptions::new()
-                    .write(true)
-                    .create(true)
-                    .truncate(true)
-                    .open(path_clone)
-                    .unwrap();
-                file.write_all(content.as_bytes()).unwrap();
-            })
-            .await
-            .unwrap();
+            let _ = spawn_blocking(move || {
+            let content = serde_json::to_string(&messages_clone)
+                .map_err(|e| {
+                    log::error!("Failed to serialize messages for persistence: {}", e);
+                    crate::core::DMSError::Serde(format!("Serialization failed: {}", e))
+                })?;
+            let mut file = OpenOptions::new()
+                .write(true)
+                .create(true)
+                .truncate(true)
+                .open(path_clone)
+                .map_err(|e| {
+                    log::error!("Failed to open persistence file: {}", e);
+                    crate::core::DMSError::Io(format!("File open failed: {}", e))
+                })?;
+            file.write_all(content.as_bytes())
+                .map_err(|e| {
+                    log::error!("Failed to write persistence file: {}", e);
+                    crate::core::DMSError::Io(format!("File write failed: {}", e))
+                })?;
+            Ok::<(), crate::core::DMSError>(())
+        })
+        .await
+        .map_err(|e| {
+            log::error!("Failed to execute persistence task: {}", e);
+            crate::core::DMSError::Other(format!("Persistence task failed: {}", e))
+        });
         }
 
         Ok(())
@@ -376,18 +398,33 @@ impl DMSQueueProducer for MemoryQueueProducer {
             let messages_clone = state.messages.clone();
             let path_clone = path.clone();
 
-            spawn_blocking(move || {
-                let content = serde_json::to_string(&messages_clone).unwrap();
-                let mut file = OpenOptions::new()
-                    .write(true)
-                    .create(true)
-                    .truncate(true)
-                    .open(path_clone)
-                    .unwrap();
-                file.write_all(content.as_bytes()).unwrap();
-            })
-            .await
-            .unwrap();
+            let _ = spawn_blocking(move || {
+            let content = serde_json::to_string(&messages_clone)
+                .map_err(|e| {
+                    log::error!("Failed to serialize messages for persistence: {}", e);
+                    crate::core::DMSError::Serde(format!("Serialization failed: {}", e))
+                })?;
+            let mut file = OpenOptions::new()
+                .write(true)
+                .create(true)
+                .truncate(true)
+                .open(path_clone)
+                .map_err(|e| {
+                    log::error!("Failed to open persistence file: {}", e);
+                    crate::core::DMSError::Io(format!("File open failed: {}", e))
+                })?;
+            file.write_all(content.as_bytes())
+                .map_err(|e| {
+                    log::error!("Failed to write persistence file: {}", e);
+                    crate::core::DMSError::Io(format!("File write failed: {}", e))
+                })?;
+            Ok::<(), crate::core::DMSError>(())
+        })
+        .await
+        .map_err(|e| {
+            log::error!("Failed to execute persistence task: {}", e);
+            crate::core::DMSError::Other(format!("Persistence task failed: {}", e))
+        });
         }
 
         Ok(())
@@ -443,18 +480,33 @@ impl DMSQueueConsumer for MemoryQueueConsumer {
                 let messages_clone = state.messages.clone();
                 let path_clone = path.clone();
 
-                spawn_blocking(move || {
-                    let content = serde_json::to_string(&messages_clone).unwrap();
+                let _ = spawn_blocking(move || {
+                    let content = serde_json::to_string(&messages_clone)
+                        .map_err(|e| {
+                            log::error!("Failed to serialize messages for persistence: {}", e);
+                            crate::core::DMSError::Serde(format!("Serialization failed: {}", e))
+                        })?;
                     let mut file = OpenOptions::new()
                         .write(true)
                         .create(true)
                         .truncate(true)
                         .open(path_clone)
-                        .unwrap();
-                    file.write_all(content.as_bytes()).unwrap();
+                        .map_err(|e| {
+                            log::error!("Failed to open persistence file: {}", e);
+                            crate::core::DMSError::Io(format!("File open failed: {}", e))
+                        })?;
+                    file.write_all(content.as_bytes())
+                        .map_err(|e| {
+                            log::error!("Failed to write persistence file: {}", e);
+                            crate::core::DMSError::Io(format!("File write failed: {}", e))
+                        })?;
+                    Ok::<(), crate::core::DMSError>(())
                 })
                 .await
-                .unwrap();
+                .map_err(|e| {
+                    log::error!("Failed to execute persistence task: {}", e);
+                    crate::core::DMSError::Other(format!("Persistence task failed: {}", e))
+                });
             }
 
             Ok(Some(message))

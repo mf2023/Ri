@@ -111,6 +111,12 @@ pub struct DMSMiddlewareChain {
     middlewares: Vec<Arc<dyn DMSMiddleware>>,
 }
 
+impl Default for DMSMiddlewareChain {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl DMSMiddlewareChain {
     /// Creates a new empty middleware chain.
     /// 
@@ -364,7 +370,7 @@ impl DMSMiddleware for DMSLoggingMiddleware {
     async fn execute(&self, request: &mut DMSGatewayRequest) -> DMSResult<()> {
         // In a real implementation, this would log the request details
         // For now, we'll just allow it through
-        println!("[{}] {} {} from {}", 
+        log::info!("[{}] {} {} from {}", 
             chrono::Utc::now().format("%Y-%m-%d %H:%M:%S"),
             request.method,
             request.path,
@@ -388,6 +394,12 @@ impl DMSMiddleware for DMSLoggingMiddleware {
 /// This middleware handles request ID generation and processing.
 /// Note: Request IDs are already generated in `DMSGatewayRequest::new`.
 pub struct DMSRequestIdMiddleware;
+
+impl Default for DMSRequestIdMiddleware {
+    fn default() -> Self {
+        Self::new()
+    }
+}
 
 impl DMSRequestIdMiddleware {
     /// Creates a new request ID middleware instance.
@@ -434,12 +446,8 @@ impl DMSMiddleware for DMSRequestIdMiddleware {
 /// 
 /// This middleware limits the number of requests from a client within a specified time window.
 pub struct DMSRateLimitMiddleware {
-    /// Maximum number of requests allowed within the time window
-    #[allow(dead_code)]
-    max_requests: u32,
-    /// Time window in seconds for rate limiting
-    #[allow(dead_code)]
-    window_seconds: u64,
+    /// Rate limiter instance for enforcing rate limits
+    rate_limiter: Arc<crate::gateway::DMSRateLimiter>,
 }
 
 impl DMSRateLimitMiddleware {
@@ -447,16 +455,14 @@ impl DMSRateLimitMiddleware {
     /// 
     /// # Parameters
     /// 
-    /// - `max_requests`: Maximum number of requests allowed within the time window
-    /// - `window_seconds`: Time window in seconds for rate limiting
+    /// - `rate_limiter`: Rate limiter instance for enforcing rate limits
     /// 
     /// # Returns
     /// 
     /// A new `DMSRateLimitMiddleware` instance
-    pub fn new(max_requests: u32, window_seconds: u64) -> Self {
+    pub fn new(rate_limiter: Arc<crate::gateway::DMSRateLimiter>) -> Self {
         Self {
-            max_requests,
-            window_seconds,
+            rate_limiter,
         }
     }
 }
@@ -465,19 +471,22 @@ impl DMSRateLimitMiddleware {
 impl DMSMiddleware for DMSRateLimitMiddleware {
     /// Applies rate limiting to the request.
     /// 
-    /// This implementation is a no-op. In a production environment, this would use
-    /// the `DMSRateLimiter` to enforce rate limits.
+    /// This implementation uses the DMSRateLimiter to check if the request should be allowed
+    /// based on rate limiting rules. If the request exceeds the rate limit, an error is returned.
     /// 
     /// # Parameters
     /// 
-    /// - `_request`: Mutable reference to the request being processed
+    /// - `request`: Mutable reference to the request being processed
     /// 
     /// # Returns
     /// 
-    /// A `DMSResult<()>` indicating success or failure
-    async fn execute(&self, _request: &mut DMSGatewayRequest) -> DMSResult<()> {
-        // Basic rate limiting logic - in a real implementation, this would use the DMSRateLimiter
-        // For now, we'll just allow it through
+    /// A `DMSResult<()>` indicating success or failure. Returns error if rate limit exceeded.
+    async fn execute(&self, request: &mut DMSGatewayRequest) -> DMSResult<()> {
+        // Check rate limit using the rate limiter
+        if !self.rate_limiter.check_request(request).await {
+            return Err(crate::core::DMSError::Other("Rate limit exceeded".to_string()));
+        }
+        
         Ok(())
     }
 

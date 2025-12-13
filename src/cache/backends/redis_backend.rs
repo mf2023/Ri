@@ -130,20 +130,28 @@ impl DMSCache for DMSRedisCache {
                 // Try to parse as simple string first, then as JSON if that fails
                 if let Ok(value) = serde_json::from_str::<serde_json::Value>(&json_str_owned) {
                     if let Some(str_value) = value.as_str() {
-                        self.stats.get_mut("hit_count").unwrap().value_mut().add_assign(1);
+                        if let Some(mut hit_count) = self.stats.get_mut("hit_count") {
+                            hit_count.value_mut().add_assign(1);
+                        }
                         Ok(Some(str_value.to_string()))
                     } else {
-                        self.stats.get_mut("error_count").unwrap().value_mut().add_assign(1);
+                        if let Some(mut error_count) = self.stats.get_mut("error_count") {
+                            error_count.value_mut().add_assign(1);
+                        }
                         Ok(None)
                     }
                 } else {
                     // If not valid JSON, treat as plain string
-                    self.stats.get_mut("hit_count").unwrap().value_mut().add_assign(1);
+                    if let Some(mut hit_count) = self.stats.get_mut("hit_count") {
+                        hit_count.value_mut().add_assign(1);
+                    }
                     Ok(Some(json_str_owned))
                 }
             }
             Err(_) => {
-                self.stats.get_mut("miss_count").unwrap().value_mut().add_assign(1);
+                if let Some(mut miss_count) = self.stats.get_mut("miss_count") {
+                    miss_count.value_mut().add_assign(1);
+                }
                 Ok(None)
             }
         }
@@ -249,9 +257,15 @@ impl DMSCache for DMSRedisCache {
     /// - Average hit rate
     /// - Memory usage (always 0 as Redis manages memory)
     async fn stats(&self) -> CacheStats {
-        let hit_count = *self.stats.get("hit_count").unwrap().value();
-        let miss_count = *self.stats.get("miss_count").unwrap().value();
-        let error_count = *self.stats.get("error_count").unwrap().value();
+        let hit_count = self.stats.get("hit_count")
+            .map(|entry| *entry.value())
+            .unwrap_or(0);
+        let miss_count = self.stats.get("miss_count")
+            .map(|entry| *entry.value())
+            .unwrap_or(0);
+        let error_count = self.stats.get("error_count")
+            .map(|entry| *entry.value())
+            .unwrap_or(0);
         
         let total_requests = hit_count + miss_count;
         let avg_hit_rate = if total_requests > 0 {

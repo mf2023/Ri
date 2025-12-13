@@ -57,10 +57,14 @@ use jsonwebtoken::{decode, encode, DecodingKey, EncodingKey, Header, Validation}
 use serde::{Deserialize, Serialize};
 use std::time::{SystemTime, UNIX_EPOCH};
 
+#[cfg(feature = "pyo3")]
+use pyo3::PyResult;
+
 /// JWT claims structure containing user information and permissions.
 /// 
 /// This struct defines the standard claims for JWT tokens used in DMS,
 /// including subject, expiration time, issued time, roles, and permissions.
+#[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct JWTClaims {
     pub sub: String, // Subject (user ID)
@@ -74,6 +78,7 @@ pub struct JWTClaims {
 /// 
 /// This struct allows customization of JWT validation behavior, including
 /// expiration validation, issued time validation, and required roles/permissions.
+#[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 #[derive(Debug, Clone)]
 pub struct JWTValidationOptions {
     pub validate_exp: bool,              // Whether to validate token expiration
@@ -104,6 +109,7 @@ impl Default for JWTValidationOptions {
 /// 
 /// This struct manages JWT token operations, including generation, validation,
 /// and refreshing. It uses HS256 algorithm for token signing and verification.
+#[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 pub struct DMSJWTManager {
     secret: String,           // Secret key for token signing
     expiry_secs: u64,         // Default token expiry time in seconds
@@ -156,7 +162,7 @@ impl DMSJWTManager {
         };
 
         encode(&Header::default(), &claims, &self.encoding_key)
-            .map_err(|e| crate::core::DMSError::Other(format!("JWT encoding error: {}", e)))
+            .map_err(|e| crate::core::DMSError::Other(format!("JWT encoding error: {e}")))
     }
 
     /// Validates a JWT token with default validation settings.
@@ -171,7 +177,7 @@ impl DMSJWTManager {
         
         decode::<JWTClaims>(token, &self.decoding_key, &validation)
             .map(|data| data.claims)
-            .map_err(|e| crate::core::DMSError::Other(format!("JWT validation error: {}", e)))
+            .map_err(|e| crate::core::DMSError::Other(format!("JWT validation error: {e}")))
     }
 
     /// Validates a JWT token with custom validation options.
@@ -210,14 +216,14 @@ impl DMSJWTManager {
         // Check required roles
         for required_role in &options.required_roles {
             if !claims.roles.contains(required_role) {
-                return Err(crate::core::DMSError::Other(format!("Missing required role: {}", required_role)));
+                return Err(crate::core::DMSError::Other(format!("Missing required role: {required_role}")));
             }
         }
 
         // Check required permissions
         for required_permission in &options.required_permissions {
             if !claims.permissions.contains(required_permission) {
-                return Err(crate::core::DMSError::Other(format!("Missing required permission: {}", required_permission)));
+                return Err(crate::core::DMSError::Other(format!("Missing required permission: {required_permission}")));
             }
         }
 
@@ -252,5 +258,36 @@ impl DMSJWTManager {
     /// A reference to the secret key string
     pub fn get_secret(&self) -> &str {
         &self.secret
+    }
+}
+
+#[cfg(feature = "pyo3")]
+/// Python bindings for DMSJWTManager
+#[pyo3::prelude::pymethods]
+impl DMSJWTManager {
+    #[new]
+    fn py_new(secret: String, expiry_secs: u64) -> PyResult<Self> {
+        Ok(Self::new(secret, expiry_secs))
+    }
+    
+    /// Generate a JWT token from Python
+    fn generate_token_py(&self, user_id: String, roles: Vec<String>, permissions: Vec<String>) -> PyResult<String> {
+        match self.generate_token(&user_id, roles, permissions) {
+            Ok(token) => Ok(token),
+            Err(e) => Err(pyo3::exceptions::PyRuntimeError::new_err(format!("Failed to generate token: {}", e))),
+        }
+    }
+    
+    /// Validate a JWT token from Python
+    fn validate_token_py(&self, token: String) -> PyResult<JWTClaims> {
+        match self.validate_token(&token) {
+            Ok(claims) => Ok(claims),
+            Err(e) => Err(pyo3::exceptions::PyRuntimeError::new_err(format!("Failed to validate token: {}", e))),
+        }
+    }
+    
+    /// Get token expiry time from Python
+    fn get_token_expiry_py(&self) -> u64 {
+        self.get_token_expiry()
     }
 }

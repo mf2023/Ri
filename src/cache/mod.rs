@@ -80,14 +80,14 @@
 //! }
 //! ```
 
-mod cache;
+mod core;
 mod manager;
 mod backends;
 mod config;
 
-pub use config::DMSCacheConfig;
+pub use config::{DMSCacheConfig, CacheBackendType};
 pub use manager::DMSCacheManager;
-pub use cache::{CachedValue, CacheStats, DMSCache};
+pub use core::{CachedValue, CacheStats, DMSCache};
 // Re-export backend implementations
 pub use backends::{DMSMemoryCache, DMSRedisCache, DMSHybridCache};
 
@@ -110,8 +110,8 @@ pub struct DMSCacheModule {
 impl DMSCacheModule {
     /// Creates a new cache module with the given configuration.
     /// 
-    /// This method creates a dummy cache manager that will be replaced during initialization
-    /// with the actual backend implementation based on the provided configuration.
+    /// This method initializes the cache manager with the appropriate backend based on the
+    /// provided configuration. The backend is created immediately, not as a placeholder.
     /// 
     /// # Parameters
     /// 
@@ -121,13 +121,27 @@ impl DMSCacheModule {
     /// 
     /// A new `DMSCacheModule` instance
     pub fn new(config: DMSCacheConfig) -> Self {
-        // Create a dummy manager that will be replaced during initialization
-        let dummy_backend = Arc::new(DMSMemoryCache::new());
-        let dummy_manager = DMSCacheManager::new(dummy_backend);
+        // Create the appropriate backend based on configuration
+        let backend = match config.backend_type {
+            crate::cache::config::CacheBackendType::Memory => {
+                Arc::new(DMSMemoryCache::new())
+            }
+            crate::cache::config::CacheBackendType::Redis => {
+                // For Redis, we'll use memory backend initially and replace it in init()
+                // since we need async context for Redis connection
+                Arc::new(DMSMemoryCache::new())
+            }
+            crate::cache::config::CacheBackendType::Hybrid => {
+                // Same for Hybrid - use memory backend initially
+                Arc::new(DMSMemoryCache::new())
+            }
+        };
+        
+        let manager = DMSCacheManager::new(backend);
         
         Self {
             config,
-            manager: Arc::new(RwLock::new(dummy_manager)),
+            manager: Arc::new(RwLock::new(manager)),
         }
     }
     
@@ -184,14 +198,15 @@ impl crate::core::DMSModule for DMSCacheModule {
     /// 
     /// A `DMSResult<()>` indicating success or failure
     async fn init(&mut self, ctx: &mut DMSServiceContext) -> DMSResult<()> {
-        println!("Initializing DMS Cache Module");
+        log::info!("Initializing DMS Cache Module");
         
         // Load configuration
-        let cfg = ctx.config().config();
+        let binding = ctx.config();
+        let cfg = binding.config();
         
         // Update configuration if provided
         if let Some(cache_config) = cfg.get("cache") {
-            self.config = serde_json::from_str(cache_config)
+            self.config = serde_yaml::from_str(cache_config)
                 .unwrap_or_else(|_| DMSCacheConfig::default());
         } else {
             self.config = DMSCacheConfig::default();
@@ -216,7 +231,11 @@ impl crate::core::DMSModule for DMSCacheModule {
             }
         }
         
-        //println!("DMS Cache Module initialized successfully");
+                // Log successful initialization
+        if let Ok(fs) = crate::fs::DMSFileSystem::new_auto_root() {
+            let logger = crate::log::DMSLogger::new(&crate::log::DMSLogConfig::default(), fs);
+            let _ = logger.info("cache", "DMS Cache Module initialized successfully");
+        }
         Ok(())
     }
     
@@ -235,20 +254,16 @@ impl crate::core::DMSModule for DMSCacheModule {
     /// 
     /// A `DMSResult<()>` indicating success or failure
     async fn after_shutdown(&mut self, _ctx: &mut DMSServiceContext) -> DMSResult<()> {
-        println!("Cleaning up DMS Cache Module");
+        log::info!("Cleaning up DMS Cache Module");
         
         let manager = self.manager.read().await;
         let stats = manager.stats().await;
-        println!("Cache stats: {stats:?}");
+        log::info!("Cache stats: {stats:?}");
         
         // Cleanup expired entries
         let cleaned = manager.cleanup_expired().await?;
-        println!("Cleaned up {cleaned} expired cache entries");
-        println!("DMS Cache Module cleanup completed");
+        log::info!("Cleaned up {cleaned} expired cache entries");
+        log::info!("DMS Cache Module cleanup completed");
         Ok(())
     }
 }
-
-
-
-

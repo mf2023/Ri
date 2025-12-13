@@ -15,18 +15,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-extern crate dms;
-
-use core::assert;
-use core::assert_eq;
-use core::option::Option;
-use core::option::Option::{Some, None};
-use core::result::Result::Ok;
+use dms_core::hooks::{DMSHookBus, DMSHookEvent, DMSHookKind, DMSModulePhase};
+use dms_core::core::DMSServiceContext;
 use std::sync::{Arc, Mutex};
 use std::sync::atomic::{AtomicBool, Ordering};
-
-use dms::hooks::{DMSHookBus, DMSHookEvent, DMSHookKind, DMSModulePhase};
-use dms::core::DMSServiceContext;
 
 #[test]
 fn test_module_phase_as_str() {
@@ -82,7 +74,7 @@ fn test_hook_bus_register_emit_with() {
     let called = Arc::new(AtomicBool::new(false));
     let captured_event: Arc<Mutex<Option<DMSHookEvent>>> = Arc::new(Mutex::new(None));
     let called_handle = Arc::clone(&called);
-    let captured_handle = Arc::clone(&captured_event);
+    let captured_handle: Arc<Mutex<Option<DMSHookEvent>>> = Arc::clone(&captured_event);
     
     hook_bus.register(DMSHookKind::Startup, "test_hook".to_string(), move |_ctx, event| {
         called_handle.store(true, Ordering::SeqCst);
@@ -102,12 +94,17 @@ fn test_hook_bus_register_emit_with() {
     assert!(called.load(Ordering::SeqCst));
     
     // Verify the event was captured correctly
-    if let Some(event) = captured_event.lock().unwrap().clone() {
+    let captured = {
+        let guard = captured_event.lock().unwrap();
+        guard.clone()
+    };
+    if let Some(event) = captured {
         assert_eq!(event.kind, DMSHookKind::Startup);
         assert_eq!(event.module, Some("test_module".to_string()));
         assert_eq!(event.phase, Some(DMSModulePhase::Init));
     } else {
-        panic!("Event was not captured");
+        // Event was not captured, this should fail the test gracefully
+        assert!(false, "Event was not captured");
     }
 }
 

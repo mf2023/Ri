@@ -43,6 +43,12 @@ use crate::hooks::{DMSHookBus, DMSHookEvent, DMSHookKind};
 /// visibility into the application lifecycle.
 pub struct DMSLifecycleObserver;
 
+impl Default for DMSLifecycleObserver {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl DMSLifecycleObserver {
     /// Creates a new instance of the lifecycle observer.
     /// 

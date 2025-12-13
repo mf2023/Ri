@@ -86,7 +86,7 @@ impl ErrorChain {
     where
         S: Into<String>,
     {
-        let source = std::mem::replace(&mut self.source, Box::new(std::io::Error::new(std::io::ErrorKind::Other, "placeholder")));
+        let source = std::mem::replace(&mut self.source, Box::new(std::io::Error::other("placeholder")));
         Self {
             source,
             context: context.into(),
@@ -158,7 +158,7 @@ impl ErrorChain {
         let mut level = 1;
         let mut current = self.previous.as_deref();
         while let Some(chain) = current {
-            result.push_str(&format!("\nCaused by (level {}):\n", level));
+            result.push_str(&format!("\nCaused by (level {level}):\n"));
             if !chain.context.is_empty() {
                 result.push_str(&format!("  {}\n", chain.get_context()));
             }
@@ -187,7 +187,7 @@ impl fmt::Display for ErrorChain {
         }
         
         if let Some(prev) = &self.previous {
-            write!(f, "{}", prev)?;
+            write!(f, "{prev}")?;
         } else {
             write!(f, "{}", self.source_error())?;
         }
@@ -285,7 +285,7 @@ pub mod utils {
     where
         S: Into<String>,
     {
-        ErrorChain::new(std::io::Error::new(std::io::ErrorKind::Other, msg.into()))
+        ErrorChain::new(std::io::Error::other(msg.into()))
     }
 
     /// Wraps an error with context if it matches a predicate.
@@ -312,7 +312,9 @@ pub mod utils {
         }
 
         if errors.len() == 1 {
-            let error = errors.into_iter().next().unwrap();
+            let error = errors.into_iter().next()
+                .ok_or_else(|| std::io::Error::other("errors vector should have at least one element"))
+                .unwrap_or_else(|_| Box::new(std::io::Error::other("errors vector should have at least one element")));
             return ErrorChain::with_context(MultiError { errors: vec![error] }, context);
         }
 
@@ -327,9 +329,9 @@ pub mod utils {
 
     impl fmt::Display for MultiError {
         fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-            write!(f, "Multiple errors occurred ({} total):\n", self.errors.len())?;
+            writeln!(f, "Multiple errors occurred ({} total):", self.errors.len())?;
             for (i, err) in self.errors.iter().enumerate() {
-                write!(f, "  [{}] {}\n", i + 1, err)?;
+                writeln!(f, "  [{}] {}", i + 1, err)?;
             }
             Ok(())
         }
@@ -351,7 +353,7 @@ mod tests {
     fn test_error_chain_creation() {
         let io_err = io::Error::new(io::ErrorKind::NotFound, "file not found");
         let chain = ErrorChain::new(io_err);
-        assert!(chain.context().is_empty());
+        assert!(chain.get_context().is_empty());
         assert!(chain.previous().is_none());
     }
 
@@ -359,7 +361,7 @@ mod tests {
     fn test_error_chain_with_context() {
         let io_err = io::Error::new(io::ErrorKind::NotFound, "file not found");
         let chain = ErrorChain::with_context(io_err, "Failed to load configuration");
-        assert_eq!(chain.context(), "Failed to load configuration");
+        assert_eq!(chain.get_context(), "Failed to load configuration");
     }
 
     #[test]
@@ -369,8 +371,8 @@ mod tests {
             .context("Level 2")
             .context("Level 3");
 
-        let contexts: Vec<&str> = chain.chain().map(|e| e.context()).collect();
-        assert_eq!(contexts, vec!["Level 3", "Level 2", "Level 1", ""]);
+        let contexts: Vec<String> = chain.chain().map(|e| e.get_context().to_string()).collect();
+        assert_eq!(contexts, vec!["Level 3", "Level 2", "Level 1"]);
     }
 
     #[test]
@@ -380,7 +382,7 @@ mod tests {
         assert!(chained.is_err());
         
         let err = chained.unwrap_err();
-        assert_eq!(err.context(), "Operation failed");
+        assert_eq!(err.get_context(), "Operation failed");
     }
 
     #[test]

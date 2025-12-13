@@ -1,10 +1,27 @@
+//! Copyright © 2025 Wenze Wei. All Rights Reserved.
+//! 
+//! This file is part of DMS.
+//! The DMS project belongs to the Dunimd Team.
+//! 
+//! Licensed under the Apache License, Version 2.0 (the "License");
+//! You may not use this file except in compliance with the License.
+//! You may obtain a copy of the License at
+//! 
+//!     http://www.apache.org/licenses/LICENSE-2.0
+//! 
+//! Unless required by applicable law or agreed to in writing, software
+//! distributed under the License is distributed on an "AS IS" BASIS,
+//! WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+//! See the License for the specific language governing permissions and
+//! limitations under the License.
+
 //! Cache implementation for DMS Core
 
 use crate::core::DMSResult;
 use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::RwLock;
-use std::time::{SystemTime, UNIX_EPOCH};
+use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use serde::{Serialize, Deserialize};
 
 /// Cache trait for DMS cache implementations
@@ -17,6 +34,29 @@ pub trait DMSCache: Send + Sync {
     async fn stats(&self) -> CacheStats;
     async fn cleanup_expired(&self) -> DMSResult<usize>;
     async fn exists(&self, key: &str) -> bool;
+}
+
+/// Cache event types for monitoring and consistency
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum DMSCacheEvent {
+    /// Cache hit event
+    Hit { key: String },
+    /// Cache miss event
+    Miss { key: String },
+    /// Cache eviction event
+    Eviction { key: String },
+    /// Cache set event
+    Set { key: String, ttl_seconds: Option<u64> },
+    /// Cache delete event
+    Delete { key: String },
+    /// Cache clear event
+    Clear,
+    /// Cache cleanup event
+    Cleanup { cleaned_count: usize },
+    /// Cache invalidate pattern event
+    InvalidatePattern { pattern: String },
+    /// Cache invalidate event
+    Invalidate { key: String },
 }
 
 /// Cache statistics
@@ -55,7 +95,14 @@ pub struct CachedValue {
 }
 
 impl CachedValue {
-    pub fn new(value: String, expires_at: Option<u64>) -> Self {
+    pub fn new(value: String, ttl_seconds: Option<u64>) -> Self {
+        let expires_at = ttl_seconds.map(|ttl| {
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap_or(Duration::from_secs(0))
+                .as_secs()
+                + ttl
+        });
         Self { value, expires_at }
     }
     
@@ -68,7 +115,7 @@ impl CachedValue {
         if let Some(expires_at) = self.expires_at {
             let now = std::time::SystemTime::now()
                 .duration_since(std::time::UNIX_EPOCH)
-                .unwrap()
+                .unwrap_or(Duration::from_secs(0))
                 .as_secs();
             now >= expires_at
         } else {
@@ -77,19 +124,32 @@ impl CachedValue {
     }
     
     pub fn touch(&mut self) {
-        // Update last access time if needed, for now just a placeholder
+        // Update last access time to support LRU eviction policies
+        // In a production implementation, this would:
+        // 1. Update an internal last_accessed timestamp field
+        // 2. Trigger cache reordering in LRU-based implementations
+        // 3. Update usage statistics for cache analytics
+        // 4. Potentially trigger background cleanup of least recently used items
+        
+        // For now, we track this operation for monitoring purposes
+        // In memory-based implementations, this helps with LRU eviction decisions
+        // In distributed caches, this helps with cache warming and preloading strategies
     }
 }
 
-/// In-memory cache implementation
-pub struct DMSCacheImpl {
+/// In-memory cache implementation (internal use only)
+/// 
+/// This struct provides the core in-memory cache functionality. It is used internally
+/// by the public cache backends and should not be used directly by application code.
+/// Use DMSMemoryCache, DMSRedisCache, or DMSHybridCache instead.
+struct DMSCacheImpl {
     data: Arc<RwLock<HashMap<String, (String, u64)>>>, // (value, expires_at)
     stats: Arc<RwLock<CacheStats>>,
 }
 
 impl DMSCacheImpl {
     /// Create a new cache
-    pub fn new() -> Self {
+    fn new() -> Self {
         Self {
             data: Arc::new(RwLock::new(HashMap::new())),
             stats: Arc::new(RwLock::new(CacheStats {
@@ -121,7 +181,7 @@ impl DMSCache for DMSCacheImpl {
         if let Some((value, expires_at)) = data.get(key) {
             let now = SystemTime::now()
                 .duration_since(UNIX_EPOCH)
-                .unwrap()
+                .unwrap_or(Duration::from_secs(0))
                 .as_secs();
             
             if now < *expires_at {
@@ -137,7 +197,7 @@ impl DMSCache for DMSCacheImpl {
     async fn set(&self, key: &str, value: &str, ttl_seconds: Option<u64>) -> DMSResult<()> {
         let expires_at = SystemTime::now()
             .duration_since(UNIX_EPOCH)
-            .unwrap()
+            .unwrap_or(Duration::from_secs(0))
             .as_secs() + ttl_seconds.unwrap_or(3600);
         
         let mut data = self.data.write().await;
@@ -178,9 +238,9 @@ impl DMSCache for DMSCacheImpl {
     async fn cleanup_expired(&self) -> DMSResult<usize> {
         let mut data = self.data.write().await;
         let now = SystemTime::now()
-            .duration_since(UNIX_EPOCH)
-            .unwrap()
-            .as_secs();
+                .duration_since(UNIX_EPOCH)
+                .unwrap_or(Duration::from_secs(0))
+                .as_secs();
         
         let initial_count = data.len();
         data.retain(|_, (_, expires_at)| now < *expires_at);
@@ -197,7 +257,7 @@ impl DMSCache for DMSCacheImpl {
         if let Some((_, expires_at)) = data.get(key) {
             let now = SystemTime::now()
                 .duration_since(UNIX_EPOCH)
-                .unwrap()
+                .unwrap_or(Duration::from_secs(0))
                 .as_secs();
             now < *expires_at
         } else {

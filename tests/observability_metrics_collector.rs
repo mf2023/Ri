@@ -15,10 +15,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-extern crate dms;
-
+use dms_core::observability::metrics_collector::{DMSSlidingWindow, DMSQuantileCalculator, DMSPerformanceCollector};
 use std::time::Duration;
-use dms::observability::metrics_collector::{DMSSlidingWindow, DMSQuantileCalculator, DMSPerformanceCollector};
 
 #[test]
 fn test_sliding_window() {

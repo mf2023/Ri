@@ -103,11 +103,11 @@
 //! }
 //! ```
 
-mod queue;
-mod backends;
+mod core;
+pub mod backends;
 mod config;
 mod manager;
 
-pub use queue::{DMSQueue, DMSQueueMessage, DMSQueueConsumer, DMSQueueProducer, QueueStats};
+pub use core::{DMSQueue, DMSQueueMessage, DMSQueueProducer, DMSQueueConsumer, DMSQueueStats};
 pub use config::{DMSQueueConfig, QueueBackendType};
 pub use manager::{DMSQueueManager, DMSQueueModule};

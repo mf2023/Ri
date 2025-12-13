@@ -15,8 +15,6 @@
 //! See the License for the specific language governing permissions and
 //! limitations under the License.
 
-
-
 //! # Observability Module
 //! 
 //! This module provides comprehensive observability capabilities for DMS, including distributed tracing
@@ -74,11 +72,11 @@
 //! ```
 
 mod metrics;
-mod tracing;
-mod propagation;
-mod prometheus;
-mod metrics_collector;
-mod grafana;
+pub mod tracing;
+pub mod propagation;
+pub mod prometheus;
+pub mod metrics_collector;
+pub mod grafana;
 
 use std::sync::Arc;
 use serde::{Serialize, Deserialize};
@@ -137,6 +135,12 @@ impl Default for DMSObservabilityConfig {
             metrics_window_size_secs: 300, // 5 minutes
             metrics_bucket_size_secs: 10,  // 10 seconds
         }
+    }
+}
+
+impl Default for DMSObservabilityModule {
+    fn default() -> Self {
+        Self::new()
     }
 }
 
@@ -336,7 +340,8 @@ impl crate::core::DMSModule for DMSObservabilityModule {
     /// A `DMSResult<()>` indicating success or failure
     async fn init(&mut self, ctx: &mut DMSServiceContext) -> DMSResult<()> {
         // Load configuration
-        let cfg = ctx.config().config();
+        let binding = ctx.config();
+        let cfg = binding.config();
         
         self.config = DMSObservabilityConfig {
             tracing_enabled: cfg.get_bool("observability.tracing_enabled").unwrap_or(true),

@@ -24,15 +24,58 @@ This Python library provides bindings to the DMS Rust core, allowing you to leve
 in Python applications.
 """
 
-__version__ = "0.1.0"
+__version__ = "0.1.2"
 __author__ = "Dunimd Team"
 __license__ = "Apache-2.0"
 
 # Import the Rust extension
-from .dms_core import new_app_builder
+from .dms_core import (
+    # Core classes
+    DMSAppBuilder, DMSAppRuntime, DMSConfig, DMSConfigManager, DMSError,
+    DMSFileSystem, DMSHookBus, DMSHookEvent, DMSHookKind, DMSLogConfig,
+    DMSLogLevel, DMSLogger, DMSModulePhase, DMSServiceContext,
+    
+    # Queue classes - also available directly
+    DMSQueueModule, DMSQueueConfig, DMSQueueManager, DMSQueueMessage, DMSQueueStats,
+    
+    # Gateway classes - also available directly
+    DMSGateway, DMSGatewayConfig, DMSRouter, DMSRoute,
+    
+    # Service mesh classes - also available directly
+    DMSServiceMesh, DMSServiceDiscovery, DMSHealthChecker, DMSTrafficManager,
+    
+    # Auth classes - also available directly
+    DMSAuthModule, DMSAuthConfig, DMSJWTManager, DMSSessionManager, 
+    DMSPermissionManager, DMSOAuthManager
+)
 
-# Submodules are created in the Rust bindings
-# They can be imported as from dms_core.log import ...
+# Import submodules
+from .dms_core import (
+    log, config, device, cache, fs, hooks, observability,
+    queue, gateway, service_mesh, auth
+)
 
-# Expose submodules for direct access
-__all__ = ['new_app_builder', 'log', 'config', 'device', 'cache', 'fs', 'hooks', 'observability']
+# Core classes available directly
+__all__ = [
+    # Core classes
+    'DMSAppBuilder', 'DMSAppRuntime', 'DMSConfig', 'DMSConfigManager', 'DMSError',
+    'DMSFileSystem', 'DMSHookBus', 'DMSHookEvent', 'DMSHookKind', 'DMSLogConfig',
+    'DMSLogLevel', 'DMSLogger', 'DMSModulePhase', 'DMSServiceContext',
+    
+    # Queue classes
+    'DMSQueueModule', 'DMSQueueConfig', 'DMSQueueManager', 'DMSQueueMessage', 'DMSQueueStats',
+    
+    # Gateway classes
+    'DMSGateway', 'DMSGatewayConfig', 'DMSRouter', 'DMSRoute',
+    
+    # Service mesh classes
+    'DMSServiceMesh', 'DMSServiceDiscovery', 'DMSHealthChecker', 'DMSTrafficManager',
+    
+    # Auth classes
+    'DMSAuthModule', 'DMSAuthConfig', 'DMSJWTManager', 'DMSSessionManager', 
+    'DMSPermissionManager', 'DMSOAuthManager',
+    
+    # Submodules - these contain the actual classes
+    'log', 'config', 'device', 'cache', 'fs', 'hooks', 'observability',
+    'queue', 'gateway', 'service_mesh', 'auth'
+]

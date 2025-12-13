@@ -15,9 +15,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-extern crate dms;
-
-use dms::observability::grafana::{DMSGrafanaDashboard, DMSGrafanaPanel, DMSGridPos};
+use dms_core::observability::grafana::{DMSGrafanaDashboard, DMSGrafanaPanel, DMSGridPos};
 
 #[test]
 fn test_grafana_dashboard() {

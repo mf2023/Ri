@@ -15,9 +15,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-extern crate dms;
-
-use dms::observability::prometheus::DMSPrometheusExporter;
+use dms_core::observability::prometheus::DMSPrometheusExporter;
 
 #[test]
 fn test_prometheus_exporter() {

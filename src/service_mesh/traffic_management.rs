@@ -109,9 +109,14 @@ use std::sync::Arc;
 use std::time::Duration;
 use tokio::sync::RwLock;
 use tokio::task::JoinHandle;
+use reqwest;
+
+#[cfg(feature = "pyo3")]
+use pyo3::PyResult;
 
 use crate::core::{DMSResult, DMSError};
 
+#[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DMSTrafficRoute {
     pub name: String,
@@ -124,6 +129,7 @@ pub struct DMSTrafficRoute {
     pub fault_injection: Option<DMSFaultInjection>,
 }
 
+#[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DMSMatchCriteria {
     pub path_prefix: Option<String>,
@@ -132,6 +138,7 @@ pub struct DMSMatchCriteria {
     pub query_parameters: HashMap<String, String>,
 }
 
+#[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum DMSRouteAction {
     Route(Vec<DMSWeightedDestination>),
@@ -139,6 +146,7 @@ pub enum DMSRouteAction {
     DirectResponse(u16, String),
 }
 
+#[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DMSWeightedDestination {
     pub service: String,
@@ -185,6 +193,7 @@ pub struct DMSSubset {
     pub weight: u32,
 }
 
+#[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 pub struct DMSTrafficManager {
     enabled: bool,
     routes: Arc<RwLock<HashMap<String, Vec<DMSTrafficRoute>>>>,
@@ -192,6 +201,7 @@ pub struct DMSTrafficManager {
     circuit_breakers: Arc<RwLock<HashMap<String, DMSCircuitBreakerConfig>>>,
     rate_limits: Arc<RwLock<HashMap<String, DMSRateLimitConfig>>>,
     background_tasks: Arc<RwLock<Vec<JoinHandle<()>>>>,
+    http_client: reqwest::Client,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -211,6 +221,12 @@ pub struct DMSRateLimitConfig {
 
 impl DMSTrafficManager {
     pub fn new(enabled: bool) -> Self {
+        let http_client = reqwest::Client::builder()
+            .timeout(Duration::from_secs(30))
+            .connect_timeout(Duration::from_secs(10))
+            .build()
+            .unwrap_or_else(|_| reqwest::Client::new());
+            
         Self {
             enabled,
             routes: Arc::new(RwLock::new(HashMap::new())),
@@ -218,6 +234,7 @@ impl DMSTrafficManager {
             circuit_breakers: Arc::new(RwLock::new(HashMap::new())),
             rate_limits: Arc::new(RwLock::new(HashMap::new())),
             background_tasks: Arc::new(RwLock::new(Vec::new())),
+            http_client,
         }
     }
 
@@ -297,10 +314,48 @@ impl DMSTrafficManager {
             return Err(DMSError::ServiceMesh("Rate limit exceeded".to_string()));
         }
 
-        self.apply_traffic_policies(request_data).await
+        // Apply traffic policies to transform request data
+        let transformed_request = self.apply_traffic_policies(request_data).await?;
+        
+        // Perform actual HTTP call
+        self.make_http_request(endpoint, transformed_request).await
+    }
+
+    async fn make_http_request(&self, endpoint: &str, request_data: Vec<u8>) -> DMSResult<Vec<u8>> {
+        // Parse endpoint URL
+        let url = endpoint.parse::<reqwest::Url>()
+            .map_err(|e| DMSError::ServiceMesh(format!("Invalid endpoint URL: {}", e)))?;
+        
+        // Create HTTP request
+        let response = self.http_client
+            .post(url)
+            .header("Content-Type", "application/octet-stream")
+            .body(request_data)
+            .send()
+            .await
+            .map_err(|e| DMSError::ServiceMesh(format!("HTTP request failed: {}", e)))?;
+        
+        // Check response status
+        if !response.status().is_success() {
+            return Err(DMSError::ServiceMesh(format!(
+                "HTTP request failed with status: {}", 
+                response.status()
+            )));
+        }
+        
+        // Get response body
+        let response_data = response
+            .bytes()
+            .await
+            .map_err(|e| DMSError::ServiceMesh(format!("Failed to read response body: {}", e)))?
+            .to_vec();
+        
+        Ok(response_data)
     }
 
     async fn apply_traffic_policies(&self, request_data: Vec<u8>) -> DMSResult<Vec<u8>> {
+        // For now, we'll pass through the request data
+        // In a full implementation, this would apply transformations based on traffic policies
         Ok(request_data)
     }
 
@@ -343,11 +398,42 @@ impl DMSTrafficManager {
         Ok(())
     }
 
-    async fn should_rate_limit(&self, _endpoint: &str) -> DMSResult<bool> {
-        use rand::Rng;
-        let mut rng = rand::thread_rng();
+    async fn should_rate_limit(&self, endpoint: &str) -> DMSResult<bool> {
+        let rate_limits = self.rate_limits.read().await;
         
-        Ok(rng.gen_bool(0.001))
+        // Check if there's a rate limit configured for this endpoint
+        if let Some(config) = rate_limits.get(endpoint) {
+            // For now, we'll use a simple counter-based approach
+            // In a full implementation, this would integrate with a proper rate limiting service
+            use std::sync::atomic::{AtomicU32, Ordering};
+            use std::collections::HashMap;
+            use std::sync::Mutex;
+            
+            static REQUEST_COUNTS: Mutex<Option<HashMap<String, (AtomicU32, std::time::Instant)>>> = 
+                Mutex::new(None);
+            
+            let mut counts = REQUEST_COUNTS.lock().unwrap();
+            if counts.is_none() {
+                *counts = Some(HashMap::new());
+            }
+            
+            let counts = counts.as_mut().unwrap();
+            let now = std::time::Instant::now();
+            
+            let (counter, last_reset) = counts.entry(endpoint.to_string())
+                .or_insert_with(|| (AtomicU32::new(0), now));
+            
+            // Reset counter if window has passed
+            if now.duration_since(*last_reset) > config.window {
+                counter.store(0, Ordering::Relaxed);
+                *last_reset = now;
+            }
+            
+            let current_count = counter.fetch_add(1, Ordering::Relaxed);
+            Ok(current_count >= config.requests_per_second)
+        } else {
+            Ok(false) // No rate limit configured
+        }
     }
 
     pub async fn set_circuit_breaker_config(&self, service: &str, config: DMSCircuitBreakerConfig) -> DMSResult<()> {
@@ -400,5 +486,29 @@ impl DMSTrafficManager {
 
     pub async fn health_check(&self) -> DMSResult<bool> {
         Ok(self.enabled)
+    }
+}
+
+#[cfg(feature = "pyo3")]
+/// Python bindings for DMSTrafficManager
+#[pyo3::prelude::pymethods]
+impl DMSTrafficManager {
+    #[new]
+    fn py_new(enabled: bool) -> PyResult<Self> {
+        Ok(Self::new(enabled))
+    }
+    
+    /// Add traffic route from Python
+    fn add_traffic_route_py(&self, _route: DMSTrafficRoute) -> PyResult<()> {
+        // For now, we'll return an error since we can't easily run async code from Python
+        // In a real implementation, you'd want to integrate with Python's async runtime
+        Err(pyo3::exceptions::PyRuntimeError::new_err("Async traffic management not supported from Python yet"))
+    }
+    
+    /// Get traffic routes from Python
+    fn get_traffic_routes_py(&self, _service_name: String) -> PyResult<Vec<DMSTrafficRoute>> {
+        // For now, we'll return an error since we can't easily run async code from Python
+        // In a real implementation, you'd want to integrate with Python's async runtime
+        Err(pyo3::exceptions::PyRuntimeError::new_err("Async traffic management not supported from Python yet"))
     }
 }

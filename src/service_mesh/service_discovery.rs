@@ -27,6 +27,7 @@ use etcd_client::{Client, PutOptions};
 
 use crate::core::{DMSResult, DMSError};
 
+#[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DMSServiceInstance {
     pub id: String,
@@ -39,6 +40,7 @@ pub struct DMSServiceInstance {
     pub status: DMSServiceStatus,
 }
 
+#[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum DMSServiceStatus {
     Starting,
@@ -270,7 +272,7 @@ impl DMSServiceRegistry {
                                 }
                             },
                             Err(e) => {
-                                eprintln!("Etcd watch error: {}", e);
+                                log::warn!("Etcd watch error: {}", e);
                                 // Sleep and retry
                                 tokio::time::sleep(Duration::from_secs(1)).await;
                                 break;
@@ -306,6 +308,7 @@ impl Default for DMSEtcdConfig {
     }
 }
 
+#[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 #[derive(Debug, Clone)]
 pub struct DMSServiceDiscovery {
     enabled: bool,
@@ -431,7 +434,7 @@ impl DMSServiceDiscovery {
             loop {
                 interval.tick().await;
                 if let Err(e) = registry_clone.cleanup_expired_instances(Duration::from_secs(300)).await {
-                    eprintln!("Failed to cleanup expired instances: {e}");
+                    log::warn!("Failed to cleanup expired instances: {e}");
                 }
             }
         });
@@ -452,7 +455,7 @@ impl DMSServiceDiscovery {
                 loop {
                     interval.tick().await;
                     if let Err(e) = registry_clone.sync_from_etcd().await {
-                        eprintln!("Failed to sync from etcd: {e}");
+                        log::warn!("Failed to sync from etcd: {e}");
                     }
                 }
             });

@@ -15,14 +15,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-extern crate dms;
-
-use dms::core::{DMSAppBuilder, DMSServiceContext, DMSError, DMSResult};
+use dms_core::core::{DMSError, DMSServiceContext, DMSAppBuilder};
 
 #[test]
 fn test_dms_error() {
-    let error = DMSError::new("Test error message");
-    assert_eq!(error.message, "Test error message");
+    let error = DMSError::Other("Test error message".to_string());
+    assert!(matches!(error, DMSError::Other(msg) if msg == "Test error message"));
 }
 
 #[test]
@@ -31,9 +29,10 @@ fn test_service_context_new() {
     assert!(ctx.fs().project_root().exists());
 }
 
-#[test]
-fn test_app_builder_new() {
+#[tokio::test]
+async fn test_app_builder_new() {
     let builder = DMSAppBuilder::new();
     let runtime = builder.build().unwrap();
-    assert!(runtime.run().await.is_ok());
+    let result = runtime.run(|_ctx| async move { Ok(()) }).await;
+    assert!(result.is_ok());
 }

@@ -15,11 +15,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-extern crate dms;
-
-use dms::log::{DMSLogContext, DMSLogLevel, DMSLogConfig, DMSLogger};
-use dms::fs::DMSFileSystem;
-use std::path::PathBuf;
+use dms_core::log::{DMSLogContext, DMSLogLevel, DMSLogConfig, DMSLogger};
+use dms_core::fs::DMSFileSystem;
 use tempfile::tempdir;
 
 #[test]
@@ -33,7 +30,7 @@ fn test_log_level_as_str() {
 #[test]
 fn test_log_config_default() {
     let config = DMSLogConfig::default();
-    assert_eq!(config.level, DMSLogLevel::Info);
+    assert_eq!(config.level.as_str(), "INFO");
     assert!(config.console_enabled);
     assert!(config.file_enabled);
     assert_eq!(config.sampling_default, 1.0);
@@ -158,7 +155,9 @@ fn test_logger_different_levels() {
     assert!(logger.error("test_target", "error_message").is_ok());
     
     // Test with Error level
+    let mut config = DMSLogConfig::default();
     config.level = DMSLogLevel::Error;
+    config.console_enabled = false;
     let logger = DMSLogger::new(&config, fs);
     
     // All levels should still work without errors
@@ -187,7 +186,7 @@ fn test_logger_with_context() {
     let temp_dir = tempdir().unwrap();
     let fs = DMSFileSystem::new_with_root(temp_dir.path().to_path_buf());
     
-    let config = DMSLogConfig::default();
+    let mut config = DMSLogConfig::default();
     config.console_enabled = false; // Disable console output for tests
     let logger = DMSLogger::new(&config, fs);
     

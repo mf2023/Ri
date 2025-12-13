@@ -82,6 +82,9 @@ use std::future::Future;
 use std::pin::Pin;
 use std::sync::Arc;
 
+#[cfg(feature = "pyo3")]
+use pyo3::PyResult;
+
 /// Type alias for route handler functions.
 /// 
 /// This type represents an asynchronous function that takes a gateway request and returns
@@ -96,6 +99,7 @@ pub type DMSRouteHandler = Arc<
 /// 
 /// This struct encapsulates all the information needed for a single API endpoint,
 /// including the HTTP method, path pattern, request handler, and attached middleware.
+#[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 #[derive(Clone)]
 pub struct DMSRoute {
     /// HTTP method for this route (GET, POST, PUT, DELETE, PATCH, OPTIONS)
@@ -150,15 +154,51 @@ impl DMSRoute {
     }
 }
 
+#[cfg(feature = "pyo3")]
+/// Python bindings for DMSRoute
+#[pyo3::prelude::pymethods]
+impl DMSRoute {
+    #[new]
+    fn py_new(method: String, path: String) -> PyResult<Self> {
+        use crate::gateway::{DMSGatewayRequest, DMSGatewayResponse};
+        
+        // Create a simple default handler for Python usage
+        let handler = Arc::new(|_req: DMSGatewayRequest| -> Pin<Box<dyn Future<Output = Result<DMSGatewayResponse, crate::core::DMSError>> + Send>> {
+            Box::pin(async move {
+                Ok(DMSGatewayResponse {
+                    status_code: 200,
+                    headers: std::collections::HashMap::new(),
+                    body: b"Hello from DMS Python!".to_vec(),
+                    request_id: String::new(),
+                })
+            })
+        });
+        
+        Ok(Self {
+            method,
+            path,
+            handler,
+            middleware: Vec::new(),
+        })
+    }
+}
+
 /// Router for managing API routes and matching requests to handlers.
 /// 
 /// This struct maintains a collection of routes and provides methods for adding routes,
 /// matching requests to handlers, and mounting routers with prefixes.
+#[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 pub struct DMSRouter {
     /// Vector of registered routes
     routes: std::sync::RwLock<Vec<DMSRoute>>,
     /// Cache of route matches for improved performance
     route_cache: std::sync::RwLock<HashMap<String, DMSRoute>>,
+}
+
+impl Default for DMSRouter {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl DMSRouter {
@@ -182,13 +222,78 @@ impl DMSRouter {
     /// 
     /// - `route`: The route to add to the router
     pub fn add_route(&self, route: DMSRoute) {
-        let mut routes = self.routes.write().unwrap();
+        let mut routes = self.routes.write().expect("Failed to acquire routes write lock");
         routes.push(route);
         
         // Clear cache when routes are modified
-        let mut cache = self.route_cache.write().unwrap();
+        let mut cache = self.route_cache.write().expect("Failed to acquire cache write lock");
         cache.clear();
     }
+}
+
+#[cfg(feature = "pyo3")]
+/// Python bindings for DMSRouter
+#[pyo3::prelude::pymethods]
+impl DMSRouter {
+    #[new]
+    fn py_new() -> Self {
+        Self::new()
+    }
+    
+    /// Adds a GET route to the router from Python
+    fn add_get_route(&self, path: String) {
+        let route = DMSRoute::py_new("GET".to_string(), path).expect("Failed to create route");
+        self.add_route(route);
+    }
+    
+    /// Adds a POST route to the router from Python
+    fn add_post_route(&self, path: String) {
+        let route = DMSRoute::py_new("POST".to_string(), path).expect("Failed to create route");
+        self.add_route(route);
+    }
+    
+    /// Adds a PUT route to the router from Python
+    fn add_put_route(&self, path: String) {
+        let route = DMSRoute::py_new("PUT".to_string(), path).expect("Failed to create route");
+        self.add_route(route);
+    }
+    
+    /// Adds a DELETE route to the router from Python
+    fn add_delete_route(&self, path: String) {
+        let route = DMSRoute::py_new("DELETE".to_string(), path).expect("Failed to create route");
+        self.add_route(route);
+    }
+    
+    /// Adds a PATCH route to the router from Python
+    fn add_patch_route(&self, path: String) {
+        let route = DMSRoute::py_new("PATCH".to_string(), path).expect("Failed to create route");
+        self.add_route(route);
+    }
+    
+    /// Adds an OPTIONS route to the router from Python
+    fn add_options_route(&self, path: String) {
+        let route = DMSRoute::py_new("OPTIONS".to_string(), path).expect("Failed to create route");
+        self.add_route(route);
+    }
+    
+    /// Adds a custom route to the router from Python
+    fn add_custom_route(&self, method: String, path: String) {
+        let route = DMSRoute::py_new(method, path).expect("Failed to create route");
+        self.add_route(route);
+    }
+    
+    /// Gets the number of routes registered in the router
+    fn get_route_count(&self) -> usize {
+        self.route_count()
+    }
+    
+    /// Clears all routes from the router
+    fn clear_all_routes(&self) {
+        self.clear_routes();
+    }
+}
+
+impl DMSRouter {
 
     /// Adds a GET route to the router.
     /// 
@@ -273,18 +378,18 @@ impl DMSRouter {
         
         // Check cache first
         {
-            let cache = self.route_cache.read().unwrap();
+            let cache = self.route_cache.read().expect("Failed to acquire cache read lock");
             if let Some(cached_route) = cache.get(&cache_key) {
                 return Ok(cached_route.handler.clone());
             }
         }
 
         // Find matching route
-        let routes = self.routes.read().unwrap();
+        let routes = self.routes.read().expect("Failed to acquire routes read lock");
         for route in routes.iter() {
             if self.matches_route(&route.method, &route.path, &request.method, &request.path) {
                 // Cache the result
-                let mut cache = self.route_cache.write().unwrap();
+                let mut cache = self.route_cache.write().expect("Failed to acquire cache write lock");
                 cache.insert(cache_key.clone(), route.clone());
                 
                 return Ok(route.handler.clone());
@@ -359,7 +464,7 @@ impl DMSRouter {
     /// - `prefix`: The prefix to prepend to all mounted routes
     /// - `router`: The router to mount
     pub fn mount(&self, prefix: &str, router: &DMSRouter) {
-        let routes = router.routes.read().unwrap();
+        let routes = router.routes.read().expect("Failed to acquire routes read lock");
         for route in routes.iter() {
             let mounted_path = if prefix.ends_with('/') && route.path.starts_with('/') {
                 format!("{}{}", prefix, &route.path[1..])

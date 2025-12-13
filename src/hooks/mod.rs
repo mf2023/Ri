@@ -71,6 +71,7 @@ use crate::core::{DMSResult, DMSServiceContext};
 /// Hook kind definition.
 /// 
 /// This enum defines the different types of hooks that can be emitted during the application lifecycle.
+#[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 #[derive(Eq, Hash, PartialEq, Clone, Copy, Debug)]
 pub enum DMSHookKind {
     /// Emitted when the application starts up
@@ -95,6 +96,7 @@ pub enum DMSHookKind {
 /// 
 /// This enum defines the different phases a module can go through during its lifecycle,
 /// including both synchronous and asynchronous phases.
+#[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 #[derive(Eq, Hash, PartialEq, Clone, Copy, Debug)]
 pub enum DMSModulePhase {
     /// Synchronous initialization phase
@@ -157,6 +159,8 @@ impl DMSModulePhase {
 /// 
 /// This struct represents an event that is emitted when a hook is triggered. It contains
 /// information about the hook kind, the module (if applicable), and the module phase (if applicable).
+#[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
+#[derive(Clone, Debug)]
 pub struct DMSHookEvent {
     /// The kind of hook that was triggered
     pub kind: DMSHookKind,
@@ -175,9 +179,16 @@ pub type DMSHookId = String;
 /// 
 /// This struct manages the registration of hook handlers and the emission of hook events.
 /// It allows multiple handlers to be registered for the same hook kind.
+#[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 pub struct DMSHookBus {
     /// Internal storage for hook handlers, organized by hook kind
     handlers: HashMap<DMSHookKind, Vec<(DMSHookId, Box<dyn Fn(&DMSServiceContext, &DMSHookEvent) -> DMSResult<()> + Send + Sync>)>>,
+}
+
+impl Default for DMSHookBus {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl DMSHookBus {

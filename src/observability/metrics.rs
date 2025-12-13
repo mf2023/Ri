@@ -146,7 +146,7 @@ impl DMSSlidingWindow {
     fn current_timestamp() -> u64 {
         SystemTime::now()
             .duration_since(UNIX_EPOCH)
-            .unwrap_or_default()
+            .unwrap_or(Duration::from_secs(0))
             .as_secs()
     }
     
@@ -354,6 +354,12 @@ impl DMSMetric {
 /// Metrics registry to manage multiple metrics
 pub struct DMSMetricsRegistry {
     metrics: Arc<RwLock<HashMap<String, Arc<DMSMetric>>>>,
+}
+
+impl Default for DMSMetricsRegistry {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl DMSMetricsRegistry {

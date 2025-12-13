@@ -317,7 +317,7 @@ impl HealthChecker {
                 Ok(Ok(result)) => result,
                 Ok(Err(err)) => HealthCheckResult::unknown(
                     check.name().to_string(),
-                    Some(format!("Check failed: {}", err)),
+                    Some(format!("Check failed: {err}")),
                 ),
                 Err(_) => HealthCheckResult::unknown(
                     check.name().to_string(),

@@ -15,10 +15,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-extern crate dms;
-
-use dms::device::{DMSDevice, DMSDeviceType, DMSDeviceStatus, DMSDeviceCapabilities};
-use dms::device::{DMSDeviceControlModule, DMSDeviceControlConfig, DMSDiscoveryResult, DMSResourceRequest, DMSResourceAllocation};
+use dms_core::device::{DMSDevice, DMSDeviceType, DMSDeviceStatus, DMSDeviceCapabilities};
+use dms_core::device::{DMSDeviceControlModule, DMSDeviceControlConfig, DMSDiscoveryResult, DMSResourceRequest, DMSResourceAllocation};
 
 #[test]
 fn test_device_capabilities_new() {

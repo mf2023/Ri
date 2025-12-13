@@ -70,10 +70,14 @@ use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 use tokio::sync::RwLock;
 
+#[cfg(feature = "pyo3")]
+use pyo3::PyResult;
+
 /// Permission definition for fine-grained access control.
 /// 
 /// This struct defines a permission with a unique ID, name, description,
 /// resource, and action. Permissions follow the "resource:action" convention.
+#[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DMSPermission {
     pub id: String,          // Unique permission identifier (e.g., "read:device")
@@ -87,6 +91,7 @@ pub struct DMSPermission {
 /// 
 /// Roles are collections of permissions that can be assigned to users.
 /// System roles cannot be deleted and are created automatically.
+#[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DMSRole {
     pub id: String,                // Unique role identifier
@@ -152,10 +157,17 @@ impl DMSRole {
 /// - Role CRUD operations
 /// - User role assignments
 /// - Permission checking for users
+#[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 pub struct DMSPermissionManager {
     permissions: RwLock<HashMap<String, DMSPermission>>, // Permission ID -> Permission
     roles: RwLock<HashMap<String, DMSRole>>,           // Role ID -> Role
     user_roles: RwLock<HashMap<String, HashSet<String>>>, // User ID -> Role IDs
+}
+
+impl Default for DMSPermissionManager {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl DMSPermissionManager {
@@ -164,6 +176,10 @@ impl DMSPermissionManager {
     /// Initializes the manager with two default system roles:
     /// - `admin`: Has wildcard permission ("*") for all access
     /// - `user`: Has basic user permissions
+    /// 
+    /// **Performance Note**: This method uses `blocking_write` during initialization
+    /// to set up default roles. For production use, consider using `new_async()` or
+    /// lazy initialization patterns to avoid blocking the async runtime.
     /// 
     /// # Returns
     /// A new instance of `DMSPermissionManager`
@@ -175,7 +191,31 @@ impl DMSPermissionManager {
         };
         
         // Initialize with default system roles
+        // Note: This uses blocking_write which may block the async runtime
         manager.initialize_default_roles();
+        manager
+    }
+
+    /// Creates a new permission manager asynchronously with default system roles.
+    /// 
+    /// This is the preferred method for creating a permission manager in async contexts
+    /// as it avoids blocking the runtime during initialization.
+    /// 
+    /// Initializes the manager with two default system roles:
+    /// - `admin`: Has wildcard permission ("*") for all access
+    /// - `user`: Has basic user permissions
+    /// 
+    /// # Returns
+    /// A new instance of `DMSPermissionManager`
+    pub async fn new_async() -> Self {
+        let manager = Self {
+            permissions: RwLock::new(HashMap::new()),
+            roles: RwLock::new(HashMap::new()),
+            user_roles: RwLock::new(HashMap::new()),
+        };
+        
+        // Initialize with default system roles asynchronously
+        manager.initialize_default_roles_async().await;
         manager
     }
 
@@ -184,9 +224,58 @@ impl DMSPermissionManager {
     /// This method is called during construction to create the default admin
     /// and user roles. It uses `blocking_write` because it's called from a
     /// non-async context.
+    /// 
+    /// **Performance Note**: This method is called during initialization and uses
+    /// `blocking_write` to avoid async complexity in the constructor. In production
+    /// scenarios, consider using an async factory pattern or lazy initialization.
     fn initialize_default_roles(&mut self) {
         // This would be called in blocking context, so we use blocking_write
+        // Note: In production, consider using an async factory pattern to avoid blocking
         let mut roles = self.roles.blocking_write();
+        
+        // Admin role - all permissions
+        let admin_permissions: HashSet<String> = vec![
+            "*".to_string(), // Wildcard permission
+        ].into_iter().collect();
+        
+        let admin_role = DMSRole {
+            id: "admin".to_string(),
+            name: "Administrator".to_string(),
+            description: "Full system access".to_string(),
+            permissions: admin_permissions,
+            is_system: true,
+        };
+        
+        roles.insert("admin".to_string(), admin_role);
+        
+        // User role - basic permissions
+        let user_permissions: HashSet<String> = vec![
+            "read:profile".to_string(),
+            "update:profile".to_string(),
+            "read:own_data".to_string(),
+        ].into_iter().collect();
+        
+        let user_role = DMSRole {
+            id: "user".to_string(),
+            name: "User".to_string(),
+            description: "Standard user access".to_string(),
+            permissions: user_permissions,
+            is_system: true,
+        };
+        
+        roles.insert("user".to_string(), user_role);
+    }
+
+    /// Initializes default system roles asynchronously.
+    /// 
+    /// This method is the async version of `initialize_default_roles` that avoids
+    /// using `blocking_write`. It should be used when creating the permission manager
+    /// in async contexts.
+    /// 
+    /// **Performance**: This method uses async write locks and is preferred for
+    /// async initialization scenarios.
+    async fn initialize_default_roles_async(&self) {
+        let mut roles = self.roles.write().await;
         
         // Admin role - all permissions
         let admin_permissions: HashSet<String> = vec![
@@ -494,5 +583,43 @@ impl DMSPermissionManager {
     pub async fn list_roles(&self) -> crate::core::DMSResult<Vec<DMSRole>> {
         let roles = self.roles.read().await;
         Ok(roles.values().cloned().collect())
+    }
+}
+
+#[cfg(feature = "pyo3")]
+/// Python bindings for DMSPermissionManager
+#[pyo3::prelude::pymethods]
+impl DMSPermissionManager {
+    #[new]
+    fn py_new() -> PyResult<Self> {
+        Ok(Self::new())
+    }
+    
+    /// Create a permission from Python
+    fn create_permission_py(&self, _permission: DMSPermission) -> PyResult<()> {
+        // For now, we'll return an error since we can't easily run async code from Python
+        // In a real implementation, you'd want to integrate with Python's async runtime
+        Err(pyo3::exceptions::PyRuntimeError::new_err("Async permission creation not supported from Python yet"))
+    }
+    
+    /// Create a role from Python
+    fn create_role_py(&self, _role: DMSRole) -> PyResult<()> {
+        // For now, we'll return an error since we can't easily run async code from Python
+        // In a real implementation, you'd want to integrate with Python's async runtime
+        Err(pyo3::exceptions::PyRuntimeError::new_err("Async role creation not supported from Python yet"))
+    }
+    
+    /// Assign role to user from Python
+    fn assign_role_to_user_py(&self, _user_id: String, _role_id: String) -> PyResult<()> {
+        // For now, we'll return an error since we can't easily run async code from Python
+        // In a real implementation, you'd want to integrate with Python's async runtime
+        Err(pyo3::exceptions::PyRuntimeError::new_err("Async role assignment not supported from Python yet"))
+    }
+    
+    /// Check if user has permission from Python
+    fn has_permission_py(&self, _user_id: String, _permission_id: String) -> PyResult<bool> {
+        // For now, we'll return an error since we can't easily run async code from Python
+        // In a real implementation, you'd want to integrate with Python's async runtime
+        Err(pyo3::exceptions::PyRuntimeError::new_err("Async permission checking not supported from Python yet"))
     }
 }

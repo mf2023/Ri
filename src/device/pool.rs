@@ -89,7 +89,7 @@ use std::collections::HashMap;
 use std::time::Duration;
 use serde::{Serialize, Deserialize};
 
-use super::device::{DMSDevice, DMSDeviceType};
+use super::core::{DMSDevice, DMSDeviceType};
 
 
 /// Resource pool for managing multiple similar devices
@@ -325,7 +325,7 @@ impl DMSResourcePool {
                 
                 // Add connection to pool
                 let mut pool = self.connection_pool.write().unwrap();
-                let _ = pool.add_connection(device.id().to_string(), device.id().to_string());
+                pool.add_connection(device.id().to_string(), device.id().to_string());
                 
                 return Some(device.clone());
             }
@@ -366,7 +366,7 @@ impl DMSResourcePool {
                     
                     // Remove connection from pool
                     let mut pool = self.connection_pool.write().unwrap();
-                    pool.remove_connection(&device.id().to_string());
+                    pool.remove_connection(device.id());
                     
                     return true;
                 }
@@ -541,7 +541,7 @@ impl DMSResourcePool {
             total_bandwidth_gbps,
             average_health_score,
             device_type: self.device_type,
-            connection_pool_stats: connection_pool_stats,
+            connection_pool_stats,
         }
     }
 }
@@ -883,6 +883,12 @@ pub struct DMSResourcePoolStatistics {
 pub struct DMSResourcePoolManager {
     /// Map of pool names to resource pools
     pools: HashMap<String, Arc<DMSResourcePool>>,
+}
+
+impl Default for DMSResourcePoolManager {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl DMSResourcePoolManager {

@@ -42,8 +42,6 @@
 //! The `prelude` module re-exports commonly used types and traits for convenient access,
 //! allowing users to import all essential components with a single `use dms::prelude::*;` statement.
 
-
-
 /// Core runtime, application builder, and service context
 pub mod core;
 /// Secure file system operations and management
@@ -190,29 +188,149 @@ pub mod py {
     pub fn dms_core(m: &Bound<'_, PyModule>) -> PyResult<()> {
         // Add core types that implement PyClass
         m.add_class::<DMSAppBuilder>()?;
+        m.add_class::<DMSAppRuntime>()?;
+        m.add_class::<DMSConfig>()?;
+        m.add_class::<DMSConfigManager>()?;
+        m.add_class::<DMSError>()?;
+        m.add_class::<DMSServiceContext>()?;
+        
+        // Add other core types
+        m.add_class::<DMSLogger>()?;
+        m.add_class::<DMSLogConfig>()?;
+        m.add_class::<DMSLogLevel>()?;
+        m.add_class::<DMSFileSystem>()?;
+        m.add_class::<DMSHookBus>()?;
+        m.add_class::<DMSHookEvent>()?;
+        m.add_class::<DMSHookKind>()?;
+        m.add_class::<DMSModulePhase>()?;
+        
+        // Add queue types to main module
+        m.add_class::<crate::queue::DMSQueueModule>()?;
+        m.add_class::<crate::queue::DMSQueueConfig>()?;
+        m.add_class::<crate::queue::DMSQueueManager>()?;
+        m.add_class::<crate::queue::DMSQueueMessage>()?;
+        m.add_class::<crate::queue::DMSQueueStats>()?;
+        
+        // Add gateway types to main module
+        m.add_class::<crate::gateway::DMSGateway>()?;
+        m.add_class::<crate::gateway::DMSGatewayConfig>()?;
+        m.add_class::<crate::gateway::DMSRouter>()?;
+        m.add_class::<crate::gateway::DMSRoute>()?;
+        
+        // Add service mesh types to main module
+        m.add_class::<crate::service_mesh::DMSServiceMesh>()?;
+        m.add_class::<crate::service_mesh::DMSServiceDiscovery>()?;
+        m.add_class::<crate::service_mesh::health_check::DMSHealthChecker>()?;
+        m.add_class::<crate::service_mesh::traffic_management::DMSTrafficManager>()?;
+        
+        // Add auth types to main module
+        m.add_class::<crate::auth::DMSAuthModule>()?;
+        m.add_class::<crate::auth::DMSAuthConfig>()?;
+        m.add_class::<crate::auth::DMSJWTManager>()?;
+        m.add_class::<crate::auth::DMSSessionManager>()?;
+        m.add_class::<crate::auth::DMSPermissionManager>()?;
+        m.add_class::<crate::auth::DMSOAuthManager>()?;
         
         // Create and add submodules
-        let log_module = PyModule::new(m.py(), "log")?;
-        m.add_submodule(&log_module)?;
+        create_log_module(m)?;
+        create_config_module(m)?;
+        create_device_module(m)?;
+        create_cache_module(m)?;
+        create_fs_module(m)?;
+        create_hooks_module(m)?;
+        create_observability_module(m)?;
+        create_queue_module(m)?;
+        create_gateway_module(m)?;
+        create_service_mesh_module(m)?;
+        create_auth_module(m)?;
         
-        let config_module = PyModule::new(m.py(), "config")?;
-        m.add_submodule(&config_module)?;
-        
-        let device_module = PyModule::new(m.py(), "device")?;
-        m.add_submodule(&device_module)?;
-        
-        let cache_module = PyModule::new(m.py(), "cache")?;
-        m.add_submodule(&cache_module)?;
-        
-        let fs_module = PyModule::new(m.py(), "fs")?;
-        m.add_submodule(&fs_module)?;
-        
-        let hooks_module = PyModule::new(m.py(), "hooks")?;
-        m.add_submodule(&hooks_module)?;
-        
-        let observability_module = PyModule::new(m.py(), "observability")?;
-        m.add_submodule(&observability_module)?;
-        
+        Ok(())
+    }
+    
+    fn create_log_module(parent: &Bound<'_, PyModule>) -> PyResult<()> {
+        let m = PyModule::new(parent.py(), "log")?;
+        parent.add_submodule(&m)?;
+        Ok(())
+    }
+    
+    fn create_config_module(parent: &Bound<'_, PyModule>) -> PyResult<()> {
+        let m = PyModule::new(parent.py(), "config")?;
+        parent.add_submodule(&m)?;
+        Ok(())
+    }
+    
+    fn create_device_module(parent: &Bound<'_, PyModule>) -> PyResult<()> {
+        let m = PyModule::new(parent.py(), "device")?;
+        parent.add_submodule(&m)?;
+        Ok(())
+    }
+    
+    fn create_cache_module(parent: &Bound<'_, PyModule>) -> PyResult<()> {
+        let m = PyModule::new(parent.py(), "cache")?;
+        parent.add_submodule(&m)?;
+        Ok(())
+    }
+    
+    fn create_fs_module(parent: &Bound<'_, PyModule>) -> PyResult<()> {
+        let m = PyModule::new(parent.py(), "fs")?;
+        parent.add_submodule(&m)?;
+        Ok(())
+    }
+    
+    fn create_hooks_module(parent: &Bound<'_, PyModule>) -> PyResult<()> {
+        let m = PyModule::new(parent.py(), "hooks")?;
+        parent.add_submodule(&m)?;
+        Ok(())
+    }
+    
+    fn create_observability_module(parent: &Bound<'_, PyModule>) -> PyResult<()> {
+        let m = PyModule::new(parent.py(), "observability")?;
+        parent.add_submodule(&m)?;
+        Ok(())
+    }
+    
+    fn create_queue_module(parent: &Bound<'_, PyModule>) -> PyResult<()> {
+        let m = PyModule::new(parent.py(), "queue")?;
+        m.add_class::<crate::queue::DMSQueueModule>()?;
+        m.add_class::<crate::queue::DMSQueueConfig>()?;
+        m.add_class::<crate::queue::DMSQueueManager>()?;
+        m.add_class::<crate::queue::DMSQueueMessage>()?;
+        m.add_class::<crate::queue::DMSQueueStats>()?;
+        parent.add_submodule(&m)?;
+        Ok(())
+    }
+    
+    fn create_gateway_module(parent: &Bound<'_, PyModule>) -> PyResult<()> {
+        let m = PyModule::new(parent.py(), "gateway")?;
+        m.add_class::<crate::gateway::DMSGateway>()?;
+        m.add_class::<crate::gateway::DMSGatewayConfig>()?;
+        m.add_class::<crate::gateway::DMSRoute>()?;
+        m.add_class::<crate::gateway::DMSRouter>()?;
+        parent.add_submodule(&m)?;
+        Ok(())
+    }
+    
+    fn create_service_mesh_module(parent: &Bound<'_, PyModule>) -> PyResult<()> {
+        let m = PyModule::new(parent.py(), "service_mesh")?;
+        m.add_class::<crate::service_mesh::DMSServiceMesh>()?;
+        m.add_class::<crate::service_mesh::DMSServiceMeshConfig>()?;
+        m.add_class::<crate::service_mesh::DMSServiceDiscovery>()?;
+        m.add_class::<crate::service_mesh::DMSServiceInstance>()?;
+        m.add_class::<crate::service_mesh::health_check::DMSHealthChecker>()?;
+        m.add_class::<crate::service_mesh::traffic_management::DMSTrafficManager>()?;
+        parent.add_submodule(&m)?;
+        Ok(())
+    }
+    
+    fn create_auth_module(parent: &Bound<'_, PyModule>) -> PyResult<()> {
+        let m = PyModule::new(parent.py(), "auth")?;
+        m.add_class::<crate::auth::DMSAuthModule>()?;
+        m.add_class::<crate::auth::DMSAuthConfig>()?;
+        m.add_class::<crate::auth::DMSJWTManager>()?;
+        m.add_class::<crate::auth::DMSSessionManager>()?;
+        m.add_class::<crate::auth::DMSPermissionManager>()?;
+        m.add_class::<crate::auth::DMSOAuthManager>()?;
+        parent.add_submodule(&m)?;
         Ok(())
     }
 }

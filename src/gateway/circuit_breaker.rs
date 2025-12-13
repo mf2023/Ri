@@ -288,15 +288,21 @@ impl CircuitBreakerStats {
 
     /// Gets the current metrics for the circuit breaker.
     /// 
-    /// Note: The state field in the returned metrics is a placeholder and should be
-    /// obtained separately using `get_state()` since it requires async access.
+    /// This method provides comprehensive circuit breaker statistics including success/failure counts,
+    /// consecutive streaks, and current state information for monitoring and alerting purposes.
     /// 
     /// # Returns
     /// 
     /// A `CircuitBreakerMetrics` struct containing the current statistics
     fn get_stats(&self) -> CircuitBreakerMetrics {
+        let state_str = match self.state.blocking_read().clone() {
+            DMSCircuitBreakerState::Closed => "Closed",
+            DMSCircuitBreakerState::Open => "Open", 
+            DMSCircuitBreakerState::HalfOpen => "HalfOpen",
+        };
+        
         CircuitBreakerMetrics {
-            state: "Unknown".to_string(), // Placeholder - use get_state() for actual state
+            state: state_str.to_string(),
             failure_count: self.failure_count.load(Ordering::Relaxed),
             success_count: self.success_count.load(Ordering::Relaxed),
             consecutive_failures: self.consecutive_failures.load(Ordering::Relaxed),

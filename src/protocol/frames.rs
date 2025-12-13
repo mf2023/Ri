@@ -155,14 +155,20 @@ impl DMSFrameHeader {
             return Err(DMSError::FrameError("Invalid header length".to_string()));
         }
         
-        let magic = u32::from_be_bytes(bytes[0..4].try_into().unwrap());
+        let magic = u32::from_be_bytes(bytes[0..4].try_into()
+            .map_err(|_| DMSError::FrameError("Invalid magic number bytes".to_string()))?);
         let frame_type = bytes[4];
         let version = bytes[5];
-        let flags = u16::from_be_bytes(bytes[6..8].try_into().unwrap());
-        let payload_length = u32::from_be_bytes(bytes[8..12].try_into().unwrap());
-        let sequence_number = u32::from_be_bytes(bytes[12..16].try_into().unwrap());
-        let timestamp = u64::from_be_bytes(bytes[16..24].try_into().unwrap());
-        let checksum = u32::from_be_bytes(bytes[24..28].try_into().unwrap());
+        let flags = u16::from_be_bytes(bytes[6..8].try_into()
+            .map_err(|_| DMSError::FrameError("Invalid flags bytes".to_string()))?);
+        let payload_length = u32::from_be_bytes(bytes[8..12].try_into()
+            .map_err(|_| DMSError::FrameError("Invalid payload length bytes".to_string()))?);
+        let sequence_number = u32::from_be_bytes(bytes[12..16].try_into()
+            .map_err(|_| DMSError::FrameError("Invalid sequence number bytes".to_string()))?);
+        let timestamp = u64::from_be_bytes(bytes[16..24].try_into()
+            .map_err(|_| DMSError::FrameError("Invalid timestamp bytes".to_string()))?);
+        let checksum = u32::from_be_bytes(bytes[24..28].try_into()
+            .map_err(|_| DMSError::FrameError("Invalid checksum bytes".to_string()))?);
         
         Ok(Self {
             magic,
@@ -456,10 +462,12 @@ mod tests {
         let original_frame = DMSFrame::data_frame(payload.to_vec(), 67890);
         
         // Serialize to bytes
-        let serialized = original_frame.to_bytes().unwrap();
+        let serialized = original_frame.to_bytes()
+            .expect("Failed to serialize frame in test");
         
         // Deserialize from bytes
-        let deserialized_frame = DMSFrame::from_bytes(&serialized).unwrap();
+        let deserialized_frame = DMSFrame::from_bytes(&serialized)
+            .expect("Failed to deserialize frame in test");
         
         // Verify integrity
         assert_eq!(original_frame.header.magic, deserialized_frame.header.magic);
@@ -477,8 +485,10 @@ mod tests {
         let frame1 = builder.build_data_frame(b"First frame".to_vec());
         let frame2 = builder.build_data_frame(b"Second frame".to_vec());
         
-        let serialized1 = frame1.to_bytes().unwrap();
-        let serialized2 = frame2.to_bytes().unwrap();
+        let serialized1 = frame1.to_bytes()
+            .expect("Failed to serialize frame1 in test");
+        let serialized2 = frame2.to_bytes()
+            .expect("Failed to serialize frame2 in test");
         
         let mut combined = Vec::new();
         combined.extend_from_slice(&serialized1);
@@ -487,8 +497,12 @@ mod tests {
         let mut parser = DMSFrameParser::new();
         parser.add_data(&combined);
         
-        let parsed1 = parser.parse_frame().unwrap().unwrap();
-        let parsed2 = parser.parse_frame().unwrap().unwrap();
+        let parsed1 = parser.parse_frame()
+            .expect("Failed to parse frame1 in test")
+            .expect("Frame1 should be Some");
+        let parsed2 = parser.parse_frame()
+            .expect("Failed to parse frame2 in test")
+            .expect("Frame2 should be Some");
         
         assert_eq!(parsed1.payload, b"First frame");
         assert_eq!(parsed2.payload, b"Second frame");

@@ -745,8 +745,19 @@ impl DMSLoadBalancer {
         if let Some(server) = servers.iter().find(|s| s.id == server_id) {
             let health_check_url = format!("{}{}", server.url, server.health_check_path);
             
-            match hyper::Client::new().get(hyper::Uri::from_maybe_shared(health_check_url).unwrap())
-                .await {
+            let uri = match hyper::Uri::from_maybe_shared(health_check_url.clone()) {
+                Ok(uri) => uri,
+                Err(e) => {
+                    // Log warning for invalid health check URL
+        if let Ok(fs) = crate::fs::DMSFileSystem::new_auto_root() {
+            let logger = crate::log::DMSLogger::new(&crate::log::DMSLogConfig::default(), fs);
+            let _ = logger.warn("load_balancer", format!("Invalid health check URL for server {server_id}: {e}"));
+        }
+                    return false;
+                }
+            };
+            
+            match hyper::Client::new().get(uri).await {
                 Ok(response) => {
                     // Consider server healthy if status code is 2xx
                     (200..300).contains(&response.status().as_u16())

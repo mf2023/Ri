@@ -1,0 +1,170 @@
+<div align="center">
+
+# DMS 帮助文档
+
+**Version: 1.0.0**
+
+**Last modified date: 2025-12-12**
+
+<a href="https://space.bilibili.com/3493284091529457" target="_blank">
+    <img alt="BiliBili" src="https://img.shields.io/badge/BiliBili-Dunimd-00A1D6?style=flat-square&logo=bilibili"/>
+</a>
+<a href="https://gitee.com/dunimd" target="_blank">
+    <img alt="Gitee" src="https://img.shields.io/badge/Gitee-Dunimd-C71D23?style=flat-square&logo=gitee"/>
+</a>
+<a href="https://crates.io/crates/dms_core" target="_blank">
+    <img alt="Crates.io" src="https://img.shields.io/badge/Crates-DMS-000000?style=flat-square&logo=rust"/>
+</a>
+<a href="https://pypi.org/project/dms-core/" target="_blank">
+    <img alt="PyPI" src="https://img.shields.io/badge/PyPI-DMS-3775A9?style=flat-square&logo=pypi"/>
+</a>
+
+欢迎使用 DMS (Dunimd Middleware Service) 帮助文档！本文档将帮助您理解和使用 DMS 框架，构建高性能、可靠、安全的后端应用。
+
+</div>
+
+<div align="center">
+
+## 文档导航
+
+</div>
+
+### 1. 入门指南
+
+- [**介绍**](./01-introduction.md) - 了解 DMS 的核心特性、模块化设计和应用场景
+- [**快速开始**](./02-getting-started.md) - 从安装到运行第一个 DMS 应用的完整指南
+
+### 2. 核心概念
+
+- [**核心概念**](./03-core-concepts.md) - 深入理解 DMS 的设计理念、服务上下文、模块系统和生命周期管理
+
+### 3. API 参考
+
+- [**API 参考**](./04-api-reference/README.md) - 详细的模块 API 文档，包括 core、auth、cache、config 等模块
+
+### 4. 使用示例
+
+- [**使用示例**](./05-usage-examples/README.md) - 各种功能的使用示例，包括基础应用、认证与授权、缓存使用、可观测性等
+
+### 5. 最佳实践
+
+- [**最佳实践**](./06-best-practices.md) - 构建高效、可靠、安全的 DMS 应用的最佳实践
+
+### 6. 故障排除
+
+- [**故障排除**](./07-troubleshooting.md) - 常见问题和解决方案，帮助您快速定位和解决问题
+
+### 7. 术语表
+
+- [**术语表**](./08-glossary.md) - DMS 文档中使用的技术术语和概念定义
+
+<div align="center">
+
+## 什么是 DMS？
+
+</div>
+
+**DMS (Dunimd Middleware Service)** — 一个高性能的 Rust 中间件框架，统一后端基础设施。专为企业级规模构建，具有模块化架构、内置可观测性和分布式系统支持。
+
+### 核心特性
+
+- **分布式追踪**：W3C 追踪上下文标准实现，全链路 TraceID/SpanID 传播
+- **企业级可观测性**：原生 Prometheus 指标导出，开箱即用的 Grafana 集成
+- **智能设备管理**：自动发现和注册，高效的资源池管理
+- **结构化日志**：支持 JSON 和文本格式，自动包含追踪上下文
+- **灵活配置**：多源加载，热配置更新
+- **安全文件系统**：统一项目根目录管理，原子文件操作
+
+### 模块化设计
+
+DMS 采用高度模块化的架构，拥有 12 个核心模块，支持按需组合和无缝扩展：
+
+| 模块 | 描述 |
+|:--------|:-------------|
+| **auth** | 认证与授权（JWT、OAuth、权限） |
+| **cache** | 多后端缓存抽象（内存、Redis、混合） |
+| **config** | 多源配置管理与热重载 |
+| **core** | 运行时、错误处理和服务上下文 |
+| **device** | 设备控制、发现和智能调度 |
+| **fs** | 安全的文件系统操作和管理 |
+| **gateway** | API 网关，支持负载均衡、限流和熔断 |
+| **hooks** | 生命周期事件钩子（启动、关闭等） |
+| **log** | 结构化日志与追踪上下文集成 |
+| **observability** | 指标、追踪和 Grafana 集成 |
+| **queue** | 分布式队列抽象（Kafka、RabbitMQ、Redis、内存） |
+| **service_mesh** | 服务发现、健康检查和流量管理 |
+
+<div align="center">
+
+## 开始使用
+
+</div>
+
+如果您是第一次使用 DMS，建议从 [快速开始](./02-getting-started.md) 开始，了解如何安装和运行第一个 DMS 应用。
+
+如果您已经熟悉 DMS 的基本概念，可以查看 [API 参考](./04-api-reference/README.md) 了解详细的模块 API，或查看 [使用示例](./05-usage-examples/README.md) 学习如何使用各种功能。
+
+<div align="center">
+
+## 社区与支持
+
+</div>
+
+- **GitHub/Gitee**：[https://gitee.com/dunimd/dms](https://gitee.com/dunimd/dms)
+- **Issues**：提交问题和建议
+- **Pull Requests**：欢迎贡献代码
+
+<div align="center">
+
+## 📄 许可证与开源协议
+
+### 🏛️ 项目许可证
+
+<p align="center">
+  <a href="../LICENSE">
+    <img src="https://img.shields.io/badge/License-Apache%202.0-blue.svg" alt="Apache License 2.0">
+  </a>
+</p>
+
+本项目使用 **Apache License 2.0** 开源协议，详见 [LICENSE](../LICENSE) 文件。
+
+### 📋 依赖包开源协议
+
+本项目使用的开源包及其协议信息：
+
+### 依赖许可证
+
+<div align="center">
+
+| 📦 包 | 📜 许可证 |
+|:-----------|:-----------|
+| serde | Apache 2.0 |
+| serde_json | MIT |
+| serde_yaml | MIT |
+| tokio | MIT |
+| prometheus | Apache 2.0 |
+| redis | MIT |
+| hyper | MIT |
+| lapin | Apache 2.0 |
+| futures | MIT |
+| yaml-rust | MIT |
+| toml | MIT |
+| etcd-client | MIT |
+| sysinfo | MIT |
+| async-trait | MIT |
+| dashmap | MIT |
+| chrono | MIT |
+| uuid | Apache 2.0 |
+| rand | MIT |
+| notify | MIT |
+| jsonwebtoken | MIT |
+| reqwest | MIT |
+| urlencoding | MIT |
+| parking_lot | MIT |
+| log | MIT |
+| pyo3 | Apache 2.0 |
+| tempfile | MIT |
+
+</div>
+
+</div>
