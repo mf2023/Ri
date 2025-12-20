@@ -25,7 +25,7 @@ cache模块包含以下子模块：
 
 </div>
 
-### DMSCacheModule
+### DMSCCacheModule
 
 缓存模块主接口，提供统一的缓存服务访问。
 
@@ -33,16 +33,16 @@ cache模块包含以下子模块：
 
 | 方法 | 描述 | 参数 | 返回值 |
 |:--------|:-------------|:--------|:--------|
-| `get(key)` | 获取缓存值 | `key: &str` | `DMSResult<Option<String>>` |
-| `set(key, value, ttl)` | 设置缓存值 | `key: &str`, `value: impl Serialize`, `ttl: Option<u64>` | `DMSResult<()>` |
-| `delete(key)` | 删除缓存 | `key: &str` | `DMSResult<()>` |
-| `exists(key)` | 检查缓存是否存在 | `key: &str` | `DMSResult<bool>` |
-| `clear()` | 清空所有缓存 | 无 | `DMSResult<()>` |
-| `keys(pattern)` | 获取匹配的键 | `pattern: &str` | `DMSResult<Vec<String>>` |
-| `ttl(key)` | 获取缓存过期时间 | `key: &str` | `DMSResult<Option<u64>>` |
-| `expire(key, ttl)` | 设置缓存过期时间 | `key: &str`, `ttl: u64` | `DMSResult<()>` |
-| `increment(key, delta)` | 数值递增 | `key: &str`, `delta: i64` | `DMSResult<i64>` |
-| `decrement(key, delta)` | 数值递减 | `key: &str`, `delta: i64` | `DMSResult<i64>` |
+| `get(key)` | 获取缓存值 | `key: &str` | `DMSCResult<Option<String>>` |
+| `set(key, value, ttl)` | 设置缓存值 | `key: &str`, `value: impl Serialize`, `ttl: Option<u64>` | `DMSCResult<()>` |
+| `delete(key)` | 删除缓存 | `key: &str` | `DMSCResult<()>` |
+| `exists(key)` | 检查缓存是否存在 | `key: &str` | `DMSCResult<bool>` |
+| `clear()` | 清空所有缓存 | 无 | `DMSCResult<()>` |
+| `keys(pattern)` | 获取匹配的键 | `pattern: &str` | `DMSCResult<Vec<String>>` |
+| `ttl(key)` | 获取缓存过期时间 | `key: &str` | `DMSCResult<Option<u64>>` |
+| `expire(key, ttl)` | 设置缓存过期时间 | `key: &str`, `ttl: u64` | `DMSCResult<()>` |
+| `increment(key, delta)` | 数值递增 | `key: &str`, `delta: i64` | `DMSCResult<i64>` |
+| `decrement(key, delta)` | 数值递减 | `key: &str`, `delta: i64` | `DMSCResult<i64>` |
 
 #### 使用示例
 
@@ -66,7 +66,7 @@ let count = ctx.cache().increment("counter", 1).await?;
 let count = ctx.cache().decrement("counter", 5).await?;
 ```
 
-### DMSCacheConfig
+### DMSCCacheConfig
 
 缓存模块配置结构。
 
@@ -74,7 +74,7 @@ let count = ctx.cache().decrement("counter", 5).await?;
 
 | 字段 | 类型 | 描述 | 默认值 |
 |:--------|:--------|:-------------|:--------|
-| `backend` | `DMSCacheBackend` | 缓存后端类型 | `Memory` |
+| `backend` | `DMSCCacheBackend` | 缓存后端类型 | `Memory` |
 | `default_ttl` | `u64` | 默认过期时间（秒） | 3600 |
 | `max_memory_size` | `usize` | 最大内存大小（字节） | 100MB |
 | `redis_url` | `Option<String>` | Redis连接URL | `None` |
@@ -85,8 +85,8 @@ let count = ctx.cache().decrement("counter", 5).await?;
 #### 使用示例
 
 ```rust
-let cache_config = DMSCacheConfig {
-    backend: DMSCacheBackend::Redis,
+let cache_config = DMSCCacheConfig {
+    backend: DMSCCacheBackend::Redis,
     default_ttl: 7200,
     max_memory_size: 200 * 1024 * 1024, // 200MB
     redis_url: Some("redis://localhost:6379".to_string()),
@@ -96,7 +96,7 @@ let cache_config = DMSCacheConfig {
 };
 ```
 
-### DMSCacheBackend
+### DMSCCacheBackend
 
 缓存后端枚举类型。
 
@@ -114,8 +114,8 @@ let cache_config = DMSCacheConfig {
 ### 内存缓存
 
 ```rust
-let config = DMSCacheConfig {
-    backend: DMSCacheBackend::Memory,
+let config = DMSCCacheConfig {
+    backend: DMSCCacheBackend::Memory,
     max_memory_size: 100 * 1024 * 1024, // 100MB
     ..Default::default()
 };
@@ -124,8 +124,8 @@ let config = DMSCacheConfig {
 ### Redis缓存
 
 ```rust
-let config = DMSCacheConfig {
-    backend: DMSCacheBackend::Redis,
+let config = DMSCCacheConfig {
+    backend: DMSCCacheBackend::Redis,
     redis_url: Some("redis://localhost:6379".to_string()),
     redis_pool_size: 10,
     ..Default::default()
@@ -135,8 +135,8 @@ let config = DMSCacheConfig {
 ### 混合缓存
 
 ```rust
-let config = DMSCacheConfig {
-    backend: DMSCacheBackend::Hybrid,
+let config = DMSCCacheConfig {
+    backend: DMSCCacheBackend::Hybrid,
     max_memory_size: 50 * 1024 * 1024, // 50MB内存缓存
     redis_url: Some("redis://localhost:6379".to_string()),
     ..Default::default()
@@ -274,8 +274,8 @@ let data = ctx.cache().get_binary("binary_key").await?;
 ### 连接池
 
 ```rust
-let config = DMSCacheConfig {
-    backend: DMSCacheBackend::Redis,
+let config = DMSCCacheConfig {
+    backend: DMSCCacheBackend::Redis,
     redis_pool_size: 50, // 增大连接池
     ..Default::default()
 };
@@ -284,7 +284,7 @@ let config = DMSCacheConfig {
 ### 压缩
 
 ```rust
-let config = DMSCacheConfig {
+let config = DMSCCacheConfig {
     compression: true, // 启用压缩
     ..Default::default()
 };
@@ -351,7 +351,7 @@ match ctx.cache().get::<User>("user:1").await {
         let user = load_user_from_database(1).await?;
         ctx.cache().set("user:1", &user, Some(3600)).await?;
     }
-    Err(DMSError { code, .. }) if code == "CACHE_CONNECTION_FAILED" => {
+    Err(DMSCError { code, .. }) if code == "CACHE_CONNECTION_FAILED" => {
         // 缓存连接失败，回退到数据库
         let user = load_user_from_database(1).await?;
     }

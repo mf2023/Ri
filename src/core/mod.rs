@@ -1,7 +1,7 @@
 //! Copyright © 2025 Wenze Wei. All Rights Reserved.
 //! 
-//! This file is part of DMS.
-//! The DMS project belongs to the Dunimd Team.
+//! This file is part of DMSC.
+//! The DMSC project belongs to the Dunimd Team.
 //! 
 //! Licensed under the Apache License, Version 2.0 (the "License");
 //! You may not use this file except in compliance with the License.
@@ -17,15 +17,15 @@
 
 //! # Core Runtime Module
 //! 
-//! The core module provides the fundamental building blocks for DMS applications,
+//! The core module provides the fundamental building blocks for DMSC applications,
 //! including the application builder, service context, error handling, and module lifecycle management.
 //! 
 //! ## Key Components
 //! 
 //! - **error**: Error handling with custom error types and result aliases
 //! - **context**: Service context for accessing core functionalities
-//! - **module**: Module system for extending DMS with custom functionality
-//! - **runtime**: Application runtime and builder for constructing DMS applications
+//! - **module**: Module system for extending DMSC with custom functionality
+//! - **runtime**: Application runtime and builder for constructing DMSC applications
 //! - **lifecycle**: Lifecycle management for modules
 //! - **analytics**: Basic analytics and telemetry support
 //! 
@@ -35,7 +35,7 @@
 //! 
 //! 1. **Dependency Injection**: Components are accessed through the service context, 
 //!    allowing for easy mocking and testing
-//! 2. **Builder Pattern**: The `DMSAppBuilder` provides a fluent API for configuring applications
+//! 2. **Builder Pattern**: The `DMSCAppBuilder` provides a fluent API for configuring applications
 //! 3. **Module System**: A flexible module system allows for easy extension
 //! 4. **Error Handling**: A unified error type simplifies error management across modules
 //! 5. **Async First**: Full support for asynchronous operations
@@ -44,13 +44,13 @@
 pub mod error;
 /// Service context for accessing core functionalities
 pub mod context;
-/// Module system for extending DMS with custom functionality
+/// Module system for extending DMSC with custom functionality
 pub mod module;
-/// Application runtime and builder for constructing DMS applications
+/// Application runtime and builder for constructing DMSC applications
 pub mod runtime;
-/// Application builder for constructing DMS applications
+/// Application builder for constructing DMSC applications
 pub mod app_builder;
-/// Application runtime for managing DMS application lifecycle
+/// Application runtime for managing DMSC application lifecycle
 pub mod app_runtime;
 /// Module types for distinguishing between sync and async modules
 pub mod module_types;
@@ -65,13 +65,13 @@ pub mod health;
 /// Error chain utilities
 pub mod error_chain;
 
-/// Main error type for DMS operations
-pub use error::{DMSError, DMSResult};
+/// Main error type for DMSC operations
+pub use error::{DMSCError, DMSCResult};
 /// Service context providing access to core functionalities
-pub use context::DMSServiceContext;
-/// Module traits for extending DMS functionality
-pub use module::DMSModule;
-/// Application builder and runtime for constructing DMS applications
-pub use runtime::{DMSAppBuilder, DMSAppRuntime};
+pub use context::DMSCServiceContext;
+/// Module traits for extending DMSC functionality
+pub use module::DMSCModule;
+/// Application builder and runtime for constructing DMSC applications
+pub use runtime::{DMSCAppBuilder, DMSCAppRuntime};
 /// Internal module traits
 pub(crate) use module::{ServiceModule, AsyncServiceModule};

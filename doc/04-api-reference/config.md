@@ -25,7 +25,7 @@ config模块包含以下子模块：
 
 </div>
 
-### DMSConfig
+### DMSCConfig
 
 配置管理器主接口，提供统一的配置访问。
 
@@ -34,14 +34,14 @@ config模块包含以下子模块：
 | 方法 | 描述 | 参数 | 返回值 |
 |:--------|:-------------|:--------|:--------|
 | `get(key)` | 获取配置值 | `key: &str` | `Option<String>` |
-| `get_typed<T>(key)` | 获取类型安全的配置值 | `key: &str` | `DMSResult<T>` |
+| `get_typed<T>(key)` | 获取类型安全的配置值 | `key: &str` | `DMSCResult<T>` |
 | `get_or_default(key, default)` | 获取配置值或默认值 | `key: &str`, `default: T` | `T` |
-| `set(key, value)` | 设置配置值 | `key: &str`, `value: impl Serialize` | `DMSResult<()>` |
+| `set(key, value)` | 设置配置值 | `key: &str`, `value: impl Serialize` | `DMSCResult<()>` |
 | `has(key)` | 检查配置是否存在 | `key: &str` | `bool` |
 | `keys()` | 获取所有配置键 | 无 | `Vec<String>` |
-| `reload()` | 重新加载配置 | 无 | `DMSResult<()>` |
-| `watch(key, callback)` | 监听配置变化 | `key: &str`, `callback: impl Fn(&str)` | `DMSResult<()>` |
-| `validate()` | 验证配置完整性 | 无 | `DMSResult<()>` |
+| `reload()` | 重新加载配置 | 无 | `DMSCResult<()>` |
+| `watch(key, callback)` | 监听配置变化 | `key: &str`, `callback: impl Fn(&str)` | `DMSCResult<()>` |
+| `validate()` | 验证配置完整性 | 无 | `DMSCResult<()>` |
 
 #### 使用示例
 
@@ -70,7 +70,7 @@ for key in keys {
 }
 ```
 
-### DMSConfigSource
+### DMSCConfigSource
 
 配置源枚举类型。
 
@@ -84,7 +84,7 @@ for key in keys {
 | `Database(connection)` | 数据库配置源 |
 | `Custom(name, data)` | 自定义配置源 |
 
-### DMSConfigBuilder
+### DMSCConfigBuilder
 
 配置构建器，用于构建配置管理器。
 
@@ -93,21 +93,21 @@ for key in keys {
 | 方法 | 描述 | 参数 | 返回值 |
 |:--------|:-------------|:--------|:--------|
 | `new()` | 创建新的配置构建器 | 无 | `Self` |
-| `add_source(source)` | 添加配置源 | `source: DMSConfigSource` | `Self` |
+| `add_source(source)` | 添加配置源 | `source: DMSCConfigSource` | `Self` |
 | `set_default(key, value)` | 设置默认值 | `key: &str`, `value: impl Serialize` | `Self` |
 | `add_validator(validator)` | 添加验证器 | `validator: impl ConfigValidator` | `Self` |
 | `enable_hot_reload()` | 启用热重载 | 无 | `Self` |
 | `set_reload_interval(seconds)` | 设置重载间隔 | `seconds: u64` | `Self` |
-| `build()` | 构建配置管理器 | 无 | `DMSResult<DMSConfig>` |
+| `build()` | 构建配置管理器 | 无 | `DMSCResult<DMSCConfig>` |
 
 #### 使用示例
 
 ```rust
 use dms::prelude::*;
 
-let config = DMSConfigBuilder::new()
-    .add_source(DMSConfigSource::File("config.yaml".to_string()))
-    .add_source(DMSConfigSource::Env("DMS".to_string()))
+let config = DMSCConfigBuilder::new()
+    .add_source(DMSCConfigSource::File("config.yaml".to_string()))
+    .add_source(DMSCConfigSource::Env("DMSC".to_string()))
     .set_default("service.port", 8080)
     .set_default("service.host", "localhost")
     .enable_hot_reload()
@@ -181,9 +181,9 @@ export SERVICE_PORT=8080
 export DATABASE_URL=postgres://localhost/mydb
 
 # 带前缀的环境变量
-export DMS_SERVICE_NAME=my-service
-export DMS_SERVICE_PORT=8080
-export DMS_DATABASE_URL=postgres://localhost/mydb
+export DMSC_SERVICE_NAME=my-service
+export DMSC_SERVICE_PORT=8080
+export DMSC_DATABASE_URL=postgres://localhost/mydb
 ```
 
 ### 配置优先级
@@ -195,10 +195,10 @@ export DMS_DATABASE_URL=postgres://localhost/mydb
 3. **默认值** (最低优先级)
 
 ```rust
-let config = DMSConfigBuilder::new()
+let config = DMSCConfigBuilder::new()
     .set_default("service.port", 3000)                    // 默认值
-    .add_source(DMSConfigSource::File("config.yaml".to_string())) // 配置文件
-    .add_source(DMSConfigSource::Env("DMS".to_string()))        // 环境变量
+    .add_source(DMSCConfigSource::File("config.yaml".to_string())) // 配置文件
+    .add_source(DMSCConfigSource::Env("DMSC".to_string()))        // 环境变量
     .build()?;
 
 // 优先级：环境变量 > 配置文件 > 默认值
@@ -267,8 +267,8 @@ let timeout = ctx.config().get_typed("service.timeout").unwrap_or(30);
 ```rust
 use dms::prelude::*;
 
-let config = DMSConfigBuilder::new()
-    .add_source(DMSConfigSource::File("config.yaml".to_string()))
+let config = DMSCConfigBuilder::new()
+    .add_source(DMSCConfigSource::File("config.yaml".to_string()))
     .add_validator(RequiredValidator::new(vec![
         "service.name",
         "service.port",
@@ -287,12 +287,12 @@ use dms::prelude::*;
 struct CustomValidator;
 
 impl ConfigValidator for CustomValidator {
-    fn validate(&self, config: &DMSConfig) -> DMSResult<()> {
+    fn validate(&self, config: &DMSCConfig) -> DMSCResult<()> {
         let port: u16 = config.get_typed("service.port")?;
         let host: String = config.get_typed("service.host")?;
         
         if port < 1024 && host != "localhost" {
-            return Err(DMSError::new("INVALID_CONFIG", "Privileged ports require localhost"));
+            return Err(DMSCError::new("INVALID_CONFIG", "Privileged ports require localhost"));
         }
         
         Ok(())
@@ -303,8 +303,8 @@ impl ConfigValidator for CustomValidator {
     }
 }
 
-let config = DMSConfigBuilder::new()
-    .add_source(DMSConfigSource::File("config.yaml".to_string()))
+let config = DMSCConfigBuilder::new()
+    .add_source(DMSCConfigSource::File("config.yaml".to_string()))
     .add_validator(CustomValidator)
     .build()?;
 ```
@@ -318,8 +318,8 @@ let config = DMSConfigBuilder::new()
 ### 启用热重载
 
 ```rust
-let config = DMSConfigBuilder::new()
-    .add_source(DMSConfigSource::File("config.yaml".to_string()))
+let config = DMSCConfigBuilder::new()
+    .add_source(DMSCConfigSource::File("config.yaml".to_string()))
     .enable_hot_reload()
     .set_reload_interval(60) // 每60秒检查一次
     .build()?;
@@ -467,7 +467,7 @@ match ctx.config().get_typed::<u16>("service.port") {
         // 配置正确
         println!("Service port: {}", port);
     }
-    Err(DMSError { code, .. }) if code == "CONFIG_TYPE_ERROR" => {
+    Err(DMSCError { code, .. }) if code == "CONFIG_TYPE_ERROR" => {
         // 类型错误，使用默认值
         let port: u16 = 8080;
         println!("Using default port: {}", port);
@@ -493,6 +493,62 @@ match ctx.config().get_typed::<u16>("service.port") {
 6. **加密敏感信息**: 对密码、密钥等敏感信息进行加密
 7. **使用配置模板**: 为不同环境创建配置模板
 8. **记录配置变化**: 监听和记录配置变化，便于审计
+9. **注意配置修改的安全时机**:
+   - **启动阶段**: 所有配置都可以安全修改
+   - **运行阶段**: 只有标记为"可动态修改"的配置才能安全修改
+   - **敏感模块**: 网关、认证、服务网格等核心模块的配置修改需要特别谨慎
+   - **重启要求**: 某些配置修改后需要重启服务才能生效
+
+<div align="center">
+
+## 配置修改的安全时机
+
+</div>  
+
+### 可安全动态修改的配置
+
+以下类型的配置通常可以安全地在运行时修改：
+
+- **日志级别**: 可以动态调整日志输出级别
+- **监控配置**: 可以动态调整监控采样率和告警阈值
+- **超时设置**: 可以动态调整请求超时时间
+- **限流配置**: 可以动态调整速率限制
+- **缓存配置**: 可以动态调整缓存大小和TTL
+- **功能开关**: 可以动态启用或禁用功能
+
+### 需要谨慎修改的配置
+
+以下类型的配置修改需要特别谨慎，可能影响系统稳定性：
+
+- **认证配置**: 可能导致用户无法登录或权限失效
+- **数据库配置**: 可能导致数据库连接中断
+- **网络配置**: 可能导致服务间通信中断
+- **安全配置**: 可能导致安全漏洞
+- **核心组件配置**: 可能导致系统崩溃
+
+### 修改配置的最佳时机
+
+1. **应用启动前**: 修改所有需要重启才能生效的配置
+2. **低峰期**: 在系统负载较低时修改配置
+3. **逐步修改**: 对于关键配置，先在非生产环境测试，然后逐步推广到生产环境
+4. **监控修改**: 修改配置后密切监控系统指标
+5. **回滚机制**: 准备好配置回滚方案，以便在出现问题时快速恢复
+
+### 配置修改的影响范围
+
+| 配置类型 | 影响范围 | 是否需要重启 |
+|:--------|:-------------|:--------|
+| 日志级别 | 全局 | 否 |
+| 监控配置 | 全局 | 否 |
+| 超时设置 | 局部 | 否 |
+| 限流配置 | 局部 | 否 |
+| 缓存配置 | 局部 | 否 |
+| 功能开关 | 局部/全局 | 否 |
+| 认证配置 | 全局 | 是 |
+| 数据库配置 | 全局 | 是 |
+| 网络配置 | 全局 | 是 |
+| 安全配置 | 全局 | 是 |
+| 核心组件配置 | 全局 | 是 |
 
 <div align="center">
 

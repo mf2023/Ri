@@ -1,7 +1,7 @@
 //! Copyright © 2025 Wenze Wei. All Rights Reserved.
 //!
-//! This file is part of DMS.
-//! The DMS project belongs to the Dunimd Team.
+//! This file is part of DMSC.
+//! The DMSC project belongs to the Dunimd Team.
 //!
 //! Licensed under the Apache License, Version 2.0 (the "License");
 //! You may not use this file except in compliance with the License.
@@ -20,23 +20,23 @@
 
 //! # RabbitMQ Queue Backend
 //! 
-//! This module provides a RabbitMQ implementation for the DMS queue system. It allows
+//! This module provides a RabbitMQ implementation for the DMSC queue system. It allows
 //! sending and receiving messages using RabbitMQ as the underlying message broker.
 //! 
 //! ## Key Components
 //! 
-//! - **DMSRabbitMQQueue**: Main RabbitMQ queue implementation
+//! - **DMSCRabbitMQQueue**: Main RabbitMQ queue implementation
 //! - **RabbitMQProducer**: RabbitMQ producer implementation
 //! - **RabbitMQConsumer**: RabbitMQ consumer implementation
 //! 
 //! ## Design Principles
 //! 
-//! 1. **Async Trait Implementation**: Implements the DMSQueue, DMSQueueProducer, and DMSQueueConsumer traits
+//! 1. **Async Trait Implementation**: Implements the DMSCQueue, DMSCQueueProducer, and DMSCQueueConsumer traits
 //! 2. **RabbitMQ Integration**: Uses the lapin crate for RabbitMQ connectivity
 //! 3. **Thread Safety**: Uses Arc for safe sharing of connections, channels, and consumers
 //! 4. **Future-based API**: Leverages async/await for non-blocking operations
 //! 5. **Durable Queues**: Configured with durable queues for message persistence
-//! 6. **Error Handling**: Comprehensive error handling with DMSResult
+//! 6. **Error Handling**: Comprehensive error handling with DMSCResult
 //! 7. **Stream-based Consumer**: Uses StreamExt for efficient message processing
 //! 8. **Batch Support**: Provides batch sending functionality
 //! 
@@ -45,15 +45,15 @@
 //! ```rust
 //! use dms::prelude::*;
 //! 
-//! async fn example() -> DMSResult<()> {
+//! async fn example() -> DMSCResult<()> {
 //!     // Create a new RabbitMQ queue
-//!     let queue = DMSRabbitMQQueue::new("test-queue", "amqp://guest:guest@localhost:5672/%2f").await?;
+//!     let queue = DMSCRabbitMQQueue::new("test-queue", "amqp://guest:guest@localhost:5672/%2f").await?;
 //!     
 //!     // Create a producer
 //!     let producer = queue.create_producer().await?;
 //!     
 //!     // Create a message
-//!     let message = DMSQueueMessage {
+//!     let message = DMSCQueueMessage {
 //!         id: "12345".to_string(),
 //!         payload: b"Hello, RabbitMQ!".to_vec(),
 //!         headers: vec![("key1".to_string(), "value1".to_string())],
@@ -85,14 +85,14 @@ use std::sync::Arc;
 use std::time::Duration;
 use tokio::sync::Mutex;
 use futures::StreamExt;
-use crate::core::DMSResult;
-use crate::queue::{DMSQueue, DMSQueueMessage, DMSQueueProducer, DMSQueueConsumer, DMSQueueStats};
+use crate::core::DMSCResult;
+use crate::queue::{DMSCQueue, DMSCQueueMessage, DMSCQueueProducer, DMSCQueueConsumer, DMSCQueueStats};
 
-/// RabbitMQ queue implementation for the DMS queue system.
+/// RabbitMQ queue implementation for the DMSC queue system.
 ///
-/// This struct provides a RabbitMQ implementation of the DMSQueue trait, allowing
+/// This struct provides a RabbitMQ implementation of the DMSCQueue trait, allowing
 /// sending and receiving messages using RabbitMQ as the underlying message broker.
-pub struct DMSRabbitMQQueue {
+pub struct DMSCRabbitMQQueue {
     /// Queue name
     name: String,
     /// RabbitMQ connection
@@ -105,7 +105,7 @@ pub struct DMSRabbitMQQueue {
     queue: Arc<Queue>,
 }
 
-impl DMSRabbitMQQueue {
+impl DMSCRabbitMQQueue {
     /// Creates a new RabbitMQ queue instance.
     ///
     /// # Parameters
@@ -115,8 +115,8 @@ impl DMSRabbitMQQueue {
     ///
     /// # Returns
     ///
-    /// A new DMSRabbitMQQueue instance wrapped in DMSResult
-    pub async fn new(name: &str, connection_string: &str) -> DMSResult<Self> {
+    /// A new DMSCRabbitMQQueue instance wrapped in DMSCResult
+    pub async fn new(name: &str, connection_string: &str) -> DMSCResult<Self> {
         let connection = Connection::connect(connection_string, ConnectionProperties::default()).await?;
         Self::new_with_connection(name, connection).await
     }
@@ -130,8 +130,8 @@ impl DMSRabbitMQQueue {
     ///
     /// # Returns
     ///
-    /// A new DMSRabbitMQQueue instance wrapped in DMSResult
-    pub async fn new_with_connection(name: &str, connection: lapin::Connection) -> DMSResult<Self> {
+    /// A new DMSCRabbitMQQueue instance wrapped in DMSCResult
+    pub async fn new_with_connection(name: &str, connection: lapin::Connection) -> DMSCResult<Self> {
         let channel = connection.create_channel().await?;
         
         let queue = channel
@@ -161,11 +161,11 @@ impl DMSRabbitMQQueue {
     ///
     /// # Returns
     ///
-    /// Detailed DMSQueueStats wrapped in DMSResult
-    async fn fetch_rabbitmq_stats(&self) -> DMSResult<DMSQueueStats> {
+    /// Detailed DMSCQueueStats wrapped in DMSCResult
+    async fn fetch_rabbitmq_stats(&self) -> DMSCResult<DMSCQueueStats> {
         // For now, return an error to trigger fallback to basic stats
         // In a production environment, you would implement the actual management API call
-        Err(crate::core::DMSError::Other("Management API not implemented yet".to_string()))
+        Err(crate::core::DMSCError::Other("Management API not implemented yet".to_string()))
     }
     
     /// Gets basic statistics when management API is not available.
@@ -174,8 +174,8 @@ impl DMSRabbitMQQueue {
     ///
     /// # Returns
     ///
-    /// Basic DMSQueueStats wrapped in DMSResult
-    async fn get_basic_stats(&self) -> DMSResult<DMSQueueStats> {
+    /// Basic DMSCQueueStats wrapped in DMSCResult
+    async fn get_basic_stats(&self) -> DMSCResult<DMSCQueueStats> {
         // Try to get basic queue info from channel
         let queue_info = self.channel
             .queue_declare(
@@ -188,7 +188,7 @@ impl DMSRabbitMQQueue {
             )
             .await?;
         
-        Ok(DMSQueueStats {
+        Ok(DMSCQueueStats {
             queue_name: self.name.clone(),
             message_count: queue_info.message_count() as u64,
             consumer_count: queue_info.consumer_count(),
@@ -202,13 +202,13 @@ impl DMSRabbitMQQueue {
 }
 
 #[async_trait]
-impl DMSQueue for DMSRabbitMQQueue {
+impl DMSCQueue for DMSCRabbitMQQueue {
     /// Creates a new producer for the RabbitMQ queue.
     ///
     /// # Returns
     ///
-    /// A new DMSQueueProducer instance wrapped in DMSResult
-    async fn create_producer(&self) -> DMSResult<Box<dyn DMSQueueProducer>> {
+    /// A new DMSCQueueProducer instance wrapped in DMSCResult
+    async fn create_producer(&self) -> DMSCResult<Box<dyn DMSCQueueProducer>> {
         Ok(Box::new(RabbitMQProducer {
             channel: self.channel.clone(),
             queue_name: self.name.clone(),
@@ -223,8 +223,8 @@ impl DMSQueue for DMSRabbitMQQueue {
     ///
     /// # Returns
     ///
-    /// A new DMSQueueConsumer instance wrapped in DMSResult
-    async fn create_consumer(&self, consumer_group: &str) -> DMSResult<Box<dyn DMSQueueConsumer>> {
+    /// A new DMSCQueueConsumer instance wrapped in DMSCResult
+    async fn create_consumer(&self, consumer_group: &str) -> DMSCResult<Box<dyn DMSCQueueConsumer>> {
         let consumer = self.channel
             .basic_consume(
                 &self.name,
@@ -247,8 +247,8 @@ impl DMSQueue for DMSRabbitMQQueue {
     ///
     /// # Returns
     ///
-    /// DMSQueueStats containing detailed queue statistics wrapped in DMSResult
-    async fn get_stats(&self) -> DMSResult<DMSQueueStats> {
+    /// DMSCQueueStats containing detailed queue statistics wrapped in DMSCResult
+    async fn get_stats(&self) -> DMSCResult<DMSCQueueStats> {
         // Try to get detailed stats from RabbitMQ management API
         match self.fetch_rabbitmq_stats().await {
             Ok(detailed_stats) => Ok(detailed_stats),
@@ -263,14 +263,14 @@ impl DMSQueue for DMSRabbitMQQueue {
     ///
     /// # Returns
     ///
-    /// DMSResult indicating success or failure
+    /// DMSCResult indicating success or failure
 
     /// Purges all messages from the RabbitMQ queue.
     ///
     /// # Returns
     ///
-    /// DMSResult indicating success or failure
-    async fn purge(&self) -> DMSResult<()> {
+    /// DMSCResult indicating success or failure
+    async fn purge(&self) -> DMSCResult<()> {
         self.channel.queue_purge(&self.name, Default::default()).await?;
         Ok(())
     }
@@ -279,8 +279,8 @@ impl DMSQueue for DMSRabbitMQQueue {
     ///
     /// # Returns
     ///
-    /// DMSResult indicating success or failure
-    async fn delete(&self) -> DMSResult<()> {
+    /// DMSCResult indicating success or failure
+    async fn delete(&self) -> DMSCResult<()> {
         self.channel.queue_delete(&self.name, Default::default()).await?;
         Ok(())
     }
@@ -288,7 +288,7 @@ impl DMSQueue for DMSRabbitMQQueue {
 
 /// RabbitMQ producer implementation.
 ///
-/// This struct provides a RabbitMQ implementation of the DMSQueueProducer trait,
+/// This struct provides a RabbitMQ implementation of the DMSCQueueProducer trait,
 /// allowing sending messages to RabbitMQ queues.
 struct RabbitMQProducer {
     /// RabbitMQ channel
@@ -298,7 +298,7 @@ struct RabbitMQProducer {
 }
 
 #[async_trait]
-impl DMSQueueProducer for RabbitMQProducer {
+impl DMSCQueueProducer for RabbitMQProducer {
     /// Sends a single message to the RabbitMQ queue.
     ///
     /// # Parameters
@@ -307,8 +307,8 @@ impl DMSQueueProducer for RabbitMQProducer {
     ///
     /// # Returns
     ///
-    /// DMSResult indicating success or failure
-    async fn send(&self, message: DMSQueueMessage) -> DMSResult<()> {
+    /// DMSCResult indicating success or failure
+    async fn send(&self, message: DMSCQueueMessage) -> DMSCResult<()> {
         let payload = serde_json::to_vec(&message)?;
         
         self.channel
@@ -332,8 +332,8 @@ impl DMSQueueProducer for RabbitMQProducer {
     ///
     /// # Returns
     ///
-    /// DMSResult indicating success or failure
-    async fn send_batch(&self, messages: Vec<DMSQueueMessage>) -> DMSResult<()> {
+    /// DMSCResult indicating success or failure
+    async fn send_batch(&self, messages: Vec<DMSCQueueMessage>) -> DMSCResult<()> {
         for message in messages {
             self.send(message).await?;
         }
@@ -343,7 +343,7 @@ impl DMSQueueProducer for RabbitMQProducer {
 
 /// RabbitMQ consumer implementation.
 ///
-/// This struct provides a RabbitMQ implementation of the DMSQueueConsumer trait,
+/// This struct provides a RabbitMQ implementation of the DMSCQueueConsumer trait,
 /// allowing receiving messages from RabbitMQ queues.
 struct RabbitMQConsumer {
     /// RabbitMQ consumer
@@ -353,13 +353,13 @@ struct RabbitMQConsumer {
 }
 
 #[async_trait]
-impl DMSQueueConsumer for RabbitMQConsumer {
+impl DMSCQueueConsumer for RabbitMQConsumer {
     /// Receives a message from the RabbitMQ queue.
     ///
     /// # Returns
     ///
     /// An Option containing the received message, or None if the consumer is paused
-    async fn receive(&self) -> DMSResult<Option<DMSQueueMessage>> {
+    async fn receive(&self) -> DMSCResult<Option<DMSCQueueMessage>> {
         let paused = *self.paused.lock().await;
         if paused {
             return Ok(None);
@@ -368,8 +368,8 @@ impl DMSQueueConsumer for RabbitMQConsumer {
         let mut consumer = self.consumer.lock().await;
         
         if let Some(delivery_result) = consumer.next().await {
-            let delivery = delivery_result.map_err(|e| crate::core::DMSError::Other(format!("Consumer error: {e}")))?;
-            let message: DMSQueueMessage = serde_json::from_slice(&delivery.data)?;
+            let delivery = delivery_result.map_err(|e| crate::core::DMSCError::Other(format!("Consumer error: {e}")))?;
+            let message: DMSCQueueMessage = serde_json::from_slice(&delivery.data)?;
             
             // Store delivery tag for acknowledgment
             Ok(Some(message))
@@ -389,8 +389,8 @@ impl DMSQueueConsumer for RabbitMQConsumer {
     ///
     /// # Returns
     ///
-    /// DMSResult indicating success or failure
-    async fn ack(&self, message_id: &str) -> DMSResult<()> {
+    /// DMSCResult indicating success or failure
+    async fn ack(&self, message_id: &str) -> DMSCResult<()> {
         // In a production implementation, this would:
         // 1. Look up the delivery tag for the given message_id
         // 2. Use basic_ack with the delivery tag to acknowledge the message
@@ -416,8 +416,8 @@ impl DMSQueueConsumer for RabbitMQConsumer {
     ///
     /// # Returns
     ///
-    /// DMSResult indicating success or failure
-    async fn nack(&self, message_id: &str) -> DMSResult<()> {
+    /// DMSCResult indicating success or failure
+    async fn nack(&self, message_id: &str) -> DMSCResult<()> {
         // In a production implementation, this would:
         // 1. Look up the delivery tag for the given message_id
         // 2. Use basic_nack with the delivery tag to negatively acknowledge the message
@@ -437,8 +437,8 @@ impl DMSQueueConsumer for RabbitMQConsumer {
     ///
     /// # Returns
     ///
-    /// DMSResult indicating success or failure
-    async fn pause(&self) -> DMSResult<()> {
+    /// DMSCResult indicating success or failure
+    async fn pause(&self) -> DMSCResult<()> {
         let mut paused = self.paused.lock().await;
         *paused = true;
         Ok(())
@@ -448,8 +448,8 @@ impl DMSQueueConsumer for RabbitMQConsumer {
     ///
     /// # Returns
     ///
-    /// DMSResult indicating success or failure
-    async fn resume(&self) -> DMSResult<()> {
+    /// DMSCResult indicating success or failure
+    async fn resume(&self) -> DMSCResult<()> {
         let mut paused = self.paused.lock().await;
         *paused = false;
         Ok(())

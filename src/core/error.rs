@@ -1,7 +1,7 @@
 //! Copyright © 2025 Wenze Wei. All Rights Reserved.
 //!
-//! This file is part of DMS.
-//! The DMS project belongs to the Dunimd Team.
+//! This file is part of DMSC.
+//! The DMSC project belongs to the Dunimd Team.
 //!
 //! Licensed under the Apache License, Version 2.0 (the "License");
 //! You may not use this file except in compliance with the License.
@@ -19,18 +19,18 @@
 
 //! # Error Handling
 //! 
-//! This module provides the core error handling types for DMS, including the `DMSError` enum
-//! and `DMSResult` type alias. It defines a comprehensive set of error variants for different
-//! error scenarios encountered in the DMS library.
+//! This module provides the core error handling types for DMSC, including the `DMSCError` enum
+//! and `DMSCResult` type alias. It defines a comprehensive set of error variants for different
+//! error scenarios encountered in the DMSC library.
 //! 
 //! ## Key Components
 //! 
-//! - **DMSError**: Enum representing all possible errors in DMS
-//! - **DMSResult**: Type alias for `Result<T, DMSError>` used throughout the library
+//! - **DMSCError**: Enum representing all possible errors in DMSC
+//! - **DMSCResult**: Type alias for `Result<T, DMSCError>` used throughout the library
 //! 
 //! ## Design Principles
 //! 
-//! 1. **Comprehensive Coverage**: Covers all major error categories encountered in DMS
+//! 1. **Comprehensive Coverage**: Covers all major error categories encountered in DMSC
 //! 2. **Type Safety**: Each error variant provides specific context about the error
 //! 3. **Easy Conversion**: Implements `From` traits for common external error types
 //! 4. **Human-Readable**: Provides clear, descriptive error messages
@@ -41,13 +41,13 @@
 //! ```rust
 //! use dms::prelude::*;
 //! 
-//! fn example_function() -> DMSResult<()> {
+//! fn example_function() -> DMSCResult<()> {
 //!     // Return a custom error
-//!     Err(DMSError::Other("An error occurred"))
+//!     Err(DMSCError::Other("An error occurred"))
 //! }
 //! 
 //! #[tokio::main]
-//! async fn main() -> DMSResult<()> {
+//! async fn main() -> DMSCResult<()> {
 //!     match example_function() {
 //!         Ok(_) => println!("Success"),
 //!         Err(err) => {
@@ -58,14 +58,14 @@
 //! }
 //! ```
 
-/// Core error type for DMS. Represents all possible errors that can occur in the library.
+/// Core error type for DMSC. Represents all possible errors that can occur in the library.
 /// 
 /// This enum provides a comprehensive set of error variants, each tailored to a specific
-/// error scenario encountered in DMS. It includes variants for I/O errors, serialization errors,
+/// error scenario encountered in DMSC. It includes variants for I/O errors, serialization errors,
 /// configuration errors, module errors, and more.
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub enum DMSError {
+pub enum DMSCError {
     /// I/O operation failed. Contains a descriptive error message.
     Io(String),
     /// Serialization or deserialization failed. Contains a descriptive error message.
@@ -78,6 +78,12 @@ pub enum DMSError {
     Prometheus(String),
     /// Service mesh error. Contains a descriptive error message.
     ServiceMesh(String),
+    /// Invalid state error. Indicates an operation was attempted in an invalid state.
+    InvalidState(String),
+    /// Invalid input error. Indicates that provided input data is not valid.
+    InvalidInput(String),
+    /// Security violation error. Indicates a security policy or rule was violated.
+    SecurityViolation(String),
     /// Device not found. Contains the device ID that was not found.
     DeviceNotFound { device_id: String },
     /// Device allocation failed. Contains the device ID and reason for failure.
@@ -104,85 +110,127 @@ pub enum DMSError {
     PoolError(String),
     /// Device error. Contains a descriptive error message for device-related errors.
     DeviceError(String),
+    /// Redis error. Contains a descriptive error message for Redis operations.
+    RedisError(String),
+    /// HTTP client error. Contains a descriptive error message for HTTP requests.
+    HttpClientError(String),
+    /// TOML parsing error. Contains a descriptive error message for TOML parsing.
+    TomlError(String),
+    /// YAML parsing error. Contains a descriptive error message for YAML parsing.
+    YamlError(String),
 }
 
-/// Result type alias for DMS operations. Used throughout the library.
+/// Result type alias for DMSC operations. Used throughout the library.
 /// 
 /// This type alias simplifies error handling by providing a consistent result type
-/// for all DMS operations. It wraps the standard `Result` type with `DMSError` as the error type.
-pub type DMSResult<T> = Result<T, DMSError>;
+/// for all DMSC operations. It wraps the standard `Result` type with `DMSCError` as the error type.
+pub type DMSCResult<T> = Result<T, DMSCError>;
 
-impl std::fmt::Display for DMSError {
+impl std::fmt::Display for DMSCError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            DMSError::Io(err) => write!(f, "IO error: {err}"),
-            DMSError::Serde(err) => write!(f, "Serialization error: {err}"),
-            DMSError::Config(msg) => write!(f, "Configuration error: {msg}"),
-            DMSError::Hook(msg) => write!(f, "Hook error: {msg}"),
-            DMSError::Prometheus(err) => write!(f, "Prometheus error: {err}"),
-            DMSError::ServiceMesh(err) => write!(f, "Service mesh error: {err}"),
-            DMSError::DeviceNotFound { device_id } => write!(f, "Device not found: {device_id}"),
-            DMSError::DeviceAllocationFailed { device_id, reason } => {
+            DMSCError::Io(err) => write!(f, "IO error: {err}"),
+            DMSCError::Serde(err) => write!(f, "Serialization error: {err}"),
+            DMSCError::Config(msg) => write!(f, "Configuration error: {msg}"),
+            DMSCError::Hook(msg) => write!(f, "Hook error: {msg}"),
+            DMSCError::Prometheus(err) => write!(f, "Prometheus error: {err}"),
+            DMSCError::ServiceMesh(err) => write!(f, "Service mesh error: {err}"),
+            DMSCError::InvalidState(msg) => write!(f, "Invalid state: {msg}"),
+            DMSCError::InvalidInput(msg) => write!(f, "Invalid input: {msg}"),
+            DMSCError::SecurityViolation(msg) => write!(f, "Security violation: {msg}"),
+            DMSCError::DeviceNotFound { device_id } => write!(f, "Device not found: {device_id}"),
+            DMSCError::DeviceAllocationFailed { device_id, reason } => {
                 write!(f, "Device allocation failed for {device_id}: {reason}")
             }
-            DMSError::AllocationNotFound { allocation_id } => {
+            DMSCError::AllocationNotFound { allocation_id } => {
                 write!(f, "Allocation not found: {allocation_id}")
             }
-            DMSError::ModuleNotFound { module_name } => {
+            DMSCError::ModuleNotFound { module_name } => {
                 write!(f, "Module not found: {module_name}")
             }
-            DMSError::ModuleInitFailed { module_name, reason } => {
+            DMSCError::ModuleInitFailed { module_name, reason } => {
                 write!(f, "Module initialization failed for {module_name}: {reason}")
             }
-            DMSError::ModuleStartFailed { module_name, reason } => {
+            DMSCError::ModuleStartFailed { module_name, reason } => {
                 write!(f, "Module start failed for {module_name}: {reason}")
             }
-            DMSError::ModuleShutdownFailed { module_name, reason } => {
+            DMSCError::ModuleShutdownFailed { module_name, reason } => {
                 write!(f, "Module shutdown failed for {module_name}: {reason}")
             }
-            DMSError::CircularDependency { modules } => {
+            DMSCError::CircularDependency { modules } => {
                 write!(f, "Circular dependency detected: {}", modules.join(" -> "))
             }
-            DMSError::MissingDependency { module_name, dependency } => {
+            DMSCError::MissingDependency { module_name, dependency } => {
                 write!(f, "Module {module_name} depends on missing module: {dependency}")
             }
-            DMSError::Other(msg) => write!(f, "{msg}"),
-            DMSError::ExternalError(msg) => write!(f, "External error: {msg}"),
-            DMSError::PoolError(msg) => write!(f, "Pool error: {msg}"),
-            DMSError::DeviceError(msg) => write!(f, "Device error: {msg}"),
+            DMSCError::Other(msg) => write!(f, "{msg}"),
+            DMSCError::ExternalError(msg) => write!(f, "External error: {msg}"),
+            DMSCError::PoolError(msg) => write!(f, "Pool error: {msg}"),
+            DMSCError::DeviceError(msg) => write!(f, "Device error: {msg}"),
+            DMSCError::RedisError(msg) => write!(f, "Redis error: {msg}"),
+            DMSCError::HttpClientError(msg) => write!(f, "HTTP client error: {msg}"),
+            DMSCError::TomlError(msg) => write!(f, "TOML error: {msg}"),
+            DMSCError::YamlError(msg) => write!(f, "YAML error: {msg}"),
         }
     }
 }
 
-impl std::error::Error for DMSError {}
+impl std::error::Error for DMSCError {}
 
-impl From<std::io::Error> for DMSError {
+impl From<std::io::Error> for DMSCError {
     fn from(error: std::io::Error) -> Self {
-        DMSError::Io(error.to_string())
+        DMSCError::Io(error.to_string())
     }
 }
 
-impl From<serde_json::Error> for DMSError {
+impl From<serde_json::Error> for DMSCError {
     fn from(error: serde_json::Error) -> Self {
-        DMSError::Serde(error.to_string())
+        DMSCError::Serde(error.to_string())
     }
 }
 
-impl From<prometheus::Error> for DMSError {
+#[cfg(feature = "observability")]
+impl From<prometheus::Error> for DMSCError {
     fn from(error: prometheus::Error) -> Self {
-        DMSError::Prometheus(error.to_string())
+        DMSCError::Prometheus(error.to_string())
     }
 }
 
-impl From<redis::RedisError> for DMSError {
+#[cfg(feature = "redis")]
+impl From<redis::RedisError> for DMSCError {
     fn from(error: redis::RedisError) -> Self {
-        DMSError::Other(format!("Redis error: {error}"))
+        DMSCError::RedisError(error.to_string())
+    }
+}
+
+#[cfg(feature = "http_client")]
+impl From<reqwest::Error> for DMSCError {
+    fn from(error: reqwest::Error) -> Self {
+        DMSCError::HttpClientError(error.to_string())
+    }
+}
+
+impl From<toml::de::Error> for DMSCError {
+    fn from(error: toml::de::Error) -> Self {
+        DMSCError::TomlError(error.to_string())
+    }
+}
+
+impl From<toml::ser::Error> for DMSCError {
+    fn from(error: toml::ser::Error) -> Self {
+        DMSCError::TomlError(error.to_string())
+    }
+}
+
+impl From<serde_yaml::Error> for DMSCError {
+    fn from(error: serde_yaml::Error) -> Self {
+        DMSCError::YamlError(error.to_string())
     }
 }
 
 #[cfg(feature = "rabbitmq")]
-impl From<lapin::Error> for DMSError {
+impl From<lapin::Error> for DMSCError {
     fn from(error: lapin::Error) -> Self {
-        DMSError::Other(format!("RabbitMQ error: {error}"))
+        DMSCError::Other(format!("RabbitMQ error: {error}"))
     }
 }

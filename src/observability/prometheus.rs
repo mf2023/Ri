@@ -1,7 +1,7 @@
 //! Copyright © 2025 Wenze Wei. All Rights Reserved.
 //!
-//! This file is part of DMS.
-//! The DMS project belongs to the Dunimd Team.
+//! This file is part of DMSC.
+//! The DMSC project belongs to the Dunimd Team.
 //!
 //! Licensed under the Apache License, Version 2.0 (the "License");
 //! You may not use this file except in compliance with the License.
@@ -19,13 +19,13 @@
 
 //! # Prometheus Exporter
 //! 
-//! This module provides a Prometheus exporter implementation for the DMS framework. It allows
+//! This module provides a Prometheus exporter implementation for the DMSC framework. It allows
 //! registering and managing Prometheus metrics (counters, gauges, histograms) and generating
 //! Grafana dashboards from these metrics.
 //! 
 //! ## Key Components
 //! 
-//! - **DMSPrometheusExporter**: Main exporter class for managing Prometheus metrics
+//! - **DMSCPrometheusExporter**: Main exporter class for managing Prometheus metrics
 //! 
 //! ## Design Principles
 //! 
@@ -36,16 +36,16 @@
 //! 5. **Easy to Use**: Simple API for registering and updating metrics
 //! 6. **Text Encoding**: Exports metrics in Prometheus text format
 //! 7. **Registry Management**: Maintains its own Prometheus registry
-//! 8. **Error Handling**: Comprehensive error handling with DMSResult
+//! 8. **Error Handling**: Comprehensive error handling with DMSCResult
 //! 
 //! ## Usage
 //! 
 //! ```rust
 //! use dms::prelude::*;
 //! 
-//! fn example() -> DMSResult<()> {
+//! fn example() -> DMSCResult<()> {
 //!     // Create a new Prometheus exporter
-//!     let exporter = DMSPrometheusExporter::new()?;
+//!     let exporter = DMSCPrometheusExporter::new()?;
 //!     
 //!     // Register a counter metric
 //!     exporter.register_counter("http_requests_total", "Total number of HTTP requests")?;
@@ -80,8 +80,9 @@
 
 use std::collections::HashMap;
 use std::sync::{Arc, RwLock};
+#[cfg(feature = "observability")]
 use prometheus::{Counter, Gauge, Histogram, Registry, Encoder, TextEncoder};
-use crate::core::DMSResult;
+use crate::core::DMSCResult;
 
 /// Prometheus exporter for managing metrics and generating Grafana dashboards.
 ///
@@ -89,7 +90,7 @@ use crate::core::DMSResult;
 /// as well as generating Grafana dashboards from these metrics.
 #[allow(dead_code)]
 #[derive(Debug, Clone)]
-pub struct DMSPrometheusExporter {
+pub struct DMSCPrometheusExporter {
     /// Prometheus registry for managing metrics
     registry: Arc<Registry>,
     /// Map of registered counter metrics
@@ -101,16 +102,16 @@ pub struct DMSPrometheusExporter {
 }
 
 #[allow(dead_code)]
-impl DMSPrometheusExporter {
+impl DMSCPrometheusExporter {
     /// Creates a new Prometheus exporter instance.
     ///
     /// # Returns
     ///
-    /// A new DMSPrometheusExporter instance wrapped in DMSResult
-    pub fn new() -> DMSResult<Self> {
+    /// A new DMSCPrometheusExporter instance wrapped in DMSCResult
+    pub fn new() -> DMSCResult<Self> {
         let registry = Arc::new(Registry::new());
         
-        Ok(DMSPrometheusExporter {
+        Ok(DMSCPrometheusExporter {
             registry: registry.clone(),
             counters: Arc::new(RwLock::new(HashMap::new())),
             gauges: Arc::new(RwLock::new(HashMap::new())),
@@ -127,8 +128,8 @@ impl DMSPrometheusExporter {
     ///
     /// # Returns
     ///
-    /// DMSResult indicating success or failure
-    pub fn register_counter(&self, name: &str, help: &str) -> DMSResult<()> {
+    /// DMSCResult indicating success or failure
+    pub fn register_counter(&self, name: &str, help: &str) -> DMSCResult<()> {
         let counter = Counter::new(name, help)?;
         self.registry.register(Box::new(counter.clone()))?;
         
@@ -147,14 +148,14 @@ impl DMSPrometheusExporter {
     ///
     /// # Returns
     ///
-    /// DMSResult indicating success or failure
-    pub fn increment_counter(&self, name: &str, value: f64) -> DMSResult<()> {
+    /// DMSCResult indicating success or failure
+    pub fn increment_counter(&self, name: &str, value: f64) -> DMSCResult<()> {
         let counters = self.counters.read().unwrap();
         if let Some(counter) = counters.get(name) {
             counter.inc_by(value);
             Ok(())
         } else {
-            Err(crate::core::DMSError::Io(format!("Counter {name} not found")))
+            Err(crate::core::DMSCError::Io(format!("Counter {name} not found")))
         }
     }
     
@@ -167,8 +168,8 @@ impl DMSPrometheusExporter {
     ///
     /// # Returns
     ///
-    /// DMSResult indicating success or failure
-    pub fn register_gauge(&self, name: &str, help: &str) -> DMSResult<()> {
+    /// DMSCResult indicating success or failure
+    pub fn register_gauge(&self, name: &str, help: &str) -> DMSCResult<()> {
         let gauge = Gauge::new(name, help)?;
         self.registry.register(Box::new(gauge.clone()))?;
         
@@ -187,14 +188,14 @@ impl DMSPrometheusExporter {
     ///
     /// # Returns
     ///
-    /// DMSResult indicating success or failure
-    pub fn set_gauge(&self, name: &str, value: f64) -> DMSResult<()> {
+    /// DMSCResult indicating success or failure
+    pub fn set_gauge(&self, name: &str, value: f64) -> DMSCResult<()> {
         let gauges = self.gauges.read().unwrap();
         if let Some(gauge) = gauges.get(name) {
             gauge.set(value);
             Ok(())
         } else {
-            Err(crate::core::DMSError::Io(format!("Gauge {name} not found")))
+            Err(crate::core::DMSCError::Io(format!("Gauge {name} not found")))
         }
     }
     
@@ -208,8 +209,8 @@ impl DMSPrometheusExporter {
     ///
     /// # Returns
     ///
-    /// DMSResult indicating success or failure
-    pub fn register_histogram(&self, name: &str, help: &str, buckets: Vec<f64>) -> DMSResult<()> {
+    /// DMSCResult indicating success or failure
+    pub fn register_histogram(&self, name: &str, help: &str, buckets: Vec<f64>) -> DMSCResult<()> {
         let histogram = Histogram::with_opts(prometheus::HistogramOpts::new(name, help).buckets(buckets))?;
         self.registry.register(Box::new(histogram.clone()))?;
         
@@ -228,14 +229,14 @@ impl DMSPrometheusExporter {
     ///
     /// # Returns
     ///
-    /// DMSResult indicating success or failure
-    pub fn observe_histogram(&self, name: &str, value: f64) -> DMSResult<()> {
+    /// DMSCResult indicating success or failure
+    pub fn observe_histogram(&self, name: &str, value: f64) -> DMSCResult<()> {
         let histograms = self.histograms.read().unwrap();
         if let Some(histogram) = histograms.get(name) {
             histogram.observe(value);
             Ok(())
         } else {
-            Err(crate::core::DMSError::Io(format!("Histogram {name} not found")))
+            Err(crate::core::DMSCError::Io(format!("Histogram {name} not found")))
         }
     }
     
@@ -243,8 +244,8 @@ impl DMSPrometheusExporter {
     ///
     /// # Returns
     ///
-    /// A string containing all metrics in Prometheus text format wrapped in DMSResult
-    pub fn render(&self) -> DMSResult<String> {
+    /// A string containing all metrics in Prometheus text format wrapped in DMSCResult
+    pub fn render(&self) -> DMSCResult<String> {
         let encoder = TextEncoder::new();
         let metric_families = self.registry.gather();
         let mut buffer = Vec::new();
@@ -263,14 +264,11 @@ impl DMSPrometheusExporter {
     ///
     /// # Returns
     ///
-    /// DMSResult indicating success or failure
-    pub fn add_counter_panel(&self, dashboard: &mut crate::observability::grafana::DMSGrafanaDashboard, title: &str, query: &str) -> DMSResult<()> {
-        let panel = crate::observability::grafana::DMSGrafanaPanel {
-            title: title.to_string(),
-            query: query.to_string(),
-            panel_type: "stat".to_string(),
-            grid_pos: crate::observability::grafana::DMSGridPos { h: 8, w: 12, x: 0, y: 0 },
-        };
+    /// DMSCResult indicating success or failure
+    pub fn add_counter_panel(&self, dashboard: &mut crate::observability::grafana::DMSCGrafanaDashboard, title: &str, query: &str) -> DMSCResult<()> {
+        let mut generator = crate::observability::grafana::DMSCGrafanaDashboardGenerator::new();
+        let mut panel = generator.create_panel(title, "stat", 0, 0, 12, 8);
+        panel.targets.push(generator.create_prometheus_target(query, "A", None));
         dashboard.panels.push(panel);
         Ok(())
     }
@@ -285,14 +283,11 @@ impl DMSPrometheusExporter {
     ///
     /// # Returns
     ///
-    /// DMSResult indicating success or failure
-    pub fn add_gauge_panel(&self, dashboard: &mut crate::observability::grafana::DMSGrafanaDashboard, title: &str, query: &str) -> DMSResult<()> {
-        let panel = crate::observability::grafana::DMSGrafanaPanel {
-            title: title.to_string(),
-            query: query.to_string(),
-            panel_type: "gauge".to_string(),
-            grid_pos: crate::observability::grafana::DMSGridPos { h: 8, w: 12, x: 12, y: 0 },
-        };
+    /// DMSCResult indicating success or failure
+    pub fn add_gauge_panel(&self, dashboard: &mut crate::observability::grafana::DMSCGrafanaDashboard, title: &str, query: &str) -> DMSCResult<()> {
+        let mut generator = crate::observability::grafana::DMSCGrafanaDashboardGenerator::new();
+        let mut panel = generator.create_panel(title, "gauge", 12, 0, 12, 8);
+        panel.targets.push(generator.create_prometheus_target(query, "A", None));
         dashboard.panels.push(panel);
         Ok(())
     }
@@ -307,14 +302,11 @@ impl DMSPrometheusExporter {
     ///
     /// # Returns
     ///
-    /// DMSResult indicating success or failure
-    pub fn add_stat_panel(&self, dashboard: &mut crate::observability::grafana::DMSGrafanaDashboard, title: &str, query: &str) -> DMSResult<()> {
-        let panel = crate::observability::grafana::DMSGrafanaPanel {
-            title: title.to_string(),
-            query: query.to_string(),
-            panel_type: "stat".to_string(),
-            grid_pos: crate::observability::grafana::DMSGridPos { h: 8, w: 12, x: 0, y: 8 },
-        };
+    /// DMSCResult indicating success or failure
+    pub fn add_stat_panel(&self, dashboard: &mut crate::observability::grafana::DMSCGrafanaDashboard, title: &str, query: &str) -> DMSCResult<()> {
+        let mut generator = crate::observability::grafana::DMSCGrafanaDashboardGenerator::new();
+        let mut panel = generator.create_panel(title, "stat", 0, 8, 12, 8);
+        panel.targets.push(generator.create_prometheus_target(query, "A", None));
         dashboard.panels.push(panel);
         Ok(())
     }
@@ -327,12 +319,9 @@ impl DMSPrometheusExporter {
     ///
     /// # Returns
     ///
-    /// A Grafana dashboard with default panels wrapped in DMSResult
-    pub fn generate_dashboard(&self, title: &str) -> DMSResult<crate::observability::grafana::DMSGrafanaDashboard> {
-        let mut dashboard = crate::observability::grafana::DMSGrafanaDashboard {
-            title: title.to_string(),
-            panels: Vec::new(),
-        };
+    /// A Grafana dashboard with default panels wrapped in DMSCResult
+    pub fn generate_dashboard(&self, title: &str) -> DMSCResult<crate::observability::grafana::DMSCGrafanaDashboard> {
+        let mut dashboard = crate::observability::grafana::DMSCGrafanaDashboard::new(title);
         
         self.add_counter_panel(&mut dashboard, "Request Count", "dms_requests_total")?;
         self.add_gauge_panel(&mut dashboard, "Active Connections", "dms_active_connections")?;
@@ -341,13 +330,13 @@ impl DMSPrometheusExporter {
         Ok(dashboard)
     }
     
-    /// Generates a default Grafana dashboard with "DMS Metrics Dashboard" title.
+    /// Generates a default Grafana dashboard with "DMSC Metrics Dashboard" title.
     ///
     /// # Returns
     ///
-    /// A default Grafana dashboard wrapped in DMSResult
-    pub fn generate_default_dashboard(&self) -> DMSResult<crate::observability::grafana::DMSGrafanaDashboard> {
-        self.generate_dashboard("DMS Metrics Dashboard")
+    /// A default Grafana dashboard wrapped in DMSCResult
+    pub fn generate_default_dashboard(&self) -> DMSCResult<crate::observability::grafana::DMSCGrafanaDashboard> {
+        self.generate_dashboard("DMSC Metrics Dashboard")
     }
 }
 

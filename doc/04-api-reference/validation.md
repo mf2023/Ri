@@ -27,7 +27,7 @@ validation模块包含以下子模块：
 
 </div>
 
-### DMSValidationManager
+### DMSCValidationManager
 
 验证管理器主接口，提供统一的验证功能访问。
 
@@ -35,13 +35,13 @@ validation模块包含以下子模块：
 
 | 方法 | 描述 | 参数 | 返回值 |
 |:--------|:-------------|:--------|:--------|
-| `validate(data, rules)` | 数据验证 | `data: &Value`, `rules: &[DMSValidationRule]` | `DMSResult<DMSValidationResult>` |
-| `validate_field(field, value, rules)` | 字段验证 | `field: &str`, `value: &Value`, `rules: &[DMSValidationRule]` | `DMSResult<DMSValidationResult>` |
-| `sanitize(data, sanitizers)` | 数据清理 | `data: Value`, `sanitizers: &[DMSSanitizer]` | `DMSResult<Value>` |
-| `sanitize_field(field, value, sanitizers)` | 字段清理 | `field: &str`, `value: Value`, `sanitizers: &[DMSSanitizer]` | `DMSResult<Value>` |
-| `validate_schema(data, schema)` | 模式验证 | `data: &Value`, `schema: &DMSSchema` | `DMSResult<DMSValidationResult>` |
-| `register_validator(name, validator)` | 注册验证器 | `name: &str`, `validator: impl DMSValidator` | `DMSResult<()>` |
-| `register_sanitizer(name, sanitizer)` | 注册清理器 | `name: &str`, `sanitizer: impl DMSSanitizer` | `DMSResult<()>` |
+| `validate(data, rules)` | 数据验证 | `data: &Value`, `rules: &[DMSCValidationRule]` | `DMSCResult<DMSCValidationResult>` |
+| `validate_field(field, value, rules)` | 字段验证 | `field: &str`, `value: &Value`, `rules: &[DMSCValidationRule]` | `DMSCResult<DMSCValidationResult>` |
+| `sanitize(data, sanitizers)` | 数据清理 | `data: Value`, `sanitizers: &[DMSCSanitizer]` | `DMSCResult<Value>` |
+| `sanitize_field(field, value, sanitizers)` | 字段清理 | `field: &str`, `value: Value`, `sanitizers: &[DMSCSanitizer]` | `DMSCResult<Value>` |
+| `validate_schema(data, schema)` | 模式验证 | `data: &Value`, `schema: &DMSCSchema` | `DMSCResult<DMSCValidationResult>` |
+| `register_validator(name, validator)` | 注册验证器 | `name: &str`, `validator: impl DMSCValidator` | `DMSCResult<()>` |
+| `register_sanitizer(name, sanitizer)` | 注册清理器 | `name: &str`, `sanitizer: impl DMSCSanitizer` | `DMSCResult<()>` |
 
 #### 使用示例
 
@@ -57,10 +57,10 @@ let data = json!({
 });
 
 let rules = vec![
-    DMSValidationRule::Required,
-    DMSValidationRule::Email,
-    DMSValidationRule::MinLength(5),
-    DMSValidationRule::MaxLength(100),
+    DMSCValidationRule::Required,
+    DMSCValidationRule::Email,
+    DMSCValidationRule::MinLength(5),
+    DMSCValidationRule::MaxLength(100),
 ];
 
 let result = ctx.validation().validate_field("email", &data["email"], &rules)?;
@@ -80,16 +80,16 @@ let dirty_data = json!({
 });
 
 let sanitizers = vec![
-    DMSSanitizer::Trim,
-    DMSSanitizer::ToLowercase,
-    DMSSanitizer::RemoveHtml,
+    DMSCSanitizer::Trim,
+    DMSCSanitizer::ToLowercase,
+    DMSCSanitizer::RemoveHtml,
 ];
 
 let clean_data = ctx.validation().sanitize(dirty_data, &sanitizers)?;
 ctx.log().info(format!("Cleaned data: {}", clean_data));
 ```
 
-### DMSValidationRule
+### DMSCValidationRule
 
 验证规则枚举。
 
@@ -116,7 +116,7 @@ ctx.log().info(format!("Cleaned data: {}", clean_data));
 | `NotIn(Vec<String>)` | 排除值 |
 | `Custom(String)` | 自定义验证 |
 
-### DMSValidationResult
+### DMSCValidationResult
 
 验证结果结构体。
 
@@ -125,9 +125,9 @@ ctx.log().info(format!("Cleaned data: {}", clean_data));
 | 字段 | 类型 | 描述 |
 |:--------|:-----|:-------------|
 | `is_valid` | `bool` | 是否有效 |
-| `errors` | `Vec<DMSValidationError>` | 错误列表 |
-| `warnings` | `Vec<DMSValidationWarning>` | 警告列表 |
-| `field_results` | `HashMap<String, DMSValidationResult>` | 字段验证结果 |
+| `errors` | `Vec<DMSCValidationError>` | 错误列表 |
+| `warnings` | `Vec<DMSCValidationWarning>` | 警告列表 |
+| `field_results` | `HashMap<String, DMSCValidationResult>` | 字段验证结果 |
 
 <div align="center">
 
@@ -154,53 +154,53 @@ let user_data = json!({
 
 // 用户名验证
 let username_rules = vec![
-    DMSValidationRule::Required,
-    DMSValidationRule::Alphanumeric,
-    DMSValidationRule::MinLength(3),
-    DMSValidationRule::MaxLength(20),
-    DMSValidationRule::Pattern(r"^[a-zA-Z][a-zA-Z0-9_]*$".to_string()),
+    DMSCValidationRule::Required,
+    DMSCValidationRule::Alphanumeric,
+    DMSCValidationRule::MinLength(3),
+    DMSCValidationRule::MaxLength(20),
+    DMSCValidationRule::Pattern(r"^[a-zA-Z][a-zA-Z0-9_]*$".to_string()),
 ];
 
 let username_result = ctx.validation().validate_field("username", &user_data["username"], &username_rules)?;
 if !username_result.is_valid {
-    return Err(DMSError::validation(format!("Username validation failed: {:?}", username_result.errors)));
+    return Err(DMSCError::validation(format!("Username validation failed: {:?}", username_result.errors)));
 }
 
 // 邮箱验证
 let email_rules = vec![
-    DMSValidationRule::Required,
-    DMSValidationRule::Email,
-    DMSValidationRule::MaxLength(100),
+    DMSCValidationRule::Required,
+    DMSCValidationRule::Email,
+    DMSCValidationRule::MaxLength(100),
 ];
 
 let email_result = ctx.validation().validate_field("email", &user_data["email"], &email_rules)?;
 if !email_result.is_valid {
-    return Err(DMSError::validation(format!("Email validation failed: {:?}", email_result.errors)));
+    return Err(DMSCError::validation(format!("Email validation failed: {:?}", email_result.errors)));
 }
 
 // 密码验证
 let password_rules = vec![
-    DMSValidationRule::Required,
-    DMSValidationRule::MinLength(8),
-    DMSValidationRule::MaxLength(128),
-    DMSValidationRule::Pattern(r"^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$".to_string()),
+    DMSCValidationRule::Required,
+    DMSCValidationRule::MinLength(8),
+    DMSCValidationRule::MaxLength(128),
+    DMSCValidationRule::Pattern(r"^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$".to_string()),
 ];
 
 let password_result = ctx.validation().validate_field("password", &user_data["password"], &password_rules)?;
 if !password_result.is_valid {
-    return Err(DMSError::validation(format!("Password validation failed: {:?}", password_result.errors)));
+    return Err(DMSCError::validation(format!("Password validation failed: {:?}", password_result.errors)));
 }
 
 // 年龄验证
 let age_rules = vec![
-    DMSValidationRule::Required,
-    DMSValidationRule::Numeric,
-    DMSValidationRule::Range(18, 120),
+    DMSCValidationRule::Required,
+    DMSCValidationRule::Numeric,
+    DMSCValidationRule::Range(18, 120),
 ];
 
 let age_result = ctx.validation().validate_field("age", &user_data["age"], &age_rules)?;
 if !age_result.is_valid {
-    return Err(DMSError::validation(format!("Age validation failed: {:?}", age_result.errors)));
+    return Err(DMSCError::validation(format!("Age validation failed: {:?}", age_result.errors)));
 }
 
 ctx.log().info("All field validations passed");
@@ -251,46 +251,46 @@ let order_data = json!({
 });
 
 // 定义验证模式
-let order_schema = DMSSchema {
+let order_schema = DMSCSchema {
     fields: vec![
-        DMSSchemaField {
+        DMSCSchemaField {
             name: "order_id".to_string(),
-            field_type: DMSSchemaFieldType::String,
+            field_type: DMSCSchemaFieldType::String,
             rules: vec![
-                DMSValidationRule::Required,
-                DMSValidationRule::Pattern(r"^ORD-\d{4}-\d{6}$".to_string()),
+                DMSCValidationRule::Required,
+                DMSCValidationRule::Pattern(r"^ORD-\d{4}-\d{6}$".to_string()),
             ],
             ..Default::default()
         },
-        DMSSchemaField {
+        DMSCSchemaField {
             name: "customer".to_string(),
-            field_type: DMSSchemaFieldType::Object,
-            nested_schema: Some(Box::new(DMSSchema {
+            field_type: DMSCSchemaFieldType::Object,
+            nested_schema: Some(Box::new(DMSCSchema {
                 fields: vec![
-                    DMSSchemaField {
+                    DMSCSchemaField {
                         name: "name".to_string(),
-                        field_type: DMSSchemaFieldType::String,
+                        field_type: DMSCSchemaFieldType::String,
                         rules: vec![
-                            DMSValidationRule::Required,
-                            DMSValidationRule::MinLength(2),
-                            DMSValidationRule::MaxLength(100),
+                            DMSCValidationRule::Required,
+                            DMSCValidationRule::MinLength(2),
+                            DMSCValidationRule::MaxLength(100),
                         ],
                         ..Default::default()
                     },
-                    DMSSchemaField {
+                    DMSCSchemaField {
                         name: "email".to_string(),
-                        field_type: DMSSchemaFieldType::String,
+                        field_type: DMSCSchemaFieldType::String,
                         rules: vec![
-                            DMSValidationRule::Required,
-                            DMSValidationRule::Email,
+                            DMSCValidationRule::Required,
+                            DMSCValidationRule::Email,
                         ],
                         ..Default::default()
                     },
-                    DMSSchemaField {
+                    DMSCSchemaField {
                         name: "phone".to_string(),
-                        field_type: DMSSchemaFieldType::String,
+                        field_type: DMSCSchemaFieldType::String,
                         rules: vec![
-                            DMSValidationRule::Phone,
+                            DMSCValidationRule::Phone,
                         ],
                         ..Default::default()
                     },
@@ -299,26 +299,26 @@ let order_schema = DMSSchema {
             })),
             ..Default::default()
         },
-        DMSSchemaField {
+        DMSCSchemaField {
             name: "items".to_string(),
-            field_type: DMSSchemaFieldType::Array,
+            field_type: DMSCSchemaFieldType::Array,
             rules: vec![
-                DMSValidationRule::Required,
-                DMSValidationRule::Min(1),
+                DMSCValidationRule::Required,
+                DMSCValidationRule::Min(1),
             ],
-            array_item_schema: Some(Box::new(DMSSchemaField {
-                field_type: DMSSchemaFieldType::Object,
-                rules: vec![DMSValidationRule::Required],
+            array_item_schema: Some(Box::new(DMSCSchemaField {
+                field_type: DMSCSchemaFieldType::Object,
+                rules: vec![DMSCValidationRule::Required],
                 ..Default::default()
             })),
             ..Default::default()
         },
-        DMSSchemaField {
+        DMSCSchemaField {
             name: "total_amount".to_string(),
-            field_type: DMSSchemaFieldType::Number,
+            field_type: DMSCSchemaFieldType::Number,
             rules: vec![
-                DMSValidationRule::Required,
-                DMSValidationRule::Min(0),
+                DMSCValidationRule::Required,
+                DMSCValidationRule::Min(0),
             ],
             ..Default::default()
         },
@@ -329,7 +329,7 @@ let order_schema = DMSSchema {
 // 执行模式验证
 let result = ctx.validation().validate_schema(&order_data, &order_schema)?;
 if !result.is_valid {
-    return Err(DMSError::validation(format!("Order validation failed: {:?}", result.errors)));
+    return Err(DMSCError::validation(format!("Order validation failed: {:?}", result.errors)));
 }
 
 ctx.log().info("Order data validation passed");
@@ -359,10 +359,10 @@ let dirty_data = json!({
 
 // 应用清理器
 let sanitizers = vec![
-    DMSSanitizer::Trim,
-    DMSSanitizer::ToLowercase,
-    DMSSanitizer::RemoveHtml,
-    DMSSanitizer::NormalizeWhitespace,
+    DMSCSanitizer::Trim,
+    DMSCSanitizer::ToLowercase,
+    DMSCSanitizer::RemoveHtml,
+    DMSCSanitizer::NormalizeWhitespace,
 ];
 
 let clean_data = ctx.validation().sanitize(dirty_data, &sanitizers)?;
@@ -370,8 +370,8 @@ ctx.log().info(format!("Cleaned data: {}", clean_data));
 
 // 字段特定清理
 let email_sanitizers = vec![
-    DMSSanitizer::Trim,
-    DMSSanitizer::ToLowercase,
+    DMSCSanitizer::Trim,
+    DMSCSanitizer::ToLowercase,
 ];
 
 let cleaned_email = ctx.validation().sanitize_field(
@@ -402,7 +402,7 @@ let html_content = r#"
     </div>
 "#;
 
-let safe_html = ctx.validation().sanitize_html(html_content, &DMSHtmlSanitizerConfig {
+let safe_html = ctx.validation().sanitize_html(html_content, &DMSCHtmlSanitizerConfig {
     allowed_tags: vec!["p".to_string(), "strong".to_string(), "em".to_string(), "br".to_string()],
     allowed_attributes: HashMap::new(),
     allowed_protocols: vec!["http".to_string(), "https".to_string()],
@@ -447,14 +447,14 @@ struct UsernameValidator {
     reserved_names: Vec<String>,
 }
 
-impl DMSValidator for UsernameValidator {
-    fn validate(&self, field_name: &str, value: &Value, _params: &[String]) -> DMSResult<DMSValidationResult> {
+impl DMSCValidator for UsernameValidator {
+    fn validate(&self, field_name: &str, value: &Value, _params: &[String]) -> DMSCResult<DMSCValidationResult> {
         if let Some(username) = value.as_str() {
             // 检查长度
             if username.len() < 3 {
-                return Ok(DMSValidationResult {
+                return Ok(DMSCValidationResult {
                     is_valid: false,
-                    errors: vec![DMSValidationError {
+                    errors: vec![DMSCValidationError {
                         field: field_name.to_string(),
                         message: "Username must be at least 3 characters long".to_string(),
                         code: "USERNAME_TOO_SHORT".to_string(),
@@ -466,9 +466,9 @@ impl DMSValidator for UsernameValidator {
             
             // 检查是否以字母开头
             if !username.chars().next().unwrap().is_alphabetic() {
-                return Ok(DMSValidationResult {
+                return Ok(DMSCValidationResult {
                     is_valid: false,
-                    errors: vec![DMSValidationError {
+                    errors: vec![DMSCValidationError {
                         field: field_name.to_string(),
                         message: "Username must start with a letter".to_string(),
                         code: "USERNAME_INVALID_START".to_string(),
@@ -480,9 +480,9 @@ impl DMSValidator for UsernameValidator {
             
             // 检查保留名称
             if self.reserved_names.contains(&username.to_lowercase()) {
-                return Ok(DMSValidationResult {
+                return Ok(DMSCValidationResult {
                     is_valid: false,
-                    errors: vec![DMSValidationError {
+                    errors: vec![DMSCValidationError {
                         field: field_name.to_string(),
                         message: "Username is reserved".to_string(),
                         code: "USERNAME_RESERVED".to_string(),
@@ -496,9 +496,9 @@ impl DMSValidator for UsernameValidator {
             let forbidden_words = vec!["admin", "root", "system", "moderator"];
             for word in &forbidden_words {
                 if username.to_lowercase().contains(word) {
-                    return Ok(DMSValidationResult {
+                    return Ok(DMSCValidationResult {
                         is_valid: false,
-                        errors: vec![DMSValidationError {
+                        errors: vec![DMSCValidationError {
                             field: field_name.to_string(),
                             message: format!("Username cannot contain '{}'", word),
                             code: "USERNAME_FORBIDDEN_WORD".to_string(),
@@ -509,16 +509,16 @@ impl DMSValidator for UsernameValidator {
                 }
             }
             
-            Ok(DMSValidationResult {
+            Ok(DMSCValidationResult {
                 is_valid: true,
                 errors: vec![],
                 warnings: vec![],
                 field_results: HashMap::new(),
             })
         } else {
-            Ok(DMSValidationResult {
+            Ok(DMSCValidationResult {
                 is_valid: false,
-                errors: vec![DMSValidationError {
+                errors: vec![DMSCValidationError {
                     field: field_name.to_string(),
                     message: "Username must be a string".to_string(),
                     code: "USERNAME_INVALID_TYPE".to_string(),
@@ -539,15 +539,15 @@ struct StrongPasswordValidator {
     min_strength: f64,
 }
 
-impl DMSValidator for StrongPasswordValidator {
-    fn validate(&self, field_name: &str, value: &Value, _params: &[String]) -> DMSResult<DMSValidationResult> {
+impl DMSCValidator for StrongPasswordValidator {
+    fn validate(&self, field_name: &str, value: &Value, _params: &[String]) -> DMSCResult<DMSCValidationResult> {
         if let Some(password) = value.as_str() {
             let strength = calculate_password_strength(password);
             
             if strength < self.min_strength {
-                return Ok(DMSValidationResult {
+                return Ok(DMSCValidationResult {
                     is_valid: false,
-                    errors: vec![DMSValidationError {
+                    errors: vec![DMSCValidationError {
                         field: field_name.to_string(),
                         message: format!("Password strength {:.1} is too low. Minimum required: {:.1}", strength, self.min_strength),
                         code: "PASSWORD_TOO_WEAK".to_string(),
@@ -557,10 +557,10 @@ impl DMSValidator for StrongPasswordValidator {
                 });
             }
             
-            Ok(DMSValidationResult {
+            Ok(DMSCValidationResult {
                 is_valid: true,
                 errors: vec![],
-                warnings: vec![DMSValidationWarning {
+                warnings: vec![DMSCValidationWarning {
                     field: field_name.to_string(),
                     message: format!("Password strength: {:.1}/10.0", strength),
                     code: "PASSWORD_STRENGTH".to_string(),
@@ -568,9 +568,9 @@ impl DMSValidator for StrongPasswordValidator {
                 field_results: HashMap::new(),
             })
         } else {
-            Ok(DMSValidationResult {
+            Ok(DMSCValidationResult {
                 is_valid: false,
-                errors: vec![DMSValidationError {
+                errors: vec![DMSCValidationError {
                     field: field_name.to_string(),
                     message: "Password must be a string".to_string(),
                     code: "PASSWORD_INVALID_TYPE".to_string(),
@@ -636,13 +636,13 @@ ctx.validation().register_validator("strong_password", StrongPasswordValidator {
 
 // 使用自定义验证器
 let username_rules = vec![
-    DMSValidationRule::Custom("username".to_string()),
+    DMSCValidationRule::Custom("username".to_string()),
 ];
 
 let password_rules = vec![
-    DMSValidationRule::Required,
-    DMSValidationRule::MinLength(8),
-    DMSValidationRule::Custom("strong_password".to_string()),
+    DMSCValidationRule::Required,
+    DMSCValidationRule::MinLength(8),
+    DMSCValidationRule::Custom("strong_password".to_string()),
 ];
 
 let username_result = ctx.validation().validate_field("username", &json!("admin_user"), &username_rules)?;
@@ -677,29 +677,29 @@ let registration_data = json!({
 
 // 定义条件验证规则
 let conditional_rules = vec![
-    DMSConditionalValidationRule {
+    DMSCConditionalValidationRule {
         field: "company_info".to_string(),
-        condition: DMSValidationCondition::Equals("account_type", "company"),
+        condition: DMSCValidationCondition::Equals("account_type", "company"),
         rules: vec![
-            DMSValidationRule::Required,
+            DMSCValidationRule::Required,
         ],
         nested_rules: Some(vec![
-            DMSSchemaField {
+            DMSCSchemaField {
                 name: "company_name".to_string(),
-                field_type: DMSSchemaFieldType::String,
+                field_type: DMSCSchemaFieldType::String,
                 rules: vec![
-                    DMSValidationRule::Required,
-                    DMSValidationRule::MinLength(2),
-                    DMSValidationRule::MaxLength(100),
+                    DMSCValidationRule::Required,
+                    DMSCValidationRule::MinLength(2),
+                    DMSCValidationRule::MaxLength(100),
                 ],
                 ..Default::default()
             },
-            DMSSchemaField {
+            DMSCSchemaField {
                 name: "tax_id".to_string(),
-                field_type: DMSSchemaFieldType::String,
+                field_type: DMSCSchemaFieldType::String,
                 rules: vec![
-                    DMSValidationRule::Required,
-                    DMSValidationRule::Pattern(r"^\d{2}-\d{7}$".to_string()),
+                    DMSCValidationRule::Required,
+                    DMSCValidationRule::Pattern(r"^\d{2}-\d{7}$".to_string()),
                 ],
                 ..Default::default()
             },
@@ -711,17 +711,17 @@ let conditional_rules = vec![
 // 执行条件验证
 let result = ctx.validation().validate_conditional(&registration_data, &conditional_rules)?;
 if !result.is_valid {
-    return Err(DMSError::validation(format!("Conditional validation failed: {:?}", result.errors)));
+    return Err(DMSCError::validation(format!("Conditional validation failed: {:?}", result.errors)));
 }
 
 // 动态验证规则
 let dynamic_rules = vec![
-    DMSDynamicValidationRule {
+    DMSCDynamicValidationRule {
         field: "shipping_address".to_string(),
         condition_field: "requires_shipping".to_string(),
         condition_value: json!(true),
         rules: vec![
-            DMSValidationRule::Required,
+            DMSCValidationRule::Required,
         ],
         ..Default::default()
     },
@@ -760,7 +760,7 @@ struct AsyncEmailValidator {
 }
 
 impl AsyncEmailValidator {
-    async fn validate_email(&self, email: &str) -> DMSResult<bool> {
+    async fn validate_email(&self, email: &str) -> DMSCResult<bool> {
         // 调用外部邮箱验证服务
         let client = reqwest::Client::new();
         let response = client
@@ -789,7 +789,7 @@ let email = "john@example.com";
 let is_valid = email_validator.validate_email(email).await?;
 
 if !is_valid {
-    return Err(DMSError::validation(format!("Email validation failed for: {}", email)));
+    return Err(DMSCError::validation(format!("Email validation failed for: {}", email)));
 }
 
 ctx.log().info(format!("Email validation passed for: {}", email));
@@ -801,7 +801,7 @@ ctx.log().info(format!("Email validation passed for: {}", email));
 
 </div>
 
-### DMSValidationConfig
+### DMSCValidationConfig
 
 验证配置结构体。
 
@@ -823,7 +823,7 @@ ctx.log().info(format!("Email validation passed for: {}", email));
 ```rust
 use dms::prelude::*;
 
-let validation_config = DMSValidationConfig {
+let validation_config = DMSCValidationConfig {
     strict_mode: true,
     stop_on_first_error: false,
     include_warnings: true,
@@ -880,7 +880,7 @@ match ctx.validation().validate(&user_data, &validation_rules) {
                 .map(|e| format!("{}: {}", e.field, e.message))
                 .collect();
             
-            return Err(DMSError::validation(format!("Validation errors: {}", user_errors.join(", "))));
+            return Err(DMSCError::validation(format!("Validation errors: {}", user_errors.join(", "))));
         }
     }
     Err(e) => {

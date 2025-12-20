@@ -6,7 +6,7 @@
 
 **Last modified date: 2025-12-12**
 
-本章介绍使用DMS框架时常见的问题和故障排除方法，帮助您快速定位和解决问题。
+本章介绍使用DMSC框架时常见的问题和故障排除方法，帮助您快速定位和解决问题。
 
 ## 1. 编译错误
 
@@ -20,8 +20,8 @@ error: failed to select a version for the requirement `dms = ...`
 ```
 
 **解决方法**：
-- 确保在`Cargo.toml`中正确指定了DMS的依赖
-- 检查Git URL是否正确：`dms = { git = "https://gitee.com/dunimd/dms" }`
+- 确保在`Cargo.toml`中正确指定了DMSC的依赖
+- 检查Git URL是否正确：`dms = { git = "https://gitee.com/dunimd/dmsc" }`
 - 尝试运行`cargo update`更新依赖
 
 ### 1.2 版本冲突
@@ -384,30 +384,30 @@ Error: TLS handshake failed
 
 </div>
 
-### Q: 如何查看DMS的版本？
+### Q: 如何查看DMSC的版本？
 
-A: 目前DMS通过Git仓库分发，您可以通过查看`Cargo.toml`文件中的依赖版本，或使用`cargo tree | grep dms`查看当前使用的DMS版本。
+A: 目前DMSC通过Git仓库分发，您可以通过查看`Cargo.toml`文件中的依赖版本，或使用`cargo tree | grep dms`查看当前使用的DMSC版本。
 
-### Q: 如何更新DMS到最新版本？
+### Q: 如何更新DMSC到最新版本？
 
-A: 运行`cargo update`命令更新所有依赖，或手动修改`Cargo.toml`中的DMS依赖版本。
+A: 运行`cargo update`命令更新所有依赖，或手动修改`Cargo.toml`中的DMSC依赖版本。
 
-### Q: 如何贡献代码到DMS？
+### Q: 如何贡献代码到DMSC？
 
 A: 您可以通过以下步骤贡献代码：
-1. Fork DMS仓库
+1. Fork DMSC仓库
 2. 创建功能分支
 3. 提交代码变更
 4. 创建Pull Request
 
-### Q: DMS支持哪些数据库？
+### Q: DMSC支持哪些数据库？
 
-A: DMS本身不直接支持特定数据库，但可以通过自定义模块集成任何数据库。建议使用异步数据库驱动，如：
+A: DMSC本身不直接支持特定数据库，但可以通过自定义模块集成任何数据库。建议使用异步数据库驱动，如：
 - PostgreSQL: `tokio-postgres`
 - MySQL: `mysql_async`
 - Redis: `redis` crate
 
-### Q: 如何在生产环境中部署DMS应用？
+### Q: 如何在生产环境中部署DMSC应用？
 
 A: 建议使用容器化部署，如Docker + Kubernetes：
 1. 编写Dockerfile
@@ -415,16 +415,16 @@ A: 建议使用容器化部署，如Docker + Kubernetes：
 3. 部署到Kubernetes集群
 4. 配置自动扩展和滚动更新
 
-### Q: DMS支持哪些操作系统？
+### Q: DMSC支持哪些操作系统？
 
-A: DMS支持所有主要操作系统：
+A: DMSC支持所有主要操作系统：
 - Linux
 - macOS
 - Windows
 
 ### Q: 如何处理异步任务中的错误？
 
-A: 使用`DMSResult`类型和`?`运算符传播错误，或使用`tokio::spawn`配合错误处理：
+A: 使用`DMSCResult`类型和`?`运算符传播错误，或使用`tokio::spawn`配合错误处理：
 
 ```rust
 tokio::spawn(async move {
@@ -442,11 +442,11 @@ tokio::spawn(async move {
 
 如果您遇到了无法解决的问题，可以通过以下方式获取帮助：
 
-1. **查看文档**：仔细阅读DMS的官方文档
+1. **查看文档**：仔细阅读DMSC的官方文档
 2. **检查示例**：查看示例代码，了解正确的使用方式
 3. **搜索Issues**：在GitHub/Gitee仓库中搜索相关Issues
 4. **提交Issue**：如果问题未被解决，提交新的Issue
-5. **加入社区**：加入DMS社区，与其他开发者交流
+5. **加入社区**：加入DMSC社区，与其他开发者交流
 
 <div align="center">
 
@@ -464,7 +464,7 @@ tokio::spawn(async move {
 4. **查看文档**：参考官方文档和示例代码
 5. **社区求助**：如果无法解决，向社区寻求帮助
 
-希望本章内容能帮助您解决使用DMS过程中遇到的问题。
+希望本章内容能帮助您解决使用DMSC过程中遇到的问题。
 
 <div align="center">
 

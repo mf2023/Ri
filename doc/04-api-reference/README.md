@@ -6,7 +6,7 @@
 
 **Last modified date: 2025-12-12**
 
-本目录包含DMS各个核心模块的详细API文档。
+本目录包含DMSC各个核心模块的详细API文档。
 
 ## 模块列表
 
@@ -47,12 +47,12 @@
 
 </div>
 
-DMS API遵循以下命名约定：
+DMSC API遵循以下命名约定：
 
-- **类名**：采用PascalCase，如`DMSAppBuilder`
+- **类名**：采用PascalCase，如`DMSCAppBuilder`
 - **方法名**：采用snake_case，如`with_config`
 - **常量**：采用SCREAMING_SNAKE_CASE，如`DEFAULT_PORT`
-- **类型别名**：采用PascalCase，如`DMSResult`
+- **类型别名**：采用PascalCase，如`DMSCResult`
 
 <div align="center">
 
@@ -60,10 +60,10 @@ DMS API遵循以下命名约定：
 
 </div>
 
-所有DMS API方法都返回`DMSResult<T>`类型，其中`T`是方法的返回值类型。`DMSResult`是`Result<T, DMSError>`的别名。
+所有DMSC API方法都返回`DMSCResult<T>`类型，其中`T`是方法的返回值类型。`DMSCResult`是`Result<T, DMSCError>`的别名。
 
 ```rust
-type DMSResult<T> = Result<T, DMSError>;
+type DMSCResult<T> = Result<T, DMSCError>;
 ```
 
 <div align="center">
@@ -72,7 +72,7 @@ type DMSResult<T> = Result<T, DMSError>;
 
 </div>
 
-大多数DMS API都是异步的，使用`async/await`语法。异步方法在调用时需要使用`.await`关键字。
+大多数DMSC API都是异步的，使用`async/await`语法。异步方法在调用时需要使用`.await`关键字。
 
 ```rust
 // 异步方法调用
@@ -85,7 +85,7 @@ ctx.cache().set("key", "value", Some(3600)).await?;
 
 </div>
 
-DMS API设计注重类型安全，使用强类型确保编译时检查。
+DMSC API设计注重类型安全，使用强类型确保编译时检查。
 
 ```rust
 // 类型安全的配置访问
@@ -101,6 +101,6 @@ let port: u16 = ctx.config().get("service.port").unwrap_or(8080);
 选择您感兴趣的模块，查看其详细的API文档。
 
 - [使用示例](./05-usage-examples/)：各种场景下的使用示例
-- [最佳实践](./06-best-practices.md)：开发 DMS 应用的最佳实践
+- [最佳实践](./06-best-practices.md)：开发 DMSC 应用的最佳实践
 - [故障排除](./07-troubleshooting.md)：解决常见问题和故障
-- [术语解释](./08-glossary.md)：理解 DMS 中使用的专业术语
+- [术语解释](./08-glossary.md)：理解 DMSC 中使用的专业术语

@@ -1,7 +1,7 @@
 //! Copyright © 2025 Wenze Wei. All Rights Reserved.
 //!
-//! This file is part of DMS.
-//! The DMS project belongs to the Dunimd Team.
+//! This file is part of DMSC.
+//! The DMSC project belongs to the Dunimd Team.
 //!
 //! Licensed under the Apache License, Version 2.0 (the "License");
 //! You may not use this file except in compliance with the License.
@@ -24,10 +24,10 @@
 //! 
 //! ## Key Components
 //! 
-//! - **DMSCircuitBreakerState**: Enum representing the three states of a circuit breaker (Closed, Open, HalfOpen)
-//! - **DMSCircuitBreakerConfig**: Configuration for circuit breaker behavior
-//! - **DMSCircuitBreaker**: Basic circuit breaker implementation
-//! - **DMSAdvancedCircuitBreaker**: Advanced circuit breaker with error-type specific thresholds
+//! - **DMSCCircuitBreakerState**: Enum representing the three states of a circuit breaker (Closed, Open, HalfOpen)
+//! - **DMSCCircuitBreakerConfig**: Configuration for circuit breaker behavior
+//! - **DMSCCircuitBreaker**: Basic circuit breaker implementation
+//! - **DMSCAdvancedCircuitBreaker**: Advanced circuit breaker with error-type specific thresholds
 //! - **CircuitBreakerMetrics**: Metrics for monitoring circuit breaker performance
 //! 
 //! ## Design Principles
@@ -45,10 +45,10 @@
 //! ```rust
 //! use dms::prelude::*;
 //! 
-//! async fn example() -> DMSResult<()> {
+//! async fn example() -> DMSCResult<()> {
 //!     // Create a circuit breaker with default configuration
-//!     let cb_config = DMSCircuitBreakerConfig::default();
-//!     let cb = DMSCircuitBreaker::new(cb_config);
+//!     let cb_config = DMSCCircuitBreakerConfig::default();
+//!     let cb = DMSCCircuitBreaker::new(cb_config);
 //!     
 //!     // Execute a risky operation with circuit breaker protection
 //!     let result = cb.execute(async || {
@@ -67,7 +67,7 @@
 //! }
 //! ```
 
-use crate::core::DMSResult;
+use crate::core::DMSCResult;
 use std::collections::HashMap;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicUsize, Ordering};
@@ -79,7 +79,7 @@ use tokio::sync::RwLock;
 /// The circuit breaker transitions between these states based on the success and failure
 /// patterns of the protected operations.
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
-pub enum DMSCircuitBreakerState {
+pub enum DMSCCircuitBreakerState {
     /// **Closed State**: Normal operation. Requests are allowed to pass through.
     /// The circuit breaker monitors for failures.
     Closed,
@@ -98,7 +98,7 @@ pub enum DMSCircuitBreakerState {
 /// This struct defines the thresholds and timeouts that control how the circuit breaker
 /// transitions between states.
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
-pub struct DMSCircuitBreakerConfig {
+pub struct DMSCCircuitBreakerConfig {
     /// Number of consecutive failures required to open the circuit breaker from Closed state.
     pub failure_threshold: u32,
     
@@ -112,7 +112,7 @@ pub struct DMSCircuitBreakerConfig {
     pub monitoring_period_seconds: u64,
 }
 
-impl Default for DMSCircuitBreakerConfig {
+impl Default for DMSCCircuitBreakerConfig {
     /// Creates a default configuration for the circuit breaker.
     /// 
     /// Default values:
@@ -137,7 +137,7 @@ impl Default for DMSCircuitBreakerConfig {
 #[derive(Debug)]
 struct CircuitBreakerStats {
     /// Current state of the circuit breaker (Closed, Open, HalfOpen)
-    state: RwLock<DMSCircuitBreakerState>,
+    state: RwLock<DMSCCircuitBreakerState>,
     
     /// Total count of failures since the circuit breaker was created
     failure_count: AtomicUsize,
@@ -164,7 +164,7 @@ impl CircuitBreakerStats {
     /// Initial state is Closed, with all counters set to zero.
     fn new() -> Self {
         Self {
-            state: RwLock::new(DMSCircuitBreakerState::Closed),
+            state: RwLock::new(DMSCCircuitBreakerState::Closed),
             failure_count: AtomicUsize::new(0),
             success_count: AtomicUsize::new(0),
             last_failure_time: RwLock::new(None),
@@ -187,21 +187,21 @@ impl CircuitBreakerStats {
 
         let state = self.state.read().await;
         match *state {
-            DMSCircuitBreakerState::HalfOpen => {
+            DMSCCircuitBreakerState::HalfOpen => {
                 let successes = self.consecutive_successes.load(Ordering::Relaxed);
                 if successes >= 3 { // Note: This should use config in future versions
                     drop(state);
                     let mut state_write = self.state.write().await;
-                    *state_write = DMSCircuitBreakerState::Closed;
+                    *state_write = DMSCCircuitBreakerState::Closed;
                     self.consecutive_successes.store(0, Ordering::Relaxed);
                     self.failure_count.store(0, Ordering::Relaxed);
                     *self.last_state_change.write().await = Instant::now();
                 }
             }
-            DMSCircuitBreakerState::Open => {
+            DMSCCircuitBreakerState::Open => {
                 // Should not happen if used correctly - Open state should reject requests
             }
-            DMSCircuitBreakerState::Closed => {
+            DMSCCircuitBreakerState::Closed => {
                 // Normal operation - no state change needed
             }
         }
@@ -215,7 +215,7 @@ impl CircuitBreakerStats {
     /// - Updates last failure time
     /// - Transitions from Closed to Open if failure threshold is met
     /// - Transitions from HalfOpen to Open on any failure
-    async fn record_failure(&self, config: &DMSCircuitBreakerConfig) {
+    async fn record_failure(&self, config: &DMSCCircuitBreakerConfig) {
         self.failure_count.fetch_add(1, Ordering::Relaxed);
         self.consecutive_successes.store(0, Ordering::Relaxed);
         self.consecutive_failures.fetch_add(1, Ordering::Relaxed);
@@ -223,24 +223,24 @@ impl CircuitBreakerStats {
 
         let state = self.state.read().await;
         match *state {
-            DMSCircuitBreakerState::Closed => {
+            DMSCCircuitBreakerState::Closed => {
                 let failures = self.consecutive_failures.load(Ordering::Relaxed);
                 if failures >= config.failure_threshold as usize {
                     drop(state);
                     let mut state_write = self.state.write().await;
-                    *state_write = DMSCircuitBreakerState::Open;
+                    *state_write = DMSCCircuitBreakerState::Open;
                     self.consecutive_failures.store(0, Ordering::Relaxed);
                     *self.last_state_change.write().await = Instant::now();
                 }
             }
-            DMSCircuitBreakerState::HalfOpen => {
+            DMSCCircuitBreakerState::HalfOpen => {
                 // Any failure in HalfOpen state immediately opens the circuit
                 drop(state);
                 let mut state_write = self.state.write().await;
-                *state_write = DMSCircuitBreakerState::Open;
+                *state_write = DMSCCircuitBreakerState::Open;
                 *self.last_state_change.write().await = Instant::now();
             }
-            DMSCircuitBreakerState::Open => {
+            DMSCCircuitBreakerState::Open => {
                 // Already open - no state change needed
             }
         }
@@ -257,9 +257,9 @@ impl CircuitBreakerStats {
     /// # Returns
     /// 
     /// `true` if the timeout has elapsed and a reset should be attempted, `false` otherwise
-    async fn should_attempt_reset(&self, config: &DMSCircuitBreakerConfig) -> bool {
+    async fn should_attempt_reset(&self, config: &DMSCCircuitBreakerConfig) -> bool {
         let state = self.state.read().await;
-        if let DMSCircuitBreakerState::Open = *state {
+        if let DMSCCircuitBreakerState::Open = *state {
             let last_change = *self.last_state_change.read().await;
             Instant::now().duration_since(last_change) >= Duration::from_secs(config.timeout_seconds)
         } else {
@@ -273,7 +273,7 @@ impl CircuitBreakerStats {
     /// should test if the service has recovered.
     async fn transition_to_half_open(&self) {
         let mut state = self.state.write().await;
-        *state = DMSCircuitBreakerState::HalfOpen;
+        *state = DMSCCircuitBreakerState::HalfOpen;
         *self.last_state_change.write().await = Instant::now();
     }
 
@@ -281,8 +281,8 @@ impl CircuitBreakerStats {
     /// 
     /// # Returns
     /// 
-    /// The current `DMSCircuitBreakerState` (Closed, Open, or HalfOpen)
-    async fn get_state(&self) -> DMSCircuitBreakerState {
+    /// The current `DMSCCircuitBreakerState` (Closed, Open, or HalfOpen)
+    async fn get_state(&self) -> DMSCCircuitBreakerState {
         self.state.read().await.clone()
     }
 
@@ -296,9 +296,9 @@ impl CircuitBreakerStats {
     /// A `CircuitBreakerMetrics` struct containing the current statistics
     fn get_stats(&self) -> CircuitBreakerMetrics {
         let state_str = match self.state.blocking_read().clone() {
-            DMSCircuitBreakerState::Closed => "Closed",
-            DMSCircuitBreakerState::Open => "Open", 
-            DMSCircuitBreakerState::HalfOpen => "HalfOpen",
+            DMSCCircuitBreakerState::Closed => "Closed",
+            DMSCCircuitBreakerState::Open => "Open", 
+            DMSCCircuitBreakerState::HalfOpen => "HalfOpen",
         };
         
         CircuitBreakerMetrics {
@@ -338,15 +338,15 @@ pub struct CircuitBreakerMetrics {
 /// This struct provides a thread-safe circuit breaker that protects against cascading failures
 /// by monitoring the success and failure patterns of operations and transitioning between states
 /// (Closed, Open, HalfOpen) based on configurable thresholds.
-pub struct DMSCircuitBreaker {
+pub struct DMSCCircuitBreaker {
     /// Configuration for the circuit breaker behavior
-    config: DMSCircuitBreakerConfig,
+    config: DMSCCircuitBreakerConfig,
     
     /// Internal statistics and state management
     stats: Arc<CircuitBreakerStats>,
 }
 
-impl DMSCircuitBreaker {
+impl DMSCCircuitBreaker {
     /// Creates a new circuit breaker with the specified configuration.
     /// 
     /// # Parameters
@@ -355,8 +355,8 @@ impl DMSCircuitBreaker {
     /// 
     /// # Returns
     /// 
-    /// A new `DMSCircuitBreaker` instance
-    pub fn new(config: DMSCircuitBreakerConfig) -> Self {
+    /// A new `DMSCCircuitBreaker` instance
+    pub fn new(config: DMSCCircuitBreakerConfig) -> Self {
         Self {
             config,
             stats: Arc::new(CircuitBreakerStats::new()),
@@ -376,8 +376,8 @@ impl DMSCircuitBreaker {
         let state = self.stats.get_state().await;
         
         match state {
-            DMSCircuitBreakerState::Closed => true,
-            DMSCircuitBreakerState::Open => {
+            DMSCCircuitBreakerState::Closed => true,
+            DMSCCircuitBreakerState::Open => {
                 if self.stats.should_attempt_reset(&self.config).await {
                     self.stats.transition_to_half_open().await;
                     true
@@ -385,7 +385,7 @@ impl DMSCircuitBreaker {
                     false
                 }
             }
-            DMSCircuitBreakerState::HalfOpen => true,
+            DMSCCircuitBreakerState::HalfOpen => true,
         }
     }
 
@@ -416,12 +416,12 @@ impl DMSCircuitBreaker {
     /// # Returns
     /// 
     /// The result of the operation, or an error if the circuit breaker is open
-    pub async fn execute<F, R>(&self, operation: F) -> DMSResult<R>
+    pub async fn execute<F, R>(&self, operation: F) -> DMSCResult<R>
     where
-        F: std::future::Future<Output = DMSResult<R>>,
+        F: std::future::Future<Output = DMSCResult<R>>,
     {
         if !self.allow_request().await {
-            return Err(crate::core::DMSError::ServiceMesh("Circuit breaker is open".to_string()));
+            return Err(crate::core::DMSCError::ServiceMesh("Circuit breaker is open".to_string()));
         }
 
         match operation.await {
@@ -440,8 +440,8 @@ impl DMSCircuitBreaker {
     /// 
     /// # Returns
     /// 
-    /// The current `DMSCircuitBreakerState` (Closed, Open, or HalfOpen)
-    pub async fn get_state(&self) -> DMSCircuitBreakerState {
+    /// The current `DMSCCircuitBreakerState` (Closed, Open, or HalfOpen)
+    pub async fn get_state(&self) -> DMSCCircuitBreakerState {
         self.stats.get_state().await
     }
 
@@ -458,8 +458,8 @@ impl DMSCircuitBreaker {
     /// 
     /// # Returns
     /// 
-    /// A reference to the `DMSCircuitBreakerConfig` used by this circuit breaker
-    pub fn get_config(&self) -> &DMSCircuitBreakerConfig {
+    /// A reference to the `DMSCCircuitBreakerConfig` used by this circuit breaker
+    pub fn get_config(&self) -> &DMSCCircuitBreakerConfig {
         &self.config
     }
 
@@ -468,7 +468,7 @@ impl DMSCircuitBreaker {
     /// This method resets all counters and transitions the circuit breaker to Closed state.
     pub async fn reset(&self) {
         let mut state = self.stats.state.write().await;
-        *state = DMSCircuitBreakerState::Closed;
+        *state = DMSCCircuitBreakerState::Closed;
         self.stats.failure_count.store(0, Ordering::Relaxed);
         self.stats.success_count.store(0, Ordering::Relaxed);
         self.stats.consecutive_failures.store(0, Ordering::Relaxed);
@@ -481,7 +481,7 @@ impl DMSCircuitBreaker {
     /// This method immediately opens the circuit breaker, rejecting all requests until the timeout elapses.
     pub async fn force_open(&self) {
         let mut state = self.stats.state.write().await;
-        *state = DMSCircuitBreakerState::Open;
+        *state = DMSCCircuitBreakerState::Open;
         *self.stats.last_state_change.write().await = Instant::now();
     }
 
@@ -490,7 +490,7 @@ impl DMSCircuitBreaker {
     /// This method immediately closes the circuit breaker, allowing all requests to proceed.
     pub async fn force_close(&self) {
         let mut state = self.stats.state.write().await;
-        *state = DMSCircuitBreakerState::Closed;
+        *state = DMSCCircuitBreakerState::Closed;
         *self.stats.last_state_change.write().await = Instant::now();
     }
 }
@@ -499,9 +499,9 @@ impl DMSCircuitBreaker {
 /// 
 /// This struct extends the basic circuit breaker functionality by maintaining separate statistics
 /// for different error types, allowing for more granular control over circuit breaker behavior.
-pub struct DMSAdvancedCircuitBreaker {
+pub struct DMSCAdvancedCircuitBreaker {
     /// Configuration for the circuit breaker behavior
-    config: DMSCircuitBreakerConfig,
+    config: DMSCCircuitBreakerConfig,
     
     /// Error-type specific statistics and state management
     stats_by_error: RwLock<HashMap<String, Arc<CircuitBreakerStats>>>,
@@ -510,7 +510,7 @@ pub struct DMSAdvancedCircuitBreaker {
     default_stats: Arc<CircuitBreakerStats>,
 }
 
-impl DMSAdvancedCircuitBreaker {
+impl DMSCAdvancedCircuitBreaker {
     /// Creates a new advanced circuit breaker with the specified configuration.
     /// 
     /// # Parameters
@@ -519,8 +519,8 @@ impl DMSAdvancedCircuitBreaker {
     /// 
     /// # Returns
     /// 
-    /// A new `DMSAdvancedCircuitBreaker` instance
-    pub fn new(config: DMSCircuitBreakerConfig) -> Self {
+    /// A new `DMSCAdvancedCircuitBreaker` instance
+    pub fn new(config: DMSCCircuitBreakerConfig) -> Self {
         Self {
             config,
             stats_by_error: RwLock::new(HashMap::new()),
@@ -583,8 +583,8 @@ impl DMSAdvancedCircuitBreaker {
         let state = stats.get_state().await;
         
         match state {
-            DMSCircuitBreakerState::Closed => true,
-            DMSCircuitBreakerState::Open => {
+            DMSCCircuitBreakerState::Closed => true,
+            DMSCCircuitBreakerState::Open => {
                 if stats.should_attempt_reset(&self.config).await {
                     stats.transition_to_half_open().await;
                     true
@@ -592,7 +592,7 @@ impl DMSAdvancedCircuitBreaker {
                     false
                 }
             }
-            DMSCircuitBreakerState::HalfOpen => true,
+            DMSCCircuitBreakerState::HalfOpen => true,
         }
     }
 }

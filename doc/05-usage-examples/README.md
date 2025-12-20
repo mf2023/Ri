@@ -6,7 +6,7 @@
 
 **Last modified date: 2025-12-12**
 
-本目录包含DMS各个核心功能的使用示例，帮助您快速理解和使用DMS框架。
+本目录包含DMSC各个核心功能的使用示例，帮助您快速理解和使用DMSC框架。
 
 ## 示例列表
 
@@ -14,7 +14,7 @@
 
 | 示例 | 描述 | 文件 |
 |:--------|:-------------|:--------|
-| **基础应用** | 构建简单的DMS应用 | [basic-app.md](./basic-app.md) |
+| **基础应用** | 构建简单的DMSC应用 | [basic-app.md](./basic-app.md) |
 | **认证与授权** | 使用JWT和OAuth进行认证 | [authentication.md](./authentication.md) |
 | **缓存使用** | 缓存的基本操作和高级用法 | [caching.md](./caching.md) |
 | **数据库操作** | 数据库连接、查询和事务管理 | [database.md](./database.md) |
@@ -54,9 +54,9 @@ use dms::prelude::*;
 
 // 2. 主函数
 #[tokio::main]
-async fn main() -> DMSResult<()> {
+async fn main() -> DMSCResult<()> {
     // 3. 构建应用
-    let app = DMSAppBuilder::new()
+    let app = DMSCAppBuilder::new()
         .with_config("config.yaml")?
         // 其他配置
         .build()?;
@@ -75,10 +75,10 @@ async fn main() -> DMSResult<()> {
 
 </div>
 
-### 1. 克隆DMS仓库
+### 1. 克隆DMSC仓库
 
 ```bash
-git clone https://gitee.com/dunimd/dms.git
+git clone https://gitee.com/dunimd/dmsc.git
 cd dms
 ```
 
@@ -95,7 +95,7 @@ cd dms-example
 
 ```toml
 [dependencies]
-dms = { git = "https://gitee.com/dunimd/dms" }
+dms = { git = "https://gitee.com/dunimd/dmsc" }
 tokio = { version = "1.0", features = ["full"] }
 ```
 
@@ -115,12 +115,12 @@ cargo run
 
 </div>
 
-您可以根据需要修改示例代码，探索DMS的各种功能：
+您可以根据需要修改示例代码，探索DMSC的各种功能：
 
 1. **添加或移除模块**：根据需求调整应用配置
 2. **修改业务逻辑**：实现自己的业务功能
 3. **调整配置**：修改配置文件或运行时参数
-4. **添加自定义模块**：扩展DMS功能
+4. **添加自定义模块**：扩展DMSC功能
 
 ## 最佳实践
 
@@ -128,7 +128,7 @@ cargo run
 2. **理解代码逻辑**：仔细阅读代码解析，理解每个组件的作用
 3. **逐步扩展**：在基础示例上逐步添加新功能
 4. **查看API文档**：遇到疑问时，参考对应的API文档
-5. **测试和调试**：使用DMS的可观测性功能进行测试和调试
+5. **测试和调试**：使用DMSC的可观测性功能进行测试和调试
 
 <div align="center">
 
@@ -136,8 +136,8 @@ cargo run
 
 </div>
 
-选择您感兴趣的示例，按照说明运行和修改，深入了解DMS的功能和用法。
+选择您感兴趣的示例，按照说明运行和修改，深入了解DMSC的功能和用法。
 
-- [最佳实践](./06-best-practices.md)：开发 DMS 应用的最佳实践
+- [最佳实践](./06-best-practices.md)：开发 DMSC 应用的最佳实践
 - [故障排除](./07-troubleshooting.md)：常见问题和解决方案
 - [术语表](./08-glossary.md)：核心术语解释

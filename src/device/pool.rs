@@ -1,7 +1,7 @@
 //! Copyright © 2025 Wenze Wei. All Rights Reserved.
 //!
-//! This file is part of DMS.
-//! The DMS project belongs to the Dunimd Team.
+//! This file is part of DMSC.
+//! The DMSC project belongs to the Dunimd Team.
 //!
 //! Licensed under the Apache License, Version 2.0 (the "License");
 //! You may not use this file except in compliance with the License.
@@ -19,16 +19,16 @@
 
 //! # Resource Pool Management
 //! 
-//! This file implements resource pool management for the DMS framework, providing a way to group
+//! This file implements resource pool management for the DMSC framework, providing a way to group
 //! similar devices together for efficient resource allocation and management. It includes both
 //! single resource pools and a resource pool manager for handling multiple pools.
 //! 
 //! ## Key Components
 //! 
-//! - **DMSResourcePool**: Manages a pool of similar devices
-//! - **DMSResourcePoolConfig**: Configuration for resource pools
-//! - **DMSResourcePoolStatistics**: Statistics for monitoring resource pools
-//! - **DMSResourcePoolManager**: Manages multiple resource pools
+//! - **DMSCResourcePool**: Manages a pool of similar devices
+//! - **DMSCResourcePoolConfig**: Configuration for resource pools
+//! - **DMSCResourcePoolStatistics**: Statistics for monitoring resource pools
+//! - **DMSCResourcePoolManager**: Manages multiple resource pools
 //! 
 //! ## Design Principles
 //! 
@@ -42,23 +42,23 @@
 //! 8. **Device Type Segregation**: Each pool contains devices of a single type
 //! 9. **Arc-Based Sharing**: Uses Arc for safe concurrent access to devices
 //! 10. **Serialization Support**: All structures support serialization/deserialization
-//! 11. **Builder Pattern**: Configurable through DMSResourcePoolConfig
+//! 11. **Builder Pattern**: Configurable through DMSCResourcePoolConfig
 //! 12. **Resource Optimization**: Calculates total compute, memory, storage, and bandwidth
 //! 
 //! ## Usage
 //! 
 //! ```rust
-//! use dms::device::{DMSResourcePoolManager, DMSResourcePoolConfig, DMSDeviceType};
-//! use dms::core::DMSResult;
+//! use dms::device::{DMSCResourcePoolManager, DMSCResourcePoolConfig, DMSCDeviceType};
+//! use dms::core::DMSCResult;
 //! 
-//! fn example() -> DMSResult<()> {
+//! fn example() -> DMSCResult<()> {
 //!     // Create a resource pool manager
-//!     let mut manager = DMSResourcePoolManager::new();
+//!     let mut manager = DMSCResourcePoolManager::new();
 //!     
 //!     // Create a resource pool configuration
-//!     let config = DMSResourcePoolConfig {
+//!     let config = DMSCResourcePoolConfig {
 //!         name: "cpu-pool-1".to_string(),
-//!         device_type: DMSDeviceType::CPU,
+//!         device_type: DMSCDeviceType::CPU,
 //!         max_concurrent_allocations: 10,
 //!         allocation_timeout_secs: 60,
 //!         health_check_interval_secs: 30,
@@ -73,7 +73,7 @@
 //!              stats.total_devices, stats.utilization_rate * 100.0);
 //!     
 //!     // Get all pools by device type
-//!     let cpu_pools = manager.get_pools_by_type(DMSDeviceType::CPU);
+//!     let cpu_pools = manager.get_pools_by_type(DMSCDeviceType::CPU);
 //!     println!("Found {} CPU pools", cpu_pools.len());
 //!     
 //!     // Get overall statistics
@@ -89,7 +89,7 @@ use std::collections::HashMap;
 use std::time::Duration;
 use serde::{Serialize, Deserialize};
 
-use super::core::{DMSDevice, DMSDeviceType};
+use super::core::{DMSCDevice, DMSCDeviceType, DMSCDeviceStatus};
 
 
 /// Resource pool for managing multiple similar devices
@@ -97,13 +97,13 @@ use super::core::{DMSDevice, DMSDeviceType};
 /// This struct manages a pool of devices of the same type, tracking their availability,
 /// allocation status, and capacity. It provides methods for adding/removing devices,
 /// allocating/releasing devices, and collecting statistics.
-pub struct DMSResourcePool {
+pub struct DMSCResourcePool {
     /// Name of the resource pool
     name: String,
     /// Type of devices in the pool
-    device_type: DMSDeviceType,
+    device_type: DMSCDeviceType,
     /// Map of device IDs to device instances
-    devices: HashMap<String, Arc<DMSDevice>>,
+    devices: HashMap<String, Arc<DMSCDevice>>,
     /// Total capacity of the pool (number of devices)
     total_capacity: usize,
     /// Available capacity (number of devices not allocated)
@@ -129,7 +129,7 @@ pub struct DMSResourcePool {
     /// Available bandwidth in Gbps (not allocated)
     available_bandwidth_gbps: f64,
     /// Connection pool state for lifecycle management
-    connection_pool: Arc<RwLock<DMSConnectionPool>>,
+    connection_pool: Arc<RwLock<DMSCConnectionPool>>,
 }
 
 /// Configuration for a resource pool
@@ -137,11 +137,11 @@ pub struct DMSResourcePool {
 /// This struct defines the configuration options for creating a resource pool, including
 /// name, device type, and various operational parameters.
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct DMSResourcePoolConfig {
+pub struct DMSCResourcePoolConfig {
     /// Name of the resource pool
     pub name: String,
     /// Type of devices that will be in the pool
-    pub device_type: DMSDeviceType,
+    pub device_type: DMSCDeviceType,
     /// Maximum number of concurrent allocations allowed
     pub max_concurrent_allocations: usize,
     /// Timeout for device allocation in seconds
@@ -150,7 +150,7 @@ pub struct DMSResourcePoolConfig {
     pub health_check_interval_secs: u64,
 }
 
-impl DMSResourcePool {
+impl DMSCResourcePool {
     /// Creates a new resource pool with the given configuration
     /// 
     /// # Parameters
@@ -159,9 +159,9 @@ impl DMSResourcePool {
     /// 
     /// # Returns
     /// 
-    /// A new `DMSResourcePool` instance with the specified configuration
-    pub fn new(config: DMSResourcePoolConfig) -> Self {
-        let connection_pool = Arc::new(RwLock::new(DMSConnectionPool::new(
+    /// A new `DMSCResourcePool` instance with the specified configuration
+    pub fn new(config: DMSCResourcePoolConfig) -> Self {
+        let connection_pool = Arc::new(RwLock::new(DMSCConnectionPool::new(
             config.max_concurrent_allocations,
             Duration::from_secs(config.allocation_timeout_secs),
             Duration::from_secs(config.health_check_interval_secs),
@@ -199,7 +199,7 @@ impl DMSResourcePool {
     /// # Returns
     /// 
     /// `true` if the device was successfully added, `false` otherwise
-    pub fn add_device(&mut self, device: Arc<DMSDevice>) -> bool {
+    pub fn add_device(&mut self, device: Arc<DMSCDevice>) -> bool {
         // Check if device type matches pool device type
         if device.device_type() != self.device_type {
             return false;
@@ -297,8 +297,8 @@ impl DMSResourcePool {
     /// 
     /// # Returns
     /// 
-    /// An `Option<Arc<DMSDevice>>` containing the allocated device if successful, `None` otherwise
-    pub fn allocate(&mut self, _allocation_id: &str) -> Option<Arc<DMSDevice>> {
+    /// An `Option<Arc<DMSCDevice>>` containing the allocated device if successful, `None` otherwise
+    pub fn allocate(&mut self, _allocation_id: &str) -> Option<Arc<DMSCDevice>> {
         // Check if there's available capacity
         if self.available_capacity == 0 {
             return None;
@@ -324,7 +324,13 @@ impl DMSResourcePool {
                 self.available_bandwidth_gbps -= capabilities.bandwidth_gbps.unwrap_or(0.0);
                 
                 // Add connection to pool
-                let mut pool = self.connection_pool.write().unwrap();
+                let mut pool = match self.connection_pool.write() {
+                    Ok(pool) => pool,
+                    Err(e) => {
+                        log::error!("Failed to acquire connection pool lock: {}", e);
+                        return None;
+                    }
+                };
                 pool.add_connection(device.id().to_string(), device.id().to_string());
                 
                 return Some(device.clone());
@@ -365,8 +371,15 @@ impl DMSResourcePool {
                     self.available_bandwidth_gbps += capabilities.bandwidth_gbps.unwrap_or(0.0);
                     
                     // Remove connection from pool
-                    let mut pool = self.connection_pool.write().unwrap();
-                    pool.remove_connection(device.id());
+                    match self.connection_pool.write() {
+                        Ok(mut pool) => {
+                            pool.remove_connection(device.id());
+                        }
+                        Err(e) => {
+                            log::error!("Failed to acquire connection pool lock for removal: {}", e);
+                            // Continue with release even if we can't update the pool
+                        }
+                    }
                     
                     return true;
                 }
@@ -378,14 +391,14 @@ impl DMSResourcePool {
     
     /// Gets the current status of the pool
     /// 
-    /// This method returns a DMSResourcePoolStatus struct containing information about the pool's
+    /// This method returns a DMSCResourcePoolStatus struct containing information about the pool's
     /// capacity, allocation, and utilization.
     /// 
     /// # Returns
     /// 
-    /// A `DMSResourcePoolStatus` struct with the current pool status
-    pub fn get_status(&self) -> super::DMSResourcePoolStatus {
-        super::DMSResourcePoolStatus {
+    /// A `DMSCResourcePoolStatus` struct with the current pool status
+    pub fn get_status(&self) -> super::DMSCResourcePoolStatus {
+        super::DMSCResourcePoolStatus {
             total_capacity: self.total_capacity,
             available_capacity: self.available_capacity,
             allocated_capacity: self.allocated_capacity,
@@ -411,8 +424,8 @@ impl DMSResourcePool {
     /// 
     /// # Returns
     /// 
-    /// The device type as a `DMSDeviceType` enum
-    pub fn device_type(&self) -> DMSDeviceType {
+    /// The device type as a `DMSCDeviceType` enum
+    pub fn device_type(&self) -> DMSCDeviceType {
         self.device_type
     }
     
@@ -420,8 +433,8 @@ impl DMSResourcePool {
     /// 
     /// # Returns
     /// 
-    /// A vector of `Arc<DMSDevice>` containing all devices in the pool
-    pub fn get_devices(&self) -> Vec<Arc<DMSDevice>> {
+    /// A vector of `Arc<DMSCDevice>` containing all devices in the pool
+    pub fn get_devices(&self) -> Vec<Arc<DMSCDevice>> {
         self.devices.values().cloned().collect()
     }
     
@@ -429,8 +442,8 @@ impl DMSResourcePool {
     /// 
     /// # Returns
     /// 
-    /// A vector of `Arc<DMSDevice>` containing only available devices
-    pub fn get_available_devices(&self) -> Vec<Arc<DMSDevice>> {
+    /// A vector of `Arc<DMSCDevice>` containing only available devices
+    pub fn get_available_devices(&self) -> Vec<Arc<DMSCDevice>> {
         self.devices.values()
             .filter(|device| device.is_available())
             .cloned()
@@ -441,8 +454,8 @@ impl DMSResourcePool {
     /// 
     /// # Returns
     /// 
-    /// A vector of `Arc<DMSDevice>` containing only allocated devices
-    pub fn get_allocated_devices(&self) -> Vec<Arc<DMSDevice>> {
+    /// A vector of `Arc<DMSCDevice>` containing only allocated devices
+    pub fn get_allocated_devices(&self) -> Vec<Arc<DMSCDevice>> {
         self.devices.values()
             .filter(|device| device.is_allocated())
             .cloned()
@@ -489,8 +502,8 @@ impl DMSResourcePool {
     /// 
     /// # Returns
     /// 
-    /// A `DMSResourcePoolStatistics` struct with comprehensive pool statistics
-    pub fn get_statistics(&self) -> DMSResourcePoolStatistics {
+    /// A `DMSCResourcePoolStatistics` struct with comprehensive pool statistics
+    pub fn get_statistics(&self) -> DMSCResourcePoolStatistics {
         let devices = self.get_devices();
         let available_devices = self.get_available_devices();
         let allocated_devices = self.get_allocated_devices();
@@ -525,12 +538,49 @@ impl DMSResourcePool {
         };
 
         // Get connection pool statistics
-        let connection_pool_stats = {
-            let pool = self.connection_pool.read().unwrap();
-            Some(pool.get_statistics())
+        let connection_pool_stats = match self.connection_pool.read() {
+            Ok(pool) => Some(pool.get_statistics()),
+            Err(e) => {
+                log::error!("Failed to acquire connection pool read lock: {}", e);
+                None
+            }
         };
-
-        DMSResourcePoolStatistics {
+        
+        // Calculate device status distribution
+        let mut status_distribution = HashMap::new();
+        for device in &devices {
+            *status_distribution.entry(device.status()).or_insert(0) += 1;
+        }
+        
+        // Calculate average health metrics
+        let mut total_response_time_ms = 0.0;
+        let mut total_network_latency_ms = 0.0;
+        let mut total_disk_iops = 0.0;
+        let mut total_battery_level_percent = 0.0;
+        let mut total_cpu_usage_percent = 0.0;
+        let mut total_memory_usage_percent = 0.0;
+        let mut total_temperature_celsius = 0.0;
+        let mut total_error_count = 0u32;
+        let mut total_throughput = 0.0;
+        let mut total_uptime_seconds = 0.0;
+        
+        for device in &devices {
+            let health_metrics = device.health_metrics();
+            total_response_time_ms += health_metrics.response_time_ms;
+            total_network_latency_ms += health_metrics.network_latency_ms;
+            total_disk_iops += health_metrics.disk_iops as f64;
+            total_battery_level_percent += health_metrics.battery_level_percent;
+            total_cpu_usage_percent += health_metrics.cpu_usage_percent;
+            total_memory_usage_percent += health_metrics.memory_usage_percent;
+            total_temperature_celsius += health_metrics.temperature_celsius;
+            total_error_count += health_metrics.error_count;
+            total_throughput += health_metrics.throughput as f64;
+            total_uptime_seconds += health_metrics.uptime_seconds as f64;
+        }
+        
+        let device_count = devices.len() as f64;
+        
+        DMSCResourcePoolStatistics {
             total_devices: devices.len(),
             available_devices: available_devices.len(),
             allocated_devices: allocated_devices.len(),
@@ -542,6 +592,18 @@ impl DMSResourcePool {
             average_health_score,
             device_type: self.device_type,
             connection_pool_stats,
+            
+            status_distribution,
+            average_response_time_ms: if device_count > 0.0 { total_response_time_ms / device_count } else { 0.0 },
+            average_network_latency_ms: if device_count > 0.0 { total_network_latency_ms / device_count } else { 0.0 },
+            average_disk_iops: if device_count > 0.0 { total_disk_iops / device_count } else { 0.0 },
+            average_battery_level_percent: if device_count > 0.0 { total_battery_level_percent / device_count } else { 0.0 },
+            average_cpu_usage_percent: if device_count > 0.0 { total_cpu_usage_percent / device_count } else { 0.0 },
+            average_memory_usage_percent: if device_count > 0.0 { total_memory_usage_percent / device_count } else { 0.0 },
+            average_temperature_celsius: if device_count > 0.0 { total_temperature_celsius / device_count } else { 0.0 },
+            total_error_count,
+            average_throughput: if device_count > 0.0 { total_throughput / device_count } else { 0.0 },
+            average_uptime_seconds: if device_count > 0.0 { total_uptime_seconds / device_count } else { 0.0 },
         }
     }
 }
@@ -549,9 +611,9 @@ impl DMSResourcePool {
 /// Connection pool for managing device connections with lifecycle and health monitoring
 #[derive(Debug, Clone)]
 #[allow(dead_code)]
-pub struct DMSConnectionPool {
+pub struct DMSCConnectionPool {
     /// Active connections with their metadata
-    connections: HashMap<String, DMSConnectionInfo>,
+    connections: HashMap<String, DMSCConnectionInfo>,
     /// Maximum number of connections allowed
     max_connections: usize,
     /// Connection timeout duration
@@ -570,7 +632,7 @@ pub struct DMSConnectionPool {
 
 /// Connection information for tracking individual connections
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct DMSConnectionInfo {
+pub struct DMSCConnectionInfo {
     /// Connection ID
     pub connection_id: String,
     /// Device ID this connection is associated with
@@ -582,14 +644,14 @@ pub struct DMSConnectionInfo {
     /// Last activity timestamp (seconds since Unix epoch)
     pub last_activity_secs: u64,
     /// Connection state
-    pub state: DMSConnectionState,
+    pub state: DMSCConnectionState,
     /// Connection health metrics
-    pub health_metrics: DMSConnectionHealthMetrics,
+    pub health_metrics: DMSCConnectionHealthMetrics,
 }
 
 /// Connection state enumeration
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub enum DMSConnectionState {
+pub enum DMSCConnectionState {
     /// Connection is establishing
     Connecting,
     /// Connection is active and healthy
@@ -606,7 +668,7 @@ pub enum DMSConnectionState {
 
 /// Connection health metrics
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
-pub struct DMSConnectionHealthMetrics {
+pub struct DMSCConnectionHealthMetrics {
     /// Number of successful operations
     pub successful_operations: u64,
     /// Number of failed operations
@@ -620,7 +682,7 @@ pub struct DMSConnectionHealthMetrics {
 }
 
 #[allow(dead_code)]
-impl DMSConnectionPool {
+impl DMSCConnectionPool {
     /// Creates a new connection pool
     pub fn new(max_connections: usize, connection_timeout: Duration, health_check_interval: Duration) -> Self {
         Self {
@@ -640,7 +702,7 @@ impl DMSConnectionPool {
     
     /// Adds a new connection to the pool
     pub fn add_connection(&mut self, device_id: String, address: String) {
-        let connection_info = DMSConnectionInfo {
+        let connection_info = DMSCConnectionInfo {
             connection_id: device_id.clone(),
             device_id: device_id.clone(),
             address,
@@ -652,8 +714,8 @@ impl DMSConnectionPool {
                 .duration_since(std::time::UNIX_EPOCH)
                 .unwrap_or_default()
                 .as_secs(),
-            state: DMSConnectionState::Active,
-            health_metrics: DMSConnectionHealthMetrics::default(),
+            state: DMSCConnectionState::Active,
+            health_metrics: DMSCConnectionHealthMetrics::default(),
         };
         
         self.connections.insert(device_id, connection_info);
@@ -666,7 +728,7 @@ impl DMSConnectionPool {
     }
     
     /// Gets connection information
-    pub fn get_connection(&self, connection_id: &str) -> Option<&DMSConnectionInfo> {
+    pub fn get_connection(&self, connection_id: &str) -> Option<&DMSCConnectionInfo> {
         self.connections.get(connection_id)
     }
     
@@ -677,8 +739,8 @@ impl DMSConnectionPool {
                 .duration_since(std::time::UNIX_EPOCH)
                 .unwrap_or(Duration::from_secs(0))
                 .as_secs();
-            if connection.state == DMSConnectionState::Idle {
-                connection.state = DMSConnectionState::Active;
+            if connection.state == DMSCConnectionState::Idle {
+                connection.state = DMSCConnectionState::Active;
             }
             true
         } else {
@@ -732,57 +794,57 @@ impl DMSConnectionPool {
                 .as_secs();
             let elapsed_secs = current_time.saturating_sub(connection.last_activity_secs);
             
-            if connection.state == DMSConnectionState::Active && elapsed_secs > self.connection_timeout.as_secs() {
-                connection.state = DMSConnectionState::Idle;
+            if connection.state == DMSCConnectionState::Active && elapsed_secs > self.connection_timeout.as_secs() {
+                connection.state = DMSCConnectionState::Idle;
             }
             
             // Check for unhealthy connections
             if connection.health_metrics.uptime_percentage < 90.0 {
-                connection.state = DMSConnectionState::Unhealthy;
+                connection.state = DMSCConnectionState::Unhealthy;
             } else if let Some(last_error_secs) = connection.health_metrics.last_error_secs {
                 let current_secs = std::time::SystemTime::now()
                     .duration_since(std::time::UNIX_EPOCH)
                     .unwrap_or(Duration::from_secs(0))
                     .as_secs();
                 if current_secs.saturating_sub(last_error_secs) < 60 {
-                    connection.state = DMSConnectionState::Unhealthy;
+                    connection.state = DMSCConnectionState::Unhealthy;
                 }
             }
             
             // Close connections that have been unhealthy for too long
-            if connection.state == DMSConnectionState::Unhealthy &&
+            if connection.state == DMSCConnectionState::Unhealthy &&
                connection.health_metrics.failed_operations > 10 {
-                connection.state = DMSConnectionState::Closing;
+                connection.state = DMSCConnectionState::Closing;
             }
         }
         
         // Remove closed connections
-        self.connections.retain(|_, conn| conn.state != DMSConnectionState::Closed);
+        self.connections.retain(|_, conn| conn.state != DMSCConnectionState::Closed);
     }
     
     /// Gets the number of active connections
     pub fn active_connections(&self) -> usize {
         self.connections.values()
-            .filter(|conn| conn.state == DMSConnectionState::Active)
+            .filter(|conn| conn.state == DMSCConnectionState::Active)
             .count()
     }
     
     /// Gets the number of idle connections
     pub fn idle_connections(&self) -> usize {
         self.connections.values()
-            .filter(|conn| conn.state == DMSConnectionState::Idle)
+            .filter(|conn| conn.state == DMSCConnectionState::Idle)
             .count()
     }
     
     /// Gets the number of unhealthy connections
     pub fn unhealthy_connections(&self) -> usize {
         self.connections.values()
-            .filter(|conn| conn.state == DMSConnectionState::Unhealthy)
+            .filter(|conn| conn.state == DMSCConnectionState::Unhealthy)
             .count()
     }
     
     /// Gets overall connection pool statistics
-    pub fn get_statistics(&self) -> DMSConnectionPoolStatistics {
+    pub fn get_statistics(&self) -> DMSCConnectionPoolStatistics {
         let total_connections = self.connections.len();
         let active_connections = self.active_connections();
         let idle_connections = self.idle_connections();
@@ -806,7 +868,7 @@ impl DMSConnectionPool {
         
         let last_health_check_secs = self.last_health_check_secs;
         
-        DMSConnectionPoolStatistics {
+        DMSCConnectionPoolStatistics {
             total_connections,
             active_connections,
             idle_connections,
@@ -823,7 +885,7 @@ impl DMSConnectionPool {
 
 /// Connection pool statistics
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct DMSConnectionPoolStatistics {
+pub struct DMSCConnectionPoolStatistics {
     /// Total number of connections
     pub total_connections: usize,
     /// Number of active connections
@@ -849,9 +911,9 @@ pub struct DMSConnectionPoolStatistics {
 /// Resource pool statistics structure
 /// 
 /// This struct contains comprehensive statistics for a resource pool, including device counts,
-/// utilization, and total resources.
+/// utilization, total resources, and detailed health metrics.
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct DMSResourcePoolStatistics {
+pub struct DMSCResourcePoolStatistics {
     /// Total number of devices in the pool
     pub total_devices: usize,
     /// Number of available devices in the pool
@@ -871,32 +933,55 @@ pub struct DMSResourcePoolStatistics {
     /// Average health score across all devices
     pub average_health_score: f64,
     /// Type of devices in the pool
-    pub device_type: DMSDeviceType,
+    pub device_type: DMSCDeviceType,
     /// Connection pool statistics
-    pub connection_pool_stats: Option<DMSConnectionPoolStatistics>,
+    pub connection_pool_stats: Option<DMSCConnectionPoolStatistics>,
+    
+    /// Device status distribution
+    pub status_distribution: HashMap<DMSCDeviceStatus, usize>,
+    /// Average response time in milliseconds
+    pub average_response_time_ms: f64,
+    /// Average network latency in milliseconds (for network devices)
+    pub average_network_latency_ms: f64,
+    /// Average disk IOPS (for storage devices)
+    pub average_disk_iops: f64,
+    /// Average battery level percentage (for battery-powered devices)
+    pub average_battery_level_percent: f64,
+    /// Average CPU usage percentage
+    pub average_cpu_usage_percent: f64,
+    /// Average memory usage percentage
+    pub average_memory_usage_percent: f64,
+    /// Average temperature in Celsius
+    pub average_temperature_celsius: f64,
+    /// Total error count across all devices
+    pub total_error_count: u32,
+    /// Average throughput across all devices
+    pub average_throughput: f64,
+    /// Average uptime in seconds
+    pub average_uptime_seconds: f64,
 }
 
 /// Resource pool manager for managing multiple resource pools
 /// 
 /// This struct manages multiple resource pools, providing methods for creating, retrieving,
 /// and removing pools, as well as getting overall statistics.
-pub struct DMSResourcePoolManager {
+pub struct DMSCResourcePoolManager {
     /// Map of pool names to resource pools
-    pools: HashMap<String, Arc<DMSResourcePool>>,
+    pools: HashMap<String, Arc<DMSCResourcePool>>,
 }
 
-impl Default for DMSResourcePoolManager {
+impl Default for DMSCResourcePoolManager {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl DMSResourcePoolManager {
+impl DMSCResourcePoolManager {
     /// Creates a new resource pool manager
     /// 
     /// # Returns
     /// 
-    /// A new `DMSResourcePoolManager` instance
+    /// A new `DMSCResourcePoolManager` instance
     pub fn new() -> Self {
         Self {
             pools: HashMap::new(),
@@ -913,9 +998,9 @@ impl DMSResourcePoolManager {
     /// 
     /// # Returns
     /// 
-    /// An `Arc<DMSResourcePool>` to the newly created pool
-    pub fn create_pool(&mut self, config: DMSResourcePoolConfig) -> Arc<DMSResourcePool> {
-        let pool = Arc::new(DMSResourcePool::new(config));
+    /// An `Arc<DMSCResourcePool>` to the newly created pool
+    pub fn create_pool(&mut self, config: DMSCResourcePoolConfig) -> Arc<DMSCResourcePool> {
+        let pool = Arc::new(DMSCResourcePool::new(config));
         self.pools.insert(pool.name().to_string(), pool.clone());
         pool
     }
@@ -928,8 +1013,8 @@ impl DMSResourcePoolManager {
     /// 
     /// # Returns
     /// 
-    /// An `Option<Arc<DMSResourcePool>>` containing the pool if found, `None` otherwise
-    pub fn get_pool(&self, name: &str) -> Option<Arc<DMSResourcePool>> {
+    /// An `Option<Arc<DMSCResourcePool>>` containing the pool if found, `None` otherwise
+    pub fn get_pool(&self, name: &str) -> Option<Arc<DMSCResourcePool>> {
         self.pools.get(name).cloned()
     }
     
@@ -941,8 +1026,8 @@ impl DMSResourcePoolManager {
     /// 
     /// # Returns
     /// 
-    /// An `Option<Arc<DMSResourcePool>>` containing the removed pool if found, `None` otherwise
-    pub fn remove_pool(&mut self, name: &str) -> Option<Arc<DMSResourcePool>> {
+    /// An `Option<Arc<DMSCResourcePool>>` containing the removed pool if found, `None` otherwise
+    pub fn remove_pool(&mut self, name: &str) -> Option<Arc<DMSCResourcePool>> {
         self.pools.remove(name)
     }
     
@@ -950,8 +1035,8 @@ impl DMSResourcePoolManager {
     /// 
     /// # Returns
     /// 
-    /// A vector of `Arc<DMSResourcePool>` containing all resource pools
-    pub fn get_all_pools(&self) -> Vec<Arc<DMSResourcePool>> {
+    /// A vector of `Arc<DMSCResourcePool>` containing all resource pools
+    pub fn get_all_pools(&self) -> Vec<Arc<DMSCResourcePool>> {
         self.pools.values().cloned().collect()
     }
     
@@ -963,8 +1048,8 @@ impl DMSResourcePoolManager {
     /// 
     /// # Returns
     /// 
-    /// A vector of `Arc<DMSResourcePool>` containing all pools of the specified device type
-    pub fn get_pools_by_type(&self, device_type: DMSDeviceType) -> Vec<Arc<DMSResourcePool>> {
+    /// A vector of `Arc<DMSCResourcePool>` containing all pools of the specified device type
+    pub fn get_pools_by_type(&self, device_type: DMSCDeviceType) -> Vec<Arc<DMSCResourcePool>> {
         self.pools.values()
             .filter(|pool| pool.device_type() == device_type)
             .cloned()
@@ -978,8 +1063,8 @@ impl DMSResourcePoolManager {
     /// 
     /// # Returns
     /// 
-    /// A `DMSResourcePoolStatistics` struct with overall statistics for all pools
-    pub fn get_overall_statistics(&self) -> DMSResourcePoolStatistics {
+    /// A `DMSCResourcePoolStatistics` struct with overall statistics for all pools
+    pub fn get_overall_statistics(&self) -> DMSCResourcePoolStatistics {
         let pools = self.get_all_pools();
         
         // Calculate total devices and allocated devices across all pools
@@ -1027,7 +1112,7 @@ impl DMSResourcePoolManager {
             0.0
         };
         
-        DMSResourcePoolStatistics {
+        DMSCResourcePoolStatistics {
             total_devices,
             available_devices: total_devices - allocated_devices,
             allocated_devices,
@@ -1037,8 +1122,20 @@ impl DMSResourcePoolManager {
             total_storage_gb,
             total_bandwidth_gbps,
             average_health_score,
-            device_type: DMSDeviceType::Custom, // Multiple device types across pools
+            device_type: DMSCDeviceType::Custom, // Multiple device types across pools
             connection_pool_stats: None, // No aggregated connection stats at manager level
+            
+            status_distribution: HashMap::new(),
+            average_response_time_ms: 0.0,
+            average_network_latency_ms: 0.0,
+            average_disk_iops: 0.0,
+            average_battery_level_percent: 0.0,
+            average_cpu_usage_percent: 0.0,
+            average_memory_usage_percent: 0.0,
+            average_temperature_celsius: 0.0,
+            total_error_count: 0,
+            average_throughput: 0.0,
+            average_uptime_seconds: 0.0,
         }
     }
 }

@@ -1,7 +1,7 @@
 //! Copyright © 2025 Wenze Wei. All Rights Reserved.
 //!
-//! This file is part of DMS.
-//! The DMS project belongs to the Dunimd Team.
+//! This file is part of DMSC.
+//! The DMSC project belongs to the Dunimd Team.
 //!
 //! Licensed under the Apache License, Version 2.0 (the "License");
 //! You may not use this file except in compliance with the License.
@@ -19,14 +19,14 @@
 
 //! # In-Memory Queue Implementation
 //!
-//! This file implements an in-memory queue backend for the DMS queue system. The in-memory queue
+//! This file implements an in-memory queue backend for the DMSC queue system. The in-memory queue
 //! provides a lightweight, fast queue implementation suitable for testing, development, and
 //! scenarios where durability is not a strict requirement. It also supports optional persistence
 //! to disk for basic durability.
 //!
 //! ## Key Components
 //!
-//! - **DMSMemoryQueue**: Main in-memory queue implementation
+//! - **DMSCMemoryQueue**: Main in-memory queue implementation
 //! - **MemoryQueueState**: Internal state management for the queue
 //! - **MemoryQueueProducer**: Producer implementation for sending messages
 //! - **MemoryQueueConsumer**: Consumer implementation for receiving messages
@@ -40,31 +40,31 @@
 //! 5. **Async-First**: All operations are asynchronous
 //! 6. **Thread-safe**: Uses Arc and RwLock for safe concurrent access
 //! 7. **Durable Option**: Optional disk persistence for message durability
-//! 8. **Simple API**: Implements the standard DMSQueue interfaces
+//! 8. **Simple API**: Implements the standard DMSCQueue interfaces
 //! 9. **Non-blocking**: Uses tokio's spawn_blocking for file I/O operations
 //! 10. **Message Retry**: Supports message requeueing with retry count increment
 //!
 //! ## Usage
 //!
 //! ```rust
-//! use dms::queue::{DMSQueue, DMSQueueMessage, DMSQueueProducer, DMSQueueConsumer};
-//! use dms::queue::backends::DMSMemoryQueue;
-//! use dms::core::DMSResult;
+//! use dms::queue::{DMSCQueue, DMSCQueueMessage, DMSCQueueProducer, DMSCQueueConsumer};
+//! use dms::queue::backends::DMSCMemoryQueue;
+//! use dms::core::DMSCResult;
 //! use serde_json::json;
 //!
-//! async fn example() -> DMSResult<()> {
+//! async fn example() -> DMSCResult<()> {
 //!     // Create a basic in-memory queue
-//!     let queue = DMSMemoryQueue::new("example_queue");
+//!     let queue = DMSCMemoryQueue::new("example_queue");
 //!     
 //!     // Or create a queue with disk persistence
-//!     // let queue = DMSMemoryQueue::with_persistence("example_queue", "/tmp/queue_persistence");
+//!     // let queue = DMSCMemoryQueue::with_persistence("example_queue", "/tmp/queue_persistence");
 //!     
 //!     // Create a producer
 //!     let producer = queue.create_producer().await?;
 //!     
 //!     // Create a message
 //!     let payload = json!({ "key": "value" }).to_string().into_bytes();
-//!     let message = DMSQueueMessage::new(payload);
+//!     let message = DMSCQueueMessage::new(payload);
 //!     
 //!     // Send the message
 //!     producer.send(message).await?;
@@ -86,8 +86,8 @@
 //! }
 //! ```
 
-use crate::core::DMSResult;
-use crate::queue::{DMSQueue, DMSQueueConsumer, DMSQueueMessage, DMSQueueProducer, DMSQueueStats};
+use crate::core::DMSCResult;
+use crate::queue::{DMSCQueue, DMSCQueueConsumer, DMSCQueueMessage, DMSCQueueProducer, DMSCQueueStats};
 use async_trait::async_trait;
 use std::collections::{HashMap, VecDeque};
 use std::fs::{File, OpenOptions};
@@ -103,9 +103,9 @@ use tokio::task::spawn_blocking;
 /// RwLock to ensure thread-safe access.
 struct MemoryQueueState {
     /// Main queue of messages waiting to be consumed
-    messages: VecDeque<DMSQueueMessage>,
+    messages: VecDeque<DMSCQueueMessage>,
     /// Map of consumer group names to their respective message queues
-    consumers: HashMap<String, VecDeque<DMSQueueMessage>>,
+    consumers: HashMap<String, VecDeque<DMSCQueueMessage>>,
 }
 
 impl MemoryQueueState {
@@ -124,9 +124,9 @@ impl MemoryQueueState {
 
 /// In-memory queue implementation.
 ///
-/// This struct implements the DMSQueue trait for an in-memory queue backend. It supports optional
+/// This struct implements the DMSCQueue trait for an in-memory queue backend. It supports optional
 /// disk persistence for message durability.
-pub struct DMSMemoryQueue {
+pub struct DMSCMemoryQueue {
     /// Name of the queue
     name: String,
     /// Internal queue state protected by a RwLock
@@ -136,7 +136,7 @@ pub struct DMSMemoryQueue {
 }
 
 #[allow(dead_code)]
-impl DMSMemoryQueue {
+impl DMSCMemoryQueue {
     /// Creates a new in-memory queue without persistence.
     ///
     /// # Parameters
@@ -145,7 +145,7 @@ impl DMSMemoryQueue {
     ///
     /// # Returns
     ///
-    /// A new DMSMemoryQueue instance
+    /// A new DMSCMemoryQueue instance
     pub fn new(name: &str) -> Self {
         Self {
             name: name.to_string(),
@@ -163,7 +163,7 @@ impl DMSMemoryQueue {
     ///
     /// # Returns
     ///
-    /// A new DMSMemoryQueue instance with persistence enabled
+    /// A new DMSCMemoryQueue instance with persistence enabled
     pub fn with_persistence(name: &str, persistence_path: &str) -> Self {
         let queue = Self {
             name: name.to_string(),
@@ -173,7 +173,7 @@ impl DMSMemoryQueue {
 
         // Load messages from disk if persistence is enabled
         if let Err(e) = queue.load_messages() {
-            log::warn!("Failed to load persisted messages for queue '{}': {}", name, e);
+            log::warn!("Failed to load persisted messages for queue '{name}': {e}");
         }
 
         queue
@@ -183,8 +183,8 @@ impl DMSMemoryQueue {
     ///
     /// # Returns
     ///
-    /// A `DMSResult<()>` indicating success or failure
-    fn load_messages(&self) -> DMSResult<()> {
+    /// A `DMSCResult<()>` indicating success or failure
+    fn load_messages(&self) -> DMSCResult<()> {
         if let Some(path) = &self.persistence_path {
             if Path::new(path).exists() {
                 let mut file = File::open(path)?;
@@ -192,7 +192,7 @@ impl DMSMemoryQueue {
                 file.read_to_string(&mut content)?;
 
                 if !content.is_empty() {
-                    let messages: VecDeque<DMSQueueMessage> = serde_json::from_str(&content)?;
+                    let messages: VecDeque<DMSCQueueMessage> = serde_json::from_str(&content)?;
                     let mut state = self.state.blocking_write();
                     state.messages = messages;
                 }
@@ -205,8 +205,8 @@ impl DMSMemoryQueue {
     ///
     /// # Returns
     ///
-    /// A `DMSResult<()>` indicating success or failure
-    fn save_messages(&self) -> DMSResult<()> {
+    /// A `DMSCResult<()>` indicating success or failure
+    fn save_messages(&self) -> DMSCResult<()> {
         if let Some(path) = &self.persistence_path {
             let state = self.state.blocking_read();
             let content = serde_json::to_string(&state.messages)?;
@@ -224,13 +224,13 @@ impl DMSMemoryQueue {
 }
 
 #[async_trait]
-impl DMSQueue for DMSMemoryQueue {
+impl DMSCQueue for DMSCMemoryQueue {
     /// Creates a new producer for this queue.
     ///
     /// # Returns
     ///
-    /// A `DMSResult<Box<dyn DMSQueueProducer>>` containing the producer
-    async fn create_producer(&self) -> DMSResult<Box<dyn DMSQueueProducer>> {
+    /// A `DMSCResult<Box<dyn DMSCQueueProducer>>` containing the producer
+    async fn create_producer(&self) -> DMSCResult<Box<dyn DMSCQueueProducer>> {
         Ok(Box::new(MemoryQueueProducer {
             state: self.state.clone(),
             persistence_path: self.persistence_path.clone(),
@@ -245,11 +245,11 @@ impl DMSQueue for DMSMemoryQueue {
     ///
     /// # Returns
     ///
-    /// A `DMSResult<Box<dyn DMSQueueConsumer>>` containing the consumer
+    /// A `DMSCResult<Box<dyn DMSCQueueConsumer>>` containing the consumer
     async fn create_consumer(
         &self,
         consumer_group: &str,
-    ) -> DMSResult<Box<dyn DMSQueueConsumer>> {
+    ) -> DMSCResult<Box<dyn DMSCQueueConsumer>> {
         Ok(Box::new(MemoryQueueConsumer {
             state: self.state.clone(),
             consumer_group: consumer_group.to_string(),
@@ -262,10 +262,10 @@ impl DMSQueue for DMSMemoryQueue {
     ///
     /// # Returns
     ///
-    /// A `DMSResult<DMSQueueStats>` containing the queue statistics
-    async fn get_stats(&self) -> DMSResult<DMSQueueStats> {
+    /// A `DMSCResult<DMSCQueueStats>` containing the queue statistics
+    async fn get_stats(&self) -> DMSCResult<DMSCQueueStats> {
         let state = self.state.read().await;
-        Ok(DMSQueueStats {
+        Ok(DMSCQueueStats {
             queue_name: self.name.clone(),
             message_count: state.messages.len() as u64,
             consumer_count: state.consumers.len() as u32,
@@ -280,8 +280,8 @@ impl DMSQueue for DMSMemoryQueue {
     ///
     /// # Returns
     ///
-    /// A `DMSResult<()>` indicating success or failure
-    async fn purge(&self) -> DMSResult<()> {
+    /// A `DMSCResult<()>` indicating success or failure
+    async fn purge(&self) -> DMSCResult<()> {
         let mut state = self.state.write().await;
         state.messages.clear();
         state.consumers.clear();
@@ -292,14 +292,14 @@ impl DMSQueue for DMSMemoryQueue {
             spawn_blocking(move || {
                 if Path::new(&path_clone).exists() {
                     if let Err(e) = std::fs::remove_file(&path_clone) {
-                        log::warn!("Failed to remove persistence file '{}': {}", path_clone, e);
+                        log::warn!("Failed to remove persistence file '{path_clone}': {e}");
                     }
                 }
             })
             .await
             .map_err(|e| {
-                log::error!("Failed to execute persistence file removal: {}", e);
-                crate::core::DMSError::Other(format!("Failed to clear persistence: {}", e))
+                log::error!("Failed to execute persistence file removal: {e}");
+                crate::core::DMSCError::Other(format!("Failed to clear persistence: {e}"))
             })?;
         }
 
@@ -310,15 +310,15 @@ impl DMSQueue for DMSMemoryQueue {
     ///
     /// # Returns
     ///
-    /// A `DMSResult<()>` indicating success or failure
-    async fn delete(&self) -> DMSResult<()> {
+    /// A `DMSCResult<()>` indicating success or failure
+    async fn delete(&self) -> DMSCResult<()> {
         self.purge().await
     }
 }
 
 /// Producer implementation for the in-memory queue.
 ///
-/// This struct implements the DMSQueueProducer trait for sending messages to the in-memory queue.
+/// This struct implements the DMSCQueueProducer trait for sending messages to the in-memory queue.
 struct MemoryQueueProducer {
     /// Shared queue state
     state: Arc<RwLock<MemoryQueueState>>,
@@ -327,7 +327,7 @@ struct MemoryQueueProducer {
 }
 
 #[async_trait]
-impl DMSQueueProducer for MemoryQueueProducer {
+impl DMSCQueueProducer for MemoryQueueProducer {
     /// Sends a single message to the queue.
     ///
     /// # Parameters
@@ -336,8 +336,8 @@ impl DMSQueueProducer for MemoryQueueProducer {
     ///
     /// # Returns
     ///
-    /// A `DMSResult<()>` indicating success or failure
-    async fn send(&self, message: DMSQueueMessage) -> DMSResult<()> {
+    /// A `DMSCResult<()>` indicating success or failure
+    async fn send(&self, message: DMSCQueueMessage) -> DMSCResult<()> {
         let mut state = self.state.write().await;
         state.messages.push_back(message);
 
@@ -349,8 +349,8 @@ impl DMSQueueProducer for MemoryQueueProducer {
             let _ = spawn_blocking(move || {
             let content = serde_json::to_string(&messages_clone)
                 .map_err(|e| {
-                    log::error!("Failed to serialize messages for persistence: {}", e);
-                    crate::core::DMSError::Serde(format!("Serialization failed: {}", e))
+                    log::error!("Failed to serialize messages for persistence: {e}");
+                    crate::core::DMSCError::Serde(format!("Serialization failed: {e}"))
                 })?;
             let mut file = OpenOptions::new()
                 .write(true)
@@ -358,20 +358,20 @@ impl DMSQueueProducer for MemoryQueueProducer {
                 .truncate(true)
                 .open(path_clone)
                 .map_err(|e| {
-                    log::error!("Failed to open persistence file: {}", e);
-                    crate::core::DMSError::Io(format!("File open failed: {}", e))
+                    log::error!("Failed to open persistence file: {e}");
+                    crate::core::DMSCError::Io(format!("File open failed: {e}"))
                 })?;
             file.write_all(content.as_bytes())
                 .map_err(|e| {
-                    log::error!("Failed to write persistence file: {}", e);
-                    crate::core::DMSError::Io(format!("File write failed: {}", e))
+                    log::error!("Failed to write persistence file: {e}");
+                    crate::core::DMSCError::Io(format!("File write failed: {e}"))
                 })?;
-            Ok::<(), crate::core::DMSError>(())
+            Ok::<(), crate::core::DMSCError>(())
         })
         .await
         .map_err(|e| {
-            log::error!("Failed to execute persistence task: {}", e);
-            crate::core::DMSError::Other(format!("Persistence task failed: {}", e))
+            log::error!("Failed to execute persistence task: {e}");
+            crate::core::DMSCError::Other(format!("Persistence task failed: {e}"))
         });
         }
 
@@ -386,8 +386,8 @@ impl DMSQueueProducer for MemoryQueueProducer {
     ///
     /// # Returns
     ///
-    /// A `DMSResult<()>` indicating success or failure
-    async fn send_batch(&self, messages: Vec<DMSQueueMessage>) -> DMSResult<()> {
+    /// A `DMSCResult<()>` indicating success or failure
+    async fn send_batch(&self, messages: Vec<DMSCQueueMessage>) -> DMSCResult<()> {
         let mut state = self.state.write().await;
         for message in messages {
             state.messages.push_back(message);
@@ -401,8 +401,8 @@ impl DMSQueueProducer for MemoryQueueProducer {
             let _ = spawn_blocking(move || {
             let content = serde_json::to_string(&messages_clone)
                 .map_err(|e| {
-                    log::error!("Failed to serialize messages for persistence: {}", e);
-                    crate::core::DMSError::Serde(format!("Serialization failed: {}", e))
+                    log::error!("Failed to serialize messages for persistence: {e}");
+                    crate::core::DMSCError::Serde(format!("Serialization failed: {e}"))
                 })?;
             let mut file = OpenOptions::new()
                 .write(true)
@@ -410,20 +410,20 @@ impl DMSQueueProducer for MemoryQueueProducer {
                 .truncate(true)
                 .open(path_clone)
                 .map_err(|e| {
-                    log::error!("Failed to open persistence file: {}", e);
-                    crate::core::DMSError::Io(format!("File open failed: {}", e))
+                    log::error!("Failed to open persistence file: {e}");
+                    crate::core::DMSCError::Io(format!("File open failed: {e}"))
                 })?;
             file.write_all(content.as_bytes())
                 .map_err(|e| {
-                    log::error!("Failed to write persistence file: {}", e);
-                    crate::core::DMSError::Io(format!("File write failed: {}", e))
+                    log::error!("Failed to write persistence file: {e}");
+                    crate::core::DMSCError::Io(format!("File write failed: {e}"))
                 })?;
-            Ok::<(), crate::core::DMSError>(())
+            Ok::<(), crate::core::DMSCError>(())
         })
         .await
         .map_err(|e| {
-            log::error!("Failed to execute persistence task: {}", e);
-            crate::core::DMSError::Other(format!("Persistence task failed: {}", e))
+            log::error!("Failed to execute persistence task: {e}");
+            crate::core::DMSCError::Other(format!("Persistence task failed: {e}"))
         });
         }
 
@@ -433,7 +433,7 @@ impl DMSQueueProducer for MemoryQueueProducer {
 
 /// Consumer implementation for the in-memory queue.
 ///
-/// This struct implements the DMSQueueConsumer trait for receiving messages from the in-memory queue.
+/// This struct implements the DMSCQueueConsumer trait for receiving messages from the in-memory queue.
 struct MemoryQueueConsumer {
     /// Shared queue state
     state: Arc<RwLock<MemoryQueueState>>,
@@ -446,13 +446,13 @@ struct MemoryQueueConsumer {
 }
 
 #[async_trait]
-impl DMSQueueConsumer for MemoryQueueConsumer {
+impl DMSCQueueConsumer for MemoryQueueConsumer {
     /// Receives a message from the queue.
     ///
     /// # Returns
     ///
-    /// A `DMSResult<Option<DMSQueueMessage>>` containing the message if available, or None if no message is available
-    async fn receive(&self) -> DMSResult<Option<DMSQueueMessage>> {
+    /// A `DMSCResult<Option<DMSCQueueMessage>>` containing the message if available, or None if no message is available
+    async fn receive(&self) -> DMSCResult<Option<DMSCQueueMessage>> {
         let paused = *self.paused.lock().await;
         if paused {
             return Ok(None);
@@ -483,8 +483,8 @@ impl DMSQueueConsumer for MemoryQueueConsumer {
                 let _ = spawn_blocking(move || {
                     let content = serde_json::to_string(&messages_clone)
                         .map_err(|e| {
-                            log::error!("Failed to serialize messages for persistence: {}", e);
-                            crate::core::DMSError::Serde(format!("Serialization failed: {}", e))
+                            log::error!("Failed to serialize messages for persistence: {e}");
+                            crate::core::DMSCError::Serde(format!("Serialization failed: {e}"))
                         })?;
                     let mut file = OpenOptions::new()
                         .write(true)
@@ -492,20 +492,20 @@ impl DMSQueueConsumer for MemoryQueueConsumer {
                         .truncate(true)
                         .open(path_clone)
                         .map_err(|e| {
-                            log::error!("Failed to open persistence file: {}", e);
-                            crate::core::DMSError::Io(format!("File open failed: {}", e))
+                            log::error!("Failed to open persistence file: {e}");
+                            crate::core::DMSCError::Io(format!("File open failed: {e}"))
                         })?;
                     file.write_all(content.as_bytes())
                         .map_err(|e| {
-                            log::error!("Failed to write persistence file: {}", e);
-                            crate::core::DMSError::Io(format!("File write failed: {}", e))
+                            log::error!("Failed to write persistence file: {e}");
+                            crate::core::DMSCError::Io(format!("File write failed: {e}"))
                         })?;
-                    Ok::<(), crate::core::DMSError>(())
+                    Ok::<(), crate::core::DMSCError>(())
                 })
                 .await
                 .map_err(|e| {
-                    log::error!("Failed to execute persistence task: {}", e);
-                    crate::core::DMSError::Other(format!("Persistence task failed: {}", e))
+                    log::error!("Failed to execute persistence task: {e}");
+                    crate::core::DMSCError::Other(format!("Persistence task failed: {e}"))
                 });
             }
 
@@ -525,8 +525,8 @@ impl DMSQueueConsumer for MemoryQueueConsumer {
     ///
     /// # Returns
     ///
-    /// A `DMSResult<()>` indicating success or failure
-    async fn ack(&self, _message_id: &str) -> DMSResult<()> {
+    /// A `DMSCResult<()>` indicating success or failure
+    async fn ack(&self, _message_id: &str) -> DMSCResult<()> {
         // In memory queue, acknowledgment is implicit when message is received
         Ok(())
     }
@@ -539,14 +539,14 @@ impl DMSQueueConsumer for MemoryQueueConsumer {
     ///
     /// # Returns
     ///
-    /// A `DMSResult<()>` indicating success or failure
-    async fn nack(&self, message_id: &str) -> DMSResult<()> {
+    /// A `DMSCResult<()>` indicating success or failure
+    async fn nack(&self, message_id: &str) -> DMSCResult<()> {
         // Find the message in consumer queue and put it back in main queue
         let mut state = self.state.write().await;
 
         if let Some(consumer_queue) = state.consumers.get_mut(&self.consumer_group) {
             // Find the message by ID
-            let mut message_to_requeue: Option<DMSQueueMessage> = None;
+            let mut message_to_requeue: Option<DMSCQueueMessage> = None;
 
             // Iterate through consumer queue to find the message
             let mut index = 0;
@@ -592,8 +592,8 @@ impl DMSQueueConsumer for MemoryQueueConsumer {
     ///
     /// # Returns
     ///
-    /// A `DMSResult<()>` indicating success or failure
-    async fn pause(&self) -> DMSResult<()> {
+    /// A `DMSCResult<()>` indicating success or failure
+    async fn pause(&self) -> DMSCResult<()> {
         let mut paused = self.paused.lock().await;
         *paused = true;
         Ok(())
@@ -603,8 +603,8 @@ impl DMSQueueConsumer for MemoryQueueConsumer {
     ///
     /// # Returns
     ///
-    /// A `DMSResult<()>` indicating success or failure
-    async fn resume(&self) -> DMSResult<()> {
+    /// A `DMSCResult<()>` indicating success or failure
+    async fn resume(&self) -> DMSCResult<()> {
         let mut paused = self.paused.lock().await;
         *paused = false;
         Ok(())

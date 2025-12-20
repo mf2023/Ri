@@ -6,13 +6,13 @@
 
 **Last modified date: 2025-12-12**
 
-本示例展示如何使用DMS的auth模块进行JWT和OAuth认证与授权。
+本示例展示如何使用DMSC的auth模块进行JWT和OAuth认证与授权。
 
 ## 示例概述
 
 </div>
 
-本示例将创建一个DMS应用，实现以下功能：
+本示例将创建一个DMSC应用，实现以下功能：
 
 - JWT令牌生成和验证
 - OAuth2授权流程
@@ -48,7 +48,7 @@ cd dms-auth-example
 
 ```toml
 [dependencies]
-dms = { git = "https://gitee.com/dunimd/dms" }
+dms = { git = "https://gitee.com/dunimd/dmsc" }
 tokio = { version = "1.0", features = ["full"] }
 serde = { version = "1.0", features = ["derive"] }
 ```
@@ -98,17 +98,17 @@ struct User {
 }
 
 #[tokio::main]
-async fn main() -> DMSResult<()> {
+async fn main() -> DMSCResult<()> {
     // 构建服务运行时
-    let app = DMSAppBuilder::new()
+    let app = DMSCAppBuilder::new()
         .with_config("config.yaml")?
-        .with_logging(DMSLogConfig::default())?
-        .with_auth(DMSAuthConfig::default())?
+        .with_logging(DMSCLogConfig::default())?
+        .with_auth(DMSCAuthConfig::default())?
         .build()?;
     
     // 运行业务逻辑
-    app.run(|ctx: &DMSServiceContext| async move {
-        ctx.logger().info("service", "DMS Auth Example started")?;
+    app.run(|ctx: &DMSCServiceContext| async move {
+        ctx.logger().info("service", "DMSC Auth Example started")?;
         
         // 创建示例用户
         let user = User {
@@ -141,7 +141,7 @@ async fn main() -> DMSResult<()> {
         let auth_url = ctx.auth().oauth_authorization_url("github", "state123").await?;
         ctx.logger().info("oauth", &format!("GitHub auth URL: {}", auth_url))?;
         
-        ctx.logger().info("service", "DMS Auth Example completed")?;
+        ctx.logger().info("service", "DMSC Auth Example completed")?;
         
         Ok(())
     }).await
@@ -161,7 +161,7 @@ use dms::prelude::*;
 use serde::{Deserialize, Serialize};
 ```
 
-导入DMS的核心组件和Serde库用于序列化和反序列化。
+导入DMSC的核心组件和Serde库用于序列化和反序列化。
 
 ### 2. 用户信息结构
 
@@ -180,10 +180,10 @@ struct User {
 ### 3. 构建应用
 
 ```rust
-let app = DMSAppBuilder::new()
+let app = DMSCAppBuilder::new()
     .with_config("config.yaml")?
-    .with_logging(DMSLogConfig::default())?
-    .with_auth(DMSAuthConfig::default())?
+    .with_logging(DMSCLogConfig::default())?
+    .with_auth(DMSCAuthConfig::default())?
     .build()?;
 ```
 
@@ -247,14 +247,14 @@ cargo run
 运行示例后，您应该会看到类似以下的输出：
 
 ```json
-{"timestamp":"2025-12-12T15:30:00Z","level":"info","module":"service","message":"DMS Auth Example started"}
+{"timestamp":"2025-12-12T15:30:00Z","level":"info","module":"service","message":"DMSC Auth Example started"}
 {"timestamp":"2025-12-12T15:30:00Z","level":"info","module":"jwt","message":"Generated JWT: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."}
 {"timestamp":"2025-12-12T15:30:00Z","level":"info","module":"jwt","message":"Decoded user: User { id: 1, username: \"test_user\", email: \"test@example.com\", role: \"admin\" }"}
 {"timestamp":"2025-12-12T15:30:00Z","level":"info","module":"auth","message":"Has admin access: true"}
 {"timestamp":"2025-12-12T15:30:00Z","level":"info","module":"auth","message":"Has user access: true"}
 {"timestamp":"2025-12-12T15:30:00Z","level":"info","module":"oauth","message":"GitHub OAuth config: ..."}
 {"timestamp":"2025-12-12T15:30:00Z","level":"info","module":"oauth","message":"GitHub auth URL: https://github.com/login/oauth/authorize?client_id=..."}
-{"timestamp":"2025-12-12T15:30:00Z","level":"info","module":"service","message":"DMS Auth Example completed"}
+{"timestamp":"2025-12-12T15:30:00Z","level":"info","module":"service","message":"DMSC Auth Example completed"}
 ```
 
 <div align="center">
@@ -267,7 +267,7 @@ cargo run
 
 ```rust
 // 在实际应用中，您需要实现一个HTTP端点来处理OAuth2回调
-async fn handle_oauth_callback(ctx: &DMSServiceContext, code: &str) -> DMSResult<String> {
+async fn handle_oauth_callback(ctx: &DMSCServiceContext, code: &str) -> DMSCResult<String> {
     let token = ctx.auth().oauth_exchange_token("github", code).await?;
     let user_info = ctx.auth().oauth_get_user_info("github", &token).await?;
     Ok(user_info)
@@ -326,13 +326,13 @@ let can_edit_resource = ctx.auth().check_resource_permission(
 
 </div>
 
-本示例展示了如何使用DMS的auth模块进行认证与授权，包括：
+本示例展示了如何使用DMSC的auth模块进行认证与授权，包括：
 
 - JWT令牌的生成和验证
 - OAuth2授权流程
 - 基于角色的访问控制
 
-通过本示例，您应该已经了解了DMS auth模块的基本使用方式。您可以在此基础上进一步实现更复杂的认证和授权逻辑。
+通过本示例，您应该已经了解了DMSC auth模块的基本使用方式。您可以在此基础上进一步实现更复杂的认证和授权逻辑。
 
 <div align="center">
 
@@ -341,7 +341,7 @@ let can_edit_resource = ctx.auth().check_resource_permission(
 </div>
 
 - [README](./README.md): 使用示例概览，提供所有使用示例的快速导航
-- [basic-app](./basic-app.md): 基础应用示例，学习如何创建和运行第一个DMS应用
+- [basic-app](./basic-app.md): 基础应用示例，学习如何创建和运行第一个DMSC应用
 - [caching](./caching.md): 缓存示例，了解如何使用缓存模块提升应用性能
 - [database](./database.md): 数据库示例，学习数据库连接和查询操作
 - [http](./http.md): HTTP服务示例，构建Web应用和RESTful API

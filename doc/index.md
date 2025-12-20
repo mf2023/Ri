@@ -1,6 +1,6 @@
 <div align="center">
 
-# DMS 帮助文档
+# DMSC 帮助文档
 
 **Version: 1.0.0**
 
@@ -12,14 +12,14 @@
 <a href="https://gitee.com/dunimd" target="_blank">
     <img alt="Gitee" src="https://img.shields.io/badge/Gitee-Dunimd-C71D23?style=flat-square&logo=gitee"/>
 </a>
-<a href="https://crates.io/crates/dms_core" target="_blank">
-    <img alt="Crates.io" src="https://img.shields.io/badge/Crates-DMS-000000?style=flat-square&logo=rust"/>
+<a href="https://crates.io/crates/dmsc" target="_blank">
+    <img alt="Crates.io" src="https://img.shields.io/badge/Crates-DMSC-000000?style=flat-square&logo=rust"/>
 </a>
-<a href="https://pypi.org/project/dms-core/" target="_blank">
-    <img alt="PyPI" src="https://img.shields.io/badge/PyPI-DMS-3775A9?style=flat-square&logo=pypi"/>
+<a href="https://pypi.org/project/dmsc/" target="_blank">
+    <img alt="PyPI" src="https://img.shields.io/badge/PyPI-DMSC-3775A9?style=flat-square&logo=pypi"/>
 </a>
 
-欢迎使用 DMS (Dunimd Middleware Service) 帮助文档！本文档将帮助您理解和使用 DMS 框架，构建高性能、可靠、安全的后端应用。
+欢迎使用 DMSC (Dunimd Middleware Service) 帮助文档！本文档将帮助您理解和使用 DMSC 框架，构建高性能、可靠、安全的后端应用。
 
 </div>
 
@@ -31,12 +31,12 @@
 
 ### 1. 入门指南
 
-- [**介绍**](./01-introduction.md) - 了解 DMS 的核心特性、模块化设计和应用场景
-- [**快速开始**](./02-getting-started.md) - 从安装到运行第一个 DMS 应用的完整指南
+- [**介绍**](./01-introduction.md) - 了解 DMSC 的核心特性、模块化设计和应用场景
+- [**快速开始**](./02-getting-started.md) - 从安装到运行第一个 DMSC 应用的完整指南
 
 ### 2. 核心概念
 
-- [**核心概念**](./03-core-concepts.md) - 深入理解 DMS 的设计理念、服务上下文、模块系统和生命周期管理
+- [**核心概念**](./03-core-concepts.md) - 深入理解 DMSC 的设计理念、服务上下文、模块系统和生命周期管理
 
 ### 3. API 参考
 
@@ -48,7 +48,7 @@
 
 ### 5. 最佳实践
 
-- [**最佳实践**](./06-best-practices.md) - 构建高效、可靠、安全的 DMS 应用的最佳实践
+- [**最佳实践**](./06-best-practices.md) - 构建高效、可靠、安全的 DMSC 应用的最佳实践
 
 ### 6. 故障排除
 
@@ -56,15 +56,15 @@
 
 ### 7. 术语表
 
-- [**术语表**](./08-glossary.md) - DMS 文档中使用的技术术语和概念定义
+- [**术语表**](./08-glossary.md) - DMSC 文档中使用的技术术语和概念定义
 
 <div align="center">
 
-## 什么是 DMS？
+## 什么是 DMSC？
 
 </div>
 
-**DMS (Dunimd Middleware Service)** — 一个高性能的 Rust 中间件框架，统一后端基础设施。专为企业级规模构建，具有模块化架构、内置可观测性和分布式系统支持。
+**DMSC (Dunimd Middleware Service)** — 一个高性能的 Rust 中间件框架，统一后端基础设施。专为企业级规模构建，具有模块化架构、内置可观测性和分布式系统支持。
 
 ### 核心特性
 
@@ -77,7 +77,7 @@
 
 ### 模块化设计
 
-DMS 采用高度模块化的架构，拥有 12 个核心模块，支持按需组合和无缝扩展：
+DMSC 采用高度模块化的架构，拥有 12 个核心模块，支持按需组合和无缝扩展：
 
 | 模块 | 描述 |
 |:--------|:-------------|
@@ -100,9 +100,9 @@ DMS 采用高度模块化的架构，拥有 12 个核心模块，支持按需组
 
 </div>
 
-如果您是第一次使用 DMS，建议从 [快速开始](./02-getting-started.md) 开始，了解如何安装和运行第一个 DMS 应用。
+如果您是第一次使用 DMSC，建议从 [快速开始](./02-getting-started.md) 开始，了解如何安装和运行第一个 DMSC 应用。
 
-如果您已经熟悉 DMS 的基本概念，可以查看 [API 参考](./04-api-reference/README.md) 了解详细的模块 API，或查看 [使用示例](./05-usage-examples/README.md) 学习如何使用各种功能。
+如果您已经熟悉 DMSC 的基本概念，可以查看 [API 参考](./04-api-reference/README.md) 了解详细的模块 API，或查看 [使用示例](./05-usage-examples/README.md) 学习如何使用各种功能。
 
 <div align="center">
 
@@ -110,7 +110,7 @@ DMS 采用高度模块化的架构，拥有 12 个核心模块，支持按需组
 
 </div>
 
-- **GitHub/Gitee**：[https://gitee.com/dunimd/dms](https://gitee.com/dunimd/dms)
+- **GitHub/Gitee**：[https://gitee.com/dunimd/dmsc](https://gitee.com/dunimd/dmsc)
 - **Issues**：提交问题和建议
 - **Pull Requests**：欢迎贡献代码
 

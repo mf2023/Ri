@@ -1,7 +1,7 @@
 //! Copyright © 2025 Wenze Wei. All Rights Reserved.
 //!
-//! This file is part of DMS.
-//! The DMS project belongs to the Dunimd Team.
+//! This file is part of DMSC.
+//! The DMSC project belongs to the Dunimd Team.
 //!
 //! Licensed under the Apache License, Version 2.0 (the "License");
 //! you may not use this file except in compliance with the License.
@@ -19,7 +19,7 @@
 
 //! # Private Protocol Module
 //! 
-//! This module implements the secure private communication protocol for DMS.
+//! This module implements the secure private communication protocol for DMSC.
 //! It provides military-grade security with quantum-resistant cryptography,
 //! device authentication, traffic obfuscation, and anti-forensic features.
 //! 
@@ -39,7 +39,7 @@
 //! 1. **Physical Layer**: Custom frame format with obfuscation
 //! 2. **Link Layer**: Device authentication and key exchange
 //! 3. **Network Layer**: Quantum-resistant encryption
-//! 4. **Application Layer**: DMS-specific secure messaging
+//! 4. **Application Layer**: DMSC-specific secure messaging
 //! 
 //! ## Threat Model
 //! 
@@ -52,15 +52,15 @@
 //! ## Usage
 //! 
 //! ```rust
-//! use dms::protocol::{DMSPrivateProtocol, DMSProtocolConfig, DMSCryptoSuite, DMSObfuscationLevel};
+//! use dms::protocol::{DMSCPrivateProtocol, DMSCProtocolConfig, DMSCCryptoSuite, DMSCObfuscationLevel};
 //! 
-//! async fn example() -> DMSResult<()> {
-//!     let mut protocol = DMSPrivateProtocol::new();
+//! async fn example() -> DMSCResult<()> {
+//!     let mut protocol = DMSCPrivateProtocol::new();
 //!     
-//!     let config = DMSProtocolConfig::Private {
-//!         crypto_suite: DMSCryptoSuite::NationalStandard,
+//!     let config = DMSCProtocolConfig::Private {
+//!         crypto_suite: DMSCCryptoSuite::NationalStandard,
 //!         device_auth: true,
-//!         obfuscation_level: DMSObfuscationLevel::High,
+//!         obfuscation_level: DMSCObfuscationLevel::High,
 //!         quantum_resistant: true,
 //!     };
 //!     
@@ -82,48 +82,48 @@ use tokio::net::TcpStream;
 use tokio::sync::RwLock;
 use rand::Rng;
 
-use crate::core::{DMSResult, DMSError};
-use super::{DMSProtocol, DMSProtocolConfig, DMSProtocolType, DMSProtocolConnection, 
-            DMSProtocolStats, DMSMessageFlags, DMSConnectionInfo, DMSSecurityLevel};
-use super::security::{DMSCryptoSuite, DMSObfuscationLevel, DMSDeviceAuthProtocol, 
-                       DMSPostQuantumCrypto, DMSObfuscationLayer};
-use super::crypto::{DMSCryptoEngine, AES256GCM, ChaCha20Poly1305};
-use super::frames::{DMSFrame, DMSFrameType, DMSFrameBuilder, DMSFrameParser};
-use crate::device::pool::{DMSConnectionPool, DMSConnectionInfo as PoolConnectionInfo, DMSConnectionState};
+use crate::core::{DMSCResult, DMSCError};
+use super::{DMSCProtocol, DMSCProtocolConfig, DMSCProtocolType, DMSCProtocolConnection, 
+            DMSCProtocolStats, DMSCMessageFlags, DMSCConnectionInfo, DMSCSecurityLevel};
+use super::security::{DMSCCryptoSuite, DMSCObfuscationLevel, DMSCDeviceAuthProtocol, 
+                       DMSCPostQuantumCrypto, DMSCObfuscationLayer};
+use super::crypto::{DMSCCryptoEngine, AES256GCM, ChaCha20Poly1305};
+use super::frames::{DMSCFrame, DMSCFrameType, DMSCFrameBuilder, DMSCFrameParser};
+use crate::device::pool::{DMSCConnectionPool, DMSCConnectionInfo as PoolConnectionInfo, DMSCConnectionState};
 
 /// Private protocol implementation.
-pub struct DMSPrivateProtocol {
+pub struct DMSCPrivateProtocol {
     /// Protocol configuration
-    config: Option<DMSPrivateConfig>,
+    config: Option<DMSCPrivateConfig>,
     /// Device authentication protocol
-    device_auth: Arc<DMSDeviceAuthProtocol>,
+    device_auth: Arc<DMSCDeviceAuthProtocol>,
     /// Post-quantum cryptography handler
-    post_quantum: Arc<DMSPostQuantumCrypto>,
+    post_quantum: Arc<DMSCPostQuantumCrypto>,
     /// Obfuscation layer
-    obfuscation: Arc<DMSObfuscationLayer>,
+    obfuscation: Arc<DMSCObfuscationLayer>,
     /// Connection pool for secure connections
-    connection_pool: Arc<RwLock<HashMap<String, Arc<DMSPrivateConnection>>>>,
+    connection_pool: Arc<RwLock<HashMap<String, Arc<DMSCPrivateConnection>>>>,
     /// Protocol statistics
-    stats: Arc<RwLock<DMSProtocolStats>>,
+    stats: Arc<RwLock<DMSCProtocolStats>>,
     /// Whether the protocol is ready
     ready: Arc<RwLock<bool>>,
     /// Crypto engine for encryption/decryption
-    crypto_engine: Arc<RwLock<Option<Box<dyn DMSCryptoEngine>>>>,
+    crypto_engine: Arc<RwLock<Option<Box<dyn DMSCCryptoEngine>>>>,
     /// Frame builder for protocol frames
-    frame_builder: Arc<DMSFrameBuilder>,
+    frame_builder: Arc<DMSCFrameBuilder>,
     /// Frame parser for incoming frames
-    frame_parser: Arc<DMSFrameParser>,
+    frame_parser: Arc<DMSCFrameParser>,
 }
 
 /// Private protocol specific configuration.
 #[derive(Debug, Clone)]
-struct DMSPrivateConfig {
+struct DMSCPrivateConfig {
     /// Cryptographic suite to use
-    crypto_suite: DMSCryptoSuite,
+    crypto_suite: DMSCCryptoSuite,
     /// Enable device authentication
     device_auth: bool,
     /// Obfuscation level
-    obfuscation_level: DMSObfuscationLevel,
+    obfuscation_level: DMSCObfuscationLevel,
     /// Enable quantum-resistant algorithms
     quantum_resistant: bool,
     /// Session timeout
@@ -132,25 +132,25 @@ struct DMSPrivateConfig {
     key_rotation_interval: Duration,
 }
 
-impl DMSPrivateProtocol {
+impl DMSCPrivateProtocol {
     /// Create a new private protocol instance.
     pub fn new() -> Self {
         Self {
             config: None,
-            device_auth: Arc::new(DMSDeviceAuthProtocol::new()),
-            post_quantum: Arc::new(DMSPostQuantumCrypto::new()),
-            obfuscation: Arc::new(DMSObfuscationLayer::new()),
+            device_auth: Arc::new(DMSCDeviceAuthProtocol::new()),
+            post_quantum: Arc::new(DMSCPostQuantumCrypto::new()),
+            obfuscation: Arc::new(DMSCObfuscationLayer::new()),
             connection_pool: Arc::new(RwLock::new(HashMap::new())),
-            stats: Arc::new(RwLock::new(DMSProtocolStats::default())),
+            stats: Arc::new(RwLock::new(DMSCProtocolStats::default())),
             ready: Arc::new(RwLock::new(false)),
             crypto_engine: Arc::new(RwLock::new(None)),
-            frame_builder: Arc::new(DMSFrameBuilder::new()),
-            frame_parser: Arc::new(DMSFrameParser::new()),
+            frame_builder: Arc::new(DMSCFrameBuilder::new()),
+            frame_parser: Arc::new(DMSCFrameParser::new()),
         }
     }
     
     /// Get or create a secure connection.
-    async fn get_or_create_connection(&self, target_id: &str) -> DMSResult<Arc<DMSPrivateConnection>> {
+    async fn get_or_create_connection(&self, target_id: &str) -> DMSCResult<Arc<DMSCPrivateConnection>> {
         let mut pool = self.connection_pool.write().await;
         
         if let Some(connection) = pool.get(target_id) {
@@ -163,9 +163,11 @@ impl DMSPrivateProtocol {
         }
         
         // Create new secure connection
-        let connection = Arc::new(DMSPrivateConnection::new(
+        let config_ref = self.config.as_ref()
+            .ok_or_else(|| DMSCError::InvalidState("Private protocol not initialized".to_string()))?;
+        let connection = Arc::new(DMSCPrivateConnection::new(
             target_id.to_string(),
-            self.config.as_ref().unwrap(),
+            config_ref,
             Arc::clone(&self.device_auth),
             Arc::clone(&self.post_quantum),
             Arc::clone(&self.obfuscation),
@@ -178,7 +180,7 @@ impl DMSPrivateProtocol {
     /// Update statistics.
     async fn update_stats<F>(&self, updater: F)
     where
-        F: FnOnce(&mut DMSProtocolStats),
+        F: FnOnce(&mut DMSCProtocolStats),
     {
         let mut stats = self.stats.write().await;
         updater(&mut *stats);
@@ -186,16 +188,16 @@ impl DMSPrivateProtocol {
 }
 
 #[async_trait]
-impl DMSProtocol for DMSPrivateProtocol {
-    fn protocol_type(&self) -> DMSProtocolType {
-        DMSProtocolType::Private
+impl DMSCProtocol for DMSCPrivateProtocol {
+    fn protocol_type(&self) -> DMSCProtocolType {
+        DMSCProtocolType::Private
     }
     
-    async fn initialize(&mut self, config: DMSProtocolConfig) -> DMSResult<()> {
+    async fn initialize(&mut self, config: DMSCProtocolConfig) -> DMSCResult<()> {
         // Validate and convert configuration
         let private_config = match config {
-            DMSProtocolConfig::Private { crypto_suite, device_auth, obfuscation_level, quantum_resistant } => {
-                DMSPrivateConfig {
+            DMSCProtocolConfig::Private { crypto_suite, device_auth, obfuscation_level, quantum_resistant } => {
+                DMSCPrivateConfig {
                     crypto_suite,
                     device_auth,
                     obfuscation_level,
@@ -204,14 +206,14 @@ impl DMSProtocol for DMSPrivateProtocol {
                     key_rotation_interval: Duration::from_secs(600), // 10 minutes
                 }
             }
-            _ => return Err(DMSError::InvalidConfiguration("Invalid configuration type for private protocol".to_string())),
+            _ => return Err(DMSCError::InvalidConfiguration("Invalid configuration type for private protocol".to_string())),
         };
         
         // Initialize crypto engine based on crypto suite
-        let crypto_engine: Box<dyn DMSCryptoEngine> = match private_config.crypto_suite {
-            DMSCryptoSuite::AES256GCM => Box::new(AES256GCM::new()),
-            DMSCryptoSuite::ChaCha20Poly1305 => Box::new(ChaCha20Poly1305::new()),
-            DMSCryptoSuite::NationalStandard => Box::new(AES256GCM::new()), // Default to AES256GCM for now
+        let crypto_engine: Box<dyn DMSCCryptoEngine> = match private_config.crypto_suite {
+            DMSCCryptoSuite::AES256GCM => Box::new(AES256GCM::new()),
+            DMSCCryptoSuite::ChaCha20Poly1305 => Box::new(ChaCha20Poly1305::new()),
+            DMSCCryptoSuite::NationalStandard => Box::new(AES256GCM::new()), // Default to AES256GCM for now
         };
         *self.crypto_engine.write().await = Some(crypto_engine);
         
@@ -232,9 +234,9 @@ impl DMSProtocol for DMSPrivateProtocol {
         Ok(())
     }
     
-    async fn connect(&self, target_id: &str) -> DMSResult<Box<dyn DMSProtocolConnection>> {
+    async fn connect(&self, target_id: &str) -> DMSCResult<Box<dyn DMSCProtocolConnection>> {
         if !*self.ready.read().await {
-            return Err(DMSError::InvalidState("Protocol not initialized".to_string()));
+            return Err(DMSCError::InvalidState("Protocol not initialized".to_string()));
         }
         
         // Update connection attempts
@@ -245,7 +247,7 @@ impl DMSProtocol for DMSPrivateProtocol {
         // Update successful connections
         self.update_stats(|stats| stats.successful_connections += 1).await;
         
-        Ok(Box::new(DMSPrivateConnectionWrapper {
+        Ok(Box::new(DMSCPrivateConnectionWrapper {
             inner: connection,
             stats: Arc::clone(&self.stats),
             frame_builder: Arc::clone(&self.frame_builder),
@@ -258,7 +260,7 @@ impl DMSProtocol for DMSPrivateProtocol {
         *self.ready.blocking_read()
     }
     
-    async fn get_stats(&self) -> DMSProtocolStats {
+    async fn get_stats(&self) -> DMSCProtocolStats {
         let mut stats = self.stats.read().await.clone();
         
         // Calculate real-time metrics
@@ -283,7 +285,7 @@ impl DMSProtocol for DMSPrivateProtocol {
         stats
     }
     
-    async fn shutdown(&mut self) -> DMSResult<()> {
+    async fn shutdown(&mut self) -> DMSCResult<()> {
         // Clear connection pool
         self.connection_pool.write().await.clear();
         
@@ -294,14 +296,14 @@ impl DMSProtocol for DMSPrivateProtocol {
     }
 }
 
-impl Default for DMSPrivateProtocol {
+impl Default for DMSCPrivateProtocol {
     fn default() -> Self {
         Self::new()
     }
 }
 
 /// Private protocol connection implementation.
-struct DMSPrivateConnection {
+struct DMSCPrivateConnection {
     /// Connection ID
     connection_id: String,
     /// Target device ID
@@ -317,11 +319,11 @@ struct DMSPrivateConnection {
     /// Session keys for encryption
     session_keys: Arc<RwLock<SessionKeys>>,
     /// Configuration
-    config: DMSPrivateConfig,
+    config: DMSCPrivateConfig,
     /// Connection pool info for integration
     pool_info: Arc<RwLock<Option<PoolConnectionInfo>>>,
     /// Reference to crypto engine
-    crypto_engine: Arc<RwLock<Option<Box<dyn DMSCryptoEngine>>>>,
+    crypto_engine: Arc<RwLock<Option<Box<dyn DMSCCryptoEngine>>>>,
 }
 
 /// Secure stream wrapper.
@@ -344,15 +346,15 @@ struct SessionKeys {
     created_at: Instant,
 }
 
-impl DMSPrivateConnection {
+impl DMSCPrivateConnection {
     /// Create a new private connection.
     async fn new(
         target_id: String,
-        config: DMSPrivateConfig,
-        device_auth: Arc<DMSDeviceAuthProtocol>,
-        post_quantum: Arc<DMSPostQuantumCrypto>,
-        obfuscation: Arc<DMSObfuscationLayer>,
-    ) -> DMSResult<Self> {
+        config: DMSCPrivateConfig,
+        device_auth: Arc<DMSCDeviceAuthProtocol>,
+        post_quantum: Arc<DMSCPostQuantumCrypto>,
+        obfuscation: Arc<DMSCObfuscationLayer>,
+    ) -> DMSCResult<Self> {
         // Perform device authentication
         if config.device_auth {
             device_auth.authenticate_device(&target_id).await?;
@@ -405,7 +407,7 @@ impl DMSPrivateConnection {
     }
     
     /// Generate ephemeral session keys.
-    async fn generate_session_keys(config: &DMSPrivateConfig) -> DMSResult<SessionKeys> {
+    async fn generate_session_keys(config: &DMSCPrivateConfig) -> DMSCResult<SessionKeys> {
         let mut rng = rand::thread_rng();
         
         // Generate encryption key (256 bits)
@@ -427,16 +429,16 @@ impl DMSPrivateConnection {
     async fn establish_secure_connection(
         target_id: &str,
         session_keys: &SessionKeys,
-        config: &DMSPrivateConfig,
-        post_quantum: Arc<DMSPostQuantumCrypto>,
-        obfuscation: Arc<DMSObfuscationLayer>,
-    ) -> DMSResult<SecureStream> {
+        config: &DMSCPrivateConfig,
+        post_quantum: Arc<DMSCPostQuantumCrypto>,
+        obfuscation: Arc<DMSCObfuscationLayer>,
+    ) -> DMSCResult<SecureStream> {
         // Parse target address (obfuscated)
         let obfuscated_addr = obfuscation.obfuscate_address(target_id).await?;
         
         // Connect with obfuscation
         let tcp_stream = TcpStream::connect(&obfuscated_addr).await
-            .map_err(|e| DMSError::ConnectionFailed(format!("Failed to connect to {}: {}", target_id, e)))?;
+            .map_err(|e| DMSCError::ConnectionFailed(format!("Failed to connect to {}: {}", target_id, e)))?;
         
         // Perform post-quantum key exchange if enabled
         if config.quantum_resistant {
@@ -488,27 +490,27 @@ impl DMSPrivateConnection {
     }
     
     /// Rotate session keys.
-    async fn rotate_keys(&self) -> DMSResult<()> {
+    async fn rotate_keys(&self) -> DMSCResult<()> {
         let new_keys = Self::generate_session_keys(&self.config).await?;
         *self.session_keys.write().await = new_keys;
         Ok(())
     }
 }
 
-/// Wrapper for private connection to implement DMSProtocolConnection trait.
-struct DMSPrivateConnectionWrapper {
-    inner: Arc<DMSPrivateConnection>,
-    stats: Arc<RwLock<DMSProtocolStats>>,
-    frame_builder: Arc<DMSFrameBuilder>,
-    frame_parser: Arc<DMSFrameParser>,
-    crypto_engine: Arc<RwLock<Option<Box<dyn DMSCryptoEngine>>>>,
+/// Wrapper for private connection to implement DMSCProtocolConnection trait.
+struct DMSCPrivateConnectionWrapper {
+    inner: Arc<DMSCPrivateConnection>,
+    stats: Arc<RwLock<DMSCProtocolStats>>,
+    frame_builder: Arc<DMSCFrameBuilder>,
+    frame_parser: Arc<DMSCFrameParser>,
+    crypto_engine: Arc<RwLock<Option<Box<dyn DMSCCryptoEngine>>>>,
 }
 
 #[async_trait]
-impl DMSProtocolConnection for DMSPrivateConnectionWrapper {
-    async fn send_message(&self, data: &[u8]) -> DMSResult<Vec<u8>> {
+impl DMSCProtocolConnection for DMSCPrivateConnectionWrapper {
+    async fn send_message(&self, data: &[u8]) -> DMSCResult<Vec<u8>> {
         let start_time = Instant::now();
-        let result = self.send_message_with_flags(data, DMSMessageFlags {
+        let result = self.send_message_with_flags(data, DMSCMessageFlags {
             encrypted: true,
             obfuscated: true,
             ..Default::default()
@@ -528,13 +530,13 @@ impl DMSProtocolConnection for DMSPrivateConnectionWrapper {
         result
     }
     
-    async fn send_message_with_flags(&self, data: &[u8], flags: DMSMessageFlags) -> DMSResult<Vec<u8>> {
+    async fn send_message_with_flags(&self, data: &[u8], flags: DMSCMessageFlags) -> DMSCResult<Vec<u8>> {
         // Update activity
         self.inner.update_activity().await;
         
         // Check connection
         if !self.inner.is_active().await {
-            return Err(DMSError::ConnectionFailed("Connection is not active".to_string()));
+            return Err(DMSCError::ConnectionFailed("Connection is not active".to_string()));
         }
         
         // Get session keys
@@ -547,10 +549,10 @@ impl DMSProtocolConnection for DMSPrivateConnectionWrapper {
         let mut stream = self.inner.stream.write().await;
         if let Some(ref mut secure_stream) = *stream {
             secure_stream.tcp_stream.write_all(&encrypted_data).await
-                .map_err(|e| DMSError::ConnectionFailed(format!("Failed to send encrypted data: {}", e)))?;
+                .map_err(|e| DMSCError::ConnectionFailed(format!("Failed to send encrypted data: {}", e)))?;
             
             secure_stream.tcp_stream.flush().await
-                .map_err(|e| DMSError::ConnectionFailed(format!("Failed to flush stream: {}", e)))?;
+                .map_err(|e| DMSCError::ConnectionFailed(format!("Failed to flush stream: {}", e)))?;
             
             // Update statistics
             self.stats.write().await.messages_sent += 1;
@@ -559,18 +561,18 @@ impl DMSProtocolConnection for DMSPrivateConnectionWrapper {
             // For simplicity, return empty response
             Ok(Vec::new())
         } else {
-            Err(DMSError::ConnectionFailed("No active secure stream".to_string()))
+            Err(DMSCError::ConnectionFailed("No active secure stream".to_string()))
         }
     }
     
-    async fn receive_message(&self) -> DMSResult<Vec<u8>> {
+    async fn receive_message(&self) -> DMSCResult<Vec<u8>> {
         let start_time = Instant::now();
         // Update activity
         self.inner.update_activity().await;
         
         // Check connection
         if !self.inner.is_active().await {
-            return Err(DMSError::ConnectionFailed("Connection is not active".to_string()));
+            return Err(DMSCError::ConnectionFailed("Connection is not active".to_string()));
         }
         
         // Get session keys
@@ -582,10 +584,10 @@ impl DMSProtocolConnection for DMSPrivateConnectionWrapper {
             // Read encrypted data (simplified - in real implementation would read frame)
             let mut buffer = vec![0u8; 4096]; // Max message size
             let n = secure_stream.tcp_stream.read(&mut buffer).await
-                .map_err(|e| DMSError::ConnectionFailed(format!("Failed to receive encrypted data: {}", e)))?;
+                .map_err(|e| DMSCError::ConnectionFailed(format!("Failed to receive encrypted data: {}", e)))?;
             
             if n == 0 {
-                return Err(DMSError::ConnectionFailed("Connection closed by peer".to_string()));
+                return Err(DMSCError::ConnectionFailed("Connection closed by peer".to_string()));
             }
             
             buffer.truncate(n);
@@ -610,7 +612,7 @@ impl DMSProtocolConnection for DMSPrivateConnectionWrapper {
             
             Ok(decrypted_data)
         } else {
-            Err(DMSError::ConnectionFailed("No active secure stream".to_string()))
+            Err(DMSCError::ConnectionFailed("No active secure stream".to_string()))
         }
     }
     
@@ -618,34 +620,34 @@ impl DMSProtocolConnection for DMSPrivateConnectionWrapper {
         *self.inner.active.blocking_read()
     }
     
-    fn get_connection_info(&self) -> DMSConnectionInfo {
-        DMSConnectionInfo {
+    fn get_connection_info(&self) -> DMSCConnectionInfo {
+        DMSCConnectionInfo {
             connection_id: self.inner.connection_id.clone(),
             target_id: self.inner.target_id.clone(),
-            protocol_type: DMSProtocolType::Private,
+            protocol_type: DMSCProtocolType::Private,
             established_at: self.inner.established_at,
             last_activity: *self.inner.last_activity.blocking_read(),
             security_level: if self.inner.config.quantum_resistant {
-                DMSSecurityLevel::Maximum
+                DMSCSecurityLevel::Maximum
             } else {
-                DMSSecurityLevel::High
+                DMSCSecurityLevel::High
             },
         }
     }
     
-    async fn close(&self) -> DMSResult<()> {
+    async fn close(&self) -> DMSCResult<()> {
         *self.inner.active.write().await = false;
         self.inner.stream.write().await.take();
         Ok(())
     }
 }
 
-impl DMSPrivateConnectionWrapper {
+impl DMSCPrivateConnectionWrapper {
     /// Encrypt and authenticate data.
-    async fn encrypt_and_authenticate(&self, data: &[u8], session_keys: &SessionKeys, flags: DMSMessageFlags) -> DMSResult<Vec<u8>> {
+    async fn encrypt_and_authenticate(&self, data: &[u8], session_keys: &SessionKeys, flags: DMSCMessageFlags) -> DMSCResult<Vec<u8>> {
         // Build protocol frame
         let frame = self.frame_builder.build_frame(
-            DMSFrameType::Data,
+            DMSCFrameType::Data,
             data,
             flags,
         ).await?;
@@ -679,9 +681,9 @@ impl DMSPrivateConnectionWrapper {
     }
     
     /// Decrypt and verify data.
-    async fn decrypt_and_verify(&self, data: &[u8], session_keys: &SessionKeys) -> DMSResult<Vec<u8>> {
+    async fn decrypt_and_verify(&self, data: &[u8], session_keys: &SessionKeys) -> DMSCResult<Vec<u8>> {
         if data.len() < 28 { // 12 bytes nonce + 16 bytes auth tag
-            return Err(DMSError::InvalidData("Data too short for nonce and authentication tag".to_string()));
+            return Err(DMSCError::InvalidData("Data too short for nonce and authentication tag".to_string()));
         }
         
         // Extract nonce
@@ -691,7 +693,7 @@ impl DMSPrivateConnectionWrapper {
         // Verify authentication tag
         let auth_tag = &data[data.len() - 16..];
         if auth_tag != &session_keys.auth_key[..16] {
-            return Err(DMSError::AuthenticationFailed("Invalid authentication tag".to_string()));
+            return Err(DMSCError::AuthenticationFailed("Invalid authentication tag".to_string()));
         }
         
         // Decrypt data

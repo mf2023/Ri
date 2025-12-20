@@ -1,6 +1,6 @@
 <div align="center">
 
-# DMS (Dunimd Middleware Service)
+# DMSCC (Dunimd Middleware Service)
 
 English | [简体中文](README.zh.md)
 
@@ -12,21 +12,21 @@ English | [简体中文](README.zh.md)
 <a href="https://gitee.com/dunimd" target="_blank">
     <img alt="Gitee" src="https://img.shields.io/badge/Gitee-Dunimd-C71D23?style=flat-square&logo=gitee"/>
 </a>
-<a href="https://crates.io/crates/dms_core" target="_blank">
-    <img alt="Crates.io" src="https://img.shields.io/badge/Crates-DMS-000000?style=flat-square&logo=rust"/>
+<a href="https://crates.io/crates/dmsc" target="_blank">
+    <img alt="Crates.io" src="https://img.shields.io/badge/Crates-DMSC-000000?style=flat-square&logo=rust"/>
 </a>
-<a href="https://pypi.org/project/dms-core/" target="_blank">
-    <img alt="PyPI" src="https://img.shields.io/badge/PyPI-DMS-3775A9?style=flat-square&logo=pypi"/>
+<a href="https://pypi.org/project/dmsc/" target="_blank">
+    <img alt="PyPI" src="https://img.shields.io/badge/PyPI-DMSC-3775A9?style=flat-square&logo=pypi"/>
 </a>
 
-**DMS (Dunimd Middleware Service)** — A high-performance Rust middleware framework that unifies backend infrastructure. Built for enterprise-scale with modular architecture, built-in observability, and distributed systems support.
+**DMSC (Dunimd Middleware Service)** — A high-performance Rust middleware framework that unifies backend infrastructure. Built for enterprise-scale with modular architecture, built-in observability, and distributed systems support.
 
 </div>
 
 <h2 align="center">🏗️ Core Architecture</h2>
 
 ### 📐 Modular Design
-DMS adopts a highly modular architecture with 12 core modules, enabling on-demand composition and seamless extension:
+DMSC adopts a highly modular architecture with 12 core modules, enabling on-demand composition and seamless extension:
 
 <div align="center">
 
@@ -98,17 +98,17 @@ DMS adopts a highly modular architecture with 12 core modules, enabling on-deman
 
 ### Quick Setup
 
-Add DMS to your project's `Cargo.toml`:
+Add DMSC to your project's `Cargo.toml`:
 
 ```toml
 [dependencies]
-dms_core = { git = "https://gitee.com/dunimd/dms" }
+dmsc = { git = "https://gitee.com/dunimd/dmsc" }
 ```
 
 Or use cargo add:
 
 ```bash
-cargo add DMS --git https://gitee.com/dunimd/dms
+cargo add DMSC --git https://gitee.com/dunimd/dmsc
 ```
 
 <h2 align="center">⚡ Quick Start</h2>
@@ -116,20 +116,20 @@ cargo add DMS --git https://gitee.com/dunimd/dms
 ### Core API Usage
 
 ```rust
-use dms_core::prelude::*;
+use dmsc::prelude::*;
 
 #[tokio::main]
-async fn main() -> DMSResult<()> {
+async fn main() -> DMSCResult<()> {
     // Build service runtime
-    let app = DMSAppBuilder::new()
+    let app = DMSCAppBuilder::new()
         .with_config("config.yaml")?
-        .with_logging(DMSLogConfig::default())?
-        .with_observability(DMSObservabilityConfig::default())?
+        .with_logging(DMSCLogConfig::default())?
+        .with_observability(DMSCObservabilityConfig::default())?
         .build()?;
     
     // Run business logic
-    app.run(|ctx: &DMSServiceContext| async move {
-        ctx.logger().info("service", "DMS service started")?;
+    app.run(|ctx: &DMSCServiceContext| async move {
+        ctx.logger().info("service", "DMSC service started")?;
         // Your business code here
         Ok(())
     }).await
@@ -139,10 +139,10 @@ async fn main() -> DMSResult<()> {
 ### Observability Example
 
 ```rust
-use dms_core::observability::*;
+use dmsc::observability::*;
 
 #[traced(name = "user_service")]
-async fn get_user(ctx: &DMSServiceContext, user_id: u64) -> DMSResult<User> {
+async fn get_user(ctx: &DMSCServiceContext, user_id: u64) -> DMSCResult<User> {
     // Automatically record traces and metrics
     let user = fetch_user_from_db(user_id).await?;
     Ok(user)
@@ -177,9 +177,9 @@ resource:
 
 ### Configuration Sources
 
-DMS supports multiple configuration sources in order of priority (highest to lowest):
+DMSC supports multiple configuration sources in order of priority (highest to lowest):
 1. Runtime parameters
-2. Environment variables (prefixed with `DMS_`)
+2. Environment variables (prefixed with `DMSC_`)
 3. Configuration files (YAML, TOML, JSON)
 4. Default values
 
@@ -201,7 +201,7 @@ cargo test -- --nocapture
 <h2 align="center">❓ Frequently Asked Questions</h2>
 
 **Q: How to add a new module?**
-A: Implement the `DMSModule` trait and register it via `DMSAppBuilder::with_module`.
+A: Implement the `DMSCModule` trait and register it via `DMSCAppBuilder::with_module`.
 
 **Q: How to configure logging level?**
 A: Set `logging.level` in the configuration file, supporting DEBUG/INFO/WARN/ERROR levels.
@@ -210,15 +210,15 @@ A: Set `logging.level` in the configuration file, supporting DEBUG/INFO/WARN/ERR
 A: Set `observability.metrics_enabled: true` and configure `prometheus_port` in the configuration file.
 
 **Q: How to extend configuration sources?**
-A: Implement a custom configuration loader and register it with `DMSConfigManager`.
+A: Implement a custom configuration loader and register it with `DMSCConfigManager`.
 
 **Q: How to handle asynchronous tasks?**
-A: Use `DMSAppBuilder::with_async_module` to add async modules, the framework handles async lifecycle automatically.
+A: Use `DMSCAppBuilder::with_async_module` to add async modules, the framework handles async lifecycle automatically.
 
 <h2 align="center">🌏 Community & Citation</h2>
 
 - Welcome to submit Issues and PRs!
-- Gitee: https://gitee.com/dunimd/dms.git
+- Gitee: https://gitee.com/dunimd/dmsc.git
 
 
 <div align="center">

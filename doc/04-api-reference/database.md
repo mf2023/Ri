@@ -26,7 +26,7 @@ database模块包含以下子模块：
 
 </div>
 
-### DMSDatabase
+### DMSCDatabase
 
 数据库管理器主接口，提供统一的数据库访问。
 
@@ -34,14 +34,14 @@ database模块包含以下子模块：
 
 | 方法 | 描述 | 参数 | 返回值 |
 |:--------|:-------------|:--------|:--------|
-| `execute(query)` | 执行SQL查询 | `query: &str` | `DMSResult<DMSQueryResult>` |
-| `query(query)` | 执行查询并返回结果 | `query: &str` | `DMSResult<Vec<DMSRow>>` |
-| `query_one(query)` | 执行查询并返回单行结果 | `query: &str` | `DMSResult<DMSRow>` |
-| `begin_transaction()` | 开始事务 | 无 | `DMSResult<DMSTransaction>` |
-| `migrate()` | 执行数据库迁移 | 无 | `DMSResult<()>` |
-| `get_connection()` | 获取数据库连接 | 无 | `DMSResult<DMSConnection>` |
-| `get_pool_stats()` | 获取连接池统计 | 无 | `DMSResult<PoolStats>` |
-| `ping()` | 测试数据库连接 | 无 | `DMSResult<()>` |
+| `execute(query)` | 执行SQL查询 | `query: &str` | `DMSCResult<DMSCQueryResult>` |
+| `query(query)` | 执行查询并返回结果 | `query: &str` | `DMSCResult<Vec<DMSCRow>>` |
+| `query_one(query)` | 执行查询并返回单行结果 | `query: &str` | `DMSCResult<DMSCRow>` |
+| `begin_transaction()` | 开始事务 | 无 | `DMSCResult<DMSCTransaction>` |
+| `migrate()` | 执行数据库迁移 | 无 | `DMSCResult<()>` |
+| `get_connection()` | 获取数据库连接 | 无 | `DMSCResult<DMSCConnection>` |
+| `get_pool_stats()` | 获取连接池统计 | 无 | `DMSCResult<PoolStats>` |
+| `ping()` | 测试数据库连接 | 无 | `DMSCResult<()>` |
 
 #### 使用示例
 
@@ -67,7 +67,7 @@ let user = ctx.database().query_one("SELECT * FROM users WHERE id = 123")?;
 let name: String = user.get("name")?;
 ```
 
-### DMSDatabaseConfig
+### DMSCDatabaseConfig
 
 数据库配置结构体。
 
@@ -75,7 +75,7 @@ let name: String = user.get("name")?;
 
 | 字段 | 类型 | 描述 | 默认值 |
 |:--------|:-----|:-------------|:-------|
-| `database_type` | `DMSDatabaseType` | 数据库类型 | `Postgres` |
+| `database_type` | `DMSCDatabaseType` | 数据库类型 | `Postgres` |
 | `host` | `String` | 数据库主机 | `"localhost"` |
 | `port` | `u16` | 数据库端口 | `5432` |
 | `database` | `String` | 数据库名称 | `""` |
@@ -92,8 +92,8 @@ let name: String = user.get("name")?;
 ```rust
 use dms::prelude::*;
 
-let db_config = DMSDatabaseConfig {
-    database_type: DMSDatabaseType::Postgres,
+let db_config = DMSCDatabaseConfig {
+    database_type: DMSCDatabaseType::Postgres,
     host: "localhost".to_string(),
     port: 5432,
     database: "myapp".to_string(),
@@ -107,7 +107,7 @@ let db_config = DMSDatabaseConfig {
 };
 ```
 
-### DMSDatabaseType
+### DMSCDatabaseType
 
 数据库类型枚举。
 
@@ -123,7 +123,7 @@ let db_config = DMSDatabaseConfig {
 
 ## 查询构建器
 
-### DMSQueryBuilder
+### DMSCQueryBuilder
 
 查询构建器，用于构建类型安全的SQL查询。
 
@@ -140,7 +140,7 @@ let db_config = DMSDatabaseConfig {
 | `limit(count)` | 设置限制 | `count: i64` | `Self` |
 | `offset(count)` | 设置偏移 | `count: i64` | `Self` |
 | `join(table, on)` | 添加连接 | `table: &str`, `on: &str` | `Self` |
-| `build()` | 构建查询 | 无 | `DMSResult<String>` |
+| `build()` | 构建查询 | 无 | `DMSCResult<String>` |
 
 #### 使用示例
 
@@ -148,7 +148,7 @@ let db_config = DMSDatabaseConfig {
 use dms::prelude::*;
 
 // 构建SELECT查询
-let query = DMSQueryBuilder::new()
+let query = DMSCQueryBuilder::new()
     .select(&["id", "name", "email"])
     .from("users")
     .where_eq("active", true)
@@ -160,7 +160,7 @@ let query = DMSQueryBuilder::new()
 let results = ctx.database().query(&query)?;
 
 // 构建复杂查询
-let complex_query = DMSQueryBuilder::new()
+let complex_query = DMSCQueryBuilder::new()
     .select(&["u.id", "u.name", "COUNT(o.id) as order_count"])
     .from("users u")
     .join("orders o", "u.id = o.user_id")
@@ -178,7 +178,7 @@ let complex_query = DMSQueryBuilder::new()
 use dms::prelude::*;
 
 // 构建INSERT查询
-let insert_query = DMSInsertBuilder::new()
+let insert_query = DMSCInsertBuilder::new()
     .into("users")
     .columns(&["name", "email", "created_at"])
     .values(&["John Doe", "john@example.com", "NOW()"])
@@ -187,7 +187,7 @@ let insert_query = DMSInsertBuilder::new()
 ctx.database().execute(&insert_query)?;
 
 // 批量插入
-let batch_insert = DMSInsertBuilder::new()
+let batch_insert = DMSCInsertBuilder::new()
     .into("users")
     .columns(&["name", "email"])
     .values(&["Alice", "alice@example.com"])
@@ -204,7 +204,7 @@ ctx.database().execute(&batch_insert)?;
 use dms::prelude::*;
 
 // 构建UPDATE查询
-let update_query = DMSUpdateBuilder::new()
+let update_query = DMSCUpdateBuilder::new()
     .table("users")
     .set("last_login", "NOW()")
     .set("login_count", "login_count + 1")
@@ -220,7 +220,7 @@ ctx.database().execute(&update_query)?;
 use dms::prelude::*;
 
 // 构建DELETE查询
-let delete_query = DMSDeleteBuilder::new()
+let delete_query = DMSCDeleteBuilder::new()
     .from("users")
     .where_eq("active", false)
     .where_lt("last_login", "NOW() - INTERVAL '1 year'")
@@ -234,7 +234,7 @@ ctx.database().execute(&delete_query)?;
 
 </div>
 
-### DMSTransaction
+### DMSCTransaction
 
 事务接口。
 
@@ -242,12 +242,12 @@ ctx.database().execute(&delete_query)?;
 
 | 方法 | 描述 | 参数 | 返回值 |
 |:--------|:-------------|:--------|:--------|
-| `execute(query)` | 在事务中执行查询 | `query: &str` | `DMSResult<DMSQueryResult>` |
-| `query(query)` | 在事务中执行查询并返回结果 | `query: &str` | `DMSResult<Vec<DMSRow>>` |
-| `commit()` | 提交事务 | 无 | `DMSResult<()>` |
-| `rollback()` | 回滚事务 | 无 | `DMSResult<()>` |
-| `savepoint(name)` | 创建保存点 | `name: &str` | `DMSResult<()>` |
-| `rollback_to_savepoint(name)` | 回滚到保存点 | `name: &str` | `DMSResult<()>` |
+| `execute(query)` | 在事务中执行查询 | `query: &str` | `DMSCResult<DMSCQueryResult>` |
+| `query(query)` | 在事务中执行查询并返回结果 | `query: &str` | `DMSCResult<Vec<DMSCRow>>` |
+| `commit()` | 提交事务 | 无 | `DMSCResult<()>` |
+| `rollback()` | 回滚事务 | 无 | `DMSCResult<()>` |
+| `savepoint(name)` | 创建保存点 | `name: &str` | `DMSCResult<()>` |
+| `rollback_to_savepoint(name)` | 回滚到保存点 | `name: &str` | `DMSCResult<()>` |
 
 #### 使用示例
 
@@ -311,7 +311,7 @@ let serializable = TransactionIsolation::Serializable;
 ```rust
 use dms::prelude::*;
 
-let pool_config = DMSPoolConfig {
+let pool_config = DMSCPoolConfig {
     max_connections: 50,
     min_connections: 10,
     connection_timeout: Duration::from_secs(30),
@@ -363,7 +363,7 @@ match ctx.database().ping() {
 
 </div>
 
-### DMSMigration
+### DMSCMigration
 
 迁移接口。
 
@@ -372,9 +372,9 @@ match ctx.database().ping() {
 | 方法 | 描述 | 参数 | 返回值 |
 |:--------|:-------------|:--------|:--------|
 | `add_migration(migration)` | 添加迁移 | `migration: impl Migration` | `()` |
-| `migrate()` | 执行迁移 | 无 | `DMSResult<()>` |
-| `rollback()` | 回滚迁移 | 无 | `DMSResult<()>` |
-| `get_status()` | 获取迁移状态 | 无 | `DMSResult<Vec<MigrationStatus>>` |
+| `migrate()` | 执行迁移 | 无 | `DMSCResult<()>` |
+| `rollback()` | 回滚迁移 | 无 | `DMSCResult<()>` |
+| `get_status()` | 获取迁移状态 | 无 | `DMSCResult<Vec<MigrationStatus>>` |
 
 ### 创建迁移
 
@@ -392,7 +392,7 @@ impl Migration for CreateUsersTable {
         "create_users_table"
     }
     
-    fn up(&self, db: &DMSDatabase) -> DMSResult<()> {
+    fn up(&self, db: &DMSCDatabase) -> DMSCResult<()> {
         db.execute(r#"
             CREATE TABLE users (
                 id SERIAL PRIMARY KEY,
@@ -406,7 +406,7 @@ impl Migration for CreateUsersTable {
         Ok(())
     }
     
-    fn down(&self, db: &DMSDatabase) -> DMSResult<()> {
+    fn down(&self, db: &DMSCDatabase) -> DMSCResult<()> {
         db.execute("DROP TABLE users")?;
         Ok(())
     }
@@ -537,7 +537,7 @@ match ctx.database().query("SELECT * FROM users WHERE id = 123") {
             println!("User: {:?}", row);
         }
     }
-    Err(DMSError { code, .. }) if code == "DATABASE_CONNECTION_ERROR" => {
+    Err(DMSCError { code, .. }) if code == "DATABASE_CONNECTION_ERROR" => {
         // 连接错误，尝试重新连接
         ctx.log().error("Database connection lost, attempting to reconnect");
         ctx.database().recreate_pool()?;

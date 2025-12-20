@@ -1,7 +1,7 @@
 //! Copyright © 2025 Wenze Wei. All Rights Reserved.
 //! 
-//! This file is part of DMS.
-//! The DMS project belongs to the Dunimd Team.
+//! This file is part of DMSC.
+//! The DMSC project belongs to the Dunimd Team.
 //! 
 //! Licensed under the Apache License, Version 2.0 (the "License");
 //! you may not use this file except in compliance with the License.
@@ -19,12 +19,12 @@
 
 //! # Application Runtime
 //! 
-//! This module provides the application runtime for DMS applications.
-//! The `DMSAppRuntime` manages the application lifecycle, including module initialization,
+//! This module provides the application runtime for DMSC applications.
+//! The `DMSCAppRuntime` manages the application lifecycle, including module initialization,
 //! startup, and shutdown. It also handles the execution of both synchronous and asynchronous modules.
 
-use crate::core::{DMSResult, DMSServiceContext};
-use crate::hooks::{DMSHookKind, DMSModulePhase};
+use crate::core::{DMSCResult, DMSCServiceContext};
+use crate::hooks::{DMSCHookKind, DMSCModulePhase};
 use super::module_types::{ModuleSlot, ModuleType};
 use tokio::sync::RwLock as AsyncRwLock;
 use std::sync::Arc;
@@ -34,7 +34,7 @@ use pyo3::PyResult;
 
 /// Public-facing application runtime.
 /// 
-/// The `DMSAppRuntime` manages the application lifecycle, including module initialization,
+/// The `DMSCAppRuntime` manages the application lifecycle, including module initialization,
 /// startup, and shutdown. It also handles the execution of both synchronous and asynchronous modules.
 /// 
 /// ## Usage
@@ -43,30 +43,30 @@ use pyo3::PyResult;
 /// use dms::prelude::*;
 /// 
 /// #[tokio::main]
-/// async fn main() -> DMSResult<()> {
-///     let app = DMSAppBuilder::new()
+/// async fn main() -> DMSCResult<()> {
+///     let app = DMSCAppBuilder::new()
 ///         .with_config("config.yaml")?
 ///         .build()?;
 ///     
 ///     app.run(|ctx| async move {
-///         ctx.logger().info("service", "DMS service started")?;
+///         ctx.logger().info("service", "DMSC service started")?;
 ///         Ok(())
 ///     }).await
 /// }
 /// ```
 
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
-pub struct DMSAppRuntime {
+pub struct DMSCAppRuntime {
     /// Service context providing access to core functionalities
-    ctx: DMSServiceContext,
+    ctx: DMSCServiceContext,
     /// Vector of modules with their state, protected by an async RwLock
     modules: Arc<AsyncRwLock<Vec<ModuleSlot>>>,
 }
 
-impl DMSAppRuntime {
+impl DMSCAppRuntime {
     /// Create a new application runtime with the given context and modules.
     /// 
-    /// This method is typically called by the `DMSAppBuilder` during the build process.
+    /// This method is typically called by the `DMSCAppBuilder` during the build process.
     /// 
     /// # Parameters
     /// 
@@ -75,8 +75,8 @@ impl DMSAppRuntime {
     /// 
     /// # Returns
     /// 
-    /// A new `DMSAppRuntime` instance.
-    pub fn new(ctx: DMSServiceContext, modules: Vec<ModuleSlot>) -> Self {
+    /// A new `DMSCAppRuntime` instance.
+    pub fn new(ctx: DMSCServiceContext, modules: Vec<ModuleSlot>) -> Self {
         Self {
             ctx,
             modules: Arc::new(AsyncRwLock::new(modules)),
@@ -97,29 +97,29 @@ impl DMSAppRuntime {
     /// 
     /// # Parameters
     /// 
-    /// - `f`: A closure that takes a `DMSServiceContext` and returns a `DMSResult<()>`. 
+    /// - `f`: A closure that takes a `DMSCServiceContext` and returns a `DMSCResult<()>`. 
     ///   This closure contains the application's business logic and is executed after all
     ///   modules have been initialized and started, but before any modules are shut down.
     /// 
     /// # Returns
     /// 
-    /// A `DMSResult` indicating success or failure.
+    /// A `DMSCResult` indicating success or failure.
     /// 
     /// # Errors
     /// 
     /// Returns an error if:
     /// - A critical module fails during execution
     /// - The provided closure returns an error
-    pub async fn run<F, Fut>(mut self, f: F) -> DMSResult<()>
+    pub async fn run<F, Fut>(mut self, f: F) -> DMSCResult<()>
     where
-        F: FnOnce(&DMSServiceContext) -> Fut,
-        Fut: std::future::Future<Output = DMSResult<()>>,
+        F: FnOnce(&DMSCServiceContext) -> Fut,
+        Fut: std::future::Future<Output = DMSCResult<()>>,
     {
         // Emit startup hook
-        self.ctx.hooks().emit_with(&DMSHookKind::Startup, &self.ctx, None, None)?;
+        self.ctx.hooks().emit_with(&DMSCHookKind::Startup, &self.ctx, None, None)?;
 
         // Emit before modules init hook
-        self.ctx.hooks().emit_with(&DMSHookKind::BeforeModulesInit, &self.ctx, None, None)?;
+        self.ctx.hooks().emit_with(&DMSCHookKind::BeforeModulesInit, &self.ctx, None, None)?;
         
         // Get module count
         let modules_guard = self.modules.read().await;
@@ -157,7 +157,7 @@ impl DMSAppRuntime {
         for (idx, skip, module_name, critical) in module_states.iter().cloned() {
             if !skip {
                 // Emit before module init hook
-                self.ctx.hooks().emit_with(&DMSHookKind::BeforeModulesInit, &self.ctx, Some(&module_name), Some(DMSModulePhase::Init))?;
+                self.ctx.hooks().emit_with(&DMSCHookKind::BeforeModulesInit, &self.ctx, Some(&module_name), Some(DMSCModulePhase::Init))?;
                 
                 // Initialize module with single write lock acquisition
                 let mut error = None;
@@ -194,10 +194,10 @@ impl DMSAppRuntime {
         }
         
         // Emit after modules init hook
-        self.ctx.hooks().emit_with(&DMSHookKind::AfterModulesInit, &self.ctx, None, None)?;
+        self.ctx.hooks().emit_with(&DMSCHookKind::AfterModulesInit, &self.ctx, None, None)?;
 
         // Emit before modules start hook
-        self.ctx.hooks().emit_with(&DMSHookKind::BeforeModulesStart, &self.ctx, None, None)?;
+        self.ctx.hooks().emit_with(&DMSCHookKind::BeforeModulesStart, &self.ctx, None, None)?;
         
         // Start synchronous modules with optimized locking
         for (idx, skip, module_name, critical) in module_states.iter().cloned() {
@@ -242,9 +242,9 @@ impl DMSAppRuntime {
                 
                 // Emit hooks outside of lock to avoid potential deadlocks
                 if error.is_none() {
-                    self.ctx.hooks().emit_with(&DMSHookKind::BeforeModulesStart, &self.ctx, Some(&module_name), Some(DMSModulePhase::BeforeStart))?;
-                    self.ctx.hooks().emit_with(&DMSHookKind::BeforeModulesStart, &self.ctx, Some(&module_name), Some(DMSModulePhase::Start))?;
-                    self.ctx.hooks().emit_with(&DMSHookKind::BeforeModulesStart, &self.ctx, Some(&module_name), Some(DMSModulePhase::AfterStart))?;
+                    self.ctx.hooks().emit_with(&DMSCHookKind::BeforeModulesStart, &self.ctx, Some(&module_name), Some(DMSCModulePhase::BeforeStart))?;
+                    self.ctx.hooks().emit_with(&DMSCHookKind::BeforeModulesStart, &self.ctx, Some(&module_name), Some(DMSCModulePhase::Start))?;
+                    self.ctx.hooks().emit_with(&DMSCHookKind::BeforeModulesStart, &self.ctx, Some(&module_name), Some(DMSCModulePhase::AfterStart))?;
                 }
                 
                 // Handle module start error
@@ -264,7 +264,7 @@ impl DMSAppRuntime {
         }
         
         // Emit after modules start hook
-        self.ctx.hooks().emit_with(&DMSHookKind::AfterModulesStart, &self.ctx, None, None)?;
+        self.ctx.hooks().emit_with(&DMSCHookKind::AfterModulesStart, &self.ctx, None, None)?;
 
         // Initialize and start asynchronous modules with optimized locking
         for idx in 0..module_len {
@@ -334,10 +334,10 @@ impl DMSAppRuntime {
                 
                 // Emit hooks outside of lock to avoid potential deadlocks
                 if error.is_none() {
-                    self.ctx.hooks().emit_with(&DMSHookKind::BeforeModulesStart, &self.ctx, Some(&module_name), Some(DMSModulePhase::AsyncInit))?;
-                    self.ctx.hooks().emit_with(&DMSHookKind::BeforeModulesStart, &self.ctx, Some(&module_name), Some(DMSModulePhase::AsyncBeforeStart))?;
-                    self.ctx.hooks().emit_with(&DMSHookKind::BeforeModulesStart, &self.ctx, Some(&module_name), Some(DMSModulePhase::AsyncStart))?;
-                    self.ctx.hooks().emit_with(&DMSHookKind::BeforeModulesStart, &self.ctx, Some(&module_name), Some(DMSModulePhase::AsyncAfterStart))?;
+                    self.ctx.hooks().emit_with(&DMSCHookKind::BeforeModulesStart, &self.ctx, Some(&module_name), Some(DMSCModulePhase::AsyncInit))?;
+                    self.ctx.hooks().emit_with(&DMSCHookKind::BeforeModulesStart, &self.ctx, Some(&module_name), Some(DMSCModulePhase::AsyncBeforeStart))?;
+                    self.ctx.hooks().emit_with(&DMSCHookKind::BeforeModulesStart, &self.ctx, Some(&module_name), Some(DMSCModulePhase::AsyncStart))?;
+                    self.ctx.hooks().emit_with(&DMSCHookKind::BeforeModulesStart, &self.ctx, Some(&module_name), Some(DMSCModulePhase::AsyncAfterStart))?;
                 }
                 
                 // Handle async module error
@@ -357,14 +357,14 @@ impl DMSAppRuntime {
         }
         
         // Emit after async modules start hook
-        self.ctx.hooks().emit_with(&DMSHookKind::AfterModulesStart, &self.ctx, None, None)?;
+        self.ctx.hooks().emit_with(&DMSCHookKind::AfterModulesStart, &self.ctx, None, None)?;
         
         // Run the application business logic (provided closure)
         let result = f(&self.ctx).await;
         
         // Emit before modules shutdown hook
         // Note: We're using a new context here since we've moved the original to the closure
-        let _ = self.ctx.hooks().emit_with(&DMSHookKind::BeforeModulesShutdown, &self.ctx, None, None);
+        let _ = self.ctx.hooks().emit_with(&DMSCHookKind::BeforeModulesShutdown, &self.ctx, None, None);
         
         // Shutdown synchronous modules in reverse order with optimized locking
         for idx in (0..module_len).rev() {
@@ -425,9 +425,9 @@ impl DMSAppRuntime {
                 
                 // Emit hooks outside of lock to avoid potential deadlocks
                 if error.is_none() {
-                    self.ctx.hooks().emit_with(&DMSHookKind::BeforeModulesShutdown, &self.ctx, Some(&module_name), Some(DMSModulePhase::BeforeShutdown))?;
-                    self.ctx.hooks().emit_with(&DMSHookKind::BeforeModulesShutdown, &self.ctx, Some(&module_name), Some(DMSModulePhase::Shutdown))?;
-                    self.ctx.hooks().emit_with(&DMSHookKind::BeforeModulesShutdown, &self.ctx, Some(&module_name), Some(DMSModulePhase::AfterShutdown))?;
+                    self.ctx.hooks().emit_with(&DMSCHookKind::BeforeModulesShutdown, &self.ctx, Some(&module_name), Some(DMSCModulePhase::BeforeShutdown))?;
+                    self.ctx.hooks().emit_with(&DMSCHookKind::BeforeModulesShutdown, &self.ctx, Some(&module_name), Some(DMSCModulePhase::Shutdown))?;
+                    self.ctx.hooks().emit_with(&DMSCHookKind::BeforeModulesShutdown, &self.ctx, Some(&module_name), Some(DMSCModulePhase::AfterShutdown))?;
                 }
                 
                 // Handle module shutdown error
@@ -447,10 +447,10 @@ impl DMSAppRuntime {
         }
         
         // Emit after modules shutdown hook
-        self.ctx.hooks().emit_with(&DMSHookKind::AfterModulesShutdown, &self.ctx, None, None)?;
+        self.ctx.hooks().emit_with(&DMSCHookKind::AfterModulesShutdown, &self.ctx, None, None)?;
 
         // Shutdown asynchronous modules in reverse order with optimized locking
-        self.ctx.hooks().emit_with(&DMSHookKind::BeforeModulesShutdown, &self.ctx, None, None)?;
+        self.ctx.hooks().emit_with(&DMSCHookKind::BeforeModulesShutdown, &self.ctx, None, None)?;
         
         for idx in (0..module_len).rev() {
             // Check if this is an async module and get its state
@@ -510,9 +510,9 @@ impl DMSAppRuntime {
                 
                 // Emit hooks outside of lock to avoid potential deadlocks
                 if error.is_none() {
-                    self.ctx.hooks().emit_with(&DMSHookKind::BeforeModulesShutdown, &self.ctx, Some(&module_name), Some(DMSModulePhase::AsyncBeforeShutdown))?;
-                    self.ctx.hooks().emit_with(&DMSHookKind::BeforeModulesShutdown, &self.ctx, Some(&module_name), Some(DMSModulePhase::AsyncShutdown))?;
-                    self.ctx.hooks().emit_with(&DMSHookKind::BeforeModulesShutdown, &self.ctx, Some(&module_name), Some(DMSModulePhase::AsyncAfterShutdown))?;
+                    self.ctx.hooks().emit_with(&DMSCHookKind::BeforeModulesShutdown, &self.ctx, Some(&module_name), Some(DMSCModulePhase::AsyncBeforeShutdown))?;
+                    self.ctx.hooks().emit_with(&DMSCHookKind::BeforeModulesShutdown, &self.ctx, Some(&module_name), Some(DMSCModulePhase::AsyncShutdown))?;
+                    self.ctx.hooks().emit_with(&DMSCHookKind::BeforeModulesShutdown, &self.ctx, Some(&module_name), Some(DMSCModulePhase::AsyncAfterShutdown))?;
                 }
                 
                 // Handle async module shutdown error
@@ -532,10 +532,10 @@ impl DMSAppRuntime {
         }
         
         // Emit after async modules shutdown hook
-        self.ctx.hooks().emit_with(&DMSHookKind::AfterModulesShutdown, &self.ctx, None, None)?;
+        self.ctx.hooks().emit_with(&DMSCHookKind::AfterModulesShutdown, &self.ctx, None, None)?;
 
         // Emit shutdown hook
-        self.ctx.hooks().emit_with(&DMSHookKind::Shutdown, &self.ctx, None, None)?;
+        self.ctx.hooks().emit_with(&DMSCHookKind::Shutdown, &self.ctx, None, None)?;
 
         // Return the result of the closure execution
         result
@@ -551,17 +551,17 @@ impl DMSAppRuntime {
     /// - `phase`: The lifecycle phase during which the error occurred
     /// - `module_name`: The name of the module that failed
     /// - `err`: The error that occurred
-    fn log_module_error(&self, phase: &str, module_name: &str, err: &crate::core::DMSError) {
+    fn log_module_error(&self, phase: &str, module_name: &str, err: &crate::core::DMSCError) {
         let logger = self.ctx.logger();
         let message = format!("module={module_name} phase={phase} error={err}");
-        let _ = logger.error("DMS.Runtime", message);
+        let _ = logger.error("DMSC.Runtime", message);
     }
 }
 
 #[cfg(feature = "pyo3")]
-/// Python bindings for DMSAppRuntime
+/// Python bindings for DMSCAppRuntime
 #[pyo3::prelude::pymethods]
-impl DMSAppRuntime {
+impl DMSCAppRuntime {
     /// Simple run method for Python that just starts the runtime
     fn run_simple(&self) -> PyResult<()> {
         // For Python, we'll just return Ok for now
@@ -570,8 +570,8 @@ impl DMSAppRuntime {
     }
     
     /// Get the service context
-    fn get_context(&self) -> PyResult<DMSServiceContext> {
-        // Since we can't clone DMSServiceContext, we'll create a new one with the same components
+    fn get_context(&self) -> PyResult<DMSCServiceContext> {
+        // Since we can't clone DMSCServiceContext, we'll create a new one with the same components
         // This is a simplified approach - in a real implementation you might want to share the context differently
         Err(pyo3::exceptions::PyRuntimeError::new_err("Service context cannot be cloned from Python"))
     }

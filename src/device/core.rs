@@ -1,7 +1,7 @@
 //! Copyright © 2025 Wenze Wei. All Rights Reserved.
 //!
-//! This file is part of DMS.
-//! The DMS project belongs to the Dunimd Team.
+//! This file is part of DMSC.
+//! The DMSC project belongs to the Dunimd Team.
 //!
 //! Licensed under the Apache License, Version 2.0 (the "License");
 //! You may not use this file except in compliance with the License.
@@ -19,17 +19,17 @@
 
 //! # Device Core Structures
 //! 
-//! This file defines the core data structures for device management in DMS, including device types,
+//! This file defines the core data structures for device management in DMSC, including device types,
 //! capabilities, status, health metrics, and the device representation itself. These structures form
 //! the foundation for device discovery, scheduling, and management.
 //! 
 //! ## Key Components
 //! 
-//! - **DMSDeviceType**: Enum defining supported device types
-//! - **DMSDeviceCapabilities**: Device capabilities structure
-//! - **DMSDeviceStatus**: Enum defining device statuses
-//! - **DMSDeviceHealthMetrics**: Device health metrics structure
-//! - **DMSDevice**: Main device representation with status, capabilities, and health metrics
+//! - **DMSCDeviceType**: Enum defining supported device types
+//! - **DMSCDeviceCapabilities**: Device capabilities structure
+//! - **DMSCDeviceStatus**: Enum defining device statuses
+//! - **DMSCDeviceHealthMetrics**: Device health metrics structure
+//! - **DMSCDevice**: Main device representation with status, capabilities, and health metrics
 //! 
 //! ## Design Principles
 //! 
@@ -45,13 +45,13 @@
 //! ## Usage
 //! 
 //! ```rust
-//! use dms::device::{DMSDevice, DMSDeviceType, DMSDeviceCapabilities};
+//! use dms::device::{DMSCDevice, DMSCDeviceType, DMSCDeviceCapabilities};
 //! 
 //! // Create a new device
-//! let mut device = DMSDevice::new("server-1".to_string(), DMSDeviceType::CPU);
+//! let mut device = DMSCDevice::new("server-1".to_string(), DMSCDeviceType::CPU);
 //! 
 //! // Configure device capabilities
-//! let capabilities = DMSDeviceCapabilities::new()
+//! let capabilities = DMSCDeviceCapabilities::new()
 //!     .with_compute_units(16)
 //!     .with_memory_gb(32.0)
 //!     .with_storage_gb(1024.0)
@@ -59,10 +59,10 @@
 //! 
 //! // Set device capabilities and status
 //! device = device.with_capabilities(capabilities);
-//! device.set_status(dms::device::DMSDeviceStatus::Available);
+//! device.set_status(dms::device::DMSCDeviceStatus::Available);
 //! 
 //! // Check if device meets requirements
-//! let requirements = DMSDeviceCapabilities::new().with_compute_units(8);
+//! let requirements = DMSCDeviceCapabilities::new().with_compute_units(8);
 //! if device.capabilities().meets_requirements(&requirements) {
 //!     println!("Device meets requirements");
 //! }
@@ -74,7 +74,7 @@ use uuid::Uuid;
 
 /// Configuration for device control module
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct DMSDeviceControlConfig {
+pub struct DMSCDeviceControlConfig {
     /// Enable CPU discovery
     pub enable_cpu_discovery: bool,
     /// Enable GPU discovery  
@@ -91,7 +91,7 @@ pub struct DMSDeviceControlConfig {
     pub max_devices_per_type: usize,
 }
 
-impl Default for DMSDeviceControlConfig {
+impl Default for DMSCDeviceControlConfig {
     fn default() -> Self {
         Self {
             enable_cpu_discovery: true,
@@ -107,7 +107,7 @@ impl Default for DMSDeviceControlConfig {
 
 /// Configuration for device module
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct DMSDeviceConfig {
+pub struct DMSCDeviceConfig {
     /// Enable CPU discovery
     pub enable_cpu_discovery: bool,
     /// Enable GPU discovery  
@@ -124,7 +124,7 @@ pub struct DMSDeviceConfig {
     pub max_devices_per_type: usize,
 }
 
-impl Default for DMSDeviceConfig {
+impl Default for DMSCDeviceConfig {
     fn default() -> Self {
         Self {
             enable_cpu_discovery: true,
@@ -159,10 +159,10 @@ pub struct NetworkDeviceInfo {
 
 /// Device type enumeration
 /// 
-/// This enum defines the different types of devices supported by DMS. Each device type
+/// This enum defines the different types of devices supported by DMSC. Each device type
 /// has specific capabilities and use cases in the system.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
-pub enum DMSDeviceType {
+pub enum DMSCDeviceType {
     /// Central Processing Unit - General purpose computing
     CPU,
     /// Graphics Processing Unit - Parallel computing and graphics
@@ -181,17 +181,17 @@ pub enum DMSDeviceType {
     Custom,
 }
 
-impl std::fmt::Display for DMSDeviceType {
+impl std::fmt::Display for DMSCDeviceType {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            DMSDeviceType::CPU => write!(f, "CPU"),
-            DMSDeviceType::GPU => write!(f, "GPU"),
-            DMSDeviceType::Memory => write!(f, "Memory"),
-            DMSDeviceType::Storage => write!(f, "Storage"),
-            DMSDeviceType::Network => write!(f, "Network"),
-            DMSDeviceType::Sensor => write!(f, "Sensor"),
-            DMSDeviceType::Actuator => write!(f, "Actuator"),
-            DMSDeviceType::Custom => write!(f, "Custom"),
+            DMSCDeviceType::CPU => write!(f, "CPU"),
+            DMSCDeviceType::GPU => write!(f, "GPU"),
+            DMSCDeviceType::Memory => write!(f, "Memory"),
+            DMSCDeviceType::Storage => write!(f, "Storage"),
+            DMSCDeviceType::Network => write!(f, "Network"),
+            DMSCDeviceType::Sensor => write!(f, "Sensor"),
+            DMSCDeviceType::Actuator => write!(f, "Actuator"),
+            DMSCDeviceType::Custom => write!(f, "Custom"),
         }
     }
 }
@@ -201,7 +201,7 @@ impl std::fmt::Display for DMSDeviceType {
 /// This struct defines the capabilities of a device, including compute power, memory, storage,
 /// bandwidth, and custom capabilities. It supports a fluent builder API for easy configuration.
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct DMSDeviceCapabilities {
+pub struct DMSCDeviceCapabilities {
     /// Number of compute units (e.g., CPU cores, GPU CUDA cores)
     pub compute_units: Option<usize>,
     /// Memory capacity in gigabytes
@@ -214,19 +214,19 @@ pub struct DMSDeviceCapabilities {
     pub custom_capabilities: HashMap<String, String>,
 }
 
-impl Default for DMSDeviceCapabilities {
+impl Default for DMSCDeviceCapabilities {
     /// Returns the default device capabilities (empty capabilities)
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl DMSDeviceCapabilities {
+impl DMSCDeviceCapabilities {
     /// Creates a new empty device capabilities structure
     /// 
     /// # Returns
     /// 
-    /// A new `DMSDeviceCapabilities` instance with no capabilities set
+    /// A new `DMSCDeviceCapabilities` instance with no capabilities set
     pub fn new() -> Self {
         Self {
             compute_units: None,
@@ -245,7 +245,7 @@ impl DMSDeviceCapabilities {
     /// 
     /// # Returns
     /// 
-    /// The updated `DMSDeviceCapabilities` instance
+    /// The updated `DMSCDeviceCapabilities` instance
     pub fn with_compute_units(mut self, units: usize) -> Self {
         self.compute_units = Some(units);
         self
@@ -259,7 +259,7 @@ impl DMSDeviceCapabilities {
     /// 
     /// # Returns
     /// 
-    /// The updated `DMSDeviceCapabilities` instance
+    /// The updated `DMSCDeviceCapabilities` instance
     pub fn with_memory_gb(mut self, memory: f64) -> Self {
         self.memory_gb = Some(memory);
         self
@@ -273,7 +273,7 @@ impl DMSDeviceCapabilities {
     /// 
     /// # Returns
     /// 
-    /// The updated `DMSDeviceCapabilities` instance
+    /// The updated `DMSCDeviceCapabilities` instance
     pub fn with_storage_gb(mut self, storage: f64) -> Self {
         self.storage_gb = Some(storage);
         self
@@ -287,7 +287,7 @@ impl DMSDeviceCapabilities {
     /// 
     /// # Returns
     /// 
-    /// The updated `DMSDeviceCapabilities` instance
+    /// The updated `DMSCDeviceCapabilities` instance
     pub fn with_bandwidth_gbps(mut self, bandwidth: f64) -> Self {
         self.bandwidth_gbps = Some(bandwidth);
         self
@@ -302,7 +302,7 @@ impl DMSDeviceCapabilities {
     /// 
     /// # Returns
     /// 
-    /// The updated `DMSDeviceCapabilities` instance
+    /// The updated `DMSCDeviceCapabilities` instance
     pub fn with_custom_capability(mut self, key: String, value: String) -> Self {
         self.custom_capabilities.insert(key, value);
         self
@@ -320,7 +320,7 @@ impl DMSDeviceCapabilities {
     /// # Returns
     /// 
     /// `true` if the device meets all requirements, `false` otherwise
-    pub fn meets_requirements(&self, requirements: &DMSDeviceCapabilities) -> bool {
+    pub fn meets_requirements(&self, requirements: &DMSCDeviceCapabilities) -> bool {
         // Check compute units requirement
         if let Some(required_units) = requirements.compute_units {
             if let Some(available_units) = self.compute_units {
@@ -385,8 +385,8 @@ impl DMSDeviceCapabilities {
 /// Device status enumeration
 /// 
 /// This enum defines the different statuses a device can have during its lifecycle.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-pub enum DMSDeviceStatus {
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum DMSCDeviceStatus {
     /// Device status is unknown
     Unknown,
     /// Device is available for use
@@ -399,13 +399,17 @@ pub enum DMSDeviceStatus {
     Offline,
     /// Device is under maintenance
     Maintenance,
+    /// Device is degraded but still operational
+    Degraded,
+    /// Device is allocated to a specific task
+    Allocated,
 }
 
 /// Device health metrics structure
 /// 
 /// This struct contains health metrics for monitoring device performance and reliability.
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct DMSDeviceHealthMetrics {
+pub struct DMSCDeviceHealthMetrics {
     /// CPU usage percentage (0-100)
     pub cpu_usage_percent: f64,
     /// Memory usage percentage (0-100)
@@ -416,9 +420,19 @@ pub struct DMSDeviceHealthMetrics {
     pub error_count: u32,
     /// Throughput in operations per second
     pub throughput: u64, // operations per second
+    /// Network latency in milliseconds (for network devices)
+    pub network_latency_ms: f64,
+    /// Disk I/O operations per second (for storage devices)
+    pub disk_iops: u64,
+    /// Battery level percentage (for battery-powered devices, 0-100)
+    pub battery_level_percent: f64,
+    /// Response time in milliseconds
+    pub response_time_ms: f64,
+    /// Uptime in seconds
+    pub uptime_seconds: u64,
 }
 
-impl Default for DMSDeviceHealthMetrics {
+impl Default for DMSCDeviceHealthMetrics {
     /// Returns default health metrics (all zero values)
     fn default() -> Self {
         Self {
@@ -427,30 +441,39 @@ impl Default for DMSDeviceHealthMetrics {
             temperature_celsius: 0.0,
             error_count: 0,
             throughput: 0,
+            network_latency_ms: 0.0,
+            disk_iops: 0,
+            battery_level_percent: 0.0,
+            response_time_ms: 0.0,
+            uptime_seconds: 0,
         }
     }
 }
 
 /// Smart device representation
 /// 
-/// This struct represents a smart device in the DMS system, including its status, capabilities,
+/// This struct represents a smart device in the DMSC system, including its status, capabilities,
 /// health metrics, and lifecycle information.
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct DMSDevice {
+pub struct DMSCDevice {
     /// Unique device ID
     id: String,
     /// Device name
     name: String,
     /// Device type
-    device_type: DMSDeviceType,
+    device_type: DMSCDeviceType,
     /// Current device status
-    status: DMSDeviceStatus,
+    status: DMSCDeviceStatus,
     /// Device capabilities for resource allocation
-    capabilities: DMSDeviceCapabilities,
+    capabilities: DMSCDeviceCapabilities,
     /// Current health metrics
-    health_metrics: DMSDeviceHealthMetrics,
+    health_metrics: DMSCDeviceHealthMetrics,
     /// Physical location of the device (optional)
     location: Option<String>,
+    /// Device group (for grouping devices)
+    group: Option<String>,
+    /// Device tags (for filtering and selection)
+    tags: Vec<String>,
     /// Additional metadata as key-value pairs
     metadata: HashMap<String, String>,
     /// Last time the device was seen/updated
@@ -459,7 +482,7 @@ pub struct DMSDevice {
     current_allocation_id: Option<String>,
 }
 
-impl DMSDevice {
+impl DMSCDevice {
     /// Creates a new device with the given name and type
     /// 
     /// # Parameters
@@ -469,16 +492,18 @@ impl DMSDevice {
     /// 
     /// # Returns
     /// 
-    /// A new `DMSDevice` instance with default capabilities and health metrics
-    pub fn new(name: String, device_type: DMSDeviceType) -> Self {
+    /// A new `DMSCDevice` instance with default capabilities and health metrics
+    pub fn new(name: String, device_type: DMSCDeviceType) -> Self {
         Self {
             id: Uuid::new_v4().to_string(),
             name,
             device_type,
-            status: DMSDeviceStatus::Unknown,
-            capabilities: DMSDeviceCapabilities::new(),
-            health_metrics: DMSDeviceHealthMetrics::default(),
+            status: DMSCDeviceStatus::Unknown,
+            capabilities: DMSCDeviceCapabilities::new(),
+            health_metrics: DMSCDeviceHealthMetrics::default(),
             location: None,
+            group: None,
+            tags: Vec::new(),
             metadata: HashMap::new(),
             last_seen: chrono::Utc::now(),
             current_allocation_id: None,
@@ -507,8 +532,8 @@ impl DMSDevice {
     /// 
     /// # Returns
     /// 
-    /// The device type as a `DMSDeviceType` enum
-    pub fn device_type(&self) -> DMSDeviceType {
+    /// The device type as a `DMSCDeviceType` enum
+    pub fn device_type(&self) -> DMSCDeviceType {
         self.device_type
     }
     
@@ -516,8 +541,8 @@ impl DMSDevice {
     /// 
     /// # Returns
     /// 
-    /// The device status as a `DMSDeviceStatus` enum
-    pub fn status(&self) -> DMSDeviceStatus {
+    /// The device status as a `DMSCDeviceStatus` enum
+    pub fn status(&self) -> DMSCDeviceStatus {
         self.status
     }
     
@@ -525,8 +550,8 @@ impl DMSDevice {
     /// 
     /// # Returns
     /// 
-    /// A reference to the `DMSDeviceCapabilities` structure
-    pub fn capabilities(&self) -> &DMSDeviceCapabilities {
+    /// A reference to the `DMSCDeviceCapabilities` structure
+    pub fn capabilities(&self) -> &DMSCDeviceCapabilities {
         &self.capabilities
     }
     
@@ -534,8 +559,8 @@ impl DMSDevice {
     /// 
     /// # Returns
     /// 
-    /// A reference to the `DMSDeviceHealthMetrics` structure
-    pub fn health_metrics(&self) -> &DMSDeviceHealthMetrics {
+    /// A reference to the `DMSCDeviceHealthMetrics` structure
+    pub fn health_metrics(&self) -> &DMSCDeviceHealthMetrics {
         &self.health_metrics
     }
     
@@ -544,7 +569,7 @@ impl DMSDevice {
     /// # Parameters
     /// 
     /// - `status`: The new status to set
-    pub fn set_status(&mut self, status: DMSDeviceStatus) {
+    pub fn set_status(&mut self, status: DMSCDeviceStatus) {
         self.status = status;
         self.last_seen = chrono::Utc::now();
     }
@@ -554,7 +579,7 @@ impl DMSDevice {
     /// # Parameters
     /// 
     /// - `metrics`: The new health metrics to set
-    pub fn update_health_metrics(&mut self, metrics: DMSDeviceHealthMetrics) {
+    pub fn update_health_metrics(&mut self, metrics: DMSCDeviceHealthMetrics) {
         self.health_metrics = metrics;
         self.last_seen = chrono::Utc::now();
     }
@@ -583,8 +608,8 @@ impl DMSDevice {
     /// 
     /// # Returns
     /// 
-    /// The updated `DMSDevice` instance
-    pub fn with_capabilities(mut self, capabilities: DMSDeviceCapabilities) -> Self {
+    /// The updated `DMSCDevice` instance
+    pub fn with_capabilities(mut self, capabilities: DMSCDeviceCapabilities) -> Self {
         self.capabilities = capabilities;
         self
     }
@@ -630,7 +655,7 @@ impl DMSDevice {
     /// 
     /// `true` if the device is available, `false` otherwise
     pub fn is_available(&self) -> bool {
-        self.status == DMSDeviceStatus::Available && self.current_allocation_id.is_none()
+        self.status == DMSCDeviceStatus::Available && self.current_allocation_id.is_none()
     }
     
     /// Checks if the device is currently allocated
@@ -656,7 +681,7 @@ impl DMSDevice {
     pub fn allocate(&mut self, allocation_id: &str) -> bool {
         if self.is_available() {
             self.current_allocation_id = Some(allocation_id.to_string());
-            self.status = DMSDeviceStatus::Busy;
+            self.status = DMSCDeviceStatus::Busy;
             true
         } else {
             false
@@ -668,9 +693,75 @@ impl DMSDevice {
     /// This method clears the allocation ID and sets the device status to Available if it was Busy.
     pub fn release(&mut self) {
         self.current_allocation_id = None;
-        if self.status == DMSDeviceStatus::Busy {
-            self.status = DMSDeviceStatus::Available;
+        if self.status == DMSCDeviceStatus::Busy {
+            self.status = DMSCDeviceStatus::Available;
         }
+    }
+    
+    /// Gets the device group
+    /// 
+    /// # Returns
+    /// 
+    /// The device group as an `Option<&str>`
+    pub fn group(&self) -> Option<&str> {
+        self.group.as_deref()
+    }
+    
+    /// Sets the device group
+    /// 
+    /// # Parameters
+    /// 
+    /// - `group`: The new group for the device
+    pub fn set_group(&mut self, group: Option<String>) {
+        self.group = group;
+    }
+    
+    /// Gets the device tags
+    /// 
+    /// # Returns
+    /// 
+    /// A reference to the device tags vector
+    pub fn tags(&self) -> &Vec<String> {
+        &self.tags
+    }
+    
+    /// Adds a tag to the device
+    /// 
+    /// # Parameters
+    /// 
+    /// - `tag`: The tag to add to the device
+    pub fn add_tag(&mut self, tag: String) {
+        if !self.tags.contains(&tag) {
+            self.tags.push(tag);
+        }
+    }
+    
+    /// Removes a tag from the device
+    /// 
+    /// # Parameters
+    /// 
+    /// - `tag`: The tag to remove from the device
+    /// 
+    /// # Returns
+    /// 
+    /// `true` if the tag was removed, `false` if the tag was not found
+    pub fn remove_tag(&mut self, tag: &str) -> bool {
+        let initial_len = self.tags.len();
+        self.tags.retain(|t| t != tag);
+        self.tags.len() < initial_len
+    }
+    
+    /// Checks if the device has a specific tag
+    /// 
+    /// # Parameters
+    /// 
+    /// - `tag`: The tag to check for
+    /// 
+    /// # Returns
+    /// 
+    /// `true` if the device has the tag, `false` otherwise
+    pub fn has_tag(&self, tag: &str) -> bool {
+        self.tags.contains(&tag.to_string())
     }
     
     /// Gets the current allocation ID if the device is allocated
@@ -691,12 +782,14 @@ impl DMSDevice {
     /// A health score between 0 (worst) and 100 (best)
     pub fn health_score(&self) -> u8 {
         match self.status {
-            DMSDeviceStatus::Available => 100,
-            DMSDeviceStatus::Busy => 80,
-            DMSDeviceStatus::Maintenance => 60,
-            DMSDeviceStatus::Offline => 20,
-            DMSDeviceStatus::Error => 10,
-            DMSDeviceStatus::Unknown => 0,
+            DMSCDeviceStatus::Available => 100,
+            DMSCDeviceStatus::Busy => 80,
+            DMSCDeviceStatus::Allocated => 80,
+            DMSCDeviceStatus::Maintenance => 60,
+            DMSCDeviceStatus::Degraded => 40,
+            DMSCDeviceStatus::Offline => 20,
+            DMSCDeviceStatus::Error => 10,
+            DMSCDeviceStatus::Unknown => 0,
         }
     }
     
@@ -726,7 +819,7 @@ impl DMSDevice {
     /// # Returns
     /// 
     /// A dynamic health score between 0 (worst) and 100 (best)
-    pub fn dynamic_health_score(&self, health_metrics: &DMSDeviceHealthMetrics) -> u8 {
+    pub fn dynamic_health_score(&self, health_metrics: &DMSCDeviceHealthMetrics) -> u8 {
         let mut score = self.health_score() as f64;
         
         // Adjust score based on CPU usage
@@ -749,6 +842,42 @@ impl DMSDevice {
         let error_penalty = (health_metrics.error_count as f64) * 5.0;
         score -= error_penalty;
         
+        // Adjust score based on network latency (for network devices)
+        if matches!(self.device_type, DMSCDeviceType::Network) {
+            let latency_penalty = if health_metrics.network_latency_ms > 100.0 {
+                (health_metrics.network_latency_ms - 100.0) * 0.5
+            } else {
+                0.0
+            };
+            score -= latency_penalty;
+        }
+        
+        // Adjust score based on disk IOPS (for storage devices)
+        if matches!(self.device_type, DMSCDeviceType::Storage) {
+            let iops_penalty = if health_metrics.disk_iops < 100 {
+                (100.0 - health_metrics.disk_iops as f64) * 0.3
+            } else {
+                0.0
+            };
+            score -= iops_penalty;
+        }
+        
+        // Adjust score based on battery level (for mobile/portable devices)
+        let battery_penalty = if health_metrics.battery_level_percent < 20.0 {
+            (20.0 - health_metrics.battery_level_percent) * 2.0
+        } else {
+            0.0
+        };
+        score -= battery_penalty;
+        
+        // Adjust score based on response time
+        let response_time_penalty = if health_metrics.response_time_ms > 50.0 {
+            (health_metrics.response_time_ms - 50.0) * 1.0
+        } else {
+            0.0
+        };
+        score -= response_time_penalty;
+        
         // Ensure score is within 0-100 range
         score.clamp(0.0, 100.0) as u8
     }
@@ -766,11 +895,11 @@ impl DMSDevice {
     /// # Returns
     /// 
     /// `true` if the device is healthy, `false` otherwise
-    pub fn is_healthy(&self, health_metrics: &DMSDeviceHealthMetrics, timeout_secs: i64) -> bool {
+    pub fn is_healthy(&self, health_metrics: &DMSCDeviceHealthMetrics, timeout_secs: i64) -> bool {
         self.is_responsive(timeout_secs) && 
         self.dynamic_health_score(health_metrics) > 50 && 
-        self.status != DMSDeviceStatus::Error && 
-        self.status != DMSDeviceStatus::Offline
+        self.status != DMSCDeviceStatus::Error && 
+        self.status != DMSCDeviceStatus::Offline
     }
 
     /// Gets a reference to the device metadata

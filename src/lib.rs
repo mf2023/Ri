@@ -1,7 +1,7 @@
 //! Copyright © 2025 Wenze Wei. All Rights Reserved.
 //!
-//! This file is part of DMS.
-//! The DMS project belongs to the Dunimd Team.
+//! This file is part of DMSC.
+//! The DMSC project belongs to the Dunimd Team.
 //!
 //! Licensed under the Apache License, Version 2.0 (the "License");
 //! You may not use this file except in compliance with the License.
@@ -15,14 +15,14 @@
 //! See the License for the specific language governing permissions and
 //! limitations under the License.
 
-//! # DMS (Dunimd Middleware Service) Library
+//! # DMSC (Dunimd Middleware Service) Library
 //! 
-//! This is the main entry point for the DMS library, which provides a comprehensive
+//! This is the main entry point for the DMSC library, which provides a comprehensive
 //! middleware service framework for building enterprise-grade backend applications.
 //! 
 //! ## Core Modules
 //! 
-//! DMS is organized into 12 core modules, each responsible for a specific set of functionalities:
+//! DMSC is organized into 12 core modules, each responsible for a specific set of functionalities:
 //! 
 //! - **core**: Core runtime, application builder, and service context
 //! - **fs**: Secure file system operations and management
@@ -69,7 +69,7 @@ pub mod auth;
 
 /// Common re-exports for convenient access to core functionality
 /// 
-/// This module provides a single import point for all commonly used DMS components,
+/// This module provides a single import point for all commonly used DMSC components,
 /// simplifying application code and reducing the number of import statements.
 /// 
 /// ## Usage
@@ -78,105 +78,105 @@ pub mod auth;
 /// use dms::prelude::*;
 /// 
 /// #[tokio::main]
-/// async fn main() -> DMSResult<()> {
-///     let app = DMSAppBuilder::new()
+/// async fn main() -> DMSCResult<()> {
+///     let app = DMSCAppBuilder::new()
 ///         .with_config("config.yaml")?
 ///         .build()?;
 ///     
 ///     app.run(|ctx| async move {
-///         ctx.logger().info("service", "DMS service started")?;
+///         ctx.logger().info("service", "DMSC service started")?;
 ///         Ok(())
 ///     }).await
 /// }
 /// ```
 pub mod prelude {
     // Re-export commonly used public classes here.
-    // Only DMSXxxXxx format classes are exposed in prelude
+    // Only DMSCXxxXxx format classes are exposed in prelude
     
-    /// Application builder for constructing DMS applications
-    pub use crate::core::{DMSAppBuilder, DMSAppRuntime};
+    /// Application builder for constructing DMSC applications
+    pub use crate::core::{DMSCAppBuilder, DMSCAppRuntime};
     /// Service context providing access to application resources
-    pub use crate::core::DMSServiceContext;
-    /// Module traits for extending DMS functionality
-    pub use crate::core::DMSModule;
-    /// Error type used throughout DMS
-    pub use crate::core::DMSError;
-    /// Result type alias using DMSError
-    pub use crate::core::DMSResult;
+    pub use crate::core::DMSCServiceContext;
+    /// Module traits for extending DMSC functionality
+    pub use crate::core::DMSCModule;
+    /// Error type used throughout DMSC
+    pub use crate::core::DMSCError;
+    /// Result type alias using DMSCError
+    pub use crate::core::DMSCResult;
     
     /// Secure file system operations
-    pub use crate::fs::DMSFileSystem;
+    pub use crate::fs::DMSCFileSystem;
     
     /// Structured logger with tracing integration
-    pub use crate::log::DMSLogger;
+    pub use crate::log::DMSCLogger;
     /// Log configuration structure
-    pub use crate::log::DMSLogConfig;
+    pub use crate::log::DMSCLogConfig;
     /// Log level enum
-    pub use crate::log::DMSLogLevel;
+    pub use crate::log::DMSCLogLevel;
     
     /// Configuration management
-    pub use crate::config::DMSConfig;
+    pub use crate::config::DMSCConfig;
     /// Configuration manager for multi-source configuration
-    pub use crate::config::DMSConfigManager;
+    pub use crate::config::DMSCConfigManager;
     
     /// Hook bus for managing lifecycle events
-    pub use crate::hooks::DMSHookBus;
+    pub use crate::hooks::DMSCHookBus;
     /// Hook event structure
-    pub use crate::hooks::DMSHookEvent;
+    pub use crate::hooks::DMSCHookEvent;
     /// Hook kind enum
-    pub use crate::hooks::DMSHookKind;
+    pub use crate::hooks::DMSCHookKind;
     /// Module lifecycle phase definition
-    pub use crate::hooks::DMSModulePhase;
+    pub use crate::hooks::DMSCModulePhase;
     
-    /// Main cache module for DMS
-    pub use crate::cache::DMSCacheModule;
+    /// Main cache module for DMSC
+    pub use crate::cache::DMSCCacheModule;
     /// Cache configuration structure
-    pub use crate::cache::DMSCacheConfig;
+    pub use crate::cache::DMSCCacheConfig;
     
-    /// Main queue module for DMS
-    pub use crate::queue::DMSQueueModule;
+    /// Main queue module for DMSC
+    pub use crate::queue::DMSCQueueModule;
     /// Queue configuration structure
-    pub use crate::queue::DMSQueueConfig;
+    pub use crate::queue::DMSCQueueConfig;
     
-    /// Main gateway struct implementing the DMSModule trait
-    pub use crate::gateway::DMSGateway;
-    /// Configuration for the DMS Gateway
-    pub use crate::gateway::DMSGatewayConfig;
+    /// Main gateway struct implementing the DMSCModule trait
+    pub use crate::gateway::DMSCGateway;
+    /// Configuration for the DMSC Gateway
+    pub use crate::gateway::DMSCGatewayConfig;
     /// Route definition for API endpoints
-    pub use crate::gateway::DMSRoute;
+    pub use crate::gateway::DMSCRoute;
     /// Router for handling request routing
-    pub use crate::gateway::DMSRouter;
+    pub use crate::gateway::DMSCRouter;
     
-    /// Main device control module for DMS
-    pub use crate::device::DMSDeviceControlModule;
+    /// Main device control module for DMSC
+    pub use crate::device::DMSCDeviceControlModule;
     /// Configuration for the device control module
-    pub use crate::device::DMSDeviceControlConfig;
+    pub use crate::device::DMSCDeviceControlConfig;
     /// Device representation with type, status, and capabilities
-    pub use crate::device::DMSDevice;
+    pub use crate::device::DMSCDevice;
     /// Enum defining supported device types
-    pub use crate::device::DMSDeviceType;
+    pub use crate::device::DMSCDeviceType;
     
-    /// Main authentication module for DMS
-    pub use crate::auth::DMSAuthModule;
+    /// Main authentication module for DMSC
+    pub use crate::auth::DMSCAuthModule;
     /// Configuration for the authentication module
-    pub use crate::auth::DMSAuthConfig;
+    pub use crate::auth::DMSCAuthConfig;
     
-    /// Main service mesh struct implementing the DMSModule trait
-    pub use crate::service_mesh::DMSServiceMesh;
+    /// Main service mesh struct implementing the DMSCModule trait
+    pub use crate::service_mesh::DMSCServiceMesh;
     /// Configuration for the service mesh
-    pub use crate::service_mesh::DMSServiceMeshConfig;
+    pub use crate::service_mesh::DMSCServiceMeshConfig;
     
-    /// Main observability module for DMS
-    pub use crate::observability::DMSObservabilityModule;
+    /// Main observability module for DMSC
+    pub use crate::observability::DMSCObservabilityModule;
     /// Configuration for the observability module
-    pub use crate::observability::DMSObservabilityConfig;
+    pub use crate::observability::DMSCObservabilityConfig;
     /// Distributed tracing implementation
-    pub use crate::observability::DMSTracer;
+    pub use crate::observability::DMSCTracer;
     /// Metrics collection and aggregation
-    pub use crate::observability::DMSMetricsRegistry;
+    pub use crate::observability::DMSCMetricsRegistry;
 }
 
-/// Python bindings for DMS
+/// Python bindings for DMSC
 #[cfg(feature = "pyo3")]
 pub mod py {
     use pyo3::prelude::*;
@@ -185,51 +185,51 @@ pub mod py {
     
     /// Initialize the Python module
     #[pymodule]
-    pub fn dms_core(m: &Bound<'_, PyModule>) -> PyResult<()> {
+    pub fn dmsc(m: &Bound<'_, PyModule>) -> PyResult<()> {
         // Add core types that implement PyClass
-        m.add_class::<DMSAppBuilder>()?;
-        m.add_class::<DMSAppRuntime>()?;
-        m.add_class::<DMSConfig>()?;
-        m.add_class::<DMSConfigManager>()?;
-        m.add_class::<DMSError>()?;
-        m.add_class::<DMSServiceContext>()?;
+        m.add_class::<DMSCAppBuilder>()?;
+        m.add_class::<DMSCAppRuntime>()?;
+        m.add_class::<DMSCConfig>()?;
+        m.add_class::<DMSCConfigManager>()?;
+        m.add_class::<DMSCError>()?;
+        m.add_class::<DMSCServiceContext>()?;
         
         // Add other core types
-        m.add_class::<DMSLogger>()?;
-        m.add_class::<DMSLogConfig>()?;
-        m.add_class::<DMSLogLevel>()?;
-        m.add_class::<DMSFileSystem>()?;
-        m.add_class::<DMSHookBus>()?;
-        m.add_class::<DMSHookEvent>()?;
-        m.add_class::<DMSHookKind>()?;
-        m.add_class::<DMSModulePhase>()?;
+        m.add_class::<DMSCLogger>()?;
+        m.add_class::<DMSCLogConfig>()?;
+        m.add_class::<DMSCLogLevel>()?;
+        m.add_class::<DMSCFileSystem>()?;
+        m.add_class::<DMSCHookBus>()?;
+        m.add_class::<DMSCHookEvent>()?;
+        m.add_class::<DMSCHookKind>()?;
+        m.add_class::<DMSCModulePhase>()?;
         
         // Add queue types to main module
-        m.add_class::<crate::queue::DMSQueueModule>()?;
-        m.add_class::<crate::queue::DMSQueueConfig>()?;
-        m.add_class::<crate::queue::DMSQueueManager>()?;
-        m.add_class::<crate::queue::DMSQueueMessage>()?;
-        m.add_class::<crate::queue::DMSQueueStats>()?;
+        m.add_class::<crate::queue::DMSCQueueModule>()?;
+        m.add_class::<crate::queue::DMSCQueueConfig>()?;
+        m.add_class::<crate::queue::DMSCQueueManager>()?;
+        m.add_class::<crate::queue::DMSCQueueMessage>()?;
+        m.add_class::<crate::queue::DMSCQueueStats>()?;
         
         // Add gateway types to main module
-        m.add_class::<crate::gateway::DMSGateway>()?;
-        m.add_class::<crate::gateway::DMSGatewayConfig>()?;
-        m.add_class::<crate::gateway::DMSRouter>()?;
-        m.add_class::<crate::gateway::DMSRoute>()?;
+        m.add_class::<crate::gateway::DMSCGateway>()?;
+        m.add_class::<crate::gateway::DMSCGatewayConfig>()?;
+        m.add_class::<crate::gateway::DMSCRouter>()?;
+        m.add_class::<crate::gateway::DMSCRoute>()?;
         
         // Add service mesh types to main module
-        m.add_class::<crate::service_mesh::DMSServiceMesh>()?;
-        m.add_class::<crate::service_mesh::DMSServiceDiscovery>()?;
-        m.add_class::<crate::service_mesh::health_check::DMSHealthChecker>()?;
-        m.add_class::<crate::service_mesh::traffic_management::DMSTrafficManager>()?;
+        m.add_class::<crate::service_mesh::DMSCServiceMesh>()?;
+        m.add_class::<crate::service_mesh::DMSCServiceDiscovery>()?;
+        m.add_class::<crate::service_mesh::health_check::DMSCHealthChecker>()?;
+        m.add_class::<crate::service_mesh::traffic_management::DMSCTrafficManager>()?;
         
         // Add auth types to main module
-        m.add_class::<crate::auth::DMSAuthModule>()?;
-        m.add_class::<crate::auth::DMSAuthConfig>()?;
-        m.add_class::<crate::auth::DMSJWTManager>()?;
-        m.add_class::<crate::auth::DMSSessionManager>()?;
-        m.add_class::<crate::auth::DMSPermissionManager>()?;
-        m.add_class::<crate::auth::DMSOAuthManager>()?;
+        m.add_class::<crate::auth::DMSCAuthModule>()?;
+        m.add_class::<crate::auth::DMSCAuthConfig>()?;
+        m.add_class::<crate::auth::DMSCJWTManager>()?;
+        m.add_class::<crate::auth::DMSCSessionManager>()?;
+        m.add_class::<crate::auth::DMSCPermissionManager>()?;
+        m.add_class::<crate::auth::DMSCOAuthManager>()?;
         
         // Create and add submodules
         create_log_module(m)?;
@@ -291,45 +291,45 @@ pub mod py {
     
     fn create_queue_module(parent: &Bound<'_, PyModule>) -> PyResult<()> {
         let m = PyModule::new(parent.py(), "queue")?;
-        m.add_class::<crate::queue::DMSQueueModule>()?;
-        m.add_class::<crate::queue::DMSQueueConfig>()?;
-        m.add_class::<crate::queue::DMSQueueManager>()?;
-        m.add_class::<crate::queue::DMSQueueMessage>()?;
-        m.add_class::<crate::queue::DMSQueueStats>()?;
+        m.add_class::<crate::queue::DMSCQueueModule>()?;
+        m.add_class::<crate::queue::DMSCQueueConfig>()?;
+        m.add_class::<crate::queue::DMSCQueueManager>()?;
+        m.add_class::<crate::queue::DMSCQueueMessage>()?;
+        m.add_class::<crate::queue::DMSCQueueStats>()?;
         parent.add_submodule(&m)?;
         Ok(())
     }
     
     fn create_gateway_module(parent: &Bound<'_, PyModule>) -> PyResult<()> {
         let m = PyModule::new(parent.py(), "gateway")?;
-        m.add_class::<crate::gateway::DMSGateway>()?;
-        m.add_class::<crate::gateway::DMSGatewayConfig>()?;
-        m.add_class::<crate::gateway::DMSRoute>()?;
-        m.add_class::<crate::gateway::DMSRouter>()?;
+        m.add_class::<crate::gateway::DMSCGateway>()?;
+        m.add_class::<crate::gateway::DMSCGatewayConfig>()?;
+        m.add_class::<crate::gateway::DMSCRoute>()?;
+        m.add_class::<crate::gateway::DMSCRouter>()?;
         parent.add_submodule(&m)?;
         Ok(())
     }
     
     fn create_service_mesh_module(parent: &Bound<'_, PyModule>) -> PyResult<()> {
         let m = PyModule::new(parent.py(), "service_mesh")?;
-        m.add_class::<crate::service_mesh::DMSServiceMesh>()?;
-        m.add_class::<crate::service_mesh::DMSServiceMeshConfig>()?;
-        m.add_class::<crate::service_mesh::DMSServiceDiscovery>()?;
-        m.add_class::<crate::service_mesh::DMSServiceInstance>()?;
-        m.add_class::<crate::service_mesh::health_check::DMSHealthChecker>()?;
-        m.add_class::<crate::service_mesh::traffic_management::DMSTrafficManager>()?;
+        m.add_class::<crate::service_mesh::DMSCServiceMesh>()?;
+        m.add_class::<crate::service_mesh::DMSCServiceMeshConfig>()?;
+        m.add_class::<crate::service_mesh::DMSCServiceDiscovery>()?;
+        m.add_class::<crate::service_mesh::DMSCServiceInstance>()?;
+        m.add_class::<crate::service_mesh::health_check::DMSCHealthChecker>()?;
+        m.add_class::<crate::service_mesh::traffic_management::DMSCTrafficManager>()?;
         parent.add_submodule(&m)?;
         Ok(())
     }
     
     fn create_auth_module(parent: &Bound<'_, PyModule>) -> PyResult<()> {
         let m = PyModule::new(parent.py(), "auth")?;
-        m.add_class::<crate::auth::DMSAuthModule>()?;
-        m.add_class::<crate::auth::DMSAuthConfig>()?;
-        m.add_class::<crate::auth::DMSJWTManager>()?;
-        m.add_class::<crate::auth::DMSSessionManager>()?;
-        m.add_class::<crate::auth::DMSPermissionManager>()?;
-        m.add_class::<crate::auth::DMSOAuthManager>()?;
+        m.add_class::<crate::auth::DMSCAuthModule>()?;
+        m.add_class::<crate::auth::DMSCAuthConfig>()?;
+        m.add_class::<crate::auth::DMSCJWTManager>()?;
+        m.add_class::<crate::auth::DMSCSessionManager>()?;
+        m.add_class::<crate::auth::DMSCPermissionManager>()?;
+        m.add_class::<crate::auth::DMSCOAuthManager>()?;
         parent.add_submodule(&m)?;
         Ok(())
     }

@@ -1,7 +1,7 @@
 // Copyright © 2025 Wenze Wei. All Rights Reserved.
 //
-// This file is part of DMS.
-// The DMS project belongs to the Dunimd Team.
+// This file is part of DMSC.
+// The DMSC project belongs to the Dunimd Team.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -15,27 +15,27 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use dms_core::fs::DMSFileSystem;
+use dmsc::fs::DMSCFileSystem;
 use std::path::PathBuf;
 use tempfile::tempdir;
 
 #[test]
 fn test_fs_new_with_root() {
     let temp_dir = tempdir().unwrap();
-    let fs = DMSFileSystem::new_with_root(temp_dir.path().to_path_buf());
+    let fs = DMSCFileSystem::new_with_root(temp_dir.path().to_path_buf());
     assert_eq!(fs.project_root(), temp_dir.path());
 }
 
 #[test]
 fn test_fs_new_auto_root() {
-    let fs = DMSFileSystem::new_auto_root().unwrap();
+    let fs = DMSCFileSystem::new_auto_root().unwrap();
     assert!(fs.project_root().exists());
 }
 
 #[test]
 fn test_fs_safe_mkdir() {
     let temp_dir = tempdir().unwrap();
-    let fs = DMSFileSystem::new_with_root(temp_dir.path().to_path_buf());
+    let fs = DMSCFileSystem::new_with_root(temp_dir.path().to_path_buf());
     let new_dir = temp_dir.path().join("test_dir");
     let result = fs.safe_mkdir(&new_dir).unwrap();
     assert_eq!(result, new_dir);
@@ -45,7 +45,7 @@ fn test_fs_safe_mkdir() {
 #[test]
 fn test_fs_ensure_parent_dir() {
     let temp_dir = tempdir().unwrap();
-    let fs = DMSFileSystem::new_with_root(temp_dir.path().to_path_buf());
+    let fs = DMSCFileSystem::new_with_root(temp_dir.path().to_path_buf());
     let file_path = temp_dir.path().join("parent_dir").join("child_file.txt");
     let result = fs.ensure_parent_dir(&file_path).unwrap();
     assert_eq!(result, temp_dir.path().join("parent_dir"));
@@ -55,9 +55,9 @@ fn test_fs_ensure_parent_dir() {
 #[test]
 fn test_fs_atomic_write_text() {
     let temp_dir = tempdir().unwrap();
-    let fs = DMSFileSystem::new_with_root(temp_dir.path().to_path_buf());
+    let fs = DMSCFileSystem::new_with_root(temp_dir.path().to_path_buf());
     let file_path = temp_dir.path().join("test_file.txt");
-    let content = "Hello, DMS!";
+    let content = "Hello, DMSC!";
     fs.atomic_write_text(&file_path, content).unwrap();
     let read_content = fs.read_text(&file_path).unwrap();
     assert_eq!(read_content, content);
@@ -66,9 +66,9 @@ fn test_fs_atomic_write_text() {
 #[test]
 fn test_fs_atomic_write_bytes() {
     let temp_dir = tempdir().unwrap();
-    let fs = DMSFileSystem::new_with_root(temp_dir.path().to_path_buf());
+    let fs = DMSCFileSystem::new_with_root(temp_dir.path().to_path_buf());
     let file_path = temp_dir.path().join("test_bytes.bin");
-    let content = b"Hello, DMS in bytes!";
+    let content = b"Hello, DMSC in bytes!";
     fs.atomic_write_bytes(&file_path, content).unwrap();
     let read_content = fs.read_text(&file_path).unwrap();
     assert_eq!(read_content, String::from_utf8_lossy(content));
@@ -85,7 +85,7 @@ fn test_fs_read_json() {
     }
     
     let temp_dir = tempdir().unwrap();
-    let fs = DMSFileSystem::new_with_root(temp_dir.path().to_path_buf());
+    let fs = DMSCFileSystem::new_with_root(temp_dir.path().to_path_buf());
     let file_path = temp_dir.path().join("test.json");
     let test_data = TestData { name: "test".to_string(), value: 42 };
     let json_str = serde_json::to_string(&test_data).unwrap();
@@ -98,7 +98,7 @@ fn test_fs_read_json() {
 #[test]
 fn test_fs_exists() {
     let temp_dir = tempdir().unwrap();
-    let fs = DMSFileSystem::new_with_root(temp_dir.path().to_path_buf());
+    let fs = DMSCFileSystem::new_with_root(temp_dir.path().to_path_buf());
     let file_path = temp_dir.path().join("test_file.txt");
     assert!(!fs.exists(&file_path));
     fs.atomic_write_text(&file_path, "test").unwrap();
@@ -108,7 +108,7 @@ fn test_fs_exists() {
 #[test]
 fn test_fs_remove_file() {
     let temp_dir = tempdir().unwrap();
-    let fs = DMSFileSystem::new_with_root(temp_dir.path().to_path_buf());
+    let fs = DMSCFileSystem::new_with_root(temp_dir.path().to_path_buf());
     let file_path = temp_dir.path().join("test_file.txt");
     fs.atomic_write_text(&file_path, "test").unwrap();
     assert!(fs.exists(&file_path));
@@ -119,7 +119,7 @@ fn test_fs_remove_file() {
 #[test]
 fn test_fs_remove_dir_all() {
     let temp_dir = tempdir().unwrap();
-    let fs = DMSFileSystem::new_with_root(temp_dir.path().to_path_buf());
+    let fs = DMSCFileSystem::new_with_root(temp_dir.path().to_path_buf());
     let dir_path = temp_dir.path().join("test_dir");
     fs.safe_mkdir(&dir_path).unwrap();
     let file_path = dir_path.join("test_file.txt");
@@ -134,10 +134,10 @@ fn test_fs_remove_dir_all() {
 #[test]
 fn test_fs_copy_file() {
     let temp_dir = tempdir().unwrap();
-    let fs = DMSFileSystem::new_with_root(temp_dir.path().to_path_buf());
+    let fs = DMSCFileSystem::new_with_root(temp_dir.path().to_path_buf());
     let src_path = temp_dir.path().join("src.txt");
     let dst_path = temp_dir.path().join("dst.txt");
-    let content = "Hello, DMS!";
+    let content = "Hello, DMSC!";
     fs.atomic_write_text(&src_path, content).unwrap();
     fs.copy_file(&src_path, &dst_path).unwrap();
     let dst_content = fs.read_text(&dst_path).unwrap();
@@ -147,10 +147,10 @@ fn test_fs_copy_file() {
 #[test]
 fn test_fs_append_text() {
     let temp_dir = tempdir().unwrap();
-    let fs = DMSFileSystem::new_with_root(temp_dir.path().to_path_buf());
+    let fs = DMSCFileSystem::new_with_root(temp_dir.path().to_path_buf());
     let file_path = temp_dir.path().join("test_file.txt");
     let content1 = "Hello, ";
-    let content2 = "DMS!";
+    let content2 = "DMSC!";
     fs.atomic_write_text(&file_path, content1).unwrap();
     fs.append_text(&file_path, content2).unwrap();
     let read_content = fs.read_text(&file_path).unwrap();
@@ -168,7 +168,7 @@ fn test_fs_write_json() {
     }
     
     let temp_dir = tempdir().unwrap();
-    let fs = DMSFileSystem::new_with_root(temp_dir.path().to_path_buf());
+    let fs = DMSCFileSystem::new_with_root(temp_dir.path().to_path_buf());
     let file_path = temp_dir.path().join("test.json");
     let test_data = TestData { name: "test".to_string(), value: 42 };
     fs.write_json(&file_path, &test_data).unwrap();
@@ -180,7 +180,7 @@ fn test_fs_write_json() {
 #[test]
 fn test_fs_category_dirs() {
     let temp_dir = tempdir().unwrap();
-    let fs = DMSFileSystem::new_with_root(temp_dir.path().to_path_buf());
+    let fs = DMSCFileSystem::new_with_root(temp_dir.path().to_path_buf());
     
     assert!(fs.app_dir().exists());
     assert!(fs.logs_dir().exists());
@@ -193,7 +193,7 @@ fn test_fs_category_dirs() {
 #[test]
 fn test_fs_ensure_category_path() {
     let temp_dir = tempdir().unwrap();
-    let fs = DMSFileSystem::new_with_root(temp_dir.path().to_path_buf());
+    let fs = DMSCFileSystem::new_with_root(temp_dir.path().to_path_buf());
     
     let path = fs.ensure_category_path("logs", "test.log");
     assert!(path.parent().unwrap().exists());
@@ -203,7 +203,7 @@ fn test_fs_ensure_category_path() {
 #[test]
 fn test_fs_normalize_under_category() {
     let temp_dir = tempdir().unwrap();
-    let fs = DMSFileSystem::new_with_root(temp_dir.path().to_path_buf());
+    let fs = DMSCFileSystem::new_with_root(temp_dir.path().to_path_buf());
     
     let path = fs.normalize_under_category("cache", "subdir/test.cache");
     assert!(path.starts_with(fs.cache_dir()));

@@ -26,7 +26,7 @@ mq模块包含以下子模块：
 
 </div>
 
-### DMSMessageQueue
+### DMSCMessageQueue
 
 消息队列管理器主接口，提供统一的消息队列访问。
 
@@ -34,13 +34,13 @@ mq模块包含以下子模块：
 
 | 方法 | 描述 | 参数 | 返回值 |
 |:--------|:-------------|:--------|:--------|
-| `publish(topic, message)` | 发布消息 | `topic: &str`, `message: impl Serialize` | `DMSResult<()>` |
-| `publish_delayed(topic, message, delay)` | 发布延迟消息 | `topic: &str`, `message: impl Serialize`, `delay: Duration` | `DMSResult<()>` |
-| `subscribe(topic, handler)` | 订阅消息 | `topic: &str`, `handler: impl MessageHandler` | `DMSResult<DMSConsumer>` |
-| `create_queue(name)` | 创建队列 | `name: &str` | `DMSResult<()>` |
-| `delete_queue(name)` | 删除队列 | `name: &str` | `DMSResult<()>` |
-| `get_queue_stats(name)` | 获取队列统计 | `name: &str` | `DMSResult<QueueStats>` |
-| `purge_queue(name)` | 清空队列 | `name: &str` | `DMSResult<()>` |
+| `publish(topic, message)` | 发布消息 | `topic: &str`, `message: impl Serialize` | `DMSCResult<()>` |
+| `publish_delayed(topic, message, delay)` | 发布延迟消息 | `topic: &str`, `message: impl Serialize`, `delay: Duration` | `DMSCResult<()>` |
+| `subscribe(topic, handler)` | 订阅消息 | `topic: &str`, `handler: impl MessageHandler` | `DMSCResult<DMSCConsumer>` |
+| `create_queue(name)` | 创建队列 | `name: &str` | `DMSCResult<()>` |
+| `delete_queue(name)` | 删除队列 | `name: &str` | `DMSCResult<()>` |
+| `get_queue_stats(name)` | 获取队列统计 | `name: &str` | `DMSCResult<QueueStats>` |
+| `purge_queue(name)` | 清空队列 | `name: &str` | `DMSCResult<()>` |
 
 #### 使用示例
 
@@ -69,7 +69,7 @@ ctx.mq().publish_delayed(
 )?;
 
 // 订阅消息
-let consumer = ctx.mq().subscribe("user.events", |message: DMSMessage| async move {
+let consumer = ctx.mq().subscribe("user.events", |message: DMSCMessage| async move {
     match message.payload.get("type").and_then(|v| v.as_str()) {
         Some("user_registered") => {
             let user_id = message.payload["user_id"].as_i64().unwrap();
@@ -94,7 +94,7 @@ let consumer = ctx.mq().subscribe("user.events", |message: DMSMessage| async mov
 })?;
 ```
 
-### DMSMessageQueueConfig
+### DMSCMessageQueueConfig
 
 消息队列配置结构体。
 
@@ -102,7 +102,7 @@ let consumer = ctx.mq().subscribe("user.events", |message: DMSMessage| async mov
 
 | 字段 | 类型 | 描述 | 默认值 |
 |:--------|:-----|:-------------|:-------|
-| `backend` | `DMSMQBackend` | 消息队列后端 | `Memory` |
+| `backend` | `DMSCMQBackend` | 消息队列后端 | `Memory` |
 | `host` | `String` | 消息队列主机 | `"localhost"` |
 | `port` | `u16` | 消息队列端口 | `5672` |
 | `username` | `String` | 用户名 | `"guest"` |
@@ -117,8 +117,8 @@ let consumer = ctx.mq().subscribe("user.events", |message: DMSMessage| async mov
 ```rust
 use dms::prelude::*;
 
-let mq_config = DMSMessageQueueConfig {
-    backend: DMSMQBackend::RabbitMQ,
+let mq_config = DMSCMessageQueueConfig {
+    backend: DMSCMQBackend::RabbitMQ,
     host: "localhost".to_string(),
     port: 5672,
     username: "guest".to_string(),
@@ -130,7 +130,7 @@ let mq_config = DMSMessageQueueConfig {
 };
 ```
 
-### DMSMQBackend
+### DMSCMQBackend
 
 消息队列后端枚举。
 
@@ -152,7 +152,7 @@ let mq_config = DMSMessageQueueConfig {
 
 </div>
 
-### DMSMessage
+### DMSCMessage
 
 消息结构体。
 
@@ -167,7 +167,7 @@ let mq_config = DMSMessageQueueConfig {
 | `headers` | `HashMap<String, String>` | 消息头 |
 | `retry_count` | `u32` | 重试次数 |
 
-### DMSMessageHandler
+### DMSCMessageHandler
 
 消息处理器trait。
 
@@ -176,8 +176,8 @@ use dms::prelude::*;
 
 struct EmailNotificationHandler;
 
-impl DMSMessageHandler for EmailNotificationHandler {
-    async fn handle(&self, message: DMSMessage) -> DMSResult<()> {
+impl DMSCMessageHandler for EmailNotificationHandler {
+    async fn handle(&self, message: DMSCMessage) -> DMSCResult<()> {
         let email_type = message.payload["type"].as_str().unwrap();
         let recipient = message.payload["recipient"].as_str().unwrap();
         let subject = message.payload["subject"].as_str().unwrap();
@@ -210,7 +210,7 @@ ctx.mq().register_handler("email.notifications", EmailNotificationHandler)?;
 ```rust
 use dms::prelude::*;
 
-let consumer = ctx.mq().subscribe("order.events", |message: DMSMessage| async move {
+let consumer = ctx.mq().subscribe("order.events", |message: DMSCMessage| async move {
     // 处理消息
     match process_order(message.payload.clone()).await {
         Ok(_) => {
@@ -232,7 +232,7 @@ let consumer = ctx.mq().subscribe("order.events", |message: DMSMessage| async mo
 let consumer = ctx.mq().subscribe_with_ack_mode(
     "important.events",
     AckMode::Manual,
-    |message: DMSMessage| async move {
+    |message: DMSCMessage| async move {
         // 处理消息
         let result = process_important_event(message.payload.clone()).await;
         
@@ -265,13 +265,13 @@ let consumer = ctx.mq().subscribe_with_ack_mode(
 use dms::prelude::*;
 
 // 基于内容的路由
-let router = DMSMessageRouter::new()
-    .when("user.events", |message: &DMSMessage| {
+let router = DMSCMessageRouter::new()
+    .when("user.events", |message: &DMSCMessage| {
         message.payload["type"].as_str() == Some("user_registered")
     })
     .route_to("email.welcome_queue")
     
-    .when("user.events", |message: &DMSMessage| {
+    .when("user.events", |message: &DMSCMessage| {
         message.payload["type"].as_str() == Some("user_premium_upgraded")
     })
     .route_to("billing.premium_queue")
@@ -288,7 +288,7 @@ ctx.mq().set_router(router)?;
 use dms::prelude::*;
 
 // 订阅多个主题
-let consumer = ctx.mq().subscribe("user.*", |message: DMSMessage| async move {
+let consumer = ctx.mq().subscribe("user.*", |message: DMSCMessage| async move {
     match message.topic.as_str() {
         "user.created" => {
             ctx.log().info("New user created");
@@ -305,7 +305,7 @@ let consumer = ctx.mq().subscribe("user.*", |message: DMSMessage| async move {
 })?;
 
 // 订阅所有日志主题
-let log_consumer = ctx.mq().subscribe("logs.>", |message: DMSMessage| async move {
+let log_consumer = ctx.mq().subscribe("logs.>", |message: DMSCMessage| async move {
     ctx.log().info(format!(
         "Log message from {}: {:?}",
         message.topic, message.payload
@@ -327,7 +327,7 @@ let log_consumer = ctx.mq().subscribe("logs.>", |message: DMSMessage| async move
 use dms::prelude::*;
 
 // 创建队列时配置死信队列
-let queue_config = DMSQueueConfig {
+let queue_config = DMSCQueueConfig {
     name: "order.processing",
     durable: true,
     auto_delete: false,
@@ -341,7 +341,7 @@ let queue_config = DMSQueueConfig {
 ctx.mq().create_queue_with_config(queue_config)?;
 
 // 创建死信队列消费者
-let dlq_consumer = ctx.mq().subscribe("failed.orders", |message: DMSMessage| async move {
+let dlq_consumer = ctx.mq().subscribe("failed.orders", |message: DMSCMessage| async move {
     ctx.log().error(format!(
         "Processing failed message: {} (retry count: {})",
         message.id, message.retry_count
@@ -403,7 +403,7 @@ println!("  Unacked: {}", dlq_stats.unacked_count);
 use dms::prelude::*;
 
 // 创建延迟队列
-let delayed_queue_config = DMSQueueConfig {
+let delayed_queue_config = DMSCQueueConfig {
     name: "delayed.notifications",
     durable: true,
     auto_delete: false,
@@ -432,7 +432,7 @@ use dms::prelude::*;
 use chrono::{DateTime, Utc, Duration as ChronoDuration};
 
 // 安排定时任务
-fn schedule_task(task_name: &str, execute_at: DateTime<Utc>, payload: serde_json::Value) -> DMSResult<()> {
+fn schedule_task(task_name: &str, execute_at: DateTime<Utc>, payload: serde_json::Value) -> DMSCResult<()> {
     let now = Utc::now();
     let delay = execute_at - now;
     
@@ -484,7 +484,7 @@ schedule_task(
 use dms::prelude::*;
 
 // 创建持久化队列
-let persistent_queue_config = DMSQueueConfig {
+let persistent_queue_config = DMSCQueueConfig {
     name: "critical.events",
     durable: true,           // 队列持久化
     auto_delete: false,      // 不自动删除
@@ -511,7 +511,7 @@ ctx.mq().publish_persistent("critical.events", critical_message)?;
 use dms::prelude::*;
 
 // 自动确认模式（默认）
-let auto_ack_consumer = ctx.mq().subscribe("auto.ack.queue", |message: DMSMessage| async move {
+let auto_ack_consumer = ctx.mq().subscribe("auto.ack.queue", |message: DMSCMessage| async move {
     // 消息会自动确认
     process_message(message.payload).await?;
     Ok(())
@@ -521,7 +521,7 @@ let auto_ack_consumer = ctx.mq().subscribe("auto.ack.queue", |message: DMSMessag
 let manual_ack_consumer = ctx.mq().subscribe_with_ack_mode(
     "manual.ack.queue",
     AckMode::Manual,
-    |message: DMSMessage| async move {
+    |message: DMSCMessage| async move {
         match process_message(message.payload.clone()).await {
             Ok(_) => {
                 // 手动确认消息
@@ -541,13 +541,13 @@ let manual_ack_consumer = ctx.mq().subscribe_with_ack_mode(
 let batch_ack_consumer = ctx.mq().subscribe_with_ack_mode(
     "batch.ack.queue",
     AckMode::Batch(100), // 每100条消息确认一次
-    |messages: Vec<DMSMessage>| async move {
+    |messages: Vec<DMSCMessage>| async move {
         for message in &messages {
             process_message(message.payload.clone()).await?;
         }
         
         // 批量确认
-        DMSMessage::ack_batch(&messages)?;
+        DMSCMessage::ack_batch(&messages)?;
         Ok(())
     }
 )?;
@@ -565,7 +565,7 @@ let batch_ack_consumer = ctx.mq().subscribe_with_ack_mode(
 use dms::prelude::*;
 
 // 创建优先级队列
-let priority_queue_config = DMSQueueConfig {
+let priority_queue_config = DMSCQueueConfig {
     name: "priority.tasks",
     durable: true,
     max_priority: 10,  // 优先级范围 0-10
@@ -613,14 +613,14 @@ use dms::prelude::*;
 // 创建带过滤器的消费者
 let filtered_consumer = ctx.mq().subscribe_with_filter(
     "user.events",
-    |message: &DMSMessage| {
+    |message: &DMSCMessage| {
         // 只处理特定类型的用户事件
         message.payload.get("type")
             .and_then(|v| v.as_str())
             .map(|t| t == "user_registered" || t == "user_premium_upgraded")
             .unwrap_or(false)
     },
-    |message: DMSMessage| async move {
+    |message: DMSCMessage| async move {
         ctx.log().info(format!("Processing filtered message: {:?}", message.payload));
         // 处理符合条件的消息
         Ok(())
@@ -634,7 +634,7 @@ let filtered_consumer = ctx.mq().subscribe_with_filter(
 
 </div>
 
-### DMSQueueConfig
+### DMSCQueueConfig
 
 队列配置结构体。
 
@@ -677,7 +677,7 @@ match ctx.mq().publish("user.events", message) {
     Ok(_) => {
         ctx.log().info("Message published successfully");
     }
-    Err(DMSError { code, .. }) if code == "MQ_CONNECTION_ERROR" => {
+    Err(DMSCError { code, .. }) if code == "MQ_CONNECTION_ERROR" => {
         // 连接错误，尝试重新连接
         ctx.log().error("MQ connection lost, attempting to reconnect");
         ctx.mq().reconnect()?;

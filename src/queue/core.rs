@@ -1,7 +1,7 @@
 //! Copyright © 2025 Wenze Wei. All Rights Reserved.
 //!
-//! This file is part of DMS.
-//! The DMS project belongs to the Dunimd Team.
+//! This file is part of DMSC.
+//! The DMSC project belongs to the Dunimd Team.
 //!
 //! Licensed under the Apache License, Version 2.0 (the "License");
 //! You may not use this file except in compliance with the License.
@@ -19,16 +19,16 @@
 
 //! # Queue Core Implementation
 //! 
-//! This file defines the core queueing interfaces and message structures for the DMS queue system.
+//! This file defines the core queueing interfaces and message structures for the DMSC queue system.
 //! It provides the fundamental building blocks for implementing various queue backends.
 //! 
 //! ## Key Components
 //! 
-//! - **DMSQueueMessage**: Message structure for queue operations
+//! - **DMSCQueueMessage**: Message structure for queue operations
 //! - **QueueStats**: Statistics for queue monitoring
-//! - **DMSQueueProducer**: Trait for producing messages to queues
-//! - **DMSQueueConsumer**: Trait for consuming messages from queues
-//! - **DMSQueue**: Main queue trait defining queue operations
+//! - **DMSCQueueProducer**: Trait for producing messages to queues
+//! - **DMSCQueueConsumer**: Trait for consuming messages from queues
+//! - **DMSCQueue**: Main queue trait defining queue operations
 //! 
 //! ## Design Principles
 //! 
@@ -43,17 +43,17 @@
 //! ## Usage
 //! 
 //! ```rust
-//! use dms::queue::{DMSQueueMessage, DMSQueueProducer, DMSQueueConsumer, DMSQueue};
-//! use dms::core::DMSResult;
+//! use dms::queue::{DMSCQueueMessage, DMSCQueueProducer, DMSCQueueConsumer, DMSCQueue};
+//! use dms::core::DMSCResult;
 //! use serde_json::json;
 //! 
-//! async fn example(queue: &dyn DMSQueue) -> DMSResult<()> {
+//! async fn example(queue: &dyn DMSCQueue) -> DMSCResult<()> {
 //!     // Create a producer
 //!     let producer = queue.create_producer().await?;
 //!     
 //!     // Create a message
 //!     let payload = json!({ "key": "value" }).to_string().into_bytes();
-//!     let message = DMSQueueMessage::new(payload)
+//!     let message = DMSCQueueMessage::new(payload)
 //!         .with_max_retries(5);
 //!     
 //!     // Send the message
@@ -80,7 +80,7 @@ use async_trait::async_trait;
 use serde::{Serialize, Deserialize};
 use std::collections::HashMap;
 use std::time::SystemTime;
-use crate::core::DMSResult;
+use crate::core::DMSCResult;
 
 /// Message structure for queue operations.
 /// 
@@ -88,7 +88,7 @@ use crate::core::DMSResult;
 /// a unique ID, payload, headers, timestamp, and retry information.
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct DMSQueueMessage {
+pub struct DMSCQueueMessage {
     /// Unique message ID
     pub id: String,
     /// Message payload as bytes
@@ -103,7 +103,7 @@ pub struct DMSQueueMessage {
     pub max_retries: u32,
 }
 
-impl DMSQueueMessage {
+impl DMSCQueueMessage {
     /// Creates a new message with the given payload.
     /// 
     /// # Parameters
@@ -112,7 +112,7 @@ impl DMSQueueMessage {
     /// 
     /// # Returns
     /// 
-    /// A new `DMSQueueMessage` instance
+    /// A new `DMSCQueueMessage` instance
     pub fn new(payload: Vec<u8>) -> Self {
         Self {
             id: uuid::Uuid::new_v4().to_string(),
@@ -132,7 +132,7 @@ impl DMSQueueMessage {
     /// 
     /// # Returns
     /// 
-    /// The updated `DMSQueueMessage` instance
+    /// The updated `DMSCQueueMessage` instance
     pub fn with_headers(mut self, headers: HashMap<String, String>) -> Self {
         self.headers = headers;
         self
@@ -146,7 +146,7 @@ impl DMSQueueMessage {
     /// 
     /// # Returns
     /// 
-    /// The updated `DMSQueueMessage` instance
+    /// The updated `DMSCQueueMessage` instance
     pub fn with_max_retries(mut self, max_retries: u32) -> Self {
         self.max_retries = max_retries;
         self
@@ -168,9 +168,9 @@ impl DMSQueueMessage {
 }
 
 #[cfg(feature = "pyo3")]
-/// Python bindings for DMSQueueMessage
+/// Python bindings for DMSCQueueMessage
 #[pyo3::prelude::pymethods]
-impl DMSQueueMessage {
+impl DMSCQueueMessage {
     #[new]
     fn py_new(payload: Vec<u8>) -> Self {
         Self::new(payload)
@@ -195,7 +195,7 @@ impl DMSQueueMessage {
 /// This struct contains comprehensive statistics about a queue's performance and usage.
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 #[derive(Debug, Clone)]
-pub struct DMSQueueStats {
+pub struct DMSCQueueStats {
     /// Name of the queue
     pub queue_name: String,
     /// Current number of messages in the queue
@@ -213,9 +213,9 @@ pub struct DMSQueueStats {
 }
 
 #[cfg(feature = "pyo3")]
-/// Python bindings for DMSQueueStats
+/// Python bindings for DMSCQueueStats
 #[pyo3::prelude::pymethods]
-impl DMSQueueStats {
+impl DMSCQueueStats {
     #[new]
     fn py_new(queue_name: String) -> Self {
         Self {
@@ -235,7 +235,7 @@ impl DMSQueueStats {
 /// This trait defines the interface for sending messages to queues, including single message
 /// sends and batch sends.
 #[async_trait]
-pub trait DMSQueueProducer: Send + Sync {
+pub trait DMSCQueueProducer: Send + Sync {
     /// Sends a single message to the queue.
     /// 
     /// # Parameters
@@ -244,8 +244,8 @@ pub trait DMSQueueProducer: Send + Sync {
     /// 
     /// # Returns
     /// 
-    /// A `DMSResult<()>` indicating success or failure
-    async fn send(&self, message: DMSQueueMessage) -> DMSResult<()>;
+    /// A `DMSCResult<()>` indicating success or failure
+    async fn send(&self, message: DMSCQueueMessage) -> DMSCResult<()>;
     
     /// Sends multiple messages to the queue in a batch.
     /// 
@@ -255,21 +255,21 @@ pub trait DMSQueueProducer: Send + Sync {
     /// 
     /// # Returns
     /// 
-    /// A `DMSResult<()>` indicating success or failure
-    async fn send_batch(&self, messages: Vec<DMSQueueMessage>) -> DMSResult<()>;
+    /// A `DMSCResult<()>` indicating success or failure
+    async fn send_batch(&self, messages: Vec<DMSCQueueMessage>) -> DMSCResult<()>;
 }
 
 /// Trait for consuming messages from queues.
 /// 
 /// This trait defines the interface for receiving and acknowledging messages from queues.
 #[async_trait]
-pub trait DMSQueueConsumer: Send + Sync {
+pub trait DMSCQueueConsumer: Send + Sync {
     /// Receives a message from the queue.
     /// 
     /// # Returns
     /// 
-    /// A `DMSResult<Option<DMSQueueMessage>>` containing the message if available, or None if no message is available
-    async fn receive(&self) -> DMSResult<Option<DMSQueueMessage>>;
+    /// A `DMSCResult<Option<DMSCQueueMessage>>` containing the message if available, or None if no message is available
+    async fn receive(&self) -> DMSCResult<Option<DMSCQueueMessage>>;
     
     /// Acknowledges a message, indicating it has been successfully processed.
     /// 
@@ -279,8 +279,8 @@ pub trait DMSQueueConsumer: Send + Sync {
     /// 
     /// # Returns
     /// 
-    /// A `DMSResult<()>` indicating success or failure
-    async fn ack(&self, message_id: &str) -> DMSResult<()>;
+    /// A `DMSCResult<()>` indicating success or failure
+    async fn ack(&self, message_id: &str) -> DMSCResult<()>;
     
     /// Negatively acknowledges a message, indicating it failed to process and should be retried.
     /// 
@@ -290,22 +290,22 @@ pub trait DMSQueueConsumer: Send + Sync {
     /// 
     /// # Returns
     /// 
-    /// A `DMSResult<()>` indicating success or failure
-    async fn nack(&self, message_id: &str) -> DMSResult<()>;
+    /// A `DMSCResult<()>` indicating success or failure
+    async fn nack(&self, message_id: &str) -> DMSCResult<()>;
     
     /// Pauses message consumption.
     /// 
     /// # Returns
     /// 
-    /// A `DMSResult<()>` indicating success or failure
-    async fn pause(&self) -> DMSResult<()>;
+    /// A `DMSCResult<()>` indicating success or failure
+    async fn pause(&self) -> DMSCResult<()>;
     
     /// Resumes message consumption after pausing.
     /// 
     /// # Returns
     /// 
-    /// A `DMSResult<()>` indicating success or failure
-    async fn resume(&self) -> DMSResult<()>;
+    /// A `DMSCResult<()>` indicating success or failure
+    async fn resume(&self) -> DMSCResult<()>;
 }
 
 /// Main queue trait defining queue operations.
@@ -313,13 +313,13 @@ pub trait DMSQueueConsumer: Send + Sync {
 /// This trait defines the core operations for queues, including creating producers and consumers,
 /// getting statistics, purging queues, and deleting queues.
 #[async_trait]
-pub trait DMSQueue: Send + Sync {
+pub trait DMSCQueue: Send + Sync {
     /// Creates a new producer for this queue.
     /// 
     /// # Returns
     /// 
-    /// A `DMSResult<Box<dyn DMSQueueProducer>>` containing the producer
-    async fn create_producer(&self) -> DMSResult<Box<dyn DMSQueueProducer>>;
+    /// A `DMSCResult<Box<dyn DMSCQueueProducer>>` containing the producer
+    async fn create_producer(&self) -> DMSCResult<Box<dyn DMSCQueueProducer>>;
     
     /// Creates a new consumer for this queue with the given consumer group.
     /// 
@@ -329,27 +329,27 @@ pub trait DMSQueue: Send + Sync {
     /// 
     /// # Returns
     /// 
-    /// A `DMSResult<Box<dyn DMSQueueConsumer>>` containing the consumer
-    async fn create_consumer(&self, consumer_group: &str) -> DMSResult<Box<dyn DMSQueueConsumer>>;
+    /// A `DMSCResult<Box<dyn DMSCQueueConsumer>>` containing the consumer
+    async fn create_consumer(&self, consumer_group: &str) -> DMSCResult<Box<dyn DMSCQueueConsumer>>;
     
     /// Gets statistics for this queue.
     /// 
     /// # Returns
     /// 
-    /// A `DMSResult<DMSQueueStats>` containing the queue statistics
-    async fn get_stats(&self) -> DMSResult<DMSQueueStats>;
+    /// A `DMSCResult<DMSCQueueStats>` containing the queue statistics
+    async fn get_stats(&self) -> DMSCResult<DMSCQueueStats>;
     
     /// Purges all messages from this queue.
     /// 
     /// # Returns
     /// 
-    /// A `DMSResult<()>` indicating success or failure
-    async fn purge(&self) -> DMSResult<()>;
+    /// A `DMSCResult<()>` indicating success or failure
+    async fn purge(&self) -> DMSCResult<()>;
     
     /// Deletes this queue.
     /// 
     /// # Returns
     /// 
-    /// A `DMSResult<()>` indicating success or failure
-    async fn delete(&self) -> DMSResult<()>;
+    /// A `DMSCResult<()>` indicating success or failure
+    async fn delete(&self) -> DMSCResult<()>;
 }

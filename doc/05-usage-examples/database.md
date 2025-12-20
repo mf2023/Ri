@@ -6,13 +6,13 @@
 
 **Last modified date: 2025-12-12**
 
-本示例展示如何使用DMS的database模块进行数据库连接、查询构建、事务管理、连接池和迁移功能的使用。
+本示例展示如何使用DMSC的database模块进行数据库连接、查询构建、事务管理、连接池和迁移功能的使用。
 
 ## 示例概述
 
 </div>
 
-本示例将创建一个DMS应用，实现以下功能：
+本示例将创建一个DMSC应用，实现以下功能：
 
 - PostgreSQL、MySQL、SQLite数据库连接
 - 查询构建器和复杂查询
@@ -52,7 +52,7 @@ cd dms-database-example
 
 ```toml
 [dependencies]
-dms = { git = "https://gitee.com/dunimd/dms" }
+dms = { git = "https://gitee.com/dunimd/dmsc" }
 tokio = { version = "1.0", features = ["full"] }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
@@ -116,17 +116,17 @@ use serde_json::json;
 use std::time::Duration;
 
 #[tokio::main]
-async fn main() -> DMSResult<()> {
+async fn main() -> DMSCResult<()> {
     // 构建服务运行时
-    let app = DMSAppBuilder::new()
+    let app = DMSCAppBuilder::new()
         .with_config("config.yaml")?
-        .with_logging(DMSLogConfig::default())?
-        .with_database(DMSDatabaseConfig::default())?
+        .with_logging(DMSCLogConfig::default())?
+        .with_database(DMSCDatabaseConfig::default())?
         .build()?;
     
     // 运行业务逻辑
-    app.run(|ctx: &DMSServiceContext| async move {
-        ctx.logger().info("service", "DMS Database Example started")?;
+    app.run(|ctx: &DMSCServiceContext| async move {
+        ctx.logger().info("service", "DMSC Database Example started")?;
         
         // 基本数据库操作示例
         basic_database_operations(&ctx).await?;
@@ -137,13 +137,13 @@ async fn main() -> DMSResult<()> {
         // 事务管理示例
         transaction_examples(&ctx).await?;
         
-        ctx.logger().info("service", "DMS Database Example completed")?;
+        ctx.logger().info("service", "DMSC Database Example completed")?;
         
         Ok(())
     }).await
 }
 
-async fn basic_database_operations(ctx: &DMSServiceContext) -> DMSResult<()> {
+async fn basic_database_operations(ctx: &DMSCServiceContext) -> DMSCResult<()> {
     ctx.logger().info("database", "Starting basic database operations")?;
     
     // 测试数据库连接
@@ -171,11 +171,11 @@ async fn basic_database_operations(ctx: &DMSServiceContext) -> DMSResult<()> {
     Ok(())
 }
 
-async fn query_builder_examples(ctx: &DMSServiceContext) -> DMSResult<()> {
+async fn query_builder_examples(ctx: &DMSCServiceContext) -> DMSCResult<()> {
     ctx.logger().info("database", "Starting query builder examples")?;
     
     // 构建复杂查询
-    let query = DMSQueryBuilder::new()
+    let query = DMSCQueryBuilder::new()
         .select(vec!["id", "name", "email", "created_at"])
         .from("users")
         .where_clause("active = $1", vec![true.into()])
@@ -189,7 +189,7 @@ async fn query_builder_examples(ctx: &DMSServiceContext) -> DMSResult<()> {
     Ok(())
 }
 
-async fn transaction_examples(ctx: &DMSServiceContext) -> DMSResult<()> {
+async fn transaction_examples(ctx: &DMSCServiceContext) -> DMSCResult<()> {
     ctx.logger().info("database", "Starting transaction examples")?;
     
     // 开始事务
@@ -241,8 +241,8 @@ use dms::prelude::*;
 use serde_json::json;
 
 // PostgreSQL连接配置
-let pg_config = DMSDatabaseConfig {
-    database_type: DMSDatabaseType::PostgreSQL,
+let pg_config = DMSCDatabaseConfig {
+    database_type: DMSCDatabaseType::PostgreSQL,
     host: "localhost".to_string(),
     port: 5432,
     database: "myapp".to_string(),
@@ -252,15 +252,15 @@ let pg_config = DMSDatabaseConfig {
     connection_timeout: Duration::from_secs(30),
     idle_timeout: Duration::from_secs(600),
     max_lifetime: Duration::from_secs(3600),
-    ssl_mode: DMSSslMode::Require,
+    ssl_mode: DMSCSslMode::Require,
     ssl_cert: Some("/path/to/client-cert.pem".to_string()),
     ssl_key: Some("/path/to/client-key.pem".to_string()),
     ssl_root_cert: Some("/path/to/root-cert.pem".to_string()),
 };
 
 // MySQL连接配置
-let mysql_config = DMSDatabaseConfig {
-    database_type: DMSDatabaseType::MySQL,
+let mysql_config = DMSCDatabaseConfig {
+    database_type: DMSCDatabaseType::MySQL,
     host: "localhost".to_string(),
     port: 3306,
     database: "myapp".to_string(),
@@ -275,14 +275,14 @@ let mysql_config = DMSDatabaseConfig {
 };
 
 // SQLite连接配置
-let sqlite_config = DMSDatabaseConfig {
-    database_type: DMSDatabaseType::SQLite,
+let sqlite_config = DMSCDatabaseConfig {
+    database_type: DMSCDatabaseType::SQLite,
     database: "./data/myapp.db".to_string(),
     pool_size: 5,
     connection_timeout: Duration::from_secs(10),
     busy_timeout: Duration::from_secs(5),
     foreign_keys: true,
-    journal_mode: DMSJournalMode::WAL,
+    journal_mode: DMSCJournalMode::WAL,
 };
 
 // 初始化数据库连接
@@ -380,7 +380,7 @@ ctx.log().info(format!("Deleted {} rows", deleted_rows));
 use dms::prelude::*;
 
 // 构建SELECT查询
-let query = DMSQueryBuilder::new()
+let query = DMSCQueryBuilder::new()
     .select(vec!["id", "name", "email", "created_at"])
     .from("users")
     .where_clause("active = $1", vec![true.into()])
@@ -393,7 +393,7 @@ let query = DMSQueryBuilder::new()
 let users = ctx.database().execute_query(query).await?;
 
 // 构建JOIN查询
-let order_query = DMSQueryBuilder::new()
+let order_query = DMSCQueryBuilder::new()
     .select(vec![
         "o.id as order_id",
         "o.total_amount",
@@ -414,7 +414,7 @@ let order_query = DMSQueryBuilder::new()
 let orders = ctx.database().execute_query(order_query).await?;
 
 // 构建聚合查询
-let stats_query = DMSQueryBuilder::new()
+let stats_query = DMSCQueryBuilder::new()
     .select(vec![
         "COUNT(*) as total_users",
         "AVG(age) as average_age",
@@ -429,14 +429,14 @@ if let Some(stats_data) = stats {
 }
 
 // 构建子查询
-let subquery = DMSQueryBuilder::new()
+let subquery = DMSCQueryBuilder::new()
     .select(vec!["user_id"])
     .from("orders")
     .where_clause("total_amount > $1", vec![1000.into()])
     .group_by(vec!["user_id"])
     .having("COUNT(*) >= $1", vec![3.into()]);
 
-let main_query = DMSQueryBuilder::new()
+let main_query = DMSCQueryBuilder::new()
     .select(vec!["id", "name", "email"])
     .from("users")
     .where_in("id", subquery);
@@ -551,7 +551,7 @@ let result = ctx.database().with_transaction(|| async {
     if let Some(balance_data) = from_balance {
         let current_balance: f64 = balance_data.get("balance").unwrap_or(0.0);
         if current_balance < amount {
-            return Err(DMSError::business("Insufficient funds".to_string()));
+            return Err(DMSCError::business("Insufficient funds".to_string()));
         }
         
         ctx.database()
@@ -561,7 +561,7 @@ let result = ctx.database().with_transaction(|| async {
             )
             .await?;
     } else {
-        return Err(DMSError::not_found("Source account not found".to_string()));
+        return Err(DMSCError::not_found("Source account not found".to_string()));
     }
     
     // 增加目标账户
@@ -598,10 +598,10 @@ use dms::prelude::*;
 
 // 设置事务隔离级别
 let isolation_levels = vec![
-    DMSIsolationLevel::ReadUncommitted,
-    DMSIsolationLevel::ReadCommitted,
-    DMSIsolationLevel::RepeatableRead,
-    DMSIsolationLevel::Serializable,
+    DMSCIsolationLevel::ReadUncommitted,
+    DMSCIsolationLevel::ReadCommitted,
+    DMSCIsolationLevel::RepeatableRead,
+    DMSCIsolationLevel::Serializable,
 ];
 
 for level in isolation_levels {
@@ -664,16 +664,16 @@ ctx.log().info(format!("Pool metrics: {}", pool_metrics));
 // 设置连接池事件监听器
 ctx.database().on_connection_event(|event| {
     match event {
-        DMSConnectionEvent::ConnectionAcquired => {
+        DMSCConnectionEvent::ConnectionAcquired => {
             ctx.log().debug("Database connection acquired");
         }
-        DMSConnectionEvent::ConnectionReleased => {
+        DMSCConnectionEvent::ConnectionReleased => {
             ctx.log().debug("Database connection released");
         }
-        DMSConnectionEvent::ConnectionTimeout => {
+        DMSCConnectionEvent::ConnectionTimeout => {
             ctx.log().warn("Database connection timeout");
         }
-        DMSConnectionEvent::ConnectionError(error) => {
+        DMSCConnectionEvent::ConnectionError(error) => {
             ctx.log().error(format!("Database connection error: {}", error));
         }
     }
@@ -709,7 +709,7 @@ ctx.log().info(format!("Cleaned up {} idle connections", cleaned));
 use dms::prelude::*;
 
 // 创建新的迁移文件
-let migration = DMSMigration {
+let migration = DMSCMigration {
     version: 2024011501,
     name: "create_users_table".to_string(),
     up: r#"
@@ -734,7 +734,7 @@ let migration = DMSMigration {
 ctx.database().create_migration(migration).await?;
 
 // 创建复杂迁移
-let complex_migration = DMSMigration {
+let complex_migration = DMSCMigration {
     version: 2024011502,
     name: "create_ecommerce_schema".to_string(),
     up: r#"
@@ -824,7 +824,7 @@ ctx.log().warn("Database reset completed - all data lost");
 use dms::prelude::*;
 
 // 数据迁移示例
-let data_migration = DMSMigration {
+let data_migration = DMSCMigration {
     version: 2024011503,
     name: "migrate_user_data".to_string(),
     up: r#"
@@ -985,24 +985,24 @@ match ctx.database().query("SELECT * FROM non_existent_table", vec![]).await {
     Ok(results) => {
         ctx.log().info(format!("Query returned {} rows", results.len()));
     }
-    Err(DMSError::DatabaseConnectionError(e)) => {
+    Err(DMSCError::DatabaseConnectionError(e)) => {
         ctx.log().error(format!("Database connection failed: {}", e));
         // 尝试重新连接或降级处理
         retry_database_connection().await?;
     }
-    Err(DMSError::DatabaseQueryError(e)) => {
+    Err(DMSCError::DatabaseQueryError(e)) => {
         ctx.log().error(format!("Database query failed: {}", e));
         // 检查是否是语法错误或表不存在
         if e.contains("doesn't exist") {
             ctx.log().warn("Table does not exist, consider running migrations");
         }
     }
-    Err(DMSError::DatabaseTimeoutError(e)) => {
+    Err(DMSCError::DatabaseTimeoutError(e)) => {
         ctx.log().warn(format!("Database query timed out: {}", e));
         // 优化查询或增加超时时间
         optimize_query_performance().await?;
     }
-    Err(DMSError::DatabaseConstraintError(e)) => {
+    Err(DMSCError::DatabaseConstraintError(e)) => {
         ctx.log().error(format!("Database constraint violation: {}", e));
         // 处理唯一性约束、外键约束等
         handle_constraint_violation(&e).await?;
@@ -1014,7 +1014,7 @@ match ctx.database().query("SELECT * FROM non_existent_table", vec![]).await {
 }
 
 // 连接池降级处理
-async fn handle_database_unavailability() -> DMSResult<()> {
+async fn handle_database_unavailability() -> DMSCResult<()> {
     ctx.log().warn("Database is unavailable, switching to read-only cache mode");
     
     // 启用缓存降级
@@ -1038,7 +1038,7 @@ async fn handle_database_unavailability() -> DMSResult<()> {
     }
     
     if retry_count >= 10 {
-        return Err(DMSError::service_unavailable("Database is still unavailable after 10 retries".to_string()));
+        return Err(DMSCError::service_unavailable("Database is still unavailable after 10 retries".to_string()));
     }
     
     Ok(())
@@ -1072,7 +1072,7 @@ cargo run
 运行示例后，您应该会看到类似以下的输出：
 
 ```json
-{"timestamp":"2025-12-12T15:30:00Z","level":"info","module":"service","message":"DMS Database Example started","trace_id":"abc123","span_id":"def456"}
+{"timestamp":"2025-12-12T15:30:00Z","level":"info","module":"service","message":"DMSC Database Example started","trace_id":"abc123","span_id":"def456"}
 {"timestamp":"2025-12-12T15:30:00Z","level":"info","module":"database","message":"Starting basic database operations","trace_id":"abc123","span_id":"def456"}
 {"timestamp":"2025-12-12T15:30:00Z","level":"info","module":"database","message":"Database connection successful","trace_id":"abc123","span_id":"def456"}
 {"timestamp":"2025-12-12T15:30:00Z","level":"info","module":"database","message":"Starting query builder examples","trace_id":"abc123","span_id":"def456"}
@@ -1080,7 +1080,7 @@ cargo run
 {"timestamp":"2025-12-12T15:30:00Z","level":"info","module":"database","message":"Starting transaction examples","trace_id":"abc123","span_id":"def456"}
 {"timestamp":"2025-12-12T15:30:00Z","level":"info","module":"database","message":"Created user with ID: 101","trace_id":"abc123","span_id":"def456"}
 {"timestamp":"2025-12-12T15:30:00Z","level":"info","module":"database","message":"Transaction committed successfully","trace_id":"abc123","span_id":"def456"}
-{"timestamp":"2025-12-12T15:30:00Z","level":"info","module":"service","message":"DMS Database Example completed","trace_id":"abc123","span_id":"def456"}
+{"timestamp":"2025-12-12T15:30:00Z","level":"info","module":"service","message":"DMSC Database Example completed","trace_id":"abc123","span_id":"def456"}
 ```
 
 <div align="center">
@@ -1122,16 +1122,16 @@ ctx.logger().info("database", &format!("Batch query returned {} users", users.le
 // 设置连接池监控
 ctx.database().set_connection_listener(|event| {
     match event {
-        DMSConnectionEvent::ConnectionCreated => {
+        DMSCConnectionEvent::ConnectionCreated => {
             ctx.logger().debug("database", "New database connection created")?;
         }
-        DMSConnectionEvent::ConnectionClosed => {
+        DMSCConnectionEvent::ConnectionClosed => {
             ctx.logger().debug("database", "Database connection closed")?;
         }
-        DMSConnectionEvent::ConnectionTimeout => {
+        DMSCConnectionEvent::ConnectionTimeout => {
             ctx.logger().warn("database", "Database connection timeout occurred")?;
         }
-        DMSConnectionEvent::PoolExhausted => {
+        DMSCConnectionEvent::PoolExhausted => {
             ctx.logger().warn("database", "Database connection pool exhausted")?;
         }
     }
@@ -1152,7 +1152,7 @@ ctx.logger().info("database", &format!(
 
 ```rust
 // 实现查询结果缓存
-async fn get_user_with_cache(ctx: &DMSServiceContext, user_id: i32) -> DMSResult<Option<User>> {
+async fn get_user_with_cache(ctx: &DMSCServiceContext, user_id: i32) -> DMSCResult<Option<User>> {
     let cache_key = format!("user:{}", user_id);
     
     // 先尝试从缓存获取
@@ -1176,7 +1176,7 @@ async fn get_user_with_cache(ctx: &DMSServiceContext, user_id: i32) -> DMSResult
 }
 
 // 实现缓存失效策略
-async fn update_user_with_cache_invalidation(ctx: &DMSServiceContext, user: &User) -> DMSResult<()> {
+async fn update_user_with_cache_invalidation(ctx: &DMSCServiceContext, user: &User) -> DMSCResult<()> {
     // 更新数据库
     ctx.database()
         .execute(
@@ -1253,7 +1253,7 @@ let user = ctx.database()
 
 </div>
 
-本示例展示了如何使用DMS的database模块进行数据库操作，包括：
+本示例展示了如何使用DMSC的database模块进行数据库操作，包括：
 
 - 多数据库连接配置（PostgreSQL、MySQL、SQLite）
 - 基本查询和参数化查询
@@ -1264,7 +1264,7 @@ let user = ctx.database()
 - 批量操作和性能优化
 - 错误处理和降级策略
 
-通过本示例，您应该已经掌握了DMS数据库模块的核心功能和使用方法。您可以在此基础上构建更复杂的数据库应用。
+通过本示例，您应该已经掌握了DMSC数据库模块的核心功能和使用方法。您可以在此基础上构建更复杂的数据库应用。
 
 <div align="center">
 
@@ -1274,7 +1274,7 @@ let user = ctx.database()
 
 - [README](./README.md): 使用示例概览，提供所有使用示例的快速导航
 - [authentication](./authentication.md): 认证示例，学习JWT、OAuth2和RBAC认证授权
-- [basic-app](./basic-app.md): 基础应用示例，学习如何创建和运行第一个DMS应用
+- [basic-app](./basic-app.md): 基础应用示例，学习如何创建和运行第一个DMSC应用
 - [caching](./caching.md): 缓存示例，了解如何使用缓存模块提升应用性能
 - [database](./database.md): 数据库示例，学习数据库连接和查询操作
 - [http](./http.md): HTTP服务示例，构建Web应用和RESTful API

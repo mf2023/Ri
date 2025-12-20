@@ -1,7 +1,7 @@
 //! Copyright © 2025 Wenze Wei. All Rights Reserved.
 //!
-//! This file is part of DMS.
-//! The DMS project belongs to the Dunimd Team.
+//! This file is part of DMSC.
+//! The DMSC project belongs to the Dunimd Team.
 //!
 //! Licensed under the Apache License, Version 2.0 (the "License");
 //! You may not use this file except in compliance with the License.
@@ -19,18 +19,18 @@
 
 //! # Metrics Collection and Aggregation Module
 //! 
-//! This module provides a comprehensive metrics collection and aggregation system for DMS.
+//! This module provides a comprehensive metrics collection and aggregation system for DMSC.
 //! It supports various metric types, sliding window aggregation, and Prometheus-compatible export.
 //! 
 //! ## Key Components
 //! 
-//! - **DMSMetricType**: Enum defining supported metric types (Counter, Gauge, Histogram, Summary)
-//! - **DMSMetricSample**: Represents a single metric sample with timestamp, value, and labels
-//! - **DMSMetricConfig**: Configuration for creating metrics
-//! - **DMSSlidingWindow**: Internal sliding time window for metric aggregation
-//! - **DMSWindowStats**: Aggregated statistics from the sliding window
-//! - **DMSMetric**: Individual metric with sliding window aggregation
-//! - **DMSMetricsRegistry**: Registry for managing multiple metrics
+//! - **DMSCMetricType**: Enum defining supported metric types (Counter, Gauge, Histogram, Summary)
+//! - **DMSCMetricSample**: Represents a single metric sample with timestamp, value, and labels
+//! - **DMSCMetricConfig**: Configuration for creating metrics
+//! - **DMSCSlidingWindow**: Internal sliding time window for metric aggregation
+//! - **DMSCWindowStats**: Aggregated statistics from the sliding window
+//! - **DMSCMetric**: Individual metric with sliding window aggregation
+//! - **DMSCMetricsRegistry**: Registry for managing multiple metrics
 //! 
 //! ## Design Principles
 //! 
@@ -49,13 +49,13 @@
 //! use dms::prelude::*;
 //! use std::time::Duration;
 //! 
-//! fn example() -> DMSResult<()> {
+//! fn example() -> DMSCResult<()> {
 //!     // Create a metrics registry
-//!     let registry = DMSMetricsRegistry::new();
+//!     let registry = DMSCMetricsRegistry::new();
 //!     
 //!     // Configure a counter metric
-//!     let counter_config = DMSMetricConfig {
-//!         metric_type: DMSMetricType::Counter,
+//!     let counter_config = DMSCMetricConfig {
+//!         metric_type: DMSCMetricType::Counter,
 //!         name: "http_requests_total".to_string(),
 //!         help: "Total number of HTTP requests".to_string(),
 //!         buckets: Vec::new(),
@@ -65,7 +65,7 @@
 //!     };
 //!     
 //!     // Create and register the metric
-//!     let counter = Arc::new(DMSMetric::new(counter_config));
+//!     let counter = Arc::new(DMSCMetric::new(counter_config));
 //!     registry.register(counter.clone())?;
 //!     
 //!     // Record some metrics
@@ -85,11 +85,11 @@ use std::sync::{Arc, RwLock};
 use std::time::{SystemTime, UNIX_EPOCH, Duration};
 use serde::{Serialize, Deserialize};
 
-use crate::core::DMSResult;
+use crate::core::DMSCResult;
 
 /// Metric types supported
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub enum DMSMetricType {
+pub enum DMSCMetricType {
     Counter,
     Gauge,
     Histogram,
@@ -98,7 +98,7 @@ pub enum DMSMetricType {
 
 /// A single metric sample
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct DMSMetricSample {
+pub struct DMSCMetricSample {
     pub timestamp: u64, // seconds since epoch
     pub value: f64,
     pub labels: Vec<(String, String)>,
@@ -106,8 +106,8 @@ pub struct DMSMetricSample {
 
 /// Metric configuration
 #[derive(Debug, Clone)]
-pub struct DMSMetricConfig {
-    pub metric_type: DMSMetricType,
+pub struct DMSCMetricConfig {
+    pub metric_type: DMSCMetricType,
     pub name: String,
     pub help: String,
     pub buckets: Vec<f64>, // for histogram
@@ -118,18 +118,18 @@ pub struct DMSMetricConfig {
 
 /// Sliding time window for metric aggregation
 #[allow(dead_code)]
-struct DMSSlidingWindow {
+struct DMSCSlidingWindow {
     #[allow(dead_code)]
     window_size: Duration,
     #[allow(dead_code)]
     bucket_size: Duration,
-    buckets: VecDeque<Vec<DMSMetricSample>>,
-    current_bucket: Vec<DMSMetricSample>,
+    buckets: VecDeque<Vec<DMSCMetricSample>>,
+    current_bucket: Vec<DMSCMetricSample>,
     #[allow(dead_code)]
     last_rotation: u64,
 }
 
-impl DMSSlidingWindow {
+impl DMSCSlidingWindow {
     fn new(window_size: Duration, bucket_size: Duration) -> Self {
         let bucket_count = window_size.as_secs().div_ceil(bucket_size.as_secs());
         
@@ -173,12 +173,13 @@ impl DMSSlidingWindow {
     }
     
     #[allow(dead_code)]
-    fn add_sample(&mut self, sample: DMSMetricSample) {
+    fn add_sample(&mut self, sample: DMSCMetricSample) {
         self.rotate_if_needed();
         self.current_bucket.push(sample);
     }
     
-    fn get_samples(&self) -> Vec<DMSMetricSample> {
+    #[allow(dead_code)]
+    fn get_samples(&self) -> Vec<DMSCMetricSample> {
         let mut all_samples = Vec::new();
         
         for bucket in &self.buckets {
@@ -189,11 +190,12 @@ impl DMSSlidingWindow {
         all_samples
     }
     
-    fn get_window_stats(&self) -> DMSWindowStats {
+    #[allow(dead_code)]
+    fn get_window_stats(&self) -> DMSCWindowStats {
         let samples = self.get_samples();
         
         if samples.is_empty() {
-            return DMSWindowStats::default();
+            return DMSCWindowStats::default();
         }
         
         let mut sorted_values: Vec<f64> = samples.iter().map(|s| s.value).collect();
@@ -218,7 +220,7 @@ impl DMSSlidingWindow {
         let p95 = Self::quantile(&sorted_values, 0.95);
         let p99 = Self::quantile(&sorted_values, 0.99);
         
-        DMSWindowStats {
+        DMSCWindowStats {
             count: count as u64,
             sum,
             min,
@@ -232,6 +234,7 @@ impl DMSSlidingWindow {
         }
     }
     
+    #[allow(dead_code)]
     fn quantile(sorted_values: &[f64], q: f64) -> f64 {
         if sorted_values.is_empty() {
             return 0.0;
@@ -252,7 +255,7 @@ impl DMSSlidingWindow {
 
 /// Window statistics
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct DMSWindowStats {
+pub struct DMSCWindowStats {
     pub count: u64,
     pub sum: f64,
     pub min: f64,
@@ -265,7 +268,7 @@ pub struct DMSWindowStats {
     pub p99: f64,
 }
 
-impl Default for DMSWindowStats {
+impl Default for DMSCWindowStats {
     fn default() -> Self {
         Self {
             count: 0,
@@ -283,17 +286,17 @@ impl Default for DMSWindowStats {
 }
 
 /// A single metric with sliding window aggregation
-pub struct DMSMetric {
-    config: DMSMetricConfig,
-    sliding_window: RwLock<DMSSlidingWindow>,
+pub struct DMSCMetric {
+    config: DMSCMetricConfig,
+    sliding_window: RwLock<DMSCSlidingWindow>,
     total_count: RwLock<u64>,
     #[allow(dead_code)]
     total_sum: RwLock<f64>,
 }
 
-impl DMSMetric {
-    pub fn new(config: DMSMetricConfig) -> Self {
-        let sliding_window = DMSSlidingWindow::new(
+impl DMSCMetric {
+    pub fn new(config: DMSCMetricConfig) -> Self {
+        let sliding_window = DMSCSlidingWindow::new(
             Duration::from_secs(300), // 5 minute window
             Duration::from_secs(10),  // 10 second buckets
         );
@@ -307,8 +310,8 @@ impl DMSMetric {
     }
     
     #[allow(dead_code)]
-    fn record(&self, value: f64, labels: Vec<(String, String)>) -> DMSResult<()> {
-        let sample = DMSMetricSample {
+    fn record(&self, value: f64, labels: Vec<(String, String)>) -> DMSCResult<()> {
+        let sample = DMSCMetricSample {
             timestamp: Self::current_timestamp(),
             value,
             labels,
@@ -325,10 +328,12 @@ impl DMSMetric {
         Ok(())
     }
     
-    fn get_stats(&self) -> DMSWindowStats {
+    #[allow(dead_code)]
+    fn get_stats(&self) -> DMSCWindowStats {
         self.sliding_window.read().unwrap().get_window_stats()
     }
     
+    #[allow(dead_code)]
     fn get_total_count(&self) -> u64 {
         *self.total_count.read().unwrap()
     }
@@ -338,7 +343,7 @@ impl DMSMetric {
         *self.total_sum.read().unwrap()
     }
     
-    fn get_config(&self) -> &DMSMetricConfig {
+    fn get_config(&self) -> &DMSCMetricConfig {
         &self.config
     }
     
@@ -352,38 +357,39 @@ impl DMSMetric {
 }
 
 /// Metrics registry to manage multiple metrics
-pub struct DMSMetricsRegistry {
-    metrics: Arc<RwLock<HashMap<String, Arc<DMSMetric>>>>,
+pub struct DMSCMetricsRegistry {
+    metrics: Arc<RwLock<HashMap<String, Arc<DMSCMetric>>>>,
 }
 
-impl Default for DMSMetricsRegistry {
+impl Default for DMSCMetricsRegistry {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl DMSMetricsRegistry {
+impl DMSCMetricsRegistry {
     pub fn new() -> Self {
         Self {
             metrics: Arc::new(RwLock::new(HashMap::new())),
         }
     }
     
-    pub fn register(&self, metric: Arc<DMSMetric>) -> DMSResult<()> {
+    pub fn register(&self, metric: Arc<DMSCMetric>) -> DMSCResult<()> {
         let name = metric.get_config().name.clone();
         self.metrics.write().unwrap().insert(name, metric);
         Ok(())
     }
     
-    pub fn get_metric(&self, name: &str) -> Option<Arc<DMSMetric>> {
+    pub fn get_metric(&self, name: &str) -> Option<Arc<DMSCMetric>> {
         self.metrics.read().unwrap().get(name).cloned()
     }
     
-    pub fn get_all_metrics(&self) -> HashMap<String, Arc<DMSMetric>> {
+    pub fn get_all_metrics(&self) -> HashMap<String, Arc<DMSCMetric>> {
         self.metrics.read().unwrap().clone()
     }
     
     /// Export metrics in Prometheus format
+    #[cfg(feature = "observability")]
     pub fn export_prometheus(&self) -> String {
         let mut output = String::new();
         let metrics = self.metrics.read().unwrap();
@@ -398,13 +404,13 @@ impl DMSMetricsRegistry {
             // Write metric value
             let stats = metric.get_stats();
             match config.metric_type {
-                DMSMetricType::Counter => {
+                DMSCMetricType::Counter => {
                     output.push_str(&format!("{} {}\n", name, metric.get_total_count()));
                 }
-                DMSMetricType::Gauge => {
+                DMSCMetricType::Gauge => {
                     output.push_str(&format!("{} {}\n", name, stats.mean));
                 }
-                DMSMetricType::Histogram => {
+                DMSCMetricType::Histogram => {
                     output.push_str(&format!("{}_count {}\n", name, stats.count));
                     output.push_str(&format!("{}_sum {}\n", name, stats.sum));
                     output.push_str(&format!("{}_min {}\n", name, stats.min));
@@ -415,7 +421,7 @@ impl DMSMetricsRegistry {
                     output.push_str(&format!("{}_p95 {}\n", name, stats.p95));
                     output.push_str(&format!("{}_p99 {}\n", name, stats.p99));
                 }
-                DMSMetricType::Summary => {
+                DMSCMetricType::Summary => {
                     output.push_str(&format!("{} {}\n", name, stats.mean));
                 }
             }

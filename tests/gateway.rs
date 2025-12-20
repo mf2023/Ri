@@ -1,7 +1,7 @@
 // Copyright © 2025 Wenze Wei. All Rights Reserved.
 //
-// This file is part of DMS.
-// The DMS project belongs to the Dunimd Team.
+// This file is part of DMSC.
+// The DMSC project belongs to the Dunimd Team.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -15,30 +15,30 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use dms_core::gateway::{
-    DMSGatewayConfig,
-    DMSGatewayRequest,
-    DMSGatewayResponse,
-    DMSGateway,
-    DMSRoute,
-    DMSRouter,
-    DMSMiddleware,
-    DMSMiddlewareChain,
-    DMSLoadBalancer,
-    DMSLoadBalancerStrategy,
-    DMSRateLimiter,
-    DMSRateLimitConfig,
-    DMSCircuitBreaker,
-    DMSCircuitBreakerConfig,
+use dmsc::gateway::{
+    DMSCGatewayConfig,
+    DMSCGatewayRequest,
+    DMSCGatewayResponse,
+    DMSCGateway,
+    DMSCRoute,
+    DMSCRouter,
+    DMSCMiddleware,
+    DMSCMiddlewareChain,
+    DMSCLoadBalancer,
+    DMSCLoadBalancerStrategy,
+    DMSCRateLimiter,
+    DMSCRateLimitConfig,
+    DMSCCircuitBreaker,
+    DMSCCircuitBreakerConfig,
 };
-use dms_core::gateway::load_balancer::DMSBackendServer;
-use dms_core::prelude::DMSResult;
+use dmsc::gateway::load_balancer::DMSCBackendServer;
+use dmsc::prelude::DMSCResult;
 use std::collections::HashMap;
 use std::sync::Arc;
 
 #[test]
 fn test_gateway_config_default() {
-    let config = DMSGatewayConfig::default();
+    let config = DMSCGatewayConfig::default();
     
     assert_eq!(config.listen_address, "0.0.0.0");
     assert_eq!(config.listen_port, 8080);
@@ -62,7 +62,7 @@ fn test_gateway_request_new() {
     let body = None::<Vec<u8>>;
     let remote_addr = "127.0.0.1:12345".to_string();
     
-    let request = DMSGatewayRequest::new(
+    let request = DMSCGatewayRequest::new(
         method.clone(),
         path.clone(),
         headers.clone(),
@@ -86,7 +86,7 @@ fn test_gateway_response_new() {
     let body = b"test_body".to_vec();
     let request_id = "test_request_id".to_string();
     
-    let response = DMSGatewayResponse::new(status_code, body.clone(), request_id.clone());
+    let response = DMSCGatewayResponse::new(status_code, body.clone(), request_id.clone());
     
     assert_eq!(response.status_code, status_code);
     assert_eq!(response.body, body);
@@ -101,7 +101,7 @@ fn test_gateway_response_with_header() {
     let body = b"test_body".to_vec();
     let request_id = "test_request_id".to_string();
     
-    let response = DMSGatewayResponse::new(status_code, body.clone(), request_id.clone())
+    let response = DMSCGatewayResponse::new(status_code, body.clone(), request_id.clone())
         .with_header("Custom-Header".to_string(), "Custom-Value".to_string());
     
     assert_eq!(response.headers.get("Custom-Header"), Some(&"Custom-Value".to_string()));
@@ -114,7 +114,7 @@ fn test_gateway_response_json() {
     
     let data = serde_json::json!({"key": "value"});
     
-    let response = DMSGatewayResponse::json(status_code, &data, request_id.clone()).unwrap();
+    let response = DMSCGatewayResponse::json(status_code, &data, request_id.clone()).unwrap();
     
     assert_eq!(response.status_code, status_code);
     assert_eq!(response.request_id, request_id);
@@ -128,7 +128,7 @@ fn test_gateway_response_error() {
     let message = "Not Found".to_string();
     let request_id = "test_request_id".to_string();
     
-    let response = DMSGatewayResponse::error(status_code, message.clone(), request_id.clone());
+    let response = DMSCGatewayResponse::error(status_code, message.clone(), request_id.clone());
     
     assert_eq!(response.status_code, status_code);
     assert_eq!(response.request_id, request_id);
@@ -138,7 +138,7 @@ fn test_gateway_response_error() {
 
 #[tokio::test]
 async fn test_gateway_new() {
-    let gateway = DMSGateway::new();
+    let gateway = DMSCGateway::new();
     
     // Verify gateway components are created
     assert_eq!(gateway.router().route_count(), 0);
@@ -147,20 +147,20 @@ async fn test_gateway_new() {
 
 #[tokio::test]
 async fn test_gateway_router() {
-    let router = DMSRouter::new();
+    let router = DMSCRouter::new();
     
     // Test adding a route
-    let handler = Arc::new(|request: DMSGatewayRequest| {
+    let handler = Arc::new(|request: DMSCGatewayRequest| {
         Box::pin(async move {
-            Ok(DMSGatewayResponse::new(
+            Ok(DMSCGatewayResponse::new(
                 200,
                 b"test_response".to_vec(),
                 request.id,
             ))
-        }) as std::pin::Pin<Box<dyn std::future::Future<Output = DMSResult<DMSGatewayResponse>> + Send>>
+        }) as std::pin::Pin<Box<dyn std::future::Future<Output = DMSCResult<DMSCGatewayResponse>> + Send>>
     });
 
-    let route = DMSRoute::new(
+    let route = DMSCRoute::new(
         "GET".to_string(),
         "/test".to_string(),
         handler,
@@ -176,11 +176,11 @@ async fn test_gateway_middleware_chain() {
     struct TestMiddleware;
 
     #[async_trait::async_trait]
-    impl DMSMiddleware for TestMiddleware {
+    impl DMSCMiddleware for TestMiddleware {
         async fn execute(
             &self,
-            request: &mut DMSGatewayRequest,
-        ) -> DMSResult<()> {
+            request: &mut DMSCGatewayRequest,
+        ) -> DMSCResult<()> {
             request
                 .headers
                 .insert("X-Custom-Middleware".to_string(), "applied".to_string());
@@ -192,11 +192,11 @@ async fn test_gateway_middleware_chain() {
         }
     }
 
-    let mut middleware_chain = DMSMiddlewareChain::new();
+    let mut middleware_chain = DMSCMiddlewareChain::new();
 
     middleware_chain.add(Arc::new(TestMiddleware));
 
-    let mut request = DMSGatewayRequest::new(
+    let mut request = DMSCGatewayRequest::new(
         "GET".to_string(),
         "/test".to_string(),
         HashMap::new(),
@@ -216,21 +216,21 @@ async fn test_gateway_middleware_chain() {
 
 #[tokio::test]
 async fn test_gateway_handle_request() {
-    let gateway = DMSGateway::new();
+    let gateway = DMSCGateway::new();
     let router = gateway.router();
     
     // Add a test route
-    let handler = Arc::new(|request: DMSGatewayRequest| {
+    let handler = Arc::new(|request: DMSCGatewayRequest| {
         Box::pin(async move {
-            Ok(DMSGatewayResponse::new(
+            Ok(DMSCGatewayResponse::new(
                 200,
                 b"test_response".to_vec(),
                 request.id,
             ))
-        }) as std::pin::Pin<Box<dyn std::future::Future<Output = DMSResult<DMSGatewayResponse>> + Send>>
+        }) as std::pin::Pin<Box<dyn std::future::Future<Output = DMSCResult<DMSCGatewayResponse>> + Send>>
     });
 
-    let route = DMSRoute::new(
+    let route = DMSCRoute::new(
         "GET".to_string(),
         "/test".to_string(),
         handler,
@@ -239,7 +239,7 @@ async fn test_gateway_handle_request() {
     router.add_route(route);
     
     // Create a test request
-    let request = DMSGatewayRequest::new(
+    let request = DMSCGatewayRequest::new(
         "GET".to_string(),
         "/test".to_string(),
         std::collections::HashMap::new(),
@@ -258,10 +258,10 @@ async fn test_gateway_handle_request() {
 
 #[tokio::test]
 async fn test_gateway_handle_request_not_found() {
-    let gateway = DMSGateway::new();
+    let gateway = DMSCGateway::new();
     
     // Create a test request to a non-existent route
-    let request = DMSGatewayRequest::new(
+    let request = DMSCGatewayRequest::new(
         "GET".to_string(),
         "/non_existent_route".to_string(),
         std::collections::HashMap::new(),
@@ -279,14 +279,14 @@ async fn test_gateway_handle_request_not_found() {
 
 #[tokio::test]
 async fn test_load_balancer_new() {
-    let load_balancer = DMSLoadBalancer::new(DMSLoadBalancerStrategy::RoundRobin);
+    let load_balancer = DMSCLoadBalancer::new(DMSCLoadBalancerStrategy::RoundRobin);
     
     // Test adding targets
-    let server1 = DMSBackendServer::new(
+    let server1 = DMSCBackendServer::new(
         "server1".to_string(),
         "http://localhost:8001".to_string(),
     );
-    let server2 = DMSBackendServer::new(
+    let server2 = DMSCBackendServer::new(
         "server2".to_string(),
         "http://localhost:8002".to_string(),
     );
@@ -305,16 +305,16 @@ async fn test_load_balancer_new() {
 
 #[tokio::test]
 async fn test_rate_limiter_new() {
-    let config = DMSRateLimitConfig {
+    let config = DMSCRateLimitConfig {
         requests_per_second: 100,
         burst_size: 200,
         window_seconds: 1,
     };
     
-    let rate_limiter = DMSRateLimiter::new(config);
+    let rate_limiter = DMSCRateLimiter::new(config);
     
     // Test checking a request
-    let request = DMSGatewayRequest::new(
+    let request = DMSCGatewayRequest::new(
         "GET".to_string(),
         "/test".to_string(),
         std::collections::HashMap::new(),
@@ -329,14 +329,14 @@ async fn test_rate_limiter_new() {
 
 #[tokio::test]
 async fn test_circuit_breaker_new() {
-    let config = DMSCircuitBreakerConfig {
+    let config = DMSCCircuitBreakerConfig {
         failure_threshold: 5,
         success_threshold: 3,
         timeout_seconds: 30,
         monitoring_period_seconds: 30,
     };
     
-    let circuit_breaker = DMSCircuitBreaker::new(config);
+    let circuit_breaker = DMSCCircuitBreaker::new(config);
     
     // Test allowing requests initially
     let allowed = circuit_breaker.allow_request().await;

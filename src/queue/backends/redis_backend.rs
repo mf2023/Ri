@@ -1,7 +1,7 @@
 //! Copyright © 2025 Wenze Wei. All Rights Reserved.
 //!
-//! This file is part of DMS.
-//! The DMS project belongs to the Dunimd Team.
+//! This file is part of DMSC.
+//! The DMSC project belongs to the Dunimd Team.
 //!
 //! Licensed under the Apache License, Version 2.0 (the "License");
 //! You may not use this file except in compliance with the License.
@@ -19,23 +19,23 @@
 
 //! # Redis Queue Backend
 //! 
-//! This module provides a Redis implementation for the DMS queue system. It allows
+//! This module provides a Redis implementation for the DMSC queue system. It allows
 //! sending and receiving messages using Redis lists as the underlying message broker.
 //! 
 //! ## Key Components
 //! 
-//! - **DMSRedisQueue**: Main Redis queue implementation
+//! - **DMSCRedisQueue**: Main Redis queue implementation
 //! - **RedisQueueProducer**: Redis producer implementation
 //! - **RedisQueueConsumer**: Redis consumer implementation
 //! 
 //! ## Design Principles
 //! 
-//! 1. **Async Trait Implementation**: Implements the DMSQueue, DMSQueueProducer, and DMSQueueConsumer traits
+//! 1. **Async Trait Implementation**: Implements the DMSCQueue, DMSCQueueProducer, and DMSCQueueConsumer traits
 //! 2. **Redis Integration**: Uses the redis crate for Redis connectivity
 //! 3. **Thread Safety**: Uses Arc for safe sharing of connections and consumers
 //! 4. **Future-based API**: Leverages async/await for non-blocking operations
 //! 5. **Blocking Operations**: Uses BLPOP for efficient blocking message consumption
-//! 6. **Error Handling**: Comprehensive error handling with DMSResult
+//! 6. **Error Handling**: Comprehensive error handling with DMSCResult
 //! 7. **List-based Queue**: Uses Redis lists for simple FIFO queue functionality
 //! 8. **Batch Support**: Provides batch sending functionality
 //! 9. **Implicit Acknowledgment**: Acknowledgment is implicit when messages are popped from the list
@@ -46,15 +46,15 @@
 //! ```rust
 //! use dms::prelude::*;
 //! 
-//! async fn example() -> DMSResult<()> {
+//! async fn example() -> DMSCResult<()> {
 //!     // Create a new Redis queue
-//!     let queue = DMSRedisQueue::new("test-queue", "redis://localhost:6379").await?;
+//!     let queue = DMSCRedisQueue::new("test-queue", "redis://localhost:6379").await?;
 //!     
 //!     // Create a producer
 //!     let producer = queue.create_producer().await?;
 //!     
 //!     // Create a message
-//!     let message = DMSQueueMessage {
+//!     let message = DMSCQueueMessage {
 //!         id: "12345".to_string(),
 //!         payload: b"Hello, Redis!".to_vec(),
 //!         headers: vec![("key1".to_string(), "value1".to_string())],
@@ -83,21 +83,21 @@ use redis::{AsyncCommands, Client};
 use std::sync::Arc;
 use std::time::Duration;
 use tokio::sync::Mutex;
-use crate::core::DMSResult;
-use crate::queue::{DMSQueue, DMSQueueMessage, DMSQueueProducer, DMSQueueConsumer, DMSQueueStats};
+use crate::core::DMSCResult;
+use crate::queue::{DMSCQueue, DMSCQueueMessage, DMSCQueueProducer, DMSCQueueConsumer, DMSCQueueStats};
 
-/// Redis queue implementation for the DMS queue system.
+/// Redis queue implementation for the DMSC queue system.
 ///
-/// This struct provides a Redis implementation of the DMSQueue trait, allowing
+/// This struct provides a Redis implementation of the DMSCQueue trait, allowing
 /// sending and receiving messages using Redis lists as the underlying message broker.
-pub struct DMSRedisQueue {
+pub struct DMSCRedisQueue {
     /// Queue name (Redis key)
     name: String,
     /// Redis client for connecting to Redis
     client: Arc<Client>,
 }
 
-impl DMSRedisQueue {
+impl DMSCRedisQueue {
     /// Creates a new Redis queue instance.
     ///
     /// # Parameters
@@ -107,8 +107,8 @@ impl DMSRedisQueue {
     ///
     /// # Returns
     ///
-    /// A new DMSRedisQueue instance wrapped in DMSResult
-    pub async fn new(name: &str, connection_string: &str) -> DMSResult<Self> {
+    /// A new DMSCRedisQueue instance wrapped in DMSCResult
+    pub async fn new(name: &str, connection_string: &str) -> DMSCResult<Self> {
         let client = Client::open(connection_string)?;
         Self::new_with_client(name, client)
     }
@@ -122,8 +122,8 @@ impl DMSRedisQueue {
     ///
     /// # Returns
     ///
-    /// A new DMSRedisQueue instance wrapped in DMSResult
-    pub fn new_with_client(name: &str, client: Client) -> DMSResult<Self> {
+    /// A new DMSCRedisQueue instance wrapped in DMSCResult
+    pub fn new_with_client(name: &str, client: Client) -> DMSCResult<Self> {
         Ok(Self {
             name: name.to_string(),
             client: Arc::new(client),
@@ -139,8 +139,8 @@ impl DMSRedisQueue {
     ///
     /// # Returns
     ///
-    /// A new DMSRedisQueue instance wrapped in DMSResult
-    pub async fn new_with_connection(name: &str, _connection: redis::aio::MultiplexedConnection) -> DMSResult<Self> {
+    /// A new DMSCRedisQueue instance wrapped in DMSCResult
+    pub async fn new_with_connection(name: &str, _connection: redis::aio::MultiplexedConnection) -> DMSCResult<Self> {
         // Create a new client for this connection (since we need to store client, not connection)
         // This is a workaround - in production, you might want to refactor to store connections instead
         let client = Client::open("redis://localhost:6379")?; // This will be overridden by the connection pool
@@ -152,13 +152,13 @@ impl DMSRedisQueue {
 }
 
 #[async_trait]
-impl DMSQueue for DMSRedisQueue {
+impl DMSCQueue for DMSCRedisQueue {
     /// Creates a new producer for the Redis queue.
     ///
     /// # Returns
     ///
-    /// A new DMSQueueProducer instance wrapped in DMSResult
-    async fn create_producer(&self) -> DMSResult<Box<dyn DMSQueueProducer>> {
+    /// A new DMSCQueueProducer instance wrapped in DMSCResult
+    async fn create_producer(&self) -> DMSCResult<Box<dyn DMSCQueueProducer>> {
         let conn = self.client.get_async_connection().await?;
         
         Ok(Box::new(RedisQueueProducer {
@@ -175,8 +175,8 @@ impl DMSQueue for DMSRedisQueue {
     ///
     /// # Returns
     ///
-    /// A new DMSQueueConsumer instance wrapped in DMSResult
-    async fn create_consumer(&self, _consumer_group: &str) -> DMSResult<Box<dyn DMSQueueConsumer>> {
+    /// A new DMSCQueueConsumer instance wrapped in DMSCResult
+    async fn create_consumer(&self, _consumer_group: &str) -> DMSCResult<Box<dyn DMSCQueueConsumer>> {
         let conn = self.client.get_async_connection().await?;
         
         Ok(Box::new(RedisQueueConsumer {
@@ -190,12 +190,12 @@ impl DMSQueue for DMSRedisQueue {
     ///
     /// # Returns
     ///
-    /// DMSQueueStats containing queue statistics wrapped in DMSResult
-    async fn get_stats(&self) -> DMSResult<DMSQueueStats> {
+    /// DMSCQueueStats containing queue statistics wrapped in DMSCResult
+    async fn get_stats(&self) -> DMSCResult<DMSCQueueStats> {
         let mut conn = self.client.get_async_connection().await?;
         let len: i64 = conn.llen(&self.name).await?;
         
-        Ok(DMSQueueStats {
+        Ok(DMSCQueueStats {
             queue_name: self.name.clone(),
             message_count: len as u64,
             consumer_count: 0,
@@ -210,8 +210,8 @@ impl DMSQueue for DMSRedisQueue {
     ///
     /// # Returns
     ///
-    /// DMSResult indicating success or failure
-    async fn purge(&self) -> DMSResult<()> {
+    /// DMSCResult indicating success or failure
+    async fn purge(&self) -> DMSCResult<()> {
         let mut conn = self.client.get_async_connection().await?;
         conn.del::<_, ()>(&self.name).await?;
         Ok(())
@@ -224,15 +224,15 @@ impl DMSQueue for DMSRedisQueue {
     ///
     /// # Returns
     ///
-    /// DMSResult indicating success or failure
-    async fn delete(&self) -> DMSResult<()> {
+    /// DMSCResult indicating success or failure
+    async fn delete(&self) -> DMSCResult<()> {
         self.purge().await
     }
 }
 
 /// Redis queue producer implementation.
 ///
-/// This struct provides a Redis implementation of the DMSQueueProducer trait,
+/// This struct provides a Redis implementation of the DMSCQueueProducer trait,
 /// allowing sending messages to Redis queues.
 struct RedisQueueProducer {
     /// Redis async connection
@@ -242,7 +242,7 @@ struct RedisQueueProducer {
 }
 
 #[async_trait]
-impl DMSQueueProducer for RedisQueueProducer {
+impl DMSCQueueProducer for RedisQueueProducer {
     /// Sends a single message to the Redis queue.
     ///
     /// # Parameters
@@ -251,8 +251,8 @@ impl DMSQueueProducer for RedisQueueProducer {
     ///
     /// # Returns
     ///
-    /// DMSResult indicating success or failure
-    async fn send(&self, message: DMSQueueMessage) -> DMSResult<()> {
+    /// DMSCResult indicating success or failure
+    async fn send(&self, message: DMSCQueueMessage) -> DMSCResult<()> {
         let mut conn = self.connection.lock().await;
         let payload = serde_json::to_vec(&message)?;
         
@@ -268,8 +268,8 @@ impl DMSQueueProducer for RedisQueueProducer {
     ///
     /// # Returns
     ///
-    /// DMSResult indicating success or failure
-    async fn send_batch(&self, messages: Vec<DMSQueueMessage>) -> DMSResult<()> {
+    /// DMSCResult indicating success or failure
+    async fn send_batch(&self, messages: Vec<DMSCQueueMessage>) -> DMSCResult<()> {
         let mut conn = self.connection.lock().await;
         
         for message in messages {
@@ -282,7 +282,7 @@ impl DMSQueueProducer for RedisQueueProducer {
 
 /// Redis queue consumer implementation.
 ///
-/// This struct provides a Redis implementation of the DMSQueueConsumer trait,
+/// This struct provides a Redis implementation of the DMSCQueueConsumer trait,
 /// allowing receiving messages from Redis queues.
 struct RedisQueueConsumer {
     /// Redis async connection
@@ -294,14 +294,14 @@ struct RedisQueueConsumer {
 }
 
 #[async_trait]
-impl DMSQueueConsumer for RedisQueueConsumer {
+impl DMSCQueueConsumer for RedisQueueConsumer {
     /// Receives a message from the Redis queue.
     ///
     /// # Returns
     ///
     /// An Option containing the received message, or None if the consumer is paused
     /// or the BLPOP operation timed out
-    async fn receive(&self) -> DMSResult<Option<DMSQueueMessage>> {
+    async fn receive(&self) -> DMSCResult<Option<DMSCQueueMessage>> {
         let paused = *self.paused.lock().await;
         if paused {
             return Ok(None);
@@ -313,7 +313,7 @@ impl DMSQueueConsumer for RedisQueueConsumer {
         let result: Option<(String, Vec<u8>)> = conn.blpop(&self.queue_name, 5.0).await?;
         
         if let Some((_, payload)) = result {
-            let message: DMSQueueMessage = serde_json::from_slice(&payload)?;
+            let message: DMSCQueueMessage = serde_json::from_slice(&payload)?;
             Ok(Some(message))
         } else {
             Ok(None)
@@ -331,8 +331,8 @@ impl DMSQueueConsumer for RedisQueueConsumer {
     ///
     /// # Returns
     ///
-    /// DMSResult indicating success or failure
-    async fn ack(&self, _message_id: &str) -> DMSResult<()> {
+    /// DMSCResult indicating success or failure
+    async fn ack(&self, _message_id: &str) -> DMSCResult<()> {
         // In Redis list-based queue, acknowledgment is implicit when message is popped
         Ok(())
     }
@@ -348,8 +348,8 @@ impl DMSQueueConsumer for RedisQueueConsumer {
     ///
     /// # Returns
     ///
-    /// DMSResult indicating success or failure
-    async fn nack(&self, message_id: &str) -> DMSResult<()> {
+    /// DMSCResult indicating success or failure
+    async fn nack(&self, message_id: &str) -> DMSCResult<()> {
         // In a production implementation, this would:
         // 1. Parse the message_id to extract retry count and original message data
         // 2. Check if max retry count has been exceeded
@@ -375,8 +375,8 @@ impl DMSQueueConsumer for RedisQueueConsumer {
     ///
     /// # Returns
     ///
-    /// DMSResult indicating success or failure
-    async fn pause(&self) -> DMSResult<()> {
+    /// DMSCResult indicating success or failure
+    async fn pause(&self) -> DMSCResult<()> {
         let mut paused = self.paused.lock().await;
         *paused = true;
         Ok(())
@@ -386,8 +386,8 @@ impl DMSQueueConsumer for RedisQueueConsumer {
     ///
     /// # Returns
     ///
-    /// DMSResult indicating success or failure
-    async fn resume(&self) -> DMSResult<()> {
+    /// DMSCResult indicating success or failure
+    async fn resume(&self) -> DMSCResult<()> {
         let mut paused = self.paused.lock().await;
         *paused = false;
         Ok(())

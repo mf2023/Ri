@@ -1,7 +1,7 @@
 //! Copyright © 2025 Wenze Wei. All Rights Reserved.
 //! 
-//! This file is part of DMS.
-//! The DMS project belongs to the Dunimd Team.
+//! This file is part of DMSC.
+//! The DMSC project belongs to the Dunimd Team.
 //! 
 //! Licensed under the Apache License, Version 2.0 (the "License");
 //! You may not use this file except in compliance with the License.
@@ -15,30 +15,30 @@
 //! See the License for the specific language governing permissions and
 //! limitations under the License.
 
-//! Cache implementation for DMS Core
+//! Cache implementation for DMSC Core
 
-use crate::core::DMSResult;
+use crate::core::DMSCResult;
 use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::RwLock;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use serde::{Serialize, Deserialize};
 
-/// Cache trait for DMS cache implementations
+/// Cache trait for DMSC cache implementations
 #[async_trait::async_trait]
-pub trait DMSCache: Send + Sync {
-    async fn get(&self, key: &str) -> DMSResult<Option<String>>;
-    async fn set(&self, key: &str, value: &str, ttl_seconds: Option<u64>) -> DMSResult<()>;
-    async fn delete(&self, key: &str) -> DMSResult<bool>;
-    async fn clear(&self) -> DMSResult<()>;
+pub trait DMSCCache: Send + Sync {
+    async fn get(&self, key: &str) -> DMSCResult<Option<String>>;
+    async fn set(&self, key: &str, value: &str, ttl_seconds: Option<u64>) -> DMSCResult<()>;
+    async fn delete(&self, key: &str) -> DMSCResult<bool>;
+    async fn clear(&self) -> DMSCResult<()>;
     async fn stats(&self) -> CacheStats;
-    async fn cleanup_expired(&self) -> DMSResult<usize>;
+    async fn cleanup_expired(&self) -> DMSCResult<usize>;
     async fn exists(&self, key: &str) -> bool;
 }
 
 /// Cache event types for monitoring and consistency
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub enum DMSCacheEvent {
+pub enum DMSCCacheEvent {
     /// Cache hit event
     Hit { key: String },
     /// Cache miss event
@@ -106,9 +106,9 @@ impl CachedValue {
         Self { value, expires_at }
     }
     
-    pub fn deserialize<T: serde::de::DeserializeOwned>(&self) -> crate::core::DMSResult<T> {
+    pub fn deserialize<T: serde::de::DeserializeOwned>(&self) -> crate::core::DMSCResult<T> {
         serde_json::from_str(&self.value)
-            .map_err(|e| crate::core::DMSError::Other(format!("Deserialization error: {e}")))
+            .map_err(|e| crate::core::DMSCError::Other(format!("Deserialization error: {e}")))
     }
     
     pub fn is_expired(&self) -> bool {
@@ -141,13 +141,13 @@ impl CachedValue {
 /// 
 /// This struct provides the core in-memory cache functionality. It is used internally
 /// by the public cache backends and should not be used directly by application code.
-/// Use DMSMemoryCache, DMSRedisCache, or DMSHybridCache instead.
-struct DMSCacheImpl {
+/// Use DMSCMemoryCache, DMSCRedisCache, or DMSCHybridCache instead.
+struct DMSCCacheImpl {
     data: Arc<RwLock<HashMap<String, (String, u64)>>>, // (value, expires_at)
     stats: Arc<RwLock<CacheStats>>,
 }
 
-impl DMSCacheImpl {
+impl DMSCCacheImpl {
     /// Create a new cache
     fn new() -> Self {
         Self {
@@ -166,15 +166,15 @@ impl DMSCacheImpl {
     }
 }
 
-impl Default for DMSCacheImpl {
+impl Default for DMSCCacheImpl {
     fn default() -> Self {
         Self::new()
     }
 }
 
 #[async_trait::async_trait]
-impl DMSCache for DMSCacheImpl {
-    async fn get(&self, key: &str) -> DMSResult<Option<String>> {
+impl DMSCCache for DMSCCacheImpl {
+    async fn get(&self, key: &str) -> DMSCResult<Option<String>> {
         let mut stats = self.stats.write().await;
         let data = self.data.read().await;
         
@@ -194,7 +194,7 @@ impl DMSCache for DMSCacheImpl {
         Ok(None)
     }
 
-    async fn set(&self, key: &str, value: &str, ttl_seconds: Option<u64>) -> DMSResult<()> {
+    async fn set(&self, key: &str, value: &str, ttl_seconds: Option<u64>) -> DMSCResult<()> {
         let expires_at = SystemTime::now()
             .duration_since(UNIX_EPOCH)
             .unwrap_or(Duration::from_secs(0))
@@ -209,7 +209,7 @@ impl DMSCache for DMSCacheImpl {
         Ok(())
     }
 
-    async fn delete(&self, key: &str) -> DMSResult<bool> {
+    async fn delete(&self, key: &str) -> DMSCResult<bool> {
         let mut data = self.data.write().await;
         let removed = data.remove(key).is_some();
         
@@ -221,7 +221,7 @@ impl DMSCache for DMSCacheImpl {
         Ok(removed)
     }
 
-    async fn clear(&self) -> DMSResult<()> {
+    async fn clear(&self) -> DMSCResult<()> {
         let mut data = self.data.write().await;
         data.clear();
         
@@ -235,7 +235,7 @@ impl DMSCache for DMSCacheImpl {
         *self.stats.read().await
     }
 
-    async fn cleanup_expired(&self) -> DMSResult<usize> {
+    async fn cleanup_expired(&self) -> DMSCResult<usize> {
         let mut data = self.data.write().await;
         let now = SystemTime::now()
                 .duration_since(UNIX_EPOCH)

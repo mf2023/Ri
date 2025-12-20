@@ -1,7 +1,7 @@
 //! Copyright © 2025 Wenze Wei. All Rights Reserved.
 //! 
-//! This file is part of DMS.
-//! The DMS project belongs to the Dunimd Team.
+//! This file is part of DMSC.
+//! The DMSC project belongs to the Dunimd Team.
 //! 
 //! Licensed under the Apache License, Version 2.0 (the "License");
 //! You may not use this file except in compliance with the License.
@@ -15,7 +15,7 @@
 //! See the License for the specific language governing permissions and
 //! limitations under the License.
 
-//! Role-based access control (RBAC) implementation for DMS.
+//! Role-based access control (RBAC) implementation for DMSC.
 //! 
 //! This module provides a comprehensive RBAC system for managing permissions,
 //! roles, and user role assignments. It supports:
@@ -36,10 +36,10 @@
 //! # Usage Examples
 //! ```rust
 //! // Create a permission manager
-//! let permission_manager = DMSPermissionManager::new();
+//! let permission_manager = DMSCPermissionManager::new();
 //! 
 //! // Create a permission
-//! let read_device_perm = DMSPermission {
+//! let read_device_perm = DMSCPermission {
 //!     id: "read:device".to_string(),
 //!     name: "Read Device".to_string(),
 //!     description: "Allows reading device information".to_string(),
@@ -49,7 +49,7 @@
 //! permission_manager.create_permission(read_device_perm).await?;
 //! 
 //! // Create a role
-//! let device_admin_role = DMSRole::new(
+//! let device_admin_role = DMSCRole::new(
 //!     "device_admin".to_string(),
 //!     "Device Administrator".to_string(),
 //!     "Manages devices".to_string(),
@@ -79,7 +79,7 @@ use pyo3::PyResult;
 /// resource, and action. Permissions follow the "resource:action" convention.
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct DMSPermission {
+pub struct DMSCPermission {
     pub id: String,          // Unique permission identifier (e.g., "read:device")
     pub name: String,        // Human-readable name
     pub description: String, // Detailed description of what the permission allows
@@ -93,7 +93,7 @@ pub struct DMSPermission {
 /// System roles cannot be deleted and are created automatically.
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct DMSRole {
+pub struct DMSCRole {
     pub id: String,                // Unique role identifier
     pub name: String,              // Human-readable name
     pub description: String,       // Detailed description of the role's purpose
@@ -101,7 +101,7 @@ pub struct DMSRole {
     pub is_system: bool,           // Whether this is a system role that cannot be deleted
 }
 
-impl DMSRole {
+impl DMSCRole {
     /// Creates a new role with the specified permissions.
     /// 
     /// # Parameters
@@ -111,7 +111,7 @@ impl DMSRole {
     /// - `permissions`: Set of permission IDs
     /// 
     /// # Returns
-    /// A new instance of `DMSRole`
+    /// A new instance of `DMSCRole`
     pub fn new(id: String, name: String, description: String, permissions: HashSet<String>) -> Self {
         Self {
             id,
@@ -158,19 +158,19 @@ impl DMSRole {
 /// - User role assignments
 /// - Permission checking for users
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
-pub struct DMSPermissionManager {
-    permissions: RwLock<HashMap<String, DMSPermission>>, // Permission ID -> Permission
-    roles: RwLock<HashMap<String, DMSRole>>,           // Role ID -> Role
+pub struct DMSCPermissionManager {
+    permissions: RwLock<HashMap<String, DMSCPermission>>, // Permission ID -> Permission
+    roles: RwLock<HashMap<String, DMSCRole>>,           // Role ID -> Role
     user_roles: RwLock<HashMap<String, HashSet<String>>>, // User ID -> Role IDs
 }
 
-impl Default for DMSPermissionManager {
+impl Default for DMSCPermissionManager {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl DMSPermissionManager {
+impl DMSCPermissionManager {
     /// Creates a new permission manager with default system roles.
     /// 
     /// Initializes the manager with two default system roles:
@@ -182,7 +182,7 @@ impl DMSPermissionManager {
     /// lazy initialization patterns to avoid blocking the async runtime.
     /// 
     /// # Returns
-    /// A new instance of `DMSPermissionManager`
+    /// A new instance of `DMSCPermissionManager`
     pub fn new() -> Self {
         let mut manager = Self {
             permissions: RwLock::new(HashMap::new()),
@@ -206,7 +206,7 @@ impl DMSPermissionManager {
     /// - `user`: Has basic user permissions
     /// 
     /// # Returns
-    /// A new instance of `DMSPermissionManager`
+    /// A new instance of `DMSCPermissionManager`
     pub async fn new_async() -> Self {
         let manager = Self {
             permissions: RwLock::new(HashMap::new()),
@@ -238,7 +238,7 @@ impl DMSPermissionManager {
             "*".to_string(), // Wildcard permission
         ].into_iter().collect();
         
-        let admin_role = DMSRole {
+        let admin_role = DMSCRole {
             id: "admin".to_string(),
             name: "Administrator".to_string(),
             description: "Full system access".to_string(),
@@ -255,7 +255,7 @@ impl DMSPermissionManager {
             "read:own_data".to_string(),
         ].into_iter().collect();
         
-        let user_role = DMSRole {
+        let user_role = DMSCRole {
             id: "user".to_string(),
             name: "User".to_string(),
             description: "Standard user access".to_string(),
@@ -282,7 +282,7 @@ impl DMSPermissionManager {
             "*".to_string(), // Wildcard permission
         ].into_iter().collect();
         
-        let admin_role = DMSRole {
+        let admin_role = DMSCRole {
             id: "admin".to_string(),
             name: "Administrator".to_string(),
             description: "Full system access".to_string(),
@@ -299,7 +299,7 @@ impl DMSPermissionManager {
             "read:own_data".to_string(),
         ].into_iter().collect();
         
-        let user_role = DMSRole {
+        let user_role = DMSCRole {
             id: "user".to_string(),
             name: "User".to_string(),
             description: "Standard user access".to_string(),
@@ -317,7 +317,7 @@ impl DMSPermissionManager {
     /// 
     /// # Returns
     /// `Ok(())` if the permission was successfully created
-    pub async fn create_permission(&self, permission: DMSPermission) -> crate::core::DMSResult<()> {
+    pub async fn create_permission(&self, permission: DMSCPermission) -> crate::core::DMSCResult<()> {
         let mut permissions = self.permissions.write().await;
         permissions.insert(permission.id.clone(), permission);
         Ok(())
@@ -329,8 +329,8 @@ impl DMSPermissionManager {
     /// - `permission_id`: Permission ID to retrieve
     /// 
     /// # Returns
-    /// `Some(DMSPermission)` if the permission exists, otherwise `None`
-    pub async fn get_permission(&self, permission_id: &str) -> crate::core::DMSResult<Option<DMSPermission>> {
+    /// `Some(DMSCPermission)` if the permission exists, otherwise `None`
+    pub async fn get_permission(&self, permission_id: &str) -> crate::core::DMSCResult<Option<DMSCPermission>> {
         let permissions = self.permissions.read().await;
         Ok(permissions.get(permission_id).cloned())
     }
@@ -342,7 +342,7 @@ impl DMSPermissionManager {
     /// 
     /// # Returns
     /// `Ok(())` if the role was successfully created
-    pub async fn create_role(&self, role: DMSRole) -> crate::core::DMSResult<()> {
+    pub async fn create_role(&self, role: DMSCRole) -> crate::core::DMSCResult<()> {
         let mut roles = self.roles.write().await;
         roles.insert(role.id.clone(), role);
         Ok(())
@@ -354,8 +354,8 @@ impl DMSPermissionManager {
     /// - `role_id`: Role ID to retrieve
     /// 
     /// # Returns
-    /// `Some(DMSRole)` if the role exists, otherwise `None`
-    pub async fn get_role(&self, role_id: &str) -> crate::core::DMSResult<Option<DMSRole>> {
+    /// `Some(DMSCRole)` if the role exists, otherwise `None`
+    pub async fn get_role(&self, role_id: &str) -> crate::core::DMSCResult<Option<DMSCRole>> {
         let roles = self.roles.read().await;
         Ok(roles.get(role_id).cloned())
     }
@@ -368,7 +368,7 @@ impl DMSPermissionManager {
     /// 
     /// # Returns
     /// `true` if the role was successfully assigned, `false` if the role doesn't exist
-    pub async fn assign_role_to_user(&self, user_id: String, role_id: String) -> crate::core::DMSResult<bool> {
+    pub async fn assign_role_to_user(&self, user_id: String, role_id: String) -> crate::core::DMSCResult<bool> {
         // Check if role exists
         let roles = self.roles.read().await;
         if !roles.contains_key(&role_id) {
@@ -390,7 +390,7 @@ impl DMSPermissionManager {
     /// 
     /// # Returns
     /// `true` if the role was successfully removed, `false` if the user didn't have the role
-    pub async fn remove_role_from_user(&self, user_id: &str, role_id: &str) -> crate::core::DMSResult<bool> {
+    pub async fn remove_role_from_user(&self, user_id: &str, role_id: &str) -> crate::core::DMSCResult<bool> {
         let mut user_roles = self.user_roles.write().await;
         
         if let Some(user_role_set) = user_roles.get_mut(user_id) {
@@ -410,8 +410,8 @@ impl DMSPermissionManager {
     /// - `user_id`: User ID to retrieve roles for
     /// 
     /// # Returns
-    /// A vector of `DMSRole` objects assigned to the user
-    pub async fn get_user_roles(&self, user_id: &str) -> crate::core::DMSResult<Vec<DMSRole>> {
+    /// A vector of `DMSCRole` objects assigned to the user
+    pub async fn get_user_roles(&self, user_id: &str) -> crate::core::DMSCResult<Vec<DMSCRole>> {
         let user_roles = self.user_roles.read().await;
         let roles = self.roles.read().await;
         
@@ -440,7 +440,7 @@ impl DMSPermissionManager {
     /// # Notes
     /// - Users with the wildcard permission ("*") have all permissions
     /// - Permission checking is done by examining all roles assigned to the user
-    pub async fn has_permission(&self, user_id: &str, permission_id: &str) -> crate::core::DMSResult<bool> {
+    pub async fn has_permission(&self, user_id: &str, permission_id: &str) -> crate::core::DMSCResult<bool> {
         let user_roles = self.user_roles.read().await;
         let roles = self.roles.read().await;
         
@@ -470,7 +470,7 @@ impl DMSPermissionManager {
     /// 
     /// # Returns
     /// `true` if the user has at least one of the permissions, otherwise `false`
-    pub async fn has_any_permission(&self, user_id: &str, permissions: &[String]) -> crate::core::DMSResult<bool> {
+    pub async fn has_any_permission(&self, user_id: &str, permissions: &[String]) -> crate::core::DMSCResult<bool> {
         for permission in permissions {
             if self.has_permission(user_id, permission).await? {
                 return Ok(true);
@@ -487,7 +487,7 @@ impl DMSPermissionManager {
     /// 
     /// # Returns
     /// `true` if the user has all of the permissions, otherwise `false`
-    pub async fn has_all_permissions(&self, user_id: &str, permissions: &[String]) -> crate::core::DMSResult<bool> {
+    pub async fn has_all_permissions(&self, user_id: &str, permissions: &[String]) -> crate::core::DMSCResult<bool> {
         for permission in permissions {
             if !self.has_permission(user_id, permission).await? {
                 return Ok(false);
@@ -503,7 +503,7 @@ impl DMSPermissionManager {
     /// 
     /// # Returns
     /// A set of permission IDs assigned to the user
-    pub async fn get_user_permissions(&self, user_id: &str) -> crate::core::DMSResult<HashSet<String>> {
+    pub async fn get_user_permissions(&self, user_id: &str) -> crate::core::DMSCResult<HashSet<String>> {
         let user_roles = self.user_roles.read().await;
         let roles = self.roles.read().await;
         
@@ -527,7 +527,7 @@ impl DMSPermissionManager {
     /// 
     /// # Returns
     /// `true` if the permission was successfully deleted, otherwise `false`
-    pub async fn delete_permission(&self, permission_id: &str) -> crate::core::DMSResult<bool> {
+    pub async fn delete_permission(&self, permission_id: &str) -> crate::core::DMSCResult<bool> {
         let mut permissions = self.permissions.write().await;
         Ok(permissions.remove(permission_id).is_some())
     }
@@ -543,7 +543,7 @@ impl DMSPermissionManager {
     /// # Notes
     /// - System roles cannot be deleted
     /// - If the role is deleted, it is removed from all users
-    pub async fn delete_role(&self, role_id: &str) -> crate::core::DMSResult<bool> {
+    pub async fn delete_role(&self, role_id: &str) -> crate::core::DMSCResult<bool> {
         // Don't delete system roles
         let roles = self.roles.read().await;
         if let Some(role) = roles.get(role_id) {
@@ -571,7 +571,7 @@ impl DMSPermissionManager {
     /// 
     /// # Returns
     /// A vector of all registered permissions
-    pub async fn list_permissions(&self) -> crate::core::DMSResult<Vec<DMSPermission>> {
+    pub async fn list_permissions(&self) -> crate::core::DMSCResult<Vec<DMSCPermission>> {
         let permissions = self.permissions.read().await;
         Ok(permissions.values().cloned().collect())
     }
@@ -580,30 +580,30 @@ impl DMSPermissionManager {
     /// 
     /// # Returns
     /// A vector of all registered roles
-    pub async fn list_roles(&self) -> crate::core::DMSResult<Vec<DMSRole>> {
+    pub async fn list_roles(&self) -> crate::core::DMSCResult<Vec<DMSCRole>> {
         let roles = self.roles.read().await;
         Ok(roles.values().cloned().collect())
     }
 }
 
 #[cfg(feature = "pyo3")]
-/// Python bindings for DMSPermissionManager
+/// Python bindings for DMSCPermissionManager
 #[pyo3::prelude::pymethods]
-impl DMSPermissionManager {
+impl DMSCPermissionManager {
     #[new]
     fn py_new() -> PyResult<Self> {
         Ok(Self::new())
     }
     
     /// Create a permission from Python
-    fn create_permission_py(&self, _permission: DMSPermission) -> PyResult<()> {
+    fn create_permission_py(&self, _permission: DMSCPermission) -> PyResult<()> {
         // For now, we'll return an error since we can't easily run async code from Python
         // In a real implementation, you'd want to integrate with Python's async runtime
         Err(pyo3::exceptions::PyRuntimeError::new_err("Async permission creation not supported from Python yet"))
     }
     
     /// Create a role from Python
-    fn create_role_py(&self, _role: DMSRole) -> PyResult<()> {
+    fn create_role_py(&self, _role: DMSCRole) -> PyResult<()> {
         // For now, we'll return an error since we can't easily run async code from Python
         // In a real implementation, you'd want to integrate with Python's async runtime
         Err(pyo3::exceptions::PyRuntimeError::new_err("Async role creation not supported from Python yet"))

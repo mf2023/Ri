@@ -1,7 +1,7 @@
 // Copyright © 2025 Wenze Wei. All Rights Reserved.
 //
-// This file is part of DMS.
-// The DMS project belongs to the Dunimd Team.
+// This file is part of DMSC.
+// The DMSC project belongs to the Dunimd Team.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -15,18 +15,18 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use dms_core::config::{DMSConfig, DMSConfigManager};
+use dmsc::config::{DMSCConfig, DMSCConfigManager};
 use tempfile::tempdir;
 
 #[test]
 fn test_config_new() {
-    let config = DMSConfig::new();
+    let config = DMSCConfig::new();
     assert!(config.get("non_existent_key").is_none());
 }
 
 #[test]
 fn test_config_set_get() {
-    let mut config = DMSConfig::new();
+    let mut config = DMSCConfig::new();
     
     // Test set and get
     config.set("test_key", "test_value");
@@ -38,7 +38,7 @@ fn test_config_set_get() {
 
 #[test]
 fn test_config_get_str() {
-    let mut config = DMSConfig::new();
+    let mut config = DMSCConfig::new();
     
     config.set("string_key", "string_value");
     assert_eq!(config.get_str("string_key"), Some("string_value"));
@@ -47,7 +47,7 @@ fn test_config_get_str() {
 
 #[test]
 fn test_config_get_bool() {
-    let mut config = DMSConfig::new();
+    let mut config = DMSCConfig::new();
     
     // Test true values
     let true_values = ["true", "1", "yes", "on"];
@@ -73,7 +73,7 @@ fn test_config_get_bool() {
 
 #[test]
 fn test_config_get_i64() {
-    let mut config = DMSConfig::new();
+    let mut config = DMSCConfig::new();
     
     // Test valid i64 values
     config.set("i64_key_positive", "123");
@@ -92,7 +92,7 @@ fn test_config_get_i64() {
 
 #[test]
 fn test_config_get_u64() {
-    let mut config = DMSConfig::new();
+    let mut config = DMSCConfig::new();
     
     // Test valid u64 values
     config.set("u64_key", "123");
@@ -112,7 +112,7 @@ fn test_config_get_u64() {
 
 #[test]
 fn test_config_get_f32() {
-    let mut config = DMSConfig::new();
+    let mut config = DMSCConfig::new();
     
     // Test valid f32 values
     config.set("f32_key_int", "123");
@@ -134,11 +134,11 @@ fn test_config_get_f32() {
 
 #[test]
 fn test_config_merge() {
-    let mut config1 = DMSConfig::new();
+    let mut config1 = DMSCConfig::new();
     config1.set("key1", "value1");
     config1.set("key2", "value2");
     
-    let mut config2 = DMSConfig::new();
+    let mut config2 = DMSCConfig::new();
     config2.set("key2", "new_value2");
     config2.set("key3", "value3");
     
@@ -151,7 +151,7 @@ fn test_config_merge() {
 
 #[test]
 fn test_config_clear() {
-    let mut config = DMSConfig::new();
+    let mut config = DMSCConfig::new();
     config.set("key1", "value1");
     config.set("key2", "value2");
     
@@ -166,7 +166,7 @@ fn test_config_clear() {
 
 #[test]
 fn test_config_manager_new() {
-    let manager = DMSConfigManager::new();
+    let manager = DMSCConfigManager::new();
     // Just test that creation works without panicking
     assert!(manager.config().get_str("non_existent_key").is_none());
 }
@@ -174,7 +174,7 @@ fn test_config_manager_new() {
 #[test]
 fn test_config_manager_add_sources() {
     let temp_dir = tempdir().unwrap();
-    let mut manager = DMSConfigManager::new();
+    let mut manager = DMSCConfigManager::new();
     
     // Test adding file source
     let file_path = temp_dir.path().join("test_config.yaml");
@@ -189,14 +189,14 @@ fn test_config_manager_add_sources() {
 
 #[test]
 fn test_config_manager_new_default() {
-    let manager = DMSConfigManager::new_default();
+    let manager = DMSCConfigManager::new_default();
     // Just test that creation works without panicking
     assert!(manager.config().get_str("non_existent_key").is_none());
 }
 
 #[test]
 fn test_config_manager_config_access() {
-    let mut manager = DMSConfigManager::new();
+    let mut manager = DMSCConfigManager::new();
     
     // Test config() method
     let config = manager.config();
@@ -212,7 +212,7 @@ fn test_config_manager_config_access() {
 
 #[tokio::test]
 async fn test_config_manager_start_watcher() {
-    let mut manager = DMSConfigManager::new();
+    let mut manager = DMSCConfigManager::new();
     // Just test that the simplified implementation works without panicking
     assert!(manager.start_watcher().await.is_ok());
 }

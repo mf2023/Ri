@@ -30,7 +30,7 @@ storage模块包含以下子模块：
 
 </div>
 
-### DMSStorageManager
+### DMSCStorageManager
 
 存储管理器主接口，提供统一的存储访问。
 
@@ -38,16 +38,16 @@ storage模块包含以下子模块：
 
 | 方法 | 描述 | 参数 | 返回值 |
 |:--------|:-------------|:--------|:--------|
-| `put(key, data)` | 上传数据 | `key: &str`, `data: &[u8]` | `DMSResult<()>` |
-| `put_stream(key, stream)` | 流式上传 | `key: &str`, `stream: impl AsyncRead` | `DMSResult<()>` |
-| `get(key)` | 下载数据 | `key: &str` | `DMSResult<Vec<u8>>` |
-| `get_stream(key)` | 流式下载 | `key: &str` | `DMSResult<impl AsyncRead>` |
-| `delete(key)` | 删除对象 | `key: &str` | `DMSResult<()>` |
-| `exists(key)` | 检查存在 | `key: &str` | `DMSResult<bool>` |
-| `metadata(key)` | 获取元数据 | `key: &str` | `DMSResult<DMSStorageMetadata>` |
-| `list(prefix)` | 列出对象 | `prefix: &str` | `DMSResult<Vec<DMSStorageObject>>` |
-| `copy(source, dest)` | 复制对象 | `source: &str`, `dest: &str` | `DMSResult<()>` |
-| `move_object(source, dest)` | 移动对象 | `source: &str`, `dest: &str` | `DMSResult<()>` |
+| `put(key, data)` | 上传数据 | `key: &str`, `data: &[u8]` | `DMSCResult<()>` |
+| `put_stream(key, stream)` | 流式上传 | `key: &str`, `stream: impl AsyncRead` | `DMSCResult<()>` |
+| `get(key)` | 下载数据 | `key: &str` | `DMSCResult<Vec<u8>>` |
+| `get_stream(key)` | 流式下载 | `key: &str` | `DMSCResult<impl AsyncRead>` |
+| `delete(key)` | 删除对象 | `key: &str` | `DMSCResult<()>` |
+| `exists(key)` | 检查存在 | `key: &str` | `DMSCResult<bool>` |
+| `metadata(key)` | 获取元数据 | `key: &str` | `DMSCResult<DMSCStorageMetadata>` |
+| `list(prefix)` | 列出对象 | `prefix: &str` | `DMSCResult<Vec<DMSCStorageObject>>` |
+| `copy(source, dest)` | 复制对象 | `source: &str`, `dest: &str` | `DMSCResult<()>` |
+| `move_object(source, dest)` | 移动对象 | `source: &str`, `dest: &str` | `DMSCResult<()>` |
 
 #### 使用示例
 
@@ -109,7 +109,7 @@ ctx.storage().delete("documents/test_backup.txt").await?;
 ctx.log().info("File deleted successfully");
 ```
 
-### DMSStorageConfig
+### DMSCStorageConfig
 
 存储配置结构体。
 
@@ -117,14 +117,14 @@ ctx.log().info("File deleted successfully");
 
 | 字段 | 类型 | 描述 | 默认值 |
 |:--------|:-----|:-------------|:-------|
-| `backend` | `DMSStorageBackend` | 存储后端 | `Local` |
+| `backend` | `DMSCStorageBackend` | 存储后端 | `Local` |
 | `bucket` | `String` | 存储桶名称 | `"default"` |
 | `region` | `String` | 存储区域 | `"us-east-1"` |
 | `endpoint` | `String` | 存储端点 | 后端默认值 |
 | `access_key` | `String` | 访问密钥 | 可选 |
 | `secret_key` | `String` | 密钥 | 可选 |
-| `encryption` | `DMSStorageEncryption` | 加密配置 | 可选 |
-| `compression` | `DMSStorageCompression` | 压缩配置 | 可选 |
+| `encryption` | `DMSCStorageEncryption` | 加密配置 | 可选 |
+| `compression` | `DMSCStorageCompression` | 压缩配置 | 可选 |
 | `max_file_size` | `u64` | 最大文件大小 | `100MB` |
 | `chunk_size` | `u64` | 分块大小 | `5MB` |
 
@@ -134,8 +134,8 @@ ctx.log().info("File deleted successfully");
 use dms::prelude::*;
 
 // 本地存储配置
-let local_config = DMSStorageConfig {
-    backend: DMSStorageBackend::Local,
+let local_config = DMSCStorageConfig {
+    backend: DMSCStorageBackend::Local,
     bucket: "local_files".to_string(),
     endpoint: "/var/lib/dms/storage".to_string(),
     max_file_size: 1024 * 1024 * 1024, // 1GB
@@ -144,31 +144,31 @@ let local_config = DMSStorageConfig {
 };
 
 // S3配置
-let s3_config = DMSStorageConfig {
-    backend: DMSStorageBackend::S3,
+let s3_config = DMSCStorageConfig {
+    backend: DMSCStorageBackend::S3,
     bucket: "my-app-bucket".to_string(),
     region: "us-west-2".to_string(),
     endpoint: "https://s3.amazonaws.com".to_string(),
     access_key: "AKIAIOSFODNN7EXAMPLE".to_string(),
     secret_key: "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY".to_string(),
-    encryption: Some(DMSStorageEncryption::ServerSide),
+    encryption: Some(DMSCStorageEncryption::ServerSide),
     max_file_size: 5 * 1024 * 1024 * 1024, // 5GB
     chunk_size: 10 * 1024 * 1024, // 10MB
 };
 
 // Azure Blob配置
-let azure_config = DMSStorageConfig {
-    backend: DMSStorageBackend::Azure,
+let azure_config = DMSCStorageConfig {
+    backend: DMSCStorageBackend::Azure,
     bucket: "my-container".to_string(),
     endpoint: "https://mystorageaccount.blob.core.windows.net".to_string(),
     access_key: "DefaultEndpointsProtocol=https;AccountName=mystorageaccount;AccountKey=example...".to_string(),
-    encryption: Some(DMSStorageEncryption::ClientSide),
+    encryption: Some(DMSCStorageEncryption::ClientSide),
     ..Default::default()
 };
 
 // Google Cloud Storage配置
-let gcs_config = DMSStorageConfig {
-    backend: DMSStorageBackend::GCS,
+let gcs_config = DMSCStorageConfig {
+    backend: DMSCStorageBackend::GCS,
     bucket: "my-gcs-bucket".to_string(),
     region: "us-central1".to_string(),
     endpoint: "https://storage.googleapis.com".to_string(),
@@ -177,7 +177,7 @@ let gcs_config = DMSStorageConfig {
 };
 ```
 
-### DMSStorageBackend
+### DMSCStorageBackend
 
 存储后端枚举。
 
@@ -205,7 +205,7 @@ use dms::prelude::*;
 use tokio::fs::File;
 
 // 处理多文件上传
-async fn handle_file_upload(files: Vec<UploadFile>) -> DMSResult<Vec<String>> {
+async fn handle_file_upload(files: Vec<UploadFile>) -> DMSCResult<Vec<String>> {
     let mut uploaded_keys = Vec::new();
     
     for file in files {
@@ -213,12 +213,12 @@ async fn handle_file_upload(files: Vec<UploadFile>) -> DMSResult<Vec<String>> {
         
         // 验证文件类型
         if !is_allowed_file_type(&file.content_type) {
-            return Err(DMSError::validation(format!("File type not allowed: {}", file.content_type)));
+            return Err(DMSCError::validation(format!("File type not allowed: {}", file.content_type)));
         }
         
         // 验证文件大小
         if file.size > 10 * 1024 * 1024 { // 10MB limit
-            return Err(DMSError::validation("File too large".to_string()));
+            return Err(DMSCError::validation("File too large".to_string()));
         }
         
         // 上传文件
@@ -281,7 +281,7 @@ loop {
         &chunk
     ).await?;
     
-    uploaded_parts.push(DMSUploadedPart {
+    uploaded_parts.push(DMSCUploadedPart {
         part_number,
         etag: part_etag,
     });
@@ -307,7 +307,7 @@ use dms::prelude::*;
 use tokio::io::AsyncWriteExt;
 
 // 断点续传下载
-async fn resumable_download(key: &str, output_path: &str) -> DMSResult<()> {
+async fn resumable_download(key: &str, output_path: &str) -> DMSCResult<()> {
     let metadata = ctx.storage().metadata(key).await?;
     let total_size = metadata.size;
     
@@ -359,7 +359,7 @@ use dms::prelude::*;
 // 生成临时下载URL
 let download_url = ctx.storage().generate_presigned_url(
     "documents/confidential.pdf",
-    DMSPresignedUrlOperation::Get,
+    DMSCPresignedUrlOperation::Get,
     Duration::from_hours(1) // 1小时有效期
 ).await?;
 
@@ -368,7 +368,7 @@ ctx.log().info(format!("Generated presigned URL: {}", download_url));
 // 生成临时上传URL
 let upload_url = ctx.storage().generate_presigned_url(
     "uploads/user_upload_{}.jpg",
-    DMSPresignedUrlOperation::Put,
+    DMSCPresignedUrlOperation::Put,
     Duration::from_minutes(30) // 30分钟有效期
 ).await?;
 
@@ -449,14 +449,14 @@ ctx.storage().remove_tag("documents/report.pdf", "project:alpha").await?;
 use dms::prelude::*;
 
 // 配置客户端加密
-let encryption_config = DMSStorageEncryption::ClientSide {
-    algorithm: DMSStorageEncryptionAlgorithm::AES256GCM,
+let encryption_config = DMSCStorageEncryption::ClientSide {
+    algorithm: DMSCStorageEncryptionAlgorithm::AES256GCM,
     key_id: "my-encryption-key".to_string(),
     key_rotation: Duration::from_days(90),
 };
 
-let mut storage_config = DMSStorageConfig {
-    backend: DMSStorageBackend::S3,
+let mut storage_config = DMSCStorageConfig {
+    backend: DMSCStorageBackend::S3,
     bucket: "encrypted-bucket".to_string(),
     encryption: Some(encryption_config),
     ..Default::default()
@@ -481,7 +481,7 @@ use dms::prelude::*;
 let data_key = ctx.storage().generate_data_encryption_key()?;
 
 // 使用KMS加密密钥
-let kms_config = DMSKMSConfig {
+let kms_config = DMSCKMSConfig {
     key_id: "arn:aws:kms:us-west-2:123456789012:key/12345678-1234-1234-1234-123456789012",
     region: "us-west-2".to_string(),
     endpoint: Some("https://kms.us-west-2.amazonaws.com".to_string()),
@@ -503,15 +503,15 @@ let decrypted_key = ctx.storage().decrypt_with_kms(&encrypted_key, &kms_config).
 use dms::prelude::*;
 
 // 配置自动压缩
-let compression_config = DMSStorageCompression {
+let compression_config = DMSCStorageCompression {
     enabled: true,
-    algorithm: DMSStorageCompressionAlgorithm::Gzip,
+    algorithm: DMSCStorageCompressionAlgorithm::Gzip,
     threshold: 1024, // 1KB以上文件才压缩
     extensions: vec!["txt".to_string(), "json".to_string(), "xml".to_string(), "csv".to_string()],
 };
 
-let mut storage_config = DMSStorageConfig {
-    backend: DMSStorageBackend::S3,
+let mut storage_config = DMSCStorageConfig {
+    backend: DMSCStorageBackend::S3,
     bucket: "compressed-bucket".to_string(),
     compression: Some(compression_config),
     ..Default::default()
@@ -539,33 +539,33 @@ use dms::prelude::*;
 
 // 配置生命周期规则
 let lifecycle_rules = vec![
-    DMSStorageLifecycleRule {
+    DMSCStorageLifecycleRule {
         name: "old_files_to_ia".to_string(),
         prefix: "logs/".to_string(),
         transitions: vec![
-            DMSTransition {
+            DMSCTransition {
                 days: 30,
-                storage_class: DMSStorageClass::InfrequentAccess,
+                storage_class: DMSCStorageClass::InfrequentAccess,
             },
-            DMSTransition {
+            DMSCTransition {
                 days: 90,
-                storage_class: DMSStorageClass::Glacier,
+                storage_class: DMSCStorageClass::Glacier,
             },
         ],
-        expiration: Some(DMSExpiration { days: 365 }),
+        expiration: Some(DMSCExpiration { days: 365 }),
     },
-    DMSStorageLifecycleRule {
+    DMSCStorageLifecycleRule {
         name: "temp_files_cleanup".to_string(),
         prefix: "temp/".to_string(),
         transitions: vec![],
-        expiration: Some(DMSExpiration { days: 7 }),
+        expiration: Some(DMSCExpiration { days: 7 }),
     },
 ];
 
 ctx.storage().set_lifecycle_rules(&lifecycle_rules).await?;
 
 // 手动转换存储类别
-ctx.storage().change_storage_class("old_document.pdf", DMSStorageClass::Glacier).await?;
+ctx.storage().change_storage_class("old_document.pdf", DMSCStorageClass::Glacier).await?;
 ```
 
 <div align="center">
@@ -668,13 +668,13 @@ match ctx.storage().get("important_file.pdf").await {
         ctx.log().info("File retrieved successfully");
         // 处理文件数据
     }
-    Err(DMSError { code, .. }) if code == "STORAGE_NOT_FOUND" => {
+    Err(DMSCError { code, .. }) if code == "STORAGE_NOT_FOUND" => {
         ctx.log().warn("File not found, using default");
         // 使用默认文件或返回错误
         let default_data = get_default_file_data();
         // ...
     }
-    Err(DMSError { code, .. }) if code == "STORAGE_CONNECTION_ERROR" => {
+    Err(DMSCError { code, .. }) if code == "STORAGE_CONNECTION_ERROR" => {
         ctx.log().error("Storage connection failed");
         // 尝试备用存储
         ctx.storage().use_backup_storage()?;

@@ -1,7 +1,7 @@
 //! Copyright © 2025 Wenze Wei. All Rights Reserved.
 //! 
-//! This file is part of DMS.
-//! The DMS project belongs to the Dunimd Team.
+//! This file is part of DMSC.
+//! The DMSC project belongs to the Dunimd Team.
 //! 
 //! Licensed under the Apache License, Version 2.0 (the "License");
 //! You may not use this file except in compliance with the License.
@@ -18,15 +18,15 @@
 use std::time::{Instant, Duration};
 use std::collections::{HashMap, VecDeque};
 use serde::{Serialize, Deserialize};
-use crate::device::{DMSDevice, DMSDeviceType, DMSDeviceCapabilities};
+use crate::device::{DMSCDevice, DMSCDeviceType, DMSCDeviceCapabilities};
 
 /// # Device Discovery and Resource Scheduling
 /// 
-/// This file implements advanced device discovery and resource scheduling algorithms for DMS.
+/// This file implements advanced device discovery and resource scheduling algorithms for DMSC.
 /// It provides two main components:
 /// 
-/// 1. **DMSDeviceDiscoveryEngine**: Advanced device discovery using machine learning and heuristics
-/// 2. **DMSResourceScheduler**: Resource scheduling algorithm using performance history and policies
+/// 1. **DMSCDeviceDiscoveryEngine**: Advanced device discovery using machine learning and heuristics
+/// 2. **DMSCResourceScheduler**: Resource scheduling algorithm using performance history and policies
 /// 
 /// ## Design Principles
 /// 
@@ -40,11 +40,11 @@ use crate::device::{DMSDevice, DMSDeviceType, DMSDeviceCapabilities};
 /// ## Usage Examples
 /// 
 /// ```rust
-/// use dms::device::{DMSDeviceDiscoveryEngine, DMSResourceScheduler, ResourceRequest, DeviceScanResult};
+/// use dms::device::{DMSCDeviceDiscoveryEngine, DMSCResourceScheduler, ResourceRequest, DeviceScanResult};
 /// 
 /// fn example() {
 ///     // Create discovery engine
-///     let mut discovery_engine = DMSDeviceDiscoveryEngine::new();
+///     let mut discovery_engine = DMSCDeviceDiscoveryEngine::new();
 ///     
 ///     // Create scan results
 ///     let scan_results = vec![
@@ -62,7 +62,7 @@ use crate::device::{DMSDevice, DMSDeviceType, DMSDeviceCapabilities};
 ///     let discovered_devices = discovery_engine.discover_devices(scan_results);
 ///     
 ///     // Create resource scheduler
-///     let mut scheduler = DMSResourceScheduler::new();
+///     let mut scheduler = DMSCResourceScheduler::new();
 ///     
 ///     // Create resource request
 ///     let request = ResourceRequest {
@@ -81,14 +81,13 @@ use crate::device::{DMSDevice, DMSDeviceType, DMSDeviceCapabilities};
 ///     let assigned_device = scheduler.schedule_resource(&request, &discovered_devices);
 /// }
 /// ```
-
 /// Advanced device discovery algorithm using machine learning and heuristics
 /// 
 /// This engine uses pattern recognition, confidence scoring, and historical data to identify
 /// devices with high accuracy. It maintains a database of device fingerprints and uses
 /// them to match discovered devices based on identification patterns.
 #[derive(Debug, Clone)]
-pub struct DMSDeviceDiscoveryEngine {
+pub struct DMSCDeviceDiscoveryEngine {
     /// Device fingerprint database mapping fingerprint IDs to their details
     fingerprints: HashMap<String, DeviceFingerprint>,
     /// Discovery history for pattern recognition and learning
@@ -104,9 +103,9 @@ pub struct DMSDeviceDiscoveryEngine {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 struct DeviceFingerprint {
     /// Type of device this fingerprint identifies
-    device_type: DMSDeviceType,
+    device_type: DMSCDeviceType,
     /// Capabilities associated with this device type
-    capabilities: DMSDeviceCapabilities,
+    capabilities: DMSCDeviceCapabilities,
     /// Identification patterns used to match this device type
     identification_patterns: Vec<IdentificationPattern>,
     /// Base confidence score for this fingerprint
@@ -142,18 +141,18 @@ struct DiscoveryRecord {
     /// Device information collected during discovery
     device_info: HashMap<String, String>,
     /// Identified device type (if confidence threshold was met)
-    identified_type: Option<DMSDeviceType>,
+    identified_type: Option<DMSCDeviceType>,
     /// Confidence score for the identification
     confidence: f64,
 }
 
-impl Default for DMSDeviceDiscoveryEngine {
+impl Default for DMSCDeviceDiscoveryEngine {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl DMSDeviceDiscoveryEngine {
+impl DMSCDeviceDiscoveryEngine {
     /// Create a new device discovery engine with default settings.
     /// 
     /// This method initializes the engine with default device fingerprints and sets up
@@ -161,7 +160,7 @@ impl DMSDeviceDiscoveryEngine {
     /// 
     /// # Returns
     /// 
-    /// A new `DMSDeviceDiscoveryEngine` instance with default fingerprints and settings.
+    /// A new `DMSCDeviceDiscoveryEngine` instance with default fingerprints and settings.
     pub fn new() -> Self {
         let mut engine = Self {
             fingerprints: HashMap::new(),
@@ -185,8 +184,8 @@ impl DMSDeviceDiscoveryEngine {
     /// 
     /// # Returns
     /// 
-    /// A vector of discovered `DMSDevice` instances with identified types and capabilities.
-    pub fn discover_devices(&mut self, scan_results: Vec<DeviceScanResult>) -> Vec<DMSDevice> {
+    /// A vector of discovered `DMSCDevice` instances with identified types and capabilities.
+    pub fn discover_devices(&mut self, scan_results: Vec<DeviceScanResult>) -> Vec<DMSCDevice> {
         let mut discovered_devices = Vec::new();
         
         for scan_result in scan_results {
@@ -210,9 +209,9 @@ impl DMSDeviceDiscoveryEngine {
     /// 
     /// # Returns
     /// 
-    /// An `Option<DMSDevice>` containing the identified device if a match was found with
+    /// An `Option<DMSCDevice>` containing the identified device if a match was found with
     /// sufficient confidence, or `None` if no match was found.
-    fn identify_device(&mut self, scan_result: DeviceScanResult) -> Option<DMSDevice> {
+    fn identify_device(&mut self, scan_result: DeviceScanResult) -> Option<DMSCDevice> {
         let device_info = scan_result.device_info;
         
         // Try to match against known fingerprints
@@ -235,7 +234,7 @@ impl DMSDeviceDiscoveryEngine {
         if let Some((fingerprint_id, confidence)) = best_match {
             let fingerprint = self.fingerprints.get(&fingerprint_id).unwrap();
             
-            let device = DMSDevice::new(
+            let device = DMSCDevice::new(
                 scan_result.device_name.clone(),
                 fingerprint.device_type,
             ).with_capabilities(fingerprint.capabilities.clone());
@@ -327,7 +326,7 @@ impl DMSDeviceDiscoveryEngine {
     /// - `device_info`: Device information collected during discovery
     /// - `identified_type`: Identified device type (if any)
     /// - `confidence`: Confidence score for the identification
-    fn record_discovery(&mut self, device_id: String, device_info: HashMap<String, String>, identified_type: Option<DMSDeviceType>, confidence: f64) {
+    fn record_discovery(&mut self, device_id: String, device_info: HashMap<String, String>, identified_type: Option<DMSCDeviceType>, confidence: f64) {
         let record = DiscoveryRecord {
             timestamp: std::time::SystemTime::now()
                 .duration_since(std::time::UNIX_EPOCH)
@@ -355,8 +354,8 @@ impl DMSDeviceDiscoveryEngine {
     fn initialize_default_fingerprints(&mut self) {
         // GPU Device Fingerprint
         let gpu_fingerprint = DeviceFingerprint {
-            device_type: DMSDeviceType::GPU,
-            capabilities: DMSDeviceCapabilities {
+            device_type: DMSCDeviceType::GPU,
+            capabilities: DMSCDeviceCapabilities {
                 memory_gb: Some(16.0),
                 compute_units: Some(512),
                 storage_gb: Some(500.0),
@@ -380,8 +379,8 @@ impl DMSDeviceDiscoveryEngine {
         
         // TPU Device Fingerprint
         let tpu_fingerprint = DeviceFingerprint {
-            device_type: DMSDeviceType::Custom, // Using Custom for TPU until we have a proper TPU type
-            capabilities: DMSDeviceCapabilities {
+            device_type: DMSCDeviceType::Custom, // Using Custom for TPU until we have a proper TPU type
+            capabilities: DMSCDeviceCapabilities {
                 memory_gb: Some(32.0),
                 compute_units: Some(128),
                 storage_gb: Some(1000.0),
@@ -479,7 +478,7 @@ pub struct DiscoveryStats {
 /// This scheduler uses device performance history, current load, and custom policies
 /// to intelligently allocate resources to the most suitable devices.
 #[derive(Debug, Clone)]
-pub struct DMSResourceScheduler {
+pub struct DMSCResourceScheduler {
     /// Device performance history mapping device IDs to performance records
     performance_history: HashMap<String, Vec<PerformanceRecord>>,
     /// Current device loads (0.0 to 1.0)
@@ -551,13 +550,13 @@ enum PolicyAction {
     PriorityBased,
 }
 
-impl Default for DMSResourceScheduler {
+impl Default for DMSCResourceScheduler {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl DMSResourceScheduler {
+impl DMSCResourceScheduler {
     /// Create a new resource scheduler with default settings.
     /// 
     /// This method initializes the scheduler with empty performance history, device loads,
@@ -565,7 +564,7 @@ impl DMSResourceScheduler {
     /// 
     /// # Returns
     /// 
-    /// A new `DMSResourceScheduler` instance with default settings.
+    /// A new `DMSCResourceScheduler` instance with default settings.
     pub fn new() -> Self {
         Self {
             performance_history: HashMap::new(),
@@ -590,10 +589,10 @@ impl DMSResourceScheduler {
     pub fn schedule_resource(
         &mut self,
         request: &ResourceRequest,
-        available_devices: &[DMSDevice],
+        available_devices: &[DMSCDevice],
     ) -> Option<String> {
         // Filter devices that meet requirements
-        let suitable_devices: Vec<&DMSDevice> = available_devices
+        let suitable_devices: Vec<&DMSCDevice> = available_devices
             .iter()
             .filter(|device| self.meets_requirements(device, request))
             .collect();
@@ -631,7 +630,7 @@ impl DMSResourceScheduler {
     /// # Returns
     /// 
     /// `true` if the device meets all requirements, `false` otherwise.
-    fn meets_requirements(&self, device: &DMSDevice, request: &ResourceRequest) -> bool {
+    fn meets_requirements(&self, device: &DMSCDevice, request: &ResourceRequest) -> bool {
         let capabilities = device.capabilities();
         
         // Check memory requirement
@@ -699,7 +698,7 @@ impl DMSResourceScheduler {
     /// # Returns
     /// 
     /// A score between 0.0 and potentially over 100.0, where higher scores indicate better suitability.
-    fn calculate_device_score(&self, device: &DMSDevice, request: &ResourceRequest) -> f64 {
+    fn calculate_device_score(&self, device: &DMSCDevice, request: &ResourceRequest) -> f64 {
         let device_id = device.id();
         let base_score = 100.0;
         let mut score = base_score;
@@ -773,7 +772,7 @@ impl DMSResourceScheduler {
         }
         
         // Ensure score is within reasonable bounds
-        score.max(0.0).min(200.0)
+        score.clamp(0.0, 200.0)
     }
     
     /// Apply policy-based score adjustments to a device's score.
@@ -793,7 +792,7 @@ impl DMSResourceScheduler {
     /// The updated score after applying the policy adjustment.
     fn apply_policy_score_adjustment(
         &self,
-        device: &DMSDevice,
+        device: &DMSCDevice,
         request: &ResourceRequest,
         policy: &SchedulingPolicy,
         current_score: f64,
@@ -851,7 +850,7 @@ impl DMSResourceScheduler {
     /// `true` if the condition is met, `false` otherwise.
     fn evaluate_condition(
         &self,
-        device: &DMSDevice,
+        device: &DMSCDevice,
         request: &ResourceRequest,
         condition: &PolicyCondition,
     ) -> bool {
@@ -859,14 +858,14 @@ impl DMSResourceScheduler {
             "device_type" => {
                 // Convert device type to numeric value for comparison
                 match device.device_type() {
-                    DMSDeviceType::GPU => 1.0,
-                    DMSDeviceType::Memory => 2.0,
-                    DMSDeviceType::CPU => 3.0,
-                    DMSDeviceType::Storage => 4.0,
-                    DMSDeviceType::Network => 5.0,
-                    DMSDeviceType::Sensor => 6.0,
-                    DMSDeviceType::Actuator => 7.0,
-                    DMSDeviceType::Custom => 8.0,
+                    DMSCDeviceType::GPU => 1.0,
+                    DMSCDeviceType::Memory => 2.0,
+                    DMSCDeviceType::CPU => 3.0,
+                    DMSCDeviceType::Storage => 4.0,
+                    DMSCDeviceType::Network => 5.0,
+                    DMSCDeviceType::Sensor => 6.0,
+                    DMSCDeviceType::Actuator => 7.0,
+                    DMSCDeviceType::Custom => 8.0,
                 }
             }
             "request_priority" => request.priority as f64,

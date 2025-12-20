@@ -1,7 +1,7 @@
 //! Copyright © 2025 Wenze Wei. All Rights Reserved.
 //!
-//! This file is part of DMS.
-//! The DMS project belongs to the Dunimd Team.
+//! This file is part of DMSC.
+//! The DMSC project belongs to the Dunimd Team.
 //!
 //! Licensed under the Apache License, Version 2.0 (the "License");
 //! You may not use this file except in compliance with the License.
@@ -19,13 +19,13 @@
 
 //! # Log Analytics Module
 //! 
-//! This module provides logging analytics functionality for DMS, tracking hook events and generating
+//! This module provides logging analytics functionality for DMSC, tracking hook events and generating
 //! comprehensive analytics reports. It implements a service module that monitors the application
 //! lifecycle and generates JSON reports with event statistics.
 //! 
 //! ## Key Components
 //! 
-//! - **DMSLogAnalyticsModule**: Main analytics module that implements `ServiceModule`
+//! - **DMSCLogAnalyticsModule**: Main analytics module that implements `ServiceModule`
 //! - **AnalyticsState**: Internal struct for tracking analytics data
 //! 
 //! ## Design Principles
@@ -41,8 +41,8 @@ use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 use std::time::{SystemTime, UNIX_EPOCH};
 
-use crate::core::{DMSResult, DMSServiceContext, DMSError, ServiceModule};
-use crate::hooks::{DMSHookBus, DMSHookEvent, DMSHookKind};
+use crate::core::{DMSCResult, DMSCServiceContext, DMSCError, ServiceModule};
+use crate::hooks::{DMSCHookBus, DMSCHookEvent, DMSCHookKind};
 use serde_json::json;
 
 /// Internal analytics state struct.
@@ -64,14 +64,14 @@ struct AnalyticsState {
     per_module: HashMap<String, u64>,
 }
 
-/// Log analytics module for DMS.
+/// Log analytics module for DMSC.
 /// 
 /// This module implements the `ServiceModule` trait and provides analytics functionality
 /// by listening to hook events and generating comprehensive reports.
 /// 
 /// ## Usage
 /// 
-/// The module is automatically added by the `DMSAppBuilder` and doesn't need to be explicitly
+/// The module is automatically added by the `DMSCAppBuilder` and doesn't need to be explicitly
 /// configured in most cases. It can be enabled/disabled through the configuration file.
 /// 
 /// ## Configuration
@@ -80,25 +80,25 @@ struct AnalyticsState {
 /// analytics:
 ///   enabled: true  # Enable or disable analytics
 /// ```
-pub struct DMSLogAnalyticsModule {
+pub struct DMSCLogAnalyticsModule {
     /// Shared analytics state protected by a mutex
     state: Arc<Mutex<AnalyticsState>>,
     /// Whether analytics is enabled
     enabled: bool,
 }
 
-impl Default for DMSLogAnalyticsModule {
+impl Default for DMSCLogAnalyticsModule {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl DMSLogAnalyticsModule {
+impl DMSCLogAnalyticsModule {
     /// Creates a new instance of the log analytics module.
     /// 
-    /// Returns a new `DMSLogAnalyticsModule` with default settings.
+    /// Returns a new `DMSCLogAnalyticsModule` with default settings.
     pub fn new() -> Self {
-        DMSLogAnalyticsModule {
+        DMSCLogAnalyticsModule {
             state: Arc::new(Mutex::new(AnalyticsState::default())),
             enabled: true,
         }
@@ -108,9 +108,9 @@ impl DMSLogAnalyticsModule {
     /// 
     /// This method returns a static slice of all hook kinds that the analytics module
     /// registers handlers for.
-    fn all_kinds() -> &'static [DMSHookKind] {
-        use DMSHookKind::*;
-        const KINDS: [DMSHookKind; 8] = [
+    fn all_kinds() -> &'static [DMSCHookKind] {
+        use DMSCHookKind::*;
+        const KINDS: [DMSCHookKind; 8] = [
             Startup,
             Shutdown,
             BeforeModulesInit,
@@ -125,7 +125,7 @@ impl DMSLogAnalyticsModule {
 
     /// Returns a string label for the given hook kind.
     /// 
-    /// This method converts a `DMSHookKind` enum variant to a human-readable string.
+    /// This method converts a `DMSCHookKind` enum variant to a human-readable string.
     /// 
     /// # Parameters
     /// 
@@ -134,16 +134,16 @@ impl DMSLogAnalyticsModule {
     /// # Returns
     /// 
     /// A static string label for the hook kind
-    fn kind_label(kind: DMSHookKind) -> &'static str {
+    fn kind_label(kind: DMSCHookKind) -> &'static str {
         match kind {
-            DMSHookKind::Startup => "Startup",
-            DMSHookKind::Shutdown => "Shutdown",
-            DMSHookKind::BeforeModulesInit => "BeforeModulesInit",
-            DMSHookKind::AfterModulesInit => "AfterModulesInit",
-            DMSHookKind::BeforeModulesStart => "BeforeModulesStart",
-            DMSHookKind::AfterModulesStart => "AfterModulesStart",
-            DMSHookKind::BeforeModulesShutdown => "BeforeModulesShutdown",
-            DMSHookKind::AfterModulesShutdown => "AfterModulesShutdown",
+            DMSCHookKind::Startup => "Startup",
+            DMSCHookKind::Shutdown => "Shutdown",
+            DMSCHookKind::BeforeModulesInit => "BeforeModulesInit",
+            DMSCHookKind::AfterModulesInit => "AfterModulesInit",
+            DMSCHookKind::BeforeModulesStart => "BeforeModulesStart",
+            DMSCHookKind::AfterModulesStart => "AfterModulesStart",
+            DMSCHookKind::BeforeModulesShutdown => "BeforeModulesShutdown",
+            DMSCHookKind::AfterModulesShutdown => "AfterModulesShutdown",
         }
     }
 
@@ -155,14 +155,14 @@ impl DMSLogAnalyticsModule {
     /// # Parameters
     /// 
     /// - `hooks`: The hook bus to register handlers with
-    fn register_handlers(&self, hooks: &mut DMSHookBus) {
+    fn register_handlers(&self, hooks: &mut DMSCHookBus) {
         for kind in Self::all_kinds() {
             let state = self.state.clone();
             let id = format!("dms.analytics.{}", Self::kind_label(*kind));
-            hooks.register(*kind, id, move |_ctx, event: &DMSHookEvent| {
+            hooks.register(*kind, id, move |_ctx, event: &DMSCHookEvent| {
                 let mut guard = state
                     .lock()
-                    .map_err(|_| DMSError::Other("analytics state poisoned".to_string()))?;
+                    .map_err(|_| DMSCError::Other("analytics state poisoned".to_string()))?;
                 guard.total_events = guard.total_events.saturating_add(1);
                 let kind_label = Self::kind_label(event.kind).to_string();
                 *guard.per_kind.entry(kind_label).or_insert(0) += 1;
@@ -188,13 +188,13 @@ impl DMSLogAnalyticsModule {
     /// 
     /// # Returns
     /// 
-    /// A `DMSResult` indicating success or failure
-    fn flush_summary(&self, ctx: &mut DMSServiceContext) -> DMSResult<()> {
+    /// A `DMSCResult` indicating success or failure
+    fn flush_summary(&self, ctx: &mut DMSCServiceContext) -> DMSCResult<()> {
         let snapshot = {
             let guard = self
                 .state
                 .lock()
-                .map_err(|_| DMSError::Other("analytics state poisoned".to_string()))?;
+                .map_err(|_| DMSCError::Other("analytics state poisoned".to_string()))?;
             json!({
                 "timestamp": SystemTime::now()
                     .duration_since(UNIX_EPOCH)
@@ -211,17 +211,17 @@ impl DMSLogAnalyticsModule {
         let output = fs.observability_dir().join("lifecycle_analytics.json");
         fs.write_json(&output, &snapshot)?;
         let logger = ctx.logger();
-        let _ = logger.info("DMS.LogAnalytics", format!("summary_path={}", output.display()));
+        let _ = logger.info("DMSC.LogAnalytics", format!("summary_path={}", output.display()));
         Ok(())
     }
 }
 
-impl ServiceModule for DMSLogAnalyticsModule {
+impl ServiceModule for DMSCLogAnalyticsModule {
     /// Returns the name of the analytics module.
     /// 
     /// This name is used for identification, logging, and dependency resolution.
     fn name(&self) -> &str {
-        "DMS.LogAnalytics"
+        "DMSC.LogAnalytics"
     }
 
     /// Indicates if the analytics module is critical to the operation of the system.
@@ -245,15 +245,15 @@ impl ServiceModule for DMSLogAnalyticsModule {
     /// 
     /// # Returns
     /// 
-    /// A `DMSResult` indicating success or failure
-    fn init(&mut self, ctx: &mut DMSServiceContext) -> DMSResult<()> {
+    /// A `DMSCResult` indicating success or failure
+    fn init(&mut self, ctx: &mut DMSCServiceContext) -> DMSCResult<()> {
         let binding = ctx.config();
         let cfg = binding.config();
         self.enabled = cfg.get_bool("analytics.enabled").unwrap_or(true);
         if !self.enabled {
             return Ok(());
         }
-        let hooks: &mut DMSHookBus = ctx.hooks_mut();
+        let hooks: &mut DMSCHookBus = ctx.hooks_mut();
         self.register_handlers(hooks);
         Ok(())
     }
@@ -269,8 +269,8 @@ impl ServiceModule for DMSLogAnalyticsModule {
     /// 
     /// # Returns
     /// 
-    /// A `DMSResult` indicating success or failure
-    fn after_shutdown(&mut self, ctx: &mut DMSServiceContext) -> DMSResult<()> {
+    /// A `DMSCResult` indicating success or failure
+    fn after_shutdown(&mut self, ctx: &mut DMSCServiceContext) -> DMSCResult<()> {
         if !self.enabled {
             return Ok(());
         }

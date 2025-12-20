@@ -30,7 +30,7 @@ security模块包含以下子模块：
 
 </div>  
 
-### DMSSecurityManager
+### DMSCSecurityManager
 
 安全管理器主接口，提供统一的安全功能访问。
 
@@ -38,14 +38,14 @@ security模块包含以下子模块：
 
 | 方法 | 描述 | 参数 | 返回值 |
 |:--------|:-------------|:--------|:--------|
-| `authenticate(credentials)` | 用户认证 | `credentials: DMSCredentials` | `DMSResult<DMSUser>` |
-| `authorize(user, resource, action)` | 权限检查 | `user: &DMSUser`, `resource: &str`, `action: &str` | `DMSResult<bool>` |
-| `encrypt(data, key)` | 数据加密 | `data: &[u8]`, `key: &[u8]` | `DMSResult<Vec<u8>>` |
-| `decrypt(data, key)` | 数据解密 | `data: &[u8]`, `key: &[u8]` | `DMSResult<Vec<u8>>` |
-| `hash_password(password)` | 密码哈希 | `password: &str` | `DMSResult<String>` |
-| `verify_password(password, hash)` | 密码验证 | `password: &str`, `hash: &str` | `DMSResult<bool>` |
-| `validate_input(input, rules)` | 输入验证 | `input: &str`, `rules: &[DMSValidationRule]` | `DMSResult<()>` |
-| `rate_limit(key, limit)` | 速率限制 | `key: &str`, `limit: DMSRateLimit` | `DMSResult<()>` |
+| `authenticate(credentials)` | 用户认证 | `credentials: DMSCCredentials` | `DMSCResult<DMSCUser>` |
+| `authorize(user, resource, action)` | 权限检查 | `user: &DMSCUser`, `resource: &str`, `action: &str` | `DMSCResult<bool>` |
+| `encrypt(data, key)` | 数据加密 | `data: &[u8]`, `key: &[u8]` | `DMSCResult<Vec<u8>>` |
+| `decrypt(data, key)` | 数据解密 | `data: &[u8]`, `key: &[u8]` | `DMSCResult<Vec<u8>>` |
+| `hash_password(password)` | 密码哈希 | `password: &str` | `DMSCResult<String>` |
+| `verify_password(password, hash)` | 密码验证 | `password: &str`, `hash: &str` | `DMSCResult<bool>` |
+| `validate_input(input, rules)` | 输入验证 | `input: &str`, `rules: &[DMSCValidationRule]` | `DMSCResult<()>` |
+| `rate_limit(key, limit)` | 速率限制 | `key: &str`, `limit: DMSCRateLimit` | `DMSCResult<()>` |
 
 #### 使用示例
 
@@ -53,7 +53,7 @@ security模块包含以下子模块：
 use dms::prelude::*;
 
 // 用户认证
-let credentials = DMSCredentials::UsernamePassword {
+let credentials = DMSCCredentials::UsernamePassword {
     username: "john_doe".to_string(),
     password: "secure_password".to_string(),
 };
@@ -69,7 +69,7 @@ match ctx.security().authenticate(credentials).await? {
     }
     None => {
         ctx.log().warn("Authentication failed");
-        return Err(DMSError::auth("Invalid credentials"));
+        return Err(DMSCError::auth("Invalid credentials"));
     }
 }
 
@@ -86,7 +86,7 @@ let password_hash = ctx.security().hash_password(password)?;
 let is_valid = ctx.security().verify_password(password, &password_hash)?;
 ```
 
-### DMSCredentials
+### DMSCCredentials
 
 认证凭据枚举。
 
@@ -100,7 +100,7 @@ let is_valid = ctx.security().verify_password(password, &password_hash)?;
 | `OAuth2 { code, provider }` | OAuth2授权码 |
 | `Certificate { cert_data }` | 客户端证书 |
 
-### DMSUser
+### DMSCUser
 
 用户结构体。
 
@@ -129,15 +129,15 @@ let is_valid = ctx.security().verify_password(password, &password_hash)?;
 use dms::prelude::*;
 
 // 生成JWT令牌
-let jwt_config = DMSJwtConfig {
+let jwt_config = DMSCJwtConfig {
     secret_key: "my_jwt_secret".to_string(),
     expiration: Duration::from_hours(24),
     issuer: "my-app".to_string(),
     audience: "users".to_string(),
-    algorithm: DMSJwtAlgorithm::HS256,
+    algorithm: DMSCJwtAlgorithm::HS256,
 };
 
-let user = DMSUser {
+let user = DMSCUser {
     id: "12345".to_string(),
     username: "john_doe".to_string(),
     email: "john@example.com".to_string(),
@@ -162,7 +162,7 @@ match ctx.security().validate_jwt(&jwt_token, &jwt_config)? {
     }
     None => {
         ctx.log().warn("Invalid JWT token");
-        return Err(DMSError::auth("Invalid JWT token"));
+        return Err(DMSCError::auth("Invalid JWT token"));
     }
 }
 ```
@@ -173,7 +173,7 @@ match ctx.security().validate_jwt(&jwt_token, &jwt_config)? {
 use dms::prelude::*;
 
 // OAuth2配置
-let oauth2_config = DMSOAuth2Config {
+let oauth2_config = DMSCOAuth2Config {
     client_id: "my_client_id".to_string(),
     client_secret: "my_client_secret".to_string(),
     authorization_url: "https://accounts.google.com/o/oauth2/v2/auth".to_string(),
@@ -192,7 +192,7 @@ let auth_code = "received_authorization_code";
 let oauth2_result = ctx.security().exchange_oauth2_code(auth_code, &oauth2_config).await?;
 
 match oauth2_result {
-    DMSOAuth2Result::Success { access_token, refresh_token, user_info } => {
+    DMSCOAuth2Result::Success { access_token, refresh_token, user_info } => {
         ctx.log().info(format!("OAuth2 successful for user: {}", user_info.email));
         
         // 创建或更新用户
@@ -202,9 +202,9 @@ match oauth2_result {
         let app_jwt = ctx.security().generate_jwt(&user, &jwt_config)?;
         ctx.log().info(format!("Generated app JWT: {}", app_jwt));
     }
-    DMSOAuth2Result::Error { error, description } => {
+    DMSCOAuth2Result::Error { error, description } => {
         ctx.log().error(format!("OAuth2 error: {} - {}", error, description));
-        return Err(DMSError::auth("OAuth2 authentication failed"));
+        return Err(DMSCError::auth("OAuth2 authentication failed"));
     }
 }
 ```
@@ -236,7 +236,7 @@ if is_valid {
     ctx.security().enable_mfa(user_id, &mfa_secret).await?;
 } else {
     ctx.log().warn("MFA verification failed");
-    return Err(DMSError::auth("Invalid MFA code"));
+    return Err(DMSCError::auth("Invalid MFA code"));
 }
 
 // 备份代码
@@ -257,7 +257,7 @@ use dms::prelude::*;
 
 // 定义角色和权限
 let roles = vec![
-    DMSRole {
+    DMSCRole {
         name: "admin".to_string(),
         permissions: vec![
             "user:create".to_string(),
@@ -267,14 +267,14 @@ let roles = vec![
             "system:manage".to_string(),
         ],
     },
-    DMSRole {
+    DMSCRole {
         name: "user".to_string(),
         permissions: vec![
             "user:read:self".to_string(),
             "user:update:self".to_string(),
         ],
     },
-    DMSRole {
+    DMSCRole {
         name: "guest".to_string(),
         permissions: vec![
             "user:read:public".to_string(),
@@ -283,7 +283,7 @@ let roles = vec![
 ];
 
 // 检查角色权限
-let user = DMSUser {
+let user = DMSCUser {
     id: "12345".to_string(),
     username: "john_doe".to_string(),
     email: "john@example.com".to_string(),
@@ -311,7 +311,7 @@ if ctx.security().authorize(&user, resource, action).await? {
     ctx.log().info(format!("User authorized to {} {}", action, resource));
 } else {
     ctx.log().warn(format!("User not authorized to {} {}", action, resource));
-    return Err(DMSError::auth("Insufficient permissions"));
+    return Err(DMSCError::auth("Insufficient permissions"));
 }
 ```
 
@@ -321,26 +321,26 @@ if ctx.security().authorize(&user, resource, action).await? {
 use dms::prelude::*;
 
 // 定义属性策略
-let abac_policy = DMSAbacPolicy {
+let abac_policy = DMSCAbacPolicy {
     name: "document_access".to_string(),
     rules: vec![
-        DMSAbacRule {
+        DMSCAbacRule {
             name: "owner_can_edit".to_string(),
-            condition: DMSAbacCondition::And(vec![
-                DMSAbacCondition::Equals("resource.type", "document"),
-                DMSAbacCondition::Equals("user.id", "resource.owner_id"),
-                DMSAbacCondition::Equals("action", "edit"),
+            condition: DMSCAbacCondition::And(vec![
+                DMSCAbacCondition::Equals("resource.type", "document"),
+                DMSCAbacCondition::Equals("user.id", "resource.owner_id"),
+                DMSCAbacCondition::Equals("action", "edit"),
             ]),
-            effect: DMSAbacEffect::Allow,
+            effect: DMSCAbacEffect::Allow,
         },
-        DMSAbacRule {
+        DMSCAbacRule {
             name: "team_member_can_read".to_string(),
-            condition: DMSAbacCondition::And(vec![
-                DMSAbacCondition::Equals("resource.type", "document"),
-                DMSAbacCondition::In("user.team_id", "resource.team_ids"),
-                DMSAbacCondition::Equals("action", "read"),
+            condition: DMSCAbacCondition::And(vec![
+                DMSCAbacCondition::Equals("resource.type", "document"),
+                DMSCAbacCondition::In("user.team_id", "resource.team_ids"),
+                DMSCAbacCondition::Equals("action", "read"),
             ]),
-            effect: DMSAbacEffect::Allow,
+            effect: DMSCAbacEffect::Allow,
         },
     ],
 };
@@ -369,12 +369,12 @@ let decision = ctx.security().evaluate_abac_policy(
 )?;
 
 match decision {
-    DMSAbacDecision::Allow => {
+    DMSCAbacDecision::Allow => {
         ctx.log().info("ABAC policy allows access");
     }
-    DMSAbacDecision::Deny => {
+    DMSCAbacDecision::Deny => {
         ctx.log().warn("ABAC policy denies access");
-        return Err(DMSError::auth("Access denied by ABAC policy"));
+        return Err(DMSCError::auth("Access denied by ABAC policy"));
     }
 }
 ```
@@ -447,7 +447,7 @@ let derived_key = ctx.security().derive_key_pbkdf2(password, &salt, 10000, 32)?;
 ctx.log().info(format!("Derived {}-byte key", derived_key.len()));
 
 // 存储盐和派生密钥用于验证
-let password_hash = DMSPasswordHash {
+let password_hash = DMSCPasswordHash {
     algorithm: "pbkdf2_sha256".to_string(),
     salt: base64::encode(&salt),
     hash: base64::encode(&derived_key),
@@ -476,31 +476,31 @@ use dms::prelude::*;
 
 // 定义验证规则
 let email_rules = vec![
-    DMSValidationRule::Required,
-    DMSValidationRule::Email,
-    DMSValidationRule::MaxLength(100),
-    DMSValidationRule::Custom(|value| {
+    DMSCValidationRule::Required,
+    DMSCValidationRule::Email,
+    DMSCValidationRule::MaxLength(100),
+    DMSCValidationRule::Custom(|value| {
         // 自定义验证：检查是否是公司邮箱
         value.ends_with("@company.com")
     }),
 ];
 
 let password_rules = vec![
-    DMSValidationRule::Required,
-    DMSValidationRule::MinLength(8),
-    DMSValidationRule::MaxLength(128),
-    DMSValidationRule::ContainsUppercase,
-    DMSValidationRule::ContainsLowercase,
-    DMSValidationRule::ContainsDigit,
-    DMSValidationRule::ContainsSpecial,
+    DMSCValidationRule::Required,
+    DMSCValidationRule::MinLength(8),
+    DMSCValidationRule::MaxLength(128),
+    DMSCValidationRule::ContainsUppercase,
+    DMSCValidationRule::ContainsLowercase,
+    DMSCValidationRule::ContainsDigit,
+    DMSCValidationRule::ContainsSpecial,
 ];
 
 let username_rules = vec![
-    DMSValidationRule::Required,
-    DMSValidationRule::Alphanumeric,
-    DMSValidationRule::MinLength(3),
-    DMSValidationRule::MaxLength(20),
-    DMSValidationRule::Pattern(r"^[a-zA-Z][a-zA-Z0-9_]*$".to_string()),
+    DMSCValidationRule::Required,
+    DMSCValidationRule::Alphanumeric,
+    DMSCValidationRule::MinLength(3),
+    DMSCValidationRule::MaxLength(20),
+    DMSCValidationRule::Pattern(r"^[a-zA-Z][a-zA-Z0-9_]*$".to_string()),
 ];
 
 // 执行验证
@@ -554,8 +554,8 @@ ctx.log().info(format!("Sanitized path: {}", safe_path));
 use dms::prelude::*;
 
 // 配置速率限制
-let rate_limit_config = DMSRateLimitConfig {
-    algorithm: DMSRateLimitAlgorithm::TokenBucket,
+let rate_limit_config = DMSCRateLimitConfig {
+    algorithm: DMSCRateLimitAlgorithm::TokenBucket,
     capacity: 100,        // 桶容量
     refill_rate: 10,      // 每秒补充令牌数
     refill_period: Duration::from_secs(1),
@@ -566,19 +566,19 @@ let client_ip = "192.168.1.100";
 let rate_limit_key = format!("rate_limit:{}", client_ip);
 
 match ctx.security().check_rate_limit(&rate_limit_key, &rate_limit_config)? {
-    DMSRateLimitResult::Allowed => {
+    DMSCRateLimitResult::Allowed => {
         ctx.log().info("Request allowed");
         // 处理请求
     }
-    DMSRateLimitResult::Denied { retry_after } => {
+    DMSCRateLimitResult::Denied { retry_after } => {
         ctx.log().warn(format!("Rate limit exceeded, retry after {:?}", retry_after));
-        return Err(DMSError::rate_limit("Too many requests"));
+        return Err(DMSCError::rate_limit("Too many requests"));
     }
 }
 
 // 滑动窗口速率限制
-let sliding_window_config = DMSRateLimitConfig {
-    algorithm: DMSRateLimitAlgorithm::SlidingWindow,
+let sliding_window_config = DMSCRateLimitConfig {
+    algorithm: DMSCRateLimitAlgorithm::SlidingWindow,
     window_size: Duration::from_minutes(1),
     max_requests: 60,  // 每分钟最多60个请求
 };
@@ -587,12 +587,12 @@ let api_key = "user_api_key_123";
 let api_rate_limit_key = format!("api_rate_limit:{}", api_key);
 
 match ctx.security().check_rate_limit(&api_rate_limit_key, &sliding_window_config)? {
-    DMSRateLimitResult::Allowed => {
+    DMSCRateLimitResult::Allowed => {
         ctx.log().info("API request allowed");
     }
-    DMSRateLimitResult::Denied { retry_after } => {
+    DMSCRateLimitResult::Denied { retry_after } => {
         ctx.log().warn("API rate limit exceeded");
-        return Err(DMSError::rate_limit("API rate limit exceeded"));
+        return Err(DMSCError::rate_limit("API rate limit exceeded"));
     }
 }
 ```
@@ -603,7 +603,7 @@ match ctx.security().check_rate_limit(&api_rate_limit_key, &sliding_window_confi
 use dms::prelude::*;
 
 // 配置CORS
-let cors_config = DMSCorsConfig {
+let cors_config = DMSCCorsConfig {
     allowed_origins: vec![
         "https://app.example.com".to_string(),
         "https://admin.example.com".to_string(),
@@ -633,16 +633,16 @@ let method = "POST";
 let headers = vec!["Content-Type", "Authorization"];
 
 match ctx.security().check_cors_request(&cors_config, origin, method, &headers)? {
-    DMSCorsResult::Allowed { headers } => {
+    DMSCCorsResult::Allowed { headers } => {
         ctx.log().info("CORS request allowed");
         // 设置响应头
         for (key, value) in headers {
             response.set_header(key, value);
         }
     }
-    DMSCorsResult::Denied => {
+    DMSCCorsResult::Denied => {
         ctx.log().warn("CORS request denied");
-        return Err(DMSError::security("CORS not allowed"));
+        return Err(DMSCError::security("CORS not allowed"));
     }
 }
 ```
@@ -670,7 +670,7 @@ let session_token = "session_csrf_token";
 
 if !ctx.security().verify_csrf_token(submitted_token, session_token)? {
     ctx.log().warn("CSRF token verification failed");
-    return Err(DMSError::security("Invalid CSRF token"));
+    return Err(DMSCError::security("Invalid CSRF token"));
 }
 
 ctx.log().info("CSRF token verified successfully");
@@ -682,7 +682,7 @@ ctx.log().info("CSRF token verified successfully");
 
 </div>
 
-### DMSSecurityConfig
+### DMSCSecurityConfig
 
 安全配置结构体。
 
@@ -691,27 +691,27 @@ ctx.log().info("CSRF token verified successfully");
 | 字段 | 类型 | 描述 | 默认值 |
 |:--------|:-----|:-------------|:-------|
 | `jwt_secret` | `String` | JWT密钥 | 必填 |
-| `password_hash_algorithm` | `DMSPasswordHashAlgorithm` | 密码哈希算法 | `Argon2id` |
+| `password_hash_algorithm` | `DMSCPasswordHashAlgorithm` | 密码哈希算法 | `Argon2id` |
 | `session_timeout` | `Duration` | 会话超时时间 | `24h` |
 | `max_login_attempts` | `u32` | 最大登录尝试次数 | `5` |
 | `lockout_duration` | `Duration` | 账户锁定时间 | `30m` |
 | `mfa_required` | `bool` | 是否需要MFA | `false` |
-| `password_policy` | `DMSPasswordPolicy` | 密码策略 | 默认策略 |
-| `rate_limit_config` | `DMSRateLimitConfig` | 速率限制配置 | 默认配置 |
+| `password_policy` | `DMSCPasswordPolicy` | 密码策略 | 默认策略 |
+| `rate_limit_config` | `DMSCRateLimitConfig` | 速率限制配置 | 默认配置 |
 
 #### 配置示例
 
 ```rust
 use dms::prelude::*;
 
-let security_config = DMSSecurityConfig {
+let security_config = DMSCSecurityConfig {
     jwt_secret: "my_super_secret_jwt_key_256_bits_long".to_string(),
-    password_hash_algorithm: DMSPasswordHashAlgorithm::Argon2id,
+    password_hash_algorithm: DMSCPasswordHashAlgorithm::Argon2id,
     session_timeout: Duration::from_hours(24),
     max_login_attempts: 5,
     lockout_duration: Duration::from_minutes(30),
     mfa_required: true,
-    password_policy: DMSPasswordPolicy {
+    password_policy: DMSCPasswordPolicy {
         min_length: 8,
         max_length: 128,
         require_uppercase: true,
@@ -721,12 +721,12 @@ let security_config = DMSSecurityConfig {
         forbid_common_passwords: true,
         max_age: Duration::from_days(90),
     },
-    rate_limit_config: DMSRateLimitConfig {
-        login_attempts: DMSRateLimit {
+    rate_limit_config: DMSCRateLimitConfig {
+        login_attempts: DMSCRateLimit {
             window: Duration::from_minutes(15),
             max_requests: 10,
         },
-        api_requests: DMSRateLimit {
+        api_requests: DMSCRateLimit {
             window: Duration::from_minutes(1),
             max_requests: 100,
         },
@@ -762,7 +762,7 @@ match ctx.security().authenticate(credentials).await {
     Ok(user) => {
         ctx.log().info(format!("User authenticated: {}", user.username));
     }
-    Err(DMSError { code, .. }) if code == "SECURITY_AUTH_FAILED" => {
+    Err(DMSCError { code, .. }) if code == "SECURITY_AUTH_FAILED" => {
         ctx.log().warn("Authentication failed");
         
         // 增加失败计数
@@ -774,7 +774,7 @@ match ctx.security().authenticate(credentials).await {
             ctx.log().warn(format!("Account locked: {}", username));
         }
         
-        return Err(DMSError::auth("Authentication failed"));
+        return Err(DMSCError::auth("Authentication failed"));
     }
     Err(e) => {
         ctx.log().error(format!("Authentication error: {}", e));

@@ -1,7 +1,7 @@
 //! Copyright © 2025 Wenze Wei. All Rights Reserved.
 //! 
-//! This file is part of DMS.
-//! The DMS project belongs to the Dunimd Team.
+//! This file is part of DMSC.
+//! The DMSC project belongs to the Dunimd Team.
 //! 
 //! Licensed under the Apache License, Version 2.0 (the "License");
 //! you may not use this file except in compliance with the License.
@@ -19,25 +19,25 @@
 
 //! # Application Runtime and Builder
 //! 
-//! This module provides the application runtime and builder for constructing DMS applications.
-//! The `DMSAppBuilder` follows the builder pattern for fluent configuration, while the `DMSAppRuntime`
+//! This module provides the application runtime and builder for constructing DMSC applications.
+//! The `DMSCAppBuilder` follows the builder pattern for fluent configuration, while the `DMSCAppRuntime`
 //! manages the application lifecycle and module execution.
 //! 
 //! ## Key Components
 //! 
-//! - **DMSAppBuilder**: Fluent API for configuring and building DMS applications
-//! - **DMSAppRuntime**: Manages the application lifecycle and module execution
+//! - **DMSCAppBuilder**: Fluent API for configuring and building DMSC applications
+//! - **DMSCAppRuntime**: Manages the application lifecycle and module execution
 //! 
 //! ## Design Principles
 //! 
-//! 1. **Builder Pattern**: The `DMSAppBuilder` provides a fluent API for configuring applications
+//! 1. **Builder Pattern**: The `DMSCAppBuilder` provides a fluent API for configuring applications
 //! 2. **Module Lifecycle**: Modules go through a well-defined lifecycle with init, start, and shutdown phases
 //! 3. **Dependency Resolution**: Modules are sorted based on dependencies and priority
 //! 4. **Async Support**: Full support for both synchronous and asynchronous modules
 //! 5. **Fault Tolerance**: Non-critical modules can fail without crashing the entire application
 
 // Re-export from app_builder.rs
-pub use super::app_builder::DMSAppBuilder;
+pub use super::app_builder::DMSCAppBuilder;
 
 // Re-export from app_runtime.rs
-pub use super::app_runtime::DMSAppRuntime;
+pub use super::app_runtime::DMSCAppRuntime;

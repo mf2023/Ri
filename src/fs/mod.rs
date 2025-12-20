@@ -1,7 +1,7 @@
 //! Copyright © 2025 Wenze Wei. All Rights Reserved.
 //!
-//! This file is part of DMS.
-//! The DMS project belongs to the Dunimd Team.
+//! This file is part of DMSC.
+//! The DMSC project belongs to the Dunimd Team.
 //!
 //! Licensed under the Apache License, Version 2.0 (the "License");
 //! You may not use this file except in compliance with the License.
@@ -19,12 +19,12 @@
 
 //! # File System Module
 //! 
-//! This module provides a comprehensive file system abstraction for DMS, offering safe and reliable
+//! This module provides a comprehensive file system abstraction for DMSC, offering safe and reliable
 //! file operations with support for atomic writes, directory management, and structured data formats.
 //! 
 //! ## Key Components
 //! 
-//! - **DMSFileSystem**: Public-facing file system class
+//! - **DMSCFileSystem**: Public-facing file system class
 //! - **FileSystemImpl**: Internal file system implementation
 //! 
 //! ## Design Principles
@@ -43,13 +43,13 @@
 //! use dms::prelude::*;
 //! use std::path::PathBuf;
 //! 
-//! fn example() -> DMSResult<()> {
+//! fn example() -> DMSCResult<()> {
 //!     // Create a file system with a project root
 //!     let project_root = PathBuf::from(".");
-//!     let fs = DMSFileSystem::new_with_root(project_root);
+//!     let fs = DMSCFileSystem::new_with_root(project_root);
 //!     
 //!     // Write text to a file
-//!     fs.atomic_write_text("example.txt", "Hello, DMS!")?;
+//!     fs.atomic_write_text("example.txt", "Hello, DMSC!")?;
 //!     
 //!     // Read text from a file
 //!     let content = fs.read_text("example.txt")?;
@@ -77,7 +77,7 @@ use std::path::{Path, PathBuf};
 use std::fs::OpenOptions;
 use std::time::SystemTime;
 
-use crate::core::DMSResult;
+use crate::core::DMSCResult;
 use serde::de::DeserializeOwned;
 use serde::Serialize;
 
@@ -142,9 +142,9 @@ impl FileSystemImpl {
     /// 
     /// # Returns
     /// 
-    /// A `DMSResult<PathBuf>` containing the created directory path
-    fn safe_mkdir(&self, path: &Path) -> DMSResult<PathBuf> {
-        fs::create_dir_all(path).map_err(|e| crate::core::DMSError::Other(format!("safe_mkdir failed: {e}")))?;
+    /// A `DMSCResult<PathBuf>` containing the created directory path
+    fn safe_mkdir(&self, path: &Path) -> DMSCResult<PathBuf> {
+        fs::create_dir_all(path).map_err(|e| crate::core::DMSCError::Other(format!("safe_mkdir failed: {e}")))?;
         Ok(path.to_path_buf())
     }
 
@@ -156,8 +156,8 @@ impl FileSystemImpl {
     /// 
     /// # Returns
     /// 
-    /// A `DMSResult<PathBuf>` containing the parent directory path
-    fn ensure_parent_dir(&self, path: &Path) -> DMSResult<PathBuf> {
+    /// A `DMSCResult<PathBuf>` containing the parent directory path
+    fn ensure_parent_dir(&self, path: &Path) -> DMSCResult<PathBuf> {
         if let Some(parent) = path.parent() {
             self.safe_mkdir(parent)
         } else {
@@ -177,13 +177,13 @@ impl FileSystemImpl {
     /// 
     /// # Returns
     /// 
-    /// A `DMSResult<()>` indicating success or failure
-    fn atomic_write_text(&self, path: &Path, text: &str) -> DMSResult<()> {
+    /// A `DMSCResult<()>` indicating success or failure
+    fn atomic_write_text(&self, path: &Path, text: &str) -> DMSCResult<()> {
         self.ensure_parent_dir(path)?;
         let dir = path.parent().unwrap_or_else(|| Path::new("."));
         let ts = SystemTime::now()
             .duration_since(SystemTime::UNIX_EPOCH)
-            .map_err(|e| crate::core::DMSError::Other(format!("timestamp error: {e}")))?;
+            .map_err(|e| crate::core::DMSCError::Other(format!("timestamp error: {e}")))?;
         let tmp_name = format!(".tmp_{}_{}", ts.as_millis(), path.file_name().and_then(|s| s.to_str()).unwrap_or("tmp"));
         let tmp_path = dir.join(tmp_name);
 
@@ -193,15 +193,15 @@ impl FileSystemImpl {
                 .create(true)
                 .truncate(true)
                 .open(&tmp_path)
-                .map_err(|e| crate::core::DMSError::Other(format!("atomic_write_text open tmp failed: {e}")))?;
+                .map_err(|e| crate::core::DMSCError::Other(format!("atomic_write_text open tmp failed: {e}")))?;
             file.write_all(text.as_bytes())
-                .map_err(|e| crate::core::DMSError::Other(format!("atomic_write_text write failed: {e}")))?;
+                .map_err(|e| crate::core::DMSCError::Other(format!("atomic_write_text write failed: {e}")))?;
             file.sync_all()
-                .map_err(|e| crate::core::DMSError::Other(format!("atomic_write_text sync failed: {e}")))?;
+                .map_err(|e| crate::core::DMSCError::Other(format!("atomic_write_text sync failed: {e}")))?;
         }
 
         fs::rename(&tmp_path, path)
-            .map_err(|e| crate::core::DMSError::Other(format!("atomic_write_text rename failed: {e}")))?;
+            .map_err(|e| crate::core::DMSCError::Other(format!("atomic_write_text rename failed: {e}")))?;
 
         Ok(())
     }
@@ -218,13 +218,13 @@ impl FileSystemImpl {
     /// 
     /// # Returns
     /// 
-    /// A `DMSResult<()>` indicating success or failure
-    fn atomic_write_bytes(&self, path: &Path, data: &[u8]) -> DMSResult<()> {
+    /// A `DMSCResult<()>` indicating success or failure
+    fn atomic_write_bytes(&self, path: &Path, data: &[u8]) -> DMSCResult<()> {
         self.ensure_parent_dir(path)?;
         let dir = path.parent().unwrap_or_else(|| Path::new("."));
         let ts = SystemTime::now()
             .duration_since(SystemTime::UNIX_EPOCH)
-            .map_err(|e| crate::core::DMSError::Other(format!("timestamp error: {e}")))?;
+            .map_err(|e| crate::core::DMSCError::Other(format!("timestamp error: {e}")))?;
         let tmp_name = format!(".tmp_{}_{}", ts.as_millis(), path.file_name().and_then(|s| s.to_str()).unwrap_or("tmp"));
         let tmp_path = dir.join(tmp_name);
 
@@ -234,15 +234,15 @@ impl FileSystemImpl {
                 .create(true)
                 .truncate(true)
                 .open(&tmp_path)
-                .map_err(|e| crate::core::DMSError::Other(format!("atomic_write_bytes open tmp failed: {e}")))?;
+                .map_err(|e| crate::core::DMSCError::Other(format!("atomic_write_bytes open tmp failed: {e}")))?;
             file.write_all(data)
-                .map_err(|e| crate::core::DMSError::Other(format!("atomic_write_bytes write failed: {e}")))?;
+                .map_err(|e| crate::core::DMSCError::Other(format!("atomic_write_bytes write failed: {e}")))?;
             file.sync_all()
-                .map_err(|e| crate::core::DMSError::Other(format!("atomic_write_bytes sync failed: {e}")))?;
+                .map_err(|e| crate::core::DMSCError::Other(format!("atomic_write_bytes sync failed: {e}")))?;
         }
 
         fs::rename(&tmp_path, path)
-            .map_err(|e| crate::core::DMSError::Other(format!("atomic_write_bytes rename failed: {e}")))?;
+            .map_err(|e| crate::core::DMSCError::Other(format!("atomic_write_bytes rename failed: {e}")))?;
 
         Ok(())
     }
@@ -255,15 +255,15 @@ impl FileSystemImpl {
     /// 
     /// # Returns
     /// 
-    /// A `DMSResult<String>` containing the file content
-    fn read_text(&self, path: &Path) -> DMSResult<String> {
+    /// A `DMSCResult<String>` containing the file content
+    fn read_text(&self, path: &Path) -> DMSCResult<String> {
         let mut file = OpenOptions::new()
             .read(true)
             .open(path)
-            .map_err(|e| crate::core::DMSError::Other(format!("read_text open failed: {e}")))?;
+            .map_err(|e| crate::core::DMSCError::Other(format!("read_text open failed: {e}")))?;
         let mut buf = String::new();
         file.read_to_string(&mut buf)
-            .map_err(|e| crate::core::DMSError::Other(format!("read_text read failed: {e}")))?;
+            .map_err(|e| crate::core::DMSCError::Other(format!("read_text read failed: {e}")))?;
         Ok(buf)
     }
 
@@ -299,16 +299,16 @@ impl FileSystemImpl {
 
 /// Public-facing filesystem class.
 /// 
-/// This struct provides a comprehensive file system abstraction for DMS, offering safe and reliable
+/// This struct provides a comprehensive file system abstraction for DMSC, offering safe and reliable
 /// file operations with support for atomic writes, directory management, and structured data formats.
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 #[derive(Clone)]
-pub struct DMSFileSystem {
+pub struct DMSCFileSystem {
     /// Internal file system implementation
     inner: FileSystemImpl,
 }
 
-impl DMSFileSystem {
+impl DMSCFileSystem {
     /// Creates a new file system with a project root and default app data root.
     /// 
     /// # Parameters
@@ -317,10 +317,10 @@ impl DMSFileSystem {
     /// 
     /// # Returns
     /// 
-    /// A new `DMSFileSystem` instance
+    /// A new `DMSCFileSystem` instance
     pub fn new_with_root(project_root: PathBuf) -> Self {
         let inner = FileSystemImpl::new_with_root(project_root);
-        DMSFileSystem { inner }
+        DMSCFileSystem { inner }
     }
 
     /// Creates a new file system with specified roots.
@@ -332,20 +332,20 @@ impl DMSFileSystem {
     /// 
     /// # Returns
     /// 
-    /// A new `DMSFileSystem` instance
+    /// A new `DMSCFileSystem` instance
     pub fn new_with_roots(project_root: PathBuf, app_data_root: PathBuf) -> Self {
         let inner = FileSystemImpl::new_with_roots(project_root, app_data_root);
-        DMSFileSystem { inner }
+        DMSCFileSystem { inner }
     }
 
     /// Creates a new file system with the current working directory as the project root.
     /// 
     /// # Returns
     /// 
-    /// A `DMSResult<Self>` containing the new `DMSFileSystem` instance
-    pub fn new_auto_root() -> DMSResult<Self> {
+    /// A `DMSCResult<Self>` containing the new `DMSCFileSystem` instance
+    pub fn new_auto_root() -> DMSCResult<Self> {
         let cwd = std::env::current_dir()
-            .map_err(|e| crate::core::DMSError::Other(format!("detect project root failed: {e}")))?;
+            .map_err(|e| crate::core::DMSCError::Other(format!("detect project root failed: {e}")))?;
         Ok(Self::new_with_root(cwd))
     }
 
@@ -366,8 +366,8 @@ impl DMSFileSystem {
     /// 
     /// # Returns
     /// 
-    /// A `DMSResult<PathBuf>` containing the created directory path
-    pub fn safe_mkdir<P: AsRef<Path>>(&self, path: P) -> DMSResult<PathBuf> {
+    /// A `DMSCResult<PathBuf>` containing the created directory path
+    pub fn safe_mkdir<P: AsRef<Path>>(&self, path: P) -> DMSCResult<PathBuf> {
         self.inner.safe_mkdir(path.as_ref())
     }
 
@@ -379,8 +379,8 @@ impl DMSFileSystem {
     /// 
     /// # Returns
     /// 
-    /// A `DMSResult<PathBuf>` containing the parent directory path
-    pub fn ensure_parent_dir<P: AsRef<Path>>(&self, path: P) -> DMSResult<PathBuf> {
+    /// A `DMSCResult<PathBuf>` containing the parent directory path
+    pub fn ensure_parent_dir<P: AsRef<Path>>(&self, path: P) -> DMSCResult<PathBuf> {
         self.inner.ensure_parent_dir(path.as_ref())
     }
 
@@ -396,8 +396,8 @@ impl DMSFileSystem {
     /// 
     /// # Returns
     /// 
-    /// A `DMSResult<()>` indicating success or failure
-    pub fn atomic_write_text<P: AsRef<Path>>(&self, path: P, text: &str) -> DMSResult<()> {
+    /// A `DMSCResult<()>` indicating success or failure
+    pub fn atomic_write_text<P: AsRef<Path>>(&self, path: P, text: &str) -> DMSCResult<()> {
         self.inner.atomic_write_text(path.as_ref(), text)
     }
 
@@ -413,8 +413,8 @@ impl DMSFileSystem {
     /// 
     /// # Returns
     /// 
-    /// A `DMSResult<()>` indicating success or failure
-    pub fn atomic_write_bytes<P: AsRef<Path>>(&self, path: P, data: &[u8]) -> DMSResult<()> {
+    /// A `DMSCResult<()>` indicating success or failure
+    pub fn atomic_write_bytes<P: AsRef<Path>>(&self, path: P, data: &[u8]) -> DMSCResult<()> {
         self.inner.atomic_write_bytes(path.as_ref(), data)
     }
 
@@ -426,8 +426,8 @@ impl DMSFileSystem {
     /// 
     /// # Returns
     /// 
-    /// A `DMSResult<String>` containing the file content
-    pub fn read_text<P: AsRef<Path>>(&self, path: P) -> DMSResult<String> {
+    /// A `DMSCResult<String>` containing the file content
+    pub fn read_text<P: AsRef<Path>>(&self, path: P) -> DMSCResult<String> {
         self.inner.read_text(path.as_ref())
     }
 
@@ -443,11 +443,11 @@ impl DMSFileSystem {
     /// 
     /// # Returns
     /// 
-    /// A `DMSResult<T>` containing the deserialized data
-    pub fn read_json<P: AsRef<Path>, T: DeserializeOwned>(&self, path: P) -> DMSResult<T> {
+    /// A `DMSCResult<T>` containing the deserialized data
+    pub fn read_json<P: AsRef<Path>, T: DeserializeOwned>(&self, path: P) -> DMSCResult<T> {
         let text = self.read_text(path)?;
         serde_json::from_str(&text)
-            .map_err(|e| crate::core::DMSError::Other(format!("json read failed: {e}")))
+            .map_err(|e| crate::core::DMSCError::Other(format!("json read failed: {e}")))
     }
 
     /// Checks if a file or directory exists.
@@ -471,13 +471,13 @@ impl DMSFileSystem {
     /// 
     /// # Returns
     /// 
-    /// A `DMSResult<()>` indicating success or failure
-    pub fn remove_file<P: AsRef<Path>>(&self, path: P) -> DMSResult<()> {
+    /// A `DMSCResult<()>` indicating success or failure
+    pub fn remove_file<P: AsRef<Path>>(&self, path: P) -> DMSCResult<()> {
         let p = path.as_ref();
         match fs::remove_file(p) {
             Ok(()) => Ok(()),
             Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(()),
-            Err(e) => Err(crate::core::DMSError::Other(format!("remove_file failed: {e}"))),
+            Err(e) => Err(crate::core::DMSCError::Other(format!("remove_file failed: {e}"))),
         }
     }
 
@@ -489,13 +489,13 @@ impl DMSFileSystem {
     /// 
     /// # Returns
     /// 
-    /// A `DMSResult<()>` indicating success or failure
-    pub fn remove_dir_all<P: AsRef<Path>>(&self, path: P) -> DMSResult<()> {
+    /// A `DMSCResult<()>` indicating success or failure
+    pub fn remove_dir_all<P: AsRef<Path>>(&self, path: P) -> DMSCResult<()> {
         let p = path.as_ref();
         match fs::remove_dir_all(p) {
             Ok(()) => Ok(()),
             Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(()),
-            Err(e) => Err(crate::core::DMSError::Other(format!("remove_dir_all failed: {e}"))),
+            Err(e) => Err(crate::core::DMSCError::Other(format!("remove_dir_all failed: {e}"))),
         }
     }
 
@@ -508,15 +508,15 @@ impl DMSFileSystem {
     /// 
     /// # Returns
     /// 
-    /// A `DMSResult<()>` indicating success or failure
-    pub fn copy_file<P: AsRef<Path>, Q: AsRef<Path>>(&self, from: P, to: Q) -> DMSResult<()> {
+    /// A `DMSCResult<()>` indicating success or failure
+    pub fn copy_file<P: AsRef<Path>, Q: AsRef<Path>>(&self, from: P, to: Q) -> DMSCResult<()> {
         let src = from.as_ref();
         let dst = to.as_ref();
         if let Some(parent) = dst.parent() {
             self.safe_mkdir(parent)?;
         }
         fs::copy(src, dst)
-            .map_err(|e| crate::core::DMSError::Other(format!("copy_file failed: {e}")))?;
+            .map_err(|e| crate::core::DMSCError::Other(format!("copy_file failed: {e}")))?;
         Ok(())
     }
 
@@ -529,8 +529,8 @@ impl DMSFileSystem {
     /// 
     /// # Returns
     /// 
-    /// A `DMSResult<()>` indicating success or failure
-    pub fn append_text<P: AsRef<Path>>(&self, path: P, text: &str) -> DMSResult<()> {
+    /// A `DMSCResult<()>` indicating success or failure
+    pub fn append_text<P: AsRef<Path>>(&self, path: P, text: &str) -> DMSCResult<()> {
         use std::io::Write as _;
 
         let path_ref = path.as_ref();
@@ -539,11 +539,11 @@ impl DMSFileSystem {
             .create(true)
             .append(true)
             .open(path_ref)
-            .map_err(|e| crate::core::DMSError::Other(format!("append_text open failed: {e}")))?;
+            .map_err(|e| crate::core::DMSCError::Other(format!("append_text open failed: {e}")))?;
         file.write_all(text.as_bytes())
-            .map_err(|e| crate::core::DMSError::Other(format!("append_text write failed: {e}")))?;
+            .map_err(|e| crate::core::DMSCError::Other(format!("append_text write failed: {e}")))?;
         file.flush()
-            .map_err(|e| crate::core::DMSError::Other(format!("append_text flush failed: {e}")))?;
+            .map_err(|e| crate::core::DMSCError::Other(format!("append_text flush failed: {e}")))?;
         Ok(())
     }
 
@@ -560,10 +560,10 @@ impl DMSFileSystem {
     /// 
     /// # Returns
     /// 
-    /// A `DMSResult<()>` indicating success or failure
-    pub fn write_json<P: AsRef<Path>, T: Serialize>(&self, path: P, value: &T) -> DMSResult<()> {
+    /// A `DMSCResult<()>` indicating success or failure
+    pub fn write_json<P: AsRef<Path>, T: Serialize>(&self, path: P, value: &T) -> DMSCResult<()> {
         let text = serde_json::to_string_pretty(value)
-            .map_err(|e| crate::core::DMSError::Other(format!("json serialize failed: {e}")))?;
+            .map_err(|e| crate::core::DMSCError::Other(format!("json serialize failed: {e}")))?;
         self.atomic_write_text(path, &text)
     }
 

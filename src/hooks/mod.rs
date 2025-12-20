@@ -1,7 +1,7 @@
 //! Copyright © 2025 Wenze Wei. All Rights Reserved.
 //!
-//! This file is part of DMS.
-//! The DMS project belongs to the Dunimd Team.
+//! This file is part of DMSC.
+//! The DMSC project belongs to the Dunimd Team.
 //!
 //! Licensed under the Apache License, Version 2.0 (the "License");
 //! You may not use this file except in compliance with the License.
@@ -19,16 +19,16 @@
 
 //! # Hooks System
 //! 
-//! This module provides an event bus system for DMS, enabling communication between components
+//! This module provides an event bus system for DMSC, enabling communication between components
 //! during various lifecycle events. It supports both synchronous and asynchronous module lifecycle
 //! phases, and allows for custom event handlers to be registered.
 //! 
 //! ## Key Components
 //! 
-//! - **DMSHookKind**: Enum defining the different types of hooks
-//! - **DMSModulePhase**: Enum defining the different module lifecycle phases
-//! - **DMSHookEvent**: Struct representing a hook event
-//! - **DMSHookBus**: Event bus for registering and emitting hooks
+//! - **DMSCHookKind**: Enum defining the different types of hooks
+//! - **DMSCModulePhase**: Enum defining the different module lifecycle phases
+//! - **DMSCHookEvent**: Struct representing a hook event
+//! - **DMSCHookBus**: Event bus for registering and emitting hooks
 //! 
 //! ## Design Principles
 //! 
@@ -44,21 +44,21 @@
 //! ```rust
 //! use dms::prelude::*;
 //! 
-//! fn example() -> DMSResult<()> {
+//! fn example() -> DMSCResult<()> {
 //!     // Create a hook bus
-//!     let mut hook_bus = DMSHookBus::new();
+//!     let mut hook_bus = DMSCHookBus::new();
 //!     
 //!     // Register a hook handler
-//!     hook_bus.register(DMSHookKind::Startup, "example.startup".to_string(), |ctx, event| {
+//!     hook_bus.register(DMSCHookKind::Startup, "example.startup".to_string(), |ctx, event| {
 //!         // Handle startup event
 //!         Ok(())
 //!     });
 //!     
 //!     // Create a service context (usually provided by the runtime)
-//!     let ctx = DMSServiceContext::new();
+//!     let ctx = DMSCServiceContext::new();
 //!     
 //!     // Emit a hook event
-//!     hook_bus.emit(&DMSHookKind::Startup, &ctx)?;
+//!     hook_bus.emit(&DMSCHookKind::Startup, &ctx)?;
 //!     
 //!     Ok(())
 //! }
@@ -66,14 +66,24 @@
 
 use std::collections::HashMap;
 
-use crate::core::{DMSResult, DMSServiceContext};
+use crate::core::{DMSCResult, DMSCServiceContext};
+
+// Type aliases for complex types
+/// Type alias for a hook handler function
+pub type DMSCHookHandler = Box<dyn Fn(&DMSCServiceContext, &DMSCHookEvent) -> DMSCResult<()> + Send + Sync>;
+
+/// Type alias for a hook handler entry (ID + handler)
+pub type DMSCHookHandlerEntry = (DMSCHookId, DMSCHookHandler);
+
+/// Type alias for a collection of hook handlers grouped by hook kind
+pub type DMSCHookHandlersMap = HashMap<DMSCHookKind, Vec<DMSCHookHandlerEntry>>;
 
 /// Hook kind definition.
 /// 
 /// This enum defines the different types of hooks that can be emitted during the application lifecycle.
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 #[derive(Eq, Hash, PartialEq, Clone, Copy, Debug)]
-pub enum DMSHookKind {
+pub enum DMSCHookKind {
     /// Emitted when the application starts up
     Startup,
     /// Emitted when the application shuts down
@@ -98,7 +108,7 @@ pub enum DMSHookKind {
 /// including both synchronous and asynchronous phases.
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 #[derive(Eq, Hash, PartialEq, Clone, Copy, Debug)]
-pub enum DMSModulePhase {
+pub enum DMSCModulePhase {
     /// Synchronous initialization phase
     Init,
     /// Synchronous phase before starting
@@ -129,7 +139,7 @@ pub enum DMSModulePhase {
     AsyncAfterShutdown,
 }
 
-impl DMSModulePhase {
+impl DMSCModulePhase {
     /// Returns the string representation of the module phase.
     /// 
     /// # Returns
@@ -137,20 +147,20 @@ impl DMSModulePhase {
     /// A static string representing the module phase (e.g., "init", "start", "async_shutdown")
     pub fn as_str(&self) -> &'static str {
         match self {
-            DMSModulePhase::Init => "init",
-            DMSModulePhase::BeforeStart => "before_start",
-            DMSModulePhase::Start => "start",
-            DMSModulePhase::AfterStart => "after_start",
-            DMSModulePhase::BeforeShutdown => "before_shutdown",
-            DMSModulePhase::Shutdown => "shutdown",
-            DMSModulePhase::AfterShutdown => "after_shutdown",
-            DMSModulePhase::AsyncInit => "async_init",
-            DMSModulePhase::AsyncBeforeStart => "async_before_start",
-            DMSModulePhase::AsyncStart => "async_start",
-            DMSModulePhase::AsyncAfterStart => "async_after_start",
-            DMSModulePhase::AsyncBeforeShutdown => "async_before_shutdown",
-            DMSModulePhase::AsyncShutdown => "async_shutdown",
-            DMSModulePhase::AsyncAfterShutdown => "async_after_shutdown",
+            DMSCModulePhase::Init => "init",
+            DMSCModulePhase::BeforeStart => "before_start",
+            DMSCModulePhase::Start => "start",
+            DMSCModulePhase::AfterStart => "after_start",
+            DMSCModulePhase::BeforeShutdown => "before_shutdown",
+            DMSCModulePhase::Shutdown => "shutdown",
+            DMSCModulePhase::AfterShutdown => "after_shutdown",
+            DMSCModulePhase::AsyncInit => "async_init",
+            DMSCModulePhase::AsyncBeforeStart => "async_before_start",
+            DMSCModulePhase::AsyncStart => "async_start",
+            DMSCModulePhase::AsyncAfterStart => "async_after_start",
+            DMSCModulePhase::AsyncBeforeShutdown => "async_before_shutdown",
+            DMSCModulePhase::AsyncShutdown => "async_shutdown",
+            DMSCModulePhase::AsyncAfterShutdown => "async_after_shutdown",
         }
     }
 }
@@ -161,42 +171,42 @@ impl DMSModulePhase {
 /// information about the hook kind, the module (if applicable), and the module phase (if applicable).
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 #[derive(Clone, Debug)]
-pub struct DMSHookEvent {
+pub struct DMSCHookEvent {
     /// The kind of hook that was triggered
-    pub kind: DMSHookKind,
+    pub kind: DMSCHookKind,
     /// The name of the module associated with the event (if any)
     pub module: Option<String>,
     /// The module phase associated with the event (if any)
-    pub phase: Option<DMSModulePhase>,
+    pub phase: Option<DMSCModulePhase>,
 }
 
 /// Type alias for hook IDs.
 /// 
 /// Hook IDs are used to identify hook handlers and can be used for debugging and logging purposes.
-pub type DMSHookId = String;
+pub type DMSCHookId = String;
 
 /// Hook bus for registering and emitting hooks.
 /// 
 /// This struct manages the registration of hook handlers and the emission of hook events.
 /// It allows multiple handlers to be registered for the same hook kind.
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
-pub struct DMSHookBus {
+pub struct DMSCHookBus {
     /// Internal storage for hook handlers, organized by hook kind
-    handlers: HashMap<DMSHookKind, Vec<(DMSHookId, Box<dyn Fn(&DMSServiceContext, &DMSHookEvent) -> DMSResult<()> + Send + Sync>)>>,
+    handlers: DMSCHookHandlersMap,
 }
 
-impl Default for DMSHookBus {
+impl Default for DMSCHookBus {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl DMSHookBus {
+impl DMSCHookBus {
     /// Creates a new hook bus instance.
     /// 
-    /// Returns a new `DMSHookBus` instance with no registered handlers.
+    /// Returns a new `DMSCHookBus` instance with no registered handlers.
     pub fn new() -> Self {
-        DMSHookBus { handlers: HashMap::new() }
+        DMSCHookBus { handlers: HashMap::new() }
     }
 
     /// Registers a hook handler for a specific hook kind.
@@ -207,10 +217,10 @@ impl DMSHookBus {
     /// - `id`: A unique ID for the hook handler
     /// - `handler`: The handler function to execute when the hook is emitted
     /// 
-    /// The handler function takes a `DMSServiceContext` and a `DMSHookEvent` and returns a `DMSResult<()>`. 
-    pub fn register<F>(&mut self, kind: DMSHookKind, id: DMSHookId, handler: F)
+    /// The handler function takes a `DMSCServiceContext` and a `DMSCHookEvent` and returns a `DMSCResult<()>`. 
+    pub fn register<F>(&mut self, kind: DMSCHookKind, id: DMSCHookId, handler: F)
     where
-        F: Fn(&DMSServiceContext, &DMSHookEvent) -> DMSResult<()> + Send + Sync + 'static,
+        F: Fn(&DMSCServiceContext, &DMSCHookEvent) -> DMSCResult<()> + Send + Sync + 'static,
     {
         self.handlers.entry(kind).or_default().push((id, Box::new(handler)));
     }
@@ -224,8 +234,8 @@ impl DMSHookBus {
     /// 
     /// # Returns
     /// 
-    /// A `DMSResult<()>` indicating success or failure
-    pub fn emit(&self, kind: &DMSHookKind, ctx: &DMSServiceContext) -> DMSResult<()> {
+    /// A `DMSCResult<()>` indicating success or failure
+    pub fn emit(&self, kind: &DMSCHookKind, ctx: &DMSCServiceContext) -> DMSCResult<()> {
         self.emit_with(kind, ctx, None, None)
     }
 
@@ -240,15 +250,15 @@ impl DMSHookBus {
     /// 
     /// # Returns
     /// 
-    /// A `DMSResult<()>` indicating success or failure
+    /// A `DMSCResult<()>` indicating success or failure
     pub fn emit_with(
         &self,
-        kind: &DMSHookKind,
-        ctx: &DMSServiceContext,
+        kind: &DMSCHookKind,
+        ctx: &DMSCServiceContext,
         module: Option<&str>,
-        phase: Option<DMSModulePhase>,
-    ) -> DMSResult<()> {
-        let event = DMSHookEvent {
+        phase: Option<DMSCModulePhase>,
+    ) -> DMSCResult<()> {
+        let event = DMSCHookEvent {
             kind: *kind,
             module: module.map(|s| s.to_string()),
             phase,

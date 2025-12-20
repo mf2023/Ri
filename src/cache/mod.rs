@@ -1,7 +1,7 @@
 //! Copyright © 2025 Wenze Wei. All Rights Reserved.
 //!
-//! This file is part of DMS.
-//! The DMS project belongs to the Dunimd Team.
+//! This file is part of DMSC.
+//! The DMSC project belongs to the Dunimd Team.
 //!
 //! Licensed under the Apache License, Version 2.0 (the "License");
 //! You may not use this file except in compliance with the License.
@@ -17,20 +17,20 @@
 
 //! # Cache Module
 //! 
-//! This module provides a comprehensive caching abstraction for DMS, offering a unified interface
+//! This module provides a comprehensive caching abstraction for DMSC, offering a unified interface
 //! with support for multiple backend implementations. It enables efficient data caching with
 //! configurable policies and backend selection.
 //! 
 //! ## Key Components
 //! 
-//! - **DMSCacheModule**: Main cache module implementing both sync and async service module traits
-//! - **DMSCacheManager**: Central cache management component
-//! - **DMSCache**: Unified cache interface implemented by all backends
-//! - **DMSCacheConfig**: Configuration for cache behavior
+//! - **DMSCCacheModule**: Main cache module implementing both sync and async service module traits
+//! - **DMSCCacheManager**: Central cache management component
+//! - **DMSCCache**: Unified cache interface implemented by all backends
+//! - **DMSCCacheConfig**: Configuration for cache behavior
 //! - **Backend Implementations**:
-//!   - **DMSMemoryCache**: In-memory cache implementation (internal)
-//!   - **DMSRedisCache**: Redis-based distributed cache (internal)
-//!   - **DMSHybridCache**: Combined memory and Redis cache for optimal performance (internal)
+//!   - **DMSCMemoryCache**: In-memory cache implementation (internal)
+//!   - **DMSCRedisCache**: Redis-based distributed cache (internal)
+//!   - **DMSCHybridCache**: Combined memory and Redis cache for optimal performance (internal)
 //! 
 //! ## Design Principles
 //! 
@@ -48,9 +48,9 @@
 //! ```rust
 //! use dms::prelude::*;
 //! 
-//! async fn example() -> DMSResult<()> {
+//! async fn example() -> DMSCResult<()> {
 //!     // Create cache configuration
-//!     let cache_config = DMSCacheConfig {
+//!     let cache_config = DMSCCacheConfig {
 //!         enabled: true,
 //!         default_ttl_secs: 3600,
 //!         max_memory_mb: 512,
@@ -61,7 +61,7 @@
 //!     };
 //!     
 //!     // Create cache module
-//!     let cache_module = DMSCacheModule::new(cache_config);
+//!     let cache_module = DMSCCacheModule::new(cache_config);
 //!     
 //!     // Get cache manager
 //!     let cache_manager = cache_module.cache_manager();
@@ -85,29 +85,31 @@ mod manager;
 mod backends;
 mod config;
 
-pub use config::{DMSCacheConfig, CacheBackendType};
-pub use manager::DMSCacheManager;
-pub use core::{CachedValue, CacheStats, DMSCache};
+pub use config::{DMSCCacheConfig, CacheBackendType};
+pub use manager::DMSCCacheManager;
+pub use core::{CachedValue, CacheStats, DMSCCache};
 // Re-export backend implementations
-pub use backends::{DMSMemoryCache, DMSRedisCache, DMSHybridCache};
+pub use backends::DMSCMemoryCache;
+#[cfg(feature = "redis")]
+pub use backends::{DMSCRedisCache, DMSCHybridCache};
 
-use crate::core::{DMSResult, DMSServiceContext};
+use crate::core::{DMSCResult, DMSCServiceContext};
 use std::sync::Arc;
 use tokio::sync::RwLock;
 
-/// Main cache module for DMS.
+/// Main cache module for DMSC.
 /// 
 /// This module provides a unified caching abstraction with support for multiple backend implementations.
 /// It implements both the `AsyncServiceModule` and `ServiceModule` traits for seamless integration
-/// into the DMS application lifecycle.
-pub struct DMSCacheModule {
+/// into the DMSC application lifecycle.
+pub struct DMSCCacheModule {
     /// Cache configuration
-    config: DMSCacheConfig,
+    config: DMSCCacheConfig,
     /// Cache manager wrapped in an async RwLock for thread-safe access
-    manager: std::sync::Arc<tokio::sync::RwLock<DMSCacheManager>>,
+    manager: std::sync::Arc<tokio::sync::RwLock<DMSCCacheManager>>,
 }
 
-impl DMSCacheModule {
+impl DMSCCacheModule {
     /// Creates a new cache module with the given configuration.
     /// 
     /// This method initializes the cache manager with the appropriate backend based on the
@@ -119,25 +121,25 @@ impl DMSCacheModule {
     /// 
     /// # Returns
     /// 
-    /// A new `DMSCacheModule` instance
-    pub fn new(config: DMSCacheConfig) -> Self {
+    /// A new `DMSCCacheModule` instance
+    pub fn new(config: DMSCCacheConfig) -> Self {
         // Create the appropriate backend based on configuration
         let backend = match config.backend_type {
             crate::cache::config::CacheBackendType::Memory => {
-                Arc::new(DMSMemoryCache::new())
+                Arc::new(DMSCMemoryCache::new())
             }
             crate::cache::config::CacheBackendType::Redis => {
                 // For Redis, we'll use memory backend initially and replace it in init()
                 // since we need async context for Redis connection
-                Arc::new(DMSMemoryCache::new())
+                Arc::new(DMSCMemoryCache::new())
             }
             crate::cache::config::CacheBackendType::Hybrid => {
                 // Same for Hybrid - use memory backend initially
-                Arc::new(DMSMemoryCache::new())
+                Arc::new(DMSCMemoryCache::new())
             }
         };
         
-        let manager = DMSCacheManager::new(backend);
+        let manager = DMSCCacheManager::new(backend);
         
         Self {
             config,
@@ -152,21 +154,21 @@ impl DMSCacheModule {
     /// 
     /// # Returns
     /// 
-    /// An Arc<RwLock<DMSCacheManager>> providing thread-safe access to the cache manager
-    pub fn cache_manager(&self) -> Arc<RwLock<DMSCacheManager>> {
+    /// An Arc<RwLock<DMSCCacheManager>> providing thread-safe access to the cache manager
+    pub fn cache_manager(&self) -> Arc<RwLock<DMSCCacheManager>> {
         self.manager.clone()
     }
 }
 
 #[async_trait::async_trait]
-impl crate::core::DMSModule for DMSCacheModule {
+impl crate::core::DMSCModule for DMSCCacheModule {
     /// Returns the name of the cache module.
     /// 
     /// # Returns
     /// 
     /// The module name as a string
     fn name(&self) -> &str {
-        "DMS.Cache"
+        "DMSC.Cache"
     }
     
     /// Indicates whether the cache module is critical.
@@ -196,9 +198,9 @@ impl crate::core::DMSModule for DMSCacheModule {
     /// 
     /// # Returns
     /// 
-    /// A `DMSResult<()>` indicating success or failure
-    async fn init(&mut self, ctx: &mut DMSServiceContext) -> DMSResult<()> {
-        log::info!("Initializing DMS Cache Module");
+    /// A `DMSCResult<()>` indicating success or failure
+    async fn init(&mut self, ctx: &mut DMSCServiceContext) -> DMSCResult<()> {
+        log::info!("Initializing DMSC Cache Module");
         
         // Load configuration
         let binding = ctx.config();
@@ -207,34 +209,43 @@ impl crate::core::DMSModule for DMSCacheModule {
         // Update configuration if provided
         if let Some(cache_config) = cfg.get("cache") {
             self.config = serde_yaml::from_str(cache_config)
-                .unwrap_or_else(|_| DMSCacheConfig::default());
+                .unwrap_or_else(|_| DMSCCacheConfig::default());
         } else {
-            self.config = DMSCacheConfig::default();
+            self.config = DMSCCacheConfig::default();
         }
         
         // Initialize the cache manager based on configuration
         match self.config.backend_type {
             crate::cache::config::CacheBackendType::Memory => {
-                let backend = Arc::new(DMSMemoryCache::new());
-                let manager = DMSCacheManager::new(backend);
+                let backend = Arc::new(DMSCMemoryCache::new());
+                let manager = DMSCCacheManager::new(backend);
                 *self.manager.write().await = manager;
             }
+            #[cfg(feature = "redis")]
             crate::cache::config::CacheBackendType::Redis => {
-                let backend = Arc::new(DMSRedisCache::new(&self.config.redis_url).await?);
-                let manager = DMSCacheManager::new(backend);
+                let backend = Arc::new(DMSCRedisCache::new(&self.config.redis_url).await?);
+                let manager = DMSCCacheManager::new(backend);
                 *self.manager.write().await = manager;
             }
+            #[cfg(feature = "redis")]
             crate::cache::config::CacheBackendType::Hybrid => {
-                let backend = Arc::new(DMSHybridCache::new(&self.config.redis_url).await?);
-                let manager = DMSCacheManager::new(backend);
+                let backend = Arc::new(DMSCHybridCache::new(&self.config.redis_url).await?);
+                let manager = DMSCCacheManager::new(backend);
+                *self.manager.write().await = manager;
+            }
+            #[cfg(not(feature = "redis"))]
+            crate::cache::config::CacheBackendType::Redis | crate::cache::config::CacheBackendType::Hybrid => {
+                // Fallback to memory cache if Redis is not enabled
+                let backend = Arc::new(DMSCMemoryCache::new());
+                let manager = DMSCCacheManager::new(backend);
                 *self.manager.write().await = manager;
             }
         }
         
                 // Log successful initialization
-        if let Ok(fs) = crate::fs::DMSFileSystem::new_auto_root() {
-            let logger = crate::log::DMSLogger::new(&crate::log::DMSLogConfig::default(), fs);
-            let _ = logger.info("cache", "DMS Cache Module initialized successfully");
+        if let Ok(fs) = crate::fs::DMSCFileSystem::new_auto_root() {
+            let logger = crate::log::DMSCLogger::new(&crate::log::DMSCLogConfig::default(), fs);
+            let _ = logger.info("cache", "DMSC Cache Module initialized successfully");
         }
         Ok(())
     }
@@ -252,9 +263,9 @@ impl crate::core::DMSModule for DMSCacheModule {
     /// 
     /// # Returns
     /// 
-    /// A `DMSResult<()>` indicating success or failure
-    async fn after_shutdown(&mut self, _ctx: &mut DMSServiceContext) -> DMSResult<()> {
-        log::info!("Cleaning up DMS Cache Module");
+    /// A `DMSCResult<()>` indicating success or failure
+    async fn after_shutdown(&mut self, _ctx: &mut DMSCServiceContext) -> DMSCResult<()> {
+        log::info!("Cleaning up DMSC Cache Module");
         
         let manager = self.manager.read().await;
         let stats = manager.stats().await;
@@ -263,7 +274,7 @@ impl crate::core::DMSModule for DMSCacheModule {
         // Cleanup expired entries
         let cleaned = manager.cleanup_expired().await?;
         log::info!("Cleaned up {cleaned} expired cache entries");
-        log::info!("DMS Cache Module cleanup completed");
+        log::info!("DMSC Cache Module cleanup completed");
         Ok(())
     }
 }

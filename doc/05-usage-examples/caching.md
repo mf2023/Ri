@@ -6,13 +6,13 @@
 
 **Last modified date: 2025-12-12**
 
-本示例展示如何使用DMS的cache模块进行多种缓存后端和高级缓存功能的使用。
+本示例展示如何使用DMSC的cache模块进行多种缓存后端和高级缓存功能的使用。
 
 ## 示例概述
 
 </div>
 
-本示例将创建一个DMS应用，实现以下功能：
+本示例将创建一个DMSC应用，实现以下功能：
 
 - 内存缓存和Redis缓存的使用
 - 缓存标签和原子操作
@@ -52,7 +52,7 @@ cd dms-cache-example
 
 ```toml
 [dependencies]
-dms = { git = "https://gitee.com/dunimd/dms" }
+dms = { git = "https://gitee.com/dunimd/dmsc" }
 tokio = { version = "1.0", features = ["full"] }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
@@ -93,17 +93,17 @@ use serde_json::json;
 use std::time::Duration;
 
 #[tokio::main]
-async fn main() -> DMSResult<()> {
+async fn main() -> DMSCResult<()> {
     // 构建服务运行时
-    let app = DMSAppBuilder::new()
+    let app = DMSCAppBuilder::new()
         .with_config("config.yaml")?
-        .with_logging(DMSLogConfig::default())?
-        .with_cache(DMSCacheConfig::default())?
+        .with_logging(DMSCLogConfig::default())?
+        .with_cache(DMSCCacheConfig::default())?
         .build()?;
     
     // 运行业务逻辑
-    app.run(|ctx: &DMSServiceContext| async move {
-        ctx.logger().info("service", "DMS Cache Example started")?;
+    app.run(|ctx: &DMSCServiceContext| async move {
+        ctx.logger().info("service", "DMSC Cache Example started")?;
         
         // 基本缓存操作示例
         basic_cache_operations(&ctx).await?;
@@ -111,13 +111,13 @@ async fn main() -> DMSResult<()> {
         // 高级缓存功能示例
         advanced_cache_features(&ctx).await?;
         
-        ctx.logger().info("service", "DMS Cache Example completed")?;
+        ctx.logger().info("service", "DMSC Cache Example completed")?;
         
         Ok(())
     }).await
 }
 
-async fn basic_cache_operations(ctx: &DMSServiceContext) -> DMSResult<()> {
+async fn basic_cache_operations(ctx: &DMSCServiceContext) -> DMSCResult<()> {
     ctx.logger().info("cache", "Starting basic cache operations")?;
     
     // 设置缓存值
@@ -144,7 +144,7 @@ async fn basic_cache_operations(ctx: &DMSServiceContext) -> DMSResult<()> {
     Ok(())
 }
 
-async fn advanced_cache_features(ctx: &DMSServiceContext) -> DMSResult<()> {
+async fn advanced_cache_features(ctx: &DMSCServiceContext) -> DMSCResult<()> {
     ctx.logger().info("cache", "Starting advanced cache features")?;
     
     // 使用缓存标签
@@ -186,13 +186,13 @@ use dms::prelude::*;
 use serde_json::json;
 
 // 创建内存缓存后端
-let memory_backend = DMSCacheBackend::Memory {
+let memory_backend = DMSCCacheBackend::Memory {
     max_size: 1000,
     ttl: Duration::from_secs(3600),
 };
 
 // 初始化缓存模块
-let cache_config = DMSCacheConfig {
+let cache_config = DMSCCacheConfig {
     backend: memory_backend,
     default_ttl: Duration::from_secs(1800),
     key_prefix: "app".to_string(),
@@ -235,7 +235,7 @@ use dms::prelude::*;
 use serde_json::json;
 
 // 创建Redis缓存后端
-let redis_backend = DMSCacheBackend::Redis {
+let redis_backend = DMSCCacheBackend::Redis {
     url: "redis://localhost:6379".to_string(),
     pool_size: 10,
     key_prefix: "app".to_string(),
@@ -243,7 +243,7 @@ let redis_backend = DMSCacheBackend::Redis {
     operation_timeout: Duration::from_secs(5),
 };
 
-let cache_config = DMSCacheConfig {
+let cache_config = DMSCCacheConfig {
     backend: redis_backend,
     default_ttl: Duration::from_secs(1800),
     key_prefix: "app".to_string(),
@@ -354,7 +354,7 @@ match ctx.cache().acquire_lock(lock_key, lock_value, ttl)? {
     }
     None => {
         ctx.log().warn("Failed to acquire lock");
-        return Err(DMSError::resource_busy("Resource is locked"));
+        return Err(DMSCError::resource_busy("Resource is locked"));
     }
 }
 
@@ -376,7 +376,7 @@ use dms::prelude::*;
 use serde_json::json;
 
 // 获取用户数据，带缓存穿透保护
-async fn get_user_with_cache_through_protection(user_id: u64) -> DMSResult<Option<Value>> {
+async fn get_user_with_cache_through_protection(user_id: u64) -> DMSCResult<Option<Value>> {
     let cache_key = format!("user:{}", user_id);
     
     // 先尝试从缓存获取
@@ -422,7 +422,7 @@ use serde_json::json;
 use rand::Rng;
 
 // 设置缓存时添加随机TTL偏移，防止缓存雪崩
-fn set_cache_with_jitter(key: &str, value: Value, base_ttl: Duration) -> DMSResult<()> {
+fn set_cache_with_jitter(key: &str, value: Value, base_ttl: Duration) -> DMSCResult<()> {
     let jitter = rand::thread_rng().gen_range(0..300); // 0-5分钟随机偏移
     let ttl = base_ttl + Duration::from_secs(jitter);
     
@@ -449,7 +449,7 @@ use dms::prelude::*;
 use serde_json::json;
 
 // 系统启动时预热热门数据
-async fn warmup_cache() -> DMSResult<()> {
+async fn warmup_cache() -> DMSCResult<()> {
     ctx.log().info("Starting cache warmup...");
     
     // 预热热门文章
@@ -506,7 +506,7 @@ use dms::prelude::*;
 use serde_json::json;
 
 // 检查缓存健康状态
-fn check_cache_health() -> DMSResult<Value> {
+fn check_cache_health() -> DMSCResult<Value> {
     let health = ctx.cache().health_check()?;
     
     let status = if health.is_healthy {
@@ -535,7 +535,7 @@ fn check_cache_health() -> DMSResult<Value> {
 ctx.observability().register_health_check("cache", || async {
     match check_cache_health() {
         Ok(health) => Ok(health),
-        Err(e) => Err(DMSError::internal(format!("Cache health check failed: {}", e))),
+        Err(e) => Err(DMSCError::internal(format!("Cache health check failed: {}", e))),
     }
 }).await?;
 ```
@@ -568,8 +568,8 @@ let user = User {
 };
 
 // 使用MessagePack序列化（更紧凑）
-let cache_config = DMSCacheConfig {
-    backend: DMSCacheBackend::Memory {
+let cache_config = DMSCCacheConfig {
+    backend: DMSCCacheBackend::Memory {
         max_size: 1000,
         ttl: Duration::from_secs(3600),
     },
@@ -577,7 +577,7 @@ let cache_config = DMSCacheConfig {
     key_prefix: "app".to_string(),
     compression: true,  // 启用压缩
     encryption: false,
-    serializer: DMSSerializer::MessagePack, // 使用MessagePack
+    serializer: DMSCSerializer::MessagePack, // 使用MessagePack
 };
 
 ctx.cache().init(cache_config)?;
@@ -615,8 +615,8 @@ let large_data = json!({
 });
 
 // 启用压缩存储
-let cache_config = DMSCacheConfig {
-    backend: DMSCacheBackend::Redis {
+let cache_config = DMSCCacheConfig {
+    backend: DMSCCacheBackend::Redis {
         url: "redis://localhost:6379".to_string(),
         pool_size: 10,
         key_prefix: "app".to_string(),
@@ -655,17 +655,17 @@ use serde_json::json;
 // 处理缓存错误
 match ctx.cache().set("key", json!("value"), None) {
     Ok(_) => ctx.log().info("Cache set successfully"),
-    Err(DMSError::CacheConnectionError(e)) => {
+    Err(DMSCError::CacheConnectionError(e)) => {
         ctx.log().error(format!("Cache connection failed: {}", e));
         // 降级到数据库或其他后备存储
         fallback_to_database("key", json!("value")).await?;
     }
-    Err(DMSError::CacheTimeoutError(e)) => {
+    Err(DMSCError::CacheTimeoutError(e)) => {
         ctx.log().warn(format!("Cache operation timed out: {}", e));
         // 重试或降级
         retry_cache_operation().await?;
     }
-    Err(DMSError::CacheFullError) => {
+    Err(DMSCError::CacheFullError) => {
         ctx.log().warn("Cache is full");
         // 清理过期缓存或增加容量
         ctx.cache().cleanup_expired()?;
@@ -677,7 +677,7 @@ match ctx.cache().set("key", json!("value"), None) {
 }
 
 // 缓存降级策略
-async fn get_data_with_fallback(key: &str) -> DMSResult<Value> {
+async fn get_data_with_fallback(key: &str) -> DMSCResult<Value> {
     // 首先尝试缓存
     if let Ok(Some(cached)) = ctx.cache().get(key) {
         return Ok(cached);
@@ -730,7 +730,7 @@ cd dms-cache-example
 
 ```toml
 [dependencies]
-dms = { git = "https://gitee.com/dunimd/dms" }
+dms = { git = "https://gitee.com/dunimd/dmsc" }
 tokio = { version = "1.0", features = ["full"] }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
@@ -780,7 +780,7 @@ cargo run
   "timestamp": "2024-01-15T10:30:00Z",
   "level": "INFO",
   "target": "dms_cache_example",
-  "message": "DMS Cache Example started"
+  "message": "DMSC Cache Example started"
 }
 {
   "timestamp": "2024-01-15T10:30:00Z",
@@ -828,7 +828,7 @@ cargo run
   "timestamp": "2024-01-15T10:30:00Z",
   "level": "INFO",
   "target": "service",
-  "message": "DMS Cache Example completed"
+  "message": "DMSC Cache Example completed"
 }
 ```
 
@@ -844,7 +844,7 @@ cargo run
 use dms::prelude::*;
 
 // 配置多节点Redis集群
-let cluster_backend = DMSCacheBackend::RedisCluster {
+let cluster_backend = DMSCCacheBackend::RedisCluster {
     nodes: vec![
         "redis://node1:6379".to_string(),
         "redis://node2:6379".to_string(),
@@ -857,7 +857,7 @@ let cluster_backend = DMSCacheBackend::RedisCluster {
     read_from_replicas: true, // 从副本读取以提高性能
 };
 
-let cache_config = DMSCacheConfig {
+let cache_config = DMSCCacheConfig {
     backend: cluster_backend,
     default_ttl: Duration::from_secs(1800),
     key_prefix: "app".to_string(),
@@ -878,7 +878,7 @@ use dms::prelude::*;
 use machine_learning::cache::CachePredictor;
 
 // 基于机器学习预测缓存需求
-async fn intelligent_cache_warmup() -> DMSResult<()> {
+async fn intelligent_cache_warmup() -> DMSCResult<()> {
     let predictor = CachePredictor::new();
     
     // 分析历史访问模式
@@ -919,7 +919,7 @@ pub struct AdaptiveCacheManager {
 }
 
 impl AdaptiveCacheManager {
-    pub async fn optimize_cache_strategy(&self) -> DMSResult<()> {
+    pub async fn optimize_cache_strategy(&self) -> DMSCResult<()> {
         let stats = ctx.cache().get_detailed_stats()?;
         
         // 分析缓存性能指标
@@ -940,9 +940,9 @@ impl AdaptiveCacheManager {
         // 动态调整缓存大小
         if stats.memory_usage > 0.8 {
             // 内存使用率高，启用更激进的清理策略
-            ctx.cache().set_eviction_policy(DMSEvictionPolicy::LFU)?;
+            ctx.cache().set_eviction_policy(DMSCEvictionPolicy::LFU)?;
         } else {
-            ctx.cache().set_eviction_policy(DMSEvictionPolicy::LRU)?;
+            ctx.cache().set_eviction_policy(DMSCEvictionPolicy::LRU)?;
         }
         
         // 调整压缩策略
@@ -954,7 +954,7 @@ impl AdaptiveCacheManager {
         Ok(())
     }
     
-    async fn optimize_prefetch_strategy(&self) -> DMSResult<()> {
+    async fn optimize_prefetch_strategy(&self) -> DMSCResult<()> {
         // 基于访问模式优化预取策略
         let patterns = ctx.cache().analyze_access_patterns()?;
         
@@ -987,7 +987,7 @@ pub struct DistributedCacheConsistency {
 }
 
 impl DistributedCacheConsistency {
-    pub async fn maintain_consistency(&self) -> DMSResult<()> {
+    pub async fn maintain_consistency(&self) -> DMSCResult<()> {
         // 使用Raft协议确保缓存更新的一致性
         let update_command = CacheUpdateCommand {
             key: "user:123".to_string(),
@@ -1004,14 +1004,14 @@ impl DistributedCacheConsistency {
             }
             ConsensusResult::Rejected => {
                 ctx.logger().warn("Cache update rejected by consensus");
-                return Err(DMSError::consensus_error("Update rejected"));
+                return Err(DMSCError::consensus_error("Update rejected"));
             }
         }
         
         Ok(())
     }
     
-    async fn apply_to_all_nodes(&self, command: &CacheUpdateCommand) -> DMSResult<()> {
+    async fn apply_to_all_nodes(&self, command: &CacheUpdateCommand) -> DMSCResult<()> {
         for instance in &self.cache_instances {
             match self.update_remote_cache(instance, command).await {
                 Ok(_) => ctx.logger().info(format!("Updated cache node: {}", instance)),
@@ -1051,7 +1051,7 @@ impl DistributedCacheConsistency {
 
 </div>
 
-本示例全面展示了 DMS 缓存模块的核心功能和高级特性，涵盖以下关键能力：
+本示例全面展示了 DMSC 缓存模块的核心功能和高级特性，涵盖以下关键能力：
 
 ### 🚀 核心功能
 - **多后端支持**: 内存缓存、Redis缓存和Redis集群的无缝集成
@@ -1089,7 +1089,7 @@ impl DistributedCacheConsistency {
 
 - [README](./README.md): 使用示例概览，提供所有使用示例的快速导航
 - [authentication](./authentication.md): 认证示例，学习JWT、OAuth2和RBAC认证授权
-- [basic-app](./basic-app.md): 基础应用示例，学习如何创建和运行第一个DMS应用
+- [basic-app](./basic-app.md): 基础应用示例，学习如何创建和运行第一个DMSC应用
 
 - [database](./database.md): 数据库示例，学习数据库连接和查询操作
 - [http](./http.md): HTTP服务示例，构建Web应用和RESTful API

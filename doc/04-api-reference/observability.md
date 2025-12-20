@@ -26,7 +26,7 @@ observability模块包含以下子模块：
 
 </div>
 
-### DMSObservability
+### DMSCObservability
 
 可观测性管理器主接口，提供统一的监控功能。
 
@@ -34,16 +34,16 @@ observability模块包含以下子模块：
 
 | 方法 | 描述 | 参数 | 返回值 |
 |:--------|:-------------|:--------|:--------|
-| `start_trace(name)` | 开始追踪 | `name: &str` | `DMSTrace` |
+| `start_trace(name)` | 开始追踪 | `name: &str` | `DMSCTrace` |
 | `record_metric(name, value)` | 记录指标 | `name: &str`, `value: f64` | `()` |
 | `increment_counter(name)` | 增加计数器 | `name: &str` | `()` |
 | `set_gauge(name, value)` | 设置计量器 | `name: &str`, `value: f64` | `()` |
 | `record_histogram(name, value)` | 记录直方图 | `name: &str`, `value: f64` | `()` |
-| `check_health()` | 执行健康检查 | 无 | `DMSResult<HealthStatus>` |
-| `start_profiling()` | 开始性能分析 | 无 | `DMSResult<()>` |
-| `stop_profiling()` | 停止性能分析 | 无 | `DMSResult<Vec<ProfileData>>` |
+| `check_health()` | 执行健康检查 | 无 | `DMSCResult<HealthStatus>` |
+| `start_profiling()` | 开始性能分析 | 无 | `DMSCResult<()>` |
+| `stop_profiling()` | 停止性能分析 | 无 | `DMSCResult<Vec<ProfileData>>` |
 | `get_metrics()` | 获取所有指标 | 无 | `HashMap<String, MetricValue>` |
-| `export_metrics()` | 导出指标 | 无 | `DMSResult<String>` |
+| `export_metrics()` | 导出指标 | 无 | `DMSCResult<String>` |
 
 #### 使用示例
 
@@ -70,7 +70,7 @@ trace.record_event("database_query", serde_json::json!({
 trace.finish();
 ```
 
-### DMSTrace
+### DMSCTrace
 
 分布式追踪接口。
 
@@ -81,7 +81,7 @@ trace.finish();
 | `with_tag(key, value)` | 添加标签 | `key: &str`, `value: impl Serialize` | `&Self` |
 | `with_tags(tags)` | 添加多个标签 | `tags: impl Serialize` | `&Self` |
 | `record_event(name, attributes)` | 记录事件 | `name: &str`, `attributes: impl Serialize` | `()` |
-| `start_span(name)` | 开始子跨度 | `name: &str` | `DMSSpan` |
+| `start_span(name)` | 开始子跨度 | `name: &str` | `DMSCSpan` |
 | `set_status(status)` | 设置状态 | `status: TraceStatus` | `()` |
 | `finish()` | 结束追踪 | 无 | `()` |
 | `get_trace_id()` | 获取追踪ID | 无 | `String` |
@@ -115,7 +115,7 @@ trace.set_status(TraceStatus::Ok);
 trace.finish();
 ```
 
-### DMSSpan
+### DMSCSpan
 
 追踪跨度接口。
 
@@ -126,7 +126,7 @@ trace.finish();
 | `with_tag(key, value)` | 添加标签 | `key: &str`, `value: impl Serialize` | `&Self` |
 | `with_tags(tags)` | 添加多个标签 | `tags: impl Serialize` | `&Self` |
 | `record_event(name, attributes)` | 记录事件 | `name: &str`, `attributes: impl Serialize` | `()` |
-| `start_span(name)` | 开始子跨度 | `name: &str` | `DMSSpan` |
+| `start_span(name)` | 开始子跨度 | `name: &str` | `DMSCSpan` |
 | `set_status(status)` | 设置状态 | `status: TraceStatus` | `()` |
 | `finish()` | 结束跨度 | 无 | `()` |
 | `get_span_id()` | 获取跨度ID | 无 | `String` |
@@ -169,7 +169,7 @@ parent_span.finish();
 
 ### 指标类型
 
-#### DMSCounter
+#### DMSCCounter
 
 计数器类型，只能增加。
 
@@ -185,7 +185,7 @@ counter.increment_by(5);
 let count = counter.get();
 ```
 
-#### DMSGauge
+#### DMSCGauge
 
 计量器类型，可以设置任意值。
 
@@ -202,7 +202,7 @@ gauge.decrement_by(2.0);
 let value = gauge.get();
 ```
 
-#### DMSHistogram
+#### DMSCHistogram
 
 直方图类型，记录数值分布。
 
@@ -276,7 +276,7 @@ println!("{}", statsd_metrics);
 
 </div>
 
-### DMSHealthCheck
+### DMSCHealthCheck
 
 健康检查接口。
 
@@ -286,7 +286,7 @@ println!("{}", statsd_metrics);
 |:--------|:-------------|:--------|:--------|
 | `add_check(name, check)` | 添加健康检查 | `name: &str`, `check: impl HealthCheck` | `()` |
 | `remove_check(name)` | 移除健康检查 | `name: &str` | `()` |
-| `run_checks()` | 执行所有检查 | 无 | `DMSResult<HealthReport>` |
+| `run_checks()` | 执行所有检查 | 无 | `DMSCResult<HealthReport>` |
 | `get_status()` | 获取健康状态 | 无 | `HealthStatus` |
 
 #### 内置健康检查
@@ -328,7 +328,7 @@ struct CustomHealthCheck {
 }
 
 impl HealthCheck for CustomHealthCheck {
-    fn check(&self) -> DMSResult<HealthCheckResult> {
+    fn check(&self) -> DMSCResult<HealthCheckResult> {
         let current_value = self.get_current_value()?;
         
         if current_value < self.threshold {
@@ -347,7 +347,7 @@ impl HealthCheck for CustomHealthCheck {
 }
 
 impl CustomHealthCheck {
-    fn get_current_value(&self) -> DMSResult<f64> {
+    fn get_current_value(&self) -> DMSCResult<f64> {
         // 实现具体的检查逻辑
         Ok(0.5)
     }
@@ -426,7 +426,7 @@ println!("Disk I/O: {:.1}MB/s", performance_report.disk_io);
 
 </div>  
 
-### DMSAlert
+### DMSCAlert
 
 告警接口。
 
@@ -434,10 +434,10 @@ println!("Disk I/O: {:.1}MB/s", performance_report.disk_io);
 
 | 方法 | 描述 | 参数 | 返回值 |
 |:--------|:-------------|:--------|:--------|
-| `create_alert(name, condition)` | 创建告警 | `name: &str`, `condition: AlertCondition` | `DMSAlert` |
+| `create_alert(name, condition)` | 创建告警 | `name: &str`, `condition: AlertCondition` | `DMSCAlert` |
 | `enable_alert(name)` | 启用告警 | `name: &str` | `()` |
 | `disable_alert(name)` | 禁用告警 | `name: &str` | `()` |
-| `get_alerts()` | 获取所有告警 | 无 | `Vec<DMSAlert>` |
+| `get_alerts()` | 获取所有告警 | 无 | `Vec<DMSCAlert>` |
 
 ### 告警条件
 
@@ -529,7 +529,7 @@ let trace = ctx.observability().start_trace_with_context("http_request", extract
 
 ## 配置
 
-### DMSObservabilityConfig
+### DMSCObservabilityConfig
 
 可观测性配置结构体。
 
@@ -549,7 +549,7 @@ let trace = ctx.observability().start_trace_with_context("http_request", extract
 ```rust
 use dms::prelude::*;
 
-let observability_config = DMSObservabilityConfig {
+let observability_config = DMSCObservabilityConfig {
     tracing_enabled: true,
     metrics_enabled: true,
     health_checks_enabled: true,
@@ -587,7 +587,7 @@ match ctx.observability().export_metrics() {
         // 指标导出成功
         println!("Exported metrics: {}", metrics);
     }
-    Err(DMSError { code, .. }) if code == "METRIC_EXPORT_ERROR" => {
+    Err(DMSCError { code, .. }) if code == "METRIC_EXPORT_ERROR" => {
         // 指标导出错误，记录警告
         ctx.log().warn("Failed to export metrics, continuing without metrics");
     }

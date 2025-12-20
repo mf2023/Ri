@@ -6,13 +6,13 @@
 
 **Last modified date: 2025-12-12**
 
-本示例展示如何使用DMS的http模块进行HTTP服务器、客户端、路由管理、中间件、WebSocket和文件上传下载功能的使用。
+本示例展示如何使用DMSC的http模块进行HTTP服务器、客户端、路由管理、中间件、WebSocket和文件上传下载功能的使用。
 
 ## 示例概述
 
 </div>
 
-本示例将创建一个DMS应用，实现以下功能：
+本示例将创建一个DMSC应用，实现以下功能：
 
 - HTTP服务器配置和路由管理
 - RESTful API设计和实现
@@ -52,7 +52,7 @@ cd dms-http-example
 
 ```toml
 [dependencies]
-dms = { git = "https://gitee.com/dunimd/dms" }
+dms = { git = "https://gitee.com/dunimd/dmsc" }
 tokio = { version = "1.0", features = ["full"] }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
@@ -108,17 +108,17 @@ use serde_json::json;
 use chrono::Utc;
 
 #[tokio::main]
-async fn main() -> DMSResult<()> {
+async fn main() -> DMSCResult<()> {
     // 构建服务运行时
-    let app = DMSAppBuilder::new()
+    let app = DMSCAppBuilder::new()
         .with_config("config.yaml")?
-        .with_logging(DMSLogConfig::default())?
-        .with_http(DMSHttpConfig::default())?
+        .with_logging(DMSCLogConfig::default())?
+        .with_http(DMSCHttpConfig::default())?
         .build()?;
     
     // 运行业务逻辑
-    app.run(|ctx: &DMSServiceContext| async move {
-        ctx.logger().info("service", "DMS HTTP Example started")?;
+    app.run(|ctx: &DMSCServiceContext| async move {
+        ctx.logger().info("service", "DMSC HTTP Example started")?;
         
         // 初始化HTTP服务器
         initialize_http_server(&ctx).await?;
@@ -137,11 +137,11 @@ async fn main() -> DMSResult<()> {
     }).await
 }
 
-async fn initialize_http_server(ctx: &DMSServiceContext) -> DMSResult<()> {
+async fn initialize_http_server(ctx: &DMSCServiceContext) -> DMSCResult<()> {
     ctx.logger().info("http", "Initializing HTTP server")?;
     
     // 创建HTTP服务器配置
-    let server_config = DMSHttpServerConfig {
+    let server_config = DMSCHttpServerConfig {
         host: "0.0.0.0".to_string(),
         port: 8080,
         max_connections: 1000,
@@ -171,13 +171,13 @@ async fn initialize_http_server(ctx: &DMSServiceContext) -> DMSResult<()> {
     Ok(())
 }
 
-async fn setup_api_routes(ctx: &DMSServiceContext) -> DMSResult<()> {
+async fn setup_api_routes(ctx: &DMSCServiceContext) -> DMSCResult<()> {
     ctx.logger().info("http", "Setting up API routes")?;
     
     // GET请求处理 - 根路径
     ctx.http().get("/", |req, ctx| async move {
-        Ok(DMSHttpResponse::ok(json!({
-            "message": "Welcome to DMS API",
+        Ok(DMSCHttpResponse::ok(json!({
+            "message": "Welcome to DMSC API",
             "version": "1.0.0",
             "timestamp": Utc::now().to_rfc3339(),
         })))
@@ -187,20 +187,20 @@ async fn setup_api_routes(ctx: &DMSServiceContext) -> DMSResult<()> {
     ctx.http().get("/users/:id", |req, ctx| async move {
         let user_id = req.params.get("id")
             .and_then(|id| id.parse::<i32>().ok())
-            .ok_or_else(|| DMSError::bad_request("Invalid user ID".to_string()))?;
+            .ok_or_else(|| DMSCError::bad_request("Invalid user ID".to_string()))?;
         
         // 从数据库获取用户信息
         match ctx.database().query_one(
             "SELECT id, name, email, created_at FROM users WHERE id = $1",
             vec![user_id.into()]
         ).await? {
-            Some(user_data) => Ok(DMSHttpResponse::ok(json!({
+            Some(user_data) => Ok(DMSCHttpResponse::ok(json!({
                 "id": user_data.get::<i32>("id"),
                 "name": user_data.get::<String>("name"),
                 "email": user_data.get::<String>("email"),
                 "created_at": user_data.get::<String>("created_at"),
             }))),
-            None => Ok(DMSHttpResponse::not_found(json!({
+            None => Ok(DMSCHttpResponse::not_found(json!({
                 "error": "User not found",
                 "user_id": user_id,
             }))),
@@ -211,17 +211,17 @@ async fn setup_api_routes(ctx: &DMSServiceContext) -> DMSResult<()> {
     ctx.http().post("/users", |req, ctx| async move {
         let body = req.json::<serde_json::Value>()
             .await
-            .map_err(|e| DMSError::bad_request(format!("Invalid JSON: {}", e)))?;
+            .map_err(|e| DMSCError::bad_request(format!("Invalid JSON: {}", e)))?;
         
         // 验证必需字段
         let name = body["name"].as_str()
-            .ok_or_else(|| DMSError::bad_request("Name is required".to_string()))?;
+            .ok_or_else(|| DMSCError::bad_request("Name is required".to_string()))?;
         let email = body["email"].as_str()
-            .ok_or_else(|| DMSError::bad_request("Email is required".to_string()))?;
+            .ok_or_else(|| DMSCError::bad_request("Email is required".to_string()))?;
         
         // 验证邮箱格式
         if !email.contains('@') {
-            return Ok(DMSHttpResponse::bad_request(json!({
+            return Ok(DMSCHttpResponse::bad_request(json!({
                 "error": "Invalid email format"
             })));
         }
@@ -234,7 +234,7 @@ async fn setup_api_routes(ctx: &DMSServiceContext) -> DMSResult<()> {
             )
             .await?;
         
-        Ok(DMSHttpResponse::created(json!({
+        Ok(DMSCHttpResponse::created(json!({
             "id": user_id,
             "name": name,
             "email": email,
@@ -265,7 +265,7 @@ use dms::prelude::*;
 use serde_json::json;
 
 // 创建HTTP服务器配置
-let server_config = DMSHttpServerConfig {
+let server_config = DMSCHttpServerConfig {
     host: "0.0.0.0".to_string(),
     port: 8080,
     max_connections: 1000,
@@ -301,8 +301,8 @@ use serde_json::json;
 
 // GET请求处理
 ctx.http().get("/", |req, ctx| async move {
-    Ok(DMSHttpResponse::ok(json!({
-        "message": "Welcome to DMS API",
+    Ok(DMSCHttpResponse::ok(json!({
+        "message": "Welcome to DMSC API",
         "version": "1.0.0",
         "timestamp": chrono::Utc::now().to_rfc3339(),
     })))
@@ -312,20 +312,20 @@ ctx.http().get("/", |req, ctx| async move {
 ctx.http().get("/users/:id", |req, ctx| async move {
     let user_id = req.params.get("id")
         .and_then(|id| id.parse::<i32>().ok())
-        .ok_or_else(|| DMSError::bad_request("Invalid user ID".to_string()))?;
+        .ok_or_else(|| DMSCError::bad_request("Invalid user ID".to_string()))?;
     
     // 从数据库获取用户信息
     match ctx.database().query_one(
         "SELECT id, name, email, created_at FROM users WHERE id = $1",
         vec![user_id.into()]
     ).await? {
-        Some(user_data) => Ok(DMSHttpResponse::ok(json!({
+        Some(user_data) => Ok(DMSCHttpResponse::ok(json!({
             "id": user_data.get::<i32>("id"),
             "name": user_data.get::<String>("name"),
             "email": user_data.get::<String>("email"),
             "created_at": user_data.get::<String>("created_at"),
         }))),
-        None => Ok(DMSHttpResponse::not_found(json!({
+        None => Ok(DMSCHttpResponse::not_found(json!({
             "error": "User not found",
             "user_id": user_id,
         }))),
@@ -336,17 +336,17 @@ ctx.http().get("/users/:id", |req, ctx| async move {
 ctx.http().post("/users", |req, ctx| async move {
     let body = req.json::<serde_json::Value>()
         .await
-        .map_err(|e| DMSError::bad_request(format!("Invalid JSON: {}", e)))?;
+        .map_err(|e| DMSCError::bad_request(format!("Invalid JSON: {}", e)))?;
     
     // 验证必需字段
     let name = body["name"].as_str()
-        .ok_or_else(|| DMSError::bad_request("Name is required".to_string()))?;
+        .ok_or_else(|| DMSCError::bad_request("Name is required".to_string()))?;
     let email = body["email"].as_str()
-        .ok_or_else(|| DMSError::bad_request("Email is required".to_string()))?;
+        .ok_or_else(|| DMSCError::bad_request("Email is required".to_string()))?;
     
     // 验证邮箱格式
     if !email.contains('@') {
-        return Ok(DMSHttpResponse::bad_request(json!({
+        return Ok(DMSCHttpResponse::bad_request(json!({
             "error": "Invalid email format"
         })));
     }
@@ -359,7 +359,7 @@ ctx.http().post("/users", |req, ctx| async move {
         )
         .await?;
     
-    Ok(DMSHttpResponse::created(json!({
+    Ok(DMSCHttpResponse::created(json!({
         "id": user_id,
         "name": name,
         "email": email,
@@ -371,11 +371,11 @@ ctx.http().post("/users", |req, ctx| async move {
 ctx.http().put("/users/:id", |req, ctx| async move {
     let user_id = req.params.get("id")
         .and_then(|id| id.parse::<i32>().ok())
-        .ok_or_else(|| DMSError::bad_request("Invalid user ID".to_string()))?;
+        .ok_or_else(|| DMSCError::bad_request("Invalid user ID".to_string()))?;
     
     let body = req.json::<serde_json::Value>()
         .await
-        .map_err(|e| DMSError::bad_request(format!("Invalid JSON: {}", e)))?;
+        .map_err(|e| DMSCError::bad_request(format!("Invalid JSON: {}", e)))?;
     
     let name = body["name"].as_str();
     let email = body["email"].as_str();
@@ -401,7 +401,7 @@ ctx.http().put("/users/:id", |req, ctx| async move {
     }
     
     if updates.is_empty() {
-        return Ok(DMSHttpResponse::bad_request(json!({
+        return Ok(DMSCHttpResponse::bad_request(json!({
             "error": "No fields to update"
         })));
     }
@@ -416,14 +416,14 @@ ctx.http().put("/users/:id", |req, ctx| async move {
     );
     
     match ctx.database().query_one(query, params).await? {
-        Some(updated_user) => Ok(DMSHttpResponse::ok(json!({
+        Some(updated_user) => Ok(DMSCHttpResponse::ok(json!({
             "id": updated_user.get::<i32>("id"),
             "name": updated_user.get::<String>("name"),
             "email": updated_user.get::<String>("email"),
             "age": updated_user.get::<i32>("age"),
             "message": "User updated successfully"
         }))),
-        None => Ok(DMSHttpResponse::not_found(json!({
+        None => Ok(DMSCHttpResponse::not_found(json!({
             "error": "User not found",
             "user_id": user_id,
         }))),
@@ -434,19 +434,19 @@ ctx.http().put("/users/:id", |req, ctx| async move {
 ctx.http().delete("/users/:id", |req, ctx| async move {
     let user_id = req.params.get("id")
         .and_then(|id| id.parse::<i32>().ok())
-        .ok_or_else(|| DMSError::bad_request("Invalid user ID".to_string()))?;
+        .ok_or_else(|| DMSCError::bad_request("Invalid user ID".to_string()))?;
     
     let deleted_rows = ctx.database()
         .execute("DELETE FROM users WHERE id = $1", vec![user_id.into()])
         .await?;
     
     if deleted_rows > 0 {
-        Ok(DMSHttpResponse::ok(json!({
+        Ok(DMSCHttpResponse::ok(json!({
             "message": "User deleted successfully",
             "user_id": user_id,
         })))
     } else {
-        Ok(DMSHttpResponse::not_found(json!({
+        Ok(DMSCHttpResponse::not_found(json!({
             "error": "User not found",
             "user_id": user_id,
         })))
@@ -473,7 +473,7 @@ api_routes.get("/health", |req, ctx| async move {
         "version": "1.0.0",
     });
     
-    Ok(DMSHttpResponse::ok(health_status))
+    Ok(DMSCHttpResponse::ok(health_status))
 });
 
 api_routes.get("/stats", |req, ctx| async move {
@@ -496,7 +496,7 @@ api_routes.get("/stats", |req, ctx| async move {
         "server_time": chrono::Utc::now().to_rfc3339(),
     });
     
-    Ok(DMSHttpResponse::ok(stats))
+    Ok(DMSCHttpResponse::ok(stats))
 });
 
 // 用户管理路由组
@@ -543,7 +543,7 @@ user_routes.get("/", |req, ctx| async move {
         }
     });
     
-    Ok(DMSHttpResponse::ok(response))
+    Ok(DMSCHttpResponse::ok(response))
 });
 
 // 认证路由组
@@ -552,12 +552,12 @@ let auth_routes = api_routes.group("/auth");
 auth_routes.post("/login", |req, ctx| async move {
     let body = req.json::<serde_json::Value>()
         .await
-        .map_err(|e| DMSError::bad_request(format!("Invalid JSON: {}", e)))?;
+        .map_err(|e| DMSCError::bad_request(format!("Invalid JSON: {}", e)))?;
     
     let email = body["email"].as_str()
-        .ok_or_else(|| DMSError::bad_request("Email is required".to_string()))?;
+        .ok_or_else(|| DMSCError::bad_request("Email is required".to_string()))?;
     let password = body["password"].as_str()
-        .ok_or_else(|| DMSError::bad_request("Password is required".to_string()))?;
+        .ok_or_else(|| DMSCError::bad_request("Password is required".to_string()))?;
     
     // 验证用户凭据
     let user = ctx.database()
@@ -578,7 +578,7 @@ auth_routes.post("/login", |req, ctx| async move {
                 Duration::from_hours(24)
             ).await?;
             
-            Ok(DMSHttpResponse::ok(json!({
+            Ok(DMSCHttpResponse::ok(json!({
                 "token": token,
                 "user": {
                     "id": user_data.get::<i32>("id"),
@@ -587,12 +587,12 @@ auth_routes.post("/login", |req, ctx| async move {
                 }
             })))
         } else {
-            Ok(DMSHttpResponse::unauthorized(json!({
+            Ok(DMSCHttpResponse::unauthorized(json!({
                 "error": "Invalid credentials"
             })))
         }
     } else {
-        Ok(DMSHttpResponse::unauthorized(json!({
+        Ok(DMSCHttpResponse::unauthorized(json!({
             "error": "Invalid credentials"
         })))
     }
@@ -601,18 +601,18 @@ auth_routes.post("/login", |req, ctx| async move {
 auth_routes.post("/register", |req, ctx| async move {
     let body = req.json::<serde_json::Value>()
         .await
-        .map_err(|e| DMSError::bad_request(format!("Invalid JSON: {}", e)))?;
+        .map_err(|e| DMSCError::bad_request(format!("Invalid JSON: {}", e)))?;
     
     let name = body["name"].as_str()
-        .ok_or_else(|| DMSError::bad_request("Name is required".to_string()))?;
+        .ok_or_else(|| DMSCError::bad_request("Name is required".to_string()))?;
     let email = body["email"].as_str()
-        .ok_or_else(|| DMSError::bad_request("Email is required".to_string()))?;
+        .ok_or_else(|| DMSCError::bad_request("Email is required".to_string()))?;
     let password = body["password"].as_str()
-        .ok_or_else(|| DMSError::bad_request("Password is required".to_string()))?;
+        .ok_or_else(|| DMSCError::bad_request("Password is required".to_string()))?;
     
     // 验证输入
     if password.len() < 8 {
-        return Ok(DMSHttpResponse::bad_request(json!({
+        return Ok(DMSCHttpResponse::bad_request(json!({
             "error": "Password must be at least 8 characters long"
         })));
     }
@@ -623,7 +623,7 @@ auth_routes.post("/register", |req, ctx| async move {
         .await?;
     
     if existing_user.is_some() {
-        return Ok(DMSHttpResponse::conflict(json!({
+        return Ok(DMSCHttpResponse::conflict(json!({
             "error": "Email already registered"
         })));
     }
@@ -639,7 +639,7 @@ auth_routes.post("/register", |req, ctx| async move {
         )
         .await?;
     
-    Ok(DMSHttpResponse::created(json!({
+    Ok(DMSCHttpResponse::created(json!({
         "id": user_id,
         "name": name,
         "email": email,
@@ -657,10 +657,10 @@ use dms::prelude::*;
 use serde_json::json;
 
 // 创建HTTP客户端配置
-let client_config = DMSHttpClientConfig {
+let client_config = DMSCHttpClientConfig {
     timeout: Duration::from_secs(30),
     max_redirects: 5,
-    user_agent: "DMS-Client/1.0".to_string(),
+    user_agent: "DMSC-Client/1.0".to_string(),
     enable_compression: true,
     enable_cookies: true,
     max_connections: 100,
@@ -677,7 +677,7 @@ ctx.http().init_client(client_config).await?;
 // GET请求
 let response = ctx.http().get("https://api.github.com/users/octocat")
     .header("Accept", "application/json")
-    .header("User-Agent", "DMS-Client/1.0")
+    .header("User-Agent", "DMSC-Client/1.0")
     .send()
     .await?;
 
@@ -787,10 +787,10 @@ use dms::prelude::*;
 use serde_json::json;
 
 // 日志中间件
-ctx.http().use_middleware(DMSHttpMiddleware::logging());
+ctx.http().use_middleware(DMSCHttpMiddleware::logging());
 
 // CORS中间件
-ctx.http().use_middleware(DMSHttpMiddleware::cors()
+ctx.http().use_middleware(DMSCHttpMiddleware::cors()
     .allow_origin("https://example.com")
     .allow_methods(vec!["GET", "POST", "PUT", "DELETE"])
     .allow_headers(vec!["Content-Type", "Authorization"])
@@ -798,14 +798,14 @@ ctx.http().use_middleware(DMSHttpMiddleware::cors()
 );
 
 // 认证中间件
-ctx.http().use_middleware(DMSHttpMiddleware::auth()
+ctx.http().use_middleware(DMSCHttpMiddleware::auth()
     .exclude_paths(vec!["/api/v1/auth/login", "/api/v1/auth/register"])
     .token_header("Authorization")
     .token_prefix("Bearer ")
 );
 
 // 速率限制中间件
-ctx.http().use_middleware(DMSHttpMiddleware::rate_limit()
+ctx.http().use_middleware(DMSCHttpMiddleware::rate_limit()
     .requests_per_minute(60)
     .burst(10)
     .key_extractor(|req| {
@@ -815,13 +815,13 @@ ctx.http().use_middleware(DMSHttpMiddleware::rate_limit()
 );
 
 // 压缩中间件
-ctx.http().use_middleware(DMSHttpMiddleware::compression()
+ctx.http().use_middleware(DMSCHttpMiddleware::compression()
     .threshold(1024)
     .level(6)
 );
 
 // 请求ID中间件
-ctx.http().use_middleware(DMSHttpMiddleware::request_id()
+ctx.http().use_middleware(DMSCHttpMiddleware::request_id()
     .header_name("X-Request-ID")
     .generator(|| uuid::Uuid::new_v4().to_string())
 );
@@ -835,10 +835,10 @@ use serde_json::json;
 
 // 自定义认证中间件
 async fn auth_middleware(
-    req: DMSHttpRequest,
-    ctx: DMSContext,
-    next: DMSNext,
-) -> DMSResult<DMSHttpResponse> {
+    req: DMSCHttpRequest,
+    ctx: DMSCContext,
+    next: DMSCNext,
+) -> DMSCResult<DMSCHttpResponse> {
     // 跳过不需要认证的路径
     let skip_auth = vec!["/api/v1/auth/login", "/api/v1/auth/register", "/health"];
     if skip_auth.iter().any(|path| req.path.starts_with(path)) {
@@ -847,10 +847,10 @@ async fn auth_middleware(
     
     // 检查认证头
     let auth_header = req.headers.get("Authorization")
-        .ok_or_else(|| DMSError::unauthorized("Missing Authorization header".to_string()))?;
+        .ok_or_else(|| DMSCError::unauthorized("Missing Authorization header".to_string()))?;
     
     let token = auth_header.strip_prefix("Bearer ")
-        .ok_or_else(|| DMSError::unauthorized("Invalid Authorization format".to_string()))?;
+        .ok_or_else(|| DMSCError::unauthorized("Invalid Authorization format".to_string()))?;
     
     // 验证JWT令牌
     match ctx.auth().validate_jwt(token).await {
@@ -863,7 +863,7 @@ async fn auth_middleware(
             next.run(req, ctx).await
         }
         Err(e) => {
-            Ok(DMSHttpResponse::unauthorized(json!({
+            Ok(DMSCHttpResponse::unauthorized(json!({
                 "error": "Invalid or expired token",
                 "details": e.to_string()
             })))
@@ -873,10 +873,10 @@ async fn auth_middleware(
 
 // 自定义日志中间件
 async fn logging_middleware(
-    req: DMSHttpRequest,
-    ctx: DMSContext,
-    next: DMSNext,
-) -> DMSResult<DMSHttpResponse> {
+    req: DMSCHttpRequest,
+    ctx: DMSCContext,
+    next: DMSCNext,
+) -> DMSCResult<DMSCHttpResponse> {
     let start_time = std::time::Instant::now();
     let request_id = req.headers.get("X-Request-ID")
         .unwrap_or(&"unknown".to_string())
@@ -907,46 +907,46 @@ async fn logging_middleware(
 
 // 自定义错误处理中间件
 async fn error_handling_middleware(
-    req: DMSHttpRequest,
-    ctx: DMSContext,
-    next: DMSNext,
-) -> DMSResult<DMSHttpResponse> {
+    req: DMSCHttpRequest,
+    ctx: DMSCContext,
+    next: DMSCNext,
+) -> DMSCResult<DMSCHttpResponse> {
     match next.run(req, ctx.clone()).await {
         Ok(response) => Ok(response),
         Err(error) => {
             ctx.log().error(format!("Request error: {}", error));
             
             let error_response = match error {
-                DMSError::BadRequest(msg) => {
-                    DMSHttpResponse::bad_request(json!({
+                DMSCError::BadRequest(msg) => {
+                    DMSCHttpResponse::bad_request(json!({
                         "error": "Bad Request",
                         "message": msg,
                         "timestamp": chrono::Utc::now().to_rfc3339(),
                     }))
                 }
-                DMSError::Unauthorized(msg) => {
-                    DMSHttpResponse::unauthorized(json!({
+                DMSCError::Unauthorized(msg) => {
+                    DMSCHttpResponse::unauthorized(json!({
                         "error": "Unauthorized",
                         "message": msg,
                         "timestamp": chrono::Utc::now().to_rfc3339(),
                     }))
                 }
-                DMSError::NotFound(msg) => {
-                    DMSHttpResponse::not_found(json!({
+                DMSCError::NotFound(msg) => {
+                    DMSCHttpResponse::not_found(json!({
                         "error": "Not Found",
                         "message": msg,
                         "timestamp": chrono::Utc::now().to_rfc3339(),
                     }))
                 }
-                DMSError::InternalError(msg) => {
-                    DMSHttpResponse::internal_server_error(json!({
+                DMSCError::InternalError(msg) => {
+                    DMSCHttpResponse::internal_server_error(json!({
                         "error": "Internal Server Error",
                         "message": "An internal error occurred",
                         "timestamp": chrono::Utc::now().to_rfc3339(),
                     }))
                 }
                 _ => {
-                    DMSHttpResponse::internal_server_error(json!({
+                    DMSCHttpResponse::internal_server_error(json!({
                         "error": "Internal Server Error",
                         "message": "An unexpected error occurred",
                         "timestamp": chrono::Utc::now().to_rfc3339(),
@@ -988,12 +988,12 @@ ctx.http().websocket("/ws", |ws_stream, ctx| async move {
         "timestamp": chrono::Utc::now().to_rfc3339(),
     });
     
-    sender.send(DMSWebSocketMessage::Text(welcome_msg.to_string())).await?;
+    sender.send(DMSCWebSocketMessage::Text(welcome_msg.to_string())).await?;
     
     // 处理接收到的消息
     while let Some(msg) = receiver.next().await {
         match msg {
-            Ok(DMSWebSocketMessage::Text(text)) => {
+            Ok(DMSCWebSocketMessage::Text(text)) => {
                 ctx.log().info(format!("Received message from {}: {}", client_id, text));
                 
                 // 解析消息
@@ -1030,24 +1030,24 @@ ctx.http().websocket("/ws", |ws_stream, ctx| async move {
                             })
                         };
                         
-                        sender.send(DMSWebSocketMessage::Text(response.to_string())).await?;
+                        sender.send(DMSCWebSocketMessage::Text(response.to_string())).await?;
                     }
                     Err(e) => {
                         let error_response = json!({
                             "type": "error",
                             "message": format!("Invalid JSON: {}", e),
                         });
-                        sender.send(DMSWebSocketMessage::Text(error_response.to_string())).await?;
+                        sender.send(DMSCWebSocketMessage::Text(error_response.to_string())).await?;
                     }
                 }
             }
-            Ok(DMSWebSocketMessage::Binary(data)) => {
+            Ok(DMSCWebSocketMessage::Binary(data)) => {
                 ctx.log().info(format!("Received binary data from {}: {} bytes", client_id, data.len()));
                 
                 // 回显二进制数据
-                sender.send(DMSWebSocketMessage::Binary(data)).await?;
+                sender.send(DMSCWebSocketMessage::Binary(data)).await?;
             }
-            Ok(DMSWebSocketMessage::Close(reason)) => {
+            Ok(DMSCWebSocketMessage::Close(reason)) => {
                 ctx.log().info(format!("WebSocket client {} disconnected: {:?}", client_id, reason));
                 break;
             }
@@ -1082,7 +1082,7 @@ ctx.http().websocket("/chat/:room", |ws_stream, ctx| async move {
     
     // 处理消息
     while let Some(msg) = receiver.next().await {
-        if let Ok(DMSWebSocketMessage::Text(text)) = msg {
+        if let Ok(DMSCWebSocketMessage::Text(text)) = msg {
             let chat_msg = json!({
                 "type": "chat_message",
                 "user_id": user_id,
@@ -1109,13 +1109,13 @@ ctx.http().websocket("/chat/:room", |ws_stream, ctx| async move {
 });
 
 // 广播函数
-async fn broadcast_to_room(room_id: &str, message: serde_json::Value, ctx: &DMSContext) -> DMSResult<()> {
+async fn broadcast_to_room(room_id: &str, message: serde_json::Value, ctx: &DMSCContext) -> DMSCResult<()> {
     let room_key = format!("chat_room:{}:connections", room_id);
     let connections = ctx.cache().get_set_members(&room_key).await?;
     
     for connection_id in connections {
         if let Some(sender) = get_websocket_sender(&connection_id) {
-            sender.send(DMSWebSocketMessage::Text(message.to_string())).await?;
+            sender.send(DMSCWebSocketMessage::Text(message.to_string())).await?;
         }
     }
     
@@ -1134,15 +1134,15 @@ let ws_client = ctx.http().websocket_client("wss://echo.websocket.org").await?;
 let (mut sender, mut receiver) = ws_client.split();
 
 // 发送消息
-sender.send(DMSWebSocketMessage::Text("Hello WebSocket!".to_string())).await?;
+sender.send(DMSCWebSocketMessage::Text("Hello WebSocket!".to_string())).await?;
 
 // 接收消息
 while let Some(msg) = receiver.next().await {
     match msg {
-        Ok(DMSWebSocketMessage::Text(text)) => {
+        Ok(DMSCWebSocketMessage::Text(text)) => {
             ctx.log().info(format!("Received: {}", text));
         }
-        Ok(DMSWebSocketMessage::Close(reason)) => {
+        Ok(DMSCWebSocketMessage::Close(reason)) => {
             ctx.log().info(format!("WebSocket closed: {:?}", reason));
             break;
         }
@@ -1187,7 +1187,7 @@ ctx.http().post("/upload/single", |req, ctx| async move {
         
         ctx.log().info(format!("File uploaded with ID: {}", file_id));
         
-        return Ok(DMSHttpResponse::ok(json!({
+        return Ok(DMSCHttpResponse::ok(json!({
             "file_id": file_id,
             "filename": filename,
             "size": data.len(),
@@ -1195,7 +1195,7 @@ ctx.http().post("/upload/single", |req, ctx| async move {
         })));
     }
     
-    Ok(DMSHttpResponse::bad_request(json!({
+    Ok(DMSCHttpResponse::bad_request(json!({
         "error": "No file uploaded"
     })))
 });
@@ -1226,7 +1226,7 @@ ctx.http().post("/upload/multiple", |req, ctx| async move {
         }
     }
     
-    Ok(DMSHttpResponse::ok(json!({
+    Ok(DMSCHttpResponse::ok(json!({
         "uploaded_files": uploaded_files,
         "total_count": uploaded_files.len()
     })))
@@ -1236,20 +1236,20 @@ ctx.http().post("/upload/multiple", |req, ctx| async move {
 ctx.http().post("/upload/chunk", |req, ctx| async move {
     let body = req.json::<serde_json::Value>()
         .await
-        .map_err(|e| DMSError::bad_request(format!("Invalid JSON: {}", e)))?;
+        .map_err(|e| DMSCError::bad_request(format!("Invalid JSON: {}", e)))?;
     
     let upload_id = body["upload_id"].as_str()
-        .ok_or_else(|| DMSError::bad_request("Upload ID is required".to_string()))?;
+        .ok_or_else(|| DMSCError::bad_request("Upload ID is required".to_string()))?;
     let chunk_index = body["chunk_index"].as_i64()
-        .ok_or_else(|| DMSError::bad_request("Chunk index is required".to_string()))? as i32;
+        .ok_or_else(|| DMSCError::bad_request("Chunk index is required".to_string()))? as i32;
     let total_chunks = body["total_chunks"].as_i64()
-        .ok_or_else(|| DMSError::bad_request("Total chunks is required".to_string()))? as i32;
+        .ok_or_else(|| DMSCError::bad_request("Total chunks is required".to_string()))? as i32;
     let chunk_data = body["data"].as_str()
-        .ok_or_else(|| DMSError::bad_request("Chunk data is required".to_string()))?;
+        .ok_or_else(|| DMSCError::bad_request("Chunk data is required".to_string()))?;
     
     // 解码base64数据
     let data = base64::decode(chunk_data)
-        .map_err(|e| DMSError::bad_request(format!("Invalid base64 data: {}", e)))?;
+        .map_err(|e| DMSCError::bad_request(format!("Invalid base64 data: {}", e)))?;
     
     // 上传分块
     ctx.storage().upload_chunk(
@@ -1263,13 +1263,13 @@ ctx.http().post("/upload/chunk", |req, ctx| async move {
     if chunk_index == total_chunks - 1 {
         let file_id = ctx.storage().complete_multipart_upload(upload_id).await?;
         
-        Ok(DMSHttpResponse::ok(json!({
+        Ok(DMSCHttpResponse::ok(json!({
             "status": "completed",
             "file_id": file_id,
             "upload_id": upload_id
         })))
     } else {
-        Ok(DMSHttpResponse::ok(json!({
+        Ok(DMSCHttpResponse::ok(json!({
             "status": "chunk_uploaded",
             "chunk_index": chunk_index,
             "upload_id": upload_id
@@ -1287,7 +1287,7 @@ use serde_json::json;
 // 文件下载
 ctx.http().get("/download/:file_id", |req, ctx| async move {
     let file_id = req.params.get("file_id")
-        .ok_or_else(|| DMSError::bad_request("File ID is required".to_string()))?;
+        .ok_or_else(|| DMSCError::bad_request("File ID is required".to_string()))?;
     
     // 获取文件信息
     let file_info = ctx.storage().get_file_info(file_id).await?;
@@ -1301,17 +1301,17 @@ ctx.http().get("/download/:file_id", |req, ctx| async move {
     // 下载文件数据
     let file_data = ctx.storage().download(file_id).await?;
     
-    Ok(DMSHttpResponse::ok_with_headers(file_data, headers))
+    Ok(DMSCHttpResponse::ok_with_headers(file_data, headers))
 });
 
 // 断点续传下载
 ctx.http().get("/download/range/:file_id", |req, ctx| async move {
     let file_id = req.params.get("file_id")
-        .ok_or_else(|| DMSError::bad_request("File ID is required".to_string()))?;
+        .ok_or_else(|| DMSCError::bad_request("File ID is required".to_string()))?;
     
     // 解析Range头
     let range_header = req.headers.get("Range")
-        .ok_or_else(|| DMSError::bad_request("Range header is required".to_string()))?;
+        .ok_or_else(|| DMSCError::bad_request("Range header is required".to_string()))?;
     
     let (start, end) = parse_range_header(range_header)?;
     
@@ -1320,7 +1320,7 @@ ctx.http().get("/download/range/:file_id", |req, ctx| async move {
     
     // 验证范围
     if start >= file_info.size as u64 {
-        return Ok(DMSHttpResponse::range_not_satisfiable());
+        return Ok(DMSCHttpResponse::range_not_satisfiable());
     }
     
     let end = end.unwrap_or(file_info.size as u64 - 1);
@@ -1337,13 +1337,13 @@ ctx.http().get("/download/range/:file_id", |req, ctx| async move {
     headers.insert("Content-Length".to_string(), content_length.to_string());
     headers.insert("Accept-Ranges".to_string(), "bytes".to_string());
     
-    Ok(DMSHttpResponse::partial_content_with_headers(data, headers))
+    Ok(DMSCHttpResponse::partial_content_with_headers(data, headers))
 });
 
 // 临时下载链接
 ctx.http().get("/download/temp/:file_id", |req, ctx| async move {
     let file_id = req.params.get("file_id")
-        .ok_or_else(|| DMSError::bad_request("File ID is required".to_string()))?;
+        .ok_or_else(|| DMSCError::bad_request("File ID is required".to_string()))?;
     
     let expires_in = req.query.get("expires")
         .and_then(|e| e.parse::<u64>().ok())
@@ -1355,7 +1355,7 @@ ctx.http().get("/download/temp/:file_id", |req, ctx| async move {
         Duration::from_secs(expires_in)
     ).await?;
     
-    Ok(DMSHttpResponse::ok(json!({
+    Ok(DMSCHttpResponse::ok(json!({
         "download_url": temp_url,
         "expires_in": expires_in,
         "file_id": file_id
@@ -1373,7 +1373,7 @@ use dms::prelude::*;
 // HTTP代理
 ctx.http().get("/proxy/*path", |req, ctx| async move {
     let target_path = req.params.get("path")
-        .ok_or_else(|| DMSError::bad_request("Target path is required".to_string()))?;
+        .ok_or_else(|| DMSCError::bad_request("Target path is required".to_string()))?;
     
     let target_url = format!("https://api.target-service.com/{}", target_path);
     
@@ -1386,7 +1386,7 @@ ctx.http().get("/proxy/*path", |req, ctx| async move {
         .await?;
     
     // 返回代理响应
-    Ok(DMSHttpResponse::new(
+    Ok(DMSCHttpResponse::new(
         proxy_response.status,
         proxy_response.headers,
         proxy_response.body
@@ -1402,7 +1402,7 @@ use serde_json::json;
 
 // SSE端点
 ctx.http().get("/events", |req, ctx| async move {
-    let mut event_stream = DMSHttpResponse::event_stream();
+    let mut event_stream = DMSCHttpResponse::event_stream();
     
     // 发送初始事件
     event_stream.send_event("connected", json!({
@@ -1432,7 +1432,7 @@ ctx.http().get("/events", |req, ctx| async move {
 });
 
 // 发送自定义事件
-async fn send_custom_event(event_type: &str, data: serde_json::Value, ctx: &DMSContext) -> DMSResult<()> {
+async fn send_custom_event(event_type: &str, data: serde_json::Value, ctx: &DMSCContext) -> DMSCResult<()> {
     let event = json!({
         "type": event_type,
         "data": data,
@@ -1468,15 +1468,15 @@ match ctx.http().get("https://api.example.com/data").send().await {
             // 处理服务器错误
         }
     }
-    Err(DMSError::HttpTimeoutError(e)) => {
+    Err(DMSCError::HttpTimeoutError(e)) => {
         ctx.log().error(format!("Request timeout: {}", e));
         // 重试或降级处理
     }
-    Err(DMSError::HttpConnectionError(e)) => {
+    Err(DMSCError::HttpConnectionError(e)) => {
         ctx.log().error(format!("Connection error: {}", e));
         // 检查网络连接或切换备用服务
     }
-    Err(DMSError::HttpRedirectError(e)) => {
+    Err(DMSCError::HttpRedirectError(e)) => {
         ctx.log().warn(format!("Too many redirects: {}", e));
         // 处理重定向循环
     }
@@ -1487,7 +1487,7 @@ match ctx.http().get("https://api.example.com/data").send().await {
 }
 
 // 重试机制
-async fn retry_request(url: &str, max_retries: u32, ctx: &DMSContext) -> DMSResult<DMSHttpResponse> {
+async fn retry_request(url: &str, max_retries: u32, ctx: &DMSCContext) -> DMSCResult<DMSCHttpResponse> {
     let mut retry_count = 0;
     
     loop {
@@ -1530,7 +1530,7 @@ async fn retry_request(url: &str, max_retries: u32, ctx: &DMSContext) -> DMSResu
 use dms::prelude::*;
 
 // HTTP客户端连接池配置
-let client_config = DMSHttpClientConfig {
+let client_config = DMSCHttpClientConfig {
     max_connections: 200,              // 增加最大连接数
     connection_timeout: Duration::from_secs(5),
     idle_timeout: Duration::from_secs(30), // 减少空闲超时时间
@@ -1551,7 +1551,7 @@ use dms::prelude::*;
 use serde_json::json;
 
 // HTTP响应缓存
-async fn cached_request(url: &str, cache_key: &str, ctx: &DMSContext) -> DMSResult<serde_json::Value> {
+async fn cached_request(url: &str, cache_key: &str, ctx: &DMSCContext) -> DMSCResult<serde_json::Value> {
     // 尝试从缓存获取
     if let Some(cached_data) = ctx.cache().get_json(cache_key).await? {
         ctx.log().debug(format!("Cache hit for key: {}", cache_key));
@@ -1570,7 +1570,7 @@ async fn cached_request(url: &str, cache_key: &str, ctx: &DMSContext) -> DMSResu
 }
 
 // 条件请求（ETag/Last-Modified）
-async fn conditional_request(url: &str, etag_key: &str, ctx: &DMSContext) -> DMSResult<Option<serde_json::Value>> {
+async fn conditional_request(url: &str, etag_key: &str, ctx: &DMSCContext) -> DMSCResult<Option<serde_json::Value>> {
     // 获取缓存的ETag
     let cached_etag = ctx.cache().get(etag_key).await?;
     
@@ -1597,7 +1597,7 @@ async fn conditional_request(url: &str, etag_key: &str, ctx: &DMSContext) -> DMS
             Ok(Some(data))
         }
         _ => {
-            Err(DMSError::http_error(format!("Unexpected status: {}", response.status)))
+            Err(DMSCError::http_error(format!("Unexpected status: {}", response.status)))
         }
     }
 }
@@ -1625,7 +1625,7 @@ async fn conditional_request(url: &str, etag_key: &str, ctx: &DMSContext) -> DMS
 运行成功后，你将看到以下输出：
 
 ```
-[INFO] DMS HTTP Example started
+[INFO] DMSC HTTP Example started
 [INFO] HTTP server initialized on port 8080
 [INFO] API routes configured successfully
 [INFO] HTTP server is running on http://localhost:8080
@@ -1665,15 +1665,15 @@ websocat ws://localhost:8080/ws
 use dms::prelude::*;
 use serde_json::json;
 
-async fn setup_load_balancer(ctx: &DMSServiceContext) -> DMSResult<()> {
+async fn setup_load_balancer(ctx: &DMSCServiceContext) -> DMSCResult<()> {
     let backend_servers = vec![
         "http://backend1.example.com:8080",
         "http://backend2.example.com:8080",
         "http://backend3.example.com:8080",
     ];
     
-    let lb_config = DMSLoadBalancerConfig {
-        algorithm: DMSLoadBalancerAlgorithm::RoundRobin,
+    let lb_config = DMSCLoadBalancerConfig {
+        algorithm: DMSCLoadBalancerAlgorithm::RoundRobin,
         health_check_interval: Duration::from_secs(30),
         health_check_timeout: Duration::from_secs(5),
         unhealthy_threshold: 3,
@@ -1692,7 +1692,7 @@ async fn setup_load_balancer(ctx: &DMSServiceContext) -> DMSResult<()> {
             "timestamp": chrono::Utc::now().to_rfc3339(),
         });
         
-        Ok(DMSHttpResponse::ok(health_status))
+        Ok(DMSCHttpResponse::ok(health_status))
     });
     
     Ok(())
@@ -1705,14 +1705,14 @@ async fn setup_load_balancer(ctx: &DMSServiceContext) -> DMSResult<()> {
 use dms::prelude::*;
 use serde_json::json;
 
-async fn setup_api_gateway(ctx: &DMSServiceContext) -> DMSResult<()> {
-    let gateway_config = DMSApiGatewayConfig {
-        rate_limiting: DMSRateLimitConfig {
+async fn setup_api_gateway(ctx: &DMSCServiceContext) -> DMSCResult<()> {
+    let gateway_config = DMSCApiGatewayConfig {
+        rate_limiting: DMSCRateLimitConfig {
             requests_per_minute: 1000,
             burst: 100,
             key_extractor: |req| req.headers.get("X-API-Key").unwrap_or(&"anonymous".to_string()).clone(),
         },
-        circuit_breaker: DMSCircuitBreakerConfig {
+        circuit_breaker: DMSCCircuitBreakerConfig {
             failure_threshold: 5,
             recovery_timeout: Duration::from_secs(60),
             success_threshold: 2,
@@ -1741,7 +1741,7 @@ async fn setup_api_gateway(ctx: &DMSServiceContext) -> DMSResult<()> {
         let api_docs = json!({
             "openapi": "3.0.0",
             "info": {
-                "title": "DMS API Gateway",
+                "title": "DMSC API Gateway",
                 "version": "1.0.0",
                 "description": "Unified API gateway for microservices",
             },
@@ -1760,7 +1760,7 @@ async fn setup_api_gateway(ctx: &DMSServiceContext) -> DMSResult<()> {
             }
         });
         
-        Ok(DMSHttpResponse::ok(api_docs))
+        Ok(DMSCHttpResponse::ok(api_docs))
     });
     
     Ok(())
@@ -1779,7 +1779,7 @@ struct QueryRoot;
 #[Object]
 impl QueryRoot {
     async fn user(&self, ctx: &Context<'_>, id: i32) -> FieldResult<User> {
-        let dms_ctx = ctx.data::<DMSServiceContext>()?;
+        let dms_ctx = ctx.data::<DMSCServiceContext>()?;
         let user_data = dms_ctx.database()
             .query_one("SELECT id, name, email FROM users WHERE id = $1", vec![id.into()])
             .await?
@@ -1793,7 +1793,7 @@ impl QueryRoot {
     }
     
     async fn users(&self, ctx: &Context<'_>, limit: Option<i32>) -> FieldResult<Vec<User>> {
-        let dms_ctx = ctx.data::<DMSServiceContext>()?;
+        let dms_ctx = ctx.data::<DMSCServiceContext>()?;
         let limit = limit.unwrap_or(10);
         
         let users_data = dms_ctx.database()
@@ -1815,7 +1815,7 @@ struct MutationRoot;
 #[Object]
 impl MutationRoot {
     async fn create_user(&self, ctx: &Context<'_>, name: String, email: String) -> FieldResult<User> {
-        let dms_ctx = ctx.data::<DMSServiceContext>()?;
+        let dms_ctx = ctx.data::<DMSCServiceContext>()?;
         
         let user_id = dms_ctx.database()
             .execute(
@@ -1832,7 +1832,7 @@ impl MutationRoot {
     }
 }
 
-async fn setup_graphql(ctx: &DMSServiceContext) -> DMSResult<()> {
+async fn setup_graphql(ctx: &DMSCServiceContext) -> DMSCResult<()> {
     let schema = Schema::build(QueryRoot, MutationRoot, EmptySubscription)
         .data(ctx.clone())
         .finish();
@@ -1847,12 +1847,12 @@ async fn setup_graphql(ctx: &DMSServiceContext) -> DMSResult<()> {
         
         let response = schema.execute(request).await;
         
-        Ok(DMSHttpResponse::ok(serde_json::to_value(response)?))
+        Ok(DMSCHttpResponse::ok(serde_json::to_value(response)?))
     });
     
     // GraphQL Playground
     ctx.http().get("/graphql", |req, ctx| async move {
-        Ok(DMSHttpResponse::ok(async_graphql::http::playground_source(
+        Ok(DMSCHttpResponse::ok(async_graphql::http::playground_source(
             GraphQLPlaygroundConfig::new("/graphql")
         )))
     });
@@ -1930,7 +1930,7 @@ impl HttpAnalytics {
     }
 }
 
-async fn setup_analytics(ctx: &DMSServiceContext) -> DMSResult<()> {
+async fn setup_analytics(ctx: &DMSCServiceContext) -> DMSCResult<()> {
     let analytics = HttpAnalytics::new();
     
     // 分析中间件
@@ -1962,9 +1962,9 @@ async fn setup_analytics(ctx: &DMSServiceContext) -> DMSResult<()> {
     ctx.http().get("/analytics", |req, ctx| async move {
         if let Some(analytics) = ctx.get_extension::<HttpAnalytics>() {
             let stats = analytics.get_stats().await;
-            Ok(DMSHttpResponse::ok(stats))
+            Ok(DMSCHttpResponse::ok(stats))
         } else {
-            Ok(DMSHttpResponse::internal_server_error(json!({
+            Ok(DMSCHttpResponse::internal_server_error(json!({
                 "error": "Analytics not available"
             })))
         }
@@ -1983,7 +1983,7 @@ async fn setup_analytics(ctx: &DMSServiceContext) -> DMSResult<()> {
                     if let Some(analytics) = ctx.get_extension::<HttpAnalytics>() {
                         let stats = analytics.get_stats().await;
                         
-                        if sender.send(DMSWebSocketMessage::Text(stats.to_string())).await.is_err() {
+                        if sender.send(DMSCWebSocketMessage::Text(stats.to_string())).await.is_err() {
                             break;
                         }
                     }
@@ -1991,7 +1991,7 @@ async fn setup_analytics(ctx: &DMSServiceContext) -> DMSResult<()> {
                 
                 msg = receiver.next() => {
                     match msg {
-                        Some(Ok(DMSWebSocketMessage::Close(_))) => break,
+                        Some(Ok(DMSCWebSocketMessage::Close(_))) => break,
                         Some(Err(_)) => break,
                         _ => {}
                     }
@@ -2029,7 +2029,7 @@ async fn setup_analytics(ctx: &DMSServiceContext) -> DMSResult<()> {
 
 </div>
 
-本示例全面展示了DMS框架的HTTP服务功能，包括服务器配置、路由管理、客户端使用、中间件、WebSocket通信、文件上传下载等核心功能。通过实际代码示例，你可以学习如何：
+本示例全面展示了DMSC框架的HTTP服务功能，包括服务器配置、路由管理、客户端使用、中间件、WebSocket通信、文件上传下载等核心功能。通过实际代码示例，你可以学习如何：
 
 - 配置和启动HTTP服务器
 - 实现RESTful API接口
@@ -2050,7 +2050,7 @@ async fn setup_analytics(ctx: &DMSServiceContext) -> DMSResult<()> {
 
 - [README](./README.md): 使用示例概览，提供所有使用示例的快速导航
 - [authentication](./authentication.md): 认证示例，学习JWT、OAuth2和RBAC认证授权
-- [basic-app](./basic-app.md): 基础应用示例，学习如何创建和运行第一个DMS应用
+- [basic-app](./basic-app.md): 基础应用示例，学习如何创建和运行第一个DMSC应用
 - [caching](./caching.md): 缓存示例，了解如何使用缓存模块提升应用性能
 - [database](./database.md): 数据库示例，学习数据库连接和查询操作
 

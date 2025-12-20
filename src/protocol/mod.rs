@@ -1,7 +1,7 @@
 //! Copyright © 2025 Wenze Wei. All Rights Reserved.
 //!
-//! This file is part of DMS.
-//! The DMS project belongs to the Dunimd Team.
+//! This file is part of DMSC.
+//! The DMSC project belongs to the Dunimd Team.
 //!
 //! Licensed under the Apache License, Version 2.0 (the "License");
 //! you may not use this file except in compliance with the License.
@@ -17,12 +17,12 @@
 
 #![allow(non_snake_case)]
 
-//! # DMS Protocol Module
+//! # DMSC Protocol Module
 //! 
-//! This module provides the protocol abstraction layer for DMS, supporting
+//! This module provides the protocol abstraction layer for DMSC, supporting
 //! both global and private communication protocols. It implements the core
 //! protocol management, security features, and integration capabilities
-//! required for the DMS distributed system.
+//! required for the DMSC distributed system.
 //! 
 //! ## Architecture Overview
 //! 
@@ -53,15 +53,15 @@
 //! ## Usage Examples
 //! 
 //! ```rust
-//! use dms::protocol::{DMSProtocolManager, DMSProtocolType, DMSProtocolConfig};
+//! use dms::protocol::{DMSCProtocolManager, DMSCProtocolType, DMSCProtocolConfig};
 //! 
-//! async fn example() -> DMSResult<()> {
+//! async fn example() -> DMSCResult<()> {
 //!     // Create protocol manager
-//!     let mut manager = DMSProtocolManager::new();
+//!     let mut manager = DMSCProtocolManager::new();
 //!     
 //!     // Configure protocols
-//!     let config = DMSProtocolConfig {
-//!         default_protocol: DMSProtocolType::Global,
+//!     let config = DMSCProtocolConfig {
+//!         default_protocol: DMSCProtocolType::Global,
 //!         enable_security: true,
 //!         enable_state_sync: true,
 //!         performance_optimization: true,
@@ -71,10 +71,10 @@
 //!     manager.initialize(config).await?;
 //!     
 //!     // Send message using default protocol
-//!     let response = manager.send_message("target-device", b"Hello DMS").await?;
+//!     let response = manager.send_message("target-device", b"Hello DMSC").await?;
 //!     
 //!     // Switch to private protocol for sensitive operations
-//!     manager.switch_protocol(DMSProtocolType::Private).await?;
+//!     manager.switch_protocol(DMSCProtocolType::Private).await?;
 //!     let secure_response = manager.send_message("secure-device", b"Secure message").await?;
 //!     
 //!     Ok(())
@@ -85,7 +85,7 @@ use std::sync::Arc;
 use async_trait::async_trait;
 use tokio::sync::RwLock;
 
-use crate::core::{DMSResult, DMSError};
+use crate::core::{DMSCResult, DMSCError, DMSCServiceContext};
 
 mod global;
 mod private;
@@ -96,14 +96,23 @@ mod integration;
 mod crypto;
 mod frames;
 
-pub use private::{DMSPrivateProtocol, DMSPrivateProtocolConfig};
-pub use security::{DMSCryptoSuite, DMSDeviceAuthProtocol, DMSObfuscationLayer, DMSPostQuantumCrypto, DMSRandomPadding};
-pub use crypto::{DMSCryptoEngine, AES256GCM, ChaCha20Poly1305};
-pub use frames::{DMSFrame, DMSFrameHeader, DMSFrameType, DMSFrameParser, DMSFrameBuilder};
+pub use private::{DMSCPrivateProtocol, DMSCPrivateProtocolConfig};
+pub use security::{DMSCCryptoSuite, DMSCDeviceAuthProtocol, DMSCObfuscationLayer, DMSCPostQuantumCrypto, DMSCRandomPadding};
+pub use crypto::{DMSCCryptoEngine, AES256GCM, ChaCha20Poly1305};
+pub use frames::{DMSCFrame, DMSCFrameHeader, DMSCFrameType, DMSCFrameParser, DMSCFrameBuilder};
+pub use integration::{
+    DMSCGlobalSystemIntegration,
+    DMSCIntegrationConfig,
+    DMSCCrossProtocolConnection,
+    DMSCCrossProtocolConnectionState,
+    DMSCControlCenter,
+    DMSCExternalControlAction,
+    DMSCExternalControlResult,
+};
 
 /// Protocol type enumeration.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub enum DMSProtocolType {
+pub enum DMSCProtocolType {
     /// Global communication protocol
     Global = 0,
     /// Private communication protocol
@@ -112,51 +121,51 @@ pub enum DMSProtocolType {
 
 /// Protocol trait defining the common interface for all protocols.
 #[async_trait]
-pub trait DMSProtocol: Send + Sync {
+pub trait DMSCProtocol: Send + Sync {
     /// Initialize the protocol.
-    async fn initialize(&mut self) -> DMSResult<()>;
+    async fn initialize(&mut self) -> DMSCResult<()>;
     
     /// Shutdown the protocol.
-    async fn shutdown(&mut self) -> DMSResult<()>;
+    async fn shutdown(&mut self) -> DMSCResult<()>;
     
     /// Connect to a target device.
-    async fn connect(&self, target: &str) -> DMSResult<Box<dyn DMSProtocolConnection>>;
+    async fn connect(&self, target: &str) -> DMSCResult<Box<dyn DMSCProtocolConnection>>;
     
     /// Get protocol type.
-    fn protocol_type(&self) -> DMSProtocolType;
+    fn protocol_type(&self) -> DMSCProtocolType;
     
     /// Get protocol version.
     fn protocol_version(&self) -> String;
     
     /// Get protocol status.
-    async fn status(&self) -> DMSProtocolStatus;
+    async fn status(&self) -> DMSCProtocolStatus;
     
     /// Get protocol statistics.
-    async fn get_stats(&self) -> DMSProtocolStats;
+    async fn get_stats(&self) -> DMSCProtocolStats;
 }
 
 /// Protocol connection trait for managing individual connections.
 #[async_trait]
-pub trait DMSProtocolConnection: Send + Sync {
+pub trait DMSCProtocolConnection: Send + Sync {
     /// Send a message through the connection.
-    async fn send_message(&self, message: &[u8]) -> DMSResult<Vec<u8>>;
+    async fn send_message(&self, message: &[u8]) -> DMSCResult<Vec<u8>>;
     
     /// Receive a message from the connection.
-    async fn receive_message(&self) -> DMSResult<Vec<u8>>;
+    async fn receive_message(&self) -> DMSCResult<Vec<u8>>;
     
     /// Close the connection.
-    async fn close(&mut self) -> DMSResult<()>;
+    async fn close(&mut self) -> DMSCResult<()>;
     
     /// Check if connection is active.
     async fn is_active(&self) -> bool;
     
     /// Get connection statistics.
-    async fn get_connection_stats(&self) -> DMSConnectionStats;
+    async fn get_connection_stats(&self) -> DMSCConnectionStats;
 }
 
 /// Protocol status structure.
 #[derive(Debug, Clone)]
-pub struct DMSProtocolStatus {
+pub struct DMSCProtocolStatus {
     /// Protocol is initialized
     pub initialized: bool,
     /// Protocol is active
@@ -164,14 +173,14 @@ pub struct DMSProtocolStatus {
     /// Number of active connections
     pub active_connections: u32,
     /// Protocol health
-    pub health: DMSProtocolHealth,
+    pub health: DMSCProtocolHealth,
     /// Last activity timestamp
     pub last_activity: std::time::Instant,
 }
 
 /// Protocol health enumeration.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum DMSProtocolHealth {
+pub enum DMSCProtocolHealth {
     /// Protocol is healthy
     Healthy,
     /// Protocol is degraded
@@ -184,7 +193,7 @@ pub enum DMSProtocolHealth {
 
 /// Protocol statistics structure.
 #[derive(Debug, Clone)]
-pub struct DMSProtocolStats {
+pub struct DMSCProtocolStats {
     /// Total messages sent
     pub total_messages_sent: u64,
     /// Total messages received
@@ -203,15 +212,15 @@ pub struct DMSProtocolStats {
 
 /// Connection statistics structure.
 #[derive(Debug, Clone)]
-pub struct DMSConnectionStats {
+pub struct DMSCConnectionStats {
     /// Connection identifier
     pub connection_id: String,
     /// Target device
     pub target_device: String,
     /// Protocol type
-    pub protocol_type: DMSProtocolType,
+    pub protocol_type: DMSCProtocolType,
     /// Connection state
-    pub connection_state: DMSConnectionState,
+    pub connection_state: DMSCConnectionState,
     /// Messages sent
     pub messages_sent: u64,
     /// Messages received
@@ -228,7 +237,7 @@ pub struct DMSConnectionStats {
 
 /// Connection state enumeration.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum DMSConnectionState {
+pub enum DMSCConnectionState {
     /// Connection is connecting
     Connecting,
     /// Connection is established
@@ -245,9 +254,9 @@ pub enum DMSConnectionState {
 
 /// Protocol configuration structure.
 #[derive(Debug, Clone)]
-pub struct DMSProtocolConfig {
+pub struct DMSCProtocolConfig {
     /// Default protocol type
-    pub default_protocol: DMSProtocolType,
+    pub default_protocol: DMSCProtocolType,
     /// Enable security features
     pub enable_security: bool,
     /// Enable state synchronization
@@ -263,43 +272,37 @@ pub struct DMSProtocolConfig {
 }
 
 /// Protocol manager for managing multiple protocols.
-pub struct DMSProtocolManager {
+pub struct DMSCProtocolManager {
     /// Protocol configuration
-    config: Arc<RwLock<DMSProtocolConfig>>,
+    config: Arc<RwLock<DMSCProtocolConfig>>,
     /// Protocol adapter
-    adapter: Arc<adapter::DMSProtocolAdapter>,
+    adapter: Arc<adapter::DMSCProtocolAdapter>,
     /// Global state manager
-    state_manager: Arc<global_state::DMSGlobalStateManager>,
+    state_manager: Arc<global_state::DMSCGlobalStateManager>,
     /// Global system integration
-    integration: Arc<integration::DMSGlobalSystemIntegration>,
+    integration: Arc<integration::DMSCGlobalSystemIntegration>,
     /// Current protocol type
-    current_protocol: Arc<RwLock<DMSProtocolType>>,
+    current_protocol: Arc<RwLock<DMSCProtocolType>>,
     /// Initialization status
     initialized: Arc<RwLock<bool>>,
 }
 
-impl DMSProtocolManager {
+impl DMSCProtocolManager {
     /// Create a new protocol manager.
     pub fn new() -> Self {
         Self {
-            config: Arc::new(RwLock::new(DMSProtocolConfig::default())),
-            adapter: Arc::new(adapter::DMSProtocolAdapter::new()),
-            state_manager: Arc::new(global_state::DMSGlobalStateManager::new()),
-            integration: Arc::new(integration::DMSGlobalSystemIntegration::new(
-                integration::DMSIntegrationConfig::default()
+            config: Arc::new(RwLock::new(DMSCProtocolConfig::default())),
+            adapter: Arc::new(adapter::DMSCProtocolAdapter::new()),
+            state_manager: Arc::new(global_state::DMSCGlobalStateManager::new()),
+            integration: Arc::new(integration::DMSCGlobalSystemIntegration::new(
+                integration::DMSCIntegrationConfig::default()
             )),
-            current_protocol: Arc::new(RwLock::new(DMSProtocolType::Global)),
+            current_protocol: Arc::new(RwLock::new(DMSCProtocolType::Global)),
             initialized: Arc::new(RwLock::new(false)),
         }
     }
-    
-    /// Create a new protocol manager.
-    pub fn new() -> Self {
-        Self::new()
-    }
-    
     /// Initialize the protocol manager.
-    pub async fn initialize(&mut self, config: DMSProtocolConfig) -> DMSResult<()> {
+    pub async fn initialize(&mut self, config: DMSCProtocolConfig) -> DMSCResult<()> {
         if *self.initialized.read().await {
             return Ok(());
         }
@@ -307,15 +310,15 @@ impl DMSProtocolManager {
         *self.config.write().await = config;
         
         // Initialize protocol adapter
-        let security_context = adapter::DMSSecurityContext {
-            required_security_level: security::DMSSecurityLevel::Standard,
-            threat_level: adapter::DMSThreatLevel::Normal,
-            data_classification: adapter::DMSDataClassification::Internal,
-            network_environment: adapter::DMSNetworkEnvironment::Trusted,
+        let security_context = adapter::DMSCSecurityContext {
+            required_security_level: security::DMSCSecurityLevel::Standard,
+            threat_level: adapter::DMSCThreatLevel::Normal,
+            data_classification: adapter::DMSCDataClassification::Internal,
+            network_environment: adapter::DMSCNetworkEnvironment::Trusted,
             compliance_requirements: vec![],
         };
         
-        let strategy = adapter::DMSProtocolStrategy::SecurityBased(security_context);
+        let strategy = adapter::DMSCProtocolStrategy::SecurityBased(security_context);
         self.adapter.initialize(strategy).await?;
         
         // Initialize state manager
@@ -325,8 +328,8 @@ impl DMSProtocolManager {
         self.integration.initialize().await?;
         
         // Register protocols
-        self.integration.register_protocol(DMSProtocolType::Global).await?;
-        self.integration.register_protocol(DMSProtocolType::Private).await?;
+        self.integration.register_protocol(DMSCProtocolType::Global).await?;
+        self.integration.register_protocol(DMSCProtocolType::Private).await?;
         
         // Start coordination
         self.integration.start_coordination().await?;
@@ -336,7 +339,7 @@ impl DMSProtocolManager {
     }
     
     /// Send a message using the current protocol.
-    pub async fn send_message(&self, target: &str, message: &[u8]) -> DMSResult<Vec<u8>> {
+    pub async fn send_message(&self, target: &str, message: &[u8]) -> DMSCResult<Vec<u8>> {
         let current_protocol = *self.current_protocol.read().await;
         self.send_message_with_protocol(target, message, current_protocol).await
     }
@@ -346,10 +349,10 @@ impl DMSProtocolManager {
         &self,
         target: &str,
         message: &[u8],
-        protocol_type: DMSProtocolType,
-    ) -> DMSResult<Vec<u8>> {
+        protocol_type: DMSCProtocolType,
+    ) -> DMSCResult<Vec<u8>> {
         if !*self.initialized.read().await {
-            return Err(DMSError::InvalidState("Protocol manager not initialized".to_string()));
+            return Err(DMSCError::InvalidState("Protocol manager not initialized".to_string()));
         }
         
         let current_protocol = *self.current_protocol.read().await;
@@ -367,9 +370,9 @@ impl DMSProtocolManager {
     }
     
     /// Switch to a different protocol.
-    pub async fn switch_protocol(&self, protocol_type: DMSProtocolType) -> DMSResult<()> {
+    pub async fn switch_protocol(&self, protocol_type: DMSCProtocolType) -> DMSCResult<()> {
         if !*self.initialized.read().await {
-            return Err(DMSError::InvalidState("Protocol manager not initialized".to_string()));
+            return Err(DMSCError::InvalidState("Protocol manager not initialized".to_string()));
         }
         
         let current_protocol = *self.current_protocol.read().await;
@@ -380,7 +383,7 @@ impl DMSProtocolManager {
         
         // Check if protocol switching is enabled
         if !self.config.read().await.protocol_switching_enabled {
-            return Err(DMSError::InvalidState("Protocol switching is disabled".to_string()));
+            return Err(DMSCError::InvalidState("Protocol switching is disabled".to_string()));
         }
         
         // Update current protocol
@@ -397,14 +400,19 @@ impl DMSProtocolManager {
     }
     
     /// Get current protocol type.
-    pub async fn get_current_protocol(&self) -> DMSProtocolType {
+    pub async fn get_current_protocol(&self) -> DMSCProtocolType {
         *self.current_protocol.read().await
     }
     
+    /// Create a control center bound to this protocol manager.
+    pub fn create_control_center(&self, service_context: DMSCServiceContext) -> DMSCControlCenter {
+        DMSCControlCenter::new(self.state_manager.clone(), service_context)
+    }
+    
     /// Get protocol statistics.
-    pub async fn get_stats(&self) -> DMSResult<DMSProtocolStats> {
+    pub async fn get_stats(&self) -> DMSCResult<DMSCProtocolStats> {
         if !*self.initialized.read().await {
-            return Err(DMSError::InvalidState("Protocol manager not initialized".to_string()));
+            return Err(DMSCError::InvalidState("Protocol manager not initialized".to_string()));
         }
         
         // Get stats from current protocol
@@ -412,7 +420,7 @@ impl DMSProtocolManager {
         
         // This would get stats from the actual protocol implementation
         // For now, return default stats
-        Ok(DMSProtocolStats {
+        Ok(DMSCProtocolStats {
             total_messages_sent: 0,
             total_messages_received: 0,
             total_bytes_sent: 0,
@@ -424,7 +432,7 @@ impl DMSProtocolManager {
     }
     
     /// Shutdown the protocol manager.
-    pub async fn shutdown(&mut self) -> DMSResult<()> {
+    pub async fn shutdown(&mut self) -> DMSCResult<()> {
         if !*self.initialized.read().await {
             return Ok(());
         }
@@ -446,10 +454,10 @@ impl DMSProtocolManager {
     }
 }
 
-impl Default for DMSProtocolConfig {
+impl Default for DMSCProtocolConfig {
     fn default() -> Self {
         Self {
-            default_protocol: DMSProtocolType::Global,
+            default_protocol: DMSCProtocolType::Global,
             enable_security: true,
             enable_state_sync: true,
             performance_optimization: true,
@@ -460,7 +468,7 @@ impl Default for DMSProtocolConfig {
     }
 }
 
-impl Default for DMSProtocolManager {
+impl Default for DMSCProtocolManager {
     fn default() -> Self {
         Self::new()
     }

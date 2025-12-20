@@ -1,7 +1,7 @@
 //! Copyright © 2025 Wenze Wei. All Rights Reserved.
 //!
-//! This file is part of DMS.
-//! The DMS project belongs to the Dunimd Team.
+//! This file is part of DMSC.
+//! The DMSC project belongs to the Dunimd Team.
 //!
 //! Licensed under the Apache License, Version 2.0 (the "License");
 //! You may not use this file except in compliance with the License.
@@ -17,29 +17,29 @@
 
 //! # Service Mesh Module
 //! 
-//! This module provides a comprehensive service mesh implementation for DMS, offering service discovery,
+//! This module provides a comprehensive service mesh implementation for DMSC, offering service discovery,
 //! health checking, traffic management, load balancing, and circuit breaking capabilities for distributed systems.
 //! 
 //! ## Key Components
 //! 
-//! - **DMSServiceMesh**: Main service mesh struct implementing the DMSModule trait
-//! - **DMSServiceMeshConfig**: Configuration for service mesh behavior
-//! - **DMSServiceEndpoint**: Service endpoint representation
-//! - **DMSServiceHealthStatus**: Enum defining service health statuses
-//! - **DMSServiceDiscovery**: Service discovery component
-//! - **DMSServiceInstance**: Service instance representation
-//! - **DMSServiceStatus**: Service status enum
-//! - **DMSHealthChecker**: Health checking component
-//! - **DMSHealthCheckResult**: Health check result structure
-//! - **DMSHealthSummary**: Health summary structure
-//! - **DMSHealthStatus**: Health status enum
-//! - **DMSTrafficManager**: Traffic management component
-//! - **DMSTrafficRoute**: Traffic route definition
-//! - **DMSMatchCriteria**: Match criteria for traffic routing
-//! - **DMSRouteAction**: Route action for traffic routing
-//! - **DMSCircuitBreaker**: Circuit breaker for preventing cascading failures
-//! - **DMSLoadBalancer**: Load balancer for distributing traffic across services
-//! - **DMSLoadBalancerStrategy**: Load balancing strategies
+//! - **DMSCServiceMesh**: Main service mesh struct implementing the DMSCModule trait
+//! - **DMSCServiceMeshConfig**: Configuration for service mesh behavior
+//! - **DMSCServiceEndpoint**: Service endpoint representation
+//! - **DMSCServiceHealthStatus**: Enum defining service health statuses
+//! - **DMSCServiceDiscovery**: Service discovery component
+//! - **DMSCServiceInstance**: Service instance representation
+//! - **DMSCServiceStatus**: Service status enum
+//! - **DMSCHealthChecker**: Health checking component
+//! - **DMSCHealthCheckResult**: Health check result structure
+//! - **DMSCHealthSummary**: Health summary structure
+//! - **DMSCHealthStatus**: Health status enum
+//! - **DMSCTrafficManager**: Traffic management component
+//! - **DMSCTrafficRoute**: Traffic route definition
+//! - **DMSCMatchCriteria**: Match criteria for traffic routing
+//! - **DMSCRouteAction**: Route action for traffic routing
+//! - **DMSCCircuitBreaker**: Circuit breaker for preventing cascading failures
+//! - **DMSCLoadBalancer**: Load balancer for distributing traffic across services
+//! - **DMSCLoadBalancerStrategy**: Load balancing strategies
 //! 
 //! ## Design Principles
 //! 
@@ -50,7 +50,7 @@
 //! 5. **Configurable**: Highly configurable service mesh behavior
 //! 6. **Async-First**: All service mesh operations are asynchronous
 //! 7. **Modular Design**: Separate components for service discovery, health checking, and traffic management
-//! 8. **Service Module Integration**: Implements DMSModule trait for seamless integration into DMS
+//! 8. **Service Module Integration**: Implements DMSCModule trait for seamless integration into DMSC
 //! 9. **Thread-safe**: Uses Arc and RwLock for safe concurrent access
 //! 10. **Critical Component**: Marked as critical for the system's operation
 //! 
@@ -58,14 +58,14 @@
 //! 
 //! ```rust
 //! use dms::prelude::*;
-//! use dms::service_mesh::{DMSServiceMesh, DMSServiceMeshConfig};
+//! use dms::service_mesh::{DMSCServiceMesh, DMSCServiceMeshConfig};
 //! 
-//! async fn example() -> DMSResult<()> {
+//! async fn example() -> DMSCResult<()> {
 //!     // Create service mesh configuration
-//!     let mesh_config = DMSServiceMeshConfig::default();
+//!     let mesh_config = DMSCServiceMeshConfig::default();
 //!     
 //!     // Create service mesh instance
-//!     let service_mesh = DMSServiceMesh::new(mesh_config)?;
+//!     let service_mesh = DMSCServiceMesh::new(mesh_config)?;
 //!     
 //!     // Register services
 //!     service_mesh.register_service("user-service", "http://user-service:8080", 100).await?;
@@ -104,20 +104,20 @@ use tokio::sync::RwLock;
 #[cfg(feature = "pyo3")]
 use pyo3::PyResult;
 
-use crate::core::{DMSModule, DMSResult, DMSError};
-use crate::gateway::{DMSCircuitBreaker, DMSCircuitBreakerConfig, DMSLoadBalancer, DMSLoadBalancerStrategy};
-use crate::gateway::load_balancer::DMSBackendServer;
+use crate::core::{DMSCModule, DMSCResult, DMSCError};
+use crate::gateway::{DMSCCircuitBreaker, DMSCCircuitBreakerConfig, DMSCLoadBalancer, DMSCLoadBalancerStrategy};
+use crate::gateway::load_balancer::DMSCBackendServer;
 
 pub mod service_discovery;
 pub mod health_check;
 pub mod traffic_management;
 
-use health_check::DMSHealthChecker;
-use traffic_management::DMSTrafficManager;
+use health_check::DMSCHealthChecker;
+use traffic_management::DMSCTrafficManager;
 
-pub use service_discovery::{DMSServiceDiscovery, DMSServiceInstance, DMSServiceStatus};
-pub use health_check::{DMSHealthCheckResult, DMSHealthSummary, DMSHealthStatus};    
-pub use traffic_management::{DMSTrafficRoute, DMSMatchCriteria, DMSRouteAction, DMSWeightedDestination};
+pub use service_discovery::{DMSCServiceDiscovery, DMSCServiceInstance, DMSCServiceStatus};
+pub use health_check::{DMSCHealthCheckResult, DMSCHealthSummary, DMSCHealthStatus};    
+pub use traffic_management::{DMSCTrafficRoute, DMSCMatchCriteria, DMSCRouteAction, DMSCWeightedDestination};
 
 /// Configuration for the service mesh.
 /// 
@@ -125,7 +125,7 @@ pub use traffic_management::{DMSTrafficRoute, DMSMatchCriteria, DMSRouteAction, 
 /// health checking, traffic management, circuit breaking, and load balancing settings.
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct DMSServiceMeshConfig {
+pub struct DMSCServiceMeshConfig {
     /// Whether to enable service discovery
     pub enable_service_discovery: bool,
     /// Whether to enable health checking
@@ -135,16 +135,16 @@ pub struct DMSServiceMeshConfig {
     /// Interval between health checks
     pub health_check_interval: Duration,
     /// Configuration for circuit breakers
-    pub circuit_breaker_config: DMSCircuitBreakerConfig,
+    pub circuit_breaker_config: DMSCCircuitBreakerConfig,
     /// Load balancing strategy to use
-    pub load_balancer_strategy: DMSLoadBalancerStrategy,
+    pub load_balancer_strategy: DMSCLoadBalancerStrategy,
     /// Maximum number of retry attempts for failed requests
     pub max_retry_attempts: u32,
     /// Timeout for retry attempts
     pub retry_timeout: Duration,
 }
 
-impl Default for DMSServiceMeshConfig {
+impl Default for DMSCServiceMeshConfig {
     /// Returns the default configuration for the service mesh.
     /// 
     /// Default values:
@@ -162,8 +162,8 @@ impl Default for DMSServiceMeshConfig {
             enable_health_check: true,
             enable_traffic_management: true,
             health_check_interval: Duration::from_secs(30),
-            circuit_breaker_config: DMSCircuitBreakerConfig::default(),
-            load_balancer_strategy: DMSLoadBalancerStrategy::RoundRobin,
+            circuit_breaker_config: DMSCCircuitBreakerConfig::default(),
+            load_balancer_strategy: DMSCLoadBalancerStrategy::RoundRobin,
             max_retry_attempts: 3,
             retry_timeout: Duration::from_secs(5),
         }
@@ -176,7 +176,7 @@ impl Default for DMSServiceMeshConfig {
 /// and last health check time.
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 #[derive(Debug, Clone)]
-pub struct DMSServiceEndpoint {
+pub struct DMSCServiceEndpoint {
     /// Name of the service
     pub service_name: String,
     /// Endpoint URL
@@ -186,7 +186,7 @@ pub struct DMSServiceEndpoint {
     /// Metadata associated with the endpoint
     pub metadata: HashMap<String, String>,
     /// Health status of the endpoint
-    pub health_status: DMSServiceHealthStatus,
+    pub health_status: DMSCServiceHealthStatus,
     /// Time of the last health check
     pub last_health_check: SystemTime,
 }
@@ -196,7 +196,7 @@ pub struct DMSServiceEndpoint {
 /// This enum defines the possible health statuses for a service endpoint.
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 #[derive(Debug, Clone, PartialEq)]
-pub enum DMSServiceHealthStatus {
+pub enum DMSCServiceHealthStatus {
     /// Service is healthy and available
     Healthy,
     /// Service is unhealthy and unavailable
@@ -205,29 +205,44 @@ pub enum DMSServiceHealthStatus {
     Unknown,
 }
 
-/// Main service mesh struct implementing the DMSModule trait.
+/// Service discovery cache entry
+/// 
+/// This struct represents a cached entry for service discovery results.
+#[derive(Debug, Clone)]
+struct ServiceDiscoveryCacheEntry {
+    /// Discovered service endpoints
+    endpoints: Vec<DMSCServiceEndpoint>,
+    /// Cache entry expiration time
+    expiration: SystemTime,
+}
+
+/// Main service mesh struct implementing the DMSCModule trait.
 /// 
 /// This struct provides comprehensive service mesh functionality, including service discovery,
 /// health checking, traffic management, load balancing, and circuit breaking.
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
-pub struct DMSServiceMesh {
+pub struct DMSCServiceMesh {
     /// Service mesh configuration
-    config: DMSServiceMeshConfig,
+    config: DMSCServiceMeshConfig,
     /// Service discovery component
-    service_discovery: Arc<DMSServiceDiscovery>,
+    service_discovery: Arc<DMSCServiceDiscovery>,
     /// Health checking component
-    health_checker: Arc<DMSHealthChecker>,
+    health_checker: Arc<DMSCHealthChecker>,
     /// Traffic management component
-    traffic_manager: Arc<DMSTrafficManager>,
+    traffic_manager: Arc<DMSCTrafficManager>,
     /// Circuit breaker for preventing cascading failures
-    circuit_breaker: Arc<DMSCircuitBreaker>,
+    circuit_breaker: Arc<DMSCCircuitBreaker>,
     /// Load balancer for distributing traffic
-    load_balancer: Arc<DMSLoadBalancer>,
+    load_balancer: Arc<DMSCLoadBalancer>,
     /// Map of service names to their endpoints, protected by a RwLock for thread-safe access
-    services: Arc<RwLock<HashMap<String, Vec<DMSServiceEndpoint>>>>,
+    services: Arc<RwLock<HashMap<String, Vec<DMSCServiceEndpoint>>>>,
+    /// Service discovery cache, protected by a RwLock for thread-safe access
+    discovery_cache: Arc<RwLock<HashMap<String, ServiceDiscoveryCacheEntry>>>,
+    /// Cache expiration duration
+    cache_expiration: Duration,
 }
 
-impl DMSServiceMesh {
+impl DMSCServiceMesh {
     /// Creates a new service mesh instance with the given configuration.
     /// 
     /// # Parameters
@@ -236,13 +251,13 @@ impl DMSServiceMesh {
     /// 
     /// # Returns
     /// 
-    /// A `DMSResult<Self>` containing the new service mesh instance
-    pub fn new(config: DMSServiceMeshConfig) -> DMSResult<Self> {
-        let service_discovery = Arc::new(DMSServiceDiscovery::new(config.enable_service_discovery));
-        let health_checker = Arc::new(DMSHealthChecker::new(config.health_check_interval));
-        let traffic_manager = Arc::new(DMSTrafficManager::new(config.enable_traffic_management));
-        let circuit_breaker = Arc::new(DMSCircuitBreaker::new(config.circuit_breaker_config.clone()));
-        let load_balancer = Arc::new(DMSLoadBalancer::new(config.load_balancer_strategy.clone()));
+    /// A `DMSCResult<Self>` containing the new service mesh instance
+    pub fn new(config: DMSCServiceMeshConfig) -> DMSCResult<Self> {
+        let service_discovery = Arc::new(DMSCServiceDiscovery::new(config.enable_service_discovery));
+        let health_checker = Arc::new(DMSCHealthChecker::new(config.health_check_interval));
+        let traffic_manager = Arc::new(DMSCTrafficManager::new(config.enable_traffic_management));
+        let circuit_breaker = Arc::new(DMSCCircuitBreaker::new(config.circuit_breaker_config.clone()));
+        let load_balancer = Arc::new(DMSCLoadBalancer::new(config.load_balancer_strategy.clone()));
         
         Ok(Self {
             config,
@@ -252,6 +267,8 @@ impl DMSServiceMesh {
             circuit_breaker,
             load_balancer,
             services: Arc::new(RwLock::new(HashMap::new())),
+            discovery_cache: Arc::new(RwLock::new(HashMap::new())),
+            cache_expiration: Duration::from_secs(30), // 30 seconds cache expiration
         })
     }
 
@@ -265,14 +282,14 @@ impl DMSServiceMesh {
     /// 
     /// # Returns
     /// 
-    /// A `DMSResult<()>` indicating success or failure
-    pub async fn register_service(&self, service_name: &str, endpoint: &str, weight: u32) -> DMSResult<()> {
-        let service_endpoint = DMSServiceEndpoint {
+    /// A `DMSCResult<()>` indicating success or failure
+    pub async fn register_service(&self, service_name: &str, endpoint: &str, weight: u32) -> DMSCResult<()> {
+        let service_endpoint = DMSCServiceEndpoint {
             service_name: service_name.to_string(),
             endpoint: endpoint.to_string(),
             weight,
             metadata: HashMap::new(),
-            health_status: DMSServiceHealthStatus::Unknown,
+            health_status: DMSCServiceHealthStatus::Unknown,
             last_health_check: SystemTime::now(),
         };
 
@@ -296,25 +313,47 @@ impl DMSServiceMesh {
     /// 
     /// # Returns
     /// 
-    /// A `DMSResult<Vec<DMSServiceEndpoint>>` containing the healthy endpoints for the service
-    pub async fn discover_service(&self, service_name: &str) -> DMSResult<Vec<DMSServiceEndpoint>> {
+    /// A `DMSCResult<Vec<DMSCServiceEndpoint>>` containing the healthy endpoints for the service
+    pub async fn discover_service(&self, service_name: &str) -> DMSCResult<Vec<DMSCServiceEndpoint>> {
         if !self.config.enable_service_discovery {
-            return Err(DMSError::ServiceMesh("Service discovery is disabled".to_string()));
+            return Err(DMSCError::ServiceMesh("Service discovery is disabled".to_string()));
         }
 
+        // Check cache first
+        {
+            let cache = self.discovery_cache.read().await;
+            if let Some(entry) = cache.get(service_name) {
+                if entry.expiration > SystemTime::now() {
+                    // Cache is still valid, return cached endpoints
+                    return Ok(entry.endpoints.clone());
+                }
+            }
+        }
+
+        // Cache miss or expired, perform regular service discovery
         let services = self.services.read().await;
         let endpoints = services.get(service_name)
-            .ok_or_else(|| DMSError::ServiceMesh(format!("Service '{service_name}' not found")))?
+            .ok_or_else(|| DMSCError::ServiceMesh(format!("Service '{service_name}' not found")))?
             .clone();
 
-        let healthy_endpoints: Vec<DMSServiceEndpoint> = endpoints
+        let healthy_endpoints: Vec<DMSCServiceEndpoint> = endpoints
             .into_iter()
-            .filter(|ep| ep.health_status == DMSServiceHealthStatus::Healthy)
+            .filter(|ep| ep.health_status == DMSCServiceHealthStatus::Healthy)
             .collect();
 
         if healthy_endpoints.is_empty() {
-            return Err(DMSError::ServiceMesh(format!("No healthy endpoints for service '{service_name}'")));
+            return Err(DMSCError::ServiceMesh(format!("No healthy endpoints for service '{service_name}'")));
         }
+
+        // Cache the discovered endpoints
+        let expiration = SystemTime::now() + self.cache_expiration;
+        let cache_entry = ServiceDiscoveryCacheEntry {
+            endpoints: healthy_endpoints.clone(),
+            expiration,
+        };
+        
+        let mut cache = self.discovery_cache.write().await;
+        cache.insert(service_name.to_string(), cache_entry);
 
         Ok(healthy_endpoints)
     }
@@ -335,18 +374,18 @@ impl DMSServiceMesh {
     /// 
     /// # Returns
     /// 
-    /// A `DMSResult<Vec<u8>>` containing the response from the service
-    pub async fn call_service(&self, service_name: &str, request_data: Vec<u8>) -> DMSResult<Vec<u8>> {
+    /// A `DMSCResult<Vec<u8>>` containing the response from the service
+    pub async fn call_service(&self, service_name: &str, request_data: Vec<u8>) -> DMSCResult<Vec<u8>> {
         let endpoints = self.discover_service(service_name).await?;
         
         // Clear existing servers for this service and add discovered endpoints
         let mut existing_servers = self.load_balancer.get_healthy_servers().await;
-        existing_servers.retain(|s| !s.id.starts_with(&format!("{}-", service_name)));
+        existing_servers.retain(|s| !s.id.starts_with(&format!("{service_name}-")));
         
         // Add discovered endpoints as backend servers
         for ep in &endpoints {
-            if ep.health_status == DMSServiceHealthStatus::Healthy {
-                let server = DMSBackendServer {
+            if ep.health_status == DMSCServiceHealthStatus::Healthy {
+                let server = DMSCBackendServer {
                     id: format!("{}-{}", service_name, ep.endpoint),
                     url: ep.endpoint.clone(),
                     weight: ep.weight,
@@ -360,11 +399,11 @@ impl DMSServiceMesh {
 
         let selected_server = match self.load_balancer.select_server(None).await {
             Ok(server) => server,
-            Err(_) => return Err(DMSError::ServiceMesh("No available backend server".to_string())),
+            Err(_) => return Err(DMSCError::ServiceMesh("No available backend server".to_string())),
         };
 
         if !self.circuit_breaker.allow_request().await {
-            return Err(DMSError::ServiceMesh("Circuit breaker is open".to_string()));
+            return Err(DMSCError::ServiceMesh("Circuit breaker is open".to_string()));
         }
 
         let result = self.execute_service_call(&selected_server.url, request_data.clone()).await;
@@ -392,8 +431,8 @@ impl DMSServiceMesh {
     /// 
     /// # Returns
     /// 
-    /// A `DMSResult<Vec<u8>>` containing the response from the service
-    async fn execute_service_call(&self, endpoint: &str, request_data: Vec<u8>) -> DMSResult<Vec<u8>> {
+    /// A `DMSCResult<Vec<u8>>` containing the response from the service
+    async fn execute_service_call(&self, endpoint: &str, request_data: Vec<u8>) -> DMSCResult<Vec<u8>> {
         let mut last_error = None;
         
         for attempt in 0..self.config.max_retry_attempts {
@@ -408,7 +447,7 @@ impl DMSServiceMesh {
             }
         }
 
-        Err(last_error.unwrap_or_else(|| DMSError::ServiceMesh("All retry attempts failed".to_string())))
+        Err(last_error.unwrap_or_else(|| DMSCError::ServiceMesh("All retry attempts failed".to_string())))
     }
 
     /// Updates the health status of a service endpoint.
@@ -421,15 +460,15 @@ impl DMSServiceMesh {
     /// 
     /// # Returns
     /// 
-    /// A `DMSResult<()>` indicating success or failure
-    pub async fn update_service_health(&self, service_name: &str, endpoint: &str, is_healthy: bool) -> DMSResult<()> {
+    /// A `DMSCResult<()>` indicating success or failure
+    pub async fn update_service_health(&self, service_name: &str, endpoint: &str, is_healthy: bool) -> DMSCResult<()> {
         let mut services = self.services.write().await;
         if let Some(endpoints) = services.get_mut(service_name) {
             if let Some(service_ep) = endpoints.iter_mut().find(|ep| ep.endpoint == endpoint) {
                 service_ep.health_status = if is_healthy {
-                    DMSServiceHealthStatus::Healthy
+                    DMSCServiceHealthStatus::Healthy
                 } else {
-                    DMSServiceHealthStatus::Unhealthy
+                    DMSCServiceHealthStatus::Unhealthy
                 };
                 service_ep.last_health_check = SystemTime::now();
             }
@@ -441,8 +480,8 @@ impl DMSServiceMesh {
     /// 
     /// # Returns
     /// 
-    /// A reference to the `DMSCircuitBreaker` instance
-    pub fn get_circuit_breaker(&self) -> &DMSCircuitBreaker {
+    /// A reference to the `DMSCCircuitBreaker` instance
+    pub fn get_circuit_breaker(&self) -> &DMSCCircuitBreaker {
         &self.circuit_breaker
     }
 
@@ -450,8 +489,8 @@ impl DMSServiceMesh {
     /// 
     /// # Returns
     /// 
-    /// A reference to the `DMSLoadBalancer` instance
-    pub fn get_load_balancer(&self) -> &DMSLoadBalancer {
+    /// A reference to the `DMSCLoadBalancer` instance
+    pub fn get_load_balancer(&self) -> &DMSCLoadBalancer {
         &self.load_balancer
     }
 
@@ -459,8 +498,8 @@ impl DMSServiceMesh {
     /// 
     /// # Returns
     /// 
-    /// A reference to the `DMSHealthChecker` instance
-    pub fn get_health_checker(&self) -> &DMSHealthChecker {
+    /// A reference to the `DMSCHealthChecker` instance
+    pub fn get_health_checker(&self) -> &DMSCHealthChecker {
         &self.health_checker
     }
 
@@ -468,8 +507,8 @@ impl DMSServiceMesh {
     /// 
     /// # Returns
     /// 
-    /// A reference to the `DMSTrafficManager` instance
-    pub fn get_traffic_manager(&self) -> &DMSTrafficManager {
+    /// A reference to the `DMSCTrafficManager` instance
+    pub fn get_traffic_manager(&self) -> &DMSCTrafficManager {
         &self.traffic_manager
     }
 
@@ -477,21 +516,21 @@ impl DMSServiceMesh {
     /// 
     /// # Returns
     /// 
-    /// A reference to the `DMSServiceDiscovery` instance
-    pub fn get_service_discovery(&self) -> &DMSServiceDiscovery {
+    /// A reference to the `DMSCServiceDiscovery` instance
+    pub fn get_service_discovery(&self) -> &DMSCServiceDiscovery {
         &self.service_discovery
     }
 }
 
 #[cfg(feature = "pyo3")]
-/// Python bindings for DMSServiceMesh
+/// Python bindings for DMSCServiceMesh
 #[pyo3::prelude::pymethods]
-impl DMSServiceMesh {
+impl DMSCServiceMesh {
     #[new]
-    fn py_new(config: DMSServiceMeshConfig) -> PyResult<Self> {
+    fn py_new(config: DMSCServiceMeshConfig) -> PyResult<Self> {
         match Self::new(config) {
             Ok(mesh) => Ok(mesh),
-            Err(e) => Err(pyo3::exceptions::PyRuntimeError::new_err(format!("Failed to create service mesh: {}", e))),
+            Err(e) => Err(pyo3::exceptions::PyRuntimeError::new_err(format!("Failed to create service mesh: {e}"))),
         }
     }
     
@@ -503,27 +542,27 @@ impl DMSServiceMesh {
     }
     
     /// Discover services from Python
-    fn discover_service_py(&self, _service_name: String) -> PyResult<Vec<DMSServiceEndpoint>> {
+    fn discover_service_py(&self, _service_name: String) -> PyResult<Vec<DMSCServiceEndpoint>> {
         // For now, we'll return an error since we can't easily run async code from Python
         // In a real implementation, you'd want to integrate with Python's async runtime
         Err(pyo3::exceptions::PyRuntimeError::new_err("Async service discovery not supported from Python yet"))
     }
     
     /// Get the service mesh configuration
-    fn get_config(&self) -> DMSServiceMeshConfig {
+    fn get_config(&self) -> DMSCServiceMeshConfig {
         self.config.clone()
     }
 }
 
 #[async_trait]
-impl DMSModule for DMSServiceMesh {
+impl DMSCModule for DMSCServiceMesh {
     /// Returns the name of the service mesh module.
     /// 
     /// # Returns
     /// 
     /// The module name as a string
     fn name(&self) -> &str {
-        "DMS.ServiceMesh"
+        "DMSC.ServiceMesh"
     }
 
     /// Indicates whether the service mesh module is critical.
@@ -549,8 +588,8 @@ impl DMSModule for DMSServiceMesh {
     /// 
     /// # Returns
     /// 
-    /// A `DMSResult<()>` indicating success or failure
-    async fn start(&mut self, _ctx: &mut crate::core::DMSServiceContext) -> DMSResult<()> {
+    /// A `DMSCResult<()>` indicating success or failure
+    async fn start(&mut self, _ctx: &mut crate::core::DMSCServiceContext) -> DMSCResult<()> {
         if self.config.enable_health_check {
             self.health_checker.start_background_tasks().await?;
         }
@@ -577,8 +616,8 @@ impl DMSModule for DMSServiceMesh {
     /// 
     /// # Returns
     /// 
-    /// A `DMSResult<()>` indicating success or failure
-    async fn shutdown(&mut self, _ctx: &mut crate::core::DMSServiceContext) -> DMSResult<()> {
+    /// A `DMSCResult<()>` indicating success or failure
+    async fn shutdown(&mut self, _ctx: &mut crate::core::DMSCServiceContext) -> DMSCResult<()> {
         if self.config.enable_health_check {
             self.health_checker.stop_background_tasks().await?;
         }

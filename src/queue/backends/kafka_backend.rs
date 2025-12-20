@@ -1,7 +1,7 @@
 //! Copyright © 2025 Wenze Wei. All Rights Reserved.
 //!
-//! This file is part of DMS.
-//! The DMS project belongs to the Dunimd Team.
+//! This file is part of DMSC.
+//! The DMSC project belongs to the Dunimd Team.
 //!
 //! Licensed under the Apache License, Version 2.0 (the "License");
 //! You may not use this file except in compliance with the License.
@@ -17,25 +17,29 @@
 
 #![allow(non_snake_case)]
 
+#![cfg_attr(windows, doc = "// Kafka support is disabled on Windows due to build dependencies")]
+
 //! # Kafka Queue Backend
 //! 
-//! This module provides a Kafka implementation for the DMS queue system. It allows
+//! This module provides a Kafka implementation for the DMSC queue system. It allows
 //! sending and receiving messages using Apache Kafka as the underlying message broker.
+//! 
+//! **Note:** Kafka support is disabled on Windows due to build dependencies.
 //! 
 //! ## Key Components
 //! 
-//! - **DMSKafkaQueue**: Main Kafka queue implementation
+//! - **DMSCKafkaQueue**: Main Kafka queue implementation
 //! - **KafkaProducer**: Kafka producer implementation
 //! - **KafkaConsumer**: Kafka consumer implementation
 //! 
 //! ## Design Principles
 //! 
-//! 1. **Async Trait Implementation**: Implements the DMSQueue, DMSQueueProducer, and DMSQueueConsumer traits
+//! 1. **Async Trait Implementation**: Implements the DMSCQueue, DMSCQueueProducer, and DMSCQueueConsumer traits
 //! 2. **Kafka Integration**: Uses the rdkafka crate for Kafka connectivity
 //! 3. **Thread Safety**: Uses Arc for safe sharing of producers and consumers
 //! 4. **Future-based API**: Leverages async/await for non-blocking operations
 //! 5. **Auto-commit**: Configured with auto-commit for consumer offset management
-//! 6. **Error Handling**: Comprehensive error handling with DMSResult
+//! 6. **Error Handling**: Comprehensive error handling with DMSCResult
 //! 7. **Stream-based Consumer**: Uses StreamConsumer for efficient message processing
 //! 8. **Batch Support**: Provides batch sending functionality
 //! 
@@ -44,15 +48,15 @@
 //! ```rust
 //! use dms::prelude::*;
 //! 
-//! async fn example() -> DMSResult<()> {
+//! async fn example() -> DMSCResult<()> {
 //!     // Create a new Kafka queue
-//!     let queue = DMSKafkaQueue::new("test-topic", "localhost:9092").await?;
+//!     let queue = DMSCKafkaQueue::new("test-topic", "localhost:9092").await?;
 //!     
 //!     // Create a producer
 //!     let producer = queue.create_producer().await?;
 //!     
 //!     // Create a message
-//!     let message = DMSQueueMessage {
+//!     let message = DMSCQueueMessage {
 //!         id: "12345".to_string(),
 //!         payload: b"Hello, Kafka!".to_vec(),
 //!         headers: vec![("key1".to_string(), "value1".to_string())],
@@ -80,17 +84,18 @@ use async_trait::async_trait;
 use rdkafka::config::ClientConfig;
 use rdkafka::producer::{FutureProducer, FutureRecord};
 use rdkafka::consumer::{StreamConsumer, Consumer};
+use rdkafka::topic_partition_list::TopicPartition;
 use futures::StreamExt;
 use std::sync::Arc;
 use tokio::sync::Mutex;
-use crate::core::DMSResult;
-use crate::queue::{DMSQueue, DMSQueueMessage, DMSQueueProducer, DMSQueueConsumer, DMSQueueStats};
+use crate::core::DMSCResult;
+use crate::queue::{DMSCQueue, DMSCQueueMessage, DMSCQueueProducer, DMSCQueueConsumer, DMSCQueueStats, DMSCQueueError};
 
-/// Kafka queue implementation for the DMS queue system.
+/// Kafka queue implementation for the DMSC queue system.
 ///
-/// This struct provides a Kafka implementation of the DMSQueue trait, allowing
+/// This struct provides a Kafka implementation of the DMSCQueue trait, allowing
 /// sending and receiving messages using Apache Kafka.
-pub struct DMSKafkaQueue {
+pub struct DMSCKafkaQueue {
     /// Queue name (Kafka topic)
     name: String,
     /// Kafka producer for sending messages
@@ -99,7 +104,7 @@ pub struct DMSKafkaQueue {
     consumer: Arc<StreamConsumer>,
 }
 
-impl DMSKafkaQueue {
+impl DMSCKafkaQueue {
     /// Creates a new Kafka queue instance.
     ///
     /// # Parameters
@@ -109,8 +114,8 @@ impl DMSKafkaQueue {
     ///
     /// # Returns
     ///
-    /// A new DMSKafkaQueue instance wrapped in DMSResult
-    pub async fn new(name: &str, connection_string: &str) -> DMSResult<Self> {
+    /// A new DMSCKafkaQueue instance wrapped in DMSCResult
+    pub async fn new(name: &str, connection_string: &str) -> DMSCResult<Self> {
         let producer: FutureProducer = ClientConfig::new()
             .set("bootstrap.servers", connection_string)
             .set("message.timeout.ms", "5000")
@@ -133,13 +138,13 @@ impl DMSKafkaQueue {
 }
 
 #[async_trait]
-impl DMSQueue for DMSKafkaQueue {
+impl DMSCQueue for DMSCKafkaQueue {
     /// Creates a new producer for the Kafka queue.
     ///
     /// # Returns
     ///
-    /// A new DMSQueueProducer instance wrapped in DMSResult
-    async fn create_producer(&self) -> DMSResult<Box<dyn DMSQueueProducer>> {
+    /// A new DMSCQueueProducer instance wrapped in DMSCResult
+    async fn create_producer(&self) -> DMSCResult<Box<dyn DMSCQueueProducer>> {
         Ok(Box::new(KafkaProducer {
             producer: self.producer.clone(),
             topic: self.name.clone(),
@@ -154,8 +159,8 @@ impl DMSQueue for DMSKafkaQueue {
     ///
     /// # Returns
     ///
-    /// A new DMSQueueConsumer instance wrapped in DMSResult
-    async fn create_consumer(&self, _consumer_group: &str) -> DMSResult<Box<dyn DMSQueueConsumer>> {
+    /// A new DMSCQueueConsumer instance wrapped in DMSCResult
+    async fn create_consumer(&self, _consumer_group: &str) -> DMSCResult<Box<dyn DMSCQueueConsumer>> {
         Ok(Box::new(KafkaConsumer {
             consumer: self.consumer.clone(),
             paused: Arc::new(Mutex::new(false)),
@@ -169,12 +174,13 @@ impl DMSQueue for DMSKafkaQueue {
     ///
     /// # Returns
     ///
-    /// DMSQueueStats containing detailed queue statistics wrapped in DMSResult
-    async fn get_stats(&self) -> DMSResult<DMSQueueStats> {
+    /// DMSCQueueStats containing detailed queue statistics wrapped in DMSCResult
+    async fn get_stats(&self) -> DMSCResult<DMSCQueueStats> {
         // Get Kafka consumer metrics
         let consumer_metrics = self.consumer.metrics();
         let mut message_count = 0u64;
         let mut consumer_lag = 0i64;
+        let mut avg_processing_time_ms = 0.0;
         
         // Extract relevant metrics from Kafka consumer
         for (metric_name, metric_value) in consumer_metrics.iter() {
@@ -187,6 +193,12 @@ impl DMSQueue for DMSKafkaQueue {
                 "records-lag-max" => {
                     if let Some(value) = metric_value.0.as_i64() {
                         consumer_lag = value;
+                    }
+                },
+                "request-latency-avg" => {
+                    // Use request latency as an approximation for processing time
+                    if let Some(value) = metric_value.0.as_f64() {
+                        avg_processing_time_ms = value;
                     }
                 },
                 _ => {}
@@ -219,14 +231,14 @@ impl DMSQueue for DMSKafkaQueue {
         let consumer_count = if consumer_lag > 0 { 1 } else { 0 };
         let producer_count = if produced_messages > 0 { 1 } else { 0 };
         
-        Ok(DMSQueueStats {
+        Ok(DMSCQueueStats {
             queue_name: self.name.clone(),
             message_count: total_messages,
             consumer_count,
             producer_count,
             processed_messages: message_count,
             failed_messages,
-            avg_processing_time_ms: if message_count > 0 { 100.0 } else { 0.0 }, // Placeholder
+            avg_processing_time_ms,
         })
     }
 
@@ -242,15 +254,15 @@ impl DMSQueue for DMSKafkaQueue {
     ///
     /// # Returns
     ///
-    /// DMSResult indicating success or failure
-    async fn purge(&self) -> DMSResult<()> {
+    /// DMSCResult indicating success or failure
+    async fn purge(&self) -> DMSCResult<()> {
         // Get topic partitions
         let metadata = self.consumer.fetch_metadata(Some(&self.name), std::time::Duration::from_secs(10))
-            .map_err(|e| DMSQueueError::BackendError(format!("Failed to fetch metadata: {}", e)))?;
+            .map_err(|e| DMSCQueueError::BackendError(format!("Failed to fetch metadata: {}", e)))?;
         
         let topic_metadata = metadata.topics().iter()
             .find(|t| t.name() == self.name)
-            .ok_or_else(|| DMSQueueError::BackendError("Topic not found".to_string()))?;
+            .ok_or_else(|| DMSCQueueError::BackendError("Topic not found".to_string()))?;
         
         // Seek to end for each partition
         for partition_metadata in topic_metadata.partitions() {
@@ -259,12 +271,12 @@ impl DMSQueue for DMSKafkaQueue {
             
             // Get the end offset for this partition
             let end_offset = self.consumer.end_offsets(&[topic_partition.clone()], std::time::Duration::from_secs(10))
-                .map_err(|e| DMSQueueError::BackendError(format!("Failed to get end offsets: {}", e)))?;
+                .map_err(|e| DMSCQueueError::BackendError(format!("Failed to get end offsets: {}", e)))?;
             
             if let Some((_, offset)) = end_offset.first() {
                 // Seek to the end offset
                 self.consumer.seek(&topic_partition, *offset, std::time::Duration::from_secs(10))
-                    .map_err(|e| DMSQueueError::BackendError(format!("Failed to seek to offset: {}", e)))?;
+                    .map_err(|e| DMSCQueueError::BackendError(format!("Failed to seek to offset: {}", e)))?;
             }
         }
         
@@ -283,20 +295,20 @@ impl DMSQueue for DMSKafkaQueue {
     ///
     /// # Returns
     ///
-    /// DMSResult indicating success or failure
-    async fn delete(&self) -> DMSResult<()> {
+    /// DMSCResult indicating success or failure
+    async fn delete(&self) -> DMSCResult<()> {
         // Unsubscribe from the topic
         self.consumer.unsubscribe();
         
         // Close the consumer
         if let Err(e) = self.consumer.close() {
-            return Err(DMSQueueError::BackendError(format!("Failed to close consumer: {}", e)).into());
+            return Err(DMSCQueueError::BackendError(format!("Failed to close consumer: {}", e)).into());
         }
         
         // Close the producer if it exists
         if let Some(producer) = &self.producer {
             if let Err(e) = producer.close(std::time::Duration::from_secs(10)) {
-                return Err(DMSQueueError::BackendError(format!("Failed to close producer: {}", e)).into());
+                return Err(DMSCQueueError::BackendError(format!("Failed to close producer: {}", e)).into());
             }
         }
         
@@ -306,7 +318,7 @@ impl DMSQueue for DMSKafkaQueue {
 
 /// Kafka producer implementation.
 ///
-/// This struct provides a Kafka implementation of the DMSQueueProducer trait,
+/// This struct provides a Kafka implementation of the DMSCQueueProducer trait,
 /// allowing sending messages to Kafka topics.
 struct KafkaProducer {
     /// Kafka future producer
@@ -316,7 +328,7 @@ struct KafkaProducer {
 }
 
 #[async_trait]
-impl DMSQueueProducer for KafkaProducer {
+impl DMSCQueueProducer for KafkaProducer {
     /// Sends a single message to the Kafka topic.
     ///
     /// # Parameters
@@ -325,8 +337,8 @@ impl DMSQueueProducer for KafkaProducer {
     ///
     /// # Returns
     ///
-    /// DMSResult indicating success or failure
-    async fn send(&self, message: DMSQueueMessage) -> DMSResult<()> {
+    /// DMSCResult indicating success or failure
+    async fn send(&self, message: DMSCQueueMessage) -> DMSCResult<()> {
         let payload = serde_json::to_vec(&message)?;
         
         let record = FutureRecord::to(&self.topic)
@@ -345,8 +357,8 @@ impl DMSQueueProducer for KafkaProducer {
     ///
     /// # Returns
     ///
-    /// DMSResult indicating success or failure
-    async fn send_batch(&self, messages: Vec<DMSQueueMessage>) -> DMSResult<()> {
+    /// DMSCResult indicating success or failure
+    async fn send_batch(&self, messages: Vec<DMSCQueueMessage>) -> DMSCResult<()> {
         for message in messages {
             self.send(message).await?;
         }
@@ -356,7 +368,7 @@ impl DMSQueueProducer for KafkaProducer {
 
 /// Kafka consumer implementation.
 ///
-/// This struct provides a Kafka implementation of the DMSQueueConsumer trait,
+/// This struct provides a Kafka implementation of the DMSCQueueConsumer trait,
 /// allowing receiving messages from Kafka topics.
 struct KafkaConsumer {
     /// Kafka stream consumer
@@ -366,22 +378,22 @@ struct KafkaConsumer {
 }
 
 #[async_trait]
-impl DMSQueueConsumer for KafkaConsumer {
+impl DMSCQueueConsumer for KafkaConsumer {
     /// Receives a message from the Kafka topic.
     ///
     /// # Returns
     ///
     /// An Option containing the received message, or None if the consumer is paused
-    async fn receive(&self) -> DMSResult<Option<DMSQueueMessage>> {
+    async fn receive(&self) -> DMSCResult<Option<DMSCQueueMessage>> {
         let paused = *self.paused.lock().await;
         if paused {
             return Ok(None);
         }
 
-        let message = self.consumer.recv().await.map_err(|e| crate::core::DMSError::Other(format!("Kafka receive error: {}", e)))?;
+        let message = self.consumer.recv().await.map_err(|e| crate::core::DMSCError::Other(format!("Kafka receive error: {}", e)))?;
         
         if let Some(payload) = message.payload() {
-            let queue_message: DMSQueueMessage = serde_json::from_slice(payload)?;
+            let queue_message: DMSCQueueMessage = serde_json::from_slice(payload)?;
             Ok(Some(queue_message))
         } else {
             Ok(None)
@@ -399,8 +411,8 @@ impl DMSQueueConsumer for KafkaConsumer {
     ///
     /// # Returns
     ///
-    /// DMSResult indicating success or failure
-    async fn ack(&self, _message_id: &str) -> DMSResult<()> {
+    /// DMSCResult indicating success or failure
+    async fn ack(&self, _message_id: &str) -> DMSCResult<()> {
         // Kafka auto-commit is enabled, so acknowledgment is automatic
         Ok(())
     }
@@ -416,8 +428,8 @@ impl DMSQueueConsumer for KafkaConsumer {
     ///
     /// # Returns
     ///
-    /// DMSResult indicating success or failure
-    async fn nack(&self, _message_id: &str) -> DMSResult<()> {
+    /// DMSCResult indicating success or failure
+    async fn nack(&self, _message_id: &str) -> DMSCResult<()> {
         // In Kafka, negative acknowledgment typically means seeking back
         Ok(())
     }
@@ -426,8 +438,8 @@ impl DMSQueueConsumer for KafkaConsumer {
     ///
     /// # Returns
     ///
-    /// DMSResult indicating success or failure
-    async fn pause(&self) -> DMSResult<()> {
+    /// DMSCResult indicating success or failure
+    async fn pause(&self) -> DMSCResult<()> {
         let mut paused = self.paused.lock().await;
         *paused = true;
         Ok(())
@@ -437,8 +449,8 @@ impl DMSQueueConsumer for KafkaConsumer {
     ///
     /// # Returns
     ///
-    /// DMSResult indicating success or failure
-    async fn resume(&self) -> DMSResult<()> {
+    /// DMSCResult indicating success or failure
+    async fn resume(&self) -> DMSCResult<()> {
         let mut paused = self.paused.lock().await;
         *paused = false;
         Ok(())

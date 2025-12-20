@@ -1,7 +1,7 @@
 //! Copyright © 2025 Wenze Wei. All Rights Reserved.
 //!
-//! This file is part of DMS.
-//! The DMS project belongs to the Dunimd Team.
+//! This file is part of DMSC.
+//! The DMSC project belongs to the Dunimd Team.
 //!
 //! Licensed under the Apache License, Version 2.0 (the "License");
 //! You may not use this file except in compliance with the License.
@@ -19,16 +19,16 @@
 
 //! # Logging System
 //! 
-//! This module provides a comprehensive logging system for DMS, supporting multiple output formats,
+//! This module provides a comprehensive logging system for DMSC, supporting multiple output formats,
 //! log levels, and configurable logging behavior. It includes support for structured logging,
 //! distributed tracing integration, and log rotation.
 //! 
 //! ## Key Components
 //! 
-//! - **DMSLogLevel**: Enum defining supported log levels (Debug, Info, Warn, Error)
-//! - **DMSLogConfig**: Configuration struct for logging behavior
-//! - **DMSLogContext**: Thread-local context for adding contextual information to logs
-//! - **DMSLogger**: Public-facing logger class for application use
+//! - **DMSCLogLevel**: Enum defining supported log levels (Debug, Info, Warn, Error)
+//! - **DMSCLogConfig**: Configuration struct for logging behavior
+//! - **DMSCLogContext**: Thread-local context for adding contextual information to logs
+//! - **DMSCLogger**: Public-facing logger class for application use
 //! - **LoggerImpl**: Internal logger implementation
 //! 
 //! ## Design Principles
@@ -36,7 +36,7 @@
 //! 1. **Multiple Outputs**: Supports both console and file logging
 //! 2. **Structured Logging**: Supports both text and JSON formats
 //! 3. **Distributed Tracing**: Integrates with distributed tracing context
-//! 4. **Configurable**: Highly configurable through `DMSLogConfig`
+//! 4. **Configurable**: Highly configurable through `DMSCLogConfig`
 //! 5. **Performance**: Includes sampling support for high-volume logging
 //! 6. **Log Rotation**: Supports size-based log rotation
 //! 7. **Contextual Logging**: Allows adding contextual information to logs
@@ -46,15 +46,15 @@
 //! ```rust
 //! use dms::prelude::*;
 //! 
-//! fn example() -> DMSResult<()> {
+//! fn example() -> DMSCResult<()> {
 //!     // Create a default log configuration
-//!     let log_config = DMSLogConfig::default();
+//!     let log_config = DMSCLogConfig::default();
 //!     
 //!     // Create a file system instance (usually provided by the service context)
-//!     let fs = DMSFileSystem::new();
+//!     let fs = DMSCFileSystem::new();
 //!     
 //!     // Create a logger
-//!     let logger = DMSLogger::new(&log_config, fs);
+//!     let logger = DMSCLogger::new(&log_config, fs);
 //!     
 //!     // Log messages at different levels
 //!     logger.debug("example", "Debug message")?;
@@ -66,7 +66,7 @@
 //! }
 //! ```
 
-// Logging module for DMS.
+// Logging module for DMSC.
 // This is a first-stage implementation using std only; can be extended later.
 
 use std::fmt::Debug;
@@ -75,22 +75,22 @@ use std::thread;
 use std::time::Duration;
 use std::collections::VecDeque;
 
-use crate::core::DMSResult;
-use crate::fs::DMSFileSystem;
+use crate::core::DMSCResult;
+use crate::fs::DMSCFileSystem;
 use rand;
 use serde_json::json;
 use std::fs as stdfs;
 use std::time::SystemTime;
 use std::time::UNIX_EPOCH;
 mod context;
-pub use context::DMSLogContext;
+pub use context::DMSCLogContext;
 
 /// Log level definition.
 /// 
-/// This enum defines the supported log levels in DMS, ordered by severity from lowest to highest.
+/// This enum defines the supported log levels in DMSC, ordered by severity from lowest to highest.
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 #[derive(Clone, Copy, Debug)]
-pub enum DMSLogLevel {
+pub enum DMSCLogLevel {
     /// Debug level: Detailed information for debugging purposes
     Debug,
     /// Info level: General information about application operation
@@ -101,7 +101,7 @@ pub enum DMSLogLevel {
     Error,
 }
 
-impl DMSLogLevel {
+impl DMSCLogLevel {
     /// Returns the string representation of the log level.
     /// 
     /// # Returns
@@ -109,23 +109,23 @@ impl DMSLogLevel {
     /// A static string representing the log level ("DEBUG", "INFO", "WARN", or "ERROR")
     pub fn as_str(&self) -> &'static str {
         match self {
-            DMSLogLevel::Debug => "DEBUG",
-            DMSLogLevel::Info => "INFO",
-            DMSLogLevel::Warn => "WARN",
-            DMSLogLevel::Error => "ERROR",
+            DMSCLogLevel::Debug => "DEBUG",
+            DMSCLogLevel::Info => "INFO",
+            DMSCLogLevel::Warn => "WARN",
+            DMSCLogLevel::Error => "ERROR",
         }
     }
 }
 
 /// Public logging configuration class.
 /// 
-/// This struct defines the configuration options for the DMS logging system, including
+/// This struct defines the configuration options for the DMSC logging system, including
 /// log level, output formats, sampling, and log rotation settings.
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 #[derive(Clone)]
-pub struct DMSLogConfig {
+pub struct DMSCLogConfig {
     /// Minimum log level to be logged
-    pub level: DMSLogLevel,
+    pub level: DMSCLogLevel,
     /// Whether console logging is enabled
     pub console_enabled: bool,
     /// Whether file logging is enabled
@@ -142,34 +142,10 @@ pub struct DMSLogConfig {
     pub max_bytes: u64,
 }
 
-impl DMSLogConfig {
-    /// Creates a new default log configuration.
+impl DMSCLogConfig {
+    /// Creates a log configuration from a `DMSCConfig` instance.
     /// 
-    /// Returns a `DMSLogConfig` instance with the following default values:
-    /// - level: Info
-    /// - console_enabled: true
-    /// - file_enabled: true
-    /// - sampling_default: 1.0
-    /// - file_name: "dms.log"
-    /// - json_format: false
-    /// - rotate_when: "size"
-    /// - max_bytes: 10 MB
-    pub fn default() -> Self {
-        DMSLogConfig {
-            level: DMSLogLevel::Info,
-            console_enabled: true,
-            file_enabled: true,
-            sampling_default: 1.0,
-            file_name: "dms.log".to_string(),
-            json_format: false,
-            rotate_when: "size".to_string(),
-            max_bytes: 10 * 1024 * 1024,
-        }
-    }
-
-    /// Creates a log configuration from a `DMSConfig` instance.
-    /// 
-    /// This method reads logging configuration from a `DMSConfig` instance, using the following keys:
+    /// This method reads logging configuration from a `DMSCConfig` instance, using the following keys:
     /// - log.level: Log level (DEBUG, INFO, WARN, ERROR)
     /// - log.console_enabled: Whether console logging is enabled
     /// - log.file_enabled: Whether file logging is enabled
@@ -181,20 +157,20 @@ impl DMSLogConfig {
     /// 
     /// # Parameters
     /// 
-    /// - `config`: The `DMSConfig` instance to read from
+    /// - `config`: The `DMSCConfig` instance to read from
     /// 
     /// # Returns
     /// 
-    /// A `DMSLogConfig` instance with configuration from the given `DMSConfig`
-    pub fn from_config(config: &crate::config::DMSConfig) -> Self {
-        let mut base = DMSLogConfig::default();
+    /// A `DMSCLogConfig` instance with configuration from the given `DMSCConfig`
+    pub fn from_config(config: &crate::config::DMSCConfig) -> Self {
+        let mut base = DMSCLogConfig::default();
 
         if let Some(level_str) = config.get_str("log.level") {
             base.level = match level_str {
-                "DEBUG" | "debug" => DMSLogLevel::Debug,
-                "INFO" | "info" => DMSLogLevel::Info,
-                "WARN" | "warn" | "WARNING" | "warning" => DMSLogLevel::Warn,
-                "ERROR" | "error" => DMSLogLevel::Error,
+                "DEBUG" | "debug" => DMSCLogLevel::Debug,
+                "INFO" | "info" => DMSCLogLevel::Info,
+                "WARN" | "warn" | "WARNING" | "warning" => DMSCLogLevel::Warn,
+                "ERROR" | "error" => DMSCLogLevel::Error,
                 _ => base.level,
             };
         }
@@ -240,9 +216,25 @@ impl DMSLogConfig {
     }
 }
 
+/// Default implementation for DMSCLogConfig
+impl Default for DMSCLogConfig {
+    fn default() -> Self {
+        DMSCLogConfig {
+            level: DMSCLogLevel::Info,
+            console_enabled: true,
+            file_enabled: true,
+            sampling_default: 1.0,
+            file_name: "dms.log".to_string(),
+            json_format: false,
+            rotate_when: "size".to_string(),
+            max_bytes: 10 * 1024 * 1024,
+        }
+    }
+}
+
 /// Log entry for caching
 struct LogEntry {
-    level: DMSLogLevel,
+    level: DMSCLogLevel,
     target: String,
     message: String,
     timestamp: String,
@@ -255,10 +247,10 @@ struct LogEntry {
 /// log level checking, sampling, log message formatting, and caching.
 struct LoggerImpl {
     /// Minimum log level to be logged
-    level: DMSLogLevel,
+    level: DMSCLogLevel,
     /// File system instance for writing log files
     #[allow(dead_code)]
-    fs: DMSFileSystem,
+    fs: DMSCFileSystem,
     /// Default sampling rate
     sampling_default: f32,
     /// Whether console logging is enabled
@@ -296,13 +288,13 @@ impl LoggerImpl {
     /// 
     /// # Parameters
     /// 
-    /// - `config`: The `DMSLogConfig` instance to use for configuration
-    /// - `fs`: The `DMSFileSystem` instance to use for writing log files
+    /// - `config`: The `DMSCLogConfig` instance to use for configuration
+    /// - `fs`: The `DMSCFileSystem` instance to use for writing log files
     /// 
     /// # Returns
     /// 
     /// A new `LoggerImpl` instance
-    fn new(config: &DMSLogConfig, fs: DMSFileSystem) -> Self {
+    fn new(config: &DMSCLogConfig, fs: DMSCFileSystem) -> Self {
         let log_cache = Arc::new((Mutex::new(VecDeque::new()), Condvar::new()));
         let shutdown_flag = Arc::new(Mutex::new(false));
         let cache_size_limit = 1000;
@@ -394,16 +386,16 @@ impl LoggerImpl {
     /// 
     /// # Returns
     /// 
-    /// A `DMSResult` indicating success or failure
+    /// A `DMSCResult` indicating success or failure
     fn flush_cache(
         log_cache: &Arc<(Mutex<VecDeque<LogEntry>>, Condvar)>,
-        fs: &DMSFileSystem,
+        fs: &DMSCFileSystem,
         file_name: &str,
         json_format: bool,
         rotate_when: &str,
         max_bytes: u64,
         console_enabled: bool
-    ) -> DMSResult<()> {
+    ) -> DMSCResult<()> {
         let (lock, _cvar) = &**log_cache;
         let mut cache = lock.lock().unwrap();
         
@@ -422,11 +414,28 @@ impl LoggerImpl {
         for log_entry in logs_to_flush {
             // Format log entry
             let line = if json_format {
-                serde_json::to_string(&log_entry.context)?
+                // Ensure all required fields are present in JSON format
+                let mut log_obj = log_entry.context.clone();
+                
+                // Add any missing standard fields
+                if !log_obj.contains_key("level") {
+                    log_obj.insert("level".to_string(), serde_json::Value::String(log_entry.level.as_str().to_string()));
+                }
+                if !log_obj.contains_key("target") {
+                    log_obj.insert("target".to_string(), serde_json::Value::String(log_entry.target.clone()));
+                }
+                if !log_obj.contains_key("message") {
+                    log_obj.insert("message".to_string(), serde_json::Value::String(log_entry.message.clone()));
+                }
+                if !log_obj.contains_key("timestamp") {
+                    log_obj.insert("timestamp".to_string(), serde_json::Value::String(log_entry.timestamp.clone()));
+                }
+                
+                serde_json::to_string(&log_obj)?
             } else {
                 // Extract context fields for text format
                 let ctx_kv: Vec<(String, String)> = log_entry.context.iter()
-                    .filter(|(k, _)| *k != "timestamp" && *k != "level" && *k != "target" && *k != "event" && *k != "message")
+                    .filter(|(k, _)| *k != "timestamp" && *k != "level" && *k != "target" && *k != "message" && *k != "trace_id" && *k != "span_id")
                     .map(|(k, v)| (k.clone(), v.to_string()))
                     .collect();
                 
@@ -440,19 +449,27 @@ impl LoggerImpl {
                     format!(" ctx={{ {} }}", parts.join(", "))
                 };
                 
-                let trace_str = if let Some(trace_id) = log_entry.context.get("trace_id") {
-                    format!(" trace_id={trace_id}")
-                } else {
-                    String::new()
+                // Extract trace and span IDs if present
+                let trace_info = match (log_entry.context.get("trace_id"), log_entry.context.get("span_id")) {
+                    (Some(trace), Some(span)) => format!(" trace_id={trace} span_id={span}"),
+                    (Some(trace), None) => format!(" trace_id={trace}"),
+                    (None, Some(span)) => format!(" span_id={span}"),
+                    (None, None) => String::new(),
                 };
                 
+                // Extract event name from context or use target as fallback
+                let event = log_entry.context.get("event")
+                    .and_then(|v| v.as_str())
+                    .unwrap_or(&log_entry.target);
+                
+                // Improved text log format with standardized fields
                 format!(
                     "{} [{}] {} event={}{} - {}{}",
                     log_entry.timestamp,
                     log_entry.level.as_str(),
                     log_entry.target,
-                    log_entry.target, // Using target as event for simplicity
-                    trace_str,
+                    event,
+                    trace_info,
                     log_entry.message,
                     ctx_str,
                 )
@@ -487,7 +504,7 @@ impl LoggerImpl {
                             let base = log_file.file_name().and_then(|s| s.to_str()).unwrap_or("dms.log");
                             let ts = SystemTime::now()
                                 .duration_since(UNIX_EPOCH)
-                                .map_err(|e| crate::core::DMSError::Other(format!("timestamp error: {e}")))?;
+                                .map_err(|e| crate::core::DMSCError::Other(format!("timestamp error: {e}")))?;
                             let rotated = parent.join(format!("{}.{}", base, ts.as_millis()));
                             let _ = stdfs::rename(&log_file, &rotated);
                         }
@@ -512,7 +529,7 @@ impl LoggerImpl {
     /// # Returns
     /// 
     /// `true` if the message should be logged, `false` otherwise
-    fn should_log(&self, level: DMSLogLevel) -> bool {
+    fn should_log(&self, level: DMSCLogLevel) -> bool {
         (level as u8) >= (self.level as u8)
     }
 
@@ -612,8 +629,8 @@ impl LoggerImpl {
     /// 
     /// # Returns
     /// 
-    /// A `DMSResult` indicating success or failure
-    fn log_message<T: Debug>(&self, level: DMSLogLevel, target: &str, message: T) -> DMSResult<()> {
+    /// A `DMSCResult` indicating success or failure
+    fn log_message<T: Debug>(&self, level: DMSCLogLevel, target: &str, message: T) -> DMSCResult<()> {
         if !self.should_log(level) {
             return Ok(());
         }
@@ -625,7 +642,7 @@ impl LoggerImpl {
 
         let ts = Self::now_timestamp();
         let message_str = format!("{message:?}");
-        let ctx_kv = DMSLogContext::get_all();
+        let ctx_kv = DMSCLogContext::get_all();
 
         // Create log entry with structured data
         let mut log_entry_context = serde_json::Map::new();
@@ -636,13 +653,13 @@ impl LoggerImpl {
         log_entry_context.insert("message".to_string(), json!(message_str));
         
         // Add distributed tracing fields if present
-        if let Some(trace_id) = DMSLogContext::get_trace_id() {
+        if let Some(trace_id) = DMSCLogContext::get_trace_id() {
             log_entry_context.insert("trace_id".to_string(), json!(trace_id));
         }
-        if let Some(span_id) = DMSLogContext::get_span_id() {
+        if let Some(span_id) = DMSCLogContext::get_span_id() {
             log_entry_context.insert("span_id".to_string(), json!(span_id));
         }
-        if let Some(parent_span_id) = DMSLogContext::get_parent_span_id() {
+        if let Some(parent_span_id) = DMSCLogContext::get_parent_span_id() {
             log_entry_context.insert("parent_span_id".to_string(), json!(parent_span_id));
         }
         
@@ -678,27 +695,27 @@ impl LoggerImpl {
 
 /// Public-facing logger class.
 /// 
-/// This struct provides the public API for logging in DMS, wrapping the internal `LoggerImpl`.
+/// This struct provides the public API for logging in DMSC, wrapping the internal `LoggerImpl`.
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
-pub struct DMSLogger {
+pub struct DMSCLogger {
     /// Internal logger implementation
     inner: LoggerImpl,
 }
 
-impl DMSLogger {
+impl DMSCLogger {
     /// Creates a new logger instance.
     /// 
     /// # Parameters
     /// 
-    /// - `config`: The `DMSLogConfig` instance to use for configuration
-    /// - `fs`: The `DMSFileSystem` instance to use for writing log files
+    /// - `config`: The `DMSCLogConfig` instance to use for configuration
+    /// - `fs`: The `DMSCFileSystem` instance to use for writing log files
     /// 
     /// # Returns
     /// 
-    /// A new `DMSLogger` instance
-    pub fn new(config: &DMSLogConfig, fs: DMSFileSystem) -> Self {
+    /// A new `DMSCLogger` instance
+    pub fn new(config: &DMSCLogConfig, fs: DMSCFileSystem) -> Self {
         let inner = LoggerImpl::new(config, fs);
-        DMSLogger { inner }
+        DMSCLogger { inner }
     }
 
     /// Logs a debug message.
@@ -710,9 +727,9 @@ impl DMSLogger {
     /// 
     /// # Returns
     /// 
-    /// A `DMSResult` indicating success or failure
-    pub fn debug<T: Debug>(&self, target: &str, message: T) -> DMSResult<()> {
-        self.inner.log_message(DMSLogLevel::Debug, target, message)
+    /// A `DMSCResult` indicating success or failure
+    pub fn debug<T: Debug>(&self, target: &str, message: T) -> DMSCResult<()> {
+        self.inner.log_message(DMSCLogLevel::Debug, target, message)
     }
 
     /// Logs an info message.
@@ -724,9 +741,9 @@ impl DMSLogger {
     /// 
     /// # Returns
     /// 
-    /// A `DMSResult` indicating success or failure
-    pub fn info<T: Debug>(&self, target: &str, message: T) -> DMSResult<()> {
-        self.inner.log_message(DMSLogLevel::Info, target, message)
+    /// A `DMSCResult` indicating success or failure
+    pub fn info<T: Debug>(&self, target: &str, message: T) -> DMSCResult<()> {
+        self.inner.log_message(DMSCLogLevel::Info, target, message)
     }
 
     /// Logs a warning message.
@@ -738,9 +755,9 @@ impl DMSLogger {
     /// 
     /// # Returns
     /// 
-    /// A `DMSResult` indicating success or failure
-    pub fn warn<T: Debug>(&self, target: &str, message: T) -> DMSResult<()> {
-        self.inner.log_message(DMSLogLevel::Warn, target, message)
+    /// A `DMSCResult` indicating success or failure
+    pub fn warn<T: Debug>(&self, target: &str, message: T) -> DMSCResult<()> {
+        self.inner.log_message(DMSCLogLevel::Warn, target, message)
     }
 
     /// Logs an error message.
@@ -752,8 +769,8 @@ impl DMSLogger {
     /// 
     /// # Returns
     /// 
-    /// A `DMSResult` indicating success or failure
-    pub fn error<T: Debug>(&self, target: &str, message: T) -> DMSResult<()> {
-        self.inner.log_message(DMSLogLevel::Error, target, message)
+    /// A `DMSCResult` indicating success or failure
+    pub fn error<T: Debug>(&self, target: &str, message: T) -> DMSCResult<()> {
+        self.inner.log_message(DMSCLogLevel::Error, target, message)
     }
 }

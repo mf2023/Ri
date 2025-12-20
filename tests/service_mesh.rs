@@ -1,7 +1,7 @@
 // Copyright © 2025 Wenze Wei. All Rights Reserved.
 //
-// This file is part of DMS.
-// The DMS project belongs to the Dunimd Team.
+// This file is part of DMSC.
+// The DMSC project belongs to the Dunimd Team.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -15,14 +15,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use dms_core::service_mesh::{DMSServiceMeshConfig, DMSServiceMesh, DMSServiceHealthStatus, DMSServiceEndpoint};
-use dms_core::service_mesh::{DMSServiceInstance, DMSServiceStatus};
-use dms_core::service_mesh::{DMSHealthCheckResult, DMSHealthSummary, DMSHealthStatus};
-use dms_core::service_mesh::{DMSTrafficRoute, DMSMatchCriteria, DMSRouteAction};
+use dmsc::service_mesh::{DMSCServiceMeshConfig, DMSCServiceMesh, DMSCServiceHealthStatus, DMSCServiceEndpoint};
+use dmsc::service_mesh::{DMSCServiceInstance, DMSCServiceStatus};
+use dmsc::service_mesh::{DMSCHealthCheckResult, DMSCHealthSummary, DMSCHealthStatus};
+use dmsc::service_mesh::{DMSCTrafficRoute, DMSCMatchCriteria, DMSCRouteAction};
 
 #[test]
 fn test_service_mesh_config_default() {
-    let config = DMSServiceMeshConfig::default();
+    let config = DMSCServiceMeshConfig::default();
     
     assert!(config.enable_service_discovery);
     assert!(config.enable_health_check);
@@ -34,9 +34,9 @@ fn test_service_mesh_config_default() {
 
 #[test]
 fn test_service_mesh_new() {
-    let config = DMSServiceMeshConfig::default();
+    let config = DMSCServiceMeshConfig::default();
     
-    let service_mesh = DMSServiceMesh::new(config).unwrap();
+    let service_mesh = DMSCServiceMesh::new(config).unwrap();
     
     // Verify components are created
     let _ = service_mesh.get_service_discovery();
@@ -48,8 +48,8 @@ fn test_service_mesh_new() {
 
 #[tokio::test]
 async fn test_service_mesh_register_service() {
-    let config = DMSServiceMeshConfig::default();
-    let service_mesh = DMSServiceMesh::new(config).unwrap();
+    let config = DMSCServiceMeshConfig::default();
+    let service_mesh = DMSCServiceMesh::new(config).unwrap();
     
     // Test registering a service
     let service_name = "test_service";
@@ -67,8 +67,8 @@ async fn test_service_mesh_register_service() {
 
 #[tokio::test]
 async fn test_service_mesh_update_service_health() {
-    let config = DMSServiceMeshConfig::default();
-    let service_mesh = DMSServiceMesh::new(config).unwrap();
+    let config = DMSCServiceMeshConfig::default();
+    let service_mesh = DMSCServiceMesh::new(config).unwrap();
     
     // Register a service
     let service_name = "test_service";
@@ -99,12 +99,12 @@ async fn test_service_mesh_update_service_health() {
 
 #[test]
 fn test_service_instance_new() {
-    let instance = DMSServiceInstance {
+    let instance = DMSCServiceInstance {
         id: "test_instance".to_string(),
         service_name: "test_service".to_string(),
         host: "localhost".to_string(),
         port: 8080,
-        status: DMSServiceStatus::Running,
+        status: DMSCServiceStatus::Running,
         metadata: std::collections::HashMap::new(),
         registered_at: std::time::SystemTime::now(),
         last_heartbeat: std::time::SystemTime::now(),
@@ -114,12 +114,12 @@ fn test_service_instance_new() {
     assert_eq!(instance.service_name, "test_service");
     assert_eq!(instance.host, "localhost");
     assert_eq!(instance.port, 8080);
-    assert_eq!(instance.status, DMSServiceStatus::Running);
+    assert_eq!(instance.status, DMSCServiceStatus::Running);
 }
 
 #[test]
 fn test_health_check_result_new() {
-    let result = DMSHealthCheckResult {
+    let result = DMSCHealthCheckResult {
         service_name: "test_service".to_string(),
         endpoint: "http://localhost:8080/health".to_string(),
         is_healthy: true,
@@ -138,7 +138,7 @@ fn test_health_check_result_new() {
 
 #[test]
 fn test_health_summary_new() {
-    let summary = DMSHealthSummary {
+    let summary = DMSCHealthSummary {
         service_name: "test_service".to_string(),
         total_checks: 20,
         healthy_checks: 16,
@@ -146,7 +146,7 @@ fn test_health_summary_new() {
         success_rate: 80.0,
         average_response_time: std::time::Duration::from_millis(100),
         last_check_time: Some(std::time::SystemTime::now()),
-        overall_status: DMSHealthStatus::Healthy,
+        overall_status: DMSCHealthStatus::Healthy,
     };
     
     assert_eq!(summary.total_checks, 20);
@@ -157,7 +157,7 @@ fn test_health_summary_new() {
 
 #[test]
 fn test_traffic_route_new() {
-    let match_criteria = DMSMatchCriteria {
+    let match_criteria = DMSCMatchCriteria {
         path_prefix: Some("/api/v1/".to_string()),
         headers: std::collections::HashMap::new(),
         method: Some("GET".to_string()),
@@ -165,16 +165,16 @@ fn test_traffic_route_new() {
     };
     
     let weighted_destinations = vec![
-        dms_core::service_mesh::DMSWeightedDestination {        
+        dmsc::service_mesh::DMSCWeightedDestination {        
             service: "backend_service".to_string(),
             weight: 100,
             subset: None,
         },
     ];
     
-    let route_action = DMSRouteAction::Route(weighted_destinations);
+    let route_action = DMSCRouteAction::Route(weighted_destinations);
     
-    let route = DMSTrafficRoute {
+    let route = DMSCTrafficRoute {
         name: "test_route".to_string(),
         source_service: "frontend_service".to_string(),
         destination_service: "backend_service".to_string(),
@@ -193,7 +193,7 @@ fn test_traffic_route_new() {
 #[test]
 fn test_service_health_status() {
     // Test all health status variants
-    assert_eq!(format!("{:?}", DMSServiceHealthStatus::Healthy), "Healthy");
-    assert_eq!(format!("{:?}", DMSServiceHealthStatus::Unhealthy), "Unhealthy");
-    assert_eq!(format!("{:?}", DMSServiceHealthStatus::Unknown), "Unknown");
+    assert_eq!(format!("{:?}", DMSCServiceHealthStatus::Healthy), "Healthy");
+    assert_eq!(format!("{:?}", DMSCServiceHealthStatus::Unhealthy), "Unhealthy");
+    assert_eq!(format!("{:?}", DMSCServiceHealthStatus::Unknown), "Unknown");
 }

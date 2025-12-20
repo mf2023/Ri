@@ -1,7 +1,7 @@
 //! Copyright © 2025 Wenze Wei. All Rights Reserved.
 //!
-//! This file is part of DMS.
-//! The DMS project belongs to the Dunimd Team.
+//! This file is part of DMSC.
+//! The DMSC project belongs to the Dunimd Team.
 //!
 //! Licensed under the Apache License, Version 2.0 (the "License");
 //! you may not use this file except in compliance with the License.
@@ -19,7 +19,7 @@
 
 //! # Global State Manager Module
 //! 
-//! This module provides centralized state management for the DMS system,
+//! This module provides centralized state management for the DMSC system,
 //! enabling coordination between global systems and private communication
 //! protocols. It acts as the central nervous system that maintains consistency
 //! across all protocol implementations and system components.
@@ -55,19 +55,19 @@
 //! ## Usage Examples
 //! 
 //! ```rust
-//! use dms::protocol::global_state::{DMSGlobalStateManager, DMSStateUpdate, DMSStateCategory};
+//! use dms::protocol::global_state::{DMSCGlobalStateManager, DMSCStateUpdate, DMSCStateCategory};
 //! 
-//! async fn example() -> DMSResult<()> {
+//! async fn example() -> DMSCResult<()> {
 //!     // Create global state manager
-//!     let state_manager = DMSGlobalStateManager::new();
+//!     let state_manager = DMSCGlobalStateManager::new();
 //!     
 //!     // Initialize state manager
 //!     state_manager.initialize().await?;
 //!     
 //!     // Update protocol state
-//!     let update = DMSStateUpdate::Protocol {
-//!         protocol_type: DMSProtocolType::Private,
-//!         status: DMSProtocolStatus::Active,
+//!     let update = DMSCStateUpdate::Protocol {
+//!         protocol_type: DMSCProtocolType::Private,
+//!         status: DMSCProtocolStatus::Active,
 //!         config: protocol_config,
 //!         connections: active_connections,
 //!     };
@@ -93,45 +93,45 @@ use async_trait::async_trait;
 use tokio::sync::{RwLock, broadcast, mpsc};
 use uuid::Uuid;
 
-use crate::core::{DMSResult, DMSError};
-use super::{DMSProtocolType, DMSProtocolConfig, DMSProtocolStats, DMSConnectionInfo, 
-            DMSSecurityLevel, DMSDeviceAuthStatus};
+use crate::core::{DMSCResult, DMSCError};
+use super::{DMSCProtocolType, DMSCProtocolConfig, DMSCProtocolStats, DMSCConnectionInfo, 
+            DMSCSecurityLevel, DMSCDeviceAuthStatus};
 
 /// Global state manager for coordinating system-wide state.
-pub struct DMSGlobalStateManager {
+pub struct DMSCGlobalStateManager {
     /// Global system state
-    global_state: Arc<RwLock<DMSGlobalState>>,
+    global_state: Arc<RwLock<DMSCGlobalState>>,
     /// Protocol-specific state
-    protocol_states: Arc<RwLock<HashMap<DMSProtocolType, DMSProtocolState>>>,
+    protocol_states: Arc<RwLock<HashMap<DMSCProtocolType, DMSCProtocolState>>>,
     /// Device-specific state
-    device_states: Arc<RwLock<HashMap<String, DMSDeviceState>>>,
+    device_states: Arc<RwLock<HashMap<String, DMSCDeviceState>>>,
     /// Security state
-    security_state: Arc<RwLock<DMSSecurityState>>,
+    security_state: Arc<RwLock<DMSCSecurityState>>,
     /// Performance state
-    performance_state: Arc<RwLock<DMSPerformanceState>>,
+    performance_state: Arc<RwLock<DMSCPerformanceState>>,
     /// State change subscribers
-    state_subscribers: Arc<RwLock<Vec<broadcast::Sender<DMSStateChange>>>>,
+    state_subscribers: Arc<RwLock<Vec<broadcast::Sender<DMSCStateChange>>>>,
     /// State version manager
-    version_manager: Arc<DMSStateVersionManager>,
+    version_manager: Arc<DMSCStateVersionManager>,
     /// State persistence manager
-    persistence_manager: Arc<DMSStatePersistenceManager>,
+    persistence_manager: Arc<DMSCStatePersistenceManager>,
     /// Whether the manager is initialized
     initialized: Arc<RwLock<bool>>,
 }
 
 /// Global system state structure.
 #[derive(Debug, Clone)]
-pub struct DMSGlobalState {
+pub struct DMSCGlobalState {
     /// System identifier
     pub system_id: String,
     /// System status
-    pub system_status: DMSSystemStatus,
+    pub system_status: DMSCSystemStatus,
     /// Global configuration
-    pub global_config: DMSGlobalConfig,
+    pub global_config: DMSCGlobalConfig,
     /// Active protocols
-    pub active_protocols: Vec<DMSProtocolType>,
+    pub active_protocols: Vec<DMSCProtocolType>,
     /// System capabilities
-    pub capabilities: Vec<DMSCapability>,
+    pub capabilities: Vec<DMSCCapability>,
     /// Last update timestamp
     pub last_update: Instant,
     /// State version
@@ -140,17 +140,17 @@ pub struct DMSGlobalState {
 
 /// Protocol-specific state structure.
 #[derive(Debug, Clone)]
-pub struct DMSProtocolState {
+pub struct DMSCProtocolState {
     /// Protocol type
-    pub protocol_type: DMSProtocolType,
+    pub protocol_type: DMSCProtocolType,
     /// Protocol status
-    pub status: DMSProtocolStatus,
+    pub status: DMSCProtocolStatus,
     /// Protocol configuration
-    pub config: DMSProtocolConfig,
+    pub config: DMSCProtocolConfig,
     /// Active connections
-    pub connections: Vec<DMSConnectionInfo>,
+    pub connections: Vec<DMSCConnectionInfo>,
     /// Protocol statistics
-    pub stats: DMSProtocolStats,
+    pub stats: DMSCProtocolStats,
     /// Last heartbeat
     pub last_heartbeat: Instant,
     /// Protocol version
@@ -159,19 +159,19 @@ pub struct DMSProtocolState {
 
 /// Device-specific state structure.
 #[derive(Debug, Clone)]
-pub struct DMSDeviceState {
+pub struct DMSCDeviceState {
     /// Device identifier
     pub device_id: String,
     /// Device type
-    pub device_type: DMSDeviceType,
+    pub device_type: DMSCDeviceType,
     /// Device status
-    pub status: DMSDeviceStatus,
+    pub status: DMSCDeviceStatus,
     /// Authentication status
-    pub auth_status: DMSDeviceAuthStatus,
+    pub auth_status: DMSCDeviceAuthStatus,
     /// Device capabilities
-    pub capabilities: Vec<DMSCapability>,
+    pub capabilities: Vec<DMSCCapability>,
     /// Supported protocols
-    pub supported_protocols: Vec<DMSProtocolType>,
+    pub supported_protocols: Vec<DMSCProtocolType>,
     /// Last seen timestamp
     pub last_seen: Instant,
     /// Device metadata
@@ -180,41 +180,41 @@ pub struct DMSDeviceState {
 
 /// Security state structure.
 #[derive(Debug, Clone)]
-pub struct DMSSecurityState {
+pub struct DMSCSecurityState {
     /// Global security level
-    pub global_security_level: DMSSecurityLevel,
+    pub global_security_level: DMSCSecurityLevel,
     /// Threat intelligence
-    pub threat_intelligence: DMSThreatIntelligence,
+    pub threat_intelligence: DMSCThreatIntelligence,
     /// Active security policies
-    pub security_policies: Vec<DMSSecurityPolicy>,
+    pub security_policies: Vec<DMSCSecurityPolicy>,
     /// Security incidents
-    pub security_incidents: Vec<DMSSecurityIncident>,
+    pub security_incidents: Vec<DMSCSecurityIncident>,
     /// Compliance status
-    pub compliance_status: HashMap<String, DMSComplianceStatus>,
+    pub compliance_status: HashMap<String, DMSCComplianceStatus>,
     /// Last security scan
     pub last_security_scan: Instant,
 }
 
 /// Performance state structure.
 #[derive(Debug, Clone)]
-pub struct DMSPerformanceState {
+pub struct DMSCPerformanceState {
     /// System performance metrics
-    pub metrics: DMSPerformanceMetrics,
+    pub metrics: DMSCPerformanceMetrics,
     /// Resource utilization
-    pub resource_utilization: DMSResourceUtilization,
+    pub resource_utilization: DMSCResourceUtilization,
     /// Network performance
-    pub network_performance: DMSNetworkPerformance,
+    pub network_performance: DMSCNetworkPerformance,
     /// Performance optimizations
-    pub optimizations: Vec<DMSPerformanceOptimization>,
+    pub optimizations: Vec<DMSCPerformanceOptimization>,
     /// Performance alerts
-    pub alerts: Vec<DMSPerformanceAlert>,
+    pub alerts: Vec<DMSCPerformanceAlert>,
     /// Last performance check
     pub last_performance_check: Instant,
 }
 
 /// System status enumeration.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum DMSSystemStatus {
+pub enum DMSCSystemStatus {
     /// System is initializing
     Initializing,
     /// System is operational
@@ -229,7 +229,7 @@ pub enum DMSSystemStatus {
 
 /// Protocol status enumeration.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum DMSProtocolStatus {
+pub enum DMSCProtocolStatus {
     /// Protocol is inactive
     Inactive,
     /// Protocol is initializing
@@ -246,7 +246,7 @@ pub enum DMSProtocolStatus {
 
 /// Device type enumeration.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum DMSDeviceType {
+pub enum DMSCDeviceType {
     /// Server device
     Server,
     /// Client device
@@ -263,7 +263,7 @@ pub enum DMSDeviceType {
 
 /// Device status enumeration.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum DMSDeviceStatus {
+pub enum DMSCDeviceStatus {
     /// Device is offline
     Offline,
     /// Device is online
@@ -278,7 +278,7 @@ pub enum DMSDeviceStatus {
 
 /// System capability structure.
 #[derive(Debug, Clone)]
-pub struct DMSCapability {
+pub struct DMSCCapability {
     /// Capability name
     pub name: String,
     /// Capability version
@@ -286,25 +286,25 @@ pub struct DMSCapability {
     /// Capability description
     pub description: String,
     /// Required protocols
-    pub required_protocols: Vec<DMSProtocolType>,
+    pub required_protocols: Vec<DMSCProtocolType>,
 }
 
 /// Threat intelligence structure.
 #[derive(Debug, Clone)]
-pub struct DMSThreatIntelligence {
+pub struct DMSCThreatIntelligence {
     /// Current threat level
-    pub threat_level: DMSThreatLevel,
+    pub threat_level: DMSCThreatLevel,
     /// Active threats
-    pub active_threats: Vec<DMSActiveThreat>,
+    pub active_threats: Vec<DMSCActiveThreat>,
     /// Threat indicators
-    pub threat_indicators: Vec<DMSThreatIndicator>,
+    pub threat_indicators: Vec<DMSCThreatIndicator>,
     /// Last threat update
     pub last_update: Instant,
 }
 
 /// Threat level enumeration.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum DMSThreatLevel {
+pub enum DMSCThreatLevel {
     /// Normal threat level
     Normal,
     /// Elevated threat level
@@ -317,24 +317,24 @@ pub enum DMSThreatLevel {
 
 /// Active threat structure.
 #[derive(Debug, Clone)]
-pub struct DMSActiveThreat {
+pub struct DMSCActiveThreat {
     /// Threat identifier
     pub threat_id: String,
     /// Threat type
-    pub threat_type: DMSThreatType,
+    pub threat_type: DMSCThreatType,
     /// Threat severity
-    pub severity: DMSThreatSeverity,
+    pub severity: DMSCThreatSeverity,
     /// Affected systems
     pub affected_systems: Vec<String>,
     /// Detection time
     pub detection_time: Instant,
     /// Mitigation status
-    pub mitigation_status: DMSMitigationStatus,
+    pub mitigation_status: DMSCMitigationStatus,
 }
 
 /// Threat type enumeration.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum DMSThreatType {
+pub enum DMSCThreatType {
     /// Malware threat
     Malware,
     /// Intrusion attempt
@@ -351,7 +351,7 @@ pub enum DMSThreatType {
 
 /// Threat severity enumeration.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum DMSThreatSeverity {
+pub enum DMSCThreatSeverity {
     /// Low severity
     Low,
     /// Medium severity
@@ -364,7 +364,7 @@ pub enum DMSThreatSeverity {
 
 /// Mitigation status enumeration.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum DMSMitigationStatus {
+pub enum DMSCMitigationStatus {
     /// Not mitigated
     NotMitigated,
     /// Partially mitigated
@@ -377,9 +377,9 @@ pub enum DMSMitigationStatus {
 
 /// Threat indicator structure.
 #[derive(Debug, Clone)]
-pub struct DMSThreatIndicator {
+pub struct DMSCThreatIndicator {
     /// Indicator type
-    pub indicator_type: DMSThreatIndicatorType,
+    pub indicator_type: DMSCThreatIndicatorType,
     /// Indicator value
     pub value: String,
     /// Confidence level
@@ -394,7 +394,7 @@ pub struct DMSThreatIndicator {
 
 /// Threat indicator type enumeration.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum DMSThreatIndicatorType {
+pub enum DMSCThreatIndicatorType {
     /// IP address indicator
     IPAddress,
     /// Domain indicator
@@ -411,7 +411,7 @@ pub enum DMSThreatIndicatorType {
 
 /// Security policy structure.
 #[derive(Debug, Clone)]
-pub struct DMSSecurityPolicy {
+pub struct DMSCSecurityPolicy {
     /// Policy identifier
     pub policy_id: String,
     /// Policy name
@@ -419,44 +419,44 @@ pub struct DMSSecurityPolicy {
     /// Policy description
     pub description: String,
     /// Policy rules
-    pub rules: Vec<DMSSecurityRule>,
+    pub rules: Vec<DMSCSecurityRule>,
     /// Enforcement level
-    pub enforcement_level: DMSEnforcementLevel,
+    pub enforcement_level: DMSCEnforcementLevel,
     /// Policy status
-    pub status: DMSSecurityPolicyStatus,
+    pub status: DMSCSecurityPolicyStatus,
 }
 
 /// Security rule structure.
 #[derive(Debug, Clone)]
-pub struct DMSSecurityRule {
+pub struct DMSCSecurityRule {
     /// Rule name
     pub rule_name: String,
     /// Rule condition
-    pub condition: DMSSecurityCondition,
+    pub condition: DMSCSecurityCondition,
     /// Rule action
-    pub action: DMSSecurityAction,
+    pub action: DMSCSecurityAction,
     /// Rule priority
     pub priority: u32,
 }
 
 /// Security condition enumeration.
 #[derive(Debug, Clone)]
-pub enum DMSSecurityCondition {
+pub enum DMSCSecurityCondition {
     /// Threat level condition
-    ThreatLevel(DMSThreatLevel),
+    ThreatLevel(DMSCThreatLevel),
     /// Data classification condition
-    DataClassification(DMSDataClassification),
+    DataClassification(DMSCDataClassification),
     /// Network environment condition
-    NetworkEnvironment(DMSNetworkEnvironment),
+    NetworkEnvironment(DMSCNetworkEnvironment),
     /// Device type condition
-    DeviceType(DMSDeviceType),
+    DeviceType(DMSCDeviceType),
     /// Custom condition
     Custom(String),
 }
 
 /// Security action enumeration.
 #[derive(Debug, Clone)]
-pub enum DMSSecurityAction {
+pub enum DMSCSecurityAction {
     /// Allow action
     Allow,
     /// Deny action
@@ -473,7 +473,7 @@ pub enum DMSSecurityAction {
 
 /// Enforcement level enumeration.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum DMSEnforcementLevel {
+pub enum DMSCEnforcementLevel {
     /// Permissive enforcement
     Permissive,
     /// Standard enforcement
@@ -486,7 +486,7 @@ pub enum DMSEnforcementLevel {
 
 /// Security policy status enumeration.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum DMSSecurityPolicyStatus {
+pub enum DMSCSecurityPolicyStatus {
     /// Policy is draft
     Draft,
     /// Policy is active
@@ -499,13 +499,13 @@ pub enum DMSSecurityPolicyStatus {
 
 /// Security incident structure.
 #[derive(Debug, Clone)]
-pub struct DMSSecurityIncident {
+pub struct DMSCSecurityIncident {
     /// Incident identifier
     pub incident_id: String,
     /// Incident type
-    pub incident_type: DMSSecurityIncidentType,
+    pub incident_type: DMSCSecurityIncidentType,
     /// Incident severity
-    pub severity: DMSSecurityIncidentSeverity,
+    pub severity: DMSCSecurityIncidentSeverity,
     /// Affected systems
     pub affected_systems: Vec<String>,
     /// Incident description
@@ -513,12 +513,12 @@ pub struct DMSSecurityIncident {
     /// Detection time
     pub detection_time: Instant,
     /// Resolution status
-    pub resolution_status: DMSResolutionStatus,
+    pub resolution_status: DMSCResolutionStatus,
 }
 
 /// Security incident type enumeration.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum DMSSecurityIncidentType {
+pub enum DMSCSecurityIncidentType {
     /// Unauthorized access
     UnauthorizedAccess,
     /// Data breach
@@ -533,7 +533,7 @@ pub enum DMSSecurityIncidentType {
 
 /// Security incident severity enumeration.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum DMSSecurityIncidentSeverity {
+pub enum DMSCSecurityIncidentSeverity {
     /// Low severity
     Low,
     /// Medium severity
@@ -546,7 +546,7 @@ pub enum DMSSecurityIncidentSeverity {
 
 /// Resolution status enumeration.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum DMSResolutionStatus {
+pub enum DMSCResolutionStatus {
     /// Not resolved
     NotResolved,
     /// Under investigation
@@ -559,11 +559,11 @@ pub enum DMSResolutionStatus {
 
 /// Compliance status structure.
 #[derive(Debug, Clone)]
-pub struct DMSComplianceStatus {
+pub struct DMSCComplianceStatus {
     /// Compliance framework
     pub framework: String,
     /// Compliance level
-    pub level: DMSComplianceLevel,
+    pub level: DMSCComplianceLevel,
     /// Last assessment
     pub last_assessment: Instant,
     /// Next assessment due
@@ -572,7 +572,7 @@ pub struct DMSComplianceStatus {
 
 /// Compliance level enumeration.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum DMSComplianceLevel {
+pub enum DMSCComplianceLevel {
     /// Non-compliant
     NonCompliant,
     /// Partially compliant
@@ -585,7 +585,7 @@ pub enum DMSComplianceLevel {
 
 /// Data classification enumeration.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum DMSDataClassification {
+pub enum DMSCDataClassification {
     /// Public data
     Public,
     /// Internal data
@@ -600,7 +600,7 @@ pub enum DMSDataClassification {
 
 /// Network environment enumeration.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum DMSNetworkEnvironment {
+pub enum DMSCNetworkEnvironment {
     /// Trusted internal network
     Trusted,
     /// Untrusted external network
@@ -613,7 +613,7 @@ pub enum DMSNetworkEnvironment {
 
 /// Global configuration structure.
 #[derive(Debug, Clone)]
-pub struct DMSGlobalConfig {
+pub struct DMSCGlobalConfig {
     /// System name
     pub system_name: String,
     /// System version
@@ -623,14 +623,14 @@ pub struct DMSGlobalConfig {
     /// Connection timeout
     pub connection_timeout: Duration,
     /// Retry policy
-    pub retry_policy: DMSRetryPolicy,
+    pub retry_policy: DMSCRetryPolicy,
     /// Logging configuration
-    pub logging_config: DMSLoggingConfig,
+    pub logging_config: DMSCLoggingConfig,
 }
 
 /// Retry policy structure.
 #[derive(Debug, Clone)]
-pub struct DMSRetryPolicy {
+pub struct DMSCRetryPolicy {
     /// Maximum retry attempts
     pub max_attempts: u32,
     /// Retry delay
@@ -643,18 +643,18 @@ pub struct DMSRetryPolicy {
 
 /// Logging configuration structure.
 #[derive(Debug, Clone)]
-pub struct DMSLoggingConfig {
+pub struct DMSCLoggingConfig {
     /// Log level
     pub log_level: String,
     /// Log destination
     pub log_destination: String,
     /// Log rotation policy
-    pub rotation_policy: DMSRotationPolicy,
+    pub rotation_policy: DMSCRotationPolicy,
 }
 
 /// Rotation policy structure.
 #[derive(Debug, Clone)]
-pub struct DMSRotationPolicy {
+pub struct DMSCRotationPolicy {
     /// Maximum file size
     pub max_file_size: u64,
     /// Maximum file count
@@ -665,7 +665,7 @@ pub struct DMSRotationPolicy {
 
 /// Performance metrics structure.
 #[derive(Debug, Clone)]
-pub struct DMSPerformanceMetrics {
+pub struct DMSCPerformanceMetrics {
     /// CPU utilization
     pub cpu_utilization: f32,
     /// Memory utilization
@@ -680,7 +680,7 @@ pub struct DMSPerformanceMetrics {
 
 /// Resource utilization structure.
 #[derive(Debug, Clone)]
-pub struct DMSResourceUtilization {
+pub struct DMSCResourceUtilization {
     /// CPU cores
     pub cpu_cores: u32,
     /// Memory total
@@ -695,7 +695,7 @@ pub struct DMSResourceUtilization {
 
 /// Network performance structure.
 #[derive(Debug, Clone)]
-pub struct DMSNetworkPerformance {
+pub struct DMSCNetworkPerformance {
     /// Network latency
     pub latency: Duration,
     /// Packet loss
@@ -708,20 +708,20 @@ pub struct DMSNetworkPerformance {
 
 /// Performance optimization structure.
 #[derive(Debug, Clone)]
-pub struct DMSPerformanceOptimization {
+pub struct DMSCPerformanceOptimization {
     /// Optimization type
-    pub optimization_type: DMSOptimizationType,
+    pub optimization_type: DMSCOptimizationType,
     /// Optimization description
     pub description: String,
     /// Performance impact
     pub performance_impact: f32,
     /// Implementation status
-    pub implementation_status: DMSImplementationStatus,
+    pub implementation_status: DMSCImplementationStatus,
 }
 
 /// Optimization type enumeration.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum DMSOptimizationType {
+pub enum DMSCOptimizationType {
     /// Network optimization
     Network,
     /// Memory optimization
@@ -736,7 +736,7 @@ pub enum DMSOptimizationType {
 
 /// Implementation status enumeration.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum DMSImplementationStatus {
+pub enum DMSCImplementationStatus {
     /// Not implemented
     NotImplemented,
     /// In progress
@@ -749,22 +749,22 @@ pub enum DMSImplementationStatus {
 
 /// Performance alert structure.
 #[derive(Debug, Clone)]
-pub struct DMSPerformanceAlert {
+pub struct DMSCPerformanceAlert {
     /// Alert type
-    pub alert_type: DMSPerformanceAlertType,
+    pub alert_type: DMSCPerformanceAlertType,
     /// Alert message
     pub message: String,
     /// Alert severity
-    pub severity: DMSPerformanceAlertSeverity,
+    pub severity: DMSCPerformanceAlertSeverity,
     /// Alert time
     pub alert_time: Instant,
     /// Resolution status
-    pub resolution_status: DMSResolutionStatus,
+    pub resolution_status: DMSCResolutionStatus,
 }
 
 /// Performance alert type enumeration.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum DMSPerformanceAlertType {
+pub enum DMSCPerformanceAlertType {
     /// High CPU usage
     HighCPU,
     /// High memory usage
@@ -779,7 +779,7 @@ pub enum DMSPerformanceAlertType {
 
 /// Performance alert severity enumeration.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum DMSPerformanceAlertSeverity {
+pub enum DMSCPerformanceAlertSeverity {
     /// Warning severity
     Warning,
     /// Critical severity
@@ -790,13 +790,13 @@ pub enum DMSPerformanceAlertSeverity {
 
 /// State change notification structure.
 #[derive(Debug, Clone)]
-pub struct DMSStateChange {
+pub struct DMSCStateChange {
     /// Change type
-    pub change_type: DMSStateChangeType,
+    pub change_type: DMSCStateChangeType,
     /// Change category
-    pub category: DMSStateCategory,
+    pub category: DMSCStateCategory,
     /// Change data
-    pub data: DMSStateChangeData,
+    pub data: DMSCStateChangeData,
     /// Change timestamp
     pub timestamp: Instant,
     /// Change version
@@ -805,7 +805,7 @@ pub struct DMSStateChange {
 
 /// State change type enumeration.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum DMSStateChangeType {
+pub enum DMSCStateChangeType {
     /// State created
     Created,
     /// State updated
@@ -818,7 +818,7 @@ pub enum DMSStateChangeType {
 
 /// State category enumeration.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum DMSStateCategory {
+pub enum DMSCStateCategory {
     /// Global state
     Global,
     /// Protocol state
@@ -833,71 +833,71 @@ pub enum DMSStateCategory {
 
 /// State change data enumeration.
 #[derive(Debug, Clone)]
-pub enum DMSStateChangeData {
+pub enum DMSCStateChangeData {
     /// Global state data
-    Global(DMSGlobalState),
+    Global(DMSCGlobalState),
     /// Protocol state data
-    Protocol(DMSProtocolState),
+    Protocol(DMSCProtocolState),
     /// Device state data
-    Device(DMSDeviceState),
+    Device(DMSCDeviceState),
     /// Security state data
-    Security(DMSSecurityState),
+    Security(DMSCSecurityState),
     /// Performance state data
-    Performance(DMSPerformanceState),
+    Performance(DMSCPerformanceState),
 }
 
 /// State update enumeration.
 #[derive(Debug, Clone)]
-pub enum DMSStateUpdate {
+pub enum DMSCStateUpdate {
     /// Global state update
     Global {
-        system_status: DMSSystemStatus,
-        global_config: DMSGlobalConfig,
-        active_protocols: Vec<DMSProtocolType>,
+        system_status: DMSCSystemStatus,
+        global_config: DMSCGlobalConfig,
+        active_protocols: Vec<DMSCProtocolType>,
     },
     /// Protocol state update
     Protocol {
-        protocol_type: DMSProtocolType,
-        status: DMSProtocolStatus,
-        config: DMSProtocolConfig,
-        connections: Vec<DMSConnectionInfo>,
+        protocol_type: DMSCProtocolType,
+        status: DMSCProtocolStatus,
+        config: DMSCProtocolConfig,
+        connections: Vec<DMSCConnectionInfo>,
     },
     /// Device state update
     Device {
         device_id: String,
-        device_type: DMSDeviceType,
-        status: DMSDeviceStatus,
-        auth_status: DMSDeviceAuthStatus,
-        capabilities: Vec<DMSCapability>,
-        supported_protocols: Vec<DMSProtocolType>,
+        device_type: DMSCDeviceType,
+        status: DMSCDeviceStatus,
+        auth_status: DMSCDeviceAuthStatus,
+        capabilities: Vec<DMSCCapability>,
+        supported_protocols: Vec<DMSCProtocolType>,
     },
     /// Security state update
     Security {
-        global_security_level: DMSSecurityLevel,
-        threat_intelligence: DMSThreatIntelligence,
-        security_policies: Vec<DMSSecurityPolicy>,
+        global_security_level: DMSCSecurityLevel,
+        threat_intelligence: DMSCThreatIntelligence,
+        security_policies: Vec<DMSCSecurityPolicy>,
     },
     /// Performance state update
     Performance {
-        metrics: DMSPerformanceMetrics,
-        resource_utilization: DMSResourceUtilization,
-        network_performance: DMSNetworkPerformance,
+        metrics: DMSCPerformanceMetrics,
+        resource_utilization: DMSCResourceUtilization,
+        network_performance: DMSCNetworkPerformance,
     },
 }
 
 /// State version manager for tracking state changes.
-struct DMSStateVersionManager {
+struct DMSCStateVersionManager {
     /// Current version
     current_version: Arc<RwLock<u64>>,
     /// Version history
-    version_history: Arc<RwLock<Vec<DMSStateVersion>>>,
+    version_history: Arc<RwLock<Vec<DMSCStateVersion>>>,
     /// Maximum history size
     max_history_size: usize,
 }
 
 /// State version structure.
 #[derive(Debug, Clone)]
-struct DMSStateVersion {
+struct DMSCStateVersion {
     /// Version number
     version: u64,
     /// Version timestamp
@@ -905,35 +905,35 @@ struct DMSStateVersion {
     /// Version hash
     version_hash: String,
     /// State snapshot
-    state_snapshot: DMSStateSnapshot,
+    state_snapshot: DMSCStateSnapshot,
 }
 
 /// State snapshot structure.
 #[derive(Debug, Clone)]
-struct DMSStateSnapshot {
+struct DMSCStateSnapshot {
     /// Global state snapshot
-    global_state: DMSGlobalState,
+    global_state: DMSCGlobalState,
     /// Protocol states snapshot
-    protocol_states: HashMap<DMSProtocolType, DMSProtocolState>,
+    protocol_states: HashMap<DMSCProtocolType, DMSCProtocolState>,
     /// Device states snapshot
-    device_states: HashMap<String, DMSDeviceState>,
+    device_states: HashMap<String, DMSCDeviceState>,
     /// Security state snapshot
-    security_state: DMSSecurityState,
+    security_state: DMSCSecurityState,
     /// Performance state snapshot
-    performance_state: DMSPerformanceState,
+    performance_state: DMSCPerformanceState,
 }
 
 /// State persistence manager for durable state storage.
-struct DMSStatePersistenceManager {
+struct DMSCStatePersistenceManager {
     /// Persistence configuration
-    config: DMSPersistenceConfig,
+    config: DMSCPersistenceConfig,
     /// Persistence backend
-    backend: Arc<dyn DMSStateBackend>,
+    backend: Arc<dyn DMSCStateBackend>,
 }
 
 /// Persistence configuration structure.
 #[derive(Debug, Clone)]
-pub struct DMSPersistenceConfig {
+pub struct DMSCPersistenceConfig {
     /// Persistence interval
     pub persistence_interval: Duration,
     /// Maximum state size
@@ -946,75 +946,75 @@ pub struct DMSPersistenceConfig {
 
 /// State backend trait for pluggable persistence.
 #[async_trait]
-pub trait DMSStateBackend: Send + Sync {
+pub trait DMSCStateBackend: Send + Sync {
     /// Save state
-    async fn save_state(&self, state: &DMSStateSnapshot) -> DMSResult<()>;
+    async fn save_state(&self, state: &DMSCStateSnapshot) -> DMSCResult<()>;
     /// Load state
-    async fn load_state(&self) -> DMSResult<Option<DMSStateSnapshot>>;
+    async fn load_state(&self) -> DMSCResult<Option<DMSCStateSnapshot>>;
     /// Delete state
-    async fn delete_state(&self) -> DMSResult<()>;
+    async fn delete_state(&self) -> DMSCResult<()>;
 }
 
-impl DMSGlobalStateManager {
+impl DMSCGlobalStateManager {
     /// Create a new global state manager.
     pub fn new() -> Self {
         let system_id = Uuid::new_v4().to_string();
-        let global_state = Arc::new(RwLock::new(DMSGlobalState {
+        let global_state = Arc::new(RwLock::new(DMSCGlobalState {
             system_id: system_id.clone(),
-            system_status: DMSSystemStatus::Initializing,
-            global_config: DMSGlobalConfig {
-                system_name: "DMS System".to_string(),
+            system_status: DMSCSystemStatus::Initializing,
+            global_config: DMSCGlobalConfig {
+                system_name: "DMSC System".to_string(),
                 system_version: "1.0.0".to_string(),
                 max_connections: 1000,
                 connection_timeout: Duration::from_secs(30),
-                retry_policy: DMSRetryPolicy {
+                retry_policy: DMSCRetryPolicy {
                     max_attempts: 3,
                     retry_delay: Duration::from_secs(1),
                     exponential_backoff: true,
                     max_retry_delay: Duration::from_secs(60),
                 },
-                logging_config: DMSLoggingConfig {
+                logging_config: DMSCLoggingConfig {
                     log_level: "INFO".to_string(),
                     log_destination: "file".to_string(),
-                    rotation_policy: DMSRotationPolicy {
+                    rotation_policy: DMSCRotationPolicy {
                         max_file_size: 100 * 1024 * 1024, // 100MB
                         max_file_count: 10,
                         rotation_interval: Duration::from_secs(86400), // 24 hours
                     },
                 },
             },
-            active_protocols: vec![DMSProtocolType::Global],
+            active_protocols: vec![DMSCProtocolType::Global],
             capabilities: vec![],
             last_update: Instant::now(),
             version: 1,
         }));
         
-        let version_manager = Arc::new(DMSStateVersionManager {
+        let version_manager = Arc::new(DMSCStateVersionManager {
             current_version: Arc::new(RwLock::new(1)),
             version_history: Arc::new(RwLock::new(Vec::new())),
             max_history_size: 1000,
         });
         
-        let persistence_config = DMSPersistenceConfig {
+        let persistence_config = DMSCPersistenceConfig {
             persistence_interval: Duration::from_secs(300), // 5 minutes
             max_state_size: 100 * 1024 * 1024, // 100MB
             compression_enabled: true,
             encryption_enabled: true,
         };
         
-        let persistence_manager = Arc::new(DMSStatePersistenceManager {
+        let persistence_manager = Arc::new(DMSCStatePersistenceManager {
             config: persistence_config,
-            backend: Arc::new(DMSMemoryStateBackend::new()),
+            backend: Arc::new(DMSCMemoryStateBackend::new()),
         });
         
         Self {
             global_state,
             protocol_states: Arc::new(RwLock::new(HashMap::new())),
             device_states: Arc::new(RwLock::new(HashMap::new())),
-            security_state: Arc::new(RwLock::new(DMSSecurityState {
-                global_security_level: DMSSecurityLevel::Standard,
-                threat_intelligence: DMSThreatIntelligence {
-                    threat_level: DMSThreatLevel::Normal,
+            security_state: Arc::new(RwLock::new(DMSCSecurityState {
+                global_security_level: DMSCSecurityLevel::Standard,
+                threat_intelligence: DMSCThreatIntelligence {
+                    threat_level: DMSCThreatLevel::Normal,
                     active_threats: vec![],
                     threat_indicators: vec![],
                     last_update: Instant::now(),
@@ -1024,22 +1024,22 @@ impl DMSGlobalStateManager {
                 compliance_status: HashMap::new(),
                 last_security_scan: Instant::now(),
             })),
-            performance_state: Arc::new(RwLock::new(DMSPerformanceState {
-                metrics: DMSPerformanceMetrics {
+            performance_state: Arc::new(RwLock::new(DMSCPerformanceState {
+                metrics: DMSCPerformanceMetrics {
                     cpu_utilization: 0.0,
                     memory_utilization: 0.0,
                     network_throughput: 0,
                     response_time: Duration::from_millis(0),
                     error_rate: 0.0,
                 },
-                resource_utilization: DMSResourceUtilization {
+                resource_utilization: DMSCResourceUtilization {
                     cpu_cores: 1,
                     memory_total: 0,
                     memory_used: 0,
                     disk_total: 0,
                     disk_used: 0,
                 },
-                network_performance: DMSNetworkPerformance {
+                network_performance: DMSCNetworkPerformance {
                     latency: Duration::from_millis(0),
                     packet_loss: 0.0,
                     bandwidth_utilization: 0.0,
@@ -1057,7 +1057,7 @@ impl DMSGlobalStateManager {
     }
     
     /// Initialize the global state manager.
-    pub async fn initialize(&self) -> DMSResult<()> {
+    pub async fn initialize(&self) -> DMSCResult<()> {
         if *self.initialized.read().await {
             return Ok(());
         }
@@ -1069,7 +1069,7 @@ impl DMSGlobalStateManager {
         
         // Update system status
         let mut global_state = self.global_state.write().await;
-        global_state.system_status = DMSSystemStatus::Operational;
+        global_state.system_status = DMSCSystemStatus::Operational;
         global_state.last_update = Instant::now();
         
         *self.initialized.write().await = true;
@@ -1077,25 +1077,25 @@ impl DMSGlobalStateManager {
     }
     
     /// Update system state.
-    pub async fn update_state(&self, update: DMSStateUpdate) -> DMSResult<()> {
+    pub async fn update_state(&self, update: DMSCStateUpdate) -> DMSCResult<()> {
         if !*self.initialized.read().await {
-            return Err(DMSError::InvalidState("State manager not initialized".to_string()));
+            return Err(DMSCError::InvalidState("State manager not initialized".to_string()));
         }
         
         match update {
-            DMSStateUpdate::Global { system_status, global_config, active_protocols } => {
+            DMSCStateUpdate::Global { system_status, global_config, active_protocols } => {
                 self.update_global_state(system_status, global_config, active_protocols).await?;
             }
-            DMSStateUpdate::Protocol { protocol_type, status, config, connections } => {
+            DMSCStateUpdate::Protocol { protocol_type, status, config, connections } => {
                 self.update_protocol_state(protocol_type, status, config, connections).await?;
             }
-            DMSStateUpdate::Device { device_id, device_type, status, auth_status, capabilities, supported_protocols } => {
+            DMSCStateUpdate::Device { device_id, device_type, status, auth_status, capabilities, supported_protocols } => {
                 self.update_device_state(device_id, device_type, status, auth_status, capabilities, supported_protocols).await?;
             }
-            DMSStateUpdate::Security { global_security_level, threat_intelligence, security_policies } => {
+            DMSCStateUpdate::Security { global_security_level, threat_intelligence, security_policies } => {
                 self.update_security_state(global_security_level, threat_intelligence, security_policies).await?;
             }
-            DMSStateUpdate::Performance { metrics, resource_utilization, network_performance } => {
+            DMSCStateUpdate::Performance { metrics, resource_utilization, network_performance } => {
                 self.update_performance_state(metrics, resource_utilization, network_performance).await?;
             }
         }
@@ -1104,32 +1104,32 @@ impl DMSGlobalStateManager {
     }
     
     /// Get global state.
-    pub async fn get_global_state(&self) -> DMSResult<DMSGlobalState> {
+    pub async fn get_global_state(&self) -> DMSCResult<DMSCGlobalState> {
         Ok(self.global_state.read().await.clone())
     }
     
     /// Get protocol state.
-    pub async fn get_protocol_state(&self, protocol_type: DMSProtocolType) -> DMSResult<Option<DMSProtocolState>> {
+    pub async fn get_protocol_state(&self, protocol_type: DMSCProtocolType) -> DMSCResult<Option<DMSCProtocolState>> {
         Ok(self.protocol_states.read().await.get(&protocol_type).cloned())
     }
     
     /// Get device state.
-    pub async fn get_device_state(&self, device_id: &str) -> DMSResult<Option<DMSDeviceState>> {
+    pub async fn get_device_state(&self, device_id: &str) -> DMSCResult<Option<DMSCDeviceState>> {
         Ok(self.device_states.read().await.get(device_id).cloned())
     }
     
     /// Get security state.
-    pub async fn get_security_state(&self) -> DMSResult<DMSSecurityState> {
+    pub async fn get_security_state(&self) -> DMSCResult<DMSCSecurityState> {
         Ok(self.security_state.read().await.clone())
     }
     
     /// Get performance state.
-    pub async fn get_performance_state(&self) -> DMSResult<DMSPerformanceState> {
+    pub async fn get_performance_state(&self) -> DMSCResult<DMSCPerformanceState> {
         Ok(self.performance_state.read().await.clone())
     }
     
     /// Subscribe to state changes.
-    pub async fn subscribe_state_changes(&self) -> DMSResult<broadcast::Receiver<DMSStateChange>> {
+    pub async fn subscribe_state_changes(&self) -> DMSCResult<broadcast::Receiver<DMSCStateChange>> {
         let (tx, rx) = broadcast::channel(1024);
         self.state_subscribers.write().await.push(tx);
         Ok(rx)
@@ -1138,10 +1138,10 @@ impl DMSGlobalStateManager {
     /// Update global state.
     async fn update_global_state(
         &self,
-        system_status: DMSSystemStatus,
-        global_config: DMSGlobalConfig,
-        active_protocols: Vec<DMSProtocolType>,
-    ) -> DMSResult<()> {
+        system_status: DMSCSystemStatus,
+        global_config: DMSCGlobalConfig,
+        active_protocols: Vec<DMSCProtocolType>,
+    ) -> DMSCResult<()> {
         let mut global_state = self.global_state.write().await;
         global_state.system_status = system_status;
         global_state.global_config = global_config;
@@ -1149,10 +1149,10 @@ impl DMSGlobalStateManager {
         global_state.last_update = Instant::now();
         global_state.version += 1;
         
-        let state_change = DMSStateChange {
-            change_type: DMSStateChangeType::Updated,
-            category: DMSStateCategory::Global,
-            data: DMSStateChangeData::Global(global_state.clone()),
+        let state_change = DMSCStateChange {
+            change_type: DMSCStateChangeType::Updated,
+            category: DMSCStateCategory::Global,
+            data: DMSCStateChangeData::Global(global_state.clone()),
             timestamp: Instant::now(),
             version: global_state.version,
         };
@@ -1166,27 +1166,27 @@ impl DMSGlobalStateManager {
     /// Update protocol state.
     async fn update_protocol_state(
         &self,
-        protocol_type: DMSProtocolType,
-        status: DMSProtocolStatus,
-        config: DMSProtocolConfig,
-        connections: Vec<DMSConnectionInfo>,
-    ) -> DMSResult<()> {
-        let protocol_state = DMSProtocolState {
+        protocol_type: DMSCProtocolType,
+        status: DMSCProtocolStatus,
+        config: DMSCProtocolConfig,
+        connections: Vec<DMSCConnectionInfo>,
+    ) -> DMSCResult<()> {
+        let protocol_state = DMSCProtocolState {
             protocol_type,
             status,
             config,
             connections,
-            stats: DMSProtocolStats::default(),
+            stats: DMSCProtocolStats::default(),
             last_heartbeat: Instant::now(),
             protocol_version: "1.0.0".to_string(),
         };
         
         self.protocol_states.write().await.insert(protocol_type, protocol_state.clone());
         
-        let state_change = DMSStateChange {
-            change_type: DMSStateChangeType::Updated,
-            category: DMSStateCategory::Protocol,
-            data: DMSStateChangeData::Protocol(protocol_state),
+        let state_change = DMSCStateChange {
+            change_type: DMSCStateChangeType::Updated,
+            category: DMSCStateCategory::Protocol,
+            data: DMSCStateChangeData::Protocol(protocol_state),
             timestamp: Instant::now(),
             version: self.get_next_version().await,
         };
@@ -1201,13 +1201,13 @@ impl DMSGlobalStateManager {
     async fn update_device_state(
         &self,
         device_id: String,
-        device_type: DMSDeviceType,
-        status: DMSDeviceStatus,
-        auth_status: DMSDeviceAuthStatus,
-        capabilities: Vec<DMSCapability>,
-        supported_protocols: Vec<DMSProtocolType>,
-    ) -> DMSResult<()> {
-        let device_state = DMSDeviceState {
+        device_type: DMSCDeviceType,
+        status: DMSCDeviceStatus,
+        auth_status: DMSCDeviceAuthStatus,
+        capabilities: Vec<DMSCCapability>,
+        supported_protocols: Vec<DMSCProtocolType>,
+    ) -> DMSCResult<()> {
+        let device_state = DMSCDeviceState {
             device_id: device_id.clone(),
             device_type,
             status,
@@ -1220,10 +1220,10 @@ impl DMSGlobalStateManager {
         
         self.device_states.write().await.insert(device_id.clone(), device_state.clone());
         
-        let state_change = DMSStateChange {
-            change_type: DMSStateChangeType::Updated,
-            category: DMSStateCategory::Device,
-            data: DMSStateChangeData::Device(device_state),
+        let state_change = DMSCStateChange {
+            change_type: DMSCStateChangeType::Updated,
+            category: DMSCStateCategory::Device,
+            data: DMSCStateChangeData::Device(device_state),
             timestamp: Instant::now(),
             version: self.get_next_version().await,
         };
@@ -1237,20 +1237,20 @@ impl DMSGlobalStateManager {
     /// Update security state.
     async fn update_security_state(
         &self,
-        global_security_level: DMSSecurityLevel,
-        threat_intelligence: DMSThreatIntelligence,
-        security_policies: Vec<DMSSecurityPolicy>,
-    ) -> DMSResult<()> {
+        global_security_level: DMSCSecurityLevel,
+        threat_intelligence: DMSCThreatIntelligence,
+        security_policies: Vec<DMSCSecurityPolicy>,
+    ) -> DMSCResult<()> {
         let mut security_state = self.security_state.write().await;
         security_state.global_security_level = global_security_level;
         security_state.threat_intelligence = threat_intelligence;
         security_state.security_policies = security_policies;
         security_state.last_security_scan = Instant::now();
         
-        let state_change = DMSStateChange {
-            change_type: DMSStateChangeType::Updated,
-            category: DMSStateCategory::Security,
-            data: DMSStateChangeData::Security(security_state.clone()),
+        let state_change = DMSCStateChange {
+            change_type: DMSCStateChangeType::Updated,
+            category: DMSCStateCategory::Security,
+            data: DMSCStateChangeData::Security(security_state.clone()),
             timestamp: Instant::now(),
             version: self.get_next_version().await,
         };
@@ -1264,20 +1264,20 @@ impl DMSGlobalStateManager {
     /// Update performance state.
     async fn update_performance_state(
         &self,
-        metrics: DMSPerformanceMetrics,
-        resource_utilization: DMSResourceUtilization,
-        network_performance: DMSNetworkPerformance,
-    ) -> DMSResult<()> {
+        metrics: DMSCPerformanceMetrics,
+        resource_utilization: DMSCResourceUtilization,
+        network_performance: DMSCNetworkPerformance,
+    ) -> DMSCResult<()> {
         let mut performance_state = self.performance_state.write().await;
         performance_state.metrics = metrics;
         performance_state.resource_utilization = resource_utilization;
         performance_state.network_performance = network_performance;
         performance_state.last_performance_check = Instant::now();
         
-        let state_change = DMSStateChange {
-            change_type: DMSStateChangeType::Updated,
-            category: DMSStateCategory::Performance,
-            data: DMSStateChangeData::Performance(performance_state.clone()),
+        let state_change = DMSCStateChange {
+            change_type: DMSCStateChangeType::Updated,
+            category: DMSCStateCategory::Performance,
+            data: DMSCStateChangeData::Performance(performance_state.clone()),
             timestamp: Instant::now(),
             version: self.get_next_version().await,
         };
@@ -1289,7 +1289,7 @@ impl DMSGlobalStateManager {
     }
     
     /// Notify state change to subscribers.
-    async fn notify_state_change(&self, change: DMSStateChange) -> DMSResult<()> {
+    async fn notify_state_change(&self, change: DMSCStateChange) -> DMSCResult<()> {
         let subscribers = self.state_subscribers.read().await;
         for subscriber in subscribers.iter() {
             let _ = subscriber.send(change.clone());
@@ -1298,21 +1298,21 @@ impl DMSGlobalStateManager {
     }
     
     /// Persist current state.
-    async fn persist_current_state(&self) -> DMSResult<()> {
+    async fn persist_current_state(&self) -> DMSCResult<()> {
         let snapshot = self.create_state_snapshot().await?;
         self.persistence_manager.backend.save_state(&snapshot).await?;
         Ok(())
     }
     
     /// Create state snapshot.
-    async fn create_state_snapshot(&self) -> DMSResult<DMSStateSnapshot> {
+    async fn create_state_snapshot(&self) -> DMSCResult<DMSCStateSnapshot> {
         let global_state = self.global_state.read().await.clone();
         let protocol_states = self.protocol_states.read().await.clone();
         let device_states = self.device_states.read().await.clone();
         let security_state = self.security_state.read().await.clone();
         let performance_state = self.performance_state.read().await.clone();
         
-        Ok(DMSStateSnapshot {
+        Ok(DMSCStateSnapshot {
             global_state,
             protocol_states,
             device_states,
@@ -1322,7 +1322,7 @@ impl DMSGlobalStateManager {
     }
     
     /// Restore state from snapshot.
-    async fn restore_state(&self, snapshot: DMSStateSnapshot) -> DMSResult<()> {
+    async fn restore_state(&self, snapshot: DMSCStateSnapshot) -> DMSCResult<()> {
         *self.global_state.write().await = snapshot.global_state;
         *self.protocol_states.write().await = snapshot.protocol_states;
         *self.device_states.write().await = snapshot.device_states;
@@ -1339,7 +1339,7 @@ impl DMSGlobalStateManager {
     }
     
     /// Shutdown the global state manager.
-    pub async fn shutdown(&mut self) -> DMSResult<()> {
+    pub async fn shutdown(&mut self) -> DMSCResult<()> {
         // Persist final state
         self.persist_current_state().await?;
         
@@ -1351,18 +1351,18 @@ impl DMSGlobalStateManager {
     }
 }
 
-impl Default for DMSGlobalStateManager {
+impl Default for DMSCGlobalStateManager {
     fn default() -> Self {
         Self::new()
     }
 }
 
 /// Memory-based state backend implementation.
-struct DMSMemoryStateBackend {
-    state: Arc<RwLock<Option<DMSStateSnapshot>>>,
+struct DMSCMemoryStateBackend {
+    state: Arc<RwLock<Option<DMSCStateSnapshot>>>,
 }
 
-impl DMSMemoryStateBackend {
+impl DMSCMemoryStateBackend {
     /// Create a new memory state backend.
     fn new() -> Self {
         Self {
@@ -1372,17 +1372,17 @@ impl DMSMemoryStateBackend {
 }
 
 #[async_trait]
-impl DMSStateBackend for DMSMemoryStateBackend {
-    async fn save_state(&self, state: &DMSStateSnapshot) -> DMSResult<()> {
+impl DMSCStateBackend for DMSCMemoryStateBackend {
+    async fn save_state(&self, state: &DMSCStateSnapshot) -> DMSCResult<()> {
         *self.state.write().await = Some(state.clone());
         Ok(())
     }
     
-    async fn load_state(&self) -> DMSResult<Option<DMSStateSnapshot>> {
+    async fn load_state(&self) -> DMSCResult<Option<DMSCStateSnapshot>> {
         Ok(self.state.read().await.clone())
     }
     
-    async fn delete_state(&self) -> DMSResult<()> {
+    async fn delete_state(&self) -> DMSCResult<()> {
         *self.state.write().await = None;
         Ok(())
     }

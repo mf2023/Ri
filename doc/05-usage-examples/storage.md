@@ -12,8 +12,8 @@ use serde_json::json;
 use std::path::Path;
 
 // 初始化存储管理器
-let storage_config = DMSStorageConfig {
-    default_backend: DMSStorageBackend::Local,
+let storage_config = DMSCStorageConfig {
+    default_backend: DMSCStorageBackend::Local,
     max_file_size: 100 * 1024 * 1024, // 100MB
     allowed_mime_types: vec![
         "image/jpeg".to_string(),
@@ -117,7 +117,7 @@ for failure in &batch_upload_result.failed {
 }
 
 // 带进度回调的上传
-let progress_callback = |progress: DMSUploadProgress| {
+let progress_callback = |progress: DMSCUploadProgress| {
     ctx.log().info(format!(
         "Upload progress: {}% ({} / {} bytes)",
         progress.percentage,
@@ -141,7 +141,7 @@ use dms::prelude::*;
 use std::path::Path;
 
 // 大文件分块上传配置
-let chunk_config = DMSChunkUploadConfig {
+let chunk_config = DMSCChunkUploadConfig {
     chunk_size: 5 * 1024 * 1024, // 5MB chunks
     max_concurrent_chunks: 4,
     retry_attempts: 3,
@@ -224,7 +224,7 @@ let download_by_name = ctx.storage()
 ctx.log().info(format!("File downloaded by name: {}", download_by_name.file_name));
 
 // 带进度回调的下载
-let progress_callback = |progress: DMSDownloadProgress| {
+let progress_callback = |progress: DMSCDownloadProgress| {
     ctx.log().info(format!(
         "Download progress: {}% ({} / {} bytes)",
         progress.percentage,
@@ -247,7 +247,7 @@ use dms::prelude::*;
 use std::path::Path;
 
 // 断点续传下载
-let resume_config = DMSResumeDownloadConfig {
+let resume_config = DMSCResumeDownloadConfig {
     chunk_size: 1024 * 1024, // 1MB chunks
     max_retries: 3,
     enable_checksum: true,
@@ -310,7 +310,7 @@ let is_valid = ctx.storage()
 ctx.log().info(format!("Temporary URL is valid: {}", is_valid));
 
 // 带访问控制的临时链接
-let access_control = DMSAccessControl {
+let access_control = DMSCAccessControl {
     allowed_ips: vec!["192.168.1.0/24".to_string(), "10.0.0.0/8".to_string()],
     max_downloads: 5,
     require_authentication: true,
@@ -382,15 +382,15 @@ ctx.storage()
 ctx.log().info("Tags removed from file");
 
 // 搜索文件
-let search_criteria = DMSSearchCriteria {
+let search_criteria = DMSCSearchCriteria {
     query: "project documentation".to_string(),
     tags: vec!["documentation".to_string(), "api".to_string()],
-    date_range: Some(DMSDateRange {
+    date_range: Some(DMSCDateRange {
         start: chrono::Utc::now() - chrono::Duration::days(30),
         end: chrono::Utc::now(),
     }),
     file_types: vec!["application/pdf".to_string(), "text/plain".to_string()],
-    size_range: Some(DMSSizeRange {
+    size_range: Some(DMSCSizeRange {
         min: 1024,      // 1KB
         max: 10 * 1024 * 1024, // 10MB
     }),
@@ -474,13 +474,13 @@ use dms::prelude::*;
 use serde_json::json;
 
 // 配置存储加密
-let encryption_config = DMSStorageEncryptionConfig {
+let encryption_config = DMSCStorageEncryptionConfig {
     enabled: true,
-    algorithm: DMSEncryptionAlgorithm::AES256GCM,
+    algorithm: DMSCEncryptionAlgorithm::AES256GCM,
     key_rotation_interval: Duration::from_days(90),
     encrypt_at_rest: true,
     encrypt_in_transit: true,
-    key_management_service: DMSKeyManagementService::AWSKMS,
+    key_management_service: DMSCKeyManagementService::AWSKMS,
     customer_managed_keys: true,
 };
 
@@ -533,7 +533,7 @@ use dms::prelude::*;
 
 // 生成数据加密密钥
 let data_key = ctx.storage()
-    .generate_data_encryption_key(DMSKeyAlgorithm::AES256)
+    .generate_data_encryption_key(DMSCKeyAlgorithm::AES256)
     .await?;
 
 ctx.log().info(format!("Data encryption key generated: key_id={}", data_key.key_id));
@@ -570,9 +570,9 @@ use dms::prelude::*;
 use serde_json::json;
 
 // 配置存储压缩
-let compression_config = DMSCompressionConfig {
+let compression_config = DMSCCompressionConfig {
     enabled: true,
-    algorithm: DMSCompressionAlgorithm::Zstd,
+    algorithm: DMSCCompressionAlgorithm::Zstd,
     compression_level: 3,
     threshold_size: 1024, // 1KB
     compressible_types: vec![
@@ -662,7 +662,7 @@ use dms::prelude::*;
 use serde_json::json;
 
 // 配置生命周期策略
-let lifecycle_config = DMSLifecycleConfig {
+let lifecycle_config = DMSCLifecycleConfig {
     enabled: true,
     default_retention_days: 365,
     archive_after_days: 90,
@@ -670,21 +670,21 @@ let lifecycle_config = DMSLifecycleConfig {
     auto_archive: true,
     auto_delete: false, // 需要手动确认删除
     lifecycle_policies: vec![
-        DMSLifecyclePolicy {
+        DMSCLifecyclePolicy {
             name: "temporary_files".to_string(),
             file_patterns: vec!["*.tmp".to_string(), "*.temp".to_string()],
             retention_days: 7,
             archive_after_days: 3,
             delete_after_days: 30,
         },
-        DMSLifecyclePolicy {
+        DMSCLifecyclePolicy {
             name: "log_files".to_string(),
             file_patterns: vec!["*.log".to_string(), "*.txt".to_string()],
             retention_days: 90,
             archive_after_days: 30,
             delete_after_days: 365,
         },
-        DMSLifecyclePolicy {
+        DMSCLifecyclePolicy {
             name: "backup_files".to_string(),
             file_patterns: vec!["*.bak".to_string(), "*.backup".to_string()],
             retention_days: 180,
@@ -768,7 +768,7 @@ ctx.log().info(format!(
 ));
 
 // 配置自动清理计划
-let cleanup_schedule = DMSCleanupSchedule {
+let cleanup_schedule = DMSCCleanupSchedule {
     enabled: true,
     schedule: "0 2 * * *".to_string(), // 每天凌晨2点
     max_files_per_run: 1000,
@@ -792,12 +792,12 @@ use dms::prelude::*;
 use serde_json::json;
 
 // 启用版本控制
-let versioning_config = DMSVersioningConfig {
+let versioning_config = DMSCVersioningConfig {
     enabled: true,
     max_versions: 10,
     auto_versioning: true,
     version_on_metadata_change: true,
-    retention_policy: DMSVersionRetentionPolicy::KeepLastN(5),
+    retention_policy: DMSCVersionRetentionPolicy::KeepLastN(5),
     version_labels: vec!["draft".to_string(), "review".to_string(), "approved".to_string(), "final".to_string()],
 };
 
@@ -1016,7 +1016,7 @@ match ctx.storage().upload_file(file_path, file_name, content_type).await {
     Ok(upload_result) => {
         ctx.log().info(format!("File uploaded successfully: {:?}", upload_result));
     }
-    Err(DMSError::StorageFull(e)) => {
+    Err(DMSCError::StorageFull(e)) => {
         ctx.log().error(format!("Storage is full: {}", e));
         
         // 尝试清理空间
@@ -1034,11 +1034,11 @@ match ctx.storage().upload_file(file_path, file_name, content_type).await {
             }
         }
     }
-    Err(DMSError::FileTooLarge(e)) => {
+    Err(DMSCError::FileTooLarge(e)) => {
         ctx.log().error(format!("File is too large: {}", e));
         
         // 尝试分块上传
-        let chunk_config = DMSChunkUploadConfig {
+        let chunk_config = DMSCChunkUploadConfig {
             chunk_size: 5 * 1024 * 1024,
             max_concurrent_chunks: 4,
             retry_attempts: 3,
@@ -1052,7 +1052,7 @@ match ctx.storage().upload_file(file_path, file_name, content_type).await {
         
         ctx.log().info("Large file upload initiated with chunked approach");
     }
-    Err(DMSError::InvalidFileType(e)) => {
+    Err(DMSCError::InvalidFileType(e)) => {
         ctx.log().error(format!("Invalid file type: {}", e));
         
         // 验证文件类型
@@ -1062,7 +1062,7 @@ match ctx.storage().upload_file(file_path, file_name, content_type).await {
         ctx.log().info(format!("Actual file type detected: {}", actual_type));
         
         if !allowed_types.contains(&actual_type.as_str()) {
-            return Err(DMSError::validation(format!("File type {} is not allowed", actual_type)));
+            return Err(DMSCError::validation(format!("File type {} is not allowed", actual_type)));
         }
     }
     Err(e) => {
@@ -1115,14 +1115,14 @@ if !health_check.is_healthy {
 # 安装Rust
 curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 
-# 安装DMS CLI
+# 安装DMSC CLI
 cargo install dms-cli
 ```
 
 ### 创建项目
 
 ```bash
-# 创建新的DMS项目
+# 创建新的DMSC项目
 dms new storage-app
 cd storage-app
 
@@ -1218,9 +1218,9 @@ use dms::prelude::*;
 use serde_json::json;
 
 // 配置分布式存储集群
-let cluster_config = DMSStorageClusterConfig {
+let cluster_config = DMSCStorageClusterConfig {
     nodes: vec![
-        DMSStorageNode {
+        DMSCStorageNode {
             id: "node-1".to_string(),
             address: "storage1.company.com:9000".to_string(),
             capacity: 10 * 1024 * 1024 * 1024, // 10TB
@@ -1228,7 +1228,7 @@ let cluster_config = DMSStorageClusterConfig {
             priority: 1,
             health_check_interval: Duration::from_secs(30),
         },
-        DMSStorageNode {
+        DMSCStorageNode {
             id: "node-2".to_string(),
             address: "storage2.company.com:9000".to_string(),
             capacity: 10 * 1024 * 1024 * 1024, // 10TB
@@ -1236,7 +1236,7 @@ let cluster_config = DMSStorageClusterConfig {
             priority: 2,
             health_check_interval: Duration::from_secs(30),
         },
-        DMSStorageNode {
+        DMSCStorageNode {
             id: "node-3".to_string(),
             address: "storage3.company.com:9000".to_string(),
             capacity: 15 * 1024 * 1024 * 1024, // 15TB
@@ -1246,8 +1246,8 @@ let cluster_config = DMSStorageClusterConfig {
         },
     ],
     replication_factor: 3,
-    consistency_level: DMSConsistencyLevel::Quorum,
-    load_balancing: DMSLoadBalancing::RoundRobin,
+    consistency_level: DMSCConsistencyLevel::Quorum,
+    load_balancing: DMSCLoadBalancing::RoundRobin,
     failover_timeout: Duration::from_secs(60),
     health_check_enabled: true,
     auto_rebalance: true,
@@ -1288,35 +1288,35 @@ use dms::prelude::*;
 use serde_json::json;
 
 // 配置智能存储分层
-let tiering_config = DMSTieringConfig {
+let tiering_config = DMSCTieringConfig {
     tiers: vec![
-        DMSTier {
+        DMSCTier {
             name: "hot".to_string(),
-            storage_class: DMSStorageClass::Hot,
+            storage_class: DMSCStorageClass::Hot,
             access_frequency_threshold: 0.8, // 80% 访问频率
             retention_days: 30,
             cost_per_gb: 0.023,
             performance_class: "high".to_string(),
         },
-        DMSTier {
+        DMSCTier {
             name: "warm".to_string(),
-            storage_class: DMSStorageClass::Warm,
+            storage_class: DMSCStorageClass::Warm,
             access_frequency_threshold: 0.3, // 30% 访问频率
             retention_days: 90,
             cost_per_gb: 0.0125,
             performance_class: "medium".to_string(),
         },
-        DMSTier {
+        DMSCTier {
             name: "cold".to_string(),
-            storage_class: DMSStorageClass::Cold,
+            storage_class: DMSCStorageClass::Cold,
             access_frequency_threshold: 0.1, // 10% 访问频率
             retention_days: 365,
             cost_per_gb: 0.004,
             performance_class: "low".to_string(),
         },
-        DMSTier {
+        DMSCTier {
             name: "archive".to_string(),
-            storage_class: DMSStorageClass::Archive,
+            storage_class: DMSCStorageClass::Archive,
             access_frequency_threshold: 0.01, // 1% 访问频率
             retention_days: 2555, // 7 years
             cost_per_gb: 0.00099,
@@ -1363,7 +1363,7 @@ use dms::prelude::*;
 use serde_json::json;
 
 // 配置实时存储分析
-let analytics_config = DMSStorageAnalyticsConfig {
+let analytics_config = DMSCStorageAnalyticsConfig {
     enabled: true,
     real_time_monitoring: true,
     metrics_collection_interval: Duration::from_secs(60),
@@ -1425,11 +1425,11 @@ use dms::prelude::*;
 use serde_json::json;
 
 // 配置多云存储提供商
-let multi_cloud_config = DMSMultiCloudConfig {
+let multi_cloud_config = DMSCMultiCloudConfig {
     providers: vec![
-        DMSCloudProvider {
+        DMSCCloudProvider {
             name: "aws-s3".to_string(),
-            provider_type: DMSCloudProviderType::AWSS3,
+            provider_type: DMSCCloudProviderType::AWSS3,
             region: "us-east-1".to_string(),
             bucket_name: "company-storage-bucket".to_string(),
             priority: 1,
@@ -1437,9 +1437,9 @@ let multi_cloud_config = DMSMultiCloudConfig {
             encryption_enabled: true,
             versioning_enabled: true,
         },
-        DMSCloudProvider {
+        DMSCCloudProvider {
             name: "azure-blob".to_string(),
-            provider_type: DMSCloudProviderType::AzureBlob,
+            provider_type: DMSCCloudProviderType::AzureBlob,
             region: "East US".to_string(),
             bucket_name: "company-storage-container".to_string(),
             priority: 2,
@@ -1447,9 +1447,9 @@ let multi_cloud_config = DMSMultiCloudConfig {
             encryption_enabled: true,
             versioning_enabled: true,
         },
-        DMSCloudProvider {
+        DMSCCloudProvider {
             name: "gcp-storage".to_string(),
-            provider_type: DMSCloudProviderType::GCPStorage,
+            provider_type: DMSCCloudProviderType::GCPStorage,
             region: "us-central1".to_string(),
             bucket_name: "company-storage-bucket".to_string(),
             priority: 3,
@@ -1458,9 +1458,9 @@ let multi_cloud_config = DMSMultiCloudConfig {
             versioning_enabled: true,
         },
     ],
-    load_balancing: DMSCloudLoadBalancing::CostOptimized,
+    load_balancing: DMSCCloudLoadBalancing::CostOptimized,
     failover_enabled: true,
-    data_replication: DMSCloudDataReplication::CrossProvider,
+    data_replication: DMSCCloudDataReplication::CrossProvider,
     cost_optimization: true,
     provider_failover_timeout: Duration::from_secs(300),
 };
@@ -1499,7 +1499,7 @@ ctx.log().info(format!(
 
 </div>
 
-本示例展示了DMS框架强大的存储管理功能，帮助您构建高效、安全、可扩展的文件存储系统。通过文件上传下载、元数据管理、存储加密、压缩、生命周期管理、版本控制和监控统计等核心功能，您可以轻松管理企业级文件存储需求。
+本示例展示了DMSC框架强大的存储管理功能，帮助您构建高效、安全、可扩展的文件存储系统。通过文件上传下载、元数据管理、存储加密、压缩、生命周期管理、版本控制和监控统计等核心功能，您可以轻松管理企业级文件存储需求。
 
 ### 核心功能
 
@@ -1547,7 +1547,7 @@ ctx.log().info(format!(
 
 - [README](./README.md): 使用示例概览，提供所有使用示例的快速导航
 - [authentication](./authentication.md): 认证示例，学习JWT、OAuth2和RBAC认证授权
-- [basic-app](./basic-app.md): 基础应用示例，学习如何创建和运行第一个DMS应用
+- [basic-app](./basic-app.md): 基础应用示例，学习如何创建和运行第一个DMSC应用
 - [caching](./caching.md): 缓存示例，了解如何使用缓存模块提升应用性能
 - [database](./database.md): 数据库示例，学习数据库连接和查询操作
 - [http](./http.md): HTTP服务示例，构建Web应用和RESTful API

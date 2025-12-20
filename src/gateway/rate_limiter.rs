@@ -1,7 +1,7 @@
 //! Copyright © 2025 Wenze Wei. All Rights Reserved.
 //!
-//! This file is part of DMS.
-//! The DMS project belongs to the Dunimd Team.
+//! This file is part of DMSC.
+//! The DMSC project belongs to the Dunimd Team.
 //!
 //! Licensed under the Apache License, Version 2.0 (the "License");
 //! You may not use this file except in compliance with the License.
@@ -19,14 +19,14 @@
 
 //! # Rate Limiter Module
 //! 
-//! This module provides rate limiting functionality for the DMS gateway, allowing for
+//! This module provides rate limiting functionality for the DMSC gateway, allowing for
 //! controlling the rate of requests from clients to prevent abuse and ensure fair usage.
 //! 
 //! ## Key Components
 //! 
-//! - **DMSRateLimitConfig**: Configuration for rate limiting behavior
-//! - **DMSRateLimiter**: Token bucket based rate limiter implementation
-//! - **DMSSlidingWindowRateLimiter**: Sliding window based rate limiter for fine-grained control
+//! - **DMSCRateLimitConfig**: Configuration for rate limiting behavior
+//! - **DMSCRateLimiter**: Token bucket based rate limiter implementation
+//! - **DMSCSlidingWindowRateLimiter**: Sliding window based rate limiter for fine-grained control
 //! - **RateLimitStats**: Metrics for monitoring rate limiter performance
 //! 
 //! ## Design Principles
@@ -47,7 +47,7 @@
 //! 
 //! async fn example() {
 //!     // Create a rate limiter with default configuration
-//!     let mut limiter = DMSRateLimiter::new(DMSRateLimitConfig::default());
+//!     let mut limiter = DMSCRateLimiter::new(DMSCRateLimitConfig::default());
 //!     
 //!     // Check if a request should be allowed
 //!     let client_ip = "192.168.1.1";
@@ -64,7 +64,7 @@
 //!     }
 //!     
 //!     // Create a sliding window rate limiter
-//!     let sliding_limiter = DMSSlidingWindowRateLimiter::new(100, 60);
+//!     let sliding_limiter = DMSCSlidingWindowRateLimiter::new(100, 60);
 //!     if sliding_limiter.allow_request().await {
 //!         println!("Sliding window request allowed");
 //!     }
@@ -82,7 +82,7 @@ use std::time::{Duration, Instant};
 /// This struct defines the parameters that control how the rate limiter behaves,
 /// including the steady rate, burst capacity, and window duration.
 #[derive(Debug, Clone)]
-pub struct DMSRateLimitConfig {
+pub struct DMSCRateLimitConfig {
     /// Maximum number of requests allowed per second in steady state
     pub requests_per_second: u32,
     
@@ -93,7 +93,7 @@ pub struct DMSRateLimitConfig {
     pub window_seconds: u64,
 }
 
-impl Default for DMSRateLimitConfig {
+impl Default for DMSCRateLimitConfig {
     /// Creates a default rate limit configuration.
     /// 
     /// Default values:
@@ -156,7 +156,7 @@ impl RateLimitBucket {
     /// # Returns
     /// 
     /// `true` if tokens were successfully consumed, `false` otherwise
-    async fn try_consume(&self, tokens: usize, config: &DMSRateLimitConfig) -> bool {
+    async fn try_consume(&self, tokens: usize, config: &DMSCRateLimitConfig) -> bool {
         let now = Instant::now();
         let mut last_update = self.last_update.write().await;
         
@@ -212,15 +212,15 @@ pub struct RateLimitStats {
 /// 
 /// This struct implements the token bucket algorithm for rate limiting, allowing
 /// for both steady-state rate limiting and temporary bursts of requests.
-pub struct DMSRateLimiter {
+pub struct DMSCRateLimiter {
     /// Configuration for rate limiting behavior
-    config: DMSRateLimitConfig,
+    config: DMSCRateLimitConfig,
     
     /// Map of key to token bucket instances
     buckets: RwLock<HashMap<String, Arc<RateLimitBucket>>>,
 }
 
-impl DMSRateLimiter {
+impl DMSCRateLimiter {
     /// Creates a new rate limiter with the specified configuration.
     /// 
     /// # Parameters
@@ -229,8 +229,8 @@ impl DMSRateLimiter {
     /// 
     /// # Returns
     /// 
-    /// A new `DMSRateLimiter` instance
-    pub fn new(config: DMSRateLimitConfig) -> Self {
+    /// A new `DMSCRateLimiter` instance
+    pub fn new(config: DMSCRateLimitConfig) -> Self {
         Self {
             config,
             buckets: RwLock::new(HashMap::new()),
@@ -248,7 +248,7 @@ impl DMSRateLimiter {
     /// # Returns
     /// 
     /// `true` if the request should be allowed, `false` otherwise
-    pub async fn check_request(&self, request: &crate::gateway::DMSGatewayRequest) -> bool {
+    pub async fn check_request(&self, request: &crate::gateway::DMSCGatewayRequest) -> bool {
         // Use client IP as the key for rate limiting
         let key = request.remote_addr.clone();
         self.check_rate_limit(&key, 1).await
@@ -343,8 +343,8 @@ impl DMSRateLimiter {
     /// 
     /// # Returns
     /// 
-    /// A reference to the current `DMSRateLimitConfig`
-    pub fn get_config(&self) -> &DMSRateLimitConfig {
+    /// A reference to the current `DMSCRateLimitConfig`
+    pub fn get_config(&self) -> &DMSCRateLimitConfig {
         &self.config
     }
 
@@ -355,7 +355,7 @@ impl DMSRateLimiter {
     /// # Parameters
     /// 
     /// - `config`: The new rate limit configuration
-    pub async fn update_config(&mut self, config: DMSRateLimitConfig) {
+    pub async fn update_config(&mut self, config: DMSCRateLimitConfig) {
         self.config = config;
         
         // Reset all buckets with new configuration
@@ -368,7 +368,7 @@ impl DMSRateLimiter {
 /// 
 /// This struct implements a sliding window rate limiter, which provides more precise
 /// rate limiting by tracking all requests within a sliding time window.
-pub struct DMSSlidingWindowRateLimiter {
+pub struct DMSCSlidingWindowRateLimiter {
     /// Maximum number of requests allowed within the window
     max_requests: u32,
     /// Duration of the sliding window
@@ -377,7 +377,7 @@ pub struct DMSSlidingWindowRateLimiter {
     requests: RwLock<Vec<Instant>>,
 }
 
-impl DMSSlidingWindowRateLimiter {
+impl DMSCSlidingWindowRateLimiter {
     /// Creates a new sliding window rate limiter.
     /// 
     /// # Parameters
@@ -387,7 +387,7 @@ impl DMSSlidingWindowRateLimiter {
     /// 
     /// # Returns
     /// 
-    /// A new `DMSSlidingWindowRateLimiter` instance
+    /// A new `DMSCSlidingWindowRateLimiter` instance
     pub fn new(max_requests: u32, window_seconds: u64) -> Self {
         Self {
             max_requests,

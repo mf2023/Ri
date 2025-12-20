@@ -1,7 +1,7 @@
 //! Copyright © 2025 Wenze Wei. All Rights Reserved.
 //! 
-//! This file is part of DMS.
-//! The DMS project belongs to the Dunimd Team.
+//! This file is part of DMSC.
+//! The DMSC project belongs to the Dunimd Team.
 //! 
 //! Licensed under the Apache License, Version 2.0 (the "License");
 //! You may not use this file except in compliance with the License.
@@ -15,7 +15,7 @@
 //! See the License for the specific language governing permissions and
 //! limitations under the License.
 
-//! Cache configuration structures and types for DMS.
+//! Cache configuration structures and types for DMSC.
 //! 
 //! This module defines the configuration structures and types used by the cache system.
 //! It includes:
@@ -35,10 +35,10 @@
 //! # Usage Examples
 //! ```rust
 //! // Create default cache configuration
-//! let default_config = DMSCacheConfig::default();
+//! let default_config = DMSCCacheConfig::default();
 //! 
 //! // Create custom cache configuration
-//! let custom_config = DMSCacheConfig {
+//! let custom_config = DMSCCacheConfig {
 //!     enabled: true,
 //!     default_ttl_secs: 7200, // 2 hours
 //!     max_memory_mb: 1024,
@@ -69,7 +69,7 @@ use std::time::Duration;
 /// This struct contains all configuration options for the cache system,
 /// including backend selection, TTL settings, memory limits, and cleanup intervals.
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct DMSCacheConfig {
+pub struct DMSCCacheConfig {
     pub enabled: bool,                // Whether caching is enabled
     pub default_ttl_secs: u64,        // Default time-to-live in seconds
     pub max_memory_mb: u64,           // Maximum memory usage in megabytes
@@ -79,7 +79,7 @@ pub struct DMSCacheConfig {
     pub redis_pool_size: usize,        // Redis connection pool size
 }
 
-impl Default for DMSCacheConfig {
+impl Default for DMSCCacheConfig {
     /// Creates a default cache configuration with sensible values.
     /// 
     /// Default values:
@@ -92,7 +92,7 @@ impl Default for DMSCacheConfig {
     /// - redis_pool_size: 10
     /// 
     /// # Returns
-    /// A new `DMSCacheConfig` instance with default values
+    /// A new `DMSCCacheConfig` instance with default values
     fn default() -> Self {
         Self {
             enabled: true,
@@ -108,7 +108,7 @@ impl Default for DMSCacheConfig {
 
 /// Cache backend type enumeration.
 /// 
-/// Defines the different cache backend types supported by DMS.
+/// Defines the different cache backend types supported by DMSC.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub enum CacheBackendType {
     Memory,  // In-memory cache (fast, non-persistent)

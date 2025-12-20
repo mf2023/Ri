@@ -26,7 +26,7 @@ log模块包含以下子模块：
 
 </div>
 
-### DMSLogger
+### DMSCLogger
 
 日志记录器主接口，提供统一的日志记录功能。
 
@@ -41,10 +41,10 @@ log模块包含以下子模块：
 | `error(message)` | 记录错误日志 | `message: impl Display` | `()` |
 | `fatal(message)` | 记录致命日志 | `message: impl Display` | `()` |
 | `log(level, message)` | 记录指定级别日志 | `level: LogLevel`, `message: impl Display` | `()` |
-| `with_field(key, value)` | 添加字段到日志上下文 | `key: &str`, `value: impl Serialize` | `DMSLogger` |
-| `with_fields(fields)` | 添加多个字段 | `fields: impl Serialize` | `DMSLogger` |
+| `with_field(key, value)` | 添加字段到日志上下文 | `key: &str`, `value: impl Serialize` | `DMSCLogger` |
+| `with_fields(fields)` | 添加多个字段 | `fields: impl Serialize` | `DMSCLogger` |
 | `with_span(name)` | 创建日志跨度 | `name: &str` | `LogSpan` |
-| `flush()` | 刷新日志缓冲区 | 无 | `DMSResult<()>` |
+| `flush()` | 刷新日志缓冲区 | 无 | `DMSCResult<()>` |
 
 #### 使用示例
 
@@ -74,7 +74,7 @@ ctx.log()
     .info("User profile updated");
 ```
 
-### DMSLogLevel
+### DMSCLogLevel
 
 日志级别枚举类型。
 
@@ -95,18 +95,18 @@ ctx.log()
 use dms::prelude::*;
 
 // 设置日志级别
-ctx.log().set_level(DMSLogLevel::Info);
+ctx.log().set_level(DMSCLogLevel::Info);
 
 // 检查日志级别
-if ctx.log().is_enabled(DMSLogLevel::Debug) {
+if ctx.log().is_enabled(DMSCLogLevel::Debug) {
     ctx.log().debug("This is a debug message");
 }
 
 // 动态调整日志级别
-ctx.log().set_level(DMSLogLevel::Debug);
+ctx.log().set_level(DMSCLogLevel::Debug);
 ```
 
-### DMSLogConfig
+### DMSCLogConfig
 
 日志配置结构体。
 
@@ -114,9 +114,9 @@ ctx.log().set_level(DMSLogLevel::Debug);
 
 | 字段 | 类型 | 描述 | 默认值 |
 |:--------|:-----|:-------------|:-------|
-| `level` | `DMSLogLevel` | 日志级别 | `Info` |
-| `format` | `DMSLogFormat` | 日志格式 | `Json` |
-| `output` | `DMSLogOutput` | 日志输出 | `Stdout` |
+| `level` | `DMSCLogLevel` | 日志级别 | `Info` |
+| `format` | `DMSCLogFormat` | 日志格式 | `Json` |
+| `output` | `DMSCLogOutput` | 日志输出 | `Stdout` |
 | `file_path` | `Option<String>` | 日志文件路径 | `None` |
 | `max_file_size` | `u64` | 最大文件大小(MB) | `100` |
 | `max_files` | `usize` | 最大文件数量 | `10` |
@@ -129,10 +129,10 @@ ctx.log().set_level(DMSLogLevel::Debug);
 ```rust
 use dms::prelude::*;
 
-let log_config = DMSLogConfig {
-    level: DMSLogLevel::Info,
-    format: DMSLogFormat::Json,
-    output: DMSLogOutput::File("/var/log/myapp.log".to_string()),
+let log_config = DMSCLogConfig {
+    level: DMSCLogLevel::Info,
+    format: DMSCLogFormat::Json,
+    output: DMSCLogOutput::File("/var/log/myapp.log".to_string()),
     max_file_size: 50,
     max_files: 5,
     enable_colors: false,
@@ -148,7 +148,7 @@ let log_config = DMSLogConfig {
 
 </div>
 
-### DMSLogFormat
+### DMSCLogFormat
 
 日志格式枚举类型。
 
@@ -225,7 +225,7 @@ ctx.log().set_formatter(Box::new(CustomFormatter));
 
 </div>
 
-### DMSLogBackend
+### DMSCLogBackend
 
 日志后端枚举类型。
 
@@ -246,7 +246,7 @@ ctx.log().set_formatter(Box::new(CustomFormatter));
 use dms::prelude::*;
 
 // 基本文件日志
-let file_backend = DMSLogBackend::File("/var/log/myapp.log".to_string());
+let file_backend = DMSCLogBackend::File("/var/log/myapp.log".to_string());
 ctx.log().set_backend(file_backend);
 
 // 带轮转的文件日志
@@ -255,7 +255,7 @@ let rotating_backend = RotatingFileBackend::new(
     100,  // 最大文件大小(MB)
     10    // 最大文件数量
 );
-ctx.log().set_backend(DMSLogBackend::Custom("rotating_file".to_string()));
+ctx.log().set_backend(DMSCLogBackend::Custom("rotating_file".to_string()));
 ```
 
 ### 多后端输出
@@ -265,11 +265,11 @@ use dms::prelude::*;
 
 // 同时输出到文件和控制台
 let multi_backend = MultiLogBackend::new(vec![
-    DMSLogBackend::Stdout,
-    DMSLogBackend::File("/var/log/myapp.log".to_string()),
+    DMSCLogBackend::Stdout,
+    DMSCLogBackend::File("/var/log/myapp.log".to_string()),
 ]);
 
-ctx.log().set_backend(DMSLogBackend::Custom("multi".to_string()));
+ctx.log().set_backend(DMSCLogBackend::Custom("multi".to_string()));
 ```
 
 ### 远程日志
@@ -283,7 +283,7 @@ let http_backend = HttpLogBackend::new(
     Some("api-key-12345".to_string())
 );
 
-ctx.log().set_backend(DMSLogBackend::Custom("http".to_string()));
+ctx.log().set_backend(DMSCLogBackend::Custom("http".to_string()));
 ```
 
 <div align="center">
@@ -297,7 +297,7 @@ ctx.log().set_backend(DMSLogBackend::Custom("http".to_string()));
 ```rust
 use dms::prelude::*;
 
-let sampling_config = DMSLogSamplingConfig {
+let sampling_config = DMSCLogSamplingConfig {
     enable_sampling: true,
     sampling_rate: 0.1,        // 10%采样率
     burst_threshold: 1000,     // 突发阈值
@@ -315,12 +315,12 @@ use dms::prelude::*;
 
 // 基于日志级别的采样
 let level_sampling = LevelBasedSampling::new()
-    .set_rate(DMSLogLevel::Debug, 0.01)    // Debug日志1%采样
-    .set_rate(DMSLogLevel::Info, 0.1)     // Info日志10%采样
-    .set_rate(DMSLogLevel::Warn, 1.0)     // Warn日志100%采样
-    .set_rate(DMSLogLevel::Error, 1.0);   // Error日志100%采样
+    .set_rate(DMSCLogLevel::Debug, 0.01)    // Debug日志1%采样
+    .set_rate(DMSCLogLevel::Info, 0.1)     // Info日志10%采样
+    .set_rate(DMSCLogLevel::Warn, 1.0)     // Warn日志100%采样
+    .set_rate(DMSCLogLevel::Error, 1.0);   // Error日志100%采样
 
-ctx.log().set_sampling_strategy(DMSLogSamplingStrategy::LevelBased(level_sampling));
+ctx.log().set_sampling_strategy(DMSCLogSamplingStrategy::LevelBased(level_sampling));
 ```
 
 ### 自适应采样
@@ -334,7 +334,7 @@ let adaptive_sampling = AdaptiveSampling::new()
     .set_max_rate(1.0)       // 最大采样率100%
     .set_target_rate(1000);  // 目标日志率(条/秒)
 
-ctx.log().set_sampling_strategy(DMSLogSamplingStrategy::Adaptive(adaptive_sampling));
+ctx.log().set_sampling_strategy(DMSCLogSamplingStrategy::Adaptive(adaptive_sampling));
 ```
 
 <div align="center">
@@ -412,7 +412,7 @@ use dms::prelude::*;
 // 查询最近100条日志
 let recent_logs = ctx.log().query()
     .limit(100)
-    .level(DMSLogLevel::Error)
+    .level(DMSCLogLevel::Error)
     .execute()?;
 
 for log in recent_logs {
@@ -488,11 +488,11 @@ ctx.log().info("Processing user request");
 use dms::prelude::*;
 
 // 设置全局日志级别
-ctx.log().set_level(DMSLogLevel::Warn);
+ctx.log().set_level(DMSCLogLevel::Warn);
 
 // 为特定模块设置日志级别
-ctx.log().set_module_level("database", DMSLogLevel::Debug);
-ctx.log().set_module_level("http", DMSLogLevel::Info);
+ctx.log().set_module_level("database", DMSCLogLevel::Debug);
+ctx.log().set_module_level("http", DMSCLogLevel::Info);
 ```
 
 ### 内容过滤
@@ -547,9 +547,9 @@ match ctx.log().flush() {
     Ok(_) => {
         // 日志刷新成功
     }
-    Err(DMSError { code, .. }) if code == "LOG_FILE_PERMISSION_DENIED" => {
+    Err(DMSCError { code, .. }) if code == "LOG_FILE_PERMISSION_DENIED" => {
         // 文件权限错误，回退到标准输出
-        ctx.log().set_backend(DMSLogBackend::Stdout);
+        ctx.log().set_backend(DMSCLogBackend::Stdout);
         ctx.log().warn("Falling back to stdout logging due to file permission error");
     }
     Err(e) => {

@@ -1,6 +1,6 @@
-//! Core module system for DMS.
+//! Core module system for DMSC.
 //!
-//! This module provides the foundation for modular service architecture in DMS.
+//! This module provides the foundation for modular service architecture in DMSC.
 //! It defines traits and structures for both synchronous and asynchronous service modules.
 //!
 //! ## Design Principles
@@ -24,17 +24,17 @@
 //! 6. **Shutdown**: `shutdown` - Stop module execution
 //! 7. **After Shutdown**: `after_shutdown` - Cleanup resources
 
-use crate::core::{DMSResult, DMSServiceContext};
+use crate::core::{DMSCResult, DMSCServiceContext};
 
 /// Synchronous service module trait.
 /// 
-/// This trait defines the interface for synchronous service modules in DMS. It provides
+/// This trait defines the interface for synchronous service modules in DMSC. It provides
 /// a comprehensive lifecycle management system with multiple phases.
 /// 
 /// ## Usage
 /// 
 /// ```rust
-/// use dms::core::{ServiceModule, DMSResult, DMSServiceContext};
+/// use dms::core::{ServiceModule, DMSCResult, DMSCServiceContext};
 /// 
 /// struct MySyncModule;
 /// 
@@ -55,7 +55,7 @@ use crate::core::{DMSResult, DMSServiceContext};
 ///         vec!["dependency_module"]
 ///     }
 ///     
-///     fn start(&mut self, ctx: &mut DMSServiceContext) -> DMSResult<()> {
+///     fn start(&mut self, ctx: &mut DMSCServiceContext) -> DMSCResult<()> {
 ///         // Start module logic
 ///         Ok(())
 ///     }
@@ -101,7 +101,7 @@ pub trait ServiceModule: Send + Sync {
     /// This method is called during the initialization phase to set up module resources.
     /// 
     /// Default: `Ok(())`
-    fn init(&mut self, _ctx: &mut DMSServiceContext) -> DMSResult<()> {
+    fn init(&mut self, _ctx: &mut DMSCServiceContext) -> DMSCResult<()> {
         Ok(())
     }
 
@@ -110,7 +110,7 @@ pub trait ServiceModule: Send + Sync {
     /// This method is called after initialization but before the main start phase.
     /// 
     /// Default: `Ok(())`
-    fn before_start(&mut self, _ctx: &mut DMSServiceContext) -> DMSResult<()> {
+    fn before_start(&mut self, _ctx: &mut DMSCServiceContext) -> DMSCResult<()> {
         Ok(())
     }
 
@@ -119,7 +119,7 @@ pub trait ServiceModule: Send + Sync {
     /// This method is called to start the main functionality of the module.
     /// 
     /// Default: `Ok(())`
-    fn start(&mut self, _ctx: &mut DMSServiceContext) -> DMSResult<()> {
+    fn start(&mut self, _ctx: &mut DMSCServiceContext) -> DMSCResult<()> {
         Ok(())
     }
 
@@ -128,7 +128,7 @@ pub trait ServiceModule: Send + Sync {
     /// This method is called after the main start phase but before the module is considered fully started.
     /// 
     /// Default: `Ok(())`
-    fn after_start(&mut self, _ctx: &mut DMSServiceContext) -> DMSResult<()> {
+    fn after_start(&mut self, _ctx: &mut DMSCServiceContext) -> DMSCResult<()> {
         Ok(())
     }
 
@@ -137,7 +137,7 @@ pub trait ServiceModule: Send + Sync {
     /// This method is called before the main shutdown phase.
     /// 
     /// Default: `Ok(())`
-    fn before_shutdown(&mut self, _ctx: &mut DMSServiceContext) -> DMSResult<()> {
+    fn before_shutdown(&mut self, _ctx: &mut DMSCServiceContext) -> DMSCResult<()> {
         Ok(())
     }
 
@@ -146,7 +146,7 @@ pub trait ServiceModule: Send + Sync {
     /// This method is called to stop the main functionality of the module.
     /// 
     /// Default: `Ok(())`
-    fn shutdown(&mut self, _ctx: &mut DMSServiceContext) -> DMSResult<()> {
+    fn shutdown(&mut self, _ctx: &mut DMSCServiceContext) -> DMSCResult<()> {
         Ok(())
     }
 
@@ -155,38 +155,38 @@ pub trait ServiceModule: Send + Sync {
     /// This method is called after the main shutdown phase to clean up resources.
     /// 
     /// Default: `Ok(())`
-    fn after_shutdown(&mut self, _ctx: &mut DMSServiceContext) -> DMSResult<()> {
+    fn after_shutdown(&mut self, _ctx: &mut DMSCServiceContext) -> DMSCResult<()> {
         Ok(())
     }
 }
 
 /// Public asynchronous service module trait.
 /// 
-/// This trait defines the public interface for asynchronous service modules in DMS.
+/// This trait defines the public interface for asynchronous service modules in DMSC.
 /// It provides a comprehensive lifecycle management system with multiple phases.
 /// 
 /// ## Usage
 /// 
 /// ```rust
-/// use dms::core::{DMSModule, DMSResult, DMSServiceContext};
+/// use dms::core::{DMSCModule, DMSCResult, DMSCServiceContext};
 /// use async_trait::async_trait;
 /// 
 /// struct MyAsyncModule;
 /// 
 /// #[async_trait]
-/// impl DMSModule for MyAsyncModule {
+/// impl DMSCModule for MyAsyncModule {
 ///     fn name(&self) -> &str {
 ///         "my_async_module"
 ///     }
 ///     
-///     async fn start(&mut self, ctx: &mut DMSServiceContext) -> DMSResult<()> {
+///     async fn start(&mut self, ctx: &mut DMSCServiceContext) -> DMSCResult<()> {
 ///         // Start async module logic
 ///         Ok(())
 ///     }
 /// }
 /// ```
 #[async_trait::async_trait]
-pub trait DMSModule: Send + Sync {
+pub trait DMSCModule: Send + Sync {
     /// Returns the name of the service module.
     /// 
     /// This name is used for identification, dependency resolution, and logging purposes.
@@ -226,7 +226,7 @@ pub trait DMSModule: Send + Sync {
     /// This method is called during the initialization phase to set up module resources.
     /// 
     /// Default: `Ok(())`
-    async fn init(&mut self, _ctx: &mut DMSServiceContext) -> DMSResult<()> {
+    async fn init(&mut self, _ctx: &mut DMSCServiceContext) -> DMSCResult<()> {
         Ok(())
     }
 
@@ -235,7 +235,7 @@ pub trait DMSModule: Send + Sync {
     /// This method is called after initialization but before the main start phase.
     /// 
     /// Default: `Ok(())`
-    async fn before_start(&mut self, _ctx: &mut DMSServiceContext) -> DMSResult<()> {
+    async fn before_start(&mut self, _ctx: &mut DMSCServiceContext) -> DMSCResult<()> {
         Ok(())
     }
 
@@ -244,7 +244,7 @@ pub trait DMSModule: Send + Sync {
     /// This method is called to start the main functionality of the module.
     /// 
     /// Default: `Ok(())`
-    async fn start(&mut self, _ctx: &mut DMSServiceContext) -> DMSResult<()> {
+    async fn start(&mut self, _ctx: &mut DMSCServiceContext) -> DMSCResult<()> {
         Ok(())
     }
 
@@ -253,7 +253,7 @@ pub trait DMSModule: Send + Sync {
     /// This method is called after the main start phase but before the module is considered fully started.
     /// 
     /// Default: `Ok(())`
-    async fn after_start(&mut self, _ctx: &mut DMSServiceContext) -> DMSResult<()> {
+    async fn after_start(&mut self, _ctx: &mut DMSCServiceContext) -> DMSCResult<()> {
         Ok(())
     }
 
@@ -262,7 +262,7 @@ pub trait DMSModule: Send + Sync {
     /// This method is called before the main shutdown phase.
     /// 
     /// Default: `Ok(())`
-    async fn before_shutdown(&mut self, _ctx: &mut DMSServiceContext) -> DMSResult<()> {
+    async fn before_shutdown(&mut self, _ctx: &mut DMSCServiceContext) -> DMSCResult<()> {
         Ok(())
     }
 
@@ -271,7 +271,7 @@ pub trait DMSModule: Send + Sync {
     /// This method is called to stop the main functionality of the module.
     /// 
     /// Default: `Ok(())`
-    async fn shutdown(&mut self, _ctx: &mut DMSServiceContext) -> DMSResult<()> {
+    async fn shutdown(&mut self, _ctx: &mut DMSCServiceContext) -> DMSCResult<()> {
         Ok(())
     }
 
@@ -280,20 +280,20 @@ pub trait DMSModule: Send + Sync {
     /// This method is called after the main shutdown phase to clean up resources.
     /// 
     /// Default: `Ok(())`
-    async fn after_shutdown(&mut self, _ctx: &mut DMSServiceContext) -> DMSResult<()> {
+    async fn after_shutdown(&mut self, _ctx: &mut DMSCServiceContext) -> DMSCResult<()> {
         Ok(())
     }
 }
 
 /// Internal asynchronous service module trait.
 /// 
-/// This trait defines the interface for internal asynchronous service modules in DMS.
+/// This trait defines the interface for internal asynchronous service modules in DMSC.
 /// It provides a comprehensive lifecycle management system with multiple phases.
 /// 
 /// ## Usage
 /// 
 /// ```rust
-/// use dms::core::{AsyncServiceModule, DMSResult, DMSServiceContext};
+/// use dms::core::{AsyncServiceModule, DMSCResult, DMSCServiceContext};
 /// use async_trait::async_trait;
 /// 
 /// struct MyInternalAsyncModule;
@@ -304,7 +304,7 @@ pub trait DMSModule: Send + Sync {
 ///         "my_internal_async_module"
 ///     }
 ///     
-///     async fn start(&mut self, ctx: &mut DMSServiceContext) -> DMSResult<()> {
+///     async fn start(&mut self, ctx: &mut DMSCServiceContext) -> DMSCResult<()> {
 ///         // Start internal async module logic
 ///         Ok(())
 ///     }
@@ -351,7 +351,7 @@ pub trait AsyncServiceModule: Send + Sync {
     /// This method is called during the initialization phase to set up module resources.
     /// 
     /// Default: `Ok(())`
-    async fn init(&mut self, _ctx: &mut DMSServiceContext) -> DMSResult<()> {
+    async fn init(&mut self, _ctx: &mut DMSCServiceContext) -> DMSCResult<()> {
         Ok(())
     }
 
@@ -360,7 +360,7 @@ pub trait AsyncServiceModule: Send + Sync {
     /// This method is called after initialization but before the main start phase.
     /// 
     /// Default: `Ok(())`
-    async fn before_start(&mut self, _ctx: &mut DMSServiceContext) -> DMSResult<()> {
+    async fn before_start(&mut self, _ctx: &mut DMSCServiceContext) -> DMSCResult<()> {
         Ok(())
     }
 
@@ -369,7 +369,7 @@ pub trait AsyncServiceModule: Send + Sync {
     /// This method is called to start the main functionality of the module.
     /// 
     /// Default: `Ok(())`
-    async fn start(&mut self, _ctx: &mut DMSServiceContext) -> DMSResult<()> {
+    async fn start(&mut self, _ctx: &mut DMSCServiceContext) -> DMSCResult<()> {
         Ok(())
     }
 
@@ -378,7 +378,7 @@ pub trait AsyncServiceModule: Send + Sync {
     /// This method is called after the main start phase but before the module is considered fully started.
     /// 
     /// Default: `Ok(())`
-    async fn after_start(&mut self, _ctx: &mut DMSServiceContext) -> DMSResult<()> {
+    async fn after_start(&mut self, _ctx: &mut DMSCServiceContext) -> DMSCResult<()> {
         Ok(())
     }
 
@@ -387,7 +387,7 @@ pub trait AsyncServiceModule: Send + Sync {
     /// This method is called before the main shutdown phase.
     /// 
     /// Default: `Ok(())`
-    async fn before_shutdown(&mut self, _ctx: &mut DMSServiceContext) -> DMSResult<()> {
+    async fn before_shutdown(&mut self, _ctx: &mut DMSCServiceContext) -> DMSCResult<()> {
         Ok(())
     }
 
@@ -396,7 +396,7 @@ pub trait AsyncServiceModule: Send + Sync {
     /// This method is called to stop the main functionality of the module.
     /// 
     /// Default: `Ok(())`
-    async fn shutdown(&mut self, _ctx: &mut DMSServiceContext) -> DMSResult<()> {
+    async fn shutdown(&mut self, _ctx: &mut DMSCServiceContext) -> DMSCResult<()> {
         Ok(())
     }
 
@@ -405,7 +405,7 @@ pub trait AsyncServiceModule: Send + Sync {
     /// This method is called after the main shutdown phase to clean up resources.
     /// 
     /// Default: `Ok(())`
-    async fn after_shutdown(&mut self, _ctx: &mut DMSServiceContext) -> DMSResult<()> {
+    async fn after_shutdown(&mut self, _ctx: &mut DMSCServiceContext) -> DMSCResult<()> {
         Ok(())
     }
 }

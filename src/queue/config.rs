@@ -1,7 +1,7 @@
 //! Copyright © 2025 Wenze Wei. All Rights Reserved.
 //!
-//! This file is part of DMS.
-//! The DMS project belongs to the Dunimd Team.
+//! This file is part of DMSC.
+//! The DMSC project belongs to the Dunimd Team.
 //!
 //! Licensed under the Apache License, Version 2.0 (the "License");
 //! You may not use this file except in compliance with the License.
@@ -19,13 +19,13 @@
 
 //! # Queue Configuration
 //!
-//! This file defines the configuration structures for the DMS queue system. These structures
+//! This file defines the configuration structures for the DMSC queue system. These structures
 //! provide a centralized way to configure queue behavior, including backend selection,
 //! connection settings, retry policies, and dead letter queue configuration.
 //!
 //! ## Key Components
 //!
-//! - **DMSQueueConfig**: Main queue configuration structure
+//! - **DMSCQueueConfig**: Main queue configuration structure
 //! - **QueueBackendType**: Enum for supported queue backends
 //! - **RetryPolicy**: Configuration for message retry behavior
 //! - **DeadLetterConfig**: Configuration for dead letter queue functionality
@@ -44,13 +44,13 @@
 //! ## Usage
 //!
 //! ```rust
-//! use dms::queue::{DMSQueueConfig, QueueBackendType, RetryPolicy, DeadLetterConfig};
+//! use dms::queue::{DMSCQueueConfig, QueueBackendType, RetryPolicy, DeadLetterConfig};
 //!
 //! // Create default queue configuration
-//! let default_config = DMSQueueConfig::default();
+//! let default_config = DMSCQueueConfig::default();
 //!
 //! // Create custom queue configuration
-//! let custom_config = DMSQueueConfig {
+//! let custom_config = DMSCQueueConfig {
 //!     enabled: true,
 //!     backend_type: QueueBackendType::RabbitMQ,
 //!     connection_string: "amqp://guest:guest@localhost:5672/".to_string(),
@@ -87,11 +87,11 @@ use std::str::FromStr;
 /// configuration.
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct DMSQueueConfig {
+pub struct DMSCQueueConfig {
     /// Whether the queue system is enabled
     pub enabled: bool,
     /// The type of queue backend to use
-    pub backend_type: QueueBackendType,
+    pub backend_type: DMSCQueueBackendType,
     /// Connection string for the queue backend
     pub connection_string: String,
     /// Maximum number of connections to the queue backend
@@ -103,27 +103,27 @@ pub struct DMSQueueConfig {
     /// Timeout for producer operations in milliseconds
     pub producer_timeout_ms: u64,
     /// Configuration for message retry behavior
-    pub retry_policy: RetryPolicy,
+    pub retry_policy: DMSCRetryPolicy,
     /// Configuration for dead letter queue functionality
-    pub dead_letter_config: Option<DeadLetterConfig>,
+    pub dead_letter_config: Option<DMSCDeadLetterConfig>,
 }
 
-impl Default for DMSQueueConfig {
+impl Default for DMSCQueueConfig {
     /// Creates a new queue configuration with sensible default values.
     ///
     /// # Returns
     ///
-    /// A `DMSQueueConfig` instance with default values
+    /// A `DMSCQueueConfig` instance with default values
     fn default() -> Self {
         Self {
             enabled: true,
-            backend_type: QueueBackendType::Memory,
+            backend_type: DMSCQueueBackendType::Memory,
             connection_string: "memory://localhost".to_string(),
             max_connections: 10,
             message_max_size: 1024 * 1024, // 1MB
             consumer_timeout_ms: 30000,    // 30 seconds
             producer_timeout_ms: 5000,     // 5 seconds
-            retry_policy: RetryPolicy::default(),
+            retry_policy: DMSCRetryPolicy::default(),
             dead_letter_config: None,
         }
     }
@@ -131,9 +131,9 @@ impl Default for DMSQueueConfig {
 
 /// Enum representing supported queue backend types.
 ///
-/// This enum defines the different queue backends that can be used with the DMS queue system.
+/// This enum defines the different queue backends that can be used with the DMSC queue system.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-pub enum QueueBackendType {
+pub enum DMSCQueueBackendType {
     /// In-memory queue implementation for testing and development
     Memory,
     /// RabbitMQ queue backend for production use
@@ -144,7 +144,7 @@ pub enum QueueBackendType {
     Redis,
 }
 
-impl FromStr for QueueBackendType {
+impl FromStr for DMSCQueueBackendType {
     type Err = String;
 
     /// Parses a string into a QueueBackendType.
@@ -158,10 +158,10 @@ impl FromStr for QueueBackendType {
     /// A `Result<Self, Self::Err>` containing the parsed backend type or an error
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s.to_lowercase().as_str() {
-            "memory" => Ok(QueueBackendType::Memory),
-            "rabbitmq" => Ok(QueueBackendType::RabbitMQ),
-            "kafka" => Ok(QueueBackendType::Kafka),
-            "redis" => Ok(QueueBackendType::Redis),
+            "memory" => Ok(DMSCQueueBackendType::Memory),
+            "rabbitmq" => Ok(DMSCQueueBackendType::RabbitMQ),
+            "kafka" => Ok(DMSCQueueBackendType::Kafka),
+            "redis" => Ok(DMSCQueueBackendType::Redis),
             _ => Err(format!("Unknown queue backend type: {s}")),
         }
     }
@@ -172,7 +172,7 @@ impl FromStr for QueueBackendType {
 /// This structure defines the retry policy for failed messages, including maximum retry
 /// attempts, initial delay, maximum delay, and backoff multiplier.
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct RetryPolicy {
+pub struct DMSCRetryPolicy {
     /// Maximum number of retry attempts for a failed message
     pub max_retries: u32,
     /// Initial delay in milliseconds before the first retry
@@ -183,12 +183,12 @@ pub struct RetryPolicy {
     pub backoff_multiplier: f64,
 }
 
-impl Default for RetryPolicy {
+impl Default for DMSCRetryPolicy {
     /// Creates a new retry policy with sensible default values.
     ///
     /// # Returns
     ///
-    /// A `RetryPolicy` instance with default values
+    /// A `DMSCRetryPolicy` instance with default values
     fn default() -> Self {
         Self {
             max_retries: 3,
@@ -204,7 +204,7 @@ impl Default for RetryPolicy {
 /// This structure defines the configuration for dead letter queues, which are used to store
 /// messages that have failed to process after maximum retry attempts.
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct DeadLetterConfig {
+pub struct DMSCDeadLetterConfig {
     /// Whether dead letter queue functionality is enabled
     pub enabled: bool,
     /// Maximum number of retry attempts before a message is sent to the dead letter queue
@@ -216,9 +216,9 @@ pub struct DeadLetterConfig {
 }
 
 #[cfg(feature = "pyo3")]
-/// Python bindings for DMSQueueConfig
+/// Python bindings for DMSCQueueConfig
 #[pyo3::prelude::pymethods]
-impl DMSQueueConfig {
+impl DMSCQueueConfig {
     #[new]
     fn py_new() -> Self {
         Self::default()
@@ -228,7 +228,7 @@ impl DMSQueueConfig {
     fn py_new_with_memory_backend() -> Self {
         Self {
             enabled: true,
-            backend_type: QueueBackendType::Memory,
+            backend_type: DMSCQueueBackendType::Memory,
             connection_string: "memory://localhost".to_string(),
             ..Self::default()
         }
@@ -238,7 +238,7 @@ impl DMSQueueConfig {
     fn py_new_with_redis_backend(connection_string: String) -> Self {
         Self {
             enabled: true,
-            backend_type: QueueBackendType::Redis,
+            backend_type: DMSCQueueBackendType::Redis,
             connection_string,
             ..Self::default()
         }

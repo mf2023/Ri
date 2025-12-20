@@ -1,7 +1,7 @@
 //! Copyright © 2025 Wenze Wei. All Rights Reserved.
 //!
-//! This file is part of DMS.
-//! The DMS project belongs to the Dunimd Team.
+//! This file is part of DMSC.
+//! The DMSC project belongs to the Dunimd Team.
 //!
 //! Licensed under the Apache License, Version 2.0 (the "License");
 //! You may not use this file except in compliance with the License.
@@ -17,14 +17,14 @@
 
 //! # Configuration Management
 //! 
-//! This module provides a comprehensive configuration management system for DMS, supporting
+//! This module provides a comprehensive configuration management system for DMSC, supporting
 //! multiple configuration sources, hot reload, and flexible configuration access.
 //! 
 //! ## Key Components
 //! 
-//! - **DMSConfig**: Basic configuration storage with typed access methods
-//! - **DMSConfigManager**: Configuration manager that handles multiple sources and hot reload
-//! - **DMSConfigSource**: Internal enum for different configuration source types
+//! - **DMSCConfig**: Basic configuration storage with typed access methods
+//! - **DMSCConfigManager**: Configuration manager that handles multiple sources and hot reload
+//! - **DMSCConfigSource**: Internal enum for different configuration source types
 //! 
 //! ## Design Principles
 //! 
@@ -40,9 +40,9 @@
 //! ```rust
 //! use dms::prelude::*;
 //! 
-//! fn example() -> DMSResult<()> {
+//! fn example() -> DMSCResult<()> {
 //!     // Create a new config manager
-//!     let mut config_manager = DMSConfigManager::new();
+//!     let mut config_manager = DMSCConfigManager::new();
 //!     
 //!     // Add configuration sources
 //!     config_manager.add_file_source("config.yaml");
@@ -71,23 +71,23 @@ use yaml_rust::{YamlLoader, Yaml};
 /// type-safe methods for accessing values as different types.
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 #[derive(Clone)]
-pub struct DMSConfig {
+pub struct DMSCConfig {
     /// Internal storage for configuration values
     values: HashMap<String, String>,
 }
 
-impl Default for DMSConfig {
+impl Default for DMSCConfig {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl DMSConfig {
+impl DMSCConfig {
     /// Creates a new empty configuration.
     /// 
-    /// Returns a new `DMSConfig` instance with an empty key-value store.
+    /// Returns a new `DMSCConfig` instance with an empty key-value store.
     pub fn new() -> Self {
-        DMSConfig { values: HashMap::new() }
+        DMSCConfig { values: HashMap::new() }
     }
 
     /// Sets a configuration value.
@@ -195,7 +195,7 @@ impl DMSConfig {
     /// # Parameters
     /// 
     /// - `other`: The other configuration to merge into this one
-    pub fn merge(&mut self, other: &DMSConfig) {
+    pub fn merge(&mut self, other: &DMSCConfig) {
         for (k, v) in &other.values {
             self.values.insert(k.clone(), v.clone());
         }
@@ -210,9 +210,9 @@ impl DMSConfig {
 }
 
 #[cfg(feature = "pyo3")]
-/// Python constructor for DMSConfig
+/// Python constructor for DMSCConfig
 #[pyo3::prelude::pymethods]
-impl DMSConfig {
+impl DMSCConfig {
     #[new]
     fn py_new() -> Self {
         Self::new()
@@ -232,9 +232,9 @@ impl DMSConfig {
 /// Internal enum for different configuration source types.
 /// 
 /// This enum represents the different types of configuration sources that the
-/// `DMSConfigManager` can handle.
+/// `DMSCConfigManager` can handle.
 #[derive(Clone)]
-enum DMSConfigSource {
+enum DMSCConfigSource {
     /// File-based configuration source
     File(PathBuf),
     /// Environment variable configuration source
@@ -248,26 +248,26 @@ enum DMSConfigSource {
 /// configuration formats.
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 #[derive(Clone)]
-pub struct DMSConfigManager {
+pub struct DMSCConfigManager {
     /// Internal configuration storage
-    config: DMSConfig,
+    config: DMSCConfig,
     /// List of configuration sources to load from
-    sources: Vec<DMSConfigSource>,
+    sources: Vec<DMSCConfigSource>,
 }
 
-impl Default for DMSConfigManager {
+impl Default for DMSCConfigManager {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl DMSConfigManager {
+impl DMSCConfigManager {
     /// Creates a new empty configuration manager.
     /// 
-    /// Returns a new `DMSConfigManager` instance with no configuration sources.
+    /// Returns a new `DMSCConfigManager` instance with no configuration sources.
     pub fn new() -> Self {
-        DMSConfigManager {
-            config: DMSConfig::new(),
+        DMSCConfigManager {
+            config: DMSCConfig::new(),
             sources: Vec::new(),
         }
     }
@@ -280,16 +280,16 @@ impl DMSConfigManager {
     /// 
     /// Supported file formats: JSON, YAML, TOML
     pub fn add_file_source(&mut self, path: impl AsRef<Path>) {
-        self.sources.push(DMSConfigSource::File(path.as_ref().to_path_buf()));
+        self.sources.push(DMSCConfigSource::File(path.as_ref().to_path_buf()));
     }
 
     /// Adds environment variables as a configuration source.
     /// 
-    /// Environment variables with the prefix `DMS_` are loaded as configuration values.
+    /// Environment variables with the prefix `DMSC_` are loaded as configuration values.
     /// Double underscores (`__`) in environment variable names are converted to dots.
-    /// For example, `DMS_SERVER__PORT=8080` becomes `server.port=8080`.
+    /// For example, `DMSC_SERVER__PORT=8080` becomes `server.port=8080`.
     pub fn add_environment_source(&mut self) {
-        self.sources.push(DMSConfigSource::Environment);
+        self.sources.push(DMSCConfigSource::Environment);
     }
 
     /// Loads configuration from all registered sources.
@@ -299,16 +299,16 @@ impl DMSConfigManager {
     /// 
     /// # Returns
     /// 
-    /// A `Result<(), DMSError>` indicating success or failure
-    pub fn load(&mut self) -> Result<(), crate::core::DMSError> {
-        let mut cfg = DMSConfig::new();
+    /// A `Result<(), DMSCError>` indicating success or failure
+    pub fn load(&mut self) -> Result<(), crate::core::DMSCError> {
+        let mut cfg = DMSCConfig::new();
 
         for source in &self.sources {
             match source {
-                DMSConfigSource::File(path) => {
+                DMSCConfigSource::File(path) => {
                     self.load_file(path, &mut cfg)?;
                 }
-                DMSConfigSource::Environment => {
+                DMSCConfigSource::Environment => {
                     self.load_environment(&mut cfg);
                 }
             }
@@ -320,15 +320,15 @@ impl DMSConfigManager {
 
     /// Creates a new configuration manager with default sources.
     /// 
-    /// This method creates a new `DMSConfigManager` with the following default sources:
+    /// This method creates a new `DMSCConfigManager` with the following default sources:
     /// 1. Configuration files in the `config` directory (dms.yaml, dms.yml, dms.toml, dms.json)
-    /// 2. Environment variables with the prefix `DMS_`
+    /// 2. Environment variables with the prefix `DMSC_`
     /// 
     /// It also loads the configuration immediately.
     /// 
     /// # Returns
     /// 
-    /// A new `DMSConfigManager` instance with default sources and loaded configuration
+    /// A new `DMSCConfigManager` instance with default sources and loaded configuration
     pub fn new_default() -> Self {
         let mut manager = Self::new();
         
@@ -364,8 +364,8 @@ impl DMSConfigManager {
     /// 
     /// # Returns
     /// 
-    /// A `Result<(), DMSError>` indicating success or failure
-    fn load_file(&self, path: &Path, cfg: &mut DMSConfig) -> Result<(), crate::core::DMSError> {
+    /// A `Result<(), DMSCError>` indicating success or failure
+    fn load_file(&self, path: &Path, cfg: &mut DMSCConfig) -> Result<(), crate::core::DMSCError> {
         if !path.exists() {
             return Ok(());
         }
@@ -408,7 +408,7 @@ impl DMSConfigManager {
     /// - `value`: The JSON value to flatten
     /// - `prefix`: The current prefix for keys (used for recursion)
     /// - `cfg`: The configuration object to load values into
-    fn flatten_json(&self, value: &serde_json::Value, prefix: &str, cfg: &mut DMSConfig) {
+    fn flatten_json(&self, value: &serde_json::Value, prefix: &str, cfg: &mut DMSCConfig) {
         Self::flatten_json_static(value, prefix, cfg);
     }
 
@@ -421,7 +421,7 @@ impl DMSConfigManager {
     /// - `value`: The JSON value to flatten
     /// - `prefix`: The current prefix for keys (used for recursion)
     /// - `cfg`: The configuration object to load values into
-    fn flatten_json_static(value: &serde_json::Value, prefix: &str, cfg: &mut DMSConfig) {
+    fn flatten_json_static(value: &serde_json::Value, prefix: &str, cfg: &mut DMSCConfig) {
         match value {
             serde_json::Value::Object(map) => {
                 for (k, v) in map {
@@ -463,7 +463,7 @@ impl DMSConfigManager {
     /// - `value`: The YAML value to flatten
     /// - `prefix`: The current prefix for keys (used for recursion)
     /// - `cfg`: The configuration object to load values into
-    fn flatten_yaml(&self, value: &Yaml, prefix: &str, cfg: &mut DMSConfig) {
+    fn flatten_yaml(&self, value: &Yaml, prefix: &str, cfg: &mut DMSCConfig) {
         Self::flatten_yaml_static(value, prefix, cfg);
     }
 
@@ -476,7 +476,7 @@ impl DMSConfigManager {
     /// - `value`: The YAML value to flatten
     /// - `prefix`: The current prefix for keys (used for recursion)
     /// - `cfg`: The configuration object to load values into
-    fn flatten_yaml_static(value: &Yaml, prefix: &str, cfg: &mut DMSConfig) {
+    fn flatten_yaml_static(value: &Yaml, prefix: &str, cfg: &mut DMSCConfig) {
         match value {
             Yaml::Hash(map) => {
                 for (k, v) in map {
@@ -526,7 +526,7 @@ impl DMSConfigManager {
     /// - `value`: The TOML value to flatten
     /// - `prefix`: The current prefix for keys (used for recursion)
     /// - `cfg`: The configuration object to load values into
-    fn flatten_toml(&self, value: &toml::Value, prefix: &str, cfg: &mut DMSConfig) {
+    fn flatten_toml(&self, value: &toml::Value, prefix: &str, cfg: &mut DMSCConfig) {
         Self::flatten_toml_static(value, prefix, cfg);
     }
 
@@ -539,7 +539,7 @@ impl DMSConfigManager {
     /// - `value`: The TOML value to flatten
     /// - `prefix`: The current prefix for keys (used for recursion)
     /// - `cfg`: The configuration object to load values into
-    fn flatten_toml_static(value: &toml::Value, prefix: &str, cfg: &mut DMSConfig) {
+    fn flatten_toml_static(value: &toml::Value, prefix: &str, cfg: &mut DMSCConfig) {
         match value {
             toml::Value::Table(table) => {
                 for (k, v) in table {
@@ -577,15 +577,15 @@ impl DMSConfigManager {
 
     /// Loads configuration from environment variables.
     /// 
-    /// This method loads environment variables with the prefix `DMS_` into the configuration.
+    /// This method loads environment variables with the prefix `DMSC_` into the configuration.
     /// Double underscores (`__`) in environment variable names are converted to dots.
     /// 
     /// # Parameters
     /// 
     /// - `cfg`: The configuration object to load values into
-    fn load_environment(&self, cfg: &mut DMSConfig) {
+    fn load_environment(&self, cfg: &mut DMSCConfig) {
         for (name, value) in std::env::vars() {
-            if let Some(rest) = name.strip_prefix("DMS_") {
+            if let Some(rest) = name.strip_prefix("DMSC_") {
                 let key_parts: Vec<String> = rest
                     .split("__")
                     .map(|part| part.to_ascii_lowercase())
@@ -605,8 +605,8 @@ impl DMSConfigManager {
     /// 
     /// # Returns
     /// 
-    /// A `Result<(), DMSError>` indicating success or failure
-    pub async fn start_watcher(&mut self) -> Result<(), crate::core::DMSError> {
+    /// A `Result<(), DMSCError>` indicating success or failure
+    pub async fn start_watcher(&mut self) -> Result<(), crate::core::DMSCError> {
         // Watcher implementation is simplified for now
         // Full hot reload support will be implemented in a future update
         Ok(())
@@ -616,8 +616,8 @@ impl DMSConfigManager {
     /// 
     /// # Returns
     /// 
-    /// A `&DMSConfig` reference to the loaded configuration
-    pub fn config(&self) -> &DMSConfig {
+    /// A `&DMSCConfig` reference to the loaded configuration
+    pub fn config(&self) -> &DMSCConfig {
         &self.config
     }
 
@@ -625,16 +625,16 @@ impl DMSConfigManager {
     /// 
     /// # Returns
     /// 
-    /// A `&mut DMSConfig` reference to the loaded configuration
-    pub fn config_mut(&mut self) -> &mut DMSConfig {
+    /// A `&mut DMSCConfig` reference to the loaded configuration
+    pub fn config_mut(&mut self) -> &mut DMSCConfig {
         &mut self.config
     }
 }
 
 #[cfg(feature = "pyo3")]
-/// Python constructor for DMSConfigManager
+/// Python constructor for DMSCConfigManager
 #[pyo3::prelude::pymethods]
-impl DMSConfigManager {
+impl DMSCConfigManager {
     #[new]
     fn py_new() -> Self {
         Self::new()

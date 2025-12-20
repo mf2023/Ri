@@ -27,7 +27,7 @@ http模块包含以下子模块：
 
 </div>
 
-### DMSHttpServer
+### DMSCHttpServer
 
 HTTP服务器接口。
 
@@ -35,15 +35,15 @@ HTTP服务器接口。
 
 | 方法 | 描述 | 参数 | 返回值 |
 |:--------|:-------------|:--------|:--------|
-| `new(config)` | 创建HTTP服务器 | `config: DMSHttpServerConfig` | `Self` |
+| `new(config)` | 创建HTTP服务器 | `config: DMSCHttpServerConfig` | `Self` |
 | `route(method, path, handler)` | 添加路由 | `method: HttpMethod`, `path: &str`, `handler: impl HttpHandler` | `&Self` |
 | `get(path, handler)` | 添加GET路由 | `path: &str`, `handler: impl HttpHandler` | `&Self` |
 | `post(path, handler)` | 添加POST路由 | `path: &str`, `handler: impl HttpHandler` | `&Self` |
 | `put(path, handler)` | 添加PUT路由 | `path: &str`, `handler: impl HttpHandler` | `&Self` |
 | `delete(path, handler)` | 添加DELETE路由 | `path: &str`, `handler: impl HttpHandler` | `&Self` |
 | `use_middleware(middleware)` | 使用中间件 | `middleware: impl HttpMiddleware` | `&Self` |
-| `listen(addr)` | 启动服务器监听 | `addr: &str` | `DMSResult<()>` |
-| `shutdown()` | 关闭服务器 | 无 | `DMSResult<()>` |
+| `listen(addr)` | 启动服务器监听 | `addr: &str` | `DMSCResult<()>` |
+| `shutdown()` | 关闭服务器 | 无 | `DMSCResult<()>` |
 
 #### 使用示例
 
@@ -51,7 +51,7 @@ HTTP服务器接口。
 use dms::prelude::*;
 
 // 创建HTTP服务器配置
-let server_config = DMSHttpServerConfig {
+let server_config = DMSCHttpServerConfig {
     host: "0.0.0.0".to_string(),
     port: 8080,
     max_connections: 1000,
@@ -60,16 +60,16 @@ let server_config = DMSHttpServerConfig {
 };
 
 // 创建HTTP服务器
-let server = DMSHttpServer::new(server_config);
+let server = DMSCHttpServer::new(server_config);
 
 // 添加路由
-server.get("/", |req: DMSHttpRequest, res: DMSHttpResponse| async move {
+server.get("/", |req: DMSCHttpRequest, res: DMSCHttpResponse| async move {
     res.status(200).json(serde_json::json!({
         "message": "Hello, World!"
     }))
 });
 
-server.get("/users/:id", |req: DMSHttpRequest, res: DMSHttpResponse| async move {
+server.get("/users/:id", |req: DMSCHttpRequest, res: DMSCHttpResponse| async move {
     let user_id = req.params.get("id").unwrap();
     
     res.status(200).json(serde_json::json!({
@@ -83,7 +83,7 @@ server.get("/users/:id", |req: DMSHttpRequest, res: DMSHttpResponse| async move 
 server.listen("0.0.0.0:8080").await?;
 ```
 
-### DMSHttpClient
+### DMSCHttpClient
 
 HTTP客户端接口。
 
@@ -91,12 +91,12 @@ HTTP客户端接口。
 
 | 方法 | 描述 | 参数 | 返回值 |
 |:--------|:-------------|:--------|:--------|
-| `new(config)` | 创建HTTP客户端 | `config: DMSHttpClientConfig` | `Self` |
-| `get(url)` | 发送GET请求 | `url: &str` | `DMSResult<DMSHttpResponse>` |
-| `post(url, body)` | 发送POST请求 | `url: &str`, `body: impl Serialize` | `DMSResult<DMSHttpResponse>` |
-| `put(url, body)` | 发送PUT请求 | `url: &str`, `body: impl Serialize` | `DMSResult<DMSHttpResponse>` |
-| `delete(url)` | 发送DELETE请求 | `url: &str` | `DMSResult<DMSHttpResponse>` |
-| `request(method, url, body)` | 发送自定义请求 | `method: HttpMethod`, `url: &str`, `body: Option<impl Serialize>` | `DMSResult<DMSHttpResponse>` |
+| `new(config)` | 创建HTTP客户端 | `config: DMSCHttpClientConfig` | `Self` |
+| `get(url)` | 发送GET请求 | `url: &str` | `DMSCResult<DMSCHttpResponse>` |
+| `post(url, body)` | 发送POST请求 | `url: &str`, `body: impl Serialize` | `DMSCResult<DMSCHttpResponse>` |
+| `put(url, body)` | 发送PUT请求 | `url: &str`, `body: impl Serialize` | `DMSCResult<DMSCHttpResponse>` |
+| `delete(url)` | 发送DELETE请求 | `url: &str` | `DMSCResult<DMSCHttpResponse>` |
+| `request(method, url, body)` | 发送自定义请求 | `method: HttpMethod`, `url: &str`, `body: Option<impl Serialize>` | `DMSCResult<DMSCHttpResponse>` |
 | `set_header(key, value)` | 设置请求头 | `key: &str`, `value: &str` | `&Self` |
 | `set_timeout(timeout)` | 设置超时 | `timeout: Duration` | `&Self` |
 | `set_auth(auth)` | 设置认证 | `auth: HttpAuth` | `&Self` |
@@ -107,7 +107,7 @@ HTTP客户端接口。
 use dms::prelude::*;
 
 // 创建HTTP客户端
-let client = DMSHttpClient::new(DMSHttpClientConfig::default());
+let client = DMSCHttpClient::new(DMSCHttpClientConfig::default());
 
 // 发送GET请求
 let response = client.get("https://api.example.com/users").await?;
@@ -123,7 +123,7 @@ let response = client.post("https://api.example.com/users", new_user).await?;
 let created_user: User = response.json().await?;
 
 // 设置认证
-let client = DMSHttpClient::new(DMSHttpClientConfig::default())
+let client = DMSCHttpClient::new(DMSCHttpClientConfig::default())
     .set_auth(HttpAuth::Bearer("your-api-token".to_string()));
 
 let response = client.get("https://api.example.com/protected").await?;
@@ -134,7 +134,7 @@ let response = client.get("https://api.example.com/protected").await?;
 
 </div>
 
-### DMSRouter
+### DMSCRouter
 
 路由器接口。
 
@@ -148,7 +148,7 @@ let response = client.get("https://api.example.com/protected").await?;
 | `put(path, handler)` | 添加PUT路由 | `path: &str`, `handler: impl HttpHandler` | `&Self` |
 | `delete(path, handler)` | 添加DELETE路由 | `path: &str`, `handler: impl HttpHandler` | `&Self` |
 | `use_middleware(middleware)` | 使用中间件 | `middleware: impl HttpMiddleware` | `&Self` |
-| `group(prefix)` | 创建路由组 | `prefix: &str` | `DMSRouteGroup` |
+| `group(prefix)` | 创建路由组 | `prefix: &str` | `DMSCRouteGroup` |
 
 #### 路由参数
 
@@ -156,13 +156,13 @@ let response = client.get("https://api.example.com/protected").await?;
 use dms::prelude::*;
 
 // 路径参数
-router.get("/users/:id", |req: DMSHttpRequest, res: DMSHttpResponse| async move {
+router.get("/users/:id", |req: DMSCHttpRequest, res: DMSCHttpResponse| async move {
     let user_id = req.params.get("id").unwrap();
     // 处理逻辑
 });
 
 // 查询参数
-router.get("/search", |req: DMSHttpRequest, res: DMSHttpResponse| async move {
+router.get("/search", |req: DMSCHttpRequest, res: DMSCHttpResponse| async move {
     let query = req.query.get("q").unwrap_or("");
     let limit = req.query.get("limit").unwrap_or("10").parse::<usize>().unwrap_or(10);
     
@@ -170,7 +170,7 @@ router.get("/search", |req: DMSHttpRequest, res: DMSHttpResponse| async move {
 });
 
 // 通配符路由
-router.get("/files/*path", |req: DMSHttpRequest, res: DMSHttpResponse| async move {
+router.get("/files/*path", |req: DMSCHttpRequest, res: DMSCHttpResponse| async move {
     let file_path = req.params.get("path").unwrap();
     // 处理文件请求
 });
@@ -205,7 +205,7 @@ users_admin_router.delete("/:id", admin_delete_user_handler);
 
 </div>  
 
-### DMSHttpMiddleware
+### DMSCHttpMiddleware
 
 中间件接口。
 
@@ -216,7 +216,7 @@ use dms::prelude::*;
 struct LoggingMiddleware;
 
 impl HttpMiddleware for LoggingMiddleware {
-    async fn handle(&self, req: DMSHttpRequest, next: Next) -> DMSResult<DMSHttpResponse> {
+    async fn handle(&self, req: DMSCHttpRequest, next: Next) -> DMSCResult<DMSCHttpResponse> {
         let start = std::time::Instant::now();
         
         ctx.log().info(format!("Request: {} {}", req.method, req.path));
@@ -241,7 +241,7 @@ struct CorsMiddleware {
 }
 
 impl HttpMiddleware for CorsMiddleware {
-    async fn handle(&self, req: DMSHttpRequest, next: Next) -> DMSResult<DMSHttpResponse> {
+    async fn handle(&self, req: DMSCHttpRequest, next: Next) -> DMSCResult<DMSCHttpResponse> {
         let mut response = next.run(req).await?;
         
         response.headers.insert("Access-Control-Allow-Origin", self.allowed_origins.join(", "));
@@ -291,7 +291,7 @@ server.use_middleware(StaticFileMiddleware::new("./public"));
 
 </div>
 
-### DMSWebSocket
+### DMSCWebSocket
 
 WebSocket接口。
 
@@ -299,10 +299,10 @@ WebSocket接口。
 
 | 方法 | 描述 | 参数 | 返回值 |
 |:--------|:-------------|:--------|:--------|
-| `accept()` | 接受WebSocket连接 | 无 | `DMSResult<DMSWebSocketConnection>` |
-| `send(message)` | 发送消息 | `message: impl Into<String>` | `DMSResult<()>` |
-| `receive()` | 接收消息 | 无 | `DMSResult<Option<String>>` |
-| `close()` | 关闭连接 | 无 | `DMSResult<()>` |
+| `accept()` | 接受WebSocket连接 | 无 | `DMSCResult<DMSCWebSocketConnection>` |
+| `send(message)` | 发送消息 | `message: impl Into<String>` | `DMSCResult<()>` |
+| `receive()` | 接收消息 | 无 | `DMSCResult<Option<String>>` |
+| `close()` | 关闭连接 | 无 | `DMSCResult<()>` |
 
 #### WebSocket服务器
 
@@ -310,7 +310,7 @@ WebSocket接口。
 use dms::prelude::*;
 
 // WebSocket路由
-server.get("/ws", |req: DMSHttpRequest, res: DMSHttpResponse| async move {
+server.get("/ws", |req: DMSCHttpRequest, res: DMSCHttpResponse| async move {
     // 升级HTTP连接到WebSocket
     let ws = res.upgrade_to_websocket(req)?;
     
@@ -349,7 +349,7 @@ server.get("/ws", |req: DMSHttpRequest, res: DMSHttpResponse| async move {
 use dms::prelude::*;
 
 // 创建WebSocket客户端
-let ws_client = DMSWebSocketClient::new();
+let ws_client = DMSCWebSocketClient::new();
 
 // 连接到WebSocket服务器
 let mut connection = ws_client.connect("ws://localhost:8080/ws").await?;
@@ -378,7 +378,7 @@ connection.close().await?;
 use dms::prelude::*;
 
 // 文件上传处理
-server.post("/upload", |req: DMSHttpRequest, res: DMSHttpResponse| async move {
+server.post("/upload", |req: DMSCHttpRequest, res: DMSCHttpResponse| async move {
     // 解析multipart表单数据
     let multipart = req.parse_multipart()?;
     
@@ -414,7 +414,7 @@ server.post("/upload", |req: DMSHttpRequest, res: DMSHttpResponse| async move {
 use dms::prelude::*;
 
 // 文件下载处理
-server.get("/download/:filename", |req: DMSHttpRequest, res: DMSHttpResponse| async move {
+server.get("/download/:filename", |req: DMSCHttpRequest, res: DMSCHttpResponse| async move {
     let filename = req.params.get("filename").unwrap();
     let file_path = format!("./uploads/{}", filename);
     
@@ -440,7 +440,7 @@ server.get("/download/:filename", |req: DMSHttpRequest, res: DMSHttpResponse| as
 use dms::prelude::*;
 
 // 大文件上传（分块上传）
-server.post("/upload/chunked", |req: DMSHttpRequest, res: DMSHttpResponse| async move {
+server.post("/upload/chunked", |req: DMSCHttpRequest, res: DMSCHttpResponse| async move {
     // 获取上传信息
     let upload_id = req.headers.get("X-Upload-ID").unwrap();
     let chunk_index = req.headers.get("X-Chunk-Index").unwrap().parse::<usize>().unwrap();
@@ -477,7 +477,7 @@ server.post("/upload/chunked", |req: DMSHttpRequest, res: DMSHttpResponse| async
 
 </div>
 
-### DMSHttpServerConfig
+### DMSCHttpServerConfig
 
 HTTP服务器配置结构体。
 
@@ -494,7 +494,7 @@ HTTP服务器配置结构体。
 | `enable_compression` | `bool` | 启用压缩 | `true` |
 | `enable_cors` | `bool` | 启用CORS | `true` |
 
-### DMSHttpClientConfig
+### DMSCHttpClientConfig
 
 HTTP客户端配置结构体。
 
@@ -504,7 +504,7 @@ HTTP客户端配置结构体。
 |:--------|:-----|:-------------|:-------|
 | `timeout` | `Duration` | 请求超时 | `30s` |
 | `max_redirects` | `usize` | 最大重定向次数 | `5` |
-| `user_agent` | `String` | User-Agent头 | `"DMS-HTTP-Client/1.0"` |
+| `user_agent` | `String` | User-Agent头 | `"DMSC-HTTP-Client/1.0"` |
 | `enable_cookies` | `bool` | 启用Cookie | `true` |
 | `enable_compression` | `bool` | 启用压缩 | `true` |
 | `pool_idle_timeout` | `Duration` | 连接池空闲超时 | `90s` |
@@ -539,7 +539,7 @@ match client.get("https://api.example.com/users").await {
             println!("API error: {} - {}", response.status_code, response.body);
         }
     }
-    Err(DMSError { code, .. }) if code == "HTTP_CLIENT_ERROR" => {
+    Err(DMSCError { code, .. }) if code == "HTTP_CLIENT_ERROR" => {
         // 客户端错误，可能是网络问题
         ctx.log().error("HTTP client error, retrying...");
         

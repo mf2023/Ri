@@ -25,7 +25,7 @@ auth模块包含以下子模块：
 
 </div>
 
-### DMSAuthModule
+### DMSCAuthModule
 
 认证模块主接口，提供统一的认证服务访问。
 
@@ -33,16 +33,16 @@ auth模块包含以下子模块：
 
 | 方法 | 描述 | 参数 | 返回值 |
 |:--------|:-------------|:--------|:--------|
-| `generate_jwt(payload)` | 生成JWT令牌 | `payload: impl Serialize` | `DMSResult<String>` |
-| `verify_jwt(token)` | 验证JWT令牌 | `token: &str` | `DMSResult<T>` |
-| `generate_jwt_with_refresh(payload)` | 生成JWT和刷新令牌 | `payload: impl Serialize` | `DMSResult<(String, String)>` |
-| `refresh_jwt(refresh_token)` | 使用刷新令牌获取新JWT | `refresh_token: &str` | `DMSResult<String>` |
-| `check_permission(role, permission)` | 检查角色权限 | `role: &str`, `permission: &str` | `DMSResult<bool>` |
-| `check_resource_permission(role, resource_type, resource_id, action)` | 检查资源权限 | `role: &str`, `resource_type: &str`, `resource_id: &str`, `action: &str` | `DMSResult<bool>` |
-| `oauth_config(provider)` | 获取OAuth配置 | `provider: &str` | `DMSResult<DMSOAuthConfig>` |
-| `oauth_authorization_url(provider, state)` | 生成OAuth授权URL | `provider: &str`, `state: &str` | `DMSResult<String>` |
-| `oauth_exchange_token(provider, code)` | 交换OAuth令牌 | `provider: &str`, `code: &str` | `DMSResult<String>` |
-| `oauth_get_user_info(provider, token)` | 获取OAuth用户信息 | `provider: &str`, `token: &str` | `DMSResult<DMSUserInfo>` |
+| `generate_jwt(payload)` | 生成JWT令牌 | `payload: impl Serialize` | `DMSCResult<String>` |
+| `verify_jwt(token)` | 验证JWT令牌 | `token: &str` | `DMSCResult<T>` |
+| `generate_jwt_with_refresh(payload)` | 生成JWT和刷新令牌 | `payload: impl Serialize` | `DMSCResult<(String, String)>` |
+| `refresh_jwt(refresh_token)` | 使用刷新令牌获取新JWT | `refresh_token: &str` | `DMSCResult<String>` |
+| `check_permission(role, permission)` | 检查角色权限 | `role: &str`, `permission: &str` | `DMSCResult<bool>` |
+| `check_resource_permission(role, resource_type, resource_id, action)` | 检查资源权限 | `role: &str`, `resource_type: &str`, `resource_id: &str`, `action: &str` | `DMSCResult<bool>` |
+| `oauth_config(provider)` | 获取OAuth配置 | `provider: &str` | `DMSCResult<DMSCOAuthConfig>` |
+| `oauth_authorization_url(provider, state)` | 生成OAuth授权URL | `provider: &str`, `state: &str` | `DMSCResult<String>` |
+| `oauth_exchange_token(provider, code)` | 交换OAuth令牌 | `provider: &str`, `code: &str` | `DMSCResult<String>` |
+| `oauth_get_user_info(provider, token)` | 获取OAuth用户信息 | `provider: &str`, `token: &str` | `DMSCResult<DMSCUserInfo>` |
 
 #### 使用示例
 
@@ -78,7 +78,7 @@ let token = ctx.auth().oauth_exchange_token("github", "code123").await?;
 let user_info = ctx.auth().oauth_get_user_info("github", &token).await?;
 ```
 
-### DMSAuthConfig
+### DMSCAuthConfig
 
 认证模块配置结构。
 
@@ -90,20 +90,20 @@ let user_info = ctx.auth().oauth_get_user_info("github", &token).await?;
 | `jwt_issuer` | `String` | JWT签发者 | "dms" |
 | `jwt_expires_in` | `u64` | JWT过期时间（秒） | 3600 |
 | `jwt_refresh_expires_in` | `u64` | 刷新令牌过期时间（秒） | 86400 |
-| `oauth_providers` | `HashMap<String, DMSOAuthConfig>` | OAuth提供商配置 | 空 |
+| `oauth_providers` | `HashMap<String, DMSCOAuthConfig>` | OAuth提供商配置 | 空 |
 | `permission_rules` | `HashMap<String, Vec<String>>` | 权限规则 | 默认规则 |
 
 #### 使用示例
 
 ```rust
-let auth_config = DMSAuthConfig {
+let auth_config = DMSCAuthConfig {
     jwt_secret: "your-secret-key".to_string(),
     jwt_issuer: "my-app".to_string(),
     jwt_expires_in: 7200,
     jwt_refresh_expires_in: 172800,
     oauth_providers: {
         let mut providers = HashMap::new();
-        providers.insert("github".to_string(), DMSOAuthConfig {
+        providers.insert("github".to_string(), DMSCOAuthConfig {
             client_id: "your-client-id".to_string(),
             client_secret: "your-client-secret".to_string(),
             redirect_uri: "http://localhost:8080/callback".to_string(),
@@ -120,7 +120,7 @@ let auth_config = DMSAuthConfig {
 };
 ```
 
-### DMSOAuthConfig
+### DMSCOAuthConfig
 
 OAuth配置结构。
 
@@ -135,7 +135,7 @@ OAuth配置结构。
 | `authorization_url` | `Option<String>` | 授权URL（可选） |
 | `token_url` | `Option<String>` | 令牌URL（可选） |
 
-### DMSUserInfo
+### DMSCUserInfo
 
 用户信息结构。
 
@@ -280,8 +280,8 @@ ctx.auth().destroy_session(&session_id).await?;
 
 ```rust
 // 使用环境变量存储密钥
-let jwt_secret = std::env::var("DMS_JWT_SECRET")?;
-let oauth_client_secret = std::env::var("DMS_OAUTH_CLIENT_SECRET")?;
+let jwt_secret = std::env::var("DMSC_JWT_SECRET")?;
+let oauth_client_secret = std::env::var("DMSC_OAUTH_CLIENT_SECRET")?;
 
 // 定期轮换密钥
 ctx.auth().rotate_jwt_secret().await?;
@@ -327,7 +327,7 @@ match ctx.auth().verify_jwt::<User>(&token).await {
         // 验证成功
         ctx.logger().info("auth", &format!("User authenticated: {}", user.username))?;
     }
-    Err(DMSError { code, .. }) if code == "TOKEN_EXPIRED" => {
+    Err(DMSCError { code, .. }) if code == "TOKEN_EXPIRED" => {
         // 令牌过期，尝试刷新
         let new_token = ctx.auth().refresh_jwt(&refresh_token).await?;
     }

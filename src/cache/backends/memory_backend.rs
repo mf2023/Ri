@@ -1,7 +1,7 @@
 //! Copyright © 2025 Wenze Wei. All Rights Reserved.
 //!
-//! This file is part of DMS.
-//! The DMS project belongs to the Dunimd Team.
+//! This file is part of DMSC.
+//! The DMSC project belongs to the Dunimd Team.
 //!
 //! Licensed under the Apache License, Version 2.0 (the "License");
 //! You may not use this file except in compliance with the License.
@@ -20,7 +20,7 @@
 //! # In-memory Cache Backend
 //! 
 //! This module provides an in-memory cache implementation using DashMap for high performance
-//! and thread safety. It implements the DMSCache trait, providing all standard cache operations
+//! and thread safety. It implements the DMSCCache trait, providing all standard cache operations
 //! with automatic expiration handling and comprehensive statistics.
 //! 
 //! ## Key Features
@@ -37,7 +37,7 @@
 //! 1. **Non-blocking**: Uses DashMap for lock-free concurrent access
 //! 2. **Automatic Expiration**: Expired entries are removed when accessed
 //! 3. **Statistics-driven**: Comprehensive cache statistics for monitoring
-//! 4. **Simple API**: Implements the standard DMSCache trait
+//! 4. **Simple API**: Implements the standard DMSCCache trait
 //! 5. **Memory Efficient**: Automatically cleans up expired entries
 //! 6. **Thread-safe**: Safe for use in multi-threaded applications
 //! 7. **Fast Access**: In-memory storage for minimal latency
@@ -49,9 +49,9 @@
 //! use dms::prelude::*;
 //! use std::time::Duration;
 //! 
-//! async fn example() -> DMSResult<()> {
+//! async fn example() -> DMSCResult<()> {
 //!     // Create a new in-memory cache
-//!     let cache = DMSMemoryCache::new();
+//!     let cache = DMSCMemoryCache::new();
 //!     
 //!     // Create a cached value with 1-hour expiration
 //!     let value = CachedValue::new(b"test_value".to_vec(), Duration::from_secs(3600));
@@ -84,34 +84,34 @@
 use dashmap::DashMap;
 use std::sync::Arc;
 use tokio::sync::RwLock;
-use crate::cache::{DMSCache, CachedValue, CacheStats};
-use crate::core::DMSResult;
+use crate::cache::{DMSCCache, CachedValue, CacheStats};
+use crate::core::DMSCResult;
 
 /// In-memory cache implementation using DashMap for high performance and thread safety.
 ///
 /// This struct provides an in-memory cache with automatic expiration handling, comprehensive
 /// statistics, and thread-safe concurrent access.
-pub struct DMSMemoryCache {
+pub struct DMSCMemoryCache {
     /// Underlying storage using DashMap for concurrent access
     store: Arc<DashMap<String, CachedValue>>,
     /// Cache statistics tracking hit count, miss count, and eviction count
     stats: Arc<RwLock<CacheStats>>,
 }
 
-impl Default for DMSMemoryCache {
+impl Default for DMSCMemoryCache {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl DMSMemoryCache {
+impl DMSCMemoryCache {
     /// Creates a new in-memory cache instance.
     ///
     /// # Returns
     ///
-    /// A new DMSMemoryCache instance
+    /// A new DMSCMemoryCache instance
     pub fn new() -> Self {
-        DMSMemoryCache {
+        DMSCMemoryCache {
             store: Arc::new(DashMap::new()),
             stats: Arc::new(RwLock::new(CacheStats::default())),
         }
@@ -119,7 +119,7 @@ impl DMSMemoryCache {
 }
 
 #[async_trait::async_trait]
-impl DMSCache for DMSMemoryCache {
+impl DMSCCache for DMSCMemoryCache {
     /// Gets a value from the cache by key.
     ///
     /// This method checks if the value exists and is not expired. If the value is expired,
@@ -133,7 +133,7 @@ impl DMSCache for DMSMemoryCache {
     /// # Returns
     ///
     /// An `Option<CachedValue>` containing the value if it exists and is not expired, or None otherwise
-    async fn get(&self, key: &str) -> DMSResult<Option<String>> {
+    async fn get(&self, key: &str) -> DMSCResult<Option<String>> {
         match self.store.get(key) {
             Some(entry) => {
                 let value = entry.clone();
@@ -167,8 +167,8 @@ impl DMSCache for DMSMemoryCache {
     ///
     /// # Returns
     ///
-    /// A `DMSResult<()>` indicating success or failure
-    async fn set(&self, key: &str, value: &str, ttl_seconds: Option<u64>) -> crate::core::DMSResult<()> {
+    /// A `DMSCResult<()>` indicating success or failure
+    async fn set(&self, key: &str, value: &str, ttl_seconds: Option<u64>) -> crate::core::DMSCResult<()> {
         let cached_value = CachedValue::new(value.to_string(), ttl_seconds);
         self.store.insert(key.to_string(), cached_value);
         Ok(())
@@ -182,8 +182,8 @@ impl DMSCache for DMSMemoryCache {
     ///
     /// # Returns
     ///
-    /// A `DMSResult<bool>` indicating whether the key was found and deleted
-    async fn delete(&self, key: &str) -> crate::core::DMSResult<bool> {
+    /// A `DMSCResult<bool>` indicating whether the key was found and deleted
+    async fn delete(&self, key: &str) -> crate::core::DMSCResult<bool> {
         Ok(self.store.remove(key).is_some())
     }
     
@@ -216,8 +216,8 @@ impl DMSCache for DMSMemoryCache {
     ///
     /// # Returns
     ///
-    /// A `DMSResult<()>` indicating success or failure
-    async fn clear(&self) -> crate::core::DMSResult<()> {
+    /// A `DMSCResult<()>` indicating success or failure
+    async fn clear(&self) -> crate::core::DMSCResult<()> {
         self.store.clear();
         Ok(())
     }
@@ -235,8 +235,8 @@ impl DMSCache for DMSMemoryCache {
     ///
     /// # Returns
     ///
-    /// A `DMSResult<usize>` containing the number of expired entries cleaned up
-    async fn cleanup_expired(&self) -> crate::core::DMSResult<usize> {
+    /// A `DMSCResult<usize>` containing the number of expired entries cleaned up
+    async fn cleanup_expired(&self) -> crate::core::DMSCResult<usize> {
         let mut cleaned = 0;
         let keys: Vec<String> = self.store.iter().map(|entry| entry.key().clone()).collect();
         

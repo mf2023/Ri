@@ -1,7 +1,7 @@
 //! Copyright © 2025 Wenze Wei. All Rights Reserved.
 //!
-//! This file is part of DMS.
-//! The DMS project belongs to the Dunimd Team.
+//! This file is part of DMSC.
+//! The DMSC project belongs to the Dunimd Team.
 //!
 //! Licensed under the Apache License, Version 2.0 (the "License");
 //! You may not use this file except in compliance with the License.
@@ -17,27 +17,27 @@
 
 //! # Device Control Module
 //! 
-//! This module provides comprehensive smart device control functionality for DMS, including device
+//! This module provides comprehensive smart device control functionality for DMSC, including device
 //! discovery, control, and resource scheduling. It enables efficient management of devices and
 //! their resources across distributed environments.
 //! 
 //! ## Key Components
 //! 
-//! - **DMSDeviceControlModule**: Main device control module implementing service module traits
-//! - **DMSDevice**: Device representation with type, status, and capabilities
-//! - **DMSDeviceType**: Enum defining supported device types
-//! - **DMSDeviceStatus**: Enum defining device statuses
-//! - **DMSDeviceCapabilities**: Device capabilities structure
-//! - **DMSDeviceController**: Device controller for managing devices
-//! - **DMSDeviceScheduler**: Device scheduler for resource allocation
-//! - **DMSResourcePool**: Resource pool for managing device resources
-//! - **DMSResourcePoolManager**: Manager for multiple resource pools
-//! - **DMSResourcePoolStatistics**: Statistics for resource pool monitoring
-//! - **DMSDeviceControlConfig**: Configuration for device control behavior
-//! - **DMSDiscoveryResult**: Result structure for device discovery
-//! - **DMSResourceRequest**: Request structure for resource allocation
-//! - **DMSResourceAllocation**: Result structure for resource allocation
-//! - **DMSResourcePoolStatus**: Status structure for resource pools
+//! - **DMSCDeviceControlModule**: Main device control module implementing service module traits
+//! - **DMSCDevice**: Device representation with type, status, and capabilities
+//! - **DMSCDeviceType**: Enum defining supported device types
+//! - **DMSCDeviceStatus**: Enum defining device statuses
+//! - **DMSCDeviceCapabilities**: Device capabilities structure
+//! - **DMSCDeviceController**: Device controller for managing devices
+//! - **DMSCDeviceScheduler**: Device scheduler for resource allocation
+//! - **DMSCResourcePool**: Resource pool for managing device resources
+//! - **DMSCResourcePoolManager**: Manager for multiple resource pools
+//! - **DMSCResourcePoolStatistics**: Statistics for resource pool monitoring
+//! - **DMSCDeviceControlConfig**: Configuration for device control behavior
+//! - **DMSCDiscoveryResult**: Result structure for device discovery
+//! - **DMSCResourceRequest**: Request structure for resource allocation
+//! - **DMSCResourceAllocation**: Result structure for resource allocation
+//! - **DMSCResourcePoolStatus**: Status structure for resource pools
 //! 
 //! ## Design Principles
 //! 
@@ -57,11 +57,11 @@
 //! 
 //! ```rust
 //! use dms::prelude::*;
-//! use dms::device::{DMSDeviceControlConfig, DMSResourceRequest, DMSDeviceType, DMSDeviceCapabilities};
+//! use dms::device::{DMSCDeviceControlConfig, DMSCResourceRequest, DMSCDeviceType, DMSCDeviceCapabilities};
 //! 
-//! async fn example() -> DMSResult<()> {
+//! async fn example() -> DMSCResult<()> {
 //!     // Create device control configuration
-//!     let device_config = DMSDeviceControlConfig {
+//!     let device_config = DMSCDeviceControlConfig {
 //!         discovery_enabled: true,
 //!         discovery_interval_secs: 30,
 //!         auto_scheduling_enabled: true,
@@ -70,7 +70,7 @@
 //!     };
 //!     
 //!     // Create device control module
-//!     let device_module = DMSDeviceControlModule::new()
+//!     let device_module = DMSCDeviceControlModule::new()
 //!         .with_config(device_config);
 //!     
 //!     // Discover devices
@@ -84,10 +84,10 @@
 //!     println!("Current devices: {:?}", devices);
 //!     
 //!     // Create resource request
-//!     let resource_request = DMSResourceRequest {
+//!     let resource_request = DMSCResourceRequest {
 //!         request_id: "request-123".to_string(),
-//!         device_type: DMSDeviceType::Compute,
-//!         required_capabilities: DMSDeviceCapabilities {
+//!         device_type: DMSCDeviceType::Compute,
+//!         required_capabilities: DMSCDeviceCapabilities {
 //!             cpu_cores: Some(4),
 //!             memory_gb: Some(8.0),
 //!             storage_gb: Some(100.0),
@@ -126,43 +126,43 @@ use tokio::sync::RwLock;
 use std::collections::HashMap;
 use parking_lot::RwLock as ParkingRwLock;
 
-use crate::observability::{DMSMetricsRegistry, DMSMetric, DMSMetricConfig, DMSMetricType};
+use crate::observability::{DMSCMetricsRegistry, DMSCMetric, DMSCMetricConfig, DMSCMetricType};
 
 
-pub use core::{DMSDevice, DMSDeviceType, DMSDeviceStatus, DMSDeviceCapabilities, DMSDeviceControlConfig, DMSDeviceConfig, NetworkDeviceInfo};
-pub use controller::DMSDeviceController;
-pub use pool::{DMSResourcePool, DMSResourcePoolManager};
-pub use scheduler::DMSDeviceScheduler;
-pub use discovery_scheduler::{DMSDeviceDiscoveryEngine, DMSResourceScheduler};
+pub use core::{DMSCDevice, DMSCDeviceType, DMSCDeviceStatus, DMSCDeviceCapabilities, DMSCDeviceControlConfig, DMSCDeviceConfig, NetworkDeviceInfo};
+pub use controller::DMSCDeviceController;
+pub use pool::{DMSCResourcePool, DMSCResourcePoolManager};
+pub use scheduler::DMSCDeviceScheduler;
+pub use discovery_scheduler::{DMSCDeviceDiscoveryEngine, DMSCResourceScheduler};
 
-use crate::core::{DMSResult, DMSServiceContext};
+use crate::core::{DMSCResult, DMSCServiceContext};
 
 
-/// Main device control module for DMS.
+/// Main device control module for DMSC.
 /// 
 /// This module provides comprehensive smart device control functionality, including device discovery,
 /// control, and resource scheduling. It manages devices and their resources across distributed environments.
-pub struct DMSDeviceControlModule {
+pub struct DMSCDeviceControlModule {
     /// Device controller for managing devices
-    controller: Arc<RwLock<DMSDeviceController>>,
+    controller: Arc<RwLock<DMSCDeviceController>>,
     /// Device scheduler for resource allocation
-    scheduler: Arc<RwLock<DMSDeviceScheduler>>,
+    scheduler: Arc<RwLock<DMSCDeviceScheduler>>,
     /// Discovery engine for device discovery
-    discovery_engine: Arc<RwLock<DMSResourceScheduler>>,
+    discovery_engine: Arc<RwLock<DMSCResourceScheduler>>,
     /// Map of resource pool names to resource pool instances
-    resource_pools: HashMap<String, Arc<DMSResourcePool>>,
+    resource_pools: HashMap<String, Arc<DMSCResourcePool>>,
     /// Device control configuration
-    config: DMSDeviceControlConfig,
+    config: DMSCDeviceControlConfig,
     /// Metrics registry for device management metrics
     #[allow(dead_code)]
-    metrics_registry: Arc<ParkingRwLock<Option<Arc<DMSMetricsRegistry>>>>,
+    metrics_registry: Arc<ParkingRwLock<Option<Arc<DMSCMetricsRegistry>>>>,
 }
 
 /// Configuration for device control module (legacy)
 /// 
-/// This struct is deprecated. Use `DMSDeviceControlConfig` from the device module instead.
+/// This struct is deprecated. Use `DMSCDeviceControlConfig` from the device module instead.
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct DMSDeviceControlConfigLegacy {
+pub struct DMSCDeviceControlConfigLegacy {
     /// Whether device discovery is enabled
     pub discovery_enabled: bool,
     /// Interval between device discovery scans in seconds
@@ -175,7 +175,7 @@ pub struct DMSDeviceControlConfigLegacy {
     pub resource_allocation_timeout_secs: u64,
 }
 
-impl Default for DMSDeviceControlConfigLegacy {
+impl Default for DMSCDeviceControlConfigLegacy {
     /// Returns the default configuration for device control.
     /// 
     /// Default values:
@@ -200,11 +200,11 @@ impl Default for DMSDeviceControlConfigLegacy {
 /// This struct contains information about the results of a device discovery scan, including
 /// discovered, updated, and removed devices.
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct DMSDiscoveryResult {
+pub struct DMSCDiscoveryResult {
     /// Newly discovered devices
-    pub discovered_devices: Vec<DMSDevice>,
+    pub discovered_devices: Vec<DMSCDevice>,
     /// Devices with updated information
-    pub updated_devices: Vec<DMSDevice>,
+    pub updated_devices: Vec<DMSCDevice>,
     /// IDs of removed devices
     pub removed_devices: Vec<String>, // device IDs
     /// Total number of devices after discovery
@@ -217,25 +217,25 @@ pub struct DMSDiscoveryResult {
 /// priority, timeout, and advanced scheduling preferences such as SLA, resource weights,
 /// and affinity rules. New fields are optional to preserve backward compatibility.
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct DMSResourceRequest {
+pub struct DMSCResourceRequest {
     /// Unique request ID
     pub request_id: String,
     /// Required device type
-    pub device_type: DMSDeviceType,
+    pub device_type: DMSCDeviceType,
     /// Required device capabilities
-    pub required_capabilities: DMSDeviceCapabilities,
+    pub required_capabilities: DMSCDeviceCapabilities,
     /// Request priority (1-10, higher is more important)
     pub priority: u8, // 1-10, higher is more important
     /// Request timeout in seconds
     pub timeout_secs: u64,
     /// Optional SLA class for this request (e.g. Critical / High / Medium / Low)
-    pub sla_class: Option<DMSRequestSlaClass>,
+    pub sla_class: Option<DMSCRequestSlaClass>,
     /// Optional multi-dimensional resource weights to influence scheduling decisions
-    pub resource_weights: Option<DMSResourceWeights>,
+    pub resource_weights: Option<DMSCResourceWeights>,
     /// Optional affinity rules describing preferred/required device labels
-    pub affinity: Option<DMSAffinityRules>,
+    pub affinity: Option<DMSCAffinityRules>,
     /// Optional anti-affinity rules describing labels or devices to avoid
-    pub anti_affinity: Option<DMSAffinityRules>,
+    pub anti_affinity: Option<DMSCAffinityRules>,
 }
 
 /// SLA class for a resource request.
@@ -243,7 +243,7 @@ pub struct DMSResourceRequest {
 /// This enum describes the service level expectations for a request. Schedulers can
 /// use this information to trade off between latency, availability, and resource usage.
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]
-pub enum DMSRequestSlaClass {
+pub enum DMSCRequestSlaClass {
     /// Mission critical requests that should be served with the highest priority
     Critical,
     /// High priority requests
@@ -260,7 +260,7 @@ pub enum DMSRequestSlaClass {
 /// (compute, memory, storage, bandwidth) for a specific request. Schedulers can use these
 /// weights when computing fitness scores.
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct DMSResourceWeights {
+pub struct DMSCResourceWeights {
     /// Weight for compute resources (e.g. CPU cores, GPU units)
     pub compute_weight: f64,
     /// Weight for memory capacity
@@ -276,7 +276,7 @@ pub struct DMSResourceWeights {
 /// Rules are expressed as label key/value pairs. Implementations can interpret labels
 /// using device metadata such as location, zone, rack, tenant, etc.
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct DMSAffinityRules {
+pub struct DMSCAffinityRules {
     /// Labels that must be present with matching values
     pub required_labels: HashMap<String, String>,
     /// Labels that are preferred (but not strictly required)
@@ -290,7 +290,7 @@ pub struct DMSAffinityRules {
 /// This struct contains information about a successful resource allocation, including the allocated
 /// device, allocation time, and expiration time.
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct DMSResourceAllocation {
+pub struct DMSCResourceAllocation {
     /// Unique allocation ID
     pub allocation_id: String,
     /// ID of the allocated device
@@ -302,33 +302,33 @@ pub struct DMSResourceAllocation {
     /// Time when the allocation expires
     pub expires_at: chrono::DateTime<chrono::Utc>,
     /// Original resource request
-    pub request: DMSResourceRequest,
+    pub request: DMSCResourceRequest,
 }
 
-impl Default for DMSDeviceControlModule {
+impl Default for DMSCDeviceControlModule {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl DMSDeviceControlModule {
+impl DMSCDeviceControlModule {
     /// Creates a new device control module with default configuration.
     /// 
     /// # Returns
     /// 
-    /// A new `DMSDeviceControlModule` instance with default configuration
+    /// A new `DMSCDeviceControlModule` instance with default configuration
     pub fn new() -> Self {
-        let controller = Arc::new(RwLock::new(DMSDeviceController::new()));
-        let resource_pool_manager = Arc::new(ParkingRwLock::new(DMSResourcePoolManager::new()));
-        let scheduler = Arc::new(RwLock::new(DMSDeviceScheduler::new(resource_pool_manager)));
-        let discovery_engine = Arc::new(RwLock::new(DMSResourceScheduler::new()));
+        let controller = Arc::new(RwLock::new(DMSCDeviceController::new()));
+        let resource_pool_manager = Arc::new(ParkingRwLock::new(DMSCResourcePoolManager::new()));
+        let scheduler = Arc::new(RwLock::new(DMSCDeviceScheduler::new(resource_pool_manager)));
+        let discovery_engine = Arc::new(RwLock::new(DMSCResourceScheduler::new()));
         
         Self {
             controller,
             scheduler,
             discovery_engine,
             resource_pools: HashMap::new(),
-            config: crate::device::core::DMSDeviceControlConfig::default(),
+            config: crate::device::core::DMSCDeviceControlConfig::default(),
             metrics_registry: Arc::new(ParkingRwLock::new(None)),
         }
     }
@@ -341,8 +341,8 @@ impl DMSDeviceControlModule {
     /// 
     /// # Returns
     /// 
-    /// The updated `DMSDeviceControlModule` instance
-    pub fn with_config(mut self, config: crate::device::core::DMSDeviceControlConfig) -> Self {
+    /// The updated `DMSCDeviceControlModule` instance
+    pub fn with_config(mut self, config: crate::device::core::DMSCDeviceControlConfig) -> Self {
         self.config = config;
         self
     }
@@ -354,12 +354,12 @@ impl DMSDeviceControlModule {
     /// 
     /// # Returns
     /// 
-    /// A `DMSResult<DMSDiscoveryResult>` containing the discovery results
-    pub async fn discover_devices(&self) -> DMSResult<DMSDiscoveryResult> {
+    /// A `DMSCResult<DMSCDiscoveryResult>` containing the discovery results
+    pub async fn discover_devices(&self) -> DMSCResult<DMSCDiscoveryResult> {
         if !self.config.enable_cpu_discovery && !self.config.enable_gpu_discovery && 
            !self.config.enable_memory_discovery && !self.config.enable_storage_discovery && 
            !self.config.enable_network_discovery {
-            return Ok(DMSDiscoveryResult {
+            return Ok(DMSCDiscoveryResult {
                 discovered_devices: vec![],
                 updated_devices: vec![],
                 removed_devices: vec![],
@@ -382,16 +382,16 @@ impl DMSDeviceControlModule {
     /// 
     /// # Returns
     /// 
-    /// A `DMSResult<Option<DMSResourceAllocation>>` containing the allocation result if successful,
+    /// A `DMSCResult<Option<DMSCResourceAllocation>>` containing the allocation result if successful,
     /// or None if allocation failed or auto-scheduling is disabled
-    pub async fn allocate_resource(&self, request: DMSResourceRequest) -> DMSResult<Option<DMSResourceAllocation>> {
+    pub async fn allocate_resource(&self, request: DMSCResourceRequest) -> DMSCResult<Option<DMSCResourceAllocation>> {
         // Check if any device type scheduling is enabled
         let scheduling_enabled = match request.device_type {
-            DMSDeviceType::CPU => self.config.enable_cpu_discovery,
-            DMSDeviceType::GPU => self.config.enable_gpu_discovery,
-            DMSDeviceType::Memory => self.config.enable_memory_discovery,
-            DMSDeviceType::Storage => self.config.enable_storage_discovery,
-            DMSDeviceType::Network => self.config.enable_network_discovery,
+            DMSCDeviceType::CPU => self.config.enable_cpu_discovery,
+            DMSCDeviceType::GPU => self.config.enable_gpu_discovery,
+            DMSCDeviceType::Memory => self.config.enable_memory_discovery,
+            DMSCDeviceType::Storage => self.config.enable_storage_discovery,
+            DMSCDeviceType::Network => self.config.enable_network_discovery,
             _ => true, // Default to enabled for unknown types
         };
         
@@ -399,7 +399,7 @@ impl DMSDeviceControlModule {
             return Ok(None);
         }
 
-        let allocation_request = crate::device::scheduler::DMSAllocationRequest {
+        let allocation_request = crate::device::scheduler::DMSCAllocationRequest {
             device_type: request.device_type,
             capabilities: request.required_capabilities,
             priority: request.priority as u32,
@@ -414,13 +414,13 @@ impl DMSDeviceControlModule {
         let device = scheduler.select_device(&allocation_request);
 
         if let Some(device) = device {
-            let allocation = DMSResourceAllocation {
+            let allocation = DMSCResourceAllocation {
                 allocation_id: uuid::Uuid::new_v4().to_string(),
                 device_id: device.id().to_string(),
                 device_name: device.name().to_string(),
                 allocated_at: chrono::Utc::now(),
                 expires_at: chrono::Utc::now() + chrono::Duration::seconds(allocation_request.timeout_secs as i64),
-                request: DMSResourceRequest {
+                request: DMSCResourceRequest {
                     request_id: request.request_id,
                     device_type: allocation_request.device_type,
                     required_capabilities: allocation_request.capabilities,
@@ -453,8 +453,8 @@ impl DMSDeviceControlModule {
     /// 
     /// # Returns
     /// 
-    /// A `DMSResult<()>` indicating success or failure
-    pub async fn release_resource(&self, allocation_id: &str) -> DMSResult<()> {
+    /// A `DMSCResult<()>` indicating success or failure
+    pub async fn release_resource(&self, allocation_id: &str) -> DMSCResult<()> {
         let mut controller = self.controller.write().await;
         controller.release_device_by_allocation(allocation_id).await
     }
@@ -465,8 +465,8 @@ impl DMSDeviceControlModule {
     /// 
     /// # Returns
     /// 
-    /// A `DMSResult<Vec<DMSDevice>>` containing all managed devices
-    pub async fn get_device_status(&self) -> DMSResult<Vec<DMSDevice>> {
+    /// A `DMSCResult<Vec<DMSCDevice>>` containing all managed devices
+    pub async fn get_device_status(&self) -> DMSCResult<Vec<DMSCDevice>> {
         let controller = self.controller.read().await;
         Ok(controller.get_all_devices())
     }
@@ -477,8 +477,8 @@ impl DMSDeviceControlModule {
     /// 
     /// # Returns
     /// 
-    /// A `HashMap<String, DMSResourcePoolStatus>` containing the status of all resource pools
-    pub fn get_resource_pool_status(&self) -> HashMap<String, DMSResourcePoolStatus> {
+    /// A `HashMap<String, DMSCResourcePoolStatus>` containing the status of all resource pools
+    pub fn get_resource_pool_status(&self) -> HashMap<String, DMSCResourcePoolStatus> {
         let mut status = HashMap::new();
         for (pool_name, pool) in &self.resource_pools {
             status.insert(pool_name.clone(), pool.get_status());
@@ -503,12 +503,12 @@ impl DMSDeviceControlModule {
     /// 
     /// # Returns
     /// 
-    /// A `DMSResult<()>` indicating success or failure
+    /// A `DMSCResult<()>` indicating success or failure
     #[allow(dead_code)]
-    fn create_device_metrics(&self, registry: Arc<DMSMetricsRegistry>) -> DMSResult<()> {
+    fn create_device_metrics(&self, registry: Arc<DMSCMetricsRegistry>) -> DMSCResult<()> {
         // Device total metric (Gauge)
-        let device_total_config = DMSMetricConfig {
-            metric_type: DMSMetricType::Gauge,
+        let device_total_config = DMSCMetricConfig {
+            metric_type: DMSCMetricType::Gauge,
             name: "dms_device_total".to_string(),
             help: "Total number of devices by type and status".to_string(),
             buckets: vec![],
@@ -516,12 +516,12 @@ impl DMSDeviceControlModule {
             max_age: std::time::Duration::from_secs(300),
             age_buckets: 5,
         };
-        let device_total_metric = Arc::new(DMSMetric::new(device_total_config));
+        let device_total_metric = Arc::new(DMSCMetric::new(device_total_config));
         registry.register(device_total_metric)?;
         
         // Allocation attempts metric (Counter)
-        let allocation_attempts_config = DMSMetricConfig {
-            metric_type: DMSMetricType::Counter,
+        let allocation_attempts_config = DMSCMetricConfig {
+            metric_type: DMSCMetricType::Counter,
             name: "dms_device_allocation_attempts_total".to_string(),
             help: "Total number of device allocation attempts".to_string(),
             buckets: vec![],
@@ -529,12 +529,12 @@ impl DMSDeviceControlModule {
             max_age: std::time::Duration::from_secs(0),
             age_buckets: 0,
         };
-        let allocation_attempts_metric = Arc::new(DMSMetric::new(allocation_attempts_config));
+        let allocation_attempts_metric = Arc::new(DMSCMetric::new(allocation_attempts_config));
         registry.register(allocation_attempts_metric)?;
         
         // Allocation success metric (Counter)
-        let allocation_success_config = DMSMetricConfig {
-            metric_type: DMSMetricType::Counter,
+        let allocation_success_config = DMSCMetricConfig {
+            metric_type: DMSCMetricType::Counter,
             name: "dms_device_allocation_success_total".to_string(),
             help: "Total number of successful device allocations".to_string(),
             buckets: vec![],
@@ -542,12 +542,12 @@ impl DMSDeviceControlModule {
             max_age: std::time::Duration::from_secs(0),
             age_buckets: 0,
         };
-        let allocation_success_metric = Arc::new(DMSMetric::new(allocation_success_config));
+        let allocation_success_metric = Arc::new(DMSCMetric::new(allocation_success_config));
         registry.register(allocation_success_metric)?;
         
         // Allocation failure metric (Counter)
-        let allocation_failure_config = DMSMetricConfig {
-            metric_type: DMSMetricType::Counter,
+        let allocation_failure_config = DMSCMetricConfig {
+            metric_type: DMSCMetricType::Counter,
             name: "dms_device_allocation_failure_total".to_string(),
             help: "Total number of failed device allocations".to_string(),
             buckets: vec![],
@@ -555,12 +555,12 @@ impl DMSDeviceControlModule {
             max_age: std::time::Duration::from_secs(0),
             age_buckets: 0,
         };
-        let allocation_failure_metric = Arc::new(DMSMetric::new(allocation_failure_config));
+        let allocation_failure_metric = Arc::new(DMSCMetric::new(allocation_failure_config));
         registry.register(allocation_failure_metric)?;
         
         // Discovery attempts metric (Counter)
-        let discovery_attempts_config = DMSMetricConfig {
-            metric_type: DMSMetricType::Counter,
+        let discovery_attempts_config = DMSCMetricConfig {
+            metric_type: DMSCMetricType::Counter,
             name: "dms_device_discovery_attempts_total".to_string(),
             help: "Total number of device discovery attempts".to_string(),
             buckets: vec![],
@@ -568,12 +568,12 @@ impl DMSDeviceControlModule {
             max_age: std::time::Duration::from_secs(0),
             age_buckets: 0,
         };
-        let discovery_attempts_metric = Arc::new(DMSMetric::new(discovery_attempts_config));
+        let discovery_attempts_metric = Arc::new(DMSCMetric::new(discovery_attempts_config));
         registry.register(discovery_attempts_metric)?;
         
         // Discovery success metric (Counter)
-        let discovery_success_config = DMSMetricConfig {
-            metric_type: DMSMetricType::Counter,
+        let discovery_success_config = DMSCMetricConfig {
+            metric_type: DMSCMetricType::Counter,
             name: "dms_device_discovery_success_total".to_string(),
             help: "Total number of successful device discoveries".to_string(),
             buckets: vec![],
@@ -581,12 +581,12 @@ impl DMSDeviceControlModule {
             max_age: std::time::Duration::from_secs(0),
             age_buckets: 0,
         };
-        let discovery_success_metric = Arc::new(DMSMetric::new(discovery_success_config));
+        let discovery_success_metric = Arc::new(DMSCMetric::new(discovery_success_config));
         registry.register(discovery_success_metric)?;
         
         // Resource utilization metric (Gauge)
-        let resource_utilization_config = DMSMetricConfig {
-            metric_type: DMSMetricType::Gauge,
+        let resource_utilization_config = DMSCMetricConfig {
+            metric_type: DMSCMetricType::Gauge,
             name: "dms_device_resource_utilization".to_string(),
             help: "Resource utilization by device type".to_string(),
             buckets: vec![],
@@ -594,7 +594,7 @@ impl DMSDeviceControlModule {
             max_age: std::time::Duration::from_secs(300),
             age_buckets: 5,
         };
-        let resource_utilization_metric = Arc::new(DMSMetric::new(resource_utilization_config));
+        let resource_utilization_metric = Arc::new(DMSCMetric::new(resource_utilization_config));
         registry.register(resource_utilization_metric)?;
         
         Ok(())
@@ -606,7 +606,7 @@ impl DMSDeviceControlModule {
 /// This struct contains information about the current status of a resource pool, including capacity,
 /// allocation, and utilization.
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct DMSResourcePoolStatus {
+pub struct DMSCResourcePoolStatus {
     /// Total capacity of the resource pool
     pub total_capacity: usize,
     /// Available capacity in the resource pool
@@ -620,14 +620,14 @@ pub struct DMSResourcePoolStatus {
 }
 
 #[async_trait::async_trait]
-impl crate::core::DMSModule for DMSDeviceControlModule {
+impl crate::core::DMSCModule for DMSCDeviceControlModule {
     /// Returns the name of the device control module.
     /// 
     /// # Returns
     /// 
     /// The module name as a string
     fn name(&self) -> &str {
-        "DMS.DeviceControl"
+        "DMSC.DeviceControl"
     }
     
     /// Indicates whether the device control module is critical.
@@ -649,15 +649,15 @@ impl crate::core::DMSModule for DMSDeviceControlModule {
     /// 1. Loads configuration from the service context
     /// 2. Initializes real device discovery based on system hardware
     /// 3. Sets up resource scheduling and management
-    async fn init(&mut self, ctx: &mut DMSServiceContext) -> DMSResult<()> {
+    async fn init(&mut self, ctx: &mut DMSCServiceContext) -> DMSCResult<()> {
         // Load configuration
         let binding = ctx.config();
         let cfg = binding.config();
-        let mut device_config = crate::device::core::DMSDeviceControlConfig::default();
+        let mut device_config = crate::device::core::DMSCDeviceControlConfig::default();
         
         if let Some(config_str) = cfg.get("device") {
             device_config = serde_json::from_str(config_str)
-                .unwrap_or_else(|_| crate::device::core::DMSDeviceControlConfig::default());
+                .unwrap_or_else(|_| crate::device::core::DMSCDeviceControlConfig::default());
         }
         
         // Initialize device controller with real system hardware discovery
@@ -668,7 +668,7 @@ impl crate::core::DMSModule for DMSDeviceControlModule {
         drop(controller);
         
         // Create and configure discovery engine
-        let discovery_engine = DMSResourceScheduler::new();
+        let discovery_engine = DMSCResourceScheduler::new();
         
         // Store them for later use
         let mut discovery_guard = self.discovery_engine.write().await;
@@ -682,7 +682,7 @@ impl crate::core::DMSModule for DMSDeviceControlModule {
         }
         
         let logger = ctx.logger();
-        logger.info("DMS.DeviceControl", "Device control module initialized with real hardware discovery")?;
+        logger.info("DMSC.DeviceControl", "Device control module initialized with real hardware discovery")?;
         Ok(())
     }
 }

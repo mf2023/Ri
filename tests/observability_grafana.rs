@@ -1,7 +1,7 @@
 // Copyright © 2025 Wenze Wei. All Rights Reserved.
 //
-// This file is part of DMS.
-// The DMS project belongs to the Dunimd Team.
+// This file is part of DMSC.
+// The DMSC project belongs to the Dunimd Team.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -15,17 +15,17 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use dms_core::observability::grafana::{DMSGrafanaDashboard, DMSGrafanaPanel, DMSGridPos};
+use dmsc::observability::grafana::{DMSCGrafanaDashboard, DMSCGrafanaPanel, DMSCGridPos};
 
 #[test]
 fn test_grafana_dashboard() {
-    let mut dashboard = DMSGrafanaDashboard::new("Test Dashboard");
+    let mut dashboard = DMSCGrafanaDashboard::new("Test Dashboard");
     
-    let panel = DMSGrafanaPanel {
+    let panel = DMSCGrafanaPanel {
         title: "CPU Usage".to_string(),
         query: "cpu_usage_percent".to_string(),
         panel_type: "graph".to_string(),
-        grid_pos: DMSGridPos { h: 8, w: 12, x: 0, y: 0 },
+        grid_pos: DMSCGridPos { h: 8, w: 12, x: 0, y: 0 },
     };
     
     dashboard.add_panel(panel).unwrap();

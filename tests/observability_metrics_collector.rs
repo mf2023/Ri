@@ -1,7 +1,7 @@
 // Copyright © 2025 Wenze Wei. All Rights Reserved.
 //
-// This file is part of DMS.
-// The DMS project belongs to the Dunimd Team.
+// This file is part of DMSC.
+// The DMSC project belongs to the Dunimd Team.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -15,12 +15,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use dms_core::observability::metrics_collector::{DMSSlidingWindow, DMSQuantileCalculator, DMSPerformanceCollector};
+use dmsc::observability::metrics_collector::{DMSCSlidingWindow, DMSCQuantileCalculator, DMSCPerformanceCollector};
 use std::time::Duration;
 
 #[test]
 fn test_sliding_window() {
-    let mut window = DMSSlidingWindow::<i32>::new(
+    let mut window = DMSCSlidingWindow::<i32>::new(
         Duration::from_secs(10),
         Duration::from_secs(1),
     );
@@ -35,7 +35,7 @@ fn test_sliding_window() {
 
 #[test]
 fn test_quantile_calculator() {
-    let mut calc = DMSQuantileCalculator::new();
+    let mut calc = DMSCQuantileCalculator::new();
     
     calc.add(1.0);
     calc.add(2.0);
@@ -50,7 +50,7 @@ fn test_quantile_calculator() {
 
 #[test]
 fn test_performance_collector() {
-    let mut collector = DMSPerformanceCollector::new(
+    let mut collector = DMSCPerformanceCollector::new(
         Duration::from_secs(60),
         Duration::from_secs(5),
     );

@@ -1,7 +1,7 @@
 //! Copyright © 2025 Wenze Wei. All Rights Reserved.
 //!
-//! This file is part of DMS.
-//! The DMS project belongs to the Dunimd Team.
+//! This file is part of DMSC.
+//! The DMSC project belongs to the Dunimd Team.
 //!
 //! Licensed under the Apache License, Version 2.0 (the "License");
 //! You may not use this file except in compliance with the License.
@@ -17,21 +17,21 @@
 
 //! # Queue Module
 //! 
-//! This module provides a comprehensive queueing system for DMS, offering a unified interface
+//! This module provides a comprehensive queueing system for DMSC, offering a unified interface
 //! with support for multiple backend implementations. It enables reliable message passing and
 //! task scheduling across distributed systems.
 //! 
 //! ## Key Components
 //! 
-//! - **DMSQueueModule**: Main queue module implementing service module traits
-//! - **DMSQueueManager**: Central queue management component
-//! - **DMSQueue**: Unified queue interface implemented by all backends
-//! - **DMSQueueConfig**: Configuration for queue behavior
-//! - **DMSQueueMessage**: Message structure for queue operations
-//! - **DMSQueueConsumer**: Interface for consuming messages from queues
-//! - **DMSQueueProducer**: Interface for producing messages to queues
-//! - **QueueBackendType**: Enum defining supported queue backends
-//! - **QueueStats**: Statistics for queue monitoring
+//! - **DMSCQueueModule**: Main queue module implementing service module traits
+//! - **DMSCQueueManager**: Central queue management component
+//! - **DMSCQueue**: Unified queue interface implemented by all backends
+//! - **DMSCQueueConfig**: Configuration for queue behavior
+//! - **DMSCQueueMessage**: Message structure for queue operations
+//! - **DMSCQueueConsumer**: Interface for consuming messages from queues
+//! - **DMSCQueueProducer**: Interface for producing messages to queues
+//! - **DMSCQueueBackendType**: Enum defining supported queue backends
+//! - **DMSCQueueStats**: Statistics for queue monitoring
 //! 
 //! ## Design Principles
 //! 
@@ -56,11 +56,11 @@
 //!     data: String,
 //! }
 //! 
-//! async fn example() -> DMSResult<()> {
+//! async fn example() -> DMSCResult<()> {
 //!     // Create queue configuration
-//!     let queue_config = DMSQueueConfig {
+//!     let queue_config = DMSCQueueConfig {
 //!         enabled: true,
-//!         backend_type: QueueBackendType::Memory,
+//!         backend_type: DMSCQueueBackendType::Memory,
 //!         default_queue_name: "default".to_string(),
 //!         max_retry_count: 3,
 //!         retry_delay_ms: 1000,
@@ -68,7 +68,7 @@
 //!     };
 //!     
 //!     // Create queue module
-//!     let queue_module = DMSQueueModule::new(queue_config);
+//!     let queue_module = DMSCQueueModule::new(queue_config);
 //!     
 //!     // Get queue manager
 //!     let queue_manager = queue_module.queue_manager();
@@ -83,7 +83,7 @@
 //!     // Create a task message
 //!     let task = Task {
 //!         id: "task-123".to_string(),
-//!         data: "Hello, DMS Queue!".to_string(),
+//!         data: "Hello, DMSC Queue!".to_string(),
 //!     };
 //!     
 //!     // Send message to queue
@@ -108,6 +108,6 @@ pub mod backends;
 mod config;
 mod manager;
 
-pub use core::{DMSQueue, DMSQueueMessage, DMSQueueProducer, DMSQueueConsumer, DMSQueueStats};
-pub use config::{DMSQueueConfig, QueueBackendType};
-pub use manager::{DMSQueueManager, DMSQueueModule};
+pub use core::{DMSCQueue, DMSCQueueMessage, DMSCQueueProducer, DMSCQueueConsumer, DMSCQueueStats};
+pub use config::{DMSCQueueConfig, DMSCQueueBackendType, DMSCRetryPolicy, DMSCDeadLetterConfig};
+pub use manager::{DMSCQueueManager, DMSCQueueModule};

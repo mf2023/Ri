@@ -1,7 +1,7 @@
 //! Copyright © 2025 Wenze Wei. All Rights Reserved.
 //!
-//! This file is part of DMS.
-//! The DMS project belongs to the Dunimd Team.
+//! This file is part of DMSC.
+//! The DMSC project belongs to the Dunimd Team.
 //!
 //! Licensed under the Apache License, Version 2.0 (the "License");
 //! You may not use this file except in compliance with the License.
@@ -17,25 +17,25 @@
 
 //! # Authentication Module
 //! 
-//! This module provides comprehensive authentication and authorization functionality for DMS,
+//! This module provides comprehensive authentication and authorization functionality for DMSC,
 //! offering multiple authentication methods and a robust permission system.
 //! 
 //! ## Key Components
 //! 
-//! - **DMSAuthModule**: Main auth module implementing service module traits
-//! - **DMSAuthConfig**: Configuration for authentication behavior
-//! - **DMSJWTManager**: JWT token management for stateless authentication
-//! - **DMSSessionManager**: Session management for stateful authentication
-//! - **DMSPermissionManager**: Permission and role management
-//! - **DMSOAuthManager**: OAuth provider integration
-//! - **DMSJWTClaims**: JWT token claims structure
-//! - **DMSJWTValidationOptions**: JWT validation options
-//! - **DMSOAuthProvider**: OAuth provider interface
-//! - **DMSOAuthToken**: OAuth token structure
-//! - **DMSOAuthUserInfo**: OAuth user information
-//! - **DMSPermission**: Permission structure
-//! - **DMSRole**: Role structure with permissions
-//! - **DMSSession**: Session structure
+//! - **DMSCAuthModule**: Main auth module implementing service module traits
+//! - **DMSCAuthConfig**: Configuration for authentication behavior
+//! - **DMSCJWTManager**: JWT token management for stateless authentication
+//! - **DMSCSessionManager**: Session management for stateful authentication
+//! - **DMSCPermissionManager**: Permission and role management
+//! - **DMSCOAuthManager**: OAuth provider integration
+//! - **DMSCJWTClaims**: JWT token claims structure
+//! - **DMSCJWTValidationOptions**: JWT validation options
+//! - **DMSCOAuthProvider**: OAuth provider interface
+//! - **DMSCOAuthToken**: OAuth token structure
+//! - **DMSCOAuthUserInfo**: OAuth user information
+//! - **DMSCPermission**: Permission structure
+//! - **DMSCRole**: Role structure with permissions
+//! - **DMSCSession**: Session structure
 //! 
 //! ## Design Principles
 //! 
@@ -54,12 +54,12 @@
 //! 
 //! ```rust
 //! use dms::prelude::*;
-//! use dms::auth::{DMSAuthConfig, DMSJWTManager, DMSJWTClaims};
+//! use dms::auth::{DMSCAuthConfig, DMSCJWTManager, DMSCJWTClaims};
 //! use serde_json::json;
 //! 
-//! async fn example() -> DMSResult<()> {
+//! async fn example() -> DMSCResult<()> {
 //!     // Create auth configuration
-//!     let auth_config = DMSAuthConfig {
+//!     let auth_config = DMSCAuthConfig {
 //!         enabled: true,
 //!         jwt_secret: "secure-secret-key".to_string(),
 //!         jwt_expiry_secs: 3600,
@@ -70,13 +70,13 @@
 //!     };
 //!     
 //!     // Create auth module
-//!     let auth_module = DMSAuthModule::new(auth_config);
+//!     let auth_module = DMSCAuthModule::new(auth_config);
 //!     
 //!     // Get JWT manager
 //!     let jwt_manager = auth_module.jwt_manager();
 //!     
 //!     // Create JWT claims
-//!     let claims = DMSJWTClaims {
+//!     let claims = DMSCJWTClaims {
 //!         sub: "user-123".to_string(),
 //!         email: "user@example.com".to_string(),
 //!         roles: vec!["user".to_string()],
@@ -108,12 +108,12 @@ mod oauth;
 mod permissions;
 mod session;
 
-pub use jwt::DMSJWTManager;
-pub use oauth::DMSOAuthManager;
-pub use permissions::DMSPermissionManager;
-pub use session::DMSSessionManager;
+pub use jwt::DMSCJWTManager;
+pub use oauth::DMSCOAuthManager;
+pub use permissions::DMSCPermissionManager;
+pub use session::DMSCSessionManager;
 
-use crate::core::{DMSResult, DMSServiceContext};
+use crate::core::{DMSCResult, DMSCServiceContext};
 use serde::Deserialize;
 use std::sync::Arc;
 use tokio::sync::RwLock;
@@ -128,7 +128,7 @@ use pyo3::PyResult;
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 #[derive(Debug, Clone)]
 #[derive(Deserialize)]
-pub struct DMSAuthConfig {
+pub struct DMSCAuthConfig {
     /// Whether authentication is enabled
     pub enabled: bool,
     /// Secret key for JWT token generation and validation
@@ -145,7 +145,7 @@ pub struct DMSAuthConfig {
     pub enable_session_auth: bool,
 }
 
-impl Default for DMSAuthConfig {
+impl Default for DMSCAuthConfig {
     /// Returns the default configuration for authentication.
     /// 
     /// Default values:
@@ -169,25 +169,25 @@ impl Default for DMSAuthConfig {
     }
 }
 
-/// Main authentication module for DMS.
+/// Main authentication module for DMSC.
 /// 
 /// This module provides comprehensive authentication and authorization functionality,
 /// including JWT management, session management, permission management, and OAuth integration.
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
-pub struct DMSAuthModule {
+pub struct DMSCAuthModule {
     /// Authentication configuration
-    config: DMSAuthConfig,
+    config: DMSCAuthConfig,
     /// JWT manager for stateless authentication
-    jwt_manager: Arc<DMSJWTManager>,
+    jwt_manager: Arc<DMSCJWTManager>,
     /// Session manager for stateful authentication, protected by a RwLock for thread-safe access
-    session_manager: Arc<RwLock<DMSSessionManager>>,
+    session_manager: Arc<RwLock<DMSCSessionManager>>,
     /// Permission manager for role-based access control, protected by a RwLock for thread-safe access
-    permission_manager: Arc<RwLock<DMSPermissionManager>>,
+    permission_manager: Arc<RwLock<DMSCPermissionManager>>,
     /// OAuth manager for OAuth provider integration, protected by a RwLock for thread-safe access
-    oauth_manager: Arc<RwLock<DMSOAuthManager>>,
+    oauth_manager: Arc<RwLock<DMSCOAuthManager>>,
 }
 
-impl DMSAuthModule {
+impl DMSCAuthModule {
     /// Creates a new authentication module with the given configuration.
     /// 
     /// **Performance Note**: This method creates a permission manager using the synchronous
@@ -200,13 +200,13 @@ impl DMSAuthModule {
     /// 
     /// # Returns
     /// 
-    /// A new `DMSAuthModule` instance
-    pub fn new(config: DMSAuthConfig) -> Self {
-        let jwt_manager = Arc::new(DMSJWTManager::new(config.jwt_secret.clone(), config.jwt_expiry_secs));
-        let session_manager = Arc::new(RwLock::new(DMSSessionManager::new(config.session_timeout_secs)));
-        let permission_manager = Arc::new(RwLock::new(DMSPermissionManager::new()));
-        let cache = Arc::new(crate::cache::DMSMemoryCache::new());
-        let oauth_manager = Arc::new(RwLock::new(DMSOAuthManager::new(cache)));
+    /// A new `DMSCAuthModule` instance
+    pub fn new(config: DMSCAuthConfig) -> Self {
+        let jwt_manager = Arc::new(DMSCJWTManager::new(config.jwt_secret.clone(), config.jwt_expiry_secs));
+        let session_manager = Arc::new(RwLock::new(DMSCSessionManager::new(config.session_timeout_secs)));
+        let permission_manager = Arc::new(RwLock::new(DMSCPermissionManager::new()));
+        let cache = Arc::new(crate::cache::DMSCMemoryCache::new());
+        let oauth_manager = Arc::new(RwLock::new(DMSCOAuthManager::new(cache)));
 
         Self {
             config,
@@ -228,13 +228,13 @@ impl DMSAuthModule {
     /// 
     /// # Returns
     /// 
-    /// A new `DMSAuthModule` instance
-    pub async fn new_async(config: DMSAuthConfig) -> Self {
-        let jwt_manager = Arc::new(DMSJWTManager::new(config.jwt_secret.clone(), config.jwt_expiry_secs));
-        let session_manager = Arc::new(RwLock::new(DMSSessionManager::new(config.session_timeout_secs)));
-        let permission_manager = Arc::new(RwLock::new(DMSPermissionManager::new_async().await));
-        let cache = Arc::new(crate::cache::DMSMemoryCache::new());
-        let oauth_manager = Arc::new(RwLock::new(DMSOAuthManager::new(cache)));
+    /// A new `DMSCAuthModule` instance
+    pub async fn new_async(config: DMSCAuthConfig) -> Self {
+        let jwt_manager = Arc::new(DMSCJWTManager::new(config.jwt_secret.clone(), config.jwt_expiry_secs));
+        let session_manager = Arc::new(RwLock::new(DMSCSessionManager::new(config.session_timeout_secs)));
+        let permission_manager = Arc::new(RwLock::new(DMSCPermissionManager::new_async().await));
+        let cache = Arc::new(crate::cache::DMSCMemoryCache::new());
+        let oauth_manager = Arc::new(RwLock::new(DMSCOAuthManager::new(cache)));
 
         Self {
             config,
@@ -249,8 +249,8 @@ impl DMSAuthModule {
     /// 
     /// # Returns
     /// 
-    /// An Arc<DMSJWTManager> providing thread-safe access to the JWT manager
-    pub fn jwt_manager(&self) -> Arc<DMSJWTManager> {
+    /// An Arc<DMSCJWTManager> providing thread-safe access to the JWT manager
+    pub fn jwt_manager(&self) -> Arc<DMSCJWTManager> {
         self.jwt_manager.clone()
     }
 
@@ -258,8 +258,8 @@ impl DMSAuthModule {
     /// 
     /// # Returns
     /// 
-    /// An Arc<RwLock<DMSSessionManager>> providing thread-safe access to the session manager
-    pub fn session_manager(&self) -> Arc<RwLock<DMSSessionManager>> {
+    /// An Arc<RwLock<DMSCSessionManager>> providing thread-safe access to the session manager
+    pub fn session_manager(&self) -> Arc<RwLock<DMSCSessionManager>> {
         self.session_manager.clone()
     }
 
@@ -267,8 +267,8 @@ impl DMSAuthModule {
     /// 
     /// # Returns
     /// 
-    /// An Arc<RwLock<DMSPermissionManager>> providing thread-safe access to the permission manager
-    pub fn permission_manager(&self) -> Arc<RwLock<DMSPermissionManager>> {
+    /// An Arc<RwLock<DMSCPermissionManager>> providing thread-safe access to the permission manager
+    pub fn permission_manager(&self) -> Arc<RwLock<DMSCPermissionManager>> {
         self.permission_manager.clone()
     }
 
@@ -276,57 +276,57 @@ impl DMSAuthModule {
     /// 
     /// # Returns
     /// 
-    /// An Arc<RwLock<DMSOAuthManager>> providing thread-safe access to the OAuth manager
-    pub fn oauth_manager(&self) -> Arc<RwLock<DMSOAuthManager>> {
+    /// An Arc<RwLock<DMSCOAuthManager>> providing thread-safe access to the OAuth manager
+    pub fn oauth_manager(&self) -> Arc<RwLock<DMSCOAuthManager>> {
         self.oauth_manager.clone()
     }
 }
 
 #[cfg(feature = "pyo3")]
-/// Python bindings for DMSAuthModule
+/// Python bindings for DMSCAuthModule
 #[pyo3::prelude::pymethods]
-impl DMSAuthModule {
+impl DMSCAuthModule {
     #[new]
-    fn py_new(config: DMSAuthConfig) -> PyResult<Self> {
+    fn py_new(config: DMSCAuthConfig) -> PyResult<Self> {
         Ok(Self::new(config))
     }
     
     /// Get JWT manager from Python
-    fn jwt_manager_py(&self) -> PyResult<DMSJWTManager> {
+    fn jwt_manager_py(&self) -> PyResult<DMSCJWTManager> {
         // Create a new JWT manager with the same configuration
-        Ok(DMSJWTManager::new(self.jwt_manager.get_secret().to_string(), self.jwt_manager.get_token_expiry()))
+        Ok(DMSCJWTManager::new(self.jwt_manager.get_secret().to_string(), self.jwt_manager.get_token_expiry()))
     }
     
     /// Get session manager from Python
-    fn session_manager_py(&self) -> PyResult<DMSSessionManager> {
+    fn session_manager_py(&self) -> PyResult<DMSCSessionManager> {
         // For now, return a new session manager with the same timeout
         // In a real implementation, you'd want to properly clone the state
-        Ok(DMSSessionManager::new(self.config.session_timeout_secs))
+        Ok(DMSCSessionManager::new(self.config.session_timeout_secs))
     }
     
     /// Get permission manager from Python
-    fn permission_manager_py(&self) -> PyResult<DMSPermissionManager> {
+    fn permission_manager_py(&self) -> PyResult<DMSCPermissionManager> {
         // Return a new permission manager
-        Ok(DMSPermissionManager::new())
+        Ok(DMSCPermissionManager::new())
     }
     
     /// Get OAuth manager from Python
-    fn oauth_manager_py(&self) -> PyResult<DMSOAuthManager> {
+    fn oauth_manager_py(&self) -> PyResult<DMSCOAuthManager> {
         // Create a new OAuth manager with a memory cache
-        let cache = Arc::new(crate::cache::DMSMemoryCache::new());
-        Ok(DMSOAuthManager::new(cache))
+        let cache = Arc::new(crate::cache::DMSCMemoryCache::new());
+        Ok(DMSCOAuthManager::new(cache))
     }
 }
 
 #[async_trait::async_trait]
-impl crate::core::DMSModule for DMSAuthModule {
+impl crate::core::DMSCModule for DMSCAuthModule {
     /// Returns the name of the authentication module.
     /// 
     /// # Returns
     /// 
     /// The module name as a string
     fn name(&self) -> &str {
-        "DMS.Auth"
+        "DMSC.Auth"
     }
 
     /// Indicates whether the authentication module is critical.
@@ -356,9 +356,9 @@ impl crate::core::DMSModule for DMSAuthModule {
     /// 
     /// # Returns
     /// 
-    /// A `DMSResult<()>` indicating success or failure
-    async fn init(&mut self, ctx: &mut DMSServiceContext) -> DMSResult<()> {
-        log::info!("Initializing DMS Auth Module");
+    /// A `DMSCResult<()>` indicating success or failure
+    async fn init(&mut self, ctx: &mut DMSCServiceContext) -> DMSCResult<()> {
+        log::info!("Initializing DMSC Auth Module");
 
         // Load configuration
         let binding = ctx.config();
@@ -367,18 +367,18 @@ impl crate::core::DMSModule for DMSAuthModule {
         // Update configuration if provided
         if let Some(auth_config) = cfg.get("auth") {
             self.config = serde_yaml::from_str(auth_config)
-                .unwrap_or_else(|_| DMSAuthConfig::default());
+                .unwrap_or_else(|_| DMSCAuthConfig::default());
         }
 
         // Initialize JWT manager with new config
-        self.jwt_manager = Arc::new(DMSJWTManager::new(self.config.jwt_secret.clone(), self.config.jwt_expiry_secs));
+        self.jwt_manager = Arc::new(DMSCJWTManager::new(self.config.jwt_secret.clone(), self.config.jwt_expiry_secs));
 
         // Initialize OAuth providers if configured
         if !self.config.oauth_providers.is_empty() {
             for provider_name in &self.config.oauth_providers {
                 // Initialize OAuth provider with default configuration
                 // In production, this would load provider-specific configuration from secure storage
-                let provider_config = crate::auth::oauth::DMSOAuthProvider {
+                let provider_config = crate::auth::oauth::DMSCOAuthProvider {
                     id: provider_name.clone(),
                     name: provider_name.clone(),
                     client_id: format!("{provider_name}_client_id"),
@@ -397,7 +397,7 @@ impl crate::core::DMSModule for DMSAuthModule {
             }
         }
 
-        log::info!("DMS Auth Module initialized successfully");
+        log::info!("DMSC Auth Module initialized successfully");
         Ok(())
     }
 
@@ -411,15 +411,15 @@ impl crate::core::DMSModule for DMSAuthModule {
     /// 
     /// # Returns
     /// 
-    /// A `DMSResult<()>` indicating success or failure
-    async fn after_shutdown(&mut self, _ctx: &mut DMSServiceContext) -> DMSResult<()> {
-        log::info!("Cleaning up DMS Auth Module");
+    /// A `DMSCResult<()>` indicating success or failure
+    async fn after_shutdown(&mut self, _ctx: &mut DMSCServiceContext) -> DMSCResult<()> {
+        log::info!("Cleaning up DMSC Auth Module");
         
         // Cleanup sessions
         let session_mgr = self.session_manager.write().await;
         session_mgr.cleanup_all().await?;
         
-        log::info!("DMS Auth Module cleanup completed");
+        log::info!("DMSC Auth Module cleanup completed");
         Ok(())
     }
 }

@@ -1,7 +1,7 @@
 //! Copyright © 2025 Wenze Wei. All Rights Reserved.
 //!
-//! This file is part of DMS.
-//! The DMS project belongs to the Dunimd Team.
+//! This file is part of DMSC.
+//! The DMSC project belongs to the Dunimd Team.
 //!
 //! Licensed under the Apache License, Version 2.0 (the "License");
 //! You may not use this file except in compliance with the License.
@@ -19,49 +19,49 @@
 
 //! # Gateway Module
 //! 
-//! This module provides a comprehensive API gateway functionality for DMS, offering routing, middleware support,
+//! This module provides a comprehensive API gateway functionality for DMSC, offering routing, middleware support,
 //! load balancing, rate limiting, and circuit breaking capabilities.
 //! 
 //! ## Key Components
 //! 
-//! - **DMSGateway**: Main gateway struct implementing the DMSModule trait
-//! - **DMSGatewayConfig**: Configuration for gateway behavior
-//! - **DMSGatewayRequest**: Request structure for gateway operations
-//! - **DMSGatewayResponse**: Response structure for gateway operations
-//! - **DMSRoute**: Route definition for API endpoints
-//! - **DMSRouter**: Router for handling request routing
-//! - **DMSMiddleware**: Middleware interface for request processing
-//! - **DMSMiddlewareChain**: Chain of middleware for sequential execution
-//! - **DMSLoadBalancer**: Load balancing for distributing requests across multiple services
-//! - **DMSLoadBalancerStrategy**: Load balancing strategies (RoundRobin, LeastConnections, etc.)
-//! - **DMSRateLimiter**: Rate limiting for controlling request rates
-//! - **DMSRateLimitConfig**: Configuration for rate limiting
-//! - **DMSCircuitBreaker**: Circuit breaker for preventing cascading failures
-//! - **DMSCircuitBreakerConfig**: Configuration for circuit breakers
+//! - **DMSCGateway**: Main gateway struct implementing the DMSCModule trait
+//! - **DMSCGatewayConfig**: Configuration for gateway behavior
+//! - **DMSCGatewayRequest**: Request structure for gateway operations
+//! - **DMSCGatewayResponse**: Response structure for gateway operations
+//! - **DMSCRoute**: Route definition for API endpoints
+//! - **DMSCRouter**: Router for handling request routing
+//! - **DMSCMiddleware**: Middleware interface for request processing
+//! - **DMSCMiddlewareChain**: Chain of middleware for sequential execution
+//! - **DMSCLoadBalancer**: Load balancing for distributing requests across multiple services
+//! - **DMSCLoadBalancerStrategy**: Load balancing strategies (RoundRobin, LeastConnections, etc.)
+//! - **DMSCRateLimiter**: Rate limiting for controlling request rates
+//! - **DMSCRateLimitConfig**: Configuration for rate limiting
+//! - **DMSCCircuitBreaker**: Circuit breaker for preventing cascading failures
+//! - **DMSCCircuitBreakerConfig**: Configuration for circuit breakers
 //! 
 //! ## Design Principles
 //! 
 //! 1. **Modular Design**: Separate components for routing, middleware, load balancing, rate limiting, and circuit breaking
 //! 2. **Async-First**: All gateway operations are asynchronous
-//! 3. **Configurable**: Highly configurable gateway behavior through DMSGatewayConfig
+//! 3. **Configurable**: Highly configurable gateway behavior through DMSCGatewayConfig
 //! 4. **Middleware Support**: Extensible middleware system for request processing
 //! 5. **Resilience**: Built-in circuit breaker and rate limiting for service resilience
 //! 6. **Load Balancing**: Support for distributing requests across multiple service instances
 //! 7. **CORS Support**: Built-in CORS configuration for cross-origin requests
 //! 8. **Logging**: Comprehensive logging support
-//! 9. **Service Integration**: Implements DMSModule trait for seamless integration into DMS
+//! 9. **Service Integration**: Implements DMSCModule trait for seamless integration into DMSC
 //! 10. **Thread-safe**: Uses Arc and RwLock for safe concurrent access
 //! 
 //! ## Usage
 //! 
 //! ```rust
 //! use dms::prelude::*;
-//! use dms::gateway::{DMSGateway, DMSGatewayConfig, DMSRoute};
+//! use dms::gateway::{DMSCGateway, DMSCGatewayConfig, DMSCRoute};
 //! use std::collections::HashMap;
 //! 
-//! async fn example() -> DMSResult<()> {
+//! async fn example() -> DMSCResult<()> {
 //!     // Create gateway configuration
-//!     let gateway_config = DMSGatewayConfig {
+//!     let gateway_config = DMSCGatewayConfig {
 //!         listen_address: "0.0.0.0".to_string(),
 //!         listen_port: 8080,
 //!         max_connections: 10000,
@@ -78,17 +78,17 @@
 //!     };
 //!     
 //!     // Create gateway instance
-//!     let gateway = DMSGateway::new();
+//!     let gateway = DMSCGateway::new();
 //!     
 //!     // Get router and add routes
 //!     let router = gateway.router();
 //!     
 //!     // Add a simple GET route
-//!     router.add_route(DMSRoute {
+//!     router.add_route(DMSCRoute {
 //!         path: "/api/v1/health".to_string(),
 //!         method: "GET".to_string(),
 //!         handler: Arc::new(|req| Box::pin(async move {
-//!             Ok(DMSGatewayResponse::json(200, &serde_json::json!({ "status": "ok" }), req.id.clone())?)
+//!             Ok(DMSCGatewayResponse::json(200, &serde_json::json!({ "status": "ok" }), req.id.clone())?)
 //!         })),
 //!         ..Default::default()
 //!     }).await?;
@@ -102,7 +102,7 @@
 //!     }))).await;
 //!     
 //!     // Handle a sample request
-//!     let sample_request = DMSGatewayRequest::new(
+//!     let sample_request = DMSCGatewayRequest::new(
 //!         "GET".to_string(),
 //!         "/api/v1/health".to_string(),
 //!         HashMap::new(),
@@ -118,7 +118,7 @@
 //! }
 //! ```
 
-use crate::core::{DMSModule, DMSServiceContext};
+use crate::core::{DMSCModule, DMSCServiceContext};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -130,19 +130,19 @@ pub mod circuit_breaker;
 pub mod load_balancer;
 pub mod rate_limiter;
 
-pub use routing::{DMSRoute, DMSRouter};
-pub use middleware::{DMSMiddleware, DMSMiddlewareChain};
-pub use load_balancer::{DMSLoadBalancer, DMSLoadBalancerStrategy};
-pub use rate_limiter::{DMSRateLimiter, DMSRateLimitConfig};
-pub use circuit_breaker::{DMSCircuitBreaker, DMSCircuitBreakerConfig};
+pub use routing::{DMSCRoute, DMSCRouter};
+pub use middleware::{DMSCMiddleware, DMSCMiddlewareChain};
+pub use load_balancer::{DMSCLoadBalancer, DMSCLoadBalancerStrategy};
+pub use rate_limiter::{DMSCRateLimiter, DMSCRateLimitConfig};
+pub use circuit_breaker::{DMSCCircuitBreaker, DMSCCircuitBreakerConfig};
 
-/// Configuration for the DMS Gateway.
+/// Configuration for the DMSC Gateway.
 /// 
 /// This struct defines the configuration options for the API gateway, including network settings,
 /// feature toggles, and CORS configuration.
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct DMSGatewayConfig {
+pub struct DMSCGatewayConfig {
     /// Address to listen on
     pub listen_address: String,
     /// Port to listen on
@@ -172,9 +172,9 @@ pub struct DMSGatewayConfig {
 }
 
 #[cfg(feature = "pyo3")]
-/// Python bindings for DMSGatewayConfig
+/// Python bindings for DMSCGatewayConfig
 #[pyo3::prelude::pymethods]
-impl DMSGatewayConfig {
+impl DMSCGatewayConfig {
     #[new]
     fn py_new() -> Self {
         Self::default()
@@ -190,7 +190,7 @@ impl DMSGatewayConfig {
     }
 }
 
-impl Default for DMSGatewayConfig {
+impl Default for DMSCGatewayConfig {
     /// Returns the default configuration for the gateway.
     /// 
     /// Default values:
@@ -231,7 +231,7 @@ impl Default for DMSGatewayConfig {
 /// This struct represents an HTTP request received by the gateway, including method, path, headers,
 /// query parameters, body, and remote address.
 #[derive(Debug, Clone)]
-pub struct DMSGatewayRequest {
+pub struct DMSCGatewayRequest {
     /// Unique request ID
     pub id: String,
     /// HTTP method (GET, POST, etc.)
@@ -250,7 +250,7 @@ pub struct DMSGatewayRequest {
     pub timestamp: std::time::Instant,
 }
 
-impl DMSGatewayRequest {
+impl DMSCGatewayRequest {
     /// Creates a new gateway request.
     /// 
     /// # Parameters
@@ -264,7 +264,7 @@ impl DMSGatewayRequest {
     /// 
     /// # Returns
     /// 
-    /// A new `DMSGatewayRequest` instance
+    /// A new `DMSCGatewayRequest` instance
     pub fn new(
         method: String,
         path: String,
@@ -291,7 +291,7 @@ impl DMSGatewayRequest {
 /// This struct represents an HTTP response returned by the gateway, including status code,
 /// headers, body, and request ID.
 #[derive(Debug, Clone)]
-pub struct DMSGatewayResponse {
+pub struct DMSCGatewayResponse {
     /// HTTP status code
     pub status_code: u16,
     /// HTTP headers
@@ -302,7 +302,7 @@ pub struct DMSGatewayResponse {
     pub request_id: String,
 }
 
-impl DMSGatewayResponse {
+impl DMSCGatewayResponse {
     /// Creates a new gateway response.
     /// 
     /// # Parameters
@@ -313,7 +313,7 @@ impl DMSGatewayResponse {
     /// 
     /// # Returns
     /// 
-    /// A new `DMSGatewayResponse` instance
+    /// A new `DMSCGatewayResponse` instance
     pub fn new(status_code: u16, body: Vec<u8>, request_id: String) -> Self {
         let mut headers = HashMap::new();
         headers.insert("Content-Type".to_string(), "application/json".to_string());
@@ -336,7 +336,7 @@ impl DMSGatewayResponse {
     /// 
     /// # Returns
     /// 
-    /// The updated `DMSGatewayResponse` instance
+    /// The updated `DMSCGatewayResponse` instance
     pub fn with_header(mut self, key: String, value: String) -> Self {
         self.headers.insert(key, value);
         self
@@ -352,8 +352,8 @@ impl DMSGatewayResponse {
     /// 
     /// # Returns
     /// 
-    /// A `DMSResult<Self>` containing the JSON response
-    pub fn json<T: serde::Serialize>(status_code: u16, data: &T, request_id: String) -> crate::core::DMSResult<Self> {
+    /// A `DMSCResult<Self>` containing the JSON response
+    pub fn json<T: serde::Serialize>(status_code: u16, data: &T, request_id: String) -> crate::core::DMSCResult<Self> {
         let body = serde_json::to_vec(data)?;
         Ok(Self::new(status_code, body, request_id))
     }
@@ -368,7 +368,7 @@ impl DMSGatewayResponse {
     /// 
     /// # Returns
     /// 
-    /// A new `DMSGatewayResponse` instance with error information
+    /// A new `DMSCGatewayResponse` instance with error information
     pub fn error(status_code: u16, message: String, request_id: String) -> Self {
         let error_body = serde_json::json!({
             "error": message,
@@ -380,58 +380,58 @@ impl DMSGatewayResponse {
     }
 }
 
-/// Main gateway struct implementing the DMSModule trait.
+/// Main gateway struct implementing the DMSCModule trait.
 /// 
 /// This struct provides the core gateway functionality, including request handling,
 /// routing, middleware execution, rate limiting, and circuit breaking.
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
-pub struct DMSGateway {
+pub struct DMSCGateway {
     /// Gateway configuration, protected by a RwLock for thread-safe access
-    config: RwLock<DMSGatewayConfig>,
+    config: RwLock<DMSCGatewayConfig>,
     /// Router for handling request routing
-    router: Arc<DMSRouter>,
+    router: Arc<DMSCRouter>,
     /// Middleware chain for request processing
-    middleware_chain: Arc<DMSMiddlewareChain>,
+    middleware_chain: Arc<DMSCMiddlewareChain>,
     /// Rate limiter for controlling request rates
-    rate_limiter: Option<Arc<DMSRateLimiter>>,
+    rate_limiter: Option<Arc<DMSCRateLimiter>>,
     /// Circuit breaker for preventing cascading failures
-    circuit_breaker: Option<Arc<DMSCircuitBreaker>>,
+    circuit_breaker: Option<Arc<DMSCCircuitBreaker>>,
     /// Load balancer for distributing requests across services
     #[allow(dead_code)]
-    load_balancer: Option<Arc<DMSLoadBalancer>>,
+    load_balancer: Option<Arc<DMSCLoadBalancer>>,
 }
 
-impl Default for DMSGateway {
+impl Default for DMSCGateway {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl DMSGateway {
+impl DMSCGateway {
     /// Creates a new gateway instance with default configuration.
     /// 
     /// # Returns
     /// 
-    /// A new `DMSGateway` instance
+    /// A new `DMSCGateway` instance
     pub fn new() -> Self {
-        let config = DMSGatewayConfig::default();
-        let router = Arc::new(DMSRouter::new());
-        let middleware_chain = Arc::new(DMSMiddlewareChain::new());
+        let config = DMSCGatewayConfig::default();
+        let router = Arc::new(DMSCRouter::new());
+        let middleware_chain = Arc::new(DMSCMiddlewareChain::new());
         
         let rate_limiter = if config.enable_rate_limiting {
-            Some(Arc::new(DMSRateLimiter::new(DMSRateLimitConfig::default())))
+            Some(Arc::new(DMSCRateLimiter::new(DMSCRateLimitConfig::default())))
         } else {
             None
         };
         
         let circuit_breaker = if config.enable_circuit_breaker {
-            Some(Arc::new(DMSCircuitBreaker::new(DMSCircuitBreakerConfig::default())))
+            Some(Arc::new(DMSCCircuitBreaker::new(DMSCCircuitBreakerConfig::default())))
         } else {
             None
         };
         
         let load_balancer = if config.enable_load_balancing {
-            Some(Arc::new(DMSLoadBalancer::new(DMSLoadBalancerStrategy::RoundRobin)))
+            Some(Arc::new(DMSCLoadBalancer::new(DMSCLoadBalancerStrategy::RoundRobin)))
         } else {
             None
         };
@@ -450,8 +450,8 @@ impl DMSGateway {
     /// 
     /// # Returns
     /// 
-    /// An Arc<DMSRouter> providing thread-safe access to the router
-    pub fn router(&self) -> Arc<DMSRouter> {
+    /// An Arc<DMSCRouter> providing thread-safe access to the router
+    pub fn router(&self) -> Arc<DMSCRouter> {
         self.router.clone()
     }
 
@@ -459,8 +459,8 @@ impl DMSGateway {
     /// 
     /// # Returns
     /// 
-    /// An Arc<DMSMiddlewareChain> providing thread-safe access to the middleware chain
-    pub fn middleware_chain(&self) -> Arc<DMSMiddlewareChain> {
+    /// An Arc<DMSCMiddlewareChain> providing thread-safe access to the middleware chain
+    pub fn middleware_chain(&self) -> Arc<DMSCMiddlewareChain> {
         self.middleware_chain.clone()
     }
 
@@ -479,21 +479,21 @@ impl DMSGateway {
     /// 
     /// # Returns
     /// 
-    /// A `DMSGatewayResponse` containing the response to the request
-    pub async fn handle_request(&self, request: DMSGatewayRequest) -> DMSGatewayResponse {
+    /// A `DMSCGatewayResponse` containing the response to the request
+    pub async fn handle_request(&self, request: DMSCGatewayRequest) -> DMSCGatewayResponse {
         let request_id = request.id.clone();
         
         // Apply rate limiting
         if let Some(rate_limiter) = &self.rate_limiter {
             if !rate_limiter.check_request(&request).await {
-                return DMSGatewayResponse::new(429, "Rate limit exceeded".to_string().into_bytes(), request_id);
+                return DMSCGatewayResponse::new(429, "Rate limit exceeded".to_string().into_bytes(), request_id);
             }
         }
 
         // Apply circuit breaker
         if let Some(circuit_breaker) = &self.circuit_breaker {
             if !circuit_breaker.allow_request().await {
-                return DMSGatewayResponse::new(503, "Service temporarily unavailable".to_string().into_bytes(), request_id);
+                return DMSCGatewayResponse::new(503, "Service temporarily unavailable".to_string().into_bytes(), request_id);
             }
         }
 
@@ -508,31 +508,31 @@ impl DMSGateway {
                         match route_handler(request).await {
                             Ok(response) => response,
                             Err(e) => {
-                                DMSGatewayResponse::new(500, format!("Internal server error: {e}").into_bytes(), request_id)
+                                DMSCGatewayResponse::new(500, format!("Internal server error: {e}").into_bytes(), request_id)
                             }
                         }
                     },
                     Err(e) => {
-                        DMSGatewayResponse::new(404, format!("Route not found: {e}").into_bytes(), request_id)
+                        DMSCGatewayResponse::new(404, format!("Route not found: {e}").into_bytes(), request_id)
                     }
                 }
             },
             Err(e) => {
-                DMSGatewayResponse::new(403, format!("Middleware error: {e}").into_bytes(), request_id)
+                DMSCGatewayResponse::new(403, format!("Middleware error: {e}").into_bytes(), request_id)
             }
         }
     }
 }
 
 #[async_trait::async_trait]
-impl DMSModule for DMSGateway {
+impl DMSCModule for DMSCGateway {
     /// Returns the name of the gateway module.
     /// 
     /// # Returns
     /// 
     /// The module name as a string
     fn name(&self) -> &str {
-        "DMS.Gateway"
+        "DMSC.Gateway"
     }
 
     /// Initializes the gateway module.
@@ -543,18 +543,18 @@ impl DMSModule for DMSGateway {
     /// 
     /// # Returns
     /// 
-    /// A `DMSResult<()>` indicating success or failure
-    async fn init(&mut self, ctx: &mut DMSServiceContext) -> crate::core::DMSResult<()> {
+    /// A `DMSCResult<()>` indicating success or failure
+    async fn init(&mut self, ctx: &mut DMSCServiceContext) -> crate::core::DMSCResult<()> {
         let logger = ctx.logger();
-        logger.info("DMS.Gateway", "Initializing API gateway module")?;
+        logger.info("DMSC.Gateway", "Initializing API gateway module")?;
 
         let config = self.config.read().await;
         logger.info(
-            "DMS.Gateway",
+            "DMSC.Gateway",
             format!("Gateway will listen on {}:{}", config.listen_address, config.listen_port)
         )?;
 
-        logger.info("DMS.Gateway", "API gateway module initialized successfully")?;
+        logger.info("DMSC.Gateway", "API gateway module initialized successfully")?;
         Ok(())
     }
 
@@ -566,17 +566,17 @@ impl DMSModule for DMSGateway {
     /// 
     /// # Returns
     /// 
-    /// A `DMSResult<()>` indicating success or failure
-    async fn after_shutdown(&mut self, _ctx: &mut DMSServiceContext) -> crate::core::DMSResult<()> {
+    /// A `DMSCResult<()>` indicating success or failure
+    async fn after_shutdown(&mut self, _ctx: &mut DMSCServiceContext) -> crate::core::DMSCResult<()> {
         ///// Cleanup gateway resources
         Ok(())
     }
 }
 
 #[cfg(feature = "pyo3")]
-/// Python bindings for DMSGateway
+/// Python bindings for DMSCGateway
 #[pyo3::prelude::pymethods]
-impl DMSGateway {
+impl DMSCGateway {
     #[new]
     fn py_new() -> Self {
         Self::new()

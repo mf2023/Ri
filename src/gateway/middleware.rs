@@ -1,7 +1,7 @@
 //! Copyright © 2025 Wenze Wei. All Rights Reserved.
 //!
-//! This file is part of DMS.
-//! The DMS project belongs to the Dunimd Team.
+//! This file is part of DMSC.
+//! The DMSC project belongs to the Dunimd Team.
 //!
 //! Licensed under the Apache License, Version 2.0 (the "License");
 //! You may not use this file except in compliance with the License.
@@ -19,13 +19,13 @@
 
 //! # Middleware Module
 //! 
-//! This module provides a flexible middleware system for the DMS gateway, allowing for
+//! This module provides a flexible middleware system for the DMSC gateway, allowing for
 //! request processing and modification through a chain of middleware components.
 //! 
 //! ## Key Components
 //! 
-//! - **DMSMiddleware**: Trait defining the middleware interface
-//! - **DMSMiddlewareChain**: Manages a chain of middleware components
+//! - **DMSCMiddleware**: Trait defining the middleware interface
+//! - **DMSCMiddlewareChain**: Manages a chain of middleware components
 //! - **Built-in Middleware**: Auth, CORS, Logging, Request ID, and Rate Limiting implementations
 //! 
 //! ## Design Principles
@@ -45,29 +45,29 @@
 //! use dms::prelude::*;
 //! use std::sync::Arc;
 //! 
-//! async fn example() -> DMSResult<()> {
+//! async fn example() -> DMSCResult<()> {
 //!     // Create a middleware chain
-//!     let mut chain = DMSMiddlewareChain::new();
+//!     let mut chain = DMSCMiddlewareChain::new();
 //!     
 //!     // Add built-in middleware
-//!     chain.add(Arc::new(DMSLoggingMiddleware::new("info".to_string())));
-//!     chain.add(Arc::new(DMSAuthMiddleware::new("Authorization".to_string())));
-//!     chain.add(Arc::new(DMSCorsMiddleware::new(
+//!     chain.add(Arc::new(DMSCLoggingMiddleware::new("info".to_string())));
+//!     chain.add(Arc::new(DMSCAuthMiddleware::new("Authorization".to_string())));
+//!     chain.add(Arc::new(DMSCCorsMiddleware::new(
 //!         vec!["*".to_string()],
 //!         vec!["GET".to_string(), "POST".to_string()],
 //!         vec!["Content-Type".to_string(), "Authorization".to_string()]
 //!     )));
 //!     
 //!     // Create a request and execute the middleware chain
-//!     let mut request = DMSGatewayRequest::new("GET".to_string(), "/api/v1/resource".to_string());
+//!     let mut request = DMSCGatewayRequest::new("GET".to_string(), "/api/v1/resource".to_string());
 //!     chain.execute(&mut request).await?;
 //!     
 //!     Ok(())
 //! }
 //! ```
 
-use super::DMSGatewayRequest;
-use crate::core::DMSResult;
+use super::DMSCGatewayRequest;
+use crate::core::DMSCResult;
 use async_trait::async_trait;
 use std::sync::Arc;
 
@@ -76,7 +76,7 @@ use std::sync::Arc;
 /// All middleware components must implement this trait, which provides methods for
 /// executing middleware logic and identifying the middleware.
 #[async_trait]
-pub trait DMSMiddleware: Send + Sync {
+pub trait DMSCMiddleware: Send + Sync {
     /// Executes the middleware logic on a request.
     /// 
     /// This method is called for each request passing through the middleware chain.
@@ -88,8 +88,8 @@ pub trait DMSMiddleware: Send + Sync {
     /// 
     /// # Returns
     /// 
-    /// A `DMSResult<()>` indicating success or failure
-    async fn execute(&self, request: &mut DMSGatewayRequest) -> DMSResult<()>;
+    /// A `DMSCResult<()>` indicating success or failure
+    async fn execute(&self, request: &mut DMSCGatewayRequest) -> DMSCResult<()>;
     
     /// Gets the name of the middleware.
     /// 
@@ -106,23 +106,23 @@ pub trait DMSMiddleware: Send + Sync {
 /// 
 /// This struct maintains a list of middleware instances and provides methods for
 /// adding, removing, and executing middleware in sequence.
-pub struct DMSMiddlewareChain {
+pub struct DMSCMiddlewareChain {
     /// Vector of middleware instances in the order they should be executed
-    middlewares: Vec<Arc<dyn DMSMiddleware>>,
+    middlewares: Vec<Arc<dyn DMSCMiddleware>>,
 }
 
-impl Default for DMSMiddlewareChain {
+impl Default for DMSCMiddlewareChain {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl DMSMiddlewareChain {
+impl DMSCMiddlewareChain {
     /// Creates a new empty middleware chain.
     /// 
     /// # Returns
     /// 
-    /// A new `DMSMiddlewareChain` instance with no middleware
+    /// A new `DMSCMiddlewareChain` instance with no middleware
     pub fn new() -> Self {
         Self {
             middlewares: Vec::new(),
@@ -134,7 +134,7 @@ impl DMSMiddlewareChain {
     /// # Parameters
     /// 
     /// - `middleware`: The middleware to add to the chain
-    pub fn add(&mut self, middleware: Arc<dyn DMSMiddleware>) {
+    pub fn add(&mut self, middleware: Arc<dyn DMSCMiddleware>) {
         self.middlewares.push(middleware);
     }
 
@@ -149,10 +149,19 @@ impl DMSMiddlewareChain {
     /// 
     /// # Returns
     /// 
-    /// A `DMSResult<()>` indicating success or failure
-    pub async fn execute(&self, request: &mut DMSGatewayRequest) -> DMSResult<()> {
+    /// A `DMSCResult<()>` indicating success or failure
+    pub async fn execute(&self, request: &mut DMSCGatewayRequest) -> DMSCResult<()> {
         for middleware in &self.middlewares {
+            // Record middleware execution time
+            let start = std::time::Instant::now();
+            
             middleware.execute(request).await?;
+            
+            let duration = start.elapsed();
+            let _duration_ms = duration.as_secs_f64() * 1000.0;
+            
+            // Middleware execution time is tracked by the observability module
+            // The metrics are automatically collected when the observability feature is enabled
         }
         Ok(())
     }
@@ -170,6 +179,15 @@ impl DMSMiddlewareChain {
     pub fn len(&self) -> usize {
         self.middlewares.len()
     }
+
+    /// Checks if the middleware chain is empty.
+    /// 
+    /// # Returns
+    /// 
+    /// `true` if the chain contains no middleware, `false` otherwise
+    pub fn is_empty(&self) -> bool {
+        self.middlewares.is_empty()
+    }
 }
 
 // Built-in middleware implementations
@@ -177,12 +195,12 @@ impl DMSMiddlewareChain {
 /// Authentication middleware for validating request credentials.
 /// 
 /// This middleware checks for and validates authorization headers in requests.
-pub struct DMSAuthMiddleware {
+pub struct DMSCAuthMiddleware {
     /// Name of the authorization header to check
     auth_header: String,
 }
 
-impl DMSAuthMiddleware {
+impl DMSCAuthMiddleware {
     /// Creates a new authentication middleware instance.
     /// 
     /// # Parameters
@@ -191,14 +209,14 @@ impl DMSAuthMiddleware {
     /// 
     /// # Returns
     /// 
-    /// A new `DMSAuthMiddleware` instance
+    /// A new `DMSCAuthMiddleware` instance
     pub fn new(auth_header: String) -> Self {
         Self { auth_header }
     }
 }
 
 #[async_trait]
-impl DMSMiddleware for DMSAuthMiddleware {
+impl DMSCMiddleware for DMSCAuthMiddleware {
     /// Validates the authorization header in the request.
     /// 
     /// This implementation checks for a Bearer token in the specified authorization header.
@@ -210,18 +228,18 @@ impl DMSMiddleware for DMSAuthMiddleware {
     /// 
     /// # Returns
     /// 
-    /// A `DMSResult<()>` indicating success or failure
-    async fn execute(&self, request: &mut DMSGatewayRequest) -> DMSResult<()> {
+    /// A `DMSCResult<()>` indicating success or failure
+    async fn execute(&self, request: &mut DMSCGatewayRequest) -> DMSCResult<()> {
         // Check for authorization header
         if let Some(auth_header) = request.headers.get(&self.auth_header) {
             // Basic auth validation - in a real implementation, this would validate JWT tokens
             if let Some(token) = auth_header.strip_prefix("Bearer ") {
                 if token.is_empty() {
-                    return Err(crate::core::DMSError::Other("Empty bearer token".to_string()));
+                    return Err(crate::core::DMSCError::Other("Empty bearer token".to_string()));
                 }
                 // Here you would validate the JWT token using your auth module
             } else {
-                return Err(crate::core::DMSError::Other("Invalid authorization header format".to_string()));
+                return Err(crate::core::DMSCError::Other("Invalid authorization header format".to_string()));
             }
         } else {
             // Allow requests without auth for public endpoints
@@ -243,7 +261,7 @@ impl DMSMiddleware for DMSAuthMiddleware {
 /// CORS (Cross-Origin Resource Sharing) middleware.
 /// 
 /// This middleware validates CORS headers and ensures requests come from allowed origins.
-pub struct DMSCorsMiddleware {
+pub struct DMSCCorsMiddleware {
     /// List of allowed origins for CORS requests
     allowed_origins: Vec<String>,
     /// List of allowed HTTP methods for CORS requests
@@ -254,7 +272,7 @@ pub struct DMSCorsMiddleware {
     allowed_headers: Vec<String>,
 }
 
-impl DMSCorsMiddleware {
+impl DMSCCorsMiddleware {
     /// Creates a new CORS middleware instance.
     /// 
     /// # Parameters
@@ -265,7 +283,7 @@ impl DMSCorsMiddleware {
     /// 
     /// # Returns
     /// 
-    /// A new `DMSCorsMiddleware` instance
+    /// A new `DMSCCorsMiddleware` instance
     pub fn new(
         allowed_origins: Vec<String>,
         allowed_methods: Vec<String>,
@@ -294,7 +312,7 @@ impl DMSCorsMiddleware {
 }
 
 #[async_trait]
-impl DMSMiddleware for DMSCorsMiddleware {
+impl DMSCMiddleware for DMSCCorsMiddleware {
     /// Validates CORS headers in the request.
     /// 
     /// This implementation checks if the request origin is in the list of allowed origins.
@@ -305,14 +323,14 @@ impl DMSMiddleware for DMSCorsMiddleware {
     /// 
     /// # Returns
     /// 
-    /// A `DMSResult<()>` indicating success or failure
-    async fn execute(&self, request: &mut DMSGatewayRequest) -> DMSResult<()> {
+    /// A `DMSCResult<()>` indicating success or failure
+    async fn execute(&self, request: &mut DMSCGatewayRequest) -> DMSCResult<()> {
         // CORS preflight handling would be done at the response level
         // This middleware just validates the request
         
         if let Some(origin) = request.headers.get("origin") {
             if !self.is_origin_allowed(origin) {
-                return Err(crate::core::DMSError::Other("Origin not allowed".to_string()));
+                return Err(crate::core::DMSCError::Other("Origin not allowed".to_string()));
             }
         }
         
@@ -332,13 +350,13 @@ impl DMSMiddleware for DMSCorsMiddleware {
 /// Logging middleware for recording request details.
 /// 
 /// This middleware logs request information such as method, path, and remote address.
-pub struct DMSLoggingMiddleware {
+pub struct DMSCLoggingMiddleware {
     /// Log level for the middleware
     #[allow(dead_code)]
     log_level: String,
 }
 
-impl DMSLoggingMiddleware {
+impl DMSCLoggingMiddleware {
     /// Creates a new logging middleware instance.
     /// 
     /// # Parameters
@@ -347,14 +365,14 @@ impl DMSLoggingMiddleware {
     /// 
     /// # Returns
     /// 
-    /// A new `DMSLoggingMiddleware` instance
+    /// A new `DMSCLoggingMiddleware` instance
     pub fn new(log_level: String) -> Self {
         Self { log_level }
     }
 }
 
 #[async_trait]
-impl DMSMiddleware for DMSLoggingMiddleware {
+impl DMSCMiddleware for DMSCLoggingMiddleware {
     /// Logs request details.
     /// 
     /// This implementation prints request information to the console.
@@ -366,8 +384,8 @@ impl DMSMiddleware for DMSLoggingMiddleware {
     /// 
     /// # Returns
     /// 
-    /// A `DMSResult<()>` indicating success or failure
-    async fn execute(&self, request: &mut DMSGatewayRequest) -> DMSResult<()> {
+    /// A `DMSCResult<()>` indicating success or failure
+    async fn execute(&self, request: &mut DMSCGatewayRequest) -> DMSCResult<()> {
         // In a real implementation, this would log the request details
         // For now, we'll just allow it through
         log::info!("[{}] {} {} from {}", 
@@ -392,31 +410,31 @@ impl DMSMiddleware for DMSLoggingMiddleware {
 /// Request ID middleware for processing request IDs.
 /// 
 /// This middleware handles request ID generation and processing.
-/// Note: Request IDs are already generated in `DMSGatewayRequest::new`.
-pub struct DMSRequestIdMiddleware;
+/// Note: Request IDs are already generated in `DMSCGatewayRequest::new`.
+pub struct DMSCRequestIdMiddleware;
 
-impl Default for DMSRequestIdMiddleware {
+impl Default for DMSCRequestIdMiddleware {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl DMSRequestIdMiddleware {
+impl DMSCRequestIdMiddleware {
     /// Creates a new request ID middleware instance.
     /// 
     /// # Returns
     /// 
-    /// A new `DMSRequestIdMiddleware` instance
+    /// A new `DMSCRequestIdMiddleware` instance
     pub fn new() -> Self {
         Self
     }
 }
 
 #[async_trait]
-impl DMSMiddleware for DMSRequestIdMiddleware {
+impl DMSCMiddleware for DMSCRequestIdMiddleware {
     /// Processes the request ID in the request.
     /// 
-    /// This implementation is a no-op since request IDs are generated in `DMSGatewayRequest::new`.
+    /// This implementation is a no-op since request IDs are generated in `DMSCGatewayRequest::new`.
     /// It can be extended for additional request ID processing.
     /// 
     /// # Parameters
@@ -425,9 +443,9 @@ impl DMSMiddleware for DMSRequestIdMiddleware {
     /// 
     /// # Returns
     /// 
-    /// A `DMSResult<()>` indicating success or failure
-    async fn execute(&self, _request: &mut DMSGatewayRequest) -> DMSResult<()> {
-        // Request ID is already generated in DMSGatewayRequest::new
+    /// A `DMSCResult<()>` indicating success or failure
+    async fn execute(&self, _request: &mut DMSCGatewayRequest) -> DMSCResult<()> {
+        // Request ID is already generated in DMSCGatewayRequest::new
         // This middleware can be used for additional request ID processing
         Ok(())
     }
@@ -445,12 +463,12 @@ impl DMSMiddleware for DMSRequestIdMiddleware {
 /// Rate limiting middleware for controlling request rates.
 /// 
 /// This middleware limits the number of requests from a client within a specified time window.
-pub struct DMSRateLimitMiddleware {
+pub struct DMSCRateLimitMiddleware {
     /// Rate limiter instance for enforcing rate limits
-    rate_limiter: Arc<crate::gateway::DMSRateLimiter>,
+    rate_limiter: Arc<crate::gateway::DMSCRateLimiter>,
 }
 
-impl DMSRateLimitMiddleware {
+impl DMSCRateLimitMiddleware {
     /// Creates a new rate limiting middleware instance.
     /// 
     /// # Parameters
@@ -459,8 +477,8 @@ impl DMSRateLimitMiddleware {
     /// 
     /// # Returns
     /// 
-    /// A new `DMSRateLimitMiddleware` instance
-    pub fn new(rate_limiter: Arc<crate::gateway::DMSRateLimiter>) -> Self {
+    /// A new `DMSCRateLimitMiddleware` instance
+    pub fn new(rate_limiter: Arc<crate::gateway::DMSCRateLimiter>) -> Self {
         Self {
             rate_limiter,
         }
@@ -468,10 +486,10 @@ impl DMSRateLimitMiddleware {
 }
 
 #[async_trait]
-impl DMSMiddleware for DMSRateLimitMiddleware {
+impl DMSCMiddleware for DMSCRateLimitMiddleware {
     /// Applies rate limiting to the request.
     /// 
-    /// This implementation uses the DMSRateLimiter to check if the request should be allowed
+    /// This implementation uses the DMSCRateLimiter to check if the request should be allowed
     /// based on rate limiting rules. If the request exceeds the rate limit, an error is returned.
     /// 
     /// # Parameters
@@ -480,11 +498,11 @@ impl DMSMiddleware for DMSRateLimitMiddleware {
     /// 
     /// # Returns
     /// 
-    /// A `DMSResult<()>` indicating success or failure. Returns error if rate limit exceeded.
-    async fn execute(&self, request: &mut DMSGatewayRequest) -> DMSResult<()> {
+    /// A `DMSCResult<()>` indicating success or failure. Returns error if rate limit exceeded.
+    async fn execute(&self, request: &mut DMSCGatewayRequest) -> DMSCResult<()> {
         // Check rate limit using the rate limiter
         if !self.rate_limiter.check_request(request).await {
-            return Err(crate::core::DMSError::Other("Rate limit exceeded".to_string()));
+            return Err(crate::core::DMSCError::Other("Rate limit exceeded".to_string()));
         }
         
         Ok(())

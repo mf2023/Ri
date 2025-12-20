@@ -1,7 +1,7 @@
 // Copyright © 2025 Wenze Wei. All Rights Reserved.
 //
-// This file is part of DMS.
-// The DMS project belongs to the Dunimd Team.
+// This file is part of DMSC.
+// The DMSC project belongs to the Dunimd Team.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -15,23 +15,23 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use dms_core::core::{DMSError, DMSServiceContext, DMSAppBuilder};
+use dmsc::core::{DMSCError, DMSCServiceContext, DMSCAppBuilder};
 
 #[test]
 fn test_dms_error() {
-    let error = DMSError::Other("Test error message".to_string());
-    assert!(matches!(error, DMSError::Other(msg) if msg == "Test error message"));
+    let error = DMSCError::Other("Test error message".to_string());
+    assert!(matches!(error, DMSCError::Other(msg) if msg == "Test error message"));
 }
 
 #[test]
 fn test_service_context_new() {
-    let ctx = DMSServiceContext::new_default().unwrap();
+    let ctx = DMSCServiceContext::new_default().unwrap();
     assert!(ctx.fs().project_root().exists());
 }
 
 #[tokio::test]
 async fn test_app_builder_new() {
-    let builder = DMSAppBuilder::new();
+    let builder = DMSCAppBuilder::new();
     let runtime = builder.build().unwrap();
     let result = runtime.run(|_ctx| async move { Ok(()) }).await;
     assert!(result.is_ok());

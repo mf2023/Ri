@@ -6,13 +6,13 @@
 
 **Last modified date: 2025-12-12**
 
-本示例展示如何使用DMS的mq模块进行消息队列、发布订阅、路由、死信队列、延迟消息、持久化、优先级和过滤功能的使用。
+本示例展示如何使用DMSC的mq模块进行消息队列、发布订阅、路由、死信队列、延迟消息、持久化、优先级和过滤功能的使用。
 
 ## 示例概述
 
 </div>
 
-本示例将创建一个DMS应用，实现以下功能：
+本示例将创建一个DMSC应用，实现以下功能：
 
 - RabbitMQ、Kafka、Redis Streams消息队列
 - 发布订阅和消息路由
@@ -52,7 +52,7 @@ cd dms-mq-example
 
 ```toml
 [dependencies]
-dms = { git = "https://gitee.com/dunimd/dms" }
+dms = { git = "https://gitee.com/dunimd/dmsc" }
 tokio = { version = "1.0", features = ["full"] }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
@@ -113,17 +113,17 @@ use chrono::Utc;
 use std::collections::HashMap;
 
 #[tokio::main]
-async fn main() -> DMSResult<()> {
+async fn main() -> DMSCResult<()> {
     // 构建服务运行时
-    let app = DMSAppBuilder::new()
+    let app = DMSCAppBuilder::new()
         .with_config("config.yaml")?
-        .with_logging(DMSLogConfig::default())?
-        .with_message_queue(DMSMessageQueueConfig::default())?
+        .with_logging(DMSCLogConfig::default())?
+        .with_message_queue(DMSCMessageQueueConfig::default())?
         .build()?;
     
     // 运行业务逻辑
-    app.run(|ctx: &DMSServiceContext| async move {
-        ctx.logger().info("service", "DMS Message Queue Example started")?;
+    app.run(|ctx: &DMSCServiceContext| async move {
+        ctx.logger().info("service", "DMSC Message Queue Example started")?;
         
         // 初始化消息队列
         initialize_message_queue(&ctx).await?;
@@ -142,12 +142,12 @@ async fn main() -> DMSResult<()> {
     }).await
 }
 
-async fn initialize_message_queue(ctx: &DMSServiceContext) -> DMSResult<()> {
+async fn initialize_message_queue(ctx: &DMSCServiceContext) -> DMSCResult<()> {
     ctx.logger().info("mq", "Initializing message queue")?;
     
     // RabbitMQ配置
-    let mq_config = DMSMessageQueueConfig {
-        broker_type: DMSMessageBrokerType::RabbitMQ,
+    let mq_config = DMSCMessageQueueConfig {
+        broker_type: DMSCMessageBrokerType::RabbitMQ,
         host: "localhost".to_string(),
         port: 5672,
         username: Some("guest".to_string()),
@@ -178,11 +178,11 @@ async fn initialize_message_queue(ctx: &DMSServiceContext) -> DMSResult<()> {
     Ok(())
 }
 
-async fn publish_sample_messages(ctx: &DMSServiceContext) -> DMSResult<()> {
+async fn publish_sample_messages(ctx: &DMSCServiceContext) -> DMSCResult<()> {
     ctx.logger().info("mq", "Publishing sample messages")?;
     
     // 创建用户注册消息
-    let message = DMSMessage {
+    let message = DMSCMessage {
         id: Uuid::new_v4().to_string(),
         queue: "user.registrations".to_string(),
         routing_key: "user.created".to_string(),
@@ -199,8 +199,8 @@ async fn publish_sample_messages(ctx: &DMSServiceContext) -> DMSResult<()> {
             h.insert("correlation_id".to_string(), Uuid::new_v4().to_string());
             h
         },
-        priority: DMSMessagePriority::Normal,
-        delivery_mode: DMSMessageDeliveryMode::Persistent,
+        priority: DMSCMessagePriority::Normal,
+        delivery_mode: DMSCMessageDeliveryMode::Persistent,
         timestamp: Utc::now(),
         expiration: None,
         correlation_id: Some(Uuid::new_v4().to_string()),
@@ -214,7 +214,7 @@ async fn publish_sample_messages(ctx: &DMSServiceContext) -> DMSResult<()> {
     Ok(())
 }
 
-async fn subscribe_to_queues(ctx: &DMSServiceContext) -> DMSResult<()> {
+async fn subscribe_to_queues(ctx: &DMSCServiceContext) -> DMSCResult<()> {
     ctx.logger().info("mq", "Subscribing to message queues")?;
     
     // 订阅用户注册队列
@@ -244,14 +244,14 @@ async fn subscribe_to_queues(ctx: &DMSServiceContext) -> DMSResult<()> {
     Ok(())
 }
 
-async fn process_user_registration(message: &DMSMessage, ctx: &DMSServiceContext) -> DMSResult<serde_json::Value> {
+async fn process_user_registration(message: &DMSCMessage, ctx: &DMSCServiceContext) -> DMSCResult<serde_json::Value> {
     let user_id = message.body["user_id"].as_i64().unwrap_or(0);
     let email = message.body["email"].as_str().unwrap_or_default();
     let name = message.body["name"].as_str().unwrap_or_default();
     
     // 验证用户数据
     if user_id == 0 || email.is_empty() || name.is_empty() {
-        return Err(DMSError::validation("Invalid user data".to_string()));
+        return Err(DMSCError::validation("Invalid user data".to_string()));
     }
     
     // 这里可以添加业务逻辑处理
@@ -283,8 +283,8 @@ use dms::prelude::*;
 use serde_json::json;
 
 // RabbitMQ配置
-let rabbitmq_config = DMSMessageQueueConfig {
-    broker_type: DMSMessageBrokerType::RabbitMQ,
+let rabbitmq_config = DMSCMessageQueueConfig {
+    broker_type: DMSCMessageBrokerType::RabbitMQ,
     host: "localhost".to_string(),
     port: 5672,
     username: "guest".to_string(),
@@ -300,8 +300,8 @@ let rabbitmq_config = DMSMessageQueueConfig {
 };
 
 // Apache Kafka配置
-let kafka_config = DMSMessageQueueConfig {
-    broker_type: DMSMessageBrokerType::Kafka,
+let kafka_config = DMSCMessageQueueConfig {
+    broker_type: DMSCMessageBrokerType::Kafka,
     host: "localhost".to_string(),
     port: 9092,
     username: None,
@@ -317,8 +317,8 @@ let kafka_config = DMSMessageQueueConfig {
 };
 
 // Redis Streams配置
-let redis_config = DMSMessageQueueConfig {
-    broker_type: DMSMessageBrokerType::Redis,
+let redis_config = DMSCMessageQueueConfig {
+    broker_type: DMSCMessageBrokerType::Redis,
     host: "localhost".to_string(),
     port: 6379,
     username: None,
@@ -354,7 +354,7 @@ use dms::prelude::*;
 use serde_json::json;
 
 // 发布消息到队列
-let message = DMSMessage {
+let message = DMSCMessage {
     id: uuid::Uuid::new_v4().to_string(),
     queue: "user.registrations".to_string(),
     routing_key: "user.created".to_string(),
@@ -371,8 +371,8 @@ let message = DMSMessage {
         h.insert("correlation_id".to_string(), uuid::Uuid::new_v4().to_string());
         h
     },
-    priority: DMSMessagePriority::Normal,
-    delivery_mode: DMSMessageDeliveryMode::Persistent,
+    priority: DMSCMessagePriority::Normal,
+    delivery_mode: DMSCMessageDeliveryMode::Persistent,
     timestamp: chrono::Utc::now(),
     expiration: None,
     correlation_id: Some(uuid::Uuid::new_v4().to_string()),
@@ -392,7 +392,7 @@ ctx.mq().subscribe("user.registrations", |message, ctx| async move {
             
             // 发送确认响应
             if let Some(reply_to) = &message.reply_to {
-                let response = DMSMessage {
+                let response = DMSCMessage {
                     id: uuid::Uuid::new_v4().to_string(),
                     queue: reply_to.clone(),
                     routing_key: "user.registration.completed".to_string(),
@@ -403,8 +403,8 @@ ctx.mq().subscribe("user.registrations", |message, ctx| async move {
                         "processed_at": chrono::Utc::now().to_rfc3339(),
                     }),
                     headers: message.headers.clone(),
-                    priority: DMSMessagePriority::Normal,
-                    delivery_mode: DMSMessageDeliveryMode::Persistent,
+                    priority: DMSCMessagePriority::Normal,
+                    delivery_mode: DMSCMessageDeliveryMode::Persistent,
                     timestamp: chrono::Utc::now(),
                     expiration: None,
                     correlation_id: message.correlation_id.clone(),
@@ -428,14 +428,14 @@ ctx.mq().subscribe("user.registrations", |message, ctx| async move {
     Ok(())
 }).await?;
 
-async fn process_user_registration(message: &DMSMessage, ctx: &DMSContext) -> DMSResult<serde_json::Value> {
+async fn process_user_registration(message: &DMSCMessage, ctx: &DMSCContext) -> DMSCResult<serde_json::Value> {
     let user_id = message.body["user_id"].as_i64().unwrap_or(0);
     let email = message.body["email"].as_str().unwrap_or_default();
     let name = message.body["name"].as_str().unwrap_or_default();
     
     // 验证用户数据
     if user_id == 0 || email.is_empty() || name.is_empty() {
-        return Err(DMSError::validation("Invalid user data".to_string()));
+        return Err(DMSCError::validation("Invalid user data".to_string()));
     }
     
     // 检查邮箱是否已存在
@@ -444,7 +444,7 @@ async fn process_user_registration(message: &DMSMessage, ctx: &DMSContext) -> DM
         .await?;
     
     if existing_user.is_some() {
-        return Err(DMSError::business("Email already registered".to_string()));
+        return Err(DMSCError::business("Email already registered".to_string()));
     }
     
     // 创建用户记录
@@ -456,7 +456,7 @@ async fn process_user_registration(message: &DMSMessage, ctx: &DMSContext) -> DM
         .await?;
     
     // 发送欢迎邮件
-    let email_message = DMSMessage {
+    let email_message = DMSCMessage {
         id: uuid::Uuid::new_v4().to_string(),
         queue: "email.welcome".to_string(),
         routing_key: "email.welcome.send".to_string(),
@@ -470,8 +470,8 @@ async fn process_user_registration(message: &DMSMessage, ctx: &DMSContext) -> DM
             }
         }),
         headers: std::collections::HashMap::new(),
-        priority: DMSMessagePriority::Normal,
-        delivery_mode: DMSMessageDeliveryMode::Persistent,
+        priority: DMSCMessagePriority::Normal,
+        delivery_mode: DMSCMessageDeliveryMode::Persistent,
         timestamp: chrono::Utc::now(),
         expiration: None,
         correlation_id: None,
@@ -497,7 +497,7 @@ use dms::prelude::*;
 use serde_json::json;
 
 // 发布到主题
-let topic_message = DMSMessage {
+let topic_message = DMSCMessage {
     id: uuid::Uuid::new_v4().to_string(),
     queue: "notifications".to_string(), // 主题名称
     routing_key: "user.activity.login".to_string(),
@@ -513,8 +513,8 @@ let topic_message = DMSMessage {
         h.insert("priority".to_string(), "normal".to_string());
         h
     },
-    priority: DMSMessagePriority::Normal,
-    delivery_mode: DMSMessageDeliveryMode::Persistent,
+    priority: DMSCMessagePriority::Normal,
+    delivery_mode: DMSCMessageDeliveryMode::Persistent,
     timestamp: chrono::Utc::now(),
     expiration: None,
     correlation_id: None,
@@ -525,27 +525,27 @@ ctx.mq().publish_to_topic("notifications", topic_message).await?;
 
 // 批量发布到主题
 let messages = vec![
-    DMSMessage {
+    DMSCMessage {
         id: uuid::Uuid::new_v4().to_string(),
         queue: "notifications".to_string(),
         routing_key: "user.activity.signup".to_string(),
         body: json!({"user_id": 12345, "action": "signup"}),
         headers: std::collections::HashMap::new(),
-        priority: DMSMessagePriority::High,
-        delivery_mode: DMSMessageDeliveryMode::Persistent,
+        priority: DMSCMessagePriority::High,
+        delivery_mode: DMSCMessageDeliveryMode::Persistent,
         timestamp: chrono::Utc::now(),
         expiration: None,
         correlation_id: None,
         reply_to: None,
     },
-    DMSMessage {
+    DMSCMessage {
         id: uuid::Uuid::new_v4().to_string(),
         queue: "notifications".to_string(),
         routing_key: "user.activity.purchase".to_string(),
         body: json!({"user_id": 12345, "action": "purchase", "amount": 99.99}),
         headers: std::collections::HashMap::new(),
-        priority: DMSMessagePriority::Normal,
-        delivery_mode: DMSMessageDeliveryMode::Persistent,
+        priority: DMSCMessagePriority::Normal,
+        delivery_mode: DMSCMessageDeliveryMode::Persistent,
         timestamp: chrono::Utc::now(),
         expiration: None,
         correlation_id: None,
@@ -619,7 +619,7 @@ ctx.mq().subscribe_to_topics(vec![
     Ok(())
 }).await?;
 
-async fn process_user_activity(message: &DMSMessage, ctx: &DMSContext) -> DMSResult<()> {
+async fn process_user_activity(message: &DMSCMessage, ctx: &DMSCContext) -> DMSCResult<()> {
     let user_id = message.body["user_id"].as_i64().unwrap_or(0);
     let activity_type = message.routing_key.split('.').last().unwrap_or("unknown");
     
@@ -639,7 +639,7 @@ async fn process_user_activity(message: &DMSMessage, ctx: &DMSContext) -> DMSRes
     Ok(())
 }
 
-async fn process_system_event(message: &DMSMessage, ctx: &DMSContext) -> DMSResult<()> {
+async fn process_system_event(message: &DMSCMessage, ctx: &DMSCContext) -> DMSCResult<()> {
     let event_type = message.routing_key.split('.').last().unwrap_or("unknown");
     
     match event_type {
@@ -663,7 +663,7 @@ async fn process_system_event(message: &DMSMessage, ctx: &DMSContext) -> DMSResu
     Ok(())
 }
 
-async fn process_analytics_event(message: &DMSMessage, ctx: &DMSContext) -> DMSResult<()> {
+async fn process_analytics_event(message: &DMSCMessage, ctx: &DMSCContext) -> DMSCResult<()> {
     // 处理分析事件，发送到分析系统
     let analytics_data = json!({
         "event": message.body,
@@ -691,22 +691,22 @@ use serde_json::json;
 
 // 创建路由规则
 let routing_rules = vec![
-    DMSRoutingRule {
+    DMSCRoutingRule {
         pattern: "order.*".to_string(),
         queue: "order_processing".to_string(),
         priority: 1,
     },
-    DMSRoutingRule {
+    DMSCRoutingRule {
         pattern: "order.created".to_string(),
         queue: "order_notifications".to_string(),
         priority: 2,
     },
-    DMSRoutingRule {
+    DMSCRoutingRule {
         pattern: "payment.*".to_string(),
         queue: "payment_processing".to_string(),
         priority: 1,
     },
-    DMSRoutingRule {
+    DMSCRoutingRule {
         pattern: "user.*".to_string(),
         queue: "user_notifications".to_string(),
         priority: 3,
@@ -716,7 +716,7 @@ let routing_rules = vec![
 ctx.mq().setup_routing_rules(routing_rules).await?;
 
 // 发布带有路由键的消息
-let order_message = DMSMessage {
+let order_message = DMSCMessage {
     id: uuid::Uuid::new_v4().to_string(),
     queue: "orders".to_string(),
     routing_key: "order.created".to_string(),
@@ -731,8 +731,8 @@ let order_message = DMSMessage {
         "created_at": chrono::Utc::now().to_rfc3339(),
     }),
     headers: std::collections::HashMap::new(),
-    priority: DMSMessagePriority::High,
-    delivery_mode: DMSMessageDeliveryMode::Persistent,
+    priority: DMSCMessagePriority::High,
+    delivery_mode: DMSCMessageDeliveryMode::Persistent,
     timestamp: chrono::Utc::now(),
     expiration: None,
     correlation_id: Some("order-12345".to_string()),
@@ -771,7 +771,7 @@ ctx.mq().subscribe_with_routing("order_processing", "order.*", |message, ctx| as
     Ok(())
 }).await?;
 
-async fn handle_order_created(order_id: &str, message: &DMSMessage, ctx: &DMSContext) -> DMSResult<()> {
+async fn handle_order_created(order_id: &str, message: &DMSCMessage, ctx: &DMSCContext) -> DMSCResult<()> {
     ctx.log().info(format!("Handling order created: {}", order_id));
     
     // 验证订单数据
@@ -779,7 +779,7 @@ async fn handle_order_created(order_id: &str, message: &DMSMessage, ctx: &DMSCon
     let total_amount = message.body["total_amount"].as_f64().unwrap_or(0.0);
     
     if user_id == 0 || total_amount <= 0.0 {
-        return Err(DMSError::validation("Invalid order data".to_string()));
+        return Err(DMSCError::validation("Invalid order data".to_string()));
     }
     
     // 检查用户是否存在
@@ -789,7 +789,7 @@ async fn handle_order_created(order_id: &str, message: &DMSMessage, ctx: &DMSCon
         .is_some();
     
     if !user_exists {
-        return Err(DMSError::not_found("User not found".to_string()));
+        return Err(DMSCError::not_found("User not found".to_string()));
     }
     
     // 创建订单记录
@@ -807,7 +807,7 @@ async fn handle_order_created(order_id: &str, message: &DMSMessage, ctx: &DMSCon
         .await?;
     
     // 发送库存检查消息
-    let inventory_message = DMSMessage {
+    let inventory_message = DMSCMessage {
         id: uuid::Uuid::new_v4().to_string(),
         queue: "inventory".to_string(),
         routing_key: "inventory.check".to_string(),
@@ -816,8 +816,8 @@ async fn handle_order_created(order_id: &str, message: &DMSMessage, ctx: &DMSCon
             "items": message.body["items"],
         }),
         headers: std::collections::HashMap::new(),
-        priority: DMSMessagePriority::High,
-        delivery_mode: DMSMessageDeliveryMode::Persistent,
+        priority: DMSCMessagePriority::High,
+        delivery_mode: DMSCMessageDeliveryMode::Persistent,
         timestamp: chrono::Utc::now(),
         expiration: None,
         correlation_id: Some(order_id.to_string()),
@@ -839,7 +839,7 @@ use dms::prelude::*;
 use serde_json::json;
 
 // 创建死信队列配置
-let dlq_config = DMSDeadLetterQueueConfig {
+let dlq_config = DMSCDeadLetterQueueConfig {
     enabled: true,
     max_retry_count: 3,
     retry_delay: Duration::from_secs(60),
@@ -893,7 +893,7 @@ ctx.mq().subscribe("dlq.orders.failed", |message, ctx| async move {
         .await?;
     
     // 发送告警通知
-    let alert_message = DMSMessage {
+    let alert_message = DMSCMessage {
         id: uuid::Uuid::new_v4().to_string(),
         queue: "alerts".to_string(),
         routing_key: "alert.message_failed".to_string(),
@@ -906,8 +906,8 @@ ctx.mq().subscribe("dlq.orders.failed", |message, ctx| async move {
             "timestamp": chrono::Utc::now().to_rfc3339(),
         }),
         headers: std::collections::HashMap::new(),
-        priority: DMSMessagePriority::High,
-        delivery_mode: DMSMessageDeliveryMode::Persistent,
+        priority: DMSCMessagePriority::High,
+        delivery_mode: DMSCMessageDeliveryMode::Persistent,
         timestamp: chrono::Utc::now(),
         expiration: None,
         correlation_id: None,
@@ -923,7 +923,7 @@ ctx.mq().subscribe("dlq.orders.failed", |message, ctx| async move {
 }).await?;
 
 // 重试机制示例
-async fn process_message_with_retry(message: &DMSMessage, ctx: &DMSContext) -> DMSResult<()> {
+async fn process_message_with_retry(message: &DMSCMessage, ctx: &DMSCContext) -> DMSCResult<()> {
     let retry_count = message.headers.get("x-retry-count")
         .and_then(|s| s.parse::<i32>().ok())
         .unwrap_or(0);
@@ -965,14 +965,14 @@ async fn process_message_with_retry(message: &DMSMessage, ctx: &DMSContext) -> D
     }
 }
 
-async fn do_message_processing(message: &DMSMessage, ctx: &DMSContext) -> DMSResult<serde_json::Value> {
+async fn do_message_processing(message: &DMSCMessage, ctx: &DMSCContext) -> DMSCResult<serde_json::Value> {
     // 实际的消息处理逻辑
     let order_id = message.body["order_id"].as_str()
-        .ok_or_else(|| DMSError::validation("Order ID is required".to_string()))?;
+        .ok_or_else(|| DMSCError::validation("Order ID is required".to_string()))?;
     
     // 模拟处理失败的情况
     if order_id.starts_with("FAIL") {
-        return Err(DMSError::business("Simulated processing failure".to_string()));
+        return Err(DMSCError::business("Simulated processing failure".to_string()));
     }
     
     // 正常处理逻辑
@@ -993,7 +993,7 @@ use dms::prelude::*;
 use serde_json::json;
 
 // 发送延迟消息
-let delayed_message = DMSMessage {
+let delayed_message = DMSCMessage {
     id: uuid::Uuid::new_v4().to_string(),
     queue: "delayed.tasks".to_string(),
     routing_key: "task.scheduled".to_string(),
@@ -1005,8 +1005,8 @@ let delayed_message = DMSMessage {
         "scheduled_for": (chrono::Utc::now() + Duration::from_days(7)).to_rfc3339(),
     }),
     headers: std::collections::HashMap::new(),
-    priority: DMSMessagePriority::Normal,
-    delivery_mode: DMSMessageDeliveryMode::Persistent,
+    priority: DMSCMessagePriority::Normal,
+    delivery_mode: DMSCMessageDeliveryMode::Persistent,
     timestamp: chrono::Utc::now(),
     expiration: Some(chrono::Utc::now() + Duration::from_days(7)),
     correlation_id: None,
@@ -1043,7 +1043,7 @@ ctx.mq().subscribe("delayed.tasks", |message, ctx| async move {
     Ok(())
 }).await?;
 
-async fn handle_reminder_email(user_id: i64, email: &str, message: &DMSMessage, ctx: &DMSContext) -> DMSResult<()> {
+async fn handle_reminder_email(user_id: i64, email: &str, message: &DMSCMessage, ctx: &DMSCContext) -> DMSCResult<()> {
     ctx.log().info(format!("Sending reminder email to {} for user {}", email, user_id));
     
     // 检查用户是否仍然需要提醒
@@ -1061,7 +1061,7 @@ async fn handle_reminder_email(user_id: i64, email: &str, message: &DMSMessage, 
         }
         
         // 发送提醒邮件
-        let email_message = DMSMessage {
+        let email_message = DMSCMessage {
             id: uuid::Uuid::new_v4().to_string(),
             queue: "email.outbound".to_string(),
             routing_key: "email.reminder.send".to_string(),
@@ -1075,8 +1075,8 @@ async fn handle_reminder_email(user_id: i64, email: &str, message: &DMSMessage, 
                 }
             }),
             headers: std::collections::HashMap::new(),
-            priority: DMSMessagePriority::Normal,
-            delivery_mode: DMSMessageDeliveryMode::Persistent,
+            priority: DMSCMessagePriority::Normal,
+            delivery_mode: DMSCMessageDeliveryMode::Persistent,
             timestamp: chrono::Utc::now(),
             expiration: None,
             correlation_id: Some(message.id.clone()),
@@ -1103,9 +1103,9 @@ async fn handle_reminder_email(user_id: i64, email: &str, message: &DMSMessage, 
 }
 
 // 定时任务调度
-async fn schedule_periodic_tasks(ctx: &DMSContext) -> DMSResult<()> {
+async fn schedule_periodic_tasks(ctx: &DMSCContext) -> DMSCResult<()> {
     // 每天凌晨2点执行数据清理
-    let cleanup_task = DMSMessage {
+    let cleanup_task = DMSCMessage {
         id: uuid::Uuid::new_v4().to_string(),
         queue: "scheduled.tasks".to_string(),
         routing_key: "task.daily_cleanup".to_string(),
@@ -1114,8 +1114,8 @@ async fn schedule_periodic_tasks(ctx: &DMSContext) -> DMSResult<()> {
             "retention_days": 30,
         }),
         headers: std::collections::HashMap::new(),
-        priority: DMSMessagePriority::Low,
-        delivery_mode: DMSMessageDeliveryMode::Persistent,
+        priority: DMSCMessagePriority::Low,
+        delivery_mode: DMSCMessageDeliveryMode::Persistent,
         timestamp: chrono::Utc::now(),
         expiration: Some(chrono::Utc::now() + Duration::from_hours(24)),
         correlation_id: None,
@@ -1130,7 +1130,7 @@ async fn schedule_periodic_tasks(ctx: &DMSContext) -> DMSResult<()> {
     ctx.mq().publish_with_delay(cleanup_task, delay).await?;
     
     // 每周一上午9点生成报告
-    let report_task = DMSMessage {
+    let report_task = DMSCMessage {
         id: uuid::Uuid::new_v4().to_string(),
         queue: "scheduled.tasks".to_string(),
         routing_key: "task.weekly_report".to_string(),
@@ -1139,8 +1139,8 @@ async fn schedule_periodic_tasks(ctx: &DMSContext) -> DMSResult<()> {
             "report_type": "sales_summary",
         }),
         headers: std::collections::HashMap::new(),
-        priority: DMSMessagePriority::Normal,
-        delivery_mode: DMSMessageDeliveryMode::Persistent,
+        priority: DMSCMessagePriority::Normal,
+        delivery_mode: DMSCMessageDeliveryMode::Persistent,
         timestamp: chrono::Utc::now(),
         expiration: Some(chrono::Utc::now() + Duration::from_days(7)),
         correlation_id: None,
@@ -1167,7 +1167,7 @@ use dms::prelude::*;
 use serde_json::json;
 
 // 发送不同优先级的消息
-let urgent_message = DMSMessage {
+let urgent_message = DMSCMessage {
     id: uuid::Uuid::new_v4().to_string(),
     queue: "notifications".to_string(),
     routing_key: "alert.critical".to_string(),
@@ -1178,15 +1178,15 @@ let urgent_message = DMSMessage {
         "affected_services": ["user_service", "order_service"],
     }),
     headers: std::collections::HashMap::new(),
-    priority: DMSMessagePriority::Critical,
-    delivery_mode: DMSMessageDeliveryMode::Persistent,
+    priority: DMSCMessagePriority::Critical,
+    delivery_mode: DMSCMessageDeliveryMode::Persistent,
     timestamp: chrono::Utc::now(),
     expiration: None,
     correlation_id: None,
     reply_to: None,
 };
 
-let high_priority_message = DMSMessage {
+let high_priority_message = DMSCMessage {
     id: uuid::Uuid::new_v4().to_string(),
     queue: "notifications".to_string(),
     routing_key: "alert.high".to_string(),
@@ -1197,15 +1197,15 @@ let high_priority_message = DMSMessage {
         "threshold": "95th_percentile > 2s",
     }),
     headers: std::collections::HashMap::new(),
-    priority: DMSMessagePriority::High,
-    delivery_mode: DMSMessageDeliveryMode::Persistent,
+    priority: DMSCMessagePriority::High,
+    delivery_mode: DMSCMessageDeliveryMode::Persistent,
     timestamp: chrono::Utc::now(),
     expiration: None,
     correlation_id: None,
     reply_to: None,
 };
 
-let normal_message = DMSMessage {
+let normal_message = DMSCMessage {
     id: uuid::Uuid::new_v4().to_string(),
     queue: "notifications".to_string(),
     routing_key: "alert.normal".to_string(),
@@ -1220,15 +1220,15 @@ let normal_message = DMSMessage {
         },
     }),
     headers: std::collections::HashMap::new(),
-    priority: DMSMessagePriority::Normal,
-    delivery_mode: DMSMessageDeliveryMode::Persistent,
+    priority: DMSCMessagePriority::Normal,
+    delivery_mode: DMSCMessageDeliveryMode::Persistent,
     timestamp: chrono::Utc::now(),
     expiration: None,
     correlation_id: None,
     reply_to: None,
 };
 
-let low_priority_message = DMSMessage {
+let low_priority_message = DMSCMessage {
     id: uuid::Uuid::new_v4().to_string(),
     queue: "notifications".to_string(),
     routing_key: "alert.low".to_string(),
@@ -1239,8 +1239,8 @@ let low_priority_message = DMSMessage {
         "maintenance_window": "2024-02-01 02:00:00",
     }),
     headers: std::collections::HashMap::new(),
-    priority: DMSMessagePriority::Low,
-    delivery_mode: DMSMessageDeliveryMode::Persistent,
+    priority: DMSCMessagePriority::Low,
+    delivery_mode: DMSCMessageDeliveryMode::Persistent,
     timestamp: chrono::Utc::now(),
     expiration: None,
     correlation_id: None,
@@ -1260,24 +1260,24 @@ ctx.mq().subscribe_with_priority("notifications", |message, ctx| async move {
     
     ctx.log().info(format!("Processing {} priority message: {}", 
         match priority {
-            DMSMessagePriority::Critical => "CRITICAL",
-            DMSMessagePriority::High => "HIGH",
-            DMSMessagePriority::Normal => "NORMAL",
-            DMSMessagePriority::Low => "LOW",
+            DMSCMessagePriority::Critical => "CRITICAL",
+            DMSCMessagePriority::High => "HIGH",
+            DMSCMessagePriority::Normal => "NORMAL",
+            DMSCMessagePriority::Low => "LOW",
         }, routing_key));
     
     // 根据优先级处理消息
     match priority {
-        DMSMessagePriority::Critical => {
+        DMSCMessagePriority::Critical => {
             handle_critical_alert(&message, &ctx).await?;
         }
-        DMSMessagePriority::High => {
+        DMSCMessagePriority::High => {
             handle_high_priority_alert(&message, &ctx).await?;
         }
-        DMSMessagePriority::Normal => {
+        DMSCMessagePriority::Normal => {
             handle_normal_alert(&message, &ctx).await?;
         }
-        DMSMessagePriority::Low => {
+        DMSCMessagePriority::Low => {
             handle_low_priority_alert(&message, &ctx).await?;
         }
     }
@@ -1286,13 +1286,13 @@ ctx.mq().subscribe_with_priority("notifications", |message, ctx| async move {
     Ok(())
 }).await?;
 
-async fn handle_critical_alert(message: &DMSMessage, ctx: &DMSContext) -> DMSResult<()> {
+async fn handle_critical_alert(message: &DMSCMessage, ctx: &DMSCContext) -> DMSCResult<()> {
     let alert_type = message.body["alert_type"].as_str().unwrap_or_default();
     
     ctx.log().error(format!("CRITICAL ALERT: {} - {:?}", alert_type, message.body));
     
     // 立即发送紧急通知
-    let alert_notification = DMSMessage {
+    let alert_notification = DMSCMessage {
         id: uuid::Uuid::new_v4().to_string(),
         queue: "urgent_notifications".to_string(),
         routing_key: "urgent.critical_alert".to_string(),
@@ -1303,8 +1303,8 @@ async fn handle_critical_alert(message: &DMSMessage, ctx: &DMSContext) -> DMSRes
             "escalation_level": 1,
         }),
         headers: std::collections::HashMap::new(),
-        priority: DMSMessagePriority::Critical,
-        delivery_mode: DMSMessageDeliveryMode::Persistent,
+        priority: DMSCMessagePriority::Critical,
+        delivery_mode: DMSCMessageDeliveryMode::Persistent,
         timestamp: chrono::Utc::now(),
         expiration: None,
         correlation_id: Some(message.id.clone()),
@@ -1323,13 +1323,13 @@ async fn handle_critical_alert(message: &DMSMessage, ctx: &DMSContext) -> DMSRes
     Ok(())
 }
 
-async fn handle_high_priority_alert(message: &DMSMessage, ctx: &DMSContext) -> DMSResult<()> {
+async fn handle_high_priority_alert(message: &DMSCMessage, ctx: &DMSCContext) -> DMSCResult<()> {
     let alert_type = message.body["alert_type"].as_str().unwrap_or_default();
     
     ctx.log().warn(format!("HIGH PRIORITY ALERT: {} - {:?}", alert_type, message.body));
     
     // 发送通知到运维团队
-    let notification = DMSMessage {
+    let notification = DMSCMessage {
         id: uuid::Uuid::new_v4().to_string(),
         queue: "team_notifications".to_string(),
         routing_key: "team.high_priority".to_string(),
@@ -1339,8 +1339,8 @@ async fn handle_high_priority_alert(message: &DMSMessage, ctx: &DMSContext) -> D
             "notify_channels": ["email", "slack"],
         }),
         headers: std::collections::HashMap::new(),
-        priority: DMSMessagePriority::High,
-        delivery_mode: DMSMessageDeliveryMode::Persistent,
+        priority: DMSCMessagePriority::High,
+        delivery_mode: DMSCMessageDeliveryMode::Persistent,
         timestamp: chrono::Utc::now(),
         expiration: None,
         correlation_id: Some(message.id.clone()),
@@ -1352,7 +1352,7 @@ async fn handle_high_priority_alert(message: &DMSMessage, ctx: &DMSContext) -> D
     Ok(())
 }
 
-async fn handle_normal_alert(message: &DMSMessage, ctx: &DMSContext) -> DMSResult<()> {
+async fn handle_normal_alert(message: &DMSCMessage, ctx: &DMSCContext) -> DMSCResult<()> {
     ctx.log().info(format!("NORMAL ALERT: {:?}", message.body));
     
     // 记录到日志系统
@@ -1363,7 +1363,7 @@ async fn handle_normal_alert(message: &DMSMessage, ctx: &DMSContext) -> DMSResul
     Ok(())
 }
 
-async fn handle_low_priority_alert(message: &DMSMessage, ctx: &DMSContext) -> DMSResult<()> {
+async fn handle_low_priority_alert(message: &DMSCMessage, ctx: &DMSCContext) -> DMSCResult<()> {
     ctx.log().debug(format!("LOW PRIORITY ALERT: {:?}", message.body));
     
     // 可以延迟处理或批量处理
@@ -1381,29 +1381,29 @@ use serde_json::json;
 
 // 创建消息过滤器
 let filters = vec![
-    DMSMessageFilter {
+    DMSCMessageFilter {
         field: "headers.event_type".to_string(),
-        operator: DMSFilterOperator::Equals,
+        operator: DMSCFilterOperator::Equals,
         value: "user_login".to_string(),
-        action: DMSFilterAction::Accept,
+        action: DMSCFilterAction::Accept,
     },
-    DMSMessageFilter {
+    DMSCMessageFilter {
         field: "headers.priority".to_string(),
-        operator: DMSFilterOperator::GreaterThan,
+        operator: DMSCFilterOperator::GreaterThan,
         value: "5".to_string(),
-        action: DMSFilterAction::Accept,
+        action: DMSCFilterAction::Accept,
     },
-    DMSMessageFilter {
+    DMSCMessageFilter {
         field: "body.user_id".to_string(),
-        operator: DMSFilterOperator::LessThan,
+        operator: DMSCFilterOperator::LessThan,
         value: "1000".to_string(),
-        action: DMSFilterAction::Reject,
+        action: DMSCFilterAction::Reject,
     },
-    DMSMessageFilter {
+    DMSCMessageFilter {
         field: "routing_key".to_string(),
-        operator: DMSFilterOperator::Contains,
+        operator: DMSCFilterOperator::Contains,
         value: "error".to_string(),
-        action: DMSFilterAction::Accept,
+        action: DMSCFilterAction::Accept,
     },
 ];
 
@@ -1442,19 +1442,19 @@ ctx.mq().subscribe_with_filters("user_events", |message, ctx| async move {
 }).await?;
 
 // 动态过滤器
-async fn create_dynamic_filter(ctx: &DMSContext, user_id_threshold: i32) -> DMSResult<()> {
+async fn create_dynamic_filter(ctx: &DMSCContext, user_id_threshold: i32) -> DMSCResult<()> {
     let dynamic_filters = vec![
-        DMSMessageFilter {
+        DMSCMessageFilter {
             field: "body.user_id".to_string(),
-            operator: DMSFilterOperator::GreaterThanOrEqual,
+            operator: DMSCFilterOperator::GreaterThanOrEqual,
             value: user_id_threshold.to_string(),
-            action: DMSFilterAction::Accept,
+            action: DMSCFilterAction::Accept,
         },
-        DMSMessageFilter {
+        DMSCMessageFilter {
             field: "headers.source".to_string(),
-            operator: DMSFilterOperator::NotEquals,
+            operator: DMSCFilterOperator::NotEquals,
             value: "test".to_string(),
-            action: DMSFilterAction::Reject,
+            action: DMSCFilterAction::Reject,
         },
     ];
     
@@ -1464,7 +1464,7 @@ async fn create_dynamic_filter(ctx: &DMSContext, user_id_threshold: i32) -> DMSR
 }
 
 // 自定义过滤器函数
-async fn custom_message_filter(message: &DMSMessage, ctx: &DMSContext) -> bool {
+async fn custom_message_filter(message: &DMSCMessage, ctx: &DMSCContext) -> bool {
     // 自定义过滤逻辑
     let user_id = message.body["user_id"].as_i64().unwrap_or(0);
     let event_time = message.body["timestamp"].as_str().unwrap_or_default();
@@ -1504,9 +1504,9 @@ use dms::prelude::*;
 use serde_json::json;
 
 // 配置消息持久化
-let persistence_config = DMSMessagePersistenceConfig {
+let persistence_config = DMSCMessagePersistenceConfig {
     enabled: true,
-    storage_type: DMSMessageStorageType::Database,
+    storage_type: DMSCMessageStorageType::Database,
     retention_days: 30,
     cleanup_interval: Duration::from_hours(24),
     compression_enabled: true,
@@ -1518,7 +1518,7 @@ let persistence_config = DMSMessagePersistenceConfig {
 ctx.mq().setup_message_persistence(persistence_config).await?;
 
 // 发送持久化消息
-let persistent_message = DMSMessage {
+let persistent_message = DMSCMessage {
     id: uuid::Uuid::new_v4().to_string(),
     queue: "important.events".to_string(),
     routing_key: "business.critical".to_string(),
@@ -1539,8 +1539,8 @@ let persistent_message = DMSMessage {
         h.insert("retention".to_string(), "permanent".to_string());
         h
     },
-    priority: DMSMessagePriority::High,
-    delivery_mode: DMSMessageDeliveryMode::Persistent,
+    priority: DMSCMessagePriority::High,
+    delivery_mode: DMSCMessageDeliveryMode::Persistent,
     timestamp: chrono::Utc::now(),
     expiration: None,
     correlation_id: Some("txn-123456789".to_string()),
@@ -1583,7 +1583,7 @@ use serde_json::json;
 
 // 批量发布消息
 let batch_messages = (0..1000).map(|i| {
-    DMSMessage {
+    DMSCMessage {
         id: uuid::Uuid::new_v4().to_string(),
         queue: "batch.processing".to_string(),
         routing_key: format!("batch.item.{}", i % 10),
@@ -1593,8 +1593,8 @@ let batch_messages = (0..1000).map(|i| {
             "timestamp": chrono::Utc::now().to_rfc3339(),
         }),
         headers: std::collections::HashMap::new(),
-        priority: if i % 100 == 0 { DMSMessagePriority::High } else { DMSMessagePriority::Normal },
-        delivery_mode: DMSMessageDeliveryMode::Persistent,
+        priority: if i % 100 == 0 { DMSCMessagePriority::High } else { DMSCMessagePriority::Normal },
+        delivery_mode: DMSCMessageDeliveryMode::Persistent,
         timestamp: chrono::Utc::now(),
         expiration: None,
         correlation_id: None,
@@ -1639,13 +1639,13 @@ ctx.mq().subscribe_batch("batch.processing", 50, |messages, ctx| async move {
     Ok(())
 }).await?;
 
-async fn process_batch_item(message: &DMSMessage, ctx: &DMSContext) -> DMSResult<()> {
+async fn process_batch_item(message: &DMSCMessage, ctx: &DMSCContext) -> DMSCResult<()> {
     let item_id = message.body["item_id"].as_i64().unwrap_or(0);
     let data = message.body["data"].as_str().unwrap_or_default();
     
     // 模拟处理逻辑
     if item_id % 50 == 0 {
-        return Err(DMSError::business(format!("Simulated failure for item {}", item_id)));
+        return Err(DMSCError::business(format!("Simulated failure for item {}", item_id)));
     }
     
     // 处理数据
@@ -1677,22 +1677,22 @@ match ctx.mq().publish(message).await {
     Ok(_) => {
         ctx.log().info("Message published successfully");
     }
-    Err(DMSError::MessageQueueConnectionError(e)) => {
+    Err(DMSCError::MessageQueueConnectionError(e)) => {
         ctx.log().error(format!("Message queue connection failed: {}", e));
         // 尝试重新连接或降级处理
         handle_mq_connection_error(&e, ctx).await?;
     }
-    Err(DMSError::MessageQueuePublishError(e)) => {
+    Err(DMSCError::MessageQueuePublishError(e)) => {
         ctx.log().error(format!("Message publish failed: {}", e));
         // 尝试重新发布或使用备用队列
         retry_message_publish(message, ctx).await?;
     }
-    Err(DMSError::MessageQueueTimeoutError(e)) => {
+    Err(DMSCError::MessageQueueTimeoutError(e)) => {
         ctx.log().warn(format!("Message queue operation timed out: {}", e));
         // 增加超时时间或分批处理
         handle_mq_timeout(&e, ctx).await?;
     }
-    Err(DMSError::MessageQueueConsumerError(e)) => {
+    Err(DMSCError::MessageQueueConsumerError(e)) => {
         ctx.log().error(format!("Message consumer error: {}", e));
         // 重新启动消费者或切换到备用消费者
         restart_message_consumer(&e, ctx).await?;
@@ -1703,7 +1703,7 @@ match ctx.mq().publish(message).await {
     }
 }
 
-async fn handle_mq_connection_error(error: &str, ctx: &DMSContext) -> DMSResult<()> {
+async fn handle_mq_connection_error(error: &str, ctx: &DMSCContext) -> DMSCResult<()> {
     ctx.log().warn("Message queue is unavailable, switching to local queue");
     
     // 启用本地队列降级
@@ -1727,13 +1727,13 @@ async fn handle_mq_connection_error(error: &str, ctx: &DMSContext) -> DMSResult<
     }
     
     if retry_count >= 10 {
-        return Err(DMSError::service_unavailable("Message queue is still unavailable after 10 retries".to_string()));
+        return Err(DMSCError::service_unavailable("Message queue is still unavailable after 10 retries".to_string()));
     }
     
     Ok(())
 }
 
-async fn retry_message_publish(message: &DMSMessage, ctx: &DMSContext) -> DMSResult<()> {
+async fn retry_message_publish(message: &DMSCMessage, ctx: &DMSCContext) -> DMSCResult<()> {
     let mut retry_count = 0;
     let max_retries = 3;
     
@@ -1753,7 +1753,7 @@ async fn retry_message_publish(message: &DMSMessage, ctx: &DMSContext) -> DMSRes
                     ctx.log().error(format!("Message publish failed after {} retries: {}", max_retries, e));
                     
                     // 发送到失败消息队列
-                    let failed_message = DMSMessage {
+                    let failed_message = DMSCMessage {
                         id: uuid::Uuid::new_v4().to_string(),
                         queue: "failed.messages".to_string(),
                         routing_key: "message.publish_failed".to_string(),
@@ -1763,8 +1763,8 @@ async fn retry_message_publish(message: &DMSMessage, ctx: &DMSContext) -> DMSRes
                             "retry_count": retry_count,
                         }),
                         headers: std::collections::HashMap::new(),
-                        priority: DMSMessagePriority::High,
-                        delivery_mode: DMSMessageDeliveryMode::Persistent,
+                        priority: DMSCMessagePriority::High,
+                        delivery_mode: DMSCMessageDeliveryMode::Persistent,
                         timestamp: chrono::Utc::now(),
                         expiration: None,
                         correlation_id: Some(message.id.clone()),
@@ -1864,7 +1864,7 @@ cargo run
 运行成功后，您将看到类似以下的输出：
 
 ```
-[2025-12-12 10:30:45] INFO  service: DMS Message Queue Example started
+[2025-12-12 10:30:45] INFO  service: DMSC Message Queue Example started
 [2025-12-12 10:30:45] INFO  mq: Initializing message queue
 [2025-12-12 10:30:45] INFO  mq: Message queue initialized
 [2025-12-12 10:30:45] INFO  mq: Message queue connection successful
@@ -1872,7 +1872,7 @@ cargo run
 [2025-12-12 10:30:45] INFO  mq: User registration message published
 [2025-12-12 10:30:45] INFO  mq: Subscribing to message queues
 [2025-12-12 10:30:45] INFO  mq: Message queue subscriptions configured
-[2025-12-12 10:30:45] INFO  mq: Received message: DMSMessage { id: "...", queue: "user.registrations", ... }
+[2025-12-12 10:30:45] INFO  mq: Received message: DMSCMessage { id: "...", queue: "user.registrations", ... }
 [2025-12-12 10:30:45] INFO  mq: Processing user registration for: newuser@example.com
 [2025-12-12 10:30:45] INFO  mq: User registration processed: {"status": "success", "user_id": 12345, "email": "newuser@example.com", "processed_at": "2025-12-12T10:30:45Z"}
 ```
@@ -1895,23 +1895,23 @@ cargo run
 use dms::prelude::*;
 
 // 配置多个消息队列节点实现负载均衡
-let load_balanced_config = DMSMessageQueueLoadBalanceConfig {
+let load_balanced_config = DMSCMessageQueueLoadBalanceConfig {
     enabled: true,
-    strategy: DMSLoadBalanceStrategy::RoundRobin,
+    strategy: DMSCLoadBalanceStrategy::RoundRobin,
     nodes: vec![
-        DMSMessageQueueNode {
+        DMSCMessageQueueNode {
             host: "mq-node-1.example.com".to_string(),
             port: 5672,
             weight: 1,
             health_check_interval: Duration::from_secs(30),
         },
-        DMSMessageQueueNode {
+        DMSCMessageQueueNode {
             host: "mq-node-2.example.com".to_string(),
             port: 5672,
             weight: 2,
             health_check_interval: Duration::from_secs(30),
         },
-        DMSMessageQueueNode {
+        DMSCMessageQueueNode {
             host: "mq-node-3.example.com".to_string(),
             port: 5672,
             weight: 1,
@@ -1927,15 +1927,15 @@ ctx.mq().setup_load_balancing(load_balanced_config).await?;
 // 监控节点健康状况
 ctx.mq().monitor_node_health(|node, status| async move {
     match status {
-        DMSNodeHealthStatus::Healthy => {
+        DMSCNodeHealthStatus::Healthy => {
             ctx.log().info(format!("Message queue node {} is healthy", node.host));
         }
-        DMSNodeHealthStatus::Unhealthy => {
+        DMSCNodeHealthStatus::Unhealthy => {
             ctx.log().warn(format!("Message queue node {} is unhealthy", node.host));
             // 触发故障转移
             ctx.mq().trigger_failover(node).await?;
         }
-        DMSNodeHealthStatus::Offline => {
+        DMSCNodeHealthStatus::Offline => {
             ctx.log().error(format!("Message queue node {} is offline", node.host));
             // 从负载均衡池中移除
             ctx.mq().remove_node_from_pool(node).await?;
@@ -1952,10 +1952,10 @@ use dms::prelude::*;
 use serde_json::json;
 
 // 配置消息队列监控
-let monitoring_config = DMSMessageQueueMonitoringConfig {
+let monitoring_config = DMSCMessageQueueMonitoringConfig {
     enabled: true,
     metrics_interval: Duration::from_secs(60),
-    alert_thresholds: DMSMessageQueueAlertThresholds {
+    alert_thresholds: DMSCMessageQueueAlertThresholds {
         queue_size_warning: 1000,
         queue_size_critical: 5000,
         processing_time_warning: Duration::from_secs(30),
@@ -1997,12 +1997,12 @@ ctx.mq().collect_metrics(|metrics| async move {
 // 设置告警
 ctx.mq().setup_alerts(|alert| async move {
     match alert.level {
-        DMSAlertLevel::Warning => {
+        DMSCAlertLevel::Warning => {
             ctx.log().warn(format!("MQ Alert: {}", alert.message));
             // 发送警告通知
             send_alert_notification("warning", &alert, ctx).await?;
         }
-        DMSAlertLevel::Critical => {
+        DMSCAlertLevel::Critical => {
             ctx.log().error(format!("MQ Critical Alert: {}", alert.message));
             // 发送紧急通知
             send_alert_notification("critical", &alert, ctx).await?;
@@ -2013,8 +2013,8 @@ ctx.mq().setup_alerts(|alert| async move {
     Ok(())
 }).await?;
 
-async fn send_alert_notification(level: &str, alert: &DMSAlert, ctx: &DMSContext) -> DMSResult<()> {
-    let notification = DMSMessage {
+async fn send_alert_notification(level: &str, alert: &DMSCAlert, ctx: &DMSCContext) -> DMSCResult<()> {
+    let notification = DMSCMessage {
         id: uuid::Uuid::new_v4().to_string(),
         queue: "notifications".to_string(),
         routing_key: format!("alert.{}", level),
@@ -2029,11 +2029,11 @@ async fn send_alert_notification(level: &str, alert: &DMSAlert, ctx: &DMSContext
         }),
         headers: std::collections::HashMap::new(),
         priority: if level == "critical" { 
-            DMSMessagePriority::Critical 
+            DMSCMessagePriority::Critical 
         } else { 
-            DMSMessagePriority::High 
+            DMSCMessagePriority::High 
         },
-        delivery_mode: DMSMessageDeliveryMode::Persistent,
+        delivery_mode: DMSCMessageDeliveryMode::Persistent,
         timestamp: chrono::Utc::now(),
         expiration: None,
         correlation_id: None,
@@ -2052,7 +2052,7 @@ use dms::prelude::*;
 use serde_json::json;
 
 // 配置分布式消息追踪
-let tracing_config = DMSMessageTracingConfig {
+let tracing_config = DMSCMessageTracingConfig {
     enabled: true,
     sampling_rate: 0.1,  // 10% 采样率
     trace_header_name: "x-trace-id".to_string(),
@@ -2065,7 +2065,7 @@ let tracing_config = DMSMessageTracingConfig {
 ctx.mq().setup_distributed_tracing(tracing_config).await?;
 
 // 发送带追踪信息的消息
-let traced_message = DMSMessage {
+let traced_message = DMSCMessage {
     id: uuid::Uuid::new_v4().to_string(),
     queue: "user.events".to_string(),
     routing_key: "user.activity.login".to_string(),
@@ -2082,8 +2082,8 @@ let traced_message = DMSMessage {
         h.insert("x-baggage-request-id".to_string(), "req-abc123".to_string());
         h
     },
-    priority: DMSMessagePriority::Normal,
-    delivery_mode: DMSMessageDeliveryMode::Persistent,
+    priority: DMSCMessagePriority::Normal,
+    delivery_mode: DMSCMessageDeliveryMode::Persistent,
     timestamp: chrono::Utc::now(),
     expiration: None,
     correlation_id: None,
@@ -2151,13 +2151,13 @@ use dms::prelude::*;
 use serde_json::json;
 
 // 配置消息压缩
-let compression_config = DMSMessageCompressionConfig {
+let compression_config = DMSCMessageCompressionConfig {
     enabled: true,
     threshold_size: 1024,  // 1KB 以上启用压缩
     algorithms: vec![
-        DMSCompressionAlgorithm::Gzip,
-        DMSCompressionAlgorithm::Lz4,
-        DMSCompressionAlgorithm::Zstd,
+        DMSCCompressionAlgorithm::Gzip,
+        DMSCCompressionAlgorithm::Lz4,
+        DMSCCompressionAlgorithm::Zstd,
     ],
     compression_level: 6,  // 压缩级别 1-9
     auto_decompress: true,
@@ -2166,7 +2166,7 @@ let compression_config = DMSMessageCompressionConfig {
 ctx.mq().setup_compression(compression_config).await?;
 
 // 发送大消息（自动压缩）
-let large_message = DMSMessage {
+let large_message = DMSCMessage {
     id: uuid::Uuid::new_v4().to_string(),
     queue: "data.updates".to_string(),
     routing_key: "batch.data.sync".to_string(),
@@ -2191,8 +2191,8 @@ let large_message = DMSMessage {
         }
     }),
     headers: std::collections::HashMap::new(),
-    priority: DMSMessagePriority::Normal,
-    delivery_mode: DMSMessageDeliveryMode::Persistent,
+    priority: DMSCMessagePriority::Normal,
+    delivery_mode: DMSCMessageDeliveryMode::Persistent,
     timestamp: chrono::Utc::now(),
     expiration: None,
     correlation_id: None,
@@ -2225,7 +2225,7 @@ ctx.mq().subscribe_compressed("data.updates", |message, compression_info, ctx| a
     Ok(())
 }).await?;
 
-async fn process_record_batch(records: &[serde_json::Value], ctx: &DMSContext) -> DMSResult<()> {
+async fn process_record_batch(records: &[serde_json::Value], ctx: &DMSCContext) -> DMSCResult<()> {
     // 批量处理记录
     for record in records {
         let id = record["id"].as_i64().unwrap_or(0);
@@ -2278,7 +2278,7 @@ async fn process_record_batch(records: &[serde_json::Value], ctx: &DMSContext) -
 
 </div>
 
-本示例全面展示了 DMS 消息队列模块的核心功能和高级特性，涵盖以下关键能力：
+本示例全面展示了 DMSC 消息队列模块的核心功能和高级特性，涵盖以下关键能力：
 
 ### 🚀 核心功能
 - **多消息队列支持**: RabbitMQ、Apache Kafka、Redis Streams 的无缝集成
@@ -2315,7 +2315,7 @@ async fn process_record_batch(records: &[serde_json::Value], ctx: &DMSContext) -
 
 - [README](./README.md): 使用示例概览，提供所有使用示例的快速导航
 - [authentication](./authentication.md): 认证示例，学习JWT、OAuth2和RBAC认证授权
-- [basic-app](./basic-app.md): 基础应用示例，学习如何创建和运行第一个DMS应用
+- [basic-app](./basic-app.md): 基础应用示例，学习如何创建和运行第一个DMSC应用
 - [caching](./caching.md): 缓存示例，了解如何使用缓存模块提升应用性能
 - [database](./database.md): 数据库示例，学习数据库连接和查询操作
 - [http](./http.md): HTTP服务示例，构建Web应用和RESTful API

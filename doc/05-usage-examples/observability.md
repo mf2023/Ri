@@ -6,13 +6,13 @@
 
 **Last modified date: 2025-12-12**
 
-本示例展示如何使用DMS的observability模块进行分布式追踪、指标收集、健康检查、性能分析和告警管理的使用。
+本示例展示如何使用DMSC的observability模块进行分布式追踪、指标收集、健康检查、性能分析和告警管理的使用。
 
 ## 示例概述
 
 </div>
 
-本示例将创建一个DMS应用，实现以下功能：
+本示例将创建一个DMSC应用，实现以下功能：
 
 - 分布式追踪和span管理
 - 指标收集和性能监控
@@ -52,7 +52,7 @@ cd dms-observability-example
 
 ```toml
 [dependencies]
-dms = { git = "https://gitee.com/dunimd/dms" }
+dms = { git = "https://gitee.com/dunimd/dmsc" }
 tokio = { version = "1.0", features = ["full"] }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
@@ -110,17 +110,17 @@ use futures::future::join_all;
 use chrono::Utc;
 
 #[tokio::main]
-async fn main() -> DMSResult<()> {
+async fn main() -> DMSCResult<()> {
     // 构建服务运行时
-    let app = DMSAppBuilder::new()
+    let app = DMSCAppBuilder::new()
         .with_config("config.yaml")?
-        .with_logging(DMSLogConfig::default())?
-        .with_observability(DMSObservabilityConfig::default())?
+        .with_logging(DMSCLogConfig::default())?
+        .with_observability(DMSCObservabilityConfig::default())?
         .build()?;
     
     // 运行业务逻辑
-    app.run(|ctx: &DMSServiceContext| async move {
-        ctx.logger().info("service", "DMS Observability Example started")?;
+    app.run(|ctx: &DMSCServiceContext| async move {
+        ctx.logger().info("service", "DMSC Observability Example started")?;
         
         // 初始化可观测性
         initialize_observability(&ctx).await?;
@@ -134,13 +134,13 @@ async fn main() -> DMSResult<()> {
         // 演示健康检查
         demonstrate_health_checks(&ctx).await?;
         
-        ctx.logger().info("service", "DMS Observability Example completed")?;
+        ctx.logger().info("service", "DMSC Observability Example completed")?;
         
         Ok(())
     }).await
 }
 
-async fn initialize_observability(ctx: &DMSServiceContext) -> DMSResult<()> {
+async fn initialize_observability(ctx: &DMSCServiceContext) -> DMSCResult<()> {
     ctx.logger().info("observability", "Initializing observability")?;
     
     // 创建根span
@@ -166,7 +166,7 @@ async fn initialize_observability(ctx: &DMSServiceContext) -> DMSResult<()> {
     Ok(())
 }
 
-async fn demonstrate_distributed_tracing(ctx: &DMSServiceContext) -> DMSResult<()> {
+async fn demonstrate_distributed_tracing(ctx: &DMSCServiceContext) -> DMSCResult<()> {
     ctx.logger().info("observability", "Demonstrating distributed tracing")?;
     
     // 创建根span
@@ -196,7 +196,7 @@ async fn demonstrate_distributed_tracing(ctx: &DMSServiceContext) -> DMSResult<(
     Ok(())
 }
 
-async fn process_order_example(order_id: &str, ctx: &DMSServiceContext) -> DMSResult<serde_json::Value> {
+async fn process_order_example(order_id: &str, ctx: &DMSCServiceContext) -> DMSCResult<serde_json::Value> {
     let order_span = ctx.observability().start_span("fetch_order", json!({
         "order_id": order_id,
     }));
@@ -228,7 +228,7 @@ async fn process_order_example(order_id: &str, ctx: &DMSServiceContext) -> DMSRe
     }))
 }
 
-async fn demonstrate_metrics_collection(ctx: &DMSServiceContext) -> DMSResult<()> {
+async fn demonstrate_metrics_collection(ctx: &DMSCServiceContext) -> DMSCResult<()> {
     ctx.logger().info("observability", "Demonstrating metrics collection")?;
     
     // 创建计数器
@@ -265,7 +265,7 @@ async fn demonstrate_metrics_collection(ctx: &DMSServiceContext) -> DMSResult<()
     Ok(())
 }
 
-async fn demonstrate_health_checks(ctx: &DMSServiceContext) -> DMSResult<()> {
+async fn demonstrate_health_checks(ctx: &DMSCServiceContext) -> DMSCResult<()> {
     ctx.logger().info("observability", "Demonstrating health checks")?;
     
     // 执行健康检查
@@ -324,7 +324,7 @@ root_span.end();
 ```rust
 use dms::prelude::*;
 
-async fn process_order(order_id: &str) -> DMSResult<OrderResult> {
+async fn process_order(order_id: &str) -> DMSCResult<OrderResult> {
     let order_span = ctx.observability().start_span("fetch_order", json!({
         "order_id": order_id,
     }));
@@ -376,7 +376,7 @@ async fn process_order(order_id: &str) -> DMSResult<OrderResult> {
 use dms::prelude::*;
 use futures::future::join_all;
 
-async fn batch_process_orders(order_ids: Vec<String>) -> DMSResult<Vec<OrderResult>> {
+async fn batch_process_orders(order_ids: Vec<String>) -> DMSCResult<Vec<OrderResult>> {
     let batch_span = ctx.observability().start_span("batch_process_orders", json!({
         "order_count": order_ids.len(),
         "orders": order_ids.clone(),
@@ -435,7 +435,7 @@ use dms::prelude::*;
 let request_counter = ctx.observability().create_counter("http_requests_total", "Total HTTP requests", "requests");
 
 // 在HTTP中间件中使用
-async fn http_middleware(req: DMSHttpRequest, next: Next) -> DMSResult<DMSHttpResponse> {
+async fn http_middleware(req: DMSCHttpRequest, next: Next) -> DMSCResult<DMSCHttpResponse> {
     // 记录请求计数
     request_counter.increment(1, json!({
         "method": req.method.clone(),
@@ -498,7 +498,7 @@ request_size_histogram.record(req.body.len() as f64, json!({
 }));
 
 // 记录数据库查询时间
-async fn execute_query(query: &str) -> DMSResult<QueryResult> {
+async fn execute_query(query: &str) -> DMSCResult<QueryResult> {
     let start_time = std::time::Instant::now();
     
     let result = ctx.database().query(query, vec![]).await?;
@@ -533,7 +533,7 @@ let system_load_gauge = ctx.observability().create_gauge("system_load_average", 
 let memory_usage_gauge = ctx.observability().create_gauge("memory_usage_bytes", "Memory usage", "bytes");
 
 // 定期更新仪表盘
-async fn update_system_metrics() -> DMSResult<()> {
+async fn update_system_metrics() -> DMSCResult<()> {
     loop {
         // 获取活跃用户数
         let active_users = get_active_user_count().await?;
@@ -591,7 +591,7 @@ ctx.observability().register_health_check("database", || async {
                 "max": 20,
             }
         })),
-        Err(e) => Err(DMSError::internal(format!("Database ping failed: {}", e))),
+        Err(e) => Err(DMSCError::internal(format!("Database ping failed: {}", e))),
     }
 }).await?;
 
@@ -603,7 +603,7 @@ ctx.observability().register_health_check("cache", || async {
             "memory_usage": health.memory_usage,
             "hit_rate": health.hit_rate,
         })),
-        Err(e) => Err(DMSError::internal(format!("Cache health check failed: {}", e))),
+        Err(e) => Err(DMSCError::internal(format!("Cache health check failed: {}", e))),
     }
 }).await?;
 
@@ -614,7 +614,7 @@ ctx.observability().register_health_check("external_api", || async {
             "response_time_ms": response_time,
             "api_endpoint": "https://api.example.com/health",
         })),
-        Err(e) => Err(DMSError::internal(format!("External API health check failed: {}", e))),
+        Err(e) => Err(DMSCError::internal(format!("External API health check failed: {}", e))),
     }
 }).await?;
 
@@ -623,7 +623,7 @@ let health_status = ctx.observability().get_health_status().await?;
 ctx.log().info(format!("System health: {:?}", health_status));
 
 // 健康检查端点
-async fn health_check_handler() -> DMSResult<DMSHttpResponse> {
+async fn health_check_handler() -> DMSCResult<DMSCHttpResponse> {
     let health = ctx.observability().get_health_status().await?;
     
     let status_code = if health.overall_status == "healthy" {
@@ -634,7 +634,7 @@ async fn health_check_handler() -> DMSResult<DMSHttpResponse> {
         503
     };
     
-    Ok(DMSHttpResponse {
+    Ok(DMSCHttpResponse {
         status_code,
         headers: json!({
             "Content-Type": "application/json",
@@ -804,7 +804,7 @@ use dms::prelude::*;
 use serde_json::json;
 
 // 运行性能基准测试
-let benchmark_config = DMSBenchmarkConfig {
+let benchmark_config = DMSCBenchmarkConfig {
     name: "order_processing_benchmark".to_string(),
     iterations: 1000,
     warmup_iterations: 100,
@@ -969,7 +969,7 @@ let slack_config = DMNotificationChannelConfig {
     config: json!({
         "webhook_url": "https://hooks.slack.com/services/YOUR/SLACK/WEBHOOK",
         "channel": "#engineering-alerts",
-        "username": "DMS-AlertBot",
+        "username": "DMSC-AlertBot",
         "icon_emoji": ":warning:",
     }),
 };
@@ -977,7 +977,7 @@ let slack_config = DMNotificationChannelConfig {
 ctx.observability().create_notification_channel(slack_config).await?;
 
 // 处理告警通知
-async fn handle_alert_notification(alert: DMAlert) -> DMSResult<()> {
+async fn handle_alert_notification(alert: DMAlert) -> DMSCResult<()> {
     ctx.log().warn(format!("Alert triggered: {} - {}", alert.name, alert.severity));
     
     // 发送邮件通知
@@ -1056,7 +1056,7 @@ use serde_json::json;
 
 // 创建Grafana仪表盘配置
 let grafana_dashboard = DMGrafanaDashboard {
-    title: "DMS Application Dashboard".to_string(),
+    title: "DMSC Application Dashboard".to_string(),
     description: "Main application monitoring dashboard".to_string(),
     tags: vec!["dms".to_string(), "production".to_string()],
     panels: vec![
@@ -1110,7 +1110,7 @@ match ctx.observability().start_span("operation", json!({"key": "value"})) {
         // 正常处理
         span.end();
     }
-    Err(DMSError::ObservabilityTracingError(e)) => {
+    Err(DMSCError::ObservabilityTracingError(e)) => {
         ctx.log().error(format!("Tracing error: {}", e));
         // 降级处理：不使用追踪
         perform_operation_without_tracing().await?;
@@ -1126,7 +1126,7 @@ match ctx.observability().create_counter("metric_name", "description", "unit") {
     Ok(counter) => {
         counter.increment(1.0, json!({"label": "value"}));
     }
-    Err(DMSError::ObservabilityMetricsError(e)) => {
+    Err(DMSCError::ObservabilityMetricsError(e)) => {
         ctx.log().warn(format!("Metrics collection error: {}", e));
         // 降级：记录日志而不是指标
         ctx.log().info("Metric: metric_name increment by 1");
@@ -1141,7 +1141,7 @@ match ctx.observability().create_counter("metric_name", "description", "unit") {
 ctx.observability().register_health_check("critical_service", || async {
     match check_critical_service().await {
         Ok(health) => Ok(health),
-        Err(DMSError::ObservabilityHealthCheckError(e)) => {
+        Err(DMSCError::ObservabilityHealthCheckError(e)) => {
             ctx.log().warn(format!("Health check error: {}", e));
             // 返回降级状态而不是错误
             Ok(json!({
@@ -1197,7 +1197,7 @@ ctx.observability().register_health_check("critical_service", || async {
 运行成功后，您将看到以下输出：
 
 ```
-[2024-01-01 12:00:00] INFO: DMS Observability Example starting...
+[2024-01-01 12:00:00] INFO: DMSC Observability Example starting...
 [2024-01-01 12:00:00] INFO: Jaeger tracing enabled on http://localhost:14268
 [2024-01-01 12:00:00] INFO: Prometheus metrics exposed on http://localhost:9090/metrics
 [2024-01-01 12:00:00] INFO: Health check endpoint available at http://localhost:8080/health
@@ -1430,7 +1430,7 @@ ctx.observability().record_business_event(business_event).await?;
 
 </div>
 
-本示例展示了DMS框架强大的可观测性功能，帮助您构建高度可监控和可调试的应用程序。通过分布式追踪、指标收集、健康检查、日志聚合和告警系统，您可以全面了解应用的运行状况。
+本示例展示了DMSC框架强大的可观测性功能，帮助您构建高度可监控和可调试的应用程序。通过分布式追踪、指标收集、健康检查、日志聚合和告警系统，您可以全面了解应用的运行状况。
 
 ### 核心功能
 
@@ -1471,7 +1471,7 @@ ctx.observability().record_business_event(business_event).await?;
 
 - [README](./README.md): 使用示例概览，提供所有使用示例的快速导航
 - [authentication](./authentication.md): 认证示例，学习JWT、OAuth2和RBAC认证授权
-- [basic-app](./basic-app.md): 基础应用示例，学习如何创建和运行第一个DMS应用
+- [basic-app](./basic-app.md): 基础应用示例，学习如何创建和运行第一个DMSC应用
 - [caching](./caching.md): 缓存示例，了解如何使用缓存模块提升应用性能
 - [database](./database.md): 数据库示例，学习数据库连接和查询操作
 - [http](./http.md): HTTP服务示例，构建Web应用和RESTful API

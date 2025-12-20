@@ -1,7 +1,7 @@
 # Copyright © 2025 Wenze Wei. All Rights Reserved.
 #
-# This file is part of DMS.
-# The DMS project belongs to the Dunimd Team.
+# This file is part of DMSC.
+# The DMSC project belongs to the Dunimd Team.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # You may not use this file except in compliance with the License.
@@ -16,62 +16,97 @@
 # limitations under the License.
 
 [package]
-name = "dms_core"
-version = "0.1.2"
+name = "dmsc"
+version = "0.1.3"
 edition = "2021"
 authors = ["Dunimd Team"]
 description = "Dunimd Middleware Service - A high-performance Rust middleware framework with modular architecture"
-repository = "https://gitee.com/dunimd/dms"
+repository = "https://gitee.com/dunimd/dmsc"
 readme = "README.md"
 keywords = ["middleware", "framework", "distributed", "async", "microservices"]
 categories = ["asynchronous", "web-programming", "network-programming"]
 license = "Apache-2.0"
 
 [lib]
-name = "dms_core"
+name = "dmsc"
 path = "src/lib.rs"
 crate-type = ["rlib", "cdylib"]
 
 [dependencies]
-pyo3 = { version = "0.27", features = ["extension-module"] }
+pyo3 = { version = "0.27", features = ["extension-module"], optional = true }
 
-# DMS core dependencies
+# DMSC core dependencies (always included)
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 serde_yaml = "0.9"
 rand = "0.8"
-notify = "6.1"
 chrono = { version = "0.4", features = ["serde", "std"] }
 uuid = { version = "1.0", features = ["v4", "serde"] }
-tokio = { version = "1", features = ["full"] }
+tokio = { version = "1", features = ["time", "sync", "rt", "rt-multi-thread", "net"] }
 async-trait = "0.1"
-prometheus = "0.13"
 dashmap = "5.5"
-redis = { version = "0.24", features = ["tokio-comp", "connection-manager"] }
-hyper = { version = "0.14", features = ["full"] }
-lapin = { version = "2.3", features = ["rustls"], optional = true }
-futures = "0.3"
-yaml-rust = "0.4"
-toml = "0.8"
-sysinfo = "0.29"
-jsonwebtoken = "8"
-reqwest = { version = "0.11", features = ["json"] }
-urlencoding = "2"
 parking_lot = "0.12"
 log = "0.4"
-# Kafka support disabled due to Windows build issues
-# rdkafka = { version = "0.36", default-features = false, features = ["tokio", "libz"] }
+yaml-rust = "0.4"
+toml = "0.8"
 
-# Optional dependencies
-etcd-client = { version = "0.11", features = ["tls"], optional = true }
-rdkafka = { version = "0.36", default-features = false, features = ["tokio", "libz"], optional = true }
+# Optional dependencies (only included when specific features are enabled)
+notify = { version = "6.1", optional = true } # For config hot reload
+prometheus = { version = "0.13", optional = true } # For observability
+redis = { version = "0.24", features = ["tokio-comp", "connection-manager"], optional = true } # For cache and queue
+hyper = { version = "0.14", features = ["client", "server", "http1", "http2"], optional = true } # For HTTP and gateway
+lapin = { version = "2.3", features = ["rustls"], optional = true } # For RabbitMQ
+futures = { version = "0.3", optional = true } # For async operations
+reqwest = { version = "0.11", features = ["json"], optional = true } # For HTTP client
+sysinfo = { version = "0.29", optional = true } # For system information
+jsonwebtoken = { version = "8", optional = true } # For JWT authentication
+urlencoding = { version = "2", optional = true } # For URL encoding
+etcd-client = { version = "0.11", features = ["tls"], optional = true } # For service discovery
+
+# Target-specific dependencies
+[target.'cfg(not(windows))'.dependencies]
+# Kafka support dependencies (disabled on Windows)
+rdkafka = { version = "0.38", default-features = false, features = ["tokio", "libz"], optional = true }
+openssl-sys = { version = "0.9", features = ["vendored"], optional = true }
 
 [features]
-default = ["pyo3"]
+default = ["pyo3", "full"]
+
+# Minimal feature set (core functionality only)
+minimal = []
+
+# Full feature set
+full = [
+    "notify",
+    "prometheus",
+    "redis",
+    "hyper",
+    "futures",
+    "sysinfo",
+    "jsonwebtoken",
+    "reqwest",
+    "urlencoding",
+    "etcd",
+    "kafka",
+    "rabbitmq",
+    "pyo3"
+]
+
+# Optional features
 etcd = ["dep:etcd-client"]
-pyo3 = []
+parking_lot = []
+pyo3 = ["dep:pyo3"]
 kafka = ["rdkafka"]
 rabbitmq = ["dep:lapin"]
+observability = ["prometheus"]
+cache = ["redis"]
+queue = ["redis", "rabbitmq", "kafka"]
+gateway = ["hyper", "redis"]
+service_mesh = ["etcd", "redis"]
+auth = ["jsonwebtoken", "urlencoding"]
+config_hot_reload = ["notify"]
+http_client = ["reqwest"]
+system_info = ["sysinfo"]
 
 [dev-dependencies]
 tempfile = "3"

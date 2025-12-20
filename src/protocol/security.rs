@@ -1,7 +1,7 @@
 //! Copyright © 2025 Wenze Wei. All Rights Reserved.
 //!
-//! This file is part of DMS.
-//! The DMS project belongs to the Dunimd Team.
+//! This file is part of DMSC.
+//! The DMSC project belongs to the Dunimd Team.
 //!
 //! Licensed under the Apache License, Version 2.0 (the "License");
 //! you may not use this file except in compliance with the License.
@@ -25,12 +25,12 @@
 //! 
 //! ## Security Components
 //! 
-//! - **DMSCryptoSuite**: Cryptographic algorithm selection
-//! - **DMSDeviceAuthProtocol**: Hardware-based device authentication
-//! - **DMSPostQuantumCrypto**: Quantum-resistant key exchange and encryption
-//! - **DMSObfuscationLayer**: Traffic pattern obfuscation
-//! - **DMSNationalCrypto**: National cryptographic standards (SM2/SM3/SM4)
-//! - **DMSAntiForensic**: Anti-forensic and anti-analysis features
+//! - **DMSCCryptoSuite**: Cryptographic algorithm selection
+//! - **DMSCDeviceAuthProtocol**: Hardware-based device authentication
+//! - **DMSCPostQuantumCrypto**: Quantum-resistant key exchange and encryption
+//! - **DMSCObfuscationLayer**: Traffic pattern obfuscation
+//! - **DMSCNationalCrypto**: National cryptographic standards (SM2/SM3/SM4)
+//! - **DMSCAntiForensic**: Anti-forensic and anti-analysis features
 //! 
 //! ## Cryptographic Algorithms
 //! 
@@ -58,16 +58,16 @@
 //! ## Usage Examples
 //! 
 //! ```rust
-//! use dms::protocol::security::{DMSCryptoSuite, DMSDeviceAuthProtocol, DMSPostQuantumCrypto};
+//! use dms::protocol::security::{DMSCCryptoSuite, DMSCDeviceAuthProtocol, DMSCPostQuantumCrypto};
 //! 
-//! async fn example() -> DMSResult<()> {
+//! async fn example() -> DMSCResult<()> {
 //!     // Initialize device authentication
-//!     let device_auth = DMSDeviceAuthProtocol::new();
+//!     let device_auth = DMSCDeviceAuthProtocol::new();
 //!     device_auth.initialize().await?;
 //!     
 //!     // Perform quantum-resistant key exchange
-//!     let post_quantum = DMSPostQuantumCrypto::new();
-//!     post_quantum.initialize(&DMSCryptoSuite::PostQuantum).await?;
+//!     let post_quantum = DMSCPostQuantumCrypto::new();
+//!     post_quantum.initialize(&DMSCCryptoSuite::PostQuantum).await?;
 //!     
 //!     // Authenticate device
 //!     device_auth.authenticate_device("target-device").await?;
@@ -85,12 +85,12 @@ use tokio::net::TcpStream;
 use tokio::sync::RwLock;
 use rand::Rng;
 
-use crate::core::{DMSResult, DMSError};
-use super::DMSProtocolConfig;
+use crate::core::{DMSCResult, DMSCError};
+use super::DMSCProtocolConfig;
 
 /// Cryptographic suite enumeration.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum DMSCryptoSuite {
+pub enum DMSCCryptoSuite {
     /// National cryptographic standards (SM2/SM3/SM4)
     NationalStandard,
     /// Post-quantum cryptography (Kyber/Dilithium/Falcon)
@@ -101,26 +101,26 @@ pub enum DMSCryptoSuite {
     Hybrid,
 }
 
-impl DMSCryptoSuite {
+impl DMSCCryptoSuite {
     /// Get the security level of this cryptographic suite.
     pub fn security_level(&self) -> u8 {
         match self {
-            DMSCryptoSuite::NationalStandard => 8,
-            DMSCryptoSuite::International => 7,
-            DMSCryptoSuite::PostQuantum => 10,
-            DMSCryptoSuite::Hybrid => 9,
+            DMSCCryptoSuite::NationalStandard => 8,
+            DMSCCryptoSuite::International => 7,
+            DMSCCryptoSuite::PostQuantum => 10,
+            DMSCCryptoSuite::Hybrid => 9,
         }
     }
     
     /// Check if this suite provides quantum resistance.
     pub fn is_quantum_resistant(&self) -> bool {
-        matches!(self, DMSCryptoSuite::PostQuantum | DMSCryptoSuite::Hybrid)
+        matches!(self, DMSCCryptoSuite::PostQuantum | DMSCCryptoSuite::Hybrid)
     }
 }
 
 /// Obfuscation level enumeration.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum DMSObfuscationLevel {
+pub enum DMSCObfuscationLevel {
     /// No obfuscation
     None,
     /// Basic obfuscation (simple patterns)
@@ -133,21 +133,21 @@ pub enum DMSObfuscationLevel {
     Maximum,
 }
 
-impl DMSObfuscationLevel {
+impl DMSCObfuscationLevel {
     /// Get the obfuscation strength level.
     pub fn strength(&self) -> u8 {
         match self {
-            DMSCryptoSuite::NationalStandard => 0,
-            DMSCryptoSuite::Basic => 3,
-            DMSCryptoSuite::Medium => 6,
-            DMSCryptoSuite::High => 8,
-            DMSCryptoSuite::Maximum => 10,
+            DMSCCryptoSuite::NationalStandard => 0,
+            DMSCCryptoSuite::Basic => 3,
+            DMSCCryptoSuite::Medium => 6,
+            DMSCCryptoSuite::High => 8,
+            DMSCCryptoSuite::Maximum => 10,
         }
     }
 }
 
 /// Device authentication protocol for hardware-based identity verification.
-pub struct DMSDeviceAuthProtocol {
+pub struct DMSCDeviceAuthProtocol {
     /// Device certificate storage
     certificates: Arc<RwLock<HashMap<String, DeviceCertificate>>>,
     /// Trusted device list
@@ -190,7 +190,7 @@ struct AuthChallenge {
 
 use std::collections::HashSet;
 
-impl DMSDeviceAuthProtocol {
+impl DMSCDeviceAuthProtocol {
     /// Create a new device authentication protocol.
     pub fn new() -> Self {
         Self {
@@ -203,7 +203,7 @@ impl DMSDeviceAuthProtocol {
     }
     
     /// Initialize the device authentication protocol.
-    pub async fn initialize(&self) -> DMSResult<()> {
+    pub async fn initialize(&self) -> DMSCResult<()> {
         let mut init = self.initialized.write().await;
         if *init {
             return Ok(());
@@ -227,16 +227,16 @@ impl DMSDeviceAuthProtocol {
     }
 
     /// Generate device key pair for authentication
-    fn generate_device_keypair(&self) -> DMSResult<(Vec<u8>, Vec<u8>)> {
+    fn generate_device_keypair(&self) -> DMSCResult<(Vec<u8>, Vec<u8>)> {
         use ring::signature::{self, KeyPair};
         use ring::rand::SystemRandom;
         
         let rng = SystemRandom::new();
         let pkcs8_bytes = signature::Ed25519KeyPair::generate_pkcs8(&rng)
-            .map_err(|e| DMSError::CryptoError(format!("Failed to generate Ed25519 key: {}", e)))?;
+            .map_err(|e| DMSCError::CryptoError(format!("Failed to generate Ed25519 key: {}", e)))?;
         
         let key_pair = signature::Ed25519KeyPair::from_pkcs8(pkcs8_bytes.as_ref())
-            .map_err(|e| DMSError::CryptoError(format!("Failed to parse Ed25519 key: {}", e)))?;
+            .map_err(|e| DMSCError::CryptoError(format!("Failed to parse Ed25519 key: {}", e)))?;
         
         let public_key = key_pair.public_key().as_ref().to_vec();
         let private_key = pkcs8_bytes.as_ref().to_vec();
@@ -245,9 +245,9 @@ impl DMSDeviceAuthProtocol {
     }
     
     /// Authenticate a target device.
-    pub async fn authenticate_device(&self, device_id: &str) -> DMSResult<bool> {
+    pub async fn authenticate_device(&self, device_id: &str) -> DMSCResult<bool> {
         if !*self.initialized.read().await {
-            return Err(DMSError::NotInitialized);
+            return Err(DMSCError::NotInitialized);
         }
         
         // Generate authentication challenge
@@ -261,13 +261,13 @@ impl DMSDeviceAuthProtocol {
     }
 
     /// Generate authentication challenge for device
-    async fn generate_challenge(&self, device_id: &str) -> DMSResult<AuthChallenge> {
+    async fn generate_challenge(&self, device_id: &str) -> DMSCResult<AuthChallenge> {
         use ring::rand::SystemRandom;
         
         let rng = SystemRandom::new();
         let mut challenge_data = vec![0u8; 32];
         rng.fill(&mut challenge_data)
-            .map_err(|e| DMSError::CryptoError(format!("Failed to generate challenge: {}", e)))?;
+            .map_err(|e| DMSCError::CryptoError(format!("Failed to generate challenge: {}", e)))?;
         
         let challenge = AuthChallenge {
             challenge_id: format!("challenge_{}_{}", device_id, std::time::SystemTime::now()
@@ -284,7 +284,7 @@ impl DMSDeviceAuthProtocol {
     }
 
     /// Send challenge to device (simplified implementation)
-    async fn send_challenge_to_device(&self, challenge: &AuthChallenge) -> DMSResult<Vec<u8>> {
+    async fn send_challenge_to_device(&self, challenge: &AuthChallenge) -> DMSCResult<Vec<u8>> {
         // In a real implementation, this would send the challenge over the network
         // and receive a signed response from the device
         
@@ -294,17 +294,17 @@ impl DMSDeviceAuthProtocol {
             use ring::signature;
             
             let key_pair = signature::Ed25519KeyPair::from_pkcs8(private_key)
-                .map_err(|e| DMSError::CryptoError(format!("Failed to parse Ed25519 key: {}", e)))?;
+                .map_err(|e| DMSCError::CryptoError(format!("Failed to parse Ed25519 key: {}", e)))?;
             
             let signature = key_pair.sign(&challenge.challenge_data);
             Ok(signature.as_ref().to_vec())
         } else {
-            Err(DMSError::CryptoError("Device key pair not found".to_string()))
+            Err(DMSCError::CryptoError("Device key pair not found".to_string()))
         }
     }
 
     /// Verify device challenge response using cryptographic signature verification.
-    async fn verify_challenge_response(&self, challenge: &AuthChallenge, response: &[u8]) -> DMSResult<bool> {
+    async fn verify_challenge_response(&self, challenge: &AuthChallenge, response: &[u8]) -> DMSCResult<bool> {
         // Check if challenge is still valid
         if Instant::now().duration_since(challenge.created_at) > challenge.valid_for {
             return Ok(false);
@@ -314,10 +314,10 @@ impl DMSDeviceAuthProtocol {
         let certificates = self.certificates.read().await;
         let device_cert = certificates.values()
             .find(|cert| cert.device_id == challenge.challenge_id.split('_').nth(1).unwrap_or(""))
-            .ok_or_else(|| DMSError::CryptoError("Device certificate not found".to_string()))?;
+            .ok_or_else(|| DMSCError::CryptoError("Device certificate not found".to_string()))?;
         
         if device_cert.public_key.is_empty() {
-            return Err(DMSError::CryptoError("Device has no public key".to_string()));
+            return Err(DMSCError::CryptoError("Device has no public key".to_string()));
         }
         
         // Verify the signature using the device's public key
@@ -337,7 +337,7 @@ impl DMSDeviceAuthProtocol {
     }
     
     /// Perform full device authentication.
-    async fn perform_full_authentication(&self, device_id: &str) -> DMSResult<()> {
+    async fn perform_full_authentication(&self, device_id: &str) -> DMSCResult<()> {
         // Generate authentication challenge
         let challenge = self.generate_challenge().await?;
         self.challenges.write().await.insert(challenge.challenge_id.clone(), challenge.clone());
@@ -355,7 +355,7 @@ impl DMSDeviceAuthProtocol {
     }
     
     /// Generate authentication challenge.
-    async fn generate_challenge(&self) -> DMSResult<AuthChallenge> {
+    async fn generate_challenge(&self) -> DMSCResult<AuthChallenge> {
         let mut rng = rand::thread_rng();
         let mut challenge_data = vec![0u8; 32];
         rng.fill(&mut challenge_data[..]);
@@ -369,7 +369,7 @@ impl DMSDeviceAuthProtocol {
     }
     
     /// Generate device key (simplified).
-    async fn generate_device_key(&self) -> DMSResult<Vec<u8>> {
+    async fn generate_device_key(&self) -> DMSCResult<Vec<u8>> {
         let mut rng = rand::thread_rng();
         let mut key = vec![0u8; 32];
         rng.fill(&mut key[..]);
@@ -377,12 +377,12 @@ impl DMSDeviceAuthProtocol {
     }
     
     /// Get device ID (simplified).
-    async fn get_device_id(&self) -> DMSResult<String> {
+    async fn get_device_id(&self) -> DMSCResult<String> {
         Ok(format!("dms-device-{}", uuid::Uuid::new_v4()))
     }
     
     /// Load device certificates from secure storage
-    async fn load_device_certificates_from_secure_storage(&self) -> DMSResult<()> {
+    async fn load_device_certificates_from_secure_storage(&self) -> DMSCResult<()> {
         // In a production environment, this would:
         // 1. Access secure storage (TPM, HSM, or encrypted filesystem)
         // 2. Load device certificates with proper validation
@@ -396,7 +396,7 @@ impl DMSDeviceAuthProtocol {
         let certificate = DeviceCertificate {
             device_id: device_id.clone(),
             public_key: public_key.clone(),
-            issuer: "DMS-Root-CA".to_string(),
+            issuer: "DMSC-Root-CA".to_string(),
             valid_until: Instant::now() + Duration::from_secs(365 * 24 * 60 * 60), // 1 year
             revoked: false,
         };
@@ -408,13 +408,13 @@ impl DMSDeviceAuthProtocol {
     }
     
     /// Initialize hardware security module with software-based key storage.
-    async fn initialize_hardware_security_module(&self) -> DMSResult<()> {
+    async fn initialize_hardware_security_module(&self) -> DMSCResult<()> {
         // Software-based HSM simulation using secure key storage
         // In a real implementation, this would connect to physical HSM
 
         // Generate master key pair for the HSM
         let master_key = crate::protocol::crypto::ECDSASigner::generate()
-            .map_err(|e| DMSError::CryptoError(format!("Failed to generate HSM master key: {}", e)))?;
+            .map_err(|e| DMSCError::CryptoError(format!("Failed to generate HSM master key: {}", e)))?;
 
         // Store master key securely (in memory for this implementation)
         // Note: In production, this would be stored in actual HSM
@@ -425,7 +425,7 @@ impl DMSDeviceAuthProtocol {
     }
     
     /// Set up secure key storage
-    async fn setup_secure_key_storage(&self) -> DMSResult<()> {
+    async fn setup_secure_key_storage(&self) -> DMSCResult<()> {
         // In a production environment, this would:
         // 1. Initialize secure key storage (TPM, HSM, or encrypted keystore)
         // 2. Generate or import master keys
@@ -453,14 +453,14 @@ impl DMSDeviceAuthProtocol {
     }
 }
 
-impl Default for DMSDeviceAuthProtocol {
+impl Default for DMSCDeviceAuthProtocol {
     fn default() -> Self {
         Self::new()
     }
 }
 
 /// Post-quantum cryptography handler.
-pub struct DMSPostQuantumCrypto {
+pub struct DMSCPostQuantumCrypto {
     /// Key exchange state
     key_exchange_state: Arc<RwLock<KeyExchangeState>>,
     /// Whether the handler is initialized
@@ -480,7 +480,7 @@ struct KeyExchangeState {
     completed: bool,
 }
 
-impl DMSPostQuantumCrypto {
+impl DMSCPostQuantumCrypto {
     /// Create a new post-quantum crypto handler.
     pub fn new() -> Self {
         Self {
@@ -490,9 +490,9 @@ impl DMSPostQuantumCrypto {
     }
     
     /// Initialize the post-quantum crypto handler.
-    pub async fn initialize(&self, crypto_suite: &DMSCryptoSuite) -> DMSResult<()> {
+    pub async fn initialize(&self, crypto_suite: &DMSCCryptoSuite) -> DMSCResult<()> {
         if !crypto_suite.is_quantum_resistant() {
-            return Err(DMSError::InvalidConfiguration("Crypto suite does not support quantum resistance".to_string()));
+            return Err(DMSCError::InvalidConfiguration("Crypto suite does not support quantum resistance".to_string()));
         }
         
         // Generate post-quantum key pair (simplified)
@@ -505,30 +505,30 @@ impl DMSPostQuantumCrypto {
     }
     
     /// Perform post-quantum key exchange using X25519.
-    pub async fn perform_key_exchange(&self, stream: &TcpStream) -> DMSResult<()> {
+    pub async fn perform_key_exchange(&self, stream: &TcpStream) -> DMSCResult<()> {
         if !*self.initialized.read().await {
-            return Err(DMSError::InvalidState("Post-quantum crypto not initialized".to_string()));
+            return Err(DMSCError::InvalidState("Post-quantum crypto not initialized".to_string()));
         }
         
         // Use X25519 for key exchange (post-quantum alternative)
         let key_exchange = crate::protocol::crypto::X25519KeyExchange::generate()
-            .map_err(|e| DMSError::CryptoError(format!("Failed to generate X25519 key: {}", e)))?;
+            .map_err(|e| DMSCError::CryptoError(format!("Failed to generate X25519 key: {}", e)))?;
         
         let public_key = key_exchange.public_key();
         
         // Send public key to peer
         let mut stream = stream;
         stream.write_all(&public_key).await
-            .map_err(|e| DMSError::NetworkError(format!("Failed to send public key: {}", e)))?;
+            .map_err(|e| DMSCError::NetworkError(format!("Failed to send public key: {}", e)))?;
         
         // Receive remote public key
         let mut remote_public_key = vec![0u8; 32];
         stream.read_exact(&mut remote_public_key).await
-            .map_err(|e| DMSError::NetworkError(format!("Failed to receive remote public key: {}", e)))?;
+            .map_err(|e| DMSCError::NetworkError(format!("Failed to receive remote public key: {}", e)))?;
         
         // Compute shared secret
         let shared_secret = key_exchange.compute_shared_secret(&remote_public_key)
-            .map_err(|e| DMSError::CryptoError(format!("Key exchange failed: {}", e)))?;
+            .map_err(|e| DMSCError::CryptoError(format!("Key exchange failed: {}", e)))?;
         
         let mut state = self.key_exchange_state.write().await;
         state.remote_public_key = Some(remote_public_key);
@@ -539,7 +539,7 @@ impl DMSPostQuantumCrypto {
     }
     
     /// Generate post-quantum key (simplified).
-    async fn generate_post_quantum_key(&self) -> DMSResult<Vec<u8>> {
+    async fn generate_post_quantum_key(&self) -> DMSCResult<Vec<u8>> {
         let mut rng = rand::thread_rng();
         let mut key = vec![0u8; 32];
         rng.fill(&mut key[..]);
@@ -547,25 +547,25 @@ impl DMSPostQuantumCrypto {
     }
 }
 
-impl Default for DMSPostQuantumCrypto {
+impl Default for DMSCPostQuantumCrypto {
     fn default() -> Self {
         Self::new()
     }
 }
 
 /// Traffic obfuscation layer.
-pub struct DMSObfuscationLayer {
+pub struct DMSCObfuscationLayer {
     /// Obfuscation configuration
     config: Arc<RwLock<ObfuscationConfig>>,
     /// Pattern generators for different obfuscation levels
-    pattern_generators: Arc<RwLock<HashMap<DMSObfuscationLevel, Box<dyn PatternGenerator>>>>,
+    pattern_generators: Arc<RwLock<HashMap<DMSCObfuscationLevel, Box<dyn PatternGenerator>>>>,
 }
 
 /// Obfuscation configuration.
 #[derive(Debug, Clone)]
 struct ObfuscationConfig {
     /// Current obfuscation level
-    level: DMSObfuscationLevel,
+    level: DMSCObfuscationLevel,
     /// Pattern rotation interval
     rotation_interval: Duration,
     /// Last pattern rotation
@@ -576,29 +576,29 @@ struct ObfuscationConfig {
 #[async_trait]
 trait PatternGenerator: Send + Sync {
     /// Generate obfuscated pattern.
-    async fn generate_pattern(&self, data: &[u8]) -> DMSResult<Vec<u8>>;
+    async fn generate_pattern(&self, data: &[u8]) -> DMSCResult<Vec<u8>>;
     
     /// Parse obfuscated pattern back to original data.
-    async fn parse_pattern(&self, pattern: &[u8]) -> DMSResult<Vec<u8>>;
+    async fn parse_pattern(&self, pattern: &[u8]) -> DMSCResult<Vec<u8>>;
     
     /// Get the pattern type identifier.
     fn pattern_type(&self) -> &'static str;
 }
 
-impl DMSObfuscationLayer {
+impl DMSCObfuscationLayer {
     /// Create a new obfuscation layer.
     pub fn new() -> Self {
-        let mut generators: HashMap<DMSObfuscationLevel, Box<dyn PatternGenerator>> = HashMap::new();
+        let mut generators: HashMap<DMSCObfuscationLevel, Box<dyn PatternGenerator>> = HashMap::new();
         
         // Register pattern generators
-        generators.insert(DMSObfuscationLevel::Basic, Box::new(BasicPatternGenerator::new()));
-        generators.insert(DMSObfuscationLevel::Medium, Box::new(HttpPatternGenerator::new()));
-        generators.insert(DMSObfuscationLevel::High, Box::new(ComplexPatternGenerator::new()));
-        generators.insert(DMSObfuscationLevel::Maximum, Box::new(PolymorphicPatternGenerator::new()));
+        generators.insert(DMSCObfuscationLevel::Basic, Box::new(BasicPatternGenerator::new()));
+        generators.insert(DMSCObfuscationLevel::Medium, Box::new(HttpPatternGenerator::new()));
+        generators.insert(DMSCObfuscationLevel::High, Box::new(ComplexPatternGenerator::new()));
+        generators.insert(DMSCObfuscationLevel::Maximum, Box::new(PolymorphicPatternGenerator::new()));
         
         Self {
             config: Arc::new(RwLock::new(ObfuscationConfig {
-                level: DMSObfuscationLevel::None,
+                level: DMSCObfuscationLevel::None,
                 rotation_interval: Duration::from_secs(600), // 10 minutes
                 last_rotation: Instant::now(),
             })),
@@ -607,7 +607,7 @@ impl DMSObfuscationLayer {
     }
     
     /// Initialize the obfuscation layer.
-    pub async fn initialize(&self, level: DMSObfuscationLevel) -> DMSResult<()> {
+    pub async fn initialize(&self, level: DMSCObfuscationLevel) -> DMSCResult<()> {
         let mut config = self.config.write().await;
         config.level = level;
         config.last_rotation = Instant::now();
@@ -615,11 +615,11 @@ impl DMSObfuscationLayer {
     }
     
     /// Obfuscate address for connection.
-    pub async fn obfuscate_address(&self, address: &str) -> DMSResult<String> {
+    pub async fn obfuscate_address(&self, address: &str) -> DMSCResult<String> {
         let config = self.config.read().await;
         
         match config.level {
-            DMSObfuscationLevel::None => Ok(address.to_string()),
+            DMSCObfuscationLevel::None => Ok(address.to_string()),
             _ => {
                 // Simple address obfuscation (in real implementation would be more sophisticated)
                 Ok(format!("obfuscated-{}", uuid::Uuid::new_v4()))
@@ -628,7 +628,7 @@ impl DMSObfuscationLayer {
     }
     
     /// Obfuscate data for transmission.
-    pub async fn obfuscate_data(&self, data: &[u8]) -> DMSResult<Vec<u8>> {
+    pub async fn obfuscate_data(&self, data: &[u8]) -> DMSCResult<Vec<u8>> {
         let config = self.config.read().await;
         let generators = self.pattern_generators.read().await;
         
@@ -640,7 +640,7 @@ impl DMSObfuscationLayer {
     }
     
     /// Parse obfuscated data back to original.
-    pub async fn parse_obfuscated_data(&self, pattern: &[u8]) -> DMSResult<Vec<u8>> {
+    pub async fn parse_obfuscated_data(&self, pattern: &[u8]) -> DMSCResult<Vec<u8>> {
         let config = self.config.read().await;
         let generators = self.pattern_generators.read().await;
         
@@ -652,7 +652,7 @@ impl DMSObfuscationLayer {
     }
 }
 
-impl Default for DMSObfuscationLayer {
+impl Default for DMSCObfuscationLayer {
     fn default() -> Self {
         Self::new()
     }
@@ -676,7 +676,7 @@ impl BasicPatternGenerator {
 
 #[async_trait]
 impl PatternGenerator for BasicPatternGenerator {
-    async fn generate_pattern(&self, data: &[u8]) -> DMSResult<Vec<u8>> {
+    async fn generate_pattern(&self, data: &[u8]) -> DMSCResult<Vec<u8>> {
         let mut result = Vec::new();
         
         // Simple XOR obfuscation
@@ -687,7 +687,7 @@ impl PatternGenerator for BasicPatternGenerator {
         Ok(result)
     }
     
-    async fn parse_pattern(&self, pattern: &[u8]) -> DMSResult<Vec<u8>> {
+    async fn parse_pattern(&self, pattern: &[u8]) -> DMSCResult<Vec<u8>> {
         // XOR is symmetric, so same operation for parsing
         self.generate_pattern(pattern).await
     }
@@ -697,18 +697,18 @@ impl PatternGenerator for BasicPatternGenerator {
     }
 }
 
-impl Default for DMSRandomPadding {
+impl Default for DMSCRandomPadding {
     fn default() -> Self {
         Self::new()
     }
 }
 
 /// Random padding generator for traffic shaping.
-pub struct DMSRandomPadding {
+pub struct DMSCRandomPadding {
     rng: rand::rngs::ThreadRng,
 }
 
-impl DMSRandomPadding {
+impl DMSCRandomPadding {
     /// Create a new random padding generator.
     pub fn new() -> Self {
         Self {
@@ -717,7 +717,7 @@ impl DMSRandomPadding {
     }
     
     /// Add random padding to data to obfuscate packet sizes.
-    pub fn add_padding(&self, data: &[u8], min_size: usize, max_size: usize) -> DMSResult<Vec<u8>> {
+    pub fn add_padding(&self, data: &[u8], min_size: usize, max_size: usize) -> DMSCResult<Vec<u8>> {
         use rand::Rng;
         
         let mut rng = rand::thread_rng();
@@ -737,15 +737,15 @@ impl DMSRandomPadding {
     }
     
     /// Remove random padding from data.
-    pub fn remove_padding(&self, padded_data: &[u8]) -> DMSResult<Vec<u8>> {
+    pub fn remove_padding(&self, padded_data: &[u8]) -> DMSCResult<Vec<u8>> {
         if padded_data.len() < 4 {
-            return Err(DMSError::CryptoError("Invalid padded data length".to_string()));
+            return Err(DMSCError::CryptoError("Invalid padded data length".to_string()));
         }
         
         let data_len = u32::from_be_bytes([padded_data[0], padded_data[1], padded_data[2], padded_data[3]]) as usize;
         
         if padded_data.len() < 4 + data_len {
-            return Err(DMSError::CryptoError("Invalid padded data format".to_string()));
+            return Err(DMSCError::CryptoError("Invalid padded data format".to_string()));
         }
         
         Ok(padded_data[4..4 + data_len].to_vec())
@@ -769,12 +769,12 @@ impl HttpPatternGenerator {
 
 #[async_trait]
 impl PatternGenerator for HttpPatternGenerator {
-    async fn generate_pattern(&self, data: &[u8]) -> DMSResult<Vec<u8>> {
+    async fn generate_pattern(&self, data: &[u8]) -> DMSCResult<Vec<u8>> {
         // Encode data as hex
         let encoded_data = hex::encode(data);
         let timestamp = std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)
-            .unwrap()
+            .map_err(|e| DMSCError::InvalidState(format!("System time error: {}", e)))?
             .as_secs();
         
         let http_request = self.template
@@ -784,21 +784,21 @@ impl PatternGenerator for HttpPatternGenerator {
         Ok(http_request.into_bytes())
     }
     
-    async fn parse_pattern(&self, pattern: &[u8]) -> DMSResult<Vec<u8>> {
+    async fn parse_pattern(&self, pattern: &[u8]) -> DMSCResult<Vec<u8>> {
         let http_str = String::from_utf8(pattern.to_vec())
-            .map_err(|_| DMSError::InvalidData("Invalid HTTP pattern".to_string()))?;
+            .map_err(|_| DMSCError::InvalidData("Invalid HTTP pattern".to_string()))?;
         
         // Extract data from HTTP request line
         if let Some(start) = http_str.find("id=") {
             if let Some(end) = http_str[start..].find("&") {
                 let encoded_data = &http_str[start + 3..start + end];
                 hex::decode(encoded_data)
-                    .map_err(|_| DMSError::InvalidData("Invalid hex encoding".to_string()))
+                    .map_err(|_| DMSCError::InvalidData("Invalid hex encoding".to_string()))
             } else {
-                Err(DMSError::InvalidData("Invalid HTTP pattern format".to_string()))
+                Err(DMSCError::InvalidData("Invalid HTTP pattern format".to_string()))
             }
         } else {
-            Err(DMSError::InvalidData("No data found in HTTP pattern".to_string()))
+            Err(DMSCError::InvalidData("No data found in HTTP pattern".to_string()))
         }
     }
     
@@ -836,7 +836,7 @@ impl ComplexPatternGenerator {
 
 #[async_trait]
 impl PatternGenerator for ComplexPatternGenerator {
-    async fn generate_pattern(&self, data: &[u8]) -> DMSResult<Vec<u8>> {
+    async fn generate_pattern(&self, data: &[u8]) -> DMSCResult<Vec<u8>> {
         let mut result = data.to_vec();
         
         // Apply all transformation layers
@@ -847,7 +847,7 @@ impl PatternGenerator for ComplexPatternGenerator {
         Ok(result)
     }
     
-    async fn parse_pattern(&self, pattern: &[u8]) -> DMSResult<Vec<u8>> {
+    async fn parse_pattern(&self, pattern: &[u8]) -> DMSCResult<Vec<u8>> {
         let mut result = pattern.to_vec();
         
         // Apply inverse transformations in reverse order
@@ -895,7 +895,7 @@ impl PolymorphicPatternGenerator {
 
 #[async_trait]
 impl PatternGenerator for PolymorphicPatternGenerator {
-    async fn generate_pattern(&self, data: &[u8]) -> DMSResult<Vec<u8>> {
+    async fn generate_pattern(&self, data: &[u8]) -> DMSCResult<Vec<u8>> {
         // Occasionally rotate patterns
         if rand::random::<f64>() < 0.1 {
             self.rotate_pattern().await;
@@ -905,7 +905,7 @@ impl PatternGenerator for PolymorphicPatternGenerator {
         generator.generate_pattern(data).await
     }
     
-    async fn parse_pattern(&self, pattern: &[u8]) -> DMSResult<Vec<u8>> {
+    async fn parse_pattern(&self, pattern: &[u8]) -> DMSCResult<Vec<u8>> {
         let generator = self.current_pattern.read().await;
         generator.parse_pattern(pattern).await
     }

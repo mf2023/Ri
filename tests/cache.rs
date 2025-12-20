@@ -1,7 +1,7 @@
 // Copyright © 2025 Wenze Wei. All Rights Reserved.
 //
-// This file is part of DMS.
-// The DMS project belongs to the Dunimd Team.
+// This file is part of DMSC.
+// The DMSC project belongs to the Dunimd Team.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -15,7 +15,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use dms_core::cache::{CachedValue, CacheStats, DMSCacheConfig, CacheBackendType, DMSCacheManager, DMSMemoryCache, DMSCache};
+use dmsc::cache::{CachedValue, CacheStats, DMSCCacheConfig, CacheBackendType, DMSCCacheManager, DMSCMemoryCache, DMSCCache};
 use std::time::Duration;
 
 #[test]
@@ -93,7 +93,7 @@ fn test_cache_stats_default() {
 
 #[test]
 fn test_cache_config_default() {
-    let config = DMSCacheConfig::default();
+    let config = DMSCCacheConfig::default();
     
     assert!(config.enabled);
     assert_eq!(config.default_ttl_secs, 3600);
@@ -121,7 +121,7 @@ fn test_cache_backend_type_from_str() {
 
 #[tokio::test]
 async fn test_memory_cache_get_set() {
-    let cache = DMSMemoryCache::new();
+    let cache = DMSCMemoryCache::new();
     
     // Test set and get
     let key = "test_key";
@@ -142,7 +142,7 @@ async fn test_memory_cache_get_set() {
 
 #[tokio::test]
 async fn test_memory_cache_delete() {
-    let cache = DMSMemoryCache::new();
+    let cache = DMSCMemoryCache::new();
     
     // Test set, delete, and get
     let key = "test_key";
@@ -158,7 +158,7 @@ async fn test_memory_cache_delete() {
 
 #[tokio::test]
 async fn test_memory_cache_exists() {
-    let cache = DMSMemoryCache::new();
+    let cache = DMSCMemoryCache::new();
     
     // Test exists
     let key = "test_key";
@@ -176,7 +176,7 @@ async fn test_memory_cache_exists() {
 
 #[tokio::test]
 async fn test_memory_cache_clear() {
-    let cache = DMSMemoryCache::new();
+    let cache = DMSCMemoryCache::new();
     
     // Set multiple keys
     let value = serde_json::json!("test_value");
@@ -202,7 +202,7 @@ async fn test_memory_cache_clear() {
 
 #[tokio::test]
 async fn test_memory_cache_stats() {
-    let cache = DMSMemoryCache::new();
+    let cache = DMSCMemoryCache::new();
     
     // Get initial stats
     let initial_stats = cache.stats().await;
@@ -230,7 +230,7 @@ async fn test_memory_cache_stats() {
 
 #[tokio::test]
 async fn test_memory_cache_cleanup_expired() {
-    let cache = DMSMemoryCache::new();
+    let cache = DMSCMemoryCache::new();
     
     // Set a key with a very short TTL
     let key = "expiring_key";
@@ -247,10 +247,10 @@ async fn test_memory_cache_cleanup_expired() {
 #[tokio::test]
 async fn test_cache_manager_get_set() {
     // Create a memory cache backend
-    let backend = std::sync::Arc::new(DMSMemoryCache::new());
+    let backend = std::sync::Arc::new(DMSCMemoryCache::new());
     
     // Create a cache manager
-    let manager = DMSCacheManager::new(backend);
+    let manager = DMSCCacheManager::new(backend);
     
     // Test set and get with string value
     let key = "test_key";
@@ -276,10 +276,10 @@ async fn test_cache_manager_get_set() {
 #[tokio::test]
 async fn test_cache_manager_delete() {
     // Create a memory cache backend
-    let backend = std::sync::Arc::new(DMSMemoryCache::new());
+    let backend = std::sync::Arc::new(DMSCMemoryCache::new());
     
     // Create a cache manager
-    let manager = DMSCacheManager::new(backend);
+    let manager = DMSCCacheManager::new(backend);
     
     // Test set, delete, and get
     let key = "test_key";
@@ -295,10 +295,10 @@ async fn test_cache_manager_delete() {
 #[tokio::test]
 async fn test_cache_manager_exists() {
     // Create a memory cache backend
-    let backend = std::sync::Arc::new(DMSMemoryCache::new());
+    let backend = std::sync::Arc::new(DMSCMemoryCache::new());
     
     // Create a cache manager
-    let manager = DMSCacheManager::new(backend);
+    let manager = DMSCCacheManager::new(backend);
     
     // Test exists
     let key = "test_key";
@@ -316,10 +316,10 @@ async fn test_cache_manager_exists() {
 #[tokio::test]
 async fn test_cache_manager_get_or_set() {
     // Create a memory cache backend
-    let backend = std::sync::Arc::new(DMSMemoryCache::new());
+    let backend = std::sync::Arc::new(DMSCMemoryCache::new());
     
     // Create a cache manager
-    let manager = DMSCacheManager::new(backend);
+    let manager = DMSCCacheManager::new(backend);
     
     // Test get_or_set
     let key = "test_key";

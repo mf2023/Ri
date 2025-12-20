@@ -6,7 +6,7 @@
 
 **Last modified date: 2025-12-12**
 
-core模块是DMS的基础，提供运行时、错误处理、服务上下文和模块系统等核心功能。
+core模块是DMSC的基础，提供运行时、错误处理、服务上下文和模块系统等核心功能。
 
 ## 模块概述
 
@@ -27,56 +27,56 @@ core模块包含以下子模块：
 
 </div>
 
-### DMSAppBuilder
+### DMSCAppBuilder
 
-应用构建器，用于配置和构建DMS应用。
+应用构建器，用于配置和构建DMSC应用。
 
 #### 方法
 
 | 方法 | 描述 | 参数 | 返回值 |
 |:--------|:-------------|:--------|:--------|
-| `new()` | 创建新的应用构建器 | 无 | `DMSAppBuilder` |
-| `with_config(path)` | 添加配置文件 | `path: &str` | `DMSResult<Self>` |
-| `with_logging(config)` | 添加日志配置 | `config: DMSLogConfig` | `DMSResult<Self>` |
-| `with_observability(config)` | 添加可观测性配置 | `config: DMSObservabilityConfig` | `DMSResult<Self>` |
-| `with_cache(config)` | 添加缓存配置 | `config: DMSCacheConfig` | `DMSResult<Self>` |
-| `with_queue(config)` | 添加队列配置 | `config: DMSQueueConfig` | `DMSResult<Self>` |
-| `with_module(module)` | 添加自定义模块 | `module: impl DMSModule` | `DMSResult<Self>` |
-| `with_async_module(module)` | 添加自定义异步模块 | `module: impl AsyncServiceModule` | `DMSResult<Self>` |
-| `build()` | 构建应用运行时 | 无 | `DMSResult<DMSAppRuntime>` |
+| `new()` | 创建新的应用构建器 | 无 | `DMSCAppBuilder` |
+| `with_config(path)` | 添加配置文件 | `path: &str` | `DMSCResult<Self>` |
+| `with_logging(config)` | 添加日志配置 | `config: DMSCLogConfig` | `DMSCResult<Self>` |
+| `with_observability(config)` | 添加可观测性配置 | `config: DMSCObservabilityConfig` | `DMSCResult<Self>` |
+| `with_cache(config)` | 添加缓存配置 | `config: DMSCCacheConfig` | `DMSCResult<Self>` |
+| `with_queue(config)` | 添加队列配置 | `config: DMSCQueueConfig` | `DMSCResult<Self>` |
+| `with_module(module)` | 添加自定义模块 | `module: impl DMSCModule` | `DMSCResult<Self>` |
+| `with_async_module(module)` | 添加自定义异步模块 | `module: impl AsyncServiceModule` | `DMSCResult<Self>` |
+| `build()` | 构建应用运行时 | 无 | `DMSCResult<DMSCAppRuntime>` |
 
 #### 使用示例
 
 ```rust
-let app = DMSAppBuilder::new()
+let app = DMSCAppBuilder::new()
     .with_config("config.yaml")?
-    .with_logging(DMSLogConfig::default())?
-    .with_observability(DMSObservabilityConfig::default())?
+    .with_logging(DMSCLogConfig::default())?
+    .with_observability(DMSCObservabilityConfig::default())?
     .build()?;
 ```
 
-### DMSAppRuntime
+### DMSCAppRuntime
 
-应用运行时，用于管理DMS应用的生命周期。
+应用运行时，用于管理DMSC应用的生命周期。
 
 #### 方法
 
 | 方法 | 描述 | 参数 | 返回值 |
 |:--------|:-------------|:--------|:--------|
-| `run<F>(f)` | 运行应用，执行提供的业务逻辑 | `f: F`，其中 `F: Fn(&DMSServiceContext) -> Fut` | `DMSResult<()>` |
-| `hook_bus()` | 获取钩子总线 | 无 | `&DMSHookBus` |
-| `stop()` | 停止应用 | 无 | `DMSResult<()>` |
+| `run<F>(f)` | 运行应用，执行提供的业务逻辑 | `f: F`，其中 `F: Fn(&DMSCServiceContext) -> Fut` | `DMSCResult<()>` |
+| `hook_bus()` | 获取钩子总线 | 无 | `&DMSCHookBus` |
+| `stop()` | 停止应用 | 无 | `DMSCResult<()>` |
 
 #### 使用示例
 
 ```rust
-app.run(|ctx: &DMSServiceContext| async move {
-    ctx.logger().info("service", "DMS service started")?;
+app.run(|ctx: &DMSCServiceContext| async move {
+    ctx.logger().info("service", "DMSC service started")?;
     Ok(())
 }).await
 ```
 
-### DMSServiceContext
+### DMSCServiceContext
 
 服务上下文，提供对所有模块功能的访问。
 
@@ -84,23 +84,23 @@ app.run(|ctx: &DMSServiceContext| async move {
 
 | 方法 | 描述 | 返回值 |
 |:--------|:-------------|:--------|
-| `logger()` | 获取日志记录器 | `&DMSLogger` |
-| `config()` | 获取配置管理器 | `&DMSConfig` |
-| `cache()` | 获取缓存服务 | `&DMSCacheModule` |
-| `queue()` | 获取队列服务 | `&DMSQueueModule` |
-| `fs()` | 获取文件系统服务 | `&DMSFileSystem` |
-| `auth()` | 获取认证服务 | `&DMSAuthModule` |
-| `device()` | 获取设备管理服务 | `&DMSDeviceControlModule` |
-| `gateway()` | 获取网关服务 | `&DMSGateway` |
-| `service_mesh()` | 获取服务网格服务 | `&DMSServiceMesh` |
-| `observability()` | 获取可观测性服务 | `&DMSObservabilityModule` |
+| `logger()` | 获取日志记录器 | `&DMSCLogger` |
+| `config()` | 获取配置管理器 | `&DMSCConfig` |
+| `cache()` | 获取缓存服务 | `&DMSCCacheModule` |
+| `queue()` | 获取队列服务 | `&DMSCQueueModule` |
+| `fs()` | 获取文件系统服务 | `&DMSCFileSystem` |
+| `auth()` | 获取认证服务 | `&DMSCAuthModule` |
+| `device()` | 获取设备管理服务 | `&DMSCDeviceControlModule` |
+| `gateway()` | 获取网关服务 | `&DMSCGateway` |
+| `service_mesh()` | 获取服务网格服务 | `&DMSCServiceMesh` |
+| `observability()` | 获取可观测性服务 | `&DMSCObservabilityModule` |
 
 #### 使用示例
 
 ```rust
-app.run(|ctx: &DMSServiceContext| async move {
+app.run(|ctx: &DMSCServiceContext| async move {
     // 访问日志功能
-    ctx.logger().info("service", "DMS service started")?;
+    ctx.logger().info("service", "DMSC service started")?;
     
     // 访问配置功能
     let service_name = ctx.config().get("service.name").unwrap_or("unknown");
@@ -112,7 +112,7 @@ app.run(|ctx: &DMSServiceContext| async move {
 }).await
 ```
 
-### DMSModule
+### DMSCModule
 
 模块 trait，用于创建自定义同步模块。
 
@@ -131,12 +131,12 @@ app.run(|ctx: &DMSServiceContext| async move {
 ```rust
 struct MyCustomModule;
 
-impl DMSModule for MyCustomModule {
+impl DMSCModule for MyCustomModule {
     fn name(&self) -> &str {
         "my_custom_module"
     }
     
-    fn initialize(&mut self, ctx: &DMSServiceContext) -> DMSResult<()> {
+    fn initialize(&mut self, ctx: &DMSCServiceContext) -> DMSCResult<()> {
         ctx.logger().info(self.name(), "Module initialized")?;
         Ok(())
     }
@@ -168,22 +168,22 @@ impl AsyncServiceModule for MyAsyncModule {
         "my_async_module"
     }
     
-    async fn initialize(&mut self, ctx: &DMSServiceContext) -> DMSResult<()> {
+    async fn initialize(&mut self, ctx: &DMSCServiceContext) -> DMSCResult<()> {
         ctx.logger().info(self.name(), "Async module initialized")?;
         Ok(())
     }
 }
 ```
 
-### DMSError
+### DMSCError
 
-DMS的统一错误类型。
+DMSC的统一错误类型。
 
 #### 方法
 
 | 方法 | 描述 | 参数 | 返回值 |
 |:--------|:-------------|:--------|:--------|
-| `new(code, message)` | 创建新的错误 | `code: &str`, `message: &str` | `DMSError` |
+| `new(code, message)` | 创建新的错误 | `code: &str`, `message: &str` | `DMSCError` |
 | `with_context(context)` | 添加错误上下文 | `context: impl Into<String>` | `Self` |
 | `with_source(source)` | 添加内部错误 | `source: impl std::error::Error + Send + Sync + 'static` | `Self` |
 | `code()` | 获取错误代码 | 无 | `&str` |
@@ -193,22 +193,22 @@ DMS的统一错误类型。
 #### 使用示例
 
 ```rust
-Err(DMSError::new("INVALID_CONFIG", "Invalid configuration")
+Err(DMSCError::new("INVALID_CONFIG", "Invalid configuration")
     .with_context("service.port must be a positive integer"))
 ```
 
-### DMSResult
+### DMSCResult
 
 结果类型别名，简化错误处理。
 
 ```rust
-type DMSResult<T> = Result<T, DMSError>;
+type DMSCResult<T> = Result<T, DMSCError>;
 ```
 
 #### 使用示例
 
 ```rust
-async fn my_function() -> DMSResult<()> {
+async fn my_function() -> DMSCResult<()> {
     // 业务逻辑
     Ok(())
 }
@@ -239,7 +239,7 @@ core模块定义了以下错误码：
 1. **使用prelude模块**：通过`use dms::prelude::*`导入常用类型，简化代码
 2. **按需配置模块**：只添加应用所需的模块，减少资源消耗
 3. **合理使用服务上下文**：通过上下文访问模块功能，避免直接依赖具体实现
-4. **实现自定义模块**：根据需要实现自定义模块扩展DMS功能
+4. **实现自定义模块**：根据需要实现自定义模块扩展DMSC功能
 5. **正确处理错误**：使用`?`运算符传播错误，或显式处理错误
 
 <div align="center">
@@ -254,18 +254,18 @@ core模块定义了以下错误码：
 use dms::prelude::*;
 
 #[tokio::main]
-async fn main() -> DMSResult<()> {
+async fn main() -> DMSCResult<()> {
     // 构建服务运行时
-    let app = DMSAppBuilder::new()
+    let app = DMSCAppBuilder::new()
         .with_config("config.yaml")?
-        .with_logging(DMSLogConfig::default())?
-        .with_observability(DMSObservabilityConfig::default())?
-        .with_cache(DMSCacheConfig::default())?
+        .with_logging(DMSCLogConfig::default())?
+        .with_observability(DMSCObservabilityConfig::default())?
+        .with_cache(DMSCCacheConfig::default())?
         .build()?;
     
     // 运行业务逻辑
-    app.run(|ctx: &DMSServiceContext| async move {
-        ctx.logger().info("service", "DMS service started")?;
+    app.run(|ctx: &DMSCServiceContext| async move {
+        ctx.logger().info("service", "DMSC service started")?;
         
         // 使用缓存
         ctx.cache().set("key", "value", Some(3600)).await?;

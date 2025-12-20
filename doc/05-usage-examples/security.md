@@ -11,9 +11,9 @@ use dms::prelude::*;
 use serde_json::json;
 
 // JWT配置
-let jwt_config = DMSJwtConfig {
+let jwt_config = DMSCJwtConfig {
     secret_key: "your-secret-key-here".to_string(),
-    algorithm: DMSJwtAlgorithm::HS256,
+    algorithm: DMSCJwtAlgorithm::HS256,
     issuer: "dms-service".to_string(),
     audience: vec!["web-app".to_string(), "mobile-app".to_string()],
     expiration: Duration::from_hours(24),
@@ -32,7 +32,7 @@ let jwt_config = DMSJwtConfig {
 ctx.security().init_jwt(jwt_config).await?;
 
 // 生成JWT令牌
-let user = DMSUser {
+let user = DMSCUser {
     id: "user123".to_string(),
     username: "john_doe".to_string(),
     email: "john@example.com".to_string(),
@@ -91,7 +91,7 @@ use dms::prelude::*;
 use serde_json::json;
 
 // OAuth2配置
-let oauth2_config = DMSOAuth2Config {
+let oauth2_config = DMSCOAuth2Config {
     client_id: "your-client-id".to_string(),
     client_secret: "your-client-secret".to_string(),
     authorization_endpoint: "https://accounts.google.com/o/oauth2/v2/auth".to_string(),
@@ -154,7 +154,7 @@ ctx.log().info(format!("MFA secret generated for user: {}", user_id));
 // 生成QR码（用于Google Authenticator等）
 let qr_code = ctx.security().generate_mfa_qr_code(
     user_id,
-    "DMS Service",
+    "DMSC Service",
     &mfa_secret,
 ).await?;
 ctx.log().info(format!("MFA QR code generated: {}...", &qr_code[..50]));
@@ -181,7 +181,7 @@ match ctx.security().verify_mfa_code(user_id, user_code).await {
             }
             false => {
                 ctx.log().error("All MFA verification methods failed");
-                return Err(DMSError::authentication("MFA verification failed".to_string()));
+                return Err(DMSCError::authentication("MFA verification failed".to_string()));
             }
         }
     }
@@ -209,7 +209,7 @@ use dms::prelude::*;
 use serde_json::json;
 
 // 创建角色
-let admin_role = DMSRole {
+let admin_role = DMSCRole {
     id: "role_admin".to_string(),
     name: "Administrator".to_string(),
     description: "Full system administrator".to_string(),
@@ -234,7 +234,7 @@ let admin_role = DMSRole {
     is_active: true,
 };
 
-let user_role = DMSRole {
+let user_role = DMSCRole {
     id: "role_user".to_string(),
     name: "User".to_string(),
     description: "Regular user".to_string(),
@@ -256,7 +256,7 @@ let user_role = DMSRole {
     is_active: true,
 };
 
-let moderator_role = DMSRole {
+let moderator_role = DMSCRole {
     id: "role_moderator".to_string(),
     name: "Moderator".to_string(),
     description: "Content moderator".to_string(),
@@ -322,12 +322,12 @@ use dms::prelude::*;
 use serde_json::json;
 
 // 定义ABAC策略
-let abac_policy = DMSABACPolicy {
+let abac_policy = DMSCABACPolicy {
     id: "policy_document_access".to_string(),
     name: "Document Access Policy".to_string(),
     description: "Controls access to documents based on user attributes".to_string(),
     rules: vec![
-        DMSABACRule {
+        DMSCABACRule {
             id: "rule_owner_access".to_string(),
             name: "Owner Access".to_string(),
             description: "Document owners have full access".to_string(),
@@ -343,10 +343,10 @@ let abac_policy = DMSABACPolicy {
             },
             action: "full_access".to_string(),
             condition: "subject.id == resource.owner_id".to_string(),
-            effect: DMSABACEffect::Allow,
+            effect: DMSCABACEffect::Allow,
             priority: 1,
         },
-        DMSABACRule {
+        DMSCABACRule {
             id: "rule_department_access".to_string(),
             name: "Department Access".to_string(),
             description: "Users can access documents in their department".to_string(),
@@ -362,10 +362,10 @@ let abac_policy = DMSABACPolicy {
             },
             action: "read".to_string(),
             condition: "subject.department == resource.department".to_string(),
-            effect: DMSABACEffect::Allow,
+            effect: DMSCABACEffect::Allow,
             priority: 2,
         },
-        DMSABACRule {
+        DMSCABACRule {
             id: "rule_time_based_access".to_string(),
             name: "Time-Based Access".to_string(),
             description: "Access restricted during business hours".to_string(),
@@ -381,7 +381,7 @@ let abac_policy = DMSABACPolicy {
             },
             action: "read".to_string(),
             condition: "current_time >= '09:00' && current_time <= '17:00'".to_string(),
-            effect: DMSABACEffect::Allow,
+            effect: DMSCABACEffect::Allow,
             priority: 3,
         },
     ],
@@ -394,7 +394,7 @@ let abac_policy = DMSABACPolicy {
 ctx.security().create_abac_policy(abac_policy).await?;
 
 // 评估ABAC访问请求
-let access_request = DMSABACRequest {
+let access_request = DMSCABACRequest {
     subject: {
         let mut attrs = std::collections::HashMap::new();
         attrs.insert("id".to_string(), "user123".to_string());
@@ -424,7 +424,7 @@ let access_request = DMSABACRequest {
 let access_decision = ctx.security().evaluate_abac_policy(&access_request).await?;
 ctx.log().info(format!("ABAC access decision: {:?}", access_decision));
 
-if access_decision.effect == DMSABACEffect::Allow {
+if access_decision.effect == DMSCABACEffect::Allow {
     ctx.log().info("Access granted");
 } else {
     ctx.log().warn("Access denied");
@@ -440,12 +440,12 @@ use dms::prelude::*;
 use serde_json::json;
 
 // 配置对称加密
-let symmetric_config = DMSSymmetricEncryptionConfig {
-    algorithm: DMSSymmetricAlgorithm::AES256GCM,
+let symmetric_config = DMSCSymmetricEncryptionConfig {
+    algorithm: DMSCSymmetricAlgorithm::AES256GCM,
     key: "this-is-a-32-byte-secret-key!".to_string(),
     iv: Some("16-byte-iv-here".to_string()),
-    mode: DMSEncryptionMode::GCM,
-    padding: DMSPaddingScheme::PKCS7,
+    mode: DMSCEncryptionMode::GCM,
+    padding: DMSCPaddingScheme::PKCS7,
 };
 
 ctx.security().init_symmetric_encryption(symmetric_config).await?;
@@ -481,7 +481,7 @@ use dms::prelude::*;
 use serde_json::json;
 
 // 生成密钥对
-let key_pair = ctx.security().generate_asymmetric_key_pair(DMSAsymmetricAlgorithm::RSA2048).await?;
+let key_pair = ctx.security().generate_asymmetric_key_pair(DMSCAsymmetricAlgorithm::RSA2048).await?;
 ctx.log().info("Asymmetric key pair generated");
 
 // 保存密钥对
@@ -526,8 +526,8 @@ use serde_json::json;
 // 从密码派生密钥
 let password = "user-strong-password";
 let salt = "random-salt-here";
-let key_derivation_config = DMSKeyDerivationConfig {
-    algorithm: DMSKeyDerivationAlgorithm::PBKDF2,
+let key_derivation_config = DMSCKeyDerivationConfig {
+    algorithm: DMSCKeyDerivationAlgorithm::PBKDF2,
     iterations: 100000,
     key_length: 32,
     salt: salt.to_string(),
@@ -537,12 +537,12 @@ let derived_key = ctx.security().derive_key_from_password(password, &key_derivat
 ctx.log().info(format!("Derived key: {}", derived_key));
 
 // 使用派生密钥进行加密
-let encryption_config = DMSSymmetricEncryptionConfig {
-    algorithm: DMSSymmetricAlgorithm::AES256GCM,
+let encryption_config = DMSCSymmetricEncryptionConfig {
+    algorithm: DMSCSymmetricAlgorithm::AES256GCM,
     key: derived_key.clone(),
     iv: None,
-    mode: DMSEncryptionMode::GCM,
-    padding: DMSPaddingScheme::PKCS7,
+    mode: DMSCEncryptionMode::GCM,
+    padding: DMSCPaddingScheme::PKCS7,
 };
 
 ctx.security().init_symmetric_encryption(encryption_config).await?;
@@ -581,21 +581,21 @@ let user_input = json!({
 
 // 定义验证规则
 let validation_rules = vec![
-    DMSValidationRule {
+    DMSCValidationRule {
         field: "email".to_string(),
-        rule_type: DMSValidationType::Email,
+        rule_type: DMSCValidationType::Email,
         required: true,
         message: "Valid email address is required".to_string(),
     },
-    DMSValidationRule {
+    DMSCValidationRule {
         field: "username".to_string(),
-        rule_type: DMSValidationType::Pattern("^[a-zA-Z0-9_]{3,20}$".to_string()),
+        rule_type: DMSCValidationType::Pattern("^[a-zA-Z0-9_]{3,20}$".to_string()),
         required: true,
         message: "Username must be 3-20 characters, alphanumeric and underscore only".to_string(),
     },
-    DMSValidationRule {
+    DMSCValidationRule {
         field: "password".to_string(),
-        rule_type: DMSValidationType::Custom(Box::new(|value| {
+        rule_type: DMSCValidationType::Custom(Box::new(|value| {
             let password = value.as_str().unwrap_or_default();
             
             // 检查密码强度
@@ -624,21 +624,21 @@ let validation_rules = vec![
         required: true,
         message: "Password does not meet security requirements".to_string(),
     },
-    DMSValidationRule {
+    DMSCValidationRule {
         field: "age".to_string(),
-        rule_type: DMSValidationType::Range(18, 100),
+        rule_type: DMSCValidationType::Range(18, 100),
         required: true,
         message: "Age must be between 18 and 100".to_string(),
     },
-    DMSValidationRule {
+    DMSCValidationRule {
         field: "phone".to_string(),
-        rule_type: DMSValidationType::Pattern(r"^\+?[1-9]\d{1,14}$".to_string()),
+        rule_type: DMSCValidationType::Pattern(r"^\+?[1-9]\d{1,14}$".to_string()),
         required: false,
         message: "Valid phone number is required".to_string(),
     },
-    DMSValidationRule {
+    DMSCValidationRule {
         field: "website".to_string(),
-        rule_type: DMSValidationType::Url,
+        rule_type: DMSCValidationType::Url,
         required: false,
         message: "Valid URL is required".to_string(),
     },
@@ -655,7 +655,7 @@ match ctx.security().validate_input(&user_input, &validation_rules).await {
         for error in validation_errors {
             ctx.log().error(format!("Validation error: {}", error));
         }
-        return Err(DMSError::validation("Input validation failed".to_string()));
+        return Err(DMSCError::validation("Input validation failed".to_string()));
     }
 }
 
@@ -707,7 +707,7 @@ if is_safe_table && is_safe_column {
     
     ctx.log().info("Dynamic query executed safely");
 } else {
-    return Err(DMSError::validation("Unsafe table or column name".to_string()));
+    return Err(DMSCError::validation("Unsafe table or column name".to_string()));
 }
 ```
 
@@ -771,7 +771,7 @@ use dms::prelude::*;
 use serde_json::json;
 
 // 配置速率限制
-let rate_limit_config = DMSRateLimitConfig {
+let rate_limit_config = DMSCRateLimitConfig {
     enabled: true,
     window_duration: Duration::from_minutes(1),
     max_requests: 100,
@@ -788,7 +788,7 @@ let rate_limit_config = DMSRateLimitConfig {
 ctx.security().init_rate_limiting(rate_limit_config).await?;
 
 // 检查速率限制
-let client_info = DMSClientInfo {
+let client_info = DMSCClientInfo {
     ip_address: "192.168.1.100".to_string(),
     user_agent: "Mozilla/5.0".to_string(),
     user_id: Some("user123".to_string()),
@@ -805,7 +805,7 @@ match ctx.security().check_rate_limit(&client_info, "api_endpoint").await {
         
         if rate_limit_info.is_limited {
             ctx.log().warn("Rate limit exceeded");
-            return Err(DMSError::rate_limit_exceeded("Too many requests".to_string()));
+            return Err(DMSCError::rate_limit_exceeded("Too many requests".to_string()));
         }
     }
     Err(e) => {
@@ -823,7 +823,7 @@ let endpoint_limits = vec![
 ];
 
 for (endpoint, max_requests, window) in endpoint_limits {
-    let endpoint_config = DMSRateLimitConfig {
+    let endpoint_config = DMSCRateLimitConfig {
         enabled: true,
         window_duration: window,
         max_requests,
@@ -859,11 +859,11 @@ use dms::prelude::*;
 use serde_json::json;
 
 // 配置分布式速率限制
-let distributed_config = DMSDistributedRateLimitConfig {
+let distributed_config = DMSCDistributedRateLimitConfig {
     enabled: true,
     sync_interval: Duration::from_secs(10),
-    sync_method: DMSSyncMethod::Redis,
-    consistency_level: DMSConsistencyLevel::Eventual,
+    sync_method: DMSCSyncMethod::Redis,
+    consistency_level: DMSCConsistencyLevel::Eventual,
     partition_count: 10,
     replication_factor: 3,
 };
@@ -871,7 +871,7 @@ let distributed_config = DMSDistributedRateLimitConfig {
 ctx.security().init_distributed_rate_limiting(distributed_config).await?;
 
 // 在集群环境中检查速率限制
-let cluster_client_info = DMSClientInfo {
+let cluster_client_info = DMSCClientInfo {
     ip_address: "192.168.1.100".to_string(),
     user_agent: "Mozilla/5.0".to_string(),
     user_id: Some("user123".to_string()),
@@ -889,7 +889,7 @@ match ctx.security().check_distributed_rate_limit(&cluster_client_info, "global_
         
         if distributed_info.is_limited {
             ctx.log().warn("Distributed rate limit exceeded");
-            return Err(DMSError::rate_limit_exceeded("Global rate limit exceeded".to_string()));
+            return Err(DMSCError::rate_limit_exceeded("Global rate limit exceeded".to_string()));
         }
     }
     Err(e) => {
@@ -899,7 +899,7 @@ match ctx.security().check_distributed_rate_limit(&cluster_client_info, "global_
 }
 
 // 滑动窗口速率限制
-let sliding_window_config = DMSSlidingWindowConfig {
+let sliding_window_config = DMSCSlidingWindowConfig {
     window_size: Duration::from_minutes(5),
     bucket_count: 10,
     sync_interval: Duration::from_secs(30),
@@ -928,7 +928,7 @@ use dms::prelude::*;
 use serde_json::json;
 
 // 配置CORS
-let cors_config = DMSCORSConfig {
+let cors_config = DMSCCORSConfig {
     allowed_origins: vec![
         "https://app.example.com".to_string(),
         "https://admin.example.com".to_string(),
@@ -964,7 +964,7 @@ let cors_config = DMSCORSConfig {
 ctx.security().init_cors(cors_config).await?;
 
 // 处理CORS预检请求
-let preflight_request = DMSCORSRequest {
+let preflight_request = DMSCCORSRequest {
     origin: "https://app.example.com".to_string(),
     method: "POST".to_string(),
     headers: vec!["Content-Type".to_string(), "Authorization".to_string()],
@@ -988,7 +988,7 @@ match ctx.security().handle_cors_preflight(&preflight_request).await {
 }
 
 // 动态CORS配置
-let dynamic_cors_config = DMSDynamicCORSConfig {
+let dynamic_cors_config = DMSCDynamicCORSConfig {
     enable_origin_validation: true,
     allowed_origin_patterns: vec![
         r"^https://.*\.example\.com$".to_string(),
@@ -1016,7 +1016,7 @@ use dms::prelude::*;
 use serde_json::json;
 
 // 配置CSRF保护
-let csrf_config = DMSCSRFConfig {
+let csrf_config = DMSCCSRFConfig {
     enabled: true,
     token_length: 32,
     token_expiration: Duration::from_hours(24),
@@ -1025,7 +1025,7 @@ let csrf_config = DMSCSRFConfig {
     form_field_name: "csrf_token".to_string(),
     secure_cookie: true,
     http_only_cookie: true,
-    same_site_cookie: DMSSameSite::Strict,
+    same_site_cookie: DMSCSameSite::Strict,
     double_submit_cookie: true,
     rotate_tokens: true,
     exempt_paths: vec!["/api/health".to_string(), "/api/public".to_string()],
@@ -1049,7 +1049,7 @@ if is_valid {
     ctx.log().info("CSRF token verification successful");
 } else {
     ctx.log().error("CSRF token verification failed");
-    return Err(DMSError::security("Invalid CSRF token".to_string()));
+    return Err(DMSCError::security("Invalid CSRF token".to_string()));
 }
 
 // 双重提交Cookie验证
@@ -1077,18 +1077,18 @@ use dms::prelude::*;
 use serde_json::json;
 
 // 综合安全配置
-let security_config = DMSSecurityConfig {
-    encryption: DMSEncryptionConfig {
-        default_algorithm: DMSEncryptionAlgorithm::AES256GCM,
+let security_config = DMSCSecurityConfig {
+    encryption: DMSCEncryptionConfig {
+        default_algorithm: DMSCEncryptionAlgorithm::AES256GCM,
         key_rotation_interval: Duration::from_days(90),
-        secure_random_source: DMSSecureRandom::System,
+        secure_random_source: DMSCSecureRandom::System,
     },
-    authentication: DMSAuthenticationConfig {
+    authentication: DMSCAuthenticationConfig {
         session_timeout: Duration::from_hours(24),
         max_failed_attempts: 5,
         lockout_duration: Duration::from_minutes(30),
         require_mfa: true,
-        password_policy: DMSPasswordPolicy {
+        password_policy: DMSCPasswordPolicy {
             min_length: 12,
             require_uppercase: true,
             require_lowercase: true,
@@ -1099,33 +1099,33 @@ let security_config = DMSSecurityConfig {
             max_age: Duration::from_days(90),
         },
     },
-    authorization: DMSAuthorizationConfig {
-        default_strategy: DMSAuthorizationStrategy::RBAC,
+    authorization: DMSCAuthorizationConfig {
+        default_strategy: DMSCAuthorizationStrategy::RBAC,
         enable_abac: true,
         enable_dynamic_policies: true,
         policy_cache_duration: Duration::from_minutes(15),
     },
-    audit: DMSAuditConfig {
+    audit: DMSCAuditConfig {
         enabled: true,
-        log_level: DMSAuditLevel::Info,
+        log_level: DMSCAuditLevel::Info,
         retention_period: Duration::from_days(365),
         include_request_body: true,
         include_response_body: false,
         sensitive_fields: vec!["password".to_string(), "credit_card".to_string(), "ssn".to_string()],
     },
-    compliance: DMSComplianceConfig {
+    compliance: DMSCComplianceConfig {
         enable_gdpr: true,
         enable_hipaa: false,
         enable_pcidss: false,
         enable_soc2: true,
-        data_classification: DMSDataClassification::Confidential,
+        data_classification: DMSCDataClassification::Confidential,
         retention_policies: vec![
-            DMSRetentionPolicy {
+            DMSCRetentionPolicy {
                 data_type: "user_data".to_string(),
                 retention_period: Duration::from_days(2555), // 7 years
                 anonymize_after: Duration::from_days(1095), // 3 years
             },
-            DMSRetentionPolicy {
+            DMSCRetentionPolicy {
                 data_type: "audit_logs".to_string(),
                 retention_period: Duration::from_days(365), // 1 year
                 anonymize_after: Duration::from_days(180), // 6 months
@@ -1158,7 +1158,7 @@ match ctx.security().authenticate_user("user123", "password").await {
     Ok(auth_result) => {
         ctx.log().info("User authentication successful");
     }
-    Err(DMSError::AuthenticationFailed(e)) => {
+    Err(DMSCError::AuthenticationFailed(e)) => {
         ctx.log().warn(format!("Authentication failed: {}", e));
         
         // 记录失败尝试
@@ -1171,18 +1171,18 @@ match ctx.security().authenticate_user("user123", "password").await {
             ctx.log().warn("Account locked due to too many failed attempts");
         }
         
-        return Err(DMSError::authentication("Invalid credentials".to_string()));
+        return Err(DMSCError::authentication("Invalid credentials".to_string()));
     }
-    Err(DMSError::AccountLocked(e)) => {
+    Err(DMSCError::AccountLocked(e)) => {
         ctx.log().warn(format!("Account is locked: {}", e));
-        return Err(DMSError::authentication("Account is temporarily locked".to_string()));
+        return Err(DMSCError::authentication("Account is temporarily locked".to_string()));
     }
-    Err(DMSError::MFARequired(e)) => {
+    Err(DMSCError::MFARequired(e)) => {
         ctx.log().info("MFA verification required");
         
         // 引导用户进行MFA验证
         let mfa_challenge = ctx.security().generate_mfa_challenge("user123").await?;
-        return Err(DMSError::mfa_required("MFA verification required".to_string()));
+        return Err(DMSCError::mfa_required("MFA verification required".to_string()));
     }
     Err(e) => {
         ctx.log().error(format!("Unexpected authentication error: {}", e));
@@ -1191,9 +1191,9 @@ match ctx.security().authenticate_user("user123", "password").await {
 }
 
 // 安全事件响应
-let security_event = DMSSecurityEvent {
+let security_event = DMSCSecurityEvent {
     event_type: "authentication_failure".to_string(),
-    severity: DMSSeverity::High,
+    severity: DMSCSeverity::High,
     source_ip: "192.168.1.100".to_string(),
     user_id: Some("user123".to_string()),
     description: "Multiple authentication failures detected".to_string(),
@@ -1249,7 +1249,7 @@ ctx.log().info("Security event handled");
 运行成功后，您将看到以下输出：
 
 ```
-[2024-01-01 12:00:00] INFO: DMS Security Example starting...
+[2024-01-01 12:00:00] INFO: DMSC Security Example starting...
 [2024-01-01 12:00:00] INFO: JWT authentication initialized
 [2024-01-01 12:00:00] INFO: OAuth2 authentication configured
 [2024-01-01 12:00:00] INFO: MFA support enabled
@@ -1285,13 +1285,13 @@ let advanced_encryption = DMAdvancedEncryptionConfig {
         data_encryption_keys: vec![
             DMDataEncryptionKey {
                 key_id: "dek-001".to_string(),
-                algorithm: DMSEncryptionAlgorithm::AES256GCM,
+                algorithm: DMSCEncryptionAlgorithm::AES256GCM,
                 rotation_schedule: Duration::from_days(7),
                 backup_enabled: true,
             },
             DMDataEncryptionKey {
                 key_id: "dek-002".to_string(),
-                algorithm: DMSEncryptionAlgorithm::ChaCha20Poly1305,
+                algorithm: DMSCEncryptionAlgorithm::ChaCha20Poly1305,
                 rotation_schedule: Duration::from_days(14),
                 backup_enabled: true,
             },
@@ -1323,7 +1323,7 @@ ctx.log().info(format!(
 
 </div>
 
-本示例展示了DMS框架全面的安全功能，帮助您构建安全、可靠且符合合规要求的应用程序。通过认证管理、授权控制、加密解密、输入验证、速率限制和CSRF保护等多重安全机制，您可以有效保护应用和数据安全。
+本示例展示了DMSC框架全面的安全功能，帮助您构建安全、可靠且符合合规要求的应用程序。通过认证管理、授权控制、加密解密、输入验证、速率限制和CSRF保护等多重安全机制，您可以有效保护应用和数据安全。
 
 ### 核心功能
 
@@ -1368,7 +1368,7 @@ ctx.log().info(format!(
 
 - [README](./README.md): 使用示例概览，提供所有使用示例的快速导航
 - [authentication](./authentication.md): 认证示例，学习JWT、OAuth2和RBAC认证授权
-- [basic-app](./basic-app.md): 基础应用示例，学习如何创建和运行第一个DMS应用
+- [basic-app](./basic-app.md): 基础应用示例，学习如何创建和运行第一个DMSC应用
 - [caching](./caching.md): 缓存示例，了解如何使用缓存模块提升应用性能
 - [database](./database.md): 数据库示例，学习数据库连接和查询操作
 - [http](./http.md): HTTP服务示例，构建Web应用和RESTful API

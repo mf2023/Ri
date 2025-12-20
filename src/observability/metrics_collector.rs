@@ -1,7 +1,7 @@
 //! Copyright © 2025 Wenze Wei. All Rights Reserved.
 //!
-//! This file is part of DMS.
-//! The DMS project belongs to the Dunimd Team.
+//! This file is part of DMSC.
+//! The DMSC project belongs to the Dunimd Team.
 //!
 //! Licensed under the Apache License, Version 2.0 (the "License");
 //! You may not use this file except in compliance with the License.
@@ -19,23 +19,23 @@
 
 //! # Metrics Collector
 //!
-//! This file implements a comprehensive metrics collection system for the DMS framework. It provides
+//! This file implements a comprehensive metrics collection system for the DMSC framework. It provides
 //! tools for collecting, analyzing, and reporting performance and system metrics. The system includes
 //! sliding window data structures for time-series data, quantile calculators for performance analysis,
 //! and system metrics collectors for monitoring CPU, memory, disk, and network usage.
 //!
 //! ## Key Components
 //!
-//! - **DMSSlidingWindow**: Sliding window for time-series data collection
-//! - **DMSQuantileCalculator**: Quantile calculator for performance metrics
-//! - **DMSPerformanceCollector**: Performance metrics collector with sliding window and quantile calculation
-//! - **DMSPerformanceMetrics**: Performance metrics snapshot structure
-//! - **DMSCPUMetrics**: CPU metrics structure
-//! - **DMSMemoryMetrics**: Memory metrics structure
-//! - **DMSDiskMetrics**: Disk metrics structure
-//! - **DMSNetworkMetrics**: Network metrics structure
-//! - **DMSSystemMetrics**: System metrics snapshot structure
-//! - **DMSSystemMetricsCollector**: System metrics collector
+//! - **DMSCSlidingWindow**: Sliding window for time-series data collection
+//! - **DMSCQuantileCalculator**: Quantile calculator for performance metrics
+//! - **DMSCPerformanceCollector**: Performance metrics collector with sliding window and quantile calculation
+//! - **DMSCPerformanceMetrics**: Performance metrics snapshot structure
+//! - **DMSCCPUMetrics**: CPU metrics structure
+//! - **DMSCMemoryMetrics**: Memory metrics structure
+//! - **DMSCDiskMetrics**: Disk metrics structure
+//! - **DMSCNetworkMetrics**: Network metrics structure
+//! - **DMSCSystemMetrics**: System metrics snapshot structure
+//! - **DMSCSystemMetricsCollector**: System metrics collector
 //!
 //! ## Design Principles
 //!
@@ -51,12 +51,12 @@
 //! ## Usage
 //!
 //! ```rust
-//! use dms::observability::{DMSPerformanceCollector, DMSSystemMetricsCollector};
+//! use dms::observability::{DMSCPerformanceCollector, DMSCSystemMetricsCollector};
 //! use std::time::Duration;
 //!
 //! fn example() {
 //!     // Create a performance collector with a 1-minute window and 5-second buckets
-//!     let mut perf_collector = DMSPerformanceCollector::new(
+//!     let mut perf_collector = DMSCPerformanceCollector::new(
 //!         Duration::from_secs(60),
 //!         Duration::from_secs(5)
 //!     );
@@ -71,7 +71,7 @@
 //!     println!("Error rate: {:.2}%", perf_metrics.error_rate * 100.0);
 //!     
 //!     // Create a system metrics collector
-//!     let mut sys_collector = DMSSystemMetricsCollector::new();
+//!     let mut sys_collector = DMSCSystemMetricsCollector::new();
 //!     
 //!     // Collect system metrics
 //!     let sys_metrics = sys_collector.collect();
@@ -93,7 +93,7 @@ use sysinfo::{CpuExt, DiskExt, NetworkExt, System, SystemExt};
 /// data points.
 #[allow(dead_code)]
 #[derive(Debug, Clone)]
-pub struct DMSSlidingWindow<T> {
+pub struct DMSCSlidingWindow<T> {
     /// Total size of the sliding window
     _window_size: Duration,
     /// Size of each bucket within the window
@@ -120,7 +120,7 @@ struct WindowBucket<T> {
 }
 
 #[allow(dead_code)]
-impl<T> DMSSlidingWindow<T> {
+impl<T> DMSCSlidingWindow<T> {
     /// Creates a new sliding window with the specified window size and bucket size.
     ///
     /// # Parameters
@@ -130,7 +130,7 @@ impl<T> DMSSlidingWindow<T> {
     ///
     /// # Returns
     ///
-    /// A new DMSSlidingWindow instance
+    /// A new DMSCSlidingWindow instance
     pub fn new(window_size: Duration, bucket_size: Duration) -> Self {
         let bucket_count = (window_size.as_millis() / bucket_size.as_millis()).max(1) as usize;
         let mut buckets = VecDeque::with_capacity(bucket_count);
@@ -221,18 +221,24 @@ impl<T> DMSSlidingWindow<T> {
 /// It sorts the data and uses linear interpolation for non-integer indices.
 #[allow(dead_code)]
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct DMSQuantileCalculator {
+pub struct DMSCQuantileCalculator {
     /// Sorted list of data points
     sorted_data: Vec<f64>,
 }
 
 #[allow(dead_code)]
-impl DMSQuantileCalculator {
+impl Default for DMSCQuantileCalculator {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl DMSCQuantileCalculator {
     /// Creates a new quantile calculator.
     ///
     /// # Returns
     ///
-    /// A new DMSQuantileCalculator instance
+    /// A new DMSCQuantileCalculator instance
     pub fn new() -> Self {
         Self {
             sorted_data: Vec::new(),
@@ -362,19 +368,19 @@ impl DMSQuantileCalculator {
 /// This struct collects performance metrics using sliding windows and provides quantile-based
 /// performance analysis.
 #[allow(dead_code)]
-pub struct DMSPerformanceCollector {
+pub struct DMSCPerformanceCollector {
     /// Sliding window for latency data
-    latency_window: DMSSlidingWindow<f64>,
+    latency_window: DMSCSlidingWindow<f64>,
     /// Sliding window for throughput data
-    throughput_window: DMSSlidingWindow<u64>,
+    throughput_window: DMSCSlidingWindow<u64>,
     /// Sliding window for error rate data
-    error_rate_window: DMSSlidingWindow<bool>,
+    error_rate_window: DMSCSlidingWindow<bool>,
     /// Quantile calculator for performance analysis
-    quantile_calculator: DMSQuantileCalculator,
+    quantile_calculator: DMSCQuantileCalculator,
 }
 
 #[allow(dead_code)]
-impl DMSPerformanceCollector {
+impl DMSCPerformanceCollector {
     /// Creates a new performance collector with the specified window size and bucket size.
     ///
     /// # Parameters
@@ -384,13 +390,13 @@ impl DMSPerformanceCollector {
     ///
     /// # Returns
     ///
-    /// A new DMSPerformanceCollector instance
+    /// A new DMSCPerformanceCollector instance
     pub fn new(window_size: Duration, bucket_size: Duration) -> Self {
         Self {
-            latency_window: DMSSlidingWindow::new(window_size, bucket_size),
-            throughput_window: DMSSlidingWindow::new(window_size, bucket_size),
-            error_rate_window: DMSSlidingWindow::new(window_size, bucket_size),
-            quantile_calculator: DMSQuantileCalculator::new(),
+            latency_window: DMSCSlidingWindow::new(window_size, bucket_size),
+            throughput_window: DMSCSlidingWindow::new(window_size, bucket_size),
+            error_rate_window: DMSCSlidingWindow::new(window_size, bucket_size),
+            quantile_calculator: DMSCQuantileCalculator::new(),
         }
     }
 
@@ -410,8 +416,8 @@ impl DMSPerformanceCollector {
     ///
     /// # Returns
     ///
-    /// A DMSPerformanceMetrics instance containing the current performance metrics
-    pub fn get_metrics(&mut self) -> DMSPerformanceMetrics {
+    /// A DMSCPerformanceMetrics instance containing the current performance metrics
+    pub fn get_metrics(&mut self) -> DMSCPerformanceMetrics {
         let latencies: Vec<f64> = self
             .latency_window
             .get_data_points()
@@ -444,7 +450,7 @@ impl DMSPerformanceCollector {
             0.0
         };
 
-        DMSPerformanceMetrics {
+        DMSCPerformanceMetrics {
             p50_latency_ms: p50,
             p95_latency_ms: p95,
             p99_latency_ms: p99,
@@ -462,7 +468,7 @@ impl DMSPerformanceCollector {
 ///
 /// This struct represents a snapshot of performance metrics at a specific point in time.
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct DMSPerformanceMetrics {
+pub struct DMSCPerformanceMetrics {
     /// 50th percentile latency in milliseconds
     pub p50_latency_ms: f64,
     /// 95th percentile latency in milliseconds
@@ -487,7 +493,7 @@ pub struct DMSPerformanceMetrics {
 ///
 /// This struct represents CPU usage metrics.
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct DMSCPUMetrics {
+pub struct DMSCCPUMetrics {
     /// Total CPU usage percentage
     pub total_usage_percent: f64,
     /// Per-core CPU usage percentages
@@ -502,7 +508,7 @@ pub struct DMSCPUMetrics {
 ///
 /// This struct represents memory usage metrics.
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct DMSMemoryMetrics {
+pub struct DMSCMemoryMetrics {
     /// Total memory in bytes
     pub total_bytes: u64,
     /// Used memory in bytes
@@ -525,7 +531,7 @@ pub struct DMSMemoryMetrics {
 ///
 /// This struct represents disk usage metrics.
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct DMSDiskMetrics {
+pub struct DMSCDiskMetrics {
     /// Total disk space in bytes
     pub total_bytes: u64,
     /// Used disk space in bytes
@@ -548,7 +554,7 @@ pub struct DMSDiskMetrics {
 ///
 /// This struct represents network usage metrics.
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct DMSNetworkMetrics {
+pub struct DMSCNetworkMetrics {
     /// Total bytes received
     pub total_received_bytes: u64,
     /// Total bytes transmitted
@@ -571,15 +577,15 @@ pub struct DMSNetworkMetrics {
 ///
 /// This struct represents a snapshot of system metrics at a specific point in time.
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct DMSSystemMetrics {
+pub struct DMSCSystemMetrics {
     /// CPU metrics
-    pub cpu: DMSCPUMetrics,
+    pub cpu: DMSCCPUMetrics,
     /// Memory metrics
-    pub memory: DMSMemoryMetrics,
+    pub memory: DMSCMemoryMetrics,
     /// Disk metrics
-    pub disk: DMSDiskMetrics,
+    pub disk: DMSCDiskMetrics,
     /// Network metrics
-    pub network: DMSNetworkMetrics,
+    pub network: DMSCNetworkMetrics,
     /// Timestamp of the metrics collection (Unix timestamp in milliseconds)
     pub timestamp: u64,
 }
@@ -589,7 +595,7 @@ pub struct DMSSystemMetrics {
 /// This struct collects system metrics using the sysinfo crate, providing cross-platform
 /// system monitoring capabilities.
 #[allow(dead_code)]
-pub struct DMSSystemMetricsCollector {
+pub struct DMSCSystemMetricsCollector {
     /// sysinfo System instance for collecting metrics
     system: System,
     /// Last network bytes received
@@ -605,12 +611,18 @@ pub struct DMSSystemMetricsCollector {
 }
 
 #[allow(dead_code)]
-impl DMSSystemMetricsCollector {
+impl Default for DMSCSystemMetricsCollector {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl DMSCSystemMetricsCollector {
     /// Creates a new system metrics collector.
     ///
     /// # Returns
     ///
-    /// A new DMSSystemMetricsCollector instance
+    /// A new DMSCSystemMetricsCollector instance
     pub fn new() -> Self {
         let mut system = System::new_all();
         system.refresh_all();
@@ -632,8 +644,8 @@ impl DMSSystemMetricsCollector {
     ///
     /// # Returns
     ///
-    /// A DMSSystemMetrics instance containing the current system metrics
-    pub fn collect(&mut self) -> DMSSystemMetrics {
+    /// A DMSCSystemMetrics instance containing the current system metrics
+    pub fn collect(&mut self) -> DMSCSystemMetrics {
         self.system.refresh_all();
 
         let cpu = self.get_cpu_metrics();
@@ -643,7 +655,7 @@ impl DMSSystemMetricsCollector {
 
         let timestamp = chrono::Utc::now().timestamp_millis() as u64;
         
-        DMSSystemMetrics {
+        DMSCSystemMetrics {
             cpu,
             memory,
             disk,
@@ -656,8 +668,8 @@ impl DMSSystemMetricsCollector {
     ///
     /// # Returns
     ///
-    /// A DMSCPUMetrics instance containing the CPU metrics
-    fn get_cpu_metrics(&self) -> DMSCPUMetrics {
+    /// A DMSCCPUMetrics instance containing the CPU metrics
+    fn get_cpu_metrics(&self) -> DMSCCPUMetrics {
         let total_usage = self.system.global_cpu_info().cpu_usage();
         let per_core_usage: Vec<f64> = self
             .system
@@ -668,7 +680,7 @@ impl DMSSystemMetricsCollector {
 
         // Note: sysinfo crate doesn't expose context switches and interrupts on all platforms
         // These values will be 0 on platforms where they're not available
-        DMSCPUMetrics {
+        DMSCCPUMetrics {
             total_usage_percent: total_usage as f64,
             per_core_usage,
             context_switches: 0,
@@ -680,8 +692,8 @@ impl DMSSystemMetricsCollector {
     ///
     /// # Returns
     ///
-    /// A DMSMemoryMetrics instance containing the memory metrics
-    fn get_memory_metrics(&self) -> DMSMemoryMetrics {
+    /// A DMSCMemoryMetrics instance containing the memory metrics
+    fn get_memory_metrics(&self) -> DMSCMemoryMetrics {
         let total = self.system.total_memory();
         let used = self.system.used_memory();
         let free = self.system.free_memory();
@@ -696,7 +708,7 @@ impl DMSSystemMetricsCollector {
             0.0
         };
 
-        DMSMemoryMetrics {
+        DMSCMemoryMetrics {
             total_bytes: total,
             used_bytes: used,
             free_bytes: free,
@@ -712,8 +724,8 @@ impl DMSSystemMetricsCollector {
     ///
     /// # Returns
     ///
-    /// A DMSDiskMetrics instance containing the disk metrics
-    fn get_disk_metrics(&self) -> DMSDiskMetrics {
+    /// A DMSCDiskMetrics instance containing the disk metrics
+    fn get_disk_metrics(&self) -> DMSCDiskMetrics {
         // Get first disk for now
         if let Some(disk) = self.system.disks().first() {
             let total = disk.total_space();
@@ -723,7 +735,7 @@ impl DMSSystemMetricsCollector {
 
             // Note: sysinfo crate doesn't expose I/O statistics on all platforms
             // These values will be 0 on platforms where they're not available
-            DMSDiskMetrics {
+            DMSCDiskMetrics {
                 total_bytes: total,
                 used_bytes: used,
                 free_bytes: available,
@@ -734,7 +746,7 @@ impl DMSSystemMetricsCollector {
                 write_count: 0,
             }
         } else {
-            DMSDiskMetrics {
+            DMSCDiskMetrics {
                 total_bytes: 0,
                 used_bytes: 0,
                 free_bytes: 0,
@@ -751,8 +763,8 @@ impl DMSSystemMetricsCollector {
     ///
     /// # Returns
     ///
-    /// A DMSNetworkMetrics instance containing the network metrics
-    fn get_network_metrics(&mut self) -> DMSNetworkMetrics {
+    /// A DMSCNetworkMetrics instance containing the network metrics
+    fn get_network_metrics(&mut self) -> DMSCNetworkMetrics {
         let (received_bytes, transmitted_bytes, received_packets, transmitted_packets) =
             Self::get_network_total(&self.system);
 
@@ -778,7 +790,7 @@ impl DMSSystemMetricsCollector {
         self.last_network_transmitted_packets = transmitted_packets;
         self.last_network_time = now;
 
-        DMSNetworkMetrics {
+        DMSCNetworkMetrics {
             total_received_bytes: received_bytes,
             total_transmitted_bytes: transmitted_bytes,
             received_bytes_per_sec,

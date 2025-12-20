@@ -1,7 +1,7 @@
 //! Copyright © 2025 Wenze Wei. All Rights Reserved.
 //! 
-//! This file is part of DMS.
-//! The DMS project belongs to the Dunimd Team.
+//! This file is part of DMSC.
+//! The DMSC project belongs to the Dunimd Team.
 //! 
 //! Licensed under the Apache License, Version 2.0 (the "License");
 //! You may not use this file except in compliance with the License.
@@ -17,36 +17,36 @@
 
 //! # Service Context
 //! 
-//! The service context provides access to all core functionalities of DMS,
+//! The service context provides access to all core functionalities of DMSC,
 //! acting as a central hub for accessing various components such as logging,
 //! configuration, file system, and hooks.
 
 #![allow(non_snake_case)]
 
-use crate::fs::DMSFileSystem;
-use crate::log::{DMSLogConfig, DMSLogger};
-use crate::config::DMSConfigManager;
-use crate::hooks::DMSHookBus;
-use crate::core::DMSResult;
-use crate::observability::DMSMetricsRegistry;
+use crate::fs::DMSCFileSystem;
+use crate::log::{DMSCLogConfig, DMSCLogger};
+use crate::config::DMSCConfigManager;
+use crate::hooks::DMSCHookBus;
+use crate::core::DMSCResult;
+use crate::observability::DMSCMetricsRegistry;
 use std::sync::Arc;
 
 /// Internal service context implementation. Not exposed directly to users.
 /// 
 /// This struct contains all the core components of the service context,
-/// but is wrapped by `DMSServiceContext` for controlled access.
+/// but is wrapped by `DMSCServiceContext` for controlled access.
 #[derive(Clone)]
 pub struct ServiceContextInner {
     /// File system accessor for secure file operations
-    pub fs: DMSFileSystem,
+    pub fs: DMSCFileSystem,
     /// Logger for structured logging
-    pub logger: Arc<DMSLogger>,
+    pub logger: Arc<DMSCLogger>,
     /// Configuration manager for accessing application settings
-    pub config: Arc<DMSConfigManager>,
+    pub config: Arc<DMSCConfigManager>,
     /// Hook bus for emitting and handling lifecycle events
-    pub hooks: Arc<DMSHookBus>,
+    pub hooks: Arc<DMSCHookBus>,
     /// Metrics registry for observability (optional)
-    pub metrics_registry: Option<Arc<DMSMetricsRegistry>>,
+    pub metrics_registry: Option<Arc<DMSCMetricsRegistry>>,
 }
 
 impl ServiceContextInner {
@@ -63,7 +63,7 @@ impl ServiceContextInner {
     /// # Returns
     /// 
     /// A new `ServiceContextInner` instance.
-    pub fn new(fs: DMSFileSystem, logger: DMSLogger, config: DMSConfigManager, hooks: DMSHookBus, metrics_registry: Option<Arc<DMSMetricsRegistry>>) -> Self {
+    pub fn new(fs: DMSCFileSystem, logger: DMSCLogger, config: DMSCConfigManager, hooks: DMSCHookBus, metrics_registry: Option<Arc<DMSCMetricsRegistry>>) -> Self {
         ServiceContextInner { 
             fs, 
             logger: Arc::new(logger), 
@@ -76,10 +76,10 @@ impl ServiceContextInner {
 
 }
 
-/// Public-facing service context for DMS applications.
+/// Public-facing service context for DMSC applications.
 /// 
-/// The `DMSServiceContext` is the primary way for modules and business logic to
-/// access core DMS functionalities. It follows the dependency injection pattern,
+/// The `DMSCServiceContext` is the primary way for modules and business logic to
+/// access core DMSC functionalities. It follows the dependency injection pattern,
 /// providing a centralized access point to all core components.
 /// 
 /// ## Design Principle
@@ -93,7 +93,7 @@ impl ServiceContextInner {
 /// ```rust
 /// use dms::prelude::*;
 /// 
-/// async fn handle_request(ctx: &DMSServiceContext) -> DMSResult<()> {
+/// async fn handle_request(ctx: &DMSCServiceContext) -> DMSCResult<()> {
 ///     // Access logger
 ///     ctx.logger().info("request", "Handling request");
 ///     
@@ -107,13 +107,13 @@ impl ServiceContextInner {
 /// }
 /// ```
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
-pub struct DMSServiceContext {
+pub struct DMSCServiceContext {
     /// Internal implementation details
     inner: ServiceContextInner,
 }
 
-impl DMSServiceContext {
-    /// Create a new `DMSServiceContext` with the provided components.
+impl DMSCServiceContext {
+    /// Create a new `DMSCServiceContext` with the provided components.
     /// 
     /// This method is typically used by the framework itself during application startup,
     /// but can be used for testing or custom initialization.
@@ -128,35 +128,35 @@ impl DMSServiceContext {
     /// 
     /// # Returns
     /// 
-    /// A new `DMSServiceContext` instance.
-    pub fn new_with(fs: DMSFileSystem, logger: DMSLogger, config: DMSConfigManager, hooks: DMSHookBus, metrics_registry: Option<Arc<DMSMetricsRegistry>>) -> Self {
+    /// A new `DMSCServiceContext` instance.
+    pub fn new_with(fs: DMSCFileSystem, logger: DMSCLogger, config: DMSCConfigManager, hooks: DMSCHookBus, metrics_registry: Option<Arc<DMSCMetricsRegistry>>) -> Self {
         let inner = ServiceContextInner::new(fs, logger, config, hooks, metrics_registry);
-        DMSServiceContext { inner }
+        DMSCServiceContext { inner }
     }
     
 
 
-    /// Create a new `DMSServiceContext` with default configuration.
+    /// Create a new `DMSCServiceContext` with default configuration.
     /// 
     /// This is the most common way to create a service context, as it handles
     /// the initialization of all core components automatically.
     /// 
     /// # Returns
     /// 
-    /// A `DMSResult` containing the new service context, or an error if initialization failed.
+    /// A `DMSCResult` containing the new service context, or an error if initialization failed.
     /// 
     /// # Errors
     /// 
     /// - If the project root directory cannot be determined
     /// - If there are issues initializing any of the core components
-    pub fn new_default() -> DMSResult<Self> {
+    pub fn new_default() -> DMSCResult<Self> {
         // Create default configuration manager
-        let config = DMSConfigManager::new_default();
+        let config = DMSCConfigManager::new_default();
         let cfg = config.config();
 
         // Determine project root directory
         let project_root = std::env::current_dir()
-            .map_err(|e| crate::core::DMSError::Other(format!("detect project root failed: {e}")))?;
+            .map_err(|e| crate::core::DMSCError::Other(format!("detect project root failed: {e}")))?;
         
         // Determine application data root directory
         let app_data_root = if let Some(root_str) = cfg.get_str("fs.app_data_root") {
@@ -166,24 +166,24 @@ impl DMSServiceContext {
         };
 
         // Initialize file system
-        let fs = DMSFileSystem::new_with_roots(project_root, app_data_root);
+        let fs = DMSCFileSystem::new_with_roots(project_root, app_data_root);
 
         // Initialize logging
-        let log_config = DMSLogConfig::from_config(cfg);
-        let logger = DMSLogger::new(&log_config, fs.clone());
+        let log_config = DMSCLogConfig::from_config(cfg);
+        let logger = DMSCLogger::new(&log_config, fs.clone());
         
         // Initialize hook bus
-        let hooks = DMSHookBus::new();
+        let hooks = DMSCHookBus::new();
         
-        Ok(DMSServiceContext::new_with(fs, logger, config, hooks, None))
+        Ok(DMSCServiceContext::new_with(fs, logger, config, hooks, None))
     }
 
     /// Get a reference to the file system accessor.
     /// 
     /// # Returns
     /// 
-    /// A reference to the `DMSFileSystem` instance.
-    pub fn fs(&self) -> &DMSFileSystem {
+    /// A reference to the `DMSCFileSystem` instance.
+    pub fn fs(&self) -> &DMSCFileSystem {
         &self.inner.fs
     }
     
@@ -193,8 +193,8 @@ impl DMSServiceContext {
     /// 
     /// # Returns
     /// 
-    /// A reference to the `DMSLogger` instance.
-    pub fn logger(&self) -> &DMSLogger {
+    /// A reference to the `DMSCLogger` instance.
+    pub fn logger(&self) -> &DMSCLogger {
         self.inner.logger.as_ref()
     }
     
@@ -204,8 +204,8 @@ impl DMSServiceContext {
     /// 
     /// # Returns
     /// 
-    /// A reference to the `DMSConfigManager` instance.
-    pub fn config(&self) -> Arc<DMSConfigManager> {
+    /// A reference to the `DMSCConfigManager` instance.
+    pub fn config(&self) -> Arc<DMSCConfigManager> {
         self.inner.config.clone()
     }
     
@@ -215,8 +215,8 @@ impl DMSServiceContext {
     /// 
     /// # Returns
     /// 
-    /// A reference to the `DMSHookBus` instance.
-    pub fn hooks(&self) -> Arc<DMSHookBus> {
+    /// A reference to the `DMSCHookBus` instance.
+    pub fn hooks(&self) -> Arc<DMSCHookBus> {
         self.inner.hooks.clone()
     }
     
@@ -226,8 +226,8 @@ impl DMSServiceContext {
     /// 
     /// # Returns
     /// 
-    /// A mutable reference to the `DMSHookBus` instance.
-    pub fn hooks_mut(&mut self) -> &mut DMSHookBus {
+    /// A mutable reference to the `DMSCHookBus` instance.
+    pub fn hooks_mut(&mut self) -> &mut DMSCHookBus {
         Arc::get_mut(&mut self.inner.hooks).expect("Cannot get mutable reference to hooks - shared ownership")
     }
 
@@ -235,8 +235,8 @@ impl DMSServiceContext {
     /// 
     /// # Returns
     /// 
-    /// A mutable reference to the `DMSConfigManager` instance.
-    pub fn config_mut(&mut self) -> &mut DMSConfigManager {
+    /// A mutable reference to the `DMSCConfigManager` instance.
+    pub fn config_mut(&mut self) -> &mut DMSCConfigManager {
         Arc::get_mut(&mut self.inner.config).expect("Cannot get mutable reference to config - shared ownership")
     }
 
@@ -244,8 +244,8 @@ impl DMSServiceContext {
     /// 
     /// # Returns
     /// 
-    /// A mutable reference to to the `DMSFileSystem` instance.
-    pub fn fs_mut(&mut self) -> &mut DMSFileSystem {
+    /// A mutable reference to to the `DMSCFileSystem` instance.
+    pub fn fs_mut(&mut self) -> &mut DMSCFileSystem {
         &mut self.inner.fs
     }
 
@@ -253,8 +253,8 @@ impl DMSServiceContext {
     /// 
     /// # Returns
     /// 
-    /// A mutable reference to the `DMSLogger` instance.
-    pub fn logger_mut(&mut self) -> &mut DMSLogger {
+    /// A mutable reference to the `DMSCLogger` instance.
+    pub fn logger_mut(&mut self) -> &mut DMSCLogger {
         Arc::get_mut(&mut self.inner.logger).expect("Cannot get mutable reference to logger - shared ownership")
     }
 
@@ -262,8 +262,8 @@ impl DMSServiceContext {
     /// 
     /// # Returns
     /// 
-    /// An optional reference to the `DMSMetricsRegistry` instance.
-    pub fn metrics_registry(&self) -> Option<Arc<DMSMetricsRegistry>> {
+    /// An optional reference to the `DMSCMetricsRegistry` instance.
+    pub fn metrics_registry(&self) -> Option<Arc<DMSCMetricsRegistry>> {
         self.inner.metrics_registry.clone()
     }
 }

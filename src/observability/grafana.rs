@@ -1,7 +1,7 @@
 //! Copyright © 2025 Wenze Wei. All Rights Reserved.
 //!
-//! This file is part of DMS.
-//! The DMS project belongs to the Dunimd Team.
+//! This file is part of DMSC.
+//! The DMSC project belongs to the Dunimd Team.
 //!
 //! Licensed under the Apache License, Version 2.0 (the "License");
 //! You may not use this file except in compliance with the License.
@@ -24,9 +24,9 @@
 //! 
 //! ## Key Components
 //! 
-//! - **DMSGridPos**: Represents the grid position of a panel on a dashboard
-//! - **DMSGrafanaPanel**: Represents a single Grafana panel with title, query, type, and position
-//! - **DMSGrafanaDashboard**: Represents a Grafana dashboard with multiple panels
+//! - **DMSCGridPos**: Represents the grid position of a panel on a dashboard
+//! - **DMSCGrafanaPanel**: Represents a single Grafana panel with title, query, type, and position
+//! - **DMSCGrafanaDashboard**: Represents a Grafana dashboard with multiple panels
 //! 
 //! ## Design Principles
 //! 
@@ -42,16 +42,16 @@
 //! ```rust
 //! use dms::prelude::*;
 //! 
-//! fn example() -> DMSResult<()> {
+//! fn example() -> DMSCResult<()> {
 //!     // Create a new dashboard
-//!     let mut dashboard = DMSGrafanaDashboard::new("DMS Metrics");
+//!     let mut dashboard = DMSCGrafanaDashboard::new("DMSC Metrics");
 //!     
 //!     // Create a panel
-//!     let panel = DMSGrafanaPanel {
+//!     let panel = DMSCGrafanaPanel {
 //!         title: "Request Rate".to_string(),
 //!         query: "rate(http_requests_total[5m])".to_string(),
 //!         panel_type: "graph".to_string(),
-//!         grid_pos: DMSGridPos {
+//!         grid_pos: DMSCGridPos {
 //!             h: 8,
 //!             w: 12,
 //!             x: 0,
@@ -71,45 +71,354 @@
 //! ```
 
 use serde::{Serialize, Deserialize};
-use crate::core::DMSResult;
+use crate::core::DMSCResult;
 
+/// Grafana target configuration for data sources
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct DMSGrafanaPanel {
-    pub title: String,
-    pub query: String,
-    pub panel_type: String,
-    pub grid_pos: DMSGridPos,
+pub struct DMSCGrafanaTarget {
+    pub expr: String,
+    pub ref_id: String,
+    pub legend_format: Option<String>,
+    pub interval: Option<String>,
 }
 
+/// Grafana grid position configuration
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct DMSGridPos {
+pub struct DMSCGridPos {
     pub h: i32,
     pub w: i32,
     pub x: i32,
     pub y: i32,
 }
 
+/// Grafana panel configuration
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct DMSGrafanaDashboard {
+pub struct DMSCGrafanaPanel {
+    pub id: i32,
     pub title: String,
-    pub panels: Vec<DMSGrafanaPanel>,
+    pub type_: String,
+    pub targets: Vec<DMSCGrafanaTarget>,
+    pub grid_pos: DMSCGridPos,
+    pub field_config: serde_json::Value,
+    pub options: serde_json::Value,
+    pub description: Option<String>,
+    pub datasource: Option<String>,
+}
+
+/// Grafana time range configuration
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DMSCGrafanaTimeRange {
+    pub from: String,
+    pub to: String,
+}
+
+/// Grafana dashboard tag
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DMSCGrafanaTag {
+    pub term: String,
+    pub color: Option<String>,
+}
+
+/// Grafana dashboard configuration
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DMSCGrafanaDashboard {
+    pub title: String,
+    pub panels: Vec<DMSCGrafanaPanel>,
+    pub tags: Vec<DMSCGrafanaTag>,
+    pub time: DMSCGrafanaTimeRange,
+    pub refresh: String,
+    pub timezone: String,
+    pub schema_version: i32,
+    pub uid: Option<String>,
+    pub version: i32,
+}
+
+/// Grafana dashboard generator
+pub struct DMSCGrafanaDashboardGenerator {
+    next_panel_id: i32,
 }
 
 #[allow(dead_code)]
-impl DMSGrafanaDashboard {
+impl DMSCGrafanaDashboard {
     pub fn new(title: &str) -> Self {
-        DMSGrafanaDashboard {
+        DMSCGrafanaDashboard {
             title: title.to_string(),
             panels: Vec::new(),
+            tags: vec![DMSCGrafanaTag { term: "dms".to_string(), color: Some("#1F77B4".to_string()) }],
+            time: DMSCGrafanaTimeRange { from: "now-1h".to_string(), to: "now".to_string() },
+            refresh: "5s".to_string(),
+            timezone: "browser".to_string(),
+            schema_version: 38,
+            uid: None,
+            version: 1,
         }
     }
     
-    pub fn add_panel(&mut self, panel: DMSGrafanaPanel) -> DMSResult<()> {
+    pub fn add_panel(&mut self, panel: DMSCGrafanaPanel) -> DMSCResult<()> {
         self.panels.push(panel);
         Ok(())
     }
     
-    pub fn to_json(&self) -> DMSResult<String> {
-        serde_json::to_string(self).map_err(|e| crate::core::DMSError::Serde(e.to_string()))
+    pub fn to_json(&self) -> DMSCResult<String> {
+        serde_json::to_string(self).map_err(|e| crate::core::DMSCError::Serde(e.to_string()))
+    }
+}
+
+impl DMSCGrafanaDashboardGenerator {
+    pub fn new() -> Self {
+        DMSCGrafanaDashboardGenerator {
+            next_panel_id: 1,
+        }
+    }
+    
+    /// Convert a string to title case (first letter of each word uppercase)
+    fn title_case(&self, s: &str) -> String {
+        let mut result = String::new();
+        let mut capitalize_next = true;
+        
+        for c in s.chars() {
+            if c == '_' || c == ' ' {
+                result.push(' ');
+                capitalize_next = true;
+            } else if capitalize_next {
+                result.push(c.to_ascii_uppercase());
+                capitalize_next = false;
+            } else {
+                result.push(c.to_ascii_lowercase());
+            }
+        }
+        
+        result
+    }
+    
+    /// Create a new dashboard with default settings
+    pub fn create_dashboard(&self, title: &str) -> DMSCGrafanaDashboard {
+        DMSCGrafanaDashboard::new(title)
+    }
+    
+    /// Create a Prometheus target
+    pub fn create_prometheus_target(&self, expr: &str, ref_id: &str, legend_format: Option<&str>) -> DMSCGrafanaTarget {
+        DMSCGrafanaTarget {
+            expr: expr.to_string(),
+            ref_id: ref_id.to_string(),
+            legend_format: legend_format.map(|s| s.to_string()),
+            interval: None,
+        }
+    }
+    
+    /// Create a new panel with default settings
+    pub fn create_panel(&mut self, title: &str, panel_type: &str, x: i32, y: i32, w: i32, h: i32) -> DMSCGrafanaPanel {
+        let panel_id = self.next_panel_id;
+        self.next_panel_id += 1;
+        
+        DMSCGrafanaPanel {
+            id: panel_id,
+            title: title.to_string(),
+            type_: panel_type.to_string(),
+            targets: Vec::new(),
+            grid_pos: DMSCGridPos { h, w, x, y },
+            field_config: serde_json::json!({ "defaults": {}, "overrides": [] }),
+            options: serde_json::json!({}),
+            description: None,
+            datasource: Some("Prometheus".to_string()),
+        }
+    }
+    
+    /// Create a graph panel for request rate
+    pub fn create_request_rate_panel(&mut self, x: i32, y: i32, w: i32, h: i32) -> DMSCGrafanaPanel {
+        let mut panel = self.create_panel("Request Rate", "timeseries", x, y, w, h);
+        panel.targets.push(self.create_prometheus_target(
+            "rate(dms_requests_total[5m])",
+            "A",
+            Some("{{instance}}")
+        ));
+        panel
+    }
+    
+    /// Create a graph panel for request duration
+    pub fn create_request_duration_panel(&mut self, x: i32, y: i32, w: i32, h: i32) -> DMSCGrafanaPanel {
+        let mut panel = self.create_panel("Request Duration", "timeseries", x, y, w, h);
+        panel.targets.push(self.create_prometheus_target(
+            "histogram_quantile(0.95, sum(rate(dms_request_duration_seconds_bucket[5m])) by (le))",
+            "A",
+            Some("95th Percentile")
+        ));
+        panel.targets.push(self.create_prometheus_target(
+            "histogram_quantile(0.5, sum(rate(dms_request_duration_seconds_bucket[5m])) by (le))",
+            "B",
+            Some("50th Percentile")
+        ));
+        panel
+    }
+    
+    /// Create a stat panel for active connections
+    pub fn create_active_connections_panel(&mut self, x: i32, y: i32, w: i32, h: i32) -> DMSCGrafanaPanel {
+        let mut panel = self.create_panel("Active Connections", "stat", x, y, w, h);
+        panel.targets.push(self.create_prometheus_target(
+            "dms_active_connections",
+            "A",
+            None
+        ));
+        panel
+    }
+    
+    /// Create a graph panel for error rate
+    pub fn create_error_rate_panel(&mut self, x: i32, y: i32, w: i32, h: i32) -> DMSCGrafanaPanel {
+        let mut panel = self.create_panel("Error Rate", "timeseries", x, y, w, h);
+        panel.targets.push(self.create_prometheus_target(
+            "rate(dms_errors_total[5m])",
+            "A",
+            Some("{{instance}}")
+        ));
+        panel
+    }
+    
+    /// Create a graph panel for cache metrics
+    pub fn create_cache_metrics_panel(&mut self, x: i32, y: i32, w: i32, h: i32) -> DMSCGrafanaPanel {
+        let mut panel = self.create_panel("Cache Metrics", "timeseries", x, y, w, h);
+        panel.targets.push(self.create_prometheus_target(
+            "rate(dms_cache_hits_total[5m])",
+            "A",
+            Some("Hits")
+        ));
+        panel.targets.push(self.create_prometheus_target(
+            "rate(dms_cache_misses_total[5m])",
+            "B",
+            Some("Misses")
+        ));
+        panel
+    }
+    
+    /// Create a graph panel for database query time
+    pub fn create_db_query_time_panel(&mut self, x: i32, y: i32, w: i32, h: i32) -> DMSCGrafanaPanel {
+        let mut panel = self.create_panel("Database Query Time", "timeseries", x, y, w, h);
+        panel.targets.push(self.create_prometheus_target(
+            "histogram_quantile(0.95, sum(rate(dms_db_query_duration_seconds_bucket[5m])) by (le))",
+            "A",
+            Some("95th Percentile")
+        ));
+        panel
+    }
+    
+    /// Generate a default DMSC dashboard with common metrics panels
+    pub fn generate_default_dashboard(&mut self) -> DMSCGrafanaDashboard {
+        let mut dashboard = self.create_dashboard("DMSC Default Dashboard");
+        
+        // First row: Request metrics
+        dashboard.add_panel(self.create_request_rate_panel(0, 0, 12, 8)).unwrap();
+        dashboard.add_panel(self.create_request_duration_panel(12, 0, 12, 8)).unwrap();
+        
+        // Second row: Error and connection metrics
+        dashboard.add_panel(self.create_error_rate_panel(0, 8, 12, 8)).unwrap();
+        dashboard.add_panel(self.create_active_connections_panel(12, 8, 6, 8)).unwrap();
+        
+        // Third row: Cache and database metrics
+        dashboard.add_panel(self.create_cache_metrics_panel(0, 16, 12, 8)).unwrap();
+        dashboard.add_panel(self.create_db_query_time_panel(12, 16, 12, 8)).unwrap();
+        
+        dashboard
+    }
+    
+    /// Generate a dashboard automatically based on available metrics
+    /// 
+    /// This method analyzes available metrics and generates an appropriate dashboard
+    /// with panels matching the metric types and values.
+    /// 
+    /// # Parameters
+    /// 
+    /// - `metrics`: List of available metric names
+    /// - `dashboard_title`: Title for the generated dashboard
+    /// 
+    /// # Returns
+    /// 
+    /// A Grafana dashboard automatically generated based on the provided metrics
+    pub fn generate_auto_dashboard(&mut self, metrics: Vec<&str>, dashboard_title: &str) -> DMSCGrafanaDashboard {
+        let mut dashboard = self.create_dashboard(dashboard_title);
+        
+        // Analyze metrics and group by type
+        let mut counter_metrics = Vec::new();
+        let mut gauge_metrics = Vec::new();
+        let mut histogram_metrics = Vec::new();
+        
+        for metric in metrics {
+            if metric.ends_with("_total") || metric.contains("count") {
+                counter_metrics.push(metric);
+            } else if metric.ends_with("_seconds") || metric.ends_with("_bytes") || metric.contains("time") {
+                histogram_metrics.push(metric);
+            } else {
+                gauge_metrics.push(metric);
+            }
+        }
+        
+        // Generate panels based on metric types
+        let mut current_row = 0;
+        
+        // Add counter panels
+        for (i, metric) in counter_metrics.iter().enumerate() {
+            let panel = self.create_counter_panel(*metric, i as i32 * 12, current_row, 12, 8);
+            dashboard.add_panel(panel).unwrap();
+            if (i + 1) % 2 == 0 {
+                current_row += 8;
+            }
+        }
+        
+        if counter_metrics.len() % 2 != 0 {
+            current_row += 8;
+        }
+        
+        // Add gauge panels
+        for (i, metric) in gauge_metrics.iter().enumerate() {
+            let panel = self.create_gauge_panel(*metric, i as i32 * 12, current_row, 12, 8);
+            dashboard.add_panel(panel).unwrap();
+            if (i + 1) % 2 == 0 {
+                current_row += 8;
+            }
+        }
+        
+        if gauge_metrics.len() % 2 != 0 {
+            current_row += 8;
+        }
+        
+        // Add histogram panels
+        for (i, metric) in histogram_metrics.iter().enumerate() {
+            let panel = self.create_histogram_panel(*metric, i as i32 * 12, current_row, 12, 8);
+            dashboard.add_panel(panel).unwrap();
+            if (i + 1) % 2 == 0 {
+                current_row += 8;
+            }
+        }
+        
+        dashboard
+    }
+    
+    /// Create a counter panel for a metric
+    pub fn create_counter_panel(&mut self, metric_name: &str, x: i32, y: i32, w: i32, h: i32) -> DMSCGrafanaPanel {
+        let title = self.title_case(metric_name);
+        let query = format!("rate({}[5m])", metric_name);
+        
+        let mut panel = self.create_panel(&title, "timeseries", x, y, w, h);
+        panel.targets.push(self.create_prometheus_target(&query, "A", Some("{{instance}}")));
+        panel
+    }
+    
+    /// Create a gauge panel for a metric
+    pub fn create_gauge_panel(&mut self, metric_name: &str, x: i32, y: i32, w: i32, h: i32) -> DMSCGrafanaPanel {
+        let title = self.title_case(metric_name);
+        
+        let mut panel = self.create_panel(&title, "stat", x, y, w, h);
+        panel.targets.push(self.create_prometheus_target(metric_name, "A", None));
+        panel
+    }
+    
+    /// Create a histogram panel for a metric
+    pub fn create_histogram_panel(&mut self, metric_name: &str, x: i32, y: i32, w: i32, h: i32) -> DMSCGrafanaPanel {
+        let title = self.title_case(metric_name);
+        let query_95 = format!("histogram_quantile(0.95, sum(rate({}_bucket[5m])) by (le))", metric_name);
+        let query_50 = format!("histogram_quantile(0.5, sum(rate({}_bucket[5m])) by (le))", metric_name);
+        
+        let mut panel = self.create_panel(&title, "timeseries", x, y, w, h);
+        panel.targets.push(self.create_prometheus_target(&query_95, "A", Some("95th Percentile")));
+        panel.targets.push(self.create_prometheus_target(&query_50, "B", Some("50th Percentile")));
+        panel
     }
 }

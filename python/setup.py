@@ -2,8 +2,8 @@
 
 # Copyright © 2025 Wenze Wei. All Rights Reserved.
 #
-# This file is part of DMS.
-# The DMS project belongs to the Dunimd Team.
+# This file is part of DMSC.
+# The DMSC project belongs to the Dunimd Team.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -24,23 +24,23 @@ with open("README.md", "r", encoding="utf-8") as fh:
     long_description = fh.read()
 
 setup(
-    name="dms-core",
-    version="0.1.2",
+    name="dmsc",
+    version="0.1.3",
     author="Dunimd Team",
     author_email="dunimd@outlook.com",
     description="Dunimd Middleware Service - A high-performance Rust middleware framework with modular architecture",
     long_description=long_description,
     long_description_content_type="text/markdown",
-    url="https://gitee.com/dunimd/dms",
+    url="https://gitee.com/dunimd/dmsc",
     project_urls={
-        "Bug Tracker": "https://gitee.com/dunimd/dms/issues",
-        "Documentation": "https://gitee.com/dunimd/dms",
-        "Source Code": "https://gitee.com/dunimd/dms",
+        "Bug Tracker": "https://gitee.com/dunimd/dmsc/issues",
+        "Documentation": "https://gitee.com/dunimd/dmsc",
+        "Source Code": "https://gitee.com/dunimd/dmsc",
     },
     packages=find_packages(),
     rust_extensions=[
         RustExtension(
-            "dms_core.dms_core",
+            "dmsc.dmsc",
             path="../Cargo.toml",
             binding=Binding.PyO3,
             features=["pyo3"],

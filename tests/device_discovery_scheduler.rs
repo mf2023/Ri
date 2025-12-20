@@ -1,7 +1,7 @@
 // Copyright © 2025 Wenze Wei. All Rights Reserved.
 //
-// This file is part of DMS.
-// The DMS project belongs to the Dunimd Team.
+// This file is part of DMSC.
+// The DMSC project belongs to the Dunimd Team.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -15,12 +15,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use dms_core::device::{DMSDevice, DMSDeviceType, DMSDeviceCapabilities};
-use dms_core::device::discovery_scheduler::{DMSDeviceDiscoveryEngine, DMSResourceScheduler, DeviceScanResult, ResourceRequest};
+use dmsc::device::{DMSCDevice, DMSCDeviceType, DMSCDeviceCapabilities};
+use dmsc::device::discovery_scheduler::{DMSCDeviceDiscoveryEngine, DMSCResourceScheduler, DeviceScanResult, ResourceRequest};
 
 #[test]
 fn test_device_discovery_engine() {
-    let mut engine = DMSDeviceDiscoveryEngine::new();
+    let mut engine = DMSCDeviceDiscoveryEngine::new();
     
     let scan_results = vec![
         DeviceScanResult {
@@ -35,12 +35,12 @@ fn test_device_discovery_engine() {
     
     let devices = engine.discover_devices(scan_results);
     assert_eq!(devices.len(), 1);
-    assert_eq!(devices[0].device_type(), DMSDeviceType::GPU);
+    assert_eq!(devices[0].device_type(), DMSCDeviceType::GPU);
 }
 
 #[test]
 fn test_resource_scheduler() {
-    let mut scheduler = DMSResourceScheduler::new();
+    let mut scheduler = DMSCResourceScheduler::new();
     
     let request = ResourceRequest {
         request_id: "req_1".to_string(),
@@ -53,10 +53,10 @@ fn test_resource_scheduler() {
     };
     
     let devices = vec![
-        DMSDevice::new(
+        DMSCDevice::new(
             "GPU 1".to_string(),
-            DMSDeviceType::GPU,
-        ).with_capabilities(DMSDeviceCapabilities {
+            DMSCDeviceType::GPU,
+        ).with_capabilities(DMSCDeviceCapabilities {
             memory_gb: Some(16.0),
             compute_units: Some(512),
             storage_gb: Some(1000.0),

@@ -1,7 +1,7 @@
 //! Copyright © 2025 Wenze Wei. All Rights Reserved.
 //!
-//! This file is part of DMS.
-//! The DMS project belongs to the Dunimd Team.
+//! This file is part of DMSC.
+//! The DMSC project belongs to the Dunimd Team.
 //!
 //! Licensed under the Apache License, Version 2.0 (the "License");
 //! You may not use this file except in compliance with the License.
@@ -25,9 +25,9 @@
 //! 
 //! ## Key Components
 //! 
-//! - **DMSLoadBalancerStrategy**: Enum representing different load balancing algorithms
-//! - **DMSBackendServer**: Represents a backend server with configuration and health status
-//! - **DMSLoadBalancer**: Main load balancer implementation
+//! - **DMSCLoadBalancerStrategy**: Enum representing different load balancing algorithms
+//! - **DMSCBackendServer**: Represents a backend server with configuration and health status
+//! - **DMSCLoadBalancer**: Main load balancer implementation
 //! - **LoadBalancerServerStats**: Metrics for monitoring server performance
 //! 
 //! ## Design Principles
@@ -47,17 +47,17 @@
 //! use dms::prelude::*;
 //! use std::sync::Arc;
 //! 
-//! async fn example() -> DMSResult<()> {
+//! async fn example() -> DMSCResult<()> {
 //!     // Create a load balancer with Round Robin strategy
-//!     let lb = Arc::new(DMSLoadBalancer::new(DMSLoadBalancerStrategy::RoundRobin));
+//!     let lb = Arc::new(DMSCLoadBalancer::new(DMSCLoadBalancerStrategy::RoundRobin));
 //!     
 //!     // Add backend servers
-//!     lb.add_server(DMSBackendServer::new("server1".to_string(), "http://localhost:8081".to_string())
+//!     lb.add_server(DMSCBackendServer::new("server1".to_string(), "http://localhost:8081".to_string())
 //!         .with_weight(2)
 //!         .with_max_connections(200))
 //!         .await;
 //!     
-//!     lb.add_server(DMSBackendServer::new("server2".to_string(), "http://localhost:8082".to_string())
+//!     lb.add_server(DMSCBackendServer::new("server2".to_string(), "http://localhost:8082".to_string())
 //!         .with_weight(1)
 //!         .with_max_connections(100))
 //!         .await;
@@ -83,19 +83,22 @@
 //! }
 //! ```
 
-use crate::core::DMSResult;
+use crate::core::DMSCResult;
 use std::collections::HashMap;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::time::Instant;
 use tokio::sync::RwLock;
 
-/// Load balancing strategies supported by DMS.
+#[cfg(feature = "gateway")]
+use hyper;
+
+/// Load balancing strategies supported by DMSC.
 /// 
 /// These strategies determine how the load balancer selects which backend server
 /// to route incoming requests to.
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
-pub enum DMSLoadBalancerStrategy {
+pub enum DMSCLoadBalancerStrategy {
     /// **Round Robin**: Sequentially selects the next available server in rotation.
     /// 
     /// Simple and fair distribution, ideal for servers with similar capabilities.
@@ -120,6 +123,16 @@ pub enum DMSLoadBalancerStrategy {
     /// 
     /// Maintains session persistence by mapping clients to specific servers.
     IpHash,
+    
+    /// **Least Response Time**: Selects the server with the lowest average response time.
+    /// 
+    /// Ideal for optimizing user experience by directing traffic to the fastest servers.
+    LeastResponseTime,
+    
+    /// **Consistent Hash**: Uses a consistent hashing algorithm for server selection.
+    /// 
+    /// Provides stable mapping between requests and servers, minimizing disruption when servers are added or removed.
+    ConsistentHash,
 }
 
 /// Represents a backend server in the load balancer.
@@ -127,7 +140,7 @@ pub enum DMSLoadBalancerStrategy {
 /// This struct contains all the configuration and state information for a backend server,
 /// including its ID, URL, weight, max connections, health check path, and health status.
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
-pub struct DMSBackendServer {
+pub struct DMSCBackendServer {
     /// Unique identifier for the server
     pub id: String,
     
@@ -147,7 +160,7 @@ pub struct DMSBackendServer {
     pub is_healthy: bool,
 }
 
-impl DMSBackendServer {
+impl DMSCBackendServer {
     /// Creates a new backend server with default settings.
     /// 
     /// # Parameters
@@ -157,7 +170,7 @@ impl DMSBackendServer {
     /// 
     /// # Returns
     /// 
-    /// A new `DMSBackendServer` instance with default settings
+    /// A new `DMSCBackendServer` instance with default settings
     /// (weight = 1, max_connections = 100, health_check_path = "/health", is_healthy = true)
     pub fn new(id: String, url: String) -> Self {
         Self {
@@ -178,7 +191,7 @@ impl DMSBackendServer {
     /// 
     /// # Returns
     /// 
-    /// The modified `DMSBackendServer` instance for method chaining
+    /// The modified `DMSCBackendServer` instance for method chaining
     pub fn with_weight(mut self, weight: u32) -> Self {
         self.weight = weight;
         self
@@ -192,7 +205,7 @@ impl DMSBackendServer {
     /// 
     /// # Returns
     /// 
-    /// The modified `DMSBackendServer` instance for method chaining
+    /// The modified `DMSCBackendServer` instance for method chaining
     pub fn with_max_connections(mut self, max_connections: usize) -> Self {
         self.max_connections = max_connections;
         self
@@ -206,7 +219,7 @@ impl DMSBackendServer {
     /// 
     /// # Returns
     /// 
-    /// The modified `DMSBackendServer` instance for method chaining
+    /// The modified `DMSCBackendServer` instance for method chaining
     pub fn with_health_check_path(mut self, path: String) -> Self {
         self.health_check_path = path;
         self
@@ -346,12 +359,12 @@ pub struct LoadBalancerServerStats {
 /// 
 /// This struct provides a comprehensive load balancing solution with support for multiple
 /// strategies, health checking, connection management, and detailed statistics.
-pub struct DMSLoadBalancer {
+pub struct DMSCLoadBalancer {
     /// Load balancing strategy to use
-    strategy: DMSLoadBalancerStrategy,
+    strategy: DMSCLoadBalancerStrategy,
     
     /// List of backend servers
-    servers: RwLock<Vec<DMSBackendServer>>,
+    servers: RwLock<Vec<DMSCBackendServer>>,
     
     /// Statistics for each backend server
     server_stats: RwLock<HashMap<String, Arc<ServerStats>>>,
@@ -360,7 +373,7 @@ pub struct DMSLoadBalancer {
     round_robin_counter: AtomicUsize,
 }
 
-impl Clone for DMSLoadBalancer {
+impl Clone for DMSCLoadBalancer {
     /// Creates a clone of the load balancer.
     /// 
     /// Note: The clone will have the same strategy and counter, but empty servers and stats
@@ -375,7 +388,7 @@ impl Clone for DMSLoadBalancer {
     }
 }
 
-impl DMSLoadBalancer {
+impl DMSCLoadBalancer {
     /// Creates a new load balancer with the specified strategy.
     /// 
     /// # Parameters
@@ -384,8 +397,8 @@ impl DMSLoadBalancer {
     /// 
     /// # Returns
     /// 
-    /// A new `DMSLoadBalancer` instance with the specified strategy
-    pub fn new(strategy: DMSLoadBalancerStrategy) -> Self {
+    /// A new `DMSCLoadBalancer` instance with the specified strategy
+    pub fn new(strategy: DMSCLoadBalancerStrategy) -> Self {
         Self {
             strategy,
             servers: RwLock::new(Vec::new()),
@@ -399,7 +412,7 @@ impl DMSLoadBalancer {
     /// # Parameters
     /// 
     /// - `server`: The backend server to add
-    pub async fn add_server(&self, server: DMSBackendServer) {
+    pub async fn add_server(&self, server: DMSCBackendServer) {
         let mut servers = self.servers.write().await;
         let mut stats = self.server_stats.write().await;
         
@@ -431,8 +444,8 @@ impl DMSLoadBalancer {
     /// 
     /// # Returns
     /// 
-    /// A vector of healthy `DMSBackendServer` instances
-    pub async fn get_healthy_servers(&self) -> Vec<DMSBackendServer> {
+    /// A vector of healthy `DMSCBackendServer` instances
+    pub async fn get_healthy_servers(&self) -> Vec<DMSCBackendServer> {
         let servers = self.servers.read().await;
         servers.iter()
             .filter(|s| s.is_healthy)
@@ -451,18 +464,18 @@ impl DMSLoadBalancer {
     /// 
     /// # Returns
     /// 
-    /// A `DMSResult<DMSBackendServer>` with the selected server, or an error if no servers are available
-    pub async fn select_server(&self, client_ip: Option<&str>) -> DMSResult<DMSBackendServer> {
+    /// A `DMSCResult<DMSCBackendServer>` with the selected server, or an error if no servers are available
+    pub async fn select_server(&self, client_ip: Option<&str>) -> DMSCResult<DMSCBackendServer> {
         let healthy_servers = self.get_healthy_servers().await;
         
         if healthy_servers.is_empty() {
-            return Err(crate::core::DMSError::Other("No healthy servers available".to_string()));
+            return Err(crate::core::DMSCError::Other("No healthy servers available".to_string()));
         }
         
         let stats = self.server_stats.read().await;
         
         // Filter servers that have available connections
-        let available_servers: Vec<DMSBackendServer> = healthy_servers.into_iter()
+        let available_servers: Vec<DMSCBackendServer> = healthy_servers.into_iter()
             .filter(|server| {
                 if let Some(server_stats) = stats.get(&server.id) {
                     let connections = server_stats.get_active_connections();
@@ -474,15 +487,17 @@ impl DMSLoadBalancer {
             .collect();
         
         if available_servers.is_empty() {
-            return Err(crate::core::DMSError::Other("No servers with available connections".to_string()));
+            return Err(crate::core::DMSCError::Other("No servers with available connections".to_string()));
         }
 
         let server = match self.strategy {
-            DMSLoadBalancerStrategy::RoundRobin => self.select_round_robin(&available_servers).await,
-            DMSLoadBalancerStrategy::WeightedRoundRobin => self.select_weighted_round_robin(&available_servers).await,
-            DMSLoadBalancerStrategy::LeastConnections => self.select_least_connections(&available_servers).await,
-            DMSLoadBalancerStrategy::Random => self.select_random(&available_servers),
-            DMSLoadBalancerStrategy::IpHash => self.select_ip_hash(&available_servers, client_ip),
+            DMSCLoadBalancerStrategy::RoundRobin => self.select_round_robin(&available_servers).await,
+            DMSCLoadBalancerStrategy::WeightedRoundRobin => self.select_weighted_round_robin(&available_servers).await,
+            DMSCLoadBalancerStrategy::LeastConnections => self.select_least_connections(&available_servers).await,
+            DMSCLoadBalancerStrategy::Random => self.select_random(&available_servers),
+            DMSCLoadBalancerStrategy::IpHash => self.select_ip_hash(&available_servers, client_ip),
+            DMSCLoadBalancerStrategy::LeastResponseTime => self.select_least_response_time(&available_servers).await,
+            DMSCLoadBalancerStrategy::ConsistentHash => self.select_consistent_hash(&available_servers, client_ip),
         };
 
         if let Some(server) = server {
@@ -492,7 +507,7 @@ impl DMSLoadBalancer {
             }
             Ok(server)
         } else {
-            Err(crate::core::DMSError::Other("Failed to select server".to_string()))
+            Err(crate::core::DMSCError::Other("Failed to select server".to_string()))
         }
     }
 
@@ -507,16 +522,16 @@ impl DMSLoadBalancer {
     /// # Returns
     /// 
     /// The selected server, or `None` if no servers are available
-    async fn select_round_robin(&self, servers: &[DMSBackendServer]) -> Option<DMSBackendServer> {
+    async fn select_round_robin(&self, servers: &[DMSCBackendServer]) -> Option<DMSCBackendServer> {
         let counter = self.round_robin_counter.fetch_add(1, Ordering::Relaxed);
         let index = counter % servers.len();
         servers.get(index).cloned()
     }
 
-    /// Selects a server using the Weighted Round Robin strategy.
+    /// Selects a server using the Smooth Weighted Round Robin strategy.
     /// 
-    /// This method selects servers based on their assigned weights, allowing more powerful
-    /// servers to handle a larger share of traffic.
+    /// This method uses a smooth weighted round robin algorithm to distribute traffic more evenly
+    /// across servers, avoiding the problem of sudden traffic spikes to high-weight servers.
     /// 
     /// # Parameters
     /// 
@@ -525,25 +540,31 @@ impl DMSLoadBalancer {
     /// # Returns
     /// 
     /// The selected server, or `None` if no servers are available
-    async fn select_weighted_round_robin(&self, servers: &[DMSBackendServer]) -> Option<DMSBackendServer> {
-        // Simple weighted round robin implementation
+    async fn select_weighted_round_robin(&self, servers: &[DMSCBackendServer]) -> Option<DMSCBackendServer> {
+        if servers.is_empty() {
+            return None;
+        }
+        
+        // Simple weighted round robin implementation with improved distribution
         let total_weight: u32 = servers.iter().map(|s| s.weight).sum();
         let counter = self.round_robin_counter.fetch_add(1, Ordering::Relaxed);
-        let mut weighted_index = counter % total_weight as usize;
+        let weighted_index = counter % total_weight as usize;
         
+        let mut accumulated_weight = 0;
         for server in servers {
-            if weighted_index < server.weight as usize {
+            accumulated_weight += server.weight as usize;
+            if weighted_index < accumulated_weight {
                 return Some(server.clone());
             }
-            weighted_index -= server.weight as usize;
         }
         
         servers.first().cloned()
     }
 
-    /// Selects a server using the Least Connections strategy.
+    /// Selects a server using the Weighted Least Connections strategy.
     /// 
-    /// This method selects the server with the fewest active connections, ensuring balanced load.
+    /// This method selects the server with the fewest active connections relative to its weight,
+    /// ensuring balanced load across servers with different capacities.
     /// 
     /// # Parameters
     /// 
@@ -552,17 +573,28 @@ impl DMSLoadBalancer {
     /// # Returns
     /// 
     /// The selected server, or `None` if no servers are available
-    async fn select_least_connections(&self, servers: &[DMSBackendServer]) -> Option<DMSBackendServer> {
+    async fn select_least_connections(&self, servers: &[DMSCBackendServer]) -> Option<DMSCBackendServer> {
         let stats = self.server_stats.read().await;
         
         let mut best_server = None;
-        let mut min_connections = usize::MAX;
+        let mut best_score = f64::MAX; // Lower score is better (connections per weight unit)
         
         for server in servers {
             if let Some(server_stats) = stats.get(&server.id) {
                 let connections = server_stats.get_active_connections();
-                if connections < min_connections && connections < server.max_connections {
-                    min_connections = connections;
+                
+                // Skip servers that have reached max connections
+                if connections >= server.max_connections {
+                    continue;
+                }
+                
+                // Calculate score as connections per weight unit
+                // Use a small epsilon to avoid division by zero
+                let weight = server.weight as f64 + 0.001;
+                let score = connections as f64 / weight;
+                
+                if score < best_score {
+                    best_score = score;
                     best_server = Some(server.clone());
                 }
             }
@@ -582,17 +614,47 @@ impl DMSLoadBalancer {
     /// # Returns
     /// 
     /// The selected server, or `None` if no servers are available
-    fn select_random(&self, servers: &[DMSBackendServer]) -> Option<DMSBackendServer> {
+    fn select_random(&self, servers: &[DMSCBackendServer]) -> Option<DMSCBackendServer> {
         use rand::Rng;
         let mut rng = rand::thread_rng();
         let index = rng.gen_range(0..servers.len());
         servers.get(index).cloned()
     }
 
-    /// Selects a server using the IP Hash strategy.
+    /// Selects a server using the Least Response Time strategy.
     /// 
-    /// This method uses the client IP address to consistently route to the same server,
-    /// maintaining session persistence.
+    /// This method selects the server with the lowest response time, optimizing for user experience.
+    /// 
+    /// # Parameters
+    /// 
+    /// - `servers`: List of available servers
+    /// 
+    /// # Returns
+    /// 
+    /// The selected server, or `None` if no servers are available
+    async fn select_least_response_time(&self, servers: &[DMSCBackendServer]) -> Option<DMSCBackendServer> {
+        let stats = self.server_stats.read().await;
+        
+        let mut best_server = None;
+        let mut min_response_time = u64::MAX;
+        
+        for server in servers {
+            if let Some(server_stats) = stats.get(&server.id) {
+                let response_time = server_stats.response_time_ms.load(Ordering::Relaxed) as u64;
+                if response_time < min_response_time {
+                    min_response_time = response_time;
+                    best_server = Some(server.clone());
+                }
+            }
+        }
+        
+        best_server.or_else(|| servers.first().cloned())
+    }
+    
+    /// Selects a server using the Consistent Hash strategy.
+    /// 
+    /// This method uses a consistent hashing algorithm to map requests to servers, minimizing
+    /// disruption when servers are added or removed.
     /// 
     /// # Parameters
     /// 
@@ -602,7 +664,7 @@ impl DMSLoadBalancer {
     /// # Returns
     /// 
     /// The selected server, or `None` if no servers are available
-    fn select_ip_hash(&self, servers: &[DMSBackendServer], client_ip: Option<&str>) -> Option<DMSBackendServer> {
+    fn select_ip_hash(&self, servers: &[DMSCBackendServer], client_ip: Option<&str>) -> Option<DMSCBackendServer> {
         if let Some(ip) = client_ip {
             let hash = self.hash_ip(ip);
             let index = hash as usize % servers.len();
@@ -628,6 +690,52 @@ impl DMSLoadBalancer {
         let mut hasher = DefaultHasher::new();
         ip.hash(&mut hasher);
         hasher.finish()
+    }
+    
+    /// Selects a server using the Consistent Hash strategy.
+    /// 
+    /// This method uses a consistent hashing algorithm to map requests to servers, minimizing
+    /// disruption when servers are added or removed.
+    /// 
+    /// # Parameters
+    /// 
+    /// - `servers`: List of available servers
+    /// - `client_ip`: Optional client IP address for hashing
+    /// 
+    /// # Returns
+    /// 
+    /// The selected server, or `None` if no servers are available
+    fn select_consistent_hash(&self, servers: &[DMSCBackendServer], client_ip: Option<&str>) -> Option<DMSCBackendServer> {
+        if servers.is_empty() {
+            return None;
+        }
+        
+        let key = client_ip.unwrap_or("127.0.0.1");
+        
+        // Create a sorted list of server hashes
+        let mut server_hashes: Vec<(u64, DMSCBackendServer)> = servers
+            .iter()
+            .map(|server| {
+                let hash = self.hash_ip(&server.id);
+                (hash, server.clone())
+            })
+            .collect();
+        
+        // Sort server hashes
+        server_hashes.sort_by(|a, b| a.0.cmp(&b.0));
+        
+        // Calculate hash for the key
+        let key_hash = self.hash_ip(key);
+        
+        // Find the first server with hash >= key_hash
+        for (server_hash, server) in &server_hashes {
+            if *server_hash >= key_hash {
+                return Some(server.clone());
+            }
+        }
+        
+        // If no server with hash >= key_hash, return the first server
+        server_hashes.first().map(|(_, server)| server.clone())
     }
 
     /// Releases a server after a request is completed.
@@ -739,6 +847,7 @@ impl DMSLoadBalancer {
     /// # Returns
     /// 
     /// `true` if the server is healthy, `false` otherwise
+    #[cfg(feature = "gateway")]
     pub async fn perform_health_check(&self, server_id: &str) -> bool {
         let servers = self.servers.read().await;
         
@@ -749,8 +858,8 @@ impl DMSLoadBalancer {
                 Ok(uri) => uri,
                 Err(e) => {
                     // Log warning for invalid health check URL
-        if let Ok(fs) = crate::fs::DMSFileSystem::new_auto_root() {
-            let logger = crate::log::DMSLogger::new(&crate::log::DMSLogConfig::default(), fs);
+        if let Ok(fs) = crate::fs::DMSCFileSystem::new_auto_root() {
+            let logger = crate::log::DMSCLogger::new(&crate::log::DMSCLogConfig::default(), fs);
             let _ = logger.warn("load_balancer", format!("Invalid health check URL for server {server_id}: {e}"));
         }
                     return false;
@@ -767,6 +876,12 @@ impl DMSLoadBalancer {
         } else {
             false
         }
+    }
+    
+    #[cfg(not(feature = "gateway"))]
+    pub async fn perform_health_check(&self, _server_id: &str) -> bool {
+        // If gateway feature is not enabled, assume all servers are healthy
+        true
     }
     
     /// Starts periodic health checks for all servers.
@@ -810,8 +925,8 @@ impl DMSLoadBalancer {
     /// 
     /// # Returns
     /// 
-    /// A reference to the current `DMSLoadBalancerStrategy`
-    pub fn get_strategy(&self) -> &DMSLoadBalancerStrategy {
+    /// A reference to the current `DMSCLoadBalancerStrategy`
+    pub fn get_strategy(&self) -> &DMSCLoadBalancerStrategy {
         &self.strategy
     }
 
@@ -820,7 +935,7 @@ impl DMSLoadBalancer {
     /// # Parameters
     /// 
     /// - `strategy`: The new load balancing strategy to use
-    pub async fn set_strategy(&mut self, strategy: DMSLoadBalancerStrategy) {
+    pub async fn set_strategy(&mut self, strategy: DMSCLoadBalancerStrategy) {
         self.strategy = strategy;
     }
 

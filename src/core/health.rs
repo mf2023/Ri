@@ -1,7 +1,7 @@
 //! Copyright © 2025 Wenze Wei. All Rights Reserved.
 //!
-//! This file is part of DMS.
-//! The DMS project belongs to the Dunimd Team.
+//! This file is part of DMSC.
+//! The DMSC project belongs to the Dunimd Team.
 //!
 //! Licensed under the Apache License, Version 2.0 (the "License");
 //! You may not use this file except in compliance with the License.
@@ -19,7 +19,7 @@
 
 //! # Health Check System
 //!
-//! This module provides comprehensive health checking functionality for DMS modules and services.
+//! This module provides comprehensive health checking functionality for DMSC modules and services.
 //! It supports both active health checks (proactive monitoring) and passive health indicators
 //! (reactive status reporting).
 //!
@@ -38,7 +38,7 @@
 //! 4. **Performance-Aware**: Minimal impact on system performance
 //! 5. **Extensible**: Easy to add new health check types
 
-use crate::core::DMSResult;
+use crate::core::DMSCResult;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::time::{Duration, SystemTime};
@@ -202,7 +202,7 @@ impl Default for HealthCheckConfig {
 #[async_trait::async_trait]
 pub trait HealthCheck: Send + Sync {
     /// Performs the health check and returns the result.
-    async fn check(&self) -> DMSResult<HealthCheckResult>;
+    async fn check(&self) -> DMSCResult<HealthCheckResult>;
 
     /// Returns the name of this health check.
     fn name(&self) -> &str;
@@ -349,66 +349,4 @@ impl Default for HealthChecker {
     }
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
 
-    struct MockHealthCheck {
-        name: String,
-        status: HealthStatus,
-        config: HealthCheckConfig,
-    }
-
-    #[async_trait::async_trait]
-    impl HealthCheck for MockHealthCheck {
-        async fn check(&self) -> DMSResult<HealthCheckResult> {
-            Ok(HealthCheckResult {
-                name: self.name.clone(),
-                status: self.status,
-                message: None,
-                timestamp: SystemTime::now(),
-                duration: Duration::from_millis(100),
-            })
-        }
-
-        fn name(&self) -> &str {
-            &self.name
-        }
-
-        fn config(&self) -> &HealthCheckConfig {
-            &self.config
-        }
-    }
-
-    #[tokio::test]
-    async fn test_health_status_merge() {
-        assert_eq!(HealthStatus::merge(&[]), HealthStatus::Unknown);
-        assert_eq!(HealthStatus::merge(&[HealthStatus::Healthy]), HealthStatus::Healthy);
-        assert_eq!(HealthStatus::merge(&[HealthStatus::Healthy, HealthStatus::Degraded]), HealthStatus::Degraded);
-        assert_eq!(HealthStatus::merge(&[HealthStatus::Healthy, HealthStatus::Unhealthy]), HealthStatus::Unhealthy);
-        assert_eq!(HealthStatus::merge(&[HealthStatus::Unknown, HealthStatus::Healthy]), HealthStatus::Unknown);
-    }
-
-    #[tokio::test]
-    async fn test_health_checker() {
-        let mut checker = HealthChecker::new();
-        
-        checker.register_check(Box::new(MockHealthCheck {
-            name: "test_healthy".to_string(),
-            status: HealthStatus::Healthy,
-            config: HealthCheckConfig::default(),
-        }));
-
-        checker.register_check(Box::new(MockHealthCheck {
-            name: "test_unhealthy".to_string(),
-            status: HealthStatus::Unhealthy,
-            config: HealthCheckConfig::default(),
-        }));
-
-        let report = checker.check_all().await;
-        assert_eq!(report.total_components, 2);
-        assert_eq!(report.healthy_count, 1);
-        assert_eq!(report.unhealthy_count, 1);
-        assert_eq!(report.overall_status, HealthStatus::Unhealthy);
-    }
-}

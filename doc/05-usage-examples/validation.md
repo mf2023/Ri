@@ -11,7 +11,7 @@ use dms::prelude::*;
 use serde_json::json;
 
 // 初始化验证管理器
-let validation_config = DMSValidationConfig {
+let validation_config = DMSCValidationConfig {
     strict_mode: true,
     stop_on_first_error: false,
     enable_type_coercion: true,
@@ -42,21 +42,21 @@ let user_data = json!({
 
 // 定义验证规则
 let validation_rules = vec![
-    DMSValidationRule {
+    DMSCValidationRule {
         field: "username".to_string(),
-        rule_type: DMSValidationType::Pattern("^[a-zA-Z0-9_]{3,20}$".to_string()),
+        rule_type: DMSCValidationType::Pattern("^[a-zA-Z0-9_]{3,20}$".to_string()),
         required: true,
         message: "Username must be 3-20 characters, alphanumeric and underscore only".to_string(),
     },
-    DMSValidationRule {
+    DMSCValidationRule {
         field: "email".to_string(),
-        rule_type: DMSValidationType::Email,
+        rule_type: DMSCValidationType::Email,
         required: true,
         message: "Valid email address is required".to_string(),
     },
-    DMSValidationRule {
+    DMSCValidationRule {
         field: "password".to_string(),
-        rule_type: DMSValidationType::Custom(Box::new(|value| {
+        rule_type: DMSCValidationType::Custom(Box::new(|value| {
             let password = value.as_str().unwrap_or_default();
             
             if password.len() < 8 {
@@ -84,33 +84,33 @@ let validation_rules = vec![
         required: true,
         message: "Password does not meet security requirements".to_string(),
     },
-    DMSValidationRule {
+    DMSCValidationRule {
         field: "age".to_string(),
-        rule_type: DMSValidationType::Range(18, 100),
+        rule_type: DMSCValidationType::Range(18, 100),
         required: true,
         message: "Age must be between 18 and 100".to_string(),
     },
-    DMSValidationRule {
+    DMSCValidationRule {
         field: "phone".to_string(),
-        rule_type: DMSValidationType::Pattern(r"^\+?[1-9]\d{1,14}$".to_string()),
+        rule_type: DMSCValidationType::Pattern(r"^\+?[1-9]\d{1,14}$".to_string()),
         required: false,
         message: "Valid phone number is required".to_string(),
     },
-    DMSValidationRule {
+    DMSCValidationRule {
         field: "website".to_string(),
-        rule_type: DMSValidationType::Url,
+        rule_type: DMSCValidationType::Url,
         required: false,
         message: "Valid URL is required".to_string(),
     },
-    DMSValidationRule {
+    DMSCValidationRule {
         field: "birth_date".to_string(),
-        rule_type: DMSValidationType::Date,
+        rule_type: DMSCValidationType::Date,
         required: true,
         message: "Valid birth date is required".to_string(),
     },
-    DMSValidationRule {
+    DMSCValidationRule {
         field: "agree_to_terms".to_string(),
-        rule_type: DMSValidationType::Boolean,
+        rule_type: DMSCValidationType::Boolean,
         required: true,
         message: "You must agree to the terms and conditions".to_string(),
     },
@@ -132,7 +132,7 @@ match ctx.validation().validate_data(&user_data, &validation_rules).await {
         }
         
         // 返回验证错误给前端
-        return Err(DMSError::validation(format!("Validation failed: {:?}", validation_errors)));
+        return Err(DMSCError::validation(format!("Validation failed: {:?}", validation_errors)));
     }
 }
 ```
@@ -178,57 +178,57 @@ let product_data = json!({
 
 // 复杂验证规则
 let complex_rules = vec![
-    DMSValidationRule {
+    DMSCValidationRule {
         field: "name".to_string(),
-        rule_type: DMSValidationType::Length(5, 100),
+        rule_type: DMSCValidationType::Length(5, 100),
         required: true,
         message: "Product name must be 5-100 characters".to_string(),
     },
-    DMSValidationRule {
+    DMSCValidationRule {
         field: "description".to_string(),
-        rule_type: DMSValidationType::Length(20, 2000),
+        rule_type: DMSCValidationType::Length(20, 2000),
         required: true,
         message: "Description must be 20-2000 characters".to_string(),
     },
-    DMSValidationRule {
+    DMSCValidationRule {
         field: "price".to_string(),
-        rule_type: DMSValidationType::Range(0.01, 10000.0),
+        rule_type: DMSCValidationType::Range(0.01, 10000.0),
         required: true,
         message: "Price must be between $0.01 and $10,000".to_string(),
     },
-    DMSValidationRule {
+    DMSCValidationRule {
         field: "currency".to_string(),
-        rule_type: DMSValidationType::In(vec!["USD".to_string(), "EUR".to_string(), "GBP".to_string(), "JPY".to_string()]),
+        rule_type: DMSCValidationType::In(vec!["USD".to_string(), "EUR".to_string(), "GBP".to_string(), "JPY".to_string()]),
         required: true,
         message: "Currency must be USD, EUR, GBP, or JPY".to_string(),
     },
-    DMSValidationRule {
+    DMSCValidationRule {
         field: "sku".to_string(),
-        rule_type: DMSValidationType::Pattern(r"^[A-Z]{2}-\d{4}-\d{3}$".to_string()),
+        rule_type: DMSCValidationType::Pattern(r"^[A-Z]{2}-\d{4}-\d{3}$".to_string()),
         required: true,
         message: "SKU must follow format: XX-YYYY-ZZZ".to_string(),
     },
-    DMSValidationRule {
+    DMSCValidationRule {
         field: "categories".to_string(),
-        rule_type: DMSValidationType::ArrayLength(1, 5),
+        rule_type: DMSCValidationType::ArrayLength(1, 5),
         required: true,
         message: "Product must have 1-5 categories".to_string(),
     },
-    DMSValidationRule {
+    DMSCValidationRule {
         field: "inventory.quantity".to_string(),
-        rule_type: DMSValidationType::Range(0, 10000),
+        rule_type: DMSCValidationType::Range(0, 10000),
         required: true,
         message: "Inventory quantity must be 0-10,000".to_string(),
     },
-    DMSValidationRule {
+    DMSCValidationRule {
         field: "dimensions.weight".to_string(),
-        rule_type: DMSValidationType::Range(0.01, 100.0),
+        rule_type: DMSCValidationType::Range(0.01, 100.0),
         required: true,
         message: "Weight must be 0.01-100.0".to_string(),
     },
-    DMSValidationRule {
+    DMSCValidationRule {
         field: "shipping.shipping_class".to_string(),
-        rule_type: DMSValidationType::In(vec!["standard".to_string(), "express".to_string(), "overnight".to_string()]),
+        rule_type: DMSCValidationType::In(vec!["standard".to_string(), "express".to_string(), "overnight".to_string()]),
         required: true,
         message: "Shipping class must be standard, express, or overnight".to_string(),
     },
@@ -245,7 +245,7 @@ match ctx.validation().validate_complex_data(&product_data, &complex_rules).awai
     Err(errors) => {
         ctx.log().error("Product validation failed");
         // 处理验证错误
-        return Err(DMSError::validation(format!("Product validation failed: {:?}", errors)));
+        return Err(DMSCError::validation(format!("Product validation failed: {:?}", errors)));
     }
 }
 ```
@@ -271,56 +271,56 @@ let dirty_data = json!({
 
 // 定义清理规则
 let sanitization_rules = vec![
-    DMSSanitizationRule {
+    DMSCSanitizationRule {
         field: "username".to_string(),
         operations: vec![
-            DMSSanitizationOperation::Trim,
-            DMSSanitizationOperation::ToLowercase,
-            DMSSanitizationOperation::RemoveSpecialCharsExcept(vec!['_', '-']),
+            DMSCSanitizationOperation::Trim,
+            DMSCSanitizationOperation::ToLowercase,
+            DMSCSanitizationOperation::RemoveSpecialCharsExcept(vec!['_', '-']),
         ],
     },
-    DMSSanitizationRule {
+    DMSCSanitizationRule {
         field: "email".to_string(),
         operations: vec![
-            DMSSanitizationOperation::Trim,
-            DMSSanitizationOperation::ToLowercase,
+            DMSCSanitizationOperation::Trim,
+            DMSCSanitizationOperation::ToLowercase,
         ],
     },
-    DMSSanitizationRule {
+    DMSCSanitizationRule {
         field: "phone".to_string(),
         operations: vec![
-            DMSSanitizationOperation::RemoveSpecialCharsExcept(vec!['+', '-']),
-            DMSSanitizationOperation::NormalizePhoneNumber,
+            DMSCSanitizationOperation::RemoveSpecialCharsExcept(vec!['+', '-']),
+            DMSCSanitizationOperation::NormalizePhoneNumber,
         ],
     },
-    DMSSanitizationRule {
+    DMSCSanitizationRule {
         field: "website".to_string(),
         operations: vec![
-            DMSSanitizationOperation::Trim,
-            DMSSanitizationOperation::NormalizeUrl,
+            DMSCSanitizationOperation::Trim,
+            DMSCSanitizationOperation::NormalizeUrl,
         ],
     },
-    DMSSanitizationRule {
+    DMSCSanitizationRule {
         field: "bio".to_string(),
         operations: vec![
-            DMSSanitizationOperation::StripHtmlTags,
-            DMSSanitizationOperation::Trim,
-            DMSSanitizationOperation::NormalizeWhitespace,
+            DMSCSanitizationOperation::StripHtmlTags,
+            DMSCSanitizationOperation::Trim,
+            DMSCSanitizationOperation::NormalizeWhitespace,
         ],
     },
-    DMSSanitizationRule {
+    DMSCSanitizationRule {
         field: "tags".to_string(),
         operations: vec![
-            DMSSanitizationOperation::TrimEach,
-            DMSSanitizationOperation::ToLowercaseEach,
-            DMSSanitizationOperation::RemoveDuplicates,
+            DMSCSanitizationOperation::TrimEach,
+            DMSCSanitizationOperation::ToLowercaseEach,
+            DMSCSanitizationOperation::RemoveDuplicates,
         ],
     },
-    DMSSanitizationRule {
+    DMSCSanitizationRule {
         field: "skills".to_string(),
         operations: vec![
-            DMSSanitizationOperation::TrimEach,
-            DMSSanitizationOperation::NormalizeWhitespace,
+            DMSCSanitizationOperation::TrimEach,
+            DMSCSanitizationOperation::NormalizeWhitespace,
         ],
     },
 ];
@@ -370,49 +370,49 @@ let rich_content = json!({
 
 // 高级清理规则
 let advanced_rules = vec![
-    DMSSanitizationRule {
+    DMSCSanitizationRule {
         field: "title".to_string(),
         operations: vec![
-            DMSSanitizationOperation::Trim,
-            DMSSanitizationOperation::StripDangerousHtmlTags,
-            DMSSanitizationOperation::NormalizeWhitespace,
+            DMSCSanitizationOperation::Trim,
+            DMSCSanitizationOperation::StripDangerousHtmlTags,
+            DMSCSanitizationOperation::NormalizeWhitespace,
         ],
     },
-    DMSSanitizationRule {
+    DMSCSanitizationRule {
         field: "content".to_string(),
         operations: vec![
-            DMSSanitizationOperation::StripScriptTags,
-            DMSSanitizationOperation::StripEventHandlers,
-            DMSSanitizationOperation::StripDangerousAttributes,
-            DMSSanitizationOperation::NormalizeUrls,
-            DMSSanitizationOperation::AddNoFollowToExternalLinks,
-            DMSSanitizationOperation::NormalizeWhitespace,
+            DMSCSanitizationOperation::StripScriptTags,
+            DMSCSanitizationOperation::StripEventHandlers,
+            DMSCSanitizationOperation::StripDangerousAttributes,
+            DMSCSanitizationOperation::NormalizeUrls,
+            DMSCSanitizationOperation::AddNoFollowToExternalLinks,
+            DMSCSanitizationOperation::NormalizeWhitespace,
         ],
     },
-    DMSSanitizationRule {
+    DMSCSanitizationRule {
         field: "tags".to_string(),
         operations: vec![
-            DMSSanitizationOperation::StripHtmlTagsEach,
-            DMSSanitizationOperation::TrimEach,
-            DMSSanitizationOperation::ToLowercaseEach,
-            DMSSanitizationOperation::RemoveDuplicates,
-            DMSSanitizationOperation::LimitLengthEach(50),
+            DMSCSanitizationOperation::StripHtmlTagsEach,
+            DMSCSanitizationOperation::TrimEach,
+            DMSCSanitizationOperation::ToLowercaseEach,
+            DMSCSanitizationOperation::RemoveDuplicates,
+            DMSCSanitizationOperation::LimitLengthEach(50),
         ],
     },
-    DMSSanitizationRule {
+    DMSCSanitizationRule {
         field: "metadata.author".to_string(),
         operations: vec![
-            DMSSanitizationOperation::Trim,
-            DMSSanitizationOperation::ToLowercase,
-            DMSSanitizationOperation::AlphanumericAndSpacesOnly,
+            DMSCSanitizationOperation::Trim,
+            DMSCSanitizationOperation::ToLowercase,
+            DMSCSanitizationOperation::AlphanumericAndSpacesOnly,
         ],
     },
-    DMSSanitizationRule {
+    DMSCSanitizationRule {
         field: "metadata.source".to_string(),
         operations: vec![
-            DMSSanitizationOperation::Trim,
-            DMSSanitizationOperation::NormalizeUrl,
-            DMSSanitizationOperation::ValidateUrl,
+            DMSCSanitizationOperation::Trim,
+            DMSCSanitizationOperation::NormalizeUrl,
+            DMSCSanitizationOperation::ValidateUrl,
         ],
     },
 ];
@@ -438,36 +438,36 @@ let sql_input = json!({
 });
 
 let sql_sanitization_rules = vec![
-    DMSSanitizationRule {
+    DMSCSanitizationRule {
         field: "search_query".to_string(),
         operations: vec![
-            DMSSanitizationOperation::EscapeSql,
-            DMSSanitizationOperation::RemoveSqlKeywords,
-            DMSSanitizationOperation::Trim,
-            DMSSanitizationOperation::LimitLength(100),
+            DMSCSanitizationOperation::EscapeSql,
+            DMSCSanitizationOperation::RemoveSqlKeywords,
+            DMSCSanitizationOperation::Trim,
+            DMSCSanitizationOperation::LimitLength(100),
         ],
     },
-    DMSSanitizationRule {
+    DMSCSanitizationRule {
         field: "category".to_string(),
         operations: vec![
-            DMSSanitizationOperation::EscapeSql,
-            DMSSanitizationOperation::AlphanumericAndSpacesOnly,
-            DMSSanitizationOperation::Trim,
+            DMSCSanitizationOperation::EscapeSql,
+            DMSCSanitizationOperation::AlphanumericAndSpacesOnly,
+            DMSCSanitizationOperation::Trim,
         ],
     },
-    DMSSanitizationRule {
+    DMSCSanitizationRule {
         field: "price_range".to_string(),
         operations: vec![
-            DMSSanitizationOperation::EscapeSql,
-            DMSSanitizationOperation::NumericCharactersOnly,
+            DMSCSanitizationOperation::EscapeSql,
+            DMSCSanitizationOperation::NumericCharactersOnly,
         ],
     },
-    DMSSanitizationRule {
+    DMSCSanitizationRule {
         field: "sort_by".to_string(),
         operations: vec![
-            DMSSanitizationOperation::EscapeSql,
-            DMSSanitizationOperation::RemoveSqlKeywords,
-            DMSSanitizationOperation::AlphanumericAndUnderscoreOnly,
+            DMSCSanitizationOperation::EscapeSql,
+            DMSCSanitizationOperation::RemoveSqlKeywords,
+            DMSCSanitizationOperation::AlphanumericAndUnderscoreOnly,
         ],
     },
 ];
@@ -512,7 +512,7 @@ impl UsernameValidator {
     }
 }
 
-impl DMSValidator for UsernameValidator {
+impl DMSCValidator for UsernameValidator {
     fn validate(&self, value: &serde_json::Value, field_name: &str) -> Result<(), String> {
         let username = value.as_str().ok_or("Username must be a string")?;
         
@@ -584,9 +584,9 @@ let user_data = json!({
     "email": "john@example.com",
 });
 
-let username_rule = DMSValidationRule {
+let username_rule = DMSCValidationRule {
     field: "username".to_string(),
-    rule_type: DMSValidationType::CustomValidator("username_validator".to_string()),
+    rule_type: DMSCValidationType::CustomValidator("username_validator".to_string()),
     required: true,
     message: "Username validation failed".to_string(),
 };
@@ -666,7 +666,7 @@ impl StrongPasswordValidator {
     }
 }
 
-impl DMSValidator for StrongPasswordValidator {
+impl DMSCValidator for StrongPasswordValidator {
     fn validate(&self, value: &serde_json::Value, field_name: &str) -> Result<(), String> {
         let password = value.as_str().ok_or("Password must be a string")?;
         
@@ -746,9 +746,9 @@ let password_data = json!({
     "password": "MyS3cur3P@ssw0rd!2024",
 });
 
-let password_rule = DMSValidationRule {
+let password_rule = DMSCValidationRule {
     field: "password".to_string(),
-    rule_type: DMSValidationType::CustomValidator("strong_password_validator".to_string()),
+    rule_type: DMSCValidationType::CustomValidator("strong_password_validator".to_string()),
     required: true,
     message: "Password is not strong enough".to_string(),
 };
@@ -797,23 +797,23 @@ let order_data = json!({
 });
 
 // 根据订单类型获取验证规则
-fn get_validation_rules(order_type: &str) -> Vec<DMSValidationRule> {
+fn get_validation_rules(order_type: &str) -> Vec<DMSCValidationRule> {
     let mut rules = vec![
-        DMSValidationRule {
+        DMSCValidationRule {
             field: "customer_id".to_string(),
-            rule_type: DMSValidationType::Pattern(r"^cust_\d+$".to_string()),
+            rule_type: DMSCValidationType::Pattern(r"^cust_\d+$".to_string()),
             required: true,
             message: "Invalid customer ID format".to_string(),
         },
-        DMSValidationRule {
+        DMSCValidationRule {
             field: "items".to_string(),
-            rule_type: DMSValidationType::ArrayLength(1, 10),
+            rule_type: DMSCValidationType::ArrayLength(1, 10),
             required: true,
             message: "Order must contain 1-10 items".to_string(),
         },
-        DMSValidationRule {
+        DMSCValidationRule {
             field: "total_amount".to_string(),
-            rule_type: DMSValidationType::Range(0.01, 10000.0),
+            rule_type: DMSCValidationType::Range(0.01, 10000.0),
             required: true,
             message: "Total amount must be between $0.01 and $10,000".to_string(),
         },
@@ -821,31 +821,31 @@ fn get_validation_rules(order_type: &str) -> Vec<DMSValidationRule> {
     
     match order_type {
         "international" => {
-            rules.push(DMSValidationRule {
+            rules.push(DMSCValidationRule {
                 field: "shipping_address.country".to_string(),
-                rule_type: DMSValidationType::NotIn(vec!["US".to_string(), "USA".to_string(), "United States".to_string()]),
+                rule_type: DMSCValidationType::NotIn(vec!["US".to_string(), "USA".to_string(), "United States".to_string()]),
                 required: true,
                 message: "International orders must ship outside the US".to_string(),
             });
             
-            rules.push(DMSValidationRule {
+            rules.push(DMSCValidationRule {
                 field: "total_amount".to_string(),
-                rule_type: DMSValidationType::Range(50.0, 5000.0),
+                rule_type: DMSCValidationType::Range(50.0, 5000.0),
                 required: true,
                 message: "International orders must be between $50 and $5,000".to_string(),
             });
         }
         "domestic" => {
-            rules.push(DMSValidationRule {
+            rules.push(DMSCValidationRule {
                 field: "shipping_address.country".to_string(),
-                rule_type: DMSValidationType::In(vec!["US".to_string(), "USA".to_string(), "United States".to_string()]),
+                rule_type: DMSCValidationType::In(vec!["US".to_string(), "USA".to_string(), "United States".to_string()]),
                 required: true,
                 message: "Domestic orders must ship within the US".to_string(),
             });
             
-            rules.push(DMSValidationRule {
+            rules.push(DMSCValidationRule {
                 field: "total_amount".to_string(),
-                rule_type: DMSValidationType::Range(10.0, 10000.0),
+                rule_type: DMSCValidationType::Range(10.0, 10000.0),
                 required: true,
                 message: "Domestic orders must be between $10 and $10,000".to_string(),
             });
@@ -899,7 +899,7 @@ let form_data = json!({
 // 依赖字段验证器
 struct ContactMethodValidator;
 
-impl DMSValidator for ContactMethodValidator {
+impl DMSCValidator for ContactMethodValidator {
     fn validate(&self, value: &serde_json::Value, field_name: &str) -> Result<(), String> {
         let contact_method = value["contact_method"].as_str().unwrap_or("");
         
@@ -958,9 +958,9 @@ impl DMSValidator for ContactMethodValidator {
 ctx.validation().register_custom_validator(Box::new(ContactMethodValidator)).await?;
 
 // 使用依赖字段验证
-let dependency_rule = DMSValidationRule {
+let dependency_rule = DMSCValidationRule {
     field: "contact_method".to_string(),
-    rule_type: DMSValidationType::CustomValidator("contact_method_validator".to_string()),
+    rule_type: DMSCValidationType::CustomValidator("contact_method_validator".to_string()),
     required: true,
     message: "Contact method validation failed".to_string(),
 };
@@ -1023,7 +1023,7 @@ impl UniqueUserValidator {
 }
 
 #[async_trait::async_trait]
-impl DMSAsyncValidator for UniqueUserValidator {
+impl DMSCAsyncValidator for UniqueUserValidator {
     async fn validate_async(&self, value: &serde_json::Value, field_name: &str) -> Result<(), String> {
         match field_name {
             "username" => {
@@ -1067,21 +1067,21 @@ ctx.validation().register_async_validator(Box::new(unique_validator)).await?;
 
 // 定义异步验证规则
 let async_validation_rules = vec![
-    DMSValidationRule {
+    DMSCValidationRule {
         field: "username".to_string(),
-        rule_type: DMSValidationType::AsyncCustomValidator("unique_user_validator".to_string()),
+        rule_type: DMSCValidationType::AsyncCustomValidator("unique_user_validator".to_string()),
         required: true,
         message: "Username validation failed".to_string(),
     },
-    DMSValidationRule {
+    DMSCValidationRule {
         field: "email".to_string(),
-        rule_type: DMSValidationType::AsyncCustomValidator("unique_user_validator".to_string()),
+        rule_type: DMSCValidationType::AsyncCustomValidator("unique_user_validator".to_string()),
         required: true,
         message: "Email validation failed".to_string(),
     },
-    DMSValidationRule {
+    DMSCValidationRule {
         field: "referral_code".to_string(),
-        rule_type: DMSValidationType::AsyncCustomValidator("unique_user_validator".to_string()),
+        rule_type: DMSCValidationType::AsyncCustomValidator("unique_user_validator".to_string()),
         required: false,
         message: "Referral code validation failed".to_string(),
     },
@@ -1185,7 +1185,7 @@ impl ApiEndpointValidator {
 }
 
 #[async_trait::async_trait]
-impl DMSAsyncValidator for ApiEndpointValidator {
+impl DMSCAsyncValidator for ApiEndpointValidator {
     async fn validate_async(&self, value: &serde_json::Value, field_name: &str) -> Result<(), String> {
         match field_name {
             "webhook_url" => {
@@ -1229,21 +1229,21 @@ ctx.validation().register_async_validator(Box::new(api_validator)).await?;
 
 // 定义API验证规则
 let api_validation_rules = vec![
-    DMSValidationRule {
+    DMSCValidationRule {
         field: "webhook_url".to_string(),
-        rule_type: DMSValidationType::AsyncCustomValidator("api_endpoint_validator".to_string()),
+        rule_type: DMSCValidationType::AsyncCustomValidator("api_endpoint_validator".to_string()),
         required: true,
         message: "Webhook URL validation failed".to_string(),
     },
-    DMSValidationRule {
+    DMSCValidationRule {
         field: "api_key".to_string(),
-        rule_type: DMSValidationType::AsyncCustomValidator("api_endpoint_validator".to_string()),
+        rule_type: DMSCValidationType::AsyncCustomValidator("api_endpoint_validator".to_string()),
         required: true,
         message: "API key validation failed".to_string(),
     },
-    DMSValidationRule {
+    DMSCValidationRule {
         field: "endpoint".to_string(),
-        rule_type: DMSValidationType::AsyncCustomValidator("api_endpoint_validator".to_string()),
+        rule_type: DMSCValidationType::AsyncCustomValidator("api_endpoint_validator".to_string()),
         required: true,
         message: "Payment endpoint validation failed".to_string(),
     },
@@ -1274,25 +1274,25 @@ use serde_json::json;
 
 // 配置验证规则模板
 let validation_templates = vec![
-    DMSValidationTemplate {
+    DMSCValidationTemplate {
         name: "user_registration".to_string(),
         description: "Validation rules for user registration".to_string(),
         rules: vec![
-            DMSValidationRule {
+            DMSCValidationRule {
                 field: "username".to_string(),
-                rule_type: DMSValidationType::Pattern("^[a-zA-Z0-9_]{3,20}$".to_string()),
+                rule_type: DMSCValidationType::Pattern("^[a-zA-Z0-9_]{3,20}$".to_string()),
                 required: true,
                 message: "Username must be 3-20 characters, alphanumeric and underscore only".to_string(),
             },
-            DMSValidationRule {
+            DMSCValidationRule {
                 field: "email".to_string(),
-                rule_type: DMSValidationType::Email,
+                rule_type: DMSCValidationType::Email,
                 required: true,
                 message: "Valid email address is required".to_string(),
             },
-            DMSValidationRule {
+            DMSCValidationRule {
                 field: "password".to_string(),
-                rule_type: DMSValidationType::CustomValidator("strong_password_validator".to_string()),
+                rule_type: DMSCValidationType::CustomValidator("strong_password_validator".to_string()),
                 required: true,
                 message: "Password does not meet security requirements".to_string(),
             },
@@ -1304,25 +1304,25 @@ let validation_templates = vec![
             meta
         },
     },
-    DMSValidationTemplate {
+    DMSCValidationTemplate {
         name: "product_creation".to_string(),
         description: "Validation rules for product creation".to_string(),
         rules: vec![
-            DMSValidationRule {
+            DMSCValidationRule {
                 field: "name".to_string(),
-                rule_type: DMSValidationType::Length(5, 100),
+                rule_type: DMSCValidationType::Length(5, 100),
                 required: true,
                 message: "Product name must be 5-100 characters".to_string(),
             },
-            DMSValidationRule {
+            DMSCValidationRule {
                 field: "price".to_string(),
-                rule_type: DMSValidationType::Range(0.01, 10000.0),
+                rule_type: DMSCValidationType::Range(0.01, 10000.0),
                 required: true,
                 message: "Price must be between $0.01 and $10,000".to_string(),
             },
-            DMSValidationRule {
+            DMSCValidationRule {
                 field: "sku".to_string(),
-                rule_type: DMSValidationType::Pattern(r"^[A-Z]{2}-\d{4}-\d{3}$".to_string()),
+                rule_type: DMSCValidationType::Pattern(r"^[A-Z]{2}-\d{4}-\d{3}$".to_string()),
                 required: true,
                 message: "SKU must follow format: XX-YYYY-ZZZ".to_string(),
             },
@@ -1365,13 +1365,13 @@ match ctx.validation().apply_validation_template("user_registration", &user_data
 }
 
 // 动态验证配置
-let dynamic_config = DMSDynamicValidationConfig {
+let dynamic_config = DMSCDynamicValidationConfig {
     enable_caching: true,
     cache_ttl: Duration::from_minutes(30),
     enable_rule_optimization: true,
     parallel_validation: true,
     max_validation_threads: 4,
-    error_message_format: DMSValidationErrorFormat::Detailed,
+    error_message_format: DMSCValidationErrorFormat::Detailed,
     enable_field_suggestions: true,
     strict_mode_threshold: 0.8,
 };
@@ -1397,27 +1397,27 @@ let user_data = json!({
 });
 
 let validation_rules = vec![
-    DMSValidationRule {
+    DMSCValidationRule {
         field: "username".to_string(),
-        rule_type: DMSValidationType::Length(3, 20),
+        rule_type: DMSCValidationType::Length(3, 20),
         required: true,
         message: "Username must be 3-20 characters".to_string(),
     },
-    DMSValidationRule {
+    DMSCValidationRule {
         field: "email".to_string(),
-        rule_type: DMSValidationType::Email,
+        rule_type: DMSCValidationType::Email,
         required: true,
         message: "Valid email address is required".to_string(),
     },
-    DMSValidationRule {
+    DMSCValidationRule {
         field: "password".to_string(),
-        rule_type: DMSValidationType::CustomValidator("strong_password_validator".to_string()),
+        rule_type: DMSCValidationType::CustomValidator("strong_password_validator".to_string()),
         required: true,
         message: "Password is not strong enough".to_string(),
     },
-    DMSValidationRule {
+    DMSCValidationRule {
         field: "age".to_string(),
-        rule_type: DMSValidationType::Range(18, 100),
+        rule_type: DMSCValidationType::Range(18, 100),
         required: true,
         message: "Age must be between 18 and 100".to_string(),
     },
@@ -1459,7 +1459,7 @@ match ctx.validation().validate_data(&user_data, &validation_rules).await {
         ctx.log().info(format!("User-friendly errors: {:?}", user_friendly_errors));
         
         // 返回格式化错误
-        return Err(DMSError::validation(format!("Validation failed: {:?}", user_friendly_errors)));
+        return Err(DMSCError::validation(format!("Validation failed: {:?}", user_friendly_errors)));
     }
 }
 ```
@@ -1488,7 +1488,7 @@ match ctx.validation().validate_data(&user_data, &validation_rules).await {
 
 </div>
 
-1. **环境准备**: 确保已安装Rust环境和DMS框架
+1. **环境准备**: 确保已安装Rust环境和DMSC框架
 2. **依赖配置**: 在Cargo.toml中添加验证相关依赖
 3. **初始化验证器**: 创建验证管理器并配置验证规则
 4. **数据验证**: 使用validate_data执行数据验证
@@ -1529,7 +1529,7 @@ use dms::prelude::*;
 use serde_json::json;
 
 // 智能验证引擎配置
-let smart_config = DMSSmartValidationConfig {
+let smart_config = DMSCSmartValidationConfig {
     enable_ml_suggestions: true,
     confidence_threshold: 0.85,
     learning_mode: true,
@@ -1570,17 +1570,17 @@ use tokio::sync::RwLock;
 
 // 实时验证监控器
 struct ValidationMonitor {
-    metrics: Arc<RwLock<DMSValidationMetrics>>,
+    metrics: Arc<RwLock<DMSCValidationMetrics>>,
 }
 
 impl ValidationMonitor {
     fn new() -> Self {
         Self {
-            metrics: Arc::new(RwLock::new(DMSValidationMetrics::default())),
+            metrics: Arc::new(RwLock::new(DMSCValidationMetrics::default())),
         }
     }
     
-    async fn record_validation(&self, result: &DMSValidationResult) {
+    async fn record_validation(&self, result: &DMSCValidationResult) {
         let mut metrics = self.metrics.write().await;
         
         metrics.total_validations += 1;
@@ -1601,7 +1601,7 @@ impl ValidationMonitor {
         metrics.average_validation_time = metrics.total_validation_time / metrics.total_validations as f64;
     }
     
-    async fn get_metrics(&self) -> DMSValidationMetrics {
+    async fn get_metrics(&self) -> DMSCValidationMetrics {
         self.metrics.read().await.clone()
     }
 }
@@ -1622,11 +1622,11 @@ use dms::prelude::*;
 use serde_json::json;
 
 // 分布式验证配置
-let distributed_config = DMSDistributedValidationConfig {
+let distributed_config = DMSCDistributedValidationConfig {
     node_count: 5,
     replication_factor: 3,
-    consistency_level: DMSConsistencyLevel::Quorum,
-    load_balancing: DMSLoadBalancing::RoundRobin,
+    consistency_level: DMSCConsistencyLevel::Quorum,
+    load_balancing: DMSCLoadBalancing::RoundRobin,
     health_check_interval: Duration::from_secs(30),
     failover_timeout: Duration::from_secs(10),
 };
@@ -1661,7 +1661,7 @@ ctx.log().info(format!(
 
 </div>
 
-验证模块为DMS框架提供了全面的数据验证解决方案，支持从简单字段验证到复杂业务逻辑验证的各种场景。通过智能验证引擎、实时监控和分布式协调等高级特性，验证模块能够处理大规模数据验证需求，确保数据的完整性和安全性。
+验证模块为DMSC框架提供了全面的数据验证解决方案，支持从简单字段验证到复杂业务逻辑验证的各种场景。通过智能验证引擎、实时监控和分布式协调等高级特性，验证模块能够处理大规模数据验证需求，确保数据的完整性和安全性。
 
 ### 核心功能
 
@@ -1699,7 +1699,7 @@ ctx.log().info(format!(
 
 - [README](./README.md): 使用示例概览，提供所有使用示例的快速导航
 - [authentication](./authentication.md): 认证示例，学习JWT、OAuth2和RBAC认证授权
-- [basic-app](./basic-app.md): 基础应用示例，学习如何创建和运行第一个DMS应用
+- [basic-app](./basic-app.md): 基础应用示例，学习如何创建和运行第一个DMSC应用
 - [caching](./caching.md): 缓存示例，了解如何使用缓存模块提升应用性能
 - [database](./database.md): 数据库示例，学习数据库连接和查询操作
 - [http](./http.md): HTTP服务示例，构建Web应用和RESTful API

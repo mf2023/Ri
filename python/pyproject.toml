@@ -1,7 +1,7 @@
 # Copyright © 2025 Wenze Wei. All Rights Reserved.
 #
-# This file is part of DMS.
-# The DMS project belongs to the Dunimd Team.
+# This file is part of DMSC.
+# The DMSC project belongs to the Dunimd Team.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # You may not use this file except in compliance with the License.
@@ -20,8 +20,8 @@ requires = ["setuptools>=45", "wheel", "setuptools-rust"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "dms-core"
-version = "0.1.2"
+name = "dmsc"
+version = "0.1.3"
 description = "Dunimd Middleware Service - A high-performance Rust middleware framework with modular architecture"
 readme = "README.md"
 requires-python = ">=3.7"
@@ -52,17 +52,17 @@ classifiers = [
 ]
 
 [project.urls]
-Homepage = "https://gitee.com/dunimd/dms"
-Documentation = "https://gitee.com/dunimd/dms"
-Repository = "https://gitee.com/dunimd/dms"
-"Bug Tracker" = "https://gitee.com/dunimd/dms/issues"
+Homepage = "https://gitee.com/dunimd/dmsc"
+Documentation = "https://gitee.com/dunimd/dmsc"
+Repository = "https://gitee.com/dunimd/dmsc"
+"Bug Tracker" = "https://gitee.com/dunimd/dmsc/issues"
 
 [tool.setuptools]
-packages = ["dms_core"]
+packages = ["dmsc"]
 
 [tool.setuptools-rust]
 extensions = [
-    {target = "dms_core.dms_core", path = "../Cargo.toml", features = ["pyo3"], binding = "pyo3"}
+    {target = "dmsc.dmsc", path = "../Cargo.toml", features = ["pyo3"], binding = "pyo3"}
 ]
 
 [project.optional-dependencies]

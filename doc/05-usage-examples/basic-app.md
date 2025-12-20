@@ -6,13 +6,13 @@
 
 **Last modified date: 2025-12-12**
 
-本示例展示如何构建一个简单的DMS应用，包括应用配置、运行和基本功能使用。
+本示例展示如何构建一个简单的DMSC应用，包括应用配置、运行和基本功能使用。
 
 ## 示例概述
 
 </div>
 
-本示例将创建一个基本的DMS应用，实现以下功能：
+本示例将创建一个基本的DMSC应用，实现以下功能：
 
 - 加载配置文件
 - 启用日志记录
@@ -48,7 +48,7 @@ cd dms-basic-example
 
 ```toml
 [dependencies]
-dms = { git = "https://gitee.com/dunimd/dms" }
+dms = { git = "https://gitee.com/dunimd/dmsc" }
 tokio = { version = "1.0", features = ["full"] }
 ```
 
@@ -81,16 +81,16 @@ observability:
 use dms::prelude::*;
 
 #[tokio::main]
-async fn main() -> DMSResult<()> {
+async fn main() -> DMSCResult<()> {
     // 构建服务运行时
-    let app = DMSAppBuilder::new()
+    let app = DMSCAppBuilder::new()
         .with_config("config.yaml")?
-        .with_logging(DMSLogConfig::default())?
-        .with_observability(DMSObservabilityConfig::default())?
+        .with_logging(DMSCLogConfig::default())?
+        .with_observability(DMSCObservabilityConfig::default())?
         .build()?;
     
     // 运行业务逻辑
-    app.run(|ctx: &DMSServiceContext| async move {
+    app.run(|ctx: &DMSCServiceContext| async move {
         // 获取服务名称和版本
         let service_name = ctx.config().get("service.name").unwrap_or("unknown");
         let service_version = ctx.config().get("service.version").unwrap_or("unknown");
@@ -128,47 +128,47 @@ async fn main() -> DMSResult<()> {
 use dms::prelude::*;
 ```
 
-这行代码导入了DMS中最常用的类型和特性，简化了代码编写。`prelude`模块包含了构建DMS应用所需的核心组件。
+这行代码导入了DMSC中最常用的类型和特性，简化了代码编写。`prelude`模块包含了构建DMSC应用所需的核心组件。
 
 ### 2. 主函数
 
 ```rust
 #[tokio::main]
-async fn main() -> DMSResult<()> {
+async fn main() -> DMSCResult<()> {
     // 代码...
 }
 ```
 
 - `#[tokio::main]`：将主函数转换为异步函数，并使用Tokio运行时执行
 - `async fn main()`：定义异步主函数
-- `-> DMSResult<()>`：返回DMS结果类型，用于错误处理
+- `-> DMSCResult<()>`：返回DMSC结果类型，用于错误处理
 
 ### 3. 构建应用
 
 ```rust
-let app = DMSAppBuilder::new()
+let app = DMSCAppBuilder::new()
     .with_config("config.yaml")?
-    .with_logging(DMSLogConfig::default())?
-    .with_observability(DMSObservabilityConfig::default())?
+    .with_logging(DMSCLogConfig::default())?
+    .with_observability(DMSCObservabilityConfig::default())?
     .build()?;
 ```
 
-- `DMSAppBuilder::new()`：创建新的应用构建器
+- `DMSCAppBuilder::new()`：创建新的应用构建器
 - `.with_config("config.yaml")?`：加载配置文件
-- `.with_logging(DMSLogConfig::default())?`：启用日志记录，使用默认配置
-- `.with_observability(DMSObservabilityConfig::default())?`：启用可观测性，使用默认配置
+- `.with_logging(DMSCLogConfig::default())?`：启用日志记录，使用默认配置
+- `.with_observability(DMSCObservabilityConfig::default())?`：启用可观测性，使用默认配置
 - `.build()?`：构建应用运行时
 
 ### 4. 运行应用
 
 ```rust
-app.run(|ctx: &DMSServiceContext| async move {
+app.run(|ctx: &DMSCServiceContext| async move {
     // 业务逻辑
 }).await
 ```
 
 - `app.run()`：启动应用运行时
-- `|ctx: &DMSServiceContext|`：闭包参数，接收服务上下文
+- `|ctx: &DMSCServiceContext|`：闭包参数，接收服务上下文
 - `async move`：异步闭包，允许在闭包内使用`await`
 
 ### 5. 业务逻辑
@@ -229,14 +229,14 @@ cargo run
 
 ```rust
 // 在应用构建时添加缓存支持
-let app = DMSAppBuilder::new()
+let app = DMSCAppBuilder::new()
     .with_config("config.yaml")?
-    .with_logging(DMSLogConfig::default())?
-    .with_cache(DMSCacheConfig::default())?
+    .with_logging(DMSCLogConfig::default())?
+    .with_cache(DMSCCacheConfig::default())?
     .build()?;
 
 // 在业务逻辑中使用缓存
-app.run(|ctx: &DMSServiceContext| async move {
+app.run(|ctx: &DMSCServiceContext| async move {
     // 设置缓存
     ctx.cache().set("key", "value", 3600).await?;
     
@@ -252,14 +252,14 @@ app.run(|ctx: &DMSServiceContext| async move {
 
 ```rust
 // 在应用构建时添加队列支持
-let app = DMSAppBuilder::new()
+let app = DMSCAppBuilder::new()
     .with_config("config.yaml")?
-    .with_logging(DMSLogConfig::default())?
-    .with_queue(DMSQueueConfig::default())?
+    .with_logging(DMSCLogConfig::default())?
+    .with_queue(DMSCQueueConfig::default())?
     .build()?;
 
 // 在业务逻辑中使用队列
-app.run(|ctx: &DMSServiceContext| async move {
+app.run(|ctx: &DMSCServiceContext| async move {
     // 发送消息到队列
     ctx.queue().publish("task_queue", json!({
         "task_id": "task-123",
@@ -277,7 +277,7 @@ app.run(|ctx: &DMSServiceContext| async move {
 
 ```rust
 // 在业务逻辑中使用文件系统
-app.run(|ctx: &DMSServiceContext| async move {
+app.run(|ctx: &DMSCServiceContext| async move {
     // 写入文件
     ctx.fs().write_file("data/config.json", r#"{"setting": "value"}"#).await?;
     
@@ -302,7 +302,7 @@ struct MyCustomModule {
 }
 
 impl MyCustomModule {
-    async fn process_data(&self, data: &str) -> DMSResult<String> {
+    async fn process_data(&self, data: &str) -> DMSCResult<String> {
         // 自定义处理逻辑
         Ok(format!("Processed by {}: {}", self.name, data))
     }
@@ -313,14 +313,14 @@ let custom_module = MyCustomModule {
     name: "MyProcessor".to_string(),
 };
 
-let app = DMSAppBuilder::new()
+let app = DMSCAppBuilder::new()
     .with_config("config.yaml")?
-    .with_logging(DMSLogConfig::default())?
+    .with_logging(DMSCLogConfig::default())?
     .with_module(custom_module)?
     .build()?;
 
 // 在业务逻辑中使用自定义模块
-app.run(|ctx: &DMSServiceContext| async move {
+app.run(|ctx: &DMSCServiceContext| async move {
     // 获取自定义模块
     let processor = ctx.module::<MyCustomModule>()?;
     
@@ -356,14 +356,14 @@ app.run(|ctx: &DMSServiceContext| async move {
 
 </div>
 
-本示例展示了如何构建一个简单的DMS应用，包括：
+本示例展示了如何构建一个简单的DMSC应用，包括：
 
 - 项目创建和依赖添加
 - 配置文件编写
 - 应用构建和运行
 - 基本功能使用
 
-通过本示例，您应该已经了解了DMS应用的基本结构和使用方式。您可以在此基础上进一步探索DMS的其他功能。
+通过本示例，您应该已经了解了DMSC应用的基本结构和使用方式。您可以在此基础上进一步探索DMSC的其他功能。
 
 <div align="center">
 
@@ -372,7 +372,7 @@ app.run(|ctx: &DMSServiceContext| async move {
 </div>
 
 - [README](./README.md): 使用示例概览，提供所有使用示例的快速导航
-- [basic-app](./basic-app.md): 基础应用示例，学习如何创建和运行第一个DMS应用
+- [basic-app](./basic-app.md): 基础应用示例，学习如何创建和运行第一个DMSC应用
 - [authentication](./authentication.md): 认证示例，学习JWT、OAuth2和RBAC认证授权
 - [caching](./caching.md): 缓存示例，了解如何使用缓存模块提升应用性能
 - [database](./database.md): 数据库示例，学习数据库连接和查询操作

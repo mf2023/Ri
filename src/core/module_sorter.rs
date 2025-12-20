@@ -1,7 +1,7 @@
 //! Copyright © 2025 Wenze Wei. All Rights Reserved.
 //! 
-//! This file is part of DMS.
-//! The DMS project belongs to the Dunimd Team.
+//! This file is part of DMSC.
+//! The DMSC project belongs to the Dunimd Team.
 //! 
 //! Licensed under the Apache License, Version 2.0 (the "License");
 //! you may not use this file except in compliance with the License.
@@ -19,13 +19,13 @@
 //! 
 //! This module provides functionality for sorting modules based on their dependencies and priorities.
 
-use crate::core::DMSResult;
+use crate::core::DMSCResult;
 use std::collections::HashMap;
 use super::module_types::ModuleSlot;
 
 /// Sort modules based on dependencies and priority
 /// Uses topological sort to handle dependencies, and sorts by priority within the same dependency level
-pub(crate) fn sort_modules(modules: Vec<ModuleSlot>) -> DMSResult<Vec<ModuleSlot>> {
+pub(crate) fn sort_modules(modules: Vec<ModuleSlot>) -> DMSCResult<Vec<ModuleSlot>> {
     let mut modules = modules;
     let mut result: Vec<ModuleSlot> = Vec::with_capacity(modules.len());
     
@@ -52,7 +52,7 @@ pub(crate) fn sort_modules(modules: Vec<ModuleSlot>) -> DMSResult<Vec<ModuleSlot
                     // Dependency not found, check if it's already in result
                     let dep_in_result = result.iter().any(|slot| slot.module.name() == dep_name);
                     if !dep_in_result {
-                        return Err(crate::core::DMSError::MissingDependency { 
+                        return Err(crate::core::DMSCError::MissingDependency { 
                             module_name: slot.module.name().to_string(), 
                             dependency: dep_name.to_string() 
                         });
@@ -71,7 +71,7 @@ pub(crate) fn sort_modules(modules: Vec<ModuleSlot>) -> DMSResult<Vec<ModuleSlot
         
         // If no modules with in-degree 0, we have a circular dependency
         if zero_in_degree.is_empty() {
-            return Err(crate::core::DMSError::CircularDependency { 
+            return Err(crate::core::DMSCError::CircularDependency { 
                 modules: modules.iter().map(|slot| slot.module.name().to_string()).collect() 
             });
         }

@@ -1,6 +1,6 @@
 <div align="center">
 
-# DMS 介绍
+# DMSC 介绍
 
 **Version: 1.0.0**
 
@@ -8,7 +8,7 @@
 
 ## 项目概述
 
-**DMS (Dunimd Middleware Service)** 是一个高性能的 Rust 中间件框架，专为统一后端基础设施而设计。它采用模块化架构，提供了企业级规模所需的各种功能，包括内置可观测性和分布式系统支持。
+**DMSC (Dunimd Middleware Service)** 是一个高性能的 Rust 中间件框架，专为统一后端基础设施而设计。它采用模块化架构，提供了企业级规模所需的各种功能，包括内置可观测性和分布式系统支持。
 
 ## 核心特性
 
@@ -69,7 +69,7 @@
 
 ## 模块化设计
 
-DMS 采用高度模块化的架构，拥有 12 个核心模块，支持按需组合和无缝扩展：
+DMSC 采用高度模块化的架构，拥有 12 个核心模块，支持按需组合和无缝扩展：
 
 | 模块 | 描述 |
 |:--------|:-------------|
@@ -94,7 +94,7 @@ DMS 采用高度模块化的架构，拥有 12 个核心模块，支持按需组
 
 </div>
 
-DMS 适用于各种企业级后端应用场景，包括：
+DMSC 适用于各种企业级后端应用场景，包括：
 
 - **微服务架构**：作为服务间通信和协调的中间件
 - **API 网关**：提供统一的 API 入口，支持限流、熔断等功能
@@ -109,7 +109,7 @@ DMS 适用于各种企业级后端应用场景，包括：
 
 </div>
 
-- **GitHub/Gitee**：[https://gitee.com/dunimd/dms](https://gitee.com/dunimd/dms)
+- **GitHub/Gitee**：[https://gitee.com/dunimd/dmsc](https://gitee.com/dunimd/dmsc)
 - **Issues**：提交问题和建议
 - **Pull Requests**：欢迎贡献代码
 
@@ -170,10 +170,10 @@ DMS 适用于各种企业级后端应用场景，包括：
 
 </div>
 
-- [快速开始](./02-getting-started.md)：安装和创建第一个 DMS 应用
-- [核心概念](./03-core-concepts.md)：深入理解 DMS 的设计理念和核心组件
+- [快速开始](./02-getting-started.md)：安装和创建第一个 DMSC 应用
+- [核心概念](./03-core-concepts.md)：深入理解 DMSC 的设计理念和核心组件
 - [API 参考](./04-api-reference/README.md)：详细的模块 API 文档
 - [使用示例](./05-usage-examples/README.md)：各种场景下的使用示例
-- [最佳实践](./06-best-practices.md)：开发 DMS 应用的最佳实践
+- [最佳实践](./06-best-practices.md)：开发 DMSC 应用的最佳实践
 - [故障排除](./07-troubleshooting.md)：常见问题和解决方案
 - [术语表](./08-glossary.md)：核心术语解释

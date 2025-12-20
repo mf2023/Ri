@@ -1,7 +1,7 @@
 //! Copyright © 2025 Wenze Wei. All Rights Reserved.
 //!
-//! This file is part of DMS.
-//! The DMS project belongs to the Dunimd Team.
+//! This file is part of DMSC.
+//! The DMSC project belongs to the Dunimd Team.
 //!
 //! Licensed under the Apache License, Version 2.0 (the "License");
 //! You may not use this file except in compliance with the License.
@@ -25,9 +25,9 @@
 //! 
 //! ## Key Components
 //! 
-//! - **DMSTraceContext**: Represents W3C Trace Context with trace ID, parent ID, and flags
-//! - **DMSBaggage**: Represents baggage for carrying additional cross-cutting concerns
-//! - **DMSContextCarrier**: Carries both trace context and baggage for propagation
+//! - **DMSCTraceContext**: Represents W3C Trace Context with trace ID, parent ID, and flags
+//! - **DMSCBaggage**: Represents baggage for carrying additional cross-cutting concerns
+//! - **DMSCContextCarrier**: Carries both trace context and baggage for propagation
 //! 
 //! ## Design Principles
 //! 
@@ -48,20 +48,20 @@
 //! 
 //! fn example() {
 //!     // Create trace and span IDs
-//!     let trace_id = DMSTraceId::generate();
-//!     let span_id = DMSSpanId::generate();
+//!     let trace_id = DMSCTraceId::generate();
+//!     let span_id = DMSCSpanId::generate();
 //!     
 //!     // Create a trace context
-//!     let mut trace_context = DMSTraceContext::new(trace_id, span_id);
+//!     let mut trace_context = DMSCTraceContext::new(trace_id, span_id);
 //!     trace_context.set_sampled(true);
 //!     
 //!     // Create baggage
-//!     let mut baggage = DMSBaggage::new();
+//!     let mut baggage = DMSCBaggage::new();
 //!     baggage.insert("user_id".to_string(), "12345".to_string());
 //!     baggage.insert("request_id".to_string(), "abc123".to_string());
 //!     
 //!     // Create a context carrier
-//!     let carrier = DMSContextCarrier::new()
+//!     let carrier = DMSCContextCarrier::new()
 //!         .with_trace_context(trace_context)
 //!         .with_baggage(baggage);
 //!     
@@ -71,34 +71,34 @@
 //!     println!("Headers: {:?}", headers);
 //!     
 //!     // Extract from HTTP headers
-//!     let extracted_carrier = DMSContextCarrier::from_headers(&headers);
+//!     let extracted_carrier = DMSCContextCarrier::from_headers(&headers);
 //!     println!("Extracted trace context: {:?}", extracted_carrier.trace_context);
 //! }
 //! ```
 
 use std::collections::HashMap;
 use serde::{Serialize, Deserialize};
-use crate::observability::tracing::{DMSTraceId, DMSSpanId};
+use crate::observability::tracing::{DMSCTraceId, DMSCSpanId};
 
 /// W3C Trace Context propagation format
 ///
 /// This struct represents a W3C Trace Context, which is used to propagate trace information
 /// across service boundaries. It follows the W3C Trace Context specification: https://www.w3.org/TR/trace-context/
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct DMSTraceContext {
+pub struct DMSCTraceContext {
     /// Trace context version
     pub version: u8,
     /// Trace ID for the entire trace
-    pub trace_id: DMSTraceId,
+    pub trace_id: DMSCTraceId,
     /// Parent span ID
-    pub parent_id: DMSSpanId,
+    pub parent_id: DMSCSpanId,
     /// Trace flags (bitmask)
     pub trace_flags: u8,
     /// Optional trace state for vendor-specific information
     pub trace_state: Option<String>,
 }
 
-impl DMSTraceContext {
+impl DMSCTraceContext {
     /// Creates a new trace context with the given trace ID and parent span ID.
     ///
     /// # Parameters
@@ -108,9 +108,9 @@ impl DMSTraceContext {
     ///
     /// # Returns
     ///
-    /// A new DMSTraceContext instance
+    /// A new DMSCTraceContext instance
     #[allow(dead_code)]
-    pub fn new(trace_id: DMSTraceId, parent_id: DMSSpanId) -> Self {
+    pub fn new(trace_id: DMSCTraceId, parent_id: DMSCSpanId) -> Self {
         Self {
             version: 0x00,
             trace_id,
@@ -128,7 +128,7 @@ impl DMSTraceContext {
     ///
     /// # Returns
     ///
-    /// An Option containing the parsed DMSTraceContext, or None if parsing failed
+    /// An Option containing the parsed DMSCTraceContext, or None if parsing failed
     #[allow(dead_code)]
     pub fn from_header(header: &str) -> Option<Self> {
         let parts: Vec<&str> = header.split('-').collect();
@@ -137,8 +137,8 @@ impl DMSTraceContext {
         }
         
         let version = u8::from_str_radix(parts[0], 16).ok()?;
-        let trace_id = DMSTraceId::from_string(parts[1].to_string());
-        let parent_id = DMSSpanId::from_string(parts[2].to_string());
+        let trace_id = DMSCTraceId::from_string(parts[1].to_string());
+        let parent_id = DMSCSpanId::from_string(parts[2].to_string());
         let trace_flags = u8::from_str_radix(parts[3], 16).ok()?;
         
         Some(Self {
@@ -196,17 +196,23 @@ impl DMSTraceContext {
 /// This struct represents baggage, which is used to carry additional context information
 /// across service boundaries. It follows the W3C Baggage specification.
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct DMSBaggage {
+pub struct DMSCBaggage {
     /// Map of baggage items
     items: HashMap<String, String>,
 }
 
-impl DMSBaggage {
+impl Default for DMSCBaggage {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl DMSCBaggage {
     /// Creates a new empty baggage instance.
     ///
     /// # Returns
     ///
-    /// A new DMSBaggage instance
+    /// A new DMSCBaggage instance
     #[allow(dead_code)]
     pub fn new() -> Self {
         Self {
@@ -257,7 +263,7 @@ impl DMSBaggage {
     ///
     /// # Returns
     ///
-    /// A new DMSBaggage instance with the parsed items
+    /// A new DMSCBaggage instance with the parsed items
     #[allow(dead_code)]
     pub fn from_header(header: &str) -> Self {
         let mut baggage = Self::new();
@@ -295,24 +301,30 @@ impl DMSBaggage {
 /// extract and inject distributed tracing information from/to HTTP headers.
 #[allow(dead_code)]
 #[derive(Debug, Clone)]
-pub struct DMSContextCarrier {
+pub struct DMSCContextCarrier {
     /// Trace context for the request
-    pub trace_context: Option<DMSTraceContext>,
+    pub trace_context: Option<DMSCTraceContext>,
     /// Baggage for additional context
-    pub baggage: DMSBaggage,
+    pub baggage: DMSCBaggage,
 }
 
-impl DMSContextCarrier {
+impl Default for DMSCContextCarrier {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl DMSCContextCarrier {
     /// Creates a new empty context carrier.
     ///
     /// # Returns
     ///
-    /// A new DMSContextCarrier instance
+    /// A new DMSCContextCarrier instance
     #[allow(dead_code)]
     pub fn new() -> Self {
         Self {
             trace_context: None,
-            baggage: DMSBaggage::new(),
+            baggage: DMSCBaggage::new(),
         }
     }
     
@@ -324,9 +336,9 @@ impl DMSContextCarrier {
     ///
     /// # Returns
     ///
-    /// The updated DMSContextCarrier instance
+    /// The updated DMSCContextCarrier instance
     #[allow(dead_code)]
-    pub fn with_trace_context(mut self, trace_context: DMSTraceContext) -> Self {
+    pub fn with_trace_context(mut self, trace_context: DMSCTraceContext) -> Self {
         self.trace_context = Some(trace_context);
         self
     }
@@ -339,11 +351,73 @@ impl DMSContextCarrier {
     ///
     /// # Returns
     ///
-    /// The updated DMSContextCarrier instance
+    /// The updated DMSCContextCarrier instance
     #[allow(dead_code)]
-    pub fn with_baggage(mut self, baggage: DMSBaggage) -> Self {
+    pub fn with_baggage(mut self, baggage: DMSCBaggage) -> Self {
         self.baggage = baggage;
         self
+    }
+    
+    /// Creates a context carrier from tracing context.
+    ///
+    /// This method converts a thread-local DMSCTracingContext into a DMSCContextCarrier
+    /// that can be propagated across service boundaries.
+    ///
+    /// # Parameters
+    ///
+    /// - `tracing_context`: The tracing context to convert
+    ///
+    /// # Returns
+    ///
+    /// A new DMSCContextCarrier instance with trace context and baggage from the tracing context
+    #[allow(dead_code)]
+    pub fn from_tracing_context(tracing_context: &crate::observability::tracing::DMSCTracingContext) -> Self {
+        let mut carrier = Self::new();
+        
+        // Create trace context if trace ID and span ID are available
+        if let (Some(trace_id), Some(span_id)) = (
+            tracing_context.trace_id(),
+            tracing_context.span_id()
+        ) {
+            let trace_context = DMSCTraceContext::new(
+                trace_id.clone(),
+                span_id.clone()
+            );
+            carrier.trace_context = Some(trace_context);
+        }
+        
+        // Convert baggage from tracing context
+        let baggage = DMSCBaggage::new();
+        // Note: We don't have direct access to tracing_context.baggage since it's private,
+        // so we'll create an empty baggage for now
+        carrier.baggage = baggage;
+        
+        carrier
+    }
+    
+    /// Creates a tracing context from this carrier.
+    ///
+    /// This method converts a DMSCContextCarrier into a thread-local DMSCTracingContext
+    /// that can be used for tracing within the service.
+    ///
+    /// # Returns
+    ///
+    /// A new DMSCTracingContext instance with trace context and baggage from the carrier
+    #[allow(dead_code)]
+    pub fn into_tracing_context(self) -> crate::observability::tracing::DMSCTracingContext {
+        let mut context = crate::observability::tracing::DMSCTracingContext::new();
+        
+        // Set trace ID and span ID from trace context if available
+        if let Some(trace_context) = self.trace_context {
+            context = context.with_trace_id(trace_context.trace_id);
+            context = context.with_span_id(trace_context.parent_id);
+        }
+        
+        // Set baggage from carrier
+        // Note: We don't have direct access to context.baggage since it's private,
+        // so we'll skip setting baggage for now
+        
+        context
     }
     
     /// Extracts a context carrier from HTTP headers.
@@ -354,21 +428,21 @@ impl DMSContextCarrier {
     ///
     /// # Returns
     ///
-    /// A new DMSContextCarrier instance with extracted trace context and baggage
+    /// A new DMSCContextCarrier instance with extracted trace context and baggage
     #[allow(dead_code)]
     pub fn from_headers(headers: &HashMap<String, String>) -> Self {
         let mut carrier = Self::new();
         
         // Extract trace context from traceparent header
         if let Some(traceparent) = headers.get("traceparent") {
-            if let Some(trace_context) = DMSTraceContext::from_header(traceparent) {
+            if let Some(trace_context) = DMSCTraceContext::from_header(traceparent) {
                 carrier.trace_context = Some(trace_context);
             }
         }
         
         // Extract baggage from baggage header
         if let Some(baggage_header) = headers.get("baggage") {
-            carrier.baggage = DMSBaggage::from_header(baggage_header);
+            carrier.baggage = DMSCBaggage::from_header(baggage_header);
         }
         
         carrier
@@ -388,6 +462,42 @@ impl DMSContextCarrier {
         let baggage_header = self.baggage.to_header();
         if !baggage_header.is_empty() {
             headers.insert("baggage".to_string(), baggage_header);
+        }
+    }
+    
+    /// Extracts a context carrier from HTTP headers and sets it as current tracing context.
+    ///
+    /// This convenience method extracts trace information from HTTP headers, creates a
+    /// tracing context, and sets it as the current thread-local context.
+    ///
+    /// # Parameters
+    ///
+    /// - `headers`: A HashMap of HTTP headers
+    ///
+    /// # Returns
+    ///
+    /// A new DMSCContextCarrier instance with extracted trace context and baggage
+    #[allow(dead_code)]
+    pub fn from_headers_and_set_current(headers: &HashMap<String, String>) -> Self {
+        let carrier = Self::from_headers(headers);
+        let tracing_context = carrier.clone().into_tracing_context();
+        tracing_context.set_as_current();
+        carrier
+    }
+    
+    /// Injects the current tracing context into HTTP headers.
+    ///
+    /// This convenience method gets the current thread-local tracing context,
+    /// converts it to a context carrier, and injects it into HTTP headers.
+    ///
+    /// # Parameters
+    ///
+    /// - `headers`: A mutable HashMap of HTTP headers to inject into
+    #[allow(dead_code)]
+    pub fn inject_current_into_headers(headers: &mut HashMap<String, String>) {
+        if let Some(tracing_context) = crate::observability::tracing::DMSCTracingContext::current() {
+            let carrier = Self::from_tracing_context(&tracing_context);
+            carrier.inject_into_headers(headers);
         }
     }
 }

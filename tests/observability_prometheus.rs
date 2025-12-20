@@ -1,7 +1,7 @@
 // Copyright © 2025 Wenze Wei. All Rights Reserved.
 //
-// This file is part of DMS.
-// The DMS project belongs to the Dunimd Team.
+// This file is part of DMSC.
+// The DMSC project belongs to the Dunimd Team.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -15,11 +15,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use dms_core::observability::prometheus::DMSPrometheusExporter;
+use dmsc::observability::prometheus::DMSCPrometheusExporter;
 
 #[test]
 fn test_prometheus_exporter() {
-    let exporter = DMSPrometheusExporter::new().unwrap();
+    let exporter = DMSCPrometheusExporter::new().unwrap();
     
     exporter.register_counter("test_counter", "A test counter").unwrap();
     exporter.increment_counter("test_counter", 1.0).unwrap();
@@ -34,9 +34,9 @@ fn test_prometheus_exporter() {
 
 #[test]
 fn test_grafana_dashboard_generation() {
-    let exporter = DMSPrometheusExporter::new().unwrap();
+    let exporter = DMSCPrometheusExporter::new().unwrap();
     let dashboard = exporter.generate_default_dashboard().unwrap();
     
-    assert_eq!(dashboard.title, "DMS Metrics Dashboard");
+    assert_eq!(dashboard.title, "DMSC Metrics Dashboard");
     assert_eq!(dashboard.panels.len(), 3);
 }

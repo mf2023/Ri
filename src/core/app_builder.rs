@@ -1,7 +1,7 @@
 //! Copyright © 2025 Wenze Wei. All Rights Reserved.
 //! 
-//! This file is part of DMS.
-//! The DMS project belongs to the Dunimd Team.
+//! This file is part of DMSC.
+//! The DMSC project belongs to the Dunimd Team.
 //! 
 //! Licensed under the Apache License, Version 2.0 (the "License");
 //! you may not use this file except in compliance with the License.
@@ -19,21 +19,21 @@
 
 //! # Application Builder
 //! 
-//! This module provides the application builder for constructing DMS applications.
-//! The `DMSAppBuilder` follows the builder pattern for fluent configuration.
+//! This module provides the application builder for constructing DMSC applications.
+//! The `DMSCAppBuilder` follows the builder pattern for fluent configuration.
 
-use crate::core::{DMSResult, DMSServiceContext, ServiceModule, AsyncServiceModule};
+use crate::core::{DMSCResult, DMSCServiceContext, ServiceModule, AsyncServiceModule};
 use super::module_sorter::sort_modules;
 use super::module_types::{ModuleSlot, ModuleType};
-use super::lifecycle::DMSLifecycleObserver;
-use super::analytics::DMSLogAnalyticsModule;
+use super::lifecycle::DMSCLifecycleObserver;
+use super::analytics::DMSCLogAnalyticsModule;
 
 #[cfg(feature = "pyo3")]
 use pyo3::PyResult;
 
-/// Public-facing application builder for DMS.
+/// Public-facing application builder for DMSC.
 /// 
-/// The `DMSAppBuilder` provides a fluent API for configuring and building DMS applications.
+/// The `DMSCAppBuilder` provides a fluent API for configuring and building DMSC applications.
 /// It follows the builder pattern, allowing users to configure various aspects of the application
 /// before building the final runtime.
 /// 
@@ -43,40 +43,46 @@ use pyo3::PyResult;
 /// use dms::prelude::*;
 /// 
 /// #[tokio::main]
-/// async fn main() -> DMSResult<()> {
-///     let app = DMSAppBuilder::new()
+/// async fn main() -> DMSCResult<()> {
+///     let app = DMSCAppBuilder::new()
 ///         .with_config("config.yaml")?
 ///         .with_module(Box::new(MySyncModule::new()))
 ///         .with_async_module(Box::new(MyAsyncModule::new()))
 ///         .build()?;
 ///     
 ///     app.run(|ctx| async move {
-///         ctx.logger().info("service", "DMS service started")?;
+///         ctx.logger().info("service", "DMSC service started")?;
 ///         Ok(())
 ///     }).await
 /// }
 /// ```
 
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
-pub struct DMSAppBuilder {
+pub struct DMSCAppBuilder {
     /// Vector of modules with their state, including both sync and async modules
     modules: Vec<ModuleSlot>, 
     /// Configuration file paths to load
     config_paths: Vec<String>, 
     /// Custom logging configuration (optional)
-    logging_config: Option<crate::log::DMSLogConfig>, 
+    logging_config: Option<crate::log::DMSCLogConfig>, 
     /// Custom observability configuration (optional)
-    observability_config: Option<crate::observability::DMSObservabilityConfig>, 
+    observability_config: Option<crate::observability::DMSCObservabilityConfig>, 
 }
 
-impl DMSAppBuilder {
+impl Default for DMSCAppBuilder {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl DMSCAppBuilder {
     /// Create a new empty application builder.
     /// 
     /// # Returns
     /// 
-    /// A new `DMSAppBuilder` instance with default settings.
+    /// A new `DMSCAppBuilder` instance with default settings.
     pub fn new() -> Self {
-        DMSAppBuilder {
+        DMSCAppBuilder {
             modules: Vec::new(),
             config_paths: Vec::new(),
             logging_config: None,
@@ -92,7 +98,7 @@ impl DMSAppBuilder {
     /// 
     /// # Returns
     /// 
-    /// The updated `DMSAppBuilder` instance for method chaining.
+    /// The updated `DMSCAppBuilder` instance for method chaining.
     pub fn with_module(mut self, module: Box<dyn ServiceModule>) -> Self {
         self.modules.push(ModuleSlot { module: ModuleType::Sync(module), failed: false });
         self
@@ -106,30 +112,30 @@ impl DMSAppBuilder {
     /// 
     /// # Returns
     /// 
-    /// The updated `DMSAppBuilder` instance for method chaining.
+    /// The updated `DMSCAppBuilder` instance for method chaining.
     pub fn with_async_module(mut self, module: Box<dyn AsyncServiceModule>) -> Self {
         self.modules.push(ModuleSlot { module: ModuleType::Async(module), failed: false });
         self
     }
 
-    /// Add a DMS module to the application.
+    /// Add a DMSC module to the application.
     /// 
-    /// This method adds a module implementing the public `DMSModule` trait to the application.
+    /// This method adds a module implementing the public `DMSCModule` trait to the application.
     /// The module will be treated as an asynchronous module.
     /// 
     /// # Parameters
     /// 
-    /// - `module`: A boxed module implementing `DMSModule`
+    /// - `module`: A boxed module implementing `DMSCModule`
     /// 
     /// # Returns
     /// 
-    /// The updated `DMSAppBuilder` instance for method chaining.
-    pub fn with_dms_module(mut self, module: Box<dyn crate::core::DMSModule>) -> Self {
-        // Wrap DMSModule into AsyncServiceModule adapter
-        struct DMSModuleAdapter(Box<dyn crate::core::DMSModule + Send + Sync + 'static>);
+    /// The updated `DMSCAppBuilder` instance for method chaining.
+    pub fn with_dms_module(mut self, module: Box<dyn crate::core::DMSCModule>) -> Self {
+        // Wrap DMSCModule into AsyncServiceModule adapter
+        struct DMSCModuleAdapter(Box<dyn crate::core::DMSCModule + Send + Sync + 'static>);
         
         #[async_trait::async_trait]
-        impl AsyncServiceModule for DMSModuleAdapter {
+        impl AsyncServiceModule for DMSCModuleAdapter {
             fn name(&self) -> &str {
                 self.0.name()
             }
@@ -146,37 +152,37 @@ impl DMSAppBuilder {
                 self.0.dependencies()
             }
             
-            async fn init(&mut self, ctx: &mut DMSServiceContext) -> DMSResult<()> {
+            async fn init(&mut self, ctx: &mut DMSCServiceContext) -> DMSCResult<()> {
                 self.0.init(ctx).await
             }
             
-            async fn before_start(&mut self, ctx: &mut DMSServiceContext) -> DMSResult<()> {
+            async fn before_start(&mut self, ctx: &mut DMSCServiceContext) -> DMSCResult<()> {
                 self.0.before_start(ctx).await
             }
             
-            async fn start(&mut self, ctx: &mut DMSServiceContext) -> DMSResult<()> {
+            async fn start(&mut self, ctx: &mut DMSCServiceContext) -> DMSCResult<()> {
                 self.0.start(ctx).await
             }
             
-            async fn after_start(&mut self, ctx: &mut DMSServiceContext) -> DMSResult<()> {
+            async fn after_start(&mut self, ctx: &mut DMSCServiceContext) -> DMSCResult<()> {
                 self.0.after_start(ctx).await
             }
             
-            async fn before_shutdown(&mut self, ctx: &mut DMSServiceContext) -> DMSResult<()> {
+            async fn before_shutdown(&mut self, ctx: &mut DMSCServiceContext) -> DMSCResult<()> {
                 self.0.before_shutdown(ctx).await
             }
             
-            async fn shutdown(&mut self, ctx: &mut DMSServiceContext) -> DMSResult<()> {
+            async fn shutdown(&mut self, ctx: &mut DMSCServiceContext) -> DMSCResult<()> {
                 self.0.shutdown(ctx).await
             }
             
-            async fn after_shutdown(&mut self, ctx: &mut DMSServiceContext) -> DMSResult<()> {
+            async fn after_shutdown(&mut self, ctx: &mut DMSCServiceContext) -> DMSCResult<()> {
                 self.0.after_shutdown(ctx).await
             }
         }
         
         self.modules.push(ModuleSlot { 
-            module: ModuleType::Async(Box::new(DMSModuleAdapter(module))), 
+            module: ModuleType::Async(Box::new(DMSCModuleAdapter(module))), 
             failed: false 
         });
         self
@@ -190,7 +196,7 @@ impl DMSAppBuilder {
     /// 
     /// # Returns
     /// 
-    /// The updated `DMSAppBuilder` instance for method chaining.
+    /// The updated `DMSCAppBuilder` instance for method chaining.
     pub fn with_modules(mut self, modules: Vec<Box<dyn ServiceModule>>) -> Self {
         for module in modules {
             self.modules.push(ModuleSlot { module: ModuleType::Sync(module), failed: false });
@@ -206,7 +212,7 @@ impl DMSAppBuilder {
     /// 
     /// # Returns
     /// 
-    /// The updated `DMSAppBuilder` instance for method chaining.
+    /// The updated `DMSCAppBuilder` instance for method chaining.
     pub fn with_async_modules(mut self, modules: Vec<Box<dyn AsyncServiceModule>>) -> Self {
         for module in modules {
             self.modules.push(ModuleSlot { module: ModuleType::Async(module), failed: false });
@@ -214,19 +220,19 @@ impl DMSAppBuilder {
         self
     }
     
-    /// Add multiple DMS modules to the application.
+    /// Add multiple DMSC modules to the application.
     /// 
-    /// This method adds multiple modules implementing the public `DMSModule` trait to the application.
+    /// This method adds multiple modules implementing the public `DMSCModule` trait to the application.
     /// Each module will be treated as an asynchronous module.
     /// 
     /// # Parameters
     /// 
-    /// - `modules`: A vector of boxed modules implementing `DMSModule`
+    /// - `modules`: A vector of boxed modules implementing `DMSCModule`
     /// 
     /// # Returns
     /// 
-    /// The updated `DMSAppBuilder` instance for method chaining.
-    pub fn with_dms_modules(mut self, modules: Vec<Box<dyn crate::core::DMSModule>>) -> Self {
+    /// The updated `DMSCAppBuilder` instance for method chaining.
+    pub fn with_dms_modules(mut self, modules: Vec<Box<dyn crate::core::DMSCModule>>) -> Self {
         for module in modules {
             self = self.with_dms_module(module);
         }
@@ -241,13 +247,13 @@ impl DMSAppBuilder {
     /// 
     /// # Returns
     /// 
-    /// A `DMSResult` containing the updated `DMSAppBuilder` instance for method chaining.
+    /// A `DMSCResult` containing the updated `DMSCAppBuilder` instance for method chaining.
     /// 
     /// # Errors
     /// 
-    /// This method currently never returns an error, but returns `DMSResult` for consistency
+    /// This method currently never returns an error, but returns `DMSCResult` for consistency
     /// with other builder methods and to allow for future error handling.
-    pub fn with_config(mut self, config_path: impl Into<String>) -> DMSResult<Self> {
+    pub fn with_config(mut self, config_path: impl Into<String>) -> DMSCResult<Self> {
         self.config_paths.push(config_path.into());
         Ok(self)
     }
@@ -260,13 +266,13 @@ impl DMSAppBuilder {
     /// 
     /// # Returns
     /// 
-    /// A `DMSResult` containing the updated `DMSAppBuilder` instance for method chaining.
+    /// A `DMSCResult` containing the updated `DMSCAppBuilder` instance for method chaining.
     /// 
     /// # Errors
     /// 
-    /// This method currently never returns an error, but returns `DMSResult` for consistency
+    /// This method currently never returns an error, but returns `DMSCResult` for consistency
     /// with other builder methods and to allow for future error handling.
-    pub fn with_logging(mut self, logging_config: crate::log::DMSLogConfig) -> DMSResult<Self> {
+    pub fn with_logging(mut self, logging_config: crate::log::DMSCLogConfig) -> DMSCResult<Self> {
         self.logging_config = Some(logging_config);
         Ok(self)
     }
@@ -279,13 +285,13 @@ impl DMSAppBuilder {
     /// 
     /// # Returns
     /// 
-    /// A `DMSResult` containing the updated `DMSAppBuilder` instance for method chaining.
+    /// A `DMSCResult` containing the updated `DMSCAppBuilder` instance for method chaining.
     /// 
     /// # Errors
     /// 
-    /// This method currently never returns an error, but returns `DMSResult` for consistency
+    /// This method currently never returns an error, but returns `DMSCResult` for consistency
     /// with other builder methods and to allow for future error handling.
-    pub fn with_observability(mut self, observability_config: crate::observability::DMSObservabilityConfig) -> DMSResult<Self> {
+    pub fn with_observability(mut self, observability_config: crate::observability::DMSCObservabilityConfig) -> DMSCResult<Self> {
         self.observability_config = Some(observability_config);
         Ok(self)
     }
@@ -302,16 +308,16 @@ impl DMSAppBuilder {
     /// 
     /// # Returns
     /// 
-    /// A `DMSResult` containing the built `DMSAppRuntime` instance, or an error if building fails.
+    /// A `DMSCResult` containing the built `DMSCAppRuntime` instance, or an error if building fails.
     /// 
     /// # Errors
     /// 
     /// - If configuration loading fails
     /// - If service context creation fails
     /// - If module sorting fails due to circular dependencies
-    pub fn build(mut self) -> DMSResult<super::app_runtime::DMSAppRuntime> {
+    pub fn build(mut self) -> DMSCResult<super::app_runtime::DMSCAppRuntime> {
         // Create config manager with specified config paths
-        let mut config_manager = crate::config::DMSConfigManager::new();
+        let mut config_manager = crate::config::DMSCConfigManager::new();
         
         // Add specified config files
         for path in &self.config_paths {
@@ -341,13 +347,13 @@ impl DMSAppBuilder {
         let ctx = self.create_service_context(config_manager)?;
         
         // Add core modules
-        self.modules.push(ModuleSlot { module: ModuleType::Sync(Box::new(DMSLogAnalyticsModule::new())), failed: false });
-        self.modules.push(ModuleSlot { module: ModuleType::Sync(Box::new(DMSLifecycleObserver::new())), failed: false });
+        self.modules.push(ModuleSlot { module: ModuleType::Sync(Box::new(DMSCLogAnalyticsModule::new())), failed: false });
+        self.modules.push(ModuleSlot { module: ModuleType::Sync(Box::new(DMSCLifecycleObserver::new())), failed: false });
         
         // Sort modules based on dependencies and priority
         self.modules = sort_modules(self.modules)?;
         
-        let runtime = super::app_runtime::DMSAppRuntime::new(ctx, self.modules);
+        let runtime = super::app_runtime::DMSCAppRuntime::new(ctx, self.modules);
         Ok(runtime)
     }
     
@@ -365,43 +371,43 @@ impl DMSAppBuilder {
     /// 
     /// # Returns
     /// 
-    /// A `DMSResult` containing the created `DMSServiceContext` instance, or an error if creation fails.
+    /// A `DMSCResult` containing the created `DMSCServiceContext` instance, or an error if creation fails.
     /// 
     /// # Errors
     /// 
     /// - If project root directory detection fails
     /// - If file system creation fails
     /// - If logger creation fails
-    fn create_service_context(&self, config_manager: crate::config::DMSConfigManager) -> DMSResult<DMSServiceContext> {
+    fn create_service_context(&self, config_manager: crate::config::DMSCConfigManager) -> DMSCResult<DMSCServiceContext> {
         let cfg = config_manager.config();
 
         let project_root = std::env::current_dir()
-            .map_err(|e| crate::core::DMSError::Other(format!("detect project root failed: {e}")))?;
+            .map_err(|e| crate::core::DMSCError::Other(format!("detect project root failed: {e}")))?;
         let app_data_root = if let Some(root_str) = cfg.get_str("fs.app_data_root") {
             project_root.join(root_str)
         } else {
             project_root.join(".dms")
         };
 
-        let fs = crate::fs::DMSFileSystem::new_with_roots(project_root, app_data_root);
+        let fs = crate::fs::DMSCFileSystem::new_with_roots(project_root, app_data_root);
 
         // Use custom logging config if provided, otherwise create from config
-        let log_config: crate::log::DMSLogConfig = if let Some(log_config) = &self.logging_config {
+        let log_config: crate::log::DMSCLogConfig = if let Some(log_config) = &self.logging_config {
             log_config.clone()
         } else {
-            crate::log::DMSLogConfig::from_config(cfg)
+            crate::log::DMSCLogConfig::from_config(cfg)
         };
-        let logger = crate::log::DMSLogger::new(&log_config, fs.clone());
-        let hooks = crate::hooks::DMSHookBus::new();
+        let logger = crate::log::DMSCLogger::new(&log_config, fs.clone());
+        let hooks = crate::hooks::DMSCHookBus::new();
         
-        Ok(DMSServiceContext::new_with(fs, logger, config_manager, hooks, None))
+        Ok(DMSCServiceContext::new_with(fs, logger, config_manager, hooks, None))
     }
 }
 
 #[cfg(feature = "pyo3")]
-    /// Python bindings for DMSAppBuilder
+    /// Python bindings for DMSCAppBuilder
     #[pyo3::prelude::pymethods]
-    impl DMSAppBuilder {
+    impl DMSCAppBuilder {
         #[new]
         fn py_new() -> Self {
             Self::new()
@@ -420,7 +426,7 @@ impl DMSAppBuilder {
         }
         
         /// Build the application runtime from Python
-        fn build_py(&self) -> PyResult<super::app_runtime::DMSAppRuntime> {
+        fn build_py(&self) -> PyResult<super::app_runtime::DMSCAppRuntime> {
             // Create a new builder and copy the configuration
             let mut builder = Self::new();
             builder.config_paths = self.config_paths.clone();
@@ -429,7 +435,7 @@ impl DMSAppBuilder {
             
             match builder.build() {
                 Ok(runtime) => Ok(runtime),
-                Err(e) => Err(pyo3::exceptions::PyRuntimeError::new_err(format!("Failed to build runtime: {}", e))),
+                Err(e) => Err(pyo3::exceptions::PyRuntimeError::new_err(format!("Failed to build runtime: {e}"))),
             }
         }
     }
