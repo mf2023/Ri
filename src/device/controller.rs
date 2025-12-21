@@ -99,6 +99,7 @@ use crate::prelude::DMSCMetricsRegistry;
 // use super::scheduler::DMSCDeviceScheduler;
 
 /// Device controller - manages device lifecycle and state
+#[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 pub struct DMSCDeviceController {
     devices: HashMap<String, Arc<RwLock<DMSCDevice>>>,
     device_type_index: HashMap<DMSCDeviceType, Vec<String>>,
@@ -574,7 +575,6 @@ impl DMSCDeviceController {
                 
             let mut cpu_count = 0;
             let mut total_cores = 0;
-            let mut total_threads = 0;
             
             for line in cpu_info.lines() {
                 if line.starts_with("processor\t") {
@@ -586,7 +586,7 @@ impl DMSCDeviceController {
                 }
             }
             
-            total_threads = cpu_count; // In Linux, processor count equals thread count
+            let total_threads = cpu_count; // In Linux, processor count equals thread count
             
             if cpu_count > 0 {
                 let cpu_device = DMSCDevice::new(

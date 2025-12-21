@@ -414,15 +414,24 @@ impl DMSCAppBuilder {
         }
         
         /// Add a configuration file from Python (creates a new builder)
-        fn with_config_py(&self, config_path: String) -> PyResult<Self> {
-            // For Python, we'll create a new builder and manually copy the state
-            // Since we can't clone ModuleSlot, we'll create a fresh builder with just the config
-            let mut new_builder = Self::new();
-            new_builder.config_paths.push(config_path);
-            // Copy other configurations if needed
-            new_builder.logging_config = self.logging_config.clone();
-            new_builder.observability_config = self.observability_config.clone();
-            Ok(new_builder)
+        fn with_config_py(&mut self, config_path: String) -> PyResult<()> {
+            // Since we can't clone modules, we'll modify self directly
+            self.config_paths.push(config_path);
+            Ok(())
+        }
+        
+        /// Set custom logging configuration from Python
+        fn with_logging_py(&mut self, logging_config: crate::log::DMSCLogConfig) -> PyResult<()> {
+            // Since we can't clone modules, we'll modify self directly
+            self.logging_config = Some(logging_config);
+            Ok(())
+        }
+        
+        /// Set custom observability configuration from Python
+        fn with_observability_py(&mut self, observability_config: crate::observability::DMSCObservabilityConfig) -> PyResult<()> {
+            // Since we can't clone modules, we'll modify self directly
+            self.observability_config = Some(observability_config);
+            Ok(())
         }
         
         /// Build the application runtime from Python
@@ -432,6 +441,8 @@ impl DMSCAppBuilder {
             builder.config_paths = self.config_paths.clone();
             builder.logging_config = self.logging_config.clone();
             builder.observability_config = self.observability_config.clone();
+            // Note: We're not copying modules because they can't be cloned
+            // This means Python users can't add modules from Python yet
             
             match builder.build() {
                 Ok(runtime) => Ok(runtime),

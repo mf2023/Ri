@@ -80,6 +80,7 @@ struct AnalyticsState {
 /// analytics:
 ///   enabled: true  # Enable or disable analytics
 /// ```
+#[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 pub struct DMSCLogAnalyticsModule {
     /// Shared analytics state protected by a mutex
     state: Arc<Mutex<AnalyticsState>>,

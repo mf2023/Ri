@@ -114,7 +114,7 @@ impl ErrorChain {
     }
 
     /// Iterates through the error chain.
-    pub fn chain(&self) -> ErrorChainIter {
+    pub fn chain(&self) -> ErrorChainIter<'_> {
         ErrorChainIter { current: Some(self) }
     }
 

@@ -30,8 +30,9 @@ use thiserror::Error;
 
 use crate::core::{DMSCResult, DMSCError};
 
-/// Protocol frame types
+/// Protocol frame type
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 pub enum DMSCFrameType {
     /// Control frame for protocol management
     Control = 0x01,
@@ -64,6 +65,7 @@ impl DMSCFrameType {
 
 /// Protocol frame header
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 pub struct DMSCFrameHeader {
     /// Frame magic number (4 bytes)
     pub magic: u32,
@@ -185,6 +187,7 @@ impl DMSCFrameHeader {
 
 /// Complete protocol frame
 #[derive(Debug, Clone)]
+#[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 pub struct DMSCFrame {
     /// Frame header
     pub header: DMSCFrameHeader,

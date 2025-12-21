@@ -107,6 +107,7 @@ impl ServiceContextInner {
 /// }
 /// ```
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
+#[derive(Clone)]
 pub struct DMSCServiceContext {
     /// Internal implementation details
     inner: ServiceContextInner,
@@ -265,5 +266,19 @@ impl DMSCServiceContext {
     /// An optional reference to the `DMSCMetricsRegistry` instance.
     pub fn metrics_registry(&self) -> Option<Arc<DMSCMetricsRegistry>> {
         self.inner.metrics_registry.clone()
+    }
+}
+
+#[cfg(feature = "pyo3")]
+/// Python bindings for DMSCServiceContext
+#[pyo3::prelude::pymethods]
+impl DMSCServiceContext {
+    /// Create a new DMSCServiceContext with default configuration
+    #[new]
+    fn py_new() -> pyo3::PyResult<Self> {
+        match Self::new_default() {
+            Ok(ctx) => Ok(ctx),
+            Err(err) => Err(pyo3::exceptions::PyRuntimeError::new_err(format!("Failed to create service context: {err}"))),
+        }
     }
 }

@@ -82,6 +82,44 @@ use std::collections::HashMap;
 use std::time::SystemTime;
 use crate::core::DMSCResult;
 
+/// Error types for queue operations.
+#[derive(Debug, Clone)]
+pub enum DMSCQueueError {
+    /// Backend-specific error with descriptive message
+    BackendError(String),
+    /// Configuration error
+    ConfigError(String),
+    /// Connection error
+    ConnectionError(String),
+    /// Message not found
+    MessageNotFound(String),
+    /// Consumer group error
+    ConsumerGroupError(String),
+    /// Serialization error
+    SerializationError(String),
+}
+
+impl std::fmt::Display for DMSCQueueError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            DMSCQueueError::BackendError(msg) => write!(f, "Queue backend error: {}", msg),
+            DMSCQueueError::ConfigError(msg) => write!(f, "Queue configuration error: {}", msg),
+            DMSCQueueError::ConnectionError(msg) => write!(f, "Queue connection error: {}", msg),
+            DMSCQueueError::MessageNotFound(msg) => write!(f, "Message not found: {}", msg),
+            DMSCQueueError::ConsumerGroupError(msg) => write!(f, "Consumer group error: {}", msg),
+            DMSCQueueError::SerializationError(msg) => write!(f, "Serialization error: {}", msg),
+        }
+    }
+}
+
+impl std::error::Error for DMSCQueueError {}
+
+impl From<DMSCQueueError> for crate::core::DMSCError {
+    fn from(error: DMSCQueueError) -> Self {
+        crate::core::DMSCError::Queue(error.to_string())
+    }
+}
+
 /// Message structure for queue operations.
 /// 
 /// This struct represents a message that can be sent to and received from queues. It includes

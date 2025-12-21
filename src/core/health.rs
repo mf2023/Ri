@@ -45,6 +45,7 @@ use std::time::{Duration, SystemTime};
 
 /// Health status enumeration representing the state of a component or service.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 pub enum HealthStatus {
     /// Component is functioning normally
     Healthy,
@@ -112,6 +113,7 @@ impl std::fmt::Display for HealthStatus {
 
 /// Result of a health check execution.
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 pub struct HealthCheckResult {
     /// Name of the health check
     pub name: String,
@@ -173,6 +175,7 @@ impl HealthCheckResult {
 
 /// Configuration for health checks.
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 pub struct HealthCheckConfig {
     /// Interval between health checks
     pub check_interval: Duration,
@@ -213,6 +216,7 @@ pub trait HealthCheck: Send + Sync {
 
 /// Comprehensive health report containing status of all components.
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 pub struct HealthReport {
     /// Overall system health status
     pub overall_status: HealthStatus,
@@ -274,6 +278,7 @@ impl Default for HealthReport {
 }
 
 /// Health checker service that manages and executes health checks.
+#[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 pub struct HealthChecker {
     /// Registered health checks
     checks: Vec<Box<dyn HealthCheck>>,

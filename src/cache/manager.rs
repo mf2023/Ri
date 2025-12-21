@@ -64,6 +64,7 @@ use crate::cache::core::{DMSCCache, CacheStats};
 /// This enum defines the events that are broadcasted to ensure all cache instances
 /// remain consistent. Each event triggers a corresponding action on all cache instances.
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 pub enum DMSCCacheEvent {
     /// Invalidate a specific cache key
     /// 
@@ -78,7 +79,7 @@ pub enum DMSCCacheEvent {
     InvalidatePattern { pattern: String },
     
     /// Clear all cache entries
-    Clear,
+    Clear(),
 }
 
 /// Cache manager that coordinates different cache backends with consistency support
@@ -86,6 +87,7 @@ pub enum DMSCCacheEvent {
 /// This struct provides a unified interface for cache operations while ensuring cache
 /// consistency across multiple instances through event-driven architecture. It wraps
 /// any backend implementing the DMSCCache trait and adds consistency guarantees.
+#[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 pub struct DMSCCacheManager {
     /// The underlying cache backend implementation
     backend: Arc<dyn DMSCCache + Send + Sync>,
@@ -153,7 +155,7 @@ impl DMSCCacheManager {
                         // Note: This requires backend support for pattern matching
                         log::error!("[DMSC.Cache] Invalidate pattern not implemented: {pattern}");
                     },
-                    DMSCCacheEvent::Clear => {
+                    DMSCCacheEvent::Clear() => {
                         log::info!("[DMSC.Cache] Processing clear cache event");
                         if let Err(e) = backend.clear().await {
                             log::error!("[DMSC.Cache] Failed to clear cache: {e}");
@@ -195,7 +197,7 @@ impl DMSCCacheManager {
         let event_type = match &event {
             DMSCCacheEvent::Invalidate { key } => format!("Invalidate(key: {key})"),
             DMSCCacheEvent::InvalidatePattern { pattern } => format!("InvalidatePattern(pattern: {pattern})"),
-            DMSCCacheEvent::Clear => "Clear".to_string(),
+            DMSCCacheEvent::Clear() => "Clear".to_string(),
         };
         
         log::info!("[DMSC.Cache] Publishing cache event: {event_type}");
@@ -325,7 +327,7 @@ impl DMSCCacheManager {
         }
         
         // Publish clear event to ensure consistency across instances
-        self.publish_event(DMSCCacheEvent::Clear);
+        self.publish_event(DMSCCacheEvent::Clear());
         
         result
     }

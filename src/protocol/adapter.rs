@@ -108,6 +108,7 @@ pub enum DMSCProtocolStrategy {
 
 /// Security context for protocol selection.
 #[derive(Debug, Clone)]
+#[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 pub struct DMSCSecurityContext {
     /// Required security level
     pub required_security_level: DMSCSecurityLevel,
@@ -123,6 +124,7 @@ pub struct DMSCSecurityContext {
 
 /// Performance context for protocol selection.
 #[derive(Debug, Clone)]
+#[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 pub struct DMSCPerformanceContext {
     /// Required throughput (bytes/second)
     pub required_throughput: u64,
@@ -136,6 +138,7 @@ pub struct DMSCPerformanceContext {
 
 /// Adaptive context for balanced protocol selection.
 #[derive(Debug, Clone)]
+#[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 pub struct DMSCAdaptiveContext {
     /// Security weight (0.0 - 1.0)
     pub security_weight: f32,
@@ -149,6 +152,7 @@ pub struct DMSCAdaptiveContext {
 
 /// Threat level enumeration.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 pub enum DMSCThreatLevel {
     /// Normal threat level
     Normal,
@@ -162,6 +166,7 @@ pub enum DMSCThreatLevel {
 
 /// Data classification enumeration.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 pub enum DMSCDataClassification {
     /// Public data
     Public,
@@ -177,6 +182,7 @@ pub enum DMSCDataClassification {
 
 /// Network environment enumeration.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 pub enum DMSCNetworkEnvironment {
     /// Trusted internal network
     Trusted,
@@ -190,6 +196,7 @@ pub enum DMSCNetworkEnvironment {
 
 /// Compliance requirement enumeration.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 pub enum DMSCComplianceRequirement {
     /// GDPR compliance
     GDPR,
@@ -205,6 +212,7 @@ pub enum DMSCComplianceRequirement {
 
 /// Bandwidth constraints structure.
 #[derive(Debug, Clone)]
+#[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 pub struct DMSCBandwidthConstraints {
     /// Available bandwidth (bits/second)
     pub available_bandwidth: u64,
@@ -216,6 +224,7 @@ pub struct DMSCBandwidthConstraints {
 
 /// Stability requirements structure.
 #[derive(Debug, Clone)]
+#[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 pub struct DMSCStabilityRequirements {
     /// Maximum acceptable packet loss (0.0 - 1.0)
     pub max_packet_loss: f32,
@@ -227,6 +236,7 @@ pub struct DMSCStabilityRequirements {
 
 /// Adaptation trigger enumeration.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 pub enum DMSCAdaptationTrigger {
     /// Security breach detected
     SecurityBreach,
@@ -240,6 +250,7 @@ pub enum DMSCAdaptationTrigger {
 
 /// Learning parameters structure.
 #[derive(Debug, Clone)]
+#[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 pub struct DMSCLearningParameters {
     /// Learning rate (0.0 - 1.0)
     pub learning_rate: f32,
@@ -251,6 +262,7 @@ pub struct DMSCLearningParameters {
 
 /// Network condition enumeration for adaptive decisions.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 pub enum DMSCNetworkCondition {
     /// Excellent network conditions
     Excellent,
@@ -263,6 +275,7 @@ pub enum DMSCNetworkCondition {
 }
 
 /// Protocol adapter for unified protocol interface.
+#[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 pub struct DMSCProtocolAdapter {
     /// Protocol strategy
     strategy: Arc<RwLock<Option<DMSCProtocolStrategy>>>,

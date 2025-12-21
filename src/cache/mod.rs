@@ -102,6 +102,7 @@ use tokio::sync::RwLock;
 /// This module provides a unified caching abstraction with support for multiple backend implementations.
 /// It implements both the `AsyncServiceModule` and `ServiceModule` traits for seamless integration
 /// into the DMSC application lifecycle.
+#[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 pub struct DMSCCacheModule {
     /// Cache configuration
     config: DMSCCacheConfig,

@@ -18,10 +18,7 @@
 //! Cache implementation for DMSC Core
 
 use crate::core::DMSCResult;
-use std::collections::HashMap;
-use std::sync::Arc;
-use tokio::sync::RwLock;
-use std::time::{Duration, SystemTime, UNIX_EPOCH};
+use std::time::Duration;
 use serde::{Serialize, Deserialize};
 
 /// Cache trait for DMSC cache implementations
@@ -38,6 +35,7 @@ pub trait DMSCCache: Send + Sync {
 
 /// Cache event types for monitoring and consistency
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 pub enum DMSCCacheEvent {
     /// Cache hit event
     Hit { key: String },
@@ -50,7 +48,7 @@ pub enum DMSCCacheEvent {
     /// Cache delete event
     Delete { key: String },
     /// Cache clear event
-    Clear,
+    Clear(),
     /// Cache cleanup event
     Cleanup { cleaned_count: usize },
     /// Cache invalidate pattern event
@@ -61,6 +59,7 @@ pub enum DMSCCacheEvent {
 
 /// Cache statistics
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+#[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 pub struct CacheStats {
     pub hits: u64,
     pub misses: u64,
@@ -89,6 +88,7 @@ impl Default for CacheStats {
 
 /// Cached value wrapper
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 pub struct CachedValue {
     pub value: String,
     pub expires_at: Option<u64>,
@@ -137,131 +137,4 @@ impl CachedValue {
     }
 }
 
-/// In-memory cache implementation (internal use only)
-/// 
-/// This struct provides the core in-memory cache functionality. It is used internally
-/// by the public cache backends and should not be used directly by application code.
-/// Use DMSCMemoryCache, DMSCRedisCache, or DMSCHybridCache instead.
-struct DMSCCacheImpl {
-    data: Arc<RwLock<HashMap<String, (String, u64)>>>, // (value, expires_at)
-    stats: Arc<RwLock<CacheStats>>,
-}
 
-impl DMSCCacheImpl {
-    /// Create a new cache
-    fn new() -> Self {
-        Self {
-            data: Arc::new(RwLock::new(HashMap::new())),
-            stats: Arc::new(RwLock::new(CacheStats {
-                hits: 0,
-                misses: 0,
-                entries: 0,
-                memory_usage_bytes: 0,
-                avg_hit_rate: 0.0,
-                hit_count: 0,
-                miss_count: 0,
-                eviction_count: 0,
-            })),
-        }
-    }
-}
-
-impl Default for DMSCCacheImpl {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
-#[async_trait::async_trait]
-impl DMSCCache for DMSCCacheImpl {
-    async fn get(&self, key: &str) -> DMSCResult<Option<String>> {
-        let mut stats = self.stats.write().await;
-        let data = self.data.read().await;
-        
-        if let Some((value, expires_at)) = data.get(key) {
-            let now = SystemTime::now()
-                .duration_since(UNIX_EPOCH)
-                .unwrap_or(Duration::from_secs(0))
-                .as_secs();
-            
-            if now < *expires_at {
-                stats.hits += 1;
-                return Ok(Some(value.clone()));
-            }
-        }
-        
-        stats.misses += 1;
-        Ok(None)
-    }
-
-    async fn set(&self, key: &str, value: &str, ttl_seconds: Option<u64>) -> DMSCResult<()> {
-        let expires_at = SystemTime::now()
-            .duration_since(UNIX_EPOCH)
-            .unwrap_or(Duration::from_secs(0))
-            .as_secs() + ttl_seconds.unwrap_or(3600);
-        
-        let mut data = self.data.write().await;
-        data.insert(key.to_string(), (value.to_string(), expires_at));
-        
-        let mut stats = self.stats.write().await;
-        stats.entries = data.len();
-        
-        Ok(())
-    }
-
-    async fn delete(&self, key: &str) -> DMSCResult<bool> {
-        let mut data = self.data.write().await;
-        let removed = data.remove(key).is_some();
-        
-        if removed {
-            let mut stats = self.stats.write().await;
-            stats.entries = data.len();
-        }
-        
-        Ok(removed)
-    }
-
-    async fn clear(&self) -> DMSCResult<()> {
-        let mut data = self.data.write().await;
-        data.clear();
-        
-        let mut stats = self.stats.write().await;
-        stats.entries = 0;
-        
-        Ok(())
-    }
-
-    async fn stats(&self) -> CacheStats {
-        *self.stats.read().await
-    }
-
-    async fn cleanup_expired(&self) -> DMSCResult<usize> {
-        let mut data = self.data.write().await;
-        let now = SystemTime::now()
-                .duration_since(UNIX_EPOCH)
-                .unwrap_or(Duration::from_secs(0))
-                .as_secs();
-        
-        let initial_count = data.len();
-        data.retain(|_, (_, expires_at)| now < *expires_at);
-        let cleaned = initial_count - data.len();
-        
-        let mut stats = self.stats.write().await;
-        stats.entries = data.len();
-        
-        Ok(cleaned)
-    }
-
-    async fn exists(&self, key: &str) -> bool {
-        let data = self.data.read().await;
-        if let Some((_, expires_at)) = data.get(key) {
-            let now = SystemTime::now()
-                .duration_since(UNIX_EPOCH)
-                .unwrap_or(Duration::from_secs(0))
-                .as_secs();
-            now < *expires_at
-        } else {
-            false
-        }
-    }
-}

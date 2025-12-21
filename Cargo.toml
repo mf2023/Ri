@@ -56,7 +56,7 @@ prometheus = { version = "0.13", optional = true } # For observability
 redis = { version = "0.24", features = ["tokio-comp", "connection-manager"], optional = true } # For cache and queue
 hyper = { version = "0.14", features = ["client", "server", "http1", "http2"], optional = true } # For HTTP and gateway
 lapin = { version = "2.3", features = ["rustls"], optional = true } # For RabbitMQ
-futures = { version = "0.3", optional = true } # For async operations
+futures = { version = "0.3", features = ["std"], optional = true } # For async operations
 reqwest = { version = "0.11", features = ["json"], optional = true } # For HTTP client
 sysinfo = { version = "0.29", optional = true } # For system information
 jsonwebtoken = { version = "8", optional = true } # For JWT authentication
@@ -70,7 +70,7 @@ rdkafka = { version = "0.38", default-features = false, features = ["tokio", "li
 openssl-sys = { version = "0.9", features = ["vendored"], optional = true }
 
 [features]
-default = ["pyo3", "full"]
+default = ["pyo3"]
 
 # Minimal feature set (core functionality only)
 minimal = []
@@ -97,7 +97,7 @@ etcd = ["dep:etcd-client"]
 parking_lot = []
 pyo3 = ["dep:pyo3"]
 kafka = ["rdkafka"]
-rabbitmq = ["dep:lapin"]
+rabbitmq = ["dep:lapin", "futures"]
 observability = ["prometheus"]
 cache = ["redis"]
 queue = ["redis", "rabbitmq", "kafka"]

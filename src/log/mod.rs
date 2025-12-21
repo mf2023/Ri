@@ -232,6 +232,110 @@ impl Default for DMSCLogConfig {
     }
 }
 
+#[cfg(feature = "pyo3")]
+/// Python methods for DMSCLogConfig
+#[pyo3::prelude::pymethods]
+impl DMSCLogConfig {
+    #[new]
+    fn py_new() -> Self {
+        Self::default()
+    }
+    
+    /// Set log level from Python
+    fn set_level(&mut self, level: String) -> pyo3::PyResult<()>
+    {
+        let log_level = match level.to_ascii_lowercase().as_str() {
+            "debug" => DMSCLogLevel::Debug,
+            "info" => DMSCLogLevel::Info,
+            "warn" | "warning" => DMSCLogLevel::Warn,
+            "error" => DMSCLogLevel::Error,
+            _ => return Err(pyo3::exceptions::PyValueError::new_err(format!("Invalid log level: {level}"))),
+        };
+        self.level = log_level;
+        Ok(())
+    }
+    
+    /// Get log level as string from Python
+    fn get_level(&self) -> String {
+        self.level.as_str().to_lowercase()
+    }
+    
+    /// Set console enabled flag from Python
+    fn set_console_enabled(&mut self, enabled: bool) {
+        self.console_enabled = enabled;
+    }
+    
+    /// Get console enabled flag from Python
+    fn get_console_enabled(&self) -> bool {
+        self.console_enabled
+    }
+    
+    /// Set file enabled flag from Python
+    fn set_file_enabled(&mut self, enabled: bool) {
+        self.file_enabled = enabled;
+    }
+    
+    /// Get file enabled flag from Python
+    fn get_file_enabled(&self) -> bool {
+        self.file_enabled
+    }
+    
+    /// Set file name from Python
+    fn set_file_name(&mut self, file_name: String) {
+        self.file_name = file_name;
+    }
+    
+    /// Get file name from Python
+    fn get_file_name(&self) -> String {
+        self.file_name.clone()
+    }
+    
+    /// Set JSON format flag from Python
+    fn set_json_format(&mut self, json_format: bool) {
+        self.json_format = json_format;
+    }
+    
+    /// Get JSON format flag from Python
+    fn get_json_format(&self) -> bool {
+        self.json_format
+    }
+    
+    /// Set rotate when from Python
+    fn set_rotate_when(&mut self, rotate_when: String) {
+        self.rotate_when = rotate_when;
+    }
+    
+    /// Get rotate when from Python
+    fn get_rotate_when(&self) -> String {
+        self.rotate_when.clone()
+    }
+    
+    /// Set max bytes from Python
+    fn set_max_bytes(&mut self, max_bytes: u64) {
+        self.max_bytes = max_bytes;
+    }
+    
+    /// Get max bytes from Python
+    fn get_max_bytes(&self) -> u64 {
+        self.max_bytes
+    }
+    
+    /// Set sampling default from Python
+    fn set_sampling_default(&mut self, sampling_default: f32) -> pyo3::PyResult<()>
+    {
+        if sampling_default < 0.0 || sampling_default > 1.0 {
+            return Err(pyo3::exceptions::PyValueError::new_err("Sampling default must be between 0.0 and 1.0"));
+        }
+        self.sampling_default = sampling_default;
+        Ok(())
+    }
+    
+    /// Get sampling default from Python
+    fn get_sampling_default(&self) -> f32 {
+        self.sampling_default
+    }
+}
+
 /// Log entry for caching
 struct LogEntry {
     level: DMSCLogLevel,

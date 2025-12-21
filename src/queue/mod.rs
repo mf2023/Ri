@@ -108,6 +108,6 @@ pub mod backends;
 mod config;
 mod manager;
 
-pub use core::{DMSCQueue, DMSCQueueMessage, DMSCQueueProducer, DMSCQueueConsumer, DMSCQueueStats};
+pub use core::{DMSCQueue, DMSCQueueMessage, DMSCQueueProducer, DMSCQueueConsumer, DMSCQueueStats, DMSCQueueError};
 pub use config::{DMSCQueueConfig, DMSCQueueBackendType, DMSCRetryPolicy, DMSCDeadLetterConfig};
 pub use manager::{DMSCQueueManager, DMSCQueueModule};

@@ -33,6 +33,8 @@ pub(crate) enum ModuleType {
     Async(Box<dyn AsyncServiceModule>),
 }
 
+
+
 impl ModuleType {
     /// Get the name of the module.
     /// 

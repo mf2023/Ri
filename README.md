@@ -4,7 +4,7 @@
 
 English | [简体中文](README.zh.md)
 
-[Help Documentation](doc\index.md)
+[Help Documentation](doc/en/index.md)
 
 <a href="https://space.bilibili.com/3493284091529457" target="_blank">
     <img alt="BiliBili" src="https://img.shields.io/badge/BiliBili-Dunimd-00A1D6?style=flat-square&logo=bilibili"/>
@@ -116,7 +116,7 @@ cargo add DMSC --git https://gitee.com/dunimd/dmsc
 ### Core API Usage
 
 ```rust
-use dmsc::prelude::*;
+use dms::prelude::*;
 
 #[tokio::main]
 async fn main() -> DMSCResult<()> {

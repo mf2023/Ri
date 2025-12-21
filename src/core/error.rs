@@ -118,6 +118,8 @@ pub enum DMSCError {
     TomlError(String),
     /// YAML parsing error. Contains a descriptive error message for YAML parsing.
     YamlError(String),
+    /// Queue error. Contains a descriptive error message for queue operations.
+    Queue(String),
 }
 
 /// Result type alias for DMSC operations. Used throughout the library.
@@ -171,6 +173,7 @@ impl std::fmt::Display for DMSCError {
             DMSCError::HttpClientError(msg) => write!(f, "HTTP client error: {msg}"),
             DMSCError::TomlError(msg) => write!(f, "TOML error: {msg}"),
             DMSCError::YamlError(msg) => write!(f, "YAML error: {msg}"),
+            DMSCError::Queue(msg) => write!(f, "Queue error: {msg}"),
         }
     }
 }
@@ -232,5 +235,192 @@ impl From<serde_yaml::Error> for DMSCError {
 impl From<lapin::Error> for DMSCError {
     fn from(error: lapin::Error) -> Self {
         DMSCError::Other(format!("RabbitMQ error: {error}"))
+    }
+}
+
+#[cfg(all(feature = "kafka", not(windows)))]
+impl From<rdkafka::error::KafkaError> for DMSCError {
+    fn from(error: rdkafka::error::KafkaError) -> Self {
+        DMSCError::Queue(format!("Kafka error: {}", error))
+    }
+}
+
+#[cfg(feature = "pyo3")]
+/// Python bindings for DMSCError
+#[pyo3::prelude::pymethods]
+impl DMSCError {
+    /// String representation of the error
+    fn __str__(&self) -> String {
+        self.to_string()
+    }
+    
+    /// Debug representation of the error
+    fn __repr__(&self) -> String {
+        format!("{:?}", self)
+    }
+    
+    /// Create a new DMSCError from a string message
+    #[staticmethod]
+    fn from_str(message: &str) -> Self {
+        DMSCError::Other(message.to_string())
+    }
+    
+    /// Create a new IO error
+    #[staticmethod]
+    fn io(message: &str) -> Self {
+        DMSCError::Io(message.to_string())
+    }
+    
+    /// Create a new serialization error
+    #[staticmethod]
+    fn serde(message: &str) -> Self {
+        DMSCError::Serde(message.to_string())
+    }
+    
+    /// Create a new configuration error
+    #[staticmethod]
+    fn config(message: &str) -> Self {
+        DMSCError::Config(message.to_string())
+    }
+    
+    /// Create a new hook error
+    #[staticmethod]
+    fn hook(message: &str) -> Self {
+        DMSCError::Hook(message.to_string())
+    }
+    
+    /// Check if this error is an IO error
+    fn is_io(&self) -> bool {
+        matches!(self, DMSCError::Io(_))
+    }
+    
+    /// Check if this error is a serialization error
+    fn is_serde(&self) -> bool {
+        matches!(self, DMSCError::Serde(_))
+    }
+    
+    /// Check if this error is a configuration error
+    fn is_config(&self) -> bool {
+        matches!(self, DMSCError::Config(_))
+    }
+    
+    /// Check if this error is a hook error
+    fn is_hook(&self) -> bool {
+        matches!(self, DMSCError::Hook(_))
+    }
+    
+    /// Check if this error is a prometheus error
+    fn is_prometheus(&self) -> bool {
+        matches!(self, DMSCError::Prometheus(_))
+    }
+    
+    /// Check if this error is a service mesh error
+    fn is_service_mesh(&self) -> bool {
+        matches!(self, DMSCError::ServiceMesh(_))
+    }
+    
+    /// Check if this error is an invalid state error
+    fn is_invalid_state(&self) -> bool {
+        matches!(self, DMSCError::InvalidState(_))
+    }
+    
+    /// Check if this error is an invalid input error
+    fn is_invalid_input(&self) -> bool {
+        matches!(self, DMSCError::InvalidInput(_))
+    }
+    
+    /// Check if this error is a security violation error
+    fn is_security_violation(&self) -> bool {
+        matches!(self, DMSCError::SecurityViolation(_))
+    }
+    
+    /// Check if this error is a device not found error
+    fn is_device_not_found(&self) -> bool {
+        matches!(self, DMSCError::DeviceNotFound { .. })
+    }
+    
+    /// Check if this error is a device allocation failed error
+    fn is_device_allocation_failed(&self) -> bool {
+        matches!(self, DMSCError::DeviceAllocationFailed { .. })
+    }
+    
+    /// Check if this error is an allocation not found error
+    fn is_allocation_not_found(&self) -> bool {
+        matches!(self, DMSCError::AllocationNotFound { .. })
+    }
+    
+    /// Check if this error is a module not found error
+    fn is_module_not_found(&self) -> bool {
+        matches!(self, DMSCError::ModuleNotFound { .. })
+    }
+    
+    /// Check if this error is a module init failed error
+    fn is_module_init_failed(&self) -> bool {
+        matches!(self, DMSCError::ModuleInitFailed { .. })
+    }
+    
+    /// Check if this error is a module start failed error
+    fn is_module_start_failed(&self) -> bool {
+        matches!(self, DMSCError::ModuleStartFailed { .. })
+    }
+    
+    /// Check if this error is a module shutdown failed error
+    fn is_module_shutdown_failed(&self) -> bool {
+        matches!(self, DMSCError::ModuleShutdownFailed { .. })
+    }
+    
+    /// Check if this error is a circular dependency error
+    fn is_circular_dependency(&self) -> bool {
+        matches!(self, DMSCError::CircularDependency { .. })
+    }
+    
+    /// Check if this error is a missing dependency error
+    fn is_missing_dependency(&self) -> bool {
+        matches!(self, DMSCError::MissingDependency { .. })
+    }
+    
+    /// Check if this error is an other error
+    fn is_other(&self) -> bool {
+        matches!(self, DMSCError::Other(_))
+    }
+    
+    /// Check if this error is an external error
+    fn is_external_error(&self) -> bool {
+        matches!(self, DMSCError::ExternalError(_))
+    }
+    
+    /// Check if this error is a pool error
+    fn is_pool_error(&self) -> bool {
+        matches!(self, DMSCError::PoolError(_))
+    }
+    
+    /// Check if this error is a device error
+    fn is_device_error(&self) -> bool {
+        matches!(self, DMSCError::DeviceError(_))
+    }
+    
+    /// Check if this error is a redis error
+    fn is_redis_error(&self) -> bool {
+        matches!(self, DMSCError::RedisError(_))
+    }
+    
+    /// Check if this error is an HTTP client error
+    fn is_http_client_error(&self) -> bool {
+        matches!(self, DMSCError::HttpClientError(_))
+    }
+    
+    /// Check if this error is a TOML error
+    fn is_toml_error(&self) -> bool {
+        matches!(self, DMSCError::TomlError(_))
+    }
+    
+    /// Check if this error is a YAML error
+    fn is_yaml_error(&self) -> bool {
+        matches!(self, DMSCError::YamlError(_))
+    }
+    
+    /// Check if this error is a queue error
+    fn is_queue(&self) -> bool {
+        matches!(self, DMSCError::Queue(_))
     }
 }

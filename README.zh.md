@@ -4,7 +4,7 @@
 
 [English](README.md) | 简体中文
 
-[帮助文档](doc\index.md)
+[帮助文档](doc/zh/index.md)
 
 <a href="https://space.bilibili.com/3493284091529457" target="_blank">
     <img alt="BiliBili" src="https://img.shields.io/badge/BiliBili-Dunimd-00A1D6?style=flat-square&logo=bilibili"/>

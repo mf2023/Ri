@@ -106,6 +106,7 @@ pub struct DMSCObservabilityModule {
 /// Configuration for the observability module.
 /// 
 /// This struct defines the configuration options for tracing and metrics collection in DMSC.
+#[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DMSCObservabilityConfig {
     /// Whether distributed tracing is enabled
@@ -141,6 +142,81 @@ impl Default for DMSCObservabilityConfig {
             metrics_window_size_secs: 300, // 5 minutes
             metrics_bucket_size_secs: 10,  // 10 seconds
         }
+    }
+}
+
+#[cfg(feature = "pyo3")]
+/// Python methods for DMSCObservabilityConfig
+#[pyo3::prelude::pymethods]
+impl DMSCObservabilityConfig {
+    #[new]
+    fn py_new() -> Self {
+        Self::default()
+    }
+    
+    /// Set tracing enabled flag from Python
+    fn set_tracing_enabled(&mut self, tracing_enabled: bool) {
+        self.tracing_enabled = tracing_enabled;
+    }
+    
+    /// Get tracing enabled flag from Python
+    fn get_tracing_enabled(&self) -> bool {
+        self.tracing_enabled
+    }
+    
+    /// Set metrics enabled flag from Python
+    fn set_metrics_enabled(&mut self, metrics_enabled: bool) {
+        self.metrics_enabled = metrics_enabled;
+    }
+    
+    /// Get metrics enabled flag from Python
+    fn get_metrics_enabled(&self) -> bool {
+        self.metrics_enabled
+    }
+    
+    /// Set tracing sampling rate from Python
+    fn set_tracing_sampling_rate(&mut self, tracing_sampling_rate: f64) -> pyo3::PyResult<()>
+    {
+        if tracing_sampling_rate < 0.0 || tracing_sampling_rate > 1.0 {
+            return Err(pyo3::exceptions::PyValueError::new_err("Tracing sampling rate must be between 0.0 and 1.0"));
+        }
+        self.tracing_sampling_rate = tracing_sampling_rate;
+        Ok(())
+    }
+    
+    /// Get tracing sampling rate from Python
+    fn get_tracing_sampling_rate(&self) -> f64 {
+        self.tracing_sampling_rate
+    }
+    
+    /// Set tracing sampling strategy from Python
+    fn set_tracing_sampling_strategy(&mut self, tracing_sampling_strategy: String) {
+        self.tracing_sampling_strategy = tracing_sampling_strategy;
+    }
+    
+    /// Get tracing sampling strategy from Python
+    fn get_tracing_sampling_strategy(&self) -> String {
+        self.tracing_sampling_strategy.clone()
+    }
+    
+    /// Set metrics window size in seconds from Python
+    fn set_metrics_window_size_secs(&mut self, metrics_window_size_secs: u64) {
+        self.metrics_window_size_secs = metrics_window_size_secs;
+    }
+    
+    /// Get metrics window size in seconds from Python
+    fn get_metrics_window_size_secs(&self) -> u64 {
+        self.metrics_window_size_secs
+    }
+    
+    /// Set metrics bucket size in seconds from Python
+    fn set_metrics_bucket_size_secs(&mut self, metrics_bucket_size_secs: u64) {
+        self.metrics_bucket_size_secs = metrics_bucket_size_secs;
+    }
+    
+    /// Get metrics bucket size in seconds from Python
+    fn get_metrics_bucket_size_secs(&self) -> u64 {
+        self.metrics_bucket_size_secs
     }
 }
 

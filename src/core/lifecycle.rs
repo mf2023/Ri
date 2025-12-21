@@ -41,6 +41,7 @@ use crate::hooks::{DMSCHookBus, DMSCHookEvent, DMSCHookKind};
 /// 
 /// This module logs all hook events in the DMSC application, providing comprehensive
 /// visibility into the application lifecycle.
+#[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 pub struct DMSCLifecycleObserver;
 
 impl Default for DMSCLifecycleObserver {

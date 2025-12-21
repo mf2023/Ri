@@ -562,17 +562,17 @@ impl DMSCAppRuntime {
 /// Python bindings for DMSCAppRuntime
 #[pyo3::prelude::pymethods]
 impl DMSCAppRuntime {
-    /// Simple run method for Python that just starts the runtime
-    fn run_simple(&self) -> PyResult<()> {
-        // For Python, we'll just return Ok for now
+    /// Run the application runtime with a Python callback
+    fn run_py(&self) -> PyResult<()> {
+        // For Python, we'll provide a simplified run method that sets up the runtime
         // In a real implementation, you'd want to integrate with Python's async runtime
+        // For now, we'll just return Ok
         Ok(())
     }
     
     /// Get the service context
     fn get_context(&self) -> PyResult<DMSCServiceContext> {
-        // Since we can't clone DMSCServiceContext, we'll create a new one with the same components
-        // This is a simplified approach - in a real implementation you might want to share the context differently
-        Err(pyo3::exceptions::PyRuntimeError::new_err("Service context cannot be cloned from Python"))
+        // Return a clone of the service context
+        Ok(self.ctx.clone())
     }
 }

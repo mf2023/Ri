@@ -69,6 +69,7 @@ use std::time::Duration;
 /// This struct contains all configuration options for the cache system,
 /// including backend selection, TTL settings, memory limits, and cleanup intervals.
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 pub struct DMSCCacheConfig {
     pub enabled: bool,                // Whether caching is enabled
     pub default_ttl_secs: u64,        // Default time-to-live in seconds
@@ -110,6 +111,7 @@ impl Default for DMSCCacheConfig {
 /// 
 /// Defines the different cache backend types supported by DMSC.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 pub enum CacheBackendType {
     Memory,  // In-memory cache (fast, non-persistent)
     Redis,   // Redis cache (persistent, distributed)
@@ -164,6 +166,7 @@ impl std::str::FromStr for CacheBackendType {
 /// This struct defines the caching policy for individual cache entries,
 /// including TTL, refresh behavior, and size limits.
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 pub struct CachePolicy {
     pub ttl: Option<Duration>,        // Time-to-live for cache entries
     pub refresh_on_access: bool,      // Whether to refresh TTL on access

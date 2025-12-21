@@ -36,13 +36,15 @@ core模块包含以下子模块：
 | 方法 | 描述 | 参数 | 返回值 |
 |:--------|:-------------|:--------|:--------|
 | `new()` | 创建新的应用构建器 | 无 | `DMSCAppBuilder` |
-| `with_config(path)` | 添加配置文件 | `path: &str` | `DMSCResult<Self>` |
-| `with_logging(config)` | 添加日志配置 | `config: DMSCLogConfig` | `DMSCResult<Self>` |
-| `with_observability(config)` | 添加可观测性配置 | `config: DMSCObservabilityConfig` | `DMSCResult<Self>` |
-| `with_cache(config)` | 添加缓存配置 | `config: DMSCCacheConfig` | `DMSCResult<Self>` |
-| `with_queue(config)` | 添加队列配置 | `config: DMSCQueueConfig` | `DMSCResult<Self>` |
-| `with_module(module)` | 添加自定义模块 | `module: impl DMSCModule` | `DMSCResult<Self>` |
-| `with_async_module(module)` | 添加自定义异步模块 | `module: impl AsyncServiceModule` | `DMSCResult<Self>` |
+| `with_config(path)` | 添加配置文件 | `path: impl Into<String>` | `DMSCResult<Self>` |
+| `with_logging(config)` | 设置日志配置 | `config: DMSCLogConfig` | `DMSCResult<Self>` |
+| `with_observability(config)` | 设置可观测性配置 | `config: DMSCObservabilityConfig` | `DMSCResult<Self>` |
+| `with_module(module)` | 添加内部同步模块 | `module: Box<dyn ServiceModule>` | `Self` |
+| `with_async_module(module)` | 添加内部异步模块 | `module: Box<dyn AsyncServiceModule>` | `Self` |
+| `with_dms_module(module)` | 添加自定义异步模块 | `module: Box<dyn DMSCModule>` | `Self` |
+| `with_modules(modules)` | 添加多个内部同步模块 | `modules: Vec<Box<dyn ServiceModule>>` | `Self` |
+| `with_async_modules(modules)` | 添加多个内部异步模块 | `modules: Vec<Box<dyn AsyncServiceModule>>` | `Self` |
+| `with_dms_modules(modules)` | 添加多个自定义异步模块 | `modules: Vec<Box<dyn DMSCModule>>` | `Self` |
 | `build()` | 构建应用运行时 | 无 | `DMSCResult<DMSCAppRuntime>` |
 
 #### 使用示例
@@ -52,6 +54,7 @@ let app = DMSCAppBuilder::new()
     .with_config("config.yaml")?
     .with_logging(DMSCLogConfig::default())?
     .with_observability(DMSCObservabilityConfig::default())?
+    .with_dms_module(Box::new(MyCustomModule::new()))
     .build()?;
 ```
 
@@ -78,22 +81,21 @@ app.run(|ctx: &DMSCServiceContext| async move {
 
 ### DMSCServiceContext
 
-服务上下文，提供对所有模块功能的访问。
+服务上下文，提供对核心功能的访问。
 
 #### 方法
 
 | 方法 | 描述 | 返回值 |
 |:--------|:-------------|:--------|
-| `logger()` | 获取日志记录器 | `&DMSCLogger` |
-| `config()` | 获取配置管理器 | `&DMSCConfig` |
-| `cache()` | 获取缓存服务 | `&DMSCCacheModule` |
-| `queue()` | 获取队列服务 | `&DMSCQueueModule` |
-| `fs()` | 获取文件系统服务 | `&DMSCFileSystem` |
-| `auth()` | 获取认证服务 | `&DMSCAuthModule` |
-| `device()` | 获取设备管理服务 | `&DMSCDeviceControlModule` |
-| `gateway()` | 获取网关服务 | `&DMSCGateway` |
-| `service_mesh()` | 获取服务网格服务 | `&DMSCServiceMesh` |
-| `observability()` | 获取可观测性服务 | `&DMSCObservabilityModule` |
+| `fs()` | 获取文件系统访问器 | `&DMSCFileSystem` |
+| `logger()` | 获取结构化日志记录器 | `&DMSCLogger` |
+| `config()` | 获取配置管理器（共享所有权） | `Arc<DMSCConfigManager>` |
+| `hooks()` | 获取钩子总线（共享所有权） | `Arc<DMSCHookBus>` |
+| `hooks_mut()` | 获取可变钩子总线（仅在独享所有权时可用） | `&mut DMSCHookBus` |
+| `config_mut()` | 获取可变配置管理器（仅在独享所有权时可用） | `&mut DMSCConfigManager` |
+| `fs_mut()` | 获取可变文件系统访问器 | `&mut DMSCFileSystem` |
+| `logger_mut()` | 获取可变日志记录器（仅在独享所有权时可用） | `&mut DMSCLogger` |
+| `metrics_registry()` | 获取指标注册表（如果可用） | `Option<Arc<DMSCMetricsRegistry>>` |
 
 #### 使用示例
 
@@ -103,10 +105,10 @@ app.run(|ctx: &DMSCServiceContext| async move {
     ctx.logger().info("service", "DMSC service started")?;
     
     // 访问配置功能
-    let service_name = ctx.config().get("service.name").unwrap_or("unknown");
+    let service_name = ctx.config().config().get_str("service.name").unwrap_or("unknown");
     
-    // 访问缓存功能
-    ctx.cache().set("key", "value", Some(3600)).await?;
+    // 访问文件系统功能
+    ctx.fs().write_file("data.txt", "content").await?;
     
     Ok(())
 }).await
@@ -114,30 +116,37 @@ app.run(|ctx: &DMSCServiceContext| async move {
 
 ### DMSCModule
 
-模块 trait，用于创建自定义同步模块。
+异步模块 trait，用于创建自定义异步模块（推荐使用）。
 
 #### 方法
 
-| 方法 | 描述 | 默认实现 |
-|:--------|:-------------|:--------|
-| `name()` | 返回模块名称 | 无，必须实现 |
-| `priority()` | 返回模块优先级 | 返回 `50` |
-| `initialize(ctx)` | 初始化模块 | 返回 `Ok(())` |
-| `start(ctx)` | 启动模块 | 返回 `Ok(())` |
-| `stop(ctx)` | 停止模块 | 返回 `Ok(())` |
+| 方法 | 描述 | 参数 | 返回值 | 默认实现 |
+|:--------|:-------------|:--------|:--------|:--------|
+| `name()` | 返回模块名称 | 无 | `&str` | 无，必须实现 |
+| `is_critical()` | 指示模块是否关键 | 无 | `bool` | 返回 `true` |
+| `priority()` | 返回模块优先级 | 无 | `i32` | 返回 `0` |
+| `dependencies()` | 返回模块依赖列表 | 无 | `Vec<&str>` | 返回空列表 |
+| `init(ctx)` | 初始化模块 | `ctx: &mut DMSCServiceContext` | `DMSCResult<()>` | 返回 `Ok(())` |
+| `before_start(ctx)` | 启动前准备 | `ctx: &mut DMSCServiceContext` | `DMSCResult<()>` | 返回 `Ok(())` |
+| `start(ctx)` | 启动模块服务 | `ctx: &mut DMSCServiceContext` | `DMSCResult<()>` | 返回 `Ok(())` |
+| `after_start(ctx)` | 启动后操作 | `ctx: &mut DMSCServiceContext` | `DMSCResult<()>` | 返回 `Ok(())` |
+| `before_shutdown(ctx)` | 关闭前准备 | `ctx: &mut DMSCServiceContext` | `DMSCResult<()>` | 返回 `Ok(())` |
+| `shutdown(ctx)` | 关闭模块服务 | `ctx: &mut DMSCServiceContext` | `DMSCResult<()>` | 返回 `Ok(())` |
+| `after_shutdown(ctx)` | 关闭后清理 | `ctx: &mut DMSCServiceContext` | `DMSCResult<()>` | 返回 `Ok(())` |
 
 #### 使用示例
 
 ```rust
 struct MyCustomModule;
 
+#[async_trait::async_trait]
 impl DMSCModule for MyCustomModule {
     fn name(&self) -> &str {
         "my_custom_module"
     }
     
-    fn initialize(&mut self, ctx: &DMSCServiceContext) -> DMSCResult<()> {
-        ctx.logger().info(self.name(), "Module initialized")?;
+    async fn start(&mut self, ctx: &mut DMSCServiceContext) -> DMSCResult<()> {
+        ctx.logger().info(self.name(), "Module started")?;
         Ok(())
     }
 }
@@ -145,35 +154,25 @@ impl DMSCModule for MyCustomModule {
 
 ### AsyncServiceModule
 
-异步模块 trait，用于创建自定义异步模块。
+**注意**：这是一个内部 trait，不对外公开。用户应使用 `DMSCModule` trait 创建自定义模块。
+
+异步模块 trait，用于框架内部的异步模块。
 
 #### 方法
 
-| 方法 | 描述 | 默认实现 |
-|:--------|:-------------|:--------|
-| `name()` | 返回模块名称 | 无，必须实现 |
-| `priority()` | 返回模块优先级 | 返回 `50` |
-| `initialize(ctx)` | 异步初始化模块 | 返回 `Ok(())` |
-| `start(ctx)` | 异步启动模块 | 返回 `Ok(())` |
-| `stop(ctx)` | 异步停止模块 | 返回 `Ok(())` |
-
-#### 使用示例
-
-```rust
-struct MyAsyncModule;
-
-#[async_trait::async_trait]
-impl AsyncServiceModule for MyAsyncModule {
-    fn name(&self) -> &str {
-        "my_async_module"
-    }
-    
-    async fn initialize(&mut self, ctx: &DMSCServiceContext) -> DMSCResult<()> {
-        ctx.logger().info(self.name(), "Async module initialized")?;
-        Ok(())
-    }
-}
-```
+| 方法 | 描述 | 返回值 | 默认实现 |
+|:--------|:-------------|:--------|:--------|
+| `name()` | 返回模块名称 | `&str` | 无，必须实现 |
+| `is_critical()` | 指示模块是否关键 | `bool` | 返回 `true` |
+| `priority()` | 返回模块优先级 | `i32` | 返回 `0` |
+| `dependencies()` | 返回模块依赖列表 | `Vec<&str>` | 返回空列表 |
+| `init(ctx)` | 异步初始化模块 | `DMSCResult<()>` | 返回 `Ok(())` |
+| `before_start(ctx)` | 异步启动前准备 | `DMSCResult<()>` | 返回 `Ok(())` |
+| `start(ctx)` | 异步启动模块服务 | `DMSCResult<()>` | 返回 `Ok(())` |
+| `after_start(ctx)` | 异步启动后操作 | `DMSCResult<()>` | 返回 `Ok(())` |
+| `before_shutdown(ctx)` | 异步关闭前准备 | `DMSCResult<()>` | 返回 `Ok(())` |
+| `shutdown(ctx)` | 异步关闭模块服务 | `DMSCResult<()>` | 返回 `Ok(())` |
+| `after_shutdown(ctx)` | 异步关闭后清理 | `DMSCResult<()>` | 返回 `Ok(())` |
 
 ### DMSCError
 
@@ -260,17 +259,15 @@ async fn main() -> DMSCResult<()> {
         .with_config("config.yaml")?
         .with_logging(DMSCLogConfig::default())?
         .with_observability(DMSCObservabilityConfig::default())?
-        .with_cache(DMSCCacheConfig::default())?
         .build()?;
     
     // 运行业务逻辑
     app.run(|ctx: &DMSCServiceContext| async move {
         ctx.logger().info("service", "DMSC service started")?;
         
-        // 使用缓存
-        ctx.cache().set("key", "value", Some(3600)).await?;
-        let value = ctx.cache().get("key").await?;
-        ctx.logger().info("cache", &format!("Cache value: {:?}", value))?;
+        // 访问配置
+        let service_name = ctx.config().config().get_str("service.name").unwrap_or("unknown");
+        ctx.logger().info("service", &format!("Service name: {}", service_name))?;
         
         Ok(())
     }).await

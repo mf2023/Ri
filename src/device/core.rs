@@ -74,6 +74,7 @@ use uuid::Uuid;
 
 /// Configuration for device control module
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 pub struct DMSCDeviceControlConfig {
     /// Enable CPU discovery
     pub enable_cpu_discovery: bool,
@@ -107,6 +108,7 @@ impl Default for DMSCDeviceControlConfig {
 
 /// Configuration for device module
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 pub struct DMSCDeviceConfig {
     /// Enable CPU discovery
     pub enable_cpu_discovery: bool,
@@ -140,6 +142,7 @@ impl Default for DMSCDeviceConfig {
 
 /// Network device information for remote device discovery
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 pub struct NetworkDeviceInfo {
     /// Unique device identifier
     pub id: String,
@@ -162,6 +165,7 @@ pub struct NetworkDeviceInfo {
 /// This enum defines the different types of devices supported by DMSC. Each device type
 /// has specific capabilities and use cases in the system.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 pub enum DMSCDeviceType {
     /// Central Processing Unit - General purpose computing
     CPU,
@@ -201,6 +205,7 @@ impl std::fmt::Display for DMSCDeviceType {
 /// This struct defines the capabilities of a device, including compute power, memory, storage,
 /// bandwidth, and custom capabilities. It supports a fluent builder API for easy configuration.
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 pub struct DMSCDeviceCapabilities {
     /// Number of compute units (e.g., CPU cores, GPU CUDA cores)
     pub compute_units: Option<usize>,

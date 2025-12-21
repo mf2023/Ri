@@ -367,14 +367,16 @@ impl DMSCQueueConsumer for RabbitMQConsumer {
 
         let mut consumer = self.consumer.lock().await;
         
-        if let Some(delivery_result) = consumer.next().await {
-            let delivery = delivery_result.map_err(|e| crate::core::DMSCError::Other(format!("Consumer error: {e}")))?;
-            let message: DMSCQueueMessage = serde_json::from_slice(&delivery.data)?;
-            
-            // Store delivery tag for acknowledgment
-            Ok(Some(message))
-        } else {
-            Ok(None)
+        // Get the next delivery from the consumer
+        match consumer.next().await {
+            Some(delivery_result) => {
+                let delivery = delivery_result.map_err(|e| crate::core::DMSCError::Other(format!("Consumer error: {e}")))?;
+                let message: DMSCQueueMessage = serde_json::from_slice(&delivery.data)?;
+                
+                // Store delivery tag for acknowledgment
+                Ok(Some(message))
+            },
+            None => Ok(None)
         }
     }
 

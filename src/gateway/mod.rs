@@ -231,6 +231,7 @@ impl Default for DMSCGatewayConfig {
 /// This struct represents an HTTP request received by the gateway, including method, path, headers,
 /// query parameters, body, and remote address.
 #[derive(Debug, Clone)]
+#[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 pub struct DMSCGatewayRequest {
     /// Unique request ID
     pub id: String,
@@ -291,6 +292,7 @@ impl DMSCGatewayRequest {
 /// This struct represents an HTTP response returned by the gateway, including status code,
 /// headers, body, and request ID.
 #[derive(Debug, Clone)]
+#[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 pub struct DMSCGatewayResponse {
     /// HTTP status code
     pub status_code: u16,

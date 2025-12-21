@@ -92,8 +92,8 @@ async fn main() -> DMSCResult<()> {
     // 运行业务逻辑
     app.run(|ctx: &DMSCServiceContext| async move {
         // 获取服务名称和版本
-        let service_name = ctx.config().get("service.name").unwrap_or("unknown");
-        let service_version = ctx.config().get("service.version").unwrap_or("unknown");
+        let service_name = ctx.config().config().get_str("service.name").unwrap_or("unknown");
+        let service_version = ctx.config().config().get_str("service.version").unwrap_or("unknown");
         
         // 输出启动日志
         ctx.logger().info(
@@ -102,10 +102,11 @@ async fn main() -> DMSCResult<()> {
         )?;
         
         // 输出配置信息
+        let log_level = ctx.config().config().get_str("logging.level").unwrap_or("info");
         ctx.logger().info(
             "config", 
-            &format!("Logging level: {:?}", ctx.config().get("logging.level").unwrap_or("info"))
-        )?;
+            &format!("Logging level: {}", log_level)
+        )?
         
         // 等待3秒，模拟业务运行
         tokio::time::sleep(tokio::time::Duration::from_secs(3)).await;

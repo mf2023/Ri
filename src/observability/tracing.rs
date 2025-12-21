@@ -339,6 +339,7 @@ pub enum DMSCSamplingStrategy {
 }
 
 /// Distributed tracer
+#[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 pub struct DMSCTracer {
     spans: Arc<RwLock<HashMap<DMSCTraceId, Vec<DMSCSpan>>>>,
     active_spans: Arc<RwLock<HashMap<DMSCSpanId, DMSCSpan>>>,

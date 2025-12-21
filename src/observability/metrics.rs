@@ -357,6 +357,7 @@ impl DMSCMetric {
 }
 
 /// Metrics registry to manage multiple metrics
+#[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 pub struct DMSCMetricsRegistry {
     metrics: Arc<RwLock<HashMap<String, Arc<DMSCMetric>>>>,
 }

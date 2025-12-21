@@ -112,6 +112,7 @@ pub use integration::{
 
 /// Protocol type enumeration.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 pub enum DMSCProtocolType {
     /// Global communication protocol
     Global = 0,
@@ -165,6 +166,7 @@ pub trait DMSCProtocolConnection: Send + Sync {
 
 /// Protocol status structure.
 #[derive(Debug, Clone)]
+#[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 pub struct DMSCProtocolStatus {
     /// Protocol is initialized
     pub initialized: bool,
@@ -193,6 +195,7 @@ pub enum DMSCProtocolHealth {
 
 /// Protocol statistics structure.
 #[derive(Debug, Clone)]
+#[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 pub struct DMSCProtocolStats {
     /// Total messages sent
     pub total_messages_sent: u64,
@@ -212,6 +215,7 @@ pub struct DMSCProtocolStats {
 
 /// Connection statistics structure.
 #[derive(Debug, Clone)]
+#[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 pub struct DMSCConnectionStats {
     /// Connection identifier
     pub connection_id: String,
@@ -254,6 +258,7 @@ pub enum DMSCConnectionState {
 
 /// Protocol configuration structure.
 #[derive(Debug, Clone)]
+#[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 pub struct DMSCProtocolConfig {
     /// Default protocol type
     pub default_protocol: DMSCProtocolType,
@@ -272,6 +277,7 @@ pub struct DMSCProtocolConfig {
 }
 
 /// Protocol manager for managing multiple protocols.
+#[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 pub struct DMSCProtocolManager {
     /// Protocol configuration
     config: Arc<RwLock<DMSCProtocolConfig>>,
