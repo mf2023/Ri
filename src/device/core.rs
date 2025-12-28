@@ -72,6 +72,11 @@ use serde::{Serialize, Deserialize};
 use std::collections::HashMap;
 use uuid::Uuid;
 
+#[cfg(feature = "pyo3")]
+use pyo3::prelude::*;
+#[cfg(feature = "pyo3")]
+use pyo3::pymethods;
+
 /// Configuration for device control module
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
@@ -103,6 +108,48 @@ impl Default for DMSCDeviceControlConfig {
             discovery_timeout_secs: 30,
             max_devices_per_type: 100,
         }
+    }
+}
+
+#[cfg(feature = "pyo3")]
+#[pymethods]
+impl DMSCDeviceConfig {
+    #[new]
+    fn py_new() -> Self {
+        Self::default()
+    }
+    
+    #[staticmethod]
+    fn default_config() -> Self {
+        Self::default()
+    }
+}
+
+#[cfg(feature = "pyo3")]
+#[pymethods]
+impl DMSCDeviceControlConfig {
+    #[new]
+    fn py_new() -> Self {
+        Self::default()
+    }
+    
+    #[staticmethod]
+    fn default_config() -> Self {
+        Self::default()
+    }
+}
+
+#[cfg(feature = "pyo3")]
+#[pymethods]
+impl DMSCDeviceHealthMetrics {
+    #[new]
+    fn py_new() -> Self {
+        Self::default()
+    }
+    
+    #[staticmethod]
+    fn default_metrics() -> Self {
+        Self::default()
     }
 }
 
@@ -160,6 +207,28 @@ pub struct NetworkDeviceInfo {
     pub bandwidth_gbps: Option<f64>,
 }
 
+#[cfg(feature = "pyo3")]
+#[pymethods]
+impl NetworkDeviceInfo {
+    #[new]
+    fn py_new(id: String, device_type: String, source: String) -> Self {
+        Self {
+            id,
+            device_type,
+            source,
+            compute_units: None,
+            memory_gb: None,
+            storage_gb: None,
+            bandwidth_gbps: None,
+        }
+    }
+    
+    #[staticmethod]
+    fn default_info(id: String, device_type: String, source: String) -> Self {
+        Self::py_new(id, device_type, source)
+    }
+}
+
 /// Device type enumeration
 /// 
 /// This enum defines the different types of devices supported by DMSC. Each device type
@@ -197,6 +266,54 @@ impl std::fmt::Display for DMSCDeviceType {
             DMSCDeviceType::Actuator => write!(f, "Actuator"),
             DMSCDeviceType::Custom => write!(f, "Custom"),
         }
+    }
+}
+
+#[cfg(feature = "pyo3")]
+#[pymethods]
+impl DMSCDeviceType {
+    #[staticmethod]
+    fn new_cpu() -> Self {
+        DMSCDeviceType::CPU
+    }
+    
+    #[staticmethod]
+    fn new_gpu() -> Self {
+        DMSCDeviceType::GPU
+    }
+    
+    #[staticmethod]
+    fn new_memory() -> Self {
+        DMSCDeviceType::Memory
+    }
+    
+    #[staticmethod]
+    fn new_storage() -> Self {
+        DMSCDeviceType::Storage
+    }
+    
+    #[staticmethod]
+    fn new_network() -> Self {
+        DMSCDeviceType::Network
+    }
+    
+    #[staticmethod]
+    fn new_sensor() -> Self {
+        DMSCDeviceType::Sensor
+    }
+    
+    #[staticmethod]
+    fn new_actuator() -> Self {
+        DMSCDeviceType::Actuator
+    }
+    
+    #[staticmethod]
+    fn new_custom() -> Self {
+        DMSCDeviceType::Custom
+    }
+    
+    fn __str__(&self) -> String {
+        self.to_string()
     }
 }
 
@@ -387,10 +504,66 @@ impl DMSCDeviceCapabilities {
     }
 }
 
+#[cfg(feature = "pyo3")]
+#[pymethods]
+impl DMSCDeviceCapabilities {
+    #[new]
+    fn py_new() -> Self {
+        Self::new()
+    }
+    
+    #[staticmethod]
+    fn default_capabilities() -> Self {
+        Self::default()
+    }
+    
+    fn with_compute_units_py(&self, units: usize) -> Self {
+        let mut new = self.clone();
+        new.compute_units = Some(units);
+        new
+    }
+    
+    fn with_memory_gb_py(&self, memory: f64) -> Self {
+        let mut new = self.clone();
+        new.memory_gb = Some(memory);
+        new
+    }
+    
+    fn with_storage_gb_py(&self, storage: f64) -> Self {
+        let mut new = self.clone();
+        new.storage_gb = Some(storage);
+        new
+    }
+    
+    fn with_bandwidth_gbps_py(&self, bandwidth: f64) -> Self {
+        let mut new = self.clone();
+        new.bandwidth_gbps = Some(bandwidth);
+        new
+    }
+    
+    fn with_custom_capability_py(&self, key: String, value: String) -> Self {
+        let mut new = self.clone();
+        new.custom_capabilities.insert(key, value);
+        new
+    }
+    
+    // Getter methods for Python
+    fn get_compute_units_py(&self) -> Option<usize> { self.compute_units }
+    fn get_memory_gb_py(&self) -> Option<f64> { self.memory_gb }
+    fn get_storage_gb_py(&self) -> Option<f64> { self.storage_gb }
+    fn get_bandwidth_gbps_py(&self) -> Option<f64> { self.bandwidth_gbps }
+    fn get_custom_capabilities_py(&self) -> HashMap<String, String> { self.custom_capabilities.clone() }
+    
+    fn meets_requirements_py(&self, requirements: &DMSCDeviceCapabilities) -> bool {
+        self.meets_requirements(requirements)
+    }
+}
+
 /// Device status enumeration
 /// 
 /// This enum defines the different statuses a device can have during its lifecycle.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 pub enum DMSCDeviceStatus {
     /// Device status is unknown
     Unknown,
@@ -410,10 +583,13 @@ pub enum DMSCDeviceStatus {
     Allocated,
 }
 
+
+
 /// Device health metrics structure
 /// 
 /// This struct contains health metrics for monitoring device performance and reliability.
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 pub struct DMSCDeviceHealthMetrics {
     /// CPU usage percentage (0-100)
     pub cpu_usage_percent: f64,
@@ -460,6 +636,7 @@ impl Default for DMSCDeviceHealthMetrics {
 /// This struct represents a smart device in the DMSC system, including its status, capabilities,
 /// health metrics, and lifecycle information.
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 pub struct DMSCDevice {
     /// Unique device ID
     id: String,
@@ -914,5 +1091,139 @@ impl DMSCDevice {
     /// A reference to the metadata HashMap
     pub fn metadata(&self) -> &HashMap<String, String> {
         &self.metadata
+    }
+}
+
+#[cfg(feature = "pyo3")]
+#[pymethods]
+impl DMSCDevice {
+    #[new]
+    fn py_new(name: String, device_type: DMSCDeviceType) -> Self {
+        Self::new(name, device_type)
+    }
+    
+    #[staticmethod]
+    fn default_device(name: String, device_type: DMSCDeviceType) -> Self {
+        Self::new(name, device_type)
+    }
+    
+    fn id_py(&self) -> String {
+        self.id().to_string()
+    }
+    
+    fn name_py(&self) -> String {
+        self.name().to_string()
+    }
+    
+    fn device_type_py(&self) -> DMSCDeviceType {
+        self.device_type()
+    }
+    
+    fn status_py(&self) -> DMSCDeviceStatus {
+        self.status()
+    }
+    
+    fn capabilities_py(&self) -> DMSCDeviceCapabilities {
+        self.capabilities().clone()
+    }
+    
+    fn health_metrics_py(&self) -> DMSCDeviceHealthMetrics {
+        self.health_metrics().clone()
+    }
+    
+    fn set_status_py(&mut self, status: DMSCDeviceStatus) {
+        self.set_status(status)
+    }
+    
+    fn update_health_metrics_py(&mut self, metrics: DMSCDeviceHealthMetrics) {
+        self.update_health_metrics(metrics)
+    }
+    
+    fn increment_error_count_py(&mut self) {
+        self.increment_error_count()
+    }
+    
+    fn update_throughput_py(&mut self, throughput: u64) {
+        self.update_throughput(throughput)
+    }
+    
+    fn with_capabilities_py(&self, capabilities: DMSCDeviceCapabilities) -> Self {
+        self.clone().with_capabilities(capabilities)
+    }
+    
+    fn set_location_py(&mut self, location: String) {
+        self.set_location(location)
+    }
+    
+    fn add_metadata_py(&mut self, key: String, value: String) {
+        self.add_metadata(key, value)
+    }
+    
+    fn update_last_seen_py(&mut self) {
+        self.update_last_seen()
+    }
+    
+    fn is_available_py(&self) -> bool {
+        self.is_available()
+    }
+    
+    fn is_allocated_py(&self) -> bool {
+        self.is_allocated()
+    }
+    
+    fn allocate_py(&mut self, allocation_id: String) -> bool {
+        self.allocate(&allocation_id)
+    }
+    
+    fn release_py(&mut self) {
+        self.release()
+    }
+    
+    fn group_py(&self) -> Option<String> {
+        self.group().map(|s| s.to_string())
+    }
+    
+    fn set_group_py(&mut self, group: Option<String>) {
+        self.set_group(group)
+    }
+    
+    fn tags_py(&self) -> Vec<String> {
+        self.tags().clone()
+    }
+    
+    fn add_tag_py(&mut self, tag: String) {
+        self.add_tag(tag)
+    }
+    
+    fn remove_tag_py(&mut self, tag: String) -> bool {
+        self.remove_tag(&tag)
+    }
+    
+    fn has_tag_py(&self, tag: String) -> bool {
+        self.has_tag(&tag)
+    }
+    
+    fn get_allocation_id_py(&self) -> Option<String> {
+        self.get_allocation_id().map(|s| s.to_string())
+    }
+    
+    fn health_score_py(&self) -> u8 {
+        self.health_score()
+    }
+    
+    fn is_responsive_py(&self, timeout_secs: i64) -> bool {
+        self.is_responsive(timeout_secs)
+    }
+    
+    fn dynamic_health_score_py(&self, health_metrics: DMSCDeviceHealthMetrics) -> u8 {
+        self.dynamic_health_score(&health_metrics)
+    }
+    
+    fn is_healthy_py(&self, health_metrics: DMSCDeviceHealthMetrics, timeout_secs: i64) -> bool {
+        self.is_healthy(&health_metrics, timeout_secs)
+    }
+    
+    fn metadata_py(&self) -> HashMap<String, String> {
+        self.metadata().clone()
     }
 }

@@ -285,6 +285,288 @@ pub trait DMSCModule: Send + Sync {
     }
 }
 
+#[cfg(feature = "pyo3")]
+use pyo3::prelude::*;
+
+#[cfg(feature = "pyo3")]
+#[pyclass]
+#[pyo3(name = "PyDMSCModule")]
+#[derive(Clone)]
+pub struct PyDMSCModule {
+    #[pyo3(get)]
+    name: String,
+    #[pyo3(get)]
+    is_critical: bool,
+    #[pyo3(get)]
+    priority: i32,
+    #[pyo3(get)]
+    dependencies: Vec<String>,
+}
+
+#[cfg(feature = "pyo3")]
+#[pymethods]
+impl PyDMSCModule {
+    #[new]
+    fn new(name: String) -> Self {
+        PyDMSCModule {
+            name,
+            is_critical: true,
+            priority: 0,
+            dependencies: Vec::new(),
+        }
+    }
+    
+    #[getter]
+    pub fn name(&self) -> String {
+        self.name.clone()
+    }
+    
+    #[setter]
+    pub fn set_name(&mut self, name: String) {
+        self.name = name;
+    }
+    
+    #[getter]
+    pub fn is_critical(&self) -> bool {
+        self.is_critical
+    }
+    
+    #[setter]
+    pub fn set_is_critical(&mut self, is_critical: bool) {
+        self.is_critical = is_critical;
+    }
+    
+    #[getter]
+    pub fn priority(&self) -> i32 {
+        self.priority
+    }
+    
+    #[setter]
+    pub fn set_priority(&mut self, priority: i32) {
+        self.priority = priority;
+    }
+    
+    #[getter]
+    pub fn dependencies(&self) -> Vec<String> {
+        self.dependencies.clone()
+    }
+    
+    #[setter]
+    pub fn set_dependencies(&mut self, dependencies: Vec<String>) {
+        self.dependencies = dependencies;
+    }
+}
+
+#[cfg(feature = "pyo3")]
+/// Python module adapter that implements DMSCModule trait
+#[pyclass]
+#[pyo3(name = "PythonModuleAdapter")]
+#[derive(Clone)]
+pub struct PythonModuleAdapter {
+    #[pyo3(get, set)]
+    pub name: String,
+    #[pyo3(get, set)]
+    pub is_critical: bool,
+    #[pyo3(get, set)]
+    pub priority: i32,
+    #[pyo3(get, set)]
+    pub dependencies: Vec<String>,
+}
+
+#[cfg(feature = "pyo3")]
+#[pymethods]
+impl PythonModuleAdapter {
+    #[new]
+    fn new(name: String) -> Self {
+        PythonModuleAdapter {
+            name,
+            is_critical: true,
+            priority: 0,
+            dependencies: Vec::new(),
+        }
+    }
+    
+
+}
+
+#[cfg(feature = "pyo3")]
+/// Python wrapper for ServiceModule trait
+#[pyclass]
+#[pyo3(name = "PyServiceModule")]
+pub struct PyServiceModule {
+    name: String,
+    is_critical: bool,
+    priority: i32,
+    dependencies: Vec<String>,
+}
+
+#[cfg(feature = "pyo3")]
+#[pymethods]
+impl PyServiceModule {
+    #[new]
+    fn new(name: String) -> Self {
+        PyServiceModule {
+            name,
+            is_critical: true,
+            priority: 0,
+            dependencies: Vec::new(),
+        }
+    }
+    
+    #[getter]
+    pub fn name(&self) -> String {
+        self.name.clone()
+    }
+    
+    #[setter]
+    pub fn set_name(&mut self, name: String) {
+        self.name = name;
+    }
+    
+    #[getter]
+    pub fn is_critical(&self) -> bool {
+        self.is_critical
+    }
+    
+    #[setter]
+    pub fn set_is_critical(&mut self, is_critical: bool) {
+        self.is_critical = is_critical;
+    }
+    
+    #[getter]
+    pub fn priority(&self) -> i32 {
+        self.priority
+    }
+    
+    #[setter]
+    pub fn set_priority(&mut self, priority: i32) {
+        self.priority = priority;
+    }
+    
+    #[getter]
+    pub fn dependencies(&self) -> Vec<String> {
+        self.dependencies.clone()
+    }
+    
+    #[setter]
+    pub fn set_dependencies(&mut self, dependencies: Vec<String>) {
+        self.dependencies = dependencies;
+    }
+}
+
+#[cfg(feature = "pyo3")]
+/// Python wrapper for AsyncServiceModule trait
+#[pyclass]
+#[pyo3(name = "PyAsyncServiceModule")]
+pub struct PyAsyncServiceModule {
+    name: String,
+    is_critical: bool,
+    priority: i32,
+    dependencies: Vec<String>,
+}
+
+#[cfg(feature = "pyo3")]
+#[pymethods]
+impl PyAsyncServiceModule {
+    #[new]
+    fn new(name: String) -> Self {
+        PyAsyncServiceModule {
+            name,
+            is_critical: true,
+            priority: 0,
+            dependencies: Vec::new(),
+        }
+    }
+    
+    #[getter]
+    pub fn name(&self) -> String {
+        self.name.clone()
+    }
+    
+    #[setter]
+    pub fn set_name(&mut self, name: String) {
+        self.name = name;
+    }
+    
+    #[getter]
+    pub fn is_critical(&self) -> bool {
+        self.is_critical
+    }
+    
+    #[setter]
+    pub fn set_is_critical(&mut self, is_critical: bool) {
+        self.is_critical = is_critical;
+    }
+    
+    #[getter]
+    pub fn priority(&self) -> i32 {
+        self.priority
+    }
+    
+    #[setter]
+    pub fn set_priority(&mut self, priority: i32) {
+        self.priority = priority;
+    }
+    
+    #[getter]
+    pub fn dependencies(&self) -> Vec<String> {
+        self.dependencies.clone()
+    }
+    
+    #[setter]
+    pub fn set_dependencies(&mut self, dependencies: Vec<String>) {
+        self.dependencies = dependencies;
+    }
+}
+
+#[cfg(feature = "pyo3")]
+#[async_trait::async_trait]
+impl AsyncServiceModule for PythonModuleAdapter {
+    fn name(&self) -> &str {
+        &self.name
+    }
+    
+    fn is_critical(&self) -> bool {
+        self.is_critical
+    }
+    
+    fn priority(&self) -> i32 {
+        self.priority
+    }
+    
+    fn dependencies(&self) -> Vec<&str> {
+        self.dependencies.iter().map(|s| s.as_str()).collect()
+    }
+    
+    async fn init(&mut self, _ctx: &mut DMSCServiceContext) -> DMSCResult<()> {
+        Ok(())
+    }
+    
+    async fn before_start(&mut self, _ctx: &mut DMSCServiceContext) -> DMSCResult<()> {
+        Ok(())
+    }
+    
+    async fn start(&mut self, _ctx: &mut DMSCServiceContext) -> DMSCResult<()> {
+        Ok(())
+    }
+    
+    async fn after_start(&mut self, _ctx: &mut DMSCServiceContext) -> DMSCResult<()> {
+        Ok(())
+    }
+    
+    async fn before_shutdown(&mut self, _ctx: &mut DMSCServiceContext) -> DMSCResult<()> {
+        Ok(())
+    }
+    
+    async fn shutdown(&mut self, _ctx: &mut DMSCServiceContext) -> DMSCResult<()> {
+        Ok(())
+    }
+    
+    async fn after_shutdown(&mut self, _ctx: &mut DMSCServiceContext) -> DMSCResult<()> {
+        Ok(())
+    }
+}
+
 
 
 /// Internal asynchronous service module trait.

@@ -1,54 +1,54 @@
 <div align="center">
 
-# 缓存使用示例
+# Caching Usage Examples
 
 **Version: 1.0.0**
 
 **Last modified date: 2025-12-12**
 
-本示例展示如何使用DMSC的cache模块进行多种缓存后端和高级缓存功能的使用。
+This example demonstrates how to use DMSC's cache module for multiple cache backends and advanced caching features.
 
-## 示例概述
+## Example Overview
 
 </div>
 
-本示例将创建一个DMSC应用，实现以下功能：
+This example will create a DMSC application that implements the following features:
 
-- 内存缓存和Redis缓存的使用
-- 缓存标签和原子操作
-- 分布式锁实现
-- 缓存健康检查和监控
-- 数据序列化与压缩
-- 错误处理和降级策略
+- Memory cache and Redis cache usage
+- Cache tags and atomic operations
+- Distributed lock implementation
+- Cache health checks and monitoring
+- Data serialization and compression
+- Error handling and fallback strategies
 
 <div align="center">
 
-## 前置要求
+## Prerequisites
 
 </div>
 
 - Rust 1.65+
 - Cargo 1.65+
-- 基本的Rust编程知识
-- 了解缓存基本概念
-- （可选）Redis服务器用于Redis缓存示例
+- Basic Rust programming knowledge
+- Understanding of basic caching concepts
+- (Optional) Redis server for Redis cache examples
 
 <div align="center">
 
-## 示例代码
+## Example Code
 
 </div>
 
-### 1. 创建项目
+### 1. Create Project
 
 ```bash
 cargo new dms-cache-example
 cd dms-cache-example
 ```
 
-### 2. 添加依赖
+### 2. Add Dependencies
 
-在`Cargo.toml`文件中添加以下依赖：
+Add the following dependencies to your `Cargo.toml` file:
 
 ```toml
 [dependencies]
@@ -58,9 +58,9 @@ serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 ```
 
-### 3. 创建配置文件
+### 3. Create Configuration File
 
-在项目根目录创建`config.yaml`文件：
+Create a `config.yaml` file in the project root directory:
 
 ```yaml
 service:
@@ -74,7 +74,7 @@ logging:
   console_enabled: true
 
 cache:
-  backend: "memory"  # 或 "redis"
+  backend: "memory"  # or "redis"
   redis:
     url: "redis://localhost:6379"
     pool_size: 10
@@ -83,9 +83,9 @@ cache:
     ttl: 3600
 ```
 
-### 4. 编写主代码
+### 4. Write Main Code
 
-将`src/main.rs`文件替换为以下内容：
+Replace the contents of `src/main.rs` file with the following:
 
 ```rust
 use dms::prelude::*;
@@ -94,21 +94,21 @@ use std::time::Duration;
 
 #[tokio::main]
 async fn main() -> DMSCResult<()> {
-    // 构建服务运行时
+    // Build service runtime
     let app = DMSCAppBuilder::new()
         .with_config("config.yaml")?
         .with_logging(DMSCLogConfig::default())?
         .with_cache(DMSCCacheConfig::default())?
         .build()?;
     
-    // 运行业务逻辑
+    // Run business logic
     app.run(|ctx: &DMSCServiceContext| async move {
         ctx.logger().info("service", "DMSC Cache Example started")?;
         
-        // 基本缓存操作示例
+        // Basic cache operations examples
         basic_cache_operations(&ctx).await?;
         
-        // 高级缓存功能示例
+        // Advanced cache features examples
         advanced_cache_features(&ctx).await?;
         
         ctx.logger().info("service", "DMSC Cache Example completed")?;
@@ -120,24 +120,24 @@ async fn main() -> DMSCResult<()> {
 async fn basic_cache_operations(ctx: &DMSCServiceContext) -> DMSCResult<()> {
     ctx.logger().info("cache", "Starting basic cache operations")?;
     
-    // 设置缓存值
+    // Set cache value
     ctx.cache().set("user:123", json!({
         "id": 123,
         "name": "John Doe",
         "email": "john@example.com"
     }), Some(Duration::from_secs(3600)))?;
     
-    // 获取缓存值
+    // Get cache value
     if let Some(user_data) = ctx.cache().get("user:123")? {
         ctx.logger().info("cache", &format!("Retrieved user: {}", user_data))?;
     }
     
-    // 检查缓存是否存在
+    // Check if cache exists
     if ctx.cache().exists("user:123")? {
         ctx.logger().info("cache", "User cache exists")?;
     }
     
-    // 删除缓存
+    // Delete cache
     ctx.cache().delete("user:123")?;
     ctx.logger().info("cache", "User cache deleted")?;
     
@@ -147,7 +147,7 @@ async fn basic_cache_operations(ctx: &DMSCServiceContext) -> DMSCResult<()> {
 async fn advanced_cache_features(ctx: &DMSCServiceContext) -> DMSCResult<()> {
     ctx.logger().info("cache", "Starting advanced cache features")?;
     
-    // 使用缓存标签
+    // Use cache tags
     ctx.cache().set_with_tags(
         "article:123",
         json!({
@@ -159,11 +159,11 @@ async fn advanced_cache_features(ctx: &DMSCServiceContext) -> DMSCResult<()> {
         vec!["articles", "programming", "rust"]
     )?;
     
-    // 原子递增操作
+    // Atomic increment operation
     let new_value = ctx.cache().increment("counter:page_views", 1)?;
     ctx.logger().info("cache", &format!("Page views: {}", new_value))?;
     
-    // 获取标签下的所有键
+    // Get all keys by tag
     let rust_keys = ctx.cache().get_keys_by_tag("rust")?;
     ctx.logger().info("cache", &format!("Found {} items with 'rust' tag", rust_keys.len()))?;
     
@@ -173,25 +173,25 @@ async fn advanced_cache_features(ctx: &DMSCServiceContext) -> DMSCResult<()> {
 
 <div align="center">
 
-## 代码解析
+## Code Analysis
 
 </div>
 
-## 基本缓存操作
+## Basic Cache Operations
 
-### 内存缓存
+### Memory Cache
 
 ```rust
 use dms::prelude::*;
 use serde_json::json;
 
-// 创建内存缓存后端
+// Create memory cache backend
 let memory_backend = DMSCCacheBackend::Memory {
     max_size: 1000,
     ttl: Duration::from_secs(3600),
 };
 
-// 初始化缓存模块
+// Initialize cache module
 let cache_config = DMSCCacheConfig {
     backend: memory_backend,
     default_ttl: Duration::from_secs(1800),
@@ -202,39 +202,39 @@ let cache_config = DMSCCacheConfig {
 
 ctx.cache().init(cache_config)?;
 
-// 设置缓存值
+// Set cache value
 ctx.cache().set("user:123", json!({
     "id": 123,
     "name": "John Doe",
     "email": "john@example.com"
 }), Some(Duration::from_secs(3600)))?;
 
-// 获取缓存值
+// Get cache value
 if let Some(user_data) = ctx.cache().get("user:123")? {
     ctx.log().info(format!("Retrieved user: {}", user_data));
 }
 
-// 删除缓存
+// Delete cache
 ctx.cache().delete("user:123")?;
 
-// 检查缓存是否存在
+// Check if cache exists
 if ctx.cache().exists("user:123")? {
     ctx.log().info("User cache exists");
 }
 
-// 获取缓存TTL
+// Get cache TTL
 if let Some(ttl) = ctx.cache().ttl("user:123")? {
     ctx.log().info(format!("Cache expires in {} seconds", ttl.as_secs()));
 }
 ```
 
-### Redis缓存
+### Redis Cache
 
 ```rust
 use dms::prelude::*;
 use serde_json::json;
 
-// 创建Redis缓存后端
+// Create Redis cache backend
 let redis_backend = DMSCCacheBackend::Redis {
     url: "redis://localhost:6379".to_string(),
     pool_size: 10,
@@ -253,7 +253,7 @@ let cache_config = DMSCCacheConfig {
 
 ctx.cache().init(cache_config)?;
 
-// 使用Redis缓存
+// Use Redis cache
 ctx.cache().set("session:abc123", json!({
     "user_id": 123,
     "role": "admin",
@@ -261,7 +261,7 @@ ctx.cache().set("session:abc123", json!({
     "login_time": "2024-01-15T10:30:00Z"
 }), Some(Duration::from_secs(7200)))?;
 
-// 批量操作
+// Batch operations
 let items = vec![
     ("key1", json!("value1")),
     ("key2", json!("value2")),
@@ -276,15 +276,15 @@ for (key, value) in values {
 }
 ```
 
-## 高级缓存功能
+## Advanced Cache Features
 
-### 缓存标签
+### Cache Tags
 
 ```rust
 use dms::prelude::*;
 use serde_json::json;
 
-// 设置带标签的缓存
+// Set cache with tags
 ctx.cache().set_with_tags(
     "article:123",
     json!({
@@ -298,45 +298,45 @@ ctx.cache().set_with_tags(
     vec!["articles", "programming", "rust"]
 )?;
 
-// 通过标签批量删除
+// Batch delete by tags
 ctx.cache().delete_by_tags(vec!["rust"])?;
 
-// 获取标签下的所有键
+// Get all keys by tag
 let rust_keys = ctx.cache().get_keys_by_tag("rust")?;
 ctx.log().info(format!("Found {} items with 'rust' tag", rust_keys.len()));
 ```
 
-### 原子操作
+### Atomic Operations
 
 ```rust
 use dms::prelude::*;
 
-// 原子递增
+// Atomic increment
 let new_value = ctx.cache().increment("counter:page_views", 1)?;
 ctx.log().info(format!("Page views: {}", new_value));
 
-// 原子递减
+// Atomic decrement
 let new_value = ctx.cache().decrement("counter:inventory:123", 5)?;
 ctx.log().info(format!("Inventory: {}", new_value));
 
-// 比较并设置 (CAS)
+// Compare and set (CAS)
 let success = ctx.cache().compare_and_set("config:feature_flag", "old_value", "new_value")?;
 if success {
     ctx.log().info("Feature flag updated successfully");
 }
 
-// 获取并设置
+// Get and set
 let old_value = ctx.cache().get_and_set("session:last_activity", json!("2024-01-15T11:00:00Z"))?;
 ctx.log().info(format!("Previous activity: {:?}", old_value));
 ```
 
-### 分布式锁
+### Distributed Lock
 
 ```rust
 use dms::prelude::*;
 use tokio::time::{sleep, Duration};
 
-// 获取分布式锁
+// Acquire distributed lock
 let lock_key = "lock:resource:123";
 let lock_value = "worker-1";
 let ttl = Duration::from_secs(30);
@@ -345,10 +345,10 @@ match ctx.cache().acquire_lock(lock_key, lock_value, ttl)? {
     Some(lock) => {
         ctx.log().info("Lock acquired successfully");
         
-        // 执行临界区操作
+        // Execute critical section operations
         perform_critical_operation().await?;
         
-        // 释放锁
+        // Release lock
         ctx.cache().release_lock(lock_key, lock_value)?;
         ctx.log().info("Lock released");
     }
@@ -358,7 +358,7 @@ match ctx.cache().acquire_lock(lock_key, lock_value, ttl)? {
     }
 }
 
-// 使用锁的便捷方法
+// Convenient method to use lock
 ctx.cache().with_lock("lock:report_generation", "worker-1", Duration::from_secs(60), || async {
     ctx.log().info("Generating report...");
     generate_report().await?;
@@ -367,45 +367,45 @@ ctx.cache().with_lock("lock:report_generation", "worker-1", Duration::from_secs(
 }).await?;
 ```
 
-## 缓存策略
+## Cache Strategies
 
-### 缓存穿透保护
+### Cache Penetration Protection
 
 ```rust
 use dms::prelude::*;
 use serde_json::json;
 
-// 获取用户数据，带缓存穿透保护
+// Get user data with cache penetration protection
 async fn get_user_with_cache_through_protection(user_id: u64) -> DMSCResult<Option<Value>> {
     let cache_key = format!("user:{}", user_id);
     
-    // 先尝试从缓存获取
+    // Try to get from cache first
     if let Some(cached_data) = ctx.cache().get(&cache_key)? {
         return Ok(Some(cached_data));
     }
     
-    // 检查布隆过滤器（防止缓存穿透）
+    // Check bloom filter (prevent cache penetration)
     if !ctx.cache().bloom_filter_might_contain("users", &user_id.to_string())? {
         ctx.log().info(format!("User {} definitely does not exist", user_id));
         return Ok(None);
     }
     
-    // 从数据库获取
+    // Get from database
     match fetch_user_from_database(user_id).await? {
         Some(user_data) => {
-            // 设置缓存
+            // Set cache
             ctx.cache().set(&cache_key, user_data.clone(), Some(Duration::from_secs(3600)))?;
             Ok(Some(user_data))
         }
         None => {
-            // 设置空值缓存（防止缓存穿透）
+            // Set empty value cache (prevent cache penetration)
             ctx.cache().set(&cache_key, json!(null), Some(Duration::from_secs(300)))?;
             Ok(None)
         }
     }
 }
 
-// 使用布隆过滤器
+// Use bloom filter
 ctx.cache().bloom_filter_add("users", "123")?;
 ctx.cache().bloom_filter_add("users", "456")?;
 
@@ -414,23 +414,23 @@ if ctx.cache().bloom_filter_might_contain("users", "123")? {
 }
 ```
 
-### 缓存雪崩保护
+### Cache Avalanche Protection
 
 ```rust
 use dms::prelude::*;
 use serde_json::json;
 use rand::Rng;
 
-// 设置缓存时添加随机TTL偏移，防止缓存雪崩
+// Add random TTL offset when setting cache to prevent cache avalanche
 fn set_cache_with_jitter(key: &str, value: Value, base_ttl: Duration) -> DMSCResult<()> {
-    let jitter = rand::thread_rng().gen_range(0..300); // 0-5分钟随机偏移
+    let jitter = rand::thread_rng().gen_range(0..300); // 0-5 minutes random offset
     let ttl = base_ttl + Duration::from_secs(jitter);
     
     ctx.cache().set(key, value, Some(ttl))?;
     Ok(())
 }
 
-// 批量设置缓存时使用不同的TTL
+// Use different TTL when batch setting cache
 let articles = vec![
     ("article:1", json!({"id": 1, "title": "Article 1"}), Duration::from_secs(3600)),
     ("article:2", json!({"id": 2, "title": "Article 2"}), Duration::from_secs(3600 + 60)),
@@ -442,31 +442,31 @@ for (key, value, ttl) in articles {
 }
 ```
 
-### 缓存预热
+### Cache Preheating
 
 ```rust
 use dms::prelude::*;
 use serde_json::json;
 
-// 系统启动时预热热门数据
+// Preheat hot data when system starts
 async fn warmup_cache() -> DMSCResult<()> {
     ctx.log().info("Starting cache warmup...");
     
-    // 预热热门文章
+    // Preheat popular articles
     let popular_articles = fetch_popular_articles().await?;
     for article in popular_articles {
         let key = format!("article:{}", article["id"]);
         ctx.cache().set(&key, article, Some(Duration::from_secs(3600)))?;
     }
     
-    // 预热用户会话
+    // Preheat user sessions
     let active_sessions = fetch_active_sessions().await?;
     for session in active_sessions {
         let key = format!("session:{}", session["id"]);
         ctx.cache().set(&key, session, Some(Duration::from_secs(7200)))?;
     }
     
-    // 预热配置数据
+    // Preheat configuration data
     let config_data = fetch_configuration().await?;
     ctx.cache().set("config:app", config_data, Some(Duration::from_secs(86400)))?;
     
@@ -475,37 +475,37 @@ async fn warmup_cache() -> DMSCResult<()> {
 }
 ```
 
-## 缓存监控
+## Cache Monitoring
 
-### 缓存统计
+### Cache Statistics
 
 ```rust
 use dms::prelude::*;
 
-// 获取缓存统计信息
+// Get cache statistics
 let stats = ctx.cache().get_stats()?;
 ctx.log().info(format!("Cache stats: {:?}", stats));
 
-// 监控特定键的命中率
+// Monitor hit rate for specific keys
 let key_stats = ctx.cache().get_key_stats("user:123")?;
 ctx.log().info(format!("Key stats: {:?}", key_stats));
 
-// 获取缓存大小
+// Get cache size
 let cache_size = ctx.cache().get_cache_size()?;
 ctx.log().info(format!("Cache size: {} bytes", cache_size));
 
-// 清理过期缓存
+// Clean expired cache
 let cleaned_count = ctx.cache().cleanup_expired()?;
 ctx.log().info(format!("Cleaned {} expired entries", cleaned_count));
 ```
 
-### 缓存健康检查
+### Cache Health Check
 
 ```rust
 use dms::prelude::*;
 use serde_json::json;
 
-// 检查缓存健康状态
+// Check cache health status
 fn check_cache_health() -> DMSCResult<Value> {
     let health = ctx.cache().health_check()?;
     
@@ -531,7 +531,7 @@ fn check_cache_health() -> DMSCResult<Value> {
     }))
 }
 
-// 定期健康检查
+// Periodic health check
 ctx.observability().register_health_check("cache", || async {
     match check_cache_health() {
         Ok(health) => Ok(health),
@@ -540,9 +540,9 @@ ctx.observability().register_health_check("cache", || async {
 }).await?;
 ```
 
-## 序列化与压缩
+## Serialization and Compression
 
-### 数据序列化
+### Data Serialization
 
 ```rust
 use dms::prelude::*;
@@ -558,7 +558,7 @@ struct User {
     created_at: String,
 }
 
-// 存储序列化数据
+// Store serialized data
 let user = User {
     id: 123,
     name: "John Doe".to_string(),
@@ -567,7 +567,7 @@ let user = User {
     created_at: "2024-01-15T10:30:00Z".to_string(),
 };
 
-// 使用MessagePack序列化（更紧凑）
+// Use MessagePack serialization (more compact)
 let cache_config = DMSCCacheConfig {
     backend: DMSCCacheBackend::Memory {
         max_size: 1000,
@@ -575,28 +575,28 @@ let cache_config = DMSCCacheConfig {
     },
     default_ttl: Duration::from_secs(1800),
     key_prefix: "app".to_string(),
-    compression: true,  // 启用压缩
+    compression: true,  // Enable compression
     encryption: false,
-    serializer: DMSCSerializer::MessagePack, // 使用MessagePack
+    serializer: DMSCSerializer::MessagePack, // Use MessagePack
 };
 
 ctx.cache().init(cache_config)?;
 ctx.cache().set("user:123", json!(user), None)?;
 
-// 获取并反序列化
+// Get and deserialize
 if let Some(cached_data) = ctx.cache().get("user:123")? {
     let cached_user: User = serde_json::from_value(cached_data)?;
     ctx.log().info(format!("Retrieved user: {:?}", cached_user));
 }
 ```
 
-### 数据压缩
+### Data Compression
 
 ```rust
 use dms::prelude::*;
 use serde_json::json;
 
-// 存储大型数据时启用压缩
+// Enable compression when storing large data
 let large_data = json!({
     "articles": (0..1000).map(|i| {
         json!({
@@ -614,7 +614,7 @@ let large_data = json!({
     }).collect::<Vec<_>>()
 });
 
-// 启用压缩存储
+// Enable compression storage
 let cache_config = DMSCCacheConfig {
     backend: DMSCCacheBackend::Redis {
         url: "redis://localhost:6379".to_string(),
@@ -625,9 +625,9 @@ let cache_config = DMSCCacheConfig {
     },
     default_ttl: Duration::from_secs(3600),
     key_prefix: "app".to_string(),
-    compression: true,  // 启用压缩
-    compression_threshold: 1024, // 大于1KB的数据才压缩
-    compression_level: 6, // 压缩级别 (1-9)
+    compression: true,  // Enable compression
+    compression_threshold: 1024, // Only compress data larger than 1KB
+    compression_level: 6, // Compression level (1-9)
     encryption: false,
 };
 
@@ -639,35 +639,35 @@ let store_time = start.elapsed();
 
 ctx.log().info(format!("Stored large dataset in {:?}", store_time));
 
-// 验证压缩效果
+// Verify compression effect
 let uncompressed_size = serde_json::to_vec(&large_data)?.len();
 ctx.log().info(format!("Uncompressed size: {} bytes", uncompressed_size));
 ```
 
-## 错误处理
+## Error Handling
 
-### 缓存错误处理
+### Cache Error Handling
 
 ```rust
 use dms::prelude::*;
 use serde_json::json;
 
-// 处理缓存错误
+// Handle cache errors
 match ctx.cache().set("key", json!("value"), None) {
     Ok(_) => ctx.log().info("Cache set successfully"),
     Err(DMSCError::CacheConnectionError(e)) => {
         ctx.log().error(format!("Cache connection failed: {}", e));
-        // 降级到数据库或其他后备存储
+        // Fallback to database or other backup storage
         fallback_to_database("key", json!("value")).await?;
     }
     Err(DMSCError::CacheTimeoutError(e)) => {
         ctx.log().warn(format!("Cache operation timed out: {}", e));
-        // 重试或降级
+        // Retry or fallback
         retry_cache_operation().await?;
     }
     Err(DMSCError::CacheFullError) => {
         ctx.log().warn("Cache is full");
-        // 清理过期缓存或增加容量
+        // Clean expired cache or increase capacity
         ctx.cache().cleanup_expired()?;
     }
     Err(e) => {
@@ -676,17 +676,17 @@ match ctx.cache().set("key", json!("value"), None) {
     }
 }
 
-// 缓存降级策略
+// Cache fallback strategy
 async fn get_data_with_fallback(key: &str) -> DMSCResult<Value> {
-    // 首先尝试缓存
+    // Try cache first
     if let Ok(Some(cached)) = ctx.cache().get(key) {
         return Ok(cached);
     }
     
-    // 缓存失败，尝试数据库
+    // Cache failed, try database
     match fetch_from_database(key).await {
         Ok(data) => {
-            // 异步更新缓存（不阻塞主流程）
+            // Update cache asynchronously (doesn't block main flow)
             let key = key.to_string();
             let data_clone = data.clone();
             tokio::spawn(async move {
@@ -707,26 +707,26 @@ async fn get_data_with_fallback(key: &str) -> DMSCResult<Value> {
 
 <div align="center">
 
-## 运行步骤
+## Running Steps
 
 </div>
 
-### 1. 环境准备
+### 1. Environment Preparation
 
-确保已安装以下组件：
-- Rust 1.65+ 和 Cargo
-- （可选）Redis 服务器（用于Redis缓存示例）
+Ensure the following components are installed:
+- Rust 1.65+ and Cargo
+- (Optional) Redis server (for Redis cache examples)
 
-### 2. 创建项目
+### 2. Create Project
 
 ```bash
 cargo new dms-cache-example
 cd dms-cache-example
 ```
 
-### 3. 添加依赖
+### 3. Add Dependencies
 
-在 `Cargo.toml` 中添加：
+Add to `Cargo.toml`:
 
 ```toml
 [dependencies]
@@ -736,9 +736,9 @@ serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 ```
 
-### 4. 创建配置
+### 4. Create Configuration
 
-在项目根目录创建 `config.yaml`：
+Create `config.yaml` in the project root directory:
 
 ```yaml
 service:
@@ -752,7 +752,7 @@ logging:
   console_enabled: true
 
 cache:
-  backend: "memory"  # 或 "redis"
+  backend: "memory"  # or "redis"
   redis:
     url: "redis://localhost:6379"
     pool_size: 10
@@ -761,7 +761,7 @@ cache:
     ttl: 3600
 ```
 
-### 5. 运行示例
+### 5. Run Example
 
 ```bash
 cargo run
@@ -769,11 +769,11 @@ cargo run
 
 <div align="center">
 
-## 预期结果
+## Expected Results
 
 </div>
 
-运行成功后，您将看到类似以下输出：
+After successful execution, you will see output similar to the following:
 
 ```json
 {
@@ -834,16 +834,16 @@ cargo run
 
 <div align="center">
 
-## 扩展功能
+## Extended Features
 
 </div>
 
-### 缓存集群支持
+### Cache Cluster Support
 
 ```rust
 use dms::prelude::*;
 
-// 配置多节点Redis集群
+// Configure multi-node Redis cluster
 let cluster_backend = DMSCCacheBackend::RedisCluster {
     nodes: vec![
         "redis://node1:6379".to_string(),
@@ -854,7 +854,7 @@ let cluster_backend = DMSCCacheBackend::RedisCluster {
     key_prefix: "app".to_string(),
     connection_timeout: Duration::from_secs(10),
     operation_timeout: Duration::from_secs(5),
-    read_from_replicas: true, // 从副本读取以提高性能
+    read_from_replicas: true, // Read from replicas to improve performance
 };
 
 let cache_config = DMSCCacheConfig {
@@ -867,32 +867,32 @@ let cache_config = DMSCCacheConfig {
 
 ctx.cache().init(cache_config)?;
 
-// 集群感知的路由
+// Cluster-aware routing
 ctx.cache().set_with_shard_key("user:123", json!({"name": "John"}), Some(Duration::from_secs(3600)), "shard_1")?;
 ```
 
-### 智能缓存预热
+### Intelligent Cache Preheating
 
 ```rust
 use dms::prelude::*;
 use machine_learning::cache::CachePredictor;
 
-// 基于机器学习预测缓存需求
+// Predict cache requirements based on machine learning
 async fn intelligent_cache_warmup() -> DMSCResult<()> {
     let predictor = CachePredictor::new();
     
-    // 分析历史访问模式
-    let access_patterns = ctx.cache().get_access_history(30)?; // 30天历史数据
+    // Analyze historical access patterns
+    let access_patterns = ctx.cache().get_access_history(30)?; // 30 days historical data
     let predictions = predictor.predict_hot_data(&access_patterns)?;
     
-    // 预热预测的热门数据
+    // Preheat predicted hot data
     for predicted_key in predictions.hot_keys {
         if let Ok(data) = fetch_data_from_source(&predicted_key).await {
             ctx.cache().set(&predicted_key, data, Some(Duration::from_secs(3600)))?;
         }
     }
     
-    // 基于时间模式预热
+    // Preheat based on time patterns
     let time_based_keys = predictor.predict_by_time_pattern(chrono::Local::now())?;
     for key in time_based_keys {
         if let Ok(data) = fetch_data_from_source(&key).await {
@@ -905,13 +905,13 @@ async fn intelligent_cache_warmup() -> DMSCResult<()> {
 }
 ```
 
-### 自适应缓存策略
+### Adaptive Cache Strategy
 
 ```rust
 use dms::prelude::*;
 use std::collections::HashMap;
 
-// 动态调整缓存策略
+// Dynamically adjust cache strategy
 pub struct AdaptiveCacheManager {
     hit_rate_threshold: f64,
     miss_rate_threshold: f64,
@@ -922,45 +922,45 @@ impl AdaptiveCacheManager {
     pub async fn optimize_cache_strategy(&self) -> DMSCResult<()> {
         let stats = ctx.cache().get_detailed_stats()?;
         
-        // 分析缓存性能指标
+        // Analyze cache performance metrics
         let hit_rate = stats.hit_rate;
         let miss_rate = stats.miss_rate;
         let avg_response_time = stats.avg_response_time;
         
-        // 动态调整TTL
+        // Dynamically adjust TTL
         if hit_rate < self.hit_rate_threshold {
-            // 命中率低，增加TTL
+            // Low hit rate, increase TTL
             ctx.cache().adjust_global_ttl(Duration::from_secs(3600))?;
         } else if miss_rate > self.miss_rate_threshold {
-            // 未命中率高，减少TTL并优化预取
+            // High miss rate, decrease TTL and optimize prefetch
             ctx.cache().adjust_global_ttl(Duration::from_secs(900))?;
             self.optimize_prefetch_strategy().await?;
         }
         
-        // 动态调整缓存大小
+        // Dynamically adjust cache size
         if stats.memory_usage > 0.8 {
-            // 内存使用率高，启用更激进的清理策略
+            // High memory usage, enable more aggressive cleanup policy
             ctx.cache().set_eviction_policy(DMSCEvictionPolicy::LFU)?;
         } else {
             ctx.cache().set_eviction_policy(DMSCEvictionPolicy::LRU)?;
         }
         
-        // 调整压缩策略
+        // Adjust compression strategy
         if avg_response_time > Duration::from_millis(100) {
             ctx.cache().enable_compression(true)?;
-            ctx.cache().set_compression_threshold(512)?; // 降低压缩阈值
+            ctx.cache().set_compression_threshold(512)?; // Lower compression threshold
         }
         
         Ok(())
     }
     
     async fn optimize_prefetch_strategy(&self) -> DMSCResult<()> {
-        // 基于访问模式优化预取策略
+        // Optimize prefetch strategy based on access patterns
         let patterns = ctx.cache().analyze_access_patterns()?;
         
         for pattern in patterns {
             if pattern.confidence > 0.8 {
-                // 高置信度模式，预取相关数据
+                // High confidence pattern, prefetch related data
                 for related_key in pattern.related_keys {
                     if let Ok(data) = fetch_data_from_source(&related_key).await {
                         ctx.cache().set(&related_key, data, Some(pattern.suggested_ttl))?;
@@ -974,13 +974,13 @@ impl AdaptiveCacheManager {
 }
 ```
 
-### 分布式缓存一致性
+### Distributed Cache Consistency
 
 ```rust
 use dms::prelude::*;
 use distributed_consensus::raft::RaftNode;
 
-// 实现分布式缓存一致性
+// Implement distributed cache consistency
 pub struct DistributedCacheConsistency {
     raft_node: RaftNode,
     cache_instances: Vec<String>,
@@ -988,17 +988,17 @@ pub struct DistributedCacheConsistency {
 
 impl DistributedCacheConsistency {
     pub async fn maintain_consistency(&self) -> DMSCResult<()> {
-        // 使用Raft协议确保缓存更新的一致性
+        // Use Raft protocol to ensure cache update consistency
         let update_command = CacheUpdateCommand {
             key: "user:123".to_string(),
             value: json!({"name": "John", "updated": chrono::Utc::now()}),
             ttl: Duration::from_secs(3600),
         };
         
-        // 通过Raft协议复制更新
+        // Replicate update through Raft protocol
         match self.raft_node.propose(update_command).await? {
             ConsensusResult::Committed => {
-                // 更新已提交，应用到所有节点
+                // Update committed, apply to all nodes
                 self.apply_to_all_nodes(&update_command).await?;
                 ctx.logger().info("Cache update committed and replicated");
             }
@@ -1025,76 +1025,76 @@ impl DistributedCacheConsistency {
 
 <div align="center">
 
-## 最佳实践
+## Best Practices
 
 </div>
 
-1. **选择合适的缓存后端**: 内存缓存适合单机应用，Redis适合分布式环境
-2. **设置合理的TTL**: 根据数据更新频率设置缓存过期时间
-3. **使用缓存标签**: 便于批量管理和清理相关缓存
-4. **实现缓存降级**: 当缓存不可用时，有后备方案
-5. **监控缓存性能**: 定期检查命中率、响应时间等指标
-6. **防止缓存穿透**: 使用布隆过滤器或空值缓存
-7. **避免缓存雪崩**: 为TTL添加随机偏移
-8. **合理序列化**: 选择高效的序列化格式，如MessagePack
-9. **压缩大数据**: 对大型数据进行压缩，节省存储空间
-10. **定期清理**: 清理过期缓存，释放资源
-11. **使用分布式锁**: 确保关键操作的互斥性
-12. **实现缓存预热**: 系统启动时加载热门数据
-13. **监控内存使用**: 避免缓存占用过多内存
-14. **配置连接池**: 合理设置连接池大小和超时时间
-15. **实现一致性哈希**: 在分布式环境中保持数据分布均衡
+1. **Choose appropriate cache backend**: Memory cache is suitable for single-machine applications, Redis is suitable for distributed environments
+2. **Set reasonable TTL**: Set cache expiration time based on data update frequency
+3. **Use cache tags**: Facilitate batch management and cleanup of related caches
+4. **Implement cache degradation**: Have fallback solutions when cache is unavailable
+5. **Monitor cache performance**: Regularly check hit rate, response time and other metrics
+6. **Prevent cache penetration**: Use bloom filters or empty value caching
+7. **Avoid cache avalanche**: Add random offset to TTL
+8. **Serialize reasonably**: Choose efficient serialization formats like MessagePack
+9. **Compress large data**: Compress large data to save storage space
+10. **Clean regularly**: Clean expired caches and release resources
+11. **Use distributed locks**: Ensure mutual exclusion of critical operations
+12. **Implement cache preheating**: Load hot data during system startup
+13. **Monitor memory usage**: Avoid cache occupying too much memory
+14. **Configure connection pool**: Set reasonable connection pool size and timeout
+15. **Implement consistent hashing**: Maintain balanced data distribution in distributed environments
 
 <div align="center">
 
-## 总结
+## Summary
 
 </div>
 
-本示例全面展示了 DMSC 缓存模块的核心功能和高级特性，涵盖以下关键能力：
+This example comprehensively demonstrates the core functionality and advanced features of the DMSC cache module, covering the following key capabilities:
 
-### 🚀 核心功能
-- **多后端支持**: 内存缓存、Redis缓存和Redis集群的无缝集成
-- **基本缓存操作**: 设置、获取、删除、存在检查等基础功能
-- **高级缓存功能**: 标签管理、原子操作、分布式锁实现
-- **缓存策略**: 穿透保护、雪崩保护、预热机制
-- **序列化与压缩**: 支持多种序列化格式和数据压缩
-- **健康监控**: 实时缓存状态监控和性能统计
+### 🚀 Core Features
+- **Multi-backend Support**: Seamless integration of memory cache, Redis cache, and Redis cluster
+- **Basic Cache Operations**: Basic functions like set, get, delete, and existence check
+- **Advanced Cache Features**: Tag management, atomic operations, distributed lock implementation
+- **Cache Strategies**: Penetration protection, avalanche protection, preheating mechanisms
+- **Serialization and Compression**: Support for multiple serialization formats and data compression
+- **Health Monitoring**: Real-time cache status monitoring and performance statistics
 
-### 🔧 高级特性
-- **缓存集群**: 多节点Redis集群支持和智能路由
-- **智能预热**: 基于机器学习的缓存预测和预热
-- **自适应策略**: 动态调整TTL、压缩和清理策略
-- **分布式一致性**: 使用Raft协议确保缓存一致性
-- **性能优化**: 连接池管理、批量操作、异步处理
-- **错误处理**: 完善的降级策略和异常处理
+### 🔧 Advanced Features
+- **Cache Cluster**: Multi-node Redis cluster support and intelligent routing
+- **Intelligent Preheating**: Machine learning-based cache prediction and preheating
+- **Adaptive Strategy**: Dynamic adjustment of TTL, compression, and cleanup strategies
+- **Distributed Consistency**: Using Raft protocol to ensure cache consistency
+- **Performance Optimization**: Connection pool management, batch operations, asynchronous processing
+- **Error Handling**: Comprehensive degradation strategies and exception handling
 
-### 💡 最佳实践
-- 选择合适的缓存后端，根据应用场景优化配置
-- 设置合理的TTL，平衡数据新鲜度和缓存命中率
-- 使用缓存标签，便于批量管理和清理
-- 实现缓存降级，确保系统高可用性
-- 监控关键指标，持续优化缓存性能
-- 防止缓存穿透和雪崩，保障系统稳定性
-- 合理配置序列化和压缩，优化存储效率
-- 定期清理和维护，保持缓存健康状态
+### 💡 Best Practices
+- Choose appropriate cache backend and optimize configuration based on application scenarios
+- Set reasonable TTL to balance data freshness and cache hit rate
+- Use cache tags for convenient batch management and cleanup
+- Implement cache degradation to ensure system high availability
+- Monitor key metrics and continuously optimize cache performance
+- Prevent cache penetration and avalanche to ensure system stability
+- Configure serialization and compression reasonably to optimize storage efficiency
+- Clean and maintain regularly to keep cache healthy
 
-通过本示例，您可以构建高性能、高可用的分布式缓存系统，显著提升应用响应速度和用户体验。
+Through this example, you can build high-performance, highly available distributed cache systems, significantly improving application response speed and user experience.
 
 <div align="center">
 
-## 相关模块
+## Related Modules
 
 </div>
 
-- [README](./README.md): 使用示例概览，提供所有使用示例的快速导航
-- [authentication](./authentication.md): 认证示例，学习JWT、OAuth2和RBAC认证授权
-- [basic-app](./basic-app.md): 基础应用示例，学习如何创建和运行第一个DMSC应用
+- [README](./README.md): Usage examples overview, providing quick navigation to all usage examples
+- [authentication](./authentication.md): Authentication examples, learn JWT, OAuth2 and RBAC authentication and authorization
+- [basic-app](./basic-app.md): Basic application example, learn how to create and run your first DMSC application
 
-- [database](./database.md): 数据库示例，学习数据库连接和查询操作
-- [http](./http.md): HTTP服务示例，构建Web应用和RESTful API
-- [mq](./mq.md): 消息队列示例，实现异步消息处理和事件驱动架构
-- [observability](./observability.md): 可观测性示例，监控应用性能和健康状况
-- [security](./security.md): 安全示例，加密、哈希和安全最佳实践
-- [storage](./storage.md): 存储示例，文件上传下载和存储管理
-- [validation](./validation.md): 验证示例，数据验证和清理操作
+- [database](./database.md): Database examples, learn database connection and query operations
+- [http](./http.md): HTTP service examples, build web applications and RESTful APIs
+- [mq](./mq.md): Message queue examples, implement asynchronous message processing and event-driven architecture
+- [observability](./observability.md): Observability examples, monitor application performance and health status
+- [security](./security.md): Security examples, encryption, hashing and security best practices
+- [storage](./storage.md): Storage examples, file upload/download and storage management
+- [validation](./validation.md): Validation examples, data validation and cleanup operations

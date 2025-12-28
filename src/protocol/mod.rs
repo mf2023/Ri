@@ -120,6 +120,20 @@ pub enum DMSCProtocolType {
     Private = 1,
 }
 
+#[cfg(feature = "pyo3")]
+#[pymethods]
+impl DMSCProtocolType {
+    #[staticmethod]
+    fn Global() -> Self {
+        DMSCProtocolType::Global
+    }
+    
+    #[staticmethod]
+    fn Private() -> Self {
+        DMSCProtocolType::Private
+    }
+}
+
 /// Protocol trait defining the common interface for all protocols.
 #[async_trait]
 pub trait DMSCProtocol: Send + Sync {
@@ -182,6 +196,7 @@ pub struct DMSCProtocolStatus {
 
 /// Protocol health enumeration.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 pub enum DMSCProtocolHealth {
     /// Protocol is healthy
     Healthy,
@@ -193,24 +208,72 @@ pub enum DMSCProtocolHealth {
     Unknown,
 }
 
+#[cfg(feature = "pyo3")]
+#[pymethods]
+impl DMSCProtocolHealth {
+    #[staticmethod]
+    fn Healthy() -> Self {
+        DMSCProtocolHealth::Healthy
+    }
+    
+    #[staticmethod]
+    fn Degraded() -> Self {
+        DMSCProtocolHealth::Degraded
+    }
+    
+    #[staticmethod]
+    fn Unhealthy() -> Self {
+        DMSCProtocolHealth::Unhealthy
+    }
+    
+    #[staticmethod]
+    fn Unknown() -> Self {
+        DMSCProtocolHealth::Unknown
+    }
+}
+
 /// Protocol statistics structure.
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 pub struct DMSCProtocolStats {
     /// Total messages sent
+    #[pyo3(get, set)]
     pub total_messages_sent: u64,
     /// Total messages received
+    #[pyo3(get, set)]
     pub total_messages_received: u64,
     /// Total bytes sent
+    #[pyo3(get, set)]
     pub total_bytes_sent: u64,
     /// Total bytes received
+    #[pyo3(get, set)]
     pub total_bytes_received: u64,
     /// Average latency
+    #[pyo3(get, set)]
     pub average_latency_ms: u64,
     /// Error count
+    #[pyo3(get, set)]
     pub error_count: u64,
     /// Success rate
+    #[pyo3(get, set)]
     pub success_rate: f32,
+}
+
+#[cfg(feature = "pyo3")]
+#[pymethods]
+impl DMSCProtocolStats {
+    #[new]
+    fn new() -> Self {
+        Self {
+            total_messages_sent: 0,
+            total_messages_received: 0,
+            total_bytes_sent: 0,
+            total_bytes_received: 0,
+            average_latency_ms: 0,
+            error_count: 0,
+            success_rate: 1.0,
+        }
+    }
 }
 
 /// Connection statistics structure.
@@ -218,29 +281,60 @@ pub struct DMSCProtocolStats {
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 pub struct DMSCConnectionStats {
     /// Connection identifier
+    #[pyo3(get, set)]
     pub connection_id: String,
     /// Target device
+    #[pyo3(get, set)]
     pub target_device: String,
     /// Protocol type
+    #[pyo3(get, set)]
     pub protocol_type: DMSCProtocolType,
     /// Connection state
+    #[pyo3(get, set)]
     pub connection_state: DMSCConnectionState,
     /// Messages sent
+    #[pyo3(get, set)]
     pub messages_sent: u64,
     /// Messages received
+    #[pyo3(get, set)]
     pub messages_received: u64,
     /// Bytes sent
+    #[pyo3(get, set)]
     pub bytes_sent: u64,
     /// Bytes received
+    #[pyo3(get, set)]
     pub bytes_received: u64,
     /// Connection established time
+    #[pyo3(get, set)]
     pub established_time: std::time::Instant,
     /// Last activity time
+    #[pyo3(get, set)]
     pub last_activity: std::time::Instant,
+}
+
+#[cfg(feature = "pyo3")]
+#[pymethods]
+impl DMSCConnectionStats {
+    #[new]
+    fn new(connection_id: String, target_device: String, protocol_type: DMSCProtocolType) -> Self {
+        Self {
+            connection_id,
+            target_device,
+            protocol_type,
+            connection_state: DMSCConnectionState::Connecting,
+            messages_sent: 0,
+            messages_received: 0,
+            bytes_sent: 0,
+            bytes_received: 0,
+            established_time: std::time::Instant::now(),
+            last_activity: std::time::Instant::now(),
+        }
+    }
 }
 
 /// Connection state enumeration.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 pub enum DMSCConnectionState {
     /// Connection is connecting
     Connecting,
@@ -256,24 +350,87 @@ pub enum DMSCConnectionState {
     Failed,
 }
 
+#[cfg(feature = "pyo3")]
+#[pymethods]
+impl DMSCConnectionState {
+    #[staticmethod]
+    fn Connecting() -> Self {
+        DMSCConnectionState::Connecting
+    }
+    
+    #[staticmethod]
+    fn Established() -> Self {
+        DMSCConnectionState::Established
+    }
+    
+    #[staticmethod]
+    fn Active() -> Self {
+        DMSCConnectionState::Active
+    }
+    
+    #[staticmethod]
+    fn Closing() -> Self {
+        DMSCConnectionState::Closing
+    }
+    
+    #[staticmethod]
+    fn Closed() -> Self {
+        DMSCConnectionState::Closed
+    }
+    
+    #[staticmethod]
+    fn Failed() -> Self {
+        DMSCConnectionState::Failed
+    }
+}
+
 /// Protocol configuration structure.
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 pub struct DMSCProtocolConfig {
     /// Default protocol type
+    #[pyo3(get, set)]
     pub default_protocol: DMSCProtocolType,
     /// Enable security features
+    #[pyo3(get, set)]
     pub enable_security: bool,
     /// Enable state synchronization
+    #[pyo3(get, set)]
     pub enable_state_sync: bool,
     /// Performance optimization enabled
+    #[pyo3(get, set)]
     pub performance_optimization: bool,
     /// Connection timeout
+    #[pyo3(get, set)]
     pub connection_timeout: std::time::Duration,
     /// Maximum connections per protocol
+    #[pyo3(get, set)]
     pub max_connections_per_protocol: u32,
     /// Protocol switching enabled
+    #[pyo3(get, set)]
     pub protocol_switching_enabled: bool,
+}
+
+#[cfg(feature = "pyo3")]
+#[pymethods]
+impl DMSCProtocolConfig {
+    #[new]
+    fn new() -> Self {
+        Self::default()
+    }
+    
+    #[staticmethod]
+    fn default() -> Self {
+        Self {
+            default_protocol: DMSCProtocolType::Global,
+            enable_security: true,
+            enable_state_sync: true,
+            performance_optimization: true,
+            connection_timeout: std::time::Duration::from_secs(30),
+            max_connections_per_protocol: 1000,
+            protocol_switching_enabled: true,
+        }
+    }
 }
 
 /// Protocol manager for managing multiple protocols.
@@ -291,6 +448,84 @@ pub struct DMSCProtocolManager {
     current_protocol: Arc<RwLock<DMSCProtocolType>>,
     /// Initialization status
     initialized: Arc<RwLock<bool>>,
+}
+
+#[cfg(feature = "pyo3")]
+#[pymethods]
+impl DMSCProtocolManager {
+    #[new]
+    fn new() -> Self {
+        Self {
+            config: Arc::new(RwLock::new(DMSCProtocolConfig::default())),
+            adapter: Arc::new(adapter::DMSCProtocolAdapter::new()),
+            state_manager: Arc::new(global_state::DMSCGlobalStateManager::new()),
+            integration: Arc::new(integration::DMSCGlobalSystemIntegration::new(
+                integration::DMSCIntegrationConfig::default()
+            )),
+            current_protocol: Arc::new(RwLock::new(DMSCProtocolType::Global)),
+            initialized: Arc::new(RwLock::new(false)),
+        }
+    }
+    
+    /// Send a message using the current protocol (Python wrapper).
+    fn send_message_py(&self, target: String, message: Vec<u8>) -> pyo3::PyResult<Vec<u8>> {
+        let rt = tokio::runtime::Runtime::new().map_err(|e| {
+            pyo3::exceptions::PyRuntimeError::new_err(format!("Failed to create runtime: {}", e))
+        })?;
+        
+        rt.block_on(async {
+            self.send_message(&target, &message).await.map_err(|e| {
+                pyo3::exceptions::PyRuntimeError::new_err(format!("Protocol error: {}", e))
+            })
+        })
+    }
+    
+    /// Send a message using a specific protocol (Python wrapper).
+    fn send_message_with_protocol_py(&self, target: String, message: Vec<u8>, protocol_type: DMSCProtocolType) -> pyo3::PyResult<Vec<u8>> {
+        let rt = tokio::runtime::Runtime::new().map_err(|e| {
+            pyo3::exceptions::PyRuntimeError::new_err(format!("Failed to create runtime: {}", e))
+        })?;
+        
+        rt.block_on(async {
+            self.send_message_with_protocol(&target, &message, protocol_type).await.map_err(|e| {
+                pyo3::exceptions::PyRuntimeError::new_err(format!("Protocol error: {}", e))
+            })
+        })
+    }
+    
+    /// Switch to a different protocol (Python wrapper).
+    fn switch_protocol_py(&self, protocol_type: DMSCProtocolType) -> pyo3::PyResult<()> {
+        let rt = tokio::runtime::Runtime::new().map_err(|e| {
+            pyo3::exceptions::PyRuntimeError::new_err(format!("Failed to create runtime: {}", e))
+        })?;
+        
+        rt.block_on(async {
+            self.switch_protocol(protocol_type).await.map_err(|e| {
+                pyo3::exceptions::PyRuntimeError::new_err(format!("Protocol error: {}", e))
+            })
+        })
+    }
+    
+    /// Get current protocol type (Python wrapper).
+    fn get_current_protocol_py(&self) -> DMSCProtocolType {
+        let rt = tokio::runtime::Runtime::new().unwrap();
+        rt.block_on(async {
+            self.get_current_protocol().await
+        }).unwrap()
+    }
+    
+    /// Get protocol statistics (Python wrapper).
+    fn get_stats_py(&self) -> pyo3::PyResult<DMSCProtocolStats> {
+        let rt = tokio::runtime::Runtime::new().map_err(|e| {
+            pyo3::exceptions::PyRuntimeError::new_err(format!("Failed to create runtime: {}", e))
+        })?;
+        
+        rt.block_on(async {
+            self.get_stats().await.map_err(|e| {
+                pyo3::exceptions::PyRuntimeError::new_err(format!("Protocol error: {}", e))
+            })
+        })
+    }
 }
 
 impl DMSCProtocolManager {

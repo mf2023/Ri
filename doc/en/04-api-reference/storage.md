@@ -1,139 +1,139 @@
 <div align="center">
 
-# Storage API参考
+# Storage API Reference
 
 **Version: 1.0.0**
 
 **Last modified date: 2025-12-12**
 
-storage模块提供文件存储与对象存储功能，支持本地文件系统、云存储服务和分布式存储。
+The storage module provides file storage and object storage functionality, supporting local file systems, cloud storage services, and distributed storage.
 
-## 模块概述
+## Module Overview
 
 </div>
 
-storage模块包含以下子模块：
+The storage module includes the following sub-modules:
 
-- **local**: 本地文件系统存储
-- **s3**: Amazon S3兼容存储
-- **azure**: Azure Blob存储
+- **local**: Local file system storage
+- **s3**: Amazon S3-compatible storage
+- **azure**: Azure Blob storage
 - **gcs**: Google Cloud Storage
-- **minio**: MinIO对象存储
-- **distributed**: 分布式存储
-- **encryption**: 存储加密
-- **compression**: 存储压缩
-- **metadata**: 元数据管理
+- **minio**: MinIO object storage
+- **distributed**: Distributed storage
+- **encryption**: Storage encryption
+- **compression**: Storage compression
+- **metadata**: Metadata management
 
 <div align="center">
 
-## 核心组件
+## Core Components
 
 </div>
 
 ### DMSCStorageManager
 
-存储管理器主接口，提供统一的存储访问。
+Storage manager main interface, providing unified storage access.
 
-#### 方法
+#### Methods
 
-| 方法 | 描述 | 参数 | 返回值 |
+| Method | Description | Parameters | Return Value |
 |:--------|:-------------|:--------|:--------|
-| `put(key, data)` | 上传数据 | `key: &str`, `data: &[u8]` | `DMSCResult<()>` |
-| `put_stream(key, stream)` | 流式上传 | `key: &str`, `stream: impl AsyncRead` | `DMSCResult<()>` |
-| `get(key)` | 下载数据 | `key: &str` | `DMSCResult<Vec<u8>>` |
-| `get_stream(key)` | 流式下载 | `key: &str` | `DMSCResult<impl AsyncRead>` |
-| `delete(key)` | 删除对象 | `key: &str` | `DMSCResult<()>` |
-| `exists(key)` | 检查存在 | `key: &str` | `DMSCResult<bool>` |
-| `metadata(key)` | 获取元数据 | `key: &str` | `DMSCResult<DMSCStorageMetadata>` |
-| `list(prefix)` | 列出对象 | `prefix: &str` | `DMSCResult<Vec<DMSCStorageObject>>` |
-| `copy(source, dest)` | 复制对象 | `source: &str`, `dest: &str` | `DMSCResult<()>` |
-| `move_object(source, dest)` | 移动对象 | `source: &str`, `dest: &str` | `DMSCResult<()>` |
+| `put(key, data)` | Upload data | `key: &str`, `data: &[u8]` | `DMSCResult<()>` |
+| `put_stream(key, stream)` | Stream upload | `key: &str`, `stream: impl AsyncRead` | `DMSCResult<()>` |
+| `get(key)` | Download data | `key: &str` | `DMSCResult<Vec<u8>>` |
+| `get_stream(key)` | Stream download | `key: &str` | `DMSCResult<impl AsyncRead>` |
+| `delete(key)` | Delete object | `key: &str` | `DMSCResult<()>` |
+| `exists(key)` | Check existence | `key: &str` | `DMSCResult<bool>` |
+| `metadata(key)` | Get metadata | `key: &str` | `DMSCResult<DMSCStorageMetadata>` |
+| `list(prefix)` | List objects | `prefix: &str` | `DMSCResult<Vec<DMSCStorageObject>>` |
+| `copy(source, dest)` | Copy object | `source: &str`, `dest: &str` | `DMSCResult<()>` |
+| `move_object(source, dest)` | Move object | `source: &str`, `dest: &str` | `DMSCResult<()>` |
 
-#### 使用示例
+#### Usage Example
 
 ```rust
 use dms::prelude::*;
 use tokio::fs::File;
 use tokio::io::AsyncReadExt;
 
-// 上传文件
+// Upload file
 let file_content = b"Hello, World! This is a test file.";
 ctx.storage().put("documents/test.txt", file_content).await?;
 ctx.log().info("File uploaded successfully");
 
-// 流式上传大文件
+// Stream upload large file
 let mut file = File::open("large_file.zip").await?;
 ctx.storage().put_stream("uploads/large_file.zip", &mut file).await?;
 ctx.log().info("Large file uploaded successfully");
 
-// 下载文件
+// Download file
 let data = ctx.storage().get("documents/test.txt").await?;
 let content = String::from_utf8(data)?;
 ctx.log().info(format!("Downloaded content: {}", content));
 
-// 流式下载
+// Stream download
 let mut stream = ctx.storage().get_stream("uploads/large_file.zip").await?;
 let mut output_file = File::create("downloaded_file.zip").await?;
 tokio::io::copy(&mut stream, &mut output_file).await?;
 
-// 检查文件是否存在
+// Check if file exists
 if ctx.storage().exists("documents/test.txt").await? {
     ctx.log().info("File exists");
 } else {
     ctx.log().info("File does not exist");
 }
 
-// 获取元数据
+// Get metadata
 let metadata = ctx.storage().metadata("documents/test.txt").await?;
 ctx.log().info(format!(
     "File metadata - Size: {}, Modified: {}, ETag: {}",
     metadata.size, metadata.last_modified, metadata.etag
 ));
 
-// 列出对象
+// List objects
 let objects = ctx.storage().list("documents/").await?;
 for obj in objects {
     ctx.log().info(format!("Found object: {} ({} bytes)", obj.key, obj.size));
 }
 
-// 复制对象
+// Copy object
 ctx.storage().copy("documents/test.txt", "documents/test_backup.txt").await?;
 ctx.log().info("File copied successfully");
 
-// 移动对象
+// Move object
 ctx.storage().move_object("documents/test.txt", "archive/test.txt").await?;
 ctx.log().info("File moved successfully");
 
-// 删除对象
+// Delete object
 ctx.storage().delete("documents/test_backup.txt").await?;
 ctx.log().info("File deleted successfully");
 ```
 
 ### DMSCStorageConfig
 
-存储配置结构体。
+Storage configuration struct.
 
-#### 字段
+#### Fields
 
-| 字段 | 类型 | 描述 | 默认值 |
+| Field | Type | Description | Default |
 |:--------|:-----|:-------------|:-------|
-| `backend` | `DMSCStorageBackend` | 存储后端 | `Local` |
-| `bucket` | `String` | 存储桶名称 | `"default"` |
-| `region` | `String` | 存储区域 | `"us-east-1"` |
-| `endpoint` | `String` | 存储端点 | 后端默认值 |
-| `access_key` | `String` | 访问密钥 | 可选 |
-| `secret_key` | `String` | 密钥 | 可选 |
-| `encryption` | `DMSCStorageEncryption` | 加密配置 | 可选 |
-| `compression` | `DMSCStorageCompression` | 压缩配置 | 可选 |
-| `max_file_size` | `u64` | 最大文件大小 | `100MB` |
-| `chunk_size` | `u64` | 分块大小 | `5MB` |
+| `backend` | `DMSCStorageBackend` | Storage backend | `Local` |
+| `bucket` | `String` | Bucket name | `"default"` |
+| `region` | `String` | Storage region | `"us-east-1"` |
+| `endpoint` | `String` | Storage endpoint | Backend default |
+| `access_key` | `String` | Access key | Optional |
+| `secret_key` | `String` | Secret key | Optional |
+| `encryption` | `DMSCStorageEncryption` | Encryption configuration | Optional |
+| `compression` | `DMSCStorageCompression` | Compression configuration | Optional |
+| `max_file_size` | `u64` | Maximum file size | `100MB` |
+| `chunk_size` | `u64` | Chunk size | `5MB` |
 
-#### 配置示例
+#### Configuration Example
 
 ```rust
 use dms::prelude::*;
 
-// 本地存储配置
+// Local storage configuration
 let local_config = DMSCStorageConfig {
     backend: DMSCStorageBackend::Local,
     bucket: "local_files".to_string(),
@@ -143,7 +143,7 @@ let local_config = DMSCStorageConfig {
     ..Default::default()
 };
 
-// S3配置
+// S3 configuration
 let s3_config = DMSCStorageConfig {
     backend: DMSCStorageBackend::S3,
     bucket: "my-app-bucket".to_string(),
@@ -156,7 +156,7 @@ let s3_config = DMSCStorageConfig {
     chunk_size: 10 * 1024 * 1024, // 10MB
 };
 
-// Azure Blob配置
+// Azure Blob configuration
 let azure_config = DMSCStorageConfig {
     backend: DMSCStorageBackend::Azure,
     bucket: "my-container".to_string(),
@@ -166,7 +166,7 @@ let azure_config = DMSCStorageConfig {
     ..Default::default()
 };
 
-// Google Cloud Storage配置
+// Google Cloud Storage configuration
 let gcs_config = DMSCStorageConfig {
     backend: DMSCStorageBackend::GCS,
     bucket: "my-gcs-bucket".to_string(),
@@ -179,49 +179,49 @@ let gcs_config = DMSCStorageConfig {
 
 ### DMSCStorageBackend
 
-存储后端枚举。
+Storage backend enum.
 
-#### 变体
+#### Variants
 
-| 变体 | 描述 |
+| Variant | Description |
 |:--------|:-------------|
-| `Local` | 本地文件系统 |
-| `S3` | Amazon S3兼容存储 |
-| `Azure` | Azure Blob存储 |
+| `Local` | Local file system |
+| `S3` | Amazon S3-compatible storage |
+| `Azure` | Azure Blob storage |
 | `GCS` | Google Cloud Storage |
-| `MinIO` | MinIO对象存储 |
-| `Distributed` | 分布式存储 |
+| `MinIO` | MinIO object storage |
+| `Distributed` | Distributed storage |
 
 <div align="center">
 
-## 文件上传
+## File Upload
 
 </div>
 
-### 多文件上传
+### Multi-File Upload
 
 ```rust
 use dms::prelude::*;
 use tokio::fs::File;
 
-// 处理多文件上传
+// Handle multi-file upload
 async fn handle_file_upload(files: Vec<UploadFile>) -> DMSCResult<Vec<String>> {
     let mut uploaded_keys = Vec::new();
     
     for file in files {
         let key = format!("uploads/{}/{}", chrono::Utc::now().format("%Y/%m/%d"), file.filename);
         
-        // 验证文件类型
+        // Validate file type
         if !is_allowed_file_type(&file.content_type) {
             return Err(DMSCError::validation(format!("File type not allowed: {}", file.content_type)));
         }
         
-        // 验证文件大小
+        // Validate file size
         if file.size > 10 * 1024 * 1024 { // 10MB limit
             return Err(DMSCError::validation("File too large".to_string()));
         }
         
-        // 上传文件
+        // Upload file
         ctx.storage().put(&key, &file.content).await?;
         uploaded_keys.push(key);
         
@@ -231,7 +231,7 @@ async fn handle_file_upload(files: Vec<UploadFile>) -> DMSCResult<Vec<String>> {
     Ok(uploaded_keys)
 }
 
-// 结构体定义
+// Struct definition
 struct UploadFile {
     filename: String,
     content_type: String,
@@ -249,17 +249,17 @@ fn is_allowed_file_type(content_type: &str) -> bool {
 }
 ```
 
-### 分块上传
+### Multipart Upload
 
 ```rust
 use dms::prelude::*;
 use tokio::io::AsyncReadExt;
 
-// 初始化分块上传
+// Initialize multipart upload
 let upload_id = ctx.storage().init_multipart_upload("large_file.zip").await?;
 ctx.log().info(format!("Started multipart upload: {}", upload_id));
 
-// 上传分块
+// Upload parts
 let mut file = File::open("large_file.zip").await?;
 let mut part_number = 1;
 let mut uploaded_parts = Vec::new();
@@ -290,30 +290,30 @@ loop {
     part_number += 1;
 }
 
-// 完成分块上传
+// Complete multipart upload
 ctx.storage().complete_multipart_upload("large_file.zip", &upload_id, &uploaded_parts).await?;
 ctx.log().info("Multipart upload completed");
 ```
 <div align="center">
 
-## 文件下载
+## File Download
 
 </div>
 
-### 断点续传
+### Resumable Download
 
 ```rust
 use dms::prelude::*;
 use tokio::io::AsyncWriteExt;
 
-// 断点续传下载
+// Resumable download
 async fn resumable_download(key: &str, output_path: &str) -> DMSCResult<()> {
     let metadata = ctx.storage().metadata(key).await?;
     let total_size = metadata.size;
     
     let mut start_byte = 0u64;
     
-    // 检查是否已有部分下载
+    // Check if partial download exists
     if let Ok(metadata) = tokio::fs::metadata(output_path).await {
         start_byte = metadata.len();
         ctx.log().info(format!("Resuming download from byte {}", start_byte));
@@ -351,41 +351,41 @@ async fn resumable_download(key: &str, output_path: &str) -> DMSCResult<()> {
 }
 ```
 
-### 临时URL
+### Presigned URL
 
 ```rust
 use dms::prelude::*;
 
-// 生成临时下载URL
+// Generate presigned download URL
 let download_url = ctx.storage().generate_presigned_url(
     "documents/confidential.pdf",
     DMSCPresignedUrlOperation::Get,
-    Duration::from_hours(1) // 1小时有效期
+    Duration::from_hours(1) // 1 hour validity
 ).await?;
 
 ctx.log().info(format!("Generated presigned URL: {}", download_url));
 
-// 生成临时上传URL
+// Generate presigned upload URL
 let upload_url = ctx.storage().generate_presigned_url(
     "uploads/user_upload_{}.jpg",
     DMSCPresignedUrlOperation::Put,
-    Duration::from_minutes(30) // 30分钟有效期
+    Duration::from_minutes(30) // 30 minutes validity
 ).await?;
 
 ctx.log().info(format!("Generated presigned upload URL: {}", upload_url));
 ```
 <div align="center">
 
-## 元数据管理
+## Metadata Management
 
 </div>
 
-### 对象元数据
+### Object Metadata
 
 ```rust
 use dms::prelude::*;
 
-// 上传带元数据的文件
+// Upload file with metadata
 let mut metadata = HashMap::new();
 metadata.insert("content-type".to_string(), "application/pdf".to_string());
 metadata.insert("author".to_string(), "John Doe".to_string());
@@ -398,7 +398,7 @@ ctx.storage().put_with_metadata(
     &metadata
 ).await?;
 
-// 更新元数据
+// Update metadata
 let mut new_metadata = HashMap::new();
 new_metadata.insert("reviewed".to_string(), "true".to_string());
 new_metadata.insert("reviewer".to_string(), "Jane Smith".to_string());
@@ -406,19 +406,19 @@ new_metadata.insert("review_date".to_string(), chrono::Utc::now().to_rfc3339());
 
 ctx.storage().update_metadata("documents/report.pdf", &new_metadata).await?;
 
-// 获取元数据
+// Get metadata
 let metadata = ctx.storage().metadata("documents/report.pdf").await?;
 for (key, value) in &metadata.metadata {
     ctx.log().info(format!("{}: {}", key, value));
 }
 ```
 
-### 标签管理
+### Tag Management
 
 ```rust
 use dms::prelude::*;
 
-// 设置对象标签
+// Set object tags
 let tags = vec![
     "project:alpha".to_string(),
     "team:engineering".to_string(),
@@ -428,27 +428,27 @@ let tags = vec![
 
 ctx.storage().set_tags("documents/report.pdf", &tags).await?;
 
-// 按标签搜索
+// Search by tag
 let tagged_objects = ctx.storage().find_by_tag("team:engineering").await?;
 for obj in tagged_objects {
     ctx.log().info(format!("Found object with tag: {}", obj.key));
 }
 
-// 删除标签
+// Remove tag
 ctx.storage().remove_tag("documents/report.pdf", "project:alpha").await?;
 ```
 <div align="center">
 
-## 存储加密
+## Storage Encryption
 
 </div>
 
-### 客户端加密
+### Client-Side Encryption
 
 ```rust
 use dms::prelude::*;
 
-// 配置客户端加密
+// Configure client-side encryption
 let encryption_config = DMSCStorageEncryption::ClientSide {
     algorithm: DMSCStorageEncryptionAlgorithm::AES256GCM,
     key_id: "my-encryption-key".to_string(),
@@ -462,25 +462,25 @@ let mut storage_config = DMSCStorageConfig {
     ..Default::default()
 };
 
-// 上传加密文件
+// Upload encrypted file
 let sensitive_data = b"This is sensitive information that needs encryption";
 ctx.storage().put_with_encryption("confidential/data.txt", sensitive_data).await?;
 
-// 下载并解密
+// Download and decrypt
 let decrypted_data = ctx.storage().get_and_decrypt("confidential/data.txt").await?;
 let content = String::from_utf8(decrypted_data)?;
 ctx.log().info(format!("Decrypted content: {}", content));
 ```
 
-### 密钥管理
+### Key Management
 
 ```rust
 use dms::prelude::*;
 
-// 生成数据加密密钥
+// Generate data encryption key
 let data_key = ctx.storage().generate_data_encryption_key()?;
 
-// 使用KMS加密密钥
+// Encrypt key with KMS
 let kms_config = DMSCKMSConfig {
     key_id: "arn:aws:kms:us-west-2:123456789012:key/12345678-1234-1234-1234-123456789012",
     region: "us-west-2".to_string(),
@@ -493,20 +493,20 @@ let decrypted_key = ctx.storage().decrypt_with_kms(&encrypted_key, &kms_config).
 
 <div align="center">
 
-## 存储压缩
+## Storage Compression
 
 </div>
 
-### 自动压缩
+### Automatic Compression
 
 ```rust
 use dms::prelude::*;
 
-// 配置自动压缩
+// Configure automatic compression
 let compression_config = DMSCStorageCompression {
     enabled: true,
     algorithm: DMSCStorageCompressionAlgorithm::Gzip,
-    threshold: 1024, // 1KB以上文件才压缩
+    threshold: 1024, // Compress files larger than 1KB
     extensions: vec!["txt".to_string(), "json".to_string(), "xml".to_string(), "csv".to_string()],
 };
 
@@ -517,27 +517,27 @@ let mut storage_config = DMSCStorageConfig {
     ..Default::default()
 };
 
-// 上传会自动压缩
-let large_text = "A".repeat(10000); // 10KB文本
+// Upload will be automatically compressed
+let large_text = "A".repeat(10000); // 10KB text
 ctx.storage().put("large_text_file.txt", large_text.as_bytes()).await?;
 
-// 下载会自动解压
+// Download will be automatically decompressed
 let decompressed_data = ctx.storage().get("large_text_file.txt").await?;
 ctx.log().info(format!("Decompressed size: {} bytes", decompressed_data.len()));
 ```
 
 <div align="center">
 
-## 生命周期管理
+## Lifecycle Management
 
 </div>
 
-### 存储类别转换
+### Storage Class Transition
 
 ```rust
 use dms::prelude::*;
 
-// 配置生命周期规则
+// Configure lifecycle rules
 let lifecycle_rules = vec![
     DMSCStorageLifecycleRule {
         name: "old_files_to_ia".to_string(),
@@ -564,30 +564,30 @@ let lifecycle_rules = vec![
 
 ctx.storage().set_lifecycle_rules(&lifecycle_rules).await?;
 
-// 手动转换存储类别
+// Manually change storage class
 ctx.storage().change_storage_class("old_document.pdf", DMSCStorageClass::Glacier).await?;
 ```
 
 <div align="center">
 
-## 版本控制
+## Version Control
 
 </div>
 
-### 对象版本管理
+### Object Version Management
 
 ```rust
 use dms::prelude::*;
 
-// 启用版本控制
+// Enable version control
 ctx.storage().enable_versioning("my-bucket").await?;
 
-// 上传多个版本
+// Upload multiple versions
 ctx.storage().put("documents/report.pdf", b"Version 1 content").await?;
 ctx.storage().put("documents/report.pdf", b"Version 2 content").await?;
 ctx.storage().put("documents/report.pdf", b"Version 3 content").await?;
 
-// 列出所有版本
+// List all versions
 let versions = ctx.storage().list_versions("documents/report.pdf").await?;
 for version in versions {
     ctx.log().info(format!(
@@ -596,42 +596,42 @@ for version in versions {
     ));
 }
 
-// 获取特定版本
+// Get specific version
 let version_data = ctx.storage().get_version("documents/report.pdf", "version_123").await?;
 
-// 恢复到特定版本
+// Restore to specific version
 ctx.storage().restore_version("documents/report.pdf", "version_123").await?;
 
-// 删除特定版本
+// Delete specific version
 ctx.storage().delete_version("documents/report.pdf", "version_456").await?;
 ```
 
 <div align="center">
 
-## 监控与统计
+## Monitoring and Statistics
 
 </div>
 
-### 存储统计
+### Storage Statistics
 
 ```rust
 use dms::prelude::*;
 
-// 获取存储统计
+// Get storage statistics
 let stats = ctx.storage().get_storage_stats().await?;
 ctx.log().info(format!(
     "Storage stats - Total objects: {}, Total size: {} bytes, Average size: {} bytes",
     stats.total_objects, stats.total_size, stats.average_size
 ));
 
-// 获取桶统计
+// Get bucket statistics
 let bucket_stats = ctx.storage().get_bucket_stats("my-bucket").await?;
 ctx.log().info(format!(
     "Bucket stats - Objects: {}, Size: {} bytes, Oldest object: {}, Newest object: {}",
     bucket_stats.object_count, bucket_stats.total_size, bucket_stats.oldest_object, bucket_stats.newest_object
 ));
 
-// 按前缀统计
+// Get statistics by prefix
 let prefix_stats = ctx.storage().get_prefix_stats("documents/").await?;
 for (prefix, stats) in prefix_stats {
     ctx.log().info(format!(
@@ -643,22 +643,22 @@ for (prefix, stats) in prefix_stats {
 
 <div align="center">
 
-## 错误处理
+## Error Handling
 
 </div>
 
-### 存储错误码
+### Storage Error Codes
 
-| 错误码 | 描述 |
+| Error Code | Description |
 |:--------|:-------------|
-| `STORAGE_CONNECTION_ERROR` | 存储连接错误 |
-| `STORAGE_NOT_FOUND` | 对象不存在 |
-| `STORAGE_PERMISSION_DENIED` | 权限不足 |
-| `STORAGE_QUOTA_EXCEEDED` | 存储配额超限 |
-| `STORAGE_ENCRYPTION_ERROR` | 加密错误 |
-| `STORAGE_COMPRESSION_ERROR` | 压缩错误 |
+| `STORAGE_CONNECTION_ERROR` | Storage connection error |
+| `STORAGE_NOT_FOUND` | Object not found |
+| `STORAGE_PERMISSION_DENIED` | Permission denied |
+| `STORAGE_QUOTA_EXCEEDED` | Storage quota exceeded |
+| `STORAGE_ENCRYPTION_ERROR` | Encryption error |
+| `STORAGE_COMPRESSION_ERROR` | Compression error |
 
-### 错误处理示例
+### Error Handling Example
 
 ```rust
 use dms::prelude::*;
@@ -666,19 +666,19 @@ use dms::prelude::*;
 match ctx.storage().get("important_file.pdf").await {
     Ok(data) => {
         ctx.log().info("File retrieved successfully");
-        // 处理文件数据
+        // Process file data
     }
     Err(DMSCError { code, .. }) if code == "STORAGE_NOT_FOUND" => {
         ctx.log().warn("File not found, using default");
-        // 使用默认文件或返回错误
+        // Use default file or return error
         let default_data = get_default_file_data();
         // ...
     }
     Err(DMSCError { code, .. }) if code == "STORAGE_CONNECTION_ERROR" => {
         ctx.log().error("Storage connection failed");
-        // 尝试备用存储
+        // Try backup storage
         ctx.storage().use_backup_storage()?;
-        // 重试操作
+        // Retry operation
     }
     Err(e) => {
         ctx.log().error(format!("Storage error: {}", e));
@@ -689,36 +689,29 @@ match ctx.storage().get("important_file.pdf").await {
 
 <div align="center">
 
-## 最佳实践
+## Best Practices
 
 </div>
 
-1. **使用流式操作**: 大文件使用流式上传下载，避免内存问题
-2. **合理设置分块大小**: 根据网络条件和文件大小调整分块大小
-3. **启用版本控制**: 重要数据启用版本控制，防止意外删除
-4. **使用生命周期管理**: 自动管理旧数据的存储类别和清理
-5. **加密敏感数据**: 对敏感数据进行客户端加密
-6. **压缩文本数据**: 对文本数据启用压缩，节省存储空间
-7. **监控存储使用**: 定期监控存储使用情况和性能指标
-8. **备份重要数据**: 关键数据配置跨区域复制或备份
-9. **使用临时URL**: 提供文件访问时使用临时URL，避免暴露凭证
-10. **验证文件类型**: 上传时验证文件类型和内容，防止恶意文件
+1. **Use streaming operations**: Use streaming upload/download for large files to avoid memory issues
+2. **Set appropriate chunk size**: Adjust chunk size based on network conditions and file size
+3. **Enable version control**: Enable version control for important data to prevent accidental deletion
+4. **Use lifecycle management**: Automatically manage storage class transitions and cleanup of old data
+5. **Encrypt sensitive data**: Perform client-side encryption for sensitive data
+6. **Compress text data**: Enable compression for text data to save storage space
+7. **Monitor storage usage**: Regularly monitor storage usage and performance metrics
+8. **Backup important data**: Configure cross-region replication or backup for critical data
+9. **Use presigned URLs**: Use presigned URLs when providing file access to avoid exposing credentials
+10. **Validate file types**: Validate file types and content during upload to prevent malicious files
 
 <div align="center">
 
-## 相关模块
+## Related Modules
 
 </div>
 
-- [README](./README.md): 模块概览，提供API参考文档总览和快速导航
-- [auth](./auth.md): 认证模块，提供JWT、OAuth2和RBAC认证授权功能
-- [core](./core.md): 核心模块，提供错误处理和服务上下文
-- [log](./log.md): 日志模块，记录认证事件和安全日志
-- [config](./config.md): 配置模块，管理认证配置和密钥设置
-- [cache](./cache.md): 缓存模块，提供多后端缓存抽象，缓存用户会话和权限数据
-- [database](./database.md): 数据库模块，提供用户数据持久化和查询功能
-- [http](./http.md): HTTP模块，提供Web认证接口和中间件支持
-- [mq](./mq.md): 消息队列模块，处理认证事件和异步通知
-- [observability](./observability.md): 可观测性模块，监控认证性能和安全事件
-- [security](./security.md): 安全模块，提供加密、哈希和验证功能
-- [validation](./validation.md): 验证模块，验证用户输入和表单数据
+- [README](./README.md): Module overview, providing API reference documentation overview and quick navigation
+- [auth](./auth.md): Authentication module, providing JWT, OAuth2, and RBAC authentication and authorization functionality
+- [core](./core.md): Core module, providing error handling and service context
+- [log](./log.md): Logging module, recording authentication events and security logs
+- [config](./config.md): Configuration module, managing authentication configuration and key settings

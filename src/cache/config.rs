@@ -64,6 +64,11 @@
 use serde::{Serialize, Deserialize};
 use std::time::Duration;
 
+#[cfg(feature = "pyo3")]
+use pyo3::prelude::*;
+#[cfg(feature = "pyo3")]
+use pyo3::pymethods;
+
 /// Main cache configuration structure.
 /// 
 /// This struct contains all configuration options for the cache system,
@@ -71,12 +76,19 @@ use std::time::Duration;
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 pub struct DMSCCacheConfig {
+    #[pyo3(get, set)]
     pub enabled: bool,                // Whether caching is enabled
+    #[pyo3(get, set)]
     pub default_ttl_secs: u64,        // Default time-to-live in seconds
+    #[pyo3(get, set)]
     pub max_memory_mb: u64,           // Maximum memory usage in megabytes
+    #[pyo3(get, set)]
     pub cleanup_interval_secs: u64,    // Interval for cleaning up expired entries in seconds
+    #[pyo3(get, set)]
     pub backend_type: CacheBackendType, // Type of cache backend to use
+    #[pyo3(get, set)]
     pub redis_url: String,             // Redis connection URL (if using Redis or Hybrid backend)
+    #[pyo3(get, set)]
     pub redis_pool_size: usize,        // Redis connection pool size
 }
 
@@ -107,6 +119,20 @@ impl Default for DMSCCacheConfig {
     }
 }
 
+#[cfg(feature = "pyo3")]
+#[pymethods]
+impl DMSCCacheConfig {
+    #[new]
+    fn py_new() -> Self {
+        Self::default()
+    }
+    
+    #[staticmethod]
+    fn default_config() -> Self {
+        Self::default()
+    }
+}
+
 /// Cache backend type enumeration.
 /// 
 /// Defines the different cache backend types supported by DMSC.
@@ -117,6 +143,8 @@ pub enum CacheBackendType {
     Redis,   // Redis cache (persistent, distributed)
     Hybrid,  // Hybrid cache (Memory + Redis for performance and persistence)
 }
+
+
 
 impl CacheBackendType {
     /// Converts a string to a `CacheBackendType`.
@@ -168,8 +196,11 @@ impl std::str::FromStr for CacheBackendType {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 pub struct CachePolicy {
+    #[pyo3(get, set)]
     pub ttl: Option<Duration>,        // Time-to-live for cache entries
+    #[pyo3(get, set)]
     pub refresh_on_access: bool,      // Whether to refresh TTL on access
+    #[pyo3(get, set)]
     pub max_size: Option<usize>,      // Maximum size for cached data in bytes
 }
 
@@ -189,5 +220,19 @@ impl Default for CachePolicy {
             refresh_on_access: false,
             max_size: None,
         }
+    }
+}
+
+#[cfg(feature = "pyo3")]
+#[pymethods]
+impl CachePolicy {
+    #[new]
+    fn new() -> Self {
+        Self::default()
+    }
+    
+    #[staticmethod]
+    fn default_policy() -> Self {
+        Self::default()
     }
 }

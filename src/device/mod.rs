@@ -128,8 +128,13 @@ use parking_lot::RwLock as ParkingRwLock;
 
 use crate::observability::{DMSCMetricsRegistry, DMSCMetric, DMSCMetricConfig, DMSCMetricType};
 
+#[cfg(feature = "pyo3")]
+use pyo3::prelude::*;
+#[cfg(feature = "pyo3")]
+use pyo3::pymethods;
 
-pub use core::{DMSCDevice, DMSCDeviceType, DMSCDeviceStatus, DMSCDeviceCapabilities, DMSCDeviceControlConfig, DMSCDeviceConfig, NetworkDeviceInfo};
+
+pub use core::{DMSCDevice, DMSCDeviceType, DMSCDeviceStatus, DMSCDeviceCapabilities, DMSCDeviceControlConfig, DMSCDeviceConfig, NetworkDeviceInfo, DMSCDeviceHealthMetrics};
 pub use controller::DMSCDeviceController;
 pub use pool::{DMSCResourcePool, DMSCResourcePoolManager};
 pub use scheduler::DMSCDeviceScheduler;
@@ -200,6 +205,7 @@ impl Default for DMSCDeviceControlConfigLegacy {
 /// This struct contains information about the results of a device discovery scan, including
 /// discovered, updated, and removed devices.
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 pub struct DMSCDiscoveryResult {
     /// Newly discovered devices
     pub discovered_devices: Vec<DMSCDevice>,
@@ -211,12 +217,65 @@ pub struct DMSCDiscoveryResult {
     pub total_devices: usize,
 }
 
+#[cfg(feature = "pyo3")]
+#[pymethods]
+impl DMSCDiscoveryResult {
+    #[new]
+    fn py_new() -> Self {
+        Self {
+            discovered_devices: Vec::new(),
+            updated_devices: Vec::new(),
+            removed_devices: Vec::new(),
+            total_devices: 0,
+        }
+    }
+    
+    #[staticmethod]
+    fn default_result() -> Self {
+        Self::default()
+    }
+    
+    fn discovered_devices_py(&self) -> Vec<DMSCDevice> {
+        self.discovered_devices.clone()
+    }
+    
+    fn updated_devices_py(&self) -> Vec<DMSCDevice> {
+        self.updated_devices.clone()
+    }
+    
+    fn removed_devices_py(&self) -> Vec<String> {
+        self.removed_devices.clone()
+    }
+    
+    fn total_devices_py(&self) -> usize {
+        self.total_devices
+    }
+    
+    fn __str__(&self) -> String {
+        format!("DMSCDiscoveryResult(discovered: {}, updated: {}, removed: {}, total: {})", 
+                self.discovered_devices.len(), self.updated_devices.len(), 
+                self.removed_devices.len(), self.total_devices)
+    }
+}
+
+impl Default for DMSCDiscoveryResult {
+    fn default() -> Self {
+        Self {
+            discovered_devices: Vec::new(),
+            updated_devices: Vec::new(),
+            removed_devices: Vec::new(),
+            total_devices: 0,
+        }
+    }
+}
+
 /// Request structure for resource allocation.
 /// 
 /// This struct defines the requirements for resource allocation, including device type, capabilities,
 /// priority, timeout, and advanced scheduling preferences such as SLA, resource weights,
 /// and affinity rules. New fields are optional to preserve backward compatibility.
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 pub struct DMSCResourceRequest {
     /// Unique request ID
     pub request_id: String,
@@ -238,11 +297,98 @@ pub struct DMSCResourceRequest {
     pub anti_affinity: Option<DMSCAffinityRules>,
 }
 
+#[cfg(feature = "pyo3")]
+#[pymethods]
+impl DMSCResourceRequest {
+    #[new]
+    #[pyo3(signature = (request_id, device_type, required_capabilities, priority=5, timeout_secs=60))]
+    fn py_new(request_id: String, device_type: DMSCDeviceType, required_capabilities: DMSCDeviceCapabilities, priority: u8, timeout_secs: u64) -> Self {
+        Self {
+            request_id,
+            device_type,
+            required_capabilities,
+            priority,
+            timeout_secs,
+            sla_class: None,
+            resource_weights: None,
+            affinity: None,
+            anti_affinity: None,
+        }
+    }
+    
+    fn request_id_py(&self) -> String {
+        self.request_id.clone()
+    }
+    
+    fn device_type_py(&self) -> DMSCDeviceType {
+        self.device_type
+    }
+    
+    fn required_capabilities_py(&self) -> DMSCDeviceCapabilities {
+        self.required_capabilities.clone()
+    }
+    
+    fn priority_py(&self) -> u8 {
+        self.priority
+    }
+    
+    fn timeout_secs_py(&self) -> u64 {
+        self.timeout_secs
+    }
+    
+    fn sla_class_py(&self) -> Option<DMSCRequestSlaClass> {
+        self.sla_class
+    }
+    
+    fn resource_weights_py(&self) -> Option<DMSCResourceWeights> {
+        self.resource_weights.clone()
+    }
+    
+    fn affinity_py(&self) -> Option<DMSCAffinityRules> {
+        self.affinity.clone()
+    }
+    
+    fn anti_affinity_py(&self) -> Option<DMSCAffinityRules> {
+        self.anti_affinity.clone()
+    }
+    
+    // Setter methods for Python
+    fn set_priority_py(&mut self, priority: u8) {
+        self.priority = priority;
+    }
+    
+    fn set_timeout_secs_py(&mut self, timeout_secs: u64) {
+        self.timeout_secs = timeout_secs;
+    }
+    
+    fn set_sla_class_py(&mut self, sla_class: Option<DMSCRequestSlaClass>) {
+        self.sla_class = sla_class;
+    }
+    
+    fn set_resource_weights_py(&mut self, resource_weights: Option<DMSCResourceWeights>) {
+        self.resource_weights = resource_weights;
+    }
+    
+    fn set_affinity_py(&mut self, affinity: Option<DMSCAffinityRules>) {
+        self.affinity = affinity;
+    }
+    
+    fn set_anti_affinity_py(&mut self, anti_affinity: Option<DMSCAffinityRules>) {
+        self.anti_affinity = anti_affinity;
+    }
+    
+    fn __str__(&self) -> String {
+        format!("DMSCResourceRequest(id: {}, type: {:?}, priority: {}, timeout: {}s)", 
+                self.request_id, self.device_type, self.priority, self.timeout_secs)
+    }
+}
+
 /// SLA class for a resource request.
 /// 
 /// This enum describes the service level expectations for a request. Schedulers can
 /// use this information to trade off between latency, availability, and resource usage.
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+#[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 pub enum DMSCRequestSlaClass {
     /// Mission critical requests that should be served with the highest priority
     Critical,
@@ -254,12 +400,26 @@ pub enum DMSCRequestSlaClass {
     Low,
 }
 
+#[cfg(feature = "pyo3")]
+#[pymethods]
+impl DMSCRequestSlaClass {
+    fn __str__(&self) -> String {
+        match self {
+            DMSCRequestSlaClass::Critical => "Critical".to_string(),
+            DMSCRequestSlaClass::High => "High".to_string(),
+            DMSCRequestSlaClass::Medium => "Medium".to_string(),
+            DMSCRequestSlaClass::Low => "Low".to_string(),
+        }
+    }
+}
+
 /// Multi-dimensional resource weights for scheduling.
 /// 
 /// This struct allows callers to express how important different resource dimensions are
 /// (compute, memory, storage, bandwidth) for a specific request. Schedulers can use these
 /// weights when computing fitness scores.
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 pub struct DMSCResourceWeights {
     /// Weight for compute resources (e.g. CPU cores, GPU units)
     pub compute_weight: f64,
@@ -271,11 +431,59 @@ pub struct DMSCResourceWeights {
     pub bandwidth_weight: f64,
 }
 
+#[cfg(feature = "pyo3")]
+#[pymethods]
+impl DMSCResourceWeights {
+    #[new]
+    #[pyo3(signature = (compute_weight=1.0, memory_weight=1.0, storage_weight=1.0, bandwidth_weight=1.0))]
+    fn py_new(compute_weight: f64, memory_weight: f64, storage_weight: f64, bandwidth_weight: f64) -> Self {
+        Self {
+            compute_weight,
+            memory_weight,
+            storage_weight,
+            bandwidth_weight,
+        }
+    }
+    
+    #[staticmethod]
+    fn default_weights() -> Self {
+        Self::default()
+    }
+    
+    fn compute_weight_py(&self) -> f64 { self.compute_weight }
+    fn memory_weight_py(&self) -> f64 { self.memory_weight }
+    fn storage_weight_py(&self) -> f64 { self.storage_weight }
+    fn bandwidth_weight_py(&self) -> f64 { self.bandwidth_weight }
+    
+    // Setter methods for Python
+    fn set_compute_weight_py(&mut self, weight: f64) { self.compute_weight = weight; }
+    fn set_memory_weight_py(&mut self, weight: f64) { self.memory_weight = weight; }
+    fn set_storage_weight_py(&mut self, weight: f64) { self.storage_weight = weight; }
+    fn set_bandwidth_weight_py(&mut self, weight: f64) { self.bandwidth_weight = weight; }
+    
+    fn __str__(&self) -> String {
+        format!("DMSCResourceWeights(compute: {}, memory: {}, storage: {}, bandwidth: {})", 
+                self.compute_weight, self.memory_weight, self.storage_weight, self.bandwidth_weight)
+    }
+}
+
+impl Default for DMSCResourceWeights {
+    fn default() -> Self {
+        Self {
+            compute_weight: 1.0,
+            memory_weight: 1.0,
+            storage_weight: 1.0,
+            bandwidth_weight: 1.0,
+        }
+    }
+}
+
 /// Affinity and anti-affinity rules for device selection.
 /// 
 /// Rules are expressed as label key/value pairs. Implementations can interpret labels
 /// using device metadata such as location, zone, rack, tenant, etc.
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 pub struct DMSCAffinityRules {
     /// Labels that must be present with matching values
     pub required_labels: HashMap<String, String>,
@@ -285,11 +493,57 @@ pub struct DMSCAffinityRules {
     pub forbidden_labels: HashMap<String, String>,
 }
 
+#[cfg(feature = "pyo3")]
+#[pymethods]
+impl DMSCAffinityRules {
+    #[new]
+    fn py_new() -> Self {
+        Self {
+            required_labels: HashMap::new(),
+            preferred_labels: HashMap::new(),
+            forbidden_labels: HashMap::new(),
+        }
+    }
+    
+    #[staticmethod]
+    fn default_rules() -> Self {
+        Self::default()
+    }
+    
+    fn required_labels_py(&self) -> HashMap<String, String> {
+        self.required_labels.clone()
+    }
+    
+    fn preferred_labels_py(&self) -> HashMap<String, String> {
+        self.preferred_labels.clone()
+    }
+    
+    fn forbidden_labels_py(&self) -> HashMap<String, String> {
+        self.forbidden_labels.clone()
+    }
+    
+    fn __str__(&self) -> String {
+        format!("DMSCAffinityRules(required: {}, preferred: {}, forbidden: {})", 
+                self.required_labels.len(), self.preferred_labels.len(), self.forbidden_labels.len())
+    }
+}
+
+impl Default for DMSCAffinityRules {
+    fn default() -> Self {
+        Self {
+            required_labels: HashMap::new(),
+            preferred_labels: HashMap::new(),
+            forbidden_labels: HashMap::new(),
+        }
+    }
+}
+
 /// Result structure for resource allocation.
 /// 
 /// This struct contains information about a successful resource allocation, including the allocated
 /// device, allocation time, and expiration time.
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 pub struct DMSCResourceAllocation {
     /// Unique allocation ID
     pub allocation_id: String,
@@ -303,6 +557,62 @@ pub struct DMSCResourceAllocation {
     pub expires_at: chrono::DateTime<chrono::Utc>,
     /// Original resource request
     pub request: DMSCResourceRequest,
+}
+
+#[cfg(feature = "pyo3")]
+#[pymethods]
+impl DMSCResourceAllocation {
+    #[new]
+    fn py_new(allocation_id: String, device_id: String, device_name: String, request: DMSCResourceRequest) -> Self {
+        let now = chrono::Utc::now();
+        let expires_at = now + chrono::TimeDelta::seconds(request.timeout_secs as i64);
+        
+        Self {
+            allocation_id,
+            device_id,
+            device_name,
+            allocated_at: now,
+            expires_at,
+            request,
+        }
+    }
+    
+    fn allocation_id_py(&self) -> String {
+        self.allocation_id.clone()
+    }
+    
+    fn device_id_py(&self) -> String {
+        self.device_id.clone()
+    }
+    
+    fn device_name_py(&self) -> String {
+        self.device_name.clone()
+    }
+    
+    fn allocated_at_py(&self) -> String {
+        self.allocated_at.to_rfc3339()
+    }
+    
+    fn expires_at_py(&self) -> String {
+        self.expires_at.to_rfc3339()
+    }
+    
+    fn request_py(&self) -> DMSCResourceRequest {
+        self.request.clone()
+    }
+    
+    fn is_expired_py(&self) -> bool {
+        chrono::Utc::now() > self.expires_at
+    }
+    
+    fn remaining_time_py(&self) -> i64 {
+        (self.expires_at - chrono::Utc::now()).num_seconds()
+    }
+    
+    fn __str__(&self) -> String {
+        format!("DMSCResourceAllocation(id: {}, device: {} ({}), expires: {})", 
+                self.allocation_id, self.device_name, self.device_id, self.expires_at)
+    }
 }
 
 impl Default for DMSCDeviceControlModule {

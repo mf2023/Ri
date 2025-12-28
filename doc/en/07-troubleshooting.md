@@ -124,7 +124,7 @@ Error: Module initialization failed: auth
 **Solutions**:
 - Check if the module configuration is correct
 - Check detailed logs to understand the specific error cause
-- Ensure services依赖的服务 are available
+- Ensure dependent services are available
 
 <div align="center">
 

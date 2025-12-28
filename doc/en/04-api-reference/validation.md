@@ -1,55 +1,55 @@
 <div align="center">
 
-# Validation API参考
+# Validation API Reference
 
 **Version: 1.0.0**
 
 **Last modified date: 2025-12-12**
 
-validation模块提供数据验证与清理功能，支持多种验证规则和自定义验证器。
+The validation module provides data validation and sanitization functionality, supporting multiple validation rules and custom validators.
 
-## 模块概述
+## Module Overview
 
 </div>
 
-validation模块包含以下子模块：
+The validation module contains the following submodules:
 
-- **rules**: 验证规则定义
-- **validators**: 验证器实现
-- **sanitizers**: 数据清理器
-- **format**: 格式验证
-- **constraints**: 约束条件
-- **custom**: 自定义验证
+- **rules**: Validation rule definitions
+- **validators**: Validator implementations
+- **sanitizers**: Data sanitizers
+- **format**: Format validation
+- **constraints**: Constraint conditions
+- **custom**: Custom validation
 
 <div align="center">
 
-## 核心组件
+## Core Components
 
 </div>
 
 ### DMSCValidationManager
 
-验证管理器主接口，提供统一的验证功能访问。
+Main interface for the validation manager, providing unified access to validation functionality.
 
-#### 方法
+#### Methods
 
-| 方法 | 描述 | 参数 | 返回值 |
+| Method | Description | Parameters | Return Value |
 |:--------|:-------------|:--------|:--------|
-| `validate(data, rules)` | 数据验证 | `data: &Value`, `rules: &[DMSCValidationRule]` | `DMSCResult<DMSCValidationResult>` |
-| `validate_field(field, value, rules)` | 字段验证 | `field: &str`, `value: &Value`, `rules: &[DMSCValidationRule]` | `DMSCResult<DMSCValidationResult>` |
-| `sanitize(data, sanitizers)` | 数据清理 | `data: Value`, `sanitizers: &[DMSCSanitizer]` | `DMSCResult<Value>` |
-| `sanitize_field(field, value, sanitizers)` | 字段清理 | `field: &str`, `value: Value`, `sanitizers: &[DMSCSanitizer]` | `DMSCResult<Value>` |
-| `validate_schema(data, schema)` | 模式验证 | `data: &Value`, `schema: &DMSCSchema` | `DMSCResult<DMSCValidationResult>` |
-| `register_validator(name, validator)` | 注册验证器 | `name: &str`, `validator: impl DMSCValidator` | `DMSCResult<()>` |
-| `register_sanitizer(name, sanitizer)` | 注册清理器 | `name: &str`, `sanitizer: impl DMSCSanitizer` | `DMSCResult<()>` |
+| `validate(data, rules)` | Data validation | `data: &Value`, `rules: &[DMSCValidationRule]` | `DMSCResult<DMSCValidationResult>` |
+| `validate_field(field, value, rules)` | Field validation | `field: &str`, `value: &Value`, `rules: &[DMSCValidationRule]` | `DMSCResult<DMSCValidationResult>` |
+| `sanitize(data, sanitizers)` | Data sanitization | `data: Value`, `sanitizers: &[DMSCSanitizer]` | `DMSCResult<Value>` |
+| `sanitize_field(field, value, sanitizers)` | Field sanitization | `field: &str`, `value: Value`, `sanitizers: &[DMSCSanitizer]` | `DMSCResult<Value>` |
+| `validate_schema(data, schema)` | Schema validation | `data: &Value`, `schema: &DMSCSchema` | `DMSCResult<DMSCValidationResult>` |
+| `register_validator(name, validator)` | Register validator | `name: &str`, `validator: impl DMSCValidator` | `DMSCResult<()>` |
+| `register_sanitizer(name, sanitizer)` | Register sanitizer | `name: &str`, `sanitizer: impl DMSCSanitizer` | `DMSCResult<()>` |
 
-#### 使用示例
+#### Usage Example
 
 ```rust
 use dms::prelude::*;
 use serde_json::json;
 
-// 简单数据验证
+// Simple data validation
 let data = json!({
     "email": "john@example.com",
     "age": 25,
@@ -72,7 +72,7 @@ if result.is_valid {
     }
 }
 
-// 数据清理
+// Data sanitization
 let dirty_data = json!({
     "username": "  John Doe  ",
     "email": "JOHN@EXAMPLE.COM",
@@ -91,57 +91,57 @@ ctx.log().info(format!("Cleaned data: {}", clean_data));
 
 ### DMSCValidationRule
 
-验证规则枚举。
+Validation rule enumeration.
 
-#### 变体
+#### Variants
 
-| 变体 | 描述 |
+| Variant | Description |
 |:--------|:-------------|
-| `Required` | 必填字段 |
-| `Optional` | 可选字段 |
-| `Email` | 邮箱格式 |
-| `Url` | URL格式 |
-| `Phone` | 电话号码 |
-| `Numeric` | 数字格式 |
-| `Alpha` | 字母格式 |
-| `Alphanumeric` | 字母数字格式 |
-| `MinLength(usize)` | 最小长度 |
-| `MaxLength(usize)` | 最大长度 |
-| `LengthRange(usize, usize)` | 长度范围 |
-| `Min(i64)` | 最小值 |
-| `Max(i64)` | 最大值 |
-| `Range(i64, i64)` | 数值范围 |
-| `Pattern(String)` | 正则表达式 |
-| `In(Vec<String>)` | 枚举值 |
-| `NotIn(Vec<String>)` | 排除值 |
-| `Custom(String)` | 自定义验证 |
+| `Required` | Required field |
+| `Optional` | Optional field |
+| `Email` | Email format |
+| `Url` | URL format |
+| `Phone` | Phone number |
+| `Numeric` | Numeric format |
+| `Alpha` | Alphabetic format |
+| `Alphanumeric` | Alphanumeric format |
+| `MinLength(usize)` | Minimum length |
+| `MaxLength(usize)` | Maximum length |
+| `LengthRange(usize, usize)` | Length range |
+| `Min(i64)` | Minimum value |
+| `Max(i64)` | Maximum value |
+| `Range(i64, i64)` | Value range |
+| `Pattern(String)` | Regular expression |
+| `In(Vec<String>)` | Enumerated values |
+| `NotIn(Vec<String>)` | Excluded values |
+| `Custom(String)` | Custom validation |
 
 ### DMSCValidationResult
 
-验证结果结构体。
+Validation result structure.
 
-#### 字段
+#### Fields
 
-| 字段 | 类型 | 描述 |
+| Field | Type | Description |
 |:--------|:-----|:-------------|
-| `is_valid` | `bool` | 是否有效 |
-| `errors` | `Vec<DMSCValidationError>` | 错误列表 |
-| `warnings` | `Vec<DMSCValidationWarning>` | 警告列表 |
-| `field_results` | `HashMap<String, DMSCValidationResult>` | 字段验证结果 |
+| `is_valid` | `bool` | Whether valid |
+| `errors` | `Vec<DMSCValidationError>` | Error list |
+| `warnings` | `Vec<DMSCValidationWarning>` | Warning list |
+| `field_results` | `HashMap<String, DMSCValidationResult>` | Field validation results |
 
 <div align="center">
 
-## 数据验证
+## Data Validation
 
 </div>
 
-### 字段验证
+### Field Validation
 
 ```rust
 use dms::prelude::*;
 use serde_json::json;
 
-// 验证用户注册数据
+// Validate user registration data
 let user_data = json!({
     "username": "john_doe",
     "email": "john@example.com",
@@ -152,7 +152,7 @@ let user_data = json!({
     "bio": "Software developer passionate about Rust"
 });
 
-// 用户名验证
+// Username validation
 let username_rules = vec![
     DMSCValidationRule::Required,
     DMSCValidationRule::Alphanumeric,
@@ -166,7 +166,7 @@ if !username_result.is_valid {
     return Err(DMSCError::validation(format!("Username validation failed: {:?}", username_result.errors)));
 }
 
-// 邮箱验证
+// Email validation
 let email_rules = vec![
     DMSCValidationRule::Required,
     DMSCValidationRule::Email,
@@ -178,7 +178,7 @@ if !email_result.is_valid {
     return Err(DMSCError::validation(format!("Email validation failed: {:?}", email_result.errors)));
 }
 
-// 密码验证
+// Password validation
 let password_rules = vec![
     DMSCValidationRule::Required,
     DMSCValidationRule::MinLength(8),
@@ -191,7 +191,7 @@ if !password_result.is_valid {
     return Err(DMSCError::validation(format!("Password validation failed: {:?}", password_result.errors)));
 }
 
-// 年龄验证
+// Age validation
 let age_rules = vec![
     DMSCValidationRule::Required,
     DMSCValidationRule::Numeric,
@@ -206,13 +206,13 @@ if !age_result.is_valid {
 ctx.log().info("All field validations passed");
 ```
 
-### 复杂数据验证
+### Complex Data Validation
 
 ```rust
 use dms::prelude::*;
 use serde_json::json;
 
-// 验证订单数据
+// Validate order data
 let order_data = json!({
     "order_id": "ORD-2024-001234",
     "customer": {
@@ -250,7 +250,7 @@ let order_data = json!({
     "order_date": "2024-01-15T10:30:00Z"
 });
 
-// 定义验证模式
+// Define validation schema
 let order_schema = DMSCSchema {
     fields: vec![
         DMSCSchemaField {
@@ -326,7 +326,7 @@ let order_schema = DMSCSchema {
     ..Default::default()
 };
 
-// 执行模式验证
+// Execute schema validation
 let result = ctx.validation().validate_schema(&order_data, &order_schema)?;
 if !result.is_valid {
     return Err(DMSCError::validation(format!("Order validation failed: {:?}", result.errors)));
@@ -337,17 +337,17 @@ ctx.log().info("Order data validation passed");
 
 <div align="center">
 
-## 数据清理
+## Data Sanitization
 
 </div>
 
-### 基本清理
+### Basic Sanitization
 
 ```rust
 use dms::prelude::*;
 use serde_json::json;
 
-// 清理用户输入数据
+// Sanitize user input data
 let dirty_data = json!({
     "username": "  John Doe  ",
     "email": "JOHN@EXAMPLE.COM",
@@ -357,7 +357,7 @@ let dirty_data = json!({
     "tags": ["  rust  ", "  programming  ", "  web  "]
 });
 
-// 应用清理器
+// Apply sanitizers
 let sanitizers = vec![
     DMSCSanitizer::Trim,
     DMSCSanitizer::ToLowercase,
@@ -368,7 +368,7 @@ let sanitizers = vec![
 let clean_data = ctx.validation().sanitize(dirty_data, &sanitizers)?;
 ctx.log().info(format!("Cleaned data: {}", clean_data));
 
-// 字段特定清理
+// Field-specific sanitization
 let email_sanitizers = vec![
     DMSCSanitizer::Trim,
     DMSCSanitizer::ToLowercase,
@@ -382,13 +382,13 @@ let cleaned_email = ctx.validation().sanitize_field(
 ctx.log().info(format!("Cleaned email: {}", cleaned_email));
 ```
 
-### 高级清理
+### Advanced Sanitization
 
 ```rust
 use dms::prelude::*;
 use serde_json::json;
 
-// 清理HTML内容
+// Sanitize HTML content
 let html_content = r#"
     <div class="content">
         <script>alert('XSS Attack!');</script>
@@ -414,17 +414,17 @@ let safe_html = ctx.validation().sanitize_html(html_content, &DMSCHtmlSanitizerC
 
 ctx.log().info(format!("Sanitized HTML: {}", safe_html));
 
-// 清理SQL输入
+// Sanitize SQL input
 let user_input = "admin' OR '1'='1' --";
 let safe_sql = ctx.validation().sanitize_sql(user_input);
 ctx.log().info(format!("Sanitized SQL: {}", safe_sql));
 
-// 清理文件路径
+// Sanitize file path
 let file_path = "../../../etc/passwd";
 let safe_path = ctx.validation().sanitize_path(file_path)?;
 ctx.log().info(format!("Sanitized path: {}", safe_path));
 
-// 清理URL
+// Sanitize URL
 let dirty_url = "https://example.com/path/../../../../etc/passwd";
 let safe_url = ctx.validation().sanitize_url(dirty_url)?;
 ctx.log().info(format!("Sanitized URL: {}", safe_url));
@@ -432,17 +432,17 @@ ctx.log().info(format!("Sanitized URL: {}", safe_url));
 
 <div align="center">
 
-## 自定义验证器
+## Custom Validators
 
 </div>
 
-### 创建自定义验证器
+### Creating Custom Validators
 
 ```rust
 use dms::prelude::*;
 use serde_json::Value;
 
-// 创建用户名验证器
+// Create username validator
 struct UsernameValidator {
     reserved_names: Vec<String>,
 }
@@ -450,7 +450,7 @@ struct UsernameValidator {
 impl DMSCValidator for UsernameValidator {
     fn validate(&self, field_name: &str, value: &Value, _params: &[String]) -> DMSCResult<DMSCValidationResult> {
         if let Some(username) = value.as_str() {
-            // 检查长度
+            // Check length
             if username.len() < 3 {
                 return Ok(DMSCValidationResult {
                     is_valid: false,
@@ -464,7 +464,7 @@ impl DMSCValidator for UsernameValidator {
                 });
             }
             
-            // 检查是否以字母开头
+            // Check if starts with a letter
             if !username.chars().next().unwrap().is_alphabetic() {
                 return Ok(DMSCValidationResult {
                     is_valid: false,
@@ -478,7 +478,7 @@ impl DMSCValidator for UsernameValidator {
                 });
             }
             
-            // 检查保留名称
+            // Check reserved names
             if self.reserved_names.contains(&username.to_lowercase()) {
                 return Ok(DMSCValidationResult {
                     is_valid: false,
@@ -492,7 +492,7 @@ impl DMSCValidator for UsernameValidator {
                 });
             }
             
-            // 检查是否包含禁止词汇
+            // Check for forbidden words
             let forbidden_words = vec!["admin", "root", "system", "moderator"];
             for word in &forbidden_words {
                 if username.to_lowercase().contains(word) {
@@ -534,7 +534,7 @@ impl DMSCValidator for UsernameValidator {
     }
 }
 
-// 创建强密码验证器
+// Create strong password validator
 struct StrongPasswordValidator {
     min_strength: f64,
 }
@@ -589,37 +589,37 @@ impl DMSCValidator for StrongPasswordValidator {
 fn calculate_password_strength(password: &str) -> f64 {
     let mut strength = 0.0;
     
-    // 长度评分
+    // Length scoring
     strength += (password.len() as f64 * 0.3).min(3.0);
     
-    // 包含小写字母
+    // Contains lowercase letters
     if password.chars().any(|c| c.is_lowercase()) {
         strength += 1.0;
     }
     
-    // 包含大写字母
+    // Contains uppercase letters
     if password.chars().any(|c| c.is_uppercase()) {
         strength += 1.0;
     }
     
-    // 包含数字
+    // Contains numbers
     if password.chars().any(|c| c.is_numeric()) {
         strength += 1.0;
     }
     
-    // 包含特殊字符
+    // Contains special characters
     if password.chars().any(|c| !c.is_alphanumeric()) {
         strength += 1.0;
     }
     
-    // 多样性评分
+    // Diversity scoring
     let unique_chars: std::collections::HashSet<_> = password.chars().collect();
     strength += (unique_chars.len() as f64 * 0.1).min(2.0);
     
     strength.min(10.0)
 }
 
-// 注册自定义验证器
+// Register custom validators
 ctx.validation().register_validator("username", UsernameValidator {
     reserved_names: vec![
         "admin".to_string(),
@@ -634,7 +634,7 @@ ctx.validation().register_validator("strong_password", StrongPasswordValidator {
     min_strength: 7.0,
 })?;
 
-// 使用自定义验证器
+// Use custom validators
 let username_rules = vec![
     DMSCValidationRule::Custom("username".to_string()),
 ];
@@ -651,17 +651,17 @@ let password_result = ctx.validation().validate_field("password", &json!("weak")
 
 <div align="center">
 
-## 条件验证
+## Conditional Validation
 
 </div>
 
-### 条件规则
+### Conditional Rules
 
 ```rust
 use dms::prelude::*;
 use serde_json::json;
 
-// 条件验证：如果用户选择公司注册，则需要公司信息
+// Conditional validation: If user chooses company registration, company information is required
 let registration_data = json!({
     "account_type": "company",
     "personal_info": {
@@ -670,258 +670,613 @@ let registration_data = json!({
     },
     "company_info": {
         "company_name": "Tech Corp",
-        "tax_id": "12-3456789",
-        "business_license": "BL123456"
+        "tax_id": "123456789",
+        "address": "456 Business Ave"
     }
 });
 
-// 定义条件验证规则
-let conditional_rules = vec![
-    DMSCConditionalValidationRule {
-        field: "company_info".to_string(),
-        condition: DMSCValidationCondition::Equals("account_type", "company"),
-        rules: vec![
-            DMSCValidationRule::Required,
-        ],
-        nested_rules: Some(vec![
-            DMSCSchemaField {
-                name: "company_name".to_string(),
-                field_type: DMSCSchemaFieldType::String,
-                rules: vec![
-                    DMSCValidationRule::Required,
-                    DMSCValidationRule::MinLength(2),
-                    DMSCValidationRule::MaxLength(100),
-                ],
-                ..Default::default()
-            },
-            DMSCSchemaField {
-                name: "tax_id".to_string(),
-                field_type: DMSCSchemaFieldType::String,
-                rules: vec![
-                    DMSCValidationRule::Required,
-                    DMSCValidationRule::Pattern(r"^\d{2}-\d{7}$".to_string()),
-                ],
-                ..Default::default()
-            },
-        ]),
-        ..Default::default()
-    },
+// Define conditional validation rules
+let account_type = registration_data["account_type"].as_str().unwrap();
+
+let mut all_errors = vec![];
+
+// Validate personal information (always required)
+let personal_info_rules = vec![
+    DMSCValidationRule::Required,
 ];
 
-// 执行条件验证
-let result = ctx.validation().validate_conditional(&registration_data, &conditional_rules)?;
-if !result.is_valid {
-    return Err(DMSCError::validation(format!("Conditional validation failed: {:?}", result.errors)));
+let name_result = ctx.validation().validate_field(
+    "personal_info.name",
+    &registration_data["personal_info"]["name"],
+    &vec![DMSCValidationRule::Required, DMSCValidationRule::MinLength(2)]
+)?;
+
+if !name_result.is_valid {
+    all_errors.extend(name_result.errors);
 }
 
-// 动态验证规则
-let dynamic_rules = vec![
-    DMSCDynamicValidationRule {
-        field: "shipping_address".to_string(),
-        condition_field: "requires_shipping".to_string(),
-        condition_value: json!(true),
-        rules: vec![
-            DMSCValidationRule::Required,
-        ],
-        ..Default::default()
-    },
-];
+let email_result = ctx.validation().validate_field(
+    "personal_info.email",
+    &registration_data["personal_info"]["email"],
+    &vec![DMSCValidationRule::Required, DMSCValidationRule::Email]
+)?;
 
-let order_data = json!({
-    "requires_shipping": true,
-    "shipping_address": {
-        "street": "123 Main St",
-        "city": "New York",
-        "state": "NY",
-        "zip": "10001"
+if !email_result.is_valid {
+    all_errors.extend(email_result.errors);
+}
+
+// Conditional validation: Company information required for company accounts
+if account_type == "company" {
+    let company_name_rules = vec![
+        DMSCValidationRule::Required,
+        DMSCValidationRule::MinLength(2),
+    ];
+    
+    let company_name_result = ctx.validation().validate_field(
+        "company_info.company_name",
+        &registration_data["company_info"]["company_name"],
+        &company_name_rules
+    )?;
+    
+    if !company_name_result.is_valid {
+        all_errors.extend(company_name_result.errors);
     }
-});
+    
+    let tax_id_rules = vec![
+        DMSCValidationRule::Required,
+        DMSCValidationRule::Pattern(r"^\d{9}$".to_string()),
+    ];
+    
+    let tax_id_result = ctx.validation().validate_field(
+        "company_info.tax_id",
+        &registration_data["company_info"]["tax_id"],
+        &tax_id_rules
+    )?;
+    
+    if !tax_id_result.is_valid {
+        all_errors.extend(tax_id_result.errors);
+    }
+}
 
-let dynamic_result = ctx.validation().validate_dynamic(&order_data, &dynamic_rules)?;
-ctx.log().info(format!("Dynamic validation result: {:?}", dynamic_result));
+if !all_errors.is_empty() {
+    return Err(DMSCError::validation(format!("Validation failed: {:?}", all_errors)));
+}
+
+ctx.log().info("Registration data validation passed");
 ```
 
-<div align="center">
-
-## 异步验证
-
-</div>
-
-### 外部服务验证
+### Multi-field Validation
 
 ```rust
 use dms::prelude::*;
 use serde_json::json;
 
-// 创建异步邮箱验证器
-struct AsyncEmailValidator {
-    api_endpoint: String,
-    api_key: String,
+// Multi-field validation: Password and confirm password must match
+let password_data = json!({
+    "password": "SecurePass123!",
+    "confirm_password": "SecurePass123!",
+    "old_password": "OldPass123!"
+});
+
+// Validate password format
+let password_rules = vec![
+    DMSCValidationRule::Required,
+    DMSCValidationRule::MinLength(8),
+    DMSCValidationRule::Pattern(r"^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$".to_string()),
+];
+
+let password_result = ctx.validation().validate_field(
+    "password",
+    &password_data["password"],
+    &password_rules
+)?;
+
+if !password_result.is_valid {
+    return Err(DMSCError::validation(format!("Password validation failed: {:?}", password_result.errors)));
 }
 
-impl AsyncEmailValidator {
-    async fn validate_email(&self, email: &str) -> DMSCResult<bool> {
-        // 调用外部邮箱验证服务
-        let client = reqwest::Client::new();
-        let response = client
-            .get(&format!("{}/validate", self.api_endpoint))
-            .header("Authorization", format!("Bearer {}", self.api_key))
-            .query(&[("email", email)])
-            .send()
-            .await?;
-        
-        if response.status().is_success() {
-            let validation_result: serde_json::Value = response.json().await?;
-            Ok(validation_result["valid"].as_bool().unwrap_or(false))
-        } else {
-            Ok(false) // 如果服务不可用，假设邮箱有效
-        }
-    }
+// Validate confirm password format
+let confirm_password_result = ctx.validation().validate_field(
+    "confirm_password",
+    &password_data["confirm_password"],
+    &password_rules
+)?;
+
+if !confirm_password_result.is_valid {
+    return Err(DMSCError::validation(format!("Confirm password validation failed: {:?}", confirm_password_result.errors)));
 }
 
-// 使用异步验证
-let email_validator = AsyncEmailValidator {
-    api_endpoint: "https://api.emailvalidator.com".to_string(),
-    api_key: "your_api_key".to_string(),
-};
-
-let email = "john@example.com";
-let is_valid = email_validator.validate_email(email).await?;
-
-if !is_valid {
-    return Err(DMSCError::validation(format!("Email validation failed for: {}", email)));
+// Check if passwords match
+if password_data["password"] != password_data["confirm_password"] {
+    return Err(DMSCError::validation("Passwords do not match".to_string()));
 }
 
-ctx.log().info(format!("Email validation passed for: {}", email));
+// Check if new password is different from old password
+if password_data["password"] == password_data["old_password"] {
+    return Err(DMSCError::validation("New password must be different from old password".to_string()));
+}
+
+ctx.log().info("Password change validation passed");
 ```
 
 <div align="center">
 
-## 验证配置
+## Error Handling
 
 </div>
 
-### DMSCValidationConfig
-
-验证配置结构体。
-
-#### 字段
-
-| 字段 | 类型 | 描述 | 默认值 |
-|:--------|:-----|:-------------|:-------|
-| `strict_mode` | `bool` | 严格模式 | `false` |
-| `stop_on_first_error` | `bool` | 第一个错误时停止 | `false` |
-| `include_warnings` | `bool` | 包含警告 | `true` |
-| `max_errors_per_field` | `usize` | 每字段最大错误数 | `5` |
-| `max_nested_depth` | `usize` | 最大嵌套深度 | `10` |
-| `async_timeout` | `Duration` | 异步验证超时 | `30s` |
-| `cache_results` | `bool` | 缓存验证结果 | `true` |
-| `cache_ttl` | `Duration` | 缓存过期时间 | `5m` |
-
-#### 配置示例
-
-```rust
-use dms::prelude::*;
-
-let validation_config = DMSCValidationConfig {
-    strict_mode: true,
-    stop_on_first_error: false,
-    include_warnings: true,
-    max_errors_per_field: 3,
-    max_nested_depth: 5,
-    async_timeout: Duration::from_secs(30),
-    cache_results: true,
-    cache_ttl: Duration::from_minutes(5),
-};
-
-ctx.validation().set_config(validation_config)?;
-```
-
-<div align="center">
-
-## 错误处理
-
-</div>
-
-### 验证错误码
-
-| 错误码 | 描述 |
-|:--------|:-------------|
-| `VALIDATION_FAILED` | 验证失败 |
-| `VALIDATION_REQUIRED` | 必填字段缺失 |
-| `VALIDATION_FORMAT` | 格式错误 |
-| `VALIDATION_LENGTH` | 长度错误 |
-| `VALIDATION_RANGE` | 范围错误 |
-| `VALIDATION_PATTERN` | 模式不匹配 |
-| `VALIDATION_TYPE` | 类型错误 |
-| `VALIDATION_CUSTOM` | 自定义验证失败 |
-
-### 错误处理示例
+### Validation Errors
 
 ```rust
 use dms::prelude::*;
 use serde_json::json;
 
-match ctx.validation().validate(&user_data, &validation_rules) {
-    Ok(result) => {
-        if result.is_valid {
-            ctx.log().info("Validation passed");
-            // 继续处理数据
-        } else {
-            ctx.log().warn(format!("Validation failed with {} errors", result.errors.len()));
-            
-            // 处理验证错误
-            for error in &result.errors {
-                ctx.log().error(format!("Field '{}': {}", error.field, error.message));
+// Handle validation errors
+let user_data = json!({
+    "username": "ab",
+    "email": "invalid-email",
+    "age": 15
+});
+
+let username_rules = vec![
+    DMSCValidationRule::Required,
+    DMSCValidationRule::MinLength(3),
+];
+
+let email_rules = vec![
+    DMSCValidationRule::Required,
+    DMSCValidationRule::Email,
+];
+
+let age_rules = vec![
+    DMSCValidationRule::Required,
+    DMSCValidationRule::Numeric,
+    DMSCValidationRule::Range(18, 120),
+];
+
+let username_result = ctx.validation().validate_field("username", &user_data["username"], &username_rules)?;
+let email_result = ctx.validation().validate_field("email", &user_data["email"], &email_rules)?;
+let age_result = ctx.validation().validate_field("age", &user_data["age"], &age_rules)?;
+
+// Collect all errors
+let mut all_errors = vec![];
+
+if !username_result.is_valid {
+    all_errors.extend(username_result.errors);
+}
+
+if !email_result.is_valid {
+    all_errors.extend(email_result.errors);
+}
+
+if !age_result.is_valid {
+    all_errors.extend(age_result.errors);
+}
+
+// Format error messages
+if !all_errors.is_empty() {
+    let error_messages: Vec<String> = all_errors
+        .iter()
+        .map(|e| format!("{}: {} ({})", e.field, e.message, e.code))
+        .collect();
+    
+    ctx.log().error(format!("Validation errors: {}", error_messages.join("; ")));
+    
+    return Err(DMSCError::validation(format!("Validation failed with {} error(s)", all_errors.len())));
+}
+
+ctx.log().info("All validations passed");
+```
+
+### Custom Error Messages
+
+```rust
+use dms::prelude::*;
+use serde_json::json;
+
+// Create custom error messages
+struct CustomErrorMessageValidator {
+    custom_messages: HashMap<String, String>,
+}
+
+impl DMSCValidator for CustomErrorMessageValidator {
+    fn validate(&self, field_name: &str, value: &Value, _params: &[String]) -> DMSCResult<DMSCValidationResult> {
+        if let Some(input) = value.as_str() {
+            if input.is_empty() {
+                let message = self.custom_messages
+                    .get("required")
+                    .cloned()
+                    .unwrap_or_else(|| format!("{} is required", field_name));
+                
+                return Ok(DMSCValidationResult {
+                    is_valid: false,
+                    errors: vec![DMSCValidationError {
+                        field: field_name.to_string(),
+                        message,
+                        code: "FIELD_REQUIRED".to_string(),
+                    }],
+                    warnings: vec![],
+                    field_results: HashMap::new(),
+                });
             }
             
-            // 返回用户友好的错误信息
-            let user_errors: Vec<String> = result.errors.iter()
-                .map(|e| format!("{}: {}", e.field, e.message))
-                .collect();
-            
-            return Err(DMSCError::validation(format!("Validation errors: {}", user_errors.join(", "))));
+            Ok(DMSCValidationResult {
+                is_valid: true,
+                errors: vec![],
+                warnings: vec![],
+                field_results: HashMap::new(),
+            })
+        } else {
+            Ok(DMSCValidationResult {
+                is_valid: false,
+                errors: vec![DMSCValidationError {
+                    field: field_name.to_string(),
+                    message: format!("{} must be a string", field_name),
+                    code: "INVALID_TYPE".to_string(),
+                }],
+                warnings: vec![],
+                field_results: HashMap::new(),
+            })
         }
     }
-    Err(e) => {
-        ctx.log().error(format!("Validation error: {}", e));
-        return Err(e);
+    
+    fn name(&self) -> &str {
+        "custom_error_message_validator"
+    }
+}
+
+// Register custom validator with error messages
+let mut custom_messages = HashMap::new();
+custom_messages.insert("required".to_string(), "Please provide a value for this field".to_string());
+
+ctx.validation().register_validator("custom_message", CustomErrorMessageValidator {
+    custom_messages,
+})?;
+
+// Use custom validator
+let result = ctx.validation().validate_field(
+    "username",
+    &json!(""),
+    &vec![DMSCValidationRule::Custom("custom_message".to_string())]
+)?;
+
+if !result.is_valid {
+    for error in result.errors {
+        ctx.log().error(format!("{}: {}", error.field, error.message));
     }
 }
 ```
 
 <div align="center">
 
-## 最佳实践
+## Performance Optimization
 
 </div>
 
-1. **早期验证**: 在数据进入系统前进行验证
-2. **分层验证**: 在客户端、API层和业务层都进行验证
-3. **验证与清理结合**: 先清理数据，再进行验证
-4. **自定义验证器**: 为业务特定需求创建自定义验证器
-5. **异步验证**: 对外部服务验证使用异步方式
-6. **验证缓存**: 缓存验证结果以提高性能
-7. **详细错误信息**: 提供清晰、用户友好的错误信息
-8. **验证配置**: 根据环境调整验证严格程度
-9. **测试验证规则**: 为验证规则编写测试用例
-10. **文档化验证规则**: 记录所有验证规则和自定义验证器
+### Caching Validation Results
+
+```rust
+use dms::prelude::*;
+use std::collections::HashMap;
+use std::sync::Arc;
+use tokio::sync::RwLock;
+
+// Validation result cache
+type ValidationCache = Arc<RwLock<HashMap<String, DMSCValidationResult>>>;
+
+async fn validate_with_cache(
+    ctx: &DMSCServiceContext,
+    cache: &ValidationCache,
+    field: &str,
+    value: &serde_json::Value,
+    rules: &[DMSCValidationRule],
+) -> DMSCResult<DMSCValidationResult> {
+    // Generate cache key
+    let cache_key = format!("{}:{}", field, value);
+    
+    // Check cache
+    {
+        let cache_read = cache.read().await;
+        if let Some(cached_result) = cache_read.get(&cache_key) {
+            return Ok(cached_result.clone());
+        }
+    }
+    
+    // Perform validation
+    let result = ctx.validation().validate_field(field, value, rules)?;
+    
+    // Cache result
+    {
+        let mut cache_write = cache.write().await;
+        cache_write.insert(cache_key, result.clone());
+    }
+    
+    Ok(result)
+}
+```
+
+### Batch Validation
+
+```rust
+use dms::prelude::*;
+use serde_json::json;
+
+// Batch validation for multiple records
+let users_data = vec![
+    json!({"username": "user1", "email": "user1@example.com", "age": 25}),
+    json!({"username": "user2", "email": "user2@example.com", "age": 30}),
+    json!({"username": "user3", "email": "user3@example.com", "age": 35}),
+];
+
+let username_rules = vec![
+    DMSCValidationRule::Required,
+    DMSCValidationRule::MinLength(3),
+    DMSCValidationRule::MaxLength(20),
+];
+
+let email_rules = vec![
+    DMSCValidationRule::Required,
+    DMSCValidationRule::Email,
+];
+
+let age_rules = vec![
+    DMSCValidationRule::Required,
+    DMSCValidationRule::Numeric,
+    DMSCValidationRule::Range(18, 120),
+];
+
+let mut validation_results = Vec::new();
+
+for (index, user_data) in users_data.iter().enumerate() {
+    let mut user_errors = vec![];
+    
+    let username_result = ctx.validation().validate_field(
+        "username",
+        &user_data["username"],
+        &username_rules
+    )?;
+    
+    if !username_result.is_valid {
+        user_errors.extend(username_result.errors);
+    }
+    
+    let email_result = ctx.validation().validate_field(
+        "email",
+        &user_data["email"],
+        &email_rules
+    )?;
+    
+    if !email_result.is_valid {
+        user_errors.extend(email_result.errors);
+    }
+    
+    let age_result = ctx.validation().validate_field(
+        "age",
+        &user_data["age"],
+        &age_rules
+    )?;
+    
+    if !age_result.is_valid {
+        user_errors.extend(age_result.errors);
+    }
+    
+    validation_results.push((index, user_errors));
+}
+
+// Process validation results
+for (index, errors) in validation_results {
+    if errors.is_empty() {
+        ctx.log().info(format!("User {} validation passed", index));
+    } else {
+        ctx.log().error(format!("User {} validation failed: {:?}", index, errors));
+    }
+}
+```
 
 <div align="center">
 
-## 相关模块
+## Security Best Practices
 
 </div>
 
-- [README](./README.md): 模块概览，提供API参考文档总览和快速导航
-- [auth](./auth.md): 认证模块，提供JWT、OAuth2和RBAC认证授权功能
-- [core](./core.md): 核心模块，提供错误处理和服务上下文
-- [log](./log.md): 日志模块，记录认证事件和安全日志
-- [config](./config.md): 配置模块，管理认证配置和密钥设置
-- [cache](./cache.md): 缓存模块，提供多后端缓存抽象，缓存用户会话和权限数据
-- [database](./database.md): 数据库模块，提供用户数据持久化和查询功能
-- [http](./http.md): HTTP模块，提供Web认证接口和中间件支持
-- [mq](./mq.md): 消息队列模块，处理认证事件和异步通知
-- [observability](./observability.md): 可观测性模块，监控认证性能和安全事件
-- [security](./security.md): 安全模块，提供加密、哈希和验证功能
-- [storage](./storage.md): 存储模块，管理认证文件、密钥和证书
+### Input Sanitization
+
+```rust
+use dms::prelude::*;
+use serde_json::json;
+
+// Always sanitize user input before processing
+let user_input = json!({
+    "username": "<script>alert('xss')</script>admin",
+    "email": "admin@example.com",
+    "bio": "Hello <img src=x onerror=alert('xss')>World",
+    "comment": "Nice post! <a href='javascript:alert(1)'>Click</a>"
+});
+
+// Apply comprehensive sanitization
+let sanitizers = vec![
+    DMSCSanitizer::Trim,
+    DMSCSanitizer::RemoveHtml,
+    DMSCSanitizer::NormalizeWhitespace,
+    DMSCSanitizer::EscapeSpecialChars,
+];
+
+let sanitized_input = ctx.validation().sanitize(user_input, &sanitizers)?;
+
+// Additional security: Validate after sanitization
+let username_rules = vec![
+    DMSCValidationRule::Required,
+    DMSCValidationRule::Alphanumeric,
+    DMSCValidationRule::MinLength(3),
+];
+
+let username_result = ctx.validation().validate_field(
+    "username",
+    &sanitized_input["username"],
+    &username_rules
+)?;
+
+if !username_result.is_valid {
+    return Err(DMSCError::validation("Invalid username after sanitization".to_string()));
+}
+
+ctx.log().info(format!("Sanitized and validated input: {}", sanitized_input));
+```
+
+### SQL Injection Prevention
+
+```rust
+use dms::prelude::*;
+
+// Sanitize SQL input to prevent injection attacks
+let user_search = "admin' OR '1'='1' --";
+
+let safe_search = ctx.validation().sanitize_sql(user_search);
+
+// Use parameterized queries instead of string concatenation
+let query = "SELECT * FROM users WHERE username = ?";
+
+// The sanitized input can now be safely used in parameterized queries
+ctx.log().info(format!("Safe search term: {}", safe_search));
+```
+
+### Path Traversal Prevention
+
+```rust
+use dms::prelude::*;
+
+// Sanitize file paths to prevent directory traversal attacks
+let user_path = "../../../etc/passwd";
+
+let safe_path = ctx.validation().sanitize_path(user_path)?;
+
+// The sanitized path will be relative to a safe base directory
+ctx.log().info(format!("Safe path: {}", safe_path));
+
+// Additional validation: Ensure path is within allowed directory
+let allowed_base = "/var/www/uploads";
+
+if !safe_path.starts_with(allowed_base) {
+    return Err(DMSCError::validation("Path traversal attempt detected".to_string()));
+}
+```
+
+<div align="center">
+
+## Testing and Debugging
+
+</div>
+
+### Validation Testing
+
+```rust
+use dms::prelude::*;
+use serde_json::json;
+
+// Test validation with various inputs
+#[cfg(test)]
+mod validation_tests {
+    use super::*;
+
+    #[test]
+    fn test_email_validation() {
+        let valid_emails = vec![
+            "test@example.com",
+            "user.name@example.co.uk",
+            "user+tag@example.com",
+        ];
+        
+        let invalid_emails = vec![
+            "invalid",
+            "@example.com",
+            "user@",
+            "user@.com",
+        ];
+        
+        for email in valid_emails {
+            let result = ctx.validation().validate_field(
+                "email",
+                &json!(email),
+                &vec![DMSCValidationRule::Required, DMSCValidationRule::Email]
+            ).unwrap();
+            
+            assert!(result.is_valid, "Valid email {} failed validation", email);
+        }
+        
+        for email in invalid_emails {
+            let result = ctx.validation().validate_field(
+                "email",
+                &json!(email),
+                &vec![DMSCValidationRule::Required, DMSCValidationRule::Email]
+            ).unwrap();
+            
+            assert!(!result.is_valid, "Invalid email {} passed validation", email);
+        }
+    }
+    
+    #[test]
+    fn test_password_strength() {
+        let weak_passwords = vec!["password", "123456", "abc"];
+        let strong_passwords = vec!["SecurePass123!", "MyP@ssw0rd", "Str0ng!P@ss"];
+        
+        for password in weak_passwords {
+            let result = ctx.validation().validate_field(
+                "password",
+                &json!(password),
+                &vec![DMSCValidationRule::Required, DMSCValidationRule::MinLength(8)]
+            ).unwrap();
+            
+            assert!(!result.is_valid || password.len() >= 8, "Weak password {} passed validation", password);
+        }
+        
+        for password in strong_passwords {
+            let result = ctx.validation().validate_field(
+                "password",
+                &json!(password),
+                &vec![DMSCValidationRule::Required, DMSCValidationRule::MinLength(8)]
+            ).unwrap();
+            
+            assert!(result.is_valid, "Strong password {} failed validation", password);
+        }
+    }
+}
+```
+
+### Debugging Validation
+
+```rust
+use dms::prelude::*;
+use serde_json::json;
+
+// Enable detailed validation logging for debugging
+let debug_data = json!({
+    "username": "test_user",
+    "email": "test@example.com",
+    "age": 25
+});
+
+let rules = vec![
+    DMSCValidationRule::Required,
+    DMSCValidationRule::MinLength(3),
+];
+
+let result = ctx.validation().validate_field("username", &debug_data["username"], &rules)?;
+
+// Log detailed validation results
+ctx.log().info(format!("Validation result: {:?}", result));
+
+if !result.is_valid {
+    ctx.log().error("Validation failed:");
+    for error in &result.errors {
+        ctx.log().error(format!("  Field: {}", error.field));
+        ctx.log().error(format!("  Message: {}", error.message));
+        ctx.log().error(format!("  Code: {}", error.code));
+    }
+    
+    for warning in &result.warnings {
+        ctx.log().warn(format!("  Warning: {}", warning.message));
+    }
+} else {
+    ctx.log().info("Validation passed successfully");
+}
+```

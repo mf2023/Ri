@@ -1,88 +1,88 @@
 <div align="center">
 
-# Cache API参考
+# Cache API Reference
 
 **Version: 1.0.0**
 
 **Last modified date: 2025-12-12**
 
-cache模块提供多后端缓存抽象，支持内存、Redis、混合等多种缓存后端。
+The cache module provides multi-backend cache abstraction, supporting memory, Redis, hybrid, and other cache backends.
 
-## 模块概述
+## Module Overview
 
 </div>
 
-cache模块包含以下子模块：
+The cache module includes the following sub-modules:
 
-- **core**: 缓存核心接口和类型定义
-- **manager**: 缓存管理器，统一管理多个缓存后端
-- **backends**: 各种缓存后端实现
-- **config**: 缓存配置
+- **core**: Cache core interfaces and type definitions
+- **manager**: Cache manager, unified management of multiple cache backends
+- **backends**: Various cache backend implementations
+- **config**: Cache configuration
 
 <div align="center">
 
-## 核心组件
+## Core Components
 
 </div>
 
 ### DMSCCacheModule
 
-缓存模块主接口，提供统一的缓存服务访问。
+The main interface for the cache module, providing unified access to cache services.
 
-#### 方法
+#### Methods
 
-| 方法 | 描述 | 参数 | 返回值 |
+| Method | Description | Parameters | Return Value |
 |:--------|:-------------|:--------|:--------|
-| `get(key)` | 获取缓存值 | `key: &str` | `DMSCResult<Option<String>>` |
-| `set(key, value, ttl)` | 设置缓存值 | `key: &str`, `value: impl Serialize`, `ttl: Option<u64>` | `DMSCResult<()>` |
-| `delete(key)` | 删除缓存 | `key: &str` | `DMSCResult<()>` |
-| `exists(key)` | 检查缓存是否存在 | `key: &str` | `DMSCResult<bool>` |
-| `clear()` | 清空所有缓存 | 无 | `DMSCResult<()>` |
-| `keys(pattern)` | 获取匹配的键 | `pattern: &str` | `DMSCResult<Vec<String>>` |
-| `ttl(key)` | 获取缓存过期时间 | `key: &str` | `DMSCResult<Option<u64>>` |
-| `expire(key, ttl)` | 设置缓存过期时间 | `key: &str`, `ttl: u64` | `DMSCResult<()>` |
-| `increment(key, delta)` | 数值递增 | `key: &str`, `delta: i64` | `DMSCResult<i64>` |
-| `decrement(key, delta)` | 数值递减 | `key: &str`, `delta: i64` | `DMSCResult<i64>` |
+| `get(key)` | Get cache value | `key: &str` | `DMSCResult<Option<String>>` |
+| `set(key, value, ttl)` | Set cache value | `key: &str`, `value: impl Serialize`, `ttl: Option<u64>` | `DMSCResult<()>` |
+| `delete(key)` | Delete cache | `key: &str` | `DMSCResult<()>` |
+| `exists(key)` | Check if cache exists | `key: &str` | `DMSCResult<bool>` |
+| `clear()` | Clear all cache | None | `DMSCResult<()>` |
+| `keys(pattern)` | Get matching keys | `pattern: &str` | `DMSCResult<Vec<String>>` |
+| `ttl(key)` | Get cache expiration time | `key: &str` | `DMSCResult<Option<u64>>` |
+| `expire(key, ttl)` | Set cache expiration time | `key: &str`, `ttl: u64` | `DMSCResult<()>` |
+| `increment(key, delta)` | Numeric increment | `key: &str`, `delta: i64` | `DMSCResult<i64>` |
+| `decrement(key, delta)` | Numeric decrement | `key: &str`, `delta: i64` | `DMSCResult<i64>` |
 
-#### 使用示例
+#### Usage Example
 
 ```rust
 use dms::prelude::*;
 
-// 设置缓存
+// Set cache
 ctx.cache().set("user:1", &user, Some(3600)).await?;
 
-// 获取缓存
+// Get cache
 let user: Option<User> = ctx.cache().get("user:1").await?;
 
-// 检查缓存是否存在
+// Check if cache exists
 let exists = ctx.cache().exists("user:1").await?;
 
-// 删除缓存
+// Delete cache
 ctx.cache().delete("user:1").await?;
 
-// 数值操作
+// Numeric operations
 let count = ctx.cache().increment("counter", 1).await?;
 let count = ctx.cache().decrement("counter", 5).await?;
 ```
 
 ### DMSCCacheConfig
 
-缓存模块配置结构。
+Cache module configuration structure.
 
-#### 字段
+#### Fields
 
-| 字段 | 类型 | 描述 | 默认值 |
+| Field | Type | Description | Default |
 |:--------|:--------|:-------------|:--------|
-| `backend` | `DMSCCacheBackend` | 缓存后端类型 | `Memory` |
-| `default_ttl` | `u64` | 默认过期时间（秒） | 3600 |
-| `max_memory_size` | `usize` | 最大内存大小（字节） | 100MB |
-| `redis_url` | `Option<String>` | Redis连接URL | `None` |
-| `redis_pool_size` | `u32` | Redis连接池大小 | 10 |
-| `cleanup_interval` | `u64` | 清理间隔（秒） | 300 |
-| `compression` | `bool` | 是否启用压缩 | false |
+| `backend` | `DMSCCacheBackend` | Cache backend type | `Memory` |
+| `default_ttl` | `u64` | Default expiration time (seconds) | 3600 |
+| `max_memory_size` | `usize` | Maximum memory size (bytes) | 100MB |
+| `redis_url` | `Option<String>` | Redis connection URL | `None` |
+| `redis_pool_size` | `u32` | Redis connection pool size | 10 |
+| `cleanup_interval` | `u64` | Cleanup interval (seconds) | 300 |
+| `compression` | `bool` | Whether to enable compression | false |
 
-#### 使用示例
+#### Usage Example
 
 ```rust
 let cache_config = DMSCCacheConfig {
@@ -98,20 +98,20 @@ let cache_config = DMSCCacheConfig {
 
 ### DMSCCacheBackend
 
-缓存后端枚举类型。
+Cache backend enum type.
 
-#### 变体
+#### Variants
 
-| 变体 | 描述 |
+| Variant | Description |
 |:--------|:-------------|
-| `Memory` | 内存缓存 |
-| `Redis` | Redis缓存 |
-| `Hybrid` | 混合缓存（内存+Redis） |
-| `Custom` | 自定义缓存后端 |
+| `Memory` | Memory cache |
+| `Redis` | Redis cache |
+| `Hybrid` | Hybrid cache (Memory + Redis) |
+| `Custom` | Custom cache backend |
 
-## 缓存后端
+## Cache Backends
 
-### 内存缓存
+### Memory Cache
 
 ```rust
 let config = DMSCCacheConfig {
@@ -121,7 +121,7 @@ let config = DMSCCacheConfig {
 };
 ```
 
-### Redis缓存
+### Redis Cache
 
 ```rust
 let config = DMSCCacheConfig {
@@ -132,12 +132,12 @@ let config = DMSCCacheConfig {
 };
 ```
 
-### 混合缓存
+### Hybrid Cache
 
 ```rust
 let config = DMSCCacheConfig {
     backend: DMSCCacheBackend::Hybrid,
-    max_memory_size: 50 * 1024 * 1024, // 50MB内存缓存
+    max_memory_size: 50 * 1024 * 1024, // 50MB memory cache
     redis_url: Some("redis://localhost:6379".to_string()),
     ..Default::default()
 };
@@ -145,18 +145,18 @@ let config = DMSCCacheConfig {
 
 <div align="center">
 
-## 高级功能
+## Advanced Features
 
 </div>
 
-### 批量操作
+### Batch Operations
 
 ```rust
-// 批量获取
+// Batch get
 let keys = vec!["key1", "key2", "key3"];
 let values = ctx.cache().get_multi(&keys).await?;
 
-// 批量设置
+// Batch set
 let items = vec![
     ("key1", "value1"),
     ("key2", "value2"),
@@ -164,81 +164,81 @@ let items = vec![
 ];
 ctx.cache().set_multi(&items, Some(3600)).await?;
 
-// 批量删除
+// Batch delete
 ctx.cache().delete_multi(&keys).await?;
 ```
 
-### 原子操作
+### Atomic Operations
 
 ```rust
-// 原子递增并返回新值
+// Atomic increment and return new value
 let new_value = ctx.cache().increment_and_get("counter", 1).await?;
 
-// 原子递减并返回新值
+// Atomic decrement and return new value
 let new_value = ctx.cache().decrement_and_get("counter", 5).await?;
 
-// 比较并设置
+// Compare and set
 let success = ctx.cache().compare_and_set("key", "old_value", "new_value").await?;
 ```
 
-### 分布式锁
+### Distributed Lock
 
 ```rust
-// 获取分布式锁
+// Acquire distributed lock
 let lock = ctx.cache().acquire_lock("resource_lock", 30).await?;
 
-// 执行业务逻辑
+// Execute business logic
 // ...
 
-// 释放锁
+// Release lock
 ctx.cache().release_lock("resource_lock", &lock).await?;
 ```
 <div align="center">
 
-## 缓存策略
+## Cache Strategies
 
 </div>  
 
-### TTL策略
+### TTL Strategy
 
 ```rust
-// 设置相对过期时间
-ctx.cache().set("key", &value, Some(3600)).await?; // 1小时
+// Set relative expiration time
+ctx.cache().set("key", &value, Some(3600)).await?; // 1 hour
 
-// 设置绝对过期时间
+// Set absolute expiration time
 ctx.cache().set_at("key", &value, timestamp).await?;
 
-// 获取剩余过期时间
+// Get remaining expiration time
 let ttl = ctx.cache().ttl("key").await?;
 
-// 延长过期时间
+// Extend expiration time
 ctx.cache().expire("key", 7200).await?;
 ```
 
-### 缓存穿透保护
+### Cache Penetration Protection
 
 ```rust
-// 使用布隆过滤器防止缓存穿透
+// Use bloom filter to prevent cache penetration
 ctx.cache().set_with_bloom_filter("key", &value, Some(3600)).await?;
 
-// 检查布隆过滤器
+// Check bloom filter
 let might_exist = ctx.cache().bloom_filter_might_contain("key").await?;
 ```
 
-### 缓存雪崩保护
+### Cache Avalanche Protection
 
 ```rust
-// 设置随机过期时间，避免同时过期
-ctx.cache().set_with_jitter("key", &value, 3600, 300).await?; // ±5分钟随机
+// Set random expiration time to avoid simultaneous expiration
+ctx.cache().set_with_jitter("key", &value, 3600, 300).await?; // ±5 minutes random
 ```
 
 <div align="center">
 
-## 序列化支持
+## Serialization Support
 
 </div>  
 
-### JSON序列化
+### JSON Serialization
 
 ```rust
 #[derive(Debug, Serialize, Deserialize)]
@@ -248,52 +248,52 @@ struct User {
     email: String,
 }
 
-// 存储结构体
+// Store struct
 let user = User { id: 1, name: "Alice".to_string(), email: "alice@example.com".to_string() };
 ctx.cache().set("user:1", &user, Some(3600)).await?;
 
-// 获取结构体
+// Get struct
 let user: Option<User> = ctx.cache().get("user:1").await?;
 ```
 
-### 二进制序列化
+### Binary Serialization
 
 ```rust
-// 使用二进制格式存储
+// Store in binary format
 ctx.cache().set_binary("binary_key", &binary_data, Some(3600)).await?;
 
-// 获取二进制数据
+// Get binary data
 let data = ctx.cache().get_binary("binary_key").await?;
 ```
 <div align="center">
 
-## 性能优化
+## Performance Optimization
 
 </div>      
 
-### 连接池
+### Connection Pool
 
 ```rust
 let config = DMSCCacheConfig {
     backend: DMSCCacheBackend::Redis,
-    redis_pool_size: 50, // 增大连接池
+    redis_pool_size: 50, // Increase connection pool
     ..Default::default()
 };
 ```
 
-### 压缩
+### Compression
 
 ```rust
 let config = DMSCCacheConfig {
-    compression: true, // 启用压缩
+    compression: true, // Enable compression
     ..Default::default()
 };
 ```
 
-### 批处理
+### Batching
 
 ```rust
-// 使用管道批量操作
+// Use pipeline for batch operations
 let pipeline = ctx.cache().pipeline();
 pipeline.set("key1", "value1", Some(3600));
 pipeline.set("key2", "value2", Some(3600));
@@ -301,95 +301,95 @@ pipeline.execute().await?;
 ```
 <div align="center">
 
-## 监控和统计
+## Monitoring and Statistics
 
 </div>
 
-### 缓存统计
+### Cache Statistics
 
 ```rust
-// 获取缓存统计信息
+// Get cache statistics
 let stats = ctx.cache().get_stats().await?;
 println!("Hits: {}, Misses: {}", stats.hits, stats.misses);
 println!("Hit rate: {:.2}%", stats.hit_rate * 100.0);
 ```
 
-### 键空间通知
+### Keyspace Notifications
 
 ```rust
-// 监听键过期事件
+// Listen to key expiration events
 ctx.cache().subscribe_key_events("expired", |event| {
     println!("Key expired: {}", event.key);
 }).await?;
 ```
 <div align="center">
 
-## 错误处理
+## Error Handling
 
 </div>
 
-### 缓存错误码
+### Cache Error Codes
 
-| 错误码 | 描述 |
+| Error Code | Description |
 |:--------|:-------------|
-| `CACHE_CONNECTION_FAILED` | 缓存连接失败 |
-| `CACHE_OPERATION_FAILED` | 缓存操作失败 |
-| `CACHE_SERIALIZATION_ERROR` | 缓存序列化错误 |
-| `CACHE_KEY_NOT_FOUND` | 缓存键不存在 |
-| `CACHE_LOCK_ACQUISITION_FAILED` | 分布式锁获取失败 |
+| `CACHE_CONNECTION_FAILED` | Cache connection failed |
+| `CACHE_OPERATION_FAILED` | Cache operation failed |
+| `CACHE_SERIALIZATION_ERROR` | Cache serialization error |
+| `CACHE_KEY_NOT_FOUND` | Cache key not found |
+| `CACHE_LOCK_ACQUISITION_FAILED` | Distributed lock acquisition failed |
 
-### 错误处理示例
+### Error Handling Example
 
 ```rust
 match ctx.cache().get::<User>("user:1").await {
     Ok(Some(user)) => {
-        // 缓存命中
+        // Cache hit
         println!("User from cache: {:?}", user);
     }
     Ok(None) => {
-        // 缓存未命中
+        // Cache miss
         let user = load_user_from_database(1).await?;
         ctx.cache().set("user:1", &user, Some(3600)).await?;
     }
     Err(DMSCError { code, .. }) if code == "CACHE_CONNECTION_FAILED" => {
-        // 缓存连接失败，回退到数据库
+        // Cache connection failed, fallback to database
         let user = load_user_from_database(1).await?;
     }
     Err(e) => {
-        // 其他错误
+        // Other errors
         return Err(e);
     }
 }
 ```
 <div align="center">
 
-## 最佳实践
+## Best Practices
 
 </div>
 
-1. **合理设置TTL**: 根据数据更新频率设置合适的过期时间
-2. **使用批量操作**: 减少网络往返，提高性能
-3. **实现缓存预热**: 在应用启动时加载热点数据
-4. **处理缓存穿透**: 使用布隆过滤器或空值缓存
-5. **监控缓存命中率**: 及时调整缓存策略
-6. **使用连接池**: 避免频繁创建连接
-7. **启用压缩**: 对于大值数据启用压缩减少内存占用
+1. **Reasonable TTL**: Set appropriate expiration times based on data update frequency
+2. **Use Batch Operations**: Reduce network round trips and improve performance
+3. **Implement Cache Warm-up**: Load hot data at application startup
+4. **Handle Cache Penetration**: Use bloom filters or null value caching
+5. **Monitor Cache Hit Rate**: Adjust cache strategies in time
+6. **Use Connection Pools**: Avoid frequent connection creation
+7. **Enable Compression**: Enable compression for large value data to reduce memory usage
 
 <div align="center">
 
-## 相关模块
+## Related Modules
 
 </div>
 
-- [README](./README.md): 模块概览，提供API参考文档总览和快速导航
-- [auth](./auth.md): 认证模块，提供JWT、OAuth2和RBAC认证授权功能
-- [core](./core.md): 核心模块，提供错误处理和服务上下文
-- [log](./log.md): 日志模块，记录认证事件和安全日志
-- [config](./config.md): 配置模块，管理认证配置和密钥设置
-- [database](./database.md): 数据库模块，提供用户数据持久化和查询功能
-- [http](./http.md): HTTP模块，提供Web认证接口和中间件支持
-- [mq](./mq.md): 消息队列模块，处理认证事件和异步通知
-- [observability](./observability.md): 可观测性模块，监控认证性能和安全事件
-- [security](./security.md): 安全模块，提供加密、哈希和验证功能
-- [storage](./storage.md): 存储模块，管理认证文件、密钥和证书
-- [validation](./validation.md): 验证模块，验证用户输入和表单数据
+- [README](./README.md): Module overview, providing API reference documentation overview and quick navigation
+- [auth](./auth.md): Authentication module, providing JWT, OAuth2 and RBAC authentication and authorization functionality
+- [core](./core.md): Core module, providing error handling and service context
+- [log](./log.md): Logging module, recording authentication events and security logs
+- [config](./config.md): Configuration module, managing authentication configuration and key settings
+- [database](./database.md): Database module, providing user data persistence and query functionality
+- [http](./http.md): HTTP module, providing web authentication interfaces and middleware support
+- [mq](./mq.md): Message queue module, handling authentication events and asynchronous notifications
+- [observability](./observability.md): Observability module, monitoring authentication performance and security events
+- [security](./security.md): Security module, providing encryption, hashing, and verification functionality
+- [storage](./storage.md): Storage module, managing authentication files, keys, and certificates
+- [validation](./validation.md): Validation module, validating user input and form data

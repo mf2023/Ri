@@ -103,6 +103,27 @@ impl DMSCAppBuilder {
         self.modules.push(ModuleSlot { module: ModuleType::Sync(module), failed: false });
         self
     }
+    
+    /// Add a Python module to the application.
+    /// 
+    /// This method adds a module created from Python code to the application.
+    /// The module will be treated as an asynchronous DMSC module.
+    /// 
+    /// # Parameters
+    /// 
+    /// - `module`: A Python module adapter implementing module configuration
+    /// 
+    /// # Returns
+    /// 
+    /// The updated `DMSCAppBuilder` instance for method chaining.
+    #[cfg(feature = "pyo3")]
+    pub fn with_python_module(mut self, module: crate::core::module::PythonModuleAdapter) -> Self {
+        self.modules.push(ModuleSlot { 
+            module: ModuleType::Async(Box::new(module)), 
+            failed: false 
+        });
+        self
+    }
 
     /// Add an asynchronous module to the application.
     /// 
@@ -405,9 +426,9 @@ impl DMSCAppBuilder {
 }
 
 #[cfg(feature = "pyo3")]
-    /// Python bindings for DMSCAppBuilder
-    #[pyo3::prelude::pymethods]
-    impl DMSCAppBuilder {
+/// Python bindings for DMSCAppBuilder
+#[pyo3::prelude::pymethods]
+impl DMSCAppBuilder {
         #[new]
         fn py_new() -> Self {
             Self::new()
@@ -434,15 +455,44 @@ impl DMSCAppBuilder {
             Ok(())
         }
         
+        /// Add a Python module to the application
+        fn with_python_module_py(&mut self, module: &crate::core::module::PythonModuleAdapter) -> PyResult<()> {
+            self.modules.push(ModuleSlot { 
+                module: ModuleType::Async(Box::new(module.clone())), 
+                failed: false 
+            });
+            Ok(())
+        }
+        
+        /// Add a Python module from PyDMSCModule
+        fn with_py_dmsc_module(&mut self, py_module: &crate::core::module::PyDMSCModule) -> PyResult<()> {
+            let adapter = crate::core::module::PythonModuleAdapter {
+                name: py_module.name().to_string(),
+                is_critical: py_module.is_critical(),
+                priority: py_module.priority(),
+                dependencies: py_module.dependencies(),
+            };
+            self.modules.push(ModuleSlot { 
+                module: ModuleType::Async(Box::new(adapter)), 
+                failed: false 
+            });
+            Ok(())
+        }
+        
         /// Build the application runtime from Python
-        fn build_py(&self) -> PyResult<super::app_runtime::DMSCAppRuntime> {
-            // Create a new builder and copy the configuration
-            let mut builder = Self::new();
-            builder.config_paths = self.config_paths.clone();
-            builder.logging_config = self.logging_config.clone();
-            builder.observability_config = self.observability_config.clone();
-            // Note: We're not copying modules because they can't be cloned
-            // This means Python users can't add modules from Python yet
+        fn build_py(&mut self) -> PyResult<super::app_runtime::DMSCAppRuntime> {
+            // Clone the current state and build from it
+            let modules = std::mem::take(&mut self.modules);
+            let config_paths = std::mem::take(&mut self.config_paths);
+            let logging_config = self.logging_config.take();
+            let observability_config = self.observability_config.take();
+            
+            let builder = DMSCAppBuilder {
+                modules,
+                config_paths,
+                logging_config,
+                observability_config,
+            };
             
             match builder.build() {
                 Ok(runtime) => Ok(runtime),

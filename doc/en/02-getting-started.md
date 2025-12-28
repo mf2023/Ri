@@ -1,109 +1,128 @@
 <div align="center">
 
-# Getting Started with DMSC
+# Getting Started
 
 **Version: 1.0.0**
 
 **Last modified date: 2025-12-12**
 
-This guide will walk you through the process of installing DMSC, creating your first DMSC application, and running it.
+This guide will help you get started with DMSC, from installation to creating your first application.
 
 ## Prerequisites
 
 </div>
 
-Before you begin, ensure you have the following installed:
+Before you begin, ensure your environment meets the following requirements:
 
 - **Rust**: 1.65+ (2021 Edition)
-- **Cargo**: 1.65+
-- **Platforms**: Linux, macOS, Windows
+- **Cargo**: 1.65+ (Rust package manager)
+- **Platforms**: Linux, macOS, or Windows
 
-<details>
-<summary>Installing Rust</summary>
+You can check your Rust and Cargo versions with the following commands:
 
-If you don't have Rust installed, follow these steps:
+```bash
+rustc --version
+cargo --version
+```
 
-1. **Linux/macOS**:
-   ```bash
-   curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
-   ```
+If you don't have Rust installed yet, you can install it via [rustup](https://rustup.rs/):
 
-2. **Windows**:
-   Download and run the [Rust installer](https://www.rust-lang.org/tools/install).
+```bash
+# Linux/macOS
+curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 
-3. **Verify installation**:
-   ```bash
-   rustc --version
-   cargo --version
-   ```
-</details>
-
-<details>
-<summary>Installing Required Dependencies</summary>
-
-DMSC has some system dependencies that may need to be installed:
-
-- **Linux**: `libssl-dev`, `pkg-config`, `build-essential`
-  ```bash
-  # Debian/Ubuntu
-  sudo apt-get update
-  sudo apt-get install libssl-dev pkg-config build-essential
-  ```
-
-- **macOS**: Xcode Command Line Tools
-  ```bash
-  xcode-select --install
-  ```
-
-- **Windows**: Microsoft Visual C++ Build Tools
-  ```
-  Download from: https://visualstudio.microsoft.com/visual-cpp-build-tools/
-  ```
-</details>
+# Windows
+# Visit https://rustup.rs/ and download the installer
+```
 
 <div align="center">
 
-## Creating Your First DMSC Application
+## Installing DMSC
 
 </div>
 
-### 1. Create a New Rust Project
+### Using DMSC in a New Project
+
+Create a new Rust project:
 
 ```bash
-cargo new dms-first-app
-cd dms-first-app
+cargo new my-dms-app
+cd my-dms-app
 ```
 
-### 2. Add DMSC Dependency
-
-Edit the `Cargo.toml` file to add DMSC as a dependency:
+Add DMSC to your project's `Cargo.toml` file:
 
 ```toml
-[package]
-name = "dms-first-app"
-version = "0.1.0"
-edition = "2021"
-
 [dependencies]
 dms = { git = "https://gitee.com/dunimd/dmsc" }
 tokio = { version = "1.0", features = ["full"] }
-async-trait = "0.1"
 ```
 
-### 3. Create a Configuration File
+Or use the `cargo add` command:
 
-Create a `config.yaml` file in the project root:
+```bash
+cargo add dms --git https://gitee.com/dunimd/dmsc
+cargo add tokio --features full
+```
+
+### Using DMSC in an Existing Project
+
+Simply add DMSC to your existing project's `Cargo.toml` file:
+
+```toml
+[dependencies]
+# Other dependencies
+dms = { git = "https://gitee.com/dunimd/dmsc" }
+```
+
+<div align="center">
+
+## Your First DMSC Application
+
+</div>
+
+Now, let's create a simple DMSC application.
+
+### Basic Application Structure
+
+Open the `src/main.rs` file and replace it with the following content:
+
+```rust
+use dms::prelude::*;
+
+#[tokio::main]
+async fn main() -> DMSCResult<()> {
+    // Build the service runtime
+    let app = DMSCAppBuilder::new()
+        .with_config("config.yaml")?
+        .with_logging(DMSCLogConfig::default())?
+        .with_observability(DMSCObservabilityConfig::default())?
+        .build()?;
+    
+    // Run business logic
+    app.run(|ctx: &DMSCServiceContext| async move {
+        ctx.logger().info("service", "DMSC service started")?;
+        // Your business code here
+        Ok(())
+    }).await
+}
+```
+
+### Configuration File
+
+Create a `config.yaml` file in the project root directory:
 
 ```yaml
+# config.yaml
 service:
-  name: "dms-first-app"
-  version: "0.1.0"
+  name: "my-dms-app"
+  version: "1.0.0"
 
 logging:
   level: "info"
   format: "json"
+  file_enabled: true
   console_enabled: true
-  file_enabled: false
 
 observability:
   metrics_enabled: true
@@ -111,182 +130,169 @@ observability:
   prometheus_port: 9090
 ```
 
-### 4. Write the Main Application Code
+### Running the Application
 
-Replace the content of `src/main.rs` with the following:
+Use Cargo to run the application:
+
+```bash
+cargo run
+```
+
+You should see output similar to the following:
+
+```
+2025-12-12T15:30:00Z INFO service: DMSC service started
+```
+<div align="center">
+
+## Application Structure Breakdown
+
+</div>  
+
+Let's break down this simple DMSC application:
+
+1. **Import DMSC Components**:
+   ```rust
+   use dms::prelude::*;
+   ```
+   This line imports the most commonly used types and traits from DMSC, simplifying code writing.
+
+2. **Create Application Builder**:
+   ```rust
+   let app = DMSCAppBuilder::new()
+   ```
+   Use the builder pattern to create a DMSC application instance.
+
+3. **Configure Application**:
+   ```rust
+   .with_config("config.yaml")?
+   .with_logging(DMSCLogConfig::default())?
+   .with_observability(DMSCObservabilityConfig::default())?
+   ```
+   - Add configuration file support
+   - Enable logging functionality
+   - Enable observability (metrics and tracing)
+
+4. **Build Application**:
+   ```rust
+   .build()?
+   ```
+   Build the final application instance.
+
+5. **Run Application**:
+   ```rust
+   app.run(|ctx: &DMSCServiceContext| async move {
+       ctx.logger().info("service", "DMSC service started")?;
+       Ok(())
+   }).await
+   ```
+   - Use the `run` method to start the application
+   - Pass a closure that receives a `DMSCServiceContext` instance
+   - Write business logic inside the closure
+
+<div align="center">
+
+## Adding More Features
+
+</div>  
+
+### Adding Cache Support
+
+Modify `Cargo.toml` to add Redis dependency (if you need to use Redis cache):
+
+```toml
+[dependencies]
+# Other dependencies
+redis = "0.23"
+```
+
+Modify the application code to add cache support:
 
 ```rust
 use dms::prelude::*;
 
 #[tokio::main]
 async fn main() -> DMSCResult<()> {
-    // Build the DMSC application
     let app = DMSCAppBuilder::new()
         .with_config("config.yaml")?
         .with_logging(DMSCLogConfig::default())?
         .with_observability(DMSCObservabilityConfig::default())?
+        .with_cache(DMSCCacheConfig::default())? // Add cache support
         .build()?;
     
-    // Run the application with custom business logic
     app.run(|ctx: &DMSCServiceContext| async move {
-        // Access service context
-        let service_name = ctx.config().config().get_str("service.name").unwrap_or("unknown");
-        let service_version = ctx.config().config().get_str("service.version").unwrap_or("unknown");
+        ctx.logger().info("service", "DMSC service started")?;
         
-        // Log application startup
-        ctx.logger().info(
-            "service", 
-            &format!("{} v{} started successfully", service_name, service_version)
-        )?;
-        
-        // Simulate some business logic
-        tokio::time::sleep(tokio::time::Duration::from_secs(5)).await;
-        
-        ctx.logger().info("service", "Business logic completed")?;
+        // Use cache
+        let cache = ctx.cache();
+        cache.set("key", "value", Some(3600)).await?;
+        let value = cache.get("key").await?;
+        ctx.logger().info("cache", &format!("Cache value: {:?}", value))?;
         
         Ok(())
     }).await
 }
 ```
 
-<details>
-<summary>Code Explanation</summary>
-
-1. **Import DMSC Prelude**: Imports commonly used DMSC types and traits.
-2. **Main Function**: Async main function using Tokio runtime.
-3. **Application Builder**: Creates and configures a DMSC application.
-   - `with_config("config.yaml")`: Loads configuration from file.
-   - `with_logging(DMSCLogConfig::default())`: Enables logging.
-   - `with_observability(DMSCObservabilityConfig::default())`: Enables observability.
-4. **Application Runtime**: Runs the application with custom business logic.
-5. **Service Context**: Accesses configuration, logging, and other services.
-6. **Business Logic**: Simple example with logging and sleep.
-</details>
-
 <div align="center">
 
-## Running Your Application
+## Running Tests
+
+</div>  
+
+DMSC provides a comprehensive test suite. You can run these tests to verify your installation:
+
+```bash
+# Clone the DMSC repository
+git clone https://gitee.com/dunimd/dmsc.git
+cd dms
+
+# Run all tests
+cargo test
+
+# Run specific test module
+cargo test cache
+
+# Run with verbose output
+cargo test -- --nocapture
+```
+<div align="center">
+
+## FAQ
 
 </div>
 
-### 1. Build the Application
+### Q: How to configure log level?
+A: Set `logging.level` in the configuration file, supporting DEBUG/INFO/WARN/ERROR levels.
 
-```bash
-cargo build
-```
+### Q: How to enable metrics export?
+A: Set `observability.metrics_enabled: true` in the configuration file and configure `prometheus_port`.
 
-### 2. Run the Application
+### Q: How to extend DMSC?
+A: Implement the `DMSCModule` trait and register it through `DMSCAppBuilder::with_module`.
 
-```bash
-cargo run
-```
+### Q: How to handle async tasks?
+A: Use `DMSCAppBuilder::with_async_module` to add async modules, the framework automatically handles async lifecycle.
 
-### 3. Expected Output
+<div align="center">
 
-```json
-{"timestamp":"2025-12-12T10:00:00Z","level":"info","module":"service","message":"dms-first-app v0.1.0 started successfully"}
-{"timestamp":"2025-12-12T10:00:05Z","level":"info","module":"service","message":"Business logic completed"}
-```
+## Troubleshooting
 
-<details>
-<summary>Monitoring Metrics</summary>
+</div>  
 
-With observability enabled, you can access metrics at `http://localhost:9090/metrics`.
-
-```bash
-# Test metrics endpoint
-curl http://localhost:9090/metrics
-```
-</details>
-
-<details>
-<summary>Running with Different Configuration</summary>
-
-You can override configuration with environment variables:
-
-```bash
-# Set log level to debug
-DMSC_LOGGING_LEVEL=debug cargo run
-```
-</details>
-
-<details>
-<summary>Running in Release Mode</summary>
-
-For production, run in release mode for better performance:
-
-```bash
-cargo run --release
-```
-</details>
+- **Compilation errors**: Ensure Rust version meets requirements, check dependency version compatibility.
+- **Runtime errors**: Check configuration file path and content, view log output for detailed information.
+- **Dependency conflicts**: Use the `cargo tree` command to view the dependency tree and resolve version conflicts.
 
 <div align="center">
 
 ## Next Steps
 
-</div>
+</div>  
 
-Now that you've created your first DMSC application, you can:
-
-1. **Explore Core Concepts**: Learn about DMSC's architecture and design philosophy
-   - [Core Concepts](./03-core-concepts.md)
-
-2. **Study API Reference**: Learn about the available APIs and services
-   - [API Reference](./04-api-reference/README.md)
-
-3. **View Usage Examples**: See practical examples for various scenarios
-   - [Usage Examples](./05-usage-examples/README.md)
-
-4. **Learn Best Practices**: Follow recommended practices for developing DMSC applications
-   - [Best Practices](./06-best-practices.md)
-
-<details>
-<summary>Common Issues and Solutions</summary>
-
-**Issue**: Build failure due to missing system dependencies.
-**Solution**: Install the required system dependencies as mentioned in prerequisites.
-
-**Issue**: Configuration file not found.
-**Solution**: Ensure the config file is in the correct location or provide the full path.
-
-**Issue**: Permission denied when accessing files.
-**Solution**: Check file permissions and ensure the application has access.
-
-**Issue**: Port already in use for metrics.
-**Solution**: Change the `prometheus_port` in the config file.
-</details>
-
-<details>
-<summary>Useful Cargo Commands</summary>
-
-```bash
-# Check for errors without building
-cargo check
-
-# Build with verbose output
-cargo build -v
-
-# Run with backtrace for debugging
-RUST_BACKTRACE=1 cargo run
-
-# Run tests
-cargo test
-
-# Generate documentation
-cargo doc --open
-```
-</details>
-
-<div align="center">
-
-## Resources
-
-</div>
-
-- [GitHub/Gitee Repository](https://gitee.com/dunimd/dmsc)
-- [API Reference](./04-api-reference/README.md)
-- [Usage Examples](./05-usage-examples/README.md)
-- [Best Practices](./06-best-practices.md)
-- [Troubleshooting](./07-troubleshooting.md)
-
-Congratulations! You've successfully created and run your first DMSC application. Now you can explore more features and build more complex applications using DMSC's modular architecture.
+- [Core Concepts](./03-core-concepts.md): In-depth understanding of DMSC's design philosophy and core components
+- [API Reference](./04-api-reference/README.md): Detailed module API documentation
+- [Usage Examples](./05-usage-examples/README.md): Usage examples for various scenarios
+- [Best Practices](./06-best-practices.md): Best practices for developing DMSC applications
+- [Troubleshooting](./07-troubleshooting.md): Common issues and solutions
+- [Glossary](./08-glossary.md): Core terminology explanation

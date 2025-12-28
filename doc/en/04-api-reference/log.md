@@ -1,68 +1,68 @@
 <div align="center">
 
-# Log API参考
+# Log API Reference
 
 **Version: 1.0.0**
 
 **Last modified date: 2025-12-12**
 
-log模块提供结构化日志记录与多后端支持，支持日志级别、格式化、采样和日志分析等功能。
+The log module provides structured logging with multi-backend support, supporting log levels, formatting, sampling, and log analysis features.
 
-## 模块概述
+## Module Overview
 
 </div>
 
-log模块包含以下子模块：
+The log module contains the following sub-modules:
 
-- **core**: 日志核心接口和类型定义
-- **formatters**: 日志格式化器
-- **backends**: 日志后端实现
-- **sampling**: 日志采样机制
-- **analytics**: 日志分析功能
+- **core**: Log core interfaces and type definitions
+- **formatters**: Log formatters
+- **backends**: Log backend implementations
+- **sampling**: Log sampling mechanisms
+- **analytics**: Log analysis features
 
 <div align="center">
 
-## 核心组件
+## Core Components
 
 </div>
 
 ### DMSCLogger
 
-日志记录器主接口，提供统一的日志记录功能。
+The main logger interface providing unified logging functionality.
 
-#### 方法
+#### Methods
 
-| 方法 | 描述 | 参数 | 返回值 |
+| Method | Description | Parameters | Return Value |
 |:--------|:-------------|:--------|:--------|
-| `trace(message)` | 记录跟踪日志 | `message: impl Display` | `()` |
-| `debug(message)` | 记录调试日志 | `message: impl Display` | `()` |
-| `info(message)` | 记录信息日志 | `message: impl Display` | `()` |
-| `warn(message)` | 记录警告日志 | `message: impl Display` | `()` |
-| `error(message)` | 记录错误日志 | `message: impl Display` | `()` |
-| `fatal(message)` | 记录致命日志 | `message: impl Display` | `()` |
-| `log(level, message)` | 记录指定级别日志 | `level: LogLevel`, `message: impl Display` | `()` |
-| `with_field(key, value)` | 添加字段到日志上下文 | `key: &str`, `value: impl Serialize` | `DMSCLogger` |
-| `with_fields(fields)` | 添加多个字段 | `fields: impl Serialize` | `DMSCLogger` |
-| `with_span(name)` | 创建日志跨度 | `name: &str` | `LogSpan` |
-| `flush()` | 刷新日志缓冲区 | 无 | `DMSCResult<()>` |
+| `trace(message)` | Record trace log | `message: impl Display` | `()` |
+| `debug(message)` | Record debug log | `message: impl Display` | `()` |
+| `info(message)` | Record info log | `message: impl Display` | `()` |
+| `warn(message)` | Record warning log | `message: impl Display` | `()` |
+| `error(message)` | Record error log | `message: impl Display` | `()` |
+| `fatal(message)` | Record fatal log | `message: impl Display` | `()` |
+| `log(level, message)` | Record log at specified level | `level: LogLevel`, `message: impl Display` | `()` |
+| `with_field(key, value)` | Add field to log context | `key: &str`, `value: impl Serialize` | `DMSCLogger` |
+| `with_fields(fields)` | Add multiple fields | `fields: impl Serialize` | `DMSCLogger` |
+| `with_span(name)` | Create log span | `name: &str` | `LogSpan` |
+| `flush()` | Flush log buffer | None | `DMSCResult<()>` |
 
-#### 使用示例
+#### Usage Examples
 
 ```rust
 use dms::prelude::*;
 
-// 基本日志记录
+// Basic logging
 ctx.log().info("Application started");
 ctx.log().warn("Configuration file not found, using defaults");
 ctx.log().error("Database connection failed");
 
-// 带字段的日志记录
+// Logging with fields
 ctx.log()
     .with_field("user_id", 12345)
     .with_field("action", "login")
     .info("User login successful");
 
-// 结构化日志
+// Structured logging
 let user_data = serde_json::json!({
     "id": 12345,
     "name": "John Doe",
@@ -76,55 +76,55 @@ ctx.log()
 
 ### DMSCLogLevel
 
-日志级别枚举类型。
+Log level enumeration type.
 
-#### 变体
+#### Variants
 
-| 变体 | 描述 | 数值 |
+| Variant | Description | Value |
 |:--------|:-------------|:-----|
-| `Trace` | 最详细的调试信息 | 0 |
-| `Debug` | 调试信息 | 1 |
-| `Info` | 一般信息 | 2 |
-| `Warn` | 警告信息 | 3 |
-| `Error` | 错误信息 | 4 |
-| `Fatal` | 致命错误 | 5 |
+| `Trace` | Most detailed debug information | 0 |
+| `Debug` | Debug information | 1 |
+| `Info` | General information | 2 |
+| `Warn` | Warning information | 3 |
+| `Error` | Error information | 4 |
+| `Fatal` | Fatal error | 5 |
 
-#### 使用示例
+#### Usage Examples
 
 ```rust
 use dms::prelude::*;
 
-// 设置日志级别
+// Set log level
 ctx.log().set_level(DMSCLogLevel::Info);
 
-// 检查日志级别
+// Check log level
 if ctx.log().is_enabled(DMSCLogLevel::Debug) {
     ctx.log().debug("This is a debug message");
 }
 
-// 动态调整日志级别
+// Dynamically adjust log level
 ctx.log().set_level(DMSCLogLevel::Debug);
 ```
 
 ### DMSCLogConfig
 
-日志配置结构体。
+Log configuration structure.
 
-#### 字段
+#### Fields
 
-| 字段 | 类型 | 描述 | 默认值 |
+| Field | Type | Description | Default |
 |:--------|:-----|:-------------|:-------|
-| `level` | `DMSCLogLevel` | 日志级别 | `Info` |
-| `format` | `DMSCLogFormat` | 日志格式 | `Json` |
-| `output` | `DMSCLogOutput` | 日志输出 | `Stdout` |
-| `file_path` | `Option<String>` | 日志文件路径 | `None` |
-| `max_file_size` | `u64` | 最大文件大小(MB) | `100` |
-| `max_files` | `usize` | 最大文件数量 | `10` |
-| `enable_colors` | `bool` | 启用颜色输出 | `true` |
-| `enable_sampling` | `bool` | 启用日志采样 | `false` |
-| `sampling_rate` | `f64` | 采样率 | `0.1` |
+| `level` | `DMSCLogLevel` | Log level | `Info` |
+| `format` | `DMSCLogFormat` | Log format | `Json` |
+| `output` | `DMSCLogOutput` | Log output | `Stdout` |
+| `file_path` | `Option<String>` | Log file path | `None` |
+| `max_file_size` | `u64` | Maximum file size (MB) | `100` |
+| `max_files` | `usize` | Maximum number of files | `10` |
+| `enable_colors` | `bool` | Enable colored output | `true` |
+| `enable_sampling` | `bool` | Enable log sampling | `false` |
+| `sampling_rate` | `f64` | Sampling rate | `0.1` |
 
-#### 配置示例
+#### Configuration Example
 
 ```rust
 use dms::prelude::*;
@@ -144,32 +144,32 @@ let log_config = DMSCLogConfig {
 
 <div align="center">
 
-## 日志格式化
+## Log Formatting
 
 </div>
 
 ### DMSCLogFormat
 
-日志格式枚举类型。
+Log format enumeration type.
 
-#### 变体
+#### Variants
 
-| 变体 | 描述 |
+| Variant | Description |
 |:--------|:-------------|
-| `Text` | 纯文本格式 |
-| `Json` | JSON格式 |
-| `Pretty` | 美化格式 |
-| `Structured` | 结构化格式 |
+| `Text` | Plain text format |
+| `Json` | JSON format |
+| `Pretty` | Pretty-printed format |
+| `Structured` | Structured format |
 
-#### 格式示例
+#### Format Examples
 
-**Text格式:**
+**Text Format:**
 ```
 2024-01-15 10:30:45 [INFO] Application started
 2024-01-15 10:30:45 [WARN] Configuration file not found, using defaults
 ```
 
-**JSON格式:**
+**JSON Format:**
 ```json
 {
   "timestamp": "2024-01-15T10:30:45.123Z",
@@ -186,7 +186,7 @@ let log_config = DMSCLogConfig {
 }
 ```
 
-**Pretty格式:**
+**Pretty Format:**
 ```
 ┌─ 2024-01-15 10:30:45.123 ─────────────────────────────┐
 │ INFO  Application started                             │
@@ -197,7 +197,7 @@ let log_config = DMSCLogConfig {
 └───────────────────────────────────────────────────────┘
 ```
 
-### 自定义格式化器
+### Custom Formatter
 
 ```rust
 use dms::prelude::*;
@@ -215,55 +215,55 @@ impl LogFormatter for CustomFormatter {
     }
 }
 
-// 使用自定义格式化器
+// Use custom formatter
 ctx.log().set_formatter(Box::new(CustomFormatter));
 ```
 
 <div align="center">
 
-## 日志后端
+## Log Backends
 
 </div>
 
 ### DMSCLogBackend
 
-日志后端枚举类型。
+Log backend enumeration type.
 
-#### 变体
+#### Variants
 
-| 变体 | 描述 |
+| Variant | Description |
 |:--------|:-------------|
-| `Stdout` | 标准输出 |
-| `Stderr` | 标准错误 |
-| `File(path)` | 文件输出 |
-| `Syslog` | 系统日志 |
-| `Http(url)` | HTTP输出 |
-| `Custom(name)` | 自定义后端 |
+| `Stdout` | Standard output |
+| `Stderr` | Standard error |
+| `File(path)` | File output |
+| `Syslog` | System log |
+| `Http(url)` | HTTP output |
+| `Custom(name)` | Custom backend |
 
-### 文件日志
+### File Logging
 
 ```rust
 use dms::prelude::*;
 
-// 基本文件日志
+// Basic file logging
 let file_backend = DMSCLogBackend::File("/var/log/myapp.log".to_string());
 ctx.log().set_backend(file_backend);
 
-// 带轮转的文件日志
+// File logging with rotation
 let rotating_backend = RotatingFileBackend::new(
     "/var/log/myapp.log",
-    100,  // 最大文件大小(MB)
-    10    // 最大文件数量
+    100,  // Maximum file size (MB)
+    10    // Maximum number of files
 );
 ctx.log().set_backend(DMSCLogBackend::Custom("rotating_file".to_string()));
 ```
 
-### 多后端输出
+### Multi-Backend Output
 
 ```rust
 use dms::prelude::*;
 
-// 同时输出到文件和控制台
+// Output to both file and console
 let multi_backend = MultiLogBackend::new(vec![
     DMSCLogBackend::Stdout,
     DMSCLogBackend::File("/var/log/myapp.log".to_string()),
@@ -272,12 +272,12 @@ let multi_backend = MultiLogBackend::new(vec![
 ctx.log().set_backend(DMSCLogBackend::Custom("multi".to_string()));
 ```
 
-### 远程日志
+### Remote Logging
 
 ```rust
 use dms::prelude::*;
 
-// HTTP日志后端
+// HTTP log backend
 let http_backend = HttpLogBackend::new(
     "https://logs.example.com/api/v1/logs",
     Some("api-key-12345".to_string())
@@ -288,80 +288,80 @@ ctx.log().set_backend(DMSCLogBackend::Custom("http".to_string()));
 
 <div align="center">
 
-## 日志采样
+## Log Sampling
 
 </div>
 
-### 采样配置
+### Sampling Configuration
 
 ```rust
 use dms::prelude::*;
 
 let sampling_config = DMSCLogSamplingConfig {
     enable_sampling: true,
-    sampling_rate: 0.1,        // 10%采样率
-    burst_threshold: 1000,     // 突发阈值
-    time_window: 60,           // 时间窗口(秒)
+    sampling_rate: 0.1,        // 10% sampling rate
+    burst_threshold: 1000,     // Burst threshold
+    time_window: 60,           // Time window (seconds)
     ..Default::default()
 };
 
 ctx.log().set_sampling_config(sampling_config);
 ```
 
-### 条件采样
+### Conditional Sampling
 
 ```rust
 use dms::prelude::*;
 
-// 基于日志级别的采样
+// Level-based sampling
 let level_sampling = LevelBasedSampling::new()
-    .set_rate(DMSCLogLevel::Debug, 0.01)    // Debug日志1%采样
-    .set_rate(DMSCLogLevel::Info, 0.1)     // Info日志10%采样
-    .set_rate(DMSCLogLevel::Warn, 1.0)     // Warn日志100%采样
-    .set_rate(DMSCLogLevel::Error, 1.0);   // Error日志100%采样
+    .set_rate(DMSCLogLevel::Debug, 0.01)    // Debug logs 1% sampling
+    .set_rate(DMSCLogLevel::Info, 0.1)     // Info logs 10% sampling
+    .set_rate(DMSCLogLevel::Warn, 1.0)     // Warn logs 100% sampling
+    .set_rate(DMSCLogLevel::Error, 1.0);   // Error logs 100% sampling
 
 ctx.log().set_sampling_strategy(DMSCLogSamplingStrategy::LevelBased(level_sampling));
 ```
 
-### 自适应采样
+### Adaptive Sampling
 
 ```rust
 use dms::prelude::*;
 
-// 自适应采样，根据日志量动态调整采样率
+// Adaptive sampling, dynamically adjusts sampling rate based on log volume
 let adaptive_sampling = AdaptiveSampling::new()
-    .set_min_rate(0.01)      // 最小采样率1%
-    .set_max_rate(1.0)       // 最大采样率100%
-    .set_target_rate(1000);  // 目标日志率(条/秒)
+    .set_min_rate(0.01)      // Minimum sampling rate 1%
+    .set_max_rate(1.0)       // Maximum sampling rate 100%
+    .set_target_rate(1000);  // Target log rate (logs/second)
 
 ctx.log().set_sampling_strategy(DMSCLogSamplingStrategy::Adaptive(adaptive_sampling));
 ```
 
 <div align="center">
 
-## 日志跨度
+## Log Spans
 
 </div>
 
-### 创建日志跨度
+### Creating Log Spans
 
 ```rust
 use dms::prelude::*;
 
-// 创建日志跨度
+// Create log span
 let span = ctx.log().with_span("user_operation");
 
-// 在跨度内记录日志
+// Log within span
 span.info("Starting user operation");
 span.with_field("user_id", 12345)
     .debug("Processing user data");
 span.info("User operation completed");
 
-// 自动关闭跨度
+// Auto-close span
 drop(span);
 ```
 
-### 嵌套跨度
+### Nested Spans
 
 ```rust
 use dms::prelude::*;
@@ -374,7 +374,7 @@ outer_span.info("Processing HTTP request");
     inner_span.with_field("query", "SELECT * FROM users")
         .debug("Executing database query");
     
-    // 模拟数据库操作
+    // Simulate database operation
     std::thread::sleep(std::time::Duration::from_millis(100));
     
     inner_span.info("Database query completed");
@@ -385,31 +385,31 @@ outer_span.info("Request processing completed");
 
 <div align="center">
 
-## 日志分析
+## Log Analysis
 
 </div>
 
-### 日志指标
+### Log Metrics
 
 ```rust
 use dms::prelude::*;
 
-// 启用日志指标收集
+// Enable log metrics collection
 ctx.log().enable_metrics(true);
 
-// 获取日志统计
+// Get log statistics
 let stats = ctx.log().get_stats()?;
 println!("Total logs: {}", stats.total_logs);
 println!("By level: {:?}", stats.by_level);
 println!("Error rate: {:.2}%", stats.error_rate * 100.0);
 ```
 
-### 日志查询
+### Log Query
 
 ```rust
 use dms::prelude::*;
 
-// 查询最近100条日志
+// Query last 100 logs
 let recent_logs = ctx.log().query()
     .limit(100)
     .level(DMSCLogLevel::Error)
@@ -420,12 +420,12 @@ for log in recent_logs {
 }
 ```
 
-### 日志聚合
+### Log Aggregation
 
 ```rust
 use dms::prelude::*;
 
-// 按级别聚合日志
+// Aggregate logs by level
 let level_aggregation = ctx.log().aggregate()
     .by_level()
     .time_range(chrono::Utc::now() - chrono::Duration::hours(1), chrono::Utc::now())
@@ -438,32 +438,32 @@ for (level, count) in level_aggregation {
 
 <div align="center">
 
-## 日志上下文
+## Log Context
 
 </div>
 
-### 全局上下文
+### Global Context
 
 ```rust
 use dms::prelude::*;
 
-// 设置全局上下文字段
+// Set global context fields
 ctx.log().set_global_context(serde_json::json!({
     "service": "my-service",
     "version": "1.0.0",
     "environment": "production"
 }));
 
-// 所有日志都会包含这些字段
+// All logs will include these fields
 ctx.log().info("This log includes global context");
 ```
 
-### 请求上下文
+### Request Context
 
 ```rust
 use dms::prelude::*;
 
-// 为特定请求设置上下文
+// Set context for specific request
 let request_context = serde_json::json!({
     "request_id": "req_12345",
     "user_id": 12345,
@@ -472,35 +472,35 @@ let request_context = serde_json::json!({
 
 ctx.log().set_request_context(request_context);
 
-// 在该请求处理过程中记录的所有日志都会包含请求上下文
+// All logs recorded during this request will include request context
 ctx.log().info("Processing user request");
 ```
 
 <div align="center">
 
-## 日志过滤
+## Log Filtering
 
 </div>
 
-### 级别过滤
+### Level Filtering
 
 ```rust
 use dms::prelude::*;
 
-// 设置全局日志级别
+// Set global log level
 ctx.log().set_level(DMSCLogLevel::Warn);
 
-// 为特定模块设置日志级别
+// Set log level for specific modules
 ctx.log().set_module_level("database", DMSCLogLevel::Debug);
 ctx.log().set_module_level("http", DMSCLogLevel::Info);
 ```
 
-### 内容过滤
+### Content Filtering
 
 ```rust
 use dms::prelude::*;
 
-// 基于关键字的过滤
+// Keyword-based filtering
 let keyword_filter = KeywordFilter::new()
     .exclude("password")
     .exclude("secret")
@@ -509,12 +509,12 @@ let keyword_filter = KeywordFilter::new()
 ctx.log().add_filter(Box::new(keyword_filter));
 ```
 
-### 速率限制
+### Rate Limiting
 
 ```rust
 use dms::prelude::*;
 
-// 设置日志速率限制
+// Set log rate limit
 let rate_limit = LogRateLimit::new()
     .set_max_logs_per_second(100)
     .set_burst_size(1000);
@@ -524,36 +524,36 @@ ctx.log().set_rate_limit(rate_limit);
 
 <div align="center">
 
-## 错误处理
+## Error Handling
 
 </div>
 
-### 日志错误码
+### Log Error Codes
 
-| 错误码 | 描述 |
+| Error Code | Description |
 |:--------|:-------------|
-| `LOG_FILE_NOT_FOUND` | 日志文件未找到 |
-| `LOG_FILE_PERMISSION_DENIED` | 日志文件权限不足 |
-| `LOG_FORMAT_ERROR` | 日志格式错误 |
-| `LOG_BACKEND_ERROR` | 日志后端错误 |
-| `LOG_ROTATION_ERROR` | 日志轮转错误 |
+| `LOG_FILE_NOT_FOUND` | Log file not found |
+| `LOG_FILE_PERMISSION_DENIED` | Log file permission denied |
+| `LOG_FORMAT_ERROR` | Log format error |
+| `LOG_BACKEND_ERROR` | Log backend error |
+| `LOG_ROTATION_ERROR` | Log rotation error |
 
-### 错误处理示例
+### Error Handling Example
 
 ```rust
 use dms::prelude::*;
 
 match ctx.log().flush() {
     Ok(_) => {
-        // 日志刷新成功
+        // Log flush successful
     }
     Err(DMSCError { code, .. }) if code == "LOG_FILE_PERMISSION_DENIED" => {
-        // 文件权限错误，回退到标准输出
+        // File permission error, fallback to stdout
         ctx.log().set_backend(DMSCLogBackend::Stdout);
         ctx.log().warn("Falling back to stdout logging due to file permission error");
     }
     Err(e) => {
-        // 其他错误
+        // Other errors
         return Err(e);
     }
 }
@@ -561,29 +561,29 @@ match ctx.log().flush() {
 
 <div align="center">
 
-## 性能优化
+## Performance Optimization
 
 </div>
 
-### 异步日志
+### Async Logging
 
 ```rust
 use dms::prelude::*;
 
-// 启用异步日志
+// Enable async logging
 ctx.log().enable_async(true);
-ctx.log().set_async_buffer_size(10000);  // 设置缓冲区大小
+ctx.log().set_async_buffer_size(10000);  // Set buffer size
 
-// 异步记录日志
+// Async log recording
 ctx.log().info_async("This is an async log message").await?;
 ```
 
-### 批量日志
+### Batch Logging
 
 ```rust
 use dms::prelude::*;
 
-// 批量记录日志
+// Batch log recording
 let batch = vec![
     LogEntry::info("Message 1"),
     LogEntry::warn("Message 2"),
@@ -593,47 +593,47 @@ let batch = vec![
 ctx.log().log_batch(batch).await?;
 ```
 
-### 内存优化
+### Memory Optimization
 
 ```rust
 use dms::prelude::*;
 
-// 优化内存使用
+// Optimize memory usage
 ctx.log().set_max_memory_usage(100 * 1024 * 1024);  // 100MB
 ctx.log().enable_memory_compression(true);
-ctx.log().set_compression_threshold(1024);  // 1KB以上启用压缩
+ctx.log().set_compression_threshold(1024);  // Enable compression for logs above 1KB
 ```
 
 <div align="center">
 
-## 最佳实践
+## Best Practices
 
 </div>
 
-1. **使用结构化日志**: 使用字段而不是字符串拼接
-2. **适当的日志级别**: 根据重要性选择合适的日志级别
-3. **避免记录敏感信息**: 不要记录密码、密钥等敏感信息
-4. **使用日志跨度**: 为相关操作创建日志跨度
-5. **启用采样**: 对于高频日志启用采样机制
-6. **定期轮转日志**: 使用日志轮转避免磁盘空间耗尽
-7. **监控日志性能**: 监控日志系统的性能指标
-8. **使用异步日志**: 对于性能敏感的应用使用异步日志
+1. **Use Structured Logging**: Use fields instead of string concatenation
+2. **Appropriate Log Levels**: Choose appropriate log levels based on importance
+3. **Avoid Logging Sensitive Information**: Do not log passwords, keys, or other sensitive information
+4. **Use Log Spans**: Create log spans for related operations
+5. **Enable Sampling**: Enable sampling mechanism for high-frequency logs
+6. **Regular Log Rotation**: Use log rotation to avoid disk space exhaustion
+7. **Monitor Log Performance**: Monitor performance metrics of the logging system
+8. **Use Async Logging**: Use async logging for performance-sensitive applications
 
 <div align="center">
 
-## 相关模块
+## Related Modules
 
 </div>
 
-- [README](./README.md): 模块概览，提供API参考文档总览和快速导航
-- [auth](./auth.md): 认证模块，提供JWT、OAuth2和RBAC认证授权功能
-- [core](./core.md): 核心模块，提供错误处理和服务上下文
-- [config](./config.md): 配置模块，管理认证配置和密钥设置
-- [cache](./cache.md): 缓存模块，提供多后端缓存抽象，缓存用户会话和权限数据
-- [database](./database.md): 数据库模块，提供用户数据持久化和查询功能
-- [http](./http.md): HTTP模块，提供Web认证接口和中间件支持
-- [mq](./mq.md): 消息队列模块，处理认证事件和异步通知
-- [observability](./observability.md): 可观测性模块，监控认证性能和安全事件
-- [security](./security.md): 安全模块，提供加密、哈希和验证功能
-- [storage](./storage.md): 存储模块，管理认证文件、密钥和证书
-- [validation](./validation.md): 验证模块，验证用户输入和表单数据
+- [README](./README.md): Module overview, providing API reference documentation overview and quick navigation
+- [auth](./auth.md): Authentication module, providing JWT, OAuth2, and RBAC authentication and authorization features
+- [core](./core.md): Core module, providing error handling and service context
+- [config](./config.md): Configuration module, managing authentication configuration and key settings
+- [cache](./cache.md): Cache module, providing multi-backend cache abstraction, caching user sessions and permission data
+- [database](./database.md): Database module, providing user data persistence and query functionality
+- [http](./http.md): HTTP module, providing web authentication interfaces and middleware support
+- [mq](./mq.md): Message queue module, handling authentication events and async notifications
+- [observability](./observability.md): Observability module, monitoring authentication performance and security events
+- [security](./security.md): Security module, providing encryption, hashing, and verification features
+- [storage](./storage.md): Storage module, managing authentication files, keys, and certificates
+- [validation](./validation.md): Validation module, validating user input and form data

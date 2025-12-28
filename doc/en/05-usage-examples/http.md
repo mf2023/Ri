@@ -1,54 +1,54 @@
 <div align="center">
 
-# HTTP服务使用示例
+# HTTP Service Usage Example
 
 **Version: 1.0.0**
 
 **Last modified date: 2025-12-12**
 
-本示例展示如何使用DMSC的http模块进行HTTP服务器、客户端、路由管理、中间件、WebSocket和文件上传下载功能的使用。
+This example demonstrates how to use the DMSC http module for HTTP server, client, routing management, middleware, WebSocket, and file upload/download functionality.
 
-## 示例概述
+## Example Overview
 
 </div>
 
-本示例将创建一个DMSC应用，实现以下功能：
+This example will create a DMSC application with the following features:
 
-- HTTP服务器配置和路由管理
-- RESTful API设计和实现
-- 中间件和请求处理
-- WebSocket实时通信
-- 文件上传下载处理
-- 错误处理和响应格式化
+- HTTP server configuration and routing management
+- RESTful API design and implementation
+- Middleware and request processing
+- WebSocket real-time communication
+- File upload/download processing
+- Error handling and response formatting
 
 <div align="center">
 
-## 前置要求
+## Prerequisites
 
 </div>
 
 - Rust 1.65+
 - Cargo 1.65+
-- 基本的Rust编程知识
-- 了解HTTP协议和RESTful API概念
-- （可选）Postman或curl用于API测试
+- Basic Rust programming knowledge
+- Understanding of HTTP protocol and RESTful API concepts
+- (Optional) Postman or curl for API testing
 
 <div align="center">
 
-## 示例代码
+## Example Code
 
 </div>
 
-### 1. 创建项目
+### 1. Create Project
 
 ```bash
 cargo new dms-http-example
 cd dms-http-example
 ```
 
-### 2. 添加依赖
+### 2. Add Dependencies
 
-在`Cargo.toml`文件中添加以下依赖：
+Add the following dependencies to the `Cargo.toml` file:
 
 ```toml
 [dependencies]
@@ -59,9 +59,9 @@ serde_json = "1.0"
 chrono = "0.4"
 ```
 
-### 3. 创建配置文件
+### 3. Create Configuration File
 
-在项目根目录创建`config.yaml`文件：
+Create a `config.yaml` file in the project root directory:
 
 ```yaml
 service:
@@ -98,9 +98,9 @@ http:
     log_response_body: false
 ```
 
-### 4. 编写主代码
+### 4. Write Main Code
 
-将`src/main.rs`文件替换为以下内容：
+Replace the `src/main.rs` file with the following content:
 
 ```rust
 use dms::prelude::*;
@@ -109,27 +109,27 @@ use chrono::Utc;
 
 #[tokio::main]
 async fn main() -> DMSCResult<()> {
-    // 构建服务运行时
+    // Build service runtime
     let app = DMSCAppBuilder::new()
         .with_config("config.yaml")?
         .with_logging(DMSCLogConfig::default())?
         .with_http(DMSCHttpConfig::default())?
         .build()?;
     
-    // 运行业务逻辑
+    // Run business logic
     app.run(|ctx: &DMSCServiceContext| async move {
         ctx.logger().info("service", "DMSC HTTP Example started")?;
         
-        // 初始化HTTP服务器
+        // Initialize HTTP server
         initialize_http_server(&ctx).await?;
         
-        // 配置API路由
+        // Configure API routes
         setup_api_routes(&ctx).await?;
         
-        // 启动HTTP服务器
+        // Start HTTP server
         ctx.logger().info("service", "HTTP server is running on http://localhost:8080")?;
         
-        // 保持服务运行
+        // Keep service running
         tokio::signal::ctrl_c().await?;
         ctx.logger().info("service", "Shutting down HTTP server")?;
         
@@ -140,7 +140,7 @@ async fn main() -> DMSCResult<()> {
 async fn initialize_http_server(ctx: &DMSCServiceContext) -> DMSCResult<()> {
     ctx.logger().info("http", "Initializing HTTP server")?;
     
-    // 创建HTTP服务器配置
+    // Create HTTP server configuration
     let server_config = DMSCHttpServerConfig {
         host: "0.0.0.0".to_string(),
         port: 8080,
@@ -164,7 +164,7 @@ async fn initialize_http_server(ctx: &DMSCServiceContext) -> DMSCResult<()> {
         log_response_body: false,
     };
     
-    // 初始化HTTP服务器
+    // Initialize HTTP server
     ctx.http().init_server(server_config).await?;
     ctx.logger().info("http", "HTTP server initialized on port 8080")?;
     
@@ -174,7 +174,7 @@ async fn initialize_http_server(ctx: &DMSCServiceContext) -> DMSCResult<()> {
 async fn setup_api_routes(ctx: &DMSCServiceContext) -> DMSCResult<()> {
     ctx.logger().info("http", "Setting up API routes")?;
     
-    // GET请求处理 - 根路径
+    // GET request handler - Root path
     ctx.http().get("/", |req, ctx| async move {
         Ok(DMSCHttpResponse::ok(json!({
             "message": "Welcome to DMSC API",
@@ -183,13 +183,13 @@ async fn setup_api_routes(ctx: &DMSCServiceContext) -> DMSCResult<()> {
         })))
     });
     
-    // GET请求处理 - 获取用户信息
+    // GET request handler - Get user information
     ctx.http().get("/users/:id", |req, ctx| async move {
         let user_id = req.params.get("id")
             .and_then(|id| id.parse::<i32>().ok())
             .ok_or_else(|| DMSCError::bad_request("Invalid user ID".to_string()))?;
         
-        // 从数据库获取用户信息
+        // Get user information from database
         match ctx.database().query_one(
             "SELECT id, name, email, created_at FROM users WHERE id = $1",
             vec![user_id.into()]
@@ -207,26 +207,26 @@ async fn setup_api_routes(ctx: &DMSCServiceContext) -> DMSCResult<()> {
         }
     });
     
-    // POST请求处理 - 创建用户
+    // POST request handler - Create user
     ctx.http().post("/users", |req, ctx| async move {
         let body = req.json::<serde_json::Value>()
             .await
             .map_err(|e| DMSCError::bad_request(format!("Invalid JSON: {}", e)))?;
         
-        // 验证必需字段
+        // Validate required fields
         let name = body["name"].as_str()
             .ok_or_else(|| DMSCError::bad_request("Name is required".to_string()))?;
         let email = body["email"].as_str()
             .ok_or_else(|| DMSCError::bad_request("Email is required".to_string()))?;
         
-        // 验证邮箱格式
+        // Validate email format
         if !email.contains('@') {
             return Ok(DMSCHttpResponse::bad_request(json!({
                 "error": "Invalid email format"
             })));
         }
         
-        // 插入用户数据
+        // Insert user data
         let user_id = ctx.database()
             .execute(
                 "INSERT INTO users (name, email) VALUES ($1, $2) RETURNING id",
@@ -250,21 +250,19 @@ async fn setup_api_routes(ctx: &DMSCServiceContext) -> DMSCResult<()> {
 
 <div align="center">
 
-## 代码解析
+## Code Analysis
 
-</div>
+The HTTP module provides usage examples for HTTP server, client, routing management, middleware, WebSocket, and file upload/download functionality.
 
-http模块提供HTTP服务器、客户端、路由管理、中间件、WebSocket和文件上传下载功能的使用示例。
+## HTTP Server
 
-## HTTP服务器
-
-### 基本服务器配置
+### Basic Server Configuration
 
 ```rust
 use dms::prelude::*;
 use serde_json::json;
 
-// 创建HTTP服务器配置
+// Create HTTP server configuration
 let server_config = DMSCHttpServerConfig {
     host: "0.0.0.0".to_string(),
     port: 8080,
@@ -288,18 +286,18 @@ let server_config = DMSCHttpServerConfig {
     log_response_body: false,
 };
 
-// 初始化HTTP服务器
+// Initialize HTTP server
 ctx.http().init_server(server_config).await?;
 ctx.log().info("HTTP server initialized on port 8080");
 ```
 
-### 基本路由
+### Basic Routing
 
 ```rust
 use dms::prelude::*;
 use serde_json::json;
 
-// GET请求处理
+// GET request handler
 ctx.http().get("/", |req, ctx| async move {
     Ok(DMSCHttpResponse::ok(json!({
         "message": "Welcome to DMSC API",
@@ -308,13 +306,13 @@ ctx.http().get("/", |req, ctx| async move {
     })))
 });
 
-// 带参数的GET请求
+// GET request with parameters
 ctx.http().get("/users/:id", |req, ctx| async move {
     let user_id = req.params.get("id")
         .and_then(|id| id.parse::<i32>().ok())
         .ok_or_else(|| DMSCError::bad_request("Invalid user ID".to_string()))?;
     
-    // 从数据库获取用户信息
+    // Get user information from database
     match ctx.database().query_one(
         "SELECT id, name, email, created_at FROM users WHERE id = $1",
         vec![user_id.into()]
@@ -332,26 +330,26 @@ ctx.http().get("/users/:id", |req, ctx| async move {
     }
 });
 
-// POST请求处理
+// POST request handler
 ctx.http().post("/users", |req, ctx| async move {
     let body = req.json::<serde_json::Value>()
         .await
         .map_err(|e| DMSCError::bad_request(format!("Invalid JSON: {}", e)))?;
     
-    // 验证必需字段
+    // Validate required fields
     let name = body["name"].as_str()
         .ok_or_else(|| DMSCError::bad_request("Name is required".to_string()))?;
     let email = body["email"].as_str()
         .ok_or_else(|| DMSCError::bad_request("Email is required".to_string()))?;
     
-    // 验证邮箱格式
+    // Validate email format
     if !email.contains('@') {
         return Ok(DMSCHttpResponse::bad_request(json!({
             "error": "Invalid email format"
         })));
     }
     
-    // 插入用户数据
+    // Insert user data
     let user_id = ctx.database()
         .execute(
             "INSERT INTO users (name, email) VALUES ($1, $2) RETURNING id",
@@ -367,7 +365,7 @@ ctx.http().post("/users", |req, ctx| async move {
     })))
 });
 
-// PUT请求处理
+// PUT request handler
 ctx.http().put("/users/:id", |req, ctx| async move {
     let user_id = req.params.get("id")
         .and_then(|id| id.parse::<i32>().ok())
@@ -381,7 +379,7 @@ ctx.http().put("/users/:id", |req, ctx| async move {
     let email = body["email"].as_str();
     let age = body["age"].as_i64();
     
-    // 构建动态更新查询
+    // Build dynamic update query
     let mut updates = Vec::new();
     let mut params = Vec::new();
     
@@ -406,7 +404,7 @@ ctx.http().put("/users/:id", |req, ctx| async move {
         })));
     }
     
-    // 添加WHERE条件
+    // Add WHERE condition
     params.push(user_id.into());
     
     let query = format!(
@@ -430,7 +428,7 @@ ctx.http().put("/users/:id", |req, ctx| async move {
     }
 });
 
-// DELETE请求处理
+// DELETE request handler
 ctx.http().delete("/users/:id", |req, ctx| async move {
     let user_id = req.params.get("id")
         .and_then(|id| id.parse::<i32>().ok())
@@ -454,16 +452,16 @@ ctx.http().delete("/users/:id", |req, ctx| async move {
 });
 ```
 
-### 路由组
+### Route Groups
 
 ```rust
 use dms::prelude::*;
 use serde_json::json;
 
-// 创建API路由组
+// Create API route group
 let api_routes = ctx.http().group("/api/v1");
 
-// 在路由组中添加路由
+// Add routes to route group
 api_routes.get("/health", |req, ctx| async move {
     let health_status = json!({
         "status": "healthy",
@@ -477,7 +475,7 @@ api_routes.get("/health", |req, ctx| async move {
 });
 
 api_routes.get("/stats", |req, ctx| async move {
-    // 获取系统统计信息
+    // Get system statistics
     let user_count = ctx.database()
         .query_one("SELECT COUNT(*) as count FROM users", vec![])
         .await?
@@ -499,7 +497,7 @@ api_routes.get("/stats", |req, ctx| async move {
     Ok(DMSCHttpResponse::ok(stats))
 });
 
-// 用户管理路由组
+// User management route group
 let user_routes = api_routes.group("/users");
 
 user_routes.get("/", |req, ctx| async move {
@@ -546,7 +544,7 @@ user_routes.get("/", |req, ctx| async move {
     Ok(DMSCHttpResponse::ok(response))
 });
 
-// 认证路由组
+// Authentication route group
 let auth_routes = api_routes.group("/auth");
 
 auth_routes.post("/login", |req, ctx| async move {
@@ -559,7 +557,7 @@ auth_routes.post("/login", |req, ctx| async move {
     let password = body["password"].as_str()
         .ok_or_else(|| DMSCError::bad_request("Password is required".to_string()))?;
     
-    // 验证用户凭据
+    // Validate user credentials
     let user = ctx.database()
         .query_one(
             "SELECT id, name, email, password_hash FROM users WHERE email = $1",
@@ -570,9 +568,9 @@ auth_routes.post("/login", |req, ctx| async move {
     if let Some(user_data) = user {
         let stored_hash = user_data.get::<String>("password_hash").unwrap_or_default();
         
-        // 验证密码（使用bcrypt等密码哈希库）
+        // Validate password (using bcrypt or similar password hashing library)
         if verify_password(password, &stored_hash)? {
-            // 生成JWT令牌
+            // Generate JWT token
             let token = ctx.auth().generate_jwt(
                 user_data.get::<i32>("id").unwrap_or(0),
                 Duration::from_hours(24)
@@ -610,14 +608,14 @@ auth_routes.post("/register", |req, ctx| async move {
     let password = body["password"].as_str()
         .ok_or_else(|| DMSCError::bad_request("Password is required".to_string()))?;
     
-    // 验证输入
+    // Validate input
     if password.len() < 8 {
         return Ok(DMSCHttpResponse::bad_request(json!({
             "error": "Password must be at least 8 characters long"
         })));
     }
     
-    // 检查邮箱是否已存在
+    // Check if email already exists
     let existing_user = ctx.database()
         .query_one("SELECT id FROM users WHERE email = $1", vec![email.into()])
         .await?;
@@ -628,10 +626,10 @@ auth_routes.post("/register", |req, ctx| async move {
         })));
     }
     
-    // 哈希密码
+    // Hash password
     let password_hash = hash_password(password)?;
     
-    // 创建用户
+    // Create user
     let user_id = ctx.database()
         .execute(
             "INSERT INTO users (name, email, password_hash) VALUES ($1, $2, $3) RETURNING id",
@@ -648,15 +646,15 @@ auth_routes.post("/register", |req, ctx| async move {
 });
 ```
 
-## HTTP客户端
+## HTTP Client
 
-### 基本客户端使用
+### Basic Client Usage
 
 ```rust
 use dms::prelude::*;
 use serde_json::json;
 
-// 创建HTTP客户端配置
+// Create HTTP client configuration
 let client_config = DMSCHttpClientConfig {
     timeout: Duration::from_secs(30),
     max_redirects: 5,
@@ -671,10 +669,10 @@ let client_config = DMSCHttpClientConfig {
     enable_metrics: true,
 };
 
-// 初始化HTTP客户端
+// Initialize HTTP client
 ctx.http().init_client(client_config).await?;
 
-// GET请求
+// GET request
 let response = ctx.http().get("https://api.github.com/users/octocat")
     .header("Accept", "application/json")
     .header("User-Agent", "DMSC-Client/1.0")
@@ -688,7 +686,7 @@ if response.status.is_success() {
     ctx.log().error(format!("Request failed with status: {}", response.status));
 }
 
-// POST请求
+// POST request
 let create_response = ctx.http().post("https://api.example.com/users")
     .json(&json!({
         "name": "John Doe",
@@ -704,13 +702,13 @@ if create_response.status.is_success() {
 }
 ```
 
-### 高级客户端功能
+### Advanced Client Features
 
 ```rust
 use dms::prelude::*;
 use serde_json::json;
 
-// 表单数据提交
+// Form data submission
 let form_response = ctx.http().post("https://httpbin.org/post")
     .form(&json!({
         "username": "testuser",
@@ -720,7 +718,7 @@ let form_response = ctx.http().post("https://httpbin.org/post")
     .send()
     .await?;
 
-// 文件上传
+// File upload
 let upload_response = ctx.http().post("https://httpbin.org/post")
     .multipart_form()
     .file("file", "./data/document.pdf", "application/pdf")
@@ -729,7 +727,7 @@ let upload_response = ctx.http().post("https://httpbin.org/post")
     .send()
     .await?;
 
-// 自定义头部和认证
+// Custom headers and authentication
 let auth_response = ctx.http().get("https://api.example.com/protected")
     .header("Authorization", "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...")
     .header("X-API-Key", "your-api-key")
@@ -737,7 +735,7 @@ let auth_response = ctx.http().get("https://api.example.com/protected")
     .send()
     .await?;
 
-// 流式下载大文件
+// Stream download large files
 let download_response = ctx.http().get("https://example.com/large-file.zip")
     .send_stream()
     .await?;
@@ -750,7 +748,7 @@ while let Some(chunk) = stream.next().await {
     file.write_all(&chunk)?;
 }
 
-// 并发请求
+// Concurrent requests
 let urls = vec![
     "https://api.github.com/users/octocat",
     "https://api.github.com/users/torvalds",
@@ -778,18 +776,18 @@ for (i, result) in results.iter().enumerate() {
 }
 ```
 
-## 中间件
+## Middleware
 
-### 内置中间件
+### Built-in Middleware
 
 ```rust
 use dms::prelude::*;
 use serde_json::json;
 
-// 日志中间件
+// Logging middleware
 ctx.http().use_middleware(DMSCHttpMiddleware::logging());
 
-// CORS中间件
+// CORS middleware
 ctx.http().use_middleware(DMSCHttpMiddleware::cors()
     .allow_origin("https://example.com")
     .allow_methods(vec!["GET", "POST", "PUT", "DELETE"])
@@ -797,69 +795,69 @@ ctx.http().use_middleware(DMSCHttpMiddleware::cors()
     .max_age(3600)
 );
 
-// 认证中间件
+// Authentication middleware
 ctx.http().use_middleware(DMSCHttpMiddleware::auth()
     .exclude_paths(vec!["/api/v1/auth/login", "/api/v1/auth/register"])
     .token_header("Authorization")
     .token_prefix("Bearer ")
 );
 
-// 速率限制中间件
+// Rate limiting middleware
 ctx.http().use_middleware(DMSCHttpMiddleware::rate_limit()
     .requests_per_minute(60)
     .burst(10)
     .key_extractor(|req| {
-        // 基于IP地址进行速率限制
+        // Rate limiting based on IP address
         req.remote_addr.to_string()
     })
 );
 
-// 压缩中间件
+// Compression middleware
 ctx.http().use_middleware(DMSCHttpMiddleware::compression()
     .threshold(1024)
     .level(6)
 );
 
-// 请求ID中间件
+// Request ID middleware
 ctx.http().use_middleware(DMSCHttpMiddleware::request_id()
     .header_name("X-Request-ID")
     .generator(|| uuid::Uuid::new_v4().to_string())
 );
 ```
 
-### 自定义中间件
+### Custom Middleware
 
 ```rust
 use dms::prelude::*;
 use serde_json::json;
 
-// 自定义认证中间件
+// Custom authentication middleware
 async fn auth_middleware(
     req: DMSCHttpRequest,
     ctx: DMSCContext,
     next: DMSCNext,
 ) -> DMSCResult<DMSCHttpResponse> {
-    // 跳过不需要认证的路径
+    // Skip paths that don't require authentication
     let skip_auth = vec!["/api/v1/auth/login", "/api/v1/auth/register", "/health"];
     if skip_auth.iter().any(|path| req.path.starts_with(path)) {
         return next.run(req, ctx).await;
     }
     
-    // 检查认证头
+    // Check authentication header
     let auth_header = req.headers.get("Authorization")
         .ok_or_else(|| DMSCError::unauthorized("Missing Authorization header".to_string()))?;
     
     let token = auth_header.strip_prefix("Bearer ")
         .ok_or_else(|| DMSCError::unauthorized("Invalid Authorization format".to_string()))?;
     
-    // 验证JWT令牌
+    // Validate JWT token
     match ctx.auth().validate_jwt(token).await {
         Ok(user_id) => {
-            // 将用户信息添加到请求上下文
+            // Add user information to request context
             let mut req = req;
             req.context.insert("user_id", user_id.to_string());
             
-            // 继续处理请求
+            // Continue processing request
             next.run(req, ctx).await
         }
         Err(e) => {
@@ -871,7 +869,7 @@ async fn auth_middleware(
     }
 }
 
-// 自定义日志中间件
+// Custom logging middleware
 async fn logging_middleware(
     req: DMSCHttpRequest,
     ctx: DMSCContext,
@@ -889,7 +887,7 @@ async fn logging_middleware(
         req.path
     ));
     
-    // 执行请求
+    // Execute request
     let response = next.run(req, ctx).await?;
     
     let duration = start_time.elapsed();
@@ -905,7 +903,7 @@ async fn logging_middleware(
     Ok(response)
 }
 
-// 自定义错误处理中间件
+// Custom error handling middleware
 async fn error_handling_middleware(
     req: DMSCHttpRequest,
     ctx: DMSCContext,
@@ -959,29 +957,29 @@ async fn error_handling_middleware(
     }
 }
 
-// 使用自定义中间件
+// Use custom middleware
 ctx.http().use_custom_middleware(auth_middleware);
 ctx.http().use_custom_middleware(logging_middleware);
 ctx.http().use_custom_middleware(error_handling_middleware);
 ```
 
-## WebSocket支持
+## WebSocket Support
 
-### WebSocket服务器
+### WebSocket Server
 
 ```rust
 use dms::prelude::*;
 use serde_json::json;
 use futures::{StreamExt, SinkExt};
 
-// WebSocket连接处理
+// WebSocket connection handling
 ctx.http().websocket("/ws", |ws_stream, ctx| async move {
     let (mut sender, mut receiver) = ws_stream.split();
     let client_id = uuid::Uuid::new_v4().to_string();
     
     ctx.log().info(format!("WebSocket client connected: {}", client_id));
     
-    // 发送欢迎消息
+    // Send welcome message
     let welcome_msg = json!({
         "type": "welcome",
         "client_id": client_id,
@@ -990,13 +988,13 @@ ctx.http().websocket("/ws", |ws_stream, ctx| async move {
     
     sender.send(DMSCWebSocketMessage::Text(welcome_msg.to_string())).await?;
     
-    // 处理接收到的消息
+    // Process received messages
     while let Some(msg) = receiver.next().await {
         match msg {
             Ok(DMSCWebSocketMessage::Text(text)) => {
                 ctx.log().info(format!("Received message from {}: {}", client_id, text));
                 
-                // 解析消息
+                // Parse message
                 match serde_json::from_str::<serde_json::Value>(&text) {
                     Ok(data) => {
                         let response = match data["type"].as_str() {
@@ -1044,7 +1042,7 @@ ctx.http().websocket("/ws", |ws_stream, ctx| async move {
             Ok(DMSCWebSocketMessage::Binary(data)) => {
                 ctx.log().info(format!("Received binary data from {}: {} bytes", client_id, data.len()));
                 
-                // 回显二进制数据
+                // Echo binary data
                 sender.send(DMSCWebSocketMessage::Binary(data)).await?;
             }
             Ok(DMSCWebSocketMessage::Close(reason)) => {
@@ -1061,16 +1059,16 @@ ctx.http().websocket("/ws", |ws_stream, ctx| async move {
     ctx.log().info(format!("WebSocket connection with {} closed", client_id));
 });
 
-// WebSocket聊天室
+// WebSocket Chat Room
 ctx.http().websocket("/chat/:room", |ws_stream, ctx| async move {
     let (mut sender, mut receiver) = ws_stream.split();
     let room_id = ctx.params.get("room").unwrap_or("default").to_string();
     let user_id = ctx.context.get("user_id").unwrap_or(&"anonymous".to_string()).to_string();
     
-    // 将用户添加到聊天室
+    // Add user to chat room
     ctx.cache().add_to_set(&format!("chat_room:{}", room_id), &user_id).await?;
     
-    // 广播用户加入消息
+    // Broadcast user join message
     let join_msg = json!({
         "type": "user_joined",
         "user_id": user_id,
@@ -1080,7 +1078,7 @@ ctx.http().websocket("/chat/:room", |ws_stream, ctx| async move {
     
     broadcast_to_room(&room_id, join_msg, &ctx).await?;
     
-    // 处理消息
+    // Process messages
     while let Some(msg) = receiver.next().await {
         if let Ok(DMSCWebSocketMessage::Text(text)) = msg {
             let chat_msg = json!({
@@ -1095,7 +1093,7 @@ ctx.http().websocket("/chat/:room", |ws_stream, ctx| async move {
         }
     }
     
-    // 用户离开聊天室
+    // User leaves chat room
     ctx.cache().remove_from_set(&format!("chat_room:{}", room_id), &user_id).await?;
     
     let leave_msg = json!({
@@ -1108,7 +1106,7 @@ ctx.http().websocket("/chat/:room", |ws_stream, ctx| async move {
     broadcast_to_room(&room_id, leave_msg, &ctx).await?;
 });
 
-// 广播函数
+// Broadcast function
 async fn broadcast_to_room(room_id: &str, message: serde_json::Value, ctx: &DMSCContext) -> DMSCResult<()> {
     let room_key = format!("chat_room:{}:connections", room_id);
     let connections = ctx.cache().get_set_members(&room_key).await?;
@@ -1123,20 +1121,20 @@ async fn broadcast_to_room(room_id: &str, message: serde_json::Value, ctx: &DMSC
 }
 ```
 
-### WebSocket客户端
+### WebSocket Client
 
 ```rust
 use dms::prelude::*;
 use futures::{StreamExt, SinkExt};
 
-// 连接到WebSocket服务器
+// Connect to WebSocket server
 let ws_client = ctx.http().websocket_client("wss://echo.websocket.org").await?;
 let (mut sender, mut receiver) = ws_client.split();
 
-// 发送消息
+// Send message
 sender.send(DMSCWebSocketMessage::Text("Hello WebSocket!".to_string())).await?;
 
-// 接收消息
+// Receive messages
 while let Some(msg) = receiver.next().await {
     match msg {
         Ok(DMSCWebSocketMessage::Text(text)) => {
@@ -1155,15 +1153,15 @@ while let Some(msg) = receiver.next().await {
 }
 ```
 
-## 文件上传下载
+## File Upload/Download
 
-### 文件上传
+### File Upload
 
 ```rust
 use dms::prelude::*;
 use serde_json::json;
 
-// 单文件上传
+// Single file upload
 ctx.http().post("/upload/single", |req, ctx| async move {
     let mut multipart = req.multipart()?;
     
@@ -1174,10 +1172,10 @@ ctx.http().post("/upload/single", |req, ctx| async move {
         
         ctx.log().info(format!("Uploading file: {} ({})", filename, content_type));
         
-        // 读取文件数据
+        // Read file data
         let data = field.bytes().await?;
         
-        // 保存到存储系统
+        // Save to storage system
         let file_id = ctx.storage().upload(
             &filename,
             &data,
@@ -1200,7 +1198,7 @@ ctx.http().post("/upload/single", |req, ctx| async move {
     })))
 });
 
-// 多文件上传
+// Multiple file upload
 ctx.http().post("/upload/multiple", |req, ctx| async move {
     let mut multipart = req.multipart()?;
     let mut uploaded_files = Vec::new();
@@ -1232,7 +1230,7 @@ ctx.http().post("/upload/multiple", |req, ctx| async move {
     })))
 });
 
-// 分块上传（大文件）
+// Chunked upload (large files)
 ctx.http().post("/upload/chunk", |req, ctx| async move {
     let body = req.json::<serde_json::Value>()
         .await
@@ -1247,11 +1245,11 @@ ctx.http().post("/upload/chunk", |req, ctx| async move {
     let chunk_data = body["data"].as_str()
         .ok_or_else(|| DMSCError::bad_request("Chunk data is required".to_string()))?;
     
-    // 解码base64数据
+    // Decode base64 data
     let data = base64::decode(chunk_data)
         .map_err(|e| DMSCError::bad_request(format!("Invalid base64 data: {}", e)))?;
     
-    // 上传分块
+    // Upload chunk
     ctx.storage().upload_chunk(
         upload_id,
         chunk_index,
@@ -1259,7 +1257,7 @@ ctx.http().post("/upload/chunk", |req, ctx| async move {
         total_chunks
     ).await?;
     
-    // 检查是否所有分块都已上传
+    // Check if all chunks have been uploaded
     if chunk_index == total_chunks - 1 {
         let file_id = ctx.storage().complete_multipart_upload(upload_id).await?;
         
@@ -1278,47 +1276,47 @@ ctx.http().post("/upload/chunk", |req, ctx| async move {
 });
 ```
 
-### 文件下载
+### File Download
 
 ```rust
 use dms::prelude::*;
 use serde_json::json;
 
-// 文件下载
+// File download
 ctx.http().get("/download/:file_id", |req, ctx| async move {
     let file_id = req.params.get("file_id")
         .ok_or_else(|| DMSCError::bad_request("File ID is required".to_string()))?;
     
-    // 获取文件信息
+    // Get file information
     let file_info = ctx.storage().get_file_info(file_id).await?;
     
-    // 设置响应头
+    // Set response headers
     let mut headers = std::collections::HashMap::new();
     headers.insert("Content-Type".to_string(), file_info.content_type.clone());
     headers.insert("Content-Disposition".to_string(), 
         format!("attachment; filename=\"{}\"", file_info.filename));
     
-    // 下载文件数据
+    // Download file data
     let file_data = ctx.storage().download(file_id).await?;
     
     Ok(DMSCHttpResponse::ok_with_headers(file_data, headers))
 });
 
-// 断点续传下载
+// Resumable download (range request)
 ctx.http().get("/download/range/:file_id", |req, ctx| async move {
     let file_id = req.params.get("file_id")
         .ok_or_else(|| DMSCError::bad_request("File ID is required".to_string()))?;
     
-    // 解析Range头
+    // Parse Range header
     let range_header = req.headers.get("Range")
         .ok_or_else(|| DMSCError::bad_request("Range header is required".to_string()))?;
     
     let (start, end) = parse_range_header(range_header)?;
     
-    // 获取文件信息
+    // Get file information
     let file_info = ctx.storage().get_file_info(file_id).await?;
     
-    // 验证范围
+    // Validate range
     if start >= file_info.size as u64 {
         return Ok(DMSCHttpResponse::range_not_satisfiable());
     }
@@ -1326,10 +1324,10 @@ ctx.http().get("/download/range/:file_id", |req, ctx| async move {
     let end = end.unwrap_or(file_info.size as u64 - 1);
     let content_length = end - start + 1;
     
-    // 下载指定范围
+    // Download specified range
     let data = ctx.storage().download_range(file_id, start, end).await?;
     
-    // 设置响应头
+    // Set response headers
     let mut headers = std::collections::HashMap::new();
     headers.insert("Content-Type".to_string(), file_info.content_type.clone());
     headers.insert("Content-Range".to_string(), 
@@ -1340,16 +1338,16 @@ ctx.http().get("/download/range/:file_id", |req, ctx| async move {
     Ok(DMSCHttpResponse::partial_content_with_headers(data, headers))
 });
 
-// 临时下载链接
+// Temporary download link
 ctx.http().get("/download/temp/:file_id", |req, ctx| async move {
     let file_id = req.params.get("file_id")
         .ok_or_else(|| DMSCError::bad_request("File ID is required".to_string()))?;
     
     let expires_in = req.query.get("expires")
         .and_then(|e| e.parse::<u64>().ok())
-        .unwrap_or(3600); // 默认1小时
+        .unwrap_or(3600); // Default 1 hour
     
-    // 生成临时下载链接
+    // Generate temporary download link
     let temp_url = ctx.storage().generate_temp_download_url(
         file_id,
         Duration::from_secs(expires_in)
@@ -1363,21 +1361,21 @@ ctx.http().get("/download/temp/:file_id", |req, ctx| async move {
 });
 ```
 
-## 高级功能
+## Advanced Features
 
-### 代理请求
+### Proxy Requests
 
 ```rust
 use dms::prelude::*;
 
-// HTTP代理
+// HTTP proxy
 ctx.http().get("/proxy/*path", |req, ctx| async move {
     let target_path = req.params.get("path")
         .ok_or_else(|| DMSCError::bad_request("Target path is required".to_string()))?;
     
     let target_url = format!("https://api.target-service.com/{}", target_path);
     
-    // 转发请求
+    // Forward request
     let proxy_response = ctx.http().client()
         .request(req.method.clone(), &target_url)
         .headers(req.headers.clone())
@@ -1385,7 +1383,7 @@ ctx.http().get("/proxy/*path", |req, ctx| async move {
         .send()
         .await?;
     
-    // 返回代理响应
+    // Return proxy response
     Ok(DMSCHttpResponse::new(
         proxy_response.status,
         proxy_response.headers,
@@ -1394,23 +1392,23 @@ ctx.http().get("/proxy/*path", |req, ctx| async move {
 });
 ```
 
-### 服务器发送事件 (SSE)
+### Server-Sent Events (SSE)
 
 ```rust
 use dms::prelude::*;
 use serde_json::json;
 
-// SSE端点
+// SSE endpoint
 ctx.http().get("/events", |req, ctx| async move {
     let mut event_stream = DMSCHttpResponse::event_stream();
     
-    // 发送初始事件
+    // Send initial event
     event_stream.send_event("connected", json!({
         "message": "Connected to event stream",
         "timestamp": chrono::Utc::now().to_rfc3339(),
     })).await?;
     
-    // 定期发送事件
+    // Send periodic events
     let mut interval = tokio::time::interval(Duration::from_secs(5));
     
     loop {
@@ -1424,14 +1422,14 @@ ctx.http().get("/events", |req, ctx| async move {
         
         match event_stream.send_event("heartbeat", event_data).await {
             Ok(_) => continue,
-            Err(_) => break, // 客户端断开连接
+            Err(_) => break, // Client disconnected
         }
     }
     
     Ok(event_stream)
 });
 
-// 发送自定义事件
+// Send custom event
 async fn send_custom_event(event_type: &str, data: serde_json::Value, ctx: &DMSCContext) -> DMSCResult<()> {
     let event = json!({
         "type": event_type,
@@ -1439,22 +1437,22 @@ async fn send_custom_event(event_type: &str, data: serde_json::Value, ctx: &DMSC
         "timestamp": chrono::Utc::now().to_rfc3339(),
     });
     
-    // 广播到所有连接的客户端
+    // Broadcast to all connected clients
     ctx.http().broadcast_event("notification", event).await?;
     
     Ok(())
 }
 ```
 
-## 错误处理
+## Error Handling
 
-### HTTP错误处理
+### HTTP Error Handling
 
 ```rust
 use dms::prelude::*;
 use serde_json::json;
 
-// 错误处理示例
+// Error handling example
 match ctx.http().get("https://api.example.com/data").send().await {
     Ok(response) => {
         if response.status.is_success() {
@@ -1462,23 +1460,23 @@ match ctx.http().get("https://api.example.com/data").send().await {
             ctx.log().info(format!("Data received: {:?}", data));
         } else if response.status.is_client_error() {
             ctx.log().warn(format!("Client error: {}", response.status));
-            // 处理客户端错误
+            // Handle client error
         } else if response.status.is_server_error() {
             ctx.log().error(format!("Server error: {}", response.status));
-            // 处理服务器错误
+            // Handle server error
         }
     }
     Err(DMSCError::HttpTimeoutError(e)) => {
         ctx.log().error(format!("Request timeout: {}", e));
-        // 重试或降级处理
+        // Retry or fallback handling
     }
     Err(DMSCError::HttpConnectionError(e)) => {
         ctx.log().error(format!("Connection error: {}", e));
-        // 检查网络连接或切换备用服务
+        // Check network connection or switch to backup service
     }
     Err(DMSCError::HttpRedirectError(e)) => {
         ctx.log().warn(format!("Too many redirects: {}", e));
-        // 处理重定向循环
+        // Handle redirect loop
     }
     Err(e) => {
         ctx.log().error(format!("Unexpected HTTP error: {}", e));
@@ -1486,7 +1484,7 @@ match ctx.http().get("https://api.example.com/data").send().await {
     }
 }
 
-// 重试机制
+// Retry mechanism
 async fn retry_request(url: &str, max_retries: u32, ctx: &DMSCContext) -> DMSCResult<DMSCHttpResponse> {
     let mut retry_count = 0;
     
@@ -1522,56 +1520,56 @@ async fn retry_request(url: &str, max_retries: u32, ctx: &DMSCContext) -> DMSCRe
 }
 ```
 
-## 性能优化
+## Performance Optimization
 
-### 连接池优化
+### Connection Pool Optimization
 
 ```rust
 use dms::prelude::*;
 
-// HTTP客户端连接池配置
+// HTTP client connection pool configuration
 let client_config = DMSCHttpClientConfig {
-    max_connections: 200,              // 增加最大连接数
+    max_connections: 200,              // Increase maximum connections
     connection_timeout: Duration::from_secs(5),
-    idle_timeout: Duration::from_secs(30), // 减少空闲超时时间
+    idle_timeout: Duration::from_secs(30), // Reduce idle timeout
     retry_attempts: 3,
     retry_delay: Duration::from_millis(500),
     enable_connection_pooling: true,
-    pool_max_idle_per_host: 20,        // 每个主机的最大空闲连接数
-    pool_max_lifetime: Duration::from_secs(300), // 连接最大生命周期
+    pool_max_idle_per_host: 20,        // Maximum idle connections per host
+    pool_max_lifetime: Duration::from_secs(300), // Connection maximum lifetime
 };
 
 ctx.http().init_client(client_config).await?;
 ```
 
-### 缓存策略
+### Cache Strategy
 
 ```rust
 use dms::prelude::*;
 use serde_json::json;
 
-// HTTP响应缓存
+// HTTP response cache
 async fn cached_request(url: &str, cache_key: &str, ctx: &DMSCContext) -> DMSCResult<serde_json::Value> {
-    // 尝试从缓存获取
+    // Try to get from cache
     if let Some(cached_data) = ctx.cache().get_json(cache_key).await? {
         ctx.log().debug(format!("Cache hit for key: {}", cache_key));
         return Ok(cached_data);
     }
     
-    // 缓存未命中，发起请求
+    // Cache miss, make request
     let response = ctx.http().get(url).send().await?;
     let data = response.json::<serde_json::Value>().await?;
     
-    // 缓存响应数据（5分钟）
+    // Cache response data (5 minutes)
     ctx.cache().set_json(cache_key, &data, Duration::from_minutes(5)).await?;
     
     ctx.log().debug(format!("Cache miss for key: {}, fetched from API", cache_key));
     Ok(data)
 }
 
-// 条件请求（ETag/Last-Modified）
+// Conditional request (ETag/Last-Modified)
 async fn conditional_request(url: &str, etag_key: &str, ctx: &DMSCContext) -> DMSCResult<Option<serde_json::Value>> {
-    // 获取缓存的ETag
+    // Get cached ETag
     let cached_etag = ctx.cache().get(etag_key).await?;
     
     let mut request = ctx.http().get(url);
@@ -1588,7 +1586,7 @@ async fn conditional_request(url: &str, etag_key: &str, ctx: &DMSCContext) -> DM
             Ok(None)
         }
         StatusCode::OK => {
-            // 更新缓存的ETag
+            // Update cached ETag
             if let Some(etag) = response.headers.get("ETag") {
                 ctx.cache().set(etag_key, etag, Duration::from_hours(1)).await?;
             }
@@ -1605,24 +1603,24 @@ async fn conditional_request(url: &str, etag_key: &str, ctx: &DMSCContext) -> DM
 
 <div align="center">
 
-## 运行步骤
+## Running Steps
 
 </div>
 
-1. **创建项目**: 使用Cargo创建新的Rust项目
-2. **添加依赖**: 在Cargo.toml中添加必要的依赖项
-3. **创建配置**: 创建config.yaml配置文件
-4. **编写代码**: 实现HTTP服务器和客户端功能
-5. **运行应用**: 使用cargo run启动应用
-6. **测试API**: 使用curl或Postman测试HTTP端点
+1. **Create Project**: Use Cargo to create a new Rust project
+2. **Add Dependencies**: Add necessary dependencies in Cargo.toml
+3. **Create Configuration**: Create config.yaml configuration file
+4. **Write Code**: Implement HTTP server and client functionality
+5. **Run Application**: Start application using cargo run
+6. **Test API**: Test HTTP endpoints using curl or Postman
 
 <div align="center">
 
-## 预期结果
+## Expected Results
 
 </div>
 
-运行成功后，你将看到以下输出：
+After successful execution, you will see the following output:
 
 ```
 [INFO] DMSC HTTP Example started
@@ -1631,35 +1629,35 @@ async fn conditional_request(url: &str, etag_key: &str, ctx: &DMSCContext) -> DM
 [INFO] HTTP server is running on http://localhost:8080
 ```
 
-API测试示例：
+API testing examples:
 
 ```bash
-# 测试根路径
+# Test root path
 curl http://localhost:8080/
 
-# 获取用户信息
+# Get user information
 curl http://localhost:8080/users/1
 
-# 创建用户
+# Create user
 curl -X POST http://localhost:8080/users \
   -H "Content-Type: application/json" \
   -d '{"name": "John Doe", "email": "john@example.com"}'
 
-# 文件上传
+# File upload
 curl -X POST http://localhost:8080/upload/single \
   -F "file=@document.pdf"
 
-# WebSocket连接
+# WebSocket connection
 websocat ws://localhost:8080/ws
 ```
 
 <div align="center">
 
-## 扩展功能
+## Extended Features
 
 </div>
 
-### 实现负载均衡支持
+### Implement Load Balancing Support
 
 ```rust
 use dms::prelude::*;
@@ -1683,7 +1681,7 @@ async fn setup_load_balancer(ctx: &DMSCServiceContext) -> DMSCResult<()> {
     
     ctx.http().setup_load_balancer(backend_servers, lb_config).await?;
     
-    // 健康检查端点
+    // Health check endpoint
     ctx.http().get("/health", |req, ctx| async move {
         let health_status = json!({
             "status": "healthy",
@@ -1699,7 +1697,7 @@ async fn setup_load_balancer(ctx: &DMSCServiceContext) -> DMSCResult<()> {
 }
 ```
 
-### 实现API网关
+### Implement API Gateway
 
 ```rust
 use dms::prelude::*;
@@ -1724,7 +1722,7 @@ async fn setup_api_gateway(ctx: &DMSCServiceContext) -> DMSCResult<()> {
     
     ctx.http().setup_api_gateway(gateway_config).await?;
     
-    // 路由配置
+    // Route configuration
     let routes = vec![
         ("/api/users/*", "http://user-service:8080"),
         ("/api/orders/*", "http://order-service:8080"),
@@ -1736,7 +1734,7 @@ async fn setup_api_gateway(ctx: &DMSCServiceContext) -> DMSCResult<()> {
         ctx.http().proxy(path, target).await?;
     }
     
-    // API文档端点
+    // API documentation endpoint
     ctx.http().get("/api/docs", |req, ctx| async move {
         let api_docs = json!({
             "openapi": "3.0.0",
@@ -1767,7 +1765,7 @@ async fn setup_api_gateway(ctx: &DMSCServiceContext) -> DMSCResult<()> {
 }
 ```
 
-### 实现GraphQL支持
+### Implement GraphQL Support
 
 ```rust
 use dms::prelude::*;
@@ -1861,7 +1859,7 @@ async fn setup_graphql(ctx: &DMSCServiceContext) -> DMSCResult<()> {
 }
 ```
 
-### 实现实时分析
+### Implement Real-time Analytics
 
 ```rust
 use dms::prelude::*;
@@ -1896,7 +1894,7 @@ impl HttpAnalytics {
         let mut times = self.response_times.write().await;
         times.push(duration);
         
-        // 保持最近1000个响应时间
+        // Keep the most recent 1000 response times
         if times.len() > 1000 {
             times.remove(0);
         }
@@ -1933,19 +1931,19 @@ impl HttpAnalytics {
 async fn setup_analytics(ctx: &DMSCServiceContext) -> DMSCResult<()> {
     let analytics = HttpAnalytics::new();
     
-    // 分析中间件
+    // Analytics middleware
     ctx.http().use_custom_middleware(|req, ctx, next| async move {
         let start_time = std::time::Instant::now();
         
-        // 记录请求
+        // Record request
         if let Some(analytics) = ctx.get_extension::<HttpAnalytics>() {
             analytics.record_request().await;
         }
         
-        // 执行请求
+        // Execute request
         let result = next.run(req, ctx.clone()).await;
         
-        // 记录响应时间和错误
+        // Record response time and errors
         if let Some(analytics) = ctx.get_extension::<HttpAnalytics>() {
             let duration = start_time.elapsed();
             analytics.record_response_time(duration).await;
@@ -1958,7 +1956,7 @@ async fn setup_analytics(ctx: &DMSCServiceContext) -> DMSCResult<()> {
         result
     });
     
-    // 分析API端点
+    // Analytics API endpoint
     ctx.http().get("/analytics", |req, ctx| async move {
         if let Some(analytics) = ctx.get_extension::<HttpAnalytics>() {
             let stats = analytics.get_stats().await;
@@ -1970,11 +1968,11 @@ async fn setup_analytics(ctx: &DMSCServiceContext) -> DMSCResult<()> {
         }
     });
     
-    // 实时仪表板WebSocket
+    // Real-time dashboard WebSocket
     ctx.http().websocket("/analytics/live", |ws_stream, ctx| async move {
         let (mut sender, mut receiver) = ws_stream.split();
         
-        // 定期发送分析数据
+        // Send analytics data periodically
         let mut interval = tokio::time::interval(Duration::from_secs(5));
         
         loop {
@@ -2008,54 +2006,54 @@ async fn setup_analytics(ctx: &DMSCServiceContext) -> DMSCResult<()> {
 
 <div align="center">
 
-## 最佳实践
+## Best Practices
 
 </div>
 
-1. **错误处理**: 妥善处理HTTP错误，实现重试机制
-2. **超时设置**: 为所有请求设置合理的超时时间
-3. **连接池**: 使用连接池提高性能
-4. **认证安全**: 安全地处理认证信息
-5. **输入验证**: 验证所有用户输入
-6. **日志记录**: 记录重要的请求和响应信息
-7. **监控指标**: 收集HTTP性能指标
-8. **限流保护**: 实施速率限制防止滥用
-9. **压缩支持**: 启用响应压缩减少带宽使用
-10. **缓存策略**: 合理使用缓存提高性能
+1. **Error Handling**: Handle HTTP errors properly and implement retry mechanisms
+2. **Timeout Settings**: Set reasonable timeout times for all requests
+3. **Connection Pool**: Use connection pools to improve performance
+4. **Authentication Security**: Handle authentication information securely
+5. **Input Validation**: Validate all user inputs
+6. **Logging**: Record important request and response information
+7. **Monitoring Metrics**: Collect HTTP performance metrics
+8. **Rate Limiting**: Implement rate limiting to prevent abuse
+9. **Compression Support**: Enable response compression to reduce bandwidth usage
+10. **Caching Strategy**: Use caching appropriately to improve performance
 
 <div align="center">
 
-## 总结
+## Summary
 
 </div>
 
-本示例全面展示了DMSC框架的HTTP服务功能，包括服务器配置、路由管理、客户端使用、中间件、WebSocket通信、文件上传下载等核心功能。通过实际代码示例，你可以学习如何：
+This example comprehensively demonstrates the HTTP service functionality of the DMSC framework, including server configuration, route management, client usage, middleware, WebSocket communication, file upload/download, and other core features. Through practical code examples, you can learn how to:
 
-- 配置和启动HTTP服务器
-- 实现RESTful API接口
-- 使用HTTP客户端进行外部请求
-- 实现自定义中间件
-- 处理WebSocket实时通信
-- 管理文件上传下载
-- 实现高级功能如负载均衡、API网关、GraphQL等
-- 进行性能优化和错误处理
+- Configure and start HTTP servers
+- Implement RESTful API interfaces
+- Use HTTP clients for external requests
+- Implement custom middleware
+- Handle WebSocket real-time communication
+- Manage file upload and download
+- Implement advanced features like load balancing, API gateway, GraphQL, etc.
+- Perform performance optimization and error handling
 
-这些功能为构建现代化的Web应用和微服务架构提供了强大的支持。
+These features provide powerful support for building modern web applications and microservice architectures.
 
 <div align="center">
 
-## 相关模块
+## Related Modules
 
 </div>
 
-- [README](./README.md): 使用示例概览，提供所有使用示例的快速导航
-- [authentication](./authentication.md): 认证示例，学习JWT、OAuth2和RBAC认证授权
-- [basic-app](./basic-app.md): 基础应用示例，学习如何创建和运行第一个DMSC应用
-- [caching](./caching.md): 缓存示例，了解如何使用缓存模块提升应用性能
-- [database](./database.md): 数据库示例，学习数据库连接和查询操作
+- [README](./README.md): Usage examples overview, providing quick navigation to all usage examples
+- [authentication](./authentication.md): Authentication examples, learn JWT, OAuth2 and RBAC authentication authorization
+- [basic-app](./basic-app.md): Basic application example, learn how to create and run your first DMSC application
+- [caching](./caching.md): Caching examples, understand how to use caching module to improve application performance
+- [database](./database.md): Database examples, learn database connection and query operations
 
-- [mq](./mq.md): 消息队列示例，实现异步消息处理和事件驱动架构
-- [observability](./observability.md): 可观测性示例，监控应用性能和健康状况
-- [security](./security.md): 安全示例，加密、哈希和安全最佳实践
-- [storage](./storage.md): 存储示例，文件上传下载和存储管理
-- [validation](./validation.md): 验证示例，数据验证和清理操作
+- [mq](./mq.md): Message queue examples, implement asynchronous message processing and event-driven architecture
+- [observability](./observability.md): Observability examples, monitor application performance and health status
+- [security](./security.md): Security examples, encryption, hashing and security best practices
+- [storage](./storage.md): Storage examples, file upload/download and storage management
+- [validation](./validation.md): Validation examples, data validation and cleanup operations

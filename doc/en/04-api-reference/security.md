@@ -1,58 +1,58 @@
 <div align="center">
 
-# Security API参考
+# Security API Reference
 
 **Version: 1.0.0**
 
 **Last modified date: 2025-12-12**
 
-security模块提供安全功能，包括认证、授权、加密、输入验证与防护机制。
+The security module provides security functionality including authentication, authorization, encryption, input validation, and protection mechanisms.
 
-## 模块概述
+## Module Overview
 
 </div>
 
-security模块包含以下子模块：
+The security module contains the following sub-modules:
 
-- **auth**: 认证管理
-- **authorization**: 授权管理  
-- **crypto**: 加密解密
-- **validation**: 输入验证
-- **rate_limit**: 速率限制
-- **cors**: CORS配置
-- **csrf**: CSRF保护
-- **xss**: XSS防护
-- **sql_injection**: SQL注入防护
+- **auth**: Authentication management
+- **authorization**: Authorization management
+- **crypto**: Encryption and decryption
+- **validation**: Input validation
+- **rate_limit**: Rate limiting
+- **cors**: CORS configuration
+- **csrf**: CSRF protection
+- **xss**: XSS protection
+- **sql_injection**: SQL injection protection
 
 <div align="center">
 
-## 核心组件
+## Core Components
 
-</div>  
+</div>
 
 ### DMSCSecurityManager
 
-安全管理器主接口，提供统一的安全功能访问。
+The security manager main interface provides unified access to security functionality.
 
-#### 方法
+#### Methods
 
-| 方法 | 描述 | 参数 | 返回值 |
+| Method | Description | Parameters | Return Value |
 |:--------|:-------------|:--------|:--------|
-| `authenticate(credentials)` | 用户认证 | `credentials: DMSCCredentials` | `DMSCResult<DMSCUser>` |
-| `authorize(user, resource, action)` | 权限检查 | `user: &DMSCUser`, `resource: &str`, `action: &str` | `DMSCResult<bool>` |
-| `encrypt(data, key)` | 数据加密 | `data: &[u8]`, `key: &[u8]` | `DMSCResult<Vec<u8>>` |
-| `decrypt(data, key)` | 数据解密 | `data: &[u8]`, `key: &[u8]` | `DMSCResult<Vec<u8>>` |
-| `hash_password(password)` | 密码哈希 | `password: &str` | `DMSCResult<String>` |
-| `verify_password(password, hash)` | 密码验证 | `password: &str`, `hash: &str` | `DMSCResult<bool>` |
-| `validate_input(input, rules)` | 输入验证 | `input: &str`, `rules: &[DMSCValidationRule]` | `DMSCResult<()>` |
-| `rate_limit(key, limit)` | 速率限制 | `key: &str`, `limit: DMSCRateLimit` | `DMSCResult<()>` |
+| `authenticate(credentials)` | User authentication | `credentials: DMSCCredentials` | `DMSCResult<DMSCUser>` |
+| `authorize(user, resource, action)` | Permission check | `user: &DMSCUser`, `resource: &str`, `action: &str` | `DMSCResult<bool>` |
+| `encrypt(data, key)` | Data encryption | `data: &[u8]`, `key: &[u8]` | `DMSCResult<Vec<u8>>` |
+| `decrypt(data, key)` | Data decryption | `data: &[u8]`, `key: &[u8]` | `DMSCResult<Vec<u8>>` |
+| `hash_password(password)` | Password hashing | `password: &str` | `DMSCResult<String>` |
+| `verify_password(password, hash)` | Password verification | `password: &str`, `hash: &str` | `DMSCResult<bool>` |
+| `validate_input(input, rules)` | Input validation | `input: &str`, `rules: &[DMSCValidationRule]` | `DMSCResult<()>` |
+| `rate_limit(key, limit)` | Rate limiting | `key: &str`, `limit: DMSCRateLimit` | `DMSCResult<()>` |
 
-#### 使用示例
+#### Usage Example
 
 ```rust
 use dms::prelude::*;
 
-// 用户认证
+// User authentication
 let credentials = DMSCCredentials::UsernamePassword {
     username: "john_doe".to_string(),
     password: "secure_password".to_string(),
@@ -61,8 +61,8 @@ let credentials = DMSCCredentials::UsernamePassword {
 match ctx.security().authenticate(credentials).await? {
     Some(user) => {
         ctx.log().info(format!("User authenticated: {}", user.username));
-        
-        // 检查权限
+
+        // Check permissions
         if ctx.security().authorize(&user, "user:profile", "read").await? {
             ctx.log().info("User has read permission for profile");
         }
@@ -73,62 +73,62 @@ match ctx.security().authenticate(credentials).await? {
     }
 }
 
-// 数据加密
+// Data encryption
 let sensitive_data = b"confidential information";
 let encryption_key = ctx.security().derive_key("my_secret_key", b"salt", 32)?;
 let encrypted_data = ctx.security().encrypt(sensitive_data, &encryption_key)?;
 
-// 密码哈希
+// Password hashing
 let password = "user_password";
 let password_hash = ctx.security().hash_password(password)?;
 
-// 验证密码
+// Verify password
 let is_valid = ctx.security().verify_password(password, &password_hash)?;
 ```
 
 ### DMSCCredentials
 
-认证凭据枚举。
+Authentication credential enumeration.
 
-#### 变体
+#### Variants
 
-| 变体 | 描述 |
+| Variant | Description |
 |:--------|:-------------|
-| `UsernamePassword { username, password }` | 用户名密码 |
-| `ApiKey { key }` | API密钥 |
-| `JwtToken { token }` | JWT令牌 |
-| `OAuth2 { code, provider }` | OAuth2授权码 |
-| `Certificate { cert_data }` | 客户端证书 |
+| `UsernamePassword { username, password }` | Username and password |
+| `ApiKey { key }` | API key |
+| `JwtToken { token }` | JWT token |
+| `OAuth2 { code, provider }` | OAuth2 authorization code |
+| `Certificate { cert_data }` | Client certificate |
 
 ### DMSCUser
 
-用户结构体。
+User structure.
 
-#### 字段
+#### Fields
 
-| 字段 | 类型 | 描述 |
+| Field | Type | Description |
 |:--------|:-----|:-------------|
-| `id` | `String` | 用户ID |
-| `username` | `String` | 用户名 |
-| `email` | `String` | 邮箱 |
-| `roles` | `Vec<String>` | 角色列表 |
-| `permissions` | `Vec<String>` | 权限列表 |
-| `metadata` | `HashMap<String, String>` | 元数据 |
-| `created_at` | `DateTime<Utc>` | 创建时间 |
-| `last_login` | `Option<DateTime<Utc>>` | 最后登录时间 |
+| `id` | `String` | User ID |
+| `username` | `String` | Username |
+| `email` | `String` | Email |
+| `roles` | `Vec<String>` | Role list |
+| `permissions` | `Vec<String>` | Permission list |
+| `metadata` | `HashMap<String, String>` | Metadata |
+| `created_at` | `DateTime<Utc>` | Creation time |
+| `last_login` | `Option<DateTime<Utc>>` | Last login time |
 
 <div align="center">
 
-## 认证管理
+## Authentication Management
 
-</div>  
+</div>
 
-### JWT认证
+### JWT Authentication
 
 ```rust
 use dms::prelude::*;
 
-// 生成JWT令牌
+// Generate JWT token
 let jwt_config = DMSCJwtConfig {
     secret_key: "my_jwt_secret".to_string(),
     expiration: Duration::from_hours(24),
@@ -151,12 +151,12 @@ let user = DMSCUser {
 let jwt_token = ctx.security().generate_jwt(&user, &jwt_config)?;
 ctx.log().info(format!("Generated JWT token: {}", jwt_token));
 
-// 验证JWT令牌
+// Validate JWT token
 match ctx.security().validate_jwt(&jwt_token, &jwt_config)? {
     Some(claims) => {
         ctx.log().info(format!("JWT valid for user: {}", claims.sub));
-        
-        // 从JWT提取用户信息
+
+        // Extract user information from JWT
         let user_from_jwt = ctx.security().user_from_jwt_claims(&claims)?;
         ctx.log().info(format!("User roles: {:?}", user_from_jwt.roles));
     }
@@ -167,12 +167,12 @@ match ctx.security().validate_jwt(&jwt_token, &jwt_config)? {
 }
 ```
 
-### OAuth2认证
+### OAuth2 Authentication
 
 ```rust
 use dms::prelude::*;
 
-// OAuth2配置
+// OAuth2 configuration
 let oauth2_config = DMSCOAuth2Config {
     client_id: "my_client_id".to_string(),
     client_secret: "my_client_secret".to_string(),
@@ -183,22 +183,22 @@ let oauth2_config = DMSCOAuth2Config {
     provider: "google".to_string(),
 };
 
-// 生成授权URL
+// Generate authorization URL
 let auth_url = ctx.security().generate_oauth2_auth_url(&oauth2_config)?;
 ctx.log().info(format!("OAuth2 authorization URL: {}", auth_url));
 
-// 处理OAuth2回调
+// Handle OAuth2 callback
 let auth_code = "received_authorization_code";
 let oauth2_result = ctx.security().exchange_oauth2_code(auth_code, &oauth2_config).await?;
 
 match oauth2_result {
     DMSCOAuth2Result::Success { access_token, refresh_token, user_info } => {
         ctx.log().info(format!("OAuth2 successful for user: {}", user_info.email));
-        
-        // 创建或更新用户
+
+        // Create or update user
         let user = ctx.security().create_or_update_user_from_oauth2(&user_info).await?;
-        
-        // 生成应用JWT
+
+        // Generate application JWT
         let app_jwt = ctx.security().generate_jwt(&user, &jwt_config)?;
         ctx.log().info(format!("Generated app JWT: {}", app_jwt));
     }
@@ -209,53 +209,53 @@ match oauth2_result {
 }
 ```
 
-### 多因素认证(MFA)
+### Multi-Factor Authentication (MFA)
 
 ```rust
 use dms::prelude::*;
 
-// 启用MFA
+// Enable MFA
 let user_id = "12345";
 let mfa_secret = ctx.security().generate_mfa_secret(user_id)?;
 
-// 生成QR码用于设置认证器应用
+// Generate QR code for setting up authenticator app
 let qr_code_data = ctx.security().generate_mfa_qr_code(
     &mfa_secret,
     "MyApp",
     "john@example.com"
 )?;
 
-// 验证MFA代码
-let mfa_code = "123456"; // 用户输入的6位代码
+// Verify MFA code
+let mfa_code = "123456"; // 6-digit code entered by user
 let is_valid = ctx.security().verify_mfa_code(user_id, mfa_code)?;
 
 if is_valid {
     ctx.log().info("MFA verification successful");
-    
-    // 启用MFA
+
+    // Enable MFA
     ctx.security().enable_mfa(user_id, &mfa_secret).await?;
 } else {
     ctx.log().warn("MFA verification failed");
     return Err(DMSCError::auth("Invalid MFA code"));
 }
 
-// 备份代码
+// Backup codes
 let backup_codes = ctx.security().generate_mfa_backup_codes(user_id, 10)?;
 ctx.log().info(format!("Generated {} backup codes", backup_codes.len()));
 ```
 
 <div align="center">
 
-## 授权管理
+## Authorization Management
 
-</div>  
+</div>
 
-### 基于角色的访问控制(RBAC)
+### Role-Based Access Control (RBAC)
 
 ```rust
 use dms::prelude::*;
 
-// 定义角色和权限
+// Define roles and permissions
 let roles = vec![
     DMSCRole {
         name: "admin".to_string(),
@@ -282,7 +282,7 @@ let roles = vec![
     },
 ];
 
-// 检查角色权限
+// Check role permissions
 let user = DMSCUser {
     id: "12345".to_string(),
     username: "john_doe".to_string(),
@@ -296,14 +296,14 @@ let user = DMSCUser {
 
 if ctx.security().has_role(&user, "admin")? {
     ctx.log().info("User has admin role");
-    
-    // 检查具体权限
+
+    // Check specific permission
     if ctx.security().has_permission(&user, "user:create")? {
         ctx.log().info("User can create other users");
     }
 }
 
-// 检查资源权限
+// Check resource permission
 let resource = "user:profile:12345";
 let action = "read";
 
@@ -315,12 +315,12 @@ if ctx.security().authorize(&user, resource, action).await? {
 }
 ```
 
-### 基于属性的访问控制(ABAC)
+### Attribute-Based Access Control (ABAC)
 
 ```rust
 use dms::prelude::*;
 
-// 定义属性策略
+// Define attribute policy
 let abac_policy = DMSCAbacPolicy {
     name: "document_access".to_string(),
     rules: vec![
@@ -345,7 +345,7 @@ let abac_policy = DMSCAbacPolicy {
     ],
 };
 
-// 评估ABAC策略
+// Evaluate ABAC policy
 let user_attributes = HashMap::from([
     ("id".to_string(), "12345".to_string()),
     ("team_id".to_string(), "team_123".to_string()),
@@ -381,16 +381,16 @@ match decision {
 
 <div align="center">
 
-## 加密解密
+## Encryption and Decryption
 
 </div>
 
-### 对称加密
+### Symmetric Encryption
 
 ```rust
 use dms::prelude::*;
 
-// AES加密
+// AES encryption
 let plaintext = b"sensitive data that needs encryption";
 let key = ctx.security().generate_symmetric_key(32)?; // 256-bit key
 let iv = ctx.security().generate_iv(16)?; // 128-bit IV
@@ -398,34 +398,34 @@ let iv = ctx.security().generate_iv(16)?; // 128-bit IV
 let encrypted_data = ctx.security().encrypt_aes256_cbc(plaintext, &key, &iv)?;
 ctx.log().info(format!("Encrypted {} bytes", encrypted_data.len()));
 
-// AES解密
+// AES decryption
 let decrypted_data = ctx.security().decrypt_aes256_cbc(&encrypted_data, &key, &iv)?;
 let decrypted_text = String::from_utf8(decrypted_data)?;
 ctx.log().info(format!("Decrypted text: {}", decrypted_text));
 ```
 
-### 非对称加密
+### Asymmetric Encryption
 
 ```rust
 use dms::prelude::*;
 
-// 生成RSA密钥对
+// Generate RSA key pair
 let (private_key, public_key) = ctx.security().generate_rsa_keypair(2048)?;
 
-// 使用公钥加密
+// Encrypt with public key
 let plaintext = b"data to encrypt with public key";
 let encrypted_data = ctx.security().encrypt_rsa_public(plaintext, &public_key)?;
 
-// 使用私钥解密
+// Decrypt with private key
 let decrypted_data = ctx.security().decrypt_rsa_private(&encrypted_data, &private_key)?;
 let decrypted_text = String::from_utf8(decrypted_data)?;
 ctx.log().info(format!("Decrypted with private key: {}", decrypted_text));
 
-// 数字签名
+// Digital signature
 let data_to_sign = b"important message";
 let signature = ctx.security().sign_rsa(data_to_sign, &private_key)?;
 
-// 验证签名
+// Verify signature
 let is_valid = ctx.security().verify_rsa_signature(data_to_sign, &signature, &public_key)?;
 if is_valid {
     ctx.log().info("Signature is valid");
@@ -434,19 +434,19 @@ if is_valid {
 }
 ```
 
-### 密钥派生
+### Key Derivation
 
 ```rust
 use dms::prelude::*;
 
-// PBKDF2密钥派生
+// PBKDF2 key derivation
 let password = "user_password";
 let salt = ctx.security().generate_salt(32)?;
 let derived_key = ctx.security().derive_key_pbkdf2(password, &salt, 10000, 32)?;
 
 ctx.log().info(format!("Derived {}-byte key", derived_key.len()));
 
-// 存储盐和派生密钥用于验证
+// Store salt and derived key for verification
 let password_hash = DMSCPasswordHash {
     algorithm: "pbkdf2_sha256".to_string(),
     salt: base64::encode(&salt),
@@ -454,7 +454,7 @@ let password_hash = DMSCPasswordHash {
     iterations: 10000,
 };
 
-// 验证密码
+// Verify password
 let is_valid = ctx.security().verify_password_pbkdf2(
     password,
     &password_hash.salt,
@@ -465,22 +465,22 @@ let is_valid = ctx.security().verify_password_pbkdf2(
 
 <div align="center">
 
-## 输入验证
+## Input Validation
 
 </div>
 
-### 验证规则
+### Validation Rules
 
 ```rust
 use dms::prelude::*;
 
-// 定义验证规则
+// Define validation rules
 let email_rules = vec![
     DMSCValidationRule::Required,
     DMSCValidationRule::Email,
     DMSCValidationRule::MaxLength(100),
     DMSCValidationRule::Custom(|value| {
-        // 自定义验证：检查是否是公司邮箱
+        // Custom validation: check if it's a company email
         value.ends_with("@company.com")
     }),
 ];
@@ -503,7 +503,7 @@ let username_rules = vec![
     DMSCValidationRule::Pattern(r"^[a-zA-Z][a-zA-Z0-9_]*$".to_string()),
 ];
 
-// 执行验证
+// Execute validation
 let email = "john@company.com";
 let password = "SecurePass123!";
 let username = "john_doe";
@@ -515,12 +515,12 @@ ctx.security().validate_input(username, &username_rules)?;
 ctx.log().info("All inputs validated successfully");
 ```
 
-### 数据清理
+### Data Sanitization
 
 ```rust
 use dms::prelude::*;
 
-// HTML清理
+// HTML sanitization
 let dirty_html = r#"
     <script>alert('XSS')</script>
     <p>Safe content</p>
@@ -531,12 +531,12 @@ let dirty_html = r#"
 let clean_html = ctx.security().sanitize_html(dirty_html)?;
 ctx.log().info(format!("Cleaned HTML: {}", clean_html));
 
-// SQL注入防护
+// SQL injection protection
 let user_input = "admin' OR '1'='1";
 let safe_input = ctx.security().escape_sql(user_input);
 ctx.log().info(format!("Escaped SQL: {}", safe_input));
 
-// 路径遍历防护
+// Path traversal protection
 let file_path = "../../../etc/passwd";
 let safe_path = ctx.security().sanitize_path(file_path)?;
 ctx.log().info(format!("Sanitized path: {}", safe_path));
@@ -544,31 +544,31 @@ ctx.log().info(format!("Sanitized path: {}", safe_path));
 
 <div align="center">
 
-## 速率限制
+## Rate Limiting
 
 </div>
 
-### 令牌桶算法
+### Token Bucket Algorithm
 
 ```rust
 use dms::prelude::*;
 
-// 配置速率限制
+// Configure rate limiting
 let rate_limit_config = DMSCRateLimitConfig {
     algorithm: DMSCRateLimitAlgorithm::TokenBucket,
-    capacity: 100,        // 桶容量
-    refill_rate: 10,      // 每秒补充令牌数
+    capacity: 100,        // Bucket capacity
+    refill_rate: 10,      // Tokens refilled per second
     refill_period: Duration::from_secs(1),
 };
 
-// 应用速率限制
+// Apply rate limiting
 let client_ip = "192.168.1.100";
 let rate_limit_key = format!("rate_limit:{}", client_ip);
 
 match ctx.security().check_rate_limit(&rate_limit_key, &rate_limit_config)? {
     DMSCRateLimitResult::Allowed => {
         ctx.log().info("Request allowed");
-        // 处理请求
+        // Process request
     }
     DMSCRateLimitResult::Denied { retry_after } => {
         ctx.log().warn(format!("Rate limit exceeded, retry after {:?}", retry_after));
@@ -576,11 +576,11 @@ match ctx.security().check_rate_limit(&rate_limit_key, &rate_limit_config)? {
     }
 }
 
-// 滑动窗口速率限制
+// Sliding window rate limiting
 let sliding_window_config = DMSCRateLimitConfig {
     algorithm: DMSCRateLimitAlgorithm::SlidingWindow,
     window_size: Duration::from_minutes(1),
-    max_requests: 60,  // 每分钟最多60个请求
+    max_requests: 60,  // Maximum 60 requests per minute
 };
 
 let api_key = "user_api_key_123";
@@ -597,12 +597,12 @@ match ctx.security().check_rate_limit(&api_rate_limit_key, &sliding_window_confi
 }
 ```
 
-## CORS配置
+## CORS Configuration
 
 ```rust
 use dms::prelude::*;
 
-// 配置CORS
+// Configure CORS
 let cors_config = DMSCCorsConfig {
     allowed_origins: vec![
         "https://app.example.com".to_string(),
@@ -627,7 +627,7 @@ let cors_config = DMSCCorsConfig {
     allow_credentials: true,
 };
 
-// 检查CORS请求
+// Check CORS request
 let origin = "https://app.example.com";
 let method = "POST";
 let headers = vec!["Content-Type", "Authorization"];
@@ -635,7 +635,7 @@ let headers = vec!["Content-Type", "Authorization"];
 match ctx.security().check_cors_request(&cors_config, origin, method, &headers)? {
     DMSCCorsResult::Allowed { headers } => {
         ctx.log().info("CORS request allowed");
-        // 设置响应头
+        // Set response headers
         for (key, value) in headers {
             response.set_header(key, value);
         }
@@ -647,24 +647,24 @@ match ctx.security().check_cors_request(&cors_config, origin, method, &headers)?
 }
 ```
 
-## CSRF保护
+## CSRF Protection
 
 ```rust
 use dms::prelude::*;
 
-// 生成CSRF令牌
+// Generate CSRF token
 let csrf_token = ctx.security().generate_csrf_token()?;
 
-// 在表单中包含CSRF令牌
+// Include CSRF token in form
 let form_html = format!(r#"
     <form method="POST" action="/update-profile">
         <input type="hidden" name="csrf_token" value="{}" />
-        <!-- 其他表单字段 -->
+        <!-- Other form fields -->
         <button type="submit">Update Profile</button>
     </form>
 "#, csrf_token);
 
-// 验证CSRF令牌
+// Verify CSRF token
 let submitted_token = "submitted_csrf_token";
 let session_token = "session_csrf_token";
 
@@ -678,28 +678,28 @@ ctx.log().info("CSRF token verified successfully");
 
 <div align="center">
 
-## 安全配置
+## Security Configuration
 
 </div>
 
 ### DMSCSecurityConfig
 
-安全配置结构体。
+Security configuration structure.
 
-#### 字段
+#### Fields
 
-| 字段 | 类型 | 描述 | 默认值 |
+| Field | Type | Description | Default Value |
 |:--------|:-----|:-------------|:-------|
-| `jwt_secret` | `String` | JWT密钥 | 必填 |
-| `password_hash_algorithm` | `DMSCPasswordHashAlgorithm` | 密码哈希算法 | `Argon2id` |
-| `session_timeout` | `Duration` | 会话超时时间 | `24h` |
-| `max_login_attempts` | `u32` | 最大登录尝试次数 | `5` |
-| `lockout_duration` | `Duration` | 账户锁定时间 | `30m` |
-| `mfa_required` | `bool` | 是否需要MFA | `false` |
-| `password_policy` | `DMSCPasswordPolicy` | 密码策略 | 默认策略 |
-| `rate_limit_config` | `DMSCRateLimitConfig` | 速率限制配置 | 默认配置 |
+| `jwt_secret` | `String` | JWT secret key | Required |
+| `password_hash_algorithm` | `DMSCPasswordHashAlgorithm` | Password hash algorithm | `Argon2id` |
+| `session_timeout` | `Duration` | Session timeout | `24h` |
+| `max_login_attempts` | `u32` | Maximum login attempts | `5` |
+| `lockout_duration` | `Duration` | Account lockout duration | `30m` |
+| `mfa_required` | `bool` | Whether MFA is required | `false` |
+| `password_policy` | `DMSCPasswordPolicy` | Password policy | Default policy |
+| `rate_limit_config` | `DMSCRateLimitConfig` | Rate limit configuration | Default configuration |
 
-#### 配置示例
+#### Configuration Example
 
 ```rust
 use dms::prelude::*;
@@ -736,24 +736,24 @@ let security_config = DMSCSecurityConfig {
 
 <div align="center">
 
-## 错误处理
+## Error Handling
 
 </div>
 
-### 安全错误码
+### Security Error Codes
 
-| 错误码 | 描述 |
+| Error Code | Description |
 |:--------|:-------------|
-| `SECURITY_AUTH_FAILED` | 认证失败 |
-| `SECURITY_UNAUTHORIZED` | 未授权 |
-| `SECURITY_FORBIDDEN` | 权限不足 |
-| `SECURITY_INVALID_TOKEN` | 无效令牌 |
-| `SECURITY_TOKEN_EXPIRED` | 令牌过期 |
-| `SECURITY_RATE_LIMITED` | 速率限制 |
-| `SECURITY_VALIDATION_FAILED` | 验证失败 |
-| `SECURITY_ENCRYPTION_ERROR` | 加密错误 |
+| `SECURITY_AUTH_FAILED` | Authentication failed |
+| `SECURITY_UNAUTHORIZED` | Unauthorized |
+| `SECURITY_FORBIDDEN` | Insufficient permissions |
+| `SECURITY_INVALID_TOKEN` | Invalid token |
+| `SECURITY_TOKEN_EXPIRED` | Token expired |
+| `SECURITY_RATE_LIMITED` | Rate limited |
+| `SECURITY_VALIDATION_FAILED` | Validation failed |
+| `SECURITY_ENCRYPTION_ERROR` | Encryption error |
 
-### 错误处理示例
+### Error Handling Example
 
 ```rust
 use dms::prelude::*;
@@ -764,16 +764,16 @@ match ctx.security().authenticate(credentials).await {
     }
     Err(DMSCError { code, .. }) if code == "SECURITY_AUTH_FAILED" => {
         ctx.log().warn("Authentication failed");
-        
-        // 增加失败计数
+
+        // Increment failure count
         let fail_count = ctx.security().increment_login_failures(&username).await?;
-        
+
         if fail_count >= ctx.config().security.max_login_attempts {
-            // 锁定账户
+            // Lock account
             ctx.security().lock_account(&username, Duration::from_minutes(30)).await?;
             ctx.log().warn(format!("Account locked: {}", username));
         }
-        
+
         return Err(DMSCError::auth("Authentication failed"));
     }
     Err(e) => {
@@ -785,36 +785,36 @@ match ctx.security().authenticate(credentials).await {
 
 <div align="center">
 
-## 最佳实践
+## Best Practices
 
 </div>
 
-1. **使用强密码策略**: 要求复杂密码并定期更换
-2. **启用多因素认证**: 对敏感操作要求MFA
-3. **实施最小权限原则**: 只授予必要的权限
-4. **加密敏感数据**: 对存储和传输的敏感数据进行加密
-5. **输入验证**: 对所有用户输入进行验证和清理
-6. **速率限制**: 对API端点实施适当的速率限制
-7. **安全审计**: 记录所有安全相关事件
-8. **定期安全扫描**: 定期检查安全漏洞
-9. **使用HTTPS**: 所有通信使用加密连接
-10. **及时更新**: 保持安全库和依赖项的最新版本
+1. **Use strong password policies**: Require complex passwords and regular password changes
+2. **Enable multi-factor authentication**: Require MFA for sensitive operations
+3. **Implement principle of least privilege**: Grant only necessary permissions
+4. **Encrypt sensitive data**: Encrypt sensitive data in storage and transmission
+5. **Input validation**: Validate and sanitize all user inputs
+6. **Rate limiting**: Implement appropriate rate limits for API endpoints
+7. **Security auditing**: Log all security-related events
+8. **Regular security scans**: Periodically check for security vulnerabilities
+9. **Use HTTPS**: Use encrypted connections for all communications
+10. **Timely updates**: Keep security libraries and dependencies up to date
 
 <div align="center">
 
-## 相关模块
+## Related Modules
 
 </div>
 
-- [README](./README.md): 模块概览，提供API参考文档总览和快速导航
-- [auth](./auth.md): 认证模块，提供JWT、OAuth2和RBAC认证授权功能
-- [core](./core.md): 核心模块，提供错误处理和服务上下文
-- [log](./log.md): 日志模块，记录认证事件和安全日志
-- [config](./config.md): 配置模块，管理认证配置和密钥设置
-- [cache](./cache.md): 缓存模块，提供多后端缓存抽象，缓存用户会话和权限数据
-- [database](./database.md): 数据库模块，提供用户数据持久化和查询功能
-- [http](./http.md): HTTP模块，提供Web认证接口和中间件支持
-- [mq](./mq.md): 消息队列模块，处理认证事件和异步通知
-- [observability](./observability.md): 可观测性模块，监控认证性能和安全事件
-- [storage](./storage.md): 存储模块，管理认证文件、密钥和证书
-- [validation](./validation.md): 验证模块，验证用户输入和表单数据
+- [README](./README.md): Module overview, providing API reference documentation overview and quick navigation
+- [auth](./auth.md): Authentication module, providing JWT, OAuth2, and RBAC authentication and authorization functionality
+- [core](./core.md): Core module, providing error handling and service context
+- [log](./log.md): Logging module, recording authentication events and security logs
+- [config](./config.md): Configuration module, managing authentication configuration and key settings
+- [cache](./cache.md): Cache module, providing multi-backend cache abstraction, caching user sessions and permission data
+- [database](./database.md): Database module, providing user data persistence and query functionality
+- [http](./http.md): HTTP module, providing web authentication interfaces and middleware support
+- [mq](./mq.md): Message queue module, handling authentication events and asynchronous notifications
+- [observability](./observability.md): Observability module, monitoring authentication performance and security events
+- [storage](./storage.md): Storage module, managing authentication files, keys, and certificates
+- [validation](./validation.md): Validation module, validating user input and form data

@@ -1,98 +1,98 @@
 <div align="center">
 
-# Observability API参考
+# Observability API Reference
 
 **Version: 1.0.0**
 
 **Last modified date: 2025-12-12**
 
-observability模块提供分布式追踪、指标收集、健康检查与性能监控功能，支持OpenTelemetry标准。
+The observability module provides distributed tracing, metrics collection, health checks, and performance monitoring functionality, supporting the OpenTelemetry standard.
 
-## 模块概述
+## Module Overview
 
 </div>
 
-observability模块包含以下子模块：
+The observability module contains the following sub-modules:
 
-- **tracing**: 分布式追踪
-- **metrics**: 指标收集
-- **health**: 健康检查
-- **profiling**: 性能分析
-- **alerts**: 告警管理
+- **tracing**: Distributed tracing
+- **metrics**: Metrics collection
+- **health**: Health checks
+- **profiling**: Performance profiling
+- **alerts**: Alert management
 
 <div align="center">
 
-## 核心组件
+## Core Components
 
 </div>
 
 ### DMSCObservability
 
-可观测性管理器主接口，提供统一的监控功能。
+Main interface for the observability manager, providing unified monitoring functionality.
 
-#### 方法
+#### Methods
 
-| 方法 | 描述 | 参数 | 返回值 |
+| Method | Description | Parameters | Return Value |
 |:--------|:-------------|:--------|:--------|
-| `start_trace(name)` | 开始追踪 | `name: &str` | `DMSCTrace` |
-| `record_metric(name, value)` | 记录指标 | `name: &str`, `value: f64` | `()` |
-| `increment_counter(name)` | 增加计数器 | `name: &str` | `()` |
-| `set_gauge(name, value)` | 设置计量器 | `name: &str`, `value: f64` | `()` |
-| `record_histogram(name, value)` | 记录直方图 | `name: &str`, `value: f64` | `()` |
-| `check_health()` | 执行健康检查 | 无 | `DMSCResult<HealthStatus>` |
-| `start_profiling()` | 开始性能分析 | 无 | `DMSCResult<()>` |
-| `stop_profiling()` | 停止性能分析 | 无 | `DMSCResult<Vec<ProfileData>>` |
-| `get_metrics()` | 获取所有指标 | 无 | `HashMap<String, MetricValue>` |
-| `export_metrics()` | 导出指标 | 无 | `DMSCResult<String>` |
+| `start_trace(name)` | Start tracing | `name: &str` | `DMSCTrace` |
+| `record_metric(name, value)` | Record metric | `name: &str`, `value: f64` | `()` |
+| `increment_counter(name)` | Increment counter | `name: &str` | `()` |
+| `set_gauge(name, value)` | Set gauge | `name: &str`, `value: f64` | `()` |
+| `record_histogram(name, value)` | Record histogram | `name: &str`, `value: f64` | `()` |
+| `check_health()` | Execute health check | None | `DMSCResult<HealthStatus>` |
+| `start_profiling()` | Start performance profiling | None | `DMSCResult<()>` |
+| `stop_profiling()` | Stop performance profiling | None | `DMSCResult<Vec<ProfileData>>` |
+| `get_metrics()` | Get all metrics | None | `HashMap<String, MetricValue>` |
+| `export_metrics()` | Export metrics | None | `DMSCResult<String>` |
 
-#### 使用示例
+#### Usage Example
 
 ```rust
 use dms::prelude::*;
 
-// 记录指标
+// Record metrics
 ctx.observability().increment_counter("requests.total");
 ctx.observability().record_metric("response.time", 125.5);
 ctx.observability().set_gauge("active.connections", 42.0);
 
-// 分布式追踪
+// Distributed tracing
 let trace = ctx.observability().start_trace("user_request");
 trace.with_tag("user_id", "12345");
 trace.with_tag("endpoint", "/api/users");
 
-// 记录追踪事件
+// Record trace event
 trace.record_event("database_query", serde_json::json!({
     "query": "SELECT * FROM users",
     "duration_ms": 45.2
 }));
 
-// 结束追踪
+// End tracing
 trace.finish();
 ```
 
 ### DMSCTrace
 
-分布式追踪接口。
+Distributed tracing interface.
 
-#### 方法
+#### Methods
 
-| 方法 | 描述 | 参数 | 返回值 |
+| Method | Description | Parameters | Return Value |
 |:--------|:-------------|:--------|:--------|
-| `with_tag(key, value)` | 添加标签 | `key: &str`, `value: impl Serialize` | `&Self` |
-| `with_tags(tags)` | 添加多个标签 | `tags: impl Serialize` | `&Self` |
-| `record_event(name, attributes)` | 记录事件 | `name: &str`, `attributes: impl Serialize` | `()` |
-| `start_span(name)` | 开始子跨度 | `name: &str` | `DMSCSpan` |
-| `set_status(status)` | 设置状态 | `status: TraceStatus` | `()` |
-| `finish()` | 结束追踪 | 无 | `()` |
-| `get_trace_id()` | 获取追踪ID | 无 | `String` |
-| `get_span_id()` | 获取跨度ID | 无 | `String` |
+| `with_tag(key, value)` | Add tag | `key: &str`, `value: impl Serialize` | `&Self` |
+| `with_tags(tags)` | Add multiple tags | `tags: impl Serialize` | `&Self` |
+| `record_event(name, attributes)` | Record event | `name: &str`, `attributes: impl Serialize` | `()` |
+| `start_span(name)` | Start child span | `name: &str` | `DMSCSpan` |
+| `set_status(status)` | Set status | `status: TraceStatus` | `()` |
+| `finish()` | End tracing | None | `()` |
+| `get_trace_id()` | Get trace ID | None | `String` |
+| `get_span_id()` | Get span ID | None | `String` |
 
-#### 使用示例
+#### Usage Example
 
 ```rust
 use dms::prelude::*;
 
-// 开始追踪
+// Start tracing
 let trace = ctx.observability().start_trace("http_request");
 trace.with_tags(serde_json::json!({
     "method": "GET",
@@ -100,50 +100,50 @@ trace.with_tags(serde_json::json!({
     "user_agent": "Mozilla/5.0"
 }));
 
-// 记录数据库查询
+// Record database query
 let db_span = trace.start_span("database_query");
 db_span.with_tag("table", "users");
 db_span.with_tag("operation", "SELECT");
 
-// 模拟数据库操作
+// Simulate database operation
 std::thread::sleep(std::time::Duration::from_millis(50));
 
 db_span.finish();
 
-// 设置追踪状态
+// Set trace status
 trace.set_status(TraceStatus::Ok);
 trace.finish();
 ```
 
 ### DMSCSpan
 
-追踪跨度接口。
+Trace span interface.
 
-#### 方法
+#### Methods
 
-| 方法 | 描述 | 参数 | 返回值 |
+| Method | Description | Parameters | Return Value |
 |:--------|:-------------|:--------|:--------|
-| `with_tag(key, value)` | 添加标签 | `key: &str`, `value: impl Serialize` | `&Self` |
-| `with_tags(tags)` | 添加多个标签 | `tags: impl Serialize` | `&Self` |
-| `record_event(name, attributes)` | 记录事件 | `name: &str`, `attributes: impl Serialize` | `()` |
-| `start_span(name)` | 开始子跨度 | `name: &str` | `DMSCSpan` |
-| `set_status(status)` | 设置状态 | `status: TraceStatus` | `()` |
-| `finish()` | 结束跨度 | 无 | `()` |
-| `get_span_id()` | 获取跨度ID | 无 | `String` |
+| `with_tag(key, value)` | Add tag | `key: &str`, `value: impl Serialize` | `&Self` |
+| `with_tags(tags)` | Add multiple tags | `tags: impl Serialize` | `&Self` |
+| `record_event(name, attributes)` | Record event | `name: &str`, `attributes: impl Serialize` | `()` |
+| `start_span(name)` | Start child span | `name: &str` | `DMSCSpan` |
+| `set_status(status)` | Set status | `status: TraceStatus` | `()` |
+| `finish()` | End span | None | `()` |
+| `get_span_id()` | Get span ID | None | `String` |
 
-#### 使用示例
+#### Usage Example
 
 ```rust
 use dms::prelude::*;
 
-// 创建嵌套跨度
+// Create nested spans
 let parent_span = ctx.observability().start_trace("request_processing");
 
 {
     let db_span = parent_span.start_span("database_operation");
     db_span.with_tag("database", "users");
     
-    // 模拟数据库操作
+    // Simulate database operation
     std::thread::sleep(std::time::Duration::from_millis(30));
     
     db_span.finish();
@@ -153,7 +153,7 @@ let parent_span = ctx.observability().start_trace("request_processing");
     let cache_span = parent_span.start_span("cache_operation");
     cache_span.with_tag("cache_type", "redis");
     
-    // 模拟缓存操作
+    // Simulate cache operation
     std::thread::sleep(std::time::Duration::from_millis(10));
     
     cache_span.finish();
@@ -163,71 +163,71 @@ parent_span.finish();
 ```
 <div align="center">
 
-## 指标收集
+## Metrics Collection
 
 </div>
 
-### 指标类型
+### Metric Types
 
 #### DMSCCounter
 
-计数器类型，只能增加。
+Counter type, can only be incremented.
 
 ```rust
 use dms::prelude::*;
 
-// 创建计数器
+// Create counter
 let counter = ctx.observability().create_counter("requests.total");
 counter.increment();
 counter.increment_by(5);
 
-// 获取当前值
+// Get current value
 let count = counter.get();
 ```
 
 #### DMSCGauge
 
-计量器类型，可以设置任意值。
+Gauge type, can be set to any value.
 
 ```rust
 use dms::prelude::*;
 
-// 创建计量器
+// Create gauge
 let gauge = ctx.observability().create_gauge("connections.active");
 gauge.set(42.0);
 gauge.increment_by(1.0);
 gauge.decrement_by(2.0);
 
-// 获取当前值
+// Get current value
 let value = gauge.get();
 ```
 
 #### DMSCHistogram
 
-直方图类型，记录数值分布。
+Histogram type, records value distribution.
 
 ```rust
 use dms::prelude::*;
 
-// 创建直方图
+// Create histogram
 let histogram = ctx.observability().create_histogram("response.duration");
 histogram.record(125.5);
 histogram.record(98.3);
 histogram.record(156.7);
 
-// 获取统计信息
+// Get statistics
 let stats = histogram.get_stats();
 println!("Count: {}", stats.count);
 println!("Mean: {}", stats.mean);
 println!("P95: {}", stats.percentile_95);
 ```
 
-### 指标标签
+### Metric Labels
 
 ```rust
 use dms::prelude::*;
 
-// 带标签的指标
+// Metrics with labels
 let counter = ctx.observability()
     .create_counter_with_labels("requests.total", vec![
         ("method", "GET"),
@@ -237,7 +237,7 @@ let counter = ctx.observability()
 
 counter.increment();
 
-// 动态标签
+// Dynamic labels
 let endpoint = get_current_endpoint();
 let status = get_response_status();
 
@@ -248,65 +248,65 @@ ctx.observability()
     ]);
 ```
 
-### 指标导出
+### Metrics Export
 
-#### Prometheus格式
+#### Prometheus Format
 
 ```rust
 use dms::prelude::*;
 
-// 导出Prometheus格式的指标
+// Export metrics in Prometheus format
 let prometheus_metrics = ctx.observability().export_prometheus()?;
 println!("{}", prometheus_metrics);
 ```
 
-#### StatsD格式
+#### StatsD Format
 
 ```rust
 use dms::prelude::*;
 
-// 导出StatsD格式的指标
+// Export metrics in StatsD format
 let statsd_metrics = ctx.observability().export_statsd()?;
 println!("{}", statsd_metrics);
 ```
 
 <div align="center">
 
-## 健康检查
+## Health Checks
 
 </div>
 
 ### DMSCHealthCheck
 
-健康检查接口。
+Health check interface.
 
-#### 方法
+#### Methods
 
-| 方法 | 描述 | 参数 | 返回值 |
+| Method | Description | Parameters | Return Value |
 |:--------|:-------------|:--------|:--------|
-| `add_check(name, check)` | 添加健康检查 | `name: &str`, `check: impl HealthCheck` | `()` |
-| `remove_check(name)` | 移除健康检查 | `name: &str` | `()` |
-| `run_checks()` | 执行所有检查 | 无 | `DMSCResult<HealthReport>` |
-| `get_status()` | 获取健康状态 | 无 | `HealthStatus` |
+| `add_check(name, check)` | Add health check | `name: &str`, `check: impl HealthCheck` | `()` |
+| `remove_check(name)` | Remove health check | `name: &str` | `()` |
+| `run_checks()` | Execute all checks | None | `DMSCResult<HealthReport>` |
+| `get_status()` | Get health status | None | `HealthStatus` |
 
-#### 内置健康检查
+#### Built-in Health Checks
 
 ```rust
 use dms::prelude::*;
 
-// 数据库健康检查
+// Database health check
 let db_health = DatabaseHealthCheck::new("postgres://localhost/mydb");
 ctx.observability().health().add_check("database", db_health);
 
-// Redis健康检查
+// Redis health check
 let redis_health = RedisHealthCheck::new("redis://localhost:6379");
 ctx.observability().health().add_check("redis", redis_health);
 
-// HTTP端点健康检查
+// HTTP endpoint health check
 let http_health = HttpHealthCheck::new("https://api.example.com/health");
 ctx.observability().health().add_check("external_api", http_health);
 
-// 执行健康检查
+// Execute health checks
 let health_report = ctx.observability().health().run_checks()?;
 
 for (name, result) in health_report.results {
@@ -318,7 +318,7 @@ for (name, result) in health_report.results {
 }
 ```
 
-### 自定义健康检查
+### Custom Health Checks
 
 ```rust
 use dms::prelude::*;
@@ -348,72 +348,72 @@ impl HealthCheck for CustomHealthCheck {
 
 impl CustomHealthCheck {
     fn get_current_value(&self) -> DMSCResult<f64> {
-        // 实现具体的检查逻辑
+        // Implement specific check logic
         Ok(0.5)
     }
 }
 
-// 使用自定义健康检查
+// Use custom health check
 let custom_check = CustomHealthCheck { threshold: 0.8 };
 ctx.observability().health().add_check("custom", custom_check);
 ```
 
 <div align="center">
 
-## 性能分析
+## Performance Profiling
 
 </div>
 
-### CPU分析
+### CPU Profiling
 
 ```rust
 use dms::prelude::*;
 
-// 开始CPU分析
+// Start CPU profiling
 ctx.observability().profiling().start_cpu_profiling()?;
 
-// 执行需要分析的操作
+// Perform operations to profile
 perform_expensive_operation();
 
-// 停止分析并获取结果
+// Stop profiling and get results
 let profile_data = ctx.observability().profiling().stop_cpu_profiling()?;
 
-// 导出分析结果
+// Export profiling results
 let flame_graph = profile_data.generate_flame_graph()?;
 std::fs::write("cpu_profile.svg", flame_graph)?;
 ```
 
-### 内存分析
+### Memory Profiling
 
 ```rust
 use dms::prelude::*;
 
-// 开始内存分析
+// Start memory profiling
 ctx.observability().profiling().start_memory_profiling()?;
 
-// 执行需要分析的操作
+// Perform operations to profile
 allocate_memory_intensive_operation();
 
-// 停止分析并获取结果
+// Stop profiling and get results
 let memory_profile = ctx.observability().profiling().stop_memory_profiling()?;
 
-// 分析内存使用模式
+// Analyze memory usage patterns
 for allocation in memory_profile.allocations {
     println!("Allocation: {} bytes at {:?}", allocation.size, allocation.timestamp);
 }
 ```
 
-### 性能指标
+### Performance Metrics
 
 ```rust
 use dms::prelude::*;
 
-// 记录性能指标
+// Record performance metrics
 ctx.observability().profiling().record_performance_metric("cpu.usage", 45.2);
 ctx.observability().profiling().record_performance_metric("memory.usage", 1024.0);
 ctx.observability().profiling().record_performance_metric("disk.io", 125.5);
 
-// 获取性能报告
+// Get performance report
 let performance_report = ctx.observability().profiling().get_performance_report()?;
 println!("CPU Usage: {:.1}%", performance_report.cpu_usage);
 println!("Memory Usage: {:.1}MB", performance_report.memory_usage);
@@ -422,52 +422,52 @@ println!("Disk I/O: {:.1}MB/s", performance_report.disk_io);
 
 <div align="center">
 
-## 告警管理
+## Alert Management
 
 </div>  
 
 ### DMSCAlert
 
-告警接口。
+Alert interface.
 
-#### 方法
+#### Methods
 
-| 方法 | 描述 | 参数 | 返回值 |
+| Method | Description | Parameters | Return Value |
 |:--------|:-------------|:--------|:--------|
-| `create_alert(name, condition)` | 创建告警 | `name: &str`, `condition: AlertCondition` | `DMSCAlert` |
-| `enable_alert(name)` | 启用告警 | `name: &str` | `()` |
-| `disable_alert(name)` | 禁用告警 | `name: &str` | `()` |
-| `get_alerts()` | 获取所有告警 | 无 | `Vec<DMSCAlert>` |
+| `create_alert(name, condition)` | Create alert | `name: &str`, `condition: AlertCondition` | `DMSCAlert` |
+| `enable_alert(name)` | Enable alert | `name: &str` | `()` |
+| `disable_alert(name)` | Disable alert | `name: &str` | `()` |
+| `get_alerts()` | Get all alerts | None | `Vec<DMSCAlert>` |
 
-### 告警条件
+### Alert Conditions
 
 ```rust
 use dms::prelude::*;
 
-// 创建告警条件
+// Create alert conditions
 let cpu_alert_condition = AlertCondition::threshold(
     "cpu.usage",
     ThresholdCondition::GreaterThan(80.0),
-    Duration::from_secs(300)  // 持续5分钟
+    Duration::from_secs(300)  // Lasts for 5 minutes
 );
 
 let memory_alert_condition = AlertCondition::threshold(
     "memory.usage",
     ThresholdCondition::GreaterThan(90.0),
-    Duration::from_secs(600)  // 持续10分钟
+    Duration::from_secs(600)  // Lasts for 10 minutes
 );
 
-// 创建告警
+// Create alerts
 ctx.observability().alerts().create_alert("high_cpu_usage", cpu_alert_condition)?;
 ctx.observability().alerts().create_alert("high_memory_usage", memory_alert_condition)?;
 ```
 
-### 告警通知
+### Alert Notifications
 
 ```rust
 use dms::prelude::*;
 
-// 配置告警通知
+// Configure alert notifications
 let email_notification = EmailNotification::new(
     "admin@example.com",
     "System Alert",
@@ -479,23 +479,23 @@ let slack_notification = SlackNotification::new(
     "#alerts"
 );
 
-// 添加通知渠道
+// Add notification channels
 ctx.observability().alerts().add_notification_channel("email", email_notification)?;
 ctx.observability().alerts().add_notification_channel("slack", slack_notification)?;
 ```
 
 <div align="center">
 
-## OpenTelemetry集成
+## OpenTelemetry Integration
 
 </div>
 
-### 导出器配置
+### Exporter Configuration
 
 ```rust
 use dms::prelude::*;
 
-// 配置Jaeger导出器
+// Configure Jaeger exporter
 let jaeger_config = JaegerExporterConfig {
     endpoint: "http://localhost:14268/api/traces".to_string(),
     service_name: "my-service".to_string(),
@@ -504,7 +504,7 @@ let jaeger_config = JaegerExporterConfig {
 
 ctx.observability().set_trace_exporter(TraceExporter::Jaeger(jaeger_config))?;
 
-// 配置Prometheus导出器
+// Configure Prometheus exporter
 let prometheus_config = PrometheusExporterConfig {
     endpoint: "0.0.0.0:9090".to_string(),
     ..Default::default()
@@ -513,38 +513,38 @@ let prometheus_config = PrometheusExporterConfig {
 ctx.observability().set_metric_exporter(MetricExporter::Prometheus(prometheus_config))?;
 ```
 
-### 上下文传播
+### Context Propagation
 
 ```rust
 use dms::prelude::*;
 
-// 注入追踪上下文到HTTP请求头
+// Inject trace context into HTTP request headers
 let mut headers = HashMap::new();
 ctx.observability().inject_context(&mut headers)?;
 
-// 从HTTP请求头提取追踪上下文
+// Extract trace context from HTTP request headers
 let extracted_context = ctx.observability().extract_context(&headers)?;
 let trace = ctx.observability().start_trace_with_context("http_request", extracted_context);
 ```
 
-## 配置
+## Configuration
 
 ### DMSCObservabilityConfig
 
-可观测性配置结构体。
+Observability configuration struct.
 
-#### 字段
+#### Fields
 
-| 字段 | 类型 | 描述 | 默认值 |
+| Field | Type | Description | Default Value |
 |:--------|:-----|:-------------|:-------|
-| `tracing_enabled` | `bool` | 启用追踪 | `true` |
-| `metrics_enabled` | `bool` | 启用指标 | `true` |
-| `health_checks_enabled` | `bool` | 启用健康检查 | `true` |
-| `profiling_enabled` | `bool` | 启用性能分析 | `false` |
-| `sampling_rate` | `f64` | 追踪采样率 | `0.1` |
-| `export_interval` | `Duration` | 导出间隔 | `60s` |
+| `tracing_enabled` | `bool` | Enable tracing | `true` |
+| `metrics_enabled` | `bool` | Enable metrics | `true` |
+| `health_checks_enabled` | `bool` | Enable health checks | `true` |
+| `profiling_enabled` | `bool` | Enable performance profiling | `false` |
+| `sampling_rate` | `f64` | Trace sampling rate | `0.1` |
+| `export_interval` | `Duration` | Export interval | `60s` |
 
-#### 配置示例
+#### Configuration Example
 
 ```rust
 use dms::prelude::*;
@@ -553,7 +553,7 @@ let observability_config = DMSCObservabilityConfig {
     tracing_enabled: true,
     metrics_enabled: true,
     health_checks_enabled: true,
-    profiling_enabled: cfg!(debug_assertions),  // 只在调试模式下启用
+    profiling_enabled: cfg!(debug_assertions),  // Enable only in debug mode
     sampling_rate: 0.1,
     export_interval: Duration::from_secs(60),
 };
@@ -563,69 +563,69 @@ ctx.observability().configure(observability_config)?;
 
 <div align="center">
 
-## 错误处理
+## Error Handling
 
 </div>  
 
-### 可观测性错误码
+### Observability Error Codes
 
-| 错误码 | 描述 |
+| Error Code | Description |
 |:--------|:-------------|
-| `TRACE_EXPORT_ERROR` | 追踪导出错误 |
-| `METRIC_EXPORT_ERROR` | 指标导出错误 |
-| `HEALTH_CHECK_ERROR` | 健康检查错误 |
-| `PROFILING_ERROR` | 性能分析错误 |
-| `ALERT_CONFIG_ERROR` | 告警配置错误 |
+| `TRACE_EXPORT_ERROR` | Trace export error |
+| `METRIC_EXPORT_ERROR` | Metric export error |
+| `HEALTH_CHECK_ERROR` | Health check error |
+| `PROFILING_ERROR` | Performance profiling error |
+| `ALERT_CONFIG_ERROR` | Alert configuration error |
 
-### 错误处理示例
+### Error Handling Example
 
 ```rust
 use dms::prelude::*;
 
 match ctx.observability().export_metrics() {
     Ok(metrics) => {
-        // 指标导出成功
+        // Metrics export successful
         println!("Exported metrics: {}", metrics);
     }
     Err(DMSCError { code, .. }) if code == "METRIC_EXPORT_ERROR" => {
-        // 指标导出错误，记录警告
+        // Metrics export error, log warning
         ctx.log().warn("Failed to export metrics, continuing without metrics");
     }
     Err(e) => {
-        // 其他错误
+        // Other errors
         return Err(e);
     }
 }
 ```
 <div align="center">
 
-## 最佳实践
+## Best Practices
 
 </div>  
 
-1. **合理设置采样率**: 生产环境使用较低的采样率(0.1-0.01)
-2. **使用有意义的指标名称**: 遵循命名约定，使用描述性名称
-3. **添加适当的标签**: 为指标和追踪添加有用的标签
-4. **监控关键路径**: 重点监控业务关键路径的性能
-5. **设置合理的告警阈值**: 避免过多的误报和漏报
-6. **定期审查健康检查**: 确保健康检查反映真实的系统状态
-7. **使用异步导出**: 避免阻塞主业务流程
-8. **保护敏感信息**: 不要在追踪和指标中包含敏感数据
+1. **Set appropriate sampling rate**: Use lower sampling rates in production (0.1-0.01)
+2. **Use meaningful metric names**: Follow naming conventions and use descriptive names
+3. **Add appropriate labels**: Add useful labels to metrics and traces
+4. **Monitor critical paths**: Focus on monitoring performance of business-critical paths
+5. **Set reasonable alert thresholds**: Avoid excessive false positives and false negatives
+6. **Regularly review health checks**: Ensure health checks reflect actual system status
+7. **Use asynchronous export**: Avoid blocking main business processes
+8. **Protect sensitive information**: Do not include sensitive data in traces and metrics
 <div align="center">
 
-## 相关模块
+## Related Modules
 
 </div>
 
-- [README](./README.md): 模块概览，提供API参考文档总览和快速导航
-- [auth](./auth.md): 认证模块，提供JWT、OAuth2和RBAC认证授权功能
-- [core](./core.md): 核心模块，提供错误处理和服务上下文
-- [log](./log.md): 日志模块，记录认证事件和安全日志
-- [config](./config.md): 配置模块，管理认证配置和密钥设置
-- [cache](./cache.md): 缓存模块，提供多后端缓存抽象，缓存用户会话和权限数据
-- [database](./database.md): 数据库模块，提供用户数据持久化和查询功能
-- [http](./http.md): HTTP模块，提供Web认证接口和中间件支持
-- [mq](./mq.md): 消息队列模块，处理认证事件和异步通知
-- [security](./security.md): 安全模块，提供加密、哈希和验证功能
-- [storage](./storage.md): 存储模块，管理认证文件、密钥和证书
-- [validation](./validation.md): 验证模块，验证用户输入和表单数据
+- [README](./README.md): Module overview, providing API reference documentation overview and quick navigation
+- [auth](./auth.md): Authentication module, providing JWT, OAuth2, and RBAC authentication and authorization functionality
+- [core](./core.md): Core module, providing error handling and service context
+- [log](./log.md): Logging module, recording authentication events and security logs
+- [config](./config.md): Configuration module, managing authentication configuration and key settings
+- [cache](./cache.md): Cache module, providing multi-backend cache abstraction, caching user sessions and permission data
+- [database](./database.md): Database module, providing user data persistence and query functionality
+- [http](./http.md): HTTP module, providing web authentication interfaces and middleware support
+- [mq](./mq.md): Message queue module, handling authentication events and asynchronous notifications
+- [security](./security.md): Security module, providing encryption, hashing, and verification functionality
+- [storage](./storage.md): Storage module, managing authentication files, keys, and certificates
+- [validation](./validation.md): Validation module, validating user input and form data

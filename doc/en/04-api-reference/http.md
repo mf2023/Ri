@@ -1,56 +1,56 @@
 <div align="center">
 
-# HTTP API参考
+# HTTP API Reference
 
 **Version: 1.0.0**
 
 **Last modified date: 2025-12-12**
 
-http模块提供HTTP客户端与服务器功能，支持路由、中间件、WebSocket与文件上传下载。
+The http module provides HTTP client and server functionality, supporting routing, middleware, WebSocket, and file upload/download.
 
-## 模块概述
+## Module Overview
 
 </div>
 
-http模块包含以下子模块：
+The http module contains the following sub-modules:
 
-- **server**: HTTP服务器
-- **client**: HTTP客户端
-- **router**: 路由管理
-- **middleware**: 中间件
-- **websocket**: WebSocket支持
-- **upload**: 文件上传下载
+- **server**: HTTP server
+- **client**: HTTP client
+- **router**: Route management
+- **middleware**: Middleware
+- **websocket**: WebSocket support
+- **upload**: File upload/download
 
 <div align="center">
 
-## 核心组件
+## Core Components
 
 </div>
 
 ### DMSCHttpServer
 
-HTTP服务器接口。
+HTTP server interface.
 
-#### 方法
+#### Methods
 
-| 方法 | 描述 | 参数 | 返回值 |
+| Method | Description | Parameters | Return Value |
 |:--------|:-------------|:--------|:--------|
-| `new(config)` | 创建HTTP服务器 | `config: DMSCHttpServerConfig` | `Self` |
-| `route(method, path, handler)` | 添加路由 | `method: HttpMethod`, `path: &str`, `handler: impl HttpHandler` | `&Self` |
-| `get(path, handler)` | 添加GET路由 | `path: &str`, `handler: impl HttpHandler` | `&Self` |
-| `post(path, handler)` | 添加POST路由 | `path: &str`, `handler: impl HttpHandler` | `&Self` |
-| `put(path, handler)` | 添加PUT路由 | `path: &str`, `handler: impl HttpHandler` | `&Self` |
-| `delete(path, handler)` | 添加DELETE路由 | `path: &str`, `handler: impl HttpHandler` | `&Self` |
-| `use_middleware(middleware)` | 使用中间件 | `middleware: impl HttpMiddleware` | `&Self` |
-| `listen(addr)` | 启动服务器监听 | `addr: &str` | `DMSCResult<()>` |
-| `shutdown()` | 关闭服务器 | 无 | `DMSCResult<()>` |
+| `new(config)` | Create HTTP server | `config: DMSCHttpServerConfig` | `Self` |
+| `route(method, path, handler)` | Add route | `method: HttpMethod`, `path: &str`, `handler: impl HttpHandler` | `&Self` |
+| `get(path, handler)` | Add GET route | `path: &str`, `handler: impl HttpHandler` | `&Self` |
+| `post(path, handler)` | Add POST route | `path: &str`, `handler: impl HttpHandler` | `&Self` |
+| `put(path, handler)` | Add PUT route | `path: &str`, `handler: impl HttpHandler` | `&Self` |
+| `delete(path, handler)` | Add DELETE route | `path: &str`, `handler: impl HttpHandler` | `&Self` |
+| `use_middleware(middleware)` | Use middleware | `middleware: impl HttpMiddleware` | `&Self` |
+| `listen(addr)` | Start server listening | `addr: &str` | `DMSCResult<()>` |
+| `shutdown()` | Shutdown server | None | `DMSCResult<()>` |
 
-#### 使用示例
+#### Usage Example
 
 ```rust
 use dms::prelude::*;
 
-// 创建HTTP服务器配置
+// Create HTTP server configuration
 let server_config = DMSCHttpServerConfig {
     host: "0.0.0.0".to_string(),
     port: 8080,
@@ -59,10 +59,10 @@ let server_config = DMSCHttpServerConfig {
     ..Default::default()
 };
 
-// 创建HTTP服务器
+// Create HTTP server
 let server = DMSCHttpServer::new(server_config);
 
-// 添加路由
+// Add routes
 server.get("/", |req: DMSCHttpRequest, res: DMSCHttpResponse| async move {
     res.status(200).json(serde_json::json!({
         "message": "Hello, World!"
@@ -79,41 +79,41 @@ server.get("/users/:id", |req: DMSCHttpRequest, res: DMSCHttpResponse| async mov
     }))
 });
 
-// 启动服务器
+// Start server
 server.listen("0.0.0.0:8080").await?;
 ```
 
 ### DMSCHttpClient
 
-HTTP客户端接口。
+HTTP client interface.
 
-#### 方法
+#### Methods
 
-| 方法 | 描述 | 参数 | 返回值 |
+| Method | Description | Parameters | Return Value |
 |:--------|:-------------|:--------|:--------|
-| `new(config)` | 创建HTTP客户端 | `config: DMSCHttpClientConfig` | `Self` |
-| `get(url)` | 发送GET请求 | `url: &str` | `DMSCResult<DMSCHttpResponse>` |
-| `post(url, body)` | 发送POST请求 | `url: &str`, `body: impl Serialize` | `DMSCResult<DMSCHttpResponse>` |
-| `put(url, body)` | 发送PUT请求 | `url: &str`, `body: impl Serialize` | `DMSCResult<DMSCHttpResponse>` |
-| `delete(url)` | 发送DELETE请求 | `url: &str` | `DMSCResult<DMSCHttpResponse>` |
-| `request(method, url, body)` | 发送自定义请求 | `method: HttpMethod`, `url: &str`, `body: Option<impl Serialize>` | `DMSCResult<DMSCHttpResponse>` |
-| `set_header(key, value)` | 设置请求头 | `key: &str`, `value: &str` | `&Self` |
-| `set_timeout(timeout)` | 设置超时 | `timeout: Duration` | `&Self` |
-| `set_auth(auth)` | 设置认证 | `auth: HttpAuth` | `&Self` |
+| `new(config)` | Create HTTP client | `config: DMSCHttpClientConfig` | `Self` |
+| `get(url)` | Send GET request | `url: &str` | `DMSCResult<DMSCHttpResponse>` |
+| `post(url, body)` | Send POST request | `url: &str`, `body: impl Serialize` | `DMSCResult<DMSCHttpResponse>` |
+| `put(url, body)` | Send PUT request | `url: &str`, `body: impl Serialize` | `DMSCResult<DMSCHttpResponse>` |
+| `delete(url)` | Send DELETE request | `url: &str` | `DMSCResult<DMSCHttpResponse>` |
+| `request(method, url, body)` | Send custom request | `method: HttpMethod`, `url: &str`, `body: Option<impl Serialize>` | `DMSCResult<DMSCHttpResponse>` |
+| `set_header(key, value)` | Set request header | `key: &str`, `value: &str` | `&Self` |
+| `set_timeout(timeout)` | Set timeout | `timeout: Duration` | `&Self` |
+| `set_auth(auth)` | Set authentication | `auth: HttpAuth` | `&Self` |
 
-#### 使用示例
+#### Usage Example
 
 ```rust
 use dms::prelude::*;
 
-// 创建HTTP客户端
+// Create HTTP client
 let client = DMSCHttpClient::new(DMSCHttpClientConfig::default());
 
-// 发送GET请求
+// Send GET request
 let response = client.get("https://api.example.com/users").await?;
 let users: Vec<User> = response.json().await?;
 
-// 发送POST请求
+// Send POST request
 let new_user = serde_json::json!({
     "name": "Jane Doe",
     "email": "jane@example.com"
@@ -122,7 +122,7 @@ let new_user = serde_json::json!({
 let response = client.post("https://api.example.com/users", new_user).await?;
 let created_user: User = response.json().await?;
 
-// 设置认证
+// Set authentication
 let client = DMSCHttpClient::new(DMSCHttpClientConfig::default())
     .set_auth(HttpAuth::Bearer("your-api-token".to_string()));
 
@@ -130,58 +130,58 @@ let response = client.get("https://api.example.com/protected").await?;
 ```
 <div align="center">
 
-## 路由管理
+## Route Management
 
 </div>
 
 ### DMSCRouter
 
-路由器接口。
+Router interface.
 
-#### 方法
+#### Methods
 
-| 方法 | 描述 | 参数 | 返回值 |
+| Method | Description | Parameters | Return Value |
 |:--------|:-------------|:--------|:--------|
-| `new()` | 创建路由器 | 无 | `Self` |
-| `get(path, handler)` | 添加GET路由 | `path: &str`, `handler: impl HttpHandler` | `&Self` |
-| `post(path, handler)` | 添加POST路由 | `path: &str`, `handler: impl HttpHandler` | `&Self` |
-| `put(path, handler)` | 添加PUT路由 | `path: &str`, `handler: impl HttpHandler` | `&Self` |
-| `delete(path, handler)` | 添加DELETE路由 | `path: &str`, `handler: impl HttpHandler` | `&Self` |
-| `use_middleware(middleware)` | 使用中间件 | `middleware: impl HttpMiddleware` | `&Self` |
-| `group(prefix)` | 创建路由组 | `prefix: &str` | `DMSCRouteGroup` |
+| `new()` | Create router | None | `Self` |
+| `get(path, handler)` | Add GET route | `path: &str`, `handler: impl HttpHandler` | `&Self` |
+| `post(path, handler)` | Add POST route | `path: &str`, `handler: impl HttpHandler` | `&Self` |
+| `put(path, handler)` | Add PUT route | `path: &str`, `handler: impl HttpHandler` | `&Self` |
+| `delete(path, handler)` | Add DELETE route | `path: &str`, `handler: impl HttpHandler` | `&Self` |
+| `use_middleware(middleware)` | Use middleware | `middleware: impl HttpMiddleware` | `&Self` |
+| `group(prefix)` | Create route group | `prefix: &str` | `DMSCRouteGroup` |
 
-#### 路由参数
+#### Route Parameters
 
 ```rust
 use dms::prelude::*;
 
-// 路径参数
+// Path parameters
 router.get("/users/:id", |req: DMSCHttpRequest, res: DMSCHttpResponse| async move {
     let user_id = req.params.get("id").unwrap();
-    // 处理逻辑
+    // Handle logic
 });
 
-// 查询参数
+// Query parameters
 router.get("/search", |req: DMSCHttpRequest, res: DMSCHttpResponse| async move {
     let query = req.query.get("q").unwrap_or("");
     let limit = req.query.get("limit").unwrap_or("10").parse::<usize>().unwrap_or(10);
     
-    // 处理搜索逻辑
+    // Handle search logic
 });
 
-// 通配符路由
+// Wildcard routes
 router.get("/files/*path", |req: DMSCHttpRequest, res: DMSCHttpResponse| async move {
     let file_path = req.params.get("path").unwrap();
-    // 处理文件请求
+    // Handle file request
 });
 ```
 
-### 路由组
+### Route Groups
 
 ```rust
 use dms::prelude::*;
 
-// 创建路由组
+// Create route group
 let api_router = router.group("/api/v1");
 
 api_router.get("/users", get_users_handler);
@@ -190,7 +190,7 @@ api_router.get("/users/:id", get_user_handler);
 api_router.put("/users/:id", update_user_handler);
 api_router.delete("/users/:id", delete_user_handler);
 
-// 嵌套路由组
+// Nested route groups
 let admin_router = router.group("/admin");
 admin_router.use_middleware(auth_middleware);
 
@@ -201,18 +201,18 @@ users_admin_router.delete("/:id", admin_delete_user_handler);
 
 <div align="center">
 
-## 中间件
+## Middleware
 
 </div>  
 
 ### DMSCHttpMiddleware
 
-中间件接口。
+Middleware interface.
 
 ```rust
 use dms::prelude::*;
 
-// 日志中间件
+// Logging middleware
 struct LoggingMiddleware;
 
 impl HttpMiddleware for LoggingMiddleware {
@@ -233,7 +233,7 @@ impl HttpMiddleware for LoggingMiddleware {
     }
 }
 
-// CORS中间件
+// CORS middleware
 struct CorsMiddleware {
     allowed_origins: Vec<String>,
     allowed_methods: Vec<String>,
@@ -252,7 +252,7 @@ impl HttpMiddleware for CorsMiddleware {
     }
 }
 
-// 使用中间件
+// Use middleware
 server.use_middleware(LoggingMiddleware);
 server.use_middleware(CorsMiddleware {
     allowed_origins: vec!["*".to_string()],
@@ -261,69 +261,69 @@ server.use_middleware(CorsMiddleware {
 });
 ```
 
-### 内置中间件
+### Built-in Middleware
 
 ```rust
 use dms::prelude::*;
 
-// 认证中间件
+// Authentication middleware
 server.use_middleware(AuthMiddleware::new());
 
-// 限流中间件
+// Rate limiting middleware
 server.use_middleware(RateLimitMiddleware::new()
-    .set_limit(100)  // 每分钟100次请求
+    .set_limit(100)  // 100 requests per minute
     .set_window(Duration::from_secs(60))
 );
 
-// 压缩中间件
+// Compression middleware
 server.use_middleware(CompressionMiddleware::new()
-    .set_threshold(1024)  // 1KB以上启用压缩
-    .set_level(6)  // 压缩级别
+    .set_threshold(1024)  // Enable compression for files larger than 1KB
+    .set_level(6)  // Compression level
 );
 
-// 静态文件中间件
+// Static file middleware
 server.use_middleware(StaticFileMiddleware::new("./public"));
 ```
 
 <div align="center">
 
-## WebSocket支持
+## WebSocket Support
 
 </div>
 
 ### DMSCWebSocket
 
-WebSocket接口。
+WebSocket interface.
 
-#### 方法
+#### Methods
 
-| 方法 | 描述 | 参数 | 返回值 |
+| Method | Description | Parameters | Return Value |
 |:--------|:-------------|:--------|:--------|
-| `accept()` | 接受WebSocket连接 | 无 | `DMSCResult<DMSCWebSocketConnection>` |
-| `send(message)` | 发送消息 | `message: impl Into<String>` | `DMSCResult<()>` |
-| `receive()` | 接收消息 | 无 | `DMSCResult<Option<String>>` |
-| `close()` | 关闭连接 | 无 | `DMSCResult<()>` |
+| `accept()` | Accept WebSocket connection | None | `DMSCResult<DMSCWebSocketConnection>` |
+| `send(message)` | Send message | `message: impl Into<String>` | `DMSCResult<()>` |
+| `receive()` | Receive message | None | `DMSCResult<Option<String>>` |
+| `close()` | Close connection | None | `DMSCResult<()>` |
 
-#### WebSocket服务器
+#### WebSocket Server
 
 ```rust
 use dms::prelude::*;
 
-// WebSocket路由
+// WebSocket route
 server.get("/ws", |req: DMSCHttpRequest, res: DMSCHttpResponse| async move {
-    // 升级HTTP连接到WebSocket
+    // Upgrade HTTP connection to WebSocket
     let ws = res.upgrade_to_websocket(req)?;
     
-    // 接受WebSocket连接
+    // Accept WebSocket connection
     let mut connection = ws.accept().await?;
     
-    // 处理WebSocket消息
+    // Handle WebSocket messages
     while let Some(message) = connection.receive().await? {
         match message {
             WebSocketMessage::Text(text) => {
                 ctx.log().info(format!("Received: {}", text));
                 
-                // 回显消息
+                // Echo message
                 connection.send(format!("Echo: {}", text)).await?;
             }
             WebSocketMessage::Binary(data) => {
@@ -336,50 +336,50 @@ server.get("/ws", |req: DMSCHttpRequest, res: DMSCHttpResponse| async move {
         }
     }
     
-    // 关闭连接
+    // Close connection
     connection.close().await?;
     
     Ok(())
 });
 ```
 
-#### WebSocket客户端
+#### WebSocket Client
 
 ```rust
 use dms::prelude::*;
 
-// 创建WebSocket客户端
+// Create WebSocket client
 let ws_client = DMSCWebSocketClient::new();
 
-// 连接到WebSocket服务器
+// Connect to WebSocket server
 let mut connection = ws_client.connect("ws://localhost:8080/ws").await?;
 
-// 发送消息
+// Send message
 connection.send("Hello, WebSocket!").await?;
 
-// 接收消息
+// Receive message
 if let Some(message) = connection.receive().await? {
     println!("Received: {}", message);
 }
 
-// 关闭连接
+// Close connection
 connection.close().await?;
 ```
 
 <div align="center">
 
-## 文件上传下载
+## File Upload/Download
 
 </div>
 
-### 文件上传
+### File Upload
 
 ```rust
 use dms::prelude::*;
 
-// 文件上传处理
+// File upload handler
 server.post("/upload", |req: DMSCHttpRequest, res: DMSCHttpResponse| async move {
-    // 解析multipart表单数据
+    // Parse multipart form data
     let multipart = req.parse_multipart()?;
     
     for field in multipart.fields {
@@ -390,7 +390,7 @@ server.post("/upload", |req: DMSCHttpRequest, res: DMSCHttpResponse| async move 
                 
                 ctx.log().info(format!("Uploading file: {} ({})", filename, content_type));
                 
-                // 保存文件
+                // Save file
                 let save_path = format!("./uploads/{}", filename);
                 file.save(&save_path).await?;
                 
@@ -408,57 +408,57 @@ server.post("/upload", |req: DMSCHttpRequest, res: DMSCHttpResponse| async move 
 });
 ```
 
-### 文件下载
+### File Download
 
 ```rust
 use dms::prelude::*;
 
-// 文件下载处理
+// File download handler
 server.get("/download/:filename", |req: DMSCHttpRequest, res: DMSCHttpResponse| async move {
     let filename = req.params.get("filename").unwrap();
     let file_path = format!("./uploads/{}", filename);
     
-    // 检查文件是否存在
+    // Check if file exists
     if !std::path::Path::new(&file_path).exists() {
         return res.status(404).json(serde_json::json!({
             "error": "File not found"
         }));
     }
     
-    // 设置响应头
+    // Set response headers
     res.set_header("Content-Type", "application/octet-stream");
     res.set_header("Content-Disposition", format!("attachment; filename=\"{}\"", filename));
     
-    // 发送文件
+    // Send file
     res.send_file(&file_path).await
 });
 ```
 
-### 大文件处理
+### Large File Handling
 
 ```rust
 use dms::prelude::*;
 
-// 大文件上传（分块上传）
+// Large file upload (chunked upload)
 server.post("/upload/chunked", |req: DMSCHttpRequest, res: DMSCHttpResponse| async move {
-    // 获取上传信息
+    // Get upload information
     let upload_id = req.headers.get("X-Upload-ID").unwrap();
     let chunk_index = req.headers.get("X-Chunk-Index").unwrap().parse::<usize>().unwrap();
     let total_chunks = req.headers.get("X-Total-Chunks").unwrap().parse::<usize>().unwrap();
     
-    // 保存分块
+    // Save chunk
     let chunk_data = req.body;
     let chunk_path = format!("./uploads/temp/{}_chunk_{}", upload_id, chunk_index);
     
     std::fs::write(&chunk_path, chunk_data)?;
     
-    // 检查是否所有分块都已上传
+    // Check if all chunks have been uploaded
     if chunk_index + 1 == total_chunks {
-        // 合并分块
+        // Merge chunks
         let final_path = format!("./uploads/{}", upload_id);
         merge_chunks(&final_path, upload_id, total_chunks).await?;
         
-        // 清理临时文件
+        // Clean up temporary files
         cleanup_temp_chunks(upload_id, total_chunks).await?;
         
         ctx.log().info(format!("Upload completed: {}", upload_id));
@@ -473,59 +473,59 @@ server.post("/upload/chunked", |req: DMSCHttpRequest, res: DMSCHttpResponse| asy
 
 <div align="center">
 
-## 配置
+## Configuration
 
 </div>
 
 ### DMSCHttpServerConfig
 
-HTTP服务器配置结构体。
+HTTP server configuration struct.
 
-#### 字段
+#### Fields
 
-| 字段 | 类型 | 描述 | 默认值 |
+| Field | Type | Description | Default Value |
 |:--------|:-----|:-------------|:-------|
-| `host` | `String` | 服务器主机 | `"0.0.0.0"` |
-| `port` | `u16` | 服务器端口 | `8080` |
-| `max_connections` | `usize` | 最大连接数 | `1000` |
-| `request_timeout` | `Duration` | 请求超时 | `30s` |
-| `keep_alive_timeout` | `Duration` | Keep-alive超时 | `60s` |
-| `max_request_size` | `usize` | 最大请求大小 | `10MB` |
-| `enable_compression` | `bool` | 启用压缩 | `true` |
-| `enable_cors` | `bool` | 启用CORS | `true` |
+| `host` | `String` | Server host | `"0.0.0.0"` |
+| `port` | `u16` | Server port | `8080` |
+| `max_connections` | `usize` | Maximum number of connections | `1000` |
+| `request_timeout` | `Duration` | Request timeout | `30s` |
+| `keep_alive_timeout` | `Duration` | Keep-alive timeout | `60s` |
+| `max_request_size` | `usize` | Maximum request size | `10MB` |
+| `enable_compression` | `bool` | Enable compression | `true` |
+| `enable_cors` | `bool` | Enable CORS | `true` |
 
 ### DMSCHttpClientConfig
 
-HTTP客户端配置结构体。
+HTTP client configuration struct.
 
-#### 字段
+#### Fields
 
-| 字段 | 类型 | 描述 | 默认值 |
+| Field | Type | Description | Default Value |
 |:--------|:-----|:-------------|:-------|
-| `timeout` | `Duration` | 请求超时 | `30s` |
-| `max_redirects` | `usize` | 最大重定向次数 | `5` |
-| `user_agent` | `String` | User-Agent头 | `"DMSC-HTTP-Client/1.0"` |
-| `enable_cookies` | `bool` | 启用Cookie | `true` |
-| `enable_compression` | `bool` | 启用压缩 | `true` |
-| `pool_idle_timeout` | `Duration` | 连接池空闲超时 | `90s` |
-| `pool_max_idle_per_host` | `usize` | 每主机最大空闲连接 | `10` |
+| `timeout` | `Duration` | Request timeout | `30s` |
+| `max_redirects` | `usize` | Maximum number of redirects | `5` |
+| `user_agent` | `String` | User-Agent header | `"DMSC-HTTP-Client/1.0"` |
+| `enable_cookies` | `bool` | Enable cookies | `true` |
+| `enable_compression` | `bool` | Enable compression | `true` |
+| `pool_idle_timeout` | `Duration` | Connection pool idle timeout | `90s` |
+| `pool_max_idle_per_host` | `usize` | Maximum idle connections per host | `10` |
 
 <div align="center">
 
-## 错误处理
+## Error Handling
 
 </div>
-### HTTP错误码
+### HTTP Error Codes
 
-| 错误码 | 描述 |
+| Error Code | Description |
 |:--------|:-------------|
-| `HTTP_SERVER_ERROR` | HTTP服务器错误 |
-| `HTTP_CLIENT_ERROR` | HTTP客户端错误 |
-| `HTTP_REQUEST_ERROR` | HTTP请求错误 |
-| `HTTP_RESPONSE_ERROR` | HTTP响应错误 |
-| `WEBSOCKET_ERROR` | WebSocket错误 |
+| `HTTP_SERVER_ERROR` | HTTP server error |
+| `HTTP_CLIENT_ERROR` | HTTP client error |
+| `HTTP_REQUEST_ERROR` | HTTP request error |
+| `HTTP_RESPONSE_ERROR` | HTTP response error |
+| `WEBSOCKET_ERROR` | WebSocket error |
 
-### 错误处理示例
+### Error Handling Example
 
 ```rust
 use dms::prelude::*;
@@ -540,15 +540,15 @@ match client.get("https://api.example.com/users").await {
         }
     }
     Err(DMSCError { code, .. }) if code == "HTTP_CLIENT_ERROR" => {
-        // 客户端错误，可能是网络问题
+        // Client error, possibly network issue
         ctx.log().error("HTTP client error, retrying...");
         
-        // 重试请求
+        // Retry request
         tokio::time::sleep(Duration::from_secs(1)).await;
         let response = client.get("https://api.example.com/users").await?;
     }
     Err(e) => {
-        // 其他错误
+        // Other errors
         return Err(e);
     }
 }
@@ -556,34 +556,34 @@ match client.get("https://api.example.com/users").await {
 
 <div align="center">
 
-## 最佳实践
+## Best Practices
 
 </div>
 
-1. **使用中间件**: 使用中间件处理横切关注点
-2. **合理设置超时**: 设置适当的请求和连接超时
-3. **处理错误**: 正确处理HTTP错误和异常情况
-4. **使用连接池**: 复用HTTP连接提高性能
-5. **验证输入**: 验证和清理用户输入
-6. **使用HTTPS**: 在生产环境使用HTTPS
-7. **限制请求大小**: 设置合理的请求大小限制
-8. **监控性能**: 监控HTTP请求的性能指标
+1. **Use Middleware**: Use middleware to handle cross-cutting concerns
+2. **Set Appropriate Timeouts**: Set appropriate request and connection timeouts
+3. **Handle Errors**: Properly handle HTTP errors and exceptions
+4. **Use Connection Pooling**: Reuse HTTP connections to improve performance
+5. **Validate Input**: Validate and sanitize user input
+6. **Use HTTPS**: Use HTTPS in production environments
+7. **Limit Request Size**: Set reasonable request size limits
+8. **Monitor Performance**: Monitor HTTP request performance metrics
 
 <div align="center">
 
-## 相关模块
+## Related Modules
 
 </div>
 
-- [README](./README.md): 模块概览，提供API参考文档总览和快速导航
-- [auth](./auth.md): 认证模块，提供JWT、OAuth2和RBAC认证授权功能
-- [core](./core.md): 核心模块，提供错误处理和服务上下文
-- [log](./log.md): 日志模块，记录认证事件和安全日志
-- [config](./config.md): 配置模块，管理认证配置和密钥设置
-- [cache](./cache.md): 缓存模块，提供多后端缓存抽象，缓存用户会话和权限数据
-- [database](./database.md): 数据库模块，提供用户数据持久化和查询功能
-- [mq](./mq.md): 消息队列模块，处理认证事件和异步通知
-- [observability](./observability.md): 可观测性模块，监控认证性能和安全事件
-- [security](./security.md): 安全模块，提供加密、哈希和验证功能
-- [storage](./storage.md): 存储模块，管理认证文件、密钥和证书
-- [validation](./validation.md): 验证模块，验证用户输入和表单数据
+- [README](./README.md): Module overview, providing API reference documentation overview and quick navigation
+- [auth](./auth.md): Authentication module, providing JWT, OAuth2, and RBAC authentication and authorization functionality
+- [core](./core.md): Core module, providing error handling and service context
+- [log](./log.md): Logging module, recording authentication events and security logs
+- [config](./config.md): Configuration module, managing authentication configuration and key settings
+- [cache](./cache.md): Cache module, providing multi-backend cache abstraction, caching user sessions and permission data
+- [database](./database.md): Database module, providing user data persistence and query functionality
+- [mq](./mq.md): Message queue module, handling authentication events and asynchronous notifications
+- [observability](./observability.md): Observability module, monitoring authentication performance and security events
+- [security](./security.md): Security module, providing encryption, hashing, and verification functionality
+- [storage](./storage.md): Storage module, managing authentication files, keys, and certificates
+- [validation](./validation.md): Validation module, validating user input and form data

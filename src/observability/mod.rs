@@ -624,6 +624,7 @@ impl DMSCObservabilityModule {
 /// 
 /// This struct represents the observability data that can be exported from the DMSC system,
 /// including metrics in Prometheus format and information about active traces and spans.
+#[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DMSCObservabilityData {
     /// Metrics data in Prometheus format
@@ -632,6 +633,36 @@ pub struct DMSCObservabilityData {
     pub active_traces: usize,
     /// Number of active spans
     pub active_spans: usize,
+}
+
+#[cfg(feature = "pyo3")]
+/// Python methods for DMSCObservabilityData
+#[pyo3::prelude::pymethods]
+impl DMSCObservabilityData {
+    /// Create new observability data from Python
+    #[new]
+    fn py_new(metrics: String, active_traces: usize, active_spans: usize) -> Self {
+        Self {
+            metrics,
+            active_traces,
+            active_spans,
+        }
+    }
+    
+    /// Get metrics data from Python
+    fn get_metrics_py(&self) -> String {
+        self.metrics.clone()
+    }
+    
+    /// Get active traces count from Python
+    fn get_active_traces_py(&self) -> usize {
+        self.active_traces
+    }
+    
+    /// Get active spans count from Python
+    fn get_active_spans_py(&self) -> usize {
+        self.active_spans
+    }
 }
 
 #[async_trait::async_trait]

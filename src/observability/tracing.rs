@@ -97,6 +97,9 @@ use uuid::Uuid;
 
 use crate::core::DMSCResult;
 
+#[cfg(feature = "pyo3")]
+use pyo3::prelude::*;
+
 /// Distributed tracing span ID
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct DMSCSpanId(String);
@@ -598,6 +601,112 @@ impl DMSCTracer {
                 }
             }
         }
+    }
+
+}
+
+#[cfg(feature = "pyo3")]
+#[pyo3::prelude::pymethods]
+impl DMSCTracer {
+    /// Create a new tracer from Python with a sampling rate
+    #[new]
+    fn py_new(sampling_rate: f64) -> Self {
+        Self::new(sampling_rate)
+    }
+
+    /// Start a new trace from Python
+    fn start_trace_py(&self, name: String) -> PyResult<Option<String>> {
+        match self.start_trace(name) {
+            Some(trace_id) => Ok(Some(trace_id.as_str().to_string())),
+            None => Ok(None),
+        }
+    }
+
+    /// Start a new span from Python using current context
+    fn start_span_from_context_py(&self, name: String, kind: String) -> PyResult<Option<String>> {
+        let span_kind = match kind.as_str() {
+            "Server" => DMSCSpanKind::Server,
+            "Client" => DMSCSpanKind::Client,
+            "Producer" => DMSCSpanKind::Producer,
+            "Consumer" => DMSCSpanKind::Consumer,
+            _ => DMSCSpanKind::Internal,
+        };
+
+        match self.start_span_from_context(name, span_kind) {
+            Some(span_id) => Ok(Some(span_id.as_str().to_string())),
+            None => Ok(None),
+        }
+    }
+
+    /// End a span from Python
+    fn end_span_py(&self, span_id: String, status: String) -> PyResult<()> {
+        let span_id_obj = DMSCSpanId::from_string(span_id);
+        let span_status = match status.as_str() {
+            "Ok" => DMSCSpanStatus::Ok,
+            "Error" => DMSCSpanStatus::Error("Python error".to_string()),
+            _ => DMSCSpanStatus::Unset,
+        };
+
+        self.end_span(&span_id_obj, span_status)
+            .map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(format!("Failed to end span: {e}")))
+    }
+
+    /// Set span attribute from Python
+    fn span_set_attribute_py(&self, span_id: String, key: String, value: String) -> PyResult<()> {
+        let span_id_obj = DMSCSpanId::from_string(span_id);
+        self.span_mut(&span_id_obj, |span| {
+            span.set_attribute(key, value);
+        })
+        .map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(format!("Failed to set attribute: {e}")))
+    }
+
+    /// Add span event from Python
+    fn span_add_event_py(&self, span_id: String, name: String, attributes: HashMap<String, String>) -> PyResult<()> {
+        let span_id_obj = DMSCSpanId::from_string(span_id);
+        self.span_mut(&span_id_obj, |span| {
+            span.add_event(name, attributes);
+        })
+        .map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(format!("Failed to add event: {e}")))
+    }
+
+    /// Export traces from Python
+    fn export_traces_py(&self) -> PyResult<HashMap<String, Vec<PyObject>>> {
+        let traces = self.export_traces();
+        let mut result = HashMap::new();
+
+        Python::with_gil(|py| {
+            for (trace_id, spans) in traces {
+                let mut span_list = Vec::new();
+                for span in spans {
+                    let span_dict = pyo3::types::PyDict::new(py);
+                    span_dict.set_item("trace_id", span.trace_id.as_str())?;
+                    span_dict.set_item("span_id", span.span_id.as_str())?;
+                    if let Some(parent_id) = &span.parent_span_id {
+                        span_dict.set_item("parent_span_id", parent_id.as_str())?;
+                    }
+                    span_dict.set_item("name", &span.name)?;
+                    span_dict.set_item("kind", format!("{:?}", span.kind))?;
+                    span_dict.set_item("start_time", span.start_time)?;
+                    span_dict.set_item("end_time", span.end_time)?;
+                    span_dict.set_item("attributes", span.attributes)?;
+                    span_dict.set_item("events", span.events.len())?;
+                    span_dict.set_item("status", format!("{:?}", span.status))?;
+                    span_list.push(span_dict.into());
+                }
+                result.insert(trace_id.as_str().to_string(), span_list);
+            }
+            Ok(result)
+        })
+    }
+
+    /// Get active trace count from Python
+    fn active_trace_count_py(&self) -> usize {
+        self.active_trace_count()
+    }
+
+    /// Get active span count from Python
+    fn active_span_count_py(&self) -> usize {
+        self.active_span_count()
     }
 }
 

@@ -35,6 +35,9 @@ from .dmsc import (
     DMSCFileSystem, DMSCHookBus, DMSCHookEvent, DMSCHookKind, DMSCLogConfig,
     DMSCLogLevel, DMSCLogger, DMSCModulePhase, DMSCServiceContext,
     
+    # Python module support
+    PyDMSCModule, PythonModuleAdapter, PyServiceModule, PyAsyncServiceModule,
+    
     # Queue classes - also available directly
     DMSCQueueModule, DMSCQueueConfig, DMSCQueueManager, DMSCQueueMessage, DMSCQueueStats,
     
@@ -61,6 +64,9 @@ __all__ = [
     'DMSCAppBuilder', 'DMSCAppRuntime', 'DMSCConfig', 'DMSCConfigManager', 'DMSCError',
     'DMSCFileSystem', 'DMSCHookBus', 'DMSCHookEvent', 'DMSCHookKind', 'DMSCLogConfig',
     'DMSCLogLevel', 'DMSCLogger', 'DMSCModulePhase', 'DMSCServiceContext',
+    
+    # Python module support
+    'PyDMSCModule', 'PythonModuleAdapter', 'PyServiceModule', 'PyAsyncServiceModule',
     
     # Queue classes
     'DMSCQueueModule', 'DMSCQueueConfig', 'DMSCQueueManager', 'DMSCQueueMessage', 'DMSCQueueStats',

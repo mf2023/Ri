@@ -535,17 +535,42 @@ impl DMSCServiceMesh {
     }
     
     /// Register a service from Python
-    fn register_service_py(&self, _service_name: String, _endpoint: String, _weight: u32) -> PyResult<()> {
-        // For now, we'll return an error since we can't easily run async code from Python
-        // In a real implementation, you'd want to integrate with Python's async runtime
-        Err(pyo3::exceptions::PyRuntimeError::new_err("Async service registration not supported from Python yet"))
+    fn register_service_py(&self, service_name: String, endpoint: String, weight: u32) -> PyResult<()> {
+        let rt = tokio::runtime::Runtime::new().map_err(|e| {
+            pyo3::exceptions::PyRuntimeError::new_err(format!("Failed to create runtime: {}", e))
+        })?;
+        
+        rt.block_on(async {
+            self.register_service(&service_name, &endpoint, weight)
+                .await
+                .map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(format!("Failed to register service: {e}")))
+        })
     }
     
     /// Discover services from Python
-    fn discover_service_py(&self, _service_name: String) -> PyResult<Vec<DMSCServiceEndpoint>> {
-        // For now, we'll return an error since we can't easily run async code from Python
-        // In a real implementation, you'd want to integrate with Python's async runtime
-        Err(pyo3::exceptions::PyRuntimeError::new_err("Async service discovery not supported from Python yet"))
+    fn discover_service_py(&self, service_name: String) -> PyResult<Vec<DMSCServiceEndpoint>> {
+        let rt = tokio::runtime::Runtime::new().map_err(|e| {
+            pyo3::exceptions::PyRuntimeError::new_err(format!("Failed to create runtime: {}", e))
+        })?;
+        
+        rt.block_on(async {
+            self.discover_service(&service_name)
+                .await
+                .map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(format!("Failed to discover service: {e}")))
+        })
+    }
+    
+    /// Update service health from Python
+    fn update_service_health_py(&self, service_name: String, endpoint: String, is_healthy: bool) -> PyResult<()> {
+        let rt = tokio::runtime::Runtime::new().map_err(|e| {
+            pyo3::exceptions::PyRuntimeError::new_err(format!("Failed to create runtime: {}", e))
+        })?;
+        
+        rt.block_on(async {
+            self.update_service_health(&service_name, &endpoint, is_healthy)
+                .await
+                .map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(format!("Failed to update health: {e}")))
+        })
     }
     
     /// Get the service mesh configuration

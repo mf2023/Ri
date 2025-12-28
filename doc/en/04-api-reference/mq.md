@@ -1,53 +1,53 @@
 <div align="center">
 
-# Message Queue API参考
+# Message Queue API Reference
 
 **Version: 1.0.0**
 
 **Last modified date: 2025-12-12**
 
-mq模块提供消息队列与事件驱动功能，支持多种消息队列后端、发布订阅、延迟消息与死信队列。
+The mq module provides message queue and event-driven functionality, supporting multiple message queue backends, publish-subscribe, delayed messages, and dead letter queues.
 
-## 模块概述
+## Module Overview
 
 </div>
 
-mq模块包含以下子模块：
+The mq module includes the following sub-modules:
 
-- **core**: 消息队列核心接口和类型定义
-- **publishers**: 发布者实现
-- **consumers**: 消费者实现
-- **routing**: 消息路由
-- **dead_letter**: 死信队列
+- **core**: Message queue core interfaces and type definitions
+- **publishers**: Publisher implementations
+- **consumers**: Consumer implementations
+- **routing**: Message routing
+- **dead_letter**: Dead letter queues
 
 <div align="center">
 
-## 核心组件
+## Core Components
 
 </div>
 
 ### DMSCMessageQueue
 
-消息队列管理器主接口，提供统一的消息队列访问。
+Main interface for message queue manager, providing unified message queue access.
 
-#### 方法
+#### Methods
 
-| 方法 | 描述 | 参数 | 返回值 |
+| Method | Description | Parameters | Return Value |
 |:--------|:-------------|:--------|:--------|
-| `publish(topic, message)` | 发布消息 | `topic: &str`, `message: impl Serialize` | `DMSCResult<()>` |
-| `publish_delayed(topic, message, delay)` | 发布延迟消息 | `topic: &str`, `message: impl Serialize`, `delay: Duration` | `DMSCResult<()>` |
-| `subscribe(topic, handler)` | 订阅消息 | `topic: &str`, `handler: impl MessageHandler` | `DMSCResult<DMSCConsumer>` |
-| `create_queue(name)` | 创建队列 | `name: &str` | `DMSCResult<()>` |
-| `delete_queue(name)` | 删除队列 | `name: &str` | `DMSCResult<()>` |
-| `get_queue_stats(name)` | 获取队列统计 | `name: &str` | `DMSCResult<QueueStats>` |
-| `purge_queue(name)` | 清空队列 | `name: &str` | `DMSCResult<()>` |
+| `publish(topic, message)` | Publish message | `topic: &str`, `message: impl Serialize` | `DMSCResult<()>` |
+| `publish_delayed(topic, message, delay)` | Publish delayed message | `topic: &str`, `message: impl Serialize`, `delay: Duration` | `DMSCResult<()>` |
+| `subscribe(topic, handler)` | Subscribe to messages | `topic: &str`, `handler: impl MessageHandler` | `DMSCResult<DMSCConsumer>` |
+| `create_queue(name)` | Create queue | `name: &str` | `DMSCResult<()>` |
+| `delete_queue(name)` | Delete queue | `name: &str` | `DMSCResult<()>` |
+| `get_queue_stats(name)` | Get queue statistics | `name: &str` | `DMSCResult<QueueStats>` |
+| `purge_queue(name)` | Purge queue | `name: &str` | `DMSCResult<()>` |
 
-#### 使用示例
+#### Usage Example
 
 ```rust
 use dms::prelude::*;
 
-// 发布消息
+// Publish message
 let message = serde_json::json!({
     "type": "user_registered",
     "user_id": 12345,
@@ -57,7 +57,7 @@ let message = serde_json::json!({
 
 ctx.mq().publish("user.events", message)?;
 
-// 发布延迟消息
+// Publish delayed message
 ctx.mq().publish_delayed(
     "reminder.notifications",
     serde_json::json!({
@@ -68,21 +68,21 @@ ctx.mq().publish_delayed(
     Duration::from_hours(24)
 )?;
 
-// 订阅消息
+// Subscribe to messages
 let consumer = ctx.mq().subscribe("user.events", |message: DMSCMessage| async move {
     match message.payload.get("type").and_then(|v| v.as_str()) {
         Some("user_registered") => {
             let user_id = message.payload["user_id"].as_i64().unwrap();
             ctx.log().info(format!("Processing user registration: {}", user_id));
             
-            // 发送欢迎邮件
+            // Send welcome email
             send_welcome_email(user_id).await?;
         }
         Some("user_updated") => {
             let user_id = message.payload["user_id"].as_i64().unwrap();
             ctx.log().info(format!("Processing user update: {}", user_id));
             
-            // 更新用户缓存
+            // Update user cache
             update_user_cache(user_id).await?;
         }
         _ => {
@@ -96,23 +96,23 @@ let consumer = ctx.mq().subscribe("user.events", |message: DMSCMessage| async mo
 
 ### DMSCMessageQueueConfig
 
-消息队列配置结构体。
+Message queue configuration structure.
 
-#### 字段
+#### Fields
 
-| 字段 | 类型 | 描述 | 默认值 |
+| Field | Type | Description | Default |
 |:--------|:-----|:-------------|:-------|
-| `backend` | `DMSCMQBackend` | 消息队列后端 | `Memory` |
-| `host` | `String` | 消息队列主机 | `"localhost"` |
-| `port` | `u16` | 消息队列端口 | `5672` |
-| `username` | `String` | 用户名 | `"guest"` |
-| `password` | `String` | 密码 | `"guest"` |
-| `virtual_host` | `String` | 虚拟主机 | `"/"` |
-| `max_retries` | `u32` | 最大重试次数 | `3` |
-| `retry_delay` | `Duration` | 重试延迟 | `5s` |
-| `prefetch_count` | `u16` | 预取数量 | `10` |
+| `backend` | `DMSCMQBackend` | Message queue backend | `Memory` |
+| `host` | `String` | Message queue host | `"localhost"` |
+| `port` | `u16` | Message queue port | `5672` |
+| `username` | `String` | Username | `"guest"` |
+| `password` | `String` | Password | `"guest"` |
+| `virtual_host` | `String` | Virtual host | `"/"` |
+| `max_retries` | `u32` | Maximum retry count | `3` |
+| `retry_delay` | `Duration` | Retry delay | `5s` |
+| `prefetch_count` | `u16` | Prefetch count | `10` |
 
-#### 配置示例
+#### Configuration Example
 
 ```rust
 use dms::prelude::*;
@@ -132,15 +132,15 @@ let mq_config = DMSCMessageQueueConfig {
 
 ### DMSCMQBackend
 
-消息队列后端枚举。
+Message queue backend enumeration.
 
-#### 变体
+#### Variants
 
-| 变体 | 描述 |
+| Variant | Description |
 |:--------|:-------------|
-| `Memory` | 内存队列 |
+| `Memory` | In-memory queue |
 | `RabbitMQ` | RabbitMQ |
-| `Redis` | Redis队列 |
+| `Redis` | Redis queue |
 | `ApacheKafka` | Apache Kafka |
 | `AmazonSQS` | Amazon SQS |
 | `GooglePubSub` | Google Cloud Pub/Sub |
@@ -148,28 +148,28 @@ let mq_config = DMSCMessageQueueConfig {
 
 <div align="center">
 
-## 消息处理
+## Message Processing
 
 </div>
 
 ### DMSCMessage
 
-消息结构体。
+Message structure.
 
-#### 字段
+#### Fields
 
-| 字段 | 类型 | 描述 |
+| Field | Type | Description |
 |:--------|:-----|:-------------|
-| `id` | `String` | 消息ID |
-| `topic` | `String` | 消息主题 |
-| `payload` | `serde_json::Value` | 消息负载 |
-| `timestamp` | `DateTime<Utc>` | 消息时间戳 |
-| `headers` | `HashMap<String, String>` | 消息头 |
-| `retry_count` | `u32` | 重试次数 |
+| `id` | `String` | Message ID |
+| `topic` | `String` | Message topic |
+| `payload` | `serde_json::Value` | Message payload |
+| `timestamp` | `DateTime<Utc>` | Message timestamp |
+| `headers` | `HashMap<String, String>` | Message headers |
+| `retry_count` | `u32` | Retry count |
 
 ### DMSCMessageHandler
 
-消息处理器trait。
+Message handler trait.
 
 ```rust
 use dms::prelude::*;
@@ -188,7 +188,7 @@ impl DMSCMessageHandler for EmailNotificationHandler {
             email_type, recipient
         ));
         
-        // 发送邮件
+        // Send email
         send_email(recipient, subject, content).await?;
         
         ctx.log().info(format!("Email sent successfully to: {}", recipient));
@@ -201,26 +201,26 @@ impl DMSCMessageHandler for EmailNotificationHandler {
     }
 }
 
-// 注册处理器
+// Register handler
 ctx.mq().register_handler("email.notifications", EmailNotificationHandler)?;
 ```
 
-### 消息确认
+### Message Acknowledgment
 
 ```rust
 use dms::prelude::*;
 
 let consumer = ctx.mq().subscribe("order.events", |message: DMSCMessage| async move {
-    // 处理消息
+    // Process message
     match process_order(message.payload.clone()).await {
         Ok(_) => {
-            // 处理成功，确认消息
+            // Processing successful, acknowledge message
             message.ack()?;
             ctx.log().info("Order processed successfully");
         }
         Err(e) => {
-            // 处理失败，拒绝消息
-            message.nack(false)?; // false表示不重新入队
+            // Processing failed, reject message
+            message.nack(false)?; // false means do not requeue
             ctx.log().error(format!("Order processing failed: {}", e));
         }
     }
@@ -228,21 +228,21 @@ let consumer = ctx.mq().subscribe("order.events", |message: DMSCMessage| async m
     Ok(())
 })?;
 
-// 手动确认模式
+// Manual acknowledgment mode
 let consumer = ctx.mq().subscribe_with_ack_mode(
     "important.events",
     AckMode::Manual,
     |message: DMSCMessage| async move {
-        // 处理消息
+        // Process message
         let result = process_important_event(message.payload.clone()).await;
         
         match result {
             Ok(_) => {
-                // 手动确认
+                // Manual acknowledgment
                 message.ack()?;
             }
             Err(e) => {
-                // 记录错误但不确认，消息会重新投递
+                // Log error but do not acknowledge, message will be redelivered
                 ctx.log().error(format!("Processing failed, will retry: {}", e));
             }
         }
@@ -255,16 +255,16 @@ let consumer = ctx.mq().subscribe_with_ack_mode(
 
 <div align="center">
 
-## 消息路由
+## Message Routing
 
 </div>
 
-### 路由规则
+### Routing Rules
 
 ```rust
 use dms::prelude::*;
 
-// 基于内容的路由
+// Content-based routing
 let router = DMSCMessageRouter::new()
     .when("user.events", |message: &DMSCMessage| {
         message.payload["type"].as_str() == Some("user_registered")
@@ -278,16 +278,16 @@ let router = DMSCMessageRouter::new()
     
     .otherwise("user.general_queue");
 
-// 使用路由器
+// Use router
 ctx.mq().set_router(router)?;
 ```
 
-### 主题通配符
+### Topic Wildcards
 
 ```rust
 use dms::prelude::*;
 
-// 订阅多个主题
+// Subscribe to multiple topics
 let consumer = ctx.mq().subscribe("user.*", |message: DMSCMessage| async move {
     match message.topic.as_str() {
         "user.created" => {
@@ -304,7 +304,7 @@ let consumer = ctx.mq().subscribe("user.*", |message: DMSCMessage| async move {
     Ok(())
 })?;
 
-// 订阅所有日志主题
+// Subscribe to all log topics
 let log_consumer = ctx.mq().subscribe("logs.>", |message: DMSCMessage| async move {
     ctx.log().info(format!(
         "Log message from {}: {:?}",
@@ -317,16 +317,16 @@ let log_consumer = ctx.mq().subscribe("logs.>", |message: DMSCMessage| async mov
 
 <div align="center">
 
-## 死信队列
+## Dead Letter Queues
 
 </div>
 
-### 配置死信队列
+### Configuring Dead Letter Queues
 
 ```rust
 use dms::prelude::*;
 
-// 创建队列时配置死信队列
+// Configure dead letter queue when creating queue
 let queue_config = DMSCQueueConfig {
     name: "order.processing",
     durable: true,
@@ -340,31 +340,31 @@ let queue_config = DMSCQueueConfig {
 
 ctx.mq().create_queue_with_config(queue_config)?;
 
-// 创建死信队列消费者
+// Create dead letter queue consumer
 let dlq_consumer = ctx.mq().subscribe("failed.orders", |message: DMSCMessage| async move {
     ctx.log().error(format!(
         "Processing failed message: {} (retry count: {})",
         message.id, message.retry_count
     ));
     
-    // 分析失败原因
+    // Analyze failure reason
     let error_info = message.payload.get("error").and_then(|v| v.as_str()).unwrap_or("Unknown error");
     
     match error_info {
         "invalid_data" => {
-            // 数据无效，记录并丢弃
+            // Invalid data, log and discard
             ctx.log().error("Invalid data, discarding message");
             message.ack()?;
         }
         "temporary_error" => {
-            // 临时错误，可以稍后重试
+            // Temporary error, can retry later
             ctx.log().warn("Temporary error, keeping in DLQ");
-            // 不确认消息，保持在死信队列中
+            // Do not acknowledge message, keep in dead letter queue
         }
         _ => {
-            // 其他错误，人工处理
+            // Other errors, manual intervention required
             ctx.log().error("Unknown error, manual intervention required");
-            // 发送告警通知
+            // Send alert notification
             send_alert("Failed message requires manual intervention", &message).await?;
         }
     }
@@ -373,16 +373,16 @@ let dlq_consumer = ctx.mq().subscribe("failed.orders", |message: DMSCMessage| as
 })?;
 ```
 
-### 死信队列管理
+### Dead Letter Queue Management
 
 ```rust
 use dms::prelude::*;
 
-// 重新投递死信消息
+// Redeliver dead letter messages
 let redelivered_count = ctx.mq().redeliver_dead_letters("failed.orders", "order.processing")?;
 ctx.log().info(format!("Redelivered {} messages", redelivered_count));
 
-// 获取死信队列统计
+// Get dead letter queue statistics
 let dlq_stats = ctx.mq().get_queue_stats("failed.orders")?;
 println!("Dead letter queue stats:");
 println!("  Messages: {}", dlq_stats.message_count);
@@ -393,16 +393,16 @@ println!("  Unacked: {}", dlq_stats.unacked_count);
 
 <div align="center">
 
-## 延迟消息
+## Delayed Messages
 
 </div>
 
-### 延迟队列
+### Delayed Queues
 
 ```rust
 use dms::prelude::*;
 
-// 创建延迟队列
+// Create delayed queue
 let delayed_queue_config = DMSCQueueConfig {
     name: "delayed.notifications",
     durable: true,
@@ -414,24 +414,24 @@ let delayed_queue_config = DMSCQueueConfig {
 
 ctx.mq().create_queue_with_config(delayed_queue_config)?;
 
-// 发布延迟消息（通过TTL和DLX实现）
+// Publish delayed message (implemented via TTL and DLX)
 let delayed_message = serde_json::json!({
     "type": "scheduled_notification",
     "user_id": 12345,
     "content": "Your subscription expires in 3 days"
 });
 
-// 直接发送到延迟队列，消息会在TTL后自动转发到目标队列
+// Send directly to delayed queue, message will be automatically forwarded to target queue after TTL
 ctx.mq().publish("delayed.notifications", delayed_message)?;
 ```
 
-### 定时任务
+### Scheduled Tasks
 
 ```rust
 use dms::prelude::*;
 use chrono::{DateTime, Utc, Duration as ChronoDuration};
 
-// 安排定时任务
+// Schedule task
 fn schedule_task(task_name: &str, execute_at: DateTime<Utc>, payload: serde_json::Value) -> DMSCResult<()> {
     let now = Utc::now();
     let delay = execute_at - now;
@@ -452,14 +452,14 @@ fn schedule_task(task_name: &str, execute_at: DateTime<Utc>, payload: serde_json
             task_name, execute_at
         ));
     } else {
-        // 立即执行
+        // Execute immediately
         ctx.mq().publish("scheduled.tasks", payload)?;
     }
     
     Ok(())
 }
 
-// 使用示例
+// Usage example
 let tomorrow_at_9am = Utc::now() + ChronoDuration::days(1);
 schedule_task(
     "send_daily_report",
@@ -474,28 +474,28 @@ schedule_task(
 
 <div align="center">
 
-## 消息持久化
+## Message Persistence
 
 </div>
 
-### 持久化配置
+### Persistence Configuration
 
 ```rust
 use dms::prelude::*;
 
-// 创建持久化队列
+// Create persistent queue
 let persistent_queue_config = DMSCQueueConfig {
     name: "critical.events",
-    durable: true,           // 队列持久化
-    auto_delete: false,      // 不自动删除
-    message_persistent: true, // 消息持久化
-    max_priority: 10,        // 最大优先级
+    durable: true,           // Queue persistence
+    auto_delete: false,      // Do not auto-delete
+    message_persistent: true, // Message persistence
+    max_priority: 10,        // Maximum priority
     ..Default::default()
 };
 
 ctx.mq().create_queue_with_config(persistent_queue_config)?;
 
-// 发布持久化消息
+// Publish persistent message
 let critical_message = serde_json::json!({
     "type": "system_alert",
     "severity": "critical",
@@ -505,30 +505,30 @@ let critical_message = serde_json::json!({
 ctx.mq().publish_persistent("critical.events", critical_message)?;
 ```
 
-### 消息确认模式
+### Message Acknowledgment Modes
 
 ```rust
 use dms::prelude::*;
 
-// 自动确认模式（默认）
+// Auto acknowledgment mode (default)
 let auto_ack_consumer = ctx.mq().subscribe("auto.ack.queue", |message: DMSCMessage| async move {
-    // 消息会自动确认
+    // Message will be automatically acknowledged
     process_message(message.payload).await?;
     Ok(())
 })?;
 
-// 手动确认模式
+// Manual acknowledgment mode
 let manual_ack_consumer = ctx.mq().subscribe_with_ack_mode(
     "manual.ack.queue",
     AckMode::Manual,
     |message: DMSCMessage| async move {
         match process_message(message.payload.clone()).await {
             Ok(_) => {
-                // 手动确认消息
+                // Manually acknowledge message
                 message.ack()?;
             }
             Err(e) => {
-                // 拒绝消息并重新入队
+                // Reject message and requeue
                 message.nack(true)?;
                 ctx.log().error(format!("Message processing failed: {}", e));
             }
@@ -537,16 +537,16 @@ let manual_ack_consumer = ctx.mq().subscribe_with_ack_mode(
     }
 )?;
 
-// 批量确认模式
+// Batch acknowledgment mode
 let batch_ack_consumer = ctx.mq().subscribe_with_ack_mode(
     "batch.ack.queue",
-    AckMode::Batch(100), // 每100条消息确认一次
+    AckMode::Batch(100), // Acknowledge every 100 messages
     |messages: Vec<DMSCMessage>| async move {
         for message in &messages {
             process_message(message.payload.clone()).await?;
         }
         
-        // 批量确认
+        // Batch acknowledgment
         DMSCMessage::ack_batch(&messages)?;
         Ok(())
     }
@@ -555,26 +555,26 @@ let batch_ack_consumer = ctx.mq().subscribe_with_ack_mode(
 
 <div align="center">
 
-## 消息优先级
+## Message Priority
 
 </div>
 
-### 优先级队列
+### Priority Queues
 
 ```rust
 use dms::prelude::*;
 
-// 创建优先级队列
+// Create priority queue
 let priority_queue_config = DMSCQueueConfig {
     name: "priority.tasks",
     durable: true,
-    max_priority: 10,  // 优先级范围 0-10
+    max_priority: 10,  // Priority range 0-10
     ..Default::default()
 };
 
 ctx.mq().create_queue_with_config(priority_queue_config)?;
 
-// 发布高优先级消息
+// Publish high priority message
 let urgent_task = serde_json::json!({
     "type": "urgent_task",
     "description": "Fix critical bug in production"
@@ -582,7 +582,7 @@ let urgent_task = serde_json::json!({
 
 ctx.mq().publish_with_priority("priority.tasks", urgent_task, 9)?;
 
-// 发布普通优先级消息
+// Publish normal priority message
 let normal_task = serde_json::json!({
     "type": "normal_task",
     "description": "Update documentation"
@@ -590,7 +590,7 @@ let normal_task = serde_json::json!({
 
 ctx.mq().publish_with_priority("priority.tasks", normal_task, 5)?;
 
-// 发布低优先级消息
+// Publish low priority message
 let low_task = serde_json::json!({
     "type": "low_priority_task",
     "description": "Clean up old log files"
@@ -601,20 +601,20 @@ ctx.mq().publish_with_priority("priority.tasks", low_task, 1)?;
 
 <div align="center">
 
-## 消息过滤
+## Message Filtering
 
 </div>  
 
-### 内容过滤
+### Content Filtering
 
 ```rust
 use dms::prelude::*;
 
-// 创建带过滤器的消费者
+// Create consumer with filter
 let filtered_consumer = ctx.mq().subscribe_with_filter(
     "user.events",
     |message: &DMSCMessage| {
-        // 只处理特定类型的用户事件
+        // Only process specific types of user events
         message.payload.get("type")
             .and_then(|v| v.as_str())
             .map(|t| t == "user_registered" || t == "user_premium_upgraded")
@@ -622,7 +622,7 @@ let filtered_consumer = ctx.mq().subscribe_with_filter(
     },
     |message: DMSCMessage| async move {
         ctx.log().info(format!("Processing filtered message: {:?}", message.payload));
-        // 处理符合条件的消息
+        // Process messages that match the criteria
         Ok(())
     }
 )?;
@@ -630,45 +630,45 @@ let filtered_consumer = ctx.mq().subscribe_with_filter(
 
 <div align="center">
 
-## 配置
+## Configuration
 
 </div>
 
 ### DMSCQueueConfig
 
-队列配置结构体。
+Queue configuration structure.
 
-#### 字段
+#### Fields
 
-| 字段 | 类型 | 描述 | 默认值 |
+| Field | Type | Description | Default |
 |:--------|:-----|:-------------|:-------|
-| `name` | `String` | 队列名称 | 必填 |
-| `durable` | `bool` | 队列持久化 | `true` |
-| `auto_delete` | `bool` | 自动删除 | `false` |
-| `exclusive` | `bool` | 独占队列 | `false` |
-| `max_priority` | `u8` | 最大优先级 | `0` |
-| `message_ttl` | `Duration` | 消息TTL | 无限制 |
-| `max_length` | `u32` | 最大消息数 | 无限制 |
-| `dead_letter_exchange` | `String` | 死信交换机 | 无 |
-| `dead_letter_routing_key` | `String` | 死信路由键 | 无 |
+| `name` | `String` | Queue name | Required |
+| `durable` | `bool` | Queue durability | `true` |
+| `auto_delete` | `bool` | Auto-delete | `false` |
+| `exclusive` | `bool` | Exclusive queue | `false` |
+| `max_priority` | `u8` | Maximum priority | `0` |
+| `message_ttl` | `Duration` | Message TTL | Unlimited |
+| `max_length` | `u32` | Maximum message count | Unlimited |
+| `dead_letter_exchange` | `String` | Dead letter exchange | None |
+| `dead_letter_routing_key` | `String` | Dead letter routing key | None |
 
 <div align="center">
 
-## 错误处理
+## Error Handling
 
 </div>
 
-### 消息队列错误码
+### Message Queue Error Codes
 
-| 错误码 | 描述 |
+| Error Code | Description |
 |:--------|:-------------|
-| `MQ_CONNECTION_ERROR` | 消息队列连接错误 |
-| `MQ_PUBLISH_ERROR` | 消息发布错误 |
-| `MQ_CONSUME_ERROR` | 消息消费错误 |
-| `MQ_QUEUE_ERROR` | 队列操作错误 |
-| `MQ_ROUTING_ERROR` | 消息路由错误 |
+| `MQ_CONNECTION_ERROR` | Message queue connection error |
+| `MQ_PUBLISH_ERROR` | Message publish error |
+| `MQ_CONSUME_ERROR` | Message consume error |
+| `MQ_QUEUE_ERROR` | Queue operation error |
+| `MQ_ROUTING_ERROR` | Message routing error |
 
-### 错误处理示例
+### Error Handling Example
 
 ```rust
 use dms::prelude::*;
@@ -678,17 +678,17 @@ match ctx.mq().publish("user.events", message) {
         ctx.log().info("Message published successfully");
     }
     Err(DMSCError { code, .. }) if code == "MQ_CONNECTION_ERROR" => {
-        // 连接错误，尝试重新连接
+        // Connection error, attempt to reconnect
         ctx.log().error("MQ connection lost, attempting to reconnect");
         ctx.mq().reconnect()?;
         
-        // 重试发布
+        // Retry publish
         ctx.mq().publish("user.events", message)?;
     }
     Err(e) => {
-        // 其他错误，记录并处理
+        // Other errors, log and handle
         ctx.log().error(format!("Failed to publish message: {}", e));
-        // 可以保存到本地存储，稍后重试
+        // Can save to local storage for retry later
         save_failed_message_to_local_storage(message)?;
     }
 }
@@ -696,34 +696,34 @@ match ctx.mq().publish("user.events", message) {
 
 <div align="center">
 
-## 最佳实践
+## Best Practices
 
 </div>
 
-1. **消息幂等性**: 确保消息处理是幂等的，避免重复处理导致的问题
-2. **合理设置重试**: 设置适当的重试次数和重试间隔
-3. **使用死信队列**: 对于无法处理的消息，使用死信队列进行后续处理
-4. **消息大小限制**: 避免发送过大的消息，大内容使用对象存储
-5. **监控队列状态**: 监控队列长度、消费速率等指标
-6. **错误处理**: 完善的错误处理和恢复机制
-7. **消息版本控制**: 对消息格式进行版本控制，支持向后兼容
-8. **资源清理**: 及时清理不再使用的队列和消费者
+1. **Message Idempotency**: Ensure message processing is idempotent to avoid issues caused by duplicate processing
+2. **Reasonable Retry Settings**: Set appropriate retry count and retry intervals
+3. **Use Dead Letter Queues**: Use dead letter queues for subsequent processing of messages that cannot be handled
+4. **Message Size Limits**: Avoid sending oversized messages, use object storage for large content
+5. **Monitor Queue Status**: Monitor metrics such as queue length and consumption rate
+6. **Error Handling**: Comprehensive error handling and recovery mechanisms
+7. **Message Version Control**: Version control message formats to support backward compatibility
+8. **Resource Cleanup**: Clean up unused queues and consumers in a timely manner
 
 <div align="center">
 
-## 相关模块
+## Related Modules
 
 </div>
 
-- [README](./README.md): 模块概览，提供API参考文档总览和快速导航
-- [auth](./auth.md): 认证模块，提供JWT、OAuth2和RBAC认证授权功能
-- [core](./core.md): 核心模块，提供错误处理和服务上下文
-- [log](./log.md): 日志模块，记录认证事件和安全日志
-- [config](./config.md): 配置模块，管理认证配置和密钥设置
-- [cache](./cache.md): 缓存模块，提供多后端缓存抽象，缓存用户会话和权限数据
-- [database](./database.md): 数据库模块，提供用户数据持久化和查询功能
-- [http](./http.md): HTTP模块，提供Web认证接口和中间件支持
-- [observability](./observability.md): 可观测性模块，监控认证性能和安全事件
-- [security](./security.md): 安全模块，提供加密、哈希和验证功能
-- [storage](./storage.md): 存储模块，管理认证文件、密钥和证书
-- [validation](./validation.md): 验证模块，验证用户输入和表单数据
+- [README](./README.md): Module overview, providing API reference documentation overview and quick navigation
+- [auth](./auth.md): Authentication module, providing JWT, OAuth2, and RBAC authentication and authorization functionality
+- [core](./core.md): Core module, providing error handling and service context
+- [log](./log.md): Logging module, recording authentication events and security logs
+- [config](./config.md): Configuration module, managing authentication configuration and key settings
+- [cache](./cache.md): Cache module, providing multi-backend cache abstraction, caching user sessions and permission data
+- [database](./database.md): Database module, providing user data persistence and query functionality
+- [http](./http.md): HTTP module, providing web authentication interfaces and middleware support
+- [observability](./observability.md): Observability module, monitoring authentication performance and security events
+- [security](./security.md): Security module, providing encryption, hashing, and verification functionality
+- [storage](./storage.md): Storage module, managing authentication files, keys, and certificates
+- [validation](./validation.md): Validation module, validating user input and form data

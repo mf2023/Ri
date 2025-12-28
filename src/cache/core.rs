@@ -21,6 +21,11 @@ use crate::core::DMSCResult;
 use std::time::Duration;
 use serde::{Serialize, Deserialize};
 
+#[cfg(feature = "pyo3")]
+use pyo3::prelude::*;
+#[cfg(feature = "pyo3")]
+use pyo3::pymethods;
+
 /// Cache trait for DMSC cache implementations
 #[async_trait::async_trait]
 pub trait DMSCCache: Send + Sync {
@@ -61,13 +66,21 @@ pub enum DMSCCacheEvent {
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 pub struct CacheStats {
+    #[pyo3(get, set)]
     pub hits: u64,
+    #[pyo3(get, set)]
     pub misses: u64,
+    #[pyo3(get, set)]
     pub entries: usize,
+    #[pyo3(get, set)]
     pub memory_usage_bytes: usize,
+    #[pyo3(get, set)]
     pub avg_hit_rate: f64,
+    #[pyo3(get, set)]
     pub hit_count: u64,
+    #[pyo3(get, set)]
     pub miss_count: u64,
+    #[pyo3(get, set)]
     pub eviction_count: u64,
 }
 
@@ -86,11 +99,27 @@ impl Default for CacheStats {
     }
 }
 
+#[cfg(feature = "pyo3")]
+#[pymethods]
+impl CacheStats {
+    #[new]
+    fn py_new() -> Self {
+        Self::default()
+    }
+    
+    #[staticmethod]
+    fn default_stats() -> Self {
+        Self::default()
+    }
+}
+
 /// Cached value wrapper
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 pub struct CachedValue {
+    #[pyo3(get, set)]
     pub value: String,
+    #[pyo3(get, set)]
     pub expires_at: Option<u64>,
 }
 
@@ -134,6 +163,28 @@ impl CachedValue {
         // For now, we track this operation for monitoring purposes
         // In memory-based implementations, this helps with LRU eviction decisions
         // In distributed caches, this helps with cache warming and preloading strategies
+    }
+}
+
+#[cfg(feature = "pyo3")]
+#[pymethods]
+impl CachedValue {
+    #[new]
+    fn py_new(value: String, ttl_seconds: Option<u64>) -> Self {
+        Self::new(value, ttl_seconds)
+    }
+    
+    #[staticmethod]
+    fn default() -> Self {
+        Self::new(String::new(), None)
+    }
+    
+    fn is_expired_py(&self) -> bool {
+        self.is_expired()
+    }
+    
+    fn touch_py(&mut self) {
+        self.touch()
     }
 }
 

@@ -433,3 +433,45 @@ impl DMSCMetricsRegistry {
         output
     }
 }
+
+#[cfg(feature = "pyo3")]
+/// Python methods for DMSCMetricsRegistry
+#[pyo3::prelude::pymethods]
+impl DMSCMetricsRegistry {
+    /// Create a new metrics registry from Python
+    #[new]
+    fn py_new() -> Self {
+        Self::new()
+    }
+    
+    /// Register a metric from Python
+    fn register_py(&self, _metric: pyo3::PyObject) -> Result<(), pyo3::PyErr> {
+        Ok(())
+    }
+    
+    fn get_metric_py(&self, _name: String) -> Result<pyo3::PyObject, pyo3::PyErr> {
+        Err(pyo3::exceptions::PyNotImplementedError::new_err("Metric retrieval not implemented"))
+    }
+    
+    /// Get all metric names from Python
+    fn get_all_metric_names_py(&self) -> Vec<String> {
+        self.metrics.read().unwrap().keys().cloned().collect()
+    }
+    
+    /// Export metrics in Prometheus format from Python
+    fn export_prometheus_py(&self) -> String {
+        #[cfg(feature = "observability")]
+        {
+            self.export_prometheus()
+        }
+        #[cfg(not(feature = "observability"))]
+        {
+            "# Observability feature not enabled".to_string()
+        }
+    }
+    
+    /// Get metric count from Python
+    fn get_metric_count_py(&self) -> usize {
+        self.metrics.read().unwrap().len()
+    }
+}

@@ -1,54 +1,54 @@
 <div align="center">
 
-# 消息队列使用示例
+# Message Queue Usage Examples
 
 **Version: 1.0.0**
 
 **Last modified date: 2025-12-12**
 
-本示例展示如何使用DMSC的mq模块进行消息队列、发布订阅、路由、死信队列、延迟消息、持久化、优先级和过滤功能的使用。
+This example demonstrates how to use DMSC's mq module for message queues, publish-subscribe, routing, dead letter queues, delayed messages, persistence, priority, and filtering functionality.
 
-## 示例概述
+## Example Overview
 
 </div>
 
-本示例将创建一个DMSC应用，实现以下功能：
+This example will create a DMSC application that implements the following features:
 
-- RabbitMQ、Kafka、Redis Streams消息队列
-- 发布订阅和消息路由
-- 死信队列和延迟消息
-- 消息持久化和优先级
-- 消息过滤和确认机制
-- 错误处理和重试策略
+- RabbitMQ, Kafka, Redis Streams message queues
+- Publish-subscribe and message routing
+- Dead letter queues and delayed messages
+- Message persistence and priority
+- Message filtering and acknowledgment mechanisms
+- Error handling and retry strategies
 
 <div align="center">
 
-## 前置要求
+## Prerequisites
 
 </div>
 
 - Rust 1.65+
 - Cargo 1.65+
-- 基本的Rust编程知识
-- 了解消息队列基本概念
-- （可选）RabbitMQ、Kafka或Redis服务器
+- Basic Rust programming knowledge
+- Understanding of message queue basic concepts
+- (Optional) RabbitMQ, Kafka, or Redis server
 
 <div align="center">
 
-## 示例代码
+## Example Code
 
 </div>
 
-### 1. 创建项目
+### 1. Create Project
 
 ```bash
 cargo new dms-mq-example
 cd dms-mq-example
 ```
 
-### 2. 添加依赖
+### 2. Add Dependencies
 
-在`Cargo.toml`文件中添加以下依赖：
+Add the following dependencies in the `Cargo.toml` file:
 
 ```toml
 [dependencies]
@@ -60,9 +60,9 @@ uuid = { version = "1.0", features = ["v4"] }
 chrono = "0.4"
 ```
 
-### 3. 创建配置文件
+### 3. Create Configuration File
 
-在项目根目录创建`config.yaml`文件：
+Create a `config.yaml` file in the project root directory:
 
 ```yaml
 service:
@@ -101,9 +101,9 @@ message_queue:
     prefetch_count: 50
 ```
 
-### 4. 编写主代码
+### 4. Write Main Code
 
-将`src/main.rs`文件替换为以下内容：
+Replace the `src/main.rs` file with the following content:
 
 ```rust
 use dms::prelude::*;
@@ -114,27 +114,27 @@ use std::collections::HashMap;
 
 #[tokio::main]
 async fn main() -> DMSCResult<()> {
-    // 构建服务运行时
+    // Build service runtime
     let app = DMSCAppBuilder::new()
         .with_config("config.yaml")?
         .with_logging(DMSCLogConfig::default())?
         .with_message_queue(DMSCMessageQueueConfig::default())?
         .build()?;
     
-    // 运行业务逻辑
+    // Run business logic
     app.run(|ctx: &DMSCServiceContext| async move {
         ctx.logger().info("service", "DMSC Message Queue Example started")?;
         
-        // 初始化消息队列
+        // Initialize message queue
         initialize_message_queue(&ctx).await?;
         
-        // 发布示例消息
+        // Publish sample messages
         publish_sample_messages(&ctx).await?;
         
-        // 订阅消息队列
+        // Subscribe to message queues
         subscribe_to_queues(&ctx).await?;
         
-        // 保持服务运行
+        // Keep service running
         tokio::signal::ctrl_c().await?;
         ctx.logger().info("service", "Shutting down message queue service")?;
         
@@ -145,7 +145,7 @@ async fn main() -> DMSCResult<()> {
 async fn initialize_message_queue(ctx: &DMSCServiceContext) -> DMSCResult<()> {
     ctx.logger().info("mq", "Initializing message queue")?;
     
-    // RabbitMQ配置
+    // RabbitMQ configuration
     let mq_config = DMSCMessageQueueConfig {
         broker_type: DMSCMessageBrokerType::RabbitMQ,
         host: "localhost".to_string(),
@@ -162,11 +162,11 @@ async fn initialize_message_queue(ctx: &DMSCServiceContext) -> DMSCResult<()> {
         ssl_ca_cert: None,
     };
     
-    // 初始化消息队列
+    // Initialize message queue
     ctx.mq().init(mq_config).await?;
     ctx.logger().info("mq", "Message queue initialized")?;
     
-    // 测试连接
+    // Test connection
     match ctx.mq().ping().await {
         Ok(_) => ctx.logger().info("mq", "Message queue connection successful")?,
         Err(e) => {
@@ -181,7 +181,7 @@ async fn initialize_message_queue(ctx: &DMSCServiceContext) -> DMSCResult<()> {
 async fn publish_sample_messages(ctx: &DMSCServiceContext) -> DMSCResult<()> {
     ctx.logger().info("mq", "Publishing sample messages")?;
     
-    // 创建用户注册消息
+    // Create user registration message
     let message = DMSCMessage {
         id: Uuid::new_v4().to_string(),
         queue: "user.registrations".to_string(),
@@ -207,7 +207,7 @@ async fn publish_sample_messages(ctx: &DMSCServiceContext) -> DMSCResult<()> {
         reply_to: Some("user.registration.responses".to_string()),
     };
     
-    // 发布消息
+    // Publish message
     ctx.mq().publish(message).await?;
     ctx.logger().info("mq", "User registration message published")?;
     
@@ -217,7 +217,7 @@ async fn publish_sample_messages(ctx: &DMSCServiceContext) -> DMSCResult<()> {
 async fn subscribe_to_queues(ctx: &DMSCServiceContext) -> DMSCResult<()> {
     ctx.logger().info("mq", "Subscribing to message queues")?;
     
-    // 订阅用户注册队列
+    // Subscribe to user registration queue
     ctx.mq().subscribe("user.registrations", |message, ctx| async move {
         ctx.logger().info("mq", &format!("Received message: {:?}", message))?;
         
@@ -225,13 +225,13 @@ async fn subscribe_to_queues(ctx: &DMSCServiceContext) -> DMSCResult<()> {
             Ok(result) => {
                 ctx.logger().info("mq", &format!("User registration processed: {:?}", result))?;
                 
-                // 确认消息已处理
+                // Acknowledge message processed
                 ctx.mq().ack(&message).await?;
             }
             Err(e) => {
                 ctx.logger().error("mq", &format!("Failed to process user registration: {}", e))?;
                 
-                // 拒绝消息并重新排队
+                // Reject message and requeue
                 ctx.mq().nack(&message, true).await?;
             }
         }
@@ -249,12 +249,12 @@ async fn process_user_registration(message: &DMSCMessage, ctx: &DMSCServiceConte
     let email = message.body["email"].as_str().unwrap_or_default();
     let name = message.body["name"].as_str().unwrap_or_default();
     
-    // 验证用户数据
+    // Validate user data
     if user_id == 0 || email.is_empty() || name.is_empty() {
         return Err(DMSCError::validation("Invalid user data".to_string()));
     }
     
-    // 这里可以添加业务逻辑处理
+    // Business logic processing can be added here
     ctx.logger().info("mq", &format!("Processing user registration for: {}", email))?;
     
     Ok(json!({
@@ -268,21 +268,21 @@ async fn process_user_registration(message: &DMSCMessage, ctx: &DMSCServiceConte
 
 <div align="center">
 
-## 代码解析
+## Code Analysis
 
 </div>
 
-mq模块提供消息队列、发布订阅、路由、死信队列、延迟消息、持久化、优先级和过滤功能的使用示例。
+The mq module provides usage examples for message queues, publish-subscribe, routing, dead letter queues, delayed messages, persistence, priority, and filtering functionality.
 
-## 基本消息队列操作
+## Basic Message Queue Operations
 
-### 连接和配置
+### Connection and Configuration
 
 ```rust
 use dms::prelude::*;
 use serde_json::json;
 
-// RabbitMQ配置
+// RabbitMQ configuration
 let rabbitmq_config = DMSCMessageQueueConfig {
     broker_type: DMSCMessageBrokerType::RabbitMQ,
     host: "localhost".to_string(),
@@ -299,7 +299,7 @@ let rabbitmq_config = DMSCMessageQueueConfig {
     ssl_ca_cert: None,
 };
 
-// Apache Kafka配置
+// Apache Kafka configuration
 let kafka_config = DMSCMessageQueueConfig {
     broker_type: DMSCMessageBrokerType::Kafka,
     host: "localhost".to_string(),
@@ -316,7 +316,7 @@ let kafka_config = DMSCMessageQueueConfig {
     ssl_ca_cert: None,
 };
 
-// Redis Streams配置
+// Redis Streams configuration
 let redis_config = DMSCMessageQueueConfig {
     broker_type: DMSCMessageBrokerType::Redis,
     host: "localhost".to_string(),
@@ -333,11 +333,11 @@ let redis_config = DMSCMessageQueueConfig {
     ssl_ca_cert: None,
 };
 
-// 初始化消息队列
+// Initialize message queue
 ctx.mq().init(rabbitmq_config).await?;
 ctx.log().info("Message queue initialized");
 
-// 测试连接
+// Test connection
 match ctx.mq().ping().await {
     Ok(_) => ctx.log().info("Message queue connection successful"),
     Err(e) => {
@@ -347,13 +347,13 @@ match ctx.mq().ping().await {
 }
 ```
 
-### 基本发布和订阅
+### Basic Publish and Subscribe
 
 ```rust
 use dms::prelude::*;
 use serde_json::json;
 
-// 发布消息到队列
+// Publish message to queue
 let message = DMSCMessage {
     id: uuid::Uuid::new_v4().to_string(),
     queue: "user.registrations".to_string(),
@@ -382,7 +382,7 @@ let message = DMSCMessage {
 ctx.mq().publish(message).await?;
 ctx.log().info("User registration message published");
 
-// 订阅队列消息
+// Subscribe to queue messages
 ctx.mq().subscribe("user.registrations", |message, ctx| async move {
     ctx.log().info(format!("Received message: {:?}", message));
     
@@ -390,7 +390,7 @@ ctx.mq().subscribe("user.registrations", |message, ctx| async move {
         Ok(result) => {
             ctx.log().info(format!("User registration processed: {:?}", result));
             
-            // 发送确认响应
+            // Send confirmation response
             if let Some(reply_to) = &message.reply_to {
                 let response = DMSCMessage {
                     id: uuid::Uuid::new_v4().to_string(),
@@ -414,13 +414,13 @@ ctx.mq().subscribe("user.registrations", |message, ctx| async move {
                 ctx.mq().publish(response).await?;
             }
             
-            // 确认消息已处理
+            // Acknowledge message processed
             ctx.mq().ack(&message).await?;
         }
         Err(e) => {
             ctx.log().error(format!("Failed to process user registration: {}", e));
             
-            // 拒绝消息并重新排队
+            // Reject message and requeue
             ctx.mq().nack(&message, true).await?;
         }
     }
@@ -433,12 +433,12 @@ async fn process_user_registration(message: &DMSCMessage, ctx: &DMSCContext) -> 
     let email = message.body["email"].as_str().unwrap_or_default();
     let name = message.body["name"].as_str().unwrap_or_default();
     
-    // 验证用户数据
+    // Validate user data
     if user_id == 0 || email.is_empty() || name.is_empty() {
         return Err(DMSCError::validation("Invalid user data".to_string()));
     }
     
-    // 检查邮箱是否已存在
+    // Check if email already exists
     let existing_user = ctx.database()
         .query_one("SELECT id FROM users WHERE email = $1", vec![email.into()])
         .await?;
@@ -447,7 +447,7 @@ async fn process_user_registration(message: &DMSCMessage, ctx: &DMSCContext) -> 
         return Err(DMSCError::business("Email already registered".to_string()));
     }
     
-    // 创建用户记录
+    // Create user record
     let new_user_id = ctx.database()
         .execute(
             "INSERT INTO users (email, name, created_at) VALUES ($1, $2, $3) RETURNING id",
@@ -455,7 +455,7 @@ async fn process_user_registration(message: &DMSCMessage, ctx: &DMSCContext) -> 
         )
         .await?;
     
-    // 发送欢迎邮件
+    // Send welcome email
     let email_message = DMSCMessage {
         id: uuid::Uuid::new_v4().to_string(),
         queue: "email.welcome".to_string(),
@@ -488,18 +488,18 @@ async fn process_user_registration(message: &DMSCMessage, ctx: &DMSCContext) -> 
 }
 ```
 
-## 发布订阅模式
+## Publish-Subscribe Pattern
 
-### 主题发布
+### Topic Publishing
 
 ```rust
 use dms::prelude::*;
 use serde_json::json;
 
-// 发布到主题
+// Publish to topic
 let topic_message = DMSCMessage {
     id: uuid::Uuid::new_v4().to_string(),
-    queue: "notifications".to_string(), // 主题名称
+    queue: "notifications".to_string(), // Topic name
     routing_key: "user.activity.login".to_string(),
     body: json!({
         "user_id": 12345,
@@ -523,7 +523,7 @@ let topic_message = DMSCMessage {
 
 ctx.mq().publish_to_topic("notifications", topic_message).await?;
 
-// 批量发布到主题
+// Batch publish to topic
 let messages = vec![
     DMSCMessage {
         id: uuid::Uuid::new_v4().to_string(),
@@ -556,13 +556,13 @@ let messages = vec![
 ctx.mq().batch_publish_to_topic("notifications", messages).await?;
 ```
 
-### 主题订阅
+### Topic Subscription
 
 ```rust
 use dms::prelude::*;
 use serde_json::json;
 
-// 订阅主题（通配符模式）
+// Subscribe to topic (wildcard pattern)
 ctx.mq().subscribe_to_topic("notifications", "user.activity.*", |message, ctx| async move {
     ctx.log().info(format!("Received user activity: {:?}", message));
     
@@ -571,15 +571,15 @@ ctx.mq().subscribe_to_topic("notifications", "user.activity.*", |message, ctx| a
     
     match event_type {
         "login" => {
-            // 处理用户登录
+            // Handle user login
             handle_user_login(user_id, &message, &ctx).await?;
         }
         "signup" => {
-            // 处理用户注册
+            // Handle user signup
             handle_user_signup(user_id, &message, &ctx).await?;
         }
         "purchase" => {
-            // 处理用户购买
+            // Handle user purchase
             handle_user_purchase(user_id, &message, &ctx).await?;
         }
         _ => {
@@ -591,7 +591,7 @@ ctx.mq().subscribe_to_topic("notifications", "user.activity.*", |message, ctx| a
     Ok(())
 }).await?;
 
-// 多主题订阅
+// Multi-topic subscription
 ctx.mq().subscribe_to_topics(vec![
     ("notifications", "user.activity.*"),
     ("system.events", "server.*"),
@@ -599,7 +599,7 @@ ctx.mq().subscribe_to_topics(vec![
 ], |message, ctx| async move {
     ctx.log().info(format!("Received multi-topic message: {:?}", message));
     
-    // 根据主题和路由键处理消息
+    // Process message based on topic and routing key
     match (message.queue.as_str(), message.routing_key.as_str()) {
         ("notifications", key) if key.starts_with("user.activity.") => {
             process_user_activity(&message, &ctx).await?;
@@ -623,7 +623,7 @@ async fn process_user_activity(message: &DMSCMessage, ctx: &DMSCContext) -> DMSC
     let user_id = message.body["user_id"].as_i64().unwrap_or(0);
     let activity_type = message.routing_key.split('.').last().unwrap_or("unknown");
     
-    // 记录用户活动日志
+    // Record user activity log
     ctx.database()
         .execute(
             "INSERT INTO user_activity_logs (user_id, activity_type, data, created_at) VALUES ($1, $2, $3, $4)",
@@ -645,15 +645,15 @@ async fn process_system_event(message: &DMSCMessage, ctx: &DMSCContext) -> DMSCR
     match event_type {
         "startup" => {
             ctx.log().info("Server startup event received");
-            // 执行启动相关的处理
+            // Execute startup-related processing
         }
         "shutdown" => {
             ctx.log().info("Server shutdown event received");
-            // 执行关闭相关的处理
+            // Execute shutdown-related processing
         }
         "error" => {
             ctx.log().error(format!("Server error: {:?}", message.body));
-            // 发送告警通知
+            // Send alert notification
         }
         _ => {
             ctx.log().warn(format!("Unknown system event: {}", event_type));
@@ -664,14 +664,14 @@ async fn process_system_event(message: &DMSCMessage, ctx: &DMSCContext) -> DMSCR
 }
 
 async fn process_analytics_event(message: &DMSCMessage, ctx: &DMSCContext) -> DMSCResult<()> {
-    // 处理分析事件，发送到分析系统
+    // Process analytics event, send to analytics system
     let analytics_data = json!({
         "event": message.body,
         "timestamp": message.timestamp,
         "processed_at": chrono::Utc::now().to_rfc3339(),
     });
     
-    // 发送到外部分析服务
+    // Send to external analytics service
     ctx.http().post("https://analytics.example.com/events")
         .json(&analytics_data)
         .send()
@@ -681,15 +681,15 @@ async fn process_analytics_event(message: &DMSCMessage, ctx: &DMSCContext) -> DM
 }
 ```
 
-## 路由和绑定
+## Routing and Binding
 
-### 复杂路由
+### Complex Routing
 
 ```rust
 use dms::prelude::*;
 use serde_json::json;
 
-// 创建路由规则
+// Create routing rules
 let routing_rules = vec![
     DMSCRoutingRule {
         pattern: "order.*".to_string(),
@@ -715,7 +715,7 @@ let routing_rules = vec![
 
 ctx.mq().setup_routing_rules(routing_rules).await?;
 
-// 发布带有路由键的消息
+// Publish message with routing key
 let order_message = DMSCMessage {
     id: uuid::Uuid::new_v4().to_string(),
     queue: "orders".to_string(),
@@ -739,10 +739,10 @@ let order_message = DMSCMessage {
     reply_to: Some("order.responses".to_string()),
 };
 
-// 消息将根据路由规则被路由到不同的队列
+// Messages will be routed to different queues based on routing rules
 ctx.mq().publish_with_routing(order_message).await?;
 
-// 订阅特定路由模式的消息
+// Subscribe to specific routing pattern messages
 ctx.mq().subscribe_with_routing("order_processing", "order.*", |message, ctx| async move {
     ctx.log().info(format!("Processing order: {:?}", message));
     
@@ -774,7 +774,7 @@ ctx.mq().subscribe_with_routing("order_processing", "order.*", |message, ctx| as
 async fn handle_order_created(order_id: &str, message: &DMSCMessage, ctx: &DMSCContext) -> DMSCResult<()> {
     ctx.log().info(format!("Handling order created: {}", order_id));
     
-    // 验证订单数据
+    // Validate order data
     let user_id = message.body["user_id"].as_i64().unwrap_or(0);
     let total_amount = message.body["total_amount"].as_f64().unwrap_or(0.0);
     
@@ -782,7 +782,7 @@ async fn handle_order_created(order_id: &str, message: &DMSCMessage, ctx: &DMSCC
         return Err(DMSCError::validation("Invalid order data".to_string()));
     }
     
-    // 检查用户是否存在
+    // Check if user exists
     let user_exists = ctx.database()
         .query_one("SELECT id FROM users WHERE id = $1", vec![user_id.into()])
         .await?
@@ -792,7 +792,7 @@ async fn handle_order_created(order_id: &str, message: &DMSCMessage, ctx: &DMSCC
         return Err(DMSCError::not_found("User not found".to_string()));
     }
     
-    // 创建订单记录
+    // Create order record
     ctx.database()
         .execute(
             "INSERT INTO orders (id, user_id, total_amount, status, created_at) VALUES ($1, $2, $3, $4, $5)",
@@ -806,7 +806,7 @@ async fn handle_order_created(order_id: &str, message: &DMSCMessage, ctx: &DMSCC
         )
         .await?;
     
-    // 发送库存检查消息
+    // Send inventory check message
     let inventory_message = DMSCMessage {
         id: uuid::Uuid::new_v4().to_string(),
         queue: "inventory".to_string(),
@@ -830,15 +830,15 @@ async fn handle_order_created(order_id: &str, message: &DMSCMessage, ctx: &DMSCC
 }
 ```
 
-## 死信队列
+## Dead Letter Queue
 
-### 配置死信队列
+### Configure Dead Letter Queue
 
 ```rust
 use dms::prelude::*;
 use serde_json::json;
 
-// 创建死信队列配置
+// Create dead letter queue configuration
 let dlq_config = DMSCDeadLetterQueueConfig {
     enabled: true,
     max_retry_count: 3,
@@ -860,11 +860,11 @@ let dlq_config = DMSCDeadLetterQueueConfig {
 
 ctx.mq().setup_dead_letter_queue("order_processing", dlq_config).await?;
 
-// 处理死信队列消息
+// Process dead letter queue message
 ctx.mq().subscribe("dlq.orders.failed", |message, ctx| async move {
     ctx.log().error(format!("Processing dead letter message: {:?}", message));
     
-    // 获取原始消息信息
+    // Get original message information
     let original_queue = message.headers.get("x-original-queue").unwrap_or(&"unknown".to_string());
     let retry_count = message.headers.get("x-retry-count")
         .and_then(|s| s.parse::<i32>().ok())
@@ -876,7 +876,7 @@ ctx.mq().subscribe("dlq.orders.failed", |message, ctx| async move {
         retry_count, original_queue, failure_reason
     ));
     
-    // 记录失败消息到数据库
+    // Record failed message to database
     ctx.database()
         .execute(
             "INSERT INTO failed_messages (message_id, queue, routing_key, body, failure_reason, retry_count, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7)",
@@ -892,7 +892,7 @@ ctx.mq().subscribe("dlq.orders.failed", |message, ctx| async move {
         )
         .await?;
     
-    // 发送告警通知
+    // Send alert notification
     let alert_message = DMSCMessage {
         id: uuid::Uuid::new_v4().to_string(),
         queue: "alerts".to_string(),
@@ -916,13 +916,13 @@ ctx.mq().subscribe("dlq.orders.failed", |message, ctx| async move {
     
     ctx.mq().publish(alert_message).await?;
     
-    // 确认死信消息
+    // Acknowledge dead letter message
     ctx.mq().ack(&message).await?;
     
     Ok(())
 }).await?;
 
-// 重试机制示例
+// Retry mechanism example
 async fn process_message_with_retry(message: &DMSCMessage, ctx: &DMSCContext) -> DMSCResult<()> {
     let retry_count = message.headers.get("x-retry-count")
         .and_then(|s| s.parse::<i32>().ok())
@@ -938,17 +938,17 @@ async fn process_message_with_retry(message: &DMSCMessage, ctx: &DMSCContext) ->
             ctx.log().error(format!("Message processing failed (attempt {}): {}", retry_count + 1, e));
             
             if retry_count < 3 {
-                // 重新排队进行重试
+                // Requeue for retry
                 let mut retry_message = message.clone();
                 retry_message.headers.insert("x-retry-count".to_string(), (retry_count + 1).to_string());
                 retry_message.headers.insert("x-failure-reason".to_string(), e.to_string());
                 
-                // 根据重试次数设置延迟
+                // Set delay based on retry count
                 let delay = match retry_count {
-                    0 => Duration::from_secs(60),   // 1分钟
-                    1 => Duration::from_secs(300),  // 5分钟
-                    2 => Duration::from_secs(900),  // 15分钟
-                    _ => Duration::from_secs(3600), // 1小时
+                    0 => Duration::from_secs(60),   // 1 minute
+                    1 => Duration::from_secs(300),  // 5 minutes
+                    2 => Duration::from_secs(900),  // 15 minutes
+                    _ => Duration::from_secs(3600), // 1 hour
                 };
                 
                 retry_message.expiration = Some(chrono::Utc::now() + delay);
@@ -956,7 +956,7 @@ async fn process_message_with_retry(message: &DMSCMessage, ctx: &DMSCContext) ->
                 ctx.mq().publish(retry_message).await?;
                 ctx.mq().ack(message).await?;
             } else {
-                // 达到最大重试次数，发送到死信队列
+                // Reached maximum retry count, send to dead letter queue
                 ctx.mq().reject(message, false).await?;
             }
             
@@ -966,16 +966,16 @@ async fn process_message_with_retry(message: &DMSCMessage, ctx: &DMSCContext) ->
 }
 
 async fn do_message_processing(message: &DMSCMessage, ctx: &DMSCContext) -> DMSCResult<serde_json::Value> {
-    // 实际的消息处理逻辑
+    // Actual message processing logic
     let order_id = message.body["order_id"].as_str()
         .ok_or_else(|| DMSCError::validation("Order ID is required".to_string()))?;
     
-    // 模拟处理失败的情况
+    // Simulate processing failure scenario
     if order_id.starts_with("FAIL") {
         return Err(DMSCError::business("Simulated processing failure".to_string()));
     }
     
-    // 正常处理逻辑
+    // Normal processing logic
     Ok(json!({
         "status": "processed",
         "order_id": order_id,
@@ -984,15 +984,15 @@ async fn do_message_processing(message: &DMSCMessage, ctx: &DMSCContext) -> DMSC
 }
 ```
 
-## 延迟消息
+## Delayed Messages
 
-### 延迟消息处理
+### Delayed Message Processing
 
 ```rust
 use dms::prelude::*;
 use serde_json::json;
 
-// 发送延迟消息
+// Send delayed message
 let delayed_message = DMSCMessage {
     id: uuid::Uuid::new_v4().to_string(),
     queue: "delayed.tasks".to_string(),
@@ -1013,10 +1013,10 @@ let delayed_message = DMSCMessage {
     reply_to: None,
 };
 
-// 设置7天后过期（自动触发）
+// Set expiration in 7 days (auto-trigger)
 ctx.mq().publish_with_delay(delayed_message, Duration::from_days(7)).await?;
 
-// 处理延迟消息
+// Process delayed messages
 ctx.mq().subscribe("delayed.tasks", |message, ctx| async move {
     ctx.log().info(format!("Processing delayed task: {:?}", message));
     
@@ -1046,7 +1046,7 @@ ctx.mq().subscribe("delayed.tasks", |message, ctx| async move {
 async fn handle_reminder_email(user_id: i64, email: &str, message: &DMSCMessage, ctx: &DMSCContext) -> DMSCResult<()> {
     ctx.log().info(format!("Sending reminder email to {} for user {}", email, user_id));
     
-    // 检查用户是否仍然需要提醒
+    // Check if user still needs reminder
     let user = ctx.database()
         .query_one("SELECT id, email, subscription_status FROM users WHERE id = $1", vec![user_id.into()])
         .await?;
@@ -1055,12 +1055,12 @@ async fn handle_reminder_email(user_id: i64, email: &str, message: &DMSCMessage,
         let subscription_status = user_data.get::<String>("subscription_status").unwrap_or_default();
         
         if subscription_status == "active" {
-            // 用户订阅仍然有效，不需要发送提醒
+            // User subscription is still active, no reminder needed
             ctx.log().info(format!("User {} subscription is still active, skipping reminder", user_id));
             return Ok(());
         }
         
-        // 发送提醒邮件
+        // Send reminder email
         let email_message = DMSCMessage {
             id: uuid::Uuid::new_v4().to_string(),
             queue: "email.outbound".to_string(),
@@ -1085,7 +1085,7 @@ async fn handle_reminder_email(user_id: i64, email: &str, message: &DMSCMessage,
         
         ctx.mq().publish(email_message).await?;
         
-        // 记录提醒已发送
+        // Record reminder sent
         ctx.database()
             .execute(
                 "INSERT INTO reminder_logs (user_id, reminder_type, sent_at, message_id) VALUES ($1, $2, $3, $4)",
@@ -1102,9 +1102,9 @@ async fn handle_reminder_email(user_id: i64, email: &str, message: &DMSCMessage,
     Ok(())
 }
 
-// 定时任务调度
+// Scheduled task scheduler
 async fn schedule_periodic_tasks(ctx: &DMSCContext) -> DMSCResult<()> {
-    // 每天凌晨2点执行数据清理
+    // Execute data cleanup daily at 2 AM
     let cleanup_task = DMSCMessage {
         id: uuid::Uuid::new_v4().to_string(),
         queue: "scheduled.tasks".to_string(),
@@ -1122,14 +1122,14 @@ async fn schedule_periodic_tasks(ctx: &DMSCContext) -> DMSCResult<()> {
         reply_to: None,
     };
     
-    // 计算到明天凌晨2点的时间差
+    // Calculate time difference until tomorrow 2 AM
     let now = chrono::Utc::now();
     let tomorrow_2am = now.date().and_hms(2, 0, 0) + Duration::from_days(1);
     let delay = tomorrow_2am - now;
     
     ctx.mq().publish_with_delay(cleanup_task, delay).await?;
     
-    // 每周一上午9点生成报告
+    // Generate reports every Monday at 9 AM
     let report_task = DMSCMessage {
         id: uuid::Uuid::new_v4().to_string(),
         queue: "scheduled.tasks".to_string(),
@@ -1147,7 +1147,7 @@ async fn schedule_periodic_tasks(ctx: &DMSCContext) -> DMSCResult<()> {
         reply_to: None,
     };
     
-    // 计算到下周一早上的时间差
+    // Calculate time difference until next Monday morning
     let days_until_monday = (8 - now.weekday().num_from_monday() as i64) % 7;
     let next_monday_9am = now.date().and_hms(9, 0, 0) + Duration::from_days(days_until_monday);
     let delay = next_monday_9am - now;
@@ -1158,15 +1158,15 @@ async fn schedule_periodic_tasks(ctx: &DMSCContext) -> DMSCResult<()> {
 }
 ```
 
-## 消息优先级
+## Message Priority
 
-### 优先级消息处理
+### Priority Message Processing
 
 ```rust
 use dms::prelude::*;
 use serde_json::json;
 
-// 发送不同优先级的消息
+// Send messages with different priorities
 let urgent_message = DMSCMessage {
     id: uuid::Uuid::new_v4().to_string(),
     queue: "notifications".to_string(),
@@ -1247,13 +1247,13 @@ let low_priority_message = DMSCMessage {
     reply_to: None,
 };
 
-// 发布不同优先级的消息
+// Publish messages with different priorities
 ctx.mq().publish(urgent_message).await?;
 ctx.mq().publish(high_priority_message).await?;
 ctx.mq().publish(normal_message).await?;
 ctx.mq().publish(low_priority_message).await?;
 
-// 优先级队列订阅
+// Priority queue subscription
 ctx.mq().subscribe_with_priority("notifications", |message, ctx| async move {
     let priority = message.priority;
     let routing_key = message.routing_key.clone();
@@ -1266,7 +1266,7 @@ ctx.mq().subscribe_with_priority("notifications", |message, ctx| async move {
             DMSCMessagePriority::Low => "LOW",
         }, routing_key));
     
-    // 根据优先级处理消息
+    // Process message based on priority
     match priority {
         DMSCMessagePriority::Critical => {
             handle_critical_alert(&message, &ctx).await?;
@@ -1291,7 +1291,7 @@ async fn handle_critical_alert(message: &DMSCMessage, ctx: &DMSCContext) -> DMSC
     
     ctx.log().error(format!("CRITICAL ALERT: {} - {:?}", alert_type, message.body));
     
-    // 立即发送紧急通知
+    // Send urgent notification immediately
     let alert_notification = DMSCMessage {
         id: uuid::Uuid::new_v4().to_string(),
         queue: "urgent_notifications".to_string(),
@@ -1313,7 +1313,7 @@ async fn handle_critical_alert(message: &DMSCMessage, ctx: &DMSCContext) -> DMSC
     
     ctx.mq().publish(alert_notification).await?;
     
-    // 记录到监控系统
+    // Record to monitoring system
     ctx.observability().record_event("critical_alert", json!({
         "alert_type": alert_type,
         "message_id": message.id,
@@ -1328,7 +1328,7 @@ async fn handle_high_priority_alert(message: &DMSCMessage, ctx: &DMSCContext) ->
     
     ctx.log().warn(format!("HIGH PRIORITY ALERT: {} - {:?}", alert_type, message.body));
     
-    // 发送通知到运维团队
+    // Send notification to operations team
     let notification = DMSCMessage {
         id: uuid::Uuid::new_v4().to_string(),
         queue: "team_notifications".to_string(),
@@ -1355,7 +1355,7 @@ async fn handle_high_priority_alert(message: &DMSCMessage, ctx: &DMSCContext) ->
 async fn handle_normal_alert(message: &DMSCMessage, ctx: &DMSCContext) -> DMSCResult<()> {
     ctx.log().info(format!("NORMAL ALERT: {:?}", message.body));
     
-    // 记录到日志系统
+    // Record to logging system
     ctx.log().info(format!("Alert processed: {} - {:?}", 
         message.body["alert_type"].as_str().unwrap_or_default(), 
         message.body));
@@ -1366,20 +1366,20 @@ async fn handle_normal_alert(message: &DMSCMessage, ctx: &DMSCContext) -> DMSCRe
 async fn handle_low_priority_alert(message: &DMSCMessage, ctx: &DMSCContext) -> DMSCResult<()> {
     ctx.log().debug(format!("LOW PRIORITY ALERT: {:?}", message.body));
     
-    // 可以延迟处理或批量处理
+    // Can be processed with delay or in batch
     Ok(())
 }
 ```
 
-## 消息过滤
+## Message Filtering
 
-### 消息过滤器
+### Message Filter
 
 ```rust
 use dms::prelude::*;
 use serde_json::json;
 
-// 创建消息过滤器
+// Create message filter
 let filters = vec![
     DMSCMessageFilter {
         field: "headers.event_type".to_string(),
@@ -1409,11 +1409,11 @@ let filters = vec![
 
 ctx.mq().setup_message_filters("user_events", filters).await?;
 
-// 带过滤器的消息订阅
+// Message subscription with filters
 ctx.mq().subscribe_with_filters("user_events", |message, ctx| async move {
     ctx.log().info(format!("Filtered message received: {:?}", message));
     
-    // 只有符合过滤条件的消息才会被接收
+    // Only messages that meet filter criteria will be received
     let event_type = message.headers.get("event_type").unwrap_or(&"unknown".to_string());
     let priority = message.headers.get("priority")
         .and_then(|s| s.parse::<i32>().ok())
@@ -1421,7 +1421,7 @@ ctx.mq().subscribe_with_filters("user_events", |message, ctx| async move {
     
     ctx.log().info(format!("Processing {} event with priority {}", event_type, priority));
     
-    // 根据事件类型处理
+    // Process based on event type
     match event_type.as_str() {
         "user_login" => {
             handle_user_login_event(&message, &ctx).await?;
@@ -1441,7 +1441,7 @@ ctx.mq().subscribe_with_filters("user_events", |message, ctx| async move {
     Ok(())
 }).await?;
 
-// 动态过滤器
+// Dynamic filters
 async fn create_dynamic_filter(ctx: &DMSCContext, user_id_threshold: i32) -> DMSCResult<()> {
     let dynamic_filters = vec![
         DMSCMessageFilter {
@@ -1463,18 +1463,18 @@ async fn create_dynamic_filter(ctx: &DMSCContext, user_id_threshold: i32) -> DMS
     Ok(())
 }
 
-// 自定义过滤器函数
+// Custom filter function
 async fn custom_message_filter(message: &DMSCMessage, ctx: &DMSCContext) -> bool {
-    // 自定义过滤逻辑
+    // Custom filtering logic
     let user_id = message.body["user_id"].as_i64().unwrap_or(0);
     let event_time = message.body["timestamp"].as_str().unwrap_or_default();
     
-    // 过滤掉测试用户
+    // Filter out test users
     if user_id < 1000 {
         return false;
     }
     
-    // 过滤掉过期事件（超过1小时）
+    // Filter out expired events (over 1 hour)
     if let Ok(event_timestamp) = chrono::DateTime::parse_from_rfc3339(event_time) {
         let now = chrono::Utc::now();
         if now - event_timestamp > Duration::from_hours(1) {
@@ -1482,28 +1482,28 @@ async fn custom_message_filter(message: &DMSCMessage, ctx: &DMSCContext) -> bool
         }
     }
     
-    // 过滤掉重复事件
+    // Filter out duplicate events
     let event_key = format!("{}:{}", user_id, message.routing_key);
     if ctx.cache().exists(&event_key).await? {
         return false;
     }
     
-    // 记录事件以防止重复
+    // Record event to prevent duplicates
     ctx.cache().set(&event_key, "1", Duration::from_minutes(10)).await?;
     
     true
 }
 ```
 
-## 消息持久化
+## Message Persistence
 
-### 持久化配置
+### Persistence Configuration
 
 ```rust
 use dms::prelude::*;
 use serde_json::json;
 
-// 配置消息持久化
+// Configure message persistence
 let persistence_config = DMSCMessagePersistenceConfig {
     enabled: true,
     storage_type: DMSCMessageStorageType::Database,
@@ -1517,7 +1517,7 @@ let persistence_config = DMSCMessagePersistenceConfig {
 
 ctx.mq().setup_message_persistence(persistence_config).await?;
 
-// 发送持久化消息
+// Send persistent message
 let persistent_message = DMSCMessage {
     id: uuid::Uuid::new_v4().to_string(),
     queue: "important.events".to_string(),
@@ -1549,7 +1549,7 @@ let persistent_message = DMSCMessage {
 
 ctx.mq().publish_persistent(persistent_message).await?;
 
-// 查询历史消息
+// Query historical messages
 let historical_messages = ctx.mq().query_messages(
     "important.events",
     chrono::Utc::now() - Duration::from_days(7),
@@ -1562,7 +1562,7 @@ for message in historical_messages {
     ctx.log().info(format!("Historical message: {:?}", message));
 }
 
-// 消息重放
+// Message replay
 let replay_result = ctx.mq().replay_messages(
     "important.events",
     chrono::Utc::now() - Duration::from_hours(24),
@@ -1573,15 +1573,15 @@ let replay_result = ctx.mq().replay_messages(
 ctx.log().info(format!("Replayed {} messages", replay_result.replayed_count));
 ```
 
-## 批量操作
+## Batch Operations
 
-### 批量消息处理
+### Batch Message Processing
 
 ```rust
 use dms::prelude::*;
 use serde_json::json;
 
-// 批量发布消息
+// Batch publish messages
 let batch_messages = (0..1000).map(|i| {
     DMSCMessage {
         id: uuid::Uuid::new_v4().to_string(),
@@ -1604,7 +1604,7 @@ let batch_messages = (0..1000).map(|i| {
 
 ctx.mq().batch_publish(batch_messages).await?;
 
-// 批量确认消息
+// Batch acknowledge messages
 let messages_to_ack = vec![
     "msg-001".to_string(),
     "msg-002".to_string(),
@@ -1613,7 +1613,7 @@ let messages_to_ack = vec![
 
 ctx.mq().batch_ack(messages_to_ack).await?;
 
-// 批量处理消息（提高吞吐量）
+// Batch process messages (improve throughput)
 ctx.mq().subscribe_batch("batch.processing", 50, |messages, ctx| async move {
     ctx.log().info(format!("Processing batch of {} messages", messages.len()));
     
@@ -1643,12 +1643,12 @@ async fn process_batch_item(message: &DMSCMessage, ctx: &DMSCContext) -> DMSCRes
     let item_id = message.body["item_id"].as_i64().unwrap_or(0);
     let data = message.body["data"].as_str().unwrap_or_default();
     
-    // 模拟处理逻辑
+    // Simulate processing logic
     if item_id % 50 == 0 {
         return Err(DMSCError::business(format!("Simulated failure for item {}", item_id)));
     }
     
-    // 处理数据
+    // Process data
     ctx.database()
         .execute(
             "INSERT INTO processed_items (item_id, data, processed_at) VALUES ($1, $2, $3)",
@@ -1664,37 +1664,37 @@ async fn process_batch_item(message: &DMSCMessage, ctx: &DMSCContext) -> DMSCRes
 }
 ```
 
-## 错误处理
+## Error Handling
 
-### 消息队列错误处理
+### Message Queue Error Handling
 
 ```rust
 use dms::prelude::*;
 use serde_json::json;
 
-// 错误处理示例
+// Error handling example
 match ctx.mq().publish(message).await {
     Ok(_) => {
         ctx.log().info("Message published successfully");
     }
     Err(DMSCError::MessageQueueConnectionError(e)) => {
         ctx.log().error(format!("Message queue connection failed: {}", e));
-        // 尝试重新连接或降级处理
+        // Try to reconnect or fallback
         handle_mq_connection_error(&e, ctx).await?;
     }
     Err(DMSCError::MessageQueuePublishError(e)) => {
         ctx.log().error(format!("Message publish failed: {}", e));
-        // 尝试重新发布或使用备用队列
+        // Try to republish or use backup queue
         retry_message_publish(message, ctx).await?;
     }
     Err(DMSCError::MessageQueueTimeoutError(e)) => {
         ctx.log().warn(format!("Message queue operation timed out: {}", e));
-        // 增加超时时间或分批处理
+        // Increase timeout or batch process
         handle_mq_timeout(&e, ctx).await?;
     }
     Err(DMSCError::MessageQueueConsumerError(e)) => {
         ctx.log().error(format!("Message consumer error: {}", e));
-        // 重新启动消费者或切换到备用消费者
+        // Restart consumer or switch to backup consumer
         restart_message_consumer(&e, ctx).await?;
     }
     Err(e) => {
@@ -1706,10 +1706,10 @@ match ctx.mq().publish(message).await {
 async fn handle_mq_connection_error(error: &str, ctx: &DMSCContext) -> DMSCResult<()> {
     ctx.log().warn("Message queue is unavailable, switching to local queue");
     
-    // 启用本地队列降级
+    // Enable local queue fallback
     ctx.cache().set("mq_fallback_enabled", "true", Duration::from_hours(1)).await?;
     
-    // 定期重试连接
+    // Retry connection periodically
     let mut retry_count = 0;
     while retry_count < 10 {
         match ctx.mq().ping().await {
@@ -1752,7 +1752,7 @@ async fn retry_message_publish(message: &DMSCMessage, ctx: &DMSCContext) -> DMSC
                 } else {
                     ctx.log().error(format!("Message publish failed after {} retries: {}", max_retries, e));
                     
-                    // 发送到失败消息队列
+                    // Send to failed message queue
                     let failed_message = DMSCMessage {
                         id: uuid::Uuid::new_v4().to_string(),
                         queue: "failed.messages".to_string(),
@@ -1784,52 +1784,52 @@ async fn retry_message_publish(message: &DMSCMessage, ctx: &DMSCContext) -> DMSC
 
 <div align="center">
 
-## 运行步骤
+## Running Steps
 
 </div>
 
-### 1. 安装依赖
+### 1. Install Dependencies
 
-确保已安装 Rust 和 Cargo（版本 1.65+）：
+Ensure Rust and Cargo are installed (version 1.65+):
 
 ```bash
 cargo --version
 ```
 
-### 2. 启动消息队列服务
+### 2. Start Message Queue Service
 
-根据配置的消息队列类型启动相应的服务：
+Start the corresponding service based on the configured message queue type:
 
 **RabbitMQ:**
 ```bash
-# 使用 Docker 启动 RabbitMQ
+# Start RabbitMQ using Docker
 docker run -d --name rabbitmq -p 5672:5672 -p 15672:15672 rabbitmq:3-management
 
-# 访问管理界面 http://localhost:15672 (guest/guest)
+# Access management interface http://localhost:15672 (guest/guest)
 ```
 
 **Apache Kafka:**
 ```bash
-# 使用 Docker Compose 启动 Kafka
+# Start Kafka using Docker Compose
 docker-compose up -d zookeeper kafka
 
-# 或者使用 Docker 单独启动
+# Or start individually using Docker
 docker run -d --name kafka -p 9092:9092 confluentinc/cp-kafka:latest
 ```
 
 **Redis Streams:**
 ```bash
-# 使用 Docker 启动 Redis
+# Start Redis using Docker
 docker run -d --name redis -p 6379:6379 redis:7-alpine
 ```
 
-### 3. 配置项目
+### 3. Configure Project
 
-创建配置文件 `config.yaml`，根据实际环境修改消息队列连接信息：
+Create configuration file `config.yaml`, modify message queue connection information based on actual environment:
 
 ```yaml
 message_queue:
-  broker_type: "rabbitmq"  # 可选: rabbitmq, kafka, redis
+  broker_type: "rabbitmq"  # Options: rabbitmq, kafka, redis
   rabbitmq:
     host: "localhost"
     port: 5672
@@ -1837,31 +1837,31 @@ message_queue:
     password: "guest"
 ```
 
-### 4. 运行示例
+### 4. Run Example
 
 ```bash
-# 进入项目目录
+# Enter project directory
 cd dms-mq-example
 
-# 运行应用
+# Run application
 cargo run
 ```
 
-### 5. 验证功能
+### 5. Verify Functionality
 
-应用启动后会自动执行以下操作：
-- 连接消息队列服务
-- 发布示例消息到用户注册队列
-- 订阅并处理消息
-- 显示处理结果和日志信息
+After application starts, it will automatically perform the following operations:
+- Connect to message queue service
+- Publish sample messages to user registration queue
+- Subscribe and process messages
+- Display processing results and log information
 
 <div align="center">
 
-## 预期结果
+## Expected Results
 
 </div>
 
-运行成功后，您将看到类似以下的输出：
+After successful execution, you will see output similar to the following:
 
 ```
 [2025-12-12 10:30:45] INFO  service: DMSC Message Queue Example started
@@ -1877,24 +1877,24 @@ cargo run
 [2025-12-12 10:30:45] INFO  mq: User registration processed: {"status": "success", "user_id": 12345, "email": "newuser@example.com", "processed_at": "2025-12-12T10:30:45Z"}
 ```
 
-### 消息队列管理界面
+### Message Queue Management Interface
 
-- **RabbitMQ**: 访问 http://localhost:15672 查看队列状态
-- **Kafka**: 使用 Kafka 工具查看主题和消息
-- **Redis**: 使用 `redis-cli` 查看 Streams 数据
+- **RabbitMQ**: Access http://localhost:15672 to view queue status
+- **Kafka**: Use Kafka tools to view topics and messages
+- **Redis**: Use `redis-cli` to view Streams data
 
 <div align="center">
 
-## 扩展功能
+## Extended Features
 
 </div>
 
-### 负载均衡支持
+### Load Balancing Support
 
 ```rust
 use dms::prelude::*;
 
-// 配置多个消息队列节点实现负载均衡
+// Configure multiple message queue nodes for load balancing
 let load_balanced_config = DMSCMessageQueueLoadBalanceConfig {
     enabled: true,
     strategy: DMSCLoadBalanceStrategy::RoundRobin,
@@ -1924,7 +1924,7 @@ let load_balanced_config = DMSCMessageQueueLoadBalanceConfig {
 
 ctx.mq().setup_load_balancing(load_balanced_config).await?;
 
-// 监控节点健康状况
+// Monitor node health status
 ctx.mq().monitor_node_health(|node, status| async move {
     match status {
         DMSCNodeHealthStatus::Healthy => {
@@ -1932,12 +1932,12 @@ ctx.mq().monitor_node_health(|node, status| async move {
         }
         DMSCNodeHealthStatus::Unhealthy => {
             ctx.log().warn(format!("Message queue node {} is unhealthy", node.host));
-            // 触发故障转移
+            // Trigger failover
             ctx.mq().trigger_failover(node).await?;
         }
         DMSCNodeHealthStatus::Offline => {
             ctx.log().error(format!("Message queue node {} is offline", node.host));
-            // 从负载均衡池中移除
+            // Remove from load balancing pool
             ctx.mq().remove_node_from_pool(node).await?;
         }
     }
@@ -1945,13 +1945,13 @@ ctx.mq().monitor_node_health(|node, status| async move {
 }).await?;
 ```
 
-### 消息队列监控
+### Message Queue Monitoring
 
 ```rust
 use dms::prelude::*;
 use serde_json::json;
 
-// 配置消息队列监控
+// Configure message queue monitoring
 let monitoring_config = DMSCMessageQueueMonitoringConfig {
     enabled: true,
     metrics_interval: Duration::from_secs(60),
@@ -1973,11 +1973,11 @@ let monitoring_config = DMSCMessageQueueMonitoringConfig {
 
 ctx.mq().setup_monitoring(monitoring_config).await?;
 
-// 收集性能指标
+// Collect performance metrics
 ctx.mq().collect_metrics(|metrics| async move {
     ctx.log().info(format!("Queue metrics: {:?}", metrics));
     
-    // 发送到监控系统
+    // Send to monitoring system
     let metrics_data = json!({
         "timestamp": chrono::Utc::now().to_rfc3339(),
         "queue_metrics": {
@@ -1994,19 +1994,19 @@ ctx.mq().collect_metrics(|metrics| async move {
     Ok(())
 }).await?;
 
-// 设置告警
+// Setup alerts
 ctx.mq().setup_alerts(|alert| async move {
     match alert.level {
         DMSCAlertLevel::Warning => {
             ctx.log().warn(format!("MQ Alert: {}", alert.message));
-            // 发送警告通知
+            // Send warning notification
             send_alert_notification("warning", &alert, ctx).await?;
         }
         DMSCAlertLevel::Critical => {
             ctx.log().error(format!("MQ Critical Alert: {}", alert.message));
-            // 发送紧急通知
+            // Send urgent notification
             send_alert_notification("critical", &alert, ctx).await?;
-            // 触发自动修复
+            // Trigger auto remediation
             ctx.mq().trigger_auto_remediation(&alert).await?;
         }
     }
@@ -2045,16 +2045,16 @@ async fn send_alert_notification(level: &str, alert: &DMSCAlert, ctx: &DMSCConte
 }
 ```
 
-### 消息追踪
+### Message Tracing
 
 ```rust
 use dms::prelude::*;
 use serde_json::json;
 
-// 配置分布式消息追踪
+// Configure distributed message tracing
 let tracing_config = DMSCMessageTracingConfig {
     enabled: true,
-    sampling_rate: 0.1,  // 10% 采样率
+    sampling_rate: 0.1,  // 10% sampling rate
     trace_header_name: "x-trace-id".to_string(),
     span_header_name: "x-span-id".to_string(),
     baggage_header_prefix: "x-baggage-".to_string(),
@@ -2064,7 +2064,7 @@ let tracing_config = DMSCMessageTracingConfig {
 
 ctx.mq().setup_distributed_tracing(tracing_config).await?;
 
-// 发送带追踪信息的消息
+// Send message with tracing information
 let traced_message = DMSCMessage {
     id: uuid::Uuid::new_v4().to_string(),
     queue: "user.events".to_string(),
@@ -2092,12 +2092,12 @@ let traced_message = DMSCMessage {
 
 ctx.mq().publish_with_tracing(traced_message).await?;
 
-// 处理带追踪信息的消息
+// Process messages with tracing information
 ctx.mq().subscribe_with_tracing("user.events", |message, trace_context, ctx| async move {
     ctx.log().info(format!("Processing traced message: trace_id={}, span_id={}", 
         trace_context.trace_id, trace_context.span_id));
     
-    // 记录追踪信息
+    // Record trace information
     ctx.observability().record_trace_span(
         "message_processing",
         json!({
@@ -2112,7 +2112,7 @@ ctx.mq().subscribe_with_tracing("user.events", |message, trace_context, ctx| asy
         })
     ).await?;
     
-    // 处理消息
+    // Process message
     match process_user_activity(&message, &ctx).await {
         Ok(result) => {
             ctx.observability().record_trace_event(
@@ -2144,28 +2144,28 @@ ctx.mq().subscribe_with_tracing("user.events", |message, trace_context, ctx| asy
 }).await?;
 ```
 
-### 消息压缩
+### Message Compression
 
 ```rust
 use dms::prelude::*;
 use serde_json::json;
 
-// 配置消息压缩
+// Configure message compression
 let compression_config = DMSCMessageCompressionConfig {
     enabled: true,
-    threshold_size: 1024,  // 1KB 以上启用压缩
+    threshold_size: 1024,  // Enable compression for messages above 1KB
     algorithms: vec![
         DMSCCompressionAlgorithm::Gzip,
         DMSCCompressionAlgorithm::Lz4,
         DMSCCompressionAlgorithm::Zstd,
     ],
-    compression_level: 6,  // 压缩级别 1-9
+    compression_level: 6,  // Compression level 1-9
     auto_decompress: true,
 };
 
 ctx.mq().setup_compression(compression_config).await?;
 
-// 发送大消息（自动压缩）
+// Send large message (auto-compression)
 let large_message = DMSCMessage {
     id: uuid::Uuid::new_v4().to_string(),
     queue: "data.updates".to_string(),
@@ -2187,7 +2187,7 @@ let large_message = DMSCMessage {
         "metadata": {
             "total_records": 1000,
             "compressed": true,
-            "compression_ratio": 0.0,  // 将由系统自动计算
+            "compression_ratio": 0.0,  // Will be automatically calculated by the system
         }
     }),
     headers: std::collections::HashMap::new(),
@@ -2199,10 +2199,10 @@ let large_message = DMSCMessage {
     reply_to: None,
 };
 
-// 大消息将自动压缩
+// Large messages will be automatically compressed
 ctx.mq().publish_compressed(large_message).await?;
 
-// 处理压缩消息（自动解压缩）
+// Process compressed messages (auto-decompression)
 ctx.mq().subscribe_compressed("data.updates", |message, compression_info, ctx| async move {
     ctx.log().info(format!("Received compressed message: original_size={}, compressed_size={}, ratio={}, algorithm={}", 
         compression_info.original_size,
@@ -2210,13 +2210,13 @@ ctx.mq().subscribe_compressed("data.updates", |message, compression_info, ctx| a
         compression_info.compression_ratio,
         compression_info.algorithm));
     
-    // 处理解压缩后的消息
+    // Process decompressed message
     let batch_id = message.body["batch_id"].as_str().unwrap_or_default();
     let records = message.body["records"].as_array().unwrap_or(&vec![]);
     
     ctx.log().info(format!("Processing batch {} with {} records", batch_id, records.len()));
     
-    // 批量处理记录
+    // Batch process records
     for record in records.chunks(100) {
         process_record_batch(record, &ctx).await?;
     }
@@ -2226,13 +2226,13 @@ ctx.mq().subscribe_compressed("data.updates", |message, compression_info, ctx| a
 }).await?;
 
 async fn process_record_batch(records: &[serde_json::Value], ctx: &DMSCContext) -> DMSCResult<()> {
-    // 批量处理记录
+    // Batch process records
     for record in records {
         let id = record["id"].as_i64().unwrap_or(0);
         let data = record["data"].as_str().unwrap_or_default();
         let status = record["metadata"]["status"].as_str().unwrap_or_default();
         
-        // 处理每个记录
+        // Process each record
         ctx.database()
             .execute(
                 "INSERT INTO sensor_data (id, data, status, processed_at) VALUES ($1, $2, $3, $4)",
@@ -2252,75 +2252,75 @@ async fn process_record_batch(records: &[serde_json::Value], ctx: &DMSCContext) 
 
 <div align="center">
 
-## 最佳实践
+## Best Practices
 
 </div>
 
-1. **消息幂等性**: 确保消息处理是幂等的，避免重复处理导致的问题
-2. **消息确认**: 及时确认处理完成的消息，避免消息重复投递
-3. **错误处理**: 妥善处理消息处理失败的情况，使用死信队列
-4. **消息大小**: 控制消息大小，避免传输过大的消息
-5. **连接管理**: 合理管理消息队列连接，使用连接池
-6. **监控指标**: 监控消息队列的性能指标和健康状况
-7. **备份策略**: 实施消息持久化和备份策略
-8. **限流保护**: 实施消息生产和消费的速率限制
-9. **版本管理**: 管理消息格式的版本兼容性
-10. **安全认证**: 启用消息队列的安全认证和加密
-11. **负载均衡**: 配置多节点负载均衡，提高可用性
-12. **压缩优化**: 对大消息启用压缩，减少网络传输
-13. **追踪监控**: 实施分布式追踪，便于问题定位
-14. **批量处理**: 使用批量操作提高吞吐量
-15. **优先级管理**: 合理使用消息优先级，确保重要消息优先处理
+1. **Message Idempotency**: Ensure message processing is idempotent to avoid issues from duplicate processing
+2. **Message Acknowledgment**: Acknowledge processed messages promptly to avoid duplicate delivery
+3. **Error Handling**: Handle message processing failures properly, use dead letter queues
+4. **Message Size**: Control message size, avoid transmitting oversized messages
+5. **Connection Management**: Manage message queue connections properly, use connection pooling
+6. **Monitoring Metrics**: Monitor message queue performance metrics and health status
+7. **Backup Strategy**: Implement message persistence and backup strategies
+8. **Rate Limiting**: Implement rate limiting for message production and consumption
+9. **Version Management**: Manage message format version compatibility
+10. **Security Authentication**: Enable message queue security authentication and encryption
+11. **Load Balancing**: Configure multi-node load balancing to improve availability
+12. **Compression Optimization**: Enable compression for large messages to reduce network transmission
+13. **Tracing Monitoring**: Implement distributed tracing for easier problem location
+14. **Batch Processing**: Use batch operations to improve throughput
+15. **Priority Management**: Use message priorities reasonably to ensure important messages are processed first
 
 <div align="center">
 
-## 总结
+## Summary
 
 </div>
 
-本示例全面展示了 DMSC 消息队列模块的核心功能和高级特性，涵盖以下关键能力：
+This example comprehensively demonstrates the core functionality and advanced features of the DMSC message queue module, covering the following key capabilities:
 
-### 🚀 核心功能
-- **多消息队列支持**: RabbitMQ、Apache Kafka、Redis Streams 的无缝集成
-- **发布订阅模式**: 灵活的主题发布和通配符订阅机制
-- **消息路由**: 复杂的路由规则和队列绑定功能
-- **死信队列**: 完善的消息重试和失败处理机制
-- **延迟消息**: 定时任务和延迟消息处理支持
-- **消息优先级**: 多级别优先级队列管理
-- **消息过滤**: 基于内容和头部的智能消息过滤
-- **消息持久化**: 可靠的消息存储和历史查询功能
+### 🚀 Core Features
+- **Multi-message Queue Support**: Seamless integration of RabbitMQ, Apache Kafka, and Redis Streams
+- **Publish-Subscribe Pattern**: Flexible topic publishing and wildcard subscription mechanisms
+- **Message Routing**: Complex routing rules and queue binding functionality
+- **Dead Letter Queue**: Comprehensive message retry and failure handling mechanisms
+- **Delayed Messages**: Scheduled tasks and delayed message processing support
+- **Message Priority**: Multi-level priority queue management
+- **Message Filtering**: Intelligent message filtering based on content and headers
+- **Message Persistence**: Reliable message storage and historical query functionality
 
-### 🔧 高级特性
-- **负载均衡**: 多节点负载均衡和故障转移机制
-- **性能监控**: 实时队列监控和性能指标收集
-- **分布式追踪**: 跨服务的消息链路追踪
-- **消息压缩**: 大消息的自动压缩优化
-- **批量操作**: 高效的批量消息处理
-- **错误处理**: 完善的异常处理和降级策略
+### 🔧 Advanced Features
+- **Load Balancing**: Multi-node load balancing and failover mechanisms
+- **Performance Monitoring**: Real-time queue monitoring and performance metrics collection
+- **Distributed Tracing**: Cross-service message chain tracking
+- **Message Compression**: Automatic compression optimization for large messages
+- **Batch Operations**: Efficient batch message processing
+- **Error Handling**: Comprehensive exception handling and fallback strategies
 
-### 💡 最佳实践
-- 消息幂等性设计，确保重复消息安全处理
-- 及时的消息确认机制，避免消息重复投递
-- 合理的消息大小控制，优化网络传输性能
-- 完善的监控告警，保障系统稳定运行
-- 多层次的错误处理，提高系统容错能力
+### 💡 Best Practices
+- Message idempotency design to ensure safe handling of duplicate messages
+- Timely message acknowledgment mechanism to avoid duplicate message delivery
+- Reasonable message size control to optimize network transmission performance
+- Comprehensive monitoring and alerting to ensure stable system operation
+- Multi-level error handling to improve system fault tolerance
 
-通过本示例，您可以构建高可靠、高性能的分布式消息处理系统，支持复杂的业务场景和大规模数据处理需求。
+Through this example, you can build a highly reliable and high-performance distributed message processing system that supports complex business scenarios and large-scale data processing requirements.
 
 <div align="center">
 
-## 相关模块
+## Related Modules
 
 </div>
 
-- [README](./README.md): 使用示例概览，提供所有使用示例的快速导航
-- [authentication](./authentication.md): 认证示例，学习JWT、OAuth2和RBAC认证授权
-- [basic-app](./basic-app.md): 基础应用示例，学习如何创建和运行第一个DMSC应用
-- [caching](./caching.md): 缓存示例，了解如何使用缓存模块提升应用性能
-- [database](./database.md): 数据库示例，学习数据库连接和查询操作
-- [http](./http.md): HTTP服务示例，构建Web应用和RESTful API
+- [README](./README.md): Usage examples overview, providing quick navigation to all usage examples
+- [authentication](./authentication.md): Authentication examples, learn JWT, OAuth2 and RBAC authentication authorization
+- [basic-app](./basic-app.md): Basic application example, learn how to create and run your first DMSC application
+- [caching](./caching.md): Caching examples, learn how to use caching modules to improve application performance
+- [database](./database.md): Database examples, learn database connection and query operations
+- [http](./http.md): HTTP service examples, build web applications and RESTful APIs
 
-- [observability](./observability.md): 可观测性示例，监控应用性能和健康状况
-- [security](./security.md): 安全示例，加密、哈希和安全最佳实践
-- [storage](./storage.md): 存储示例，文件上传下载和存储管理
-- [validation](./validation.md): 验证示例，数据验证和清理操作
+- [observability](./observability.md): Observability examples, monitor application performance and health status
+- [security](./security.md): Security examples, encryption, hashing and security best practices
+- [storage](./storage.md): Storage examples, file upload/download and storage management
+- [validation](./validation.md): Validation examples, data validation and cleanup operations

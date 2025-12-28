@@ -194,6 +194,12 @@ pub mod py {
         m.add_class::<DMSCError>()?;
         m.add_class::<DMSCServiceContext>()?;
         
+        // Add Python module support
+        m.add_class::<crate::core::module::PyDMSCModule>()?;
+        m.add_class::<crate::core::module::PythonModuleAdapter>()?;
+        m.add_class::<crate::core::module::PyServiceModule>()?;
+        m.add_class::<crate::core::module::PyAsyncServiceModule>()?;
+        
         // Add other core types
         m.add_class::<DMSCLogger>()?;
         m.add_class::<DMSCLogConfig>()?;
@@ -261,30 +267,65 @@ pub mod py {
     
     fn create_device_module(parent: &Bound<'_, PyModule>) -> PyResult<()> {
         let m = PyModule::new(parent.py(), "device")?;
+        
+        // Add device types to the device module
+        m.add_class::<crate::device::DMSCDevice>()?;
+        m.add_class::<crate::device::DMSCDeviceType>()?;
+        m.add_class::<crate::device::DMSCDeviceStatus>()?;
+        m.add_class::<crate::device::DMSCDeviceCapabilities>()?;
+        m.add_class::<crate::device::DMSCDeviceHealthMetrics>()?;
+        m.add_class::<crate::device::DMSCDeviceController>()?;
+        m.add_class::<crate::device::DMSCDiscoveryResult>()?;
+        m.add_class::<crate::device::DMSCResourceRequest>()?;
+        m.add_class::<crate::device::DMSCRequestSlaClass>()?;
+        m.add_class::<crate::device::DMSCResourceWeights>()?;
+        m.add_class::<crate::device::DMSCAffinityRules>()?;
+        m.add_class::<crate::device::DMSCResourceAllocation>()?;
+        
         parent.add_submodule(&m)?;
         Ok(())
     }
     
     fn create_cache_module(parent: &Bound<'_, PyModule>) -> PyResult<()> {
         let m = PyModule::new(parent.py(), "cache")?;
+        
+        // Add cache types to the cache module
+        m.add_class::<crate::cache::DMSCCacheModule>()?;
+        m.add_class::<crate::cache::DMSCCacheManager>()?;
+        m.add_class::<crate::cache::DMSCCacheConfig>()?;
+        m.add_class::<crate::cache::CacheBackendType>()?;
+        m.add_class::<crate::cache::CachePolicy>()?;
+        m.add_class::<crate::cache::CacheStats>()?;
+        m.add_class::<crate::cache::CachedValue>()?;
+        m.add_class::<crate::cache::DMSCCacheEvent>()?;
+        
         parent.add_submodule(&m)?;
         Ok(())
     }
     
     fn create_fs_module(parent: &Bound<'_, PyModule>) -> PyResult<()> {
         let m = PyModule::new(parent.py(), "fs")?;
+        m.add_class::<crate::fs::DMSCFileSystem>()?;
         parent.add_submodule(&m)?;
         Ok(())
     }
     
     fn create_hooks_module(parent: &Bound<'_, PyModule>) -> PyResult<()> {
         let m = PyModule::new(parent.py(), "hooks")?;
+        m.add_class::<crate::hooks::DMSCHookKind>()?;
+        m.add_class::<crate::hooks::DMSCModulePhase>()?;
+        m.add_class::<crate::hooks::DMSCHookEvent>()?;
+        m.add_class::<crate::hooks::DMSCHookBus>()?;
         parent.add_submodule(&m)?;
         Ok(())
     }
     
     fn create_observability_module(parent: &Bound<'_, PyModule>) -> PyResult<()> {
         let m = PyModule::new(parent.py(), "observability")?;
+        m.add_class::<crate::observability::DMSCObservabilityConfig>()?;
+        m.add_class::<crate::observability::DMSCObservabilityData>()?;
+        m.add_class::<crate::observability::DMSCMetricsRegistry>()?;
+        m.add_class::<crate::observability::DMSCTracer>()?;
         parent.add_submodule(&m)?;
         Ok(())
     }

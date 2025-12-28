@@ -90,6 +90,7 @@ use super::DMSCProtocolConfig;
 
 /// Cryptographic suite enumeration.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 pub enum DMSCCryptoSuite {
     /// National cryptographic standards (SM2/SM3/SM4)
     NationalStandard,
@@ -120,6 +121,7 @@ impl DMSCCryptoSuite {
 
 /// Obfuscation level enumeration.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 pub enum DMSCObfuscationLevel {
     /// No obfuscation
     None,
@@ -147,6 +149,7 @@ impl DMSCObfuscationLevel {
 }
 
 /// Device authentication protocol for hardware-based identity verification.
+#[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 pub struct DMSCDeviceAuthProtocol {
     /// Device certificate storage
     certificates: Arc<RwLock<HashMap<String, DeviceCertificate>>>,

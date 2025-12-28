@@ -82,7 +82,10 @@ app.run(|ctx: &DMSCServiceContext| async move {
     ctx.logger().info("service", "DMSC service started")?;
     
     // Access configuration functionality
-    let service_name = ctx.config().config().get_str("service.name").unwrap_or("unknown");
+    let service_name = ctx.config().get("service.name").unwrap_or("unknown");
+    
+    // Access cache functionality
+    ctx.cache().set("key", "value", Some(3600)).await?;
     
     // Access file system functionality
     ctx.fs().write_file("data.txt", "content").await?;
@@ -436,13 +439,13 @@ You can access configurations through the service context:
 
 ```rust
 // Get string configuration
-let service_name = ctx.config().config().get_str("service.name").unwrap_or("unknown");
+let service_name = ctx.config().get("service.name").unwrap_or("unknown");
 
 // Get integer configuration
-let port = ctx.config().config().get_int("service.port").unwrap_or(8080);
+let port = ctx.config().get("service.port").unwrap_or(8080);
 
 // Get boolean configuration
-let enabled = ctx.config().config().get_bool("feature.enabled").unwrap_or(false);
+let enabled = ctx.config().get("feature.enabled").unwrap_or(false);
 ```
 
 <div align="center">

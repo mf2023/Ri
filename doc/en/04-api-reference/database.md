@@ -1,54 +1,54 @@
 <div align="center">
 
-# Database API参考
+# Database API Reference
 
 **Version: 1.0.0**
 
 **Last modified date: 2025-12-12**
 
-database模块提供统一数据库访问层，支持多种数据库类型、连接池管理、事务处理与查询构建器。
+The database module provides a unified database access layer, supporting multiple database types, connection pool management, transaction processing, and query builders.
 
-## 模块概述
+## Module Overview
 
 </div>
 
-database模块包含以下子模块：
+The database module includes the following sub-modules:
 
-- **core**: 数据库核心接口和类型定义
-- **pools**: 连接池管理
-- **query**: 查询构建器
-- **migration**: 数据库迁移
-- **transaction**: 事务管理
+- **core**: Database core interfaces and type definitions
+- **pools**: Connection pool management
+- **query**: Query builders
+- **migration**: Database migrations
+- **transaction**: Transaction management
 
 <div align="center">
 
-## 核心组件
+## Core Components
 
 </div>
 
 ### DMSCDatabase
 
-数据库管理器主接口，提供统一的数据库访问。
+Database manager main interface, providing unified database access.
 
-#### 方法
+#### Methods
 
-| 方法 | 描述 | 参数 | 返回值 |
+| Method | Description | Parameters | Return Value |
 |:--------|:-------------|:--------|:--------|
-| `execute(query)` | 执行SQL查询 | `query: &str` | `DMSCResult<DMSCQueryResult>` |
-| `query(query)` | 执行查询并返回结果 | `query: &str` | `DMSCResult<Vec<DMSCRow>>` |
-| `query_one(query)` | 执行查询并返回单行结果 | `query: &str` | `DMSCResult<DMSCRow>` |
-| `begin_transaction()` | 开始事务 | 无 | `DMSCResult<DMSCTransaction>` |
-| `migrate()` | 执行数据库迁移 | 无 | `DMSCResult<()>` |
-| `get_connection()` | 获取数据库连接 | 无 | `DMSCResult<DMSCConnection>` |
-| `get_pool_stats()` | 获取连接池统计 | 无 | `DMSCResult<PoolStats>` |
-| `ping()` | 测试数据库连接 | 无 | `DMSCResult<()>` |
+| `execute(query)` | Execute SQL query | `query: &str` | `DMSCResult<DMSCQueryResult>` |
+| `query(query)` | Execute query and return results | `query: &str` | `DMSCResult<Vec<DMSCRow>>` |
+| `query_one(query)` | Execute query and return single row result | `query: &str` | `DMSCResult<DMSCRow>` |
+| `begin_transaction()` | Begin transaction | None | `DMSCResult<DMSCTransaction>` |
+| `migrate()` | Execute database migration | None | `DMSCResult<()>` |
+| `get_connection()` | Get database connection | None | `DMSCResult<DMSCConnection>` |
+| `get_pool_stats()` | Get connection pool statistics | None | `DMSCResult<PoolStats>` |
+| `ping()` | Test database connection | None | `DMSCResult<()>` |
 
-#### 使用示例
+#### Usage Example
 
 ```rust
 use dms::prelude::*;
 
-// 执行查询
+// Execute query
 let results = ctx.database().query("SELECT id, name, email FROM users WHERE active = true")?;
 
 for row in results {
@@ -59,35 +59,35 @@ for row in results {
     println!("User {}: {} <{}>", id, name, email);
 }
 
-// 执行更新
+// Execute update
 ctx.database().execute("UPDATE users SET last_login = NOW() WHERE id = 123")?;
 
-// 获取单行结果
+// Get single row result
 let user = ctx.database().query_one("SELECT * FROM users WHERE id = 123")?;
 let name: String = user.get("name")?;
 ```
 
 ### DMSCDatabaseConfig
 
-数据库配置结构体。
+Database configuration struct.
 
-#### 字段
+#### Fields
 
-| 字段 | 类型 | 描述 | 默认值 |
+| Field | Type | Description | Default |
 |:--------|:-----|:-------------|:-------|
-| `database_type` | `DMSCDatabaseType` | 数据库类型 | `Postgres` |
-| `host` | `String` | 数据库主机 | `"localhost"` |
-| `port` | `u16` | 数据库端口 | `5432` |
-| `database` | `String` | 数据库名称 | `""` |
-| `username` | `String` | 用户名 | `""` |
-| `password` | `String` | 密码 | `""` |
-| `max_connections` | `u32` | 最大连接数 | `10` |
-| `min_connections` | `u32` | 最小连接数 | `1` |
-| `connection_timeout` | `Duration` | 连接超时 | `30s` |
-| `idle_timeout` | `Duration` | 空闲超时 | `600s` |
-| `max_lifetime` | `Duration` | 连接最大生命周期 | `1800s` |
+| `database_type` | `DMSCDatabaseType` | Database type | `Postgres` |
+| `host` | `String` | Database host | `"localhost"` |
+| `port` | `u16` | Database port | `5432` |
+| `database` | `String` | Database name | `""` |
+| `username` | `String` | Username | `""` |
+| `password` | `String` | Password | `""` |
+| `max_connections` | `u32` | Maximum connections | `10` |
+| `min_connections` | `u32` | Minimum connections | `1` |
+| `connection_timeout` | `Duration` | Connection timeout | `30s` |
+| `idle_timeout` | `Duration` | Idle timeout | `600s` |
+| `max_lifetime` | `Duration` | Connection maximum lifetime | `1800s` |
 
-#### 配置示例
+#### Configuration Example
 
 ```rust
 use dms::prelude::*;
@@ -109,11 +109,11 @@ let db_config = DMSCDatabaseConfig {
 
 ### DMSCDatabaseType
 
-数据库类型枚举。
+Database type enum.
 
-#### 变体
+#### Variants
 
-| 变体 | 描述 |
+| Variant | Description |
 |:--------|:-------------|
 | `Postgres` | PostgreSQL |
 | `MySQL` | MySQL |
@@ -121,33 +121,33 @@ let db_config = DMSCDatabaseConfig {
 | `MongoDB` | MongoDB |
 | `Redis` | Redis |
 
-## 查询构建器
+## Query Builders
 
 ### DMSCQueryBuilder
 
-查询构建器，用于构建类型安全的SQL查询。
+Query builder for building type-safe SQL queries.
 
-#### 方法
+#### Methods
 
-| 方法 | 描述 | 参数 | 返回值 |
+| Method | Description | Parameters | Return Value |
 |:--------|:-------------|:--------|:--------|
-| `select(columns)` | 选择列 | `columns: &[&str]` | `Self` |
-| `from(table)` | 指定表 | `table: &str` | `Self` |
-| `where(condition)` | 添加条件 | `condition: &str` | `Self` |
-| `where_eq(column, value)` | 添加等值条件 | `column: &str`, `value: impl ToSql` | `Self` |
-| `where_in(column, values)` | 添加IN条件 | `column: &str`, `values: &[impl ToSql]` | `Self` |
-| `order_by(column, direction)` | 添加排序 | `column: &str`, `direction: OrderDirection` | `Self` |
-| `limit(count)` | 设置限制 | `count: i64` | `Self` |
-| `offset(count)` | 设置偏移 | `count: i64` | `Self` |
-| `join(table, on)` | 添加连接 | `table: &str`, `on: &str` | `Self` |
-| `build()` | 构建查询 | 无 | `DMSCResult<String>` |
+| `select(columns)` | Select columns | `columns: &[&str]` | `Self` |
+| `from(table)` | Specify table | `table: &str` | `Self` |
+| `where(condition)` | Add condition | `condition: &str` | `Self` |
+| `where_eq(column, value)` | Add equality condition | `column: &str`, `value: impl ToSql` | `Self` |
+| `where_in(column, values)` | Add IN condition | `column: &str`, `values: &[impl ToSql]` | `Self` |
+| `order_by(column, direction)` | Add ordering | `column: &str`, `direction: OrderDirection` | `Self` |
+| `limit(count)` | Set limit | `count: i64` | `Self` |
+| `offset(count)` | Set offset | `count: i64` | `Self` |
+| `join(table, on)` | Add join | `table: &str`, `on: &str` | `Self` |
+| `build()` | Build query | None | `DMSCResult<String>` |
 
-#### 使用示例
+#### Usage Example
 
 ```rust
 use dms::prelude::*;
 
-// 构建SELECT查询
+// Build SELECT query
 let query = DMSCQueryBuilder::new()
     .select(&["id", "name", "email"])
     .from("users")
@@ -159,7 +159,7 @@ let query = DMSCQueryBuilder::new()
 
 let results = ctx.database().query(&query)?;
 
-// 构建复杂查询
+// Build complex query
 let complex_query = DMSCQueryBuilder::new()
     .select(&["u.id", "u.name", "COUNT(o.id) as order_count"])
     .from("users u")
@@ -172,12 +172,12 @@ let complex_query = DMSCQueryBuilder::new()
     .build()?;
 ```
 
-### 插入构建器
+### Insert Builder
 
 ```rust
 use dms::prelude::*;
 
-// 构建INSERT查询
+// Build INSERT query
 let insert_query = DMSCInsertBuilder::new()
     .into("users")
     .columns(&["name", "email", "created_at"])
@@ -186,7 +186,7 @@ let insert_query = DMSCInsertBuilder::new()
 
 ctx.database().execute(&insert_query)?;
 
-// 批量插入
+// Batch insert
 let batch_insert = DMSCInsertBuilder::new()
     .into("users")
     .columns(&["name", "email"])
@@ -198,12 +198,12 @@ let batch_insert = DMSCInsertBuilder::new()
 ctx.database().execute(&batch_insert)?;
 ```
 
-### 更新构建器
+### Update Builder
 
 ```rust
 use dms::prelude::*;
 
-// 构建UPDATE查询
+// Build UPDATE query
 let update_query = DMSCUpdateBuilder::new()
     .table("users")
     .set("last_login", "NOW()")
@@ -214,12 +214,12 @@ let update_query = DMSCUpdateBuilder::new()
 ctx.database().execute(&update_query)?;
 ```
 
-### 删除构建器
+### Delete Builder
 
 ```rust
 use dms::prelude::*;
 
-// 构建DELETE查询
+// Build DELETE query
 let delete_query = DMSCDeleteBuilder::new()
     .from("users")
     .where_eq("active", false)
@@ -230,70 +230,70 @@ ctx.database().execute(&delete_query)?;
 ```
 <div align="center">
 
-## 事务管理
+## Transaction Management
 
 </div>
 
 ### DMSCTransaction
 
-事务接口。
+Transaction interface.
 
-#### 方法
+#### Methods
 
-| 方法 | 描述 | 参数 | 返回值 |
+| Method | Description | Parameters | Return Value |
 |:--------|:-------------|:--------|:--------|
-| `execute(query)` | 在事务中执行查询 | `query: &str` | `DMSCResult<DMSCQueryResult>` |
-| `query(query)` | 在事务中执行查询并返回结果 | `query: &str` | `DMSCResult<Vec<DMSCRow>>` |
-| `commit()` | 提交事务 | 无 | `DMSCResult<()>` |
-| `rollback()` | 回滚事务 | 无 | `DMSCResult<()>` |
-| `savepoint(name)` | 创建保存点 | `name: &str` | `DMSCResult<()>` |
-| `rollback_to_savepoint(name)` | 回滚到保存点 | `name: &str` | `DMSCResult<()>` |
+| `execute(query)` | Execute query in transaction | `query: &str` | `DMSCResult<DMSCQueryResult>` |
+| `query(query)` | Execute query in transaction and return results | `query: &str` | `DMSCResult<Vec<DMSCRow>>` |
+| `commit()` | Commit transaction | None | `DMSCResult<()>` |
+| `rollback()` | Rollback transaction | None | `DMSCResult<()>` |
+| `savepoint(name)` | Create savepoint | `name: &str` | `DMSCResult<()>` |
+| `rollback_to_savepoint(name)` | Rollback to savepoint | `name: &str` | `DMSCResult<()>` |
 
-#### 使用示例
+#### Usage Example
 
 ```rust
 use dms::prelude::*;
 
-// 开始事务
+// Begin transaction
 let mut transaction = ctx.database().begin_transaction()?;
 
 try {
-    // 在事务中执行操作
+    // Execute operations in transaction
     transaction.execute("UPDATE accounts SET balance = balance - 100 WHERE id = 1")?;
     transaction.execute("UPDATE accounts SET balance = balance + 100 WHERE id = 2")?;
     
-    // 创建保存点
+    // Create savepoint
     transaction.savepoint("before_fee")?;
     
-    // 执行可能失败的操作
+    // Execute operation that might fail
     match transaction.execute("UPDATE accounts SET balance = balance - 5 WHERE id = 2") {
         Ok(_) => {
-            // 操作成功，提交事务
+            // Operation succeeded, commit transaction
             transaction.commit()?;
         }
         Err(_) => {
-            // 操作失败，回滚到保存点
+            // Operation failed, rollback to savepoint
             transaction.rollback_to_savepoint("before_fee")?;
             transaction.commit()?;
         }
     }
 } catch (e) {
-    // 发生错误，回滚整个事务
+    // Error occurred, rollback entire transaction
     transaction.rollback()?;
     return Err(e);
 }
 ```
 
-### 事务隔离级别
+### Transaction Isolation Levels
 
 ```rust
 use dms::prelude::*;
 
-// 设置事务隔离级别
+// Set transaction isolation level
 let transaction = ctx.database()
     .begin_transaction_with_isolation(TransactionIsolation::Serializable)?;
 
-// 不同的隔离级别
+// Different isolation levels
 let read_uncommitted = TransactionIsolation::ReadUncommitted;
 let read_committed = TransactionIsolation::ReadCommitted;
 let repeatable_read = TransactionIsolation::RepeatableRead;
@@ -302,11 +302,11 @@ let serializable = TransactionIsolation::Serializable;
 
 <div align="center">
 
-## 连接池管理
+## Connection Pool Management
 
 </div>
 
-### 连接池配置
+### Connection Pool Configuration
 
 ```rust
 use dms::prelude::*;
@@ -324,12 +324,12 @@ let pool_config = DMSCPoolConfig {
 };
 ```
 
-### 连接池监控
+### Connection Pool Monitoring
 
 ```rust
 use dms::prelude::*;
 
-// 获取连接池统计信息
+// Get connection pool statistics
 let stats = ctx.database().get_pool_stats()?;
 
 println!("Active connections: {}", stats.active_connections);
@@ -339,12 +339,12 @@ println!("Total connections created: {}", stats.total_created);
 println!("Total connections destroyed: {}", stats.total_destroyed);
 ```
 
-### 连接池健康检查
+### Connection Pool Health Check
 
 ```rust
 use dms::prelude::*;
 
-// 检查连接池健康状态
+// Check connection pool health status
 match ctx.database().ping() {
     Ok(_) => {
         println!("Database connection is healthy");
@@ -352,31 +352,31 @@ match ctx.database().ping() {
     Err(e) => {
         println!("Database connection failed: {}", e);
         
-        // 尝试重新创建连接池
+        // Try to recreate connection pool
         ctx.database().recreate_pool()?;
     }
 }
 ```
 <div align="center">
 
-## 数据库迁移
+## Database Migrations
 
 </div>
 
 ### DMSCMigration
 
-迁移接口。
+Migration interface.
 
-#### 方法
+#### Methods
 
-| 方法 | 描述 | 参数 | 返回值 |
+| Method | Description | Parameters | Return Value |
 |:--------|:-------------|:--------|:--------|
-| `add_migration(migration)` | 添加迁移 | `migration: impl Migration` | `()` |
-| `migrate()` | 执行迁移 | 无 | `DMSCResult<()>` |
-| `rollback()` | 回滚迁移 | 无 | `DMSCResult<()>` |
-| `get_status()` | 获取迁移状态 | 无 | `DMSCResult<Vec<MigrationStatus>>` |
+| `add_migration(migration)` | Add migration | `migration: impl Migration` | `()` |
+| `migrate()` | Execute migration | None | `DMSCResult<()>` |
+| `rollback()` | Rollback migration | None | `DMSCResult<()>` |
+| `get_status()` | Get migration status | None | `DMSCResult<Vec<MigrationStatus>>` |
 
-### 创建迁移
+### Creating Migrations
 
 ```rust
 use dms::prelude::*;
@@ -412,19 +412,19 @@ impl Migration for CreateUsersTable {
     }
 }
 
-// 添加迁移
+// Add migration
 ctx.database().migration().add_migration(CreateUsersTable)?;
 
-// 执行迁移
+// Execute migration
 ctx.database().migrate()?;
 ```
 
-### 迁移管理
+### Migration Management
 
 ```rust
 use dms::prelude::*;
 
-// 获取迁移状态
+// Get migration status
 let migration_status = ctx.database().migration().get_status()?;
 
 for status in migration_status {
@@ -433,25 +433,25 @@ for status in migration_status {
     println!("Applied at: {:?}", status.applied_at);
 }
 
-// 回滚最后一步迁移
+// Rollback last migration
 ctx.database().migration().rollback()?;
 
-// 回滚到指定版本
+// Rollback to specific version
 ctx.database().migration().rollback_to("20240115000001")?;
 ```
 
 <div align="center">
 
-## 高级功能
+## Advanced Features
 
 </div>
 
-### 批量操作
+### Batch Operations
 
 ```rust
 use dms::prelude::*;
 
-// 批量插入
+// Batch insert
 let users = vec![
     ("Alice", "alice@example.com"),
     ("Bob", "bob@example.com"),
@@ -460,7 +460,7 @@ let users = vec![
 
 ctx.database().batch_insert("users", &["name", "email"], users)?;
 
-// 批量更新
+// Batch update
 let updates = vec![
     (1, "Alice Smith"),
     (2, "Bob Johnson"),
@@ -470,33 +470,33 @@ let updates = vec![
 ctx.database().batch_update("users", "id", &["name"], updates)?;
 ```
 
-### 预处理语句
+### Prepared Statements
 
 ```rust
 use dms::prelude::*;
 
-// 准备预处理语句
+// Prepare statement
 let stmt = ctx.database().prepare("SELECT * FROM users WHERE id = $1 AND active = $2")?;
 
-// 执行预处理语句
+// Execute prepared statement
 let results = stmt.query(&[123, true])?;
 
-// 多次执行
+// Execute multiple times
 for user_id in [123, 456, 789] {
     let results = stmt.query(&[user_id, true])?;
-    // 处理结果
+    // Process results
 }
 ```
 
-### 异步操作
+### Async Operations
 
 ```rust
 use dms::prelude::*;
 
-// 异步查询
+// Async query
 let results = ctx.database().query_async("SELECT * FROM users WHERE active = true").await?;
 
-// 异步事务
+// Async transaction
 let mut transaction = ctx.database().begin_transaction_async().await?;
 
 try {
@@ -511,42 +511,42 @@ try {
 
 <div align="center">
 
-## 错误处理
+## Error Handling
 
 </div>  
 
-### 数据库错误码
+### Database Error Codes
 
-| 错误码 | 描述 |
+| Error Code | Description |
 |:--------|:-------------|
-| `DATABASE_CONNECTION_ERROR` | 数据库连接错误 |
-| `DATABASE_QUERY_ERROR` | 数据库查询错误 |
-| `DATABASE_TRANSACTION_ERROR` | 数据库事务错误 |
-| `DATABASE_MIGRATION_ERROR` | 数据库迁移错误 |
-| `DATABASE_POOL_ERROR` | 连接池错误 |
+| `DATABASE_CONNECTION_ERROR` | Database connection error |
+| `DATABASE_QUERY_ERROR` | Database query error |
+| `DATABASE_TRANSACTION_ERROR` | Database transaction error |
+| `DATABASE_MIGRATION_ERROR` | Database migration error |
+| `DATABASE_POOL_ERROR` | Connection pool error |
 
-### 错误处理示例
+### Error Handling Example
 
 ```rust
 use dms::prelude::*;
 
 match ctx.database().query("SELECT * FROM users WHERE id = 123") {
     Ok(results) => {
-        // 查询成功
+        // Query succeeded
         for row in results {
             println!("User: {:?}", row);
         }
     }
     Err(DMSCError { code, .. }) if code == "DATABASE_CONNECTION_ERROR" => {
-        // 连接错误，尝试重新连接
+        // Connection error, try to reconnect
         ctx.log().error("Database connection lost, attempting to reconnect");
         ctx.database().recreate_pool()?;
         
-        // 重试查询
+        // Retry query
         let results = ctx.database().query("SELECT * FROM users WHERE id = 123")?;
     }
     Err(e) => {
-        // 其他错误
+        // Other errors
         return Err(e);
     }
 }
@@ -554,34 +554,34 @@ match ctx.database().query("SELECT * FROM users WHERE id = 123") {
 
 <div align="center">
 
-## 最佳实践
+## Best Practices
 
 </div>
 
-1. **使用连接池**: 避免频繁创建和销毁连接
-2. **使用预处理语句**: 提高性能并防止SQL注入
-3. **合理使用事务**: 保持事务简短，避免长时间锁定
-4. **正确处理错误**: 区分可恢复和不可恢复的错误
-5. **监控连接池**: 监控连接池的使用情况和性能
-6. **使用迁移**: 使用数据库迁移管理schema变化
-7. **索引优化**: 为常用查询添加适当的索引
-8. **批量操作**: 使用批量操作减少数据库往返
+1. **Use connection pools**: Avoid frequent creation and destruction of connections
+2. **Use prepared statements**: Improve performance and prevent SQL injection
+3. **Use transactions appropriately**: Keep transactions short, avoid long locks
+4. **Handle errors correctly**: Distinguish between recoverable and unrecoverable errors
+5. **Monitor connection pools**: Monitor connection pool usage and performance
+6. **Use migrations**: Use database migrations to manage schema changes
+7. **Index optimization**: Add appropriate indexes for common queries
+8. **Batch operations**: Use batch operations to reduce database round trips
 
 <div align="center">
 
-## 相关模块
+## Related Modules
 
 </div>
 
-- [README](./README.md): 模块概览，提供API参考文档总览和快速导航
-- [auth](./auth.md): 认证模块，提供JWT、OAuth2和RBAC认证授权功能
-- [core](./core.md): 核心模块，提供错误处理和服务上下文
-- [log](./log.md): 日志模块，记录认证事件和安全日志
-- [config](./config.md): 配置模块，管理认证配置和密钥设置
-- [cache](./cache.md): 缓存模块，提供多后端缓存抽象，缓存用户会话和权限数据
-- [http](./http.md): HTTP模块，提供Web认证接口和中间件支持
-- [mq](./mq.md): 消息队列模块，处理认证事件和异步通知
-- [observability](./observability.md): 可观测性模块，监控认证性能和安全事件
-- [security](./security.md): 安全模块，提供加密、哈希和验证功能
-- [storage](./storage.md): 存储模块，管理认证文件、密钥和证书
-- [validation](./validation.md): 验证模块，验证用户输入和表单数据
+- [README](./README.md): Module overview, providing API reference documentation overview and quick navigation
+- [auth](./auth.md): Authentication module, providing JWT, OAuth2, and RBAC authentication and authorization functionality
+- [core](./core.md): Core module, providing error handling and service context
+- [log](./log.md): Logging module, recording authentication events and security logs
+- [config](./config.md): Configuration module, managing authentication configuration and key settings
+- [cache](./cache.md): Cache module, providing multi-backend cache abstraction, caching user sessions and permission data
+- [http](./http.md): HTTP module, providing web authentication interfaces and middleware support
+- [mq](./mq.md): Message queue module, handling authentication events and asynchronous notifications
+- [observability](./observability.md): Observability module, monitoring authentication performance and security events
+- [security](./security.md): Security module, providing encryption, hashing, and validation functionality
+- [storage](./storage.md): Storage module, managing authentication files, keys, and certificates
+- [validation](./validation.md): Validation module, validating user input and form data

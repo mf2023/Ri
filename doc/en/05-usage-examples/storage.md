@@ -1,17 +1,17 @@
-# 存储使用示例
+# Storage Usage Examples
 
-storage模块提供文件上传下载、元数据管理、存储加密、压缩、生命周期管理、版本控制和监控统计功能的使用示例。
+The storage module provides usage examples for file upload/download, metadata management, storage encryption, compression, lifecycle management, version control, and monitoring statistics.
 
-## 基本文件操作
+## Basic File Operations
 
-### 文件上传
+### File Upload
 
 ```rust
 use dms::prelude::*;
 use serde_json::json;
 use std::path::Path;
 
-// 初始化存储管理器
+// Initialize storage manager
 let storage_config = DMSCStorageConfig {
     default_backend: DMSCStorageBackend::Local,
     max_file_size: 100 * 1024 * 1024, // 100MB
@@ -39,7 +39,7 @@ let storage_config = DMSCStorageConfig {
 
 ctx.storage().init_storage(storage_config).await?;
 
-// 单文件上传
+// Single file upload
 let file_path = Path::new("/path/to/document.pdf");
 let file_name = "project_document.pdf";
 let content_type = "application/pdf";
@@ -55,7 +55,7 @@ ctx.log().info(format!(
     upload_result.file_size
 ));
 
-// 带元数据的上传
+// Upload with metadata
 let metadata = json!({
     "project_id": "proj_123",
     "department": "engineering",
@@ -76,13 +76,15 @@ ctx.log().info(format!(
 ));
 ```
 
-### 多文件上传
+));
+
+### Multiple File Upload
 
 ```rust
 use dms::prelude::*;
 use std::path::Path;
 
-// 批量文件上传
+// Batch file upload
 let files = vec![
     (Path::new("/path/to/image1.jpg"), "product_image_1.jpg", "image/jpeg"),
     (Path::new("/path/to/image2.png"), "product_image_2.png", "image/png"),
@@ -99,7 +101,7 @@ ctx.log().info(format!(
     batch_upload_result.failed.len()
 ));
 
-// 处理上传结果
+// Process upload results
 for success in &batch_upload_result.successful {
     ctx.log().info(format!(
         "✓ Uploaded: {} ({} bytes)",
@@ -116,7 +118,7 @@ for failure in &batch_upload_result.failed {
     ));
 }
 
-// 带进度回调的上传
+// Upload with progress callback
 let progress_callback = |progress: DMSCUploadProgress| {
     ctx.log().info(format!(
         "Upload progress: {}% ({} / {} bytes)",
@@ -134,13 +136,13 @@ let large_file_result = ctx.storage()
 ctx.log().info(format!("Large file upload completed: {:?}", large_file_result));
 ```
 
-### 分块上传
+### Chunked Upload
 
 ```rust
 use dms::prelude::*;
 use std::path::Path;
 
-// 大文件分块上传配置
+// Large file chunked upload configuration
 let chunk_config = DMSCChunkUploadConfig {
     chunk_size: 5 * 1024 * 1024, // 5MB chunks
     max_concurrent_chunks: 4,
@@ -149,7 +151,7 @@ let chunk_config = DMSCChunkUploadConfig {
     compression_threshold: 1024 * 1024, // 1MB
 };
 
-// 初始化分块上传
+// Initialize chunked upload
 let large_file_path = Path::new("/path/to/large_dataset.csv");
 let file_name = "customer_data_2024.csv";
 let content_type = "text/csv";
@@ -164,7 +166,7 @@ ctx.log().info(format!(
     upload_session.total_chunks
 ));
 
-// 上传分块
+// Upload chunks
 for chunk_index in 0..upload_session.total_chunks {
     let chunk_result = ctx.storage()
         .upload_chunk(&upload_session.session_id, chunk_index)
@@ -177,7 +179,7 @@ for chunk_index in 0..upload_session.total_chunks {
     ));
 }
 
-// 完成分块上传
+// Complete chunked upload
 let final_result = ctx.storage()
     .complete_chunked_upload(&upload_session.session_id)
     .await?;
@@ -188,19 +190,19 @@ ctx.log().info(format!(
     final_result.total_size
 ));
 
-// 取消分块上传
+// Abort chunked upload
 // ctx.storage().abort_chunked_upload(&upload_session.session_id).await?;
 ```
 
-## 文件下载
+## File Download
 
-### 基本文件下载
+### Basic File Download
 
 ```rust
 use dms::prelude::*;
 use std::path::Path;
 
-// 通过文件ID下载
+// Download by file ID
 let file_id = "file_123";
 let download_path = Path::new("/downloads/document.pdf");
 
@@ -215,7 +217,7 @@ ctx.log().info(format!(
     download_result.checksum
 ));
 
-// 通过文件名下载
+// Download by file name
 let file_name = "project_document.pdf";
 let download_by_name = ctx.storage()
     .download_file_by_name(file_name, download_path)
@@ -223,7 +225,7 @@ let download_by_name = ctx.storage()
 
 ctx.log().info(format!("File downloaded by name: {}", download_by_name.file_name));
 
-// 带进度回调的下载
+// Download with progress callback
 let progress_callback = |progress: DMSCDownloadProgress| {
     ctx.log().info(format!(
         "Download progress: {}% ({} / {} bytes)",
@@ -240,13 +242,13 @@ let large_download = ctx.storage()
 ctx.log().info(format!("Large file download completed: {:?}", large_download));
 ```
 
-### 断点续传
+### Resume Download
 
 ```rust
 use dms::prelude::*;
 use std::path::Path;
 
-// 断点续传下载
+// Resume download configuration
 let resume_config = DMSCResumeDownloadConfig {
     chunk_size: 1024 * 1024, // 1MB chunks
     max_retries: 3,
@@ -257,7 +259,7 @@ let resume_config = DMSCResumeDownloadConfig {
 let file_id = "large_file_123";
 let download_path = Path::new("/downloads/large_file.zip");
 
-// 检查是否支持断点续传
+// Check if resume download is supported
 let resume_info = ctx.storage()
     .check_resume_download(file_id)
     .await?;
@@ -269,7 +271,7 @@ if resume_info.supports_resume {
         resume_info.resume_from
     ));
     
-    // 从指定位置开始下载
+    // Resume download from specified position
     let resume_result = ctx.storage()
         .resume_download(file_id, download_path, resume_info.resume_from, resume_config)
         .await?;
@@ -280,19 +282,19 @@ if resume_info.supports_resume {
         resume_result.resumed_from
     ));
 } else {
-    // 不支持断点续传，重新开始下载
+    // Does not support resume download, start fresh download
     ctx.log().info("File does not support resume, starting fresh download");
     let fresh_download = ctx.storage().download_file(file_id, download_path).await?;
     ctx.log().info(format!("Fresh download completed: {:?}", fresh_download));
 }
 ```
 
-### 临时下载链接
+### Temporary Download Links
 
 ```rust
 use dms::prelude::*;
 
-// 生成临时下载链接
+// Generate temporary download link
 let file_id = "sensitive_document.pdf";
 let expiration_duration = Duration::from_hours(2);
 
@@ -302,14 +304,14 @@ let temp_url = ctx.storage()
 
 ctx.log().info(format!("Temporary download URL: {}", temp_url));
 
-// 验证临时链接
+// Validate temporary link
 let is_valid = ctx.storage()
     .validate_temporary_url(&temp_url)
     .await?;
 
 ctx.log().info(format!("Temporary URL is valid: {}", is_valid));
 
-// 带访问控制的临时链接
+// Temporary link with access control
 let access_control = DMSCAccessControl {
     allowed_ips: vec!["192.168.1.0/24".to_string(), "10.0.0.0/8".to_string()],
     max_downloads: 5,
@@ -323,20 +325,20 @@ let secure_temp_url = ctx.storage()
 
 ctx.log().info(format!("Secure temporary URL: {}", secure_temp_url));
 
-// 撤销临时链接
+// Revoke temporary link
 ctx.storage().revoke_temporary_url(&temp_url).await?;
 ctx.log().info("Temporary URL revoked");
 ```
 
-## 元数据管理
+## Metadata Management
 
-### 文件元数据操作
+### File Metadata Operations
 
 ```rust
 use dms::prelude::*;
 use serde_json::json;
 
-// 获取文件元数据
+// Get file metadata
 let file_id = "file_123";
 let metadata = ctx.storage()
     .get_file_metadata(file_id)
@@ -350,7 +352,7 @@ ctx.log().info(format!(
     metadata.tags
 ));
 
-// 更新文件元数据
+// Update file metadata
 let updated_metadata = json!({
     "project_id": "proj_456",
     "department": "marketing",
@@ -365,7 +367,7 @@ ctx.storage()
 
 ctx.log().info("File metadata updated successfully");
 
-// 添加标签
+// Add tags
 let new_tags = vec!["important", "client-facing", "v2.0"];
 ctx.storage()
     .add_file_tags(file_id, new_tags)
@@ -373,7 +375,7 @@ ctx.storage()
 
 ctx.log().info("Tags added to file");
 
-// 移除标签
+// Remove tags
 let tags_to_remove = vec!["draft", "temporary"];
 ctx.storage()
     .remove_file_tags(file_id, tags_to_remove)
@@ -381,7 +383,7 @@ ctx.storage()
 
 ctx.log().info("Tags removed from file");
 
-// 搜索文件
+// Search files
 let search_criteria = DMSCSearchCriteria {
     query: "project documentation".to_string(),
     tags: vec!["documentation".to_string(), "api".to_string()],
@@ -406,13 +408,13 @@ for file in &search_results.files {
 }
 ```
 
-### 文件组织
+### File Organization
 
 ```rust
 use dms::prelude::*;
 use serde_json::json;
 
-// 创建文件夹结构
+// Create folder structure
 let folder_structure = vec![
     ("/projects/project1/documents", "Project 1 Documents"),
     ("/projects/project1/images", "Project 1 Images"),
@@ -429,7 +431,7 @@ for (path, description) in folder_structure {
     ctx.log().info(format!("Created folder: {}", path));
 }
 
-// 移动文件到文件夹
+// Move file to folder
 let file_id = "file_123";
 let target_folder = "/projects/project1/documents";
 
@@ -439,14 +441,14 @@ ctx.storage()
 
 ctx.log().info(format!("File moved to folder: {}", target_folder));
 
-// 复制文件
+// Copy file
 let copied_file = ctx.storage()
     .copy_file(file_id, "/backup/copied_file.pdf")
     .await?;
 
 ctx.log().info(format!("File copied: new_file_id={}", copied_file.file_id));
 
-// 获取文件夹内容
+// Get folder contents
 let folder_contents = ctx.storage()
     .get_folder_contents("/projects/project1", Some(100), Some(0))
     .await?;
@@ -457,7 +459,7 @@ ctx.log().info(format!(
     folder_contents.subfolders.len()
 ));
 
-// 递归删除文件夹
+// Recursively delete folder
 ctx.storage()
     .delete_folder_recursive("/projects/project1")
     .await?;
@@ -465,15 +467,15 @@ ctx.storage()
 ctx.log().info("Folder and all contents deleted");
 ```
 
-## 存储加密
+## Storage Encryption
 
-### 文件加密
+### File Encryption
 
 ```rust
 use dms::prelude::*;
 use serde_json::json;
 
-// 配置存储加密
+// Configure storage encryption
 let encryption_config = DMSCStorageEncryptionConfig {
     enabled: true,
     algorithm: DMSCEncryptionAlgorithm::AES256GCM,
@@ -486,7 +488,7 @@ let encryption_config = DMSCStorageEncryptionConfig {
 
 ctx.storage().init_encryption(encryption_config).await?;
 
-// 上传加密文件
+// Upload encrypted file
 let sensitive_file = Path::new("/path/to/sensitive_data.xlsx");
 let encrypted_upload = ctx.storage()
     .upload_encrypted_file(sensitive_file, "encrypted_data.xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
@@ -498,21 +500,21 @@ ctx.log().info(format!(
     encrypted_upload.encryption_key_id
 ));
 
-// 下载并解密文件
+// Download and decrypt file
 let decrypted_download = ctx.storage()
     .download_and_decrypt_file(&encrypted_upload.file_id, Path::new("/downloads/decrypted_data.xlsx"))
     .await?;
 
 ctx.log().info(format!("File decrypted and downloaded: {:?}", decrypted_download));
 
-// 轮换加密密钥
+// Rotate encryption key
 let new_key_id = ctx.storage()
     .rotate_encryption_key(&encrypted_upload.file_id)
     .await?;
 
 ctx.log().info(format!("Encryption key rotated: new_key_id={}", new_key_id));
 
-// 客户端加密上传
+// Client-side encrypted upload
 let client_encrypted_data = b"client encrypted file content";
 let client_upload = ctx.storage()
     .upload_client_encrypted_file(
@@ -526,19 +528,19 @@ let client_upload = ctx.storage()
 ctx.log().info("Client encrypted file uploaded");
 ```
 
-### 密钥管理
+### Key Management
 
 ```rust
 use dms::prelude::*;
 
-// 生成数据加密密钥
+// Generate data encryption key
 let data_key = ctx.storage()
     .generate_data_encryption_key(DMSCKeyAlgorithm::AES256)
     .await?;
 
 ctx.log().info(format!("Data encryption key generated: key_id={}", data_key.key_id));
 
-// 加密数据密钥
+// Encrypt data key
 let master_key_id = "master-key-123";
 let encrypted_data_key = ctx.storage()
     .encrypt_data_key(&data_key.plaintext_key, master_key_id)
@@ -546,14 +548,14 @@ let encrypted_data_key = ctx.storage()
 
 ctx.log().info("Data key encrypted with master key");
 
-// 解密数据密钥
+// Decrypt data key
 let decrypted_data_key = ctx.storage()
     .decrypt_data_key(&encrypted_data_key, master_key_id)
     .await?;
 
 ctx.log().info("Data key decrypted successfully");
 
-// 安全删除密钥
+// Securely delete key
 ctx.storage()
     .secure_delete_key(&data_key.key_id)
     .await?;
@@ -561,15 +563,15 @@ ctx.storage()
 ctx.log().info("Encryption key securely deleted");
 ```
 
-## 存储压缩
+## Storage Compression
 
-### 文件压缩
+### File Compression
 
 ```rust
 use dms::prelude::*;
 use serde_json::json;
 
-// 配置存储压缩
+// Configure storage compression
 let compression_config = DMSCCompressionConfig {
     enabled: true,
     algorithm: DMSCCompressionAlgorithm::Zstd,
@@ -589,7 +591,7 @@ let compression_config = DMSCCompressionConfig {
 
 ctx.storage().init_compression(compression_config).await?;
 
-// 上传并压缩文件
+// Upload and compress file
 let text_file = Path::new("/path/to/large_log_file.txt");
 let compressed_upload = ctx.storage()
     .upload_and_compress_file(text_file, "compressed_log.txt", "text/plain")
@@ -602,14 +604,14 @@ ctx.log().info(format!(
     compressed_upload.compression_ratio * 100.0
 ));
 
-// 下载并解压缩文件
+// Download and decompress file
 let decompressed_download = ctx.storage()
     .download_and_decompress_file(&compressed_upload.file_id, Path::new("/downloads/decompressed_log.txt"))
     .await?;
 
 ctx.log().info(format!("File downloaded and decompressed: {:?}", decompressed_download));
 
-// 批量压缩现有文件
+// Batch compress existing files
 let files_to_compress = vec!["file1.txt", "file2.json", "file3.csv"];
 let batch_compression = ctx.storage()
     .compress_existing_files(files_to_compress)
@@ -622,12 +624,12 @@ ctx.log().info(format!(
 ));
 ```
 
-### 智能压缩
+### Smart Compression
 
 ```rust
 use dms::prelude::*;
 
-// 智能压缩决策
+// Smart compression decision
 let smart_compression = ctx.storage()
     .should_compress_file("large_dataset.csv", 1024 * 1024, "text/csv")
     .await?;
@@ -639,7 +641,7 @@ if smart_compression.should_compress {
         smart_compression.recommended_algorithm
     ));
     
-    // 执行智能压缩
+    // Execute smart compression
     let compression_result = ctx.storage()
         .smart_compress_file("large_dataset.csv")
         .await?;
@@ -653,22 +655,22 @@ if smart_compression.should_compress {
 }
 ```
 
-## 生命周期管理
+## Lifecycle Management
 
-### 文件生命周期
+### File Lifecycle
 
 ```rust
 use dms::prelude::*;
 use serde_json::json;
 
-// 配置生命周期策略
+// Configure lifecycle policy
 let lifecycle_config = DMSCLifecycleConfig {
     enabled: true,
     default_retention_days: 365,
     archive_after_days: 90,
     delete_after_days: 1095, // 3 years
     auto_archive: true,
-    auto_delete: false, // 需要手动确认删除
+    auto_delete: false, // Requires manual confirmation for deletion
     lifecycle_policies: vec![
         DMSCLifecyclePolicy {
             name: "temporary_files".to_string(),
@@ -696,14 +698,14 @@ let lifecycle_config = DMSCLifecycleConfig {
 
 ctx.storage().init_lifecycle_management(lifecycle_config).await?;
 
-// 应用生命周期策略
+// Apply lifecycle policies
 ctx.storage()
     .apply_lifecycle_policies()
     .await?;
 
 ctx.log().info("Lifecycle policies applied");
 
-// 归档文件
+// Archive file
 let file_id = "old_file_123";
 let archive_result = ctx.storage()
     .archive_file(file_id, "cold_storage")
@@ -715,7 +717,7 @@ ctx.log().info(format!(
     archive_result.archive_date
 ));
 
-// 恢复归档文件
+// Restore archived file
 let restore_result = ctx.storage()
     .restore_archived_file(file_id, Duration::from_days(7))
     .await?;
@@ -726,7 +728,7 @@ ctx.log().info(format!(
     restore_result.available_by
 ));
 
-// 批量归档
+// Batch archive
 let old_files = vec!["file1", "file2", "file3"];
 let batch_archive = ctx.storage()
     .batch_archive_files(old_files, "glacier")
@@ -739,12 +741,12 @@ ctx.log().info(format!(
 ));
 ```
 
-### 自动清理
+### Automatic Cleanup
 
 ```rust
 use dms::prelude::*;
 
-// 运行自动清理任务
+// Run automatic cleanup task
 let cleanup_result = ctx.storage()
     .run_cleanup_task()
     .await?;
@@ -756,7 +758,7 @@ ctx.log().info(format!(
     cleanup_result.error_count
 ));
 
-// 获取清理报告
+// Get cleanup report
 let cleanup_report = ctx.storage()
     .get_cleanup_report(chrono::Utc::now() - chrono::Duration::days(30), chrono::Utc::now())
     .await?;
@@ -767,10 +769,10 @@ ctx.log().info(format!(
     cleanup_report.storage_space_reclaimed
 ));
 
-// 配置自动清理计划
+// Configure automatic cleanup schedule
 let cleanup_schedule = DMSCCleanupSchedule {
     enabled: true,
-    schedule: "0 2 * * *".to_string(), // 每天凌晨2点
+    schedule: "0 2 * * *".to_string(), // Daily at 2 AM
     max_files_per_run: 1000,
     dry_run: false,
     notification_email: "admin@company.com".to_string(),
@@ -783,15 +785,15 @@ ctx.storage()
 ctx.log().info("Cleanup schedule configured");
 ```
 
-## 版本控制
+## Version Control
 
-### 文件版本管理
+### File Version Management
 
 ```rust
 use dms::prelude::*;
 use serde_json::json;
 
-// 启用版本控制
+// Enable version control
 let versioning_config = DMSCVersioningConfig {
     enabled: true,
     max_versions: 10,
@@ -803,7 +805,7 @@ let versioning_config = DMSCVersioningConfig {
 
 ctx.storage().init_versioning(versioning_config).await?;
 
-// 上传新版本
+// Upload new version
 let document_path = Path::new("/path/to/updated_document_v2.pdf");
 let file_id = "original_file_123";
 
@@ -818,7 +820,7 @@ ctx.log().info(format!(
     new_version.file_size
 ));
 
-// 列出文件版本
+// List file versions
 let version_history = ctx.storage()
     .list_file_versions(file_id)
     .await?;
@@ -834,7 +836,7 @@ for version in &version_history.versions {
     ));
 }
 
-// 下载特定版本
+// Download specific version
 let version_number = 2;
 let version_download = ctx.storage()
     .download_file_version(file_id, version_number, Path::new("/downloads/version2.pdf"))
@@ -842,7 +844,7 @@ let version_download = ctx.storage()
 
 ctx.log().info(format!("Version {} downloaded successfully", version_number));
 
-// 恢复文件到特定版本
+// Restore file to specific version
 let restored_version = ctx.storage()
     .restore_file_version(file_id, version_number)
     .await?;
@@ -853,14 +855,14 @@ ctx.log().info(format!(
     restored_version.version_id
 ));
 
-// 删除特定版本
+// Delete specific version
 ctx.storage()
-    .delete_file_version(file_id, 1) // 删除版本1
+    .delete_file_version(file_id, 1) // Delete version 1
     .await?;
 
 ctx.log().info("File version deleted");
 
-// 标记版本标签
+// Label file version
 ctx.storage()
     .label_file_version(file_id, 3, "approved")
     .await?;
@@ -868,12 +870,12 @@ ctx.storage()
 ctx.log().info("Version 3 labeled as 'approved'");
 ```
 
-### 版本比较
+### Version Comparison
 
 ```rust
 use dms::prelude::*;
 
-// 比较两个版本
+// Compare two versions
 let version1 = 1;
 let version2 = 3;
 
@@ -888,7 +890,7 @@ ctx.log().info(format!(
     version_comparison.content_similarity * 100.0
 ));
 
-// 获取版本差异报告
+// Get version diff report
 let diff_report = ctx.storage()
     .generate_version_diff_report(file_id, version1, version2)
     .await?;
@@ -896,14 +898,14 @@ let diff_report = ctx.storage()
 ctx.log().info(format!("Version diff report generated: {}", diff_report.report_id));
 ```
 
-## 监控统计
+## Monitoring and Statistics
 
-### 存储统计
+### Storage Statistics
 
 ```rust
 use dms::prelude::*;
 
-// 获取存储使用统计
+// Get storage usage statistics
 let storage_stats = ctx.storage()
     .get_storage_statistics()
     .await?;
@@ -915,7 +917,7 @@ ctx.log().info(format!(
     storage_stats.average_file_size
 ));
 
-// 按文件类型统计
+// Statistics by file type
 let stats_by_type = ctx.storage()
     .get_statistics_by_file_type()
     .await?;
@@ -930,7 +932,7 @@ for (file_type, stats) in stats_by_type {
     ));
 }
 
-// 按时间范围统计
+// Statistics by time range
 let time_range_stats = ctx.storage()
     .get_statistics_by_time_range(
         chrono::Utc::now() - chrono::Duration::days(30),
@@ -945,7 +947,7 @@ ctx.log().info(format!(
     time_range_stats.bytes_transferred
 ));
 
-// 存储容量监控
+// Storage capacity monitoring
 let capacity_info = ctx.storage()
     .get_capacity_info()
     .await?;
@@ -963,12 +965,12 @@ if capacity_info.utilization_percentage > 0.8 {
 }
 ```
 
-### 性能监控
+### Performance Monitoring
 
 ```rust
 use dms::prelude::*;
 
-// 获取性能指标
+// Get performance metrics
 let performance_metrics = ctx.storage()
     .get_performance_metrics()
     .await?;
@@ -980,7 +982,7 @@ ctx.log().info(format!(
     performance_metrics.cache_hit_rate * 100.0
 ));
 
-// 获取操作统计
+// Get operation statistics
 let operation_stats = ctx.storage()
     .get_operation_statistics()
     .await?;
@@ -992,7 +994,7 @@ ctx.log().info(format!(
     operation_stats.failed_operations
 ));
 
-// 错误统计
+// Error statistics
 let error_stats = ctx.storage()
     .get_error_statistics()
     .await?;
@@ -1003,15 +1005,15 @@ for (error_type, count) in error_stats.error_counts {
 }
 ```
 
-## 错误处理
+## Error Handling
 
-### 存储错误处理
+### Storage Error Handling
 
 ```rust
 use dms::prelude::*;
 use serde_json::json;
 
-// 文件上传错误处理
+// File upload error handling
 match ctx.storage().upload_file(file_path, file_name, content_type).await {
     Ok(upload_result) => {
         ctx.log().info(format!("File uploaded successfully: {:?}", upload_result));
@@ -1019,11 +1021,11 @@ match ctx.storage().upload_file(file_path, file_name, content_type).await {
     Err(DMSCError::StorageFull(e)) => {
         ctx.log().error(format!("Storage is full: {}", e));
         
-        // 尝试清理空间
+        // Try to free up space
         let cleanup_result = ctx.storage().run_cleanup_task().await?;
         ctx.log().info(format!("Cleanup completed: {} bytes freed", cleanup_result.storage_space_reclaimed));
         
-        // 重试上传
+        // Retry upload
         match ctx.storage().upload_file(file_path, file_name, content_type).await {
             Ok(retry_result) => {
                 ctx.log().info("File uploaded successfully after cleanup");
@@ -1037,7 +1039,7 @@ match ctx.storage().upload_file(file_path, file_name, content_type).await {
     Err(DMSCError::FileTooLarge(e)) => {
         ctx.log().error(format!("File is too large: {}", e));
         
-        // 尝试分块上传
+        // Try chunked upload
         let chunk_config = DMSCChunkUploadConfig {
             chunk_size: 5 * 1024 * 1024,
             max_concurrent_chunks: 4,
@@ -1055,7 +1057,7 @@ match ctx.storage().upload_file(file_path, file_name, content_type).await {
     Err(DMSCError::InvalidFileType(e)) => {
         ctx.log().error(format!("Invalid file type: {}", e));
         
-        // 验证文件类型
+        // Validate file type
         let allowed_types = vec!["image/jpeg", "image/png", "application/pdf"];
         let actual_type = ctx.storage().detect_file_type(file_path).await?;
         
@@ -1071,7 +1073,7 @@ match ctx.storage().upload_file(file_path, file_name, content_type).await {
     }
 }
 
-// 存储服务健康检查
+// Storage service health check
 let health_check = ctx.storage()
     .health_check()
     .await?;
@@ -1079,60 +1081,60 @@ let health_check = ctx.storage()
 if !health_check.is_healthy {
     ctx.log().error(format!("Storage service is unhealthy: {:?}", health_check.issues));
     
-    // 尝试重新连接存储服务
+    // Try to reconnect storage service
     ctx.storage().reconnect().await?;
     ctx.log().info("Storage service reconnected");
 }
 ```
 
-## 最佳实践
+## Best Practices
 
-1. **文件命名**: 使用有意义的文件命名规范
-2. **元数据**: 充分利用元数据进行文件组织
-3. **生命周期**: 配置适当的文件生命周期策略
-4. **版本控制**: 为重要文件启用版本控制
-5. **加密**: 对敏感文件启用加密
-6. **压缩**: 对可压缩文件启用压缩
-7. **监控**: 监控存储使用和性能指标
-8. **备份**: 实施定期备份策略
-9. **访问控制**: 实施文件访问控制
-10. **错误处理**: 妥善处理存储错误和异常情况
-11. **分块上传**: 对大文件使用分块上传
-12. **临时链接**: 对敏感文件使用临时下载链接
-13. **存储分层**: 根据访问频率使用不同存储层级
-14. **容量规划**: 定期监控和规划存储容量
-15. **合规性**: 确保存储方案符合相关法规要求
+1. **File Naming**: Use meaningful file naming conventions
+2. **Metadata**: Fully utilize metadata for file organization
+3. **Lifecycle**: Configure appropriate file lifecycle policies
+4. **Version Control**: Enable version control for important files
+5. **Encryption**: Enable encryption for sensitive files
+6. **Compression**: Enable compression for compressible files
+7. **Monitoring**: Monitor storage usage and performance metrics
+8. **Backup**: Implement regular backup strategies
+9. **Access Control**: Implement file access control
+10. **Error Handling**: Properly handle storage errors and exceptions
+11. **Chunked Upload**: Use chunked upload for large files
+12. **Temporary Links**: Use temporary download links for sensitive files
+13. **Storage Tiers**: Use different storage tiers based on access frequency
+14. **Capacity Planning**: Regularly monitor and plan storage capacity
+15. **Compliance**: Ensure storage solution complies with relevant regulations
 
 <div align="center">
 
-## 运行步骤
+## Running Steps
 
 </div>
 
-### 环境准备
+### Environment Setup
 
 ```bash
-# 安装Rust
+# Install Rust
 curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 
-# 安装DMSC CLI
+# Install DMSC CLI
 cargo install dms-cli
 ```
 
-### 创建项目
+### Create Project
 
 ```bash
-# 创建新的DMSC项目
+# Create new DMSC project
 dms new storage-app
 cd storage-app
 
-# 添加存储依赖
+# Add storage dependency
 cargo add dms-storage
 ```
 
-### 添加依赖
+### Add Dependencies
 
-在 `Cargo.toml` 中添加：
+Add to `Cargo.toml`:
 
 ```toml
 [dependencies]
@@ -1144,9 +1146,9 @@ serde_json = "1.0"
 chrono = { version = "0.4", features = ["serde"] }
 ```
 
-### 配置创建
+### Configuration Creation
 
-创建 `config/storage.toml`：
+Create `config/storage.toml`:
 
 ```toml
 [storage]
@@ -1175,23 +1177,23 @@ threshold_size = 1024
 compressible_types = ["text/plain", "text/csv", "application/json", "application/xml", "text/html"]
 ```
 
-### 运行示例
+### Run Example
 
 ```bash
-# 编译项目
+# Build project
 cargo build --release
 
-# 运行存储示例
+# Run storage example
 cargo run --example storage-demo
 ```
 
 <div align="center">
 
-## 预期结果
+## Expected Results
 
 </div>
 
-运行成功后，您将看到类似以下输出：
+After successful execution, you will see output similar to:
 
 ```
 [2024-01-15 10:30:15] INFO: Storage service initialized successfully
@@ -1207,17 +1209,17 @@ cargo run --example storage-demo
 
 <div align="center">
 
-## 扩展功能
+## Extended Features
 
 </div>
 
-### 分布式存储集群
+### Distributed Storage Cluster
 
 ```rust
 use dms::prelude::*;
 use serde_json::json;
 
-// 配置分布式存储集群
+// Configure distributed storage cluster
 let cluster_config = DMSCStorageClusterConfig {
     nodes: vec![
         DMSCStorageNode {
@@ -1255,7 +1257,7 @@ let cluster_config = DMSCStorageClusterConfig {
 
 ctx.storage().init_cluster(cluster_config).await?;
 
-// 上传文件到集群（自动选择最优节点）
+// Upload file to cluster (automatically selects optimal node)
 let file_path = Path::new("/path/to/large_dataset.csv");
 let cluster_upload = ctx.storage()
     .upload_to_cluster(file_path, "dataset.csv", "text/csv")
@@ -1268,7 +1270,7 @@ ctx.log().info(format!(
     cluster_upload.replication_factor
 ));
 
-// 获取集群健康状态
+// Get cluster health status
 let cluster_health = ctx.storage()
     .get_cluster_health()
     .await?;
@@ -1281,19 +1283,19 @@ ctx.log().info(format!(
 ));
 ```
 
-### 智能存储分层
+### Intelligent Storage Tiering
 
 ```rust
 use dms::prelude::*;
 use serde_json::json;
 
-// 配置智能存储分层
+// Configure intelligent storage tiering
 let tiering_config = DMSCTieringConfig {
     tiers: vec![
         DMSCTier {
             name: "hot".to_string(),
             storage_class: DMSCStorageClass::Hot,
-            access_frequency_threshold: 0.8, // 80% 访问频率
+            access_frequency_threshold: 0.8, // 80% access frequency
             retention_days: 30,
             cost_per_gb: 0.023,
             performance_class: "high".to_string(),
@@ -1301,7 +1303,7 @@ let tiering_config = DMSCTieringConfig {
         DMSCTier {
             name: "warm".to_string(),
             storage_class: DMSCStorageClass::Warm,
-            access_frequency_threshold: 0.3, // 30% 访问频率
+            access_frequency_threshold: 0.3, // 30% access frequency
             retention_days: 90,
             cost_per_gb: 0.0125,
             performance_class: "medium".to_string(),
@@ -1309,7 +1311,7 @@ let tiering_config = DMSCTieringConfig {
         DMSCTier {
             name: "cold".to_string(),
             storage_class: DMSCStorageClass::Cold,
-            access_frequency_threshold: 0.1, // 10% 访问频率
+            access_frequency_threshold: 0.1, // 10% access frequency
             retention_days: 365,
             cost_per_gb: 0.004,
             performance_class: "low".to_string(),
@@ -1317,7 +1319,7 @@ let tiering_config = DMSCTieringConfig {
         DMSCTier {
             name: "archive".to_string(),
             storage_class: DMSCStorageClass::Archive,
-            access_frequency_threshold: 0.01, // 1% 访问频率
+            access_frequency_threshold: 0.01, // 1% access frequency
             retention_days: 2555, // 7 years
             cost_per_gb: 0.00099,
             performance_class: "minimal".to_string(),
@@ -1331,7 +1333,7 @@ let tiering_config = DMSCTieringConfig {
 
 ctx.storage().init_tiering(tiering_config).await?;
 
-// 获取文件推荐的存储层级
+// Get recommended storage tier for file
 let file_id = "large_dataset.csv";
 let recommended_tier = ctx.storage()
     .get_recommended_tier(file_id)
@@ -1344,7 +1346,7 @@ ctx.log().info(format!(
     recommended_tier.estimated_monthly_savings
 ));
 
-// 执行自动分层
+// Execute auto tiering
 let tiering_result = ctx.storage()
     .execute_auto_tiering()
     .await?;
@@ -1356,13 +1358,13 @@ ctx.log().info(format!(
 ));
 ```
 
-### 实时存储分析
+### Real-time Storage Analysis
 
 ```rust
 use dms::prelude::*;
 use serde_json::json;
 
-// 配置实时存储分析
+// Configure real-time storage analysis
 let analytics_config = DMSCStorageAnalyticsConfig {
     enabled: true,
     real_time_monitoring: true,
@@ -1376,7 +1378,7 @@ let analytics_config = DMSCStorageAnalyticsConfig {
 
 ctx.storage().init_analytics(analytics_config).await?;
 
-// 获取实时存储指标
+// Get real-time storage metrics
 let real_time_metrics = ctx.storage()
     .get_real_time_metrics()
     .await?;
@@ -1388,7 +1390,7 @@ ctx.log().info(format!(
     real_time_metrics.active_connections
 ));
 
-// 检测存储异常
+// Detect storage anomalies
 let anomalies = ctx.storage()
     .detect_storage_anomalies()
     .await?;
@@ -1405,9 +1407,9 @@ if !anomalies.is_empty() {
     }
 }
 
-// 预测存储需求
+// Predict storage needs
 let storage_forecast = ctx.storage()
-    .forecast_storage_needs(30) // 预测未来30天
+    .forecast_storage_needs(30) // Predict next 30 days
     .await?;
 
 ctx.log().info(format!(
@@ -1418,13 +1420,13 @@ ctx.log().info(format!(
 ));
 ```
 
-### 多云存储管理
+### Multi-Cloud Storage Management
 
 ```rust
 use dms::prelude::*;
 use serde_json::json;
 
-// 配置多云存储提供商
+// Configure multi-cloud storage providers
 let multi_cloud_config = DMSCMultiCloudConfig {
     providers: vec![
         DMSCCloudProvider {
@@ -1467,7 +1469,7 @@ let multi_cloud_config = DMSCMultiCloudConfig {
 
 ctx.storage().init_multi_cloud(multi_cloud_config).await?;
 
-// 选择最优云提供商上传文件
+// Select optimal cloud provider to upload file
 let file_path = Path::new("/path/to/business_document.pdf");
 let optimal_upload = ctx.storage()
     .upload_to_optimal_cloud(file_path, "document.pdf", "application/pdf")
@@ -1480,7 +1482,7 @@ ctx.log().info(format!(
     optimal_upload.estimated_cost
 ));
 
-// 获取多云存储成本分析
+// Get multi-cloud storage cost analysis
 let cost_analysis = ctx.storage()
     .get_multi_cloud_cost_analysis()
     .await?;
@@ -1495,64 +1497,64 @@ ctx.log().info(format!(
 
 <div align="center">
 
-## 总结
+## Summary
 
 </div>
 
-本示例展示了DMSC框架强大的存储管理功能，帮助您构建高效、安全、可扩展的文件存储系统。通过文件上传下载、元数据管理、存储加密、压缩、生命周期管理、版本控制和监控统计等核心功能，您可以轻松管理企业级文件存储需求。
+This example demonstrates the powerful storage management capabilities of the DMSC framework, helping you build efficient, secure, and scalable file storage systems. Through core features such as file upload/download, metadata management, storage encryption, compression, lifecycle management, version control, and monitoring statistics, you can easily manage enterprise-level file storage requirements.
 
-### 核心功能
+### Core Features
 
-1. **文件上传下载**: 支持单文件、多文件、分块上传，断点续传下载
-2. **元数据管理**: 灵活的元数据操作，标签管理，文件搜索
-3. **存储加密**: AES256-GCM加密，密钥轮换，客户端加密支持
-4. **存储压缩**: 智能压缩算法，支持多种文件类型压缩
-5. **生命周期管理**: 自动归档、删除策略，分层存储
-6. **版本控制**: 文件版本管理，版本比较，标签标记
-7. **监控统计**: 存储使用统计，性能监控，错误统计
-8. **错误处理**: 完善的错误处理机制，自动重试策略
-9. **临时链接**: 安全的一次性下载链接，访问控制
-10. **文件组织**: 文件夹结构，批量操作，递归处理
+1. **File Upload/Download**: Support for single file, multiple file, and chunked uploads, resumable downloads
+2. **Metadata Management**: Flexible metadata operations, tag management, file search
+3. **Storage Encryption**: AES256-GCM encryption, key rotation, client-side encryption support
+4. **Storage Compression**: Intelligent compression algorithms, support for multiple file types
+5. **Lifecycle Management**: Automatic archiving, deletion policies, tiered storage
+6. **Version Control**: File version management, version comparison, label tagging
+7. **Monitoring Statistics**: Storage usage statistics, performance monitoring, error statistics
+8. **Error Handling**: Comprehensive error handling mechanisms, automatic retry strategies
+9. **Temporary Links**: Secure one-time download links, access control
+10. **File Organization**: Folder structure, batch operations, recursive processing
 
-### 高级特性
+### Advanced Features
 
-1. **分布式集群**: 多节点存储集群，负载均衡，故障转移
-2. **智能分层**: 基于访问频率的自动存储分层
-3. **实时分析**: 存储异常检测，需求预测，成本优化
-4. **多云管理**: 多云提供商支持，成本优化，故障转移
-5. **访问控制**: 细粒度权限控制，IP限制，用户组管理
-6. **性能优化**: 缓存机制，并发处理，网络优化
+1. **Distributed Cluster**: Multi-node storage cluster, load balancing, failover
+2. **Intelligent Tiering**: Automatic storage tiering based on access frequency
+3. **Real-time Analysis**: Storage anomaly detection, demand forecasting, cost optimization
+4. **Multi-Cloud Management**: Multi-cloud provider support, cost optimization, failover
+5. **Access Control**: Fine-grained permission control, IP restrictions, user group management
+6. **Performance Optimization**: Caching mechanisms, concurrent processing, network optimization
 
-### 最佳实践
+### Best Practices
 
-- 使用有意义的文件命名规范和组织结构
-- 充分利用元数据和标签进行文件分类管理
-- 根据业务需求配置适当的生命周期策略
-- 为重要文件启用版本控制和自动备份
-- 对敏感文件启用加密和访问控制
-- 对可压缩文件启用压缩以节省存储空间
-- 定期监控存储使用和性能指标
-- 实施完善的错误处理和重试机制
-- 对大文件使用分块上传提高可靠性
-- 使用临时链接保护敏感文件下载
-- 根据访问频率实施存储分层策略
-- 定期进行容量规划和成本优化
-- 确保存储方案符合相关法规要求
+- Use meaningful file naming conventions and organizational structures
+- Fully utilize metadata and tags for file classification management
+- Configure appropriate lifecycle policies based on business requirements
+- Enable version control and automatic backup for important files
+- Enable encryption and access control for sensitive files
+- Enable compression for compressible files to save storage space
+- Regularly monitor storage usage and performance metrics
+- Implement comprehensive error handling and retry mechanisms
+- Use chunked upload for large files to improve reliability
+- Use temporary links to protect sensitive file downloads
+- Implement storage tiering strategies based on access frequency
+- Regularly perform capacity planning and cost optimization
+- Ensure storage solution complies with relevant regulations
 
 <div align="center">
 
-## 相关模块
+## Related Modules
 
 </div>
 
-- [README](./README.md): 使用示例概览，提供所有使用示例的快速导航
-- [authentication](./authentication.md): 认证示例，学习JWT、OAuth2和RBAC认证授权
-- [basic-app](./basic-app.md): 基础应用示例，学习如何创建和运行第一个DMSC应用
-- [caching](./caching.md): 缓存示例，了解如何使用缓存模块提升应用性能
-- [database](./database.md): 数据库示例，学习数据库连接和查询操作
-- [http](./http.md): HTTP服务示例，构建Web应用和RESTful API
-- [mq](./mq.md): 消息队列示例，实现异步消息处理和事件驱动架构
-- [observability](./observability.md): 可观测性示例，监控应用性能和健康状况
-- [security](./security.md): 安全示例，加密、哈希和安全最佳实践
+- [README](./README.md): Usage examples overview, providing quick navigation to all usage examples
+- [authentication](./authentication.md): Authentication examples, learn JWT, OAuth2, and RBAC authentication and authorization
+- [basic-app](./basic-app.md): Basic application example, learn how to create and run your first DMSC application
+- [caching](./caching.md): Caching examples, learn how to use the caching module to improve application performance
+- [database](./database.md): Database examples, learn database connections and query operations
+- [http](./http.md): HTTP service examples, build web applications and RESTful APIs
+- [mq](./mq.md): Message queue examples, implement asynchronous message processing and event-driven architecture
+- [observability](./observability.md): Observability examples, monitor application performance and health status
+- [security](./security.md): Security examples, encryption, hashing, and security best practices
 
-- [validation](./validation.md): 验证示例，数据验证和清理操作
+- [validation](./validation.md): Validation examples, data validation and sanitization operations

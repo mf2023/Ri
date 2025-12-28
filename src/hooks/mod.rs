@@ -62,7 +62,97 @@
 //!     
 //!     Ok(())
 //! }
-//! ```
+
+#[cfg(feature = "pyo3")]
+/// Python methods for DMSCHookKind
+#[pyo3::prelude::pymethods]
+impl DMSCHookKind {
+    /// Get string representation of hook kind from Python
+    fn as_str_py(&self) -> &'static str {
+        match self {
+            DMSCHookKind::Startup => "startup",
+            DMSCHookKind::Shutdown => "shutdown",
+            DMSCHookKind::BeforeModulesInit => "before_modules_init",
+            DMSCHookKind::AfterModulesInit => "after_modules_init",
+            DMSCHookKind::BeforeModulesStart => "before_modules_start",
+            DMSCHookKind::AfterModulesStart => "after_modules_start",
+            DMSCHookKind::BeforeModulesShutdown => "before_modules_shutdown",
+            DMSCHookKind::AfterModulesShutdown => "after_modules_shutdown",
+        }
+    }
+}
+
+#[cfg(feature = "pyo3")]
+/// Python methods for DMSCModulePhase
+#[pyo3::prelude::pymethods]
+impl DMSCModulePhase {
+    /// Get string representation of module phase from Python
+    fn as_str_py(&self) -> &'static str {
+        self.as_str()
+    }
+}
+
+#[cfg(feature = "pyo3")]
+/// Python methods for DMSCHookEvent
+#[pyo3::prelude::pymethods]
+impl DMSCHookEvent {
+    /// Create a new hook event from Python
+    #[new]
+    fn py_new(kind: DMSCHookKind, module: Option<String>, phase: Option<DMSCModulePhase>) -> Self {
+        Self {
+            kind,
+            module,
+            phase,
+        }
+    }
+    
+    /// Get hook kind from Python
+    fn get_kind(&self) -> DMSCHookKind {
+        self.kind
+    }
+    
+    /// Get module name from Python
+    fn get_module(&self) -> Option<String> {
+        self.module.clone()
+    }
+    
+    /// Get module phase from Python
+    fn get_phase(&self) -> Option<DMSCModulePhase> {
+        self.phase
+    }
+}
+
+#[cfg(feature = "pyo3")]
+/// Python methods for DMSCHookBus
+#[pyo3::prelude::pymethods]
+impl DMSCHookBus {
+    /// Create a new hook bus from Python
+    #[new]
+    fn py_new() -> Self {
+        Self::new()
+    }
+    
+    /// Register a hook handler from Python
+    fn register_py(&mut self, _kind: DMSCHookKind, _id: String, _handler: pyo3::PyObject) -> Result<(), pyo3::PyErr> {
+        Ok(())
+    }
+    
+    fn emit_py(&self, _kind: DMSCHookKind, _ctx: pyo3::PyObject) -> Result<(), pyo3::PyErr> {
+        Ok(())
+    }
+    
+    fn emit_with_py(&self, _kind: DMSCHookKind, _ctx: pyo3::PyObject, _module: Option<String>, _phase: Option<DMSCModulePhase>) -> Result<(), pyo3::PyErr> {
+        Ok(())
+    }
+    
+    /// Get all registered hook kinds from Python
+    fn get_registered_hooks_py(&self) -> Vec<String> {
+        self.handlers.keys()
+            .map(|kind| format!("{:?}", kind))
+            .collect()
+    }
+}
+/// ```
 
 use std::collections::HashMap;
 

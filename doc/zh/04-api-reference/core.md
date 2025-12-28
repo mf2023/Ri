@@ -39,12 +39,12 @@ core模块包含以下子模块：
 | `with_config(path)` | 添加配置文件 | `path: impl Into<String>` | `DMSCResult<Self>` |
 | `with_logging(config)` | 设置日志配置 | `config: DMSCLogConfig` | `DMSCResult<Self>` |
 | `with_observability(config)` | 设置可观测性配置 | `config: DMSCObservabilityConfig` | `DMSCResult<Self>` |
-| `with_module(module)` | 添加内部同步模块 | `module: Box<dyn ServiceModule>` | `Self` |
-| `with_async_module(module)` | 添加内部异步模块 | `module: Box<dyn AsyncServiceModule>` | `Self` |
-| `with_dms_module(module)` | 添加自定义异步模块 | `module: Box<dyn DMSCModule>` | `Self` |
-| `with_modules(modules)` | 添加多个内部同步模块 | `modules: Vec<Box<dyn ServiceModule>>` | `Self` |
-| `with_async_modules(modules)` | 添加多个内部异步模块 | `modules: Vec<Box<dyn AsyncServiceModule>>` | `Self` |
-| `with_dms_modules(modules)` | 添加多个自定义异步模块 | `modules: Vec<Box<dyn DMSCModule>>` | `Self` |
+| `with_module(module)` | 添加同步模块 | `module: Box<dyn ServiceModule>` | `Self` |
+| `with_async_module(module)` | 添加异步模块 | `module: Box<dyn AsyncServiceModule>` | `Self` |
+| `with_dms_module(module)` | 添加DMSC模块 | `module: Box<dyn DMSCModule>` | `Self` |
+| `with_modules(modules)` | 添加多个同步模块 | `modules: Vec<Box<dyn ServiceModule>>` | `Self` |
+| `with_async_modules(modules)` | 添加多个异步模块 | `modules: Vec<Box<dyn AsyncServiceModule>>` | `Self` |
+| `with_dms_modules(modules)` | 添加多个DMSC模块 | `modules: Vec<Box<dyn DMSCModule>>` | `Self` |
 | `build()` | 构建应用运行时 | 无 | `DMSCResult<DMSCAppRuntime>` |
 
 #### 使用示例

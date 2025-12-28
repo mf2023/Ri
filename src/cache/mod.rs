@@ -85,9 +85,9 @@ mod manager;
 mod backends;
 mod config;
 
-pub use config::{DMSCCacheConfig, CacheBackendType};
-pub use manager::DMSCCacheManager;
-pub use core::{CachedValue, CacheStats, DMSCCache};
+pub use config::{DMSCCacheConfig, CacheBackendType, CachePolicy};
+pub use manager::{DMSCCacheManager, DMSCCacheEvent};
+pub use core::{CachedValue, CacheStats, DMSCCache, DMSCCacheEvent as CoreCacheEvent};
 // Re-export backend implementations
 pub use backends::DMSCMemoryCache;
 #[cfg(feature = "redis")]
@@ -97,6 +97,9 @@ use crate::core::{DMSCResult, DMSCServiceContext};
 use std::sync::Arc;
 use tokio::sync::RwLock;
 
+#[cfg(feature = "pyo3")]
+use pyo3::pymethods;
+
 /// Main cache module for DMSC.
 /// 
 /// This module provides a unified caching abstraction with support for multiple backend implementations.
@@ -105,6 +108,7 @@ use tokio::sync::RwLock;
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 pub struct DMSCCacheModule {
     /// Cache configuration
+    #[pyo3(get, set)]
     config: DMSCCacheConfig,
     /// Cache manager wrapped in an async RwLock for thread-safe access
     manager: std::sync::Arc<tokio::sync::RwLock<DMSCCacheManager>>,
@@ -158,6 +162,20 @@ impl DMSCCacheModule {
     /// An Arc<RwLock<DMSCCacheManager>> providing thread-safe access to the cache manager
     pub fn cache_manager(&self) -> Arc<RwLock<DMSCCacheManager>> {
         self.manager.clone()
+    }
+}
+
+#[cfg(feature = "pyo3")]
+#[pymethods]
+impl DMSCCacheModule {
+    #[new]
+    fn py_new(config: DMSCCacheConfig) -> Self {
+        Self::new(config)
+    }
+    
+    /// Get cache manager status for Python (Python wrapper)
+    fn get_cache_manager_status(&self) -> String {
+        format!("Cache manager initialized with backend: {:?}", self.config.backend_type)
     }
 }
 

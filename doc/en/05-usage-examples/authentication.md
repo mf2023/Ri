@@ -1,50 +1,50 @@
 <div align="center">
 
-# 认证与授权示例
+# Authentication and Authorization Example
 
 **Version: 1.0.0**
 
 **Last modified date: 2025-12-12**
 
-本示例展示如何使用DMSC的auth模块进行JWT和OAuth认证与授权。
+This example demonstrates how to use DMSC's auth module for JWT and OAuth authentication and authorization.
 
-## 示例概述
+## Example Overview
 
 </div>
 
-本示例将创建一个DMSC应用，实现以下功能：
+This example will create a DMSC application that implements the following features:
 
-- JWT令牌生成和验证
-- OAuth2授权流程
-- 基于角色的访问控制
+- JWT token generation and verification
+- OAuth2 authorization flow
+- Role-based access control
 
 <div align="center">
 
-## 前置要求
+## Prerequisites
 
 </div>
 
 - Rust 1.65+
 - Cargo 1.65+
-- 基本的Rust编程知识
-- 了解JWT和OAuth2基本概念
+- Basic Rust programming knowledge
+- Understanding of JWT and OAuth2 basic concepts
 
 <div align="center">
 
-## 示例代码
+## Example Code
 
 </div>
 
-### 1. 创建项目
+### 1. Create Project
 
 ```bash
 cargo new dms-auth-example
 cd dms-auth-example
 ```
 
-### 2. 添加依赖
+### 2. Add Dependencies
 
-在`Cargo.toml`文件中添加以下依赖：
+Add the following dependencies to your `Cargo.toml` file:
 
 ```toml
 [dependencies]
@@ -53,9 +53,9 @@ tokio = { version = "1.0", features = ["full"] }
 serde = { version = "1.0", features = ["derive"] }
 ```
 
-### 3. 创建配置文件
+### 3. Create Configuration File
 
-在项目根目录创建`config.yaml`文件：
+Create a `config.yaml` file in the project root:
 
 ```yaml
 service:
@@ -80,15 +80,15 @@ auth:
       redirect_uri: "http://localhost:8080/callback"
 ```
 
-### 4. 编写主代码
+### 4. Write Main Code
 
-将`src/main.rs`文件替换为以下内容：
+Replace the content of `src/main.rs` with the following:
 
 ```rust
 use dms::prelude::*;
 use serde::{Deserialize, Serialize};
 
-// 用户信息结构
+// User information structure
 #[derive(Debug, Serialize, Deserialize)]
 struct User {
     id: u64,
@@ -99,18 +99,18 @@ struct User {
 
 #[tokio::main]
 async fn main() -> DMSCResult<()> {
-    // 构建服务运行时
+    // Build service runtime
     let app = DMSCAppBuilder::new()
         .with_config("config.yaml")?
         .with_logging(DMSCLogConfig::default())?
         .with_auth(DMSCAuthConfig::default())?
         .build()?;
     
-    // 运行业务逻辑
+    // Run business logic
     app.run(|ctx: &DMSCServiceContext| async move {
         ctx.logger().info("service", "DMSC Auth Example started")?;
         
-        // 创建示例用户
+        // Create sample user
         let user = User {
             id: 1,
             username: "test_user",
@@ -118,26 +118,26 @@ async fn main() -> DMSCResult<()> {
             role: "admin",
         };
         
-        // 生成JWT令牌
+        // Generate JWT token
         let jwt = ctx.auth().generate_jwt(&user).await?;
         ctx.logger().info("jwt", &format!("Generated JWT: {}", jwt))?;
         
-        // 验证JWT令牌
+        // Verify JWT token
         let decoded_user: User = ctx.auth().verify_jwt(&jwt).await?;
         ctx.logger().info("jwt", &format!("Decoded user: {:?}", decoded_user))?;
         
-        // 检查权限
+        // Check permissions
         let has_admin_access = ctx.auth().check_permission(&decoded_user.role, "admin").await?;
         let has_user_access = ctx.auth().check_permission(&decoded_user.role, "user").await?;
         
         ctx.logger().info("auth", &format!("Has admin access: {}", has_admin_access))?;
         ctx.logger().info("auth", &format!("Has user access: {}", has_user_access))?;
         
-        // OAuth2配置示例
+        // OAuth2 configuration example
         let oauth_config = ctx.auth().oauth_config("github").await?;
         ctx.logger().info("oauth", &format!("GitHub OAuth config: {:?}", oauth_config))?;
         
-        // 生成OAuth授权URL
+        // Generate OAuth authorization URL
         let auth_url = ctx.auth().oauth_authorization_url("github", "state123").await?;
         ctx.logger().info("oauth", &format!("GitHub auth URL: {}", auth_url))?;
         
@@ -150,20 +150,20 @@ async fn main() -> DMSCResult<()> {
 
 <div align="center">
 
-## 代码解析
+## Code Explanation
 
 </div>
 
-### 1. 导入依赖
+### 1. Import Dependencies
 
 ```rust
 use dms::prelude::*;
 use serde::{Deserialize, Serialize};
 ```
 
-导入DMSC的核心组件和Serde库用于序列化和反序列化。
+Import DMSC's core components and Serde library for serialization and deserialization.
 
-### 2. 用户信息结构
+### 2. User Information Structure
 
 ```rust
 #[derive(Debug, Serialize, Deserialize)]
@@ -175,9 +175,9 @@ struct User {
 }
 ```
 
-定义用户信息结构，用于JWT令牌的生成和验证。
+Define the user information structure for JWT token generation and verification.
 
-### 3. 构建应用
+### 3. Build Application
 
 ```rust
 let app = DMSCAppBuilder::new()
@@ -187,64 +187,64 @@ let app = DMSCAppBuilder::new()
     .build()?;
 ```
 
-构建应用并启用auth模块。
+Build the application and enable the auth module.
 
-### 4. JWT操作
+### 4. JWT Operations
 
 ```rust
-// 生成JWT令牌
+// Generate JWT token
 let jwt = ctx.auth().generate_jwt(&user).await?;
 
-// 验证JWT令牌
+// Verify JWT token
 let decoded_user: User = ctx.auth().verify_jwt(&jwt).await?;
 ```
 
-- `generate_jwt()`：根据用户信息生成JWT令牌
-- `verify_jwt()`：验证JWT令牌并解码为用户信息
+- `generate_jwt()`: Generate JWT token based on user information
+- `verify_jwt()`: Verify JWT token and decode to user information
 
-### 5. 权限检查
+### 5. Permission Check
 
 ```rust
 let has_admin_access = ctx.auth().check_permission(&decoded_user.role, "admin").await?;
 let has_user_access = ctx.auth().check_permission(&decoded_user.role, "user").await?;
 ```
 
-`check_permission()`：检查用户角色是否具有特定权限。
+`check_permission()`: Check if the user role has specific permissions.
 
-### 6. OAuth2操作
+### 6. OAuth2 Operations
 
 ```rust
-// 获取OAuth配置
+// Get OAuth configuration
 let oauth_config = ctx.auth().oauth_config("github").await?;
 
-// 生成授权URL
+// Generate authorization URL
 let auth_url = ctx.auth().oauth_authorization_url("github", "state123").await?;
 ```
 
-- `oauth_config()`：获取特定OAuth提供商的配置
-- `oauth_authorization_url()`：生成OAuth授权URL
+- `oauth_config()`: Get configuration for specific OAuth provider
+- `oauth_authorization_url()`: Generate OAuth authorization URL
 
 <div align="center">
 
-## 运行步骤
+## Running Steps
 
 </div>
 
-### 1. 构建项目
+### 1. Build Project
 
 ```bash
 cargo build
 ```
 
-### 2. 运行项目
+### 2. Run Project
 
 ```bash
 cargo run
 ```
 
-## 预期结果
+## Expected Results
 
-运行示例后，您应该会看到类似以下的输出：
+After running the example, you should see output similar to the following:
 
 ```json
 {"timestamp":"2025-12-12T15:30:00Z","level":"info","module":"service","message":"DMSC Auth Example started"}
@@ -259,14 +259,14 @@ cargo run
 
 <div align="center">
 
-## 扩展功能
+## Extended Features
 
 </div>
 
-### 1. 实现完整的OAuth2回调处理
+### 1. Implement Complete OAuth2 Callback Handling
 
 ```rust
-// 在实际应用中，您需要实现一个HTTP端点来处理OAuth2回调
+// In a real application, you need to implement an HTTP endpoint to handle OAuth2 callbacks
 async fn handle_oauth_callback(ctx: &DMSCServiceContext, code: &str) -> DMSCResult<String> {
     let token = ctx.auth().oauth_exchange_token("github", code).await?;
     let user_info = ctx.auth().oauth_get_user_info("github", &token).await?;
@@ -274,26 +274,26 @@ async fn handle_oauth_callback(ctx: &DMSCServiceContext, code: &str) -> DMSCResu
 }
 ```
 
-### 2. 实现刷新令牌机制
+### 2. Implement Refresh Token Mechanism
 
 ```rust
-// 生成包含刷新令牌的JWT
+// Generate JWT with refresh token
 let (access_token, refresh_token) = ctx.auth().generate_jwt_with_refresh(&user).await?;
 
-// 使用刷新令牌获取新的访问令牌
+// Use refresh token to get new access token
 let new_access_token = ctx.auth().refresh_jwt(&refresh_token).await?;
 ```
 
-### 3. 实现更复杂的权限模型
+### 3. Implement More Complex Permission Models
 
 ```rust
-// 定义更复杂的权限规则
+// Define more complex permission rules
 let permission_rules = vec![
     ("admin", vec!["create", "read", "update", "delete"]),
     ("user", vec!["read"]),
 ];
 
-// 检查特定资源的权限
+// Check permissions for specific resources
 let can_edit_resource = ctx.auth().check_resource_permission(
     &user.role, 
     "resource_type", 
@@ -304,50 +304,50 @@ let can_edit_resource = ctx.auth().check_resource_permission(
 
 <div align="center">
 
-## 最佳实践
+## Best Practices
 
 </div>
 
-1. **安全存储密钥**：在生产环境中，不要将JWT密钥和OAuth凭证硬编码在配置文件中，使用环境变量或安全的密钥管理服务
+1. **Securely store keys**: In production environments, do not hardcode JWT keys and OAuth credentials in configuration files. Use environment variables or secure key management services.
 
-2. **合理设置过期时间**：根据应用需求设置合适的JWT过期时间，平衡安全性和用户体验
+2. **Set appropriate expiration times**: Set suitable JWT expiration times based on application requirements, balancing security and user experience.
 
-3. **使用HTTPS**：在生产环境中，始终使用HTTPS传输JWT令牌和OAuth凭证
+3. **Use HTTPS**: Always use HTTPS to transmit JWT tokens and OAuth credentials in production environments.
 
-4. **实现令牌刷新机制**：对于长期运行的应用，实现令牌刷新机制，避免用户频繁登录
+4. **Implement token refresh mechanism**: For long-running applications, implement token refresh mechanisms to avoid frequent user logins.
 
-5. **定期轮换密钥**：定期轮换JWT密钥和OAuth凭证，提高安全性
+5. **Regularly rotate keys**: Regularly rotate JWT keys and OAuth credentials to improve security.
 
-6. **记录认证事件**：记录所有认证和授权事件，便于审计和调试
+6. **Log authentication events**: Record all authentication and authorization events for auditing and debugging.
 
 <div align="center">
 
-## 总结
+## Summary
 
 </div>
 
-本示例展示了如何使用DMSC的auth模块进行认证与授权，包括：
+This example demonstrates how to use DMSC's auth module for authentication and authorization, including:
 
-- JWT令牌的生成和验证
-- OAuth2授权流程
-- 基于角色的访问控制
+- JWT token generation and verification
+- OAuth2 authorization flow
+- Role-based access control
 
-通过本示例，您应该已经了解了DMSC auth模块的基本使用方式。您可以在此基础上进一步实现更复杂的认证和授权逻辑。
+Through this example, you should have understood the basic usage of the DMSC auth module. You can build upon this foundation to implement more complex authentication and authorization logic.
 
 <div align="center">
 
-## 相关模块
+## Related Modules
 
 </div>
 
-- [README](./README.md): 使用示例概览，提供所有使用示例的快速导航
-- [basic-app](./basic-app.md): 基础应用示例，学习如何创建和运行第一个DMSC应用
-- [caching](./caching.md): 缓存示例，了解如何使用缓存模块提升应用性能
-- [database](./database.md): 数据库示例，学习数据库连接和查询操作
-- [http](./http.md): HTTP服务示例，构建Web应用和RESTful API
-- [mq](./mq.md): 消息队列示例，实现异步消息处理和事件驱动架构
-- [observability](./observability.md): 可观测性示例，监控应用性能和健康状况
-- [security](./security.md): 安全示例，加密、哈希和安全最佳实践
-- [storage](./storage.md): 存储示例，文件上传下载和存储管理
-- [validation](./validation.md): 验证示例，数据验证和清理操作
-- [authentication](./authentication.md): 认证示例，学习JWT、OAuth2和RBAC认证授权
+- [README](./README.md): Usage examples overview, providing quick navigation to all usage examples
+- [basic-app](./basic-app.md): Basic application example, learn how to create and run your first DMSC application
+- [caching](./caching.md): Caching example, understand how to use the caching module to improve application performance
+- [database](./database.md): Database example, learn database connection and query operations
+- [http](./http.md): HTTP service example, build web applications and RESTful APIs
+- [mq](./mq.md): Message queue example, implement asynchronous message processing and event-driven architecture
+- [observability](./observability.md): Observability example, monitor application performance and health status
+- [security](./security.md): Security example, encryption, hashing, and security best practices
+- [storage](./storage.md): Storage example, file upload/download and storage management
+- [validation](./validation.md): Validation example, data validation and sanitization operations
+- [authentication](./authentication.md): Authentication example, learn JWT, OAuth2, and RBAC authentication and authorization

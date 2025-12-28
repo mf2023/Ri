@@ -23,6 +23,11 @@ use std::collections::HashMap;
 use tokio::sync::{RwLock, broadcast};
 use crate::cache::core::{DMSCCache, CacheStats};
 
+#[cfg(feature = "pyo3")]
+use pyo3::prelude::*;
+#[cfg(feature = "pyo3")]
+use pyo3::pymethods;
+
 
 /// # DMSC Cache Manager
 /// 
@@ -431,5 +436,101 @@ impl DMSCCacheManager {
         
         log::debug!("[DMSC.Cache] get_or_set successfully generated and cached value for key: {key}");
         Ok(value)
+    }
+}
+
+#[cfg(feature = "pyo3")]
+#[pymethods]
+impl DMSCCacheManager {
+    #[new]
+    fn py_new() -> Self {
+        use crate::cache::backends::DMSCMemoryCache;
+        let backend = std::sync::Arc::new(DMSCMemoryCache::new());
+        Self::new(backend)
+    }
+    
+    /// Get a value from cache (Python wrapper)
+    fn get_py(&self, key: String) -> pyo3::PyResult<Option<String>> {
+        let rt = tokio::runtime::Runtime::new().map_err(|e| {
+            pyo3::exceptions::PyRuntimeError::new_err(format!("Failed to create runtime: {}", e))
+        })?;
+        
+        rt.block_on(async {
+            self.get::<String>(&key).await.map_err(|e| {
+                pyo3::exceptions::PyRuntimeError::new_err(format!("Cache error: {}", e))
+            })
+        })
+    }
+    
+    /// Set a value in cache (Python wrapper)
+    fn set_py(&self, key: String, value: String, ttl_seconds: Option<u64>) -> pyo3::PyResult<()> {
+        let rt = tokio::runtime::Handle::current();
+        
+        rt.block_on(async {
+            self.set(&key, &value, ttl_seconds).await.map_err(|e| {
+                pyo3::exceptions::PyRuntimeError::new_err(format!("Cache error: {}", e))
+            })
+        })
+    }
+    
+    /// Delete a value from cache (Python wrapper)
+    fn delete_py(&self, key: String) -> pyo3::PyResult<bool> {
+        let rt = tokio::runtime::Runtime::new().map_err(|e| {
+            pyo3::exceptions::PyRuntimeError::new_err(format!("Failed to create runtime: {}", e))
+        })?;
+        
+        rt.block_on(async {
+            self.delete(&key).await.map_err(|e| {
+                pyo3::exceptions::PyRuntimeError::new_err(format!("Cache error: {}", e))
+            })
+        })
+    }
+    
+    /// Check if a key exists in cache (Python wrapper)
+    fn exists_py(&self, key: String) -> pyo3::PyResult<bool> {
+        let rt = tokio::runtime::Runtime::new().map_err(|e| {
+            pyo3::exceptions::PyRuntimeError::new_err(format!("Failed to create runtime: {}", e))
+        })?;
+        
+        Ok(rt.block_on(async {
+            self.exists(&key).await
+        }))
+    }
+    
+    /// Clear all cache entries (Python wrapper)
+    fn clear_py(&self) -> pyo3::PyResult<()> {
+        let rt = tokio::runtime::Runtime::new().map_err(|e| {
+            pyo3::exceptions::PyRuntimeError::new_err(format!("Failed to create runtime: {}", e))
+        })?;
+        
+        rt.block_on(async {
+            self.clear().await.map_err(|e| {
+                pyo3::exceptions::PyRuntimeError::new_err(format!("Cache error: {}", e))
+            })
+        })
+    }
+    
+    /// Get cache statistics (Python wrapper)
+    fn stats_py(&self) -> pyo3::PyResult<CacheStats> {
+        let rt = tokio::runtime::Runtime::new().map_err(|e| {
+            pyo3::exceptions::PyRuntimeError::new_err(format!("Failed to create runtime: {}", e))
+        })?;
+        
+        Ok(rt.block_on(async {
+            self.stats().await
+        }))
+    }
+    
+    /// Cleanup expired cache entries (Python wrapper)
+    fn cleanup_expired_py(&self) -> pyo3::PyResult<usize> {
+        let rt = tokio::runtime::Runtime::new().map_err(|e| {
+            pyo3::exceptions::PyRuntimeError::new_err(format!("Failed to create runtime: {}", e))
+        })?;
+        
+        rt.block_on(async {
+            self.cleanup_expired().await.map_err(|e| {
+                pyo3::exceptions::PyRuntimeError::new_err(format!("Cache error: {}", e))
+            })
+        })
     }
 }

@@ -582,3 +582,52 @@ impl DMSCQueueManager {
         Ok(())
     }
 }
+
+#[cfg(feature = "pyo3")]
+#[pyo3::prelude::pymethods]
+impl DMSCQueueManager {
+    fn create_queue_py(&self, name: String) -> PyResult<String> {
+        let rt = tokio::runtime::Runtime::new().map_err(|e| {
+            pyo3::exceptions::PyRuntimeError::new_err(format!("Failed to create runtime: {}", e))
+        })?;
+        
+        rt.block_on(async {
+            self.create_queue(&name)
+                .await
+                .map(|_| name)
+                .map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(format!("Failed to create queue: {e}")))
+        })
+    }
+    
+    fn get_queue_py(&self, name: String) -> PyResult<Option<()>> {
+        let rt = tokio::runtime::Runtime::new().map_err(|e| {
+            pyo3::exceptions::PyRuntimeError::new_err(format!("Failed to create runtime: {}", e))
+        })?;
+        
+        Ok(rt.block_on(async {
+            self.get_queue(&name).await.map(|_| ())
+        }))
+    }
+    
+    fn list_queues_py(&self) -> PyResult<Vec<String>> {
+        let rt = tokio::runtime::Runtime::new().map_err(|e| {
+            pyo3::exceptions::PyRuntimeError::new_err(format!("Failed to create runtime: {}", e))
+        })?;
+        
+        Ok(rt.block_on(async {
+            self.list_queues().await
+        }))
+    }
+    
+    fn delete_queue_py(&self, name: String) -> PyResult<()> {
+        let rt = tokio::runtime::Runtime::new().map_err(|e| {
+            pyo3::exceptions::PyRuntimeError::new_err(format!("Failed to create runtime: {}", e))
+        })?;
+        
+        rt.block_on(async {
+            self.delete_queue(&name)
+                .await
+                .map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(format!("Failed to delete queue: {e}")))
+        })
+    }
+}
