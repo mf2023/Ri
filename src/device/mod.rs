@@ -1,4 +1,4 @@
-//! Copyright © 2025 Wenze Wei. All Rights Reserved.
+//! Copyright © 2025-2026 Wenze Wei. All Rights Reserved.
 //!
 //! This file is part of DMSC.
 //! The DMSC project belongs to the Dunimd Team.
@@ -235,19 +235,19 @@ impl DMSCDiscoveryResult {
         Self::default()
     }
     
-    fn discovered_devices_py(&self) -> Vec<DMSCDevice> {
+    fn discovered_devices_impl(&self) -> Vec<DMSCDevice> {
         self.discovered_devices.clone()
     }
     
-    fn updated_devices_py(&self) -> Vec<DMSCDevice> {
+    fn updated_devices_impl(&self) -> Vec<DMSCDevice> {
         self.updated_devices.clone()
     }
     
-    fn removed_devices_py(&self) -> Vec<String> {
+    fn removed_devices_impl(&self) -> Vec<String> {
         self.removed_devices.clone()
     }
     
-    fn total_devices_py(&self) -> usize {
+    fn total_devices_impl(&self) -> usize {
         self.total_devices
     }
     
@@ -316,64 +316,78 @@ impl DMSCResourceRequest {
         }
     }
     
-    fn request_id_py(&self) -> String {
+    #[pyo3(name = "request_id")]
+    fn request_id_impl(&self) -> String {
         self.request_id.clone()
     }
     
-    fn device_type_py(&self) -> DMSCDeviceType {
+    #[pyo3(name = "device_type")]
+    fn device_type_impl(&self) -> DMSCDeviceType {
         self.device_type
     }
     
-    fn required_capabilities_py(&self) -> DMSCDeviceCapabilities {
+    #[pyo3(name = "required_capabilities")]
+    fn required_capabilities_impl(&self) -> DMSCDeviceCapabilities {
         self.required_capabilities.clone()
     }
     
-    fn priority_py(&self) -> u8 {
+    #[pyo3(name = "priority")]
+    fn priority_impl(&self) -> u8 {
         self.priority
     }
     
-    fn timeout_secs_py(&self) -> u64 {
+    #[pyo3(name = "timeout_secs")]
+    fn timeout_secs_impl(&self) -> u64 {
         self.timeout_secs
     }
     
-    fn sla_class_py(&self) -> Option<DMSCRequestSlaClass> {
+    #[pyo3(name = "sla_class")]
+    fn sla_class_impl(&self) -> Option<DMSCRequestSlaClass> {
         self.sla_class
     }
     
-    fn resource_weights_py(&self) -> Option<DMSCResourceWeights> {
+    #[pyo3(name = "resource_weights")]
+    fn resource_weights_impl(&self) -> Option<DMSCResourceWeights> {
         self.resource_weights.clone()
     }
     
-    fn affinity_py(&self) -> Option<DMSCAffinityRules> {
+    #[pyo3(name = "affinity")]
+    fn affinity_impl(&self) -> Option<DMSCAffinityRules> {
         self.affinity.clone()
     }
     
-    fn anti_affinity_py(&self) -> Option<DMSCAffinityRules> {
+    #[pyo3(name = "anti_affinity")]
+    fn anti_affinity_impl(&self) -> Option<DMSCAffinityRules> {
         self.anti_affinity.clone()
     }
     
-    // Setter methods for Python
-    fn set_priority_py(&mut self, priority: u8) {
+    #[pyo3(name = "set_priority")]
+    fn set_priority_impl(&mut self, priority: u8) {
         self.priority = priority;
     }
     
-    fn set_timeout_secs_py(&mut self, timeout_secs: u64) {
+    #[pyo3(name = "set_timeout_secs")]
+    fn set_timeout_secs_impl(&mut self, timeout_secs: u64) {
         self.timeout_secs = timeout_secs;
     }
     
-    fn set_sla_class_py(&mut self, sla_class: Option<DMSCRequestSlaClass>) {
+    #[pyo3(name = "set_sla_class")]
+    fn set_sla_class_impl(&mut self, sla_class: Option<DMSCRequestSlaClass>) {
         self.sla_class = sla_class;
     }
     
-    fn set_resource_weights_py(&mut self, resource_weights: Option<DMSCResourceWeights>) {
+    #[pyo3(name = "set_resource_weights")]
+    fn set_resource_weights_impl(&mut self, resource_weights: Option<DMSCResourceWeights>) {
         self.resource_weights = resource_weights;
     }
     
-    fn set_affinity_py(&mut self, affinity: Option<DMSCAffinityRules>) {
+    #[pyo3(name = "set_affinity")]
+    fn set_affinity_impl(&mut self, affinity: Option<DMSCAffinityRules>) {
         self.affinity = affinity;
     }
     
-    fn set_anti_affinity_py(&mut self, anti_affinity: Option<DMSCAffinityRules>) {
+    #[pyo3(name = "set_anti_affinity")]
+    fn set_anti_affinity_impl(&mut self, anti_affinity: Option<DMSCAffinityRules>) {
         self.anti_affinity = anti_affinity;
     }
     
@@ -450,16 +464,23 @@ impl DMSCResourceWeights {
         Self::default()
     }
     
-    fn compute_weight_py(&self) -> f64 { self.compute_weight }
-    fn memory_weight_py(&self) -> f64 { self.memory_weight }
-    fn storage_weight_py(&self) -> f64 { self.storage_weight }
-    fn bandwidth_weight_py(&self) -> f64 { self.bandwidth_weight }
+    #[pyo3(name = "compute_weight")]
+    fn compute_weight_impl(&self) -> f64 { self.compute_weight }
+    #[pyo3(name = "memory_weight")]
+    fn memory_weight_impl(&self) -> f64 { self.memory_weight }
+    #[pyo3(name = "storage_weight")]
+    fn storage_weight_impl(&self) -> f64 { self.storage_weight }
+    #[pyo3(name = "bandwidth_weight")]
+    fn bandwidth_weight_impl(&self) -> f64 { self.bandwidth_weight }
     
-    // Setter methods for Python
-    fn set_compute_weight_py(&mut self, weight: f64) { self.compute_weight = weight; }
-    fn set_memory_weight_py(&mut self, weight: f64) { self.memory_weight = weight; }
-    fn set_storage_weight_py(&mut self, weight: f64) { self.storage_weight = weight; }
-    fn set_bandwidth_weight_py(&mut self, weight: f64) { self.bandwidth_weight = weight; }
+    #[pyo3(name = "set_compute_weight")]
+    fn set_compute_weight_impl(&mut self, weight: f64) { self.compute_weight = weight; }
+    #[pyo3(name = "set_memory_weight")]
+    fn set_memory_weight_impl(&mut self, weight: f64) { self.memory_weight = weight; }
+    #[pyo3(name = "set_storage_weight")]
+    fn set_storage_weight_impl(&mut self, weight: f64) { self.storage_weight = weight; }
+    #[pyo3(name = "set_bandwidth_weight")]
+    fn set_bandwidth_weight_impl(&mut self, weight: f64) { self.bandwidth_weight = weight; }
     
     fn __str__(&self) -> String {
         format!("DMSCResourceWeights(compute: {}, memory: {}, storage: {}, bandwidth: {})", 
@@ -510,15 +531,18 @@ impl DMSCAffinityRules {
         Self::default()
     }
     
-    fn required_labels_py(&self) -> HashMap<String, String> {
+    #[pyo3(name = "required_labels")]
+    fn required_labels_impl(&self) -> HashMap<String, String> {
         self.required_labels.clone()
     }
     
-    fn preferred_labels_py(&self) -> HashMap<String, String> {
+    #[pyo3(name = "preferred_labels")]
+    fn preferred_labels_impl(&self) -> HashMap<String, String> {
         self.preferred_labels.clone()
     }
     
-    fn forbidden_labels_py(&self) -> HashMap<String, String> {
+    #[pyo3(name = "forbidden_labels")]
+    fn forbidden_labels_impl(&self) -> HashMap<String, String> {
         self.forbidden_labels.clone()
     }
     
@@ -577,35 +601,43 @@ impl DMSCResourceAllocation {
         }
     }
     
-    fn allocation_id_py(&self) -> String {
+    #[pyo3(name = "allocation_id")]
+    fn allocation_id_impl(&self) -> String {
         self.allocation_id.clone()
     }
     
-    fn device_id_py(&self) -> String {
+    #[pyo3(name = "device_id")]
+    fn device_id_impl(&self) -> String {
         self.device_id.clone()
     }
     
-    fn device_name_py(&self) -> String {
+    #[pyo3(name = "device_name")]
+    fn device_name_impl(&self) -> String {
         self.device_name.clone()
     }
     
-    fn allocated_at_py(&self) -> String {
+    #[pyo3(name = "allocated_at")]
+    fn allocated_at_impl(&self) -> String {
         self.allocated_at.to_rfc3339()
     }
     
-    fn expires_at_py(&self) -> String {
+    #[pyo3(name = "expires_at")]
+    fn expires_at_impl(&self) -> String {
         self.expires_at.to_rfc3339()
     }
     
-    fn request_py(&self) -> DMSCResourceRequest {
+    #[pyo3(name = "request")]
+    fn request_impl(&self) -> DMSCResourceRequest {
         self.request.clone()
     }
     
-    fn is_expired_py(&self) -> bool {
+    #[pyo3(name = "is_expired")]
+    fn is_expired_impl(&self) -> bool {
         chrono::Utc::now() > self.expires_at
     }
     
-    fn remaining_time_py(&self) -> i64 {
+    #[pyo3(name = "remaining_time")]
+    fn remaining_time_impl(&self) -> i64 {
         (self.expires_at - chrono::Utc::now()).num_seconds()
     }
     

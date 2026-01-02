@@ -1,4 +1,4 @@
-//! Copyright © 2025 Wenze Wei. All Rights Reserved.
+//! Copyright © 2025-2026 Wenze Wei. All Rights Reserved.
 //!
 //! This file is part of DMSC.
 //! The DMSC project belongs to the Dunimd Team.
@@ -125,7 +125,8 @@ impl DMSCDeviceController {
         Self::default()
     }
     
-    fn discover_devices_py(&mut self) -> PyResult<super::DMSCDiscoveryResult> {
+    #[pyo3(name = "discover_devices")]
+    fn discover_devices_impl(&mut self) -> PyResult<super::DMSCDiscoveryResult> {
         let rt = tokio::runtime::Runtime::new().map_err(|e| {
             pyo3::exceptions::PyRuntimeError::new_err(format!("Failed to create runtime: {}", e))
         })?;
@@ -135,7 +136,8 @@ impl DMSCDeviceController {
         })
     }
     
-    fn discover_system_devices_py(&mut self, config: &DMSCDeviceControlConfig) -> PyResult<()> {
+    #[pyo3(name = "discover_system_devices")]
+    fn discover_system_devices_impl(&mut self, config: &DMSCDeviceControlConfig) -> PyResult<()> {
         let rt = tokio::runtime::Runtime::new().map_err(|e| {
             pyo3::exceptions::PyRuntimeError::new_err(format!("Failed to create runtime: {}", e))
         })?;
@@ -145,7 +147,8 @@ impl DMSCDeviceController {
         })
     }
     
-    fn find_suitable_device_py(&self, device_type: &DMSCDeviceType, requirements: &DMSCDeviceCapabilities) -> PyResult<Option<DMSCDevice>> {
+    #[pyo3(name = "find_suitable_device")]
+    fn find_suitable_device_impl(&self, device_type: &DMSCDeviceType, requirements: &DMSCDeviceCapabilities) -> PyResult<Option<DMSCDevice>> {
         let rt = tokio::runtime::Runtime::new().map_err(|e| {
             pyo3::exceptions::PyRuntimeError::new_err(format!("Failed to create runtime: {}", e))
         })?;
@@ -155,7 +158,8 @@ impl DMSCDeviceController {
         })
     }
     
-    fn allocate_device_py(&mut self, device_id: &str, allocation_id: &str) -> PyResult<()> {
+    #[pyo3(name = "allocate_device")]
+    fn allocate_device_impl(&mut self, device_id: &str, allocation_id: &str) -> PyResult<()> {
         let rt = tokio::runtime::Runtime::new().map_err(|e| {
             pyo3::exceptions::PyRuntimeError::new_err(format!("Failed to create runtime: {}", e))
         })?;
@@ -165,7 +169,8 @@ impl DMSCDeviceController {
         })
     }
     
-    fn release_device_by_allocation_py(&mut self, allocation_id: &str) -> PyResult<()> {
+    #[pyo3(name = "release_device_by_allocation")]
+    fn release_device_by_allocation_impl(&mut self, allocation_id: &str) -> PyResult<()> {
         let rt = tokio::runtime::Runtime::new().map_err(|e| {
             pyo3::exceptions::PyRuntimeError::new_err(format!("Failed to create runtime: {}", e))
         })?;
@@ -175,17 +180,20 @@ impl DMSCDeviceController {
         })
     }
     
-    fn get_all_devices_py(&self) -> Vec<DMSCDevice> {
+    #[pyo3(name = "get_all_devices")]
+    fn get_all_devices_impl(&self) -> Vec<DMSCDevice> {
         self.get_all_devices()
     }
     
-    fn release_all_devices_py(&mut self) -> PyResult<()> {
+    #[pyo3(name = "release_all_devices")]
+    fn release_all_devices_impl(&mut self) -> PyResult<()> {
         self.release_all_devices().map_err(|e| {
             pyo3::exceptions::PyRuntimeError::new_err(format!("Failed to release all devices: {}", e))
         })
     }
     
-    fn perform_health_checks_py(&mut self) -> PyResult<Vec<(String, u8)>> {
+    #[pyo3(name = "perform_health_checks")]
+    fn perform_health_checks_impl(&mut self) -> PyResult<Vec<(String, u8)>> {
         let rt = tokio::runtime::Runtime::new().map_err(|e| {
             pyo3::exceptions::PyRuntimeError::new_err(format!("Failed to create runtime: {}", e))
         })?;
@@ -195,7 +203,8 @@ impl DMSCDeviceController {
         })
     }
     
-    fn get_device_health_py(&self, device_id: &str) -> PyResult<super::core::DMSCDeviceHealthMetrics> {
+    #[pyo3(name = "get_device_health")]
+    fn get_device_health_impl(&self, device_id: &str) -> PyResult<super::core::DMSCDeviceHealthMetrics> {
         let rt = tokio::runtime::Runtime::new().map_err(|e| {
             pyo3::exceptions::PyRuntimeError::new_err(format!("Failed to create runtime: {}", e))
         })?;
@@ -205,7 +214,8 @@ impl DMSCDeviceController {
         })
     }
     
-    fn get_all_device_health_py(&self) -> PyResult<std::collections::HashMap<String, super::core::DMSCDeviceHealthMetrics>> {
+    #[pyo3(name = "get_all_device_health")]
+    fn get_all_device_health_impl(&self) -> PyResult<std::collections::HashMap<String, super::core::DMSCDeviceHealthMetrics>> {
         let rt = tokio::runtime::Runtime::new().map_err(|e| {
             pyo3::exceptions::PyRuntimeError::new_err(format!("Failed to create runtime: {}", e))
         })?;
@@ -215,11 +225,13 @@ impl DMSCDeviceController {
         })
     }
     
-    fn device_count_py(&self) -> usize {
+    #[pyo3(name = "device_count")]
+    fn device_count_impl(&self) -> usize {
         self.devices.len()
     }
     
-    fn get_devices_by_type_py(&self, device_type: &DMSCDeviceType) -> Vec<DMSCDevice> {
+    #[pyo3(name = "get_devices_by_type")]
+    fn get_devices_by_type_impl(&self, device_type: &DMSCDeviceType) -> Vec<DMSCDevice> {
         let device_ids = match self.device_type_index.get(device_type) {
             Some(ids) => ids.clone(),
             None => return Vec::new(),
@@ -236,7 +248,8 @@ impl DMSCDeviceController {
         devices
     }
     
-    fn start_health_checks_py(&self, interval_secs: u64) -> PyResult<String> {
+    #[pyo3(name = "start_health_checks")]
+    fn start_health_checks_impl(&self, interval_secs: u64) -> PyResult<String> {
         let _handle = self.start_health_checks(interval_secs);
         Ok(format!("Health check task started with interval {} seconds", interval_secs))
     }

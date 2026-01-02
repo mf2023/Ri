@@ -1,4 +1,4 @@
-//! Copyright © 2025 Wenze Wei. All Rights Reserved.
+//! Copyright © 2025-2026 Wenze Wei. All Rights Reserved.
 //!
 //! This file is part of DMSC.
 //! The DMSC project belongs to the Dunimd Team.
@@ -804,7 +804,8 @@ impl DMSCHealthChecker {
     }
     
     /// Get service health summary from Python
-    fn get_service_health_summary_py(&self, _service_name: String) -> PyResult<DMSCHealthSummary> {
+    #[pyo3(name = "get_service_health_summary")]
+    fn get_service_health_summary_impl(&self, _service_name: String) -> PyResult<DMSCHealthSummary> {
         // For now, we'll return an error since we can't easily run async code from Python
         // In a real implementation, you'd want to integrate with Python's async runtime
         Err(pyo3::exceptions::PyRuntimeError::new_err("Async health check not supported from Python yet"))

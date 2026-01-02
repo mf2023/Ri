@@ -1,4 +1,4 @@
-//! Copyright © 2025 Wenze Wei. All Rights Reserved.
+//! Copyright © 2025-2026 Wenze Wei. All Rights Reserved.
 //!
 //! This file is part of DMSC.
 //! The DMSC project belongs to the Dunimd Team.
@@ -615,7 +615,8 @@ impl DMSCTracer {
     }
 
     /// Start a new trace from Python
-    fn start_trace_py(&self, name: String) -> PyResult<Option<String>> {
+    #[pyo3(name = "start_trace")]
+    fn start_trace_impl(&self, name: String) -> PyResult<Option<String>> {
         match self.start_trace(name) {
             Some(trace_id) => Ok(Some(trace_id.as_str().to_string())),
             None => Ok(None),
@@ -623,7 +624,8 @@ impl DMSCTracer {
     }
 
     /// Start a new span from Python using current context
-    fn start_span_from_context_py(&self, name: String, kind: String) -> PyResult<Option<String>> {
+    #[pyo3(name = "start_span_from_context")]
+    fn start_span_from_context_impl(&self, name: String, kind: String) -> PyResult<Option<String>> {
         let span_kind = match kind.as_str() {
             "Server" => DMSCSpanKind::Server,
             "Client" => DMSCSpanKind::Client,
@@ -639,7 +641,8 @@ impl DMSCTracer {
     }
 
     /// End a span from Python
-    fn end_span_py(&self, span_id: String, status: String) -> PyResult<()> {
+    #[pyo3(name = "end_span")]
+    fn end_span_impl(&self, span_id: String, status: String) -> PyResult<()> {
         let span_id_obj = DMSCSpanId::from_string(span_id);
         let span_status = match status.as_str() {
             "Ok" => DMSCSpanStatus::Ok,
@@ -652,7 +655,8 @@ impl DMSCTracer {
     }
 
     /// Set span attribute from Python
-    fn span_set_attribute_py(&self, span_id: String, key: String, value: String) -> PyResult<()> {
+    #[pyo3(name = "span_set_attribute")]
+    fn span_set_attribute_impl(&self, span_id: String, key: String, value: String) -> PyResult<()> {
         let span_id_obj = DMSCSpanId::from_string(span_id);
         self.span_mut(&span_id_obj, |span| {
             span.set_attribute(key, value);
@@ -661,7 +665,8 @@ impl DMSCTracer {
     }
 
     /// Add span event from Python
-    fn span_add_event_py(&self, span_id: String, name: String, attributes: HashMap<String, String>) -> PyResult<()> {
+    #[pyo3(name = "span_add_event")]
+    fn span_add_event_impl(&self, span_id: String, name: String, attributes: HashMap<String, String>) -> PyResult<()> {
         let span_id_obj = DMSCSpanId::from_string(span_id);
         self.span_mut(&span_id_obj, |span| {
             span.add_event(name, attributes);
@@ -670,7 +675,8 @@ impl DMSCTracer {
     }
 
     /// Export traces from Python
-    fn export_traces_py(&self) -> PyResult<HashMap<String, Vec<PyObject>>> {
+    #[pyo3(name = "export_traces")]
+    fn export_traces_impl(&self) -> PyResult<HashMap<String, Vec<PyObject>>> {
         let traces = self.export_traces();
         let mut result = HashMap::new();
 
@@ -700,12 +706,14 @@ impl DMSCTracer {
     }
 
     /// Get active trace count from Python
-    fn active_trace_count_py(&self) -> usize {
+    #[pyo3(name = "active_trace_count")]
+    fn active_trace_count_impl(&self) -> usize {
         self.active_trace_count()
     }
 
     /// Get active span count from Python
-    fn active_span_count_py(&self) -> usize {
+    #[pyo3(name = "active_span_count")]
+    fn active_span_count_impl(&self) -> usize {
         self.active_span_count()
     }
 }

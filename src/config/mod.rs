@@ -1,4 +1,4 @@
-//! Copyright © 2025 Wenze Wei. All Rights Reserved.
+//! Copyright © 2025-2026 Wenze Wei. All Rights Reserved.
 //!
 //! This file is part of DMSC.
 //! The DMSC project belongs to the Dunimd Team.
@@ -218,13 +218,13 @@ impl DMSCConfig {
         Self::new()
     }
     
-    /// Sets a configuration value from Python
-    fn set_py(&mut self, key: String, value: String) {
+    #[pyo3(name = "set")]
+    fn set_impl(&mut self, key: String, value: String) {
         self.set(key, value);
     }
     
-    /// Gets a configuration value as string from Python
-    fn get_py(&self, key: String) -> Option<String> {
+    #[pyo3(name = "get")]
+    fn get_impl(&self, key: String) -> Option<String> {
         self.get(&key).cloned()
     }
 }
@@ -641,17 +641,50 @@ impl DMSCConfigManager {
     }
     
     /// Adds a file-based configuration source from Python
-    fn add_file_source_py(&mut self, path: String) {
+    ///
+    /// ## Supported Formats
+    ///
+    /// - `.json`: JSON configuration format
+    /// - `.yaml`, `.yml`: YAML configuration format
+    /// - `.toml`: TOML configuration format
+    #[pyo3(name = "add_file_source")]
+    fn add_file_source_impl(&mut self, path: String) {
         self.add_file_source(path);
     }
-    
+
     /// Adds environment variables as a configuration source from Python
-    fn add_environment_source_py(&mut self) {
+    ///
+    /// Environment variables are prefixed with `DMSC_` and double underscores
+    /// are converted to dots (`.`) in the configuration key hierarchy.
+    /// Example: `DMSC_DATABASE__HOST` becomes `database.host`
+    #[pyo3(name = "add_environment_source")]
+    fn add_environment_source_impl(&mut self) {
         self.add_environment_source();
     }
-    
-    /// Gets the configuration value as string from Python
-    fn get_config_py(&self, key: String) -> Option<String> {
-        self.config().get_py(key)
+
+    /// Gets a configuration value as string from Python
+    ///
+    /// This method retrieves a configuration value by key, returning it as a string.
+    /// If the key does not exist, returns `None`.
+    ///
+    /// ## Parameters
+    ///
+    /// - `key`: Configuration key string (dot-notation supported, e.g., "server.port")
+    ///
+    /// ## Returns
+    ///
+    /// Optional string containing the configuration value if found, `None` otherwise
+    ///
+    /// ## Example
+    ///
+    /// ```python
+    /// manager = DMSCConfigManager.new_default()
+    /// value = manager.get("server.port")
+    /// if value:
+    ///     print(f"Server port: {value}")
+    /// ```
+    #[pyo3(name = "get")]
+    fn get_config_impl(&self, key: String) -> Option<String> {
+        self.config().get(&key).cloned()
     }
 }

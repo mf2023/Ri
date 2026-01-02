@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-# Copyright © 2025 Wenze Wei. All Rights Reserved.
+# Copyright © 2025-2026 Wenze Wei. All Rights Reserved.
 #
 # This file is part of DMSC.
 # The DMSC project belongs to the Dunimd Team.

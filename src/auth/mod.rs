@@ -1,4 +1,4 @@
-//! Copyright © 2025 Wenze Wei. All Rights Reserved.
+//! Copyright © 2025-2026 Wenze Wei. All Rights Reserved.
 //!
 //! This file is part of DMSC.
 //! The DMSC project belongs to the Dunimd Team.
@@ -291,28 +291,23 @@ impl DMSCAuthModule {
         Ok(Self::new(config))
     }
     
-    /// Get JWT manager from Python
-    fn jwt_manager_py(&self) -> PyResult<DMSCJWTManager> {
-        // Create a new JWT manager with the same configuration
+    #[pyo3(name = "jwt_manager")]
+    fn jwt_manager_impl(&self) -> PyResult<DMSCJWTManager> {
         Ok(DMSCJWTManager::new(self.jwt_manager.get_secret().to_string(), self.jwt_manager.get_token_expiry()))
     }
     
-    /// Get session manager from Python
-    fn session_manager_py(&self) -> PyResult<DMSCSessionManager> {
-        // For now, return a new session manager with the same timeout
-        // In a real implementation, you'd want to properly clone the state
+    #[pyo3(name = "session_manager")]
+    fn session_manager_impl(&self) -> PyResult<DMSCSessionManager> {
         Ok(DMSCSessionManager::new(self.config.session_timeout_secs))
     }
     
-    /// Get permission manager from Python
-    fn permission_manager_py(&self) -> PyResult<DMSCPermissionManager> {
-        // Return a new permission manager
+    #[pyo3(name = "permission_manager")]
+    fn permission_manager_impl(&self) -> PyResult<DMSCPermissionManager> {
         Ok(DMSCPermissionManager::new())
     }
     
-    /// Get OAuth manager from Python
-    fn oauth_manager_py(&self) -> PyResult<DMSCOAuthManager> {
-        // Create a new OAuth manager with a memory cache
+    #[pyo3(name = "oauth_manager")]
+    fn oauth_manager_impl(&self) -> PyResult<DMSCOAuthManager> {
         let cache = Arc::new(crate::cache::DMSCMemoryCache::new());
         Ok(DMSCOAuthManager::new(cache))
     }

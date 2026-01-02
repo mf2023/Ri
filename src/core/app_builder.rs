@@ -430,33 +430,26 @@ impl DMSCAppBuilder {
 #[pyo3::prelude::pymethods]
 impl DMSCAppBuilder {
         #[new]
-        fn py_new() -> Self {
-            Self::new()
-        }
-        
-        /// Add a configuration file from Python (creates a new builder)
-        fn with_config_py(&mut self, config_path: String) -> PyResult<()> {
-            // Since we can't clone modules, we'll modify self directly
+        #[pyo3(name = "with_config")]
+        fn with_config_impl(&mut self, config_path: String) -> PyResult<()> {
             self.config_paths.push(config_path);
             Ok(())
         }
         
-        /// Set custom logging configuration from Python
-        fn with_logging_py(&mut self, logging_config: crate::log::DMSCLogConfig) -> PyResult<()> {
-            // Since we can't clone modules, we'll modify self directly
+        #[pyo3(name = "with_logging")]
+        fn with_logging_impl(&mut self, logging_config: crate::log::DMSCLogConfig) -> PyResult<()> {
             self.logging_config = Some(logging_config);
             Ok(())
         }
         
-        /// Set custom observability configuration from Python
-        fn with_observability_py(&mut self, observability_config: crate::observability::DMSCObservabilityConfig) -> PyResult<()> {
-            // Since we can't clone modules, we'll modify self directly
+        #[pyo3(name = "with_observability")]
+        fn with_observability_impl(&mut self, observability_config: crate::observability::DMSCObservabilityConfig) -> PyResult<()> {
             self.observability_config = Some(observability_config);
             Ok(())
         }
         
-        /// Add a Python module to the application
-        fn with_python_module_py(&mut self, module: &crate::core::module::PythonModuleAdapter) -> PyResult<()> {
+        #[pyo3(name = "with_python_module")]
+        fn with_python_module_impl(&mut self, module: &crate::core::module::PythonModuleAdapter) -> PyResult<()> {
             self.modules.push(ModuleSlot { 
                 module: ModuleType::Async(Box::new(module.clone())), 
                 failed: false 
@@ -464,7 +457,6 @@ impl DMSCAppBuilder {
             Ok(())
         }
         
-        /// Add a Python module from PyDMSCModule
         fn with_py_dmsc_module(&mut self, py_module: &crate::core::module::PyDMSCModule) -> PyResult<()> {
             let adapter = crate::core::module::PythonModuleAdapter {
                 name: py_module.name().to_string(),
@@ -479,9 +471,8 @@ impl DMSCAppBuilder {
             Ok(())
         }
         
-        /// Build the application runtime from Python
-        fn build_py(&mut self) -> PyResult<super::app_runtime::DMSCAppRuntime> {
-            // Clone the current state and build from it
+        #[pyo3(name = "build")]
+        fn build_impl(&mut self) -> PyResult<super::app_runtime::DMSCAppRuntime> {
             let modules = std::mem::take(&mut self.modules);
             let config_paths = std::mem::take(&mut self.config_paths);
             let logging_config = self.logging_config.take();

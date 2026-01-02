@@ -1,4 +1,4 @@
-//! Copyright © 2025 Wenze Wei. All Rights Reserved.
+//! Copyright © 2025-2026 Wenze Wei. All Rights Reserved.
 //!
 //! This file is part of DMSC.
 //! The DMSC project belongs to the Dunimd Team.
@@ -650,17 +650,20 @@ impl DMSCObservabilityData {
     }
     
     /// Get metrics data from Python
-    fn get_metrics_py(&self) -> String {
+    #[pyo3(name = "get_metrics")]
+    fn get_metrics_impl(&self) -> String {
         self.metrics.clone()
     }
     
     /// Get active traces count from Python
-    fn get_active_traces_py(&self) -> usize {
+    #[pyo3(name = "get_active_traces")]
+    fn get_active_traces_impl(&self) -> usize {
         self.active_traces
     }
     
     /// Get active spans count from Python
-    fn get_active_spans_py(&self) -> usize {
+    #[pyo3(name = "get_active_spans")]
+    fn get_active_spans_impl(&self) -> usize {
         self.active_spans
     }
 }

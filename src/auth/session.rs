@@ -438,22 +438,18 @@ impl DMSCSessionManager {
         Ok(Self::new(timeout_secs))
     }
     
-    /// Create a session from Python
-    fn create_session_py(&self, _user_id: String, _ip_address: Option<String>, _user_agent: Option<String>) -> PyResult<String> {
-        // For now, we'll return an error since we can't easily run async code from Python
-        // In a real implementation, you'd want to integrate with Python's async runtime
+    #[pyo3(name = "create_session")]
+    fn create_session_impl(&self, _user_id: String, _ip_address: Option<String>, _user_agent: Option<String>) -> PyResult<String> {
         Err(pyo3::exceptions::PyRuntimeError::new_err("Async session creation not supported from Python yet"))
     }
     
-    /// Get session from Python
-    fn get_session_py(&self, _session_id: String) -> PyResult<DMSCSession> {
-        // For now, we'll return an error since we can't easily run async code from Python
-        // In a real implementation, you'd want to integrate with Python's async runtime
+    #[pyo3(name = "get_session")]
+    fn get_session_impl(&self, _session_id: String) -> PyResult<DMSCSession> {
         Err(pyo3::exceptions::PyRuntimeError::new_err("Async session retrieval not supported from Python yet"))
     }
     
-    /// Get timeout from Python
-    fn get_timeout_py(&self) -> u64 {
+    #[pyo3(name = "get_timeout")]
+    fn get_timeout_impl(&self) -> u64 {
         self.get_timeout()
     }
 }

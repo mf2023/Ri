@@ -1,4 +1,4 @@
-//! Copyright © 2025 Wenze Wei. All Rights Reserved.
+//! Copyright © 2025-2026 Wenze Wei. All Rights Reserved.
 //!
 //! This file is part of DMSC.
 //! The DMSC project belongs to the Dunimd Team.
@@ -445,21 +445,25 @@ impl DMSCMetricsRegistry {
     }
     
     /// Register a metric from Python
-    fn register_py(&self, _metric: pyo3::PyObject) -> Result<(), pyo3::PyErr> {
+    #[pyo3(name = "register")]
+    fn register_impl(&self, _metric: pyo3::PyObject) -> Result<(), pyo3::PyErr> {
         Ok(())
     }
     
-    fn get_metric_py(&self, _name: String) -> Result<pyo3::PyObject, pyo3::PyErr> {
+    #[pyo3(name = "get_metric")]
+    fn get_metric_impl(&self, _name: String) -> Result<pyo3::PyObject, pyo3::PyErr> {
         Err(pyo3::exceptions::PyNotImplementedError::new_err("Metric retrieval not implemented"))
     }
     
     /// Get all metric names from Python
-    fn get_all_metric_names_py(&self) -> Vec<String> {
+    #[pyo3(name = "get_all_metric_names")]
+    fn get_all_metric_names_impl(&self) -> Vec<String> {
         self.metrics.read().unwrap().keys().cloned().collect()
     }
     
     /// Export metrics in Prometheus format from Python
-    fn export_prometheus_py(&self) -> String {
+    #[pyo3(name = "export_prometheus")]
+    fn export_prometheus_impl(&self) -> String {
         #[cfg(feature = "observability")]
         {
             self.export_prometheus()
@@ -471,7 +475,8 @@ impl DMSCMetricsRegistry {
     }
     
     /// Get metric count from Python
-    fn get_metric_count_py(&self) -> usize {
+    #[pyo3(name = "get_metric_count")]
+    fn get_metric_count_impl(&self) -> usize {
         self.metrics.read().unwrap().len()
     }
 }

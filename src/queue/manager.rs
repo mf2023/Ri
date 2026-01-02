@@ -1,4 +1,4 @@
-//! Copyright © 2025 Wenze Wei. All Rights Reserved.
+//! Copyright © 2025-2026 Wenze Wei. All Rights Reserved.
 //!
 //! This file is part of DMSC.
 //! The DMSC project belongs to the Dunimd Team.
@@ -586,7 +586,8 @@ impl DMSCQueueManager {
 #[cfg(feature = "pyo3")]
 #[pyo3::prelude::pymethods]
 impl DMSCQueueManager {
-    fn create_queue_py(&self, name: String) -> PyResult<String> {
+    #[pyo3(name = "create_queue")]
+    fn create_queue_impl(&self, name: String) -> PyResult<String> {
         let rt = tokio::runtime::Runtime::new().map_err(|e| {
             pyo3::exceptions::PyRuntimeError::new_err(format!("Failed to create runtime: {}", e))
         })?;
@@ -599,7 +600,8 @@ impl DMSCQueueManager {
         })
     }
     
-    fn get_queue_py(&self, name: String) -> PyResult<Option<()>> {
+    #[pyo3(name = "get_queue")]
+    fn get_queue_impl(&self, name: String) -> PyResult<Option<()>> {
         let rt = tokio::runtime::Runtime::new().map_err(|e| {
             pyo3::exceptions::PyRuntimeError::new_err(format!("Failed to create runtime: {}", e))
         })?;
@@ -609,7 +611,8 @@ impl DMSCQueueManager {
         }))
     }
     
-    fn list_queues_py(&self) -> PyResult<Vec<String>> {
+    #[pyo3(name = "list_queues")]
+    fn list_queues_impl(&self) -> PyResult<Vec<String>> {
         let rt = tokio::runtime::Runtime::new().map_err(|e| {
             pyo3::exceptions::PyRuntimeError::new_err(format!("Failed to create runtime: {}", e))
         })?;
@@ -619,7 +622,8 @@ impl DMSCQueueManager {
         }))
     }
     
-    fn delete_queue_py(&self, name: String) -> PyResult<()> {
+    #[pyo3(name = "delete_queue")]
+    fn delete_queue_impl(&self, name: String) -> PyResult<()> {
         let rt = tokio::runtime::Runtime::new().map_err(|e| {
             pyo3::exceptions::PyRuntimeError::new_err(format!("Failed to create runtime: {}", e))
         })?;

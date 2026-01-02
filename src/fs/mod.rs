@@ -1,4 +1,4 @@
-//! Copyright © 2025 Wenze Wei. All Rights Reserved.
+//! Copyright © 2025-2026 Wenze Wei. All Rights Reserved.
 //!
 //! This file is part of DMSC.
 //! The DMSC project belongs to the Dunimd Team.
@@ -680,128 +680,127 @@ impl DMSCFileSystem {
             .map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(format!("Failed to create filesystem: {e}")))
     }
     
-    /// Atomically write text to a file from Python
-    fn atomic_write_text_py(&self, path: String, text: String) -> Result<(), pyo3::PyErr> {
+    #[pyo3(name = "atomic_write_text")]
+    fn atomic_write_text_impl(&self, path: String, text: String) -> Result<(), pyo3::PyErr> {
         self.atomic_write_text(&path, &text)
             .map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(format!("Failed to write text: {e}")))
     }
     
-    /// Atomically write bytes to a file from Python
-    fn atomic_write_bytes_py(&self, path: String, data: Vec<u8>) -> Result<(), pyo3::PyErr> {
+    #[pyo3(name = "atomic_write_bytes")]
+    fn atomic_write_bytes_impl(&self, path: String, data: Vec<u8>) -> Result<(), pyo3::PyErr> {
         self.atomic_write_bytes(&path, &data)
             .map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(format!("Failed to write bytes: {e}")))
     }
     
-    /// Read text from a file from Python
-    fn read_text_py(&self, path: String) -> Result<String, pyo3::PyErr> {
+    #[pyo3(name = "read_text")]
+    fn read_text_impl(&self, path: String) -> Result<String, pyo3::PyErr> {
         self.read_text(&path)
             .map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(format!("Failed to read text: {e}")))
     }
     
-    /// Write JSON to a file from Python
-    fn write_json_py(&self, path: String, value: String) -> Result<(), pyo3::PyErr> {
-        // Parse JSON string first
+    #[pyo3(name = "write_json")]
+    fn write_json_impl(&self, path: String, value: String) -> Result<(), pyo3::PyErr> {
         let json_value: serde_json::Value = serde_json::from_str(&value)
             .map_err(|e| pyo3::exceptions::PyValueError::new_err(format!("Invalid JSON: {e}")))?;
         self.write_json(&path, &json_value)
             .map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(format!("Failed to write JSON: {e}")))
     }
     
-    /// Read JSON from a file from Python
-    fn read_json_py(&self, path: String) -> Result<String, pyo3::PyErr> {
+    #[pyo3(name = "read_json")]
+    fn read_json_impl(&self, path: String) -> Result<String, pyo3::PyErr> {
         let json_value: serde_json::Value = self.read_json(&path)
             .map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(format!("Failed to read JSON: {e}")))?;
         serde_json::to_string_pretty(&json_value)
             .map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(format!("Failed to serialize JSON: {e}")))
     }
     
-    /// Check if a file or directory exists from Python
-    fn exists_py(&self, path: String) -> bool {
+    #[pyo3(name = "exists")]
+    fn exists_impl(&self, path: String) -> bool {
         self.exists(&path)
     }
     
-    /// Remove a file from Python
-    fn remove_file_py(&self, path: String) -> Result<(), pyo3::PyErr> {
+    #[pyo3(name = "remove_file")]
+    fn remove_file_impl(&self, path: String) -> Result<(), pyo3::PyErr> {
         self.remove_file(&path)
             .map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(format!("Failed to remove file: {e}")))
     }
     
-    /// Remove a directory and all its contents from Python
-    fn remove_dir_all_py(&self, path: String) -> Result<(), pyo3::PyErr> {
+    #[pyo3(name = "remove_dir_all")]
+    fn remove_dir_all_impl(&self, path: String) -> Result<(), pyo3::PyErr> {
         self.remove_dir_all(&path)
             .map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(format!("Failed to remove directory: {e}")))
     }
     
-    /// Copy a file from one path to another from Python
-    fn copy_file_py(&self, from: String, to: String) -> Result<(), pyo3::PyErr> {
+    #[pyo3(name = "copy_file")]
+    fn copy_file_impl(&self, from: String, to: String) -> Result<(), pyo3::PyErr> {
         self.copy_file(&from, &to)
             .map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(format!("Failed to copy file: {e}")))
     }
     
-    /// Append text to a file from Python
-    fn append_text_py(&self, path: String, text: String) -> Result<(), pyo3::PyErr> {
+    #[pyo3(name = "append_text")]
+    fn append_text_impl(&self, path: String, text: String) -> Result<(), pyo3::PyErr> {
         self.append_text(&path, &text)
             .map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(format!("Failed to append text: {e}")))
     }
     
-    /// Safely create a directory from Python
-    fn safe_mkdir_py(&self, path: String) -> Result<String, pyo3::PyErr> {
+    #[pyo3(name = "safe_mkdir")]
+    fn safe_mkdir_impl(&self, path: String) -> Result<String, pyo3::PyErr> {
         let result = self.safe_mkdir(&path)
             .map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(format!("Failed to create directory: {e}")))?;
         Ok(result.to_string_lossy().to_string())
     }
     
-    /// Ensure parent directory exists from Python
-    fn ensure_parent_dir_py(&self, path: String) -> Result<String, pyo3::PyErr> {
+    #[pyo3(name = "ensure_parent_dir")]
+    fn ensure_parent_dir_impl(&self, path: String) -> Result<String, pyo3::PyErr> {
         let result = self.ensure_parent_dir(&path)
             .map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(format!("Failed to ensure parent directory: {e}")))?;
         Ok(result.to_string_lossy().to_string())
     }
     
-    /// Get the project root directory from Python
-    fn get_project_root_py(&self) -> String {
+    #[pyo3(name = "get_project_root")]
+    fn get_project_root_impl(&self) -> String {
         self.project_root().to_string_lossy().to_string()
     }
     
-    /// Get the application data directory from Python
-    fn get_app_dir_py(&self) -> String {
+    #[pyo3(name = "get_app_dir")]
+    fn get_app_dir_impl(&self) -> String {
         self.app_dir().to_string_lossy().to_string()
     }
     
-    /// Get the logs directory from Python
-    fn get_logs_dir_py(&self) -> String {
+    #[pyo3(name = "get_logs_dir")]
+    fn get_logs_dir_impl(&self) -> String {
         self.logs_dir().to_string_lossy().to_string()
     }
     
-    /// Get the cache directory from Python
-    fn get_cache_dir_py(&self) -> String {
+    #[pyo3(name = "get_cache_dir")]
+    fn get_cache_dir_impl(&self) -> String {
         self.cache_dir().to_string_lossy().to_string()
     }
     
-    /// Get the reports directory from Python
-    fn get_reports_dir_py(&self) -> String {
+    #[pyo3(name = "get_reports_dir")]
+    fn get_reports_dir_impl(&self) -> String {
         self.reports_dir().to_string_lossy().to_string()
     }
     
-    /// Get the observability directory from Python
-    fn get_observability_dir_py(&self) -> String {
+    #[pyo3(name = "get_observability_dir")]
+    fn get_observability_dir_impl(&self) -> String {
         self.observability_dir().to_string_lossy().to_string()
     }
     
-    /// Get the temporary directory from Python
-    fn get_temp_dir_py(&self) -> String {
+    #[pyo3(name = "get_temp_dir")]
+    fn get_temp_dir_impl(&self) -> String {
         self.temp_dir().to_string_lossy().to_string()
     }
     
-    /// Ensure a path exists under a specific category directory from Python
-    fn ensure_category_path_py(&self, category: String, path_or_name: String) -> String {
+    #[pyo3(name = "ensure_category_path")]
+    fn ensure_category_path_impl(&self, category: String, path_or_name: String) -> String {
         self.ensure_category_path(&category, &path_or_name)
             .to_string_lossy()
             .to_string()
     }
     
-    /// Normalize a path under a specific category directory from Python
-    fn normalize_under_category_py(&self, category: String, path_or_name: String) -> String {
+    #[pyo3(name = "normalize_under_category")]
+    fn normalize_under_category_impl(&self, category: String, path_or_name: String) -> String {
         self.normalize_under_category(&category, &path_or_name)
             .to_string_lossy()
             .to_string()

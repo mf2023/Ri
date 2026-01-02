@@ -595,31 +595,23 @@ impl DMSCPermissionManager {
         Ok(Self::new())
     }
     
-    /// Create a permission from Python
-    fn create_permission_py(&self, _permission: DMSCPermission) -> PyResult<()> {
-        // For now, we'll return an error since we can't easily run async code from Python
-        // In a real implementation, you'd want to integrate with Python's async runtime
+    #[pyo3(name = "create_permission")]
+    fn create_permission_impl(&self, _permission: DMSCPermission) -> PyResult<()> {
         Err(pyo3::exceptions::PyRuntimeError::new_err("Async permission creation not supported from Python yet"))
     }
     
-    /// Create a role from Python
-    fn create_role_py(&self, _role: DMSCRole) -> PyResult<()> {
-        // For now, we'll return an error since we can't easily run async code from Python
-        // In a real implementation, you'd want to integrate with Python's async runtime
+    #[pyo3(name = "create_role")]
+    fn create_role_impl(&self, _role: DMSCRole) -> PyResult<()> {
         Err(pyo3::exceptions::PyRuntimeError::new_err("Async role creation not supported from Python yet"))
     }
     
-    /// Assign role to user from Python
-    fn assign_role_to_user_py(&self, _user_id: String, _role_id: String) -> PyResult<()> {
-        // For now, we'll return an error since we can't easily run async code from Python
-        // In a real implementation, you'd want to integrate with Python's async runtime
+    #[pyo3(name = "assign_role_to_user")]
+    fn assign_role_to_user_impl(&self, _user_id: String, _role_id: String) -> PyResult<()> {
         Err(pyo3::exceptions::PyRuntimeError::new_err("Async role assignment not supported from Python yet"))
     }
     
-    /// Check if user has permission from Python
-    fn has_permission_py(&self, _user_id: String, _permission_id: String) -> PyResult<bool> {
-        // For now, we'll return an error since we can't easily run async code from Python
-        // In a real implementation, you'd want to integrate with Python's async runtime
+    #[pyo3(name = "has_permission")]
+    fn has_permission_impl(&self, _user_id: String, _permission_id: String) -> PyResult<bool> {
         Err(pyo3::exceptions::PyRuntimeError::new_err("Async permission checking not supported from Python yet"))
     }
 }

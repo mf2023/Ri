@@ -179,11 +179,13 @@ impl CachedValue {
         Self::new(String::new(), None)
     }
     
-    fn is_expired_py(&self) -> bool {
+    #[pyo3(name = "is_expired")]
+    fn is_expired_impl(&self) -> bool {
         self.is_expired()
     }
     
-    fn touch_py(&mut self) {
+    #[pyo3(name = "touch")]
+    fn touch_impl(&mut self) {
         self.touch()
     }
 }

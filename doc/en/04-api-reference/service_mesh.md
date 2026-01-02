@@ -1,0 +1,324 @@
+<div align="center">
+
+# ServiceMesh API Reference
+
+**Version: 0.0.3**
+
+**Last modified date: 2026-01-01**
+
+The service_mesh module provides service mesh functionality, including service discovery, health checking, traffic management, and load balancing.
+
+## Module Overview
+
+</div>
+
+The service_mesh module contains the following sub-modules:
+
+- **service_discovery**: Service discovery
+- **health_check**: Health checking
+- **traffic_management**: Traffic management
+
+<div align="center">
+
+## Core Components
+
+</div>
+
+### DMSCServiceMesh
+
+The main service mesh interface.
+
+#### Methods
+
+| Method | Description | Parameters | Returns |
+|:--------|:-------------|:--------|:--------|
+| `new(config)` | Create service mesh instance | `config: DMSCServiceMeshConfig` | `DMSCResult<Self>` |
+| `register_service(service_name, endpoint, weight)` | Register service | `service_name: &str`, `endpoint: &str`, `weight: u32` | `DMSCResult<()>` |
+| `discover_service(service_name)` | Discover service | `service_name: &str` | `DMSCResult<Vec<DMSCServiceEndpoint>>` |
+| `call_service(service_name, request_data)` | Call service | `service_name: &str`, `request_data: Vec<u8>` | `DMSCResult<Vec<u8>>` |
+| `update_service_health(service_name, endpoint, is_healthy)` | Update service health | `service_name: &str`, `endpoint: &str`, `is_healthy: bool` | `DMSCResult<()>` |
+| `get_circuit_breaker()` | Get circuit breaker | None | `&DMSCCircuitBreaker` |
+| `get_load_balancer()` | Get load balancer | None | `&DMSCLoadBalancer` |
+| `get_health_checker()` | Get health checker | None | `&DMSCHealthChecker` |
+| `get_traffic_manager()` | Get traffic manager | None | `&DMSCTrafficManager` |
+| `get_service_discovery()` | Get service discovery | None | `&DMSCServiceDiscovery` |
+
+#### Usage Example
+
+```rust
+use dms::prelude::*;
+use dms::service_mesh::{DMSCServiceMesh, DMSCServiceMeshConfig};
+
+async fn example() -> DMSCResult<()> {
+    let mesh_config = DMSCServiceMeshConfig::default();
+    
+    let service_mesh = DMSCServiceMesh::new(mesh_config)?;
+    
+    service_mesh.register_service("user-service", "http://user-service:8080", 100).await?;
+    service_mesh.register_service("order-service", "http://order-service:8080", 100).await?;
+    service_mesh.register_service("payment-service", "http://payment-service:8080", 100).await?;
+    
+    let user_service_endpoints = service_mesh.discover_service("user-service").await?;
+    println!("User service endpoints: {:?}", user_service_endpoints);
+    
+    let request_data = r#"{ "user_id": "123" }"#.as_bytes().to_vec();
+    let response = service_mesh.call_service("user-service", request_data).await?;
+    println!("Service response: {}", String::from_utf8_lossy(&response));
+    
+    let health_checker = service_mesh.get_health_checker();
+    let traffic_manager = service_mesh.get_traffic_manager();
+    let circuit_breaker = service_mesh.get_circuit_breaker();
+    let load_balancer = service_mesh.get_load_balancer();
+    
+    Ok(())
+}
+```
+
+### DMSCServiceMeshConfig
+
+Service mesh configuration.
+
+| Field | Type | Description | Default |
+|:--------|:-----|:-------------|:-------|
+| `enable_service_discovery` | `bool` | Enable service discovery | `true` |
+| `enable_health_check` | `bool` | Enable health checking | `true` |
+| `enable_traffic_management` | `bool` | Enable traffic management | `true` |
+| `health_check_interval` | `Duration` | Health check interval | `30s` |
+| `circuit_breaker_config` | `DMSCCircuitBreakerConfig` | Circuit breaker config | Default |
+| `load_balancer_strategy` | `DMSCLoadBalancerStrategy` | Load balancing strategy | `RoundRobin` |
+| `max_retry_attempts` | `u32` | Max retry attempts | `3` |
+| `retry_timeout` | `Duration` | Retry timeout | `5s` |
+
+<div align="center">
+
+## Service Discovery
+
+</div>
+
+### DMSCServiceDiscovery
+
+Service discovery component.
+
+```rust
+use dms::service_mesh::DMSCServiceDiscovery;
+
+let discovery = DMSCServiceDiscovery::new(true);
+
+discovery.start_background_tasks().await?;
+
+let endpoints = discovery.discover("user-service").await?;
+
+discovery.stop_background_tasks().await?;
+```
+
+### DMSCServiceEndpoint
+
+Service endpoint.
+
+| Field | Type | Description |
+|:--------|:-----|:-------------|
+| `service_name` | `String` | Service name |
+| `endpoint` | `String` | Endpoint URL |
+| `weight` | `u32` | Load balancing weight |
+| `metadata` | `HashMap<String, String>` | Metadata |
+| `health_status` | `DMSCServiceHealthStatus` | Health status |
+| `last_health_check` | `SystemTime` | Last health check time |
+
+### DMSCServiceHealthStatus
+
+Service health status.
+
+| Variant | Description |
+|:--------|:-------------|
+| `Healthy` | Healthy |
+| `Unhealthy` | Unhealthy |
+| `Unknown` | Unknown |
+
+<div align="center">
+
+## Health Checking
+
+</div>
+
+### DMSCHealthChecker
+
+Health checker.
+
+```rust
+use dms::service_mesh::{DMSCHealthChecker, DMSCHealthStatus};
+
+let health_checker = DMSCHealthChecker::new(Duration::from_secs(30));
+
+health_checker.start_health_check("user-service", "http://user-service:8080/health").await?;
+
+let summary = health_checker.get_health_summary().await?;
+println!("Healthy services: {}", summary.healthy_count);
+println!("Unhealthy services: {}", summary.unhealthy_count);
+
+health_checker.stop_background_tasks().await?;
+```
+
+### DMSCHealthCheckResult
+
+Health check result.
+
+```rust
+let result = health_checker.check_health("http://user-service:8080").await?;
+
+match result.status {
+    DMSCHealthStatus::Healthy => println!("Service is healthy"),
+    DMSCHealthStatus::Unhealthy => println!("Service is unhealthy: {:?}", result.error),
+    DMSCHealthStatus::Unknown => println!("Service health unknown"),
+}
+```
+
+### DMSCHealthSummary
+
+Health check summary.
+
+| Field | Type | Description |
+|:--------|:-----|:-------------|
+| `healthy_count` | `usize` | Healthy services count |
+| `unhealthy_count` | `usize` | Unhealthy services count |
+| `unknown_count` | `usize` | Unknown services count |
+| `total_services` | `usize` | Total services count |
+
+<div align="center">
+
+## Traffic Management
+
+</div>
+
+### DMSCTrafficManager
+
+Traffic manager.
+
+```rust
+use dms::service_mesh::{DMSCTrafficManager, DMSCTrafficRoute, DMSCMatchCriteria, DMSCRouteAction};
+
+let traffic_manager = DMSCTrafficManager::new(true);
+
+let route = DMSCTrafficRoute {
+    name: "api-route".to_string(),
+    match_criteria: DMSCMatchCriteria {
+        path_prefix: Some("/api/".to_string()),
+        headers: HashMap::new(),
+        methods: vec!["GET".to_string()],
+    },
+    action: DMSCRouteAction::RouteTo {
+        service_name: "api-service".to_string(),
+        weight: 100,
+    },
+    timeout: Duration::from_secs(30),
+    retry_count: 3,
+};
+
+traffic_manager.add_route(route).await?;
+
+traffic_manager.start_background_tasks().await?;
+traffic_manager.stop_background_tasks().await?;
+```
+
+### DMSCTrafficRoute
+
+Traffic route.
+
+| Field | Type | Description |
+|:--------|:-----|:-------------|
+| `name` | `String` | Route name |
+| `match_criteria` | `DMSCMatchCriteria` | Match criteria |
+| `action` | `DMSCRouteAction` | Route action |
+| `timeout` | `Duration` | Timeout |
+| `retry_count` | `u32` | Retry count |
+
+### DMSCMatchCriteria
+
+Match criteria.
+
+| Field | Type | Description |
+|:--------|:-----|:-------------|
+| `path_prefix` | `Option<String>` | Path prefix |
+| `headers` | `HashMap<String, String>` | Request headers |
+| `methods` | `Vec<String>` | HTTP methods |
+
+### DMSCRouteAction
+
+Route action.
+
+| Variant | Description |
+|:--------|:-------------|
+| `RouteTo { service_name, weight }` | Route to service |
+| `Redirect { url }` | Redirect |
+| `Rewrite { path }` | Path rewrite |
+| `CircuitBreak` | Circuit break |
+
+<div align="center">
+
+## Circuit Breaking
+
+</div>
+
+```rust
+use dms::gateway::{DMSCCircuitBreaker, DMSCCircuitBreakerConfig};
+
+let circuit_breaker = service_mesh.get_circuit_breaker();
+
+if circuit_breaker.allow_request().await {
+    println!("Request allowed");
+} else {
+    println!("Circuit breaker is open");
+}
+
+circuit_breaker.record_success().await;
+circuit_breaker.record_failure().await;
+```
+
+<div align="center">
+
+## Load Balancing
+
+</div>
+
+```rust
+use dms::gateway::DMSCLoadBalancer;
+
+let load_balancer = service_mesh.get_load_balancer();
+
+let selected_server = load_balancer.select_server(None).await?;
+println!("Selected server: {}", selected_server.url);
+
+load_balancer.add_server(DMSCBackendServer {
+    id: "new-server".to_string(),
+    url: "http://new-server:8080".to_string(),
+    weight: 100,
+    max_connections: 1000,
+    health_check_path: "/health".to_string(),
+    is_healthy: true,
+}).await;
+```
+
+<div align="center">
+
+## Best Practices
+
+</div>
+
+1. **Enable health checking**: Regularly check service health status and automatically remove unhealthy instances
+2. **Configure appropriate timeouts**: Set appropriate timeouts based on service response time
+3. **Use retry mechanism**: Automatically retry transient failures
+4. **Enable circuit breaker protection**: Prevent cascading failures
+5. **Configure load balancing**: Properly distribute requests to different instances
+6. **Monitor service status**: Regularly check service mesh status
+
+<div align="center">
+
+## Related Modules
+
+</div>
+
+- [README](./README.md): Module overview with API reference summary and quick navigation
+- [core](./core.md): Core module providing error handling and service context
+- [gateway](./gateway.md): Gateway module working with service mesh
+- [device](./device.md): Device module using service discovery
+- [log](./log.md): Logging module for service mesh events
+- [observability](./observability.md): Observability module for service performance monitoring

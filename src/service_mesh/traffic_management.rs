@@ -1,4 +1,4 @@
-//! Copyright © 2025 Wenze Wei. All Rights Reserved.
+//! Copyright © 2025-2026 Wenze Wei. All Rights Reserved.
 //!
 //! This file is part of DMSC.
 //! The DMSC project belongs to the Dunimd Team.
@@ -734,14 +734,16 @@ impl DMSCTrafficManager {
     }
     
     /// Add traffic route from Python
-    fn add_traffic_route_py(&self, _route: DMSCTrafficRoute) -> PyResult<()> {
+    #[pyo3(name = "add_traffic_route")]
+    fn add_traffic_route_impl(&self, _route: DMSCTrafficRoute) -> PyResult<()> {
         // For now, we'll return an error since we can't easily run async code from Python
         // In a real implementation, you'd want to integrate with Python's async runtime
         Err(pyo3::exceptions::PyRuntimeError::new_err("Async traffic management not supported from Python yet"))
     }
     
     /// Get traffic routes from Python
-    fn get_traffic_routes_py(&self, _service_name: String) -> PyResult<Vec<DMSCTrafficRoute>> {
+    #[pyo3(name = "get_traffic_routes")]
+    fn get_traffic_routes_impl(&self, _service_name: String) -> PyResult<Vec<DMSCTrafficRoute>> {
         // For now, we'll return an error since we can't easily run async code from Python
         // In a real implementation, you'd want to integrate with Python's async runtime
         Err(pyo3::exceptions::PyRuntimeError::new_err("Async traffic management not supported from Python yet"))

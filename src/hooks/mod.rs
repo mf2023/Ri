@@ -1,4 +1,4 @@
-//! Copyright © 2025 Wenze Wei. All Rights Reserved.
+//! Copyright © 2025-2026 Wenze Wei. All Rights Reserved.
 //!
 //! This file is part of DMSC.
 //! The DMSC project belongs to the Dunimd Team.
@@ -67,8 +67,8 @@
 /// Python methods for DMSCHookKind
 #[pyo3::prelude::pymethods]
 impl DMSCHookKind {
-    /// Get string representation of hook kind from Python
-    fn as_str_py(&self) -> &'static str {
+    #[pyo3(name = "as_str")]
+    fn as_str_impl(&self) -> &'static str {
         match self {
             DMSCHookKind::Startup => "startup",
             DMSCHookKind::Shutdown => "shutdown",
@@ -83,11 +83,10 @@ impl DMSCHookKind {
 }
 
 #[cfg(feature = "pyo3")]
-/// Python methods for DMSCModulePhase
 #[pyo3::prelude::pymethods]
 impl DMSCModulePhase {
-    /// Get string representation of module phase from Python
-    fn as_str_py(&self) -> &'static str {
+    #[pyo3(name = "as_str")]
+    fn as_str_impl(&self) -> &'static str {
         self.as_str()
     }
 }
@@ -128,25 +127,23 @@ impl DMSCHookEvent {
 impl DMSCHookBus {
     /// Create a new hook bus from Python
     #[new]
-    fn py_new() -> Self {
-        Self::new()
-    }
-    
-    /// Register a hook handler from Python
-    fn register_py(&mut self, _kind: DMSCHookKind, _id: String, _handler: pyo3::PyObject) -> Result<(), pyo3::PyErr> {
+    #[pyo3(name = "register")]
+    fn register_impl(&mut self, _kind: DMSCHookKind, _id: String, _handler: pyo3::PyObject) -> Result<(), pyo3::PyErr> {
         Ok(())
     }
     
-    fn emit_py(&self, _kind: DMSCHookKind, _ctx: pyo3::PyObject) -> Result<(), pyo3::PyErr> {
+    #[pyo3(name = "emit")]
+    fn emit_impl(&self, _kind: DMSCHookKind, _ctx: pyo3::PyObject) -> Result<(), pyo3::PyErr> {
         Ok(())
     }
     
-    fn emit_with_py(&self, _kind: DMSCHookKind, _ctx: pyo3::PyObject, _module: Option<String>, _phase: Option<DMSCModulePhase>) -> Result<(), pyo3::PyErr> {
+    #[pyo3(name = "emit_with")]
+    fn emit_with_impl(&self, _kind: DMSCHookKind, _ctx: pyo3::PyObject, _module: Option<String>, _phase: Option<DMSCModulePhase>) -> Result<(), pyo3::PyErr> {
         Ok(())
     }
     
-    /// Get all registered hook kinds from Python
-    fn get_registered_hooks_py(&self) -> Vec<String> {
+    #[pyo3(name = "get_registered_hooks")]
+    fn get_registered_hooks_impl(&self) -> Vec<String> {
         self.handlers.keys()
             .map(|kind| format!("{:?}", kind))
             .collect()

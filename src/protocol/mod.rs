@@ -468,7 +468,8 @@ impl DMSCProtocolManager {
     }
     
     /// Send a message using the current protocol (Python wrapper).
-    fn send_message_py(&self, target: String, message: Vec<u8>) -> pyo3::PyResult<Vec<u8>> {
+    #[pyo3(name = "send_message")]
+    fn send_message_impl(&self, target: String, message: Vec<u8>) -> pyo3::PyResult<Vec<u8>> {
         let rt = tokio::runtime::Runtime::new().map_err(|e| {
             pyo3::exceptions::PyRuntimeError::new_err(format!("Failed to create runtime: {}", e))
         })?;
@@ -481,7 +482,8 @@ impl DMSCProtocolManager {
     }
     
     /// Send a message using a specific protocol (Python wrapper).
-    fn send_message_with_protocol_py(&self, target: String, message: Vec<u8>, protocol_type: DMSCProtocolType) -> pyo3::PyResult<Vec<u8>> {
+    #[pyo3(name = "send_message_with_protocol")]
+    fn send_message_with_protocol_impl(&self, target: String, message: Vec<u8>, protocol_type: DMSCProtocolType) -> pyo3::PyResult<Vec<u8>> {
         let rt = tokio::runtime::Runtime::new().map_err(|e| {
             pyo3::exceptions::PyRuntimeError::new_err(format!("Failed to create runtime: {}", e))
         })?;
@@ -494,7 +496,8 @@ impl DMSCProtocolManager {
     }
     
     /// Switch to a different protocol (Python wrapper).
-    fn switch_protocol_py(&self, protocol_type: DMSCProtocolType) -> pyo3::PyResult<()> {
+    #[pyo3(name = "switch_protocol")]
+    fn switch_protocol_impl(&self, protocol_type: DMSCProtocolType) -> pyo3::PyResult<()> {
         let rt = tokio::runtime::Runtime::new().map_err(|e| {
             pyo3::exceptions::PyRuntimeError::new_err(format!("Failed to create runtime: {}", e))
         })?;
@@ -507,7 +510,8 @@ impl DMSCProtocolManager {
     }
     
     /// Get current protocol type (Python wrapper).
-    fn get_current_protocol_py(&self) -> DMSCProtocolType {
+    #[pyo3(name = "get_current_protocol")]
+    fn get_current_protocol_impl(&self) -> DMSCProtocolType {
         let rt = tokio::runtime::Runtime::new().unwrap();
         rt.block_on(async {
             self.get_current_protocol().await
@@ -515,7 +519,8 @@ impl DMSCProtocolManager {
     }
     
     /// Get protocol statistics (Python wrapper).
-    fn get_stats_py(&self) -> pyo3::PyResult<DMSCProtocolStats> {
+    #[pyo3(name = "get_stats")]
+    fn get_stats_impl(&self) -> pyo3::PyResult<DMSCProtocolStats> {
         let rt = tokio::runtime::Runtime::new().map_err(|e| {
             pyo3::exceptions::PyRuntimeError::new_err(format!("Failed to create runtime: {}", e))
         })?;

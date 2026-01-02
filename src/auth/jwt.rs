@@ -296,24 +296,24 @@ impl DMSCJWTManager {
         Ok(Self::new(secret, expiry_secs))
     }
     
-    /// Generate a JWT token from Python
-    fn generate_token_py(&self, user_id: String, roles: Vec<String>, permissions: Vec<String>) -> PyResult<String> {
+    #[pyo3(name = "generate_token")]
+    fn generate_token_impl(&self, user_id: String, roles: Vec<String>, permissions: Vec<String>) -> PyResult<String> {
         match self.generate_token(&user_id, roles, permissions) {
             Ok(token) => Ok(token),
             Err(e) => Err(pyo3::exceptions::PyRuntimeError::new_err(format!("Failed to generate token: {e}"))),
         }
     }
     
-    /// Validate a JWT token from Python
-    fn validate_token_py(&self, token: String) -> PyResult<JWTClaims> {
+    #[pyo3(name = "validate_token")]
+    fn validate_token_impl(&self, token: String) -> PyResult<JWTClaims> {
         match self.validate_token(&token) {
             Ok(claims) => Ok(claims),
             Err(e) => Err(pyo3::exceptions::PyRuntimeError::new_err(format!("Failed to validate token: {e}"))),
         }
     }
     
-    /// Get token expiry time from Python
-    fn get_token_expiry_py(&self) -> u64 {
+    #[pyo3(name = "get_token_expiry")]
+    fn get_token_expiry_impl(&self) -> u64 {
         self.get_token_expiry()
     }
 }

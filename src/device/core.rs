@@ -1,4 +1,4 @@
-//! Copyright © 2025 Wenze Wei. All Rights Reserved.
+//! Copyright © 2025-2026 Wenze Wei. All Rights Reserved.
 //!
 //! This file is part of DMSC.
 //! The DMSC project belongs to the Dunimd Team.
@@ -517,44 +517,54 @@ impl DMSCDeviceCapabilities {
         Self::default()
     }
     
-    fn with_compute_units_py(&self, units: usize) -> Self {
+    #[pyo3(name = "with_compute_units")]
+    fn with_compute_units_impl(&self, units: usize) -> Self {
         let mut new = self.clone();
         new.compute_units = Some(units);
         new
     }
     
-    fn with_memory_gb_py(&self, memory: f64) -> Self {
+    #[pyo3(name = "with_memory_gb")]
+    fn with_memory_gb_impl(&self, memory: f64) -> Self {
         let mut new = self.clone();
         new.memory_gb = Some(memory);
         new
     }
     
-    fn with_storage_gb_py(&self, storage: f64) -> Self {
+    #[pyo3(name = "with_storage_gb")]
+    fn with_storage_gb_impl(&self, storage: f64) -> Self {
         let mut new = self.clone();
         new.storage_gb = Some(storage);
         new
     }
     
-    fn with_bandwidth_gbps_py(&self, bandwidth: f64) -> Self {
+    #[pyo3(name = "with_bandwidth_gbps")]
+    fn with_bandwidth_gbps_impl(&self, bandwidth: f64) -> Self {
         let mut new = self.clone();
         new.bandwidth_gbps = Some(bandwidth);
         new
     }
     
-    fn with_custom_capability_py(&self, key: String, value: String) -> Self {
+    #[pyo3(name = "with_custom_capability")]
+    fn with_custom_capability_impl(&self, key: String, value: String) -> Self {
         let mut new = self.clone();
         new.custom_capabilities.insert(key, value);
         new
     }
     
-    // Getter methods for Python
-    fn get_compute_units_py(&self) -> Option<usize> { self.compute_units }
-    fn get_memory_gb_py(&self) -> Option<f64> { self.memory_gb }
-    fn get_storage_gb_py(&self) -> Option<f64> { self.storage_gb }
-    fn get_bandwidth_gbps_py(&self) -> Option<f64> { self.bandwidth_gbps }
-    fn get_custom_capabilities_py(&self) -> HashMap<String, String> { self.custom_capabilities.clone() }
+    #[pyo3(name = "get_compute_units")]
+    fn get_compute_units_impl(&self) -> Option<usize> { self.compute_units }
+    #[pyo3(name = "get_memory_gb")]
+    fn get_memory_gb_impl(&self) -> Option<f64> { self.memory_gb }
+    #[pyo3(name = "get_storage_gb")]
+    fn get_storage_gb_impl(&self) -> Option<f64> { self.storage_gb }
+    #[pyo3(name = "get_bandwidth_gbps")]
+    fn get_bandwidth_gbps_impl(&self) -> Option<f64> { self.bandwidth_gbps }
+    #[pyo3(name = "get_custom_capabilities")]
+    fn get_custom_capabilities_impl(&self) -> HashMap<String, String> { self.custom_capabilities.clone() }
     
-    fn meets_requirements_py(&self, requirements: &DMSCDeviceCapabilities) -> bool {
+    #[pyo3(name = "meets_requirements")]
+    fn meets_requirements_impl(&self, requirements: &DMSCDeviceCapabilities) -> bool {
         self.meets_requirements(requirements)
     }
 }
@@ -1107,123 +1117,153 @@ impl DMSCDevice {
         Self::new(name, device_type)
     }
     
-    fn id_py(&self) -> String {
+    #[pyo3(name = "id")]
+    fn id_impl(&self) -> String {
         self.id().to_string()
     }
     
-    fn name_py(&self) -> String {
+    #[pyo3(name = "name")]
+    fn name_impl(&self) -> String {
         self.name().to_string()
     }
     
-    fn device_type_py(&self) -> DMSCDeviceType {
+    #[pyo3(name = "device_type")]
+    fn device_type_impl(&self) -> DMSCDeviceType {
         self.device_type()
     }
     
-    fn status_py(&self) -> DMSCDeviceStatus {
+    #[pyo3(name = "status")]
+    fn status_impl(&self) -> DMSCDeviceStatus {
         self.status()
     }
     
-    fn capabilities_py(&self) -> DMSCDeviceCapabilities {
+    #[pyo3(name = "capabilities")]
+    fn capabilities_impl(&self) -> DMSCDeviceCapabilities {
         self.capabilities().clone()
     }
     
-    fn health_metrics_py(&self) -> DMSCDeviceHealthMetrics {
+    #[pyo3(name = "health_metrics")]
+    fn health_metrics_impl(&self) -> DMSCDeviceHealthMetrics {
         self.health_metrics().clone()
     }
     
-    fn set_status_py(&mut self, status: DMSCDeviceStatus) {
+    #[pyo3(name = "set_status")]
+    fn set_status_impl(&mut self, status: DMSCDeviceStatus) {
         self.set_status(status)
     }
     
-    fn update_health_metrics_py(&mut self, metrics: DMSCDeviceHealthMetrics) {
+    #[pyo3(name = "update_health_metrics")]
+    fn update_health_metrics_impl(&mut self, metrics: DMSCDeviceHealthMetrics) {
         self.update_health_metrics(metrics)
     }
     
-    fn increment_error_count_py(&mut self) {
+    #[pyo3(name = "increment_error_count")]
+    fn increment_error_count_impl(&mut self) {
         self.increment_error_count()
     }
     
-    fn update_throughput_py(&mut self, throughput: u64) {
+    #[pyo3(name = "update_throughput")]
+    fn update_throughput_impl(&mut self, throughput: u64) {
         self.update_throughput(throughput)
     }
     
-    fn with_capabilities_py(&self, capabilities: DMSCDeviceCapabilities) -> Self {
+    #[pyo3(name = "with_capabilities")]
+    fn with_capabilities_impl(&self, capabilities: DMSCDeviceCapabilities) -> Self {
         self.clone().with_capabilities(capabilities)
     }
     
-    fn set_location_py(&mut self, location: String) {
+    #[pyo3(name = "set_location")]
+    fn set_location_impl(&mut self, location: String) {
         self.set_location(location)
     }
     
-    fn add_metadata_py(&mut self, key: String, value: String) {
+    #[pyo3(name = "add_metadata")]
+    fn add_metadata_impl(&mut self, key: String, value: String) {
         self.add_metadata(key, value)
     }
     
-    fn update_last_seen_py(&mut self) {
+    #[pyo3(name = "update_last_seen")]
+    fn update_last_seen_impl(&mut self) {
         self.update_last_seen()
     }
     
-    fn is_available_py(&self) -> bool {
+    #[pyo3(name = "is_available")]
+    fn is_available_impl(&self) -> bool {
         self.is_available()
     }
     
-    fn is_allocated_py(&self) -> bool {
+    #[pyo3(name = "is_allocated")]
+    fn is_allocated_impl(&self) -> bool {
         self.is_allocated()
     }
     
-    fn allocate_py(&mut self, allocation_id: String) -> bool {
+    #[pyo3(name = "allocate")]
+    fn allocate_impl(&mut self, allocation_id: String) -> bool {
         self.allocate(&allocation_id)
     }
     
-    fn release_py(&mut self) {
+    #[pyo3(name = "release")]
+    fn release_impl(&mut self) {
         self.release()
     }
     
-    fn group_py(&self) -> Option<String> {
+    #[pyo3(name = "group")]
+    fn group_impl(&self) -> Option<String> {
         self.group().map(|s| s.to_string())
     }
     
-    fn set_group_py(&mut self, group: Option<String>) {
+    #[pyo3(name = "set_group")]
+    fn set_group_impl(&mut self, group: Option<String>) {
         self.set_group(group)
     }
     
-    fn tags_py(&self) -> Vec<String> {
+    #[pyo3(name = "tags")]
+    fn tags_impl(&self) -> Vec<String> {
         self.tags().clone()
     }
     
-    fn add_tag_py(&mut self, tag: String) {
+    #[pyo3(name = "add_tag")]
+    fn add_tag_impl(&mut self, tag: String) {
         self.add_tag(tag)
     }
     
-    fn remove_tag_py(&mut self, tag: String) -> bool {
+    #[pyo3(name = "remove_tag")]
+    fn remove_tag_impl(&mut self, tag: String) -> bool {
         self.remove_tag(&tag)
     }
     
-    fn has_tag_py(&self, tag: String) -> bool {
+    #[pyo3(name = "has_tag")]
+    fn has_tag_impl(&self, tag: String) -> bool {
         self.has_tag(&tag)
     }
     
-    fn get_allocation_id_py(&self) -> Option<String> {
+    #[pyo3(name = "get_allocation_id")]
+    fn get_allocation_id_impl(&self) -> Option<String> {
         self.get_allocation_id().map(|s| s.to_string())
     }
     
-    fn health_score_py(&self) -> u8 {
+    #[pyo3(name = "health_score")]
+    fn health_score_impl(&self) -> u8 {
         self.health_score()
     }
     
-    fn is_responsive_py(&self, timeout_secs: i64) -> bool {
+    #[pyo3(name = "is_responsive")]
+    fn is_responsive_impl(&self, timeout_secs: i64) -> bool {
         self.is_responsive(timeout_secs)
     }
     
-    fn dynamic_health_score_py(&self, health_metrics: DMSCDeviceHealthMetrics) -> u8 {
+    #[pyo3(name = "dynamic_health_score")]
+    fn dynamic_health_score_impl(&self, health_metrics: DMSCDeviceHealthMetrics) -> u8 {
         self.dynamic_health_score(&health_metrics)
     }
     
-    fn is_healthy_py(&self, health_metrics: DMSCDeviceHealthMetrics, timeout_secs: i64) -> bool {
+    #[pyo3(name = "is_healthy")]
+    fn is_healthy_impl(&self, health_metrics: DMSCDeviceHealthMetrics, timeout_secs: i64) -> bool {
         self.is_healthy(&health_metrics, timeout_secs)
     }
     
-    fn metadata_py(&self) -> HashMap<String, String> {
+    #[pyo3(name = "metadata")]
+    fn metadata_impl(&self) -> HashMap<String, String> {
         self.metadata().clone()
     }
 }

@@ -1,4 +1,4 @@
-//! Copyright © 2025 Wenze Wei. All Rights Reserved.
+//! Copyright © 2025-2026 Wenze Wei. All Rights Reserved.
 //!
 //! This file is part of DMSC.
 //! The DMSC project belongs to the Dunimd Team.
@@ -449,8 +449,8 @@ impl DMSCCacheManager {
         Self::new(backend)
     }
     
-    /// Get a value from cache (Python wrapper)
-    fn get_py(&self, key: String) -> pyo3::PyResult<Option<String>> {
+    #[pyo3(name = "get")]
+    fn get_impl(&self, key: String) -> pyo3::PyResult<Option<String>> {
         let rt = tokio::runtime::Runtime::new().map_err(|e| {
             pyo3::exceptions::PyRuntimeError::new_err(format!("Failed to create runtime: {}", e))
         })?;
@@ -462,8 +462,8 @@ impl DMSCCacheManager {
         })
     }
     
-    /// Set a value in cache (Python wrapper)
-    fn set_py(&self, key: String, value: String, ttl_seconds: Option<u64>) -> pyo3::PyResult<()> {
+    #[pyo3(name = "set")]
+    fn set_impl(&self, key: String, value: String, ttl_seconds: Option<u64>) -> pyo3::PyResult<()> {
         let rt = tokio::runtime::Handle::current();
         
         rt.block_on(async {
@@ -473,8 +473,8 @@ impl DMSCCacheManager {
         })
     }
     
-    /// Delete a value from cache (Python wrapper)
-    fn delete_py(&self, key: String) -> pyo3::PyResult<bool> {
+    #[pyo3(name = "delete")]
+    fn delete_impl(&self, key: String) -> pyo3::PyResult<bool> {
         let rt = tokio::runtime::Runtime::new().map_err(|e| {
             pyo3::exceptions::PyRuntimeError::new_err(format!("Failed to create runtime: {}", e))
         })?;
@@ -486,8 +486,8 @@ impl DMSCCacheManager {
         })
     }
     
-    /// Check if a key exists in cache (Python wrapper)
-    fn exists_py(&self, key: String) -> pyo3::PyResult<bool> {
+    #[pyo3(name = "exists")]
+    fn exists_impl(&self, key: String) -> pyo3::PyResult<bool> {
         let rt = tokio::runtime::Runtime::new().map_err(|e| {
             pyo3::exceptions::PyRuntimeError::new_err(format!("Failed to create runtime: {}", e))
         })?;
@@ -497,8 +497,8 @@ impl DMSCCacheManager {
         }))
     }
     
-    /// Clear all cache entries (Python wrapper)
-    fn clear_py(&self) -> pyo3::PyResult<()> {
+    #[pyo3(name = "clear")]
+    fn clear_impl(&self) -> pyo3::PyResult<()> {
         let rt = tokio::runtime::Runtime::new().map_err(|e| {
             pyo3::exceptions::PyRuntimeError::new_err(format!("Failed to create runtime: {}", e))
         })?;
@@ -510,8 +510,8 @@ impl DMSCCacheManager {
         })
     }
     
-    /// Get cache statistics (Python wrapper)
-    fn stats_py(&self) -> pyo3::PyResult<CacheStats> {
+    #[pyo3(name = "stats")]
+    fn stats_impl(&self) -> pyo3::PyResult<CacheStats> {
         let rt = tokio::runtime::Runtime::new().map_err(|e| {
             pyo3::exceptions::PyRuntimeError::new_err(format!("Failed to create runtime: {}", e))
         })?;
@@ -521,8 +521,8 @@ impl DMSCCacheManager {
         }))
     }
     
-    /// Cleanup expired cache entries (Python wrapper)
-    fn cleanup_expired_py(&self) -> pyo3::PyResult<usize> {
+    #[pyo3(name = "cleanup_expired")]
+    fn cleanup_expired_impl(&self) -> pyo3::PyResult<usize> {
         let rt = tokio::runtime::Runtime::new().map_err(|e| {
             pyo3::exceptions::PyRuntimeError::new_err(format!("Failed to create runtime: {}", e))
         })?;

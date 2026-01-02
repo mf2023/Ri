@@ -1,4 +1,4 @@
-//! Copyright © 2025 Wenze Wei. All Rights Reserved.
+//! Copyright © 2025-2026 Wenze Wei. All Rights Reserved.
 //!
 //! This file is part of DMSC.
 //! The DMSC project belongs to the Dunimd Team.
@@ -535,7 +535,8 @@ impl DMSCServiceMesh {
     }
     
     /// Register a service from Python
-    fn register_service_py(&self, service_name: String, endpoint: String, weight: u32) -> PyResult<()> {
+    #[pyo3(name = "register_service")]
+    fn register_service_impl(&self, service_name: String, endpoint: String, weight: u32) -> PyResult<()> {
         let rt = tokio::runtime::Runtime::new().map_err(|e| {
             pyo3::exceptions::PyRuntimeError::new_err(format!("Failed to create runtime: {}", e))
         })?;
@@ -548,7 +549,8 @@ impl DMSCServiceMesh {
     }
     
     /// Discover services from Python
-    fn discover_service_py(&self, service_name: String) -> PyResult<Vec<DMSCServiceEndpoint>> {
+    #[pyo3(name = "discover_service")]
+    fn discover_service_impl(&self, service_name: String) -> PyResult<Vec<DMSCServiceEndpoint>> {
         let rt = tokio::runtime::Runtime::new().map_err(|e| {
             pyo3::exceptions::PyRuntimeError::new_err(format!("Failed to create runtime: {}", e))
         })?;
@@ -561,7 +563,8 @@ impl DMSCServiceMesh {
     }
     
     /// Update service health from Python
-    fn update_service_health_py(&self, service_name: String, endpoint: String, is_healthy: bool) -> PyResult<()> {
+    #[pyo3(name = "update_service_health")]
+    fn update_service_health_impl(&self, service_name: String, endpoint: String, is_healthy: bool) -> PyResult<()> {
         let rt = tokio::runtime::Runtime::new().map_err(|e| {
             pyo3::exceptions::PyRuntimeError::new_err(format!("Failed to create runtime: {}", e))
         })?;
