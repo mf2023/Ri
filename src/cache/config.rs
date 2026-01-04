@@ -43,16 +43,16 @@
 //!     default_ttl_secs: 7200, // 2 hours
 //!     max_memory_mb: 1024,
 //!     cleanup_interval_secs: 600, // 10 minutes
-//!     backend_type: CacheBackendType::Hybrid,
+//!     backend_type: DMSCCacheBackendType::Hybrid,
 //!     redis_url: "redis://localhost:6379/1".to_string(),
 //!     redis_pool_size: 20,
 //! };
 //! 
 //! // Parse backend type from string
-//! let backend_type: CacheBackendType = "redis".parse()?;
+//! let backend_type: DMSCCacheBackendType = "redis".parse()?;
 //! 
 //! // Create a custom cache policy
-//! let cache_policy = CachePolicy {
+//! let cache_policy = DMSCCachePolicy {
 //!     ttl: Some(Duration::from_secs(1800)), // 30 minutes
 //!     refresh_on_access: true,
 //!     max_size: Some(1024 * 1024), // 1MB
@@ -66,8 +66,6 @@ use std::time::Duration;
 
 #[cfg(feature = "pyo3")]
 use pyo3::prelude::*;
-#[cfg(feature = "pyo3")]
-use pyo3::pymethods;
 
 /// Main cache configuration structure.
 /// 
@@ -85,7 +83,7 @@ pub struct DMSCCacheConfig {
     #[pyo3(get, set)]
     pub cleanup_interval_secs: u64,    // Interval for cleaning up expired entries in seconds
     #[pyo3(get, set)]
-    pub backend_type: CacheBackendType, // Type of cache backend to use
+    pub backend_type: DMSCCacheBackendType, // Type of cache backend to use
     #[pyo3(get, set)]
     pub redis_url: String,             // Redis connection URL (if using Redis or Hybrid backend)
     #[pyo3(get, set)]
@@ -112,7 +110,7 @@ impl Default for DMSCCacheConfig {
             default_ttl_secs: 3600, // 1 hour
             max_memory_mb: 512,
             cleanup_interval_secs: 300, // 5 minutes
-            backend_type: CacheBackendType::Memory,
+            backend_type: DMSCCacheBackendType::Memory,
             redis_url: "redis://127.0.0.1:6379".to_string(),
             redis_pool_size: 10,
         }
@@ -138,7 +136,7 @@ impl DMSCCacheConfig {
 /// Defines the different cache backend types supported by DMSC.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
-pub enum CacheBackendType {
+pub enum DMSCCacheBackendType {
     Memory,  // In-memory cache (fast, non-persistent)
     Redis,   // Redis cache (persistent, distributed)
     Hybrid,  // Hybrid cache (Memory + Redis for performance and persistence)
@@ -146,44 +144,44 @@ pub enum CacheBackendType {
 
 
 
-impl CacheBackendType {
-    /// Converts a string to a `CacheBackendType`.
+impl DMSCCacheBackendType {
+    /// Converts a string to a `DMSCCacheBackendType`.
     /// 
     /// This method provides a custom string conversion for cache backend types.
     /// 
     /// # Parameters
-    /// - `s`: String to convert to `CacheBackendType`
+    /// - `s`: String to convert to `DMSCCacheBackendType`
     /// 
     /// # Returns
-    /// A `CacheBackendType` based on the input string
+    /// A `DMSCCacheBackendType` based on the input string
     /// 
     /// # Mapping
-    /// - "redis" -> `CacheBackendType::Redis`
-    /// - "hybrid" -> `CacheBackendType::Hybrid`
-    /// - Any other value -> `CacheBackendType::Memory`
+    /// - "redis" -> `DMSCCacheBackendType::Redis`
+    /// - "hybrid" -> `DMSCCacheBackendType::Hybrid`
+    /// - Any other value -> `DMSCCacheBackendType::Memory`
     pub fn from_str_custom(s: &str) -> Self {
         match s.to_lowercase().as_str() {
-            "redis" => CacheBackendType::Redis,
-            "hybrid" => CacheBackendType::Hybrid,
-            _ => CacheBackendType::Memory,
+            "redis" => DMSCCacheBackendType::Redis,
+            "hybrid" => DMSCCacheBackendType::Hybrid,
+            _ => DMSCCacheBackendType::Memory,
         }
     }
 }
 
-// Implement standard FromStr trait for CacheBackendType
-impl std::str::FromStr for CacheBackendType {
+// Implement standard FromStr trait for DMSCCacheBackendType
+impl std::str::FromStr for DMSCCacheBackendType {
     type Err = ();
     
-    /// Parses a string to a `CacheBackendType`.
+    /// Parses a string to a `DMSCCacheBackendType`.
     /// 
     /// This implementation of the standard `FromStr` trait allows for easy
-    /// parsing of strings to `CacheBackendType` using the `parse()` method.
+    /// parsing of strings to `DMSCCacheBackendType` using the `parse()` method.
     /// 
     /// # Parameters
     /// - `s`: String to parse
     /// 
     /// # Returns
-    /// `Ok(CacheBackendType)` if parsing succeeds, otherwise `Ok(CacheBackendType::Memory)`
+    /// `Ok(DMSCCacheBackendType)` if parsing succeeds, otherwise `Ok(DMSCCacheBackendType::Memory)`
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         Ok(Self::from_str_custom(s))
     }
@@ -195,7 +193,7 @@ impl std::str::FromStr for CacheBackendType {
 /// including TTL, refresh behavior, and size limits.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
-pub struct CachePolicy {
+pub struct DMSCCachePolicy {
     #[pyo3(get, set)]
     pub ttl: Option<Duration>,        // Time-to-live for cache entries
     #[pyo3(get, set)]
@@ -204,7 +202,7 @@ pub struct CachePolicy {
     pub max_size: Option<usize>,      // Maximum size for cached data in bytes
 }
 
-impl Default for CachePolicy {
+impl Default for DMSCCachePolicy {
     /// Creates a default cache policy with sensible values.
     /// 
     /// Default values:
@@ -213,7 +211,7 @@ impl Default for CachePolicy {
     /// - max_size: None (no size limit)
     /// 
     /// # Returns
-    /// A new `CachePolicy` instance with default values
+    /// A new `DMSCCachePolicy` instance with default values
     fn default() -> Self {
         Self {
             ttl: Some(Duration::from_secs(3600)),
@@ -225,7 +223,7 @@ impl Default for CachePolicy {
 
 #[cfg(feature = "pyo3")]
 #[pymethods]
-impl CachePolicy {
+impl DMSCCachePolicy {
     #[new]
     fn new() -> Self {
         Self::default()

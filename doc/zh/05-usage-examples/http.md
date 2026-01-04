@@ -2,9 +2,9 @@
 
 # HTTP服务使用示例
 
-**Version: 1.0.0**
+**Version: 0.0.3**
 
-**Last modified date: 2025-12-12**
+**Last modified date: 2026-01-01**
 
 本示例展示如何使用DMSC的http模块进行HTTP服务器、客户端、路由管理、中间件、WebSocket和文件上传下载功能的使用。
 

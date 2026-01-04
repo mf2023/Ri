@@ -110,13 +110,142 @@ pub use integration::{
     DMSCExternalControlResult,
 };
 
-/// Protocol type enumeration.
+/// Protocol type enumeration defining the available protocol variants.
+///
+/// The DMSC protocol module supports two distinct protocol types designed for
+/// different communication requirements. The Global protocol handles standard
+/// communications, while the Private protocol provides enhanced security features
+/// for sensitive operations. Protocol type selection determines the encryption
+/// algorithms, authentication mechanisms, and communication patterns used.
+///
+/// # Protocol Type Selection Guidelines
+///
+/// - Use **Global** protocol for general-purpose communications where standard
+///   security requirements apply and performance is a priority
+/// - Use **Private** protocol when enhanced confidentiality is required, including
+///   sensitive data transmission, financial operations, or communications subject
+///   to regulatory compliance requirements
+///
+/// # Python Bindings
+///
+/// When compiled with the `pyo3` feature, this enum provides Python static methods
+/// for creating protocol type instances:
+/// ```python
+/// from dms import DMSCProtocolType
+///
+/// # Use global protocol for standard operations
+/// protocol = DMSCProtocolType.Global()
+///
+/// # Use private protocol for sensitive operations
+/// secure_protocol = DMSCProtocolType.Private()
+/// ```
+///
+/// # Thread Safety
+///
+/// This enum is fully thread-safe and can be shared across concurrent contexts
+/// without additional synchronization. The Copy trait enables efficient passing
+/// of protocol type values through function arguments and return types.
+///
+/// # Storage and Transmission
+///
+/// Protocol type values are stored as single bytes (0 for Global, 1 for Private)
+/// making them efficient for network transmission and compact storage. The Hash
+/// trait enables protocol type usage as dictionary keys in collection types.
+///
+/// # Examples
+///
+/// Basic protocol type creation and comparison:
+/// ```rust
+/// use dms::protocol::DMSCProtocolType;
+///
+/// let global = DMSCProtocolType::Global;
+/// let private = DMSCProtocolType::Private;
+///
+/// assert_eq!(global as u8, 0);
+/// assert_eq!(private as u8, 1);
+/// assert_ne!(global, private);
+/// ```
+///
+/// Protocol type matching in conditional logic:
+/// ```rust
+/// use dms::protocol::DMSCProtocolType;
+///
+/// fn requires_enhanced_security(protocol: DMSCProtocolType) -> bool {
+///     matches!(protocol, DMSCProtocolType::Private)
+/// }
+///
+/// assert!(requires_enhanced_security(DMSCProtocolType::Private));
+/// assert!(!requires_enhanced_security(DMSCProtocolType::Global));
+/// ```
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 pub enum DMSCProtocolType {
-    /// Global communication protocol
+    /// Global communication protocol - standard protocol for general use
+    ///
+    /// The Global protocol provides reliable, ordered message delivery with
+    /// standard AES-256-GCM encryption. It is optimized for performance and
+    /// is suitable for the majority of inter-service communications within
+    /// the DMSC distributed system. This protocol type consumes minimal
+    /// computational resources while maintaining industry-standard security.
+    ///
+    /// ## Protocol Characteristics
+    ///
+    /// - **Encryption**: AES-256-GCM with 256-bit keys
+    /// - **Key Exchange**: ECDH with P-256 curve
+    /// - **Digital Signatures**: ECDSA with P-256 curve
+    /// - **Hash Functions**: SHA-256 for message integrity
+    /// - **Connection Model**: Long-lived persistent connections
+    /// - **Message Ordering**: Guaranteed in-order delivery
+    /// - **Flow Control**: Sliding window-based congestion control
+    ///
+    /// ## Performance Characteristics
+    ///
+    /// - **Latency**: Low overhead, suitable for real-time communications
+    /// - **Throughput**: Optimized for high message throughput
+    /// - **Resource Usage**: Minimal CPU and memory footprint
+    /// - **Scaling**: Efficient connection multiplexing
+    ///
+    /// ## Use Cases
+    ///
+    /// - General inter-service communication
+    /// - Status updates and health monitoring
+    /// - Non-sensitive data synchronization
+    /// - Load balancing and service discovery
     Global = 0,
-    /// Private communication protocol
+    /// Private communication protocol - enhanced security protocol
+    ///
+    /// The Private protocol implements advanced security features including
+    /// post-quantum cryptography, traffic obfuscation, and enhanced device
+    /// authentication. This protocol is designed for operations requiring
+    /// maximum confidentiality and resistance to sophisticated attacks,
+    /// including potential future quantum computing threats.
+    ///
+    /// ## Protocol Characteristics
+    ///
+    /// - **Encryption**: AES-256-GCM + ChaCha20-Poly1305 (dual encryption)
+    /// - **Key Exchange**: Kyber-1024 (post-quantum KEM)
+    /// - **Digital Signatures**: Dilithium-5 or Falcon-1024
+    /// - **Traffic Obfuscation**: Polymorphic traffic patterns
+    /// - **Anti-Forensic**: Metadata protection and timing randomization
+    /// - **Device Authentication**: Hardware-based identity verification
+    ///
+    /// ## Security Level
+    ///
+    /// The Private protocol achieves Security Level 10 (maximum) under the
+    /// DMSC security framework, providing protection against:
+    ///
+    /// - Classical cryptanalysis attacks
+    /// - Quantum computing attacks (Shor's algorithm, Grover's algorithm)
+    /// - Side-channel attacks (timing, power, electromagnetic)
+    /// - Traffic analysis and pattern recognition
+    /// - Replay and man-in-the-middle attacks
+    ///
+    /// ## Use Cases
+    ///
+    /// - Sensitive data transmission (financial, medical, legal)
+    /// - Regulatory compliance (GDPR, HIPAA, PCI-DSS)
+    /// - High-value transaction processing
+    /// - Communications subject to advanced persistent threats
     Private = 1,
 }
 
@@ -159,7 +288,84 @@ pub trait DMSCProtocol: Send + Sync {
     async fn get_stats(&self) -> DMSCProtocolStats;
 }
 
-/// Protocol connection trait for managing individual connections.
+/// Protocol connection trait for managing individual protocol connections.
+///
+/// This trait defines the core operations available on a protocol connection,
+/// enabling message transmission, reception, and lifecycle management. Connections
+/// represent established communication channels to remote devices or services,
+/// providing bidirectional data exchange with reliability guarantees.
+///
+/// ## Connection Lifecycle
+///
+/// 1. **Creation**: Connections are created through protocol's `connect()` method
+/// 2. **Active State**: Ready for message exchange after successful establishment
+/// 3. **Message Exchange**: Bidirectional communication using send/receive methods
+/// 4. **Graceful Closure**: Connections should be closed via `close()` when done
+///
+/// ## Thread Safety
+///
+/// All trait methods are marked with async_trait and implement Send + Sync bounds,
+/// enabling safe concurrent access from multiple tasks or threads. Multiple send
+/// operations may be performed concurrently, though message ordering depends on
+/// the underlying protocol implementation.
+///
+/// ## Error Handling
+///
+/// Operations return `DMSCResult` indicating success or specific error conditions:
+/// - Connection errors during send/receive operations
+/// - Timeout errors when operations exceed configured limits
+/// - Resource exhaustion when connection limits are exceeded
+/// - Protocol violations or malformed messages
+///
+/// # Examples
+///
+/// Basic connection usage pattern:
+/// ```rust,ignore
+/// async fn communicate(protocol: &dyn DMSCProtocol, target: &str) -> DMSCResult<Vec<u8>> {
+///     // Establish connection to target device
+///     let connection = protocol.connect(target).await?;
+///
+///     // Send request message
+///     let request = b"Hello, target device!";
+///     let response = connection.send_message(request).await?;
+///
+///     // Gracefully close connection
+///     connection.close().await?;
+///
+///     Ok(response)
+/// }
+/// ```
+///
+/// Concurrent message handling:
+/// ```rust,ignore
+/// async fn parallel_communication(
+///     protocol: &dyn DMSCProtocol,
+///     targets: &[&str],
+///     message: &[u8]
+/// ) -> DMSCResult<Vec<Vec<u8>>> {
+///     use futures::stream::FuturesUnordered;
+///     use futures::TryStreamExt;
+///
+///     // Create connections to all targets
+///     let connections: Vec<_> = targets
+///         .iter()
+///         .map(|t| protocol.connect(t))
+///         .collect();
+///
+///     // Execute sends concurrently
+///     let mut results = FuturesUnordered::new();
+///     for (i, conn) in connections.into_iter().enumerate() {
+///         let conn = conn.await?;
+///         results.push(async move {
+///             conn.send_message(message).await
+///         });
+///     }
+///
+///     // Collect all responses
+///     let responses: Vec<Vec<u8>> = results.try_collect().await?;
+///     Ok(responses)
+/// }
+/// ```
 #[async_trait]
 pub trait DMSCProtocolConnection: Send + Sync {
     /// Send a message through the connection.

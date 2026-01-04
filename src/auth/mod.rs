@@ -202,7 +202,7 @@ impl DMSCAuthModule {
     /// 
     /// A new `DMSCAuthModule` instance
     pub fn new(config: DMSCAuthConfig) -> Self {
-        let jwt_manager = Arc::new(DMSCJWTManager::new(config.jwt_secret.clone(), config.jwt_expiry_secs));
+        let jwt_manager = Arc::new(DMSCJWTManager::create(config.jwt_secret.clone(), config.jwt_expiry_secs));
         let session_manager = Arc::new(RwLock::new(DMSCSessionManager::new(config.session_timeout_secs)));
         let permission_manager = Arc::new(RwLock::new(DMSCPermissionManager::new()));
         let cache = Arc::new(crate::cache::DMSCMemoryCache::new());
@@ -230,7 +230,7 @@ impl DMSCAuthModule {
     /// 
     /// A new `DMSCAuthModule` instance
     pub async fn new_async(config: DMSCAuthConfig) -> Self {
-        let jwt_manager = Arc::new(DMSCJWTManager::new(config.jwt_secret.clone(), config.jwt_expiry_secs));
+        let jwt_manager = Arc::new(DMSCJWTManager::create(config.jwt_secret.clone(), config.jwt_expiry_secs));
         let session_manager = Arc::new(RwLock::new(DMSCSessionManager::new(config.session_timeout_secs)));
         let permission_manager = Arc::new(RwLock::new(DMSCPermissionManager::new_async().await));
         let cache = Arc::new(crate::cache::DMSCMemoryCache::new());
@@ -283,7 +283,41 @@ impl DMSCAuthModule {
 }
 
 #[cfg(feature = "pyo3")]
-/// Python bindings for DMSCAuthModule
+/// Python bindings for the DMSC Authentication Module.
+///
+/// This module provides Python interface to DMSC authentication functionality,
+/// enabling Python applications to leverage DMSC's authentication capabilities.
+///
+/// ## Supported Operations
+///
+/// - JWT token generation and validation
+/// - Session management for stateful authentication
+/// - Permission and role management for RBAC
+/// - OAuth provider integration
+///
+/// ## Python Usage Example
+///
+/// ```python
+/// from dms import DMSCAuthConfig, DMSCJWTManager
+///
+/// # Create auth configuration
+/// config = DMSCAuthConfig(
+///     enabled=True,
+///     jwt_secret="secure-secret-key",
+///     jwt_expiry_secs=3600,
+///     session_timeout_secs=86400,
+///     oauth_providers=["google", "github"],
+///     enable_api_keys=True,
+///     enable_session_auth=True,
+/// )
+///
+/// # Create auth module
+/// auth_module = DMSCAuthModule(config)
+///
+/// # Get JWT manager and generate token
+/// jwt_manager = auth_module.jwt_manager()
+/// token = jwt_manager.generate_token("user123", ["user"], ["read:data"])
+/// ```
 #[pyo3::prelude::pymethods]
 impl DMSCAuthModule {
     #[new]
@@ -293,7 +327,7 @@ impl DMSCAuthModule {
     
     #[pyo3(name = "jwt_manager")]
     fn jwt_manager_impl(&self) -> PyResult<DMSCJWTManager> {
-        Ok(DMSCJWTManager::new(self.jwt_manager.get_secret().to_string(), self.jwt_manager.get_token_expiry()))
+        Ok(DMSCJWTManager::create(self.jwt_manager.get_secret().to_string(), self.jwt_manager.get_token_expiry()))
     }
     
     #[pyo3(name = "session_manager")]
@@ -366,7 +400,7 @@ impl crate::core::DMSCModule for DMSCAuthModule {
         }
 
         // Initialize JWT manager with new config
-        self.jwt_manager = Arc::new(DMSCJWTManager::new(self.config.jwt_secret.clone(), self.config.jwt_expiry_secs));
+        self.jwt_manager = Arc::new(DMSCJWTManager::create(self.config.jwt_secret.clone(), self.config.jwt_expiry_secs));
 
         // Initialize OAuth providers if configured
         if !self.config.oauth_providers.is_empty() {

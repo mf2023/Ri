@@ -878,3 +878,12 @@ impl DMSCLogger {
         self.inner.log_message(DMSCLogLevel::Error, target, message)
     }
 }
+
+#[cfg(feature = "pyo3")]
+#[pyo3::prelude::pymethods]
+impl DMSCLogger {
+    #[new]
+    fn py_new(config: DMSCLogConfig, fs: DMSCFileSystem) -> Self {
+        Self::new(&config, fs)
+    }
+}

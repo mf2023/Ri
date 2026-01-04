@@ -88,17 +88,61 @@ use rand::Rng;
 use crate::core::{DMSCResult, DMSCError};
 use super::DMSCProtocolConfig;
 
-/// Cryptographic suite enumeration.
+/// Cryptographic suite enumeration for protocol security configuration.
+///
+/// This enumeration defines available cryptographic algorithm suites that can be used
+/// to secure protocol communications. Each suite represents a different security level
+/// and compliance requirement, allowing organizations to select appropriate algorithms
+/// based on their security policies and regulatory requirements.
+///
+/// ## Suite Selection Guidelines
+///
+/// - **NationalStandard**: Required for government and financial institutions in China
+///   that must comply with Chinese cryptographic regulations
+/// - **International**: Suitable for cross-border communications requiring globally
+///   recognized algorithms like AES-256 and ECDSA
+/// - **PostQuantum**: Recommended for long-term data protection against quantum
+///   computer attacks on current cryptographic systems
+/// - **Hybrid**: Provides defense-in-depth by combining multiple algorithm families
+///
+/// ## Security Level Comparison
+///
+/// | Suite | Level | Quantum Resistance | Compliance |
+/// |-------|-------|-------------------|------------|
+/// | NationalStandard | 8 | No | CN Regulations |
+/// | International | 7 | No | Global Standards |
+/// | PostQuantum | 10 | Yes | Future-Proof |
+/// | Hybrid | 9 | Partial | Multi-Framework |
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 pub enum DMSCCryptoSuite {
     /// National cryptographic standards (SM2/SM3/SM4)
+    ///
+    /// Implements Chinese National Standard cryptographic algorithms required for
+    /// commercial applications within China. This suite provides strong encryption
+    /// compliant with GB/T 32907-2016 (SM4), GB/T 32918-2016 (SM2), and
+    /// GM/T 0004-2012 (SM3).
     NationalStandard,
     /// Post-quantum cryptography (Kyber/Dilithium/Falcon)
+    ///
+    /// Provides quantum-resistant cryptographic algorithms selected by NIST's
+    /// post-quantum cryptography standardization process. This suite protects
+    /// against both classical and quantum computer attacks on confidentiality
+    /// and authenticity of communications.
     PostQuantum,
     /// International standards (AES-256/SHA-3/ECDSA)
+    ///
+    /// Implements widely-adopted international cryptographic standards including
+    /// AES-256-GCM for authenticated encryption, SHA-3 for hashing, and ECDSA
+    /// for digital signatures. Suitable for organizations following global
+    /// security standards like FIPS 140-2/3 or ISO 27001.
     International,
     /// Hybrid approach combining multiple suites
+    ///
+    /// Combines multiple cryptographic algorithm families to provide defense-in-depth
+    /// and graceful degradation. Uses both classical and post-quantum algorithms
+    /// simultaneously, ensuring security even if one algorithm family is compromised.
+    /// Recommended for high-value assets requiring maximum protection.
     Hybrid,
 }
 
@@ -119,19 +163,73 @@ impl DMSCCryptoSuite {
     }
 }
 
-/// Obfuscation level enumeration.
+/// Obfuscation level enumeration for traffic pattern concealment.
+///
+/// This enumeration defines available obfuscation levels that can be applied to
+/// protocol traffic to prevent pattern analysis and traffic identification. Higher
+/// obfuscation levels provide stronger protection against network surveillance and
+/// deep packet inspection, at the cost of increased bandwidth and latency.
+///
+/// ## Obfuscation Techniques
+///
+/// - **None**: Standard protocol traffic with no obfuscation
+/// - **Basic**: Simple pattern modification and padding
+/// - **Medium**: HTTP-like traffic simulation with realistic timing
+/// - **High**: Complex pattern generation resembling real applications
+/// - **Maximum**: Polymorphic patterns that change dynamically
+///
+/// ## Performance Trade-offs
+///
+/// | Level | Bandwidth Overhead | Latency Impact | Detection Resistance |
+/// |-------|-------------------|----------------|---------------------|
+/// | None | 0% | Minimal | None |
+/// | Basic | 5-10% | Low | Basic |
+/// | Medium | 15-30% | Medium | Good |
+/// | High | 30-50% | High | Excellent |
+/// | Maximum | 50-100% | Very High | Maximum |
+///
+/// ## Use Case Recommendations
+///
+/// - **None**: High-trust internal networks with no surveillance concerns
+/// - **Basic**: General enterprise environments with passive monitoring
+/// - **Medium**: Environments with active DPI and traffic shaping
+/// - **High**: High-security environments with sophisticated adversaries
+/// - **Maximum**: Maximum privacy requirements with tolerance for overhead
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 pub enum DMSCObfuscationLevel {
     /// No obfuscation
+    ///
+    /// Protocol traffic is transmitted in standard format without any pattern
+    /// concealment. Suitable for trusted network environments where traffic
+    /// analysis is not a concern and minimum overhead is required.
     None,
     /// Basic obfuscation (simple patterns)
+    ///
+    /// Applies lightweight obfuscation techniques including random padding,
+    /// basic timing randomization, and pattern masking. Provides protection
+    /// against casual observation and simple automated analysis tools.
     Basic,
     /// Medium obfuscation (HTTP-like patterns)
+    ///
+    /// Transforms traffic patterns to resemble HTTP/HTTPS web browsing.
+    /// Includes realistic request/response patterns, typical web traffic
+    /// timing distributions, and standard HTTP-like header structures.
+    /// Effective against network classification systems and DPI.
     Medium,
     /// High obfuscation (complex patterns)
+    ///
+    /// Generates complex traffic patterns simulating real-time applications
+    /// like video streaming, VoIP, or gaming. Includes variable-length
+    /// packets, realistic timing jitter, and multi-stream patterns that
+    /// make traffic analysis extremely difficult.
     High,
     /// Maximum obfuscation (polymorphic patterns)
+    ///
+    /// Employs polymorphic techniques that dynamically alter traffic patterns,
+    /// packet sizes, timing, and protocols. Each session appears different,
+    /// preventing any form of pattern matching or statistical analysis.
+    /// Maximum protection at significant bandwidth and latency cost.
     Maximum,
 }
 
@@ -149,52 +247,197 @@ impl DMSCObfuscationLevel {
 }
 
 /// Device authentication protocol for hardware-based identity verification.
+///
+/// This protocol provides robust device identity verification using cryptographic
+/// challenge-response mechanisms and hardware-based key storage. It implements
+/// hardware root of trust principles where device identities are bound to unique
+/// cryptographic keys stored in secure hardware.
+///
+/// ## Authentication Flow
+///
+/// 1. **Challenge Generation**: The authenticator generates a random challenge
+/// 2. **Challenge Transmission**: Challenge is sent to the target device
+/// 3. **Device Signing**: Device signs the challenge with its private key
+/// 4. **Signature Verification**: Authenticator verifies the signature using
+///    the device's known public key
+/// 5. **Trust Decision**: Device is added to trusted list if verification succeeds
+///
+/// ## Security Features
+///
+/// - **Ed25519 Signatures**: Uses Ed25519 for digital signatures, providing
+///   128-bit security level with small signature sizes
+/// - **Hardware Security**: Keys can be stored in TPM, HSM, or secure elements
+/// - **Challenge-Response**: Prevents replay attacks through unique challenges
+/// - **Certificate Validation**: Supports X.509 certificate chains for trust
+///
+/// ## Certificate Management
+///
+/// Device certificates are stored securely and include:
+/// - Device identifier (unique per device)
+/// - Public key for signature verification
+/// - Certificate issuer (Certificate Authority)
+/// - Validity period with expiration
+/// - Revocation status for compromised devices
+///
+/// ## Implementation Notes
+///
+/// This implementation provides a software-based simulation of hardware security.
+/// In production deployments, integrate with actual hardware security modules
+/// (TPM 2.0, HSM, Secure Element) for real hardware root of trust.
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 pub struct DMSCDeviceAuthProtocol {
-    /// Device certificate storage
+    /// Device certificate storage with thread-safe access.
+    ///
+    /// Contains all known device certificates indexed by device ID.
+    /// Certificates are stored in an Arc<RwLock> for efficient concurrent
+    /// access from multiple async tasks while maintaining thread safety.
     certificates: Arc<RwLock<HashMap<String, DeviceCertificate>>>,
-    /// Trusted device list
+    /// Trusted device list with set-based storage.
+    ///
+    /// Contains device IDs that have successfully completed authentication.
+    /// Using a HashSet provides O(1) lookup time for trust verification
+    /// during protocol operations.
     trusted_devices: Arc<RwLock<HashSet<String>>>,
-    /// Authentication challenges
+    /// Active authentication challenges with expiration tracking.
+    ///
+    /// Maps challenge IDs to active authentication challenges that have
+    /// been issued but not yet verified. Challenges automatically expire
+    /// after a configurable validity period to prevent replay attacks.
     challenges: Arc<RwLock<HashMap<String, AuthChallenge>>>,
-    /// Whether the protocol is initialized
+    /// Initialization status flag.
+    ///
+    /// Atomic boolean tracking whether the authentication protocol has been
+    /// properly initialized. Prevents operations before setup is complete.
     initialized: Arc<RwLock<bool>>,
-    /// Device key pair for authentication
+    /// Device cryptographic key pair for authentication operations.
+    ///
+    /// Contains the device's Ed25519 key pair (private and public key).
+    /// The private key is used to sign authentication challenges, while
+    /// the public key is shared for verification by other parties.
+    /// Stored in Arc<RwLock> for safe concurrent access.
     device_keypair: Arc<RwLock<Option<(Vec<u8>, Vec<u8>)>>>,
 }
 
-/// Device certificate structure.
+/// Device certificate structure for hardware identity verification.
+///
+/// Represents an X.509-like certificate binding a device ID to its public key.
+/// Certificates are issued by a trusted Certificate Authority and include
+/// validity period and revocation status for lifecycle management.
+///
+/// ## Certificate Fields
+///
+/// - **device_id**: Unique identifier assigned to the device during manufacturing
+/// - **public_key**: Ed25519 public key for signature verification
+/// - **issuer**: Name of the Certificate Authority that issued the certificate
+/// - **valid_until**: Timestamp after which the certificate is no longer valid
+/// - **revoked**: Flag indicating if the certificate has been revoked
+///
+/// ## Security Considerations
+///
+/// Certificate validation should verify:
+/// 1. Signature chain from trusted root CA
+/// 2. Certificate validity period (not expired, not premature)
+/// 3. Certificate revocation status via CRL or OCSP
+/// 4. Device ID matches expected format and range
 #[derive(Debug, Clone)]
 struct DeviceCertificate {
-    /// Device ID
+    /// Unique device identifier assigned during manufacturing.
+    ///
+    /// This identifier is embedded in device hardware and cannot be changed.
+    /// Format typically follows scheme: VENDOR-DEVICE-TYPE-SERIAL
     device_id: String,
-    /// Public key for verification
+    /// Public key for signature verification.
+    ///
+    /// Ed25519 public key used to verify signatures produced by this device.
+    /// This key is derived from the device's unique private key stored in
+    /// secure hardware and is safe to share openly.
     public_key: Vec<u8>,
-    /// Certificate issuer
+    /// Certificate issuer identifier.
+    ///
+    /// Name of the Certificate Authority that signed this certificate.
+    /// The issuer must be in the trusted CA list for validation.
     issuer: String,
-    /// Certificate validity period
+    /// Certificate expiration timestamp.
+    ///
+    /// Instant after which the certificate should be considered invalid.
+    /// Certificates should be renewed before expiration to maintain
+    /// continuous operation.
     valid_until: Instant,
-    /// Certificate revocation status
+    /// Certificate revocation status.
+    ///
+    /// Flag set to true when a certificate has been compromised or is no
+    /// longer valid before its natural expiration. Revoked certificates
+    /// should be rejected even if within validity period.
     revoked: bool,
 }
 
-/// Authentication challenge structure.
+/// Authentication challenge structure for device verification.
+///
+/// Represents an active challenge awaiting response from a device being
+/// authenticated. Challenges include cryptographic random data that must
+/// be signed by the device's private key to prove possession.
+///
+/// ## Challenge Lifecycle
+///
+/// 1. **Creation**: Challenge generated with random data and timestamp
+/// 2. **Transmission**: Challenge sent to target device
+/// 3. **Response Window**: Device has valid_for duration to respond
+/// 4. **Verification**: Response verified against original challenge
+/// 5. **Cleanup**: Challenge removed from active challenges
+///
+/// ## Security Properties
+///
+/// - Challenge data is generated using cryptographically secure RNG
+/// - Each challenge has unique ID for tracking
+/// - Fixed validity period prevents indefinite replay
+/// - Immediate cleanup after verification limits attack window
 #[derive(Debug, Clone)]
 struct AuthChallenge {
-    /// Challenge ID
+    /// Unique challenge identifier for tracking.
+    ///
+    /// Generated using device ID and current timestamp to ensure uniqueness.
+    /// Used as key in the challenges HashMap for retrieval and cleanup.
     challenge_id: String,
-    /// Challenge data
+    /// Cryptographic challenge data.
+    ///
+    /// Random bytes generated by secure random number generator.
+    /// This data must be signed by the device's private key. Typical
+    /// challenge size is 32 bytes for Ed25519 compatibility.
     challenge_data: Vec<u8>,
-    /// Challenge timestamp
+    /// Challenge creation timestamp.
+    ///
+    /// Used to calculate challenge age for expiration checking.
+    /// Challenges older than valid_for duration are considered expired.
     created_at: Instant,
-    /// Challenge validity period
+    /// Challenge validity duration.
+    ///
+    /// Time window during which the device must respond with a signed
+    /// challenge. Standard value is 300 seconds (5 minutes). Shorter
+    /// windows provide better security but may cause reliability issues
+    /// in high-latency networks.
     valid_for: Duration,
 }
 
 use std::collections::HashSet;
 
 impl DMSCDeviceAuthProtocol {
-    /// Create a new device authentication protocol.
+    /// Creates a new device authentication protocol instance.
+    ///
+    /// Returns a newly initialized DMSCDeviceAuthProtocol with empty certificate
+    /// storage, no trusted devices, and uninitialized state. Call `initialize()`
+    /// before performing any authentication operations.
+    ///
+    /// ## Example
+    ///
+    /// ```rust
+    /// let auth_protocol = DMSCDeviceAuthProtocol::new();
+    /// auth_protocol.initialize().await?;
+    /// ```
+    ///
+    /// ## Thread Safety
+    ///
+    /// The returned instance is safe to share across multiple async tasks.
+    /// Internal state is protected by RwLock synchronization primitives.
     pub fn new() -> Self {
         Self {
             certificates: Arc::new(RwLock::new(HashMap::new())),
@@ -205,7 +448,44 @@ impl DMSCDeviceAuthProtocol {
         }
     }
     
-    /// Initialize the device authentication protocol.
+    /// Initializes the device authentication protocol.
+    ///
+    /// Performs the following initialization steps:
+    /// 1. Generates Ed25519 key pair for device authentication
+    /// 2. Loads device certificates from secure storage
+    /// 3. Initializes hardware security module
+    /// 4. Sets up secure key storage
+    ///
+    /// ## Initialization Sequence
+    ///
+    /// ```
+    /// 1. Generate Device Key Pair
+    ///    ├── Create Ed25519 key pair using ring::signature
+    ///    └── Store private key securely
+    ///
+    /// 2. Load Certificates
+    ///    ├── Access secure storage (TPM/HSM/filesystem)
+    ///    └── Validate certificate chains
+    ///
+    /// 3. Initialize HSM
+    ///    ├── Generate master key
+    ///    └── Configure secure key hierarchy
+    ///
+    /// 4. Setup Key Storage
+    ///    ├── Encrypt private keys
+    ///    └── Configure access policies
+    /// ```
+    ///
+    /// ## Idempotency
+    ///
+    /// This method is idempotent - calling it multiple times has no effect
+    /// after the first successful initialization. The initialization flag
+    /// prevents redundant setup operations.
+    ///
+    /// ## Errors
+    ///
+    /// Returns DMSCError::AlreadyInitialized if protocol is already initialized.
+    /// Returns DMSCError::CryptoError if key generation or storage fails.
     pub async fn initialize(&self) -> DMSCResult<()> {
         let mut init = self.initialized.write().await;
         if *init {
@@ -229,7 +509,30 @@ impl DMSCDeviceAuthProtocol {
         Ok(())
     }
 
-    /// Generate device key pair for authentication
+    /// Generates an Ed25519 key pair for device authentication.
+    ///
+    /// Creates a new Ed25519 signing key pair using cryptographically secure
+    /// random number generation. The private key is stored in PKCS#8 format
+    /// for interoperability and secure storage.
+    ///
+    /// ## Key Generation Process
+    ///
+    /// 1. Obtain system random number generator (ring::rand::SystemRandom)
+    /// 2. Generate PKCS#8 key pair using Ed25519 algorithm
+    /// 3. Parse the generated key pair for validation
+    /// 4. Extract public key bytes for sharing
+    ///
+    /// ## Security Properties
+    ///
+    /// - Uses SystemRandom which reads from OS entropy source
+    /// - Ed25519 provides 128-bit security level
+    /// - PKCS#8 format allows key import/export safely
+    ///
+    /// ## Errors
+    ///
+    /// Returns DMSCError::CryptoError if:
+    /// - Random number generation fails
+    /// - Key pair parsing fails
     fn generate_device_keypair(&self) -> DMSCResult<(Vec<u8>, Vec<u8>)> {
         use ring::signature::{self, KeyPair};
         use ring::rand::SystemRandom;
@@ -247,7 +550,43 @@ impl DMSCDeviceAuthProtocol {
         Ok((private_key, public_key))
     }
     
-    /// Authenticate a target device.
+    /// Authenticates a target device using challenge-response protocol.
+    ///
+    /// Performs full device authentication by generating a cryptographic challenge,
+    /// sending it to the device, and verifying the response. On successful verification,
+    /// the device is added to the trusted devices list.
+    ///
+    /// ## Authentication Process
+    ///
+    /// ```text
+    /// Authenticator                    Target Device
+    ///     |                                  |
+    ///     |-- Generate Challenge ----------->
+    ///     |   (random 32-byte data)         |
+    ///     |                                  |
+    ///     |                          Sign Challenge
+    ///     |                          with private key
+    ///     |                                  |
+    ///     |<-- Send Signature --------------|
+    ///     |   (Ed25519 signature, 64 bytes) |
+    ///     |                                  |
+    ///     |-- Verify Signature ------------->
+    ///     |   (using device's public key)    |
+    ///     |                                  |
+    ///     |-- Add to Trusted Devices -------> (if valid)
+    /// ```
+    ///
+    /// ## Security Properties
+    ///
+    /// - **Proof of Possession**: Device must have private key to sign
+    /// - **Replay Prevention**: Each challenge is unique and time-limited
+    /// - **Forward Security**: Compromised sessions don't affect future keys
+    ///
+    /// ## Errors
+    ///
+    /// Returns DMSCError::NotInitialized if protocol not initialized.
+    /// Returns DMSCError::CryptoError if signature verification fails.
+    /// Returns DMSCError::CryptoError if device certificate not found.
     pub async fn authenticate_device(&self, device_id: &str) -> DMSCResult<bool> {
         if !*self.initialized.read().await {
             return Err(DMSCError::NotInitialized);
@@ -263,7 +602,24 @@ impl DMSCDeviceAuthProtocol {
         self.verify_challenge_response(&challenge, &device_response).await
     }
 
-    /// Generate authentication challenge for device
+    /// Generates a cryptographic challenge for device authentication.
+    ///
+    /// Creates a unique challenge by generating 32 random bytes using the system
+    /// random number generator. The challenge is stored with metadata for later
+    /// verification.
+    ///
+    /// ## Challenge Properties
+    ///
+    /// - **Size**: 32 bytes (256 bits) - matches Ed25519 scalar size
+    /// - **Generation**: SystemRandom (OS entropy)
+    /// - **Uniqueness**: Challenge ID includes timestamp for uniqueness
+    /// - **Validity**: 5 minutes (300 seconds) from creation
+    ///
+    /// ## Storage
+    ///
+    /// The generated challenge is stored in the challenges HashMap keyed by
+    /// challenge_id. This allows retrieval during verification and prevents
+    /// replay attacks using expired or replayed challenges.
     async fn generate_challenge(&self, device_id: &str) -> DMSCResult<AuthChallenge> {
         use ring::rand::SystemRandom;
         
@@ -286,7 +642,22 @@ impl DMSCDeviceAuthProtocol {
         Ok(challenge)
     }
 
-    /// Send challenge to device (simplified implementation)
+    /// Sends authentication challenge to target device.
+    ///
+    /// In a real implementation, this would transmit the challenge over the network
+    /// to the target device and receive a signed response. This implementation
+    /// simulates the response by signing the challenge with the local key pair.
+    ///
+    /// ## Network Communication
+    ///
+    /// - **Challenge Transmission**: Send challenge_data to device
+    /// - **Protocol**: Custom DMSC protocol or secure channel
+    /// - **Timeout**: Should implement per-operation timeout
+    ///
+    /// ## Response Format
+    ///
+    /// The expected response is an Ed25519 signature over the challenge_data,
+    /// which is exactly 64 bytes in length.
     async fn send_challenge_to_device(&self, challenge: &AuthChallenge) -> DMSCResult<Vec<u8>> {
         // In a real implementation, this would send the challenge over the network
         // and receive a signed response from the device
@@ -306,7 +677,38 @@ impl DMSCDeviceAuthProtocol {
         }
     }
 
-    /// Verify device challenge response using cryptographic signature verification.
+    /// Verifies device's challenge response through signature validation.
+    ///
+    /// Validates that the device's response is a valid Ed25519 signature over
+    /// the original challenge data. Also checks that the challenge has not
+    /// expired before accepting the response.
+    ///
+    /// ## Verification Process
+    ///
+    /// 1. **Challenge Expiration Check**
+    ///    - Current time minus created_at must be less than valid_for
+    ///    - Expired challenges are rejected
+    ///
+    /// 2. **Certificate Lookup**
+    ///    - Find device certificate by device ID
+    ///    - Verify certificate is not revoked
+    ///    - Verify certificate is within validity period
+    ///
+    /// 3. **Signature Verification**
+    ///    - Use device's public key from certificate
+    ///    - Verify Ed25519 signature over challenge data
+    ///    - Reject invalid signatures
+    ///
+    /// 4. **Cleanup**
+    ///    - Remove challenge from active challenges
+    ///    - Prevents replay using same challenge
+    ///
+    /// ## Security Considerations
+    ///
+    /// - **Timing Attack Prevention**: Use constant-time comparison
+    /// - **Side Channel**: Consider implementing constant-time verification
+    /// - **Error Handling**: Don't reveal which check failed (security through
+    ///   obscurity is not sufficient but reduces information leakage)
     async fn verify_challenge_response(&self, challenge: &AuthChallenge, response: &[u8]) -> DMSCResult<bool> {
         // Check if challenge is still valid
         if Instant::now().duration_since(challenge.created_at) > challenge.valid_for {
@@ -339,7 +741,20 @@ impl DMSCDeviceAuthProtocol {
         Ok(is_valid)
     }
     
-    /// Perform full device authentication.
+    /// Performs complete device authentication workflow.
+    ///
+    /// Internal method that orchestrates the full authentication process including
+    /// challenge generation, transmission, response verification, and trust list
+    /// management. This is a simplified implementation for demonstration.
+    ///
+    /// ## Workflow
+    ///
+    /// 1. Generate unique authentication challenge
+    /// 2. Store challenge for later verification
+    /// 3. Transmit challenge to device
+    /// 4. Receive and verify signature response
+    /// 5. Validate device certificate chain
+    /// 6. Add device to trusted list on success
     async fn perform_full_authentication(&self, device_id: &str) -> DMSCResult<()> {
         // Generate authentication challenge
         let challenge = self.generate_challenge().await?;
@@ -357,7 +772,16 @@ impl DMSCDeviceAuthProtocol {
         Ok(())
     }
     
-    /// Generate authentication challenge.
+    /// Generates authentication challenge using thread-local RNG.
+    ///
+    /// Alternative implementation using rand crate's thread-local RNG.
+    /// This method is used when ring::rand is not available.
+    ///
+    /// ## RNG Selection
+    ///
+    /// - Uses rand::thread_rng() for convenience
+    /// - Suitable for most authentication scenarios
+    /// - Consider SystemRandom for highest security requirements
     async fn generate_challenge(&self) -> DMSCResult<AuthChallenge> {
         let mut rng = rand::thread_rng();
         let mut challenge_data = vec![0u8; 32];
@@ -371,7 +795,16 @@ impl DMSCDeviceAuthProtocol {
         })
     }
     
-    /// Generate device key (simplified).
+    /// Generates device authentication key.
+    ///
+    /// Creates a 32-byte random key using thread-local random number generator.
+    /// This is a simplified key generation for demonstration purposes.
+    ///
+    /// ## Security Note
+    ///
+    /// This method uses rand::thread_rng() which is suitable for most purposes.
+    /// For highest security requirements, use a cryptographically secure RNG
+    /// like ring::rand::SystemRandom or the operating system's entropy source.
     async fn generate_device_key(&self) -> DMSCResult<Vec<u8>> {
         let mut rng = rand::thread_rng();
         let mut key = vec![0u8; 32];
@@ -379,12 +812,47 @@ impl DMSCDeviceAuthProtocol {
         Ok(key)
     }
     
-    /// Get device ID (simplified).
+    /// Retrieves the unique device identifier.
+    ///
+    /// Generates a device ID using UUID v4 format with a standard prefix.
+    /// In production, this would read the device ID from hardware registers
+    /// or secure storage.
+    ///
+    /// ## Device ID Format
+    ///
+    /// Format: `dms-device-{UUID}`
+    ///
+    /// ## Production Considerations
+    ///
+    /// - Read from device manufacturing ID register
+    /// - Store in tamper-evident storage
+    /// - Bind to hardware (TPM, secure boot)
     async fn get_device_id(&self) -> DMSCResult<String> {
         Ok(format!("dms-device-{}", uuid::Uuid::new_v4()))
     }
     
-    /// Load device certificates from secure storage
+    /// Loads device certificates from secure storage.
+    ///
+    /// Retrieves device certificates and their associated public keys from
+    /// secure storage. In production, this would access TPM, HSM, or encrypted
+    /// filesystem storage.
+    ///
+    /// ## Storage Operations
+    ///
+    /// 1. Access secure storage (TPM key handle, HSM, or encrypted file)
+    /// 2. Load certificate data in serialized format
+    /// 3. Deserialize and validate certificate structure
+    /// 4. Verify certificate chain signatures
+    /// 5. Check certificate revocation status
+    ///
+    /// ## Current Implementation
+    ///
+    /// This implementation creates a sample self-signed certificate for
+    /// demonstration purposes. Production code should:
+    /// - Load actual certificates from secure storage
+    /// - Validate complete certificate chains
+    /// - Implement CRL checking and OCSP stapling
+    /// - Use hardware-protected private keys
     async fn load_device_certificates_from_secure_storage(&self) -> DMSCResult<()> {
         // In a production environment, this would:
         // 1. Access secure storage (TPM, HSM, or encrypted filesystem)
@@ -410,7 +878,36 @@ impl DMSCDeviceAuthProtocol {
         Ok(())
     }
     
-    /// Initialize hardware security module with software-based key storage.
+    /// Initializes hardware security module interface.
+    ///
+    /// Sets up the connection to hardware security module for secure key
+    /// storage and cryptographic operations. This implementation simulates
+    /// HSM functionality using software-based key protection.
+    ///
+    /// ## HSM Initialization Sequence
+    ///
+    /// 1. **Connect to HSM**
+    ///    - Establish communication channel
+    ///    - Authenticate to HSM (admin credentials)
+    ///    - Verify HSM integrity (attestation)
+    ///
+    /// 2. **Generate Master Key**
+    ///    - Generate master key within HSM
+    ///    - Never export master key from HSM
+    ///    - Use for key encryption only
+    ///
+    /// 3. **Configure Key Hierarchy**
+    ///    - Set up key derivation paths
+    ///    - Configure access policies
+    ///    - Enable audit logging
+    ///
+    /// ## Current Implementation
+    ///
+    /// This implementation generates an ECDSA master key using software
+    /// simulation. Production code should:
+    /// - Use actual HSM (AWS CloudHSM, Azure Dedicated HSM, etc.)
+    /// - Implement proper HSM authentication
+    /// - Configure key backup and recovery
     async fn initialize_hardware_security_module(&self) -> DMSCResult<()> {
         // Software-based HSM simulation using secure key storage
         // In a real implementation, this would connect to physical HSM
@@ -427,7 +924,33 @@ impl DMSCDeviceAuthProtocol {
         Ok(())
     }
     
-    /// Set up secure key storage
+    /// Configures secure key storage for device keys.
+    ///
+    /// Sets up encryption and access control for storing device private keys.
+    /// In production, this would configure TPM sealing, HSM storage, or
+    /// encrypted filesystem with proper access controls.
+    ///
+    /// ## Key Storage Requirements
+    ///
+    /// 1. **Encryption at Rest**
+    ///    - Encrypt private keys using master key
+    ///    - Use authenticated encryption (AES-256-GCM)
+    ///    - Include key version for rotation support
+    ///
+    /// 2. **Access Control**
+    ///    - Restrict key access to authorized processes
+    ///    - Use OS-level access controls (DAC, MAC)
+    ///    - Implement key usage policies
+    ///
+    /// 3. **Audit Logging**
+    ///    - Log all key access operations
+    ///    - Include principal, operation, and timestamp
+    ///    - Store audit logs immutably
+    ///
+    /// 4. **Key Rotation**
+    ///    - Implement automatic key rotation schedule
+    ///    - Support graceful transition between key versions
+    ///    - Archive old keys securely
     async fn setup_secure_key_storage(&self) -> DMSCResult<()> {
         // In a production environment, this would:
         // 1. Initialize secure key storage (TPM, HSM, or encrypted keystore)
@@ -470,72 +993,106 @@ pub struct DMSCPostQuantumCrypto {
     initialized: Arc<RwLock<bool>>,
 }
 
-/// Key exchange state.
+/// Key exchange state for post-quantum cryptographic operations.
+///
+/// Tracks the current state of a key exchange operation including local private
+/// key, remote public key, computed shared secret, and completion status.
+///
+/// ## State Transitions
+///
+/// ```text
+/// Initial State:
+///   - private_key: None
+///   - remote_public_key: None
+///   - shared_secret: None
+///   - completed: false
+///
+/// After Initialization:
+///   - private_key: Some(local_private_key)
+///   - remote_public_key: None
+///   - shared_secret: None
+///   - completed: false
+///
+/// After Key Exchange:
+///   - private_key: Some(local_private_key)
+///   - remote_public_key: Some(remote_public_key)
+///   - shared_secret: Some(shared_secret)
+///   - completed: true
+/// ```
+///
+/// ## Security Properties
+///
+/// - **Forward Secrecy**: Each key exchange generates new key pair
+/// - **Unique Keys**: Different sessions use different key pairs
+/// - **Secure Comparison**: X25519 provides computational security
 #[derive(Debug, Default)]
 struct KeyExchangeState {
-    /// Local private key
+    /// Local private key for key exchange.
+    ///
+    /// X25519 private scalar used to derive public key and compute shared secret.
+    /// This key should be zeroized after use to minimize exposure.
     private_key: Option<Vec<u8>>,
-    /// Remote public key
+    /// Remote party's public key.
+    ///
+    /// X25519 public key received from the remote party during key exchange.
+    /// Used to compute the shared secret using X25519 scalar multiplication.
     remote_public_key: Option<Vec<u8>>,
-    /// Shared secret
+    /// Computed shared secret.
+    ///
+    /// The result of X25519 key agreement, which is a shared secret known only
+    /// to both parties. This secret should be used only once and then discarded.
     shared_secret: Option<Vec<u8>>,
-    /// Key exchange completed
+    /// Flag indicating key exchange completion.
+    ///
+    /// Set to true after shared secret has been successfully computed.
+    /// Prevents re-computation of shared secret.
     completed: bool,
 }
 
-impl DMSCPostQuantumCrypto {
-    /// Create a new post-quantum crypto handler.
-    pub fn new() -> Self {
-        Self {
-            key_exchange_state: Arc::new(RwLock::new(KeyExchangeState::default())),
-            initialized: Arc::new(RwLock::new(false)),
-        }
-    }
-    
-    /// Initialize the post-quantum crypto handler.
-    pub async fn initialize(&self, crypto_suite: &DMSCCryptoSuite) -> DMSCResult<()> {
-        if !crypto_suite.is_quantum_resistant() {
-            return Err(DMSCError::InvalidConfiguration("Crypto suite does not support quantum resistance".to_string()));
-        }
-        
-        // Generate post-quantum key pair (simplified)
-        let private_key = self.generate_post_quantum_key().await?;
-        
-        self.key_exchange_state.write().await.private_key = Some(private_key);
-        *self.initialized.write().await = true;
-        
-        Ok(())
-    }
-    
-    /// Perform post-quantum key exchange using X25519.
-    pub async fn perform_key_exchange(&self, stream: &TcpStream) -> DMSCResult<()> {
-        if !*self.initialized.read().await {
-            return Err(DMSCError::InvalidState("Post-quantum crypto not initialized".to_string()));
-        }
-        
-        // Use X25519 for key exchange (post-quantum alternative)
-        let key_exchange = crate::protocol::crypto::X25519KeyExchange::generate()
-            .map_err(|e| DMSCError::CryptoError(format!("Failed to generate X25519 key: {}", e)))?;
-        
-        let public_key = key_exchange.public_key();
-        
-        // Send public key to peer
-        let mut stream = stream;
-        stream.write_all(&public_key).await
-            .map_err(|e| DMSCError::NetworkError(format!("Failed to send public key: {}", e)))?;
-        
-        // Receive remote public key
-        let mut remote_public_key = vec![0u8; 32];
-        stream.read_exact(&mut remote_public_key).await
-            .map_err(|e| DMSCError::NetworkError(format!("Failed to receive remote public key: {}", e)))?;
-        
-        // Compute shared secret
-        let shared_secret = key_exchange.compute_shared_secret(&remote_public_key)
-            .map_err(|e| DMSCError::CryptoError(format!("Key exchange failed: {}", e)))?;
-        
-        let mut state = self.key_exchange_state.write().await;
-        state.remote_public_key = Some(remote_public_key);
-        state.shared_secret = Some(shared_secret);
+/// Post-quantum cryptography handler.
+///
+/// Provides quantum-resistant cryptographic operations using X25519 key exchange
+/// as a post-quantum alternative to traditional Diffie-Hellman. X25519 is
+/// believed to be resistant to attacks from both classical and quantum computers.
+///
+/// ## Quantum Resistance
+///
+/// X25519 is based on the difficulty of the elliptic curve discrete logarithm
+/// problem. While Shor's algorithm can solve this problem on a quantum computer,
+/// the required quantum resources make it impractical for the foreseeable future.
+/// For stronger post-quantum guarantees, this module can be extended with
+/// lattice-based algorithms like Kyber.
+///
+/// ## X25519 Algorithm Details
+///
+/// - **Curve**: Edwards 25519
+/// - **Security Level**: 128-bit (classical), limited against quantum
+/// - **Key Size**: 256-bit (32 bytes each for private/public keys)
+/// - **Shared Secret**: 256-bit (32 bytes)
+///
+/// ## Usage
+///
+/// ```rust
+/// let post_quantum = DMSCPostQuantumCrypto::new();
+/// post_quantum.initialize(&DMSCCryptoSuite::PostQuantum).await?;
+///
+/// // Perform key exchange with remote peer
+/// post_quantum.perform_key_exchange(&tcp_stream).await?;
+/// ```
+pub struct DMSCPostQuantumCrypto {
+    /// Key exchange state with thread-safe access.
+    ///
+    /// Contains all state required for key exchange operations including
+    /// private key, remote public key, and shared secret. Protected by
+    /// RwLock for concurrent access from multiple async tasks.
+    key_exchange_state: Arc<RwLock<KeyExchangeState>>,
+    /// Initialization status flag.
+    ///
+    /// Tracks whether the post-quantum crypto handler has been properly
+    /// initialized with a valid cryptographic suite. Prevents operations
+    /// before initialization is complete.
+    initialized: Arc<RwLock<bool>>,
+}
         state.completed = true;
         
         Ok(())

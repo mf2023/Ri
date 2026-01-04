@@ -36,10 +36,14 @@ from .dmsc import (
     DMSCLogLevel, DMSCLogger, DMSCModulePhase, DMSCServiceContext,
     
     # Python module support
-    PyDMSCModule, PythonModuleAdapter, PyServiceModule, PyAsyncServiceModule,
+    DMSCPyModule, DMSCPyModuleAdapter, DMSCPyServiceModule, DMSCPyAsyncServiceModule,
+    
+    # Cache classes - also available directly
+    DMSCCacheModule, DMSCCacheManager, DMSCCacheConfig, DMSCCacheBackendType,
+    DMSCCachePolicy, DMSCCacheStats, DMSCCachedValue, DMSCCacheEvent,
     
     # Queue classes - also available directly
-    DMSCQueueModule, DMSCQueueConfig, DMSCQueueManager, DMSCQueueMessage, DMSCQueueStats,
+    DMSCQueueModule, DMSCQueueConfig, DMSCQueueManager, DMSCQueueMessage, DMSCQueueStats, DMSCQueueBackendType,
     
     # Gateway classes - also available directly
     DMSCGateway, DMSCGatewayConfig, DMSCRouter, DMSCRoute,
@@ -58,6 +62,29 @@ from .dmsc import (
     queue, gateway, service_mesh, auth
 )
 
+# Create aliases for methods with _py suffix (pyo3 auto-renaming)
+# This ensures Python API matches Rust API naming
+def _create_method_alias(cls, old_name, new_name):
+    """Create an alias for a method, mapping new_name to old_name."""
+    def alias_method(self, *args, **kwargs):
+        return getattr(self, old_name)(*args, **kwargs)
+    alias_method.__name__ = new_name
+    setattr(cls, new_name, alias_method)
+
+# Apply aliases to DMSCJWTManager
+if hasattr(DMSCJWTManager, 'generate_token_py'):
+    _create_method_alias(DMSCJWTManager, 'generate_token_py', 'generate_token')
+if hasattr(DMSCJWTManager, 'validate_token_py'):
+    _create_method_alias(DMSCJWTManager, 'validate_token_py', 'validate_token')
+if hasattr(DMSCJWTManager, 'get_token_expiry_py'):
+    _create_method_alias(DMSCJWTManager, 'get_token_expiry_py', 'get_token_expiry')
+
+# Apply aliases to DMSCQueueManager
+if hasattr(DMSCQueueManager, 'push_py'):
+    _create_method_alias(DMSCQueueManager, 'push_py', 'push')
+if hasattr(DMSCQueueManager, 'pop_py'):
+    _create_method_alias(DMSCQueueManager, 'pop_py', 'pop')
+
 # Core classes available directly
 __all__ = [
     # Core classes
@@ -66,10 +93,14 @@ __all__ = [
     'DMSCLogLevel', 'DMSCLogger', 'DMSCModulePhase', 'DMSCServiceContext',
     
     # Python module support
-    'PyDMSCModule', 'PythonModuleAdapter', 'PyServiceModule', 'PyAsyncServiceModule',
+    'DMSCPyModule', 'DMSCPyModuleAdapter', 'DMSCPyServiceModule', 'DMSCPyAsyncServiceModule',
+    
+    # Cache classes
+    'DMSCCacheModule', 'DMSCCacheManager', 'DMSCCacheConfig', 'DMSCCacheBackendType',
+    'DMSCCachePolicy', 'DMSCCacheStats', 'DMSCCachedValue', 'DMSCCacheEvent',
     
     # Queue classes
-    'DMSCQueueModule', 'DMSCQueueConfig', 'DMSCQueueManager', 'DMSCQueueMessage', 'DMSCQueueStats',
+    'DMSCQueueModule', 'DMSCQueueConfig', 'DMSCQueueManager', 'DMSCQueueMessage', 'DMSCQueueStats', 'DMSCQueueBackendType',
     
     # Gateway classes
     'DMSCGateway', 'DMSCGatewayConfig', 'DMSCRouter', 'DMSCRoute',

@@ -23,8 +23,6 @@ use serde::{Serialize, Deserialize};
 
 #[cfg(feature = "pyo3")]
 use pyo3::prelude::*;
-#[cfg(feature = "pyo3")]
-use pyo3::pymethods;
 
 /// Cache trait for DMSC cache implementations
 #[async_trait::async_trait]
@@ -33,7 +31,7 @@ pub trait DMSCCache: Send + Sync {
     async fn set(&self, key: &str, value: &str, ttl_seconds: Option<u64>) -> DMSCResult<()>;
     async fn delete(&self, key: &str) -> DMSCResult<bool>;
     async fn clear(&self) -> DMSCResult<()>;
-    async fn stats(&self) -> CacheStats;
+    async fn stats(&self) -> DMSCCacheStats;
     async fn cleanup_expired(&self) -> DMSCResult<usize>;
     async fn exists(&self, key: &str) -> bool;
 }
@@ -65,7 +63,7 @@ pub enum DMSCCacheEvent {
 /// Cache statistics
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
-pub struct CacheStats {
+pub struct DMSCCacheStats {
     #[pyo3(get, set)]
     pub hits: u64,
     #[pyo3(get, set)]
@@ -84,7 +82,7 @@ pub struct CacheStats {
     pub eviction_count: u64,
 }
 
-impl Default for CacheStats {
+impl Default for DMSCCacheStats {
     fn default() -> Self {
         Self {
             hits: 0,
@@ -101,7 +99,7 @@ impl Default for CacheStats {
 
 #[cfg(feature = "pyo3")]
 #[pymethods]
-impl CacheStats {
+impl DMSCCacheStats {
     #[new]
     fn py_new() -> Self {
         Self::default()
@@ -116,14 +114,14 @@ impl CacheStats {
 /// Cached value wrapper
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
-pub struct CachedValue {
+pub struct DMSCCachedValue {
     #[pyo3(get, set)]
     pub value: String,
     #[pyo3(get, set)]
     pub expires_at: Option<u64>,
 }
 
-impl CachedValue {
+impl DMSCCachedValue {
     pub fn new(value: String, ttl_seconds: Option<u64>) -> Self {
         let expires_at = ttl_seconds.map(|ttl| {
             std::time::SystemTime::now()
@@ -168,7 +166,7 @@ impl CachedValue {
 
 #[cfg(feature = "pyo3")]
 #[pymethods]
-impl CachedValue {
+impl DMSCCachedValue {
     #[new]
     fn py_new(value: String, ttl_seconds: Option<u64>) -> Self {
         Self::new(value, ttl_seconds)

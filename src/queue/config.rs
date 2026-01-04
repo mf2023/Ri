@@ -89,18 +89,25 @@ use std::str::FromStr;
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DMSCQueueConfig {
     /// Whether the queue system is enabled
+    #[pyo3(get, set)]
     pub enabled: bool,
     /// The type of queue backend to use
+    #[pyo3(get, set)]
     pub backend_type: DMSCQueueBackendType,
     /// Connection string for the queue backend
+    #[pyo3(get, set)]
     pub connection_string: String,
     /// Maximum number of connections to the queue backend
+    #[pyo3(get, set)]
     pub max_connections: u32,
     /// Maximum size of messages in bytes
+    #[pyo3(get, set)]
     pub message_max_size: usize,
     /// Timeout for consumer operations in milliseconds
+    #[pyo3(get, set)]
     pub consumer_timeout_ms: u64,
     /// Timeout for producer operations in milliseconds
+    #[pyo3(get, set)]
     pub producer_timeout_ms: u64,
     /// Configuration for message retry behavior
     pub retry_policy: DMSCRetryPolicy,
@@ -132,6 +139,7 @@ impl Default for DMSCQueueConfig {
 /// Enum representing supported queue backend types.
 ///
 /// This enum defines the different queue backends that can be used with the DMSC queue system.
+#[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum DMSCQueueBackendType {
     /// In-memory queue implementation for testing and development
@@ -142,6 +150,15 @@ pub enum DMSCQueueBackendType {
     Kafka,
     /// Redis queue backend for simple, lightweight queueing
     Redis,
+}
+
+#[cfg(feature = "pyo3")]
+#[pyo3::prelude::pymethods]
+impl DMSCQueueBackendType {
+    #[staticmethod]
+    fn from_string(s: String) -> Self {
+        s.parse().unwrap_or(DMSCQueueBackendType::Memory)
+    }
 }
 
 impl FromStr for DMSCQueueBackendType {

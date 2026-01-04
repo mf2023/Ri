@@ -2,9 +2,9 @@
 
 # Config API Reference
 
-**Version: 1.0.0**
+**Version: 0.0.3**
 
-**Last modified date: 2025-12-12**
+**Last modified date: 2026-01-01**
 
 The config module provides multi-source configuration management and hot reload functionality, supporting multiple configuration sources such as files and environment variables.
 

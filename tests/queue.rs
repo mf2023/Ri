@@ -15,6 +15,61 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+//! # Queue Module Tests
+//!
+//! This module contains comprehensive tests for the DMSC message queue system,
+//! covering message lifecycle, producer-consumer patterns, queue management operations,
+//! and various backend implementations for asynchronous task processing.
+//!
+//! ## Test Coverage
+//!
+//! - **DMSCQueueMessage**: Tests for message structure including unique identification,
+//!   payload storage, header management, retry tracking, and delivery confirmation
+//!
+//! - **DMSCMemoryQueue**: Tests for in-memory queue implementation covering message
+//!   production, consumption with consumer groups, batch operations, statistics, and
+//!   queue lifecycle management (purge, delete)
+//!
+//! - **DMSCQueueManager**: Tests for queue management including creation, retrieval,
+//!   listing, deletion, and queue registry maintenance
+//!
+//! - **DMSCQueueConfig**: Tests for queue configuration including backend selection,
+//!   connection settings, and queue-specific parameters
+//!
+//! - **Consumer Groups**: Tests for consumer group semantics allowing multiple consumers
+//!   to share queue workload with independent acknowledgment
+//!
+//! ## Architecture
+//!
+//! The queue system implements a layered architecture:
+//! - **Message Layer**: Typed message structures with headers, priorities, and retry logic
+//! - **Backend Layer**: Pluggable queue implementations (in-memory, Redis, Kafka, etc.)
+//! - **Producer Layer**: Sender abstraction with single and batch send capabilities
+//! - **Consumer Layer**: Receiver abstraction with acknowledgment and flow control
+//! - **Management Layer**: Queue lifecycle, monitoring, and administrative operations
+//!
+//! ## Message Delivery Semantics
+//!
+//! The queue system supports flexible delivery guarantees:
+//! - **At-Least-Once**: Messages are guaranteed to be delivered, potentially duplicated
+//! - **Acknowledgment**: Consumers must ack messages to prevent redelivery
+//! - **Retry Logic**: Failed messages can be retried with configurable limits
+//! - **Dead Letter**: Messages exceeding retry limits can be moved to DLQ
+//!
+//! ## Consumer Flow Control
+//!
+//! Consumers support pause/resume for load management:
+//! - **Pause**: Stops message delivery while maintaining queue position
+//! - **Resume**: Continues message delivery from where it was paused
+//! - **Use Cases**: Backpressure, maintenance windows, scaling operations
+//!
+//! ## Batch Operations
+//!
+//! For high-throughput scenarios, batch operations optimize performance:
+//! - **Send Batch**: Multiple messages sent in a single network round-trip
+//! - **Receive Batch**: Multiple messages delivered for batch processing
+//! - **Benefits**: Reduced latency, improved throughput, better resource utilization
+
 use dmsc::queue::{DMSCQueueMessage, DMSCQueue, DMSCQueueConfig, QueueBackendType, DMSCQueueManager, DMSCQueueModule};
 use dmsc::queue::backends::DMSCMemoryQueue;
 

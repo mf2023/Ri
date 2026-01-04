@@ -75,7 +75,7 @@ use tokio::sync::RwLock;
 use pyo3::PyResult;
 
 #[cfg(feature = "auth")]
-use urlencoding;
+extern crate urlencoding;
 
 /// OAuth provider configuration.
 /// 
@@ -514,7 +514,41 @@ impl DMSCOAuthManager {
 }
 
 #[cfg(feature = "pyo3")]
-/// Python bindings for DMSCOAuthManager
+/// Python bindings for the OAuth Manager.
+///
+/// This module provides Python interface to DMSC OAuth functionality,
+/// enabling Python applications to integrate with OAuth identity providers.
+///
+/// ## Supported Operations
+///
+/// - Provider registration and management
+/// - Authentication URL generation for OAuth flows
+/// - Token exchange with authorization codes
+/// - User information retrieval from OAuth providers
+/// - Token refresh and revocation
+///
+/// ## Python Usage Example
+///
+/// ```python
+/// from dms import DMSCOAuthProvider, DMSCOAuthManager
+///
+/// # Create OAuth manager
+/// oauth_manager = DMSCOAuthManager()
+///
+/// # Register a provider
+/// provider = DMSCOAuthProvider(
+///     id="google",
+///     name="Google",
+///     client_id="your_client_id",
+///     client_secret="your_client_secret",
+///     auth_url="https://accounts.google.com/o/oauth2/auth",
+///     token_url="https://oauth2.googleapis.com/token",
+///     user_info_url="https://www.googleapis.com/oauth2/v3/userinfo",
+///     scopes=["openid", "email", "profile"],
+///     enabled=True,
+/// )
+/// # Note: Async operations require Python 3.7+ with asyncio
+/// ```
 #[pyo3::prelude::pymethods]
 impl DMSCOAuthManager {
     #[new]

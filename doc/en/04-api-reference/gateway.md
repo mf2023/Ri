@@ -30,6 +30,8 @@ The gateway module contains the following sub-modules:
 
 The main API gateway interface, providing unified gateway functionality.
 
+**Note**: The `handle_request` method is an internal method, only available within the crate.
+
 #### Methods
 
 | Method | Description | Parameters | Returns |
@@ -37,7 +39,7 @@ The main API gateway interface, providing unified gateway functionality.
 | `new()` | Create gateway instance | None | `Self` |
 | `router()` | Get router | None | `Arc<DMSCRouter>` |
 | `middleware_chain()` | Get middleware chain | None | `Arc<DMSCMiddlewareChain>` |
-| `handle_request(request)` | Handle request | `request: DMSCGatewayRequest` | `DMSCGatewayResponse` |
+| `handle_request(request)` | Handle request (internal method) | `request: DMSCGatewayRequest` | `DMSCGatewayResponse` |
 
 #### Usage Example
 

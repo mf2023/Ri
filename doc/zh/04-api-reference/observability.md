@@ -2,9 +2,9 @@
 
 # Observability API参考
 
-**Version: 1.0.0**
+**Version: 0.0.3**
 
-**Last modified date: 2025-12-12**
+**Last modified date: 2026-01-01**
 
 observability模块提供分布式追踪、指标收集、健康检查与性能监控功能，支持OpenTelemetry标准。
 

@@ -15,7 +15,33 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use dmsc::cache::{CachedValue, CacheStats, DMSCCacheConfig, CacheBackendType, DMSCCacheManager, DMSCMemoryCache, DMSCCache};
+//! # Cache Module Tests
+//!
+//! This module contains comprehensive tests for the DMSC caching system, covering
+//! all cache-related components including cached values, statistics, configuration,
+//! backend types, memory cache implementation, and the cache manager.
+//!
+//! ## Test Coverage
+//!
+//! - **DMSCCachedValue**: Tests for serialized value storage, TTL-based expiration,
+//!   touch functionality, and deserialization with type safety
+//! - **DMSCCacheStats**: Tests for cache statistics tracking including entries,
+//!   memory usage, hit/miss counts, and eviction tracking
+//! - **DMSCCacheConfig**: Tests for default configuration values and backend type
+//!   parsing from strings
+//! - **DMSCMemoryCache**: Tests for in-memory cache operations including get, set,
+//!   delete, exists, clear, statistics, and expired entry cleanup
+//! - **DMSCCacheManager**: Tests for the generic cache manager interface with typed
+//!   get/set operations, existence checks, and lazy value generation
+//!
+//! ## Design Principles
+//!
+//! Tests follow the principle of verifying both positive and negative scenarios,
+//! including edge cases such as non-existent keys, expired entries, and type
+//! mismatches during deserialization. All async operations use tokio for testing
+//! concurrent cache access patterns.
+
+use dmsc::cache::{DMSCCachedValue, DMSCCacheStats, DMSCCacheConfig, DMSCCacheBackendType, DMSCCacheManager, DMSCMemoryCache, DMSCCache};
 use std::time::Duration;
 
 #[test]
@@ -24,7 +50,7 @@ fn test_cached_value_new() {
     let ttl_seconds = Some(60_u64);
     let serialized = serde_json::to_string(&data).unwrap();
     
-    let cached_value = CachedValue::new(serialized, ttl_seconds);
+    let cached_value = DMSCCachedValue::new(serialized, ttl_seconds);
     
     let deserialized: serde_json::Value = cached_value.deserialize().unwrap();
     assert_eq!(deserialized, data);
@@ -38,7 +64,7 @@ fn test_cached_value_touch() {
     let ttl_seconds = Some(60_u64);
     let serialized = serde_json::to_string(&data).unwrap();
     
-    let mut cached_value = CachedValue::new(serialized, ttl_seconds);
+    let mut cached_value = DMSCCachedValue::new(serialized, ttl_seconds);
     
     cached_value.touch();
 }
@@ -50,7 +76,7 @@ fn test_cached_value_expired() {
     // Create a value with a very short TTL
     let ttl_seconds = Some(1_u64);
     let serialized = serde_json::to_string(&data).unwrap();
-    let mut cached_value = CachedValue::new(serialized, ttl_seconds);
+    let mut cached_value = DMSCCachedValue::new(serialized, ttl_seconds);
     
     // Should not be expired immediately
     assert!(!cached_value.is_expired());
@@ -68,7 +94,7 @@ fn test_cached_value_deserialize() {
     let ttl_seconds = Some(60_u64);
     let serialized = serde_json::to_string(&data).unwrap();
     
-    let cached_value = CachedValue::new(serialized, ttl_seconds);
+    let cached_value = DMSCCachedValue::new(serialized, ttl_seconds);
     
     // Test deserialization to string
     let result: String = cached_value.deserialize().unwrap();
@@ -81,7 +107,7 @@ fn test_cached_value_deserialize() {
 
 #[test]
 fn test_cache_stats_default() {
-    let stats = CacheStats::default();
+    let stats = DMSCCacheStats::default();
     
     assert_eq!(stats.entries, 0);
     assert_eq!(stats.memory_usage_bytes, 0);
@@ -99,7 +125,7 @@ fn test_cache_config_default() {
     assert_eq!(config.default_ttl_secs, 3600);
     assert_eq!(config.max_memory_mb, 512);
     assert_eq!(config.cleanup_interval_secs, 300);
-    assert_eq!(config.backend_type, CacheBackendType::Memory);
+    assert_eq!(config.backend_type, DMSCCacheBackendType::Memory);
     assert_eq!(config.redis_url, "redis://127.0.0.1:6379");
     assert_eq!(config.redis_pool_size, 10);
 }
@@ -107,16 +133,16 @@ fn test_cache_config_default() {
 #[test]
 fn test_cache_backend_type_from_str() {
     // Test from_str_custom method
-    assert_eq!(CacheBackendType::from_str_custom("memory"), CacheBackendType::Memory);
-    assert_eq!(CacheBackendType::from_str_custom("redis"), CacheBackendType::Redis);
-    assert_eq!(CacheBackendType::from_str_custom("hybrid"), CacheBackendType::Hybrid);
-    assert_eq!(CacheBackendType::from_str_custom("invalid"), CacheBackendType::Memory);
+    assert_eq!(DMSCCacheBackendType::from_str_custom("memory"), DMSCCacheBackendType::Memory);
+    assert_eq!(DMSCCacheBackendType::from_str_custom("redis"), DMSCCacheBackendType::Redis);
+    assert_eq!(DMSCCacheBackendType::from_str_custom("hybrid"), DMSCCacheBackendType::Hybrid);
+    assert_eq!(DMSCCacheBackendType::from_str_custom("invalid"), DMSCCacheBackendType::Memory);
     
     // Test standard FromStr trait
-    assert_eq!("memory".parse::<CacheBackendType>().unwrap(), CacheBackendType::Memory);
-    assert_eq!("redis".parse::<CacheBackendType>().unwrap(), CacheBackendType::Redis);
-    assert_eq!("hybrid".parse::<CacheBackendType>().unwrap(), CacheBackendType::Hybrid);
-    assert_eq!("invalid".parse::<CacheBackendType>().unwrap(), CacheBackendType::Memory);
+    assert_eq!("memory".parse::<DMSCCacheBackendType>().unwrap(), DMSCCacheBackendType::Memory);
+    assert_eq!("redis".parse::<DMSCCacheBackendType>().unwrap(), DMSCCacheBackendType::Redis);
+    assert_eq!("hybrid".parse::<DMSCCacheBackendType>().unwrap(), DMSCCacheBackendType::Hybrid);
+    assert_eq!("invalid".parse::<DMSCCacheBackendType>().unwrap(), DMSCCacheBackendType::Memory);
 }
 
 #[tokio::test]

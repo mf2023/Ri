@@ -130,8 +130,6 @@ use crate::observability::{DMSCMetricsRegistry, DMSCMetric, DMSCMetricConfig, DM
 
 #[cfg(feature = "pyo3")]
 use pyo3::prelude::*;
-#[cfg(feature = "pyo3")]
-use pyo3::pymethods;
 
 
 pub use core::{DMSCDevice, DMSCDeviceType, DMSCDeviceStatus, DMSCDeviceCapabilities, DMSCDeviceControlConfig, DMSCDeviceConfig, NetworkDeviceInfo, DMSCDeviceHealthMetrics};

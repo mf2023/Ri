@@ -2,9 +2,9 @@
 
 # Config API参考
 
-**Version: 1.0.0**
+**Version: 0.0.3**
 
-**Last modified date: 2025-12-12**
+**Last modified date: 2026-01-01**
 
 config模块提供多源配置管理与热重载功能，支持文件、环境变量等多种配置来源。
 

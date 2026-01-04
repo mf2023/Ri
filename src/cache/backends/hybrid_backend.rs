@@ -38,7 +38,7 @@
 //! let hybrid_cache = DMSCHybridCache::new("redis://localhost:6379").await?;
 //! 
 //! // Set a value (stored in both memory and Redis)
-//! let cached_value = CachedValue {
+//! let cached_value = DMSCCachedValue {
 //!     value: b"test_data".to_vec(),
 //!     expires_at: Some(SystemTime::now() + Duration::from_secs(3600)),
 //!     metadata: HashMap::new(),
@@ -55,7 +55,7 @@
 #![allow(non_snake_case)]
 
 use std::sync::Arc;
-use crate::cache::{DMSCCache, CacheStats};
+use crate::cache::{DMSCCache, DMSCCacheStats};
 use crate::core::DMSCResult;
 
 /// Hybrid cache implementation combining memory and Redis backends.
@@ -99,7 +99,7 @@ impl DMSCCache for DMSCHybridCache {
     /// - `key`: Cache key to retrieve
     /// 
     /// # Returns
-    /// `Some(CachedValue)` if the key exists in either cache, otherwise `None`
+    /// `Some(DMSCCachedValue)` if the key exists in either cache, otherwise `None`
     async fn get(&self, key: &str) -> DMSCResult<Option<String>> {
         // First check memory cache
         if let Ok(Some(value)) = self.memory_cache.get(key).await {
@@ -184,12 +184,12 @@ impl DMSCCache for DMSCHybridCache {
     /// including total keys, memory usage, hit/miss counts, and eviction counts.
     /// 
     /// # Returns
-    /// A `CacheStats` struct containing combined statistics from both caches
-    async fn stats(&self) -> CacheStats {
+    /// A `DMSCCacheStats` struct containing combined statistics from both caches
+    async fn stats(&self) -> DMSCCacheStats {
         let memory_stats = self.memory_cache.stats().await;
         let redis_stats = self.redis_cache.stats().await;
         
-        CacheStats {
+        DMSCCacheStats {
             hits: memory_stats.hits + redis_stats.hits,
             misses: memory_stats.misses + redis_stats.misses,
             entries: memory_stats.entries + redis_stats.entries,

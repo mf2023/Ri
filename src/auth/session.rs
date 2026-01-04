@@ -430,7 +430,55 @@ impl DMSCSessionManager {
 }
 
 #[cfg(feature = "pyo3")]
-/// Python bindings for DMSCSessionManager
+/// Python bindings for the Session Manager.
+///
+/// This module provides Python interface to DMSC session management functionality,
+/// enabling Python applications to manage user sessions with expiration and data storage.
+///
+/// ## Supported Operations
+///
+/// - Session creation with user ID, IP address, and user agent tracking
+/// - Session retrieval and validation
+/// - Session data storage with key-value pairs
+/// - Session expiration management
+/// - Session cleanup for expired sessions
+///
+/// ## Python Usage Example
+///
+/// ```python
+/// from dms import DMSCSessionManager
+///
+/// # Create session manager with 30-minute timeout
+/// session_manager = DMSCSessionManager(1800)
+///
+/// # Create a new session
+/// session_id = session_manager.create_session(
+///     "user123",
+///     "192.168.1.1",
+///     "Mozilla/5.0"
+/// )
+///
+/// # Get session data
+/// session = session_manager.get_session(session_id)
+/// if session:
+///     print(f"Session created at: {session.created_at}")
+///     print(f"Session expires at: {session.expires_at}")
+///
+/// # Update session data
+/// session_manager.update_session(session_id, {"theme": "dark"})
+///
+/// # Extend session
+/// session_manager.extend_session(session_id)
+///
+/// # Destroy session when done
+/// session_manager.destroy_session(session_id)
+/// ```
+///
+/// ## Limitations
+///
+/// The current Python bindings do not support async session operations.
+/// For async scenarios, use the Rust API directly or implement async wrappers
+/// using Python's asyncio library.
 #[pyo3::prelude::pymethods]
 impl DMSCSessionManager {
     #[new]

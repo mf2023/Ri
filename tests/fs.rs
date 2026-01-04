@@ -15,6 +15,68 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+//! # FileSystem Module Tests
+//!
+//! This module contains comprehensive tests for the DMSC filesystem abstraction layer,
+//! covering filesystem initialization, safe directory operations, atomic file operations,
+//! JSON serialization/deserialization, and category-based path management.
+//!
+//! ## Test Coverage
+//!
+//! - **DMSCFileSystem Initialization**: Tests for filesystem root setup including explicit
+//!   root path configuration and automatic root detection based on system conventions
+//! - **Directory Operations**: Tests for safe directory creation, parent directory
+//!   enforcement, and recursive directory handling
+//! - **File Operations**: Tests for atomic text and binary writes that prevent partial
+//!   file corruption, file reading, existence checking, and file removal
+//! - **JSON Serialization**: Tests for structured data storage with automatic JSON
+//!   parsing and type-safe deserialization using Serde
+//! - **Directory Management**: Tests for recursive directory removal and file copying
+//!   operations
+//! - **Category Path Management**: Tests for standardized directory categories including
+//!   app data, logs, cache, reports, observability data, and temporary files
+//!
+//! ## Design Principles
+//!
+//! The DMSCFileSystem abstraction provides a safe, consistent interface for filesystem
+//! operations with the following principles:
+//! - **Path Safety**: All paths are normalized and validated to prevent path traversal
+//!   attacks and ensure operations stay within the project root
+//! - **Atomic Operations**: Write operations use temporary files with atomic rename
+//!   to prevent data corruption from crashes or interruptions
+//! - **Category Organization**: Files are organized into standard categories (logs,
+//!   cache, reports, etc.) for consistent structure and easy management
+//! - **Error Handling**: Operations return proper error types with context rather
+//!   than panicking on common filesystem issues
+//!
+//! ## Category Directory Structure
+//!
+//! The filesystem maintains a standard category directory layout:
+//! - **app/**: Application-specific data and configuration
+//! - **logs/**: Log files and logging-related data
+//! - **cache/**: Temporary cached data that can be evicted
+//! - **reports/**: Generated reports and output files
+//! - **observability/**: Metrics, traces, and observability data
+//! - **temp/**: Temporary files with automatic cleanup semantics
+//!
+//! ## Path Normalization
+//!
+//! The filesystem provides several path normalization mechanisms:
+//! - `ensure_parent_dir()`: Ensures the parent directory exists before file operations
+//! - `normalize_under_category()`: Validates and normalizes paths to ensure they
+//!   remain within the specified category directory
+//! - Category path helpers: Each category directory has a dedicated helper method
+//!   (app_dir(), logs_dir(), cache_dir(), etc.) that returns the category root path
+//!
+//! ## Atomic Write Pattern
+//!
+//! The atomic write pattern ensures data integrity:
+//! 1. Content is written to a temporary file in the same directory (e.g., filename.tmp)
+//! 2. On successful write, the temporary file is renamed to the target filename
+//! 3. If a crash occurs during write, the temporary file can be cleaned up on restart
+//! 4. The rename operation is atomic on most filesystems, ensuring either complete
+//!    old or complete new content is visible
+
 use dmsc::fs::DMSCFileSystem;
 use std::path::PathBuf;
 use tempfile::tempdir;

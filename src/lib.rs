@@ -195,10 +195,10 @@ pub mod py {
         m.add_class::<DMSCServiceContext>()?;
         
         // Add Python module support
-        m.add_class::<crate::core::module::PyDMSCModule>()?;
-        m.add_class::<crate::core::module::PythonModuleAdapter>()?;
-        m.add_class::<crate::core::module::PyServiceModule>()?;
-        m.add_class::<crate::core::module::PyAsyncServiceModule>()?;
+        m.add_class::<crate::core::module::DMSCPyModule>()?;
+        m.add_class::<crate::core::module::DMSCPyModuleAdapter>()?;
+        m.add_class::<crate::core::module::DMSCPyServiceModule>()?;
+        m.add_class::<crate::core::module::DMSCPyAsyncServiceModule>()?;
         
         // Add other core types
         m.add_class::<DMSCLogger>()?;
@@ -210,12 +210,23 @@ pub mod py {
         m.add_class::<DMSCHookKind>()?;
         m.add_class::<DMSCModulePhase>()?;
         
+        // Add cache types to main module
+        m.add_class::<crate::cache::DMSCCacheModule>()?;
+        m.add_class::<crate::cache::DMSCCacheManager>()?;
+        m.add_class::<crate::cache::DMSCCacheConfig>()?;
+        m.add_class::<crate::cache::DMSCCacheBackendType>()?;
+        m.add_class::<crate::cache::DMSCCachePolicy>()?;
+        m.add_class::<crate::cache::DMSCCacheStats>()?;
+        m.add_class::<crate::cache::DMSCCachedValue>()?;
+        m.add_class::<crate::cache::DMSCCacheEvent>()?;
+        
         // Add queue types to main module
         m.add_class::<crate::queue::DMSCQueueModule>()?;
         m.add_class::<crate::queue::DMSCQueueConfig>()?;
         m.add_class::<crate::queue::DMSCQueueManager>()?;
         m.add_class::<crate::queue::DMSCQueueMessage>()?;
         m.add_class::<crate::queue::DMSCQueueStats>()?;
+        m.add_class::<crate::queue::DMSCQueueBackendType>()?;
         
         // Add gateway types to main module
         m.add_class::<crate::gateway::DMSCGateway>()?;
@@ -293,10 +304,10 @@ pub mod py {
         m.add_class::<crate::cache::DMSCCacheModule>()?;
         m.add_class::<crate::cache::DMSCCacheManager>()?;
         m.add_class::<crate::cache::DMSCCacheConfig>()?;
-        m.add_class::<crate::cache::CacheBackendType>()?;
-        m.add_class::<crate::cache::CachePolicy>()?;
-        m.add_class::<crate::cache::CacheStats>()?;
-        m.add_class::<crate::cache::CachedValue>()?;
+        m.add_class::<crate::cache::DMSCCacheBackendType>()?;
+        m.add_class::<crate::cache::DMSCCachePolicy>()?;
+        m.add_class::<crate::cache::DMSCCacheStats>()?;
+        m.add_class::<crate::cache::DMSCCachedValue>()?;
         m.add_class::<crate::cache::DMSCCacheEvent>()?;
         
         parent.add_submodule(&m)?;

@@ -289,10 +289,33 @@ pub trait DMSCModule: Send + Sync {
 use pyo3::prelude::*;
 
 #[cfg(feature = "pyo3")]
+/// Python representation of a DMSC module configuration.
+///
+/// This structure provides a Python-accessible view of module configuration,
+/// allowing Python code to define module properties that can be used in Rust.
+/// It serves as a data container for module metadata and lifecycle configuration.
+///
+/// ## Attributes
+///
+/// - **name**: The unique identifier for the module
+/// - **is_critical**: Whether the module is critical to system operation
+/// - **priority**: Execution priority for dependency resolution
+/// - **dependencies**: List of module names this module depends on
+///
+/// ## Python Usage
+///
+/// ```python
+/// import dms
+///
+/// module = dms.DMSCPyModule(name="my_python_module")
+/// module.is_critical = True
+/// module.priority = 100
+/// module.dependencies = ["logger", "config"]
+/// ```
 #[pyclass]
-#[pyo3(name = "PyDMSCModule")]
+#[pyo3(name = "DMSCPyModule")]
 #[derive(Clone)]
-pub struct PyDMSCModule {
+pub struct DMSCPyModule {
     #[pyo3(get)]
     name: String,
     #[pyo3(get)]
@@ -305,10 +328,10 @@ pub struct PyDMSCModule {
 
 #[cfg(feature = "pyo3")]
 #[pymethods]
-impl PyDMSCModule {
+impl DMSCPyModule {
     #[new]
     fn new(name: String) -> Self {
-        PyDMSCModule {
+        DMSCPyModule {
             name,
             is_critical: true,
             priority: 0,
@@ -358,11 +381,46 @@ impl PyDMSCModule {
 }
 
 #[cfg(feature = "pyo3")]
-/// Python module adapter that implements DMSCModule trait
+/// Python module adapter that implements DMSCModule trait.
+///
+/// This structure enables Python modules to integrate with the DMSC module system
+/// by implementing the `AsyncServiceModule` trait. Python code can create instances
+/// of this adapter with custom configuration, and they will participate in the
+/// module lifecycle just like Rust-native modules.
+///
+/// ## Thread Safety
+///
+/// This structure is designed to be safely used across threads when combined
+/// with the appropriate Python GIL management. The underlying implementation
+/// ensures proper synchronization during lifecycle callbacks.
+///
+/// ## Lifecycle Methods
+///
+/// All lifecycle methods (`init`, `before_start`, `start`, `after_start`,
+/// `before_shutdown`, `shutdown`, `after_shutdown`) have default implementations
+/// that return `Ok(())`, allowing Python modules to override only the methods
+/// they need.
+///
+/// ## Python Usage
+///
+/// ```python
+/// import dms
+///
+/// class MyPythonModule:
+///     def name(&self):
+///         return "python_module"
+///
+///     async def start(&self, ctx):
+///         print("Starting Python module")
+///         return None
+///
+/// adapter = dms.DMSCPyModuleAdapter(name="my_module")
+/// adapter.name = "python_module"
+/// ```
 #[pyclass]
-#[pyo3(name = "PythonModuleAdapter")]
+#[pyo3(name = "DMSCPyModuleAdapter")]
 #[derive(Clone)]
-pub struct PythonModuleAdapter {
+pub struct DMSCPyModuleAdapter {
     #[pyo3(get, set)]
     pub name: String,
     #[pyo3(get, set)]
@@ -375,10 +433,10 @@ pub struct PythonModuleAdapter {
 
 #[cfg(feature = "pyo3")]
 #[pymethods]
-impl PythonModuleAdapter {
+impl DMSCPyModuleAdapter {
     #[new]
     fn new(name: String) -> Self {
-        PythonModuleAdapter {
+        DMSCPyModuleAdapter {
             name,
             is_critical: true,
             priority: 0,
@@ -390,10 +448,50 @@ impl PythonModuleAdapter {
 }
 
 #[cfg(feature = "pyo3")]
-/// Python wrapper for ServiceModule trait
+/// Python wrapper for synchronous ServiceModule trait.
+///
+/// This structure provides a Python-accessible representation of synchronous
+/// service modules. It enables Python code to define synchronous modules that
+/// integrate with DMSC's module lifecycle system. Unlike asynchronous modules,
+/// synchronous modules execute their operations in a blocking manner.
+///
+/// ## Synchronous vs Asynchronous
+///
+/// Synchronous modules use blocking I/O and execute their callbacks on the
+/// same thread as the module lifecycle manager. For non-blocking operations,
+/// use `DMSCPyAsyncServiceModule` instead.
+///
+/// ## Threading Model
+///
+/// Synchronous modules are executed in the context of the module management
+/// thread. Long-running operations will block the entire module system.
+/// Consider using `tokio::task::spawn_blocking` for CPU-intensive work.
+///
+/// ## Default Behavior
+///
+/// All lifecycle methods return `Ok(())` by default, allowing Python modules
+/// to override only the methods they need to customize.
+///
+/// ## Python Usage
+///
+/// ```python
+/// import dms
+///
+/// class MySyncModule:
+///     def name(&self):
+///         return "sync_module"
+///
+///     def start(&self, ctx):
+///         print("Starting sync module")
+///         return None
+///
+/// module = dms.DMSCPyServiceModule(name="my_sync")
+/// module.priority = 50
+/// module.dependencies = ["config"]
+/// ```
 #[pyclass]
-#[pyo3(name = "PyServiceModule")]
-pub struct PyServiceModule {
+#[pyo3(name = "DMSCPyServiceModule")]
+pub struct DMSCPyServiceModule {
     name: String,
     is_critical: bool,
     priority: i32,
@@ -402,10 +500,10 @@ pub struct PyServiceModule {
 
 #[cfg(feature = "pyo3")]
 #[pymethods]
-impl PyServiceModule {
+impl DMSCPyServiceModule {
     #[new]
     fn new(name: String) -> Self {
-        PyServiceModule {
+        DMSCPyServiceModule {
             name,
             is_critical: true,
             priority: 0,
@@ -455,10 +553,50 @@ impl PyServiceModule {
 }
 
 #[cfg(feature = "pyo3")]
-/// Python wrapper for AsyncServiceModule trait
+/// Python wrapper for asynchronous AsyncServiceModule trait.
+///
+/// This structure provides a Python-accessible representation of asynchronous
+/// service modules. It enables Python code to define async modules that integrate
+/// with DMSC's module lifecycle system using non-blocking operations.
+///
+/// ## Asynchronous Execution
+///
+/// Asynchronous modules use Rust's async/await model and are executed on the
+/// Tokio runtime. This enables non-blocking I/O operations and concurrent
+/// execution of multiple async modules without thread blocking.
+///
+/// ## Tokio Runtime
+///
+/// The async modules execute within the Tokio runtime that is managed by the
+/// DMSC application runtime. This provides efficient task scheduling and
+/// native support for async I/O operations.
+///
+/// ## Python Integration
+///
+/// When using Python with pyo3, asynchronous methods should be defined using
+/// async def syntax. The Python runtime must be properly initialized before
+/// async operations can be performed.
+///
+/// ## Python Usage
+///
+/// ```python
+/// import dms
+///
+/// class MyAsyncModule:
+///     async def name(&self):
+///         return "async_module"
+///
+///     async def start(&self, ctx):
+///         print("Starting async module")
+///         return None
+///
+/// module = dms.DMSCPyAsyncServiceModule(name="my_async")
+/// module.priority = 100
+/// module.dependencies = ["config", "logger"]
+/// ```
 #[pyclass]
-#[pyo3(name = "PyAsyncServiceModule")]
-pub struct PyAsyncServiceModule {
+#[pyo3(name = "DMSCPyAsyncServiceModule")]
+pub struct DMSCPyAsyncServiceModule {
     name: String,
     is_critical: bool,
     priority: i32,
@@ -467,10 +605,10 @@ pub struct PyAsyncServiceModule {
 
 #[cfg(feature = "pyo3")]
 #[pymethods]
-impl PyAsyncServiceModule {
+impl DMSCPyAsyncServiceModule {
     #[new]
     fn new(name: String) -> Self {
-        PyAsyncServiceModule {
+        DMSCPyAsyncServiceModule {
             name,
             is_critical: true,
             priority: 0,
@@ -521,7 +659,7 @@ impl PyAsyncServiceModule {
 
 #[cfg(feature = "pyo3")]
 #[async_trait::async_trait]
-impl AsyncServiceModule for PythonModuleAdapter {
+impl AsyncServiceModule for DMSCPyModuleAdapter {
     fn name(&self) -> &str {
         &self.name
     }

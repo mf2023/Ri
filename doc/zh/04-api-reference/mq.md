@@ -2,9 +2,9 @@
 
 # Message Queue API参考
 
-**Version: 1.0.0**
+**Version: 0.0.3**
 
-**Last modified date: 2025-12-12**
+**Last modified date: 2026-01-01**
 
 mq模块提供消息队列与事件驱动功能，支持多种消息队列后端、发布订阅、延迟消息与死信队列。
 

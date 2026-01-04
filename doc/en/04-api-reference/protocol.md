@@ -28,18 +28,17 @@ The protocol module implements a layered architecture:
 
 ### DMSCProtocolManager
 
-The main protocol manager interface.
+The main protocol manager interface, providing protocol initialization, message sending, and protocol switching capabilities.
+
+**Note**: This class is an internal type, only available within the crate.
 
 #### Methods
 
 | Method | Description | Parameters | Returns |
 |:--------|:-------------|:--------|:--------|
-| `create()` | Create protocol manager | None | `DMSCProtocolManager` |
 | `initialize(config)` | Initialize manager | `config: DMSCProtocolConfig` | `DMSCResult<()>` |
 | `send_message(target, message)` | Send message | `target: &str`, `message: &[u8]` | `DMSCResult<Vec<u8>>` |
 | `send_message_with_protocol(target, message, protocol_type)` | Send with specific protocol | `target: &str`, `message: &[u8]`, `protocol_type: DMSCProtocolType` | `DMSCResult<Vec<u8>>` |
-| `switch_protocol(protocol_type)` | Switch protocol | `protocol_type: DMSCProtocolType` | `DMSCResult<()>` |
-| `get_current_protocol()` | Get current protocol | None | `DMSCProtocolType` |
 | `get_stats()` | Get statistics | None | `DMSCResult<DMSCProtocolStats>` |
 | `shutdown()` | Shutdown manager | None | `DMSCResult<()>` |
 | `create_control_center(ctx)` | Create control center | `ctx: DMSCServiceContext` | `DMSCControlCenter` |
@@ -48,9 +47,11 @@ The main protocol manager interface.
 
 ```rust
 use dms::protocol::{DMSCProtocolManager, DMSCProtocolType, DMSCProtocolConfig};
+use dms::core::DMSCServiceContext;
 
 async fn example() -> DMSCResult<()> {
-    let mut manager = DMSCProtocolManager::create();
+    let mut ctx = DMSCServiceContext::new();
+    let mut manager = DMSCProtocolManager::new(ctx);
     
     let config = DMSCProtocolConfig {
         default_protocol: DMSCProtocolType::Global,
@@ -65,9 +66,6 @@ async fn example() -> DMSCResult<()> {
     manager.initialize(config).await?;
     
     let response = manager.send_message("target-device", b"Hello DMSC").await?;
-    
-    manager.switch_protocol(DMSCProtocolType::Private).await?;
-    let secure_response = manager.send_message("secure-device", b"Sensitive data").await?;
     
     let stats = manager.get_stats().await?;
     println!("Messages sent: {}", stats.total_messages_sent);
@@ -201,7 +199,7 @@ HSM type enum.
 | `Hardware` | Hardware HSM |
 | `Cloud` | Cloud HSM |
 
-<div align="center">
+<div align="center>
 
 ## Frame Processing
 
@@ -265,7 +263,7 @@ state_manager.publish_update(update).await?;
 let state = state_manager.get_state(DMSCStateCategory::Device, "device:001").await?;
 ```
 
-<div align="center">
+<div align="center>
 
 ## Error Handling
 
@@ -285,7 +283,7 @@ Protocol statistics.
 | `error_count` | `u64` | Error count |
 | `success_rate` | `f32` | Success rate |
 
-<div align="center">
+<div align="center>
 
 ## Best Practices
 
@@ -298,7 +296,7 @@ Protocol statistics.
 5. **Use HSM for key protection**: Use hardware security modules for critical keys
 6. **Enable protocol switching**: Dynamically switch protocol types when needed
 
-<div align="center">
+<div align="center>
 
 ## Related Modules
 

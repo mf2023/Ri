@@ -15,6 +15,36 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+//! # Configuration Module Tests
+//!
+//! This module contains comprehensive tests for the DMSC configuration system,
+//! covering configuration storage, retrieval with type conversion, merging operations,
+//! and the configuration manager with multiple source support.
+//!
+//! ## Test Coverage
+//!
+//! - **DMSCConfig**: Tests for in-memory key-value configuration storage including
+//!   basic operations (new, set, get), type-safe retrieval methods (get_str, get_bool,
+//!   get_i64, get_u64, get_f32), configuration merging, and clearing operations
+//! - **DMSCConfigManager**: Tests for the configuration manager that supports multiple
+//!   configuration sources including file-based and environment-based sources, with
+//!   hot-reload capabilities through the watcher functionality
+//!
+//! ## Configuration Types
+//!
+//! The configuration system supports various data types through type conversion:
+//! - **Boolean**: Accepts "true", "1", "yes", "on" (case-insensitive) for true;
+//!   "false", "0", "no", "off" for false
+//! - **Integer (i64)**: Parses signed 64-bit integers with support for negative values
+//! - **Unsigned Integer (u64)**: Parses non-negative 64-bit integers, rejects negatives
+//! - **Floating Point (f32)**: Parses 32-bit floating point numbers with decimal support
+//!
+//! ## Design Notes
+//!
+//! Tests verify both successful conversions and error handling for invalid inputs.
+//! The merge operation follows a last-wins semantics where values from the source
+//! configuration override existing values in the target configuration.
+
 use dmsc::config::{DMSCConfig, DMSCConfigManager};
 use tempfile::tempdir;
 

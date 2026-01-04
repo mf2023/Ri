@@ -96,6 +96,9 @@ use tokio::sync::RwLock;
 #[cfg(feature = "pyo3")]
 use pyo3::prelude::*;
 
+#[cfg(feature = "pyo3")]
+use pyo3::PyResult;
+
 use super::core::{DMSCDevice, DMSCDeviceCapabilities, DMSCDeviceStatus, DMSCDeviceType, DMSCDeviceControlConfig, NetworkDeviceInfo};
 use crate::core::{DMSCResult, DMSCError};
 use crate::prelude::DMSCMetricsRegistry;
@@ -108,9 +111,6 @@ pub struct DMSCDeviceController {
     device_type_index: HashMap<DMSCDeviceType, Vec<String>>,
     allocation_map: HashMap<String, String>, // allocation_id -> device_id
 }
-
-#[cfg(feature = "pyo3")]
-use pyo3::prelude::*;
 
 #[cfg(feature = "pyo3")]
 #[pymethods]

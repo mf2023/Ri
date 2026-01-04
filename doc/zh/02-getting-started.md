@@ -2,9 +2,9 @@
 
 # 快速开始
 
-**Version: 1.0.0**
+**Version: 0.0.3**
 
-**Last modified date: 2025-12-12**
+**Last modified date: 2026-01-01**
 
 本指南将帮助您快速上手DMSC，从安装到创建第一个应用。
 
@@ -34,6 +34,24 @@ curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 # Windows
 # 访问 https://rustup.rs/ 并下载安装程序
 ```
+
+### Python 环境要求
+
+如果您使用 Python SDK，需满足以下要求：
+
+- **Python**: 3.8+
+- **pip**: 最新版本
+- **平台**: Linux、macOS 或 Windows
+
+您可以使用以下命令检查 Python 版本：
+
+```bash
+python --version
+# 或
+python3 --version
+```
+
+如果您还没有安装 Python 3.8+，请访问 [Python 官网](https://www.python.org/downloads/) 下载安装。
 
 <div align="center">
 
@@ -73,6 +91,27 @@ cargo add tokio --features full
 [dependencies]
 # 其他依赖
 dms = { git = "https://gitee.com/dunimd/dmsc" }
+```
+
+### 使用 Python SDK
+
+安装 Python SDK 最简单的方式是通过 pip：
+
+```bash
+pip install dmsc
+```
+
+或者添加到 `requirements.txt`：
+
+```
+dmsc==0.1.3
+```
+
+验证安装：
+
+```python
+import dmsc
+print(f"DMSC Python SDK 版本: {dmsc.__version__}")
 ```
 
 <div align="center">
@@ -143,6 +182,58 @@ cargo run
 ```
 2025-12-12T15:30:00Z INFO service: DMSC service started
 ```
+
+### 第一个 Python 应用
+
+使用 Python SDK 创建应用同样简单：
+
+```python
+from dmsc import DMSCAppBuilder, DMSCLogConfig
+
+# 构建服务运行时
+app = DMSCAppBuilder() \
+    .with_config("config.yaml") \
+    .with_logging(DMSCLogConfig.default()) \
+    .build()
+
+# 运行业务逻辑
+app.run(lambda ctx: ctx.logger().info("service", "DMSC service started"))
+```
+
+### 配置文件
+
+在项目根目录创建 `config.yaml` 文件（Rust 和 Python 共用）：
+
+```yaml
+# config.yaml
+service:
+  name: "my-dms-app"
+  version: "1.0.0"
+
+logging:
+  level: "info"
+  format: "json"
+  file_enabled: true
+  console_enabled: true
+
+observability:
+  metrics_enabled: true
+  tracing_enabled: true
+  prometheus_port: 9090
+```
+
+### 运行 Python 应用
+
+```bash
+python main.py
+```
+
+您应该会看到类似以下的输出：
+
+```
+2025-12-12T15:30:00Z INFO service: DMSC service started
+```
+
 <div align="center">
 
 ## 应用结构解析

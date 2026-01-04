@@ -1,8 +1,10 @@
 <div align="center">
 
-# DMSC (Dunimd Middleware Service) - Python Bindings
+# DMSC (Dunimd Middleware Service) - DMSC Library for Python
 
 English | [简体中文](README.zh.md)
+
+[Help Documentation](../doc/en/index.md)
 
 <a href="https://space.bilibili.com/3493284091529457" target="_blank">
     <img alt="BiliBili" src="https://img.shields.io/badge/BiliBili-Dunimd-00A1D6?style=flat-square&logo=bilibili"/>
@@ -90,7 +92,7 @@ DMSC adopts a highly modular architecture with 12 core modules, enabling on-dema
 <h2 align="center">🛠️ Installation & Environment</h2>
 
 ### Prerequisites
-- **Python**: 3.7+
+- **Python**: 3.8+
 - **pip**: Latest version
 - **Platforms**: Linux, macOS, Windows
 

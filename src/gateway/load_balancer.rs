@@ -866,7 +866,7 @@ impl DMSCLoadBalancer {
                 }
             };
             
-            match hyper::Client::new().get(uri).await {
+            match hyper::Client::builder().build::<_, hyper::Body>(hyper::client::HttpConnector::new()).get(uri).await {
                 Ok(response) => {
                     // Consider server healthy if status code is 2xx
                     (200..300).contains(&response.status().as_u16())

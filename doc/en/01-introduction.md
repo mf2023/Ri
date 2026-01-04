@@ -2,9 +2,9 @@
 
 # DMSC Introduction
 
-**Version: 1.0.0**
+**Version: 0.0.3**
 
-**Last modified date: 2025-12-12**
+**Last modified date: 2026-01-01**
 
 ## Project Overview
 
@@ -86,7 +86,48 @@ DMSC adopts a highly modular architecture with 12 core modules, enabling on-dema
 | **queue** | Distributed queue abstraction (Kafka, RabbitMQ, Redis, Memory) |
 | **service_mesh** | Service discovery, health checking, and traffic management |
 
+### 🐍 Python Module Support
+
 </div>
+
+DMSC provides complete Python bindings, allowing you to use all core features through Python:
+
+| Module | Description |
+|:--------|:-------------|
+| **auth** | Authentication & authorization (JWT, OAuth, permissions) |
+| **cache** | Multi-backend cache abstraction (Memory, Redis, Hybrid) |
+| **config** | Multi-source configuration management with hot reload |
+| **core** | Runtime, error handling, and service context |
+| **device** | Device control, discovery, and intelligent scheduling |
+| **fs** | Secure file system operations and management |
+| **gateway** | API gateway with load balancing, rate limiting, and circuit breaking |
+| **hooks** | Lifecycle event hooks (Startup, Shutdown, etc.) |
+| **log** | Structured logging with tracing context integration |
+| **observability** | Metrics, tracing, and Grafana integration |
+| **queue** | Distributed queue abstraction (Kafka, RabbitMQ, Redis, Memory) |
+| **service_mesh** | Service discovery, health checking, and traffic management |
+
+**Python SDK Features:**
+- Native Python interfaces with seamless Rust core invocation
+- Support for sync and async service modules
+- Version: **0.1.3** (requires Python 3.8+)
+- Distributed via [PyPI](https://pypi.org/project/dmsc/)
+
+**Quick Start:**
+```python
+from dmsc import DMSCAppBuilder, DMSCLogConfig
+
+# Build service runtime
+app = DMSCAppBuilder() \
+    .with_config("config.yaml") \
+    .with_logging(DMSCLogConfig.default()) \
+    .build()
+
+# Run business logic
+app.run(lambda ctx: ctx.logger().info("service", "DMSC service started"))
+```
+
+For more Python usage examples, please check the [Python README](https://gitee.com/dunimd/dmsc/blob/master/python/README.md).
 
 <div align="center">
 
@@ -163,6 +204,22 @@ Open source packages and their agreement information used by this project:
 | log | MIT |
 | pyo3 | Apache 2.0 |
 | tempfile | MIT |
+
+</div>
+
+### 📋 Python Dependencies License
+
+| 📦 Package | 📜 License |
+|:-----------|:-----------|
+| setuptools | MIT |
+| setuptools-rust | MIT |
+| wheel | MIT |
+| pytest | MIT |
+| pytest-asyncio | Apache 2.0 |
+| black | MIT |
+| isort | MIT |
+| mypy | MIT |
+| pyo3 | Apache 2.0 |
 
 </div>
 

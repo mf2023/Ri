@@ -17,6 +17,61 @@
 
 use dms::protocol::crypto::*;
 
+/// Cryptographic algorithm test module for DMSC protocol security layer.
+///
+/// This module provides comprehensive test coverage for the cryptographic
+/// primitives used in the DMSC protocol, ensuring the security foundations
+/// are correctly implemented. The tests verify both the correctness of
+/// cryptographic operations and the security properties that protect data
+/// in transit across the distributed messaging system.
+///
+/// ## Test Coverage
+///
+/// - **Symmetric Encryption**: Tests for AES256-GCM authenticated encryption
+///   and ChaCha20-Poly1305 stream cipher, covering encryption, decryption,
+///   and authentication tag verification with both correct and incorrect
+///   additional authenticated data.
+///
+/// - **National Standard Ciphers**: Validates SM4 cipher implementation in
+///   CBC mode, supporting Chinese cryptographic standards compliance for
+///   domestic deployment requirements.
+///
+/// - **Cryptographic Hash Functions**: Tests SHA-256 and SHA-3 for general
+///   purpose hashing alongside SM3 for national standard compliance, verifying
+///   output lengths and collision resistance properties.
+///
+/// - **Digital Signatures**: Covers ECDSA and Ed25519 signature schemes,
+///   testing key generation, message signing, public key extraction, and
+///   signature verification including rejection of tampered messages.
+///
+/// - **Key Exchange Protocols**: Tests ECDH and X25519 Diffie-Hellman key
+///   exchange implementations, verifying that both parties derive the same
+///   shared secret without revealing their private keys.
+///
+/// - **Secure Random Number Generation**: Validates the cryptographic RNG
+///   implementation for generating random bytes and integers with sufficient
+///   entropy for security-critical operations.
+///
+/// ## Design Principles
+///
+/// The cryptographic testing strategy emphasizes verification of security
+/// properties rather than mere functional correctness. Tests verify that:
+/// - Encryption transforms plaintext to unintelligible ciphertext
+/// - Decryption with correct parameters recovers the original plaintext
+/// - Authentication prevents tampering detection
+/// - Invalid parameters produce errors rather than incorrect results
+/// - Cryptographic operations produce outputs of expected lengths
+///
+/// Tests use property-based verification where applicable, checking that
+/// encryption followed by decryption returns the original data, and that
+/// encryption produces semantically different outputs to prevent pattern
+/// analysis attacks.
+///
+/// The test suite intentionally avoids timing-based side-channel tests
+/// as these require specialized environments, but does verify that all
+/// error conditions are handled gracefully without information leakage
+/// through error messages or exception types.
+
 #[test]
 fn test_aes256_gcm() {
     let aes = AES256GCM::new().expect("Failed to create AES256GCM instance");

@@ -15,6 +15,71 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+//! # Device Module Tests
+//!
+//! This module contains comprehensive tests for the DMSC device management system,
+//! covering device capabilities, device lifecycle management, device control operations,
+//! and resource allocation mechanisms.
+//!
+//! ## Test Coverage
+//!
+//! - **DMSCDeviceCapabilities**: Tests for device capability representation including
+//!   compute units, memory, storage, bandwidth, and custom capabilities. The builder
+//!   pattern enables fluent capability construction, and the requirements matching
+//!   system supports capability-based device selection
+//!
+//! - **DMSCDevice**: Tests for the core device entity covering device identification,
+//!   type classification (CPU, GPU, FPGA, TPU, ASIC), status management, allocation
+//!   lifecycle, and health scoring based on device state
+//!
+//! - **DMSCDeviceControlConfig**: Tests for device control configuration including
+//!   discovery settings, scheduling parameters, concurrent task limits, and resource
+//!   allocation timeouts
+//!
+//! - **DMSCDeviceControlModule**: Tests for the device control module that orchestrates
+//!   device discovery, status monitoring, resource allocation, and pool management
+//!
+//! - **Resource Management**: Tests for resource request/allocation semantics including
+//!   capability-based matching, priority handling, timeout management, and allocation
+//!   lifecycle (allocate, query, release)
+//!
+//! ## Device Lifecycle
+//!
+//! The device management system implements a complete device lifecycle:
+//! - **Discovery**: Devices are discovered through the control module's discovery
+//!   mechanism, which identifies available resources and registers them
+//! - **Registration**: Each device receives a unique identifier and is tracked in
+//!   the system's device registry
+//! - **Status Management**: Devices transition through various states (Unknown,
+//!   Available, Busy, Maintenance, Offline, Error) with associated health scores
+//! - **Allocation**: Resources can be allocated to consumers, marking devices as
+//!   busy and tracking allocation identifiers
+//! - **Release**: When resource use is complete, devices are released back to the
+//!   available pool
+//!
+//! ## Capability Matching
+//!
+//! The capability system enables sophisticated device selection:
+//! - **Quantitative Capabilities**: Compute units, memory (GB), storage (GB), and
+//!   bandwidth (Gbps) are stored as optional values that can be compared against
+//!   requirements
+//! - **Custom Capabilities**: Key-value pairs enable domain-specific feature flags
+//!   and capability extensions
+//! - **Requirements Matching**: The `meets_requirements()` method checks that a
+//!   device's capabilities satisfy all specified requirements, with None values
+//!   treated as unlimited (a device with unspecified memory meets any memory
+//!   requirement)
+//!
+//! ## Health Scoring
+//!
+//! Health scores provide quick device state assessment:
+//! - **Available**: 100% - Device is fully operational and ready for use
+//! - **Busy**: 80% - Device is in use but healthy
+//! - **Maintenance**: 60% - Device is undergoing maintenance, still partially usable
+//! - **Offline**: 20% - Device is unreachable but not in error state
+//! - **Error**: 10% - Device has encountered an error condition
+//! - **Unknown**: 0% - Device state has not been determined
+
 use dmsc::device::{DMSCDevice, DMSCDeviceType, DMSCDeviceStatus, DMSCDeviceCapabilities};
 use dmsc::device::{DMSCDeviceControlModule, DMSCDeviceControlConfig, DMSCDiscoveryResult, DMSCResourceRequest, DMSCResourceAllocation};
 

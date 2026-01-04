@@ -676,33 +676,33 @@ impl DMSCTracer {
 
     /// Export traces from Python
     #[pyo3(name = "export_traces")]
-    fn export_traces_impl(&self) -> PyResult<HashMap<String, Vec<PyObject>>> {
+    fn export_traces_impl(&self) -> PyResult<HashMap<String, Vec<pyo3::Py<pyo3::PyAny>>>> {
         let traces = self.export_traces();
         let mut result = HashMap::new();
 
-        Python::with_gil(|py| {
-            for (trace_id, spans) in traces {
-                let mut span_list = Vec::new();
-                for span in spans {
-                    let span_dict = pyo3::types::PyDict::new(py);
-                    span_dict.set_item("trace_id", span.trace_id.as_str())?;
-                    span_dict.set_item("span_id", span.span_id.as_str())?;
-                    if let Some(parent_id) = &span.parent_span_id {
-                        span_dict.set_item("parent_span_id", parent_id.as_str())?;
-                    }
-                    span_dict.set_item("name", &span.name)?;
-                    span_dict.set_item("kind", format!("{:?}", span.kind))?;
-                    span_dict.set_item("start_time", span.start_time)?;
-                    span_dict.set_item("end_time", span.end_time)?;
-                    span_dict.set_item("attributes", span.attributes)?;
-                    span_dict.set_item("events", span.events.len())?;
-                    span_dict.set_item("status", format!("{:?}", span.status))?;
-                    span_list.push(span_dict.into());
+        let py = unsafe { pyo3::Python::assume_attached() };
+
+        for (trace_id, spans) in traces {
+            let mut span_list = Vec::new();
+            for span in spans {
+                let span_dict = pyo3::types::PyDict::new(py);
+                span_dict.set_item("trace_id", span.trace_id.as_str())?;
+                span_dict.set_item("span_id", span.span_id.as_str())?;
+                if let Some(parent_id) = &span.parent_span_id {
+                    span_dict.set_item("parent_span_id", parent_id.as_str())?;
                 }
-                result.insert(trace_id.as_str().to_string(), span_list);
+                span_dict.set_item("name", &span.name)?;
+                span_dict.set_item("kind", format!("{:?}", span.kind))?;
+                span_dict.set_item("start_time", span.start_time)?;
+                span_dict.set_item("end_time", span.end_time)?;
+                span_dict.set_item("attributes", span.attributes)?;
+                span_dict.set_item("events", span.events.len())?;
+                span_dict.set_item("status", format!("{:?}", span.status))?;
+                span_list.push(span_dict.into());
             }
-            Ok(result)
-        })
+            result.insert(trace_id.as_str().to_string(), span_list);
+        }
+        Ok(result)
     }
 
     /// Get active trace count from Python

@@ -18,6 +18,48 @@
 use dmsc::observability::propagation::{DMSCTraceContext, DMSCBaggage, DMSCContextCarrier};
 use dmsc::observability::tracing::{DMSCTraceId, DMSCSpanId};
 
+/// Observability trace context propagation test module for distributed tracing.
+///
+/// This module provides comprehensive test coverage for the trace context and
+/// baggage propagation systems that enable distributed request tracing across
+/// service boundaries. The tests validate the header format encoding and decoding
+/// used by the W3C Trace Context standard and baggage propagation protocols.
+///
+/// ## Test Coverage
+///
+/// - **Trace Context Header Format**: Tests the serialization of trace context
+///   to W3C standard header format, including trace ID, parent span ID, and
+///   sampling flags. Also tests deserialization to reconstruct the original
+///   context from valid headers.
+///
+/// - **Trace ID and Span ID Encoding**: Validates the hexadecimal string encoding
+///   of trace and span identifiers, ensuring proper formatting with leading zeros
+///   and correct character ranges for interoperability with other tracing systems.
+///
+/// - **Baggage Header Format**: Tests the propagation of baggage entries (key-value
+///   pairs) through HTTP headers, verifying correct encoding and decoding of
+///   multiple entries with proper URL encoding for special characters.
+///
+/// - **Sampling Decision Propagation**: Validates that the sampling flag is
+///   correctly encoded in the trace context header and preserved during propagation,
+///   enabling consistent sampling decisions across service boundaries.
+///
+/// ## Design Principles
+///
+/// The propagation system implements the W3C Trace Context specification for
+/// standard-compliant trace header format, ensuring interoperability with
+/// existing observability tools and platforms. Tests verify compliance with
+/// the standard format including version prefixes and field separators.
+///
+/// Trace context uses hexadecimal encoding for compact representation of 128-bit
+/// trace IDs and 64-bit span IDs, providing sufficient namespace for globally
+/// unique identification across distributed systems.
+///
+/// Baggage propagation uses header-based key-value encoding with support for
+/// multiple entries, enabling correlation of contextual information across
+/// service boundaries. Tests verify proper handling of edge cases including
+/// special characters and empty values.
+
 #[test]
 fn test_trace_context_header_format() {
     let trace_id = DMSCTraceId::from_string("0123456789abcdef0123456789abcdef".to_string());

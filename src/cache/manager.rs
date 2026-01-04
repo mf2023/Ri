@@ -21,12 +21,10 @@ use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use std::collections::HashMap;
 use tokio::sync::{RwLock, broadcast};
-use crate::cache::core::{DMSCCache, CacheStats};
+use crate::cache::core::{DMSCCache, DMSCCacheStats};
 
 #[cfg(feature = "pyo3")]
 use pyo3::prelude::*;
-#[cfg(feature = "pyo3")]
-use pyo3::pymethods;
 
 
 /// # DMSC Cache Manager
@@ -360,8 +358,8 @@ impl DMSCCacheManager {
     /// and the number of entries.
     /// 
     /// **Returns:**
-    /// - A `CacheStats` struct containing the cache statistics
-    pub async fn stats(&self) -> CacheStats {
+    /// - A `DMSCCacheStats` struct containing the cache statistics
+    pub async fn stats(&self) -> DMSCCacheStats {
         let stats = self.backend.stats().await;
         
         // Log cache statistics for monitoring
@@ -511,7 +509,7 @@ impl DMSCCacheManager {
     }
     
     #[pyo3(name = "stats")]
-    fn stats_impl(&self) -> pyo3::PyResult<CacheStats> {
+    fn stats_impl(&self) -> pyo3::PyResult<DMSCCacheStats> {
         let rt = tokio::runtime::Runtime::new().map_err(|e| {
             pyo3::exceptions::PyRuntimeError::new_err(format!("Failed to create runtime: {}", e))
         })?;

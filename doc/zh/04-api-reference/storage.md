@@ -2,9 +2,9 @@
 
 # Storage API参考
 
-**Version: 1.0.0**
+**Version: 0.0.3**
 
-**Last modified date: 2025-12-12**
+**Last modified date: 2026-01-01**
 
 storage模块提供文件存储与对象存储功能，支持本地文件系统、云存储服务和分布式存储。
 

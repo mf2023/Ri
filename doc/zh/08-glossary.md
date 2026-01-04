@@ -2,9 +2,9 @@
 
 # 术语表
 
-**Version: 1.0.0**
+**Version: 0.0.3**
 
-**Last modified date: 2025-12-12**
+**Last modified date: 2026-01-01**
 
 本章定义了DMSC文档中使用的技术术语和概念，帮助您理解相关内容。
 

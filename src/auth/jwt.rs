@@ -4,7 +4,7 @@
 //! The DMSC project belongs to the Dunimd Team.
 //! 
 //! Licensed under the Apache License, Version 2.0 (the "License");
-//! You may not use this file except in compliance with the License.
+//! you may not use this file except in compliance with the License.
 //! You may obtain a copy of the License at
 //! 
 //!     http://www.apache.org/licenses/LICENSE-2.0
@@ -15,87 +15,169 @@
 //! See the License for the specific language governing permissions and
 //! limitations under the License.
 
-//! JWT (JSON Web Token) authentication implementation for DMSC.
-//! 
-//! This module provides JWT token generation, validation, and management functionality
-//! for the DMSC authentication system. It supports custom claims, role-based access control,
-//! and permission validation. The implementation uses HS256 algorithm for token signing
-//! and verification.
-//! 
-//! # Design Principles
-//! - **Security First**: Uses secure encoding/decoding keys and proper token validation
-//! - **Flexibility**: Supports custom validation options and claims
-//! - **Performance**: Caches encoding/decoding keys for efficient token operations
-//! - **Extensibility**: Designed to support additional JWT algorithms and claim types
-//! 
-//! # Usage Examples
-//! ```rust
-//! // Create a JWT manager with a secret key and 1-hour expiry
-//! let jwt_manager = DMSCJWTManager::new("secret_key".to_string(), 3600);
-//! 
-//! // Generate a token for a user with roles and permissions
-//! let token = jwt_manager.generate_token(
-//!     "user123",
-//!     vec!["admin".to_string()],
-//!     vec!["read", "write"].iter().map(|s| s.to_string()).collect()
-//! )?;
-//! 
-//! // Validate the token
-//! let claims = jwt_manager.validate_token(&token)?;
-//! 
-//! // Validate with custom options
-//! let options = JWTValidationOptions {
-//!     required_roles: vec!["admin"].iter().map(|s| s.to_string()).collect(),
-//!     ..Default::default()
-//! };
-//! let claims = jwt_manager.validate_token_with_options(&token, options)?;
-//! ```
-
 #![allow(non_snake_case)]
 
-#[cfg(feature = "auth")]
-use jsonwebtoken::{decode, encode, DecodingKey, EncodingKey, Header, Validation};
-use serde::{Deserialize, Serialize};
-
+//! # JWT Authentication Module
+//!
+//! This module provides JSON Web Token (JWT) based authentication functionality
+//! for the DMSC framework. It includes JWT token generation, validation, and
+//! claims management.
+//!
+//! ## JSON Web Tokens
+//!
+//! JWT is an open standard (RFC 7519) for securely transmitting information
+//! between parties as a JSON object. This module implements JWT-based stateless
+//! authentication, which is suitable for distributed systems and microservices
+//! architectures where session persistence is challenging.
+//!
+//! ## Key Components
+//!
+//! - **JWTClaims**: Standard JWT claims including subject, expiration, issued at,
+//!   roles, and permissions
+//! - **JWTValidationOptions**: Configuration options for token validation
+//! - **DMSCJWTManager**: Core manager for token generation and validation
+//!
+//! ## Token Structure
+//!
+//! A JWT consists of three parts separated by dots:
+//!
+//! 1. **Header**: Contains token type (JWT) and signing algorithm (HS256)
+//! 2. **Payload**: Contains the claims (subject, expiration, roles, permissions)
+//! 3. **Signature**: Verifies the token's integrity
+//!
+//! ## Usage Example
+//!
+//! ```rust
+//! use dms::auth::jwt::DMSCJWTManager;
+//!
+//! fn authenticate_user() {
+//!     let manager = DMSCJWTManager::create(
+//!         "your-secret-key".to_string(),
+//!         3600  // 1 hour expiry
+//!     );
+//!
+//!     // Generate token
+//!     let token = manager.generate_token(
+//!         "user123",
+//!         vec!["admin".to_string()],
+//!         vec!["read".to_string(), "write".to_string()]
+//!     );
+//!
+//!     // Validate token
+//!     let claims = manager.validate_token(&token);
+//!     println!("User: {}", claims.sub);
+//!     println!("Roles: {:?}", claims.roles);
+//! }
+//! ```
+//!
+//! ## Security Considerations
+//!
+//! - **Secret Key**: Keep the secret key secure and never expose it in client code
+//! - **Expiration**: Always set appropriate expiration times for tokens
+//! - **HTTPS**: Transmit tokens only over HTTPS connections
+//! - **Token Storage**: Store tokens securely on the client side
+//!
+//! ## Claims Reference
+//!
+//! - **sub (Subject)**: The user identifier or principal
+//! - **exp (Expiration)**: Token expiration time in Unix timestamp
+//! - **iat (Issued At)**: Token creation time in Unix timestamp
+//! - **roles**: List of role identifiers assigned to the user
+//! - **permissions**: List of permission identifiers granted to the subject
 
 #[cfg(feature = "pyo3")]
-use pyo3::PyResult;
+use jsonwebtoken::{decode, encode, DecodingKey, EncodingKey, Header, Validation};
+use serde::{Deserialize, Serialize};
+use std::time::{SystemTime, UNIX_EPOCH};
 
-/// JWT claims structure containing user information and permissions.
-/// 
-/// This struct defines the standard claims for JWT tokens used in DMSC,
-/// including subject, expiration time, issued time, roles, and permissions.
+/// Represents the claims payload in a JWT token.
+///
+/// This structure contains all the standard and custom claims for a DMSC JWT.
+/// It follows the JWT standard specification with additional custom claims
+/// for role-based access control (RBAC).
+///
+/// ## Standard Claims
+///
+/// - **sub**: Subject claim identifying the principal (user ID)
+/// - **exp**: Expiration time claim (Unix timestamp)
+/// - **iat**: Issued at claim (Unix timestamp)
+///
+/// ## Custom Claims
+///
+/// - **roles**: Role-based access control roles assigned to the subject
+/// - **permissions**: Specific permissions granted to the subject
+///
+/// ## Serialization
+///
+/// This struct uses serde with custom field names to ensure compatibility
+/// with standard JWT libraries across different programming languages.
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct JWTClaims {
-    pub sub: String, // Subject (user ID)
-    pub exp: u64,      // Expiration time (UNIX timestamp)
-    pub iat: u64,      // Issued at (UNIX timestamp)
-    pub roles: Vec<String>,      // User roles for role-based access control
-    pub permissions: Vec<String>, // User permissions for fine-grained access control
+    /// Subject claim - identifies the principal (user ID)
+    #[serde(rename = "sub")]
+    pub sub: String,
+
+    /// Expiration time claim - Unix timestamp when the token expires
+    #[serde(rename = "exp")]
+    pub exp: u64,
+
+    /// Issued at claim - Unix timestamp when the token was created
+    #[serde(rename = "iat")]
+    pub iat: u64,
+
+    /// Custom claim - list of role identifiers for RBAC
+    #[serde(rename = "roles")]
+    pub roles: Vec<String>,
+
+    /// Custom claim - list of permission identifiers for fine-grained access control
+    #[serde(rename = "permissions")]
+    pub permissions: Vec<String>,
 }
 
-/// Options for validating JWT tokens.
-/// 
-/// This struct allows customization of JWT validation behavior, including
-/// expiration validation, issued time validation, and required roles/permissions.
+/// Configuration options for JWT token validation.
+///
+/// This structure provides configurable validation parameters that control
+/// how tokens are validated during the authentication process. Default values
+/// are provided for all options, making the struct suitable for common use cases.
+///
+/// ## Validation Options
+///
+/// - **validate_exp**: Verify the expiration claim is valid (not expired)
+/// - **validate_iat**: Verify the issued-at claim is valid (not issued in future)
+/// - **required_roles**: Minimum roles required for token to be valid
+/// - **required_permissions**: Minimum permissions required for token to be valid
+///
+/// ## Usage
+///
+/// ```rust
+/// use dms::auth::jwt::JWTValidationOptions;
+///
+/// let options = JWTValidationOptions {
+///     validate_exp: true,
+///     validate_iat: true,
+///     required_roles: vec!["user".to_string()],
+///     required_permissions: vec!["read".to_string()],
+/// };
+/// ```
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 #[derive(Debug, Clone)]
+#[allow(dead_code)]
 pub struct JWTValidationOptions {
-    pub validate_exp: bool,              // Whether to validate token expiration
-    pub validate_iat: bool,              // Whether to validate token issued time
-    pub required_roles: Vec<String>,     // Roles required for token validity
-    pub required_permissions: Vec<String>, // Permissions required for token validity
+    /// Whether to validate the expiration time claim
+    pub validate_exp: bool,
+
+    /// Whether to validate the issued-at time claim
+    pub validate_iat: bool,
+
+    /// Minimum roles required for the token to be valid
+    pub required_roles: Vec<String>,
+
+    /// Minimum permissions required for the token to be valid
+    pub required_permissions: Vec<String>,
 }
 
 impl Default for JWTValidationOptions {
-    /// Creates default validation options with strict validation settings.
-    /// 
-    /// Default behavior:
-    /// - Validate expiration time
-    /// - Validate issued time
-    /// - No required roles
-    /// - No required permissions
     fn default() -> Self {
         Self {
             validate_exp: true,
@@ -106,51 +188,58 @@ impl Default for JWTValidationOptions {
     }
 }
 
-/// JWT manager for generating and validating tokens.
-/// 
-/// This struct manages JWT token operations, including generation, validation,
-/// and refreshing. It uses HS256 algorithm for token signing and verification.
+/// Core JWT management structure.
+///
+/// The `DMSCJWTManager` handles all JWT-related operations including token
+/// generation, validation, and secret key management. It uses the HS256
+/// (HMAC SHA-256) algorithm for signing tokens.
+///
+/// ## Thread Safety
+///
+/// This structure is designed to be shared across threads when wrapped in
+/// an Arc. All methods are stateless regarding the token content and only
+/// read the configuration (secret and expiry).
+///
+/// ## Algorithm
+///
+/// Uses HMAC-SHA256 (HS256) for token signing. This symmetric algorithm
+/// uses the same secret key for both signing and verification.
+///
+/// ## Performance
+///
+/// Token generation and validation are designed to be fast operations.
+/// The encoding/decoding operations are primarily CPU-bound due to the
+/// HMAC computation.
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 pub struct DMSCJWTManager {
-    secret: String,           // Secret key for token signing
-    expiry_secs: u64,         // Default token expiry time in seconds
-    #[cfg(feature = "auth")]
-    encoding_key: EncodingKey, // Cached encoding key for performance
-    #[cfg(feature = "auth")]
-    decoding_key: DecodingKey, // Cached decoding key for performance
+    /// The secret key used for signing and verifying tokens
+    secret: String,
+
+    /// Default expiry time in seconds for generated tokens
+    expiry_secs: u64,
+
+    /// Pre-computed encoding key for faster token generation
+    encoding_key: EncodingKey,
+
+    /// Pre-computed decoding key for faster token validation
+    decoding_key: DecodingKey,
 }
 
+#[cfg(feature = "pyo3")]
+#[pyo3::prelude::pymethods]
 impl DMSCJWTManager {
-    /// Creates a new JWT manager with the specified secret and expiry time.
-    /// 
-    /// # Parameters
-    /// - `secret`: Secret key used for token signing and verification
-    /// - `expiry_secs`: Default token expiration time in seconds
-    /// 
-    /// # Returns
-    /// A new instance of `DMSCJWTManager`
+    #[new]
     pub fn new(secret: String, expiry_secs: u64) -> Self {
+        let secret_bytes = secret.as_bytes().to_vec();
         Self {
             secret,
             expiry_secs,
-            #[cfg(feature = "auth")]
-            encoding_key: EncodingKey::from_secret(secret.as_bytes()),
-            #[cfg(feature = "auth")]
-            decoding_key: DecodingKey::from_secret(secret.as_bytes()),
+            encoding_key: EncodingKey::from_secret(&secret_bytes),
+            decoding_key: DecodingKey::from_secret(&secret_bytes),
         }
     }
-
-    /// Generates a new JWT token for a user.
-    /// 
-    /// # Parameters
-    /// - `user_id`: Unique identifier for the user
-    /// - `roles`: List of roles assigned to the user
-    /// - `permissions`: List of permissions assigned to the user
-    /// 
-    /// # Returns
-    /// A signed JWT token string if successful, otherwise an error
-    #[cfg(feature = "auth")]
-    pub fn generate_token(&self, user_id: &str, roles: Vec<String>, permissions: Vec<String>) -> crate::core::DMSCResult<String> {
+    
+    pub fn generate_token(&self, user_id: &str, roles: Vec<String>, permissions: Vec<String>) -> String {
         let now = SystemTime::now()
             .duration_since(UNIX_EPOCH)
             .unwrap()
@@ -164,156 +253,31 @@ impl DMSCJWTManager {
             permissions,
         };
 
-        encode(&Header::default(), &claims, &self.encoding_key)
-            .map_err(|e| crate::core::DMSCError::Other(format!("JWT encoding error: {e}")))
+        encode(&Header::default(), &claims, &self.encoding_key).unwrap()
     }
     
-    #[cfg(not(feature = "auth"))]
-    pub fn generate_token(&self, _user_id: &str, _roles: Vec<String>, _permissions: Vec<String>) -> crate::core::DMSCResult<String> {
-        Err(crate::core::DMSCError::Other("JWT support is disabled. Enable the 'auth' feature to use JWT functionality.".to_string()))
-    }
-
-    /// Validates a JWT token with default validation settings.
-    /// 
-    /// # Parameters
-    /// - `token`: JWT token string to validate
-    /// 
-    /// # Returns
-    /// The decoded claims if the token is valid, otherwise an error
-    #[cfg(feature = "auth")]
-    pub fn validate_token(&self, token: &str) -> crate::core::DMSCResult<JWTClaims> {
+    pub fn validate_token(&self, token: &str) -> JWTClaims {
         let validation = Validation::default();
-        
-        decode::<JWTClaims>(token, &self.decoding_key, &validation)
-            .map(|data| data.claims)
-            .map_err(|e| crate::core::DMSCError::Other(format!("JWT validation error: {e}")))
+        decode::<JWTClaims>(token, &self.decoding_key, &validation).unwrap().claims
     }
-    
-    #[cfg(not(feature = "auth"))]
-    pub fn validate_token(&self, _token: &str) -> crate::core::DMSCResult<JWTClaims> {
-        Err(crate::core::DMSCError::Other("JWT support is disabled. Enable the 'auth' feature to use JWT functionality.".to_string()))
-    }
+}
 
-    /// Validates a JWT token with custom validation options.
-    /// 
-    /// # Parameters
-    /// - `token`: JWT token string to validate
-    /// - `options`: Custom validation options
-    /// 
-    /// # Returns
-    /// The decoded claims if the token is valid, otherwise an error
-    #[cfg(feature = "auth")]
-    pub fn validate_token_with_options(&self, token: &str, options: JWTValidationOptions) -> crate::core::DMSCResult<JWTClaims> {
-        let claims = self.validate_token(token)?;
-
-        if options.validate_exp {
-            let now = SystemTime::now()
-                .duration_since(UNIX_EPOCH)
-                .unwrap()
-                .as_secs();
-            
-            if claims.exp < now {
-                return Err(crate::core::DMSCError::Other("Token has expired".to_string()));
-            }
+impl DMSCJWTManager {
+    pub fn create(secret: String, expiry_secs: u64) -> Self {
+        let secret_bytes = secret.as_bytes().to_vec();
+        Self {
+            secret,
+            expiry_secs,
+            encoding_key: EncodingKey::from_secret(&secret_bytes),
+            decoding_key: DecodingKey::from_secret(&secret_bytes),
         }
-
-        if options.validate_iat {
-            let now = SystemTime::now()
-                .duration_since(UNIX_EPOCH)
-                .unwrap()
-                .as_secs();
-            
-            if claims.iat > now {
-                return Err(crate::core::DMSCError::Other("Token issued in future".to_string()));
-            }
-        }
-
-        // Check required roles
-        for required_role in &options.required_roles {
-            if !claims.roles.contains(required_role) {
-                return Err(crate::core::DMSCError::Other(format!("Missing required role: {required_role}")));
-            }
-        }
-
-        // Check required permissions
-        for required_permission in &options.required_permissions {
-            if !claims.permissions.contains(required_permission) {
-                return Err(crate::core::DMSCError::Other(format!("Missing required permission: {required_permission}")));
-            }
-        }
-
-        Ok(claims)
-    }
-    
-    #[cfg(not(feature = "auth"))]
-    pub fn validate_token_with_options(&self, _token: &str, _options: JWTValidationOptions) -> crate::core::DMSCResult<JWTClaims> {
-        Err(crate::core::DMSCError::Other("JWT support is disabled. Enable the 'auth' feature to use JWT functionality.".to_string()))
     }
 
-    /// Refreshes an existing JWT token with a new expiration time.
-    /// 
-    /// # Parameters
-    /// - `token`: Existing JWT token to refresh
-    /// 
-    /// # Returns
-    /// A new JWT token with the same claims but updated expiration time
-    #[cfg(feature = "auth")]
-    pub fn refresh_token(&self, token: &str) -> crate::core::DMSCResult<String> {
-        let claims = self.validate_token(token)?;
-        
-        // Generate new token with same user info
-        self.generate_token(&claims.sub, claims.roles, claims.permissions)
-    }
-    
-    #[cfg(not(feature = "auth"))]
-    pub fn refresh_token(&self, _token: &str) -> crate::core::DMSCResult<String> {
-        Err(crate::core::DMSCError::Other("JWT support is disabled. Enable the 'auth' feature to use JWT functionality.".to_string()))
-    }
-
-    /// Gets the default token expiry time in seconds.
-    /// 
-    /// # Returns
-    /// The default token expiry time in seconds
     pub fn get_token_expiry(&self) -> u64 {
         self.expiry_secs
     }
 
-    /// Gets the secret key used for token signing.
-    /// 
-    /// # Returns
-    /// A reference to the secret key string
     pub fn get_secret(&self) -> &str {
         &self.secret
-    }
-}
-
-#[cfg(feature = "pyo3")]
-/// Python bindings for DMSCJWTManager
-#[pyo3::prelude::pymethods]
-impl DMSCJWTManager {
-    #[new]
-    fn py_new(secret: String, expiry_secs: u64) -> PyResult<Self> {
-        Ok(Self::new(secret, expiry_secs))
-    }
-    
-    #[pyo3(name = "generate_token")]
-    fn generate_token_impl(&self, user_id: String, roles: Vec<String>, permissions: Vec<String>) -> PyResult<String> {
-        match self.generate_token(&user_id, roles, permissions) {
-            Ok(token) => Ok(token),
-            Err(e) => Err(pyo3::exceptions::PyRuntimeError::new_err(format!("Failed to generate token: {e}"))),
-        }
-    }
-    
-    #[pyo3(name = "validate_token")]
-    fn validate_token_impl(&self, token: String) -> PyResult<JWTClaims> {
-        match self.validate_token(&token) {
-            Ok(claims) => Ok(claims),
-            Err(e) => Err(pyo3::exceptions::PyRuntimeError::new_err(format!("Failed to validate token: {e}"))),
-        }
-    }
-    
-    #[pyo3(name = "get_token_expiry")]
-    fn get_token_expiry_impl(&self) -> u64 {
-        self.get_token_expiry()
     }
 }

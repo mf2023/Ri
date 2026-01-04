@@ -2,9 +2,9 @@
 
 # Security API参考
 
-**Version: 1.0.0**
+**Version: 0.0.3**
 
-**Last modified date: 2025-12-12**
+**Last modified date: 2026-01-01**
 
 security模块提供安全功能，包括认证、授权、加密、输入验证与防护机制。
 

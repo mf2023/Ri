@@ -15,6 +15,76 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+//! # Logging Module Tests
+//!
+//! This module contains comprehensive tests for the DMSC logging system, providing
+//! structured, contextual logging capabilities with configurable output destinations,
+//! log levels, and sampling strategies for production observability.
+//!
+//! ## Test Coverage
+//!
+//! - **DMSCLogLevel**: Tests for log severity levels (Debug, Info, Warn, Error) with
+//!   string representations for configuration and display purposes
+//!
+//! - **DMSCLogConfig**: Tests for logging configuration including level thresholds,
+//!   console and file output toggles, sampling rates, log rotation settings, and
+//!   format options (plain text vs JSON)
+//!
+//! - **DMSCLogContext**: Tests for thread-local and global log context management
+//!   supporting structured logging with key-value pairs, context inheritance, and
+//!   distributed tracing support (trace_id, span_id, parent_span_id)
+//!
+//! - **DMSCLogger**: Tests for the logging interface including level-based filtering,
+//!   contextual log enrichment, JSON formatting, and output routing
+//!
+//! ## Design Principles
+//!
+//! The logging system is designed with these principles:
+//! - **Structured Logging**: All logs are key-value pairs enabling powerful queries
+//!   and analysis in log aggregation systems
+//! - **Context Isolation**: Each thread/request has isolated log context that can be
+//!   enriched without affecting other concurrent operations
+//! - **Performance**: Logging is designed to have minimal impact when disabled,
+//!   with sampling support for high-volume debug logging
+//! - **Observability Integration**: First-class support for distributed tracing
+//!   through context propagation
+//!
+//! ## Log Levels
+//!
+//! The system supports standard severity levels:
+//! - **Debug**: Detailed information for troubleshooting, typically disabled in production
+//! - **Info**: General operational information about system progress
+//! - **Warning**: Abnormal conditions that don't prevent operation but may indicate issues
+//! - **Error**: Failures that may affect functionality but don't crash the system
+//!
+//! Each level can be independently configured for console and file outputs.
+//!
+//! ## Structured Context
+//!
+//! The log context enables correlation and debugging:
+//! - **Key-Value Storage**: Arbitrary metadata can be attached to logs
+//! - **Trace Correlation**: Trace IDs and span IDs link logs across service boundaries
+//! - **Context Inheritance**: Child threads/spans automatically inherit parent context
+//! - **Scoped Modifications**: Context changes can be made locally without affecting
+//!   global state
+//!
+//! ## Log Rotation
+//!
+//! The file-based logging supports rotation policies:
+//! - **Size-based**: Rotate when log file exceeds configured bytes (default 10MB)
+//! - **Retention**: Old logs are archived or deleted based on policy
+//! - **Atomic Rotation**: Rotation happens atomically to prevent log loss
+//!
+//! ## JSON Format
+//!
+//! When json_format is enabled, logs are emitted as JSON objects with:
+//! - Timestamp in ISO 8601 format
+//! - Log level as string
+//! - Target/component name
+//! - Message text
+//! - All context key-value pairs
+//! - Trace and span identifiers (if present)
+
 use dmsc::log::{DMSCLogContext, DMSCLogLevel, DMSCLogConfig, DMSCLogger};
 use dmsc::fs::DMSCFileSystem;
 use tempfile::tempdir;

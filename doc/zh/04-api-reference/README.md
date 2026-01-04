@@ -2,9 +2,9 @@
 
 # API参考
 
-**Version: 1.0.0**
+**Version: 0.0.3**
 
-**Last modified date: 2025-12-12**
+**Last modified date: 2026-01-01**
 
 本目录包含DMSC各个核心模块的详细API文档。
 

@@ -2,9 +2,9 @@
 
 # 基础应用示例
 
-**Version: 1.0.0**
+**Version: 0.0.3**
 
-**Last modified date: 2025-12-12**
+**Last modified date: 2026-01-01**
 
 本示例展示如何构建一个简单的DMSC应用，包括应用配置、运行和基本功能使用。
 

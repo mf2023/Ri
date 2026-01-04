@@ -18,6 +18,48 @@
 use dmsc::device::{DMSCDevice, DMSCDeviceType, DMSCDeviceCapabilities};
 use dmsc::device::discovery_scheduler::{DMSCDeviceDiscoveryEngine, DMSCResourceScheduler, DeviceScanResult, ResourceRequest};
 
+/// Device discovery and resource scheduling test module for DMSC tooling.
+///
+/// This module provides comprehensive test coverage for the device management
+/// components that handle hardware resource discovery and scheduling in the
+/// DMSC tooling layer. The tests validate device detection, capability matching,
+/// and resource allocation strategies.
+///
+/// ## Test Coverage
+///
+/// - **Device Discovery Engine**: Tests the scanning functionality that detects
+///   and identifies hardware devices from scan results, including device type
+///   classification based on detected capabilities and metadata.
+///
+/// - **Device Capability Matching**: Validates the capability matching logic
+///   that determines whether a device satisfies resource requirements, including
+///   memory, compute units, bandwidth, and custom capability constraints.
+///
+/// - **Resource Scheduling**: Tests the scheduling algorithm that selects
+///   appropriate devices for resource requests based on availability and
+///   requirement matching, prioritizing devices that fully satisfy constraints.
+///
+/// - **Multi-Device Selection**: Validates scenarios with multiple candidate
+///   devices, verifying that the scheduler correctly identifies and selects
+///   the optimal device based on resource requirements and priorities.
+///
+/// ## Design Principles
+///
+/// The device discovery system supports hot-plugging and dynamic device
+/// detection, enabling runtime discovery of hardware resources. Tests verify
+/// that scan results are correctly transformed into device representations
+/// with appropriate type classification.
+///
+/// The capability model uses a flexible key-value format for custom
+/// capabilities, enabling extension to new device types and vendor-specific
+/// features without modifying core scheduling logic. Tests verify that
+/// capability matching correctly interprets requirement constraints.
+///
+/// The resource scheduler implements a best-fit allocation strategy,
+/// selecting devices that satisfy requirements with minimal excess capacity.
+Tests verify that scheduling decisions correctly balance multiple
+/// requirements including memory, compute, bandwidth, and custom features.
+
 #[test]
 fn test_device_discovery_engine() {
     let mut engine = DMSCDeviceDiscoveryEngine::new();

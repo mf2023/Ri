@@ -1482,14 +1482,205 @@ match ctx.validation().validate_data(&user_data, &validation_rules).await {
 14. **条件验证**: 根据上下文动态调整验证规则
 15. **验证缓存**: 缓存验证结果提升性能
 
+## Python验证示例
+
+### 基本数据验证
+
+```python
+import dmsc
+from dmsc import DMSCPyValidationConfig, DMSCValidationRule, DMSCValidationType
+
+config = DMSCPyValidationConfig(
+    strict_mode=True,
+    stop_on_first_error=False,
+    enable_type_coercion=True,
+    locale="en",
+    timezone="UTC"
+)
+
+ctx.validation().init_validation(config)
+
+user_data = {
+    "username": "john_doe",
+    "email": "john.doe@example.com",
+    "password": "SecureP@ssw0rd!",
+    "age": 25,
+}
+
+validation_rules = [
+    DMSCValidationRule(
+        field="username",
+        rule_type=DMSCValidationType.Pattern("^[a-zA-Z0-9_]{3,20}$"),
+        required=True,
+        message="Username must be 3-20 characters"
+    ),
+    DMSCValidationRule(
+        field="email",
+        rule_type=DMSCValidationType.Email,
+        required=True,
+        message="Valid email is required"
+    ),
+    DMSCValidationRule(
+        field="age",
+        rule_type=DMSCValidationType.Range(18, 100),
+        required=True,
+        message="Age must be between 18 and 100"
+    ),
+]
+
+result = ctx.validation().validate_data(user_data, validation_rules)
+if result.is_success():
+    ctx.log().info("Validation successful")
+else:
+    ctx.log().error(f"Validation failed: {result.errors}")
+```
+
+### 自定义验证器
+
+```python
+from dmsc import DMSCPyValidator, DMSCValidationRule, DMSCValidationType
+
+class StrongPasswordValidator(DMSCPyValidator):
+    def __init__(self):
+        self.common_passwords = {"password", "123456", "qwerty", "admin"}
+        self.min_length = 8
+    
+    def validate(self, value, field_name):
+        password = value if isinstance(value, str) else str(value)
+        
+        if len(password) < self.min_length:
+            return "Password must be at least 8 characters"
+        
+        if password.lower() in self.common_passwords:
+            return "Password is too common"
+        
+        if not any(c.isupper() for c in password):
+            return "Password must contain uppercase letter"
+        
+        if not any(c.islower() for c in password):
+            return "Password must contain lowercase letter"
+        
+        if not any(c.isdigit() for c in password):
+            return "Password must contain number"
+        
+        if not any(c in "!@#$%^&*" for c in password):
+            return "Password must contain special character"
+        
+        return None
+    
+    @property
+    def name(self):
+        return "strong_password_validator"
+
+password_validator = StrongPasswordValidator()
+ctx.validation().register_custom_validator(password_validator)
+
+password_rule = DMSCValidationRule(
+    field="password",
+    rule_type=DMSCValidationType.CustomValidator("strong_password_validator"),
+    required=True,
+    message="Password validation failed"
+)
+
+result = ctx.validation().validate_data({"password": "MyS3cur3P@ss!"}, [password_rule])
+```
+
+### 数据清理
+
+```python
+from dmsc import DMSCSanitizationRule, DMSCSanitizationOperation
+
+dirty_data = {
+    "username": "  john_doe  ",
+    "email": "JOHN.DOE@EXAMPLE.COM",
+    "bio": "<script>alert('XSS')</script>Hello!"
+}
+
+sanitization_rules = [
+    DMSCSanitizationRule(
+        field="username",
+        operations=[
+            DMSCSanitizationOperation.Trim,
+            DMSCSanitizationOperation.ToLowercase
+        ]
+    ),
+    DMSCSanitizationRule(
+        field="email",
+        operations=[
+            DMSCSanitizationOperation.Trim,
+            DMSCSanitizationOperation.ToLowercase
+        ]
+    ),
+    DMSCSanitizationRule(
+        field="bio",
+        operations=[
+            DMSCSanitizationOperation.StripHtmlTags,
+            DMSCSanitizationOperation.Trim
+        ]
+    ),
+]
+
+sanitized_data = ctx.validation().sanitize_data(dirty_data, sanitization_rules)
+ctx.log().info(f"Sanitized data: {sanitized_data}")
+```
+
+### 异步验证
+
+```python
+from dmsc import DMSCPyAsyncValidator, DMSCValidationRule, DMSCValidationType
+
+class UniqueUserValidator(DMSCPyAsyncValidator):
+    def __init__(self):
+        self.existing_users = {"admin", "root", "user"}
+        self.existing_emails = {"admin@example.com"}
+    
+    async def validate_async(self, value, field_name):
+        if field_name == "username":
+            username = value if isinstance(value, str) else str(value)
+            if username.lower() in self.existing_users:
+                return "Username is already taken"
+        elif field_name == "email":
+            email = value if isinstance(value, str) else str(value)
+            if email.lower() in self.existing_emails:
+                return "Email is already registered"
+        return None
+    
+    @property
+    def name(self):
+        return "unique_user_validator"
+
+unique_validator = UniqueUserValidator()
+ctx.validation().register_async_validator(unique_validator)
+
+async_rules = [
+    DMSCValidationRule(
+        field="username",
+        rule_type=DMSCValidationType.AsyncCustomValidator("unique_user_validator"),
+        required=True,
+        message="Username validation failed"
+    ),
+    DMSCValidationRule(
+        field="email",
+        rule_type=DMSCValidationType.AsyncCustomValidator("unique_user_validator"),
+        required=True,
+        message="Email validation failed"
+    ),
+]
+
+result = ctx.validation().validate_data_async(
+    {"username": "john_doe", "email": "john@example.com"},
+    async_rules
+)
+```
+
 <div align="center">
 
 ## 运行步骤
 
 </div>
 
-1. **环境准备**: 确保已安装Rust环境和DMSC框架
-2. **依赖配置**: 在Cargo.toml中添加验证相关依赖
+1. **环境准备**: 确保已安装Rust环境和DMSC框架（或Python 3.8+和dmsc包）
+2. **依赖配置**: 在Cargo.toml中添加验证相关依赖（或pip install dmsc）
 3. **初始化验证器**: 创建验证管理器并配置验证规则
 4. **数据验证**: 使用validate_data执行数据验证
 5. **错误处理**: 处理验证失败的情况并返回友好错误消息

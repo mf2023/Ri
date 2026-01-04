@@ -1482,14 +1482,205 @@ match ctx.validation().validate_data(&user_data, &validation_rules).await {
 14. **Conditional Validation**: Dynamically adjust validation rules based on context
 15. **Validation Caching**: Cache validation results to improve performance
 
+## Python Validation Examples
+
+### Basic Data Validation
+
+```python
+import dmsc
+from dmsc import DMSCPyValidationConfig, DMSCValidationRule, DMSCValidationType
+
+config = DMSCPyValidationConfig(
+    strict_mode=True,
+    stop_on_first_error=False,
+    enable_type_coercion=True,
+    locale="en",
+    timezone="UTC"
+)
+
+ctx.validation().init_validation(config)
+
+user_data = {
+    "username": "john_doe",
+    "email": "john.doe@example.com",
+    "password": "SecureP@ssw0rd!",
+    "age": 25,
+}
+
+validation_rules = [
+    DMSCValidationRule(
+        field="username",
+        rule_type=DMSCValidationType.Pattern("^[a-zA-Z0-9_]{3,20}$"),
+        required=True,
+        message="Username must be 3-20 characters"
+    ),
+    DMSCValidationRule(
+        field="email",
+        rule_type=DMSCValidationType.Email,
+        required=True,
+        message="Valid email is required"
+    ),
+    DMSCValidationRule(
+        field="age",
+        rule_type=DMSCValidationType.Range(18, 100),
+        required=True,
+        message="Age must be between 18 and 100"
+    ),
+]
+
+result = ctx.validation().validate_data(user_data, validation_rules)
+if result.is_success():
+    ctx.log().info("Validation successful")
+else:
+    ctx.log().error(f"Validation failed: {result.errors}")
+```
+
+### Custom Validators
+
+```python
+from dmsc import DMSCPyValidator, DMSCValidationRule, DMSCValidationType
+
+class StrongPasswordValidator(DMSCPyValidator):
+    def __init__(self):
+        self.common_passwords = {"password", "123456", "qwerty", "admin"}
+        self.min_length = 8
+    
+    def validate(self, value, field_name):
+        password = value if isinstance(value, str) else str(value)
+        
+        if len(password) < self.min_length:
+            return "Password must be at least 8 characters"
+        
+        if password.lower() in self.common_passwords:
+            return "Password is too common"
+        
+        if not any(c.isupper() for c in password):
+            return "Password must contain uppercase letter"
+        
+        if not any(c.islower() for c in password):
+            return "Password must contain lowercase letter"
+        
+        if not any(c.isdigit() for c in password):
+            return "Password must contain number"
+        
+        if not any(c in "!@#$%^&*" for c in password):
+            return "Password must contain special character"
+        
+        return None
+    
+    @property
+    def name(self):
+        return "strong_password_validator"
+
+password_validator = StrongPasswordValidator()
+ctx.validation().register_custom_validator(password_validator)
+
+password_rule = DMSCValidationRule(
+    field="password",
+    rule_type=DMSCValidationType.CustomValidator("strong_password_validator"),
+    required=True,
+    message="Password validation failed"
+)
+
+result = ctx.validation().validate_data({"password": "MyS3cur3P@ss!"}, [password_rule])
+```
+
+### Data Sanitization
+
+```python
+from dmsc import DMSCSanitizationRule, DMSCSanitizationOperation
+
+dirty_data = {
+    "username": "  john_doe  ",
+    "email": "JOHN.DOE@EXAMPLE.COM",
+    "bio": "<script>alert('XSS')</script>Hello!"
+}
+
+sanitization_rules = [
+    DMSCSanitizationRule(
+        field="username",
+        operations=[
+            DMSCSanitizationOperation.Trim,
+            DMSCSanitizationOperation.ToLowercase
+        ]
+    ),
+    DMSCSanitizationRule(
+        field="email",
+        operations=[
+            DMSCSanitizationOperation.Trim,
+            DMSCSanitizationOperation.ToLowercase
+        ]
+    ),
+    DMSCSanitizationRule(
+        field="bio",
+        operations=[
+            DMSCSanitizationOperation.StripHtmlTags,
+            DMSCSanitizationOperation.Trim
+        ]
+    ),
+]
+
+sanitized_data = ctx.validation().sanitize_data(dirty_data, sanitization_rules)
+ctx.log().info(f"Sanitized data: {sanitized_data}")
+```
+
+### Asynchronous Validation
+
+```python
+from dmsc import DMSCPyAsyncValidator, DMSCValidationRule, DMSCValidationType
+
+class UniqueUserValidator(DMSCPyAsyncValidator):
+    def __init__(self):
+        self.existing_users = {"admin", "root", "user"}
+        self.existing_emails = {"admin@example.com"}
+    
+    async def validate_async(self, value, field_name):
+        if field_name == "username":
+            username = value if isinstance(value, str) else str(value)
+            if username.lower() in self.existing_users:
+                return "Username is already taken"
+        elif field_name == "email":
+            email = value if isinstance(value, str) else str(value)
+            if email.lower() in self.existing_emails:
+                return "Email is already registered"
+        return None
+    
+    @property
+    def name(self):
+        return "unique_user_validator"
+
+unique_validator = UniqueUserValidator()
+ctx.validation().register_async_validator(unique_validator)
+
+async_rules = [
+    DMSCValidationRule(
+        field="username",
+        rule_type=DMSCValidationType.AsyncCustomValidator("unique_user_validator"),
+        required=True,
+        message="Username validation failed"
+    ),
+    DMSCValidationRule(
+        field="email",
+        rule_type=DMSCValidationType.AsyncCustomValidator("unique_user_validator"),
+        required=True,
+        message="Email validation failed"
+    ),
+]
+
+result = ctx.validation().validate_data_async(
+    {"username": "john_doe", "email": "john@example.com"},
+    async_rules
+)
+```
+
 <div align="center">
 
 ## Running Steps
 
 </div>
 
-1. **Environment Preparation**: Ensure Rust environment and DMSC framework are installed
-2. **Dependency Configuration**: Add validation-related dependencies in Cargo.toml
+1. **Environment Preparation**: Ensure Rust environment and DMSC framework are installed (or Python 3.8+ and dmsc package)
+2. **Dependency Configuration**: Add validation-related dependencies in Cargo.toml (or pip install dmsc)
 3. **Initialize Validator**: Create validation manager and configure validation rules
 4. **Data Validation**: Use validate_data to perform data validation
 5. **Error Handling**: Handle validation failures and return user-friendly error messages

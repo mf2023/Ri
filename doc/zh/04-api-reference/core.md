@@ -2,9 +2,9 @@
 
 # Core API参考
 
-**Version: 1.0.0**
+**Version: 0.0.3**
 
-**Last modified date: 2025-12-12**
+**Last modified date: 2026-01-01**
 
 core模块是DMSC的基础，提供运行时、错误处理、服务上下文和模块系统等核心功能。
 

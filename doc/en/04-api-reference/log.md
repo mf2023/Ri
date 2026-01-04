@@ -2,9 +2,9 @@
 
 # Log API Reference
 
-**Version: 1.0.0**
+**Version: 0.0.3**
 
-**Last modified date: 2025-12-12**
+**Last modified date: 2026-01-01**
 
 The log module provides structured logging with multi-backend support, supporting log levels, formatting, sampling, and log analysis features.
 

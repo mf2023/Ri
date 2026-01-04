@@ -20,6 +20,56 @@ use dms::core::{DMSCResult, DMSCError};
 use async_trait::async_trait;
 use std::time::{Duration, SystemTime};
 
+/// Health checking system test module for DMSC core monitoring infrastructure.
+///
+/// This module provides comprehensive test coverage for the health monitoring
+/// subsystem, which enables applications to track the operational status of
+/// critical components and aggregate health reports across the system. The health
+/// checking system supports configurable health checks with custom thresholds,
+/// asynchronous execution, and status aggregation for determining overall system
+/// health state.
+///
+/// ## Test Coverage
+///
+/// - **Health Status Merging**: Verifies the status aggregation algorithm that
+///   determines overall health from multiple component statuses. Tests cover all
+///   combinations including Healthy, Degraded, Unhealthy, and Unknown states.
+///
+/// - **Health Checker Registration**: Tests the ability to register multiple
+///   health check implementations with the HealthChecker component, supporting
+///   diverse check types including connectivity, resource utilization, and
+///   dependency availability.
+///
+/// - **Asynchronous Health Checks**: Validates the async execution model where
+///   health checks run concurrently with configurable timeouts, ensuring that
+///   slow checks do not block the overall health assessment process.
+///
+/// - **Health Report Aggregation**: Tests the report generation functionality
+///   that summarizes check results including counts of healthy and unhealthy
+///   components, overall status determination, and result metadata collection.
+///
+/// ## Design Principles
+///
+/// The health checking system implements a composite pattern where individual
+/// health checks contribute to an aggregate health status. This design supports
+/// both simple single-component checks and complex multi-layer health monitoring
+/// scenarios common in distributed systems.
+///
+/// Tests follow a behavioral specification approach, verifying the observable
+/// outcomes of health check operations rather than internal implementation
+/// details. This ensures test stability across refactoring while validating
+/// the critical health monitoring functionality.
+///
+/// The status merging algorithm implements a severity-based aggregation where
+/// the most severe status takes precedence: Unhealthy overrides Degraded which
+/// overrides Healthy. Unknown status is treated as neutral, only affecting the
+/// result when all components report Unknown.
+///
+/// The async health check design enables efficient concurrent execution of
+/// independent checks while providing proper error isolation. A failure in one
+/// check does not affect others, and the HealthChecker continues to aggregate
+/// results from all registered checks regardless of individual outcomes.
+
 struct MockHealthCheck {
     name: String,
     status: HealthStatus,

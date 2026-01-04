@@ -55,7 +55,7 @@
 //!         default_ttl_secs: 3600,
 //!         max_memory_mb: 512,
 //!         cleanup_interval_secs: 300,
-//!         backend_type: CacheBackendType::Memory,
+//!         backend_type: DMSCCacheBackendType::Memory,
 //!         redis_url: "redis://127.0.0.1:6379".to_string(),
 //!         redis_pool_size: 10,
 //!     };
@@ -85,9 +85,9 @@ mod manager;
 mod backends;
 mod config;
 
-pub use config::{DMSCCacheConfig, CacheBackendType, CachePolicy};
+pub use config::{DMSCCacheConfig, DMSCCacheBackendType, DMSCCachePolicy};
 pub use manager::{DMSCCacheManager, DMSCCacheEvent};
-pub use core::{CachedValue, CacheStats, DMSCCache, DMSCCacheEvent as CoreCacheEvent};
+pub use core::{DMSCCachedValue, DMSCCacheStats, DMSCCache, DMSCCacheEvent as CoreCacheEvent};
 // Re-export backend implementations
 pub use backends::DMSCMemoryCache;
 #[cfg(feature = "redis")]
@@ -130,15 +130,15 @@ impl DMSCCacheModule {
     pub fn new(config: DMSCCacheConfig) -> Self {
         // Create the appropriate backend based on configuration
         let backend = match config.backend_type {
-            crate::cache::config::CacheBackendType::Memory => {
+            crate::cache::config::DMSCCacheBackendType::Memory => {
                 Arc::new(DMSCMemoryCache::new())
             }
-            crate::cache::config::CacheBackendType::Redis => {
+            crate::cache::config::DMSCCacheBackendType::Redis => {
                 // For Redis, we'll use memory backend initially and replace it in init()
                 // since we need async context for Redis connection
                 Arc::new(DMSCMemoryCache::new())
             }
-            crate::cache::config::CacheBackendType::Hybrid => {
+            crate::cache::config::DMSCCacheBackendType::Hybrid => {
                 // Same for Hybrid - use memory backend initially
                 Arc::new(DMSCMemoryCache::new())
             }
@@ -235,25 +235,25 @@ impl crate::core::DMSCModule for DMSCCacheModule {
         
         // Initialize the cache manager based on configuration
         match self.config.backend_type {
-            crate::cache::config::CacheBackendType::Memory => {
+            crate::cache::config::DMSCCacheBackendType::Memory => {
                 let backend = Arc::new(DMSCMemoryCache::new());
                 let manager = DMSCCacheManager::new(backend);
                 *self.manager.write().await = manager;
             }
             #[cfg(feature = "redis")]
-            crate::cache::config::CacheBackendType::Redis => {
+            crate::cache::config::DMSCCacheBackendType::Redis => {
                 let backend = Arc::new(DMSCRedisCache::new(&self.config.redis_url).await?);
                 let manager = DMSCCacheManager::new(backend);
                 *self.manager.write().await = manager;
             }
             #[cfg(feature = "redis")]
-            crate::cache::config::CacheBackendType::Hybrid => {
+            crate::cache::config::DMSCCacheBackendType::Hybrid => {
                 let backend = Arc::new(DMSCHybridCache::new(&self.config.redis_url).await?);
                 let manager = DMSCCacheManager::new(backend);
                 *self.manager.write().await = manager;
             }
             #[cfg(not(feature = "redis"))]
-            crate::cache::config::CacheBackendType::Redis | crate::cache::config::CacheBackendType::Hybrid => {
+            crate::cache::config::DMSCCacheBackendType::Redis | crate::cache::config::DMSCCacheBackendType::Hybrid => {
                 // Fallback to memory cache if Redis is not enabled
                 let backend = Arc::new(DMSCMemoryCache::new());
                 let manager = DMSCCacheManager::new(backend);

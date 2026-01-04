@@ -30,6 +30,8 @@ gateway模块包含以下子模块：
 
 API网关主接口，提供统一的网关功能。
 
+**注意**：`handle_request`方法为内部方法，仅在crate内部使用。
+
 #### 方法
 
 | 方法 | 描述 | 参数 | 返回值 |
@@ -37,7 +39,7 @@ API网关主接口，提供统一的网关功能。
 | `new()` | 创建网关实例 | 无 | `Self` |
 | `router()` | 获取路由器 | 无 | `Arc<DMSCRouter>` |
 | `middleware_chain()` | 获取中间件链 | 无 | `Arc<DMSCMiddlewareChain>` |
-| `handle_request(request)` | 处理请求 | `request: DMSCGatewayRequest` | `DMSCGatewayResponse` |
+| `handle_request(request)` | 处理请求（内部方法） | `request: DMSCGatewayRequest` | `DMSCGatewayResponse` |
 
 #### 使用示例
 

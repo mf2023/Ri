@@ -42,7 +42,7 @@ serde_yaml = "0.9"
 rand = "0.8"
 chrono = { version = "0.4", features = ["serde", "std"] }
 uuid = { version = "1.0", features = ["v4", "serde"] }
-tokio = { version = "1", features = ["time", "sync", "rt", "rt-multi-thread", "net"] }
+tokio = { version = "1", features = ["time", "sync", "rt", "rt-multi-thread", "net", "io-util", "io-std"] }
 async-trait = "0.1"
 dashmap = "5.5"
 parking_lot = "0.12"
@@ -54,14 +54,23 @@ toml = "0.8"
 notify = { version = "6.1", optional = true } # For config hot reload
 prometheus = { version = "0.13", optional = true } # For observability
 redis = { version = "0.24", features = ["tokio-comp", "connection-manager"], optional = true } # For cache and queue
-hyper = { version = "0.14", features = ["client", "server", "http1", "http2"], optional = true } # For HTTP and gateway
+hyper = { version = "0.14", features = ["client", "server", "http1", "http2", "tcp"], optional = true } # For HTTP and gateway
 lapin = { version = "2.3", features = ["rustls"], optional = true } # For RabbitMQ
 futures = { version = "0.3", features = ["std"], optional = true } # For async operations
 reqwest = { version = "0.11", features = ["json"], optional = true } # For HTTP client
 sysinfo = { version = "0.29", optional = true } # For system information
-jsonwebtoken = { version = "8", optional = true } # For JWT authentication
+jsonwebtoken = "8" # For JWT authentication (required by auth module)
 urlencoding = { version = "2", optional = true } # For URL encoding
 etcd-client = { version = "0.11", features = ["tls"], optional = true } # For service discovery
+
+# Protocol module dependencies
+num-bigint = "0.4"
+ring = "0.17"
+thiserror = "2"
+hex = "0.4"
+crc32fast = "1"
+tracing = "0.1"
+data-encoding = "2"
 
 # Target-specific dependencies
 [target.'cfg(not(windows))'.dependencies]
@@ -83,7 +92,6 @@ full = [
     "hyper",
     "futures",
     "sysinfo",
-    "jsonwebtoken",
     "reqwest",
     "urlencoding",
     "etcd",
@@ -103,7 +111,7 @@ cache = ["redis"]
 queue = ["redis", "rabbitmq", "kafka"]
 gateway = ["hyper", "redis"]
 service_mesh = ["etcd", "redis"]
-auth = ["jsonwebtoken", "urlencoding"]
+auth = ["urlencoding"]
 config_hot_reload = ["notify"]
 http_client = ["reqwest"]
 system_info = ["sysinfo"]

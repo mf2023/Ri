@@ -15,6 +15,71 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+//! # Hooks Module Tests
+//!
+//! This module contains comprehensive tests for the DMSC hooks system, a publish-subscribe
+//! mechanism for lifecycle event handling that enables modular extension and integration
+//! of system components through event-driven coordination.
+//!
+//! ## Test Coverage
+//!
+//! - **DMSCHookBus**: Tests for the central event bus that manages hook registration,
+//!   emission, and propagation. The bus supports both simple emission and detailed
+//!   emission with module/phase context
+//!
+//! - **DMSCHookEvent**: Tests for event data structure including event kind, timestamp,
+//!   associated module name, and lifecycle phase information
+//!
+//! - **DMSCHookKind**: Tests for event type classification including Startup, Shutdown,
+//!   and custom event kinds for different system integration points
+//!
+//! - **DMSCModulePhase**: Tests for lifecycle phase enumeration covering both synchronous
+//!   and asynchronous phases: Init, BeforeStart, Start, AfterStart, BeforeShutdown,
+//!   Shutdown, AfterShutdown, and their async variants
+//!
+//! ## Design Principles
+//!
+//! The hooks system follows an event-driven architecture:
+//! - **Decoupling**: Components communicate through events rather than direct dependencies
+//! - **Extensibility**: New functionality can be added by registering new hooks without
+//!   modifying existing code
+//! - **Lifecycle Awareness**: System components can participate in startup and shutdown
+//!   sequences in a coordinated manner
+//! - **Error Isolation**: Hook failures are isolated and don't crash the entire system
+//!
+//! ## Hook Execution Model
+//!
+//! The hook bus implements a synchronous execution model:
+//! 1. Handlers are registered with a hook kind and identifier
+//! 2. When emit() is called, all registered handlers for that kind are executed in order
+//! 3. Each handler receives the service context and event details
+//! 4. If any handler returns an error, emission stops and returns the error
+//! 5. Successful handlers complete before the emit call returns
+//!
+//! ## Module Lifecycle Phases
+//!
+//! The system supports comprehensive lifecycle phase coverage:
+//! - **Init**: Early initialization before any services start
+//! - **BeforeStart**: Pre-startup configuration and validation
+//! - **Start**: Main startup phase where services become operational
+//! - **AfterStart**: Post-startup verification and registration
+//! - **BeforeShutdown**: Pre-shutdown graceful termination preparation
+//! - **Shutdown**: Main shutdown phase where services stop
+//! - **AfterShutdown**: Final cleanup and resource release
+//!
+//! Each phase has both synchronous and asynchronous variants to support different
+//! component types and initialization requirements.
+//!
+//! ## Use Cases
+//!
+//! The hooks system enables several integration patterns:
+//! - **Configuration Loading**: Load config from various sources during Init phase
+//! - **Database Migration**: Run migrations before Start phase completes
+//! - **Health Registration**: Register with service discovery in AfterStart
+//! - **Metrics Export**: Initialize metrics exporters in Init phase
+//! - **Graceful Shutdown**: Stop accepting new requests in BeforeShutdown
+//! - **Connection Cleanup**: Close database connections in Shutdown phase
+
 use dmsc::hooks::{DMSCHookBus, DMSCHookEvent, DMSCHookKind, DMSCModulePhase};
 use dmsc::core::DMSCServiceContext;
 use std::sync::{Arc, Mutex};

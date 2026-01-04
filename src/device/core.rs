@@ -74,8 +74,6 @@ use uuid::Uuid;
 
 #[cfg(feature = "pyo3")]
 use pyo3::prelude::*;
-#[cfg(feature = "pyo3")]
-use pyo3::pymethods;
 
 /// Configuration for device control module
 #[derive(Debug, Clone, Serialize, Deserialize)]

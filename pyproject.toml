@@ -44,6 +44,7 @@ repository = "https://gitee.com/dunimd/dmsc"
 
 [tool.maturin]
 python-source = "python"
+features = ["pyo3", "auth", "cache", "queue", "gateway", "observability"]
 
 [tool.maturin.dependencies]
 pyo3 = "^0.27"

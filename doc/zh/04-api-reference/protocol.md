@@ -28,18 +28,17 @@ protocol模块实现分层架构：
 
 ### DMSCProtocolManager
 
-协议管理器主接口。
+协议管理器主接口，提供协议初始化、消息发送、协议切换等功能。
+
+**注意**：此类为内部类型，仅在crate内部使用。
 
 #### 方法
 
 | 方法 | 描述 | 参数 | 返回值 |
 |:--------|:-------------|:--------|:--------|
-| `create()` | 创建协议管理器 | 无 | `DMSCProtocolManager` |
 | `initialize(config)` | 初始化管理器 | `config: DMSCProtocolConfig` | `DMSCResult<()>` |
 | `send_message(target, message)` | 发送消息 | `target: &str`, `message: &[u8]` | `DMSCResult<Vec<u8>>` |
 | `send_message_with_protocol(target, message, protocol_type)` | 使用指定协议发送 | `target: &str`, `message: &[u8]`, `protocol_type: DMSCProtocolType` | `DMSCResult<Vec<u8>>` |
-| `switch_protocol(protocol_type)` | 切换协议 | `protocol_type: DMSCProtocolType` | `DMSCResult<()>` |
-| `get_current_protocol()` | 获取当前协议 | 无 | `DMSCProtocolType` |
 | `get_stats()` | 获取统计信息 | 无 | `DMSCResult<DMSCProtocolStats>` |
 | `shutdown()` | 关闭管理器 | 无 | `DMSCResult<()>` |
 | `create_control_center(ctx)` | 创建控制中心 | `ctx: DMSCServiceContext` | `DMSCControlCenter` |
@@ -48,9 +47,11 @@ protocol模块实现分层架构：
 
 ```rust
 use dms::protocol::{DMSCProtocolManager, DMSCProtocolType, DMSCProtocolConfig};
+use dms::core::DMSCServiceContext;
 
 async fn example() -> DMSCResult<()> {
-    let mut manager = DMSCProtocolManager::create();
+    let mut ctx = DMSCServiceContext::new();
+    let mut manager = DMSCProtocolManager::new(ctx);
     
     let config = DMSCProtocolConfig {
         default_protocol: DMSCProtocolType::Global,
@@ -65,9 +66,6 @@ async fn example() -> DMSCResult<()> {
     manager.initialize(config).await?;
     
     let response = manager.send_message("target-device", b"Hello DMSC").await?;
-    
-    manager.switch_protocol(DMSCProtocolType::Private).await?;
-    let secure_response = manager.send_message("secure-device", b"Sensitive data").await?;
     
     let stats = manager.get_stats().await?;
     println!("Messages sent: {}", stats.total_messages_sent);
@@ -237,7 +235,7 @@ let parsed_frame = DMSCFrame::parse(&bytes)?;
 | `Handshake` | 握手帧 |
 | `Heartbeat` | 心跳帧 |
 
-<div align="center">
+<div align="center>
 
 ## 全局状态管理
 
@@ -285,7 +283,7 @@ let state = state_manager.get_state(DMSCStateCategory::Device, "device:001").awa
 | `error_count` | `u64` | 错误数 |
 | `success_rate` | `f32` | 成功率 |
 
-<div align="center">
+<div align="center>
 
 ## 最佳实践
 

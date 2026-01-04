@@ -15,6 +15,68 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+//! # Gateway Module Tests
+//!
+//! This module contains comprehensive tests for the DMSC API gateway system,
+//! covering request/response handling, routing, middleware processing, load balancing,
+//! rate limiting, and circuit breaker functionality for building resilient API services.
+//!
+//! ## Test Coverage
+//!
+//! - **DMSCGatewayConfig**: Tests for gateway configuration including network settings
+//!   (listen address, port, max connections), feature toggles (rate limiting, circuit
+//!   breaker, load balancing), CORS settings, and logging configuration
+//!
+//! - **DMSCGatewayRequest**: Tests for request object creation and properties including
+//!   HTTP method, path, headers, query parameters, body, and remote address
+//!
+//! - **DMSCGatewayResponse**: Tests for response construction including status codes,
+//!   headers, body content, JSON responses, and error responses
+//!
+//! - **DMSCRouter**: Tests for route registration, route matching, and route counting
+//!
+//! - **DMSCMiddleware**: Tests for middleware chain execution and the interceptor pattern
+//!   for request/response processing
+//!
+//! - **DMSCLoadBalancer**: Tests for load balancing strategies (RoundRobin, LeastConn,
+//!   Random), backend server management, and healthy server selection
+//!
+//! - **DMSCRateLimiter**: Tests for rate limiting configuration and request throttling
+//!
+//! - **DMSCCircuitBreaker**: Tests for circuit breaker states (Closed, Open, Half-Open)
+//!   and fault tolerance patterns
+//!
+//! ## Architecture
+//!
+//! The gateway system implements a layered architecture:
+//! - **Transport Layer**: Handles raw network connections and request parsing
+//! - **Router Layer**: Matches incoming requests to registered routes using method and path
+//! - **Middleware Layer**: Applies cross-cutting concerns (authentication, logging, etc.)
+//! - **Handler Layer**: Executes business logic for matched routes
+//! - **Response Layer**: Formats and sends responses back to clients
+//!
+//! ## Load Balancing Strategies
+//!
+//! The load balancer supports multiple distribution strategies:
+//! - **RoundRobin**: Sequentially distributes requests across all healthy backends
+//! - **LeastConn**: Routes to the backend with the fewest active connections
+//! - **Random**: Randomly selects a healthy backend for each request
+//!
+//! ## Circuit Breaker States
+//!
+//! The circuit breaker implements a three-state failure protection pattern:
+//! - **Closed**: Normal operation, requests pass through to backends
+//! - **Open**: After threshold failures, requests are immediately rejected
+//! - **Half-Open**: Probe requests are allowed to test backend recovery
+//!
+//! ## Middleware Chain
+//!
+//! The middleware chain enables flexible request processing composition:
+//! - Middlewares are registered in order and execute sequentially
+//! - Each middleware can modify request headers, body, or reject the request
+//! - Errors in middleware short-circuit the chain and return error responses
+//! - The chain pattern enables separation of concerns (auth, logging, compression, etc.)
+
 use dmsc::gateway::{
     DMSCGatewayConfig,
     DMSCGatewayRequest,

@@ -15,6 +15,26 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+//! # Core Module Tests
+//!
+//! This module contains tests for the fundamental DMSC core components including
+//! error types, service context, and the application builder pattern.
+//!
+//! ## Test Coverage
+//!
+//! - **DMSCError**: Tests for the core error type with various error variants
+//! - **DMSCServiceContext**: Tests for the service context that provides access
+//!   to core services like filesystem access
+//! - **DMSCAppBuilder**: Tests for the application builder pattern that enables
+//!   fluent construction of the DMSC runtime with callback-based execution
+//!
+//! ## Design Principles
+//!
+//! The core module provides the foundation for all DMSC services. Tests verify
+//! that the application can be constructed, configured, and executed successfully.
+//! The DMSCAppBuilder follows a builder pattern allowing flexible runtime
+//! configuration before execution.
+
 use dmsc::core::{DMSCError, DMSCServiceContext, DMSCAppBuilder};
 
 #[test]

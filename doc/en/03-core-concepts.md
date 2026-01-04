@@ -2,9 +2,9 @@
 
 # Core Concepts
 
-**Version: 1.0.0**
+**Version: 0.0.3**
 
-**Last modified date: 2025-12-12**
+**Last modified date: 2026-01-01**
 
 This chapter provides an in-depth introduction to DMSC's core design principles and key components, helping you better understand and use the DMSC framework.
 
@@ -33,7 +33,7 @@ Modules have complex dependency relationships, and the DMSC framework automatica
 
 ### 1.3 Core Module Structure
 
-- **core**: The most basic module, providing runtime, error handling, service context, and module system
+- **core**: The most fundamental module, providing runtime, error handling, service context, and module system
   - Includes: error, context, module, runtime, app_builder, app_runtime, lifecycle, etc.
 - **log**: Depends on core, provides structured logging functionality
 - **config**: Depends on core, provides configuration management functionality
@@ -42,7 +42,31 @@ Modules have complex dependency relationships, and the DMSC framework automatica
 - **fs**: Depends on core, provides secure file system access
 - **Other modules**: Depend on the above basic modules as needed
 
-### 1.4 Module Composition
+### 1.5 Python Module Support
+
+DMSC provides complete Python bindings, allowing you to use all core features through Python. Python modules have the same functionality as Rust modules:
+
+| Python Module | Corresponding Rust Module | Description |
+|:-------------|:------------------------|:------------|
+| `dmsc.auth` | auth | Authentication & authorization (JWT, OAuth, permissions) |
+| `dmsc.cache` | cache | Multi-backend cache abstraction (Memory, Redis, Hybrid) |
+| `dmsc.config` | config | Multi-source configuration management with hot reload |
+| `dmsc.core` | core | Runtime, error handling, and service context |
+| `dmsc.device` | device | Device control, discovery, and intelligent scheduling |
+| `dmsc.fs` | fs | Secure file system operations and management |
+| `dmsc.gateway` | gateway | API gateway with load balancing, rate limiting, and circuit breaking |
+| `dmsc.hooks` | hooks | Lifecycle event hooks (Startup, Shutdown, etc.) |
+| `dmsc.log` | log | Structured logging with tracing context integration |
+| `dmsc.observability` | observability | Metrics, tracing, and Grafana integration |
+| `dmsc.queue` | queue | Distributed queue abstraction (Kafka, RabbitMQ, Redis, Memory) |
+| `dmsc.service_mesh` | service_mesh | Service discovery, health checking, and traffic management |
+
+**Python Module Features:**
+- Native Python interfaces with seamless Rust core invocation
+- Support for sync and async service modules
+- Version: **0.1.3** (requires Python 3.8+)
+
+### 1.6 Module Composition
 
 You can selectively compose the modules you need based on your application requirements:
 
@@ -189,6 +213,60 @@ impl DMSCModule for MyCustomModule {
         100 // Higher value means higher priority
     }
 }
+```
+
+### 3.4 Python Custom Modules
+
+DMSC Python SDK supports creating custom sync and async modules:
+
+```python
+from dmsc import DMSCPyServiceModule, DMSCPyAsyncServiceModule, DMSCServiceContext
+from dmsc.core import DMSCResult
+
+class MyPyModule(DMSCPyServiceModule):
+    """Sync service module"""
+    def name(&self) -> str:
+        return "my_python_module"
+    
+    def init(&self, ctx: DMSCServiceContext) -> DMSCResult:
+        ctx.logger().info("my_python_module", "Python module initialized")
+        return None
+    
+    def start(&self, ctx: DMSCServiceContext) -> DMSCResult:
+        ctx.logger().info("my_python_module", "Python module started")
+        return None
+    
+    def shutdown(&self, ctx: DMSCServiceContext) -> DMSCResult:
+        ctx.logger().info("my_python_module", "Python module stopped")
+        return None
+
+# Async module example
+class MyAsyncPyModule(DMSCPyAsyncServiceModule):
+    """Async service module"""
+    async def init(&self, ctx: DMSCServiceContext) -> DMSCResult:
+        ctx.logger().info("my_async_python_module", "Async Python module initialized")
+        return None
+    
+    async def start(&self, ctx: DMSCServiceContext) -> DMSCResult:
+        ctx.logger().info("my_async_python_module", "Async Python module started")
+        return None
+    
+    async def shutdown(&self, ctx: DMSCServiceContext) -> DMSCResult:
+        ctx.logger().info("my_async_python_module", "Async Python module stopped")
+        return None
+```
+
+Using custom modules in Python application:
+
+```python
+from dmsc import DMSCAppBuilder
+
+app = DMSCAppBuilder() \
+    .with_config("config.yaml") \
+    .with_logging(DMSCLogConfig.default()) \
+    .build()
+
+app.run(lambda ctx: ctx.logger().info("service", "Python service started"))
 ```
 
 <div align="center">

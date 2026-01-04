@@ -2,9 +2,9 @@
 
 # Glossary
 
-**Version: 1.0.0**
+**Version: 0.0.3**
 
-**Last modified date: 2025-12-12**
+**Last modified date: 2026-01-01**
 
 This chapter defines technical terms and concepts used in the DMSC documentation to help you understand the content.
 

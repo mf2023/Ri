@@ -2,9 +2,9 @@
 
 # Database API参考
 
-**Version: 1.0.0**
+**Version: 0.0.3**
 
-**Last modified date: 2025-12-12**
+**Last modified date: 2026-01-01**
 
 database模块提供统一数据库访问层，支持多种数据库类型、连接池管理、事务处理与查询构建器。
 

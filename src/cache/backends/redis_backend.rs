@@ -38,7 +38,7 @@
 //! let redis_cache = DMSCRedisCache::new("redis://localhost:6379").await?;
 //! 
 //! // Set a value with expiration
-//! let cached_value = CachedValue {
+//! let cached_value = DMSCCachedValue {
 //!     value: b"test_data".to_vec(),
 //!     expires_at: Some(SystemTime::now() + Duration::from_secs(3600)),
 //!     metadata: HashMap::new(),
@@ -64,7 +64,7 @@ use redis::{AsyncCommands, Client};
 use redis::aio::ConnectionManager;
 use std::sync::Arc;
 use std::ops::AddAssign;
-use crate::cache::{DMSCCache, CachedValue, CacheStats};
+use crate::cache::{DMSCCache, DMSCCachedValue, DMSCCacheStats};
 use crate::core::DMSCResult;
 
 /// Redis cache implementation.
@@ -114,11 +114,11 @@ impl DMSCCache for DMSCRedisCache {
     /// - `key`: Cache key to retrieve
     /// 
     /// # Returns
-    /// `Some(CachedValue)` if the key exists and the value is not expired, otherwise `None`
+    /// `Some(DMSCCachedValue)` if the key exists and the value is not expired, otherwise `None`
     /// 
     /// # Implementation Details
     /// 1. Retrieves the JSON-encoded value from Redis
-    /// 2. Deserializes the value to `CachedValue`
+    /// 2. Deserializes the value to `DMSCCachedValue`
     /// 3. Checks if the value is expired
     /// 4. If expired, deletes the key from Redis and returns `None`
     /// 5. Otherwise, updates hit count and returns the value
@@ -170,14 +170,14 @@ impl DMSCCache for DMSCRedisCache {
     /// `Ok(())` if the value was successfully set, otherwise an error
     /// 
     /// # Implementation Details
-    /// 1. Creates a CachedValue from the string value
-    /// 2. Serializes the CachedValue to JSON
+    /// 1. Creates a DMSCCachedValue from the string value
+    /// 2. Serializes the DMSCCachedValue to JSON
     /// 3. Calculates the TTL (Time-To-Live) based on the ttl_seconds parameter
     /// 4. Uses `SET` or `SETEX` command depending on whether TTL is specified
     async fn set(&self, key: &str, value: &str, ttl_seconds: Option<u64>) -> crate::core::DMSCResult<()> {
         let mut conn = (*self.connection).clone();
         
-        let cached_value = CachedValue {
+        let cached_value = DMSCCachedValue {
             value: value.to_string(),
             expires_at: ttl_seconds,
         };
@@ -249,7 +249,7 @@ impl DMSCCache for DMSCRedisCache {
     /// Gets cache statistics.
     /// 
     /// # Returns
-    /// A `CacheStats` struct containing cache statistics
+    /// A `DMSCCacheStats` struct containing cache statistics
     /// 
     /// # Statistics Included
     /// - Total keys (approximate using DBSIZE command)
@@ -258,7 +258,7 @@ impl DMSCCache for DMSCRedisCache {
     /// - Error count (used as eviction count)
     /// - Average hit rate
     /// - Memory usage (always 0 as Redis manages memory)
-    async fn stats(&self) -> CacheStats {
+    async fn stats(&self) -> DMSCCacheStats {
         let hit_count = self.stats.get("hit_count")
             .map(|entry| *entry.value())
             .unwrap_or(0);
@@ -282,7 +282,7 @@ impl DMSCCache for DMSCRedisCache {
             Err(_) => 0,
         };
         
-        CacheStats {
+        DMSCCacheStats {
             hits: hit_count,
             misses: miss_count,
             entries: total_keys,

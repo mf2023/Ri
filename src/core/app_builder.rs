@@ -18,18 +18,73 @@
 #![allow(non_snake_case)]
 
 //! # Application Builder
-//! 
+//!
 //! This module provides the application builder for constructing DMSC applications.
-//! The `DMSCAppBuilder` follows the builder pattern for fluent configuration.
+//! The `DMSCAppBuilder` follows the builder pattern for fluent configuration,
+//! enabling developers to compose applications from various modules, configuration
+//! sources, and runtime settings in a declarative manner.
+//!
+//! ## Builder Pattern
+//!
+//! The builder pattern allows step-by-step construction of complex objects.
+//! Each method on `DMSCAppBuilder` configures a specific aspect of the application
+//! and returns the builder for method chaining. This results in a fluent API
+//! that is both readable and type-safe.
+//!
+//! ## Module Registration
+//!
+//! Modules are the primary extension point for DMSC applications. The builder
+//! supports multiple types of modules:
+//!
+//! - **Synchronous modules**: Implement `ServiceModule` trait for sync operations
+//! - **Asynchronous modules**: Implement `AsyncServiceModule` trait for async operations
+//! - **DMSC modules**: Implement public `DMSCModule` trait (converted to async internally)
+//! - **Python modules**: Modules created from Python code (with pyo3 feature)
+//!
+//! ## Configuration Management
+//!
+//! The builder supports multiple configuration sources with a defined priority order:
+//!
+//! 1. Configuration files (lowest priority): `dms.yaml`, `dms.yml`, `dms.toml`, `dms.json`
+//! 2. Custom configuration via `with_config()` method
+//! 3. Environment variables (highest priority)
+//!
+//! ## Usage Example
+//!
+//! ```rust
+//! use dms::prelude::*;
+//!
+//! #[tokio::main]
+//! async fn main() -> DMSCResult<()> {
+//!     let app = DMSCAppBuilder::new()
+//!         .with_config("config.yaml")?
+//!         .with_module(Box::new(MySyncModule::new()))
+//!         .with_async_module(Box::new(MyAsyncModule::new()))
+//!         .build()?;
+//!
+//!     app.run(|ctx| async move {
+//!         ctx.logger().info("service", "DMSC service started")?;
+//!         Ok(())
+//!     }).await
+//! }
+//! ```
+//!
+//! ## Thread Safety
+//!
+//! The `DMSCAppBuilder` is designed to be used in a single-threaded context
+//! during application construction. After calling `build()`, the resulting
+//! `DMSCAppRuntime` is safe to use across multiple threads.
+//!
+//! ## Error Handling
+//!
+//! All builder methods that can fail return `DMSCResult`, enabling proper
+//! error handling through the `?` operator or explicit match statements.
 
 use crate::core::{DMSCResult, DMSCServiceContext, ServiceModule, AsyncServiceModule};
 use super::module_sorter::sort_modules;
 use super::module_types::{ModuleSlot, ModuleType};
 use super::lifecycle::DMSCLifecycleObserver;
 use super::analytics::DMSCLogAnalyticsModule;
-
-#[cfg(feature = "pyo3")]
-use pyo3::PyResult;
 
 /// Public-facing application builder for DMSC.
 /// 
@@ -117,7 +172,7 @@ impl DMSCAppBuilder {
     /// 
     /// The updated `DMSCAppBuilder` instance for method chaining.
     #[cfg(feature = "pyo3")]
-    pub fn with_python_module(mut self, module: crate::core::module::PythonModuleAdapter) -> Self {
+    pub fn with_python_module(mut self, module: crate::core::module::DMSCPyModuleAdapter) -> Self {
         self.modules.push(ModuleSlot { 
             module: ModuleType::Async(Box::new(module)), 
             failed: false 
@@ -426,68 +481,10 @@ impl DMSCAppBuilder {
 }
 
 #[cfg(feature = "pyo3")]
-/// Python bindings for DMSCAppBuilder
 #[pyo3::prelude::pymethods]
 impl DMSCAppBuilder {
-        #[new]
-        #[pyo3(name = "with_config")]
-        fn with_config_impl(&mut self, config_path: String) -> PyResult<()> {
-            self.config_paths.push(config_path);
-            Ok(())
-        }
-        
-        #[pyo3(name = "with_logging")]
-        fn with_logging_impl(&mut self, logging_config: crate::log::DMSCLogConfig) -> PyResult<()> {
-            self.logging_config = Some(logging_config);
-            Ok(())
-        }
-        
-        #[pyo3(name = "with_observability")]
-        fn with_observability_impl(&mut self, observability_config: crate::observability::DMSCObservabilityConfig) -> PyResult<()> {
-            self.observability_config = Some(observability_config);
-            Ok(())
-        }
-        
-        #[pyo3(name = "with_python_module")]
-        fn with_python_module_impl(&mut self, module: &crate::core::module::PythonModuleAdapter) -> PyResult<()> {
-            self.modules.push(ModuleSlot { 
-                module: ModuleType::Async(Box::new(module.clone())), 
-                failed: false 
-            });
-            Ok(())
-        }
-        
-        fn with_py_dmsc_module(&mut self, py_module: &crate::core::module::PyDMSCModule) -> PyResult<()> {
-            let adapter = crate::core::module::PythonModuleAdapter {
-                name: py_module.name().to_string(),
-                is_critical: py_module.is_critical(),
-                priority: py_module.priority(),
-                dependencies: py_module.dependencies(),
-            };
-            self.modules.push(ModuleSlot { 
-                module: ModuleType::Async(Box::new(adapter)), 
-                failed: false 
-            });
-            Ok(())
-        }
-        
-        #[pyo3(name = "build")]
-        fn build_impl(&mut self) -> PyResult<super::app_runtime::DMSCAppRuntime> {
-            let modules = std::mem::take(&mut self.modules);
-            let config_paths = std::mem::take(&mut self.config_paths);
-            let logging_config = self.logging_config.take();
-            let observability_config = self.observability_config.take();
-            
-            let builder = DMSCAppBuilder {
-                modules,
-                config_paths,
-                logging_config,
-                observability_config,
-            };
-            
-            match builder.build() {
-                Ok(runtime) => Ok(runtime),
-                Err(e) => Err(pyo3::exceptions::PyRuntimeError::new_err(format!("Failed to build runtime: {e}"))),
-            }
-        }
+    #[new]
+    fn py_new() -> Self {
+        Self::new()
     }
+}

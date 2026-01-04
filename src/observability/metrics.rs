@@ -446,12 +446,12 @@ impl DMSCMetricsRegistry {
     
     /// Register a metric from Python
     #[pyo3(name = "register")]
-    fn register_impl(&self, _metric: pyo3::PyObject) -> Result<(), pyo3::PyErr> {
+    fn register_impl(&self, _metric: pyo3::Py<pyo3::PyAny>) -> Result<(), pyo3::PyErr> {
         Ok(())
     }
     
     #[pyo3(name = "get_metric")]
-    fn get_metric_impl(&self, _name: String) -> Result<pyo3::PyObject, pyo3::PyErr> {
+    fn get_metric_impl(&self, _name: String) -> Result<pyo3::Py<pyo3::PyAny>, pyo3::PyErr> {
         Err(pyo3::exceptions::PyNotImplementedError::new_err("Metric retrieval not implemented"))
     }
     

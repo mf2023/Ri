@@ -18,6 +18,62 @@
 use dms::protocol::frames::*;
 use dms::core::{DMSCResult, DMSCError};
 
+/// Protocol frame test module for DMSC wire protocol implementation.
+///
+/// This module provides comprehensive test coverage for the DMSC protocol
+/// frame layer, which defines the binary message format used for all network
+/// communication in the distributed messaging system. The frame layer handles
+/// serialization, deserialization, validation, and parsing of protocol messages
+/// ensuring reliable data exchange between system components.
+///
+/// ## Test Coverage
+///
+/// - **Frame Structure Validation**: Tests the creation and initialization of
+///   DMSCFrame instances, verifying correct header field population including
+///   magic bytes for protocol identification, version information, payload
+///   length tracking, and sequence numbering for ordered delivery.
+///
+/// - **Binary Serialization**: Validates the byte-level encoding of frames
+///   including header fields, payload data, and integrity checksums. Tests
+///   verify that serialization produces deterministic output and that the
+///   serialized format matches the DMSC protocol specification.
+///
+/// - **Deserialization Integrity**: Tests reconstruction of frame objects from
+///   serialized byte streams, verifying that all header fields and payload
+///   data are correctly recovered without data corruption or truncation.
+///
+/// - **Frame Parsing Pipeline**: Validates the incremental frame parser that
+///   can process streams of concatenated frame data, correctly identifying
+///   and extracting individual frames regardless of buffer boundaries.
+///
+/// - **Checksum Verification**: Tests the frame integrity mechanism that
+///   detects data corruption during transmission or storage using CRC-based
+///   checksum calculation and validation.
+///
+/// ## Design Principles
+///
+/// The frame layer implements a canonical binary encoding strategy that
+/// ensures consistent representation across different platforms and architectures.
+/// All multi-byte fields use network byte order (big-endian) for cross-platform
+/// interoperability, and frame boundaries are self-describing through explicit
+/// length fields.
+///
+/// Tests verify the round-trip property: any frame that can be created and
+/// serialized must deserialize back to an equivalent frame with identical
+/// semantic content. This property is critical for reliable network protocols
+/// where frames may be logged, stored, or forwarded through intermediate
+/// components.
+///
+/// The incremental parser design supports streaming protocols where frames
+/// arrive piecemeal over network connections. Tests verify that the parser
+/// correctly handles all boundary conditions including partial frames,
+/// multiple frames in a single buffer, and frames spanning buffer boundaries.
+///
+/// Integrity verification through checksums provides a first-line defense
+/// against data corruption without the computational overhead of cryptographic
+/// authentication. Tests verify that corrupted frames are reliably detected
+/// while correct frames pass validation.
+
 #[test]
 fn test_frame_creation() {
     let payload = b"Hello, DMSC Protocol!";

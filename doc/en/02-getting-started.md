@@ -2,9 +2,9 @@
 
 # Getting Started
 
-**Version: 1.0.0**
+**Version: 0.0.3**
 
-**Last modified date: 2025-12-12**
+**Last modified date: 2026-01-01**
 
 This guide will help you get started with DMSC, from installation to creating your first application.
 
@@ -34,6 +34,24 @@ curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 # Windows
 # Visit https://rustup.rs/ and download the installer
 ```
+
+### Python Environment Requirements
+
+If you use the Python SDK, ensure your environment meets the following requirements:
+
+- **Python**: 3.8+
+- **pip**: Latest version
+- **Platforms**: Linux, macOS, or Windows
+
+You can check your Python version with the following commands:
+
+```bash
+python --version
+# or
+python3 --version
+```
+
+If you don't have Python 3.8+ installed, please visit [Python Official Website](https://www.python.org/downloads/) to download and install.
 
 <div align="center">
 
@@ -73,6 +91,27 @@ Simply add DMSC to your existing project's `Cargo.toml` file:
 [dependencies]
 # Other dependencies
 dms = { git = "https://gitee.com/dunimd/dmsc" }
+```
+
+### Using Python SDK
+
+The simplest way to install the Python SDK is via pip:
+
+```bash
+pip install dmsc
+```
+
+Or add to your `requirements.txt`:
+
+```
+dmsc==0.1.3
+```
+
+Verify the installation:
+
+```python
+import dmsc
+print(f"DMSC Python SDK Version: {dmsc.__version__}")
 ```
 
 <div align="center">
@@ -143,6 +182,58 @@ You should see output similar to the following:
 ```
 2025-12-12T15:30:00Z INFO service: DMSC service started
 ```
+
+### Your First Python Application
+
+Creating an application with Python SDK is equally simple:
+
+```python
+from dmsc import DMSCAppBuilder, DMSCLogConfig
+
+# Build the service runtime
+app = DMSCAppBuilder() \
+    .with_config("config.yaml") \
+    .with_logging(DMSCLogConfig.default()) \
+    .build()
+
+# Run business logic
+app.run(lambda ctx: ctx.logger().info("service", "DMSC service started"))
+```
+
+### Configuration File
+
+Create a `config.yaml` file in the project root directory (shared by Rust and Python):
+
+```yaml
+# config.yaml
+service:
+  name: "my-dms-app"
+  version: "1.0.0"
+
+logging:
+  level: "info"
+  format: "json"
+  file_enabled: true
+  console_enabled: true
+
+observability:
+  metrics_enabled: true
+  tracing_enabled: true
+  prometheus_port: 9090
+```
+
+### Running Python Application
+
+```bash
+python main.py
+```
+
+You should see output similar to the following:
+
+```
+2025-12-12T15:30:00Z INFO service: DMSC service started
+```
+
 <div align="center">
 
 ## Application Structure Breakdown

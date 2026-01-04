@@ -587,7 +587,46 @@ impl DMSCPermissionManager {
 }
 
 #[cfg(feature = "pyo3")]
-/// Python bindings for DMSCPermissionManager
+/// Python bindings for the Permission Manager.
+///
+/// This module provides Python interface to DMSC RBAC functionality,
+/// enabling Python applications to manage permissions, roles, and user assignments.
+///
+/// ## Supported Operations
+///
+/// - Permission creation and management
+/// - Role creation and management with permission assignments
+/// - User role assignments and removal
+/// - Permission checking for users
+/// - Permission and role listing
+///
+/// ## Python Usage Example
+///
+/// ```python
+/// from dms import DMSCPermission, DMSCRole, DMSCPermissionManager
+///
+/// # Create permission manager
+/// perm_manager = DMSCPermissionManager()
+///
+/// # Create a permission
+/// permission = DMSCPermission(
+///     id="read:device",
+///     name="Read Device",
+///     description="Allows reading device information",
+///     resource="device",
+///     action="read",
+/// )
+///
+/// # Create a role
+/// role = DMSCRole(
+///     id="device_admin",
+///     name="Device Administrator",
+///     description="Manages devices",
+///     permissions=["read:device", "write:device"],
+///     is_system=False,
+/// )
+/// # Note: Async operations require Python 3.7+ with asyncio
+/// ```
 #[pyo3::prelude::pymethods]
 impl DMSCPermissionManager {
     #[new]

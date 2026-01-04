@@ -15,6 +15,72 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+//! # Service Mesh Module Tests
+//!
+//! This module contains comprehensive tests for the DMSC service mesh system,
+//! providing service discovery, health checking, traffic management, circuit breaking,
+//! and load balancing for building resilient microservice architectures.
+//!
+//! ## Test Coverage
+//!
+//! - **DMSCServiceMeshConfig**: Tests for service mesh configuration including feature
+//!   toggles (discovery, health checks, traffic management), intervals, timeouts, and
+//!   retry policies
+//!
+//! - **DMSCServiceMesh**: Tests for the core service mesh orchestrating all components
+//!   including service registry, health checker, traffic manager, circuit breaker, and
+//!   load balancer
+//!
+//! - **DMSCServiceInstance**: Tests for service instance representation including
+//!   identification, endpoint information, status, metadata, and heartbeat tracking
+//!
+//! - **DMSCHealthCheck**: Tests for health checking including result structures,
+//!   summary aggregation, success rate tracking, and response time monitoring
+//!
+//! - **DMSCTrafficRoute**: Tests for traffic routing including match criteria (path,
+//!   headers, method, query), weighted destinations, retry policies, timeouts, and
+//!   fault injection configuration
+//!
+//! - **DMSCServiceStatus**: Tests for service instance states (Running, Stopped, Unknown)
+//!
+//! ## Architecture
+//!
+//! The service mesh implements a sidecar-less architecture for DMSC services:
+//! - **Service Discovery**: Registry mapping service names to healthy instances
+//! - **Health Checking**: Active and passive health verification with configurable intervals
+//! - **Traffic Management**: Advanced routing with subset-based deployments and traffic shifting
+//! - **Resilience**: Circuit breaking, retry policies, and timeouts for fault tolerance
+//! - **Load Balancing**: Multiple strategies with consistent hashing support
+//!
+//! ## Health Check States
+//!
+//! The health system tracks service availability:
+//! - **Healthy**: Service passes health checks and receives traffic
+//! - **Unhealthy**: Service failed checks and is temporarily excluded
+//! - **Unknown**: Initial state before first health check completes
+//!
+//! Health checks can be configured with:
+//! - **Interval**: How often to check service health
+//! - **Timeout**: Maximum wait for health check response
+//! - **Unhealthy Threshold**: Consecutive failures before marking unhealthy
+//! - **Healthy Threshold**: Consecutive successes before marking healthy
+//!
+//! ## Traffic Routing
+//!
+//! Traffic routes enable sophisticated traffic management:
+//! - **Subset Routing**: Route to specific service versions (canary, blue-green)
+//! - **Weight-Based Routing**: Split traffic between destinations
+//! - **Header-Based Routing**: Route based on request headers
+//! - **Path-Based Routing**: Match requests by path prefix or exact match
+//!
+//! ## Resilience Patterns
+//!
+//! The service mesh implements multiple resilience patterns:
+//! - **Circuit Breaker**: Prevents cascade failures by failing fast
+//! - **Retry Policies**: Automatic retries with exponential backoff
+//! - **Timeouts**: Request timeout enforcement
+//! - **Fault Injection**: Inject delays and aborts for chaos testing
+
 use dmsc::service_mesh::{DMSCServiceMeshConfig, DMSCServiceMesh, DMSCServiceHealthStatus, DMSCServiceEndpoint};
 use dmsc::service_mesh::{DMSCServiceInstance, DMSCServiceStatus};
 use dmsc::service_mesh::{DMSCHealthCheckResult, DMSCHealthSummary, DMSCHealthStatus};

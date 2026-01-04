@@ -2,9 +2,9 @@
 
 # Observability API Reference
 
-**Version: 1.0.0**
+**Version: 0.0.3**
 
-**Last modified date: 2025-12-12**
+**Last modified date: 2026-01-01**
 
 The observability module provides distributed tracing, metrics collection, health checks, and performance monitoring functionality, supporting the OpenTelemetry standard.
 

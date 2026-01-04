@@ -54,7 +54,7 @@
 //!     let cache = DMSCMemoryCache::new();
 //!     
 //!     // Create a cached value with 1-hour expiration
-//!     let value = CachedValue::new(b"test_value".to_vec(), Duration::from_secs(3600));
+//!     let value = DMSCCachedValue::new(b"test_value".to_vec(), Duration::from_secs(3600));
 //!     
 //!     // Set the value in the cache
 //!     cache.set("test_key", value).await?;
@@ -84,7 +84,7 @@
 use dashmap::DashMap;
 use std::sync::Arc;
 use tokio::sync::RwLock;
-use crate::cache::{DMSCCache, CachedValue, CacheStats};
+use crate::cache::{DMSCCache, DMSCCachedValue, DMSCCacheStats};
 use crate::core::DMSCResult;
 
 /// In-memory cache implementation using DashMap for high performance and thread safety.
@@ -93,9 +93,9 @@ use crate::core::DMSCResult;
 /// statistics, and thread-safe concurrent access.
 pub struct DMSCMemoryCache {
     /// Underlying storage using DashMap for concurrent access
-    store: Arc<DashMap<String, CachedValue>>,
+    store: Arc<DashMap<String, DMSCCachedValue>>,
     /// Cache statistics tracking hit count, miss count, and eviction count
-    stats: Arc<RwLock<CacheStats>>,
+    stats: Arc<RwLock<DMSCCacheStats>>,
 }
 
 impl Default for DMSCMemoryCache {
@@ -113,7 +113,7 @@ impl DMSCMemoryCache {
     pub fn new() -> Self {
         DMSCMemoryCache {
             store: Arc::new(DashMap::new()),
-            stats: Arc::new(RwLock::new(CacheStats::default())),
+            stats: Arc::new(RwLock::new(DMSCCacheStats::default())),
         }
     }
 }
@@ -132,7 +132,7 @@ impl DMSCCache for DMSCMemoryCache {
     ///
     /// # Returns
     ///
-    /// An `Option<CachedValue>` containing the value if it exists and is not expired, or None otherwise
+    /// An `Option<DMSCCachedValue>` containing the value if it exists and is not expired, or None otherwise
     async fn get(&self, key: &str) -> DMSCResult<Option<String>> {
         match self.store.get(key) {
             Some(entry) => {
@@ -169,7 +169,7 @@ impl DMSCCache for DMSCMemoryCache {
     ///
     /// A `DMSCResult<()>` indicating success or failure
     async fn set(&self, key: &str, value: &str, ttl_seconds: Option<u64>) -> crate::core::DMSCResult<()> {
-        let cached_value = CachedValue::new(value.to_string(), ttl_seconds);
+        let cached_value = DMSCCachedValue::new(value.to_string(), ttl_seconds);
         self.store.insert(key.to_string(), cached_value);
         Ok(())
     }
@@ -226,8 +226,8 @@ impl DMSCCache for DMSCMemoryCache {
     ///
     /// # Returns
     ///
-    /// A `CacheStats` struct containing cache statistics
-    async fn stats(&self) -> CacheStats {
+    /// A `DMSCCacheStats` struct containing cache statistics
+    async fn stats(&self) -> DMSCCacheStats {
         *self.stats.read().await
     }
     

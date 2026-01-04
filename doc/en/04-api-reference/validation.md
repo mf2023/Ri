@@ -2,9 +2,9 @@
 
 # Validation API Reference
 
-**Version: 1.0.0**
+**Version: 0.0.3**
 
-**Last modified date: 2025-12-12**
+**Last modified date: 2026-01-01**
 
 The validation module provides data validation and sanitization functionality, supporting multiple validation rules and custom validators.
 

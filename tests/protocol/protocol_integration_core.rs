@@ -22,6 +22,47 @@ use dms::protocol::global_state::{DMSCSystemStatus, DMSCGlobalStateManager, DMSC
 use std::sync::Arc as StdArc;
 use std::sync::atomic::{AtomicBool, Ordering};
 
+/// Protocol integration core test module for DMSC control plane operations.
+///
+/// This module provides comprehensive test coverage for the protocol integration
+/// layer that connects the core system with external control mechanisms. The tests
+/// validate the DMSCControlCenter component which serves as the central coordinator
+/// for system state management, hook triggering, and external control actions.
+///
+/// ## Test Coverage
+///
+/// - **Hook Triggering**: Tests the ability to trigger registered hooks through
+///   external control actions, verifying that hook callbacks are executed with
+///   correct parameters and that the triggering operation reports success accurately.
+///
+/// - **Global State Management**: Validates the state update mechanism where the
+///   control center can modify system-wide state including operational status,
+///   global configuration, and active protocol sets through atomic updates.
+///
+/// - **System Status Transitions**: Tests the ability to change the overall system
+///   status through external control actions, verifying that status changes are
+///   persisted and reflected in subsequent state queries.
+///
+/// - **Control Center Lifecycle**: Validates the proper initialization of the
+///   control center with service context and state manager references, ensuring
+///   all dependencies are correctly wired for coordinated operation.
+///
+/// ## Design Principles
+///
+/// The integration tests focus on the interaction patterns between components
+/// rather than individual component behavior. This approach validates that the
+/// system works correctly when assembled, catching integration issues that unit
+/// tests would miss.
+///
+/// Tests use real implementations of dependencies (DMSCGlobalStateManager,
+/// DMSCServiceContext) rather than mocks where practical, providing confidence
+/// that the integration paths function correctly in production scenarios.
+///
+/// The control center design implements a facade pattern, providing a unified
+/// interface to complex system operations while hiding implementation details
+/// from external callers. Tests verify that this abstraction correctly delegates
+/// to underlying components.
+
 #[tokio::test]
 async fn test_control_center_trigger_hook_and_update_state() {
     let state_manager = StdArc::new(DMSCGlobalStateManager::new());
