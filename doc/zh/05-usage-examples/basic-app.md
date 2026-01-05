@@ -215,9 +215,30 @@ cargo run
 运行示例后，您应该会看到类似以下的输出：
 
 ```json
-{"timestamp":"2025-12-12T15:30:00Z","level":"info","module":"service","message":"dms-basic-example v1.0.0 started successfully","trace_id":"abc123","span_id":"def456"}
-{"timestamp":"2025-12-12T15:30:00Z","level":"info","module":"config","message":"Logging level: info","trace_id":"abc123","span_id":"def456"}
-{"timestamp":"2025-12-12T15:30:00Z","level":"info","module":"service","message":"Service finished successfully","trace_id":"abc123","span_id":"def456"}
+{
+  "timestamp": "2025-12-12T15:30:00Z",
+  "level": "info",
+  "module": "service",
+  "message": "dms-basic-example v1.0.0 started successfully",
+  "trace_id": "abc123",
+  "span_id": "def456"
+}
+{
+  "timestamp": "2025-12-12T15:30:00Z",
+  "level": "info",
+  "module": "config",
+  "message": "Logging level: info",
+  "trace_id": "abc123",
+  "span_id": "def456"
+}
+{
+  "timestamp": "2025-12-12T15:30:00Z",
+  "level": "info",
+  "module": "service",
+  "message": "Service finished successfully",
+  "trace_id": "abc123",
+  "span_id": "def456"
+}
 ```
 
 <div align="center">

@@ -325,6 +325,328 @@ auth:
 
 <div align="center">
 
+## 11. 密钥管理与密码学安全
+
+</div>
+
+### 11.1 密钥管理最佳实践
+
+#### 11.1.1 密钥生成
+
+- **使用安全随机数生成器**：始终使用密码学安全的随机数生成器生成密钥
+- **选择足够的密钥长度**：根据安全需求选择合适的密钥长度，推荐RSA至少2048位，ECC至少256位
+- **避免弱密钥**：确保生成的密钥不是已知弱密钥或默认密钥
+- **密钥_entropy**：保证密钥具有足够的熵值，建议至少128位安全强度
+
+```rust
+// 好的做法：使用安全的随机数生成器
+use ring::rand::SystemRandom;
+
+let rng = SystemRandom::new();
+let mut key = [0u8; 32];
+rng.fill(&mut key).map_err(|_| DMSCError::SecurityViolation("Failed to generate secure random key".to_string()))?;
+
+// 避免的做法：使用伪随机数或固定密钥
+let weak_key = [1, 2, 3, 4, 5, 6, 7, 8]; // 不安全
+```
+
+#### 11.1.2 密钥存储
+
+- **永不硬编码密钥**：绝对不要在源代码或配置文件中硬编码密钥
+- **使用密钥管理服务**：在生产环境中，使用HSM（硬件安全模块）或KMS（密钥管理服务）
+- **环境变量存储**：临时解决方案可使用环境变量存储密钥
+- **加密存储**：静态密钥应使用主密钥加密后存储
+
+```yaml
+# 不好的做法
+auth:
+  jwt:
+    secret: "my-super-secret-key-12345"
+
+# 好的做法
+auth:
+  jwt:
+    secret: ${DMSC_JWT_SECRET}  # 从环境变量读取
+```
+
+#### 11.1.3 密钥轮换
+
+- **定期轮换密钥**：制定密钥轮换策略，建议JWT密钥每90天轮换一次
+- **双密钥过渡**：轮换期间支持新旧密钥同时验证，确保平滑过渡
+- **密钥版本管理**：为每个密钥版本分配唯一标识，支持历史密钥追溯
+- **自动化轮换**：实现自动化密钥轮换流程，减少人为操作风险
+
+```rust
+// 实现密钥轮换支持
+struct KeyRotationManager {
+    current_key: EncodingKey,
+    previous_key: Option<EncodingKey>,
+    key_version: u64,
+    rotation_date: chrono::DateTime<chrono::Utc>,
+}
+
+impl KeyRotationManager {
+    pub fn rotate_key(&mut self, new_secret: &[u8]) {
+        self.previous_key = Some(std::mem::replace(
+            &mut self.current_key,
+            EncodingKey::from_secret(new_secret),
+        ));
+        self.key_version += 1;
+        self.rotation_date = chrono::Utc::now();
+    }
+
+    pub fn validate_with_rotation(&self, token: &str) -> Result<JWTClaims, DMSCError> {
+        // 首先尝试使用当前密钥验证
+        if let Ok(claims) = self.validate_current(token) {
+            return Ok(claims);
+        }
+        // 如果失败，尝试使用前一个密钥（支持轮换过渡期）
+        self.previous_key
+            .as_ref()
+            .ok_or_else(|| DMSCError::SecurityViolation("Token validation failed".to_string()))?;
+        // ... 验证逻辑
+        Ok(claims)
+    }
+}
+```
+
+#### 11.1.4 密钥销毁
+
+- **安全删除**：密钥不再使用时，应安全删除内存中的密钥数据
+- **使用敏感数据类型**：使用`zeroize`等库安全覆盖内存
+- **审计追踪**：记录密钥的创建、使用和销毁时间
+
+```rust
+use zeroize::Zeroize;
+
+struct SensitiveKey {
+    data: Vec<u8>,
+}
+
+impl Drop for SensitiveKey {
+    fn drop(&mut self) {
+        self.data.zeroize();
+    }
+}
+```
+
+### 11.2 JWT安全最佳实践
+
+#### 11.2.1 算法选择
+
+- **使用HS256或更高级别算法**：推荐使用HS256、RS256或ES256
+- **验证算法**：在验证JWT时，始终验证算法声明，防止算法混淆攻击
+- **禁用none算法**：确保验证逻辑拒绝alg为"none"的令牌
+
+```rust
+// 确保验证算法
+let validation = Validation::new(Algorithm::HS256);
+let claims = decode::<JWTClaims>(token, &key, &validation)?;
+```
+
+#### 11.2.2 Token安全
+
+- **设置合理的过期时间**：JWT过期时间建议设置为15分钟到1小时
+- **使用短期访问令牌**：配合刷新令牌机制使用短期访问令牌
+- **验证发布时间**：验证iat（发布时间）声明，防止使用旧令牌
+- **存储令牌安全**：客户端安全存储令牌，避免XSS攻击
+
+#### 11.2.3 敏感信息处理
+
+- **不在JWT中存储敏感信息**：JWT使用Base64编码，可被轻松解码
+- **只存储必要声明**：只包含用户ID、角色等必要信息
+- **加密敏感数据**：如需在JWT中传输敏感数据，应先进行加密
+
+### 11.3 后量子密码学指南
+
+#### 11.3.1 算法选择
+
+DMSC支持多种后量子密码学算法，选择合适的算法取决于具体场景：
+
+| 算法 | 类型 | 推荐场景 | 安全级别 |
+|:-----|:-----|:---------|:---------|
+| **Kyber-512** | KEM | 密钥封装、SSL/TLS | NIST Level 5 |
+| **Dilithium-5** | 数字签名 | 身份认证、软件签名 | NIST Level 5 |
+| **Falcon-512** | 数字签名 | 需要紧凑签名的场景 | NIST Level 4 |
+
+```rust
+use dmsc::protocol::post_quantum::DMSCPostQuantumManager;
+
+// 生成后量子密钥对
+let pq_manager = DMSCPostQuantumManager::new();
+let (public_key, private_key) = pq_manager.generate_kyber_keypair()?;
+
+// 使用Kyber进行密钥封装
+let (ciphertext, shared_secret) = pq_manager.kyber_encapsulate(&public_key)?;
+```
+
+#### 11.3.2 混合加密模式
+
+在过渡期，建议使用混合加密模式，同时使用传统和后量子算法：
+
+```rust
+struct HybridEncryption {
+    traditional_kem: Box<dyn TraditionalKEM>,
+    post_quantum_kem: Box<dyn PostQuantumKEM>,
+}
+
+impl HybridEncryption {
+    pub fn encrypt(&self, plaintext: &[u8]) -> Result<HybridCiphertext, DMSCError> {
+        // 1. 生成随机会话密钥
+        let session_key = self.generate_session_key()?;
+        // 2. 分别用传统和后量子KEM封装会话密钥
+        let traditional_ciphertext = self.traditional_kem.encapsulate(&session_key)?;
+        let pq_ciphertext = self.post_quantum_kem.encapsulate(&session_key)?;
+        // 3. 用会话密钥加密数据
+        let encrypted_data = self.symmetric_encrypt(&session_key, plaintext)?;
+        Ok(HybridCiphertext { traditional_ciphertext, pq_ciphertext, encrypted_data })
+    }
+}
+```
+
+#### 11.3.3 迁移策略
+
+- **渐进式迁移**：逐步将系统迁移到后量子密码学
+- **保持兼容性**：过渡期间同时支持传统和后量子算法
+- **监控和评估**：持续监控新算法的安全性和性能
+
+### 11.4 国密算法使用指南
+
+#### 11.4.1 算法选择
+
+国密算法适用于需要符合中国国家密码标准的场景：
+
+| 算法 | 类型 | 用途 | 标准 |
+|:-----|:-----|:-----|:-----|
+| **SM2** | 椭圆曲线密码 | 数字签名、密钥交换 | GM/T 0003 |
+| **SM3** | 哈希算法 | 消息摘要 | GM/T 0004 |
+| **SM4** | 分组密码 | 数据加密 | GM/T 0002 |
+
+```rust
+use dmsc::protocol::guomi::DMSCGmCrypto;
+
+// SM2签名
+let gm_crypto = DMSCGmCrypto::new();
+let (sm2_public, sm2_private) = gm_crypto.generate_sm2_keypair()?;
+let signature = gm_crypto.sm2_sign(&message, &sm2_private)?;
+
+// SM3哈希
+let sm3_hash = gm_crypto.sm3_hash(&data)?;
+
+// SM4加密
+let sm4_key = gm_crypto.generate_sm4_key()?;
+let encrypted = gm_crypto.sm4_encrypt(&data, &sm4_key)?;
+```
+
+#### 11.4.2 合规要求
+
+- **密钥管理**：国密密钥必须使用经国家密码管理局认证的密钥管理设备
+- **算法合规**：确保使用的算法和实现符合GM/T系列标准
+- **密码模块认证**：使用的密码模块应通过国家密码管理局的认证
+
+### 11.5 HSM集成指南
+
+#### 11.5.1 HSM选择
+
+- **选择认证HSM**：使用通过FIPS 140-2 Level 3或更高认证的HSM
+- **供应商兼容性**：确保HSM与DMSC兼容，支持PKCS#11或厂商专用API
+- **高可用配置**：生产环境建议配置HSM集群，确保高可用性
+
+#### 11.5.2 HSM配置
+
+```rust
+use dmsc::protocol::hsm::DMSCHSMInterface;
+
+struct HSMConfig {
+    pub pkcs11_library_path: String,
+    pub slot_id: u32,
+    pub pin: String,
+    pub key_label: String,
+}
+
+impl DMSCHSMInterface for HSMConfig {
+    fn initialize(&self) -> Result<(), DMSCError> {
+        // 初始化PKCS#11库
+        // 打开会话
+        // 登录HSM
+        Ok(())
+    }
+
+    fn sign(&self, data: &[u8]) -> Result<Vec<u8>, DMSCError> {
+        // 使用HSM密钥进行签名
+        Ok(signature)
+    }
+
+    fn decrypt(&self, ciphertext: &[u8]) -> Result<Vec<u8>, DMSCError> {
+        // 使用HSM密钥进行解密
+        Ok(plaintext)
+    }
+}
+```
+
+#### 11.5.3 密钥生命周期
+
+- **密钥生成**：在HSM内生成密钥，避免密钥导出
+- **密钥使用**：所有加密操作在HSM内完成，私钥不离开HSM
+- **密钥备份**：使用HSM提供的备份机制安全备份密钥
+- **密钥销毁**：使用HSM的安全销毁功能删除密钥
+
+### 11.6 安全审计建议
+
+#### 11.6.1 审计范围
+
+- **认证流程**：定期审查认证流程的安全性
+- **密钥管理**：审查密钥的生成、存储、使用和销毁流程
+- **加密实现**：审查加密算法的实现和使用方式
+- **访问控制**：审查权限控制和访问日志
+- **依赖审计**：定期审查第三方依赖的安全性
+
+#### 11.6.2 审计频率
+
+- **代码审查**：每次重大更新后进行代码审查
+- **渗透测试**：每年至少进行一次专业渗透测试
+- **安全扫描**：每月运行自动化安全扫描工具
+- **依赖审计**：每周检查依赖的安全公告
+
+#### 11.6.3 审计工具
+
+- **静态分析**：使用cargo-audit、cargo-geiger检测安全风险
+- **依赖检查**：使用cargo-audit检查依赖漏洞
+- **代码质量**：使用clippy和rustsec检查代码安全问题
+- **动态测试**：使用模糊测试（fuzz testing）发现潜在漏洞
+
+```bash
+# 定期运行安全检查
+cargo audit                    # 检查依赖漏洞
+cargo clippy                   # 检查代码质量问题
+cargo sec --check             # 安全相关检查
+```
+
+#### 11.6.4 响应流程
+
+- **漏洞报告**：建立安全漏洞报告和响应流程
+- **影响评估**：发现漏洞后立即评估影响范围
+- **修复优先级**：根据漏洞严重程度确定修复优先级
+- **更新策略**：制定安全更新的发布策略
+
+### 11.7 安全配置清单
+
+以下配置项对于安全性至关重要：
+
+| 配置项 | 安全影响 | 建议值 |
+|:-------|:---------|:-------|
+| `auth.jwt.secret` | JWT签名密钥 | 至少32位随机字符串 |
+| `auth.jwt.expiry` | Token有效期 | 建议15-60分钟 |
+| `encryption.key` | 数据加密密钥 | 建议256位 |
+| `database.ssl` | 数据库连接 | 必须启用 |
+| `cache.redis.password` | Redis认证 | 强密码 |
+| `tls.enabled` | 传输加密 | 必须启用 |
+| `tls.min_version` | TLS最低版本 | 1.2或更高 |
+| `rate_limit.enabled` | 防暴力破解 | 建议启用 |
+| `audit.enabled` | 安全审计 | 必须启用 |
+
+<div align="center">
+
 ## 总结
 
 </div>

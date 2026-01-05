@@ -85,6 +85,7 @@ use std::sync::Arc;
 use std::time::Duration;
 use tokio::sync::Mutex;
 use futures::StreamExt;
+use serde::{Deserialize, Serialize};
 use crate::core::DMSCResult;
 use crate::queue::{DMSCQueue, DMSCQueueMessage, DMSCQueueProducer, DMSCQueueConsumer, DMSCQueueStats};
 
@@ -103,6 +104,14 @@ pub struct DMSCRabbitMQQueue {
     /// RabbitMQ queue
     #[allow(dead_code)]
     queue: Arc<Queue>,
+    /// RabbitMQ management API URL
+    management_url: Option<String>,
+    /// Management API username
+    #[allow(dead_code)]
+    management_username: Option<String>,
+    /// Management API password
+    #[allow(dead_code)]
+    management_password: Option<String>,
 }
 
 impl DMSCRabbitMQQueue {
@@ -150,7 +159,72 @@ impl DMSCRabbitMQQueue {
             connection: Arc::new(connection),
             channel: Arc::new(channel),
             queue: Arc::new(queue),
+            management_url: None,
+            management_username: None,
+            management_password: None,
         })
+    }
+
+    /// Creates a new RabbitMQ queue instance with management API support.
+    ///
+    /// # Parameters
+    ///
+    /// - `name`: The name of the queue
+    /// - `connection`: The existing RabbitMQ connection
+    /// - `management_url`: RabbitMQ management API URL (e.g., "http://localhost:15672")
+    /// - `management_username`: Management API username
+    /// - `management_password`: Management API password
+    ///
+    /// # Returns
+    ///
+    /// A new DMSCRabbitMQQueue instance wrapped in DMSCResult
+    pub async fn new_with_management(
+        name: &str,
+        connection: lapin::Connection,
+        management_url: &str,
+        management_username: &str,
+        management_password: &str,
+    ) -> DMSCResult<Self> {
+        let channel = connection.create_channel().await?;
+        
+        let queue = channel
+            .queue_declare(
+                name,
+                QueueDeclareOptions {
+                    durable: true,
+                    ..Default::default()
+                },
+                FieldTable::default(),
+            )
+            .await?;
+
+        Ok(Self {
+            name: name.to_string(),
+            connection: Arc::new(connection),
+            channel: Arc::new(channel),
+            queue: Arc::new(queue),
+            management_url: Some(management_url.to_string()),
+            management_username: Some(management_username.to_string()),
+            management_password: Some(management_password.to_string()),
+        })
+    }
+
+    #[derive(Debug, Serialize, Deserialize)]
+    struct RabbitMQQueueInfo {
+        name: String,
+        messages: u64,
+        consumers: u64,
+        message_stats: Option<RabbitMQMessageStats>,
+    }
+
+    #[derive(Debug, Serialize, Deserialize)]
+    struct RabbitMQMessageStats {
+        publish: Option<u64>,
+        deliver_no_ack: Option<u64>,
+        get_no_ack: Option<u64>,
+        redeliver: Option<u64>,
+        deliver: Option<u64>,
+        get: Option<u64>,
     }
 
     /// Fetches detailed statistics from RabbitMQ management API.
@@ -163,9 +237,63 @@ impl DMSCRabbitMQQueue {
     ///
     /// Detailed DMSCQueueStats wrapped in DMSCResult
     async fn fetch_rabbitmq_stats(&self) -> DMSCResult<DMSCQueueStats> {
-        // For now, return an error to trigger fallback to basic stats
-        // In a production environment, you would implement the actual management API call
-        Err(crate::core::DMSCError::Other("Management API not implemented yet".to_string()))
+        let (Some(management_url), Some(username), Some(password)) = (
+            &self.management_url,
+            &self.management_username,
+            &self.management_password,
+        ) else {
+            return Err(crate::core::DMSCError::Other(
+                "Management API not configured. Use new_with_management() to enable.".to_string(),
+            ));
+        };
+
+        let client = reqwest::Client::new();
+        let url = format!(
+            "{}/api/queues/%2f/{}",
+            management_url.rtrim_end('/'),
+            urlencoding::encode(&self.name)
+        );
+
+        let response = client
+            .get(&url)
+            .basic_auth(username, Some(password))
+            .send()
+            .await
+            .map_err(|e| crate::core::DMSCError::Other(format!("Failed to connect to RabbitMQ Management API: {}", e)))?;
+
+        if !response.status().is_success() {
+            return Err(crate::core::DMSCError::Other(format!(
+                "RabbitMQ Management API returned error: {}",
+                response.status()
+            )));
+        }
+
+        let queue_info: RabbitMQQueueInfo = response
+            .json()
+            .await
+            .map_err(|e| crate::core::DMSCError::Other(format!("Failed to parse RabbitMQ response: {}", e)))?;
+
+        let processed_messages = queue_info
+            .message_stats
+            .as_ref()
+            .and_then(|s| s.publish.or(s.deliver).or(s.get))
+            .unwrap_or(0);
+
+        let failed_messages = queue_info
+            .message_stats
+            .as_ref()
+            .and_then(|s| s.redeliver)
+            .unwrap_or(0);
+
+        Ok(DMSCQueueStats {
+            queue_name: queue_info.name,
+            message_count: queue_info.messages,
+            consumer_count: queue_info.consumers,
+            producer_count: 0,
+            processed_messages,
+            failed_messages,
+            avg_processing_time_ms: 0.0,
+        })
     }
     
     /// Gets basic statistics when management API is not available.

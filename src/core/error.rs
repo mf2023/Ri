@@ -286,6 +286,31 @@ impl From<rdkafka::error::KafkaError> for DMSCError {
     }
 }
 
+impl From<tokio::time::error::Elapsed> for DMSCError {
+    fn from(error: tokio::time::error::Elapsed) -> Self {
+        DMSCError::Io(format!("Operation timed out: {}", error))
+    }
+}
+
+impl From<std::str::Utf8Error> for DMSCError {
+    fn from(error: std::str::Utf8Error) -> Self {
+        DMSCError::Serde(format!("UTF-8 conversion error: {}", error))
+    }
+}
+
+impl From<tokio::sync::TryLockError> for DMSCError {
+    fn from(error: tokio::sync::TryLockError) -> Self {
+        DMSCError::InvalidState(format!("Lock acquisition failed: {}", error))
+    }
+}
+
+#[cfg(feature = "pyo3")]
+impl std::convert::From<DMSCError> for pyo3::PyErr {
+    fn from(error: DMSCError) -> Self {
+        pyo3::exceptions::PyRuntimeError::new_err(error.to_string())
+    }
+}
+
 #[cfg(feature = "pyo3")]
 /// Python bindings for DMSCError.
 ///

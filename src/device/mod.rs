@@ -990,31 +990,19 @@ impl crate::core::DMSCModule for DMSCDeviceControlModule {
     /// 2. Initializes real device discovery based on system hardware
     /// 3. Sets up resource scheduling and management
     async fn init(&mut self, ctx: &mut DMSCServiceContext) -> DMSCResult<()> {
-        // Load configuration
         let binding = ctx.config();
         let cfg = binding.config();
-        let mut device_config = crate::device::core::DMSCDeviceControlConfig::default();
+        let device_config = parse_device_config(cfg.get("device"));
         
-        if let Some(config_str) = cfg.get("device") {
-            device_config = serde_json::from_str(config_str)
-                .unwrap_or_else(|_| crate::device::core::DMSCDeviceControlConfig::default());
-        }
-        
-        // Initialize device controller with real system hardware discovery
         let mut controller = self.controller.write().await;
-        
-        // Discover real system devices instead of mock devices
         controller.discover_system_devices(&device_config).await?;
         drop(controller);
         
-        // Create and configure discovery engine
         let discovery_engine = DMSCResourceScheduler::new();
         
-        // Store them for later use
         let mut discovery_guard = self.discovery_engine.write().await;
         *discovery_guard = discovery_engine;
         
-        // Initialize metrics if observability is available
         if let Some(metrics_registry) = ctx.metrics_registry() {
             let mut controller = self.controller.write().await;
             controller.initialize_metrics(&metrics_registry)?;
@@ -1024,5 +1012,31 @@ impl crate::core::DMSCModule for DMSCDeviceControlModule {
         let logger = ctx.logger();
         logger.info("DMSC.DeviceControl", "Device control module initialized with real hardware discovery")?;
         Ok(())
+    }
+}
+
+fn parse_device_config(config_str: Option<&String>) -> crate::device::core::DMSCDeviceControlConfig {
+    match config_str {
+        Some(config) => {
+            let trimmed = config.trim();
+            if trimmed.starts_with('{') {
+                if let Ok(result) = serde_json::from_str::<crate::device::core::DMSCDeviceControlConfig>(trimmed) {
+                    return result;
+                }
+            }
+            if trimmed.starts_with("---") || trimmed.contains("discovery_enabled:") {
+                if let Ok(result) = serde_yaml::from_str::<crate::device::core::DMSCDeviceControlConfig>(trimmed) {
+                    return result;
+                }
+            }
+            if trimmed.contains('[') || trimmed.contains("discovery_enabled") {
+                if let Ok(result) = toml::from_str::<crate::device::core::DMSCDeviceControlConfig>(trimmed) {
+                    return result;
+                }
+            }
+            serde_json::from_str::<crate::device::core::DMSCDeviceControlConfig>(trimmed)
+                .unwrap_or_default()
+        }
+        None => crate::device::core::DMSCDeviceControlConfig::default(),
     }
 }

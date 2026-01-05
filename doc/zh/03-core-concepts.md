@@ -225,33 +225,33 @@ from dmsc.core import DMSCResult
 
 class MyPyModule(DMSCPyServiceModule):
     """同步服务模块"""
-    def name(&self) -> str:
+    def name(self) -> str:
         return "my_python_module"
     
-    def init(&self, ctx: DMSCServiceContext) -> DMSCResult:
+    def init(self, ctx: DMSCServiceContext) -> DMSCResult:
         ctx.logger().info("my_python_module", "Python module initialized")
         return None
     
-    def start(&self, ctx: DMSCServiceContext) -> DMSCResult:
+    def start(self, ctx: DMSCServiceContext) -> DMSCResult:
         ctx.logger().info("my_python_module", "Python module started")
         return None
     
-    def shutdown(&self, ctx: DMSCServiceContext) -> DMSCResult:
+    def shutdown(self, ctx: DMSCServiceContext) -> DMSCResult:
         ctx.logger().info("my_python_module", "Python module stopped")
         return None
 
 # 异步模块示例
 class MyAsyncPyModule(DMSCPyAsyncServiceModule):
     """异步服务模块"""
-    async def init(&self, ctx: DMSCServiceContext) -> DMSCResult:
+    async def init(self, ctx: DMSCServiceContext) -> DMSCResult:
         ctx.logger().info("my_async_python_module", "Async Python module initialized")
         return None
     
-    async def start(&self, ctx: DMSCServiceContext) -> DMSCResult:
+    async def start(self, ctx: DMSCServiceContext) -> DMSCResult:
         ctx.logger().info("my_async_python_module", "Async Python module started")
         return None
     
-    async def shutdown(&self, ctx: DMSCServiceContext) -> DMSCResult:
+    async def shutdown(self, ctx: DMSCServiceContext) -> DMSCResult:
         ctx.logger().info("my_async_python_module", "Async Python module stopped")
         return None
 ```
@@ -259,14 +259,14 @@ class MyAsyncPyModule(DMSCPyAsyncServiceModule):
 在 Python 应用中使用自定义模块：
 
 ```python
-from dmsc import DMSCAppBuilder
+from dmsc import DMSCAppBuilder, DMSCLogConfig
 
 app = DMSCAppBuilder() \
     .with_config("config.yaml") \
-    .with_logging(DMSCLogConfig.default()) \
+    .with_logging(DMSCLogConfig()) \
     .build()
 
-app.run(lambda ctx: ctx.logger().info("service", "Python service started"))
+app.run(lambda ctx: ctx.logger().info("service", "Python service started") or None)
 ```
 
 <div align="center">
@@ -498,12 +498,11 @@ DMSC支持多源配置管理，允许您从不同来源加载配置。
 
 ### 8.1 配置源优先级
 
-DMSC按照以下优先级加载配置（从高到低）：
+DMSC 按照以下优先级加载配置（从低到高）：
 
-1. **运行时参数**：通过代码设置的配置
-2. **环境变量**：以`DMSC_`为前缀的环境变量
-3. **配置文件**：YAML、TOML或JSON格式的配置文件
-4. **默认值**：模块提供的默认配置
+1. **配置文件**：YAML、TOML 或 JSON 格式的配置文件（最低优先级）
+2. **自定义配置**：通过代码设置的配置
+3. **环境变量**：以 `DMSC_` 为前缀的环境变量（最高优先级）
 
 ### 8.2 配置热重载
 

@@ -299,29 +299,325 @@ auth:
 
 <div align="center">
 
-## 10. Development Process Design
+## 11. Key Management and Cryptography Security
 
 </div>
 
-### 10.1 Code Style
+### 11.1 Key Management Best Practices
 
-- **Follow the Rust Style Guide**: Adhere to the official Rust Style Guide
-- **Use rustfmt**: Format code with `rustfmt`
-- **Use clippy**: Check code quality with `clippy`
-- **Conduct code reviews**: Perform code reviews to ensure code quality
+#### 11.1.1 Key Generation
 
-### 10.2 Version Management
+- **Use secure random number generators**: Always use cryptographically secure random number generators for key generation
+- **Choose sufficient key length**: Select appropriate key length based on security requirements, recommend at least 2048 bits for RSA and 256 bits for ECC
+- **Avoid weak keys**: Ensure generated keys are not known weak keys or default keys
+- **Key entropy**: Ensure keys have sufficient entropy, recommend at least 128-bit security strength
 
-- **Use semantic versioning**: Follow semantic versioning conventions
-- **Update CHANGELOG**: Update the CHANGELOG with each version release
-- **Use Git tags**: Mark versions with Git tags
+```rust
+// Good practice: Use secure random number generator
+use ring::rand::SystemRandom;
 
-### 10.3 Documentation
+let rng = SystemRandom::new();
+let mut key = [0u8; 32];
+rng.fill(&mut key).map_err(|_| DMSCError::SecurityViolation("Failed to generate secure random key".to_string()))?;
 
-- **Write documentation**: Create detailed documentation for public APIs
-- **Update examples**: Keep example code current
-- **Maintain README**: Regularly update README files
-- **Use comments**: Add comments to complex code
+// Bad practice: Using pseudorandom or fixed keys
+let weak_key = [1, 2, 3, 4, 5, 6, 7, 8]; // Not secure
+```
+
+#### 11.1.2 Key Storage
+
+- **Never hardcode keys**: Never hardcode keys in source code or configuration files
+- **Use key management services**: In production environments, use HSM (Hardware Security Module) or KMS (Key Management Service)
+- **Environment variable storage**: Use environment variables for temporary key storage
+- **Encrypted storage**: Static keys should be encrypted using a master key before storage
+
+```yaml
+# Bad practice
+auth:
+  jwt:
+    secret: "my-super-secret-key-12345"
+
+# Good practice
+auth:
+  jwt:
+    secret: ${DMSC_JWT_SECRET}  # Read from environment variable
+```
+
+#### 11.1.3 Key Rotation
+
+- **Rotate keys regularly**: Establish a key rotation policy, recommend rotating JWT keys every 90 days
+- **Dual-key transition**: Support both old and new key verification during rotation to ensure smooth transition
+- **Key version management**: Assign unique identifiers to each key version for historical key tracking
+- **Automated rotation**: Implement automated key rotation processes to reduce human error risk
+
+```rust
+// Implement key rotation support
+struct KeyRotationManager {
+    current_key: EncodingKey,
+    previous_key: Option<EncodingKey>,
+    key_version: u64,
+    rotation_date: chrono::DateTime<chrono::Utc>,
+}
+
+impl KeyRotationManager {
+    pub fn rotate_key(&mut self, new_secret: &[u8]) {
+        self.previous_key = Some(std::mem::replace(
+            &mut self.current_key,
+            EncodingKey::from_secret(new_secret),
+        ));
+        self.key_version += 1;
+        self.rotation_date = chrono::Utc::now();
+    }
+
+    pub fn validate_with_rotation(&self, token: &str) -> Result<JWTClaims, DMSCError> {
+        // First try to validate with current key
+        if let Ok(claims) = self.validate_current(token) {
+            return Ok(claims);
+        }
+        // If it fails, try using the previous key (support rotation transition period)
+        self.previous_key
+            .as_ref()
+            .ok_or_else(|| DMSCError::SecurityViolation("Token validation failed".to_string()))?;
+        // ... validation logic
+        Ok(claims)
+    }
+}
+```
+
+#### 11.1.4 Key Destruction
+
+- **Secure deletion**: When keys are no longer needed, securely delete key data from memory
+- **Use sensitive data types**: Use libraries like `zeroize` to securely overwrite memory
+- **Audit trail**: Record the creation, usage, and destruction time of keys
+
+```rust
+use zeroize::Zeroize;
+
+struct SensitiveKey {
+    data: Vec<u8>,
+}
+
+impl Drop for SensitiveKey {
+    fn drop(&mut self) {
+        self.data.zeroize();
+    }
+}
+```
+
+### 11.2 JWT Security Best Practices
+
+#### 11.2.1 Algorithm Selection
+
+- **Use HS256 or higher-level algorithms**: Recommend using HS256, RS256, or ES256
+- **Verify algorithm**: Always verify the algorithm claim when validating JWT to prevent algorithm confusion attacks
+- **Disable none algorithm**: Ensure validation logic rejects tokens with alg="none"
+
+```rust
+// Ensure algorithm verification
+let validation = Validation::new(Algorithm::HS256);
+let claims = decode::<JWTClaims>(token, &key, &validation)?;
+```
+
+#### 11.2.2 Token Security
+
+- **Set reasonable expiration time**: JWT expiration time is recommended to be set between 15 minutes and 1 hour
+- **Use short-lived access tokens**: Use short-lived access tokens with refresh token mechanism
+- **Verify issued time**: Verify the iat (issued at) claim to prevent using old tokens
+- **Secure token storage**: Store tokens securely on the client side to prevent XSS attacks
+
+#### 11.2.3 Sensitive Information Handling
+
+- **Do not store sensitive information in JWT**: JWT uses Base64 encoding and can be easily decoded
+- **Store only necessary claims**: Only include necessary information like user ID and roles
+- **Encrypt sensitive data**: If sensitive data needs to be transmitted in JWT, encrypt it first
+
+### 11.3 Post-Quantum Cryptography Guide
+
+#### 11.3.1 Algorithm Selection
+
+DMSC supports multiple post-quantum cryptographic algorithms. The choice of algorithm depends on the specific scenario:
+
+| Algorithm | Type | Recommended Scenario | Security Level |
+|:----------|:-----|:---------------------|:---------------|
+| **Kyber-512** | KEM | Key encapsulation, SSL/TLS | NIST Level 5 |
+| **Dilithium-5** | Digital signature | Authentication, software signing | NIST Level 5 |
+| **Falcon-512** | Digital signature | Scenarios requiring compact signatures | NIST Level 4 |
+
+```rust
+use dmsc::protocol::post_quantum::DMSCPostQuantumManager;
+
+// Generate post-quantum key pair
+let pq_manager = DMSCPostQuantumManager::new();
+let (public_key, private_key) = pq_manager.generate_kyber_keypair()?;
+
+// Use Kyber for key encapsulation
+let (ciphertext, shared_secret) = pq_manager.kyber_encapsulate(&public_key)?;
+```
+
+#### 11.3.2 Hybrid Encryption Mode
+
+During the transition period, it is recommended to use hybrid encryption mode with both traditional and post-quantum algorithms:
+
+```rust
+struct HybridEncryption {
+    traditional_kem: Box<dyn TraditionalKEM>,
+    post_quantum_kem: Box<dyn PostQuantumKEM>,
+}
+
+impl HybridEncryption {
+    pub fn encrypt(&self, plaintext: &[u8]) -> Result<HybridCiphertext, DMSCError> {
+        // 1. Generate random session key
+        let session_key = self.generate_session_key()?;
+        // 2. Encapsulate session key with both traditional and post-quantum KEM
+        let traditional_ciphertext = self.traditional_kem.encapsulate(&session_key)?;
+        let pq_ciphertext = self.post_quantum_kem.encapsulate(&session_key)?;
+        // 3. Encrypt data with session key
+        let encrypted_data = self.symmetric_encrypt(&session_key, plaintext)?;
+        Ok(HybridCiphertext { traditional_ciphertext, pq_ciphertext, encrypted_data })
+    }
+}
+```
+
+#### 11.3.3 Migration Strategy
+
+- **Gradual migration**: Gradually migrate the system to post-quantum cryptography
+- **Maintain compatibility**: Support both traditional and post-quantum algorithms during transition
+- **Monitor and evaluate**: Continuously monitor new algorithm security and performance
+
+### 11.4 National Cryptography (Guomi) Algorithm Usage Guide
+
+#### 11.4.1 Algorithm Selection
+
+National cryptography algorithms are suitable for scenarios requiring compliance with Chinese national cryptographic standards:
+
+| Algorithm | Type | Usage | Standard |
+|:----------|:-----|:------|:---------|
+| **SM2** | Elliptic curve cryptography | Digital signature, key exchange | GM/T 0003 |
+| **SM3** | Hash algorithm | Message digest | GM/T 0004 |
+| **SM4** | Block cipher | Data encryption | GM/T 0002 |
+
+```rust
+use dmsc::protocol::guomi::DMSCGmCrypto;
+
+// SM2 signature
+let gm_crypto = DMSCGmCrypto::new();
+let (sm2_public, sm2_private) = gm_crypto.generate_sm2_keypair()?;
+let signature = gm_crypto.sm2_sign(&message, &sm2_private)?;
+
+// SM3 hash
+let sm3_hash = gm_crypto.sm3_hash(&data)?;
+
+// SM4 encryption
+let sm4_key = gm_crypto.generate_sm4_key()?;
+let encrypted = gm_crypto.sm4_encrypt(&data, &sm4_key)?;
+```
+
+#### 11.4.2 Compliance Requirements
+
+- **Key management**: National cryptography keys must use key management devices certified by the State Cryptography Administration
+- **Algorithm compliance**: Ensure algorithms and implementations comply with GM/T series standards
+- **Cryptographic module certification**: Cryptographic modules used should be certified by the State Cryptography Administration
+
+### 11.5 HSM Integration Guide
+
+#### 11.5.1 HSM Selection
+
+- **Select certified HSM**: Use HSM certified to FIPS 140-2 Level 3 or higher
+- **Vendor compatibility**: Ensure HSM is compatible with DMSC, supporting PKCS#11 or vendor-specific APIs
+- **High-availability configuration**: In production environments, it is recommended to configure HSM clusters for high availability
+
+#### 11.5.2 HSM Configuration
+
+```rust
+use dmsc::protocol::hsm::DMSCHSMInterface;
+
+struct HSMConfig {
+    pub pkcs11_library_path: String,
+    pub slot_id: u32,
+    pub pin: String,
+    pub key_label: String,
+}
+
+impl DMSCHSMInterface for HSMConfig {
+    fn initialize(&self) -> Result<(), DMSCError> {
+        // Initialize PKCS#11 library
+        // Open session
+        // Login to HSM
+        Ok(())
+    }
+
+    fn sign(&self, data: &[u8]) -> Result<Vec<u8>, DMSCError> {
+        // Sign using HSM key
+        Ok(signature)
+    }
+
+    fn decrypt(&self, ciphertext: &[u8]) -> Result<Vec<u8>, DMSCError> {
+        // Decrypt using HSM key
+        Ok(plaintext)
+    }
+}
+```
+
+#### 11.5.3 Key Lifecycle
+
+- **Key generation**: Generate keys within HSM to avoid key export
+- **Key usage**: Complete all encryption operations within HSM, private keys never leave HSM
+- **Key backup**: Use HSM-provided backup mechanisms to securely back up keys
+- **Key destruction**: Use HSM's secure destruction function to delete keys
+
+### 11.6 Security Audit Recommendations
+
+#### 11.6.1 Audit Scope
+
+- **Authentication process**: Regularly review the security of authentication processes
+- **Key management**: Review key generation, storage, usage, and destruction processes
+- **Encryption implementation**: Review encryption algorithm implementation and usage
+- **Access control**: Review permission control and access logs
+- **Dependency audit**: Regularly review the security of third-party dependencies
+
+#### 11.6.2 Audit Frequency
+
+- **Code review**: Conduct code review after each major update
+- **Penetration testing**: Conduct at least one professional penetration test annually
+- **Security scanning**: Run automated security scanning tools monthly
+- **Dependency audit**: Check dependency security advisories weekly
+
+#### 11.6.3 Audit Tools
+
+- **Static analysis**: Use cargo-audit, cargo-geiger to detect security risks
+- **Dependency checking**: Use cargo-audit to check dependency vulnerabilities
+- **Code quality**: Use clippy and rustsec to check for code security issues
+- **Dynamic testing**: Use fuzz testing to discover potential vulnerabilities
+
+```bash
+# Run security checks regularly
+cargo audit                    # Check dependency vulnerabilities
+cargo clippy                   # Check code quality issues
+cargo sec --check             # Security-related checks
+```
+
+#### 11.6.4 Response Process
+
+- **Vulnerability reporting**: Establish vulnerability reporting and response process
+- **Impact assessment**: Immediately assess the impact scope when vulnerabilities are discovered
+- **Fix priority**: Determine fix priority based on vulnerability severity
+- **Update strategy**: Develop security update release strategy
+
+### 11.7 Security Configuration Checklist
+
+The following configuration items are crucial for security:
+
+| Configuration Item | Security Impact | Recommended Value |
+|:-------------------|:----------------|:------------------|
+| `auth.jwt.secret` | JWT signing key | At least 32 random characters |
+| `auth.jwt.expiry` | Token validity period | Recommended 15-60 minutes |
+| `encryption.key` | Data encryption key | Recommended 256 bits |
+| `database.ssl` | Database connection | Must be enabled |
+| `cache.redis.password` | Redis authentication | Strong password |
+| `tls.enabled` | Transport encryption | Must be enabled |
+| `tls.min_version` | TLS minimum version | 1.2 or higher |
+| `rate_limit.enabled` | Brute force prevention | Recommended enabled |
+| `audit.enabled` | Security audit | Must be enabled |
 
 <div align="center">
 

@@ -1,0 +1,362 @@
+# Copyright © 2025-2026 Wenze Wei. All Rights Reserved.
+#
+# This file is part of DMSC.
+# The DMSC project belongs to the Dunimd Team.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# You may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+name: Build DMSC
+
+on:
+  push:
+    branches:
+      - master
+  workflow_dispatch:
+
+jobs:
+  # Build Rust library for Linux x64 platform
+  # This job compiles the Rust library as a cdylib (C dynamic library) for Linux x64 architecture
+  # The compiled artifact is uploaded for use in subsequent Python wheel building jobs
+  # Uses native compilation since the ubuntu-latest runner matches the target platform
+  build-rust-linux:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build
+        run: cargo build --release
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: rust-linux-x64
+          path: target/release/libdmsc.*
+
+  # Build Rust library for Linux arm64 platform
+  # NOTE: Switching from cross-compilation to native build on ARM64 Ubuntu runner
+  # Cross-compilation from x64 to ARM64 fails because:
+  # 1. ring crate requires native compilation for cryptographic operations
+  # 2. PyO3 linking issues with cross-compiled artifacts
+  # Using ubuntu-24.04-arm provides native ARM64 environment for proper compilation
+  build-rust-linux-arm64:
+    runs-on: ubuntu-24.04-arm
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build
+        run: cargo build --release
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: rust-linux-arm64
+          path: target/release/libdmsc.*
+
+  # Build Rust library for Windows x64 platform
+  # Compiles Rust library as cdylib for Windows x64 (x86_64-pc-windows-msvc target)
+  # Uses windows-latest runner for native compilation without cross-compilation overhead
+  # The resulting .dll file is suitable for use with Python on Windows x64 systems
+  build-rust-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build
+        run: cargo build --release
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: rust-windows-x64
+          path: target/release/libdmsc.*
+
+  # Build Rust library for macOS x64 platform
+  # Note: macOS-15-intel is x64 runner (will be available until Aug 2027)
+  # Required because newer macOS runners only support ARM64 natively
+  # This job runs on Intel-based macOS runners to produce x64 (x86_64-apple-darwin) binaries
+  # Native compilation on Intel Mac provides optimal build performance for x64 targets
+  # Python setup required for proper PyO3 linking on macOS
+  # MACOSX_DEPLOYMENT_TARGET=11.0 ensures compatibility with macOS 11+ and prevents SDK version mismatches
+  build-rust-macos:
+    runs-on: macos-15-intel
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      - name: Build with maturin
+        run: |
+          pip install maturin
+          maturin build --release --target x86_64-apple-darwin -o target/wheels
+      - name: List built files
+        run: |
+          echo "=== target/wheels ===" && ls -la target/wheels/ 2>/dev/null || echo "No files"
+          find target -type f -name "*.dylib" 2>/dev/null | head -10
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: rust-macos-x64
+          path: target/wheels/
+
+  # Build Python Wheel for all platforms and architectures (supports Python 3.8~3.14)
+  # This matrix job generates distributable Python wheel packages (.whl files) for all
+  # supported combinations of platforms, architectures, and Python versions (3.8 through 3.14)
+  #
+  # Matrix Configuration Strategy:
+  # - Each matrix entry specifies a unique combination of Python version, runner OS, Rust target,
+  #   and manylinux compatibility tag (for Linux wheels)
+  # - Linux builds use Docker container with manylinux image for glibc compatibility
+  # - macOS and Windows builds use native runners as they use platform-specific formats
+  # - fail-fast: false ensures all matrix combinations are attempted even if one fails
+  #
+  # Platform and Architecture Coverage:
+  # - Linux x64 (x86_64-unknown-linux-gnu): manylinux2014 Docker image for glibc 2.17 compatibility
+  # - Linux arm64 (aarch64-unknown-linux-gnu): manylinux_2_17 Docker image for glibc 2.17 compatibility
+  # - Windows x64 (x86_64-pc-windows-msvc): native windows-latest runner
+  # - macOS x64 (x86_64-apple-darwin): macos-15-intel runner
+  # - macOS arm64 (aarch64-apple-darwin): macos-15 native ARM64 runner
+  #
+  # Python Version Support: 3.8, 3.9, 3.10, 3.11, 3.12, 3.13, 3.14
+  #
+  # Build Process:
+  # 1. Checkout repository
+  # 2. Set up Docker for Linux builds (manylinux compatibility)
+  # 3. Set up Python interpreter matching matrix.python version
+  # 4. Install maturin build tool and pip dependencies
+  # 5. Build wheel using maturin with appropriate target and compatibility settings
+  # 6. Upload built wheel artifact for collection in release
+  build-python:
+    runs-on: ${{ matrix.runs-on }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # Linux x64
+          # Python 3.11+ requires glibc 2.25+ (manylinux_2_27)
+          # Using manylinux_2_39 for compatibility with modern glibc
+          - python: '3.8'
+            runs-on: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+            manylinux: manylinux_2_39
+            docker: true
+          - python: '3.9'
+            runs-on: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+            manylinux: manylinux_2_39
+            docker: true
+          - python: '3.10'
+            runs-on: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+            manylinux: manylinux_2_39
+            docker: true
+          - python: '3.11'
+            runs-on: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+            manylinux: manylinux_2_39
+            docker: true
+          - python: '3.12'
+            runs-on: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+            manylinux: manylinux_2_39
+            docker: true
+          - python: '3.13'
+            runs-on: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+            manylinux: manylinux_2_39
+            docker: true
+          - python: '3.14'
+            runs-on: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+            manylinux: manylinux_2_39
+            docker: true
+          # Linux arm64
+          # Native ARM64 builds on ubuntu-24.04-arm
+          # Using manylinux_2_39 for consistency with x64 builds
+          - python: '3.8'
+            runs-on: ubuntu-24.04-arm
+            target: aarch64-unknown-linux-gnu
+            manylinux: manylinux_2_39
+            docker: false
+          - python: '3.9'
+            runs-on: ubuntu-24.04-arm
+            target: aarch64-unknown-linux-gnu
+            manylinux: manylinux_2_39
+            docker: false
+          - python: '3.10'
+            runs-on: ubuntu-24.04-arm
+            target: aarch64-unknown-linux-gnu
+            manylinux: manylinux_2_39
+            docker: false
+          - python: '3.11'
+            runs-on: ubuntu-24.04-arm
+            target: aarch64-unknown-linux-gnu
+            manylinux: manylinux_2_39
+            docker: false
+          - python: '3.12'
+            runs-on: ubuntu-24.04-arm
+            target: aarch64-unknown-linux-gnu
+            manylinux: manylinux_2_39
+            docker: false
+          - python: '3.13'
+            runs-on: ubuntu-24.04-arm
+            target: aarch64-unknown-linux-gnu
+            manylinux: manylinux_2_39
+            docker: false
+          - python: '3.14'
+            runs-on: ubuntu-24.04-arm
+            target: aarch64-unknown-linux-gnu
+            manylinux: manylinux_2_39
+            docker: false
+          # Windows x64
+          # null manylinux indicates platform-specific wheel format (win-amd64)
+          # Uses Windows-specific ABI (x86_64-pc-windows-msvc) for optimal performance
+          - python: '3.8'
+            runs-on: windows-latest
+            target: x86_64-pc-windows-msvc
+            manylinux: null
+          - python: '3.9'
+            runs-on: windows-latest
+            target: x86_64-pc-windows-msvc
+            manylinux: null
+          - python: '3.10'
+            runs-on: windows-latest
+            target: x86_64-pc-windows-msvc
+            manylinux: null
+          - python: '3.11'
+            runs-on: windows-latest
+            target: x86_64-pc-windows-msvc
+            manylinux: null
+          - python: '3.12'
+            runs-on: windows-latest
+            target: x86_64-pc-windows-msvc
+            manylinux: null
+          - python: '3.13'
+            runs-on: windows-latest
+            target: x86_64-pc-windows-msvc
+            manylinux: null
+          - python: '3.14'
+            runs-on: windows-latest
+            target: x86_64-pc-windows-msvc
+            manylinux: null
+          # Windows arm64
+          # Note: GitHub Actions windows-latest does not provide ARM64 Python interpreters
+          # Skipping ARM64 builds for Windows as ARM64 Windows runners are not available
+          # ARM64 Windows requires specialized Python interpreters not available in GitHub Actions
+          # The following entries are commented out to prevent build failures
+          # - python: '3.10'
+          #   runs-on: windows-latest
+          #   target: aarch64-pc-windows-msvc
+          #   manylinux: null
+          # - python: '3.11'
+          #   runs-on: windows-latest
+          #   target: aarch64-pc-windows-msvc
+          #   manylinux: null
+          # - python: '3.12'
+          #   runs-on: windows-latest
+          #   target: aarch64-pc-windows-msvc
+          #   manylinux: null
+          # - python: '3.13'
+          #   runs-on: windows-latest
+          #   target: aarch64-pc-windows-msvc
+          #   manylinux: null
+          # - python: '3.14'
+          #   runs-on: windows-latest
+          #   target: aarch64-pc-windows-msvc
+          #   manylinux: null
+          # macOS x64 (requires macOS-15-intel for native x64 builds)
+          # Note: macOS-15-intel is x64 runner (will be available until Aug 2027)
+          # macOS wheels use null manylinux as they are platform-specific (.whl format)
+          # macOS-15-intel runner required because modern macOS runners only support ARM64
+          - python: '3.8'
+            runs-on: macos-15-intel
+            target: x86_64-apple-darwin
+            manylinux: null
+          - python: '3.9'
+            runs-on: macos-15-intel
+            target: x86_64-apple-darwin
+            manylinux: null
+          - python: '3.10'
+            runs-on: macos-15-intel
+            target: x86_64-apple-darwin
+            manylinux: null
+          - python: '3.11'
+            runs-on: macos-15-intel
+            target: x86_64-apple-darwin
+            manylinux: null
+          - python: '3.12'
+            runs-on: macos-15-intel
+            target: x86_64-apple-darwin
+            manylinux: null
+          - python: '3.13'
+            runs-on: macos-15-intel
+            target: x86_64-apple-darwin
+            manylinux: null
+          - python: '3.14'
+            runs-on: macos-15-intel
+            target: x86_64-apple-darwin
+            manylinux: null
+          # macOS arm64 (native ARM64 build on macOS-15)
+          # Requires Python 3.8+ with universal2 support or arm64-specific build
+          # Native ARM64 compilation provides optimal performance on Apple Silicon
+          # macOS-15 runner provides ARM64-native environment for aarch64-apple-darwin target
+          - python: '3.8'
+            runs-on: macos-15
+            target: aarch64-apple-darwin
+            manylinux: null
+          - python: '3.9'
+            runs-on: macos-15
+            target: aarch64-apple-darwin
+            manylinux: null
+          - python: '3.10'
+            runs-on: macos-15
+            target: aarch64-apple-darwin
+            manylinux: null
+          - python: '3.11'
+            runs-on: macos-15
+            target: aarch64-apple-darwin
+            manylinux: null
+          - python: '3.12'
+            runs-on: macos-15
+            target: aarch64-apple-darwin
+            manylinux: null
+          - python: '3.13'
+            runs-on: macos-15
+            target: aarch64-apple-darwin
+            manylinux: null
+          - python: '3.14'
+            runs-on: macos-15
+            target: aarch64-apple-darwin
+            manylinux: null
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      - name: Install dependencies
+        run: pip install --upgrade pip maturin auditwheel
+      - name: Build wheel
+        if: matrix.docker != true
+        run: |
+          maturin build --release --target ${{ matrix.target }} -o dist
+      - name: Build Linux wheel with auditwheel repair
+        if: matrix.docker == true
+        run: |
+          TARGET="${{ matrix.target }}"
+          ARCH="${TARGET%%-*}"
+          maturin build --release --target "$TARGET" -o wheelhouse
+          auditwheel repair wheelhouse/*.whl -w dist --plat ${{ matrix.manylinux }}_${ARCH}
+      - name: List generated files
+        shell: bash
+        run: |
+          ls -la dist/ 2>/dev/null || echo "No files in dist"
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: python-${{ matrix.target }}-${{ matrix.python }}
+          path: dist/

@@ -12,6 +12,9 @@ English | [简体中文](README.zh.md)
 <a href="https://gitee.com/dunimd" target="_blank">
     <img alt="Gitee" src="https://img.shields.io/badge/Gitee-Dunimd-C71D23?style=flat-square&logo=gitee"/>
 </a>
+<a href="https://github.com/mf2023/DMSC" target="_blank">
+    <img alt="GitHub" src="https://img.shields.io/badge/GitHub-DMSC-181717?style=flat-square&logo=github"/>
+</a>
 <a href="https://crates.io/crates/dmsc" target="_blank">
     <img alt="Crates.io" src="https://img.shields.io/badge/Crates-DMSC-000000?style=flat-square&logo=rust"/>
 </a>
@@ -36,6 +39,7 @@ DMSC adopts a highly modular architecture with 12 core modules, enabling on-dema
 | **cache** | Multi-backend cache abstraction (Memory, Redis, Hybrid) |
 | **config** | Multi-source configuration management with hot reload |
 | **core** | Runtime, error handling, and service context |
+| **database** | Database abstraction with PostgreSQL, MySQL, SQLite support |
 | **device** | Device control, discovery, and intelligent scheduling |
 | **fs** | Secure file system operations and management |
 | **gateway** | API gateway with load balancing, rate limiting, and circuit breaking |
@@ -44,6 +48,7 @@ DMSC adopts a highly modular architecture with 12 core modules, enabling on-dema
 | **observability** | Metrics, tracing, and Grafana integration |
 | **queue** | Distributed queue abstraction (Kafka, RabbitMQ, Redis, Memory) |
 | **service_mesh** | Service discovery, health checking, and traffic management |
+| **validation** | Input validation and data sanitization utilities |
 
 </div>
 
@@ -177,11 +182,10 @@ resource:
 
 ### Configuration Sources
 
-DMSC supports multiple configuration sources in order of priority (highest to lowest):
-1. Runtime parameters
-2. Environment variables (prefixed with `DMSC_`)
-3. Configuration files (YAML, TOML, JSON)
-4. Default values
+DMSC supports multiple configuration sources in order of priority (lowest to highest):
+1. Configuration files (YAML, TOML, JSON)
+2. Custom configuration via code
+3. Environment variables (prefixed with `DMSC_`)
 
 <h2 align="center">🧪 Development & Testing</h2>
 
@@ -271,6 +275,15 @@ Open source packages and their agreement information used by this project:
 | log | MIT |
 | pyo3 | Apache 2.0 |
 | tempfile | MIT |
+| tracing | MIT |
+| thiserror | MIT |
+| hex | MIT |
+| base64 | MIT |
+| regex | MIT |
+| url | Apache 2.0 |
+| aes-gcm | Apache 2.0 |
+| ring | Apache 2.0 |
+| lazy_static | MIT |
 
 </div>
 

@@ -74,14 +74,13 @@ Cache manager, responsible for specific cache operations.
 |:--------|:-------------|:--------|:--------|
 | `get(key)` | Get cache value | `key: &str` | `DMSCResult<Option<String>>` |
 | `set(key, value, ttl)` | Set cache value | `key: &str`, `value: impl Serialize`, `ttl: Option<u64>` | `DMSCResult<()>` |
-| `delete(key)` | Delete cache | `key: &str` | `DMSCResult<()>` |
-| `exists(key)` | Check if cache exists | `key: &str` | `DMSCResult<bool>` |
+| `delete(key)` | Delete cache | `key: &str` | `DMSCResult<bool>` |
+| `exists(key)` | Check if cache exists | `key: &str` | `bool` |
 | `clear()` | Clear all cache | None | `DMSCResult<()>` |
-| `keys(pattern)` | Get matching keys | `pattern: &str` | `DMSCResult<Vec<String>>` |
-| `ttl(key)` | Get cache expiration time | `key: &str` | `DMSCResult<Option<u64>>` |
-| `expire(key, ttl)` | Set cache expiration time | `key: &str`, `ttl: u64` | `DMSCResult<()>` |
-| `increment(key, delta)` | Numeric increment | `key: &str`, `delta: i64` | `DMSCResult<i64>` |
-| `decrement(key, delta)` | Numeric decrement | `key: &str`, `delta: i64` | `DMSCResult<i64>` |
+| `invalidate_pattern(pattern)` | Invalidate cache by pattern | `pattern: &str` | `DMSCResult<()>` |
+| `stats()` | Get cache statistics | None | `DMSCCacheStats` |
+| `cleanup_expired()` | Cleanup expired cache | None | `DMSCResult<usize>` |
+| `get_or_set(key, ttl, factory)` | Get or set cache | `key: &str`, `ttl: Option<u64>`, `factory: FnOnce() -> Result<T>` | `DMSCResult<T>` |
 
 ### DMSCCacheConfig
 
@@ -91,7 +90,7 @@ Cache module configuration structure.
 
 | Field | Type | Description | Default |
 |:--------|:--------|:-------------|:--------|
-| `backend` | `DMSCCacheBackend` | Cache backend type | `Memory` |
+| `backend` | `DMSCCacheBackendType` | Cache backend type | `Memory` |
 | `default_ttl` | `u64` | Default expiration time (seconds) | 3600 |
 | `max_memory_size` | `usize` | Maximum memory size (bytes) | 100MB |
 | `redis_url` | `Option<String>` | Redis connection URL | `None` |
@@ -113,7 +112,7 @@ let cache_config = DMSCCacheConfig {
 };
 ```
 
-### DMSCCacheBackend
+### DMSCCacheBackendType
 
 Cache backend type enum.
 

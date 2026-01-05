@@ -115,6 +115,45 @@ impl DMSCLogLevel {
             DMSCLogLevel::Error => "ERROR",
         }
     }
+
+    /// Parses a log level from an environment variable.
+    /// 
+    /// Reads the `DMSC_LOG_LEVEL` environment variable and returns the corresponding log level.
+    /// If the environment variable is not set or contains an invalid value, returns `None`.
+    /// 
+    /// # Returns
+    /// 
+    /// An `Option<DMSCLogLevel>` containing the parsed log level
+    pub fn from_env() -> Option<Self> {
+        std::env::var("DMSC_LOG_LEVEL").ok().and_then(|s| {
+            match s.to_ascii_uppercase().as_str() {
+                "DEBUG" => Some(DMSCLogLevel::Debug),
+                "INFO" => Some(DMSCLogLevel::Info),
+                "WARN" | "WARNING" => Some(DMSCLogLevel::Warn),
+                "ERROR" => Some(DMSCLogLevel::Error),
+                _ => None,
+            }
+        })
+    }
+
+    /// Creates a log level from a string.
+    /// 
+    /// # Parameters
+    /// 
+    /// - `s`: The string to parse
+    /// 
+    /// # Returns
+    /// 
+    /// An `Option<DMSCLogLevel>` containing the parsed log level
+    pub fn from_str(s: &str) -> Option<Self> {
+        match s.to_ascii_uppercase().as_str() {
+            "DEBUG" => Some(DMSCLogLevel::Debug),
+            "INFO" => Some(DMSCLogLevel::Info),
+            "WARN" | "WARNING" => Some(DMSCLogLevel::Warn),
+            "ERROR" => Some(DMSCLogLevel::Error),
+            _ => None,
+        }
+    }
 }
 
 /// Public logging configuration class.
@@ -166,13 +205,9 @@ impl DMSCLogConfig {
         let mut base = DMSCLogConfig::default();
 
         if let Some(level_str) = config.get_str("log.level") {
-            base.level = match level_str {
-                "DEBUG" | "debug" => DMSCLogLevel::Debug,
-                "INFO" | "info" => DMSCLogLevel::Info,
-                "WARN" | "warn" | "WARNING" | "warning" => DMSCLogLevel::Warn,
-                "ERROR" | "error" => DMSCLogLevel::Error,
-                _ => base.level,
-            };
+            if let Some(level) = DMSCLogLevel::from_str(level_str) {
+                base.level = level;
+            }
         }
 
         if let Some(v) = config.get_f32("log.sampling_default") {
@@ -186,7 +221,6 @@ impl DMSCLogConfig {
         }
 
         if let Some(fmt) = config.get_str("log.file_format") {
-            // Accept "json"/"JSON" to enable JSON file output, others default to text
             if fmt.eq_ignore_ascii_case("json") {
                 base.json_format = true;
             }
@@ -210,6 +244,79 @@ impl DMSCLogConfig {
 
         if let Some(v) = config.get_bool("log.file_enabled") {
             base.file_enabled = v;
+        }
+
+        base
+    }
+
+    /// Creates a log configuration from environment variables.
+    /// 
+    /// This method reads logging configuration from environment variables:
+    /// - DMSC_LOG_LEVEL: Log level (DEBUG, INFO, WARN, ERROR)
+    /// - DMSC_LOG_CONSOLE_ENABLED: Whether console logging is enabled (true/false)
+    /// - DMSC_LOG_FILE_ENABLED: Whether file logging is enabled (true/false)
+    /// - DMSC_LOG_SAMPLING_DEFAULT: Default sampling rate (0.0-1.0)
+    /// - DMSC_LOG_FILE_NAME: Name of the log file
+    /// - DMSC_LOG_FILE_FORMAT: Log format ("json" for JSON format)
+    /// - DMSC_LOG_ROTATE_WHEN: When to rotate logs
+    /// - DMSC_LOG_MAX_BYTES: Maximum file size before rotation
+    /// 
+    /// # Returns
+    /// 
+    /// A `DMSCLogConfig` instance with configuration from environment variables
+    pub fn from_env() -> Self {
+        let mut base = DMSCLogConfig::default();
+
+        if let Some(level) = DMSCLogLevel::from_env() {
+            base.level = level;
+        }
+
+        if let Ok(v) = std::env::var("DMSC_LOG_SAMPLING_DEFAULT") {
+            if let Ok(rate) = v.parse::<f32>() {
+                base.sampling_default = rate.clamp(0.0, 1.0);
+            }
+        }
+
+        if let Ok(file_name) = std::env::var("DMSC_LOG_FILE_NAME") {
+            if !file_name.is_empty() {
+                base.file_name = file_name;
+            }
+        }
+
+        if let Ok(fmt) = std::env::var("DMSC_LOG_FILE_FORMAT") {
+            if fmt.eq_ignore_ascii_case("json") {
+                base.json_format = true;
+            }
+        }
+
+        if let Ok(rotate) = std::env::var("DMSC_LOG_ROTATE_WHEN") {
+            if !rotate.is_empty() {
+                base.rotate_when = rotate;
+            }
+        }
+
+        if let Ok(v) = std::env::var("DMSC_LOG_MAX_BYTES") {
+            if let Ok(bytes) = v.parse::<u64>() {
+                if bytes > 0 {
+                    base.max_bytes = bytes;
+                }
+            }
+        }
+
+        if let Ok(v) = std::env::var("DMSC_LOG_CONSOLE_ENABLED") {
+            if v.eq_ignore_ascii_case("true") || v == "1" {
+                base.console_enabled = true;
+            } else if v.eq_ignore_ascii_case("false") || v == "0" {
+                base.console_enabled = false;
+            }
+        }
+
+        if let Ok(v) = std::env::var("DMSC_LOG_FILE_ENABLED") {
+            if v.eq_ignore_ascii_case("true") || v == "1" {
+                base.file_enabled = true;
+            } else if v.eq_ignore_ascii_case("false") || v == "0" {
+                base.file_enabled = false;
+            }
         }
 
         base

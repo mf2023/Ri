@@ -79,6 +79,7 @@ use tokio::sync::RwLock;
 /// The circuit breaker transitions between these states based on the success and failure
 /// patterns of the protected operations.
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+#[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 pub enum DMSCCircuitBreakerState {
     /// **Closed State**: Normal operation. Requests are allowed to pass through.
     /// The circuit breaker monitors for failures.
@@ -98,6 +99,7 @@ pub enum DMSCCircuitBreakerState {
 /// This struct defines the thresholds and timeouts that control how the circuit breaker
 /// transitions between states.
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+#[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 pub struct DMSCCircuitBreakerConfig {
     /// Number of consecutive failures required to open the circuit breaker from Closed state.
     pub failure_threshold: u32,
@@ -110,6 +112,57 @@ pub struct DMSCCircuitBreakerConfig {
     
     /// Time window in seconds for counting failures. This defines how long failures are remembered.
     pub monitoring_period_seconds: u64,
+}
+
+#[cfg(feature = "pyo3")]
+#[pyo3::prelude::pymethods]
+impl DMSCCircuitBreakerConfig {
+    #[new]
+    fn py_new() -> Self {
+        Self::default()
+    }
+    
+    #[staticmethod]
+    fn py_new_with_values(failure_threshold: u32, success_threshold: u32, timeout_seconds: u64, monitoring_period_seconds: u64) -> Self {
+        Self {
+            failure_threshold,
+            success_threshold,
+            timeout_seconds,
+            monitoring_period_seconds,
+        }
+    }
+    
+    fn get_failure_threshold(&self) -> u32 {
+        self.failure_threshold
+    }
+    
+    fn set_failure_threshold(&mut self, value: u32) {
+        self.failure_threshold = value;
+    }
+    
+    fn get_success_threshold(&self) -> u32 {
+        self.success_threshold
+    }
+    
+    fn set_success_threshold(&mut self, value: u32) {
+        self.success_threshold = value;
+    }
+    
+    fn get_timeout_seconds(&self) -> u64 {
+        self.timeout_seconds
+    }
+    
+    fn set_timeout_seconds(&mut self, value: u64) {
+        self.timeout_seconds = value;
+    }
+    
+    fn get_monitoring_period_seconds(&self) -> u64 {
+        self.monitoring_period_seconds
+    }
+    
+    fn set_monitoring_period_seconds(&mut self, value: u64) {
+        self.monitoring_period_seconds = value;
+    }
 }
 
 impl Default for DMSCCircuitBreakerConfig {
@@ -162,6 +215,7 @@ impl CircuitBreakerStats {
     /// Creates a new circuit breaker statistics instance with default values.
     /// 
     /// Initial state is Closed, with all counters set to zero.
+    #[allow(dead_code)]
     fn new() -> Self {
         Self {
             state: RwLock::new(DMSCCircuitBreakerState::Closed),
@@ -180,7 +234,7 @@ impl CircuitBreakerStats {
     /// - Resets consecutive failure count
     /// - Increments consecutive success count
     /// - Transitions from HalfOpen to Closed if success threshold is met
-    async fn record_success(&self) {
+    async fn record_success(&self, config: &DMSCCircuitBreakerConfig) {
         self.success_count.fetch_add(1, Ordering::Relaxed);
         self.consecutive_failures.store(0, Ordering::Relaxed);
         self.consecutive_successes.fetch_add(1, Ordering::Relaxed);
@@ -189,7 +243,7 @@ impl CircuitBreakerStats {
         match *state {
             DMSCCircuitBreakerState::HalfOpen => {
                 let successes = self.consecutive_successes.load(Ordering::Relaxed);
-                if successes >= 3 { // Note: This should use config in future versions
+                if successes >= config.success_threshold as usize {
                     drop(state);
                     let mut state_write = self.state.write().await;
                     *state_write = DMSCCircuitBreakerState::Closed;
@@ -199,10 +253,9 @@ impl CircuitBreakerStats {
                 }
             }
             DMSCCircuitBreakerState::Open => {
-                // Should not happen if used correctly - Open state should reject requests
             }
             DMSCCircuitBreakerState::Closed => {
-                // Normal operation - no state change needed
+                self.consecutive_failures.store(0, Ordering::Relaxed);
             }
         }
     }
@@ -294,6 +347,7 @@ impl CircuitBreakerStats {
     /// # Returns
     /// 
     /// A `CircuitBreakerMetrics` struct containing the current statistics
+    #[allow(dead_code)]
     fn get_stats(&self) -> CircuitBreakerMetrics {
         let state_str = match self.state.blocking_read().clone() {
             DMSCCircuitBreakerState::Closed => "Closed",
@@ -316,6 +370,7 @@ impl CircuitBreakerStats {
 /// This struct contains statistics about the circuit breaker's performance, including
 /// success and failure counts, consecutive success/failure streaks, and current state.
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+#[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 pub struct CircuitBreakerMetrics {
     /// Current state of the circuit breaker as a string
     pub state: String,
@@ -333,11 +388,47 @@ pub struct CircuitBreakerMetrics {
     pub consecutive_successes: usize,
 }
 
+#[cfg(feature = "pyo3")]
+#[pyo3::prelude::pymethods]
+impl CircuitBreakerMetrics {
+    #[new]
+    fn py_new(state: String, failure_count: usize, success_count: usize, consecutive_failures: usize, consecutive_successes: usize) -> Self {
+        Self {
+            state,
+            failure_count,
+            success_count,
+            consecutive_failures,
+            consecutive_successes,
+        }
+    }
+    
+    fn get_state(&self) -> &str {
+        &self.state
+    }
+    
+    fn get_failure_count(&self) -> usize {
+        self.failure_count
+    }
+    
+    fn get_success_count(&self) -> usize {
+        self.success_count
+    }
+    
+    fn get_consecutive_failures(&self) -> usize {
+        self.consecutive_failures
+    }
+    
+    fn get_consecutive_successes(&self) -> usize {
+        self.consecutive_successes
+    }
+}
+
 /// Basic circuit breaker implementation.
 /// 
 /// This struct provides a thread-safe circuit breaker that protects against cascading failures
 /// by monitoring the success and failure patterns of operations and transitioning between states
 /// (Closed, Open, HalfOpen) based on configurable thresholds.
+#[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 pub struct DMSCCircuitBreaker {
     /// Configuration for the circuit breaker behavior
     config: DMSCCircuitBreakerConfig,
@@ -372,14 +463,25 @@ impl DMSCCircuitBreaker {
     /// # Returns
     /// 
     /// `true` if the request should be allowed, `false` otherwise
-    pub async fn allow_request(&self) -> bool {
-        let state = self.stats.get_state().await;
+    pub fn allow_request(&self) -> bool {
+        let state = futures::executor::block_on(async {
+            let state = self.stats.state.read().await;
+            state.clone()
+        });
         
         match state {
             DMSCCircuitBreakerState::Closed => true,
             DMSCCircuitBreakerState::Open => {
-                if self.stats.should_attempt_reset(&self.config).await {
-                    self.stats.transition_to_half_open().await;
+                let last_change = futures::executor::block_on(async {
+                    let guard = self.stats.last_state_change.read().await;
+                    *guard
+                });
+                if last_change.elapsed() >= Duration::from_secs(self.config.timeout_seconds) {
+                    futures::executor::block_on(async {
+                        let mut state = self.stats.state.write().await;
+                        *state = DMSCCircuitBreakerState::HalfOpen;
+                        *self.stats.last_state_change.write().await = Instant::now();
+                    });
                     true
                 } else {
                     false
@@ -390,13 +492,17 @@ impl DMSCCircuitBreaker {
     }
 
     /// Records a successful operation and updates the circuit breaker state if necessary.
-    pub async fn record_success(&self) {
-        self.stats.record_success().await;
+    pub fn record_success(&self) {
+        futures::executor::block_on(async {
+            self.stats.record_success(&self.config).await;
+        });
     }
 
     /// Records a failed operation and updates the circuit breaker state if necessary.
-    pub async fn record_failure(&self) {
-        self.stats.record_failure(&self.config).await;
+    pub fn record_failure(&self) {
+        futures::executor::block_on(async {
+            self.stats.record_failure(&self.config).await;
+        });
     }
 
     /// Executes an operation with circuit breaker protection.
@@ -420,17 +526,17 @@ impl DMSCCircuitBreaker {
     where
         F: std::future::Future<Output = DMSCResult<R>>,
     {
-        if !self.allow_request().await {
+        if !self.allow_request() {
             return Err(crate::core::DMSCError::ServiceMesh("Circuit breaker is open".to_string()));
         }
 
         match operation.await {
             Ok(result) => {
-                self.record_success().await;
+                self.record_success();
                 Ok(result)
             }
             Err(error) => {
-                self.record_failure().await;
+                self.record_failure();
                 Err(error)
             }
         }
@@ -441,8 +547,10 @@ impl DMSCCircuitBreaker {
     /// # Returns
     /// 
     /// The current `DMSCCircuitBreakerState` (Closed, Open, or HalfOpen)
-    pub async fn get_state(&self) -> DMSCCircuitBreakerState {
-        self.stats.get_state().await
+    pub fn get_state(&self) -> DMSCCircuitBreakerState {
+        futures::executor::block_on(async {
+            self.stats.get_state().await
+        })
     }
 
     /// Gets the current metrics for the circuit breaker.
@@ -451,7 +559,22 @@ impl DMSCCircuitBreaker {
     /// 
     /// A `CircuitBreakerMetrics` struct containing the current statistics
     pub fn get_stats(&self) -> CircuitBreakerMetrics {
-        self.stats.get_stats()
+        let state_str = match futures::executor::block_on(async {
+            let state = self.stats.state.read().await;
+            state.clone()
+        }) {
+            DMSCCircuitBreakerState::Closed => "Closed",
+            DMSCCircuitBreakerState::Open => "Open", 
+            DMSCCircuitBreakerState::HalfOpen => "HalfOpen",
+        };
+        
+        CircuitBreakerMetrics {
+            state: state_str.to_string(),
+            failure_count: self.stats.failure_count.load(Ordering::Relaxed),
+            success_count: self.stats.success_count.load(Ordering::Relaxed),
+            consecutive_failures: self.stats.consecutive_failures.load(Ordering::Relaxed),
+            consecutive_successes: self.stats.consecutive_successes.load(Ordering::Relaxed),
+        }
     }
 
     /// Gets the configuration for the circuit breaker.
@@ -459,39 +582,86 @@ impl DMSCCircuitBreaker {
     /// # Returns
     /// 
     /// A reference to the `DMSCCircuitBreakerConfig` used by this circuit breaker
-    pub fn get_config(&self) -> &DMSCCircuitBreakerConfig {
-        &self.config
+    pub fn get_config(&self) -> DMSCCircuitBreakerConfig {
+        self.config.clone()
     }
 
     /// Resets the circuit breaker to its initial state (Closed).
     /// 
     /// This method resets all counters and transitions the circuit breaker to Closed state.
-    pub async fn reset(&self) {
-        let mut state = self.stats.state.write().await;
-        *state = DMSCCircuitBreakerState::Closed;
-        self.stats.failure_count.store(0, Ordering::Relaxed);
-        self.stats.success_count.store(0, Ordering::Relaxed);
-        self.stats.consecutive_failures.store(0, Ordering::Relaxed);
-        self.stats.consecutive_successes.store(0, Ordering::Relaxed);
-        *self.stats.last_state_change.write().await = Instant::now();
+    pub fn reset(&self) {
+        futures::executor::block_on(async move {
+            let mut state = self.stats.state.write().await;
+            *state = DMSCCircuitBreakerState::Closed;
+            self.stats.failure_count.store(0, Ordering::Relaxed);
+            self.stats.success_count.store(0, Ordering::Relaxed);
+            self.stats.consecutive_failures.store(0, Ordering::Relaxed);
+            self.stats.consecutive_successes.store(0, Ordering::Relaxed);
+            *self.stats.last_state_change.write().await = Instant::now();
+        });
     }
-
+    
     /// Forces the circuit breaker to transition to Open state.
     /// 
     /// This method immediately opens the circuit breaker, rejecting all requests until the timeout elapses.
-    pub async fn force_open(&self) {
-        let mut state = self.stats.state.write().await;
-        *state = DMSCCircuitBreakerState::Open;
-        *self.stats.last_state_change.write().await = Instant::now();
+    pub fn force_open(&self) {
+        futures::executor::block_on(async move {
+            let mut state = self.stats.state.write().await;
+            *state = DMSCCircuitBreakerState::Open;
+            *self.stats.last_state_change.write().await = Instant::now();
+        });
     }
-
+    
     /// Forces the circuit breaker to transition to Closed state.
     /// 
     /// This method immediately closes the circuit breaker, allowing all requests to proceed.
-    pub async fn force_close(&self) {
-        let mut state = self.stats.state.write().await;
-        *state = DMSCCircuitBreakerState::Closed;
-        *self.stats.last_state_change.write().await = Instant::now();
+    pub fn force_close(&self) {
+        futures::executor::block_on(async move {
+            let mut state = self.stats.state.write().await;
+            *state = DMSCCircuitBreakerState::Closed;
+            *self.stats.last_state_change.write().await = Instant::now();
+        });
+    }
+
+    pub fn failure_rate(&self) -> f64 {
+        let failures = self.stats.failure_count.load(Ordering::Relaxed);
+        let successes = self.stats.success_count.load(Ordering::Relaxed);
+        let total = failures + successes;
+        if total == 0 {
+            0.0
+        } else {
+            failures as f64 / total as f64
+        }
+    }
+    
+    pub fn success_rate(&self) -> f64 {
+        let failures = self.stats.failure_count.load(Ordering::Relaxed);
+        let successes = self.stats.success_count.load(Ordering::Relaxed);
+        let total = failures + successes;
+        if total == 0 {
+            1.0
+        } else {
+            successes as f64 / total as f64
+        }
+    }
+    
+    pub fn total_requests(&self) -> usize {
+        self.stats.failure_count.load(Ordering::Relaxed) + self.stats.success_count.load(Ordering::Relaxed)
+    }
+
+    pub fn is_open(&self) -> bool {
+        let state = futures::executor::block_on(self.stats.state.read());
+        matches!(*state, DMSCCircuitBreakerState::Open)
+    }
+
+    pub fn is_closed(&self) -> bool {
+        let state = futures::executor::block_on(self.stats.state.read());
+        matches!(*state, DMSCCircuitBreakerState::Closed)
+    }
+
+    pub fn is_half_open(&self) -> bool {
+        let state = futures::executor::block_on(self.stats.state.read());
+        matches!(*state, DMSCCircuitBreakerState::HalfOpen)
     }
 }
 
@@ -556,7 +726,7 @@ impl DMSCAdvancedCircuitBreaker {
     /// - `error_type`: The error type identifier, or `None` for default statistics
     pub async fn record_success_with_type(&self, error_type: Option<&str>) {
         let stats = self.get_stats_for_error(error_type).await;
-        stats.record_success().await;
+        stats.record_success(&self.config).await;
     }
 
     /// Records a failed operation for a specific error type and updates the circuit breaker state if necessary.

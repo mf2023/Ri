@@ -402,7 +402,7 @@ impl DMSCServiceMesh {
             Err(_) => return Err(DMSCError::ServiceMesh("No available backend server".to_string())),
         };
 
-        if !self.circuit_breaker.allow_request().await {
+        if !self.circuit_breaker.allow_request() {
             return Err(DMSCError::ServiceMesh("Circuit breaker is open".to_string()));
         }
 
@@ -410,10 +410,10 @@ impl DMSCServiceMesh {
 
         match &result {
             Ok(_) => {
-                self.circuit_breaker.record_success().await;
+                self.circuit_breaker.record_success();
             }
             Err(_) => {
-                self.circuit_breaker.record_failure().await;
+                self.circuit_breaker.record_failure();
             }
         }
 

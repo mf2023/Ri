@@ -85,6 +85,7 @@ use crate::observability::tracing::{DMSCTraceId, DMSCSpanId};
 /// This struct represents a W3C Trace Context, which is used to propagate trace information
 /// across service boundaries. It follows the W3C Trace Context specification: https://www.w3.org/TR/trace-context/
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 pub struct DMSCTraceContext {
     /// Trace context version
     pub version: u8,
@@ -96,6 +97,18 @@ pub struct DMSCTraceContext {
     pub trace_flags: u8,
     /// Optional trace state for vendor-specific information
     pub trace_state: Option<String>,
+}
+
+impl Default for DMSCTraceContext {
+    fn default() -> Self {
+        Self {
+            version: 0x00,
+            trace_id: DMSCTraceId::default(),
+            parent_id: DMSCSpanId::default(),
+            trace_flags: 0x01,
+            trace_state: None,
+        }
+    }
 }
 
 impl DMSCTraceContext {
@@ -191,11 +204,41 @@ impl DMSCTraceContext {
     }
 }
 
+#[cfg(feature = "pyo3")]
+#[pyo3::prelude::pymethods]
+impl DMSCTraceContext {
+    #[new]
+    fn py_new() -> Self {
+        Self::default()
+    }
+
+    #[staticmethod]
+    #[pyo3(name = "from_header")]
+    fn py_from_header(header: String) -> Option<Self> {
+        Self::from_header(&header)
+    }
+
+    #[pyo3(name = "to_header")]
+    fn py_to_header(&self) -> String {
+        self.to_header()
+    }
+
+    #[pyo3(name = "is_sampled")]
+    fn py_is_sampled(&self) -> bool {
+        self.is_sampled()
+    }
+
+    fn sampled(&mut self, sampled: bool) {
+        self.set_sampled(sampled);
+    }
+}
+
 /// Baggage propagation for cross-cutting concerns.
 ///
 /// This struct represents baggage, which is used to carry additional context information
 /// across service boundaries. It follows the W3C Baggage specification.
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 pub struct DMSCBaggage {
     /// Map of baggage items
     items: HashMap<String, String>,
@@ -295,12 +338,45 @@ impl DMSCBaggage {
     }
 }
 
+#[cfg(feature = "pyo3")]
+#[pyo3::prelude::pymethods]
+impl DMSCBaggage {
+    #[new]
+    fn py_new() -> Self {
+        Self::new()
+    }
+
+    #[staticmethod]
+    #[pyo3(name = "from_header")]
+    fn py_from_header(header: String) -> Self {
+        Self::from_header(&header)
+    }
+
+    #[pyo3(name = "to_header")]
+    fn py_to_header(&self) -> String {
+        self.to_header()
+    }
+
+    fn add(&mut self, key: String, value: String) {
+        self.items.insert(key, value);
+    }
+
+    fn fetch(&self, key: String) -> Option<String> {
+        self.items.get(&key).cloned()
+    }
+
+    fn delete(&mut self, key: String) {
+        self.items.remove(&key);
+    }
+}
+
 /// Context carrier for distributed tracing.
 ///
 /// This struct carries both trace context and baggage, providing a convenient way to
 /// extract and inject distributed tracing information from/to HTTP headers.
 #[allow(dead_code)]
 #[derive(Debug, Clone)]
+#[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 pub struct DMSCContextCarrier {
     /// Trace context for the request
     pub trace_context: Option<DMSCTraceContext>,
@@ -499,5 +575,163 @@ impl DMSCContextCarrier {
             let carrier = Self::from_tracing_context(&tracing_context);
             carrier.inject_into_headers(headers);
         }
+    }
+}
+
+#[cfg(feature = "pyo3")]
+#[pyo3::prelude::pymethods]
+impl DMSCContextCarrier {
+    #[new]
+    fn py_new() -> Self {
+        Self::new()
+    }
+
+    #[pyo3(name = "with_trace_context")]
+    fn py_with_trace_context(&mut self, trace_context: DMSCTraceContext) {
+        self.trace_context = Some(trace_context);
+    }
+
+    #[pyo3(name = "get_trace_context")]
+    fn py_get_trace_context(&self) -> Option<DMSCTraceContext> {
+        self.trace_context.clone()
+    }
+
+    #[pyo3(name = "with_baggage")]
+    fn py_with_baggage(&mut self, baggage: DMSCBaggage) {
+        self.baggage = baggage;
+    }
+
+    #[pyo3(name = "get_baggage")]
+    fn py_get_baggage(&self) -> DMSCBaggage {
+        self.baggage.clone()
+    }
+
+    #[pyo3(name = "inject_into_headers")]
+    fn py_inject_into_headers(&self) -> HashMap<String, String> {
+        let mut headers = HashMap::new();
+        self.inject_into_headers(&mut headers);
+        headers
+    }
+
+    #[staticmethod]
+    #[pyo3(name = "from_headers")]
+    fn py_from_headers(headers: HashMap<String, String>) -> Self {
+        Self::from_headers(&headers)
+    }
+}
+
+/// W3C Trace Context Propagator for distributed tracing.
+///
+/// This struct implements the W3C Trace Context propagation specification,
+/// providing methods for extracting and injecting trace context from/to
+/// various carrier formats like HTTP headers.
+#[derive(Debug, Clone, Default)]
+#[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
+pub struct W3CTracePropagator;
+
+impl W3CTracePropagator {
+    /// Creates a new W3CTracePropagator instance.
+    ///
+    /// # Returns
+    ///
+    /// A new W3CTracePropagator instance
+    #[allow(dead_code)]
+    pub fn new() -> Self {
+        Self
+    }
+
+    /// Extracts trace context from HTTP headers.
+    ///
+    /// This method parses the W3C traceparent and baggage headers from the
+    /// provided HTTP headers and creates a DMSCContextCarrier with the
+    /// extracted information.
+    ///
+    /// # Parameters
+    ///
+    /// - `headers`: A reference to a HashMap of HTTP headers
+    ///
+    /// # Returns
+    ///
+    /// A DMSCContextCarrier containing the extracted trace context and baggage
+    #[allow(dead_code)]
+    pub fn extract(&self, headers: &HashMap<String, String>) -> DMSCContextCarrier {
+        DMSCContextCarrier::from_headers(headers)
+    }
+
+    /// Injects trace context into HTTP headers.
+    ///
+    /// This method takes a DMSCContextCarrier and injects its trace context
+    /// and baggage into the provided HTTP headers HashMap.
+    ///
+    /// # Parameters
+    ///
+    /// - `carrier`: The context carrier containing trace information
+    /// - `headers`: A mutable reference to a HashMap of HTTP headers
+    #[allow(dead_code)]
+    pub fn inject(&self, carrier: &DMSCContextCarrier, headers: &mut HashMap<String, String>) {
+        carrier.inject_into_headers(headers);
+    }
+
+    /// Extracts trace context and sets it as the current tracing context.
+    ///
+    /// This convenience method extracts trace context from HTTP headers and
+    /// sets it as the current thread-local tracing context.
+    ///
+    /// # Parameters
+    ///
+    /// - `headers`: A reference to a HashMap of HTTP headers
+    ///
+    /// # Returns
+    ///
+    /// A DMSCContextCarrier containing the extracted trace context and baggage
+    #[allow(dead_code)]
+    pub fn extract_and_set_current(&self, headers: &HashMap<String, String>) -> DMSCContextCarrier {
+        DMSCContextCarrier::from_headers_and_set_current(headers)
+    }
+
+    /// Injects the current tracing context into HTTP headers.
+    ///
+    /// This convenience method gets the current thread-local tracing context,
+    /// converts it to a context carrier, and injects it into HTTP headers.
+    ///
+    /// # Parameters
+    ///
+    /// - `headers`: A mutable reference to a HashMap of HTTP headers
+    #[allow(dead_code)]
+    pub fn inject_current(&self, headers: &mut HashMap<String, String>) {
+        DMSCContextCarrier::inject_current_into_headers(headers);
+    }
+}
+
+#[cfg(feature = "pyo3")]
+#[pyo3::prelude::pymethods]
+impl W3CTracePropagator {
+    #[new]
+    fn py_new() -> Self {
+        Self::new()
+    }
+
+    #[pyo3(name = "extract")]
+    fn py_extract(&self, headers: HashMap<String, String>) -> DMSCContextCarrier {
+        self.extract(&headers)
+    }
+
+    #[pyo3(name = "inject")]
+    fn py_inject(&self, carrier: &DMSCContextCarrier) -> HashMap<String, String> {
+        let mut headers = HashMap::new();
+        self.inject(carrier, &mut headers);
+        headers
+    }
+
+    #[pyo3(name = "extract_and_set_current")]
+    fn py_extract_and_set_current(&self, headers: HashMap<String, String>) -> DMSCContextCarrier {
+        self.extract_and_set_current(&headers)
+    }
+
+    #[pyo3(name = "inject_current")]
+    fn py_inject_current(&self) -> HashMap<String, String> {
+        let mut headers = HashMap::new();
+        self.inject_current(&mut headers);
+        headers
     }
 }

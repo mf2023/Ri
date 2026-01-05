@@ -454,15 +454,24 @@ pub struct DMSCProtocolStats {
     /// Total bytes received
     #[pyo3(get, set)]
     pub total_bytes_received: u64,
-    /// Average latency
+    /// Average latency in milliseconds
     #[pyo3(get, set)]
     pub average_latency_ms: u64,
     /// Error count
     #[pyo3(get, set)]
     pub error_count: u64,
-    /// Success rate
+    /// Success rate (0.0 to 1.0)
     #[pyo3(get, set)]
     pub success_rate: f32,
+    /// Current active connections
+    #[pyo3(get, set)]
+    pub active_connections: u32,
+    /// Total connections established
+    #[pyo3(get, set)]
+    pub total_connections: u64,
+    /// Protocol type distribution
+    #[pyo3(get, set)]
+    pub protocol_distribution: std::collections::HashMap<String, u64>,
 }
 
 #[cfg(feature = "pyo3")]
@@ -478,6 +487,9 @@ impl DMSCProtocolStats {
             average_latency_ms: 0,
             error_count: 0,
             success_rate: 1.0,
+            active_connections: 0,
+            total_connections: 0,
+            protocol_distribution: std::collections::HashMap::new(),
         }
     }
 }
@@ -654,6 +666,8 @@ pub struct DMSCProtocolManager {
     current_protocol: Arc<RwLock<DMSCProtocolType>>,
     /// Initialization status
     initialized: Arc<RwLock<bool>>,
+    /// Statistics for protocol operations
+    stats: Arc<RwLock<DMSCProtocolStats>>,
 }
 
 #[cfg(feature = "pyo3")]
@@ -670,6 +684,7 @@ impl DMSCProtocolManager {
             )),
             current_protocol: Arc::new(RwLock::new(DMSCProtocolType::Global)),
             initialized: Arc::new(RwLock::new(false)),
+            stats: Arc::new(RwLock::new(DMSCProtocolStats::new())),
         }
     }
     
@@ -751,6 +766,7 @@ impl DMSCProtocolManager {
             )),
             current_protocol: Arc::new(RwLock::new(DMSCProtocolType::Global)),
             initialized: Arc::new(RwLock::new(false)),
+            stats: Arc::new(RwLock::new(DMSCProtocolStats::new())),
         }
     }
     /// Initialize the protocol manager.
@@ -760,6 +776,9 @@ impl DMSCProtocolManager {
         }
         
         *self.config.write().await = config;
+        
+        // Reset statistics
+        *self.stats.write().await = DMSCProtocolStats::new();
         
         // Initialize protocol adapter
         let security_context = adapter::DMSCSecurityContext {
@@ -807,18 +826,48 @@ impl DMSCProtocolManager {
             return Err(DMSCError::InvalidState("Protocol manager not initialized".to_string()));
         }
         
+        let start_time = std::time::Instant::now();
+        let message_len = message.len();
         let current_protocol = *self.current_protocol.read().await;
+        let result;
         
         if protocol_type == current_protocol {
-            // Use current protocol directly
             let connection = self.adapter.connect(target).await?;
-            connection.send_message(message).await
+            result = connection.send_message(message).await;
         } else {
-            // Use cross-protocol integration
-            self.integration.send_cross_protocol_message(
+            result = self.integration.send_cross_protocol_message(
                 target, current_protocol, protocol_type, message
-            ).await
+            ).await;
         }
+        
+        let elapsed = start_time.elapsed();
+        let elapsed_ms = elapsed.as_millis() as u64;
+        
+        let mut stats = self.stats.write().await;
+        match &result {
+            Ok(response) => {
+                stats.total_messages_sent += 1;
+                stats.total_bytes_sent += message_len as u64;
+                stats.total_messages_received += 1;
+                stats.total_bytes_received += response.len() as u64;
+                
+                let total_ops = stats.total_messages_sent + stats.total_messages_received;
+                if total_ops > 0 {
+                    stats.average_latency_ms = (stats.average_latency_ms * (total_ops - 1) + elapsed_ms) / total_ops;
+                }
+                
+                let protocol_key = format!("{:?}", protocol_type);
+                *stats.protocol_distribution.entry(protocol_key).or_insert(0) += 1;
+            }
+            Err(_) => {
+                stats.error_count += 1;
+            }
+        }
+        
+        let total_ops = stats.total_messages_sent.max(1);
+        stats.success_rate = (total_ops as f32 - stats.error_count as f32) / total_ops as f32;
+        
+        result
     }
     
     /// Switch to a different protocol.
@@ -862,25 +911,21 @@ impl DMSCProtocolManager {
     }
     
     /// Get protocol statistics.
+    /// 
+    /// This method returns comprehensive statistics about protocol operations,
+    /// including message counts, byte transfers, latency metrics, and success rates.
+    /// The statistics are collected in real-time during protocol operations.
+    /// 
+    /// # Returns
+    /// 
+    /// A `DMSCResult<DMSCProtocolStats>` containing the current protocol statistics
     pub async fn get_stats(&self) -> DMSCResult<DMSCProtocolStats> {
         if !*self.initialized.read().await {
             return Err(DMSCError::InvalidState("Protocol manager not initialized".to_string()));
         }
         
-        // Get stats from current protocol
-        let current_protocol = *self.current_protocol.read().await;
-        
-        // This would get stats from the actual protocol implementation
-        // For now, return default stats
-        Ok(DMSCProtocolStats {
-            total_messages_sent: 0,
-            total_messages_received: 0,
-            total_bytes_sent: 0,
-            total_bytes_received: 0,
-            average_latency_ms: 0,
-            error_count: 0,
-            success_rate: 1.0,
-        })
+        let stats = self.stats.read().await.clone();
+        Ok(stats)
     }
     
     /// Shutdown the protocol manager.

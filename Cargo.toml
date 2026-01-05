@@ -56,12 +56,17 @@ prometheus = { version = "0.13", optional = true } # For observability
 redis = { version = "0.24", features = ["tokio-comp", "connection-manager"], optional = true } # For cache and queue
 hyper = { version = "0.14", features = ["client", "server", "http1", "http2", "tcp"], optional = true } # For HTTP and gateway
 lapin = { version = "2.3", features = ["rustls"], optional = true } # For RabbitMQ
-futures = { version = "0.3", features = ["std"], optional = true } # For async operations
+tokio-rustls = { version = "0.24", optional = true } # For TLS support in gateway
+futures = { version = "0.3", features = ["std"] } # For async operations
 reqwest = { version = "0.11", features = ["json"], optional = true } # For HTTP client
 sysinfo = { version = "0.29", optional = true } # For system information
 jsonwebtoken = "8" # For JWT authentication (required by auth module)
 urlencoding = { version = "2", optional = true } # For URL encoding
 etcd-client = { version = "0.11", features = ["tls"], optional = true } # For service discovery
+tokio-postgres = { version = "0.7", optional = true } # For PostgreSQL
+mysql = { version = "24", optional = true } # For MySQL
+rusqlite = { version = "0.29", optional = true, features = ["bundled"] } # For SQLite
+erased-serde = "0.4"
 
 # Protocol module dependencies
 num-bigint = "0.4"
@@ -71,6 +76,14 @@ hex = "0.4"
 crc32fast = "1"
 tracing = "0.1"
 data-encoding = "2"
+aes-gcm = "0.10"
+base64 = "0.21"
+generic-array = "0.14"
+typenum = "1"
+regex = "1.10"
+url = "2.5"
+lazy_static = "1.4"
+html-escape = "0.2"
 
 # Target-specific dependencies
 [target.'cfg(not(windows))'.dependencies]
@@ -90,7 +103,6 @@ full = [
     "prometheus",
     "redis",
     "hyper",
-    "futures",
     "sysinfo",
     "reqwest",
     "urlencoding",
@@ -105,16 +117,19 @@ etcd = ["dep:etcd-client"]
 parking_lot = []
 pyo3 = ["dep:pyo3"]
 kafka = ["rdkafka"]
-rabbitmq = ["dep:lapin", "futures"]
+rabbitmq = ["dep:lapin"]
 observability = ["prometheus"]
 cache = ["redis"]
 queue = ["redis", "rabbitmq", "kafka"]
-gateway = ["hyper", "redis"]
-service_mesh = ["etcd", "redis"]
+gateway = ["hyper", "redis", "tokio-rustls"]
+service_mesh = ["redis", "hyper", "tokio-rustls"]
 auth = ["urlencoding"]
 config_hot_reload = ["notify"]
 http_client = ["reqwest"]
 system_info = ["sysinfo"]
+postgres = ["dep:tokio-postgres"]
+mysql = ["dep:mysql"]
+sqlite = ["dep:rusqlite"]
 
 [dev-dependencies]
 tempfile = "3"

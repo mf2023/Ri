@@ -100,8 +100,8 @@ use pyo3::prelude::*;
 use pyo3::PyResult;
 
 use super::core::{DMSCDevice, DMSCDeviceCapabilities, DMSCDeviceStatus, DMSCDeviceType, DMSCDeviceControlConfig, NetworkDeviceInfo};
-use crate::core::{DMSCResult, DMSCError};
-use crate::prelude::DMSCMetricsRegistry;
+use crate::core::DMSCResult;
+use crate::prelude::{DMSCMetricsRegistry, DMSCError};
 // use super::scheduler::DMSCDeviceScheduler;
 
 /// Device controller - manages device lifecycle and state
@@ -933,6 +933,7 @@ impl DMSCDeviceController {
     }
     
     /// Helper method to add a discovered device
+    #[allow(dead_code)]
     async fn add_device(&mut self, mut device: DMSCDevice, location: String) -> DMSCResult<()> {
         device.set_status(DMSCDeviceStatus::Available);
         device.set_location(location);

@@ -225,33 +225,33 @@ from dmsc.core import DMSCResult
 
 class MyPyModule(DMSCPyServiceModule):
     """Sync service module"""
-    def name(&self) -> str:
+    def name(self) -> str:
         return "my_python_module"
     
-    def init(&self, ctx: DMSCServiceContext) -> DMSCResult:
+    def init(self, ctx: DMSCServiceContext) -> DMSCResult:
         ctx.logger().info("my_python_module", "Python module initialized")
         return None
     
-    def start(&self, ctx: DMSCServiceContext) -> DMSCResult:
+    def start(self, ctx: DMSCServiceContext) -> DMSCResult:
         ctx.logger().info("my_python_module", "Python module started")
         return None
     
-    def shutdown(&self, ctx: DMSCServiceContext) -> DMSCResult:
+    def shutdown(self, ctx: DMSCServiceContext) -> DMSCResult:
         ctx.logger().info("my_python_module", "Python module stopped")
         return None
 
 # Async module example
 class MyAsyncPyModule(DMSCPyAsyncServiceModule):
     """Async service module"""
-    async def init(&self, ctx: DMSCServiceContext) -> DMSCResult:
+    async def init(self, ctx: DMSCServiceContext) -> DMSCResult:
         ctx.logger().info("my_async_python_module", "Async Python module initialized")
         return None
     
-    async def start(&self, ctx: DMSCServiceContext) -> DMSCResult:
+    async def start(self, ctx: DMSCServiceContext) -> DMSCResult:
         ctx.logger().info("my_async_python_module", "Async Python module started")
         return None
     
-    async def shutdown(&self, ctx: DMSCServiceContext) -> DMSCResult:
+    async def shutdown(self, ctx: DMSCServiceContext) -> DMSCResult:
         ctx.logger().info("my_async_python_module", "Async Python module stopped")
         return None
 ```
@@ -259,14 +259,14 @@ class MyAsyncPyModule(DMSCPyAsyncServiceModule):
 Using custom modules in Python application:
 
 ```python
-from dmsc import DMSCAppBuilder
+from dmsc import DMSCAppBuilder, DMSCLogConfig
 
 app = DMSCAppBuilder() \
     .with_config("config.yaml") \
-    .with_logging(DMSCLogConfig.default()) \
+    .with_logging(DMSCLogConfig()) \
     .build()
 
-app.run(lambda ctx: ctx.logger().info("service", "Python service started"))
+app.run(lambda ctx: ctx.logger().info("service", "Python service started") or None)
 ```
 
 <div align="center">
@@ -494,12 +494,11 @@ DMSC supports multi-source configuration management, allowing you to load config
 
 ### 8.1 Configuration Source Priority
 
-DMSC loads configurations in the following priority order (from highest to lowest):
+DMSC loads configurations in the following priority order (from lowest to highest):
 
-1. **Runtime Parameters**: Configurations set through code
-2. **Environment Variables**: Environment variables prefixed with `DMSC_`
-3. **Configuration Files**: YAML, TOML, or JSON format configuration files
-4. **Default Values**: Default configurations provided by modules
+1. **Configuration Files**: YAML, TOML, or JSON format configuration files (lowest priority)
+2. **Custom Configuration**: Configurations set through code
+3. **Environment Variables**: Environment variables prefixed with `DMSC_` (highest priority)
 
 ### 8.2 Configuration Hot Reload
 

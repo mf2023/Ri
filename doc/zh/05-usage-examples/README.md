@@ -79,7 +79,7 @@ async fn main() -> DMSCResult<()> {
 
 ```bash
 git clone https://gitee.com/dunimd/dmsc.git
-cd dms
+cd dmsc
 ```
 
 ### 2. 创建示例项目

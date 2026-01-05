@@ -34,6 +34,39 @@ pub trait DMSCCache: Send + Sync {
     async fn stats(&self) -> DMSCCacheStats;
     async fn cleanup_expired(&self) -> DMSCResult<usize>;
     async fn exists(&self, key: &str) -> bool;
+
+    async fn get_multi(&self, keys: &[&str]) -> DMSCResult<Vec<Option<String>>> {
+        let mut results = Vec::with_capacity(keys.len());
+        for &key in keys {
+            results.push(self.get(key).await?);
+        }
+        Ok(results)
+    }
+
+    async fn set_multi(&self, items: &[(&str, &str)], ttl_seconds: Option<u64>) -> DMSCResult<()> {
+        for &(key, value) in items {
+            self.set(key, value, ttl_seconds).await?;
+        }
+        Ok(())
+    }
+
+    async fn delete_multi(&self, keys: &[&str]) -> DMSCResult<usize> {
+        let mut count = 0;
+        for &key in keys {
+            if self.delete(key).await? {
+                count += 1;
+            }
+        }
+        Ok(count)
+    }
+
+    async fn exists_multi(&self, keys: &[&str]) -> DMSCResult<Vec<bool>> {
+        let mut results = Vec::with_capacity(keys.len());
+        for &key in keys {
+            results.push(self.exists(key).await);
+        }
+        Ok(results)
+    }
 }
 
 /// Cache event types for monitoring and consistency

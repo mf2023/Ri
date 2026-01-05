@@ -274,27 +274,16 @@ impl DMSCQueueStats {
 /// sends and batch sends.
 #[async_trait]
 pub trait DMSCQueueProducer: Send + Sync {
-    /// Sends a single message to the queue.
-    /// 
-    /// # Parameters
-    /// 
-    /// - `message`: The message to send
-    /// 
-    /// # Returns
-    /// 
-    /// A `DMSCResult<()>` indicating success or failure
     async fn send(&self, message: DMSCQueueMessage) -> DMSCResult<()>;
     
-    /// Sends multiple messages to the queue in a batch.
-    /// 
-    /// # Parameters
-    /// 
-    /// - `messages`: A vector of messages to send
-    /// 
-    /// # Returns
-    /// 
-    /// A `DMSCResult<()>` indicating success or failure
     async fn send_batch(&self, messages: Vec<DMSCQueueMessage>) -> DMSCResult<()>;
+
+    async fn send_multi(&self, messages: &[DMSCQueueMessage]) -> DMSCResult<()> {
+        for message in messages {
+            self.send(message.clone()).await?;
+        }
+        Ok(())
+    }
 }
 
 /// Trait for consuming messages from queues.
@@ -344,6 +333,21 @@ pub trait DMSCQueueConsumer: Send + Sync {
     /// 
     /// A `DMSCResult<()>` indicating success or failure
     async fn resume(&self) -> DMSCResult<()>;
+
+    async fn receive_multi(&self, count: usize) -> DMSCResult<Vec<Option<DMSCQueueMessage>>> {
+        let mut messages = Vec::with_capacity(count);
+        for _ in 0..count {
+            messages.push(self.receive().await?);
+        }
+        Ok(messages)
+    }
+
+    async fn ack_multi(&self, message_ids: &[String]) -> DMSCResult<()> {
+        for id in message_ids {
+            self.ack(id).await?;
+        }
+        Ok(())
+    }
 }
 
 /// Main queue trait defining queue operations.

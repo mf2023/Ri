@@ -107,16 +107,49 @@ mod jwt;
 mod oauth;
 mod permissions;
 mod session;
+mod security;
+mod revocation;
 
 pub use jwt::DMSCJWTManager;
 pub use oauth::DMSCOAuthManager;
 pub use permissions::DMSCPermissionManager;
 pub use session::DMSCSessionManager;
+pub use security::DMSCSecurityManager;
+pub use revocation::{JWTRevocationList, RevokedTokenInfo};
 
 use crate::core::{DMSCResult, DMSCServiceContext};
+use rand::RngCore;
 use serde::Deserialize;
+use std::env;
 use std::sync::Arc;
 use tokio::sync::RwLock;
+
+const DEFAULT_JWT_SECRET_ENV: &str = "DMSC_JWT_SECRET";
+const FALLBACK_SECRET_LENGTH: usize = 64;
+
+const DEFAULT_OAUTH_CLIENT_ID: &str = "your_client_id";
+const DEFAULT_OAUTH_CLIENT_SECRET: &str = "your_client_secret";
+
+fn load_jwt_secret_from_env() -> String {
+    env::var(DEFAULT_JWT_SECRET_ENV).unwrap_or_else(|_| {
+        let mut secret = vec![0u8; FALLBACK_SECRET_LENGTH];
+        rand::thread_rng().fill_bytes(&mut secret);
+        hex::encode(secret)
+    })
+}
+
+fn load_oauth_env_var(provider_name: &str, suffix: &str) -> String {
+    let env_var = format!("DMSC_OAUTH_{}_{}", provider_name.to_uppercase(), suffix);
+    env::var(&env_var).unwrap_or_default()
+}
+
+fn get_oauth_url(provider_name: &str, endpoint: &str) -> String {
+    let env_url = load_oauth_env_var(provider_name, endpoint);
+    if !env_url.is_empty() {
+        return env_url;
+    }
+    format!("https://{}.com/oauth/{}", provider_name, endpoint)
+}
 
 #[cfg(feature = "pyo3")]
 use pyo3::PyResult;
@@ -125,6 +158,14 @@ use pyo3::PyResult;
 /// 
 /// This struct defines the configuration options for authentication behavior, including
 /// JWT settings, session settings, OAuth providers, and enabled authentication methods.
+/// 
+/// ## Security
+/// 
+/// The JWT secret is loaded from the `DMSC_JWT_SECRET` environment variable. If not set,
+/// a cryptographically secure random secret is generated automatically.
+/// 
+/// **Important**: For production environments, always set the `DMSC_JWT_SECRET` environment
+/// variable to a strong, unique value. Do not rely on auto-generated secrets in production.
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 #[derive(Debug, Clone)]
 #[derive(Deserialize)]
@@ -146,20 +187,10 @@ pub struct DMSCAuthConfig {
 }
 
 impl Default for DMSCAuthConfig {
-    /// Returns the default configuration for authentication.
-    /// 
-    /// Default values:
-    /// - enabled: true
-    /// - jwt_secret: "default-secret-change-in-production"
-    /// - jwt_expiry_secs: 3600 (1 hour)
-    /// - session_timeout_secs: 86400 (24 hours)
-    /// - oauth_providers: empty vector
-    /// - enable_api_keys: true
-    /// - enable_session_auth: true
     fn default() -> Self {
         Self {
             enabled: true,
-            jwt_secret: "default-secret-change-in-production".to_string(),
+            jwt_secret: load_jwt_secret_from_env(),
             jwt_expiry_secs: 3600,
             session_timeout_secs: 86400,
             oauth_providers: vec![],
@@ -185,6 +216,8 @@ pub struct DMSCAuthModule {
     permission_manager: Arc<RwLock<DMSCPermissionManager>>,
     /// OAuth manager for OAuth provider integration, protected by a RwLock for thread-safe access
     oauth_manager: Arc<RwLock<DMSCOAuthManager>>,
+    /// JWT token revocation list for token invalidation
+    revocation_list: Arc<JWTRevocationList>,
 }
 
 impl DMSCAuthModule {
@@ -207,6 +240,7 @@ impl DMSCAuthModule {
         let permission_manager = Arc::new(RwLock::new(DMSCPermissionManager::new()));
         let cache = Arc::new(crate::cache::DMSCMemoryCache::new());
         let oauth_manager = Arc::new(RwLock::new(DMSCOAuthManager::new(cache)));
+        let revocation_list = Arc::new(JWTRevocationList::new());
 
         Self {
             config,
@@ -214,6 +248,7 @@ impl DMSCAuthModule {
             session_manager,
             permission_manager,
             oauth_manager,
+            revocation_list,
         }
     }
 
@@ -235,6 +270,7 @@ impl DMSCAuthModule {
         let permission_manager = Arc::new(RwLock::new(DMSCPermissionManager::new_async().await));
         let cache = Arc::new(crate::cache::DMSCMemoryCache::new());
         let oauth_manager = Arc::new(RwLock::new(DMSCOAuthManager::new(cache)));
+        let revocation_list = Arc::new(JWTRevocationList::new());
 
         Self {
             config,
@@ -242,7 +278,17 @@ impl DMSCAuthModule {
             session_manager,
             permission_manager,
             oauth_manager,
+            revocation_list,
         }
+    }
+
+    /// Returns a reference to the JWT revocation list.
+    /// 
+    /// # Returns
+    /// 
+    /// An Arc<JWTRevocationList> providing thread-safe access to the token revocation list
+    pub fn revocation_list(&self) -> Arc<JWTRevocationList> {
+        self.revocation_list.clone()
     }
 
     /// Returns a reference to the JWT manager.
@@ -405,21 +451,21 @@ impl crate::core::DMSCModule for DMSCAuthModule {
         // Initialize OAuth providers if configured
         if !self.config.oauth_providers.is_empty() {
             for provider_name in &self.config.oauth_providers {
-                // Initialize OAuth provider with default configuration
-                // In production, this would load provider-specific configuration from secure storage
+                let client_id = load_oauth_env_var(provider_name, "CLIENT_ID");
+                let client_secret = load_oauth_env_var(provider_name, "CLIENT_SECRET");
+                
                 let provider_config = crate::auth::oauth::DMSCOAuthProvider {
                     id: provider_name.clone(),
                     name: provider_name.clone(),
-                    client_id: format!("{provider_name}_client_id"),
-                    client_secret: format!("{provider_name}_client_secret"),
-                    auth_url: format!("https://{provider_name}.com/oauth/authorize"),
-                    token_url: format!("https://{provider_name}.com/oauth/token"),
-                    user_info_url: format!("https://{provider_name}.com/oauth/userinfo"),
+                    client_id: if !client_id.is_empty() { client_id } else { DEFAULT_OAUTH_CLIENT_ID.to_string() },
+                    client_secret: if !client_secret.is_empty() { client_secret } else { DEFAULT_OAUTH_CLIENT_SECRET.to_string() },
+                    auth_url: get_oauth_url(provider_name, "authorize"),
+                    token_url: get_oauth_url(provider_name, "token"),
+                    user_info_url: get_oauth_url(provider_name, "userinfo"),
                     scopes: vec!["openid".to_string(), "profile".to_string(), "email".to_string()],
                     enabled: true,
                 };
                 
-                // Register the OAuth provider
                 let oauth_mgr = self.oauth_manager.write().await;
                 oauth_mgr.register_provider(provider_config).await?;
                 log::info!("OAuth provider registered: {provider_name}");

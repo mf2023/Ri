@@ -63,7 +63,13 @@
 use std::collections::HashMap;
 use std::fs;
 use std::path::{Path, PathBuf};
+use std::sync::Arc;
 use yaml_rust::{YamlLoader, Yaml};
+
+#[cfg(feature = "pyo3")]
+use crate::hooks::DMSCHookKind;
+#[cfg(feature = "pyo3")]
+use crate::core::DMSCServiceContext;
 
 /// Basic configuration storage with typed access methods.
 /// 
@@ -162,6 +168,21 @@ impl DMSCConfig {
         self.values.get(key).and_then(|s| s.trim().parse::<i64>().ok())
     }
 
+    /// Gets a configuration value as a 64-bit signed integer with bounds checking.
+    /// 
+    /// # Parameters
+    /// 
+    /// - `key`: The configuration key to look up
+    /// - `min`: Minimum allowed value
+    /// - `max`: Maximum allowed value
+    /// 
+    /// # Returns
+    /// 
+    /// An `Option<i64>` containing the parsed and validated integer value
+    pub fn get_i64_with_bounds(&self, key: &str, min: i64, max: i64) -> Option<i64> {
+        self.get_i64(key).filter(|&v| v >= min && v <= max)
+    }
+
     /// Gets a configuration value as a 64-bit unsigned integer.
     /// 
     /// # Parameters
@@ -175,6 +196,47 @@ impl DMSCConfig {
         self.values.get(key).and_then(|s| s.trim().parse::<u64>().ok())
     }
 
+    /// Gets a configuration value as a 64-bit unsigned integer with bounds checking.
+    /// 
+    /// # Parameters
+    /// 
+    /// - `key`: The configuration key to look up
+    /// - `min`: Minimum allowed value (default: 0)
+    /// - `max`: Maximum allowed value
+    /// 
+    /// # Returns
+    /// 
+    /// An `Option<u64>` containing the parsed and validated integer value
+    pub fn get_u64_with_bounds(&self, key: &str, min: u64, max: u64) -> Option<u64> {
+        self.get_u64(key).filter(|&v| v >= min && v <= max)
+    }
+
+    /// Gets a configuration value as a positive 64-bit unsigned integer (must be > 0).
+    /// 
+    /// # Parameters
+    /// 
+    /// - `key`: The configuration key to look up
+    /// 
+    /// # Returns
+    /// 
+    /// An `Option<u64>` containing the positive integer value
+    pub fn get_positive_u64(&self, key: &str) -> Option<u64> {
+        self.get_u64(key).filter(|&v| v > 0)
+    }
+
+    /// Gets a configuration value as a port number (1-65535).
+    /// 
+    /// # Parameters
+    /// 
+    /// - `key`: The configuration key to look up
+    /// 
+    /// # Returns
+    /// 
+    /// An `Option<u16>` containing the valid port number
+    pub fn get_port(&self, key: &str) -> Option<u16> {
+        self.get_u64_with_bounds(key, 1, 65535).map(|v| v as u16)
+    }
+
     /// Gets a configuration value as a 32-bit floating point number.
     /// 
     /// # Parameters
@@ -186,6 +248,47 @@ impl DMSCConfig {
     /// An `Option<f32>` containing the parsed float value if the key exists and can be parsed
     pub fn get_f32(&self, key: &str) -> Option<f32> {
         self.values.get(key).and_then(|s| s.trim().parse::<f32>().ok())
+    }
+
+    /// Gets a configuration value as a 32-bit floating point number with bounds checking.
+    /// 
+    /// # Parameters
+    /// 
+    /// - `key`: The configuration key to look up
+    /// - `min`: Minimum allowed value
+    /// - `max`: Maximum allowed value
+    /// 
+    /// # Returns
+    /// 
+    /// An `Option<f32>` containing the parsed and validated float value
+    pub fn get_f32_with_bounds(&self, key: &str, min: f32, max: f32) -> Option<f32> {
+        self.get_f32(key).filter(|&v| v >= min && v <= max)
+    }
+
+    /// Gets a configuration value as a percentage (0.0-100.0).
+    /// 
+    /// # Parameters
+    /// 
+    /// - `key`: The configuration key to look up
+    /// 
+    /// # Returns
+    /// 
+    /// An `Option<f32>` containing the percentage value
+    pub fn get_percentage(&self, key: &str) -> Option<f32> {
+        self.get_f32_with_bounds(key, 0.0, 100.0)
+    }
+
+    /// Gets a configuration value as a rate (0.0-1.0).
+    /// 
+    /// # Parameters
+    /// 
+    /// - `key`: The configuration key to look up
+    /// 
+    /// # Returns
+    /// 
+    /// An `Option<f32>` containing the rate value
+    pub fn get_rate(&self, key: &str) -> Option<f32> {
+        self.get_f32_with_bounds(key, 0.0, 1.0)
     }
 
     /// Merges another configuration into this one.
@@ -207,6 +310,92 @@ impl DMSCConfig {
     pub fn clear(&mut self) {
         self.values.clear();
     }
+
+    pub fn get_or_default<T>(&self, key: &str, default: T) -> T 
+    where
+        T: std::str::FromStr,
+        T::Err: std::fmt::Debug,
+    {
+        self.values.get(key).and_then(|s| s.trim().parse::<T>().ok()).unwrap_or(default)
+    }
+
+    pub fn get_f64(&self, key: &str) -> Option<f64> {
+        self.values.get(key).and_then(|s| s.trim().parse::<f64>().ok())
+    }
+
+    pub fn get_usize(&self, key: &str) -> Option<usize> {
+        self.values.get(key).and_then(|s| s.trim().parse::<usize>().ok())
+    }
+
+    pub fn get_i32(&self, key: &str) -> Option<i32> {
+        self.values.get(key).and_then(|s| s.trim().parse::<i32>().ok())
+    }
+
+    pub fn get_u32(&self, key: &str) -> Option<u32> {
+        self.values.get(key).and_then(|s| s.trim().parse::<u32>().ok())
+    }
+
+    /// Gets a configuration value as a 32-bit unsigned integer with bounds checking.
+    /// 
+    /// # Parameters
+    /// 
+    /// - `key`: The configuration key to look up
+    /// - `min`: Minimum allowed value
+    /// - `max`: Maximum allowed value
+    /// 
+    /// # Returns
+    /// 
+    /// An `Option<u32>` containing the parsed and validated integer value
+    pub fn get_u32_with_bounds(&self, key: &str, min: u32, max: u32) -> Option<u32> {
+        self.get_u32(key).filter(|&v| v >= min && v <= max)
+    }
+
+    /// Gets a configuration value as a timeout value in seconds (1-86400).
+    /// 
+    /// # Parameters
+    /// 
+    /// - `key`: The configuration key to look up
+    /// 
+    /// # Returns
+    /// 
+    /// An `Option<u32>` containing the timeout in seconds
+    pub fn get_timeout_secs(&self, key: &str) -> Option<u32> {
+        self.get_u32_with_bounds(key, 1, 86400)
+    }
+
+    /// Gets a configuration value as a retry count (0-100).
+    /// 
+    /// # Parameters
+    /// 
+    /// - `key`: The configuration key to look up
+    /// 
+    /// # Returns
+    /// 
+    /// An `Option<u32>` containing the retry count
+    pub fn get_retry_count(&self, key: &str) -> Option<u32> {
+        self.get_u32_with_bounds(key, 0, 100)
+    }
+
+    pub fn keys(&self) -> Vec<&str> {
+        self.values.keys().map(|s| s.as_str()).collect()
+    }
+
+    pub fn all_values(&self) -> Vec<&str> {
+        self.values.values().map(|s| s.as_str()).collect()
+    }
+
+    pub fn has_key(&self, key: &str) -> bool {
+        self.values.contains_key(key)
+    }
+
+    pub fn count(&self) -> usize {
+        self.values.len()
+    }
+
+    #[cfg(feature = "pyo3")]
+    pub fn is_empty(&self) -> bool {
+        self.values.is_empty()
+    }
 }
 
 #[cfg(feature = "pyo3")]
@@ -226,6 +415,36 @@ impl DMSCConfig {
     #[pyo3(name = "get")]
     fn get_impl(&self, key: String) -> Option<String> {
         self.get(&key).cloned()
+    }
+    
+    #[pyo3(name = "get_f64")]
+    fn get_f64_impl(&self, key: String) -> Option<f64> {
+        self.get_f64(&key)
+    }
+    
+    #[pyo3(name = "get_usize")]
+    fn get_usize_impl(&self, key: String) -> Option<usize> {
+        self.get_usize(&key)
+    }
+    
+    #[pyo3(name = "keys")]
+    fn py_keys(&self) -> Vec<String> {
+        self.keys().iter().map(|s| s.to_string()).collect()
+    }
+    
+    #[pyo3(name = "values")]
+    fn py_values(&self) -> Vec<String> {
+        self.all_values().iter().map(|s| s.to_string()).collect()
+    }
+    
+    #[pyo3(name = "contains")]
+    fn py_contains(&self, key: String) -> bool {
+        self.has_key(&key)
+    }
+    
+    #[pyo3(name = "len")]
+    fn py_len(&self) -> usize {
+        self.count()
     }
 }
 
@@ -253,6 +472,9 @@ pub struct DMSCConfigManager {
     config: DMSCConfig,
     /// List of configuration sources to load from
     sources: Vec<DMSCConfigSource>,
+    /// Optional hook bus for emitting config reload events
+    #[cfg(feature = "pyo3")]
+    hooks: Option<Arc<crate::hooks::DMSCHookBus>>,
 }
 
 impl Default for DMSCConfigManager {
@@ -269,6 +491,28 @@ impl DMSCConfigManager {
         DMSCConfigManager {
             config: DMSCConfig::new(),
             sources: Vec::new(),
+            #[cfg(feature = "pyo3")]
+            hooks: None,
+        }
+    }
+
+    /// Creates a new configuration manager with the provided hook bus.
+    /// 
+    /// This method allows the config manager to emit hooks when configuration is reloaded.
+    /// 
+    /// # Parameters
+    /// 
+    /// - `hooks`: The hook bus to use for emitting events
+    /// 
+    /// # Returns
+    /// 
+    /// A new `DMSCConfigManager` instance with the provided hook bus
+    #[cfg(feature = "pyo3")]
+    pub fn with_hooks(hooks: Arc<crate::hooks::DMSCHookBus>) -> Self {
+        DMSCConfigManager {
+            config: DMSCConfig::new(),
+            sources: Vec::new(),
+            hooks: Some(hooks),
         }
     }
 
@@ -292,6 +536,27 @@ impl DMSCConfigManager {
         self.sources.push(DMSCConfigSource::Environment);
     }
 
+    /// Notifies registered hooks when configuration is reloaded.
+    #[cfg(feature = "pyo3")]
+    fn notify_config_reload(&self, _path: &str) {
+        if let Some(hooks) = &self.hooks {
+            let _ = hooks.emit_with(
+                &DMSCHookKind::ConfigReload,
+                &DMSCServiceContext::new_default().unwrap_or_else(|_| {
+                    DMSCServiceContext::new_with(
+                        crate::fs::DMSCFileSystem::new_auto_root().unwrap_or_else(|_| crate::fs::DMSCFileSystem::new_with_root(std::env::current_dir().unwrap_or_default())),
+                        crate::log::DMSCLogger::new(&crate::log::DMSCLogConfig::default(), crate::fs::DMSCFileSystem::new_with_root(std::env::current_dir().unwrap_or_default())),
+                        crate::config::DMSCConfigManager::new(),
+                        crate::hooks::DMSCHookBus::new(),
+                        None,
+                    )
+                }),
+                Some("config_manager"),
+                None,
+            );
+        }
+    }
+
     /// Loads configuration from all registered sources.
     /// 
     /// This method loads configuration from all registered sources in the order they were added,
@@ -307,6 +572,8 @@ impl DMSCConfigManager {
             match source {
                 DMSCConfigSource::File(path) => {
                     self.load_file(path, &mut cfg)?;
+                    #[cfg(feature = "pyo3")]
+                    self.notify_config_reload(path.to_str().unwrap_or(""));
                 }
                 DMSCConfigSource::Environment => {
                     self.load_environment(&mut cfg);
@@ -686,5 +953,195 @@ impl DMSCConfigManager {
     #[pyo3(name = "get")]
     fn get_config_impl(&self, key: String) -> Option<String> {
         self.config().get(&key).cloned()
+    }
+}
+
+#[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
+#[derive(Clone, Debug)]
+pub struct DMSCConfigValidator {
+    required_keys: Vec<String>,
+    port_keys: Vec<String>,
+    timeout_keys: Vec<String>,
+    secret_keys: Vec<String>,
+    url_keys: Vec<String>,
+    positive_int_keys: Vec<String>,
+}
+
+impl Default for DMSCConfigValidator {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl DMSCConfigValidator {
+    pub fn new() -> Self {
+        DMSCConfigValidator {
+            required_keys: Vec::new(),
+            port_keys: vec!["server.port".to_string(), "cache.redis.port".to_string(), "database.port".to_string()],
+            timeout_keys: vec!["server.timeout".to_string(), "cache.ttl".to_string(), "session.timeout".to_string()],
+            secret_keys: vec!["auth.jwt.secret".to_string(), "auth.password.salt".to_string(), "encryption.key".to_string()],
+            url_keys: vec!["database.url".to_string(), "cache.redis.url".to_string(), "mq.url".to_string()],
+            positive_int_keys: vec!["pool.size".to_string(), "worker.count".to_string(), "retry.max".to_string()],
+        }
+    }
+
+    pub fn add_required(&mut self, key: String) -> &mut Self {
+        self.required_keys.push(key);
+        self
+    }
+
+    pub fn add_port_check(&mut self, key: String) -> &mut Self {
+        self.port_keys.push(key);
+        self
+    }
+
+    pub fn add_timeout_check(&mut self, key: String) -> &mut Self {
+        self.timeout_keys.push(key);
+        self
+    }
+
+    pub fn add_secret_check(&mut self, key: String) -> &mut Self {
+        self.secret_keys.push(key);
+        self
+    }
+
+    pub fn add_url_check(&mut self, key: String) -> &mut Self {
+        self.url_keys.push(key);
+        self
+    }
+
+    pub fn add_positive_int_check(&mut self, key: String) -> &mut Self {
+        self.positive_int_keys.push(key);
+        self
+    }
+
+    pub fn validate_config(&self, config: &DMSCConfig) -> Result<(), crate::core::DMSCError> {
+        for key in &self.required_keys {
+            if !config.has_key(key) {
+                return Err(crate::core::DMSCError::Config(format!(
+                    "Missing required configuration key: {}", key
+                )));
+            }
+        }
+
+        for key in &self.port_keys {
+            if let Some(port) = config.get_port(key) {
+                if port == 0 {
+                    return Err(crate::core::DMSCError::Config(format!(
+                        "Invalid port number for {}: must be between 1 and 65535", key
+                    )));
+                }
+            }
+        }
+
+        for key in &self.timeout_keys {
+            if let Some(timeout) = config.get_timeout_secs(key) {
+                if timeout == 0 {
+                    return Err(crate::core::DMSCError::Config(format!(
+                        "Invalid timeout for {}: must be between 1 and 86400 seconds", key
+                    )));
+                }
+            }
+        }
+
+        for key in &self.secret_keys {
+            if let Some(secret) = config.get_str(key) {
+                if secret.len() < 8 {
+                    return Err(crate::core::DMSCError::Config(format!(
+                        "Secret key {} is too short: minimum length is 8 characters", key
+                    )));
+                }
+                if secret == "secret" || secret == "password" || secret == "123456" {
+                    return Err(crate::core::DMSCError::Config(format!(
+                        "Insecure secret key detected for {}: using default or weak value", key
+                    )));
+                }
+            }
+        }
+
+        for key in &self.url_keys {
+            if let Some(url) = config.get_str(key) {
+                if !url.starts_with("http://") && !url.starts_with("https://")
+                    && !url.starts_with("redis://") && !url.starts_with("postgresql://")
+                    && !url.starts_with("mysql://") && !url.starts_with("amqp://")
+                    && !url.starts_with("kafka://") && !url.starts_with("sqlite://")
+                {
+                    return Err(crate::core::DMSCError::Config(format!(
+                        "Invalid URL format for {}: {}", key, url
+                    )));
+                }
+            }
+        }
+
+        for key in &self.positive_int_keys {
+            if let Some(value) = config.get_u32(key) {
+                if value == 0 {
+                    return Err(crate::core::DMSCError::Config(format!(
+                        "Invalid value for {}: must be a positive integer", key
+                    )));
+                }
+            }
+        }
+
+        Ok(())
+    }
+
+    pub fn validate_with_requirements(
+        &self,
+        config: &DMSCConfig,
+        requirements: &[String],
+    ) -> Result<(), crate::core::DMSCError> {
+        for key in requirements {
+            if !config.has_key(key) {
+                return Err(crate::core::DMSCError::Config(format!(
+                    "Missing required configuration key: {}", key
+                )));
+            }
+        }
+        self.validate_config(config)
+    }
+}
+
+#[cfg(feature = "pyo3")]
+#[pyo3::prelude::pymethods]
+impl DMSCConfigValidator {
+    #[new]
+    fn py_new() -> Self {
+        Self::new()
+    }
+
+    #[pyo3(name = "require")]
+    fn py_add_required(&mut self, key: String) {
+        self.required_keys.push(key);
+    }
+
+    #[pyo3(name = "require_port")]
+    fn py_add_port_check(&mut self, key: String) {
+        self.port_keys.push(key);
+    }
+
+    #[pyo3(name = "require_timeout")]
+    fn py_add_timeout_check(&mut self, key: String) {
+        self.timeout_keys.push(key);
+    }
+
+    #[pyo3(name = "require_secret")]
+    fn py_add_secret_check(&mut self, key: String) {
+        self.secret_keys.push(key);
+    }
+
+    #[pyo3(name = "require_url")]
+    fn py_add_url_check(&mut self, key: String) {
+        self.url_keys.push(key);
+    }
+
+    #[pyo3(name = "require_positive_int")]
+    fn py_add_positive_int_check(&mut self, key: String) {
+        self.positive_int_keys.push(key);
+    }
+
+    #[pyo3(name = "validate")]
+    fn py_validate(&self, config: &DMSCConfig) -> bool {
+        self.validate_config(config).is_ok()
     }
 }

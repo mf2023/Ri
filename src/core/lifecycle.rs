@@ -4,7 +4,7 @@
 //! The DMSC project belongs to the Dunimd Team.
 //!
 //! Licensed under the Apache License, Version 2.0 (the "License");
-//! You may not use this file except in compliance with the License.
+//! you may not use this file except in compliance with the License.
 //! You may obtain a copy of the License at
 //!
 //!     http://www.apache.org/licenses/LICENSE-2.0
@@ -92,13 +92,20 @@ impl ServiceModule for DMSCLifecycleObserver {
     /// A `DMSCResult` indicating success or failure
     fn init(&mut self, ctx: &mut DMSCServiceContext) -> DMSCResult<()> {
         let hooks: &mut DMSCHookBus = ctx.hooks_mut();
+        let all_kinds = [
+            DMSCHookKind::Startup,
+            DMSCHookKind::Shutdown,
+            DMSCHookKind::BeforeModulesInit,
+            DMSCHookKind::AfterModulesInit,
+            DMSCHookKind::BeforeModulesStart,
+            DMSCHookKind::AfterModulesStart,
+            DMSCHookKind::BeforeModulesShutdown,
+            DMSCHookKind::AfterModulesShutdown,
+            DMSCHookKind::ConfigReload,
+        ];
 
-        // Register handler for Startup events
-        hooks.register(DMSCHookKind::Startup, "dms.lifecycle.startup".to_string(), |_ctx, event: &DMSCHookEvent| {
-            let logger = _ctx.logger();
-            let module = event.module.as_deref().unwrap_or("-");
-            let phase = event.phase.map(|p| p.as_str()).unwrap_or("-");
-            let kind = match event.kind {
+        for &kind in &all_kinds {
+            let kind_str = match kind {
                 DMSCHookKind::Startup => "Startup",
                 DMSCHookKind::Shutdown => "Shutdown",
                 DMSCHookKind::BeforeModulesInit => "BeforeModulesInit",
@@ -107,151 +114,19 @@ impl ServiceModule for DMSCLifecycleObserver {
                 DMSCHookKind::AfterModulesStart => "AfterModulesStart",
                 DMSCHookKind::BeforeModulesShutdown => "BeforeModulesShutdown",
                 DMSCHookKind::AfterModulesShutdown => "AfterModulesShutdown",
+                DMSCHookKind::ConfigReload => "ConfigReload",
             };
-            let message = format!("kind={kind} module={module} phase={phase}");
-            let _ = logger.info("DMSC.Lifecycle", message);
-            Ok(())
-        });
-
-        // Register handler for Shutdown events
-        hooks.register(DMSCHookKind::Shutdown, "dms.lifecycle.shutdown".to_string(), |_ctx, event: &DMSCHookEvent| {
-            let logger = _ctx.logger();
-            let module = event.module.as_deref().unwrap_or("-");
-            let phase = event.phase.map(|p| p.as_str()).unwrap_or("-");
-            let kind = match event.kind {
-                DMSCHookKind::Startup => "Startup",
-                DMSCHookKind::Shutdown => "Shutdown",
-                DMSCHookKind::BeforeModulesInit => "BeforeModulesInit",
-                DMSCHookKind::AfterModulesInit => "AfterModulesInit",
-                DMSCHookKind::BeforeModulesStart => "BeforeModulesStart",
-                DMSCHookKind::AfterModulesStart => "AfterModulesStart",
-                DMSCHookKind::BeforeModulesShutdown => "BeforeModulesShutdown",
-                DMSCHookKind::AfterModulesShutdown => "AfterModulesShutdown",
-            };
-            let message = format!("kind={kind} module={module} phase={phase}");
-            let _ = logger.info("DMSC.Lifecycle", message);
-            Ok(())
-        });
-
-        // Register handler for BeforeModulesInit events
-        hooks.register(DMSCHookKind::BeforeModulesInit, "dms.lifecycle.before_init".to_string(), |_ctx, event: &DMSCHookEvent| {
-            let logger = _ctx.logger();
-            let module = event.module.as_deref().unwrap_or("-");
-            let phase = event.phase.map(|p| p.as_str()).unwrap_or("-");
-            let kind = match event.kind {
-                DMSCHookKind::Startup => "Startup",
-                DMSCHookKind::Shutdown => "Shutdown",
-                DMSCHookKind::BeforeModulesInit => "BeforeModulesInit",
-                DMSCHookKind::AfterModulesInit => "AfterModulesInit",
-                DMSCHookKind::BeforeModulesStart => "BeforeModulesStart",
-                DMSCHookKind::AfterModulesStart => "AfterModulesStart",
-                DMSCHookKind::BeforeModulesShutdown => "BeforeModulesShutdown",
-                DMSCHookKind::AfterModulesShutdown => "AfterModulesShutdown",
-            };
-            let message = format!("kind={kind} module={module} phase={phase}");
-            let _ = logger.info("DMSC.Lifecycle", message);
-            Ok(())
-        });
-
-        // Register handler for AfterModulesInit events
-        hooks.register(DMSCHookKind::AfterModulesInit, "dms.lifecycle.after_init".to_string(), |_ctx, event: &DMSCHookEvent| {
-            let logger = _ctx.logger();
-            let module = event.module.as_deref().unwrap_or("-");
-            let phase = event.phase.map(|p| p.as_str()).unwrap_or("-");
-            let kind = match event.kind {
-                DMSCHookKind::Startup => "Startup",
-                DMSCHookKind::Shutdown => "Shutdown",
-                DMSCHookKind::BeforeModulesInit => "BeforeModulesInit",
-                DMSCHookKind::AfterModulesInit => "AfterModulesInit",
-                DMSCHookKind::BeforeModulesStart => "BeforeModulesStart",
-                DMSCHookKind::AfterModulesStart => "AfterModulesStart",
-                DMSCHookKind::BeforeModulesShutdown => "BeforeModulesShutdown",
-                DMSCHookKind::AfterModulesShutdown => "AfterModulesShutdown",
-            };
-            let message = format!("kind={kind} module={module} phase={phase}");
-            let _ = logger.info("DMSC.Lifecycle", message);
-            Ok(())
-        });
-
-        // Register handler for BeforeModulesStart events
-        hooks.register(DMSCHookKind::BeforeModulesStart, "dms.lifecycle.before_start".to_string(), |_ctx, event: &DMSCHookEvent| {
-            let logger = _ctx.logger();
-            let module = event.module.as_deref().unwrap_or("-");
-            let phase = event.phase.map(|p| p.as_str()).unwrap_or("-");
-            let kind = match event.kind {
-                DMSCHookKind::Startup => "Startup",
-                DMSCHookKind::Shutdown => "Shutdown",
-                DMSCHookKind::BeforeModulesInit => "BeforeModulesInit",
-                DMSCHookKind::AfterModulesInit => "AfterModulesInit",
-                DMSCHookKind::BeforeModulesStart => "BeforeModulesStart",
-                DMSCHookKind::AfterModulesStart => "AfterModulesStart",
-                DMSCHookKind::BeforeModulesShutdown => "BeforeModulesShutdown",
-                DMSCHookKind::AfterModulesShutdown => "AfterModulesShutdown",
-            };
-            let message = format!("kind={kind} module={module} phase={phase}");
-            let _ = logger.info("DMSC.Lifecycle", message);
-            Ok(())
-        });
-
-        // Register handler for AfterModulesStart events
-        hooks.register(DMSCHookKind::AfterModulesStart, "dms.lifecycle.after_start".to_string(), |_ctx, event: &DMSCHookEvent| {
-            let logger = _ctx.logger();
-            let module = event.module.as_deref().unwrap_or("-");
-            let phase = event.phase.map(|p| p.as_str()).unwrap_or("-");
-            let kind = match event.kind {
-                DMSCHookKind::Startup => "Startup",
-                DMSCHookKind::Shutdown => "Shutdown",
-                DMSCHookKind::BeforeModulesInit => "BeforeModulesInit",
-                DMSCHookKind::AfterModulesInit => "AfterModulesInit",
-                DMSCHookKind::BeforeModulesStart => "BeforeModulesStart",
-                DMSCHookKind::AfterModulesStart => "AfterModulesStart",
-                DMSCHookKind::BeforeModulesShutdown => "BeforeModulesShutdown",
-                DMSCHookKind::AfterModulesShutdown => "AfterModulesShutdown",
-            };
-            let message = format!("kind={kind} module={module} phase={phase}");
-            let _ = logger.info("DMSC.Lifecycle", message);
-            Ok(())
-        });
-
-        // Register handler for BeforeModulesShutdown events
-        hooks.register(DMSCHookKind::BeforeModulesShutdown, "dms.lifecycle.before_shutdown".to_string(), |_ctx, event: &DMSCHookEvent| {
-            let logger = _ctx.logger();
-            let module = event.module.as_deref().unwrap_or("-");
-            let phase = event.phase.map(|p| p.as_str()).unwrap_or("-");
-            let kind = match event.kind {
-                DMSCHookKind::Startup => "Startup",
-                DMSCHookKind::Shutdown => "Shutdown",
-                DMSCHookKind::BeforeModulesInit => "BeforeModulesInit",
-                DMSCHookKind::AfterModulesInit => "AfterModulesInit",
-                DMSCHookKind::BeforeModulesStart => "BeforeModulesStart",
-                DMSCHookKind::AfterModulesStart => "AfterModulesStart",
-                DMSCHookKind::BeforeModulesShutdown => "BeforeModulesShutdown",
-                DMSCHookKind::AfterModulesShutdown => "AfterModulesShutdown",
-            };
-            let message = format!("kind={kind} module={module} phase={phase}");
-            let _ = logger.info("DMSC.Lifecycle", message);
-            Ok(())
-        });
-
-        // Register handler for AfterModulesShutdown events
-        hooks.register(DMSCHookKind::AfterModulesShutdown, "dms.lifecycle.after_shutdown".to_string(), |_ctx, event: &DMSCHookEvent| {
-            let logger = _ctx.logger();
-            let module = event.module.as_deref().unwrap_or("-");
-            let phase = event.phase.map(|p| p.as_str()).unwrap_or("-");
-            let kind = match event.kind {
-                DMSCHookKind::Startup => "Startup",
-                DMSCHookKind::Shutdown => "Shutdown",
-                DMSCHookKind::BeforeModulesInit => "BeforeModulesInit",
-                DMSCHookKind::AfterModulesInit => "AfterModulesInit",
-                DMSCHookKind::BeforeModulesStart => "BeforeModulesStart",
-                DMSCHookKind::AfterModulesStart => "AfterModulesStart",
-                DMSCHookKind::BeforeModulesShutdown => "BeforeModulesShutdown",
-                DMSCHookKind::AfterModulesShutdown => "AfterModulesShutdown",
-            };
-            let message = format!("kind={kind} module={module} phase={phase}");
-            let _ = logger.info("DMSC.Lifecycle", message);
-            Ok(())
-        });
+            let handler_name = format!("dms.lifecycle.{}", kind_str.to_lowercase());
+            
+            hooks.register(kind, handler_name, move |_ctx, event: &DMSCHookEvent| {
+                let logger = _ctx.logger();
+                let module = event.module.as_deref().unwrap_or("-");
+                let phase = event.phase.map(|p| p.as_str()).unwrap_or("-");
+                let message = format!("kind={} module={} phase={}", kind_str, module, phase);
+                let _ = logger.info("DMSC.Lifecycle", message);
+                Ok(())
+            });
+        }
 
         Ok(())
     }

@@ -129,12 +129,16 @@ pub mod routing;
 pub mod circuit_breaker;
 pub mod load_balancer;
 pub mod rate_limiter;
+pub mod server;
 
 pub use routing::{DMSCRoute, DMSCRouter};
 pub use middleware::{DMSCMiddleware, DMSCMiddlewareChain};
 pub use load_balancer::{DMSCLoadBalancer, DMSCLoadBalancerStrategy};
 pub use rate_limiter::{DMSCRateLimiter, DMSCRateLimitConfig};
 pub use circuit_breaker::{DMSCCircuitBreaker, DMSCCircuitBreakerConfig};
+
+#[cfg(feature = "gateway")]
+pub use server::{DMSCGatewayServer, load_tls_config};
 
 /// Configuration for the DMSC Gateway.
 /// 
@@ -494,7 +498,7 @@ impl DMSCGateway {
 
         // Apply circuit breaker
         if let Some(circuit_breaker) = &self.circuit_breaker {
-            if !circuit_breaker.allow_request().await {
+            if !circuit_breaker.allow_request() {
                 return DMSCGatewayResponse::new(503, "Service temporarily unavailable".to_string().into_bytes(), request_id);
             }
         }

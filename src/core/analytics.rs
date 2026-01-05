@@ -111,7 +111,7 @@ impl DMSCLogAnalyticsModule {
     /// registers handlers for.
     fn all_kinds() -> &'static [DMSCHookKind] {
         use DMSCHookKind::*;
-        const KINDS: [DMSCHookKind; 8] = [
+        const KINDS: [DMSCHookKind; 9] = [
             Startup,
             Shutdown,
             BeforeModulesInit,
@@ -120,6 +120,7 @@ impl DMSCLogAnalyticsModule {
             AfterModulesStart,
             BeforeModulesShutdown,
             AfterModulesShutdown,
+            ConfigReload,
         ];
         &KINDS
     }
@@ -145,6 +146,7 @@ impl DMSCLogAnalyticsModule {
             DMSCHookKind::AfterModulesStart => "AfterModulesStart",
             DMSCHookKind::BeforeModulesShutdown => "BeforeModulesShutdown",
             DMSCHookKind::AfterModulesShutdown => "AfterModulesShutdown",
+            DMSCHookKind::ConfigReload => "ConfigReload",
         }
     }
 

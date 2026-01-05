@@ -90,6 +90,8 @@ use jsonwebtoken::{decode, encode, DecodingKey, EncodingKey, Header, Validation}
 use serde::{Deserialize, Serialize};
 use std::time::{SystemTime, UNIX_EPOCH};
 
+use crate::core::error::DMSCError;
+
 /// Represents the claims payload in a JWT token.
 ///
 /// This structure contains all the standard and custom claims for a DMSC JWT.
@@ -239,10 +241,10 @@ impl DMSCJWTManager {
         }
     }
     
-    pub fn generate_token(&self, user_id: &str, roles: Vec<String>, permissions: Vec<String>) -> String {
+    pub fn generate_token(&self, user_id: &str, roles: Vec<String>, permissions: Vec<String>) -> Result<String, DMSCError> {
         let now = SystemTime::now()
             .duration_since(UNIX_EPOCH)
-            .unwrap()
+            .map_err(|e| DMSCError::Other(format!("System time error: {}", e)))?
             .as_secs();
 
         let claims = JWTClaims {
@@ -253,12 +255,15 @@ impl DMSCJWTManager {
             permissions,
         };
 
-        encode(&Header::default(), &claims, &self.encoding_key).unwrap()
+        encode(&Header::default(), &claims, &self.encoding_key)
+            .map_err(|e| DMSCError::Other(format!("JWT encoding failed: {}", e)))
     }
     
-    pub fn validate_token(&self, token: &str) -> JWTClaims {
+    pub fn validate_token(&self, token: &str) -> Result<JWTClaims, DMSCError> {
         let validation = Validation::default();
-        decode::<JWTClaims>(token, &self.decoding_key, &validation).unwrap().claims
+        decode::<JWTClaims>(token, &self.decoding_key, &validation)
+            .map_err(|e| DMSCError::Other(format!("JWT decoding failed: {}", e)))
+            .map(|token_data| token_data.claims)
     }
 }
 

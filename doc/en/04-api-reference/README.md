@@ -89,7 +89,7 @@ DMSC API design emphasizes type safety, using strong typing to ensure compile-ti
 
 ```rust
 // Type-safe configuration access
-let port: u16 = ctx.config().get("service.port").unwrap_or(8080);
+let port: u16 = ctx.config().config().get("service.port").unwrap_or(8080);
 ```
 
 <div align="center">

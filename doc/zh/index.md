@@ -128,11 +128,11 @@ from dmsc import DMSCAppBuilder, DMSCLogConfig
 # 构建服务运行时
 app = DMSCAppBuilder() \
     .with_config("config.yaml") \
-    .with_logging(DMSCLogConfig.default()) \
+    .with_logging(DMSCLogConfig()) \
     .build()
 
 # 运行业务逻辑
-app.run(lambda ctx: ctx.logger().info("service", "DMSC service started"))
+app.run(lambda ctx: ctx.logger().info("service", "DMSC service started") or None)
 ```
 
 更多 Python 使用示例，请查看 [Python README](https://gitee.com/dunimd/dmsc/blob/master/python/README.zh.md)。

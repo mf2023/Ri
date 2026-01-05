@@ -89,7 +89,7 @@ DMSC API设计注重类型安全，使用强类型确保编译时检查。
 
 ```rust
 // 类型安全的配置访问
-let port: u16 = ctx.config().get("service.port").unwrap_or(8080);
+let port: u16 = ctx.config().config().get("service.port").unwrap_or(8080);
 ```
 
 <div align="center">

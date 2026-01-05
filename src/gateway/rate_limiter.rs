@@ -81,6 +81,7 @@ use std::time::{Duration, Instant};
 /// 
 /// This struct defines the parameters that control how the rate limiter behaves,
 /// including the steady rate, burst capacity, and window duration.
+#[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 #[derive(Debug, Clone)]
 pub struct DMSCRateLimitConfig {
     /// Maximum number of requests allowed per second in steady state
@@ -91,6 +92,48 @@ pub struct DMSCRateLimitConfig {
     
     /// Duration of the rate limiting window in seconds
     pub window_seconds: u64,
+}
+
+#[cfg(feature = "pyo3")]
+#[pyo3::prelude::pymethods]
+impl DMSCRateLimitConfig {
+    #[new]
+    fn py_new() -> Self {
+        Self::default()
+    }
+    
+    #[staticmethod]
+    fn py_new_with_values(requests_per_second: u32, burst_size: u32, window_seconds: u64) -> Self {
+        Self {
+            requests_per_second,
+            burst_size,
+            window_seconds,
+        }
+    }
+    
+    fn get_requests_per_second(&self) -> u32 {
+        self.requests_per_second
+    }
+    
+    fn set_requests_per_second(&mut self, value: u32) {
+        self.requests_per_second = value;
+    }
+    
+    fn get_burst_size(&self) -> u32 {
+        self.burst_size
+    }
+    
+    fn set_burst_size(&mut self, value: u32) {
+        self.burst_size = value;
+    }
+    
+    fn get_window_seconds(&self) -> u64 {
+        self.window_seconds
+    }
+    
+    fn set_window_seconds(&mut self, value: u64) {
+        self.window_seconds = value;
+    }
 }
 
 impl Default for DMSCRateLimitConfig {
@@ -199,6 +242,7 @@ impl RateLimitBucket {
 /// 
 /// This struct contains metrics about a rate limiter bucket, including the current
 /// number of available tokens and the total number of requests processed.
+#[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 #[derive(Debug, Clone)]
 pub struct RateLimitStats {
     /// Current number of available tokens in the bucket
@@ -208,10 +252,31 @@ pub struct RateLimitStats {
     pub total_requests: usize,
 }
 
+#[cfg(feature = "pyo3")]
+#[pyo3::prelude::pymethods]
+impl RateLimitStats {
+    #[new]
+    fn py_new(current_tokens: usize, total_requests: usize) -> Self {
+        Self {
+            current_tokens,
+            total_requests,
+        }
+    }
+    
+    fn get_current_tokens(&self) -> usize {
+        self.current_tokens
+    }
+    
+    fn get_total_requests(&self) -> usize {
+        self.total_requests
+    }
+}
+
 /// Token bucket based rate limiter implementation.
 /// 
 /// This struct implements the token bucket algorithm for rate limiting, allowing
 /// for both steady-state rate limiting and temporary bursts of requests.
+#[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 pub struct DMSCRateLimiter {
     /// Configuration for rate limiting behavior
     config: DMSCRateLimitConfig,
@@ -251,7 +316,7 @@ impl DMSCRateLimiter {
     pub async fn check_request(&self, request: &crate::gateway::DMSCGatewayRequest) -> bool {
         // Use client IP as the key for rate limiting
         let key = request.remote_addr.clone();
-        self.check_rate_limit(&key, 1).await
+        self.check_rate_limit(&key, 1)
     }
 
     /// Checks if a request with a custom key should be allowed based on rate limiting.
@@ -267,26 +332,26 @@ impl DMSCRateLimiter {
     /// # Returns
     /// 
     /// `true` if the request should be allowed, `false` otherwise
-    pub async fn check_rate_limit(&self, key: &str, tokens: usize) -> bool {
-        let buckets = self.buckets.read().await;
-        
-        if let Some(bucket) = buckets.get(key) {
-            bucket.try_consume(tokens, &self.config).await
-        } else {
-            // Create new bucket
-            drop(buckets);
-            let mut buckets = self.buckets.write().await;
+    pub fn check_rate_limit(&self, key: &str, tokens: usize) -> bool {
+        futures::executor::block_on(async {
+            let buckets = self.buckets.read().await;
             
-            // Check again in case another thread created it
             if let Some(bucket) = buckets.get(key) {
                 bucket.try_consume(tokens, &self.config).await
             } else {
-                let bucket = Arc::new(RateLimitBucket::new(self.config.burst_size as usize));
-                let result = bucket.try_consume(tokens, &self.config).await;
-                buckets.insert(key.to_string(), bucket);
-                result
+                drop(buckets);
+                let mut buckets = self.buckets.write().await;
+                
+                if let Some(bucket) = buckets.get(key) {
+                    bucket.try_consume(tokens, &self.config).await
+                } else {
+                    let bucket = Arc::new(RateLimitBucket::new(self.config.burst_size as usize));
+                    let result = bucket.try_consume(tokens, &self.config).await;
+                    buckets.insert(key.to_string(), bucket);
+                    result
+                }
             }
-        }
+        })
     }
 
     /// Gets rate limit statistics for a specific key.
@@ -298,9 +363,22 @@ impl DMSCRateLimiter {
     /// # Returns
     /// 
     /// An `Option<RateLimitStats>` with the statistics, or `None` if no bucket exists for the key
-    pub async fn get_stats(&self, key: &str) -> Option<RateLimitStats> {
-        let buckets = self.buckets.read().await;
-        buckets.get(key).map(|bucket| bucket.get_stats())
+    pub fn get_stats(&self, key: &str) -> Option<RateLimitStats> {
+        futures::executor::block_on(async {
+            let buckets = self.buckets.read().await;
+            buckets.get(key).map(|bucket| bucket.get_stats())
+        })
+    }
+    
+    /// Gets the remaining tokens for a specific key.
+    pub fn get_remaining(&self, key: &str) -> Option<f64> {
+        futures::executor::block_on(async {
+            let buckets = self.buckets.read().await;
+            buckets.get(key).map(|bucket| {
+                let stats = bucket.get_stats();
+                stats.current_tokens as f64
+            })
+        })
     }
 
     /// Gets rate limit statistics for all keys.
@@ -308,15 +386,17 @@ impl DMSCRateLimiter {
     /// # Returns
     /// 
     /// A `HashMap<String, RateLimitStats>` with statistics for all keys
-    pub async fn get_all_stats(&self) -> HashMap<String, RateLimitStats> {
-        let buckets = self.buckets.read().await;
-        let mut stats = HashMap::new();
-        
-        for (key, bucket) in buckets.iter() {
-            stats.insert(key.clone(), bucket.get_stats());
-        }
-        
-        stats
+    pub fn get_all_stats(&self) -> HashMap<String, RateLimitStats> {
+        futures::executor::block_on(async {
+            let buckets = self.buckets.read().await;
+            let mut stats = HashMap::new();
+            
+            for (key, bucket) in buckets.iter() {
+                stats.insert(key.clone(), bucket.get_stats());
+            }
+            
+            stats
+        })
     }
 
     /// Resets the rate limit bucket for a specific key.
@@ -326,17 +406,21 @@ impl DMSCRateLimiter {
     /// # Parameters
     /// 
     /// - `key`: The key to reset the bucket for
-    pub async fn reset_bucket(&self, key: &str) {
-        let mut buckets = self.buckets.write().await;
-        buckets.remove(key);
+    pub fn reset_bucket(&self, key: &str) {
+        futures::executor::block_on(async {
+            let mut buckets = self.buckets.write().await;
+            buckets.remove(key);
+        })
     }
 
     /// Clears all rate limit buckets.
     /// 
     /// This method removes all buckets, effectively resetting rate limits for all keys.
-    pub async fn clear_all_buckets(&self) {
-        let mut buckets = self.buckets.write().await;
-        buckets.clear();
+    pub fn clear_all_buckets(&self) {
+        futures::executor::block_on(async {
+            let mut buckets = self.buckets.write().await;
+            buckets.clear();
+        })
     }
 
     /// Gets the current rate limit configuration.
@@ -344,8 +428,8 @@ impl DMSCRateLimiter {
     /// # Returns
     /// 
     /// A reference to the current `DMSCRateLimitConfig`
-    pub fn get_config(&self) -> &DMSCRateLimitConfig {
-        &self.config
+    pub fn get_config(&self) -> DMSCRateLimitConfig {
+        self.config.clone()
     }
 
     /// Updates the rate limit configuration.
@@ -358,9 +442,28 @@ impl DMSCRateLimiter {
     pub async fn update_config(&mut self, config: DMSCRateLimitConfig) {
         self.config = config;
         
-        // Reset all buckets with new configuration
         let mut buckets = self.buckets.write().await;
         buckets.clear();
+    }
+
+    pub async fn check_multi(&self, keys: &[String], tokens: usize) -> Vec<bool> {
+        let mut results = Vec::with_capacity(keys.len());
+        for key in keys {
+            results.push(self.check_rate_limit(key, tokens));
+        }
+        results
+    }
+
+    pub async fn get_keys(&self) -> Vec<String> {
+        let buckets = self.buckets.read().await;
+        buckets.keys().cloned().collect()
+    }
+    
+    pub fn bucket_count(&self) -> usize {
+        futures::executor::block_on(async {
+            let buckets = self.buckets.read().await;
+            buckets.len()
+        })
     }
 }
 
@@ -368,6 +471,7 @@ impl DMSCRateLimiter {
 /// 
 /// This struct implements a sliding window rate limiter, which provides more precise
 /// rate limiting by tracking all requests within a sliding time window.
+#[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 pub struct DMSCSlidingWindowRateLimiter {
     /// Maximum number of requests allowed within the window
     max_requests: u32,
@@ -404,20 +508,20 @@ impl DMSCSlidingWindowRateLimiter {
     /// # Returns
     /// 
     /// `true` if the request should be allowed, `false` otherwise
-    pub async fn allow_request(&self) -> bool {
-        let mut requests = self.requests.write().await;
-        let now = Instant::now();
-        
-        // Remove old requests outside the window
-        requests.retain(|&timestamp| now.duration_since(timestamp) < self.window_duration);
-        
-        // Check if we can add a new request
-        if requests.len() < self.max_requests as usize {
-            requests.push(now);
-            true
-        } else {
-            false
-        }
+    pub fn allow_request(&self) -> bool {
+        futures::executor::block_on(async {
+            let mut requests = self.requests.write().await;
+            let now = Instant::now();
+            
+            requests.retain(|&timestamp| now.duration_since(timestamp) < self.window_duration);
+            
+            if requests.len() < self.max_requests as usize {
+                requests.push(now);
+                true
+            } else {
+                false
+            }
+        })
     }
 
     /// Gets the current number of requests within the sliding window.
@@ -428,19 +532,30 @@ impl DMSCSlidingWindowRateLimiter {
     /// # Returns
     /// 
     /// The number of requests within the current window
-    pub async fn get_current_count(&self) -> usize {
-        let mut requests = self.requests.write().await;
-        let now = Instant::now();
-        
-        // Remove old requests outside the window
-        requests.retain(|&timestamp| now.duration_since(timestamp) < self.window_duration);
-        
-        requests.len()
+    pub fn get_current_count(&self) -> usize {
+        futures::executor::block_on(async {
+            let mut requests = self.requests.write().await;
+            let now = Instant::now();
+            
+            requests.retain(|&timestamp| now.duration_since(timestamp) < self.window_duration);
+            
+            requests.len()
+        })
     }
 
     /// Resets the sliding window by clearing all request timestamps.
-    pub async fn reset(&self) {
-        let mut requests = self.requests.write().await;
-        requests.clear();
+    pub fn reset(&self) {
+        futures::executor::block_on(async {
+            let mut requests = self.requests.write().await;
+            requests.clear();
+        })
+    }
+    
+    pub fn get_max_requests(&self) -> u32 {
+        self.max_requests
+    }
+    
+    pub fn get_window_seconds(&self) -> u64 {
+        self.window_duration.as_secs()
     }
 }

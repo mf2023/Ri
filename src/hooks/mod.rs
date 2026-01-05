@@ -99,6 +99,8 @@ pub enum DMSCHookKind {
     BeforeModulesShutdown,
     /// Emitted after modules are shut down
     AfterModulesShutdown,
+    /// Emitted when configuration is reloaded
+    ConfigReload,
 }
 
 /// Module lifecycle phase definition.
@@ -177,6 +179,22 @@ pub struct DMSCHookEvent {
     pub module: Option<String>,
     /// The module phase associated with the event (if any)
     pub phase: Option<DMSCModulePhase>,
+}
+
+impl DMSCHookEvent {
+    /// Creates a new hook event.
+    pub fn new(kind: DMSCHookKind, module: Option<String>, phase: Option<DMSCModulePhase>) -> Self {
+        Self { kind, module, phase }
+    }
+
+    /// Creates a config reload event.
+    pub fn config_reload(_path: String, _timestamp: chrono::DateTime<chrono::Utc>) -> Self {
+        Self { 
+            kind: DMSCHookKind::ConfigReload, 
+            module: Some("config_manager".to_string()), 
+            phase: None,
+        }
+    }
 }
 
 /// Type alias for hook IDs.

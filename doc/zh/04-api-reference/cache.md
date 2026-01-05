@@ -36,7 +36,7 @@ cache模块包含以下子模块：
 | 方法 | 描述 | 参数 | 返回值 |
 |:--------|:-------------|:--------|:--------|
 | `cache_manager()` | 获取缓存管理器 | 无 | `Arc<DMSCCacheManager>` |
-| `backend()` | 获取当前使用的缓存后端类型 | 无 | `DMSCCacheBackend` |
+| `backend()` | 获取当前使用的缓存后端类型 | 无 | `DMSCCacheBackendType` |
 
 #### 使用示例
 
@@ -74,14 +74,13 @@ let count = cache_manager.decrement("counter", 5).await?;
 |:--------|:-------------|:--------|:--------|
 | `get(key)` | 获取缓存值 | `key: &str` | `DMSCResult<Option<String>>` |
 | `set(key, value, ttl)` | 设置缓存值 | `key: &str`, `value: impl Serialize`, `ttl: Option<u64>` | `DMSCResult<()>` |
-| `delete(key)` | 删除缓存 | `key: &str` | `DMSCResult<()>` |
-| `exists(key)` | 检查缓存是否存在 | `key: &str` | `DMSCResult<bool>` |
+| `delete(key)` | 删除缓存 | `key: &str` | `DMSCResult<bool>` |
+| `exists(key)` | 检查缓存是否存在 | `key: &str` | `bool` |
 | `clear()` | 清空所有缓存 | 无 | `DMSCResult<()>` |
-| `keys(pattern)` | 获取匹配的键 | `pattern: &str` | `DMSCResult<Vec<String>>` |
-| `ttl(key)` | 获取缓存过期时间 | `key: &str` | `DMSCResult<Option<u64>>` |
-| `expire(key, ttl)` | 设置缓存过期时间 | `key: &str`, `ttl: u64` | `DMSCResult<()>` |
-| `increment(key, delta)` | 数值递增 | `key: &str`, `delta: i64` | `DMSCResult<i64>` |
-| `decrement(key, delta)` | 数值递减 | `key: &str`, `delta: i64` | `DMSCResult<i64>` |
+| `invalidate_pattern(pattern)` | 按模式失效缓存 | `pattern: &str` | `DMSCResult<()>` |
+| `stats()` | 获取缓存统计 | 无 | `DMSCCacheStats` |
+| `cleanup_expired()` | 清理过期缓存 | 无 | `DMSCResult<usize>` |
+| `get_or_set(key, ttl, factory)` | 获取或设置缓存 | `key: &str`, `ttl: Option<u64>`, `factory: FnOnce() -> Result<T>` | `DMSCResult<T>` |
 
 ### DMSCCacheConfig
 
@@ -113,7 +112,7 @@ let cache_config = DMSCCacheConfig {
 };
 ```
 
-### DMSCCacheBackend
+### DMSCCacheBackendType
 
 缓存后端类型枚举。
 

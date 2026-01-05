@@ -33,3 +33,6 @@ pub use redis_backend::DMSCRedisQueue;
 pub mod kafka_backend;
 #[cfg(all(feature = "kafka", not(windows)))]
 pub use kafka_backend::DMSCKafkaQueue;
+
+#[cfg(all(feature = "kafka", windows))]
+pub mod kafka_windows_stub;

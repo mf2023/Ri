@@ -96,3 +96,6 @@ Thumbs.db
 *.db
 *.sqlite
 *.sqlite3
+
+# Release build output
+/release/

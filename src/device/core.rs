@@ -111,20 +111,6 @@ impl Default for DMSCDeviceControlConfig {
 
 #[cfg(feature = "pyo3")]
 #[pymethods]
-impl DMSCDeviceConfig {
-    #[new]
-    fn py_new() -> Self {
-        Self::default()
-    }
-    
-    #[staticmethod]
-    fn default_config() -> Self {
-        Self::default()
-    }
-}
-
-#[cfg(feature = "pyo3")]
-#[pymethods]
 impl DMSCDeviceControlConfig {
     #[new]
     fn py_new() -> Self {
@@ -182,6 +168,20 @@ impl Default for DMSCDeviceConfig {
             discovery_timeout_secs: 30,
             max_devices_per_type: 100,
         }
+    }
+}
+
+#[cfg(feature = "pyo3")]
+#[pymethods]
+impl DMSCDeviceConfig {
+    #[new]
+    fn py_new() -> Self {
+        Self::default()
+    }
+    
+    #[staticmethod]
+    fn default_config() -> Self {
+        Self::default()
     }
 }
 
@@ -551,15 +551,29 @@ impl DMSCDeviceCapabilities {
     }
     
     #[pyo3(name = "get_compute_units")]
-    fn get_compute_units_impl(&self) -> Option<usize> { self.compute_units }
+    fn get_compute_units_impl(&self) -> Option<usize> { 
+        self.compute_units 
+    }
+    
     #[pyo3(name = "get_memory_gb")]
-    fn get_memory_gb_impl(&self) -> Option<f64> { self.memory_gb }
+    fn get_memory_gb_impl(&self) -> Option<f64> { 
+        self.memory_gb 
+    }
+    
     #[pyo3(name = "get_storage_gb")]
-    fn get_storage_gb_impl(&self) -> Option<f64> { self.storage_gb }
+    fn get_storage_gb_impl(&self) -> Option<f64> { 
+        self.storage_gb 
+    }
+    
     #[pyo3(name = "get_bandwidth_gbps")]
-    fn get_bandwidth_gbps_impl(&self) -> Option<f64> { self.bandwidth_gbps }
+    fn get_bandwidth_gbps_impl(&self) -> Option<f64> { 
+        self.bandwidth_gbps 
+    }
+    
     #[pyo3(name = "get_custom_capabilities")]
-    fn get_custom_capabilities_impl(&self) -> HashMap<String, String> { self.custom_capabilities.clone() }
+    fn get_custom_capabilities_impl(&self) -> HashMap<String, String> { 
+        self.custom_capabilities.clone() 
+    }
     
     #[pyo3(name = "meets_requirements")]
     fn meets_requirements_impl(&self, requirements: &DMSCDeviceCapabilities) -> bool {

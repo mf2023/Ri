@@ -66,6 +66,12 @@ pub mod gateway;
 pub mod service_mesh;
 /// Authentication and authorization mechanisms
 pub mod auth;
+/// Database abstraction layer with multiple backend support
+pub mod database;
+/// Validation utilities for input validation and data sanitization
+pub mod validation;
+/// Inter-module RPC communication for distributed method calls
+pub mod module_rpc;
 
 /// Common re-exports for convenient access to core functionality
 /// 
@@ -75,7 +81,7 @@ pub mod auth;
 /// ## Usage
 /// 
 /// ```rust
-/// use dms::prelude::*;
+/// use dmsc::prelude::*;
 /// 
 /// #[tokio::main]
 /// async fn main() -> DMSCResult<()> {
@@ -174,6 +180,28 @@ pub mod prelude {
     pub use crate::observability::DMSCTracer;
     /// Metrics collection and aggregation
     pub use crate::observability::DMSCMetricsRegistry;
+    
+    /// Database configuration structure
+    pub use crate::database::DMSCDatabaseConfig;
+    /// Database type enum
+    pub use crate::database::DatabaseType;
+    /// Database connection pool
+    pub use crate::database::DMSCDatabasePool;
+    /// Database row representation
+    pub use crate::database::DMSCDBRow;
+    /// Database query result
+    pub use crate::database::DMSCDBResult;
+    
+    /// Inter-module RPC coordinator
+    pub use crate::module_rpc::DMSCModuleRPC;
+    /// RPC client for making method calls
+    pub use crate::module_rpc::DMSCModuleClient;
+    /// RPC endpoint for a module
+    pub use crate::module_rpc::DMSCModuleEndpoint;
+    /// RPC method call request
+    pub use crate::module_rpc::DMSCMethodCall;
+    /// RPC method call response
+    pub use crate::module_rpc::DMSCMethodResponse;
 }
 
 /// Python bindings for DMSC
@@ -233,6 +261,14 @@ pub mod py {
         m.add_class::<crate::gateway::DMSCGatewayConfig>()?;
         m.add_class::<crate::gateway::DMSCRouter>()?;
         m.add_class::<crate::gateway::DMSCRoute>()?;
+        m.add_class::<crate::gateway::rate_limiter::DMSCRateLimiter>()?;
+        m.add_class::<crate::gateway::rate_limiter::DMSCRateLimitConfig>()?;
+        m.add_class::<crate::gateway::rate_limiter::RateLimitStats>()?;
+        m.add_class::<crate::gateway::rate_limiter::DMSCSlidingWindowRateLimiter>()?;
+        m.add_class::<crate::gateway::circuit_breaker::DMSCCircuitBreaker>()?;
+        m.add_class::<crate::gateway::circuit_breaker::DMSCCircuitBreakerConfig>()?;
+        m.add_class::<crate::gateway::circuit_breaker::DMSCCircuitBreakerState>()?;
+        m.add_class::<crate::gateway::circuit_breaker::CircuitBreakerMetrics>()?;
         
         // Add service mesh types to main module
         m.add_class::<crate::service_mesh::DMSCServiceMesh>()?;
@@ -248,6 +284,18 @@ pub mod py {
         m.add_class::<crate::auth::DMSCPermissionManager>()?;
         m.add_class::<crate::auth::DMSCOAuthManager>()?;
         
+        // Add database types to main module
+        m.add_class::<crate::database::DMSCDatabaseConfig>()?;
+        m.add_class::<crate::database::DMSCDBRow>()?;
+        m.add_class::<crate::database::DMSCDBResult>()?;
+        
+        // Add module_rpc types to main module
+        m.add_class::<crate::module_rpc::DMSCModuleRPC>()?;
+        m.add_class::<crate::module_rpc::DMSCModuleClient>()?;
+        m.add_class::<crate::module_rpc::DMSCModuleEndpoint>()?;
+        m.add_class::<crate::module_rpc::DMSCMethodCall>()?;
+        m.add_class::<crate::module_rpc::DMSCMethodResponse>()?;
+        
         // Create and add submodules
         create_log_module(m)?;
         create_config_module(m)?;
@@ -260,6 +308,8 @@ pub mod py {
         create_gateway_module(m)?;
         create_service_mesh_module(m)?;
         create_auth_module(m)?;
+        create_database_module(m)?;
+        create_validation_module(m)?;
         
         Ok(())
     }
@@ -292,6 +342,8 @@ pub mod py {
         m.add_class::<crate::device::DMSCResourceWeights>()?;
         m.add_class::<crate::device::DMSCAffinityRules>()?;
         m.add_class::<crate::device::DMSCResourceAllocation>()?;
+        m.add_class::<crate::device::DMSCDeviceConfig>()?;
+        m.add_class::<crate::device::DMSCDeviceControlConfig>()?;
         
         parent.add_submodule(&m)?;
         Ok(())
@@ -382,6 +434,30 @@ pub mod py {
         m.add_class::<crate::auth::DMSCSessionManager>()?;
         m.add_class::<crate::auth::DMSCPermissionManager>()?;
         m.add_class::<crate::auth::DMSCOAuthManager>()?;
+        parent.add_submodule(&m)?;
+        Ok(())
+    }
+    
+    fn create_database_module(parent: &Bound<'_, PyModule>) -> PyResult<()> {
+        let m = PyModule::new(parent.py(), "database")?;
+        m.add_class::<crate::database::DMSCDatabaseConfig>()?;
+        m.add_class::<crate::database::DMSCDBRow>()?;
+        m.add_class::<crate::database::DMSCDBResult>()?;
+        parent.add_submodule(&m)?;
+        Ok(())
+    }
+    
+    fn create_validation_module(parent: &Bound<'_, PyModule>) -> PyResult<()> {
+        let m = PyModule::new(parent.py(), "validation")?;
+        m.add_class::<crate::validation::DMSCValidationError>()?;
+        m.add_class::<crate::validation::DMSCValidationResult>()?;
+        m.add_class::<crate::validation::DMSCValidationSeverity>()?;
+        m.add_class::<crate::validation::DMSCValidatorBuilder>()?;
+        m.add_class::<crate::validation::DMSCValidationRunner>()?;
+        m.add_class::<crate::validation::DMSCSanitizer>()?;
+        m.add_class::<crate::validation::DMSCSanitizationConfig>()?;
+        m.add_class::<crate::validation::DMSCSchemaValidator>()?;
+        m.add_class::<crate::validation::DMSCValidationModule>()?;
         parent.add_submodule(&m)?;
         Ok(())
     }
