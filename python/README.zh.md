@@ -29,7 +29,7 @@
 <h2 align="center">🏗️ 核心架构</h2>
 
 ### 📐 模块化设计
-DMSC 采用高度模块化的架构，拥有 12 个核心模块，支持按需组合和无缝扩展：
+DMSC 采用高度模块化的架构，拥有 14 个核心模块，支持按需组合和无缝扩展：
 
 <div align="center">
 
@@ -112,7 +112,7 @@ pip install dmsc
 或者添加到您的 `requirements.txt`：
 
 ```
-dmsc==0.1.3
+dmsc==0.1.4
 ```
 
 <h2 align="center">⚡ 快速开始</h2>
@@ -120,17 +120,20 @@ dmsc==0.1.3
 ### 核心 API 使用
 
 ```python
-from dmsc import DMSCAppBuilder, DMSCLogConfig, DMSCObservabilityConfig
+import asyncio
+from dmsc import DMSCAppBuilder, DMSCLogConfig
 
-# 构建服务运行时
-app = DMSCAppBuilder() \
-    .with_config("config.yaml") \
-    .with_logging(DMSCLogConfig()) \
-    .with_observability(DMSCObservabilityConfig()) \
-    .build()
+async def main():
+    # 构建服务运行时
+    app = DMSCAppBuilder() \
+        .with_config("config.yaml") \
+        .with_logging(DMSCLogConfig()) \
+        .build()
+    
+    # 运行业务逻辑
+    await app.run()
 
-# 运行业务逻辑
-app.run(lambda ctx: ctx.logger().info("service", "DMSC service started") or None)
+asyncio.run(main())
 ```
 
 ### 认证示例
@@ -155,11 +158,14 @@ from dmsc import DMSCQueueManager, DMSCQueueConfig
 queue_config = DMSCQueueConfig()
 queue_manager = DMSCQueueManager(queue_config)
 
-# 发送消息
-queue_manager.send_message("my_queue", {"data": "hello"})
+# 先创建队列
+queue_manager.create_queue("my_queue")
 
-# 接收消息
-message = queue_manager.receive_message("my_queue")
+# 使用 push 发送消息
+queue_manager.push("my_queue", {"data": "hello"})
+
+# 使用 pop 接收消息
+message = queue_manager.pop("my_queue")
 ```
 
 ### 服务网格示例
@@ -171,11 +177,13 @@ from dmsc import DMSCServiceMesh, DMSCServiceDiscovery
 service_mesh = DMSCServiceMesh()
 service_discovery = DMSCServiceDiscovery()
 
-# 注册服务
-service_discovery.register_service("user-service", "localhost:8080")
+# 使用 host、port 和元数据注册服务
+instance_id = service_discovery.register_service("user-service", "localhost", 8080, {"version": "1.0.0"})
 
 # 发现服务
-service_info = service_discovery.discover_service("user-service")
+instances = service_discovery.discover_service("user-service")
+for instance in instances:
+    print(f"服务: {instance.service_name}, 主机: {instance.host}, 端口: {instance.port}")
 ```
 
 ### 缓存管理示例

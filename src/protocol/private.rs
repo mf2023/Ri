@@ -82,6 +82,25 @@ use tokio::net::TcpStream;
 use tokio::sync::RwLock;
 use rand::Rng;
 
+/// Connection health status enumeration
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ConnectionHealth {
+    /// Healthy status
+    Healthy,
+    /// Degraded status
+    Degraded,
+    /// Unhealthy status
+    Unhealthy,
+    /// Unknown status
+    Unknown,
+}
+
+impl Default for ConnectionHealth {
+    fn default() -> Self {
+        ConnectionHealth::Unknown
+    }
+}
+
 use crate::core::{DMSCResult, DMSCError};
 use super::{DMSCProtocol, DMSCProtocolConfig, DMSCProtocolType, DMSCProtocolConnection, 
             DMSCProtocolStats, DMSCMessageFlags, DMSCConnectionInfo, DMSCSecurityLevel};

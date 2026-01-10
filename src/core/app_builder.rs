@@ -86,6 +86,10 @@ use super::module_types::{ModuleSlot, ModuleType};
 use super::lifecycle::DMSCLifecycleObserver;
 use super::analytics::DMSCLogAnalyticsModule;
 
+#[cfg(feature = "pyo3")]
+use pyo3::PyResult;
+use crate::core::app_runtime::DMSCAppRuntime;
+
 /// Public-facing application builder for DMSC.
 /// 
 /// The `DMSCAppBuilder` provides a fluent API for configuring and building DMSC applications.
@@ -123,13 +127,13 @@ pub struct DMSCAppBuilder {
     /// Custom observability configuration (optional)
     observability_config: Option<crate::observability::DMSCObservabilityConfig>, 
 }
-
+ 
 impl Default for DMSCAppBuilder {
     fn default() -> Self {
         Self::new()
     }
 }
-
+ 
 impl DMSCAppBuilder {
     /// Create a new empty application builder.
     /// 
@@ -144,7 +148,7 @@ impl DMSCAppBuilder {
             observability_config: None,
         }
     }
-
+ 
     /// Add a synchronous module to the application.
     /// 
     /// # Parameters
@@ -179,7 +183,7 @@ impl DMSCAppBuilder {
         });
         self
     }
-
+ 
     /// Add an asynchronous module to the application.
     /// 
     /// # Parameters
@@ -193,7 +197,7 @@ impl DMSCAppBuilder {
         self.modules.push(ModuleSlot { module: ModuleType::Async(module), failed: false });
         self
     }
-
+ 
     /// Add a DMSC module to the application.
     /// 
     /// This method adds a module implementing the public `DMSCModule` trait to the application.
@@ -263,7 +267,7 @@ impl DMSCAppBuilder {
         });
         self
     }
-
+ 
     /// Add multiple synchronous modules to the application.
     /// 
     /// # Parameters
@@ -279,7 +283,7 @@ impl DMSCAppBuilder {
         }
         self
     }
-
+ 
     /// Add multiple asynchronous modules to the application.
     /// 
     /// # Parameters
@@ -314,7 +318,7 @@ impl DMSCAppBuilder {
         }
         self
     }
-
+ 
     /// Add a configuration file to the application.
     /// 
     /// # Parameters
@@ -333,7 +337,7 @@ impl DMSCAppBuilder {
         self.config_paths.push(config_path.into());
         Ok(self)
     }
-
+ 
     /// Set custom logging configuration for the application.
     /// 
     /// # Parameters
@@ -352,7 +356,7 @@ impl DMSCAppBuilder {
         self.logging_config = Some(logging_config);
         Ok(self)
     }
-
+ 
     /// Set custom observability configuration for the application.
     /// 
     /// # Parameters
@@ -371,7 +375,7 @@ impl DMSCAppBuilder {
         self.observability_config = Some(observability_config);
         Ok(self)
     }
-
+ 
     /// Build the application runtime.
     /// 
     /// This method performs the following steps:
@@ -418,7 +422,7 @@ impl DMSCAppBuilder {
         
         // Load configuration
         config_manager.load()?;
-
+ 
         // Create service context with custom configuration
         let ctx = self.create_service_context(config_manager)?;
         
@@ -456,7 +460,7 @@ impl DMSCAppBuilder {
     /// - If logger creation fails
     fn create_service_context(&self, config_manager: crate::config::DMSCConfigManager) -> DMSCResult<DMSCServiceContext> {
         let cfg = config_manager.config();
-
+ 
         let project_root = std::env::current_dir()
             .map_err(|e| crate::core::DMSCError::Other(format!("detect project root failed: {e}")))?;
         let app_data_root = if let Some(root_str) = cfg.get_str("fs.app_data_root") {
@@ -464,14 +468,14 @@ impl DMSCAppBuilder {
         } else {
             project_root.join(".dms")
         };
-
+ 
         let fs = crate::fs::DMSCFileSystem::new_with_roots(project_root, app_data_root);
-
+ 
         // Use custom logging config if provided, otherwise create from config
         let log_config: crate::log::DMSCLogConfig = if let Some(log_config) = &self.logging_config {
             log_config.clone()
         } else {
-            crate::log::DMSCLogConfig::from_config(cfg)
+            crate::log::DMSCLogConfig::from_config(&cfg)
         };
         let logger = crate::log::DMSCLogger::new(&log_config, fs.clone());
         let hooks = crate::hooks::DMSCHookBus::new();
@@ -479,12 +483,105 @@ impl DMSCAppBuilder {
         Ok(DMSCServiceContext::new_with(fs, logger, config_manager, hooks, None))
     }
 }
-
+ 
 #[cfg(feature = "pyo3")]
 #[pyo3::prelude::pymethods]
 impl DMSCAppBuilder {
     #[new]
     fn py_new() -> Self {
         Self::new()
+    }
+
+    #[pyo3(name = "with_config")]
+    fn with_config_py(&mut self, config_path: &str) -> PyResult<()> {
+        self.config_paths.push(config_path.to_string());
+        Ok(())
+    }
+
+    #[pyo3(name = "with_logging")]
+    fn with_logging_py(&mut self, logging_config: crate::log::DMSCLogConfig) -> PyResult<()> {
+        self.logging_config = Some(logging_config);
+        Ok(())
+    }
+
+    #[pyo3(name = "with_observability")]
+    fn with_observability_py(&mut self, observability_config: crate::observability::DMSCObservabilityConfig) -> PyResult<()> {
+        self.observability_config = Some(observability_config);
+        Ok(())
+    }
+
+    #[pyo3(name = "build")]
+    fn build_py(&mut self) -> PyResult<DMSCAppRuntime> {
+        let builder = std::mem::take(self);
+        DMSCAppBuilder::build(builder).map_err(|e| pyo3::prelude::PyErr::from(e))
+    }
+
+    #[pyo3(name = "with_module")]
+    fn with_module_py(&mut self, module: super::module::DMSCPyServiceModule) -> PyResult<()> {
+        self.modules.push(crate::core::module_types::ModuleSlot {
+            module: crate::core::module_types::ModuleType::Sync(Box::new(module)),
+            failed: false,
+        });
+        Ok(())
+    }
+
+    #[pyo3(name = "with_python_module")]
+    fn with_python_module_py(&mut self, module: super::module::DMSCPyModuleAdapter) -> PyResult<()> {
+        self.modules.push(crate::core::module_types::ModuleSlot {
+            module: crate::core::module_types::ModuleType::Async(Box::new(module)),
+            failed: false,
+        });
+        Ok(())
+    }
+
+    #[pyo3(name = "with_async_module")]
+    fn with_async_module_py(&mut self, module: super::module::DMSCPyAsyncServiceModule) -> PyResult<()> {
+        self.modules.push(crate::core::module_types::ModuleSlot {
+            module: crate::core::module_types::ModuleType::Async(Box::new(module)),
+            failed: false,
+        });
+        Ok(())
+    }
+
+    #[pyo3(name = "with_dms_module")]
+    fn with_dms_module_py(&mut self, module: super::module::DMSCPyModuleAdapter) -> PyResult<()> {
+        self.modules.push(crate::core::module_types::ModuleSlot {
+            module: crate::core::module_types::ModuleType::Async(Box::new(module)),
+            failed: false,
+        });
+        Ok(())
+    }
+
+    #[pyo3(name = "with_modules")]
+    fn with_modules_py(&mut self, modules: Vec<super::module::DMSCPyServiceModule>) -> PyResult<()> {
+        for module in modules {
+            self.modules.push(crate::core::module_types::ModuleSlot {
+                module: crate::core::module_types::ModuleType::Sync(Box::new(module)),
+                failed: false,
+            });
+        }
+        Ok(())
+    }
+
+    #[pyo3(name = "with_async_modules")]
+    fn with_async_modules_py(&mut self, modules: Vec<super::module::DMSCPyAsyncServiceModule>) -> PyResult<()> {
+        for module in modules {
+            self.modules.push(crate::core::module_types::ModuleSlot {
+                module: crate::core::module_types::ModuleType::Async(Box::new(module)),
+                failed: false,
+            });
+        }
+        Ok(())
+    }
+
+    #[pyo3(name = "with_dms_modules")]
+    fn with_dms_modules_py(&mut self, modules: Vec<super::module::DMSCPyModuleAdapter>) -> PyResult<()> {
+        for module in modules {
+            self.modules.push(crate::core::module_types::ModuleSlot {
+                module: crate::core::module_types::ModuleType::Async(Box::new(module)),
+                failed: false,
+            });
+        }
+        Ok(())
     }
 }

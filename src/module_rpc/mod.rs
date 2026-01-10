@@ -174,7 +174,7 @@ impl Default for DMSCMethodResponse {
 type DMSCMethodHandler = Arc<dyn Fn(Vec<u8>) -> DMSCResult<Vec<u8>> + Send + Sync>;
 
 #[async_trait::async_trait]
-trait DMSCMethodHandlerAsync: Send + Sync {
+pub trait DMSCMethodHandlerAsync: Send + Sync {
     async fn call(&self, params: Vec<u8>) -> DMSCMethodResponse;
 }
 

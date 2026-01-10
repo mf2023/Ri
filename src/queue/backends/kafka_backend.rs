@@ -88,8 +88,10 @@ use rdkafka::producer::{FutureProducer, FutureRecord};
 use rdkafka::consumer::{StreamConsumer, Consumer};
 use rdkafka::Message;
 use rdkafka::statistics::TopicPartition;
+use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
 use tokio::sync::Mutex;
+use std::time::{Duration, Instant};
 use crate::core::{DMSCResult, DMSCError};
 use crate::queue::{DMSCQueue, DMSCQueueMessage, DMSCQueueProducer, DMSCQueueConsumer, DMSCQueueStats, DMSCQueueError};
 
@@ -104,6 +106,54 @@ pub struct DMSCKafkaQueue {
     producer: Arc<FutureProducer>,
     /// Kafka consumer for receiving messages
     consumer: Arc<StreamConsumer>,
+    /// Statistics tracking
+    stats: Arc<KafkaStats>,
+}
+
+struct KafkaStats {
+    message_count: AtomicU64,
+    produced_messages: AtomicU64,
+    failed_messages: AtomicU64,
+    total_bytes_sent: AtomicU64,
+    total_bytes_received: AtomicU64,
+    last_message_time: AtomicU64,
+    start_time: Instant,
+}
+
+impl KafkaStats {
+    fn new() -> Self {
+        Self {
+            message_count: AtomicU64::new(0),
+            produced_messages: AtomicU64::new(0),
+            failed_messages: AtomicU64::new(0),
+            total_bytes_sent: AtomicU64::new(0),
+            total_bytes_received: AtomicU64::new(0),
+            last_message_time: AtomicU64::new(0),
+            start_time: Instant::now(),
+        }
+    }
+
+    fn record_produced(&self, bytes: usize) {
+        self.produced_messages.fetch_add(1, Ordering::SeqCst);
+        self.total_bytes_sent.fetch_add(bytes as u64, Ordering::SeqCst);
+        self.last_message_time.store(
+            Instant::now().duration_since(self.start_time).as_millis() as u64,
+            Ordering::SeqCst
+        );
+    }
+
+    fn record_consumed(&self, bytes: usize) {
+        self.message_count.fetch_add(1, Ordering::SeqCst);
+        self.total_bytes_received.fetch_add(bytes as u64, Ordering::SeqCst);
+        self.last_message_time.store(
+            Instant::now().duration_since(self.start_time).as_millis() as u64,
+            Ordering::SeqCst
+        );
+    }
+
+    fn record_failed(&self) {
+        self.failed_messages.fetch_add(1, Ordering::SeqCst);
+    }
 }
 
 impl DMSCKafkaQueue {
@@ -135,6 +185,7 @@ impl DMSCKafkaQueue {
             name: name.to_string(),
             producer: Arc::new(producer),
             consumer: Arc::new(consumer),
+            stats: Arc::new(KafkaStats::new()),
         })
     }
 }
@@ -150,6 +201,7 @@ impl DMSCQueue for DMSCKafkaQueue {
         Ok(Box::new(KafkaProducer {
             producer: self.producer.clone(),
             topic: self.name.clone(),
+            stats: self.stats.clone(),
         }))
     }
 
@@ -166,6 +218,7 @@ impl DMSCQueue for DMSCKafkaQueue {
         Ok(Box::new(KafkaConsumer {
             consumer: self.consumer.clone(),
             paused: Arc::new(Mutex::new(false)),
+            stats: self.stats.clone(),
         }))
     }
 
@@ -178,27 +231,24 @@ impl DMSCQueue for DMSCKafkaQueue {
     ///
     /// DMSCQueueStats containing detailed queue statistics wrapped in DMSCResult
     async fn get_stats(&self) -> DMSCResult<DMSCQueueStats> {
-        // Get basic stats - Kafka metrics are not directly available on Arc<StreamConsumer>
-        // We'll use a simplified approach for now
-        let message_count = 0u64;
-        let consumer_lag = 0i64;
-        let avg_processing_time_ms = 0.0;
-        
-        // Get producer metrics if available - simplified approach
-        let produced_messages = 0u64;
-        
-        // Calculate derived metrics
+        let message_count = self.stats.message_count.load(Ordering::SeqCst);
+        let produced_messages = self.stats.produced_messages.load(Ordering::SeqCst);
+        let failed_messages = self.stats.failed_messages.load(Ordering::SeqCst);
+        let total_bytes_sent = self.stats.total_bytes_sent.load(Ordering::SeqCst);
+        let total_bytes_received = self.stats.total_bytes_received.load(Ordering::SeqCst);
+        let last_message_time = self.stats.last_message_time.load(Ordering::SeqCst);
+
         let total_messages = message_count + produced_messages;
-        let failed_messages = if total_messages > 0 {
-            (total_messages - message_count) as u64
+        let avg_processing_time_ms = if message_count > 0 {
+            let elapsed = Instant::now().duration_since(self.stats.start_time);
+            elapsed.as_secs_f64() * 1000.0 / message_count as f64
         } else {
-            0
+            0.0
         };
-        
-        // Estimate consumer and producer counts based on active connections
-        let consumer_count = if consumer_lag > 0 { 1 } else { 0 };
+
+        let consumer_count = if message_count > 0 { 1 } else { 0 };
         let producer_count = if produced_messages > 0 { 1 } else { 0 };
-        
+
         Ok(DMSCQueueStats {
             queue_name: self.name.clone(),
             message_count: total_messages,
@@ -207,6 +257,9 @@ impl DMSCQueue for DMSCKafkaQueue {
             processed_messages: message_count,
             failed_messages,
             avg_processing_time_ms,
+            total_bytes_sent,
+            total_bytes_received,
+            last_message_time,
         })
     }
 
@@ -283,6 +336,8 @@ struct KafkaProducer {
     producer: Arc<FutureProducer>,
     /// Kafka topic to send messages to
     topic: String,
+    /// Statistics tracking
+    stats: Arc<KafkaStats>,
 }
 
 #[async_trait]
@@ -298,14 +353,22 @@ impl DMSCQueueProducer for KafkaProducer {
     /// DMSCResult indicating success or failure
     async fn send(&self, message: DMSCQueueMessage) -> DMSCResult<()> {
         let payload = serde_json::to_vec(&message)?;
-        
+        let bytes = payload.len();
+
         let record = FutureRecord::to(&self.topic)
             .payload(&payload)
             .key(&message.id);
 
-        self.producer.send(record, std::time::Duration::from_secs(0)).await
-            .map_err(|(e, _)| DMSCError::Queue(format!("Kafka send error: {}", e)))?;
-        Ok(())
+        match self.producer.send(record, Duration::from_secs(0)).await {
+            Ok(_) => {
+                self.stats.record_produced(bytes);
+                Ok(())
+            }
+            Err((e, _)) => {
+                self.stats.record_failed();
+                Err(DMSCError::Queue(format!("Kafka send error: {}", e)))
+            }
+        }
     }
 
     /// Sends multiple messages to the Kafka topic.
@@ -334,6 +397,8 @@ struct KafkaConsumer {
     consumer: Arc<StreamConsumer>,
     /// Flag indicating if the consumer is paused
     paused: Arc<Mutex<bool>>,
+    /// Statistics tracking
+    stats: Arc<KafkaStats>,
 }
 
 #[async_trait]
@@ -352,7 +417,9 @@ impl DMSCQueueConsumer for KafkaConsumer {
         let message = self.consumer.recv().await.map_err(|e| crate::core::DMSCError::Other(format!("Kafka receive error: {}", e)))?;
         
         if let Some(payload) = message.payload() {
+            let bytes = payload.len();
             let queue_message: DMSCQueueMessage = serde_json::from_slice(payload)?;
+            self.stats.record_consumed(bytes);
             Ok(Some(queue_message))
         } else {
             Ok(None)

@@ -456,6 +456,7 @@ struct LogEntry {
 /// 
 /// This struct contains the internal implementation of the logging system, including
 /// log level checking, sampling, log message formatting, and caching.
+#[derive(Clone)]
 struct LoggerImpl {
     /// Minimum log level to be logged
     level: DMSCLogLevel,
@@ -527,7 +528,8 @@ impl LoggerImpl {
             
             loop {
                 // Check if we should shutdown
-                if *bg_shutdown_flag.lock().unwrap() {
+                let shutdown_flag = bg_shutdown_flag.lock().expect("Log shutdown flag lock poisoned");
+                if *shutdown_flag {
                     // Flush remaining logs before shutting down
                     Self::flush_cache(
                         &bg_log_cache,
@@ -540,12 +542,13 @@ impl LoggerImpl {
                     ).unwrap_or(());
                     break;
                 }
+                drop(shutdown_flag);
                 
                 // Check if we need to flush based on time or cache size
                 let now = SystemTime::now();
                 let time_since_last_flush = now.duration_since(last_flush).unwrap_or(Duration::from_millis(0));
                 
-                let cache_len = bg_log_cache.0.lock().unwrap().len();
+                let cache_len = bg_log_cache.0.lock().expect("Log cache lock poisoned").len();
                 
                 if time_since_last_flush >= Duration::from_millis(flush_interval_ms) || cache_len >= cache_size_limit {
                     Self::flush_cache(
@@ -908,6 +911,7 @@ impl LoggerImpl {
 /// 
 /// This struct provides the public API for logging in DMSC, wrapping the internal `LoggerImpl`.
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
+#[derive(Clone)]
 pub struct DMSCLogger {
     /// Internal logger implementation
     inner: LoggerImpl,

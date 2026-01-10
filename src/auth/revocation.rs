@@ -44,6 +44,7 @@ pub struct RevokedTokenInfo {
     pub reason: Option<String>,
 }
 
+#[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 pub struct JWTRevocationList {
     revoked_tokens: DashSet<String>,
     token_info: DashMap<String, RevokedTokenInfo>,

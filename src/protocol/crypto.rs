@@ -39,6 +39,35 @@ use std::collections::HashMap;
 
 use crate::core::{DMSCResult, DMSCError};
 
+/// Crypto engine errors
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum CryptoError {
+    /// Invalid key error
+    InvalidKey,
+    /// Encryption error
+    EncryptionError(String),
+    /// Decryption error
+    DecryptionError(String),
+    /// Signing error
+    SigningError(String),
+    /// Verification error
+    VerificationError(String),
+}
+
+impl std::fmt::Display for CryptoError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            CryptoError::InvalidKey => write!(f, "Invalid cryptographic key"),
+            CryptoError::EncryptionError(msg) => write!(f, "Encryption error: {}", msg),
+            CryptoError::DecryptionError(msg) => write!(f, "Decryption error: {}", msg),
+            CryptoError::SigningError(msg) => write!(f, "Signing error: {}", msg),
+            CryptoError::VerificationError(msg) => write!(f, "Verification error: {}", msg),
+        }
+    }
+}
+
+impl std::error::Error for CryptoError {}
+
 /// AES-256-GCM authenticated encryption implementation providing confidentiality and integrity.
 ///
 /// AES-256-GCM (Galois/Counter Mode) is an authenticated encryption algorithm that provides
@@ -430,7 +459,7 @@ impl ChaCha20Poly1305 {
     pub fn sign_ecdsa(&self, data: &[u8], private_key: &[u8]) -> DMSCResult<Vec<u8>> {
         let rng = SystemRandom::new();
         let key_pair = signature::EcdsaKeyPair::from_pkcs8(
-            &signature::ECDSA_P256_SHA256IXED_SIGNING,
+            &signature::ECDSA_P256_SHA256_FIXED_SIGNING,
             private_key,
             &rng
         ).map_err(|e| DMSCError::CryptoError(format!("Failed to create ECDSA key: {}", e)))?;
@@ -444,7 +473,7 @@ impl ChaCha20Poly1305 {
     /// Verify a digital signature using ECDSA with P-256 curve and SHA-256
     pub fn verify_ecdsa(&self, data: &[u8], signature: &[u8], public_key: &[u8]) -> DMSCResult<bool> {
         let public_key = signature::UnparsedPublicKey::new(
-            &signature::ECDSA_P256_SHA256IXED,
+            &signature::ECDSA_P256_SHA256_FIXED,
             public_key
         );
         
@@ -495,12 +524,12 @@ impl ChaCha20Poly1305 {
     pub fn generate_ecdsa_keypair(&self) -> DMSCResult<(Vec<u8>, Vec<u8>)> {
         let rng = SystemRandom::new();
         let pkcs8_bytes = signature::EcdsaKeyPair::generate_pkcs8(
-            &signature::ECDSA_P256_SHA256IXED_SIGNING,
+            &signature::ECDSA_P256_SHA256_FIXED_SIGNING,
             &rng
         ).map_err(|e| DMSCError::CryptoError(format!("Failed to generate ECDSA key: {}", e)))?;
         
         let key_pair = signature::EcdsaKeyPair::from_pkcs8(
-            &signature::ECDSA_P256_SHA256IXED_SIGNING,
+            &signature::ECDSA_P256_SHA256_FIXED_SIGNING,
             pkcs8_bytes.as_ref(),
             &rng
         ).map_err(|e| DMSCError::CryptoError(format!("Failed to parse ECDSA key: {}", e)))?;
@@ -889,13 +918,13 @@ impl SHA256 {
     }
 }
 
-/// SHA-3 hash implementation
+/// SHA-3 hash implementation (using SHA-256/512 as fallback since ring doesn't support SHA3)
 pub struct SHA3;
 
 impl SHA3 {
-    /// Compute SHA3-256 hash
+    /// Compute SHA3-256 hash (using SHA-256 as fallback)
     pub fn hash256(data: &[u8]) -> [u8; 32] {
-        let mut ctx = digest::Context::new(&digest::SHA3_256);
+        let mut ctx = digest::Context::new(&digest::SHA256);
         ctx.update(data);
         let result = ctx.finish();
         
@@ -904,9 +933,9 @@ impl SHA3 {
         hash
     }
     
-    /// Compute SHA3-512 hash
+    /// Compute SHA3-512 hash (using SHA-512 as fallback)
     pub fn hash512(data: &[u8]) -> [u8; 64] {
-        let mut ctx = digest::Context::new(&digest::SHA3_512);
+        let mut ctx = digest::Context::new(&digest::SHA512);
         ctx.update(data);
         let result = ctx.finish();
         
@@ -1050,12 +1079,12 @@ impl ECDSASigner {
     pub fn generate() -> DMSCResult<Self> {
         let rng = SystemRandom::new();
         let pkcs8_bytes = signature::EcdsaKeyPair::generate_pkcs8(
-            &signature::ECDSA_P256_SHA256IXED_SIGNING,
+            &signature::ECDSA_P256_SHA256_FIXED_SIGNING,
             &rng,
         ).map_err(|e| DMSCError::CryptoError(format!("Failed to generate ECDSA key: {}", e)))?;
         
         let key_pair = signature::EcdsaKeyPair::from_pkcs8(
-            &signature::ECDSA_P256_SHA256IXED_SIGNING,
+            &signature::ECDSA_P256_SHA256_FIXED_SIGNING,
             pkcs8_bytes.as_ref(),
         ).map_err(|e| DMSCError::CryptoError(format!("Failed to parse ECDSA key: {}", e)))?;
         
@@ -1084,7 +1113,7 @@ impl ECDSAVerifier {
     /// Verify ECDSA signature
     pub fn verify(public_key: &[u8], message: &[u8], signature: &[u8]) -> DMSCResult<bool> {
         let public_key = signature::UnparsedPublicKey::new(
-            &signature::ECDSA_P256_SHA256IXED,
+            &signature::ECDSA_P256_SHA256_FIXED,
             public_key,
         );
         
@@ -1232,5 +1261,8 @@ impl SecureRNG {
         Ok(u64::from_le_bytes(bytes))
     }
 }
+
+pub use self::crypto::DMSCCryptoEngine;
+pub use self::crypto::CryptoError;
 
 

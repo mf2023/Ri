@@ -104,7 +104,7 @@ pip install dmsc
 或者添加到 `requirements.txt`：
 
 ```
-dmsc==0.1.3
+dmsc==0.1.4
 ```
 
 验证安装：

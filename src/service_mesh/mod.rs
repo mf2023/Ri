@@ -112,12 +112,9 @@ pub mod service_discovery;
 pub mod health_check;
 pub mod traffic_management;
 
-use health_check::DMSCHealthChecker;
-use traffic_management::DMSCTrafficManager;
-
 pub use service_discovery::{DMSCServiceDiscovery, DMSCServiceInstance, DMSCServiceStatus};
-pub use health_check::{DMSCHealthCheckResult, DMSCHealthSummary, DMSCHealthStatus};    
-pub use traffic_management::{DMSCTrafficRoute, DMSCMatchCriteria, DMSCRouteAction, DMSCWeightedDestination};
+pub use health_check::{DMSCHealthChecker, DMSCHealthCheckResult, DMSCHealthSummary, DMSCHealthStatus};    
+pub use traffic_management::{DMSCTrafficRoute, DMSCMatchCriteria, DMSCRouteAction, DMSCWeightedDestination, DMSCTrafficManager};
 
 /// Configuration for the service mesh.
 /// 

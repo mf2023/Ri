@@ -111,13 +111,13 @@ mod security;
 mod revocation;
 
 pub use jwt::DMSCJWTManager;
-pub use oauth::DMSCOAuthManager;
-pub use permissions::DMSCPermissionManager;
+pub use oauth::{DMSCOAuthManager, DMSCOAuthToken, DMSCOAuthUserInfo};
+pub use permissions::{DMSCPermissionManager, DMSCPermission, DMSCRole};
 pub use session::DMSCSessionManager;
 pub use security::DMSCSecurityManager;
 pub use revocation::{JWTRevocationList, RevokedTokenInfo};
 
-use crate::core::{DMSCResult, DMSCServiceContext};
+use crate::core::{DMSCResult, DMSCError, DMSCServiceContext};
 use rand::RngCore;
 use serde::Deserialize;
 use std::env;
@@ -127,9 +127,6 @@ use tokio::sync::RwLock;
 const DEFAULT_JWT_SECRET_ENV: &str = "DMSC_JWT_SECRET";
 const FALLBACK_SECRET_LENGTH: usize = 64;
 
-const DEFAULT_OAUTH_CLIENT_ID: &str = "your_client_id";
-const DEFAULT_OAUTH_CLIENT_SECRET: &str = "your_client_secret";
-
 fn load_jwt_secret_from_env() -> String {
     env::var(DEFAULT_JWT_SECRET_ENV).unwrap_or_else(|_| {
         let mut secret = vec![0u8; FALLBACK_SECRET_LENGTH];
@@ -138,17 +135,23 @@ fn load_jwt_secret_from_env() -> String {
     })
 }
 
-fn load_oauth_env_var(provider_name: &str, suffix: &str) -> String {
+fn load_oauth_env_var(provider_name: &str, suffix: &str) -> Result<String, DMSCError> {
     let env_var = format!("DMSC_OAUTH_{}_{}", provider_name.to_uppercase(), suffix);
-    env::var(&env_var).unwrap_or_default()
+    env::var(&env_var).map_err(|_| {
+        DMSCError::Config(format!(
+            "OAuth {} is not set for provider '{}'. Please set the environment variable {}",
+            suffix.to_lowercase(),
+            provider_name,
+            env_var
+        ))
+    })
 }
 
 fn get_oauth_url(provider_name: &str, endpoint: &str) -> String {
-    let env_url = load_oauth_env_var(provider_name, endpoint);
-    if !env_url.is_empty() {
-        return env_url;
+    match load_oauth_env_var(provider_name, endpoint) {
+        Ok(url) if !url.is_empty() => url,
+        _ => format!("https://{}.com/oauth/{}", provider_name, endpoint)
     }
-    format!("https://{}.com/oauth/{}", provider_name, endpoint)
 }
 
 #[cfg(feature = "pyo3")]
@@ -451,14 +454,14 @@ impl crate::core::DMSCModule for DMSCAuthModule {
         // Initialize OAuth providers if configured
         if !self.config.oauth_providers.is_empty() {
             for provider_name in &self.config.oauth_providers {
-                let client_id = load_oauth_env_var(provider_name, "CLIENT_ID");
-                let client_secret = load_oauth_env_var(provider_name, "CLIENT_SECRET");
-                
+                let client_id = load_oauth_env_var(provider_name, "CLIENT_ID")?;
+                let client_secret = load_oauth_env_var(provider_name, "CLIENT_SECRET")?;
+
                 let provider_config = crate::auth::oauth::DMSCOAuthProvider {
                     id: provider_name.clone(),
                     name: provider_name.clone(),
-                    client_id: if !client_id.is_empty() { client_id } else { DEFAULT_OAUTH_CLIENT_ID.to_string() },
-                    client_secret: if !client_secret.is_empty() { client_secret } else { DEFAULT_OAUTH_CLIENT_SECRET.to_string() },
+                    client_id,
+                    client_secret,
                     auth_url: get_oauth_url(provider_name, "authorize"),
                     token_url: get_oauth_url(provider_name, "token"),
                     user_info_url: get_oauth_url(provider_name, "userinfo"),

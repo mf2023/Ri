@@ -170,7 +170,7 @@ impl DMSCServiceContext {
         let fs = DMSCFileSystem::new_with_roots(project_root, app_data_root);
 
         // Initialize logging
-        let log_config = DMSCLogConfig::from_config(cfg);
+        let log_config = DMSCLogConfig::from_config(&cfg);
         let logger = DMSCLogger::new(&log_config, fs.clone());
         
         // Initialize hook bus
@@ -280,5 +280,25 @@ impl DMSCServiceContext {
             Ok(ctx) => Ok(ctx),
             Err(err) => Err(pyo3::exceptions::PyRuntimeError::new_err(format!("Failed to create service context: {err}"))),
         }
+    }
+
+    #[pyo3(name = "fs")]
+    fn fs_py(&self) -> crate::fs::DMSCFileSystem {
+        self.inner.fs.clone()
+    }
+
+    #[pyo3(name = "logger")]
+    fn logger_py(&self) -> crate::log::DMSCLogger {
+        (*self.inner.logger).clone()
+    }
+
+    #[pyo3(name = "config")]
+    fn config_py(&self) -> crate::config::DMSCConfigManager {
+        (*self.inner.config).clone()
+    }
+
+    #[pyo3(name = "metrics_registry")]
+    fn metrics_registry_py(&self) -> Option<crate::observability::DMSCMetricsRegistry> {
+        self.inner.metrics_registry.as_ref().map(|r| (**r).clone())
     }
 }

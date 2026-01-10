@@ -240,7 +240,19 @@ impl DMSCJWTManager {
             decoding_key: DecodingKey::from_secret(&secret_bytes),
         }
     }
-    
+}
+
+impl DMSCJWTManager {
+    pub fn create(secret: String, expiry_secs: u64) -> Self {
+        let secret_bytes = secret.as_bytes().to_vec();
+        Self {
+            secret,
+            expiry_secs,
+            encoding_key: EncodingKey::from_secret(&secret_bytes),
+            decoding_key: DecodingKey::from_secret(&secret_bytes),
+        }
+    }
+
     pub fn generate_token(&self, user_id: &str, roles: Vec<String>, permissions: Vec<String>) -> Result<String, DMSCError> {
         let now = SystemTime::now()
             .duration_since(UNIX_EPOCH)
@@ -258,24 +270,12 @@ impl DMSCJWTManager {
         encode(&Header::default(), &claims, &self.encoding_key)
             .map_err(|e| DMSCError::Other(format!("JWT encoding failed: {}", e)))
     }
-    
+
     pub fn validate_token(&self, token: &str) -> Result<JWTClaims, DMSCError> {
         let validation = Validation::default();
         decode::<JWTClaims>(token, &self.decoding_key, &validation)
             .map_err(|e| DMSCError::Other(format!("JWT decoding failed: {}", e)))
             .map(|token_data| token_data.claims)
-    }
-}
-
-impl DMSCJWTManager {
-    pub fn create(secret: String, expiry_secs: u64) -> Self {
-        let secret_bytes = secret.as_bytes().to_vec();
-        Self {
-            secret,
-            expiry_secs,
-            encoding_key: EncodingKey::from_secret(&secret_bytes),
-            decoding_key: DecodingKey::from_secret(&secret_bytes),
-        }
     }
 
     pub fn get_token_expiry(&self) -> u64 {

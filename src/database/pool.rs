@@ -100,6 +100,7 @@ struct PoolConnection {
     acquired_at: Instant,
 }
 
+#[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 pub struct DMSCDatabasePool {
     config: DMSCDatabaseConfig,
     connections: Arc<DashMap<u32, PoolConnection>>,

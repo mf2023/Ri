@@ -98,6 +98,7 @@ impl DilithiumSigner {
             }
         }
         self.polyvec_reduce(&mut t);
+        let mut t1 = vec![vec![0i32; DILITHIUM_N]; DILITHIUM_K];
         self.polyvec_power2round(&mut t, &mut t1);
 
         let mut pk = Vec::with_capacity(32 + DILITHIUM_POLYVECBYTES);
@@ -226,7 +227,7 @@ impl DilithiumSigner {
             let mut w1_input = Vec::with_capacity(64 + 32);
             w1_input.extend_from_slice(&mu);
             w1_input.extend_from_slice(rho_prime);
-            let mut w1 = vec![0i32; DILITHIUM_K * DILITHIUM_N];
+            let mut w1_bytes = [0u8; 64];
             self.crypto.hash_sha3_512(&w1_input, &mut w1_bytes);
 
             let mut y = Vec::with_capacity(DILITHIUM_L);

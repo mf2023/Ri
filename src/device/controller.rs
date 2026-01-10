@@ -100,6 +100,7 @@ use pyo3::prelude::*;
 use pyo3::PyResult;
 
 use super::core::{DMSCDevice, DMSCDeviceCapabilities, DMSCDeviceStatus, DMSCDeviceType, DMSCDeviceControlConfig, NetworkDeviceInfo};
+use super::discovery::{DMSCDeviceDiscovery, DiscoveryConfig};
 use crate::core::DMSCResult;
 use crate::prelude::{DMSCMetricsRegistry, DMSCError};
 // use super::scheduler::DMSCDeviceScheduler;
@@ -109,7 +110,8 @@ use crate::prelude::{DMSCMetricsRegistry, DMSCError};
 pub struct DMSCDeviceController {
     devices: HashMap<String, Arc<RwLock<DMSCDevice>>>,
     device_type_index: HashMap<DMSCDeviceType, Vec<String>>,
-    allocation_map: HashMap<String, String>, // allocation_id -> device_id
+    allocation_map: HashMap<String, String>,
+    discovery: Option<Arc<DMSCDeviceDiscovery>>,
 }
 
 #[cfg(feature = "pyo3")]
@@ -267,7 +269,26 @@ impl DMSCDeviceController {
             devices: HashMap::new(),
             device_type_index: HashMap::new(),
             allocation_map: HashMap::new(),
+            discovery: None,
         }
+    }
+
+    /// Creates a new controller with the discovery engine
+    pub async fn with_discovery(discovery: Arc<DMSCDeviceDiscovery>) -> Self {
+        Self {
+            devices: HashMap::new(),
+            device_type_index: HashMap::new(),
+            allocation_map: HashMap::new(),
+            discovery: Some(discovery),
+        }
+    }
+
+    /// Initializes the discovery engine
+    pub async fn init_discovery(&mut self) -> DMSCResult<()> {
+        let config = DiscoveryConfig::default();
+        let discovery = Arc::new(DMSCDeviceDiscovery::new(config).await?);
+        self.discovery = Some(discovery);
+        Ok(())
     }
     
     /// Discover devices in the system
@@ -841,16 +862,18 @@ impl DMSCDeviceController {
         Ok(())
     }
     
-    /// Discover real hardware devices
+    /// Discover real hardware devices using the new discovery engine
     async fn discover_hardware_devices(&mut self) -> DMSCResult<Vec<DMSCDevice>> {
-        // Create a temporary device controller for hardware discovery
+        // Use the new discovery engine if available
+        if let Some(discovery) = &self.discovery {
+            let devices = discovery.discover_all().await?;
+            return Ok(devices);
+        }
+
+        // Fallback to old discovery if no engine initialized
         let mut temp_controller = DMSCDeviceController::new();
         let config = DMSCDeviceControlConfig::default();
-        
-        // Discover all system devices using the existing discovery methods
         temp_controller.discover_system_devices(&config).await?;
-        
-        // Return the discovered devices
         Ok(temp_controller.get_all_devices())
     }
     

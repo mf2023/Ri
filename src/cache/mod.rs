@@ -128,24 +128,31 @@ impl DMSCCacheModule {
     /// 
     /// A new `DMSCCacheModule` instance
     pub fn new(config: DMSCCacheConfig) -> Self {
-        // Create the appropriate backend based on configuration
+        #[cfg(feature = "redis")]
         let backend = match config.backend_type {
             crate::cache::config::DMSCCacheBackendType::Memory => {
                 Arc::new(DMSCMemoryCache::new())
             }
             crate::cache::config::DMSCCacheBackendType::Redis => {
-                // For Redis, we'll use memory backend initially and replace it in init()
-                // since we need async context for Redis connection
-                Arc::new(DMSCMemoryCache::new())
+                Arc::new(crate::cache::DMSCRedisCache::new(&config.redis_url))
             }
             crate::cache::config::DMSCCacheBackendType::Hybrid => {
-                // Same for Hybrid - use memory backend initially
+                Arc::new(crate::cache::DMSCHybridCache::new(&config.redis_url))
+            }
+        };
+
+        #[cfg(not(feature = "redis"))]
+        let backend = match config.backend_type {
+            crate::cache::config::DMSCCacheBackendType::Memory => {
+                Arc::new(DMSCMemoryCache::new())
+            }
+            crate::cache::config::DMSCCacheBackendType::Redis | crate::cache::config::DMSCCacheBackendType::Hybrid => {
                 Arc::new(DMSCMemoryCache::new())
             }
         };
-        
+
         let manager = DMSCCacheManager::new(backend);
-        
+
         Self {
             config,
             manager: Arc::new(RwLock::new(manager)),

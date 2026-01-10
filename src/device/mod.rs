@@ -116,8 +116,9 @@
 mod core;
 mod controller;
 mod scheduler;
-mod pool;
+pub mod pool;
 pub mod discovery_scheduler;
+pub mod discovery;
 
 use std::sync::Arc;
 
@@ -138,6 +139,27 @@ pub use pool::{DMSCResourcePool, DMSCResourcePoolManager};
 pub use scheduler::DMSCDeviceScheduler;
 pub use discovery_scheduler::{DMSCDeviceDiscoveryEngine, DMSCResourceScheduler};
 
+// Re-export discovery module types
+pub use discovery::{
+    DMSCDeviceDiscovery,
+    DiscoveryConfig,
+    DiscoveryStats,
+    DiscoveryStrategy,
+    HardwareCategory,
+    PlatformInfo,
+    PlatformType,
+    Architecture,
+    PlatformCompatibility,
+    ProviderRegistry,
+    DMSCHardwareProvider,
+    PluginRegistry,
+    DMSCHardwareDiscoveryPlugin,
+    PluginMetadata,
+    PluginStatus,
+    PluginError,
+    AsyncDiscovery,
+};
+
 use crate::core::{DMSCResult, DMSCServiceContext};
 
 
@@ -145,6 +167,7 @@ use crate::core::{DMSCResult, DMSCServiceContext};
 /// 
 /// This module provides comprehensive smart device control functionality, including device discovery,
 /// control, and resource scheduling. It manages devices and their resources across distributed environments.
+#[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 pub struct DMSCDeviceControlModule {
     /// Device controller for managing devices
     controller: Arc<RwLock<DMSCDeviceController>>,
@@ -162,8 +185,15 @@ pub struct DMSCDeviceControlModule {
 }
 
 /// Configuration for device control module (legacy)
-/// 
-/// This struct is deprecated. Use `DMSCDeviceControlConfig` from the device module instead.
+///
+/// This struct is deprecated and maintained for backward compatibility.
+/// The new configuration has been split into:
+/// - `DMSCDeviceControlConfig` (in device/core.rs): Device discovery configuration
+/// - `DMSCDeviceControlConfig` fields here: Module-level control configuration
+///
+/// Migration: New code should use `DMSCDeviceControlConfig` from the device module.
+/// This legacy struct will be removed in a future version.
+#[deprecated(since = "0.1.4", note = "Use DMSCDeviceControlConfig from device::core instead")]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DMSCDeviceControlConfigLegacy {
     /// Whether device discovery is enabled
@@ -195,6 +225,83 @@ impl Default for DMSCDeviceControlConfigLegacy {
             max_concurrent_tasks: 100,
             resource_allocation_timeout_secs: 60,
         }
+    }
+}
+
+impl DMSCDeviceControlConfigLegacy {
+    /// Converts this legacy configuration to the new module-level configuration format.
+    /// 
+    /// This method provides a migration path from the legacy configuration structure
+    /// to the new unified configuration structure.
+    /// 
+    /// Returns:
+    ///     A tuple of (discovery_config, control_config) representing the split configuration
+    #[deprecated(since = "0.1.4", note = "Use direct configuration construction instead")]
+    pub fn to_module_config(&self) -> (crate::device::core::DMSCDeviceControlConfig, DMSCDeviceControlModuleLevelConfig) {
+        let discovery_config = crate::device::core::DMSCDeviceControlConfig {
+            enable_cpu_discovery: self.discovery_enabled,
+            enable_gpu_discovery: self.discovery_enabled,
+            enable_memory_discovery: self.discovery_enabled,
+            enable_storage_discovery: self.discovery_enabled,
+            enable_network_discovery: self.discovery_enabled,
+            discovery_timeout_secs: self.discovery_interval_secs,
+            max_devices_per_type: self.max_concurrent_tasks,
+        };
+        
+        let control_config = DMSCDeviceControlModuleLevelConfig {
+            discovery_enabled: self.discovery_enabled,
+            discovery_interval_secs: self.discovery_interval_secs,
+            auto_scheduling_enabled: self.auto_scheduling_enabled,
+            max_concurrent_tasks: self.max_concurrent_tasks,
+            resource_allocation_timeout_secs: self.resource_allocation_timeout_secs,
+        };
+        
+        (discovery_config, control_config)
+    }
+}
+
+/// Module-level configuration for device control (extracted from legacy config)
+/// 
+/// This configuration contains module-level control settings that were previously
+/// part of the monolithic legacy configuration struct.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
+pub struct DMSCDeviceControlModuleLevelConfig {
+    /// Whether device discovery is enabled
+    pub discovery_enabled: bool,
+    /// Interval between device discovery scans in seconds
+    pub discovery_interval_secs: u64,
+    /// Whether automatic resource scheduling is enabled
+    pub auto_scheduling_enabled: bool,
+    /// Maximum number of concurrent tasks
+    pub max_concurrent_tasks: usize,
+    /// Timeout for resource allocation in seconds
+    pub resource_allocation_timeout_secs: u64,
+}
+
+impl Default for DMSCDeviceControlModuleLevelConfig {
+    fn default() -> Self {
+        Self {
+            discovery_enabled: true,
+            discovery_interval_secs: 30,
+            auto_scheduling_enabled: true,
+            max_concurrent_tasks: 100,
+            resource_allocation_timeout_secs: 60,
+        }
+    }
+}
+
+#[cfg(feature = "pyo3")]
+#[pymethods]
+impl DMSCDeviceControlModuleLevelConfig {
+    #[new]
+    fn py_new() -> Self {
+        Self::default()
+    }
+    
+    #[staticmethod]
+    fn default_config() -> Self {
+        Self::default()
     }
 }
 
@@ -938,6 +1045,14 @@ impl DMSCDeviceControlModule {
         registry.register(resource_utilization_metric)?;
         
         Ok(())
+    }
+}
+
+#[cfg(feature = "pyo3")]
+#[pyo3::prelude::pymethods]
+impl DMSCDeviceControlModule {
+    fn get_config(&self) -> String {
+        format!("{:?}", self.config)
     }
 }
 

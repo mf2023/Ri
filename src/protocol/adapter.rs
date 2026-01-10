@@ -332,7 +332,7 @@ struct DMSCProtocolAdapterStats {
     /// Average switch time (milliseconds)
     pub avg_switch_time_ms: u64,
     /// Protocol-specific switch statistics
-    pub protocol_switches: HashMap<DMSCProtocolType, u64>,
+    pub protocol_switch_stats: HashMap<DMSCProtocolType, u64>,
 }
 
 impl DMSCProtocolAdapter {

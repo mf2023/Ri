@@ -70,6 +70,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::RwLock;
+use tokio::runtime::Runtime;
 
 #[cfg(feature = "pyo3")]
 use pyo3::PyResult;
@@ -553,58 +554,88 @@ impl DMSCOAuthManager {
 impl DMSCOAuthManager {
     #[new]
     fn py_new() -> PyResult<Self> {
-        // Create a simple memory cache for Python usage
         let cache = Arc::new(crate::cache::DMSCMemoryCache::new());
         Ok(Self::new(cache))
     }
     
     #[pyo3(name = "register_provider")]
-    fn register_provider_impl(&self, _provider: DMSCOAuthProvider) -> PyResult<()> {
-        Err(pyo3::exceptions::PyRuntimeError::new_err("Async provider registration not supported from Python yet"))
+    fn register_provider_impl(&self, provider: DMSCOAuthProvider) -> PyResult<bool> {
+        let rt = Runtime::new().map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(e.to_string()))?;
+        rt.block_on(async {
+            self.register_provider(provider).await?;
+            Ok(true)
+        })
     }
     
     #[pyo3(name = "get_provider")]
-    fn get_provider_impl(&self, _provider_id: String) -> PyResult<Option<DMSCOAuthProvider>> {
-        Err(pyo3::exceptions::PyRuntimeError::new_err("Async provider retrieval not supported from Python yet"))
+    fn get_provider_impl(&self, provider_id: String) -> PyResult<Option<DMSCOAuthProvider>> {
+        let rt = Runtime::new().map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(e.to_string()))?;
+        rt.block_on(async {
+            self.get_provider(&provider_id).await.map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(e.to_string()))
+        })
     }
     
     #[pyo3(name = "get_auth_url")]
-    fn get_auth_url_impl(&self, _provider_id: String, _state: String) -> PyResult<Option<String>> {
-        Err(pyo3::exceptions::PyRuntimeError::new_err("Async auth URL generation not supported from Python yet"))
+    fn get_auth_url_impl(&self, provider_id: String, state: String) -> PyResult<Option<String>> {
+        let rt = Runtime::new().map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(e.to_string()))?;
+        rt.block_on(async {
+            self.get_auth_url(&provider_id, &state).await.map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(e.to_string()))
+        })
     }
     
     #[pyo3(name = "exchange_code_for_token")]
-    fn exchange_code_for_token_impl(&self, _provider_id: String, _code: String, _redirect_uri: String) -> PyResult<Option<DMSCOAuthToken>> {
-        Err(pyo3::exceptions::PyRuntimeError::new_err("Async token exchange not supported from Python yet"))
+    fn exchange_code_for_token_impl(&self, provider_id: String, code: String, redirect_uri: String) -> PyResult<Option<DMSCOAuthToken>> {
+        let rt = Runtime::new().map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(e.to_string()))?;
+        rt.block_on(async {
+            self.exchange_code_for_token(&provider_id, &code, &redirect_uri).await.map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(e.to_string()))
+        })
     }
     
     #[pyo3(name = "get_user_info")]
-    fn get_user_info_impl(&self, _provider_id: String, _access_token: String) -> PyResult<Option<DMSCOAuthUserInfo>> {
-        Err(pyo3::exceptions::PyRuntimeError::new_err("Async user info retrieval not supported from Python yet"))
+    fn get_user_info_impl(&self, provider_id: String, access_token: String) -> PyResult<Option<DMSCOAuthUserInfo>> {
+        let rt = Runtime::new().map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(e.to_string()))?;
+        rt.block_on(async {
+            self.get_user_info(&provider_id, &access_token).await.map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(e.to_string()))
+        })
     }
     
     #[pyo3(name = "refresh_token")]
-    fn refresh_token_impl(&self, _provider_id: String, _refresh_token: String) -> PyResult<Option<DMSCOAuthToken>> {
-        Err(pyo3::exceptions::PyRuntimeError::new_err("Async token refresh not supported from Python yet"))
+    fn refresh_token_impl(&self, provider_id: String, refresh_token: String) -> PyResult<Option<DMSCOAuthToken>> {
+        let rt = Runtime::new().map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(e.to_string()))?;
+        rt.block_on(async {
+            self.refresh_token(&provider_id, &refresh_token).await.map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(e.to_string()))
+        })
     }
     
     #[pyo3(name = "revoke_token")]
-    fn revoke_token_impl(&self, _provider_id: String, _access_token: String) -> PyResult<bool> {
-        Err(pyo3::exceptions::PyRuntimeError::new_err("Async token revocation not supported from Python yet"))
+    fn revoke_token_impl(&self, provider_id: String, access_token: String) -> PyResult<bool> {
+        let rt = Runtime::new().map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(e.to_string()))?;
+        rt.block_on(async {
+            self.revoke_token(&provider_id, &access_token).await.map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(e.to_string()))
+        })
     }
     
     #[pyo3(name = "list_providers")]
     fn list_providers_impl(&self) -> PyResult<Vec<DMSCOAuthProvider>> {
-        Err(pyo3::exceptions::PyRuntimeError::new_err("Async provider listing not supported from Python yet"))
+        let rt = Runtime::new().map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(e.to_string()))?;
+        rt.block_on(async {
+            self.list_providers().await.map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(e.to_string()))
+        })
     }
     
     #[pyo3(name = "disable_provider")]
-    fn disable_provider_impl(&self, _provider_id: String) -> PyResult<bool> {
-        Err(pyo3::exceptions::PyRuntimeError::new_err("Async provider disable not supported from Python yet"))
+    fn disable_provider_impl(&self, provider_id: String) -> PyResult<bool> {
+        let rt = Runtime::new().map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(e.to_string()))?;
+        rt.block_on(async {
+            self.disable_provider(&provider_id).await.map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(e.to_string()))
+        })
     }
     
     #[pyo3(name = "enable_provider")]
-    fn enable_provider_impl(&self, _provider_id: String) -> PyResult<bool> {
-        Err(pyo3::exceptions::PyRuntimeError::new_err("Async provider enable not supported from Python yet"))
+    fn enable_provider_impl(&self, provider_id: String) -> PyResult<bool> {
+        let rt = Runtime::new().map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(e.to_string()))?;
+        rt.block_on(async {
+            self.enable_provider(&provider_id).await.map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(e.to_string()))
+        })
     }
 }

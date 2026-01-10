@@ -15,22 +15,61 @@
 //! See the License for the specific language governing permissions and
 //! limitations under the License.
 
-use crate::core::DMSCResult;
-use crate::database::{DMSCDatabaseConfig, DMSCDBResult, DMSCDBRow, DatabaseType};
 use async_trait::async_trait;
-use mysql::Pool;
-use std::sync::Arc;
+use mysql as mysql_crate;
 
-#[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
+use crate::core::{DMSCResult, DMSCError};
+use crate::database::{
+    DMSCDatabase, DMSCDatabaseConfig, DatabaseType,
+    DMSCDBResult, DMSCDBRow
+};
+
 #[derive(Clone)]
 pub struct MySQLDatabase {
-    pool: Pool,
+    pool: mysql_crate::Pool,
     config: DMSCDatabaseConfig,
 }
 
 impl MySQLDatabase {
-    pub fn new(pool: Pool, config: DMSCDatabaseConfig) -> Self {
+    pub fn new(pool: mysql_crate::Pool, config: DMSCDatabaseConfig) -> Self {
         Self { pool, config }
+    }
+
+    fn row_to_dmsc_row(row: &mysql_crate::Row) -> DMSCDBRow {
+        let columns: Vec<String> = row.columns().iter()
+            .map(|col| col.name_str().to_string())
+            .collect();
+
+        let values: Vec<Option<serde_json::Value>> = row.columns().iter()
+            .enumerate()
+            .map(|(idx, col)| {
+                let value: Option<mysql_crate::Value> = row.get(idx);
+                Self::value_to_json(value, col.column_type())
+            })
+            .collect();
+
+        DMSCDBRow { columns, values }
+    }
+
+    fn value_to_json(value: Option<mysql_crate::Value>, col_type: mysql_crate::ColumnType) -> Option<serde_json::Value> {
+        match value {
+            None => None,
+            Some(mysql_crate::Value::NULL) => None,
+            Some(mysql_crate::Value::Bytes(v)) => Some(serde_json::json!(String::from_utf8_lossy(&v).to_string())),
+            Some(mysql_crate::Value::Int(v)) => Some(serde_json::json!(v)),
+            Some(mysql_crate::Value::UInt(v)) => Some(serde_json::json!(v)),
+            Some(mysql_crate::Value::Float(f)) => Some(serde_json::json!(f)),
+            Some(mysql_crate::Value::Double(d)) => Some(serde_json::json!(d)),
+            Some(mysql_crate::Value::Date(y, m, d, hh, mm, ss, frac)) => {
+                Some(serde_json::json!(format!("{:04}-{:02}-{:02} {:02}:{:02}:{:02}.{:06}",
+                    y, m, d, hh, mm, ss, frac)))
+            }
+            Some(mysql_crate::Value::Time(neg, d, h, m, s, frac)) => {
+                let sign = if neg { "-" } else { "" };
+                Some(serde_json::json!(format!("{} {:02}:{:02}:{:02}.{:06}",
+                    sign, h + d * 24, m, s, frac)))
+            }
+        }
     }
 }
 
@@ -41,67 +80,109 @@ impl DMSCDatabase for MySQLDatabase {
     }
 
     async fn execute(&self, sql: &str) -> DMSCResult<u64> {
-        self.pool
-            .prep_exec(sql, ())
+        let result = self.pool.get_conn()
             .await
-            .map_err(|e| crate::core::DMSCError::Config(e.to_string()))?;
-        Ok(0)
+            .map_err(|e| DMSCError::Other(format!("MySQL connection error: {}", e)))?
+            .query_drop(sql)
+            .await
+            .map_err(|e| DMSCError::Other(format!("MySQL execute error: {}", e)))?;
+
+        Ok(result.affected_rows())
     }
 
     async fn query(&self, sql: &str) -> DMSCResult<DMSCDBResult> {
-        let mut conn = self.pool.get_conn().map_err(|e| crate::core::DMSCError::Config(e.to_string()))?;
-        let rows: Vec<DMSCDBRow> = conn
-            .query_map(sql, |row: mysql::Row| {
-                let mut dmsc_row = DMSCDBRow::new();
-                let columns = row.columns_ref();
-                for col in columns {
-                    let name = col.name_str();
-                    let value: Option<mysql::Value> = row.get(name.as_str());
-                    let json = value_to_json(value);
-                    dmsc_row.add_value(name.as_str(), json);
-                }
-                dmsc_row
-            })
-            .map_err(|e| crate::core::DMSCError::Config(e.to_string()))?;
-        Ok(DMSCDBResult::with_rows(rows))
+        let conn = self.pool.get_conn()
+            .await
+            .map_err(|e| DMSCError::Other(format!("MySQL connection error: {}", e)))?;
+
+        let result = conn.query_iter(sql)
+            .await
+            .map_err(|e| DMSCError::Other(format!("MySQL query error: {}", e)))?;
+
+        let mut dmsc_rows = Vec::new();
+        for row in result {
+            let mysql_row = row.map_err(|e| DMSCError::Other(format!("MySQL row error: {}", e)))?;
+            dmsc_rows.push(Self::row_to_dmsc_row(&mysql_row));
+        }
+
+        Ok(DMSCDBResult::with_rows(dmsc_rows))
     }
 
     async fn query_one(&self, sql: &str) -> DMSCResult<Option<DMSCDBRow>> {
-        let mut conn = self.pool.get_conn().map_err(|e| crate::core::DMSCError::Config(e.to_string()))?;
-        let result: Option<DMSCDBRow> = conn
-            .query_first(sql)
-            .map_err(|e| crate::core::DMSCError::Config(e.to_string()))?;
-        Ok(result)
+        let conn = self.pool.get_conn()
+            .await
+            .map_err(|e| DMSCError::Other(format!("MySQL connection error: {}", e)))?;
+
+        let result = conn.query_iter(sql)
+            .await
+            .map_err(|e| DMSCError::Other(format!("MySQL query error: {}", e)))?;
+
+        if let Some(row) = result.next().transpose()? {
+            Ok(Some(Self::row_to_dmsc_row(&row)))
+        } else {
+            Ok(None)
+        }
     }
 
     async fn ping(&self) -> DMSCResult<bool> {
-        self.pool.test_conn().map_err(|e| crate::core::DMSCError::Config(e.to_string()))
+        self.pool.get_conn()
+            .await
+            .map(|_| true)
+            .map_err(|e| DMSCError::Other(format!("MySQL ping error: {}", e)))
     }
 
     fn is_connected(&self) -> bool {
-        self.pool.is_active()
+        !self.pool.is_closed()
     }
 
     async fn close(&self) -> DMSCResult<()> {
-        self.pool.disconnect().map_err(|e| crate::core::DMSCError::Config(e.to_string()))
+        drop(self.pool);
+        Ok(())
     }
 }
 
-fn value_to_json(value: Option<mysql::Value>) -> serde_json::Value {
-    match value {
-        Some(mysql::Value::NULL) => serde_json::Value::Null,
-        Some(mysql::Value::Bytes(v)) => serde_json::Value::String(hex::encode(v)),
-        Some(mysql::Value::Int(v)) => serde_json::Value::Number(serde_json::Number::from(v)),
-        Some(mysql::Value::UInt(v)) => serde_json::Value::Number(serde_json::Number::from(v)),
-        Some(mysql::Value::Float(v)) => serde_json::Value::Number(serde_json::Number::from_f64(v as f64).unwrap_or_default()),
-        Some(mysql::Value::Double(v)) => serde_json::Value::Number(serde_json::Number::from_f64(v).unwrap_or_default()),
-        Some(mysql::Value::Date(y, m, d, h, min, s, _)) => {
-            serde_json::Value::String(format!("{}-{:02}-{:02} {:02}:{:02}:{:02}", y, m, d, h, min, s))
-        }
-        Some(mysql::Value::Time(is_neg, d, h, m, s, _)) => {
-            let sign = if is_neg { "-" } else { "" };
-            serde_json::Value::String(format!("{}{}:{}:{}:{}", sign, d, h, m, s))
-        }
-        None => serde_json::Value::Null,
+#[cfg(feature = "pyo3")]
+#[pyo3::prelude::pymethods]
+impl MySQLDatabase {
+    #[staticmethod]
+    pub fn from_connection_string(conn_string: &str, max_connections: u32) -> Self {
+        let opts = mysql_crate::Opts::from_url(conn_string)
+            .unwrap_or_else(|_| mysql_crate::Opts::from_url("mysql://localhost:3306").unwrap());
+
+        let pool_opts = mysql_crate::PoolOpts::default()
+            .with_conn_idle_timeout(std::time::Duration::from_secs(600))
+            .with_max_idle_connections(max_connections as u16);
+
+        let pool = mysql_crate::Pool::new_opts(opts, pool_opts);
+
+        let db_config = DMSCDatabaseConfig::mysql()
+            .max_connections(max_connections)
+            .build();
+
+        Self::new(pool, db_config)
+    }
+
+    pub fn execute_sync(&self, sql: &str) -> Result<u64, DMSCError> {
+        tokio::runtime::Runtime::new()
+            .unwrap()
+            .block_on(async {
+                self.execute(sql).await
+            })
+    }
+
+    pub fn query_sync(&self, sql: &str) -> Result<DMSCDBResult, DMSCError> {
+        tokio::runtime::Runtime::new()
+            .unwrap()
+            .block_on(async {
+                self.query(sql).await
+            })
+    }
+
+    pub fn ping_sync(&self) -> Result<bool, DMSCError> {
+        tokio::runtime::Runtime::new()
+            .unwrap()
+            .block_on(async {
+                self.ping().await
+            })
     }
 }

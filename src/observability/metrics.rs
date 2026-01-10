@@ -89,6 +89,7 @@ use crate::core::DMSCResult;
 
 /// Metric types supported
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 pub enum DMSCMetricType {
     Counter,
     Gauge,
@@ -98,6 +99,7 @@ pub enum DMSCMetricType {
 
 /// A single metric sample
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 pub struct DMSCMetricSample {
     pub timestamp: u64, // seconds since epoch
     pub value: f64,
@@ -106,6 +108,7 @@ pub struct DMSCMetricSample {
 
 /// Metric configuration
 #[derive(Debug, Clone)]
+#[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 pub struct DMSCMetricConfig {
     pub metric_type: DMSCMetricType,
     pub name: String,
@@ -286,6 +289,7 @@ impl Default for DMSCWindowStats {
 }
 
 /// A single metric with sliding window aggregation
+#[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 pub struct DMSCMetric {
     config: DMSCMetricConfig,
     sliding_window: RwLock<DMSCSlidingWindow>,
@@ -318,29 +322,38 @@ impl DMSCMetric {
         };
         
         {
-            let mut window = self.sliding_window.write().unwrap();
+            let mut window = self.sliding_window.write().expect("Failed to acquire write lock for sliding window");
             window.add_sample(sample);
         }
         
-        *self.total_count.write().unwrap() += 1;
-        *self.total_sum.write().unwrap() += value;
+        {
+            let mut count = self.total_count.write().expect("Failed to acquire write lock for total count");
+            *count += 1;
+        }
+        
+        {
+            let mut sum = self.total_sum.write().expect("Failed to acquire write lock for total sum");
+            *sum += value;
+        }
         
         Ok(())
     }
     
     #[allow(dead_code)]
     fn get_stats(&self) -> DMSCWindowStats {
-        self.sliding_window.read().unwrap().get_window_stats()
+        self.sliding_window.read().expect("Failed to acquire read lock for sliding window").get_window_stats()
     }
     
     #[allow(dead_code)]
     fn get_total_count(&self) -> u64 {
-        *self.total_count.read().unwrap()
+        let count = self.total_count.read().expect("Failed to acquire read lock for total count");
+        *count
     }
     
     #[allow(dead_code)]
     fn get_total_sum(&self) -> f64 {
-        *self.total_sum.read().unwrap()
+        let sum = self.total_sum.read().expect("Failed to acquire read lock for total sum");
+        *sum
     }
     
     fn get_config(&self) -> &DMSCMetricConfig {
@@ -358,6 +371,7 @@ impl DMSCMetric {
 
 /// Metrics registry to manage multiple metrics
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
+#[derive(Clone)]
 pub struct DMSCMetricsRegistry {
     metrics: Arc<RwLock<HashMap<String, Arc<DMSCMetric>>>>,
 }
@@ -377,23 +391,23 @@ impl DMSCMetricsRegistry {
     
     pub fn register(&self, metric: Arc<DMSCMetric>) -> DMSCResult<()> {
         let name = metric.get_config().name.clone();
-        self.metrics.write().unwrap().insert(name, metric);
+        self.metrics.write().expect("Failed to acquire write lock for metrics registry").insert(name, metric);
         Ok(())
     }
     
     pub fn get_metric(&self, name: &str) -> Option<Arc<DMSCMetric>> {
-        self.metrics.read().unwrap().get(name).cloned()
+        self.metrics.read().expect("Failed to acquire read lock for metrics registry").get(name).cloned()
     }
     
     pub fn get_all_metrics(&self) -> HashMap<String, Arc<DMSCMetric>> {
-        self.metrics.read().unwrap().clone()
+        self.metrics.read().expect("Failed to acquire read lock for metrics registry").clone()
     }
     
     /// Export metrics in Prometheus format
     #[cfg(feature = "observability")]
     pub fn export_prometheus(&self) -> String {
         let mut output = String::new();
-        let metrics = self.metrics.read().unwrap();
+        let metrics = self.metrics.read().expect("Failed to acquire read lock for metrics registry");
         
         for (name, metric) in metrics.iter() {
             let config = metric.get_config();

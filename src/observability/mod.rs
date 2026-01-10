@@ -77,14 +77,14 @@ pub mod propagation;
 #[cfg(feature = "observability")]
 pub mod prometheus;
 #[cfg(feature = "system_info")]
-pub mod metrics_collector;
+mod metrics_collector;
 pub mod grafana;
 
 use std::sync::Arc;
 use serde::{Serialize, Deserialize};
 
 pub use tracing::{DMSCTracer, DMSCTraceId, DMSCSpanId, DMSCSpan, DMSCSpanKind, DMSCSpanStatus, DMSCTracingContext, DMSCSamplingStrategy};
-pub use metrics::{DMSCMetricsRegistry, DMSCMetric, DMSCMetricConfig, DMSCMetricType, DMSCWindowStats};
+pub use metrics::{DMSCMetricsRegistry, DMSCMetric, DMSCMetricConfig, DMSCMetricType, DMSCWindowStats, DMSCMetricSample};
 pub use propagation::{DMSCTraceContext, DMSCBaggage, DMSCContextCarrier, W3CTracePropagator};
 
 use crate::core::{DMSCResult, DMSCServiceContext};
@@ -95,6 +95,7 @@ use crate::core::{DMSCResult, DMSCServiceContext};
 /// This module provides distributed tracing and metrics collection capabilities, following modern
 /// observability best practices. It implements the `ServiceModule` trait for seamless integration
 /// with the DMSC application lifecycle.
+#[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 pub struct DMSCObservabilityModule {
     /// Distributed tracer instance
     tracer: Option<Arc<DMSCTracer>>,
@@ -669,6 +670,14 @@ impl DMSCObservabilityData {
     }
 }
 
+#[cfg(feature = "pyo3")]
+#[pyo3::prelude::pymethods]
+impl DMSCObservabilityModule {
+    fn get_metrics(&self) -> String {
+        format!("ObservabilityModule with config: {:?}", self.config)
+    }
+}
+
 #[async_trait::async_trait]
 impl crate::core::DMSCModule for DMSCObservabilityModule {
     /// Returns the name of the observability module.
@@ -718,10 +727,19 @@ impl crate::core::DMSCModule for DMSCObservabilityModule {
         self.config = DMSCObservabilityConfig {
             tracing_enabled: cfg.get_bool("observability.tracing_enabled").unwrap_or(true),
             metrics_enabled: cfg.get_bool("observability.metrics_enabled").unwrap_or(true),
-            tracing_sampling_rate: cfg.get_f32("observability.tracing_sampling_rate").unwrap_or(0.1) as f64,
-            tracing_sampling_strategy: cfg.get_str("observability.tracing_sampling_strategy").unwrap_or("rate").to_string(),
-            metrics_window_size_secs: cfg.get_u64("observability.metrics_window_size_secs").unwrap_or(300),
-            metrics_bucket_size_secs: cfg.get_u64("observability.metrics_bucket_size_secs").unwrap_or(10),
+            tracing_sampling_rate: cfg.get_f32("observability.tracing_sampling_rate")
+                .unwrap_or(0.1)
+                .max(0.0)
+                .min(1.0) as f64,
+            tracing_sampling_strategy: cfg.get_str("observability.tracing_sampling_strategy")
+                .unwrap_or("rate")
+                .to_string(),
+            metrics_window_size_secs: cfg.get_u64("observability.metrics_window_size_secs")
+                .unwrap_or(300)
+                .max(1),
+            metrics_bucket_size_secs: cfg.get_u64("observability.metrics_bucket_size_secs")
+                .unwrap_or(10)
+                .max(1),
         };
         
         // Initialize components

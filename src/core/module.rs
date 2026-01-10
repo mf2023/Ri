@@ -491,6 +491,7 @@ impl DMSCPyModuleAdapter {
 /// ```
 #[pyclass]
 #[pyo3(name = "DMSCPyServiceModule")]
+#[derive(Clone)]
 pub struct DMSCPyServiceModule {
     name: String,
     is_critical: bool,
@@ -596,6 +597,7 @@ impl DMSCPyServiceModule {
 /// ```
 #[pyclass]
 #[pyo3(name = "DMSCPyAsyncServiceModule")]
+#[derive(Clone)]
 pub struct DMSCPyAsyncServiceModule {
     name: String,
     is_critical: bool,
@@ -705,6 +707,100 @@ impl AsyncServiceModule for DMSCPyModuleAdapter {
     }
 }
 
+#[cfg(feature = "pyo3")]
+impl ServiceModule for DMSCPyServiceModule {
+    fn name(&self) -> &str {
+        &self.name
+    }
+    
+    fn is_critical(&self) -> bool {
+        self.is_critical
+    }
+    
+    fn priority(&self) -> i32 {
+        self.priority
+    }
+    
+    fn dependencies(&self) -> Vec<&str> {
+        self.dependencies.iter().map(|s| s.as_str()).collect()
+    }
+    
+    fn init(&mut self, _ctx: &mut DMSCServiceContext) -> DMSCResult<()> {
+        Ok(())
+    }
+    
+    fn before_start(&mut self, _ctx: &mut DMSCServiceContext) -> DMSCResult<()> {
+        Ok(())
+    }
+    
+    fn start(&mut self, _ctx: &mut DMSCServiceContext) -> DMSCResult<()> {
+        Ok(())
+    }
+    
+    fn after_start(&mut self, _ctx: &mut DMSCServiceContext) -> DMSCResult<()> {
+        Ok(())
+    }
+    
+    fn before_shutdown(&mut self, _ctx: &mut DMSCServiceContext) -> DMSCResult<()> {
+        Ok(())
+    }
+    
+    fn shutdown(&mut self, _ctx: &mut DMSCServiceContext) -> DMSCResult<()> {
+        Ok(())
+    }
+    
+    fn after_shutdown(&mut self, _ctx: &mut DMSCServiceContext) -> DMSCResult<()> {
+        Ok(())
+    }
+}
+
+#[cfg(feature = "pyo3")]
+#[async_trait::async_trait]
+impl AsyncServiceModule for DMSCPyAsyncServiceModule {
+    fn name(&self) -> &str {
+        &self.name
+    }
+    
+    fn is_critical(&self) -> bool {
+        self.is_critical
+    }
+    
+    fn priority(&self) -> i32 {
+        self.priority
+    }
+    
+    fn dependencies(&self) -> Vec<&str> {
+        self.dependencies.iter().map(|s| s.as_str()).collect()
+    }
+    
+    async fn init(&mut self, _ctx: &mut DMSCServiceContext) -> DMSCResult<()> {
+        Ok(())
+    }
+    
+    async fn before_start(&mut self, _ctx: &mut DMSCServiceContext) -> DMSCResult<()> {
+        Ok(())
+    }
+    
+    async fn start(&mut self, _ctx: &mut DMSCServiceContext) -> DMSCResult<()> {
+        Ok(())
+    }
+    
+    async fn after_start(&mut self, _ctx: &mut DMSCServiceContext) -> DMSCResult<()> {
+        Ok(())
+    }
+    
+    async fn before_shutdown(&mut self, _ctx: &mut DMSCServiceContext) -> DMSCResult<()> {
+        Ok(())
+    }
+    
+    async fn shutdown(&mut self, _ctx: &mut DMSCServiceContext) -> DMSCResult<()> {
+        Ok(())
+    }
+    
+    async fn after_shutdown(&mut self, _ctx: &mut DMSCServiceContext) -> DMSCResult<()> {
+        Ok(())
+    }
+}
 
 
 /// Internal asynchronous service module trait.

@@ -188,15 +188,20 @@ impl FromStr for DMSCQueueBackendType {
 ///
 /// This structure defines the retry policy for failed messages, including maximum retry
 /// attempts, initial delay, maximum delay, and backoff multiplier.
+#[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DMSCRetryPolicy {
     /// Maximum number of retry attempts for a failed message
+    #[pyo3(get, set)]
     pub max_retries: u32,
     /// Initial delay in milliseconds before the first retry
+    #[pyo3(get, set)]
     pub initial_delay_ms: u64,
     /// Maximum delay in milliseconds between retries
+    #[pyo3(get, set)]
     pub max_delay_ms: u64,
     /// Multiplier for exponential backoff (e.g., 2.0 for doubling delay each retry)
+    #[pyo3(get, set)]
     pub backoff_multiplier: f64,
 }
 
@@ -216,20 +221,74 @@ impl Default for DMSCRetryPolicy {
     }
 }
 
+#[cfg(feature = "pyo3")]
+#[pyo3::prelude::pymethods]
+impl DMSCRetryPolicy {
+    #[new]
+    fn py_new() -> Self {
+        Self::default()
+    }
+    
+    #[staticmethod]
+    fn py_new_with_values(max_retries: u32, initial_delay_ms: u64, max_delay_ms: u64, backoff_multiplier: f64) -> Self {
+        Self {
+            max_retries,
+            initial_delay_ms,
+            max_delay_ms,
+            backoff_multiplier,
+        }
+    }
+}
+
 /// Configuration for dead letter queue functionality.
 ///
 /// This structure defines the configuration for dead letter queues, which are used to store
 /// messages that have failed to process after maximum retry attempts.
+#[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DMSCDeadLetterConfig {
     /// Whether dead letter queue functionality is enabled
+    #[pyo3(get, set)]
     pub enabled: bool,
     /// Maximum number of retry attempts before a message is sent to the dead letter queue
+    #[pyo3(get, set)]
     pub max_retry_count: u32,
     /// Name of the dead letter queue
+    #[pyo3(get, set)]
     pub dead_letter_queue_name: String,
     /// Time-to-live for messages in the dead letter queue in hours
+    #[pyo3(get, set)]
     pub ttl_hours: u32,
+}
+
+impl Default for DMSCDeadLetterConfig {
+    fn default() -> Self {
+        Self {
+            enabled: false,
+            max_retry_count: 3,
+            dead_letter_queue_name: "dead_letter".to_string(),
+            ttl_hours: 24,
+        }
+    }
+}
+
+#[cfg(feature = "pyo3")]
+#[pyo3::prelude::pymethods]
+impl DMSCDeadLetterConfig {
+    #[new]
+    fn py_new() -> Self {
+        Self::default()
+    }
+    
+    #[staticmethod]
+    fn py_new_enabled(dead_letter_queue_name: String, ttl_hours: u32) -> Self {
+        Self {
+            enabled: true,
+            max_retry_count: 3,
+            dead_letter_queue_name,
+            ttl_hours,
+        }
+    }
 }
 
 #[cfg(feature = "pyo3")]

@@ -28,9 +28,8 @@ use crate::hooks::{DMSCHookKind, DMSCModulePhase};
 use super::module_types::{ModuleSlot, ModuleType};
 use tokio::sync::RwLock as AsyncRwLock;
 use std::sync::Arc;
-
 #[cfg(feature = "pyo3")]
-use pyo3::PyResult;
+use pyo3::prelude::*;
 
 /// Public-facing application runtime.
 /// 
@@ -56,6 +55,7 @@ use pyo3::PyResult;
 /// ```
 
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
+#[derive(Clone)]
 pub struct DMSCAppRuntime {
     /// Service context providing access to core functionalities
     ctx: DMSCServiceContext,
@@ -559,14 +559,21 @@ impl DMSCAppRuntime {
 }
 
 #[cfg(feature = "pyo3")]
-/// Python bindings for DMSCAppRuntime
 #[pyo3::prelude::pymethods]
 impl DMSCAppRuntime {
     #[pyo3(name = "run")]
-    fn run_impl(&self) -> PyResult<()> {
-        Ok(())
+    fn run_py(&self) -> PyResult<()> {
+        let rt = tokio::runtime::Builder::new_current_thread()
+            .enable_all()
+            .build()
+            .map_err::<pyo3::PyErr, _>(|e| e.into())?;
+        
+        let runtime = self.clone();
+        rt.block_on(async {
+            runtime.run(|_ctx| async move { Ok(()) }).await
+        }).map_err(|e| e.into())
     }
-    
+
     fn get_context(&self) -> PyResult<DMSCServiceContext> {
         Ok(self.ctx.clone())
     }

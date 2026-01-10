@@ -248,6 +248,12 @@ pub struct DMSCQueueStats {
     pub failed_messages: u64,
     /// Average processing time in milliseconds
     pub avg_processing_time_ms: f64,
+    /// Total bytes sent
+    pub total_bytes_sent: u64,
+    /// Total bytes received
+    pub total_bytes_received: u64,
+    /// Timestamp of last message (milliseconds since start)
+    pub last_message_time: u64,
 }
 
 #[cfg(feature = "pyo3")]
@@ -264,6 +270,9 @@ impl DMSCQueueStats {
             processed_messages: 0,
             failed_messages: 0,
             avg_processing_time_ms: 0.0,
+            total_bytes_sent: 0,
+            total_bytes_received: 0,
+            last_message_time: 0,
         }
     }
 }

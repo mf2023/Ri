@@ -68,6 +68,10 @@ pub mod service_mesh;
 pub mod auth;
 /// Database abstraction layer with multiple backend support
 pub mod database;
+/// Protocol abstraction layer for multiple protocol support
+#[cfg(feature = "pyo3")]
+#[cfg_attr(feature = "pyo3", path = "protocol/mod.rs")]
+pub mod protocol;
 /// Validation utilities for input validation and data sanitization
 pub mod validation;
 /// Inter-module RPC communication for distributed method calls
@@ -255,6 +259,8 @@ pub mod py {
         m.add_class::<crate::queue::DMSCQueueMessage>()?;
         m.add_class::<crate::queue::DMSCQueueStats>()?;
         m.add_class::<crate::queue::DMSCQueueBackendType>()?;
+        m.add_class::<crate::queue::DMSCRetryPolicy>()?;
+        m.add_class::<crate::queue::DMSCDeadLetterConfig>()?;
         
         // Add gateway types to main module
         m.add_class::<crate::gateway::DMSCGateway>()?;
@@ -272,9 +278,15 @@ pub mod py {
         
         // Add service mesh types to main module
         m.add_class::<crate::service_mesh::DMSCServiceMesh>()?;
+        m.add_class::<crate::service_mesh::DMSCServiceMeshConfig>()?;
         m.add_class::<crate::service_mesh::DMSCServiceDiscovery>()?;
+        m.add_class::<crate::service_mesh::DMSCServiceInstance>()?;
+        m.add_class::<crate::service_mesh::DMSCServiceStatus>()?;
         m.add_class::<crate::service_mesh::health_check::DMSCHealthChecker>()?;
-        m.add_class::<crate::service_mesh::traffic_management::DMSCTrafficManager>()?;
+        m.add_class::<crate::service_mesh::DMSCTrafficRoute>()?;
+        m.add_class::<crate::service_mesh::DMSCMatchCriteria>()?;
+        m.add_class::<crate::service_mesh::DMSCRouteAction>()?;
+        m.add_class::<crate::service_mesh::DMSCWeightedDestination>()?;
         
         // Add auth types to main module
         m.add_class::<crate::auth::DMSCAuthModule>()?;
@@ -283,11 +295,45 @@ pub mod py {
         m.add_class::<crate::auth::DMSCSessionManager>()?;
         m.add_class::<crate::auth::DMSCPermissionManager>()?;
         m.add_class::<crate::auth::DMSCOAuthManager>()?;
+        m.add_class::<crate::auth::DMSCOAuthToken>()?;
+        m.add_class::<crate::auth::DMSCOAuthUserInfo>()?;
+        m.add_class::<crate::auth::DMSCPermission>()?;
+        m.add_class::<crate::auth::DMSCRole>()?;
+        m.add_class::<crate::auth::JWTRevocationList>()?;
+        
+        // Add observability types to main module
+        m.add_class::<crate::observability::DMSCObservabilityModule>()?;
+        m.add_class::<crate::observability::DMSCObservabilityConfig>()?;
+        m.add_class::<crate::observability::DMSCMetricsRegistry>()?;
+        m.add_class::<crate::observability::DMSCTracer>()?;
+        m.add_class::<crate::observability::DMSCMetricType>()?;
+        m.add_class::<crate::observability::DMSCMetricConfig>()?;
+        m.add_class::<crate::observability::DMSCMetricSample>()?;
+        m.add_class::<crate::observability::DMSCMetric>()?;
+        m.add_class::<crate::observability::DMSCObservabilityData>()?;
+        
+        // Add protocol types to main module
+        m.add_class::<crate::protocol::DMSCProtocolManager>()?;
+        m.add_class::<crate::protocol::DMSCProtocolType>()?;
+        m.add_class::<crate::protocol::DMSCProtocolConfig>()?;
+        m.add_class::<crate::protocol::DMSCProtocolStatus>()?;
+        m.add_class::<crate::protocol::DMSCProtocolStats>()?;
+        m.add_class::<crate::protocol::DMSCConnectionState>()?;
+        m.add_class::<crate::protocol::DMSCConnectionStats>()?;
+        m.add_class::<crate::protocol::DMSCProtocolHealth>()?;
+        m.add_class::<crate::protocol::DMSCFrame>()?;
+        m.add_class::<crate::protocol::DMSCFrameHeader>()?;
+        m.add_class::<crate::protocol::DMSCFrameType>()?;
+        m.add_class::<crate::protocol::DMSCConnectionInfo>()?;
+        m.add_class::<crate::protocol::DMSCMessageFlags>()?;
+        m.add_class::<crate::protocol::DMSCSecurityLevel>()?;
         
         // Add database types to main module
         m.add_class::<crate::database::DMSCDatabaseConfig>()?;
+        m.add_class::<crate::database::DMSCDatabasePool>()?;
         m.add_class::<crate::database::DMSCDBRow>()?;
         m.add_class::<crate::database::DMSCDBResult>()?;
+        m.add_class::<crate::database::DatabaseType>()?;
         
         // Add module_rpc types to main module
         m.add_class::<crate::module_rpc::DMSCModuleRPC>()?;
@@ -295,6 +341,35 @@ pub mod py {
         m.add_class::<crate::module_rpc::DMSCModuleEndpoint>()?;
         m.add_class::<crate::module_rpc::DMSCMethodCall>()?;
         m.add_class::<crate::module_rpc::DMSCMethodResponse>()?;
+        
+        // Add service mesh types to main module
+        m.add_class::<crate::service_mesh::DMSCServiceInstance>()?;
+        m.add_class::<crate::service_mesh::DMSCServiceStatus>()?;
+        m.add_class::<crate::service_mesh::health_check::DMSCHealthChecker>()?;
+        
+        // Add auth types to main module
+        m.add_class::<crate::auth::DMSCAuthModule>()?;
+        
+        // Add device types to main module
+        m.add_class::<crate::device::DMSCDevice>()?;
+        m.add_class::<crate::device::DMSCDeviceType>()?;
+        m.add_class::<crate::device::DMSCDeviceStatus>()?;
+        m.add_class::<crate::device::DMSCDeviceCapabilities>()?;
+        m.add_class::<crate::device::DMSCDeviceHealthMetrics>()?;
+        m.add_class::<crate::device::DMSCDeviceController>()?;
+        m.add_class::<crate::device::DMSCDeviceConfig>()?;
+        m.add_class::<crate::device::DMSCDeviceControlConfig>()?;
+        m.add_class::<crate::device::NetworkDeviceInfo>()?;
+        m.add_class::<crate::device::DMSCDiscoveryResult>()?;
+        m.add_class::<crate::device::DMSCResourceRequest>()?;
+        m.add_class::<crate::device::DMSCResourceAllocation>()?;
+        m.add_class::<crate::device::DMSCRequestSlaClass>()?;
+        m.add_class::<crate::device::DMSCResourceWeights>()?;
+        m.add_class::<crate::device::DMSCAffinityRules>()?;
+        m.add_class::<crate::device::pool::DMSCResourcePool>()?;
+        m.add_class::<crate::device::pool::DMSCResourcePoolConfig>()?;
+        m.add_class::<crate::device::pool::DMSCResourcePoolStatistics>()?;
+        m.add_class::<crate::device::pool::DMSCResourcePoolManager>()?;
         
         // Create and add submodules
         create_log_module(m)?;
@@ -310,6 +385,7 @@ pub mod py {
         create_auth_module(m)?;
         create_database_module(m)?;
         create_validation_module(m)?;
+        create_protocol_module(m)?;
         
         Ok(())
     }
@@ -329,21 +405,26 @@ pub mod py {
     fn create_device_module(parent: &Bound<'_, PyModule>) -> PyResult<()> {
         let m = PyModule::new(parent.py(), "device")?;
         
-        // Add device types to the device module
+        m.add_class::<crate::device::DMSCDeviceControlModule>()?;
         m.add_class::<crate::device::DMSCDevice>()?;
         m.add_class::<crate::device::DMSCDeviceType>()?;
         m.add_class::<crate::device::DMSCDeviceStatus>()?;
         m.add_class::<crate::device::DMSCDeviceCapabilities>()?;
         m.add_class::<crate::device::DMSCDeviceHealthMetrics>()?;
         m.add_class::<crate::device::DMSCDeviceController>()?;
+        m.add_class::<crate::device::DMSCDeviceConfig>()?;
+        m.add_class::<crate::device::DMSCDeviceControlConfig>()?;
+        m.add_class::<crate::device::NetworkDeviceInfo>()?;
         m.add_class::<crate::device::DMSCDiscoveryResult>()?;
         m.add_class::<crate::device::DMSCResourceRequest>()?;
+        m.add_class::<crate::device::DMSCResourceAllocation>()?;
         m.add_class::<crate::device::DMSCRequestSlaClass>()?;
         m.add_class::<crate::device::DMSCResourceWeights>()?;
         m.add_class::<crate::device::DMSCAffinityRules>()?;
-        m.add_class::<crate::device::DMSCResourceAllocation>()?;
-        m.add_class::<crate::device::DMSCDeviceConfig>()?;
-        m.add_class::<crate::device::DMSCDeviceControlConfig>()?;
+        m.add_class::<crate::device::pool::DMSCResourcePool>()?;
+        m.add_class::<crate::device::pool::DMSCResourcePoolConfig>()?;
+        m.add_class::<crate::device::pool::DMSCResourcePoolStatistics>()?;
+        m.add_class::<crate::device::pool::DMSCResourcePoolManager>()?;
         
         parent.add_submodule(&m)?;
         Ok(())
@@ -385,6 +466,7 @@ pub mod py {
     
     fn create_observability_module(parent: &Bound<'_, PyModule>) -> PyResult<()> {
         let m = PyModule::new(parent.py(), "observability")?;
+        m.add_class::<crate::observability::DMSCObservabilityModule>()?;
         m.add_class::<crate::observability::DMSCObservabilityConfig>()?;
         m.add_class::<crate::observability::DMSCObservabilityData>()?;
         m.add_class::<crate::observability::DMSCMetricsRegistry>()?;
@@ -400,6 +482,9 @@ pub mod py {
         m.add_class::<crate::queue::DMSCQueueManager>()?;
         m.add_class::<crate::queue::DMSCQueueMessage>()?;
         m.add_class::<crate::queue::DMSCQueueStats>()?;
+        m.add_class::<crate::queue::DMSCQueueBackendType>()?;
+        m.add_class::<crate::queue::DMSCRetryPolicy>()?;
+        m.add_class::<crate::queue::DMSCDeadLetterConfig>()?;
         parent.add_submodule(&m)?;
         Ok(())
     }
@@ -458,6 +543,26 @@ pub mod py {
         m.add_class::<crate::validation::DMSCSanitizationConfig>()?;
         m.add_class::<crate::validation::DMSCSchemaValidator>()?;
         m.add_class::<crate::validation::DMSCValidationModule>()?;
+        parent.add_submodule(&m)?;
+        Ok(())
+    }
+    
+    fn create_protocol_module(parent: &Bound<'_, PyModule>) -> PyResult<()> {
+        let m = PyModule::new(parent.py(), "protocol")?;
+        m.add_class::<crate::protocol::DMSCProtocolManager>()?;
+        m.add_class::<crate::protocol::DMSCProtocolType>()?;
+        m.add_class::<crate::protocol::DMSCProtocolConfig>()?;
+        m.add_class::<crate::protocol::DMSCProtocolStatus>()?;
+        m.add_class::<crate::protocol::DMSCProtocolStats>()?;
+        m.add_class::<crate::protocol::DMSCConnectionState>()?;
+        m.add_class::<crate::protocol::DMSCConnectionStats>()?;
+        m.add_class::<crate::protocol::DMSCProtocolHealth>()?;
+        m.add_class::<crate::protocol::DMSCFrame>()?;
+        m.add_class::<crate::protocol::DMSCFrameHeader>()?;
+        m.add_class::<crate::protocol::DMSCFrameType>()?;
+        m.add_class::<crate::protocol::DMSCConnectionInfo>()?;
+        m.add_class::<crate::protocol::DMSCMessageFlags>()?;
+        m.add_class::<crate::protocol::DMSCSecurityLevel>()?;
         parent.add_submodule(&m)?;
         Ok(())
     }

@@ -985,14 +985,6 @@ impl Default for DMSCDeviceAuthProtocol {
     }
 }
 
-/// Post-quantum cryptography handler.
-pub struct DMSCPostQuantumCrypto {
-    /// Key exchange state
-    key_exchange_state: Arc<RwLock<KeyExchangeState>>,
-    /// Whether the handler is initialized
-    initialized: Arc<RwLock<bool>>,
-}
-
 /// Key exchange state for post-quantum cryptographic operations.
 ///
 /// Tracks the current state of a key exchange operation including local private
@@ -1092,19 +1084,6 @@ pub struct DMSCPostQuantumCrypto {
     /// initialized with a valid cryptographic suite. Prevents operations
     /// before initialization is complete.
     initialized: Arc<RwLock<bool>>,
-}
-        state.completed = true;
-        
-        Ok(())
-    }
-    
-    /// Generate post-quantum key (simplified).
-    async fn generate_post_quantum_key(&self) -> DMSCResult<Vec<u8>> {
-        let mut rng = rand::thread_rng();
-        let mut key = vec![0u8; 32];
-        rng.fill(&mut key[..]);
-        Ok(key)
-    }
 }
 
 impl Default for DMSCPostQuantumCrypto {
@@ -1310,7 +1289,6 @@ impl DMSCRandomPadding {
         
         Ok(padded_data[4..4 + data_len].to_vec())
     }
-}
 }
 
 /// HTTP pattern generator (makes data look like HTTP traffic).

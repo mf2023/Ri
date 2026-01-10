@@ -29,7 +29,7 @@ English | [简体中文](README.zh.md)
 <h2 align="center">🏗️ Core Architecture</h2>
 
 ### 📐 Modular Design
-DMSC adopts a highly modular architecture with 12 core modules, enabling on-demand composition and seamless extension:
+DMSC adopts a highly modular architecture with 14 core modules, enabling on-demand composition and seamless extension:
 
 <div align="center">
 
@@ -112,7 +112,7 @@ pip install dmsc
 Or add to your `requirements.txt`:
 
 ```
-dmsc==0.1.3
+dmsc==0.1.4
 ```
 
 <h2 align="center">⚡ Quick Start</h2>
@@ -120,17 +120,20 @@ dmsc==0.1.3
 ### Core API Usage
 
 ```python
-from dmsc import DMSCAppBuilder, DMSCLogConfig, DMSCObservabilityConfig
+import asyncio
+from dmsc import DMSCAppBuilder, DMSCLogConfig
 
-# Build service runtime
-app = DMSCAppBuilder() \
-    .with_config("config.yaml") \
-    .with_logging(DMSCLogConfig()) \
-    .with_observability(DMSCObservabilityConfig()) \
-    .build()
+async def main():
+    # Build service runtime
+    app = DMSCAppBuilder() \
+        .with_config("config.yaml") \
+        .with_logging(DMSCLogConfig()) \
+        .build()
+    
+    # Run business logic
+    await app.run()
 
-# Run business logic
-app.run(lambda ctx: ctx.logger().info("service", "DMSC service started") or None)
+asyncio.run(main())
 ```
 
 ### Authentication Example
@@ -155,11 +158,14 @@ from dmsc import DMSCQueueManager, DMSCQueueConfig
 queue_config = DMSCQueueConfig()
 queue_manager = DMSCQueueManager(queue_config)
 
-# Send message
-queue_manager.send_message("my_queue", {"data": "hello"})
+# Create a queue first
+queue_manager.create_queue("my_queue")
 
-# Receive message
-message = queue_manager.receive_message("my_queue")
+# Send message using push
+queue_manager.push("my_queue", {"data": "hello"})
+
+# Receive message using pop
+message = queue_manager.pop("my_queue")
 ```
 
 ### Service Mesh Example
@@ -171,11 +177,13 @@ from dmsc import DMSCServiceMesh, DMSCServiceDiscovery
 service_mesh = DMSCServiceMesh()
 service_discovery = DMSCServiceDiscovery()
 
-# Register service
-service_discovery.register_service("user-service", "localhost:8080")
+# Register service with host, port, and metadata
+instance_id = service_discovery.register_service("user-service", "localhost", 8080, {"version": "1.0.0"})
 
 # Discover service
-service_info = service_discovery.discover_service("user-service")
+instances = service_discovery.discover_service("user-service")
+for instance in instances:
+    print(f"Service: {instance.service_name}, Host: {instance.host}, Port: {instance.port}")
 ```
 
 ### Cache Management Example

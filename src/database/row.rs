@@ -22,8 +22,8 @@ use std::collections::HashMap;
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 #[derive(Debug, Clone)]
 pub struct DMSCDBRow {
-    columns: Vec<String>,
-    values: Vec<Option<serde_json::Value>>,
+    pub columns: Vec<String>,
+    pub values: Vec<Option<serde_json::Value>>,
 }
 
 impl DMSCDBRow {

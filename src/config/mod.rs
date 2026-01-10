@@ -63,8 +63,13 @@
 use std::collections::HashMap;
 use std::fs;
 use std::path::{Path, PathBuf};
-use std::sync::Arc;
+use std::sync::{Arc, RwLock};
+use tokio::sync::RwLock as TokioRwLock;
+use tokio::task::JoinHandle;
 use yaml_rust::{YamlLoader, Yaml};
+
+#[cfg(feature = "config_hot_reload")]
+use notify::{RecommendedWatcher, RecursiveMode, Watcher};
 
 #[cfg(feature = "pyo3")]
 use crate::hooks::DMSCHookKind;
@@ -466,20 +471,46 @@ enum DMSCConfigSource {
 /// and provides access to the configuration. It supports hot reload and multiple
 /// configuration formats.
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
-#[derive(Clone)]
 pub struct DMSCConfigManager {
     /// Internal configuration storage
-    config: DMSCConfig,
+    config: Arc<RwLock<DMSCConfig>>,
     /// List of configuration sources to load from
     sources: Vec<DMSCConfigSource>,
     /// Optional hook bus for emitting config reload events
     #[cfg(feature = "pyo3")]
     hooks: Option<Arc<crate::hooks::DMSCHookBus>>,
+    /// Hot reload watcher handle
+    #[cfg(feature = "config_hot_reload")]
+    watcher: Option<Arc<RecommendedWatcher>>,
+    /// Background task handle for the watcher
+    watcher_task: Arc<TokioRwLock<Option<JoinHandle<()>>>>,
+    /// Monitored file paths for hot reload
+    monitored_paths: Arc<TokioRwLock<Vec<PathBuf>>>,
+    /// Callback for config changes
+    #[cfg(feature = "config_hot_reload")]
+    change_callback: Option<Arc<dyn Fn() + Send + Sync>>,
 }
 
 impl Default for DMSCConfigManager {
     fn default() -> Self {
         Self::new()
+    }
+}
+
+impl Clone for DMSCConfigManager {
+    fn clone(&self) -> Self {
+        DMSCConfigManager {
+            config: self.config.clone(),
+            sources: self.sources.clone(),
+            #[cfg(feature = "pyo3")]
+            hooks: self.hooks.clone(),
+            #[cfg(feature = "config_hot_reload")]
+            watcher: self.watcher.clone(),
+            watcher_task: self.watcher_task.clone(),
+            monitored_paths: self.monitored_paths.clone(),
+            #[cfg(feature = "config_hot_reload")]
+            change_callback: self.change_callback.clone(),
+        }
     }
 }
 
@@ -489,10 +520,16 @@ impl DMSCConfigManager {
     /// Returns a new `DMSCConfigManager` instance with no configuration sources.
     pub fn new() -> Self {
         DMSCConfigManager {
-            config: DMSCConfig::new(),
+            config: Arc::new(RwLock::new(DMSCConfig::new())),
             sources: Vec::new(),
             #[cfg(feature = "pyo3")]
             hooks: None,
+            #[cfg(feature = "config_hot_reload")]
+            watcher: None,
+            watcher_task: Arc::new(TokioRwLock::new(None)),
+            monitored_paths: Arc::new(TokioRwLock::new(Vec::new())),
+            #[cfg(feature = "config_hot_reload")]
+            change_callback: None,
         }
     }
 
@@ -510,9 +547,15 @@ impl DMSCConfigManager {
     #[cfg(feature = "pyo3")]
     pub fn with_hooks(hooks: Arc<crate::hooks::DMSCHookBus>) -> Self {
         DMSCConfigManager {
-            config: DMSCConfig::new(),
+            config: Arc::new(RwLock::new(DMSCConfig::new())),
             sources: Vec::new(),
             hooks: Some(hooks),
+            #[cfg(feature = "config_hot_reload")]
+            watcher: None,
+            watcher_task: Arc::new(TokioRwLock::new(None)),
+            monitored_paths: Arc::new(TokioRwLock::new(Vec::new())),
+            #[cfg(feature = "config_hot_reload")]
+            change_callback: None,
         }
     }
 
@@ -581,7 +624,8 @@ impl DMSCConfigManager {
             }
         }
 
-        self.config = cfg;
+        *self.config.write().expect("Failed to lock config for writing") = cfg;
+        
         Ok(())
     }
 
@@ -867,15 +911,162 @@ impl DMSCConfigManager {
 
     /// Starts the configuration watcher for hot reload.
     /// 
-    /// **Note**: This is a simplified implementation. Full hot reload support
-    /// will be implemented in a future update.
+    /// This method starts watching all registered file-based configuration sources
+    /// for changes. When a configuration file is modified, it will be automatically
+    /// reloaded and the change callback (if registered) will be invoked.
     /// 
     /// # Returns
     /// 
     /// A `Result<(), DMSCError>` indicating success or failure
+    #[cfg(feature = "config_hot_reload")]
     pub async fn start_watcher(&mut self) -> Result<(), crate::core::DMSCError> {
-        // Watcher implementation is simplified for now
-        // Full hot reload support will be implemented in a future update
+        self.start_watcher_with_callback::<fn()>(None).await
+    }
+
+    /// Starts the configuration watcher with a custom change callback.
+    /// 
+    /// This method starts watching all registered file-based configuration sources
+    /// for changes. When a configuration file is modified, it will be automatically
+    /// reloaded and the provided callback will be invoked.
+    /// 
+    /// # Parameters
+    /// 
+    /// - `callback`: Optional callback function to invoke when configuration changes
+    /// 
+    /// # Returns
+    /// 
+    /// A `Result<(), DMSCError>` indicating success or failure
+    #[cfg(feature = "config_hot_reload")]
+    pub async fn start_watcher_with_callback<F>(&mut self, callback: Option<Arc<dyn Fn() + Send + Sync>>) -> Result<(), crate::core::DMSCError> {
+        let (tx, mut rx) = tokio::sync::mpsc::channel::<notify::Result<notify::Event>>(100);
+        
+        let mut watcher = RecommendedWatcher::new(
+            move |res| {
+                let _ = tx.blocking_send(res);
+            },
+            notify::Config::default(),
+        ).map_err(|e| crate::core::DMSCError::Config(format!("Failed to create config watcher: {}", e)))?;
+        
+        let mut monitored = Vec::new();
+        
+        for source in &self.sources {
+            if let DMSCConfigSource::File(path) = source {
+                if path.exists() {
+                    watcher.watch(path, RecursiveMode::NonRecursive)
+                        .map_err(|e| crate::core::DMSCError::Config(format!("Failed to watch config file {}: {}", path.display(), e)))?;
+                    monitored.push(path.clone());
+                }
+            }
+        }
+        
+        let monitored_paths = self.monitored_paths.clone();
+        let manager = self.clone();
+        let change_callback = callback.clone();
+        
+        let task = tokio::spawn(async move {
+            while let Some(event) = rx.recv().await {
+                match event {
+                    Ok(event) => {
+                        if let Some(paths) = event.paths.first() {
+                            let changed_path = paths.clone();
+                            
+                            {
+                                let mut paths_guard = monitored_paths.write().await;
+                                if !paths_guard.contains(&changed_path) {
+                                    paths_guard.push(changed_path.clone());
+                                }
+                            }
+                            
+                            log::info!("Config file changed: {}", changed_path.display());
+                            
+                            if let Err(e) = manager.reload_file(&changed_path).await {
+                                log::error!("Failed to reload config file {}: {}", changed_path.display(), e);
+                            }
+                            
+                            if let Some(ref cb) = change_callback {
+                                cb();
+                            }
+                            
+                            #[cfg(feature = "pyo3")]
+                            manager.notify_config_reload(changed_path.to_str().unwrap_or(""));
+                        }
+                    }
+                    Err(e) => {
+                        log::warn!("Config watcher error: {:?}", e);
+                    }
+                }
+            }
+        });
+        
+        self.watcher = Some(Arc::new(watcher));
+        *self.watcher_task.write().await = Some(task);
+        self.change_callback = callback;
+        
+        let mut paths_guard = self.monitored_paths.write().await;
+        *paths_guard = monitored;
+        
+        Ok(())
+    }
+
+    /// Reloads configuration from a specific file.
+    /// 
+    /// # Parameters
+    /// 
+    /// - `path`: The path to the configuration file to reload
+    /// 
+    /// # Returns
+    /// 
+    /// A `Result<(), DMSCError>` indicating success or failure
+    #[cfg(feature = "config_hot_reload")]
+    async fn reload_file(&self, path: &PathBuf) -> Result<(), crate::core::DMSCError> {
+        let mut new_config = self.config.read().expect("Failed to lock config for reading").clone();
+        self.load_file(path, &mut new_config)?;
+        
+        *self.config.write().expect("Failed to lock config for writing") = new_config;
+        
+        Ok(())
+    }
+
+    /// Stops the configuration watcher.
+    /// 
+    /// This method stops the configuration watcher and cleans up associated resources.
+    /// 
+    /// # Returns
+    /// 
+    /// A `Result<(), DMSCError>` indicating success or failure
+    #[cfg(feature = "config_hot_reload")]
+    pub async fn stop_watcher(&mut self) -> Result<(), crate::core::DMSCError> {
+        let task = self.watcher_task.write().await.take();
+        if let Some(task) = task {
+            task.abort();
+        }
+        
+        self.watcher = None;
+        
+        let mut paths_guard = self.monitored_paths.write().await;
+        paths_guard.clear();
+        
+        Ok(())
+    }
+
+    /// Gets the list of monitored configuration file paths.
+    /// 
+    /// # Returns
+    /// 
+    /// A vector of paths being monitored for changes
+    pub async fn get_monitored_paths(&self) -> Vec<PathBuf> {
+        self.monitored_paths.read().await.clone()
+    }
+
+    /// Starts the configuration watcher for hot reload.
+    /// 
+    /// This is a no-op implementation when the `config_hot_reload` feature is not enabled.
+    /// 
+    /// # Returns
+    /// 
+    /// A `Result<(), DMSCError>` indicating success or failure
+    #[cfg(not(feature = "config_hot_reload"))]
+    pub async fn start_watcher(&mut self) -> Result<(), crate::core::DMSCError> {
         Ok(())
     }
 
@@ -883,18 +1074,18 @@ impl DMSCConfigManager {
     /// 
     /// # Returns
     /// 
-    /// A `&DMSCConfig` reference to the loaded configuration
-    pub fn config(&self) -> &DMSCConfig {
-        &self.config
+    /// A `DMSCConfig` clone of the loaded configuration
+    pub fn config(&self) -> DMSCConfig {
+        self.config.read().expect("Failed to lock config for reading").clone()
     }
 
     /// Gets a mutable reference to the loaded configuration.
     /// 
     /// # Returns
     /// 
-    /// A `&mut DMSCConfig` reference to the loaded configuration
-    pub fn config_mut(&mut self) -> &mut DMSCConfig {
-        &mut self.config
+    /// A `std::sync::RwLockWriteGuard<DMSCConfig>` for the loaded configuration
+    pub fn config_mut(&mut self) -> std::sync::RwLockWriteGuard<'_, DMSCConfig> {
+        self.config.write().expect("Failed to lock config for writing")
     }
 }
 

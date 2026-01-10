@@ -72,15 +72,14 @@ Cache manager, responsible for specific cache operations.
 
 | Method | Description | Parameters | Return Value |
 |:--------|:-------------|:--------|:--------|
-| `get(key)` | Get cache value | `key: &str` | `DMSCResult<Option<String>>` |
-| `set(key, value, ttl)` | Set cache value | `key: &str`, `value: impl Serialize`, `ttl: Option<u64>` | `DMSCResult<()>` |
+| `get(key)` | Get cache value | `key: &str` | `DMSCResult<Option<T>>` |
+| `set(key, value, ttl)` | Set cache value | `key: &str`, `value: &T`, `ttl: Option<u64>` | `DMSCResult<()>` |
 | `delete(key)` | Delete cache | `key: &str` | `DMSCResult<bool>` |
-| `exists(key)` | Check if cache exists | `key: &str` | `bool` |
+| `exists(key)` | Check if cache exists | `key: &str` | `DMSCResult<bool>` |
 | `clear()` | Clear all cache | None | `DMSCResult<()>` |
 | `invalidate_pattern(pattern)` | Invalidate cache by pattern | `pattern: &str` | `DMSCResult<()>` |
 | `stats()` | Get cache statistics | None | `DMSCCacheStats` |
 | `cleanup_expired()` | Cleanup expired cache | None | `DMSCResult<usize>` |
-| `get_or_set(key, ttl, factory)` | Get or set cache | `key: &str`, `ttl: Option<u64>`, `factory: FnOnce() -> Result<T>` | `DMSCResult<T>` |
 
 ### DMSCCacheConfig
 

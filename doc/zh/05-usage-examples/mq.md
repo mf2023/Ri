@@ -181,35 +181,20 @@ async fn initialize_message_queue(ctx: &DMSCServiceContext) -> DMSCResult<()> {
 async fn publish_sample_messages(ctx: &DMSCServiceContext) -> DMSCResult<()> {
     ctx.logger().info("mq", "Publishing sample messages")?;
     
-    // 创建用户注册消息
-    let message = DMSCMessage {
-        id: Uuid::new_v4().to_string(),
-        queue: "user.registrations".to_string(),
-        routing_key: "user.created".to_string(),
-        body: json!({
-            "user_id": 12345,
-            "email": "newuser@example.com",
-            "name": "John Doe",
-            "registration_time": Utc::now().to_rfc3339(),
-        }),
-        headers: {
-            let mut h = HashMap::new();
-            h.insert("source".to_string(), "web_app".to_string());
-            h.insert("version".to_string(), "1.0".to_string());
-            h.insert("correlation_id".to_string(), Uuid::new_v4().to_string());
-            h
-        },
-        priority: DMSCMessagePriority::Normal,
-        delivery_mode: DMSCMessageDeliveryMode::Persistent,
-        timestamp: Utc::now(),
-        expiration: None,
-        correlation_id: Some(Uuid::new_v4().to_string()),
-        reply_to: Some("user.registration.responses".to_string()),
-    };
+    // 创建队列
+    ctx.mq().create_queue("user_registrations").await?;
+    ctx.logger().info("mq", "Queue created: user_registrations")?;
     
     // 发布消息
-    ctx.mq().publish(message).await?;
-    ctx.logger().info("mq", "User registration message published")?;
+    let message = json!({
+        "user_id": 12345,
+        "email": "newuser@example.com",
+        "name": "John Doe",
+        "registration_time": Utc::now().to_rfc3339(),
+    });
+    
+    ctx.mq().push("user_registrations", &message).await?;
+    ctx.logger().info("mq", "Message published to user_registrations queue")?;
     
     Ok(())
 }
@@ -218,36 +203,41 @@ async fn subscribe_to_queues(ctx: &DMSCServiceContext) -> DMSCResult<()> {
     ctx.logger().info("mq", "Subscribing to message queues")?;
     
     // 订阅用户注册队列
-    ctx.mq().subscribe("user.registrations", |message, ctx| async move {
-        ctx.logger().info("mq", &format!("Received message: {:?}", message))?;
-        
-        match process_user_registration(&message, &ctx).await {
-            Ok(result) => {
-                ctx.logger().info("mq", &format!("User registration processed: {:?}", result))?;
+    loop {
+        match ctx.mq().pop::<serde_json::Value>("user_registrations").await {
+            Ok(Some(message)) => {
+                ctx.logger().info("mq", &format!("Received message: {:?}", message))?;
                 
-                // 确认消息已处理
-                ctx.mq().ack(&message).await?;
+                match process_user_registration(&message, &ctx).await {
+                    Ok(result) => {
+                        ctx.logger().info("mq", &format!("User registration processed: {:?}", result))?;
+                    }
+                    Err(e) => {
+                        ctx.logger().error("mq", &format!("Failed to process user registration: {}", e))?;
+                        // 重新放入队列
+                        ctx.mq().push("user_registrations", &message).await?;
+                    }
+                }
+            }
+            Ok(None) => {
+                tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
             }
             Err(e) => {
-                ctx.logger().error("mq", &format!("Failed to process user registration: {}", e))?;
-                
-                // 拒绝消息并重新排队
-                ctx.mq().nack(&message, true).await?;
+                ctx.logger().error("mq", &format!("Failed to receive message: {}", e))?;
+                tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
             }
         }
-        
-        Ok(())
-    }).await?;
+    }
     
     ctx.logger().info("mq", "Message queue subscriptions configured")?;
     
     Ok(())
 }
 
-async fn process_user_registration(message: &DMSCMessage, ctx: &DMSCServiceContext) -> DMSCResult<serde_json::Value> {
-    let user_id = message.body["user_id"].as_i64().unwrap_or(0);
-    let email = message.body["email"].as_str().unwrap_or_default();
-    let name = message.body["name"].as_str().unwrap_or_default();
+async fn process_user_registration(message: &serde_json::Value, ctx: &DMSCServiceContext) -> DMSCResult<serde_json::Value> {
+    let user_id = message["user_id"].as_i64().unwrap_or(0);
+    let email = message["email"].as_str().unwrap_or_default();
+    let name = message["name"].as_str().unwrap_or_default();
     
     // 验证用户数据
     if user_id == 0 || email.is_empty() || name.is_empty() {

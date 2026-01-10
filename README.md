@@ -29,7 +29,7 @@ English | [简体中文](README.zh.md)
 <h2 align="center">🏗️ Core Architecture</h2>
 
 ### 📐 Modular Design
-DMSC adopts a highly modular architecture with 12 core modules, enabling on-demand composition and seamless extension:
+DMSC adopts a highly modular architecture with 14 core modules, enabling on-demand composition and seamless extension:
 
 <div align="center">
 
