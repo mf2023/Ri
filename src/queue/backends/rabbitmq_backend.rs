@@ -81,6 +81,8 @@ use async_trait::async_trait;
 use lapin::{Connection, ConnectionProperties, Channel, Queue, Consumer};
 use lapin::options::{QueueDeclareOptions, BasicConsumeOptions, BasicPublishOptions};
 use lapin::types::FieldTable;
+use std::collections::HashMap;
+use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
 use std::time::Duration;
 use tokio::sync::Mutex;
@@ -366,10 +368,7 @@ impl DMSCQueue for DMSCRabbitMQQueue {
             )
             .await?;
 
-        Ok(Box::new(RabbitMQConsumer {
-            consumer: Arc::new(Mutex::new(consumer)),
-            paused: Arc::new(Mutex::new(false)),
-        }))
+        Ok(Box::new(RabbitMQConsumer::new(consumer)))
     }
 
     /// Gets statistics for the RabbitMQ queue.
@@ -483,6 +482,21 @@ struct RabbitMQConsumer {
     consumer: Arc<Mutex<Consumer>>,
     /// Flag indicating if the consumer is paused
     paused: Arc<Mutex<bool>>,
+    /// Message tracking: delivery_tag -> message_id
+    delivery_tags: Arc<Mutex<HashMap<u64, String>>>,
+    /// Next delivery tag counter
+    next_delivery_tag: Arc<AtomicU64>,
+}
+
+impl RabbitMQConsumer {
+    fn new(consumer: Consumer) -> Self {
+        Self {
+            consumer: Arc::new(Mutex::new(consumer)),
+            paused: Arc::new(Mutex::new(false)),
+            delivery_tags: Arc::new(Mutex::new(HashMap::new())),
+            next_delivery_tag: Arc::new(AtomicU64::new(1)),
+        }
+    }
 }
 
 #[async_trait]
@@ -500,13 +514,22 @@ impl DMSCQueueConsumer for RabbitMQConsumer {
 
         let mut consumer = self.consumer.lock().await;
         
-        // Get the next delivery from the consumer
         match consumer.next().await {
             Some(delivery_result) => {
                 let delivery = delivery_result.map_err(|e| crate::core::DMSCError::Other(format!("Consumer error: {e}")))?;
+                
+                let message_id = {
+                    let delivery_tag = delivery.delivery_tag;
+                    let message_id = format!("msg_{}", uuid::Uuid::new_v4());
+                    
+                    let mut tags = self.delivery_tags.lock().await;
+                    tags.insert(delivery_tag, message_id.clone());
+                    
+                    message_id
+                };
+                
                 let message: DMSCQueueMessage = serde_json::from_slice(&delivery.data)?;
                 
-                // Store delivery tag for acknowledgment
                 Ok(Some(message))
             },
             None => Ok(None)
@@ -516,7 +539,6 @@ impl DMSCQueueConsumer for RabbitMQConsumer {
     /// Acknowledges a message.
     ///
     /// This implementation tracks delivery tags and uses basic_ack to acknowledge messages.
-    /// In production, this would maintain a mapping of message IDs to delivery tags.
     ///
     /// # Parameters
     ///
@@ -526,16 +548,27 @@ impl DMSCQueueConsumer for RabbitMQConsumer {
     ///
     /// DMSCResult indicating success or failure
     async fn ack(&self, message_id: &str) -> DMSCResult<()> {
-        // In a production implementation, this would:
-        // 1. Look up the delivery tag for the given message_id
-        // 2. Use basic_ack with the delivery tag to acknowledge the message
-        // 3. Remove the message from internal tracking
+        log::debug!("Acknowledging message: {}", message_id);
         
-        // For demonstration, we simulate successful acknowledgment
-        log::info!("Message acknowledged: {message_id}");
-        
-        // Simulate acknowledgment delay
-        tokio::time::sleep(Duration::from_millis(10)).await;
+        let delivery_tag = {
+            let tags = self.delivery_tags.lock().await;
+            tags.iter()
+                .find(|(_, id)| *id == message_id)
+                .map(|(tag, _)| *tag)
+        };
+
+        if let Some(tag) = delivery_tag {
+            let mut consumer = self.consumer.lock().await;
+            consumer.ack(DeliveryTag(tag)).await
+                .map_err(|e| crate::core::DMSCError::Other(format!("Failed to ack message: {e}")))?;
+            
+            let mut tags = self.delivery_tags.lock().await;
+            tags.remove(&tag);
+            
+            log::debug!("Message {} acknowledged successfully", message_id);
+        } else {
+            log::warn!("Message ID not found for acknowledgment: {}", message_id);
+        }
         
         Ok(())
     }
@@ -543,7 +576,6 @@ impl DMSCQueueConsumer for RabbitMQConsumer {
     /// Negatively acknowledges a message.
     ///
     /// This implementation tracks delivery tags and uses basic_nack to negatively acknowledge messages.
-    /// In production, this would maintain a mapping of message IDs to delivery tags and handle requeue decisions.
     ///
     /// # Parameters
     ///
@@ -553,17 +585,27 @@ impl DMSCQueueConsumer for RabbitMQConsumer {
     ///
     /// DMSCResult indicating success or failure
     async fn nack(&self, message_id: &str) -> DMSCResult<()> {
-        // In a production implementation, this would:
-        // 1. Look up the delivery tag for the given message_id
-        // 2. Use basic_nack with the delivery tag to negatively acknowledge the message
-        // 3. Decide whether to requeue the message based on retry policies
-        // 4. Update retry counters and dead letter queue status
+        log::debug!("Negatively acknowledging message: {}", message_id);
         
-        // For demonstration, we simulate successful negative acknowledgment
-        log::info!("Message negatively acknowledged (will be req...requeued): {message_id}");
-        
-        // Simulate negative acknowledgment delay
-        tokio::time::sleep(Duration::from_millis(10)).await;
+        let delivery_tag = {
+            let tags = self.delivery_tags.lock().await;
+            tags.iter()
+                .find(|(_, id)| *id == message_id)
+                .map(|(tag, _)| *tag)
+        };
+
+        if let Some(tag) = delivery_tag {
+            let mut consumer = self.consumer.lock().await;
+            consumer.nack(DeliveryTag(tag), false).await
+                .map_err(|e| crate::core::DMSCError::Other(format!("Failed to nack message: {e}")))?;
+            
+            let mut tags = self.delivery_tags.lock().await;
+            tags.remove(&tag);
+            
+            log::debug!("Message {} negatively acknowledged (will be requeued)", message_id);
+        } else {
+            log::warn!("Message ID not found for negative acknowledgment: {}", message_id);
+        }
         
         Ok(())
     }

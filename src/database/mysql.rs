@@ -139,6 +139,147 @@ impl DMSCDatabase for MySQLDatabase {
         drop(self.pool);
         Ok(())
     }
+
+    async fn batch_execute(&self, sql: &str, params: &[Vec<serde_json::Value>]) -> DMSCResult<Vec<u64>> {
+        let mut results = Vec::with_capacity(params.len());
+        for param_set in params {
+            let result = self.execute_with_params(sql, param_set).await?;
+            results.push(result);
+        }
+        Ok(results)
+    }
+
+    async fn batch_query(&self, sql: &str, params: &[Vec<serde_json::Value>]) -> DMSCResult<Vec<DMSCDBResult>> {
+        let mut results = Vec::with_capacity(params.len());
+        for param_set in params {
+            let result = self.query_with_params(sql, param_set).await?;
+            results.push(result);
+        }
+        Ok(results)
+    }
+
+    async fn execute_with_params(&self, sql: &str, params: &[serde_json::Value]) -> DMSCResult<u64> {
+        let conn = self.pool.get_conn()
+            .await
+            .map_err(|e| DMSCError::Other(format!("MySQL connection error: {}", e)))?;
+
+        let mysql_params: Vec<mysql_crate::Value> = params.iter()
+            .map(|v| {
+                match v {
+                    serde_json::Value::Null => mysql_crate::Value::NULL,
+                    serde_json::Value::Bool(b) => mysql_crate::Value::Int(*b as i64),
+                    serde_json::Value::Number(n) => {
+                        if let Some(i) = n.as_i64() {
+                            mysql_crate::Value::Int(i)
+                        } else if let Some(f) = n.as_f64() {
+                            mysql_crate::Value::Float(f)
+                        } else {
+                            mysql_crate::Value::NULL
+                        }
+                    }
+                    serde_json::Value::String(s) => mysql_crate::Value::Bytes(s.as_bytes().to_vec()),
+                    _ => mysql_crate::Value::Bytes(serde_json::to_string(v).unwrap_or_default().into_bytes()),
+                }
+            })
+            .collect();
+
+        let result = conn.exec_drop(sql, mysql_params)
+            .await
+            .map_err(|e| DMSCError::Other(format!("MySQL execute_with_params error: {}", e)))?;
+
+        Ok(result.affected_rows())
+    }
+
+    async fn query_with_params(&self, sql: &str, params: &[serde_json::Value]) -> DMSCResult<DMSCDBResult> {
+        let conn = self.pool.get_conn()
+            .await
+            .map_err(|e| DMSCError::Other(format!("MySQL connection error: {}", e)))?;
+
+        let mysql_params: Vec<mysql_crate::Value> = params.iter()
+            .map(|v| {
+                match v {
+                    serde_json::Value::Null => mysql_crate::Value::NULL,
+                    serde_json::Value::Bool(b) => mysql_crate::Value::Int(*b as i64),
+                    serde_json::Value::Number(n) => {
+                        if let Some(i) = n.as_i64() {
+                            mysql_crate::Value::Int(i)
+                        } else if let Some(f) = n.as_f64() {
+                            mysql_crate::Value::Float(f)
+                        } else {
+                            mysql_crate::Value::NULL
+                        }
+                    }
+                    serde_json::Value::String(s) => mysql_crate::Value::Bytes(s.as_bytes().to_vec()),
+                    _ => mysql_crate::Value::Bytes(serde_json::to_string(v).unwrap_or_default().into_bytes()),
+                }
+            })
+            .collect();
+
+        let result = conn.exec_iter(sql, mysql_params)
+            .await
+            .map_err(|e| DMSCError::Other(format!("MySQL query_with_params error: {}", e)))?;
+
+        let mut dmsc_rows = Vec::new();
+        for row in result {
+            let mysql_row = row.map_err(|e| DMSCError::Other(format!("MySQL row error: {}", e)))?;
+            dmsc_rows.push(Self::row_to_dmsc_row(&mysql_row));
+        }
+
+        Ok(DMSCDBResult::with_rows(dmsc_rows))
+    }
+
+    async fn transaction(&self) -> DMSCResult<Box<dyn crate::database::DMSCDatabaseTransaction>> {
+        let conn = self.pool.get_conn()
+            .await
+            .map_err(|e| DMSCError::Other(format!("MySQL transaction begin error: {}", e)))?;
+
+        conn.cmd_query("START TRANSACTION").await
+            .map_err(|e| DMSCError::Other(format!("MySQL transaction begin error: {}", e)))?;
+
+        Ok(Box::new(MySQLTransaction { conn }))
+    }
+}
+
+struct MySQLTransaction {
+    conn: mysql_crate::pool::PooledConn,
+}
+
+#[async_trait::async_trait]
+impl crate::database::DMSCDatabaseTransaction for MySQLTransaction {
+    async fn execute(&self, sql: &str) -> DMSCResult<u64> {
+        let result = self.conn.query_drop(sql)
+            .await
+            .map_err(|e| DMSCError::Other(format!("MySQL transaction execute error: {}", e)))?;
+        Ok(result.affected_rows())
+    }
+
+    async fn query(&self, sql: &str) -> DMSCResult<DMSCDBResult> {
+        let result = self.conn.query_iter(sql)
+            .await
+            .map_err(|e| DMSCError::Other(format!("MySQL transaction query error: {}", e)))?;
+
+        let mut dmsc_rows = Vec::new();
+        for row in result {
+            let mysql_row = row.map_err(|e| DMSCError::Other(format!("MySQL transaction row error: {}", e)))?;
+            dmsc_rows.push(MySQLDatabase::row_to_dmsc_row(&mysql_row));
+        }
+
+        Ok(DMSCDBResult::with_rows(dmsc_rows))
+    }
+
+    async fn commit(&self) -> DMSCResult<()> {
+        self.conn.cmd_query("COMMIT").await
+            .map_err(|e| DMSCError::Other(format!("MySQL transaction commit error: {}", e)))
+    }
+
+    async fn rollback(&self) -> DMSCResult<()> {
+        self.conn.cmd_query("ROLLBACK").await
+            .map_err(|e| DMSCError::Other(format!("MySQL transaction rollback error: {}", e)))
+    }
+
+    async fn close(&self) -> DMSCResult<()> {
+        self.rollback().await
+    }
 }
 
 #[cfg(feature = "pyo3")]
@@ -146,8 +287,21 @@ impl DMSCDatabase for MySQLDatabase {
 impl MySQLDatabase {
     #[staticmethod]
     pub fn from_connection_string(conn_string: &str, max_connections: u32) -> Self {
-        let opts = mysql_crate::Opts::from_url(conn_string)
-            .unwrap_or_else(|_| mysql_crate::Opts::from_url("mysql://localhost:3306").unwrap());
+        let opts = match mysql_crate::Opts::from_url(conn_string) {
+            Ok(o) => o,
+            Err(_) => {
+                mysql_crate::Opts::from_url("mysql://localhost:3306")
+                    .unwrap_or_else(|_| {
+                        mysql_crate::OptsBuilder::new()
+                            .ip_or_hostname("localhost")
+                            .tcp_port(3306)
+                            .user(None)
+                            .pass(None)
+                            .db_name(None)
+                            .clone()
+                    })
+            }
+        };
 
         let pool_opts = mysql_crate::PoolOpts::default()
             .with_conn_idle_timeout(std::time::Duration::from_secs(600))
@@ -163,26 +317,32 @@ impl MySQLDatabase {
     }
 
     pub fn execute_sync(&self, sql: &str) -> Result<u64, DMSCError> {
-        tokio::runtime::Runtime::new()
-            .unwrap()
-            .block_on(async {
-                self.execute(sql).await
-            })
+        let rt = match tokio::runtime::Runtime::new() {
+            Ok(r) => r,
+            Err(e) => return Err(DMSCError::Other(format!("Failed to create Tokio runtime: {}", e))),
+        };
+        rt.block_on(async {
+            self.execute(sql).await
+        })
     }
 
     pub fn query_sync(&self, sql: &str) -> Result<DMSCDBResult, DMSCError> {
-        tokio::runtime::Runtime::new()
-            .unwrap()
-            .block_on(async {
-                self.query(sql).await
-            })
+        let rt = match tokio::runtime::Runtime::new() {
+            Ok(r) => r,
+            Err(e) => return Err(DMSCError::Other(format!("Failed to create Tokio runtime: {}", e))),
+        };
+        rt.block_on(async {
+            self.query(sql).await
+        })
     }
 
     pub fn ping_sync(&self) -> Result<bool, DMSCError> {
-        tokio::runtime::Runtime::new()
-            .unwrap()
-            .block_on(async {
-                self.ping().await
-            })
+        let rt = match tokio::runtime::Runtime::new() {
+            Ok(r) => r,
+            Err(e) => return Err(DMSCError::Other(format!("Failed to create Tokio runtime: {}", e))),
+        };
+        rt.block_on(async {
+            self.ping().await
+        })
     }
 }

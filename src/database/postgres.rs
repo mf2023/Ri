@@ -50,9 +50,10 @@ impl PostgresDatabase {
                 match value {
                     Some(tokio_postgres::types::Json(json)) => json,
                     None => {
-                        if row.try_get::<usize, tokio_postgres::types::Uuid>(idx).is_ok() {
-                            serde_json::to_value(row.try_get::<usize, tokio_postgres::types::Uuid>(idx).unwrap()).ok()
-                        } else if let Ok(v) = row.try_get::<usize, i32>(idx) {
+                            if row.try_get::<usize, tokio_postgres::types::Uuid>(idx).is_ok() {
+                                let uuid_value = row.try_get::<usize, tokio_postgres::types::Uuid>(idx).ok();
+                                uuid_value.and_then(|u| serde_json::to_value(u).ok())
+                            } else if let Ok(v) = row.try_get::<usize, i32>(idx) {
                             serde_json::json!(v)
                         } else if let Ok(v) = row.try_get::<usize, i64>(idx) {
                             serde_json::json!(v)
@@ -191,6 +192,162 @@ impl DMSCDatabase for PostgresDatabase {
         self.client.close().await
             .map_err(|e| DMSCError::Other(format!("PostgreSQL close error: {}", e)))
     }
+
+    async fn batch_execute(&self, sql: &str, params: &[Vec<serde_json::Value>]) -> DMSCResult<Vec<u64>> {
+        let mut results = Vec::with_capacity(params.len());
+        for param_set in params {
+            let result = self.execute_with_params(sql, param_set).await?;
+            results.push(result);
+        }
+        Ok(results)
+    }
+
+    async fn batch_query(&self, sql: &str, params: &[Vec<serde_json::Value>]) -> DMSCResult<Vec<DMSCDBResult>> {
+        let mut results = Vec::with_capacity(params.len());
+        for param_set in params {
+            let result = self.query_with_params(sql, param_set).await?;
+            results.push(result);
+        }
+        Ok(results)
+    }
+
+    async fn execute_with_params(&self, sql: &str, params: &[serde_json::Value]) -> DMSCResult<u64> {
+        let pg_params: Vec<Option<&(dyn tokio_postgres::types::ToSql + Sync)>> = params.iter()
+            .map(|v| {
+                match v {
+                    serde_json::Value::Null => None,
+                    serde_json::Value::Bool(b) => Some(b as &dyn tokio_postgres::types::ToSql),
+                    serde_json::Value::Number(n) => {
+                        if let Some(i) = n.as_i64() {
+                            Some(&i as &dyn tokio_postgres::types::ToSql)
+                        } else if let Some(f) = n.as_f64() {
+                            Some(&f as &dyn tokio_postgres::types::ToSql)
+                        } else {
+                            None
+                        }
+                    }
+                    serde_json::Value::String(s) => Some(s as &dyn tokio_postgres::types::ToSql),
+                    serde_json::Value::Array(arr) => {
+                        let json_str = serde_json::to_string(arr).ok().as_ref().map(|s| s.as_str());
+                        json_str.map(|s| s as &dyn tokio_postgres::types::ToSql)
+                    }
+                    serde_json::Value::Object(obj) => {
+                        let json_str = serde_json::to_string(obj).ok().as_ref().map(|s| s.as_str());
+                        json_str.map(|s| s as &dyn tokio_postgres::types::ToSql)
+                    }
+                }
+            })
+            .collect();
+
+        let result = self.client.execute(sql, &pg_params).await
+            .map_err(|e| DMSCError::Other(format!("PostgreSQL execute_with_params error: {}", e)))?;
+        Ok(result as u64)
+    }
+
+    async fn query_with_params(&self, sql: &str, params: &[serde_json::Value]) -> DMSCResult<DMSCDBResult> {
+        let pg_params: Vec<Option<&(dyn tokio_postgres::types::ToSql + Sync)>> = params.iter()
+            .map(|v| {
+                match v {
+                    serde_json::Value::Null => None,
+                    serde_json::Value::Bool(b) => Some(b as &dyn tokio_postgres::types::ToSql),
+                    serde_json::Value::Number(n) => {
+                        if let Some(i) = n.as_i64() {
+                            Some(&i as &dyn tokio_postgres::types::ToSql)
+                        } else if let Some(f) = n.as_f64() {
+                            Some(&f as &dyn tokio_postgres::types::ToSql)
+                        } else {
+                            None
+                        }
+                    }
+                    serde_json::Value::String(s) => Some(s as &dyn tokio_postgres::types::ToSql),
+                    _ => {
+                        let json_str = serde_json::to_string(v).ok().as_ref().map(|s| s.as_str());
+                        json_str.map(|s| s as &dyn tokio_postgres::types::ToSql)
+                    }
+                }
+            })
+            .collect();
+
+        let rows = self.client.query(sql, &pg_params).await
+            .map_err(|e| DMSCError::Other(format!("PostgreSQL query_with_params error: {}", e)))?;
+
+        let dmsc_rows: Vec<DMSCDBRow> = rows.iter()
+            .map(|row| {
+                let columns: Vec<String> = row.columns()
+                    .iter()
+                    .map(|col| col.name().to_string())
+                    .collect();
+
+                let values: Vec<Option<serde_json::Value>> = row.columns()
+                    .iter()
+                    .enumerate()
+                    .map(|(idx, col)| Self::row_to_json_value(&row, idx, col))
+                    .collect();
+
+                DMSCDBRow { columns, values }
+            })
+            .collect();
+
+        Ok(DMSCDBResult::with_rows(dmsc_rows))
+    }
+
+    async fn transaction(&self) -> DMSCResult<Box<dyn crate::database::DMSCDatabaseTransaction>> {
+        let transaction = self.client.transaction().await
+            .map_err(|e| DMSCError::Other(format!("PostgreSQL transaction begin error: {}", e)))?;
+
+        Ok(Box::new(PostgresTransaction { transaction }))
+    }
+}
+
+struct PostgresTransaction {
+    transaction: tokio_postgres::Transaction<'static>,
+}
+
+#[async_trait::async_trait]
+impl crate::database::DMSCDatabaseTransaction for PostgresTransaction {
+    async fn execute(&self, sql: &str) -> DMSCResult<u64> {
+        let result = self.transaction.execute(sql, &[]).await
+            .map_err(|e| DMSCError::Other(format!("PostgreSQL transaction execute error: {}", e)))?;
+        Ok(result as u64)
+    }
+
+    async fn query(&self, sql: &str) -> DMSCResult<DMSCDBResult> {
+        let rows = self.transaction.query(sql, &[]).await
+            .map_err(|e| DMSCError::Other(format!("PostgreSQL transaction query error: {}", e)))?;
+
+        let dmsc_rows: Vec<DMSCDBRow> = rows.iter()
+            .map(|row| {
+                let columns: Vec<String> = row.columns()
+                    .iter()
+                    .map(|col| col.name().to_string())
+                    .collect();
+
+                let values: Vec<Option<serde_json::Value>> = row.columns()
+                    .iter()
+                    .enumerate()
+                    .map(|(idx, col)| PostgresDatabase::row_to_json_value(&row, idx, col))
+                    .collect();
+
+                DMSCDBRow { columns, values }
+            })
+            .collect();
+
+        Ok(DMSCDBResult::with_rows(dmsc_rows))
+    }
+
+    async fn commit(&self) -> DMSCResult<()> {
+        self.transaction.commit().await
+            .map_err(|e| DMSCError::Other(format!("PostgreSQL transaction commit error: {}", e)))
+    }
+
+    async fn rollback(&self) -> DMSCResult<()> {
+        self.transaction.rollback().await
+            .map_err(|e| DMSCError::Other(format!("PostgreSQL transaction rollback error: {}", e)))
+    }
+
+    async fn close(&self) -> DMSCResult<()> {
+        self.rollback().await
+    }
 }
 
 #[cfg(feature = "pyo3")]
@@ -199,12 +356,16 @@ impl PostgresDatabase {
     #[staticmethod]
     pub fn from_connection_string(conn_string: &str, max_connections: u32) -> Self {
         let config = tokio_postgres::Config::from(conn_string);
-        let (client, conn) = tokio::runtime::Runtime::new()
-            .unwrap()
-            .block_on(async {
-                config.connect(tokio_postgres::NoTls).await
-            })
-            .unwrap();
+        let rt = match tokio::runtime::Runtime::new() {
+            Ok(r) => r,
+            Err(e) => panic!("Failed to create Tokio runtime: {}", e),
+        };
+        let (client, conn) = match rt.block_on(async {
+            config.connect(tokio_postgres::NoTls).await
+        }) {
+            Ok(c) => c,
+            Err(e) => panic!("Failed to connect to PostgreSQL: {}", e),
+        };
 
         tokio::spawn(async move {
             if let Err(e) = conn.await {
@@ -220,26 +381,32 @@ impl PostgresDatabase {
     }
 
     pub fn execute_sync(&self, sql: &str) -> Result<u64, DMSCError> {
-        tokio::runtime::Runtime::new()
-            .unwrap()
-            .block_on(async {
-                self.execute(sql).await
-            })
+        let rt = match tokio::runtime::Runtime::new() {
+            Ok(r) => r,
+            Err(e) => return Err(DMSCError::Other(format!("Failed to create Tokio runtime: {}", e))),
+        };
+        rt.block_on(async {
+            self.execute(sql).await
+        })
     }
 
     pub fn query_sync(&self, sql: &str) -> Result<DMSCDBResult, DMSCError> {
-        tokio::runtime::Runtime::new()
-            .unwrap()
-            .block_on(async {
-                self.query(sql).await
-            })
+        let rt = match tokio::runtime::Runtime::new() {
+            Ok(r) => r,
+            Err(e) => return Err(DMSCError::Other(format!("Failed to create Tokio runtime: {}", e))),
+        };
+        rt.block_on(async {
+            self.query(sql).await
+        })
     }
 
     pub fn ping_sync(&self) -> Result<bool, DMSCError> {
-        tokio::runtime::Runtime::new()
-            .unwrap()
-            .block_on(async {
-                self.ping().await
-            })
+        let rt = match tokio::runtime::Runtime::new() {
+            Ok(r) => r,
+            Err(e) => return Err(DMSCError::Other(format!("Failed to create Tokio runtime: {}", e))),
+        };
+        rt.block_on(async {
+            self.ping().await
+        })
     }
 }

@@ -38,18 +38,19 @@
 //! ## Usage
 //!
 //! ```rust
-//! use dms::protocol::post_quantum::{Kyber KEM, DilithiumSigner};
+//! use dmsc::protocol::post_quantum::{KyberKEM, DilithiumSigner};
 //!
 //! // Kyber key encapsulation
-//! let (pk, sk) = KyberKEM::keygen()?;
-//! let (ct, ss) = KyherKEM::encapsulate(&pk)?;
-//! let ss2 = KyberKEM::decapsulate(&ct, &sk)?;
-//! assert_eq!(ss, ss2);
+//! let (public_key, secret_key) = KyberKEM::new().keygen()?;
+//! let (ciphertext, shared_secret_1) = KyberKEM::new().encapsulate(&public_key)?;
+//! let shared_secret_2 = KyberKEM::new().decapsulate(&ciphertext, &secret_key)?;
+//! assert_eq!(shared_secret_1, shared_secret_2);
 //!
 //! // Dilithium signing
-//! let (pk, sk) = DilithiumSigner::keygen()?;
-//! let signature = DilithiumSigner::sign(&sk, message)?;
-//! assert!(DilithiumSigner::verify(&pk, message, &signature));
+//! let (pk, sk) = DilithiumSigner::new().keygen()?;
+//! let message = b"Hello, Post-Quantum World!";
+//! let signature = DilithiumSigner::new().sign(&sk, message)?;
+//! assert!(DilithiumSigner::new().verify(&pk, message, &signature));
 //! ```
 
 use std::sync::Arc;

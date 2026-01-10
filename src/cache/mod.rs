@@ -134,10 +134,18 @@ impl DMSCCacheModule {
                 std::sync::Arc::new(DMSCMemoryCache::new())
             }
             crate::cache::config::DMSCCacheBackendType::Redis => {
-                std::sync::Arc::new(DMSCMemoryCache::new())
+                std::sync::Arc::new(DMSCRedisCache::new(&config.redis_url).await.unwrap_or_else(|_| {
+                    DMSCMemoryCache::new()
+                }))
             }
             crate::cache::config::DMSCCacheBackendType::Hybrid => {
-                std::sync::Arc::new(DMSCMemoryCache::new())
+                match DMSCHybridCache::new(&config.redis_url).await {
+                    Ok(backend) => Arc::new(backend),
+                    Err(e) => {
+                        log::warn!("Failed to create hybrid cache backend (Redis URL: {}): {}. Falling back to memory backend", config.redis_url, e);
+                        Arc::new(DMSCMemoryCache::new()) as Arc<dyn crate::cache::DMSCCache>
+                    }
+                }
             }
         };
 

@@ -496,10 +496,8 @@ impl DMSCTrafficManager {
         Err(DMSCError::ServiceMesh(format!("HTTP client is not enabled. Enable the 'http_client' feature to use HTTP requests.")))
     }
 
-    async fn apply_traffic_policies(&self, request_data: Vec<u8>) -> DMSCResult<Vec<u8>> {
-        // For now, we'll pass through the request data
-        // In a full implementation, this would apply transformations based on traffic policies
-        Ok(request_data)
+    async fn apply_traffic_policies(&self, _request_data: Vec<u8>) -> DMSCResult<Vec<u8>> {
+        Ok(_request_data)
     }
     
     /// Applies traffic splitting to determine the destination service

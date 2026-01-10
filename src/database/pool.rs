@@ -93,6 +93,26 @@ impl DMSCDatabase for PooledDatabase {
     async fn close(&self) -> DMSCResult<()> {
         self.pool.close().await
     }
+
+    async fn batch_execute(&self, sql: &str, params: &[Vec<serde_json::Value>]) -> DMSCResult<Vec<u64>> {
+        self.inner.batch_execute(sql, params).await
+    }
+
+    async fn batch_query(&self, sql: &str, params: &[Vec<serde_json::Value>]) -> DMSCResult<Vec<DMSCDBResult>> {
+        self.inner.batch_query(sql, params).await
+    }
+
+    async fn execute_with_params(&self, sql: &str, params: &[serde_json::Value]) -> DMSCResult<u64> {
+        self.inner.execute_with_params(sql, params).await
+    }
+
+    async fn query_with_params(&self, sql: &str, params: &[serde_json::Value]) -> DMSCResult<DMSCDBResult> {
+        self.inner.query_with_params(sql, params).await
+    }
+
+    async fn transaction(&self) -> DMSCResult<Box<dyn crate::database::DMSCDatabaseTransaction>> {
+        self.inner.transaction().await
+    }
 }
 
 struct PoolConnection {

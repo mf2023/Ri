@@ -17,6 +17,52 @@
 
 #![allow(non_snake_case)]
 
+//! # Protocol Module
+//!
+//! ⚠️ **CRITICAL SECURITY WARNING: DO NOT USE IN PRODUCTION**
+//!
+//! This module provides protocol implementations for DMSC, including
+//! global protocol, private protocol, post-quantum cryptography, and
+//! integration features.
+//!
+//! ## ⚠️ SECURITY RESTRICTIONS
+//!
+//! - **DO NOT USE** this module in production environments
+//! - Post-quantum cryptography implementations are EXPERIMENTAL and UNAUDITED
+//! - Not reviewed for cryptographic security vulnerabilities
+//! - Missing side-channel attack protections
+//! - No formal security audit has been performed
+//!
+//! ## ⛔ DISABLED BY DEFAULT
+//!
+//! This module is NOT enabled by default. To use it, you must explicitly
+//! enable the `protocol` feature, which will show a compile-time warning.
+//!
+//! ## Module Contents
+//!
+//! - **DMSCProtocol**: Main protocol interface (NOT IMPLEMENTED)
+//! - **DMSCGlobalProtocol**: Global protocol implementation (NOT IMPLEMENTED)
+//! - **DMSCPrivateProtocol**: Private protocol implementation (NOT IMPLEMENTED)
+//! - **DMSCCrypto**: Cryptographic operations (Partially implemented)
+//! - **Post-Quantum Cryptography**: Kyber, Dilithium, Falcon implementations (EXPERIMENTAL)
+//!
+//! ## Post-Quantum Cryptography Status
+//!
+//! The post-quantum cryptography implementations (Kyber, Dilithium, Falcon):
+//! - Are based on NIST PQC competition algorithms
+//! - Have NOT undergone formal security audits
+//! - May contain timing or other side-channel vulnerabilities
+//! - Are NOT recommended for protecting sensitive data
+//! - Should only be used for research and evaluation purposes
+//!
+//! ## Recommendation
+//!
+//! For production use, please consider mature, audited cryptographic libraries such as:
+//! - `pqclean` - NIST PQC reference implementation
+//! - `liboqs` - Open Quantum Safe library
+//! - `ring` - Modern, audited crypto library
+//! - `openssl` - Industry-standard crypto library
+
 use std::collections::HashMap;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
@@ -469,15 +515,33 @@ impl DMSCProtocolManager {
             target_id: target.to_string(),
         };
         
-        let serialized = serde_json::to_vec(&frame)
-            .map_err(|e| ProtocolError::Serialization { message: e.to_string() }).unwrap_or_default();
+        let serialized = match serde_json::to_vec(&frame) {
+            Ok(serialized_data) => serialized_data,
+            Err(e) => {
+                self.stats.try_write().unwrap().record_error();
+                let error_response = DMSCProtocolResponse {
+                    success: false,
+                    sequence_number: sequence,
+                    target_id: target.to_string(),
+                    response_data: format!("Serialization error: {}", e).into_bytes(),
+                    timestamp,
+                };
+                return serde_json::to_vec(&error_response).unwrap_or_else(|_| b"{\"success\":false,\"error\":\"Serialization failed\"}".to_vec());
+            }
+        };
         
         let payload_len = serialized.len();
         self.stats.try_write().unwrap().record_sent(payload_len);
         
-        self.stats.try_write().unwrap().record_received(0);
+        let response = DMSCProtocolResponse {
+            success: true,
+            sequence_number: sequence,
+            target_id: target.to_string(),
+            response_data: b"Message sent successfully".to_vec(),
+            timestamp,
+        };
         
-        b"Message sent successfully".to_vec()
+        serde_json::to_vec(&response).unwrap_or_else(|_| b"{\"success\":true,\"message\":\"Message sent\"}".to_vec())
     }
     
     /// Send message with flags (sync version for Python)
@@ -531,15 +595,6 @@ impl Default for DMSCProtocolResponse {
         }
     }
 }
-
-#[allow(dead_code)]
-const PROTOCOL_ERROR_TARGET_NOT_FOUND: &str = "Target not found";
-#[allow(dead_code)]
-const PROTOCOL_ERROR_SEND_FAILED: &str = "Failed to send message";
-#[allow(dead_code)]
-const PROTOCOL_ERROR_NOT_INITIALIZED: &str = "Protocol not initialized";
-#[allow(dead_code)]
-const PROTOCOL_ERROR_INVALID_STATE: &str = "Invalid protocol state";
 
 #[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
 pub enum ProtocolError {
