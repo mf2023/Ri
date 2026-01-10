@@ -532,9 +532,13 @@ impl Default for DMSCProtocolResponse {
     }
 }
 
+#[allow(dead_code)]
 const PROTOCOL_ERROR_TARGET_NOT_FOUND: &str = "Target not found";
+#[allow(dead_code)]
 const PROTOCOL_ERROR_SEND_FAILED: &str = "Failed to send message";
+#[allow(dead_code)]
 const PROTOCOL_ERROR_NOT_INITIALIZED: &str = "Protocol not initialized";
+#[allow(dead_code)]
 const PROTOCOL_ERROR_INVALID_STATE: &str = "Invalid protocol state";
 
 #[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]

@@ -109,7 +109,6 @@ full = [
     "sysinfo",
     "reqwest",
     "urlencoding",
-    "etcd",
     "rabbitmq",
     "pyo3"
 ]
@@ -131,10 +130,7 @@ system_info = ["sysinfo"]
 postgres = ["dep:tokio-postgres"]
 mysql = ["dep:mysql"]
 sqlite = ["dep:rusqlite"]
-
-[target.'cfg(not(windows))'.features]
 kafka = ["rdkafka"]
-default = ["kafka"]
 
 [dev-dependencies]
 tempfile = "3"

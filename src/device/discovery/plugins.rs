@@ -262,6 +262,7 @@ impl PluginWrapper {
         }
     }
 
+    #[allow(dead_code)]
     pub fn with_library(plugin: Box<dyn DMSCHardwareDiscoveryPlugin>, library: Arc<Library>) -> Self {
         let metadata = plugin.metadata();
         let status = plugin.status();
@@ -598,7 +599,8 @@ impl PluginLoader {
 
     /// Loads a plugin from an already loaded library
     fn load_plugin_from_library(&self, library: &Arc<Library>, path: &PathBuf) -> PluginResult<Box<dyn DMSCHardwareDiscoveryPlugin>> {
-        type CreatePluginFn = unsafe extern "C" fn() -> *mut dyn DMSCHardwareDiscoveryPlugin;
+        #[allow(improper_ctypes_definitions)]
+    type CreatePluginFn = unsafe extern "C" fn() -> *mut dyn DMSCHardwareDiscoveryPlugin;
 
         unsafe {
             let create_symbol: Symbol<CreatePluginFn> = library
@@ -642,6 +644,7 @@ impl PluginLoader {
             }
         );
 
+        #[allow(improper_ctypes_definitions)]
         type GetMetadataFn = unsafe extern "C" fn() -> PluginMetadata;
 
         unsafe {

@@ -109,6 +109,7 @@ pub struct DMSCRabbitMQQueue {
     #[allow(dead_code)]
     queue: Arc<Queue>,
     /// RabbitMQ management API URL
+    #[allow(dead_code)]
     management_url: Option<String>,
     /// Management API username
     #[allow(dead_code)]
@@ -240,6 +241,7 @@ impl DMSCRabbitMQQueue {
     /// # Returns
     ///
     /// Detailed DMSCQueueStats wrapped in DMSCResult
+    #[cfg(feature = "http_client")]
     async fn fetch_rabbitmq_stats(&self) -> DMSCResult<DMSCQueueStats> {
         let (Some(management_url), Some(username), Some(password)) = (
             &self.management_url,
@@ -303,20 +305,12 @@ impl DMSCRabbitMQQueue {
         })
     }
     
-    /// Gets basic statistics when management API is not available.
-    ///
-    /// Provides fallback statistics using channel-level information.
-    ///
-    /// # Returns
-    ///
-    /// Basic DMSCQueueStats wrapped in DMSCResult
     async fn get_basic_stats(&self) -> DMSCResult<DMSCQueueStats> {
-        // Try to get basic queue info from channel
         let queue_info = self.channel
             .queue_declare(
                 &self.name,
                 lapin::options::QueueDeclareOptions {
-                    passive: true, // Only check if exists, don't create
+                    passive: true,
                     ..Default::default()
                 },
                 lapin::types::FieldTable::default(),
@@ -387,14 +381,15 @@ impl DMSCQueue for DMSCRabbitMQQueue {
     ///
     /// DMSCQueueStats containing detailed queue statistics wrapped in DMSCResult
     async fn get_stats(&self) -> DMSCResult<DMSCQueueStats> {
-        // Try to get detailed stats from RabbitMQ management API
+        #[cfg(feature = "http_client")]
         match self.fetch_rabbitmq_stats().await {
             Ok(detailed_stats) => Ok(detailed_stats),
             Err(_) => {
-                // Fallback to basic stats if management API is not available
                 self.get_basic_stats().await
             }
         }
+        #[cfg(not(feature = "http_client"))]
+        self.get_basic_stats().await
     }
 
     /// Purges all messages from the RabbitMQ queue.

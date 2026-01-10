@@ -208,6 +208,7 @@ pub struct DMSCDeviceControlConfigLegacy {
     pub resource_allocation_timeout_secs: u64,
 }
 
+#[allow(deprecated)]
 impl Default for DMSCDeviceControlConfigLegacy {
     /// Returns the default configuration for device control.
     /// 
@@ -228,6 +229,7 @@ impl Default for DMSCDeviceControlConfigLegacy {
     }
 }
 
+#[allow(deprecated)]
 impl DMSCDeviceControlConfigLegacy {
     /// Converts this legacy configuration to the new module-level configuration format.
     /// 
