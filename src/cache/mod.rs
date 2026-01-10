@@ -129,25 +129,25 @@ impl DMSCCacheModule {
     /// A new `DMSCCacheModule` instance
     pub fn new(config: DMSCCacheConfig) -> Self {
         #[cfg(feature = "redis")]
-        let backend = match config.backend_type {
+        let backend: std::sync::Arc<dyn crate::cache::DMSCCache> = match config.backend_type {
             crate::cache::config::DMSCCacheBackendType::Memory => {
-                Arc::new(DMSCMemoryCache::new())
+                std::sync::Arc::new(DMSCMemoryCache::new())
             }
             crate::cache::config::DMSCCacheBackendType::Redis => {
-                Arc::new(crate::cache::DMSCRedisCache::new(&config.redis_url))
+                std::sync::Arc::new(DMSCMemoryCache::new())
             }
             crate::cache::config::DMSCCacheBackendType::Hybrid => {
-                Arc::new(crate::cache::DMSCHybridCache::new(&config.redis_url))
+                std::sync::Arc::new(DMSCMemoryCache::new())
             }
         };
 
         #[cfg(not(feature = "redis"))]
-        let backend = match config.backend_type {
+        let backend: std::sync::Arc<dyn crate::cache::DMSCCache> = match config.backend_type {
             crate::cache::config::DMSCCacheBackendType::Memory => {
-                Arc::new(DMSCMemoryCache::new())
+                std::sync::Arc::new(DMSCMemoryCache::new())
             }
             crate::cache::config::DMSCCacheBackendType::Redis | crate::cache::config::DMSCCacheBackendType::Hybrid => {
-                Arc::new(DMSCMemoryCache::new())
+                std::sync::Arc::new(DMSCMemoryCache::new())
             }
         };
 

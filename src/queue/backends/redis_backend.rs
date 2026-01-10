@@ -203,6 +203,9 @@ impl DMSCQueue for DMSCRedisQueue {
             processed_messages: 0,
             failed_messages: 0,
             avg_processing_time_ms: 0.0,
+            total_bytes_sent: 0,
+            total_bytes_received: 0,
+            last_message_time: 0,
         })
     }
 

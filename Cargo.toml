@@ -110,7 +110,6 @@ full = [
     "reqwest",
     "urlencoding",
     "etcd",
-    "kafka",
     "rabbitmq",
     "pyo3"
 ]
@@ -119,11 +118,10 @@ full = [
 etcd = ["dep:etcd-client"]
 parking_lot = []
 pyo3 = ["dep:pyo3"]
-kafka = ["rdkafka"]
 rabbitmq = ["dep:lapin"]
 observability = ["prometheus"]
 cache = ["redis"]
-queue = ["redis", "rabbitmq", "kafka"]
+queue = ["redis", "rabbitmq"]
 gateway = ["hyper", "redis", "tokio-rustls"]
 service_mesh = ["redis", "hyper", "tokio-rustls"]
 auth = ["urlencoding"]
@@ -133,6 +131,10 @@ system_info = ["sysinfo"]
 postgres = ["dep:tokio-postgres"]
 mysql = ["dep:mysql"]
 sqlite = ["dep:rusqlite"]
+
+[target.'cfg(not(windows))'.features]
+kafka = ["rdkafka"]
+default = ["kafka"]
 
 [dev-dependencies]
 tempfile = "3"
