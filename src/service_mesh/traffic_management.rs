@@ -345,7 +345,7 @@ impl DMSCTrafficManager {
     }
     
     /// Checks if a route matches the given endpoint
-    fn is_route_match(&self, _route: &DMSCTrafficRoute, _endpoint: &str) -> bool {
+    fn is_route_match(&self, route: &DMSCTrafficRoute, endpoint: &str) -> bool {
         // Simple matching logic for demonstration
         // In a full implementation, this would parse the request and match against criteria
         

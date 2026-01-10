@@ -86,6 +86,10 @@ use std::time::Duration;
 use tokio::sync::Mutex;
 use futures::StreamExt;
 use serde::{Deserialize, Serialize};
+#[cfg(feature = "http_client")]
+use reqwest;
+#[cfg(feature = "http_client")]
+use urlencoding;
 use crate::core::DMSCResult;
 use crate::queue::{DMSCQueue, DMSCQueueMessage, DMSCQueueProducer, DMSCQueueConsumer, DMSCQueueStats};
 
@@ -109,9 +113,27 @@ pub struct DMSCRabbitMQQueue {
     /// Management API username
     #[allow(dead_code)]
     management_username: Option<String>,
-    /// Management API password
+    /// RabbitMQ management API password
     #[allow(dead_code)]
     management_password: Option<String>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+struct RabbitMQQueueInfo {
+    name: String,
+    messages: u64,
+    consumers: u64,
+    message_stats: Option<RabbitMQMessageStats>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+struct RabbitMQMessageStats {
+    publish: Option<u64>,
+    deliver_no_ack: Option<u64>,
+    get_no_ack: Option<u64>,
+    redeliver: Option<u64>,
+    deliver: Option<u64>,
+    get: Option<u64>,
 }
 
 impl DMSCRabbitMQQueue {
@@ -209,24 +231,6 @@ impl DMSCRabbitMQQueue {
         })
     }
 
-    #[derive(Debug, Serialize, Deserialize)]
-    struct RabbitMQQueueInfo {
-        name: String,
-        messages: u64,
-        consumers: u64,
-        message_stats: Option<RabbitMQMessageStats>,
-    }
-
-    #[derive(Debug, Serialize, Deserialize)]
-    struct RabbitMQMessageStats {
-        publish: Option<u64>,
-        deliver_no_ack: Option<u64>,
-        get_no_ack: Option<u64>,
-        redeliver: Option<u64>,
-        deliver: Option<u64>,
-        get: Option<u64>,
-    }
-
     /// Fetches detailed statistics from RabbitMQ management API.
     ///
     /// This method attempts to connect to RabbitMQ's management API to retrieve
@@ -250,7 +254,7 @@ impl DMSCRabbitMQQueue {
         let client = reqwest::Client::new();
         let url = format!(
             "{}/api/queues/%2f/{}",
-            management_url.rtrim_end('/'),
+            management_url.trim_end_matches('/'),
             urlencoding::encode(&self.name)
         );
 
@@ -288,11 +292,14 @@ impl DMSCRabbitMQQueue {
         Ok(DMSCQueueStats {
             queue_name: queue_info.name,
             message_count: queue_info.messages,
-            consumer_count: queue_info.consumers,
+            consumer_count: queue_info.consumers as u32,
             producer_count: 0,
             processed_messages,
             failed_messages,
             avg_processing_time_ms: 0.0,
+            total_bytes_sent: 0,
+            total_bytes_received: 0,
+            last_message_time: 0,
         })
     }
     
@@ -319,11 +326,14 @@ impl DMSCRabbitMQQueue {
         Ok(DMSCQueueStats {
             queue_name: self.name.clone(),
             message_count: queue_info.message_count() as u64,
-            consumer_count: queue_info.consumer_count(),
-            producer_count: 0, // Not available from queue_declare
-            processed_messages: 0, // Not available without management API
+            consumer_count: queue_info.consumer_count() as u32,
+            producer_count: 0,
+            processed_messages: 0,
             failed_messages: 0,
             avg_processing_time_ms: 0.0,
+            total_bytes_sent: 0,
+            total_bytes_received: 0,
+            last_message_time: 0,
         })
     }
 
