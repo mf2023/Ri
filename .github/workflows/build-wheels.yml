@@ -79,32 +79,19 @@ jobs:
   # Required because newer macOS runners only support ARM64 natively
   # This job runs on Intel-based macOS runners to produce x64 (x86_64-apple-darwin) binaries
   # Native compilation on Intel Mac provides optimal build performance for x64 targets
-  # Python setup required for proper PyO3 linking on macOS
-  # MACOSX_DEPLOYMENT_TARGET=11.0 ensures compatibility with macOS 11+ and prevents SDK version mismatches
+  # Compiles Rust library as cdylib for macOS x64 architecture
+  # The resulting .dylib file is suitable for use with Python on macOS x64 systems
   build-rust-macos:
     runs-on: macos-15-intel
-    strategy:
-      matrix:
-        python: ['3.8', '3.9', '3.10', '3.11', '3.12', '3.13', '3.14']
     steps:
       - uses: actions/checkout@v4
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: ${{ matrix.python }}
-      - name: Build with maturin
-        run: |
-          pip install maturin
-          maturin build --release --target x86_64-apple-darwin -o target/wheels
-      - name: List built files
-        run: |
-          echo "=== target/wheels ===" && ls -la target/wheels/ 2>/dev/null || echo "No files"
-          find target -type f -name "*.dylib" 2>/dev/null | head -10
+      - name: Build Rust library
+        run: cargo build --release --target x86_64-apple-darwin
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: rust-macos-x64
-          path: target/wheels/
+          path: target/release/x86_64-apple-darwin/libdmsc.*
 
   # Build Python Wheel for all platforms and architectures (supports Python 3.8~3.14)
   # This matrix job generates distributable Python wheel packages (.whl files) for all

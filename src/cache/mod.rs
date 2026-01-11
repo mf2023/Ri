@@ -127,7 +127,7 @@ impl DMSCCacheModule {
     /// # Returns
     /// 
     /// A new `DMSCCacheModule` instance
-    pub fn new(config: DMSCCacheConfig) -> Self {
+    pub async fn new(config: DMSCCacheConfig) -> Self {
         #[cfg(feature = "redis")]
         let backend: std::sync::Arc<dyn crate::cache::DMSCCache> = match config.backend_type {
             crate::cache::config::DMSCCacheBackendType::Memory => {
@@ -185,7 +185,10 @@ impl DMSCCacheModule {
 impl DMSCCacheModule {
     #[new]
     fn py_new(config: DMSCCacheConfig) -> Self {
-        Self::new(config)
+        let rt = tokio::runtime::Runtime::new().expect("Failed to create runtime");
+        rt.block_on(async {
+            Self::new(config).await
+        })
     }
     
     /// Get cache manager status for Python (Python wrapper)

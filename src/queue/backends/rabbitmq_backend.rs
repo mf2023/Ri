@@ -82,9 +82,7 @@ use lapin::{Connection, ConnectionProperties, Channel, Queue, Consumer};
 use lapin::options::{QueueDeclareOptions, BasicConsumeOptions, BasicPublishOptions};
 use lapin::types::FieldTable;
 use std::collections::HashMap;
-use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
-use std::time::Duration;
 use tokio::sync::Mutex;
 use futures::StreamExt;
 use serde::{Deserialize, Serialize};
@@ -518,7 +516,7 @@ impl DMSCQueueConsumer for RabbitMQConsumer {
             Some(delivery_result) => {
                 let delivery = delivery_result.map_err(|e| crate::core::DMSCError::Other(format!("Consumer error: {e}")))?;
                 
-                let message_id = {
+                let _message_id = {
                     let delivery_tag = delivery.delivery_tag;
                     let message_id = format!("msg_{}", uuid::Uuid::new_v4());
                     
@@ -558,8 +556,8 @@ impl DMSCQueueConsumer for RabbitMQConsumer {
         };
 
         if let Some(tag) = delivery_tag {
-            let mut consumer = self.consumer.lock().await;
-            consumer.ack(DeliveryTag(tag)).await
+            let channel = self.channel.clone();
+            channel.basic_ack(tag, false).await
                 .map_err(|e| crate::core::DMSCError::Other(format!("Failed to ack message: {e}")))?;
             
             let mut tags = self.delivery_tags.lock().await;
@@ -595,8 +593,8 @@ impl DMSCQueueConsumer for RabbitMQConsumer {
         };
 
         if let Some(tag) = delivery_tag {
-            let mut consumer = self.consumer.lock().await;
-            consumer.nack(DeliveryTag(tag), false).await
+            let channel = self.channel.clone();
+            channel.basic_nack(tag, false, true).await
                 .map_err(|e| crate::core::DMSCError::Other(format!("Failed to nack message: {e}")))?;
             
             let mut tags = self.delivery_tags.lock().await;
