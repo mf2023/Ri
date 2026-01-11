@@ -79,14 +79,14 @@ jobs:
   # Required because newer macOS runners only support ARM64 natively
   # This job runs on Intel-based macOS runners to produce x64 (x86_64-apple-darwin) binaries
   # Native compilation on Intel Mac provides optimal build performance for x64 targets
-  # Compiles Rust library as cdylib for macOS x64 architecture
+  # Compiles Rust library as cdylib for macOS x64 architecture (without pyo3 for pure Rust)
   # The resulting .dylib file is suitable for use with Python on macOS x64 systems
   build-rust-macos:
     runs-on: macos-15-intel
     steps:
       - uses: actions/checkout@v4
       - name: Build Rust library
-        run: cargo build --release --target x86_64-apple-darwin
+        run: cargo build --release --target x86_64-apple-darwin --no-default-features
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
