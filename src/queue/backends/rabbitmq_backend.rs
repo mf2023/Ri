@@ -82,6 +82,7 @@ use lapin::{Connection, ConnectionProperties, Channel, Queue, Consumer};
 use lapin::options::{QueueDeclareOptions, BasicConsumeOptions, BasicPublishOptions};
 use lapin::types::FieldTable;
 use std::collections::HashMap;
+use std::sync::atomic::AtomicU64;
 use std::sync::Arc;
 use tokio::sync::Mutex;
 use futures::StreamExt;
@@ -366,7 +367,7 @@ impl DMSCQueue for DMSCRabbitMQQueue {
             )
             .await?;
 
-        Ok(Box::new(RabbitMQConsumer::new(consumer)))
+        Ok(Box::new(RabbitMQConsumer::new(self.channel.clone(), consumer)))
     }
 
     /// Gets statistics for the RabbitMQ queue.
@@ -476,6 +477,8 @@ impl DMSCQueueProducer for RabbitMQProducer {
 /// This struct provides a RabbitMQ implementation of the DMSCQueueConsumer trait,
 /// allowing receiving messages from RabbitMQ queues.
 struct RabbitMQConsumer {
+    /// RabbitMQ channel for sending acks/nacks
+    channel: Arc<Channel>,
     /// RabbitMQ consumer
     consumer: Arc<Mutex<Consumer>>,
     /// Flag indicating if the consumer is paused
@@ -487,8 +490,9 @@ struct RabbitMQConsumer {
 }
 
 impl RabbitMQConsumer {
-    fn new(consumer: Consumer) -> Self {
+    fn new(channel: Arc<Channel>, consumer: Consumer) -> Self {
         Self {
+            channel,
             consumer: Arc::new(Mutex::new(consumer)),
             paused: Arc::new(Mutex::new(false)),
             delivery_tags: Arc::new(Mutex::new(HashMap::new())),
