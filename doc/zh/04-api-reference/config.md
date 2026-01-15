@@ -2,9 +2,9 @@
 
 # Config API参考
 
-**Version: 0.0.3**
+**Version: 0.1.4**
 
-**Last modified date: 2026-01-01**
+**Last modified date: 2026-01-15**
 
 config模块提供多源配置管理与热重载功能，支持文件、环境变量等多种配置来源。
 
@@ -33,30 +33,42 @@ config模块包含以下子模块：
 
 | 方法 | 描述 | 参数 | 返回值 |
 |:--------|:-------------|:--------|:--------|
-| `get(key)` | 获取配置值 | `key: &str` | `Option<String>` |
-| `get_typed<T>(key)` | 获取类型安全的配置值 | `key: &str` | `DMSCResult<T>` |
-| `get_or_default(key, default)` | 获取配置值或默认值 | `key: &str`, `default: T` | `T` |
-| `set(key, value)` | 设置配置值 | `key: &str`, `value: impl Serialize` | `DMSCResult<()>` |
-| `has(key)` | 检查配置是否存在 | `key: &str` | `bool` |
-| `keys()` | 获取所有配置键 | 无 | `Vec<String>` |
-| `reload()` | 重新加载配置 | 无 | `DMSCResult<()>` |
-| `watch(key, callback)` | 监听配置变化 | `key: &str`, `callback: impl Fn(&str)` | `DMSCResult<()>` |
-| `validate()` | 验证配置完整性 | 无 | `DMSCResult<()>` |
+| `get(key)` | 获取配置值 | `key: &str` | `Option<&String>` |
+| `get_str(key)` | 获取字符串值 | `key: &str` | `Option<&str>` |
+| `get_bool(key)` | 获取布尔值 | `key: &str` | `Option<bool>` |
+| `get_i64(key)` | 获取 i64 值 | `key: &str` | `Option<i64>` |
+| `get_u64(key)` | 获取 u64 值 | `key: &str` | `Option<u64>` |
+| `get_f32(key)` | 获取 f32 值 | `key: &str` | `Option<f32>` |
+| `get_f64(key)` | 获取 f64 值 | `key: &str` | `Option<f64>` |
+| `get_usize(key)` | 获取 usize 值 | `key: &str` | `Option<usize>` |
+| `get_i32(key)` | 获取 i32 值 | `key: &str` | `Option<i32>` |
+| `get_u32(key)` | 获取 u32 值 | `key: &str` | `Option<u32>` |
+| `get_port(key)` | 获取端口号 (1-65535) | `key: &str` | `Option<u16>` |
+| `get_timeout_secs(key)` | 获取超时秒数 | `key: &str` | `Option<u32>` |
+| `get_retry_count(key)` | 获取重试次数 | `key: &str` | `Option<u32>` |
+| `get_percentage(key)` | 获取百分比 (0.0-1.0) | `key: &str` | `Option<f32>` |
+| `get_rate(key)` | 获取速率值 | `key: &str` | `Option<f32>` |
+| `get_or_default(key, default)` | 获取值或默认值 | `key: &str`, `default: T` | `T` |
+| `has(key)` | 检查键是否存在 | `key: &str` | `bool` |
+| `keys()` | 获取所有键 | 无 | `Vec<String>` |
 
 #### 使用示例
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 
 // 获取字符串配置
-let service_name = ctx.config().get("service.name").unwrap_or("default");
+let service_name = ctx.config().get_str("service.name").unwrap_or("default");
 
-// 获取类型安全的配置
-let port: u16 = ctx.config().get_typed("service.port")?;
-let max_connections: usize = ctx.config().get_typed("database.max_connections")?;
+// 获取类型化配置
+let port: u16 = ctx.config().get_port("service.port").unwrap_or(8080);
+let max_connections = ctx.config().get_usize("database.max_connections").unwrap_or(100);
 
-// 获取配置或默认值
-let timeout = ctx.config().get_or_default("service.timeout", 30);
+// 获取带边界检查的值
+let timeout = ctx.config().get_timeout_secs("service.timeout").unwrap_or(30);
+
+// 获取或默认值
+let retries = ctx.config().get_or_default("service.retries", 3);
 
 // 检查配置是否存在
 if ctx.config().has("feature.new_feature") {
@@ -103,7 +115,7 @@ for key in keys {
 #### 使用示例
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 
 let config = DMSCConfigBuilder::new()
     .add_source(DMSCConfigSource::File("config.yaml".to_string()))
@@ -265,7 +277,7 @@ let timeout = ctx.config().get_typed("service.timeout").unwrap_or(30);
 ### 内置验证器
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 
 let config = DMSCConfigBuilder::new()
     .add_source(DMSCConfigSource::File("config.yaml".to_string()))
@@ -282,7 +294,7 @@ let config = DMSCConfigBuilder::new()
 ### 自定义验证器
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 
 struct CustomValidator;
 
@@ -557,14 +569,20 @@ match ctx.config().get_typed::<u16>("service.port") {
 </div>
 
 - [README](./README.md): 模块概览，提供API参考文档总览和快速导航
-- [auth](./auth.md): 认证模块，提供JWT、OAuth2和RBAC认证授权功能
+- [auth](./auth.md): 认证模块，处理用户认证和授权
+- [cache](./cache.md): 缓存模块，提供内存缓存和分布式缓存支持
 - [core](./core.md): 核心模块，提供错误处理和服务上下文
-- [log](./log.md): 日志模块，记录认证事件和安全日志
-- [cache](./cache.md): 缓存模块，提供多后端缓存抽象，缓存用户会话和权限数据
-- [database](./database.md): 数据库模块，提供用户数据持久化和查询功能
-- [http](./http.md): HTTP模块，提供Web认证接口和中间件支持
-- [mq](./mq.md): 消息队列模块，处理认证事件和异步通知
-- [observability](./observability.md): 可观测性模块，监控认证性能和安全事件
-- [security](./security.md): 安全模块，提供加密、哈希和验证功能
-- [storage](./storage.md): 存储模块，管理认证文件、密钥和证书
-- [validation](./validation.md): 验证模块，验证用户输入和表单数据
+- [database](./database.md): 数据库模块，提供数据库操作支持
+- [device](./device.md): 设备模块，使用协议进行设备通信
+- [fs](./fs.md): 文件系统模块，提供文件操作功能
+- [gateway](./gateway.md): 网关模块，提供API网关功能
+- [hooks](./hooks.md): 钩子模块，提供生命周期钩子支持
+- [http](./http.md): HTTP模块，提供HTTP服务器和客户端功能
+- [log](./log.md): 日志模块，记录协议事件
+- [mq](./mq.md): 消息队列模块，提供消息队列支持
+- [observability](./observability.md): 可观测性模块，监控协议性能
+- [protocol](./protocol.md): 协议模块，提供通信协议支持
+- [security](./security.md): 安全模块，提供加密和解密功能
+- [service_mesh](./service_mesh.md): 服务网格模块，使用协议进行服务间通信
+- [storage](./storage.md): 存储模块，提供云存储支持
+- [validation](./validation.md): 验证模块，提供数据验证功能

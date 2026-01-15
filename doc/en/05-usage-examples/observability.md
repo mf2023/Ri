@@ -2,9 +2,9 @@
 
 # Observability Usage Examples
 
-**Version: 0.0.3**
+**Version: 0.1.4**
 
-**Last modified date: 2026-01-01**
+**Last modified date: 2026-01-15**
 
 This example demonstrates how to use DMSC's observability module for distributed tracing, metrics collection, health checks, performance analysis, and alerting management.
 
@@ -104,7 +104,7 @@ observability:
 Replace the content of `src/main.rs` with the following:
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 use serde_json::json;
 use futures::future::join_all;
 use chrono::Utc;
@@ -290,7 +290,7 @@ The observability module provides practical usage examples for distributed traci
 ### Basic Tracing
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 use serde_json::json;
 
 // Create root span
@@ -322,7 +322,7 @@ root_span.end();
 ### Nested Spans
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 
 async fn process_order(order_id: &str) -> DMSCResult<OrderResult> {
     let order_span = ctx.observability().start_span("fetch_order", json!({
@@ -373,7 +373,7 @@ async fn process_order(order_id: &str) -> DMSCResult<OrderResult> {
 ### Asynchronous Tracing
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 use futures::future::join_all;
 
 async fn batch_process_orders(order_ids: Vec<String>) -> DMSCResult<Vec<OrderResult>> {
@@ -429,7 +429,7 @@ async fn batch_process_orders(order_ids: Vec<String>) -> DMSCResult<Vec<OrderRes
 ### Counter Metrics
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 
 // Create counters
 let request_counter = ctx.observability().create_counter("http_requests_total", "Total HTTP requests", "requests");
@@ -484,7 +484,7 @@ match process_order(&order).await {
 ### Histogram Metrics
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 
 // Create histograms
 let request_size_histogram = ctx.observability().create_histogram("http_request_size_bytes", "HTTP request size", "bytes");
@@ -525,7 +525,7 @@ let custom_histogram = ctx.observability().create_histogram_with_buckets(
 ### Gauge Metrics
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 
 // Create gauges
 let active_users_gauge = ctx.observability().create_gauge("active_users_current", "Current active users", "users");
@@ -576,7 +576,7 @@ processing_rate_gauge.set(calculate_processing_rate(), json!({
 ### System Health Checks
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 use serde_json::json;
 
 // Register health checks
@@ -647,7 +647,7 @@ async fn health_check_handler() -> DMSCResult<DMSCHttpResponse> {
 ### Custom Health Checks
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 use serde_json::json;
 
 // Business logic health check
@@ -734,7 +734,7 @@ ctx.observability().register_health_check("memory_usage", || async {
 ### Performance Profiling
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 use serde_json::json;
 
 // Start performance profiling
@@ -767,7 +767,7 @@ for hotspot in hotspots {
 ### Memory Analysis
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 use serde_json::json;
 
 // Start memory profiling
@@ -800,7 +800,7 @@ if !leaks.is_empty() {
 ### Performance Benchmarking
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 use serde_json::json;
 
 // Run performance benchmark
@@ -835,7 +835,7 @@ ctx.log().info(format!("Error rate: {:.2}%", stats.error_rate * 100.0));
 ### Creating Alert Rules
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 use serde_json::json;
 
 // Create CPU usage alert
@@ -890,7 +890,7 @@ ctx.observability().create_alert_rule(error_rate_alert_rule).await?;
 ### Business Metrics Alerts
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 use serde_json::json;
 
 // Order processing latency alert
@@ -944,7 +944,7 @@ ctx.observability().create_alert_rule(fraud_detection_alert).await?;
 ### Alert Notifications
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 use serde_json::json;
 
 // Configure notification channels
@@ -1019,7 +1019,7 @@ async fn handle_alert_notification(alert: DMAlert) -> DMSCResult<()> {
 ### Prometheus Integration
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 use serde_json::json;
 
 // Configure Prometheus exporter
@@ -1050,7 +1050,7 @@ custom_metric.increment(1.0, vec!["value1".to_string(), "value2".to_string()]);
 ### Grafana Integration
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 use serde_json::json;
 
 // Create Grafana dashboard configuration
@@ -1100,7 +1100,7 @@ ctx.observability().create_grafana_dashboard(grafana_dashboard).await?;
 ### Observability Error Handling
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 use serde_json::json;
 
 // Handle tracing errors
@@ -1218,7 +1218,7 @@ After successful execution, you will see the following output:
 ### Distributed Tracing Enhancement
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 use serde_json::json;
 
 // Configure advanced tracing options
@@ -1259,7 +1259,7 @@ let cross_service_context = ctx.observability().create_cross_service_context(
 ### Smart Alerting System
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 use serde_json::json;
 
 // Configure intelligent alerting rules
@@ -1327,7 +1327,7 @@ ctx.observability().configure_escalation_policy(escalation_policy).await?;
 ### Performance Profiling Integration
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 use serde_json::json;
 
 // Configure continuous performance profiling
@@ -1370,7 +1370,7 @@ custom_profile.end_timer();
 ### Business Metrics Monitoring
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 use serde_json::json;
 
 // Configure business KPI monitoring

@@ -2,9 +2,9 @@
 
 # Device API Reference
 
-**Version: 0.0.3**
+**Version: 0.1.4**
 
-**Last modified date: 2026-01-01**
+**Last modified date: 2026-01-15**
 
 The device module provides smart device control functionality, including device discovery, resource scheduling, and resource pool management.
 
@@ -45,8 +45,8 @@ The main device control module interface, providing unified device management fu
 #### Usage Example
 
 ```rust
-use dms::prelude::*;
-use dms::device::{DMSCDeviceControlConfig, DMSCResourceRequest, DMSCDeviceType, DMSCDeviceCapabilities};
+use dmsc::prelude::*;
+use dmsc::device::{DMSCDeviceControlConfig, DMSCResourceRequest, DMSCDeviceType, DMSCDeviceCapabilities};
 
 async fn example() -> DMSCResult<()> {
     let device_config = DMSCDeviceControlConfig {
@@ -172,7 +172,7 @@ Device capabilities struct.
 Resource request struct.
 
 ```rust
-use dms::device::{DMSCResourceRequest, DMSCDeviceType, DMSCDeviceCapabilities};
+use dmsc::device::{DMSCResourceRequest, DMSCDeviceType, DMSCDeviceCapabilities};
 
 let request = DMSCResourceRequest {
     request_id: "req-001".to_string(),
@@ -239,7 +239,7 @@ SLA priority class.
 Resource pool interface.
 
 ```rust
-use dms::device::DMSCResourcePool;
+use dmsc::device::DMSCResourcePool;
 
 let pool = DMSCResourcePool::new("gpu-pool".to_string(), 10);
 
@@ -329,9 +329,20 @@ Device control configuration.
 </div>
 
 - [README](./README.md): Module overview with API reference summary and quick navigation
+- [auth](./auth.md): Authentication module handling user authentication and authorization
+- [cache](./cache.md): Cache module providing in-memory and distributed cache support
+- [config](./config.md): Configuration module managing application configuration
 - [core](./core.md): Core module providing error handling and service context
-- [log](./log.md): Logging module for device events
-- [config](./config.md): Configuration module for device settings
-- [cache](./cache.md): Caching module for device state
-- [observability](./observability.md): Observability module for device performance monitoring
-- [service_mesh](./service_mesh.md): Service mesh module for device service discovery
+- [database](./database.md): Database module providing database operation support
+- [fs](./fs.md): Filesystem module providing file operation functions
+- [gateway](./gateway.md): Gateway module providing API gateway functionality
+- [hooks](./hooks.md): Hooks module providing lifecycle hook support
+- [http](./http.md): HTTP module providing HTTP server and client functionality
+- [log](./log.md): Logging module for protocol events
+- [mq](./mq.md): Message queue module providing message queue support
+- [observability](./observability.md): Observability module for protocol performance monitoring
+- [protocol](./protocol.md): Protocol module providing communication protocol support
+- [security](./security.md): Security module providing encryption and decryption functions
+- [service_mesh](./service_mesh.md): Service mesh module using protocols for inter-service communication
+- [storage](./storage.md): Storage module providing cloud storage support
+- [validation](./validation.md): Validation module providing data validation functions

@@ -43,7 +43,7 @@
 //! ## Usage
 //! 
 //! ```rust
-//! use dms::prelude::*;
+//! use dmsc::prelude::*;
 //! use std::collections::HashMap;
 //! 
 //! fn example() {

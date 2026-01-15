@@ -46,7 +46,7 @@
 //! ## Usage
 //! 
 //! ```rust
-//! use dms::prelude::*;
+//! use dmsc::prelude::*;
 //! use std::time::Duration;
 //! 
 //! async fn example() -> DMSCResult<()> {
@@ -251,5 +251,15 @@ impl DMSCCache for DMSCMemoryCache {
         }
         
         Ok(cleaned)
+    }
+
+    /// Gets all keys from the cache.
+    ///
+    /// # Returns
+    ///
+    /// A `DMSCResult<Vec<String>>` containing all cache keys
+    async fn keys(&self) -> crate::core::DMSCResult<Vec<String>> {
+        let keys: Vec<String> = self.store.iter().map(|entry| entry.key().clone()).collect();
+        Ok(keys)
     }
 }

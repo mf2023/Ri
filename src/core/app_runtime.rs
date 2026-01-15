@@ -39,7 +39,7 @@ use pyo3::prelude::*;
 /// ## Usage
 /// 
 /// ```rust
-/// use dms::prelude::*;
+/// use dmsc::prelude::*;
 /// 
 /// #[tokio::main]
 /// async fn main() -> DMSCResult<()> {

@@ -4,9 +4,9 @@
 
 English | [简体中文](../zh/index.md)
 
-**Version: 0.0.3**
+**Version: 0.1.4**
 
-**Last modified date: 2026-01-01**
+**Last modified date: 2026-01-15**
 
 <a href="https://space.bilibili.com/3493284091529457" target="_blank">
     <img alt="BiliBili" src="https://img.shields.io/badge/BiliBili-Dunimd-00A1D6?style=flat-square&logo=bilibili"/>

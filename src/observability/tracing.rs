@@ -53,8 +53,8 @@
 //! ## Usage
 //!
 //! ```rust
-//! use dms::observability::{init_tracer, tracer, DMSCSpanKind, DMSCSpanStatus};
-//! use dms::core::DMSCResult;
+//! use dmsc::observability::{init_tracer, tracer, DMSCSpanKind, DMSCSpanStatus};
+//! use dmsc::core::DMSCResult;
 //!
 //! async fn example() -> DMSCResult<()> {
 //!     // Initialize the global tracer with 100% sampling rate

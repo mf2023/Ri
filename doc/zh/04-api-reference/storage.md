@@ -2,9 +2,9 @@
 
 # Storage API参考
 
-**Version: 0.0.3**
+**Version: 0.1.4**
 
-**Last modified date: 2026-01-01**
+**Last modified date: 2026-01-15**
 
 storage模块提供文件存储与对象存储功能，支持本地文件系统、云存储服务和分布式存储。
 
@@ -52,7 +52,7 @@ storage模块包含以下子模块：
 #### 使用示例
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 use tokio::fs::File;
 use tokio::io::AsyncReadExt;
 
@@ -131,7 +131,7 @@ ctx.log().info("File deleted successfully");
 #### 配置示例
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 
 // 本地存储配置
 let local_config = DMSCStorageConfig {
@@ -201,7 +201,7 @@ let gcs_config = DMSCStorageConfig {
 ### 多文件上传
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 use tokio::fs::File;
 
 // 处理多文件上传
@@ -252,7 +252,7 @@ fn is_allowed_file_type(content_type: &str) -> bool {
 ### 分块上传
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 use tokio::io::AsyncReadExt;
 
 // 初始化分块上传
@@ -303,7 +303,7 @@ ctx.log().info("Multipart upload completed");
 ### 断点续传
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 use tokio::io::AsyncWriteExt;
 
 // 断点续传下载
@@ -354,7 +354,7 @@ async fn resumable_download(key: &str, output_path: &str) -> DMSCResult<()> {
 ### 临时URL
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 
 // 生成临时下载URL
 let download_url = ctx.storage().generate_presigned_url(
@@ -383,7 +383,7 @@ ctx.log().info(format!("Generated presigned upload URL: {}", upload_url));
 ### 对象元数据
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 
 // 上传带元数据的文件
 let mut metadata = HashMap::new();
@@ -416,7 +416,7 @@ for (key, value) in &metadata.metadata {
 ### 标签管理
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 
 // 设置对象标签
 let tags = vec![
@@ -446,7 +446,7 @@ ctx.storage().remove_tag("documents/report.pdf", "project:alpha").await?;
 ### 客户端加密
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 
 // 配置客户端加密
 let encryption_config = DMSCStorageEncryption::ClientSide {
@@ -475,7 +475,7 @@ ctx.log().info(format!("Decrypted content: {}", content));
 ### 密钥管理
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 
 // 生成数据加密密钥
 let data_key = ctx.storage().generate_data_encryption_key()?;
@@ -500,7 +500,7 @@ let decrypted_key = ctx.storage().decrypt_with_kms(&encrypted_key, &kms_config).
 ### 自动压缩
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 
 // 配置自动压缩
 let compression_config = DMSCStorageCompression {
@@ -535,7 +535,7 @@ ctx.log().info(format!("Decompressed size: {} bytes", decompressed_data.len()));
 ### 存储类别转换
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 
 // 配置生命周期规则
 let lifecycle_rules = vec![
@@ -577,7 +577,7 @@ ctx.storage().change_storage_class("old_document.pdf", DMSCStorageClass::Glacier
 ### 对象版本管理
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 
 // 启用版本控制
 ctx.storage().enable_versioning("my-bucket").await?;
@@ -615,7 +615,7 @@ ctx.storage().delete_version("documents/report.pdf", "version_456").await?;
 ### 存储统计
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 
 // 获取存储统计
 let stats = ctx.storage().get_storage_stats().await?;
@@ -661,7 +661,7 @@ for (prefix, stats) in prefix_stats {
 ### 错误处理示例
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 
 match ctx.storage().get("important_file.pdf").await {
     Ok(data) => {
@@ -711,14 +711,20 @@ match ctx.storage().get("important_file.pdf").await {
 </div>
 
 - [README](./README.md): 模块概览，提供API参考文档总览和快速导航
-- [auth](./auth.md): 认证模块，提供JWT、OAuth2和RBAC认证授权功能
+- [auth](./auth.md): 认证模块，处理用户认证和授权
+- [cache](./cache.md): 缓存模块，提供内存缓存和分布式缓存支持
+- [config](./config.md): 配置模块，管理应用程序配置
 - [core](./core.md): 核心模块，提供错误处理和服务上下文
-- [log](./log.md): 日志模块，记录认证事件和安全日志
-- [config](./config.md): 配置模块，管理认证配置和密钥设置
-- [cache](./cache.md): 缓存模块，提供多后端缓存抽象，缓存用户会话和权限数据
-- [database](./database.md): 数据库模块，提供用户数据持久化和查询功能
-- [http](./http.md): HTTP模块，提供Web认证接口和中间件支持
-- [mq](./mq.md): 消息队列模块，处理认证事件和异步通知
-- [observability](./observability.md): 可观测性模块，监控认证性能和安全事件
-- [security](./security.md): 安全模块，提供加密、哈希和验证功能
-- [validation](./validation.md): 验证模块，验证用户输入和表单数据
+- [database](./database.md): 数据库模块，提供数据库操作支持
+- [device](./device.md): 设备模块，使用协议进行设备通信
+- [fs](./fs.md): 文件系统模块，提供文件操作功能
+- [gateway](./gateway.md): 网关模块，提供API网关功能
+- [hooks](./hooks.md): 钩子模块，提供生命周期钩子支持
+- [http](./http.md): HTTP模块，提供HTTP服务器和客户端功能
+- [log](./log.md): 日志模块，记录协议事件
+- [mq](./mq.md): 消息队列模块，提供消息队列支持
+- [observability](./observability.md): 可观测性模块，监控协议性能
+- [protocol](./protocol.md): 协议模块，提供通信协议支持
+- [security](./security.md): 安全模块，提供加密和解密功能
+- [service_mesh](./service_mesh.md): 服务网格模块，使用协议进行服务间通信
+- [validation](./validation.md): 验证模块，提供数据验证功能

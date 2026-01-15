@@ -2,9 +2,9 @@
 
 # Protocol API Reference
 
-**Version: 0.0.3**
+**Version: 0.1.4**
 
-**Last modified date: 2026-01-01**
+**Last modified date: 2026-01-15**
 
 The protocol module provides a protocol abstraction layer, supporting global protocols and private communication protocols, implementing encryption, HSM, frame processing, and other core features.
 
@@ -46,8 +46,8 @@ The main protocol manager interface, providing protocol initialization, message 
 #### Usage Example
 
 ```rust
-use dms::protocol::{DMSCProtocolManager, DMSCProtocolType, DMSCProtocolConfig};
-use dms::core::DMSCServiceContext;
+use dmsc::protocol::{DMSCProtocolManager, DMSCProtocolType, DMSCProtocolConfig};
+use dmsc::core::DMSCServiceContext;
 
 async fn example() -> DMSCResult<()> {
     let mut ctx = DMSCServiceContext::new();
@@ -113,7 +113,7 @@ Protocol configuration.
 Crypto suite interface.
 
 ```rust
-use dms::protocol::{DMSCCryptoSuite, AES256GCM, ChaCha20Poly1305};
+use dmsc::protocol::{DMSCCryptoSuite, AES256GCM, ChaCha20Poly1305};
 
 let aes = AES256GCM::new();
 let encrypted = aes.encrypt(data, &key, &nonce).await?;
@@ -128,7 +128,7 @@ let encrypted = chacha.encrypt(data, &key, &nonce).await?;
 Device authentication protocol.
 
 ```rust
-use dms::protocol::DMSCDeviceAuthProtocol;
+use dmsc::protocol::DMSCDeviceAuthProtocol;
 
 let auth = DMSCDeviceAuthProtocol::new();
 let device_cert = auth.generate_device_certificate(device_id, public_key)?;
@@ -140,7 +140,7 @@ let auth_result = auth.authenticate_device(&device_cert, &signature).await?;
 Post-quantum cryptography.
 
 ```rust
-use dms::protocol::DMSCPostQuantumCrypto;
+use dmsc::protocol::DMSCPostQuantumCrypto;
 
 let pq_crypto = DMSCPostQuantumCrypto::new();
 let (public_key, secret_key) = pq_crypto.generate_keypair()?;
@@ -159,7 +159,7 @@ let plaintext = pq_crypto.decrypt(&secret_key, &ciphertext)?;
 HSM manager.
 
 ```rust
-use dms::protocol::{DMSCHSMManager, DMSCHSMType, DMSCHSMConfig};
+use dmsc::protocol::{DMSCHSMManager, DMSCHSMType, DMSCHSMConfig};
 
 let hsm_config = DMSCHSMConfig {
     hsm_type: DMSCHSMType::Software,
@@ -210,7 +210,7 @@ HSM type enum.
 Protocol frame.
 
 ```rust
-use dms::protocol::{DMSCFrame, DMSCFrameType, DMSCFrameBuilder};
+use dmsc::protocol::{DMSCFrame, DMSCFrameType, DMSCFrameBuilder};
 
 let frame = DMSCFrameBuilder::new()
     .with_frame_type(DMSCFrameType::Data)
@@ -246,7 +246,7 @@ Frame type enum.
 Global state manager.
 
 ```rust
-use dms::protocol::DMSCGlobalStateManager;
+use dmsc::protocol::DMSCGlobalStateManager;
 
 let state_manager = DMSCGlobalStateManager::new();
 state_manager.initialize().await?;
@@ -296,15 +296,27 @@ Protocol statistics.
 5. **Use HSM for key protection**: Use hardware security modules for critical keys
 6. **Enable protocol switching**: Dynamically switch protocol types when needed
 
-<div align="center>
+<div align="center">
 
 ## Related Modules
 
 </div>
 
 - [README](./README.md): Module overview with API reference summary and quick navigation
+- [auth](./auth.md): Authentication module handling user authentication and authorization
+- [cache](./cache.md): Cache module providing in-memory and distributed cache support
+- [config](./config.md): Configuration module managing application configuration
 - [core](./core.md): Core module providing error handling and service context
-- [log](./log.md): Logging module for protocol events
+- [database](./database.md): Database module providing database operation support
 - [device](./device.md): Device module using protocols for device communication
-- [service_mesh](./service_mesh.md): Service mesh module using protocols for inter-service communication
+- [fs](./fs.md): Filesystem module providing file operation functions
+- [gateway](./gateway.md): Gateway module providing API gateway functionality
+- [hooks](./hooks.md): Hooks module providing lifecycle hook support
+- [http](./http.md): HTTP module providing HTTP server and client functionality
+- [log](./log.md): Logging module for protocol events
+- [mq](./mq.md): Message queue module providing message queue support
 - [observability](./observability.md): Observability module for protocol performance monitoring
+- [security](./security.md): Security module providing encryption and decryption functions
+- [service_mesh](./service_mesh.md): Service mesh module using protocols for inter-service communication
+- [storage](./storage.md): Storage module providing cloud storage support
+- [validation](./validation.md): Validation module providing data validation functions

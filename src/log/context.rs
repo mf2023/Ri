@@ -41,7 +41,7 @@
 //! ## Usage
 //! 
 //! ```rust
-//! use dms::prelude::*;
+//! use dmsc::prelude::*;
 //! 
 //! fn example() {
 //!     // Set a context value

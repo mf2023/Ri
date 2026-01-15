@@ -2,9 +2,9 @@
 
 # Getting Started
 
-**Version: 0.0.3**
+**Version: 0.1.4**
 
-**Last modified date: 2026-01-01**
+**Last modified date: 2026-01-15**
 
 This guide will help you get started with DMSC, from installation to creating your first application.
 
@@ -127,7 +127,7 @@ Now, let's create a simple DMSC application.
 Open the `src/main.rs` file and replace it with the following content:
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 
 #[tokio::main]
 async fn main() -> DMSCResult<()> {
@@ -244,7 +244,7 @@ Let's break down this simple DMSC application:
 
 1. **Import DMSC Components**:
    ```rust
-   use dms::prelude::*;
+   use dmsc::prelude::*;
    ```
    This line imports the most commonly used types and traits from DMSC, simplifying code writing.
 
@@ -300,7 +300,7 @@ redis = "0.23"
 Modify the application code to add cache support:
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 
 #[tokio::main]
 async fn main() -> DMSCResult<()> {

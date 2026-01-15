@@ -90,7 +90,7 @@ use crate::core::{DMSCResult, DMSCError};
 ///
 /// Basic frame type creation and conversion:
 /// ```rust
-/// use dms::protocol::frames::DMSCFrameType;
+/// use dmsc::protocol::frames::DMSCFrameType;
 ///
 /// let control = DMSCFrameType::Control;
 /// let data = DMSCFrameType::Data;
@@ -102,7 +102,7 @@ use crate::core::{DMSCResult, DMSCError};
 ///
 /// Frame type matching in protocol handling:
 /// ```rust
-/// use dms::protocol::frames::DMSCFrameType;
+/// use dmsc::protocol::frames::DMSCFrameType;
 ///
 /// fn handle_frame_type(frame_type: DMSCFrameType) -> &str {
 ///     match frame_type {
@@ -120,7 +120,7 @@ use crate::core::{DMSCResult, DMSCError};
 ///
 /// Converting between byte values and frame types:
 /// ```rust
-/// use dms::protocol::frames::DMSCFrameType;
+/// use dmsc::protocol::frames::DMSCFrameType;
 ///
 /// // Convert byte to frame type
 /// let frame_type = DMSCFrameType::from_u8(0x03);
@@ -343,7 +343,7 @@ impl DMSCFrameType {
 ///
 /// Creating a new frame header:
 /// ```rust
-/// use dms::protocol::frames::{DMSCFrameHeader, DMSCFrameType};
+/// use dmsc::protocol::frames::{DMSCFrameHeader, DMSCFrameType};
 ///
 /// let header = DMSCFrameHeader::new(
 ///     DMSCFrameType::Data,
@@ -358,7 +358,7 @@ impl DMSCFrameType {
 ///
 /// Serializing and deserializing headers:
 /// ```rust
-/// use dms::protocol::frames::{DMSCFrameHeader, DMSCFrameType};
+/// use dmsc::protocol::frames::{DMSCFrameHeader, DMSCFrameType};
 ///
 /// let header = DMSCFrameHeader::new(
 ///     DMSCFrameType::Control,
@@ -379,7 +379,7 @@ impl DMSCFrameType {
 ///
 /// Verifying frame integrity:
 /// ```rust
-/// use dms::protocol::frames::{DMSCFrameHeader, DMSCFrameType};
+/// use dmsc::protocol::frames::{DMSCFrameHeader, DMSCFrameType};
 ///
 /// let header = DMSCFrameHeader::new(
 ///     DMSCFrameType::Data,
@@ -713,7 +713,7 @@ impl DMSCFrameHeader {
 ///
 /// Creating and serializing a data frame:
 /// ```rust
-/// use dms::protocol::frames::{DMSCFrame, DMSCFrameType};
+/// use dmsc::protocol::frames::{DMSCFrame, DMSCFrameType};
 ///
 /// let frame = DMSCFrame::data_frame(
 ///     b"Hello, World!".to_vec(),
@@ -729,7 +729,7 @@ impl DMSCFrameHeader {
 ///
 /// Creating different frame types:
 /// ```rust
-/// use dms::protocol::frames::{DMSCFrame, DMSCFrameType};
+/// use dmsc::protocol::frames::{DMSCFrame, DMSCFrameType};
 ///
 /// // Control frame with command data
 /// let control = DMSCFrame::control_frame(
@@ -757,7 +757,7 @@ impl DMSCFrameHeader {
 ///
 /// Receiving and deserializing frames:
 /// ```rust
-/// use dms::protocol::frames::{DMSCFrame, DMSCFrameType};
+/// use dmsc::protocol::frames::{DMSCFrame, DMSCFrameType};
 ///
 /// let original = DMSCFrame::data_frame(
 ///     b"Received data".to_vec(),
@@ -969,7 +969,7 @@ impl DMSCFrame {
 ///
 /// Basic frame parsing from stream data:
 /// ```rust
-/// use dms::protocol::frames::{DMSCFrameParser, DMSCFrame};
+/// use dmsc::protocol::frames::{DMSCFrameParser, DMSCFrame};
 ///
 /// let mut parser = DMSCFrameParser::new();
 ///
@@ -999,7 +999,7 @@ impl DMSCFrame {
 ///
 /// Handling sequence number reset:
 /// ```rust
-/// use dms::protocol::frames::DMSCFrameParser;
+/// use dmsc::protocol::frames::DMSCFrameParser;
 ///
 /// let mut parser = DMSCFrameParser::new();
 ///
@@ -1165,7 +1165,7 @@ impl Default for DMSCFrameParser {
 ///
 /// Building multiple frames with automatic sequencing:
 /// ```rust
-/// use dms::protocol::frames::DMSCFrameBuilder;
+/// use dmsc::protocol::frames::DMSCFrameBuilder;
 ///
 /// let mut builder = DMSCFrameBuilder::new();
 ///
@@ -1187,7 +1187,7 @@ impl Default for DMSCFrameParser {
 ///
 /// Building different frame types:
 /// ```rust
-/// use dms::protocol::frames::DMSCFrameBuilder;
+/// use dmsc::protocol::frames::DMSCFrameBuilder;
 ///
 /// let mut builder = DMSCFrameBuilder::new();
 ///
@@ -1210,7 +1210,7 @@ impl Default for DMSCFrameParser {
 ///
 /// Managing sequence numbers:
 /// ```rust
-/// use dms::protocol::frames::DMSCFrameBuilder;
+/// use dmsc::protocol::frames::DMSCFrameBuilder;
 ///
 /// let mut builder = DMSCFrameBuilder::new();
 ///

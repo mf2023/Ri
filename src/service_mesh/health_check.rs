@@ -49,7 +49,7 @@
 //! ## Usage
 //! 
 //! ```rust
-//! use dms::prelude::*;
+//! use dmsc::prelude::*;
 //! use std::time::Duration;
 //! 
 //! async fn example() -> DMSCResult<()> {

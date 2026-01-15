@@ -51,7 +51,7 @@
 //! ## Usage Examples
 //!
 //! ```rust
-//! use dms::protocol::hsm::{DMSCHSMManager, DMSCHSMType, DMSCKeyInfo};
+//! use dmsc::protocol::hsm::{DMSCHSMManager, DMSCHSMType, DMSCKeyInfo};
 //!
 //! async fn example() -> DMSCResult<()> {
 //!     // Initialize HSM manager

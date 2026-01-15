@@ -2,9 +2,9 @@
 
 # API Gateway Usage Example
 
-**Version: 0.0.3**
+**Version: 0.1.4**
 
-**Last modified date: 2026-01-01**
+**Last modified date: 2026-01-15**
 
 This example demonstrates how to use the gateway module to build an API gateway, including routing, middleware, load balancing, rate limiting, and circuit breaking functionality.
 
@@ -22,8 +22,8 @@ This example demonstrates how to use the gateway module to build an API gateway,
 </div>
 
 ```rust
-use dms::prelude::*;
-use dms::gateway::{DMSCGateway, DMSCGatewayConfig, DMSCRoute, DMSCRouter};
+use dmsc::prelude::*;
+use dmsc::gateway::{DMSCGateway, DMSCGatewayConfig, DMSCRoute, DMSCRouter};
 use std::collections::HashMap;
 use std::sync::Arc;
 
@@ -355,7 +355,30 @@ fn configure_load_balancing(gateway: &DMSCGateway) {
 5. **Enable request logging**: Log requests for easier troubleshooting
 6. **Use route parameters**: Use route parameters for dynamic path handling
 
-<div align="center>
+<div align="center">
+
+## Related Modules
+
+</div>
+
+- [README](./README.md): Module overview with usage examples summary and quick navigation
+- [authentication](./authentication.md): Authentication examples, including JWT, OAuth2, and MFA
+- [basic-app](./basic-app.md): Basic application examples
+- [caching](./caching.md): Caching examples, including memory and distributed caching
+- [database](./database.md): Database operation examples
+- [device](./device.md): Device control examples
+- [fs](./fs.md): Filesystem operation examples
+- [hooks](./hooks.md): Hook system examples
+- [http](./http.md): HTTP server and client examples
+- [mq](./mq.md): Message queue examples
+- [observability](./observability.md): Observability examples
+- [protocol](./protocol.md): Protocol module examples
+- [security](./security.md): Security and encryption examples
+- [service_mesh](./service_mesh.md): Service mesh examples
+- [storage](./storage.md): Cloud storage examples
+- [validation](./validation.md): Data validation examples
+
+<div align="center">
 
 ## Related Documentation
 

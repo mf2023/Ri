@@ -2,9 +2,9 @@
 
 # Protocol API参考
 
-**Version: 0.0.3**
+**Version: 0.1.4**
 
-**Last modified date: 2026-01-01**
+**Last modified date: 2026-01-15**
 
 protocol模块提供协议抽象层，支持全局协议和私有通信协议，实现加密、HSM、帧处理等核心功能。
 
@@ -46,8 +46,8 @@ protocol模块实现分层架构：
 #### 使用示例
 
 ```rust
-use dms::protocol::{DMSCProtocolManager, DMSCProtocolType, DMSCProtocolConfig};
-use dms::core::DMSCServiceContext;
+use dmsc::protocol::{DMSCProtocolManager, DMSCProtocolType, DMSCProtocolConfig};
+use dmsc::core::DMSCServiceContext;
 
 async fn example() -> DMSCResult<()> {
     let mut ctx = DMSCServiceContext::new();
@@ -113,7 +113,7 @@ async fn example() -> DMSCResult<()> {
 加密套件接口。
 
 ```rust
-use dms::protocol::{DMSCCryptoSuite, AES256GCM, ChaCha20Poly1305};
+use dmsc::protocol::{DMSCCryptoSuite, AES256GCM, ChaCha20Poly1305};
 
 let aes = AES256GCM::new();
 let encrypted = aes.encrypt(data, &key, &nonce).await?;
@@ -128,7 +128,7 @@ let encrypted = chacha.encrypt(data, &key, &nonce).await?;
 设备认证协议。
 
 ```rust
-use dms::protocol::DMSCDeviceAuthProtocol;
+use dmsc::protocol::DMSCDeviceAuthProtocol;
 
 let auth = DMSCDeviceAuthProtocol::new();
 let device_cert = auth.generate_device_certificate(device_id, public_key)?;
@@ -140,7 +140,7 @@ let auth_result = auth.authenticate_device(&device_cert, &signature).await?;
 后量子密码学。
 
 ```rust
-use dms::protocol::DMSCPostQuantumCrypto;
+use dmsc::protocol::DMSCPostQuantumCrypto;
 
 let pq_crypto = DMSCPostQuantumCrypto::new();
 let (public_key, secret_key) = pq_crypto.generate_keypair()?;
@@ -159,7 +159,7 @@ let plaintext = pq_crypto.decrypt(&secret_key, &ciphertext)?;
 HSM管理器。
 
 ```rust
-use dms::protocol::{DMSCHSMManager, DMSCHSMType, DMSCHSMConfig};
+use dmsc::protocol::{DMSCHSMManager, DMSCHSMType, DMSCHSMConfig};
 
 let hsm_config = DMSCHSMConfig {
     hsm_type: DMSCHSMType::Software,
@@ -210,7 +210,7 @@ HSM类型枚举。
 协议帧。
 
 ```rust
-use dms::protocol::{DMSCFrame, DMSCFrameType, DMSCFrameBuilder};
+use dmsc::protocol::{DMSCFrame, DMSCFrameType, DMSCFrameBuilder};
 
 let frame = DMSCFrameBuilder::new()
     .with_frame_type(DMSCFrameType::Data)
@@ -246,7 +246,7 @@ let parsed_frame = DMSCFrame::parse(&bytes)?;
 全局状态管理器。
 
 ```rust
-use dms::protocol::DMSCGlobalStateManager;
+use dmsc::protocol::DMSCGlobalStateManager;
 
 let state_manager = DMSCGlobalStateManager::new();
 state_manager.initialize().await?;
@@ -296,15 +296,27 @@ let state = state_manager.get_state(DMSCStateCategory::Device, "device:001").awa
 5. **使用HSM保护密钥**：对关键密钥使用硬件安全模块
 6. **启用协议切换**：在需要时动态切换协议类型
 
-<div align="center>
+<div align="center">
 
 ## 相关模块
 
 </div>
 
 - [README](./README.md): 模块概览，提供API参考文档总览和快速导航
+- [auth](./auth.md): 认证模块，处理用户认证和授权
+- [cache](./cache.md): 缓存模块，提供内存缓存和分布式缓存支持
+- [config](./config.md): 配置模块，管理应用程序配置
 - [core](./core.md): 核心模块，提供错误处理和服务上下文
-- [log](./log.md): 日志模块，记录协议事件
+- [database](./database.md): 数据库模块，提供数据库操作支持
 - [device](./device.md): 设备模块，使用协议进行设备通信
-- [service_mesh](./service_mesh.md): 服务网格模块，使用协议进行服务间通信
+- [fs](./fs.md): 文件系统模块，提供文件操作功能
+- [gateway](./gateway.md): 网关模块，提供API网关功能
+- [hooks](./hooks.md): 钩子模块，提供生命周期钩子支持
+- [http](./http.md): HTTP模块，提供HTTP服务器和客户端功能
+- [log](./log.md): 日志模块，记录协议事件
+- [mq](./mq.md): 消息队列模块，提供消息队列支持
 - [observability](./observability.md): 可观测性模块，监控协议性能
+- [security](./security.md): 安全模块，提供加密和解密功能
+- [service_mesh](./service_mesh.md): 服务网格模块，使用协议进行服务间通信
+- [storage](./storage.md): 存储模块，提供云存储支持
+- [validation](./validation.md): 验证模块，提供数据验证功能

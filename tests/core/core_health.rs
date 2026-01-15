@@ -15,8 +15,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use dms::core::health::*;
-use dms::core::{DMSCResult, DMSCError};
+use dmsc::core::health::*;
+use dmsc::core::{DMSCResult, DMSCError};
 use async_trait::async_trait;
 use std::time::{Duration, SystemTime};
 

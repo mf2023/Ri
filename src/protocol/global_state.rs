@@ -55,7 +55,7 @@
 //! ## Usage Examples
 //! 
 //! ```rust
-//! use dms::protocol::global_state::{DMSCGlobalStateManager, DMSCStateUpdate, DMSCStateCategory};
+//! use dmsc::protocol::global_state::{DMSCGlobalStateManager, DMSCStateUpdate, DMSCStateCategory};
 //! 
 //! async fn example() -> DMSCResult<()> {
 //!     // Create global state manager

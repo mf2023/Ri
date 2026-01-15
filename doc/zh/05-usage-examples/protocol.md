@@ -2,9 +2,9 @@
 
 # 协议模块使用指南
 
-**Version: 0.0.3**
+**Version: 0.1.4**
 
-**Last modified date: 2026-01-01**
+**Last modified date: 2026-01-15**
 
 本文档提供 DMSC 协议模块的完整使用示例，演示如何利用协议抽象、安全特性和状态管理功能。
 
@@ -31,7 +31,7 @@
 ### 创建协议管理器
 
 ```rust
-use dms::protocol::{DMSCProtocolManager, DMSCProtocolConfig, DMSCProtocolType};
+use dmsc::protocol::{DMSCProtocolManager, DMSCProtocolConfig, DMSCProtocolType};
 
 async fn create_protocol_manager() -> DMSCResult<()> {
     let manager = DMSCProtocolManager::new();
@@ -42,7 +42,7 @@ async fn create_protocol_manager() -> DMSCResult<()> {
 ### 使用自定义配置初始化
 
 ```rust
-use dms::protocol::{DMSCProtocolManager, DMSCProtocolConfig, DMSCProtocolType};
+use dmsc::protocol::{DMSCProtocolManager, DMSCProtocolConfig, DMSCProtocolType};
 
 async fn initialize_with_config() -> DMSCResult<()> {
     let mut manager = DMSCProtocolManager::new();
@@ -66,7 +66,7 @@ async fn initialize_with_config() -> DMSCResult<()> {
 ### 默认配置
 
 ```rust
-use dms::protocol::{DMSCProtocolManager, DMSCProtocolConfig, DMSCProtocolType};
+use dmsc::protocol::{DMSCProtocolManager, DMSCProtocolConfig, DMSCProtocolType};
 
 async fn use_default_config() -> DMSCResult<()> {
     let mut manager = DMSCProtocolManager::new();
@@ -88,8 +88,8 @@ DMSC 支持两种协议类型以满足不同的通信需求。
 全局协议是适用于一般场景的标准通信协议：
 
 ```rust
-use dms::protocol::{DMSCProtocolManager, DMSCProtocolType};
-use dms::prelude::*;
+use dmsc::protocol::{DMSCProtocolManager, DMSCProtocolType};
+use dmsc::prelude::*;
 
 async fn use_global_protocol() -> DMSCResult<()> {
     let mut manager = DMSCProtocolManager::new();
@@ -106,8 +106,8 @@ async fn use_global_protocol() -> DMSCResult<()> {
 私有协议为敏感操作提供增强的安全性：
 
 ```rust
-use dms::protocol::{DMSCProtocolManager, DMSCProtocolType};
-use dms::prelude::*;
+use dmsc::protocol::{DMSCProtocolManager, DMSCProtocolType};
+use dmsc::prelude::*;
 
 async fn use_private_protocol() -> DMSCResult<()> {
     let mut manager = DMSCProtocolManager::new();
@@ -135,8 +135,8 @@ async fn use_private_protocol() -> DMSCResult<()> {
 ### 基本消息发送
 
 ```rust
-use dms::protocol::{DMSCProtocolManager};
-use dms::prelude::*;
+use dmsc::protocol::{DMSCProtocolManager};
+use dmsc::prelude::*;
 
 async fn send_basic_message() -> DMSCResult<()> {
     let mut manager = DMSCProtocolManager::new();
@@ -154,8 +154,8 @@ async fn send_basic_message() -> DMSCResult<()> {
 ### 使用指定协议发送
 
 ```rust
-use dms::protocol::{DMSCProtocolManager, DMSCProtocolType};
-use dms::prelude::*;
+use dmsc::protocol::{DMSCProtocolManager, DMSCProtocolType};
+use dmsc::prelude::*;
 
 async fn send_with_specific_protocol() -> DMSCResult<()> {
     let mut manager = DMSCProtocolManager::new();
@@ -180,8 +180,8 @@ async fn send_with_specific_protocol() -> DMSCResult<()> {
 ### 二进制数据传输
 
 ```rust
-use dms::protocol::DMSCProtocolManager;
-use dms::prelude::*;
+use dmsc::protocol::DMSCProtocolManager;
+use dmsc::prelude::*;
 
 async fn send_binary_data() -> DMSCResult<()> {
     let mut manager = DMSCProtocolManager::new();
@@ -200,8 +200,8 @@ async fn send_binary_data() -> DMSCResult<()> {
 ### JSON数据传输
 
 ```rust
-use dms::protocol::DMSCProtocolManager;
-use dms::prelude::*;
+use dmsc::protocol::DMSCProtocolManager;
+use dmsc::prelude::*;
 
 async fn send_json_data() -> DMSCResult<()> {
     let mut manager = DMSCProtocolManager::new();
@@ -232,8 +232,8 @@ async fn send_json_data() -> DMSCResult<()> {
 ### 运行时切换协议
 
 ```rust
-use dms::protocol::{DMSCProtocolManager, DMSCProtocolType};
-use dms::prelude::*;
+use dmsc::protocol::{DMSCProtocolManager, DMSCProtocolType};
+use dmsc::prelude::*;
 
 async fn runtime_protocol_switching() -> DMSCResult<()> {
     let mut manager = DMSCProtocolManager::new();
@@ -257,8 +257,8 @@ async fn runtime_protocol_switching() -> DMSCResult<()> {
 ### 检查当前协议
 
 ```rust
-use dms::protocol::{DMSCProtocolManager, DMSCProtocolType};
-use dms::prelude::*;
+use dmsc::protocol::{DMSCProtocolManager, DMSCProtocolType};
+use dmsc::prelude::*;
 
 async fn check_current_protocol() -> DMSCResult<()> {
     let manager = DMSCProtocolManager::new();
@@ -281,7 +281,7 @@ async fn check_current_protocol() -> DMSCResult<()> {
 ### 启用安全功能
 
 ```rust
-use dms::protocol::{DMSCProtocolManager, DMSCProtocolConfig, DMSCProtocolType};
+use dmsc::protocol::{DMSCProtocolManager, DMSCProtocolConfig, DMSCProtocolType};
 
 async fn configure_security() -> DMSCResult<()> {
     let mut manager = DMSCProtocolManager::new();
@@ -321,8 +321,8 @@ async fn configure_security() -> DMSCResult<()> {
 ### 获取协议统计
 
 ```rust
-use dms::protocol::DMSCProtocolManager;
-use dms::prelude::*;
+use dmsc::protocol::DMSCProtocolManager;
+use dmsc::prelude::*;
 
 async fn get_protocol_stats() -> DMSCResult<()> {
     let mut manager = DMSCProtocolManager::new();
@@ -346,8 +346,8 @@ async fn get_protocol_stats() -> DMSCResult<()> {
 ### 协议状态
 
 ```rust
-use dms::protocol::{DMSCProtocolManager, DMSCProtocolStatus};
-use dms::prelude::*;
+use dmsc::protocol::{DMSCProtocolManager, DMSCProtocolStatus};
+use dmsc::prelude::*;
 
 async fn check_protocol_status() -> DMSCResult<()> {
     let mut manager = DMSCProtocolManager::new();
@@ -371,13 +371,13 @@ async fn check_protocol_status() -> DMSCResult<()> {
 ### HSM管理器设置
 
 ```rust
-use dms::protocol::{
+use dmsc::protocol::{
     DMSCHSMManager,
     DMSCHSMType,
     DMSCHSMConfig,
     DMSCHSMStatistics,
 };
-use dms::prelude::*;
+use dmsc::prelude::*;
 
 async fn setup_hsm() -> DMSCResult<()> {
     let config = DMSCHSMConfig {
@@ -397,8 +397,8 @@ async fn setup_hsm() -> DMSCResult<()> {
 ### 密钥管理
 
 ```rust
-use dms::protocol::{DMSCHSMManager, DMSCHSMConfig, DMSCKeyType};
-use dms::prelude::*;
+use dmsc::protocol::{DMSCHSMManager, DMSCHSMConfig, DMSCKeyType};
+use dmsc::prelude::*;
 
 async fn manage_keys() -> DMSCResult<()> {
     let config = DMSCHSMConfig::default();
@@ -432,8 +432,8 @@ async fn manage_keys() -> DMSCResult<()> {
 ### 创建帧
 
 ```rust
-use dms::protocol::{DMSCFrame, DMSCFrameHeader, DMSCFrameType};
-use dms::prelude::*;
+use dmsc::protocol::{DMSCFrame, DMSCFrameHeader, DMSCFrameType};
+use dmsc::prelude::*;
 
 fn create_frames() -> DMSCResult<()> {
     let data_frame = DMSCFrame::new(
@@ -462,7 +462,7 @@ fn create_frames() -> DMSCResult<()> {
 以下示例演示了协议模块的完整集成：
 
 ```rust
-use dms::protocol::{
+use dmsc::protocol::{
     DMSCProtocolManager,
     DMSCProtocolConfig,
     DMSCProtocolType,
@@ -470,7 +470,7 @@ use dms::protocol::{
     DMSCHSMConfig,
     DMSCKeyType,
 };
-use dms::prelude::*;
+use dmsc::prelude::*;
 
 struct ProtocolApplication {
     manager: DMSCProtocolManager,
@@ -599,3 +599,26 @@ Error count: 0
 Success rate: 100.00%
 Generated new key: key-a1b2c3d4
 ```
+
+<div align="center">
+
+## 相关模块
+
+</div>
+
+- [README](./README.md)：使用示例总览，提供快速导航
+- [authentication](./authentication.md)：认证示例，包括JWT、OAuth2和多因素认证
+- [basic-app](./basic-app.md)：基础应用示例
+- [caching](./caching.md)：缓存示例，包括内存缓存和分布式缓存
+- [database](./database.md)：数据库操作示例
+- [device](./device.md)：设备控制示例
+- [fs](./fs.md)：文件系统操作示例
+- [gateway](./gateway.md)：API网关示例
+- [hooks](./hooks.md)：钩子系统示例
+- [http](./http.md)：HTTP服务器和客户端示例
+- [mq](./mq.md)：消息队列示例
+- [observability](./observability.md)：可观测性示例
+- [security](./security.md)：安全和加密示例
+- [service_mesh](./service_mesh.md)：服务网格示例
+- [storage](./storage.md)：云存储示例
+- [validation](./validation.md)：数据验证示例

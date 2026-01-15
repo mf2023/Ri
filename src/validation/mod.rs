@@ -42,8 +42,8 @@
 //! ## Usage
 //!
 //! ```rust
-//! use dms::validation::{Validator, ValidationRule, DMSCValidator};
-//! use dms::prelude::*;
+//! use dmsc::validation::{Validator, ValidationRule, DMSCValidator};
+//! use dmsc::prelude::*;
 //!
 //! let validator = DMSCValidator::new("user_email")
 //!     .not_empty()

@@ -56,8 +56,8 @@
 //! ## Usage
 //! 
 //! ```rust
-//! use dms::prelude::*;
-//! use dms::device::{DMSCDeviceControlConfig, DMSCResourceRequest, DMSCDeviceType, DMSCDeviceCapabilities};
+//! use dmsc::prelude::*;
+//! use dmsc::device::{DMSCDeviceControlConfig, DMSCResourceRequest, DMSCDeviceType, DMSCDeviceCapabilities};
 //! 
 //! async fn example() -> DMSCResult<()> {
 //!     // Create device control configuration

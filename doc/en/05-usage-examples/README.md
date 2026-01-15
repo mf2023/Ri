@@ -2,9 +2,9 @@
 
 # Usage Examples
 
-**Version: 0.0.3**
+**Version: 0.1.4**
 
-**Last modified date: 2026-01-01**
+**Last modified date: 2026-01-15**
 
 This directory contains usage examples for each core feature of DMSC, helping you quickly understand and use the DMSC framework.
 
@@ -50,7 +50,7 @@ All examples follow this structure:
 
 ```rust
 // 1. Import necessary dependencies
-use dms::prelude::*;
+use dmsc::prelude::*;
 
 // 2. Main function
 #[tokio::main]

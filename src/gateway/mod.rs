@@ -55,8 +55,8 @@
 //! ## Usage
 //! 
 //! ```rust
-//! use dms::prelude::*;
-//! use dms::gateway::{DMSCGateway, DMSCGatewayConfig, DMSCRoute};
+//! use dmsc::prelude::*;
+//! use dmsc::gateway::{DMSCGateway, DMSCGatewayConfig, DMSCRoute};
 //! use std::collections::HashMap;
 //! 
 //! async fn example() -> DMSCResult<()> {

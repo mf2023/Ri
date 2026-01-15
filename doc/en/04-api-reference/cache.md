@@ -2,9 +2,9 @@
 
 # Cache API Reference
 
-**Version: 0.0.3**
+**Version: 0.1.4**
 
-**Last modified date: 2026-01-01**
+**Last modified date: 2026-01-15**
 
 The cache module provides multi-backend cache abstraction, supporting memory, Redis, hybrid, and other cache backends.
 
@@ -41,7 +41,7 @@ The main interface for the cache module, providing unified access to cache servi
 #### Usage Example
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 
 // Access cache manager through module
 let cache_manager = ctx.module::<DMSCCacheModule>().await?
@@ -122,4 +122,29 @@ Cache backend type enum.
 | `Memory` | Memory cache (default) |
 | `Redis` | Redis distributed cache |
 | `Hybrid` | Hybrid cache (Memory + Redis) |
+
+<div align="center">
+
+## Related Modules
+
+</div>
+
+- [README](./README.md): Module overview with API reference summary and quick navigation
+- [auth](./auth.md): Authentication module handling user authentication and authorization
+- [config](./config.md): Configuration module managing application configuration
+- [core](./core.md): Core module providing error handling and service context
+- [database](./database.md): Database module providing database operation support
+- [device](./device.md): Device module using protocols for device communication
+- [fs](./fs.md): Filesystem module providing file operation functions
+- [gateway](./gateway.md): Gateway module providing API gateway functionality
+- [hooks](./hooks.md): Hooks module providing lifecycle hook support
+- [http](./http.md): HTTP module providing HTTP server and client functionality
+- [log](./log.md): Logging module for protocol events
+- [mq](./mq.md): Message queue module providing message queue support
+- [observability](./observability.md): Observability module for protocol performance monitoring
+- [protocol](./protocol.md): Protocol module providing communication protocol support
+- [security](./security.md): Security module providing encryption and decryption functions
+- [service_mesh](./service_mesh.md): Service mesh module using protocols for inter-service communication
+- [storage](./storage.md): Storage module providing cloud storage support
+- [validation](./validation.md): Validation module providing data validation functions
 

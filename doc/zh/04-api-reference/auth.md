@@ -2,9 +2,9 @@
 
 # Auth API参考
 
-**Version: 0.0.3**
+**Version: 0.1.4**
 
-**Last modified date: 2026-01-01**
+**Last modified date: 2026-01-15**
 
 auth模块提供认证与授权功能，支持JWT、OAuth2和基于角色的访问控制。
 
@@ -38,12 +38,12 @@ auth模块包含以下子模块：
 | `jwt_manager()` | 获取JWT管理器 | 无 | `Arc<DMSCJWTManager>` |
 | `permission_manager()` | 获取权限管理器 | 无 | `Arc<DMSCPermissionManager>` |
 | `session_manager()` | 获取会话管理器 | 无 | `Arc<DMSCSessionManager>` |
-| `oauth_provider(provider)` | 获取OAuth提供商 | `provider: &str` | `Option<Arc<DMSCOAuthProvider>>` |
+| `oauth_manager(provider)` | 获取OAuth管理器 | `provider: &str` | `Option<Arc<DMSCOAuthManager>>` |
 
 #### 使用示例
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -64,10 +64,10 @@ let user = User {
     role: "admin".to_string(),
 };
 
-let jwt = jwt_manager.generate_jwt(&user).await?;
+let jwt = jwt_manager.generate_token("user123", vec!["admin"], vec!["read", "write"])?;
 
 // 验证JWT令牌
-let decoded_user: User = jwt_manager.verify_jwt(&jwt).await?;
+let claims = jwt_manager.validate_token(&jwt)?;
 
 // 通过module访问权限管理器
 let permission_manager = ctx.module::<DMSCAuthModule>().await?
@@ -78,9 +78,9 @@ let has_access = permission_manager.check_permission(&user.role, "admin").await?
 
 // OAuth2流程
 let auth_url = ctx.module::<DMSCAuthModule>().await?
-    .oauth_provider("github")
+    .oauth_manager("github")
     .unwrap()
-    .get_authorization_url("state123").await?;
+    .get_auth_url("state123").await?;
 ```
 
 ### DMSCJWTManager
@@ -91,11 +91,11 @@ JWT令牌管理器，负责JWT的生成和验证。
 
 | 方法 | 描述 | 参数 | 返回值 |
 |:--------|:-------------|:--------|:--------|
-| `new(secret)` | 创建JWT管理器 | `secret: String` | `Self` |
-| `generate_jwt(payload)` | 生成JWT令牌 | `payload: impl Serialize` | `DMSCResult<String>` |
-| `verify_jwt(token)` | 验证JWT令牌 | `token: &str` | `DMSCResult<T>` |
-| `generate_jwt_with_refresh(payload)` | 生成JWT和刷新令牌 | `payload: impl Serialize` | `DMSCResult<(String, String)>` |
-| `refresh_jwt(refresh_token)` | 使用刷新令牌获取新JWT | `refresh_token: &str` | `DMSCResult<String>` |
+| `new(secret, expiry_secs)` | 创建JWT管理器 | `secret: String`, `expiry_secs: u64` | `Self` |
+| `generate_token(user_id, roles, permissions)` | 生成JWT令牌 | `user_id: &str`, `roles: Vec<String>`, `permissions: Vec<String>` | `DMSCResult<String>` |
+| `validate_token(token)` | 验证JWT令牌 | `token: &str` | `DMSCResult<JWTClaims>` |
+| `get_token_expiry()` | 获取令牌过期时间 | 无 | `u64` |
+| `get_secret()` | 获取密钥 | 无 | `&str` |
 
 ### DMSCPermissionManager
 
@@ -119,9 +119,9 @@ JWT令牌管理器，负责JWT的生成和验证。
 |:--------|:--------|:-------------|:--------|
 | `jwt_secret` | `String` | JWT签名密钥 | 自动生成 |
 | `jwt_issuer` | `String` | JWT签发者 | "dms" |
-| `jwt_expires_in` | `u64` | JWT过期时间（秒） | 3600 |
-| `jwt_refresh_expires_in` | `u64` | 刷新令牌过期时间（秒） | 86400 |
-| `oauth_providers` | `HashMap<String, DMSCOAuthConfig>` | OAuth提供商配置 | 空 |
+| `jwt_expiry_secs` | `u64` | JWT过期时间（秒） | 3600 |
+| `jwt_refresh_expiry_secs` | `u64` | 刷新令牌过期时间（秒） | 86400 |
+| `oauth_managers` | `HashMap<String, DMSCOAuthConfig>` | OAuth管理器配置 | 空 |
 | `permission_rules` | `HashMap<String, Vec<String>>` | 权限规则 | 默认规则 |
 
 #### 使用示例
@@ -130,9 +130,34 @@ JWT令牌管理器，负责JWT的生成和验证。
 let auth_config = DMSCAuthConfig {
     jwt_secret: "your-secret-key".to_string(),
     jwt_issuer: "dms".to_string(),
-    jwt_expires_in: 3600,
-    jwt_refresh_expires_in: 86400,
-    oauth_providers: HashMap::new(),
+    jwt_expiry_secs: 3600,
+    jwt_refresh_expiry_secs: 86400,
+    oauth_managers: HashMap::new(),
     permission_rules: HashMap::new(),
 };
 ```
+
+<div align="center">
+
+## 相关模块
+
+</div>
+
+- [README](./README.md): 模块概览，提供API参考文档总览和快速导航
+- [cache](./cache.md): 缓存模块，提供内存缓存和分布式缓存支持
+- [config](./config.md): 配置模块，管理应用程序配置
+- [core](./core.md): 核心模块，提供错误处理和服务上下文
+- [database](./database.md): 数据库模块，提供数据库操作支持
+- [device](./device.md): 设备模块，使用协议进行设备通信
+- [fs](./fs.md): 文件系统模块，提供文件操作功能
+- [gateway](./gateway.md): 网关模块，提供API网关功能
+- [hooks](./hooks.md): 钩子模块，提供生命周期钩子支持
+- [http](./http.md): HTTP模块，提供HTTP服务器和客户端功能
+- [log](./log.md): 日志模块，记录协议事件
+- [mq](./mq.md): 消息队列模块，提供消息队列支持
+- [observability](./observability.md): 可观测性模块，监控协议性能
+- [protocol](./protocol.md): 协议模块，提供通信协议支持
+- [security](./security.md): 安全模块，提供加密和解密功能
+- [service_mesh](./service_mesh.md): 服务网格模块，使用协议进行服务间通信
+- [storage](./storage.md): 存储模块，提供云存储支持
+- [validation](./validation.md): 验证模块，提供数据验证功能

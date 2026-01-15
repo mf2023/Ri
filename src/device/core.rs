@@ -45,7 +45,7 @@
 //! ## Usage
 //! 
 //! ```rust
-//! use dms::device::{DMSCDevice, DMSCDeviceType, DMSCDeviceCapabilities};
+//! use dmsc::device::{DMSCDevice, DMSCDeviceType, DMSCDeviceCapabilities};
 //! 
 //! // Create a new device
 //! let mut device = DMSCDevice::new("server-1".to_string(), DMSCDeviceType::CPU);
@@ -59,7 +59,7 @@
 //! 
 //! // Set device capabilities and status
 //! device = device.with_capabilities(capabilities);
-//! device.set_status(dms::device::DMSCDeviceStatus::Available);
+//! device.set_status(dmsc::device::DMSCDeviceStatus::Available);
 //! 
 //! // Check if device meets requirements
 //! let requirements = DMSCDeviceCapabilities::new().with_compute_units(8);

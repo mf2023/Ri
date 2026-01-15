@@ -2,9 +2,9 @@
 
 # 数据库使用示例
 
-**Version: 0.0.3**
+**Version: 0.1.4**
 
-**Last modified date: 2026-01-01**
+**Last modified date: 2026-01-15**
 
 本示例展示如何使用DMSC的database模块进行数据库连接、查询构建、事务管理、连接池和迁移功能的使用。
 
@@ -111,7 +111,7 @@ database:
 将`src/main.rs`文件替换为以下内容：
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 use serde_json::json;
 use std::time::Duration;
 
@@ -237,7 +237,7 @@ database模块提供数据库连接、查询构建、事务管理、连接池和
 ### 连接管理
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 use serde_json::json;
 
 // PostgreSQL连接配置
@@ -301,7 +301,7 @@ match ctx.database().ping().await {
 ### 基本查询
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 use serde_json::json;
 
 // 简单查询
@@ -377,7 +377,7 @@ ctx.log().info(format!("Deleted {} rows", deleted_rows));
 ### 构建复杂查询
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 
 // 构建SELECT查询
 let query = DMSCQueryBuilder::new()
@@ -447,7 +447,7 @@ let vip_users = ctx.database().execute_query(main_query).await?;
 ### 类型安全查询
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -484,7 +484,7 @@ if let Some(u) = user {
 ### 基本事务
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 use serde_json::json;
 
 // 手动事务管理
@@ -531,7 +531,7 @@ try {
 ### 事务便捷方法
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 
 // 使用事务便捷方法
 let result = ctx.database().with_transaction(|| async {
@@ -594,7 +594,7 @@ ctx.log().info(format!("Transfer completed: {:?}", result));
 ### 隔离级别
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 
 // 设置事务隔离级别
 let isolation_levels = vec![
@@ -640,7 +640,7 @@ for level in isolation_levels {
 ### 连接池监控
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 use serde_json::json;
 
 // 获取连接池统计信息
@@ -683,7 +683,7 @@ ctx.database().on_connection_event(|event| {
 ### 连接池调优
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 
 // 动态调整连接池大小
 ctx.database().set_pool_size(30).await?;
@@ -706,7 +706,7 @@ ctx.log().info(format!("Cleaned up {} idle connections", cleaned));
 ### 创建迁移
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 
 // 创建新的迁移文件
 let migration = DMSCMigration {
@@ -797,7 +797,7 @@ ctx.database().create_migration(complex_migration).await?;
 ### 运行迁移
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 
 // 运行所有待处理迁移
 let migration_result = ctx.database().migrate().await?;
@@ -821,7 +821,7 @@ ctx.log().warn("Database reset completed - all data lost");
 ### 数据迁移
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 
 // 数据迁移示例
 let data_migration = DMSCMigration {
@@ -855,7 +855,7 @@ ctx.database().create_migration(data_migration).await?;
 ### 批量操作
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 use serde_json::json;
 
 // 批量插入
@@ -900,7 +900,7 @@ ctx.log().info(format!("Updated {} users", updated_count));
 ### 数据库函数
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 
 // 创建数据库函数
 let create_function = r#"
@@ -937,7 +937,7 @@ for stat in user_stats {
 ### 全文搜索
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 
 // PostgreSQL全文搜索
 let search_query = r#"
@@ -977,7 +977,7 @@ ctx.database().execute(create_index, vec![]).await?;
 ### 数据库错误处理
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 use serde_json::json;
 
 // 处理数据库错误

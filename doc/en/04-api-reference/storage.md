@@ -2,9 +2,9 @@
 
 # Storage API Reference
 
-**Version: 0.0.3**
+**Version: 0.1.4**
 
-**Last modified date: 2026-01-01**
+**Last modified date: 2026-01-15**
 
 The storage module provides file storage and object storage functionality, supporting local file systems, cloud storage services, and distributed storage.
 
@@ -52,7 +52,7 @@ Storage manager main interface, providing unified storage access.
 #### Usage Example
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 use tokio::fs::File;
 use tokio::io::AsyncReadExt;
 
@@ -131,7 +131,7 @@ Storage configuration struct.
 #### Configuration Example
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 
 // Local storage configuration
 let local_config = DMSCStorageConfig {
@@ -201,7 +201,7 @@ Storage backend enum.
 ### Multi-File Upload
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 use tokio::fs::File;
 
 // Handle multi-file upload
@@ -252,7 +252,7 @@ fn is_allowed_file_type(content_type: &str) -> bool {
 ### Multipart Upload
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 use tokio::io::AsyncReadExt;
 
 // Initialize multipart upload
@@ -303,7 +303,7 @@ ctx.log().info("Multipart upload completed");
 ### Resumable Download
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 use tokio::io::AsyncWriteExt;
 
 // Resumable download
@@ -354,7 +354,7 @@ async fn resumable_download(key: &str, output_path: &str) -> DMSCResult<()> {
 ### Presigned URL
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 
 // Generate presigned download URL
 let download_url = ctx.storage().generate_presigned_url(
@@ -383,7 +383,7 @@ ctx.log().info(format!("Generated presigned upload URL: {}", upload_url));
 ### Object Metadata
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 
 // Upload file with metadata
 let mut metadata = HashMap::new();
@@ -416,7 +416,7 @@ for (key, value) in &metadata.metadata {
 ### Tag Management
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 
 // Set object tags
 let tags = vec![
@@ -446,7 +446,7 @@ ctx.storage().remove_tag("documents/report.pdf", "project:alpha").await?;
 ### Client-Side Encryption
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 
 // Configure client-side encryption
 let encryption_config = DMSCStorageEncryption::ClientSide {
@@ -475,7 +475,7 @@ ctx.log().info(format!("Decrypted content: {}", content));
 ### Key Management
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 
 // Generate data encryption key
 let data_key = ctx.storage().generate_data_encryption_key()?;
@@ -500,7 +500,7 @@ let decrypted_key = ctx.storage().decrypt_with_kms(&encrypted_key, &kms_config).
 ### Automatic Compression
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 
 // Configure automatic compression
 let compression_config = DMSCStorageCompression {
@@ -535,7 +535,7 @@ ctx.log().info(format!("Decompressed size: {} bytes", decompressed_data.len()));
 ### Storage Class Transition
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 
 // Configure lifecycle rules
 let lifecycle_rules = vec![
@@ -577,7 +577,7 @@ ctx.storage().change_storage_class("old_document.pdf", DMSCStorageClass::Glacier
 ### Object Version Management
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 
 // Enable version control
 ctx.storage().enable_versioning("my-bucket").await?;
@@ -615,7 +615,7 @@ ctx.storage().delete_version("documents/report.pdf", "version_456").await?;
 ### Storage Statistics
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 
 // Get storage statistics
 let stats = ctx.storage().get_storage_stats().await?;
@@ -661,7 +661,7 @@ for (prefix, stats) in prefix_stats {
 ### Error Handling Example
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 
 match ctx.storage().get("important_file.pdf").await {
     Ok(data) => {
@@ -710,8 +710,21 @@ match ctx.storage().get("important_file.pdf").await {
 
 </div>
 
-- [README](./README.md): Module overview, providing API reference documentation overview and quick navigation
-- [auth](./auth.md): Authentication module, providing JWT, OAuth2, and RBAC authentication and authorization functionality
-- [core](./core.md): Core module, providing error handling and service context
-- [log](./log.md): Logging module, recording authentication events and security logs
-- [config](./config.md): Configuration module, managing authentication configuration and key settings
+- [README](./README.md): Module overview with API reference summary and quick navigation
+- [auth](./auth.md): Authentication module handling user authentication and authorization
+- [cache](./cache.md): Cache module providing in-memory and distributed cache support
+- [config](./config.md): Configuration module managing application configuration
+- [core](./core.md): Core module providing error handling and service context
+- [database](./database.md): Database module providing database operation support
+- [device](./device.md): Device module using protocols for device communication
+- [fs](./fs.md): Filesystem module providing file operation functions
+- [gateway](./gateway.md): Gateway module providing API gateway functionality
+- [hooks](./hooks.md): Hooks module providing lifecycle hook support
+- [http](./http.md): HTTP module providing HTTP server and client functionality
+- [log](./log.md): Logging module for protocol events
+- [mq](./mq.md): Message queue module providing message queue support
+- [observability](./observability.md): Observability module for protocol performance monitoring
+- [protocol](./protocol.md): Protocol module providing communication protocol support
+- [security](./security.md): Security module providing encryption and decryption functions
+- [service_mesh](./service_mesh.md): Service mesh module using protocols for inter-service communication
+- [validation](./validation.md): Validation module providing data validation functions

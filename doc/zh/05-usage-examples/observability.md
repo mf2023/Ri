@@ -2,9 +2,9 @@
 
 # 可观测性使用示例
 
-**Version: 0.0.3**
+**Version: 0.1.4**
 
-**Last modified date: 2026-01-01**
+**Last modified date: 2026-01-15**
 
 本示例展示如何使用DMSC的observability模块进行分布式追踪、指标收集、健康检查、性能分析和告警管理的使用。
 
@@ -104,7 +104,7 @@ observability:
 将`src/main.rs`文件替换为以下内容：
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 use serde_json::json;
 use futures::future::join_all;
 use chrono::Utc;
@@ -290,7 +290,7 @@ observability模块提供分布式追踪、指标收集、健康检查、性能�
 ### 基本追踪
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 use serde_json::json;
 
 // 创建根span
@@ -322,7 +322,7 @@ root_span.end();
 ### 嵌套span
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 
 async fn process_order(order_id: &str) -> DMSCResult<OrderResult> {
     let order_span = ctx.observability().start_span("fetch_order", json!({
@@ -373,7 +373,7 @@ async fn process_order(order_id: &str) -> DMSCResult<OrderResult> {
 ### 异步追踪
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 use futures::future::join_all;
 
 async fn batch_process_orders(order_ids: Vec<String>) -> DMSCResult<Vec<OrderResult>> {
@@ -429,7 +429,7 @@ async fn batch_process_orders(order_ids: Vec<String>) -> DMSCResult<Vec<OrderRes
 ### 计数器指标
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 
 // 创建计数器
 let request_counter = ctx.observability().create_counter("http_requests_total", "Total HTTP requests", "requests");
@@ -484,7 +484,7 @@ match process_order(&order).await {
 ### 直方图指标
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 
 // 创建直方图
 let request_size_histogram = ctx.observability().create_histogram("http_request_size_bytes", "HTTP request size", "bytes");
@@ -525,7 +525,7 @@ let custom_histogram = ctx.observability().create_histogram_with_buckets(
 ### 仪表盘指标
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 
 // 创建仪表盘
 let active_users_gauge = ctx.observability().create_gauge("active_users_current", "Current active users", "users");
@@ -576,7 +576,7 @@ processing_rate_gauge.set(calculate_processing_rate(), json!({
 ### 系统健康检查
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 use serde_json::json;
 
 // 注册健康检查
@@ -647,7 +647,7 @@ async fn health_check_handler() -> DMSCResult<DMSCHttpResponse> {
 ### 自定义健康检查
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 use serde_json::json;
 
 // 业务逻辑健康检查
@@ -734,7 +734,7 @@ ctx.observability().register_health_check("memory_usage", || async {
 ### 性能剖析
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 use serde_json::json;
 
 // 开始性能剖析
@@ -767,7 +767,7 @@ for hotspot in hotspots {
 ### 内存分析
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 use serde_json::json;
 
 // 开始内存分析
@@ -800,7 +800,7 @@ if !leaks.is_empty() {
 ### 性能基准测试
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 use serde_json::json;
 
 // 运行性能基准测试
@@ -835,7 +835,7 @@ ctx.log().info(format!("Error rate: {:.2}%", stats.error_rate * 100.0));
 ### 创建告警规则
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 use serde_json::json;
 
 // 创建CPU使用率告警
@@ -890,7 +890,7 @@ ctx.observability().create_alert_rule(error_rate_alert_rule).await?;
 ### 业务指标告警
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 use serde_json::json;
 
 // 订单处理延迟告警
@@ -945,7 +945,7 @@ ctx.observability().create_alert_rule(fraud_detection_alert).await?;
 ### 告警通知
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 use serde_json::json;
 
 // 配置通知渠道
@@ -1020,7 +1020,7 @@ async fn handle_alert_notification(alert: DMAlert) -> DMSCResult<()> {
 ### Prometheus集成
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 use serde_json::json;
 
 // 配置Prometheus导出器
@@ -1051,7 +1051,7 @@ custom_metric.increment(1.0, vec!["value1".to_string(), "value2".to_string()]);
 ### Grafana集成
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 use serde_json::json;
 
 // 创建Grafana仪表盘配置
@@ -1101,7 +1101,7 @@ ctx.observability().create_grafana_dashboard(grafana_dashboard).await?;
 ### 可观测性错误处理
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 use serde_json::json;
 
 // 处理追踪错误
@@ -1219,7 +1219,7 @@ ctx.observability().register_health_check("critical_service", || async {
 ### 分布式追踪增强
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 use serde_json::json;
 
 // 配置高级追踪选项
@@ -1260,7 +1260,7 @@ let cross_service_context = ctx.observability().create_cross_service_context(
 ### 智能告警系统
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 use serde_json::json;
 
 // 配置智能告警规则
@@ -1328,7 +1328,7 @@ ctx.observability().configure_escalation_policy(escalation_policy).await?;
 ### 性能剖析集成
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 use serde_json::json;
 
 // 配置持续性能剖析
@@ -1371,7 +1371,7 @@ custom_profile.end_timer();
 ### 业务指标监控
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 use serde_json::json;
 
 // 配置业务KPI监控

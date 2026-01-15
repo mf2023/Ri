@@ -44,7 +44,7 @@
 //! ## Usage
 //! 
 //! ```rust
-//! use dms::prelude::*;
+//! use dmsc::prelude::*;
 //! 
 //! async fn example() -> DMSCResult<()> {
 //!     // Create a new Redis queue

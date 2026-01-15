@@ -2,9 +2,9 @@
 
 # Caching Usage Examples
 
-**Version: 0.0.3**
+**Version: 0.1.4**
 
-**Last modified date: 2026-01-01**
+**Last modified date: 2026-01-15**
 
 This example demonstrates how to use DMSC's cache module for multiple cache backends and advanced caching features.
 
@@ -88,7 +88,7 @@ cache:
 Replace the contents of `src/main.rs` file with the following:
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 use serde_json::json;
 use std::time::Duration;
 
@@ -182,7 +182,7 @@ async fn advanced_cache_features(ctx: &DMSCServiceContext) -> DMSCResult<()> {
 ### Memory Cache
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 use serde_json::json;
 
 // Create memory cache backend
@@ -231,7 +231,7 @@ if let Some(ttl) = ctx.cache().ttl("user:123")? {
 ### Redis Cache
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 use serde_json::json;
 
 // Create Redis cache backend
@@ -281,7 +281,7 @@ for (key, value) in values {
 ### Cache Tags
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 use serde_json::json;
 
 // Set cache with tags
@@ -309,7 +309,7 @@ ctx.log().info(format!("Found {} items with 'rust' tag", rust_keys.len()));
 ### Atomic Operations
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 
 // Atomic increment
 let new_value = ctx.cache().increment("counter:page_views", 1)?;
@@ -333,7 +333,7 @@ ctx.log().info(format!("Previous activity: {:?}", old_value));
 ### Distributed Lock
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 use tokio::time::{sleep, Duration};
 
 // Acquire distributed lock
@@ -372,7 +372,7 @@ ctx.cache().with_lock("lock:report_generation", "worker-1", Duration::from_secs(
 ### Cache Penetration Protection
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 use serde_json::json;
 
 // Get user data with cache penetration protection
@@ -417,7 +417,7 @@ if ctx.cache().bloom_filter_might_contain("users", "123")? {
 ### Cache Avalanche Protection
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 use serde_json::json;
 use rand::Rng;
 
@@ -445,7 +445,7 @@ for (key, value, ttl) in articles {
 ### Cache Preheating
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 use serde_json::json;
 
 // Preheat hot data when system starts
@@ -480,7 +480,7 @@ async fn warmup_cache() -> DMSCResult<()> {
 ### Cache Statistics
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 
 // Get cache statistics
 let stats = ctx.cache().get_stats()?;
@@ -502,7 +502,7 @@ ctx.log().info(format!("Cleaned {} expired entries", cleaned_count));
 ### Cache Health Check
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 use serde_json::json;
 
 // Check cache health status
@@ -545,7 +545,7 @@ ctx.observability().register_health_check("cache", || async {
 ### Data Serialization
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 
@@ -593,7 +593,7 @@ if let Some(cached_data) = ctx.cache().get("user:123")? {
 ### Data Compression
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 use serde_json::json;
 
 // Enable compression when storing large data
@@ -649,7 +649,7 @@ ctx.log().info(format!("Uncompressed size: {} bytes", uncompressed_size));
 ### Cache Error Handling
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 use serde_json::json;
 
 // Handle cache errors
@@ -841,7 +841,7 @@ After successful execution, you will see output similar to the following:
 ### Cache Cluster Support
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 
 // Configure multi-node Redis cluster
 let cluster_backend = DMSCCacheBackend::RedisCluster {
@@ -874,7 +874,7 @@ ctx.cache().set_with_shard_key("user:123", json!({"name": "John"}), Some(Duratio
 ### Intelligent Cache Preheating
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 use machine_learning::cache::CachePredictor;
 
 // Predict cache requirements based on machine learning
@@ -908,7 +908,7 @@ async fn intelligent_cache_warmup() -> DMSCResult<()> {
 ### Adaptive Cache Strategy
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 use std::collections::HashMap;
 
 // Dynamically adjust cache strategy
@@ -977,7 +977,7 @@ impl AdaptiveCacheManager {
 ### Distributed Cache Consistency
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 use distributed_consensus::raft::RaftNode;
 
 // Implement distributed cache consistency

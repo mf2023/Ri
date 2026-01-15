@@ -44,7 +44,7 @@
 //! ## Usage
 //!
 //! ```rust
-//! use dms::queue::{DMSCQueueConfig, QueueBackendType, RetryPolicy, DeadLetterConfig};
+//! use dmsc::queue::{DMSCQueueConfig, QueueBackendType, RetryPolicy, DeadLetterConfig};
 //!
 //! // Create default queue configuration
 //! let default_config = DMSCQueueConfig::default();

@@ -20,7 +20,7 @@ The hook bus serves as the central event management system for DMSC. It allows c
 ### Creating a Hook Bus
 
 ```rust
-use dms::hooks::{DMSCHookBus, DMSCHookKind};
+use dmsc::hooks::{DMSCHookBus, DMSCHookKind};
 
 // Create a new hook bus instance
 let hook_bus = DMSCHookBus::new();
@@ -52,8 +52,8 @@ Hook handlers are closures that execute when a specific hook event is emitted. E
 ### Simple Handler Registration
 
 ```rust
-use dms::hooks::{DMSCHookBus, DMSCHookKind};
-use dms::prelude::*;
+use dmsc::hooks::{DMSCHookBus, DMSCHookKind};
+use dmsc::prelude::*;
 
 fn register_basic_handler() -> DMSCResult<()> {
     let mut hook_bus = DMSCHookBus::new();
@@ -85,8 +85,8 @@ fn register_basic_handler() -> DMSCResult<()> {
 ### Handler with Contextual Information
 
 ```rust
-use dms::hooks::{DMSCHookBus, DMSCHookKind, DMSCHookEvent};
-use dms::prelude::*;
+use dmsc::hooks::{DMSCHookBus, DMSCHookKind, DMSCHookEvent};
+use dmsc::prelude::*;
 
 fn register_contextual_handler() -> DMSCResult<()> {
     let mut hook_bus = DMSCHookBus::new();
@@ -109,8 +109,8 @@ fn register_contextual_handler() -> DMSCResult<()> {
 ### Module-Specific Handlers
 
 ```rust
-use dms::hooks::{DMSCHookBus, DMSCHookKind};
-use dms::prelude::*;
+use dmsc::hooks::{DMSCHookBus, DMSCHookKind};
+use dmsc::prelude::*;
 
 fn register_module_handler() -> DMSCResult<()> {
     let mut hook_bus = DMSCHookBus::new();
@@ -143,8 +143,8 @@ The hook bus provides two methods for emitting events: `emit()` for simple event
 ### Basic Event Emission
 
 ```rust
-use dms::hooks::{DMSCHookBus, DMSCHookKind};
-use dms::prelude::*;
+use dmsc::hooks::{DMSCHookBus, DMSCHookKind};
+use dmsc::prelude::*;
 
 fn emit_basic_event() -> DMSCResult<()> {
     let hook_bus = DMSCHookBus::new();
@@ -163,8 +163,8 @@ fn emit_basic_event() -> DMSCResult<()> {
 ### Event Emission with Context
 
 ```rust
-use dms::hooks::{DMSCHookBus, DMSCHookKind, DMSCModulePhase};
-use dms::prelude::*;
+use dmsc::hooks::{DMSCHookBus, DMSCHookKind, DMSCModulePhase};
+use dmsc::prelude::*;
 
 fn emit_contextual_event() -> DMSCResult<()> {
     let hook_bus = DMSCHookBus::new();
@@ -213,8 +213,8 @@ This section demonstrates comprehensive lifecycle event handling patterns.
 ### Application Startup Sequence
 
 ```rust
-use dms::hooks::{DMSCHookBus, DMSCHookKind};
-use dms::prelude::*;
+use dmsc::hooks::{DMSCHookBus, DMSCHookKind};
+use dmsc::prelude::*;
 
 async fn handle_startup_sequence() -> DMSCResult<()> {
     let mut hook_bus = DMSCHookBus::new();
@@ -272,8 +272,8 @@ async fn handle_startup_sequence() -> DMSCResult<()> {
 ### Application Shutdown Sequence
 
 ```rust
-use dms::hooks::{DMSCHookBus, DMSCHookKind};
-use dms::prelude::*;
+use dmsc::hooks::{DMSCHookBus, DMSCHookKind};
+use dmsc::prelude::*;
 
 async fn handle_shutdown_sequence() -> DMSCResult<()> {
     let mut hook_bus = DMSCHookBus::new();
@@ -333,8 +333,8 @@ async fn handle_shutdown_sequence() -> DMSCResult<()> {
 ### Error Handling in Hooks
 
 ```rust
-use dms::hooks::{DMSCHookBus, DMSCHookKind};
-use dms::prelude::*;
+use dmsc::hooks::{DMSCHookBus, DMSCHookKind};
+use dmsc::prelude::*;
 
 fn register_error_handling_hooks() -> DMSCResult<()> {
     let mut hook_bus = DMSCHookBus::new();
@@ -373,8 +373,8 @@ fn register_error_handling_hooks() -> DMSCResult<()> {
 ### Conditional Handler Execution
 
 ```rust
-use dms::hooks::{DMSCHookBus, DMSCHookKind};
-use dms::prelude::*;
+use dmsc::hooks::{DMSCHookBus, DMSCHookKind};
+use dmsc::prelude::*;
 
 fn register_conditional_handler() -> DMSCResult<()> {
     let mut hook_bus = DMSCHookBus::new();
@@ -401,8 +401,8 @@ fn register_conditional_handler() -> DMSCResult<()> {
 ### Multiple Handlers for Same Hook
 
 ```rust
-use dms::hooks::{DMSCHookBus, DMSCHookKind};
-use dms::prelude::*;
+use dmsc::hooks::{DMSCHookBus, DMSCHookKind};
+use dmsc::prelude::*;
 
 fn register_multiple_handlers() -> DMSCResult<()> {
     let mut hook_bus = DMSCHookBus::new();
@@ -451,8 +451,8 @@ fn register_multiple_handlers() -> DMSCResult<()> {
 The following example demonstrates a complete integration of the hooks system:
 
 ```rust
-use dms::hooks::{DMSCHookBus, DMSCHookKind, DMSCModulePhase, DMSCHookEvent};
-use dms::prelude::*;
+use dmsc::hooks::{DMSCHookBus, DMSCHookKind, DMSCModulePhase, DMSCHookEvent};
+use dmsc::prelude::*;
 
 struct Application {
     hook_bus: DMSCHookBus,
@@ -625,3 +625,26 @@ Stopping application lifecycle
 [SHUTDOWN] Performing final cleanup
 Application stopped successfully
 ```
+
+<div align="center">
+
+## Related Modules
+
+</div>
+
+- [README](./README.md): Module overview with usage examples summary and quick navigation
+- [authentication](./authentication.md): Authentication examples, including JWT, OAuth2, and MFA
+- [basic-app](./basic-app.md): Basic application examples
+- [caching](./caching.md): Caching examples, including memory and distributed caching
+- [database](./database.md): Database operation examples
+- [device](./device.md): Device control examples
+- [fs](./fs.md): Filesystem operation examples
+- [gateway](./gateway.md): API gateway examples
+- [http](./http.md): HTTP server and client examples
+- [mq](./mq.md): Message queue examples
+- [observability](./observability.md): Observability examples
+- [protocol](./protocol.md): Protocol module examples
+- [security](./security.md): Security and encryption examples
+- [service_mesh](./service_mesh.md): Service mesh examples
+- [storage](./storage.md): Cloud storage examples
+- [validation](./validation.md): Data validation examples

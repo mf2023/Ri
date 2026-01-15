@@ -35,7 +35,7 @@
 //! ## Usage
 //!
 //! ```rust
-//! use dms::device::discovery::providers::{ProviderRegistry, CPUProvider};
+//! use dmsc::device::discovery::providers::{ProviderRegistry, CPUProvider};
 //!
 //! let mut registry = ProviderRegistry::new();
 //! registry.register(Box::new(CPUProvider::new()));

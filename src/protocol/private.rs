@@ -52,7 +52,7 @@
 //! ## Usage
 //! 
 //! ```rust
-//! use dms::protocol::{DMSCPrivateProtocol, DMSCProtocolConfig, DMSCCryptoSuite, DMSCObfuscationLevel};
+//! use dmsc::protocol::{DMSCPrivateProtocol, DMSCProtocolConfig, DMSCCryptoSuite, DMSCObfuscationLevel};
 //! 
 //! async fn example() -> DMSCResult<()> {
 //!     let mut protocol = DMSCPrivateProtocol::new();

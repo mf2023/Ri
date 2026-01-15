@@ -31,7 +31,7 @@
 //! ## Usage
 //!
 //! ```rust
-//! use dms::device::discovery::platform::{PlatformInfo, PlatformType, get_platform_info};
+//! use dmsc::device::discovery::platform::{PlatformInfo, PlatformType, get_platform_info};
 //!
 //! let platform = get_platform_info();
 //! println!("Platform: {:?}", platform.platform_type);

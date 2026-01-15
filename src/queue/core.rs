@@ -43,8 +43,8 @@
 //! ## Usage
 //! 
 //! ```rust
-//! use dms::queue::{DMSCQueueMessage, DMSCQueueProducer, DMSCQueueConsumer, DMSCQueue};
-//! use dms::core::DMSCResult;
+//! use dmsc::queue::{DMSCQueueMessage, DMSCQueueProducer, DMSCQueueConsumer, DMSCQueue};
+//! use dmsc::core::DMSCResult;
 //! use serde_json::json;
 //! 
 //! async fn example(queue: &dyn DMSCQueue) -> DMSCResult<()> {

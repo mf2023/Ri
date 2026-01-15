@@ -7,7 +7,7 @@ The validation module provides usage examples for data validation, data sanitiza
 ### Simple Field Validation
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 use serde_json::json;
 
 // Initialize validation manager
@@ -140,7 +140,7 @@ match ctx.validation().validate_data(&user_data, &validation_rules).await {
 ### Complex Data Validation
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 use serde_json::json;
 
 // Product data validation
@@ -255,7 +255,7 @@ match ctx.validation().validate_complex_data(&product_data, &complex_rules).awai
 ### Basic Data Sanitization
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 use serde_json::json;
 
 // User input data sanitization
@@ -344,7 +344,7 @@ ctx.log().info(format!("Sanitized data is valid: {}", is_valid));
 ### Advanced Data Sanitization
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 use serde_json::json;
 
 // Rich text content sanitization
@@ -484,7 +484,7 @@ ctx.log().info(format!("SQL input sanitized: {:?}", sanitized_sql_input));
 ### Username Validator
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 use std::collections::HashSet;
 
 // Create custom username validator
@@ -604,7 +604,7 @@ match ctx.validation().validate_data(&user_data, &[username_rule]).await {
 ### Strong Password Validator
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 use std::collections::HashSet;
 
 // Create strong password validator
@@ -768,7 +768,7 @@ match ctx.validation().validate_data(&password_data, &[password_rule]).await {
 ### Dynamic Validation Rules
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 use serde_json::json;
 
 // Order validation - apply different rules based on order type
@@ -878,7 +878,7 @@ match ctx.validation().validate_data(&order_data, &conditional_rules).await {
 ### Dependent Field Validation
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 use serde_json::json;
 
 // Form validation - inter-field dependencies
@@ -980,7 +980,7 @@ match ctx.validation().validate_data(&form_data, &[dependency_rule]).await {
 ### Database Validation
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 use serde_json::json;
 
 // User registration data
@@ -1108,7 +1108,7 @@ match ctx.validation().validate_data_async(&registration_data, &async_validation
 ### API Validation
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 use serde_json::json;
 
 // API endpoint validation - check external API availability
@@ -1269,7 +1269,7 @@ match ctx.validation().validate_data_async(&api_data, &api_validation_rules).awa
 ### Validation Rules Configuration
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 use serde_json::json;
 
 // Configure validation rule templates
@@ -1385,7 +1385,7 @@ ctx.log().info("Dynamic validation configured");
 ### Validation Error Handling
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 use serde_json::json;
 
 // Validation error handling example
@@ -1716,7 +1716,7 @@ After running the validation examples, you will see:
 ### Smart Validation Engine
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 use serde_json::json;
 
 // Smart validation engine configuration
@@ -1755,7 +1755,7 @@ if let Some(suggestions) = smart_result.suggestions {
 ### Real-time Validation Monitoring
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 use std::sync::Arc;
 use tokio::sync::RwLock;
 
@@ -1809,7 +1809,7 @@ ctx.log().info(format!("Validation metrics: {:?}", metrics));
 ### Distributed Validation Coordination
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 use serde_json::json;
 
 // Distributed validation configuration

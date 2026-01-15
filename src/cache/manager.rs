@@ -154,9 +154,14 @@ impl DMSCCacheManager {
                     },
                     DMSCCacheEvent::InvalidatePattern { pattern } => {
                         log::info!("[DMSC.Cache] Processing invalidate pattern event: {pattern}");
-                        // Invalidate all keys matching the pattern
-                        // Note: This requires backend support for pattern matching
-                        log::error!("[DMSC.Cache] Invalidate pattern not implemented: {pattern}");
+                        match backend.delete_by_pattern(&pattern).await {
+                            Ok(count) => {
+                                log::info!("[DMSC.Cache] Successfully invalidated {} cache keys matching pattern: {pattern}", count);
+                            }
+                            Err(e) => {
+                                log::error!("[DMSC.Cache] Failed to invalidate cache pattern {pattern}: {e}");
+                            }
+                        }
                     },
                     DMSCCacheEvent::Clear() => {
                         log::info!("[DMSC.Cache] Processing clear cache event");

@@ -7,7 +7,7 @@ The storage module provides usage examples for file upload/download, metadata ma
 ### File Upload
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 use serde_json::json;
 use std::path::Path;
 
@@ -81,7 +81,7 @@ ctx.log().info(format!(
 ### Multiple File Upload
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 use std::path::Path;
 
 // Batch file upload
@@ -139,7 +139,7 @@ ctx.log().info(format!("Large file upload completed: {:?}", large_file_result));
 ### Chunked Upload
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 use std::path::Path;
 
 // Large file chunked upload configuration
@@ -199,7 +199,7 @@ ctx.log().info(format!(
 ### Basic File Download
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 use std::path::Path;
 
 // Download by file ID
@@ -245,7 +245,7 @@ ctx.log().info(format!("Large file download completed: {:?}", large_download));
 ### Resume Download
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 use std::path::Path;
 
 // Resume download configuration
@@ -292,7 +292,7 @@ if resume_info.supports_resume {
 ### Temporary Download Links
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 
 // Generate temporary download link
 let file_id = "sensitive_document.pdf";
@@ -335,7 +335,7 @@ ctx.log().info("Temporary URL revoked");
 ### File Metadata Operations
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 use serde_json::json;
 
 // Get file metadata
@@ -411,7 +411,7 @@ for file in &search_results.files {
 ### File Organization
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 use serde_json::json;
 
 // Create folder structure
@@ -472,7 +472,7 @@ ctx.log().info("Folder and all contents deleted");
 ### File Encryption
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 use serde_json::json;
 
 // Configure storage encryption
@@ -531,7 +531,7 @@ ctx.log().info("Client encrypted file uploaded");
 ### Key Management
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 
 // Generate data encryption key
 let data_key = ctx.storage()
@@ -568,7 +568,7 @@ ctx.log().info("Encryption key securely deleted");
 ### File Compression
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 use serde_json::json;
 
 // Configure storage compression
@@ -627,7 +627,7 @@ ctx.log().info(format!(
 ### Smart Compression
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 
 // Smart compression decision
 let smart_compression = ctx.storage()
@@ -660,7 +660,7 @@ if smart_compression.should_compress {
 ### File Lifecycle
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 use serde_json::json;
 
 // Configure lifecycle policy
@@ -744,7 +744,7 @@ ctx.log().info(format!(
 ### Automatic Cleanup
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 
 // Run automatic cleanup task
 let cleanup_result = ctx.storage()
@@ -790,7 +790,7 @@ ctx.log().info("Cleanup schedule configured");
 ### File Version Management
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 use serde_json::json;
 
 // Enable version control
@@ -873,7 +873,7 @@ ctx.log().info("Version 3 labeled as 'approved'");
 ### Version Comparison
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 
 // Compare two versions
 let version1 = 1;
@@ -903,7 +903,7 @@ ctx.log().info(format!("Version diff report generated: {}", diff_report.report_i
 ### Storage Statistics
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 
 // Get storage usage statistics
 let storage_stats = ctx.storage()
@@ -968,7 +968,7 @@ if capacity_info.utilization_percentage > 0.8 {
 ### Performance Monitoring
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 
 // Get performance metrics
 let performance_metrics = ctx.storage()
@@ -1010,7 +1010,7 @@ for (error_type, count) in error_stats.error_counts {
 ### Storage Error Handling
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 use serde_json::json;
 
 // File upload error handling
@@ -1216,7 +1216,7 @@ After successful execution, you will see output similar to:
 ### Distributed Storage Cluster
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 use serde_json::json;
 
 // Configure distributed storage cluster
@@ -1286,7 +1286,7 @@ ctx.log().info(format!(
 ### Intelligent Storage Tiering
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 use serde_json::json;
 
 // Configure intelligent storage tiering
@@ -1361,7 +1361,7 @@ ctx.log().info(format!(
 ### Real-time Storage Analysis
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 use serde_json::json;
 
 // Configure real-time storage analysis
@@ -1423,7 +1423,7 @@ ctx.log().info(format!(
 ### Multi-Cloud Storage Management
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 use serde_json::json;
 
 // Configure multi-cloud storage providers

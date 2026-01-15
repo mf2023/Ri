@@ -2,9 +2,9 @@
 
 # Log API参考
 
-**Version: 0.0.3**
+**Version: 0.1.4**
 
-**Last modified date: 2026-01-01**
+**Last modified date: 2026-01-15**
 
 log模块提供结构化日志记录与多后端支持，支持日志级别、格式化、采样和日志分析等功能。
 
@@ -49,7 +49,7 @@ log模块包含以下子模块：
 #### 使用示例
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 
 // 基本日志记录
 ctx.log().info("Application started");
@@ -92,7 +92,7 @@ ctx.log()
 #### 使用示例
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 
 // 设置日志级别
 ctx.log().set_level(DMSCLogLevel::Info);
@@ -115,29 +115,28 @@ ctx.log().set_level(DMSCLogLevel::Debug);
 | 字段 | 类型 | 描述 | 默认值 |
 |:--------|:-----|:-------------|:-------|
 | `level` | `DMSCLogLevel` | 日志级别 | `Info` |
-| `format` | `DMSCLogFormat` | 日志格式 | `Json` |
-| `output` | `DMSCLogOutput` | 日志输出 | `Stdout` |
-| `file_path` | `Option<String>` | 日志文件路径 | `None` |
-| `max_file_size` | `u64` | 最大文件大小(MB) | `100` |
-| `max_files` | `usize` | 最大文件数量 | `10` |
-| `enable_colors` | `bool` | 启用颜色输出 | `true` |
-| `enable_sampling` | `bool` | 启用日志采样 | `false` |
-| `sampling_rate` | `f64` | 采样率 | `0.1` |
+| `console_enabled` | `bool` | 启用控制台输出 | `true` |
+| `file_enabled` | `bool` | 启用文件输出 | `false` |
+| `sampling_default` | `f32` | 默认采样率 (0.0-1.0) | `1.0` |
+| `file_name` | `String` | 日志文件名 | `""` |
+| `json_format` | `bool` | 使用JSON格式 | `false` |
+| `rotate_when` | `String` | 何时轮转 ("size" 或 "none") | `"size"` |
+| `max_bytes` | `u64` | 轮转前最大文件大小(字节) | `10485760` |
 
 #### 配置示例
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 
 let log_config = DMSCLogConfig {
     level: DMSCLogLevel::Info,
-    format: DMSCLogFormat::Json,
-    output: DMSCLogOutput::File("/var/log/myapp.log".to_string()),
-    max_file_size: 50,
-    max_files: 5,
-    enable_colors: false,
-    enable_sampling: true,
-    sampling_rate: 0.1,
+    console_enabled: true,
+    file_enabled: true,
+    sampling_default: 1.0,
+    file_name: "myapp.log".to_string(),
+    json_format: true,
+    rotate_when: "size".to_string(),
+    max_bytes: 10 * 1024 * 1024, // 10MB
     ..Default::default()
 };
 ```
@@ -200,7 +199,7 @@ let log_config = DMSCLogConfig {
 ### 自定义格式化器
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 
 struct CustomFormatter;
 
@@ -243,7 +242,7 @@ ctx.log().set_formatter(Box::new(CustomFormatter));
 ### 文件日志
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 
 // 基本文件日志
 let file_backend = DMSCLogBackend::File("/var/log/myapp.log".to_string());
@@ -261,7 +260,7 @@ ctx.log().set_backend(DMSCLogBackend::Custom("rotating_file".to_string()));
 ### 多后端输出
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 
 // 同时输出到文件和控制台
 let multi_backend = MultiLogBackend::new(vec![
@@ -275,7 +274,7 @@ ctx.log().set_backend(DMSCLogBackend::Custom("multi".to_string()));
 ### 远程日志
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 
 // HTTP日志后端
 let http_backend = HttpLogBackend::new(
@@ -295,7 +294,7 @@ ctx.log().set_backend(DMSCLogBackend::Custom("http".to_string()));
 ### 采样配置
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 
 let sampling_config = DMSCLogSamplingConfig {
     enable_sampling: true,
@@ -311,7 +310,7 @@ ctx.log().set_sampling_config(sampling_config);
 ### 条件采样
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 
 // 基于日志级别的采样
 let level_sampling = LevelBasedSampling::new()
@@ -326,7 +325,7 @@ ctx.log().set_sampling_strategy(DMSCLogSamplingStrategy::LevelBased(level_sampli
 ### 自适应采样
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 
 // 自适应采样，根据日志量动态调整采样率
 let adaptive_sampling = AdaptiveSampling::new()
@@ -346,7 +345,7 @@ ctx.log().set_sampling_strategy(DMSCLogSamplingStrategy::Adaptive(adaptive_sampl
 ### 创建日志跨度
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 
 // 创建日志跨度
 let span = ctx.log().with_span("user_operation");
@@ -364,7 +363,7 @@ drop(span);
 ### 嵌套跨度
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 
 let outer_span = ctx.log().with_span("request_processing");
 outer_span.info("Processing HTTP request");
@@ -392,7 +391,7 @@ outer_span.info("Request processing completed");
 ### 日志指标
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 
 // 启用日志指标收集
 ctx.log().enable_metrics(true);
@@ -407,7 +406,7 @@ println!("Error rate: {:.2}%", stats.error_rate * 100.0);
 ### 日志查询
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 
 // 查询最近100条日志
 let recent_logs = ctx.log().query()
@@ -423,7 +422,7 @@ for log in recent_logs {
 ### 日志聚合
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 
 // 按级别聚合日志
 let level_aggregation = ctx.log().aggregate()
@@ -445,7 +444,7 @@ for (level, count) in level_aggregation {
 ### 全局上下文
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 
 // 设置全局上下文字段
 ctx.log().set_global_context(serde_json::json!({
@@ -461,7 +460,7 @@ ctx.log().info("This log includes global context");
 ### 请求上下文
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 
 // 为特定请求设置上下文
 let request_context = serde_json::json!({
@@ -485,7 +484,7 @@ ctx.log().info("Processing user request");
 ### 级别过滤
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 
 // 设置全局日志级别
 ctx.log().set_level(DMSCLogLevel::Warn);
@@ -498,7 +497,7 @@ ctx.log().set_module_level("http", DMSCLogLevel::Info);
 ### 内容过滤
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 
 // 基于关键字的过滤
 let keyword_filter = KeywordFilter::new()
@@ -512,7 +511,7 @@ ctx.log().add_filter(Box::new(keyword_filter));
 ### 速率限制
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 
 // 设置日志速率限制
 let rate_limit = LogRateLimit::new()
@@ -541,7 +540,7 @@ ctx.log().set_rate_limit(rate_limit);
 ### 错误处理示例
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 
 match ctx.log().flush() {
     Ok(_) => {
@@ -568,7 +567,7 @@ match ctx.log().flush() {
 ### 异步日志
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 
 // 启用异步日志
 ctx.log().enable_async(true);
@@ -581,7 +580,7 @@ ctx.log().info_async("This is an async log message").await?;
 ### 批量日志
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 
 // 批量记录日志
 let batch = vec![
@@ -596,7 +595,7 @@ ctx.log().log_batch(batch).await?;
 ### 内存优化
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 
 // 优化内存使用
 ctx.log().set_max_memory_usage(100 * 1024 * 1024);  // 100MB
@@ -626,14 +625,20 @@ ctx.log().set_compression_threshold(1024);  // 1KB以上启用压缩
 </div>
 
 - [README](./README.md): 模块概览，提供API参考文档总览和快速导航
-- [auth](./auth.md): 认证模块，提供JWT、OAuth2和RBAC认证授权功能
+- [auth](./auth.md): 认证模块，处理用户认证和授权
+- [cache](./cache.md): 缓存模块，提供内存缓存和分布式缓存支持
+- [config](./config.md): 配置模块，管理应用程序配置
 - [core](./core.md): 核心模块，提供错误处理和服务上下文
-- [config](./config.md): 配置模块，管理认证配置和密钥设置
-- [cache](./cache.md): 缓存模块，提供多后端缓存抽象，缓存用户会话和权限数据
-- [database](./database.md): 数据库模块，提供用户数据持久化和查询功能
-- [http](./http.md): HTTP模块，提供Web认证接口和中间件支持
-- [mq](./mq.md): 消息队列模块，处理认证事件和异步通知
-- [observability](./observability.md): 可观测性模块，监控认证性能和安全事件
-- [security](./security.md): 安全模块，提供加密、哈希和验证功能
-- [storage](./storage.md): 存储模块，管理认证文件、密钥和证书
-- [validation](./validation.md): 验证模块，验证用户输入和表单数据
+- [database](./database.md): 数据库模块，提供数据库操作支持
+- [device](./device.md): 设备模块，使用协议进行设备通信
+- [fs](./fs.md): 文件系统模块，提供文件操作功能
+- [gateway](./gateway.md): 网关模块，提供API网关功能
+- [hooks](./hooks.md): 钩子模块，提供生命周期钩子支持
+- [http](./http.md): HTTP模块，提供HTTP服务器和客户端功能
+- [mq](./mq.md): 消息队列模块，提供消息队列支持
+- [observability](./observability.md): 可观测性模块，监控协议性能
+- [protocol](./protocol.md): 协议模块，提供通信协议支持
+- [security](./security.md): 安全模块，提供加密和解密功能
+- [service_mesh](./service_mesh.md): 服务网格模块，使用协议进行服务间通信
+- [storage](./storage.md): 存储模块，提供云存储支持
+- [validation](./validation.md): 验证模块，提供数据验证功能

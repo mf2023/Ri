@@ -40,7 +40,7 @@
 //! ## Usage
 //! 
 //! ```rust
-//! use dms::prelude::*;
+//! use dmsc::prelude::*;
 //! use std::path::PathBuf;
 //! 
 //! fn example() -> DMSCResult<()> {

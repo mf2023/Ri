@@ -43,7 +43,7 @@
 //! ## Usage
 //! 
 //! ```rust
-//! use dms::protocol::{DMSCGlobalProtocol, DMSCProtocolConfig};
+//! use dmsc::protocol::{DMSCGlobalProtocol, DMSCProtocolConfig};
 //! 
 //! async fn example() -> DMSCResult<()> {
 //!     let mut protocol = DMSCGlobalProtocol::new();

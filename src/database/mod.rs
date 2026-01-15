@@ -49,7 +49,7 @@
 //! ## Usage Example
 //!
 //! ```rust
-//! use dms::database::{DMSCDatabase, DMSCDatabaseConfig, PooledDatabase};
+//! use dmsc::database::{DMSCDatabase, DMSCDatabaseConfig, PooledDatabase};
 //!
 //! #[tokio::main]
 //! async fn main() -> DMSCResult<()> {
@@ -82,7 +82,7 @@
 //! ## Batch Operations Example
 //!
 //! ```rust
-//! use dms::database::{DMSCDatabasePool, DMSCDatabaseConfig};
+//! use dmsc::database::{DMSCDatabasePool, DMSCDatabaseConfig};
 //!
 //! #[tokio::main]
 //! async fn main() -> DMSCResult<()> {
@@ -114,7 +114,7 @@
 //! ## Transaction Example
 //!
 //! ```rust
-//! use dms::database::{DMSCDatabasePool, DMSCDatabaseConfig};
+//! use dmsc::database::{DMSCDatabasePool, DMSCDatabaseConfig};
 //!
 //! #[tokio::main]
 //! async fn main() -> DMSCResult<()> {
@@ -180,7 +180,7 @@ use serde::{Deserialize, Serialize};
 /// ## Example
 ///
 /// ```rust
-/// use dms::database::{DMSCDatabase, DMSCDatabasePool, DMSCDatabaseConfig};
+/// use dmsc::database::{DMSCDatabase, DMSCDatabasePool, DMSCDatabaseConfig};
 ///
 /// #[tokio::main]
 /// async fn main() -> DMSCResult<()> {
@@ -386,7 +386,7 @@ pub trait DMSCDatabase: Send + Sync {
 /// ## Example
 ///
 /// ```rust
-/// use dms::database::{DMSCDatabasePool, DMSCDatabaseConfig};
+/// use dmsc::database::{DMSCDatabasePool, DMSCDatabaseConfig};
 ///
 /// #[tokio::main]
 /// async fn main() -> DMSCResult<()> {

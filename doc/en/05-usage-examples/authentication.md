@@ -2,9 +2,9 @@
 
 # Authentication and Authorization Example
 
-**Version: 0.0.3**
+**Version: 0.1.4**
 
-**Last modified date: 2026-01-01**
+**Last modified date: 2026-01-15**
 
 This example demonstrates how to use DMSC's auth module for JWT and OAuth authentication and authorization.
 
@@ -85,7 +85,7 @@ auth:
 Replace the content of `src/main.rs` with the following:
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 use serde::{Deserialize, Serialize};
 
 // User information structure
@@ -119,27 +119,28 @@ async fn main() -> DMSCResult<()> {
         };
         
         // Generate JWT token
-        let jwt = ctx.auth().generate_jwt(&user).await?;
+        let jwt_manager = ctx.module::<DMSCAuthModule>().await?.jwt_manager();
+        let jwt = jwt_manager.generate_token("user123", vec!["admin"], vec!["read", "write"])?;
         ctx.logger().info("jwt", &format!("Generated JWT: {}", jwt))?;
         
         // Verify JWT token
-        let decoded_user: User = ctx.auth().verify_jwt(&jwt).await?;
-        ctx.logger().info("jwt", &format!("Decoded user: {:?}", decoded_user))?;
+        let claims = jwt_manager.validate_token(&jwt)?;
+        ctx.logger().info("jwt", &format!("Decoded claims: {:?}", claims))?;
         
         // Check permissions
-        let has_admin_access = ctx.auth().check_permission(&decoded_user.role, "admin").await?;
-        let has_user_access = ctx.auth().check_permission(&decoded_user.role, "user").await?;
+        let permission_manager = ctx.module::<DMSCAuthModule>().await?.permission_manager();
+        let has_admin_access = permission_manager.check_permission("admin", "admin").await?;
+        let has_user_access = permission_manager.check_permission("admin", "user").await?;
         
         ctx.logger().info("auth", &format!("Has admin access: {}", has_admin_access))?;
         ctx.logger().info("auth", &format!("Has user access: {}", has_user_access))?;
         
         // OAuth2 configuration example
-        let oauth_config = ctx.auth().oauth_config("github").await?;
-        ctx.logger().info("oauth", &format!("GitHub OAuth config: {:?}", oauth_config))?;
-        
-        // Generate OAuth authorization URL
-        let auth_url = ctx.auth().oauth_authorization_url("github", "state123").await?;
-        ctx.logger().info("oauth", &format!("GitHub auth URL: {}", auth_url))?;
+        let oauth_manager = ctx.module::<DMSCAuthModule>().await?.oauth_manager("github");
+        if let Some(oauth) = oauth_manager {
+            let auth_url = oauth.get_auth_url("state123").await?;
+            ctx.logger().info("oauth", &format!("GitHub auth URL: {}", auth_url))?;
+        }
         
         ctx.logger().info("service", "DMSC Auth Example completed")?;
         
@@ -157,7 +158,7 @@ async fn main() -> DMSCResult<()> {
 ### 1. Import Dependencies
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 use serde::{Deserialize, Serialize};
 ```
 
@@ -192,37 +193,35 @@ Build the application and enable the auth module.
 ### 4. JWT Operations
 
 ```rust
-// Generate JWT token
-let jwt = ctx.auth().generate_jwt(&user).await?;
+let jwt_manager = ctx.module::<DMSCAuthModule>().await?.jwt_manager();
+let jwt = jwt_manager.generate_token("user123", vec!["admin"], vec!["read", "write"])?;
 
 // Verify JWT token
-let decoded_user: User = ctx.auth().verify_jwt(&jwt).await?;
+let claims = jwt_manager.validate_token(&jwt)?;
 ```
 
-- `generate_jwt()`: Generate JWT token based on user information
-- `verify_jwt()`: Verify JWT token and decode to user information
+- `generate_token()`: Generate JWT token with user ID, roles, and permissions
+- `validate_token()`: Verify JWT token and return claims
 
 ### 5. Permission Check
 
 ```rust
-let has_admin_access = ctx.auth().check_permission(&decoded_user.role, "admin").await?;
-let has_user_access = ctx.auth().check_permission(&decoded_user.role, "user").await?;
+let permission_manager = ctx.module::<DMSCAuthModule>().await?.permission_manager();
+let has_admin_access = permission_manager.check_permission("admin", "admin").await?;
+let has_user_access = permission_manager.check_permission("admin", "user").await?;
 ```
 
-`check_permission()`: Check if the user role has specific permissions.
+`check_permission()`: Check if the role has specific permissions.
 
 ### 6. OAuth2 Operations
 
 ```rust
-// Get OAuth configuration
-let oauth_config = ctx.auth().oauth_config("github").await?;
-
-// Generate authorization URL
-let auth_url = ctx.auth().oauth_authorization_url("github", "state123").await?;
+let oauth_manager = ctx.module::<DMSCAuthModule>().await?.oauth_manager("github")?;
+let auth_url = oauth_manager.get_auth_url("state123").await?;
 ```
 
-- `oauth_config()`: Get configuration for specific OAuth provider
-- `oauth_authorization_url()`: Generate OAuth authorization URL
+- `oauth_manager()`: Get OAuth manager for specific provider
+- `get_auth_url()`: Generate OAuth authorization URL
 
 <div align="center">
 
@@ -267,9 +266,10 @@ After running the example, you should see output similar to the following:
 
 ```rust
 // In a real application, you need to implement an HTTP endpoint to handle OAuth2 callbacks
-async fn handle_oauth_callback(ctx: &DMSCServiceContext, code: &str) -> DMSCResult<String> {
-    let token = ctx.auth().oauth_exchange_token("github", code).await?;
-    let user_info = ctx.auth().oauth_get_user_info("github", &token).await?;
+async fn handle_oauth_callback(ctx: &DMSCServiceContext, code: String) -> DMSCResult<serde_json::Value> {
+    let oauth_manager = ctx.module::<DMSCAuthModule>().await?.oauth_manager("github").unwrap();
+    let token = oauth_manager.exchange_code("client_id", "client_secret", &code, "callback_url").await?;
+    let user_info = oauth_manager.get_user_info(&token.access_token).await?;
     Ok(user_info)
 }
 ```
@@ -277,29 +277,25 @@ async fn handle_oauth_callback(ctx: &DMSCServiceContext, code: &str) -> DMSCResu
 ### 2. Implement Refresh Token Mechanism
 
 ```rust
-// Generate JWT with refresh token
-let (access_token, refresh_token) = ctx.auth().generate_jwt_with_refresh(&user).await?;
+let jwt_manager = ctx.module::<DMSCAuthModule>().await?.jwt_manager();
+let token = jwt_manager.generate_token("user123", vec!["admin"], vec!["read", "write"])?;
 
-// Use refresh token to get new access token
-let new_access_token = ctx.auth().refresh_jwt(&refresh_token).await?;
+// Refresh token is not directly supported, generate a new token
+let new_token = jwt_manager.generate_token("user123", vec!["admin"], vec!["read", "write"])?;
 ```
 
 ### 3. Implement More Complex Permission Models
 
 ```rust
 // Define more complex permission rules
+let permission_manager = ctx.module::<DMSCAuthModule>().await?.permission_manager();
 let permission_rules = vec![
     ("admin", vec!["create", "read", "update", "delete"]),
     ("user", vec!["read"]),
 ];
 
 // Check permissions for specific resources
-let can_edit_resource = ctx.auth().check_resource_permission(
-    &user.role, 
-    "resource_type", 
-    "resource_id", 
-    "edit"
-).await?;
+let can_edit_resource = permission_manager.check_permission("admin", "edit").await?;
 ```
 
 <div align="center">

@@ -2,9 +2,9 @@
 
 # ServiceMesh API参考
 
-**Version: 0.0.3**
+**Version: 0.1.4**
 
-**Last modified date: 2026-01-01**
+**Last modified date: 2026-01-15**
 
 service_mesh模块提供服务网格功能，包括服务发现、健康检查、流量管理和负载均衡。
 
@@ -46,8 +46,8 @@ service_mesh模块包含以下子模块：
 #### 使用示例
 
 ```rust
-use dms::prelude::*;
-use dms::service_mesh::{DMSCServiceMesh, DMSCServiceMeshConfig};
+use dmsc::prelude::*;
+use dmsc::service_mesh::{DMSCServiceMesh, DMSCServiceMeshConfig};
 
 async fn example() -> DMSCResult<()> {
     let mesh_config = DMSCServiceMeshConfig::default();
@@ -100,7 +100,7 @@ async fn example() -> DMSCResult<()> {
 服务发现组件。
 
 ```rust
-use dms::service_mesh::DMSCServiceDiscovery;
+use dmsc::service_mesh::DMSCServiceDiscovery;
 
 let discovery = DMSCServiceDiscovery::new(true);
 
@@ -145,7 +145,7 @@ discovery.stop_background_tasks().await?;
 健康检查器。
 
 ```rust
-use dms::service_mesh::{DMSCHealthChecker, DMSCHealthStatus};
+use dmsc::service_mesh::{DMSCHealthChecker, DMSCHealthStatus};
 
 let health_checker = DMSCHealthChecker::new(Duration::from_secs(30));
 
@@ -194,7 +194,7 @@ match result.status {
 流量管理器。
 
 ```rust
-use dms::service_mesh::{DMSCTrafficManager, DMSCTrafficRoute, DMSCMatchCriteria, DMSCRouteAction};
+use dmsc::service_mesh::{DMSCTrafficManager, DMSCTrafficRoute, DMSCMatchCriteria, DMSCRouteAction};
 
 let traffic_manager = DMSCTrafficManager::new(true);
 
@@ -259,7 +259,7 @@ traffic_manager.stop_background_tasks().await?;
 </div>
 
 ```rust
-use dms::gateway::{DMSCCircuitBreaker, DMSCCircuitBreakerConfig};
+use dmsc::gateway::{DMSCCircuitBreaker, DMSCCircuitBreakerConfig};
 
 let circuit_breaker = service_mesh.get_circuit_breaker();
 
@@ -280,7 +280,7 @@ circuit_breaker.record_failure().await;
 </div>
 
 ```rust
-use dms::gateway::DMSCLoadBalancer;
+use dmsc::gateway::DMSCLoadBalancer;
 
 let load_balancer = service_mesh.get_load_balancer();
 
@@ -310,15 +310,27 @@ load_balancer.add_server(DMSCBackendServer {
 5. **配置负载均衡**：合理分配请求到不同实例
 6. **监控服务状态**：定期检查服务网格状态
 
-<div align="center>
+<div align="center">
 
 ## 相关模块
 
 </div>
 
 - [README](./README.md): 模块概览，提供API参考文档总览和快速导航
+- [auth](./auth.md): 认证模块，处理用户认证和授权
+- [cache](./cache.md): 缓存模块，提供内存缓存和分布式缓存支持
+- [config](./config.md): 配置模块，管理应用程序配置
 - [core](./core.md): 核心模块，提供错误处理和服务上下文
-- [gateway](./gateway.md): 网关模块，与服务网格配合使用
-- [device](./device.md): 设备模块，使用服务发现
-- [log](./log.md): 日志模块，记录服务网格事件
-- [observability](./observability.md): 可观测性模块，监控服务性能
+- [database](./database.md): 数据库模块，提供数据库操作支持
+- [device](./device.md): 设备模块，使用协议进行设备通信
+- [fs](./fs.md): 文件系统模块，提供文件操作功能
+- [gateway](./gateway.md): 网关模块，提供API网关功能
+- [hooks](./hooks.md): 钩子模块，提供生命周期钩子支持
+- [http](./http.md): HTTP模块，提供HTTP服务器和客户端功能
+- [log](./log.md): 日志模块，记录协议事件
+- [mq](./mq.md): 消息队列模块，提供消息队列支持
+- [observability](./observability.md): 可观测性模块，监控协议性能
+- [protocol](./protocol.md): 协议模块，提供通信协议支持
+- [security](./security.md): 安全模块，提供加密和解密功能
+- [storage](./storage.md): 存储模块，提供云存储支持
+- [validation](./validation.md): 验证模块，提供数据验证功能

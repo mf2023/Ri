@@ -2,9 +2,9 @@
 
 # 认证与授权示例
 
-**Version: 0.0.3**
+**Version: 0.1.4**
 
-**Last modified date: 2026-01-01**
+**Last modified date: 2026-01-15**
 
 本示例展示如何使用DMSC的auth模块进行JWT和OAuth认证与授权。
 
@@ -85,7 +85,7 @@ auth:
 将`src/main.rs`文件替换为以下内容：
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 use serde::{Deserialize, Serialize};
 
 // 用户信息结构
@@ -119,27 +119,28 @@ async fn main() -> DMSCResult<()> {
         };
         
         // 生成JWT令牌
-        let jwt = ctx.auth().generate_jwt(&user).await?;
+        let jwt_manager = ctx.module::<DMSCAuthModule>().await?.jwt_manager();
+        let jwt = jwt_manager.generate_token("user123", vec!["admin"], vec!["read", "write"])?;
         ctx.logger().info("jwt", &format!("Generated JWT: {}", jwt))?;
         
         // 验证JWT令牌
-        let decoded_user: User = ctx.auth().verify_jwt(&jwt).await?;
-        ctx.logger().info("jwt", &format!("Decoded user: {:?}", decoded_user))?;
+        let claims = jwt_manager.validate_token(&jwt)?;
+        ctx.logger().info("jwt", &format!("Decoded claims: {:?}", claims))?;
         
         // 检查权限
-        let has_admin_access = ctx.auth().check_permission(&decoded_user.role, "admin").await?;
-        let has_user_access = ctx.auth().check_permission(&decoded_user.role, "user").await?;
+        let permission_manager = ctx.module::<DMSCAuthModule>().await?.permission_manager();
+        let has_admin_access = permission_manager.check_permission("admin", "admin").await?;
+        let has_user_access = permission_manager.check_permission("admin", "user").await?;
         
         ctx.logger().info("auth", &format!("Has admin access: {}", has_admin_access))?;
         ctx.logger().info("auth", &format!("Has user access: {}", has_user_access))?;
         
         // OAuth2配置示例
-        let oauth_config = ctx.auth().oauth_config("github").await?;
-        ctx.logger().info("oauth", &format!("GitHub OAuth config: {:?}", oauth_config))?;
-        
-        // 生成OAuth授权URL
-        let auth_url = ctx.auth().oauth_authorization_url("github", "state123").await?;
-        ctx.logger().info("oauth", &format!("GitHub auth URL: {}", auth_url))?;
+        let oauth_manager = ctx.module::<DMSCAuthModule>().await?.oauth_manager("github");
+        if let Some(oauth) = oauth_manager {
+            let auth_url = oauth.get_auth_url("state123").await?;
+            ctx.logger().info("oauth", &format!("GitHub auth URL: {}", auth_url))?;
+        }
         
         ctx.logger().info("service", "DMSC Auth Example completed")?;
         
@@ -157,7 +158,7 @@ async fn main() -> DMSCResult<()> {
 ### 1. 导入依赖
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 use serde::{Deserialize, Serialize};
 ```
 
@@ -192,37 +193,35 @@ let app = DMSCAppBuilder::new()
 ### 4. JWT操作
 
 ```rust
-// 生成JWT令牌
-let jwt = ctx.auth().generate_jwt(&user).await?;
+let jwt_manager = ctx.module::<DMSCAuthModule>().await?.jwt_manager();
+let jwt = jwt_manager.generate_token("user123", vec!["admin"], vec!["read", "write"])?;
 
 // 验证JWT令牌
-let decoded_user: User = ctx.auth().verify_jwt(&jwt).await?;
+let claims = jwt_manager.validate_token(&jwt)?;
 ```
 
-- `generate_jwt()`：根据用户信息生成JWT令牌
-- `verify_jwt()`：验证JWT令牌并解码为用户信息
+- `generate_token()`：生成带用户ID、角色和权限的JWT令牌
+- `validate_token()`：验证JWT令牌并返回声明
 
 ### 5. 权限检查
 
 ```rust
-let has_admin_access = ctx.auth().check_permission(&decoded_user.role, "admin").await?;
-let has_user_access = ctx.auth().check_permission(&decoded_user.role, "user").await?;
+let permission_manager = ctx.module::<DMSCAuthModule>().await?.permission_manager();
+let has_admin_access = permission_manager.check_permission("admin", "admin").await?;
+let has_user_access = permission_manager.check_permission("admin", "user").await?;
 ```
 
-`check_permission()`：检查用户角色是否具有特定权限。
+`check_permission()`：检查角色是否具有特定权限。
 
 ### 6. OAuth2操作
 
 ```rust
-// 获取OAuth配置
-let oauth_config = ctx.auth().oauth_config("github").await?;
-
-// 生成授权URL
-let auth_url = ctx.auth().oauth_authorization_url("github", "state123").await?;
+let oauth_manager = ctx.module::<DMSCAuthModule>().await?.oauth_manager("github")?;
+let auth_url = oauth_manager.get_auth_url("state123").await?;
 ```
 
-- `oauth_config()`：获取特定OAuth提供商的配置
-- `oauth_authorization_url()`：生成OAuth授权URL
+- `oauth_manager()`：获取特定OAuth提供商的管理器
+- `get_auth_url()`：生成OAuth授权URL
 
 <div align="center">
 

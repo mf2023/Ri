@@ -135,7 +135,7 @@ impl std::error::Error for CryptoError {}
 ///
 /// Basic encryption and decryption:
 /// ```rust
-/// use dms::protocol::crypto::AES256GCM;
+/// use dmsc::protocol::crypto::AES256GCM;
 ///
 /// let cipher = AES256GCM::new().expect("Failed to create cipher");
 ///
@@ -155,7 +155,7 @@ impl std::error::Error for CryptoError {}
 ///
 /// Using an existing key (e.g., from key exchange):
 /// ```rust
-/// use dms::protocol::crypto::AES256GCM;
+/// use dmsc::protocol::crypto::AES256GCM;
 ///
 /// let key = [0x42u8; 32]; // In practice, use a securely generated key
 /// let cipher = AES256GCM::with_key(key);
@@ -346,7 +346,7 @@ impl AES256GCM {
 ///
 /// Basic encryption and decryption:
 /// ```rust
-/// use dms::protocol::crypto::ChaCha20Poly1305;
+/// use dmsc::protocol::crypto::ChaCha20Poly1305;
 ///
 /// let cipher = ChaCha20Poly1305::new().expect("Failed to create cipher");
 ///
@@ -364,7 +364,7 @@ impl AES256GCM {
 ///
 /// Comparing with AES-256-GCM:
 /// ```rust
-/// use dms::protocol::crypto::{AES256GCM, ChaCha20Poly1305};
+/// use dmsc::protocol::crypto::{AES256GCM, ChaCha20Poly1305};
 ///
 /// let aes_cipher = AES256GCM::new().expect("Failed to create AES cipher");
 /// let chacha_cipher = ChaCha20Poly1305::new().expect("Failed to create ChaCha20 cipher");
@@ -606,7 +606,7 @@ impl ChaCha20Poly1305 {
 ///
 /// Basic CBC mode encryption and decryption:
 /// ```rust
-/// use dms::protocol::crypto::SM4Cipher;
+/// use dmsc::protocol::crypto::SM4Cipher;
 ///
 /// let cipher = SM4Cipher::new().expect("Failed to create SM4 cipher");
 ///
@@ -625,7 +625,7 @@ impl ChaCha20Poly1305 {
 ///
 /// Using a specific IV for deterministic encryption:
 /// ```rust
-/// use dms::protocol::crypto::SM4Cipher;
+/// use dmsc::protocol::crypto::SM4Cipher;
 ///
 /// let cipher = SM4Cipher::new().expect("Failed to create SM4 cipher");
 ///

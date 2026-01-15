@@ -2,9 +2,9 @@
 
 # Best Practices
 
-**Version: 0.0.3**
+**Version: 0.1.4**
 
-**Last modified date: 2026-01-01**
+**Last modified date: 2026-01-15**
 
 This chapter introduces best practices for using the DMSC framework to help you build efficient, reliable, and secure applications.
 
@@ -44,7 +44,7 @@ my-dms-app/
 
 ### 1.3 Code Organization
 
-- **Use the prelude module**: Import commonly used types via `use dms::prelude::*`
+- **Use the prelude module**: Import commonly used types via `use dmsc::prelude::*`
 - **Separate concerns**: Separate configuration, business logic, and utility functions
 - **Use layered architecture**: Adopt a layered architecture, such as controller, service, and data access layers
 

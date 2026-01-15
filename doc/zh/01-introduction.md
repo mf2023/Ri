@@ -2,9 +2,9 @@
 
 # DMSC 介绍
 
-**Version: 0.0.3**
+**Version: 0.1.4**
 
-**Last modified date: 2026-01-01**
+**Last modified date: 2026-01-15**
 
 ## 项目概述
 

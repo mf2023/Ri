@@ -52,7 +52,7 @@
 //! ## Usage Examples
 //! 
 //! ```rust
-//! use dms::protocol::adapter::{DMSCProtocolAdapter, DMSCProtocolStrategy, DMSCSecurityContext};
+//! use dmsc::protocol::adapter::{DMSCProtocolAdapter, DMSCProtocolStrategy, DMSCSecurityContext};
 //! 
 //! async fn example() -> DMSCResult<()> {
 //!     // Create protocol adapter

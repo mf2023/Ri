@@ -7,7 +7,7 @@ security模块提供认证管理、授权管理、加密解密、输入验证、
 ### JWT认证
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 use serde_json::json;
 
 // JWT配置
@@ -87,7 +87,7 @@ ctx.log().info("JWT token revoked");
 ### OAuth2认证
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 use serde_json::json;
 
 // OAuth2配置
@@ -140,7 +140,7 @@ ctx.log().info("Access token revoked");
 ### 多因素认证(MFA)
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 use serde_json::json;
 
 // 初始化MFA
@@ -205,7 +205,7 @@ ctx.log().info(format!("MFA re-enabled for user: {}", user_id));
 ### RBAC基于角色的访问控制
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 use serde_json::json;
 
 // 创建角色
@@ -318,7 +318,7 @@ ctx.log().info("User role permissions updated");
 ### ABAC基于属性的访问控制
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 use serde_json::json;
 
 // 定义ABAC策略
@@ -436,7 +436,7 @@ if access_decision.effect == DMSCABACEffect::Allow {
 ### 对称加密
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 use serde_json::json;
 
 // 配置对称加密
@@ -477,7 +477,7 @@ ctx.log().info(format!("Batch decrypted {} items", decrypted_batch.len()));
 ### 非对称加密
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 use serde_json::json;
 
 // 生成密钥对
@@ -520,7 +520,7 @@ ctx.log().info(format!("Signature verification: {}", is_valid));
 ### 密钥派生
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 use serde_json::json;
 
 // 从密码派生密钥
@@ -566,7 +566,7 @@ ctx.log().info(format!("Password validation: {}", is_password_valid));
 ### 数据验证
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 use serde_json::json;
 
 // 验证用户输入
@@ -667,7 +667,7 @@ ctx.log().info(format!("Sanitized data: {:?}", sanitized_data));
 ### SQL注入防护
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 use serde_json::json;
 
 // 用户输入的搜索查询
@@ -714,7 +714,7 @@ if is_safe_table && is_safe_column {
 ### XSS防护
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 use serde_json::json;
 
 // 用户输入的HTML内容
@@ -767,7 +767,7 @@ ctx.log().info(format!("Sanitized URL parameters: {:?}", sanitized_params));
 ### API速率限制
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 use serde_json::json;
 
 // 配置速率限制
@@ -855,7 +855,7 @@ ctx.log().info("Rate limit reset for user");
 ### 分布式速率限制
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 use serde_json::json;
 
 // 配置分布式速率限制
@@ -924,7 +924,7 @@ ctx.log().info(format!(
 ### 跨域资源共享
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 use serde_json::json;
 
 // 配置CORS
@@ -1012,7 +1012,7 @@ ctx.log().info(format!("Origin {} is allowed: {}", origin, is_allowed));
 ### 跨站请求伪造防护
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 use serde_json::json;
 
 // 配置CSRF保护
@@ -1073,7 +1073,7 @@ ctx.log().info("Expired CSRF tokens cleaned up");
 ### 安全策略配置
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 use serde_json::json;
 
 // 综合安全配置
@@ -1150,7 +1150,7 @@ ctx.log().info(format!("Security status: {:?}", security_status));
 ### 安全错误处理
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 use serde_json::json;
 
 // 安全错误处理示例
@@ -1274,7 +1274,7 @@ ctx.log().info("Security event handled");
 ### 高级加密功能
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 use serde_json::json;
 
 // 配置高级加密方案

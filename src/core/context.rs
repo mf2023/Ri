@@ -91,7 +91,7 @@ impl ServiceContextInner {
 /// ## Usage
 /// 
 /// ```rust
-/// use dms::prelude::*;
+/// use dmsc::prelude::*;
 /// 
 /// async fn handle_request(ctx: &DMSCServiceContext) -> DMSCResult<()> {
 ///     // Access logger

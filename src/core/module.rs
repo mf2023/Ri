@@ -34,7 +34,7 @@ use crate::core::{DMSCResult, DMSCServiceContext};
 /// ## Usage
 /// 
 /// ```rust
-/// use dms::core::{ServiceModule, DMSCResult, DMSCServiceContext};
+/// use dmsc::core::{ServiceModule, DMSCResult, DMSCServiceContext};
 /// 
 /// struct MySyncModule;
 /// 
@@ -168,7 +168,7 @@ pub trait ServiceModule: Send + Sync {
 /// ## Usage
 /// 
 /// ```rust
-/// use dms::core::{DMSCModule, DMSCResult, DMSCServiceContext};
+/// use dmsc::core::{DMSCModule, DMSCResult, DMSCServiceContext};
 /// use async_trait::async_trait;
 /// 
 /// struct MyAsyncModule;
@@ -307,15 +307,15 @@ use pyo3::prelude::*;
 /// ```python
 /// import dms
 ///
-/// module = dms.DMSCPyModule(name="my_python_module")
+/// module = dms.DMSCPythonModule(name="my_python_module")
 /// module.is_critical = True
 /// module.priority = 100
 /// module.dependencies = ["logger", "config"]
 /// ```
 #[pyclass]
-#[pyo3(name = "DMSCPyModule")]
+#[pyo3(name = "DMSCPythonModule")]
 #[derive(Clone)]
-pub struct DMSCPyModule {
+pub struct DMSCPythonModule {
     #[pyo3(get)]
     name: String,
     #[pyo3(get)]
@@ -328,10 +328,10 @@ pub struct DMSCPyModule {
 
 #[cfg(feature = "pyo3")]
 #[pymethods]
-impl DMSCPyModule {
+impl DMSCPythonModule {
     #[new]
     fn new(name: String) -> Self {
-        DMSCPyModule {
+        DMSCPythonModule {
             name,
             is_critical: true,
             priority: 0,
@@ -414,13 +414,12 @@ impl DMSCPyModule {
 ///         print("Starting Python module")
 ///         return None
 ///
-/// adapter = dms.DMSCPyModuleAdapter(name="my_module")
+/// adapter = dms.DMSCPythonModuleAdapter(name="my_module")
 /// adapter.name = "python_module"
 /// ```
 #[pyclass]
-#[pyo3(name = "DMSCPyModuleAdapter")]
 #[derive(Clone)]
-pub struct DMSCPyModuleAdapter {
+pub struct DMSCPythonModuleAdapter {
     #[pyo3(get, set)]
     pub name: String,
     #[pyo3(get, set)]
@@ -433,18 +432,16 @@ pub struct DMSCPyModuleAdapter {
 
 #[cfg(feature = "pyo3")]
 #[pymethods]
-impl DMSCPyModuleAdapter {
+impl DMSCPythonModuleAdapter {
     #[new]
     fn new(name: String) -> Self {
-        DMSCPyModuleAdapter {
+        DMSCPythonModuleAdapter {
             name,
             is_critical: true,
             priority: 0,
             dependencies: Vec::new(),
         }
     }
-    
-
 }
 
 #[cfg(feature = "pyo3")]
@@ -459,7 +456,7 @@ impl DMSCPyModuleAdapter {
 ///
 /// Synchronous modules use blocking I/O and execute their callbacks on the
 /// same thread as the module lifecycle manager. For non-blocking operations,
-/// use `DMSCPyAsyncServiceModule` instead.
+/// use `DMSCPythonAsyncServiceModule` instead.
 ///
 /// ## Threading Model
 ///
@@ -485,14 +482,13 @@ impl DMSCPyModuleAdapter {
 ///         print("Starting sync module")
 ///         return None
 ///
-/// module = dms.DMSCPyServiceModule(name="my_sync")
+/// module = dms.DMSCPythonServiceModule(name="my_sync")
 /// module.priority = 50
 /// module.dependencies = ["config"]
 /// ```
 #[pyclass]
-#[pyo3(name = "DMSCPyServiceModule")]
 #[derive(Clone)]
-pub struct DMSCPyServiceModule {
+pub struct DMSCPythonServiceModule {
     name: String,
     is_critical: bool,
     priority: i32,
@@ -501,10 +497,10 @@ pub struct DMSCPyServiceModule {
 
 #[cfg(feature = "pyo3")]
 #[pymethods]
-impl DMSCPyServiceModule {
+impl DMSCPythonServiceModule {
     #[new]
     fn new(name: String) -> Self {
-        DMSCPyServiceModule {
+        DMSCPythonServiceModule {
             name,
             is_critical: true,
             priority: 0,
@@ -591,14 +587,13 @@ impl DMSCPyServiceModule {
 ///         print("Starting async module")
 ///         return None
 ///
-/// module = dms.DMSCPyAsyncServiceModule(name="my_async")
+/// module = dms.DMSCPythonAsyncServiceModule(name="my_async")
 /// module.priority = 100
 /// module.dependencies = ["config", "logger"]
 /// ```
 #[pyclass]
-#[pyo3(name = "DMSCPyAsyncServiceModule")]
 #[derive(Clone)]
-pub struct DMSCPyAsyncServiceModule {
+pub struct DMSCPythonAsyncServiceModule {
     name: String,
     is_critical: bool,
     priority: i32,
@@ -607,10 +602,10 @@ pub struct DMSCPyAsyncServiceModule {
 
 #[cfg(feature = "pyo3")]
 #[pymethods]
-impl DMSCPyAsyncServiceModule {
+impl DMSCPythonAsyncServiceModule {
     #[new]
     fn new(name: String) -> Self {
-        DMSCPyAsyncServiceModule {
+        DMSCPythonAsyncServiceModule {
             name,
             is_critical: true,
             priority: 0,
@@ -661,7 +656,7 @@ impl DMSCPyAsyncServiceModule {
 
 #[cfg(feature = "pyo3")]
 #[async_trait::async_trait]
-impl AsyncServiceModule for DMSCPyModuleAdapter {
+impl AsyncServiceModule for DMSCPythonModuleAdapter {
     fn name(&self) -> &str {
         &self.name
     }
@@ -708,7 +703,7 @@ impl AsyncServiceModule for DMSCPyModuleAdapter {
 }
 
 #[cfg(feature = "pyo3")]
-impl ServiceModule for DMSCPyServiceModule {
+impl ServiceModule for DMSCPythonServiceModule {
     fn name(&self) -> &str {
         &self.name
     }
@@ -756,7 +751,7 @@ impl ServiceModule for DMSCPyServiceModule {
 
 #[cfg(feature = "pyo3")]
 #[async_trait::async_trait]
-impl AsyncServiceModule for DMSCPyAsyncServiceModule {
+impl AsyncServiceModule for DMSCPythonAsyncServiceModule {
     fn name(&self) -> &str {
         &self.name
     }
@@ -811,7 +806,7 @@ impl AsyncServiceModule for DMSCPyAsyncServiceModule {
 /// ## Usage
 /// 
 /// ```rust
-/// use dms::core::{AsyncServiceModule, DMSCResult, DMSCServiceContext};
+/// use dmsc::core::{AsyncServiceModule, DMSCResult, DMSCServiceContext};
 /// use async_trait::async_trait;
 /// 
 /// struct MyInternalAsyncModule;

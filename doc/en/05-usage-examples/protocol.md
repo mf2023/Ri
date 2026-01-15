@@ -23,7 +23,7 @@ The protocol manager serves as the central component for managing communication 
 ### Creating a Protocol Manager
 
 ```rust
-use dms::protocol::{DMSCProtocolManager, DMSCProtocolConfig, DMSCProtocolType};
+use dmsc::protocol::{DMSCProtocolManager, DMSCProtocolConfig, DMSCProtocolType};
 
 async fn create_protocol_manager() -> DMSCResult<()> {
     let manager = DMSCProtocolManager::new();
@@ -34,7 +34,7 @@ async fn create_protocol_manager() -> DMSCResult<()> {
 ### Initializing with Custom Configuration
 
 ```rust
-use dms::protocol::{DMSCProtocolManager, DMSCProtocolConfig, DMSCProtocolType};
+use dmsc::protocol::{DMSCProtocolManager, DMSCProtocolConfig, DMSCProtocolType};
 
 async fn initialize_with_config() -> DMSCResult<()> {
     let mut manager = DMSCProtocolManager::new();
@@ -58,7 +58,7 @@ async fn initialize_with_config() -> DMSCResult<()> {
 ### Default Configuration
 
 ```rust
-use dms::protocol::{DMSCProtocolManager, DMSCProtocolConfig, DMSCProtocolType};
+use dmsc::protocol::{DMSCProtocolManager, DMSCProtocolConfig, DMSCProtocolType};
 
 async fn use_default_config() -> DMSCResult<()> {
     let mut manager = DMSCProtocolManager::new();
@@ -81,8 +81,8 @@ DMSC supports two protocol types for different communication needs.
 The global protocol is the standard communication protocol for general use cases:
 
 ```rust
-use dms::protocol::{DMSCProtocolManager, DMSCProtocolType};
-use dms::prelude::*;
+use dmsc::protocol::{DMSCProtocolManager, DMSCProtocolType};
+use dmsc::prelude::*;
 
 async fn use_global_protocol() -> DMSCResult<()> {
     let mut manager = DMSCProtocolManager::new();
@@ -100,8 +100,8 @@ async fn use_global_protocol() -> DMSCResult<()> {
 The private protocol provides enhanced security for sensitive operations:
 
 ```rust
-use dms::protocol::{DMSCProtocolManager, DMSCProtocolType};
-use dms::prelude::*;
+use dmsc::protocol::{DMSCProtocolManager, DMSCProtocolType};
+use dmsc::prelude::*;
 
 async fn use_private_protocol() -> DMSCResult<()> {
     let mut manager = DMSCProtocolManager::new();
@@ -131,8 +131,8 @@ async fn use_private_protocol() -> DMSCResult<()> {
 ### Basic Message Sending
 
 ```rust
-use dms::protocol::DMSCProtocolManager;
-use dms::prelude::*;
+use dmsc::protocol::DMSCProtocolManager;
+use dmsc::prelude::*;
 
 async fn send_basic_message() -> DMSCResult<()> {
     let mut manager = DMSCProtocolManager::new();
@@ -151,8 +151,8 @@ async fn send_basic_message() -> DMSCResult<()> {
 ### Sending with Specific Protocol
 
 ```rust
-use dms::protocol::{DMSCProtocolManager, DMSCProtocolType};
-use dms::prelude::*;
+use dmsc::protocol::{DMSCProtocolManager, DMSCProtocolType};
+use dmsc::prelude::*;
 
 async fn send_with_specific_protocol() -> DMSCResult<()> {
     let mut manager = DMSCProtocolManager::new();
@@ -179,8 +179,8 @@ async fn send_with_specific_protocol() -> DMSCResult<()> {
 ### Binary Data Transfer
 
 ```rust
-use dms::protocol::DMSCProtocolManager;
-use dms::prelude::*;
+use dmsc::protocol::DMSCProtocolManager;
+use dmsc::prelude::*;
 
 async fn send_binary_data() -> DMSCResult<()> {
     let mut manager = DMSCProtocolManager::new();
@@ -202,8 +202,8 @@ async fn send_binary_data() -> DMSCResult<()> {
 ### JSON Data Transfer
 
 ```rust
-use dms::protocol::DMSCProtocolManager;
-use dms::prelude::*;
+use dmsc::protocol::DMSCProtocolManager;
+use dmsc::prelude::*;
 
 async fn send_json_data() -> DMSCResult<()> {
     let mut manager = DMSCProtocolManager::new();
@@ -237,8 +237,8 @@ async fn send_json_data() -> DMSCResult<()> {
 ### Switching at Runtime
 
 ```rust
-use dms::protocol::{DMSCProtocolManager, DMSCProtocolType};
-use dms::prelude::*;
+use dmsc::protocol::{DMSCProtocolManager, DMSCProtocolType};
+use dmsc::prelude::*;
 
 async fn runtime_protocol_switching() -> DMSCResult<()> {
     let mut manager = DMSCProtocolManager::new();
@@ -266,8 +266,8 @@ async fn runtime_protocol_switching() -> DMSCResult<()> {
 ### Checking Current Protocol
 
 ```rust
-use dms::protocol::{DMSCProtocolManager, DMSCProtocolType};
-use dms::prelude::*;
+use dmsc::protocol::{DMSCProtocolManager, DMSCProtocolType};
+use dmsc::prelude::*;
 
 async fn check_current_protocol() -> DMSCResult<()> {
     let manager = DMSCProtocolManager::new();
@@ -291,7 +291,7 @@ async fn check_current_protocol() -> DMSCResult<()> {
 ### Enabling Security Features
 
 ```rust
-use dms::protocol::{DMSCProtocolManager, DMSCProtocolConfig, DMSCProtocolType};
+use dmsc::protocol::{DMSCProtocolManager, DMSCProtocolConfig, DMSCProtocolType};
 
 async fn configure_security() -> DMSCResult<()> {
     let mut manager = DMSCProtocolManager::new();
@@ -332,8 +332,8 @@ async fn configure_security() -> DMSCResult<()> {
 ### Getting Protocol Statistics
 
 ```rust
-use dms::protocol::DMSCProtocolManager;
-use dms::prelude::*;
+use dmsc::protocol::DMSCProtocolManager;
+use dmsc::prelude::*;
 
 async fn get_protocol_stats() -> DMSCResult<()> {
     let mut manager = DMSCProtocolManager::new();
@@ -359,8 +359,8 @@ async fn get_protocol_stats() -> DMSCResult<()> {
 ### Protocol Status
 
 ```rust
-use dms::protocol::{DMSCProtocolManager, DMSCProtocolStatus};
-use dms::prelude::*;
+use dmsc::protocol::{DMSCProtocolManager, DMSCProtocolStatus};
+use dmsc::prelude::*;
 
 async fn check_protocol_status() -> DMSCResult<()> {
     let mut manager = DMSCProtocolManager::new();
@@ -385,13 +385,13 @@ async fn check_protocol_status() -> DMSCResult<()> {
 ### HSM Manager Setup
 
 ```rust
-use dms::protocol::{
+use dmsc::protocol::{
     DMSCHSMManager,
     DMSCHSMType,
     DMSCHSMConfig,
     DMSCHSMStatistics,
 };
-use dms::prelude::*;
+use dmsc::prelude::*;
 
 async fn setup_hsm() -> DMSCResult<()> {
     let config = DMSCHSMConfig {
@@ -411,8 +411,8 @@ async fn setup_hsm() -> DMSCResult<()> {
 ### Key Management
 
 ```rust
-use dms::protocol::{DMSCHSMManager, DMSCHSMConfig, DMSCKeyType};
-use dms::prelude::*;
+use dmsc::protocol::{DMSCHSMManager, DMSCHSMConfig, DMSCKeyType};
+use dmsc::prelude::*;
 
 async fn manage_keys() -> DMSCResult<()> {
     let config = DMSCHSMConfig::default();
@@ -448,8 +448,8 @@ async fn manage_keys() -> DMSCResult<()> {
 ### Creating Frames
 
 ```rust
-use dms::protocol::{DMSCFrame, DMSCFrameHeader, DMSCFrameType};
-use dms::prelude::*;
+use dmsc::protocol::{DMSCFrame, DMSCFrameHeader, DMSCFrameType};
+use dmsc::prelude::*;
 
 fn create_frames() -> DMSCResult<()> {
     // Create a data frame
@@ -481,7 +481,7 @@ fn create_frames() -> DMSCResult<()> {
 The following example demonstrates a complete integration of the protocol module:
 
 ```rust
-use dms::protocol::{
+use dmsc::protocol::{
     DMSCProtocolManager,
     DMSCProtocolConfig,
     DMSCProtocolType,
@@ -489,7 +489,7 @@ use dms::protocol::{
     DMSCHSMConfig,
     DMSCKeyType,
 };
-use dms::prelude::*;
+use dmsc::prelude::*;
 
 struct ProtocolApplication {
     manager: DMSCProtocolManager,
@@ -618,3 +618,26 @@ Error count: 0
 Success rate: 100.00%
 Generated new key: key-a1b2c3d4
 ```
+
+<div align="center">
+
+## Related Modules
+
+</div>
+
+- [README](./README.md): Module overview with usage examples summary and quick navigation
+- [authentication](./authentication.md): Authentication examples, including JWT, OAuth2, and MFA
+- [basic-app](./basic-app.md): Basic application examples
+- [caching](./caching.md): Caching examples, including memory and distributed caching
+- [database](./database.md): Database operation examples
+- [device](./device.md): Device control examples
+- [fs](./fs.md): Filesystem operation examples
+- [gateway](./gateway.md): API gateway examples
+- [hooks](./hooks.md): Hook system examples
+- [http](./http.md): HTTP server and client examples
+- [mq](./mq.md): Message queue examples
+- [observability](./observability.md): Observability examples
+- [security](./security.md): Security and encryption examples
+- [service_mesh](./service_mesh.md): Service mesh examples
+- [storage](./storage.md): Cloud storage examples
+- [validation](./validation.md): Data validation examples

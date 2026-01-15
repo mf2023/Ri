@@ -2,9 +2,9 @@
 
 # Validation API参考
 
-**Version: 0.0.3**
+**Version: 0.1.4**
 
-**Last modified date: 2026-01-01**
+**Last modified date: 2026-01-15**
 
 validation模块提供数据验证与清理功能，支持多种验证规则和自定义验证器。
 
@@ -46,7 +46,7 @@ validation模块包含以下子模块：
 #### 使用示例
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 use serde_json::json;
 
 // 简单数据验证
@@ -138,7 +138,7 @@ ctx.log().info(format!("Cleaned data: {}", clean_data));
 ### 字段验证
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 use serde_json::json;
 
 // 验证用户注册数据
@@ -209,7 +209,7 @@ ctx.log().info("All field validations passed");
 ### 复杂数据验证
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 use serde_json::json;
 
 // 验证订单数据
@@ -344,7 +344,7 @@ ctx.log().info("Order data validation passed");
 ### 基本清理
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 use serde_json::json;
 
 // 清理用户输入数据
@@ -385,7 +385,7 @@ ctx.log().info(format!("Cleaned email: {}", cleaned_email));
 ### 高级清理
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 use serde_json::json;
 
 // 清理HTML内容
@@ -439,7 +439,7 @@ ctx.log().info(format!("Sanitized URL: {}", safe_url));
 ### 创建自定义验证器
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 use serde_json::Value;
 
 // 创建用户名验证器
@@ -658,7 +658,7 @@ let password_result = ctx.validation().validate_field("password", &json!("weak")
 ### 条件规则
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 use serde_json::json;
 
 // 条件验证：如果用户选择公司注册，则需要公司信息
@@ -750,7 +750,7 @@ ctx.log().info(format!("Dynamic validation result: {:?}", dynamic_result));
 ### 外部服务验证
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 use serde_json::json;
 
 // 创建异步邮箱验证器
@@ -821,7 +821,7 @@ ctx.log().info(format!("Email validation passed for: {}", email));
 #### 配置示例
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 
 let validation_config = DMSCValidationConfig {
     strict_mode: true,
@@ -859,7 +859,7 @@ ctx.validation().set_config(validation_config)?;
 ### 错误处理示例
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 use serde_json::json;
 
 match ctx.validation().validate(&user_data, &validation_rules) {
@@ -914,14 +914,20 @@ match ctx.validation().validate(&user_data, &validation_rules) {
 </div>
 
 - [README](./README.md): 模块概览，提供API参考文档总览和快速导航
-- [auth](./auth.md): 认证模块，提供JWT、OAuth2和RBAC认证授权功能
+- [auth](./auth.md): 认证模块，处理用户认证和授权
+- [cache](./cache.md): 缓存模块，提供内存缓存和分布式缓存支持
+- [config](./config.md): 配置模块，管理应用程序配置
 - [core](./core.md): 核心模块，提供错误处理和服务上下文
-- [log](./log.md): 日志模块，记录认证事件和安全日志
-- [config](./config.md): 配置模块，管理认证配置和密钥设置
-- [cache](./cache.md): 缓存模块，提供多后端缓存抽象，缓存用户会话和权限数据
-- [database](./database.md): 数据库模块，提供用户数据持久化和查询功能
-- [http](./http.md): HTTP模块，提供Web认证接口和中间件支持
-- [mq](./mq.md): 消息队列模块，处理认证事件和异步通知
-- [observability](./observability.md): 可观测性模块，监控认证性能和安全事件
-- [security](./security.md): 安全模块，提供加密、哈希和验证功能
-- [storage](./storage.md): 存储模块，管理认证文件、密钥和证书
+- [database](./database.md): 数据库模块，提供数据库操作支持
+- [device](./device.md): 设备模块，使用协议进行设备通信
+- [fs](./fs.md): 文件系统模块，提供文件操作功能
+- [gateway](./gateway.md): 网关模块，提供API网关功能
+- [hooks](./hooks.md): 钩子模块，提供生命周期钩子支持
+- [http](./http.md): HTTP模块，提供HTTP服务器和客户端功能
+- [log](./log.md): 日志模块，记录协议事件
+- [mq](./mq.md): 消息队列模块，提供消息队列支持
+- [observability](./observability.md): 可观测性模块，监控协议性能
+- [protocol](./protocol.md): 协议模块，提供通信协议支持
+- [security](./security.md): 安全模块，提供加密和解密功能
+- [service_mesh](./service_mesh.md): 服务网格模块，使用协议进行服务间通信
+- [storage](./storage.md): 存储模块，提供云存储支持

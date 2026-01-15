@@ -2,9 +2,9 @@
 
 # Log API Reference
 
-**Version: 0.0.3**
+**Version: 0.1.4**
 
-**Last modified date: 2026-01-01**
+**Last modified date: 2026-01-15**
 
 The log module provides structured logging with multi-backend support, supporting log levels, formatting, sampling, and log analysis features.
 
@@ -49,7 +49,7 @@ The main logger interface providing unified logging functionality.
 #### Usage Examples
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 
 // Basic logging
 ctx.log().info("Application started");
@@ -92,7 +92,7 @@ Log level enumeration type.
 #### Usage Examples
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 
 // Set log level
 ctx.log().set_level(DMSCLogLevel::Info);
@@ -115,29 +115,28 @@ Log configuration structure.
 | Field | Type | Description | Default |
 |:--------|:-----|:-------------|:-------|
 | `level` | `DMSCLogLevel` | Log level | `Info` |
-| `format` | `DMSCLogFormat` | Log format | `Json` |
-| `output` | `DMSCLogOutput` | Log output | `Stdout` |
-| `file_path` | `Option<String>` | Log file path | `None` |
-| `max_file_size` | `u64` | Maximum file size (MB) | `100` |
-| `max_files` | `usize` | Maximum number of files | `10` |
-| `enable_colors` | `bool` | Enable colored output | `true` |
-| `enable_sampling` | `bool` | Enable log sampling | `false` |
-| `sampling_rate` | `f64` | Sampling rate | `0.1` |
+| `console_enabled` | `bool` | Enable console output | `true` |
+| `file_enabled` | `bool` | Enable file output | `false` |
+| `sampling_default` | `f32` | Default sampling rate (0.0-1.0) | `1.0` |
+| `file_name` | `String` | Log file name | `""` |
+| `json_format` | `bool` | Use JSON format | `false` |
+| `rotate_when` | `String` | When to rotate ("size" or "none") | `"size"` |
+| `max_bytes` | `u64` | Max file size before rotation (bytes) | `10485760` |
 
 #### Configuration Example
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 
 let log_config = DMSCLogConfig {
     level: DMSCLogLevel::Info,
-    format: DMSCLogFormat::Json,
-    output: DMSCLogOutput::File("/var/log/myapp.log".to_string()),
-    max_file_size: 50,
-    max_files: 5,
-    enable_colors: false,
-    enable_sampling: true,
-    sampling_rate: 0.1,
+    console_enabled: true,
+    file_enabled: true,
+    sampling_default: 1.0,
+    file_name: "myapp.log".to_string(),
+    json_format: true,
+    rotate_when: "size".to_string(),
+    max_bytes: 10 * 1024 * 1024, // 10MB
     ..Default::default()
 };
 ```
@@ -200,7 +199,7 @@ Log format enumeration type.
 ### Custom Formatter
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 
 struct CustomFormatter;
 
@@ -243,7 +242,7 @@ Log backend enumeration type.
 ### File Logging
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 
 // Basic file logging
 let file_backend = DMSCLogBackend::File("/var/log/myapp.log".to_string());
@@ -261,7 +260,7 @@ ctx.log().set_backend(DMSCLogBackend::Custom("rotating_file".to_string()));
 ### Multi-Backend Output
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 
 // Output to both file and console
 let multi_backend = MultiLogBackend::new(vec![
@@ -275,7 +274,7 @@ ctx.log().set_backend(DMSCLogBackend::Custom("multi".to_string()));
 ### Remote Logging
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 
 // HTTP log backend
 let http_backend = HttpLogBackend::new(
@@ -295,7 +294,7 @@ ctx.log().set_backend(DMSCLogBackend::Custom("http".to_string()));
 ### Sampling Configuration
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 
 let sampling_config = DMSCLogSamplingConfig {
     enable_sampling: true,
@@ -311,7 +310,7 @@ ctx.log().set_sampling_config(sampling_config);
 ### Conditional Sampling
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 
 // Level-based sampling
 let level_sampling = LevelBasedSampling::new()
@@ -326,7 +325,7 @@ ctx.log().set_sampling_strategy(DMSCLogSamplingStrategy::LevelBased(level_sampli
 ### Adaptive Sampling
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 
 // Adaptive sampling, dynamically adjusts sampling rate based on log volume
 let adaptive_sampling = AdaptiveSampling::new()
@@ -346,7 +345,7 @@ ctx.log().set_sampling_strategy(DMSCLogSamplingStrategy::Adaptive(adaptive_sampl
 ### Creating Log Spans
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 
 // Create log span
 let span = ctx.log().with_span("user_operation");
@@ -364,7 +363,7 @@ drop(span);
 ### Nested Spans
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 
 let outer_span = ctx.log().with_span("request_processing");
 outer_span.info("Processing HTTP request");
@@ -392,7 +391,7 @@ outer_span.info("Request processing completed");
 ### Log Metrics
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 
 // Enable log metrics collection
 ctx.log().enable_metrics(true);
@@ -407,7 +406,7 @@ println!("Error rate: {:.2}%", stats.error_rate * 100.0);
 ### Log Query
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 
 // Query last 100 logs
 let recent_logs = ctx.log().query()
@@ -423,7 +422,7 @@ for log in recent_logs {
 ### Log Aggregation
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 
 // Aggregate logs by level
 let level_aggregation = ctx.log().aggregate()
@@ -445,7 +444,7 @@ for (level, count) in level_aggregation {
 ### Global Context
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 
 // Set global context fields
 ctx.log().set_global_context(serde_json::json!({
@@ -461,7 +460,7 @@ ctx.log().info("This log includes global context");
 ### Request Context
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 
 // Set context for specific request
 let request_context = serde_json::json!({
@@ -485,7 +484,7 @@ ctx.log().info("Processing user request");
 ### Level Filtering
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 
 // Set global log level
 ctx.log().set_level(DMSCLogLevel::Warn);
@@ -498,7 +497,7 @@ ctx.log().set_module_level("http", DMSCLogLevel::Info);
 ### Content Filtering
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 
 // Keyword-based filtering
 let keyword_filter = KeywordFilter::new()
@@ -512,7 +511,7 @@ ctx.log().add_filter(Box::new(keyword_filter));
 ### Rate Limiting
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 
 // Set log rate limit
 let rate_limit = LogRateLimit::new()
@@ -541,7 +540,7 @@ ctx.log().set_rate_limit(rate_limit);
 ### Error Handling Example
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 
 match ctx.log().flush() {
     Ok(_) => {
@@ -568,7 +567,7 @@ match ctx.log().flush() {
 ### Async Logging
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 
 // Enable async logging
 ctx.log().enable_async(true);
@@ -581,7 +580,7 @@ ctx.log().info_async("This is an async log message").await?;
 ### Batch Logging
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 
 // Batch log recording
 let batch = vec![
@@ -596,7 +595,7 @@ ctx.log().log_batch(batch).await?;
 ### Memory Optimization
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 
 // Optimize memory usage
 ctx.log().set_max_memory_usage(100 * 1024 * 1024);  // 100MB
@@ -625,15 +624,21 @@ ctx.log().set_compression_threshold(1024);  // Enable compression for logs above
 
 </div>
 
-- [README](./README.md): Module overview, providing API reference documentation overview and quick navigation
-- [auth](./auth.md): Authentication module, providing JWT, OAuth2, and RBAC authentication and authorization features
-- [core](./core.md): Core module, providing error handling and service context
-- [config](./config.md): Configuration module, managing authentication configuration and key settings
-- [cache](./cache.md): Cache module, providing multi-backend cache abstraction, caching user sessions and permission data
-- [database](./database.md): Database module, providing user data persistence and query functionality
-- [http](./http.md): HTTP module, providing web authentication interfaces and middleware support
-- [mq](./mq.md): Message queue module, handling authentication events and async notifications
-- [observability](./observability.md): Observability module, monitoring authentication performance and security events
-- [security](./security.md): Security module, providing encryption, hashing, and verification features
-- [storage](./storage.md): Storage module, managing authentication files, keys, and certificates
-- [validation](./validation.md): Validation module, validating user input and form data
+- [README](./README.md): Module overview with API reference summary and quick navigation
+- [auth](./auth.md): Authentication module handling user authentication and authorization
+- [cache](./cache.md): Cache module providing in-memory and distributed cache support
+- [config](./config.md): Configuration module managing application configuration
+- [core](./core.md): Core module providing error handling and service context
+- [database](./database.md): Database module providing database operation support
+- [device](./device.md): Device module using protocols for device communication
+- [fs](./fs.md): Filesystem module providing file operation functions
+- [gateway](./gateway.md): Gateway module providing API gateway functionality
+- [hooks](./hooks.md): Hooks module providing lifecycle hook support
+- [http](./http.md): HTTP module providing HTTP server and client functionality
+- [mq](./mq.md): Message queue module providing message queue support
+- [observability](./observability.md): Observability module for protocol performance monitoring
+- [protocol](./protocol.md): Protocol module providing communication protocol support
+- [security](./security.md): Security module providing encryption and decryption functions
+- [service_mesh](./service_mesh.md): Service mesh module using protocols for inter-service communication
+- [storage](./storage.md): Storage module providing cloud storage support
+- [validation](./validation.md): Validation module providing data validation functions

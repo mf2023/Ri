@@ -47,9 +47,9 @@
 //! ## Usage
 //!
 //! ```rust
-//! use dms::queue::{DMSCQueue, DMSCQueueMessage, DMSCQueueProducer, DMSCQueueConsumer};
-//! use dms::queue::backends::DMSCMemoryQueue;
-//! use dms::core::DMSCResult;
+//! use dmsc::queue::{DMSCQueue, DMSCQueueMessage, DMSCQueueProducer, DMSCQueueConsumer};
+//! use dmsc::queue::backends::DMSCMemoryQueue;
+//! use dmsc::core::DMSCResult;
 //! use serde_json::json;
 //!
 //! async fn example() -> DMSCResult<()> {

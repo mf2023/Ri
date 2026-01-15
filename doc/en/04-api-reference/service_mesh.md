@@ -2,9 +2,9 @@
 
 # ServiceMesh API Reference
 
-**Version: 0.0.3**
+**Version: 0.1.4**
 
-**Last modified date: 2026-01-01**
+**Last modified date: 2026-01-15**
 
 The service_mesh module provides service mesh functionality, including service discovery, health checking, traffic management, and load balancing.
 
@@ -46,8 +46,8 @@ The main service mesh interface.
 #### Usage Example
 
 ```rust
-use dms::prelude::*;
-use dms::service_mesh::{DMSCServiceMesh, DMSCServiceMeshConfig};
+use dmsc::prelude::*;
+use dmsc::service_mesh::{DMSCServiceMesh, DMSCServiceMeshConfig};
 
 async fn example() -> DMSCResult<()> {
     let mesh_config = DMSCServiceMeshConfig::default();
@@ -100,7 +100,7 @@ Service mesh configuration.
 Service discovery component.
 
 ```rust
-use dms::service_mesh::DMSCServiceDiscovery;
+use dmsc::service_mesh::DMSCServiceDiscovery;
 
 let discovery = DMSCServiceDiscovery::new(true);
 
@@ -145,7 +145,7 @@ Service health status.
 Health checker.
 
 ```rust
-use dms::service_mesh::{DMSCHealthChecker, DMSCHealthStatus};
+use dmsc::service_mesh::{DMSCHealthChecker, DMSCHealthStatus};
 
 let health_checker = DMSCHealthChecker::new(Duration::from_secs(30));
 
@@ -194,7 +194,7 @@ Health check summary.
 Traffic manager.
 
 ```rust
-use dms::service_mesh::{DMSCTrafficManager, DMSCTrafficRoute, DMSCMatchCriteria, DMSCRouteAction};
+use dmsc::service_mesh::{DMSCTrafficManager, DMSCTrafficRoute, DMSCMatchCriteria, DMSCRouteAction};
 
 let traffic_manager = DMSCTrafficManager::new(true);
 
@@ -259,7 +259,7 @@ Route action.
 </div>
 
 ```rust
-use dms::gateway::{DMSCCircuitBreaker, DMSCCircuitBreakerConfig};
+use dmsc::gateway::{DMSCCircuitBreaker, DMSCCircuitBreakerConfig};
 
 let circuit_breaker = service_mesh.get_circuit_breaker();
 
@@ -280,7 +280,7 @@ circuit_breaker.record_failure().await;
 </div>
 
 ```rust
-use dms::gateway::DMSCLoadBalancer;
+use dmsc::gateway::DMSCLoadBalancer;
 
 let load_balancer = service_mesh.get_load_balancer();
 
@@ -317,8 +317,20 @@ load_balancer.add_server(DMSCBackendServer {
 </div>
 
 - [README](./README.md): Module overview with API reference summary and quick navigation
+- [auth](./auth.md): Authentication module handling user authentication and authorization
+- [cache](./cache.md): Cache module providing in-memory and distributed cache support
+- [config](./config.md): Configuration module managing application configuration
 - [core](./core.md): Core module providing error handling and service context
-- [gateway](./gateway.md): Gateway module working with service mesh
-- [device](./device.md): Device module using service discovery
-- [log](./log.md): Logging module for service mesh events
-- [observability](./observability.md): Observability module for service performance monitoring
+- [database](./database.md): Database module providing database operation support
+- [device](./device.md): Device module using protocols for device communication
+- [fs](./fs.md): Filesystem module providing file operation functions
+- [gateway](./gateway.md): Gateway module providing API gateway functionality
+- [hooks](./hooks.md): Hooks module providing lifecycle hook support
+- [http](./http.md): HTTP module providing HTTP server and client functionality
+- [log](./log.md): Logging module for protocol events
+- [mq](./mq.md): Message queue module providing message queue support
+- [observability](./observability.md): Observability module for protocol performance monitoring
+- [protocol](./protocol.md): Protocol module providing communication protocol support
+- [security](./security.md): Security module providing encryption and decryption functions
+- [storage](./storage.md): Storage module providing cloud storage support
+- [validation](./validation.md): Validation module providing data validation functions

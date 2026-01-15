@@ -48,8 +48,8 @@
 //! ## Usage
 //! 
 //! ```rust
-//! use dms::device::{DMSCResourcePoolManager, DMSCResourcePoolConfig, DMSCDeviceType};
-//! use dms::core::DMSCResult;
+//! use dmsc::device::{DMSCResourcePoolManager, DMSCResourcePoolConfig, DMSCDeviceType};
+//! use dmsc::core::DMSCResult;
 //! 
 //! fn example() -> DMSCResult<()> {
 //!     // Create a resource pool manager

@@ -2,9 +2,9 @@
 
 # HTTP API Reference
 
-**Version: 0.0.3**
+**Version: 0.1.4**
 
-**Last modified date: 2026-01-01**
+**Last modified date: 2026-01-15**
 
 The http module provides HTTP client and server functionality, supporting routing, middleware, WebSocket, and file upload/download.
 
@@ -48,7 +48,7 @@ HTTP server interface.
 #### Usage Example
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 
 // Create HTTP server configuration
 let server_config = DMSCHttpServerConfig {
@@ -104,7 +104,7 @@ HTTP client interface.
 #### Usage Example
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 
 // Create HTTP client
 let client = DMSCHttpClient::new(DMSCHttpClientConfig::default());
@@ -153,7 +153,7 @@ Router interface.
 #### Route Parameters
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 
 // Path parameters
 router.get("/users/:id", |req: DMSCHttpRequest, res: DMSCHttpResponse| async move {
@@ -179,7 +179,7 @@ router.get("/files/*path", |req: DMSCHttpRequest, res: DMSCHttpResponse| async m
 ### Route Groups
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 
 // Create route group
 let api_router = router.group("/api/v1");
@@ -210,7 +210,7 @@ users_admin_router.delete("/:id", admin_delete_user_handler);
 Middleware interface.
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 
 // Logging middleware
 struct LoggingMiddleware;
@@ -264,7 +264,7 @@ server.use_middleware(CorsMiddleware {
 ### Built-in Middleware
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 
 // Authentication middleware
 server.use_middleware(AuthMiddleware::new());
@@ -307,7 +307,7 @@ WebSocket interface.
 #### WebSocket Server
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 
 // WebSocket route
 server.get("/ws", |req: DMSCHttpRequest, res: DMSCHttpResponse| async move {
@@ -346,7 +346,7 @@ server.get("/ws", |req: DMSCHttpRequest, res: DMSCHttpResponse| async move {
 #### WebSocket Client
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 
 // Create WebSocket client
 let ws_client = DMSCWebSocketClient::new();
@@ -375,7 +375,7 @@ connection.close().await?;
 ### File Upload
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 
 // File upload handler
 server.post("/upload", |req: DMSCHttpRequest, res: DMSCHttpResponse| async move {
@@ -411,7 +411,7 @@ server.post("/upload", |req: DMSCHttpRequest, res: DMSCHttpResponse| async move 
 ### File Download
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 
 // File download handler
 server.get("/download/:filename", |req: DMSCHttpRequest, res: DMSCHttpResponse| async move {
@@ -437,7 +437,7 @@ server.get("/download/:filename", |req: DMSCHttpRequest, res: DMSCHttpResponse| 
 ### Large File Handling
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 
 // Large file upload (chunked upload)
 server.post("/upload/chunked", |req: DMSCHttpRequest, res: DMSCHttpResponse| async move {
@@ -528,7 +528,7 @@ HTTP client configuration struct.
 ### Error Handling Example
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 
 match client.get("https://api.example.com/users").await {
     Ok(response) => {
@@ -575,15 +575,21 @@ match client.get("https://api.example.com/users").await {
 
 </div>
 
-- [README](./README.md): Module overview, providing API reference documentation overview and quick navigation
-- [auth](./auth.md): Authentication module, providing JWT, OAuth2, and RBAC authentication and authorization functionality
-- [core](./core.md): Core module, providing error handling and service context
-- [log](./log.md): Logging module, recording authentication events and security logs
-- [config](./config.md): Configuration module, managing authentication configuration and key settings
-- [cache](./cache.md): Cache module, providing multi-backend cache abstraction, caching user sessions and permission data
-- [database](./database.md): Database module, providing user data persistence and query functionality
-- [mq](./mq.md): Message queue module, handling authentication events and asynchronous notifications
-- [observability](./observability.md): Observability module, monitoring authentication performance and security events
-- [security](./security.md): Security module, providing encryption, hashing, and verification functionality
-- [storage](./storage.md): Storage module, managing authentication files, keys, and certificates
-- [validation](./validation.md): Validation module, validating user input and form data
+- [README](./README.md): Module overview with API reference summary and quick navigation
+- [auth](./auth.md): Authentication module handling user authentication and authorization
+- [cache](./cache.md): Cache module providing in-memory and distributed cache support
+- [config](./config.md): Configuration module managing application configuration
+- [core](./core.md): Core module providing error handling and service context
+- [database](./database.md): Database module providing database operation support
+- [device](./device.md): Device module using protocols for device communication
+- [fs](./fs.md): Filesystem module providing file operation functions
+- [gateway](./gateway.md): Gateway module providing API gateway functionality
+- [hooks](./hooks.md): Hooks module providing lifecycle hook support
+- [log](./log.md): Logging module for protocol events
+- [mq](./mq.md): Message queue module providing message queue support
+- [observability](./observability.md): Observability module for protocol performance monitoring
+- [protocol](./protocol.md): Protocol module providing communication protocol support
+- [security](./security.md): Security module providing encryption and decryption functions
+- [service_mesh](./service_mesh.md): Service mesh module using protocols for inter-service communication
+- [storage](./storage.md): Storage module providing cloud storage support
+- [validation](./validation.md): Validation module providing data validation functions

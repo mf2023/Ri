@@ -124,14 +124,14 @@ import asyncio
 from dmsc import DMSCAppBuilder, DMSCLogConfig
 
 async def main():
-    # 构建服务运行时
-    app = DMSCAppBuilder() \
-        .with_config("config.yaml") \
-        .with_logging(DMSCLogConfig()) \
-        .build()
+    # 构建服务运行时（逐步调用，Python 中不支持链式调用）
+    app_builder = DMSCAppBuilder()
+    app_builder.with_config("config.yaml")
+    app_builder.with_logging(DMSCLogConfig())
+    runtime = app_builder.build()
     
     # 运行业务逻辑
-    await app.run()
+    await runtime.run()
 
 asyncio.run(main())
 ```
@@ -139,34 +139,44 @@ asyncio.run(main())
 ### 认证示例
 
 ```python
-from dmsc import DMSCAuthModule, DMSCJWTManager
+from dmsc import DMSCJWTManager
 
-# 创建 JWT 管理器
-jwt_manager = DMSCJWTManager()
-token = jwt_manager.generate_token({"user_id": 123})
+# 创建 JWT 管理器（需要密钥和过期时间）
+jwt_manager = DMSCJWTManager("your-secret-key", 3600)
+
+# 生成令牌（需要用户 ID、角色、权限）
+token = jwt_manager.generate_token("user123", ["admin"], ["read", "write"])
 
 # 验证令牌
-payload = jwt_manager.verify_token(token)
+payload = jwt_manager.validate_token(token)
+print(f"用户 ID: {payload.sub}")
+print(f"角色: {payload.roles}")
+print(f"权限: {payload.permissions}")
 ```
 
 ### 队列管理示例
 
 ```python
-from dmsc import DMSCQueueManager, DMSCQueueConfig
+from dmsc import DMSCQueueManager
 
-# 创建队列管理器
-queue_config = DMSCQueueConfig()
-queue_manager = DMSCQueueManager(queue_config)
+# 创建队列管理器（默认使用内存后端）
+queue_manager = DMSCQueueManager()
 
-# 先创建队列
+# 创建队列
 queue_manager.create_queue("my_queue")
 
-# 使用 push 发送消息
-queue_manager.push("my_queue", {"data": "hello"})
+# 列出所有队列
+queues = queue_manager.list_queues()
+print(f"队列: {queues}")
 
-# 使用 pop 接收消息
-message = queue_manager.pop("my_queue")
+# 获取指定队列（在 Rust 中进行进一步操作）
+queue = queue_manager.get_queue("my_queue")
+
+# 删除队列
+queue_manager.delete_queue("my_queue")
 ```
+
+**注意**：有关高级队列操作（push、pop 等），请直接使用 Rust API 或扩展 Python 绑定。
 
 ### 服务网格示例
 
@@ -189,17 +199,20 @@ for instance in instances:
 ### 缓存管理示例
 
 ```python
-from dmsc import DMSCCacheManager, DMSCCacheConfig
+from dmsc import DMSCCacheManager
 
-# 创建缓存管理器
-cache_config = DMSCCacheConfig()
-cache_manager = DMSCCacheManager(cache_config)
+# 创建缓存管理器（默认使用内存后端）
+cache_manager = DMSCCacheManager()
 
 # 设置缓存值
-cache_manager.set("user:123", {"name": "John"}, ttl=3600)
+cache_manager.set("user:123", '{"name": "John"}', ttl=3600)
 
 # 获取缓存值
 user_data = cache_manager.get("user:123")
+
+# 检查键是否存在
+if cache_manager.exists("user:123"):
+    cache_manager.delete("user:123")
 ```
 
 <h2 align="center">🔧 配置</h2>
@@ -214,7 +227,7 @@ service:
 
 logging:
   level: "info"
-  format: "json"
+  file_format: "json"
   file_enabled: true
   console_enabled: true
 

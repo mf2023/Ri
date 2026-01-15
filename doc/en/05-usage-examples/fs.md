@@ -2,9 +2,9 @@
 
 # FileSystem Usage Example
 
-**Version: 0.0.3**
+**Version: 0.1.4**
 
-**Last modified date: 2026-01-01**
+**Last modified date: 2026-01-15**
 
 This example demonstrates how to use the fs module for file operations, including atomic writes, directory management, and categorized directory organization.
 
@@ -22,7 +22,7 @@ This example demonstrates how to use the fs module for file operations, includin
 </div>
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 use std::path::PathBuf;
 use serde::{Serialize, Deserialize};
 
@@ -270,7 +270,7 @@ example.txt removed
 ```rust
 fn batch_json_operations(fs: &DMSCFileSystem) -> DMSCResult<()> {
     let settings = AppSettings {
-        version: "0.0.3".to_string(),
+        version: "0.1.4".to_string(),
         debug_mode: true,
         max_connections: 100,
     };
@@ -313,6 +313,29 @@ fn cleanup_old_data(fs: &DMSCFileSystem) -> DMSCResult<()> {
 4. **Clean up temporary files promptly**: Regularly clean up the tmp directory
 5. **Verify file existence**: Check if files exist before performing operations
 6. **Use ensure_parent_dir**: Ensure parent directory exists before writing files
+
+<div align="center">
+
+## Related Modules
+
+</div>
+
+- [README](./README.md): Module overview with usage examples summary and quick navigation
+- [authentication](./authentication.md): Authentication examples, including JWT, OAuth2, and MFA
+- [basic-app](./basic-app.md): Basic application examples
+- [caching](./caching.md): Caching examples, including memory and distributed caching
+- [database](./database.md): Database operation examples
+- [device](./device.md): Device control examples
+- [gateway](./gateway.md): API gateway examples
+- [hooks](./hooks.md): Hook system examples
+- [http](./http.md): HTTP server and client examples
+- [mq](./mq.md): Message queue examples
+- [observability](./observability.md): Observability examples
+- [protocol](./protocol.md): Protocol module examples
+- [security](./security.md): Security and encryption examples
+- [service_mesh](./service_mesh.md): Service mesh examples
+- [storage](./storage.md): Cloud storage examples
+- [validation](./validation.md): Data validation examples
 
 <div align="center">
 

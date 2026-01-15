@@ -46,7 +46,7 @@
 //! ## Usage
 //! 
 //! ```rust
-//! use dms::prelude::*;
+//! use dmsc::prelude::*;
 //! use std::time::Duration;
 //! 
 //! fn example() -> DMSCResult<()> {
@@ -359,7 +359,12 @@ impl DMSCMetric {
     fn get_config(&self) -> &DMSCMetricConfig {
         &self.config
     }
-    
+
+    pub fn get_value(&self) -> f64 {
+        let count = self.total_count.read().expect("Failed to acquire read lock for count");
+        *count as f64
+    }
+
     #[allow(dead_code)]
     fn current_timestamp() -> u64 {
         SystemTime::now()
@@ -458,17 +463,12 @@ impl DMSCMetricsRegistry {
         Self::new()
     }
     
-    /// Register a metric from Python
-    #[pyo3(name = "register")]
-    fn register_impl(&self, _metric: pyo3::Py<pyo3::PyAny>) -> Result<(), pyo3::PyErr> {
-        Ok(())
+    /// Get a metric's current value by name from Python
+    #[pyo3(name = "get_metric_value")]
+    fn get_metric_value_impl(&self, name: &str) -> Option<f64> {
+        self.get_metric(name).map(|m| m.get_value())
     }
-    
-    #[pyo3(name = "get_metric")]
-    fn get_metric_impl(&self, _name: String) -> Result<pyo3::Py<pyo3::PyAny>, pyo3::PyErr> {
-        Err(pyo3::exceptions::PyNotImplementedError::new_err("Metric retrieval not implemented"))
-    }
-    
+
     /// Get all metric names from Python
     #[pyo3(name = "get_all_metric_names")]
     fn get_all_metric_names_impl(&self) -> Vec<String> {

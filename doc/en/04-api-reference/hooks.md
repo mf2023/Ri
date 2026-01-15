@@ -2,9 +2,9 @@
 
 # Hooks API Reference
 
-**Version: 0.0.3**
+**Version: 0.1.4**
 
-**Last modified date: 2026-01-01**
+**Last modified date: 2026-01-15**
 
 The hooks module provides lifecycle event hook system, supporting custom logic execution at critical moments like application startup and shutdown.
 
@@ -41,8 +41,8 @@ Hook event bus, managing hook registration and triggering.
 #### Usage Example
 
 ```rust
-use dms::prelude::*;
-use dms::hooks::{DMSCHookBus, DMSCHookKind, DMSCHookHandler};
+use dmsc::prelude::*;
+use dmsc::hooks::{DMSCHookBus, DMSCHookKind, DMSCHookHandler};
 
 fn example() -> DMSCResult<()> {
     let mut hook_bus = DMSCHookBus::new();
@@ -134,8 +134,8 @@ Hook event struct.
 ### Basic Hook Registration
 
 ```rust
-use dms::hooks::{DMSCHookBus, DMSCHookKind, DMSCHookEvent};
-use dms::core::DMSCServiceContext;
+use dmsc::hooks::{DMSCHookBus, DMSCHookKind, DMSCHookEvent};
+use dmsc::core::DMSCServiceContext;
 
 let mut hook_bus = DMSCHookBus::new();
 
@@ -174,7 +174,7 @@ hook_bus._register(
 ### Hooks with Module Information
 
 ```rust
-use dms::hooks::{DMSCHookBus, DMSCHookKind, DMSCModulePhase};
+use dmsc::hooks::{DMSCHookBus, DMSCHookKind, DMSCModulePhase};
 
 hook_bus._emit_with(
     &DMSCHookKind::BeforeModulesInit,
@@ -193,8 +193,8 @@ hook_bus._emit_with(
 ### Application Startup Initialization
 
 ```rust
-use dms::prelude::*;
-use dms::hooks::{DMSCHookBus, DMSCHookKind};
+use dmsc::prelude::*;
+use dmsc::hooks::{DMSCHookBus, DMSCHookKind};
 
 fn setup_startup_hooks(hook_bus: &mut DMSCHookBus) {
     hook_bus._register(
@@ -298,7 +298,7 @@ fn setup_dependency_hooks(hook_bus: &mut DMSCHookBus) {
 Errors during hook execution propagate upwards:
 
 ```rust
-use dms::core::DMSCError;
+use dmsc::core::DMSCError;
 
 hook_bus._register(
     DMSCHookKind::Startup,
@@ -332,8 +332,20 @@ hook_bus._register(
 </div>
 
 - [README](./README.md): Module overview with API reference summary and quick navigation
-- [core](./core.md): Core module providing service context
-- [log](./log.md): Logging module for hook execution logging
-- [config](./config.md): Configuration module for hook settings
-- [device](./device.md): Device module using hooks for device lifecycle management
-- [service_mesh](./service_mesh.md): Service mesh module using hooks for service lifecycle management
+- [auth](./auth.md): Authentication module handling user authentication and authorization
+- [cache](./cache.md): Cache module providing in-memory and distributed cache support
+- [config](./config.md): Configuration module managing application configuration
+- [core](./core.md): Core module providing error handling and service context
+- [database](./database.md): Database module providing database operation support
+- [device](./device.md): Device module using protocols for device communication
+- [fs](./fs.md): Filesystem module providing file operation functions
+- [gateway](./gateway.md): Gateway module providing API gateway functionality
+- [http](./http.md): HTTP module providing HTTP server and client functionality
+- [log](./log.md): Logging module for protocol events
+- [mq](./mq.md): Message queue module providing message queue support
+- [observability](./observability.md): Observability module for protocol performance monitoring
+- [protocol](./protocol.md): Protocol module providing communication protocol support
+- [security](./security.md): Security module providing encryption and decryption functions
+- [service_mesh](./service_mesh.md): Service mesh module using protocols for inter-service communication
+- [storage](./storage.md): Storage module providing cloud storage support
+- [validation](./validation.md): Validation module providing data validation functions

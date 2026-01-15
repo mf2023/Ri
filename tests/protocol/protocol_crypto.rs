@@ -15,7 +15,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use dms::protocol::crypto::*;
+use dmsc::protocol::crypto::*;
 
 /// Cryptographic algorithm test module for DMSC protocol security layer.
 ///

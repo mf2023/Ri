@@ -2,9 +2,9 @@
 
 # Config API Reference
 
-**Version: 0.0.3**
+**Version: 0.1.4**
 
-**Last modified date: 2026-01-01**
+**Last modified date: 2026-01-15**
 
 The config module provides multi-source configuration management and hot reload functionality, supporting multiple configuration sources such as files and environment variables.
 
@@ -33,30 +33,42 @@ Configuration manager main interface, providing unified configuration access.
 
 | Method | Description | Parameters | Return Value |
 |:--------|:-------------|:--------|:--------|
-| `get(key)` | Get configuration value | `key: &str` | `Option<String>` |
-| `get_typed<T>(key)` | Get type-safe configuration value | `key: &str` | `DMSCResult<T>` |
-| `get_or_default(key, default)` | Get configuration value or default | `key: &str`, `default: T` | `T` |
-| `set(key, value)` | Set configuration value | `key: &str`, `value: impl Serialize` | `DMSCResult<()>` |
-| `has(key)` | Check if configuration exists | `key: &str` | `bool` |
-| `keys()` | Get all configuration keys | None | `Vec<String>` |
-| `reload()` | Reload configuration | None | `DMSCResult<()>` |
-| `watch(key, callback)` | Watch configuration changes | `key: &str`, `callback: impl Fn(&str)` | `DMSCResult<()>` |
-| `validate()` | Validate configuration integrity | None | `DMSCResult<()>` |
+| `get(key)` | Get configuration value | `key: &str` | `Option<&String>` |
+| `get_str(key)` | Get string value | `key: &str` | `Option<&str>` |
+| `get_bool(key)` | Get boolean value | `key: &str` | `Option<bool>` |
+| `get_i64(key)` | Get i64 value | `key: &str` | `Option<i64>` |
+| `get_u64(key)` | Get u64 value | `key: &str` | `Option<u64>` |
+| `get_f32(key)` | Get f32 value | `key: &str` | `Option<f32>` |
+| `get_f64(key)` | Get f64 value | `key: &str` | `Option<f64>` |
+| `get_usize(key)` | Get usize value | `key: &str` | `Option<usize>` |
+| `get_i32(key)` | Get i32 value | `key: &str` | `Option<i32>` |
+| `get_u32(key)` | Get u32 value | `key: &str` | `Option<u32>` |
+| `get_port(key)` | Get port number (1-65535) | `key: &str` | `Option<u16>` |
+| `get_timeout_secs(key)` | Get timeout in seconds | `key: &str` | `Option<u32>` |
+| `get_retry_count(key)` | Get retry count | `key: &str` | `Option<u32>` |
+| `get_percentage(key)` | Get percentage (0.0-1.0) | `key: &str` | `Option<f32>` |
+| `get_rate(key)` | Get rate value | `key: &str` | `Option<f32>` |
+| `get_or_default(key, default)` | Get value or default | `key: &str`, `default: T` | `T` |
+| `has(key)` | Check if key exists | `key: &str` | `bool` |
+| `keys()` | Get all keys | None | `Vec<String>` |
 
 #### Usage Example
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 
 // Get string configuration
-let service_name = ctx.config().get("service.name").unwrap_or("default");
+let service_name = ctx.config().get_str("service.name").unwrap_or("default");
 
-// Get type-safe configuration
-let port: u16 = ctx.config().get_typed("service.port")?;
-let max_connections: usize = ctx.config().get_typed("database.max_connections")?;
+// Get typed configuration
+let port: u16 = ctx.config().get_port("service.port").unwrap_or(8080);
+let max_connections = ctx.config().get_usize("database.max_connections").unwrap_or(100);
 
-// Get configuration or default value
-let timeout = ctx.config().get_or_default("service.timeout", 30);
+// Get with bounds checking
+let timeout = ctx.config().get_timeout_secs("service.timeout").unwrap_or(30);
+
+// Get or default value
+let retries = ctx.config().get_or_default("service.retries", 3);
 
 // Check if configuration exists
 if ctx.config().has("feature.new_feature") {
@@ -103,7 +115,7 @@ Configuration builder, used to build configuration manager.
 #### Usage Example
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 
 let config = DMSCConfigBuilder::new()
     .add_source(DMSCConfigSource::File("config.yaml".to_string()))
@@ -265,7 +277,7 @@ let timeout = ctx.config().get_typed("service.timeout").unwrap_or(30);
 ### Built-in Validators
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 
 let config = DMSCConfigBuilder::new()
     .add_source(DMSCConfigSource::File("config.yaml".to_string()))
@@ -282,7 +294,7 @@ let config = DMSCConfigBuilder::new()
 ### Custom Validators
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 
 struct CustomValidator;
 
@@ -556,15 +568,21 @@ The following types of configuration modifications require special caution and m
 
 </div>
 
-- [README](./README.md): Module overview, providing API reference documentation overview and quick navigation
-- [auth](./auth.md): Authentication module, providing JWT, OAuth2, and RBAC authentication and authorization functionality
-- [core](./core.md): Core module, providing error handling and service context
-- [log](./log.md): Logging module, recording authentication events and security logs
-- [cache](./cache.md): Cache module, providing multi-backend cache abstraction, caching user sessions and permission data
-- [database](./database.md): Database module, providing user data persistence and query functionality
-- [http](./http.md): HTTP module, providing web authentication interfaces and middleware support
-- [mq](./mq.md): Message queue module, handling authentication events and asynchronous notifications
-- [observability](./observability.md): Observability module, monitoring authentication performance and security events
-- [security](./security.md): Security module, providing encryption, hashing, and validation functionality
-- [storage](./storage.md): Storage module, managing authentication files, keys, and certificates
-- [validation](./validation.md): Validation module, validating user input and form data
+- [README](./README.md): Module overview with API reference summary and quick navigation
+- [auth](./auth.md): Authentication module handling user authentication and authorization
+- [cache](./cache.md): Cache module providing in-memory and distributed cache support
+- [core](./core.md): Core module providing error handling and service context
+- [database](./database.md): Database module providing database operation support
+- [device](./device.md): Device module using protocols for device communication
+- [fs](./fs.md): Filesystem module providing file operation functions
+- [gateway](./gateway.md): Gateway module providing API gateway functionality
+- [hooks](./hooks.md): Hooks module providing lifecycle hook support
+- [http](./http.md): HTTP module providing HTTP server and client functionality
+- [log](./log.md): Logging module for protocol events
+- [mq](./mq.md): Message queue module providing message queue support
+- [observability](./observability.md): Observability module for protocol performance monitoring
+- [protocol](./protocol.md): Protocol module providing communication protocol support
+- [security](./security.md): Security module providing encryption and decryption functions
+- [service_mesh](./service_mesh.md): Service mesh module using protocols for inter-service communication
+- [storage](./storage.md): Storage module providing cloud storage support
+- [validation](./validation.md): Validation module providing data validation functions

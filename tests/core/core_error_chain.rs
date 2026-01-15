@@ -15,7 +15,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use dms::core::error_chain::*;
+use dmsc::core::error_chain::*;
 use std::io;
 
 /// Error chain test module for DMSC core error handling system.

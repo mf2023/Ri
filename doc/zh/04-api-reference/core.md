@@ -2,9 +2,9 @@
 
 # Core API参考
 
-**Version: 0.0.3**
+**Version: 0.1.4**
 
-**Last modified date: 2026-01-01**
+**Last modified date: 2026-01-15**
 
 core模块是DMSC的基础，提供运行时、错误处理、服务上下文和模块系统等核心功能。
 
@@ -235,7 +235,7 @@ core模块定义了以下错误码：
 
 </div>
 
-1. **使用prelude模块**：通过`use dms::prelude::*`导入常用类型，简化代码
+1. **使用prelude模块**：通过`use dmsc::prelude::*`导入常用类型，简化代码
 2. **按需配置模块**：只添加应用所需的模块，减少资源消耗
 3. **合理使用服务上下文**：通过上下文访问模块功能，避免直接依赖具体实现
 4. **实现自定义模块**：根据需要实现自定义模块扩展DMSC功能
@@ -250,7 +250,7 @@ core模块定义了以下错误码：
 ### 完整应用示例
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 
 #[tokio::main]
 async fn main() -> DMSCResult<()> {
@@ -280,14 +280,20 @@ async fn main() -> DMSCResult<()> {
 </div>
 
 - [README](./README.md): 模块概览，提供API参考文档总览和快速导航
-- [auth](./auth.md): 认证模块，提供JWT、OAuth2和RBAC认证授权功能
-- [log](./log.md): 日志模块，记录认证事件和安全日志
-- [config](./config.md): 配置模块，管理认证配置和密钥设置
-- [cache](./cache.md): 缓存模块，提供多后端缓存抽象，缓存用户会话和权限数据
-- [database](./database.md): 数据库模块，提供用户数据持久化和查询功能
-- [http](./http.md): HTTP模块，提供Web认证接口和中间件支持
-- [mq](./mq.md): 消息队列模块，处理认证事件和异步通知
-- [observability](./observability.md): 可观测性模块，监控认证性能和安全事件
-- [security](./security.md): 安全模块，提供加密、哈希和验证功能
-- [storage](./storage.md): 存储模块，管理认证文件、密钥和证书
-- [validation](./validation.md): 验证模块，验证用户输入和表单数据
+- [auth](./auth.md): 认证模块，处理用户认证和授权
+- [cache](./cache.md): 缓存模块，提供内存缓存和分布式缓存支持
+- [config](./config.md): 配置模块，管理应用程序配置
+- [database](./database.md): 数据库模块，提供数据库操作支持
+- [device](./device.md): 设备模块，使用协议进行设备通信
+- [fs](./fs.md): 文件系统模块，提供文件操作功能
+- [gateway](./gateway.md): 网关模块，提供API网关功能
+- [hooks](./hooks.md): 钩子模块，提供生命周期钩子支持
+- [http](./http.md): HTTP模块，提供HTTP服务器和客户端功能
+- [log](./log.md): 日志模块，记录协议事件
+- [mq](./mq.md): 消息队列模块，提供消息队列支持
+- [observability](./observability.md): 可观测性模块，监控协议性能
+- [protocol](./protocol.md): 协议模块，提供通信协议支持
+- [security](./security.md): 安全模块，提供加密和解密功能
+- [service_mesh](./service_mesh.md): 服务网格模块，使用协议进行服务间通信
+- [storage](./storage.md): 存储模块，提供云存储支持
+- [validation](./validation.md): 验证模块，提供数据验证功能

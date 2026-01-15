@@ -69,8 +69,8 @@ impl DMSCResourceScheduler {
 /// ## Usage Examples
 /// 
 /// ```rust
-/// use dms::device::{DMSCDeviceScheduler, DMSCAllocationRequest, DMSCDeviceType, DMSCDeviceCapabilities};
-/// use dms::device::pool::DMSCResourcePoolManager;
+/// use dmsc::device::{DMSCDeviceScheduler, DMSCAllocationRequest, DMSCDeviceType, DMSCDeviceCapabilities};
+/// use dmsc::device::pool::DMSCResourcePoolManager;
 /// use std::sync::{Arc, Mutex};
 /// 
 /// fn example() {
@@ -81,7 +81,7 @@ impl DMSCResourceScheduler {
 ///     let mut scheduler = DMSCDeviceScheduler::new(pool_manager);
 ///     
 ///     // Set scheduling policy for GPUs
-///     scheduler.set_policy(DMSCDeviceType::GPU, dms::device::DMSCSchedulingPolicy::PriorityBased);
+///     scheduler.set_policy(DMSCDeviceType::GPU, dmsc::device::DMSCSchedulingPolicy::PriorityBased);
 ///     
 ///     // Create allocation request
 ///     let request = DMSCAllocationRequest {

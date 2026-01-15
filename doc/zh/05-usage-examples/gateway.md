@@ -2,9 +2,9 @@
 
 # API网关使用示例
 
-**Version: 0.0.3**
+**Version: 0.1.4**
 
-**Last modified date: 2026-01-01**
+**Last modified date: 2026-01-15**
 
 本示例展示如何使用 gateway 模块构建 API 网关，包括路由、中间件、负载均衡、限流和熔断功能。
 
@@ -22,8 +22,8 @@
 </div>
 
 ```rust
-use dms::prelude::*;
-use dms::gateway::{DMSCGateway, DMSCGatewayConfig, DMSCRoute, DMSCRouter};
+use dmsc::prelude::*;
+use dmsc::gateway::{DMSCGateway, DMSCGatewayConfig, DMSCRoute, DMSCRouter};
 use std::collections::HashMap;
 use std::sync::Arc;
 
@@ -354,6 +354,29 @@ fn configure_load_balancing(gateway: &DMSCGateway) {
 4. **正确配置CORS**：正确配置跨域资源共享策略
 5. **启用请求日志**：记录请求日志便于问题排查
 6. **使用路由参数**：使用路由参数处理动态路径
+
+<div align="center">
+
+## 相关模块
+
+</div>
+
+- [README](./README.md)：使用示例总览，提供快速导航
+- [authentication](./authentication.md)：认证示例，包括JWT、OAuth2和多因素认证
+- [basic-app](./basic-app.md)：基础应用示例
+- [caching](./caching.md)：缓存示例，包括内存缓存和分布式缓存
+- [database](./database.md)：数据库操作示例
+- [device](./device.md)：设备控制示例
+- [fs](./fs.md)：文件系统操作示例
+- [hooks](./hooks.md)：钩子系统示例
+- [http](./http.md)：HTTP服务器和客户端示例
+- [mq](./mq.md)：消息队列示例
+- [observability](./observability.md)：可观测性示例
+- [protocol](./protocol.md)：协议模块示例
+- [security](./security.md)：安全和加密示例
+- [service_mesh](./service_mesh.md)：服务网格示例
+- [storage](./storage.md)：云存储示例
+- [validation](./validation.md)：数据验证示例
 
 <div align="center">
 

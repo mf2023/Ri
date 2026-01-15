@@ -2,9 +2,9 @@
 
 # 快速开始
 
-**Version: 0.0.3**
+**Version: 0.1.4**
 
-**Last modified date: 2026-01-01**
+**Last modified date: 2026-01-15**
 
 本指南将帮助您快速上手DMSC，从安装到创建第一个应用。
 
@@ -127,7 +127,7 @@ print(f"DMSC Python SDK 版本: {dmsc.__version__}")
 打开 `src/main.rs` 文件，替换为以下内容：
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 
 #[tokio::main]
 async fn main() -> DMSCResult<()> {
@@ -244,7 +244,7 @@ python main.py
 
 1. **导入 DMSC 组件**：
    ```rust
-   use dms::prelude::*;
+   use dmsc::prelude::*;
    ```
    这行代码导入了 DMSC 中最常用的类型和特性，简化了代码编写。
 
@@ -300,7 +300,7 @@ redis = "0.23"
 修改应用代码，添加缓存支持：
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 
 #[tokio::main]
 async fn main() -> DMSCResult<()> {

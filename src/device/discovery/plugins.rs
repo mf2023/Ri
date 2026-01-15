@@ -30,7 +30,7 @@
 //! ## Usage
 //!
 //! ```rust
-//! use dms::device::discovery::plugins::{DMSCHardwareDiscoveryPlugin, PluginRegistry};
+//! use dmsc::device::discovery::plugins::{DMSCHardwareDiscoveryPlugin, PluginRegistry};
 //!
 //! // Create a custom plugin
 //! struct MyCustomPlugin;

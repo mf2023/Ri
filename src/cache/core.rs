@@ -17,7 +17,7 @@
 
 //! Cache implementation for DMSC Core
 
-use crate::core::DMSCResult;
+use crate::core::{DMSCResult, DMSCError};
 use std::time::Duration;
 use serde::{Serialize, Deserialize};
 
@@ -34,6 +34,7 @@ pub trait DMSCCache: Send + Sync {
     async fn stats(&self) -> DMSCCacheStats;
     async fn cleanup_expired(&self) -> DMSCResult<usize>;
     async fn exists(&self, key: &str) -> bool;
+    async fn keys(&self) -> DMSCResult<Vec<String>>;
 
     async fn get_multi(&self, keys: &[&str]) -> DMSCResult<Vec<Option<String>>> {
         let mut results = Vec::with_capacity(keys.len());
@@ -66,6 +67,21 @@ pub trait DMSCCache: Send + Sync {
             results.push(self.exists(key).await);
         }
         Ok(results)
+    }
+
+    async fn delete_by_pattern(&self, pattern: &str) -> DMSCResult<usize> {
+        let keys = self.keys().await?;
+        let regex = regex::Regex::new(pattern)
+            .map_err(|e| DMSCError::Other(format!("Invalid pattern: {}", e)))?;
+        let mut count = 0;
+        for key in keys {
+            if regex.is_match(&key) {
+                if self.delete(&key).await? {
+                    count += 1;
+                }
+            }
+        }
+        Ok(count)
     }
 }
 

@@ -2,9 +2,9 @@
 
 # Core Concepts
 
-**Version: 0.0.3**
+**Version: 0.1.4**
 
-**Last modified date: 2026-01-01**
+**Last modified date: 2026-01-15**
 
 This chapter provides an in-depth introduction to DMSC's core design principles and key components, helping you better understand and use the DMSC framework.
 
@@ -147,9 +147,9 @@ DMSC provides a flexible module system, supporting multiple module types:
 Create a custom async module (recommended):
 
 ```rust
-use dms::core::module::DMSCModule;
-use dms::core::context::DMSCServiceContext;
-use dms::core::error::DMSCResult;
+use dmsc::core::module::DMSCModule;
+use dmsc::core::context::DMSCServiceContext;
+use dmsc::core::error::DMSCResult;
 use async_trait::async_trait;
 
 pub struct MyCustomModule {
@@ -304,7 +304,7 @@ Each module goes through the following complete lifecycle stages:
 DMSC provides lifecycle hooks, allowing you to execute custom logic at specific stages:
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 
 // Register hooks when building the application
 let app = DMSCAppBuilder::new()
@@ -372,7 +372,7 @@ async fn my_function(ctx: &DMSCServiceContext) -> DMSCResult<()> {
 You can create custom errors and convert them to `DMSCError`:
 
 ```rust
-use dms::core::error::{DMSCError, DMSCResult};
+use dmsc::core::error::{DMSCError, DMSCResult};
 
 fn my_custom_error() -> DMSCResult<()> {
     Err(DMSCError::new("CUSTOM_ERROR", "This is a custom error"))
@@ -396,9 +396,9 @@ DMSC is based on the Tokio async runtime, supporting high concurrency and non-bl
 For custom modules, you should use the `DMSCModule` trait, which is async and public:
 
 ```rust
-use dms::core::module::DMSCModule;
-use dms::core::context::DMSCServiceContext;
-use dms::core::error::DMSCResult;
+use dmsc::core::module::DMSCModule;
+use dmsc::core::context::DMSCServiceContext;
+use dmsc::core::error::DMSCResult;
 
 pub struct MyAsyncModule {
     // Module configuration
@@ -450,7 +450,7 @@ DMSC has built-in complete observability support, helping you monitor and debug 
 DMSC implements the W3C Trace Context standard, supporting cross-service distributed tracing:
 
 ```rust
-use dms::observability::traced;
+use dmsc::observability::traced;
 
 #[traced(name = "user_service")]
 async fn get_user(ctx: &DMSCServiceContext, user_id: u64) -> DMSCResult<User> {

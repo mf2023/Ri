@@ -40,7 +40,7 @@ use crate::device::{DMSCDevice, DMSCDeviceType, DMSCDeviceCapabilities};
 /// ## Usage Examples
 /// 
 /// ```rust
-/// use dms::device::{DMSCDeviceDiscoveryEngine, DMSCResourceScheduler, ResourceRequest, DeviceScanResult};
+/// use dmsc::device::{DMSCDeviceDiscoveryEngine, DMSCResourceScheduler, ResourceRequest, DeviceScanResult};
 /// 
 /// fn example() {
 ///     // Create discovery engine

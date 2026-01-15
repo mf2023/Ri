@@ -2,9 +2,9 @@
 
 # Observability API Reference
 
-**Version: 0.0.3**
+**Version: 0.1.4**
 
-**Last modified date: 2026-01-01**
+**Last modified date: 2026-01-15**
 
 The observability module provides distributed tracing, metrics collection, health checks, and performance monitoring functionality, supporting the OpenTelemetry standard.
 
@@ -48,7 +48,7 @@ Main interface for the observability manager, providing unified monitoring funct
 #### Usage Example
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 
 // Record metrics
 ctx.observability().increment_counter("requests.total");
@@ -90,7 +90,7 @@ Distributed tracing interface.
 #### Usage Example
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 
 // Start tracing
 let trace = ctx.observability().start_trace("http_request");
@@ -134,7 +134,7 @@ Trace span interface.
 #### Usage Example
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 
 // Create nested spans
 let parent_span = ctx.observability().start_trace("request_processing");
@@ -174,7 +174,7 @@ parent_span.finish();
 Counter type, can only be incremented.
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 
 // Create counter
 let counter = ctx.observability().create_counter("requests.total");
@@ -190,7 +190,7 @@ let count = counter.get();
 Gauge type, can be set to any value.
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 
 // Create gauge
 let gauge = ctx.observability().create_gauge("connections.active");
@@ -207,7 +207,7 @@ let value = gauge.get();
 Histogram type, records value distribution.
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 
 // Create histogram
 let histogram = ctx.observability().create_histogram("response.duration");
@@ -225,7 +225,7 @@ println!("P95: {}", stats.percentile_95);
 ### Metric Labels
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 
 // Metrics with labels
 let counter = ctx.observability()
@@ -253,7 +253,7 @@ ctx.observability()
 #### Prometheus Format
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 
 // Export metrics in Prometheus format
 let prometheus_metrics = ctx.observability().export_prometheus()?;
@@ -263,7 +263,7 @@ println!("{}", prometheus_metrics);
 #### StatsD Format
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 
 // Export metrics in StatsD format
 let statsd_metrics = ctx.observability().export_statsd()?;
@@ -292,7 +292,7 @@ Health check interface.
 #### Built-in Health Checks
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 
 // Database health check
 let db_health = DatabaseHealthCheck::new("postgres://localhost/mydb");
@@ -321,7 +321,7 @@ for (name, result) in health_report.results {
 ### Custom Health Checks
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 
 struct CustomHealthCheck {
     threshold: f64,
@@ -367,7 +367,7 @@ ctx.observability().health().add_check("custom", custom_check);
 ### CPU Profiling
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 
 // Start CPU profiling
 ctx.observability().profiling().start_cpu_profiling()?;
@@ -386,7 +386,7 @@ std::fs::write("cpu_profile.svg", flame_graph)?;
 ### Memory Profiling
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 
 // Start memory profiling
 ctx.observability().profiling().start_memory_profiling()?;
@@ -406,7 +406,7 @@ for allocation in memory_profile.allocations {
 ### Performance Metrics
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 
 // Record performance metrics
 ctx.observability().profiling().record_performance_metric("cpu.usage", 45.2);
@@ -442,7 +442,7 @@ Alert interface.
 ### Alert Conditions
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 
 // Create alert conditions
 let cpu_alert_condition = AlertCondition::threshold(
@@ -465,7 +465,7 @@ ctx.observability().alerts().create_alert("high_memory_usage", memory_alert_cond
 ### Alert Notifications
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 
 // Configure alert notifications
 let email_notification = EmailNotification::new(
@@ -493,7 +493,7 @@ ctx.observability().alerts().add_notification_channel("slack", slack_notificatio
 ### Exporter Configuration
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 
 // Configure Jaeger exporter
 let jaeger_config = JaegerExporterConfig {
@@ -516,7 +516,7 @@ ctx.observability().set_metric_exporter(MetricExporter::Prometheus(prometheus_co
 ### Context Propagation
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 
 // Inject trace context into HTTP request headers
 let mut headers = HashMap::new();
@@ -547,7 +547,7 @@ Observability configuration struct.
 #### Configuration Example
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 
 let observability_config = DMSCObservabilityConfig {
     tracing_enabled: true,
@@ -580,7 +580,7 @@ ctx.observability().configure(observability_config)?;
 ### Error Handling Example
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 
 match ctx.observability().export_metrics() {
     Ok(metrics) => {
@@ -617,15 +617,21 @@ match ctx.observability().export_metrics() {
 
 </div>
 
-- [README](./README.md): Module overview, providing API reference documentation overview and quick navigation
-- [auth](./auth.md): Authentication module, providing JWT, OAuth2, and RBAC authentication and authorization functionality
-- [core](./core.md): Core module, providing error handling and service context
-- [log](./log.md): Logging module, recording authentication events and security logs
-- [config](./config.md): Configuration module, managing authentication configuration and key settings
-- [cache](./cache.md): Cache module, providing multi-backend cache abstraction, caching user sessions and permission data
-- [database](./database.md): Database module, providing user data persistence and query functionality
-- [http](./http.md): HTTP module, providing web authentication interfaces and middleware support
-- [mq](./mq.md): Message queue module, handling authentication events and asynchronous notifications
-- [security](./security.md): Security module, providing encryption, hashing, and verification functionality
-- [storage](./storage.md): Storage module, managing authentication files, keys, and certificates
-- [validation](./validation.md): Validation module, validating user input and form data
+- [README](./README.md): Module overview with API reference summary and quick navigation
+- [auth](./auth.md): Authentication module handling user authentication and authorization
+- [cache](./cache.md): Cache module providing in-memory and distributed cache support
+- [config](./config.md): Configuration module managing application configuration
+- [core](./core.md): Core module providing error handling and service context
+- [database](./database.md): Database module providing database operation support
+- [device](./device.md): Device module using protocols for device communication
+- [fs](./fs.md): Filesystem module providing file operation functions
+- [gateway](./gateway.md): Gateway module providing API gateway functionality
+- [hooks](./hooks.md): Hooks module providing lifecycle hook support
+- [http](./http.md): HTTP module providing HTTP server and client functionality
+- [log](./log.md): Logging module for protocol events
+- [mq](./mq.md): Message queue module providing message queue support
+- [protocol](./protocol.md): Protocol module providing communication protocol support
+- [security](./security.md): Security module providing encryption and decryption functions
+- [service_mesh](./service_mesh.md): Service mesh module using protocols for inter-service communication
+- [storage](./storage.md): Storage module providing cloud storage support
+- [validation](./validation.md): Validation module providing data validation functions

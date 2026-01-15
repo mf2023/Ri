@@ -42,8 +42,8 @@
 //! ## Usage
 //! 
 //! ```rust
-//! use dms::prelude::*;
-//! use dms::queue::{DMSCQueueConfig, DMSCQueueBackendType};
+//! use dmsc::prelude::*;
+//! use dmsc::queue::{DMSCQueueConfig, DMSCQueueBackendType};
 //! 
 //! async fn example() -> DMSCResult<()> {
 //!     // Create queue configuration

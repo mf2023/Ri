@@ -58,7 +58,7 @@
 //! ## Usage Examples
 //! 
 //! ```rust
-//! use dms::protocol::security::{DMSCCryptoSuite, DMSCDeviceAuthProtocol, DMSCPostQuantumCrypto};
+//! use dmsc::protocol::security::{DMSCCryptoSuite, DMSCDeviceAuthProtocol, DMSCPostQuantumCrypto};
 //! 
 //! async fn example() -> DMSCResult<()> {
 //!     // Initialize device authentication

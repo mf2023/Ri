@@ -52,7 +52,7 @@
 //! ## Usage Example
 //!
 //! ```rust
-//! use dms::prelude::*;
+//! use dmsc::prelude::*;
 //!
 //! #[tokio::main]
 //! async fn main() -> DMSCResult<()> {
@@ -99,7 +99,7 @@ use crate::core::app_runtime::DMSCAppRuntime;
 /// ## Usage
 /// 
 /// ```rust
-/// use dms::prelude::*;
+/// use dmsc::prelude::*;
 /// 
 /// #[tokio::main]
 /// async fn main() -> DMSCResult<()> {
@@ -176,7 +176,7 @@ impl DMSCAppBuilder {
     /// 
     /// The updated `DMSCAppBuilder` instance for method chaining.
     #[cfg(feature = "pyo3")]
-    pub fn with_python_module(mut self, module: crate::core::module::DMSCPyModuleAdapter) -> Self {
+    pub fn with_python_module(mut self, module: crate::core::module::DMSCPythonModuleAdapter) -> Self {
         self.modules.push(ModuleSlot { 
             module: ModuleType::Async(Box::new(module)), 
             failed: false 
@@ -517,7 +517,7 @@ impl DMSCAppBuilder {
     }
 
     #[pyo3(name = "with_module")]
-    fn with_module_py(&mut self, module: super::module::DMSCPyServiceModule) -> PyResult<()> {
+    fn with_module_py(&mut self, module: super::module::DMSCPythonServiceModule) -> PyResult<()> {
         self.modules.push(crate::core::module_types::ModuleSlot {
             module: crate::core::module_types::ModuleType::Sync(Box::new(module)),
             failed: false,
@@ -526,7 +526,7 @@ impl DMSCAppBuilder {
     }
 
     #[pyo3(name = "with_python_module")]
-    fn with_python_module_py(&mut self, module: super::module::DMSCPyModuleAdapter) -> PyResult<()> {
+    fn with_python_module_py(&mut self, module: super::module::DMSCPythonModuleAdapter) -> PyResult<()> {
         self.modules.push(crate::core::module_types::ModuleSlot {
             module: crate::core::module_types::ModuleType::Async(Box::new(module)),
             failed: false,
@@ -535,7 +535,7 @@ impl DMSCAppBuilder {
     }
 
     #[pyo3(name = "with_async_module")]
-    fn with_async_module_py(&mut self, module: super::module::DMSCPyAsyncServiceModule) -> PyResult<()> {
+    fn with_async_module_py(&mut self, module: super::module::DMSCPythonAsyncServiceModule) -> PyResult<()> {
         self.modules.push(crate::core::module_types::ModuleSlot {
             module: crate::core::module_types::ModuleType::Async(Box::new(module)),
             failed: false,
@@ -544,7 +544,7 @@ impl DMSCAppBuilder {
     }
 
     #[pyo3(name = "with_dms_module")]
-    fn with_dms_module_py(&mut self, module: super::module::DMSCPyModuleAdapter) -> PyResult<()> {
+    fn with_dms_module_py(&mut self, module: super::module::DMSCPythonModuleAdapter) -> PyResult<()> {
         self.modules.push(crate::core::module_types::ModuleSlot {
             module: crate::core::module_types::ModuleType::Async(Box::new(module)),
             failed: false,
@@ -553,7 +553,7 @@ impl DMSCAppBuilder {
     }
 
     #[pyo3(name = "with_modules")]
-    fn with_modules_py(&mut self, modules: Vec<super::module::DMSCPyServiceModule>) -> PyResult<()> {
+    fn with_modules_py(&mut self, modules: Vec<super::module::DMSCPythonServiceModule>) -> PyResult<()> {
         for module in modules {
             self.modules.push(crate::core::module_types::ModuleSlot {
                 module: crate::core::module_types::ModuleType::Sync(Box::new(module)),
@@ -564,7 +564,7 @@ impl DMSCAppBuilder {
     }
 
     #[pyo3(name = "with_async_modules")]
-    fn with_async_modules_py(&mut self, modules: Vec<super::module::DMSCPyAsyncServiceModule>) -> PyResult<()> {
+    fn with_async_modules_py(&mut self, modules: Vec<super::module::DMSCPythonAsyncServiceModule>) -> PyResult<()> {
         for module in modules {
             self.modules.push(crate::core::module_types::ModuleSlot {
                 module: crate::core::module_types::ModuleType::Async(Box::new(module)),
@@ -575,7 +575,7 @@ impl DMSCAppBuilder {
     }
 
     #[pyo3(name = "with_dms_modules")]
-    fn with_dms_modules_py(&mut self, modules: Vec<super::module::DMSCPyModuleAdapter>) -> PyResult<()> {
+    fn with_dms_modules_py(&mut self, modules: Vec<super::module::DMSCPythonModuleAdapter>) -> PyResult<()> {
         for module in modules {
             self.modules.push(crate::core::module_types::ModuleSlot {
                 module: crate::core::module_types::ModuleType::Async(Box::new(module)),

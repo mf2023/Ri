@@ -2,9 +2,9 @@
 
 # Basic Application Example
 
-**Version: 0.0.3**
+**Version: 0.1.4**
 
-**Last modified date: 2026-01-01**
+**Last modified date: 2026-01-15**
 
 This example shows how to build a simple DMSC application, including application configuration, running, and basic functionality usage.
 
@@ -78,7 +78,7 @@ observability:
 Replace the content of `src/main.rs` with the following:
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 
 #[tokio::main]
 async fn main() -> DMSCResult<()> {
@@ -126,7 +126,7 @@ async fn main() -> DMSCResult<()> {
 ### 1. Import Dependencies
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 ```
 
 This line imports the most commonly used types and traits from DMSC, simplifying code writing. The `prelude` module contains core components needed for building DMSC applications.

@@ -2,9 +2,9 @@
 
 # FileSystem API Reference
 
-**Version: 0.0.3**
+**Version: 0.1.4**
 
-**Last modified date: 2026-01-01**
+**Last modified date: 2026-01-15**
 
 The fs module provides secure file system operations, supporting atomic writes, directory management, and categorized directory organization.
 
@@ -59,7 +59,7 @@ The main file system interface, providing unified file operation functionality.
 #### Usage Example
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 use std::path::PathBuf;
 
 fn example() -> DMSCResult<()> {
@@ -89,7 +89,7 @@ fn example() -> DMSCResult<()> {
 Atomic writes use temporary files to ensure data integrity:
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 use std::path::PathBuf;
 
 let fs = DMSCFileSystem::new_with_root(PathBuf::from("."))?;
@@ -103,7 +103,7 @@ println!("Files written atomically");
 ### JSON Operations
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 use serde::{Serialize, Deserialize};
 
 #[derive(Serialize, Deserialize)]
@@ -128,7 +128,7 @@ println!("Loaded config: {:?}", loaded_config);
 ### Directory Operations
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 
 let fs = DMSCFileSystem::new_auto_root()?;
 
@@ -145,7 +145,7 @@ fs.remove_dir_all("tmp/old_data")?;
 ### File Operations
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 
 let fs = DMSCFileSystem::new_auto_root()?;
 
@@ -166,7 +166,7 @@ if fs.exists("to_delete.txt") {
 The file system supports categorized directory organization for easier file management:
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 
 let fs = DMSCFileSystem::new_auto_root()?;
 
@@ -186,7 +186,7 @@ println!("Temp: {:?}", temp_dir);
 ### Ensure Category Path
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 
 let fs = DMSCFileSystem::new_auto_root()?;
 
@@ -200,7 +200,7 @@ println!("Cache file path: {:?}", cache_file);
 ### Normalize Path
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 
 let fs = DMSCFileSystem::new_auto_root()?;
 
@@ -217,7 +217,7 @@ println!("Normalized path: {:?}", normalized);
 The application data directory is used to store application-private data:
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 
 let fs = DMSCFileSystem::new_auto_root()?;
 
@@ -266,8 +266,20 @@ File system configuration is primarily controlled through constructor parameters
 </div>
 
 - [README](./README.md): Module overview with API reference summary and quick navigation
+- [auth](./auth.md): Authentication module handling user authentication and authorization
+- [cache](./cache.md): Cache module providing in-memory and distributed cache support
+- [config](./config.md): Configuration module managing application configuration
 - [core](./core.md): Core module providing error handling and service context
-- [log](./log.md): Logging module using fs module for log file storage
-- [cache](./cache.md): Caching module using fs module for cache file management
-- [config](./config.md): Configuration module using fs module for config file reading
-- [observability](./observability.md): Observability module using fs module for monitoring data storage
+- [database](./database.md): Database module providing database operation support
+- [device](./device.md): Device module using protocols for device communication
+- [gateway](./gateway.md): Gateway module providing API gateway functionality
+- [hooks](./hooks.md): Hooks module providing lifecycle hook support
+- [http](./http.md): HTTP module providing HTTP server and client functionality
+- [log](./log.md): Logging module for protocol events
+- [mq](./mq.md): Message queue module providing message queue support
+- [observability](./observability.md): Observability module for protocol performance monitoring
+- [protocol](./protocol.md): Protocol module providing communication protocol support
+- [security](./security.md): Security module providing encryption and decryption functions
+- [service_mesh](./service_mesh.md): Service mesh module using protocols for inter-service communication
+- [storage](./storage.md): Storage module providing cloud storage support
+- [validation](./validation.md): Validation module providing data validation functions

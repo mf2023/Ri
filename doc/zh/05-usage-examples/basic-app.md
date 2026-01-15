@@ -2,9 +2,9 @@
 
 # 基础应用示例
 
-**Version: 0.0.3**
+**Version: 0.1.4**
 
-**Last modified date: 2026-01-01**
+**Last modified date: 2026-01-15**
 
 本示例展示如何构建一个简单的DMSC应用，包括应用配置、运行和基本功能使用。
 
@@ -78,7 +78,7 @@ observability:
 将`src/main.rs`文件替换为以下内容：
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 
 #[tokio::main]
 async fn main() -> DMSCResult<()> {
@@ -126,7 +126,7 @@ async fn main() -> DMSCResult<()> {
 ### 1. 导入依赖
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 ```
 
 这行代码导入了DMSC中最常用的类型和特性，简化了代码编写。`prelude`模块包含了构建DMSC应用所需的核心组件。

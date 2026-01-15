@@ -39,7 +39,7 @@
 //! ## Usage
 //! 
 //! ```rust
-//! use dms::prelude::*;
+//! use dmsc::prelude::*;
 //! 
 //! fn example_function() -> DMSCResult<()> {
 //!     // Return a custom error

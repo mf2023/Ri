@@ -2,9 +2,9 @@
 
 # Message Queue Usage Examples
 
-**Version: 0.0.3**
+**Version: 0.1.4**
 
-**Last modified date: 2026-01-01**
+**Last modified date: 2026-01-15**
 
 This example demonstrates how to use DMSC's mq module for message queues, publish-subscribe, routing, dead letter queues, delayed messages, persistence, priority, and filtering functionality.
 
@@ -106,7 +106,7 @@ message_queue:
 Replace the `src/main.rs` file with the following content:
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 use serde_json::json;
 use uuid::Uuid;
 use chrono::Utc;
@@ -269,7 +269,7 @@ The mq module provides usage examples for message queues, publish-subscribe, rou
 ### Connection and Configuration
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 use serde_json::json;
 
 // RabbitMQ configuration
@@ -340,7 +340,7 @@ match ctx.mq().ping().await {
 ### Basic Publish and Subscribe
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 use serde_json::json;
 
 // Publish message to queue
@@ -483,7 +483,7 @@ async fn process_user_registration(message: &DMSCMessage, ctx: &DMSCContext) -> 
 ### Topic Publishing
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 use serde_json::json;
 
 // Publish to topic
@@ -549,7 +549,7 @@ ctx.mq().batch_publish_to_topic("notifications", messages).await?;
 ### Topic Subscription
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 use serde_json::json;
 
 // Subscribe to topic (wildcard pattern)
@@ -676,7 +676,7 @@ async fn process_analytics_event(message: &DMSCMessage, ctx: &DMSCContext) -> DM
 ### Complex Routing
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 use serde_json::json;
 
 // Create routing rules
@@ -825,7 +825,7 @@ async fn handle_order_created(order_id: &str, message: &DMSCMessage, ctx: &DMSCC
 ### Configure Dead Letter Queue
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 use serde_json::json;
 
 // Create dead letter queue configuration
@@ -979,7 +979,7 @@ async fn do_message_processing(message: &DMSCMessage, ctx: &DMSCContext) -> DMSC
 ### Delayed Message Processing
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 use serde_json::json;
 
 // Send delayed message
@@ -1153,7 +1153,7 @@ async fn schedule_periodic_tasks(ctx: &DMSCContext) -> DMSCResult<()> {
 ### Priority Message Processing
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 use serde_json::json;
 
 // Send messages with different priorities
@@ -1366,7 +1366,7 @@ async fn handle_low_priority_alert(message: &DMSCMessage, ctx: &DMSCContext) -> 
 ### Message Filter
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 use serde_json::json;
 
 // Create message filter
@@ -1490,7 +1490,7 @@ async fn custom_message_filter(message: &DMSCMessage, ctx: &DMSCContext) -> bool
 ### Persistence Configuration
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 use serde_json::json;
 
 // Configure message persistence
@@ -1568,7 +1568,7 @@ ctx.log().info(format!("Replayed {} messages", replay_result.replayed_count));
 ### Batch Message Processing
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 use serde_json::json;
 
 // Batch publish messages
@@ -1659,7 +1659,7 @@ async fn process_batch_item(message: &DMSCMessage, ctx: &DMSCContext) -> DMSCRes
 ### Message Queue Error Handling
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 use serde_json::json;
 
 // Error handling example
@@ -1882,7 +1882,7 @@ After successful execution, you will see output similar to the following:
 ### Load Balancing Support
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 
 // Configure multiple message queue nodes for load balancing
 let load_balanced_config = DMSCMessageQueueLoadBalanceConfig {
@@ -1938,7 +1938,7 @@ ctx.mq().monitor_node_health(|node, status| async move {
 ### Message Queue Monitoring
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 use serde_json::json;
 
 // Configure message queue monitoring
@@ -2038,7 +2038,7 @@ async fn send_alert_notification(level: &str, alert: &DMSCAlert, ctx: &DMSCConte
 ### Message Tracing
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 use serde_json::json;
 
 // Configure distributed message tracing
@@ -2137,7 +2137,7 @@ ctx.mq().subscribe_with_tracing("user.events", |message, trace_context, ctx| asy
 ### Message Compression
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 use serde_json::json;
 
 // Configure message compression

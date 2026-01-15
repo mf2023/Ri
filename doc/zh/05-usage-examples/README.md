@@ -2,9 +2,9 @@
 
 # 使用示例
 
-**Version: 0.0.3**
+**Version: 0.1.4**
 
-**Last modified date: 2026-01-01**
+**Last modified date: 2026-01-15**
 
 本目录包含DMSC各个核心功能的使用示例，帮助您快速理解和使用DMSC框架。
 
@@ -50,7 +50,7 @@
 
 ```rust
 // 1. 导入必要的依赖
-use dms::prelude::*;
+use dmsc::prelude::*;
 
 // 2. 主函数
 #[tokio::main]

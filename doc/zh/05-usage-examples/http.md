@@ -2,9 +2,9 @@
 
 # HTTP服务使用示例
 
-**Version: 0.0.3**
+**Version: 0.1.4**
 
-**Last modified date: 2026-01-01**
+**Last modified date: 2026-01-15**
 
 本示例展示如何使用DMSC的http模块进行HTTP服务器、客户端、路由管理、中间件、WebSocket和文件上传下载功能的使用。
 
@@ -103,7 +103,7 @@ http:
 将`src/main.rs`文件替换为以下内容：
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 use serde_json::json;
 use chrono::Utc;
 
@@ -261,7 +261,7 @@ http模块提供HTTP服务器、客户端、路由管理、中间件、WebSocket
 ### 基本服务器配置
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 use serde_json::json;
 
 // 创建HTTP服务器配置
@@ -296,7 +296,7 @@ ctx.log().info("HTTP server initialized on port 8080");
 ### 基本路由
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 use serde_json::json;
 
 // GET请求处理
@@ -457,7 +457,7 @@ ctx.http().delete("/users/:id", |req, ctx| async move {
 ### 路由组
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 use serde_json::json;
 
 // 创建API路由组
@@ -653,7 +653,7 @@ auth_routes.post("/register", |req, ctx| async move {
 ### 基本客户端使用
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 use serde_json::json;
 
 // 创建HTTP客户端配置
@@ -707,7 +707,7 @@ if create_response.status.is_success() {
 ### 高级客户端功能
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 use serde_json::json;
 
 // 表单数据提交
@@ -783,7 +783,7 @@ for (i, result) in results.iter().enumerate() {
 ### 内置中间件
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 use serde_json::json;
 
 // 日志中间件
@@ -830,7 +830,7 @@ ctx.http().use_middleware(DMSCHttpMiddleware::request_id()
 ### 自定义中间件
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 use serde_json::json;
 
 // 自定义认证中间件
@@ -970,7 +970,7 @@ ctx.http().use_custom_middleware(error_handling_middleware);
 ### WebSocket服务器
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 use serde_json::json;
 use futures::{StreamExt, SinkExt};
 
@@ -1126,7 +1126,7 @@ async fn broadcast_to_room(room_id: &str, message: serde_json::Value, ctx: &DMSC
 ### WebSocket客户端
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 use futures::{StreamExt, SinkExt};
 
 // 连接到WebSocket服务器
@@ -1160,7 +1160,7 @@ while let Some(msg) = receiver.next().await {
 ### 文件上传
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 use serde_json::json;
 
 // 单文件上传
@@ -1281,7 +1281,7 @@ ctx.http().post("/upload/chunk", |req, ctx| async move {
 ### 文件下载
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 use serde_json::json;
 
 // 文件下载
@@ -1368,7 +1368,7 @@ ctx.http().get("/download/temp/:file_id", |req, ctx| async move {
 ### 代理请求
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 
 // HTTP代理
 ctx.http().get("/proxy/*path", |req, ctx| async move {
@@ -1397,7 +1397,7 @@ ctx.http().get("/proxy/*path", |req, ctx| async move {
 ### 服务器发送事件 (SSE)
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 use serde_json::json;
 
 // SSE端点
@@ -1451,7 +1451,7 @@ async fn send_custom_event(event_type: &str, data: serde_json::Value, ctx: &DMSC
 ### HTTP错误处理
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 use serde_json::json;
 
 // 错误处理示例
@@ -1527,7 +1527,7 @@ async fn retry_request(url: &str, max_retries: u32, ctx: &DMSCContext) -> DMSCRe
 ### 连接池优化
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 
 // HTTP客户端连接池配置
 let client_config = DMSCHttpClientConfig {
@@ -1547,7 +1547,7 @@ ctx.http().init_client(client_config).await?;
 ### 缓存策略
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 use serde_json::json;
 
 // HTTP响应缓存
@@ -1662,7 +1662,7 @@ websocat ws://localhost:8080/ws
 ### 实现负载均衡支持
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 use serde_json::json;
 
 async fn setup_load_balancer(ctx: &DMSCServiceContext) -> DMSCResult<()> {
@@ -1702,7 +1702,7 @@ async fn setup_load_balancer(ctx: &DMSCServiceContext) -> DMSCResult<()> {
 ### 实现API网关
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 use serde_json::json;
 
 async fn setup_api_gateway(ctx: &DMSCServiceContext) -> DMSCResult<()> {
@@ -1770,7 +1770,7 @@ async fn setup_api_gateway(ctx: &DMSCServiceContext) -> DMSCResult<()> {
 ### 实现GraphQL支持
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 use async_graphql::*;
 use serde_json::json;
 
@@ -1864,7 +1864,7 @@ async fn setup_graphql(ctx: &DMSCServiceContext) -> DMSCResult<()> {
 ### 实现实时分析
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 use serde_json::json;
 use std::sync::Arc;
 use tokio::sync::RwLock;

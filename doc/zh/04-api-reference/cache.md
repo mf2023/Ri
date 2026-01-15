@@ -2,9 +2,9 @@
 
 # Cache API参考
 
-**Version: 0.0.3**
+**Version: 0.1.4**
 
-**Last modified date: 2026-01-01**
+**Last modified date: 2026-01-15**
 
 cache模块提供多后端缓存抽象，支持内存、Redis、混合等多种缓存后端。
 
@@ -41,7 +41,7 @@ cache模块包含以下子模块：
 #### 使用示例
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 
 // 通过module访问缓存管理器
 let cache_manager = ctx.module::<DMSCCacheModule>().await?
@@ -122,4 +122,29 @@ let cache_config = DMSCCacheConfig {
 | `Memory` | 内存缓存（默认） |
 | `Redis` | Redis分布式缓存 |
 | `Hybrid` | 混合缓存（内存+Redis） |
+
+<div align="center">
+
+## 相关模块
+
+</div>
+
+- [README](./README.md): 模块概览，提供API参考文档总览和快速导航
+- [auth](./auth.md): 认证模块，处理用户认证和授权
+- [config](./config.md): 配置模块，管理应用程序配置
+- [core](./core.md): 核心模块，提供错误处理和服务上下文
+- [database](./database.md): 数据库模块，提供数据库操作支持
+- [device](./device.md): 设备模块，使用协议进行设备通信
+- [fs](./fs.md): 文件系统模块，提供文件操作功能
+- [gateway](./gateway.md): 网关模块，提供API网关功能
+- [hooks](./hooks.md): 钩子模块，提供生命周期钩子支持
+- [http](./http.md): HTTP模块，提供HTTP服务器和客户端功能
+- [log](./log.md): 日志模块，记录协议事件
+- [mq](./mq.md): 消息队列模块，提供消息队列支持
+- [observability](./observability.md): 可观测性模块，监控协议性能
+- [protocol](./protocol.md): 协议模块，提供通信协议支持
+- [security](./security.md): 安全模块，提供加密和解密功能
+- [service_mesh](./service_mesh.md): 服务网格模块，使用协议进行服务间通信
+- [storage](./storage.md): 存储模块，提供云存储支持
+- [validation](./validation.md): 验证模块，提供数据验证功能
 

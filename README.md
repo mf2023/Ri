@@ -121,7 +121,7 @@ cargo add DMSC --git https://gitee.com/dunimd/dmsc
 ### Core API Usage
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 
 #[tokio::main]
 async fn main() -> DMSCResult<()> {
@@ -146,9 +146,20 @@ async fn main() -> DMSCResult<()> {
 ```rust
 use dmsc::observability::*;
 
-#[traced(name = "user_service")]
+#[tracing::instrument(name = "user_service", skip(ctx))]
 async fn get_user(ctx: &DMSCServiceContext, user_id: u64) -> DMSCResult<User> {
-    // Automatically record traces and metrics
+    let user = fetch_user_from_db(user_id).await?;
+    Ok(user)
+}
+```
+
+或者使用手动 span：
+
+```rust
+use dmsc::prelude::*;
+
+async fn get_user(ctx: &DMSCServiceContext, user_id: u64) -> DMSCResult<User> {
+    let _span = ctx.tracer().start_span("get_user")?;
     let user = fetch_user_from_db(user_id).await?;
     Ok(user)
 }
@@ -166,7 +177,7 @@ service:
 
 logging:
   level: "info"
-  format: "json"
+  file_format: "json"
   file_enabled: true
   console_enabled: true
 

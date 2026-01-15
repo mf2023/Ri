@@ -7,7 +7,7 @@ The security module provides usage examples for authentication management, autho
 ### JWT Authentication
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 use serde_json::json;
 
 // JWT configuration
@@ -87,7 +87,7 @@ ctx.log().info("JWT token revoked");
 ### OAuth2 Authentication
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 use serde_json::json;
 
 // OAuth2 configuration
@@ -140,7 +140,7 @@ ctx.log().info("Access token revoked");
 ### Multi-Factor Authentication (MFA)
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 use serde_json::json;
 
 // Initialize MFA
@@ -205,7 +205,7 @@ ctx.log().info(format!("MFA re-enabled for user: {}", user_id));
 ### RBAC Role-Based Access Control
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 use serde_json::json;
 
 // Create roles
@@ -318,7 +318,7 @@ ctx.log().info("User role permissions updated");
 ### ABAC Attribute-Based Access Control
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 use serde_json::json;
 
 // Define ABAC policy
@@ -436,7 +436,7 @@ if access_decision.effect == DMSCABACEffect::Allow {
 ### Symmetric Encryption
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 use serde_json::json;
 
 // Configure symmetric encryption
@@ -477,7 +477,7 @@ ctx.log().info(format!("Batch decrypted {} items", decrypted_batch.len()));
 ### Asymmetric Encryption
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 use serde_json::json;
 
 // Generate key pair
@@ -520,7 +520,7 @@ ctx.log().info(format!("Signature verification: {}", is_valid));
 ### Key Derivation
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 use serde_json::json;
 
 // Derive key from password
@@ -566,7 +566,7 @@ ctx.log().info(format!("Password validation: {}", is_password_valid));
 ### Data Validation
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 use serde_json::json;
 
 // Validate user input
@@ -661,7 +661,7 @@ if validation_result.is_valid {
 ### Input Sanitization
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 use serde_json::json;
 
 // Sanitize user input
@@ -703,7 +703,7 @@ ctx.log().info(format!("Batch sanitized {} items", sanitized_batch.len()));
 ### Token Bucket Algorithm
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 
 // Configure token bucket rate limiter
 let rate_limiter_config = DMSCRateLimiterConfig {
@@ -743,7 +743,7 @@ ctx.log().info(format!("Rate limit status: {:?}", rate_limit_status));
 ### Sliding Window Algorithm
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 
 // Configure sliding window rate limiter
 let rate_limiter_config = DMSCRateLimiterConfig {
@@ -779,7 +779,7 @@ for request in requests {
 ### IP-Based Rate Limiting
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 
 // Configure IP-based rate limiter
 let ip_rate_limiter_config = DMSCRateLimiterConfig {
@@ -816,7 +816,7 @@ match ctx.security().check_ip_rate_limit(client_ip, 1).await {
 ### Basic CORS Configuration
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 
 // Configure CORS
 let cors_config = DMSCCorsConfig {
@@ -853,7 +853,7 @@ ctx.log().info("CORS configuration completed");
 ### Dynamic CORS Configuration
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 
 // Configure dynamic CORS based on request
 let cors_config = DMSCCorsConfig {
@@ -883,7 +883,7 @@ ctx.log().info(format!("CORS headers: {:?}", cors_headers));
 ### CSRF Token Generation
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 
 // Initialize CSRF protection
 ctx.security().init_csrf_protection().await?;
@@ -914,7 +914,7 @@ match ctx.security().validate_csrf_token(user_id, &submitted_token).await {
 ### CSRF Token Rotation
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 
 // Rotate CSRF token
 let user_id = "user123";
@@ -933,7 +933,7 @@ ctx.log().info(format!("CSRF token invalidated for user: {}", user_id));
 ### Secure Password Storage
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 
 // Hash password securely
 let password = "user_password";
@@ -954,7 +954,7 @@ if is_valid {
 ### Secure Session Management
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 
 // Create secure session
 let user_id = "user123";
@@ -985,6 +985,28 @@ match ctx.security().validate_session(&session_id).await {
 ctx.security().destroy_session(&session_id).await?;
 ctx.log().info("Session destroyed");
 ```
+
+<div align="center">
+
+## Related Modules
+
+</div>
+
+- [README](./README.md): Module overview with usage examples summary and quick navigation
+- [basic-app](./basic-app.md): Basic application examples
+- [caching](./caching.md): Caching examples, including memory and distributed caching
+- [database](./database.md): Database operation examples
+- [device](./device.md): Device control examples
+- [fs](./fs.md): Filesystem operation examples
+- [gateway](./gateway.md): API gateway examples
+- [hooks](./hooks.md): Hook system examples
+- [http](./http.md): HTTP server and client examples
+- [mq](./mq.md): Message queue examples
+- [observability](./observability.md): Observability examples
+- [protocol](./protocol.md): Protocol module examples
+- [service_mesh](./service_mesh.md): Service mesh examples
+- [storage](./storage.md): Cloud storage examples
+- [validation](./validation.md): Data validation examples
 
 ## See Also
 

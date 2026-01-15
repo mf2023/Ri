@@ -2,9 +2,9 @@
 
 # Validation API Reference
 
-**Version: 0.0.3**
+**Version: 0.1.4**
 
-**Last modified date: 2026-01-01**
+**Last modified date: 2026-01-15**
 
 The validation module provides data validation and sanitization functionality, supporting multiple validation rules and custom validators.
 
@@ -46,7 +46,7 @@ Main interface for the validation manager, providing unified access to validatio
 #### Usage Example
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 use serde_json::json;
 
 // Simple data validation
@@ -138,7 +138,7 @@ Validation result structure.
 ### Field Validation
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 use serde_json::json;
 
 // Validate user registration data
@@ -209,7 +209,7 @@ ctx.log().info("All field validations passed");
 ### Complex Data Validation
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 use serde_json::json;
 
 // Validate order data
@@ -344,7 +344,7 @@ ctx.log().info("Order data validation passed");
 ### Basic Sanitization
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 use serde_json::json;
 
 // Sanitize user input data
@@ -385,7 +385,7 @@ ctx.log().info(format!("Cleaned email: {}", cleaned_email));
 ### Advanced Sanitization
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 use serde_json::json;
 
 // Sanitize HTML content
@@ -439,7 +439,7 @@ ctx.log().info(format!("Sanitized URL: {}", safe_url));
 ### Creating Custom Validators
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 use serde_json::Value;
 
 // Create username validator
@@ -658,7 +658,7 @@ let password_result = ctx.validation().validate_field("password", &json!("weak")
 ### Conditional Rules
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 use serde_json::json;
 
 // Conditional validation: If user chooses company registration, company information is required
@@ -748,7 +748,7 @@ ctx.log().info("Registration data validation passed");
 ### Multi-field Validation
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 use serde_json::json;
 
 // Multi-field validation: Password and confirm password must match
@@ -808,7 +808,7 @@ ctx.log().info("Password change validation passed");
 ### Validation Errors
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 use serde_json::json;
 
 // Handle validation errors
@@ -871,7 +871,7 @@ ctx.log().info("All validations passed");
 ### Custom Error Messages
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 use serde_json::json;
 
 // Create custom error messages
@@ -956,7 +956,7 @@ if !result.is_valid {
 ### Caching Validation Results
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::RwLock;
@@ -998,7 +998,7 @@ async fn validate_with_cache(
 ### Batch Validation
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 use serde_json::json;
 
 // Batch validation for multiple records
@@ -1082,7 +1082,7 @@ for (index, errors) in validation_results {
 ### Input Sanitization
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 use serde_json::json;
 
 // Always sanitize user input before processing
@@ -1126,7 +1126,7 @@ ctx.log().info(format!("Sanitized and validated input: {}", sanitized_input));
 ### SQL Injection Prevention
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 
 // Sanitize SQL input to prevent injection attacks
 let user_search = "admin' OR '1'='1' --";
@@ -1143,7 +1143,7 @@ ctx.log().info(format!("Safe search term: {}", safe_search));
 ### Path Traversal Prevention
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 
 // Sanitize file paths to prevent directory traversal attacks
 let user_path = "../../../etc/passwd";
@@ -1170,7 +1170,7 @@ if !safe_path.starts_with(allowed_base) {
 ### Validation Testing
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 use serde_json::json;
 
 // Test validation with various inputs
@@ -1245,7 +1245,7 @@ mod validation_tests {
 ### Debugging Validation
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 use serde_json::json;
 
 // Enable detailed validation logging for debugging

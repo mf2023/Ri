@@ -44,7 +44,7 @@
 //! ## Usage
 //! 
 //! ```rust
-//! use dms::prelude::*;
+//! use dmsc::prelude::*;
 //! use std::sync::Arc;
 //! 
 //! async fn example() -> DMSCResult<()> {

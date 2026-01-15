@@ -124,14 +124,14 @@ import asyncio
 from dmsc import DMSCAppBuilder, DMSCLogConfig
 
 async def main():
-    # Build service runtime
-    app = DMSCAppBuilder() \
-        .with_config("config.yaml") \
-        .with_logging(DMSCLogConfig()) \
-        .build()
+    # Build service runtime (step by step, not chainable in Python)
+    app_builder = DMSCAppBuilder()
+    app_builder.with_config("config.yaml")
+    app_builder.with_logging(DMSCLogConfig())
+    runtime = app_builder.build()
     
     # Run business logic
-    await app.run()
+    await runtime.run()
 
 asyncio.run(main())
 ```
@@ -139,34 +139,44 @@ asyncio.run(main())
 ### Authentication Example
 
 ```python
-from dmsc import DMSCAuthModule, DMSCJWTManager
+from dmsc import DMSCJWTManager
 
-# Create JWT manager
-jwt_manager = DMSCJWTManager()
-token = jwt_manager.generate_token({"user_id": 123})
+# Create JWT manager with secret and expiry (in seconds)
+jwt_manager = DMSCJWTManager("your-secret-key", 3600)
 
-# Verify token
-payload = jwt_manager.verify_token(token)
+# Generate token with user ID, roles, and permissions
+token = jwt_manager.generate_token("user123", ["admin"], ["read", "write"])
+
+# Verify/validate token
+payload = jwt_manager.validate_token(token)
+print(f"User ID: {payload.sub}")
+print(f"Roles: {payload.roles}")
+print(f"Permissions: {payload.permissions}")
 ```
 
 ### Queue Management Example
 
 ```python
-from dmsc import DMSCQueueManager, DMSCQueueConfig
+from dmsc import DMSCQueueManager
 
-# Create queue manager
-queue_config = DMSCQueueConfig()
-queue_manager = DMSCQueueManager(queue_config)
+# Create queue manager (uses in-memory backend by default)
+queue_manager = DMSCQueueManager()
 
-# Create a queue first
+# Create a queue
 queue_manager.create_queue("my_queue")
 
-# Send message using push
-queue_manager.push("my_queue", {"data": "hello"})
+# List all queues
+queues = queue_manager.list_queues()
+print(f"Queues: {queues}")
 
-# Receive message using pop
-message = queue_manager.pop("my_queue")
+# Get a specific queue (for further operations in Rust)
+queue = queue_manager.get_queue("my_queue")
+
+# Delete a queue
+queue_manager.delete_queue("my_queue")
 ```
+
+**Note**: For advanced queue operations (push, pop, etc.), use the Rust API directly or extend the Python bindings.
 
 ### Service Mesh Example
 
@@ -189,17 +199,20 @@ for instance in instances:
 ### Cache Management Example
 
 ```python
-from dmsc import DMSCCacheManager, DMSCCacheConfig
+from dmsc import DMSCCacheManager
 
-# Create cache manager
-cache_config = DMSCCacheConfig()
-cache_manager = DMSCCacheManager(cache_config)
+# Create cache manager with in-memory backend (default)
+cache_manager = DMSCCacheManager()
 
 # Set cache value
-cache_manager.set("user:123", {"name": "John"}, ttl=3600)
+cache_manager.set("user:123", '{"name": "John"}', ttl=3600)
 
 # Get cache value
 user_data = cache_manager.get("user:123")
+
+# Check if key exists
+if cache_manager.exists("user:123"):
+    cache_manager.delete("user:123")
 ```
 
 <h2 align="center">🔧 Configuration</h2>

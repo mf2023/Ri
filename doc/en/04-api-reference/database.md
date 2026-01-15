@@ -2,9 +2,9 @@
 
 # Database API Reference
 
-**Version: 0.0.3**
+**Version: 0.1.4**
 
-**Last modified date: 2026-01-01**
+**Last modified date: 2026-01-15**
 
 The database module provides a unified database access layer, supporting multiple database types, connection pool management, transaction processing, and query builders.
 
@@ -46,7 +46,7 @@ Database manager main interface, providing unified database access.
 #### Usage Example
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 
 // Execute query
 let results = ctx.database().query("SELECT id, name, email FROM users WHERE active = true")?;
@@ -90,7 +90,7 @@ Database configuration struct.
 #### Configuration Example
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 
 let db_config = DMSCDatabaseConfig {
     database_type: DMSCDatabaseType::Postgres,
@@ -145,7 +145,7 @@ Query builder for building type-safe SQL queries.
 #### Usage Example
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 
 // Build SELECT query
 let query = DMSCQueryBuilder::new()
@@ -175,7 +175,7 @@ let complex_query = DMSCQueryBuilder::new()
 ### Insert Builder
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 
 // Build INSERT query
 let insert_query = DMSCInsertBuilder::new()
@@ -201,7 +201,7 @@ ctx.database().execute(&batch_insert)?;
 ### Update Builder
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 
 // Build UPDATE query
 let update_query = DMSCUpdateBuilder::new()
@@ -217,7 +217,7 @@ ctx.database().execute(&update_query)?;
 ### Delete Builder
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 
 // Build DELETE query
 let delete_query = DMSCDeleteBuilder::new()
@@ -252,7 +252,7 @@ Transaction interface.
 #### Usage Example
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 
 // Begin transaction
 let mut transaction = ctx.database().begin_transaction()?;
@@ -287,7 +287,7 @@ try {
 ### Transaction Isolation Levels
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 
 // Set transaction isolation level
 let transaction = ctx.database()
@@ -309,7 +309,7 @@ let serializable = TransactionIsolation::Serializable;
 ### Connection Pool Configuration
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 
 let pool_config = DMSCPoolConfig {
     max_connections: 50,
@@ -327,7 +327,7 @@ let pool_config = DMSCPoolConfig {
 ### Connection Pool Monitoring
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 
 // Get connection pool statistics
 let stats = ctx.database().get_pool_stats()?;
@@ -342,7 +342,7 @@ println!("Total connections destroyed: {}", stats.total_destroyed);
 ### Connection Pool Health Check
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 
 // Check connection pool health status
 match ctx.database().ping() {
@@ -379,7 +379,7 @@ Migration interface.
 ### Creating Migrations
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 
 struct CreateUsersTable;
 
@@ -422,7 +422,7 @@ ctx.database().migrate()?;
 ### Migration Management
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 
 // Get migration status
 let migration_status = ctx.database().migration().get_status()?;
@@ -449,7 +449,7 @@ ctx.database().migration().rollback_to("20240115000001")?;
 ### Batch Operations
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 
 // Batch insert
 let users = vec![
@@ -473,7 +473,7 @@ ctx.database().batch_update("users", "id", &["name"], updates)?;
 ### Prepared Statements
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 
 // Prepare statement
 let stmt = ctx.database().prepare("SELECT * FROM users WHERE id = $1 AND active = $2")?;
@@ -491,7 +491,7 @@ for user_id in [123, 456, 789] {
 ### Async Operations
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 
 // Async query
 let results = ctx.database().query_async("SELECT * FROM users WHERE active = true").await?;
@@ -528,7 +528,7 @@ try {
 ### Error Handling Example
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 
 match ctx.database().query("SELECT * FROM users WHERE id = 123") {
     Ok(results) => {
@@ -573,15 +573,21 @@ match ctx.database().query("SELECT * FROM users WHERE id = 123") {
 
 </div>
 
-- [README](./README.md): Module overview, providing API reference documentation overview and quick navigation
-- [auth](./auth.md): Authentication module, providing JWT, OAuth2, and RBAC authentication and authorization functionality
-- [core](./core.md): Core module, providing error handling and service context
-- [log](./log.md): Logging module, recording authentication events and security logs
-- [config](./config.md): Configuration module, managing authentication configuration and key settings
-- [cache](./cache.md): Cache module, providing multi-backend cache abstraction, caching user sessions and permission data
-- [http](./http.md): HTTP module, providing web authentication interfaces and middleware support
-- [mq](./mq.md): Message queue module, handling authentication events and asynchronous notifications
-- [observability](./observability.md): Observability module, monitoring authentication performance and security events
-- [security](./security.md): Security module, providing encryption, hashing, and validation functionality
-- [storage](./storage.md): Storage module, managing authentication files, keys, and certificates
-- [validation](./validation.md): Validation module, validating user input and form data
+- [README](./README.md): Module overview with API reference summary and quick navigation
+- [auth](./auth.md): Authentication module handling user authentication and authorization
+- [cache](./cache.md): Cache module providing in-memory and distributed cache support
+- [config](./config.md): Configuration module managing application configuration
+- [core](./core.md): Core module providing error handling and service context
+- [device](./device.md): Device module using protocols for device communication
+- [fs](./fs.md): Filesystem module providing file operation functions
+- [gateway](./gateway.md): Gateway module providing API gateway functionality
+- [hooks](./hooks.md): Hooks module providing lifecycle hook support
+- [http](./http.md): HTTP module providing HTTP server and client functionality
+- [log](./log.md): Logging module for protocol events
+- [mq](./mq.md): Message queue module providing message queue support
+- [observability](./observability.md): Observability module for protocol performance monitoring
+- [protocol](./protocol.md): Protocol module providing communication protocol support
+- [security](./security.md): Security module providing encryption and decryption functions
+- [service_mesh](./service_mesh.md): Service mesh module using protocols for inter-service communication
+- [storage](./storage.md): Storage module providing cloud storage support
+- [validation](./validation.md): Validation module providing data validation functions

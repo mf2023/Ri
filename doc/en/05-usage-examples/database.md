@@ -2,9 +2,9 @@
 
 # Database Usage Examples
 
-**Version: 0.0.3**
+**Version: 0.1.4**
 
-**Last modified date: 2026-01-01**
+**Last modified date: 2026-01-15**
 
 This example demonstrates how to use DMSC's database module for database connections, query building, transaction management, connection pooling, and migration functionality.
 
@@ -111,7 +111,7 @@ database:
 Replace the `src/main.rs` file with the following content:
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 use serde_json::json;
 use std::time::Duration;
 
@@ -237,7 +237,7 @@ The database module provides usage examples for database connections, query buil
 ### Connection Management
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 use serde_json::json;
 
 // PostgreSQL connection configuration
@@ -301,7 +301,7 @@ match ctx.database().ping().await {
 ### Basic Queries
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 use serde_json::json;
 
 // Simple query
@@ -377,7 +377,7 @@ ctx.log().info(format!("Deleted {} rows", deleted_rows));
 ### Building Complex Queries
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 
 // Build SELECT query
 let query = DMSCQueryBuilder::new()
@@ -447,7 +447,7 @@ let vip_users = ctx.database().execute_query(main_query).await?;
 ### Type-Safe Queries
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -484,7 +484,7 @@ if let Some(u) = user {
 ### Basic Transactions
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 use serde_json::json;
 
 // Manual transaction management
@@ -531,7 +531,7 @@ try {
 ### Transaction Convenience Methods
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 
 // Use transaction convenience method
 let result = ctx.database().with_transaction(|| async {
@@ -594,7 +594,7 @@ ctx.log().info(format!("Transfer completed: {:?}", result));
 ### Isolation Levels
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 
 // Set transaction isolation levels
 let isolation_levels = vec![
@@ -640,7 +640,7 @@ for level in isolation_levels {
 ### Connection Pool Monitoring
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 use serde_json::json;
 
 // Get connection pool statistics
@@ -683,7 +683,7 @@ ctx.database().on_connection_event(|event| {
 ### Connection Pool Tuning
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 
 // Dynamically adjust connection pool size
 ctx.database().set_pool_size(30).await?;
@@ -706,7 +706,7 @@ ctx.log().info(format!("Cleaned up {} idle connections", cleaned));
 ### Creating Migrations
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 
 // Create new migration file
 let migration = DMSCMigration {
@@ -797,7 +797,7 @@ ctx.database().create_migration(complex_migration).await?;
 ### Running Migrations
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 
 // Run all pending migrations
 let migration_result = ctx.database().migrate().await?;
@@ -821,7 +821,7 @@ ctx.log().warn("Database reset completed - all data lost");
 ### Data Migration
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 
 // Data migration example
 let data_migration = DMSCMigration {
@@ -855,7 +855,7 @@ ctx.database().create_migration(data_migration).await?;
 ### Batch Operations
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 use serde_json::json;
 
 // Batch insert
@@ -900,7 +900,7 @@ ctx.log().info(format!("Updated {} users", updated_count));
 ### Database Functions
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 
 // Create database function
 let create_function = r#"
@@ -937,7 +937,7 @@ for stat in user_stats {
 ### Full-Text Search
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 
 // PostgreSQL full-text search
 let search_query = r#"
@@ -977,7 +977,7 @@ ctx.database().execute(create_index, vec![]).await?;
 ### Database Error Handling
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 use serde_json::json;
 
 // Handle database errors

@@ -2,9 +2,9 @@
 
 # Device API参考
 
-**Version: 0.0.3**
+**Version: 0.1.4**
 
-**Last modified date: 2026-01-01**
+**Last modified date: 2026-01-15**
 
 device模块提供智能设备控制功能，包括设备发现、资源调度和资源池管理。
 
@@ -45,8 +45,8 @@ device模块包含以下子模块：
 #### 使用示例
 
 ```rust
-use dms::prelude::*;
-use dms::device::{DMSCDeviceControlConfig, DMSCResourceRequest, DMSCDeviceType, DMSCDeviceCapabilities};
+use dmsc::prelude::*;
+use dmsc::device::{DMSCDeviceControlConfig, DMSCResourceRequest, DMSCDeviceType, DMSCDeviceCapabilities};
 
 async fn example() -> DMSCResult<()> {
     let device_config = DMSCDeviceControlConfig {
@@ -172,7 +172,7 @@ async fn example() -> DMSCResult<()> {
 资源请求结构体。
 
 ```rust
-use dms::device::{DMSCResourceRequest, DMSCDeviceType, DMSCDeviceCapabilities};
+use dmsc::device::{DMSCResourceRequest, DMSCDeviceType, DMSCDeviceCapabilities};
 
 let request = DMSCResourceRequest {
     request_id: "req-001".to_string(),
@@ -239,7 +239,7 @@ SLA 优先级类别。
 资源池接口。
 
 ```rust
-use dms::device::DMSCResourcePool;
+use dmsc::device::DMSCResourcePool;
 
 let pool = DMSCResourcePool::new("gpu-pool".to_string(), 10);
 
@@ -329,9 +329,20 @@ for device in &discovery_result.discovered_devices {
 </div>
 
 - [README](./README.md): 模块概览，提供API参考文档总览和快速导航
+- [auth](./auth.md): 认证模块，处理用户认证和授权
+- [cache](./cache.md): 缓存模块，提供内存缓存和分布式缓存支持
+- [config](./config.md): 配置模块，管理应用程序配置
 - [core](./core.md): 核心模块，提供错误处理和服务上下文
-- [log](./log.md): 日志模块，记录设备事件
-- [config](./config.md): 配置模块，管理设备配置
-- [cache](./cache.md): 缓存模块，缓存设备状态
-- [observability](./observability.md): 可观测性模块，监控设备性能
-- [service_mesh](./service_mesh.md): 服务网格模块，管理设备服务发现
+- [database](./database.md): 数据库模块，提供数据库操作支持
+- [fs](./fs.md): 文件系统模块，提供文件操作功能
+- [gateway](./gateway.md): 网关模块，提供API网关功能
+- [hooks](./hooks.md): 钩子模块，提供生命周期钩子支持
+- [http](./http.md): HTTP模块，提供HTTP服务器和客户端功能
+- [log](./log.md): 日志模块，记录协议事件
+- [mq](./mq.md): 消息队列模块，提供消息队列支持
+- [observability](./observability.md): 可观测性模块，监控协议性能
+- [protocol](./protocol.md): 协议模块，提供通信协议支持
+- [security](./security.md): 安全模块，提供加密和解密功能
+- [service_mesh](./service_mesh.md): 服务网格模块，使用协议进行服务间通信
+- [storage](./storage.md): 存储模块，提供云存储支持
+- [validation](./validation.md): 验证模块，提供数据验证功能

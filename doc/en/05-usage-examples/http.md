@@ -2,9 +2,9 @@
 
 # HTTP Service Usage Example
 
-**Version: 0.0.3**
+**Version: 0.1.4**
 
-**Last modified date: 2026-01-01**
+**Last modified date: 2026-01-15**
 
 This example demonstrates how to use the DMSC http module for HTTP server, client, routing management, middleware, WebSocket, and file upload/download functionality.
 
@@ -103,7 +103,7 @@ http:
 Replace the `src/main.rs` file with the following content:
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 use serde_json::json;
 use chrono::Utc;
 
@@ -259,7 +259,7 @@ The HTTP module provides usage examples for HTTP server, client, routing managem
 ### Basic Server Configuration
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 use serde_json::json;
 
 // Create HTTP server configuration
@@ -294,7 +294,7 @@ ctx.log().info("HTTP server initialized on port 8080");
 ### Basic Routing
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 use serde_json::json;
 
 // GET request handler
@@ -455,7 +455,7 @@ ctx.http().delete("/users/:id", |req, ctx| async move {
 ### Route Groups
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 use serde_json::json;
 
 // Create API route group
@@ -651,7 +651,7 @@ auth_routes.post("/register", |req, ctx| async move {
 ### Basic Client Usage
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 use serde_json::json;
 
 // Create HTTP client configuration
@@ -705,7 +705,7 @@ if create_response.status.is_success() {
 ### Advanced Client Features
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 use serde_json::json;
 
 // Form data submission
@@ -781,7 +781,7 @@ for (i, result) in results.iter().enumerate() {
 ### Built-in Middleware
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 use serde_json::json;
 
 // Logging middleware
@@ -828,7 +828,7 @@ ctx.http().use_middleware(DMSCHttpMiddleware::request_id()
 ### Custom Middleware
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 use serde_json::json;
 
 // Custom authentication middleware
@@ -968,7 +968,7 @@ ctx.http().use_custom_middleware(error_handling_middleware);
 ### WebSocket Server
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 use serde_json::json;
 use futures::{StreamExt, SinkExt};
 
@@ -1124,7 +1124,7 @@ async fn broadcast_to_room(room_id: &str, message: serde_json::Value, ctx: &DMSC
 ### WebSocket Client
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 use futures::{StreamExt, SinkExt};
 
 // Connect to WebSocket server
@@ -1158,7 +1158,7 @@ while let Some(msg) = receiver.next().await {
 ### File Upload
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 use serde_json::json;
 
 // Single file upload
@@ -1279,7 +1279,7 @@ ctx.http().post("/upload/chunk", |req, ctx| async move {
 ### File Download
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 use serde_json::json;
 
 // File download
@@ -1366,7 +1366,7 @@ ctx.http().get("/download/temp/:file_id", |req, ctx| async move {
 ### Proxy Requests
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 
 // HTTP proxy
 ctx.http().get("/proxy/*path", |req, ctx| async move {
@@ -1395,7 +1395,7 @@ ctx.http().get("/proxy/*path", |req, ctx| async move {
 ### Server-Sent Events (SSE)
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 use serde_json::json;
 
 // SSE endpoint
@@ -1449,7 +1449,7 @@ async fn send_custom_event(event_type: &str, data: serde_json::Value, ctx: &DMSC
 ### HTTP Error Handling
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 use serde_json::json;
 
 // Error handling example
@@ -1525,7 +1525,7 @@ async fn retry_request(url: &str, max_retries: u32, ctx: &DMSCContext) -> DMSCRe
 ### Connection Pool Optimization
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 
 // HTTP client connection pool configuration
 let client_config = DMSCHttpClientConfig {
@@ -1545,7 +1545,7 @@ ctx.http().init_client(client_config).await?;
 ### Cache Strategy
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 use serde_json::json;
 
 // HTTP response cache
@@ -1660,7 +1660,7 @@ websocat ws://localhost:8080/ws
 ### Implement Load Balancing Support
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 use serde_json::json;
 
 async fn setup_load_balancer(ctx: &DMSCServiceContext) -> DMSCResult<()> {
@@ -1700,7 +1700,7 @@ async fn setup_load_balancer(ctx: &DMSCServiceContext) -> DMSCResult<()> {
 ### Implement API Gateway
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 use serde_json::json;
 
 async fn setup_api_gateway(ctx: &DMSCServiceContext) -> DMSCResult<()> {
@@ -1768,7 +1768,7 @@ async fn setup_api_gateway(ctx: &DMSCServiceContext) -> DMSCResult<()> {
 ### Implement GraphQL Support
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 use async_graphql::*;
 use serde_json::json;
 
@@ -1862,7 +1862,7 @@ async fn setup_graphql(ctx: &DMSCServiceContext) -> DMSCResult<()> {
 ### Implement Real-time Analytics
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 use serde_json::json;
 use std::sync::Arc;
 use tokio::sync::RwLock;

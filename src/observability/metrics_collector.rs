@@ -51,7 +51,7 @@
 //! ## Usage
 //!
 //! ```rust
-//! use dms::observability::{DMSCPerformanceCollector, DMSCSystemMetricsCollector};
+//! use dmsc::observability::{DMSCPerformanceCollector, DMSCSystemMetricsCollector};
 //! use std::time::Duration;
 //!
 //! fn example() {

@@ -4,9 +4,9 @@
 
 [English](../en/index.md) | 简体中文
 
-**Version: 0.0.3**
+**Version: 0.1.4**
 
-**最后更新日期: 2026-01-01**
+**最后更新日期: 2026-01-15**
 
 <a href="https://space.bilibili.com/3493284091529457" target="_blank">
     <img alt="BiliBili" src="https://img.shields.io/badge/BiliBili-Dunimd-00A1D6?style=flat-square&logo=bilibili"/>

@@ -2,9 +2,9 @@
 
 # 缓存使用示例
 
-**Version: 0.0.3**
+**Version: 0.1.4**
 
-**Last modified date: 2026-01-01**
+**Last modified date: 2026-01-15**
 
 本示例展示如何使用DMSC的cache模块进行多种缓存后端和高级缓存功能的使用。
 
@@ -88,7 +88,7 @@ cache:
 将`src/main.rs`文件替换为以下内容：
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 use serde_json::json;
 use std::time::Duration;
 
@@ -182,7 +182,7 @@ async fn advanced_cache_features(ctx: &DMSCServiceContext) -> DMSCResult<()> {
 ### 内存缓存
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 use serde_json::json;
 
 // 创建内存缓存后端
@@ -231,7 +231,7 @@ if let Some(ttl) = ctx.cache().ttl("user:123")? {
 ### Redis缓存
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 use serde_json::json;
 
 // 创建Redis缓存后端
@@ -281,7 +281,7 @@ for (key, value) in values {
 ### 缓存标签
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 use serde_json::json;
 
 // 设置带标签的缓存
@@ -309,7 +309,7 @@ ctx.log().info(format!("Found {} items with 'rust' tag", rust_keys.len()));
 ### 原子操作
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 
 // 原子递增
 let new_value = ctx.cache().increment("counter:page_views", 1)?;
@@ -333,7 +333,7 @@ ctx.log().info(format!("Previous activity: {:?}", old_value));
 ### 分布式锁
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 use tokio::time::{sleep, Duration};
 
 // 获取分布式锁
@@ -372,7 +372,7 @@ ctx.cache().with_lock("lock:report_generation", "worker-1", Duration::from_secs(
 ### 缓存穿透保护
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 use serde_json::json;
 
 // 获取用户数据，带缓存穿透保护
@@ -417,7 +417,7 @@ if ctx.cache().bloom_filter_might_contain("users", "123")? {
 ### 缓存雪崩保护
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 use serde_json::json;
 use rand::Rng;
 
@@ -445,7 +445,7 @@ for (key, value, ttl) in articles {
 ### 缓存预热
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 use serde_json::json;
 
 // 系统启动时预热热门数据
@@ -480,7 +480,7 @@ async fn warmup_cache() -> DMSCResult<()> {
 ### 缓存统计
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 
 // 获取缓存统计信息
 let stats = ctx.cache().get_stats()?;
@@ -502,7 +502,7 @@ ctx.log().info(format!("Cleaned {} expired entries", cleaned_count));
 ### 缓存健康检查
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 use serde_json::json;
 
 // 检查缓存健康状态
@@ -545,7 +545,7 @@ ctx.observability().register_health_check("cache", || async {
 ### 数据序列化
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 
@@ -593,7 +593,7 @@ if let Some(cached_data) = ctx.cache().get("user:123")? {
 ### 数据压缩
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 use serde_json::json;
 
 // 存储大型数据时启用压缩
@@ -649,7 +649,7 @@ ctx.log().info(format!("Uncompressed size: {} bytes", uncompressed_size));
 ### 缓存错误处理
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 use serde_json::json;
 
 // 处理缓存错误
@@ -841,7 +841,7 @@ cargo run
 ### 缓存集群支持
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 
 // 配置多节点Redis集群
 let cluster_backend = DMSCCacheBackend::RedisCluster {
@@ -874,7 +874,7 @@ ctx.cache().set_with_shard_key("user:123", json!({"name": "John"}), Some(Duratio
 ### 智能缓存预热
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 use machine_learning::cache::CachePredictor;
 
 // 基于机器学习预测缓存需求
@@ -908,7 +908,7 @@ async fn intelligent_cache_warmup() -> DMSCResult<()> {
 ### 自适应缓存策略
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 use std::collections::HashMap;
 
 // 动态调整缓存策略
@@ -977,7 +977,7 @@ impl AdaptiveCacheManager {
 ### 分布式缓存一致性
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 use distributed_consensus::raft::RaftNode;
 
 // 实现分布式缓存一致性

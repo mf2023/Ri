@@ -15,8 +15,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use dms::protocol::frames::*;
-use dms::core::{DMSCResult, DMSCError};
+use dmsc::protocol::frames::*;
+use dmsc::core::{DMSCResult, DMSCError};
 
 /// Protocol frame test module for DMSC wire protocol implementation.
 ///

@@ -38,7 +38,7 @@
 //! ## Usage
 //!
 //! ```rust
-//! use dms::device::discovery::{DMSCDeviceDiscovery, DiscoveryConfig};
+//! use dmsc::device::discovery::{DMSCDeviceDiscovery, DiscoveryConfig};
 //!
 //! #[tokio::main]
 //! async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -50,7 +50,7 @@
 //!     println!("Discovered {} devices", devices.len());
 //!
 //!     // Discover specific category
-//!     let cpus = discovery.discover_category(dms::device::HardwareCategory::CPU).await?;
+//!     let cpus = discovery.discover_category(dmsc::device::HardwareCategory::CPU).await?;
 //!     println!("Found {} CPUs", cpus.len());
 //!
 //!     Ok(())

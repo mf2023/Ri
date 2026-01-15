@@ -48,7 +48,7 @@
 //! ## Usage Example
 //!
 //! ```rust
-//! use dms::auth::jwt::DMSCJWTManager;
+//! use dmsc::auth::jwt::DMSCJWTManager;
 //!
 //! fn authenticate_user() {
 //!     let manager = DMSCJWTManager::create(
@@ -153,7 +153,7 @@ pub struct JWTClaims {
 /// ## Usage
 ///
 /// ```rust
-/// use dms::auth::jwt::JWTValidationOptions;
+/// use dmsc::auth::jwt::JWTValidationOptions;
 ///
 /// let options = JWTValidationOptions {
 ///     validate_exp: true,

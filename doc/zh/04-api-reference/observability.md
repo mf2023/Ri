@@ -2,9 +2,9 @@
 
 # Observability API参考
 
-**Version: 0.0.3**
+**Version: 0.1.4**
 
-**Last modified date: 2026-01-01**
+**Last modified date: 2026-01-15**
 
 observability模块提供分布式追踪、指标收集、健康检查与性能监控功能，支持OpenTelemetry标准。
 
@@ -48,7 +48,7 @@ observability模块包含以下子模块：
 #### 使用示例
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 
 // 记录指标
 ctx.observability().increment_counter("requests.total");
@@ -90,7 +90,7 @@ trace.finish();
 #### 使用示例
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 
 // 开始追踪
 let trace = ctx.observability().start_trace("http_request");
@@ -134,7 +134,7 @@ trace.finish();
 #### 使用示例
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 
 // 创建嵌套跨度
 let parent_span = ctx.observability().start_trace("request_processing");
@@ -174,7 +174,7 @@ parent_span.finish();
 计数器类型，只能增加。
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 
 // 创建计数器
 let counter = ctx.observability().create_counter("requests.total");
@@ -190,7 +190,7 @@ let count = counter.get();
 计量器类型，可以设置任意值。
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 
 // 创建计量器
 let gauge = ctx.observability().create_gauge("connections.active");
@@ -207,7 +207,7 @@ let value = gauge.get();
 直方图类型，记录数值分布。
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 
 // 创建直方图
 let histogram = ctx.observability().create_histogram("response.duration");
@@ -225,7 +225,7 @@ println!("P95: {}", stats.percentile_95);
 ### 指标标签
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 
 // 带标签的指标
 let counter = ctx.observability()
@@ -253,7 +253,7 @@ ctx.observability()
 #### Prometheus格式
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 
 // 导出Prometheus格式的指标
 let prometheus_metrics = ctx.observability().export_prometheus()?;
@@ -263,7 +263,7 @@ println!("{}", prometheus_metrics);
 #### StatsD格式
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 
 // 导出StatsD格式的指标
 let statsd_metrics = ctx.observability().export_statsd()?;
@@ -292,7 +292,7 @@ println!("{}", statsd_metrics);
 #### 内置健康检查
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 
 // 数据库健康检查
 let db_health = DatabaseHealthCheck::new("postgres://localhost/mydb");
@@ -321,7 +321,7 @@ for (name, result) in health_report.results {
 ### 自定义健康检查
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 
 struct CustomHealthCheck {
     threshold: f64,
@@ -367,7 +367,7 @@ ctx.observability().health().add_check("custom", custom_check);
 ### CPU分析
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 
 // 开始CPU分析
 ctx.observability().profiling().start_cpu_profiling()?;
@@ -386,7 +386,7 @@ std::fs::write("cpu_profile.svg", flame_graph)?;
 ### 内存分析
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 
 // 开始内存分析
 ctx.observability().profiling().start_memory_profiling()?;
@@ -406,7 +406,7 @@ for allocation in memory_profile.allocations {
 ### 性能指标
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 
 // 记录性能指标
 ctx.observability().profiling().record_performance_metric("cpu.usage", 45.2);
@@ -442,7 +442,7 @@ println!("Disk I/O: {:.1}MB/s", performance_report.disk_io);
 ### 告警条件
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 
 // 创建告警条件
 let cpu_alert_condition = AlertCondition::threshold(
@@ -465,7 +465,7 @@ ctx.observability().alerts().create_alert("high_memory_usage", memory_alert_cond
 ### 告警通知
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 
 // 配置告警通知
 let email_notification = EmailNotification::new(
@@ -493,7 +493,7 @@ ctx.observability().alerts().add_notification_channel("slack", slack_notificatio
 ### 导出器配置
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 
 // 配置Jaeger导出器
 let jaeger_config = JaegerExporterConfig {
@@ -516,7 +516,7 @@ ctx.observability().set_metric_exporter(MetricExporter::Prometheus(prometheus_co
 ### 上下文传播
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 
 // 注入追踪上下文到HTTP请求头
 let mut headers = HashMap::new();
@@ -547,7 +547,7 @@ let trace = ctx.observability().start_trace_with_context("http_request", extract
 #### 配置示例
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 
 let observability_config = DMSCObservabilityConfig {
     tracing_enabled: true,
@@ -580,7 +580,7 @@ ctx.observability().configure(observability_config)?;
 ### 错误处理示例
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 
 match ctx.observability().export_metrics() {
     Ok(metrics) => {
@@ -618,14 +618,20 @@ match ctx.observability().export_metrics() {
 </div>
 
 - [README](./README.md): 模块概览，提供API参考文档总览和快速导航
-- [auth](./auth.md): 认证模块，提供JWT、OAuth2和RBAC认证授权功能
+- [auth](./auth.md): 认证模块，处理用户认证和授权
+- [cache](./cache.md): 缓存模块，提供内存缓存和分布式缓存支持
+- [config](./config.md): 配置模块，管理应用程序配置
 - [core](./core.md): 核心模块，提供错误处理和服务上下文
-- [log](./log.md): 日志模块，记录认证事件和安全日志
-- [config](./config.md): 配置模块，管理认证配置和密钥设置
-- [cache](./cache.md): 缓存模块，提供多后端缓存抽象，缓存用户会话和权限数据
-- [database](./database.md): 数据库模块，提供用户数据持久化和查询功能
-- [http](./http.md): HTTP模块，提供Web认证接口和中间件支持
-- [mq](./mq.md): 消息队列模块，处理认证事件和异步通知
-- [security](./security.md): 安全模块，提供加密、哈希和验证功能
-- [storage](./storage.md): 存储模块，管理认证文件、密钥和证书
-- [validation](./validation.md): 验证模块，验证用户输入和表单数据
+- [database](./database.md): 数据库模块，提供数据库操作支持
+- [device](./device.md): 设备模块，使用协议进行设备通信
+- [fs](./fs.md): 文件系统模块，提供文件操作功能
+- [gateway](./gateway.md): 网关模块，提供API网关功能
+- [hooks](./hooks.md): 钩子模块，提供生命周期钩子支持
+- [http](./http.md): HTTP模块，提供HTTP服务器和客户端功能
+- [log](./log.md): 日志模块，记录协议事件
+- [mq](./mq.md): 消息队列模块，提供消息队列支持
+- [protocol](./protocol.md): 协议模块，提供通信协议支持
+- [security](./security.md): 安全模块，提供加密和解密功能
+- [service_mesh](./service_mesh.md): 服务网格模块，使用协议进行服务间通信
+- [storage](./storage.md): 存储模块，提供云存储支持
+- [validation](./validation.md): 验证模块，提供数据验证功能

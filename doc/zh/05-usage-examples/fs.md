@@ -2,9 +2,9 @@
 
 # 文件系统使用示例
 
-**Version: 0.0.3**
+**Version: 0.1.4**
 
-**Last modified date: 2026-01-01**
+**Last modified date: 2026-01-15**
 
 本示例展示如何使用 fs 模块进行文件操作，包括原子写入、目录管理和分类目录组织。
 
@@ -22,7 +22,7 @@
 </div>
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 use std::path::PathBuf;
 use serde::{Serialize, Deserialize};
 
@@ -270,7 +270,7 @@ example.txt removed
 ```rust
 fn batch_json_operations(fs: &DMSCFileSystem) -> DMSCResult<()> {
     let settings = AppSettings {
-        version: "0.0.3".to_string(),
+        version: "0.1.4".to_string(),
         debug_mode: true,
         max_connections: 100,
     };
@@ -313,6 +313,29 @@ fn cleanup_old_data(fs: &DMSCFileSystem) -> DMSCResult<()> {
 4. **及时清理临时文件**：定期清理tmp目录
 5. **验证文件存在性**：操作前检查文件是否存在
 6. **使用ensure_parent_dir**：写入前确保父目录存在
+
+<div align="center">
+
+## 相关模块
+
+</div>
+
+- [README](./README.md)：使用示例总览，提供快速导航
+- [authentication](./authentication.md)：认证示例，包括JWT、OAuth2和多因素认证
+- [basic-app](./basic-app.md)：基础应用示例
+- [caching](./caching.md)：缓存示例，包括内存缓存和分布式缓存
+- [database](./database.md)：数据库操作示例
+- [device](./device.md)：设备控制示例
+- [gateway](./gateway.md)：API网关示例
+- [hooks](./hooks.md)：钩子系统示例
+- [http](./http.md)：HTTP服务器和客户端示例
+- [mq](./mq.md)：消息队列示例
+- [observability](./observability.md)：可观测性示例
+- [protocol](./protocol.md)：协议模块示例
+- [security](./security.md)：安全和加密示例
+- [service_mesh](./service_mesh.md)：服务网格示例
+- [storage](./storage.md)：云存储示例
+- [validation](./validation.md)：数据验证示例
 
 <div align="center">
 

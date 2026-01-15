@@ -43,7 +43,7 @@
 //! ## Usage
 //! 
 //! ```rust
-//! use dms::prelude::*;
+//! use dmsc::prelude::*;
 //! 
 //! async fn example() {
 //!     // Create a rate limiter with default configuration

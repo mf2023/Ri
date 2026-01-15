@@ -2,9 +2,9 @@
 
 # Database API参考
 
-**Version: 0.0.3**
+**Version: 0.1.4**
 
-**Last modified date: 2026-01-01**
+**Last modified date: 2026-01-15**
 
 database模块提供统一数据库访问层，支持多种数据库类型、连接池管理、事务处理与查询构建器。
 
@@ -46,7 +46,7 @@ database模块包含以下子模块：
 #### 使用示例
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 
 // 执行查询
 let results = ctx.database().query("SELECT id, name, email FROM users WHERE active = true")?;
@@ -90,7 +90,7 @@ let name: String = user.get("name")?;
 #### 配置示例
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 
 let db_config = DMSCDatabaseConfig {
     database_type: DMSCDatabaseType::Postgres,
@@ -145,7 +145,7 @@ let db_config = DMSCDatabaseConfig {
 #### 使用示例
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 
 // 构建SELECT查询
 let query = DMSCQueryBuilder::new()
@@ -175,7 +175,7 @@ let complex_query = DMSCQueryBuilder::new()
 ### 插入构建器
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 
 // 构建INSERT查询
 let insert_query = DMSCInsertBuilder::new()
@@ -201,7 +201,7 @@ ctx.database().execute(&batch_insert)?;
 ### 更新构建器
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 
 // 构建UPDATE查询
 let update_query = DMSCUpdateBuilder::new()
@@ -217,7 +217,7 @@ ctx.database().execute(&update_query)?;
 ### 删除构建器
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 
 // 构建DELETE查询
 let delete_query = DMSCDeleteBuilder::new()
@@ -252,7 +252,7 @@ ctx.database().execute(&delete_query)?;
 #### 使用示例
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 
 // 开始事务
 let mut transaction = ctx.database().begin_transaction()?;
@@ -287,7 +287,7 @@ try {
 ### 事务隔离级别
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 
 // 设置事务隔离级别
 let transaction = ctx.database()
@@ -309,7 +309,7 @@ let serializable = TransactionIsolation::Serializable;
 ### 连接池配置
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 
 let pool_config = DMSCPoolConfig {
     max_connections: 50,
@@ -327,7 +327,7 @@ let pool_config = DMSCPoolConfig {
 ### 连接池监控
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 
 // 获取连接池统计信息
 let stats = ctx.database().get_pool_stats()?;
@@ -342,7 +342,7 @@ println!("Total connections destroyed: {}", stats.total_destroyed);
 ### 连接池健康检查
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 
 // 检查连接池健康状态
 match ctx.database().ping() {
@@ -379,7 +379,7 @@ match ctx.database().ping() {
 ### 创建迁移
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 
 struct CreateUsersTable;
 
@@ -422,7 +422,7 @@ ctx.database().migrate()?;
 ### 迁移管理
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 
 // 获取迁移状态
 let migration_status = ctx.database().migration().get_status()?;
@@ -449,7 +449,7 @@ ctx.database().migration().rollback_to("20240115000001")?;
 ### 批量操作
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 
 // 批量插入
 let users = vec![
@@ -473,7 +473,7 @@ ctx.database().batch_update("users", "id", &["name"], updates)?;
 ### 预处理语句
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 
 // 准备预处理语句
 let stmt = ctx.database().prepare("SELECT * FROM users WHERE id = $1 AND active = $2")?;
@@ -491,7 +491,7 @@ for user_id in [123, 456, 789] {
 ### 异步操作
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 
 // 异步查询
 let results = ctx.database().query_async("SELECT * FROM users WHERE active = true").await?;
@@ -528,7 +528,7 @@ try {
 ### 错误处理示例
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 
 match ctx.database().query("SELECT * FROM users WHERE id = 123") {
     Ok(results) => {
@@ -574,14 +574,20 @@ match ctx.database().query("SELECT * FROM users WHERE id = 123") {
 </div>
 
 - [README](./README.md): 模块概览，提供API参考文档总览和快速导航
-- [auth](./auth.md): 认证模块，提供JWT、OAuth2和RBAC认证授权功能
+- [auth](./auth.md): 认证模块，处理用户认证和授权
+- [cache](./cache.md): 缓存模块，提供内存缓存和分布式缓存支持
+- [config](./config.md): 配置模块，管理应用程序配置
 - [core](./core.md): 核心模块，提供错误处理和服务上下文
-- [log](./log.md): 日志模块，记录认证事件和安全日志
-- [config](./config.md): 配置模块，管理认证配置和密钥设置
-- [cache](./cache.md): 缓存模块，提供多后端缓存抽象，缓存用户会话和权限数据
-- [http](./http.md): HTTP模块，提供Web认证接口和中间件支持
-- [mq](./mq.md): 消息队列模块，处理认证事件和异步通知
-- [observability](./observability.md): 可观测性模块，监控认证性能和安全事件
-- [security](./security.md): 安全模块，提供加密、哈希和验证功能
-- [storage](./storage.md): 存储模块，管理认证文件、密钥和证书
-- [validation](./validation.md): 验证模块，验证用户输入和表单数据
+- [device](./device.md): 设备模块，使用协议进行设备通信
+- [fs](./fs.md): 文件系统模块，提供文件操作功能
+- [gateway](./gateway.md): 网关模块，提供API网关功能
+- [hooks](./hooks.md): 钩子模块，提供生命周期钩子支持
+- [http](./http.md): HTTP模块，提供HTTP服务器和客户端功能
+- [log](./log.md): 日志模块，记录协议事件
+- [mq](./mq.md): 消息队列模块，提供消息队列支持
+- [observability](./observability.md): 可观测性模块，监控协议性能
+- [protocol](./protocol.md): 协议模块，提供通信协议支持
+- [security](./security.md): 安全模块，提供加密和解密功能
+- [service_mesh](./service_mesh.md): 服务网格模块，使用协议进行服务间通信
+- [storage](./storage.md): 存储模块，提供云存储支持
+- [validation](./validation.md): 验证模块，提供数据验证功能

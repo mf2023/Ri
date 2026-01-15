@@ -2,9 +2,9 @@
 
 # Hooks API参考
 
-**Version: 0.0.3**
+**Version: 0.1.4**
 
-**Last modified date: 2026-01-01**
+**Last modified date: 2026-01-15**
 
 hooks模块提供生命周期事件钩子系统，支持在应用启动、关闭等关键时刻执行自定义逻辑。
 
@@ -41,8 +41,8 @@ hooks模块基于事件总线模式，提供以下功能：
 #### 使用示例
 
 ```rust
-use dms::prelude::*;
-use dms::hooks::{DMSCHookBus, DMSCHookKind, DMSCHookHandler};
+use dmsc::prelude::*;
+use dmsc::hooks::{DMSCHookBus, DMSCHookKind, DMSCHookHandler};
 
 fn example() -> DMSCResult<()> {
     let mut hook_bus = DMSCHookBus::new();
@@ -134,8 +134,8 @@ fn example() -> DMSCResult<()> {
 ### 基础钩子注册
 
 ```rust
-use dms::hooks::{DMSCHookBus, DMSCHookKind, DMSCHookEvent};
-use dms::core::DMSCServiceContext;
+use dmsc::hooks::{DMSCHookBus, DMSCHookKind, DMSCHookEvent};
+use dmsc::core::DMSCServiceContext;
 
 let mut hook_bus = DMSCHookBus::new();
 
@@ -174,7 +174,7 @@ hook_bus._register(
 ### 带模块信息的钩子
 
 ```rust
-use dms::hooks::{DMSCHookBus, DMSCHookKind, DMSCModulePhase};
+use dmsc::hooks::{DMSCHookBus, DMSCHookKind, DMSCModulePhase};
 
 hook_bus._emit_with(
     &DMSCHookKind::BeforeModulesInit,
@@ -193,8 +193,8 @@ hook_bus._emit_with(
 ### 应用启动初始化
 
 ```rust
-use dms::prelude::*;
-use dms::hooks::{DMSCHookBus, DMSCHookKind};
+use dmsc::prelude::*;
+use dmsc::hooks::{DMSCHookBus, DMSCHookKind};
 
 fn setup_startup_hooks(hook_bus: &mut DMSCHookBus) {
     hook_bus._register(
@@ -298,7 +298,7 @@ fn setup_dependency_hooks(hook_bus: &mut DMSCHookBus) {
 钩子执行过程中的错误会向上传播：
 
 ```rust
-use dms::core::DMSCError;
+use dmsc::core::DMSCError;
 
 hook_bus._register(
     DMSCHookKind::Startup,
@@ -332,8 +332,20 @@ hook_bus._register(
 </div>
 
 - [README](./README.md): 模块概览，提供API参考文档总览和快速导航
-- [core](./core.md): 核心模块，提供服务上下文
-- [log](./log.md): 日志模块，记录钩子执行日志
-- [config](./config.md): 配置模块，管理钩子配置
-- [device](./device.md): 设备模块，使用钩子管理设备生命周期
-- [service_mesh](./service_mesh.md): 服务网格模块，使用钩子管理服务生命周期
+- [auth](./auth.md): 认证模块，处理用户认证和授权
+- [cache](./cache.md): 缓存模块，提供内存缓存和分布式缓存支持
+- [config](./config.md): 配置模块，管理应用程序配置
+- [core](./core.md): 核心模块，提供错误处理和服务上下文
+- [database](./database.md): 数据库模块，提供数据库操作支持
+- [device](./device.md): 设备模块，使用协议进行设备通信
+- [fs](./fs.md): 文件系统模块，提供文件操作功能
+- [gateway](./gateway.md): 网关模块，提供API网关功能
+- [http](./http.md): HTTP模块，提供HTTP服务器和客户端功能
+- [log](./log.md): 日志模块，记录协议事件
+- [mq](./mq.md): 消息队列模块，提供消息队列支持
+- [observability](./observability.md): 可观测性模块，监控协议性能
+- [protocol](./protocol.md): 协议模块，提供通信协议支持
+- [security](./security.md): 安全模块，提供加密和解密功能
+- [service_mesh](./service_mesh.md): 服务网格模块，使用协议进行服务间通信
+- [storage](./storage.md): 存储模块，提供云存储支持
+- [validation](./validation.md): 验证模块，提供数据验证功能

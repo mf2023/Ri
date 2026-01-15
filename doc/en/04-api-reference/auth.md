@@ -2,9 +2,9 @@
 
 # Auth API Reference
 
-**Version: 0.0.3**
+**Version: 0.1.4**
 
-**Last modified date: 2026-01-01**
+**Last modified date: 2026-01-15**
 
 The auth module provides authentication and authorization functionality, supporting JWT, OAuth2, and role-based access control.
 
@@ -38,12 +38,12 @@ The main interface for the authentication module, providing unified access to au
 | `jwt_manager()` | Get JWT manager | None | `Arc<DMSCJWTManager>` |
 | `permission_manager()` | Get permission manager | None | `Arc<DMSCPermissionManager>` |
 | `session_manager()` | Get session manager | None | `Arc<DMSCSessionManager>` |
-| `oauth_provider(provider)` | Get OAuth provider | `provider: &str` | `Option<Arc<DMSCOAuthProvider>>` |
+| `oauth_manager(provider)` | Get OAuth manager | `provider: &str` | `Option<Arc<DMSCOAuthManager>>` |
 
 #### Usage Example
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -64,10 +64,10 @@ let user = User {
     role: "admin".to_string(),
 };
 
-let jwt = jwt_manager.generate_jwt(&user).await?;
+let jwt = jwt_manager.generate_token("user123", vec!["admin"], vec!["read", "write"])?;
 
 // Verify JWT token
-let decoded_user: User = jwt_manager.verify_jwt(&jwt).await?;
+let claims = jwt_manager.validate_token(&jwt)?;
 
 // Access permission manager through module
 let permission_manager = ctx.module::<DMSCAuthModule>().await?
@@ -78,9 +78,9 @@ let has_access = permission_manager.check_permission(&user.role, "admin").await?
 
 // OAuth2 flow
 let auth_url = ctx.module::<DMSCAuthModule>().await?
-    .oauth_provider("github")
+    .oauth_manager("github")
     .unwrap()
-    .get_authorization_url("state123").await?;
+    .get_auth_url("state123").await?;
 ```
 
 ### DMSCJWTManager
@@ -91,11 +91,11 @@ JWT token manager, responsible for JWT generation and verification.
 
 | Method | Description | Parameters | Return Value |
 |:--------|:-------------|:--------|:--------|
-| `new(secret)` | Create JWT manager | `secret: String` | `Self` |
-| `generate_jwt(payload)` | Generate JWT token | `payload: impl Serialize` | `DMSCResult<String>` |
-| `verify_jwt(token)` | Verify JWT token | `token: &str` | `DMSCResult<T>` |
-| `generate_jwt_with_refresh(payload)` | Generate JWT and refresh token | `payload: impl Serialize` | `DMSCResult<(String, String)>` |
-| `refresh_jwt(refresh_token)` | Get new JWT using refresh token | `refresh_token: &str` | `DMSCResult<String>` |
+| `new(secret, expiry_secs)` | Create JWT manager | `secret: String`, `expiry_secs: u64` | `Self` |
+| `generate_token(user_id, roles, permissions)` | Generate JWT token | `user_id: &str`, `roles: Vec<String>`, `permissions: Vec<String>` | `DMSCResult<String>` |
+| `validate_token(token)` | Verify JWT token | `token: &str` | `DMSCResult<JWTClaims>` |
+| `get_token_expiry()` | Get token expiry time | None | `u64` |
+| `get_secret()` | Get secret key | None | `&str` |
 
 ### DMSCPermissionManager
 
@@ -119,9 +119,9 @@ Authentication module configuration structure.
 |:--------|:--------|:-------------|:--------|
 | `jwt_secret` | `String` | JWT signing key | Auto-generated |
 | `jwt_issuer` | `String` | JWT issuer | "dms" |
-| `jwt_expires_in` | `u64` | JWT expiration time (seconds) | 3600 |
-| `jwt_refresh_expires_in` | `u64` | Refresh token expiration time (seconds) | 86400 |
-| `oauth_providers` | `HashMap<String, DMSCOAuthConfig>` | OAuth provider configuration | Empty |
+| `jwt_expiry_secs` | `u64` | JWT expiration time (seconds) | 3600 |
+| `jwt_refresh_expiry_secs` | `u64` | Refresh token expiration time (seconds) | 86400 |
+| `oauth_managers` | `HashMap<String, DMSCOAuthConfig>` | OAuth manager configuration | Empty |
 | `permission_rules` | `HashMap<String, Vec<String>>` | Permission rules | Default rules |
 
 #### Usage Example
@@ -130,9 +130,34 @@ Authentication module configuration structure.
 let auth_config = DMSCAuthConfig {
     jwt_secret: "your-secret-key".to_string(),
     jwt_issuer: "dms".to_string(),
-    jwt_expires_in: 3600,
-    jwt_refresh_expires_in: 86400,
-    oauth_providers: HashMap::new(),
+    jwt_expiry_secs: 3600,
+    jwt_refresh_expiry_secs: 86400,
+    oauth_managers: HashMap::new(),
     permission_rules: HashMap::new(),
 };
 ```
+
+<div align="center">
+
+## Related Modules
+
+</div>
+
+- [README](./README.md): Module overview with API reference summary and quick navigation
+- [cache](./cache.md): Cache module providing in-memory and distributed cache support
+- [config](./config.md): Configuration module managing application configuration
+- [core](./core.md): Core module providing error handling and service context
+- [database](./database.md): Database module providing database operation support
+- [device](./device.md): Device module using protocols for device communication
+- [fs](./fs.md): Filesystem module providing file operation functions
+- [gateway](./gateway.md): Gateway module providing API gateway functionality
+- [hooks](./hooks.md): Hooks module providing lifecycle hook support
+- [http](./http.md): HTTP module providing HTTP server and client functionality
+- [log](./log.md): Logging module for protocol events
+- [mq](./mq.md): Message queue module providing message queue support
+- [observability](./observability.md): Observability module for protocol performance monitoring
+- [protocol](./protocol.md): Protocol module providing communication protocol support
+- [security](./security.md): Security module providing encryption and decryption functions
+- [service_mesh](./service_mesh.md): Service mesh module using protocols for inter-service communication
+- [storage](./storage.md): Storage module providing cloud storage support
+- [validation](./validation.md): Validation module providing data validation functions

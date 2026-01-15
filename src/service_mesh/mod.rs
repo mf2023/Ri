@@ -57,8 +57,8 @@
 //! ## Usage
 //! 
 //! ```rust
-//! use dms::prelude::*;
-//! use dms::service_mesh::{DMSCServiceMesh, DMSCServiceMeshConfig};
+//! use dmsc::prelude::*;
+//! use dmsc::service_mesh::{DMSCServiceMesh, DMSCServiceMeshConfig};
 //! 
 //! async fn example() -> DMSCResult<()> {
 //!     // Create service mesh configuration

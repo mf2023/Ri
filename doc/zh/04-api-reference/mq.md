@@ -2,9 +2,9 @@
 
 # Message Queue API参考
 
-**Version: 0.0.3**
+**Version: 0.1.4**
 
-**Last modified date: 2026-01-01**
+**Last modified date: 2026-01-15**
 
 mq模块提供消息队列与事件驱动功能，支持多种消息队列后端、发布订阅、延迟消息与死信队列。
 
@@ -45,7 +45,7 @@ mq模块包含以下子模块：
 #### 使用示例
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 
 // 发布消息
 let message = serde_json::json!({
@@ -115,7 +115,7 @@ let consumer = ctx.mq().subscribe("user.events", |message: DMSCMessage| async mo
 #### 配置示例
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 
 let mq_config = DMSCMessageQueueConfig {
     backend: DMSCMQBackend::RabbitMQ,
@@ -172,7 +172,7 @@ let mq_config = DMSCMessageQueueConfig {
 消息处理器trait。
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 
 struct EmailNotificationHandler;
 
@@ -208,7 +208,7 @@ ctx.mq().register_handler("email.notifications", EmailNotificationHandler)?;
 ### 消息确认
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 
 let consumer = ctx.mq().subscribe("order.events", |message: DMSCMessage| async move {
     // 处理消息
@@ -262,7 +262,7 @@ let consumer = ctx.mq().subscribe_with_ack_mode(
 ### 路由规则
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 
 // 基于内容的路由
 let router = DMSCMessageRouter::new()
@@ -285,7 +285,7 @@ ctx.mq().set_router(router)?;
 ### 主题通配符
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 
 // 订阅多个主题
 let consumer = ctx.mq().subscribe("user.*", |message: DMSCMessage| async move {
@@ -324,7 +324,7 @@ let log_consumer = ctx.mq().subscribe("logs.>", |message: DMSCMessage| async mov
 ### 配置死信队列
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 
 // 创建队列时配置死信队列
 let queue_config = DMSCQueueConfig {
@@ -376,7 +376,7 @@ let dlq_consumer = ctx.mq().subscribe("failed.orders", |message: DMSCMessage| as
 ### 死信队列管理
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 
 // 重新投递死信消息
 let redelivered_count = ctx.mq().redeliver_dead_letters("failed.orders", "order.processing")?;
@@ -400,7 +400,7 @@ println!("  Unacked: {}", dlq_stats.unacked_count);
 ### 延迟队列
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 
 // 创建延迟队列
 let delayed_queue_config = DMSCQueueConfig {
@@ -428,7 +428,7 @@ ctx.mq().publish("delayed.notifications", delayed_message)?;
 ### 定时任务
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 use chrono::{DateTime, Utc, Duration as ChronoDuration};
 
 // 安排定时任务
@@ -481,7 +481,7 @@ schedule_task(
 ### 持久化配置
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 
 // 创建持久化队列
 let persistent_queue_config = DMSCQueueConfig {
@@ -508,7 +508,7 @@ ctx.mq().publish_persistent("critical.events", critical_message)?;
 ### 消息确认模式
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 
 // 自动确认模式（默认）
 let auto_ack_consumer = ctx.mq().subscribe("auto.ack.queue", |message: DMSCMessage| async move {
@@ -562,7 +562,7 @@ let batch_ack_consumer = ctx.mq().subscribe_with_ack_mode(
 ### 优先级队列
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 
 // 创建优先级队列
 let priority_queue_config = DMSCQueueConfig {
@@ -608,7 +608,7 @@ ctx.mq().publish_with_priority("priority.tasks", low_task, 1)?;
 ### 内容过滤
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 
 // 创建带过滤器的消费者
 let filtered_consumer = ctx.mq().subscribe_with_filter(
@@ -671,7 +671,7 @@ let filtered_consumer = ctx.mq().subscribe_with_filter(
 ### 错误处理示例
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 
 match ctx.mq().publish("user.events", message) {
     Ok(_) => {
@@ -716,14 +716,20 @@ match ctx.mq().publish("user.events", message) {
 </div>
 
 - [README](./README.md): 模块概览，提供API参考文档总览和快速导航
-- [auth](./auth.md): 认证模块，提供JWT、OAuth2和RBAC认证授权功能
+- [auth](./auth.md): 认证模块，处理用户认证和授权
+- [cache](./cache.md): 缓存模块，提供内存缓存和分布式缓存支持
+- [config](./config.md): 配置模块，管理应用程序配置
 - [core](./core.md): 核心模块，提供错误处理和服务上下文
-- [log](./log.md): 日志模块，记录认证事件和安全日志
-- [config](./config.md): 配置模块，管理认证配置和密钥设置
-- [cache](./cache.md): 缓存模块，提供多后端缓存抽象，缓存用户会话和权限数据
-- [database](./database.md): 数据库模块，提供用户数据持久化和查询功能
-- [http](./http.md): HTTP模块，提供Web认证接口和中间件支持
-- [observability](./observability.md): 可观测性模块，监控认证性能和安全事件
-- [security](./security.md): 安全模块，提供加密、哈希和验证功能
-- [storage](./storage.md): 存储模块，管理认证文件、密钥和证书
-- [validation](./validation.md): 验证模块，验证用户输入和表单数据
+- [database](./database.md): 数据库模块，提供数据库操作支持
+- [device](./device.md): 设备模块，使用协议进行设备通信
+- [fs](./fs.md): 文件系统模块，提供文件操作功能
+- [gateway](./gateway.md): 网关模块，提供API网关功能
+- [hooks](./hooks.md): 钩子模块，提供生命周期钩子支持
+- [http](./http.md): HTTP模块，提供HTTP服务器和客户端功能
+- [log](./log.md): 日志模块，记录协议事件
+- [observability](./observability.md): 可观测性模块，监控协议性能
+- [protocol](./protocol.md): 协议模块，提供通信协议支持
+- [security](./security.md): 安全模块，提供加密和解密功能
+- [service_mesh](./service_mesh.md): 服务网格模块，使用协议进行服务间通信
+- [storage](./storage.md): 存储模块，提供云存储支持
+- [validation](./validation.md): 验证模块，提供数据验证功能

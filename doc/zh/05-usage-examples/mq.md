@@ -2,9 +2,9 @@
 
 # 消息队列使用示例
 
-**Version: 0.0.3**
+**Version: 0.1.4**
 
-**Last modified date: 2026-01-01**
+**Last modified date: 2026-01-15**
 
 本示例展示如何使用DMSC的mq模块进行消息队列、发布订阅、路由、死信队列、延迟消息、持久化、优先级和过滤功能的使用。
 
@@ -106,7 +106,7 @@ message_queue:
 将`src/main.rs`文件替换为以下内容：
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 use serde_json::json;
 use uuid::Uuid;
 use chrono::Utc;
@@ -269,7 +269,7 @@ mq模块提供消息队列、发布订阅、路由、死信队列、延迟消息
 ### 连接和配置
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 use serde_json::json;
 
 // RabbitMQ配置
@@ -340,7 +340,7 @@ match ctx.mq().ping().await {
 ### 基本发布和订阅
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 use serde_json::json;
 
 // 发布消息到队列
@@ -483,7 +483,7 @@ async fn process_user_registration(message: &DMSCMessage, ctx: &DMSCContext) -> 
 ### 主题发布
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 use serde_json::json;
 
 // 发布到主题
@@ -549,7 +549,7 @@ ctx.mq().batch_publish_to_topic("notifications", messages).await?;
 ### 主题订阅
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 use serde_json::json;
 
 // 订阅主题（通配符模式）
@@ -676,7 +676,7 @@ async fn process_analytics_event(message: &DMSCMessage, ctx: &DMSCContext) -> DM
 ### 复杂路由
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 use serde_json::json;
 
 // 创建路由规则
@@ -825,7 +825,7 @@ async fn handle_order_created(order_id: &str, message: &DMSCMessage, ctx: &DMSCC
 ### 配置死信队列
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 use serde_json::json;
 
 // 创建死信队列配置
@@ -979,7 +979,7 @@ async fn do_message_processing(message: &DMSCMessage, ctx: &DMSCContext) -> DMSC
 ### 延迟消息处理
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 use serde_json::json;
 
 // 发送延迟消息
@@ -1153,7 +1153,7 @@ async fn schedule_periodic_tasks(ctx: &DMSCContext) -> DMSCResult<()> {
 ### 优先级消息处理
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 use serde_json::json;
 
 // 发送不同优先级的消息
@@ -1366,7 +1366,7 @@ async fn handle_low_priority_alert(message: &DMSCMessage, ctx: &DMSCContext) -> 
 ### 消息过滤器
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 use serde_json::json;
 
 // 创建消息过滤器
@@ -1490,7 +1490,7 @@ async fn custom_message_filter(message: &DMSCMessage, ctx: &DMSCContext) -> bool
 ### 持久化配置
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 use serde_json::json;
 
 // 配置消息持久化
@@ -1568,7 +1568,7 @@ ctx.log().info(format!("Replayed {} messages", replay_result.replayed_count));
 ### 批量消息处理
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 use serde_json::json;
 
 // 批量发布消息
@@ -1659,7 +1659,7 @@ async fn process_batch_item(message: &DMSCMessage, ctx: &DMSCContext) -> DMSCRes
 ### 消息队列错误处理
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 use serde_json::json;
 
 // 错误处理示例
@@ -1882,7 +1882,7 @@ cargo run
 ### 负载均衡支持
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 
 // 配置多个消息队列节点实现负载均衡
 let load_balanced_config = DMSCMessageQueueLoadBalanceConfig {
@@ -1938,7 +1938,7 @@ ctx.mq().monitor_node_health(|node, status| async move {
 ### 消息队列监控
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 use serde_json::json;
 
 // 配置消息队列监控
@@ -2038,7 +2038,7 @@ async fn send_alert_notification(level: &str, alert: &DMSCAlert, ctx: &DMSCConte
 ### 消息追踪
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 use serde_json::json;
 
 // 配置分布式消息追踪
@@ -2137,7 +2137,7 @@ ctx.mq().subscribe_with_tracing("user.events", |message, trace_context, ctx| asy
 ### 消息压缩
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 use serde_json::json;
 
 // 配置消息压缩

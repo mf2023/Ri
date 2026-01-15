@@ -15,10 +15,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use dms::protocol::integration::core::*;
-use dms::core::{DMSCResult, DMSCError, DMSCServiceContext};
-use dms::hooks::{DMSCHookKind, DMSCModulePhase};
-use dms::protocol::global_state::{DMSCSystemStatus, DMSCGlobalStateManager, DMSCStateUpdate};
+use dmsc::protocol::integration::core::*;
+use dmsc::core::{DMSCResult, DMSCError, DMSCServiceContext};
+use dmsc::hooks::{DMSCHookKind, DMSCModulePhase};
+use dmsc::protocol::global_state::{DMSCSystemStatus, DMSCGlobalStateManager, DMSCStateUpdate};
 use std::sync::Arc as StdArc;
 use std::sync::atomic::{AtomicBool, Ordering};
 

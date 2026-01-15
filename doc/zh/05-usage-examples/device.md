@@ -2,9 +2,9 @@
 
 # 设备控制使用示例
 
-**Version: 0.0.3**
+**Version: 0.1.4**
 
-**Last modified date: 2026-01-01**
+**Last modified date: 2026-01-15**
 
 本示例展示如何使用 device 模块进行设备发现、资源调度和资源池管理。
 
@@ -23,8 +23,8 @@
 </div>
 
 ```rust
-use dms::prelude::*;
-use dms::device::{DMSCDeviceControlModule, DMSCDeviceControlConfig, DMSCDeviceType, DMSCDeviceCapabilities, DMSCResourceRequest};
+use dmsc::prelude::*;
+use dmsc::device::{DMSCDeviceControlModule, DMSCDeviceControlConfig, DMSCDeviceType, DMSCDeviceCapabilities, DMSCResourceRequest};
 
 #[tokio::main]
 async fn main() -> DMSCResult<()> {
@@ -76,8 +76,8 @@ async fn main() -> DMSCResult<()> {
         },
         priority: 8,
         timeout_secs: 300,
-        sla_class: Some(dms::device::DMSCRequestSlaClass::High),
-        resource_weights: Some(dms::device::DMSCResourceWeights {
+        sla_class: Some(dmsc::device::DMSCRequestSlaClass::High),
+        resource_weights: Some(dmsc::device::DMSCResourceWeights {
             compute_weight: 1.0,
             memory_weight: 0.8,
             storage_weight: 0.5,
@@ -276,6 +276,29 @@ fn monitor_resource_pools(device_module: &DMSCDeviceControlModule) {
 3. **设置合适的超时**：根据任务复杂度设置合理的资源分配超时
 4. **及时释放资源**：任务完成后立即释放不再需要的资源
 5. **监控资源池**：定期检查资源池状态和利用率
+
+<div align="center">
+
+## 相关模块
+
+</div>
+
+- [README](./README.md)：使用示例总览，提供快速导航
+- [authentication](./authentication.md)：认证示例，包括JWT、OAuth2和多因素认证
+- [basic-app](./basic-app.md)：基础应用示例
+- [caching](./caching.md)：缓存示例，包括内存缓存和分布式缓存
+- [database](./database.md)：数据库操作示例
+- [fs](./fs.md)：文件系统操作示例
+- [gateway](./gateway.md)：API网关示例
+- [hooks](./hooks.md)：钩子系统示例
+- [http](./http.md)：HTTP服务器和客户端示例
+- [mq](./mq.md)：消息队列示例
+- [observability](./observability.md)：可观测性示例
+- [protocol](./protocol.md)：协议模块示例
+- [security](./security.md)：安全和加密示例
+- [service_mesh](./service_mesh.md)：服务网格示例
+- [storage](./storage.md)：云存储示例
+- [validation](./validation.md)：数据验证示例
 
 <div align="center">
 

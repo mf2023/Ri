@@ -2,9 +2,9 @@
 
 # Gateway API参考
 
-**Version: 0.0.3**
+**Version: 0.1.4**
 
-**Last modified date: 2026-01-01**
+**Last modified date: 2026-01-15**
 
 gateway模块提供API网关功能，包括路由、中间件、负载均衡、限流和熔断支持。
 
@@ -44,8 +44,8 @@ API网关主接口，提供统一的网关功能。
 #### 使用示例
 
 ```rust
-use dms::prelude::*;
-use dms::gateway::{DMSCGateway, DMSCGatewayConfig, DMSCRoute};
+use dmsc::prelude::*;
+use dmsc::gateway::{DMSCGateway, DMSCGatewayConfig, DMSCRoute};
 use std::collections::HashMap;
 
 async fn example() -> DMSCResult<()> {
@@ -76,13 +76,13 @@ async fn example() -> DMSCResult<()> {
             Ok(DMSCGatewayResponse::json(200, &serde_json::json!({ "status": "ok" }), req.id.clone())?)
         })),
         ..Default::default()
-    }).await?;
+    });
     
     let middleware_chain = gateway.middleware_chain();
     middleware_chain.add_middleware(Arc::new(|req, next| Box::pin(async move {
         println!("Request: {} {}", req.method, req.path);
         next(req).await
-    }))).await;
+    })));
     
     let sample_request = DMSCGatewayRequest::new(
         "GET".to_string(),
@@ -93,7 +93,7 @@ async fn example() -> DMSCResult<()> {
         "127.0.0.1:12345".to_string(),
     );
     
-    let response = gateway.handle_request(sample_request).await;
+    let response = gateway.handle_request(sample_request);
     println!("Response: {} {}", response.status_code, String::from_utf8_lossy(&response.body));
     
     Ok(())
@@ -155,7 +155,7 @@ async fn example() -> DMSCResult<()> {
 路由器。
 
 ```rust
-use dms::gateway::{DMSCRoute, DMSCRouter};
+use dmsc::gateway::{DMSCRoute, DMSCRouter};
 
 let router = DMSCRouter::new();
 
@@ -170,10 +170,31 @@ router.add_route(DMSCRoute {
         Ok(DMSCGatewayResponse::json(200, &users, req.id.clone())?)
     })),
     ..Default::default()
-}).await?;
+});
 
-let route = router.route(&request).await?;
+// 或者使用简写方法
+router.get("/api/users", Arc::new(|req| Box::pin(async move {
+    let users = vec![
+        serde_json::json!({"id": 1, "name": "Alice"}),
+        serde_json::json!({"id": 2, "name": "Bob"}),
+    ];
+    Ok(DMSCGatewayResponse::json(200, &users, req.id.clone())?)
+})));
 ```
+
+#### 方法
+
+| 方法 | 描述 | 参数 | 返回值 |
+|:--------|:-------------|:--------|:--------|
+| `new()` | 创建路由器 | 无 | `Self` |
+| `add_route(route)` | 添加路由 | `route: DMSCRoute` | `()` |
+| `get(path, handler)` | 添加GET路由 | `path: &str`, `handler: DMSCRouteHandler` | `()` |
+| `post(path, handler)` | 添加POST路由 | `path: &str`, `handler: DMSCRouteHandler` | `()` |
+| `put(path, handler)` | 添加PUT路由 | `path: &str`, `handler: DMSCRouteHandler` | `()` |
+| `delete(path, handler)` | 添加DELETE路由 | `path: &str`, `handler: DMSCRouteHandler` | `()` |
+| `patch(path, handler)` | 添加PATCH路由 | `path: &str`, `handler: DMSCRouteHandler` | `()` |
+| `clear_routes()` | 清除所有路由 | 无 | `()` |
+| `route_count()` | 获取路由数量 | 无 | `usize` |
 
 <div align="center">
 
@@ -186,7 +207,7 @@ let route = router.route(&request).await?;
 中间件接口。
 
 ```rust
-use dms::gateway::{DMSCMiddleware, DMSCGatewayRequest, DMSCGatewayResponse};
+use dmsc::gateway::{DMSCMiddleware, DMSCGatewayRequest, DMSCGatewayResponse};
 
 struct LoggingMiddleware;
 
@@ -209,7 +230,7 @@ gateway.middleware_chain().add_middleware(Arc::new(LoggingMiddleware)).await;
 ### 内置中间件
 
 ```rust
-use dms::gateway::DMSCRateLimiter;
+use dmsc::gateway::DMSCRateLimiter;
 
 let rate_limiter = DMSCRateLimiter::new(DMSCRateLimitConfig::default());
 gateway.set_rate_limiter(Some(Arc::new(rate_limiter)));
@@ -229,7 +250,7 @@ gateway.set_circuit_breaker(Some(Arc::new(circuit_breaker)));
 负载均衡器。
 
 ```rust
-use dms::gateway::{DMSCLoadBalancer, DMSCLoadBalancerStrategy};
+use dmsc::gateway::{DMSCLoadBalancer, DMSCLoadBalancerStrategy};
 
 let load_balancer = DMSCLoadBalancer::new(DMSCLoadBalancerStrategy::RoundRobin);
 
@@ -266,7 +287,7 @@ let server = load_balancer.select_server(None).await?;
 限流器。
 
 ```rust
-use dms::gateway::{DMSCRateLimiter, DMSCRateLimitConfig};
+use dmsc::gateway::{DMSCRateLimiter, DMSCRateLimitConfig};
 
 let rate_limit_config = DMSCRateLimitConfig {
     requests_per_second: 100,
@@ -304,7 +325,7 @@ if rate_limiter.check_request(&request).await {
 熔断器。
 
 ```rust
-use dms::gateway::{DMSCCircuitBreaker, DMSCCircuitBreakerConfig};
+use dmsc::gateway::{DMSCCircuitBreaker, DMSCCircuitBreakerConfig};
 
 let circuit_breaker_config = DMSCCircuitBreakerConfig {
     failure_threshold: 5,
@@ -380,8 +401,20 @@ circuit_breaker.record_failure().await;
 </div>
 
 - [README](./README.md): 模块概览，提供API参考文档总览和快速导航
+- [auth](./auth.md): 认证模块，处理用户认证和授权
+- [cache](./cache.md): 缓存模块，提供内存缓存和分布式缓存支持
+- [config](./config.md): 配置模块，管理应用程序配置
 - [core](./core.md): 核心模块，提供错误处理和服务上下文
-- [log](./log.md): 日志模块，记录网关请求日志
-- [config](./config.md): 配置模块，管理网关配置
-- [service_mesh](./service_mesh.md): 服务网格模块，与网关配合实现服务治理
-- [observability](./observability.md): 可观测性模块，监控网关性能
+- [database](./database.md): 数据库模块，提供数据库操作支持
+- [device](./device.md): 设备模块，使用协议进行设备通信
+- [fs](./fs.md): 文件系统模块，提供文件操作功能
+- [hooks](./hooks.md): 钩子模块，提供生命周期钩子支持
+- [http](./http.md): HTTP模块，提供HTTP服务器和客户端功能
+- [log](./log.md): 日志模块，记录协议事件
+- [mq](./mq.md): 消息队列模块，提供消息队列支持
+- [observability](./observability.md): 可观测性模块，监控协议性能
+- [protocol](./protocol.md): 协议模块，提供通信协议支持
+- [security](./security.md): 安全模块，提供加密和解密功能
+- [service_mesh](./service_mesh.md): 服务网格模块，使用协议进行服务间通信
+- [storage](./storage.md): 存储模块，提供云存储支持
+- [validation](./validation.md): 验证模块，提供数据验证功能

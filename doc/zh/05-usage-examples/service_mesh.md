@@ -2,9 +2,9 @@
 
 # Service Mesh 使用指南
 
-**Version: 0.0.3**
+**Version: 0.1.4**
 
-**Last modified date: 2026-01-01**
+**Last modified date: 2026-01-15**
 
 本文档提供 DMSC 服务网格的完整使用示例，演示如何利用服务发现、健康检查、流量管理、负载均衡和熔断器等功能构建分布式系统。
 
@@ -32,8 +32,8 @@
 ### 创建服务网格
 
 ```rust
-use dms::service_mesh::{DMSCServiceMesh, DMSCServiceMeshConfig};
-use dms::prelude::*;
+use dmsc::service_mesh::{DMSCServiceMesh, DMSCServiceMeshConfig};
+use dmsc::prelude::*;
 
 async fn create_service_mesh() -> DMSCResult<()> {
     let mesh = DMSCServiceMesh::new(DMSCServiceMeshConfig::default())?;
@@ -44,8 +44,8 @@ async fn create_service_mesh() -> DMSCResult<()> {
 ### 自定义配置
 
 ```rust
-use dms::service_mesh::DMSCServiceMeshConfig;
-use dms::gateway::{DMSCCircuitBreakerConfig, DMSCLoadBalancerStrategy};
+use dmsc::service_mesh::DMSCServiceMeshConfig;
+use dmsc::gateway::{DMSCCircuitBreakerConfig, DMSCLoadBalancerStrategy};
 use std::time::Duration;
 
 async fn create_custom_mesh() -> DMSCResult<()> {
@@ -68,8 +68,8 @@ async fn create_custom_mesh() -> DMSCResult<()> {
 ### 默认配置
 
 ```rust
-use dms::service_mesh::DMSCServiceMesh;
-use dms::prelude::*;
+use dmsc::service_mesh::DMSCServiceMesh;
+use dmsc::prelude::*;
 
 async fn use_default_config() -> DMSCResult<()> {
     let mesh_config = DMSCServiceMeshConfig::default();
@@ -87,8 +87,8 @@ async fn use_default_config() -> DMSCResult<()> {
 ### 基本服务注册
 
 ```rust
-use dms::service_mesh::DMSCServiceMesh;
-use dms::prelude::*;
+use dmsc::service_mesh::DMSCServiceMesh;
+use dmsc::prelude::*;
 
 async fn register_basic_service() -> DMSCResult<()> {
     let mesh = DMSCServiceMesh::new(DMSCServiceMeshConfig::default())?;
@@ -109,8 +109,8 @@ async fn register_basic_service() -> DMSCResult<()> {
 ### 带权重的服务注册
 
 ```rust
-use dms::service_mesh::DMSCServiceMesh;
-use dms::prelude::*;
+use dmsc::service_mesh::DMSCServiceMesh;
+use dmsc::prelude::*;
 
 async fn register_weighted_services() -> DMSCResult<()> {
     let mesh = DMSCServiceMesh::new(DMSCServiceMeshConfig::default())?;
@@ -143,8 +143,8 @@ async fn register_weighted_services() -> DMSCResult<()> {
 ### 批量服务注册
 
 ```rust
-use dms::service_mesh::DMSCServiceMesh;
-use dms::prelude::*;
+use dmsc::service_mesh::DMSCServiceMesh;
+use dmsc::prelude::*;
 
 async fn batch_registration() -> DMSCResult<()> {
     let mesh = DMSCServiceMesh::new(DMSCServiceMeshConfig::default())?;
@@ -176,8 +176,8 @@ async fn batch_registration() -> DMSCResult<()> {
 ### 发现服务实例
 
 ```rust
-use dms::service_mesh::DMSCServiceMesh;
-use dms::prelude::*;
+use dmsc::service_mesh::DMSCServiceMesh;
+use dmsc::prelude::*;
 
 async fn discover_services() -> DMSCResult<()> {
     let mesh = DMSCServiceMesh::new(DMSCServiceMeshConfig::default())?;
@@ -201,8 +201,8 @@ async fn discover_services() -> DMSCResult<()> {
 ### 处理服务不可用
 
 ```rust
-use dms::service_mesh::DMSCServiceMesh;
-use dms::prelude::*;
+use dmsc::service_mesh::DMSCServiceMesh;
+use dmsc::prelude::*;
 
 async fn handle_service_not_found() -> DMSCResult<()> {
     let mesh = DMSCServiceMesh::new(DMSCServiceMeshConfig::default())?;
@@ -224,8 +224,8 @@ async fn handle_service_not_found() -> DMSCResult<()> {
 ### 发现健康实例
 
 ```rust
-use dms::service_mesh::{DMSCServiceMesh, DMSCServiceHealthStatus};
-use dms::prelude::*;
+use dmsc::service_mesh::{DMSCServiceMesh, DMSCServiceHealthStatus};
+use dmsc::prelude::*;
 
 async fn discover_healthy_instances() -> DMSCResult<()> {
     let mesh = DMSCServiceMesh::new(DMSCServiceMeshConfig::default())?;
@@ -259,8 +259,8 @@ async fn discover_healthy_instances() -> DMSCResult<()> {
 ### 手动更新健康状态
 
 ```rust
-use dms::service_mesh::{DMSCServiceMesh, DMSCServiceHealthStatus};
-use dms::prelude::*;
+use dmsc::service_mesh::{DMSCServiceMesh, DMSCServiceHealthStatus};
+use dmsc::prelude::*;
 
 async fn manual_health_update() -> DMSCResult<()> {
     let mesh = DMSCServiceMesh::new(DMSCServiceMeshConfig::default())?;
@@ -298,8 +298,8 @@ async fn manual_health_update() -> DMSCResult<()> {
 ### 调用服务
 
 ```rust
-use dms::service_mesh::DMSCServiceMesh;
-use dms::prelude::*;
+use dmsc::service_mesh::DMSCServiceMesh;
+use dmsc::prelude::*;
 
 async fn call_service() -> DMSCResult<()> {
     let mesh = DMSCServiceMesh::new(DMSCServiceMeshConfig::default())?;
@@ -320,8 +320,8 @@ async fn call_service() -> DMSCResult<()> {
 ### 带重试的调用
 
 ```rust
-use dms::service_mesh::DMSCServiceMesh;
-use dms::prelude::*;
+use dmsc::service_mesh::DMSCServiceMesh;
+use dmsc::prelude::*;
 
 async fn call_with_retry() -> DMSCResult<()> {
     let config = DMSCServiceMeshConfig {
@@ -329,8 +329,8 @@ async fn call_with_retry() -> DMSCResult<()> {
         enable_health_check: true,
         enable_traffic_management: true,
         health_check_interval: std::time::Duration::from_secs(30),
-        circuit_breaker_config: dms::gateway::DMSCCircuitBreakerConfig::default(),
-        load_balancer_strategy: dms::gateway::DMSCLoadBalancerStrategy::RoundRobin,
+        circuit_breaker_config: dmsc::gateway::DMSCCircuitBreakerConfig::default(),
+        load_balancer_strategy: dmsc::gateway::DMSCLoadBalancerStrategy::RoundRobin,
         max_retry_attempts: 5, // 最多重试5次
         retry_timeout: std::time::Duration::from_secs(10),
     };
@@ -366,8 +366,8 @@ async fn call_with_retry() -> DMSCResult<()> {
 ### 获取熔断器实例
 
 ```rust
-use dms::service_mesh::DMSCServiceMesh;
-use dms::prelude::*;
+use dmsc::service_mesh::DMSCServiceMesh;
+use dmsc::prelude::*;
 
 async fn access_circuit_breaker() -> DMSCResult<()> {
     let mesh = DMSCServiceMesh::new(DMSCServiceMeshConfig::default())?;
@@ -386,8 +386,8 @@ async fn access_circuit_breaker() -> DMSCResult<()> {
 ### 熔断器配置
 
 ```rust
-use dms::service_mesh::DMSCServiceMeshConfig;
-use dms::gateway::{DMSCCircuitBreaker, DMSCCircuitBreakerConfig};
+use dmsc::service_mesh::DMSCServiceMeshConfig;
+use dmsc::gateway::{DMSCCircuitBreaker, DMSCCircuitBreakerConfig};
 
 async fn configure_circuit_breaker() -> DMSCResult<()> {
     let config = DMSCServiceMeshConfig {
@@ -401,7 +401,7 @@ async fn configure_circuit_breaker() -> DMSCResult<()> {
             timeout_duration: std::time::Duration::from_secs(30), // 30秒后尝试半开
             half_open_max_requests: 10,
         },
-        load_balancer_strategy: dms::gateway::DMSCLoadBalancerStrategy::RoundRobin,
+        load_balancer_strategy: dmsc::gateway::DMSCLoadBalancerStrategy::RoundRobin,
         max_retry_attempts: 3,
         retry_timeout: std::time::Duration::from_secs(5),
     };
@@ -430,8 +430,8 @@ async fn configure_circuit_breaker() -> DMSCResult<()> {
 ### 获取负载均衡器
 
 ```rust
-use dms::service_mesh::DMSCServiceMesh;
-use dms::prelude::*;
+use dmsc::service_mesh::DMSCServiceMesh;
+use dmsc::prelude::*;
 
 async fn access_load_balancer() -> DMSCResult<()> {
     let mesh = DMSCServiceMesh::new(DMSCServiceMeshConfig::default())?;
@@ -451,8 +451,8 @@ async fn access_load_balancer() -> DMSCResult<()> {
 ### 自定义负载均衡策略
 
 ```rust
-use dms::service_mesh::DMSCServiceMeshConfig;
-use dms::gateway::DMSCLoadBalancerStrategy;
+use dmsc::service_mesh::DMSCServiceMeshConfig;
+use dmsc::gateway::DMSCLoadBalancerStrategy;
 
 async fn custom_load_balancing() -> DMSCResult<()> {
     // 使用最少连接策略
@@ -461,7 +461,7 @@ async fn custom_load_balancing() -> DMSCResult<()> {
         enable_health_check: true,
         enable_traffic_management: true,
         health_check_interval: std::time::Duration::from_secs(30),
-        circuit_breaker_config: dms::gateway::DMSCCircuitBreakerConfig::default(),
+        circuit_breaker_config: dmsc::gateway::DMSCCircuitBreakerConfig::default(),
         load_balancer_strategy: DMSCLoadBalancerStrategy::LeastConnections,
         max_retry_attempts: 3,
         retry_timeout: std::time::Duration::from_secs(5),
@@ -485,9 +485,9 @@ async fn custom_load_balancing() -> DMSCResult<()> {
 以下示例展示服务网格的完整集成，包括所有核心功能的协调使用：
 
 ```rust
-use dms::service_mesh::{DMSCServiceMesh, DMSCServiceMeshConfig};
-use dms::gateway::{DMSCCircuitBreakerConfig, DMSCLoadBalancerStrategy};
-use dms::prelude::*;
+use dmsc::service_mesh::{DMSCServiceMesh, DMSCServiceMeshConfig};
+use dmsc::gateway::{DMSCCircuitBreakerConfig, DMSCLoadBalancerStrategy};
+use dmsc::prelude::*;
 use std::time::Duration;
 
 struct MicroservicesPlatform {
@@ -683,3 +683,26 @@ api-gateway: 2 个健康实例
 
 演示完成
 ```
+
+<div align="center">
+
+## 相关模块
+
+</div>
+
+- [README](./README.md)：使用示例总览，提供快速导航
+- [authentication](./authentication.md)：认证示例，包括JWT、OAuth2和多因素认证
+- [basic-app](./basic-app.md)：基础应用示例
+- [caching](./caching.md)：缓存示例，包括内存缓存和分布式缓存
+- [database](./database.md)：数据库操作示例
+- [device](./device.md)：设备控制示例
+- [fs](./fs.md)：文件系统操作示例
+- [gateway](./gateway.md)：API网关示例
+- [hooks](./hooks.md)：钩子系统示例
+- [http](./http.md)：HTTP服务器和客户端示例
+- [mq](./mq.md)：消息队列示例
+- [observability](./observability.md)：可观测性示例
+- [protocol](./protocol.md)：协议模块示例
+- [security](./security.md)：安全和加密示例
+- [storage](./storage.md)：云存储示例
+- [validation](./validation.md)：数据验证示例

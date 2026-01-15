@@ -47,7 +47,7 @@
 //! ## Usage
 //! 
 //! ```rust
-//! use dms::prelude::*;
+//! use dmsc::prelude::*;
 //! use serde::{Serialize, Deserialize};
 //! 
 //! #[derive(Debug, Serialize, Deserialize)]

@@ -40,7 +40,7 @@
 //! ## Prelude
 //! 
 //! The `prelude` module re-exports commonly used types and traits for convenient access,
-//! allowing users to import all essential components with a single `use dms::prelude::*;` statement.
+//! allowing users to import all essential components with a single `use dmsc::prelude::*;` statement.
 
 /// Core runtime, application builder, and service context
 pub mod core;
@@ -227,10 +227,10 @@ pub mod py {
         m.add_class::<DMSCServiceContext>()?;
         
         // Add Python module support
-        m.add_class::<crate::core::module::DMSCPyModule>()?;
-        m.add_class::<crate::core::module::DMSCPyModuleAdapter>()?;
-        m.add_class::<crate::core::module::DMSCPyServiceModule>()?;
-        m.add_class::<crate::core::module::DMSCPyAsyncServiceModule>()?;
+        m.add_class::<crate::core::module::DMSCPythonModule>()?;
+        m.add_class::<crate::core::module::DMSCPythonModuleAdapter>()?;
+        m.add_class::<crate::core::module::DMSCPythonServiceModule>()?;
+        m.add_class::<crate::core::module::DMSCPythonAsyncServiceModule>()?;
         
         // Add other core types
         m.add_class::<DMSCLogger>()?;
@@ -372,8 +372,6 @@ pub mod py {
         m.add_class::<crate::device::pool::DMSCResourcePoolManager>()?;
         
         // Create and add submodules
-        create_log_module(m)?;
-        create_config_module(m)?;
         create_device_module(m)?;
         create_cache_module(m)?;
         create_fs_module(m)?;
@@ -386,22 +384,10 @@ pub mod py {
         create_database_module(m)?;
         create_validation_module(m)?;
         create_protocol_module(m)?;
-        
+
         Ok(())
     }
-    
-    fn create_log_module(parent: &Bound<'_, PyModule>) -> PyResult<()> {
-        let m = PyModule::new(parent.py(), "log")?;
-        parent.add_submodule(&m)?;
-        Ok(())
-    }
-    
-    fn create_config_module(parent: &Bound<'_, PyModule>) -> PyResult<()> {
-        let m = PyModule::new(parent.py(), "config")?;
-        parent.add_submodule(&m)?;
-        Ok(())
-    }
-    
+
     fn create_device_module(parent: &Bound<'_, PyModule>) -> PyResult<()> {
         let m = PyModule::new(parent.py(), "device")?;
         

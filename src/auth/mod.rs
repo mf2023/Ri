@@ -53,8 +53,8 @@
 //! ## Usage
 //! 
 //! ```rust
-//! use dms::prelude::*;
-//! use dms::auth::{DMSCAuthConfig, DMSCJWTManager, DMSCJWTClaims};
+//! use dmsc::prelude::*;
+//! use dmsc::auth::{DMSCAuthConfig, DMSCJWTManager, DMSCJWTClaims};
 //! use serde_json::json;
 //! 
 //! async fn example() -> DMSCResult<()> {
@@ -373,26 +373,49 @@ impl DMSCAuthModule {
     fn py_new(config: DMSCAuthConfig) -> PyResult<Self> {
         Ok(Self::new(config))
     }
-    
-    #[pyo3(name = "jwt_manager")]
-    fn jwt_manager_impl(&self) -> PyResult<DMSCJWTManager> {
-        Ok(DMSCJWTManager::create(self.jwt_manager.get_secret().to_string(), self.jwt_manager.get_token_expiry()))
+
+    #[getter]
+    fn get_config(&self) -> DMSCAuthConfig {
+        self.config.clone()
     }
-    
-    #[pyo3(name = "session_manager")]
-    fn session_manager_impl(&self) -> PyResult<DMSCSessionManager> {
-        Ok(DMSCSessionManager::new(self.config.session_timeout_secs))
+
+    #[getter]
+    fn get_jwt_expiry_secs(&self) -> u64 {
+        self.jwt_manager.get_token_expiry()
     }
-    
-    #[pyo3(name = "permission_manager")]
-    fn permission_manager_impl(&self) -> PyResult<DMSCPermissionManager> {
-        Ok(DMSCPermissionManager::new())
+
+    #[getter]
+    fn get_session_timeout_secs(&self) -> u64 {
+        self.config.session_timeout_secs
     }
-    
-    #[pyo3(name = "oauth_manager")]
-    fn oauth_manager_impl(&self) -> PyResult<DMSCOAuthManager> {
-        let cache = Arc::new(crate::cache::DMSCMemoryCache::new());
-        Ok(DMSCOAuthManager::new(cache))
+
+    #[getter]
+    fn is_enabled(&self) -> bool {
+        self.config.enabled
+    }
+
+    #[getter]
+    fn is_api_keys_enabled(&self) -> bool {
+        self.config.enable_api_keys
+    }
+
+    #[getter]
+    fn is_session_auth_enabled(&self) -> bool {
+        self.config.enable_session_auth
+    }
+
+    #[getter]
+    fn get_oauth_providers(&self) -> Vec<String> {
+        self.config.oauth_providers.clone()
+    }
+
+    fn validate_jwt_token(&self, token: &str) -> bool {
+        self.jwt_manager.validate_token(token).is_ok()
+    }
+
+    fn generate_test_token(&self, subject: &str, roles: Vec<String>, permissions: Vec<String>) -> PyResult<String> {
+        self.jwt_manager.generate_token(subject, roles, permissions)
+            .map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(e.to_string()))
     }
 }
 

@@ -2,9 +2,9 @@
 
 # Device Control Usage Example
 
-**Version: 0.0.3**
+**Version: 0.1.4**
 
-**Last modified date: 2026-01-01**
+**Last modified date: 2026-01-15**
 
 This example demonstrates how to use the device module for device discovery, resource scheduling, and resource pool management.
 
@@ -23,8 +23,8 @@ This example demonstrates how to use the device module for device discovery, res
 </div>
 
 ```rust
-use dms::prelude::*;
-use dms::device::{DMSCDeviceControlModule, DMSCDeviceControlConfig, DMSCDeviceType, DMSCDeviceCapabilities, DMSCResourceRequest};
+use dmsc::prelude::*;
+use dmsc::device::{DMSCDeviceControlModule, DMSCDeviceControlConfig, DMSCDeviceType, DMSCDeviceCapabilities, DMSCResourceRequest};
 
 #[tokio::main]
 async fn main() -> DMSCResult<()> {
@@ -76,8 +76,8 @@ async fn main() -> DMSCResult<()> {
         },
         priority: 8,
         timeout_secs: 300,
-        sla_class: Some(dms::device::DMSCRequestSlaClass::High),
-        resource_weights: Some(dms::device::DMSCResourceWeights {
+        sla_class: Some(dmsc::device::DMSCRequestSlaClass::High),
+        resource_weights: Some(dmsc::device::DMSCResourceWeights {
             compute_weight: 1.0,
             memory_weight: 0.8,
             storage_weight: 0.5,
@@ -276,6 +276,29 @@ fn monitor_resource_pools(device_module: &DMSCDeviceControlModule) {
 3. **Set appropriate timeouts**: Set reasonable resource allocation timeouts based on task complexity
 4. **Release resources promptly**: Release resources no longer needed immediately after task completion
 5. **Monitor resource pools**: Regularly check resource pool status and utilization
+
+<div align="center">
+
+## Related Modules
+
+</div>
+
+- [README](./README.md): Module overview with usage examples summary and quick navigation
+- [authentication](./authentication.md): Authentication examples, including JWT, OAuth2, and MFA
+- [basic-app](./basic-app.md): Basic application examples
+- [caching](./caching.md): Caching examples, including memory and distributed caching
+- [database](./database.md): Database operation examples
+- [fs](./fs.md): Filesystem operation examples
+- [gateway](./gateway.md): API gateway examples
+- [hooks](./hooks.md): Hook system examples
+- [http](./http.md): HTTP server and client examples
+- [mq](./mq.md): Message queue examples
+- [observability](./observability.md): Observability examples
+- [protocol](./protocol.md): Protocol module examples
+- [security](./security.md): Security and encryption examples
+- [service_mesh](./service_mesh.md): Service mesh examples
+- [storage](./storage.md): Cloud storage examples
+- [validation](./validation.md): Data validation examples
 
 <div align="center">
 

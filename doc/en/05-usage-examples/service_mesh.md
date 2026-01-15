@@ -22,8 +22,8 @@ The service mesh is a core component of DMSC, providing a complete solution for 
 ### Creating a Service Mesh
 
 ```rust
-use dms::service_mesh::{DMSCServiceMesh, DMSCServiceMeshConfig};
-use dms::prelude::*;
+use dmsc::service_mesh::{DMSCServiceMesh, DMSCServiceMeshConfig};
+use dmsc::prelude::*;
 
 async fn create_service_mesh() -> DMSCResult<()> {
     let mesh = DMSCServiceMesh::new(DMSCServiceMeshConfig::default())?;
@@ -34,8 +34,8 @@ async fn create_service_mesh() -> DMSCResult<()> {
 ### Custom Configuration
 
 ```rust
-use dms::service_mesh::DMSCServiceMeshConfig;
-use dms::gateway::{DMSCCircuitBreakerConfig, DMSCLoadBalancerStrategy};
+use dmsc::service_mesh::DMSCServiceMeshConfig;
+use dmsc::gateway::{DMSCCircuitBreakerConfig, DMSCLoadBalancerStrategy};
 use std::time::Duration;
 
 async fn create_custom_mesh() -> DMSCResult<()> {
@@ -58,8 +58,8 @@ async fn create_custom_mesh() -> DMSCResult<()> {
 ### Default Configuration
 
 ```rust
-use dms::service_mesh::DMSCServiceMesh;
-use dms::prelude::*;
+use dmsc::service_mesh::DMSCServiceMesh;
+use dmsc::prelude::*;
 
 async fn use_default_config() -> DMSCResult<()> {
     let mesh_config = DMSCServiceMeshConfig::default();
@@ -77,8 +77,8 @@ Service registration is the process of adding service instances to the service m
 ### Basic Service Registration
 
 ```rust
-use dms::service_mesh::DMSCServiceMesh;
-use dms::prelude::*;
+use dmsc::service_mesh::DMSCServiceMesh;
+use dmsc::prelude::*;
 
 async fn register_basic_service() -> DMSCResult<()> {
     let mesh = DMSCServiceMesh::new(DMSCServiceMeshConfig::default())?;
@@ -99,8 +99,8 @@ async fn register_basic_service() -> DMSCResult<()> {
 ### Weighted Service Registration
 
 ```rust
-use dms::service_mesh::DMSCServiceMesh;
-use dms::prelude::*;
+use dmsc::service_mesh::DMSCServiceMesh;
+use dmsc::prelude::*;
 
 async fn register_weighted_services() -> DMSCResult<()> {
     let mesh = DMSCServiceMesh::new(DMSCServiceMeshConfig::default())?;
@@ -133,8 +133,8 @@ async fn register_weighted_services() -> DMSCResult<()> {
 ### Batch Registration
 
 ```rust
-use dms::service_mesh::DMSCServiceMesh;
-use dms::prelude::*;
+use dmsc::service_mesh::DMSCServiceMesh;
+use dmsc::prelude::*;
 
 async fn batch_registration() -> DMSCResult<()> {
     let mesh = DMSCServiceMesh::new(DMSCServiceMeshConfig::default())?;
@@ -166,8 +166,8 @@ Service discovery allows the service mesh to automatically find available servic
 ### Discovering Service Instances
 
 ```rust
-use dms::service_mesh::DMSCServiceMesh;
-use dms::prelude::*;
+use dmsc::service_mesh::DMSCServiceMesh;
+use dmsc::prelude::*;
 
 async fn discover_services() -> DMSCResult<()> {
     let mesh = DMSCServiceMesh::new(DMSCServiceMeshConfig::default())?;
@@ -191,8 +191,8 @@ async fn discover_services() -> DMSCResult<()> {
 ### Handling Unavailable Services
 
 ```rust
-use dms::service_mesh::DMSCServiceMesh;
-use dms::prelude::*;
+use dmsc::service_mesh::DMSCServiceMesh;
+use dmsc::prelude::*;
 
 async fn handle_service_not_found() -> DMSCResult<()> {
     let mesh = DMSCServiceMesh::new(DMSCServiceMeshConfig::default())?;
@@ -214,8 +214,8 @@ async fn handle_service_not_found() -> DMSCResult<()> {
 ### Discovering Healthy Instances
 
 ```rust
-use dms::service_mesh::{DMSCServiceMesh, DMSCServiceHealthStatus};
-use dms::prelude::*;
+use dmsc::service_mesh::{DMSCServiceMesh, DMSCServiceHealthStatus};
+use dmsc::prelude::*;
 
 async fn discover_healthy_instances() -> DMSCResult<()> {
     let mesh = DMSCServiceMesh::new(DMSCServiceMeshConfig::default())?;
@@ -249,8 +249,8 @@ Health checking continuously monitors the status of service instances, ensuring 
 ### Manual Health Status Update
 
 ```rust
-use dms::service_mesh::{DMSCServiceMesh, DMSCServiceHealthStatus};
-use dms::prelude::*;
+use dmsc::service_mesh::{DMSCServiceMesh, DMSCServiceHealthStatus};
+use dmsc::prelude::*;
 
 async fn manual_health_update() -> DMSCResult<()> {
     let mesh = DMSCServiceMesh::new(DMSCServiceMeshConfig::default())?;
@@ -288,8 +288,8 @@ Traffic management provides intelligent routing and request forwarding, supporti
 ### Calling a Service
 
 ```rust
-use dms::service_mesh::DMSCServiceMesh;
-use dms::prelude::*;
+use dmsc::service_mesh::DMSCServiceMesh;
+use dmsc::prelude::*;
 
 async fn call_service() -> DMSCResult<()> {
     let mesh = DMSCServiceMesh::new(DMSCServiceMeshConfig::default())?;
@@ -310,8 +310,8 @@ async fn call_service() -> DMSCResult<()> {
 ### Calling with Retry
 
 ```rust
-use dms::service_mesh::DMSCServiceMesh;
-use dms::prelude::*;
+use dmsc::service_mesh::DMSCServiceMesh;
+use dmsc::prelude::*;
 
 async fn call_with_retry() -> DMSCResult<()> {
     let config = DMSCServiceMeshConfig {
@@ -319,8 +319,8 @@ async fn call_with_retry() -> DMSCResult<()> {
         enable_health_check: true,
         enable_traffic_management: true,
         health_check_interval: std::time::Duration::from_secs(30),
-        circuit_breaker_config: dms::gateway::DMSCCircuitBreakerConfig::default(),
-        load_balancer_strategy: dms::gateway::DMSCLoadBalancerStrategy::RoundRobin,
+        circuit_breaker_config: dmsc::gateway::DMSCCircuitBreakerConfig::default(),
+        load_balancer_strategy: dmsc::gateway::DMSCLoadBalancerStrategy::RoundRobin,
         max_retry_attempts: 5, // Retry up to 5 times
         retry_timeout: std::time::Duration::from_secs(10),
     };
@@ -356,8 +356,8 @@ The circuit breaker is a critical component that protects the system from cascad
 ### Accessing the Circuit Breaker
 
 ```rust
-use dms::service_mesh::DMSCServiceMesh;
-use dms::prelude::*;
+use dmsc::service_mesh::DMSCServiceMesh;
+use dmsc::prelude::*;
 
 async fn access_circuit_breaker() -> DMSCResult<()> {
     let mesh = DMSCServiceMesh::new(DMSCServiceMeshConfig::default())?;
@@ -376,8 +376,8 @@ async fn access_circuit_breaker() -> DMSCResult<()> {
 ### Circuit Breaker Configuration
 
 ```rust
-use dms::service_mesh::DMSCServiceMeshConfig;
-use dms::gateway::{DMSCCircuitBreaker, DMSCCircuitBreakerConfig};
+use dmsc::service_mesh::DMSCServiceMeshConfig;
+use dmsc::gateway::{DMSCCircuitBreaker, DMSCCircuitBreakerConfig};
 
 async fn configure_circuit_breaker() -> DMSCResult<()> {
     let config = DMSCServiceMeshConfig {
@@ -391,7 +391,7 @@ async fn configure_circuit_breaker() -> DMSCResult<()> {
             timeout_duration: std::time::Duration::from_secs(30), // Try half-open after 30 seconds
             half_open_max_requests: 10,
         },
-        load_balancer_strategy: dms::gateway::DMSCLoadBalancerStrategy::RoundRobin,
+        load_balancer_strategy: dmsc::gateway::DMSCLoadBalancerStrategy::RoundRobin,
         max_retry_attempts: 3,
         retry_timeout: std::time::Duration::from_secs(5),
     };
@@ -420,8 +420,8 @@ Load balancing distributes requests across multiple service instances, ensuring 
 ### Accessing the Load Balancer
 
 ```rust
-use dms::service_mesh::DMSCServiceMesh;
-use dms::prelude::*;
+use dmsc::service_mesh::DMSCServiceMesh;
+use dmsc::prelude::*;
 
 async fn access_load_balancer() -> DMSCResult<()> {
     let mesh = DMSCServiceMesh::new(DMSCServiceMeshConfig::default())?;
@@ -441,8 +441,8 @@ async fn access_load_balancer() -> DMSCResult<()> {
 ### Custom Load Balancing Strategy
 
 ```rust
-use dms::service_mesh::DMSCServiceMeshConfig;
-use dms::gateway::DMSCLoadBalancerStrategy;
+use dmsc::service_mesh::DMSCServiceMeshConfig;
+use dmsc::gateway::DMSCLoadBalancerStrategy;
 
 async fn custom_load_balancing() -> DMSCResult<()> {
     // Use least connections strategy
@@ -451,7 +451,7 @@ async fn custom_load_balancing() -> DMSCResult<()> {
         enable_health_check: true,
         enable_traffic_management: true,
         health_check_interval: std::time::Duration::from_secs(30),
-        circuit_breaker_config: dms::gateway::DMSCCircuitBreakerConfig::default(),
+        circuit_breaker_config: dmsc::gateway::DMSCCircuitBreakerConfig::default(),
         load_balancer_strategy: DMSCLoadBalancerStrategy::LeastConnections,
         max_retry_attempts: 3,
         retry_timeout: std::time::Duration::from_secs(5),
@@ -475,9 +475,9 @@ async fn custom_load_balancing() -> DMSCResult<()> {
 The following example demonstrates a complete integration of the service mesh, including coordinated use of all core features:
 
 ```rust
-use dms::service_mesh::{DMSCServiceMesh, DMSCServiceMeshConfig};
-use dms::gateway::{DMSCCircuitBreakerConfig, DMSCLoadBalancerStrategy};
-use dms::prelude::*;
+use dmsc::service_mesh::{DMSCServiceMesh, DMSCServiceMeshConfig};
+use dmsc::gateway::{DMSCCircuitBreakerConfig, DMSCLoadBalancerStrategy};
+use dmsc::prelude::*;
 use std::time::Duration;
 
 struct MicroservicesPlatform {
@@ -673,3 +673,26 @@ Payment processed successfully
 
 Demonstration complete
 ```
+
+<div align="center">
+
+## Related Modules
+
+</div>
+
+- [README](./README.md): Module overview with usage examples summary and quick navigation
+- [authentication](./authentication.md): Authentication examples, including JWT, OAuth2, and MFA
+- [basic-app](./basic-app.md): Basic application examples
+- [caching](./caching.md): Caching examples, including memory and distributed caching
+- [database](./database.md): Database operation examples
+- [device](./device.md): Device control examples
+- [fs](./fs.md): Filesystem operation examples
+- [gateway](./gateway.md): API gateway examples
+- [hooks](./hooks.md): Hook system examples
+- [http](./http.md): HTTP server and client examples
+- [mq](./mq.md): Message queue examples
+- [observability](./observability.md): Observability examples
+- [protocol](./protocol.md): Protocol module examples
+- [security](./security.md): Security and encryption examples
+- [storage](./storage.md): Cloud storage examples
+- [validation](./validation.md): Data validation examples

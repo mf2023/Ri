@@ -2,9 +2,9 @@
 
 # Gateway API Reference
 
-**Version: 0.0.3**
+**Version: 0.1.4**
 
-**Last modified date: 2026-01-01**
+**Last modified date: 2026-01-15**
 
 The gateway module provides API gateway functionality, including routing, middleware, load balancing, rate limiting, and circuit breaking support.
 
@@ -44,8 +44,8 @@ The main API gateway interface, providing unified gateway functionality.
 #### Usage Example
 
 ```rust
-use dms::prelude::*;
-use dms::gateway::{DMSCGateway, DMSCGatewayConfig, DMSCRoute};
+use dmsc::prelude::*;
+use dmsc::gateway::{DMSCGateway, DMSCGatewayConfig, DMSCRoute};
 use std::collections::HashMap;
 
 async fn example() -> DMSCResult<()> {
@@ -76,13 +76,13 @@ async fn example() -> DMSCResult<()> {
             Ok(DMSCGatewayResponse::json(200, &serde_json::json!({ "status": "ok" }), req.id.clone())?)
         })),
         ..Default::default()
-    }).await?;
+    });
     
     let middleware_chain = gateway.middleware_chain();
     middleware_chain.add_middleware(Arc::new(|req, next| Box::pin(async move {
         println!("Request: {} {}", req.method, req.path);
         next(req).await
-    }))).await;
+    })));
     
     let sample_request = DMSCGatewayRequest::new(
         "GET".to_string(),
@@ -93,7 +93,7 @@ async fn example() -> DMSCResult<()> {
         "127.0.0.1:12345".to_string(),
     );
     
-    let response = gateway.handle_request(sample_request).await;
+    let response = gateway.handle_request(sample_request);
     println!("Response: {} {}", response.status_code, String::from_utf8_lossy(&response.body));
     
     Ok(())
@@ -155,7 +155,7 @@ Route definition.
 Router.
 
 ```rust
-use dms::gateway::{DMSCRoute, DMSCRouter};
+use dmsc::gateway::{DMSCRoute, DMSCRouter};
 
 let router = DMSCRouter::new();
 
@@ -170,10 +170,31 @@ router.add_route(DMSCRoute {
         Ok(DMSCGatewayResponse::json(200, &users, req.id.clone())?)
     })),
     ..Default::default()
-}).await?;
+});
 
-let route = router.route(&request).await?;
+// Or use shorthand methods
+router.get("/api/users", Arc::new(|req| Box::pin(async move {
+    let users = vec![
+        serde_json::json!({"id": 1, "name": "Alice"}),
+        serde_json::json!({"id": 2, "name": "Bob"}),
+    ];
+    Ok(DMSCGatewayResponse::json(200, &users, req.id.clone())?)
+})));
 ```
+
+#### Methods
+
+| Method | Description | Parameters | Returns |
+|:--------|:-------------|:--------|:--------|
+| `new()` | Create router | None | `Self` |
+| `add_route(route)` | Add route | `route: DMSCRoute` | `()` |
+| `get(path, handler)` | Add GET route | `path: &str`, `handler: DMSCRouteHandler` | `()` |
+| `post(path, handler)` | Add POST route | `path: &str`, `handler: DMSCRouteHandler` | `()` |
+| `put(path, handler)` | Add PUT route | `path: &str`, `handler: DMSCRouteHandler` | `()` |
+| `delete(path, handler)` | Add DELETE route | `path: &str`, `handler: DMSCRouteHandler` | `()` |
+| `patch(path, handler)` | Add PATCH route | `path: &str`, `handler: DMSCRouteHandler` | `()` |
+| `clear_routes()` | Clear all routes | None | `()` |
+| `route_count()` | Get route count | None | `usize` |
 
 <div align="center">
 
@@ -186,7 +207,7 @@ let route = router.route(&request).await?;
 Middleware interface.
 
 ```rust
-use dms::gateway::{DMSCMiddleware, DMSCGatewayRequest, DMSCGatewayResponse};
+use dmsc::gateway::{DMSCMiddleware, DMSCGatewayRequest, DMSCGatewayResponse};
 
 struct LoggingMiddleware;
 
@@ -209,7 +230,7 @@ gateway.middleware_chain().add_middleware(Arc::new(LoggingMiddleware)).await;
 ### Built-in Middleware
 
 ```rust
-use dms::gateway::DMSCRateLimiter;
+use dmsc::gateway::DMSCRateLimiter;
 
 let rate_limiter = DMSCRateLimiter::new(DMSCRateLimitConfig::default());
 gateway.set_rate_limiter(Some(Arc::new(rate_limiter)));
@@ -229,7 +250,7 @@ gateway.set_circuit_breaker(Some(Arc::new(circuit_breaker)));
 Load balancer.
 
 ```rust
-use dms::gateway::{DMSCLoadBalancer, DMSCLoadBalancerStrategy};
+use dmsc::gateway::{DMSCLoadBalancer, DMSCLoadBalancerStrategy};
 
 let load_balancer = DMSCLoadBalancer::new(DMSCLoadBalancerStrategy::RoundRobin);
 
@@ -266,7 +287,7 @@ let server = load_balancer.select_server(None).await?;
 Rate limiter.
 
 ```rust
-use dms::gateway::{DMSCRateLimiter, DMSCRateLimitConfig};
+use dmsc::gateway::{DMSCRateLimiter, DMSCRateLimitConfig};
 
 let rate_limit_config = DMSCRateLimitConfig {
     requests_per_second: 100,
@@ -304,7 +325,7 @@ Rate limit configuration.
 Circuit breaker.
 
 ```rust
-use dms::gateway::{DMSCCircuitBreaker, DMSCCircuitBreakerConfig};
+use dmsc::gateway::{DMSCCircuitBreaker, DMSCCircuitBreakerConfig};
 
 let circuit_breaker_config = DMSCCircuitBreakerConfig {
     failure_threshold: 5,
@@ -380,8 +401,20 @@ Gateway configuration.
 </div>
 
 - [README](./README.md): Module overview with API reference summary and quick navigation
+- [auth](./auth.md): Authentication module handling user authentication and authorization
+- [cache](./cache.md): Cache module providing in-memory and distributed cache support
+- [config](./config.md): Configuration module managing application configuration
 - [core](./core.md): Core module providing error handling and service context
-- [log](./log.md): Logging module for gateway request logging
-- [config](./config.md): Configuration module for gateway settings
-- [service_mesh](./service_mesh.md): Service mesh module working with gateway for service governance
-- [observability](./observability.md): Observability module for gateway performance monitoring
+- [database](./database.md): Database module providing database operation support
+- [device](./device.md): Device module using protocols for device communication
+- [fs](./fs.md): Filesystem module providing file operation functions
+- [hooks](./hooks.md): Hooks module providing lifecycle hook support
+- [http](./http.md): HTTP module providing HTTP server and client functionality
+- [log](./log.md): Logging module for protocol events
+- [mq](./mq.md): Message queue module providing message queue support
+- [observability](./observability.md): Observability module for protocol performance monitoring
+- [protocol](./protocol.md): Protocol module providing communication protocol support
+- [security](./security.md): Security module providing encryption and decryption functions
+- [service_mesh](./service_mesh.md): Service mesh module using protocols for inter-service communication
+- [storage](./storage.md): Storage module providing cloud storage support
+- [validation](./validation.md): Validation module providing data validation functions

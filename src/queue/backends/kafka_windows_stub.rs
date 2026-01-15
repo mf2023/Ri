@@ -72,7 +72,7 @@
 //!
 //! ### Using Memory Queue (Recommended for Testing)
 //! ```rust
-//! use dms::prelude::*;
+//! use dmsc::prelude::*;
 //!
 //! async fn example() -> DMSCResult<()> {
 //!     // Use memory queue for testing - works on all platforms
@@ -83,7 +83,7 @@
 //!
 //! ### Using Redis Queue
 //! ```rust
-//! use dms::prelude::*;
+//! use dmsc::prelude::*;
 //!
 //! async fn example() -> DMSCResult<()> {
 //!     // Use Redis queue - requires Redis server
@@ -265,7 +265,7 @@ impl KafkaWindowsHelper {
 /// # Example
 ///
 /// ```rust,ignore
-/// use dms::queue::DMSCKafkaQueue;
+/// use dmsc::queue::DMSCKafkaQueue;
 ///
 /// async fn example() -> DMSCResult<()> {
 ///     // This will always fail on Windows with a helpful error message
@@ -279,7 +279,7 @@ impl KafkaWindowsHelper {
 /// Use `DMSCMemoryQueue` instead for testing:
 ///
 /// ```rust,ignore
-/// use dms::queue::DMSCMemoryQueue;
+/// use dmsc::queue::DMSCMemoryQueue;
 ///
 /// async fn example() -> DMSCResult<()> {
 ///     // This works on all platforms

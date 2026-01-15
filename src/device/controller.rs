@@ -47,8 +47,8 @@
 //! ## Usage
 //!
 //! ```rust
-//! use dms::device::{DMSCDeviceController, DMSCDeviceType, DMSCDeviceCapabilities};
-//! use dms::core::DMSCResult;
+//! use dmsc::device::{DMSCDeviceController, DMSCDeviceType, DMSCDeviceCapabilities};
+//! use dmsc::core::DMSCResult;
 //!
 //! async fn example() -> DMSCResult<()> {
 //!     // Create a new device controller

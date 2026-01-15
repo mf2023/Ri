@@ -2,9 +2,9 @@
 
 # Message Queue API Reference
 
-**Version: 0.0.3**
+**Version: 0.1.4**
 
-**Last modified date: 2026-01-01**
+**Last modified date: 2026-01-15**
 
 The mq module provides message queue and event-driven functionality, supporting multiple message queue backends, publish-subscribe, delayed messages, and dead letter queues.
 
@@ -45,7 +45,7 @@ Main interface for message queue manager, providing unified message queue access
 #### Usage Example
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 
 // Publish message
 let message = serde_json::json!({
@@ -115,7 +115,7 @@ Message queue configuration structure.
 #### Configuration Example
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 
 let mq_config = DMSCMessageQueueConfig {
     backend: DMSCMQBackend::RabbitMQ,
@@ -172,7 +172,7 @@ Message structure.
 Message handler trait.
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 
 struct EmailNotificationHandler;
 
@@ -208,7 +208,7 @@ ctx.mq().register_handler("email.notifications", EmailNotificationHandler)?;
 ### Message Acknowledgment
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 
 let consumer = ctx.mq().subscribe("order.events", |message: DMSCMessage| async move {
     // Process message
@@ -262,7 +262,7 @@ let consumer = ctx.mq().subscribe_with_ack_mode(
 ### Routing Rules
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 
 // Content-based routing
 let router = DMSCMessageRouter::new()
@@ -285,7 +285,7 @@ ctx.mq().set_router(router)?;
 ### Topic Wildcards
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 
 // Subscribe to multiple topics
 let consumer = ctx.mq().subscribe("user.*", |message: DMSCMessage| async move {
@@ -324,7 +324,7 @@ let log_consumer = ctx.mq().subscribe("logs.>", |message: DMSCMessage| async mov
 ### Configuring Dead Letter Queues
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 
 // Configure dead letter queue when creating queue
 let queue_config = DMSCQueueConfig {
@@ -376,7 +376,7 @@ let dlq_consumer = ctx.mq().subscribe("failed.orders", |message: DMSCMessage| as
 ### Dead Letter Queue Management
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 
 // Redeliver dead letter messages
 let redelivered_count = ctx.mq().redeliver_dead_letters("failed.orders", "order.processing")?;
@@ -400,7 +400,7 @@ println!("  Unacked: {}", dlq_stats.unacked_count);
 ### Delayed Queues
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 
 // Create delayed queue
 let delayed_queue_config = DMSCQueueConfig {
@@ -428,7 +428,7 @@ ctx.mq().publish("delayed.notifications", delayed_message)?;
 ### Scheduled Tasks
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 use chrono::{DateTime, Utc, Duration as ChronoDuration};
 
 // Schedule task
@@ -481,7 +481,7 @@ schedule_task(
 ### Persistence Configuration
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 
 // Create persistent queue
 let persistent_queue_config = DMSCQueueConfig {
@@ -508,7 +508,7 @@ ctx.mq().publish_persistent("critical.events", critical_message)?;
 ### Message Acknowledgment Modes
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 
 // Auto acknowledgment mode (default)
 let auto_ack_consumer = ctx.mq().subscribe("auto.ack.queue", |message: DMSCMessage| async move {
@@ -562,7 +562,7 @@ let batch_ack_consumer = ctx.mq().subscribe_with_ack_mode(
 ### Priority Queues
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 
 // Create priority queue
 let priority_queue_config = DMSCQueueConfig {
@@ -608,7 +608,7 @@ ctx.mq().publish_with_priority("priority.tasks", low_task, 1)?;
 ### Content Filtering
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 
 // Create consumer with filter
 let filtered_consumer = ctx.mq().subscribe_with_filter(
@@ -671,7 +671,7 @@ Queue configuration structure.
 ### Error Handling Example
 
 ```rust
-use dms::prelude::*;
+use dmsc::prelude::*;
 
 match ctx.mq().publish("user.events", message) {
     Ok(_) => {
@@ -715,15 +715,21 @@ match ctx.mq().publish("user.events", message) {
 
 </div>
 
-- [README](./README.md): Module overview, providing API reference documentation overview and quick navigation
-- [auth](./auth.md): Authentication module, providing JWT, OAuth2, and RBAC authentication and authorization functionality
-- [core](./core.md): Core module, providing error handling and service context
-- [log](./log.md): Logging module, recording authentication events and security logs
-- [config](./config.md): Configuration module, managing authentication configuration and key settings
-- [cache](./cache.md): Cache module, providing multi-backend cache abstraction, caching user sessions and permission data
-- [database](./database.md): Database module, providing user data persistence and query functionality
-- [http](./http.md): HTTP module, providing web authentication interfaces and middleware support
-- [observability](./observability.md): Observability module, monitoring authentication performance and security events
-- [security](./security.md): Security module, providing encryption, hashing, and verification functionality
-- [storage](./storage.md): Storage module, managing authentication files, keys, and certificates
-- [validation](./validation.md): Validation module, validating user input and form data
+- [README](./README.md): Module overview with API reference summary and quick navigation
+- [auth](./auth.md): Authentication module handling user authentication and authorization
+- [cache](./cache.md): Cache module providing in-memory and distributed cache support
+- [config](./config.md): Configuration module managing application configuration
+- [core](./core.md): Core module providing error handling and service context
+- [database](./database.md): Database module providing database operation support
+- [device](./device.md): Device module using protocols for device communication
+- [fs](./fs.md): Filesystem module providing file operation functions
+- [gateway](./gateway.md): Gateway module providing API gateway functionality
+- [hooks](./hooks.md): Hooks module providing lifecycle hook support
+- [http](./http.md): HTTP module providing HTTP server and client functionality
+- [log](./log.md): Logging module for protocol events
+- [observability](./observability.md): Observability module for protocol performance monitoring
+- [protocol](./protocol.md): Protocol module providing communication protocol support
+- [security](./security.md): Security module providing encryption and decryption functions
+- [service_mesh](./service_mesh.md): Service mesh module using protocols for inter-service communication
+- [storage](./storage.md): Storage module providing cloud storage support
+- [validation](./validation.md): Validation module providing data validation functions
