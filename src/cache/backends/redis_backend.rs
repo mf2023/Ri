@@ -222,6 +222,20 @@ impl DMSCCache for DMSCRedisCache {
         result.unwrap_or_default()
     }
     
+    /// Gets all cache keys from Redis.
+    /// 
+    /// # Returns
+    /// A `DMSCResult<Vec<String>>` containing all cache keys
+    async fn keys(&self) -> crate::core::DMSCResult<Vec<String>> {
+        let mut conn = (*self.connection).clone();
+        
+        let pattern = "dms:cache:*";
+        let keys: Vec<String> = conn.keys(pattern).await
+            .map_err(|e| crate::core::DMSCError::Other(format!("Redis keys error: {e}")))?;
+        
+        Ok(keys)
+    }
+    
     /// Clears all DMSC-related cache entries from Redis.
     /// 
     /// # Returns

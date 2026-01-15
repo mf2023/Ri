@@ -165,6 +165,27 @@ impl DMSCCache for DMSCHybridCache {
         self.memory_cache.exists(key).await || self.redis_cache.exists(key).await
     }
     
+    /// Gets all cache keys from both caches.
+    /// 
+    /// Returns keys from both the in-memory cache and Redis.
+    /// 
+    /// # Returns
+    /// A `DMSCResult<Vec<String>>` containing all cache keys
+    async fn keys(&self) -> crate::core::DMSCResult<Vec<String>> {
+        let memory_keys = self.memory_cache.keys().await?;
+        let redis_keys = self.redis_cache.keys().await?;
+        
+        // Combine and deduplicate keys
+        let mut all_keys = memory_keys;
+        for key in redis_keys {
+            if !all_keys.contains(&key) {
+                all_keys.push(key);
+            }
+        }
+        
+        Ok(all_keys)
+    }
+    
     /// Clears both caches.
     /// 
     /// Removes all entries from both the in-memory cache and Redis.

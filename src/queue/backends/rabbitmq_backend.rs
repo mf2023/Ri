@@ -79,7 +79,7 @@
 
 use async_trait::async_trait;
 use lapin::{Connection, ConnectionProperties, Channel, Queue, Consumer};
-use lapin::options::{QueueDeclareOptions, BasicConsumeOptions, BasicPublishOptions, BasicAckOptions, BasicNackOptions};
+use lapin::options::{QueueDeclareOptions, BasicConsumeOptions, BasicPublishOptions, BasicAckOptions};
 use lapin::types::FieldTable;
 use std::collections::HashMap;
 use std::sync::atomic::AtomicU64;
@@ -598,7 +598,8 @@ impl DMSCQueueConsumer for RabbitMQConsumer {
 
         if let Some(tag) = delivery_tag {
             let channel = self.channel.clone();
-            channel.basic_nack(tag, false, true).await
+            use lapin::options::BasicNackOptions;
+            channel.basic_nack(tag, BasicNackOptions { multiple: false, requeue: true }).await
                 .map_err(|e| crate::core::DMSCError::Other(format!("Failed to nack message: {e}")))?;
             
             let mut tags = self.delivery_tags.lock().await;
