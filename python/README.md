@@ -365,7 +365,7 @@ A: Yes, the package includes the compiled Rust backend with Python bindings.
 <h2 align="center">🌏 Community & Citation</h2>
 
 - Welcome to submit Issues and PRs!
-- Gitee: https://gitee.com/dunimd/dmsc.git
+- Gitee: https://github.com/mf2023/DMSC.git
 
 <div align="center">
 

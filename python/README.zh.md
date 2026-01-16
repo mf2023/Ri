@@ -365,7 +365,7 @@ A: 是的，该包包含了编译后的 Rust 后端和 Python 绑定。
 <h2 align="center">🌏 社区与引用</h2>
 
 - 欢迎提交 Issues 和 PRs！
-- Gitee: https://gitee.com/dunimd/dmsc.git
+- Gitee: https://github.com/mf2023/DMSC.git
 
 <div align="center">
 

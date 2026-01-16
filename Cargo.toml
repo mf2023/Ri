@@ -15,102 +15,328 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# =============================================================================
+# Cargo Package Configuration for DMSC
+# =============================================================================
+# This file defines the Rust package metadata, dependencies, and feature flags
+# for the DMSC (Dunimd Middleware Service) project. DMSC is a high-performance
+# middleware framework built with Rust, featuring modular architecture for
+# building distributed systems, API gateways, and microservices.
+#
+# The framework provides core capabilities including:
+# - Asynchronous runtime and concurrency primitives
+# - Protocol parsing and data transformation
+# - Service discovery and configuration management
+# - Observability with metrics and tracing support
+#
+# Project Features:
+# - PyO3 integration for Python bindings
+# - Plugin system for extensibility
+# - Multiple database support (PostgreSQL, MySQL, SQLite, Redis)
+# - Message queue integration (RabbitMQ, Kafka)
+# - gRPC and WebSocket protocol support
+# - JWT authentication and authorization
+
+# =============================================================================
+# Package Definition
+# =============================================================================
+# Core package metadata including name, version, edition, and authorship.
+# This information is used for crate publishing, dependency resolution,
+# and documentation generation.
 [package]
 name = "dmsc"
 version = "0.1.4"
 edition = "2021"
 authors = ["Dunimd Team"]
 description = "Dunimd Middleware Service - A high-performance Rust middleware framework with modular architecture"
-repository = "https://gitee.com/dunimd/dmsc"
+repository = "https://github.com/mf2023/DMSC"
 readme = "README.md"
 keywords = ["middleware", "framework", "distributed", "async", "microservices"]
 categories = ["asynchronous", "web-programming", "network-programming"]
 license = "Apache-2.0"
 
+# =============================================================================
+# Library Configuration
+# =============================================================================
+# Defines the library output type and source location. The crate-type
+# specifies both rlib (Rust static library) and cdylib (C dynamic library)
+# to support both Rust native usage and foreign function interface bindings.
 [lib]
 name = "dmsc"
 path = "src/lib.rs"
 crate-type = ["rlib", "cdylib"]
 
+# =============================================================================
+# Core Dependencies
+# =============================================================================
+# Fundamental dependencies that are always included in all build configurations.
+# These provide the foundational functionality for the middleware framework.
+
 [dependencies]
+# PyO3 Python bindings with extension-module feature for building Python extensions
+# Optional to allow pure Rust builds without Python support
 pyo3 = { version = "0.27", features = ["extension-module"], optional = true }
 
 # DMSC core dependencies (always included)
+# Serialization and deserialization framework with derive macro support
+# Used for configuration parsing, API serialization, and data transformation
 serde = { version = "1", features = ["derive"] }
+
+# JSON serialization library for API responses and configuration
+# Supports flexible data structures and schema validation
 serde_json = "1"
+
+# YAML configuration parsing support
+# Used for reading YAML-based configuration files
 serde_yaml = "0.9"
+
+# Random number generation for session IDs, tokens, and cryptographic operations
 rand = "0.8"
+
+# Date and time handling with serde integration
+# Provides timezone-aware timestamps for logging and event tracking
 chrono = { version = "0.4", features = ["serde", "std"] }
+
+# UUID generation and parsing (v4 random UUIDs)
+# Used for unique identifiers in distributed systems
 uuid = { version = "1.0", features = ["v4", "serde"] }
+
+# =============================================================================
+# Asynchronous Runtime Dependencies
+# =============================================================================
+# Tokio-based async runtime with comprehensive feature support for
+# concurrent network operations, timers, and I/O handling.
+#
+# Features enabled:
+# - time: Timer and timeout functionality
+# - sync: Synchronization primitives (Mutex, RwLock, etc.)
+# - rt: Async runtime support
+# - rt-multi-thread: Multi-threaded runtime for parallel task execution
+# - net: Network socket operations (TCP, UDP, Unix sockets)
+# - io-util: Async I/O utilities (AsyncRead, AsyncWrite)
+# - io-std: Standard I/O integration with async runtime
 tokio = { version = "1", features = ["time", "sync", "rt", "rt-multi-thread", "net", "io-util", "io-std"] }
+
+# Trait-based async pattern support for trait objects and dynamic dispatch
+# Enables async methods in trait definitions
 async-trait = "0.1"
+
+# High-performance concurrent HashMap with lock-free reads
+# Used for shared state and caching in concurrent scenarios
 dashmap = "5.5"
+
+# Advanced synchronization primitives with better performance than std
+# Provides Mutex, RwLock, Condvar, and other synchronization types
 parking_lot = "0.12"
+
+# Logging facade for structured and asynchronous logging
+# Provides abstraction over different logging implementations
 log = "0.4"
+
+# YAML parsing and manipulation library
+# Alternative YAML handler with different parsing characteristics
 yaml-rust = "0.4"
+
+# TOML configuration parsing support
+# Used for reading application configuration files
 toml = "0.8"
 
-# Optional dependencies (only included when specific features are enabled)
+# =============================================================================
+# Optional Dependencies (Feature-Gated)
+# =============================================================================
+# Dependencies that are only included when specific features are enabled.
+# This allows users to minimize binary size by selecting only needed features.
+
+# File system notification for configuration hot reload
+# Watches configuration files and triggers reload on changes
 notify = { version = "6.1", optional = true } # For config hot reload
+
+# Prometheus metrics client for observability and monitoring
+# Collects and exposes application metrics in Prometheus format
 prometheus = { version = "0.13", optional = true } # For observability
+
+# Redis client with tokio async runtime support
+# Provides caching and message queue capabilities
 redis = { version = "0.24", features = ["tokio-comp", "connection-manager"], optional = true } # For cache and queue
+
+# HTTP client and server library with HTTP/1 and HTTP/2 support
+# Core component for building API gateways and HTTP services
 hyper = { version = "0.14", features = ["client", "server", "http1", "http2", "tcp"], optional = true } # For HTTP and gateway
+
+# RabbitMQ client with TLS support for message queuing
+# Provides reliable message queue functionality
 lapin = { version = "2.3", features = ["rustls"], optional = true } # For RabbitMQ
+
+# TLS support for tokio-based network operations
+# Required for secure HTTPS and WSS connections in gateway
 tokio-rustls = { version = "0.24", optional = true } # For TLS support in gateway
+
+# Future utilities extension for async operations
+# Provides additional combinators and utilities for futures
 futures = { version = "0.3", features = ["std"] } # For async operations
+
+# HTTP client for external API calls and service integration
+# Supports JSON response parsing and async requests
 reqwest = { version = "0.11", features = ["json"], optional = true } # For HTTP client
+
+# System information collection for monitoring and diagnostics
+# Provides CPU, memory, disk, and process information
 sysinfo = { version = "0.29", optional = true } # For system information
+
+# JWT (JSON Web Token) implementation for authentication
+# Handles token creation, validation, and claims management
 jsonwebtoken = "8" # For JWT authentication (required by auth module)
+
+# URL encoding and decoding support
+# Required for query string and path parameter handling
 urlencoding = { version = "2", optional = true } # For URL encoding
+
+# etcd client for service discovery and distributed configuration
+# Provides key-value store for cluster coordination
 etcd-client = { version = "0.11", features = ["tls"], optional = true } # For service discovery
+
+# PostgreSQL async driver for database operations
+# Supports connection pooling and transaction management
 tokio-postgres = { version = "0.7", optional = true } # For PostgreSQL
+
+# MySQL database driver support
+# Provides MySQL connection and query capabilities
 mysql = { version = "24", optional = true } # For MySQL
+
+# SQLite embedded database with bundled C library
+# Zero-configuration database for local storage
 rusqlite = { version = "0.29", optional = true, features = ["bundled"] } # For SQLite
+
+# Type-erased serialization for dynamic data handling
+# Enables serializing arbitrary types at runtime
 erased-serde = "0.4"
 
-# Plugin system dependencies
+# =============================================================================
+# Plugin System Dependencies
+# =============================================================================
+# Dynamic library loading support for the plugin architecture.
+# Enables runtime loading of compiled plugin modules.
 libloading = "0.8"
 
-# Protocol module dependencies
+# =============================================================================
+# Protocol Module Dependencies
+# =============================================================================
+# Dependencies for parsing, encoding, and transforming various protocols
+# and data formats used throughout the middleware framework.
+
+# Big integer arithmetic for cryptographic operations
 num-bigint = "0.4"
+
+# Cryptographic primitives and utilities
+# Provides crypto algorithms and secure random generation
 ring = "0.17"
+
+# Error handling with derive macro support
+# Provides the #[error] attribute for custom error types
 thiserror = "2"
+
+# Hexadecimal encoding and decoding
+# Used for binary data representation in configuration and APIs
 hex = "0.4"
+
+# CRC32 checksum calculation for data integrity verification
 crc32fast = "1"
+
+# Structured logging and tracing framework
+# Provides detailed execution tracing for debugging and profiling
 tracing = "0.1"
+
+# Custom data encoding formats
+# Supports specialized encoding schemes for protocol handling
 data-encoding = "2"
+
+# AES-GCM authenticated encryption for secure data storage
+# Provides encryption and integrity verification
 aes-gcm = "0.10"
+
+# Base64 encoding and decoding utilities
+# Used for binary-to-text conversion in APIs
 base64 = "0.21"
+
+# Generic array types for compile-time sized collections
+# Enables low-level buffer manipulation
 generic-array = "0.14"
+
+# Type-level integer operations for type-safe sizing
 typenum = "1"
+
+# Regular expression support with JIT compilation
+# Used for pattern matching and validation
 regex = "1.10"
+
+# URL parsing and manipulation
+# Provides URL decomposition and normalization
 url = "2.5"
+
+# Static initialization for global variables
+# Enables thread-safe lazy initialization of complex constants
 lazy_static = "1.4"
+
+# HTML entity encoding and decoding
+# Used for safe HTML content handling
 html-escape = "0.2"
 
-# gRPC dependencies
+# =============================================================================
+# gRPC Dependencies
+# =============================================================================
+# gRPC protocol support for high-performance remote procedure calls.
+# Enables building and consuming gRPC services.
+
+# gRPC client and server framework with prost codec support
 tonic = { version = "0.12", optional = true, features = ["prost"] }
 prost = { version = "0.12", optional = true }
 tokio-stream = { version = "0.1", optional = true }
 tower = { version = "0.4", optional = true }
 
-# WebSocket dependencies
+# =============================================================================
+# WebSocket Dependencies
+# =============================================================================
+# WebSocket protocol support for full-duplex communication channels.
+
+# Async WebSocket client and server with tokio runtime
 tokio-tungstenite = { version = "0.24", optional = true }
 tungstenite = { version = "0.21", optional = true }
 
-# Target-specific dependencies
+# =============================================================================
+# Platform-Specific Dependencies
+# =============================================================================
+# Dependencies that are only available or needed on specific operating systems.
+# Kafka support is disabled on Windows due to native library requirements.
 [target.'cfg(not(windows))'.dependencies]
+
 # Kafka support dependencies (disabled on Windows)
+# Kafka client library for message streaming
+# Supports Kafka protocol and consumer/producer patterns
+# Requires native libraries (libz) for compression
 rdkafka = { version = "0.38", default-features = false, features = ["tokio", "libz"], optional = true }
+
+# OpenSSL native library bindings with vendored feature
+# Required for secure TLS connections on non-Windows platforms
 openssl-sys = { version = "0.9", features = ["vendored"], optional = true }
 
+# =============================================================================
+# Feature Flags Configuration
+# =============================================================================
+# Defines conditional compilation features that control which dependencies
+# and functionality are included in the build. Users can enable features
+# via cargo build --features command.
 [features]
+
+# Default features enabled on fresh installation
+# Includes pyo3 for Python binding support
 default = ["pyo3"]
 
 # Minimal feature set (core functionality only)
+# Useful for embedded deployments or minimal binary size
 minimal = []
 
 # Full feature set
+# Enables all major features for complete middleware functionality
 full = [
     "notify",
     "prometheus",
@@ -123,26 +349,75 @@ full = [
     "pyo3"
 ]
 
-# Optional features
+# =============================================================================
+# Feature Definitions
+# =============================================================================
+# Individual feature flags that enable specific functionality modules.
+# Each feature may enable multiple dependencies and code paths.
+
+# Service discovery via etcd cluster
 etcd = ["dep:etcd-client"]
+
+# Advanced synchronization with parking_lot
 parking_lot = []
+
+# Python binding support via PyO3
 pyo3 = ["dep:pyo3"]
+
+# RabbitMQ message queue support
 rabbitmq = ["dep:lapin"]
+
+# Observability with Prometheus metrics collection
 observability = ["prometheus"]
+
+# Redis caching layer support
 cache = ["redis"]
+
+# Message queue support (Redis Pub/Sub and RabbitMQ)
 queue = ["redis", "rabbitmq"]
+
+# API gateway with HTTP server and Redis integration
 gateway = ["hyper", "redis", "tokio-rustls"]
+
+# Service mesh with distributed coordination
 service_mesh = ["redis", "hyper", "tokio-rustls"]
+
+# URL encoding support for web handlers
 auth = ["urlencoding"]
+
+# Configuration hot reload via file system notifications
 config_hot_reload = ["notify"]
+
+# HTTP client for external service calls
 http_client = ["reqwest", "urlencoding"]
+
+# System information collection
 system_info = ["sysinfo"]
+
+# PostgreSQL database support
 postgres = ["dep:tokio-postgres"]
+
+# MySQL database support
 mysql = ["dep:mysql"]
+
+# SQLite embedded database support
 sqlite = ["dep:rusqlite"]
+
+# Kafka message streaming support (non-Windows)
 kafka = ["rdkafka"]
+
+# gRPC protocol support for RPC services
 grpc = ["tonic", "prost", "tokio-stream", "tower"]
+
+# WebSocket protocol support for real-time communication
 websocket = ["tokio-tungstenite", "tungstenite"]
 
+# =============================================================================
+# Development Dependencies
+# =============================================================================
+# Dependencies used only during development and testing.
+# Not included in release builds or published crates.
+
+# Temporary file and directory creation for testing
 [dev-dependencies]
 tempfile = "3"

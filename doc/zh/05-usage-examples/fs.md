@@ -184,7 +184,7 @@ cd dms-fs-example
 
 ```toml
 [dependencies]
-dms = { git = "https://gitee.com/dunimd/dmsc.git" }
+dms = { git = "https://github.com/mf2023/DMSC.git" }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 ```

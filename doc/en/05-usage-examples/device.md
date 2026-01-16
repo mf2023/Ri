@@ -147,7 +147,7 @@ Add to `Cargo.toml`:
 
 ```toml
 [dependencies]
-dms = { git = "https://gitee.com/dunimd/dmsc.git" }
+dms = { git = "https://github.com/mf2023/DMSC.git" }
 tokio = { version = "1.0", features = ["full"] }
 serde_json = "1.0"
 ```

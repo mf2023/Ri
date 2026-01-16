@@ -80,7 +80,7 @@ async fn main() -> DMSCResult<()> {
 ### 1. 克隆DMSC仓库
 
 ```bash
-git clone https://gitee.com/dunimd/dmsc.git
+git clone https://github.com/mf2023/DMSC.git
 cd dmsc
 ```
 
@@ -97,7 +97,7 @@ cd dms-example
 
 ```toml
 [dependencies]
-dms = { git = "https://gitee.com/dunimd/dmsc" }
+dms = { git = "https://github.com/mf2023/DMSC" }
 tokio = { version = "1.0", features = ["full"] }
 ```
 

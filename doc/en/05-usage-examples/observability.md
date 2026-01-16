@@ -52,7 +52,7 @@ Add the following dependencies to your `Cargo.toml` file:
 
 ```toml
 [dependencies]
-dms = { git = "https://gitee.com/dunimd/dmsc" }
+dms = { git = "https://github.com/mf2023/DMSC" }
 tokio = { version = "1.0", features = ["full"] }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"

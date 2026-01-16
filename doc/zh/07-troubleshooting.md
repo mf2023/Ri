@@ -21,7 +21,7 @@ error: failed to select a version for the requirement `dms = ...`
 
 **解决方法**：
 - 确保在`Cargo.toml`中正确指定了DMSC的依赖
-- 检查Git URL是否正确：`dms = { git = "https://gitee.com/dunimd/dmsc" }`
+- 检查Git URL是否正确：`dms = { git = "https://github.com/mf2023/DMSC" }`
 - 尝试运行`cargo update`更新依赖
 
 ### 1.2 版本冲突

@@ -135,7 +135,7 @@ app = DMSCAppBuilder() \
 app.run(lambda ctx: ctx.logger().info("service", "DMSC service started") or None)
 ```
 
-更多 Python 使用示例，请查看 [Python README](https://gitee.com/dunimd/dmsc/blob/master/python/README.zh.md)。
+更多 Python 使用示例，请查看 [Python README](https://github.com/mf2023/DMSC/blob/master/python/README.zh.md)。
 
 <div align="center">
 
@@ -153,7 +153,7 @@ app.run(lambda ctx: ctx.logger().info("service", "DMSC service started") or None
 
 </div>
 
-- **GitHub/Gitee**：[https://gitee.com/dunimd/dmsc](https://gitee.com/dunimd/dmsc)
+- **GitHub/Gitee**：[https://github.com/mf2023/DMSC](https://github.com/mf2023/DMSC)
 - **Issues**：提交问题和建议
 - **Pull Requests**：欢迎贡献代码
 

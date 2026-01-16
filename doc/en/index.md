@@ -135,7 +135,7 @@ app = DMSCAppBuilder() \
 app.run(lambda ctx: ctx.logger().info("service", "DMSC service started"))
 ```
 
-For more Python usage examples, please check the [Python README](https://gitee.com/dunimd/dmsc/blob/master/python/README.md).
+For more Python usage examples, please check the [Python README](https://github.com/mf2023/DMSC/blob/master/python/README.md).
 
 <div align="center">
 
@@ -153,7 +153,7 @@ If you're already familiar with DMSC's basic concepts, you can check the [API Re
 
 </div>
 
-- **GitHub/Gitee**: [https://gitee.com/dunimd/dmsc](https://gitee.com/dunimd/dmsc)
+- **GitHub/Gitee**: [https://github.com/mf2023/DMSC](https://github.com/mf2023/DMSC)
 - **Issues**: Submit questions and suggestions
 - **Pull Requests**: Contributions are welcome
 

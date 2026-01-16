@@ -110,13 +110,13 @@ Add DMSC to your project's `Cargo.toml`:
 
 ```toml
 [dependencies]
-dmsc = { git = "https://gitee.com/dunimd/dmsc" }
+dmsc = { git = "https://github.com/mf2023/DMSC" }
 ```
 
 Or use cargo add:
 
 ```bash
-cargo add DMSC --git https://gitee.com/dunimd/dmsc
+cargo add DMSC --git https://github.com/mf2023/DMSC
 ```
 
 <h2 align="center">⚡ Quick Start</h2>
@@ -236,7 +236,7 @@ A: Use `DMSCAppBuilder::with_async_module` to add async modules, the framework h
 <h2 align="center">🌏 Community & Citation</h2>
 
 - Welcome to submit Issues and PRs!
-- Gitee: https://gitee.com/dunimd/dmsc.git
+- Gitee: https://github.com/mf2023/DMSC.git
 
 
 <div align="center">

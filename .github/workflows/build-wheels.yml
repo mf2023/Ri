@@ -15,6 +15,51 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+################################################################################
+# DMSC Rust Library and Python Wheel Build Pipeline
+#
+# Purpose:
+# This GitHub Actions workflow builds the DMSC Rust library and generates
+# distributable Python wheel packages (.whl files) for multiple platforms,
+# architectures, and Python versions. The workflow ensures binary compatibility
+# across the supported target environments.
+#
+# Architecture Overview:
+# 1. Rust Library Compilation Phase: Four dedicated jobs compile the Rust library
+#    (libdmsc) as a C dynamic library (cdylib) for each target platform:
+#    - Linux x64 (x86_64-unknown-linux-gnu)
+#    - Linux arm64 (aarch64-unknown-linux-gnu)
+#    - Windows x64 (x86_64-pc-windows-msvc)
+#    - macOS x64 (x86_64-apple-darwin)
+#
+# 2. Python Wheel Generation Phase: A single matrix job generates Python wheels
+#    for all supported platform/architecture/Python version combinations.
+#    Each matrix entry builds a complete Python wheel with embedded Rust binary.
+#
+# Build Strategy:
+# - Native compilation on matching architecture runners (no cross-compilation)
+# - Linux ARM64 uses ubuntu-24.04-arm for proper ARM64 native builds
+# - macOS x64 uses macos-15-intel (available until Aug 2027) for Intel builds
+# - Docker-based manylinux images for Linux wheel compatibility guarantees
+# - maturin as the build tool (Rust/Python integration framework)
+#
+# Supported Platforms:
+# - Linux: x64 and arm64 architectures
+# - Windows: x64 architecture
+# - macOS: x64 and arm64 (Apple Silicon) architectures
+#
+# Supported Python Versions: 3.8, 3.9, 3.10, 3.11, 3.12, 3.13, 3.14
+#
+# Trigger Conditions:
+# - Automatic: On push to master branch
+# - Manual: Workflow dispatch allows manual execution
+#
+# Artifacts:
+# - Rust library artifacts (.so, .dll, .dylib files) per platform
+# - Python wheel artifacts (.whl files) per matrix combination
+# - Artifacts are uploaded using actions/upload-artifact@v4
+################################################################################
+
 name: Build DMSC
 
 on:
@@ -31,9 +76,20 @@ jobs:
   build-rust-linux:
     runs-on: ubuntu-latest
     steps:
+      # Step 1: Checkout repository source code
+      # Clones the repository to access Cargo.toml and Rust source files
       - uses: actions/checkout@v4
+      
+      # Step 2: Build Rust library in release mode
+      # Compiles libdmsc as a cdylib for x86_64-unknown-linux-gnu target
+      # Release mode enables optimizations (-O3) and LTO for maximum performance
+      # Output location: target/release/libdmsc.so
       - name: Build
         run: cargo build --release
+      
+      # Step 3: Upload compiled library artifact
+      # Artifact is named rust-linux-x64 for identification in downloads
+      # Contains .so files (libdmsc.so) for Python wheel building on Linux x64
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
@@ -48,12 +104,21 @@ jobs:
   # Using ubuntu-24.04-arm provides native ARM64 environment for proper compilation
   build-rust-linux-arm64:
     runs-on: ubuntu-24.04-arm
-    env:
-      ACTIONS_SET_OUTPUT_API: "0"
     steps:
+      # Step 1: Checkout repository source code
+      # Clones repository for ARM64 native compilation environment
       - uses: actions/checkout@v4
+      
+      # Step 2: Build Rust library in release mode
+      # Compiles libdmsc as a cdylib for aarch64-unknown-linux-gnu target
+      # Native ARM64 compilation ensures correct code generation for the target arch
+      # Output location: target/release/libdmsc.so
       - name: Build
         run: cargo build --release
+      
+      # Step 3: Upload compiled library artifact
+      # Artifact is named rust-linux-arm64 for identification
+      # Contains .so files for Python wheel building on Linux ARM64 platforms
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
@@ -67,9 +132,20 @@ jobs:
   build-rust-windows:
     runs-on: windows-latest
     steps:
+      # Step 1: Checkout repository source code
+      # Clones repository on Windows runner for native compilation
       - uses: actions/checkout@v4
+      
+      # Step 2: Build Rust library in release mode
+      # Compiles libdmsc as a cdylib for x86_64-pc-windows-msvc target
+      # Default MSVC toolchain on Windows provides optimal Windows compatibility
+      # Output location: target/release/libdmsc.dll
       - name: Build
         run: cargo build --release
+      
+      # Step 3: Upload compiled library artifact
+      # Artifact is named rust-windows-x64 for identification
+      # Contains .dll files for Python wheel building on Windows x64 platforms
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
@@ -86,18 +162,37 @@ jobs:
   build-rust-macos:
     runs-on: macos-15-intel
     steps:
+      # Step 1: Checkout repository source code
+      # Clones repository on macOS x64 (Intel) runner for native compilation
       - uses: actions/checkout@v4
+      
+      # Step 2: Set up Python 3.9 for build toolchain compatibility
+      # Python 3.9 provides stable maturin support for wheel building
+      # Installed using actions/setup-python@v5 for caching and version management
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.9'
+      
+      # Step 3: Configure linker for macOS dynamic library linking
+      # Creates .cargo/config.toml with special linker flags for macOS
+      # -undefined dynamic_lookup allows undefined symbols (Python API symbols)
+      # Required because Rust/Python bindings need runtime symbol resolution
       - name: Configure linker
         run: |
           mkdir -p .cargo
           echo '[target.x86_64-apple-darwin]' > .cargo/config.toml
           echo 'rustflags = ["-C", "link-arg=-undefined", "-C", "link-arg=dynamic_lookup"]' >> .cargo/config.toml
+      
+      # Step 4: Build Rust library with explicit x86_64-apple-darwin target
+      # Explicit --target flag ensures correct architecture compilation
+      # Output location: target/release/x86_64-apple-darwin/libdmsc.dylib
       - name: Build Rust library
         run: cargo build --release --target x86_64-apple-darwin
+      
+      # Step 5: Upload compiled library artifact
+      # Artifact is named rust-macos-x64 for identification
+      # Contains .dylib files for Python wheel building on macOS x64 platforms
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
@@ -133,8 +228,6 @@ jobs:
   # 6. Upload built wheel artifact for collection in release
   build-python:
     runs-on: ${{ matrix.runs-on }}
-    env:
-      ACTIONS_SET_OUTPUT_API: "0"
     strategy:
       fail-fast: false
       matrix:
@@ -336,17 +429,34 @@ jobs:
             target: aarch64-apple-darwin
             manylinux: null
     steps:
+      # Step 1: Checkout repository source code to the workflow runner
+      # This action clones the repository contents, making source code and configuration
+      # files available for the build process. Uses v4 for latest features and security.
       - uses: actions/checkout@v4
+      
+      # Step 2: Set up Python interpreter matching matrix.python version
+      # Installs the specified Python version using actions/setup-python@v5
+      # The Python version is determined by the matrix configuration (3.8-3.14)
+      # This enables running Python-based build tools and tests
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python }}
-        env:
-          ACTIONS_SET_OUTPUT_API: "0"
+      
+      # Step 3: Install Rust stable toolchain for compilation
+      # Uses actions-rs/toolchain@v1 to install Rust stable channel
+      # Required for compiling the Rust library component of the package
+      # The toolchain is added to PATH for cargo and rustc access
       - name: Set up Rust
         uses: actions-rs/toolchain@v1
         with:
           toolchain: stable
+      
+      # Step 4: Configure macOS linker settings for dynamic library linking
+      # Conditional: Only runs when targeting macOS platforms (x64 or ARM64)
+      # Creates .cargo/config.toml with linker flags to allow undefined symbols
+      # This is required for PyO3 bindings to work correctly on macOS
+      # The -undefined dynamic_lookup flag prevents linking errors for Python symbols
       - name: Configure macOS linker
         if: matrix.target == 'x86_64-apple-darwin' || matrix.target == 'aarch64-apple-darwin'
         run: |
@@ -356,14 +466,36 @@ jobs:
           echo '' >> .cargo/config.toml
           echo '[target.aarch64-apple-darwin]' >> .cargo/config.toml
           echo 'rustflags = ["-C", "link-arg=-undefined", "-C", "link-arg=dynamic_lookup"]' >> .cargo/config.toml
+      
+      # Step 5: Upgrade pip to latest version for package management
+      # Ensures pip has the latest features and security fixes
+      # --quiet suppresses output, --disable-pip-version-check reduces noise
       - name: Update pip
         run: python3 -m pip install --upgrade pip --quiet --disable-pip-version-check
+      
+      # Step 6: Install build dependencies (maturin and auditwheel)
+      # maturin: Rust/Python build tool that creates Python wheels from Rust libraries
+      # auditwheel: Tool for repairing Linux wheel distribution tags
+      # Both are essential for building portable Python packages with native extensions
       - name: Install dependencies
-        run: pip install --upgrade pip maturin auditwheel --quiet --disable-pip-version-check
+        run: pip install maturin auditwheel --quiet --disable-pip-version-check
+      
+      # Step 7: Build Python wheel for non-Docker platforms (macOS, Windows, Linux ARM64)
+      # Conditional: Executes when docker: false (native builds without manylinux container)
+      # Uses maturin to build the wheel with release optimizations
+      # Outputs to dist/ directory for artifact collection
+      # --target specifies the Rust target triple for cross-compilation if needed
       - name: Build wheel
         if: matrix.docker != true
         run: |
           maturin build --release --target ${{ matrix.target }} -o dist
+      
+      # Step 8: Build and repair Linux wheel using manylinux Docker container
+      # Conditional: Executes when docker: true (Linux x64 builds)
+      # First builds the wheel in wheelhouse/ directory
+      # Then uses auditwheel to repair and tag the wheel for manylinux compatibility
+      # The --plat flag sets the platform tag (e.g., manylinux_2_39_x86_64)
+      # This ensures the wheel can be installed on older Linux distributions
       - name: Build Linux wheel with auditwheel repair
         if: matrix.docker == true
         run: |
@@ -371,10 +503,20 @@ jobs:
           ARCH="${TARGET%%-*}"
           maturin build --release --target "$TARGET" -o wheelhouse
           auditwheel repair wheelhouse/*.whl -w dist --plat ${{ matrix.manylinux }}_${ARCH}
+      
+      # Step 9: List generated wheel files for debugging and verification
+      # Shell: bash required for glob patterns and ls command
+      # Displays all files in dist/ directory or shows message if empty
+      # Helps verify wheel generation was successful
       - name: List generated files
         shell: bash
         run: |
           ls -la dist/ 2>/dev/null || echo "No files in dist"
+      
+      # Step 10: Upload built wheel artifact for collection and release
+      # Uses actions/upload-artifact@v4 to upload wheel files
+      # Artifact name includes target platform and Python version for identification
+      # Artifacts are available for 90 days by default in GitHub Actions
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:

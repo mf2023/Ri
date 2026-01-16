@@ -72,14 +72,14 @@ cd my-dms-app
 
 ```toml
 [dependencies]
-dms = { git = "https://gitee.com/dunimd/dmsc" }
+dms = { git = "https://github.com/mf2023/DMSC" }
 tokio = { version = "1.0", features = ["full"] }
 ```
 
 或者使用 `cargo add` 命令：
 
 ```bash
-cargo add dms --git https://gitee.com/dunimd/dmsc
+cargo add dms --git https://github.com/mf2023/DMSC
 cargo add tokio --features full
 ```
 
@@ -90,7 +90,7 @@ cargo add tokio --features full
 ```toml
 [dependencies]
 # 其他依赖
-dms = { git = "https://gitee.com/dunimd/dmsc" }
+dms = { git = "https://github.com/mf2023/DMSC" }
 ```
 
 ### 使用 Python SDK
@@ -335,7 +335,7 @@ DMSC 提供了完整的测试套件，您可以运行这些测试来验证安装
 
 ```bash
 # 克隆 DMSC 仓库
-git clone https://gitee.com/dunimd/dmsc.git
+git clone https://github.com/mf2023/DMSC.git
 cd dms
 
 # 运行所有测试

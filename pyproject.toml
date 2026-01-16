@@ -15,10 +15,33 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# =============================================================================
+# Python Project Configuration for DMSC
+# =============================================================================
+# This file configures the Python packaging and build system for the DMSC
+# Rust-Python hybrid middleware framework. It uses maturin as the build
+# backend to create Python extension modules from Rust source code.
+#
+# The project provides a high-performance middleware framework that combines
+# Rust's performance with Python's ease of use, supporting features including
+# authentication, caching, message queuing, API gateway, and observability.
+
+# =============================================================================
+# Build System Configuration
+# =============================================================================
+# Defines the build requirements and backend for compiling Rust code into
+# Python extension modules. Maturin is the standard tool for building
+# PyO3-based Python extensions from Rust projects.
 [build-system]
 requires = ["maturin>=1.0"]
 build-backend = "maturin"
 
+# =============================================================================
+# Project Metadata
+# =============================================================================
+# Core project information including name, version, description, and
+# authorship details. This metadata is used by PyPI and other package
+# managers for distribution and discovery.
 [project]
 name = "dmsc"
 version = "0.1.4"
@@ -26,6 +49,13 @@ description = "Dunimd Middleware Service - A high-performance Rust middleware fr
 readme = "README.md"
 authors = [{ name = "Dunimd Team" }]
 license = { file = "LICENSE" }
+
+# =============================================================================
+# Platform and Interpreter Compatibility
+# =============================================================================
+# Specifies the supported Python versions and implementations. This ensures
+# cross-version compatibility and helps users understand which Python
+# environments can use this package.
 classifiers = [
     "Programming Language :: Rust",
     "Programming Language :: Python :: Implementation :: CPython",
@@ -38,13 +68,26 @@ classifiers = [
     "Programming Language :: Python :: 3.13",
     "Programming Language :: Python :: 3.14",
 ]
+
+# Minimum Python version requirement and keywords for package discovery
 requires-python = ">=3.8"
 keywords = ["middleware", "rust", "async", "gateway", "service-mesh"]
-repository = "https://gitee.com/dunimd/dmsc"
+repository = "https://github.com/mf2023/DMSC"
 
+# =============================================================================
+# Maturin Build Configuration
+# =============================================================================
+# Configures the maturin build tool for compiling Rust code into Python
+# extension modules. Specifies the Python source directory and enables
+# optional features that control which Rust modules are compiled.
 [tool.maturin]
 python-source = "python"
 features = ["pyo3", "auth", "cache", "queue", "gateway", "observability"]
 
+# =============================================================================
+# Python Extension Dependencies
+# =============================================================================
+# Additional Python-specific dependencies required for the extension module.
+# Pyo3 version is locked to maintain compatibility with the maturin build.
 [tool.maturin.dependencies]
 pyo3 = "^0.27"

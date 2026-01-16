@@ -110,13 +110,13 @@ DMSC 采用高度模块化的架构，拥有 17 个核心模块，支持按需�
 
 ```toml
 [dependencies]
-dmsc = { git = "https://gitee.com/dunimd/dmsc" }
+dmsc = { git = "https://github.com/mf2023/DMSC" }
 ```
 
 或者使用 cargo add：
 
 ```bash
-cargo add dmsc --git https://gitee.com/dunimd/dmsc
+cargo add dmsc --git https://github.com/mf2023/DMSC
 ```
 
 <h2 align="center">⚡ 快速开始</h2>
@@ -236,7 +236,7 @@ A: 使用 `DMSCAppBuilder::with_async_module` 添加异步模块，框架自动�
 <h2 align="center">🌏 社区与引用</h2>
 
 - 欢迎提交 Issues 和 PRs！
-- Gitee: https://gitee.com/dunimd/dmsc.git
+- Gitee: https://github.com/mf2023/DMSC.git
 
 
 <div align="center">

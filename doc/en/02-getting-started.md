@@ -72,14 +72,14 @@ Add DMSC to your project's `Cargo.toml` file:
 
 ```toml
 [dependencies]
-dms = { git = "https://gitee.com/dunimd/dmsc" }
+dms = { git = "https://github.com/mf2023/DMSC" }
 tokio = { version = "1.0", features = ["full"] }
 ```
 
 Or use the `cargo add` command:
 
 ```bash
-cargo add dms --git https://gitee.com/dunimd/dmsc
+cargo add dms --git https://github.com/mf2023/DMSC
 cargo add tokio --features full
 ```
 
@@ -90,7 +90,7 @@ Simply add DMSC to your existing project's `Cargo.toml` file:
 ```toml
 [dependencies]
 # Other dependencies
-dms = { git = "https://gitee.com/dunimd/dmsc" }
+dms = { git = "https://github.com/mf2023/DMSC" }
 ```
 
 ### Using Python SDK
@@ -335,7 +335,7 @@ DMSC provides a comprehensive test suite. You can run these tests to verify your
 
 ```bash
 # Clone the DMSC repository
-git clone https://gitee.com/dunimd/dmsc.git
+git clone https://github.com/mf2023/DMSC.git
 cd dms
 
 # Run all tests

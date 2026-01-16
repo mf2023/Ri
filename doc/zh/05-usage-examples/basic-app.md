@@ -48,7 +48,7 @@ cd dms-basic-example
 
 ```toml
 [dependencies]
-dms = { git = "https://gitee.com/dunimd/dmsc" }
+dms = { git = "https://github.com/mf2023/DMSC" }
 tokio = { version = "1.0", features = ["full"] }
 ```
 
