@@ -102,7 +102,7 @@ use pyo3::PyResult;
 use super::core::{DMSCDevice, DMSCDeviceCapabilities, DMSCDeviceStatus, DMSCDeviceType, DMSCDeviceControlConfig, NetworkDeviceInfo};
 use super::discovery::{DMSCDeviceDiscovery, DiscoveryConfig};
 use crate::core::DMSCResult;
-use crate::prelude::{DMSCMetricsRegistry, DMSCError};
+use crate::prelude::DMSCMetricsRegistry;
 // use super::scheduler::DMSCDeviceScheduler;
 
 /// Device controller - manages device lifecycle and state
