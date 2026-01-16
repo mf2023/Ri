@@ -212,6 +212,108 @@ async fn my_function() -> DMSCResult<()> {
     Ok(())
 }
 ```
+
+### DMSCLockError
+
+安全锁错误类型，专用于并发锁操作错误处理。
+
+#### 方法
+
+| 方法 | 描述 | 参数 | 返回值 |
+|:--------|:-------------|:--------|:--------|
+| `new(context)` | 创建新的锁错误 | `context: &str` | `DMSCLockError` |
+| `poisoned(context)` | 创建毒锁错误 | `context: &str` | `DMSCLockError` |
+| `is_poisoned()` | 检查是否为毒锁错误 | 无 | `bool` |
+| `context()` | 获取错误上下文 | 无 | `&str` |
+
+#### 使用示例
+
+```rust
+match lock.read_safe("my data") {
+    Ok(data) => println!("Data: {}", data),
+    Err(e) if e.is_poisoned() => {
+        log::error!("Lock poisoned: {}", e.context());
+    }
+    Err(e) => {
+        log::error!("Lock error: {}", e.context());
+    }
+}
+```
+
+### DMSCLockResult
+
+锁操作结果类型别名。
+
+```rust
+type DMSCLockResult<T> = Result<T, DMSCLockError>;
+```
+
+#### 使用示例
+
+```rust
+fn safe_read_data(lock: &RwLock<String>, context: &str) -> DMSCLockResult<String> {
+    let data = lock.read_safe(context)?;
+    Ok(data.clone())
+}
+```
+
+### RwLockExtensions
+
+为标准库 `RwLock` 提供安全锁获取扩展 trait。
+
+#### 方法
+
+| 方法 | 描述 | 参数 | 返回值 |
+|:--------|:-------------|:--------|:--------|
+| `read_safe(context)` | 安全获取读锁 | `context: &str` | `DMSCLockResult<RwLockReadGuard<T>>` |
+| `write_safe(context)` | 安全获取写锁 | `context: &str` | `DMSCLockResult<RwLockWriteGuard<T>>` |
+| `try_read_safe(context)` | 尝试获取读锁（非阻塞） | `context: &str` | `DMSCLockResult<Option<RwLockReadGuard<T>>>` |
+| `try_write_safe(context)` | 尝试获取写锁（非阻塞） | `context: &str` | `DMSCLockResult<Option<RwLockWriteGuard<T>>>` |
+
+#### 使用示例
+
+```rust
+use dmsc::core::lock::RwLockExtensions;
+
+let lock = RwLock::new(42);
+
+fn read_value(lock: &RwLock<i32>) -> DMSCLockResult<i32> {
+    let value = lock.read_safe("reading counter")?;
+    Ok(*value)
+}
+
+fn write_value(lock: &RwLock<i32>, new_value: i32) -> DMSCLockResult<()> {
+    let mut value = lock.write_safe("writing counter")?;
+    *value = new_value;
+    Ok(())
+}
+```
+
+### MutexExtensions
+
+为标准库 `Mutex` 提供安全锁获取扩展 trait。
+
+#### 方法
+
+| 方法 | 描述 | 参数 | 返回值 |
+|:--------|:-------------|:--------|:--------|
+| `lock_safe(context)` | 安全获取互斥锁 | `context: &str` | `DMSCLockResult<MutexGuard<T>>` |
+| `try_lock_safe(context)` | 尝试获取互斥锁（非阻塞） | `context: &str` | `DMSCLockResult<Option<MutexGuard<T>>>` |
+
+#### 使用示例
+
+```rust
+use dmsc::core::lock::MutexExtensions;
+
+let mutex = Mutex::new(Vec::new());
+
+fn push_item(mutex: &Mutex<Vec<String>>, item: String) -> DMSCLockResult<()> {
+    let mut items = mutex.lock_safe("pushing item")?;
+    items.push(item);
+    Ok(())
+}
+```
+
 <div align="center">
 
 ## 错误码
@@ -287,13 +389,16 @@ async fn main() -> DMSCResult<()> {
 - [device](./device.md): 设备模块，使用协议进行设备通信
 - [fs](./fs.md): 文件系统模块，提供文件操作功能
 - [gateway](./gateway.md): 网关模块，提供API网关功能
+- [grpc](./grpc.md): gRPC 模块，带服务注册和 Python 绑定
 - [hooks](./hooks.md): 钩子模块，提供生命周期钩子支持
 - [http](./http.md): HTTP模块，提供HTTP服务器和客户端功能
 - [log](./log.md): 日志模块，记录协议事件
 - [mq](./mq.md): 消息队列模块，提供消息队列支持
 - [observability](./observability.md): 可观测性模块，监控协议性能
+- [orm](./orm.md): ORM 模块，带查询构建器和分页支持
 - [protocol](./protocol.md): 协议模块，提供通信协议支持
 - [security](./security.md): 安全模块，提供加密和解密功能
 - [service_mesh](./service_mesh.md): 服务网格模块，使用协议进行服务间通信
 - [storage](./storage.md): 存储模块，提供云存储支持
 - [validation](./validation.md): 验证模块，提供数据验证功能
+- [ws](./ws.md): WebSocket 模块，带 Python 绑定的实时通信

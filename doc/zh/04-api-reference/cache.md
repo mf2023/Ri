@@ -111,6 +111,71 @@ let cache_config = DMSCCacheConfig {
 };
 ```
 
+### DMSCCachedValue
+
+缓存值包装器，支持TTL过期和LRU淘汰策略。
+
+#### 字段
+
+| 字段 | 类型 | 描述 |
+|:--------|:--------|:-------------|
+| `value` | `String` | 缓存的实际数据 |
+| `expires_at` | `Option<u64>` | 基于TTL的过期时间戳（UNIX epoch秒），None表示永不过期 |
+| `last_accessed` | `Option<u64>` | 最后访问时间戳（UNIX epoch秒），用于LRU淘汰策略 |
+
+#### 方法
+
+| 方法 | 描述 | 参数 | 返回值 |
+|:--------|:-------------|:--------|:--------|
+| `new(value, ttl)` | 创建缓存值 | `value: String`, `ttl: Option<u64>` | `Self` |
+| `touch()` | 更新最后访问时间 | 无 | `()` |
+| `is_expired()` | 检查是否过期 | 无 | `bool` |
+| `is_stale(max_idle_secs)` | 检查是否因长时间未访问而变陈旧 | `max_idle_secs: u64` | `bool` |
+| `deserialize<T>()` | 反序列化为指定类型 | 无 | `DMSCResult<T>` |
+
+#### 使用示例
+
+```rust
+use dmsc::cache::DMSCCachedValue;
+
+// 创建缓存值，1小时后过期
+let cached = DMSCCachedValue::new("user_data".to_string(), Some(3600));
+
+// 访问时更新最后访问时间
+cached.touch();
+
+// 检查是否过期
+if cached.is_expired() {
+    println!("Cache expired");
+}
+
+// 检查是否因长时间未访问而变陈旧（用于LRU淘汰）
+if cached.is_stale(300) {
+    println!("Cache is stale, may be evicted by LRU policy");
+}
+
+// 反序列化
+let user: User = cached.deserialize()?;
+```
+
+#### LRU淘汰策略支持
+
+`DMSCCachedValue`提供以下功能支持LRU缓存淘汰：
+
+- **touch()**: 每次访问缓存时调用，更新最后访问时间
+- **is_stale(max_idle_secs)**: 判断缓存项是否超过最大空闲时间
+
+```rust
+// LRU淘汰示例
+let max_idle_seconds = 300; // 5分钟
+for (_, cached) in cache.iter() {
+    if cached.is_stale(max_idle_seconds) {
+        // 移除长时间未访问的缓存项
+        cache.remove(key);
+    }
+}
+```
+
 ### DMSCCacheBackendType
 
 缓存后端类型枚举。
@@ -137,14 +202,17 @@ let cache_config = DMSCCacheConfig {
 - [device](./device.md): 设备模块，使用协议进行设备通信
 - [fs](./fs.md): 文件系统模块，提供文件操作功能
 - [gateway](./gateway.md): 网关模块，提供API网关功能
+- [grpc](./grpc.md): gRPC 模块，带服务注册和 Python 绑定
 - [hooks](./hooks.md): 钩子模块，提供生命周期钩子支持
 - [http](./http.md): HTTP模块，提供HTTP服务器和客户端功能
 - [log](./log.md): 日志模块，记录协议事件
 - [mq](./mq.md): 消息队列模块，提供消息队列支持
 - [observability](./observability.md): 可观测性模块，监控协议性能
+- [orm](./orm.md): ORM 模块，带查询构建器和分页支持
 - [protocol](./protocol.md): 协议模块，提供通信协议支持
 - [security](./security.md): 安全模块，提供加密和解密功能
 - [service_mesh](./service_mesh.md): 服务网格模块，使用协议进行服务间通信
 - [storage](./storage.md): 存储模块，提供云存储支持
 - [validation](./validation.md): 验证模块，提供数据验证功能
+- [ws](./ws.md): WebSocket 模块，带 Python 绑定的实时通信
 

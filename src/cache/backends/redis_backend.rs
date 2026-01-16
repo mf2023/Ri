@@ -180,6 +180,7 @@ impl DMSCCache for DMSCRedisCache {
         let cached_value = DMSCCachedValue {
             value: value.to_string(),
             expires_at: ttl_seconds,
+            last_accessed: None,
         };
         
         let result: redis::RedisResult<()> = match ttl_seconds {
@@ -229,7 +230,7 @@ impl DMSCCache for DMSCRedisCache {
     async fn keys(&self) -> crate::core::DMSCResult<Vec<String>> {
         let mut conn = (*self.connection).clone();
         
-        let pattern = "dms:cache:*";
+        let pattern = "dmsc:cache:*";
         let keys: Vec<String> = conn.keys(pattern).await
             .map_err(|e| crate::core::DMSCError::Other(format!("Redis keys error: {e}")))?;
         

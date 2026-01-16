@@ -616,8 +616,8 @@ impl DMSCObservabilityModule {
                     String::default()
                 }
             },
-            active_traces: self.tracer.as_ref().map(|_| tracing::tracer().active_trace_count()).unwrap_or(0),
-            active_spans: self.tracer.as_ref().map(|_| tracing::tracer().active_span_count()).unwrap_or(0),
+            active_traces: self.tracer.as_ref().map(|_| tracing::tracer().map(|t| t.active_trace_count()).unwrap_or(0)).unwrap_or(0),
+            active_spans: self.tracer.as_ref().map(|_| tracing::tracer().map(|t| t.active_span_count()).unwrap_or(0)).unwrap_or(0),
         }
     }
 }

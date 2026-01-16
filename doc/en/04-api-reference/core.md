@@ -212,6 +212,108 @@ async fn my_function() -> DMSCResult<()> {
     Ok(())
 }
 ```
+
+### DMSCLockError
+
+Safe lock error type, specifically for concurrent lock operation error handling.
+
+#### Methods
+
+| Method | Description | Parameters | Returns |
+|:--------|:-------------|:--------|:--------|
+| `new(context)` | Create a new lock error | `context: &str` | `DMSCLockError` |
+| `poisoned(context)` | Create a poisoned lock error | `context: &str` | `DMSCLockError` |
+| `is_poisoned()` | Check if it's a poisoned lock error | None | `bool` |
+| `context()` | Get error context | None | `&str` |
+
+#### Usage Example
+
+```rust
+match lock.read_safe("my data") {
+    Ok(data) => println!("Data: {}", data),
+    Err(e) if e.is_poisoned() => {
+        log::error!("Lock poisoned: {}", e.context());
+    }
+    Err(e) => {
+        log::error!("Lock error: {}", e.context());
+    }
+}
+```
+
+### DMSCLockResult
+
+Lock operation result type alias.
+
+```rust
+type DMSCLockResult<T> = Result<T, DMSCLockError>;
+```
+
+#### Usage Example
+
+```rust
+fn safe_read_data(lock: &RwLock<String>, context: &str) -> DMSCLockResult<String> {
+    let data = lock.read_safe(context)?;
+    Ok(data.clone())
+}
+```
+
+### RwLockExtensions
+
+Extension trait providing safe lock acquisition for standard library `RwLock`.
+
+#### Methods
+
+| Method | Description | Parameters | Returns |
+|:--------|:-------------|:--------|:--------|
+| `read_safe(context)` | Safely acquire read lock | `context: &str` | `DMSCLockResult<RwLockReadGuard<T>>` |
+| `write_safe(context)` | Safely acquire write lock | `context: &str` | `DMSCLockResult<RwLockWriteGuard<T>>` |
+| `try_read_safe(context)` | Try to acquire read lock (non-blocking) | `context: &str` | `DMSCLockResult<Option<RwLockReadGuard<T>>>` |
+| `try_write_safe(context)` | Try to acquire write lock (non-blocking) | `context: &str` | `DMSCLockResult<Option<RwLockWriteGuard<T>>>` |
+
+#### Usage Example
+
+```rust
+use dmsc::core::lock::RwLockExtensions;
+
+let lock = RwLock::new(42);
+
+fn read_value(lock: &RwLock<i32>) -> DMSCLockResult<i32> {
+    let value = lock.read_safe("reading counter")?;
+    Ok(*value)
+}
+
+fn write_value(lock: &RwLock<i32>, new_value: i32) -> DMSCLockResult<()> {
+    let mut value = lock.write_safe("writing counter")?;
+    *value = new_value;
+    Ok(())
+}
+```
+
+### MutexExtensions
+
+Extension trait providing safe lock acquisition for standard library `Mutex`.
+
+#### Methods
+
+| Method | Description | Parameters | Returns |
+|:--------|:-------------|:--------|:--------|
+| `lock_safe(context)` | Safely acquire mutex lock | `context: &str` | `DMSCLockResult<MutexGuard<T>>` |
+| `try_lock_safe(context)` | Try to acquire mutex lock (non-blocking) | `context: &str` | `DMSCLockResult<Option<MutexGuard<T>>>` |
+
+#### Usage Example
+
+```rust
+use dmsc::core::lock::MutexExtensions;
+
+let mutex = Mutex::new(Vec::new());
+
+fn push_item(mutex: &Mutex<Vec<String>>, item: String) -> DMSCLockResult<()> {
+    let mut items = mutex.lock_safe("pushing item")?;
+    items.push(item);
+    Ok(())
+}
+```
+
 <div align="center">
 
 ## Error Codes
@@ -287,13 +389,16 @@ async fn main() -> DMSCResult<()> {
 - [device](./device.md): Device module using protocols for device communication
 - [fs](./fs.md): Filesystem module providing file operation functions
 - [gateway](./gateway.md): Gateway module providing API gateway functionality
+- [grpc](./grpc.md): gRPC module with service registry and Python bindings
 - [hooks](./hooks.md): Hooks module providing lifecycle hook support
 - [http](./http.md): HTTP module providing HTTP server and client functionality
 - [log](./log.md): Logging module for protocol events
 - [mq](./mq.md): Message queue module providing message queue support
 - [observability](./observability.md): Observability module for protocol performance monitoring
+- [orm](./orm.md): ORM module with query builder and pagination support
 - [protocol](./protocol.md): Protocol module providing communication protocol support
 - [security](./security.md): Security module providing encryption and decryption functions
 - [service_mesh](./service_mesh.md): Service mesh module using protocols for inter-service communication
 - [storage](./storage.md): Storage module providing cloud storage support
 - [validation](./validation.md): Validation module providing data validation functions
+- [ws](./ws.md): WebSocket module with Python bindings for real-time communication

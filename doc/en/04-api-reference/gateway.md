@@ -40,6 +40,7 @@ The main API gateway interface, providing unified gateway functionality.
 | `router()` | Get router | None | `Arc<DMSCRouter>` |
 | `middleware_chain()` | Get middleware chain | None | `Arc<DMSCMiddlewareChain>` |
 | `handle_request(request)` | Handle request (internal method) | `request: DMSCGatewayRequest` | `DMSCGatewayResponse` |
+| `after_shutdown(ctx)` | Cleanup operation after gateway shutdown (implements DMSCModule trait) | `ctx: &mut DMSCServiceContext` | `DMSCResult<()>` |
 
 #### Usage Example
 
@@ -408,13 +409,16 @@ Gateway configuration.
 - [database](./database.md): Database module providing database operation support
 - [device](./device.md): Device module using protocols for device communication
 - [fs](./fs.md): Filesystem module providing file operation functions
+- [grpc](./grpc.md): gRPC module with service registry and Python bindings
 - [hooks](./hooks.md): Hooks module providing lifecycle hook support
 - [http](./http.md): HTTP module providing HTTP server and client functionality
 - [log](./log.md): Logging module for protocol events
 - [mq](./mq.md): Message queue module providing message queue support
 - [observability](./observability.md): Observability module for protocol performance monitoring
+- [orm](./orm.md): ORM module with query builder and pagination support
 - [protocol](./protocol.md): Protocol module providing communication protocol support
 - [security](./security.md): Security module providing encryption and decryption functions
 - [service_mesh](./service_mesh.md): Service mesh module using protocols for inter-service communication
 - [storage](./storage.md): Storage module providing cloud storage support
 - [validation](./validation.md): Validation module providing data validation functions
+- [ws](./ws.md): WebSocket module with Python bindings for real-time communication

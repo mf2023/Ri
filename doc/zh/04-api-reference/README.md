@@ -18,14 +18,23 @@
 | **cache** | 多后端缓存抽象（内存、Redis、混合） | [cache.md](./cache.md) |
 | **config** | 多源配置管理与热重载 | [config.md](./config.md) |
 | **core** | 运行时、错误处理和服务上下文 | [core.md](./core.md) |
+| **database** | 数据库访问层，带 ORM 支持 | [database.md](./database.md) |
 | **device** | 设备控制、发现和智能调度 | [device.md](./device.md) |
 | **fs** | 安全的文件系统操作和管理 | [fs.md](./fs.md) |
 | **gateway** | API 网关，支持负载均衡、限流和熔断 | [gateway.md](./gateway.md) |
+| **grpc** | 高性能 RPC，带服务注册和 Python 绑定 | [grpc.md](./grpc.md) |
 | **hooks** | 生命周期事件钩子（启动、关闭等） | [hooks.md](./hooks.md) |
+| **http** | HTTP 服务器和客户端，请求/响应处理 | [http.md](./http.md) |
 | **log** | 结构化日志与追踪上下文集成 | [log.md](./log.md) |
+| **mq** | 消息队列抽象（Kafka、RabbitMQ、Redis、内存） | [mq.md](./mq.md) |
 | **observability** | 指标、追踪和 Grafana 集成 | [observability.md](./observability.md) |
-| **queue** | 分布式队列抽象（Kafka、RabbitMQ、Redis、内存） | [queue.md](./queue.md) |
+| **orm** | 类型安全 ORM，带查询构建器和分页 | [orm.md](./orm.md) |
+| **protocol** | 通信协议支持 | [protocol.md](./protocol.md) |
+| **security** | 加密、解密和安全工具 | [security.md](./security.md) |
 | **service_mesh** | 服务发现、健康检查和流量管理 | [service_mesh.md](./service_mesh.md) |
+| **storage** | 云存储抽象（S3、OSS、COS） | [storage.md](./storage.md) |
+| **validation** | 数据验证和清理 | [validation.md](./validation.md) |
+| **ws** | WebSocket 实时通信，带 Python 绑定 | [ws.md](./ws.md) |
 
 <div align="center">
 

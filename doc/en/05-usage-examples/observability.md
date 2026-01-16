@@ -1473,7 +1473,9 @@ This example demonstrates the powerful observability features of the DMSC framew
 - [basic-app](./basic-app.md): Basic application example, learning how to create and run your first DMSC application
 - [caching](./caching.md): Caching examples, understanding how to use caching modules to improve application performance
 - [database](./database.md): Database examples, learning database connections and query operations
+- [grpc](./grpc.md): gRPC examples, implement high-performance RPC calls
 - [http](./http.md): HTTP service examples, building web applications and RESTful APIs
+- [websocket](./websocket.md): WebSocket examples, implement real-time bidirectional communication
 - [mq](./mq.md): Message queue examples, implementing asynchronous message processing and event-driven architecture
 
 - [security](./security.md): Security examples, encryption, hashing and security best practices

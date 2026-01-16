@@ -301,22 +301,22 @@ impl DMSCGrafanaDashboardGenerator {
     }
     
     /// Generate a default DMSC dashboard with common metrics panels
-    pub fn generate_default_dashboard(&mut self) -> DMSCGrafanaDashboard {
+    pub fn generate_default_dashboard(&mut self) -> DMSCResult<DMSCGrafanaDashboard> {
         let mut dashboard = self.create_dashboard("DMSC Default Dashboard");
         
         // First row: Request metrics
-        dashboard.add_panel(self.create_request_rate_panel(0, 0, 12, 8)).unwrap();
-        dashboard.add_panel(self.create_request_duration_panel(12, 0, 12, 8)).unwrap();
+        dashboard.add_panel(self.create_request_rate_panel(0, 0, 12, 8))?;
+        dashboard.add_panel(self.create_request_duration_panel(12, 0, 12, 8))?;
         
         // Second row: Error and connection metrics
-        dashboard.add_panel(self.create_error_rate_panel(0, 8, 12, 8)).unwrap();
-        dashboard.add_panel(self.create_active_connections_panel(12, 8, 6, 8)).unwrap();
+        dashboard.add_panel(self.create_error_rate_panel(0, 8, 12, 8))?;
+        dashboard.add_panel(self.create_active_connections_panel(12, 8, 6, 8))?;
         
         // Third row: Cache and database metrics
-        dashboard.add_panel(self.create_cache_metrics_panel(0, 16, 12, 8)).unwrap();
-        dashboard.add_panel(self.create_db_query_time_panel(12, 16, 12, 8)).unwrap();
+        dashboard.add_panel(self.create_cache_metrics_panel(0, 16, 12, 8))?;
+        dashboard.add_panel(self.create_db_query_time_panel(12, 16, 12, 8))?;
         
-        dashboard
+        Ok(dashboard)
     }
     
     /// Generate a dashboard automatically based on available metrics
@@ -332,7 +332,7 @@ impl DMSCGrafanaDashboardGenerator {
     /// # Returns
     /// 
     /// A Grafana dashboard automatically generated based on the provided metrics
-    pub fn generate_auto_dashboard(&mut self, metrics: Vec<&str>, dashboard_title: &str) -> DMSCGrafanaDashboard {
+    pub fn generate_auto_dashboard(&mut self, metrics: Vec<&str>, dashboard_title: &str) -> DMSCResult<DMSCGrafanaDashboard> {
         let mut dashboard = self.create_dashboard(dashboard_title);
         
         // Analyze metrics and group by type
@@ -356,7 +356,7 @@ impl DMSCGrafanaDashboardGenerator {
         // Add counter panels
         for (i, metric) in counter_metrics.iter().enumerate() {
             let panel = self.create_counter_panel(*metric, i as i32 * 12, current_row, 12, 8);
-            dashboard.add_panel(panel).unwrap();
+            dashboard.add_panel(panel)?;
             if (i + 1) % 2 == 0 {
                 current_row += 8;
             }
@@ -369,7 +369,7 @@ impl DMSCGrafanaDashboardGenerator {
         // Add gauge panels
         for (i, metric) in gauge_metrics.iter().enumerate() {
             let panel = self.create_gauge_panel(*metric, i as i32 * 12, current_row, 12, 8);
-            dashboard.add_panel(panel).unwrap();
+            dashboard.add_panel(panel)?;
             if (i + 1) % 2 == 0 {
                 current_row += 8;
             }
@@ -382,13 +382,13 @@ impl DMSCGrafanaDashboardGenerator {
         // Add histogram panels
         for (i, metric) in histogram_metrics.iter().enumerate() {
             let panel = self.create_histogram_panel(*metric, i as i32 * 12, current_row, 12, 8);
-            dashboard.add_panel(panel).unwrap();
+            dashboard.add_panel(panel)?;
             if (i + 1) % 2 == 0 {
                 current_row += 8;
             }
         }
         
-        dashboard
+        Ok(dashboard)
     }
     
     /// Create a counter panel for a metric

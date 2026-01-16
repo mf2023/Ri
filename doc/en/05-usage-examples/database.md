@@ -1278,6 +1278,8 @@ Through this example, you should have mastered the core functions and usage meth
 - [caching](./caching.md): Caching examples, understand how to use cache modules to improve application performance
 - [database](./database.md): Database examples, learn database connection and query operations
 - [http](./http.md): HTTP service examples, build Web applications and RESTful APIs
+- [grpc](./grpc.md): gRPC examples, implement high-performance RPC calls
+- [websocket](./websocket.md): WebSocket examples, implement real-time bidirectional communication
 - [mq](./mq.md): Message queue examples, implement asynchronous message processing and event-driven architecture
 - [observability](./observability.md): Observability examples, monitor application performance and health status
 - [security](./security.md): Security examples, encryption, hashing and security best practices

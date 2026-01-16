@@ -86,6 +86,7 @@ use std::time::{SystemTime, UNIX_EPOCH, Duration};
 use serde::{Serialize, Deserialize};
 
 use crate::core::DMSCResult;
+use crate::core::lock::RwLockExtensions;
 
 /// Metric types supported
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -322,17 +323,17 @@ impl DMSCMetric {
         };
         
         {
-            let mut window = self.sliding_window.write().expect("Failed to acquire write lock for sliding window");
+            let mut window = self.sliding_window.write_safe("sliding window")?;
             window.add_sample(sample);
         }
         
         {
-            let mut count = self.total_count.write().expect("Failed to acquire write lock for total count");
+            let mut count = self.total_count.write_safe("total count")?;
             *count += 1;
         }
         
         {
-            let mut sum = self.total_sum.write().expect("Failed to acquire write lock for total sum");
+            let mut sum = self.total_sum.write_safe("total sum")?;
             *sum += value;
         }
         
@@ -341,19 +342,26 @@ impl DMSCMetric {
     
     #[allow(dead_code)]
     fn get_stats(&self) -> DMSCWindowStats {
-        self.sliding_window.read().expect("Failed to acquire read lock for sliding window").get_window_stats()
+        match self.sliding_window.read_safe("sliding window stats") {
+            Ok(window) => window.get_window_stats(),
+            Err(_) => DMSCWindowStats::default(),
+        }
     }
     
     #[allow(dead_code)]
     fn get_total_count(&self) -> u64 {
-        let count = self.total_count.read().expect("Failed to acquire read lock for total count");
-        *count
+        match self.total_count.read_safe("total count") {
+            Ok(count) => *count,
+            Err(_) => 0,
+        }
     }
     
     #[allow(dead_code)]
     fn get_total_sum(&self) -> f64 {
-        let sum = self.total_sum.read().expect("Failed to acquire read lock for total sum");
-        *sum
+        match self.total_sum.read_safe("total sum") {
+            Ok(sum) => *sum,
+            Err(_) => 0.0,
+        }
     }
     
     fn get_config(&self) -> &DMSCMetricConfig {
@@ -361,8 +369,10 @@ impl DMSCMetric {
     }
 
     pub fn get_value(&self) -> f64 {
-        let count = self.total_count.read().expect("Failed to acquire read lock for count");
-        *count as f64
+        match self.total_count.read_safe("total count value") {
+            Ok(count) => *count as f64,
+            Err(_) => 0.0,
+        }
     }
 
     #[allow(dead_code)]
@@ -396,23 +406,33 @@ impl DMSCMetricsRegistry {
     
     pub fn register(&self, metric: Arc<DMSCMetric>) -> DMSCResult<()> {
         let name = metric.get_config().name.clone();
-        self.metrics.write().expect("Failed to acquire write lock for metrics registry").insert(name, metric);
+        let mut metrics = self.metrics.write_safe("metrics registry")?;
+        metrics.insert(name, metric);
         Ok(())
     }
     
     pub fn get_metric(&self, name: &str) -> Option<Arc<DMSCMetric>> {
-        self.metrics.read().expect("Failed to acquire read lock for metrics registry").get(name).cloned()
+        match self.metrics.read_safe("metrics registry") {
+            Ok(metrics) => metrics.get(name).cloned(),
+            Err(_) => None,
+        }
     }
     
     pub fn get_all_metrics(&self) -> HashMap<String, Arc<DMSCMetric>> {
-        self.metrics.read().expect("Failed to acquire read lock for metrics registry").clone()
+        match self.metrics.read_safe("metrics registry") {
+            Ok(metrics) => metrics.clone(),
+            Err(_) => HashMap::new(),
+        }
     }
     
     /// Export metrics in Prometheus format
     #[cfg(feature = "observability")]
     pub fn export_prometheus(&self) -> String {
         let mut output = String::new();
-        let metrics = self.metrics.read().expect("Failed to acquire read lock for metrics registry");
+        let metrics = match self.metrics.read_safe("metrics registry for export") {
+            Ok(m) => m,
+            Err(_) => return "# Error: Failed to acquire metrics registry lock".to_string(),
+        };
         
         for (name, metric) in metrics.iter() {
             let config = metric.get_config();
@@ -472,7 +492,11 @@ impl DMSCMetricsRegistry {
     /// Get all metric names from Python
     #[pyo3(name = "get_all_metric_names")]
     fn get_all_metric_names_impl(&self) -> Vec<String> {
-        self.metrics.read().unwrap().keys().cloned().collect()
+        let metrics = match self.metrics.read_safe("metrics registry for names") {
+            Ok(m) => m,
+            Err(_) => return Vec::new(),
+        };
+        metrics.keys().cloned().collect()
     }
     
     /// Export metrics in Prometheus format from Python
@@ -491,6 +515,10 @@ impl DMSCMetricsRegistry {
     /// Get metric count from Python
     #[pyo3(name = "get_metric_count")]
     fn get_metric_count_impl(&self) -> usize {
-        self.metrics.read().unwrap().len()
+        let metrics = match self.metrics.read_safe("metrics registry for count") {
+            Ok(m) => m,
+            Err(_) => return 0,
+        };
+        metrics.len()
     }
 }

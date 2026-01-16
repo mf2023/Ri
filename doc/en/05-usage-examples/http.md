@@ -2051,6 +2051,8 @@ These features provide powerful support for building modern web applications and
 - [basic-app](./basic-app.md): Basic application example, learn how to create and run your first DMSC application
 - [caching](./caching.md): Caching examples, understand how to use caching module to improve application performance
 - [database](./database.md): Database examples, learn database connection and query operations
+- [grpc](./grpc.md): gRPC examples, implement high-performance RPC calls
+- [websocket](./websocket.md): WebSocket examples, implement real-time bidirectional communication
 
 - [mq](./mq.md): Message queue examples, implement asynchronous message processing and event-driven architecture
 - [observability](./observability.md): Observability examples, monitor application performance and health status

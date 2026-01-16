@@ -18,12 +18,14 @@ This directory contains usage examples for each core feature of DMSC, helping yo
 | **Authentication and Authorization** | Using JWT and OAuth for authentication | [authentication.md](./authentication.md) |
 | **Cache Usage** | Basic operations and advanced usage of cache | [caching.md](./caching.md) |
 | **Database Operations** | Database connection, querying, and transaction management | [database.md](./database.md) |
+| **gRPC Service** | High-performance RPC with service registry and Python bindings | [grpc.md](./grpc.md) |
 | **HTTP Service** | Building web applications and RESTful APIs | [http.md](./http.md) |
 | **Message Queue** | Asynchronous message processing and event-driven architecture | [mq.md](./mq.md) |
 | **Observability** | Distributed tracing, metrics collection, and monitoring | [observability.md](./observability.md) |
 | **Security Practices** | Encryption, hashing, and security best practices | [security.md](./security.md) |
 | **Storage Management** | File upload/download and storage management | [storage.md](./storage.md) |
 | **Data Validation** | Data validation, cleaning, and custom validators | [validation.md](./validation.md) |
+| **WebSocket** | Real-time bidirectional communication with Python bindings | [ws.md](./ws.md) |
 
 <div align="center">
 

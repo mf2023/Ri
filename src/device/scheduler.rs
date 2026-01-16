@@ -757,8 +757,10 @@ impl DMSCDeviceScheduler {
         if let Some(record) = self.allocation_history.iter_mut().find(|r| r.allocation_id == allocation_id) {
             record.released_at = Some(Utc::now());
             
-            if let Ok(duration) = record.released_at.unwrap().signed_duration_since(record.allocated_at).to_std() {
-                record.duration_seconds = Some(duration.as_secs_f64());
+            if let Some(released_at) = record.released_at {
+                if let Ok(duration) = released_at.signed_duration_since(record.allocated_at).to_std() {
+                    record.duration_seconds = Some(duration.as_secs_f64());
+                }
             }
         }
     }

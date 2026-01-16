@@ -40,6 +40,7 @@ API网关主接口，提供统一的网关功能。
 | `router()` | 获取路由器 | 无 | `Arc<DMSCRouter>` |
 | `middleware_chain()` | 获取中间件链 | 无 | `Arc<DMSCMiddlewareChain>` |
 | `handle_request(request)` | 处理请求（内部方法） | `request: DMSCGatewayRequest` | `DMSCGatewayResponse` |
+| `after_shutdown(ctx)` | 网关关闭后的清理操作（实现DMSCModule trait） | `ctx: &mut DMSCServiceContext` | `DMSCResult<()>` |
 
 #### 使用示例
 
@@ -408,13 +409,16 @@ circuit_breaker.record_failure().await;
 - [database](./database.md): 数据库模块，提供数据库操作支持
 - [device](./device.md): 设备模块，使用协议进行设备通信
 - [fs](./fs.md): 文件系统模块，提供文件操作功能
+- [grpc](./grpc.md): gRPC 模块，带服务注册和 Python 绑定
 - [hooks](./hooks.md): 钩子模块，提供生命周期钩子支持
 - [http](./http.md): HTTP模块，提供HTTP服务器和客户端功能
 - [log](./log.md): 日志模块，记录协议事件
 - [mq](./mq.md): 消息队列模块，提供消息队列支持
 - [observability](./observability.md): 可观测性模块，监控协议性能
+- [orm](./orm.md): ORM 模块，带查询构建器和分页支持
 - [protocol](./protocol.md): 协议模块，提供通信协议支持
 - [security](./security.md): 安全模块，提供加密和解密功能
 - [service_mesh](./service_mesh.md): 服务网格模块，使用协议进行服务间通信
 - [storage](./storage.md): 存储模块，提供云存储支持
 - [validation](./validation.md): 验证模块，提供数据验证功能
+- [ws](./ws.md): WebSocket 模块，带 Python 绑定的实时通信

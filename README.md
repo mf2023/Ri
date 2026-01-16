@@ -29,7 +29,7 @@ English | [简体中文](README.zh.md)
 <h2 align="center">🏗️ Core Architecture</h2>
 
 ### 📐 Modular Design
-DMSC adopts a highly modular architecture with 14 core modules, enabling on-demand composition and seamless extension:
+DMSC adopts a highly modular architecture with 17 core modules, enabling on-demand composition and seamless extension:
 
 <div align="center">
 
@@ -43,12 +43,15 @@ DMSC adopts a highly modular architecture with 14 core modules, enabling on-dema
 | **device** | Device control, discovery, and intelligent scheduling |
 | **fs** | Secure file system operations and management |
 | **gateway** | API gateway with load balancing, rate limiting, and circuit breaking |
+| **grpc** | gRPC server and client support with Python bindings |
 | **hooks** | Lifecycle event hooks (Startup, Shutdown, etc.) |
 | **log** | Structured logging with tracing context integration |
 | **observability** | Metrics, tracing, and Grafana integration |
+| **orm** | Type-safe ORM with repository pattern, query builder, and Python bindings |
 | **queue** | Distributed queue abstraction (Kafka, RabbitMQ, Redis, Memory) |
 | **service_mesh** | Service discovery, health checking, and traffic management |
 | **validation** | Input validation and data sanitization utilities |
+| **ws** | WebSocket server support with Python bindings |
 
 </div>
 

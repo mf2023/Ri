@@ -4,9 +4,9 @@
 
 **Version: 0.1.4**
 
-**Last modified date: 2026-01-15**
+**Last modified date: 2026-01-16**
 
-The observability module provides distributed tracing, metrics collection, health checks, and performance monitoring functionality, supporting the OpenTelemetry standard.
+The observability module provides distributed tracing, metrics collection, Prometheus integration, and Grafana dashboard generation functionality.
 
 ## Module Overview
 
@@ -16,9 +16,10 @@ The observability module contains the following sub-modules:
 
 - **tracing**: Distributed tracing
 - **metrics**: Metrics collection
-- **health**: Health checks
-- **profiling**: Performance profiling
-- **alerts**: Alert management
+- **propagation**: Trace context propagation
+- **prometheus**: Prometheus metrics export
+- **grafana**: Grafana dashboard generation
+- **metrics_collector**: System metrics collector
 
 <div align="center">
 
@@ -26,7 +27,7 @@ The observability module contains the following sub-modules:
 
 </div>
 
-### DMSCObservability
+### DMSCObservabilityModule
 
 Main interface for the observability manager, providing unified monitoring functionality.
 
@@ -34,58 +35,12 @@ Main interface for the observability manager, providing unified monitoring funct
 
 | Method | Description | Parameters | Return Value |
 |:--------|:-------------|:--------|:--------|
-| `start_trace(name)` | Start tracing | `name: &str` | `DMSCTrace` |
-| `record_metric(name, value)` | Record metric | `name: &str`, `value: f64` | `()` |
-| `increment_counter(name)` | Increment counter | `name: &str` | `()` |
-| `set_gauge(name, value)` | Set gauge | `name: &str`, `value: f64` | `()` |
-| `record_histogram(name, value)` | Record histogram | `name: &str`, `value: f64` | `()` |
-| `check_health()` | Execute health check | None | `DMSCResult<HealthStatus>` |
-| `start_profiling()` | Start performance profiling | None | `DMSCResult<()>` |
-| `stop_profiling()` | Stop performance profiling | None | `DMSCResult<Vec<ProfileData>>` |
-| `get_metrics()` | Get all metrics | None | `HashMap<String, MetricValue>` |
-| `export_metrics()` | Export metrics | None | `DMSCResult<String>` |
-
-#### Usage Example
-
-```rust
-use dmsc::prelude::*;
-
-// Record metrics
-ctx.observability().increment_counter("requests.total");
-ctx.observability().record_metric("response.time", 125.5);
-ctx.observability().set_gauge("active.connections", 42.0);
-
-// Distributed tracing
-let trace = ctx.observability().start_trace("user_request");
-trace.with_tag("user_id", "12345");
-trace.with_tag("endpoint", "/api/users");
-
-// Record trace event
-trace.record_event("database_query", serde_json::json!({
-    "query": "SELECT * FROM users",
-    "duration_ms": 45.2
-}));
-
-// End tracing
-trace.finish();
-```
-
-### DMSCTrace
-
-Distributed tracing interface.
-
-#### Methods
-
-| Method | Description | Parameters | Return Value |
-|:--------|:-------------|:--------|:--------|
-| `with_tag(key, value)` | Add tag | `key: &str`, `value: impl Serialize` | `&Self` |
-| `with_tags(tags)` | Add multiple tags | `tags: impl Serialize` | `&Self` |
-| `record_event(name, attributes)` | Record event | `name: &str`, `attributes: impl Serialize` | `()` |
-| `start_span(name)` | Start child span | `name: &str` | `DMSCSpan` |
-| `set_status(status)` | Set status | `status: TraceStatus` | `()` |
-| `finish()` | End tracing | None | `()` |
-| `get_trace_id()` | Get trace ID | None | `String` |
-| `get_span_id()` | Get span ID | None | `String` |
+| `new(config)` | Create observability module | `config: DMSCObservabilityConfig` | `Self` |
+| `start_trace(name)` | Start tracing | `name: String` | `Option<DMSCTraceId>` |
+| `start_span(...)` | Start span | Multiple parameters | `Option<DMSCSpanId>` |
+| `end_span(id, status)` | End span | `id: &DMSCSpanId`, `status: DMSCSpanStatus` | `DMSCResult<()>` |
+| `get_tracer()` | Get tracer reference | None | `Option<Arc<DMSCTracer>>` |
+| `get_metrics_registry()` | Get metrics registry | None | `Option<Arc<DMSCMetricsRegistry>>` |
 
 #### Usage Example
 
@@ -93,545 +48,379 @@ Distributed tracing interface.
 use dmsc::prelude::*;
 
 // Start tracing
-let trace = ctx.observability().start_trace("http_request");
-trace.with_tags(serde_json::json!({
-    "method": "GET",
-    "path": "/api/users",
-    "user_agent": "Mozilla/5.0"
-}));
+let trace_id = observability.start_trace("user_request".to_string());
 
-// Record database query
-let db_span = trace.start_span("database_query");
-db_span.with_tag("table", "users");
-db_span.with_tag("operation", "SELECT");
+// Start child span
+let span_id = observability.start_span(
+    None, // Use current trace ID
+    None, // No parent span
+    "database_query".to_string(),
+    DMSCSpanKind::Client
+);
 
-// Simulate database operation
-std::thread::sleep(std::time::Duration::from_millis(50));
-
-db_span.finish();
-
-// Set trace status
-trace.set_status(TraceStatus::Ok);
-trace.finish();
+// End span
+observability.end_span(&span_id, DMSCSpanStatus::Ok)?;
 ```
 
-### DMSCSpan
+### DMSCMetricsRegistry
 
-Trace span interface.
+Metrics registry for managing application metrics.
 
 #### Methods
 
 | Method | Description | Parameters | Return Value |
 |:--------|:-------------|:--------|:--------|
-| `with_tag(key, value)` | Add tag | `key: &str`, `value: impl Serialize` | `&Self` |
-| `with_tags(tags)` | Add multiple tags | `tags: impl Serialize` | `&Self` |
-| `record_event(name, attributes)` | Record event | `name: &str`, `attributes: impl Serialize` | `()` |
-| `start_span(name)` | Start child span | `name: &str` | `DMSCSpan` |
-| `set_status(status)` | Set status | `status: TraceStatus` | `()` |
-| `finish()` | End span | None | `()` |
-| `get_span_id()` | Get span ID | None | `String` |
+| `new()` | Create new metrics registry | None | `Self` |
+| `register(metric)` | Register metric | `metric: Arc<DMSCMetric>` | `DMSCResult<()>` |
+| `get_metric(name)` | Get metric | `name: &str` | `Option<Arc<DMSCMetric>>` |
+| `get_all_metrics()` | Get all metrics | None | `HashMap<String, Arc<DMSCMetric>>` |
+| `export_prometheus()` | Export in Prometheus format | None | `String` |
+
+#### Usage Example
+
+```rust
+use dmsc::prelude::*;
+use std::sync::Arc;
+
+let registry = DMSCMetricsRegistry::new();
+
+// Create and register counter metric
+let counter = Arc::new(DMSCMetric::new(DMSCMetricConfig {
+    name: "requests_total".to_string(),
+    metric_type: DMSCMetricType::Counter,
+    description: "Total number of requests".to_string(),
+    buckets: None,
+}));
+
+registry.register(counter.clone())?;
+
+// Record metric value
+counter.record(1.0);
+
+// Export Prometheus format
+let prometheus_output = registry.export_prometheus();
+```
+
+### DMSCMetric
+
+Metric type supporting counter, gauge, and histogram.
+
+#### DMSCMetricType
+
+| Type | Description |
+|:--------|:-------------|
+| `Counter` | Counter, increment-only |
+| `Gauge` | Gauge, can increment or decrement |
+| `Histogram` | Histogram, records distribution |
+
+### DMSCTracer
+
+Distributed tracer.
+
+#### Methods
+
+| Method | Description | Parameters | Return Value |
+|:--------|:-------------|:--------|:--------|
+| `new()` | Create new tracer | None | `Self` |
+| `start_trace(name)` | Start tracing | `name: String` | `Option<DMSCTraceId>` |
+| `start_span(...)` | Start span | Multiple parameters | `Option<DMSCSpanId>` |
+| `end_span(id, status)` | End span | `id: &DMSCSpanId`, `status: DMSCSpanStatus` | `DMSCResult<()>` |
+| `span_mut(id, f)` | Modify span | `id: &DMSCSpanId`, `f: F` | `DMSCResult<()>` |
+| `export_traces()` | Export traces | None | `HashMap<DMSCTraceId, Vec<DMSCSpan>>` |
+| `active_trace_count()` | Active trace count | None | `usize` |
+| `active_span_count()` | Active span count | None | `usize` |
 
 #### Usage Example
 
 ```rust
 use dmsc::prelude::*;
 
-// Create nested spans
-let parent_span = ctx.observability().start_trace("request_processing");
+let tracer = DMSCTracer::new();
 
-{
-    let db_span = parent_span.start_span("database_operation");
-    db_span.with_tag("database", "users");
-    
-    // Simulate database operation
-    std::thread::sleep(std::time::Duration::from_millis(30));
-    
-    db_span.finish();
-}
+// Start tracing
+let trace_id = tracer.start_trace("HTTP request".to_string())?;
+assert!(trace_id.is_some());
 
-{
-    let cache_span = parent_span.start_span("cache_operation");
-    cache_span.with_tag("cache_type", "redis");
-    
-    // Simulate cache operation
-    std::thread::sleep(std::time::Duration::from_millis(10));
-    
-    cache_span.finish();
-}
+// Start child span
+let span_id = tracer.start_span(
+    trace_id.as_ref(),
+    None,
+    "database_query".to_string(),
+    DMSCSpanKind::Client
+)?;
+assert!(span_id.is_some());
 
-parent_span.finish();
+// End span
+tracer.end_span(&span_id, DMSCSpanStatus::Ok)?;
 ```
+
+### DMSCTraceId
+
+Trace ID type.
+
+```rust
+/// Trace ID type
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub struct DMSCTraceId(pub String);
+```
+
+### DMSCSpanId
+
+Span ID type.
+
+```rust
+/// Span ID type
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub struct DMSCSpanId(pub String);
+```
+
+### DMSCSpanKind
+
+Span type.
+
+| Variant | Description |
+|:--------|:-------------|
+| `Server` | Server-side processing |
+| `Client` | Client request |
+| `Producer` | Message producer |
+| `Consumer` | Message consumer |
+| `Internal` | Internal operation |
+
+### DMSCSpanStatus
+
+Span status.
+
+| Variant | Description |
+|:--------|:-------------|
+| `Unset` | Not set |
+| `Ok` | Success |
+| `Error` | Error |
+| `DeadlineExceeded` | Timeout |
+
+### DMSCSamplingStrategy
+
+Trace sampling strategy.
+
+| Variant | Description |
+|:--------|:-------------|
+| `Rate(rate)` | Fixed sampling rate |
+| `Deterministic(rate)` | Deterministic sampling |
+| `Adaptive(target_rate)` | Adaptive sampling |
+
 <div align="center">
 
-## Metrics Collection
+## Trace Propagation
 
 </div>
 
-### Metric Types
+### DMSCTraceContext
 
-#### DMSCCounter
-
-Counter type, can only be incremented.
+Trace context.
 
 ```rust
 use dmsc::prelude::*;
 
-// Create counter
-let counter = ctx.observability().create_counter("requests.total");
-counter.increment();
-counter.increment_by(5);
+let context = DMSCTraceContext::new()
+    .with_trace_id("trace-123".to_string())
+    .with_span_id("span-456".to_string());
 
-// Get current value
-let count = counter.get();
+// Set as current context
+context.set_as_current();
+
+// Get current context
+if let Some(current) = DMSCTraceContext::current() {
+    let trace_id = current.trace_id();
+    let span_id = current.span_id();
+}
 ```
 
-#### DMSCGauge
+### W3CTracePropagator
 
-Gauge type, can be set to any value.
-
-```rust
-use dmsc::prelude::*;
-
-// Create gauge
-let gauge = ctx.observability().create_gauge("connections.active");
-gauge.set(42.0);
-gauge.increment_by(1.0);
-gauge.decrement_by(2.0);
-
-// Get current value
-let value = gauge.get();
-```
-
-#### DMSCHistogram
-
-Histogram type, records value distribution.
+W3C trace propagator.
 
 ```rust
 use dmsc::prelude::*;
 
-// Create histogram
-let histogram = ctx.observability().create_histogram("response.duration");
-histogram.record(125.5);
-histogram.record(98.3);
-histogram.record(156.7);
+let propagator = W3CTracePropagator::new();
 
-// Get statistics
-let stats = histogram.get_stats();
-println!("Count: {}", stats.count);
-println!("Mean: {}", stats.mean);
-println!("P95: {}", stats.percentile_95);
-```
+// Inject into carrier
+let mut carrier = HashMap::new();
+propagator.inject(&context, &mut carrier);
 
-### Metric Labels
-
-```rust
-use dmsc::prelude::*;
-
-// Metrics with labels
-let counter = ctx.observability()
-    .create_counter_with_labels("requests.total", vec![
-        ("method", "GET"),
-        ("endpoint", "/api/users"),
-        ("status", "200")
-    ]);
-
-counter.increment();
-
-// Dynamic labels
-let endpoint = get_current_endpoint();
-let status = get_response_status();
-
-ctx.observability()
-    .increment_counter_with_labels("requests.total", vec![
-        ("endpoint", endpoint.as_str()),
-        ("status", status.as_str())
-    ]);
-```
-
-### Metrics Export
-
-#### Prometheus Format
-
-```rust
-use dmsc::prelude::*;
-
-// Export metrics in Prometheus format
-let prometheus_metrics = ctx.observability().export_prometheus()?;
-println!("{}", prometheus_metrics);
-```
-
-#### StatsD Format
-
-```rust
-use dmsc::prelude::*;
-
-// Export metrics in StatsD format
-let statsd_metrics = ctx.observability().export_statsd()?;
-println!("{}", statsd_metrics);
+// Extract from carrier
+let extracted = propagator.extract(&carrier);
 ```
 
 <div align="center">
 
-## Health Checks
+## Prometheus Integration
 
 </div>
 
-### DMSCHealthCheck
+### DMSCPrometheusExporter
 
-Health check interface.
+Prometheus metrics exporter.
 
 #### Methods
 
 | Method | Description | Parameters | Return Value |
 |:--------|:-------------|:--------|:--------|
-| `add_check(name, check)` | Add health check | `name: &str`, `check: impl HealthCheck` | `()` |
-| `remove_check(name)` | Remove health check | `name: &str` | `()` |
-| `run_checks()` | Execute all checks | None | `DMSCResult<HealthReport>` |
-| `get_status()` | Get health status | None | `HealthStatus` |
+| `new()` | Create new exporter | None | `Self` |
+| `register_counter(name, help)` | Register counter | `name: &str`, `help: &str` | `DMSCResult<()>` |
+| `register_gauge(name, help)` | Register gauge | `name: &str`, `help: &str` | `DMSCResult<()>` |
+| `register_histogram(name, help, buckets)` | Register histogram | Multiple parameters | `DMSCResult<()>` |
+| `increment_counter(name)` | Increment counter | `name: &str` | `DMSCResult<()>` |
+| `set_gauge(name, value)` | Set gauge | `name: &str`, `value: f64` | `DMSCResult<()>` |
+| `observe_histogram(name, value)` | Observe histogram | `name: &str`, `value: f64` | `DMSCResult<()>` |
+| `render()` | Render metrics | None | `DMSCResult<String>` |
 
-#### Built-in Health Checks
-
-```rust
-use dmsc::prelude::*;
-
-// Database health check
-let db_health = DatabaseHealthCheck::new("postgres://localhost/mydb");
-ctx.observability().health().add_check("database", db_health);
-
-// Redis health check
-let redis_health = RedisHealthCheck::new("redis://localhost:6379");
-ctx.observability().health().add_check("redis", redis_health);
-
-// HTTP endpoint health check
-let http_health = HttpHealthCheck::new("https://api.example.com/health");
-ctx.observability().health().add_check("external_api", http_health);
-
-// Execute health checks
-let health_report = ctx.observability().health().run_checks()?;
-
-for (name, result) in health_report.results {
-    match result.status {
-        HealthStatus::Healthy => println!("{}: ✓", name),
-        HealthStatus::Degraded => println!("{}: ⚠ ({})", name, result.message),
-        HealthStatus::Unhealthy => println!("{}: ✗ ({})", name, result.message),
-    }
-}
-```
-
-### Custom Health Checks
+#### Usage Example
 
 ```rust
 use dmsc::prelude::*;
 
-struct CustomHealthCheck {
-    threshold: f64,
-}
+let exporter = DMSCPrometheusExporter::new();
 
-impl HealthCheck for CustomHealthCheck {
-    fn check(&self) -> DMSCResult<HealthCheckResult> {
-        let current_value = self.get_current_value()?;
-        
-        if current_value < self.threshold {
-            Ok(HealthCheckResult::healthy())
-        } else {
-            Ok(HealthCheckResult::unhealthy(format!(
-                "Value {} exceeds threshold {}",
-                current_value, self.threshold
-            )))
-        }
-    }
-    
-    fn name(&self) -> &str {
-        "custom_check"
-    }
-}
+// Register metrics
+exporter.register_counter("http_requests_total", "Total HTTP requests")?;
+exporter.register_gauge("http_active_connections", "Active HTTP connections")?;
+exporter.register_histogram(
+    "http_request_duration_seconds",
+    "HTTP request duration in seconds",
+    vec![0.1, 0.25, 0.5, 1.0, 2.5, 5.0, 10.0]
+)?;
 
-impl CustomHealthCheck {
-    fn get_current_value(&self) -> DMSCResult<f64> {
-        // Implement specific check logic
-        Ok(0.5)
-    }
-}
+// Record metrics
+exporter.increment_counter("http_requests_total")?;
+exporter.set_gauge("http_active_connections", 42.0)?;
+exporter.observe_histogram("http_request_duration_seconds", 0.256)?;
 
-// Use custom health check
-let custom_check = CustomHealthCheck { threshold: 0.8 };
-ctx.observability().health().add_check("custom", custom_check);
+// Export Prometheus format
+let output = exporter.render()?;
+println!("{}", output);
 ```
 
 <div align="center">
 
-## Performance Profiling
+## Grafana Integration
 
 </div>
 
-### CPU Profiling
+### DMSCGrafanaDashboard
 
-```rust
-use dmsc::prelude::*;
-
-// Start CPU profiling
-ctx.observability().profiling().start_cpu_profiling()?;
-
-// Perform operations to profile
-perform_expensive_operation();
-
-// Stop profiling and get results
-let profile_data = ctx.observability().profiling().stop_cpu_profiling()?;
-
-// Export profiling results
-let flame_graph = profile_data.generate_flame_graph()?;
-std::fs::write("cpu_profile.svg", flame_graph)?;
-```
-
-### Memory Profiling
-
-```rust
-use dmsc::prelude::*;
-
-// Start memory profiling
-ctx.observability().profiling().start_memory_profiling()?;
-
-// Perform operations to profile
-allocate_memory_intensive_operation();
-
-// Stop profiling and get results
-let memory_profile = ctx.observability().profiling().stop_memory_profiling()?;
-
-// Analyze memory usage patterns
-for allocation in memory_profile.allocations {
-    println!("Allocation: {} bytes at {:?}", allocation.size, allocation.timestamp);
-}
-```
-
-### Performance Metrics
-
-```rust
-use dmsc::prelude::*;
-
-// Record performance metrics
-ctx.observability().profiling().record_performance_metric("cpu.usage", 45.2);
-ctx.observability().profiling().record_performance_metric("memory.usage", 1024.0);
-ctx.observability().profiling().record_performance_metric("disk.io", 125.5);
-
-// Get performance report
-let performance_report = ctx.observability().profiling().get_performance_report()?;
-println!("CPU Usage: {:.1}%", performance_report.cpu_usage);
-println!("Memory Usage: {:.1}MB", performance_report.memory_usage);
-println!("Disk I/O: {:.1}MB/s", performance_report.disk_io);
-```
-
-<div align="center">
-
-## Alert Management
-
-</div>  
-
-### DMSCAlert
-
-Alert interface.
+Grafana dashboard.
 
 #### Methods
 
 | Method | Description | Parameters | Return Value |
 |:--------|:-------------|:--------|:--------|
-| `create_alert(name, condition)` | Create alert | `name: &str`, `condition: AlertCondition` | `DMSCAlert` |
-| `enable_alert(name)` | Enable alert | `name: &str` | `()` |
-| `disable_alert(name)` | Disable alert | `name: &str` | `()` |
-| `get_alerts()` | Get all alerts | None | `Vec<DMSCAlert>` |
+| `new(title)` | Create new dashboard | `title: &str` | `Self` |
+| `add_panel(panel)` | Add panel | `panel: DMSCGrafanaPanel` | `DMSCResult<()>` |
+| `to_json()` | Export JSON | None | `DMSCResult<String>` |
 
-### Alert Conditions
+### DMSCGrafanaPanel
+
+Grafana panel.
 
 ```rust
 use dmsc::prelude::*;
 
-// Create alert conditions
-let cpu_alert_condition = AlertCondition::threshold(
-    "cpu.usage",
-    ThresholdCondition::GreaterThan(80.0),
-    Duration::from_secs(300)  // Lasts for 5 minutes
-);
-
-let memory_alert_condition = AlertCondition::threshold(
-    "memory.usage",
-    ThresholdCondition::GreaterThan(90.0),
-    Duration::from_secs(600)  // Lasts for 10 minutes
-);
-
-// Create alerts
-ctx.observability().alerts().create_alert("high_cpu_usage", cpu_alert_condition)?;
-ctx.observability().alerts().create_alert("high_memory_usage", memory_alert_condition)?;
+let panel = DMSCGrafanaPanel {
+    title: "Request Rate".to_string(),
+    query: "rate(http_requests_total[5m])".to_string(),
+    panel_type: "timeseries".to_string(),
+    grid_pos: DMSCGridPos { h: 8, w: 12, x: 0, y: 0 },
+};
 ```
 
-### Alert Notifications
+### DMSCGrafanaDashboardGenerator
+
+Grafana dashboard generator.
 
 ```rust
 use dmsc::prelude::*;
 
-// Configure alert notifications
-let email_notification = EmailNotification::new(
-    "admin@example.com",
-    "System Alert",
-    "CPU usage exceeded threshold"
-);
+let mut generator = DMSCGrafanaDashboardGenerator::new();
 
-let slack_notification = SlackNotification::new(
-    "https://hooks.slack.com/services/xxx/yyy/zzz",
-    "#alerts"
-);
+// Generate default dashboard
+let dashboard = generator.generate_default_dashboard()?;
 
-// Add notification channels
-ctx.observability().alerts().add_notification_channel("email", email_notification)?;
-ctx.observability().alerts().add_notification_channel("slack", slack_notification)?;
+// Generate auto dashboard
+let metrics = vec!["http_requests_total", "http_request_duration_seconds"];
+let auto_dashboard = generator.generate_auto_dashboard(metrics, "Auto Dashboard")?;
+
+// Export JSON
+let json = auto_dashboard.to_json()?;
 ```
 
 <div align="center">
-
-## OpenTelemetry Integration
-
-</div>
-
-### Exporter Configuration
-
-```rust
-use dmsc::prelude::*;
-
-// Configure Jaeger exporter
-let jaeger_config = JaegerExporterConfig {
-    endpoint: "http://localhost:14268/api/traces".to_string(),
-    service_name: "my-service".to_string(),
-    ..Default::default()
-};
-
-ctx.observability().set_trace_exporter(TraceExporter::Jaeger(jaeger_config))?;
-
-// Configure Prometheus exporter
-let prometheus_config = PrometheusExporterConfig {
-    endpoint: "0.0.0.0:9090".to_string(),
-    ..Default::default()
-};
-
-ctx.observability().set_metric_exporter(MetricExporter::Prometheus(prometheus_config))?;
-```
-
-### Context Propagation
-
-```rust
-use dmsc::prelude::*;
-
-// Inject trace context into HTTP request headers
-let mut headers = HashMap::new();
-ctx.observability().inject_context(&mut headers)?;
-
-// Extract trace context from HTTP request headers
-let extracted_context = ctx.observability().extract_context(&headers)?;
-let trace = ctx.observability().start_trace_with_context("http_request", extracted_context);
-```
 
 ## Configuration
 
+</div>
+
 ### DMSCObservabilityConfig
 
-Observability configuration struct.
+Observability module configuration.
 
 #### Fields
 
-| Field | Type | Description | Default Value |
+| Field | Type | Description | Default |
 |:--------|:-----|:-------------|:-------|
 | `tracing_enabled` | `bool` | Enable tracing | `true` |
 | `metrics_enabled` | `bool` | Enable metrics | `true` |
-| `health_checks_enabled` | `bool` | Enable health checks | `true` |
-| `profiling_enabled` | `bool` | Enable performance profiling | `false` |
-| `sampling_rate` | `f64` | Trace sampling rate | `0.1` |
-| `export_interval` | `Duration` | Export interval | `60s` |
+| `tracing_sampling_rate` | `f64` | Tracing sampling rate | `1.0` |
+| `tracing_sampling_strategy` | `String` | Sampling strategy | `"rate"` |
+| `metrics_window_size_secs` | `u64` | Metrics window size (seconds) | `60` |
+| `metrics_bucket_size_secs` | `u64` | Metrics bucket size (seconds) | `10` |
 
-#### Configuration Example
+#### Usage Example
 
 ```rust
 use dmsc::prelude::*;
 
-let observability_config = DMSCObservabilityConfig {
+let config = DMSCObservabilityConfig {
     tracing_enabled: true,
     metrics_enabled: true,
-    health_checks_enabled: true,
-    profiling_enabled: cfg!(debug_assertions),  // Enable only in debug mode
-    sampling_rate: 0.1,
-    export_interval: Duration::from_secs(60),
+    tracing_sampling_rate: 0.1,
+    tracing_sampling_strategy: "adaptive".to_string(),
+    metrics_window_size_secs: 300,
+    metrics_bucket_size_secs: 30,
 };
 
-ctx.observability().configure(observability_config)?;
+let observability = DMSCObservabilityModule::new(config);
 ```
 
-<div align="center">
-
-## Error Handling
-
-</div>  
-
-### Observability Error Codes
-
-| Error Code | Description |
-|:--------|:-------------|
-| `TRACE_EXPORT_ERROR` | Trace export error |
-| `METRIC_EXPORT_ERROR` | Metric export error |
-| `HEALTH_CHECK_ERROR` | Health check error |
-| `PROFILING_ERROR` | Performance profiling error |
-| `ALERT_CONFIG_ERROR` | Alert configuration error |
-
-### Error Handling Example
-
-```rust
-use dmsc::prelude::*;
-
-match ctx.observability().export_metrics() {
-    Ok(metrics) => {
-        // Metrics export successful
-        println!("Exported metrics: {}", metrics);
-    }
-    Err(DMSCError { code, .. }) if code == "METRIC_EXPORT_ERROR" => {
-        // Metrics export error, log warning
-        ctx.log().warn("Failed to export metrics, continuing without metrics");
-    }
-    Err(e) => {
-        // Other errors
-        return Err(e);
-    }
-}
-```
 <div align="center">
 
 ## Best Practices
 
-</div>  
+</div>
 
-1. **Set appropriate sampling rate**: Use lower sampling rates in production (0.1-0.01)
-2. **Use meaningful metric names**: Follow naming conventions and use descriptive names
-3. **Add appropriate labels**: Add useful labels to metrics and traces
-4. **Monitor critical paths**: Focus on monitoring performance of business-critical paths
-5. **Set reasonable alert thresholds**: Avoid excessive false positives and false negatives
-6. **Regularly review health checks**: Ensure health checks reflect actual system status
-7. **Use asynchronous export**: Avoid blocking main business processes
-8. **Protect sensitive information**: Do not include sensitive data in traces and metrics
+1. **Configure sampling rate appropriately**: Adjust tracing sampling rate based on traffic volume to avoid excessive overhead
+2. **Use appropriate metric types**: Choose Counter, Gauge, or Histogram based on metric characteristics
+3. **Add meaningful labels**: Use labels to distinguish different dimensions, but avoid high-cardinality labels
+4. **Export and clean up regularly**: Configure metric export intervals to avoid excessive memory usage
+5. **Use context propagation**: Properly propagate trace context in distributed systems
+6. **Use safe lock acquisition methods**: Use `read_safe()` and `write_safe()` instead of `.read()` and `.write()`
+
 <div align="center">
 
 ## Related Modules
 
 </div>
 
-- [README](./README.md): Module overview with API reference summary and quick navigation
-- [auth](./auth.md): Authentication module handling user authentication and authorization
-- [cache](./cache.md): Cache module providing in-memory and distributed cache support
-- [config](./config.md): Configuration module managing application configuration
-- [core](./core.md): Core module providing error handling and service context
-- [database](./database.md): Database module providing database operation support
-- [device](./device.md): Device module using protocols for device communication
-- [fs](./fs.md): Filesystem module providing file operation functions
+- [core](./core.md): Core module providing error handling and runtime support
 - [gateway](./gateway.md): Gateway module providing API gateway functionality
-- [hooks](./hooks.md): Hooks module providing lifecycle hook support
+- [database](./database.md): Database module providing database operation support
+- [grpc](./grpc.md): gRPC module with service registry and Python bindings
 - [http](./http.md): HTTP module providing HTTP server and client functionality
 - [log](./log.md): Logging module for protocol events
 - [mq](./mq.md): Message queue module providing message queue support
+- [orm](./orm.md): ORM module with query builder and pagination support
 - [protocol](./protocol.md): Protocol module providing communication protocol support
 - [security](./security.md): Security module providing encryption and decryption functions
 - [service_mesh](./service_mesh.md): Service mesh module using protocols for inter-service communication
 - [storage](./storage.md): Storage module providing cloud storage support
 - [validation](./validation.md): Validation module providing data validation functions
+- [ws](./ws.md): WebSocket module with Python bindings for real-time communication

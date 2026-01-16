@@ -202,7 +202,12 @@ impl<T> DMSCSlidingWindow<T> {
             for _ in 0..buckets_to_advance.min(self.buckets.len()) {
                 self.buckets.pop_front();
 
-                let new_bucket_start = self.buckets.back().unwrap().end_time;
+                let new_bucket_start = match self.buckets.back() {
+                    Some(bucket) => bucket.end_time,
+                    None => {
+                        continue;
+                    }
+                };
                 self.buckets.push_back(WindowBucket {
                     _start_time: new_bucket_start,
                     end_time: new_bucket_start + self.bucket_size,
@@ -268,7 +273,9 @@ impl DMSCQuantileCalculator {
             return None;
         }
 
-        self.sorted_data.sort_by(|a, b| a.partial_cmp(b).unwrap());
+        self.sorted_data.sort_by(|a, b| {
+            a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal)
+        });
 
         let n = self.sorted_data.len();
         let index = q * (n - 1) as f64;

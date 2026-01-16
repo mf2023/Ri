@@ -610,6 +610,8 @@ pub enum ProtocolError {
     ConnectionNotFound { connection_id: String },
     #[error("Serialization error: {message}")]
     Serialization { message: String },
+    #[error("Operation not supported for this protocol")]
+    NotSupported,
 }
 
 impl From<ProtocolError> for DMSCError {
@@ -715,7 +717,7 @@ impl DMSCProtocol for DMSCGlobalProtocol {
         if !*self.initialized.read().await {
             return Err(ProtocolError::NotInitialized.into());
         }
-        Ok(Vec::new())
+        Err(ProtocolError::NotSupported.into())
     }
 
     async fn get_connection_info(&self, connection_id: &str) -> DMSCResult<DMSCConnectionInfo> {
@@ -841,7 +843,7 @@ impl DMSCProtocol for DMSCPrivateProtocol {
         if !*self.initialized.read().await {
             return Err(ProtocolError::NotInitialized.into());
         }
-        Ok(Vec::new())
+        Err(ProtocolError::NotSupported.into())
     }
 
     async fn get_connection_info(&self, connection_id: &str) -> DMSCResult<DMSCConnectionInfo> {

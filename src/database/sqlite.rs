@@ -308,24 +308,33 @@ impl crate::database::DMSCDatabaseTransaction for SQLiteTransaction {
 #[pyo3::prelude::pymethods]
 impl SQLiteDatabase {
     #[staticmethod]
-    pub fn from_path(path: &str, max_connections: u32) -> Self {
-        let conn = rusqlite::Connection::open(path)
-            .expect("Failed to open SQLite database");
+    pub fn from_path(path: &str, max_connections: u32) -> Result<Self, pyo3::PyErr> {
+        let conn = match rusqlite::Connection::open(path) {
+            Ok(c) => c,
+            Err(e) => {
+                return Err(pyo3::PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(
+                    format!("Failed to open SQLite database: {}", e),
+                ));
+            }
+        };
 
-        conn.pragma_update(None, "journal_mode", "WAL")
-            .expect("Failed to set WAL mode");
+        if let Err(e) = conn.pragma_update(None, "journal_mode", "WAL") {
+            log::warn!("Failed to set WAL mode: {}", e);
+        }
 
-        conn.pragma_update(None, "synchronous", "NORMAL")
-            .expect("Failed to set synchronous mode");
+        if let Err(e) = conn.pragma_update(None, "synchronous", "NORMAL") {
+            log::warn!("Failed to set synchronous mode: {}", e);
+        }
 
-        conn.pragma_update(None, "busy_timeout", 30000)
-            .expect("Failed to set busy timeout");
+        if let Err(e) = conn.pragma_update(None, "busy_timeout", 30000) {
+            log::warn!("Failed to set busy timeout: {}", e);
+        }
 
         let db_config = DMSCDatabaseConfig::sqlite(path)
             .max_connections(max_connections)
             .build();
 
-        Self::new(conn, db_config)
+        Ok(Self::new(conn, db_config))
     }
 
     pub fn execute_sync(&self, sql: &str) -> Result<u64, DMSCError> {

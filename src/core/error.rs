@@ -304,6 +304,12 @@ impl From<tokio::sync::TryLockError> for DMSCError {
     }
 }
 
+impl From<super::lock::DMSCLockError> for DMSCError {
+    fn from(error: super::lock::DMSCLockError) -> Self {
+        DMSCError::InvalidState(format!("Lock error: {}", error))
+    }
+}
+
 #[cfg(feature = "pyo3")]
 impl std::convert::From<DMSCError> for pyo3::PyErr {
     fn from(error: DMSCError) -> Self {

@@ -68,7 +68,9 @@ fn extract_params(sql: &str) -> Vec<String> {
             let mut param = String::from("$");
             while let Some(&next) = chars.peek() {
                 if next.is_ascii_digit() {
-                    param.push(chars.next().unwrap());
+                    if let Some(digit) = chars.next() {
+                        param.push(digit);
+                    }
                 } else {
                     break;
                 }

@@ -96,6 +96,8 @@ use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use uuid::Uuid;
 
 use crate::core::DMSCResult;
+use crate::core::DMSCError;
+use crate::core::lock::RwLockExtensions;
 
 #[cfg(feature = "pyo3")]
 use pyo3::prelude::*;
@@ -383,14 +385,14 @@ impl DMSCTracer {
         let span = DMSCSpan::new(trace_id.clone(), None, name, DMSCSpanKind::Server);
 
         let span_id = span.span_id.clone();
-        self.active_spans
-            .write()
-            .unwrap()
-            .insert(span_id.clone(), span);
-        self.spans
-            .write()
-            .unwrap()
-            .insert(trace_id.clone(), Vec::new());
+        {
+            let mut active_spans = self.active_spans.write_safe("active spans for new trace").ok()?;
+            active_spans.insert(span_id.clone(), span);
+        }
+        {
+            let mut spans = self.spans.write_safe("spans for new trace").ok()?;
+            spans.insert(trace_id.clone(), Vec::new());
+        }
 
         // Set current context
         let context = DMSCTracingContext::new()
@@ -431,7 +433,11 @@ impl DMSCTracer {
             None => DMSCTracingContext::current().and_then(|context| context.span_id().cloned()),
         };
 
-        if !self.spans.read().unwrap().contains_key(&resolved_trace_id) {
+        let spans = match self.spans.read_safe("spans for span check") {
+            Ok(s) => s,
+            Err(_) => return None,
+        };
+        if !spans.contains_key(&resolved_trace_id) {
             return None;
         }
 
@@ -443,10 +449,10 @@ impl DMSCTracer {
         );
 
         let span_id = span.span_id.clone();
-        self.active_spans
-            .write()
-            .unwrap()
-            .insert(span_id.clone(), span);
+        {
+            let mut active_spans = self.active_spans.write_safe("active spans for new span").ok()?;
+            active_spans.insert(span_id.clone(), span);
+        }
 
         // Update current context with new span
         if let Some(context) = DMSCTracingContext::current() {
@@ -470,19 +476,26 @@ impl DMSCTracer {
 
     /// End a span and restore parent span context if available
     pub fn end_span(&self, span_id: &DMSCSpanId, status: DMSCSpanStatus) -> DMSCResult<()> {
-        let mut active_spans = self.active_spans.write().unwrap();
+        let mut active_spans = self.active_spans.write_safe("active spans for end span")?;
 
         if let Some(mut span) = active_spans.remove(span_id) {
             span.end(status);
 
             let trace_id = span.trace_id.clone();
-            if let Some(spans) = self.spans.write().unwrap().get_mut(&trace_id) {
-                spans.push(span.clone());
+            let parent_span_id = span.parent_span_id.clone();
+            drop(active_spans);
+
+            {
+                let mut spans = self.spans.write_safe("spans for end span")?;
+                if let Some(spans_list) = spans.get_mut(&trace_id) {
+                    spans_list.push(span);
+                }
             }
 
             // Restore parent span context if available
-            if let Some(parent_span_id) = span.parent_span_id.clone() {
+            if let Some(parent_span_id) = parent_span_id {
                 // Try to find parent span in active spans
+                let active_spans = self.active_spans.read_safe("active spans for parent check")?;
                 if active_spans.get(&parent_span_id).is_some() {
                     let context = DMSCTracingContext::new()
                         .with_trace_id(trace_id)
@@ -504,7 +517,7 @@ impl DMSCTracer {
     where
         F: FnOnce(&mut DMSCSpan),
     {
-        let mut active_spans = self.active_spans.write().unwrap();
+        let mut active_spans = self.active_spans.write_safe("active spans for span_mut")?;
 
         if let Some(span) = active_spans.get_mut(span_id) {
             f(span);
@@ -516,17 +529,26 @@ impl DMSCTracer {
 
     /// Export completed traces
     pub fn export_traces(&self) -> HashMap<DMSCTraceId, Vec<DMSCSpan>> {
-        self.spans.read().unwrap().clone()
+        match self.spans.read_safe("spans for export") {
+            Ok(spans) => spans.clone(),
+            Err(_) => HashMap::new(),
+        }
     }
 
     /// Get active traces count
     pub fn active_trace_count(&self) -> usize {
-        self.spans.read().unwrap().len()
+        match self.spans.read_safe("spans for count") {
+            Ok(spans) => spans.len(),
+            Err(_) => 0,
+        }
     }
 
     /// Get active span count
     pub fn active_span_count(&self) -> usize {
-        self.active_spans.read().unwrap().len()
+        match self.active_spans.read_safe("active spans for count") {
+            Ok(active_spans) => active_spans.len(),
+            Err(_) => 0,
+        }
     }
 
     fn should_sample(&self) -> bool {
@@ -574,8 +596,18 @@ impl DMSCTracer {
                     false
                 } else {
                     // Calculate current load based on active spans
-                    let active_count = self.active_spans.read().unwrap().len() as f64;
-                    let mut window = self.adaptive_window.write().unwrap();
+                    let active_count = match self.active_spans.read_safe("active spans for sampling") {
+                        Ok(active_spans) => active_spans.len() as f64,
+                        Err(_) => 0.0,
+                    };
+                    
+                    let mut window = match self.adaptive_window.write_safe("adaptive window for sampling") {
+                        Ok(w) => w,
+                        Err(_) => {
+                            // If we can't acquire the lock, default to high load (low sampling rate)
+                            return false;
+                        }
+                    };
                     
                     // Add current active count to window
                     window.push(active_count as u64);
@@ -799,39 +831,41 @@ impl DefaultTracerManager {
         Default::default()
     }
 
-    pub async fn register_tracer(&self, name: &str, sampling_rate: f64) {
+    pub async fn register_tracer(&self, name: &str, sampling_rate: f64) -> DMSCResult<()> {
         let tracer = Arc::new(DMSCTracer::new(sampling_rate));
-        let mut manager = self.inner.write().unwrap();
+        let mut manager = self.inner.write_safe("tracer manager for register")?;
         manager.register_tracer(name, tracer);
+        Ok(())
     }
     
-    pub async fn register_tracer_with_strategy(&self, name: &str, strategy: DMSCSamplingStrategy) {
+    pub async fn register_tracer_with_strategy(&self, name: &str, strategy: DMSCSamplingStrategy) -> DMSCResult<()> {
         let tracer = Arc::new(DMSCTracer::with_strategy(strategy));
-        let mut manager = self.inner.write().unwrap();
+        let mut manager = self.inner.write_safe("tracer manager for register with strategy")?;
         manager.register_tracer(name, tracer);
+        Ok(())
     }
 
     #[allow(dead_code)]
-    pub async fn get_tracer(&self, name: &str) -> Option<Arc<DMSCTracer>> {
-        let manager = self.inner.read().unwrap();
-        manager.get_tracer(name).cloned()
+    pub async fn get_tracer(&self, name: &str) -> DMSCResult<Option<Arc<DMSCTracer>>> {
+        let manager = self.inner.read_safe("tracer manager for get")?;
+        Ok(manager.get_tracer(name).cloned())
     }
 
-    pub async fn get_default_tracer(&self) -> Option<Arc<DMSCTracer>> {
-        let manager = self.inner.read().unwrap();
-        manager.get_default_tracer().cloned()
-    }
-
-    #[allow(dead_code)]
-    pub async fn set_default_tracer(&self, name: &str) -> bool {
-        let mut manager = self.inner.write().unwrap();
-        manager.set_default_tracer(name)
+    pub async fn get_default_tracer(&self) -> DMSCResult<Option<Arc<DMSCTracer>>> {
+        let manager = self.inner.read_safe("tracer manager for get default")?;
+        Ok(manager.get_default_tracer().cloned())
     }
 
     #[allow(dead_code)]
-    pub async fn remove_tracer(&self, name: &str) -> bool {
-        let mut manager = self.inner.write().unwrap();
-        manager.remove_tracer(name)
+    pub async fn set_default_tracer(&self, name: &str) -> DMSCResult<bool> {
+        let mut manager = self.inner.write_safe("tracer manager for set default")?;
+        Ok(manager.set_default_tracer(name))
+    }
+
+    #[allow(dead_code)]
+    pub async fn remove_tracer(&self, name: &str) -> DMSCResult<bool> {
+        let mut manager = self.inner.write_safe("tracer manager for remove")?;
+        Ok(manager.remove_tracer(name))
     }
 }
 
@@ -840,15 +874,22 @@ pub static DEFAULT_TRACER_MANAGER: std::sync::LazyLock<DefaultTracerManager> = s
 
 /// Initialize global tracer with fixed rate (backward compatibility)
 pub fn init_tracer(sampling_rate: f64) {
-    tokio::runtime::Builder::new_current_thread()
+    let runtime = match tokio::runtime::Builder::new_current_thread()
         .enable_all()
         .build()
-        .unwrap()
-        .block_on(async {
-            DEFAULT_TRACER_MANAGER
-                .register_tracer("default", sampling_rate)
-                .await;
-        });
+    {
+        Ok(r) => r,
+        Err(e) => {
+            eprintln!("Failed to create tokio runtime: {}", e);
+            return;
+        }
+    };
+    
+    runtime.block_on(async {
+        if let Err(e) = DEFAULT_TRACER_MANAGER.register_tracer("default", sampling_rate).await {
+            eprintln!("Failed to register tracer: {}", e);
+        }
+    });
 }
 
 /// Initialize global tracer with custom sampling strategy
@@ -859,27 +900,51 @@ pub fn init_tracer_with_strategy(strategy: DMSCSamplingStrategy) {
         DMSCSamplingStrategy::Adaptive(rate) => rate,
     };
     
-    tokio::runtime::Builder::new_current_thread()
+    let runtime = match tokio::runtime::Builder::new_current_thread()
         .enable_all()
         .build()
-        .unwrap()
-        .block_on(async {
-            DEFAULT_TRACER_MANAGER
-                .register_tracer("default", rate)
-                .await;
-        });
+    {
+        Ok(r) => r,
+        Err(e) => {
+            eprintln!("Failed to create tokio runtime: {}", e);
+            return;
+        }
+    };
+    
+    runtime.block_on(async {
+        if let Err(e) = DEFAULT_TRACER_MANAGER.register_tracer("default", rate).await {
+            eprintln!("Failed to register tracer: {}", e);
+        }
+    });
 }
 
 /// Get global tracer (backward compatibility)
-pub fn tracer() -> Arc<DMSCTracer> {
-    tokio::runtime::Builder::new_current_thread()
+pub fn tracer() -> Result<Arc<DMSCTracer>, Box<DMSCError>> {
+    let runtime = match tokio::runtime::Builder::new_current_thread()
         .enable_all()
         .build()
-        .unwrap()
-        .block_on(async {
-            DEFAULT_TRACER_MANAGER
-                .get_default_tracer()
-                .await
-                .expect("Tracer not initialized")
-        })
+    {
+        Ok(r) => r,
+        Err(e) => {
+            return Err(Box::new(DMSCError::Other(format!(
+                "Failed to create tokio runtime for tracer: {}",
+                e
+            ))));
+        }
+    };
+
+    runtime.block_on(async {
+        match DEFAULT_TRACER_MANAGER.get_default_tracer().await {
+            Ok(Some(tracer)) => Ok(tracer),
+            Ok(None) => {
+                Err(Box::new(DMSCError::Other(
+                    "Tracer not initialized".to_string(),
+                )))
+            }
+            Err(e) => Err(Box::new(DMSCError::Other(format!(
+                "Failed to get tracer: {}",
+                e
+            )))),
+        }
+    })
 }

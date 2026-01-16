@@ -370,6 +370,8 @@ fn configure_load_balancing(gateway: &DMSCGateway) {
 - [fs](./fs.md): Filesystem operation examples
 - [hooks](./hooks.md): Hook system examples
 - [http](./http.md): HTTP server and client examples
+- [grpc](./grpc.md): gRPC examples, implement high-performance RPC calls
+- [websocket](./websocket.md): WebSocket examples, implement real-time bidirectional communication
 - [mq](./mq.md): Message queue examples
 - [observability](./observability.md): Observability examples
 - [protocol](./protocol.md): Protocol module examples

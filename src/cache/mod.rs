@@ -188,10 +188,17 @@ impl DMSCCacheModule {
 #[pymethods]
 impl DMSCCacheModule {
     #[new]
-    fn py_new(config: DMSCCacheConfig) -> Self {
-        let rt = tokio::runtime::Runtime::new().expect("Failed to create runtime");
+    fn py_new(config: DMSCCacheConfig) -> Result<Self, pyo3::PyErr> {
+        let rt = match tokio::runtime::Runtime::new() {
+            Ok(r) => r,
+            Err(e) => {
+                return Err(pyo3::PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(
+                    format!("Failed to create runtime: {}", e),
+                ));
+            }
+        };
         rt.block_on(async {
-            Self::new(config).await
+            Ok(Self::new(config).await)
         })
     }
     

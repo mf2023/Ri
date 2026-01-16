@@ -377,7 +377,7 @@ impl PostgresDatabase {
             .max_connections(max_connections)
             .build();
 
-        Self::new(client, db_config)
+        Ok(Self::new(client, db_config))
     }
 
     pub fn execute_sync(&self, sql: &str) -> Result<u64, DMSCError> {

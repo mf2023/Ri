@@ -145,6 +145,7 @@ mod pool;
 mod row;
 mod result;
 mod migration;
+pub mod orm;
 
 #[cfg(feature = "postgres")]
 pub mod postgres;
@@ -158,6 +159,9 @@ pub use pool::{DMSCDatabasePool, PooledDatabase};
 pub use row::DMSCDBRow;
 pub use result::DMSCDBResult;
 pub use migration::{DMSCDatabaseMigration, DMSCMigrationHistory, DMSCDatabaseMigrator};
+pub use orm::{QueryBuilder, Criteria, SortOrder, Pagination, ComparisonOperator, 
+    TableDefinition, ColumnDefinition, IndexDefinition, ForeignKeyDefinition,
+    DMSCORMSimpleRepository, DMSCORMCrudRepository, DMSCORMRepository};
 
 use crate::core::{DMSCResult, DMSCError};
 use async_trait::async_trait;

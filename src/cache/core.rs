@@ -160,26 +160,80 @@ impl DMSCCacheStats {
     }
 }
 
-/// Cached value wrapper
+/// Cached value wrapper with TTL and LRU support.
+///
+/// This struct encapsulates a cached value along with metadata for cache management:
+/// - **value**: The actual cached data as a string
+/// - **expires_at**: Optional TTL-based expiration timestamp (UNIX epoch seconds)
+/// - **last_accessed**: Optional last access timestamp for LRU eviction policies
+///
+/// # Examples
+///
+/// ```
+/// use dmsc::cache::DMSCCachedValue;
+///
+/// let cached = DMSCCachedValue::new("test_data".to_string(), Some(3600));
+/// assert!(!cached.is_expired());
+/// cached.touch();
+/// assert!(!cached.is_stale(300));
+/// ```
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 pub struct DMSCCachedValue {
+    /// The cached value as a string
     #[pyo3(get, set)]
     pub value: String,
+    /// Optional expiration timestamp (UNIX epoch seconds)
+    /// If None, the value never expires based on TTL
     #[pyo3(get, set)]
     pub expires_at: Option<u64>,
+    /// Optional last access timestamp (UNIX epoch seconds)
+    /// Used for LRU-based cache eviction policies
+    #[pyo3(get, set)]
+    pub last_accessed: Option<u64>,
 }
 
 impl DMSCCachedValue {
+    /// Creates a new cached value with optional TTL.
+    /// 
+    /// # Parameters
+    /// 
+    /// - `value`: The string value to cache
+    /// - `ttl_seconds`: Optional time-to-live in seconds
+    ///   - If Some(seconds), the value will expire after the specified duration
+    ///   - If None, the value never expires based on TTL
+    /// 
+    /// # Behavior
+    /// 
+    /// - Initializes `last_accessed` to current timestamp for LRU tracking
+    /// - Calculates `expires_at` as current_time + ttl_seconds if TTL is provided
+    /// 
+    /// # Examples
+    /// 
+    /// ```
+    /// use dmsc::cache::DMSCCachedValue;
+    /// 
+    /// // Create a value that expires in 1 hour
+    /// let cached = DMSCCachedValue::new("data".to_string(), Some(3600));
+    /// 
+    /// // Create a value that never expires
+    /// let persistent = DMSCCachedValue::new("persistent".to_string(), None);
+    /// ```
     pub fn new(value: String, ttl_seconds: Option<u64>) -> Self {
+        let now = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap_or(Duration::from_secs(0))
+            .as_secs();
+        
         let expires_at = ttl_seconds.map(|ttl| {
-            std::time::SystemTime::now()
-                .duration_since(std::time::UNIX_EPOCH)
-                .unwrap_or(Duration::from_secs(0))
-                .as_secs()
-                + ttl
+            now + ttl
         });
-        Self { value, expires_at }
+        
+        Self { 
+            value, 
+            expires_at,
+            last_accessed: Some(now),
+        }
     }
     
     pub fn deserialize<T: serde::de::DeserializeOwned>(&self) -> crate::core::DMSCResult<T> {
@@ -199,17 +253,67 @@ impl DMSCCachedValue {
         }
     }
     
+    /// Updates the last access timestamp to current time.
+    /// 
+    /// This method should be called each time the cached value is accessed
+    /// to support LRU (Least Recently Used) cache eviction policies.
+    /// 
+    /// # Behavior
+    /// 
+    /// - Sets `last_accessed` to the current UNIX timestamp
+    /// - Does not modify `expires_at` or `value`
+    /// 
+    /// # Use Cases
+    /// 
+    /// - LRU cache implementations tracking access order
+    /// - Cache warming strategies based on access patterns
+    /// - Usage analytics and cache performance monitoring
     pub fn touch(&mut self) {
-        // Update last access time to support LRU eviction policies
-        // In a production implementation, this would:
-        // 1. Update an internal last_accessed timestamp field
-        // 2. Trigger cache reordering in LRU-based implementations
-        // 3. Update usage statistics for cache analytics
-        // 4. Potentially trigger background cleanup of least recently used items
+        let now = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap_or(Duration::from_secs(0))
+            .as_secs();
         
-        // For now, we track this operation for monitoring purposes
-        // In memory-based implementations, this helps with LRU eviction decisions
-        // In distributed caches, this helps with cache warming and preloading strategies
+        self.last_accessed = Some(now);
+    }
+    
+    /// Checks if the cached value is stale based on idle time.
+    /// 
+    /// A value is considered stale if it has not been accessed for longer
+    /// than the specified maximum idle time. This is useful for LRU eviction.
+    /// 
+    /// # Parameters
+    /// 
+    /// - `max_idle_secs`: Maximum idle time in seconds before considering stale
+    /// 
+    /// # Returns
+    /// 
+    /// - `true` if the value is stale (not accessed within max_idle_secs)
+    /// - `false` if the value is still fresh or has no access timestamp
+    /// 
+    /// # Examples
+    /// 
+    /// ```
+    /// use dmsc::cache::DMSCCachedValue;
+    /// 
+    /// let mut cached = DMSCCachedValue::new("data".to_string(), None);
+    /// 
+    /// // Immediately after creation, not stale
+    /// assert!(!cached.is_stale(300));
+    /// 
+    /// cached.touch();
+    /// assert!(!cached.is_stale(300));
+    /// ```
+    pub fn is_stale(&self, max_idle_secs: u64) -> bool {
+        if let Some(last_accessed) = self.last_accessed {
+            let now = std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap_or(Duration::from_secs(0))
+                .as_secs();
+            now - last_accessed > max_idle_secs
+        } else {
+            false
+        }
     }
 }
 

@@ -83,6 +83,7 @@ use std::sync::{Arc, RwLock};
 #[cfg(feature = "observability")]
 use prometheus::{Counter, Gauge, Histogram, Registry, Encoder, TextEncoder};
 use crate::core::DMSCResult;
+use crate::core::lock::RwLockExtensions;
 
 /// Prometheus exporter for managing metrics and generating Grafana dashboards.
 ///
@@ -133,7 +134,7 @@ impl DMSCPrometheusExporter {
         let counter = Counter::new(name, help)?;
         self.registry.register(Box::new(counter.clone()))?;
         
-        let mut counters = self.counters.write().unwrap();
+        let mut counters = self.counters.write_safe("counters for register")?;
         counters.insert(name.to_string(), counter);
         
         Ok(())
@@ -150,7 +151,7 @@ impl DMSCPrometheusExporter {
     ///
     /// DMSCResult indicating success or failure
     pub fn increment_counter(&self, name: &str, value: f64) -> DMSCResult<()> {
-        let counters = self.counters.read().unwrap();
+        let counters = self.counters.read_safe("counters for increment")?;
         if let Some(counter) = counters.get(name) {
             counter.inc_by(value);
             Ok(())
@@ -173,7 +174,7 @@ impl DMSCPrometheusExporter {
         let gauge = Gauge::new(name, help)?;
         self.registry.register(Box::new(gauge.clone()))?;
         
-        let mut gauges = self.gauges.write().unwrap();
+        let mut gauges = self.gauges.write_safe("gauges for register")?;
         gauges.insert(name.to_string(), gauge);
         
         Ok(())
@@ -190,7 +191,7 @@ impl DMSCPrometheusExporter {
     ///
     /// DMSCResult indicating success or failure
     pub fn set_gauge(&self, name: &str, value: f64) -> DMSCResult<()> {
-        let gauges = self.gauges.read().unwrap();
+        let gauges = self.gauges.read_safe("gauges for set")?;
         if let Some(gauge) = gauges.get(name) {
             gauge.set(value);
             Ok(())
@@ -214,7 +215,7 @@ impl DMSCPrometheusExporter {
         let histogram = Histogram::with_opts(prometheus::HistogramOpts::new(name, help).buckets(buckets))?;
         self.registry.register(Box::new(histogram.clone()))?;
         
-        let mut histograms = self.histograms.write().unwrap();
+        let mut histograms = self.histograms.write_safe("histograms for register")?;
         histograms.insert(name.to_string(), histogram);
         
         Ok(())
@@ -231,7 +232,7 @@ impl DMSCPrometheusExporter {
     ///
     /// DMSCResult indicating success or failure
     pub fn observe_histogram(&self, name: &str, value: f64) -> DMSCResult<()> {
-        let histograms = self.histograms.read().unwrap();
+        let histograms = self.histograms.read_safe("histograms for observe")?;
         if let Some(histogram) = histograms.get(name) {
             histogram.observe(value);
             Ok(())
@@ -251,7 +252,7 @@ impl DMSCPrometheusExporter {
         let mut buffer = Vec::new();
         encoder.encode(&metric_families, &mut buffer)?;
         
-        Ok(String::from_utf8(buffer).unwrap())
+        String::from_utf8(buffer).map_err(|e| crate::core::DMSCError::Serde(format!("Invalid UTF-8 in Prometheus output: {}", e)))
     }
     
     /// Adds a counter panel to a Grafana dashboard.

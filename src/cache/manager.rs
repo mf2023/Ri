@@ -134,7 +134,13 @@ impl DMSCCacheManager {
     /// - A `JoinHandle` for the background task
     pub async fn start_consistency_listener(&mut self) -> tokio::task::JoinHandle<()> {
         let backend = self.backend.clone();
-        let mut receiver = self.event_receiver.take().expect("Already started");
+        let mut receiver = match self.event_receiver.take() {
+            Some(r) => r,
+            None => {
+                log::error!("[DMSC.Cache] Event receiver already started or not initialized");
+                return tokio::spawn(async {});
+            }
+        };
         
         log::info!("[DMSC.Cache] Starting cache consistency event listener");
         

@@ -232,7 +232,10 @@ impl DMSCDeviceDiscoveryEngine {
         }
         
         if let Some((fingerprint_id, confidence)) = best_match {
-            let fingerprint = self.fingerprints.get(&fingerprint_id).unwrap();
+            let fingerprint = match self.fingerprints.get(&fingerprint_id) {
+                Some(f) => f,
+                None => return None,
+            };
             
             let device = DMSCDevice::new(
                 scan_result.device_name.clone(),
@@ -611,7 +614,9 @@ impl DMSCResourceScheduler {
             .collect();
         
         // Sort by score (highest first)
-        device_scores.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap());
+        device_scores.sort_by(|a, b| {
+            b.1.partial_cmp(&a.1).unwrap_or(std::cmp::Ordering::Equal)
+        });
         
         // Return the best device
         device_scores.first().map(|(device_id, _)| device_id.clone())

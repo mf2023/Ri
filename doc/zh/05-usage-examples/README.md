@@ -18,12 +18,14 @@
 | **认证与授权** | 使用JWT和OAuth进行认证 | [authentication.md](./authentication.md) |
 | **缓存使用** | 缓存的基本操作和高级用法 | [caching.md](./caching.md) |
 | **数据库操作** | 数据库连接、查询和事务管理 | [database.md](./database.md) |
+| **gRPC服务** | 高性能 RPC，带服务注册和 Python 绑定 | [grpc.md](./grpc.md) |
 | **HTTP服务** | 构建Web应用和RESTful API | [http.md](./http.md) |
 | **消息队列** | 异步消息处理和事件驱动架构 | [mq.md](./mq.md) |
 | **可观测性** | 分布式追踪、指标收集和监控 | [observability.md](./observability.md) |
 | **安全实践** | 加密、哈希和安全最佳实践 | [security.md](./security.md) |
 | **存储管理** | 文件上传下载和存储管理 | [storage.md](./storage.md) |
 | **数据验证** | 数据验证、清理和自定义验证器 | [validation.md](./validation.md) |
+| **WebSocket** | 实时双向通信，带 Python 绑定 | [ws.md](./ws.md) |
 
 <div align="center">
 

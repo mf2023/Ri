@@ -76,6 +76,12 @@ pub mod protocol;
 pub mod validation;
 /// Inter-module RPC communication for distributed method calls
 pub mod module_rpc;
+/// gRPC server and client support
+#[cfg(feature = "grpc")]
+pub mod grpc;
+/// WebSocket server and client support
+#[cfg(feature = "websocket")]
+pub mod ws;
 
 /// Common re-exports for convenient access to core functionality
 /// 
@@ -384,6 +390,10 @@ pub mod py {
         create_database_module(m)?;
         create_validation_module(m)?;
         create_protocol_module(m)?;
+        #[cfg(feature = "grpc")]
+        create_grpc_module(m)?;
+        #[cfg(feature = "websocket")]
+        create_ws_module(m)?;
 
         Ok(())
     }
@@ -514,6 +524,14 @@ pub mod py {
         m.add_class::<crate::database::DMSCDatabaseConfig>()?;
         m.add_class::<crate::database::DMSCDBRow>()?;
         m.add_class::<crate::database::DMSCDBResult>()?;
+        m.add_class::<crate::database::orm::ColumnDefinition>()?;
+        m.add_class::<crate::database::orm::IndexDefinition>()?;
+        m.add_class::<crate::database::orm::ForeignKeyDefinition>()?;
+        m.add_class::<crate::database::orm::ComparisonOperator>()?;
+        m.add_class::<crate::database::orm::SortOrder>()?;
+        m.add_class::<crate::database::orm::Pagination>()?;
+        m.add_class::<crate::database::orm::QueryBuilder>()?;
+        m.add_class::<crate::database::orm::JoinType>()?;
         parent.add_submodule(&m)?;
         Ok(())
     }
@@ -549,6 +567,28 @@ pub mod py {
         m.add_class::<crate::protocol::DMSCConnectionInfo>()?;
         m.add_class::<crate::protocol::DMSCMessageFlags>()?;
         m.add_class::<crate::protocol::DMSCSecurityLevel>()?;
+        parent.add_submodule(&m)?;
+        Ok(())
+    }
+    
+    #[cfg(feature = "grpc")]
+    fn create_grpc_module(parent: &Bound<'_, PyModule>) -> PyResult<()> {
+        let m = PyModule::new(parent.py(), "grpc")?;
+        m.add_class::<crate::grpc::DMSCGrpcConfig>()?;
+        m.add_class::<crate::grpc::DMSCGrpcStats>()?;
+        m.add_class::<crate::grpc::DMSCGrpcServiceRegistryPy>()?;
+        parent.add_submodule(&m)?;
+        Ok(())
+    }
+    
+    #[cfg(feature = "websocket")]
+    fn create_ws_module(parent: &Bound<'_, PyModule>) -> PyResult<()> {
+        let m = PyModule::new(parent.py(), "ws")?;
+        m.add_class::<crate::ws::DMSCWSServerConfig>()?;
+        m.add_class::<crate::ws::DMSCWSSessionInfo>()?;
+        m.add_class::<crate::ws::DMSCWSServerStats>()?;
+        m.add_class::<crate::ws::DMSCWSPythonHandler>()?;
+        m.add_class::<crate::ws::DMSCWSSessionManagerPy>()?;
         parent.add_submodule(&m)?;
         Ok(())
     }

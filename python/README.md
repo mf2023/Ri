@@ -29,26 +29,31 @@ English | [简体中文](README.zh.md)
 <h2 align="center">🏗️ Core Architecture</h2>
 
 ### 📐 Modular Design
-DMSC adopts a highly modular architecture with 14 core modules, enabling on-demand composition and seamless extension:
+DMSC adopts a highly modular architecture with 17 core modules, enabling on-demand composition and seamless extension:
 
 <div align="center">
 
-| Module | Description |
-|:--------|:-------------|
-| **auth** | Authentication & authorization (JWT, OAuth, permissions) |
-| **cache** | Multi-backend cache abstraction (Memory, Redis, Hybrid) |
-| **config** | Multi-source configuration management with hot reload |
-| **core** | Runtime, error handling, and service context |
-| **database** | Database abstraction with PostgreSQL, MySQL, SQLite support |
-| **device** | Device control, discovery, and intelligent scheduling |
-| **fs** | Secure file system operations and management |
-| **gateway** | API gateway with load balancing, rate limiting, and circuit breaking |
-| **hooks** | Lifecycle event hooks (Startup, Shutdown, etc.) |
-| **log** | Structured logging with tracing context integration |
-| **observability** | Metrics, tracing, and Grafana integration |
-| **queue** | Distributed queue abstraction (Kafka, RabbitMQ, Redis, Memory) |
-| **service_mesh** | Service discovery, health checking, and traffic management |
-| **validation** | Input validation and data sanitization utilities |
+| Module | Description | Python Support |
+|:--------|:------------|:---------------|
+| **auth** | Authentication & authorization (JWT, OAuth, permissions) | ✅ Full |
+| **cache** | Multi-backend cache abstraction (Memory, Redis, Hybrid) | ✅ Full |
+| **config** | Multi-source configuration management with hot reload | ✅ Full |
+| **core** | Runtime, error handling, and service context | ✅ Full |
+| **database** | Database abstraction with PostgreSQL, MySQL, SQLite support | ✅ Full |
+| **device** | Device control, discovery, and intelligent scheduling | ✅ Full |
+| **fs** | Secure file system operations and management | ✅ Full |
+| **gateway** | API gateway with load balancing, rate limiting, and circuit breaking | ✅ Full |
+| **grpc** | gRPC server and client support | ✅ Full (service registry + handler) |
+| **hooks** | Lifecycle event hooks (Startup, Shutdown, etc.) | ✅ Full |
+| **log** | Structured logging with tracing context integration | ✅ Full |
+| **observability** | Metrics, tracing, and Grafana integration | ✅ Full |
+| **orm** | Type-safe ORM with repository pattern and query builder | ✅ Full (types + QueryBuilder) |
+| **queue** | Distributed queue abstraction (Kafka, RabbitMQ, Redis, Memory) | ✅ Full |
+| **service_mesh** | Service discovery, health checking, and traffic management | ✅ Full |
+| **validation** | Input validation and data sanitization utilities | ✅ Full |
+| **ws** | WebSocket server support | ✅ Full (handler + session manager) |
+
+> **Note**: For gRPC/WebSocket servers in Python, use native Python libraries like `grpcio` and `websockets`. The DMSC Rust API provides advanced features for high-performance scenarios.
 
 </div>
 
@@ -214,6 +219,77 @@ user_data = cache_manager.get("user:123")
 if cache_manager.exists("user:123"):
     cache_manager.delete("user:123")
 ```
+
+### gRPC Service Example
+
+```python
+from dmsc.grpc import DMSCGrpcServiceRegistryPy, DMSCGrpcConfig
+
+# Create gRPC service registry
+registry = DMSCGrpcServiceRegistryPy()
+
+# Define service handler
+def my_handler(method: str, data: bytes) -> bytes:
+    print(f"Received request: {method}")
+    return b"Response from Python handler"
+
+# Register service
+registry.register("my-service", my_handler)
+
+# List registered services
+services = registry.list_services()
+print(f"Services: {services}")
+```
+
+### WebSocket Handler Example
+
+```python
+from dmsc.ws import DMSCWSPythonHandler, DMSCWSSessionManagerPy
+
+# Create WebSocket handler with callbacks
+handler = DMSCWSPythonHandler(
+    on_connect=lambda session_id, remote_addr: print(f"Connected: {session_id}"),
+    on_disconnect=lambda session_id: print(f"Disconnected: {session_id}"),
+    on_message=lambda session_id, data: b"Echo: " + data,
+    on_error=lambda session_id, error: print(f"Error: {error}")
+)
+
+# Create session manager
+manager = DMSCWSSessionManagerPy(max_connections=1000)
+
+# Get session count
+count = manager.get_session_count()
+print(f"Active sessions: {count}")
+```
+
+### ORM Usage Example (Rust API)
+
+```rust
+use dmsc::database::{DMSCORMSimpleRepository, Criteria, Pagination, ComparisonOperator};
+
+#[derive(serde::Serialize, serde::Deserialize, Clone)]
+struct User {
+    id: String,
+    name: String,
+    email: String,
+}
+
+// Create repository (Rust only)
+let repo = DMSCORMSimpleRepository::<User>::new("users");
+
+// Find all users
+let users = repo.find_all(&db).await?;
+
+// Query with criteria
+let criteria = Criteria::new("name", ComparisonOperator::Like, serde_json::json!("%John%"));
+let users = repo.find_many(&db, vec![criteria]).await?;
+
+// Paginated query
+let pagination = Pagination::new(1, 20);
+let (users, total) = repo.find_paginated(&db, pagination, vec![]).await?;
+```
+
+> **Note**: The ORM module provides type-safe database operations in Rust. For Python, use SQLAlchemy or other ORM libraries directly.
 
 <h2 align="center">🔧 Configuration</h2>
 

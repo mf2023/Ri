@@ -4,9 +4,9 @@
 
 **Version: 0.1.4**
 
-**Last modified date: 2026-01-15**
+**Last modified date: 2026-01-16**
 
-observability模块提供分布式追踪、指标收集、健康检查与性能监控功能，支持OpenTelemetry标准。
+observability模块提供分布式追踪、指标收集、Prometheus集成和Grafana仪表板生成功能。
 
 ## 模块概述
 
@@ -16,9 +16,10 @@ observability模块包含以下子模块：
 
 - **tracing**: 分布式追踪
 - **metrics**: 指标收集
-- **health**: 健康检查
-- **profiling**: 性能分析
-- **alerts**: 告警管理
+- **propagation**: 追踪上下文传播
+- **prometheus**: Prometheus指标导出
+- **grafana**: Grafana仪表板生成
+- **metrics_collector**: 系统指标收集器
 
 <div align="center">
 
@@ -26,7 +27,7 @@ observability模块包含以下子模块：
 
 </div>
 
-### DMSCObservability
+### DMSCObservabilityModule
 
 可观测性管理器主接口，提供统一的监控功能。
 
@@ -34,40 +35,31 @@ observability模块包含以下子模块：
 
 | 方法 | 描述 | 参数 | 返回值 |
 |:--------|:-------------|:--------|:--------|
-| `start_trace(name)` | 开始追踪 | `name: &str` | `DMSCTrace` |
-| `record_metric(name, value)` | 记录指标 | `name: &str`, `value: f64` | `()` |
-| `increment_counter(name)` | 增加计数器 | `name: &str` | `()` |
-| `set_gauge(name, value)` | 设置计量器 | `name: &str`, `value: f64` | `()` |
-| `record_histogram(name, value)` | 记录直方图 | `name: &str`, `value: f64` | `()` |
-| `check_health()` | 执行健康检查 | 无 | `DMSCResult<HealthStatus>` |
-| `start_profiling()` | 开始性能分析 | 无 | `DMSCResult<()>` |
-| `stop_profiling()` | 停止性能分析 | 无 | `DMSCResult<Vec<ProfileData>>` |
-| `get_metrics()` | 获取所有指标 | 无 | `HashMap<String, MetricValue>` |
-| `export_metrics()` | 导出指标 | 无 | `DMSCResult<String>` |
+| `new(config)` | 创建可观测性模块 | `config: DMSCObservabilityConfig` | `Self` |
+| `start_trace(name)` | 开始追踪 | `name: String` | `Option<DMSCTraceId>` |
+| `start_span(...)` | 开始子跨度 | 多种参数 | `Option<DMSCSpanId>` |
+| `end_span(id, status)` | 结束跨度 | `id: &DMSCSpanId`, `status: DMSCSpanStatus` | `DMSCResult<()>` |
+| `get_tracer()` | 获取追踪器引用 | 无 | `Option<Arc<DMSCTracer>>` |
+| `get_metrics_registry()` | 获取指标注册表 | 无 | `Option<Arc<DMSCMetricsRegistry>>` |
 
 #### 使用示例
 
 ```rust
 use dmsc::prelude::*;
 
-// 记录指标
-ctx.observability().increment_counter("requests.total");
-ctx.observability().record_metric("response.time", 125.5);
-ctx.observability().set_gauge("active.connections", 42.0);
+// 开始追踪
+let trace_id = observability.start_trace("user_request".to_string());
 
-// 分布式追踪
-let trace = ctx.observability().start_trace("user_request");
-trace.with_tag("user_id", "12345");
-trace.with_tag("endpoint", "/api/users");
+// 开始子跨度
+let span_id = observability.start_span(
+    None, // 使用当前追踪ID
+    None, // 无父跨度
+    "database_query".to_string(),
+    DMSCSpanKind::Client
+);
 
-// 记录追踪事件
-trace.record_event("database_query", serde_json::json!({
-    "query": "SELECT * FROM users",
-    "duration_ms": 45.2
-}));
-
-// 结束追踪
-trace.finish();
+// 结束跨度
+observability.end_span(&span_id, DMSCSpanStatus::Ok)?;
 ```
 
 ### DMSCTrace
@@ -167,86 +159,100 @@ parent_span.finish();
 
 </div>
 
-### 指标类型
+### DMSCMetricsRegistry
 
-#### DMSCCounter
+指标注册表，用于管理应用指标。
 
-计数器类型，只能增加。
+#### 方法
+
+| 方法 | 描述 | 参数 | 返回值 |
+|:--------|:-------------|:--------|:--------|
+| `new()` | 创建新的指标注册表 | 无 | `Self` |
+| `register(metric)` | 注册指标 | `metric: Arc<DMSCMetric>` | `DMSCResult<()>` |
+| `get_metric(name)` | 获取指标 | `name: &str` | `Option<Arc<DMSCMetric>>` |
+| `get_all_metrics()` | 获取所有指标 | 无 | `HashMap<String, Arc<DMSCMetric>>` |
+| `export_prometheus()` | 导出Prometheus格式 | 无 | `String` |
+
+#### 使用示例
+
+```rust
+use dmsc::prelude::*;
+use std::sync::Arc;
+
+let registry = DMSCMetricsRegistry::new();
+
+// 创建并注册计数器指标
+let counter = Arc::new(DMSCMetric::new(DMSCMetricConfig {
+    name: "requests_total".to_string(),
+    metric_type: DMSCMetricType::Counter,
+    description: "Total number of requests".to_string(),
+    buckets: None,
+}));
+
+registry.register(counter.clone())?;
+
+// 记录指标值
+counter.record(1.0);
+
+// 导出Prometheus格式
+let prometheus_output = registry.export_prometheus();
+```
+
+### DMSCMetric
+
+指标类型，支持计数器、计量器和直方图。
+
+#### DMSCMetricType
+
+| 类型 | 描述 |
+|:--------|:-------------|
+| `Counter` | 计数器，只增不减 |
+| `Gauge` | 计量器，可增可减 |
+| `Histogram` | 直方图，记录分布 |
+
+#### 使用示例
 
 ```rust
 use dmsc::prelude::*;
 
 // 创建计数器
-let counter = ctx.observability().create_counter("requests.total");
-counter.increment();
-counter.increment_by(5);
+let counter = DMSCMetric::new(DMSCMetricConfig {
+    name: "http_requests_total".to_string(),
+    metric_type: DMSCMetricType::Counter,
+    description: "Total HTTP requests".to_string(),
+    buckets: None,
+});
 
-// 获取当前值
-let count = counter.get();
-```
-
-#### DMSCGauge
-
-计量器类型，可以设置任意值。
-
-```rust
-use dmsc::prelude::*;
-
-// 创建计量器
-let gauge = ctx.observability().create_gauge("connections.active");
-gauge.set(42.0);
-gauge.increment_by(1.0);
-gauge.decrement_by(2.0);
-
-// 获取当前值
-let value = gauge.get();
-```
-
-#### DMSCHistogram
-
-直方图类型，记录数值分布。
-
-```rust
-use dmsc::prelude::*;
+// 记录值
+counter.record(1.0);
 
 // 创建直方图
-let histogram = ctx.observability().create_histogram("response.duration");
-histogram.record(125.5);
-histogram.record(98.3);
-histogram.record(156.7);
+let histogram = DMSCMetric::new(DMSCMetricConfig {
+    name: "http_request_duration_seconds".to_string(),
+    metric_type: DMSCMetricType::Histogram,
+    description: "HTTP request duration".to_string(),
+    buckets: Some(vec![0.1, 0.5, 1.0, 5.0]),
+});
 
-// 获取统计信息
-let stats = histogram.get_stats();
-println!("Count: {}", stats.count);
-println!("Mean: {}", stats.mean);
-println!("P95: {}", stats.percentile_95);
+// 记录直方图值
+histogram.record(0.125);
+histogram.record(0.456);
 ```
 
-### 指标标签
+### DMSCWindowStats
 
-```rust
-use dmsc::prelude::*;
+滑动窗口统计信息。
 
-// 带标签的指标
-let counter = ctx.observability()
-    .create_counter_with_labels("requests.total", vec![
-        ("method", "GET"),
-        ("endpoint", "/api/users"),
-        ("status", "200")
-    ]);
+#### 字段
 
-counter.increment();
-
-// 动态标签
-let endpoint = get_current_endpoint();
-let status = get_response_status();
-
-ctx.observability()
-    .increment_counter_with_labels("requests.total", vec![
-        ("endpoint", endpoint.as_str()),
-        ("status", status.as_str())
-    ]);
-```
+| 字段 | 类型 | 描述 |
+|:--------|:-----|:-------------|
+| `count` | `u64` | 样本数量 |
+| `sum` | `f64` | 值总和 |
+| `min` | `f64` | 最小值 |
+| `max` | `f64` | 最大值 |
+| `mean` | `f64` | 平均值 |
+| `std_dev` | `f64` | 标准差 |
 
 ### 指标导出
 
@@ -255,15 +261,297 @@ ctx.observability()
 ```rust
 use dmsc::prelude::*;
 
+let registry = DMSCMetricsRegistry::new();
+// ... 注册指标
+
 // 导出Prometheus格式的指标
-let prometheus_metrics = ctx.observability().export_prometheus()?;
+let prometheus_metrics = registry.export_prometheus();
 println!("{}", prometheus_metrics);
 ```
 
-#### StatsD格式
+<div align="center">
+
+## 分布式追踪
+
+</div>
+
+### DMSCTracer
+
+分布式追踪器。
+
+#### 方法
+
+| 方法 | 描述 | 参数 | 返回值 |
+|:--------|:-------------|:--------|:--------|
+| `new()` | 创建新的追踪器 | 无 | `Self` |
+| `start_trace(name)` | 开始追踪 | `name: String` | `Option<DMSCTraceId>` |
+| `start_span(...)` | 开始跨度 | 多种参数 | `Option<DMSCSpanId>` |
+| `end_span(id, status)` | 结束跨度 | `id: &DMSCSpanId`, `status: DMSCSpanStatus` | `DMSCResult<()>` |
+| `span_mut(id, f)` | 修改跨度 | `id: &DMSCSpanId`, `f: F` | `DMSCResult<()>` |
+| `export_traces()` | 导出追踪 | 无 | `HashMap<DMSCTraceId, Vec<DMSCSpan>>` |
+| `active_trace_count()` | 活跃追踪数 | 无 | `usize` |
+| `active_span_count()` | 活跃跨度数 | 无 | `usize` |
+
+#### 使用示例
 
 ```rust
 use dmsc::prelude::*;
+
+let tracer = DMSCTracer::new();
+
+// 开始追踪
+let trace_id = tracer.start_trace("HTTP request".to_string())?;
+assert!(trace_id.is_some());
+
+// 开始子跨度
+let span_id = tracer.start_span(
+    trace_id.as_ref(),
+    None,
+    "database_query".to_string(),
+    DMSCSpanKind::Client
+)?;
+assert!(span_id.is_some());
+
+// 结束跨度
+tracer.end_span(&span_id, DMSCSpanStatus::Ok)?;
+```
+
+### DMSCTraceId
+
+追踪ID类型。
+
+```rust
+/// 追踪ID类型
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub struct DMSCTraceId(pub String);
+```
+
+### DMSCSpanId
+
+跨度ID类型。
+
+```rust
+/// 跨度ID类型
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub struct DMSCSpanId(pub String);
+```
+
+### DMSCSpanKind
+
+跨度类型。
+
+| 变体 | 描述 |
+|:--------|:-------------|
+| `Server` | 服务器端处理 |
+| `Client` | 客户端请求 |
+| `Producer` | 消息生产者 |
+| `Consumer` | 消息消费者 |
+| `Internal` | 内部操作 |
+
+### DMSCSpanStatus
+
+跨度状态。
+
+| 变体 | 描述 |
+|:--------|:-------------|
+| `Unset` | 未设置 |
+| `Ok` | 成功 |
+| `Error` | 错误 |
+| `DeadlineExceeded` | 超时 |
+
+### DMSCSamplingStrategy
+
+追踪采样策略。
+
+| 变体 | 描述 |
+|:--------|:-------------|
+| `Rate(rate)` | 固定采样率 |
+| `Deterministic(rate)` | 确定性采样 |
+| `Adaptive(target_rate)` | 自适应采样 |
+
+<div align="center">
+
+## 追踪传播
+
+</div>
+
+### DMSCTraceContext
+
+追踪上下文。
+
+```rust
+use dmsc::prelude::*;
+
+let context = DMSCTraceContext::new()
+    .with_trace_id("trace-123".to_string())
+    .with_span_id("span-456".to_string());
+
+// 设置为当前上下文
+context.set_as_current();
+
+// 获取当前上下文
+if let Some(current) = DMSCTraceContext::current() {
+    let trace_id = current.trace_id();
+    let span_id = current.span_id();
+}
+```
+
+### W3CTracePropagator
+
+W3C追踪传播器。
+
+```rust
+use dmsc::prelude::*;
+
+let propagator = W3CTracePropagator::new();
+
+// 注入到载体
+let mut carrier = HashMap::new();
+propagator.inject(&context, &mut carrier);
+
+// 从载体提取
+let extracted = propagator.extract(&carrier);
+```
+
+<div align="center">
+
+## Prometheus集成
+
+</div>
+
+### DMSCPrometheusExporter
+
+Prometheus指标导出器。
+
+#### 方法
+
+| 方法 | 描述 | 参数 | 返回值 |
+|:--------|:-------------|:--------|:--------|
+| `new()` | 创建新的导出器 | 无 | `Self` |
+| `register_counter(name, help)` | 注册计数器 | `name: &str`, `help: &str` | `DMSCResult<()>` |
+| `register_gauge(name, help)` | 注册计量器 | `name: &str`, `help: &str` | `DMSCResult<()>` |
+| `register_histogram(name, help, buckets)` | 注册直方图 | 多种参数 | `DMSCResult<()>` |
+| `increment_counter(name)` | 增加计数器 | `name: &str` | `DMSCResult<()>` |
+| `set_gauge(name, value)` | 设置计量器 | `name: &str`, `value: f64` | `DMSCResult<()>` |
+| `observe_histogram(name, value)` | 观察直方图 | `name: &str`, `value: f64` | `DMSCResult<()>` |
+| `render()` | 渲染指标 | 无 | `DMSCResult<String>` |
+
+#### 使用示例
+
+```rust
+use dmsc::prelude::*;
+
+let exporter = DMSCPrometheusExporter::new();
+
+// 注册指标
+exporter.register_counter("http_requests_total", "Total HTTP requests")?;
+exporter.register_gauge("http_active_connections", "Active HTTP connections")?;
+exporter.register_histogram(
+    "http_request_duration_seconds",
+    "HTTP request duration in seconds",
+    vec![0.1, 0.25, 0.5, 1.0, 2.5, 5.0, 10.0]
+)?;
+
+// 记录指标
+exporter.increment_counter("http_requests_total")?;
+exporter.set_gauge("http_active_connections", 42.0)?;
+exporter.observe_histogram("http_request_duration_seconds", 0.256)?;
+
+// 导出Prometheus格式
+let output = exporter.render()?;
+println!("{}", output);
+```
+
+<div align="center">
+
+## Grafana集成
+
+</div>
+
+### DMSCGrafanaDashboard
+
+Grafana仪表板。
+
+#### 方法
+
+| 方法 | 描述 | 参数 | 返回值 |
+|:--------|:-------------|:--------|:--------|
+| `new(title)` | 创建新仪表板 | `title: &str` | `Self` |
+| `add_panel(panel)` | 添加面板 | `panel: DMSCGrafanaPanel` | `DMSCResult<()>` |
+| `to_json()` | 导出JSON | 无 | `DMSCResult<String>` |
+
+### DMSCGrafanaPanel
+
+Grafana面板。
+
+```rust
+use dmsc::prelude::*;
+
+let panel = DMSCGrafanaPanel {
+    title: "Request Rate".to_string(),
+    query: "rate(http_requests_total[5m])".to_string(),
+    panel_type: "timeseries".to_string(),
+    grid_pos: DMSCGridPos { h: 8, w: 12, x: 0, y: 0 },
+};
+```
+
+### DMSCGrafanaDashboardGenerator
+
+Grafana仪表板生成器。
+
+```rust
+use dmsc::prelude::*;
+
+let mut generator = DMSCGrafanaDashboardGenerator::new();
+
+// 生成默认仪表板
+let dashboard = generator.generate_default_dashboard()?;
+
+// 生成自动仪表板
+let metrics = vec!["http_requests_total", "http_request_duration_seconds"];
+let auto_dashboard = generator.generate_auto_dashboard(metrics, "Auto Dashboard")?;
+
+// 导出JSON
+let json = auto_dashboard.to_json()?;
+```
+
+<div align="center">
+
+## 配置
+
+</div>
+
+### DMSCObservabilityConfig
+
+可观测性模块配置。
+
+#### 字段
+
+| 字段 | 类型 | 描述 | 默认值 |
+|:--------|:-----|:-------------|:-------|
+| `tracing_enabled` | `bool` | 启用追踪 | `true` |
+| `metrics_enabled` | `bool` | 启用指标 | `true` |
+| `tracing_sampling_rate` | `f64` | 追踪采样率 | `1.0` |
+| `tracing_sampling_strategy` | `String` | 采样策略 | `"rate"` |
+| `metrics_window_size_secs` | `u64` | 指标窗口大小(秒) | `60` |
+| `metrics_bucket_size_secs` | `u64` | 指标桶大小(秒) | `10` |
+
+#### 使用示例
+
+```rust
+use dmsc::prelude::*;
+
+let config = DMSCObservabilityConfig {
+    tracing_enabled: true,
+    metrics_enabled: true,
+    tracing_sampling_rate: 0.1,
+    tracing_sampling_strategy: "adaptive".to_string(),
+    metrics_window_size_secs: 300,
+    metrics_bucket_size_secs: 30,
+};
+
+let observability = DMSCObservabilityModule::new(config);
+```;
 
 // 导出StatsD格式的指标
 let statsd_metrics = ctx.observability().export_statsd()?;
@@ -552,86 +840,45 @@ use dmsc::prelude::*;
 let observability_config = DMSCObservabilityConfig {
     tracing_enabled: true,
     metrics_enabled: true,
-    health_checks_enabled: true,
-    profiling_enabled: cfg!(debug_assertions),  // 只在调试模式下启用
-    sampling_rate: 0.1,
-    export_interval: Duration::from_secs(60),
+    tracing_sampling_rate: 0.1,
+    tracing_sampling_strategy: "adaptive".to_string(),
+    metrics_window_size_secs: 300,
+    metrics_bucket_size_secs: 30,
 };
 
-ctx.observability().configure(observability_config)?;
+let observability = DMSCObservabilityModule::new(observability_config);
 ```
 
-<div align="center">
-
-## 错误处理
-
-</div>  
-
-### 可观测性错误码
-
-| 错误码 | 描述 |
-|:--------|:-------------|
-| `TRACE_EXPORT_ERROR` | 追踪导出错误 |
-| `METRIC_EXPORT_ERROR` | 指标导出错误 |
-| `HEALTH_CHECK_ERROR` | 健康检查错误 |
-| `PROFILING_ERROR` | 性能分析错误 |
-| `ALERT_CONFIG_ERROR` | 告警配置错误 |
-
-### 错误处理示例
-
-```rust
-use dmsc::prelude::*;
-
-match ctx.observability().export_metrics() {
-    Ok(metrics) => {
-        // 指标导出成功
-        println!("Exported metrics: {}", metrics);
-    }
-    Err(DMSCError { code, .. }) if code == "METRIC_EXPORT_ERROR" => {
-        // 指标导出错误，记录警告
-        ctx.log().warn("Failed to export metrics, continuing without metrics");
-    }
-    Err(e) => {
-        // 其他错误
-        return Err(e);
-    }
-}
-```
 <div align="center">
 
 ## 最佳实践
 
-</div>  
+</div>
 
-1. **合理设置采样率**: 生产环境使用较低的采样率(0.1-0.01)
-2. **使用有意义的指标名称**: 遵循命名约定，使用描述性名称
-3. **添加适当的标签**: 为指标和追踪添加有用的标签
-4. **监控关键路径**: 重点监控业务关键路径的性能
-5. **设置合理的告警阈值**: 避免过多的误报和漏报
-6. **定期审查健康检查**: 确保健康检查反映真实的系统状态
-7. **使用异步导出**: 避免阻塞主业务流程
-8. **保护敏感信息**: 不要在追踪和指标中包含敏感数据
+1. **合理配置采样率**：根据流量大小调整追踪采样率，避免过多开销
+2. **使用合适的指标类型**：根据指标特性选择Counter、Gauge或Histogram
+3. **添加有意义的标签**：使用标签区分不同维度，但避免基数过高的标签
+4. **定期导出和清理**：配置指标导出间隔，避免内存占用过大
+5. **使用上下文传播**：在分布式系统中正确传播追踪上下文
+6. **使用安全的锁获取方法**：使用 `read_safe()` 和 `write_safe()` 替代 `.read()` 和 `.write()`
+
 <div align="center">
 
 ## 相关模块
 
 </div>
 
-- [README](./README.md): 模块概览，提供API参考文档总览和快速导航
-- [auth](./auth.md): 认证模块，处理用户认证和授权
-- [cache](./cache.md): 缓存模块，提供内存缓存和分布式缓存支持
-- [config](./config.md): 配置模块，管理应用程序配置
-- [core](./core.md): 核心模块，提供错误处理和服务上下文
-- [database](./database.md): 数据库模块，提供数据库操作支持
-- [device](./device.md): 设备模块，使用协议进行设备通信
-- [fs](./fs.md): 文件系统模块，提供文件操作功能
+- [core](./core.md): 核心模块，提供错误处理和运行时支持
 - [gateway](./gateway.md): 网关模块，提供API网关功能
-- [hooks](./hooks.md): 钩子模块，提供生命周期钩子支持
+- [database](./database.md): 数据库模块，提供数据库操作支持
+- [grpc](./grpc.md): gRPC 模块，带服务注册和 Python 绑定
 - [http](./http.md): HTTP模块，提供HTTP服务器和客户端功能
 - [log](./log.md): 日志模块，记录协议事件
 - [mq](./mq.md): 消息队列模块，提供消息队列支持
+- [orm](./orm.md): ORM 模块，带查询构建器和分页支持
 - [protocol](./protocol.md): 协议模块，提供通信协议支持
 - [security](./security.md): 安全模块，提供加密和解密功能
 - [service_mesh](./service_mesh.md): 服务网格模块，使用协议进行服务间通信
 - [storage](./storage.md): 存储模块，提供云存储支持
 - [validation](./validation.md): 验证模块，提供数据验证功能
+- [ws](./ws.md): WebSocket 模块，带 Python 绑定的实时通信

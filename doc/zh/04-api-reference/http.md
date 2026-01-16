@@ -584,12 +584,15 @@ match client.get("https://api.example.com/users").await {
 - [device](./device.md): 设备模块，使用协议进行设备通信
 - [fs](./fs.md): 文件系统模块，提供文件操作功能
 - [gateway](./gateway.md): 网关模块，提供API网关功能
+- [grpc](./grpc.md): gRPC 模块，带服务注册和 Python 绑定
 - [hooks](./hooks.md): 钩子模块，提供生命周期钩子支持
 - [log](./log.md): 日志模块，记录协议事件
 - [mq](./mq.md): 消息队列模块，提供消息队列支持
 - [observability](./observability.md): 可观测性模块，监控协议性能
+- [orm](./orm.md): ORM 模块，带查询构建器和分页支持
 - [protocol](./protocol.md): 协议模块，提供通信协议支持
 - [security](./security.md): 安全模块，提供加密和解密功能
 - [service_mesh](./service_mesh.md): 服务网格模块，使用协议进行服务间通信
 - [storage](./storage.md): 存储模块，提供云存储支持
 - [validation](./validation.md): 验证模块，提供数据验证功能
+- [ws](./ws.md): WebSocket 模块，带 Python 绑定的实时通信

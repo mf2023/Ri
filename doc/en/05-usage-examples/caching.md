@@ -1090,6 +1090,8 @@ Through this example, you can build high-performance, highly available distribut
 - [README](./README.md): Usage examples overview, providing quick navigation to all usage examples
 - [authentication](./authentication.md): Authentication examples, learn JWT, OAuth2 and RBAC authentication and authorization
 - [basic-app](./basic-app.md): Basic application example, learn how to create and run your first DMSC application
+- [grpc](./grpc.md): gRPC examples, implement high-performance RPC calls
+- [websocket](./websocket.md): WebSocket examples, implement real-time bidirectional communication
 
 - [database](./database.md): Database examples, learn database connection and query operations
 - [http](./http.md): HTTP service examples, build web applications and RESTful APIs

@@ -111,6 +111,71 @@ let cache_config = DMSCCacheConfig {
 };
 ```
 
+### DMSCCachedValue
+
+Cached value wrapper with TTL expiration and LRU eviction support.
+
+#### Fields
+
+| Field | Type | Description |
+|:--------|:--------|:-------------|
+| `value` | `String` | The actual cached data |
+| `expires_at` | `Option<u64>` | TTL-based expiration timestamp (UNIX epoch seconds), None means never expires |
+| `last_accessed` | `Option<u64>` | Last access timestamp (UNIX epoch seconds), used for LRU eviction policies |
+
+#### Methods
+
+| Method | Description | Parameters | Returns |
+|:--------|:-------------|:--------|:--------|
+| `new(value, ttl)` | Create cached value | `value: String`, `ttl: Option<u64>` | `Self` |
+| `touch()` | Update last access timestamp | `()` | `()` |
+| `is_expired()` | Check if expired | `()` | `bool` |
+| `is_stale(max_idle_secs)` | Check if stale due to long idle time | `max_idle_secs: u64` | `bool` |
+| `deserialize<T>()` | Deserialize to specified type | `()` | `DMSCResult<T>` |
+
+#### Usage Example
+
+```rust
+use dmsc::cache::DMSCCachedValue;
+
+// Create a cache value that expires in 1 hour
+let cached = DMSCCachedValue::new("user_data".to_string(), Some(3600));
+
+// Update last access time when accessed
+cached.touch();
+
+// Check if expired
+if cached.is_expired() {
+    println!("Cache expired");
+}
+
+// Check if stale due to long idle time (for LRU eviction)
+if cached.is_stale(300) {
+    println!("Cache is stale, may be evicted by LRU policy");
+}
+
+// Deserialize
+let user: User = cached.deserialize()?;
+```
+
+#### LRU Eviction Policy Support
+
+`DMSCCachedValue` provides the following features to support LRU cache eviction:
+
+- **touch()**: Call each time the cached value is accessed to update the last access timestamp
+- **is_stale(max_idle_secs)**: Determine if the cache item has exceeded the maximum idle time
+
+```rust
+// LRU eviction example
+let max_idle_seconds = 300; // 5 minutes
+for (_, cached) in cache.iter() {
+    if cached.is_stale(max_idle_seconds) {
+        // Remove cache items that haven't been accessed for a long time
+        cache.remove(key);
+    }
+}
+```
+
 ### DMSCCacheBackendType
 
 Cache backend type enum.
@@ -137,14 +202,17 @@ Cache backend type enum.
 - [device](./device.md): Device module using protocols for device communication
 - [fs](./fs.md): Filesystem module providing file operation functions
 - [gateway](./gateway.md): Gateway module providing API gateway functionality
+- [grpc](./grpc.md): gRPC module with service registry and Python bindings
 - [hooks](./hooks.md): Hooks module providing lifecycle hook support
 - [http](./http.md): HTTP module providing HTTP server and client functionality
 - [log](./log.md): Logging module for protocol events
 - [mq](./mq.md): Message queue module providing message queue support
 - [observability](./observability.md): Observability module for protocol performance monitoring
+- [orm](./orm.md): ORM module with query builder and pagination support
 - [protocol](./protocol.md): Protocol module providing communication protocol support
 - [security](./security.md): Security module providing encryption and decryption functions
 - [service_mesh](./service_mesh.md): Service mesh module using protocols for inter-service communication
 - [storage](./storage.md): Storage module providing cloud storage support
 - [validation](./validation.md): Validation module providing data validation functions
+- [ws](./ws.md): WebSocket module with Python bindings for real-time communication
 

@@ -292,6 +292,8 @@ fn monitor_resource_pools(device_module: &DMSCDeviceControlModule) {
 - [gateway](./gateway.md)：API网关示例
 - [hooks](./hooks.md)：钩子系统示例
 - [http](./http.md)：HTTP服务器和客户端示例
+- [grpc](./grpc.md)：gRPC 示例，实现高性能 RPC 调用
+- [websocket](./websocket.md)：WebSocket 示例，实现实时双向通信
 - [mq](./mq.md)：消息队列示例
 - [observability](./observability.md)：可观测性示例
 - [protocol](./protocol.md)：协议模块示例

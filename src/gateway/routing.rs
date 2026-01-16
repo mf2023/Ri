@@ -76,6 +76,7 @@
 
 use super::{DMSCGatewayRequest, DMSCGatewayResponse};
 use crate::core::DMSCResult;
+use crate::core::lock::RwLockExtensions;
 use crate::gateway::middleware::DMSCMiddleware;
 use std::collections::HashMap;
 use std::future::Future;
@@ -222,11 +223,23 @@ impl DMSCRouter {
     /// 
     /// - `route`: The route to add to the router
     pub fn add_route(&self, route: DMSCRoute) {
-        let mut routes = self.routes.write().expect("Failed to acquire routes write lock");
+        let mut routes = match self.routes.write_safe("routes for add_route") {
+            Ok(r) => r,
+            Err(e) => {
+                log::error!("Failed to acquire routes write lock: {}", e);
+                return;
+            }
+        };
         routes.push(route);
         
         // Clear cache when routes are modified
-        let mut cache = self.route_cache.write().expect("Failed to acquire cache write lock");
+        let mut cache = match self.route_cache.write_safe("cache for add_route") {
+            Ok(c) => c,
+            Err(e) => {
+                log::error!("Failed to acquire cache write lock: {}", e);
+                return;
+            }
+        };
         cache.clear();
     }
 }
@@ -378,18 +391,27 @@ impl DMSCRouter {
         
         // Check cache first
         {
-            let cache = self.route_cache.read().expect("Failed to acquire cache read lock");
+            let cache = match self.route_cache.read_safe("cache for route lookup") {
+                Ok(c) => c,
+                Err(_) => return Err(crate::core::DMSCError::InvalidState("Failed to acquire cache read lock".to_string())),
+            };
             if let Some(cached_route) = cache.get(&cache_key) {
                 return Ok(cached_route.handler.clone());
             }
         }
 
         // Find matching route
-        let routes = self.routes.read().expect("Failed to acquire routes read lock");
+        let routes = match self.routes.read_safe("routes for route lookup") {
+            Ok(r) => r,
+            Err(_) => return Err(crate::core::DMSCError::InvalidState("Failed to acquire routes read lock".to_string())),
+        };
         for route in routes.iter() {
             if self.matches_route(&route.method, &route.path, &request.method, &request.path) {
                 // Cache the result
-                let mut cache = self.route_cache.write().expect("Failed to acquire cache write lock");
+                let mut cache = match self.route_cache.write_safe("cache for route insert") {
+                    Ok(c) => c,
+                    Err(_) => return Ok(route.handler.clone()), // Return anyway, cache miss is acceptable
+                };
                 cache.insert(cache_key.clone(), route.clone());
                 
                 return Ok(route.handler.clone());
@@ -464,7 +486,10 @@ impl DMSCRouter {
     /// - `prefix`: The prefix to prepend to all mounted routes
     /// - `router`: The router to mount
     pub fn mount(&self, prefix: &str, router: &DMSCRouter) {
-        let routes = router.routes.read().expect("Failed to acquire routes read lock");
+        let routes = match router.routes.read_safe("routes for mount") {
+            Ok(r) => r,
+            Err(_) => return,
+        };
         for route in routes.iter() {
             let mounted_path = if prefix.ends_with('/') && route.path.starts_with('/') {
                 format!("{}{}", prefix, &route.path[1..])
@@ -484,8 +509,20 @@ impl DMSCRouter {
     /// 
     /// This method removes all routes from the router and clears the route cache.
     pub fn clear_routes(&self) {
-        let mut routes = self.routes.write().unwrap();
-        let mut cache = self.route_cache.write().unwrap();
+        let mut routes = match self.routes.write_safe("routes for clear") {
+            Ok(r) => r,
+            Err(e) => {
+                log::error!("Failed to acquire routes write lock: {}", e);
+                return;
+            }
+        };
+        let mut cache = match self.route_cache.write_safe("cache for clear") {
+            Ok(c) => c,
+            Err(e) => {
+                log::error!("Failed to acquire cache write lock: {}", e);
+                return;
+            }
+        };
         routes.clear();
         cache.clear();
     }
@@ -496,6 +533,9 @@ impl DMSCRouter {
     /// 
     /// The number of routes registered in the router
     pub fn route_count(&self) -> usize {
-        self.routes.read().unwrap().len()
+        match self.routes.read_safe("routes for count") {
+            Ok(routes) => routes.len(),
+            Err(_) => 0,
+        }
     }
 }

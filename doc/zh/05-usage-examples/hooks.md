@@ -648,6 +648,7 @@ async fn main() -> DMSCResult<()> {
 - [device](./device.md)：设备控制示例
 - [fs](./fs.md)：文件系统操作示例
 - [gateway](./gateway.md)：API网关示例
+- [grpc](./grpc.md)：gRPC 示例，实现高性能 RPC 调用
 - [http](./http.md)：HTTP服务器和客户端示例
 - [mq](./mq.md)：消息队列示例
 - [observability](./observability.md)：可观测性示例
@@ -656,3 +657,4 @@ async fn main() -> DMSCResult<()> {
 - [service_mesh](./service_mesh.md)：服务网格示例
 - [storage](./storage.md)：云存储示例
 - [validation](./validation.md)：数据验证示例
+- [websocket](./websocket.md)：WebSocket 示例，实现实时双向通信

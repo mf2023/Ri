@@ -620,7 +620,10 @@ impl DMSCHSM for DMSCPKCS11HSM {
             self.authenticate(None)?;
         }
 
-        let library = self.library.as_ref().unwrap();
+        let library = match self.library.as_ref() {
+            Some(l) => l,
+            None => return Err(DMSCError::Other("HSM library not initialized".to_string())),
+        };
         let token_info = library.get_token_info(slot)
             .map_err(|e| DMSCError::CryptoError(format!("Failed to get token info: {}", e)))?;
 

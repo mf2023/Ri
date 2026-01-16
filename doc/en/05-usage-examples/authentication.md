@@ -341,6 +341,8 @@ Through this example, you should have understood the basic usage of the DMSC aut
 - [caching](./caching.md): Caching example, understand how to use the caching module to improve application performance
 - [database](./database.md): Database example, learn database connection and query operations
 - [http](./http.md): HTTP service example, build web applications and RESTful APIs
+- [grpc](./grpc.md): gRPC examples, implement high-performance RPC calls
+- [websocket](./websocket.md): WebSocket examples, implement real-time bidirectional communication
 - [mq](./mq.md): Message queue example, implement asynchronous message processing and event-driven architecture
 - [observability](./observability.md): Observability example, monitor application performance and health status
 - [security](./security.md): Security example, encryption, hashing, and security best practices

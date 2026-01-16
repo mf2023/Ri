@@ -1553,6 +1553,8 @@ This example demonstrates the powerful storage management capabilities of the DM
 - [caching](./caching.md): Caching examples, learn how to use the caching module to improve application performance
 - [database](./database.md): Database examples, learn database connections and query operations
 - [http](./http.md): HTTP service examples, build web applications and RESTful APIs
+- [grpc](./grpc.md): gRPC examples, implement high-performance RPC calls
+- [websocket](./websocket.md): WebSocket examples, implement real-time bidirectional communication
 - [mq](./mq.md): Message queue examples, implement asynchronous message processing and event-driven architecture
 - [observability](./observability.md): Observability examples, monitor application performance and health status
 - [security](./security.md): Security examples, encryption, hashing, and security best practices

@@ -343,10 +343,12 @@ let can_edit_resource = ctx.auth().check_resource_permission(
 - [basic-app](./basic-app.md): 基础应用示例，学习如何创建和运行第一个DMSC应用
 - [caching](./caching.md): 缓存示例，了解如何使用缓存模块提升应用性能
 - [database](./database.md): 数据库示例，学习数据库连接和查询操作
+- [grpc](./grpc.md): gRPC 示例，实现高性能 RPC 调用
 - [http](./http.md): HTTP服务示例，构建Web应用和RESTful API
 - [mq](./mq.md): 消息队列示例，实现异步消息处理和事件驱动架构
 - [observability](./observability.md): 可观测性示例，监控应用性能和健康状况
 - [security](./security.md): 安全示例，加密、哈希和安全最佳实践
 - [storage](./storage.md): 存储示例，文件上传下载和存储管理
 - [validation](./validation.md): 验证示例，数据验证和清理操作
+- [websocket](./websocket.md): WebSocket 示例，实现实时双向通信
 - [authentication](./authentication.md): 认证示例，学习JWT、OAuth2和RBAC认证授权

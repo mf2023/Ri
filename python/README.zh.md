@@ -29,26 +29,31 @@
 <h2 align="center">🏗️ 核心架构</h2>
 
 ### 📐 模块化设计
-DMSC 采用高度模块化的架构，拥有 14 个核心模块，支持按需组合和无缝扩展：
+DMSC 采用高度模块化的架构，拥有 17 个核心模块，支持按需组合和无缝扩展：
 
 <div align="center">
 
-| 模块 | 描述 |
-|:--------|:-------------|
-| **auth** | 认证与授权（JWT、OAuth、权限） |
-| **cache** | 多后端缓存抽象（内存、Redis、混合） |
-| **config** | 多源配置管理与热重载 |
-| **core** | 运行时、错误处理和服务上下文 |
-| **database** | 数据库抽象层，支持 PostgreSQL、MySQL、SQLite |
-| **device** | 设备控制、发现和智能调度 |
-| **fs** | 安全的文件系统操作和管理 |
-| **gateway** | API 网关，支持负载均衡、限流和熔断 |
-| **hooks** | 生命周期事件钩子（启动、关闭等） |
-| **log** | 结构化日志与追踪上下文集成 |
-| **observability** | 指标、追踪和 Grafana 集成 |
-| **queue** | 分布式队列抽象（Kafka、RabbitMQ、Redis、内存） |
-| **service_mesh** | 服务发现、健康检查和流量管理 |
-| **validation** | 数据验证和清理工具 |
+| 模块 | 描述 | Python 支持 |
+|:--------|:------------|:------------|
+| **auth** | 认证与授权（JWT、OAuth、权限） | ✅ 完整 |
+| **cache** | 多后端缓存抽象（内存、Redis、混合） | ✅ 完整 |
+| **config** | 多源配置管理与热重载 | ✅ 完整 |
+| **core** | 运行时、错误处理和服务上下文 | ✅ 完整 |
+| **database** | 数据库抽象层，支持 PostgreSQL、MySQL、SQLite | ✅ 完整 |
+| **device** | 设备控制、发现和智能调度 | ✅ 完整 |
+| **fs** | 安全的文件系统操作和管理 | ✅ 完整 |
+| **gateway** | API 网关，支持负载均衡、限流和熔断 | ✅ 完整 |
+| **grpc** | gRPC 服务器和客户端支持 | ✅ 完整（服务注册表+处理器） |
+| **hooks** | 生命周期事件钩子（启动、关闭等） | ✅ 完整 |
+| **log** | 结构化日志与追踪上下文集成 | ✅ 完整 |
+| **observability** | 指标、追踪和 Grafana 集成 | ✅ 完整 |
+| **orm** | 类型安全的 ORM，带有仓储模式和查询构建器 | ✅ 完整（类型+QueryBuilder） |
+| **queue** | 分布式队列抽象（Kafka、RabbitMQ、Redis、内存） | ✅ 完整 |
+| **service_mesh** | 服务发现、健康检查和流量管理 | ✅ 完整 |
+| **validation** | 数据验证和清理工具 | ✅ 完整 |
+| **ws** | WebSocket 服务器支持 | ✅ 完整（处理器+会话管理器） |
+
+> **注意**：在 Python 中使用 gRPC/WebSocket 服务器，请使用原生 Python 库如 `grpcio` 和 `websockets`。DMSC Rust API 为高性能场景提供高级功能。
 
 </div>
 
@@ -214,6 +219,77 @@ user_data = cache_manager.get("user:123")
 if cache_manager.exists("user:123"):
     cache_manager.delete("user:123")
 ```
+
+### gRPC 服务示例
+
+```python
+from dmsc.grpc import DMSCGrpcServiceRegistryPy, DMSCGrpcConfig
+
+# 创建 gRPC 服务注册表
+registry = DMSCGrpcServiceRegistryPy()
+
+# 定义服务处理器
+def my_handler(method: str, data: bytes) -> bytes:
+    print(f"收到请求: {method}")
+    return b"来自 Python 处理器的响应"
+
+# 注册服务
+registry.register("my-service", my_handler)
+
+# 列出已注册的服务
+services = registry.list_services()
+print(f"服务: {services}")
+```
+
+### WebSocket 处理器示例
+
+```python
+from dmsc.ws import DMSCWSPythonHandler, DMSCWSSessionManagerPy
+
+# 创建带回调的 WebSocket 处理器
+handler = DMSCWSPythonHandler(
+    on_connect=lambda session_id, remote_addr: print(f"连接: {session_id}"),
+    on_disconnect=lambda session_id: print(f"断开: {session_id}"),
+    on_message=lambda session_id, data: b"回显: " + data,
+    on_error=lambda session_id, error: print(f"错误: {error}")
+)
+
+# 创建会话管理器
+manager = DMSCWSSessionManagerPy(max_connections=1000)
+
+# 获取会话数量
+count = manager.get_session_count()
+print(f"活动会话: {count}")
+```
+
+### ORM 使用示例（Rust API）
+
+```rust
+use dmsc::database::{DMSCORMSimpleRepository, Criteria, Pagination, ComparisonOperator};
+
+#[derive(serde::Serialize, serde::Deserialize, Clone)]
+struct User {
+    id: String,
+    name: String,
+    email: String,
+}
+
+// 创建仓储（仅 Rust）
+let repo = DMSCORMSimpleRepository::<User>::new("users");
+
+// 查找所有用户
+let users = repo.find_all(&db).await?;
+
+// 带条件的查询
+let criteria = Criteria::new("name", ComparisonOperator::Like, serde_json::json!("%John%"));
+let users = repo.find_many(&db, vec![criteria]).await?;
+
+// 分页查询
+let pagination = Pagination::new(1, 20);
+let (users, total) = repo.find_paginated(&db, pagination, vec![]).await?;
+```
+
+> **注意**：ORM 模块在 Rust 中提供类型安全的数据库操作。在 Python 中，请直接使用 SQLAlchemy 或其他 ORM 库。
 
 <h2 align="center">🔧 配置</h2>
 

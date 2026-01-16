@@ -54,10 +54,8 @@ from .dmsc import (
     
     # Service mesh classes - also available directly
     DMSCServiceMesh, DMSCServiceMeshConfig, DMSCServiceDiscovery,
-    DMSCServiceInstance, DMSCServiceStatus, DMSCServiceEndpoint,
-    DMSCHealthCheckResult, DMSCHealthSummary, DMSCHealthStatus,
+    DMSCServiceInstance, DMSCServiceStatus,
     DMSCTrafficRoute, DMSCMatchCriteria, DMSCRouteAction, DMSCWeightedDestination,
-    DMSCCircuitBreakerConfig, DMSCCircuitBreakerState,
     
     # Auth classes - also available directly
     DMSCAuthModule, DMSCAuthConfig, DMSCJWTManager, DMSCSessionManager,

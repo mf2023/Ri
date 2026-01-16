@@ -119,6 +119,7 @@
 //! ```
 
 use crate::core::{DMSCModule, DMSCServiceContext};
+use log;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -566,6 +567,11 @@ impl DMSCModule for DMSCGateway {
 
     /// Performs cleanup after the gateway has shut down.
     /// 
+    /// This method ensures proper resource cleanup during gateway shutdown:
+    /// - Clears all rate limiter buckets
+    /// - Resets the circuit breaker to closed state
+    /// - Clears all registered routes
+    /// 
     /// # Parameters
     /// 
     /// - `_ctx`: Service context (not used in this implementation)
@@ -573,8 +579,27 @@ impl DMSCModule for DMSCGateway {
     /// # Returns
     /// 
     /// A `DMSCResult<()>` indicating success or failure
+    /// 
+    /// # Logs
+    /// 
+    /// Logs cleanup progress at INFO level for debugging purposes
     async fn after_shutdown(&mut self, _ctx: &mut DMSCServiceContext) -> crate::core::DMSCResult<()> {
-        ///// Cleanup gateway resources
+        log::info!("Cleaning up DMSC Gateway Module");
+        
+        if let Some(rate_limiter) = &self.rate_limiter {
+            rate_limiter.clear_all_buckets();
+            log::info!("Rate limiter cleanup completed");
+        }
+        
+        if let Some(circuit_breaker) = &self.circuit_breaker {
+            circuit_breaker.reset();
+            log::info!("Circuit breaker reset completed");
+        }
+        
+        self.router.clear_routes();
+        log::info!("Router cleanup completed");
+        
+        log::info!("DMSC Gateway Module cleanup completed");
         Ok(())
     }
 }

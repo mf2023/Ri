@@ -728,8 +728,10 @@ match ctx.mq().publish("user.events", message) {
 - [http](./http.md): HTTP module providing HTTP server and client functionality
 - [log](./log.md): Logging module for protocol events
 - [observability](./observability.md): Observability module for protocol performance monitoring
+- [orm](./orm.md): ORM module with query builder and pagination support
 - [protocol](./protocol.md): Protocol module providing communication protocol support
 - [security](./security.md): Security module providing encryption and decryption functions
 - [service_mesh](./service_mesh.md): Service mesh module using protocols for inter-service communication
 - [storage](./storage.md): Storage module providing cloud storage support
 - [validation](./validation.md): Validation module providing data validation functions
+- [ws](./ws.md): WebSocket module with Python bindings for real-time communication

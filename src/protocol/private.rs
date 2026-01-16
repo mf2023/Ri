@@ -577,8 +577,7 @@ impl DMSCProtocolConnection for DMSCPrivateConnectionWrapper {
             self.stats.write().await.messages_sent += 1;
             self.stats.write().await.bytes_sent += data.len() as u64;
             
-            // For simplicity, return empty response
-            Ok(Vec::new())
+            self.receive_message().await
         } else {
             Err(DMSCError::ConnectionFailed("No active secure stream".to_string()))
         }

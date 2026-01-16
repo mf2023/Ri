@@ -42,6 +42,8 @@
 
 /// Error handling with custom error types and result aliases
 pub mod error;
+/// Safe lock utilities for concurrent programming
+pub mod lock;
 /// Service context for accessing core functionalities
 pub mod context;
 /// Module system for extending DMSC with custom functionality

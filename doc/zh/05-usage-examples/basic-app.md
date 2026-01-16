@@ -398,7 +398,9 @@ app.run(|ctx: &DMSCServiceContext| async move {
 - [authentication](./authentication.md): 认证示例，学习JWT、OAuth2和RBAC认证授权
 - [caching](./caching.md): 缓存示例，了解如何使用缓存模块提升应用性能
 - [database](./database.md): 数据库示例，学习数据库连接和查询操作
+- [grpc](./grpc.md): gRPC 示例，实现高性能 RPC 调用
 - [http](./http.md): HTTP服务示例，构建Web应用和RESTful API
+- [websocket](./websocket.md): WebSocket 示例，实现实时双向通信
 - [mq](./mq.md): 消息队列示例，实现异步消息处理和事件驱动架构
 - [observability](./observability.md): 可观测性示例，监控应用性能和健康状况
 - [security](./security.md): 安全示例，加密、哈希和安全最佳实践
