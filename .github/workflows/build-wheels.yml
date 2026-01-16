@@ -166,7 +166,21 @@ jobs:
       # Clones repository on macOS x64 (Intel) runner for native compilation
       - uses: actions/checkout@v4
       
-      # Step 2: Set up Rust stable toolchain with x86_64-apple-darwin target
+      # Step 2: Install Homebrew for dependency management
+      # Homebrew is the package manager for macOS, required for installing build tools
+      - name: Install Homebrew
+        run: |
+          /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+          echo 'eval "$(/opt/homebrew/bin/brew shellenv)"' >> ~/.zprofile
+          eval "$(/opt/homebrew/bin/brew shellenv)"
+      
+      # Step 3: Install required build dependencies via Homebrew
+      # Installs CMake, pkg-config, and other tools needed for Rust compilation
+      - name: Install dependencies
+        run: |
+          brew install cmake pkg-config
+      
+      # Step 4: Set up Rust stable toolchain with x86_64-apple-darwin target
       # Installs Rust stable and adds x86_64-apple-darwin target for cross-compilation
       # The target must be installed before building to ensure proper toolchain availability
       - name: Set up Rust
@@ -175,38 +189,29 @@ jobs:
           toolchain: stable
           targets: x86_64-apple-darwin
       
-      # Step 3: Set up Python 3.9 for build toolchain compatibility
-      # Python 3.9 provides stable maturin support for wheel building
-      # Installed using actions/setup-python@v5 for caching and version management
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.9'
+      # Step 5: Install cargo-zigbuild for improved macOS linking
+      # cargo-zigbuild provides better cross-compilation support using Zig's clang
+      # This ensures proper linking of macOS frameworks and libraries
+      - name: Install cargo-zigbuild
+        run: cargo install cargo-zigbuild
       
-      # Step 4: Configure linker for macOS dynamic library linking
-      # Creates .cargo/config.toml with special linker flags for macOS
-      # -undefined dynamic_lookup allows undefined symbols (Python API symbols)
-      # Required because Rust/Python bindings need runtime symbol resolution
-      - name: Configure linker
-        run: |
-          mkdir -p .cargo
-          echo '[target.x86_64-apple-darwin]' > .cargo/config.toml
-          echo 'rustflags = ["-C", "link-arg=-undefined", "-C", "link-arg=dynamic_lookup"]' >> .cargo/config.toml
-      
-      # Step 5: Build Rust library with explicit x86_64-apple-darwin target
-      # Explicit --target flag ensures correct architecture compilation
+      # Step 6: Build Rust library with explicit x86_64-apple-darwin target
+      # Uses cargo-zigbuild for proper macOS SDK linking
       # Output location: target/release/x86_64-apple-darwin/libdmsc.dylib
       - name: Build Rust library
-        run: cargo build --release --target x86_64-apple-darwin
+        run: cargo zigbuild --release --target x86_64-apple-darwin
       
-      # Step 6: List built artifacts for verification
+      # Step 7: List built artifacts for verification
       # Displays contents of target directory to confirm library was built
       - name: List artifacts
         run: |
-          ls -la target/release/x86_64-apple-darwin/ || echo "Build directory not found"
-          ls -la target/release/x86_64-apple-darwin/libdmsc* 2>/dev/null || echo "No libdmsc files found"
+          echo "=== Contents of target/release/x86_64-apple-darwin/ ==="
+          ls -la target/release/x86_64-apple-darwin/ 2>/dev/null || echo "Build directory not found"
+          echo ""
+          echo "=== Looking for libdmsc files ==="
+          find target/release -name "libdmsc*" -type f 2>/dev/null || echo "No libdmsc files found"
       
-      # Step 7: Upload compiled library artifact
+      # Step 8: Upload compiled library artifact
       # Artifact is named rust-macos-x64 for identification
       # Contains .dylib files for Python wheel building on macOS x64 platforms
       - name: Upload artifact
