@@ -340,13 +340,11 @@ jobs:
         if: matrix.target == 'x86_64-apple-darwin' || matrix.target == 'aarch64-apple-darwin'
         run: |
           mkdir -p .cargo
-          cat > .cargo/config.toml << 'ENDOFFILE'
-[target.x86_64-apple-darwin]
-rustflags = ["-C", "link-arg=-undefined", "-C", "link-arg=dynamic_lookup"]
-
-[target.aarch64-apple-darwin]
-rustflags = ["-C", "link-arg=-undefined", "-C", "link-arg=dynamic_lookup"]
-ENDOFFILE
+          echo '[target.x86_64-apple-darwin]' > .cargo/config.toml
+          echo 'rustflags = ["-C", "link-arg=-undefined", "-C", "link-arg=dynamic_lookup"]' >> .cargo/config.toml
+          echo '' >> .cargo/config.toml
+          echo '[target.aarch64-apple-darwin]' >> .cargo/config.toml
+          echo 'rustflags = ["-C", "link-arg=-undefined", "-C", "link-arg=dynamic_lookup"]' >> .cargo/config.toml
       - name: Update pip
         run: python3 -m pip install --upgrade pip
       - name: Install dependencies
