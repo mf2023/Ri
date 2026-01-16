@@ -162,63 +162,35 @@ jobs:
   build-rust-macos:
     runs-on: macos-15-intel
     steps:
-      # Step 1: Checkout repository source code
-      # Clones repository on macOS x64 (Intel) runner for native compilation
       - uses: actions/checkout@v4
       
-      # Step 2: Install Homebrew for dependency management
-      # Homebrew is the package manager for macOS, required for installing build tools
-      - name: Install Homebrew
-        run: |
-          /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
-          echo 'eval "$(/opt/homebrew/bin/brew shellenv)"' >> ~/.zprofile
-          eval "$(/opt/homebrew/bin/brew shellenv)"
-      
-      # Step 3: Install required build dependencies via Homebrew
-      # Installs CMake, pkg-config, and other tools needed for Rust compilation
       - name: Install dependencies
         run: |
-          brew install cmake pkg-config
+          brew update
+          brew install cmake pkg-config || true
       
-      # Step 4: Set up Rust stable toolchain with x86_64-apple-darwin target
-      # Installs Rust stable and adds x86_64-apple-darwin target for cross-compilation
-      # The target must be installed before building to ensure proper toolchain availability
       - name: Set up Rust
         uses: dtolnay/rust-toolchain@master
         with:
           toolchain: stable
           targets: x86_64-apple-darwin
       
-      # Step 5: Install cargo-zigbuild for improved macOS linking
-      # cargo-zigbuild provides better cross-compilation support using Zig's clang
-      # This ensures proper linking of macOS frameworks and libraries
-      - name: Install cargo-zigbuild
-        run: cargo install cargo-zigbuild
-      
-      # Step 6: Build Rust library with explicit x86_64-apple-darwin target
-      # Uses cargo-zigbuild for proper macOS SDK linking
-      # Output location: target/release/x86_64-apple-darwin/libdmsc.dylib
       - name: Build Rust library
-        run: cargo zigbuild --release --target x86_64-apple-darwin
+        run: cargo build --release --target x86_64-apple-darwin
       
-      # Step 7: List built artifacts for verification
-      # Displays contents of target directory to confirm library was built
       - name: List artifacts
         run: |
-          echo "=== Contents of target/release/x86_64-apple-darwin/ ==="
-          ls -la target/release/x86_64-apple-darwin/ 2>/dev/null || echo "Build directory not found"
+          echo "=== Contents of target/x86_64-apple-darwin/release/ ==="
+          ls -la target/x86_64-apple-darwin/release/ 2>/dev/null || echo "Build directory not found"
           echo ""
           echo "=== Looking for libdmsc files ==="
-          find target/release -name "libdmsc*" -type f 2>/dev/null || echo "No libdmsc files found"
+          find target -name "libdmsc*" -type f 2>/dev/null || echo "No libdmsc files found"
       
-      # Step 8: Upload compiled library artifact
-      # Artifact is named rust-macos-x64 for identification
-      # Contains .dylib files for Python wheel building on macOS x64 platforms
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: rust-macos-x64
-          path: target/release/x86_64-apple-darwin/libdmsc.*
+          path: target/x86_64-apple-darwin/release/libdmsc.*
 
   # Build Python Wheel for all platforms and architectures (supports Python 3.8~3.14)
   # This matrix job generates distributable Python wheel packages (.whl files) for all
@@ -249,6 +221,8 @@ jobs:
   # 6. Upload built wheel artifact for collection in release
   build-python:
     runs-on: ${{ matrix.runs-on }}
+    env:
+      PIP_DISABLE_PIP_VERSION_CHECK: '1'
     strategy:
       fail-fast: false
       matrix:
@@ -490,22 +464,14 @@ jobs:
           echo '[target.aarch64-apple-darwin]' >> .cargo/config.toml
           echo 'rustflags = ["-C", "link-arg=-undefined", "-C", "link-arg=dynamic_lookup"]' >> .cargo/config.toml
       
-      # Step 5: Upgrade pip to latest version for package management
-      # Ensures pip has the latest features and security fixes
-      # Uses environment variable to completely suppress version check notices
-      - name: Update pip
-        env:
-          PIP_DISABLE_PIP_VERSION_CHECK: 1
-        run: python3 -m pip install --upgrade pip -q
-      
-      # Step 6: Install build dependencies (maturin and auditwheel)
+      # Step 5: Install build dependencies (maturin and auditwheel)
       # maturin: Rust/Python build tool that creates Python wheels from Rust libraries
       # auditwheel: Tool for repairing Linux wheel distribution tags
       # Both are essential for building portable Python packages with native extensions
       - name: Install dependencies
-        run: pip install maturin auditwheel --quiet --disable-pip-version-check
+        run: pip install maturin auditwheel --quiet
       
-      # Step 7: Build Python wheel for non-Docker platforms (macOS, Windows, Linux ARM64)
+      # Step 6: Build Python wheel for non-Docker platforms (macOS, Windows, Linux ARM64)
       # Conditional: Executes when docker: false (native builds without manylinux container)
       # Uses maturin to build the wheel with release optimizations
       # Outputs to dist/ directory for artifact collection
@@ -515,7 +481,7 @@ jobs:
         run: |
           maturin build --release --target ${{ matrix.target }} -o dist
       
-      # Step 8: Build and repair Linux wheel using manylinux Docker container
+      # Step 7: Build and repair Linux wheel using manylinux Docker container
       # Conditional: Executes when docker: true (Linux x64 builds)
       # First builds the wheel in wheelhouse/ directory
       # Then uses auditwheel to repair and tag the wheel for manylinux compatibility
@@ -529,7 +495,7 @@ jobs:
           maturin build --release --target "$TARGET" -o wheelhouse
           auditwheel repair wheelhouse/*.whl -w dist --plat ${{ matrix.manylinux }}_${ARCH}
       
-      # Step 9: List generated wheel files for debugging and verification
+      # Step 8: List generated wheel files for debugging and verification
       # Shell: bash required for glob patterns and ls command
       # Displays all files in dist/ directory or shows message if empty
       # Helps verify wheel generation was successful
@@ -538,7 +504,7 @@ jobs:
         run: |
           ls -la dist/ 2>/dev/null || echo "No files in dist"
       
-      # Step 10: Upload built wheel artifact for collection and release
+      # Step 9: Upload built wheel artifact for collection and release
       # Uses actions/upload-artifact@v4 to upload wheel files
       # Artifact name includes target platform and Python version for identification
       # Artifacts are available for 90 days by default in GitHub Actions
