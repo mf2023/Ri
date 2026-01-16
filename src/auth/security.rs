@@ -18,9 +18,36 @@
 //! # Security Utilities Module
 //!
 //! This module provides security-related utilities for DMSC, including:
-//! - Configuration encryption and decryption
-//! - Sensitive data protection
-//! - Cryptographic utilities
+//! - Configuration encryption and decryption using AES-256-GCM
+//! - Sensitive data protection with HMAC-SHA256 signing
+//! - Cryptographic key generation and management
+//!
+//! ## Encryption
+//!
+//! The module uses AES-256-GCM (Galois/Counter Mode) for symmetric encryption,
+//! providing both confidentiality and authenticity. Nonce values are generated
+//! randomly for each encryption operation.
+//!
+//! ## HMAC Signing
+//!
+//! HMAC-SHA256 is used for message authentication, ensuring data integrity
+//! and authenticity. Both signing and verification functions are provided.
+//!
+//! ## Key Management
+//!
+//! Encryption and HMAC keys are loaded from environment variables:
+//! - `DMSC_ENCRYPTION_KEY`: 32-byte hex-encoded key for encryption
+//! - `DMSC_HMAC_KEY`: 32-byte hex-encoded key for HMAC
+//!
+//! If not set, keys are generated randomly using cryptographically secure
+//! random number generators.
+//!
+//! ## Security Considerations
+//!
+//! - Keys should be stored securely in production environments
+//! - Randomly generated keys are lost on application restart
+//! - Consider using a secrets management solution for production
+//! - Encrypted data includes a random nonce, so the same plaintext encrypts differently each time
 
 use aes_gcm::aead::Aead;
 use aes_gcm::{Aes256Gcm, KeyInit, Nonce};
@@ -54,9 +81,65 @@ fn load_hmac_key() -> Vec<u8> {
     load_or_generate_key(HMAC_KEY_ENV, DEFAULT_KEY_LENGTH)
 }
 
+/// Security utilities manager for DMSC.
+///
+/// This struct provides static methods for encryption, decryption, HMAC signing,
+/// and key management operations. It is designed as a singleton utility class
+/// with no instance state.
+///
+/// ## Thread Safety
+///
+/// All methods are stateless and can be safely called concurrently from multiple threads.
+///
+/// ## Usage
+///
+/// ```rust
+/// use dmsc::auth::security::DMSCSecurityManager;
+///
+/// // Encrypt sensitive data
+/// let encrypted = DMSCSecurityManager::encrypt("secret data");
+///
+/// // Decrypt data
+/// let decrypted = DMSCSecurityManager::decrypt(&encrypted);
+///
+/// // Sign data with HMAC
+/// let signature = DMSCSecurityManager::hmac_sign("data to sign");
+///
+/// // Verify HMAC signature
+/// let is_valid = DMSCSecurityManager::hmac_verify("data to verify", &signature);
+/// ```
 pub struct DMSCSecurityManager;
 
 impl DMSCSecurityManager {
+    /// Encrypts plaintext data using AES-256-GCM.
+    ///
+    /// This method encrypts the input string using AES-256-GCM (Galois/Counter Mode),
+    /// which provides both confidentiality and authenticity. A random nonce is generated
+    /// for each encryption operation, so the same plaintext produces different ciphertext
+    /// each time it is encrypted.
+    ///
+    /// ## Output Format
+    ///
+    /// The output is Base64-encoded and contains:
+    /// - 12-byte nonce (randomly generated)
+    /// - Encrypted data with authentication tag
+    ///
+    /// # Parameters
+    ///
+    /// - `plaintext`: The text string to encrypt
+    ///
+    /// # Returns
+    ///
+    /// Base64-encoded encrypted data
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use dmsc::auth::security::DMSCSecurityManager;
+    ///
+    /// let encrypted = DMSCSecurityManager::encrypt("sensitive data");
+    /// println!("Encrypted: {}", encrypted);
+    /// ```
     pub fn encrypt(plaintext: &str) -> String {
         let key = load_encryption_key();
         let nonce = {
@@ -77,6 +160,39 @@ impl DMSCSecurityManager {
         STANDARD.encode(result)
     }
 
+    /// Decrypts encrypted data using AES-256-GCM.
+    ///
+    /// This method decrypts data that was encrypted using the `encrypt` method.
+    /// It verifies the authentication tag and returns the original plaintext.
+    ///
+    /// ## Failure Conditions
+    ///
+    /// Returns `None` if:
+    /// - The input is not valid Base64
+    /// - The input is shorter than the nonce length
+    /// - The authentication tag verification fails (wrong key or tampered data)
+    ///
+    /// # Parameters
+    ///
+    /// - `encrypted`: Base64-encoded encrypted data
+    ///
+    /// # Returns
+    ///
+    /// `Some(String)` containing the decrypted plaintext, or `None` if decryption fails
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use dmsc::auth::security::DMSCSecurityManager;
+    ///
+    /// let encrypted = DMSCSecurityManager::encrypt("secret");
+    /// let decrypted = DMSCSecurityManager::decrypt(&encrypted);
+    ///
+    /// match decrypted {
+    ///     Some(text) => println!("Decrypted: {}", text),
+    ///     None => println!("Decryption failed!"),
+    /// }
+    /// ```
     pub fn decrypt(encrypted: &str) -> Option<String> {
         let key = load_encryption_key();
         let data = STANDARD.decode(encrypted).ok()?;
@@ -94,6 +210,33 @@ impl DMSCSecurityManager {
             .map(|v| String::from_utf8(v).ok())?
     }
 
+    /// Signs data using HMAC-SHA256.
+    ///
+    /// This method creates an HMAC signature using the configured HMAC key
+    /// and SHA-256 hash algorithm. The signature is returned as a hex-encoded string.
+    ///
+    /// ## Security
+    ///
+    /// HMAC provides message integrity and authenticity verification. Only parties
+    /// with access to the HMAC key can create or verify signatures.
+    ///
+    /// # Parameters
+    ///
+    /// - `data`: The data string to sign
+    ///
+    /// # Returns
+    ///
+    /// Hex-encoded HMAC signature
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use dmsc::auth::security::DMSCSecurityManager;
+    ///
+    /// let data = "important message";
+    /// let signature = DMSCSecurityManager::hmac_sign(data);
+    /// println!("Signature: {}", signature);
+    /// ```
     pub fn hmac_sign(data: &str) -> String {
         let key = load_hmac_key();
         let signing_key = hmac::Key::new(hmac::HMAC_SHA256, &key);
@@ -101,6 +244,38 @@ impl DMSCSecurityManager {
         hex::encode(signature)
     }
 
+    /// Verifies an HMAC-SHA256 signature.
+    ///
+    /// This method verifies that the provided signature matches the data using
+    /// constant-time comparison to prevent timing attacks.
+    ///
+    /// ## Signature Format
+    ///
+    /// The signature must be a valid hex-encoded string as produced by `hmac_sign`.
+    ///
+    /// # Parameters
+    ///
+    /// - `data`: The original data that was signed
+    /// - `signature`: The hex-encoded signature to verify
+    ///
+    /// # Returns
+    ///
+    /// `true` if the signature is valid, `false` otherwise
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use dmsc::auth::security::DMSCSecurityManager;
+    ///
+    /// let data = "important message";
+    /// let signature = DMSCSecurityManager::hmac_sign(data);
+    ///
+    /// if DMSCSecurityManager::hmac_verify(data, &signature) {
+    ///     println!("Signature is valid!");
+    /// } else {
+    ///     println!("Signature is invalid!");
+    /// }
+    /// ```
     pub fn hmac_verify(data: &str, signature: &str) -> bool {
         let expected = hex::decode(signature).ok().unwrap_or_default();
         let key = load_hmac_key();
@@ -108,12 +283,56 @@ impl DMSCSecurityManager {
         hmac::verify(&signing_key, data.as_bytes(), &expected).is_ok()
     }
 
+    /// Generates a new encryption key.
+    ///
+    /// This method generates a cryptographically secure random 32-byte (256-bit) key
+    /// suitable for AES-256 encryption. The key is returned as a hex-encoded string.
+    ///
+    /// ## Usage
+    ///
+    /// This method can be used to generate keys for initial configuration or key rotation.
+    /// Store the generated key securely and set it via the `DMSC_ENCRYPTION_KEY` environment variable.
+    ///
+    /// # Returns
+    ///
+    /// Hex-encoded 32-byte encryption key
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use dmsc::auth::security::DMSCSecurityManager;
+    ///
+    /// let key = DMSCSecurityManager::generate_encryption_key();
+    /// println!("New encryption key: {}", key);
+    /// ```
     pub fn generate_encryption_key() -> String {
         let mut key = vec![0u8; DEFAULT_KEY_LENGTH];
         rand::thread_rng().fill_bytes(&mut key);
         hex::encode(key)
     }
 
+    /// Generates a new HMAC key.
+    ///
+    /// This method generates a cryptographically secure random 32-byte (256-bit) key
+    /// suitable for HMAC-SHA256 signing. The key is returned as a hex-encoded string.
+    ///
+    /// ## Usage
+    ///
+    /// This method can be used to generate keys for initial configuration or key rotation.
+    /// Store the generated key securely and set it via theDMSC_HMAC_KEY` environment variable.
+    ///
+    /// # Returns
+    ///
+    /// Hex-encoded 32-byte HMAC key
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use dmsc::auth::security::DMSCSecurityManager;
+    ///
+    /// let key = DMSCSecurityManager::generate_hmac_key();
+    /// println!("New HMAC key: {}", key);
+    /// ```
     pub fn generate_hmac_key() -> String {
         let mut key = vec![0u8; DEFAULT_KEY_LENGTH];
         rand::thread_rng().fill_bytes(&mut key);

@@ -71,20 +71,28 @@ use uuid::Uuid;
 use pyo3::PyResult;
 
 /// Session structure for tracking user sessions.
-/// 
+///
 /// This struct represents a user session with metadata, expiration tracking,
 /// and custom data storage. Sessions are uniquely identified by UUIDs.
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DMSCSession {
-    pub id: String,               // Unique session ID (UUID v4)
-    pub user_id: String,          // ID of the user associated with the session
-    pub created_at: u64,          // Session creation time (UNIX timestamp)
-    pub last_accessed: u64,       // Last time the session was accessed (UNIX timestamp)
-    pub expires_at: u64,          // Session expiration time (UNIX timestamp)
-    pub data: HashMap<String, String>, // Custom session data
-    pub ip_address: Option<String>, // Client IP address
-    pub user_agent: Option<String>, // Client user agent
+    /// Unique session identifier generated using UUID v4
+    pub id: String,
+    /// User ID associated with this session
+    pub user_id: String,
+    /// Session creation time as Unix timestamp
+    pub created_at: u64,
+    /// Last access time as Unix timestamp (updated on each access)
+    pub last_accessed: u64,
+    /// Session expiration time as Unix timestamp
+    pub expires_at: u64,
+    /// Custom key-value data associated with the session
+    pub data: HashMap<String, String>,
+    /// Client IP address from which the session was created
+    pub ip_address: Option<String>,
+    /// Client user agent string from which the session was created
+    pub user_agent: Option<String>,
 }
 
 impl DMSCSession {
@@ -185,32 +193,38 @@ impl DMSCSession {
 }
 
 /// Session manager for handling user sessions.
-/// 
+///
 /// This struct manages session creation, validation, and cleanup. It limits
 /// the number of sessions per user and automatically cleans up expired sessions.
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 pub struct DMSCSessionManager {
-    sessions: RwLock<HashMap<String, DMSCSession>>, // Session ID -> Session
-    timeout_secs: u64,                          // Default session timeout in seconds
-    max_sessions_per_user: usize,               // Maximum number of sessions per user
+    /// Hash map of active sessions indexed by session ID
+    sessions: RwLock<HashMap<String, DMSCSession>>,
+    /// Default session timeout duration in seconds
+    timeout_secs: u64,
+    /// Maximum number of concurrent sessions allowed per user
+    max_sessions_per_user: usize,
 }
 
 impl DMSCSessionManager {
     /// Creates a new session manager with the specified timeout.
-    /// 
+    ///
     /// # Parameters
+    ///
     /// - `timeout_secs`: Default session timeout in seconds
-    /// 
+    ///
     /// # Returns
+    ///
     /// A new instance of `DMSCSessionManager`
-    /// 
+    ///
     /// # Notes
-    /// - Default maximum sessions per user is 5
+    ///
+    /// Default maximum sessions per user is 5
     pub fn new(timeout_secs: u64) -> Self {
         Self {
             sessions: RwLock::new(HashMap::new()),
             timeout_secs,
-            max_sessions_per_user: 5, // Default max 5 sessions per user
+            max_sessions_per_user: 5,
         }
     }
 

@@ -1,14 +1,14 @@
-//! Copyright © 2025 Wenze Wei. All Rights Reserved.
-//! 
+//! Copyright © 2025-2026 Wenze Wei. All Rights Reserved.
+//!
 //! This file is part of DMSC.
 //! The DMSC project belongs to the Dunimd Team.
-//! 
+//!
 //! Licensed under the Apache License, Version 2.0 (the "License");
 //! you may not use this file except in compliance with the License.
 //! You may obtain a copy of the License at
-//! 
+//!
 //!     http://www.apache.org/licenses/LICENSE-2.0
-//! 
+//!
 //! Unless required by applicable law or agreed to in writing, software
 //! distributed under the License is distributed on an "AS IS" BASIS,
 //! WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -16,8 +16,29 @@
 //! limitations under the License.
 
 //! # Module Sorter
-//! 
+//!
 //! This module provides functionality for sorting modules based on their dependencies and priorities.
+//! It uses topological sort to handle dependencies and sorts modules by priority within the same dependency level.
+//!
+//! ## Key Components
+//!
+//! - **sort_modules**: Function that performs topological sorting of modules
+//!
+//! ## Design Principles
+//!
+//! 1. **Topological Sort**: Uses Kahn's algorithm for dependency resolution
+//! 2. **Priority-Based Ordering**: Modules with higher priority execute first
+//! 3. **Circular Dependency Detection**: Returns error if circular dependencies exist
+//! 4. **Missing Dependency Detection**: Returns error if a dependency is not found
+//!
+//! ## Usage Example
+//!
+//! ```rust
+//! use dmsc::core::module_sorter::sort_modules;
+//!
+//! let modules = vec![...]; // Module slots
+//! let sorted = sort_modules(modules)?;
+//! ```
 
 use crate::core::DMSCResult;
 use std::collections::HashMap;

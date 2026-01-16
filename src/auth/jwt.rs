@@ -230,6 +230,19 @@ pub struct DMSCJWTManager {
 #[cfg(feature = "pyo3")]
 #[pyo3::prelude::pymethods]
 impl DMSCJWTManager {
+    /// Creates a new JWT manager with the specified secret and expiry time.
+    ///
+    /// This constructor is used for Python bindings and creates a JWT manager
+    /// that can generate and validate tokens with the given configuration.
+    ///
+    /// # Parameters
+    ///
+    /// - `secret`: The secret key used for signing and verifying JWT tokens
+    /// - `expiry_secs`: The default expiry time in seconds for generated tokens
+    ///
+    /// # Returns
+    ///
+    /// A new instance of `DMSCJWTManager`
     #[new]
     pub fn new(secret: String, expiry_secs: u64) -> Self {
         let secret_bytes = secret.as_bytes().to_vec();
@@ -243,6 +256,36 @@ impl DMSCJWTManager {
 }
 
 impl DMSCJWTManager {
+    /// Creates a new JWT manager with the specified secret and expiry time.
+    ///
+    /// This is the primary constructor for creating a JWT manager. It initializes
+    /// the manager with a secret key and default token expiry time. The secret key
+    /// is used for both signing new tokens and validating existing ones.
+    ///
+    /// ## Performance
+    ///
+    /// This constructor pre-computes the encoding and decoding keys for optimal
+    /// performance during token generation and validation operations.
+    ///
+    /// # Parameters
+    ///
+    /// - `secret`: The secret key used for signing and verifying JWT tokens
+    /// - `expiry_secs`: The default expiry time in seconds for generated tokens
+    ///
+    /// # Returns
+    ///
+    /// A new instance of `DMSCJWTManager`
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use dmsc::auth::jwt::DMSCJWTManager;
+    ///
+    /// let manager = DMSCJWTManager::create(
+    ///     "your-secret-key".to_string(),
+    ///     3600  // 1 hour expiry
+    /// );
+    /// ```
     pub fn create(secret: String, expiry_secs: u64) -> Self {
         let secret_bytes = secret.as_bytes().to_vec();
         Self {
@@ -253,6 +296,48 @@ impl DMSCJWTManager {
         }
     }
 
+    /// Generates a new JWT token for the specified user with roles and permissions.
+    ///
+    /// This method creates a signed JWT token containing the user's subject identifier,
+    /// assigned roles, and permissions. The token is signed using HMAC-SHA256 algorithm.
+    ///
+    /// ## Token Claims
+    ///
+    /// The generated token includes the following claims:
+    /// - `sub`: The user identifier
+    /// - `exp`: Expiration time (current time + expiry_secs)
+    /// - `iat`: Issued at time (current time)
+    /// - `roles`: List of role identifiers
+    /// - `permissions`: List of permission identifiers
+    ///
+    /// # Parameters
+    ///
+    /// - `user_id`: The unique identifier of the user (subject claim)
+    /// - `roles`: A vector of role identifiers assigned to the user
+    /// - `permissions`: A vector of permission identifiers granted to the user
+    ///
+    /// # Returns
+    ///
+    /// A Result containing the encoded JWT token string, or a DMSCError if encoding fails
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use dmsc::auth::jwt::DMSCJWTManager;
+    ///
+    /// let manager = DMSCJWTManager::create("secret".to_string(), 3600);
+    ///
+    /// let token = manager.generate_token(
+    ///     "user123",
+    ///     vec!["admin".to_string()],
+    ///     vec!["read:data".to_string(), "write:data".to_string()]
+    /// );
+    ///
+    /// match token {
+    ///     Ok(t) => println!("Generated token: {}", t),
+    ///     Err(e) => println!("Failed to generate token: {:?}", e),
+    /// }
+    /// ```
     pub fn generate_token(&self, user_id: &str, roles: Vec<String>, permissions: Vec<String>) -> Result<String, DMSCError> {
         let now = SystemTime::now()
             .duration_since(UNIX_EPOCH)
@@ -271,6 +356,44 @@ impl DMSCJWTManager {
             .map_err(|e| DMSCError::Other(format!("JWT encoding failed: {}", e)))
     }
 
+    /// Validates a JWT token and returns the decoded claims.
+    ///
+    /// This method verifies the token's signature and decodes the claims payload.
+    /// It validates the token structure and signature using the configured secret key.
+    ///
+    /// ## Validation Performed
+    ///
+    /// - Verifies the token signature using HMAC-SHA256
+    /// - Validates the token structure (header, payload, signature)
+    /// - Checks token expiration if validation is enabled
+    ///
+    /// # Parameters
+    ///
+    /// - `token`: The JWT token string to validate
+    ///
+    /// # Returns
+    ///
+    /// A Result containing the decoded JWTClaims if validation succeeds,
+    /// or a DMSCError if validation fails (invalid signature, expired token, etc.)
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use dmsc::auth::jwt::DMSCJWTManager;
+    ///
+    /// let manager = DMSCJWTManager::create("secret".to_string(), 3600);
+    ///
+    /// // First generate a token
+    /// let token = manager.generate_token("user123", vec![], vec![]).unwrap();
+    ///
+    /// // Then validate it
+    /// let claims = manager.validate_token(&token);
+    ///
+    /// match claims {
+    ///     Ok(c) => println!("User: {}, Roles: {:?}", c.sub, c.roles),
+    ///     Err(e) => println!("Invalid token: {:?}", e),
+    /// }
+    /// ```
     pub fn validate_token(&self, token: &str) -> Result<JWTClaims, DMSCError> {
         let validation = Validation::default();
         decode::<JWTClaims>(token, &self.decoding_key, &validation)
@@ -278,10 +401,31 @@ impl DMSCJWTManager {
             .map(|token_data| token_data.claims)
     }
 
+    /// Returns the default token expiry time in seconds.
+    ///
+    /// This method returns the configured default expiry time that is used
+    /// when generating new tokens.
+    ///
+    /// # Returns
+    ///
+    /// The default token expiry time in seconds
     pub fn get_token_expiry(&self) -> u64 {
         self.expiry_secs
     }
 
+    /// Returns a reference to the secret key.
+    ///
+    /// This method provides read-only access to the configured secret key.
+    /// The secret key is used for both signing and verifying tokens.
+    ///
+    /// # Returns
+    ///
+    /// A string slice reference to the secret key
+    ///
+    /// # Security Note
+    ///
+    /// Be cautious when exposing the secret key. In production, the secret
+    /// should be stored securely and never logged or exposed to unauthorized parties.
     pub fn get_secret(&self) -> &str {
         &self.secret
     }

@@ -33,27 +33,65 @@ use std::time::{SystemTime, UNIX_EPOCH};
 use std::vec::Vec;
 use uuid::Uuid;
 
-const DEFAULT_MAX_REVOKED_TOKENS: usize = 10000;
-
+/// Information about a revoked JWT token.
+///
+/// This struct stores metadata about a token that has been revoked,
+/// including when it was revoked, when it expires, and the reason for revocation.
 #[derive(Debug, Clone)]
 pub struct RevokedTokenInfo {
+    /// Unique identifier for the revocation record
     pub token_id: String,
+    /// User ID associated with the revoked token
     pub user_id: String,
+    /// Unix timestamp when the token was revoked
     pub revoked_at: u64,
+    /// Unix timestamp when the token expires (may differ from original token expiry)
     pub expires_at: u64,
+    /// Optional reason for revocation (e.g., "user_logout", "security_breach")
     pub reason: Option<String>,
 }
 
+/// JWT token revocation list for managing invalidated tokens.
+///
+/// This struct provides functionality to revoke JWT tokens and check if tokens
+/// have been revoked. It uses concurrent data structures for thread-safe access.
+///
+/// ## Usage
+///
+/// The revocation list can be used to implement token invalidation scenarios:
+/// - User logout (revoke specific token)
+/// - Password change (revoke all user tokens)
+/// - Security incidents (bulk revocation)
+///
+/// ## Storage
+///
+/// By default, revoked tokens are stored in-memory. For production use,
+/// consider integrating with Redis or a database-backed storage solution
+/// to persist revocations across application restarts.
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 pub struct JWTRevocationList {
+    /// Set of revoked token strings for O(1) lookup
     revoked_tokens: DashSet<String>,
+    /// Map of token string to RevokedTokenInfo for metadata storage
     token_info: DashMap<String, RevokedTokenInfo>,
+    /// Maximum number of revoked tokens to store
     max_tokens: usize,
 }
 
 use dashmap::DashMap;
 
+/// Default maximum number of revoked tokens to store in the list.
+const DEFAULT_MAX_REVOKED_TOKENS: usize = 10000;
+
 impl JWTRevocationList {
+    /// Creates a new JWT revocation list with default capacity.
+    ///
+    /// This constructor initializes an empty revocation list with the default
+    /// maximum capacity for storing revoked tokens.
+    ///
+    /// # Returns
+    ///
+    /// A new instance of `JWTRevocationList`
     pub fn new() -> Self {
         Self {
             revoked_tokens: DashSet::new(),
@@ -62,6 +100,19 @@ impl JWTRevocationList {
         }
     }
 
+    /// Creates a new JWT revocation list with specified capacity.
+    ///
+    /// This constructor allows specifying the maximum number of revoked tokens
+    /// that can be stored. When the capacity is exceeded, oldest revoked tokens
+    /// are automatically removed.
+    ///
+    /// # Parameters
+    ///
+    /// - `capacity`: Maximum number of revoked tokens to store
+    ///
+    /// # Returns
+    ///
+    /// A new instance of `JWTRevocationList` with specified capacity
     pub fn with_capacity(capacity: usize) -> Self {
         Self {
             revoked_tokens: DashSet::with_capacity(capacity),
@@ -70,6 +121,22 @@ impl JWTRevocationList {
         }
     }
 
+    /// Revokes a specific JWT token.
+    ///
+    /// This method adds a token to the revocation list with associated metadata.
+    /// The token will be considered invalid for the specified time-to-live duration.
+    ///
+    /// ## Automatic Cleanup
+    ///
+    /// After revocation, expired tokens are automatically cleaned up if the
+    /// revocation list exceeds its maximum capacity.
+    ///
+    /// # Parameters
+    ///
+    /// - `token`: The JWT token string to revoke
+    /// - `user_id`: The user ID associated with the token
+    /// - `reason`: Optional reason for revocation
+    /// - `ttl_secs`: Time-to-live in seconds for this revocation record
     pub fn revoke_token(
         &self,
         token: &str,
@@ -97,6 +164,20 @@ impl JWTRevocationList {
         self.cleanup_expired();
     }
 
+    /// Revokes all tokens for a specific user.
+    ///
+    /// This method finds all tokens associated with the given user ID and
+    /// marks them as revoked. Useful for implementing "logout everywhere"
+    /// functionality or revoking tokens after a security incident.
+    ///
+    /// # Parameters
+    ///
+    /// - `user_id`: The user ID whose tokens should be revoked
+    /// - `reason`: Optional reason for the mass revocation
+    ///
+    /// # Returns
+    ///
+    /// The number of tokens that were revoked
     pub fn revoke_all_user_tokens(&self, user_id: &str, reason: Option<String>) -> usize {
         let mut count = 0;
         let now = SystemTime::now()
@@ -125,6 +206,24 @@ impl JWTRevocationList {
         count
     }
 
+    /// Checks if a token has been revoked.
+    ///
+    /// This method performs an O(1) lookup to determine if a token exists
+    /// in the revocation list. If found, it also checks if the revocation
+    /// record has expired and removes it if so.
+    ///
+    /// ## Expiration Handling
+    ///
+    /// If the token is found but its revocation record has expired,
+    /// the token is automatically removed and treated as not revoked.
+    ///
+    /// # Parameters
+    ///
+    /// - `token`: The JWT token string to check
+    ///
+    /// # Returns
+    ///
+    /// `true` if the token is revoked and valid, `false` otherwise
     pub fn is_revoked(&self, token: &str) -> bool {
         if self.revoked_tokens.contains(token) {
             if let Some(info) = self.token_info.get(token) {
@@ -143,15 +242,43 @@ impl JWTRevocationList {
         false
     }
 
+    /// Retrieves revocation information for a specific token.
+    ///
+    /// This method returns the metadata associated with a revoked token,
+    /// including when it was revoked and the reason (if provided).
+    ///
+    /// # Parameters
+    ///
+    /// - `token`: The JWT token string to look up
+    ///
+    /// # Returns
+    ///
+    /// `Some(RevokedTokenInfo)` if the token is revoked, `None` otherwise
     pub fn get_revocation_info(&self, token: &str) -> Option<RevokedTokenInfo> {
         self.token_info.get(token).map(|i| i.clone())
     }
 
+    /// Removes a single revoked token from the list.
+    ///
+    /// This is an internal method used for cleanup operations.
+    ///
+    /// # Parameters
+    ///
+    /// - `token`: The JWT token string to remove
     fn remove_revoked_token(&self, token: &str) {
         self.revoked_tokens.remove(token);
         self.token_info.remove(token);
     }
 
+    /// Removes all expired revocation records from the list.
+    ///
+    /// This internal method is called after token revocation to clean up
+    /// expired entries and enforce the maximum capacity limit.
+    ///
+    /// ## Cleanup Criteria
+    ///
+    /// - Removes all revocation records where the expiry time has passed
+    /// - If capacity is exceeded, removes oldest entries first
     fn cleanup_expired(&self) {
         let now = SystemTime::now()
             .duration_since(UNIX_EPOCH)
@@ -178,10 +305,21 @@ impl JWTRevocationList {
         }
     }
 
+    /// Returns the current count of revoked tokens.
+    ///
+    /// This method provides the number of tokens currently in the revocation list.
+    ///
+    /// # Returns
+    ///
+    /// The number of revoked tokens stored
     pub fn get_revoked_count(&self) -> usize {
         self.revoked_tokens.len()
     }
 
+    /// Clears all revoked tokens from the list.
+    ///
+    /// This method removes all entries from both the revoked tokens set
+    /// and the token info map. Use with caution as it cannot be undone.
     pub fn clear(&self) {
         self.revoked_tokens.clear();
         self.token_info.clear();

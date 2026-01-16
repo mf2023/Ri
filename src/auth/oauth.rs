@@ -79,58 +79,81 @@ use pyo3::PyResult;
 extern crate urlencoding;
 
 /// OAuth provider configuration.
-/// 
+///
 /// This struct defines the configuration for an OAuth identity provider,
 /// including client credentials, endpoints, and scopes.
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DMSCOAuthProvider {
-    pub id: String,                  // Unique identifier for the provider
-    pub name: String,                // Human-readable name of the provider
-    pub client_id: String,           // OAuth client ID
-    pub client_secret: String,       // OAuth client secret
-    pub auth_url: String,            // Authorization endpoint URL
-    pub token_url: String,           // Token endpoint URL
-    pub user_info_url: String,       // User information endpoint URL
-    pub scopes: Vec<String>,         // Requested OAuth scopes
-    pub enabled: bool,               // Whether the provider is enabled
+    /// Unique identifier for the OAuth provider
+    pub id: String,
+    /// Human-readable name of the provider (e.g., "Google", "GitHub")
+    pub name: String,
+    /// OAuth client ID issued by the provider
+    pub client_id: String,
+    /// OAuth client secret issued by the provider
+    pub client_secret: String,
+    /// Authorization endpoint URL for initiating OAuth flow
+    pub auth_url: String,
+    /// Token endpoint URL for exchanging authorization codes
+    pub token_url: String,
+    /// User information endpoint URL for retrieving user details
+    pub user_info_url: String,
+    /// Requested OAuth scopes (e.g., "openid", "email", "profile")
+    pub scopes: Vec<String>,
+    /// Whether the provider is enabled for authentication
+    pub enabled: bool,
 }
 
 /// OAuth token response.
-/// 
+///
 /// This struct represents the token response from an OAuth provider,
 /// including access token, refresh token, and expiration information.
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DMSCOAuthToken {
-    pub access_token: String,        // Access token for API requests
-    pub refresh_token: Option<String>, // Refresh token for obtaining new access tokens
-    pub expires_in: Option<i64>,     // Token expiration time in seconds
-    pub token_type: String,          // Token type (usually "Bearer")
-    pub scope: Option<String>,       // Granted scopes
+    /// Access token for making authenticated API requests
+    pub access_token: String,
+    /// Refresh token for obtaining new access tokens when expired
+    pub refresh_token: Option<String>,
+    /// Token expiration time in seconds from issuance
+    pub expires_in: Option<i64>,
+    /// Token type (typically "Bearer")
+    pub token_type: String,
+    /// Granted scopes (may differ from requested scopes)
+    pub scope: Option<String>,
 }
 
 /// OAuth user information.
-/// 
+///
 /// This struct represents the user information retrieved from an OAuth provider,
 /// including user ID, email, name, and profile information.
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DMSCOAuthUserInfo {
-    pub id: String,                  // Unique user ID from the provider
-    pub email: String,               // User's email address
-    pub name: Option<String>,        // User's full name
-    pub avatar_url: Option<String>,  // URL to user's avatar image
-    pub provider: String,            // Name of the OAuth provider
+    /// Unique user identifier from the OAuth provider
+    pub id: String,
+    /// User's email address from the provider
+    pub email: String,
+    /// User's full name from the provider
+    pub name: Option<String>,
+    /// URL to user's avatar profile image
+    pub avatar_url: Option<String>,
+    /// Name of the OAuth provider that authenticated the user
+    pub provider: String,
 }
 
 /// OAuth manager for handling multiple identity providers.
-/// 
+///
 /// This struct manages OAuth providers, handles token exchange, and retrieves user information.
+/// It supports concurrent access through RwLock and integrates with the DMSC cache system
+/// for token storage.
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 pub struct DMSCOAuthManager {
-    providers: RwLock<HashMap<String, DMSCOAuthProvider>>, // Registered OAuth providers
-    _token_cache: Arc<dyn crate::cache::DMSCCache>,        // Cache for storing tokens
+    /// Hash map of registered OAuth providers indexed by provider ID
+    providers: RwLock<HashMap<String, DMSCOAuthProvider>>,
+    /// Cache implementation for storing OAuth tokens
+    _token_cache: Arc<dyn crate::cache::DMSCCache>,
 }
 
 impl DMSCOAuthManager {
@@ -272,6 +295,20 @@ impl DMSCOAuthManager {
     }
     
     #[cfg(not(feature = "http_client"))]
+    /// Exchanges an authorization code for an access token.
+    ///
+    /// This method requires the `http_client` feature to be enabled.
+    /// Without this feature, calling this method returns an error.
+    ///
+    /// # Parameters
+    ///
+    /// - `_provider_id`: Unique identifier of the provider (not used when feature is disabled)
+    /// - `_code`: Authorization code from the provider (not used when feature is disabled)
+    /// - `_redirect_uri`: Redirect URI used in the authentication request (not used when feature is disabled)
+    ///
+    /// # Returns
+    ///
+    /// A Result containing an error indicating the http_client feature is not enabled
     pub async fn exchange_code_for_token(
         &self,
         _provider_id: &str,
@@ -338,6 +375,19 @@ impl DMSCOAuthManager {
     }
     
     #[cfg(not(feature = "http_client"))]
+    /// Retrieves user information from an OAuth provider.
+    ///
+    /// This method requires the `http_client` feature to be enabled.
+    /// Without this feature, calling this method returns an error.
+    ///
+    /// # Parameters
+    ///
+    /// - `_provider_id`: Unique identifier of the provider (not used when feature is disabled)
+    /// - `_access_token`: Access token for authentication (not used when feature is disabled)
+    ///
+    /// # Returns
+    ///
+    /// A Result containing an error indicating the http_client feature is not enabled
     pub async fn get_user_info(
         &self,
         _provider_id: &str,
@@ -410,6 +460,19 @@ impl DMSCOAuthManager {
     }
     
     #[cfg(not(feature = "http_client"))]
+    /// Refreshes an access token using a refresh token.
+    ///
+    /// This method requires the `http_client` feature to be enabled.
+    /// Without this feature, calling this method returns an error.
+    ///
+    /// # Parameters
+    ///
+    /// - `_provider_id`: Unique identifier of the provider (not used when feature is disabled)
+    /// - `_refresh_token`: Refresh token for obtaining a new access token (not used when feature is disabled)
+    ///
+    /// # Returns
+    ///
+    /// A Result containing an error indicating the http_client feature is not enabled
     pub async fn refresh_token(
         &self,
         _provider_id: &str,
@@ -460,6 +523,19 @@ impl DMSCOAuthManager {
     }
     
     #[cfg(not(feature = "http_client"))]
+    /// Revokes an access token.
+    ///
+    /// This method requires the `http_client` feature to be enabled.
+    /// Without this feature, calling this method returns an error.
+    ///
+    /// # Parameters
+    ///
+    /// - `_provider_id`: Unique identifier of the provider (not used when feature is disabled)
+    /// - `_access_token`: Access token to revoke (not used when feature is disabled)
+    ///
+    /// # Returns
+    ///
+    /// A Result containing an error indicating the http_client feature is not enabled
     pub async fn revoke_token(
         &self,
         _provider_id: &str,

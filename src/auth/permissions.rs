@@ -74,31 +74,41 @@ use tokio::sync::RwLock;
 use pyo3::PyResult;
 
 /// Permission definition for fine-grained access control.
-/// 
+///
 /// This struct defines a permission with a unique ID, name, description,
 /// resource, and action. Permissions follow the "resource:action" convention.
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DMSCPermission {
-    pub id: String,          // Unique permission identifier (e.g., "read:device")
-    pub name: String,        // Human-readable name
-    pub description: String, // Detailed description of what the permission allows
-    pub resource: String,    // Resource being accessed (e.g., "device")
-    pub action: String,      // Action being performed (e.g., "read", "write")
+    /// Unique permission identifier following "resource:action" format (e.g., "read:device")
+    pub id: String,
+    /// Human-readable name for the permission
+    pub name: String,
+    /// Detailed description explaining what this permission allows
+    pub description: String,
+    /// Resource being accessed (e.g., "device", "user", "data")
+    pub resource: String,
+    /// Action being performed (e.g., "read", "write", "delete")
+    pub action: String,
 }
 
 /// Role definition for grouping permissions.
-/// 
+///
 /// Roles are collections of permissions that can be assigned to users.
-/// System roles cannot be deleted and are created automatically.
+/// System roles cannot be deleted and are created automatically during initialization.
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DMSCRole {
-    pub id: String,                // Unique role identifier
-    pub name: String,              // Human-readable name
-    pub description: String,       // Detailed description of the role's purpose
-    pub permissions: HashSet<String>, // Set of permission IDs assigned to this role
-    pub is_system: bool,           // Whether this is a system role that cannot be deleted
+    /// Unique role identifier
+    pub id: String,
+    /// Human-readable name for the role
+    pub name: String,
+    /// Detailed description explaining the role's purpose and access level
+    pub description: String,
+    /// Set of permission IDs assigned to this role
+    pub permissions: HashSet<String>,
+    /// Whether this is a system role that cannot be deleted
+    pub is_system: bool,
 }
 
 impl DMSCRole {
@@ -151,7 +161,7 @@ impl DMSCRole {
 }
 
 /// Permission manager for handling permissions, roles, and user assignments.
-/// 
+///
 /// This struct manages the entire RBAC system, including:
 /// - Permission CRUD operations
 /// - Role CRUD operations
@@ -159,9 +169,12 @@ impl DMSCRole {
 /// - Permission checking for users
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 pub struct DMSCPermissionManager {
-    permissions: RwLock<HashMap<String, DMSCPermission>>, // Permission ID -> Permission
-    roles: RwLock<HashMap<String, DMSCRole>>,           // Role ID -> Role
-    user_roles: RwLock<HashMap<String, HashSet<String>>>, // User ID -> Role IDs
+    /// Hash map of permissions indexed by permission ID
+    permissions: RwLock<HashMap<String, DMSCPermission>>,
+    /// Hash map of roles indexed by role ID
+    roles: RwLock<HashMap<String, DMSCRole>>,
+    /// Hash map of user role assignments indexed by user ID
+    user_roles: RwLock<HashMap<String, HashSet<String>>>,
 }
 
 impl Default for DMSCPermissionManager {

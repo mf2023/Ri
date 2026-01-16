@@ -471,9 +471,11 @@ jobs:
       
       # Step 5: Upgrade pip to latest version for package management
       # Ensures pip has the latest features and security fixes
-      # --quiet suppresses output, --disable-pip-version-check reduces noise
+      # Uses environment variable to completely suppress version check notices
       - name: Update pip
-        run: python3 -m pip install --upgrade pip --quiet --disable-pip-version-check
+        env:
+          PIP_DISABLE_PIP_VERSION_CHECK: 1
+        run: python3 -m pip install --upgrade pip -q
       
       # Step 6: Install build dependencies (maturin and auditwheel)
       # maturin: Rust/Python build tool that creates Python wheels from Rust libraries

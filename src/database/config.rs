@@ -4,7 +4,7 @@
 //! The DMSC project belongs to the Dunimd Team.
 //!
 //! Licensed under the Apache License, Version 2.0 (the "License");
-//! You may not use this file except in compliance with the License.
+//! you may not use this file except in compliance with the License.
 //! You may obtain a copy of the License at
 //!
 //!     http://www.apache.org/licenses/LICENSE-2.0
@@ -14,6 +14,40 @@
 //! WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 //! See the License for the specific language governing permissions and
 //! limitations under the License.
+
+//! # Database Configuration
+//!
+//! This module provides database configuration types and settings for DMSC.
+//! It supports multiple database backends including MySQL, PostgreSQL, SQLite, and in-memory databases.
+//!
+//! ## Key Components
+//!
+//! - **DMSCDatabaseConfig**: Enum for different database configurations
+//! - **DatabaseType**: Enum for supported database engines
+//! - **PoolConfig**: Connection pool configuration settings
+//!
+//! ## Design Principles
+//!
+//! 1. **Type Safety**: Each database type has its own configuration variant
+//! 2. **Flexible Pooling**: Configurable connection pool settings for performance
+//! 3. **Backend-Agnostic**: Unified interface across different database engines
+//! 4. **Default Values**: Sensible defaults for all configuration options
+//!
+//! ## Usage Example
+//!
+//! ```rust
+//! use dmsc::database::{DMSCDatabaseConfig, DatabaseType, PoolConfig};
+//!
+//! let config = DMSCDatabaseConfig::new_mysql(
+//!     "localhost",
+//!     3306,
+//!     "root",
+//!     "password",
+//!     "test_db",
+//! );
+//!
+//! let pool_config = PoolConfig::new(10, 300, 600);
+//! ```
 
 use serde::{Deserialize, Serialize};
 use std::env;

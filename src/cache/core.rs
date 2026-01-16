@@ -1,21 +1,71 @@
-//! Copyright © 2025 Wenze Wei. All Rights Reserved.
-//! 
+//! Copyright © 2025-2026 Wenze Wei. All Rights Reserved.
+//!
 //! This file is part of DMSC.
 //! The DMSC project belongs to the Dunimd Team.
-//! 
+//!
 //! Licensed under the Apache License, Version 2.0 (the "License");
 //! You may not use this file except in compliance with the License.
 //! You may obtain a copy of the License at
-//! 
+//!
 //!     http://www.apache.org/licenses/LICENSE-2.0
-//! 
+//!
 //! Unless required by applicable law or agreed to in writing, software
 //! distributed under the License is distributed on an "AS IS" BASIS,
 //! WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 //! See the License for the specific language governing permissions and
 //! limitations under the License.
 
-//! Cache implementation for DMSC Core
+//! # Core Module
+//!
+//! This module provides the core abstractions and data structures for the DMSC caching system.
+//! It defines the foundational traits, event types, statistics, and value wrappers that all
+//! cache backend implementations rely upon.
+//!
+//! ## Key Components
+//!
+//! - **[`DMSCCache`](DMSCCache)**: Core trait defining the cache interface with async operations
+//! - **[`DMSCCacheEvent`](DMSCCacheEvent)**: Event types for cache monitoring and consistency
+//! - **[`DMSCCacheStats`](DMSCCacheStats)**: Statistics tracking for cache performance monitoring
+//! - **[`DMSCCachedValue`](DMSCCachedValue)**: Wrapper for cached values with TTL and LRU support
+//!
+//! ## Design Principles
+//!
+//! 1. **Trait-based Architecture**: All backends implement the DMSCCache trait for consistency
+//! 2. **Async-first**: Full async/await support for non-blocking cache operations
+//! 3. **Thread Safety**: All implementations are Send + Sync for concurrent access
+//! 4. **Extensibility**: Easy to add new cache backends by implementing the trait
+//! 5. **Monitoring**: Built-in event system for cache activity tracking
+//! 6. **Statistics**: Comprehensive metrics for cache performance analysis
+//!
+//! ## Usage Example
+//!
+//! ```rust
+//! use dmsc::cache::{DMSCCache, DMSCCacheEvent, DMSCCacheStats, DMSCCachedValue};
+//! use dmsc::cache::backends::DMSCMemoryCache;
+//!
+//! async fn example() -> dmsc::core::DMSCResult<()> {
+//!     // Create a memory cache backend
+//!     let cache = DMSCMemoryCache::new();
+//!
+//!     // Set a value with 1-hour TTL
+//!     cache.set("user:123", "{\"name\": \"Alice\"}", Some(3600)).await?;
+//!
+//!     // Retrieve the value
+//!     let value = cache.get("user:123").await?;
+//!     println!("Retrieved: {:?}", value);
+//!
+//!     // Check if key exists
+//!     let exists = cache.exists("user:123").await;
+//!
+//!     // Get cache statistics
+//!     let stats: DMSCCacheStats = cache.stats().await;
+//!
+//!     // Clean up expired entries
+//!     let cleaned = cache.cleanup_expired().await?;
+//!
+//!     Ok(())
+//! }
+//! ```
 
 use crate::core::{DMSCResult, DMSCError};
 use std::time::Duration;

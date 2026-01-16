@@ -1,4 +1,4 @@
-//! Copyright © 2025 Wenze Wei. All Rights Reserved.
+//! Copyright © 2025-2026 Wenze Wei. All Rights Reserved.
 //! 
 //! This file is part of DMSC.
 //! The DMSC project belongs to the Dunimd Team.
@@ -39,6 +39,25 @@
 //! 3. **Module System**: A flexible module system allows for easy extension
 //! 4. **Error Handling**: A unified error type simplifies error management across modules
 //! 5. **Async First**: Full support for asynchronous operations
+//!
+//! ## Usage Example
+//!
+//! ```rust
+//! use dmsc::prelude::*;
+//!
+//! #[tokio::main]
+//! async fn main() -> DMSCResult<()> {
+//!     let app = DMSCAppBuilder::new()
+//!         .with_config("config.yaml")?
+//!         .with_module(Box::new(MyModule::new()))
+//!         .build()?;
+//!
+//!     app.run(|ctx| async move {
+//!         ctx.logger().info("service", "DMSC service started")?;
+//!         Ok(())
+//!     }).await
+//! }
+//! ```
 
 /// Error handling with custom error types and result aliases
 pub mod error;
