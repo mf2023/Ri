@@ -142,8 +142,6 @@ pub enum DMSCCacheBackendType {
     Hybrid,  // Hybrid cache (Memory + Redis for performance and persistence)
 }
 
-
-
 impl DMSCCacheBackendType {
     /// Converts a string to a `DMSCCacheBackendType`.
     /// 

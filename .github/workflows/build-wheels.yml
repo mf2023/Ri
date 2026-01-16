@@ -444,11 +444,13 @@ jobs:
           python-version: ${{ matrix.python }}
       
       # Step 3: Install Rust stable toolchain for compilation
-      # Uses actions-rs/toolchain@v1 to install Rust stable channel
+      # Uses dtolnay/rust-toolchain to install Rust stable channel
+      # This modern action replaces deprecated actions-rs/toolchain and supports
+      # the new Environment Files approach for output handling
       # Required for compiling the Rust library component of the package
       # The toolchain is added to PATH for cargo and rustc access
       - name: Set up Rust
-        uses: actions-rs/toolchain@v1
+        uses: dtolnay/rust-toolchain@master
         with:
           toolchain: stable
       
