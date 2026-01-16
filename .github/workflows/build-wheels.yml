@@ -166,7 +166,16 @@ jobs:
       # Clones repository on macOS x64 (Intel) runner for native compilation
       - uses: actions/checkout@v4
       
-      # Step 2: Set up Python 3.9 for build toolchain compatibility
+      # Step 2: Set up Rust stable toolchain with x86_64-apple-darwin target
+      # Installs Rust stable and adds x86_64-apple-darwin target for cross-compilation
+      # The target must be installed before building to ensure proper toolchain availability
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: stable
+          targets: x86_64-apple-darwin
+      
+      # Step 3: Set up Python 3.9 for build toolchain compatibility
       # Python 3.9 provides stable maturin support for wheel building
       # Installed using actions/setup-python@v5 for caching and version management
       - name: Set up Python
@@ -174,7 +183,7 @@ jobs:
         with:
           python-version: '3.9'
       
-      # Step 3: Configure linker for macOS dynamic library linking
+      # Step 4: Configure linker for macOS dynamic library linking
       # Creates .cargo/config.toml with special linker flags for macOS
       # -undefined dynamic_lookup allows undefined symbols (Python API symbols)
       # Required because Rust/Python bindings need runtime symbol resolution
@@ -184,13 +193,20 @@ jobs:
           echo '[target.x86_64-apple-darwin]' > .cargo/config.toml
           echo 'rustflags = ["-C", "link-arg=-undefined", "-C", "link-arg=dynamic_lookup"]' >> .cargo/config.toml
       
-      # Step 4: Build Rust library with explicit x86_64-apple-darwin target
+      # Step 5: Build Rust library with explicit x86_64-apple-darwin target
       # Explicit --target flag ensures correct architecture compilation
       # Output location: target/release/x86_64-apple-darwin/libdmsc.dylib
       - name: Build Rust library
         run: cargo build --release --target x86_64-apple-darwin
       
-      # Step 5: Upload compiled library artifact
+      # Step 6: List built artifacts for verification
+      # Displays contents of target directory to confirm library was built
+      - name: List artifacts
+        run: |
+          ls -la target/release/x86_64-apple-darwin/ || echo "Build directory not found"
+          ls -la target/release/x86_64-apple-darwin/libdmsc* 2>/dev/null || echo "No libdmsc files found"
+      
+      # Step 7: Upload compiled library artifact
       # Artifact is named rust-macos-x64 for identification
       # Contains .dylib files for Python wheel building on macOS x64 platforms
       - name: Upload artifact
