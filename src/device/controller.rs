@@ -103,6 +103,8 @@ use super::core::{DMSCDevice, DMSCDeviceCapabilities, DMSCDeviceStatus, DMSCDevi
 use super::discovery::{DMSCDeviceDiscovery, DiscoveryConfig};
 use crate::core::DMSCResult;
 use crate::prelude::DMSCMetricsRegistry;
+#[cfg(not(target_os = "macos"))]
+use crate::prelude::DMSCError;
 // use super::scheduler::DMSCDeviceScheduler;
 
 /// Device controller - manages device lifecycle and state
