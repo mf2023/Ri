@@ -332,6 +332,23 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python }}
+      - name: Set up Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+      - name: Configure macOS linker
+        if: matrix.target == 'x86_64-apple-darwin' || matrix.target == 'aarch64-apple-darwin'
+        run: |
+          mkdir -p .cargo
+          cat > .cargo/config.toml << 'EOF'
+[target.x86_64-apple-darwin]
+rustflags = ["-C", "link-arg=-undefined", "-C", "link-arg=dynamic_lookup"]
+
+[target.aarch64-apple-darwin]
+rustflags = ["-C", "link-arg=-undefined", "-C", "link-arg=dynamic_lookup"]
+EOF
+      - name: Update pip
+        run: python3 -m pip install --upgrade pip
       - name: Install dependencies
         run: pip install --upgrade pip maturin auditwheel
       - name: Build wheel
