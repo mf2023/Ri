@@ -1,6 +1,6 @@
 <div align="center">
 
-# DMSCC (Dunimd Middleware Service)
+# DMSC (Dunimd Middleware Service)
 
 English | [简体中文](README.zh.md)
 
