@@ -2,9 +2,9 @@
 
 # ServiceMesh API Reference
 
-**Version: 0.1.4**
+**Version: 0.1.5**
 
-**Last modified date: 2026-01-15**
+**Last modified date: 2026-01-18**
 
 The service_mesh module provides service mesh functionality, including service discovery, health checking, traffic management, and load balancing.
 
@@ -33,10 +33,14 @@ The main service mesh interface.
 | Method | Description | Parameters | Returns |
 |:--------|:-------------|:--------|:--------|
 | `new(config)` | Create service mesh instance | `config: DMSCServiceMeshConfig` | `DMSCResult<Self>` |
-| `register_service(service_name, endpoint, weight)` | Register service | `service_name: &str`, `endpoint: &str`, `weight: u32` | `DMSCResult<()>` |
-| `discover_service(service_name)` | Discover service | `service_name: &str` | `DMSCResult<Vec<DMSCServiceEndpoint>>` |
+| `register_service(service_name, endpoint, weight, metadata)` | Register service with optional metadata | `service_name: &str`, `endpoint: &str`, `weight: u32`, `metadata: Option<HashMap<String, String>>` | `DMSCResult<()>` |
+| `register_versioned_service(service_name, version, endpoint, weight, metadata)` | Register versioned service | `service_name: &str`, `version: &str`, `endpoint: &str`, `weight: u32`, `metadata: Option<HashMap<String, String>>` | `DMSCResult<()>` |
+| `unregister_service(service_name, endpoint)` | Unregister service | `service_name: &str`, `endpoint: &str` | `DMSCResult<()>` |
+| `discover_service(service_name)` | Discover healthy service endpoints | `service_name: &str` | `DMSCResult<Vec<DMSCServiceEndpoint>>` |
+| `get_all_endpoints(service_name)` | Get all endpoints regardless of health | `service_name: &str` | `DMSCResult<Vec<DMSCServiceEndpoint>>` |
 | `call_service(service_name, request_data)` | Call service | `service_name: &str`, `request_data: Vec<u8>` | `DMSCResult<Vec<u8>>` |
 | `update_service_health(service_name, endpoint, is_healthy)` | Update service health | `service_name: &str`, `endpoint: &str`, `is_healthy: bool` | `DMSCResult<()>` |
+| `get_stats()` | Get service mesh statistics | None | `DMSCResult<ServiceMeshStats>` |
 | `get_circuit_breaker()` | Get circuit breaker | None | `&DMSCCircuitBreaker` |
 | `get_load_balancer()` | Get load balancer | None | `&DMSCLoadBalancer` |
 | `get_health_checker()` | Get health checker | None | `&DMSCHealthChecker` |
@@ -48,22 +52,42 @@ The main service mesh interface.
 ```rust
 use dmsc::prelude::*;
 use dmsc::service_mesh::{DMSCServiceMesh, DMSCServiceMeshConfig};
+use std::collections::HashMap;
 
 async fn example() -> DMSCResult<()> {
     let mesh_config = DMSCServiceMeshConfig::default();
     
     let service_mesh = DMSCServiceMesh::new(mesh_config)?;
     
-    service_mesh.register_service("user-service", "http://user-service:8080", 100).await?;
-    service_mesh.register_service("order-service", "http://order-service:8080", 100).await?;
-    service_mesh.register_service("payment-service", "http://payment-service:8080", 100).await?;
+    // Register service with metadata
+    let mut metadata = HashMap::new();
+    metadata.insert("region".to_string(), "us-east-1".to_string());
+    service_mesh.register_service("user-service", "http://user-service:8080", 100, Some(metadata)).await?;
     
+    // Register versioned service
+    service_mesh.register_versioned_service("api-service", "v2.0", "http://api-service-v2:8080", 100, None).await?;
+    
+    service_mesh.register_service("order-service", "http://order-service:8080", 100, None).await?;
+    service_mesh.register_service("payment-service", "http://payment-service:8080", 100, None).await?;
+    
+    // Discover healthy endpoints
     let user_service_endpoints = service_mesh.discover_service("user-service").await?;
     println!("User service endpoints: {:?}", user_service_endpoints);
+    
+    // Get all endpoints
+    let all_endpoints = service_mesh.get_all_endpoints("user-service").await?;
+    
+    // Get statistics
+    let stats = service_mesh.get_stats().await?;
+    println!("Total services: {}", stats.total_services);
+    println!("Healthy endpoints: {}", stats.healthy_endpoints);
     
     let request_data = r#"{ "user_id": "123" }"#.as_bytes().to_vec();
     let response = service_mesh.call_service("user-service", request_data).await?;
     println!("Service response: {}", String::from_utf8_lossy(&response));
+    
+    // Unregister service
+    service_mesh.unregister_service("user-service", "http://user-service:8080").await?;
     
     let health_checker = service_mesh.get_health_checker();
     let traffic_manager = service_mesh.get_traffic_manager();
@@ -73,6 +97,17 @@ async fn example() -> DMSCResult<()> {
     Ok(())
 }
 ```
+
+### DMSCServiceMeshStats
+
+Service mesh statistics.
+
+| Field | Type | Description |
+|:--------|:-----|:-------------|
+| `total_services` | `usize` | Total registered services |
+| `total_endpoints` | `usize` | Total registered endpoints |
+| `healthy_endpoints` | `usize` | Number of healthy endpoints |
+| `unhealthy_endpoints` | `usize` | Number of unhealthy endpoints |
 
 ### DMSCServiceMeshConfig
 
@@ -150,6 +185,9 @@ use dmsc::service_mesh::{DMSCHealthChecker, DMSCHealthStatus};
 let health_checker = DMSCHealthChecker::new(Duration::from_secs(30));
 
 health_checker.start_health_check("user-service", "http://user-service:8080/health").await?;
+
+// Stop health check for a specific service
+health_checker.stop_health_check("user-service", "http://user-service:8080/health").await?;
 
 let summary = health_checker.get_health_summary().await?;
 println!("Healthy services: {}", summary.healthy_count);

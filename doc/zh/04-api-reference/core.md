@@ -244,6 +244,8 @@ match lock.read_safe("my data") {
 
 锁操作结果类型别名。
 
+> **注意**：此类型为 Rust 专用类型别名，在 Python 中不可用。Python 中可直接使用 `Result[T, DMSCLockError]` 替代。
+
 ```rust
 type DMSCLockResult<T> = Result<T, DMSCLockError>;
 ```
@@ -260,6 +262,8 @@ fn safe_read_data(lock: &RwLock<String>, context: &str) -> DMSCLockResult<String
 ### RwLockExtensions
 
 为标准库 `RwLock` 提供安全锁获取扩展 trait。
+
+> **注意**：此 trait 为 Rust 专用，在 Python 中不可用。Python 用户可直接使用 `RwLock.read()` 和 `RwLock.write()` 方法。
 
 #### 方法
 
@@ -292,6 +296,8 @@ fn write_value(lock: &RwLock<i32>, new_value: i32) -> DMSCLockResult<()> {
 ### MutexExtensions
 
 为标准库 `Mutex` 提供安全锁获取扩展 trait。
+
+> **注意**：此 trait 为 Rust 专用，在 Python 中不可用。Python 用户可直接使用 `Mutex.lock()` 方法。
 
 #### 方法
 

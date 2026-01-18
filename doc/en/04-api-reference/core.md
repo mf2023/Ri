@@ -244,6 +244,8 @@ match lock.read_safe("my data") {
 
 Lock operation result type alias.
 
+> **Note**: This type is a Rust-only type alias and is not available in Python. In Python, you can use `Result[T, DMSCLockError]` directly instead.
+
 ```rust
 type DMSCLockResult<T> = Result<T, DMSCLockError>;
 ```
@@ -260,6 +262,8 @@ fn safe_read_data(lock: &RwLock<String>, context: &str) -> DMSCLockResult<String
 ### RwLockExtensions
 
 Extension trait providing safe lock acquisition for standard library `RwLock`.
+
+> **Note**: This trait is Rust-only and is not available in Python. Python users can use `RwLock.read()` and `RwLock.write()` methods directly.
 
 #### Methods
 
@@ -292,6 +296,8 @@ fn write_value(lock: &RwLock<i32>, new_value: i32) -> DMSCLockResult<()> {
 ### MutexExtensions
 
 Extension trait providing safe lock acquisition for standard library `Mutex`.
+
+> **Note**: This trait is Rust-only and is not available in Python. Python users can use `Mutex.lock()` method directly.
 
 #### Methods
 

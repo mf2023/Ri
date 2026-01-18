@@ -574,8 +574,8 @@ println!("{}", statsd_metrics);
 |:--------|:-------------|:--------|:--------|
 | `add_check(name, check)` | 添加健康检查 | `name: &str`, `check: impl HealthCheck` | `()` |
 | `remove_check(name)` | 移除健康检查 | `name: &str` | `()` |
-| `run_checks()` | 执行所有检查 | 无 | `DMSCResult<HealthReport>` |
-| `get_status()` | 获取健康状态 | 无 | `HealthStatus` |
+| `run_checks()` | 执行所有检查 | 无 | `DMSCResult<DMSCHealthReport>` |
+| `get_status()` | 获取健康状态 | 无 | `DMSCHealthStatus` |
 
 #### 内置健康检查
 
@@ -599,9 +599,9 @@ let health_report = ctx.observability().health().run_checks()?;
 
 for (name, result) in health_report.results {
     match result.status {
-        HealthStatus::Healthy => println!("{}: ✓", name),
-        HealthStatus::Degraded => println!("{}: ⚠ ({})", name, result.message),
-        HealthStatus::Unhealthy => println!("{}: ✗ ({})", name, result.message),
+        DMSCHealthStatus::Healthy => println!("{}: ✓", name),
+        DMSCHealthStatus::Degraded => println!("{}: ⚠ ({})", name, result.message),
+        DMSCHealthStatus::Unhealthy => println!("{}: ✗ ({})", name, result.message),
     }
 }
 ```
@@ -615,14 +615,14 @@ struct CustomHealthCheck {
     threshold: f64,
 }
 
-impl HealthCheck for CustomHealthCheck {
-    fn check(&self) -> DMSCResult<HealthCheckResult> {
+impl DMSCHealthCheck for CustomHealthCheck {
+    fn check(&self) -> DMSCResult<DMSCHealthCheckResult> {
         let current_value = self.get_current_value()?;
         
         if current_value < self.threshold {
-            Ok(HealthCheckResult::healthy())
+            Ok(DMSCHealthCheckResult::healthy())
         } else {
-            Ok(HealthCheckResult::unhealthy(format!(
+            Ok(DMSCHealthCheckResult::unhealthy(format!(
                 "Value {} exceeds threshold {}",
                 current_value, self.threshold
             )))

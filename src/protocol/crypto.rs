@@ -1,10 +1,10 @@
-//! Copyright © 2025 Wenze Wei. All Rights Reserved.
+//! Copyright © 2025-2026 Wenze Wei. All Rights Reserved.
 //!
 //! This file is part of DMSC.
 //! The DMSC project belongs to the Dunimd Team.
 //!
 //! Licensed under the Apache License, Version 2.0 (the "License");
-//! you may not use this file except in compliance with the License.
+//! You may not use this file except in compliance with the License.
 //! You may obtain a copy of the License at
 //!
 //!     http://www.apache.org/licenses/LICENSE-2.0
@@ -1259,6 +1259,178 @@ impl SecureRNG {
         self.rng.fill(&mut bytes)
             .map_err(|e| DMSCError::CryptoError(format!("Failed to generate random u64: {}", e)))?;
         Ok(u64::from_le_bytes(bytes))
+    }
+}
+
+#[cfg(test)]
+mod crypto_tests {
+    use super::*;
+
+    #[test]
+    fn test_aes256_gcm_encrypt_decrypt() {
+        let key = [0u8; 32];
+        let nonce = [0u8; 12];
+
+        let cipher = DMSAes256Gcm::new(&key, &nonce);
+        let plaintext = b"Hello, World!";
+
+        let ciphertext = cipher.encrypt(plaintext, None).unwrap();
+        assert_ne!(ciphertext[..12], plaintext); // First 12 bytes are nonce
+
+        let decrypted = cipher.decrypt(&ciphertext[12..], None).unwrap();
+        assert_eq!(&decrypted, plaintext);
+    }
+
+    #[test]
+    fn test_aes256_gcm_with_aad() {
+        let key = [0u8; 32];
+        let nonce = [0u8; 12];
+        let aad = b"additional data";
+
+        let cipher = DMSAes256Gcm::new(&key, &nonce);
+        let plaintext = b"Secret message";
+
+        let ciphertext = cipher.encrypt(plaintext, Some(aad)).unwrap();
+        let decrypted = cipher.decrypt(&ciphertext[12..], Some(aad)).unwrap();
+        assert_eq!(&decrypted, plaintext);
+    }
+
+    #[test]
+    fn test_aes256_gcm_different_keys() {
+        let key1 = [0u8; 32];
+        let key2 = [1u8; 32];
+        let nonce = [0u8; 12];
+
+        let cipher1 = DMSAes256Gcm::new(&key1, &nonce);
+        let cipher2 = DMSAes256Gcm::new(&key2, &nonce);
+        let plaintext = b"Test message";
+
+        let ciphertext1 = cipher1.encrypt(plaintext, None).unwrap();
+        let ciphertext2 = cipher2.encrypt(plaintext, None).unwrap();
+
+        assert_ne!(ciphertext1, ciphertext2);
+    }
+
+    #[test]
+    fn test_chacha20_poly1305_encrypt_decrypt() {
+        let key = [0u8; 32];
+        let nonce = [0u8; 12];
+
+        let cipher = DMSCChacha20Poly1305::new(&key, &nonce);
+        let plaintext = b"ChaCha20 Poly1305 test";
+
+        let ciphertext = cipher.encrypt(plaintext, None).unwrap();
+        assert_ne!(ciphertext[..12], plaintext);
+
+        let decrypted = cipher.decrypt(&ciphertext[12..], None).unwrap();
+        assert_eq!(&decrypted, plaintext);
+    }
+
+    #[test]
+    fn test_sm4_cbc_encrypt_decrypt() {
+        let key = [0u8; 16];
+        let cipher = DMSCSM4Cbc::new(&key);
+
+        let plaintext = b"SM4 CBC test message with padding";
+
+        let ciphertext = cipher.encrypt(plaintext).unwrap();
+        let decrypted = cipher.decrypt(&ciphertext).unwrap();
+        assert_eq!(&decrypted, plaintext);
+    }
+
+    #[test]
+    fn test_sm4_cbc_padding() {
+        let key = [0u8; 16];
+        let cipher = DMSCSM4Cbc::new(&key);
+
+        // Test with exactly 16 bytes (one block)
+        let plaintext = b"Exactly16bytes!!";
+        let ciphertext = cipher.encrypt(plaintext).unwrap();
+        let decrypted = cipher.decrypt(&ciphertext).unwrap();
+        assert_eq!(&decrypted, plaintext);
+
+        // Test with 15 bytes (needs padding)
+        let plaintext = b"Exactly15bytes";
+        let ciphertext = cipher.encrypt(plaintext).unwrap();
+        let decrypted = cipher.decrypt(&ciphertext).unwrap();
+        assert_eq!(&decrypted, plaintext);
+    }
+
+    #[test]
+    fn test_hmac_sha256() {
+        let key = b"test_key";
+        let data = b"test_data";
+
+        let hmac = DMSCHmac::hmac_sha256(key, data);
+        assert_eq!(hmac.len(), 32);
+
+        // Verify same input produces same output
+        let hmac2 = DMSCHmac::hmac_sha256(key, data);
+        assert_eq!(hmac, hmac2);
+
+        // Verify different key produces different output
+        let hmac3 = DMSCHmac::hmac_sha256(b"different_key", data);
+        assert_ne!(hmac, hmac3);
+    }
+
+    #[test]
+    fn test_pbkdf2_derivation() {
+        let password = "test_password";
+        let salt = b"unique_salt";
+        let iterations = 1000;
+        let output_len = 32;
+
+        let derived = DMSCPbkdf2::derive_key(password, salt, iterations, output_len);
+        assert_eq!(derived.len(), output_len);
+
+        // Same input produces same output
+        let derived2 = DMSCPbkdf2::derive_key(password, salt, iterations, output_len);
+        assert_eq!(derived, derived2);
+
+        // Different iterations produces different output
+        let derived3 = DMSCPbkdf2::derive_key(password, salt, iterations + 1, output_len);
+        assert_ne!(derived, derived3);
+    }
+
+    #[test]
+    fn test_scrypt_derivation() {
+        let password = "test_password";
+        let salt = b"unique_salt";
+        let params = DMSCSCRYPTParams::standard();
+
+        let derived = DMSCScrypt::derive_key(password, salt, &params);
+        assert_eq!(derived.len(), 64);
+
+        // Same input produces same output
+        let derived2 = DMSCScrypt::derive_key(password, salt, &params);
+        assert_eq!(derived, derived2);
+    }
+
+    #[test]
+    fn test_x25519_key_exchange() {
+        let alice_private = DMSCPrivateKey::generate_x25519();
+        let bob_private = DMSCPrivateKey::generate_x25519();
+
+        let alice_public = alice_private.public_key_x25519();
+        let bob_public = bob_private.public_key_x25519();
+
+        let alice_shared = alice_private.x25519_agree(&bob_public).unwrap();
+        let bob_shared = bob_private.x25519_agree(&alice_public).unwrap();
+
+        assert_eq!(alice_shared, bob_shared);
+    }
+
+    #[test]
+    fn test_random_bytes_generation() {
+        let rng = DMSCRandom::new();
+        let bytes1 = rng.generate(32).unwrap();
+        let bytes2 = rng.generate(32).unwrap();
+
+        // Should be random, unlikely to be equal
+        assert_ne!(bytes1, bytes2);
+
+        // All zeros should not pass (with very high probability)
+        assert_ne!(bytes1, vec![0u8; 32]);
     }
 }
 

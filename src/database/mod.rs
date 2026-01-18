@@ -163,7 +163,7 @@ pub use orm::{QueryBuilder, Criteria, SortOrder, Pagination, ComparisonOperator,
     TableDefinition, ColumnDefinition, IndexDefinition, ForeignKeyDefinition,
     DMSCORMSimpleRepository, DMSCORMCrudRepository, DMSCORMRepository};
 
-use crate::core::{DMSCResult, DMSCError};
+use crate::core::DMSCResult;
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 
@@ -341,9 +341,7 @@ pub trait DMSCDatabase: Send + Sync {
     /// ## Returns
     ///
     /// The number of rows affected.
-    async fn execute_with_params(&self, _sql: &str, _params: &[serde_json::Value]) -> DMSCResult<u64> {
-        Err(DMSCError::Other("execute_with_params not implemented for this database".to_string()))
-    }
+    async fn execute_with_params(&self, sql: &str, params: &[serde_json::Value]) -> DMSCResult<u64>;
 
     /// Executes a SQL query with parameters.
     ///
@@ -358,9 +356,7 @@ pub trait DMSCDatabase: Send + Sync {
     /// ## Returns
     ///
     /// A result set containing all matching rows.
-    async fn query_with_params(&self, _sql: &str, _params: &[serde_json::Value]) -> DMSCResult<DMSCDBResult> {
-        Err(DMSCError::Other("query_with_params not implemented for this database".to_string()))
-    }
+    async fn query_with_params(&self, sql: &str, params: &[serde_json::Value]) -> DMSCResult<DMSCDBResult>;
 
     /// Starts a new database transaction.
     ///

@@ -4,7 +4,7 @@
 //! The DMSC project belongs to the Dunimd Team.
 //!
 //! Licensed under the Apache License, Version 2.0 (the "License");
-//! you may not use this file except in compliance with the License.
+//! You may not use this file except in compliance with the License.
 //! You may obtain a copy of the License at
 //!
 //!     http://www.apache.org/licenses/LICENSE-2.0
@@ -78,12 +78,16 @@
 use std::sync::{RwLock, Mutex, PoisonError, RwLockReadGuard, RwLockWriteGuard, MutexGuard};
 use std::fmt;
 
+#[cfg(feature = "pyo3")]
+use pyo3::pyclass;
+
 /// Specialized error type for lock-related failures.
 ///
 /// This error type provides detailed information about lock acquisition failures,
 /// including whether the lock was poisoned or simply contested. The error includes
 /// context about the lock's purpose for better debugging.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[cfg_attr(feature = "pyo3", pyclass)]
 pub struct DMSCLockError {
     context: String,
     is_poisoned: bool,
@@ -122,25 +126,8 @@ impl DMSCLockError {
         }
     }
 
-    /// Returns whether this error represents a poisoned lock.
-    ///
-    /// Poisoned locks occur when a previous holder panicked while holding the lock.
-    /// While Rust's default behavior is to panic, this implementation recovers
-    /// from poisoned states when possible.
-    ///
-    /// # Returns
-    ///
-    ///     true if the lock was poisoned, false otherwise
-    pub fn is_poisoned(&self) -> bool {
-        self.is_poisoned
-    }
-
-    /// Returns the context description for this lock error.
-    ///
-    /// # Returns
-    ///
-    ///     A string slice containing the error context
-    pub fn context(&self) -> &str {
+    /// Gets the context message for this lock error.
+    pub fn get_context(&self) -> &str {
         &self.context
     }
 }
@@ -156,6 +143,52 @@ impl fmt::Display for DMSCLockError {
 }
 
 impl std::error::Error for DMSCLockError {}
+
+#[cfg(feature = "pyo3")]
+#[pyo3::prelude::pymethods]
+impl DMSCLockError {
+    #[new]
+    fn new_py(context: String, is_poisoned: bool) -> Self {
+        Self {
+            context,
+            is_poisoned,
+        }
+    }
+
+    #[staticmethod]
+    fn create_from_context(context: String) -> Self {
+        Self {
+            context,
+            is_poisoned: false,
+        }
+    }
+
+    #[staticmethod]
+    fn create_poisoned(context: String) -> Self {
+        Self {
+            context,
+            is_poisoned: true,
+        }
+    }
+
+    #[getter]
+    fn is_poisoned(&self) -> bool {
+        self.is_poisoned
+    }
+
+    #[getter]
+    fn context(&self) -> String {
+        self.context.clone()
+    }
+
+    fn __str__(&self) -> String {
+        self.to_string()
+    }
+
+    fn __repr__(&self) -> String {
+        format!("DMSCLockError {{ context: {:?}, is_poisoned: {} }}", self.context, self.is_poisoned)
+    }
+}
 
 /// Result type alias for lock operations.
 ///
@@ -389,6 +422,7 @@ pub fn from_poison_error<T>(_error: PoisonError<T>, context: &str) -> DMSCLockEr
 mod tests {
     use super::*;
     use std::sync::atomic::{AtomicU64, Ordering};
+    use std::sync::Arc;
     use std::thread;
 
     #[test]

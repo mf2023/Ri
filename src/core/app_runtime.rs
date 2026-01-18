@@ -561,17 +561,19 @@ impl DMSCAppRuntime {
 #[cfg(feature = "pyo3")]
 #[pyo3::prelude::pymethods]
 impl DMSCAppRuntime {
-    #[pyo3(name = "run")]
-    fn run_py(&self) -> PyResult<()> {
+    fn py_run(&self, callback: Py<pyo3::PyAny>) -> PyResult<()> {
         let rt = tokio::runtime::Builder::new_current_thread()
             .enable_all()
             .build()
             .map_err::<pyo3::PyErr, _>(|e| e.into())?;
         
         let runtime = self.clone();
-        rt.block_on(async {
-            runtime.run(|_ctx| async move { Ok(()) }).await
-        }).map_err(|e| e.into())
+        pyo3::Python::attach(|py| {
+            rt.block_on(async move {
+                let _ = callback.call0(py);
+                runtime.run(|_ctx| async move { Ok(()) }).await
+            }).map_err(|e| e.into())
+        })
     }
 
     fn get_context(&self) -> PyResult<DMSCServiceContext> {

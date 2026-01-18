@@ -93,7 +93,7 @@ JWT token manager, responsible for JWT generation and verification.
 |:--------|:-------------|:--------|:--------|
 | `new(secret, expiry_secs)` | Create JWT manager | `secret: String`, `expiry_secs: u64` | `Self` |
 | `generate_token(user_id, roles, permissions)` | Generate JWT token | `user_id: &str`, `roles: Vec<String>`, `permissions: Vec<String>` | `DMSCResult<String>` |
-| `validate_token(token)` | Verify JWT token | `token: &str` | `DMSCResult<JWTClaims>` |
+| `validate_token(token)` | Verify JWT token | `token: &str` | `DMSCResult<DMSCJWTClaims>` |
 | `get_token_expiry()` | Get token expiry time | None | `u64` |
 | `get_secret()` | Get secret key | None | `&str` |
 

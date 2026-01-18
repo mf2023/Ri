@@ -120,6 +120,32 @@ pub mod prelude {
     /// Result type alias using DMSCError
     pub use crate::core::DMSCResult;
     
+    /// Lock utilities - Only DMSCLockError is available in Python
+    /// Note: DMSCLockResult, RwLockExtensions, MutexExtensions, and from_poison_error
+    /// are Rust-only types and not exposed in Python bindings
+    #[cfg(feature = "pyo3")]
+    pub use crate::core::DMSCLockError;
+    
+    /// Python module support
+    #[cfg(feature = "pyo3")]
+    pub use crate::core::{DMSCPythonModule, DMSCPythonModuleAdapter, DMSCPythonServiceModule, DMSCPythonAsyncServiceModule};
+    
+    /// Error chain utilities
+    #[cfg(feature = "pyo3")]
+    pub use crate::core::{DMSCErrorChain, DMSCErrorChainIter, DMSCErrorContext, DMSCOptionErrorContext};
+    
+    /// Health check types
+    #[cfg(feature = "pyo3")]
+    pub use crate::core::{DMSCHealthStatus, DMSCHealthCheckResult, DMSCHealthCheckConfig, DMSCHealthReport, DMSCHealthChecker};
+    
+    /// Lifecycle management
+    #[cfg(feature = "pyo3")]
+    pub use crate::core::DMSCLifecycleObserver;
+    
+    /// Analytics module
+    #[cfg(feature = "pyo3")]
+    pub use crate::core::DMSCLogAnalyticsModule;
+    
     /// Secure file system operations
     pub use crate::fs::DMSCFileSystem;
     
@@ -165,8 +191,10 @@ pub mod prelude {
     
     /// Main device control module for DMSC
     pub use crate::device::DMSCDeviceControlModule;
-    /// Configuration for the device control module
+    /// Configuration for device discovery
     pub use crate::device::DMSCDeviceControlConfig;
+    /// Scheduling configuration for device control
+    pub use crate::device::DMSCDeviceSchedulingConfig;
     /// Device representation with type, status, and capabilities
     pub use crate::device::DMSCDevice;
     /// Enum defining supported device types
@@ -248,6 +276,19 @@ pub mod py {
         m.add_class::<DMSCHookKind>()?;
         m.add_class::<DMSCModulePhase>()?;
         
+        // Add lock types
+        m.add_class::<crate::core::DMSCLockError>()?;
+        
+        // Add health check types
+        m.add_class::<crate::core::DMSCHealthStatus>()?;
+        m.add_class::<crate::core::DMSCHealthCheckResult>()?;
+        m.add_class::<crate::core::DMSCHealthCheckConfig>()?;
+        m.add_class::<crate::core::DMSCHealthReport>()?;
+        m.add_class::<crate::core::DMSCHealthChecker>()?;
+        
+        // Add lifecycle types
+        m.add_class::<crate::core::DMSCLifecycleObserver>()?;
+        
         // Add cache types to main module
         m.add_class::<crate::cache::DMSCCacheModule>()?;
         m.add_class::<crate::cache::DMSCCacheManager>()?;
@@ -298,14 +339,19 @@ pub mod py {
         m.add_class::<crate::auth::DMSCAuthModule>()?;
         m.add_class::<crate::auth::DMSCAuthConfig>()?;
         m.add_class::<crate::auth::DMSCJWTManager>()?;
+        m.add_class::<crate::auth::DMSCJWTClaims>()?;
+        m.add_class::<crate::auth::DMSCJWTValidationOptions>()?;
         m.add_class::<crate::auth::DMSCSessionManager>()?;
+        m.add_class::<crate::auth::DMSCSession>()?;
         m.add_class::<crate::auth::DMSCPermissionManager>()?;
         m.add_class::<crate::auth::DMSCOAuthManager>()?;
         m.add_class::<crate::auth::DMSCOAuthToken>()?;
         m.add_class::<crate::auth::DMSCOAuthUserInfo>()?;
+        m.add_class::<crate::auth::DMSCOAuthProvider>()?;
         m.add_class::<crate::auth::DMSCPermission>()?;
         m.add_class::<crate::auth::DMSCRole>()?;
-        m.add_class::<crate::auth::JWTRevocationList>()?;
+        m.add_class::<crate::auth::DMSCJWTRevocationList>()?;
+        m.add_class::<crate::auth::DMSCRevokedTokenInfo>()?;
         
         // Add observability types to main module
         m.add_class::<crate::observability::DMSCObservabilityModule>()?;
@@ -317,6 +363,17 @@ pub mod py {
         m.add_class::<crate::observability::DMSCMetricSample>()?;
         m.add_class::<crate::observability::DMSCMetric>()?;
         m.add_class::<crate::observability::DMSCObservabilityData>()?;
+        
+        // Add validation types to main module
+        m.add_class::<crate::validation::DMSCValidationError>()?;
+        m.add_class::<crate::validation::DMSCValidationResult>()?;
+        m.add_class::<crate::validation::DMSCValidationSeverity>()?;
+        m.add_class::<crate::validation::DMSCValidatorBuilder>()?;
+        m.add_class::<crate::validation::DMSCValidationRunner>()?;
+        m.add_class::<crate::validation::DMSCSanitizer>()?;
+        m.add_class::<crate::validation::DMSCSanitizationConfig>()?;
+        m.add_class::<crate::validation::DMSCSchemaValidator>()?;
+        m.add_class::<crate::validation::DMSCValidationModule>()?;
         
         // Add protocol types to main module
         m.add_class::<crate::protocol::DMSCProtocolManager>()?;
@@ -348,15 +405,11 @@ pub mod py {
         m.add_class::<crate::module_rpc::DMSCMethodCall>()?;
         m.add_class::<crate::module_rpc::DMSCMethodResponse>()?;
         
-        // Add service mesh types to main module
-        m.add_class::<crate::service_mesh::DMSCServiceInstance>()?;
-        m.add_class::<crate::service_mesh::DMSCServiceStatus>()?;
-        m.add_class::<crate::service_mesh::health_check::DMSCHealthChecker>()?;
-        
         // Add auth types to main module
         m.add_class::<crate::auth::DMSCAuthModule>()?;
         
         // Add device types to main module
+        m.add_class::<crate::device::DMSCDeviceControlModule>()?;
         m.add_class::<crate::device::DMSCDevice>()?;
         m.add_class::<crate::device::DMSCDeviceType>()?;
         m.add_class::<crate::device::DMSCDeviceStatus>()?;
@@ -365,6 +418,7 @@ pub mod py {
         m.add_class::<crate::device::DMSCDeviceController>()?;
         m.add_class::<crate::device::DMSCDeviceConfig>()?;
         m.add_class::<crate::device::DMSCDeviceControlConfig>()?;
+        m.add_class::<crate::device::DMSCDeviceSchedulingConfig>()?;
         m.add_class::<crate::device::NetworkDeviceInfo>()?;
         m.add_class::<crate::device::DMSCDiscoveryResult>()?;
         m.add_class::<crate::device::DMSCResourceRequest>()?;
@@ -376,6 +430,7 @@ pub mod py {
         m.add_class::<crate::device::pool::DMSCResourcePoolConfig>()?;
         m.add_class::<crate::device::pool::DMSCResourcePoolStatistics>()?;
         m.add_class::<crate::device::pool::DMSCResourcePoolManager>()?;
+        m.add_class::<crate::device::pool::DMSCConnectionPoolStatistics>()?;
         
         // Create and add submodules
         create_device_module(m)?;
@@ -501,6 +556,7 @@ pub mod py {
         m.add_class::<crate::service_mesh::DMSCServiceMeshConfig>()?;
         m.add_class::<crate::service_mesh::DMSCServiceDiscovery>()?;
         m.add_class::<crate::service_mesh::DMSCServiceInstance>()?;
+        m.add_class::<crate::service_mesh::DMSCServiceStatus>()?;
         m.add_class::<crate::service_mesh::health_check::DMSCHealthChecker>()?;
         m.add_class::<crate::service_mesh::traffic_management::DMSCTrafficManager>()?;
         parent.add_submodule(&m)?;
@@ -512,9 +568,19 @@ pub mod py {
         m.add_class::<crate::auth::DMSCAuthModule>()?;
         m.add_class::<crate::auth::DMSCAuthConfig>()?;
         m.add_class::<crate::auth::DMSCJWTManager>()?;
+        m.add_class::<crate::auth::DMSCJWTClaims>()?;
+        m.add_class::<crate::auth::DMSCJWTValidationOptions>()?;
         m.add_class::<crate::auth::DMSCSessionManager>()?;
+        m.add_class::<crate::auth::DMSCSession>()?;
         m.add_class::<crate::auth::DMSCPermissionManager>()?;
+        m.add_class::<crate::auth::DMSCPermission>()?;
+        m.add_class::<crate::auth::DMSCRole>()?;
         m.add_class::<crate::auth::DMSCOAuthManager>()?;
+        m.add_class::<crate::auth::DMSCOAuthToken>()?;
+        m.add_class::<crate::auth::DMSCOAuthUserInfo>()?;
+        m.add_class::<crate::auth::DMSCOAuthProvider>()?;
+        m.add_class::<crate::auth::DMSCJWTRevocationList>()?;
+        m.add_class::<crate::auth::DMSCRevokedTokenInfo>()?;
         parent.add_submodule(&m)?;
         Ok(())
     }

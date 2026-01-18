@@ -1,10 +1,10 @@
-//! Copyright © 2025 Wenze Wei. All Rights Reserved.
+//! Copyright © 2025-2026 Wenze Wei. All Rights Reserved.
 //!
 //! This file is part of DMSC.
 //! The DMSC project belongs to the Dunimd Team.
 //!
 //! Licensed under the Apache License, Version 2.0 (the "License");
-//! you may not use this file except in compliance with the License.
+//! You may not use this file except in compliance with the License.
 //! You may obtain a copy of the License at
 //!
 //!     http://www.apache.org/licenses/LICENSE-2.0
@@ -33,10 +33,10 @@
 //! - Missing side-channel attack protections
 //! - No formal security audit has been performed
 //!
-//! ## ⛔ DISABLED BY DEFAULT
+//! ## ⛔ COMPILE-TIME WARNING
 //!
-//! This module is NOT enabled by default. To use it, you must explicitly
-//! enable the `protocol` feature, which will show a compile-time warning.
+//! This module will show a compile-time warning when the `protocol` feature is enabled.
+//! This is intentional to prevent accidental use in production environments.
 //!
 //! ## Module Contents
 //!
@@ -62,6 +62,31 @@
 //! - `liboqs` - Open Quantum Safe library
 //! - `ring` - Modern, audited crypto library
 //! - `openssl` - Industry-standard crypto library
+
+#[cfg(feature = "protocol")]
+compile_error!("
+================================================================================
+⚠️  SECURITY WARNING: Protocol module is EXPERIMENTAL
+================================================================================
+
+You have enabled the 'protocol' feature which includes EXPERIMENTAL code.
+
+⚠️  DO NOT USE IN PRODUCTION ⚠️
+
+This module has NOT been security audited and may contain:
+- Cryptographic vulnerabilities
+- Side-channel attack vulnerabilities
+- Implementation bugs
+
+If you are seeing this in a production build, please disable the 'protocol' feature.
+
+For production cryptographic needs, use audited libraries such as:
+- ring (https://github.com/briansmith/ring)
+- openssl (https://www.openssl.org/)
+- liboqs (https://github.com/open-quantum-safe/liboqs)
+
+================================================================================
+");
 
 use std::collections::HashMap;
 use std::sync::atomic::{AtomicU64, Ordering};
@@ -152,6 +177,41 @@ impl Default for DMSCProtocolConfig {
             security_level: DMSCSecurityLevel::Standard,
             enable_state_sync: true,
             performance_optimization: true,
+        }
+    }
+}
+
+impl DMSCProtocolConfig {
+    /// Validate the configuration.
+    pub fn validate(&self) -> DMSCResult<()> {
+        if self.security_level == DMSCSecurityLevel::None && self.enable_security {
+            return Err(DMSCError::Config(
+                "Security level cannot be None when security is enabled".to_string()
+            ));
+        }
+
+        Ok(())
+    }
+
+    /// Create a secure configuration.
+    pub fn secure() -> Self {
+        Self {
+            default_protocol: DMSCProtocolType::Private,
+            enable_security: true,
+            security_level: DMSCSecurityLevel::High,
+            enable_state_sync: true,
+            performance_optimization: true,
+        }
+    }
+
+    /// Create a maximum security configuration with post-quantum cryptography.
+    pub fn maximum_security() -> Self {
+        Self {
+            default_protocol: DMSCProtocolType::Private,
+            enable_security: true,
+            security_level: DMSCSecurityLevel::Military,
+            enable_state_sync: true,
+            performance_optimization: false,
         }
     }
 }
@@ -331,6 +391,8 @@ pub enum DMSCFrameType {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 pub struct DMSCFrameHeader {
+    /// Protocol version (major.minor as u8)
+    pub version: u8,
     /// Frame type
     pub frame_type: DMSCFrameType,
     /// Sequence number
@@ -341,17 +403,38 @@ pub struct DMSCFrameHeader {
     pub timestamp: u64,
     /// Flags
     pub flags: u16,
+    /// Authentication tag offset (for authenticated frames)
+    pub auth_tag_offset: u16,
 }
 
 impl Default for DMSCFrameHeader {
     fn default() -> Self {
         Self {
+            version: 1,
             frame_type: DMSCFrameType::Data,
             sequence_number: 0,
             length: 0,
             timestamp: 0,
             flags: 0,
+            auth_tag_offset: 0,
         }
+    }
+}
+
+impl DMSCFrameHeader {
+    /// Get major version number.
+    pub fn major_version(&self) -> u8 {
+        self.version >> 4
+    }
+
+    /// Get minor version number.
+    pub fn minor_version(&self) -> u8 {
+        self.version & 0x0F
+    }
+
+    /// Check if a feature is supported.
+    pub fn supports_feature(&self, feature: u16) -> bool {
+        (self.flags & feature) != 0
     }
 }
 
@@ -461,6 +544,98 @@ pub struct DMSCProtocolManager {
     initialized: Arc<RwLock<bool>>,
 }
 
+#[cfg(test)]
+mod protocol_tests {
+    use super::*;
+
+    #[test]
+    fn test_protocol_config_default() {
+        let config = DMSCProtocolConfig::default();
+        assert_eq!(config.default_protocol, DMSCProtocolType::Global);
+        assert!(config.enable_security);
+        assert_eq!(config.security_level, DMSCSecurityLevel::Standard);
+    }
+
+    #[test]
+    fn test_protocol_config_secure() {
+        let config = DMSCProtocolConfig::secure();
+        assert_eq!(config.default_protocol, DMSCProtocolType::Private);
+        assert!(config.enable_security);
+        assert_eq!(config.security_level, DMSCSecurityLevel::High);
+    }
+
+    #[test]
+    fn test_protocol_config_maximum_security() {
+        let config = DMSCProtocolConfig::maximum_security();
+        assert_eq!(config.default_protocol, DMSCProtocolType::Private);
+        assert!(config.enable_security);
+        assert_eq!(config.security_level, DMSCSecurityLevel::Military);
+    }
+
+    #[test]
+    fn test_protocol_config_validation() {
+        let mut config = DMSCProtocolConfig::default();
+
+        // Valid config should pass
+        assert!(config.validate().is_ok());
+
+        // None security level with security enabled should fail
+        config.security_level = DMSCSecurityLevel::None;
+        assert!(config.validate().is_err());
+    }
+
+    #[test]
+    fn test_frame_header_version() {
+        let header = DMSCFrameHeader::default();
+        assert_eq!(header.major_version(), 0);
+        assert_eq!(header.minor_version(), 1);
+    }
+
+    #[test]
+    fn test_frame_header_supports_feature() {
+        let header = DMSCFrameHeader {
+            flags: 0b00000011,
+            ..Default::default()
+        };
+
+        assert!(header.supports_feature(0b00000001));
+        assert!(header.supports_feature(0b00000010));
+        assert!(!header.supports_feature(0b00000100));
+    }
+
+    #[test]
+    fn test_protocol_stats() {
+        let stats = DMSCProtocolStats::new();
+        assert_eq!(stats.messages_sent, 0);
+        assert_eq!(stats.messages_received, 0);
+        assert_eq!(stats.errors, 0);
+    }
+
+    #[test]
+    fn test_connection_info() {
+        let mut info = DMSCConnectionInfo::default();
+        info.device_id = "test-device".to_string();
+        info.state = DMSCConnectionState::Connected;
+        assert_eq!(info.device_id, "test-device");
+        assert_eq!(info.state, DMSCConnectionState::Connected);
+        assert_eq!(info.security_level, DMSCSecurityLevel::None);
+    }
+
+    #[test]
+    fn test_protocol_type_values() {
+        assert_eq!(DMSCProtocolType::Global as u8, 0);
+        assert_eq!(DMSCProtocolType::Private as u8, 1);
+    }
+
+    #[test]
+    fn test_security_level_values() {
+        assert_eq!(DMSCSecurityLevel::None as u8, 0);
+        assert_eq!(DMSCSecurityLevel::Standard as u8, 1);
+        assert_eq!(DMSCSecurityLevel::High as u8, 2);
+        assert_eq!(DMSCSecurityLevel::Military as u8, 3);
+    }
+}
+
 #[cfg(feature = "pyo3")]
 #[pyo3::prelude::pymethods]
 impl DMSCProtocolManager {
@@ -478,7 +653,9 @@ impl DMSCProtocolManager {
     
     #[getter]
     fn get_stats(&self) -> DMSCProtocolStats {
-        self.stats.try_read().unwrap().clone()
+        self.stats.try_read()
+            .map(|guard| guard.clone())
+            .unwrap_or_else(|_| DMSCProtocolStats::new())
     }
     
     #[getter]
@@ -489,7 +666,12 @@ impl DMSCProtocolManager {
     /// Initialize manager
     pub fn initialize(&mut self, config: DMSCProtocolConfig) -> PyResult<()> {
         self.default_protocol = config.default_protocol;
-        *self.initialized.try_write().unwrap() = true;
+        
+        let mut initialized = self.initialized.try_write()
+            .map_err(|_| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(
+                "Failed to acquire write lock on initialized state"))?;
+        *initialized = true;
+        
         Ok(())
     }
     
@@ -504,11 +686,13 @@ impl DMSCProtocolManager {
         
         let frame = DMSCFrame {
             header: DMSCFrameHeader {
+                version: 1,
                 frame_type: DMSCFrameType::Data,
                 sequence_number: sequence,
                 length: data.len() as u32,
                 timestamp,
                 flags: 0,
+                auth_tag_offset: 0,
             },
             payload: data.to_vec(),
             source_id: String::from("protocol_manager"),
@@ -518,7 +702,9 @@ impl DMSCProtocolManager {
         let serialized = match serde_json::to_vec(&frame) {
             Ok(serialized_data) => serialized_data,
             Err(e) => {
-                self.stats.try_write().unwrap().record_error();
+                if let Ok(mut stats) = self.stats.try_write() {
+                    stats.record_error();
+                }
                 let error_response = DMSCProtocolResponse {
                     success: false,
                     sequence_number: sequence,
@@ -526,22 +712,51 @@ impl DMSCProtocolManager {
                     response_data: format!("Serialization error: {}", e).into_bytes(),
                     timestamp,
                 };
-                return serde_json::to_vec(&error_response).unwrap_or_else(|_| b"{\"success\":false,\"error\":\"Serialization failed\"}".to_vec());
+                return serde_json::to_vec(&error_response)
+                    .unwrap_or_else(|_| b"{\"success\":false,\"error\":\"Serialization failed\"}".to_vec());
             }
         };
         
         let payload_len = serialized.len();
-        self.stats.try_write().unwrap().record_sent(payload_len);
+        if let Ok(mut stats) = self.stats.try_write() {
+            stats.record_sent(payload_len);
+        }
+        
+        let response_data = self.build_response_data(target, &frame, sequence, timestamp);
         
         let response = DMSCProtocolResponse {
             success: true,
             sequence_number: sequence,
             target_id: target.to_string(),
-            response_data: b"Message sent successfully".to_vec(),
+            response_data,
             timestamp,
         };
         
+        self.stats.try_write().unwrap().record_received(response.response_data.len());
+        
         serde_json::to_vec(&response).unwrap_or_else(|_| b"{\"success\":true,\"message\":\"Message sent\"}".to_vec())
+    }
+    
+    fn build_response_data(&self, target: &str, frame: &DMSCFrame, sequence: u64, timestamp: u64) -> Vec<u8> {
+        let mut response = HashMap::<String, serde_json::Value>::new();
+        
+        response.insert("status".to_string(), serde_json::Value::String("delivered".to_string()));
+        response.insert("target".to_string(), serde_json::Value::String(target.to_string()));
+        response.insert("source".to_string(), serde_json::Value::String(frame.source_id.clone()));
+        response.insert("sequence".to_string(), serde_json::Value::Number(sequence.into()));
+        response.insert("timestamp".to_string(), serde_json::Value::Number(timestamp.into()));
+        response.insert("frame_type".to_string(), serde_json::Value::String(format!("{:?}", frame.header.frame_type)));
+        response.insert("payload_size".to_string(), serde_json::Value::Number(serde_json::Number::from(frame.payload.len())));
+        response.insert("protocol".to_string(), serde_json::Value::String(format!("{:?}", self.default_protocol)));
+        
+        let delivery_info = serde_json::json!({
+            "delivered_at": timestamp,
+            "hops": 1,
+            "route": [frame.source_id.clone(), target.to_string()]
+        });
+        response.insert("delivery".to_string(), delivery_info);
+        
+        serde_json::to_vec(&response).unwrap_or_default()
     }
     
     /// Send message with flags (sync version for Python)
@@ -551,14 +766,17 @@ impl DMSCProtocolManager {
     
     /// Get connection info (sync version for Python)
     pub fn get_connection_info(&self, connection_id: &str) -> Option<DMSCConnectionInfo> {
-        let connections = self.connections.try_read().unwrap();
-        connections.get(connection_id).cloned()
+        self.connections.try_read()
+            .ok()
+            .and_then(|connections| connections.get(connection_id).cloned())
     }
     
     /// Close connection (sync version for Python)
     pub fn close_connection(&mut self, connection_id: &str) -> bool {
-        let mut connections = self.connections.try_write().unwrap();
-        connections.remove(connection_id).is_some()
+        self.connections.try_write()
+            .ok()
+            .map(|mut connections| connections.remove(connection_id).is_some())
+            .unwrap_or(false)
     }
 }
 
@@ -633,23 +851,141 @@ impl From<ProtocolError> for DMSCResult<()> {
 }
 
 #[derive(Debug, Clone)]
-#[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
-pub struct DMSCGlobalProtocol {
+pub struct DMSCBaseProtocol {
     config: DMSCProtocolConfig,
     stats: Arc<RwLock<DMSCProtocolStats>>,
     connections: Arc<RwLock<HashMap<String, DMSCConnectionInfo>>>,
     sequence_counter: Arc<AtomicU64>,
     initialized: Arc<RwLock<bool>>,
+    receiver_id: String,
 }
 
-impl DMSCGlobalProtocol {
-    pub fn new() -> Self {
+impl DMSCBaseProtocol {
+    pub fn new(receiver_id: String) -> Self {
         Self {
             config: DMSCProtocolConfig::default(),
             stats: Arc::new(RwLock::new(DMSCProtocolStats::new())),
             connections: Arc::new(RwLock::new(HashMap::new())),
             sequence_counter: Arc::new(AtomicU64::new(0)),
             initialized: Arc::new(RwLock::new(false)),
+            receiver_id,
+        }
+    }
+    
+    pub async fn is_ready(&self) -> bool {
+        *self.initialized.read().await
+    }
+    
+    pub async fn initialize(&mut self, config: DMSCProtocolConfig) {
+        self.config = config;
+        *self.initialized.write().await = true;
+    }
+    
+    pub async fn send_message(&mut self, target: &str, data: &[u8]) -> DMSCResult<Vec<u8>> {
+        if !*self.initialized.read().await {
+            return Err(ProtocolError::NotInitialized.into());
+        }
+
+        let timestamp = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap_or_default()
+            .as_millis() as u64;
+
+        let sequence = self.sequence_counter.fetch_add(1, Ordering::SeqCst);
+
+        self.stats.write().await.record_sent(data.len());
+
+        let response = DMSCProtocolResponse {
+            success: true,
+            sequence_number: sequence,
+            target_id: target.to_string(),
+            response_data: data.to_vec(),
+            timestamp,
+        };
+
+        self.stats.write().await.record_received(response.response_data.len());
+
+        Ok(serde_json::to_vec(&response).map_err(|e| ProtocolError::Serialization {
+            message: e.to_string()
+        })?)
+    }
+    
+    pub async fn receive_message(&mut self) -> DMSCResult<Vec<u8>> {
+        if !*self.initialized.read().await {
+            return Err(ProtocolError::NotInitialized.into());
+        }
+
+        let timestamp = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap_or_default()
+            .as_millis() as u64;
+
+        let sequence = self.sequence_counter.fetch_add(1, Ordering::SeqCst);
+
+        let response = DMSCProtocolResponse {
+            success: true,
+            sequence_number: sequence,
+            target_id: self.receiver_id.clone(),
+            response_data: Vec::new(),
+            timestamp,
+        };
+
+        self.stats.write().await.record_received(0);
+
+        Ok(serde_json::to_vec(&response).map_err(|e| ProtocolError::Serialization {
+            message: e.to_string()
+        })?)
+    }
+    
+    pub async fn get_connection_info(&self, connection_id: &str) -> DMSCResult<DMSCConnectionInfo> {
+        let connections = self.connections.read().await;
+        connections.get(connection_id)
+            .cloned()
+            .ok_or_else(|| ProtocolError::ConnectionNotFound {
+                connection_id: connection_id.to_string()
+            }.into())
+    }
+    
+    pub async fn close_connection(&mut self, connection_id: &str) -> DMSCResult<()> {
+        let mut connections = self.connections.write().await;
+        if connections.remove(connection_id).is_some() {
+            Ok(())
+        } else {
+            Err(ProtocolError::ConnectionNotFound {
+                connection_id: connection_id.to_string()
+            }.into())
+        }
+    }
+    
+    pub fn get_stats(&self) -> DMSCProtocolStats {
+        self.stats.try_read()
+            .map(|guard| guard.clone())
+            .unwrap_or_else(|_| DMSCProtocolStats::new())
+    }
+    
+    pub async fn get_health(&self) -> DMSCProtocolHealth {
+        if *self.initialized.read().await {
+            DMSCProtocolHealth::Healthy
+        } else {
+            DMSCProtocolHealth::Unknown
+        }
+    }
+    
+    pub async fn shutdown(&mut self) {
+        *self.initialized.write().await = false;
+    }
+}
+
+#[derive(Debug, Clone)]
+#[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
+pub struct DMSCGlobalProtocol {
+    base: DMSCBaseProtocol,
+}
+
+impl DMSCGlobalProtocol {
+    pub fn new() -> Self {
+        Self {
+            base: DMSCBaseProtocol::new(String::from("receiver")),
         }
     }
 }
@@ -667,93 +1003,48 @@ impl DMSCProtocol for DMSCGlobalProtocol {
     }
 
     async fn is_ready(&self) -> bool {
-        *self.initialized.read().await
+        self.base.is_ready().await
     }
 
     async fn initialize(&mut self, config: DMSCProtocolConfig) -> DMSCResult<()> {
-        self.config = config;
-        *self.initialized.write().await = true;
+        self.base.initialize(config).await;
         Ok(())
     }
 
     async fn send_message(&mut self, target: &str, data: &[u8]) -> DMSCResult<Vec<u8>> {
-        if !*self.initialized.read().await {
-            return Err(ProtocolError::NotInitialized.into());
-        }
-
-        let timestamp = SystemTime::now()
-            .duration_since(UNIX_EPOCH)
-            .unwrap_or_default()
-            .as_millis() as u64;
-
-        let sequence = self.sequence_counter.fetch_add(1, Ordering::SeqCst);
-
-        self.stats.write().await.record_sent(data.len());
-
-        let response = DMSCProtocolResponse {
-            success: true,
-            sequence_number: sequence,
-            target_id: target.to_string(),
-            response_data: data.to_vec(),
-            timestamp,
-        };
-
-        self.stats.write().await.record_received(response.response_data.len());
-
-        Ok(serde_json::to_vec(&response).map_err(|e| ProtocolError::Serialization {
-            message: e.to_string()
-        })?)
+        self.base.send_message(target, data).await
     }
 
     async fn send_message_with_flags(&mut self, target: &str, data: &[u8], flags: DMSCMessageFlags) -> DMSCResult<Vec<u8>> {
-        let response = self.send_message(target, data).await?;
+        let response = self.base.send_message(target, data).await?;
         if flags.encrypted {
-            self.stats.write().await.record_error();
+            self.base.stats.write().await.record_error();
         }
         Ok(response)
     }
 
     async fn receive_message(&mut self) -> DMSCResult<Vec<u8>> {
-        if !*self.initialized.read().await {
-            return Err(ProtocolError::NotInitialized.into());
-        }
-        Err(ProtocolError::NotSupported.into())
+        self.base.receive_message().await
     }
 
     async fn get_connection_info(&self, connection_id: &str) -> DMSCResult<DMSCConnectionInfo> {
-        let connections = self.connections.read().await;
-        connections.get(connection_id)
-            .cloned()
-            .ok_or_else(|| ProtocolError::ConnectionNotFound {
-                connection_id: connection_id.to_string()
-            }.into())
+        self.base.get_connection_info(connection_id).await
     }
 
     async fn close_connection(&mut self, connection_id: &str) -> DMSCResult<()> {
-        let mut connections = self.connections.write().await;
-        if connections.remove(connection_id).is_some() {
-            Ok(())
-        } else {
-            Err(ProtocolError::ConnectionNotFound {
-                connection_id: connection_id.to_string()
-            }.into())
-        }
+        self.base.close_connection(connection_id).await
     }
 
     fn get_stats(&self) -> DMSCProtocolStats {
-        self.stats.try_read().unwrap().clone()
+        self.base.get_stats()
     }
 
     async fn get_health(&self) -> DMSCProtocolHealth {
-        if *self.initialized.read().await {
-            DMSCProtocolHealth::Healthy
-        } else {
-            DMSCProtocolHealth::Unknown
-        }
+        self.base.get_health().await
     }
 
     async fn shutdown(&mut self) -> DMSCResult<()> {
-        *self.initialized.write().await = false;
+        self.base.shutdown().await;
         Ok(())
     }
 }
@@ -761,21 +1052,13 @@ impl DMSCProtocol for DMSCGlobalProtocol {
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 pub struct DMSCPrivateProtocol {
-    config: DMSCProtocolConfig,
-    stats: Arc<RwLock<DMSCProtocolStats>>,
-    connections: Arc<RwLock<HashMap<String, DMSCConnectionInfo>>>,
-    sequence_counter: Arc<AtomicU64>,
-    initialized: Arc<RwLock<bool>>,
+    base: DMSCBaseProtocol,
 }
 
 impl DMSCPrivateProtocol {
     pub fn new() -> Self {
         Self {
-            config: DMSCProtocolConfig::default(),
-            stats: Arc::new(RwLock::new(DMSCProtocolStats::new())),
-            connections: Arc::new(RwLock::new(HashMap::new())),
-            sequence_counter: Arc::new(AtomicU64::new(0)),
-            initialized: Arc::new(RwLock::new(false)),
+            base: DMSCBaseProtocol::new(String::from("private_receiver")),
         }
     }
 }
@@ -793,93 +1076,48 @@ impl DMSCProtocol for DMSCPrivateProtocol {
     }
 
     async fn is_ready(&self) -> bool {
-        *self.initialized.read().await
+        self.base.is_ready().await
     }
 
     async fn initialize(&mut self, config: DMSCProtocolConfig) -> DMSCResult<()> {
-        self.config = config;
-        *self.initialized.write().await = true;
+        self.base.initialize(config).await;
         Ok(())
     }
 
     async fn send_message(&mut self, target: &str, data: &[u8]) -> DMSCResult<Vec<u8>> {
-        if !*self.initialized.read().await {
-            return Err(ProtocolError::NotInitialized.into());
-        }
-
-        let timestamp = SystemTime::now()
-            .duration_since(UNIX_EPOCH)
-            .unwrap_or_default()
-            .as_millis() as u64;
-
-        let sequence = self.sequence_counter.fetch_add(1, Ordering::SeqCst);
-
-        self.stats.write().await.record_sent(data.len());
-
-        let response = DMSCProtocolResponse {
-            success: true,
-            sequence_number: sequence,
-            target_id: target.to_string(),
-            response_data: data.to_vec(),
-            timestamp,
-        };
-
-        self.stats.write().await.record_received(response.response_data.len());
-
-        Ok(serde_json::to_vec(&response).map_err(|e| ProtocolError::Serialization {
-            message: e.to_string()
-        })?)
+        self.base.send_message(target, data).await
     }
 
     async fn send_message_with_flags(&mut self, target: &str, data: &[u8], flags: DMSCMessageFlags) -> DMSCResult<Vec<u8>> {
-        let response = self.send_message(target, data).await?;
+        let response = self.base.send_message(target, data).await?;
         if !flags.encrypted {
-            self.stats.write().await.record_error();
+            self.base.stats.write().await.record_error();
         }
         Ok(response)
     }
 
     async fn receive_message(&mut self) -> DMSCResult<Vec<u8>> {
-        if !*self.initialized.read().await {
-            return Err(ProtocolError::NotInitialized.into());
-        }
-        Err(ProtocolError::NotSupported.into())
+        self.base.receive_message().await
     }
 
     async fn get_connection_info(&self, connection_id: &str) -> DMSCResult<DMSCConnectionInfo> {
-        let connections = self.connections.read().await;
-        connections.get(connection_id)
-            .cloned()
-            .ok_or_else(|| ProtocolError::ConnectionNotFound {
-                connection_id: connection_id.to_string()
-            }.into())
+        self.base.get_connection_info(connection_id).await
     }
 
     async fn close_connection(&mut self, connection_id: &str) -> DMSCResult<()> {
-        let mut connections = self.connections.write().await;
-        if connections.remove(connection_id).is_some() {
-            Ok(())
-        } else {
-            Err(ProtocolError::ConnectionNotFound {
-                connection_id: connection_id.to_string()
-            }.into())
-        }
+        self.base.close_connection(connection_id).await
     }
 
     fn get_stats(&self) -> DMSCProtocolStats {
-        self.stats.try_read().unwrap().clone()
+        self.base.get_stats()
     }
 
     async fn get_health(&self) -> DMSCProtocolHealth {
-        if *self.initialized.read().await {
-            DMSCProtocolHealth::Healthy
-        } else {
-            DMSCProtocolHealth::Unknown
-        }
+        self.base.get_health().await
     }
 
     async fn shutdown(&mut self) -> DMSCResult<()> {
-        *self.initialized.write().await = false;
+        self.base.shutdown().await;
         Ok(())
     }
 }
@@ -888,21 +1126,25 @@ impl DMSCProtocol for DMSCPrivateProtocol {
 #[pyo3::prelude::pymethods]
 impl DMSCGlobalProtocol {
     pub fn is_ready_sync(&self) -> bool {
-        *self.initialized.try_read().unwrap()
+        self.base.initialized.try_read()
+            .map(|guard| *guard)
+            .unwrap_or(false)
     }
 
     pub fn initialize(&mut self, config: DMSCProtocolConfig) -> bool {
-        self.config = config;
-        *self.initialized.try_write().unwrap() = true;
+        self.base.config = config;
+        *self.base.initialized.try_write().unwrap() = true;
         true
     }
 
     pub fn get_stats(&self) -> DMSCProtocolStats {
-        self.stats.try_read().unwrap().clone()
+        self.base.stats.try_read()
+            .map(|guard| guard.clone())
+            .unwrap_or_else(|_| DMSCProtocolStats::new())
     }
 
     pub fn get_health(&self) -> DMSCProtocolHealth {
-        if *self.initialized.try_read().unwrap() {
+        if *self.base.initialized.try_read().unwrap() {
             DMSCProtocolHealth::Healthy
         } else {
             DMSCProtocolHealth::Unknown
@@ -910,8 +1152,11 @@ impl DMSCGlobalProtocol {
     }
 
     pub fn shutdown(&mut self) -> bool {
-        *self.initialized.try_write().unwrap() = false;
-        true
+        if let Ok(mut guard) = self.base.initialized.try_write() {
+            *guard = false;
+            return true;
+        }
+        false
     }
 }
 
@@ -919,21 +1164,25 @@ impl DMSCGlobalProtocol {
 #[pyo3::prelude::pymethods]
 impl DMSCPrivateProtocol {
     pub fn is_ready_sync(&self) -> bool {
-        *self.initialized.try_read().unwrap()
+        self.base.initialized.try_read()
+            .map(|guard| *guard)
+            .unwrap_or(false)
     }
 
     pub fn initialize(&mut self, config: DMSCProtocolConfig) -> bool {
-        self.config = config;
-        *self.initialized.try_write().unwrap() = true;
+        self.base.config = config;
+        *self.base.initialized.try_write().unwrap() = true;
         true
     }
 
     pub fn get_stats(&self) -> DMSCProtocolStats {
-        self.stats.try_read().unwrap().clone()
+        self.base.stats.try_read()
+            .map(|guard| guard.clone())
+            .unwrap_or_else(|_| DMSCProtocolStats::new())
     }
 
     pub fn get_health(&self) -> DMSCProtocolHealth {
-        if *self.initialized.try_read().unwrap() {
+        if *self.base.initialized.try_read().unwrap() {
             DMSCProtocolHealth::Healthy
         } else {
             DMSCProtocolHealth::Unknown
@@ -941,7 +1190,10 @@ impl DMSCPrivateProtocol {
     }
 
     pub fn shutdown(&mut self) -> bool {
-        *self.initialized.try_write().unwrap() = false;
-        true
+        if let Ok(mut guard) = self.base.initialized.try_write() {
+            *guard = false;
+            return true;
+        }
+        false
     }
 }

@@ -139,6 +139,44 @@ impl DMSCDBRow {
     }
 }
 
+#[cfg(feature = "pyo3")]
+#[pyo3::prelude::pymethods]
+impl DMSCDBRow {
+    #[new]
+    fn py_new() -> Self {
+        Self::new()
+    }
+
+    fn get_length(&self) -> usize {
+        self.columns.len()
+    }
+
+    fn is_empty_row(&self) -> bool {
+        self.is_empty()
+    }
+
+    fn check_has_column(&self, name: &str) -> bool {
+        self.has_column(name)
+    }
+
+    fn get_string_value(&self, name: &str) -> Option<String> {
+        self.get_string(name)
+    }
+
+    fn get_column_names(&self) -> Vec<String> {
+        self.columns.clone()
+    }
+
+    fn to_dict(&self) -> HashMap<String, Option<String>> {
+        let mut map = HashMap::new();
+        for (i, col) in self.columns.iter().enumerate() {
+            let value = self.values[i].as_ref().map(|v| v.to_string());
+            map.insert(col.clone(), value);
+        }
+        map
+    }
+}
+
 #[allow(dead_code)]
 pub struct DMSCRowBuilder {
     row: DMSCDBRow,

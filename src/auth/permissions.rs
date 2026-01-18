@@ -92,6 +92,27 @@ pub struct DMSCPermission {
     pub action: String,
 }
 
+#[cfg(feature = "pyo3")]
+#[pyo3::prelude::pymethods]
+impl DMSCPermission {
+    #[new]
+    fn py_new(
+        id: Option<String>,
+        name: String,
+        description: String,
+        resource: String,
+        action: String,
+    ) -> Self {
+        Self {
+            id: id.unwrap_or_else(|| format!("{}:{}", resource, action)),
+            name,
+            description,
+            resource,
+            action,
+        }
+    }
+}
+
 /// Role definition for grouping permissions.
 ///
 /// Roles are collections of permissions that can be assigned to users.
@@ -109,6 +130,27 @@ pub struct DMSCRole {
     pub permissions: HashSet<String>,
     /// Whether this is a system role that cannot be deleted
     pub is_system: bool,
+}
+
+#[cfg(feature = "pyo3")]
+#[pyo3::prelude::pymethods]
+impl DMSCRole {
+    #[new]
+    fn py_new(
+        id: Option<String>,
+        name: String,
+        description: String,
+        permissions: Vec<String>,
+        is_system: bool,
+    ) -> Self {
+        Self {
+            id: id.unwrap_or_else(|| name.to_lowercase().replace(' ', "_")),
+            name,
+            description,
+            permissions: permissions.into_iter().collect(),
+            is_system,
+        }
+    }
 }
 
 impl DMSCRole {

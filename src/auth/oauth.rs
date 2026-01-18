@@ -105,6 +105,35 @@ pub struct DMSCOAuthProvider {
     pub enabled: bool,
 }
 
+#[cfg(feature = "pyo3")]
+#[pyo3::prelude::pymethods]
+impl DMSCOAuthProvider {
+    #[new]
+    fn py_new(
+        id: String,
+        name: String,
+        client_id: String,
+        client_secret: String,
+        auth_url: String,
+        token_url: String,
+        user_info_url: String,
+        scopes: Vec<String>,
+        enabled: bool,
+    ) -> Self {
+        Self {
+            id,
+            name,
+            client_id,
+            client_secret,
+            auth_url,
+            token_url,
+            user_info_url,
+            scopes,
+            enabled,
+        }
+    }
+}
+
 /// OAuth token response.
 ///
 /// This struct represents the token response from an OAuth provider,
@@ -124,6 +153,27 @@ pub struct DMSCOAuthToken {
     pub scope: Option<String>,
 }
 
+#[cfg(feature = "pyo3")]
+#[pyo3::prelude::pymethods]
+impl DMSCOAuthToken {
+    #[new]
+    fn py_new(
+        access_token: String,
+        token_type: String,
+        refresh_token: Option<String>,
+        scope: Option<String>,
+        expires_in: Option<i64>,
+    ) -> Self {
+        Self {
+            access_token,
+            token_type,
+            refresh_token,
+            scope,
+            expires_in,
+        }
+    }
+}
+
 /// OAuth user information.
 ///
 /// This struct represents the user information retrieved from an OAuth provider,
@@ -141,6 +191,27 @@ pub struct DMSCOAuthUserInfo {
     pub avatar_url: Option<String>,
     /// Name of the OAuth provider that authenticated the user
     pub provider: String,
+}
+
+#[cfg(feature = "pyo3")]
+#[pyo3::prelude::pymethods]
+impl DMSCOAuthUserInfo {
+    #[new]
+    fn py_new(
+        id: String,
+        email: String,
+        name: Option<String>,
+        avatar_url: Option<String>,
+        provider: String,
+    ) -> Self {
+        Self {
+            id,
+            email,
+            name,
+            avatar_url,
+            provider,
+        }
+    }
 }
 
 /// OAuth manager for handling multiple identity providers.

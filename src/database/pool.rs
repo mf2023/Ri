@@ -277,6 +277,44 @@ impl DMSCDatabasePool {
     }
 }
 
+#[cfg(feature = "pyo3")]
+#[pyo3::prelude::pymethods]
+impl DMSCDatabasePool {
+    #[new]
+    fn py_new(config: DMSCDatabaseConfig) -> Self {
+        let pool = Self {
+            config: config.clone(),
+            connections: Arc::new(DashMap::new()),
+            available: Arc::new(DashMap::new()),
+            connection_ids: Arc::new(AtomicU64::new(0)),
+            semaphore: Arc::new(Semaphore::new(config.max_connections as usize)),
+            max_idle_time: Duration::from_secs(config.idle_timeout_secs),
+            max_lifetime: Duration::from_secs(config.max_lifetime_secs),
+            idle_connections: Arc::new(AtomicU64::new(0)),
+            active_connections: Arc::new(AtomicU64::new(0)),
+            total_connections: Arc::new(AtomicU64::new(0)),
+            queries_executed: Arc::new(AtomicU64::new(0)),
+            errors: Arc::new(AtomicU64::new(0)),
+        };
+        pool
+    }
+
+    fn status(&self) -> String {
+        format!(
+            "Pool status - Active: {}, Idle: {}, Total: {}, Queries: {}, Errors: {}",
+            self.active_connections.load(Ordering::SeqCst),
+            self.idle_connections.load(Ordering::SeqCst),
+            self.total_connections.load(Ordering::SeqCst),
+            self.queries_executed.load(Ordering::SeqCst),
+            self.errors.load(Ordering::SeqCst)
+        )
+    }
+
+    fn get_config(&self) -> DMSCDatabaseConfig {
+        self.config.clone()
+    }
+}
+
 impl Clone for DMSCDatabasePool {
     fn clone(&self) -> Self {
         Self {

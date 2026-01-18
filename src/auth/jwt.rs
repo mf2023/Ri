@@ -1,14 +1,14 @@
-//! Copyright © 2025 Wenze Wei. All Rights Reserved.
-//! 
+//! Copyright © 2025-2026 Wenze Wei. All Rights Reserved.
+//!
 //! This file is part of DMSC.
 //! The DMSC project belongs to the Dunimd Team.
-//! 
+//!
 //! Licensed under the Apache License, Version 2.0 (the "License");
-//! you may not use this file except in compliance with the License.
+//! You may not use this file except in compliance with the License.
 //! You may obtain a copy of the License at
-//! 
+//!
 //!     http://www.apache.org/licenses/LICENSE-2.0
-//! 
+//!
 //! Unless required by applicable law or agreed to in writing, software
 //! distributed under the License is distributed on an "AS IS" BASIS,
 //! WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -32,9 +32,9 @@
 //!
 //! ## Key Components
 //!
-//! - **JWTClaims**: Standard JWT claims including subject, expiration, issued at,
+//! - **DMSCJWTClaims**: Standard JWT claims including subject, expiration, issued at,
 //!   roles, and permissions
-//! - **JWTValidationOptions**: Configuration options for token validation
+//! - **DMSCJWTValidationOptions**: Configuration options for token validation
 //! - **DMSCJWTManager**: Core manager for token generation and validation
 //!
 //! ## Token Structure
@@ -115,7 +115,7 @@ use crate::core::error::DMSCError;
 /// with standard JWT libraries across different programming languages.
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 #[derive(Debug, Serialize, Deserialize, Clone)]
-pub struct JWTClaims {
+pub struct DMSCJWTClaims {
     /// Subject claim - identifies the principal (user ID)
     #[serde(rename = "sub")]
     pub sub: String,
@@ -153,9 +153,9 @@ pub struct JWTClaims {
 /// ## Usage
 ///
 /// ```rust
-/// use dmsc::auth::jwt::JWTValidationOptions;
+/// use dmsc::auth::jwt::DMSCJWTValidationOptions;
 ///
-/// let options = JWTValidationOptions {
+/// let options = DMSCJWTValidationOptions {
 ///     validate_exp: true,
 ///     validate_iat: true,
 ///     required_roles: vec!["user".to_string()],
@@ -165,7 +165,7 @@ pub struct JWTClaims {
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 #[derive(Debug, Clone)]
 #[allow(dead_code)]
-pub struct JWTValidationOptions {
+pub struct DMSCJWTValidationOptions {
     /// Whether to validate the expiration time claim
     pub validate_exp: bool,
 
@@ -179,7 +179,26 @@ pub struct JWTValidationOptions {
     pub required_permissions: Vec<String>,
 }
 
-impl Default for JWTValidationOptions {
+#[cfg(feature = "pyo3")]
+#[pyo3::prelude::pymethods]
+impl DMSCJWTValidationOptions {
+    #[new]
+    fn py_new(
+        validate_exp: bool,
+        validate_iat: bool,
+        required_roles: Vec<String>,
+        required_permissions: Vec<String>,
+    ) -> Self {
+        Self {
+            validate_exp,
+            validate_iat,
+            required_roles,
+            required_permissions,
+        }
+    }
+}
+
+impl Default for DMSCJWTValidationOptions {
     fn default() -> Self {
         Self {
             validate_exp: true,
@@ -344,7 +363,7 @@ impl DMSCJWTManager {
             .map_err(|e| DMSCError::Other(format!("System time error: {}", e)))?
             .as_secs();
 
-        let claims = JWTClaims {
+        let claims = DMSCJWTClaims {
             sub: user_id.to_string(),
             exp: now + self.expiry_secs,
             iat: now,
@@ -373,7 +392,7 @@ impl DMSCJWTManager {
     ///
     /// # Returns
     ///
-    /// A Result containing the decoded JWTClaims if validation succeeds,
+    /// A Result containing the decoded DMSCJWTClaims if validation succeeds,
     /// or a DMSCError if validation fails (invalid signature, expired token, etc.)
     ///
     /// # Examples
@@ -394,9 +413,9 @@ impl DMSCJWTManager {
     ///     Err(e) => println!("Invalid token: {:?}", e),
     /// }
     /// ```
-    pub fn validate_token(&self, token: &str) -> Result<JWTClaims, DMSCError> {
+    pub fn validate_token(&self, token: &str) -> Result<DMSCJWTClaims, DMSCError> {
         let validation = Validation::default();
-        decode::<JWTClaims>(token, &self.decoding_key, &validation)
+        decode::<DMSCJWTClaims>(token, &self.decoding_key, &validation)
             .map_err(|e| DMSCError::Other(format!("JWT decoding failed: {}", e)))
             .map(|token_data| token_data.claims)
     }

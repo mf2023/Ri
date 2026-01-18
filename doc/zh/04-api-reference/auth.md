@@ -93,7 +93,7 @@ JWT令牌管理器，负责JWT的生成和验证。
 |:--------|:-------------|:--------|:--------|
 | `new(secret, expiry_secs)` | 创建JWT管理器 | `secret: String`, `expiry_secs: u64` | `Self` |
 | `generate_token(user_id, roles, permissions)` | 生成JWT令牌 | `user_id: &str`, `roles: Vec<String>`, `permissions: Vec<String>` | `DMSCResult<String>` |
-| `validate_token(token)` | 验证JWT令牌 | `token: &str` | `DMSCResult<JWTClaims>` |
+| `validate_token(token)` | 验证JWT令牌 | `token: &str` | `DMSCResult<DMSCJWTClaims>` |
 | `get_token_expiry()` | 获取令牌过期时间 | 无 | `u64` |
 | `get_secret()` | 获取密钥 | 无 | `&str` |
 

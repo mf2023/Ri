@@ -403,9 +403,6 @@ pub struct DMSCGateway {
     rate_limiter: Option<Arc<DMSCRateLimiter>>,
     /// Circuit breaker for preventing cascading failures
     circuit_breaker: Option<Arc<DMSCCircuitBreaker>>,
-    /// Load balancer for distributing requests across services
-    #[allow(dead_code)]
-    load_balancer: Option<Arc<DMSCLoadBalancer>>,
 }
 
 impl Default for DMSCGateway {
@@ -436,12 +433,6 @@ impl DMSCGateway {
         } else {
             None
         };
-        
-        let load_balancer = if config.enable_load_balancing {
-            Some(Arc::new(DMSCLoadBalancer::new(DMSCLoadBalancerStrategy::RoundRobin)))
-        } else {
-            None
-        };
 
         Self {
             config: RwLock::new(config),
@@ -449,7 +440,6 @@ impl DMSCGateway {
             middleware_chain,
             rate_limiter,
             circuit_breaker,
-            load_balancer,
         }
     }
 

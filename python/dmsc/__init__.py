@@ -6,7 +6,7 @@
 # The DMSC project belongs to the Dunimd Team.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
+# You may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
 #     http://www.apache.org/licenses/LICENSE-2.0
@@ -41,12 +41,15 @@ Key Components:
 Example Usage:
     from dmsc import DMSCAppBuilder, DMSCCacheModule, DMSCGateway
     
-    app = DMSCAppBuilder("my_service").build()
+    app = (DMSCAppBuilder()
+        .with_config("config.yaml")
+        .with_logging(DMSCLogConfig())
+        .build())
     cache = DMSCCacheModule()
     gateway = DMSCGateway()
 """
 
-__version__ = "0.1.4"
+__version__ = "0.1.5"
 __author__ = "Dunimd Team"
 __license__ = "Apache-2.0"
 
@@ -57,15 +60,31 @@ from .dmsc import (
     # Core classes - Fundamental framework components for application lifecycle,
     # configuration management, logging, hooks, and service context management
     # =============================================================================
-    DMSCAppBuilder, DMSCAppRuntime, DMSCConfig, DMSCConfigManager, DMSCError,
+    DMSCAppRuntime, DMSCConfig, DMSCConfigManager, DMSCError,
     DMSCFileSystem, DMSCHookBus, DMSCHookEvent, DMSCHookKind, DMSCLogConfig,
     DMSCLogLevel, DMSCLogger, DMSCModulePhase, DMSCServiceContext,
+    
+    # =============================================================================
+    # Lock utilities - Safe lock utilities for concurrent programming
+    # Note: DMSCLockResult is a type alias, not a pyclass
+    # =============================================================================
+    DMSCLockError,
     
     # =============================================================================
     # Python module support - Enables Python-based service modules to integrate
     # with the DMSC framework, supporting both synchronous and asynchronous service patterns
     # =============================================================================
-    DMSCPyModule, DMSCPyModuleAdapter, DMSCPyServiceModule, DMSCPyAsyncServiceModule,
+    DMSCPythonModule, DMSCPythonModuleAdapter, DMSCPythonServiceModule, DMSCPythonAsyncServiceModule,
+    
+    # =============================================================================
+    # Health check types - Health monitoring for services and modules
+    # =============================================================================
+    DMSCHealthStatus, DMSCHealthCheckResult, DMSCHealthCheckConfig, DMSCHealthReport,
+    
+    # =============================================================================
+    # Lifecycle management - Module lifecycle observation
+    # =============================================================================
+    DMSCLifecycleObserver,
     
     # =============================================================================
     # Cache classes - In-memory caching with configurable backends, eviction policies,
@@ -97,14 +116,16 @@ from .dmsc import (
     DMSCServiceMesh, DMSCServiceMeshConfig, DMSCServiceDiscovery,
     DMSCServiceInstance, DMSCServiceStatus,
     DMSCTrafficRoute, DMSCMatchCriteria, DMSCRouteAction, DMSCWeightedDestination,
+    DMSCTrafficManager,
     
     # =============================================================================
     # Auth classes - Authentication and authorization including JWT management,
     # session handling, OAuth integration, role-based and permission-based access control
     # =============================================================================
-    DMSCAuthModule, DMSCAuthConfig, DMSCJWTManager, DMSCSessionManager,
-    DMSCSecurityManager, DMSCOAuthManager, DMSCOAuthToken, DMSCOAuthUserInfo,
-    DMSCPermissionManager, DMSCPermission, DMSCRole, JWTRevocationList,
+    DMSCAuthModule, DMSCAuthConfig, DMSCJWTManager, DMSCJWTClaims, DMSCJWTValidationOptions,
+    DMSCSessionManager, DMSCSession, DMSCPermissionManager, DMSCPermission, DMSCRole,
+    DMSCOAuthManager, DMSCOAuthToken, DMSCOAuthUserInfo, DMSCOAuthProvider,
+    DMSCJWTRevocationList, DMSCRevokedTokenInfo,
     
     # =============================================================================
     # Device classes - IoT device management including device control, health monitoring,
@@ -112,7 +133,7 @@ from .dmsc import (
     # =============================================================================
     DMSCDeviceControlModule, DMSCDevice, DMSCDeviceType, DMSCDeviceStatus,
     DMSCDeviceCapabilities, DMSCDeviceHealthMetrics, DMSCDeviceController,
-    DMSCDeviceConfig, DMSCDeviceControlConfig, NetworkDeviceInfo,
+    DMSCDeviceConfig, DMSCDeviceControlConfig, DMSCDeviceSchedulingConfig, NetworkDeviceInfo,
     DMSCDiscoveryResult, DMSCResourceRequest,
     DMSCResourceAllocation, DMSCRequestSlaClass, DMSCResourceWeights,
     DMSCAffinityRules,
@@ -158,7 +179,7 @@ from .dmsc import (
 # specialized functionality for specific middleware concerns
 # =============================================================================
 from .dmsc import (
-    log, config, device, cache, fs, hooks, observability,
+    device, cache, fs, hooks, observability,
     queue, gateway, service_mesh, auth, protocol, database
 )
 
@@ -169,12 +190,21 @@ from .dmsc import (
 # =============================================================================
 __all__ = [
     # Core classes - Application framework, configuration, logging, and hooks
-    'DMSCAppBuilder', 'DMSCAppRuntime', 'DMSCConfig', 'DMSCConfigManager', 'DMSCError',
+    'DMSCAppRuntime', 'DMSCConfig', 'DMSCConfigManager', 'DMSCError',
     'DMSCFileSystem', 'DMSCHookBus', 'DMSCHookEvent', 'DMSCHookKind', 'DMSCLogConfig',
     'DMSCLogLevel', 'DMSCLogger', 'DMSCModulePhase', 'DMSCServiceContext',
     
+    # Lock utilities - Safe lock utilities for concurrent programming
+    'DMSCLockError',
+    
     # Python module support - Python service module integration
-    'DMSCPyModule', 'DMSCPyModuleAdapter', 'DMSCPyServiceModule', 'DMSCPyAsyncServiceModule',
+    'DMSCPythonModule', 'DMSCPythonModuleAdapter', 'DMSCPythonServiceModule', 'DMSCPythonAsyncServiceModule',
+    
+    # Health check types - Health monitoring for services and modules
+    'DMSCHealthStatus', 'DMSCHealthCheckResult', 'DMSCHealthCheckConfig', 'DMSCHealthReport',
+    
+    # Lifecycle management - Module lifecycle observation
+    'DMSCLifecycleObserver',
     
     # Cache classes - Caching infrastructure and management
     'DMSCCacheModule', 'DMSCCacheManager', 'DMSCCacheConfig', 'DMSCCacheBackendType',
@@ -194,16 +224,18 @@ __all__ = [
     'DMSCServiceMesh', 'DMSCServiceMeshConfig', 'DMSCServiceDiscovery',
     'DMSCServiceInstance', 'DMSCServiceStatus',
     'DMSCTrafficRoute', 'DMSCMatchCriteria', 'DMSCRouteAction', 'DMSCWeightedDestination',
+    'DMSCTrafficManager',
     
     # Auth classes - Authentication, authorization, and session management
-    'DMSCAuthModule', 'DMSCAuthConfig', 'DMSCJWTManager', 'DMSCSessionManager', 
-    'DMSCSecurityManager', 'DMSCOAuthManager', 'DMSCOAuthToken', 'DMSCOAuthUserInfo',
-    'DMSCPermissionManager', 'DMSCPermission', 'DMSCRole', 'JWTRevocationList',
+    'DMSCAuthModule', 'DMSCAuthConfig', 'DMSCJWTManager', 'DMSCJWTClaims', 'DMSCJWTValidationOptions',
+    'DMSCSessionManager', 'DMSCSession', 'DMSCPermissionManager', 'DMSCPermission', 'DMSCRole',
+    'DMSCOAuthManager', 'DMSCOAuthToken', 'DMSCOAuthUserInfo', 'DMSCOAuthProvider',
+    'DMSCJWTRevocationList', 'DMSCRevokedTokenInfo',
     
     # Device classes - IoT device control and resource management
     'DMSCDeviceControlModule', 'DMSCDevice', 'DMSCDeviceType', 'DMSCDeviceStatus',
     'DMSCDeviceCapabilities', 'DMSCDeviceHealthMetrics', 'DMSCDeviceController',
-    'DMSCDeviceConfig', 'DMSCDeviceControlConfig', 'NetworkDeviceInfo',
+    'DMSCDeviceConfig', 'DMSCDeviceControlConfig', 'DMSCDeviceSchedulingConfig', 'NetworkDeviceInfo',
     'DMSCDiscoveryResult', 'DMSCResourceRequest',
     'DMSCResourceAllocation', 'DMSCRequestSlaClass', 'DMSCResourceWeights',
     'DMSCAffinityRules',
@@ -232,6 +264,111 @@ __all__ = [
     'DMSCDatabaseConfig', 'DMSCDatabasePool', 'DMSCDBRow', 'DMSCDBResult', 'DatabaseType',
     
     # Submodules - Functional submodule references
-    'log', 'config', 'device', 'cache', 'fs', 'hooks', 'observability',
+    'device', 'cache', 'fs', 'hooks', 'observability',
     'queue', 'gateway', 'service_mesh', 'auth', 'protocol', 'database'
 ]
+
+
+class DMSCAppBuilder:
+    """
+    Fluent API builder for DMSC applications.
+    
+    This class provides a Python-friendly chainable interface for building
+    DMSC applications. All configuration methods return `self` to enable
+    fluent-style method chaining.
+    
+    Example:
+        app = (DMSCAppBuilder()
+            .with_config("config.yaml")
+            .with_logging(DMSCLogConfig())
+            .build())
+    """
+    
+    def __init__(self):
+        from .dmsc import DMSCAppBuilder as RustBuilder
+        self._builder = RustBuilder()
+    
+    def with_config(self, config_path: str) -> 'DMSCAppBuilder':
+        """Add a configuration file path."""
+        self._builder.py_with_config(config_path)
+        return self
+    
+    def with_logging(self, log_config) -> 'DMSCAppBuilder':
+        """Add logging configuration."""
+        self._builder.py_with_logging(log_config)
+        return self
+    
+    def with_observability(self, observability_config) -> 'DMSCAppBuilder':
+        """Add observability configuration."""
+        self._builder.py_with_observability(observability_config)
+        return self
+    
+    def with_module(self, module) -> 'DMSCAppBuilder':
+        """Add a synchronous Python service module."""
+        self._builder.py_with_module(module)
+        return self
+    
+    def with_python_module(self, module) -> 'DMSCAppBuilder':
+        """Add a Python module adapter."""
+        self._builder.py_with_python_module(module)
+        return self
+    
+    def with_async_module(self, module) -> 'DMSCAppBuilder':
+        """Add an asynchronous Python service module."""
+        self._builder.py_with_async_module(module)
+        return self
+    
+    def with_dms_module(self, module) -> 'DMSCAppBuilder':
+        """Add a DMSC module adapter."""
+        self._builder.py_with_dms_module(module)
+        return self
+    
+    def with_modules(self, modules: list) -> 'DMSCAppBuilder':
+        """Add multiple synchronous Python service modules."""
+        self._builder.py_with_modules(modules)
+        return self
+    
+    def with_async_modules(self, modules: list) -> 'DMSCAppBuilder':
+        """Add multiple asynchronous Python service modules."""
+        self._builder.py_with_async_modules(modules)
+        return self
+    
+    def with_dms_modules(self, modules: list) -> 'DMSCAppBuilder':
+        """Add multiple DMSC module adapters."""
+        self._builder.py_with_dms_modules(modules)
+        return self
+    
+    def build(self):
+        """Build and return the DMSC application runtime."""
+        return DMSCAppRuntime(self._builder.py_build())
+    
+    def run(self, callback=None):
+        """Run the application with an optional callback."""
+        runtime = self.build()
+        runtime.run(callback)
+
+
+class DMSCAppRuntime:
+    """
+    DMSC Application Runtime.
+    
+    This class provides the runtime for executing a DMSC application.
+    It wraps the Rust implementation and provides a Python-friendly interface.
+    """
+    
+    def __init__(self, runtime):
+        self._runtime = runtime
+    
+    def run(self, callback=None):
+        """Run the application with an optional callback."""
+        if callback:
+            self._runtime.py_run(callback)
+        else:
+            self._runtime.py_run(lambda ctx: None)
+    
+    def get_context(self):
+        """Get the service context."""
+        return self._runtime.get_context()
+
+
+__all__.extend(['DMSCAppBuilder', 'DMSCAppRuntime'])

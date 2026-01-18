@@ -46,7 +46,7 @@ use std::time::{Duration, SystemTime};
 /// Health status enumeration representing the state of a component or service.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
-pub enum HealthStatus {
+pub enum DMSCHealthStatus {
     /// Component is functioning normally
     Healthy,
     /// Component is experiencing issues but still operational
@@ -57,22 +57,22 @@ pub enum HealthStatus {
     Unknown,
 }
 
-impl HealthStatus {
+impl DMSCHealthStatus {
     /// Returns true if the status is considered healthy (Healthy or Degraded).
     pub fn is_healthy(&self) -> bool {
-        matches!(self, HealthStatus::Healthy | HealthStatus::Degraded)
+        matches!(self, DMSCHealthStatus::Healthy | DMSCHealthStatus::Degraded)
     }
 
     /// Returns true if the status requires immediate attention.
     pub fn requires_attention(&self) -> bool {
-        matches!(self, HealthStatus::Unhealthy)
+        matches!(self, DMSCHealthStatus::Unhealthy)
     }
 
     /// Merges multiple health statuses into a single status.
     /// The most severe status takes precedence: Unhealthy > Degraded > Unknown > Healthy
-    pub fn merge(statuses: &[HealthStatus]) -> HealthStatus {
+    pub fn merge(statuses: &[DMSCHealthStatus]) -> DMSCHealthStatus {
         if statuses.is_empty() {
-            return HealthStatus::Unknown;
+            return DMSCHealthStatus::Unknown;
         }
 
         let mut has_unhealthy = false;
@@ -81,44 +81,61 @@ impl HealthStatus {
 
         for status in statuses {
             match status {
-                HealthStatus::Unhealthy => has_unhealthy = true,
-                HealthStatus::Degraded => has_degraded = true,
-                HealthStatus::Unknown => has_unknown = true,
-                HealthStatus::Healthy => {}
+                DMSCHealthStatus::Unhealthy => has_unhealthy = true,
+                DMSCHealthStatus::Degraded => has_degraded = true,
+                DMSCHealthStatus::Unknown => has_unknown = true,
+                DMSCHealthStatus::Healthy => {}
             }
         }
 
         if has_unhealthy {
-            HealthStatus::Unhealthy
+            DMSCHealthStatus::Unhealthy
         } else if has_degraded {
-            HealthStatus::Degraded
+            DMSCHealthStatus::Degraded
         } else if has_unknown {
-            HealthStatus::Unknown
+            DMSCHealthStatus::Unknown
         } else {
-            HealthStatus::Healthy
+            DMSCHealthStatus::Healthy
         }
     }
 }
 
-impl std::fmt::Display for HealthStatus {
+impl std::fmt::Display for DMSCHealthStatus {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            HealthStatus::Healthy => write!(f, "healthy"),
-            HealthStatus::Degraded => write!(f, "degraded"),
-            HealthStatus::Unhealthy => write!(f, "unhealthy"),
-            HealthStatus::Unknown => write!(f, "unknown"),
+            DMSCHealthStatus::Healthy => write!(f, "healthy"),
+            DMSCHealthStatus::Degraded => write!(f, "degraded"),
+            DMSCHealthStatus::Unhealthy => write!(f, "unhealthy"),
+            DMSCHealthStatus::Unknown => write!(f, "unknown"),
         }
+    }
+}
+
+#[cfg(feature = "pyo3")]
+#[pyo3::prelude::pymethods]
+impl DMSCHealthStatus {
+    fn __str__(&self) -> String {
+        self.to_string()
+    }
+
+    fn __repr__(&self) -> String {
+        format!("DMSCHealthStatus::{}", self)
+    }
+
+    #[staticmethod]
+    fn merge_statuses(statuses: Vec<DMSCHealthStatus>) -> Self {
+        DMSCHealthStatus::merge(&statuses)
     }
 }
 
 /// Result of a health check execution.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
-pub struct HealthCheckResult {
+pub struct DMSCHealthCheckResult {
     /// Name of the health check
     pub name: String,
     /// Health status
-    pub status: HealthStatus,
+    pub status: DMSCHealthStatus,
     /// Optional message providing additional context
     pub message: Option<String>,
     /// Timestamp when the check was performed
@@ -127,12 +144,12 @@ pub struct HealthCheckResult {
     pub duration: Duration,
 }
 
-impl HealthCheckResult {
+impl DMSCHealthCheckResult {
     /// Creates a new successful health check result.
     pub fn healthy(name: String, message: Option<String>) -> Self {
         Self {
             name,
-            status: HealthStatus::Healthy,
+            status: DMSCHealthStatus::Healthy,
             message,
             timestamp: SystemTime::now(),
             duration: Duration::ZERO,
@@ -143,7 +160,7 @@ impl HealthCheckResult {
     pub fn degraded(name: String, message: Option<String>) -> Self {
         Self {
             name,
-            status: HealthStatus::Degraded,
+            status: DMSCHealthStatus::Degraded,
             message,
             timestamp: SystemTime::now(),
             duration: Duration::ZERO,
@@ -154,7 +171,7 @@ impl HealthCheckResult {
     pub fn unhealthy(name: String, message: Option<String>) -> Self {
         Self {
             name,
-            status: HealthStatus::Unhealthy,
+            status: DMSCHealthStatus::Unhealthy,
             message,
             timestamp: SystemTime::now(),
             duration: Duration::ZERO,
@@ -165,7 +182,7 @@ impl HealthCheckResult {
     pub fn unknown(name: String, message: Option<String>) -> Self {
         Self {
             name,
-            status: HealthStatus::Unknown,
+            status: DMSCHealthStatus::Unknown,
             message,
             timestamp: SystemTime::now(),
             duration: Duration::ZERO,
@@ -173,10 +190,68 @@ impl HealthCheckResult {
     }
 }
 
+#[cfg(feature = "pyo3")]
+#[pyo3::prelude::pymethods]
+impl DMSCHealthCheckResult {
+    #[new]
+    fn new_py(name: String, status: DMSCHealthStatus, message: Option<String>) -> Self {
+        Self {
+            name,
+            status,
+            message,
+            timestamp: SystemTime::now(),
+            duration: Duration::ZERO,
+        }
+    }
+
+    #[staticmethod]
+    fn create_healthy(name: String, message: Option<String>) -> Self {
+        Self::healthy(name, message)
+    }
+
+    #[staticmethod]
+    fn create_degraded(name: String, message: Option<String>) -> Self {
+        Self::degraded(name, message)
+    }
+
+    #[staticmethod]
+    fn create_unhealthy(name: String, message: Option<String>) -> Self {
+        Self::unhealthy(name, message)
+    }
+
+    #[staticmethod]
+    fn create_unknown(name: String, message: Option<String>) -> Self {
+        Self::unknown(name, message)
+    }
+
+    #[getter]
+    fn name(&self) -> String {
+        self.name.clone()
+    }
+
+    #[getter]
+    fn status(&self) -> DMSCHealthStatus {
+        self.status
+    }
+
+    #[getter]
+    fn message(&self) -> Option<String> {
+        self.message.clone()
+    }
+
+    fn __str__(&self) -> String {
+        format!("{}: {}", self.name, self.status)
+    }
+
+    fn __repr__(&self) -> String {
+        format!("DMSCHealthCheckResult {{ name: {:?}, status: {:?} }}", self.name, self.status)
+    }
+}
+
 /// Configuration for health checks.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
-pub struct HealthCheckConfig {
+pub struct DMSCHealthCheckConfig {
     /// Interval between health checks
     pub check_interval: Duration,
     /// Timeout for individual health checks
@@ -189,7 +264,7 @@ pub struct HealthCheckConfig {
     pub enabled: bool,
 }
 
-impl Default for HealthCheckConfig {
+impl Default for DMSCHealthCheckConfig {
     fn default() -> Self {
         Self {
             check_interval: Duration::from_secs(30),
@@ -201,27 +276,87 @@ impl Default for HealthCheckConfig {
     }
 }
 
+#[cfg(feature = "pyo3")]
+#[pyo3::prelude::pymethods]
+impl DMSCHealthCheckConfig {
+    #[new]
+    fn new_py(check_interval: u64, timeout: u64, failure_threshold: u32, success_threshold: u32, enabled: bool) -> Self {
+        Self {
+            check_interval: Duration::from_secs(check_interval),
+            timeout: Duration::from_secs(timeout),
+            failure_threshold,
+            success_threshold,
+            enabled,
+        }
+    }
+
+    #[staticmethod]
+    fn default_config() -> Self {
+        Self::default()
+    }
+
+    #[getter]
+    fn check_interval(&self) -> u64 {
+        self.check_interval.as_secs()
+    }
+
+    #[setter]
+    fn set_check_interval(&mut self, value: u64) {
+        self.check_interval = Duration::from_secs(value);
+    }
+
+    #[getter]
+    fn timeout(&self) -> u64 {
+        self.timeout.as_secs()
+    }
+
+    #[setter]
+    fn set_timeout(&mut self, value: u64) {
+        self.timeout = Duration::from_secs(value);
+    }
+
+    #[getter]
+    fn failure_threshold(&self) -> u32 {
+        self.failure_threshold
+    }
+
+    #[getter]
+    fn success_threshold(&self) -> u32 {
+        self.success_threshold
+    }
+
+    #[getter]
+    fn enabled(&self) -> bool {
+        self.enabled
+    }
+
+    fn __repr__(&self) -> String {
+        format!("DMSCHealthCheckConfig {{ check_interval: {}, timeout: {}, failure_threshold: {}, success_threshold: {}, enabled: {} }}",
+            self.check_interval.as_secs(), self.timeout.as_secs(), self.failure_threshold, self.success_threshold, self.enabled)
+    }
+}
+
 /// Trait for implementing custom health checks.
 #[async_trait::async_trait]
 pub trait HealthCheck: Send + Sync {
     /// Performs the health check and returns the result.
-    async fn check(&self) -> DMSCResult<HealthCheckResult>;
+    async fn check(&self) -> DMSCResult<DMSCHealthCheckResult>;
 
     /// Returns the name of this health check.
     fn name(&self) -> &str;
 
     /// Returns the configuration for this health check.
-    fn config(&self) -> &HealthCheckConfig;
+    fn config(&self) -> &DMSCHealthCheckConfig;
 }
 
 /// Comprehensive health report containing status of all components.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
-pub struct HealthReport {
+pub struct DMSCHealthReport {
     /// Overall system health status
-    pub overall_status: HealthStatus,
+    pub overall_status: DMSCHealthStatus,
     /// Individual component health results
-    pub components: HashMap<String, HealthCheckResult>,
+    pub components: HashMap<String, DMSCHealthCheckResult>,
     /// Timestamp when the report was generated
     pub timestamp: SystemTime,
     /// Total number of components checked
@@ -236,11 +371,11 @@ pub struct HealthReport {
     pub unknown_count: usize,
 }
 
-impl HealthReport {
+impl DMSCHealthReport {
     /// Creates a new empty health report.
     pub fn new() -> Self {
         Self {
-            overall_status: HealthStatus::Unknown,
+            overall_status: DMSCHealthStatus::Unknown,
             components: HashMap::new(),
             timestamp: SystemTime::now(),
             total_components: 0,
@@ -252,12 +387,12 @@ impl HealthReport {
     }
 
     /// Adds a health check result to the report.
-    pub fn add_result(&mut self, result: HealthCheckResult) {
+    pub fn add_result(&mut self, result: DMSCHealthCheckResult) {
         match result.status {
-            HealthStatus::Healthy => self.healthy_count += 1,
-            HealthStatus::Degraded => self.degraded_count += 1,
-            HealthStatus::Unhealthy => self.unhealthy_count += 1,
-            HealthStatus::Unknown => self.unknown_count += 1,
+            DMSCHealthStatus::Healthy => self.healthy_count += 1,
+            DMSCHealthStatus::Degraded => self.degraded_count += 1,
+            DMSCHealthStatus::Unhealthy => self.unhealthy_count += 1,
+            DMSCHealthStatus::Unknown => self.unknown_count += 1,
         }
         self.total_components += 1;
         self.components.insert(result.name.clone(), result);
@@ -266,37 +401,100 @@ impl HealthReport {
 
     /// Updates the overall health status based on component statuses.
     fn update_overall_status(&mut self) {
-        let statuses: Vec<HealthStatus> = self.components.values().map(|r| r.status).collect();
-        self.overall_status = HealthStatus::merge(&statuses);
+        let statuses: Vec<DMSCHealthStatus> = self.components.values().map(|r| r.status).collect();
+        self.overall_status = DMSCHealthStatus::merge(&statuses);
     }
 }
 
-impl Default for HealthReport {
+impl Default for DMSCHealthReport {
     fn default() -> Self {
         Self::new()
     }
 }
 
+#[cfg(feature = "pyo3")]
+#[pyo3::prelude::pymethods]
+impl DMSCHealthReport {
+    #[new]
+    fn new_py() -> Self {
+        Self::new()
+    }
+
+    #[staticmethod]
+    fn create() -> Self {
+        Self::new()
+    }
+
+    #[staticmethod]
+    fn from_results(results: Vec<DMSCHealthCheckResult>) -> Self {
+        let mut report = Self::new();
+        for result in results {
+            report.add_result(result);
+        }
+        report
+    }
+
+    #[getter]
+    fn overall_status(&self) -> DMSCHealthStatus {
+        self.overall_status
+    }
+
+    #[getter]
+    fn total_components(&self) -> usize {
+        self.total_components
+    }
+
+    #[getter]
+    fn healthy_count(&self) -> usize {
+        self.healthy_count
+    }
+
+    #[getter]
+    fn degraded_count(&self) -> usize {
+        self.degraded_count
+    }
+
+    #[getter]
+    fn unhealthy_count(&self) -> usize {
+        self.unhealthy_count
+    }
+
+    #[getter]
+    fn unknown_count(&self) -> usize {
+        self.unknown_count
+    }
+
+    fn __str__(&self) -> String {
+        format!("DMSCHealthReport: {} ({}/{} healthy, {} degraded, {} unhealthy, {} unknown)",
+            self.overall_status, self.healthy_count, self.total_components,
+            self.degraded_count, self.unhealthy_count, self.unknown_count)
+    }
+
+    fn __repr__(&self) -> String {
+        format!("DMSCHealthReport {{ overall_status: {:?}, total_components: {} }}", self.overall_status, self.total_components)
+    }
+}
+
 /// Health checker service that manages and executes health checks.
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
-pub struct HealthChecker {
+pub struct DMSCHealthChecker {
     /// Registered health checks
     checks: Vec<Box<dyn HealthCheck>>,
     /// Global configuration
-    _config: HealthCheckConfig,
+    _config: DMSCHealthCheckConfig,
 }
 
-impl HealthChecker {
+impl DMSCHealthChecker {
     /// Creates a new health checker with default configuration.
     pub fn new() -> Self {
         Self {
             checks: Vec::new(),
-            _config: HealthCheckConfig::default(),
+            _config: DMSCHealthCheckConfig::default(),
         }
     }
 
     /// Creates a new health checker with custom configuration.
-    pub fn with_config(config: HealthCheckConfig) -> Self {
+    pub fn with_config(config: DMSCHealthCheckConfig) -> Self {
         Self {
             checks: Vec::new(),
             _config: config,
@@ -309,8 +507,8 @@ impl HealthChecker {
     }
 
     /// Performs all health checks and returns a comprehensive report.
-    pub async fn check_all(&self) -> HealthReport {
-        let mut report = HealthReport::new();
+    pub async fn check_all(&self) -> DMSCHealthReport {
+        let mut report = DMSCHealthReport::new();
 
         for check in &self.checks {
             if !check.config().enabled {
@@ -320,11 +518,11 @@ impl HealthChecker {
             let start_time = SystemTime::now();
             let result = match tokio::time::timeout(check.config().timeout, check.check()).await {
                 Ok(Ok(result)) => result,
-                Ok(Err(err)) => HealthCheckResult::unknown(
+                Ok(Err(err)) => DMSCHealthCheckResult::unknown(
                     check.name().to_string(),
                     Some(format!("Check failed: {err}")),
                 ),
-                Err(_) => HealthCheckResult::unknown(
+                Err(_) => DMSCHealthCheckResult::unknown(
                     check.name().to_string(),
                     Some("Check timed out".to_string()),
                 ),
@@ -348,7 +546,7 @@ impl HealthChecker {
     }
 }
 
-impl Default for HealthChecker {
+impl Default for DMSCHealthChecker {
     fn default() -> Self {
         Self::new()
     }

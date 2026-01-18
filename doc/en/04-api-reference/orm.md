@@ -2,9 +2,9 @@
 
 # ORM API Reference
 
-**Version: 0.1.4**
+**Version: 0.1.5**
 
-**Last modified date: 2026-01-16**
+**Last modified date: 2026-01-18**
 
 The ORM module provides a type-safe object-relational mapping layer with query builders, criteria-based filtering, pagination support, and Python bindings.
 
@@ -243,6 +243,36 @@ Generic repository interface for data access operations.
 | `count_by_criteria(criteria)` | Count by criteria | `criteria: &DMSCCriteria` | `DMSCResult<u64>` |
 | `exists_by_id(id)` | Check existence by ID | `id: impl ToSql` | `DMSCResult<bool>` |
 | `exists_by_criteria(criteria)` | Check existence by criteria | `criteria: &DMSCCriteria` | `DMSCResult<bool>` |
+| `batch_insert(entities, batch_size)` | Batch insert entities | `entities: &[Entity]`, `batch_size: usize` | `DMSCResult<Vec<Entity>>` |
+| `upsert(entity, conflict_columns)` | Insert or update entity | `entity: &Entity`, `conflict_columns: &[&str]` | `DMSCResult<Entity>` |
+
+#### Batch Insert Example
+
+```rust
+use dmsc::prelude::*;
+
+let users = vec![
+    User { name: "Alice".to_string(), email: "alice@example.com".to_string() },
+    User { name: "Bob".to_string(), email: "bob@example.com".to_string() },
+    User { name: "Charlie".to_string(), email: "charlie@example.com".to_string() },
+];
+
+// Batch insert with custom batch size
+let inserted = repository.batch_insert(&users, 100)?;
+println!("Inserted {} users", inserted.len());
+```
+
+#### Upsert Example
+
+```rust
+use dmsc::prelude::*;
+
+let user = User { id: Some(1), name: "Alice Updated".to_string(), email: "alice.new@example.com".to_string() };
+
+// Upsert on conflict with email column
+let upserted = repository.upsert(&user, &["email"])?;
+println!("Upserted user with ID: {}", upserted.id);
+```
 
 #### Usage Example
 

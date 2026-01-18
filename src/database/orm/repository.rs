@@ -44,6 +44,9 @@ pub trait DMSCORMRepository<E: for<'de> serde::Deserialize<'de> + serde::Seriali
     
     async fn exists(&self, db: &dyn DMSCDatabase, id: &str) -> DMSCResult<bool>;
     async fn exists_by(&self, db: &dyn DMSCDatabase, criteria: &Criteria) -> DMSCResult<bool>;
+    
+    async fn batch_insert(&self, db: &dyn DMSCDatabase, entities: &[E], batch_size: usize) -> DMSCResult<Vec<E>>;
+    async fn upsert(&self, db: &dyn DMSCDatabase, entity: &E, conflict_columns: &[&str]) -> DMSCResult<E>;
 }
 
 #[async_trait]
@@ -141,21 +144,25 @@ impl<E: for<'de> serde::Deserialize<'de> + serde::Serialize + Clone + Send + Syn
     }
 
     async fn find_paginated(&self, db: &dyn DMSCDatabase, pagination: Pagination, criteria: Vec<Criteria>) -> DMSCResult<(Vec<E>, u64)> {
-        let mut count_query = QueryBuilder::new(self.table_name);
-        for c in &criteria {
-            count_query.and_where(c.clone());
-        }
-        let (count_sql, count_params) = count_query.build();
-        let count_sql = count_sql.replace("*", "COUNT(*) as total");
+        let count_sql = format!("SELECT COUNT(*) as total FROM {}", self.table_name);
         
-        let total: u64 = if count_params.is_empty() {
-            db.query_one(&count_sql).await?
-                .and_then(|row| row.get::<i64>("total").map(|v| v as u64))
-                .unwrap_or(0)
+        let total: u64 = if criteria.is_empty() {
+            if let Some(row) = db.query_one(&count_sql).await? {
+                row.get::<i64>("total").map(|v| v as u64).unwrap_or(0)
+            } else {
+                0
+            }
         } else {
-            db.query_one(&count_sql).await?
-                .and_then(|row| row.get::<i64>("total").map(|v| v as u64))
-                .unwrap_or(0)
+            let mut count_query = QueryBuilder::new(self.table_name);
+            for c in &criteria {
+                count_query.and_where(c.clone());
+            }
+            let (sql, params) = count_query.build();
+            let count_sql = format!("SELECT COUNT(*) as total FROM ({}) as subquery", sql);
+            
+            let result = db.query_with_params(&count_sql, &params).await?;
+            let row = result.first().ok_or_else(|| DMSCError::Other("Query returned no rows".to_string()))?;
+            row.get_i64("total").map(|v| v as u64).unwrap_or(0)
         };
         
         let mut data_query = QueryBuilder::new(self.table_name);
@@ -277,15 +284,98 @@ impl<E: for<'de> serde::Deserialize<'de> + serde::Serialize + Clone + Send + Syn
     }
 
     async fn delete_many(&self, db: &dyn DMSCDatabase, criteria: Vec<Criteria>) -> DMSCResult<u64> {
+        if criteria.is_empty() {
+            return Err(DMSCError::Other("Criteria required for delete_many operation".to_string()));
+        }
+        
         let mut query = QueryBuilder::new(self.table_name);
         for c in criteria {
             query.and_where(c);
         }
         
-        let (sql, _) = query.build();
-        let delete_sql = sql.replace("SELECT *", "DELETE");
+        let (sql, params) = query.build();
+        let delete_sql = format!("DELETE FROM {}", sql.split("FROM").nth(1).unwrap_or(&sql));
         
-        db.execute(&delete_sql).await.map_err(|e| e.into())
+        db.execute_with_params(&delete_sql, &params).await.map_err(|e| e.into())
+    }
+    
+    async fn batch_insert(&self, db: &dyn DMSCDatabase, entities: &[E], batch_size: usize) -> DMSCResult<Vec<E>> {
+        let mut inserted = Vec::with_capacity(entities.len());
+        
+        for chunk in entities.chunks(batch_size) {
+            let json_values: Vec<serde_json::Value> = chunk.iter()
+                .map(|e| serde_json::to_value(e))
+                .collect::<Result<_, _>>()?;
+            
+            let mut all_columns: std::collections::HashSet<&str> = std::collections::HashSet::new();
+            for json_value in &json_values {
+                if let serde_json::Value::Object(map) = json_value {
+                    for key in map.keys() {
+                        all_columns.insert(key);
+                    }
+                }
+            }
+            
+            let columns: Vec<&str> = all_columns.iter().copied().collect();
+            let placeholders: Vec<String> = (0..columns.len()).map(|_| "?".to_string()).collect();
+            
+            let sql = format!(
+                "INSERT INTO {} ({}) VALUES ({})",
+                self.table_name,
+                columns.join(", "),
+                placeholders.join(", ")
+            );
+            
+            for json_value in chunk {
+                let json_val = serde_json::to_value(json_value)?;
+                let values: HashMap<String, serde_json::Value> = serde_json::from_value(json_val)?;
+                
+                let params: Vec<serde_json::Value> = columns.iter()
+                    .map(|&col| values.get(col).cloned().unwrap_or(serde_json::Value::Null))
+                    .collect();
+                
+                db.execute_with_params(&sql, &params).await?;
+                inserted.push(json_value.clone());
+            }
+        }
+        
+        Ok(inserted)
+    }
+    
+    async fn upsert(&self, db: &dyn DMSCDatabase, entity: &E, conflict_columns: &[&str]) -> DMSCResult<E> {
+        let json_value = serde_json::to_value(entity)?;
+        let values: HashMap<String, serde_json::Value> = serde_json::from_value(json_value)?;
+        
+        let columns: Vec<&str> = values.keys().map(|s| s.as_str()).collect();
+        let placeholders: Vec<String> = (0..columns.len()).map(|_| "?".to_string()).collect();
+        
+        let update_parts: Vec<String> = columns.iter()
+            .filter(|&&col| !conflict_columns.contains(&col))
+            .map(|col| format!("{} = EXCLUDED.{}", col, col))
+            .collect();
+        
+        let conflict_cols = conflict_columns.join(", ");
+        let update_set = if update_parts.is_empty() {
+            String::new()
+        } else {
+            format!("ON CONFLICT ({}) DO UPDATE SET {}", conflict_cols, update_parts.join(", "))
+        };
+        
+        let sql = format!(
+            "INSERT INTO {} ({}) VALUES ({}) {}",
+            self.table_name,
+            columns.join(", "),
+            placeholders.join(", "),
+            update_set
+        );
+        
+        let params: Vec<serde_json::Value> = columns.iter()
+            .map(|&col| values.get(col).cloned().unwrap_or(serde_json::Value::Null))
+            .collect();
+        
+        db.execute_with_params(&sql, &params).await?;
+        
+        Ok(entity.clone())
     }
 
     async fn exists(&self, db: &dyn DMSCDatabase, id: &str) -> DMSCResult<bool> {

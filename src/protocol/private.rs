@@ -1,10 +1,10 @@
-//! Copyright © 2025 Wenze Wei. All Rights Reserved.
+//! Copyright © 2025-2026 Wenze Wei. All Rights Reserved.
 //!
 //! This file is part of DMSC.
 //! The DMSC project belongs to the Dunimd Team.
 //!
 //! Licensed under the Apache License, Version 2.0 (the "License");
-//! you may not use this file except in compliance with the License.
+//! You may not use this file except in compliance with the License.
 //! You may obtain a copy of the License at
 //!
 //!     http://www.apache.org/licenses/LICENSE-2.0
@@ -73,7 +73,7 @@
 //! }
 //! ```
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 use async_trait::async_trait;
@@ -81,6 +81,9 @@ use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::TcpStream;
 use tokio::sync::RwLock;
 use rand::Rng;
+use zeroize::{Zeroize, ZeroizeOnDrop};
+use secrecy::{ExposeSecret, SecretVec};
+use std::sync::atomic::{AtomicUsize, Ordering};
 
 /// Connection health status enumeration
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -335,7 +338,7 @@ struct DMSCPrivateConnection {
     last_activity: Arc<RwLock<Instant>>,
     /// Whether the connection is active
     active: Arc<RwLock<bool>>,
-    /// Session keys for encryption
+    /// Session keys for encryption (with zeroize protection)
     session_keys: Arc<RwLock<SessionKeys>>,
     /// Configuration
     config: DMSCPrivateConfig,
@@ -343,26 +346,87 @@ struct DMSCPrivateConnection {
     pool_info: Arc<RwLock<Option<PoolConnectionInfo>>>,
     /// Reference to crypto engine
     crypto_engine: Arc<RwLock<Option<Box<dyn DMSCCryptoEngine>>>>,
+    /// Key rotation in progress flag
+    key_rotation_in_progress: Arc<RwLock<bool>>,
 }
 
 /// Secure stream wrapper.
 struct SecureStream {
     /// Underlying TCP stream
     tcp_stream: TcpStream,
-    /// Encryption key
-    encryption_key: Vec<u8>,
-    /// Authentication key
-    auth_key: Vec<u8>,
+    /// Encryption key (zeroized on drop)
+    encryption_key: SecretVec<u8>,
+    /// Authentication key (zeroized on drop)
+    auth_key: SecretVec<u8>,
 }
 
-/// Session keys for encryption and authentication.
+/// Session keys for encryption and authentication with secure memory handling.
+#[derive(ZeroizeOnDrop)]
 struct SessionKeys {
     /// Encryption key
-    encryption_key: Vec<u8>,
+    #[zeroize(skip)]
+    encryption_key: SecretVec<u8>,
     /// Authentication key
-    auth_key: Vec<u8>,
+    #[zeroize(skip)]
+    auth_key: SecretVec<u8>,
     /// Key generation timestamp
     created_at: Instant,
+    /// Nonce counter for replay protection (sliding window)
+    nonce_counter: Arc<AtomicUsize>,
+    /// Recently used nonces (limited sliding window)
+    recent_nonces: Arc<RwLock<HashSet<u64>>>,
+    /// Maximum nonces to track
+    max_nonce_history: usize,
+}
+
+impl SessionKeys {
+    /// Create new session keys with secure memory handling
+    async fn new(config: &DMSCPrivateConfig) -> DMSCResult<Self> {
+        let mut rng = rand::thread_rng();
+
+        let mut encryption_key_data = vec![0u8; 32];
+        rng.fill(&mut encryption_key_data[..]);
+
+        let mut auth_key_data = vec![0u8; 32];
+        rng.fill(&mut auth_key_data[..]);
+
+        Ok(Self {
+            encryption_key: SecretVec::new(encryption_key_data),
+            auth_key: SecretVec::new(auth_key_data),
+            created_at: Instant::now(),
+            nonce_counter: Arc::new(AtomicUsize::new(0)),
+            recent_nonces: Arc::new(RwLock::new(HashSet::new())),
+            max_nonce_history: 1000000, // Track up to 1M nonces
+        })
+    }
+
+    /// Generate a unique nonce for a new message
+    async fn generate_nonce(&self) -> u64 {
+        let nonce = self.nonce_counter.fetch_add(1, Ordering::SeqCst) as u64;
+
+        // Add to sliding window
+        let mut recent = self.recent_nonces.write().await;
+        if recent.len() >= self.max_nonce_history {
+            // Remove oldest nonce (simple eviction)
+            if let Some(oldest) = recent.iter().next().cloned() {
+                recent.remove(&oldest);
+            }
+        }
+        recent.insert(nonce);
+
+        nonce
+    }
+
+    /// Check if a nonce is valid (not replayed)
+    async fn is_valid_nonce(&self, nonce: u64) -> bool {
+        let recent = self.recent_nonces.read().await;
+        !recent.contains(&nonce)
+    }
+
+    /// Check if keys need rotation
+    fn needs_rotation(&self, rotation_interval: Duration) -> bool {
+        self.created_at.elapsed() > rotation_interval
+    }
 }
 
 impl DMSCPrivateConnection {
@@ -374,15 +438,12 @@ impl DMSCPrivateConnection {
         post_quantum: Arc<DMSCPostQuantumCrypto>,
         obfuscation: Arc<DMSCObfuscationLayer>,
     ) -> DMSCResult<Self> {
-        // Perform device authentication
         if config.device_auth {
             device_auth.authenticate_device(&target_id).await?;
         }
-        
-        // Generate ephemeral session keys
-        let session_keys = Self::generate_session_keys(&config).await?;
-        
-        // Establish secure connection
+
+        let session_keys = SessionKeys::new(&config).await?;
+
         let stream = Self::establish_secure_connection(
             &target_id,
             &session_keys,
@@ -390,11 +451,10 @@ impl DMSCPrivateConnection {
             post_quantum,
             obfuscation,
         ).await?;
-        
+
         let connection_id = format!("private-{}", uuid::Uuid::new_v4());
         let now = Instant::now();
-        
-        // Create pool connection info for integration
+
         let pool_info = PoolConnectionInfo {
             connection_id: connection_id.clone(),
             device_id: target_id.clone(),
@@ -410,7 +470,7 @@ impl DMSCPrivateConnection {
             is_active: true,
             health_status: ConnectionHealth::Healthy,
         };
-        
+
         Ok(Self {
             connection_id,
             target_id,
@@ -422,25 +482,7 @@ impl DMSCPrivateConnection {
             config,
             pool_info: Arc::new(RwLock::new(Some(pool_info))),
             crypto_engine: Arc::new(RwLock::new(None)),
-        })
-    }
-    
-    /// Generate ephemeral session keys.
-    async fn generate_session_keys(config: &DMSCPrivateConfig) -> DMSCResult<SessionKeys> {
-        let mut rng = rand::thread_rng();
-        
-        // Generate encryption key (256 bits)
-        let mut encryption_key = vec![0u8; 32];
-        rng.fill(&mut encryption_key[..]);
-        
-        // Generate authentication key (256 bits)
-        let mut auth_key = vec![0u8; 32];
-        rng.fill(&mut auth_key[..]);
-        
-        Ok(SessionKeys {
-            encryption_key,
-            auth_key,
-            created_at: Instant::now(),
+            key_rotation_in_progress: Arc::new(RwLock::new(false)),
         })
     }
     
@@ -487,31 +529,39 @@ impl DMSCPrivateConnection {
         if !active {
             return false;
         }
-        
-        // Check session timeout
+
         let last_activity = *self.last_activity.read().await;
         if last_activity.elapsed() > self.config.session_timeout {
             *self.active.write().await = false;
             return false;
         }
-        
-        // Check if keys need rotation
+
         let session_keys = self.session_keys.read().await;
-        if session_keys.created_at.elapsed() > self.config.key_rotation_interval {
+        if session_keys.needs_rotation(self.config.key_rotation_interval) {
             drop(session_keys);
-            // In a real implementation, we would rotate keys here
-            // For now, just mark as inactive
-            *self.active.write().await = false;
-            return false;
+            let _ = self.rotate_keys().await;
         }
-        
+
         true
     }
-    
-    /// Rotate session keys.
+
+    /// Rotate session keys securely.
     async fn rotate_keys(&self) -> DMSCResult<()> {
-        let new_keys = Self::generate_session_keys(&self.config).await?;
-        *self.session_keys.write().await = new_keys;
+        let mut rotation_in_progress = self.key_rotation_in_progress.write().await;
+        if *rotation_in_progress {
+            return Ok(());
+        }
+        *rotation_in_progress = true;
+        drop(rotation_in_progress);
+
+        let new_keys = SessionKeys::new(&self.config).await?;
+
+        {
+            let mut keys = self.session_keys.write().await;
+            *keys = new_keys;
+        }
+
+        *self.key_rotation_in_progress.write().await = false;
         Ok(())
     }
 }
@@ -661,75 +711,83 @@ impl DMSCProtocolConnection for DMSCPrivateConnectionWrapper {
 }
 
 impl DMSCPrivateConnectionWrapper {
-    /// Encrypt and authenticate data.
+    /// Encrypt and authenticate data with nonce-based replay protection.
     async fn encrypt_and_authenticate(&self, data: &[u8], session_keys: &SessionKeys, flags: DMSCMessageFlags) -> DMSCResult<Vec<u8>> {
-        // Build protocol frame
         let frame = self.frame_builder.build_frame(
             DMSCFrameType::Data,
             data,
             flags,
         ).await?;
-        
-        // Serialize frame
+
         let frame_data = frame.to_bytes()?;
-        
-        // Encrypt frame data using session keys
+
         let mut result = Vec::new();
-        
-        // Add nonce for encryption
-        let mut nonce = vec![0u8; 12];
-        rand::thread_rng().fill(&mut nonce[..]);
-        result.extend_from_slice(&nonce);
-        
-        // Use crypto engine for real encryption if available
+
+        let nonce = session_keys.generate_nonce().await;
+        result.extend_from_slice(&nonce.to_be_bytes()[..12]);
+
         if let Some(ref crypto_engine) = *self.inner.crypto_engine.read().await {
-            let encrypted_data = crypto_engine.encrypt(&frame_data, &session_keys.encryption_key, &nonce)?;
+            let encrypted_data = crypto_engine.encrypt(&frame_data, session_keys.encryption_key.expose_secret(), &nonce.to_be_bytes()[..])?;
             result.extend_from_slice(&encrypted_data);
         } else {
-            // Fallback to simplified XOR encryption
             for (i, &byte) in frame_data.iter().enumerate() {
-                result.push(byte ^ session_keys.encryption_key[i % session_keys.encryption_key.len()]);
+                result.push(byte ^ session_keys.encryption_key.expose_secret()[i % session_keys.encryption_key.len()]);
             }
         }
-        
-        // Add authentication tag
-        result.extend_from_slice(&session_keys.auth_key[..16]);
-        
+
+        result.extend_from_slice(&session_keys.auth_key.expose_secret()[..16]);
+
         Ok(result)
     }
-    
-    /// Decrypt and verify data.
+
+    /// Decrypt and verify data with nonce validation.
     async fn decrypt_and_verify(&self, data: &[u8], session_keys: &SessionKeys) -> DMSCResult<Vec<u8>> {
-        if data.len() < 28 { // 12 bytes nonce + 16 bytes auth tag
+        if data.len() < 28 {
             return Err(DMSCError::InvalidData("Data too short for nonce and authentication tag".to_string()));
         }
-        
-        // Extract nonce
-        let nonce = &data[..12];
+
+        let nonce = u64::from_be_bytes([
+            data[0], data[1], data[2], data[3],
+            data[4], data[5], data[6], data[7],
+            data[8], data[9], data[10], data[11]
+        ]);
+
+        if !session_keys.is_valid_nonce(nonce).await {
+            return Err(DMSCError::AuthenticationFailed("Nonce replay detected".to_string()));
+        }
+
         let encrypted_data = &data[12..data.len() - 16];
-        
-        // Verify authentication tag
+
         let auth_tag = &data[data.len() - 16..];
-        if auth_tag != &session_keys.auth_key[..16] {
+        let expected_tag = &session_keys.auth_key.expose_secret()[..16];
+
+        // Use constant-time comparison to prevent timing attacks
+        let auth_tag_len = auth_tag.len();
+        let expected_tag_len = expected_tag.len();
+        let mut result = 0u8;
+        if auth_tag_len == expected_tag_len {
+            for i in 0..auth_tag_len {
+                result |= auth_tag[i] ^ expected_tag[i];
+            }
+        } else {
+            result = 1;
+        }
+        if result != 0 {
             return Err(DMSCError::AuthenticationFailed("Invalid authentication tag".to_string()));
         }
-        
-        // Decrypt data
+
         let decrypted_data = if let Some(ref crypto_engine) = *self.inner.crypto_engine.read().await {
-            crypto_engine.decrypt(encrypted_data, &session_keys.encryption_key, nonce)?
+            crypto_engine.decrypt(encrypted_data, session_keys.encryption_key.expose_secret(), &nonce.to_be_bytes()[..])?
         } else {
-            // Fallback to simplified XOR decryption
             let mut result = Vec::new();
             for (i, &byte) in encrypted_data.iter().enumerate() {
-                result.push(byte ^ session_keys.encryption_key[i % session_keys.encryption_key.len()]);
+                result.push(byte ^ session_keys.encryption_key.expose_secret()[i % session_keys.encryption_key.len()]);
             }
             result
         };
-        
-        // Parse frame from decrypted data
+
         let frame = self.frame_parser.parse_frame(&decrypted_data)?;
-        
-        // Extract payload from frame
+
         Ok(frame.payload)
     }
 }

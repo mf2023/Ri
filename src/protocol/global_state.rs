@@ -1,10 +1,10 @@
-//! Copyright © 2025 Wenze Wei. All Rights Reserved.
+//! Copyright © 2025-2026 Wenze Wei. All Rights Reserved.
 //!
 //! This file is part of DMSC.
 //! The DMSC project belongs to the Dunimd Team.
 //!
 //! Licensed under the Apache License, Version 2.0 (the "License");
-//! you may not use this file except in compliance with the License.
+//! You may not use this file except in compliance with the License.
 //! You may obtain a copy of the License at
 //!
 //!     http://www.apache.org/licenses/LICENSE-2.0
@@ -92,6 +92,10 @@ use std::time::{Duration, Instant};
 use async_trait::async_trait;
 use tokio::sync::{RwLock, broadcast, mpsc};
 use uuid::Uuid;
+use zeroize::{Zeroize, ZeroizeOnDrop};
+use secrecy::{ExposeSecret, SecretVec};
+use aes_gcm::{Aes256Gcm, Key, Nonce, KeyInit};
+use rand::RngCore;
 
 use crate::core::{DMSCResult, DMSCError};
 use super::{DMSCProtocolType, DMSCProtocolConfig, DMSCProtocolStats, DMSCConnectionInfo, 
@@ -929,6 +933,61 @@ struct DMSCStatePersistenceManager {
     config: DMSCPersistenceConfig,
     /// Persistence backend
     backend: Arc<dyn DMSCStateBackend>,
+    /// State encryption key
+    encryption_key: Arc<RwLock<Option<SecretVec<u8>>>>,
+}
+
+/// State encryption key with secure memory handling.
+#[derive(ZeroizeOnDrop)]
+struct StateEncryptionKey {
+    key: SecretVec<u8>,
+    created_at: Instant,
+}
+
+impl StateEncryptionKey {
+    fn new() -> Self {
+        let mut key_data = vec![0u8; 32];
+        rand::thread_rng().fill_bytes(&mut key_data);
+        Self {
+            key: SecretVec::new(key_data),
+            created_at: Instant::now(),
+        }
+    }
+
+    fn is_expired(&self, max_age: Duration) -> bool {
+        self.created_at.elapsed() > max_age
+    }
+}
+
+/// Encrypted state backend for secure persistence.
+struct DMSCEncryptedStateBackend {
+    /// Encryption key
+    encryption_key: Arc<RwLock<StateEncryptionKey>>,
+    /// Underlying memory backend
+    memory_backend: Arc<DMSCMemoryStateBackend>,
+    /// Encryption interval
+    key_rotation_interval: Duration,
+}
+
+impl DMSCEncryptedStateBackend {
+    fn new(encryption_key: Arc<RwLock<StateEncryptionKey>>, memory_backend: Arc<DMSCMemoryStateBackend>) -> Self {
+        Self {
+            encryption_key,
+            memory_backend,
+            key_rotation_interval: Duration::from_secs(86400), // 24 hours
+        }
+    }
+
+    async fn get_current_key(&self) -> DMSCResult<&SecretVec<u8>> {
+        let key = self.encryption_key.read().await;
+        if key.is_expired(self.key_rotation_interval) {
+            drop(key);
+            let mut new_key = self.encryption_key.write().await;
+            *new_key = StateEncryptionKey::new();
+            return Ok(&new_key.key);
+        }
+        Ok(&key.key)
+    }
 }
 
 /// Persistence configuration structure.
@@ -996,15 +1055,23 @@ impl DMSCGlobalStateManager {
         });
         
         let persistence_config = DMSCPersistenceConfig {
-            persistence_interval: Duration::from_secs(300), // 5 minutes
-            max_state_size: 100 * 1024 * 1024, // 100MB
+            persistence_interval: Duration::from_secs(300),
+            max_state_size: 100 * 1024 * 1024,
             compression_enabled: true,
             encryption_enabled: true,
         };
+
+        let encryption_key = Arc::new(RwLock::new(StateEncryptionKey::new()));
+        let memory_backend = Arc::new(DMSCMemoryStateBackend::new());
+        let encrypted_backend: Arc<dyn DMSCStateBackend> = Arc::new(DMSCEncryptedStateBackend::new(
+            Arc::clone(&encryption_key),
+            memory_backend,
+        ));
         
         let persistence_manager = Arc::new(DMSCStatePersistenceManager {
             config: persistence_config,
-            backend: Arc::new(DMSCMemoryStateBackend::new()),
+            backend: encrypted_backend,
+            encryption_key: Arc::new(RwLock::new(None)),
         });
         
         Self {
@@ -1360,6 +1427,7 @@ impl Default for DMSCGlobalStateManager {
 /// Memory-based state backend implementation.
 struct DMSCMemoryStateBackend {
     state: Arc<RwLock<Option<DMSCStateSnapshot>>>,
+    encrypted_state: Arc<RwLock<Option<Vec<u8>>>>,
 }
 
 impl DMSCMemoryStateBackend {
@@ -1367,7 +1435,49 @@ impl DMSCMemoryStateBackend {
     fn new() -> Self {
         Self {
             state: Arc::new(RwLock::new(None)),
+            encrypted_state: Arc::new(RwLock::new(None)),
         }
+    }
+
+    /// Encrypt state data using AES-256-GCM.
+    fn encrypt_state(state: &DMSCStateSnapshot, key: &[u8]) -> DMSCResult<Vec<u8>> {
+        let serialized = bincode::serialize(state)
+            .map_err(|e| DMSCError::Serialization(e.to_string()))?;
+
+        let key = Key::<Aes256Gcm>::from_slice(key);
+        let cipher = Aes256Gcm::new(key);
+
+        let mut nonce = [0u8; 12];
+        rand::thread_rng().fill_bytes(&mut nonce);
+        let nonce = Nonce::from_slice(&nonce);
+
+        let ciphertext = cipher.encrypt(nonce, serialized.as_slice())
+            .map_err(|e| DMSCError::CryptoError(e.to_string()))?;
+
+        let mut result = nonce.to_vec();
+        result.extend_from_slice(&ciphertext);
+        Ok(result)
+    }
+
+    /// Decrypt state data using AES-256-GCM.
+    fn decrypt_state(encrypted_data: &[u8], key: &[u8]) -> DMSCResult<Option<DMSCStateSnapshot>> {
+        if encrypted_data.len() < 12 + 16 {
+            return Ok(None);
+        }
+
+        let nonce = Nonce::from_slice(&encrypted_data[..12]);
+        let ciphertext = &encrypted_data[12..];
+
+        let key = Key::<Aes256Gcm>::from_slice(key);
+        let cipher = Aes256Gcm::new(key);
+
+        let decrypted = cipher.decrypt(nonce, ciphertext)
+            .map_err(|e| DMSCError::CryptoError(e.to_string()))?;
+
+        let state = bincode::deserialize(&decrypted)
+            .map_err(|e| DMSCError::Serialization(e.to_string()))?;
+
+        Ok(Some(state))
     }
 }
 
@@ -1383,7 +1493,8 @@ impl DMSCStateBackend for DMSCMemoryStateBackend {
     }
     
     async fn delete_state(&self) -> DMSCResult<()> {
-        *self.state.write().await = None;
+        self.state.write().await.take();
+        self.encrypted_state.write().await.take();
         Ok(())
     }
 }

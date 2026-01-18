@@ -213,6 +213,19 @@ struct ServiceDiscoveryCacheEntry {
     expiration: SystemTime,
 }
 
+/// Service mesh statistics.
+#[derive(Debug, Clone)]
+pub struct ServiceMeshStats {
+    /// Total number of registered services
+    pub total_services: usize,
+    /// Total number of registered endpoints
+    pub total_endpoints: usize,
+    /// Number of healthy endpoints
+    pub healthy_endpoints: usize,
+    /// Number of unhealthy endpoints
+    pub unhealthy_endpoints: usize,
+}
+
 /// Main service mesh struct implementing the DMSCModule trait.
 /// 
 /// This struct provides comprehensive service mesh functionality, including service discovery,
@@ -276,16 +289,17 @@ impl DMSCServiceMesh {
     /// - `service_name`: The name of the service
     /// - `endpoint`: The endpoint URL of the service
     /// - `weight`: The weight of the endpoint for load balancing
+    /// - `metadata`: Optional metadata associated with the service
     /// 
     /// # Returns
     /// 
     /// A `DMSCResult<()>` indicating success or failure
-    pub async fn register_service(&self, service_name: &str, endpoint: &str, weight: u32) -> DMSCResult<()> {
+    pub async fn register_service(&self, service_name: &str, endpoint: &str, weight: u32, metadata: Option<HashMap<String, String>>) -> DMSCResult<()> {
         let service_endpoint = DMSCServiceEndpoint {
             service_name: service_name.to_string(),
             endpoint: endpoint.to_string(),
             weight,
-            metadata: HashMap::new(),
+            metadata: metadata.unwrap_or_default(),
             health_status: DMSCServiceHealthStatus::Unknown,
             last_health_check: SystemTime::now(),
         };
@@ -300,6 +314,61 @@ impl DMSCServiceMesh {
         }
 
         Ok(())
+    }
+    
+    /// Registers a service with full metadata including version information.
+    pub async fn register_versioned_service(&self, service_name: &str, version: &str, endpoint: &str, weight: u32, metadata: Option<HashMap<String, String>>) -> DMSCResult<()> {
+        let mut enriched_metadata = metadata.unwrap_or_default();
+        enriched_metadata.insert("version".to_string(), version.to_string());
+        
+        self.register_service(service_name, endpoint, weight, Some(enriched_metadata)).await
+    }
+    
+    /// Unregisters a service endpoint from the service mesh.
+    pub async fn unregister_service(&self, service_name: &str, endpoint: &str) -> DMSCResult<()> {
+        let mut services = self.services.write().await;
+        
+        if let Some(endpoints) = services.get_mut(service_name) {
+            endpoints.retain(|ep| ep.endpoint != endpoint);
+            
+            if endpoints.is_empty() {
+                services.remove(service_name);
+            }
+            
+            if self.config.enable_health_check {
+                self.health_checker.stop_health_check(service_name, endpoint).await?;
+            }
+        }
+        
+        Ok(())
+    }
+    
+    /// Gets all registered endpoints for a service regardless of health status.
+    pub async fn get_all_endpoints(&self, service_name: &str) -> DMSCResult<Vec<DMSCServiceEndpoint>> {
+        let services = self.services.read().await;
+        
+        services.get(service_name)
+            .cloned()
+            .ok_or_else(|| DMSCError::ServiceMesh(format!("Service '{service_name}' not found")))
+    }
+    
+    /// Gets service mesh statistics.
+    pub async fn get_stats(&self) -> ServiceMeshStats {
+        let services = self.services.read().await;
+        let healthy_count = services.values()
+            .flat_map(|endpoints| endpoints.iter())
+            .filter(|ep| ep.health_status == DMSCServiceHealthStatus::Healthy)
+            .count();
+        
+        ServiceMeshStats {
+            total_services: services.len(),
+            total_endpoints: services.values().map(|v| v.len()).sum(),
+            healthy_endpoints: healthy_count,
+            unhealthy_endpoints: services.values()
+                .flat_map(|endpoints| endpoints.iter())
+                .filter(|ep| ep.health_status == DMSCServiceHealthStatus::Unhealthy)
+                .count(),
+        }
     }
 
     /// Discovers healthy endpoints for a service.
@@ -539,7 +608,7 @@ impl DMSCServiceMesh {
         })?;
         
         rt.block_on(async {
-            self.register_service(&service_name, &endpoint, weight)
+            self.register_service(&service_name, &endpoint, weight, None)
                 .await
                 .map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(format!("Failed to register service: {e}")))
         })

@@ -4,9 +4,9 @@
 
 **Version: 0.1.4**
 
-**Last modified date: 2026-01-15**
+**Last modified date: 2026-01-18**
 
-The database module provides a unified database access layer, supporting multiple database types, connection pool management, transaction processing, and query builders.
+The database module provides a unified database access layer, supporting multiple database types, connection pool management, transaction processing, and ORM query builders.
 
 ## Module Overview
 
@@ -16,7 +16,7 @@ The database module includes the following sub-modules:
 
 - **core**: Database core interfaces and type definitions
 - **pools**: Connection pool management
-- **query**: Query builders
+- **orm**: Object-relational mapping and query builders
 - **migration**: Database migrations
 - **transaction**: Transaction management
 
@@ -28,83 +28,116 @@ The database module includes the following sub-modules:
 
 ### DMSCDatabase
 
-Database manager main interface, providing unified database access.
+Database operation interface trait, providing unified database access.
+
+**Note**: DMSCDatabase is a trait and cannot be instantiated directly. You need to obtain a concrete database connection through DMSCDatabasePool.
 
 #### Methods
 
 | Method | Description | Parameters | Return Value |
 |:--------|:-------------|:--------|:--------|
-| `execute(query)` | Execute SQL query | `query: &str` | `DMSCResult<DMSCQueryResult>` |
-| `query(query)` | Execute query and return results | `query: &str` | `DMSCResult<Vec<DMSCRow>>` |
-| `query_one(query)` | Execute query and return single row result | `query: &str` | `DMSCResult<DMSCRow>` |
-| `begin_transaction()` | Begin transaction | None | `DMSCResult<DMSCTransaction>` |
-| `migrate()` | Execute database migration | None | `DMSCResult<()>` |
-| `get_connection()` | Get database connection | None | `DMSCResult<DMSCConnection>` |
-| `get_pool_stats()` | Get connection pool statistics | None | `DMSCResult<PoolStats>` |
-| `ping()` | Test database connection | None | `DMSCResult<()>` |
+| `execute(sql)` | Execute SQL query | `sql: &str` | `DMSCResult<u64>` |
+| `query(sql)` | Execute query and return results | `sql: &str` | `DMSCResult<DMSCDBResult>` |
+| `query_one(sql)` | Execute query and return single row | `sql: &str` | `DMSCResult<Option<DMSCDBRow>>` |
+| `ping()` | Test database connection | None | `DMSCResult<bool>` |
+| `is_connected()` | Check connection status | None | `bool` |
+| `close()` | Close connection | None | `DMSCResult<()>` |
+| `transaction()` | Begin transaction | None | `DMSCResult<Box<dyn DMSCDatabaseTransaction>>` |
+| `execute_with_params(sql, params)` | Execute SQL with parameters | `sql: &str`, `params: &[serde_json::Value]` | `DMSCResult<u64>` |
+| `query_with_params(sql, params)` | Execute query with parameters | `sql: &str`, `params: &[serde_json::Value]` | `DMSCResult<DMSCDBResult>` |
+| `batch_execute(sql, params)` | Batch execution | `sql: &str`, `params: &[Vec<serde_json::Value>]` | `DMSCResult<Vec<u64>>` |
+| `batch_query(sql, params)` | Batch query | `sql: &str`, `params: &[Vec<serde_json::Value>]` | `DMSCResult<Vec<DMSCDBResult>>` |
 
 #### Usage Example
 
 ```rust
-use dmsc::prelude::*;
+use dmsc::database::{DMSCDatabasePool, DMSCDatabaseConfig};
 
-// Execute query
-let results = ctx.database().query("SELECT id, name, email FROM users WHERE active = true")?;
+#[tokio::main]
+async fn main() -> DMSCResult<()> {
+    let config = DMSCDatabaseConfig::postgres()
+        .host("localhost")
+        .database("myapp")
+        .build();
 
-for row in results {
-    let id: i32 = row.get("id")?;
-    let name: String = row.get("name")?;
-    let email: String = row.get("email")?;
-    
-    println!("User {}: {} <{}>", id, name, email);
+    let pool = DMSCDatabasePool::new(config).await?;
+    let db = pool.get().await?;
+
+    // Execute query
+    let results = db.query("SELECT id, name, email FROM users WHERE active = true").await?;
+
+    for row in results {
+        let id: i64 = row.get("id");
+        let name: String = row.get("name");
+        let email: String = row.get("email");
+        
+        println!("User {}: {} <{}>", id, name, email);
+    }
+
+    // Execute update
+    db.execute("UPDATE users SET last_login = NOW() WHERE id = 123").await?;
+
+    // Get single row result
+    let user = db.query_one("SELECT * FROM users WHERE id = 123").await?;
+    if let Some(row) = user {
+        let name: String = row.get("name")?;
+    }
+
+    // Query with parameters
+    let rows = db.query_with_params(
+        "SELECT * FROM users WHERE name = $1 AND active = $2",
+        &[serde_json::json!("alice"), serde_json::json!(true)]
+    ).await?;
+
+    Ok(())
 }
-
-// Execute update
-ctx.database().execute("UPDATE users SET last_login = NOW() WHERE id = 123")?;
-
-// Get single row result
-let user = ctx.database().query_one("SELECT * FROM users WHERE id = 123")?;
-let name: String = user.get("name")?;
 ```
 
 ### DMSCDatabaseConfig
 
-Database configuration struct.
+Database configuration builder.
 
-#### Fields
+#### Static Methods
 
-| Field | Type | Description | Default |
-|:--------|:-----|:-------------|:-------|
-| `database_type` | `DMSCDatabaseType` | Database type | `Postgres` |
-| `host` | `String` | Database host | `"localhost"` |
-| `port` | `u16` | Database port | `5432` |
-| `database` | `String` | Database name | `""` |
-| `username` | `String` | Username | `""` |
-| `password` | `String` | Password | `""` |
-| `max_connections` | `u32` | Maximum connections | `10` |
-| `min_connections` | `u32` | Minimum connections | `1` |
-| `connection_timeout` | `Duration` | Connection timeout | `30s` |
-| `idle_timeout` | `Duration` | Idle timeout | `600s` |
-| `max_lifetime` | `Duration` | Connection maximum lifetime | `1800s` |
+| Method | Description | Return Value |
+|:--------|:-------------|:--------|
+| `postgres()` | Create PostgreSQL default config | `DMSCDatabaseConfig` |
+| `mysql()` | Create MySQL default config | `DMSCDatabaseConfig` |
+| `sqlite()` | Create SQLite default config | `DMSCDatabaseConfig` |
+
+#### Builder Methods
+
+| Method | Description | Parameters | Return Value |
+|:--------|:-------------|:--------|:--------|
+| `host()` | Set host | `host: &str` | `Self` |
+| `port()` | Set port | `port: u16` | `Self` |
+| `database()` | Set database name | `database: &str` | `Self` |
+| `user()` | Set username | `user: &str` | `Self` |
+| `password()` | Set password | `password: &str` | `Self` |
+| `max_connections()` | Maximum connections | `n: u32` | `Self` |
+| `min_idle_connections()` | Minimum idle connections | `n: u32` | `Self` |
+| `connection_timeout_secs()` | Connection timeout (seconds) | `secs: u64` | `Self` |
+| `idle_timeout_secs()` | Idle timeout (seconds) | `secs: u64` | `Self` |
+| `max_lifetime_secs()` | Maximum lifetime (seconds) | `secs: u64` | `Self` |
+| `build()` | Build configuration | None | `DMSCDatabaseConfig` |
 
 #### Configuration Example
 
 ```rust
-use dmsc::prelude::*;
+use dmsc::database::DMSCDatabaseConfig;
 
-let db_config = DMSCDatabaseConfig {
-    database_type: DMSCDatabaseType::Postgres,
-    host: "localhost".to_string(),
-    port: 5432,
-    database: "myapp".to_string(),
-    username: "postgres".to_string(),
-    password: "password".to_string(),
-    max_connections: 20,
-    min_connections: 5,
-    connection_timeout: Duration::from_secs(30),
-    idle_timeout: Duration::from_secs(600),
-    max_lifetime: Duration::from_secs(1800),
-};
+let config = DMSCDatabaseConfig::postgres()
+    .host("localhost")
+    .port(5432)
+    .database("myapp")
+    .user("postgres")
+    .password("password")
+    .max_connections(20)
+    .min_idle_connections(5)
+    .connection_timeout_secs(30)
+    .idle_timeout_secs(600)
+    .max_lifetime_secs(1800)
+    .build();
 ```
 
 ### DMSCDatabaseType
@@ -121,391 +154,345 @@ Database type enum.
 | `MongoDB` | MongoDB |
 | `Redis` | Redis |
 
-## Query Builders
-
-### DMSCQueryBuilder
-
-Query builder for building type-safe SQL queries.
-
-#### Methods
-
-| Method | Description | Parameters | Return Value |
-|:--------|:-------------|:--------|:--------|
-| `select(columns)` | Select columns | `columns: &[&str]` | `Self` |
-| `from(table)` | Specify table | `table: &str` | `Self` |
-| `where(condition)` | Add condition | `condition: &str` | `Self` |
-| `where_eq(column, value)` | Add equality condition | `column: &str`, `value: impl ToSql` | `Self` |
-| `where_in(column, values)` | Add IN condition | `column: &str`, `values: &[impl ToSql]` | `Self` |
-| `order_by(column, direction)` | Add ordering | `column: &str`, `direction: OrderDirection` | `Self` |
-| `limit(count)` | Set limit | `count: i64` | `Self` |
-| `offset(count)` | Set offset | `count: i64` | `Self` |
-| `join(table, on)` | Add join | `table: &str`, `on: &str` | `Self` |
-| `build()` | Build query | None | `DMSCResult<String>` |
-
-#### Usage Example
-
-```rust
-use dmsc::prelude::*;
-
-// Build SELECT query
-let query = DMSCQueryBuilder::new()
-    .select(&["id", "name", "email"])
-    .from("users")
-    .where_eq("active", true)
-    .where_eq("role", "admin")
-    .order_by("created_at", OrderDirection::Desc)
-    .limit(10)
-    .build()?;
-
-let results = ctx.database().query(&query)?;
-
-// Build complex query
-let complex_query = DMSCQueryBuilder::new()
-    .select(&["u.id", "u.name", "COUNT(o.id) as order_count"])
-    .from("users u")
-    .join("orders o", "u.id = o.user_id")
-    .where_eq("u.active", true)
-    .where_in("u.role", &["admin", "user"])
-    .group_by(&["u.id", "u.name"])
-    .having("COUNT(o.id) > 5")
-    .order_by("order_count", OrderDirection::Desc)
-    .build()?;
-```
-
-### Insert Builder
-
-```rust
-use dmsc::prelude::*;
-
-// Build INSERT query
-let insert_query = DMSCInsertBuilder::new()
-    .into("users")
-    .columns(&["name", "email", "created_at"])
-    .values(&["John Doe", "john@example.com", "NOW()"])
-    .build()?;
-
-ctx.database().execute(&insert_query)?;
-
-// Batch insert
-let batch_insert = DMSCInsertBuilder::new()
-    .into("users")
-    .columns(&["name", "email"])
-    .values(&["Alice", "alice@example.com"])
-    .values(&["Bob", "bob@example.com"])
-    .values(&["Charlie", "charlie@example.com"])
-    .build()?;
-
-ctx.database().execute(&batch_insert)?;
-```
-
-### Update Builder
-
-```rust
-use dmsc::prelude::*;
-
-// Build UPDATE query
-let update_query = DMSCUpdateBuilder::new()
-    .table("users")
-    .set("last_login", "NOW()")
-    .set("login_count", "login_count + 1")
-    .where_eq("id", 123)
-    .build()?;
-
-ctx.database().execute(&update_query)?;
-```
-
-### Delete Builder
-
-```rust
-use dmsc::prelude::*;
-
-// Build DELETE query
-let delete_query = DMSCDeleteBuilder::new()
-    .from("users")
-    .where_eq("active", false)
-    .where_lt("last_login", "NOW() - INTERVAL '1 year'")
-    .build()?;
-
-ctx.database().execute(&delete_query)?;
-```
-<div align="center">
-
-## Transaction Management
-
-</div>
-
-### DMSCTransaction
-
-Transaction interface.
-
-#### Methods
-
-| Method | Description | Parameters | Return Value |
-|:--------|:-------------|:--------|:--------|
-| `execute(query)` | Execute query in transaction | `query: &str` | `DMSCResult<DMSCQueryResult>` |
-| `query(query)` | Execute query in transaction and return results | `query: &str` | `DMSCResult<Vec<DMSCRow>>` |
-| `commit()` | Commit transaction | None | `DMSCResult<()>` |
-| `rollback()` | Rollback transaction | None | `DMSCResult<()>` |
-| `savepoint(name)` | Create savepoint | `name: &str` | `DMSCResult<()>` |
-| `rollback_to_savepoint(name)` | Rollback to savepoint | `name: &str` | `DMSCResult<()>` |
-
-#### Usage Example
-
-```rust
-use dmsc::prelude::*;
-
-// Begin transaction
-let mut transaction = ctx.database().begin_transaction()?;
-
-try {
-    // Execute operations in transaction
-    transaction.execute("UPDATE accounts SET balance = balance - 100 WHERE id = 1")?;
-    transaction.execute("UPDATE accounts SET balance = balance + 100 WHERE id = 2")?;
-    
-    // Create savepoint
-    transaction.savepoint("before_fee")?;
-    
-    // Execute operation that might fail
-    match transaction.execute("UPDATE accounts SET balance = balance - 5 WHERE id = 2") {
-        Ok(_) => {
-            // Operation succeeded, commit transaction
-            transaction.commit()?;
-        }
-        Err(_) => {
-            // Operation failed, rollback to savepoint
-            transaction.rollback_to_savepoint("before_fee")?;
-            transaction.commit()?;
-        }
-    }
-} catch (e) {
-    // Error occurred, rollback entire transaction
-    transaction.rollback()?;
-    return Err(e);
-}
-```
-
-### Transaction Isolation Levels
-
-```rust
-use dmsc::prelude::*;
-
-// Set transaction isolation level
-let transaction = ctx.database()
-    .begin_transaction_with_isolation(TransactionIsolation::Serializable)?;
-
-// Different isolation levels
-let read_uncommitted = TransactionIsolation::ReadUncommitted;
-let read_committed = TransactionIsolation::ReadCommitted;
-let repeatable_read = TransactionIsolation::RepeatableRead;
-let serializable = TransactionIsolation::Serializable;
-```
-
 <div align="center">
 
 ## Connection Pool Management
 
 </div>
 
-### Connection Pool Configuration
+### DMSCDatabasePool
+
+Database connection pool manager.
+
+#### Methods
+
+| Method | Description | Parameters | Return Value |
+|:--------|:-------------|:--------|:--------|
+| `new(config)` | Create connection pool | `config: DMSCDatabaseConfig` | `DMSCResult<Self>` |
+| `get()` | Get connection | None | `DMSCResult<PooledDatabase>` |
+| `close()` | Close connection pool | None | `DMSCResult<()>` |
+| `metrics()` | Get statistics | None | `DatabaseMetrics` |
+
+#### Usage Example
 
 ```rust
-use dmsc::prelude::*;
+use dmsc::database::{DMSCDatabasePool, DMSCDatabaseConfig};
 
-let pool_config = DMSCPoolConfig {
-    max_connections: 50,
-    min_connections: 10,
-    connection_timeout: Duration::from_secs(30),
-    idle_timeout: Duration::from_secs(600),
-    max_lifetime: Duration::from_secs(1800),
-    test_on_check_out: true,
-    test_on_check_in: false,
-    test_while_idle: true,
-    validation_query: "SELECT 1".to_string(),
-};
-```
+#[tokio::main]
+async fn main() -> DMSCResult<()> {
+    let config = DMSCDatabaseConfig::postgres()
+        .database("mydb")
+        .max_connections(10)
+        .build();
 
-### Connection Pool Monitoring
+    let pool = DMSCDatabasePool::new(config).await?;
+    let db = pool.get().await?;
 
-```rust
-use dmsc::prelude::*;
+    // Use database connection...
 
-// Get connection pool statistics
-let stats = ctx.database().get_pool_stats()?;
+    // Get pool statistics
+    let metrics = pool.metrics();
+    println!("Active connections: {}", metrics.active_connections);
+    println!("Idle connections: {}", metrics.idle_connections);
 
-println!("Active connections: {}", stats.active_connections);
-println!("Idle connections: {}", stats.idle_connections);
-println!("Waiting connections: {}", stats.waiting_connections);
-println!("Total connections created: {}", stats.total_created);
-println!("Total connections destroyed: {}", stats.total_destroyed);
-```
-
-### Connection Pool Health Check
-
-```rust
-use dmsc::prelude::*;
-
-// Check connection pool health status
-match ctx.database().ping() {
-    Ok(_) => {
-        println!("Database connection is healthy");
-    }
-    Err(e) => {
-        println!("Database connection failed: {}", e);
-        
-        // Try to recreate connection pool
-        ctx.database().recreate_pool()?;
-    }
+    Ok(())
 }
 ```
+
+### PooledDatabase
+
+Pooled database connection wrapper.
+
+Implements DMSCDatabase trait, can be used directly for database operations.
+
+#### Methods
+
+| Method | Description | Parameters | Return Value |
+|:--------|:-------------|:--------|:--------|
+| `id()` | Get connection ID | None | `u32` |
+| `execute(sql)` | Execute SQL | `sql: &str` | `DMSCResult<u64>` |
+| `query(sql)` | Execute query | `sql: &str` | `DMSCResult<DMSCDBResult>` |
+| `query_one(sql)` | Query single row | `sql: &str` | `DMSCResult<Option<DMSCDBRow>>` |
+| `ping()` | Test connection | None | `DMSCResult<bool>` |
+| `is_connected()` | Check connection | None | `bool` |
+| `pool_metrics()` | Get pool statistics | None | `DatabaseMetrics` |
+
+### DatabaseMetrics
+
+Connection pool statistics.
+
+#### Fields
+
+| Field | Type | Description |
+|:--------|:-----|:-------------|
+| `active_connections` | `u64` | Active connections count |
+| `idle_connections` | `u64` | Idle connections count |
+| `total_connections` | `u64` | Total connections count |
+| `queries_executed` | `u64` | Queries executed count |
+| `query_duration_ms` | `f64` | Average query duration (ms) |
+| `errors` | `u64` | Errors count |
+
+<div align="center">
+
+## ORM and Query Builders
+
+</div>
+
+### QueryBuilder
+
+ORM query builder, providing type-safe query building.
+
+**Note**: QueryBuilder is located in the `dmsc::database::orm` module.
+
+#### Methods
+
+| Method | Description | Parameters | Return Value |
+|:--------|:-------------|:--------|:--------|
+| `new()` | Create new instance | None | `Self` |
+| `table(name)` | Set table name | `name: &str` | `Self` |
+| `select(columns)` | Select columns | `columns: &[&str]` | `Self` |
+| `and_where(condition)` | Add AND condition | `condition: &str` | `Self` |
+| `or_where(condition)` | Add OR condition | `condition: &str` | `Self` |
+| `where_eq(column, value)` | Equality condition | `column: &str`, `value: serde_json::Value` | `Self` |
+| `where_in(column, values)` | IN condition | `column: &str`, `values: &[serde_json::Value]` | `Self` |
+| `order_by(column, order)` | Order by | `column: &str`, `order: SortOrder` | `Self` |
+| `limit(n)` | Limit count | `n: u64` | `Self` |
+| `offset(n)` | Offset | `n: u64` | `Self` |
+| `build()` | Build SQL | None | `String` |
+
+#### Usage Example
+
+```rust
+use dmsc::database::orm::{QueryBuilder, SortOrder};
+
+let query = QueryBuilder::new()
+    .table("users")
+    .select(&["id", "name", "email"])
+    .where_eq("active", serde_json::json!(true))
+    .and_where("role = 'admin'")
+    .order_by("created_at", SortOrder::Desc)
+    .limit(10)
+    .build();
+
+let results = db.query(&query).await?;
+```
+
+### DMSCORMSimpleRepository
+
+Simple ORM repository, providing basic CRUD operations.
+
+#### Methods
+
+| Method | Description | Parameters | Return Value |
+|:--------|:-------------|:--------|:--------|
+| `new(table_name)` | Create instance | `table_name: &str` | `Self` |
+| `find_all()` | Query all | None | `DMSCResult<Vec<serde_json::Value>>` |
+| `find_by_id(id)` | Query by ID | `id: i64` | `DMSCResult<Option<serde_json::Value>>` |
+| `find_by_where(where)` | Conditional query | `where: &str` | `DMSCResult<Vec<serde_json::Value>>` |
+| `create(data)` | Create record | `data: &serde_json::Value` | `DMSCResult<serde_json::Value>` |
+| `update(id, data)` | Update record | `id: i64`, `data: &serde_json::Value` | `DMSCResult<serde_json::Value>` |
+| `delete(id)` | Delete record | `id: i64` | `DMSCResult<()>` |
+
+<div align="center">
+
+## Transaction Management
+
+</div>
+
+### DMSCDatabaseTransaction
+
+Transaction interface trait.
+
+#### Methods
+
+| Method | Description | Parameters | Return Value |
+|:--------|:-------------|:--------|:--------|
+| `execute(sql)` | Execute SQL | `sql: &str` | `DMSCResult<u64>` |
+| `query(sql)` | Execute query | `sql: &str` | `DMSCResult<DMSCDBResult>` |
+| `commit()` | Commit transaction | None | `DMSCResult<()>` |
+| `rollback()` | Rollback transaction | None | `DMSCResult<()>` |
+| `close()` | Close transaction | None | `DMSCResult<()>` |
+
+#### Usage Example
+
+```rust
+use dmsc::database::{DMSCDatabasePool, DMSCDatabaseConfig};
+
+#[tokio::main]
+async fn main() -> DMSCResult<()> {
+    let config = DMSCDatabaseConfig::postgres()
+        .database("mydb")
+        .build();
+
+    let pool = DMSCDatabasePool::new(config).await?;
+    let db = pool.get().await?;
+
+    // Start transaction
+    let mut tx = db.transaction().await?;
+
+    // Execute operations within transaction
+    tx.execute("UPDATE accounts SET balance = balance - 100 WHERE id = $1", &[&1]).await?;
+    tx.execute("UPDATE accounts SET balance = balance + 100 WHERE id = $1", &[&2]).await?;
+
+    // Commit transaction
+    tx.commit().await?;
+
+    Ok(())
+}
+```
+
 <div align="center">
 
 ## Database Migrations
 
 </div>
 
-### DMSCMigration
+### DMSCDatabaseMigrator
 
-Migration interface.
+Database migration manager.
 
 #### Methods
 
 | Method | Description | Parameters | Return Value |
 |:--------|:-------------|:--------|:--------|
-| `add_migration(migration)` | Add migration | `migration: impl Migration` | `()` |
-| `migrate()` | Execute migration | None | `DMSCResult<()>` |
-| `rollback()` | Rollback migration | None | `DMSCResult<()>` |
-| `get_status()` | Get migration status | None | `DMSCResult<Vec<MigrationStatus>>` |
+| `new()` | Create new instance | None | `Self` |
+| `with_migrations_dir(dir)` | Set migrations directory | `dir: PathBuf` | `Self` |
+| `add_migration(migration)` | Add migration | `migration: DMSCDatabaseMigration` | `()` |
+| `get_migrations()` | Get all migrations | None | `&[DMSCDatabaseMigration]` |
+| `load_migrations_from_dir(dir)` | Load from directory | `dir: &str` | `std::io::Result<()>` |
 
-### Creating Migrations
+### DMSCDatabaseMigration
 
-```rust
-use dmsc::prelude::*;
+Migration definition struct.
 
-struct CreateUsersTable;
+#### Fields
 
-impl Migration for CreateUsersTable {
-    fn version(&self) -> &str {
-        "20240115000001"
-    }
-    
-    fn name(&self) -> &str {
-        "create_users_table"
-    }
-    
-    fn up(&self, db: &DMSCDatabase) -> DMSCResult<()> {
-        db.execute(r#"
-            CREATE TABLE users (
-                id SERIAL PRIMARY KEY,
-                name VARCHAR(255) NOT NULL,
-                email VARCHAR(255) UNIQUE NOT NULL,
-                created_at TIMESTAMP DEFAULT NOW(),
-                updated_at TIMESTAMP DEFAULT NOW()
-            )
-        "#)?;
-        
-        Ok(())
-    }
-    
-    fn down(&self, db: &DMSCDatabase) -> DMSCResult<()> {
-        db.execute("DROP TABLE users")?;
-        Ok(())
-    }
-}
+| Field | Type | Description |
+|:--------|:-----|:-------------|
+| `version` | `u32` | Version number |
+| `name` | `String` | Migration name |
+| `sql_up` | `String` | Upgrade SQL |
+| `sql_down` | `Option<String>` | Rollback SQL |
+| `timestamp` | `DateTime<Utc>` | Creation time |
 
-// Add migration
-ctx.database().migration().add_migration(CreateUsersTable)?;
-
-// Execute migration
-ctx.database().migrate()?;
-```
-
-### Migration Management
+#### Creating Migrations
 
 ```rust
-use dmsc::prelude::*;
+use dmsc::database::{DMSCDatabaseMigrator, DMSCDatabaseMigration};
 
-// Get migration status
-let migration_status = ctx.database().migration().get_status()?;
+let migration = DMSCDatabaseMigration::new(
+    20240115000001,
+    "create_users_table",
+    r#"
+        CREATE TABLE users (
+            id SERIAL PRIMARY KEY,
+            name VARCHAR(255) NOT NULL,
+            email VARCHAR(255) UNIQUE NOT NULL,
+            created_at TIMESTAMP DEFAULT NOW()
+        )
+    "#,
+    Some("DROP TABLE users")
+);
 
-for status in migration_status {
-    println!("Migration: {} ({})", status.name, status.version);
-    println!("Status: {:?}", status.status);
-    println!("Applied at: {:?}", status.applied_at);
-}
-
-// Rollback last migration
-ctx.database().migration().rollback()?;
-
-// Rollback to specific version
-ctx.database().migration().rollback_to("20240115000001")?;
+let mut migrator = DMSCDatabaseMigrator::new();
+migrator.add_migration(migration);
 ```
+
+### DMSCMigrationHistory
+
+Migration history record.
+
+#### Fields
+
+| Field | Type | Description |
+|:--------|:-----|:-------------|
+| `version` | `u32` | Version number |
+| `name` | `String` | Migration name |
+| `applied_at` | `DateTime<Utc>` | Applied time |
+| `checksum` | `String` | Checksum |
 
 <div align="center">
 
-## Advanced Features
+## Row Data Operations
 
 </div>
 
-### Batch Operations
+### DMSCDBRow
+
+Database result row.
+
+#### Methods
+
+| Method | Description | Parameters | Return Value |
+|:--------|:-------------|:--------|:--------|
+| `get<T>(column)` | Get column value | `column: &str` | `T` |
+| `get_opt<T>(column)` | Get optional value | `column: &str` | `DMSCResult<Option<T>>` |
+| `len()` | Column count | None | `usize` |
+| `is_empty()` | Is empty | None | `bool` |
+| `columns()` | Column names | None | `Vec<String>` |
+
+#### Usage Example
 
 ```rust
-use dmsc::prelude::*;
+let rows = db.query("SELECT * FROM users WHERE id = $1", &[&1]).await?;
 
-// Batch insert
-let users = vec![
-    ("Alice", "alice@example.com"),
-    ("Bob", "bob@example.com"),
-    ("Charlie", "charlie@example.com"),
-];
-
-ctx.database().batch_insert("users", &["name", "email"], users)?;
-
-// Batch update
-let updates = vec![
-    (1, "Alice Smith"),
-    (2, "Bob Johnson"),
-    (3, "Charlie Brown"),
-];
-
-ctx.database().batch_update("users", "id", &["name"], updates)?;
-```
-
-### Prepared Statements
-
-```rust
-use dmsc::prelude::*;
-
-// Prepare statement
-let stmt = ctx.database().prepare("SELECT * FROM users WHERE id = $1 AND active = $2")?;
-
-// Execute prepared statement
-let results = stmt.query(&[123, true])?;
-
-// Execute multiple times
-for user_id in [123, 456, 789] {
-    let results = stmt.query(&[user_id, true])?;
-    // Process results
+for row in rows {
+    let id: i64 = row.get("id")?;
+    let name: String = row.get("name")?;
+    let email: Option<String> = row.get_opt("email")?;
+    
+    println!("User: {} - {} - {:?}", id, name, email);
 }
 ```
 
-### Async Operations
+### DMSCDBResult
+
+Query result set.
+
+#### Methods
+
+| Method | Description | Parameters | Return Value |
+|:--------|:-------------|:--------|:--------|
+| `len()` | Row count | None | `usize` |
+| `is_empty()` | Is empty | None | `bool` |
+| `columns()` | Column names | None | `Vec<String>` |
+| `iter()` | Iterator | None | `Iter<'_, DMSCDBRow>` |
+| `into_iter()` | Into iterator | None | `IntoIter<DMSCDBRow>` |
+
+#### Implemented Traits
+
+- `IntoIterator` - Supports `for row in results` iteration
+
+<div align="center">
+
+## Batch Operations
+
+</div>
 
 ```rust
-use dmsc::prelude::*;
+use dmsc::database::{DMSCDatabasePool, DMSCDatabaseConfig};
 
-// Async query
-let results = ctx.database().query_async("SELECT * FROM users WHERE active = true").await?;
+#[tokio::main]
+async fn main() -> DMSCResult<()> {
+    let config = DMSCDatabaseConfig::postgres().build();
+    let pool = DMSCDatabasePool::new(config).await?;
+    let db = pool.get().await?;
 
-// Async transaction
-let mut transaction = ctx.database().begin_transaction_async().await?;
+    // Batch insert
+    let users = vec![
+        vec![serde_json::json!("Alice"), serde_json::json!("alice@example.com")],
+        vec![serde_json::json!("Bob"), serde_json::json!("bob@example.com")],
+        vec![serde_json::json!("Charlie"), serde_json::json!("charlie@example.com")],
+    ];
 
-try {
-    transaction.execute_async("UPDATE accounts SET balance = balance - 100 WHERE id = 1").await?;
-    transaction.execute_async("UPDATE accounts SET balance = balance + 100 WHERE id = 2").await?;
-    transaction.commit_async().await?;
-} catch (e) {
-    transaction.rollback_async().await?;
-    return Err(e);
+    let results = db.batch_execute(
+        "INSERT INTO users (name, email) VALUES ($1, $2)",
+        &users
+    ).await?;
+
+    println!("Inserted {} rows", results.len());
+
+    Ok(())
 }
 ```
 
@@ -513,9 +500,9 @@ try {
 
 ## Error Handling
 
-</div>  
+</div>
 
-### Database Error Codes
+### Error Codes
 
 | Error Code | Description |
 |:--------|:-------------|
@@ -528,27 +515,27 @@ try {
 ### Error Handling Example
 
 ```rust
-use dmsc::prelude::*;
+use dmsc::database::{DMSCDatabasePool, DMSCDatabaseConfig};
 
-match ctx.database().query("SELECT * FROM users WHERE id = 123") {
-    Ok(results) => {
-        // Query succeeded
-        for row in results {
-            println!("User: {:?}", row);
+#[tokio::main]
+async fn main() -> DMSCResult<()> {
+    let config = DMSCDatabaseConfig::postgres().build();
+    let pool = DMSCDatabasePool::new(config).await?;
+    let db = pool.get().await?;
+
+    match db.query("SELECT * FROM users WHERE id = $1", &[&123]).await {
+        Ok(results) => {
+            for row in results {
+                println!("User: {:?}", row);
+            }
+        }
+        Err(e) => {
+            eprintln!("Database error: {}", e);
+            return Err(e);
         }
     }
-    Err(DMSCError { code, .. }) if code == "DATABASE_CONNECTION_ERROR" => {
-        // Connection error, try to reconnect
-        ctx.log().error("Database connection lost, attempting to reconnect");
-        ctx.database().recreate_pool()?;
-        
-        // Retry query
-        let results = ctx.database().query("SELECT * FROM users WHERE id = 123")?;
-    }
-    Err(e) => {
-        // Other errors
-        return Err(e);
-    }
+
+    Ok(())
 }
 ```
 
@@ -558,14 +545,14 @@ match ctx.database().query("SELECT * FROM users WHERE id = 123") {
 
 </div>
 
-1. **Use connection pools**: Avoid frequent creation and destruction of connections
-2. **Use prepared statements**: Improve performance and prevent SQL injection
-3. **Use transactions appropriately**: Keep transactions short, avoid long locks
-4. **Handle errors correctly**: Distinguish between recoverable and unrecoverable errors
-5. **Monitor connection pools**: Monitor connection pool usage and performance
-6. **Use migrations**: Use database migrations to manage schema changes
-7. **Index optimization**: Add appropriate indexes for common queries
-8. **Batch operations**: Use batch operations to reduce database round trips
+1. **Use Connection Pool**: Avoid frequent connection creation and destruction
+2. **Use Parameter Binding**: Use `query_with_params` to prevent SQL injection
+3. **Use Transactions Appropriately**: Keep transactions short, avoid long locks
+4. **Handle Errors Correctly**: Distinguish between recoverable and unrecoverable errors
+5. **Monitor Connection Pool**: Use `metrics()` to monitor pool usage
+6. **Use Migrations**: Use DMSCDatabaseMigrator to manage schema changes
+7. **Async Operations**: All database operations are asynchronous, use `.await`
+8. **Batch Operations**: Use `batch_execute` to reduce database round trips
 
 <div align="center">
 
@@ -573,24 +560,24 @@ match ctx.database().query("SELECT * FROM users WHERE id = 123") {
 
 </div>
 
-- [README](./README.md): Module overview with API reference summary and quick navigation
-- [auth](./auth.md): Authentication module handling user authentication and authorization
-- [cache](./cache.md): Cache module providing in-memory and distributed cache support
-- [config](./config.md): Configuration module managing application configuration
-- [core](./core.md): Core module providing error handling and service context
-- [device](./device.md): Device module using protocols for device communication
-- [fs](./fs.md): Filesystem module providing file operation functions
-- [gateway](./gateway.md): Gateway module providing API gateway functionality
-- [grpc](./grpc.md): gRPC module with service registry and Python bindings
-- [hooks](./hooks.md): Hooks module providing lifecycle hook support
-- [http](./http.md): HTTP module providing HTTP server and client functionality
-- [log](./log.md): Logging module for protocol events
-- [mq](./mq.md): Message queue module providing message queue support
-- [observability](./observability.md): Observability module for protocol performance monitoring
-- [orm](./orm.md): ORM module with query builder and pagination support
-- [protocol](./protocol.md): Protocol module providing communication protocol support
-- [security](./security.md): Security module providing encryption and decryption functions
-- [service_mesh](./service_mesh.md): Service mesh module using protocols for inter-service communication
-- [storage](./storage.md): Storage module providing cloud storage support
-- [validation](./validation.md): Validation module providing data validation functions
-- [ws](./ws.md): WebSocket module with Python bindings for real-time communication
+- [README](./README.md): Module overview, providing API reference documentation overview and quick navigation
+- [auth](./auth.md): Authentication module, handling user authentication and authorization
+- [cache](./cache.md): Cache module, providing memory cache and distributed cache support
+- [config](./config.md): Configuration module, managing application configuration
+- [core](./core.md): Core module, providing error handling and service context
+- [device](./device.md): Device module, using protocols for device communication
+- [fs](./fs.md): File system module, providing file operation functions
+- [gateway](./gateway.md): Gateway module, providing API gateway functions
+- [grpc](./grpc.md): gRPC Module, with service registration and Python bindings
+- [hooks](./hooks.md): Hooks module, providing lifecycle hook support
+- [http](./http.md): HTTP module, providing HTTP server and client functions
+- [log](./log.md): Log module, recording protocol events
+- [mq](./mq.md): Message queue module, providing message queue support
+- [observability](./observability.md): Observability module, monitoring protocol performance
+- [orm](./orm.md): ORM Module, with query builder and pagination support
+- [protocol](./protocol.md): Protocol module, providing communication protocol support
+- [security](./security.md): Security module, providing encryption and decryption functions
+- [service_mesh](./service_mesh.md): Service mesh module, using protocols for inter-service communication
+- [storage](./storage.md): Storage module, providing cloud storage support
+- [validation](./validation.md): Validation module, providing data validation functions
+- [ws](./ws.md): WebSocket Module, with Python bindings for real-time communication

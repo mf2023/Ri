@@ -2,9 +2,9 @@
 
 # Protocol API Reference
 
-**Version: 0.1.4**
+**Version: 0.1.5**
 
-**Last modified date: 2026-01-15**
+**Last modified date: 2026-01-18**
 
 The protocol module provides a protocol abstraction layer, supporting global protocols and private communication protocols, implementing encryption, HSM, frame processing, and other core features.
 
@@ -37,41 +37,65 @@ The main protocol manager interface, providing protocol initialization, message 
 | Method | Description | Parameters | Returns |
 |:--------|:-------------|:--------|:--------|
 | `initialize(config)` | Initialize manager | `config: DMSCProtocolConfig` | `DMSCResult<()>` |
-| `send_message(target, message)` | Send message | `target: &str`, `message: &[u8]` | `DMSCResult<Vec<u8>>` |
-| `send_message_with_protocol(target, message, protocol_type)` | Send with specific protocol | `target: &str`, `message: &[u8]`, `protocol_type: DMSCProtocolType` | `DMSCResult<Vec<u8>>` |
-| `get_stats()` | Get statistics | None | `DMSCResult<DMSCProtocolStats>` |
-| `shutdown()` | Shutdown manager | None | `DMSCResult<()>` |
-| `create_control_center(ctx)` | Create control center | `ctx: DMSCServiceContext` | `DMSCControlCenter` |
+| `send_message(target, message)` | Send message with detailed response | `target: &str`, `message: &[u8]` | `Vec<u8>` (JSON response) |
+| `send_message_with_flags(target, message, flags)` | Send message with custom flags | `target: &str`, `message: &[u8]`, `flags: DMSCMessageFlags` | `Vec<u8>` (JSON response) |
+| `get_stats()` | Get statistics | None | `DMSCProtocolStats` |
+| `close_connection(connection_id)` | Close connection | `connection_id: &str` | `bool` |
+| `get_connection_info(connection_id)` | Get connection info | `connection_id: &str` | `Option<DMSCConnectionInfo>` |
+
+#### Response Format
+
+The `send_message` method returns a JSON response with the following structure:
+
+```json
+{
+    "success": true,
+    "sequence_number": 123,
+    "target_id": "target-device",
+    "response_data": {
+        "status": "delivered",
+        "target": "target-device",
+        "source": "protocol_manager",
+        "sequence": 123,
+        "timestamp": 1705588800000,
+        "frame_type": "Data",
+        "payload_size": 11,
+        "protocol": "Global",
+        "delivery": {
+            "delivered_at": 1705588800000,
+            "hops": 1,
+            "route": ["protocol_manager", "target-device"]
+        }
+    },
+    "timestamp": 1705588800000
+}
+```
 
 #### Usage Example
 
 ```rust
 use dmsc::protocol::{DMSCProtocolManager, DMSCProtocolType, DMSCProtocolConfig};
-use dmsc::core::DMSCServiceContext;
+use serde_json::Value;
 
 async fn example() -> DMSCResult<()> {
-    let mut ctx = DMSCServiceContext::new();
-    let mut manager = DMSCProtocolManager::new(ctx);
+    let manager = DMSCProtocolManager::new();
     
     let config = DMSCProtocolConfig {
         default_protocol: DMSCProtocolType::Global,
         enable_security: true,
+        security_level: DMSCSecurityLevel::Standard,
         enable_state_sync: true,
         performance_optimization: true,
-        connection_timeout: std::time::Duration::from_secs(30),
-        max_connections_per_protocol: 1000,
-        protocol_switching_enabled: true,
     };
     
-    manager.initialize(config).await?;
+    manager.initialize(config)?;
     
-    let response = manager.send_message("target-device", b"Hello DMSC").await?;
+    let response = manager.send_message("target-device", b"Hello DMSC");
+    let response_json: Value = serde_json::from_slice(&response)?;
     
-    let stats = manager.get_stats().await?;
-    println!("Messages sent: {}", stats.total_messages_sent);
-    println!("Messages received: {}", stats.total_messages_received);
-    
-    manager.shutdown().await?;
+    println!("Status: {}", response_json["response_data"]["status"]);
+    println!("Sequence: {}", response_json["response_data"]["sequence"]);
+    println!("Frame Type: {}", response_json["response_data"]["frame_type"]);
     
     Ok(())
 }
@@ -96,11 +120,20 @@ Protocol configuration.
 |:--------|:-----|:-------------|:-------|
 | `default_protocol` | `DMSCProtocolType` | Default protocol type | `Global` |
 | `enable_security` | `bool` | Enable security features | `true` |
+| `security_level` | `DMSCSecurityLevel` | Security level | `Standard` |
 | `enable_state_sync` | `bool` | Enable state synchronization | `true` |
 | `performance_optimization` | `bool` | Enable performance optimization | `true` |
-| `connection_timeout` | `Duration` | Connection timeout | `30s` |
-| `max_connections_per_protocol` | `u32` | Max connections per protocol | `1000` |
-| `protocol_switching_enabled` | `bool` | Enable protocol switching | `true` |
+
+### DMSCSecurityLevel
+
+Security level enum.
+
+| Variant | Description |
+|:--------|:-------------|
+| `None` | No security |
+| `Standard` | Standard security |
+| `High` | High security |
+| `Military` | Military-grade security |
 
 <div align="center">
 

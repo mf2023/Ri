@@ -45,7 +45,7 @@
 # and documentation generation.
 [package]
 name = "dmsc"
-version = "0.1.4"
+version = "0.1.5"
 edition = "2021"
 authors = ["Dunimd Team"]
 description = "Dunimd Middleware Service - A high-performance Rust middleware framework with modular architecture"
@@ -218,6 +218,19 @@ erased-serde = "0.4"
 # Enables runtime loading of compiled plugin modules.
 libloading = "0.8"
 
+# Zeroize for secure memory clearing of sensitive data
+# Automatically clears memory when sensitive types are dropped
+# Prevents cold-boot attacks and memory forensics
+zeroize = "1.8"
+
+# Zeroize derive macro for automatic Zeroize trait implementation
+# Provides derive macro support for zeroizing struct fields
+zeroize_derive = "1.4"
+
+# Secret handling for secure secret value management
+# Provides zeroize-on-drop semantics for sensitive data
+secrecy = "0.8"
+
 # =============================================================================
 # Protocol Module Dependencies
 # =============================================================================
@@ -261,6 +274,10 @@ base64 = "0.21"
 # Generic array types for compile-time sized collections
 # Enables low-level buffer manipulation
 generic-array = "0.14"
+
+# Binary serialization for state persistence
+# Provides efficient binary encoding/decoding
+bincode = "1"
 
 # Type-level integer operations for type-safe sizing
 typenum = "1"
@@ -411,6 +428,10 @@ grpc = ["tonic", "prost", "tokio-stream", "tower"]
 
 # WebSocket protocol support for real-time communication
 websocket = ["tokio-tungstenite", "tungstenite"]
+
+# Experimental protocol module with post-quantum cryptography
+# WARNING: This feature is for research purposes only. DO NOT use in production.
+protocol = []
 
 # =============================================================================
 # Development Dependencies

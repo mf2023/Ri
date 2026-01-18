@@ -95,4 +95,28 @@ pub use module::DMSCModule;
 /// Application builder and runtime for constructing DMSC applications
 pub use runtime::{DMSCAppBuilder, DMSCAppRuntime};
 /// Internal module traits
-pub(crate) use module::{ServiceModule, AsyncServiceModule};
+pub use module::{ServiceModule, AsyncServiceModule};
+
+/// Lock utilities
+#[cfg(feature = "pyo3")]
+pub use lock::{DMSCLockError, DMSCLockResult, RwLockExtensions, MutexExtensions, from_poison_error};
+
+/// Python module bindings
+#[cfg(feature = "pyo3")]
+pub use module::{DMSCPythonModule, DMSCPythonModuleAdapter, DMSCPythonServiceModule, DMSCPythonAsyncServiceModule};
+
+/// Error chain utilities
+#[cfg(feature = "pyo3")]
+pub use error_chain::{DMSCErrorChain, DMSCErrorChainIter, DMSCErrorContext, DMSCOptionErrorContext};
+
+/// Health check types
+#[cfg(feature = "pyo3")]
+pub use health::{DMSCHealthStatus, DMSCHealthCheckResult, DMSCHealthCheckConfig, DMSCHealthReport, DMSCHealthChecker};
+
+/// Lifecycle management
+#[cfg(feature = "pyo3")]
+pub use lifecycle::DMSCLifecycleObserver;
+
+/// Analytics module
+#[cfg(feature = "pyo3")]
+pub use analytics::DMSCLogAnalyticsModule;

@@ -33,54 +33,64 @@ config模块包含以下子模块：
 
 | 方法 | 描述 | 参数 | 返回值 |
 |:--------|:-------------|:--------|:--------|
-| `get(key)` | 获取配置值 | `key: &str` | `Option<&String>` |
-| `get_str(key)` | 获取字符串值 | `key: &str` | `Option<&str>` |
-| `get_bool(key)` | 获取布尔值 | `key: &str` | `Option<bool>` |
-| `get_i64(key)` | 获取 i64 值 | `key: &str` | `Option<i64>` |
-| `get_u64(key)` | 获取 u64 值 | `key: &str` | `Option<u64>` |
-| `get_f32(key)` | 获取 f32 值 | `key: &str` | `Option<f32>` |
-| `get_f64(key)` | 获取 f64 值 | `key: &str` | `Option<f64>` |
-| `get_usize(key)` | 获取 usize 值 | `key: &str` | `Option<usize>` |
-| `get_i32(key)` | 获取 i32 值 | `key: &str` | `Option<i32>` |
-| `get_u32(key)` | 获取 u32 值 | `key: &str` | `Option<u32>` |
-| `get_port(key)` | 获取端口号 (1-65535) | `key: &str` | `Option<u16>` |
-| `get_timeout_secs(key)` | 获取超时秒数 | `key: &str` | `Option<u32>` |
-| `get_retry_count(key)` | 获取重试次数 | `key: &str` | `Option<u32>` |
-| `get_percentage(key)` | 获取百分比 (0.0-1.0) | `key: &str` | `Option<f32>` |
-| `get_rate(key)` | 获取速率值 | `key: &str` | `Option<f32>` |
-| `get_or_default(key, default)` | 获取值或默认值 | `key: &str`, `default: T` | `T` |
-| `has(key)` | 检查键是否存在 | `key: &str` | `bool` |
+| `new()` | 创建新的配置 | 无 | `DMSCConfig` |
+| `get(key)` | 获取配置值 | `key: &str` | `String` 或 `None` |
+| `get_f64(key)` | 获取 f64 值 | `key: &str` | `f64` |
+| `get_usize(key)` | 获取 usize 值 | `key: &str` | `usize` |
+| `set(key, value)` | 设置配置值 | `key: &str`, `value: &str` | 无 |
+| `contains(key)` | 检查键是否存在 | `key: &str` | `bool` |
 | `keys()` | 获取所有键 | 无 | `Vec<String>` |
+| `values()` | 获取所有值 | 无 | `Vec<String>` |
+| `len()` | 获取配置数量 | 无 | `usize` |
+| `is_empty()` | 检查是否为空 | 无 | `bool` |
+| `merge(other)` | 合并配置 | `other: &DMSCConfig` | 无 |
+| `clear()` | 清空配置 | 无 | 无 |
 
 #### 使用示例
 
 ```rust
-use dmsc::prelude::*;
+use dmsc::config::DMSCConfig;
 
-// 获取字符串配置
-let service_name = ctx.config().get_str("service.name").unwrap_or("default");
+// 创建配置
+let config = DMSCConfig::new();
 
-// 获取类型化配置
-let port: u16 = ctx.config().get_port("service.port").unwrap_or(8080);
-let max_connections = ctx.config().get_usize("database.max_connections").unwrap_or(100);
+// 设置配置
+config.set("service.port", "8080");
+config.set("database.url", "postgres://localhost/mydb");
 
-// 获取带边界检查的值
-let timeout = ctx.config().get_timeout_secs("service.timeout").unwrap_or(30);
+// 获取配置
+let port = config.get("service.port");
+let url = config.get("database.url");
 
-// 获取或默认值
-let retries = ctx.config().get_or_default("service.retries", 3);
-
-// 检查配置是否存在
-if ctx.config().has("feature.new_feature") {
-    // 启用新功能
+// 检查配置
+if config.contains("service.host") {
+    let host = config.get("service.host");
 }
 
-// 获取所有配置键
-let keys = ctx.config().keys();
-for key in keys {
+// 获取所有键
+let keys = config.keys();
+for key in &keys {
     println!("Config key: {}", key);
 }
+
+// 合并配置
+let other = DMSCConfig::new();
+other.set("additional", "value");
+config.merge(&other);
 ```
+
+### DMSCConfigManager
+
+配置管理器，提供多源配置管理。
+
+#### 方法
+
+| 方法 | 描述 | 参数 | 返回值 |
+|:--------|:-------------|:--------|:--------|
+| `new()` | 创建新的配置管理器 | 无 | `DMSCConfigManager` |
+| `add_file_source(path)` | 添加文件配置源 | `path: &str` | 无 |
+| `add_environment_source()` | 添加环境变量源 | 无 | 无 |
+| `get(key)` | 获取配置值 | `key: &str` | `String` 或 `None` |
 
 ### DMSCConfigSource
 

@@ -4,7 +4,7 @@
 //! The DMSC project belongs to the Dunimd Team.
 //!
 //! Licensed under the Apache License, Version 2.0 (the "License");
-//! you may not use this file except in compliance with the License.
+//! You may not use this file except in compliance with the License.
 //! You may obtain a copy of the License at
 //!
 //!     http://www.apache.org/licenses/LICENSE-2.0
@@ -510,7 +510,7 @@ impl DMSCPythonModuleAdapter {
 /// module.priority = 50
 /// module.dependencies = ["config"]
 /// ```
-#[pyclass]
+#[pyclass(subclass)]
 #[derive(Clone)]
 pub struct DMSCPythonServiceModule {
     name: String,
@@ -615,7 +615,7 @@ impl DMSCPythonServiceModule {
 /// module.priority = 100
 /// module.dependencies = ["config", "logger"]
 /// ```
-#[pyclass]
+#[pyclass(subclass)]
 #[derive(Clone)]
 pub struct DMSCPythonAsyncServiceModule {
     name: String,

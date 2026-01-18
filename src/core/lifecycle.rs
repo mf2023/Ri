@@ -131,3 +131,24 @@ impl ServiceModule for DMSCLifecycleObserver {
         Ok(())
     }
 }
+
+#[cfg(feature = "pyo3")]
+#[pyo3::prelude::pymethods]
+impl DMSCLifecycleObserver {
+    #[new]
+    fn new_py() -> Self {
+        Self::new()
+    }
+
+    fn name(&self) -> String {
+        "DMSC.LifecycleObserver".to_string()
+    }
+
+    fn is_critical(&self) -> bool {
+        false
+    }
+
+    fn __repr__(&self) -> String {
+        "DMSCLifecycleObserver".to_string()
+    }
+}

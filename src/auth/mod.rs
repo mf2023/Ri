@@ -110,12 +110,12 @@ mod session;
 mod security;
 mod revocation;
 
-pub use jwt::DMSCJWTManager;
-pub use oauth::{DMSCOAuthManager, DMSCOAuthToken, DMSCOAuthUserInfo};
+pub use jwt::{DMSCJWTManager, DMSCJWTClaims, DMSCJWTValidationOptions};
+pub use oauth::{DMSCOAuthManager, DMSCOAuthToken, DMSCOAuthUserInfo, DMSCOAuthProvider};
 pub use permissions::{DMSCPermissionManager, DMSCPermission, DMSCRole};
-pub use session::DMSCSessionManager;
+pub use session::{DMSCSessionManager, DMSCSession};
 pub use security::DMSCSecurityManager;
-pub use revocation::{JWTRevocationList, RevokedTokenInfo};
+pub use revocation::{DMSCJWTRevocationList, DMSCRevokedTokenInfo};
 
 use crate::core::{DMSCResult, DMSCError, DMSCServiceContext};
 use rand::RngCore;
@@ -220,7 +220,7 @@ pub struct DMSCAuthModule {
     /// OAuth manager for OAuth provider integration, protected by a RwLock for thread-safe access
     oauth_manager: Arc<RwLock<DMSCOAuthManager>>,
     /// JWT token revocation list for token invalidation
-    revocation_list: Arc<JWTRevocationList>,
+    revocation_list: Arc<DMSCJWTRevocationList>,
 }
 
 impl DMSCAuthModule {
@@ -243,7 +243,7 @@ impl DMSCAuthModule {
         let permission_manager = Arc::new(RwLock::new(DMSCPermissionManager::new()));
         let cache = Arc::new(crate::cache::DMSCMemoryCache::new());
         let oauth_manager = Arc::new(RwLock::new(DMSCOAuthManager::new(cache)));
-        let revocation_list = Arc::new(JWTRevocationList::new());
+        let revocation_list = Arc::new(DMSCJWTRevocationList::new());
 
         Self {
             config,
@@ -273,7 +273,7 @@ impl DMSCAuthModule {
         let permission_manager = Arc::new(RwLock::new(DMSCPermissionManager::new_async().await));
         let cache = Arc::new(crate::cache::DMSCMemoryCache::new());
         let oauth_manager = Arc::new(RwLock::new(DMSCOAuthManager::new(cache)));
-        let revocation_list = Arc::new(JWTRevocationList::new());
+        let revocation_list = Arc::new(DMSCJWTRevocationList::new());
 
         Self {
             config,
@@ -289,8 +289,8 @@ impl DMSCAuthModule {
     /// 
     /// # Returns
     /// 
-    /// An Arc<JWTRevocationList> providing thread-safe access to the token revocation list
-    pub fn revocation_list(&self) -> Arc<JWTRevocationList> {
+    /// An Arc<DMSCJWTRevocationList> providing thread-safe access to the token revocation list
+    pub fn revocation_list(&self) -> Arc<DMSCJWTRevocationList> {
         self.revocation_list.clone()
     }
 

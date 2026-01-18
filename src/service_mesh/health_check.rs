@@ -533,6 +533,25 @@ impl DMSCHealthChecker {
         Ok(())
     }
     
+    /// Stops health checks for a specific service endpoint.
+    /// 
+    /// This method clears the health check results for the specified service.
+    /// The background task will continue running but will no longer record results.
+    /// 
+    /// # Parameters
+    /// 
+    /// - `service_name`: Name of the service
+    /// - `endpoint`: Endpoint URL
+    /// 
+    /// # Returns
+    /// 
+    /// A `DMSCResult<()>` indicating success or failure
+    pub async fn stop_health_check(&self, service_name: &str, _endpoint: &str) -> DMSCResult<()> {
+        let mut results = self.check_results.write().await;
+        results.remove(service_name);
+        Ok(())
+    }
+    
     /// Starts background health checks for a service with a specific health check type.
     /// 
     /// This method creates a background task that periodically checks the health of a service

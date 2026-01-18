@@ -44,7 +44,7 @@ build-backend = "maturin"
 # managers for distribution and discovery.
 [project]
 name = "dmsc"
-version = "0.1.4"
+version = "0.1.5"
 description = "Dunimd Middleware Service - A high-performance Rust middleware framework with modular architecture"
 readme = "README.md"
 authors = [{ name = "Dunimd Team" }]

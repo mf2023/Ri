@@ -35,10 +35,10 @@
 //! ## Usage Examples
 //!
 //! ```rust
-//! use dmsc::core::error_chain::{ErrorChain, ErrorContext};
+//! use dmsc::core::error_chain::{DMSCErrorChain, DMSCErrorContext};
 //!
 //! let result = some_operation()
-//!     .map_err(|e| ErrorChain::new(e).context("Failed to perform operation"));
+//!     .map_err(|e| DMSCErrorChain::new(e).context("Failed to perform operation"));
 //! ```
 
 use std::error::Error as StdError;
@@ -46,16 +46,16 @@ use std::fmt;
 
 /// A chain of errors with contextual information.
 #[derive(Debug)]
-pub struct ErrorChain {
+pub struct DMSCErrorChain {
     /// The source error
     source: Box<dyn StdError + Send + Sync>,
     /// Contextual message
     context: String,
     /// Previous error in the chain (if any)
-    previous: Option<Box<ErrorChain>>,
+    previous: Option<Box<DMSCErrorChain>>,
 }
 
-impl ErrorChain {
+impl DMSCErrorChain {
     /// Creates a new error chain from a source error.
     pub fn new<E>(source: E) -> Self
     where
@@ -86,10 +86,6 @@ impl ErrorChain {
     where
         S: Into<String>,
     {
-        // This is the correct implementation
-        // We use mem::replace to avoid partial move issues
-        // The original error chain's source is used for the new chain
-        // The original chain becomes the previous entry
         let source = std::mem::replace(&mut self.source, Box::new(std::io::Error::other("error_chain_internal")));
         Self {
             source,
@@ -109,13 +105,13 @@ impl ErrorChain {
     }
 
     /// Gets the previous error in the chain.
-    pub fn previous(&self) -> Option<&ErrorChain> {
+    pub fn previous(&self) -> Option<&DMSCErrorChain> {
         self.previous.as_deref()
     }
 
     /// Iterates through the error chain.
-    pub fn chain(&self) -> ErrorChainIter<'_> {
-        ErrorChainIter { current: Some(self) }
+    pub fn chain(&self) -> DMSCErrorChainIter<'_> {
+        DMSCErrorChainIter { current: Some(self) }
     }
 
     /// Checks if this error chain contains a specific error type.
@@ -123,12 +119,10 @@ impl ErrorChain {
     where
         E: StdError + Send + Sync + 'static,
     {
-        // Check current error
         if self.source.is::<E>() {
             return true;
         }
         
-        // Check previous errors in chain
         let mut current = self.previous.as_deref();
         while let Some(chain) = current {
             if chain.source.is::<E>() {
@@ -152,13 +146,11 @@ impl ErrorChain {
     pub fn pretty_format(&self) -> String {
         let mut result = String::new();
         
-        // Add main error
         if !self.context.is_empty() {
             result.push_str(&format!("Error: {}\n", self.context));
         }
         result.push_str(&format!("Source: {}\n", self.source_error()));
 
-        // Add chain
         let mut level = 1;
         let mut current = self.previous.as_deref();
         while let Some(chain) = current {
@@ -175,13 +167,13 @@ impl ErrorChain {
     }
 }
 
-impl StdError for ErrorChain {
+impl StdError for DMSCErrorChain {
     fn source(&self) -> Option<&(dyn StdError + 'static)> {
         Some(&*self.source)
     }
 }
 
-impl fmt::Display for ErrorChain {
+impl fmt::Display for DMSCErrorChain {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         if !self.context.is_empty() {
             write!(f, "{}", self.context)?;
@@ -201,12 +193,12 @@ impl fmt::Display for ErrorChain {
 }
 
 /// Iterator over the error chain.
-pub struct ErrorChainIter<'a> {
-    current: Option<&'a ErrorChain>,
+pub struct DMSCErrorChainIter<'a> {
+    current: Option<&'a DMSCErrorChain>,
 }
 
-impl<'a> Iterator for ErrorChainIter<'a> {
-    type Item = &'a ErrorChain;
+impl<'a> Iterator for DMSCErrorChainIter<'a> {
+    type Item = &'a DMSCErrorChain;
 
     fn next(&mut self) -> Option<Self::Item> {
         let current = self.current?;
@@ -216,67 +208,67 @@ impl<'a> Iterator for ErrorChainIter<'a> {
 }
 
 /// Trait for adding error chain functionality to Result types.
-pub trait ErrorContext<T, E> {
+pub trait DMSCErrorContext<T, E> {
     /// Adds context to the error if the Result is Err.
-    fn chain_context<S>(self, context: S) -> Result<T, ErrorChain>
+    fn chain_context<S>(self, context: S) -> Result<T, DMSCErrorChain>
     where
         S: Into<String>;
 
     /// Adds context to the error with lazy evaluation.
-    fn with_chain_context<S, F>(self, f: F) -> Result<T, ErrorChain>
+    fn with_chain_context<S, F>(self, f: F) -> Result<T, DMSCErrorChain>
     where
         S: Into<String>,
         F: FnOnce() -> S;
 }
 
-impl<T, E> ErrorContext<T, E> for Result<T, E>
+impl<T, E> DMSCErrorContext<T, E> for Result<T, E>
 where
     E: StdError + Send + Sync + 'static,
 {
-    fn chain_context<S>(self, context: S) -> Result<T, ErrorChain>
+    fn chain_context<S>(self, context: S) -> Result<T, DMSCErrorChain>
     where
         S: Into<String>,
     {
-        self.map_err(|e| ErrorChain::with_context(e, context))
+        self.map_err(|e| DMSCErrorChain::with_context(e, context))
     }
 
-    fn with_chain_context<S, F>(self, f: F) -> Result<T, ErrorChain>
+    fn with_chain_context<S, F>(self, f: F) -> Result<T, DMSCErrorChain>
     where
         S: Into<String>,
         F: FnOnce() -> S,
     {
-        self.map_err(|e| ErrorChain::with_context(e, f()))
+        self.map_err(|e| DMSCErrorChain::with_context(e, f()))
     }
 }
 
 /// Extension trait for adding error context to Option types.
-pub trait OptionErrorContext<T> {
+pub trait DMSCOptionErrorContext<T> {
     /// Converts None to an error with context.
-    fn ok_or_chain<E>(self, err: E) -> Result<T, ErrorChain>
+    fn ok_or_chain<E>(self, err: E) -> Result<T, DMSCErrorChain>
     where
         E: StdError + Send + Sync + 'static;
 
     /// Converts None to an error with lazy context.
-    fn ok_or_else_chain<E, F>(self, f: F) -> Result<T, ErrorChain>
+    fn ok_or_else_chain<E, F>(self, f: F) -> Result<T, DMSCErrorChain>
     where
         E: StdError + Send + Sync + 'static,
         F: FnOnce() -> E;
 }
 
-impl<T> OptionErrorContext<T> for Option<T> {
-    fn ok_or_chain<E>(self, err: E) -> Result<T, ErrorChain>
+impl<T> DMSCOptionErrorContext<T> for Option<T> {
+    fn ok_or_chain<E>(self, err: E) -> Result<T, DMSCErrorChain>
     where
         E: StdError + Send + Sync + 'static,
     {
-        self.ok_or_else(|| ErrorChain::new(err))
+        self.ok_or_else(|| DMSCErrorChain::new(err))
     }
 
-    fn ok_or_else_chain<E, F>(self, f: F) -> Result<T, ErrorChain>
+    fn ok_or_else_chain<E, F>(self, f: F) -> Result<T, DMSCErrorChain>
     where
         E: StdError + Send + Sync + 'static,
         F: FnOnce() -> E,
     {
-        self.ok_or_else(|| ErrorChain::new(f()))
+        self.ok_or_else(|| DMSCErrorChain::new(f()))
     }
 }
 
@@ -285,29 +277,29 @@ pub mod utils {
     use super::*;
 
     /// Creates a new error chain from a string message.
-    pub fn chain_from_msg<S>(msg: S) -> ErrorChain
+    pub fn chain_from_msg<S>(msg: S) -> DMSCErrorChain
     where
         S: Into<String>,
     {
-        ErrorChain::new(std::io::Error::other(msg.into()))
+        DMSCErrorChain::new(std::io::Error::other(msg.into()))
     }
 
     /// Wraps an error with context if it matches a predicate.
-    pub fn chain_if<E, F, S>(err: E, predicate: F, context: S) -> ErrorChain
+    pub fn chain_if<E, F, S>(err: E, predicate: F, context: S) -> DMSCErrorChain
     where
         E: StdError + Send + Sync + 'static,
         F: FnOnce(&E) -> bool,
         S: Into<String>,
     {
         if predicate(&err) {
-            ErrorChain::with_context(err, context)
+            DMSCErrorChain::with_context(err, context)
         } else {
-            ErrorChain::new(err)
+            DMSCErrorChain::new(err)
         }
     }
 
     /// Collects multiple errors into a single error chain.
-    pub fn chain_from_multiple<S>(errors: Vec<Box<dyn StdError + Send + Sync>>, context: S) -> ErrorChain
+    pub fn chain_from_multiple<S>(errors: Vec<Box<dyn StdError + Send + Sync>>, context: S) -> DMSCErrorChain
     where
         S: Into<String>,
     {
@@ -319,11 +311,11 @@ pub mod utils {
             let error = errors.into_iter().next()
                 .ok_or_else(|| std::io::Error::other("errors vector should have at least one element"))
                 .unwrap_or_else(|_| Box::new(std::io::Error::other("errors vector should have at least one element")));
-            return ErrorChain::with_context(MultiError { errors: vec![error] }, context);
+            return DMSCErrorChain::with_context(MultiError { errors: vec![error] }, context);
         }
 
         let combined = MultiError { errors };
-        ErrorChain::with_context(combined, context)
+        DMSCErrorChain::with_context(combined, context)
     }
 
     #[derive(Debug)]
@@ -347,5 +339,3 @@ pub mod utils {
         }
     }
 }
-
-

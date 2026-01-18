@@ -89,25 +89,25 @@ let count = cache_manager.decrement("counter", 5).await?;
 
 | 字段 | 类型 | 描述 | 默认值 |
 |:--------|:--------|:-------------|:--------|
-| `backend` | `DMSCCacheBackend` | 缓存后端类型 | `Memory` |
-| `default_ttl` | `u64` | 默认过期时间（秒） | 3600 |
-| `max_memory_size` | `usize` | 最大内存大小（字节） | 100MB |
-| `redis_url` | `Option<String>` | Redis连接URL | `None` |
-| `redis_pool_size` | `u32` | Redis连接池大小 | 10 |
-| `cleanup_interval` | `u64` | 清理间隔（秒） | 300 |
-| `compression` | `bool` | 是否启用压缩 | false |
+| `enabled` | `bool` | 是否启用缓存 | `true` |
+| `backend_type` | `DMSCCacheBackendType` | 缓存后端类型 | `Memory` |
+| `default_ttl_secs` | `u64` | 默认过期时间（秒） | 3600 |
+| `max_memory_mb` | `u64` | 最大内存大小（MB） | 512 |
+| `cleanup_interval_secs` | `u64` | 清理间隔（秒） | 300 |
+| `redis_url` | `String` | Redis连接URL | `"redis://127.0.0.1:6379"` |
+| `redis_pool_size` | `usize` | Redis连接池大小 | 10 |
 
 #### 使用示例
 
 ```rust
 let cache_config = DMSCCacheConfig {
-    backend: DMSCCacheBackend::Redis,
-    default_ttl: 7200,
-    max_memory_size: 200 * 1024 * 1024, // 200MB
-    redis_url: Some("redis://localhost:6379".to_string()),
+    enabled: true,
+    backend_type: DMSCCacheBackendType::Redis,
+    default_ttl_secs: 7200,
+    max_memory_mb: 512,
+    cleanup_interval_secs: 600,
+    redis_url: "redis://localhost:6379".to_string(),
     redis_pool_size: 20,
-    cleanup_interval: 600,
-    compression: true,
 };
 ```
 

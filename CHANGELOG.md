@@ -89,7 +89,7 @@
 ### ✨ Added
 
 #### Python Module Support
-- Added Python module adapter support, including DMSCPyModule, DMSCPyModuleAdapter, DMSCPyServiceModule, DMSCPyAsyncServiceModule
+- Added Python module adapter support, including DMSCPythonModule, DMSCPythonModuleAdapter, DMSCPythonServiceModule, DMSCPythonAsyncServiceModule
 - Created modular Python submodule structure (dmsc.log, dmsc.config, dmsc.device, dmsc.cache, dmsc.fs, dmsc.hooks, dmsc.observability, dmsc.queue, dmsc.gateway, dmsc.service_mesh, dmsc.auth)
 - Each submodule contains corresponding type bindings, providing clearer API organization
 
@@ -153,7 +153,7 @@
 ### ✨ 新增功能
 
 #### Python模块化支持
-- 新增Python模块适配器支持，包括DMSCPyModule、DMSCPyModuleAdapter、DMSCPyServiceModule、DMSCPyAsyncServiceModule
+- 新增Python模块适配器支持，包括DMSCPythonModule、DMSCPythonModuleAdapter、DMSCPythonServiceModule、DMSCPythonAsyncServiceModule
 - 创建模块化的Python子模块结构（dmsc.log、dmsc.config、dmsc.device、dmsc.cache、dmsc.fs、dmsc.hooks、dmsc.observability、dmsc.queue、dmsc.gateway、dmsc.service_mesh、dmsc.auth）
 - 每个子模块包含对应的类型绑定，提供更清晰的API组织结构
 

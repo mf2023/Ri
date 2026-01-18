@@ -95,6 +95,37 @@ pub struct DMSCSession {
     pub user_agent: Option<String>,
 }
 
+#[cfg(feature = "pyo3")]
+#[pyo3::prelude::pymethods]
+impl DMSCSession {
+    #[new]
+    fn py_new(
+        id: Option<String>,
+        user_id: String,
+        created_at: Option<u64>,
+        last_accessed: Option<u64>,
+        expires_at: Option<u64>,
+        data: Option<HashMap<String, String>>,
+        ip_address: Option<String>,
+        user_agent: Option<String>,
+    ) -> Self {
+        let now = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .map_or(0, |d| d.as_secs());
+        
+        Self {
+            id: id.unwrap_or_else(|| uuid::Uuid::new_v4().to_string()),
+            user_id,
+            created_at: created_at.unwrap_or(now),
+            last_accessed: last_accessed.unwrap_or(now),
+            expires_at: expires_at.unwrap_or(now + 28800),
+            data: data.unwrap_or_default(),
+            ip_address,
+            user_agent,
+        }
+    }
+}
+
 impl DMSCSession {
     /// Creates a new session for a user.
     /// 
@@ -109,8 +140,7 @@ impl DMSCSession {
     pub fn new(user_id: String, timeout_secs: u64, ip_address: Option<String>, user_agent: Option<String>) -> Self {
         let now = SystemTime::now()
             .duration_since(UNIX_EPOCH)
-            .unwrap()
-            .as_secs();
+            .map_or(0, |d| d.as_secs());
 
         Self {
             id: Uuid::new_v4().to_string(),
@@ -131,8 +161,7 @@ impl DMSCSession {
     pub fn is_expired(&self) -> bool {
         let now = SystemTime::now()
             .duration_since(UNIX_EPOCH)
-            .unwrap()
-            .as_secs();
+            .map_or(0, |d| d.as_secs());
         now > self.expires_at
     }
 
@@ -155,8 +184,7 @@ impl DMSCSession {
     pub fn extend(&mut self, timeout_secs: u64) {
         let now = SystemTime::now()
             .duration_since(UNIX_EPOCH)
-            .unwrap()
-            .as_secs();
+            .map_or(0, |d| d.as_secs());
         self.expires_at = now + timeout_secs;
     }
 

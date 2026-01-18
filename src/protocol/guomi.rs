@@ -422,18 +422,33 @@ impl SM2Signer {
 
     fn compute_za(&self, identity: &[u8], za: &mut [u8; 32]) -> DMSCResult<()> {
         let mut input = Vec::new();
-        input.extend_from_slice(b"SMSOFT:");
-        if !identity.is_empty() {
-            input.extend_from_slice(identity);
-        }
+
+        let id_bytes = identity.as_bytes();
+        let id_len = id_bytes.len();
+        let id_len_bytes = (id_len as u16).to_be_bytes();
+        input.extend_from_slice(&id_len_bytes);
+        input.extend_from_slice(id_bytes);
+
         input.extend_from_slice(&SM2_P);
         input.extend_from_slice(&SM2_A);
         input.extend_from_slice(&SM2_B);
         input.extend_from_slice(&SM2_GX);
         input.extend_from_slice(&SM2_GY);
 
-        let digest = digest::digest(&digest::SHA256, &input);
-        za.copy_from_slice(&digest.as_ref()[..32]);
+        let za_input_hash = digest::digest(&digest::SHA256, &input);
+
+        input.clear();
+        input.extend_from_slice(&za_input_hash);
+        input.extend_from_slice(&SM2_P);
+        input.extend_from_slice(&SM2_A);
+        input.extend_from_slice(&SM2_B);
+        input.extend_from_slice(&SM2_GX);
+        input.extend_from_slice(&SM2_GY);
+
+        let mut sm3_hasher = SM3::new();
+        sm3_hasher.update(&input);
+        let za_result = sm3_hasher.finalize();
+        za.copy_from_slice(&za_result);
 
         Ok(())
     }
@@ -573,3 +588,117 @@ pub struct SM2SecretKey(pub [u8; 32]);
 
 #[derive(Debug, Clone)]
 pub struct SM2Signature(pub Vec<u8>);
+
+#[cfg(test)]
+mod guomi_tests {
+    use super::*;
+
+    #[test]
+    fn test_sm3_hash() {
+        let data = b"Hello, World!";
+        let hash = DMSCGuomi::sm3_hash(data);
+
+        // SM3 should produce 32 bytes
+        assert_eq!(hash.len(), 32);
+
+        // Same input should produce same hash
+        let hash2 = DMSCGuomi::sm3_hash(data);
+        assert_eq!(hash, hash2);
+
+        // Different input should produce different hash
+        let hash3 = DMSCGuomi::sm3_hash(b"Different data");
+        assert_ne!(hash, hash3);
+    }
+
+    #[test]
+    fn test_sm4_encrypt_decrypt() {
+        let key = [0u8; 16];
+        let plaintext = b"SM4 test message!";
+
+        let ciphertext = DMSCGuomi::sm4_encrypt(&key, plaintext).unwrap();
+        let decrypted = DMSCGuomi::sm4_decrypt(&key, &ciphertext).unwrap();
+
+        assert_eq!(&decrypted, plaintext);
+    }
+
+    #[test]
+    fn test_sm4_different_modes() {
+        let key = [0u8; 16];
+        let plaintext = b"Test data for SM4";
+
+        // ECB mode
+        let ecb = DMSCGuomi::sm4_encrypt_ecb(&key, plaintext).unwrap();
+        let decrypted_ecb = DMSCGuomi::sm4_decrypt_ecb(&key, &ecb).unwrap();
+        assert_eq!(&decrypted_ecb, plaintext);
+
+        // CBC mode
+        let iv = [0u8; 16];
+        let cbc = DMSCGuomi::sm4_encrypt_cbc(&key, &iv, plaintext).unwrap();
+        let decrypted_cbc = DMSCGuomi::sm4_decrypt_cbc(&key, &iv, &cbc).unwrap();
+        assert_eq!(&decrypted_cbc, plaintext);
+    }
+
+    #[test]
+    fn test_sm2_key_generation() {
+        let private_key = DMSCGuomi::sm2_generate_private_key().unwrap();
+        assert_eq!(private_key.len(), 32);
+
+        let public_key = DMSCGuomi::sm2_derive_public_key(&private_key).unwrap();
+        assert_eq!(public_key.len(), 64);
+    }
+
+    #[test]
+    fn test_sm2_sign_verify() {
+        let private_key = DMSCGuomi::sm2_generate_private_key().unwrap();
+        let public_key = DMSCGuomi::sm2_derive_public_key(&private_key).unwrap();
+        let signer = DMSCGuomi::sm2_signer(&private_key).unwrap();
+
+        let message = b"Message to sign";
+        let signature = signer.sign(message).unwrap();
+        assert_eq!(signature.len(), 64);
+
+        let verifier = DMSCGuomi::sm2_verifier(&public_key);
+        let is_valid = verifier.verify(message, &signature).unwrap();
+        assert!(is_valid);
+
+        // Verify that different message fails
+        let wrong_message = b"Different message";
+        let is_valid_wrong = verifier.verify(wrong_message, &signature).unwrap();
+        assert!(!is_valid_wrong);
+    }
+
+    #[test]
+    fn test_sm2_sign_different_keys() {
+        let private_key1 = DMSCGuomi::sm2_generate_private_key().unwrap();
+        let private_key2 = DMSCGuomi::sm2_generate_private_key().unwrap();
+        let public_key1 = DMSCGuomi::sm2_derive_public_key(&private_key1).unwrap();
+
+        let signer1 = DMSCGuomi::sm2_signer(&private_key1).unwrap();
+        let signature = signer1.sign(b"test").unwrap();
+
+        let verifier1 = DMSCGuomi::sm2_verifier(&public_key1);
+        assert!(verifier1.verify(b"test", &signature).unwrap());
+
+        // Signature from different key should not verify
+        let signer2 = DMSCGuomi::sm2_signer(&private_key2);
+        let signature2 = signer2.sign(b"test").unwrap();
+        assert!(!verifier1.verify(b"test", &signature2).unwrap());
+    }
+
+    #[test]
+    fn test_sm2_signature_format() {
+        let private_key = DMSCGuomi::sm2_generate_private_key().unwrap();
+        let signer = DMSCGuomi::sm2_signer(&private_key).unwrap();
+
+        let signature = signer.sign(b"test").unwrap();
+
+        // SM2 signature should be 64 bytes (r || s)
+        assert_eq!(signature.len(), 64);
+
+        // Both r and s should be non-zero
+        let r = &signature[..32];
+        let s = &signature[32..];
+        assert!(r.iter().any(|&x| x != 0));
+        assert!(s.iter().any(|&x| x != 0));
+    }
+}

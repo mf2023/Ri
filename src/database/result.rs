@@ -109,6 +109,39 @@ impl DMSCDBResult {
     }
 }
 
+#[cfg(feature = "pyo3")]
+#[pyo3::prelude::pymethods]
+impl DMSCDBResult {
+    #[new]
+    fn py_new() -> Self {
+        Self::new()
+    }
+
+    fn get_affected_rows(&self) -> u64 {
+        self.affected_rows
+    }
+
+    fn get_last_insert_id(&self) -> Option<i64> {
+        self.last_insert_id
+    }
+
+    fn is_empty_result(&self) -> bool {
+        self.is_empty()
+    }
+
+    fn get_length(&self) -> usize {
+        self.len()
+    }
+
+    fn get_row_count(&self) -> usize {
+        self.row_count()
+    }
+
+    fn to_rows(&self) -> Vec<DMSCDBRow> {
+        self.to_vec()
+    }
+}
+
 impl Default for DMSCDBResult {
     fn default() -> Self {
         Self::new()

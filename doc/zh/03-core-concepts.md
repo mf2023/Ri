@@ -220,40 +220,39 @@ impl DMSCModule for MyCustomModule {
 DMSC Python SDK 支持创建自定义同步和异步模块：
 
 ```python
-from dmsc import DMSCPyServiceModule, DMSCPyAsyncServiceModule, DMSCServiceContext
-from dmsc.core import DMSCResult
+from dmsc import DMSCPythonServiceModule, DMSCPythonAsyncServiceModule, DMSCServiceContext
 
-class MyPyModule(DMSCPyServiceModule):
+class MyPyModule(DMSCPythonServiceModule):
     """同步服务模块"""
     def name(self) -> str:
         return "my_python_module"
     
-    def init(self, ctx: DMSCServiceContext) -> DMSCResult:
+    def init(self, ctx: DMSCServiceContext) -> None:
+        """初始化模块，返回 None 表示成功"""
         ctx.logger().info("my_python_module", "Python module initialized")
-        return None
     
-    def start(self, ctx: DMSCServiceContext) -> DMSCResult:
+    def start(self, ctx: DMSCServiceContext) -> None:
+        """启动模块，返回 None 表示成功"""
         ctx.logger().info("my_python_module", "Python module started")
-        return None
     
-    def shutdown(self, ctx: DMSCServiceContext) -> DMSCResult:
+    def shutdown(self, ctx: DMSCServiceContext) -> None:
+        """关闭模块，返回 None 表示成功"""
         ctx.logger().info("my_python_module", "Python module stopped")
-        return None
 
 # 异步模块示例
-class MyAsyncPyModule(DMSCPyAsyncServiceModule):
+class MyAsyncPyModule(DMSCPythonAsyncServiceModule):
     """异步服务模块"""
-    async def init(self, ctx: DMSCServiceContext) -> DMSCResult:
+    async def init(self, ctx: DMSCServiceContext) -> None:
+        """异步初始化模块，返回 None 表示成功"""
         ctx.logger().info("my_async_python_module", "Async Python module initialized")
-        return None
     
-    async def start(self, ctx: DMSCServiceContext) -> DMSCResult:
+    async def start(self, ctx: DMSCServiceContext) -> None:
+        """异步启动模块，返回 None 表示成功"""
         ctx.logger().info("my_async_python_module", "Async Python module started")
-        return None
     
-    async def shutdown(self, ctx: DMSCServiceContext) -> DMSCResult:
+    async def shutdown(self, ctx: DMSCServiceContext) -> None:
+        """异步关闭模块，返回 None 表示成功"""
         ctx.logger().info("my_async_python_module", "Async Python module stopped")
-        return None
 ```
 
 在 Python 应用中使用自定义模块：

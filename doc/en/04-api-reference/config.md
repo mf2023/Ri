@@ -33,54 +33,64 @@ Configuration manager main interface, providing unified configuration access.
 
 | Method | Description | Parameters | Return Value |
 |:--------|:-------------|:--------|:--------|
-| `get(key)` | Get configuration value | `key: &str` | `Option<&String>` |
-| `get_str(key)` | Get string value | `key: &str` | `Option<&str>` |
-| `get_bool(key)` | Get boolean value | `key: &str` | `Option<bool>` |
-| `get_i64(key)` | Get i64 value | `key: &str` | `Option<i64>` |
-| `get_u64(key)` | Get u64 value | `key: &str` | `Option<u64>` |
-| `get_f32(key)` | Get f32 value | `key: &str` | `Option<f32>` |
-| `get_f64(key)` | Get f64 value | `key: &str` | `Option<f64>` |
-| `get_usize(key)` | Get usize value | `key: &str` | `Option<usize>` |
-| `get_i32(key)` | Get i32 value | `key: &str` | `Option<i32>` |
-| `get_u32(key)` | Get u32 value | `key: &str` | `Option<u32>` |
-| `get_port(key)` | Get port number (1-65535) | `key: &str` | `Option<u16>` |
-| `get_timeout_secs(key)` | Get timeout in seconds | `key: &str` | `Option<u32>` |
-| `get_retry_count(key)` | Get retry count | `key: &str` | `Option<u32>` |
-| `get_percentage(key)` | Get percentage (0.0-1.0) | `key: &str` | `Option<f32>` |
-| `get_rate(key)` | Get rate value | `key: &str` | `Option<f32>` |
-| `get_or_default(key, default)` | Get value or default | `key: &str`, `default: T` | `T` |
-| `has(key)` | Check if key exists | `key: &str` | `bool` |
+| `new()` | Create new config | None | `DMSCConfig` |
+| `get(key)` | Get configuration value | `key: &str` | `String` or `None` |
+| `get_f64(key)` | Get f64 value | `key: &str` | `f64` |
+| `get_usize(key)` | Get usize value | `key: &str` | `usize` |
+| `set(key, value)` | Set configuration value | `key: &str`, `value: &str` | None |
+| `contains(key)` | Check if key exists | `key: &str` | `bool` |
 | `keys()` | Get all keys | None | `Vec<String>` |
+| `values()` | Get all values | None | `Vec<String>` |
+| `len()` | Get config count | None | `usize` |
+| `is_empty()` | Check if empty | None | `bool` |
+| `merge(other)` | Merge configs | `other: &DMSCConfig` | None |
+| `clear()` | Clear config | None | None |
 
 #### Usage Example
 
 ```rust
-use dmsc::prelude::*;
+use dmsc::config::DMSCConfig;
 
-// Get string configuration
-let service_name = ctx.config().get_str("service.name").unwrap_or("default");
+// Create config
+let config = DMSCConfig::new();
 
-// Get typed configuration
-let port: u16 = ctx.config().get_port("service.port").unwrap_or(8080);
-let max_connections = ctx.config().get_usize("database.max_connections").unwrap_or(100);
+// Set config
+config.set("service.port", "8080");
+config.set("database.url", "postgres://localhost/mydb");
 
-// Get with bounds checking
-let timeout = ctx.config().get_timeout_secs("service.timeout").unwrap_or(30);
+// Get config
+let port = config.get("service.port");
+let url = config.get("database.url");
 
-// Get or default value
-let retries = ctx.config().get_or_default("service.retries", 3);
-
-// Check if configuration exists
-if ctx.config().has("feature.new_feature") {
-    // Enable new feature
+// Check config
+if config.contains("service.host") {
+    let host = config.get("service.host");
 }
 
-// Get all configuration keys
-let keys = ctx.config().keys();
-for key in keys {
+// Get all keys
+let keys = config.keys();
+for key in &keys {
     println!("Config key: {}", key);
 }
+
+// Merge configs
+let other = DMSCConfig::new();
+other.set("additional", "value");
+config.merge(&other);
 ```
+
+### DMSCConfigManager
+
+Configuration manager with multi-source support.
+
+#### Methods
+
+| Method | Description | Parameters | Return Value |
+|:--------|:-------------|:--------|:--------|
+| `new()` | Create new config manager | None | `DMSCConfigManager` |
+| `add_file_source(path)` | Add file source | `path: &str` | None |
+| `add_environment_source()` | Add environment source | None | None |
+| `get(key)` | Get config value | `key: &str` | `String` or `None` |
 
 ### DMSCConfigSource
 

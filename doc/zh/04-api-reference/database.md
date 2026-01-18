@@ -4,9 +4,9 @@
 
 **Version: 0.1.4**
 
-**Last modified date: 2026-01-15**
+**Last modified date: 2026-01-18**
 
-database模块提供统一数据库访问层，支持多种数据库类型、连接池管理、事务处理与查询构建器。
+database模块提供统一数据库访问层，支持多种数据库类型、连接池管理、事务处理与ORM查询构建器。
 
 ## 模块概述
 
@@ -16,7 +16,7 @@ database模块包含以下子模块：
 
 - **core**: 数据库核心接口和类型定义
 - **pools**: 连接池管理
-- **query**: 查询构建器
+- **orm**: 对象关系映射和查询构建器
 - **migration**: 数据库迁移
 - **transaction**: 事务管理
 
@@ -28,83 +28,116 @@ database模块包含以下子模块：
 
 ### DMSCDatabase
 
-数据库管理器主接口，提供统一的数据库访问。
+数据库操作接口trait，提供统一的数据库访问。
+
+**注意**: DMSCDatabase是一个trait，不能直接实例化。需要通过DMSCDatabasePool获取具体的数据库连接。
 
 #### 方法
 
 | 方法 | 描述 | 参数 | 返回值 |
 |:--------|:-------------|:--------|:--------|
-| `execute(query)` | 执行SQL查询 | `query: &str` | `DMSCResult<DMSCQueryResult>` |
-| `query(query)` | 执行查询并返回结果 | `query: &str` | `DMSCResult<Vec<DMSCRow>>` |
-| `query_one(query)` | 执行查询并返回单行结果 | `query: &str` | `DMSCResult<DMSCRow>` |
-| `begin_transaction()` | 开始事务 | 无 | `DMSCResult<DMSCTransaction>` |
-| `migrate()` | 执行数据库迁移 | 无 | `DMSCResult<()>` |
-| `get_connection()` | 获取数据库连接 | 无 | `DMSCResult<DMSCConnection>` |
-| `get_pool_stats()` | 获取连接池统计 | 无 | `DMSCResult<PoolStats>` |
-| `ping()` | 测试数据库连接 | 无 | `DMSCResult<()>` |
+| `execute(sql)` | 执行SQL查询 | `sql: &str` | `DMSCResult<u64>` |
+| `query(sql)` | 执行查询并返回结果 | `sql: &str` | `DMSCResult<DMSCDBResult>` |
+| `query_one(sql)` | 执行查询并返回单行结果 | `sql: &str` | `DMSCResult<Option<DMSCDBRow>>` |
+| `ping()` | 测试数据库连接 | 无 | `DMSCResult<bool>` |
+| `is_connected()` | 检查连接状态 | 无 | `bool` |
+| `close()` | 关闭连接 | 无 | `DMSCResult<()>` |
+| `transaction()` | 开始事务 | 无 | `DMSCResult<Box<dyn DMSCDatabaseTransaction>>` |
+| `execute_with_params(sql, params)` | 带参数执行SQL | `sql: &str`, `params: &[serde_json::Value]` | `DMSCResult<u64>` |
+| `query_with_params(sql, params)` | 带参数执行查询 | `sql: &str`, `params: &[serde_json::Value]` | `DMSCResult<DMSCDBResult>` |
+| `batch_execute(sql, params)` | 批量执行 | `sql: &str`, `params: &[Vec<serde_json::Value>]` | `DMSCResult<Vec<u64>>` |
+| `batch_query(sql, params)` | 批量查询 | `sql: &str`, `params: &[Vec<serde_json::Value>]` | `DMSCResult<Vec<DMSCDBResult>>` |
 
 #### 使用示例
 
 ```rust
-use dmsc::prelude::*;
+use dmsc::database::{DMSCDatabasePool, DMSCDatabaseConfig};
 
-// 执行查询
-let results = ctx.database().query("SELECT id, name, email FROM users WHERE active = true")?;
+#[tokio::main]
+async fn main() -> DMSCResult<()> {
+    let config = DMSCDatabaseConfig::postgres()
+        .host("localhost")
+        .database("myapp")
+        .build();
 
-for row in results {
-    let id: i32 = row.get("id")?;
-    let name: String = row.get("name")?;
-    let email: String = row.get("email")?;
-    
-    println!("User {}: {} <{}>", id, name, email);
+    let pool = DMSCDatabasePool::new(config).await?;
+    let db = pool.get().await?;
+
+    // 执行查询
+    let results = db.query("SELECT id, name, email FROM users WHERE active = true").await?;
+
+    for row in results {
+        let id: i64 = row.get("id");
+        let name: String = row.get("name");
+        let email: String = row.get("email");
+        
+        println!("User {}: {} <{}>", id, name, email);
+    }
+
+    // 执行更新
+    db.execute("UPDATE users SET last_login = NOW() WHERE id = 123").await?;
+
+    // 获取单行结果
+    let user = db.query_one("SELECT * FROM users WHERE id = 123").await?;
+    if let Some(row) = user {
+        let name: String = row.get("name")?;
+    }
+
+    // 带参数查询
+    let rows = db.query_with_params(
+        "SELECT * FROM users WHERE name = $1 AND active = $2",
+        &[serde_json::json!("alice"), serde_json::json!(true)]
+    ).await?;
+
+    Ok(())
 }
-
-// 执行更新
-ctx.database().execute("UPDATE users SET last_login = NOW() WHERE id = 123")?;
-
-// 获取单行结果
-let user = ctx.database().query_one("SELECT * FROM users WHERE id = 123")?;
-let name: String = user.get("name")?;
 ```
 
 ### DMSCDatabaseConfig
 
-数据库配置结构体。
+数据库配置构建器。
 
-#### 字段
+#### 静态方法
 
-| 字段 | 类型 | 描述 | 默认值 |
-|:--------|:-----|:-------------|:-------|
-| `database_type` | `DMSCDatabaseType` | 数据库类型 | `Postgres` |
-| `host` | `String` | 数据库主机 | `"localhost"` |
-| `port` | `u16` | 数据库端口 | `5432` |
-| `database` | `String` | 数据库名称 | `""` |
-| `username` | `String` | 用户名 | `""` |
-| `password` | `String` | 密码 | `""` |
-| `max_connections` | `u32` | 最大连接数 | `10` |
-| `min_connections` | `u32` | 最小连接数 | `1` |
-| `connection_timeout` | `Duration` | 连接超时 | `30s` |
-| `idle_timeout` | `Duration` | 空闲超时 | `600s` |
-| `max_lifetime` | `Duration` | 连接最大生命周期 | `1800s` |
+| 方法 | 描述 | 返回值 |
+|:--------|:-------------|:--------|
+| `postgres()` | 创建PostgreSQL默认配置 | `DMSCDatabaseConfig` |
+| `mysql()` | 创建MySQL默认配置 | `DMSCDatabaseConfig` |
+| `sqlite()` | 创建SQLite默认配置 | `DMSCDatabaseConfig` |
+
+#### 构建器方法
+
+| 方法 | 描述 | 参数 | 返回值 |
+|:--------|:-------------|:--------|:--------|
+| `host()` | 设置主机 | `host: &str` | `Self` |
+| `port()` | 设置端口 | `port: u16` | `Self` |
+| `database()` | 设置数据库名 | `database: &str` | `Self` |
+| `user()` | 设置用户名 | `user: &str` | `Self` |
+| `password()` | 设置密码 | `password: &str` | `Self` |
+| `max_connections()` | 最大连接数 | `n: u32` | `Self` |
+| `min_idle_connections()` | 最小空闲连接数 | `n: u32` | `Self` |
+| `connection_timeout_secs()` | 连接超时(秒) | `secs: u64` | `Self` |
+| `idle_timeout_secs()` | 空闲超时(秒) | `secs: u64` | `Self` |
+| `max_lifetime_secs()` | 最大生命周期(秒) | `secs: u64` | `Self` |
+| `build()` | 构建配置 | 无 | `DMSCDatabaseConfig` |
 
 #### 配置示例
 
 ```rust
-use dmsc::prelude::*;
+use dmsc::database::DMSCDatabaseConfig;
 
-let db_config = DMSCDatabaseConfig {
-    database_type: DMSCDatabaseType::Postgres,
-    host: "localhost".to_string(),
-    port: 5432,
-    database: "myapp".to_string(),
-    username: "postgres".to_string(),
-    password: "password".to_string(),
-    max_connections: 20,
-    min_connections: 5,
-    connection_timeout: Duration::from_secs(30),
-    idle_timeout: Duration::from_secs(600),
-    max_lifetime: Duration::from_secs(1800),
-};
+let config = DMSCDatabaseConfig::postgres()
+    .host("localhost")
+    .port(5432)
+    .database("myapp")
+    .user("postgres")
+    .password("password")
+    .max_connections(20)
+    .min_idle_connections(5)
+    .connection_timeout_secs(30)
+    .idle_timeout_secs(600)
+    .max_lifetime_secs(1800)
+    .build();
 ```
 
 ### DMSCDatabaseType
@@ -121,391 +154,345 @@ let db_config = DMSCDatabaseConfig {
 | `MongoDB` | MongoDB |
 | `Redis` | Redis |
 
-## 查询构建器
-
-### DMSCQueryBuilder
-
-查询构建器，用于构建类型安全的SQL查询。
-
-#### 方法
-
-| 方法 | 描述 | 参数 | 返回值 |
-|:--------|:-------------|:--------|:--------|
-| `select(columns)` | 选择列 | `columns: &[&str]` | `Self` |
-| `from(table)` | 指定表 | `table: &str` | `Self` |
-| `where(condition)` | 添加条件 | `condition: &str` | `Self` |
-| `where_eq(column, value)` | 添加等值条件 | `column: &str`, `value: impl ToSql` | `Self` |
-| `where_in(column, values)` | 添加IN条件 | `column: &str`, `values: &[impl ToSql]` | `Self` |
-| `order_by(column, direction)` | 添加排序 | `column: &str`, `direction: OrderDirection` | `Self` |
-| `limit(count)` | 设置限制 | `count: i64` | `Self` |
-| `offset(count)` | 设置偏移 | `count: i64` | `Self` |
-| `join(table, on)` | 添加连接 | `table: &str`, `on: &str` | `Self` |
-| `build()` | 构建查询 | 无 | `DMSCResult<String>` |
-
-#### 使用示例
-
-```rust
-use dmsc::prelude::*;
-
-// 构建SELECT查询
-let query = DMSCQueryBuilder::new()
-    .select(&["id", "name", "email"])
-    .from("users")
-    .where_eq("active", true)
-    .where_eq("role", "admin")
-    .order_by("created_at", OrderDirection::Desc)
-    .limit(10)
-    .build()?;
-
-let results = ctx.database().query(&query)?;
-
-// 构建复杂查询
-let complex_query = DMSCQueryBuilder::new()
-    .select(&["u.id", "u.name", "COUNT(o.id) as order_count"])
-    .from("users u")
-    .join("orders o", "u.id = o.user_id")
-    .where_eq("u.active", true)
-    .where_in("u.role", &["admin", "user"])
-    .group_by(&["u.id", "u.name"])
-    .having("COUNT(o.id) > 5")
-    .order_by("order_count", OrderDirection::Desc)
-    .build()?;
-```
-
-### 插入构建器
-
-```rust
-use dmsc::prelude::*;
-
-// 构建INSERT查询
-let insert_query = DMSCInsertBuilder::new()
-    .into("users")
-    .columns(&["name", "email", "created_at"])
-    .values(&["John Doe", "john@example.com", "NOW()"])
-    .build()?;
-
-ctx.database().execute(&insert_query)?;
-
-// 批量插入
-let batch_insert = DMSCInsertBuilder::new()
-    .into("users")
-    .columns(&["name", "email"])
-    .values(&["Alice", "alice@example.com"])
-    .values(&["Bob", "bob@example.com"])
-    .values(&["Charlie", "charlie@example.com"])
-    .build()?;
-
-ctx.database().execute(&batch_insert)?;
-```
-
-### 更新构建器
-
-```rust
-use dmsc::prelude::*;
-
-// 构建UPDATE查询
-let update_query = DMSCUpdateBuilder::new()
-    .table("users")
-    .set("last_login", "NOW()")
-    .set("login_count", "login_count + 1")
-    .where_eq("id", 123)
-    .build()?;
-
-ctx.database().execute(&update_query)?;
-```
-
-### 删除构建器
-
-```rust
-use dmsc::prelude::*;
-
-// 构建DELETE查询
-let delete_query = DMSCDeleteBuilder::new()
-    .from("users")
-    .where_eq("active", false)
-    .where_lt("last_login", "NOW() - INTERVAL '1 year'")
-    .build()?;
-
-ctx.database().execute(&delete_query)?;
-```
-<div align="center">
-
-## 事务管理
-
-</div>
-
-### DMSCTransaction
-
-事务接口。
-
-#### 方法
-
-| 方法 | 描述 | 参数 | 返回值 |
-|:--------|:-------------|:--------|:--------|
-| `execute(query)` | 在事务中执行查询 | `query: &str` | `DMSCResult<DMSCQueryResult>` |
-| `query(query)` | 在事务中执行查询并返回结果 | `query: &str` | `DMSCResult<Vec<DMSCRow>>` |
-| `commit()` | 提交事务 | 无 | `DMSCResult<()>` |
-| `rollback()` | 回滚事务 | 无 | `DMSCResult<()>` |
-| `savepoint(name)` | 创建保存点 | `name: &str` | `DMSCResult<()>` |
-| `rollback_to_savepoint(name)` | 回滚到保存点 | `name: &str` | `DMSCResult<()>` |
-
-#### 使用示例
-
-```rust
-use dmsc::prelude::*;
-
-// 开始事务
-let mut transaction = ctx.database().begin_transaction()?;
-
-try {
-    // 在事务中执行操作
-    transaction.execute("UPDATE accounts SET balance = balance - 100 WHERE id = 1")?;
-    transaction.execute("UPDATE accounts SET balance = balance + 100 WHERE id = 2")?;
-    
-    // 创建保存点
-    transaction.savepoint("before_fee")?;
-    
-    // 执行可能失败的操作
-    match transaction.execute("UPDATE accounts SET balance = balance - 5 WHERE id = 2") {
-        Ok(_) => {
-            // 操作成功，提交事务
-            transaction.commit()?;
-        }
-        Err(_) => {
-            // 操作失败，回滚到保存点
-            transaction.rollback_to_savepoint("before_fee")?;
-            transaction.commit()?;
-        }
-    }
-} catch (e) {
-    // 发生错误，回滚整个事务
-    transaction.rollback()?;
-    return Err(e);
-}
-```
-
-### 事务隔离级别
-
-```rust
-use dmsc::prelude::*;
-
-// 设置事务隔离级别
-let transaction = ctx.database()
-    .begin_transaction_with_isolation(TransactionIsolation::Serializable)?;
-
-// 不同的隔离级别
-let read_uncommitted = TransactionIsolation::ReadUncommitted;
-let read_committed = TransactionIsolation::ReadCommitted;
-let repeatable_read = TransactionIsolation::RepeatableRead;
-let serializable = TransactionIsolation::Serializable;
-```
-
 <div align="center">
 
 ## 连接池管理
 
 </div>
 
-### 连接池配置
+### DMSCDatabasePool
+
+数据库连接池管理器。
+
+#### 方法
+
+| 方法 | 描述 | 参数 | 返回值 |
+|:--------|:-------------|:--------|:--------|
+| `new(config)` | 创建连接池 | `config: DMSCDatabaseConfig` | `DMSCResult<Self>` |
+| `get()` | 获取连接 | 无 | `DMSCResult<PooledDatabase>` |
+| `close()` | 关闭连接池 | 无 | `DMSCResult<()>` |
+| `metrics()` | 获取统计信息 | 无 | `DatabaseMetrics` |
+
+#### 使用示例
 
 ```rust
-use dmsc::prelude::*;
+use dmsc::database::{DMSCDatabasePool, DMSCDatabaseConfig};
 
-let pool_config = DMSCPoolConfig {
-    max_connections: 50,
-    min_connections: 10,
-    connection_timeout: Duration::from_secs(30),
-    idle_timeout: Duration::from_secs(600),
-    max_lifetime: Duration::from_secs(1800),
-    test_on_check_out: true,
-    test_on_check_in: false,
-    test_while_idle: true,
-    validation_query: "SELECT 1".to_string(),
-};
-```
+#[tokio::main]
+async fn main() -> DMSCResult<()> {
+    let config = DMSCDatabaseConfig::postgres()
+        .database("mydb")
+        .max_connections(10)
+        .build();
 
-### 连接池监控
+    let pool = DMSCDatabasePool::new(config).await?;
+    let db = pool.get().await?;
 
-```rust
-use dmsc::prelude::*;
+    // 使用数据库连接...
 
-// 获取连接池统计信息
-let stats = ctx.database().get_pool_stats()?;
+    // 获取连接池统计
+    let metrics = pool.metrics();
+    println!("活跃连接: {}", metrics.active_connections);
+    println!("空闲连接: {}", metrics.idle_connections);
 
-println!("Active connections: {}", stats.active_connections);
-println!("Idle connections: {}", stats.idle_connections);
-println!("Waiting connections: {}", stats.waiting_connections);
-println!("Total connections created: {}", stats.total_created);
-println!("Total connections destroyed: {}", stats.total_destroyed);
-```
-
-### 连接池健康检查
-
-```rust
-use dmsc::prelude::*;
-
-// 检查连接池健康状态
-match ctx.database().ping() {
-    Ok(_) => {
-        println!("Database connection is healthy");
-    }
-    Err(e) => {
-        println!("Database connection failed: {}", e);
-        
-        // 尝试重新创建连接池
-        ctx.database().recreate_pool()?;
-    }
+    Ok(())
 }
 ```
+
+### PooledDatabase
+
+池化数据库连接包装器。
+
+实现DMSCDatabase trait，可直接用于数据库操作。
+
+#### 方法
+
+| 方法 | 描述 | 参数 | 返回值 |
+|:--------|:-------------|:--------|:--------|
+| `id()` | 获取连接ID | 无 | `u32` |
+| `execute(sql)` | 执行SQL | `sql: &str` | `DMSCResult<u64>` |
+| `query(sql)` | 执行查询 | `sql: &str` | `DMSCResult<DMSCDBResult>` |
+| `query_one(sql)` | 查询单行 | `sql: &str` | `DMSCResult<Option<DMSCDBRow>>` |
+| `ping()` | 测试连接 | 无 | `DMSCResult<bool>` |
+| `is_connected()` | 检查连接 | 无 | `bool` |
+| `pool_metrics()` | 获取池统计 | 无 | `DatabaseMetrics` |
+
+### DatabaseMetrics
+
+连接池统计信息。
+
+#### 字段
+
+| 字段 | 类型 | 描述 |
+|:--------|:-----|:-------------|
+| `active_connections` | `u64` | 活跃连接数 |
+| `idle_connections` | `u64` | 空闲连接数 |
+| `total_connections` | `u64` | 总连接数 |
+| `queries_executed` | `u64` | 执行查询数 |
+| `query_duration_ms` | `f64` | 查询平均耗时(ms) |
+| `errors` | `u64` | 错误数 |
+
+<div align="center">
+
+## ORM与查询构建器
+
+</div>
+
+### QueryBuilder
+
+ORM查询构建器，提供类型安全的查询构建。
+
+**注意**: QueryBuilder位于`dmsc::database::orm`模块中。
+
+#### 方法
+
+| 方法 | 描述 | 参数 | 返回值 |
+|:--------|:-------------|:--------|:--------|
+| `new()` | 创建新实例 | 无 | `Self` |
+| `table(name)` | 设置表名 | `name: &str` | `Self` |
+| `select(columns)` | 选择列 | `columns: &[&str]` | `Self` |
+| `and_where(condition)` | 添加AND条件 | `condition: &str` | `Self` |
+| `or_where(condition)` | 添加OR条件 | `condition: &str` | `Self` |
+| `where_eq(column, value)` | 等值条件 | `column: &str`, `value: serde_json::Value` | `Self` |
+| `where_in(column, values)` | IN条件 | `column: &str`, `values: &[serde_json::Value]` | `Self` |
+| `order_by(column, order)` | 排序 | `column: &str`, `order: SortOrder` | `Self` |
+| `limit(n)` | 限制数量 | `n: u64` | `Self` |
+| `offset(n)` | 偏移量 | `n: u64` | `Self` |
+| `build()` | 构建SQL | 无 | `String` |
+
+#### 使用示例
+
+```rust
+use dmsc::database::orm::{QueryBuilder, SortOrder};
+
+let query = QueryBuilder::new()
+    .table("users")
+    .select(&["id", "name", "email"])
+    .where_eq("active", serde_json::json!(true))
+    .and_where("role = 'admin'")
+    .order_by("created_at", SortOrder::Desc)
+    .limit(10)
+    .build();
+
+let results = db.query(&query).await?;
+```
+
+### DMSCORMSimpleRepository
+
+简单ORM仓储，提供基础的CRUD操作。
+
+#### 方法
+
+| 方法 | 描述 | 参数 | 返回值 |
+|:--------|:-------------|:--------|:--------|
+| `new(table_name)` | 创建实例 | `table_name: &str` | `Self` |
+| `find_all()` | 查询所有 | 无 | `DMSCResult<Vec<serde_json::Value>>` |
+| `find_by_id(id)` | 按ID查询 | `id: i64` | `DMSCResult<Option<serde_json::Value>>` |
+| `find_by_where(where)` | 条件查询 | `where: &str` | `DMSCResult<Vec<serde_json::Value>>` |
+| `create(data)` | 创建记录 | `data: &serde_json::Value` | `DMSCResult<serde_json::Value>` |
+| `update(id, data)` | 更新记录 | `id: i64`, `data: &serde_json::Value` | `DMSCResult<serde_json::Value>` |
+| `delete(id)` | 删除记录 | `id: i64` | `DMSCResult<()>` |
+
+<div align="center">
+
+## 事务管理
+
+</div>
+
+### DMSCDatabaseTransaction
+
+事务接口trait。
+
+#### 方法
+
+| 方法 | 描述 | 参数 | 返回值 |
+|:--------|:-------------|:--------|:--------|
+| `execute(sql)` | 执行SQL | `sql: &str` | `DMSCResult<u64>` |
+| `query(sql)` | 执行查询 | `sql: &str` | `DMSCResult<DMSCDBResult>` |
+| `commit()` | 提交事务 | 无 | `DMSCResult<()>` |
+| `rollback()` | 回滚事务 | 无 | `DMSCResult<()>` |
+| `close()` | 关闭事务 | 无 | `DMSCResult<()>` |
+
+#### 使用示例
+
+```rust
+use dmsc::database::{DMSCDatabasePool, DMSCDatabaseConfig};
+
+#[tokio::main]
+async fn main() -> DMSCResult<()> {
+    let config = DMSCDatabaseConfig::postgres()
+        .database("mydb")
+        .build();
+
+    let pool = DMSCDatabasePool::new(config).await?;
+    let db = pool.get().await?;
+
+    // 开始事务
+    let mut tx = db.transaction().await?;
+
+    // 在事务中执行操作
+    tx.execute("UPDATE accounts SET balance = balance - 100 WHERE id = $1", &[&1]).await?;
+    tx.execute("UPDATE accounts SET balance = balance + 100 WHERE id = $1", &[&2]).await?;
+
+    // 提交事务
+    tx.commit().await?;
+
+    Ok(())
+}
+```
+
 <div align="center">
 
 ## 数据库迁移
 
 </div>
 
-### DMSCMigration
+### DMSCDatabaseMigrator
 
-迁移接口。
+数据库迁移管理器。
 
 #### 方法
 
 | 方法 | 描述 | 参数 | 返回值 |
 |:--------|:-------------|:--------|:--------|
-| `add_migration(migration)` | 添加迁移 | `migration: impl Migration` | `()` |
-| `migrate()` | 执行迁移 | 无 | `DMSCResult<()>` |
-| `rollback()` | 回滚迁移 | 无 | `DMSCResult<()>` |
-| `get_status()` | 获取迁移状态 | 无 | `DMSCResult<Vec<MigrationStatus>>` |
+| `new()` | 创建新实例 | 无 | `Self` |
+| `with_migrations_dir(dir)` | 设置迁移目录 | `dir: PathBuf` | `Self` |
+| `add_migration(migration)` | 添加迁移 | `migration: DMSCDatabaseMigration` | `()` |
+| `get_migrations()` | 获取所有迁移 | 无 | `&[DMSCDatabaseMigration]` |
+| `load_migrations_from_dir(dir)` | 从目录加载 | `dir: &str` | `std::io::Result<()>` |
 
-### 创建迁移
+### DMSCDatabaseMigration
 
-```rust
-use dmsc::prelude::*;
+迁移定义结构体。
 
-struct CreateUsersTable;
+#### 字段
 
-impl Migration for CreateUsersTable {
-    fn version(&self) -> &str {
-        "20240115000001"
-    }
-    
-    fn name(&self) -> &str {
-        "create_users_table"
-    }
-    
-    fn up(&self, db: &DMSCDatabase) -> DMSCResult<()> {
-        db.execute(r#"
-            CREATE TABLE users (
-                id SERIAL PRIMARY KEY,
-                name VARCHAR(255) NOT NULL,
-                email VARCHAR(255) UNIQUE NOT NULL,
-                created_at TIMESTAMP DEFAULT NOW(),
-                updated_at TIMESTAMP DEFAULT NOW()
-            )
-        "#)?;
-        
-        Ok(())
-    }
-    
-    fn down(&self, db: &DMSCDatabase) -> DMSCResult<()> {
-        db.execute("DROP TABLE users")?;
-        Ok(())
-    }
-}
+| 字段 | 类型 | 描述 |
+|:--------|:-----|:-------------|
+| `version` | `u32` | 版本号 |
+| `name` | `String` | 迁移名称 |
+| `sql_up` | `String` | 升级SQL |
+| `sql_down` | `Option<String>` | 回滚SQL |
+| `timestamp` | `DateTime<Utc>` | 创建时间 |
 
-// 添加迁移
-ctx.database().migration().add_migration(CreateUsersTable)?;
-
-// 执行迁移
-ctx.database().migrate()?;
-```
-
-### 迁移管理
+#### 创建迁移
 
 ```rust
-use dmsc::prelude::*;
+use dmsc::database::{DMSCDatabaseMigrator, DMSCDatabaseMigration};
 
-// 获取迁移状态
-let migration_status = ctx.database().migration().get_status()?;
+let migration = DMSCDatabaseMigration::new(
+    20240115000001,
+    "create_users_table",
+    r#"
+        CREATE TABLE users (
+            id SERIAL PRIMARY KEY,
+            name VARCHAR(255) NOT NULL,
+            email VARCHAR(255) UNIQUE NOT NULL,
+            created_at TIMESTAMP DEFAULT NOW()
+        )
+    "#,
+    Some("DROP TABLE users")
+);
 
-for status in migration_status {
-    println!("Migration: {} ({})", status.name, status.version);
-    println!("Status: {:?}", status.status);
-    println!("Applied at: {:?}", status.applied_at);
-}
-
-// 回滚最后一步迁移
-ctx.database().migration().rollback()?;
-
-// 回滚到指定版本
-ctx.database().migration().rollback_to("20240115000001")?;
+let mut migrator = DMSCDatabaseMigrator::new();
+migrator.add_migration(migration);
 ```
+
+### DMSCMigrationHistory
+
+迁移历史记录。
+
+#### 字段
+
+| 字段 | 类型 | 描述 |
+|:--------|:-----|:-------------|
+| `version` | `u32` | 版本号 |
+| `name` | `String` | 迁移名称 |
+| `applied_at` | `DateTime<Utc>` | 执行时间 |
+| `checksum` | `String` | 校验和 |
 
 <div align="center">
 
-## 高级功能
+## 数据行操作
 
 </div>
 
-### 批量操作
+### DMSCDBRow
+
+数据库结果行。
+
+#### 方法
+
+| 方法 | 描述 | 参数 | 返回值 |
+|:--------|:-------------|:--------|:--------|
+| `get<T>(column)` | 获取列值 | `column: &str` | `T` |
+| `get_opt<T>(column)` | 获取可选值 | `column: &str` | `DMSCResult<Option<T>>` |
+| `len()` | 列数 | 无 | `usize` |
+| `is_empty()` | 是否为空 | 无 | `bool` |
+| `columns()` | 列名列表 | 无 | `Vec<String>` |
+
+#### 使用示例
 
 ```rust
-use dmsc::prelude::*;
+let rows = db.query("SELECT * FROM users WHERE id = $1", &[&1]).await?;
 
-// 批量插入
-let users = vec![
-    ("Alice", "alice@example.com"),
-    ("Bob", "bob@example.com"),
-    ("Charlie", "charlie@example.com"),
-];
-
-ctx.database().batch_insert("users", &["name", "email"], users)?;
-
-// 批量更新
-let updates = vec![
-    (1, "Alice Smith"),
-    (2, "Bob Johnson"),
-    (3, "Charlie Brown"),
-];
-
-ctx.database().batch_update("users", "id", &["name"], updates)?;
-```
-
-### 预处理语句
-
-```rust
-use dmsc::prelude::*;
-
-// 准备预处理语句
-let stmt = ctx.database().prepare("SELECT * FROM users WHERE id = $1 AND active = $2")?;
-
-// 执行预处理语句
-let results = stmt.query(&[123, true])?;
-
-// 多次执行
-for user_id in [123, 456, 789] {
-    let results = stmt.query(&[user_id, true])?;
-    // 处理结果
+for row in rows {
+    let id: i64 = row.get("id")?;
+    let name: String = row.get("name")?;
+    let email: Option<String> = row.get_opt("email")?;
+    
+    println!("User: {} - {} - {:?}", id, name, email);
 }
 ```
 
-### 异步操作
+### DMSCDBResult
+
+查询结果集。
+
+#### 方法
+
+| 方法 | 描述 | 参数 | 返回值 |
+|:--------|:-------------|:--------|:--------|
+| `len()` | 行数 | 无 | `usize` |
+| `is_empty()` | 是否为空 | 无 | `bool` |
+| `columns()` | 列名列表 | 无 | `Vec<String>` |
+| `iter()` | 迭代器 | 无 | `Iter<'_, DMSCDBRow>` |
+| `into_iter()` | 转为迭代器 | 无 | `IntoIter<DMSCDBRow>` |
+
+#### 实现 trait
+
+- `IntoIterator` - 支持 `for row in results` 遍历
+
+<div align="center">
+
+## 批量操作
+
+</div>
 
 ```rust
-use dmsc::prelude::*;
+use dmsc::database::{DMSCDatabasePool, DMSCDatabaseConfig};
 
-// 异步查询
-let results = ctx.database().query_async("SELECT * FROM users WHERE active = true").await?;
+#[tokio::main]
+async fn main() -> DMSCResult<()> {
+    let config = DMSCDatabaseConfig::postgres().build();
+    let pool = DMSCDatabasePool::new(config).await?;
+    let db = pool.get().await?;
 
-// 异步事务
-let mut transaction = ctx.database().begin_transaction_async().await?;
+    // 批量插入
+    let users = vec![
+        vec![serde_json::json!("Alice"), serde_json::json!("alice@example.com")],
+        vec![serde_json::json!("Bob"), serde_json::json!("bob@example.com")],
+        vec![serde_json::json!("Charlie"), serde_json::json!("charlie@example.com")],
+    ];
 
-try {
-    transaction.execute_async("UPDATE accounts SET balance = balance - 100 WHERE id = 1").await?;
-    transaction.execute_async("UPDATE accounts SET balance = balance + 100 WHERE id = 2").await?;
-    transaction.commit_async().await?;
-} catch (e) {
-    transaction.rollback_async().await?;
-    return Err(e);
+    let results = db.batch_execute(
+        "INSERT INTO users (name, email) VALUES ($1, $2)",
+        &users
+    ).await?;
+
+    println!("插入 {} 行", results.len());
+
+    Ok(())
 }
 ```
 
@@ -513,9 +500,9 @@ try {
 
 ## 错误处理
 
-</div>  
+</div>
 
-### 数据库错误码
+### 错误码
 
 | 错误码 | 描述 |
 |:--------|:-------------|
@@ -528,27 +515,27 @@ try {
 ### 错误处理示例
 
 ```rust
-use dmsc::prelude::*;
+use dmsc::database::{DMSCDatabasePool, DMSCDatabaseConfig};
 
-match ctx.database().query("SELECT * FROM users WHERE id = 123") {
-    Ok(results) => {
-        // 查询成功
-        for row in results {
-            println!("User: {:?}", row);
+#[tokio::main]
+async fn main() -> DMSCResult<()> {
+    let config = DMSCDatabaseConfig::postgres().build();
+    let pool = DMSCDatabasePool::new(config).await?;
+    let db = pool.get().await?;
+
+    match db.query("SELECT * FROM users WHERE id = $1", &[&123]).await {
+        Ok(results) => {
+            for row in results {
+                println!("User: {:?}", row);
+            }
+        }
+        Err(e) => {
+            eprintln!("数据库错误: {}", e);
+            return Err(e);
         }
     }
-    Err(DMSCError { code, .. }) if code == "DATABASE_CONNECTION_ERROR" => {
-        // 连接错误，尝试重新连接
-        ctx.log().error("Database connection lost, attempting to reconnect");
-        ctx.database().recreate_pool()?;
-        
-        // 重试查询
-        let results = ctx.database().query("SELECT * FROM users WHERE id = 123")?;
-    }
-    Err(e) => {
-        // 其他错误
-        return Err(e);
-    }
+
+    Ok(())
 }
 ```
 
@@ -559,13 +546,13 @@ match ctx.database().query("SELECT * FROM users WHERE id = 123") {
 </div>
 
 1. **使用连接池**: 避免频繁创建和销毁连接
-2. **使用预处理语句**: 提高性能并防止SQL注入
+2. **使用参数绑定**: 使用`query_with_params`防止SQL注入
 3. **合理使用事务**: 保持事务简短，避免长时间锁定
 4. **正确处理错误**: 区分可恢复和不可恢复的错误
-5. **监控连接池**: 监控连接池的使用情况和性能
-6. **使用迁移**: 使用数据库迁移管理schema变化
-7. **索引优化**: 为常用查询添加适当的索引
-8. **批量操作**: 使用批量操作减少数据库往返
+5. **监控连接池**: 使用`metrics()`监控连接池使用情况
+6. **使用迁移**: 使用DMSCDatabaseMigrator管理schema变化
+7. **异步操作**: 所有数据库操作都是异步的，使用`.await`
+8. **批量操作**: 使用`batch_execute`减少数据库往返
 
 <div align="center">
 

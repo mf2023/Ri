@@ -80,9 +80,10 @@ async fn example() -> DMSCResult<()> {
     });
     
     let middleware_chain = gateway.middleware_chain();
-    middleware_chain.add_middleware(Arc::new(|req, next| Box::pin(async move {
+    middleware_chain.add(Arc::new(|req, next| Box::pin(async move {
         println!("Request: {} {}", req.method, req.path);
-        next(req).await
+        next.execute(req).await?;
+        Ok(())
     })));
     
     let sample_request = DMSCGatewayRequest::new(
@@ -94,7 +95,7 @@ async fn example() -> DMSCResult<()> {
         "127.0.0.1:12345".to_string(),
     );
     
-    let response = gateway.handle_request(sample_request);
+    let response = gateway.handle_request(sample_request).await;
     println!("Response: {} {}", response.status_code, String::from_utf8_lossy(&response.body));
     
     Ok(())
@@ -214,18 +215,23 @@ struct LoggingMiddleware;
 
 #[async_trait]
 impl DMSCMiddleware for LoggingMiddleware {
-    async fn handle(&self, req: &mut DMSCGatewayRequest, next: RouteNext) -> Result<DMSCGatewayResponse, String> {
+    async fn execute(&self, req: &mut DMSCGatewayRequest, next: &dyn DMSCMiddleware) -> DMSCResult<()> {
         println!("Before: {} {}", req.method, req.path);
         
-        let response = next.run(req).await?;
+        next.execute(req).await?;
         
-        println!("After: {} {}", response.status_code, req.path);
+        println!("After: {} {}", req.path, req.id);
         
-        Ok(response)
+        Ok(())
+    }
+
+    fn name(&self) -> &'static str {
+        "LoggingMiddleware"
     }
 }
 
-gateway.middleware_chain().add_middleware(Arc::new(LoggingMiddleware)).await;
+let middleware = Arc::new(LoggingMiddleware);
+gateway.middleware_chain().add(middleware);
 ```
 
 ### 内置中间件

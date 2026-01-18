@@ -369,7 +369,7 @@ impl KeyRotationManager {
         self.rotation_date = chrono::Utc::now();
     }
 
-    pub fn validate_with_rotation(&self, token: &str) -> Result<JWTClaims, DMSCError> {
+    pub fn validate_with_rotation(&self, token: &str) -> Result<DMSCJWTClaims, DMSCError> {
         // First try to validate with current key
         if let Ok(claims) = self.validate_current(token) {
             return Ok(claims);
@@ -415,7 +415,7 @@ impl Drop for SensitiveKey {
 ```rust
 // Ensure algorithm verification
 let validation = Validation::new(Algorithm::HS256);
-let claims = decode::<JWTClaims>(token, &key, &validation)?;
+let claims = decode::<DMSCJWTClaims>(token, &key, &validation)?;
 ```
 
 #### 11.2.2 Token Security

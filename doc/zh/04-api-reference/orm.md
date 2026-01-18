@@ -2,9 +2,9 @@
 
 # ORM API 参考
 
-**Version: 0.1.4**
+**Version: 0.1.5**
 
-**Last modified date: 2026-01-16**
+**Last modified date: 2026-01-18**
 
 ORM 模块提供类型安全的对象关系映射层，包含查询构建器、基于条件的过滤、分页支持，以及 Python 绑定。
 
@@ -243,6 +243,36 @@ println!("有上一页: {}", pagination.has_previous());
 | `count_by_criteria(criteria)` | 按条件统计 | `criteria: &DMSCCriteria` | `DMSCResult<u64>` |
 | `exists_by_id(id)` | 按 ID 检查存在 | `id: impl ToSql` | `DMSCResult<bool>` |
 | `exists_by_criteria(criteria)` | 按条件检查存在 | `criteria: &DMSCCriteria` | `DMSCResult<bool>` |
+| `batch_insert(entities, batch_size)` | 批量插入实体 | `entities: &[Entity]`, `batch_size: usize` | `DMSCResult<Vec<Entity>>` |
+| `upsert(entity, conflict_columns)` | 插入或更新实体 | `entity: &Entity`, `conflict_columns: &[&str]` | `DMSCResult<Entity>` |
+
+#### 批量插入示例
+
+```rust
+use dmsc::prelude::*;
+
+let users = vec![
+    User { name: "Alice".to_string(), email: "alice@example.com".to_string() },
+    User { name: "Bob".to_string(), email: "bob@example.com".to_string() },
+    User { name: "Charlie".to_string(), email: "charlie@example.com".to_string() },
+];
+
+// 批量插入（自定义批次大小）
+let inserted = repository.batch_insert(&users, 100)?;
+println!("插入 {} 个用户", inserted.len());
+```
+
+#### Upsert示例
+
+```rust
+use dmsc::prelude::*;
+
+let user = User { id: Some(1), name: "Alice Updated".to_string(), email: "alice.new@example.com".to_string() };
+
+// 冲突时按email列进行upsert
+let upserted = repository.upsert(&user, &["email"])?;
+println!("Upserted用户ID: {}", upserted.id);
+```
 
 #### 使用示例
 

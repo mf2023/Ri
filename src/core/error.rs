@@ -192,8 +192,80 @@ impl std::error::Error for DMSCError {}
 /// and other standard I/O operations.
 impl From<std::io::Error> for DMSCError {
     fn from(error: std::io::Error) -> Self {
-        DMSCError::Io(error.to_string())
+        DMSCError::Io(format!("I/O operation failed: {}", error))
     }
+}
+
+/// Enhanced error formatting with suggestions.
+/// Provides consistent error messages with actionable suggestions for resolution.
+pub struct DMSCErrorFormatter<'a> {
+    error: &'a DMSCError,
+}
+
+impl<'a> DMSCErrorFormatter<'a> {
+    /// Creates a new error formatter for the given error.
+    pub fn new(error: &'a DMSCError) -> Self {
+        Self { error }
+    }
+
+    /// Returns the formatted error message with suggestion.
+    pub fn format(&self) -> String {
+        let base_message = self.error.to_string();
+        let suggestion = self.get_suggestion();
+
+        match suggestion {
+            Some(s) => format!("{}\n💡 Suggestion: {}", base_message, s),
+            None => base_message,
+        }
+    }
+
+    /// Returns an actionable suggestion for the error.
+    fn get_suggestion(&self) -> Option<&'static str> {
+        match self.error {
+            DMSCError::Io(_) => Some("Check file permissions and disk space"),
+            DMSCError::Serde(_) => Some("Verify data format matches expected schema"),
+            DMSCError::Config(_) => Some("Review configuration file syntax and required fields"),
+            DMSCError::Hook(_) => Some("Check hook implementation for errors and ensure proper registration"),
+            DMSCError::Prometheus(_) => Some("Verify Prometheus server is running and metrics endpoint is accessible"),
+            DMSCError::ServiceMesh(_) => Some("Check service mesh configuration and network connectivity"),
+            DMSCError::InvalidState(_) => Some("Ensure module is in correct state before performing operation"),
+            DMSCError::InvalidInput(_) => Some("Validate input data against expected format and constraints"),
+            DMSCError::SecurityViolation(_) => Some("Review security policies and access permissions"),
+            DMSCError::DeviceNotFound { .. } => Some("Verify device ID exists and is properly registered"),
+            DMSCError::DeviceAllocationFailed { .. } => Some("Check device availability and allocation constraints"),
+            DMSCError::AllocationNotFound { .. } => Some("Verify allocation ID is correct and hasn't expired"),
+            DMSCError::ModuleNotFound { .. } => Some("Ensure module is registered and feature flag is enabled"),
+            DMSCError::ModuleInitFailed { .. } => Some("Check module dependencies and initialization parameters"),
+            DMSCError::ModuleStartFailed { .. } => Some("Review module start sequence and resource availability"),
+            DMSCError::ModuleShutdownFailed { .. } => Some("Ensure no active connections before shutdown"),
+            DMSCError::CircularDependency { .. } => Some("Restructure module dependencies to eliminate cycles"),
+            DMSCError::MissingDependency { .. } => Some("Add required module to application configuration"),
+            DMSCError::Other(_) => None,
+            DMSCError::ExternalError(_) => Some("Check external service status and credentials"),
+            DMSCError::PoolError(_) => Some("Verify connection pool configuration and database availability"),
+            DMSCError::DeviceError(_) => Some("Check device connection and configuration"),
+            DMSCError::RedisError(_) => Some("Verify Redis server is running and connection parameters are correct"),
+            DMSCError::HttpClientError(_) => Some("Check network connectivity and target server availability"),
+            DMSCError::TomlError(_) => Some("Validate TOML syntax and required sections"),
+            DMSCError::YamlError(_) => Some("Validate YAML syntax and indentation"),
+            DMSCError::Queue(_) => Some("Check message queue service status and queue configuration"),
+        }
+    }
+}
+
+/// Formats an error with actionable suggestion.
+/// This helper function provides enhanced error messages that include
+/// suggestions for resolving the issue.
+#[inline]
+pub fn format_error(error: &DMSCError) -> String {
+    DMSCErrorFormatter::new(error).format()
+}
+
+/// Logs an error with enhanced formatting.
+/// This helper function logs the error with its suggestion for debugging.
+#[inline]
+pub fn log_error(error: &DMSCError) {
+    log::error!("{}", format_error(error));
 }
 
 /// Enables automatic conversion from JSON serialization/deserialization errors.
@@ -355,7 +427,7 @@ impl DMSCError {
     ///
     /// Returns:
     ///     A String containing the formatted error message
-    fn __str__(&self) -> String {
+    pub fn __str__(&self) -> String {
         self.to_string()
     }
 
@@ -367,7 +439,7 @@ impl DMSCError {
     ///
     /// Returns:
     ///     A String containing the debug-formatted error representation
-    fn __repr__(&self) -> String {
+    pub fn __repr__(&self) -> String {
         format!("{:?}", self)
     }
 
@@ -383,7 +455,7 @@ impl DMSCError {
     /// Returns:
     ///     A new DMSCError instance with Other variant
     #[staticmethod]
-    fn from_str(message: &str) -> Self {
+    pub fn from_str(message: &str) -> Self {
         DMSCError::Other(message.to_string())
     }
 
@@ -398,7 +470,7 @@ impl DMSCError {
     /// Returns:
     ///     A new DMSCError instance with Io variant
     #[staticmethod]
-    fn io(message: &str) -> Self {
+    pub fn io(message: &str) -> Self {
         DMSCError::Io(message.to_string())
     }
 
@@ -414,7 +486,7 @@ impl DMSCError {
     /// Returns:
     ///     A new DMSCError instance with Serde variant
     #[staticmethod]
-    fn serde(message: &str) -> Self {
+    pub fn serde(message: &str) -> Self {
         DMSCError::Serde(message.to_string())
     }
 
@@ -430,7 +502,7 @@ impl DMSCError {
     /// Returns:
     ///     A new DMSCError instance with Config variant
     #[staticmethod]
-    fn config(message: &str) -> Self {
+    pub fn config(message: &str) -> Self {
         DMSCError::Config(message.to_string())
     }
 
@@ -445,7 +517,7 @@ impl DMSCError {
     /// Returns:
     ///     A new DMSCError instance with Hook variant
     #[staticmethod]
-    fn hook(message: &str) -> Self {
+    pub fn hook(message: &str) -> Self {
         DMSCError::Hook(message.to_string())
     }
 
@@ -456,7 +528,7 @@ impl DMSCError {
     ///
     /// Returns:
     ///     true if the error is an Io variant, false otherwise
-    fn is_io(&self) -> bool {
+    pub fn is_io(&self) -> bool {
         matches!(self, DMSCError::Io(_))
     }
 
@@ -467,7 +539,7 @@ impl DMSCError {
     ///
     /// Returns:
     ///     true if the error is a Serde variant, false otherwise
-    fn is_serde(&self) -> bool {
+    pub fn is_serde(&self) -> bool {
         matches!(self, DMSCError::Serde(_))
     }
 
@@ -478,7 +550,7 @@ impl DMSCError {
     ///
     /// Returns:
     ///     true if the error is a Config variant, false otherwise
-    fn is_config(&self) -> bool {
+    pub fn is_config(&self) -> bool {
         matches!(self, DMSCError::Config(_))
     }
 
@@ -489,7 +561,7 @@ impl DMSCError {
     ///
     /// Returns:
     ///     true if the error is a Hook variant, false otherwise
-    fn is_hook(&self) -> bool {
+    pub fn is_hook(&self) -> bool {
         matches!(self, DMSCError::Hook(_))
     }
 
@@ -500,7 +572,7 @@ impl DMSCError {
     ///
     /// Returns:
     ///     true if the error is a Prometheus variant, false otherwise
-    fn is_prometheus(&self) -> bool {
+    pub fn is_prometheus(&self) -> bool {
         matches!(self, DMSCError::Prometheus(_))
     }
 
@@ -511,7 +583,7 @@ impl DMSCError {
     ///
     /// Returns:
     ///     true if the error is a ServiceMesh variant, false otherwise
-    fn is_service_mesh(&self) -> bool {
+    pub fn is_service_mesh(&self) -> bool {
         matches!(self, DMSCError::ServiceMesh(_))
     }
 
@@ -522,7 +594,7 @@ impl DMSCError {
     ///
     /// Returns:
     ///     true if the error is an InvalidState variant, false otherwise
-    fn is_invalid_state(&self) -> bool {
+    pub fn is_invalid_state(&self) -> bool {
         matches!(self, DMSCError::InvalidState(_))
     }
 
@@ -533,7 +605,7 @@ impl DMSCError {
     ///
     /// Returns:
     ///     true if the error is an InvalidInput variant, false otherwise
-    fn is_invalid_input(&self) -> bool {
+    pub fn is_invalid_input(&self) -> bool {
         matches!(self, DMSCError::InvalidInput(_))
     }
 
@@ -544,7 +616,7 @@ impl DMSCError {
     ///
     /// Returns:
     ///     true if the error is a SecurityViolation variant, false otherwise
-    fn is_security_violation(&self) -> bool {
+    pub fn is_security_violation(&self) -> bool {
         matches!(self, DMSCError::SecurityViolation(_))
     }
 
@@ -555,7 +627,7 @@ impl DMSCError {
     ///
     /// Returns:
     ///     true if the error is a DeviceNotFound variant, false otherwise
-    fn is_device_not_found(&self) -> bool {
+    pub fn is_device_not_found(&self) -> bool {
         matches!(self, DMSCError::DeviceNotFound { .. })
     }
 
@@ -566,7 +638,7 @@ impl DMSCError {
     ///
     /// Returns:
     ///     true if the error is a DeviceAllocationFailed variant, false otherwise
-    fn is_device_allocation_failed(&self) -> bool {
+    pub fn is_device_allocation_failed(&self) -> bool {
         matches!(self, DMSCError::DeviceAllocationFailed { .. })
     }
 
@@ -577,7 +649,7 @@ impl DMSCError {
     ///
     /// Returns:
     ///     true if the error is an AllocationNotFound variant, false otherwise
-    fn is_allocation_not_found(&self) -> bool {
+    pub fn is_allocation_not_found(&self) -> bool {
         matches!(self, DMSCError::AllocationNotFound { .. })
     }
 
@@ -588,7 +660,7 @@ impl DMSCError {
     ///
     /// Returns:
     ///     true if the error is a ModuleNotFound variant, false otherwise
-    fn is_module_not_found(&self) -> bool {
+    pub fn is_module_not_found(&self) -> bool {
         matches!(self, DMSCError::ModuleNotFound { .. })
     }
 
@@ -599,7 +671,7 @@ impl DMSCError {
     ///
     /// Returns:
     ///     true if the error is a ModuleInitFailed variant, false otherwise
-    fn is_module_init_failed(&self) -> bool {
+    pub fn is_module_init_failed(&self) -> bool {
         matches!(self, DMSCError::ModuleInitFailed { .. })
     }
 
@@ -610,7 +682,7 @@ impl DMSCError {
     ///
     /// Returns:
     ///     true if the error is a ModuleStartFailed variant, false otherwise
-    fn is_module_start_failed(&self) -> bool {
+    pub fn is_module_start_failed(&self) -> bool {
         matches!(self, DMSCError::ModuleStartFailed { .. })
     }
 
@@ -621,7 +693,7 @@ impl DMSCError {
     ///
     /// Returns:
     ///     true if the error is a ModuleShutdownFailed variant, false otherwise
-    fn is_module_shutdown_failed(&self) -> bool {
+    pub fn is_module_shutdown_failed(&self) -> bool {
         matches!(self, DMSCError::ModuleShutdownFailed { .. })
     }
 
@@ -632,7 +704,7 @@ impl DMSCError {
     ///
     /// Returns:
     ///     true if the error is a CircularDependency variant, false otherwise
-    fn is_circular_dependency(&self) -> bool {
+    pub fn is_circular_dependency(&self) -> bool {
         matches!(self, DMSCError::CircularDependency { .. })
     }
 
@@ -643,7 +715,7 @@ impl DMSCError {
     ///
     /// Returns:
     ///     true if the error is a MissingDependency variant, false otherwise
-    fn is_missing_dependency(&self) -> bool {
+    pub fn is_missing_dependency(&self) -> bool {
         matches!(self, DMSCError::MissingDependency { .. })
     }
 
@@ -654,7 +726,7 @@ impl DMSCError {
     ///
     /// Returns:
     ///     true if the error is an Other variant, false otherwise
-    fn is_other(&self) -> bool {
+    pub fn is_other(&self) -> bool {
         matches!(self, DMSCError::Other(_))
     }
 
@@ -665,7 +737,7 @@ impl DMSCError {
     ///
     /// Returns:
     ///     true if the error is an ExternalError variant, false otherwise
-    fn is_external_error(&self) -> bool {
+    pub fn is_external_error(&self) -> bool {
         matches!(self, DMSCError::ExternalError(_))
     }
 
@@ -676,7 +748,7 @@ impl DMSCError {
     ///
     /// Returns:
     ///     true if the error is a PoolError variant, false otherwise
-    fn is_pool_error(&self) -> bool {
+    pub fn is_pool_error(&self) -> bool {
         matches!(self, DMSCError::PoolError(_))
     }
 
@@ -687,7 +759,7 @@ impl DMSCError {
     ///
     /// Returns:
     ///     true if the error is a DeviceError variant, false otherwise
-    fn is_device_error(&self) -> bool {
+    pub fn is_device_error(&self) -> bool {
         matches!(self, DMSCError::DeviceError(_))
     }
 
@@ -698,7 +770,7 @@ impl DMSCError {
     ///
     /// Returns:
     ///     true if the error is a RedisError variant, false otherwise
-    fn is_redis_error(&self) -> bool {
+    pub fn is_redis_error(&self) -> bool {
         matches!(self, DMSCError::RedisError(_))
     }
 
@@ -709,7 +781,7 @@ impl DMSCError {
     ///
     /// Returns:
     ///     true if the error is an HttpClientError variant, false otherwise
-    fn is_http_client_error(&self) -> bool {
+    pub fn is_http_client_error(&self) -> bool {
         matches!(self, DMSCError::HttpClientError(_))
     }
 
@@ -720,7 +792,7 @@ impl DMSCError {
     ///
     /// Returns:
     ///     true if the error is a TomlError variant, false otherwise
-    fn is_toml_error(&self) -> bool {
+    pub fn is_toml_error(&self) -> bool {
         matches!(self, DMSCError::TomlError(_))
     }
 
@@ -731,7 +803,7 @@ impl DMSCError {
     ///
     /// Returns:
     ///     true if the error is a YamlError variant, false otherwise
-    fn is_yaml_error(&self) -> bool {
+    pub fn is_yaml_error(&self) -> bool {
         matches!(self, DMSCError::YamlError(_))
     }
 
@@ -742,7 +814,7 @@ impl DMSCError {
     ///
     /// Returns:
     ///     true if the error is a Queue variant, false otherwise
-    fn is_queue(&self) -> bool {
+    pub fn is_queue(&self) -> bool {
         matches!(self, DMSCError::Queue(_))
     }
 }

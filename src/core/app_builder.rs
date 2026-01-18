@@ -492,96 +492,75 @@ impl DMSCAppBuilder {
         Self::new()
     }
 
-    #[pyo3(name = "with_config")]
-    fn with_config_py(&mut self, config_path: &str) -> PyResult<()> {
+    fn py_with_config(&mut self, config_path: &str) {
         self.config_paths.push(config_path.to_string());
-        Ok(())
     }
 
-    #[pyo3(name = "with_logging")]
-    fn with_logging_py(&mut self, logging_config: crate::log::DMSCLogConfig) -> PyResult<()> {
+    fn py_with_logging(&mut self, logging_config: crate::log::DMSCLogConfig) {
         self.logging_config = Some(logging_config);
-        Ok(())
     }
 
-    #[pyo3(name = "with_observability")]
-    fn with_observability_py(&mut self, observability_config: crate::observability::DMSCObservabilityConfig) -> PyResult<()> {
+    fn py_with_observability(&mut self, observability_config: crate::observability::DMSCObservabilityConfig) {
         self.observability_config = Some(observability_config);
-        Ok(())
     }
 
-    #[pyo3(name = "build")]
-    fn build_py(&mut self) -> PyResult<DMSCAppRuntime> {
+    fn py_build(&mut self) -> PyResult<DMSCAppRuntime> {
         let builder = std::mem::take(self);
         DMSCAppBuilder::build(builder).map_err(|e| pyo3::prelude::PyErr::from(e))
     }
 
-    #[pyo3(name = "with_module")]
-    fn with_module_py(&mut self, module: super::module::DMSCPythonServiceModule) -> PyResult<()> {
+    fn py_with_module(&mut self, module: super::module::DMSCPythonServiceModule) {
         self.modules.push(crate::core::module_types::ModuleSlot {
             module: crate::core::module_types::ModuleType::Sync(Box::new(module)),
             failed: false,
         });
-        Ok(())
     }
 
-    #[pyo3(name = "with_python_module")]
-    fn with_python_module_py(&mut self, module: super::module::DMSCPythonModuleAdapter) -> PyResult<()> {
+    fn py_with_python_module(&mut self, module: super::module::DMSCPythonModuleAdapter) {
         self.modules.push(crate::core::module_types::ModuleSlot {
             module: crate::core::module_types::ModuleType::Async(Box::new(module)),
             failed: false,
         });
-        Ok(())
     }
 
-    #[pyo3(name = "with_async_module")]
-    fn with_async_module_py(&mut self, module: super::module::DMSCPythonAsyncServiceModule) -> PyResult<()> {
+    fn py_with_async_module(&mut self, module: super::module::DMSCPythonAsyncServiceModule) {
         self.modules.push(crate::core::module_types::ModuleSlot {
             module: crate::core::module_types::ModuleType::Async(Box::new(module)),
             failed: false,
         });
-        Ok(())
     }
 
-    #[pyo3(name = "with_dms_module")]
-    fn with_dms_module_py(&mut self, module: super::module::DMSCPythonModuleAdapter) -> PyResult<()> {
+    fn py_with_dms_module(&mut self, module: super::module::DMSCPythonModuleAdapter) {
         self.modules.push(crate::core::module_types::ModuleSlot {
             module: crate::core::module_types::ModuleType::Async(Box::new(module)),
             failed: false,
         });
-        Ok(())
     }
 
-    #[pyo3(name = "with_modules")]
-    fn with_modules_py(&mut self, modules: Vec<super::module::DMSCPythonServiceModule>) -> PyResult<()> {
+    fn py_with_modules(&mut self, modules: Vec<super::module::DMSCPythonServiceModule>) {
         for module in modules {
             self.modules.push(crate::core::module_types::ModuleSlot {
                 module: crate::core::module_types::ModuleType::Sync(Box::new(module)),
                 failed: false,
             });
         }
-        Ok(())
     }
 
-    #[pyo3(name = "with_async_modules")]
-    fn with_async_modules_py(&mut self, modules: Vec<super::module::DMSCPythonAsyncServiceModule>) -> PyResult<()> {
+    fn py_with_async_modules(&mut self, modules: Vec<super::module::DMSCPythonAsyncServiceModule>) {
         for module in modules {
             self.modules.push(crate::core::module_types::ModuleSlot {
                 module: crate::core::module_types::ModuleType::Async(Box::new(module)),
                 failed: false,
             });
         }
-        Ok(())
     }
 
-    #[pyo3(name = "with_dms_modules")]
-    fn with_dms_modules_py(&mut self, modules: Vec<super::module::DMSCPythonModuleAdapter>) -> PyResult<()> {
+    fn py_with_dms_modules(&mut self, modules: Vec<super::module::DMSCPythonModuleAdapter>) {
         for module in modules {
             self.modules.push(crate::core::module_types::ModuleSlot {
                 module: crate::core::module_types::ModuleType::Async(Box::new(module)),
                 failed: false,
             });
         }
-        Ok(())
     }
 }

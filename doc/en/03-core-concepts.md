@@ -220,40 +220,39 @@ impl DMSCModule for MyCustomModule {
 DMSC Python SDK supports creating custom sync and async modules:
 
 ```python
-from dmsc import DMSCPyServiceModule, DMSCPyAsyncServiceModule, DMSCServiceContext
-from dmsc.core import DMSCResult
+from dmsc import DMSCPythonServiceModule, DMSCPythonAsyncServiceModule, DMSCServiceContext
 
-class MyPyModule(DMSCPyServiceModule):
+class MyPyModule(DMSCPythonServiceModule):
     """Sync service module"""
     def name(self) -> str:
         return "my_python_module"
     
-    def init(self, ctx: DMSCServiceContext) -> DMSCResult:
+    def init(self, ctx: DMSCServiceContext) -> None:
+        """Initialize module, return None for success"""
         ctx.logger().info("my_python_module", "Python module initialized")
-        return None
     
-    def start(self, ctx: DMSCServiceContext) -> DMSCResult:
+    def start(self, ctx: DMSCServiceContext) -> None:
+        """Start module, return None for success"""
         ctx.logger().info("my_python_module", "Python module started")
-        return None
     
-    def shutdown(self, ctx: DMSCServiceContext) -> DMSCResult:
+    def shutdown(self, ctx: DMSCServiceContext) -> None:
+        """Shutdown module, return None for success"""
         ctx.logger().info("my_python_module", "Python module stopped")
-        return None
 
 # Async module example
-class MyAsyncPyModule(DMSCPyAsyncServiceModule):
+class MyAsyncPyModule(DMSCPythonAsyncServiceModule):
     """Async service module"""
-    async def init(self, ctx: DMSCServiceContext) -> DMSCResult:
+    async def init(self, ctx: DMSCServiceContext) -> None:
+        """Async initialize module, return None for success"""
         ctx.logger().info("my_async_python_module", "Async Python module initialized")
-        return None
     
-    async def start(self, ctx: DMSCServiceContext) -> DMSCResult:
+    async def start(self, ctx: DMSCServiceContext) -> None:
+        """Async start module, return None for success"""
         ctx.logger().info("my_async_python_module", "Async Python module started")
-        return None
     
-    async def shutdown(self, ctx: DMSCServiceContext) -> DMSCResult:
+    async def shutdown(self, ctx: DMSCServiceContext) -> None:
+        """Async shutdown module, return None for success"""
         ctx.logger().info("my_async_python_module", "Async Python module stopped")
-        return None
 ```
 
 Using custom modules in Python application:
