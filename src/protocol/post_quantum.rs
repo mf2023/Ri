@@ -29,28 +29,49 @@
 //! These algorithms are based on hard problems in lattice theory and have been
 //! selected by NIST for standardization in the post-quantum cryptography competition.
 //!
-//! ## Security Properties
+//! ## Security Status
 //!
-//! - **Kyber**: Provides IND-CCA2 security, suitable for key encapsulation
-//! - **Dilithium**: Provides EUF-CMA security, suitable for digital signatures
-//! - **Falcon**: Provides small signature sizes for bandwidth-constrained scenarios
+//! ⚠️ **IMPORTANT**: This module provides the API structure for post-quantum cryptography.
+//! For production use, integrate an audited library:
 //!
-//! ## Usage
+//! - **liboqs** (Recommended): https://github.com/open-quantum-safe/liboqs
+//!   - NIST PQC competition reference implementation
+//!   - Actively maintained and audited
+//!   - Supports all major platforms including Windows, Linux, macOS
+//!
+//! - **pqm4**: https://github.com/mupq/pqm4
+//!   - For ARM Cortex-M4 microcontrollers
+//!
+//! ## Integration Example
+//!
+//! Add to your `Cargo.toml`:
+//! ```toml
+//! [dependencies]
+//! liboqs = "0.7"
+//! ```
+//!
+//! Then enable the protocol feature:
+//! ```bash
+//! cargo build --features protocol
+//! ```
+//!
+//! ## API Structure
 //!
 //! ```rust
 //! use dmsc::protocol::post_quantum::{KyberKEM, DilithiumSigner};
 //!
-//! // Kyber key encapsulation
-//! let (public_key, secret_key) = KyberKEM::new().keygen()?;
-//! let (ciphertext, shared_secret_1) = KyberKEM::new().encapsulate(&public_key)?;
-//! let shared_secret_2 = KyberKEM::new().decapsulate(&ciphertext, &secret_key)?;
-//! assert_eq!(shared_secret_1, shared_secret_2);
+//! // Kyber key encapsulation (requires liboqs integration)
+//! let kem = KyberKEM::new();
+//! let (public_key, secret_key) = kem.keygen()?;
+//! let (ciphertext, shared_secret_1) = kem.encapsulate(&public_key)?;
+//! let shared_secret_2 = kem.decapsulate(&ciphertext, &secret_key)?;
 //!
-//! // Dilithium signing
-//! let (pk, sk) = DilithiumSigner::new().keygen()?;
+//! // Dilithium signing (requires liboqs integration)
+//! let signer = DilithiumSigner::new();
+//! let (pk, sk) = signer.keygen()?;
 //! let message = b"Hello, Post-Quantum World!";
-//! let signature = DilithiumSigner::new().sign(&sk, message)?;
-//! assert!(DilithiumSigner::new().verify(&pk, message, &signature));
+//! let signature = signer.sign(&sk, message)?;
+//! assert!(signer.verify(&pk, message, &signature));
 //! ```
 
 use std::sync::Arc;
@@ -60,6 +81,9 @@ use rand::RngCore;
 use subtle::ConstantTimeEq;
 use crate::core::{DMSCResult, DMSCError};
 
+#[cfg(feature = "pyo3")]
+use pyo3::prelude::*;
+
 pub mod kyber;
 pub mod dilithium;
 pub mod falcon;
@@ -68,55 +92,39 @@ pub use kyber::{KyberKEM, KyberPublicKey, KyberSecretKey, KyberCiphertext};
 pub use dilithium::{DilithiumSigner, DilithiumPublicKey, DilithiumSecretKey, DilithiumSignature};
 pub use falcon::{FalconSigner, FalconPublicKey, FalconSecretKey, FalconSignature};
 
-/// Post-quantum algorithm type
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 pub enum DMSCPostQuantumAlgorithm {
-    /// Kyber KEM
     Kyber512,
-    /// Dilithium signature
+    Kyber768,
+    Kyber1024,
+    Dilithium2,
+    Dilithium3,
     Dilithium5,
-    /// Falcon signature
     Falcon512,
+    Falcon1024,
 }
 
-/// Key encapsulation result
 pub struct KEMResult {
-    /// Ciphertext to send to receiver
     pub ciphertext: Vec<u8>,
-    /// Shared secret
     pub shared_secret: Vec<u8>,
 }
 
-/// Post-quantum crypto manager
 pub struct DMSCPostQuantumManager {
-    /// Algorithm selection
     algorithm: Arc<RwLock<DMSCPostQuantumAlgorithm>>,
-    /// Kyber KEM instance
-    kyber: Arc<RwLock<KyberKEM>>,
-    /// Dilithium signer instance
-    dilithium: Arc<RwLock<DilithiumSigner>>,
-    /// Falcon signer instance
-    falcon: Arc<RwLock<FalconSigner>>,
-    /// Initialization time
     initialized_at: Arc<RwLock<Instant>>,
-    /// Whether initialized
     initialized: Arc<RwLock<bool>>,
 }
 
 impl DMSCPostQuantumManager {
-    /// Create new post-quantum manager
     pub fn new() -> Self {
         Self {
             algorithm: Arc::new(RwLock::new(DMSCPostQuantumAlgorithm::Kyber512)),
-            kyber: Arc::new(RwLock::new(KyberKEM::new())),
-            dilithium: Arc::new(RwLock::new(DilithiumSigner::new())),
-            falcon: Arc::new(RwLock::new(FalconSigner::new())),
             initialized_at: Arc::new(RwLock::new(Instant::now())),
             initialized: Arc::new(RwLock::new(false)),
         }
     }
 
-    /// Initialize the post-quantum manager
     pub async fn initialize(&self, algorithm: DMSCPostQuantumAlgorithm) -> DMSCResult<()> {
         let mut init = self.initialized.write().await;
         if *init {
@@ -130,104 +138,20 @@ impl DMSCPostQuantumManager {
         Ok(())
     }
 
-    /// Get current algorithm
     pub async fn algorithm(&self) -> DMSCPostQuantumAlgorithm {
         *self.algorithm.read().await
     }
 
-    /// Generate key pair for key encapsulation
-    pub async fn generate_kem_keypair(&self) -> DMSCResult<(Vec<u8>, Vec<u8>)> {
-        if !*self.initialized.read().await {
-            return Err(DMSCError::InvalidState("Post-quantum crypto not initialized".to_string()));
-        }
-
-        let kyber = self.kyber.read().await;
-        kyber.keygen()
-    }
-
-    /// Encapsulate key using public key
-    pub async fn encapsulate(&self, public_key: &[u8]) -> DMSCResult<KEMResult> {
-        if !*self.initialized.read().await {
-            return Err(DMSCError::InvalidState("Post-quantum crypto not initialized".to_string()));
-        }
-
-        let kyber = self.kyber.read().await;
-        kyber.encapsulate(public_key)
-    }
-
-    /// Decapsulate key using secret key
-    pub async fn decapsulate(&self, ciphertext: &[u8], secret_key: &[u8]) -> DMSCResult<Vec<u8>> {
-        if !*self.initialized.read().await {
-            return Err(DMSCError::InvalidState("Post-quantum crypto not initialized".to_string()));
-        }
-
-        let kyber = self.kyber.read().await;
-        kyber.decapsulate(ciphertext, secret_key)
-    }
-
-    /// Generate signing key pair
-    pub async fn generate_signing_keypair(&self) -> DMSCResult<(Vec<u8>, Vec<u8>)> {
-        if !*self.initialized.read().await {
-            return Err(DMSCError::InvalidState("Post-quantum crypto not initialized".to_string()));
-        }
-
-        let alg = self.algorithm.read().await;
-        match *alg {
-            DMSCPostQuantumAlgorithm::Kyber512 | DMSCPostQuantumAlgorithm::Dilithium5 => {
-                let dilithium = self.dilithium.read().await;
-                dilithium.keygen()
-            }
-            DMSCPostQuantumAlgorithm::Falcon512 => {
-                let falcon = self.falcon.read().await;
-                falcon.keygen()
-            }
-        }
-    }
-
-    /// Sign data
-    pub async fn sign(&self, secret_key: &[u8], data: &[u8]) -> DMSCResult<Vec<u8>> {
-        if !*self.initialized.read().await {
-            return Err(DMSCError::InvalidState("Post-quantum crypto not initialized".to_string()));
-        }
-
-        let alg = self.algorithm.read().await;
-        match *alg {
-            DMSCPostQuantumAlgorithm::Kyber512 | DMSCPostQuantumAlgorithm::Dilithium5 => {
-                let dilithium = self.dilithium.read().await;
-                dilithium.sign(secret_key, data)
-            }
-            DMSCPostQuantumAlgorithm::Falcon512 => {
-                let falcon = self.falcon.read().await;
-                falcon.sign(secret_key, data)
-            }
-        }
-    }
-
-    /// Verify signature
-    pub async fn verify(&self, public_key: &[u8], data: &[u8], signature: &[u8]) -> DMSCResult<bool> {
-        if !*self.initialized.read().await {
-            return Err(DMSCError::InvalidState("Post-quantum crypto not initialized".to_string()));
-        }
-
-        let alg = self.algorithm.read().await;
-        match *alg {
-            DMSCPostQuantumAlgorithm::Kyber512 | DMSCPostQuantumAlgorithm::Dilithium5 => {
-                let dilithium = self.dilithium.read().await;
-                dilithium.verify(public_key, data, signature)
-            }
-            DMSCPostQuantumAlgorithm::Falcon512 => {
-                let falcon = self.falcon.read().await;
-                falcon.verify(public_key, data, signature)
-            }
-        }
-    }
-
-    /// Get algorithm security level
     pub fn security_level(&self) -> u8 {
-        match *self.algorithm.read().await {
-            DMSCPostQuantumAlgorithm::Kyber512 => 5,
+        match *self.algorithm.read() {
+            DMSCPostQuantumAlgorithm::Kyber512 => 1,
+            DMSCPostQuantumAlgorithm::Kyber768 => 3,
+            DMSCPostQuantumAlgorithm::Kyber1024 => 5,
+            DMSCPostQuantumAlgorithm::Dilithium2 => 1,
+            DMSCPostQuantumAlgorithm::Dilithium3 => 3,
             DMSCPostQuantumAlgorithm::Dilithium5 => 5,
-            DMSCPostQuantumAlgorithm::Falcon512 => 4,
+            DMSCPostQuantumAlgorithm::Falcon512 => 1,
+            DMSCPostQuantumAlgorithm::Falcon1024 => 5,
         }
     }
 }
@@ -235,5 +159,24 @@ impl DMSCPostQuantumManager {
 impl Default for DMSCPostQuantumManager {
     fn default() -> Self {
         Self::new()
+    }
+}
+
+#[cfg(feature = "pyo3")]
+#[pyo3::prelude::pymethods]
+impl DMSCPostQuantumManager {
+    #[new]
+    pub fn new_py() -> Self {
+        Self::new()
+    }
+
+    pub fn initialize_sync(&mut self, algorithm: DMSCPostQuantumAlgorithm) -> bool {
+        *self.initialized.try_write().unwrap() = true;
+        *self.algorithm.try_write().unwrap() = algorithm;
+        true
+    }
+
+    pub fn get_stats(&self) -> String {
+        format!("Post-Quantum Manager: API structure ready. Integrate liboqs for production use.")
     }
 }

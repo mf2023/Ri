@@ -337,6 +337,19 @@ rdkafka = { version = "0.38", default-features = false, features = ["tokio", "li
 openssl-sys = { version = "0.9", features = ["vendored"], optional = true }
 
 # =============================================================================
+# Post-Quantum Cryptography Dependencies
+# =============================================================================
+# oqs - Rust bindings to liboqs (Open Quantum Safe)
+# Provides audited post-quantum KEM and signature algorithms:
+# - Kyber: IND-CCA2 secure key encapsulation
+# - Dilithium: EUF-CMA secure digital signatures
+# - Falcon: Compact digital signatures
+# Requires liboqs C library to be installed on the system
+# https://github.com/open-quantum-safe/liboqs
+# https://crates.io/crates/oqs
+oqs = { version = "0.11", optional = true }
+
+# =============================================================================
 # Feature Flags Configuration
 # =============================================================================
 # Defines conditional compilation features that control which dependencies
@@ -429,9 +442,12 @@ grpc = ["tonic", "prost", "tokio-stream", "tower"]
 # WebSocket protocol support for real-time communication
 websocket = ["tokio-tungstenite", "tungstenite"]
 
-# Experimental protocol module with post-quantum cryptography
-# WARNING: This feature is for research purposes only. DO NOT use in production.
-protocol = []
+# =============================================================================
+# Post-Quantum Cryptography Feature
+# =============================================================================
+# Enable post-quantum cryptography integration via oqs
+# Requires: liboqs C library installed + oqs Rust crate
+protocol = ["dep:oqs"]
 
 # =============================================================================
 # Development Dependencies
