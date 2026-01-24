@@ -520,16 +520,12 @@ jobs:
       
       # Step 4d: Configure Rust linker for static linking on Linux builds
       # This ensures the final binary is fully statically linked
-      # Configures rustflags for both x86_64 and aarch64 targets
+      # Configures build profile settings for optimal release builds
       - name: Configure static linking
         if: runner.os == 'Linux'
         run: |
           mkdir -p .cargo
-          printf '[target.x86_64-unknown-linux-gnu]\n' > .cargo/config.toml
-          printf 'rustflags = ["-C", "target-feature=+crt-static", "-L", "static=native"]\n\n' >> .cargo/config.toml
-          printf '[target.aarch64-unknown-linux-gnu]\n' >> .cargo/config.toml
-          printf 'rustflags = ["-C", "target-feature=+crt-static", "-L", "static=native"]\n\n' >> .cargo/config.toml
-          printf '[profile.release]\n' >> .cargo/config.toml
+          printf '[profile.release]\n' > .cargo/config.toml
           printf 'lto = true\ncodegen-units = 1\nstrip = true\n' >> .cargo/config.toml
       
       # Step 5: Install build dependencies (maturin and auditwheel)
