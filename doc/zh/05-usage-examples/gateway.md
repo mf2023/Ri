@@ -2,9 +2,9 @@
 
 # API网关使用示例
 
-**Version: 0.1.4**
+**Version: 0.1.5**
 
-**Last modified date: 2026-01-15**
+**Last modified date: 2026-01-24**
 
 本示例展示如何使用 gateway 模块构建 API 网关，包括路由、中间件、负载均衡、限流和熔断功能。
 
@@ -58,10 +58,10 @@ async fn main() -> DMSCResult<()> {
     println!("\n2. Adding Routes");
     println!("-----------------");
     
-    router.add_route(DMSCRoute {
-        path: "/api/health".to_string(),
-        method: "GET".to_string(),
-        handler: Arc::new(|req| {
+    router.add_route(DMSCRoute::new(
+        "GET".to_string(),
+        "/api/health".to_string(),
+        Arc::new(|req| {
             Box::pin(async move {
                 Ok(DMSCGatewayResponse::json(200, &serde_json::json!({
                     "status": "healthy",
@@ -70,14 +70,13 @@ async fn main() -> DMSCResult<()> {
                 }), req.id.clone())?)
             })
         }),
-        ..Default::default()
-    }).await?;
+    ));
     println!("Route added: GET /api/health");
     
-    router.add_route(DMSCRoute {
-        path: "/api/users".to_string(),
-        method: "GET".to_string(),
-        handler: Arc::new(|req| {
+    router.add_route(DMSCRoute::new(
+        "GET".to_string(),
+        "/api/users".to_string(),
+        Arc::new(|req| {
             Box::pin(async move {
                 let users = vec![
                     serde_json::json!({"id": 1, "name": "Alice", "email": "alice@example.com"}),
@@ -87,14 +86,13 @@ async fn main() -> DMSCResult<()> {
                 Ok(DMSCGatewayResponse::json(200, &users, req.id.clone())?)
             })
         }),
-        ..Default::default()
-    }).await?;
+    ));
     println!("Route added: GET /api/users");
     
-    router.add_route(DMSCRoute {
-        path: "/api/users".to_string(),
-        method: "POST".to_string(),
-        handler: Arc::new(|req| {
+    router.add_route(DMSCRoute::new(
+        "POST".to_string(),
+        "/api/users".to_string(),
+        Arc::new(|req| {
             Box::pin(async move {
                 let user_data = match &req.body {
                     Some(body) => {
@@ -108,16 +106,15 @@ async fn main() -> DMSCResult<()> {
                 }), req.id.clone())?)
             })
         }),
-        ..Default::default()
-    }).await?;
+    ));
     println!("Route added: POST /api/users");
     
-    router.add_route(DMSCRoute {
-        path: "/api/users/:id".to_string(),
-        method: "GET".to_string(),
-        handler: Arc::new(|req| {
+    router.add_route(DMSCRoute::new(
+        "GET".to_string(),
+        "/api/users/:id".to_string(),
+        Arc::new(|req| {
             Box::pin(async move {
-                let user_id = req.params.get("id").cloned().unwrap_or_default();
+                let user_id = req.path.split("/").last().unwrap_or("unknown").to_string();
                 Ok(DMSCGatewayResponse::json(200, &serde_json::json!({
                     "id": user_id,
                     "name": "User ".to_string() + &user_id,
@@ -125,8 +122,7 @@ async fn main() -> DMSCResult<()> {
                 }), req.id.clone())?)
             })
         }),
-        ..Default::default()
-    }).await?;
+    ));
     println!("Route added: GET /api/users/:id");
     
     println!("\n3. Testing Request Handling");
@@ -174,23 +170,17 @@ async fn main() -> DMSCResult<()> {
     println!("\n4. Rate Limiting");
     println!("-----------------");
     
-    let rate_limiter = gateway.get_rate_limiter().cloned().unwrap_or_default();
-    if let Some(limiter) = rate_limiter {
-        println!("Rate limiter is enabled");
-        println!("  Requests per second: {}", limiter.config.requests_per_second);
-        println!("  Burst size: {}", limiter.config.burst_size);
-    }
+    println!("Rate limiting is configured in DMSCGatewayConfig");
+    println!("  Requests per second: 100");
+    println!("  Burst size: 200");
     
     println!("\n5. Circuit Breaker");
     println!("-------------------");
     
-    let circuit_breaker = gateway.get_circuit_breaker().cloned().unwrap_or_default();
-    if let Some(breaker) = circuit_breaker {
-        println!("Circuit breaker is enabled");
-        println!("  Failure threshold: {}", breaker.config.failure_threshold);
-        println!("  Success threshold: {}", breaker.config.success_threshold);
-        println!("  Timeout duration: {:?}", breaker.config.timeout_duration);
-    }
+    println!("Circuit breaker is configured in DMSCGatewayConfig");
+    println!("  Failure threshold: 5");
+    println!("  Success threshold: 2");
+    println!("  Timeout duration: 30s");
     
     println!("\n6. Error Handling");
     println!("------------------");
@@ -299,16 +289,16 @@ Not found response: 404 - {"error":"Route not found"}
 
 ```rust
 fn add_custom_middleware(gateway: &DMSCGateway) {
-    let middleware_chain = gateway.middleware_chain();
+    let mut middleware_chain = gateway.middleware_chain();
     
-    middleware_chain.add_middleware(Arc::new(|req, next| {
+    middleware_chain.add(Arc::new(|req, next| {
         Box::pin(async move {
             println!("Request received: {} {}", req.method, req.path);
-            let response = next.run(req).await?;
-            println!("Response sent: {}", response.status_code);
-            Ok(response)
+            next.execute(req).await?;
+            println!("Response sent");
+            Ok(())
         })
-    })).await;
+    }));
     
     println!("Custom logging middleware added");
 }
@@ -317,8 +307,10 @@ fn add_custom_middleware(gateway: &DMSCGateway) {
 ### 配置负载均衡
 
 ```rust
-fn configure_load_balancing(gateway: &DMSCGateway) {
-    let load_balancer = gateway.get_load_balancer().unwrap();
+use dmsc::gateway::{DMSCLoadBalancer, DMSCLoadBalancerStrategy, DMSCBackendServer};
+
+async fn configure_load_balancing() {
+    let load_balancer = DMSCLoadBalancer::new(DMSCLoadBalancerStrategy::RoundRobin);
     
     load_balancer.add_server(DMSCBackendServer {
         id: "backend-1".to_string(),

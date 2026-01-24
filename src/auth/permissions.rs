@@ -658,7 +658,7 @@ impl DMSCPermissionManager {
 /// ## Python Usage Example
 ///
 /// ```python
-/// from dms import DMSCPermission, DMSCRole, DMSCPermissionManager
+/// from dmsc import DMSCPermission, DMSCRole, DMSCPermissionManager
 ///
 /// # Create permission manager
 /// perm_manager = DMSCPermissionManager()

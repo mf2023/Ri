@@ -16,10 +16,10 @@
 //! limitations under the License.
 
 use async_trait::async_trait;
-use std::path::Path;
+use sqlx::sqlite::{SqlitePool, SqliteRow};
+use sqlx::{Transaction, Row, Column};
 use std::sync::Arc;
 use tokio::sync::Mutex;
-use rusqlite::{params, Row as SqliteRow, Statement};
 
 use crate::core::{DMSCResult, DMSCError};
 use crate::database::{
@@ -28,60 +28,28 @@ use crate::database::{
 };
 
 #[derive(Clone)]
+#[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
+#[allow(dead_code)]
 pub struct SQLiteDatabase {
-    path: String,
-    pool: Arc<Mutex<Vec<rusqlite::Connection>>>,
+    pool: SqlitePool,
     config: DMSCDatabaseConfig,
-    max_pool_size: usize,
 }
 
 impl SQLiteDatabase {
-    pub fn new(conn: rusqlite::Connection, config: DMSCDatabaseConfig) -> Self {
-        let path = config.database.clone();
-        let pool = Arc::new(Mutex::new(vec![conn]));
-        let max_pool_size = config.max_connections as usize;
-
-        Self {
-            path,
-            pool,
-            config,
-            max_pool_size,
-        }
-    }
-
-    async fn get_connection(&self) -> Result<rusqlite::Connection, DMSCError> {
-        let mut pool = self.pool.lock().await;
-
-        if let Some(conn) = pool.pop() {
-            return Ok(conn);
-        }
-
-        if pool.len() < self.max_pool_size {
-            let conn = rusqlite::Connection::open(&self.path)
-                .map_err(|e| DMSCError::Other(format!("SQLite connection error: {}", e)))?;
-
-            conn.busy_timeout(std::time::Duration::from_secs(self.config.connection_timeout_secs))
-                .map_err(|e| DMSCError::Other(format!("SQLite busy timeout error: {}", e)))?;
-
-            return Ok(conn);
-        }
-
-        Err(DMSCError::PoolError("SQLite connection pool exhausted".to_string()))
-    }
-
-    async fn return_connection(&self, conn: rusqlite::Connection) {
-        let mut pool = self.pool.lock().await;
-        if pool.len() < self.max_pool_size {
-            pool.push(conn);
-        }
+    pub async fn new(database_url: &str, config: DMSCDatabaseConfig) -> Result<Self, DMSCError> {
+        let pool = SqlitePool::connect(database_url)
+            .await
+            .map_err(|e| DMSCError::Other(format!("Failed to connect to SQLite database: {}", e)))?;
+        
+        Ok(Self { pool, config })
     }
 
     fn row_to_dmsc_row(row: &SqliteRow) -> DMSCDBRow {
-        let columns: Vec<String> = (0..row.column_count())
-            .map(|i| row.column_name(i).unwrap_or("").to_string())
+        let columns: Vec<String> = (0..row.len())
+            .map(|i| row.column(i).name().to_string())
             .collect();
 
-        let values: Vec<Option<serde_json::Value>> = (0..row.column_count())
+        let values: Vec<Option<serde_json::Value>> = (0..row.len())
             .map(|idx| Self::value_to_json(row, idx))
             .collect();
 
@@ -89,21 +57,28 @@ impl SQLiteDatabase {
     }
 
     fn value_to_json(row: &SqliteRow, idx: usize) -> Option<serde_json::Value> {
-        let col_type = row.column_type(idx);
-
-        match col_type {
-            rusqlite::types::Type::Null => None,
-            rusqlite::types::Type::Integer => {
-                row.get::<_, i64>(idx).ok().map(serde_json::json)
-            }
-            rusqlite::types::Type::Real => {
-                row.get::<_, f64>(idx).ok().map(serde_json::json)
-            }
-            rusqlite::types::Type::Text => {
-                row.get::<_, String>(idx).ok().map(serde_json::json)
-            }
-            rusqlite::types::Type::Blob => {
-                row.get::<_, Vec<u8>>(idx).ok().map(serde_json::json)
+        match row.try_get::<i64, _>(idx) {
+            Ok(v) => Some(serde_json::json!(v)),
+            Err(_) => {
+                match row.try_get::<f64, _>(idx) {
+                    Ok(v) => Some(serde_json::json!(v)),
+                    Err(_) => {
+                        match row.try_get::<String, _>(idx) {
+                            Ok(v) => Some(serde_json::json!(v)),
+                            Err(_) => {
+                                match row.try_get::<bool, _>(idx) {
+                                    Ok(v) => Some(serde_json::json!(v)),
+                                    Err(_) => {
+                                        match row.try_get::<Vec<u8>, _>(idx) {
+                                            Ok(v) => Some(serde_json::json!(v)),
+                                            Err(_) => None,
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
             }
         }
     }
@@ -116,68 +91,49 @@ impl DMSCDatabase for SQLiteDatabase {
     }
 
     async fn execute(&self, sql: &str) -> DMSCResult<u64> {
-        let conn = self.get_connection().await?;
-        let result = conn.execute(sql, params![])
+        let result = sqlx::query::<sqlx::Sqlite>(sql)
+            .execute(&self.pool)
+            .await
             .map_err(|e| DMSCError::Other(format!("SQLite execute error: {}", e)))?;
-
-        self.return_connection(conn).await;
-        Ok(result as u64)
+        Ok(result.rows_affected())
     }
 
     async fn query(&self, sql: &str) -> DMSCResult<DMSCDBResult> {
-        let conn = self.get_connection().await?;
-
-        let mut stmt = conn.prepare(sql)
-            .map_err(|e| DMSCError::Other(format!("SQLite prepare error: {}", e)))?;
-
-        let rows = stmt.query_map(params![], |row| Ok(Self::row_to_dmsc_row(row)))
+        let rows = sqlx::query::<sqlx::Sqlite>(sql)
+            .fetch_all(&self.pool)
+            .await
             .map_err(|e| DMSCError::Other(format!("SQLite query error: {}", e)))?;
 
-        let mut dmsc_rows = Vec::new();
-        for row in rows {
-            dmsc_rows.push(row.map_err(|e| DMSCError::Other(format!("SQLite row error: {}", e)))?);
-        }
+        let dmsc_rows: Vec<DMSCDBRow> = rows.iter()
+            .map(|row| Self::row_to_dmsc_row(row))
+            .collect();
 
-        self.return_connection(conn).await;
         Ok(DMSCDBResult::with_rows(dmsc_rows))
     }
 
     async fn query_one(&self, sql: &str) -> DMSCResult<Option<DMSCDBRow>> {
-        let conn = self.get_connection().await?;
+        let row = sqlx::query::<sqlx::Sqlite>(sql)
+            .fetch_optional(&self.pool)
+            .await
+            .map_err(|e| DMSCError::Other(format!("SQLite query_one error: {}", e)))?;
 
-        let mut stmt = conn.prepare(sql)
-            .map_err(|e| DMSCError::Other(format!("SQLite prepare error: {}", e)))?;
-
-        let rows: Vec<DMSCDBRow> = stmt.query_map(params![], |row| Ok(Self::row_to_dmsc_row(row)))
-            .map_err(|e| DMSCError::Other(format!("SQLite query error: {}", e)))?
-            .filter_map(|r| r.ok())
-            .take(1)
-            .collect();
-
-        self.return_connection(conn).await;
-
-        if rows.is_empty() {
-            Ok(None)
-        } else {
-            Ok(Some(rows[0].clone()))
-        }
+        Ok(row.map(|r| Self::row_to_dmsc_row(&r)))
     }
 
     async fn ping(&self) -> DMSCResult<bool> {
-        let conn = self.get_connection().await?;
-        let result = conn.query_row("SELECT 1", params![], |_| Ok(()));
-        self.return_connection(conn).await;
-        result.map(|_| true)
+        sqlx::query::<sqlx::Sqlite>("SELECT 1")
+            .fetch_one(&self.pool)
+            .await
+            .map(|_| true)
             .map_err(|e| DMSCError::Other(format!("SQLite ping error: {}", e)))
     }
 
     fn is_connected(&self) -> bool {
-        Path::new(&self.path).exists()
+        !self.pool.is_closed()
     }
 
     async fn close(&self) -> DMSCResult<()> {
-        let mut pool = self.pool.lock().await;
-        pool.clear();
+        self.pool.close().await;
         Ok(())
     }
 
@@ -200,107 +156,111 @@ impl DMSCDatabase for SQLiteDatabase {
     }
 
     async fn execute_with_params(&self, sql: &str, params: &[serde_json::Value]) -> DMSCResult<u64> {
-        let conn = self.get_connection().await?;
-        let sqlite_params: Vec<&dyn rusqlite::types::ToSql> = params.iter()
-            .map(|v| v as &dyn rusqlite::types::ToSql)
-            .collect();
-
-        let result = conn.execute(sql, rusqlite::params_from_iter(sqlite_params))
+        let mut query = sqlx::query::<sqlx::Sqlite>(sql);
+        
+        for param in params {
+            let param_str = param.to_string();
+            query = query.bind(param_str);
+        }
+        
+        let result = query
+            .execute(&self.pool)
+            .await
             .map_err(|e| DMSCError::Other(format!("SQLite execute_with_params error: {}", e)))?;
-
-        self.return_connection(conn).await;
-        Ok(result as u64)
+        Ok(result.rows_affected())
     }
 
     async fn query_with_params(&self, sql: &str, params: &[serde_json::Value]) -> DMSCResult<DMSCDBResult> {
-        let conn = self.get_connection().await?;
-        let sqlite_params: Vec<&dyn rusqlite::types::ToSql> = params.iter()
-            .map(|v| v as &dyn rusqlite::types::ToSql)
-            .collect();
-
-        let mut stmt = conn.prepare(sql)
-            .map_err(|e| DMSCError::Other(format!("SQLite query_with_params prepare error: {}", e)))?;
-
-        let rows = stmt.query_map(rusqlite::params_from_iter(sqlite_params), |row| Ok(Self::row_to_dmsc_row(row)))
+        let mut query = sqlx::query::<sqlx::Sqlite>(sql);
+        
+        for param in params {
+            let param_str = param.to_string();
+            query = query.bind(param_str);
+        }
+        
+        let rows = query
+            .fetch_all(&self.pool)
+            .await
             .map_err(|e| DMSCError::Other(format!("SQLite query_with_params error: {}", e)))?;
 
-        let mut dmsc_rows = Vec::new();
-        for row in rows {
-            dmsc_rows.push(row.map_err(|e| DMSCError::Other(format!("SQLite row error: {}", e)))?);
-        }
+        let dmsc_rows: Vec<DMSCDBRow> = rows.iter()
+            .map(|row| Self::row_to_dmsc_row(row))
+            .collect();
 
-        self.return_connection(conn).await;
         Ok(DMSCDBResult::with_rows(dmsc_rows))
     }
 
     async fn transaction(&self) -> DMSCResult<Box<dyn crate::database::DMSCDatabaseTransaction>> {
-        let conn = self.get_connection().await?;
-        conn.execute("BEGIN TRANSACTION", params![])
+        let tx = self.pool.begin().await
             .map_err(|e| DMSCError::Other(format!("SQLite transaction begin error: {}", e)))?;
 
-        Ok(Box::new(SQLiteTransaction { conn: Some(conn), committed: false }))
+        Ok(Box::new(SQLiteTransaction::new(tx)))
     }
 }
 
 struct SQLiteTransaction {
-    conn: Option<rusqlite::Connection>,
-    committed: bool,
+    tx: Arc<Mutex<Option<Transaction<'static, sqlx::Sqlite>>>>,
+}
+
+impl SQLiteTransaction {
+    pub fn new(tx: Transaction<'static, sqlx::Sqlite>) -> Self {
+        Self {
+            tx: Arc::new(Mutex::new(Some(tx))),
+        }
+    }
 }
 
 #[async_trait::async_trait]
 impl crate::database::DMSCDatabaseTransaction for SQLiteTransaction {
     async fn execute(&self, sql: &str) -> DMSCResult<u64> {
-        let conn = self.conn.as_ref()
+        let mut guard = self.tx.lock().await;
+        let tx = guard.as_mut()
             .ok_or_else(|| DMSCError::Other("SQLite transaction already closed".to_string()))?;
-
-        let result = conn.execute(sql, params![])
+        
+        let result = sqlx::query::<sqlx::Sqlite>(sql)
+            .execute(&mut **tx)
+            .await
             .map_err(|e| DMSCError::Other(format!("SQLite transaction execute error: {}", e)))?;
-        Ok(result as u64)
+        Ok(result.rows_affected())
     }
 
     async fn query(&self, sql: &str) -> DMSCResult<DMSCDBResult> {
-        let conn = self.conn.as_ref()
+        let mut guard = self.tx.lock().await;
+        let tx = guard.as_mut()
             .ok_or_else(|| DMSCError::Other("SQLite transaction already closed".to_string()))?;
-
-        let mut stmt = conn.prepare(sql)
-            .map_err(|e| DMSCError::Other(format!("SQLite transaction query prepare error: {}", e)))?;
-
-        let rows = stmt.query_map(params![], |row| Ok(SQLiteDatabase::row_to_dmsc_row(row)))
+        
+        let rows = sqlx::query::<sqlx::Sqlite>(sql)
+            .fetch_all(&mut **tx)
+            .await
             .map_err(|e| DMSCError::Other(format!("SQLite transaction query error: {}", e)))?;
 
-        let mut dmsc_rows = Vec::new();
-        for row in rows {
-            dmsc_rows.push(row.map_err(|e| DMSCError::Other(format!("SQLite transaction row error: {}", e)))?);
-        }
+        let dmsc_rows: Vec<DMSCDBRow> = rows.iter()
+            .map(|row| SQLiteDatabase::row_to_dmsc_row(row))
+            .collect();
 
         Ok(DMSCDBResult::with_rows(dmsc_rows))
     }
 
     async fn commit(&self) -> DMSCResult<()> {
-        let conn = self.conn.take()
+        let mut guard = self.tx.lock().await;
+        let tx = guard.take()
             .ok_or_else(|| DMSCError::Other("SQLite transaction already closed".to_string()))?;
-
-        conn.execute("COMMIT", params![])
-            .map_err(|e| DMSCError::Other(format!("SQLite transaction commit error: {}", e)))?;
-
-        Ok(())
+        
+        tx.commit().await
+            .map_err(|e| DMSCError::Other(format!("SQLite transaction commit error: {}", e)))
     }
 
     async fn rollback(&self) -> DMSCResult<()> {
-        let conn = self.conn.take()
+        let mut guard = self.tx.lock().await;
+        let tx = guard.take()
             .ok_or_else(|| DMSCError::Other("SQLite transaction already closed".to_string()))?;
-
-        conn.execute("ROLLBACK", params![])
-            .map_err(|e| DMSCError::Other(format!("SQLite transaction rollback error: {}", e)))?;
-
-        Ok(())
+        
+        tx.rollback().await
+            .map_err(|e| DMSCError::Other(format!("SQLite transaction rollback error: {}", e)))
     }
 
     async fn close(&self) -> DMSCResult<()> {
-        if !self.committed {
-            self.rollback().await?;
-        }
-        Ok(())
+        self.rollback().await
     }
 }
 
@@ -309,59 +269,47 @@ impl crate::database::DMSCDatabaseTransaction for SQLiteTransaction {
 impl SQLiteDatabase {
     #[staticmethod]
     pub fn from_path(path: &str, max_connections: u32) -> Result<Self, pyo3::PyErr> {
-        let conn = match rusqlite::Connection::open(path) {
-            Ok(c) => c,
-            Err(e) => {
-                return Err(pyo3::PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(
-                    format!("Failed to open SQLite database: {}", e),
-                ));
-            }
-        };
+        let rt = tokio::runtime::Runtime::new()
+            .map_err(|e| pyo3::PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(
+                format!("Failed to create Tokio runtime: {}", e),
+            ))?;
+        
+        let url = format!("sqlite:{}", path);
+        
+        rt.block_on(async {
+            let pool = SqlitePool::connect(&url)
+                .await
+                .map_err(|e| pyo3::PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(
+                    format!("Failed to connect to SQLite database: {}", e),
+                ))?;
 
-        if let Err(e) = conn.pragma_update(None, "journal_mode", "WAL") {
-            log::warn!("Failed to set WAL mode: {}", e);
-        }
+            let db_config = DMSCDatabaseConfig::sqlite(path)
+                .max_connections(max_connections)
+                .build();
 
-        if let Err(e) = conn.pragma_update(None, "synchronous", "NORMAL") {
-            log::warn!("Failed to set synchronous mode: {}", e);
-        }
-
-        if let Err(e) = conn.pragma_update(None, "busy_timeout", 30000) {
-            log::warn!("Failed to set busy timeout: {}", e);
-        }
-
-        let db_config = DMSCDatabaseConfig::sqlite(path)
-            .max_connections(max_connections)
-            .build();
-
-        Ok(Self::new(conn, db_config))
+            Ok(Self { pool, config: db_config })
+        })
     }
 
     pub fn execute_sync(&self, sql: &str) -> Result<u64, DMSCError> {
-        let rt = match tokio::runtime::Runtime::new() {
-            Ok(r) => r,
-            Err(e) => return Err(DMSCError::Other(format!("Failed to create Tokio runtime: {}", e))),
-        };
+        let rt = tokio::runtime::Runtime::new()
+            .map_err(|e| DMSCError::Other(format!("Failed to create Tokio runtime: {}", e)))?;
         rt.block_on(async {
             self.execute(sql).await
         })
     }
 
     pub fn query_sync(&self, sql: &str) -> Result<DMSCDBResult, DMSCError> {
-        let rt = match tokio::runtime::Runtime::new() {
-            Ok(r) => r,
-            Err(e) => return Err(DMSCError::Other(format!("Failed to create Tokio runtime: {}", e))),
-        };
+        let rt = tokio::runtime::Runtime::new()
+            .map_err(|e| DMSCError::Other(format!("Failed to create Tokio runtime: {}", e)))?;
         rt.block_on(async {
             self.query(sql).await
         })
     }
 
     pub fn ping_sync(&self) -> Result<bool, DMSCError> {
-        let rt = match tokio::runtime::Runtime::new() {
-            Ok(r) => r,
-            Err(e) => return Err(DMSCError::Other(format!("Failed to create Tokio runtime: {}", e))),
-        };
+        let rt = tokio::runtime::Runtime::new()
+            .map_err(|e| DMSCError::Other(format!("Failed to create Tokio runtime: {}", e)))?;
         rt.block_on(async {
             self.ping().await
         })

@@ -2,9 +2,9 @@
 
 # Auth API参考
 
-**Version: 0.1.4**
+**Version: 0.1.5**
 
-**Last modified date: 2026-01-15**
+**Last modified date: 2026-01-24**
 
 auth模块提供认证与授权功能，支持JWT、OAuth2和基于角色的访问控制。
 

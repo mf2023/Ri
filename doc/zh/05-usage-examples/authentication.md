@@ -2,9 +2,9 @@
 
 # 认证与授权示例
 
-**Version: 0.1.4**
+**Version: 0.1.5**
 
-**Last modified date: 2026-01-15**
+**Last modified date: 2026-01-24**
 
 本示例展示如何使用DMSC的auth模块进行JWT和OAuth认证与授权。
 

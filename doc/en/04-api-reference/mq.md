@@ -2,9 +2,9 @@
 
 # Message Queue API Reference
 
-**Version: 0.1.4**
+**Version: 0.1.5**
 
-**Last modified date: 2026-01-15**
+**Last modified date: 2026-01-24**
 
 The mq module provides message queue and event-driven functionality, supporting multiple message queue backends, publish-subscribe, delayed messages, and dead letter queues.
 

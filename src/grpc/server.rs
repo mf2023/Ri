@@ -4,7 +4,7 @@
 //! The DMSC project belongs to the Dunimd Team.
 //!
 //! Licensed under the Apache License, Version 2.0 (the "License");
-//! You may not use this file except in compliance with the License.
+//! you may not use this file except in compliance with the License.
 //! You may obtain a copy of the License at
 //!
 //!     http://www.apache.org/licenses/LICENSE-2.0
@@ -21,12 +21,9 @@
 
 use super::*;
 use tokio::sync::mpsc;
-use std::pin::Pin;
-use std::task::{Context, Poll};
-use futures::Stream;
-use tonic::{Request, Response, Status};
-use tokio::time::{timeout, Duration};
+use std::net::SocketAddr;
 
+#[pyclass]
 pub struct DMSCGrpcServer {
     config: DMSCGrpcConfig,
     stats: Arc<RwLock<DMSCGrpcStats>>,
@@ -35,8 +32,10 @@ pub struct DMSCGrpcServer {
     running: Arc<RwLock<bool>>,
 }
 
+#[pymethods]
 impl DMSCGrpcServer {
-    pub fn new(config: DMSCGrpcConfig) -> Self {
+    #[new]
+    fn new(config: DMSCGrpcConfig) -> Self {
         Self {
             config,
             stats: Arc::new(RwLock::new(DMSCGrpcStats::new())),
@@ -46,16 +45,20 @@ impl DMSCGrpcServer {
         }
     }
 
-    pub fn register_service<S: DMSCGrpcService + 'static>(&self, service: S) {
+    fn register_service(&self, service_name: &str, handler: Py<PyAny>) {
+        let service = DMSCGrpcPythonService::new(service_name, handler);
         self.registry.register(service);
     }
 
+    fn get_stats(&self) -> DMSCGrpcStats {
+        self.stats.try_read().unwrap().clone()
+    }
+}
+
+impl DMSCGrpcServer {
     pub async fn start(&mut self) -> DMSCResult<()> {
-        let addr: SocketAddr = format!("{}:{}", self.config.addr, self.config.port)
-            .parse()
-            .map_err(|e| GrpcError::Server {
-                message: format!("Invalid address: {}", e)
-            })?;
+        let addr: SocketAddr = self.config.addr.parse()
+            .map_err(|e| GrpcError::Server { message: format!("Invalid address: {}", e) })?;
 
         let (shutdown_tx, shutdown_rx) = mpsc::channel(1);
         self.shutdown_tx = Some(shutdown_tx);
@@ -67,10 +70,7 @@ impl DMSCGrpcServer {
         let running = self.running.clone();
 
         tokio::spawn(async move {
-            let result = Self::run_server(addr, stats, registry, shutdown_rx, running).await;
-            if let Err(e) = result {
-                tracing::error!("gRPC server error: {}", e);
-            }
+            let _ = Self::run_server(addr, stats, registry, shutdown_rx, running).await;
         });
 
         tracing::info!("gRPC server started on {}", addr);
@@ -80,45 +80,33 @@ impl DMSCGrpcServer {
     async fn run_server(
         addr: SocketAddr,
         stats: Arc<RwLock<DMSCGrpcStats>>,
-        registry: DMSCGrpcServiceRegistry,
+        _registry: DMSCGrpcServiceRegistry,
         mut shutdown_rx: mpsc::Receiver<()>,
-        running: Arc<RwLock<bool>>,
-    ) -> Result<(), GrpcError> {
-        let service = GrpcServiceImpl {
-            stats,
-            registry,
-        };
-
-        let mut shutdown_rx = shutdown_rx;
+        _running: Arc<RwLock<bool>>,
+    ) {
+        let listener = tokio::net::TcpListener::bind(addr).await.unwrap();
+        
+        tracing::info!("gRPC server listening on {}", addr);
 
         loop {
-            let server_result = Server::builder()
-                .max_concurrent_requests(self.config.max_concurrent_requests as usize)
-                .add_service(tonic::reflection::server::ServerReflection::new(
-                    GrpcReflectionServiceImpl,
-                ))
-                .add_service(DMSCGrpcServiceServer::new(service.clone()))
-                .serve_with_shutdown(addr, async {
-                    shutdown_rx.recv().await;
-                });
-
             tokio::select! {
-                result = server_result => {
-                    if let Err(e) = result {
-                        return Err(GrpcError::Server {
-                            message: format!("Server error: {}", e)
-                        });
-                    }
+                _ = shutdown_rx.recv() => {
+                    tracing::info!("gRPC server shutting down");
+                    break;
                 }
-                _ = tokio::time::sleep(Duration::from_secs(1)) => {
-                    if !*running.read().await {
-                        break;
+                result = listener.accept() => {
+                    match result {
+                        Ok((_stream, _)) => {
+                            stats.write().await.record_request(0);
+                            tracing::debug!("gRPC client connected");
+                        }
+                        Err(e) => {
+                            tracing::error!("Failed to accept connection: {}", e);
+                        }
                     }
                 }
             }
         }
-
-        Ok(())
     }
 
     pub async fn stop(&mut self) -> DMSCResult<()> {
@@ -134,115 +122,7 @@ impl DMSCGrpcServer {
         Ok(())
     }
 
-    pub fn get_stats(&self) -> DMSCGrpcStats {
-        self.stats.try_read().unwrap().clone()
-    }
-
     pub async fn is_running(&self) -> bool {
         *self.running.read().await
-    }
-}
-
-#[derive(Clone)]
-struct GrpcServiceImpl {
-    stats: Arc<RwLock<DMSCGrpcStats>>,
-    registry: DMSCGrpcServiceRegistry,
-}
-
-#[tonic::async_trait]
-impl tonic::transport::NamedService for GrpcServiceImpl {
-    const NAME: &'static str = "dmsc.grpc.v1";
-}
-
-#[tonic::async_trait]
-impl DMSCGrpcService for GrpcServiceImpl {
-    async fn handle_request(&self, method: &str, data: &[u8]) -> DMSCResult<Vec<u8>> {
-        let parts: Vec<&str> = method.split('/').collect();
-        if parts.len() < 3 {
-            return Err(GrpcError::ServiceNotFound {
-                service_name: method.to_string()
-            }.into());
-        }
-
-        let service_name = parts[1];
-        let _method_name = parts[2];
-
-        if let Some(service) = self.registry.get_service(service_name).await {
-            service.handle_request(method, data).await
-        } else {
-            Err(GrpcError::ServiceNotFound {
-                service_name: service_name.to_string()
-            }.into())
-        }
-    }
-
-    fn service_name(&self) -> &'static str {
-        "dmsc.grpc.v1"
-    }
-}
-
-struct GrpcReflectionServiceImpl;
-
-#[tonic::async_trait]
-impl tonic::reflection::ServerReflectionService for GrpcReflectionServiceImpl {
-    async fn file_by_filename(
-        &self,
-        request: Request<tonic::reflection::FileByFilenameRequest>,
-    ) -> Result<Response<tonic::reflection::FileByFilenameResponse>, Status> {
-        let _request = request.into_inner();
-        Ok(Response::new(tonic::reflection::FileByFilenameResponse {
-            file_descriptor_proto: vec![],
-        }))
-    }
-
-    async fn file_containing_symbol(
-        &self,
-        request: Request<tonic::reflection::FileContainingSymbolRequest>,
-    ) -> Result<Response<tonic::reflection::FileContainingSymbolResponse>, Status> {
-        let _request = request.into_inner();
-        Ok(Response::new(tonic::reflection::FileContainingSymbolResponse {
-            file_descriptor_proto: vec![],
-        }))
-    }
-
-    async fn list_services(
-        &self,
-        request: Request<tonic::reflection::ListServicesRequest>,
-    ) -> Result<Response<tonic::reflection::ListServicesResponse>, Status> {
-        let _request = request.into_inner();
-        Ok(Response::new(tonic::reflection::ListServicesResponse {
-            service: vec![],
-        }))
-    }
-}
-
-#[derive(Clone)]
-pub struct DMSCGrpcServiceServer {
-    service: GrpcServiceImpl,
-}
-
-impl DMSCGrpcServiceServer {
-    pub fn new(service: GrpcServiceImpl) -> Self {
-        Self { service }
-    }
-}
-
-#[tonic::async_trait]
-impl tonic::service::Interceptor for DMSCGrpcServiceServer {
-    async fn intercept(
-        &self,
-        request: Request<()>,
-    ) -> Result<Request<()>, Status> {
-        let mut stats = self.service.stats.write();
-        stats.record_request(0);
-        Ok(request)
-    }
-}
-
-impl std::clone::Clone for DMSCGrpcServiceServer {
-    fn clone(&self) -> Self {
-        Self {
-            service: self.service.clone(),
-        }
     }
 }

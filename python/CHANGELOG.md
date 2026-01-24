@@ -1,6 +1,6 @@
 # DMSC Changelog
 
-## [0.1.4] - 2026-01-17
+## [0.1.5] - 2026-01-17
 
 ## This version is a beta version with incomplete functionality and may pose risks. It is not recommended for production environments or official use.
 
@@ -41,7 +41,7 @@
 
 ---
 
-## [0.1.4] - 2026-01-16
+## [0.1.5] - 2026-01-16
 
 ## 该版本为测试版，功能尚不完整，可能存在风险，不推荐用于生产环境或正式用途。
 

@@ -170,32 +170,27 @@ impl DMSCDatabasePool {
             #[cfg(feature = "postgres")]
             crate::database::DatabaseType::Postgres => {
                 let connection_string = self.config.connection_string();
-                let (client, conn) = tokio_postgres::Config::new()
-                    .connect_timeout(Duration::from_secs(self.config.connection_timeout_secs))
-                    .connect(&connection_string)
-                    .await
+                let db = crate::database::postgres::PostgresDatabase::new(&connection_string, self.config.clone()).await
                     .map_err(|e| crate::core::DMSCError::Config(e.to_string()))?;
-                tokio::spawn(async move {
-                    if let Err(e) = conn.await {
-                        eprintln!("PostgreSQL connection error: {}", e);
-                    }
-                });
-                Ok(Arc::new(crate::database::postgres::PostgresDatabase::new(client, self.config.clone())) as Arc<dyn DMSCDatabase>)
+                Ok(Arc::new(db) as Arc<dyn DMSCDatabase>)
             }
             #[cfg(feature = "mysql")]
             crate::database::DatabaseType::MySQL => {
                 let connection_string = self.config.connection_string();
-                let opts = mysql::Opts::from_url(&connection_string).map_err(|e| crate::core::DMSCError::Config(e.to_string()))?;
-                let pool = mysql::Pool::new(mysql::PoolOpts::default().with_conn_idle_timeout(Duration::from_secs(self.config.idle_timeout_secs)));
-                Ok(Arc::new(crate::database::mysql::MySQLDatabase::new(pool, self.config.clone())) as Arc<dyn DMSCDatabase>)
+                let db = crate::database::mysql::MySQLDatabase::new(&connection_string, self.config.clone()).await
+                    .map_err(|e| crate::core::DMSCError::Config(e.to_string()))?;
+                Ok(Arc::new(db) as Arc<dyn DMSCDatabase>)
             }
             #[cfg(feature = "sqlite")]
             crate::database::DatabaseType::SQLite => {
-                let conn = rusqlite::Connection::open(&self.config.database)
-                    .map_err(|e| crate::core::DMSCError::Config(e.to_string()))?;
-                conn.busy_timeout(Duration::from_secs(self.config.connection_timeout_secs))
-                    .map_err(|e| crate::core::DMSCError::Config(e.to_string()))?;
-                Ok(Arc::new(crate::database::sqlite::SQLiteDatabase::new(conn, self.config.clone())) as Arc<dyn DMSCDatabase>)
+                let url = format!("sqlite:{}", self.config.database);
+                let db = tokio::runtime::Handle::current().block_on(
+                    crate::database::sqlite::SQLiteDatabase::new(&url, self.config.clone())
+                );
+                match db {
+                    Ok(db) => Ok(Arc::new(db) as Arc<dyn DMSCDatabase>),
+                    Err(e) => Err(crate::core::DMSCError::Config(e.to_string())),
+                }
             }
             _ => Err(crate::core::DMSCError::Config("Unsupported database type".to_string())),
         }

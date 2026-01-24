@@ -4,7 +4,7 @@
 //! The DMSC project belongs to the Dunimd Team.
 //!
 //! Licensed under the Apache License, Version 2.0 (the "License");
-//! You may not use this file except in compliance with the License.
+//! you may not use this file except in compliance with the License.
 //! You may obtain a copy of the License at
 //!
 //!     http://www.apache.org/licenses/LICENSE-2.0
@@ -46,11 +46,6 @@ use crate::core::DMSCResult;
 use async_trait::async_trait;
 use std::sync::Arc;
 use tokio::sync::RwLock;
-use std::net::SocketAddr;
-#[cfg(feature = "grpc")]
-use tonic::{transport::Server, codegen::StdError};
-#[cfg(feature = "grpc")]
-use tonic::metadata::MetadataMap;
 #[cfg(feature = "grpc")]
 use std::collections::HashMap;
 
@@ -65,7 +60,7 @@ pub use server::DMSCGrpcServer;
 pub use client::DMSCGrpcClient;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-#[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
+#[pyclass]
 pub struct DMSCGrpcConfig {
     pub addr: String,
     pub port: u16,
@@ -73,6 +68,14 @@ pub struct DMSCGrpcConfig {
     pub enable_tls: bool,
     pub cert_path: Option<String>,
     pub key_path: Option<String>,
+}
+
+#[pymethods]
+impl DMSCGrpcConfig {
+    #[new]
+    fn new() -> Self {
+        Self::default()
+    }
 }
 
 impl Default for DMSCGrpcConfig {
@@ -96,6 +99,7 @@ pub trait DMSCGrpcService: Send + Sync {
 }
 
 #[cfg(feature = "grpc")]
+#[derive(Clone)]
 pub struct DMSCGrpcServiceRegistry {
     pub services: Arc<RwLock<HashMap<String, Arc<dyn DMSCGrpcService>>>>,
 }
@@ -110,12 +114,12 @@ impl DMSCGrpcServiceRegistry {
 
     pub fn register<S: DMSCGrpcService + 'static>(&self, service: S) {
         let name = service.service_name();
-        let mut services = self.services.write();
+        let mut services = self.services.blocking_write();
         services.insert(name.to_string(), Arc::new(service));
     }
 
     pub async fn get_service(&self, name: &str) -> Option<Arc<dyn DMSCGrpcService>> {
-        let services = self.services.read();
+        let services = self.services.read().await;
         services.get(name).cloned()
     }
 }
@@ -128,7 +132,7 @@ impl Default for DMSCGrpcServiceRegistry {
 }
 
 #[derive(Debug, Clone)]
-#[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
+#[pyclass]
 pub struct DMSCGrpcStats {
     pub requests_received: u64,
     pub requests_completed: u64,
@@ -136,6 +140,10 @@ pub struct DMSCGrpcStats {
     pub bytes_received: u64,
     pub bytes_sent: u64,
     pub active_connections: u64,
+}
+
+#[pymethods]
+impl DMSCGrpcStats {
 }
 
 impl DMSCGrpcStats {
@@ -180,7 +188,7 @@ impl Default for DMSCGrpcStats {
 }
 
 #[cfg(feature = "pyo3")]
-use pyo3::{prelude::*, types::PyBytes};
+use pyo3::prelude::*;
 
 #[cfg(feature = "pyo3")]
 #[pyclass]
@@ -204,23 +212,16 @@ impl DMSCGrpcPythonService {
 #[cfg(feature = "pyo3")]
 impl DMSCGrpcService for DMSCGrpcPythonService {
     async fn handle_request(&self, method: &str, data: &[u8]) -> DMSCResult<Vec<u8>> {
-        let gil = Python::acquire_gil();
-        let py = gil.python();
+        let py = unsafe { Python::assume_attached() };
         
         let method_str = method.to_string();
         let data_vec = data.to_vec();
         
-        let result = py.eval_bound(
-            "lambda handler, method, data: handler(method, data)",
-            None,
-            None,
-        )?;
-        
-        let call_result = result.call((&self.handler, method_str, data_vec), None);
+        let call_result = self.handler.call1(py, (method_str, data_vec));
         
         match call_result {
             Ok(obj) => {
-                let bytes: Vec<u8> = obj.extract()?;
+                let bytes: Vec<u8> = obj.extract(py)?;
                 Ok(bytes)
             }
             Err(e) => Err(DMSCError::Other(format!("Python handler error: {:?}", e))),
@@ -254,7 +255,7 @@ impl DMSCGrpcServiceRegistryPy {
     }
     
     fn list_services(&self) -> Vec<String> {
-        let services = self.registry.services.read();
+        let services = self.registry.services.blocking_read();
         services.keys().cloned().collect()
     }
 }

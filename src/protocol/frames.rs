@@ -22,11 +22,9 @@
 //! This module implements the real protocol frame format with serialization,
 //! checksums, and frame integrity verification for the DMSC private protocol.
 
-use std::io::{Read, Write};
 use std::convert::TryInto;
 use serde::{Deserialize, Serialize};
 use crc32fast::Hasher;
-use thiserror::Error;
 
 use crate::core::{DMSCResult, DMSCError};
 
@@ -62,7 +60,7 @@ use crate::core::{DMSCResult, DMSCError};
 /// When compiled with the `pyo3` feature, this enum provides Python bindings
 /// for frame type identification:
 /// ```python
-/// from dms import DMSCFrameType
+/// from dmsc import DMSCFrameType
 ///
 /// # Identify frame types for protocol handling
 /// control_type = DMSCFrameType.Control()
@@ -206,17 +204,6 @@ pub enum DMSCFrameType {
     /// prevent connection timeout and detect connection failures. Keep-alive
     /// frames have minimal overhead and contain no payload.
     ///
-    ## Keep-Alive Configuration
-    ///
-    /// - **Default Interval**: 30 seconds between keep-alive frames
-    /// - **Timeout Window**: 3 missed keep-alives triggers disconnection
-    /// - **Adjustability**: Interval configurable per connection
-    ///
-    /// ## Protocol Behavior
-    ///
-    /// Upon receiving a keep-alive frame, the recipient should immediately
-    /// respond with another keep-alive frame. Failure to respond within the
-    /// timeout window indicates connection failure and triggers cleanup.
     KeepAlive = 0x04,
 
     /// Error frame for error condition reporting.
@@ -226,21 +213,6 @@ pub enum DMSCFrameType {
     /// to facilitate debugging and error recovery. Error frames may be sent
     /// in response to any invalid protocol message.
     ///
-    /// ## Error Code Ranges
-    ///
-    /// - **0x0001-0x00FF**: Protocol errors (parsing, validation)
-    /// - **0x0100-0x01FF**: Authentication errors
-    /// - **0x0200-0x02FF**: Authorization errors
-    /// - **0x0300-0x03FF**: Resource errors (capacity, limits)
-    /// - **0x0400-0x04FF**: Timeout errors
-    /// - **0x0500+**: Application-specific errors
-    ///
-    /// ## Error Handling Strategy
-    ///
-    /// Upon receiving an error frame, the protocol implementation should:
-    /// 1. Log the error for diagnostic purposes
-    /// 2. Attempt error recovery if possible
-    /// 3. Gracefully close connection if unrecoverable
     Error = 0x05,
 
     /// Encrypted frame for pre-encrypted payload transmission.
@@ -320,7 +292,7 @@ impl DMSCFrameType {
 ///
 /// When compiled with the `pyo3` feature, this struct provides Python bindings:
 /// ```python
-/// from dms import DMSCFrameHeader
+/// from dmsc import DMSCFrameHeader
 ///
 /// # Create new header for a data frame
 /// header = DMSCFrameHeader.new(
@@ -686,7 +658,7 @@ impl DMSCFrameHeader {
 ///
 /// When compiled with the `pyo3` feature, this struct provides Python bindings:
 /// ```python
-/// from dms import DMSCFrame, DMSCFrameType
+/// from dmsc import DMSCFrame, DMSCFrameType
 ///
 /// # Create a data frame
 /// frame = DMSCFrame.data_frame(
@@ -829,7 +801,7 @@ impl DMSCFrame {
         let mut payload = Vec::new();
         payload.extend_from_slice(&error_code.to_be_bytes());
         payload.extend_from_slice(error_message.as_bytes());
-        Ok(Self::new(DMSCFrameType::Error, payload, sequence_number))
+        Self::new(DMSCFrameType::Error, payload, sequence_number)
     }
     
     /// Serialize frame to bytes
@@ -942,7 +914,7 @@ impl DMSCFrame {
 ///
 /// When compiled with the `pyo3` feature, this struct provides Python bindings:
 /// ```python
-/// from dms import DMSCFrameParser
+/// from dmsc import DMSCFrameParser
 ///
 /// # Create parser for incoming stream data
 /// parser = DMSCFrameParser.new()
@@ -1144,7 +1116,7 @@ impl Default for DMSCFrameParser {
 ///
 /// When compiled with the `pyo3` feature, this struct provides Python bindings:
 /// ```python
-/// from dms import DMSCFrameBuilder
+/// from dmsc import DMSCFrameBuilder
 ///
 /// # Create builder for convenient frame construction
 /// builder = DMSCFrameBuilder.new()

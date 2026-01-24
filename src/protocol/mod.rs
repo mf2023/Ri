@@ -65,6 +65,10 @@ use crate::core::{DMSCResult, DMSCError};
 #[cfg(feature = "pyo3")]
 use pyo3::prelude::*;
 
+/// Frame definitions for binary protocol encoding
+mod frames;
+pub use frames::{DMSCFrameBuilder, DMSCFrameParser};
+
 /// Protocol type enumeration
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, std::hash::Hash)]
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
@@ -696,7 +700,10 @@ impl DMSCProtocolManager {
             timestamp,
         };
         
-        self.stats.try_write().unwrap().record_received(response.response_data.len());
+        self.stats.try_write()
+            .map(|mut stats| stats.record_received(response.response_data.len()))
+            .map_err(|e| tracing::error!("Failed to update protocol stats: {}", e))
+            .ok();
         
         serde_json::to_vec(&response).unwrap_or_else(|_| b"{\"success\":true,\"message\":\"Message sent\"}".to_vec())
     }
@@ -821,7 +828,7 @@ pub struct DMSCBaseProtocol {
     connections: Arc<RwLock<HashMap<String, DMSCConnectionInfo>>>,
     sequence_counter: Arc<AtomicU64>,
     initialized: Arc<RwLock<bool>>,
-    receiver_id: String,
+    _receiver_id: String,
 }
 
 impl DMSCBaseProtocol {
@@ -832,7 +839,7 @@ impl DMSCBaseProtocol {
             connections: Arc::new(RwLock::new(HashMap::new())),
             sequence_counter: Arc::new(AtomicU64::new(0)),
             initialized: Arc::new(RwLock::new(false)),
-            receiver_id,
+            _receiver_id: receiver_id,
         }
     }
     
@@ -844,34 +851,31 @@ impl DMSCBaseProtocol {
         self.config = config;
         *self.initialized.write().await = true;
     }
-    
-    pub async fn send_message(&mut self, target: &str, data: &[u8]) -> DMSCResult<Vec<u8>> {
+
+    pub async fn send_message(&mut self, _target: &str, data: &[u8]) -> DMSCResult<Vec<u8>> {
         if !*self.initialized.read().await {
             return Err(ProtocolError::NotInitialized.into());
         }
 
-        let timestamp = SystemTime::now()
-            .duration_since(UNIX_EPOCH)
-            .unwrap_or_default()
-            .as_millis() as u64;
-
-        let sequence = self.sequence_counter.fetch_add(1, Ordering::SeqCst);
+        let sequence = self.sequence_counter.fetch_add(1, Ordering::SeqCst) as u32;
 
         self.stats.write().await.record_sent(data.len());
 
-        let response = DMSCProtocolResponse {
-            success: true,
-            sequence_number: sequence,
-            target_id: target.to_string(),
-            response_data: data.to_vec(),
-            timestamp,
-        };
+        let mut builder = DMSCFrameBuilder::new();
+        builder.set_sequence(sequence);
+        let frame = builder.build_data_frame(data.to_vec())
+            .map_err(|e| ProtocolError::Serialization {
+                message: e.to_string()
+            })?;
 
-        self.stats.write().await.record_received(response.response_data.len());
+        let frame_bytes = frame.to_bytes()
+            .map_err(|e| ProtocolError::Serialization {
+                message: e.to_string()
+            })?;
 
-        Ok(serde_json::to_vec(&response).map_err(|e| ProtocolError::Serialization {
-            message: e.to_string()
-        })?)
+        self.stats.write().await.record_received(frame_bytes.len());
+
+        Ok(frame_bytes)
     }
     
     pub async fn receive_message(&mut self) -> DMSCResult<Vec<u8>> {
@@ -879,26 +883,23 @@ impl DMSCBaseProtocol {
             return Err(ProtocolError::NotInitialized.into());
         }
 
-        let timestamp = SystemTime::now()
-            .duration_since(UNIX_EPOCH)
-            .unwrap_or_default()
-            .as_millis() as u64;
+        let sequence = self.sequence_counter.fetch_add(1, Ordering::SeqCst) as u32;
 
-        let sequence = self.sequence_counter.fetch_add(1, Ordering::SeqCst);
+        let mut builder = DMSCFrameBuilder::new();
+        builder.set_sequence(sequence);
+        let frame = builder.build_keepalive_frame()
+            .map_err(|e| ProtocolError::Serialization {
+                message: e.to_string()
+            })?;
 
-        let response = DMSCProtocolResponse {
-            success: true,
-            sequence_number: sequence,
-            target_id: self.receiver_id.clone(),
-            response_data: Vec::new(),
-            timestamp,
-        };
+        let frame_bytes = frame.to_bytes()
+            .map_err(|e| ProtocolError::Serialization {
+                message: e.to_string()
+            })?;
 
         self.stats.write().await.record_received(0);
 
-        Ok(serde_json::to_vec(&response).map_err(|e| ProtocolError::Serialization {
-            message: e.to_string()
-        })?)
+        Ok(frame_bytes)
     }
     
     pub async fn get_connection_info(&self, connection_id: &str) -> DMSCResult<DMSCConnectionInfo> {
@@ -1108,11 +1109,15 @@ impl DMSCGlobalProtocol {
     }
 
     pub fn get_health(&self) -> DMSCProtocolHealth {
-        if *self.base.initialized.try_read().unwrap() {
-            DMSCProtocolHealth::Healthy
-        } else {
-            DMSCProtocolHealth::Unknown
-        }
+        self.base.initialized.try_read()
+            .map(|guard| {
+                if *guard {
+                    DMSCProtocolHealth::Healthy
+                } else {
+                    DMSCProtocolHealth::Unknown
+                }
+            })
+            .unwrap_or(DMSCProtocolHealth::Unknown)
     }
 
     pub fn shutdown(&mut self) -> bool {

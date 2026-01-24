@@ -238,6 +238,7 @@ impl Default for DMSCQuantileCalculator {
     }
 }
 
+#[allow(dead_code)]
 impl DMSCQuantileCalculator {
     /// Creates a new quantile calculator.
     ///
@@ -624,6 +625,7 @@ impl Default for DMSCSystemMetricsCollector {
     }
 }
 
+#[allow(dead_code)]
 impl DMSCSystemMetricsCollector {
     /// Creates a new system metrics collector.
     ///

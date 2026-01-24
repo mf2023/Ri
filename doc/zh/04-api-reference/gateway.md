@@ -2,9 +2,9 @@
 
 # Gateway API参考
 
-**Version: 0.1.4**
+**Version: 0.1.5**
 
-**Last modified date: 2026-01-15**
+**Last modified date: 2026-01-24**
 
 gateway模块提供API网关功能，包括路由、中间件、负载均衡、限流和熔断支持。
 
@@ -46,57 +46,21 @@ API网关主接口，提供统一的网关功能。
 
 ```rust
 use dmsc::prelude::*;
-use dmsc::gateway::{DMSCGateway, DMSCGatewayConfig, DMSCRoute};
-use std::collections::HashMap;
+use dmsc::gateway::{DMSCGateway, DMSCRoute};
+use std::sync::Arc;
 
 async fn example() -> DMSCResult<()> {
-    let gateway_config = DMSCGatewayConfig {
-        listen_address: "0.0.0.0".to_string(),
-        listen_port: 8080,
-        max_connections: 10000,
-        request_timeout_seconds: 30,
-        enable_rate_limiting: true,
-        enable_circuit_breaker: true,
-        enable_load_balancing: true,
-        cors_enabled: true,
-        cors_origins: vec!["*".to_string()],
-        cors_methods: vec!["GET".to_string(), "POST".to_string()],
-        cors_headers: vec!["Content-Type".to_string(), "Authorization".to_string()],
-        enable_logging: true,
-        log_level: "info".to_string(),
-    };
-    
     let gateway = DMSCGateway::new();
     
     let router = gateway.router();
     
-    router.add_route(DMSCRoute {
-        path: "/api/v1/health".to_string(),
-        method: "GET".to_string(),
-        handler: Arc::new(|req| Box::pin(async move {
-            Ok(DMSCGatewayResponse::json(200, &serde_json::json!({ "status": "ok" }), req.id.clone())?)
-        })),
-        ..Default::default()
-    });
-    
-    let middleware_chain = gateway.middleware_chain();
-    middleware_chain.add(Arc::new(|req, next| Box::pin(async move {
-        println!("Request: {} {}", req.method, req.path);
-        next.execute(req).await?;
-        Ok(())
-    })));
-    
-    let sample_request = DMSCGatewayRequest::new(
+    router.add_route(DMSCRoute::new(
         "GET".to_string(),
         "/api/v1/health".to_string(),
-        HashMap::new(),
-        HashMap::new(),
-        None,
-        "127.0.0.1:12345".to_string(),
-    );
-    
-    let response = gateway.handle_request(sample_request).await;
-    println!("Response: {} {}", response.status_code, String::from_utf8_lossy(&response.body));
+        Arc::new(|req| Box::pin(async move {
+            Ok(DMSCGatewayResponse::json(200, &serde_json::json!({ "status": "ok" }), req.id.clone())?)
+        })),
+    ));
     
     Ok(())
 }
@@ -231,7 +195,8 @@ impl DMSCMiddleware for LoggingMiddleware {
 }
 
 let middleware = Arc::new(LoggingMiddleware);
-gateway.middleware_chain().add(middleware);
+let mut middleware_chain = gateway.middleware_chain();
+middleware_chain.add(middleware);
 ```
 
 ### 内置中间件
@@ -239,11 +204,7 @@ gateway.middleware_chain().add(middleware);
 ```rust
 use dmsc::gateway::DMSCRateLimiter;
 
-let rate_limiter = DMSCRateLimiter::new(DMSCRateLimitConfig::default());
-gateway.set_rate_limiter(Some(Arc::new(rate_limiter)));
-
-let circuit_breaker = DMSCCircuitBreaker::new(DMSCCircuitBreakerConfig::default());
-gateway.set_circuit_breaker(Some(Arc::new(circuit_breaker)));
+let rate_limiter = Arc::new(DMSCRateLimiter::new(DMSCRateLimitConfig::default()));
 ```
 
 <div align="center">

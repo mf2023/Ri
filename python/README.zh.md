@@ -117,7 +117,7 @@ pip install dmsc
 或者添加到您的 `requirements.txt`：
 
 ```
-dmsc==0.1.4
+dmsc==0.1.5
 ```
 
 <h2 align="center">⚡ 快速开始</h2>
@@ -186,17 +186,19 @@ queue_manager.delete_queue("my_queue")
 ### 服务网格示例
 
 ```python
-from dmsc import DMSCServiceMesh, DMSCServiceDiscovery
+from dmsc.service_mesh import DMSCServiceMesh, DMSCServiceMeshConfig
+
+# 创建服务网格配置
+config = DMSCServiceMeshConfig()
 
 # 创建服务网格
-service_mesh = DMSCServiceMesh()
-service_discovery = DMSCServiceDiscovery()
+service_mesh = DMSCServiceMesh(config)
 
-# 使用 host、port 和元数据注册服务
-instance_id = service_discovery.register_service("user-service", "localhost", 8080, {"version": "1.0.0"})
+# 注册服务
+service_mesh.register_service("user-service", "http://localhost:8080", 100)
 
 # 发现服务
-instances = service_discovery.discover_service("user-service")
+instances = service_mesh.discover_service("user-service")
 for instance in instances:
     print(f"服务: {instance.service_name}, 主机: {instance.host}, 端口: {instance.port}")
 ```

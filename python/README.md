@@ -117,7 +117,7 @@ pip install dmsc
 Or add to your `requirements.txt`:
 
 ```
-dmsc==0.1.4
+dmsc==0.1.5
 ```
 
 <h2 align="center">⚡ Quick Start</h2>
@@ -186,17 +186,19 @@ queue_manager.delete_queue("my_queue")
 ### Service Mesh Example
 
 ```python
-from dmsc import DMSCServiceMesh, DMSCServiceDiscovery
+from dmsc.service_mesh import DMSCServiceMesh, DMSCServiceMeshConfig
+
+# Create service mesh config
+config = DMSCServiceMeshConfig()
 
 # Create service mesh
-service_mesh = DMSCServiceMesh()
-service_discovery = DMSCServiceDiscovery()
+service_mesh = DMSCServiceMesh(config)
 
-# Register service with host, port, and metadata
-instance_id = service_discovery.register_service("user-service", "localhost", 8080, {"version": "1.0.0"})
+# Register service
+service_mesh.register_service("user-service", "http://localhost:8080", 100)
 
 # Discover service
-instances = service_discovery.discover_service("user-service")
+instances = service_mesh.discover_service("user-service")
 for instance in instances:
     print(f"Service: {instance.service_name}, Host: {instance.host}, Port: {instance.port}")
 ```

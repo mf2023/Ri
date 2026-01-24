@@ -2,9 +2,9 @@
 
 # 快速开始
 
-**Version: 0.1.4**
+**Version: 0.1.5**
 
-**Last modified date: 2026-01-15**
+**Last modified date: 2026-01-24**
 
 本指南将帮助您快速上手DMSC，从安装到创建第一个应用。
 
@@ -104,7 +104,7 @@ pip install dmsc
 或者添加到 `requirements.txt`：
 
 ```
-dmsc==0.1.4
+dmsc==0.1.5
 ```
 
 验证安装：

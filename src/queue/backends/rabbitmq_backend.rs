@@ -473,9 +473,7 @@ impl DMSCQueueProducer for RabbitMQProducer {
 }
 
 /// RabbitMQ consumer implementation.
-///
-/// This struct provides a RabbitMQ implementation of the DMSCQueueConsumer trait,
-/// allowing receiving messages from RabbitMQ queues.
+#[allow(dead_code)]
 struct RabbitMQConsumer {
     /// RabbitMQ channel for sending acks/nacks
     channel: Arc<Channel>,

@@ -117,6 +117,11 @@ uuid = { version = "1.0", features = ["v4", "serde"] }
 # - io-std: Standard I/O integration with async runtime
 tokio = { version = "1", features = ["time", "sync", "rt", "rt-multi-thread", "net", "io-util", "io-std"] }
 
+# SQL query builder and database driver framework
+# Supports PostgreSQL, MySQL, SQLite with async/await
+# Provides type-safe SQL execution with compile-time checks
+sqlx = { version = "0.7", optional = true, default-features = false, features = ["runtime-tokio", "postgres", "mysql", "sqlite"] }
+
 # Trait-based async pattern support for trait objects and dynamic dispatch
 # Enables async methods in trait definitions
 async-trait = "0.1"
@@ -198,10 +203,6 @@ etcd-client = { version = "0.11", features = ["tls"], optional = true } # For se
 # PostgreSQL async driver for database operations
 # Supports connection pooling and transaction management
 tokio-postgres = { version = "0.7", optional = true } # For PostgreSQL
-
-# MySQL database driver support
-# Provides MySQL connection and query capabilities
-mysql = { version = "24", optional = true } # For MySQL
 
 # SQLite embedded database with bundled C library
 # Zero-configuration database for local storage
@@ -299,6 +300,32 @@ lazy_static = "1.4"
 html-escape = "0.2"
 
 # =============================================================================
+# Network Module Dependencies
+# =============================================================================
+# Dependencies for network communication including TLS, connection pooling,
+# and binary protocol handling.
+
+# TLS support for secure network connections
+# Provides modern TLS implementation with client and server support
+rustls = "0.22"
+
+# PEM file parsing for TLS certificates and keys
+# Required for loading certificate files in PEM format
+rustls-pemfile = "2"
+
+# X.509 certificate validation and parsing
+# Provides certificate verification and chain validation
+webpki = "0.22"
+
+# Native root certificate loading for TLS
+# Loads system root certificates on supported platforms
+rustls-native-certs = "0.8"
+
+# Byte buffer management for efficient network I/O
+# Provides BytesMut for zero-copy buffer operations
+bytes = "1"
+
+# =============================================================================
 # gRPC Dependencies
 # =============================================================================
 # gRPC protocol support for high-performance remote procedure calls.
@@ -307,8 +334,10 @@ html-escape = "0.2"
 # gRPC client and server framework with prost codec support
 tonic = { version = "0.12", optional = true, features = ["prost"] }
 prost = { version = "0.12", optional = true }
+prost-types = { version = "0.12", optional = true }
 tokio-stream = { version = "0.1", optional = true }
 tower = { version = "0.4", optional = true }
+async-stream = { version = "0.3", optional = true }
 
 # =============================================================================
 # WebSocket Dependencies
@@ -425,19 +454,19 @@ http_client = ["reqwest", "urlencoding"]
 system_info = ["sysinfo"]
 
 # PostgreSQL database support
-postgres = ["dep:tokio-postgres"]
+postgres = ["sqlx"]
 
 # MySQL database support
-mysql = ["dep:mysql"]
+mysql = ["sqlx"]
 
 # SQLite embedded database support
-sqlite = ["dep:rusqlite"]
+sqlite = ["sqlx"]
 
 # Kafka message streaming support (non-Windows)
 kafka = ["rdkafka"]
 
 # gRPC protocol support for RPC services
-grpc = ["tonic", "prost", "tokio-stream", "tower"]
+grpc = ["tonic", "prost", "prost-types", "tokio-stream", "tower", "async-stream"]
 
 # WebSocket protocol support for real-time communication
 websocket = ["tokio-tungstenite", "tungstenite"]

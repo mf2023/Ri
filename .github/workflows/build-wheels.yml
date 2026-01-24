@@ -109,7 +109,13 @@ jobs:
       # Clones repository for ARM64 native compilation environment
       - uses: actions/checkout@v4
       
-      # Step 2: Build Rust library in release mode
+      # Step 2: Install protoc (Protocol Buffers compiler) for etcd-client build
+      - name: Install protoc
+        uses: arduino/setup-protoc@v3
+        with:
+          version: '33.x'
+      
+      # Step 3: Build Rust library in release mode
       # Compiles libdmsc as a cdylib for aarch64-unknown-linux-gnu target
       # Native ARM64 compilation ensures correct code generation for the target arch
       # Output location: target/release/libdmsc.so
@@ -136,7 +142,15 @@ jobs:
       # Clones repository on Windows runner for native compilation
       - uses: actions/checkout@v4
       
-      # Step 2: Build Rust library in release mode
+      # Step 2: Install protoc (Protocol Buffers compiler) for etcd-client build
+      # etcd-client requires protoc to compile .proto files during build
+      - name: Install protoc
+        uses: arduino/setup-protoc@v3
+        with:
+          version: '33.x'
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+      
+      # Step 3: Build Rust library in release mode
       # Compiles libdmsc as a cdylib for x86_64-pc-windows-msvc target
       # Default MSVC toolchain on Windows provides optimal Windows compatibility
       # Output location: target/release/libdmsc.dll
@@ -471,6 +485,15 @@ jobs:
           echo '' >> .cargo/config.toml
           echo '[target.aarch64-apple-darwin]' >> .cargo/config.toml
           echo 'rustflags = ["-C", "link-arg=-undefined", "-C", "link-arg=dynamic_lookup"]' >> .cargo/config.toml
+      
+      # Step 4b: Install protoc for Windows and Linux builds (required by etcd-client)
+      # Conditional: Only runs on Windows and Linux platforms (not macOS)
+      # protoc is needed to compile .proto files for the etcd-client dependency
+      - name: Install protoc
+        if: runner.os == 'Windows' || runner.os == 'Linux'
+        uses: arduino/setup-protoc@v3
+        with:
+          version: '33.x'
       
       # Step 5: Install build dependencies (maturin and auditwheel)
       # maturin: Rust/Python build tool that creates Python wheels from Rust libraries

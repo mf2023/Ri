@@ -2,9 +2,9 @@
 
 # Cache API Reference
 
-**Version: 0.1.4**
+**Version: 0.1.5**
 
-**Last modified date: 2026-01-15**
+**Last modified date: 2026-01-24**
 
 The cache module provides multi-backend cache abstraction, supporting memory, Redis, hybrid, and other cache backends.
 

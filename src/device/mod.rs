@@ -125,7 +125,6 @@ use std::sync::Arc;
 use serde::{Serialize, Deserialize};
 use tokio::sync::RwLock;
 use std::collections::HashMap;
-use parking_lot::RwLock as ParkingRwLock;
 
 use crate::observability::{DMSCMetricsRegistry, DMSCMetric, DMSCMetricConfig, DMSCMetricType};
 
@@ -687,7 +686,7 @@ impl DMSCDeviceControlModule {
     /// A new `DMSCDeviceControlModule` instance with default configuration
     pub fn new() -> Self {
         let controller = Arc::new(RwLock::new(DMSCDeviceController::new()));
-        let resource_pool_manager = Arc::new(ParkingRwLock::new(DMSCResourcePoolManager::new()));
+        let resource_pool_manager = Arc::new(RwLock::new(DMSCResourcePoolManager::new()));
         let scheduler = Arc::new(RwLock::new(DMSCDeviceScheduler::new(resource_pool_manager)));
         let discovery_engine = Arc::new(RwLock::new(DMSCResourceScheduler::new()));
         
@@ -777,8 +776,8 @@ impl DMSCDeviceControlModule {
             anti_affinity: request.anti_affinity,
         };
 
-        let mut scheduler = self.scheduler.write().await;
-        let device = scheduler.select_device(&allocation_request);
+        let scheduler = self.scheduler.write().await;
+        let device = scheduler.select_device(&allocation_request).await;
 
         if let Some(device) = device {
             let allocation = DMSCResourceAllocation {

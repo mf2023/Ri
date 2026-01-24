@@ -2,9 +2,9 @@
 
 # Security API参考
 
-**Version: 0.1.4**
+**Version: 0.1.5**
 
-**Last modified date: 2026-01-15**
+**Last modified date: 2026-01-24**
 
 security模块提供加密、解密和加密功能。
 

@@ -2,9 +2,9 @@
 
 # 最佳实践
 
-**Version: 0.1.4**
+**Version: 0.1.5**
 
-**Last modified date: 2026-01-15**
+**Last modified date: 2026-01-24**
 
 本章介绍使用DMSC框架时的最佳实践，帮助您构建高效、可靠、安全的应用程序。
 

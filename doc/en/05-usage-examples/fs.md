@@ -2,9 +2,9 @@
 
 # FileSystem Usage Example
 
-**Version: 0.1.4**
+**Version: 0.1.5**
 
-**Last modified date: 2026-01-15**
+**Last modified date: 2026-01-24**
 
 This example demonstrates how to use the fs module for file operations, including atomic writes, directory management, and categorized directory organization.
 
@@ -270,7 +270,7 @@ example.txt removed
 ```rust
 fn batch_json_operations(fs: &DMSCFileSystem) -> DMSCResult<()> {
     let settings = AppSettings {
-        version: "0.1.4".to_string(),
+        version: "0.1.5".to_string(),
         debug_mode: true,
         max_connections: 100,
     };

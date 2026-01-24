@@ -2,9 +2,9 @@
 
 # FileSystem API参考
 
-**Version: 0.1.4**
+**Version: 0.1.5**
 
-**Last modified date: 2026-01-15**
+**Last modified date: 2026-01-24**
 
 fs模块提供安全的文件系统操作功能，支持原子写入、目录管理和分类目录组织。
 

@@ -488,7 +488,7 @@ impl DMSCSessionManager {
 /// ## Python Usage Example
 ///
 /// ```python
-/// from dms import DMSCSessionManager
+/// from dmsc import DMSCSessionManager
 ///
 /// # Create session manager with 30-minute timeout
 /// session_manager = DMSCSessionManager(1800)

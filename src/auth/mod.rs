@@ -123,6 +123,7 @@ use serde::Deserialize;
 use std::env;
 use std::sync::Arc;
 use tokio::sync::RwLock;
+use tokio::runtime::Handle;
 
 const DEFAULT_JWT_SECRET_ENV: &str = "DMSC_JWT_SECRET";
 const FALLBACK_SECRET_LENGTH: usize = 64;
@@ -187,6 +188,12 @@ pub struct DMSCAuthConfig {
     pub enable_api_keys: bool,
     /// Whether session authentication is enabled
     pub enable_session_auth: bool,
+    /// OAuth token cache backend type (Memory or Redis)
+    #[cfg(feature = "cache")]
+    pub oauth_cache_backend_type: crate::cache::DMSCCacheBackendType,
+    /// Redis URL for OAuth token cache (used when backend is Redis)
+    #[cfg(feature = "cache")]
+    pub oauth_cache_redis_url: String,
 }
 
 impl Default for DMSCAuthConfig {
@@ -199,6 +206,10 @@ impl Default for DMSCAuthConfig {
             oauth_providers: vec![],
             enable_api_keys: true,
             enable_session_auth: true,
+            #[cfg(feature = "cache")]
+            oauth_cache_backend_type: crate::cache::DMSCCacheBackendType::Memory,
+            #[cfg(feature = "cache")]
+            oauth_cache_redis_url: "redis://127.0.0.1:6379".to_string(),
         }
     }
 }
@@ -237,11 +248,27 @@ impl DMSCAuthModule {
     /// # Returns
     /// 
     /// A new `DMSCAuthModule` instance
-    pub fn new(config: DMSCAuthConfig) -> Self {
+    pub async fn new(config: DMSCAuthConfig) -> Self {
         let jwt_manager = Arc::new(DMSCJWTManager::create(config.jwt_secret.clone(), config.jwt_expiry_secs));
         let session_manager = Arc::new(RwLock::new(DMSCSessionManager::new(config.session_timeout_secs)));
         let permission_manager = Arc::new(RwLock::new(DMSCPermissionManager::new()));
+        
+        #[cfg(feature = "cache")]
+        let cache: Arc<dyn crate::cache::DMSCCache> = match config.oauth_cache_backend_type {
+            crate::cache::DMSCCacheBackendType::Memory => {
+                Arc::new(crate::cache::DMSCMemoryCache::new())
+            }
+            crate::cache::DMSCCacheBackendType::Redis => {
+                let cache = crate::cache::DMSCRedisCache::new(&config.oauth_cache_redis_url).await
+                    .expect("Failed to create Redis cache for OAuth");
+                Arc::new(cache)
+            }
+            _ => Arc::new(crate::cache::DMSCMemoryCache::new()),
+        };
+        
+        #[cfg(not(feature = "cache"))]
         let cache = Arc::new(crate::cache::DMSCMemoryCache::new());
+        
         let oauth_manager = Arc::new(RwLock::new(DMSCOAuthManager::new(cache)));
         let revocation_list = Arc::new(DMSCJWTRevocationList::new());
 
@@ -271,7 +298,23 @@ impl DMSCAuthModule {
         let jwt_manager = Arc::new(DMSCJWTManager::create(config.jwt_secret.clone(), config.jwt_expiry_secs));
         let session_manager = Arc::new(RwLock::new(DMSCSessionManager::new(config.session_timeout_secs)));
         let permission_manager = Arc::new(RwLock::new(DMSCPermissionManager::new_async().await));
+        
+        #[cfg(feature = "cache")]
+        let cache: Arc<dyn crate::cache::DMSCCache> = match config.oauth_cache_backend_type {
+            crate::cache::DMSCCacheBackendType::Memory => {
+                Arc::new(crate::cache::DMSCMemoryCache::new())
+            }
+            crate::cache::DMSCCacheBackendType::Redis => {
+                let cache = crate::cache::DMSCRedisCache::new(&config.oauth_cache_redis_url).await
+                    .expect("Failed to create Redis cache");
+                Arc::new(cache)
+            }
+            _ => Arc::new(crate::cache::DMSCMemoryCache::new()),
+        };
+        
+        #[cfg(not(feature = "cache"))]
         let cache = Arc::new(crate::cache::DMSCMemoryCache::new());
+        
         let oauth_manager = Arc::new(RwLock::new(DMSCOAuthManager::new(cache)));
         let revocation_list = Arc::new(DMSCJWTRevocationList::new());
 
@@ -347,7 +390,7 @@ impl DMSCAuthModule {
 /// ## Python Usage Example
 ///
 /// ```python
-/// from dms import DMSCAuthConfig, DMSCJWTManager
+/// from dmsc import DMSCAuthConfig, DMSCJWTManager
 ///
 /// # Create auth configuration
 /// config = DMSCAuthConfig(
@@ -371,7 +414,10 @@ impl DMSCAuthModule {
 impl DMSCAuthModule {
     #[new]
     fn py_new(config: DMSCAuthConfig) -> PyResult<Self> {
-        Ok(Self::new(config))
+        let rt = Handle::current();
+        Ok(rt.block_on(async {
+            Self::new(config).await
+        }))
     }
 
     #[getter]

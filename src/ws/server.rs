@@ -4,7 +4,7 @@
 //! The DMSC project belongs to the Dunimd Team.
 //!
 //! Licensed under the Apache License, Version 2.0 (the "License");
-//! You may not use this file except in compliance with the License.
+//! you may not use this file except in compliance with the License.
 //! You may obtain a copy of the License at
 //!
 //!     http://www.apache.org/licenses/LICENSE-2.0
@@ -22,12 +22,11 @@
 use super::*;
 use uuid::Uuid;
 use tokio::sync::mpsc;
-use std::pin::Pin;
-use std::task::{Context, Poll};
-use futures::Stream;
-use tokio::time::{interval, Duration};
-use futures::stream::FuturesUnordered;
+use tokio::time::Duration;
+use futures::StreamExt;
+use tungstenite::Message;
 
+#[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 pub struct DMSCWSServer {
     config: DMSCWSServerConfig,
     stats: Arc<RwLock<DMSCWSServerStats>>,
@@ -51,8 +50,8 @@ impl DMSCWSServer {
         }
     }
 
-    pub fn set_handler<H: DMSCWSSessionHandler + 'static>(&self, handler: H) {
-        *self.handler.write() = Some(Arc::new(handler));
+    pub async fn set_handler<H: DMSCWSSessionHandler + 'static>(&self, handler: H) {
+        *self.handler.write().await = Some(Arc::new(handler));
     }
 
     pub async fn start(&mut self) -> DMSCResult<()> {
@@ -69,7 +68,7 @@ impl DMSCWSServer {
             })?;
 
         let (event_tx, _) = broadcast::channel(100);
-        *self.event_tx.write() = Some(Arc::new(event_tx));
+        *self.event_tx.write().await = Some(event_tx);
 
         let (shutdown_tx, shutdown_rx) = mpsc::channel(1);
         self.shutdown_tx = Some(shutdown_tx);
@@ -107,70 +106,89 @@ impl DMSCWSServer {
         mut shutdown_rx: mpsc::Receiver<()>,
         running: Arc<RwLock<bool>>,
     ) {
-        let mut interval = interval(Duration::from_secs(config.heartbeat_interval));
-        let mut active_sessions = FuturesUnordered::new();
+        let mut shutdown = false;
 
-        loop {
-            tokio::select! {
-                result = listener.accept() => {
-                    match result {
-                        Ok((stream, remote_addr)) => {
-                            let session_id = Uuid::new_v4().to_string();
-                            let remote_addr_str = remote_addr.to_string();
-                            
-                            tracing::info!("New WebSocket connection: {} (session: {})", remote_addr_str, session_id);
+        while !shutdown {
+            let result = listener.accept().await;
+            
+            if shutdown {
+                break;
+            }
 
-                            match tokio_tungstenite::accept_async(stream).await {
-                                Ok(ws_stream) => {
-                                    let (sender, receiver) = ws_stream.split();
-                                    let (tx, mut rx) = mpsc::channel(100);
+            match result {
+                Ok((stream, remote_addr)) => {
+                    let session_id = Uuid::new_v4().to_string();
+                    let remote_addr_str = remote_addr.to_string();
+                    
+                    tracing::info!("New WebSocket connection: {} (session: {})", remote_addr_str, session_id);
 
-                                    let session = Arc::new(DMSCWSSession::new(
-                                        session_id.clone(),
-                                        tx,
-                                        receiver,
-                                        remote_addr_str.clone(),
-                                    ));
+                    match tokio_tungstenite::accept_async(stream).await {
+                        Ok(ws_stream) => {
+                            let (_sender, receiver) = ws_stream.split();
+                            let (tx, rx) = mpsc::channel(100);
 
-                                    if session_manager.add_session(session.clone()).await.is_ok() {
-                                        stats.write().record_connection();
+                            let session = Arc::new(DMSCWSSession::new(
+                                session_id.clone(),
+                                tx,
+                                receiver,
+                                remote_addr_str.clone(),
+                            ));
 
-                                        let handler_clone = handler.clone();
-                                        let session_manager_clone = session_manager.clone();
-                                        let stats_clone = stats.clone();
+                            if session_manager.add_session(session.clone()).await.is_ok() {
+                                stats.write().await.record_connection();
 
-                                        active_sessions.push(async move {
-                                            Self::handle_session(
-                                                session.clone(),
-                                                rx,
-                                                handler_clone,
-                                                session_manager_clone,
-                                                stats_clone,
-                                            ).await;
-                                        });
-                                    }
-                                }
-                                Err(e) => {
-                                    tracing::error!("WebSocket upgrade failed: {}", e);
-                                    stats.write().record_connection_error();
-                                }
+                                let handler_clone = handler.clone();
+                                let session_manager_clone = session_manager.clone();
+                                let stats_clone = stats.clone();
+
+                                tokio::spawn(async move {
+                                    Self::handle_session(
+                                        session.clone(),
+                                        rx,
+                                        handler_clone,
+                                        session_manager_clone,
+                                        stats_clone,
+                                    ).await;
+                                });
+                            } else {
+                                tracing::trace!("Failed to add session: {}", session_id);
                             }
                         }
                         Err(e) => {
-                            tracing::error!("Failed to accept connection: {}", e);
-                            stats.write().record_connection_error();
+                            tracing::error!("WebSocket upgrade failed: {}", e);
+                            stats.write().await.record_connection_error();
                         }
                     }
                 }
-                _ = interval.tick() => {
-                    if !*running.read().await {
-                        break;
+                Err(e) => {
+                    tracing::error!("Failed to accept connection: {}", e);
+                    stats.write().await.record_connection_error();
+                }
+            }
+
+            tokio::time::sleep(Duration::from_secs(config.heartbeat_interval)).await;
+            
+            if !*running.read().await {
+                break;
+            }
+            
+            let _timeout = Duration::from_secs(config.heartbeat_timeout);
+            let sessions = session_manager.get_all_sessions().await;
+            for session_info in sessions {
+                let last_heartbeat_time = chrono::DateTime::from_timestamp(session_info.last_heartbeat as i64, 0)
+                    .unwrap_or_else(|| chrono::Utc::now());
+                let elapsed = last_heartbeat_time.signed_duration_since(chrono::Utc::now());
+                let elapsed_secs = elapsed.num_seconds() as u64;
+                
+                if elapsed_secs > config.heartbeat_timeout {
+                    if let Some(session) = session_manager.get_session(&session_info.session_id).await {
+                        let _ = session.close().await;
                     }
                 }
-                _ = shutdown_rx.recv() => {
-                    break;
-                }
-                _ = active_sessions.next() => {}
+            }
+            
+            if shutdown_rx.try_recv().is_ok() {
+                shutdown = true;
             }
         }
 
@@ -179,7 +197,7 @@ impl DMSCWSServer {
 
     async fn handle_session(
         session: Arc<DMSCWSSession>,
-        mut rx: mpsc::Receiver<std::result::Result<tokio_tungstenite::tungstenite::Message, tokio_tungstenite::tungstenite::Error>>,
+        mut rx: mpsc::Receiver<std::result::Result<Message, tokio_tungstenite::tungstenite::Error>>,
         handler: Arc<RwLock<Option<Arc<dyn DMSCWSSessionHandler>>>>,
         session_manager: Arc<DMSCWSSessionManager>,
         stats: Arc<RwLock<DMSCWSServerStats>>,
@@ -190,45 +208,44 @@ impl DMSCWSServer {
             match message_result {
                 Ok(message) => {
                     match message {
-                        tokio_tungstenite::tungstenite::Message::Binary(data) => {
-                            stats.write().record_message_received(data.len());
+                        Message::Binary(data) => {
+                            stats.write().await.record_message_received(data.len());
 
-                            let handler_read = handler.read();
+                            let handler_read = handler.read().await;
                             if let Some(handler) = &*handler_read {
                                 if let Ok(response) = handler.on_message(&session_id, &data).await {
                                     if session.send(&response).await.is_err() {
                                         break;
                                     }
-                                    stats.write().record_message_sent(response.len());
+                                    stats.write().await.record_message_sent(response.len());
                                 }
                             } else {
                                 if session.send(&data).await.is_err() {
                                     break;
                                 }
-                                stats.write().record_message_sent(data.len());
+                                stats.write().await.record_message_sent(data.len());
                             }
                         }
-                        tokio_tungstenite::tungstenite::Message::Text(text) => {
-                            if let Ok(data) = text.into_bytes() {
-                                stats.write().record_message_received(data.len());
-                                
-                                let handler_read = handler.read();
-                                if let Some(handler) = &*handler_read {
-                                    if let Ok(response) = handler.on_message(&session_id, &data).await {
-                                        if session.send(&response).await.is_err() {
-                                            break;
-                                        }
+                        Message::Text(text) => {
+                            let data = text.into_bytes();
+                            stats.write().await.record_message_received(data.len());
+                            
+                            let handler_read = handler.read().await;
+                            if let Some(handler) = &*handler_read {
+                                if let Ok(response) = handler.on_message(&session_id, &data).await {
+                                    if session.send(&response).await.is_err() {
+                                        break;
                                     }
                                 }
                             }
                         }
-                        tokio_tungstenite::tungstenite::Message::Ping(ping_data) => {
-                            if session.send_pong(ping_data).await.is_err() {
+                        Message::Ping(ping_data) => {
+                            if session.send(&ping_data).await.is_err() {
                                 break;
                             }
                         }
-                        tokio_tungstenite::tungstenite::Message::Pong(_) => {}
-                        tokio_tungstenite::tungstenite::Message::Close(_) => {
+                        Message::Pong(_) => {}
+                        Message::Close(_) => {
                             break;
                         }
                         _ => {}
@@ -236,16 +253,16 @@ impl DMSCWSServer {
                 }
                 Err(e) => {
                     tracing::error!("WebSocket error for session {}: {}", session_id, e);
-                    stats.write().record_message_error();
+                    stats.write().await.record_message_error();
                     break;
                 }
             }
         }
 
         session_manager.remove_session(&session_id).await;
-        stats.write().record_disconnection();
+        stats.write().await.record_disconnection();
 
-        let handler_read = handler.read();
+        let handler_read = handler.read().await;
         if let Some(handler) = &*handler_read {
             let _ = handler.on_disconnect(&session_id).await;
         }
@@ -282,7 +299,7 @@ impl DMSCWSServer {
 
     pub async fn broadcast(&self, data: &[u8]) -> DMSCResult<usize> {
         let count = self.session_manager.broadcast(data).await?;
-        self.stats.write().record_message_sent(data.len() * count);
+        self.stats.write().await.record_message_sent(data.len() * count);
         Ok(count)
     }
 

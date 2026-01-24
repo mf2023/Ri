@@ -27,23 +27,22 @@
 //! - **DMSCWSEvent**: WebSocket events for session management
 //!
 
-use crate::core::DMSCResult;
+use crate::core::{DMSCResult, DMSCError};
 use async_trait::async_trait;
 use std::sync::Arc;
 use tokio::sync::RwLock;
 use std::net::SocketAddr;
-use tokio::time::Duration;
 use futures::stream::SplitStream;
-use futures::SinkExt;
 use tokio::net::TcpListener;
 use tokio::sync::broadcast;
 use std::collections::HashMap;
+use tungstenite::Message;
 
 #[cfg(feature = "websocket")]
 mod server;
 
 #[cfg(feature = "websocket")]
-pub use server::{DMSCWSServer, DMSCWSServerConfig};
+pub use server::DMSCWSServer;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
@@ -91,6 +90,7 @@ pub struct DMSCWSSessionInfo {
     pub bytes_sent: u64,
     pub bytes_received: u64,
     pub is_active: bool,
+    pub last_heartbeat: u64,
 }
 
 impl Default for DMSCWSSessionInfo {
@@ -104,6 +104,7 @@ impl Default for DMSCWSSessionInfo {
             bytes_sent: 0,
             bytes_received: 0,
             is_active: false,
+            last_heartbeat: 0,
         }
     }
 }
@@ -138,10 +139,9 @@ impl From<WSError> for DMSCError {
     }
 }
 
-#[derive(Debug, Clone)]
 pub struct DMSCWSSession {
     pub id: String,
-    pub sender: tokio::sync::mpsc::Sender<std::result::Result<tokio_tungstenite::tungstenite::Message, tokio_tungstenite::tungstenite::Error>>,
+    pub sender: tokio::sync::mpsc::Sender<std::result::Result<Message, tokio_tungstenite::tungstenite::Error>>,
     pub receiver: SplitStream<tokio_tungstenite::WebSocketStream<tokio::net::TcpStream>>,
     pub info: Arc<RwLock<DMSCWSSessionInfo>>,
 }
@@ -149,36 +149,40 @@ pub struct DMSCWSSession {
 impl DMSCWSSession {
     pub fn new(
         id: String,
-        sender: tokio::sync::mpsc::Sender<std::result::Result<tokio_tungstenite::tungstenite::Message, tokio_tungstenite::tungstenite::Error>>,
+        sender: tokio::sync::mpsc::Sender<std::result::Result<Message, tokio_tungstenite::tungstenite::Error>>,
         receiver: SplitStream<tokio_tungstenite::WebSocketStream<tokio::net::TcpStream>>,
         remote_addr: String,
     ) -> Self {
+            let now = chrono::Utc::now().timestamp() as u64;
+        let session_id = id.clone();
         Self {
             id,
             sender,
             receiver,
             info: Arc::new(RwLock::new(DMSCWSSessionInfo {
-                session_id: id.clone(),
+                session_id,
                 remote_addr,
-                connected_at: chrono::Utc::now().timestamp() as u64,
+                connected_at: now,
                 messages_sent: 0,
                 messages_received: 0,
                 bytes_sent: 0,
                 bytes_received: 0,
                 is_active: true,
+                last_heartbeat: now,
             })),
         }
     }
 
     pub async fn send(&self, data: &[u8]) -> DMSCResult<()> {
-        let message = tokio_tungstenite::tungstenite::Message::Binary(data.to_vec());
+        let message = Message::Binary(data.to_vec());
         
-        self.sender.send(Ok(message)).await
+        self.sender.send(Ok(message))
+            .await
             .map_err(|e| WSError::Session {
                 message: format!("Failed to send message: {}", e)
-            }.into())?;
+            })?;
 
-        let mut info = self.info.write();
+        let mut info = self.info.write().await;
         info.messages_sent += 1;
         info.bytes_sent += data.len() as u64;
 
@@ -186,14 +190,15 @@ impl DMSCWSSession {
     }
 
     pub async fn send_text(&self, text: &str) -> DMSCResult<()> {
-        let message = tokio_tungstenite::tungstenite::Message::Text(text.to_string());
+        let message = Message::Text(text.to_string());
         
-        self.sender.send(Ok(message)).await
+        self.sender.send(Ok(message))
+            .await
             .map_err(|e| WSError::Session {
                 message: format!("Failed to send message: {}", e)
-            }.into())?;
+            })?;
 
-        let mut info = self.info.write();
+        let mut info = self.info.write().await;
         info.messages_sent += 1;
         info.bytes_sent += text.len() as u64;
 
@@ -201,13 +206,13 @@ impl DMSCWSSession {
     }
 
     pub async fn close(&self) -> DMSCResult<()> {
-        self.sender.send(Ok(tokio_tungstenite::tungstenite::Message::Close(None)))
+        self.sender.send(Ok(Message::Close(None)))
             .await
             .map_err(|e| WSError::Session {
                 message: format!("Failed to close session: {}", e)
-            }.into())?;
+            })?;
 
-        let mut info = self.info.write();
+        let mut info = self.info.write().await;
         info.is_active = false;
 
         Ok(())
@@ -218,10 +223,18 @@ impl DMSCWSSession {
     }
 }
 
-#[derive(Debug, Clone)]
 pub struct DMSCWSSessionManager {
     sessions: Arc<RwLock<HashMap<String, Arc<DMSCWSSession>>>>,
     max_connections: usize,
+}
+
+impl Clone for DMSCWSSessionManager {
+    fn clone(&self) -> Self {
+        Self {
+            sessions: self.sessions.clone(),
+            max_connections: self.max_connections,
+        }
+    }
 }
 
 impl DMSCWSSessionManager {
@@ -233,7 +246,7 @@ impl DMSCWSSessionManager {
     }
 
     pub async fn add_session(&self, session: Arc<DMSCWSSession>) -> DMSCResult<()> {
-        let mut sessions = self.sessions.write();
+        let mut sessions = self.sessions.write().await;
         
         if sessions.len() >= self.max_connections {
             return Err(WSError::Session {
@@ -246,17 +259,17 @@ impl DMSCWSSessionManager {
     }
 
     pub async fn remove_session(&self, session_id: &str) {
-        let mut sessions = self.sessions.write();
+        let mut sessions = self.sessions.write().await;
         sessions.remove(session_id);
     }
 
     pub async fn get_session(&self, session_id: &str) -> Option<Arc<DMSCWSSession>> {
-        let sessions = self.sessions.read();
+        let sessions = self.sessions.read().await;
         sessions.get(session_id).cloned()
     }
 
     pub async fn broadcast(&self, data: &[u8]) -> DMSCResult<usize> {
-        let sessions = self.sessions.read();
+        let sessions = self.sessions.read().await;
         let mut count = 0;
 
         for session in sessions.values() {
@@ -269,11 +282,11 @@ impl DMSCWSSessionManager {
     }
 
     pub async fn get_session_count(&self) -> usize {
-        self.sessions.read().len()
+        self.sessions.read().await.len()
     }
 
     pub async fn get_all_sessions(&self) -> Vec<DMSCWSSessionInfo> {
-        let sessions = self.sessions.read();
+        let sessions = self.sessions.read().await;
         sessions.values().map(|s| s.get_info()).collect()
     }
 }
@@ -281,11 +294,10 @@ impl DMSCWSSessionManager {
 #[cfg(feature = "pyo3")]
 use pyo3::prelude::*;
 
-#[cfg(feature = "pyo3")]
-#[pyclass]
+#[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 pub struct DMSCWSPythonHandler {
     on_connect: Py<PyAny>,
-    on_disconnect: Py<Any>,
+    on_disconnect: Py<PyAny>,
     on_message: Py<PyAny>,
     on_error: Py<PyAny>,
 }
@@ -313,27 +325,24 @@ impl DMSCWSPythonHandler {
 #[cfg(feature = "pyo3")]
 impl DMSCWSSessionHandler for DMSCWSPythonHandler {
     async fn on_connect(&self, session_id: &str, remote_addr: &str) -> DMSCResult<()> {
-        let gil = Python::acquire_gil();
-        let py = gil.python();
+        let py = unsafe { Python::assume_attached() };
         let _ = self.on_connect.call(py, (session_id, remote_addr), None);
         Ok(())
     }
     
     async fn on_disconnect(&self, session_id: &str) -> DMSCResult<()> {
-        let gil = Python::acquire_gil();
-        let py = gil.python();
+        let py = unsafe { Python::assume_attached() };
         let _ = self.on_disconnect.call(py, (session_id,), None);
         Ok(())
     }
     
     async fn on_message(&self, session_id: &str, data: &[u8]) -> DMSCResult<Vec<u8>> {
-        let gil = Python::acquire_gil();
-        let py = gil.python();
+        let py = unsafe { Python::assume_attached() };
         let data_vec = data.to_vec();
         
         match self.on_message.call(py, (session_id, data_vec), None) {
             Ok(obj) => {
-                let result: Vec<u8> = obj.extract()?;
+                let result: Vec<u8> = obj.extract(py)?;
                 Ok(result)
             }
             Err(_) => Ok(vec![]),
@@ -341,8 +350,7 @@ impl DMSCWSSessionHandler for DMSCWSPythonHandler {
     }
     
     async fn on_error(&self, session_id: &str, error: &str) -> DMSCResult<()> {
-        let gil = Python::acquire_gil();
-        let py = gil.python();
+        let py = unsafe { Python::assume_attached() };
         let _ = self.on_error.call(py, (session_id, error), None);
         Ok(())
     }

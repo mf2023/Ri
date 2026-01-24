@@ -2,9 +2,9 @@
 
 # 可观测性使用示例
 
-**Version: 0.1.4**
+**Version: 0.1.5**
 
-**Last modified date: 2026-01-15**
+**Last modified date: 2026-01-24**
 
 本示例展示如何使用DMSC的observability模块进行分布式追踪、指标收集、健康检查、性能分析和告警管理的使用。
 

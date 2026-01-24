@@ -2,9 +2,9 @@
 
 # Validation API参考
 
-**Version: 0.1.4**
+**Version: 0.1.5**
 
-**Last modified date: 2026-01-15**
+**Last modified date: 2026-01-24**
 
 validation模块提供数据验证与清理功能，支持多种验证规则和自定义验证器。
 

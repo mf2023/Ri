@@ -2,9 +2,9 @@
 
 # Core Concepts
 
-**Version: 0.1.4**
+**Version: 0.1.5**
 
-**Last modified date: 2026-01-15**
+**Last modified date: 2026-01-24**
 
 This chapter provides an in-depth introduction to DMSC's core design principles and key components, helping you better understand and use the DMSC framework.
 
@@ -64,7 +64,7 @@ DMSC provides complete Python bindings, allowing you to use all core features th
 **Python Module Features:**
 - Native Python interfaces with seamless Rust core invocation
 - Support for sync and async service modules
-- Version: **0.1.4** (requires Python 3.8+)
+- Version: **0.1.5** (requires Python 3.8+)
 
 ### 1.6 Module Composition
 

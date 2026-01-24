@@ -504,8 +504,9 @@ impl DMSCServiceMesh {
         for attempt in 0..self.config.max_retry_attempts {
             match self.traffic_manager.route_request(endpoint, request_data.clone()).await {
                 Ok(response) => return Ok(response),
-                Err(e) => {
-                    last_error = Some(e);
+                Err(_e) => {
+                    let sanitized_error = DMSCError::ServiceMesh(format!("Retry attempt {} failed", attempt + 1));
+                    last_error = Some(sanitized_error);
                     if attempt < self.config.max_retry_attempts - 1 {
                         tokio::time::sleep(Duration::from_millis(100 * (attempt + 1) as u64)).await;
                     }

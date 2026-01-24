@@ -2,9 +2,9 @@
 
 # Security API Reference
 
-**Version: 0.1.4**
+**Version: 0.1.5**
 
-**Last modified date: 2026-01-15**
+**Last modified date: 2026-01-24**
 
 The security module provides encryption, decryption, and cryptographic functionality.
 

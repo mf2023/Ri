@@ -67,8 +67,9 @@
 //!     let pool = DMSCDatabasePool::new(config).await?;
 //!     let db = pool.get().await?;
 //!
-//!     // Execute a query
-//!     let rows = db.query("SELECT * FROM users WHERE id = $1", &[&1]).await?;
+//!     // Execute a query with parameter binding
+//!     use serde_json::json;
+//!     let rows = db.query("SELECT * FROM users WHERE id = $1", &[&json!(1)]).await?;
 //!     for row in rows {
 //!         let id: i64 = row.get("id");
 //!         let name: String = row.get("name");

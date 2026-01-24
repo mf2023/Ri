@@ -82,7 +82,24 @@ repository = "https://github.com/mf2023/DMSC"
 # optional features that control which Rust modules are compiled.
 [tool.maturin]
 python-source = "python"
-features = ["pyo3", "auth", "cache", "queue", "gateway", "observability"]
+features = [
+    "pyo3",
+    "auth",
+    "cache",
+    "queue",
+    "gateway",
+    "observability",
+    "rabbitmq",
+    "protocol",
+    "sqlite",
+    "postgres",
+    "mysql",
+    "service_mesh",
+    "parking_lot",
+    "http_client",
+    "system_info",
+    "config_hot_reload",
+]
 
 # =============================================================================
 # Python Extension Dependencies

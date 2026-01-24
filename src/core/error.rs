@@ -120,6 +120,8 @@ pub enum DMSCError {
     YamlError(String),
     /// Queue error. Contains a descriptive error message for queue operations.
     Queue(String),
+    /// Frame error. Contains a descriptive error message for frame parsing/building errors.
+    FrameError(String),
 }
 
 /// Result type alias for DMSC operations. Used throughout the library.
@@ -180,6 +182,7 @@ impl std::fmt::Display for DMSCError {
             DMSCError::TomlError(msg) => write!(f, "TOML error: {msg}"),
             DMSCError::YamlError(msg) => write!(f, "YAML error: {msg}"),
             DMSCError::Queue(msg) => write!(f, "Queue error: {msg}"),
+            DMSCError::FrameError(msg) => write!(f, "Frame error: {msg}"),
         }
     }
 }
@@ -249,6 +252,7 @@ impl<'a> DMSCErrorFormatter<'a> {
             DMSCError::TomlError(_) => Some("Validate TOML syntax and required sections"),
             DMSCError::YamlError(_) => Some("Validate YAML syntax and indentation"),
             DMSCError::Queue(_) => Some("Check message queue service status and queue configuration"),
+            DMSCError::FrameError(_) => Some("Check frame format and protocol compatibility"),
         }
     }
 }
@@ -390,6 +394,13 @@ impl std::convert::From<DMSCError> for pyo3::PyErr {
 }
 
 #[cfg(feature = "pyo3")]
+impl std::convert::From<pyo3::PyErr> for DMSCError {
+    fn from(error: pyo3::PyErr) -> Self {
+        DMSCError::Other(format!("Python error: {}", error))
+    }
+}
+
+#[cfg(feature = "pyo3")]
 /// Python bindings for DMSCError.
 ///
 /// This implementation provides a Python interface for the DMSCError type, enabling
@@ -400,7 +411,7 @@ impl std::convert::From<DMSCError> for pyo3::PyErr {
 /// ## Python Usage Example
 ///
 /// ```python
-/// import dms
+/// 
 ///
 /// try:
 ///     # Some operation that might fail

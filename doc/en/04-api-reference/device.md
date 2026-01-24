@@ -2,9 +2,9 @@
 
 # Device API Reference
 
-**Version: 0.1.4**
+**Version: 0.1.5**
 
-**Last modified date: 2026-01-15**
+**Last modified date: 2026-01-24**
 
 The device module provides smart device control functionality, including device discovery, resource scheduling, and resource pool management.
 

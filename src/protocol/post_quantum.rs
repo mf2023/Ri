@@ -171,9 +171,14 @@ impl DMSCPostQuantumManager {
     }
 
     pub fn initialize_sync(&mut self, algorithm: DMSCPostQuantumAlgorithm) -> bool {
-        *self.initialized.try_write().unwrap() = true;
-        *self.algorithm.try_write().unwrap() = algorithm;
-        true
+        if let Ok(mut guard) = self.initialized.try_write() {
+            *guard = true;
+            if let Ok(mut algo_guard) = self.algorithm.try_write() {
+                *algo_guard = algorithm;
+                return true;
+            }
+        }
+        false
     }
 
     pub fn get_stats(&self) -> String {

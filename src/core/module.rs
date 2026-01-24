@@ -329,7 +329,7 @@ use pyo3::prelude::*;
 /// ## Python Usage
 ///
 /// ```python
-/// import dms
+/// 
 ///
 /// module = dms.DMSCPythonModule(name="my_python_module")
 /// module.is_critical = True
@@ -428,7 +428,7 @@ impl DMSCPythonModule {
 /// ## Python Usage
 ///
 /// ```python
-/// import dms
+/// 
 ///
 /// class MyPythonModule:
 ///     def name(&self):
@@ -496,7 +496,7 @@ impl DMSCPythonModuleAdapter {
 /// ## Python Usage
 ///
 /// ```python
-/// import dms
+/// 
 ///
 /// class MySyncModule:
 ///     def name(&self):
@@ -601,7 +601,7 @@ impl DMSCPythonServiceModule {
 /// ## Python Usage
 ///
 /// ```python
-/// import dms
+/// 
 ///
 /// class MyAsyncModule:
 ///     async def name(&self):

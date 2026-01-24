@@ -2,9 +2,9 @@
 
 # Message Queue Usage Examples
 
-**Version: 0.1.4**
+**Version: 0.1.5**
 
-**Last modified date: 2026-01-15**
+**Last modified date: 2026-01-24**
 
 This example demonstrates how to use DMSC's mq module for message queues, publish-subscribe, routing, dead letter queues, delayed messages, persistence, priority, and filtering functionality.
 

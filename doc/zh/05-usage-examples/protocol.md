@@ -2,9 +2,9 @@
 
 # 协议模块使用指南
 
-**Version: 0.1.4**
+**Version: 0.1.5**
 
-**Last modified date: 2026-01-15**
+**Last modified date: 2026-01-24**
 
 本文档提供 DMSC 协议模块的完整使用示例，演示如何利用协议抽象、安全特性和状态管理功能。
 

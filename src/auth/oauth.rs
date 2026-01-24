@@ -678,7 +678,7 @@ impl DMSCOAuthManager {
 /// ## Python Usage Example
 ///
 /// ```python
-/// from dms import DMSCOAuthProvider, DMSCOAuthManager
+/// from dmsc import DMSCOAuthProvider, DMSCOAuthManager
 ///
 /// # Create OAuth manager
 /// oauth_manager = DMSCOAuthManager()

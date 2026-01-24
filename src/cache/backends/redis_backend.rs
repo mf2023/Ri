@@ -75,7 +75,7 @@ use redis::{AsyncCommands, Client};
 use redis::aio::ConnectionManager;
 use std::sync::Arc;
 use std::ops::AddAssign;
-use crate::cache::{DMSCCache, DMSCCachedValue, DMSCCacheStats};
+use crate::cache::{DMSCCache, DMSCCacheStats};
 use crate::core::DMSCResult;
 
 /// Redis cache implementation.

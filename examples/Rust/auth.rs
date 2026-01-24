@@ -78,7 +78,7 @@ fn main() -> DMSCResult<()> {
     rt.block_on(async {
         // Module Initialization: Create authentication module instance with configuration
         // The module provides JWT management and session management capabilities
-        let auth_module = DMSCAuthModule::new(auth_config);
+        let auth_module = DMSCAuthModule::new(auth_config).await;
         
         // Get JWT manager for token operations (generation and validation)
         // JWT manager handles token lifecycle: create, validate, refresh, revoke

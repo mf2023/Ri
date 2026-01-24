@@ -2,9 +2,9 @@
 
 # 文件系统使用示例
 
-**Version: 0.1.4**
+**Version: 0.1.5**
 
-**Last modified date: 2026-01-15**
+**Last modified date: 2026-01-24**
 
 本示例展示如何使用 fs 模块进行文件操作，包括原子写入、目录管理和分类目录组织。
 
@@ -270,7 +270,7 @@ example.txt removed
 ```rust
 fn batch_json_operations(fs: &DMSCFileSystem) -> DMSCResult<()> {
     let settings = AppSettings {
-        version: "0.1.4".to_string(),
+        version: "0.1.5".to_string(),
         debug_mode: true,
         max_connections: 100,
     };

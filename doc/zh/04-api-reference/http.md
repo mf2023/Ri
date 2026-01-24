@@ -2,9 +2,9 @@
 
 # HTTP API参考
 
-**Version: 0.1.4**
+**Version: 0.1.5**
 
-**Last modified date: 2026-01-15**
+**Last modified date: 2026-01-24**
 
 http模块提供HTTP客户端与服务器功能，支持路由、中间件、WebSocket与文件上传下载。
 

@@ -116,7 +116,7 @@ impl std::error::Error for CryptoError {}
 ///
 /// When compiled with the `pyo3` feature, this struct provides Python bindings:
 /// ```python
-/// from dms import AES256GCM
+/// from dmsc import AES256GCM
 ///
 /// # Create new cipher with random key
 /// cipher = AES256GCM.new()
@@ -327,7 +327,7 @@ impl AES256GCM {
 ///
 /// When compiled with the `pyo3` feature, this struct provides Python bindings:
 /// ```python
-/// from dms import ChaCha20Poly1305
+/// from dmsc import ChaCha20Poly1305
 ///
 /// # Create new cipher with random key
 /// cipher = ChaCha20Poly1305.new()
@@ -588,7 +588,7 @@ impl ChaCha20Poly1305 {
 ///
 /// When compiled with the `pyo3` feature, this struct provides Python bindings:
 /// ```python
-/// from dms import SM4Cipher
+/// from dmsc import SM4Cipher
 ///
 /// # Create new cipher with random key
 /// cipher = SM4Cipher.new()

@@ -643,6 +643,8 @@ pub mod py {
         m.add_class::<crate::grpc::DMSCGrpcConfig>()?;
         m.add_class::<crate::grpc::DMSCGrpcStats>()?;
         m.add_class::<crate::grpc::DMSCGrpcServiceRegistryPy>()?;
+        m.add_class::<crate::grpc::DMSCGrpcServer>()?;
+        m.add_class::<crate::grpc::DMSCGrpcClient>()?;
         parent.add_submodule(&m)?;
         Ok(())
     }
@@ -655,6 +657,7 @@ pub mod py {
         m.add_class::<crate::ws::DMSCWSServerStats>()?;
         m.add_class::<crate::ws::DMSCWSPythonHandler>()?;
         m.add_class::<crate::ws::DMSCWSSessionManagerPy>()?;
+        m.add_class::<crate::ws::DMSCWSServer>()?;
         parent.add_submodule(&m)?;
         Ok(())
     }

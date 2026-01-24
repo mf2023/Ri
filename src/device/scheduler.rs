@@ -22,7 +22,6 @@ use std::collections::HashMap;
 use chrono::{DateTime, Utc};
 use crate::device::DMSCResourceAllocation;
 use tokio::sync::RwLock;
-use parking_lot::RwLock as ParkingRwLock;
 
 use super::core::{DMSCDevice, DMSCDeviceType, DMSCDeviceCapabilities};
 use super::pool::DMSCResourcePoolManager;
@@ -117,14 +116,10 @@ impl DMSCResourceScheduler {
 /// the resource pool manager to access available devices and implements multiple
 /// scheduling policies per device type.
 pub struct DMSCDeviceScheduler {
-    /// Scheduling policies per device type
     scheduling_policies: HashMap<DMSCDeviceType, DMSCSchedulingPolicy>,
-    /// History of all allocations
-    allocation_history: Vec<DMSCAllocationRecord>,
-    /// Resource pool manager for accessing available devices
-    resource_pool_manager: Arc<ParkingRwLock<DMSCResourcePoolManager>>,
-    /// Round-robin counters per device type
-    round_robin_counters: HashMap<DMSCDeviceType, usize>,
+    allocation_history: Arc<RwLock<Vec<DMSCAllocationRecord>>>,
+    resource_pool_manager: Arc<RwLock<DMSCResourcePoolManager>>,
+    round_robin_counters: Arc<RwLock<HashMap<DMSCDeviceType, usize>>>,
 }
 
 /// Scheduling policy enum - defines different algorithms for device selection
@@ -210,7 +205,7 @@ impl DMSCDeviceScheduler {
     /// # Returns
     /// 
     /// A new `DMSCDeviceScheduler` instance with default policies and settings.
-    pub fn new(resource_pool_manager: Arc<ParkingRwLock<DMSCResourcePoolManager>>) -> Self {
+    pub fn new(resource_pool_manager: Arc<RwLock<DMSCResourcePoolManager>>) -> Self {
         let mut scheduling_policies = HashMap::new();
         
         // Set default policies for different device types
@@ -225,9 +220,9 @@ impl DMSCDeviceScheduler {
         
         Self {
             scheduling_policies,
-            allocation_history: Vec::new(),
+            allocation_history: Arc::new(RwLock::new(Vec::new())),
             resource_pool_manager,
-            round_robin_counters: HashMap::new(),
+            round_robin_counters: Arc::new(RwLock::new(HashMap::new())),
         }
     }
     
@@ -274,13 +269,11 @@ impl DMSCDeviceScheduler {
     /// # Returns
     /// 
     /// An `Arc<DMSCDevice>` if a suitable device was found, or `None` if no device meets the requirements.
-    pub fn select_device(&mut self, request: &DMSCAllocationRequest) -> Option<Arc<DMSCDevice>> {
-        // Get policy first to avoid borrow conflicts
+    pub async fn select_device(&self, request: &DMSCAllocationRequest) -> Option<Arc<DMSCDevice>> {
         let policy = self.get_policy(&request.device_type);
 
-        // Collect all available devices from all pools while holding the lock
         let available_devices = {
-            let pool_manager = self.resource_pool_manager.read();
+            let pool_manager = self.resource_pool_manager.read().await;
             let pools = pool_manager.get_pools_by_type(request.device_type);
 
             if pools.is_empty() {
@@ -315,7 +308,7 @@ impl DMSCDeviceScheduler {
             DMSCSchedulingPolicy::FirstFit => self.first_fit(&scored),
             DMSCSchedulingPolicy::BestFit => self.best_fit(&scored, &request.capabilities),
             DMSCSchedulingPolicy::WorstFit => self.worst_fit(&scored, &request.capabilities),
-            DMSCSchedulingPolicy::RoundRobin => self.round_robin(&scored, request.device_type),
+            DMSCSchedulingPolicy::RoundRobin => self.round_robin(&scored, request.device_type).await,
             DMSCSchedulingPolicy::PriorityBased => self.priority_based(&scored, request.priority),
             DMSCSchedulingPolicy::LoadBalanced => self.load_balanced(&scored),
         }
@@ -561,8 +554,9 @@ impl DMSCDeviceScheduler {
     /// # Returns
     /// 
     /// The next device in the rotation, or `None` if no devices meet the requirements.
-    fn round_robin(&mut self, devices: &[Arc<DMSCDevice>], device_type: DMSCDeviceType) -> Option<Arc<DMSCDevice>> {
-        let counter = self.round_robin_counters.entry(device_type)
+    async fn round_robin(&self, devices: &[Arc<DMSCDevice>], device_type: DMSCDeviceType) -> Option<Arc<DMSCDevice>> {
+        let mut counters = self.round_robin_counters.write().await;
+        let counter = counters.entry(device_type)
             .or_insert(0);
         
         let index = *counter % devices.len();
@@ -697,8 +691,8 @@ impl DMSCDeviceScheduler {
     /// # Returns
     /// 
     /// An allocation ID if successful, or `None` if no suitable device was found.
-    pub fn allocate(&mut self, request: &DMSCAllocationRequest) -> Option<String> {
-        if let Some(device) = self.select_device(request) {
+    pub async fn allocate(&self, request: &DMSCAllocationRequest) -> Option<String> {
+        if let Some(device) = self.select_device(request).await {
             // Generate unique allocation ID
             let allocation_id = uuid::Uuid::new_v4().to_string();
             
@@ -706,7 +700,7 @@ impl DMSCDeviceScheduler {
             // This is simplified for demonstration
             
             // Record the allocation
-            self.record_allocation(allocation_id.clone(), device.id().to_string(), device.device_type(), request.capabilities.clone());
+            self.record_allocation(allocation_id.clone(), device.id().to_string(), device.device_type(), request.capabilities.clone()).await;
             
             Some(allocation_id)
         } else {
@@ -725,7 +719,7 @@ impl DMSCDeviceScheduler {
     /// - `device_id`: ID of the allocated device
     /// - `device_type`: Type of the allocated device
     /// - `capabilities_required`: Capabilities required for this allocation
-    pub fn record_allocation(&mut self, allocation_id: String, device_id: String, device_type: DMSCDeviceType, capabilities_required: DMSCDeviceCapabilities) {
+    pub async fn record_allocation(&self, allocation_id: String, device_id: String, device_type: DMSCDeviceType, capabilities_required: DMSCDeviceCapabilities) {
         let record = DMSCAllocationRecord {
             allocation_id,
             device_id,
@@ -737,11 +731,11 @@ impl DMSCDeviceScheduler {
             capabilities_required,
         };
         
-        self.allocation_history.push(record);
+        let mut history = self.allocation_history.write().await;
+        history.push(record);
         
-        // Keep only recent history (last 1000 allocations)
-        if self.allocation_history.len() > 1000 {
-            self.allocation_history.remove(0);
+        if history.len() > 1000 {
+            history.remove(0);
         }
     }
     
@@ -753,8 +747,9 @@ impl DMSCDeviceScheduler {
     /// # Parameters
     /// 
     /// - `allocation_id`: ID of the allocation to release
-    pub fn record_release(&mut self, allocation_id: &str) {
-        if let Some(record) = self.allocation_history.iter_mut().find(|r| r.allocation_id == allocation_id) {
+    pub async fn record_release(&self, allocation_id: &str) {
+        let mut history = self.allocation_history.write().await;
+        if let Some(record) = history.iter_mut().find(|r| r.allocation_id == allocation_id) {
             record.released_at = Some(Utc::now());
             
             if let Some(released_at) = record.released_at {
@@ -776,12 +771,13 @@ impl DMSCDeviceScheduler {
     /// # Returns
     /// 
     /// A `DMSCAllocationStatistics` struct containing comprehensive allocation statistics.
-    pub fn get_statistics(&self) -> DMSCAllocationStatistics {
-        let total_allocations = self.allocation_history.len();
-        let successful_allocations = self.allocation_history.iter().filter(|r| r.success).count();
+    pub async fn get_statistics(&self) -> DMSCAllocationStatistics {
+        let history = self.allocation_history.read().await;
+        let total_allocations = history.len();
+        let successful_allocations = history.iter().filter(|r| r.success).count();
         let failed_allocations = total_allocations - successful_allocations;
         
-        let completed_allocations: Vec<&DMSCAllocationRecord> = self.allocation_history.iter()
+        let completed_allocations: Vec<&DMSCAllocationRecord> = history.iter()
             .filter(|r| r.released_at.is_some())
             .collect();
         
@@ -795,21 +791,20 @@ impl DMSCDeviceScheduler {
             0.0
         };
         
-        // Statistics by device type
         let mut by_device_type = HashMap::new();
         for device_type in [DMSCDeviceType::CPU, DMSCDeviceType::GPU, DMSCDeviceType::Memory, 
             DMSCDeviceType::Storage, DMSCDeviceType::Network, DMSCDeviceType::Sensor, 
             DMSCDeviceType::Actuator, DMSCDeviceType::Custom] {
-            let type_allocations = self.allocation_history.iter()
+            let type_allocations = history.iter()
                 .filter(|r| r.device_type == device_type)
                 .count();
             
             if type_allocations > 0 {
-                let type_completed = self.allocation_history.iter()
+                let type_completed = history.iter()
                     .filter(|r| r.device_type == device_type && r.released_at.is_some())
                     .count();
                 
-                let type_duration: f64 = self.allocation_history.iter()
+                let type_duration: f64 = history.iter()
                     .filter(|r| r.device_type == device_type)
                     .filter_map(|r| r.duration_seconds)
                     .sum();
@@ -843,26 +838,14 @@ impl DMSCDeviceScheduler {
     }
     
     /// Get scheduling recommendations based on historical data.
-    /// 
-    /// This method analyzes recent allocation patterns for the specified device type and generates
-    /// recommendations for optimizing scheduling policies. Recommendations are based on success rates,
-    /// allocation durations, and frequency.
-    /// 
-    /// # Parameters
-    /// 
-    /// - `device_type`: Device type to get recommendations for
-    /// 
-    /// # Returns
-    /// 
-    /// A vector of `DMSCSchedulingRecommendation` sorted by priority (highest first).
-    pub fn get_recommendations(&self, device_type: &DMSCDeviceType) -> Vec<DMSCSchedulingRecommendation> {
+    pub async fn get_recommendations(&self, device_type: &DMSCDeviceType) -> Vec<DMSCSchedulingRecommendation> {
         let mut recommendations = Vec::new();
         
-        // Analyze recent allocation patterns for this device type
-        let recent_allocations: Vec<&DMSCAllocationRecord> = self.allocation_history.iter()
+        let history = self.allocation_history.read().await;
+        let recent_allocations: Vec<&DMSCAllocationRecord> = history.iter()
             .filter(|r| r.device_type == *device_type)
             .rev()
-            .take(100) // Last 100 allocations
+            .take(100)
             .collect();
         
         if recent_allocations.is_empty() {
@@ -882,7 +865,6 @@ impl DMSCDeviceScheduler {
         let success_rate = recent_allocations.iter().filter(|r| r.success).count() as f64 
             / recent_allocations.len() as f64;
         
-        // Generate recommendations based on patterns
         if success_rate < 0.8 {
             recommendations.push(DMSCSchedulingRecommendation {
                 recommendation_type: DMSCSchedulingRecommendationType::ConsiderPolicyChange,
@@ -893,7 +875,7 @@ impl DMSCDeviceScheduler {
             });
         }
         
-        if avg_duration > 300.0 { // 5 minutes
+        if avg_duration > 300.0 {
             recommendations.push(DMSCSchedulingRecommendation {
                 recommendation_type: DMSCSchedulingRecommendationType::OptimizeForLongRunning,
                 description: format!("Average allocation duration is {avg_duration:.1} seconds for {device_type:?}, consider load balancing"),

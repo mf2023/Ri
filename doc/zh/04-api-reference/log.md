@@ -2,9 +2,9 @@
 
 # Log API参考
 
-**Version: 0.1.4**
+**Version: 0.1.5**
 
-**Last modified date: 2026-01-15**
+**Last modified date: 2026-01-24**
 
 log模块提供结构化日志记录与多后端支持，支持日志级别、格式化、采样和日志分析等功能。
 

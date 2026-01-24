@@ -508,11 +508,11 @@ mod tests {
         let iterations = 100;
         
         let handles: Vec<_> = (0..num_threads)
-            .map(|i| {
+            .map(|_i| {
                 let lock = Arc::clone(&lock);
                 thread::spawn(move || {
                     for _ in 0..iterations {
-                        let mut guard = lock.write_safe("concurrent write").unwrap();
+                        let guard = lock.write_safe("concurrent write").unwrap();
                         guard.fetch_add(1, Ordering::SeqCst);
                     }
                 })
