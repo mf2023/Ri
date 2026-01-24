@@ -516,15 +516,10 @@ jobs:
         if: runner.os == 'Linux'
         run: |
           mkdir -p .cargo
-          cat > .cargo/config.toml << 'EOF'
-[target.x86_64-unknown-linux-gnu]
-rustflags = ["-C", "target-feature=+crt-static", "-L", "static=native"]
-
-[profile.release]
-lto = true
-codegen-units = 1
-strip = true
-EOF
+          printf '[target.x86_64-unknown-linux-gnu]\n' > .cargo/config.toml
+          printf 'rustflags = ["-C", "target-feature=+crt-static", "-L", "static=native"]\n\n' >> .cargo/config.toml
+          printf '[profile.release]\n' >> .cargo/config.toml
+          printf 'lto = true\ncodegen-units = 1\nstrip = true\n' >> .cargo/config.toml
       
       # Step 5: Install build dependencies (maturin and auditwheel)
       # maturin: Rust/Python build tool that creates Python wheels from Rust libraries
