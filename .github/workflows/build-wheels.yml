@@ -182,6 +182,7 @@ jobs:
         run: |
           brew update
           brew install cmake pkg-config || true
+          brew upgrade cmake pkg-config || true
       
       - name: Set up Rust
         uses: dtolnay/rust-toolchain@master
@@ -500,23 +501,33 @@ jobs:
       # to avoid "libcrypto-*.so.3 not found" errors during auditwheel repair
       # OPENSSL_STATIC=1: Links OpenSSL statically
       # VENDORED_OPENSSL_SSL: Forces openssl crate to use vendored OpenSSL
+      # OPENSSL_LIB_DIR and OPENSSL_INCLUDE_DIR: Must match target architecture
+      # - x86_64: /usr/lib/x86_64-linux-gnu, /usr/include/openssl
+      # - aarch64: /usr/lib/aarch64-linux-gnu, /usr/include/openssl
       - name: Configure OpenSSL static linking
         if: runner.os == 'Linux'
         run: |
           echo "OPENSSL_STATIC=1" >> $GITHUB_ENV
           echo "VENDORED_OPENSSL_SSL=1" >> $GITHUB_ENV
-          echo "OPENSSL_LIB_DIR=/usr/lib/x86_64-linux-gnu" >> $GITHUB_ENV
-          echo "OPENSSL_INCLUDE_DIR=/usr/include/openssl" >> $GITHUB_ENV
           echo "PKG_CONFIG_ALLOW_CROSS=1" >> $GITHUB_ENV
           echo "cargo:rustflags=-C target-feature=+crt-static" >> $GITHUB_ENV
+          if [[ "${{ matrix.target }}" == "aarch64"* ]]; then
+            echo "OPENSSL_LIB_DIR=/usr/lib/aarch64-linux-gnu" >> $GITHUB_ENV
+          else
+            echo "OPENSSL_LIB_DIR=/usr/lib/x86_64-linux-gnu" >> $GITHUB_ENV
+          fi
+          echo "OPENSSL_INCLUDE_DIR=/usr/include/openssl" >> $GITHUB_ENV
       
       # Step 4d: Configure Rust linker for static linking on Linux builds
       # This ensures the final binary is fully statically linked
+      # Configures rustflags for both x86_64 and aarch64 targets
       - name: Configure static linking
         if: runner.os == 'Linux'
         run: |
           mkdir -p .cargo
           printf '[target.x86_64-unknown-linux-gnu]\n' > .cargo/config.toml
+          printf 'rustflags = ["-C", "target-feature=+crt-static", "-L", "static=native"]\n\n' >> .cargo/config.toml
+          printf '[target.aarch64-unknown-linux-gnu]\n' >> .cargo/config.toml
           printf 'rustflags = ["-C", "target-feature=+crt-static", "-L", "static=native"]\n\n' >> .cargo/config.toml
           printf '[profile.release]\n' >> .cargo/config.toml
           printf 'lto = true\ncodegen-units = 1\nstrip = true\n' >> .cargo/config.toml
