@@ -98,6 +98,7 @@ use hyper;
 /// These strategies determine how the load balancer selects which backend server
 /// to route incoming requests to.
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+#[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 pub enum DMSCLoadBalancerStrategy {
     /// **Round Robin**: Sequentially selects the next available server in rotation.
     /// 
@@ -322,6 +323,7 @@ pub struct LoadBalancerServerStats {
 /// 
 /// This struct provides a comprehensive load balancing solution with support for multiple
 /// strategies, health checking, connection management, and detailed statistics.
+#[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 pub struct DMSCLoadBalancer {
     /// Load balancing strategy to use
     strategy: DMSCLoadBalancerStrategy,

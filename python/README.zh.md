@@ -117,7 +117,7 @@ pip install dmsc
 或者添加到您的 `requirements.txt`：
 
 ```
-dmsc==0.1.5
+dmsc==0.1.6
 ```
 
 <h2 align="center">⚡ 快速开始</h2>

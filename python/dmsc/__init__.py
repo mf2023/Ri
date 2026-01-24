@@ -49,7 +49,7 @@ Example Usage:
     gateway = DMSCGateway()
 """
 
-__version__ = "0.1.5"
+__version__ = "0.1.6"
 __author__ = "Dunimd Team"
 __license__ = "Apache-2.0"
 
@@ -109,6 +109,7 @@ from .dmsc import (
     DMSCSlidingWindowRateLimiter, DMSCCircuitBreaker, DMSCCircuitBreakerConfig,
     DMSCCircuitBreakerState, CircuitBreakerMetrics,
     DMSCBackendServer, LoadBalancerServerStats,
+    DMSCLoadBalancer, DMSCLoadBalancerStrategy,
     
     # =============================================================================
     # Service mesh classes - Service discovery, traffic routing, load balancing,
@@ -180,6 +181,26 @@ from .dmsc import (
     ColumnDefinition, IndexDefinition, ForeignKeyDefinition,
     TableDefinition, LogicalOperator, Criteria, JoinClause,
     ComparisonOperator, SortOrder, Pagination, QueryBuilder, JoinType,
+
+    # =============================================================================
+    # gRPC classes - gRPC server and client support (conditional on grpc feature)
+    # =============================================================================
+    try:
+        DMSCGrpcConfig, DMSCGrpcStats, DMSCGrpcServiceRegistry,
+        DMSCGrpcPythonService, DMSCGrpcServiceRegistryPy,
+        DMSCGrpcServer, DMSCGrpcClient,
+    except ImportError:
+        pass,
+
+    # =============================================================================
+    # WebSocket classes - WebSocket server and client support (conditional on websocket feature)
+    # =============================================================================
+    try:
+        DMSCWSServerConfig, DMSCWSEvent, DMSCWSSessionInfo, DMSCWSServerStats,
+        DMSCWSPythonHandler, DMSCWSSessionManagerPy,
+        DMSCWSServer, DMSCWSClientConfig, DMSCWSClientStats, DMSCWSClient,
+    except ImportError:
+        pass,
 )
 
 # =============================================================================
@@ -188,7 +209,8 @@ from .dmsc import (
 # =============================================================================
 from .dmsc import (
     device, cache, fs, hooks, observability,
-    queue, gateway, service_mesh, auth, protocol, database
+    queue, gateway, service_mesh, auth, protocol, database,
+    grpc, ws
 )
 
 # =============================================================================
@@ -228,6 +250,7 @@ __all__ = [
     'DMSCSlidingWindowRateLimiter', 'DMSCCircuitBreaker', 'DMSCCircuitBreakerConfig',
     'DMSCCircuitBreakerState', 'CircuitBreakerMetrics',
     'DMSCBackendServer', 'LoadBalancerServerStats',
+    'DMSCLoadBalancer', 'DMSCLoadBalancerStrategy',
     
     # Service mesh classes - Service discovery and traffic routing
     'DMSCServiceMesh', 'DMSCServiceMeshConfig', 'DMSCServiceDiscovery',
@@ -279,9 +302,20 @@ __all__ = [
     'TableDefinition', 'LogicalOperator', 'Criteria', 'JoinClause',
     'ComparisonOperator', 'SortOrder', 'Pagination', 'QueryBuilder', 'JoinType',
     
+    # gRPC classes - gRPC server and client support (conditional on grpc feature)
+    'DMSCGrpcConfig', 'DMSCGrpcStats', 'DMSCGrpcServiceRegistry',
+    'DMSCGrpcPythonService', 'DMSCGrpcServiceRegistryPy',
+    'DMSCGrpcServer', 'DMSCGrpcClient',
+    
+    # WebSocket classes - WebSocket server and client support (conditional on websocket feature)
+    'DMSCWSServerConfig', 'DMSCWSEvent', 'DMSCWSSessionInfo', 'DMSCWSServerStats',
+    'DMSCWSPythonHandler', 'DMSCWSSessionManagerPy',
+    'DMSCWSServer', 'DMSCWSClientConfig', 'DMSCWSClientStats', 'DMSCWSClient',
+    
     # Submodules - Functional submodule references
     'device', 'cache', 'fs', 'hooks', 'observability',
-    'queue', 'gateway', 'service_mesh', 'auth', 'protocol', 'database'
+    'queue', 'gateway', 'service_mesh', 'auth', 'protocol', 'database',
+    'grpc', 'ws'
 ]
 
 

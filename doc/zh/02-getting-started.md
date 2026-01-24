@@ -2,7 +2,7 @@
 
 # 快速开始
 
-**Version: 0.1.5**
+**Version: 0.1.6**
 
 **Last modified date: 2026-01-24**
 
@@ -104,7 +104,7 @@ pip install dmsc
 或者添加到 `requirements.txt`：
 
 ```
-dmsc==0.1.5
+dmsc==0.1.6
 ```
 
 验证安装：

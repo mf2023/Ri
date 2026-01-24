@@ -45,7 +45,7 @@
 # and documentation generation.
 [package]
 name = "dmsc"
-version = "0.1.5"
+version = "0.1.6"
 edition = "2021"
 authors = ["Dunimd Team"]
 description = "Dunimd Middleware Service - A high-performance Rust middleware framework with modular architecture"

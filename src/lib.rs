@@ -564,6 +564,8 @@ pub mod py {
         m.add_class::<crate::gateway::circuit_breaker::CircuitBreakerMetrics>()?;
         m.add_class::<crate::gateway::load_balancer::DMSCBackendServer>()?;
         m.add_class::<crate::gateway::load_balancer::LoadBalancerServerStats>()?;
+        m.add_class::<crate::gateway::load_balancer::DMSCLoadBalancer>()?;
+        m.add_class::<crate::gateway::load_balancer::DMSCLoadBalancerStrategy>()?;
         parent.add_submodule(&m)?;
         Ok(())
     }
@@ -578,6 +580,10 @@ pub mod py {
         m.add_class::<crate::service_mesh::DMSCServiceMeshStats>()?;
         m.add_class::<crate::service_mesh::health_check::DMSCHealthChecker>()?;
         m.add_class::<crate::service_mesh::traffic_management::DMSCTrafficManager>()?;
+        m.add_class::<crate::service_mesh::traffic_management::DMSCTrafficRoute>()?;
+        m.add_class::<crate::service_mesh::traffic_management::DMSCMatchCriteria>()?;
+        m.add_class::<crate::service_mesh::traffic_management::DMSCRouteAction>()?;
+        m.add_class::<crate::service_mesh::traffic_management::DMSCWeightedDestination>()?;
         parent.add_submodule(&m)?;
         Ok(())
     }
@@ -680,6 +686,7 @@ pub mod py {
     fn create_ws_module(parent: &Bound<'_, PyModule>) -> PyResult<()> {
         let m = PyModule::new(parent.py(), "ws")?;
         m.add_class::<crate::ws::DMSCWSServerConfig>()?;
+        m.add_class::<crate::ws::DMSCWSEvent>()?;
         m.add_class::<crate::ws::DMSCWSSessionInfo>()?;
         m.add_class::<crate::ws::DMSCWSServerStats>()?;
         m.add_class::<crate::ws::DMSCWSPythonHandler>()?;

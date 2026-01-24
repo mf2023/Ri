@@ -2,7 +2,7 @@
 
 # 文件系统使用示例
 
-**Version: 0.1.5**
+**Version: 0.1.6**
 
 **Last modified date: 2026-01-24**
 
@@ -270,7 +270,7 @@ example.txt removed
 ```rust
 fn batch_json_operations(fs: &DMSCFileSystem) -> DMSCResult<()> {
     let settings = AppSettings {
-        version: "0.1.5".to_string(),
+        version: "0.1.6".to_string(),
         debug_mode: true,
         max_connections: 100,
     };

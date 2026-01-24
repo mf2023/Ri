@@ -2,7 +2,7 @@
 
 # Message Queue API Reference
 
-**Version: 0.1.5**
+**Version: 0.1.6**
 
 **Last modified date: 2026-01-24**
 

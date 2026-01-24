@@ -2,7 +2,7 @@
 
 # Getting Started
 
-**Version: 0.1.5**
+**Version: 0.1.6**
 
 **Last modified date: 2026-01-24**
 
@@ -104,7 +104,7 @@ pip install dmsc
 Or add to your `requirements.txt`:
 
 ```
-dmsc==0.1.5
+dmsc==0.1.6
 ```
 
 Verify the installation:

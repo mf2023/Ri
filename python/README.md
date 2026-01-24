@@ -117,7 +117,7 @@ pip install dmsc
 Or add to your `requirements.txt`:
 
 ```
-dmsc==0.1.5
+dmsc==0.1.6
 ```
 
 <h2 align="center">⚡ Quick Start</h2>
