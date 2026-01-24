@@ -4,7 +4,7 @@
 //! The DMSC project belongs to the Dunimd Team.
 //!
 //! Licensed under the Apache License, Version 2.0 (the "License");
-//! you may not use this file except in compliance with the License.
+//! You may not use this file except in compliance with the License.
 //! You may obtain a copy of the License at
 //!
 //!     http://www.apache.org/licenses/LICENSE-2.0
@@ -80,11 +80,17 @@ impl DMSCGrpcServer {
     async fn run_server(
         addr: SocketAddr,
         stats: Arc<RwLock<DMSCGrpcStats>>,
-        _registry: DMSCGrpcServiceRegistry,
+        registry: DMSCGrpcServiceRegistry,
         mut shutdown_rx: mpsc::Receiver<()>,
-        _running: Arc<RwLock<bool>>,
+        running: Arc<RwLock<bool>>,
     ) {
-        let listener = tokio::net::TcpListener::bind(addr).await.unwrap();
+        let listener = match tokio::net::TcpListener::bind(&addr).await {
+            Ok(l) => l,
+            Err(e) => {
+                tracing::error!("Failed to bind gRPC server to {}: {}", addr, e);
+                return;
+            }
+        };
         
         tracing::info!("gRPC server listening on {}", addr);
 

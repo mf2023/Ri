@@ -45,6 +45,22 @@ fn test_auth_config_default() {
 
 #[test]
 /// Tests DMSCAuthConfig with custom settings.
+///
+/// This test verifies that the builder pattern correctly updates
+/// all configuration options to custom values.
+///
+/// ## Configuration Changes
+///
+/// - `enabled`: Disabled for testing or specific scenarios
+/// - `jwt_secret`: Custom secret key for token signing
+/// - `jwt_expiry_secs`: Extended token lifetime (2 hours)
+/// - `session_timeout_secs`: Extended session lifetime (48 hours)
+///
+/// ## Expected Behavior
+///
+/// - Configuration values match builder method calls
+/// - Custom secret is properly stored
+/// - Custom timeouts are applied correctly
 fn test_auth_config_custom() {
     let config = DMSCAuthConfig::new()
         .enabled(false)
@@ -60,6 +76,29 @@ fn test_auth_config_custom() {
 
 #[test]
 /// Tests DMSCJWTClaims creation and fields.
+///
+/// This test verifies that JWT claims can be created with all
+/// standard and custom fields populated.
+///
+/// ## Claims Structure
+///
+/// - `sub` (subject): User identifier (required)
+/// - `name`: User's display name (optional)
+/// - `email`: User's email address (optional)
+/// - `roles`: List of role names (optional)
+/// - `permissions`: List of permission strings (optional)
+/// - `issued_at`: Unix timestamp of token creation (optional)
+/// - `expires_at`: Unix timestamp of token expiration (optional)
+/// - `not_before`: Unix timestamp when token becomes valid (optional)
+/// - `issuer`: Token issuer identifier (optional)
+/// - `audience`: Intended token audience (optional)
+/// - `jwt_id`: Unique token identifier (optional)
+///
+/// ## Expected Behavior
+///
+/// - All specified claims are correctly stored
+/// - Optional fields are properly wrapped in Some/None
+/// - Collections (roles, permissions) have correct lengths
 fn test_jwt_claims_creation() {
     let claims = DMSCJWTClaims {
         sub: "user-123".to_string(),
@@ -84,6 +123,20 @@ fn test_jwt_claims_creation() {
 
 #[test]
 /// Tests DMSCJWTClaims with minimal fields.
+///
+/// This test verifies that JWT claims can be created with only
+/// the required fields, with all optional fields set to None.
+///
+/// ## Minimal Claims
+///
+/// - `sub`: User identifier (required, always present)
+/// - All other fields: None (not specified)
+///
+/// ## Expected Behavior
+///
+/// - Required subject field is correctly set
+/// - Optional fields are correctly None
+/// - Empty collections are represented as empty Vec
 fn test_jwt_claims_minimal() {
     let claims = DMSCJWTClaims {
         sub: "user-456".to_string(),
@@ -107,6 +160,24 @@ fn test_jwt_claims_minimal() {
 
 #[test]
 /// Tests DMSCJWTValidationOptions default values.
+///
+/// This test verifies that default validation options enforce
+/// maximum security by validating all token components.
+///
+/// ## Default Security Checks
+///
+/// - `verify_signature`: true (validate token signature)
+/// - `verify_expiration`: true (check token expiry)
+/// - `verify_not_before`: true (check token not-before)
+/// - `verify_issuer`: true (validate issuer claim)
+/// - `verify_audience`: true (validate audience claim)
+/// - `allow_expired_session`: true (allow within grace period)
+///
+/// ## Expected Behavior
+///
+/// - All security validations are enabled by default
+/// - Tokens must pass all checks to be considered valid
+/// - Expired sessions within grace period are still accepted
 fn test_jwt_validation_options_default() {
     let options = DMSCJWTValidationOptions::default();
     assert!(options.verify_signature);
@@ -119,6 +190,24 @@ fn test_jwt_validation_options_default() {
 
 #[test]
 /// Tests DMSCJWTValidationOptions custom configuration.
+///
+/// This test verifies that validation options can be selectively
+/// disabled for specific use cases like testing or development.
+///
+/// ## Custom Configuration
+///
+/// - `verify_signature`: Disabled for testing without real keys
+/// - `verify_expiration`: Disabled for debugging expired tokens
+/// - `verify_not_before`: Disabled for testing future tokens
+/// - `verify_issuer`: Disabled when issuer varies
+/// - `verify_audience`: Disabled when audience varies
+/// - `allow_expired_session`: Enabled for extended grace period
+///
+/// ## Expected Behavior
+///
+/// - Disabled validations are correctly set to false
+/// - Enabled validations remain true
+/// - Custom configuration overrides defaults
 fn test_jwt_validation_options_custom() {
     let options = DMSCJWTValidationOptions::new()
         .verify_signature(false)
@@ -135,6 +224,26 @@ fn test_jwt_validation_options_custom() {
 
 #[test]
 /// Tests DMSCPermission creation and operations.
+///
+/// This test verifies that permissions are created with action,
+/// resource, and optional description fields.
+///
+/// ## Permission Structure
+///
+/// - `action`: The action being permitted (e.g., "read", "write")
+/// - `resource`: The resource being accessed (e.g., "posts", "users")
+/// - `description`: Human-readable explanation (optional)
+///
+/// ## Permission Examples
+///
+/// - `read:posts` - Allow reading posts
+/// - `write:users` - Allow modifying users
+/// - `delete:*` - Allow deleting any resource
+///
+/// ## Expected Behavior
+///
+/// - Permission fields are correctly stored
+/// - Optional description is properly wrapped
 fn test_permission_creation() {
     let permission = DMSCPermission::new("read", "posts", Some("Read access to posts"));
 
@@ -156,6 +265,28 @@ fn test_permission_equality() {
 
 #[test]
 /// Tests DMSCRole creation and permission management.
+///
+/// This test verifies that roles can be created with name and
+/// description, and permissions can be added and checked.
+///
+/// ## Role Structure
+///
+/// - `name`: Unique role identifier (e.g., "admin", "user")
+/// - `description`: Human-readable role description
+/// - `permissions`: Collection of granted permissions
+///
+/// ## Permission Management
+///
+/// - `add_permission()`: Grants a permission to the role
+/// - `remove_permission()`: Revokes a permission from the role
+/// - `has_permission()`: Checks if role has a specific permission
+///
+/// ## Expected Behavior
+///
+/// - Role is created with specified name and description
+/// - Initially, role has no permissions
+/// - Added permissions are correctly stored
+/// - `has_permission()` returns true for granted permissions
 fn test_role_creation() {
     let mut role = DMSCRole::new("admin", "Administrator role");
 
@@ -176,6 +307,21 @@ fn test_role_creation() {
 
 #[test]
 /// Tests DMSCRole permission removal.
+///
+/// This test verifies that permissions can be removed from
+/// a role and that `has_permission()` returns false after removal.
+///
+/// ## Removal Behavior
+///
+/// - `remove_permission()` revokes a previously granted permission
+/// - After removal, `has_permission()` returns false
+/// - Removing non-existent permission has no effect
+///
+/// ## Expected Behavior
+///
+/// - Permission exists before removal
+/// - Permission no longer exists after removal
+/// - Role state is correctly updated
 fn test_role_permission_removal() {
     let mut role = DMSCRole::new("editor", "Editor role");
     let perm = DMSCPermission::new("edit", "articles", None);
@@ -189,6 +335,30 @@ fn test_role_permission_removal() {
 
 #[test]
 /// Tests DMSCSession creation and basic properties.
+///
+/// This test verifies that sessions are created with session ID,
+/// user ID, and default valid state.
+///
+/// ## Session Structure
+///
+/// - `session_id`: Unique session identifier
+/// - `user_id`: Associated user identifier
+/// - `created_at`: Session creation timestamp
+/// - `last_accessed`: Last access timestamp
+/// - `expires_at`: Session expiration timestamp
+/// - `is_valid`: Current validity status
+///
+/// ## Initial State
+///
+/// - Session is valid upon creation
+/// - Session is not expired upon creation
+/// - Timestamps are set to current time and expiry
+///
+/// ## Expected Behavior
+///
+/// - Session ID and user ID are correctly stored
+/// - Session is initially valid
+/// - Session is not initially expired
 fn test_session_creation() {
     let session = DMSCSession::new("session-123", "user-456");
 
@@ -214,6 +384,25 @@ fn test_session_timeout() {
 
 #[test]
 /// Tests DMSCSession touch and extend operations.
+///
+/// This test verifies that sessions can be updated to track
+/// recent activity and extend their validity period.
+///
+/// ## Session Operations
+///
+/// - `touch()`: Updates last_accessed timestamp to current time
+///   - Used to track session activity
+///   - Keeps session alive during active use
+///
+/// - `extend(seconds)`: Extends expires_at by specified seconds
+///   - Called after successful authentication
+///   - Resets the session timeout countdown
+///
+/// ## Expected Behavior
+///
+/// - `touch()` updates last_accessed to current time
+/// - `extend()` moves expires_at into the future
+/// - Extended session has expiry after current time
 fn test_session_touch_extend() {
     let mut session = DMSCSession::new("session-abc", "user-xyz");
     let initial_accessed = session.last_accessed;
@@ -231,6 +420,22 @@ fn test_session_touch_extend() {
 
 #[test]
 /// Tests DMSCSession invalidation.
+///
+/// This test verifies that sessions can be explicitly invalidated
+/// to force user logout or security-related termination.
+///
+/// ## Invalidation Use Cases
+///
+/// - User logs out explicitly
+/// - Administrator terminates session
+/// - Security policy requires session revocation
+/// - User changes password (revoke all sessions)
+///
+/// ## Expected Behavior
+///
+/// - Session is valid before invalidation
+/// - Session is not valid after invalidation
+/// - Invalidated session cannot be used for authentication
 fn test_session_invalidation() {
     let mut session = DMSCSession::new("session-def", "user-ghi");
     assert!(session.is_valid());
@@ -241,6 +446,22 @@ fn test_session_invalidation() {
 
 #[test]
 /// Tests DMSCAuthConfig builder pattern.
+///
+/// This test verifies that the builder pattern correctly chains
+/// configuration methods and produces a valid configuration.
+///
+/// ## Builder Pattern Benefits
+///
+/// - Fluent API for readable configuration
+/// - Compile-time checking of required fields
+/// - Optional fields with sensible defaults
+/// - Easy to see all configured values in one place
+///
+/// ## Expected Behavior
+///
+/// - All builder methods return self for chaining
+/// - Final configuration has all specified values
+/// - Unspecified values use defaults
 fn test_auth_config_builder() {
     let config = DMSCAuthConfig::new()
         .enabled(true)

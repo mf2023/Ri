@@ -29,7 +29,7 @@ English | [简体中文](README.zh.md)
 <h2 align="center">🏗️ Core Architecture</h2>
 
 ### 📐 Modular Design
-DMSC adopts a highly modular architecture with 17 core modules, enabling on-demand composition and seamless extension:
+DMSC adopts a highly modular architecture with 16 core modules plus 3 optional modules, enabling on-demand composition and seamless extension:
 
 <div align="center">
 
@@ -43,17 +43,24 @@ DMSC adopts a highly modular architecture with 17 core modules, enabling on-dema
 | **device** | Device control, discovery, and intelligent scheduling |
 | **fs** | Secure file system operations and management |
 | **gateway** | API gateway with load balancing, rate limiting, and circuit breaking |
-| **grpc** | gRPC server and client support with Python bindings |
+| **grpc** | gRPC server and client support with Python bindings (requires `grpc` feature) |
 | **hooks** | Lifecycle event hooks (Startup, Shutdown, etc.) |
 | **log** | Structured logging with tracing context integration |
+| **module_rpc** | Inter-module RPC communication for distributed method calls |
 | **observability** | Metrics, tracing, and Grafana integration |
-| **orm** | Type-safe ORM with repository pattern, query builder, and Python bindings |
+| **database.orm** | Type-safe ORM with repository pattern, query builder, and Python bindings |
+| **protocol** | Protocol abstraction layer for multi-protocol support (requires `pyo3` feature) |
 | **queue** | Distributed queue abstraction (Kafka, RabbitMQ, Redis, Memory) |
 | **service_mesh** | Service discovery, health checking, and traffic management |
 | **validation** | Input validation and data sanitization utilities |
-| **ws** | WebSocket server support with Python bindings |
+| **ws** | WebSocket server support with Python bindings (requires `websocket` feature) |
 
 </div>
+
+> **Note**: Some modules require specific feature flags:
+> - `grpc`: gRPC support (`--features grpc`)
+> - `websocket`: WebSocket support (`--features websocket`)
+> - `protocol`: Protocol abstraction layer (`--features protocol` or `full`)
 
 ### 🚀 Key Features
 
@@ -62,6 +69,7 @@ DMSC adopts a highly modular architecture with 17 core modules, enabling on-dema
 - Full-chain TraceID/SpanID propagation
 - Baggage data transmission for business context
 - Multi-language compatibility (Java, Go, Python)
+- Automatic span creation via `#[tracing::instrument]` attribute
 
 #### 📊 Enterprise Observability
 - Native Prometheus metrics export
@@ -147,7 +155,8 @@ async fn main() -> DMSCResult<()> {
 ### Observability Example
 
 ```rust
-use dmsc::observability::*;
+use dmsc::prelude::*;
+use dmsc::observability::{DMSCTracer, DMSCSpanKind, DMSCSpanStatus};
 
 #[tracing::instrument(name = "user_service", skip(ctx))]
 async fn get_user(ctx: &DMSCServiceContext, user_id: u64) -> DMSCResult<User> {
@@ -156,13 +165,17 @@ async fn get_user(ctx: &DMSCServiceContext, user_id: u64) -> DMSCResult<User> {
 }
 ```
 
-或者使用手动 span：
+Or using DMSCTracer directly:
 
 ```rust
 use dmsc::prelude::*;
+use dmsc::observability::DMSCTracer;
 
 async fn get_user(ctx: &DMSCServiceContext, user_id: u64) -> DMSCResult<User> {
-    let _span = ctx.tracer().start_span("get_user")?;
+    let tracer = DMSCTracer::new(1.0);
+    let _span = tracer.span("get_user")
+        .with_attribute("user_id", user_id.to_string())
+        .start();
     let user = fetch_user_from_db(user_id).await?;
     Ok(user)
 }
@@ -298,6 +311,29 @@ Open source packages and their agreement information used by this project:
 | aes-gcm | Apache 2.0 |
 | ring | Apache 2.0 |
 | lazy_static | MIT |
+| libloading | MIT |
+| zeroize | MIT/Apache-2.0 |
+| secrecy | MIT |
+| data-encoding | MIT |
+| crc32fast | MIT |
+| generic-array | MIT |
+| bincode | MIT |
+| typenum | MIT |
+| html-escape | MIT |
+| rustls | Apache 2.0/MIT |
+| rustls-pemfile | Apache 2.0/MIT |
+| webpki | ISC |
+| rustls-native-certs | Apache 2.0/MIT |
+| bytes | Apache 2.0 |
+| tonic | MIT |
+| prost | Apache 2.0 |
+| tokio-stream | MIT |
+| tower | MIT |
+| async-stream | MIT |
+| tokio-tungstenite | MIT |
+| tungstenite | MPL-2.0 |
+| num-bigint | MIT/Apache-2.0 |
+| oqs | MIT/Apache-2.0 |
 
 </div>
 

@@ -42,7 +42,19 @@ use tungstenite::Message;
 mod server;
 
 #[cfg(feature = "websocket")]
+mod client;
+
+#[cfg(feature = "websocket")]
 pub use server::DMSCWSServer;
+
+#[cfg(feature = "websocket")]
+pub use client::DMSCWSClient;
+
+#[cfg(feature = "websocket")]
+pub use client::DMSCWSClientConfig;
+
+#[cfg(feature = "websocket")]
+pub use client::DMSCWSClientStats;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]

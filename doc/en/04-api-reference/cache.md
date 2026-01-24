@@ -77,7 +77,7 @@ Cache manager, responsible for specific cache operations.
 | `delete(key)` | Delete cache | `key: &str` | `DMSCResult<bool>` |
 | `exists(key)` | Check if cache exists | `key: &str` | `DMSCResult<bool>` |
 | `clear()` | Clear all cache | None | `DMSCResult<()>` |
-| `invalidate_pattern(pattern)` | Invalidate cache by pattern | `pattern: &str` | `DMSCResult<()>` |
+| `delete_by_pattern(pattern)` | Delete cache by pattern | `pattern: &str` | `DMSCResult<()>` |
 | `stats()` | Get cache statistics | None | `DMSCCacheStats` |
 | `cleanup_expired()` | Cleanup expired cache | None | `DMSCResult<usize>` |
 

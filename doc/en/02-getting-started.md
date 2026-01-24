@@ -72,14 +72,14 @@ Add DMSC to your project's `Cargo.toml` file:
 
 ```toml
 [dependencies]
-dms = { git = "https://github.com/mf2023/DMSC" }
+dmsc = { git = "https://github.com/mf2023/DMSC" }
 tokio = { version = "1.0", features = ["full"] }
 ```
 
 Or use the `cargo add` command:
 
 ```bash
-cargo add dms --git https://github.com/mf2023/DMSC
+cargo add dmsc --git https://github.com/mf2023/DMSC
 cargo add tokio --features full
 ```
 
@@ -90,7 +90,7 @@ Simply add DMSC to your existing project's `Cargo.toml` file:
 ```toml
 [dependencies]
 # Other dependencies
-dms = { git = "https://github.com/mf2023/DMSC" }
+dmsc = { git = "https://github.com/mf2023/DMSC" }
 ```
 
 ### Using Python SDK
@@ -193,7 +193,7 @@ from dmsc import DMSCAppBuilder, DMSCLogConfig
 # Build the service runtime
 app = DMSCAppBuilder() \
     .with_config("config.yaml") \
-    .with_logging(DMSCLogConfig.default()) \
+    .with_logging(DMSCLogConfig()) \
     .build()
 
 # Run business logic

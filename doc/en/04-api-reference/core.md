@@ -41,6 +41,7 @@ Application builder for configuring and building DMSC applications.
 | `with_observability(config)` | Set observability configuration | `config: DMSCObservabilityConfig` | `DMSCResult<Self>` |
 | `with_module(module)` | Add internal synchronous module | `module: Box<dyn ServiceModule>` | `Self` |
 | `with_async_module(module)` | Add internal asynchronous module | `module: Box<dyn AsyncServiceModule>` | `Self` |
+| `with_python_module(module)` | Add Python module (requires pyo3 feature) | `module: DMSCPythonModuleAdapter` | `Self` |
 | `with_dms_module(module)` | Add custom asynchronous module | `module: Box<dyn DMSCModule>` | `Self` |
 | `with_modules(modules)` | Add multiple internal synchronous modules | `modules: Vec<Box<dyn ServiceModule>>` | `Self` |
 | `with_async_modules(modules)` | Add multiple internal asynchronous modules | `modules: Vec<Box<dyn AsyncServiceModule>>` | `Self` |

@@ -140,6 +140,7 @@ pub enum DMSCLoadBalancerStrategy {
 /// This struct contains all the configuration and state information for a backend server,
 /// including its ID, URL, weight, max connections, health check path, and health status.
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+#[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 pub struct DMSCBackendServer {
     /// Unique identifier for the server
     pub id: String,
@@ -160,19 +161,10 @@ pub struct DMSCBackendServer {
     pub is_healthy: bool,
 }
 
+#[cfg_attr(feature = "pyo3", pyo3::prelude::pymethods)]
 impl DMSCBackendServer {
-    /// Creates a new backend server with default settings.
-    /// 
-    /// # Parameters
-    /// 
-    /// - `id`: Unique identifier for the server
-    /// - `url`: Base URL of the server
-    /// 
-    /// # Returns
-    /// 
-    /// A new `DMSCBackendServer` instance with default settings
-    /// (weight = 1, max_connections = 100, health_check_path = "/health", is_healthy = true)
-    pub fn new(id: String, url: String) -> Self {
+    #[new]
+    fn new(id: String, url: String) -> Self {
         Self {
             id,
             url,
@@ -183,46 +175,16 @@ impl DMSCBackendServer {
         }
     }
 
-    /// Sets the weight for this server.
-    /// 
-    /// # Parameters
-    /// 
-    /// - `weight`: Weight to assign to the server
-    /// 
-    /// # Returns
-    /// 
-    /// The modified `DMSCBackendServer` instance for method chaining
-    pub fn with_weight(mut self, weight: u32) -> Self {
+    fn set_weight(&mut self, weight: u32) {
         self.weight = weight;
-        self
     }
 
-    /// Sets the maximum number of concurrent connections for this server.
-    /// 
-    /// # Parameters
-    /// 
-    /// - `max_connections`: Maximum number of concurrent connections allowed
-    /// 
-    /// # Returns
-    /// 
-    /// The modified `DMSCBackendServer` instance for method chaining
-    pub fn with_max_connections(mut self, max_connections: usize) -> Self {
+    fn set_max_connections(&mut self, max_connections: usize) {
         self.max_connections = max_connections;
-        self
     }
 
-    /// Sets the health check path for this server.
-    /// 
-    /// # Parameters
-    /// 
-    /// - `path`: Path to use for health checks (e.g., "/health")
-    /// 
-    /// # Returns
-    /// 
-    /// The modified `DMSCBackendServer` instance for method chaining
-    pub fn with_health_check_path(mut self, path: String) -> Self {
+    fn set_health_check_path(&mut self, path: String) {
         self.health_check_path = path;
-        self
     }
 }
 
@@ -337,10 +299,11 @@ impl ServerStats {
 }
 
 /// Load balancer server statistics for monitoring and reporting.
-/// 
+///
 /// This struct contains metrics for a backend server, providing insights into its
 /// performance, load, and reliability.
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+#[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 pub struct LoadBalancerServerStats {
     /// Number of currently active connections to the server
     pub active_connections: usize,

@@ -277,9 +277,116 @@ let query = QueryBuilder::new()
 let results = db.query(&query).await?;
 ```
 
+### TableDefinition
+
+Table definition structure for schema management.
+
+```rust
+use dmsc::database::orm::{TableDefinition, ColumnDefinition, ColumnType};
+
+let table = TableDefinition::new("users");
+table.add_column(ColumnDefinition::new("id", ColumnType::BigInt).primary_key(true));
+table.add_column(ColumnDefinition::new("name", ColumnType::VarChar(255)));
+table.add_column(ColumnDefinition::new("email", ColumnType::VarChar(255)).unique(true));
+table.set_primary_key(vec!["id".to_string()]);
+
+let sql = table.get_create_sql();
+println!("{}", sql);
+```
+
+### ColumnDefinition
+
+Column definition structure.
+
+| Field | Type | Description |
+|:--------|:-----|:-------------|
+| `name` | `String` | Column name |
+| `column_type` | `ColumnType` | Column type |
+| `is_nullable` | `bool` | Whether nullable |
+| `is_primary_key` | `bool` | Whether primary key |
+| `is_unique` | `bool` | Whether unique |
+| `default_value` | `Option<String>` | Default value |
+
+### Criteria
+
+Query condition for building WHERE clauses.
+
+```rust
+use dmsc::database::orm::{Criteria, ComparisonOperator, LogicalOperator};
+
+let criteria = Criteria::new("age", ComparisonOperator::GreaterThan, serde_json::json!(18));
+let criteria2 = Criteria::new("status", ComparisonOperator::Equal, serde_json::json!("active"));
+```
+
+### JoinClause
+
+Join clause for building JOIN queries.
+
+```rust
+use dmsc::database::orm::{JoinClause, JoinType};
+
+let join = JoinClause::new(
+    "orders",
+    JoinType::Inner,
+    "user_id",
+    "id"
+);
+```
+
+### LogicalOperator
+
+Logical operator for combining criteria.
+
+#### Variants
+
+| Variant | Description |
+|:--------|:-------------|
+| `And` | AND operator |
+| `Or` | OR operator |
+
+### ComparisonOperator
+
+Comparison operator for WHERE clauses.
+
+#### Variants
+
+| Variant | Description |
+|:--------|:-------------|
+| `Equal` | = |
+| `NotEqual` | != |
+| `GreaterThan` | > |
+| `LessThan` | < |
+| `GreaterThanOrEqual` | >= |
+| `LessThanOrEqual` | <= |
+| `Like` | LIKE |
+| `In` | IN |
+| `NotIn` | NOT IN |
+| `IsNull` | IS NULL |
+| `IsNotNull` | IS NOT NULL |
+
+### Pagination
+
+Pagination information for query results.
+
+| Field | Type | Description |
+|:--------|:-----|:-------------|
+| `page` | `u64` | Current page number (1-based) |
+| `page_size` | `u64` | Number of items per page |
+
+### SortOrder
+
+Sort order enum.
+
+#### Variants
+
+| Variant | Description |
+|:--------|:-------------|
+| `Asc` | Ascending order |
+| `Desc` | Descending order |
+
 ### DMSCORMSimpleRepository
 
-Simple ORM repository, providing basic CRUD operations.
+Simple ORM repository, providing basic CRUD operations。
 
 #### Methods
 

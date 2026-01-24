@@ -132,18 +132,22 @@ impl DMSCRedisQueue {
 
     /// Creates a new Redis queue instance with an existing connection.
     ///
+    /// Note: This implementation currently creates a new client using a connection string.
+    /// The provided connection parameter is not used directly due to architecture constraints.
+    /// Consider using `new_with_client` if you have an existing Client, or `new` with a connection string.
+    ///
     /// # Parameters
     ///
     /// - `name`: The name of the queue (Redis key)
-    /// - `_connection`: The existing Redis connection (unused in this implementation)
+    /// - `_connection`: The existing Redis connection (not used in current implementation)
     ///
     /// # Returns
     ///
     /// A new DMSCRedisQueue instance wrapped in DMSCResult
     pub async fn new_with_connection(name: &str, _connection: redis::aio::MultiplexedConnection) -> DMSCResult<Self> {
-        // Create a new client for this connection (since we need to store client, not connection)
-        // This is a workaround - in production, you might want to refactor to store connections instead
-        let client = Client::open("redis://localhost:6379")?; // This will be overridden by the connection pool
+        // Note: Connection parameter is reserved for future use when architecture supports it
+        // Currently using default connection string as placeholder
+        let client = Client::open("redis://localhost:6379")?;
         Ok(Self {
             name: name.to_string(),
             client: Arc::new(client),

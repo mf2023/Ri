@@ -204,32 +204,57 @@ class TestDMSCDeviceController(unittest.TestCase):
 
 
 class TestDMSCDeviceCapabilities(unittest.TestCase):
-    """
-    Test suite for DMSCDeviceCapabilities class.
-
+    """Test suite for DMSCDeviceCapabilities class.
+    
     The DMSCDeviceCapabilities class describes the features and limits
     of a device. Capabilities determine what operations are supported
     and at what performance levels.
-
+    
     Capability Categories:
     - Operations: Supported commands and modes
     - Performance: Speed, throughput, latency
     - Resources: Memory, storage, power
     - Limits: Temperature, pressure, etc.
-
+    
     Capability Discovery:
     Capabilities are typically discovered during device initialization
     and used to validate command requests.
-
+    
+    Common Capabilities:
+    - BATTERY: Device has battery (reports level)
+    - BRIGHTNESS: Light supports brightness control
+    - COLOR: Light supports color control
+    - COLOR_TEMP: Light supports color temperature
+    - MOTION: Sensor detects motion
+    - TEMPERATURE: Sensor reports temperature
+    - HUMIDITY: Sensor reports humidity
+    - LOCK: Device can lock/unlock
+    
+    Capability Checking:
+    - has_capability(): Check if specific capability exists
+    - get_capabilities(): Get all capabilities
+    - add_capability(): Add capability to device
+    - remove_capability(): Remove capability from device
+    
+    Capability Inheritance:
+    - Base capabilities for device type
+    - Extended capabilities from device features
+    - Dynamic capabilities based on firmware
+    
     Test Methods:
     - test_device_capabilities_new: Verify capabilities instantiation
     """
 
     def test_device_capabilities_new(self):
         """Test creating device capabilities.
-
+        
         A capabilities object represents the feature set of a device
         and is used to validate operations.
+        
+        Expected Behavior:
+        - Constructor completes without errors
+        - Returns a valid capabilities instance
+        - Capabilities is ready for configuration
         """
         caps = DMSCDeviceCapabilities()
         self.assertIsNotNone(caps)
@@ -292,6 +317,60 @@ class TestDMSCDeviceControlConfig(unittest.TestCase):
         """
         config = DMSCDeviceControlConfig()
         self.assertIsNotNone(config)
+
+
+class TestDMSCDeviceCommand(unittest.TestCase):
+    """Test suite for DMSCDeviceCommand class.
+    
+    The DMSCDeviceCommand class represents a command that can be sent
+    to a device for execution. Commands enable remote control and
+    automation of device actions.
+    
+    Command Structure:
+    - Command Type: Action to perform (on, off, set_value, etc.)
+    - Parameters: Additional parameters for the command
+    - Target Device: Device identifier for command delivery
+    - Execution ID: Unique identifier for tracking
+    
+    Command Types:
+    - POWER_ON: Turn device on
+    - POWER_OFF: Turn device off
+    - SET_VALUE: Set a specific value (brightness, temperature, etc.)
+    - GET_STATUS: Request current device status
+    - TOGGLE: Toggle between on/off states
+    - LOCK/UNLOCK: For lock devices
+    - OPEN/CLOSE: For door/window devices
+    
+    Command Lifecycle:
+    1. Create: Build command with parameters
+    2. Send: Transmit to device
+    3. Execute: Device processes command
+    4. Response: Device sends result back
+    5. Complete: Command execution finished
+    
+    Command Properties:
+    - command_type: Type of command to execute
+    - device_id: Target device identifier
+    - parameters: Command-specific parameters
+    - timeout: Maximum time to wait for response
+    
+    Test Methods:
+    - test_device_command_new: Verify command creation
+    """
+
+    def test_device_command_new(self):
+        """Test creating a new device command.
+        
+        This test verifies that DMSCDeviceCommand can be instantiated.
+        The command is ready to be configured and sent.
+        
+        Expected Behavior:
+        - Constructor completes without errors
+        - Returns a valid command instance
+        - Command is ready for configuration
+        """
+        command = DMSCDeviceCommand()
+        self.assertIsNotNone(command)
 
 
 class TestDMSCRequestSlaClass(unittest.TestCase):

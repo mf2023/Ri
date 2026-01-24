@@ -38,7 +38,7 @@ The main interface for the authentication module, providing unified access to au
 | `jwt_manager()` | Get JWT manager | None | `Arc<DMSCJWTManager>` |
 | `permission_manager()` | Get permission manager | None | `Arc<DMSCPermissionManager>` |
 | `session_manager()` | Get session manager | None | `Arc<DMSCSessionManager>` |
-| `oauth_manager(provider)` | Get OAuth manager | `provider: &str` | `Option<Arc<DMSCOAuthManager>>` |
+| `oauth_manager()` | Get OAuth manager | None | `Arc<RwLock<DMSCOAuthManager>>` |
 
 #### Usage Example
 
@@ -77,10 +77,11 @@ let permission_manager = ctx.module::<DMSCAuthModule>().await?
 let has_access = permission_manager.check_permission(&user.role, "admin").await?;
 
 // OAuth2 flow
-let auth_url = ctx.module::<DMSCAuthModule>().await?
-    .oauth_manager("github")
-    .unwrap()
-    .get_auth_url("state123").await?;
+let oauth_manager = ctx.module::<DMSCAuthModule>().await?
+    .oauth_manager();
+    
+let auth_url = oauth_manager.write().await
+    .get_auth_url("github", "state123").await?;
 ```
 
 ### DMSCJWTManager
@@ -117,23 +118,31 @@ Authentication module configuration structure.
 
 | Field | Type | Description | Default |
 |:--------|:--------|:-------------|:--------|
+| `enabled` | `bool` | Whether authentication is enabled | `true` |
 | `jwt_secret` | `String` | JWT signing key | Auto-generated |
-| `jwt_issuer` | `String` | JWT issuer | "dms" |
 | `jwt_expiry_secs` | `u64` | JWT expiration time (seconds) | 3600 |
-| `jwt_refresh_expiry_secs` | `u64` | Refresh token expiration time (seconds) | 86400 |
-| `oauth_managers` | `HashMap<String, DMSCOAuthConfig>` | OAuth manager configuration | Empty |
-| `permission_rules` | `HashMap<String, Vec<String>>` | Permission rules | Default rules |
+| `session_timeout_secs` | `u64` | Session timeout (seconds) | 86400 |
+| `oauth_providers` | `Vec<String>` | List of OAuth providers | Empty list |
+| `enable_api_keys` | `bool` | Whether API key authentication is enabled | `true` |
+| `enable_session_auth` | `bool` | Whether session authentication is enabled | `true` |
+| `oauth_cache_backend_type` | `DMSCCacheBackendType` | OAuth cache backend type | `Memory` |
+| `oauth_cache_redis_url` | `String` | OAuth cache Redis URL | `"redis://127.0.0.1:6379"` |
 
 #### Usage Example
 
 ```rust
 let auth_config = DMSCAuthConfig {
+    enabled: true,
     jwt_secret: "your-secret-key".to_string(),
-    jwt_issuer: "dms".to_string(),
     jwt_expiry_secs: 3600,
-    jwt_refresh_expiry_secs: 86400,
-    oauth_managers: HashMap::new(),
-    permission_rules: HashMap::new(),
+    session_timeout_secs: 86400,
+    oauth_providers: vec![],
+    enable_api_keys: true,
+    enable_session_auth: true,
+    #[cfg(feature = "cache")]
+    oauth_cache_backend_type: crate::cache::DMSCCacheBackendType::Memory,
+    #[cfg(feature = "cache")]
+    oauth_cache_redis_url: "redis://127.0.0.1:6379".to_string(),
 };
 ```
 

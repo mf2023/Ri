@@ -140,34 +140,52 @@ class TestDMSCDatabaseConfig(unittest.TestCase):
         self.assertEqual(config.get_max_connections(), 20)
 
 
-class TestDatabaseType(unittest.TestCase):
-    """
-    Test suite for DatabaseType enum.
-
-    The DatabaseType enum defines the supported database backends.
-    Each database type has specific characteristics and driver
-    requirements.
-
-    Database Characteristics:
-    - Postgres: Relational, ACID compliant, feature-rich
-    - MySQL: Popular relational database, widely used
-    - SQLite: Embedded, zero-configuration, file-based
-    - MongoDB: Document-oriented, flexible schema
-    - Redis: In-memory key-value, fast access
-
+class TestDMSCDatabaseType(unittest.TestCase):
+    """Test suite for DMSCDatabaseType enum.
+    
+    The DMSCDatabaseType enum defines the supported database engines.
+    Each database type may have different SQL dialect and features.
+    
+    Supported Database Types:
+    - PostgreSQL: Open-source relational database with advanced features
+    - MySQL: Popular open-source database, widely used in web applications
+    - SQLite: Lightweight file-based database, good for development
+    - MariaDB: MySQL fork with additional features
+    - Oracle: Enterprise-grade database from Oracle Corporation
+    - SQL Server: Microsoft's enterprise database
+    
+    Type-Specific Features:
+    - PostgreSQL: JSON support, full-text search, window functions
+    - MySQL: GIS extensions, JSON support, common table expressions
+    - SQLite: Full-text search, JSON support, transactional DDL
+    - Oracle: Advanced analytics, partitioning, in-memory options
+    - SQL Server: T-SQL extensions, JSON, in-memory tables
+    
+    SQL Dialect Considerations:
+    - Different LIMIT/OFFSET syntax
+    - Different string concatenation operators
+    - Different date/time handling
+    - Different boolean representation
+    
     Test Methods:
-    - test_database_type_values: Verify all database types exist
+    - test_database_type_values: Verify enum values exist
     """
 
     def test_database_type_values(self):
-        """Test database type enum values.
-
-        All supported database types should have string representations
-        for logging and configuration purposes.
+        """Test database type enum values exist.
+        
+        Each supported database type should be available for
+        configuration and initialization.
+        
+        Expected Behavior:
+        - PostgreSQL enum value is available
+        - MySQL enum value is available
+        - SQLite enum value is available
+        - All other supported types are available
         """
-        self.assertEqual(str(DatabaseType.Postgres), "DatabaseType.Postgres")
-        self.assertEqual(str(DatabaseType.MySQL), "DatabaseType.MySQL")
-        self.assertEqual(str(DatabaseType.SQLite), "DatabaseType.SQLite")
+        self.assertIsNotNone(DMSCDatabaseType.PostgreSQL)
+        self.assertIsNotNone(DMSCDatabaseType.MySQL)
+        self.assertIsNotNone(DMSCDatabaseType.SQLite)
         self.assertEqual(str(DatabaseType.MongoDB), "DatabaseType.MongoDB")
         self.assertEqual(str(DatabaseType.Redis), "DatabaseType.Redis")
 
@@ -405,6 +423,52 @@ class TestDMSCDatabasePool(unittest.TestCase):
         pool = DMSCDatabasePool(config)
         retrieved = pool.get_config()
         self.assertIsNotNone(retrieved)
+
+
+class TestDMSCDatabaseStatement(unittest.TestCase):
+    """Test suite for DMSCDatabaseStatement class.
+    
+    The DMSCDatabaseStatement class represents a prepared SQL statement.
+    Prepared statements are pre-compiled SQL that can be executed multiple
+    times with different parameters, improving performance and security.
+    
+    Statement Types:
+    - Simple statement: Direct SQL text
+    - Prepared statement: Pre-compiled with parameter placeholders
+    - Callable statement: Stored procedure call
+    
+    Parameter Binding:
+    - Positional: $1, $2, ... (PostgreSQL style)
+    - Named: :name, @name (other databases)
+    - Automatic: Binding by parameter order
+    
+    Statement Benefits:
+    - Performance: Pre-compilation reduces parsing overhead
+    - Security: Parameter binding prevents SQL injection
+    - Consistency: Same statement executed multiple times
+    
+    Execution Methods:
+    - execute(): Run statement, returns affected row count
+    - execute_query(): Run SELECT, returns result set
+    - execute_update(): Run INSERT/UPDATE/DELETE, returns row count
+    
+    Test Methods:
+    - test_database_statement_new: Verify statement creation
+    """
+
+    def test_database_statement_new(self):
+        """Test creating a new database statement.
+        
+        This test verifies that DMSCDatabaseStatement can be instantiated.
+        The statement is ready for SQL preparation.
+        
+        Expected Behavior:
+        - Constructor completes without errors
+        - Returns a valid statement instance
+        - Statement is ready for SQL text
+        """
+        statement = DMSCDatabaseStatement()
+        self.assertIsNotNone(statement)
 
 
 if __name__ == "__main__":

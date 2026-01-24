@@ -537,7 +537,32 @@ async fn test_memory_cache_stats() {
     assert_eq!(updated_stats.misses, initial_stats.misses + 1);
 }
 
-#[tokio::test]
+/// Tests DMSCMemoryCache cleanup of expired entries.
+///
+/// Verifies that the cleanup operation correctly identifies and removes
+/// expired entries from the cache, returning the count of cleaned entries.
+///
+/// ## Test Scenarios
+///
+/// 1. **Automatic expiration**: Entries with TTL are automatically expired
+/// 2. **Cleanup trigger**: cleanup_expired() removes all expired entries
+/// 3. **Return value**: Returns the count of entries removed
+/// 4. **Post-cleanup state**: Expired entries are no longer accessible
+///
+/// ## Test Steps
+///
+/// 1. Create a new in-memory cache
+/// 2. Set a value with a very short TTL (1 second)
+/// 3. Wait for the TTL to expire (2 seconds)
+/// 4. Call cleanup_expired() to remove expired entries
+/// 5. Verify the cleaned count is at least 1
+/// 6. Verify the expired key no longer exists
+///
+/// ## Expected Behavior
+///
+/// - cleanup_expired() returns the number of entries removed
+/// - After cleanup, expired entries are not accessible
+/// - The cache state reflects the removal of expired entries
 async fn test_memory_cache_cleanup_expired() {
     let cache = DMSCMemoryCache::new();
     
@@ -553,7 +578,31 @@ async fn test_memory_cache_cleanup_expired() {
     assert!(!cache.exists(key).await);
 }
 
-#[tokio::test]
+/// Tests DMSCCacheManager typed get/set operations.
+///
+/// Verifies that the cache manager correctly stores and retrieves
+/// values of different types using generic type parameters.
+///
+/// ## Test Scenarios
+///
+/// 1. **String values**: Store and retrieve string data
+/// 2. **Integer values**: Store and retrieve numeric data
+/// 3. **Type safety**: Generic type parameter ensures correct deserialization
+///
+/// ## Test Steps
+///
+/// 1. Create a memory cache backend wrapped in Arc
+/// 2. Create a cache manager with the backend
+/// 3. Test string value: set and get
+/// 4. Verify the retrieved string matches the original
+/// 5. Test integer value: set and get
+/// 6. Verify the retrieved integer matches the original
+///
+/// ## Expected Behavior
+///
+/// - String values are correctly stored and retrieved
+/// - Integer values are correctly stored and retrieved
+/// - Type parameter ensures correct deserialization
 async fn test_cache_manager_get_set() {
     // Create a memory cache backend
     let backend = std::sync::Arc::new(DMSCMemoryCache::new());
@@ -601,7 +650,33 @@ async fn test_cache_manager_delete() {
     assert!(manager.get::<String>(key).await.unwrap().is_none());
 }
 
-#[tokio::test]
+/// Tests DMSCCacheManager exists operation.
+///
+/// Verifies that the cache manager correctly checks for the
+/// existence of entries in the underlying cache backend.
+///
+/// ## Test Scenarios
+///
+/// 1. **Non-existent key**: exists returns false for unknown keys
+/// 2. **Existing key**: exists returns true for stored keys
+/// 3. **After deletion**: exists returns false for deleted keys
+///
+/// ## Test Steps
+///
+/// 1. Create a memory cache backend wrapped in Arc
+/// 2. Create a cache manager with the backend
+/// 3. Verify non-existent key returns false
+/// 4. Store a value in the cache
+/// 5. Verify the key now returns true
+/// 6. Delete the key from the cache
+/// 7. Verify the key now returns false again
+///
+/// ## Expected Behavior
+///
+/// - exists() returns false for non-existent keys
+/// - exists() returns true for stored keys
+/// - exists() returns false for deleted keys
+/// - The cache manager correctly delegates to the backend
 async fn test_cache_manager_exists() {
     // Create a memory cache backend
     let backend = std::sync::Arc::new(DMSCMemoryCache::new());
@@ -622,7 +697,33 @@ async fn test_cache_manager_exists() {
     assert!(!manager.exists(key).await);
 }
 
-#[tokio::test]
+/// Tests DMSCCacheManager get_or_set lazy value generation.
+///
+/// Verifies that the get_or_set method correctly implements
+/// "get or create" semantics, returning cached values when
+/// available and generating new values only when needed.
+///
+/// ## Test Scenarios
+///
+/// 1. **Cache miss**: Value is generated using the provided closure
+/// 2. **Cache hit**: Cached value is returned, generator is not called
+/// 3. **Idempotency**: The generator is only called once per cache miss
+///
+/// ## Test Steps
+///
+/// 1. Create a memory cache backend wrapped in Arc
+/// 2. Create a cache manager with the backend
+/// 3. Call get_or_set with a key and generator closure
+/// 4. Verify the result matches the generated value
+/// 5. Call get_or_set again with the same key and a different generator
+/// 6. Verify the cached value is returned, not the new generator result
+///
+/// ## Expected Behavior
+///
+/// - First call generates the value using the closure
+/// - Second call returns the cached value
+/// - The generator is only called on cache miss
+/// - Cached value takes precedence over new generator output
 async fn test_cache_manager_get_or_set() {
     // Create a memory cache backend
     let backend = std::sync::Arc::new(DMSCMemoryCache::new());

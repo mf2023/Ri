@@ -263,6 +263,104 @@ Resource pool status.
 
 <div align="center">
 
+## Resource Scheduling
+
+</div>
+
+### DMSCResourceScheduler
+
+Resource scheduler for device management. Manages resource allocations and maintains allocation history.
+
+```rust
+use dmsc::device::scheduler::DMSCResourceScheduler;
+
+let scheduler = DMSCResourceScheduler::new();
+```
+
+### DMSCDeviceScheduler
+
+Device scheduler - manages device resource allocation and scheduling using various algorithms.
+
+```rust
+use dmsc::device::scheduler::{DMSCDeviceScheduler, DMSCSchedulingPolicy};
+use dmsc::device::pool::DMSCResourcePoolManager;
+
+let pool_manager = DMSCResourcePoolManager::new();
+let scheduler = DMSCDeviceScheduler::new(pool_manager);
+```
+
+### DMSCSchedulingPolicy
+
+Scheduling policy enum - defines different algorithms for device selection.
+
+#### Variants
+
+| Variant | Description |
+|:--------|:-------------|
+| `FirstFit` | Select the first device that meets requirements |
+| `BestFit` | Select the device that best matches the requirements |
+| `WorstFit` | Select the device with the most remaining capacity |
+| `RoundRobin` | Select devices in rotation |
+| `PriorityBased` | Select device based on request priority and device health |
+| `LoadBalanced` | Select device with lowest current load |
+
+### DMSCAllocationRecord
+
+Allocation record - details of a device allocation.
+
+| Field | Type | Description |
+|:--------|:-----|:-------------|
+| `allocation_id` | `String` | Unique allocation identifier |
+| `device_id` | `String` | ID of the allocated device |
+| `device_type` | `DMSCDeviceType` | Type of the allocated device |
+| `allocated_at` | `DateTime<Utc>` | Time when the device was allocated |
+| `released_at` | `Option<DateTime<Utc>>` | Time when the device was released |
+| `duration_seconds` | `Option<f64>` | Duration of the allocation in seconds |
+| `success` | `bool` | Whether the allocation was successful |
+| `capabilities_required` | `DMSCDeviceCapabilities` | Capabilities required |
+
+### DMSCAllocationStatistics
+
+Allocation statistics - comprehensive metrics about device allocations.
+
+| Field | Type | Description |
+|:--------|:-----|:-------------|
+| `total_allocations` | `usize` | Total number of allocations |
+| `successful_allocations` | `usize` | Number of successful allocations |
+| `failed_allocations` | `usize` | Number of failed allocations |
+| `success_rate` | `f64` | Success rate as a percentage (0.0-100.0) |
+| `average_duration_seconds` | `f64` | Average duration in seconds |
+| `by_device_type` | `HashMap<DMSCDeviceType, DMSCDeviceTypeStatistics>` | Statistics by device type |
+
+### DMSCSchedulingRecommendation
+
+Scheduling recommendation - suggestion for optimizing scheduling.
+
+| Field | Type | Description |
+|:--------|:-----|:-------------|
+| `recommendation_type` | `DMSCSchedulingRecommendationType` | Type of recommendation |
+| `description` | `String` | Human-readable description |
+| `priority` | `u8` | Priority (1-10, higher = more important) |
+| `confidence` | `f64` | Confidence (0.0-1.0) |
+
+### DMSCSchedulingRecommendationType
+
+Scheduling recommendation types.
+
+#### Variants
+
+| Variant | Description |
+|:--------|:-------------|
+| `UseDefaultPolicy` | Use the default policy for this device type |
+| `ContinueCurrentPolicy` | Continue using the current policy |
+| `ConsiderPolicyChange` | Consider changing the scheduling policy |
+| `OptimizeForLongRunning` | Optimize for long-running allocations |
+| `OptimizeForShortRunning` | Optimize for short-running allocations |
+| `LoadBalance` | Use load balancing |
+| `Prioritize` | Use priority-based scheduling |
+
+<div align="center">
+
 ## Device Discovery
 
 </div>

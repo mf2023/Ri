@@ -4,7 +4,7 @@
 //! The DMSC project belongs to the Dunimd Team.
 //!
 //! Licensed under the Apache License, Version 2.0 (the "License");
-//! you may not use this file except in compliance with the License.
+//! You may not use this file except in compliance with the License.
 //! You may obtain a copy of the License at
 //!
 //!     http://www.apache.org/licenses/LICENSE-2.0
@@ -81,10 +81,44 @@ impl DMSCGrpcClient {
         *self.connected.read().await
     }
 
-    pub async fn call(&self, _method: &str, _data: &[u8]) -> DMSCResult<Vec<u8>> {
-        Err(GrpcError::Client {
-            message: "gRPC client call not yet implemented".to_string()
-        }.into())
+    pub async fn call(&mut self, method: &str, data: &[u8]) -> DMSCResult<Vec<u8>> {
+        let channel = match &self.channel {
+            Some(ch) => ch.clone(),
+            None => {
+                return Err(GrpcError::Client {
+                    message: "Not connected to gRPC server".to_string()
+                }.into());
+            }
+        };
+
+        if !*self.connected.read().await {
+            return Err(GrpcError::Client {
+                message: "gRPC client not connected".to_string()
+            }.into());
+        }
+
+        let request = tonic::Request::new(data.to_vec());
+        let method_path = format!("{}", method);
+
+        let response = channel
+            .ready()
+            .await
+            .map_err(|e| GrpcError::Client {
+                message: format!("Channel not ready: {}", e)
+            })?
+            .call(request)
+            .await
+            .map_err(|e| GrpcError::Client {
+                message: format!("RPC call failed: {}", e)
+            })?;
+
+        let response_data = response.into_inner();
+
+        let mut stats = self.stats.write().await;
+        stats.record_request(data.len());
+        stats.record_response(response_data.len());
+
+        Ok(response_data)
     }
 
     pub async fn disconnect(&mut self) {

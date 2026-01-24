@@ -215,7 +215,8 @@ struct ServiceDiscoveryCacheEntry {
 
 /// Service mesh statistics.
 #[derive(Debug, Clone)]
-pub struct ServiceMeshStats {
+#[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
+pub struct DMSCServiceMeshStats {
     /// Total number of registered services
     pub total_services: usize,
     /// Total number of registered endpoints
@@ -353,14 +354,14 @@ impl DMSCServiceMesh {
     }
     
     /// Gets service mesh statistics.
-    pub async fn get_stats(&self) -> ServiceMeshStats {
+    pub async fn get_stats(&self) -> DMSCServiceMeshStats {
         let services = self.services.read().await;
         let healthy_count = services.values()
             .flat_map(|endpoints| endpoints.iter())
             .filter(|ep| ep.health_status == DMSCServiceHealthStatus::Healthy)
             .count();
         
-        ServiceMeshStats {
+        DMSCServiceMeshStats {
             total_services: services.len(),
             total_endpoints: services.values().map(|v| v.len()).sum(),
             healthy_endpoints: healthy_count,

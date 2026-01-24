@@ -97,7 +97,7 @@ cd dms-example
 
 ```toml
 [dependencies]
-dms = { git = "https://github.com/mf2023/DMSC" }
+dmsc = { git = "https://github.com/mf2023/DMSC" }
 tokio = { version = "1.0", features = ["full"] }
 ```
 

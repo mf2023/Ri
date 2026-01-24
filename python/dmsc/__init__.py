@@ -108,15 +108,16 @@ from .dmsc import (
     DMSCRateLimiter, DMSCRateLimitConfig, RateLimitStats,
     DMSCSlidingWindowRateLimiter, DMSCCircuitBreaker, DMSCCircuitBreakerConfig,
     DMSCCircuitBreakerState, CircuitBreakerMetrics,
+    DMSCBackendServer, LoadBalancerServerStats,
     
     # =============================================================================
     # Service mesh classes - Service discovery, traffic routing, load balancing,
     # weighted destinations, and traffic splitting for microservices architecture
     # =============================================================================
     DMSCServiceMesh, DMSCServiceMeshConfig, DMSCServiceDiscovery,
-    DMSCServiceInstance, DMSCServiceStatus,
+    DMSCServiceInstance, DMSCServiceStatus, DMSCServiceMeshStats,
     DMSCTrafficRoute, DMSCMatchCriteria, DMSCRouteAction, DMSCWeightedDestination,
-    DMSCTrafficManager,
+    DMSCTrafficManager, DMSCHealthChecker,
     
     # =============================================================================
     # Auth classes - Authentication and authorization including JWT management,
@@ -139,6 +140,9 @@ from .dmsc import (
     DMSCAffinityRules,
     DMSCResourcePool, DMSCResourcePoolConfig, DMSCResourcePoolStatistics, DMSCResourcePoolManager,
     DMSCConnectionPoolStatistics,
+    DMSCResourceScheduler, DMSCDeviceScheduler, DMSCSchedulingPolicy,
+    DMSCAllocationRecord, DMSCAllocationRequest, DMSCAllocationStatistics,
+    DMSCDeviceTypeStatistics, DMSCSchedulingRecommendation, DMSCSchedulingRecommendationType,
     
     # =============================================================================
     # Observability classes - Metrics, tracing, and health monitoring for system
@@ -166,12 +170,16 @@ from .dmsc import (
     DMSCConnectionStats, DMSCProtocolHealth,
     DMSCFrame, DMSCFrameHeader, DMSCFrameType,
     DMSCConnectionInfo, DMSCMessageFlags, DMSCSecurityLevel,
+    DMSCFrameParser, DMSCFrameBuilder,
     
     # =============================================================================
     # Database classes - Database configuration, connection pooling, row-level
     # access, and result set management across different database backends
     # =============================================================================
     DMSCDatabaseConfig, DMSCDatabasePool, DMSCDBRow, DMSCDBResult, DatabaseType,
+    ColumnDefinition, IndexDefinition, ForeignKeyDefinition,
+    TableDefinition, LogicalOperator, Criteria, JoinClause,
+    ComparisonOperator, SortOrder, Pagination, QueryBuilder, JoinType,
 )
 
 # =============================================================================
@@ -219,12 +227,13 @@ __all__ = [
     'DMSCRateLimiter', 'DMSCRateLimitConfig', 'RateLimitStats',
     'DMSCSlidingWindowRateLimiter', 'DMSCCircuitBreaker', 'DMSCCircuitBreakerConfig',
     'DMSCCircuitBreakerState', 'CircuitBreakerMetrics',
+    'DMSCBackendServer', 'LoadBalancerServerStats',
     
     # Service mesh classes - Service discovery and traffic routing
     'DMSCServiceMesh', 'DMSCServiceMeshConfig', 'DMSCServiceDiscovery',
-    'DMSCServiceInstance', 'DMSCServiceStatus',
+    'DMSCServiceInstance', 'DMSCServiceStatus', 'DMSCServiceMeshStats',
     'DMSCTrafficRoute', 'DMSCMatchCriteria', 'DMSCRouteAction', 'DMSCWeightedDestination',
-    'DMSCTrafficManager',
+    'DMSCTrafficManager', 'DMSCHealthChecker',
     
     # Auth classes - Authentication, authorization, and session management
     'DMSCAuthModule', 'DMSCAuthConfig', 'DMSCJWTManager', 'DMSCJWTClaims', 'DMSCJWTValidationOptions',
@@ -241,6 +250,9 @@ __all__ = [
     'DMSCAffinityRules',
     'DMSCResourcePool', 'DMSCResourcePoolConfig', 'DMSCResourcePoolStatistics', 'DMSCResourcePoolManager',
     'DMSCConnectionPoolStatistics',
+    'DMSCResourceScheduler', 'DMSCDeviceScheduler', 'DMSCSchedulingPolicy',
+    'DMSCAllocationRecord', 'DMSCAllocationRequest', 'DMSCAllocationStatistics',
+    'DMSCDeviceTypeStatistics', 'DMSCSchedulingRecommendation', 'DMSCSchedulingRecommendationType',
     
     # Observability classes - Metrics, tracing, and health monitoring
     'DMSCObservabilityModule', 'DMSCObservabilityConfig',
@@ -259,9 +271,13 @@ __all__ = [
     'DMSCConnectionStats', 'DMSCProtocolHealth',
     'DMSCFrame', 'DMSCFrameHeader', 'DMSCFrameType',
     'DMSCConnectionInfo', 'DMSCMessageFlags', 'DMSCSecurityLevel',
+    'DMSCFrameParser', 'DMSCFrameBuilder',
     
     # Database classes - Database configuration and connection pooling
     'DMSCDatabaseConfig', 'DMSCDatabasePool', 'DMSCDBRow', 'DMSCDBResult', 'DatabaseType',
+    'ColumnDefinition', 'IndexDefinition', 'ForeignKeyDefinition',
+    'TableDefinition', 'LogicalOperator', 'Criteria', 'JoinClause',
+    'ComparisonOperator', 'SortOrder', 'Pagination', 'QueryBuilder', 'JoinType',
     
     # Submodules - Functional submodule references
     'device', 'cache', 'fs', 'hooks', 'observability',

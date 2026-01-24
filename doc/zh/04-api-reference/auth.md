@@ -38,7 +38,7 @@ auth模块包含以下子模块：
 | `jwt_manager()` | 获取JWT管理器 | 无 | `Arc<DMSCJWTManager>` |
 | `permission_manager()` | 获取权限管理器 | 无 | `Arc<DMSCPermissionManager>` |
 | `session_manager()` | 获取会话管理器 | 无 | `Arc<DMSCSessionManager>` |
-| `oauth_manager(provider)` | 获取OAuth管理器 | `provider: &str` | `Option<Arc<DMSCOAuthManager>>` |
+| `oauth_manager()` | 获取OAuth管理器 | 无 | `Arc<RwLock<DMSCOAuthManager>>` |
 
 #### 使用示例
 
@@ -77,10 +77,11 @@ let permission_manager = ctx.module::<DMSCAuthModule>().await?
 let has_access = permission_manager.check_permission(&user.role, "admin").await?;
 
 // OAuth2流程
-let auth_url = ctx.module::<DMSCAuthModule>().await?
-    .oauth_manager("github")
-    .unwrap()
-    .get_auth_url("state123").await?;
+let oauth_manager = ctx.module::<DMSCAuthModule>().await?
+    .oauth_manager();
+    
+let auth_url = oauth_manager.write().await
+    .get_auth_url("github", "state123").await?;
 ```
 
 ### DMSCJWTManager
@@ -117,23 +118,31 @@ JWT令牌管理器，负责JWT的生成和验证。
 
 | 字段 | 类型 | 描述 | 默认值 |
 |:--------|:--------|:-------------|:--------|
+| `enabled` | `bool` | 是否启用认证 | `true` |
 | `jwt_secret` | `String` | JWT签名密钥 | 自动生成 |
-| `jwt_issuer` | `String` | JWT签发者 | "dms" |
 | `jwt_expiry_secs` | `u64` | JWT过期时间（秒） | 3600 |
-| `jwt_refresh_expiry_secs` | `u64` | 刷新令牌过期时间（秒） | 86400 |
-| `oauth_managers` | `HashMap<String, DMSCOAuthConfig>` | OAuth管理器配置 | 空 |
-| `permission_rules` | `HashMap<String, Vec<String>>` | 权限规则 | 默认规则 |
+| `session_timeout_secs` | `u64` | 会话超时时间（秒） | 86400 |
+| `oauth_providers` | `Vec<String>` | OAuth提供商列表 | 空列表 |
+| `enable_api_keys` | `bool` | 是否启用API密钥认证 | `true` |
+| `enable_session_auth` | `bool` | 是否启用会话认证 | `true` |
+| `oauth_cache_backend_type` | `DMSCCacheBackendType` | OAuth缓存后端类型 | `Memory` |
+| `oauth_cache_redis_url` | `String` | OAuth缓存Redis URL | `"redis://127.0.0.1:6379"` |
 
 #### 使用示例
 
 ```rust
 let auth_config = DMSCAuthConfig {
+    enabled: true,
     jwt_secret: "your-secret-key".to_string(),
-    jwt_issuer: "dms".to_string(),
     jwt_expiry_secs: 3600,
-    jwt_refresh_expiry_secs: 86400,
-    oauth_managers: HashMap::new(),
-    permission_rules: HashMap::new(),
+    session_timeout_secs: 86400,
+    oauth_providers: vec![],
+    enable_api_keys: true,
+    enable_session_auth: true,
+    #[cfg(feature = "cache")]
+    oauth_cache_backend_type: crate::cache::DMSCCacheBackendType::Memory,
+    #[cfg(feature = "cache")]
+    oauth_cache_redis_url: "redis://127.0.0.1:6379".to_string(),
 };
 ```
 

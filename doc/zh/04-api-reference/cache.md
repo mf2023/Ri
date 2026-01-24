@@ -77,7 +77,7 @@ let count = cache_manager.decrement("counter", 5).await?;
 | `delete(key)` | 删除缓存 | `key: &str` | `DMSCResult<bool>` |
 | `exists(key)` | 检查缓存是否存在 | `key: &str` | `DMSCResult<bool>` |
 | `clear()` | 清空所有缓存 | 无 | `DMSCResult<()>` |
-| `invalidate_pattern(pattern)` | 按模式失效缓存 | `pattern: &str` | `DMSCResult<()>` |
+| `delete_by_pattern(pattern)` | 按模式删除缓存 | `pattern: &str` | `DMSCResult<()>` |
 | `stats()` | 获取缓存统计 | 无 | `DMSCCacheStats` |
 | `cleanup_expired()` | 清理过期缓存 | 无 | `DMSCResult<usize>` |
 

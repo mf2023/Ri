@@ -29,6 +29,7 @@ use std::sync::Arc;
 
 /// Resource scheduler for device management
 #[allow(dead_code)]
+#[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 pub struct DMSCResourceScheduler {
     /// Active allocations
     allocations: Arc<RwLock<HashMap<String, DMSCResourceAllocation>>>,
@@ -36,10 +37,10 @@ pub struct DMSCResourceScheduler {
     allocation_history: Arc<RwLock<Vec<DMSCResourceAllocation>>>,
 }
 
+#[cfg_attr(feature = "pyo3", pyo3::prelude::pymethods)]
 impl DMSCResourceScheduler {
-    /// Creates a new resource scheduler
-    #[allow(dead_code)]
-    pub fn new() -> Self {
+    #[new]
+    fn new() -> Self {
         Self {
             allocations: Arc::new(RwLock::new(HashMap::new())),
             allocation_history: Arc::new(RwLock::new(Vec::new())),
@@ -110,11 +111,12 @@ impl DMSCResourceScheduler {
 /// }
 /// ```
 /// Device scheduler - manages device resource allocation and scheduling
-/// 
+///
 /// This struct implements a comprehensive device scheduling system that manages
 /// resource allocation using various scheduling algorithms. It works closely with
 /// the resource pool manager to access available devices and implements multiple
 /// scheduling policies per device type.
+#[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 pub struct DMSCDeviceScheduler {
     scheduling_policies: HashMap<DMSCDeviceType, DMSCSchedulingPolicy>,
     allocation_history: Arc<RwLock<Vec<DMSCAllocationRecord>>>,
@@ -123,30 +125,38 @@ pub struct DMSCDeviceScheduler {
 }
 
 /// Scheduling policy enum - defines different algorithms for device selection
-/// 
+///
 /// This enum defines the available scheduling policies that can be applied to different
 /// device types. Each policy implements a different algorithm for selecting devices.
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 pub enum DMSCSchedulingPolicy {
     /// FirstFit: Select the first device that meets requirements
+    #[pyo3(name = "FIRSTFIT")]
     FirstFit,
     /// BestFit: Select the device that best matches the requirements
+    #[pyo3(name = "BESTFIT")]
     BestFit,
     /// WorstFit: Select the device with the most remaining capacity
+    #[pyo3(name = "WORSTFIT")]
     WorstFit,
     /// RoundRobin: Select devices in rotation
+    #[pyo3(name = "ROUNDROBIN")]
     RoundRobin,
     /// PriorityBased: Select device based on request priority and device health
+    #[pyo3(name = "PRIORITYBASED")]
     PriorityBased,
     /// LoadBalanced: Select device with lowest current load
+    #[pyo3(name = "LOADBALANCED")]
     LoadBalanced,
 }
 
 /// Allocation record - details of a device allocation
-/// 
+///
 /// This struct records detailed information about each device allocation, including
 /// the device used, capabilities required, allocation and release times, and success status.
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 pub struct DMSCAllocationRecord {
     /// Unique allocation identifier
     pub allocation_id: String,
@@ -167,12 +177,13 @@ pub struct DMSCAllocationRecord {
 }
 
 /// Allocation request - request for device resources
-/// 
+///
 /// This struct represents a request for device resources, including the device type,
 /// required capabilities, priority, timeout, and additional scheduling hints such as
 /// SLA class, resource weights, and affinity rules. These extra fields are optional
 /// and are used only by advanced scheduling logic.
 #[derive(Debug, Clone)]
+#[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 pub struct DMSCAllocationRequest {
     /// Type of device requested
     pub device_type: DMSCDeviceType,
@@ -906,10 +917,11 @@ impl DMSCDeviceScheduler {
 }
 
 /// Allocation statistics - comprehensive metrics about device allocations
-/// 
+///
 /// This struct contains detailed statistics about device allocations, including success rates,
 /// durations, and breakdowns by device type.
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 pub struct DMSCAllocationStatistics {
     /// Total number of allocations
     pub total_allocations: usize,
@@ -926,9 +938,10 @@ pub struct DMSCAllocationStatistics {
 }
 
 /// Device type statistics - metrics for a specific device type
-/// 
+///
 /// This struct contains allocation statistics for a specific device type.
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 pub struct DMSCDeviceTypeStatistics {
     /// Total number of allocations for this device type
     pub total_allocations: usize,
@@ -939,38 +952,47 @@ pub struct DMSCDeviceTypeStatistics {
 }
 
 /// Scheduling recommendation types - categories of scheduling recommendations
-/// 
+///
 /// This enum defines the different types of scheduling recommendations that can be generated.
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 pub enum DMSCSchedulingRecommendationType {
     /// Use the default policy for this device type
+    #[pyo3(name = "USE_DEFAULT_POLICY")]
     UseDefaultPolicy,
     /// Continue using the current policy
+    #[pyo3(name = "CONTINUE_CURRENT_POLICY")]
     ContinueCurrentPolicy,
     /// Consider changing the scheduling policy
+    #[pyo3(name = "CONSIDER_POLICY_CHANGE")]
     ConsiderPolicyChange,
     /// Optimize for long-running allocations
+    #[pyo3(name = "OPTIMIZE_FOR_LONG_RUNNING")]
     OptimizeForLongRunning,
     /// Optimize for short-running allocations
+    #[pyo3(name = "OPTIMIZE_FOR_SHORT_RUNNING")]
     OptimizeForShortRunning,
     /// Use load balancing
+    #[pyo3(name = "LOAD_BALANCE")]
     LoadBalance,
     /// Use priority-based scheduling
+    #[pyo3(name = "PRIORITIZE")]
     Prioritize,
 }
 
 /// Scheduling recommendation - suggestion for optimizing scheduling
-/// 
+///
 /// This struct represents a recommendation for optimizing scheduling, including the recommendation type,
 /// description, priority, and confidence level.
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 pub struct DMSCSchedulingRecommendation {
     /// Type of recommendation
     pub recommendation_type: DMSCSchedulingRecommendationType,
     /// Human-readable description of the recommendation
     pub description: String,
     /// Priority of the recommendation (1-10, higher = more important)
-    pub priority: u8, // 1-10, higher is more important
+    pub priority: u8,
     /// Confidence in the recommendation (0.0-1.0)
-    pub confidence: f64, // 0.0-1.0, confidence in this recommendation
+    pub confidence: f64,
 }

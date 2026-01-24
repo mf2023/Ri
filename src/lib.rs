@@ -405,9 +405,6 @@ pub mod py {
         m.add_class::<crate::module_rpc::DMSCMethodCall>()?;
         m.add_class::<crate::module_rpc::DMSCMethodResponse>()?;
         
-        // Add auth types to main module
-        m.add_class::<crate::auth::DMSCAuthModule>()?;
-        
         // Add device types to main module
         m.add_class::<crate::device::DMSCDeviceControlModule>()?;
         m.add_class::<crate::device::DMSCDevice>()?;
@@ -465,6 +462,7 @@ pub mod py {
         m.add_class::<crate::device::DMSCDeviceController>()?;
         m.add_class::<crate::device::DMSCDeviceConfig>()?;
         m.add_class::<crate::device::DMSCDeviceControlConfig>()?;
+        m.add_class::<crate::device::DMSCDeviceSchedulingConfig>()?;
         m.add_class::<crate::device::NetworkDeviceInfo>()?;
         m.add_class::<crate::device::DMSCDiscoveryResult>()?;
         m.add_class::<crate::device::DMSCResourceRequest>()?;
@@ -476,6 +474,16 @@ pub mod py {
         m.add_class::<crate::device::pool::DMSCResourcePoolConfig>()?;
         m.add_class::<crate::device::pool::DMSCResourcePoolStatistics>()?;
         m.add_class::<crate::device::pool::DMSCResourcePoolManager>()?;
+        m.add_class::<crate::device::pool::DMSCConnectionPoolStatistics>()?;
+        m.add_class::<crate::device::scheduler::DMSCResourceScheduler>()?;
+        m.add_class::<crate::device::scheduler::DMSCDeviceScheduler>()?;
+        m.add_class::<crate::device::scheduler::DMSCSchedulingPolicy>()?;
+        m.add_class::<crate::device::scheduler::DMSCAllocationRecord>()?;
+        m.add_class::<crate::device::scheduler::DMSCAllocationRequest>()?;
+        m.add_class::<crate::device::scheduler::DMSCAllocationStatistics>()?;
+        m.add_class::<crate::device::scheduler::DMSCDeviceTypeStatistics>()?;
+        m.add_class::<crate::device::scheduler::DMSCSchedulingRecommendation>()?;
+        m.add_class::<crate::device::scheduler::DMSCSchedulingRecommendationType>()?;
         
         parent.add_submodule(&m)?;
         Ok(())
@@ -546,6 +554,16 @@ pub mod py {
         m.add_class::<crate::gateway::DMSCGatewayConfig>()?;
         m.add_class::<crate::gateway::DMSCRoute>()?;
         m.add_class::<crate::gateway::DMSCRouter>()?;
+        m.add_class::<crate::gateway::rate_limiter::DMSCRateLimiter>()?;
+        m.add_class::<crate::gateway::rate_limiter::DMSCRateLimitConfig>()?;
+        m.add_class::<crate::gateway::rate_limiter::RateLimitStats>()?;
+        m.add_class::<crate::gateway::rate_limiter::DMSCSlidingWindowRateLimiter>()?;
+        m.add_class::<crate::gateway::circuit_breaker::DMSCCircuitBreaker>()?;
+        m.add_class::<crate::gateway::circuit_breaker::DMSCCircuitBreakerConfig>()?;
+        m.add_class::<crate::gateway::circuit_breaker::DMSCCircuitBreakerState>()?;
+        m.add_class::<crate::gateway::circuit_breaker::CircuitBreakerMetrics>()?;
+        m.add_class::<crate::gateway::load_balancer::DMSCBackendServer>()?;
+        m.add_class::<crate::gateway::load_balancer::LoadBalancerServerStats>()?;
         parent.add_submodule(&m)?;
         Ok(())
     }
@@ -557,6 +575,7 @@ pub mod py {
         m.add_class::<crate::service_mesh::DMSCServiceDiscovery>()?;
         m.add_class::<crate::service_mesh::DMSCServiceInstance>()?;
         m.add_class::<crate::service_mesh::DMSCServiceStatus>()?;
+        m.add_class::<crate::service_mesh::DMSCServiceMeshStats>()?;
         m.add_class::<crate::service_mesh::health_check::DMSCHealthChecker>()?;
         m.add_class::<crate::service_mesh::traffic_management::DMSCTrafficManager>()?;
         parent.add_submodule(&m)?;
@@ -593,7 +612,11 @@ pub mod py {
         m.add_class::<crate::database::orm::ColumnDefinition>()?;
         m.add_class::<crate::database::orm::IndexDefinition>()?;
         m.add_class::<crate::database::orm::ForeignKeyDefinition>()?;
+        m.add_class::<crate::database::orm::TableDefinition>()?;
         m.add_class::<crate::database::orm::ComparisonOperator>()?;
+        m.add_class::<crate::database::orm::LogicalOperator>()?;
+        m.add_class::<crate::database::orm::Criteria>()?;
+        m.add_class::<crate::database::orm::JoinClause>()?;
         m.add_class::<crate::database::orm::SortOrder>()?;
         m.add_class::<crate::database::orm::Pagination>()?;
         m.add_class::<crate::database::orm::QueryBuilder>()?;
@@ -633,6 +656,8 @@ pub mod py {
         m.add_class::<crate::protocol::DMSCConnectionInfo>()?;
         m.add_class::<crate::protocol::DMSCMessageFlags>()?;
         m.add_class::<crate::protocol::DMSCSecurityLevel>()?;
+        m.add_class::<crate::protocol::frames::DMSCFrameParser>()?;
+        m.add_class::<crate::protocol::frames::DMSCFrameBuilder>()?;
         parent.add_submodule(&m)?;
         Ok(())
     }
@@ -642,6 +667,8 @@ pub mod py {
         let m = PyModule::new(parent.py(), "grpc")?;
         m.add_class::<crate::grpc::DMSCGrpcConfig>()?;
         m.add_class::<crate::grpc::DMSCGrpcStats>()?;
+        m.add_class::<crate::grpc::DMSCGrpcServiceRegistry>()?;
+        m.add_class::<crate::grpc::DMSCGrpcPythonService>()?;
         m.add_class::<crate::grpc::DMSCGrpcServiceRegistryPy>()?;
         m.add_class::<crate::grpc::DMSCGrpcServer>()?;
         m.add_class::<crate::grpc::DMSCGrpcClient>()?;
@@ -658,6 +685,9 @@ pub mod py {
         m.add_class::<crate::ws::DMSCWSPythonHandler>()?;
         m.add_class::<crate::ws::DMSCWSSessionManagerPy>()?;
         m.add_class::<crate::ws::DMSCWSServer>()?;
+        m.add_class::<crate::ws::DMSCWSClientConfig>()?;
+        m.add_class::<crate::ws::DMSCWSClientStats>()?;
+        m.add_class::<crate::ws::DMSCWSClient>()?;
         parent.add_submodule(&m)?;
         Ok(())
     }

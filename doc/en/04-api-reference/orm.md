@@ -320,7 +320,7 @@ let updated_user = repository.update(&user)?;
 repository.delete(1)?;
 ```
 
-<div align="center>
+<div align="center">
 
 ## Entity Mapping
 
@@ -437,7 +437,7 @@ try {
 }
 ```
 
-<div align="center>
+<div align="center">
 
 ## Python Support
 
@@ -485,7 +485,7 @@ count = repository.count()
 7. **Use transactions**: Wrap related operations in transactions for data consistency
 8. **Index optimization**: Create database indexes for frequently queried columns
 
-<div align="center>
+<div align="center">
 
 ## Related Modules
 

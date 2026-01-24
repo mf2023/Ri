@@ -232,7 +232,7 @@ HSM type enum.
 | `Hardware` | Hardware HSM |
 | `Cloud` | Cloud HSM |
 
-<div align="center>
+<div align="center">
 
 ## Frame Processing
 
@@ -254,6 +254,35 @@ let frame = DMSCFrameBuilder::new()
 
 let bytes = frame.to_bytes()?;
 let parsed_frame = DMSCFrame::parse(&bytes)?;
+```
+
+### DMSCFrameBuilder
+
+Frame builder for constructing protocol frames.
+
+```rust
+use dmsc::protocol::DMSCFrameBuilder;
+
+let mut builder = DMSCFrameBuilder::new();
+let control_frame = builder.build_control_frame(vec![0x01, 0x02, 0x03]).ok()?;
+let data_frame = builder.build_data_frame(b"Hello".to_vec()).ok()?;
+let auth_frame = builder.build_auth_frame(vec![0xFF]).ok()?;
+let keepalive_frame = builder.build_keepalive_frame().ok()?;
+```
+
+### DMSCFrameParser
+
+Frame parser for parsing protocol frames from byte streams.
+
+```rust
+use dmsc::protocol::frames::DMSCFrameParser;
+
+let mut parser = DMSCFrameParser::new();
+parser.add_data(received_bytes);
+
+if let Some(frame) = parser.parse_frame() {
+    println!("Received frame: {:?}", frame.header.frame_type);
+}
 ```
 
 ### DMSCFrameType

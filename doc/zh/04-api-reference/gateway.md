@@ -325,6 +325,45 @@ circuit_breaker.record_failure().await;
 
 <div align="center">
 
+## 负载均衡
+
+</div>
+
+### DMSCBackendServer
+
+后端服务器配置和状态，用于负载均衡。
+
+| 字段 | 类型 | 描述 |
+|:--------|:-----|:-------------|
+| `id` | `String` | 服务器唯一标识符 |
+| `url` | `String` | 服务器基础URL（如"http://localhost:8080"） |
+| `weight` | `u32` | 加权负载均衡的权重 |
+| `max_connections` | `usize` | 最大并发连接数 |
+| `health_check_path` | `String` | 健康检查路径 |
+| `is_healthy` | `bool` | 当前健康状态 |
+
+```rust
+use dmsc::gateway::load_balancer::DMSCBackendServer;
+
+let server = DMSCBackendServer::new("server-1".to_string(), "http://localhost:8080".to_string())
+    .with_weight(2)
+    .with_max_connections(100)
+    .with_health_check_path("/health".to_string());
+```
+
+### LoadBalancerServerStats
+
+负载均衡服务器统计信息，用于监控。
+
+| 字段 | 类型 | 描述 |
+|:--------|:-----|:-------------|
+| `active_connections` | `usize` | 当前活跃连接数 |
+| `total_requests` | `usize` | 自添加以来的总请求数 |
+| `failed_requests` | `usize` | 失败请求数 |
+| `response_time_ms` | `usize` | 最近响应时间（毫秒） |
+
+<div align="center">
+
 ## 配置
 
 </div>

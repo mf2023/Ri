@@ -67,37 +67,78 @@ from dmsc import (
 
 
 class TestDMSCValidationSeverity(unittest.TestCase):
-    """
-    Test suite for DMSCValidationSeverity enum.
-
+    """Test suite for DMSCValidationSeverity enum.
+    
     The DMSCValidationSeverity enum defines the severity levels for
     validation results. Severity determines how validation failures
-    are handled and reported.
-
-    Severity Hierarchy:
-    - Error: Critical problem that should block processing
-    - Warning: Issue that should be noted but not block processing
-    - Info: Informational message or suggestion
-
-    Severity Impact:
-    - Error: Prevents operation completion
-    - Warning: Allows operation with logged warning
-    - Info: Provides additional context
-
-    Common Use Cases:
-    - Error: Missing required field, type mismatch
-    - Warning: Deprecated field usage, performance concern
-    - Info: Best practice suggestion, deprecation notice
-
+    are handled, reported, and what actions are taken.
+    
+    Severity Hierarchy (from most to least severe):
+    - Error (3): Critical problem that blocks processing
+      Characteristics: Operation cannot continue, data is invalid
+      Examples: Missing required field, type mismatch, constraint violation
+      Actions: Block operation, return error response, log as error
+    - Warning (2): Non-critical issue that should be noted
+      Characteristics: Operation can continue, but there are concerns
+      Examples: Deprecated field, performance concern, unusual value
+      Actions: Log warning, continue operation, notify monitoring
+    - Info (1): Informational message or suggestion
+      Characteristics: No problem, just informational
+      Examples: Best practice suggestion, deprecation notice, optimization tip
+      Actions: Log info, no operational impact
+    
+    Severity Impact on Processing:
+    - Errors: Block operation, return failure, do not proceed
+    - Warnings: Allow operation with logged warning
+    - Info: No impact, just for information
+    
+    Severity Comparison:
+    - Error > Warning > Info in terms of severity
+    - Higher severity takes precedence in aggregation
+    - Error count affects validation pass/fail decision
+    
+    Common Use Cases by Severity:
+    - Error Level:
+      * Required field is missing
+      * Data type does not match expected type
+      * Value violates constraint (e.g., min/max)
+      * Format does not match pattern (regex)
+      * Reference to non-existent related object
+      * Business rule violation
+    - Warning Level:
+      * Using deprecated field
+      * Value is unusual but valid
+      * Performance could be improved
+      * Security concern (e.g., weak password)
+      * Future deprecation notice
+      * Best practice not followed
+    - Info Level:
+      * Suggestion for improvement
+      * Informational context about data
+      * Validation passed with notes
+      * Optimization hints
+      * Documentation references
+    
+    Reporting and Logging:
+    - Errors: Include in error response, count toward failure
+    - Warnings: Include in response if requested, log separately
+    - Info: Include in detailed response, debug logging
+    
     Test Methods:
     - test_validation_severity_values: Verify all severity levels exist
     """
 
     def test_validation_severity_values(self):
         """Test validation severity values.
-
-        All validation severity levels should have string
-        representations for logging and reporting.
+        
+        Each validation severity level should have a string representation
+        for logging, reporting, API responses, and debugging purposes.
+        
+        Expected Behavior:
+        - Error severity string matches expected format
+        - Warning severity string matches expected format
+        - Info severity string matches expected format
+        - String representations are consistent
         """
         self.assertEqual(str(DMSCValidationSeverity.Error), "DMSCValidationSeverity.Error")
         self.assertEqual(str(DMSCValidationSeverity.Warning), "DMSCValidationSeverity.Warning")

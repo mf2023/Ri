@@ -263,6 +263,104 @@ println!("Utilization rate: {:.2}%", status.utilization_rate * 100.0);
 
 <div align="center">
 
+## 资源调度
+
+</div>
+
+### DMSCResourceScheduler
+
+资源调度器，用于设备管理。管理资源分配并维护分配历史。
+
+```rust
+use dmsc::device::scheduler::DMSCResourceScheduler;
+
+let scheduler = DMSCResourceScheduler::new();
+```
+
+### DMSCDeviceScheduler
+
+设备调度器 - 使用各种算法管理设备资源分配和调度。
+
+```rust
+use dmsc::device::scheduler::{DMSCDeviceScheduler, DMSCSchedulingPolicy};
+use dmsc::device::pool::DMSCResourcePoolManager;
+
+let pool_manager = DMSCResourcePoolManager::new();
+let scheduler = DMSCDeviceScheduler::new(pool_manager);
+```
+
+### DMSCSchedulingPolicy
+
+调度策略枚举 - 定义不同的设备选择算法。
+
+#### 变体
+
+| 变体 | 描述 |
+|:--------|:-------------|
+| `FirstFit` | 选择第一个满足要求的设备 |
+| `BestFit` | 选择最匹配要求的设备 |
+| `WorstFit` | 选择剩余容量最大的设备 |
+| `RoundRobin` | 轮询选择设备 |
+| `PriorityBased` | 基于请求优先级和设备健康状态选择 |
+| `LoadBalanced` | 选择当前负载最低的设备 |
+
+### DMSCAllocationRecord
+
+分配记录 - 设备分配的详细信息。
+
+| 字段 | 类型 | 描述 |
+|:--------|:-----|:-------------|
+| `allocation_id` | `String` | 唯一分配标识符 |
+| `device_id` | `String` | 已分配设备的ID |
+| `device_type` | `DMSCDeviceType` | 已分配设备的类型 |
+| `allocated_at` | `DateTime<Utc>` | 设备分配时间 |
+| `released_at` | `Option<DateTime<Utc>>` | 设备释放时间 |
+| `duration_seconds` | `Option<f64>` | 分配持续时间（秒） |
+| `success` | `bool` | 分配是否成功 |
+| `capabilities_required` | `DMSCDeviceCapabilities` | 所需的能力 |
+
+### DMSCAllocationStatistics
+
+分配统计 - 关于设备分配的综合指标。
+
+| 字段 | 类型 | 描述 |
+|:--------|:-----|:-------------|
+| `total_allocations` | `usize` | 分配总数 |
+| `successful_allocations` | `usize` | 成功分配数 |
+| `failed_allocations` | `usize` | 失败分配数 |
+| `success_rate` | `f64` | 成功率百分比（0.0-100.0） |
+| `average_duration_seconds` | `f64` | 平均持续时间（秒） |
+| `by_device_type` | `HashMap<DMSCDeviceType, DMSCDeviceTypeStatistics>` | 按设备类型的统计 |
+
+### DMSCSchedulingRecommendation
+
+调度建议 - 优化调度的建议。
+
+| 字段 | 类型 | 描述 |
+|:--------|:-----|:-------------|
+| `recommendation_type` | `DMSCSchedulingRecommendationType` | 建议类型 |
+| `description` | `String` | 人类可读的描述 |
+| `priority` | `u8` | 优先级（1-10，越高越重要） |
+| `confidence` | `f64` | 置信度（0.0-1.0） |
+
+### DMSCSchedulingRecommendationType
+
+调度建议类型。
+
+#### 变体
+
+| 变体 | 描述 |
+|:--------|:-------------|
+| `UseDefaultPolicy` | 对此设备类型使用默认策略 |
+| `ContinueCurrentPolicy` | 继续使用当前策略 |
+| `ConsiderPolicyChange` | 考虑更改调度策略 |
+| `OptimizeForLongRunning` | 优化长时间运行分配 |
+| `OptimizeForShortRunning` | 优化短时间运行分配 |
+| `LoadBalance` | 使用负载均衡 |
+| `Prioritize` | 使用基于优先级的调度 |
+
+<div align="center">
+
 ## 设备发现
 
 </div>

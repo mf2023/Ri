@@ -41,6 +41,7 @@ core模块包含以下子模块：
 | `with_observability(config)` | 设置可观测性配置 | `config: DMSCObservabilityConfig` | `DMSCResult<Self>` |
 | `with_module(module)` | 添加同步模块 | `module: Box<dyn ServiceModule>` | `Self` |
 | `with_async_module(module)` | 添加异步模块 | `module: Box<dyn AsyncServiceModule>` | `Self` |
+| `with_python_module(module)` | 添加Python模块（需要pyo3特性） | `module: DMSCPythonModuleAdapter` | `Self` |
 | `with_dms_module(module)` | 添加DMSC模块 | `module: Box<dyn DMSCModule>` | `Self` |
 | `with_modules(modules)` | 添加多个同步模块 | `modules: Vec<Box<dyn ServiceModule>>` | `Self` |
 | `with_async_modules(modules)` | 添加多个异步模块 | `modules: Vec<Box<dyn AsyncServiceModule>>` | `Self` |

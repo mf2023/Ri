@@ -115,7 +115,7 @@
 
 mod core;
 mod controller;
-mod scheduler;
+pub mod scheduler;
 pub mod pool;
 pub mod discovery_scheduler;
 pub mod discovery;

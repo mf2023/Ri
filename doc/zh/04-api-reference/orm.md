@@ -320,7 +320,7 @@ let updated_user = repository.update(&user)?;
 repository.delete(1)?;
 ```
 
-<div align="center
+<div align="center">
 
 ## 实体映射
 
@@ -470,7 +470,7 @@ paginated_users = repository.find_paginated(criteria, pagination)
 count = repository.count()
 ```
 
-<div align="center
+<div align="center">
 
 ## 最佳实践
 

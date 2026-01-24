@@ -66,7 +66,7 @@ use crate::core::{DMSCResult, DMSCError};
 use pyo3::prelude::*;
 
 /// Frame definitions for binary protocol encoding
-mod frames;
+pub mod frames;
 pub use frames::{DMSCFrameBuilder, DMSCFrameParser};
 
 /// Protocol type enumeration

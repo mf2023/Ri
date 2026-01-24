@@ -99,6 +99,7 @@ impl Default for ForeignKeyDefinition {
 }
 
 #[derive(Debug, Clone)]
+#[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 pub struct TableDefinition {
     pub table_name: String,
     pub columns: HashMap<String, ColumnDefinition>,

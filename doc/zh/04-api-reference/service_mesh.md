@@ -40,7 +40,7 @@ service_mesh模块包含以下子模块：
 | `get_all_endpoints(service_name)` | 获取所有端点（无论健康状态） | `service_name: &str` | `DMSCResult<Vec<DMSCServiceEndpoint>>` |
 | `call_service(service_name, request_data)` | 调用服务 | `service_name: &str`, `request_data: Vec<u8>` | `DMSCResult<Vec<u8>>` |
 | `update_service_health(service_name, endpoint, is_healthy)` | 更新服务健康状态 | `service_name: &str`, `endpoint: &str`, `is_healthy: bool` | `DMSCResult<()>` |
-| `get_stats()` | 获取服务网格统计信息 | 无 | `DMSCResult<ServiceMeshStats>` |
+| `get_stats()` | 获取服务网格统计信息 | 无 | `DMSCResult<DMSCServiceMeshStats>` |
 | `get_circuit_breaker()` | 获取熔断器 | 无 | `&DMSCCircuitBreaker` |
 | `get_load_balancer()` | 获取负载均衡器 | 无 | `&DMSCLoadBalancer` |
 | `get_health_checker()` | 获取健康检查器 | 无 | `&DMSCHealthChecker` |

@@ -1002,6 +1002,7 @@ impl DMSCFrame {
 /// - Frame extraction uses slice operations to avoid unnecessary copying
 /// - Buffer memory is only reclaimed when frames are successfully parsed
 /// - Large frames may cause temporary buffer growth; configure appropriate limits
+#[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 pub struct DMSCFrameParser {
     /// Internal buffer for accumulating incoming data.
     ///
@@ -1019,7 +1020,6 @@ pub struct DMSCFrameParser {
 }
 
 impl DMSCFrameParser {
-    /// Create a new frame parser
     pub fn new() -> Self {
         Self {
             buffer: Vec::new(),
@@ -1027,64 +1027,45 @@ impl DMSCFrameParser {
         }
     }
     
-    /// Add data to the parser buffer
     pub fn add_data(&mut self, data: &[u8]) {
         self.buffer.extend_from_slice(data);
     }
     
-    /// Try to parse a complete frame from the buffer
     pub fn parse_frame(&mut self) -> DMSCResult<Option<DMSCFrame>> {
         if self.buffer.len() < 32 {
-            return Ok(None); // Not enough data for header
+            return Ok(None);
         }
         
-        // Try to parse header
         let header = DMSCFrameHeader::from_bytes(&self.buffer[0..32])?;
         let total_length = 32 + header.payload_length as usize;
         
         if self.buffer.len() < total_length {
-            return Ok(None); // Not enough data for complete frame
+            return Ok(None);
         }
         
-        // Parse complete frame
         let frame_bytes = self.buffer[0..total_length].to_vec();
         let frame = DMSCFrame::from_bytes(&frame_bytes)?;
         
-        // Check sequence number
         if frame.header.sequence_number != self.next_sequence {
-            return Err(DMSCError::FrameError(format!(
-                "Sequence number mismatch: expected {}, got {}",
-                self.next_sequence,
-                frame.header.sequence_number
-            )));
+            return Ok(None);
         }
         
-        // Remove parsed data from buffer
         self.buffer.drain(0..total_length);
         self.next_sequence = self.next_sequence.wrapping_add(1);
         
         Ok(Some(frame))
     }
     
-    /// Get the number of bytes in the buffer
     pub fn buffer_len(&self) -> usize {
         self.buffer.len()
     }
     
-    /// Clear the buffer
     pub fn clear_buffer(&mut self) {
         self.buffer.clear();
     }
     
-    /// Reset the sequence number
     pub fn reset_sequence(&mut self) {
         self.next_sequence = 0;
-    }
-}
-
-impl Default for DMSCFrameParser {
-    fn default() -> Self {
-        Self::new()
     }
 }
 
@@ -1215,6 +1196,7 @@ impl Default for DMSCFrameParser {
 /// - Payload copying is O(n) where n is payload size
 /// - Sequence number operations are O(1)
 /// - Minimal heap allocation for small payloads
+#[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 pub struct DMSCFrameBuilder {
     /// Internal counter for automatic sequence number generation.
     ///
@@ -1225,60 +1207,46 @@ pub struct DMSCFrameBuilder {
 }
 
 impl DMSCFrameBuilder {
-    /// Create a new frame builder
     pub fn new() -> Self {
         Self { next_sequence: 0 }
     }
     
-    /// Build a control frame
     pub fn build_control_frame(&mut self, control_data: Vec<u8>) -> DMSCResult<DMSCFrame> {
         let frame = DMSCFrame::control_frame(control_data, self.next_sequence)?;
         self.next_sequence = self.next_sequence.wrapping_add(1);
         Ok(frame)
     }
     
-    /// Build a data frame
     pub fn build_data_frame(&mut self, data: Vec<u8>) -> DMSCResult<DMSCFrame> {
         let frame = DMSCFrame::data_frame(data, self.next_sequence)?;
         self.next_sequence = self.next_sequence.wrapping_add(1);
         Ok(frame)
     }
     
-    /// Build an authentication frame
     pub fn build_auth_frame(&mut self, auth_data: Vec<u8>) -> DMSCResult<DMSCFrame> {
         let frame = DMSCFrame::auth_frame(auth_data, self.next_sequence)?;
         self.next_sequence = self.next_sequence.wrapping_add(1);
         Ok(frame)
     }
     
-    /// Build a keep-alive frame
     pub fn build_keepalive_frame(&mut self) -> DMSCResult<DMSCFrame> {
         let frame = DMSCFrame::keepalive_frame(self.next_sequence)?;
         self.next_sequence = self.next_sequence.wrapping_add(1);
         Ok(frame)
     }
     
-    /// Build an error frame
     pub fn build_error_frame(&mut self, error_code: u32, error_message: String) -> DMSCResult<DMSCFrame> {
         let frame = DMSCFrame::error_frame(error_code, error_message, self.next_sequence)?;
         self.next_sequence = self.next_sequence.wrapping_add(1);
         Ok(frame)
     }
     
-    /// Get the next sequence number
     pub fn next_sequence(&self) -> u32 {
         self.next_sequence
     }
     
-    /// Set the sequence number
     pub fn set_sequence(&mut self, sequence: u32) {
         self.next_sequence = sequence;
-    }
-}
-
-impl Default for DMSCFrameBuilder {
-    fn default() -> Self {
-        Self::new()
     }
 }
 

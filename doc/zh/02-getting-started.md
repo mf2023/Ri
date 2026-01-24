@@ -72,14 +72,14 @@ cd my-dms-app
 
 ```toml
 [dependencies]
-dms = { git = "https://github.com/mf2023/DMSC" }
+dmsc = { git = "https://github.com/mf2023/DMSC" }
 tokio = { version = "1.0", features = ["full"] }
 ```
 
 或者使用 `cargo add` 命令：
 
 ```bash
-cargo add dms --git https://github.com/mf2023/DMSC
+cargo add dmsc --git https://github.com/mf2023/DMSC
 cargo add tokio --features full
 ```
 
@@ -90,7 +90,7 @@ cargo add tokio --features full
 ```toml
 [dependencies]
 # 其他依赖
-dms = { git = "https://github.com/mf2023/DMSC" }
+dmsc = { git = "https://github.com/mf2023/DMSC" }
 ```
 
 ### 使用 Python SDK
@@ -193,7 +193,7 @@ from dmsc import DMSCAppBuilder, DMSCLogConfig
 # 构建服务运行时
 app = DMSCAppBuilder() \
     .with_config("config.yaml") \
-    .with_logging(DMSCLogConfig.default()) \
+    .with_logging(DMSCLogConfig()) \
     .build()
 
 # 运行业务逻辑

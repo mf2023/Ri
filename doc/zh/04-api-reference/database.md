@@ -277,6 +277,113 @@ let query = QueryBuilder::new()
 let results = db.query(&query).await?;
 ```
 
+### TableDefinition
+
+表定义结构，用于模式管理。
+
+```rust
+use dmsc::database::orm::{TableDefinition, ColumnDefinition, ColumnType};
+
+let table = TableDefinition::new("users");
+table.add_column(ColumnDefinition::new("id", ColumnType::BigInt).primary_key(true));
+table.add_column(ColumnDefinition::new("name", ColumnType::VarChar(255)));
+table.add_column(ColumnDefinition::new("email", ColumnType::VarChar(255)).unique(true));
+table.set_primary_key(vec!["id".to_string()]);
+
+let sql = table.get_create_sql();
+println!("{}", sql);
+```
+
+### ColumnDefinition
+
+列定义结构。
+
+| 字段 | 类型 | 描述 |
+|:--------|:-----|:-------------|
+| `name` | `String` | 列名 |
+| `column_type` | `ColumnType` | 列类型 |
+| `is_nullable` | `bool` | 是否可为空 |
+| `is_primary_key` | `bool` | 是否为主键 |
+| `is_unique` | `bool` | 是否唯一 |
+| `default_value` | `Option<String>` | 默认值 |
+
+### Criteria
+
+查询条件，用于构建WHERE子句。
+
+```rust
+use dmsc::database::orm::{Criteria, ComparisonOperator, LogicalOperator};
+
+let criteria = Criteria::new("age", ComparisonOperator::GreaterThan, serde_json::json!(18));
+let criteria2 = Criteria::new("status", ComparisonOperator::Equal, serde_json::json!("active"));
+```
+
+### JoinClause
+
+连接子句，用于构建JOIN查询。
+
+```rust
+use dmsc::database::orm::{JoinClause, JoinType};
+
+let join = JoinClause::new(
+    "orders",
+    JoinType::Inner,
+    "user_id",
+    "id"
+);
+```
+
+### LogicalOperator
+
+逻辑运算符，用于组合条件。
+
+#### 变体
+
+| 变体 | 描述 |
+|:--------|:-------------|
+| `And` | AND运算符 |
+| `Or` | OR运算符 |
+
+### ComparisonOperator
+
+比较运算符，用于WHERE子句。
+
+#### 变体
+
+| 变体 | 描述 |
+|:--------|:-------------|
+| `Equal` | 等于 |
+| `NotEqual` | 不等于 |
+| `GreaterThan` | 大于 |
+| `LessThan` | 小于 |
+| `GreaterThanOrEqual` | 大于等于 |
+| `LessThanOrEqual` | 小于等于 |
+| `Like` | LIKE |
+| `In` | IN |
+| `NotIn` | NOT IN |
+| `IsNull` | IS NULL |
+| `IsNotNull` | IS NOT NULL |
+
+### Pagination
+
+分页信息，用于查询结果分页。
+
+| 字段 | 类型 | 描述 |
+|:--------|:-----|:-------------|
+| `page` | `u64` | 当前页码（从1开始） |
+| `page_size` | `u64` | 每页项目数 |
+
+### SortOrder
+
+排序顺序枚举。
+
+#### 变体
+
+| 变体 | 描述 |
+|:--------|:-------------|
+| `Asc` | 升序 |
+| `Desc` | 降序 |
+
 ### DMSCORMSimpleRepository
 
 简单ORM仓储，提供基础的CRUD操作。

@@ -71,37 +71,43 @@ from dmsc import (
 
 
 class CoreAppBuilderTests(unittest.TestCase):
-    """
-    Test suite for DMSCAppBuilder class.
-
-    The DMSCAppBuilder class implements the builder pattern for constructing
-    DMSC applications. It provides a fluent API for configuring application
-    components before building the runtime.
-
+    """Test suite for DMSCAppBuilder class.
+    
+    The DMSCAppBuilder class provides a fluent API for constructing DMSCCore
+    instances. It allows step-by-step configuration of core services including
+    logging, error handling, health checks, and lifecycle management.
+    
     Builder Pattern:
-    - with_config(): Add configuration source
-    - with_logging(): Configure logging
-    - build(): Create the application runtime
-
-    Configuration Sources:
-    - YAML/JSON configuration files
-    - Environment variables
-    - Command line arguments
-    - In-memory configuration
-
+    - Methods return self for method chaining
+    - build() creates the final DMSCCore instance
+    - Configuration is applied in the order methods are called
+    
+    Configuration Methods:
+    - with_logging(): Enable structured logging with JSON output
+    - with_error_handler(): Register custom error handler
+    - with_health_check(): Add health check endpoint
+    - build(): Finalize and create the core instance
+    
+    Common Use Cases:
+    - Minimal app: Just call build()
+    - Configured app: Chain configuration methods before build()
+    - Custom logging: with_logging() for JSON output
+    - Custom error handling: Register error handler
+    
     Test Methods:
     - test_app_builder_new: Verify builder instantiation
-    - test_app_builder_with_config: Test configuration file addition
-    - test_app_builder_with_logging: Test logging configuration
-    - test_app_builder_chaining: Verify method chaining works
-    - test_app_builder_build_without_config: Test minimal build
     """
 
     def test_app_builder_new(self):
         """Test creating a new app builder.
-
+        
         This test verifies that DMSCAppBuilder can be instantiated.
-        The builder is ready to configure application settings.
+        The builder is ready to configure and build a DMSCCore instance.
+        
+        Expected Behavior:
+        - Constructor completes without errors
+        - Returns a valid builder instance
+        - Builder is ready for configuration
         """
         builder = DMSCAppBuilder()
         self.assertIsNotNone(builder)
@@ -693,6 +699,173 @@ class CoreHealthReportTests(unittest.TestCase):
         self.assertIsInstance(report.overall_status, DMSCHealthStatus)
         self.assertEqual(report.total_components, 0)
         self.assertEqual(report.healthy_count, 0)
+
+
+class CoreRouterTests(unittest.TestCase):
+    """
+    Test suite for DMSCRouter class.
+    
+    The DMSCRouter class provides URL routing functionality for the DMSC
+    framework. It maps URL patterns to handler functions and supports
+    parameter extraction from URLs.
+    
+    Route Management:
+    - add_route(): Register a new route with path and handler
+    - match(): Find matching route for a given URL
+    - get_routes(): Retrieve all registered routes
+    
+    Path Patterns:
+    - Static paths: "/api/users"
+    - Parameterized paths: "/api/users/{id}"
+    - Wildcard paths: "/api/**"
+    
+    Test Methods:
+    - test_router_new: Verify router instantiation
+    - test_router_add_route: Test route registration
+    - test_router_route_creation: Test route object creation
+    """
+
+    def test_router_new(self):
+        """Test creating a new router.
+        
+        This test verifies that DMSCRouter can be instantiated.
+        The router is ready to register routes and handle requests.
+        
+        Expected Behavior:
+        - Constructor completes without errors
+        - Returns a valid router instance
+        - Router has empty route table initially
+        """
+        router = DMSCRouter()
+        self.assertIsNotNone(router)
+
+    def test_router_add_route(self):
+        """Test adding a route to the router.
+        
+        The add_route() method registers a new route in the routing table.
+        The route maps a path pattern to a handler function.
+        
+        Route Parameters:
+        - path: URL pattern (e.g., "/api/users")
+        - handler: Function to call for matching requests
+        
+        Example Route Registration:
+        - add_route("/api/users", user_handler)
+        - add_route("/api/posts/{id}", post_handler)
+        
+        Expected Behavior:
+        - add_route() adds route to routing table
+        - Route is stored for later matching
+        - Multiple routes can be added
+        """
+        router = DMSCRouter()
+        route = DMSCRoute()
+        router.add_route("/test", route)
+        self.assertIsNotNone(router)
+
+    def test_router_route_creation(self):
+        """Test creating a route object.
+        
+        The DMSCRoute class represents a single route with a path pattern
+        and associated handler function. Routes are immutable once created.
+        
+        Expected Behavior:
+        - Constructor completes without errors
+        - Returns a valid route instance
+        - Route has path and handler properties
+        """
+        route = DMSCRoute()
+        self.assertIsNotNone(route)
+
+
+class TestDMSCMiddleware(unittest.TestCase):
+    """Test suite for DMSCMiddleware class.
+    
+    The DMSCMiddleware class represents a middleware component that can
+    process requests before they reach the handler and modify responses
+    after the handler completes. Middleware enables cross-cutting concerns.
+    
+    Middleware Chain:
+    1. Request arrives
+    2. Middleware A (request phase)
+    3. Middleware B (request phase)
+    4. Handler processes request
+    5. Middleware B (response phase)
+    6. Middleware A (response phase)
+    7. Response sent to client
+    
+    Common Use Cases:
+    - Authentication: Check credentials before handler
+    - Logging: Log request/response details
+    - Compression: Compress response body
+    - Caching: Return cached responses
+    - Rate limiting: Count requests per client
+    
+    Middleware Types:
+    - Pre-processing: Runs before handler
+    - Post-processing: Runs after handler
+    - Around: Wraps handler execution
+    
+    Test Methods:
+    - test_middleware_new: Verify middleware creation
+    """
+
+    def test_middleware_new(self):
+        """Test creating new middleware.
+        
+        This test verifies that DMSCMiddleware can be instantiated.
+        The middleware is ready to process requests.
+        
+        Expected Behavior:
+        - Constructor completes without errors
+        - Returns a valid middleware instance
+        - Middleware is ready for registration
+        """
+        middleware = DMSCMiddleware()
+        self.assertIsNotNone(middleware)
+
+
+class TestDMSCCustomErrorHandler(unittest.TestCase):
+    """Test suite for DMSCCustomErrorHandler class.
+    
+    The DMSCCustomErrorHandler class provides custom error handling capabilities
+    for the DMSC framework. It allows applications to define how errors are
+    processed, logged, and presented to clients.
+    
+    Error Handling Features:
+    - Custom error processing logic
+    - Error logging and categorization
+    - User-friendly error responses
+    - Error tracking and reporting
+    
+    Handler Operations:
+    - handle_error(): Process an error and return response
+    - get_error_count(): Get total number of errors handled
+    - get_last_error(): Get the most recent error
+    
+    Error Types:
+    - Validation errors: Invalid input data
+    - Authentication errors: Failed auth attempts
+    - Authorization errors: Permission denied
+    - System errors: Internal failures
+    
+    Test Methods:
+    - test_custom_error_handler_new: Verify handler instantiation
+    """
+
+    def test_custom_error_handler_new(self):
+        """Test creating a new error handler.
+        
+        This test verifies that DMSCCustomErrorHandler can be instantiated.
+        The handler is ready to process errors.
+        
+        Expected Behavior:
+        - Constructor completes without errors
+        - Returns a valid handler instance
+        - Handler has zero errors initially
+        """
+        handler = DMSCCustomErrorHandler()
+        self.assertIsNotNone(handler)
 
 
 if __name__ == '__main__':

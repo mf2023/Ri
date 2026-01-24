@@ -495,6 +495,37 @@ jobs:
         with:
           version: '33.x'
       
+      # Step 4c: Configure OpenSSL for static linking on Linux builds
+      # This ensures all OpenSSL dependencies are statically linked into the binary
+      # to avoid "libcrypto-*.so.3 not found" errors during auditwheel repair
+      # OPENSSL_STATIC=1: Links OpenSSL statically
+      # VENDORED_OPENSSL_SSL: Forces openssl crate to use vendored OpenSSL
+      - name: Configure OpenSSL static linking
+        if: runner.os == 'Linux'
+        run: |
+          echo "OPENSSL_STATIC=1" >> $GITHUB_ENV
+          echo "VENDORED_OPENSSL_SSL=1" >> $GITHUB_ENV
+          echo "OPENSSL_LIB_DIR=/usr/lib/x86_64-linux-gnu" >> $GITHUB_ENV
+          echo "OPENSSL_INCLUDE_DIR=/usr/include/openssl" >> $GITHUB_ENV
+          echo "PKG_CONFIG_ALLOW_CROSS=1" >> $GITHUB_ENV
+          echo "cargo:rustflags=-C target-feature=+crt-static" >> $GITHUB_ENV
+      
+      # Step 4d: Configure Rust linker for static linking on Linux builds
+      # This ensures the final binary is fully statically linked
+      - name: Configure static linking
+        if: runner.os == 'Linux'
+        run: |
+          mkdir -p .cargo
+          cat > .cargo/config.toml << 'EOF'
+[target.x86_64-unknown-linux-gnu]
+rustflags = ["-C", "target-feature=+crt-static", "-L", "static=native"]
+
+[profile.release]
+lto = true
+codegen-units = 1
+strip = true
+EOF
+      
       # Step 5: Install build dependencies (maturin and auditwheel)
       # maturin: Rust/Python build tool that creates Python wheels from Rust libraries
       # auditwheel: Tool for repairing Linux wheel distribution tags
@@ -518,6 +549,7 @@ jobs:
       # Then uses auditwheel to repair and tag the wheel for manylinux compatibility
       # The --plat flag sets the platform tag (e.g., manylinux_2_39_x86_64)
       # This ensures the wheel can be installed on older Linux distributions
+      # Note: OpenSSL is now statically linked, so auditwheel won't have issues
       - name: Build Linux wheel with auditwheel repair
         if: matrix.docker == true
         run: |

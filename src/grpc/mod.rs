@@ -4,7 +4,7 @@
 //! The DMSC project belongs to the Dunimd Team.
 //!
 //! Licensed under the Apache License, Version 2.0 (the "License");
-//! you may not use this file except in compliance with the License.
+//! You may not use this file except in compliance with the License.
 //! You may obtain a copy of the License at
 //!
 //!     http://www.apache.org/licenses/LICENSE-2.0
@@ -100,27 +100,31 @@ pub trait DMSCGrpcService: Send + Sync {
 
 #[cfg(feature = "grpc")]
 #[derive(Clone)]
+#[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 pub struct DMSCGrpcServiceRegistry {
     pub services: Arc<RwLock<HashMap<String, Arc<dyn DMSCGrpcService>>>>,
 }
 
 #[cfg(feature = "grpc")]
+#[cfg_attr(feature = "pyo3", pyo3::prelude::pymethods)]
 impl DMSCGrpcServiceRegistry {
-    pub fn new() -> Self {
+    #[new]
+    fn new() -> Self {
         Self {
             services: Arc::new(RwLock::new(HashMap::new())),
         }
     }
 
-    pub fn register<S: DMSCGrpcService + 'static>(&self, service: S) {
+    fn register(&mut self, service_name: &str, handler: Py<PyAny>) {
+        let service = DMSCGrpcPythonService::new(service_name, handler);
         let name = service.service_name();
         let mut services = self.services.blocking_write();
         services.insert(name.to_string(), Arc::new(service));
     }
 
-    pub async fn get_service(&self, name: &str) -> Option<Arc<dyn DMSCGrpcService>> {
-        let services = self.services.read().await;
-        services.get(name).cloned()
+    fn list_services(&self) -> Vec<String> {
+        let services = self.services.blocking_read();
+        services.keys().cloned().collect()
     }
 }
 

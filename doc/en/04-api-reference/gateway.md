@@ -325,6 +325,45 @@ Circuit breaker configuration.
 
 <div align="center">
 
+## Load Balancing
+
+</div>
+
+### DMSCBackendServer
+
+Backend server configuration and state for load balancing.
+
+| Field | Type | Description |
+|:--------|:-----|:-------------|
+| `id` | `String` | Unique identifier for the server |
+| `url` | `String` | Base URL of the server (e.g., "http://localhost:8080") |
+| `weight` | `u32` | Weight for weighted load balancing |
+| `max_connections` | `usize` | Max concurrent connections |
+| `health_check_path` | `String` | Path for health checks |
+| `is_healthy` | `bool` | Current health status |
+
+```rust
+use dmsc::gateway::load_balancer::DMSCBackendServer;
+
+let server = DMSCBackendServer::new("server-1".to_string(), "http://localhost:8080".to_string())
+    .with_weight(2)
+    .with_max_connections(100)
+    .with_health_check_path("/health".to_string());
+```
+
+### LoadBalancerServerStats
+
+Load balancer server statistics for monitoring.
+
+| Field | Type | Description |
+|:--------|:-----|:-------------|
+| `active_connections` | `usize` | Currently active connections |
+| `total_requests` | `usize` | Total requests since added |
+| `failed_requests` | `usize` | Number of failed requests |
+| `response_time_ms` | `usize` | Most recent response time in ms |
+
+<div align="center">
+
 ## Configuration
 
 </div>
