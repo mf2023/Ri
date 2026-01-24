@@ -30,8 +30,7 @@ Features Demonstrated:
 - Resource pool management
 """
 
-import dmsc
-from dmsc.device import (
+from dmsc import (
     DMSCDeviceControlModule, DMSCDeviceControlConfig,
     DMSCDevice, DMSCDeviceType, DMSCDeviceStatus, DMSCDeviceCapabilities,
     DMSCResourceRequest, DMSCResourceAllocation, DMSCRequestSlaClass,

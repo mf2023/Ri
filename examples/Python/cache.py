@@ -30,8 +30,10 @@ Features Demonstrated:
 - Multiple backend support
 """
 
-import dmsc
-from dmsc.cache import DMSCCacheModule, DMSCCacheConfig, DMSCCacheBackendType
+from dmsc import (
+    DMSCCacheModule, DMSCCacheConfig, DMSCCacheBackendType,
+    DMSCCacheManager
+)
 import asyncio
 import time
 

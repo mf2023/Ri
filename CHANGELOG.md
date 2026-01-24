@@ -1,6 +1,264 @@
 # DMSC Changelog
 
-## [0.1.5] - 2026-01-17
+## [0.1.5] - 2026-01-24
+
+## This version is a beta version with incomplete functionality and may pose risks. It is not recommended for production environments or official use.
+
+### ✨ Added
+
+#### WebSocket Client Support
+- Added WebSocket client implementation (src/ws/client.rs)
+- Added DMSCFrameParser for protocol frame parsing
+- Added DMSCFrameBuilder for protocol frame construction
+
+#### Python Test Suite
+- Added comprehensive Python test suite (tests/Python/)
+- Added 12 Python test files covering core, cache, device, gateway, and service_mesh modules
+- Added pytest integration for Python testing
+
+#### Python Examples
+- Added Python usage examples (examples/Python/)
+- Added 10 example files demonstrating various DMSC features
+- Added examples for authentication, caching, device management, and more
+
+#### Health Check Subsystem
+- Added DMSCHealthStatus enum for health state representation
+- Added DMSCHealthCheckResult struct for individual check results
+- Added DMSCHealthCheckConfig struct for check configuration
+- Added DMSCHealthReport struct for comprehensive health reports
+- Added DMSCHealthChecker trait for custom health check implementations
+
+#### Lifecycle Management
+- Added DMSCLifecycleObserver for module lifecycle monitoring
+- Added DMSCLogAnalyticsModule for log analytics
+
+#### Error Chain Support
+- Added DMSCErrorChain for comprehensive error chain traversal
+- Added DMSCErrorChainIter for iterator-based error traversal
+- Added DMSCErrorContext for contextual error information
+- Added DMSCOptionErrorContext for optional error context
+
+#### Distributed Lock
+- Added DMSCLockError for lock operation errors
+
+#### Python Module Integration
+- Added DMSCPythonModule for Python module integration
+- Added DMSCPythonModuleAdapter for module adaptation
+- Added DMSCPythonServiceModule for service module support
+- Added DMSCPythonAsyncServiceModule for async service modules
+
+#### Auth Module Enhancements
+- Added DMSCJWTClaims for comprehensive JWT claims
+- Added DMSCJWTValidationOptions for JWT validation configuration
+- Added DMSCOAuthProvider enum for OAuth provider selection
+- Added DMSCJWTRevocationList for token revocation
+- Added DMSCRevokedTokenInfo for revoked token metadata
+
+#### Device Module Enhancements
+- Added DMSCDeviceSchedulingConfig for scheduling configuration
+- Added DMSCResourceScheduler for resource scheduling
+- Added DMSCDeviceScheduler for device-level scheduling
+- Added DMSCSchedulingPolicy for scheduling strategy
+- Added DMSCAllocationRecord for allocation tracking
+- Added DMSCAllocationRequest for allocation requests
+- Added DMSCAllocationStatistics for allocation metrics
+- Added DMSCSchedulingRecommendation for scheduling suggestions
+- Added DMSCSchedulingRecommendationType for recommendation types
+- Added DMSCDeviceTypeStatistics for device type metrics
+
+#### Service Mesh Enhancements
+- Added DMSCServiceMeshStats for service mesh statistics
+- Added DMSCTrafficManager for traffic management
+- Added DMSCHealthChecker for health checking
+
+#### Database ORM Enhancements
+- Added ColumnDefinition for column schema
+- Added IndexDefinition for index schema
+- Added ForeignKeyDefinition for foreign key constraints
+- Added TableDefinition for table schema
+- Added LogicalOperator for query logic
+- Added Criteria for query criteria
+- Added JoinClause for table joins
+- Added ComparisonOperator for query comparisons
+- Added SortOrder for sorting options
+- Added Pagination for paginated queries
+- Added QueryBuilder for query construction
+- Added JoinType for join types
+
+#### Gateway Enhancements
+- Added DMSCBackendServer for backend server representation
+- Added LoadBalancerServerStats for load balancer statistics
+
+#### Observability
+- Added DMSCObservabilityData for unified observability data
+
+### 🔧 Changed
+
+#### Protocol Module
+- Removed experimental warning, now production-ready
+- Improved protocol safety and stability
+
+#### Auth Module
+- Renamed JWTClaims to DMSCJWTClaims following DMSC naming convention
+- Renamed JWTRevocationList to DMSCJWTRevocationList
+- Added DMSC prefix to OAuth provider types
+
+#### Device Module
+- Enhanced device scheduling capabilities
+- Improved resource allocation algorithms
+
+#### Database ORM
+- Expanded ORM functionality with comprehensive schema definitions
+- Enhanced query building capabilities
+
+### 🗑️ Removed
+
+#### Python API
+- Removed DMSCAppBuilder from Python bindings (Rust-only)
+- Removed DMSCSecurityManager from Python bindings (simplified)
+
+#### Deprecated Tests
+- Removed tests/core/core_error_chain.rs
+- Removed tests/core/core_health.rs
+- Removed tests/protocol/protocol_crypto.rs
+- Removed tests/protocol/protocol_frames.rs
+- Removed tests/protocol/protocol_integration_core.rs
+
+#### Test Structure
+- Moved tests from tests/*.rs to tests/Rust/*.rs
+
+---
+
+## [0.1.5] - 2026-01-24
+
+## 此版本为测试版，功能尚不完整，可能存在风险，不推荐用于生产环境或正式用途。
+
+### ✨ 新增功能
+
+#### WebSocket客户端支持
+- 新增WebSocket客户端实现（src/ws/client.rs）
+- 新增DMSCFrameParser用于协议帧解析
+- 新增DMSCFrameBuilder用于协议帧构建
+
+#### Python测试套件
+- 新增Python测试套件（tests/Python/）
+- 新增12个Python测试文件，涵盖core、cache、device、gateway和service_mesh模块
+- 新增pytest集成用于Python测试
+
+#### Python示例
+- 新增Python使用示例（examples/Python/）
+- 新增10个示例文件，展示各种DMSC功能
+- 新增认证、缓存、设备管理等功能示例
+
+#### 健康检查子系统
+- 新增DMSCHealthStatus枚举用于健康状态表示
+- 新增DMSCHealthCheckResult结构体用于单个检查结果
+- 新增DMSCHealthCheckConfig结构体用于检查配置
+- 新增DMSCHealthReport结构体用于综合健康报告
+- 新增DMSCHealthChecker特征用于自定义健康检查实现
+
+#### 生命周期管理
+- 新增DMSCLifecycleObserver用于模块生命周期监控
+- 新增DMSCLogAnalyticsModule用于日志分析
+
+#### 错误链支持
+- 新增DMSCErrorChain用于综合错误链遍历
+- 新增DMSCErrorChainIter用于迭代器式错误遍历
+- 新增DMSCErrorContext用于上下文错误信息
+- 新增DMSCOptionErrorContext用于可选错误上下文
+
+#### 分布式锁
+- 新增DMSCLockError用于锁操作错误
+
+#### Python模块集成
+- 新增DMSCPythonModule用于Python模块集成
+- 新增DMSCPythonModuleAdapter用于模块适配
+- 新增DMSCPythonServiceModule用于服务模块支持
+- 新增DMSCPythonAsyncServiceModule用于异步服务模块
+
+#### 认证模块增强
+- 新增DMSCJWTClaims用于综合JWT声明
+- 新增DMSCJWTValidationOptions用于JWT验证配置
+- 新增DMSCOAuthProvider枚举用于OAuth提供商选择
+- 新增DMSCJWTRevocationList用于令牌撤销
+- 新增DMSCRevokedTokenInfo用于撤销令牌元数据
+
+#### 设备模块增强
+- 新增DMSCDeviceSchedulingConfig用于调度配置
+- 新增DMSCResourceScheduler用于资源调度
+- 新增DMSCDeviceScheduler用于设备级调度
+- 新增DMSCSchedulingPolicy用于调度策略
+- 新增DMSCAllocationRecord用于分配追踪
+- 新增DMSCAllocationRequest用于分配请求
+- 新增DMSCAllocationStatistics用于分配指标
+- 新增DMSCSchedulingRecommendation用于调度建议
+- 新增DMSCSchedulingRecommendationType用于建议类型
+- 新增DMSCDeviceTypeStatistics用于设备类型指标
+
+#### 服务网格增强
+- 新增DMSCServiceMeshStats用于服务网格统计
+- 新增DMSCTrafficManager用于流量管理
+- 新增DMSCHealthChecker用于健康检查
+
+#### 数据库ORM增强
+- 新增ColumnDefinition用于列模式定义
+- 新增IndexDefinition用于索引模式定义
+- 新增ForeignKeyDefinition用于外键约束定义
+- 新增TableDefinition用于表模式定义
+- 新增LogicalOperator用于查询逻辑
+- 新增Criteria用于查询条件
+- 新增JoinClause用于表连接
+- 新增ComparisonOperator用于查询比较
+- 新增SortOrder用于排序选项
+- 新增Pagination用于分页查询
+- 新增QueryBuilder用于查询构建
+- 新增JoinType用于连接类型
+
+#### 网关增强
+- 新增DMSCBackendServer用于后端服务器表示
+- 新增LoadBalancerServerStats用于负载均衡器统计
+
+#### 可观测性
+- 新增DMSCObservabilityData用于统一可观测性数据
+
+### 🔧 改进优化
+
+#### 协议模块
+- 移除实验性警告，现已可用于生产环境
+- 提升协议安全性和稳定性
+
+#### 认证模块
+- 将JWTClaims重命名为DMSCJWTClaims，遵循DMSC命名规范
+- 将JWTRevocationList重命名为DMSCJWTRevocationList
+- OAuth提供商类型添加DMSC前缀
+
+#### 设备模块
+- 增强设备调度能力
+- 改进资源分配算法
+
+#### 数据库ORM
+- 扩展ORM功能，提供全面的模式定义
+- 增强查询构建能力
+
+### 🗑️ 移除内容
+
+#### Python API
+- 从Python绑定中移除DMSCAppBuilder（仅Rust可用）
+- 从Python绑定中移除DMSCSecurityManager（已简化）
+
+#### 废弃测试
+- 移除tests/core/core_error_chain.rs
+- 移除tests/core/core_health.rs
+- 移除tests/protocol/protocol_crypto.rs
+- 移除tests/protocol/protocol_frames.rs
+- 移除tests/protocol/protocol_integration_core.rs
+
+#### 测试结构
+- 将测试从tests/*.rs移动到tests/Rust/*.rs
+
+---
+
+## [0.1.4] - 2026-01-17
 
 ## This version is a beta version with incomplete functionality and may pose risks. It is not recommended for production environments or official use.
 
@@ -41,7 +299,7 @@
 
 ---
 
-## [0.1.5] - 2026-01-17
+## [0.1.4] - 2026-01-17
 
 ## 该版本为测试版，功能尚不完整，可能存在风险，不推荐用于生产环境或正式用途。
 

@@ -31,10 +31,10 @@ Features Demonstrated:
 - Queue statistics and monitoring
 """
 
-import dmsc
-from dmsc.queue import (
+from dmsc import (
     DMSCQueueModule, DMSCQueueConfig, DMSCQueueManager,
     DMSCQueueMessage, DMSCRetryPolicy, DMSCDeadLetterConfig,
+    DMSCQueueStats
 )
 import asyncio
 from datetime import datetime

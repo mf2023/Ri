@@ -31,10 +31,10 @@ Features Demonstrated:
 - Health checks
 """
 
-import dmsc
-from dmsc.observability import (
+from dmsc import (
     DMSCObservabilityModule, DMSCObservabilityConfig,
     DMSCMetricsRegistry, DMSCTracer, DMSCMetricType,
+    DMSCObservabilityData
 )
 import asyncio
 

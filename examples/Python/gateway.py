@@ -29,8 +29,10 @@ Features Demonstrated:
 - Gateway initialization
 """
 
-import dmsc
-from dmsc.gateway import DMSCGateway, DMSCRoute, DMSCRouter
+from dmsc import (
+    DMSCGateway, DMSCRoute, DMSCRouter,
+    DMSCGatewayConfig
+)
 import asyncio
 
 

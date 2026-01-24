@@ -30,10 +30,10 @@ Features Demonstrated:
 - Service status monitoring
 """
 
-import dmsc
-from dmsc.service_mesh import (
+from dmsc import (
     DMSCServiceMesh, DMSCServiceMeshConfig, 
     DMSCServiceDiscovery, DMSCServiceInstance, DMSCServiceStatus,
+    DMSCTrafficManager, DMSCHealthChecker
 )
 import asyncio
 
