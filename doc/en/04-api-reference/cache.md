@@ -54,14 +54,15 @@ cache_manager.set("user:1", &user, Some(3600)).await?;
 let user: Option<User> = cache_manager.get("user:1").await?;
 
 // Check if cache exists
-let exists = cache_manager.exists("user:1").await?;
+let exists = cache_manager.exists("user:1").await;
 
 // Delete cache
 cache_manager.delete("user:1").await?;
 
-// Numeric operations
-let count = cache_manager.increment("counter", 1).await?;
-let count = cache_manager.decrement("counter", 5).await?;
+// Get or set cache value
+let user = cache_manager.get_or_set("user:1", Some(3600), || async {
+    fetch_user_from_db().await
+}).await?;
 ```
 
 ### DMSCCacheManager
@@ -73,13 +74,13 @@ Cache manager, responsible for specific cache operations.
 | Method | Description | Parameters | Return Value |
 |:--------|:-------------|:--------|:--------|
 | `get(key)` | Get cache value | `key: &str` | `DMSCResult<Option<T>>` |
-| `set(key, value, ttl)` | Set cache value | `key: &str`, `value: &T`, `ttl: Option<u64>` | `DMSCResult<()>` |
+| `set(key, value, ttl_seconds)` | Set cache value | `key: &str`, `value: &T`, `ttl_seconds: Option<u64>` | `DMSCResult<()>` |
 | `delete(key)` | Delete cache | `key: &str` | `DMSCResult<bool>` |
-| `exists(key)` | Check if cache exists | `key: &str` | `DMSCResult<bool>` |
+| `exists(key)` | Check if cache exists | `key: &str` | `bool` |
 | `clear()` | Clear all cache | None | `DMSCResult<()>` |
-| `delete_by_pattern(pattern)` | Delete cache by pattern | `pattern: &str` | `DMSCResult<()>` |
 | `stats()` | Get cache statistics | None | `DMSCCacheStats` |
 | `cleanup_expired()` | Cleanup expired cache | None | `DMSCResult<usize>` |
+| `get_or_set(key, ttl_seconds, factory)` | Get or set cache value | `key: &str`, `ttl_seconds: Option<u64>`, `factory: F` where `F: FnOnce() -> Fut`, `Fut: Future` | `DMSCResult<T>` |
 
 ### DMSCCacheConfig
 

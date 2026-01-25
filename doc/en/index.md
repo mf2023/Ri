@@ -79,7 +79,7 @@ Welcome to the DMSC (Dunimd Middleware Service) documentation! This documentatio
 
 ### Modular Design
 
-DMSC adopts a highly modular architecture with 12 core modules, enabling on-demand composition and seamless extension:
+DMSC adopts a highly modular architecture with 18 core modules, enabling on-demand composition and seamless extension:
 
 | Module | Description |
 |:--------|:-------------|
@@ -87,6 +87,7 @@ DMSC adopts a highly modular architecture with 12 core modules, enabling on-dema
 | **cache** | Multi-backend cache abstraction (Memory, Redis, Hybrid) |
 | **config** | Multi-source configuration management with hot reload |
 | **core** | Runtime, error handling, and service context |
+| **database** | Database abstraction with PostgreSQL, MySQL, SQLite support |
 | **device** | Device control, discovery, and intelligent scheduling |
 | **fs** | Secure file system operations and management |
 | **gateway** | API gateway with load balancing, rate limiting, and circuit breaking |
@@ -95,6 +96,9 @@ DMSC adopts a highly modular architecture with 12 core modules, enabling on-dema
 | **observability** | Metrics, tracing, and Grafana integration |
 | **queue** | Distributed queue abstraction (Kafka, RabbitMQ, Redis, Memory) |
 | **service_mesh** | Service discovery, health checking, and traffic management |
+| **validation** | Input validation and data sanitization utilities |
+| **protocol** | Protocol abstraction layer for multi-protocol support |
+| **module_rpc** | Inter-module RPC communication for distributed method calls |
 
 ### 🐍 Python Module Support
 
@@ -106,6 +110,7 @@ DMSC provides complete Python bindings, allowing you to use all core features th
 | **cache** | Multi-backend cache abstraction (Memory, Redis, Hybrid) |
 | **config** | Multi-source configuration management with hot reload |
 | **core** | Runtime, error handling, and service context |
+| **database** | Database abstraction with PostgreSQL, MySQL, SQLite support |
 | **device** | Device control, discovery, and intelligent scheduling |
 | **fs** | Secure file system operations and management |
 | **gateway** | API gateway with load balancing, rate limiting, and circuit breaking |
@@ -114,6 +119,9 @@ DMSC provides complete Python bindings, allowing you to use all core features th
 | **observability** | Metrics, tracing, and Grafana integration |
 | **queue** | Distributed queue abstraction (Kafka, RabbitMQ, Redis, Memory) |
 | **service_mesh** | Service discovery, health checking, and traffic management |
+| **validation** | Input validation and data sanitization utilities |
+| **protocol** | Protocol abstraction layer for multi-protocol support |
+| **module_rpc** | Inter-module RPC communication for distributed method calls |
 
 **Python SDK Features:**
 - Native Python interfaces with seamless Rust core invocation

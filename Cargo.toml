@@ -77,6 +77,11 @@ crate-type = ["rlib", "cdylib"]
 # Optional to allow pure Rust builds without Python support
 pyo3 = { version = "0.27", features = ["extension-module"], optional = true }
 
+# Kafka message streaming support
+# Kafka client library for message streaming using rdkafka
+# Supports Kafka protocol and consumer/producer patterns
+rdkafka = { version = "0.38", default-features = false, features = ["tokio", "libz"], optional = true }
+
 # DMSC core dependencies (always included)
 # Serialization and deserialization framework with derive macro support
 # Used for configuration parsing, API serialization, and data transformation
@@ -352,14 +357,8 @@ tungstenite = { version = "0.21", optional = true }
 # Platform-Specific Dependencies
 # =============================================================================
 # Dependencies that are only available or needed on specific operating systems.
-# Kafka support is disabled on Windows due to native library requirements.
-[target.'cfg(not(windows))'.dependencies]
 
-# Kafka support dependencies (disabled on Windows)
-# Kafka client library for message streaming
-# Supports Kafka protocol and consumer/producer patterns
-# Requires native libraries (libz) for compression
-rdkafka = { version = "0.38", default-features = false, features = ["tokio", "libz"], optional = true }
+[target.'cfg(not(windows))'.dependencies]
 
 # OpenSSL native library bindings with vendored feature
 # Required for secure TLS connections on non-Windows platforms

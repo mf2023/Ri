@@ -21,7 +21,6 @@
 
 use super::*;
 use async_trait::async_trait;
-use std::sync::Arc;
 use std::collections::HashMap;
 
 #[async_trait]
@@ -59,6 +58,7 @@ pub trait DMSCORMCrudRepository<E: for<'de> serde::Deserialize<'de> + serde::Ser
     async fn delete(&self, entity: &E) -> DMSCResult<()>;
 }
 
+#[derive(Debug, Clone)]
 pub struct DMSCORMSimpleRepository<E: for<'de> serde::Deserialize<'de> + serde::Serialize + Clone + Send + Sync> {
     table_name: &'static str,
     _phantom: std::marker::PhantomData<E>,
@@ -401,42 +401,5 @@ impl<E: for<'de> serde::Deserialize<'de> + serde::Serialize + Clone + Send + Syn
 impl<E: for<'de> serde::Deserialize<'de> + serde::Serialize + Clone + Send + Sync> DMSCORMSimpleRepository<E> {
     pub fn default() -> Self {
         Self::new("unknown")
-    }
-}
-
-pub struct DMSCORMSessionRepository<E: for<'de> serde::Deserialize<'de> + serde::Serialize + Clone + Send + Sync> {
-    db: Arc<dyn DMSCDatabase>,
-    repository: DMSCORMSimpleRepository<E>,
-}
-
-impl<E: for<'de> serde::Deserialize<'de> + serde::Serialize + Clone + Send + Sync> DMSCORMSessionRepository<E> {
-    pub fn new(db: Arc<dyn DMSCDatabase>, table_name: &'static str) -> Self {
-        Self {
-            db,
-            repository: DMSCORMSimpleRepository::new(table_name),
-        }
-    }
-}
-
-#[async_trait]
-impl<E: for<'de> serde::Deserialize<'de> + serde::Serialize + Clone + Send + Sync> DMSCORMCrudRepository<E> for DMSCORMSessionRepository<E> {
-    fn table_name(&self) -> &'static str {
-        self.repository.table_name()
-    }
-
-    async fn find_all(&self) -> DMSCResult<Vec<E>> {
-        self.repository.find_all(&*self.db).await
-    }
-
-    async fn find_by_id(&self, id: &str) -> DMSCResult<Option<E>> {
-        self.repository.find_by_id(&*self.db, id).await
-    }
-
-    async fn save(&self, entity: &E) -> DMSCResult<E> {
-        self.repository.save(&*self.db, entity).await
-    }
-
-    async fn delete(&self, entity: &E) -> DMSCResult<()> {
-        self.repository.delete(&*self.db, entity).await
     }
 }

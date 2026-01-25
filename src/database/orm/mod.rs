@@ -28,6 +28,12 @@ pub mod repository;
 
 pub use repository::{DMSCORMSimpleRepository, DMSCORMCrudRepository, DMSCORMRepository};
 
+#[cfg(feature = "pyo3")]
+pub mod py_repository;
+
+#[cfg(feature = "pyo3")]
+pub use py_repository::DMSCPyORMRepository;
+
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 pub struct ColumnDefinition {

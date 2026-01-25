@@ -158,7 +158,7 @@ database:
 
 logging:
   level: "info"
-  format: "json"
+  file_format: "json"
 ```
 
 #### JSON文件

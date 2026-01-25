@@ -17,15 +17,11 @@
 
 #![allow(non_snake_case)]
 
-#![cfg_attr(windows, doc = "// Kafka support is disabled on Windows due to build dependencies")]
-
 //! # Kafka Queue Backend
-//! 
+//!
 //! This module provides a Kafka implementation for the DMSC queue system. It allows
 //! sending and receiving messages using Apache Kafka as the underlying message broker.
-//! 
-//! **Note:** Kafka support is disabled on Windows due to build dependencies.
-//! 
+//!
 //! ## Key Components
 //! 
 //! - **DMSCKafkaQueue**: Main Kafka queue implementation
@@ -79,8 +75,6 @@
 //!     Ok(())
 //! }
 //! ```
-
-#![cfg(not(windows))]
 
 use async_trait::async_trait;
 use rdkafka::config::ClientConfig;

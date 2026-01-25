@@ -390,6 +390,8 @@ pub mod py {
         m.add_class::<crate::protocol::DMSCConnectionInfo>()?;
         m.add_class::<crate::protocol::DMSCMessageFlags>()?;
         m.add_class::<crate::protocol::DMSCSecurityLevel>()?;
+        m.add_class::<crate::protocol::frames::DMSCFrameParser>()?;
+        m.add_class::<crate::protocol::frames::DMSCFrameBuilder>()?;
         
         // Add database types to main module
         m.add_class::<crate::database::DMSCDatabaseConfig>()?;
@@ -530,6 +532,10 @@ pub mod py {
         m.add_class::<crate::observability::DMSCObservabilityData>()?;
         m.add_class::<crate::observability::DMSCMetricsRegistry>()?;
         m.add_class::<crate::observability::DMSCTracer>()?;
+        m.add_class::<crate::observability::DMSCMetricType>()?;
+        m.add_class::<crate::observability::DMSCMetricConfig>()?;
+        m.add_class::<crate::observability::DMSCMetricSample>()?;
+        m.add_class::<crate::observability::DMSCMetric>()?;
         parent.add_submodule(&m)?;
         Ok(())
     }
@@ -578,7 +584,10 @@ pub mod py {
         m.add_class::<crate::service_mesh::DMSCServiceInstance>()?;
         m.add_class::<crate::service_mesh::DMSCServiceStatus>()?;
         m.add_class::<crate::service_mesh::DMSCServiceMeshStats>()?;
+        m.add_class::<crate::service_mesh::DMSCServiceEndpoint>()?;
+        m.add_class::<crate::service_mesh::DMSCServiceHealthStatus>()?;
         m.add_class::<crate::service_mesh::health_check::DMSCHealthChecker>()?;
+        m.add_class::<crate::service_mesh::health_check::DMSCHealthCheckType>()?;
         m.add_class::<crate::service_mesh::traffic_management::DMSCTrafficManager>()?;
         m.add_class::<crate::service_mesh::traffic_management::DMSCTrafficRoute>()?;
         m.add_class::<crate::service_mesh::traffic_management::DMSCMatchCriteria>()?;
@@ -627,6 +636,7 @@ pub mod py {
         m.add_class::<crate::database::orm::Pagination>()?;
         m.add_class::<crate::database::orm::QueryBuilder>()?;
         m.add_class::<crate::database::orm::JoinType>()?;
+        m.add_class::<crate::database::orm::DMSCPyORMRepository>()?;
         parent.add_submodule(&m)?;
         Ok(())
     }

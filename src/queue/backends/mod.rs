@@ -29,10 +29,10 @@ pub use rabbitmq_backend::DMSCRabbitMQQueue;
 #[cfg(feature = "redis")]
 pub use redis_backend::DMSCRedisQueue;
 
-#[cfg(all(feature = "kafka", not(windows)))]
+#[cfg(feature = "kafka")]
 pub mod kafka_backend;
 #[cfg(all(feature = "kafka", not(windows)))]
 pub use kafka_backend::DMSCKafkaQueue;
 
 #[cfg(all(feature = "kafka", windows))]
-pub mod kafka_windows_stub;
+pub mod kafka_stub;
