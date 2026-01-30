@@ -4,7 +4,7 @@
 
 **Version: 0.1.6**
 
-**Last modified date: 2026-01-24**
+**Last modified date: 2026-01-30**
 
 This example shows how to build a simple DMSC application, including application configuration, running, and basic functionality usage.
 
@@ -48,7 +48,7 @@ Add the following dependencies to your `Cargo.toml` file:
 
 ```toml
 [dependencies]
-dms = { git = "https://github.com/mf2023/DMSC" }
+dmsc = { path = "../dmsc" }
 tokio = { version = "1.0", features = ["full"] }
 ```
 
@@ -249,26 +249,30 @@ After running the example, you should see output similar to the following:
 
 ### 1. Implementing Cache Support
 
-**Note**: Cache module needs to be separately configured and enabled.
+**Note**: Cache functionality needs to be separately configured and enabled through the module system. Cache module is accessed via `DMSCCacheModule`.
 
 ```rust
-// Add cache support when building the application
+// Add cache module
+let cache_module = DMSCCacheModule::new(DMSCCacheConfig::default());
+
 let app = DMSCAppBuilder::new()
     .with_config("config.yaml")?
     .with_logging(DMSCLogConfig::default())?
+    .with_dms_module(Box::new(cache_module))?
     .build()?;
 
 // Use cache in business logic
 app.run(|ctx: &DMSCServiceContext| async move {
-    // Get cache service if enabled
-    if let Some(cache) = ctx.cache() {
-        // Set cache
-        cache.set("key", "value", 3600).await?;
-        
-        // Get cache
-        let value: String = cache.get("key").await?;
-        ctx.logger().info("cache", &format!("Cached value: {}", value))?;
-    }
+    // Get cache module
+    let cache = ctx.module::<DMSCCacheModule>().await?;
+    let cache_manager = cache.cache_manager();
+    
+    // Set cache
+    cache_manager.set("key", "value", Some(3600)).await?;
+    
+    // Get cache
+    let value: Option<String> = cache_manager.get("key").await?;
+    ctx.logger().info("cache", &format!("Cached value: {:?}", value))?;
     
     Ok(())
 }).await
@@ -276,22 +280,32 @@ app.run(|ctx: &DMSCServiceContext| async move {
 
 ### 2. Implementing Queue Support
 
+**Note**: Queue functionality needs to be separately configured and enabled through the module system. Queue module is accessed via `DMSCQueueModule`.
+
 ```rust
-// Add queue support when building the application
+// Add queue module
+let queue_module = DMSCQueueModule::new(DMSCQueueConfig::default());
+
 let app = DMSCAppBuilder::new()
     .with_config("config.yaml")?
     .with_logging(DMSCLogConfig::default())?
-    .with_queue(DMSCQueueConfig::default())?
+    .with_dms_module(Box::new(queue_module))?
     .build()?;
 
 // Use queue in business logic
 app.run(|ctx: &DMSCServiceContext| async move {
-    // Send message to queue
-    ctx.queue().publish("task_queue", json!({
-        "task_id": "task-123",
+    // Get queue module
+    let queue = ctx.module::<DMSCQueueModule>().await?;
+    let queue_manager = queue.queue_manager();
+    
+    // Get or create queue
+    let queue = queue_manager.create_queue("task_queue").await?;
+    
+    // Send message
+    queue.publish(&DMSCQueueMessage::new("task-123", json!({
         "task_type": "data_processing",
         "priority": 1,
-    })).await?;
+    }))).await?;
     
     ctx.logger().info("queue", "Task message sent to queue")?;
     

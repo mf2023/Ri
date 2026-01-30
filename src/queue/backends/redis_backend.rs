@@ -132,22 +132,16 @@ impl DMSCRedisQueue {
 
     /// Creates a new Redis queue instance with an existing connection.
     ///
-    /// Note: This implementation currently creates a new client using a connection string.
-    /// The provided connection parameter is not used directly due to architecture constraints.
-    /// Consider using `new_with_client` if you have an existing Client, or `new` with a connection string.
-    ///
     /// # Parameters
     ///
     /// - `name`: The name of the queue (Redis key)
-    /// - `_connection`: The existing Redis connection (not used in current implementation)
+    /// - `connection_string`: The Redis connection string
     ///
     /// # Returns
     ///
     /// A new DMSCRedisQueue instance wrapped in DMSCResult
-    pub async fn new_with_connection(name: &str, _connection: redis::aio::MultiplexedConnection) -> DMSCResult<Self> {
-        // Note: Connection parameter is reserved for future use when architecture supports it
-        // Currently using default connection string as placeholder
-        let client = Client::open("redis://localhost:6379")?;
+    pub async fn new_with_connection(name: &str, connection_string: &str) -> DMSCResult<Self> {
+        let client = Client::open(connection_string)?;
         Ok(Self {
             name: name.to_string(),
             client: Arc::new(client),
@@ -347,7 +341,8 @@ impl DMSCQueueConsumer for RedisQueueConsumer {
     /// Negatively acknowledges a message.
     ///
     /// This implementation handles message retry by pushing the message back to the queue
-    /// with appropriate retry logic and delay mechanisms.
+    /// with appropriate retry logic and delay mechanisms. It tracks retry counts and
+    /// implements exponential backoff for retry delays.
     ///
     /// # Parameters
     ///
@@ -357,24 +352,37 @@ impl DMSCQueueConsumer for RedisQueueConsumer {
     ///
     /// DMSCResult indicating success or failure
     async fn nack(&self, message_id: &str) -> DMSCResult<()> {
-        // In a production implementation, this would:
-        // 1. Parse the message_id to extract retry count and original message data
-        // 2. Check if max retry count has been exceeded
-        // 3. If under retry limit, push message back to queue with exponential backoff delay
-        // 4. If over retry limit, move to dead letter queue
-        // 5. Update retry statistics and alerting metrics
-        
-        // For demonstration, we simulate retry logic with logging
-        log::info!("Message negatively acknowledged (will be ret...retried): {message_id}");
-        
-        // Simulate retry delay calculation (exponential backoff)
-        let retry_delay = Duration::from_millis(1000); // 1 second base delay
-        tokio::time::sleep(retry_delay).await;
-        
-        // In a real implementation, we would push the message back to the queue
-        // For now, we just log the retry action
-        log::info!("Message scheduled for retry: {message_id} (after {retry_delay:?} delay)");
-        
+        log::info!("Message negatively acknowledged: {message_id}");
+
+        let mut conn = self.connection.lock().await;
+
+        let (original_data, retry_count): (Option<Vec<u8>>, u32) = conn.hgetall::<_, (Option<Vec<u8>>, u32)>(&format!("{}_meta", self.queue_name)).await
+            .map(|(data, count)| (data, count))
+            .unwrap_or((None, 0));
+
+        let max_retries = 3u32;
+        let base_delay_ms = 1000u64;
+
+        if retry_count >= max_retries {
+            log::warn!("Message {message_id} exceeded max retries ({max_retries}), moving to dead letter queue");
+            conn.rpush::<_, _, ()>(&format!("{}_dlq", self.queue_name), message_id.as_bytes()).await?;
+            conn.hdel::<_, &str, ()>(&format!("{}_meta", self.queue_name), "retry_count").await?;
+            return Ok(());
+        }
+
+        let new_retry_count = retry_count + 1;
+        let retry_delay_ms = base_delay_ms * (2u64.pow(new_retry_count - 1));
+
+        log::info!("Message {message_id} scheduled for retry {new_retry_count}/{max_retries} after {retry_delay_ms}ms delay");
+
+        conn.hset::<_, &str, u32, ()>(&format!("{}_meta", self.queue_name), "retry_count", new_retry_count).await?;
+
+        tokio::time::sleep(Duration::from_millis(retry_delay_ms)).await;
+
+        if let Some(data) = original_data {
+            conn.rpush::<_, _, ()>(&self.queue_name, &data).await?;
+        }
+
         Ok(())
     }
 

@@ -141,6 +141,33 @@ async fn example() -> DMSCResult<()> {
 
 </div>
 
+### DMSCCryptoSuite
+
+加密套件接口。
+
+```rust
+use dmsc::protocol::{DMSCCryptoSuite, AES256GCM, ChaCha20Poly1305};
+
+let aes = AES256GCM::new();
+let encrypted = aes.encrypt(data, &key, &nonce).await?;
+let decrypted = aes.decrypt(&encrypted, &key, &nonce).await?;
+
+let chacha = ChaCha20Poly1305::new();
+let encrypted = chacha.encrypt(data, &key, &nonce).await?;
+```
+
+### DMSCDeviceAuthProtocol
+
+设备认证协议。
+
+```rust
+use dmsc::protocol::DMSCDeviceAuthProtocol;
+
+let auth = DMSCDeviceAuthProtocol::new();
+let device_cert = auth.generate_device_certificate(device_id, public_key)?;
+let auth_result = auth.authenticate_device(&device_cert, &signature).await?;
+```
+
 ### DMSCPostQuantumCrypto
 
 后量子密码学。
@@ -153,6 +180,57 @@ let (public_key, secret_key) = pq_crypto.generate_keypair()?;
 let ciphertext = pq_crypto.encrypt(&public_key, plaintext)?;
 let plaintext = pq_crypto.decrypt(&secret_key, &ciphertext)?;
 ```
+
+<div align="center">
+
+## 硬件安全模块 (HSM)
+
+</div>
+
+### DMSCHSMManager
+
+HSM管理器。
+
+```rust
+use dmsc::protocol::{DMSCHSMManager, DMSCHSMType, DMSCHSMConfig};
+
+let hsm_config = DMSCHSMConfig {
+    hsm_type: DMSCHSMType::Software,
+    key_path: "/etc/dms/keys".to_string(),
+    enable_audit_log: true,
+};
+
+let mut hsm = DMSCHSMManager::new(hsm_config)?;
+hsm.initialize().await?;
+
+let key_info = hsm.generate_key(DMSCKeyType::Symmetric, 256)?;
+let encrypted_key = hsm.encrypt_key(key_id, data).await?;
+let decrypted_key = hsm.decrypt_key(key_id, &encrypted_key).await?;
+
+let stats = hsm.get_statistics()?;
+println!("生成的密钥数: {}", stats.keys_generated);
+println!("执行的操作数: {}", stats.operations_performed);
+```
+
+### DMSCHSMConfig
+
+HSM配置。
+
+| 字段 | 类型 | 描述 |
+|:--------|:-----|:-------------|
+| `hsm_type` | `DMSCHSMType` | HSM类型 |
+| `key_path` | `String` | 密钥存储路径 |
+| `enable_audit_log` | `bool` | 启用审计日志 |
+
+### DMSCHSMType
+
+HSM类型枚举。
+
+| 变体 | 描述 |
+|:--------|:-------------|
+| `Software` | 软件HSM |
+| `Hardware` | 硬件HSM |
+| `Cloud` | 云HSM |
 
 <div align="center">
 
@@ -215,9 +293,37 @@ if let Some(frame) = parser.parse_frame() {
 |:--------|:-------------|
 | `Data` | 数据帧 |
 | `Control` | 控制帧 |
-| `Heartbeat` | 心跳帧 |
 | `Ack` | 确认帧 |
-| `Error` | 错误帧 |
+| `Handshake` | 握手帧 |
+| `Heartbeat` | 心跳帧 |
+
+<div align="center>
+
+## 全局状态管理
+
+</div>
+
+### DMSCGlobalStateManager
+
+全局状态管理器。
+
+```rust
+use dmsc::protocol::DMSCGlobalStateManager;
+
+let state_manager = DMSCGlobalStateManager::new();
+state_manager.initialize().await?;
+
+let update = DMSCStateUpdate {
+    category: DMSCStateCategory::Device,
+    key: "device:001".to_string(),
+    value: serde_json::json!({"status": "online"}),
+    timestamp: chrono::Utc::now(),
+};
+
+state_manager.publish_update(update).await?;
+
+let state = state_manager.get_state(DMSCStateCategory::Device, "device:001").await?;
+```
 
 <div align="center>
 
@@ -231,12 +337,13 @@ if let Some(frame) = parser.parse_frame() {
 
 | 字段 | 类型 | 描述 |
 |:--------|:-----|:-------------|
-| `messages_sent` | `u64` | 发送消息数 |
-| `messages_received` | `u64` | 接收消息数 |
-| `bytes_sent` | `u64` | 发送字节数 |
-| `bytes_received` | `u64` | 接收字节数 |
-| `errors` | `u64` | 错误数 |
-| `avg_latency_ms` | `f64` | 平均延迟(毫秒) |
+| `total_messages_sent` | `u64` | 发送消息总数 |
+| `total_messages_received` | `u64` | 接收消息总数 |
+| `total_bytes_sent` | `u64` | 发送字节总数 |
+| `total_bytes_received` | `u64` | 接收字节总数 |
+| `average_latency_ms` | `u64` | 平均延迟(毫秒) |
+| `error_count` | `u64` | 错误数 |
+| `success_rate` | `f32` | 成功率 |
 
 <div align="center>
 
@@ -248,7 +355,8 @@ if let Some(frame) = parser.parse_frame() {
 2. **启用状态同步**：在分布式环境中保持状态一致
 3. **合理配置超时**：根据网络条件设置合适的连接超时
 4. **监控协议性能**：定期检查协议统计信息
-5. **启用协议切换**：在需要时动态切换协议类型
+5. **使用HSM保护密钥**：对关键密钥使用硬件安全模块
+6. **启用协议切换**：在需要时动态切换协议类型
 
 <div align="center">
 

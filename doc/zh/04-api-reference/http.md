@@ -4,7 +4,7 @@
 
 **Version: 0.1.6**
 
-**Last modified date: 2026-01-24**
+**Last modified date: 2026-01-30**
 
 http模块提供HTTP客户端与服务器功能，支持路由、中间件、WebSocket与文件上传下载。
 

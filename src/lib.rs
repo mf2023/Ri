@@ -188,6 +188,14 @@ pub mod prelude {
     pub use crate::gateway::DMSCRoute;
     /// Router for handling request routing
     pub use crate::gateway::DMSCRouter;
+    /// Backend server for load balancing
+    pub use crate::gateway::load_balancer::DMSCBackendServer;
+    /// Load balancer server statistics
+    pub use crate::gateway::load_balancer::LoadBalancerServerStats;
+    /// Load balancer implementation
+    pub use crate::gateway::load_balancer::DMSCLoadBalancer;
+    /// Load balancing strategy enum
+    pub use crate::gateway::load_balancer::DMSCLoadBalancerStrategy;
     
     /// Main device control module for DMSC
     pub use crate::device::DMSCDeviceControlModule;
@@ -289,6 +297,9 @@ pub mod py {
         // Add lifecycle types
         m.add_class::<crate::core::DMSCLifecycleObserver>()?;
         
+        // Add analytics types
+        m.add_class::<crate::core::DMSCLogAnalyticsModule>()?;
+        
         // Add cache types to main module
         m.add_class::<crate::cache::DMSCCacheModule>()?;
         m.add_class::<crate::cache::DMSCCacheManager>()?;
@@ -322,6 +333,12 @@ pub mod py {
         m.add_class::<crate::gateway::circuit_breaker::DMSCCircuitBreakerConfig>()?;
         m.add_class::<crate::gateway::circuit_breaker::DMSCCircuitBreakerState>()?;
         m.add_class::<crate::gateway::circuit_breaker::CircuitBreakerMetrics>()?;
+        
+        // Add load balancer types to main module
+        m.add_class::<crate::gateway::load_balancer::DMSCBackendServer>()?;
+        m.add_class::<crate::gateway::load_balancer::LoadBalancerServerStats>()?;
+        m.add_class::<crate::gateway::load_balancer::DMSCLoadBalancer>()?;
+        m.add_class::<crate::gateway::load_balancer::DMSCLoadBalancerStrategy>()?;
         
         // Add service mesh types to main module
         m.add_class::<crate::service_mesh::DMSCServiceMesh>()?;
@@ -486,6 +503,7 @@ pub mod py {
         m.add_class::<crate::device::scheduler::DMSCDeviceTypeStatistics>()?;
         m.add_class::<crate::device::scheduler::DMSCSchedulingRecommendation>()?;
         m.add_class::<crate::device::scheduler::DMSCSchedulingRecommendationType>()?;
+        m.add_class::<crate::device::DMSCDeviceDiscoveryEngine>()?;
         
         parent.add_submodule(&m)?;
         Ok(())
@@ -587,6 +605,7 @@ pub mod py {
         m.add_class::<crate::service_mesh::DMSCServiceEndpoint>()?;
         m.add_class::<crate::service_mesh::DMSCServiceHealthStatus>()?;
         m.add_class::<crate::service_mesh::health_check::DMSCHealthChecker>()?;
+        m.add_class::<crate::service_mesh::health_check::DMSCHealthSummary>()?;
         m.add_class::<crate::service_mesh::health_check::DMSCHealthCheckType>()?;
         m.add_class::<crate::service_mesh::traffic_management::DMSCTrafficManager>()?;
         m.add_class::<crate::service_mesh::traffic_management::DMSCTrafficRoute>()?;

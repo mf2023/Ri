@@ -4,7 +4,7 @@
 
 **Version: 0.1.6**
 
-**Last modified date: 2026-01-24**
+**Last modified date: 2026-01-30**
 
 storage模块提供文件存储与对象存储功能，支持本地文件系统、云存储服务和分布式存储。
 

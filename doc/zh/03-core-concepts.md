@@ -4,7 +4,7 @@
 
 **Version: 0.1.6**
 
-**Last modified date: 2026-01-24**
+**Last modified date: 2026-01-30**
 
 本章深入介绍DMSC的核心设计理念和关键组件，帮助您更好地理解和使用DMSC框架。
 
@@ -108,8 +108,11 @@ app.run(|ctx: &DMSCServiceContext| async move {
     // 访问配置功能
     let service_name = ctx.config().get("service.name").unwrap_or("unknown");
     
-    // 访问缓存功能
-    ctx.cache().set("key", "value", Some(3600)).await?;
+    // 访问缓存功能（通过模块系统）
+    if let Ok(cache) = ctx.module::<DMSCCacheModule>().await {
+        let cache_manager = cache.cache_manager();
+        cache_manager.set("key", "value", Some(3600)).await?;
+    }
     
     // 访问文件系统功能
     ctx.fs().write_file("data.txt", "content").await?;
@@ -209,7 +212,7 @@ let app = DMSCAppBuilder::new()
 impl DMSCModule for MyCustomModule {
     // 其他方法
     
-    fn priority(&self) -> u32 {
+    fn priority(&self) -> i32 {
         100 // 数值越大，优先级越高
     }
 }
@@ -361,7 +364,11 @@ type DMSCResult<T> = Result<T, DMSCError>;
 
 ```rust
 async fn my_function(ctx: &DMSCServiceContext) -> DMSCResult<()> {
-    let value = ctx.cache().get("key").await?; // 错误自动传播
+    // 通过模块系统访问缓存
+    if let Ok(cache) = ctx.module::<DMSCCacheModule>().await {
+        let cache_manager = cache.cache_manager();
+        let value = cache_manager.get("key").await?;
+    }
     Ok(())
 }
 ```
@@ -431,9 +438,12 @@ impl DMSCModule for MyAsyncModule {
 大多数DMSC API都是异步的，使用`async/await`语法：
 
 ```rust
-// 异步缓存操作
-ctx.cache().set("key", "value", Some(3600)).await?;
-let value = ctx.cache().get("key").await?;
+// 异步缓存操作（通过模块系统）
+if let Ok(cache) = ctx.module::<DMSCCacheModule>().await {
+    let cache_manager = cache.cache_manager();
+    cache_manager.set("key", "value", Some(3600)).await?;
+    let value = cache_manager.get("key").await?;
+}
 
 // 异步文件操作
 ctx.fs().write_file("data.txt", "content").await?;

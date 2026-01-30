@@ -4,7 +4,7 @@
 
 **Version: 0.1.6**
 
-**Last modified date: 2026-01-24**
+**Last modified date: 2026-01-30**
 
 validation模块提供数据验证与清理功能，支持多种验证规则和自定义验证器。
 

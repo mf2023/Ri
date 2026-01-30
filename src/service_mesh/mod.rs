@@ -296,6 +296,16 @@ impl DMSCServiceMesh {
     /// 
     /// A `DMSCResult<()>` indicating success or failure
     pub async fn register_service(&self, service_name: &str, endpoint: &str, weight: u32, metadata: Option<HashMap<String, String>>) -> DMSCResult<()> {
+        if service_name.is_empty() {
+            return Err(DMSCError::ServiceMesh("Service name cannot be empty".to_string()));
+        }
+        if endpoint.is_empty() {
+            return Err(DMSCError::ServiceMesh("Endpoint cannot be empty".to_string()));
+        }
+        if weight == 0 {
+            return Err(DMSCError::ServiceMesh("Weight must be greater than zero".to_string()));
+        }
+
         let service_endpoint = DMSCServiceEndpoint {
             service_name: service_name.to_string(),
             endpoint: endpoint.to_string(),

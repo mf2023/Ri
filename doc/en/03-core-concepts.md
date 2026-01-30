@@ -4,7 +4,7 @@
 
 **Version: 0.1.6**
 
-**Last modified date: 2026-01-24**
+**Last modified date: 2026-01-30**
 
 This chapter provides an in-depth introduction to DMSC's core design principles and key components, helping you better understand and use the DMSC framework.
 
@@ -108,8 +108,11 @@ app.run(|ctx: &DMSCServiceContext| async move {
     // Access configuration functionality
     let service_name = ctx.config().get("service.name").unwrap_or("unknown");
     
-    // Access cache functionality
-    ctx.cache().set("key", "value", Some(3600)).await?;
+    // Access cache functionality (through module system)
+    if let Ok(cache) = ctx.module::<DMSCCacheModule>().await {
+        let cache_manager = cache.cache_manager();
+        cache_manager.set("key", "value", Some(3600)).await?;
+    }
     
     // Access file system functionality
     ctx.fs().write_file("data.txt", "content").await?;
@@ -361,7 +364,11 @@ In async code, DMSC errors can be automatically propagated through the `?` opera
 
 ```rust
 async fn my_function(ctx: &DMSCServiceContext) -> DMSCResult<()> {
-    let value = ctx.cache().get("key").await?; // Error automatically propagated
+    // Access cache through module system
+    if let Ok(cache) = ctx.module::<DMSCCacheModule>().await {
+        let cache_manager = cache.cache_manager();
+        let value = cache_manager.get("key").await?;
+    }
     Ok(())
 }
 ```

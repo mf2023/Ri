@@ -9,12 +9,21 @@ English | [简体中文](README.zh.md)
 <a href="https://space.bilibili.com/3493284091529457" target="_blank">
     <img alt="BiliBili" src="https://img.shields.io/badge/BiliBili-Dunimd-00A1D6?style=flat-square&logo=bilibili"/>
 </a>
+
 <a href="https://gitee.com/dunimd" target="_blank">
     <img alt="Gitee" src="https://img.shields.io/badge/Gitee-Dunimd-C71D23?style=flat-square&logo=gitee"/>
 </a>
 <a href="https://github.com/mf2023/DMSC" target="_blank">
     <img alt="GitHub" src="https://img.shields.io/badge/GitHub-DMSC-181717?style=flat-square&logo=github"/>
 </a>
+<a href="https://huggingface.co/dunimd" target="_blank">
+    <img alt="Hugging Face" src="https://img.shields.io/badge/Hugging%20Face-Dunimd-FFD21E?style=flat-square&logo=huggingface"/>
+</a>
+<a href="https://modelscope.cn/organization/dunimd" target="_blank">
+    <img alt="ModelScope" src="https://img.shields.io/badge/ModelScope-Dunimd-1E6CFF?style=flat-square&logo=data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTQiIGhlaWdodD0iMTQiIHZpZXdCb3g9IjAgMCAxNCAxNCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHBhdGggZD0iTTcuMDA2IDBDMy4xNDIgMCAwIDMuMTQyIDAgNy4wMDZTMy4xNDIgMTQuMDEyIDcuMDA2IDE0LjAxMkMxMC44NyAxNC4wMTIgMTQuMDEyIDEwLjg3IDE0LjAxMiA3LjAwNkMxNC4wMTIgMy4xNDIgMTAuODcgMCA3LjAwNiAwWiIgZmlsbD0iIzFFNkNGRiIvPgo8L3N2Zz4K"/>
+</a>
+
+
 <a href="https://crates.io/crates/dmsc" target="_blank">
     <img alt="Crates.io" src="https://img.shields.io/badge/Crates-DMSC-000000?style=flat-square&logo=rust"/>
 </a>
@@ -46,6 +55,7 @@ DMSC adopts a highly modular architecture with 18 core modules, enabling on-dema
 | **grpc** | gRPC server and client support | ✅ Full (service registry + handler) |
 | **hooks** | Lifecycle event hooks (Startup, Shutdown, etc.) | ✅ Full |
 | **log** | Structured logging with tracing context integration | ✅ Full |
+| **module_rpc** | Inter-module RPC communication for distributed method calls | ✅ Full |
 | **observability** | Metrics, tracing, and Grafana integration | ✅ Full |
 | **orm** | Type-safe ORM with repository pattern and query builder | ✅ Full (types + QueryBuilder) |
 | **queue** | Distributed queue abstraction (Kafka, RabbitMQ, Redis, Memory) | ✅ Full |
@@ -359,7 +369,7 @@ A: Implement custom configuration loaders and register with DMSC configuration s
 A: The framework handles async operations internally, use the provided async interfaces.
 
 **Q: What Python versions are supported?**
-A: Python 3.7 and above are supported.
+A: Python 3.8 and above are supported.
 
 **Q: Is the Rust backend included?**
 A: Yes, the package includes the compiled Rust backend with Python bindings.
@@ -367,7 +377,8 @@ A: Yes, the package includes the compiled Rust backend with Python bindings.
 <h2 align="center">🌏 Community & Citation</h2>
 
 - Welcome to submit Issues and PRs!
-- Gitee: https://github.com/mf2023/DMSC.git
+- Gitee: https://gitee.com/dunimd/dmsc.git
+- Github: https://github.com/mf2023/DMSC.git
 
 <div align="center">
 

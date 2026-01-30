@@ -9,12 +9,21 @@
 <a href="https://space.bilibili.com/3493284091529457" target="_blank">
     <img alt="BiliBili" src="https://img.shields.io/badge/BiliBili-Dunimd-00A1D6?style=flat-square&logo=bilibili"/>
 </a>
+
 <a href="https://gitee.com/dunimd" target="_blank">
     <img alt="Gitee" src="https://img.shields.io/badge/Gitee-Dunimd-C71D23?style=flat-square&logo=gitee"/>
 </a>
 <a href="https://github.com/mf2023/DMSC" target="_blank">
     <img alt="GitHub" src="https://img.shields.io/badge/GitHub-DMSC-181717?style=flat-square&logo=github"/>
 </a>
+<a href="https://huggingface.co/dunimd" target="_blank">
+    <img alt="Hugging Face" src="https://img.shields.io/badge/Hugging%20Face-Dunimd-FFD21E?style=flat-square&logo=huggingface"/>
+</a>
+<a href="https://modelscope.cn/organization/dunimd" target="_blank">
+    <img alt="ModelScope" src="https://img.shields.io/badge/ModelScope-Dunimd-1E6CFF?style=flat-square&logo=data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTQiIGhlaWdodD0iMTQiIHZpZXdCb3g9IjAgMCAxNCAxNCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHBhdGggZD0iTTcuMDA2IDBDMy4xNDIgMCAwIDMuMTQyIDAgNy4wMDZTMy4xNDIgMTQuMDEyIDcuMDA2IDE0LjAxMkMxMC44NyAxNC4wMTIgMTQuMDEyIDEwLjg3IDE0LjAxMiA3LjAwNkMxNC4wMTIgMy4xNDIgMTAuODcgMCA3LjAwNiAwWiIgZmlsbD0iIzFFNkNGRiIvPgo8L3N2Zz4K"/>
+</a>
+
+
 <a href="https://crates.io/crates/dmsc" target="_blank">
     <img alt="Crates.io" src="https://img.shields.io/badge/Crates-DMSC-000000?style=flat-square&logo=rust"/>
 </a>
@@ -46,6 +55,7 @@ DMSC 采用高度模块化的架构，拥有 18 个核心模块，支持按需�
 | **grpc** | gRPC 服务器和客户端支持 | ✅ 完整（服务注册表+处理器） |
 | **hooks** | 生命周期事件钩子（启动、关闭等） | ✅ 完整 |
 | **log** | 结构化日志与追踪上下文集成 | ✅ 完整 |
+| **module_rpc** | 模块间 RPC 通信，支持分布式方法调用 | ✅ 完整 |
 | **observability** | 指标、追踪和 Grafana 集成 | ✅ 完整 |
 | **orm** | 类型安全的 ORM，带有仓储模式和查询构建器 | ✅ 完整（类型+QueryBuilder） |
 | **queue** | 分布式队列抽象（Kafka、RabbitMQ、Redis、内存） | ✅ 完整 |
@@ -367,7 +377,8 @@ A: 是的，该包包含了编译后的 Rust 后端和 Python 绑定。
 <h2 align="center">🌏 社区与引用</h2>
 
 - 欢迎提交 Issues 和 PRs！
-- Gitee: https://github.com/mf2023/DMSC.git
+- Gitee: https://gitee.com/dunimd/dmsc.git
+- Github: https://github.com/mf2023/DMSC.git
 
 <div align="center">
 

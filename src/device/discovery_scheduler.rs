@@ -87,6 +87,7 @@ use crate::device::{DMSCDevice, DMSCDeviceType, DMSCDeviceCapabilities};
 /// devices with high accuracy. It maintains a database of device fingerprints and uses
 /// them to match discovered devices based on identification patterns.
 #[derive(Debug, Clone)]
+#[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 pub struct DMSCDeviceDiscoveryEngine {
     /// Device fingerprint database mapping fingerprint IDs to their details
     fingerprints: HashMap<String, DeviceFingerprint>,
@@ -153,14 +154,7 @@ impl Default for DMSCDeviceDiscoveryEngine {
 }
 
 impl DMSCDeviceDiscoveryEngine {
-    /// Create a new device discovery engine with default settings.
-    /// 
-    /// This method initializes the engine with default device fingerprints and sets up
-    /// the discovery history with a capacity of 1000 records.
-    /// 
-    /// # Returns
-    /// 
-    /// A new `DMSCDeviceDiscoveryEngine` instance with default fingerprints and settings.
+    #[cfg(not(feature = "pyo3"))]
     pub fn new() -> Self {
         let mut engine = Self {
             fingerprints: HashMap::new(),
@@ -173,18 +167,7 @@ impl DMSCDeviceDiscoveryEngine {
         engine
     }
     
-    /// Discover devices using advanced pattern matching and confidence scoring.
-    /// 
-    /// This method processes a list of device scan results, identifies each device using
-    /// pattern matching against known fingerprints, and returns a list of discovered devices.
-    /// 
-    /// # Parameters
-    /// 
-    /// - `scan_results`: List of device scan results from hardware discovery
-    /// 
-    /// # Returns
-    /// 
-    /// A vector of discovered `DMSCDevice` instances with identified types and capabilities.
+    #[cfg(not(feature = "pyo3"))]
     pub fn discover_devices(&mut self, scan_results: Vec<DeviceScanResult>) -> Vec<DMSCDevice> {
         let mut discovered_devices = Vec::new();
         
@@ -417,6 +400,7 @@ impl DMSCDeviceDiscoveryEngine {
     /// # Returns
     /// 
     /// A `DiscoveryStats` struct containing the discovery statistics.
+    #[cfg(not(feature = "pyo3"))]
     pub fn get_discovery_stats(&self) -> DiscoveryStats {
         let total_attempts = self.discovery_history.len();
         let successful_identifications = self.discovery_history
@@ -446,11 +430,72 @@ impl DMSCDeviceDiscoveryEngine {
     }
 }
 
+#[cfg(feature = "pyo3")]
+#[pyo3::prelude::pymethods]
+impl DMSCDeviceDiscoveryEngine {
+    #[new]
+    pub fn new() -> Self {
+        let mut engine = Self {
+            fingerprints: HashMap::new(),
+            discovery_history: VecDeque::with_capacity(1000),
+            confidence_threshold: 0.7,
+        };
+        engine.initialize_default_fingerprints();
+        engine
+    }
+
+    pub fn discover_devices(&mut self, scan_results: Vec<DeviceScanResult>) -> Vec<DMSCDevice> {
+        let mut discovered_devices = Vec::new();
+        for scan_result in scan_results {
+            if let Some(device) = self.identify_device(scan_result) {
+                discovered_devices.push(device);
+            }
+        }
+        discovered_devices
+    }
+
+    pub fn get_confidence_threshold(&self) -> f64 {
+        self.confidence_threshold
+    }
+
+    pub fn set_confidence_threshold(&mut self, threshold: f64) {
+        self.confidence_threshold = threshold;
+    }
+
+    pub fn get_discovery_stats(&self) -> DiscoveryStats {
+        let total_attempts = self.discovery_history.len();
+        let successful_identifications = self.discovery_history
+            .iter()
+            .filter(|r| r.identified_type.is_some())
+            .count();
+        let avg_confidence = if total_attempts > 0 {
+            self.discovery_history
+                .iter()
+                .map(|record| record.confidence)
+                .sum::<f64>() / total_attempts as f64
+        } else {
+            0.0
+        };
+        
+        DiscoveryStats {
+            total_attempts,
+            successful_identifications,
+            success_rate: if total_attempts > 0 {
+                successful_identifications as f64 / total_attempts as f64
+            } else {
+                0.0
+            },
+            avg_confidence,
+        }
+    }
+}
+
 /// Device scan result from hardware discovery
 /// 
 /// This struct represents the result of a device scan, containing basic device information
 /// that is used for identification and fingerprint matching.
 #[derive(Debug, Clone)]
+#[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 pub struct DeviceScanResult {
     /// Unique identifier for the discovered device
     pub device_id: String,
@@ -465,6 +510,7 @@ pub struct DeviceScanResult {
 /// This struct contains statistics about the device discovery process, including
 /// success rates, confidence scores, and total attempts.
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 pub struct DiscoveryStats {
     /// Total number of device discovery attempts
     pub total_attempts: usize,

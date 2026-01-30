@@ -4,7 +4,7 @@
 
 **Version: 0.1.6**
 
-**Last modified date: 2026-01-24**
+**Last modified date: 2026-01-30**
 
 本文档提供 DMSC 协议模块的完整使用示例，演示如何利用协议抽象、安全特性和状态管理功能。
 

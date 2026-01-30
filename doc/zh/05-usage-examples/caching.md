@@ -4,7 +4,7 @@
 
 **Version: 0.1.6**
 
-**Last modified date: 2026-01-24**
+**Last modified date: 2026-01-30**
 
 本示例展示如何使用DMSC的cache模块进行多种缓存后端和高级缓存功能的使用。
 

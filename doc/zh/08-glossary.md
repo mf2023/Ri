@@ -4,7 +4,7 @@
 
 **Version: 0.1.6**
 
-**Last modified date: 2026-01-24**
+**Last modified date: 2026-01-30**
 
 本章定义了DMSC文档中使用的技术术语和概念，帮助您理解相关内容。
 

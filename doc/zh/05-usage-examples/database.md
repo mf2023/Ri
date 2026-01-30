@@ -4,7 +4,7 @@
 
 **Version: 0.1.6**
 
-**Last modified date: 2026-01-24**
+**Last modified date: 2026-01-30**
 
 本示例展示如何使用DMSC的database模块进行数据库连接、查询构建、事务管理、连接池和迁移功能的使用。
 

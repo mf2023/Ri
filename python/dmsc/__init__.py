@@ -118,7 +118,7 @@ from .dmsc import (
     DMSCServiceMesh, DMSCServiceMeshConfig, DMSCServiceDiscovery,
     DMSCServiceInstance, DMSCServiceStatus, DMSCServiceMeshStats,
     DMSCTrafficRoute, DMSCMatchCriteria, DMSCRouteAction, DMSCWeightedDestination,
-    DMSCTrafficManager, DMSCHealthChecker,
+    DMSCTrafficManager, DMSCHealthChecker, DMSCHealthSummary,
     
     # =============================================================================
     # Auth classes - Authentication and authorization including JWT management,
@@ -144,6 +144,7 @@ from .dmsc import (
     DMSCResourceScheduler, DMSCDeviceScheduler, DMSCSchedulingPolicy,
     DMSCAllocationRecord, DMSCAllocationRequest, DMSCAllocationStatistics,
     DMSCDeviceTypeStatistics, DMSCSchedulingRecommendation, DMSCSchedulingRecommendationType,
+    DMSCDeviceDiscoveryEngine,
     
     # =============================================================================
     # Observability classes - Metrics, tracing, and health monitoring for system
@@ -181,6 +182,7 @@ from .dmsc import (
     ColumnDefinition, IndexDefinition, ForeignKeyDefinition,
     TableDefinition, LogicalOperator, Criteria, JoinClause,
     ComparisonOperator, SortOrder, Pagination, QueryBuilder, JoinType,
+    DMSCPyORMRepository,
 
     # =============================================================================
     # gRPC classes - gRPC server and client support (conditional on grpc feature)
@@ -256,7 +258,7 @@ __all__ = [
     'DMSCServiceMesh', 'DMSCServiceMeshConfig', 'DMSCServiceDiscovery',
     'DMSCServiceInstance', 'DMSCServiceStatus', 'DMSCServiceMeshStats',
     'DMSCTrafficRoute', 'DMSCMatchCriteria', 'DMSCRouteAction', 'DMSCWeightedDestination',
-    'DMSCTrafficManager', 'DMSCHealthChecker',
+    'DMSCTrafficManager', 'DMSCHealthChecker', 'DMSCHealthSummary',
     
     # Auth classes - Authentication, authorization, and session management
     'DMSCAuthModule', 'DMSCAuthConfig', 'DMSCJWTManager', 'DMSCJWTClaims', 'DMSCJWTValidationOptions',
@@ -276,6 +278,7 @@ __all__ = [
     'DMSCResourceScheduler', 'DMSCDeviceScheduler', 'DMSCSchedulingPolicy',
     'DMSCAllocationRecord', 'DMSCAllocationRequest', 'DMSCAllocationStatistics',
     'DMSCDeviceTypeStatistics', 'DMSCSchedulingRecommendation', 'DMSCSchedulingRecommendationType',
+    'DMSCDeviceDiscoveryEngine',
     
     # Observability classes - Metrics, tracing, and health monitoring
     'DMSCObservabilityModule', 'DMSCObservabilityConfig',
@@ -301,6 +304,7 @@ __all__ = [
     'ColumnDefinition', 'IndexDefinition', 'ForeignKeyDefinition',
     'TableDefinition', 'LogicalOperator', 'Criteria', 'JoinClause',
     'ComparisonOperator', 'SortOrder', 'Pagination', 'QueryBuilder', 'JoinType',
+    'DMSCPyORMRepository',
     
     # gRPC classes - gRPC server and client support (conditional on grpc feature)
     'DMSCGrpcConfig', 'DMSCGrpcStats', 'DMSCGrpcServiceRegistry',

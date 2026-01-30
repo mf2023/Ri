@@ -4,7 +4,7 @@
 
 **Version: 0.1.6**
 
-**Last modified date: 2026-01-24**
+**Last modified date: 2026-01-30**
 
 本示例展示如何构建一个简单的DMSC应用，包括应用配置、运行和基本功能使用。
 
@@ -48,7 +48,7 @@ cd dms-basic-example
 
 ```toml
 [dependencies]
-dms = { git = "https://github.com/mf2023/DMSC" }
+dmsc = { path = "../dmsc" }
 tokio = { version = "1.0", features = ["full"] }
 ```
 
@@ -249,22 +249,30 @@ cargo run
 
 ### 1. 实现缓存支持
 
+**注意**：缓存功能需要通过模块系统单独配置和启用。缓存模块通过 `DMSCCacheModule` 提供访问。
+
 ```rust
-// 在应用构建时添加缓存支持
+// 添加缓存模块
+let cache_module = DMSCCacheModule::new(DMSCCacheConfig::default());
+
 let app = DMSCAppBuilder::new()
     .with_config("config.yaml")?
     .with_logging(DMSCLogConfig::default())?
-    .with_cache(DMSCCacheConfig::default())?
+    .with_dms_module(Box::new(cache_module))?
     .build()?;
 
 // 在业务逻辑中使用缓存
 app.run(|ctx: &DMSCServiceContext| async move {
+    // 获取缓存模块
+    let cache = ctx.module::<DMSCCacheModule>().await?;
+    let cache_manager = cache.cache_manager();
+    
     // 设置缓存
-    ctx.cache().set("key", "value", 3600).await?;
+    cache_manager.set("key", "value", Some(3600)).await?;
     
     // 获取缓存
-    let value: String = ctx.cache().get("key").await?;
-    ctx.logger().info("cache", &format!("Cached value: {}", value))?;
+    let value: Option<String> = cache_manager.get("key").await?;
+    ctx.logger().info("cache", &format!("Cached value: {:?}", value))?;
     
     Ok(())
 }).await
@@ -272,22 +280,32 @@ app.run(|ctx: &DMSCServiceContext| async move {
 
 ### 2. 实现队列支持
 
+**注意**：队列功能需要通过模块系统单独配置和启用。队列模块通过 `DMSCQueueModule` 提供访问。
+
 ```rust
-// 在应用构建时添加队列支持
+// 添加队列模块
+let queue_module = DMSCQueueModule::new(DMSCQueueConfig::default());
+
 let app = DMSCAppBuilder::new()
     .with_config("config.yaml")?
     .with_logging(DMSCLogConfig::default())?
-    .with_queue(DMSCQueueConfig::default())?
+    .with_dms_module(Box::new(queue_module))?
     .build()?;
 
 // 在业务逻辑中使用队列
 app.run(|ctx: &DMSCServiceContext| async move {
-    // 发送消息到队列
-    ctx.queue().publish("task_queue", json!({
-        "task_id": "task-123",
+    // 获取队列模块
+    let queue = ctx.module::<DMSCQueueModule>().await?;
+    let queue_manager = queue.queue_manager();
+    
+    // 获取或创建队列
+    let queue = queue_manager.create_queue("task_queue").await?;
+    
+    // 发送消息
+    queue.publish(&DMSCQueueMessage::new("task-123", json!({
         "task_type": "data_processing",
         "priority": 1,
-    })).await?;
+    }))).await?;
     
     ctx.logger().info("queue", "Task message sent to queue")?;
     
