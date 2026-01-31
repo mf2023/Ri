@@ -17,6 +17,7 @@
 
 ################################################################################
 # DMSC Rust Library and Python Wheel Build Pipeline
+################################################################################
 #
 # Purpose:
 # This GitHub Actions workflow builds the DMSC Rust library and generates
@@ -60,20 +61,39 @@
 # - Artifacts are uploaded using actions/upload-artifact@v4
 ################################################################################
 
+# Workflow name displayed in GitHub Actions UI
 name: Build DMSC
 
+# =============================================================================
+# Trigger Configuration
+# =============================================================================
+# Defines when this workflow should be executed
+
 on:
+  # Trigger on push events to the master branch
+  # This ensures wheels are built automatically when code is merged to master
   push:
     branches:
       - master
+  # Allow manual triggering from the GitHub Actions UI
+  # Useful for testing builds or re-running failed jobs
   workflow_dispatch:
 
+# =============================================================================
+# Job Definitions
+# =============================================================================
+# Each job runs in a separate runner environment and can execute in parallel
+
 jobs:
-  # Build Rust library for Linux x64 platform
+  ################################################################################
+  # Job: Build Rust Library for Linux x64
+  ################################################################################
   # This job compiles the Rust library as a cdylib (C dynamic library) for Linux x64 architecture
   # The compiled artifact is uploaded for use in subsequent Python wheel building jobs
   # Uses native compilation since the ubuntu-latest runner matches the target platform
   build-rust-linux:
+    # Use Ubuntu latest runner for Linux x64 builds
+    # This provides a native x86_64 environment for compilation
     runs-on: ubuntu-latest
     steps:
       # Step 1: Checkout repository source code
@@ -81,18 +101,24 @@ jobs:
       - uses: actions/checkout@v4
 
       # Step 2: Install protoc (Protocol Buffers compiler) for etcd-client build
+      # The etcd-client crate requires protoc to compile Protocol Buffer definitions
+      # This is needed because DMSC includes etcd integration for service discovery
       - name: Install protoc
         uses: arduino/setup-protoc@v3
         with:
           version: '33.x'
 
       # Step 3: Install CMake for rdkafka build
+      # rdkafka (Kafka client library) requires CMake to build its C dependencies
+      # DMSC uses Kafka for message streaming capabilities
       - name: Install CMake
         uses: jwlawson/actions-setup-cmake@v2
         with:
           cmake-version: '3.28.x'
 
       # Step 4: Install system dependencies for rdkafka
+      # rdkafka requires curl and SASL libraries for network and authentication support
+      # These are system-level dependencies needed by the Kafka C client library
       - name: Install system dependencies
         run: |
           sudo apt-get update
@@ -105,7 +131,7 @@ jobs:
       - name: Build
         run: cargo build --release
       
-      # Step 3: Upload compiled library artifact
+      # Step 6: Upload compiled library artifact
       # Artifact is named rust-linux-x64 for identification in downloads
       # Contains .so files (libdmsc.so) for Python wheel building on Linux x64
       - name: Upload artifact
@@ -114,13 +140,17 @@ jobs:
           name: rust-linux-x64
           path: target/release/libdmsc.*
 
-  # Build Rust library for Linux arm64 platform
+  ################################################################################
+  # Job: Build Rust Library for Linux ARM64
+  ################################################################################
   # NOTE: Switching from cross-compilation to native build on ARM64 Ubuntu runner
   # Cross-compilation from x64 to ARM64 fails because:
   # 1. ring crate requires native compilation for cryptographic operations
   # 2. PyO3 linking issues with cross-compiled artifacts
   # Using ubuntu-24.04-arm provides native ARM64 environment for proper compilation
   build-rust-linux-arm64:
+    # Use ARM64-specific Ubuntu runner for native ARM64 compilation
+    # This avoids cross-compilation issues with cryptographic and Python bindings
     runs-on: ubuntu-24.04-arm
     steps:
       # Step 1: Checkout repository source code
@@ -128,18 +158,21 @@ jobs:
       - uses: actions/checkout@v4
       
       # Step 2: Install protoc (Protocol Buffers compiler) for etcd-client build
+      # Required for compiling Protocol Buffer definitions used by etcd-client
       - name: Install protoc
         uses: arduino/setup-protoc@v3
         with:
           version: '33.x'
       
       # Step 3: Install CMake for rdkafka build
+      # Required for building Kafka client C dependencies
       - name: Install CMake
         uses: jwlawson/actions-setup-cmake@v2
         with:
           cmake-version: '3.28.x'
 
       # Step 4: Install system dependencies for rdkafka
+      # Install curl and SASL libraries required by Kafka client
       - name: Install system dependencies
         run: |
           sudo apt-get update
@@ -152,7 +185,7 @@ jobs:
       - name: Build
         run: cargo build --release
       
-      # Step 3: Upload compiled library artifact
+      # Step 6: Upload compiled library artifact
       # Artifact is named rust-linux-arm64 for identification
       # Contains .so files for Python wheel building on Linux ARM64 platforms
       - name: Upload artifact
@@ -161,11 +194,15 @@ jobs:
           name: rust-linux-arm64
           path: target/release/libdmsc.*
 
-  # Build Rust library for Windows x64 platform
+  ################################################################################
+  # Job: Build Rust Library for Windows x64
+  ################################################################################
   # Compiles Rust library as cdylib for Windows x64 (x86_64-pc-windows-msvc target)
   # Uses windows-latest runner for native compilation without cross-compilation overhead
   # The resulting .dll file is suitable for use with Python on Windows x64 systems
   build-rust-windows:
+    # Use Windows latest runner for native Windows x64 builds
+    # Provides MSVC toolchain and Windows SDK for compilation
     runs-on: windows-latest
     steps:
       # Step 1: Checkout repository source code
@@ -174,6 +211,7 @@ jobs:
       
       # Step 2: Install protoc (Protocol Buffers compiler) for etcd-client build
       # etcd-client requires protoc to compile .proto files during build
+      # repo-token is required for Windows to authenticate with GitHub API
       - name: Install protoc
         uses: arduino/setup-protoc@v3
         with:
@@ -181,6 +219,7 @@ jobs:
           repo-token: ${{ secrets.GITHUB_TOKEN }}
       
       # Step 3: Install CMake for rdkafka build
+      # Required for building Kafka client dependencies on Windows
       - name: Install CMake
         uses: jwlawson/actions-setup-cmake@v2
         with:
@@ -193,7 +232,7 @@ jobs:
       - name: Build
         run: cargo build --release
       
-      # Step 3: Upload compiled library artifact
+      # Step 5: Upload compiled library artifact
       # Artifact is named rust-windows-x64 for identification
       # Contains .dll files for Python wheel building on Windows x64 platforms
       - name: Upload artifact
@@ -202,7 +241,9 @@ jobs:
           name: rust-windows-x64
           path: target/release/libdmsc.*
 
-  # Build Rust library for macOS x64 platform
+  ################################################################################
+  # Job: Build Rust Library for macOS x64
+  ################################################################################
   # Note: macOS-15-intel is x64 runner (will be available until Aug 2027)
   # Required because newer macOS runners only support ARM64 natively
   # This job runs on Intel-based macOS runners to produce x64 (x86_64-apple-darwin) binaries
@@ -210,15 +251,22 @@ jobs:
   # Compiles Rust library as cdylib for macOS x64 architecture
   # The resulting .dylib file is suitable for use with Python on macOS x64 systems
   build-rust-macos:
+    # Use Intel-based macOS runner for x64 builds
+    # macos-15-intel provides native x86_64 environment for Intel Macs
     runs-on: macos-15-intel
     steps:
+      # Step 1: Checkout repository source code
       - uses: actions/checkout@v4
 
+      # Step 2: Install protoc for etcd-client build
       - name: Install protoc
         uses: arduino/setup-protoc@v3
         with:
           version: '33.x'
 
+      # Step 3: Install macOS dependencies via Homebrew
+      # Installs cmake and pkg-config for building native dependencies
+      # Also upgrades pip, setuptools, and wheel for Python package building
       - name: Install dependencies
         run: |
           brew update
@@ -226,23 +274,30 @@ jobs:
           brew upgrade cmake pkg-config || true
           pip install --upgrade pip setuptools wheel || true
       
+      # Step 4: Set up Rust toolchain for x86_64-apple-darwin target
+      # Installs stable Rust and adds the macOS x64 target
       - name: Set up Rust
         uses: dtolnay/rust-toolchain@master
         with:
           toolchain: stable
           targets: x86_64-apple-darwin
 
-      # Configure macOS linker for PyO3 cdylib builds so that Python C API
-      # symbols are resolved at load time instead of link time.
+      # Step 5: Configure macOS linker for PyO3 cdylib builds
+      # This configuration allows Python C API symbols to be resolved at load time
+      # instead of link time, which is required for Python extension modules on macOS
+      # The -undefined dynamic_lookup flag tells the linker to defer symbol resolution
       - name: Configure macOS linker for PyO3
         run: |
           mkdir -p .cargo
           echo '[target.x86_64-apple-darwin]' > .cargo/config.toml
           echo 'rustflags = ["-C", "link-arg=-undefined", "-C", "link-arg=dynamic_lookup"]' >> .cargo/config.toml
       
+      # Step 6: Build Rust library for x86_64-apple-darwin target
       - name: Build Rust library
         run: cargo build --release --target x86_64-apple-darwin
       
+      # Step 7: List build artifacts for debugging
+      # Displays the contents of the release directory to verify build success
       - name: List artifacts
         run: |
           echo "=== Contents of target/x86_64-apple-darwin/release/ ==="
@@ -251,13 +306,18 @@ jobs:
           echo "=== Looking for libdmsc files ==="
           find target -name "libdmsc*" -type f 2>/dev/null || echo "No libdmsc files found"
       
+      # Step 8: Upload compiled library artifact
+      # Artifact is named rust-macos-x64 for identification
+      # Contains .dylib files for Python wheel building on macOS x64
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: rust-macos-x64
           path: target/x86_64-apple-darwin/release/libdmsc.*
 
-  # Build Python Wheel for all platforms and architectures (supports Python 3.8~3.14)
+  ################################################################################
+  # Job: Build Python Wheels for All Platforms
+  ################################################################################
   # This matrix job generates distributable Python wheel packages (.whl files) for all
   # supported combinations of platforms, architectures, and Python versions (3.8 through 3.14)
   #
@@ -285,18 +345,33 @@ jobs:
   # 5. Build wheel using maturin with appropriate target and compatibility settings
   # 6. Upload built wheel artifact for collection in release
   build-python:
+    # Use the runner specified in the matrix configuration
     runs-on: ${{ matrix.runs-on }}
+    
+    # Environment variables for the job
     env:
+      # Disable pip version check to avoid unnecessary warnings
       PIP_DISABLE_PIP_VERSION_CHECK: '1'
+      # Increase Cargo HTTP timeout for slower networks
       CARGO_HTTP_TIMEOUT: '60'
+      # Use git CLI for fetching to improve compatibility
       CARGO_NET_GIT_FETCH_WITH_CLI: 'true'
+    
+    # Matrix strategy configuration
     strategy:
+      # Continue building other matrix combinations even if one fails
+      # This ensures maximum coverage even with partial failures
       fail-fast: false
+      
+      # Matrix defines all platform/architecture/Python combinations to build
       matrix:
         include:
-          # Linux x64
+          ##########################################################################
+          # Linux x64 Matrix Entries
+          ##########################################################################
           # Python 3.11+ requires glibc 2.25+ (manylinux_2_27)
           # Using manylinux_2_39 for compatibility with modern glibc
+          
           - python: '3.8'
             runs-on: ubuntu-latest
             target: x86_64-unknown-linux-gnu
@@ -332,9 +407,13 @@ jobs:
             target: x86_64-unknown-linux-gnu
             manylinux: manylinux_2_39
             docker: true
-          # Linux arm64
+          
+          ##########################################################################
+          # Linux ARM64 Matrix Entries
+          ##########################################################################
           # Native ARM64 builds on ubuntu-24.04-arm
           # Using manylinux_2_39 for consistency with x64 builds
+          
           - python: '3.8'
             runs-on: ubuntu-24.04-arm
             target: aarch64-unknown-linux-gnu
@@ -370,9 +449,13 @@ jobs:
             target: aarch64-unknown-linux-gnu
             manylinux: manylinux_2_39
             docker: false
-          # Windows x64
+          
+          ##########################################################################
+          # Windows x64 Matrix Entries
+          ##########################################################################
           # null manylinux indicates platform-specific wheel format (win-amd64)
           # Uses Windows-specific ABI (x86_64-pc-windows-msvc) for optimal performance
+          
           - python: '3.8'
             runs-on: windows-latest
             target: x86_64-pc-windows-msvc
@@ -401,7 +484,10 @@ jobs:
             runs-on: windows-latest
             target: x86_64-pc-windows-msvc
             manylinux: null
-          # Windows arm64
+          
+          ##########################################################################
+          # Windows ARM64 Matrix Entries (Disabled)
+          ##########################################################################
           # Note: GitHub Actions windows-latest does not provide ARM64 Python interpreters
           # Skipping ARM64 builds for Windows as ARM64 Windows runners are not available
           # ARM64 Windows requires specialized Python interpreters not available in GitHub Actions
@@ -426,10 +512,14 @@ jobs:
           #   runs-on: windows-latest
           #   target: aarch64-pc-windows-msvc
           #   manylinux: null
-          # macOS x64 (requires macOS-15-intel for native x64 builds)
+          
+          ##########################################################################
+          # macOS x64 Matrix Entries
+          ##########################################################################
           # Note: macOS-15-intel is x64 runner (will be available until Aug 2027)
           # macOS wheels use null manylinux as they are platform-specific (.whl format)
           # macOS-15-intel runner required because modern macOS runners only support ARM64
+          
           - python: '3.8'
             runs-on: macos-15-intel
             target: x86_64-apple-darwin
@@ -458,10 +548,14 @@ jobs:
             runs-on: macos-15-intel
             target: x86_64-apple-darwin
             manylinux: null
-          # macOS arm64 (native ARM64 build on macOS-15)
+          
+          ##########################################################################
+          # macOS ARM64 Matrix Entries
+          ##########################################################################
           # Requires Python 3.8+ with universal2 support or arm64-specific build
           # Native ARM64 compilation provides optimal performance on Apple Silicon
           # macOS-15 runner provides ARM64-native environment for aarch64-apple-darwin target
+          
           - python: '3.8'
             runs-on: macos-15
             target: aarch64-apple-darwin
@@ -490,6 +584,8 @@ jobs:
             runs-on: macos-15
             target: aarch64-apple-darwin
             manylinux: null
+    
+    # Build steps executed for each matrix combination
     steps:
       # Step 1: Checkout repository source code to the workflow runner
       # This action clones the repository contents, making source code and configuration
@@ -530,8 +626,15 @@ jobs:
           echo '' >> .cargo/config.toml
           echo '[target.aarch64-apple-darwin]' >> .cargo/config.toml
           echo 'rustflags = ["-C", "link-arg=-undefined", "-C", "link-arg=dynamic_lookup"]' >> .cargo/config.toml
-      
-      # Step 4a: Cache pip dependencies to avoid rate limits
+
+      # Step 4b: Install protoc for macOS (required by etcd-client)
+      - name: Install protoc for macOS
+        if: runner.os == 'macOS'
+        run: |
+          brew install protobuf
+          echo "PROTOC=$(brew --prefix protobuf)/bin/protoc" >> $GITHUB_ENV
+
+      # Step 5: Cache pip dependencies to avoid rate limits
       # Using GitHub Actions cache to store pip packages
       # This significantly speeds up builds and avoids PyPI rate limits
       - name: Cache pip packages
@@ -546,7 +649,7 @@ jobs:
             pip-${{ matrix.python }}-${{ matrix.target }}-
             pip-${{ matrix.python }}-
       
-      # Step 4b: Cache Rust cargo registry to speed up builds
+      # Step 6: Cache Rust cargo registry to speed up builds
       # Caching cargo registry and target directory significantly reduces build times
       - name: Cache Rust dependencies
         uses: actions/cache@v4
@@ -560,7 +663,7 @@ jobs:
             rust-${{ matrix.target }}-
             rust-
 
-      # Step 4d: Install protoc for Windows and Linux builds (required by etcd-client)
+      # Step 7: Install protoc for Windows and Linux builds (required by etcd-client)
       # Conditional: Only runs on Windows and Linux platforms (not macOS)
       # protoc is needed to compile .proto files for the etcd-client dependency
       - name: Install protoc
@@ -568,15 +671,18 @@ jobs:
         uses: arduino/setup-protoc@v3
         with:
           version: '33.x'
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
 
-      # Step 4e: Install system dependencies for rdkafka on Linux
+      # Step 8: Install system dependencies for rdkafka on Linux
+      # Conditional: Only runs on Linux platforms
+      # Installs curl and SASL libraries required by the Kafka C client
       - name: Install rdkafka dependencies
         if: runner.os == 'Linux'
         run: |
           sudo apt-get update
           sudo apt-get install -y libcurl4-openssl-dev libsasl2-dev
 
-      # Step 4f: Configure OpenSSL for static linking on Linux builds
+      # Step 9: Configure OpenSSL for static linking on Linux builds
       # This ensures all OpenSSL dependencies are statically linked into the binary
       # to avoid "libcrypto-*.so.3 not found" errors during auditwheel repair
       # OPENSSL_STATIC=1: Links OpenSSL statically
@@ -598,7 +704,7 @@ jobs:
           fi
           echo "OPENSSL_INCLUDE_DIR=/usr/include/openssl" >> $GITHUB_ENV
       
-      # Step 4g: Configure Rust linker for static linking on Linux builds
+      # Step 10: Configure Rust linker for static linking on Linux builds
       # This ensures the final binary is fully statically linked
       # Configures build profile settings for optimal release builds
       - name: Configure static linking
@@ -608,23 +714,24 @@ jobs:
           printf '[profile.release]\n' > .cargo/config.toml
           printf 'lto = true\ncodegen-units = 1\nstrip = true\n' >> .cargo/config.toml
       
-      # Step 5: Upgrade pip and install build dependencies
+      # Step 11: Upgrade pip and install build dependencies
       # Upgrading pip before installation helps avoid API rate limits
       # and ensures using the latest versions of build tools
       # Using pip cache to avoid repeated downloads from PyPI
+      # Configures Tsinghua University PyPI mirror for faster downloads in China
       - name: Upgrade pip
         run: |
           python -m pip install --upgrade pip setuptools wheel
           pip config set global.index-url https://pypi.tuna.tsinghua.edu.cn/simple
 
-      # Step 6: Install build dependencies (maturin and auditwheel)
+      # Step 12: Install build dependencies (maturin and auditwheel)
       # maturin: Rust/Python build tool that creates Python wheels from Rust libraries
       # auditwheel: Tool for repairing Linux wheel distribution tags
       # Both are essential for building portable Python packages with native extensions
       - name: Install dependencies
         run: pip install maturin auditwheel --quiet
       
-      # Step 7: Build Python wheel for non-Docker platforms (macOS, Windows, Linux ARM64)
+      # Step 13: Build Python wheel for non-Docker platforms (macOS, Windows, Linux ARM64)
       # Conditional: Executes when docker: false (native builds without manylinux container)
       # Uses maturin to build the wheel with release optimizations
       # Outputs to dist/ directory for artifact collection
@@ -634,7 +741,7 @@ jobs:
         run: |
           maturin build --release --target ${{ matrix.target }} -o dist
       
-      # Step 8: Build and repair Linux wheel using manylinux Docker container
+      # Step 14: Build and repair Linux wheel using manylinux Docker container
       # Conditional: Executes when docker: true (Linux x64 builds)
       # First builds the wheel in wheelhouse/ directory
       # Then uses auditwheel to repair and tag the wheel for manylinux compatibility
@@ -649,7 +756,7 @@ jobs:
           maturin build --release --target "$TARGET" -o wheelhouse
           auditwheel repair wheelhouse/*.whl -w dist --plat ${{ matrix.manylinux }}_${ARCH}
       
-      # Step 9: List generated wheel files for debugging and verification
+      # Step 15: List generated wheel files for debugging and verification
       # Shell: bash required for glob patterns and ls command
       # Displays all files in dist/ directory or shows message if empty
       # Helps verify wheel generation was successful
@@ -658,7 +765,7 @@ jobs:
         run: |
           ls -la dist/ 2>/dev/null || echo "No files in dist"
       
-      # Step 10: Upload built wheel artifact for collection and release
+      # Step 16: Upload built wheel artifact for collection and release
       # Uses actions/upload-artifact@v4 to upload wheel files
       # Artifact name includes target platform and Python version for identification
       # Artifacts are available for 90 days by default in GitHub Actions

@@ -179,22 +179,51 @@ impl DMSCModule for MyCustomModule {
 
 DMSC的统一错误类型。
 
-#### 方法
+#### 枚举变体
 
-| 方法 | 描述 | 参数 | 返回值 |
-|:--------|:-------------|:--------|:--------|
-| `new(code, message)` | 创建新的错误 | `code: &str`, `message: &str` | `DMSCError` |
-| `with_context(context)` | 添加错误上下文 | `context: impl Into<String>` | `Self` |
-| `with_source(source)` | 添加内部错误 | `source: impl std::error::Error + Send + Sync + 'static` | `Self` |
-| `code()` | 获取错误代码 | 无 | `&str` |
-| `message()` | 获取错误消息 | 无 | `&str` |
-| `context()` | 获取错误上下文 | 无 | `Option<&str>` |
+| 变体 | 描述 | 参数 |
+|:--------|:-------------|:--------|
+| `Io(String)` | I/O操作失败 | 错误消息 |
+| `Serde(String)` | 序列化/反序列化错误 | 错误消息 |
+| `Config(String)` | 配置错误 | 错误消息 |
+| `Hook(String)` | 钩子执行错误 | 错误消息 |
+| `Prometheus(String)` | Prometheus指标错误 | 错误消息 |
+| `ServiceMesh(String)` | 服务网格错误 | 错误消息 |
+| `InvalidState(String)` | 无效状态错误 | 错误消息 |
+| `InvalidInput(String)` | 无效输入错误 | 错误消息 |
+| `SecurityViolation(String)` | 安全违规错误 | 错误消息 |
+| `DeviceNotFound { device_id }` | 设备未找到 | 设备ID |
+| `DeviceAllocationFailed { device_id, reason }` | 设备分配失败 | 设备ID和原因 |
+| `AllocationNotFound { allocation_id }` | 分配未找到 | 分配ID |
+| `ModuleNotFound { module_name }` | 模块未找到 | 模块名称 |
+| `ModuleInitFailed { module_name, reason }` | 模块初始化失败 | 模块名称和原因 |
+| `ModuleStartFailed { module_name, reason }` | 模块启动失败 | 模块名称和原因 |
+| `ModuleShutdownFailed { module_name, reason }` | 模块关闭失败 | 模块名称和原因 |
+| `CircularDependency { modules }` | 循环依赖 | 涉及的模块列表 |
+| `MissingDependency { module_name, dependency }` | 缺少依赖 | 模块名称和依赖 |
+| `Other(String)` | 其他错误 | 错误消息 |
+| `ExternalError(String)` | 外部错误 | 错误消息 |
+| `PoolError(String)` | 连接池错误 | 错误消息 |
+| `DeviceError(String)` | 设备错误 | 错误消息 |
+| `RedisError(String)` | Redis错误 | 错误消息 |
+| `HttpClientError(String)` | HTTP客户端错误 | 错误消息 |
+| `TomlError(String)` | TOML解析错误 | 错误消息 |
+| `YamlError(String)` | YAML解析错误 | 错误消息 |
+| `Queue(String)` | 队列错误 | 错误消息 |
+| `FrameError(String)` | 帧错误 | 错误消息 |
+| `Database(String)` | 数据库错误 | 错误消息 |
 
 #### 使用示例
 
 ```rust
-Err(DMSCError::new("INVALID_CONFIG", "Invalid configuration")
-    .with_context("service.port must be a positive integer"))
+// 使用枚举变体创建错误
+Err(DMSCError::Config("Invalid port number".to_string()))
+
+// I/O错误自动转换
+let file = std::fs::File::open("config.yaml")?; // 自动转换为 DMSCError::Io
+
+// 设备相关错误
+Err(DMSCError::DeviceNotFound { device_id: "gpu-001".to_string() })
 ```
 
 ### DMSCResult

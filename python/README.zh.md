@@ -1,13 +1,19 @@
 <div align="center">
 
-# DMSC (Dunimd Middleware Service) - 适用于Python的DMSC库
+<h1 style="display: flex; flex-direction: column; align-items: center; gap: 12px; margin-bottom: 8px;">
+  <span style="display: flex; align-items: center; gap: 12px;"><img src="../assets/svg/dmsc.svg" width="48" height="48" alt="DMSC">Dunimd Middleware Service</span>
+  <span style="font-size: 0.6em; color: #666; font-weight: normal;">适用于 Python 的 DMSC 库</span>
+</h1>
 
 [English](README.md) | 简体中文
 
-[帮助文档](../doc/zh/index.md) | [更新日志](CHANGELOG.md)
+[帮助文档](../doc/zh/index.md) | [更新日志](CHANGELOG.md) | [安全](../SECURITY.md) | [贡献](../CONTRIBUTING.md) | [行为准则](../CODE_OF_CONDUCT.md)
 
 <a href="https://space.bilibili.com/3493284091529457" target="_blank">
     <img alt="BiliBili" src="https://img.shields.io/badge/BiliBili-Dunimd-00A1D6?style=flat-square&logo=bilibili"/>
+</a>
+<a href="https://x.com/Dunimd2025" target="_blank">
+    <img alt="X" src="https://img.shields.io/badge/X-Dunimd-000000?style=flat-square&logo=x"/>
 </a>
 
 <a href="https://gitee.com/dunimd" target="_blank">
@@ -206,11 +212,11 @@ import asyncio
 from dmsc import DMSCAppBuilder, DMSCLogConfig
 
 async def main():
-    # 构建服务运行时（逐步调用，Python 中不支持链式调用）
-    app_builder = DMSCAppBuilder()
-    app_builder.with_config("config.yaml")
-    app_builder.with_logging(DMSCLogConfig())
-    runtime = app_builder.build()
+    # 构建服务运行时（支持链式调用）
+    runtime = (DMSCAppBuilder()
+        .with_config("config.yaml")
+        .with_logging(DMSCLogConfig())
+        .build())
     
     # 运行业务逻辑
     await runtime.run()

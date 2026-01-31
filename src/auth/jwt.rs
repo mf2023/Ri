@@ -272,6 +272,39 @@ impl DMSCJWTManager {
             decoding_key: DecodingKey::from_secret(&secret_bytes),
         }
     }
+
+    /// Generates a new JWT token for the specified user with roles and permissions.
+    ///
+    /// # Parameters
+    ///
+    /// - `user_id`: The unique identifier of the user (subject claim)
+    /// - `roles`: A list of role identifiers assigned to the user
+    /// - `permissions`: A list of permission identifiers granted to the user
+    ///
+    /// # Returns
+    ///
+    /// The encoded JWT token string
+    pub fn py_generate_token(&self, user_id: &str, roles: Vec<String>, permissions: Vec<String>) -> Result<String, DMSCError> {
+        self.generate_token(user_id, roles, permissions)
+    }
+
+    /// Validates a JWT token and returns the decoded claims.
+    ///
+    /// # Parameters
+    ///
+    /// - `token`: The JWT token string to validate
+    ///
+    /// # Returns
+    ///
+    /// The decoded DMSCJWTClaims if validation succeeds
+    pub fn py_validate_token(&self, token: &str) -> Result<DMSCJWTClaims, DMSCError> {
+        self.validate_token(token)
+    }
+
+    /// Returns the default token expiry time in seconds.
+    pub fn py_get_token_expiry(&self) -> u64 {
+        self.expiry_secs
+    }
 }
 
 impl DMSCJWTManager {

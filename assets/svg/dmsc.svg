@@ -1,0 +1,49 @@
+<!--
+  Copyright © 2025-2026 Wenze Wei. All Rights Reserved.
+
+  This file is part of DMSC.
+  The DMSC project belongs to the Dunimd Team.
+
+  Licensed under the Apache License, Version 2.0 (the "License");
+  You may not use this file except in compliance with the License.
+  You may obtain a copy of the License at
+
+      http://www.apache.org/licenses/LICENSE-2.0
+
+  Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License.
+
+  ============================================================================
+  DMSC Logo SVG
+  ============================================================================
+  This is the official logo for DMSC (Dunimd Middleware Service).
+
+  Design Specifications:
+  - Canvas Size: 512x512 pixels
+  - Corner Radius: 115 pixels (22.5% of width)
+  - Primary Color: #1E6CFF (Blue)
+  - Font: Inter, sans-serif
+  - Font Size: 130 pixels
+  - Font Weight: 900 (Black)
+  - Letter Spacing: -2 pixels
+
+  Usage:
+  - This SVG serves as the source file for all DMSC branding materials
+  - Export to PNG at various sizes (16x16, 32x32, 48x48, 128x128, etc.)
+  - Do not modify without authorization
+
+  ============================================================================
+-->
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+  <rect x="0" y="0" width="512" height="512" rx="115" fill="#1E6CFF"/>
+  <text x="256" y="301"
+        font-family="Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif"
+        font-size="130"
+        font-weight="900"
+        fill="white"
+        text-anchor="middle"
+        letter-spacing="-2">DMSC</text>
+</svg>

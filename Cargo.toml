@@ -43,16 +43,38 @@
 # Core package metadata including name, version, edition, and authorship.
 # This information is used for crate publishing, dependency resolution,
 # and documentation generation.
+
 [package]
+# Package name used for crate publishing and dependency references
 name = "dmsc"
+
+# Semantic version of the package
+# Follows MAJOR.MINOR.PATCH format
 version = "0.1.6"
+
+# Rust edition determines language features and behavior
+# 2021 edition provides disjoint capture in closures, panic macro consistency, etc.
 edition = "2021"
+
+# Package authors for crates.io and documentation
 authors = ["Dunimd Team"]
+
+# Short description for crates.io and package managers
 description = "Dunimd Middleware Service - A high-performance Rust middleware framework with modular architecture"
+
+# Source code repository URL
 repository = "https://github.com/mf2023/DMSC"
+
+# Path to README file for crates.io rendering
 readme = "README.md"
+
+# Keywords for crates.io search and categorization
 keywords = ["middleware", "framework", "distributed", "async", "microservices"]
+
+# Categories for crates.io browsing
 categories = ["asynchronous", "web-programming", "network-programming"]
+
+# Software license for the package
 license = "Apache-2.0"
 
 # =============================================================================
@@ -61,9 +83,17 @@ license = "Apache-2.0"
 # Defines the library output type and source location. The crate-type
 # specifies both rlib (Rust static library) and cdylib (C dynamic library)
 # to support both Rust native usage and foreign function interface bindings.
+
 [lib]
+# Library name (used for the output file)
 name = "dmsc"
+
+# Path to the library source file
 path = "src/lib.rs"
+
+# Library crate types for different use cases:
+# - "rlib": Rust static library for Rust-to-Rust linking
+# - "cdylib": C dynamic library for FFI and Python bindings via PyO3
 crate-type = ["rlib", "cdylib"]
 
 # =============================================================================
@@ -75,6 +105,7 @@ crate-type = ["rlib", "cdylib"]
 [dependencies]
 # PyO3 Python bindings with extension-module feature for building Python extensions
 # Optional to allow pure Rust builds without Python support
+# When enabled, allows Python code to import and use DMSC functionality
 pyo3 = { version = "0.27", features = ["extension-module"], optional = true }
 
 # Kafka message streaming support
@@ -155,31 +186,31 @@ toml = "0.8"
 
 # File system notification for configuration hot reload
 # Watches configuration files and triggers reload on changes
-notify = { version = "6.1", optional = true } # For config hot reload
+notify = { version = "6.1", optional = true }
 
 # Prometheus metrics client for observability and monitoring
 # Collects and exposes application metrics in Prometheus format
-prometheus = { version = "0.13", optional = true } # For observability
+prometheus = { version = "0.13", optional = true }
 
 # Redis client with tokio async runtime support
 # Provides caching and message queue capabilities
-redis = { version = "0.24", features = ["tokio-comp", "connection-manager"], optional = true } # For cache and queue
+redis = { version = "0.24", features = ["tokio-comp", "connection-manager"], optional = true }
 
 # HTTP client and server library with HTTP/1 and HTTP/2 support
 # Core component for building API gateways and HTTP services
-hyper = { version = "0.14", features = ["client", "server", "http1", "http2", "tcp"], optional = true } # For HTTP and gateway
+hyper = { version = "0.14", features = ["client", "server", "http1", "http2", "tcp"], optional = true }
 
 # RabbitMQ client with TLS support for message queuing
 # Provides reliable message queue functionality
-lapin = { version = "2.3", features = ["rustls"], optional = true } # For RabbitMQ
+lapin = { version = "2.3", features = ["rustls"], optional = true }
 
 # TLS support for tokio-based network operations
 # Required for secure HTTPS and WSS connections in gateway
-tokio-rustls = { version = "0.24", optional = true } # For TLS support in gateway
+tokio-rustls = { version = "0.24", optional = true }
 
 # Future utilities extension for async operations
 # Provides additional combinators and utilities for futures
-futures = { version = "0.3", features = ["std"] } # For async operations
+futures = { version = "0.3", features = ["std"] }
 
 # Future utilities for async stream operations
 futures-util = { version = "0.3", features = ["sink", "std"] }
@@ -189,31 +220,31 @@ http = "1.0"
 
 # HTTP client for external API calls and service integration
 # Supports JSON response parsing and async requests
-reqwest = { version = "0.11", features = ["json"], optional = true } # For HTTP client
+reqwest = { version = "0.11", features = ["json"], optional = true }
 
 # System information collection for monitoring and diagnostics
 # Provides CPU, memory, disk, and process information
-sysinfo = { version = "0.29", optional = true } # For system information
+sysinfo = { version = "0.29", optional = true }
 
 # JWT (JSON Web Token) implementation for authentication
 # Handles token creation, validation, and claims management
-jsonwebtoken = "8" # For JWT authentication (required by auth module)
+jsonwebtoken = "8"
 
 # URL encoding and decoding support
 # Required for query string and path parameter handling
-urlencoding = { version = "2", optional = true } # For URL encoding
+urlencoding = { version = "2", optional = true }
 
 # etcd client for service discovery and distributed configuration
 # Provides key-value store for cluster coordination
-etcd-client = { version = "0.11", features = ["tls"], optional = true } # For service discovery
+etcd-client = { version = "0.11", features = ["tls"], optional = true }
 
 # PostgreSQL async driver for database operations
 # Supports connection pooling and transaction management
-tokio-postgres = { version = "0.7", optional = true } # For PostgreSQL
+tokio-postgres = { version = "0.7", optional = true }
 
 # SQLite embedded database with bundled C library
 # Zero-configuration database for local storage
-rusqlite = { version = "0.29", optional = true, features = ["bundled"] } # For SQLite
+rusqlite = { version = "0.29", optional = true, features = ["bundled"] }
 
 # SQL query builder and database driver framework
 # Supports PostgreSQL, MySQL, SQLite with async/await
@@ -229,6 +260,9 @@ erased-serde = "0.4"
 # =============================================================================
 # Dynamic library loading support for the plugin architecture.
 # Enables runtime loading of compiled plugin modules.
+
+# Cross-platform dynamic library loading
+# Loads .so, .dll, or .dylib files at runtime for plugin support
 libloading = "0.8"
 
 # Zeroize for secure memory clearing of sensitive data
@@ -345,10 +379,20 @@ bytes = "1"
 
 # gRPC client and server framework with prost codec support
 tonic = { version = "0.12", optional = true, features = ["prost"] }
+
+# Protocol Buffers code generation for Rust
 prost = { version = "0.12", optional = true }
+
+# Protocol Buffers well-known types
 prost-types = { version = "0.12", optional = true }
+
+# Async stream utilities for Tokio
 tokio-stream = { version = "0.1", optional = true }
+
+# Tower service framework for middleware composition
 tower = { version = "0.4", optional = true }
+
+# Async stream macros for generating streams
 async-stream = { version = "0.3", optional = true }
 
 # =============================================================================
@@ -356,8 +400,10 @@ async-stream = { version = "0.3", optional = true }
 # =============================================================================
 # WebSocket protocol support for full-duplex communication channels.
 
-# Async WebSocket client and server with tokio runtime
+# Async WebSocket client and server with tokio runtime and TLS support
 tokio-tungstenite = { version = "0.24", optional = true, features = ["rustls-tls-webpki-roots"] }
+
+# Core WebSocket library (tungstenite) for protocol handling
 tungstenite = { version = "0.24", optional = true }
 
 # =============================================================================
@@ -366,9 +412,9 @@ tungstenite = { version = "0.24", optional = true }
 # Dependencies that are only available or needed on specific operating systems.
 
 [target.'cfg(not(windows))'.dependencies]
-
 # OpenSSL native library bindings with vendored feature
 # Required for secure TLS connections on non-Windows platforms
+# The vendored feature builds OpenSSL from source, avoiding system dependency issues
 openssl-sys = { version = "0.9", features = ["vendored"], optional = true }
 
 # =============================================================================
@@ -394,8 +440,8 @@ sm-crypto = { version = "0.1", optional = true }
 # Defines conditional compilation features that control which dependencies
 # and functionality are included in the build. Users can enable features
 # via cargo build --features command.
-[features]
 
+[features]
 # Default features enabled on fresh installation
 # ALL FEATURES ENABLED - Complete functionality
 default = [
@@ -439,9 +485,9 @@ full = [
 ]
 
 # =============================================================================
-# Feature Definitions
+# Individual Feature Definitions
 # =============================================================================
-# Individual feature flags that enable specific functionality modules.
+# Each feature flag enables specific functionality modules.
 # Each feature may enable multiple dependencies and code paths.
 
 # Service discovery via etcd cluster
@@ -503,10 +549,7 @@ websocket = ["tokio-tungstenite", "tungstenite"]
 # See documentation for Windows build instructions
 kafka = ["rdkafka"]
 
-# =============================================================================
-# Post-Quantum Cryptography Feature
-# =============================================================================
-# Enable post-quantum cryptography integration via oqs
+# Post-quantum cryptography integration via oqs
 # Requires: liboqs C library installed + oqs Rust crate
 protocol = ["dep:oqs", "dep:sm-crypto"]
 
@@ -516,6 +559,7 @@ protocol = ["dep:oqs", "dep:sm-crypto"]
 # Dependencies used only during development and testing.
 # Not included in release builds or published crates.
 
-# Temporary file and directory creation for testing
 [dev-dependencies]
+# Temporary file and directory creation for testing
+# Provides secure temporary directories that are automatically cleaned up
 tempfile = "3"

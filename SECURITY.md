@@ -1,4 +1,11 @@
-# Security Policy
+<div align="center">
+
+<h1 style="display: flex; flex-direction: column; align-items: center; gap: 12px; margin-bottom: 8px;">
+  <span style="display: flex; align-items: center; gap: 12px;"><img src="assets/svg/dmsc.svg" width="48" height="48" alt="DMSC">Dunimd Middleware Service</span>
+  <span style="font-size: 0.6em; color: #666; font-weight: normal;">Security Policy</span>
+</h1>
+
+</div>
 
 The DMSC (Dunimd Middleware Service) project takes security seriously. This document outlines our security policy, including supported versions, how to report vulnerabilities, and our disclosure process.
 

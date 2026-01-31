@@ -1,4 +1,11 @@
-# Contributing to DMSC
+<div align="center">
+
+<h1 style="display: flex; flex-direction: column; align-items: center; gap: 12px; margin-bottom: 8px;">
+  <span style="display: flex; align-items: center; gap: 12px;"><img src="assets/svg/dmsc.svg" width="48" height="48" alt="DMSC">Dunimd Middleware Service</span>
+  <span style="font-size: 0.6em; color: #666; font-weight: normal;">Contributing Guide</span>
+</h1>
+
+</div>
 
 First off, thank you for considering contributing to DMSC (Dunimd Middleware Service)! It's people like you that make DMSC such a great tool.
 

@@ -179,22 +179,51 @@ Async module trait for internal async modules in DMSC.
 
 Unified error type for DMSC.
 
-#### Methods
+#### Enum Variants
 
-| Method | Description | Parameters | Return Value |
-|:--------|:-------------|:--------|:--------|
-| `new(code, message)` | Create a new error | `code: &str`, `message: &str` | `DMSCError` |
-| `with_context(context)` | Add error context | `context: impl Into<String>` | `Self` |
-| `with_source(source)` | Add inner error | `source: impl std::error::Error + Send + Sync + 'static` | `Self` |
-| `code()` | Get error code | None | `&str` |
-| `message()` | Get error message | None | `&str` |
-| `context()` | Get error context | None | `Option<&str>` |
+| Variant | Description | Parameters |
+|:--------|:-------------|:--------|
+| `Io(String)` | I/O operation failed | Error message |
+| `Serde(String)` | Serialization/deserialization error | Error message |
+| `Config(String)` | Configuration error | Error message |
+| `Hook(String)` | Hook execution error | Error message |
+| `Prometheus(String)` | Prometheus metrics error | Error message |
+| `ServiceMesh(String)` | Service mesh error | Error message |
+| `InvalidState(String)` | Invalid state error | Error message |
+| `InvalidInput(String)` | Invalid input error | Error message |
+| `SecurityViolation(String)` | Security violation error | Error message |
+| `DeviceNotFound { device_id }` | Device not found | Device ID |
+| `DeviceAllocationFailed { device_id, reason }` | Device allocation failed | Device ID and reason |
+| `AllocationNotFound { allocation_id }` | Allocation not found | Allocation ID |
+| `ModuleNotFound { module_name }` | Module not found | Module name |
+| `ModuleInitFailed { module_name, reason }` | Module initialization failed | Module name and reason |
+| `ModuleStartFailed { module_name, reason }` | Module start failed | Module name and reason |
+| `ModuleShutdownFailed { module_name, reason }` | Module shutdown failed | Module name and reason |
+| `CircularDependency { modules }` | Circular dependency detected | List of involved modules |
+| `MissingDependency { module_name, dependency }` | Missing dependency | Module name and dependency |
+| `Other(String)` | Other error | Error message |
+| `ExternalError(String)` | External error | Error message |
+| `PoolError(String)` | Connection pool error | Error message |
+| `DeviceError(String)` | Device error | Error message |
+| `RedisError(String)` | Redis error | Error message |
+| `HttpClientError(String)` | HTTP client error | Error message |
+| `TomlError(String)` | TOML parsing error | Error message |
+| `YamlError(String)` | YAML parsing error | Error message |
+| `Queue(String)` | Queue error | Error message |
+| `FrameError(String)` | Frame error | Error message |
+| `Database(String)` | Database error | Error message |
 
 #### Usage Example
 
 ```rust
-Err(DMSCError::new("INVALID_CONFIG", "Invalid configuration")
-    .with_context("service.port must be a positive integer"))
+// Create error using enum variant
+Err(DMSCError::Config("Invalid port number".to_string()))
+
+// I/O error auto-conversion
+let file = std::fs::File::open("config.yaml")?; // Auto converts to DMSCError::Io
+
+// Device-related error
+Err(DMSCError::DeviceNotFound { device_id: "gpu-001".to_string() })
 ```
 
 ### DMSCResult

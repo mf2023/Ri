@@ -1,6 +1,9 @@
 <div align="center">
 
-# DMSC 帮助文档
+<h1 style="display: flex; flex-direction: column; align-items: center; gap: 12px; margin-bottom: 8px;">
+  <span style="display: flex; align-items: center; gap: 12px;"><img src="../../assets/svg/dmsc.svg" width="48" height="48" alt="DMSC">Dunimd Middleware Service</span>
+  <span style="font-size: 0.6em; color: #666; font-weight: normal;">帮助文档</span>
+</h1>
 
 [English](../en/index.md) | 简体中文
 
@@ -10,6 +13,9 @@
 
 <a href="https://space.bilibili.com/3493284091529457" target="_blank">
     <img alt="BiliBili" src="https://img.shields.io/badge/BiliBili-Dunimd-00A1D6?style=flat-square&logo=bilibili"/>
+</a>
+<a href="https://x.com/Dunimd2025" target="_blank">
+    <img alt="X" src="https://img.shields.io/badge/X-Dunimd-000000?style=flat-square&logo=x"/>
 </a>
 
 <a href="https://gitee.com/dunimd" target="_blank">

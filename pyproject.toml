@@ -25,6 +25,12 @@
 # The project provides a high-performance middleware framework that combines
 # Rust's performance with Python's ease of use, supporting features including
 # authentication, caching, message queuing, API gateway, and observability.
+#
+# Relationship to Cargo.toml:
+# - This file works in conjunction with Cargo.toml to build hybrid Rust-Python packages
+# - The [tool.maturin] section references features defined in Cargo.toml
+# - Version numbers should be kept in sync between both files
+# - maturin reads Cargo.toml for Rust build configuration
 
 # =============================================================================
 # Build System Configuration
@@ -32,8 +38,20 @@
 # Defines the build requirements and backend for compiling Rust code into
 # Python extension modules. Maturin is the standard tool for building
 # PyO3-based Python extensions from Rust projects.
+#
+# Build Process:
+# 1. pip reads pyproject.toml to determine build system
+# 2. pip installs maturin as the build backend
+# 3. maturin reads Cargo.toml and compiles Rust code
+# 4. maturin packages the compiled library as a Python wheel
+
 [build-system]
+# Build dependencies required before building the package
+# maturin>=1.0 is required for modern PyO3 support and build features
 requires = ["maturin>=1.0"]
+
+# The build backend that pip will use to build the package
+# maturin handles the Rust compilation and Python packaging
 build-backend = "maturin"
 
 # =============================================================================
@@ -42,12 +60,26 @@ build-backend = "maturin"
 # Core project information including name, version, description, and
 # authorship details. This metadata is used by PyPI and other package
 # managers for distribution and discovery.
+
 [project]
+# Package name on PyPI
+# Must match the name used in 'pip install dmsc'
 name = "dmsc"
+
+# Package version - should match Cargo.toml version
+# Follows semantic versioning (MAJOR.MINOR.PATCH)
 version = "0.1.6"
+
+# Short description displayed on PyPI and package listings
 description = "Dunimd Middleware Service - A high-performance Rust middleware framework with modular architecture"
+
+# Path to the README file for long description on PyPI
 readme = "README.md"
+
+# Package authors list
 authors = [{ name = "Dunimd Team" }]
+
+# License file path
 license = { file = "LICENSE" }
 
 # =============================================================================
@@ -56,10 +88,14 @@ license = { file = "LICENSE" }
 # Specifies the supported Python versions and implementations. This ensures
 # cross-version compatibility and helps users understand which Python
 # environments can use this package.
+
 classifiers = [
+    # Implementation language for the native extension
     "Programming Language :: Rust",
+    # Supported Python implementations
     "Programming Language :: Python :: Implementation :: CPython",
     "Programming Language :: Python :: Implementation :: PyPy",
+    # Supported Python versions (3.8 through 3.14)
     "Programming Language :: Python :: 3.8",
     "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
@@ -69,9 +105,14 @@ classifiers = [
     "Programming Language :: Python :: 3.14",
 ]
 
-# Minimum Python version requirement and keywords for package discovery
+# Minimum Python version requirement
+# DMSC requires Python 3.8+ for modern async/await syntax support
 requires-python = ">=3.8"
+
+# Keywords for PyPI search and categorization
 keywords = ["middleware", "rust", "async", "gateway", "service-mesh"]
+
+# Source code repository URL
 repository = "https://github.com/mf2023/DMSC"
 
 # =============================================================================
@@ -80,8 +121,35 @@ repository = "https://github.com/mf2023/DMSC"
 # Configures the maturin build tool for compiling Rust code into Python
 # extension modules. Specifies the Python source directory and enables
 # optional features that control which Rust modules are compiled.
+
 [tool.maturin]
+# Directory containing Python source files
+# Python modules will be imported from this directory
 python-source = "python"
+
+# Rust features to enable during the build
+# These correspond to feature flags defined in Cargo.toml
+# Each feature enables specific functionality in the DMSC framework:
+# - pyo3: Python bindings support (required for Python extension)
+# - auth: Authentication and authorization modules
+# - cache: Caching layer with Redis support
+# - queue: Message queue support (Redis and RabbitMQ)
+# - gateway: API gateway functionality
+# - observability: Metrics and monitoring with Prometheus
+# - rabbitmq: RabbitMQ message broker integration
+# - protocol: Protocol parsing and transformation
+# - sqlite: SQLite database support
+# - postgres: PostgreSQL database support
+# - mysql: MySQL database support
+# - service_mesh: Service mesh capabilities
+# - parking_lot: Advanced synchronization primitives
+# - http_client: HTTP client for external API calls
+# - system_info: System information collection
+# - config_hot_reload: Configuration file hot reloading
+# - grpc: gRPC protocol support
+# - websocket: WebSocket protocol support
+# - kafka: Apache Kafka integration
+# - etcd: etcd service discovery
 features = [
     "pyo3",
     "auth",
@@ -109,6 +177,10 @@ features = [
 # Python Extension Dependencies
 # =============================================================================
 # Additional Python-specific dependencies required for the extension module.
-# Pyo3 version is locked to maintain compatibility with the maturin build.
+# These are separate from the Rust dependencies in Cargo.toml.
+
 [tool.maturin.dependencies]
+# PyO3 version specification for the Python-Rust interface
+# This version is locked to maintain compatibility with maturin
+# PyO3 provides the FFI layer between Python and Rust code
 pyo3 = "^0.27"
