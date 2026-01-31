@@ -27,9 +27,8 @@
 //! 4. Build with: `cargo build --features kafka`
 
 use crate::core::DMSCResult;
-use crate::queue::{DMSCQueue, DMSCQueueMessage};
+use crate::queue::{DMSCQueue, DMSCQueueProducer, DMSCQueueConsumer, DMSCQueueStats};
 use async_trait::async_trait;
-use std::time::Duration;
 
 /// Stub implementation for Kafka queue on Windows
 #[derive(Debug, Clone)]
@@ -39,7 +38,7 @@ pub struct DMSCKafkaQueue {
 }
 
 impl DMSCKafkaQueue {
-    pub fn new(brokers: &str, topic: &str) -> DMSCResult<Self> {
+    pub fn new(_brokers: &str, _topic: &str) -> DMSCResult<Self> {
         Err(crate::core::DMSCError::Other(
             "Kafka backend on Windows requires manual rdkafka build. \
              Please install CMake and vcpkg, then run: \
@@ -58,31 +57,23 @@ impl DMSCKafkaQueue {
 
 #[async_trait]
 impl DMSCQueue for DMSCKafkaQueue {
-    async fn publish(&self, _message: DMSCQueueMessage) -> DMSCResult<()> {
+    async fn create_producer(&self) -> DMSCResult<Box<dyn DMSCQueueProducer>> {
         unreachable!("Kafka stub should not be instantiated")
     }
 
-    async fn consume(&self) -> DMSCResult<DMSCQueueMessage> {
+    async fn create_consumer(&self, _consumer_group: &str) -> DMSCResult<Box<dyn DMSCQueueConsumer>> {
         unreachable!("Kafka stub should not be instantiated")
     }
 
-    async fn consume_with_timeout(&self, _timeout: Duration) -> DMSCResult<DMSCQueueMessage> {
+    async fn get_stats(&self) -> DMSCResult<DMSCQueueStats> {
         unreachable!("Kafka stub should not be instantiated")
     }
 
-    async fn ack(&self, _message_id: &str) -> DMSCResult<()> {
+    async fn purge(&self) -> DMSCResult<()> {
         unreachable!("Kafka stub should not be instantiated")
     }
 
-    async fn nack(&self, _message_id: &str, _requeue: bool) -> DMSCResult<()> {
-        unreachable!("Kafka stub should not be instantiated")
-    }
-
-    async fn queue_size(&self) -> DMSCResult<usize> {
-        unreachable!("Kafka stub should not be instantiated")
-    }
-
-    async fn close(&self) -> DMSCResult<()> {
+    async fn delete(&self) -> DMSCResult<()> {
         unreachable!("Kafka stub should not be instantiated")
     }
 }

@@ -366,6 +366,16 @@ impl From<rdkafka::error::KafkaError> for DMSCError {
     }
 }
 
+/// Stub implementation for Kafka errors on Windows.
+/// This prevents compilation errors on Windows where rdkafka is not available.
+/// The actual Kafka functionality is disabled on Windows via the kafka_stub module.
+#[cfg(all(feature = "kafka", windows))]
+impl From<rdkafka::error::KafkaError> for DMSCError {
+    fn from(error: rdkafka::error::KafkaError) -> Self {
+        DMSCError::Queue(format!("Kafka error: {}", error))
+    }
+}
+
 impl From<tokio::time::error::Elapsed> for DMSCError {
     fn from(error: tokio::time::error::Elapsed) -> Self {
         DMSCError::Io(format!("Operation timed out: {}", error))

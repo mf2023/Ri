@@ -20,11 +20,6 @@
 //! This module provides the WebSocket client implementation for DMSC.
 
 use super::*;
-use futures::SinkExt;
-use futures::StreamExt;
-use tokio::net::TcpStream;
-use tokio::sync::mpsc;
-use tokio::time::Duration;
 use tokio_tungstenite::tungstenite::protocol::WebSocketConfig;
 
 #[derive(Debug, Clone)]

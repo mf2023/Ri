@@ -46,7 +46,7 @@ impl DMSCGrpcServer {
     }
 
     fn register_service(&mut self, service_name: &str, handler: Py<PyAny>) {
-        Python::with_gil(|py| {
+        Python::attach(|py| {
             let handler_clone = handler.clone_ref(py);
             let _service = DMSCGrpcPythonService::new(service_name, handler_clone);
             self.registry.register(service_name, handler);

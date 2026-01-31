@@ -22,7 +22,6 @@
 use super::*;
 use std::time::Duration;
 use std::sync::atomic::AtomicU64;
-use tower::ServiceExt;
 
 #[pyclass]
 pub struct DMSCGrpcClient {
@@ -82,7 +81,7 @@ impl DMSCGrpcClient {
         *self.connected.read().await
     }
 
-    pub async fn call(&mut self, method: &str, data: &[u8]) -> DMSCResult<Vec<u8>> {
+    pub async fn call(&mut self, _method: &str, data: &[u8]) -> DMSCResult<Vec<u8>> {
         let _channel = match &self.channel {
             Some(ch) => ch.clone(),
             None => {

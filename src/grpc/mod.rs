@@ -267,13 +267,13 @@ impl DMSCGrpcService for DMSCGrpcPythonService {
         let method_str = method.to_string();
         let data_vec = data.to_vec();
         
-        let result = pyo3::Python::with_gil(|py| {
+        let result = pyo3::Python::attach(|py| {
             self.handler.call1(py, (method_str, data_vec))
         });
         
         match result {
             Ok(obj) => {
-                let result_vec = pyo3::Python::with_gil(|py| {
+                let result_vec = pyo3::Python::attach(|py| {
                     obj.extract::<Vec<u8>>(py)
                 });
                 match result_vec {
@@ -307,7 +307,7 @@ impl DMSCGrpcServiceRegistryPy {
     }
     
     fn register(&mut self, service_name: &str, handler: Py<PyAny>) {
-        Python::with_gil(|py| {
+        Python::attach(|py| {
             let handler_clone = handler.clone_ref(py);
             let _service = DMSCGrpcPythonService::new(service_name, handler_clone);
             self.registry.register(service_name, handler);
