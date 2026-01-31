@@ -191,7 +191,7 @@ pub mod prelude {
     /// Backend server for load balancing
     pub use crate::gateway::load_balancer::DMSCBackendServer;
     /// Load balancer server statistics
-    pub use crate::gateway::load_balancer::LoadBalancerServerStats;
+    pub use crate::gateway::load_balancer::DMSCLoadBalancerServerStats;
     /// Load balancer implementation
     pub use crate::gateway::load_balancer::DMSCLoadBalancer;
     /// Load balancing strategy enum
@@ -333,16 +333,16 @@ pub mod py {
         m.add_class::<crate::gateway::DMSCRoute>()?;
         m.add_class::<crate::gateway::rate_limiter::DMSCRateLimiter>()?;
         m.add_class::<crate::gateway::rate_limiter::DMSCRateLimitConfig>()?;
-        m.add_class::<crate::gateway::rate_limiter::RateLimitStats>()?;
+        m.add_class::<crate::gateway::rate_limiter::DMSCRateLimitStats>()?;
         m.add_class::<crate::gateway::rate_limiter::DMSCSlidingWindowRateLimiter>()?;
         m.add_class::<crate::gateway::circuit_breaker::DMSCCircuitBreaker>()?;
         m.add_class::<crate::gateway::circuit_breaker::DMSCCircuitBreakerConfig>()?;
         m.add_class::<crate::gateway::circuit_breaker::DMSCCircuitBreakerState>()?;
-        m.add_class::<crate::gateway::circuit_breaker::CircuitBreakerMetrics>()?;
+        m.add_class::<crate::gateway::circuit_breaker::DMSCCircuitBreakerMetrics>()?;
         
         // Add load balancer types to main module
         m.add_class::<crate::gateway::load_balancer::DMSCBackendServer>()?;
-        m.add_class::<crate::gateway::load_balancer::LoadBalancerServerStats>()?;
+        m.add_class::<crate::gateway::load_balancer::DMSCLoadBalancerServerStats>()?;
         m.add_class::<crate::gateway::load_balancer::DMSCLoadBalancer>()?;
         m.add_class::<crate::gateway::load_balancer::DMSCLoadBalancerStrategy>()?;
         
@@ -352,7 +352,10 @@ pub mod py {
         m.add_class::<crate::service_mesh::DMSCServiceDiscovery>()?;
         m.add_class::<crate::service_mesh::DMSCServiceInstance>()?;
         m.add_class::<crate::service_mesh::DMSCServiceStatus>()?;
+        m.add_class::<crate::service_mesh::DMSCServiceMeshStats>()?;
         m.add_class::<crate::service_mesh::health_check::DMSCHealthChecker>()?;
+        m.add_class::<crate::service_mesh::health_check::DMSCHealthSummary>()?;
+        m.add_class::<crate::service_mesh::traffic_management::DMSCTrafficManager>()?;
         m.add_class::<crate::service_mesh::DMSCTrafficRoute>()?;
         m.add_class::<crate::service_mesh::DMSCMatchCriteria>()?;
         m.add_class::<crate::service_mesh::DMSCRouteAction>()?;
@@ -415,14 +418,41 @@ pub mod py {
         m.add_class::<crate::protocol::DMSCSecurityLevel>()?;
         m.add_class::<crate::protocol::frames::DMSCFrameParser>()?;
         m.add_class::<crate::protocol::frames::DMSCFrameBuilder>()?;
-        
+
         // Add database types to main module
         m.add_class::<crate::database::DMSCDatabaseConfig>()?;
         m.add_class::<crate::database::DMSCDatabasePool>()?;
         m.add_class::<crate::database::DMSCDBRow>()?;
         m.add_class::<crate::database::DMSCDBResult>()?;
-        m.add_class::<crate::database::DatabaseType>()?;
-        
+        m.add_class::<crate::database::orm::DMSCPyORMRepository>()?;
+
+        // Add grpc types to main module
+        #[cfg(feature = "grpc")]
+        {
+            m.add_class::<crate::grpc::DMSCGrpcConfig>()?;
+            m.add_class::<crate::grpc::DMSCGrpcStats>()?;
+            m.add_class::<crate::grpc::DMSCGrpcServiceRegistry>()?;
+            m.add_class::<crate::grpc::DMSCGrpcPythonService>()?;
+            m.add_class::<crate::grpc::DMSCGrpcServiceRegistryPy>()?;
+            m.add_class::<crate::grpc::DMSCGrpcServer>()?;
+            m.add_class::<crate::grpc::DMSCGrpcClient>()?;
+        }
+
+        // Add websocket types to main module
+        #[cfg(feature = "websocket")]
+        {
+            m.add_class::<crate::ws::DMSCWSServerConfig>()?;
+            m.add_class::<crate::ws::DMSCWSEvent>()?;
+            m.add_class::<crate::ws::DMSCWSSessionInfo>()?;
+            m.add_class::<crate::ws::DMSCWSServerStats>()?;
+            m.add_class::<crate::ws::DMSCWSPythonHandler>()?;
+            m.add_class::<crate::ws::DMSCWSSessionManagerPy>()?;
+            m.add_class::<crate::ws::DMSCWSServer>()?;
+            m.add_class::<crate::ws::DMSCWSClientConfig>()?;
+            m.add_class::<crate::ws::DMSCWSClientStats>()?;
+            m.add_class::<crate::ws::DMSCWSClient>()?;
+        }
+
         // Add module_rpc types to main module
         m.add_class::<crate::module_rpc::DMSCModuleRPC>()?;
         m.add_class::<crate::module_rpc::DMSCModuleClient>()?;
@@ -441,7 +471,7 @@ pub mod py {
         m.add_class::<crate::device::DMSCDeviceConfig>()?;
         m.add_class::<crate::device::DMSCDeviceControlConfig>()?;
         m.add_class::<crate::device::DMSCDeviceSchedulingConfig>()?;
-        m.add_class::<crate::device::NetworkDeviceInfo>()?;
+        m.add_class::<crate::device::DMSCNetworkDeviceInfo>()?;
         m.add_class::<crate::device::DMSCDiscoveryResult>()?;
         m.add_class::<crate::device::DMSCResourceRequest>()?;
         m.add_class::<crate::device::DMSCResourceAllocation>()?;
@@ -453,6 +483,16 @@ pub mod py {
         m.add_class::<crate::device::pool::DMSCResourcePoolStatistics>()?;
         m.add_class::<crate::device::pool::DMSCResourcePoolManager>()?;
         m.add_class::<crate::device::pool::DMSCConnectionPoolStatistics>()?;
+        m.add_class::<crate::device::scheduler::DMSCResourceScheduler>()?;
+        m.add_class::<crate::device::scheduler::DMSCDeviceScheduler>()?;
+        m.add_class::<crate::device::scheduler::DMSCSchedulingPolicy>()?;
+        m.add_class::<crate::device::scheduler::DMSCAllocationRecord>()?;
+        m.add_class::<crate::device::scheduler::DMSCAllocationRequest>()?;
+        m.add_class::<crate::device::scheduler::DMSCAllocationStatistics>()?;
+        m.add_class::<crate::device::scheduler::DMSCDeviceTypeStatistics>()?;
+        m.add_class::<crate::device::scheduler::DMSCSchedulingRecommendation>()?;
+        m.add_class::<crate::device::scheduler::DMSCSchedulingRecommendationType>()?;
+        m.add_class::<crate::device::DMSCDeviceDiscoveryEngine>()?;
         
         // Create and add submodules
         create_device_module(m)?;
@@ -488,7 +528,7 @@ pub mod py {
         m.add_class::<crate::device::DMSCDeviceConfig>()?;
         m.add_class::<crate::device::DMSCDeviceControlConfig>()?;
         m.add_class::<crate::device::DMSCDeviceSchedulingConfig>()?;
-        m.add_class::<crate::device::NetworkDeviceInfo>()?;
+        m.add_class::<crate::device::DMSCNetworkDeviceInfo>()?;
         m.add_class::<crate::device::DMSCDiscoveryResult>()?;
         m.add_class::<crate::device::DMSCResourceRequest>()?;
         m.add_class::<crate::device::DMSCResourceAllocation>()?;
@@ -586,14 +626,14 @@ pub mod py {
         m.add_class::<crate::gateway::DMSCRouter>()?;
         m.add_class::<crate::gateway::rate_limiter::DMSCRateLimiter>()?;
         m.add_class::<crate::gateway::rate_limiter::DMSCRateLimitConfig>()?;
-        m.add_class::<crate::gateway::rate_limiter::RateLimitStats>()?;
+        m.add_class::<crate::gateway::rate_limiter::DMSCRateLimitStats>()?;
         m.add_class::<crate::gateway::rate_limiter::DMSCSlidingWindowRateLimiter>()?;
         m.add_class::<crate::gateway::circuit_breaker::DMSCCircuitBreaker>()?;
         m.add_class::<crate::gateway::circuit_breaker::DMSCCircuitBreakerConfig>()?;
         m.add_class::<crate::gateway::circuit_breaker::DMSCCircuitBreakerState>()?;
-        m.add_class::<crate::gateway::circuit_breaker::CircuitBreakerMetrics>()?;
+        m.add_class::<crate::gateway::circuit_breaker::DMSCCircuitBreakerMetrics>()?;
         m.add_class::<crate::gateway::load_balancer::DMSCBackendServer>()?;
-        m.add_class::<crate::gateway::load_balancer::LoadBalancerServerStats>()?;
+        m.add_class::<crate::gateway::load_balancer::DMSCLoadBalancerServerStats>()?;
         m.add_class::<crate::gateway::load_balancer::DMSCLoadBalancer>()?;
         m.add_class::<crate::gateway::load_balancer::DMSCLoadBalancerStrategy>()?;
         parent.add_submodule(&m)?;

@@ -105,10 +105,10 @@ from .dmsc import (
     # circuit breaker patterns, and sliding window algorithms for distributed systems
     # =============================================================================
     DMSCGateway, DMSCGatewayConfig, DMSCRouter, DMSCRoute,
-    DMSCRateLimiter, DMSCRateLimitConfig, RateLimitStats,
+    DMSCRateLimiter, DMSCRateLimitConfig, DMSCRateLimitStats,
     DMSCSlidingWindowRateLimiter, DMSCCircuitBreaker, DMSCCircuitBreakerConfig,
-    DMSCCircuitBreakerState, CircuitBreakerMetrics,
-    DMSCBackendServer, LoadBalancerServerStats,
+    DMSCCircuitBreakerState, DMSCCircuitBreakerMetrics,
+    DMSCBackendServer, DMSCLoadBalancerServerStats,
     DMSCLoadBalancer, DMSCLoadBalancerStrategy,
     
     # =============================================================================
@@ -135,7 +135,7 @@ from .dmsc import (
     # =============================================================================
     DMSCDeviceControlModule, DMSCDevice, DMSCDeviceType, DMSCDeviceStatus,
     DMSCDeviceCapabilities, DMSCDeviceHealthMetrics, DMSCDeviceController,
-    DMSCDeviceConfig, DMSCDeviceControlConfig, DMSCDeviceSchedulingConfig, NetworkDeviceInfo,
+    DMSCDeviceConfig, DMSCDeviceControlConfig, DMSCDeviceSchedulingConfig, DMSCNetworkDeviceInfo,
     DMSCDiscoveryResult, DMSCResourceRequest,
     DMSCResourceAllocation, DMSCRequestSlaClass, DMSCResourceWeights,
     DMSCAffinityRules,
@@ -178,21 +178,18 @@ from .dmsc import (
     # Database classes - Database configuration, connection pooling, row-level
     # access, and result set management across different database backends
     # =============================================================================
-    DMSCDatabaseConfig, DMSCDatabasePool, DMSCDBRow, DMSCDBResult, DatabaseType,
-    ColumnDefinition, IndexDefinition, ForeignKeyDefinition,
-    TableDefinition, LogicalOperator, Criteria, JoinClause,
-    ComparisonOperator, SortOrder, Pagination, QueryBuilder, JoinType,
+    DMSCDatabaseConfig, DMSCDatabasePool, DMSCDBRow, DMSCDBResult,
     DMSCPyORMRepository,
 
     # =============================================================================
-    # gRPC classes - gRPC server and client support (conditional on grpc feature)
+    # gRPC classes - gRPC server and client support
     # =============================================================================
     DMSCGrpcConfig, DMSCGrpcStats, DMSCGrpcServiceRegistry,
     DMSCGrpcPythonService, DMSCGrpcServiceRegistryPy,
     DMSCGrpcServer, DMSCGrpcClient,
 
     # =============================================================================
-    # WebSocket classes - WebSocket server and client support (conditional on websocket feature)
+    # WebSocket classes - WebSocket server and client support
     # =============================================================================
     DMSCWSServerConfig, DMSCWSEvent, DMSCWSSessionInfo, DMSCWSServerStats,
     DMSCWSPythonHandler, DMSCWSSessionManagerPy,
@@ -242,10 +239,10 @@ __all__ = [
     
     # Gateway classes - Traffic management and resilience patterns
     'DMSCGateway', 'DMSCGatewayConfig', 'DMSCRouter', 'DMSCRoute',
-    'DMSCRateLimiter', 'DMSCRateLimitConfig', 'RateLimitStats',
+    'DMSCRateLimiter', 'DMSCRateLimitConfig', 'DMSCRateLimitStats',
     'DMSCSlidingWindowRateLimiter', 'DMSCCircuitBreaker', 'DMSCCircuitBreakerConfig',
-    'DMSCCircuitBreakerState', 'CircuitBreakerMetrics',
-    'DMSCBackendServer', 'LoadBalancerServerStats',
+    'DMSCCircuitBreakerState', 'DMSCCircuitBreakerMetrics',
+    'DMSCBackendServer', 'DMSCLoadBalancerServerStats',
     'DMSCLoadBalancer', 'DMSCLoadBalancerStrategy',
     
     # Service mesh classes - Service discovery and traffic routing
@@ -263,7 +260,7 @@ __all__ = [
     # Device classes - IoT device control and resource management
     'DMSCDeviceControlModule', 'DMSCDevice', 'DMSCDeviceType', 'DMSCDeviceStatus',
     'DMSCDeviceCapabilities', 'DMSCDeviceHealthMetrics', 'DMSCDeviceController',
-    'DMSCDeviceConfig', 'DMSCDeviceControlConfig', 'DMSCDeviceSchedulingConfig', 'NetworkDeviceInfo',
+    'DMSCDeviceConfig', 'DMSCDeviceControlConfig', 'DMSCDeviceSchedulingConfig', 'DMSCNetworkDeviceInfo',
     'DMSCDiscoveryResult', 'DMSCResourceRequest',
     'DMSCResourceAllocation', 'DMSCRequestSlaClass', 'DMSCResourceWeights',
     'DMSCAffinityRules',
@@ -274,7 +271,7 @@ __all__ = [
     'DMSCDeviceTypeStatistics', 'DMSCSchedulingRecommendation', 'DMSCSchedulingRecommendationType',
     'DMSCDeviceDiscoveryEngine',
     
-    # Observability classes - Metrics, tracing, and health monitoring
+    # Observability classes - Metrics, tracing, and monitoring
     'DMSCObservabilityModule', 'DMSCObservabilityConfig',
     'DMSCMetricsRegistry', 'DMSCTracer',
     'DMSCMetricType', 'DMSCMetricConfig', 'DMSCMetricSample', 'DMSCMetric',
@@ -285,31 +282,28 @@ __all__ = [
     'DMSCValidatorBuilder', 'DMSCValidationRunner', 'DMSCSanitizer',
     'DMSCSanitizationConfig', 'DMSCSchemaValidator', 'DMSCValidationModule',
     
-    # Protocol classes - Protocol management and connection handling
+    # Protocol classes - Multi-protocol support and frame processing
     'DMSCProtocolManager', 'DMSCProtocolType', 'DMSCProtocolConfig',
     'DMSCProtocolStatus', 'DMSCProtocolStats', 'DMSCConnectionState',
     'DMSCConnectionStats', 'DMSCProtocolHealth',
     'DMSCFrame', 'DMSCFrameHeader', 'DMSCFrameType',
     'DMSCConnectionInfo', 'DMSCMessageFlags', 'DMSCSecurityLevel',
     'DMSCFrameParser', 'DMSCFrameBuilder',
-    
+
     # Database classes - Database configuration and connection pooling
-    'DMSCDatabaseConfig', 'DMSCDatabasePool', 'DMSCDBRow', 'DMSCDBResult', 'DatabaseType',
-    'ColumnDefinition', 'IndexDefinition', 'ForeignKeyDefinition',
-    'TableDefinition', 'LogicalOperator', 'Criteria', 'JoinClause',
-    'ComparisonOperator', 'SortOrder', 'Pagination', 'QueryBuilder', 'JoinType',
+    'DMSCDatabaseConfig', 'DMSCDatabasePool', 'DMSCDBRow', 'DMSCDBResult',
     'DMSCPyORMRepository',
-    
-    # gRPC classes - gRPC server and client support (conditional on grpc feature)
+
+    # gRPC classes - gRPC server and client support
     'DMSCGrpcConfig', 'DMSCGrpcStats', 'DMSCGrpcServiceRegistry',
     'DMSCGrpcPythonService', 'DMSCGrpcServiceRegistryPy',
     'DMSCGrpcServer', 'DMSCGrpcClient',
-    
-    # WebSocket classes - WebSocket server and client support (conditional on websocket feature)
+
+    # WebSocket classes - WebSocket server and client support
     'DMSCWSServerConfig', 'DMSCWSEvent', 'DMSCWSSessionInfo', 'DMSCWSServerStats',
     'DMSCWSPythonHandler', 'DMSCWSSessionManagerPy',
     'DMSCWSServer', 'DMSCWSClientConfig', 'DMSCWSClientStats', 'DMSCWSClient',
-    
+
     # Submodules - Functional submodule references
     'device', 'cache', 'fs', 'hooks', 'observability',
     'queue', 'gateway', 'service_mesh', 'auth', 'protocol', 'database',
@@ -318,12 +312,10 @@ __all__ = [
 
 
 class DMSCAppBuilder:
-    """
-    Fluent API builder for DMSC applications.
+    """Python wrapper for DMSC application builder.
     
-    This class provides a Python-friendly chainable interface for building
-    DMSC applications. All configuration methods return `self` to enable
-    fluent-style method chaining.
+    This class provides a Pythonic interface to the Rust DMSCAppBuilder,
+    enabling configuration of DMSC applications with method chaining.
     
     Example:
         app = (DMSCAppBuilder()
@@ -341,82 +333,16 @@ class DMSCAppBuilder:
         self._builder.py_with_config(config_path)
         return self
     
-    def with_logging(self, log_config) -> 'DMSCAppBuilder':
-        """Add logging configuration."""
-        self._builder.py_with_logging(log_config)
-        return self
-    
-    def with_observability(self, observability_config) -> 'DMSCAppBuilder':
-        """Add observability configuration."""
-        self._builder.py_with_observability(observability_config)
+    def with_logging(self, config: 'DMSCLogConfig') -> 'DMSCAppBuilder':
+        """Configure logging with the provided config."""
+        self._builder.py_with_logging(config)
         return self
     
     def with_module(self, module) -> 'DMSCAppBuilder':
-        """Add a synchronous Python service module."""
+        """Add a module to the application."""
         self._builder.py_with_module(module)
         return self
     
-    def with_python_module(self, module) -> 'DMSCAppBuilder':
-        """Add a Python module adapter."""
-        self._builder.py_with_python_module(module)
-        return self
-    
-    def with_async_module(self, module) -> 'DMSCAppBuilder':
-        """Add an asynchronous Python service module."""
-        self._builder.py_with_async_module(module)
-        return self
-    
-    def with_dms_module(self, module) -> 'DMSCAppBuilder':
-        """Add a DMSC module adapter."""
-        self._builder.py_with_dms_module(module)
-        return self
-    
-    def with_modules(self, modules: list) -> 'DMSCAppBuilder':
-        """Add multiple synchronous Python service modules."""
-        self._builder.py_with_modules(modules)
-        return self
-    
-    def with_async_modules(self, modules: list) -> 'DMSCAppBuilder':
-        """Add multiple asynchronous Python service modules."""
-        self._builder.py_with_async_modules(modules)
-        return self
-    
-    def with_dms_modules(self, modules: list) -> 'DMSCAppBuilder':
-        """Add multiple DMSC module adapters."""
-        self._builder.py_with_dms_modules(modules)
-        return self
-    
-    def build(self):
-        """Build and return the DMSC application runtime."""
-        return DMSCAppRuntime(self._builder.py_build())
-    
-    def run(self, callback=None):
-        """Run the application with an optional callback."""
-        runtime = self.build()
-        runtime.run(callback)
-
-
-class DMSCAppRuntime:
-    """
-    DMSC Application Runtime.
-    
-    This class provides the runtime for executing a DMSC application.
-    It wraps the Rust implementation and provides a Python-friendly interface.
-    """
-    
-    def __init__(self, runtime):
-        self._runtime = runtime
-    
-    def run(self, callback=None):
-        """Run the application with an optional callback."""
-        if callback:
-            self._runtime.py_run(callback)
-        else:
-            self._runtime.py_run(lambda ctx: None)
-    
-    def get_context(self):
-        """Get the service context."""
-        return self._runtime.get_context()
-
-
-__all__.extend(['DMSCAppBuilder', 'DMSCAppRuntime'])
+    def build(self) -> 'DMSCAppRuntime':
+        """Build the application runtime."""
+        return self._builder.py_build()

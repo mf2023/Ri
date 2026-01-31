@@ -132,7 +132,7 @@ use crate::observability::{DMSCMetricsRegistry, DMSCMetric, DMSCMetricConfig, DM
 use pyo3::prelude::*;
 
 
-pub use core::{DMSCDevice, DMSCDeviceType, DMSCDeviceStatus, DMSCDeviceCapabilities, DMSCDeviceControlConfig, DMSCDeviceConfig, NetworkDeviceInfo, DMSCDeviceHealthMetrics};
+pub use core::{DMSCDevice, DMSCDeviceType, DMSCDeviceStatus, DMSCDeviceCapabilities, DMSCDeviceControlConfig, DMSCDeviceConfig, DMSCNetworkDeviceInfo, DMSCDeviceHealthMetrics};
 pub use controller::DMSCDeviceController;
 pub use pool::{DMSCResourcePool, DMSCResourcePoolManager, DMSCConnectionPoolStatistics};
 pub use scheduler::DMSCDeviceScheduler;

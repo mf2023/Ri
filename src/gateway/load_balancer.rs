@@ -28,7 +28,7 @@
 //! - **DMSCLoadBalancerStrategy**: Enum representing different load balancing algorithms
 //! - **DMSCBackendServer**: Represents a backend server with configuration and health status
 //! - **DMSCLoadBalancer**: Main load balancer implementation
-//! - **LoadBalancerServerStats**: Metrics for monitoring server performance
+//! - **DMSCLoadBalancerServerStats**: Metrics for monitoring server performance
 //! 
 //! ## Design Principles
 //! 
@@ -283,14 +283,14 @@ impl ServerStats {
     }
 
     /// Gets a snapshot of the current server statistics.
-    /// 
-    /// This method converts the internal statistics into a public-facing `LoadBalancerServerStats` struct.
-    /// 
+    ///
+    /// This method converts the internal statistics into a public-facing `DMSCLoadBalancerServerStats` struct.
+    ///
     /// # Returns
-    /// 
-    /// A `LoadBalancerServerStats` struct containing the current statistics
-    fn get_stats(&self) -> LoadBalancerServerStats {
-        LoadBalancerServerStats {
+    ///
+    /// A `DMSCLoadBalancerServerStats` struct containing the current statistics
+    fn get_stats(&self) -> DMSCLoadBalancerServerStats {
+        DMSCLoadBalancerServerStats {
             active_connections: self.get_active_connections(),
             total_requests: self.total_requests.load(Ordering::Relaxed),
             failed_requests: self.failed_requests.load(Ordering::Relaxed),
@@ -305,16 +305,16 @@ impl ServerStats {
 /// performance, load, and reliability.
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
-pub struct LoadBalancerServerStats {
+pub struct DMSCLoadBalancerServerStats {
     /// Number of currently active connections to the server
     pub active_connections: usize,
-    
+
     /// Total number of requests sent to the server since it was added
     pub total_requests: usize,
-    
+
     /// Number of failed requests to the server
     pub failed_requests: usize,
-    
+
     /// Most recent response time in milliseconds
     pub response_time_ms: usize,
 }
@@ -764,19 +764,19 @@ impl DMSCLoadBalancer {
     /// 
     /// # Returns
     /// 
-    /// An `Option<LoadBalancerServerStats>` with the server statistics, or `None` if the server doesn't exist
-    pub async fn get_server_stats(&self, server_id: &str) -> Option<LoadBalancerServerStats> {
+    /// An `Option<DMSCLoadBalancerServerStats>` with the server statistics, or `None` if the server doesn't exist
+    pub async fn get_server_stats(&self, server_id: &str) -> Option<DMSCLoadBalancerServerStats> {
         self.server_stats.read().await
             .get(server_id)
             .map(|stats| stats.get_stats())
     }
 
     /// Gets statistics for all servers.
-    /// 
+    ///
     /// # Returns
-    /// 
-    /// A `HashMap<String, LoadBalancerServerStats>` with statistics for all servers
-    pub async fn get_all_stats(&self) -> HashMap<String, LoadBalancerServerStats> {
+    ///
+    /// A `HashMap<String, DMSCLoadBalancerServerStats>` with statistics for all servers
+    pub async fn get_all_stats(&self) -> HashMap<String, DMSCLoadBalancerServerStats> {
         let stats = self.server_stats.read().await;
         let mut result = HashMap::new();
         

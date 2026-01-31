@@ -99,7 +99,7 @@ use pyo3::prelude::*;
 #[cfg(feature = "pyo3")]
 use pyo3::PyResult;
 
-use super::core::{DMSCDevice, DMSCDeviceCapabilities, DMSCDeviceStatus, DMSCDeviceType, DMSCDeviceControlConfig, NetworkDeviceInfo};
+use super::core::{DMSCDevice, DMSCDeviceCapabilities, DMSCDeviceStatus, DMSCDeviceType, DMSCDeviceControlConfig, DMSCNetworkDeviceInfo};
 use super::discovery::{DMSCDeviceDiscovery, DiscoveryConfig};
 use crate::core::DMSCResult;
 use crate::prelude::DMSCMetricsRegistry;
@@ -977,7 +977,7 @@ impl DMSCDeviceController {
 
     /// Create a device from network discovery (for remote devices)
     #[allow(dead_code)]
-    fn create_discovered_device(&self, device_info: &NetworkDeviceInfo) -> DMSCDevice {
+    fn create_discovered_device(&self, device_info: &DMSCNetworkDeviceInfo) -> DMSCDevice {
         let device_type_enum = match device_info.device_type.as_str() {
             "CPU" => DMSCDeviceType::CPU,
             "GPU" => DMSCDeviceType::GPU,

@@ -116,6 +116,73 @@ DMSC adopts a highly modular architecture with 18 core modules, enabling on-dema
 - **pip**: Latest version
 - **Platforms**: Linux, macOS, Windows
 
+### Build Dependencies (for building from source)
+
+Some features require additional system dependencies when building from source:
+
+| Dependency | Required For | Installation |
+|:-----------|:-------------|:-------------|
+| **protoc** | etcd feature (Protocol Buffers) | [Protocol Buffers](https://protobuf.dev/downloads/) |
+| **CMake + C++ compiler** | kafka feature (rdkafka) | See instructions below |
+
+#### Installing protoc
+
+**Windows:**
+```powershell
+# Using chocolatey
+choco install protoc
+
+# Or download from GitHub releases
+# https://github.com/protocolbuffers/protobuf/releases
+```
+
+**macOS:**
+```bash
+brew install protobuf
+```
+
+**Linux (Ubuntu/Debian):**
+```bash
+sudo apt-get update
+sudo apt-get install -y protobuf-compiler
+```
+
+**Linux (CentOS/RHEL):**
+```bash
+sudo yum install -y protobuf-compiler
+```
+
+#### Installing CMake and C++ compiler (for Kafka support)
+
+**Windows:**
+```powershell
+# CMake is usually installed with Visual Studio
+# Or download from: https://cmake.org/download/
+
+# Using chocolatey
+choco install cmake
+```
+
+**macOS:**
+```bash
+# CMake and C++ compiler (Xcode Command Line Tools)
+xcode-select --install
+
+# Or using Homebrew
+brew install cmake
+```
+
+**Linux (Ubuntu/Debian):**
+```bash
+sudo apt-get update
+sudo apt-get install -y cmake build-essential
+```
+
+**Linux (CentOS/RHEL):**
+```bash
+sudo yum install -y cmake gcc-c++ make
+```
+
 ### Quick Setup
 
 Install DMSC Python package:

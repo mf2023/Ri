@@ -115,7 +115,13 @@ jobs:
         with:
           version: '33.x'
       
-      # Step 3: Build Rust library in release mode
+      # Step 3: Install CMake for rdkafka build
+      - name: Install CMake
+        uses: jwlawson/actions-setup-cmake@v2
+        with:
+          cmake-version: '3.28.x'
+      
+      # Step 4: Build Rust library in release mode
       # Compiles libdmsc as a cdylib for aarch64-unknown-linux-gnu target
       # Native ARM64 compilation ensures correct code generation for the target arch
       # Output location: target/release/libdmsc.so
@@ -150,7 +156,13 @@ jobs:
           version: '33.x'
           repo-token: ${{ secrets.GITHUB_TOKEN }}
       
-      # Step 3: Build Rust library in release mode
+      # Step 3: Install CMake for rdkafka build
+      - name: Install CMake
+        uses: jwlawson/actions-setup-cmake@v2
+        with:
+          cmake-version: '3.28.x'
+      
+      # Step 4: Build Rust library in release mode
       # Compiles libdmsc as a cdylib for x86_64-pc-windows-msvc target
       # Default MSVC toolchain on Windows provides optimal Windows compatibility
       # Output location: target/release/libdmsc.dll

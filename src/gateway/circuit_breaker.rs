@@ -28,7 +28,7 @@
 //! - **DMSCCircuitBreakerConfig**: Configuration for circuit breaker behavior
 //! - **DMSCCircuitBreaker**: Basic circuit breaker implementation
 //! - **DMSCAdvancedCircuitBreaker**: Advanced circuit breaker with error-type specific thresholds
-//! - **CircuitBreakerMetrics**: Metrics for monitoring circuit breaker performance
+//! - **DMSCCircuitBreakerMetrics**: Metrics for monitoring circuit breaker performance
 //! 
 //! ## Design Principles
 //! 
@@ -346,16 +346,16 @@ impl CircuitBreakerStats {
     /// 
     /// # Returns
     /// 
-    /// A `CircuitBreakerMetrics` struct containing the current statistics
+    /// A `DMSCCircuitBreakerMetrics` struct containing the current statistics
     #[allow(dead_code)]
-    fn get_stats(&self) -> CircuitBreakerMetrics {
+    fn get_stats(&self) -> DMSCCircuitBreakerMetrics {
         let state_str = match self.state.blocking_read().clone() {
             DMSCCircuitBreakerState::Closed => "Closed",
-            DMSCCircuitBreakerState::Open => "Open", 
+            DMSCCircuitBreakerState::Open => "Open",
             DMSCCircuitBreakerState::HalfOpen => "HalfOpen",
         };
-        
-        CircuitBreakerMetrics {
+
+        DMSCCircuitBreakerMetrics {
             state: state_str.to_string(),
             failure_count: self.failure_count.load(Ordering::Relaxed),
             success_count: self.success_count.load(Ordering::Relaxed),
@@ -366,31 +366,31 @@ impl CircuitBreakerStats {
 }
 
 /// Metrics for monitoring circuit breaker performance.
-/// 
+///
 /// This struct contains statistics about the circuit breaker's performance, including
 /// success and failure counts, consecutive success/failure streaks, and current state.
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
-pub struct CircuitBreakerMetrics {
+pub struct DMSCCircuitBreakerMetrics {
     /// Current state of the circuit breaker as a string
     pub state: String,
-    
+
     /// Total number of failures since the circuit breaker was created
     pub failure_count: usize,
-    
+
     /// Total number of successes since the circuit breaker was created
     pub success_count: usize,
-    
+
     /// Number of consecutive failures in the current sequence
     pub consecutive_failures: usize,
-    
+
     /// Number of consecutive successes in the current sequence
     pub consecutive_successes: usize,
 }
 
 #[cfg(feature = "pyo3")]
 #[pyo3::prelude::pymethods]
-impl CircuitBreakerMetrics {
+impl DMSCCircuitBreakerMetrics {
     #[new]
     fn py_new(state: String, failure_count: usize, success_count: usize, consecutive_failures: usize, consecutive_successes: usize) -> Self {
         Self {
@@ -554,21 +554,21 @@ impl DMSCCircuitBreaker {
     }
 
     /// Gets the current metrics for the circuit breaker.
-    /// 
+    ///
     /// # Returns
-    /// 
-    /// A `CircuitBreakerMetrics` struct containing the current statistics
-    pub fn get_stats(&self) -> CircuitBreakerMetrics {
+    ///
+    /// A `DMSCCircuitBreakerMetrics` struct containing the current statistics
+    pub fn get_stats(&self) -> DMSCCircuitBreakerMetrics {
         let state_str = match futures::executor::block_on(async {
             let state = self.stats.state.read().await;
             state.clone()
         }) {
             DMSCCircuitBreakerState::Closed => "Closed",
-            DMSCCircuitBreakerState::Open => "Open", 
+            DMSCCircuitBreakerState::Open => "Open",
             DMSCCircuitBreakerState::HalfOpen => "HalfOpen",
         };
-        
-        CircuitBreakerMetrics {
+
+        DMSCCircuitBreakerMetrics {
             state: state_str.to_string(),
             failure_count: self.stats.failure_count.load(Ordering::Relaxed),
             success_count: self.stats.success_count.load(Ordering::Relaxed),

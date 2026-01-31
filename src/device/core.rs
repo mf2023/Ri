@@ -188,7 +188,7 @@ impl DMSCDeviceConfig {
 /// Network device information for remote device discovery
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
-pub struct NetworkDeviceInfo {
+pub struct DMSCNetworkDeviceInfo {
     /// Unique device identifier
     pub id: String,
     /// Device type (CPU, GPU, Memory, Storage, Network)
@@ -207,7 +207,7 @@ pub struct NetworkDeviceInfo {
 
 #[cfg(feature = "pyo3")]
 #[pymethods]
-impl NetworkDeviceInfo {
+impl DMSCNetworkDeviceInfo {
     #[new]
     fn py_new(id: String, device_type: String, source: String) -> Self {
         Self {

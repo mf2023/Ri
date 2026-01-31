@@ -18,6 +18,73 @@
 - **Cargo**: 1.65+ (Rust 包管理器)
 - **平台**: Linux、macOS 或 Windows
 
+### 构建依赖
+
+某些功能需要额外的系统依赖：
+
+| 依赖 | 用于 | 安装 |
+|:-----------|:-------------|:-------------|
+| **protoc** | etcd 功能 (Protocol Buffers) | [Protocol Buffers](https://protobuf.dev/downloads/) |
+| **CMake + C++ 编译器** | kafka 功能 (rdkafka) | 见下方说明 |
+
+#### 安装 protoc
+
+**Windows:**
+```powershell
+# 使用 chocolatey
+choco install protoc
+
+# 或从 GitHub releases 下载
+# https://github.com/protocolbuffers/protobuf/releases
+```
+
+**macOS:**
+```bash
+brew install protobuf
+```
+
+**Linux (Ubuntu/Debian):**
+```bash
+sudo apt-get update
+sudo apt-get install -y protobuf-compiler
+```
+
+**Linux (CentOS/RHEL):**
+```bash
+sudo yum install -y protobuf-compiler
+```
+
+#### 安装 CMake 和 C++ 编译器（用于 Kafka 支持）
+
+**Windows:**
+```powershell
+# CMake 通常随 Visual Studio 安装
+# 或从官网下载: https://cmake.org/download/
+
+# 使用 chocolatey
+choco install cmake
+```
+
+**macOS:**
+```bash
+# CMake 和 C++ 编译器 (Xcode Command Line Tools)
+xcode-select --install
+
+# 或使用 Homebrew
+brew install cmake
+```
+
+**Linux (Ubuntu/Debian):**
+```bash
+sudo apt-get update
+sudo apt-get install -y cmake build-essential
+```
+
+**Linux (CentOS/RHEL):**
+```bash
+sudo yum install -y cmake gcc-c++ make
+```
+
 您可以使用以下命令检查 Rust 和 Cargo 版本：
 
 ```bash

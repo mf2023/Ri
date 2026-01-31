@@ -27,7 +27,7 @@
 //! - **DMSCRateLimitConfig**: Configuration for rate limiting behavior
 //! - **DMSCRateLimiter**: Token bucket based rate limiter implementation
 //! - **DMSCSlidingWindowRateLimiter**: Sliding window based rate limiter for fine-grained control
-//! - **RateLimitStats**: Metrics for monitoring rate limiter performance
+//! - **DMSCRateLimitStats**: Metrics for monitoring rate limiter performance
 //! 
 //! ## Design Principles
 //! 
@@ -229,9 +229,9 @@ impl RateLimitBucket {
     /// 
     /// # Returns
     /// 
-    /// A `RateLimitStats` struct containing current tokens and total requests
-    fn get_stats(&self) -> RateLimitStats {
-        RateLimitStats {
+    /// A `DMSCRateLimitStats` struct containing current tokens and total requests
+    fn get_stats(&self) -> DMSCRateLimitStats {
+        DMSCRateLimitStats {
             current_tokens: self.tokens.load(Ordering::Relaxed),
             total_requests: self.request_count.load(Ordering::Relaxed),
         }
@@ -244,17 +244,17 @@ impl RateLimitBucket {
 /// number of available tokens and the total number of requests processed.
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 #[derive(Debug, Clone)]
-pub struct RateLimitStats {
+pub struct DMSCRateLimitStats {
     /// Current number of available tokens in the bucket
     pub current_tokens: usize,
-    
+
     /// Total number of requests processed by the bucket
     pub total_requests: usize,
 }
 
 #[cfg(feature = "pyo3")]
 #[pyo3::prelude::pymethods]
-impl RateLimitStats {
+impl DMSCRateLimitStats {
     #[new]
     fn py_new(current_tokens: usize, total_requests: usize) -> Self {
         Self {
@@ -362,8 +362,8 @@ impl DMSCRateLimiter {
     /// 
     /// # Returns
     /// 
-    /// An `Option<RateLimitStats>` with the statistics, or `None` if no bucket exists for the key
-    pub fn get_stats(&self, key: &str) -> Option<RateLimitStats> {
+    /// An `Option<DMSCRateLimitStats>` with the statistics, or `None` if no bucket exists for the key
+    pub fn get_stats(&self, key: &str) -> Option<DMSCRateLimitStats> {
         futures::executor::block_on(async {
             let buckets = self.buckets.read().await;
             buckets.get(key).map(|bucket| bucket.get_stats())
@@ -385,8 +385,8 @@ impl DMSCRateLimiter {
     /// 
     /// # Returns
     /// 
-    /// A `HashMap<String, RateLimitStats>` with statistics for all keys
-    pub fn get_all_stats(&self) -> HashMap<String, RateLimitStats> {
+    /// A `HashMap<String, DMSCRateLimitStats>` with statistics for all keys
+    pub fn get_all_stats(&self) -> HashMap<String, DMSCRateLimitStats> {
         futures::executor::block_on(async {
             let buckets = self.buckets.read().await;
             let mut stats = HashMap::new();

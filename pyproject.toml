@@ -99,6 +99,10 @@ features = [
     "http_client",
     "system_info",
     "config_hot_reload",
+    "grpc",
+    "websocket",
+    "kafka",
+    "etcd",
 ]
 
 # =============================================================================
