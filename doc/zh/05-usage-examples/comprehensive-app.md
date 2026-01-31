@@ -232,7 +232,7 @@ async def demonstrate_application():
     print("   Application initialized\n")
     
     print("2. Authentication module...")
-    auth_config = DMSCAuthConfig.default()
+    auth_config = DMSCAuthConfig()
     auth_config.set_jwt_secret("your-secret-key")
     auth_module = DMSCAuthModule(auth_config)
     print("   Auth module ready\n")
@@ -250,19 +250,19 @@ async def demonstrate_application():
     print("   Queue module ready\n")
     
     print("5. Service mesh module...")
-    mesh_config = DMSCServiceMeshConfig.default()
+    mesh_config = DMSCServiceMeshConfig()
     service_mesh = DMSCServiceMesh(mesh_config)
     await service_mesh.register_service("api-gateway", "http://api:8080", 100)
     print("   Service mesh ready\n")
     
     print("6. Observability module...")
-    obs_config = DMSCObservabilityConfig.default()
+    obs_config = DMSCObservabilityConfig()
     obs_config.set_metrics_enabled(True)
     obs_module = DMSCObservabilityModule(obs_config)
     print("   Observability ready\n")
     
     print("7. Gateway module...")
-    gateway_config = DMSCGatewayConfig.default()
+    gateway_config = DMSCGatewayConfig()
     gateway_config.set_port(8080)
     router = DMSCRouter()
     route = DMSCRoute(path="/api/health", method="GET", handler="health_handler")

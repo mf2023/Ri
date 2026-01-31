@@ -122,6 +122,8 @@ pub enum DMSCError {
     Queue(String),
     /// Frame error. Contains a descriptive error message for frame parsing/building errors.
     FrameError(String),
+    /// Database error. Contains a descriptive error message for database operations.
+    Database(String),
 }
 
 /// Result type alias for DMSC operations. Used throughout the library.
@@ -183,6 +185,7 @@ impl std::fmt::Display for DMSCError {
             DMSCError::YamlError(msg) => write!(f, "YAML error: {msg}"),
             DMSCError::Queue(msg) => write!(f, "Queue error: {msg}"),
             DMSCError::FrameError(msg) => write!(f, "Frame error: {msg}"),
+            DMSCError::Database(msg) => write!(f, "Database error: {msg}"),
         }
     }
 }
@@ -253,6 +256,7 @@ impl<'a> DMSCErrorFormatter<'a> {
             DMSCError::YamlError(_) => Some("Validate YAML syntax and indentation"),
             DMSCError::Queue(_) => Some("Check message queue service status and queue configuration"),
             DMSCError::FrameError(_) => Some("Check frame format and protocol compatibility"),
+            DMSCError::Database(_) => Some("Verify database connection and query syntax"),
         }
     }
 }

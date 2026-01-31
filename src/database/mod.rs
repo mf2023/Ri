@@ -156,7 +156,7 @@ pub mod mysql;
 pub mod sqlite;
 
 pub use config::{DMSCDatabaseConfig, DatabaseType};
-pub use pool::{DMSCDatabasePool, PooledDatabase};
+pub use pool::{DMSCDatabasePool, PooledDatabase, DatabaseMetrics};
 pub use row::DMSCDBRow;
 pub use result::DMSCDBResult;
 pub use migration::{DMSCDatabaseMigration, DMSCMigrationHistory, DMSCDatabaseMigrator};
@@ -164,9 +164,33 @@ pub use orm::{QueryBuilder, Criteria, SortOrder, Pagination, ComparisonOperator,
     TableDefinition, ColumnDefinition, IndexDefinition, ForeignKeyDefinition,
     DMSCORMSimpleRepository, DMSCORMCrudRepository, DMSCORMRepository};
 
-use crate::core::DMSCResult;
+use crate::core::{DMSCResult, DMSCError};
 use async_trait::async_trait;
-use serde::{Deserialize, Serialize};
+use thiserror::Error as ThisError;
+
+#[derive(Debug, ThisError)]
+pub enum DMSCDatabaseTransactionError {
+    #[error("Transaction commit failed: {message}")]
+    CommitFailed { message: String },
+    #[error("Transaction rollback failed: {message}")]
+    RollbackFailed { message: String },
+    #[error("Transaction already completed")]
+    AlreadyCompleted,
+    #[error("Transaction operation failed: {message}")]
+    OperationFailed { message: String },
+}
+
+impl From<DMSCDatabaseTransactionError> for DMSCError {
+    fn from(e: DMSCDatabaseTransactionError) -> Self {
+        DMSCError::Database(e.to_string())
+    }
+}
+
+impl From<DMSCDatabaseTransactionError> for DMSCResult<()> {
+    fn from(e: DMSCDatabaseTransactionError) -> Self {
+        Err(e.into())
+    }
+}
 
 /// Trait defining the database interface for all supported databases.
 ///
@@ -457,27 +481,4 @@ pub trait DMSCDatabaseTransaction: Send + Sync {
     /// roll back any changes. This method is primarily for cleanup
     /// and should not be used as a substitute for explicit rollback.
     async fn close(&self) -> DMSCResult<()>;
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct DatabaseMetrics {
-    pub active_connections: u64,
-    pub idle_connections: u64,
-    pub total_connections: u64,
-    pub queries_executed: u64,
-    pub query_duration_ms: f64,
-    pub errors: u64,
-}
-
-impl Default for DatabaseMetrics {
-    fn default() -> Self {
-        Self {
-            active_connections: 0,
-            idle_connections: 0,
-            total_connections: 0,
-            queries_executed: 0,
-            query_duration_ms: 0.0,
-            errors: 0,
-        }
-    }
 }

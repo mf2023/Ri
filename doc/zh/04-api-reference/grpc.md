@@ -70,16 +70,12 @@ gRPC服务器配置结构。
 
 | 字段 | 类型 | 描述 | 默认值 |
 |:--------|:-----|:-------------|:-------|
-| `host` | `String` | 服务器主机 | `"0.0.0.0"` |
+| `addr` | `String` | 服务器地址 | `"127.0.0.1"` |
 | `port` | `u16` | 服务器端口 | `50051` |
-| `max_concurrent_rpcs` | `u32` | 最大并发RPC数 | `100` |
-| `max_receive_message_size` | `u32` | 最大接收消息大小(字节) | `4194304` |
-| `max_send_message_size` | `u32` | 最大发送消息大小(字节) | `4194304` |
-| `keepalive_time` | `Duration` | 保活时间 | `30000ms` |
-| `keepalive_timeout` | `Duration` | 保活超时 | `5000ms` |
-| `tls_enabled` | `bool` | 启用TLS | `false` |
-| `tls_cert_path` | `Option<String>` | TLS证书路径 | `None` |
-| `tls_key_path` | `Option<String>` | TLS密钥路径 | `None` |
+| `max_concurrent_requests` | `u32` | 最大并发请求数 | `100` |
+| `enable_tls` | `bool` | 启用TLS | `false` |
+| `cert_path` | `Option<String>` | TLS证书路径 | `None` |
+| `key_path` | `Option<String>` | TLS密钥路径 | `None` |
 
 #### 配置示例
 
@@ -87,17 +83,25 @@ gRPC服务器配置结构。
 use dmsc::prelude::*;
 
 let config = DMSCGrpcConfig {
-    host: "0.0.0.0".to_string(),
+    addr: "127.0.0.1".to_string(),
     port: 50051,
-    max_concurrent_rpcs: 100,
-    max_receive_message_size: 4 * 1024 * 1024,
-    max_send_message_size: 4 * 1024 * 1024,
-    keepalive_time: Duration::from_secs(30),
-    keepalive_timeout: Duration::from_secs(5),
-    tls_enabled: false,
-    tls_cert_path: None,
-    tls_key_path: None,
+    max_concurrent_requests: 100,
+    enable_tls: false,
+    cert_path: None,
+    key_path: None,
 };
+```
+
+#### Python配置示例
+
+```python
+from dmsc.grpc import DMSCGrpcConfig
+
+config = DMSCGrpcConfig()
+config.set_addr("0.0.0.0")
+config.set_port(50051)
+config.set_max_concurrent_requests(100)
+config.set_enable_tls(False)
 ```
 
 ### DMSCGrpcServer

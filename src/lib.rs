@@ -217,6 +217,12 @@ pub mod prelude {
     pub use crate::service_mesh::DMSCServiceMesh;
     /// Configuration for the service mesh
     pub use crate::service_mesh::DMSCServiceMeshConfig;
+    /// Statistics for the service mesh
+    pub use crate::service_mesh::DMSCServiceMeshStats;
+    /// Service endpoint information
+    pub use crate::service_mesh::DMSCServiceEndpoint;
+    /// Service health status enum
+    pub use crate::service_mesh::DMSCServiceHealthStatus;
     
     /// Main observability module for DMSC
     pub use crate::observability::DMSCObservabilityModule;

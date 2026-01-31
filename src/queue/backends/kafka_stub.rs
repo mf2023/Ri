@@ -24,6 +24,14 @@
 //! **Note:** On Windows, building rdkafka from source requires additional build tools.
 //! For production deployments, Kafka typically runs on Linux servers.
 //!
+//! ## Platform Support
+//!
+//! | Platform | Status | Notes |
+//! |----------|--------|-------|
+//! | Linux | ✅ Full Support | Native rdkafka support |
+//! | macOS | ✅ Full Support | Native rdkafka support |
+//! | Windows | ⚠️ Stub Only | Requires manual build |
+//!
 //! ## Options for Windows Development
 //!
 //! 1. **Use Linux/WSL2** (Recommended)
@@ -38,6 +46,10 @@
 //!    - `DMSCMemoryQueue`: In-memory queue for testing
 //!    - `DMSCRedisQueue`: Requires Redis server
 //!    - `DMSCRabbitMQQueue`: Requires RabbitMQ server
+//!
+//! ## Runtime Detection
+//!
+//! Use `DMSCKafkaQueue::is_available()` to check if Kafka is available at runtime.
 //!
 //! ## Building rdkafka on Windows (Advanced)
 //!
@@ -62,23 +74,31 @@
 //!    rdkafka = { version = "0.38", features = ["tokio", "libz", "vendored"] }
 //!    ```
 
+#[cfg(windows)]
+compile_error!("Kafka backend on Windows requires manual rdkafka build. See kafka_stub.rs documentation for details.");
+
 use async_trait::async_trait;
 use std::sync::Arc;
 use thiserror::Error as ThisError;
 use crate::core::{DMSCResult, DMSCError};
 use crate::queue::{DMSCQueue, DMSCQueueMessage, DMSCQueueProducer, DMSCQueueConsumer, DMSCQueueStats, DMSCQueueError};
 
-const KAFKA_WINDOWS_BUILD_NOTE: &str = r#"Kafka support on Windows requires building rdkafka from source.
+const KAFKA_UNAVAILABLE_MESSAGE: &str = r#"Kafka support is not available on this platform.
 
-For development, consider using:
+This may occur because:
+1. You are building on Windows (rdkafka requires manual build)
+2. The rdkafka native library is not installed
+
+For immediate use, consider these alternatives:
 1. DMSCMemoryQueue - in-memory queue for testing
 2. DMSCRedisQueue - requires Redis server
 3. DMSCRabbitMQQueue - requires RabbitMQ server
 
-Or run Kafka in Docker/WSL2 and connect remotely.
+For Linux/macOS, ensure rdkafka is installed:
+- Ubuntu/Debian: apt install librdkafka-dev
+- macOS: brew install librdkafka
 
-For production, Kafka typically runs on Linux servers.
-See: https://dmsc.dunimd.dev/queue
+Documentation: https://dmsc.dunimd.dev/queue
 "#;
 
 #[derive(Debug, ThisError)]
@@ -98,30 +118,34 @@ pub struct DMSCKafkaQueue;
 
 impl DMSCKafkaQueue {
     pub async fn new(_name: &str, _connection_string: &str) -> DMSCResult<Self> {
-        Err(DMSCError::Queue(KAFKA_WINDOWS_BUILD_NOTE.to_string()))
+        Err(DMSCError::Queue(KAFKA_UNAVAILABLE_MESSAGE.to_string()))
+    }
+
+    pub fn is_available() -> bool {
+        false
     }
 }
 
 #[async_trait]
 impl DMSCQueue for DMSCKafkaQueue {
     async fn create_producer(&self) -> DMSCResult<Box<dyn DMSCQueueProducer>> {
-        Err(DMSCError::Queue(KAFKA_WINDOWS_BUILD_NOTE.to_string()))
+        Err(DMSCError::Queue(KAFKA_UNAVAILABLE_MESSAGE.to_string()))
     }
 
     async fn create_consumer(&self, _consumer_group: &str) -> DMSCResult<Box<dyn DMSCQueueConsumer>> {
-        Err(DMSCError::Queue(KAFKA_WINDOWS_BUILD_NOTE.to_string()))
+        Err(DMSCError::Queue(KAFKA_UNAVAILABLE_MESSAGE.to_string()))
     }
 
     async fn get_stats(&self) -> DMSCResult<DMSCQueueStats> {
-        Err(DMSCError::Queue(KAFKA_WINDOWS_BUILD_NOTE.to_string()))
+        Err(DMSCError::Queue(KAFKA_UNAVAILABLE_MESSAGE.to_string()))
     }
 
     async fn purge(&self) -> DMSCResult<()> {
-        Err(DMSCError::Queue(KAFKA_WINDOWS_BUILD_NOTE.to_string()))
+        Err(DMSCError::Queue(KAFKA_UNAVAILABLE_MESSAGE.to_string()))
     }
 
     async fn delete(&self) -> DMSCResult<()> {
-        Err(DMSCError::Queue(KAFKA_WINDOWS_BUILD_NOTE.to_string()))
+        Err(DMSCError::Queue(KAFKA_UNAVAILABLE_MESSAGE.to_string()))
     }
 }
 
@@ -131,11 +155,11 @@ pub struct KafkaProducer;
 #[async_trait]
 impl DMSCQueueProducer for KafkaProducer {
     async fn send(&self, _message: DMSCQueueMessage) -> DMSCResult<()> {
-        Err(DMSCError::Queue(KAFKA_WINDOWS_BUILD_NOTE.to_string()))
+        Err(DMSCError::Queue(KAFKA_UNAVAILABLE_MESSAGE.to_string()))
     }
 
     async fn send_batch(&self, _messages: Vec<DMSCQueueMessage>) -> DMSCResult<()> {
-        Err(DMSCError::Queue(KAFKA_WINDOWS_BUILD_NOTE.to_string()))
+        Err(DMSCError::Queue(KAFKA_UNAVAILABLE_MESSAGE.to_string()))
     }
 }
 
@@ -145,22 +169,22 @@ pub struct KafkaConsumer;
 #[async_trait]
 impl DMSCQueueConsumer for KafkaConsumer {
     async fn receive(&self) -> DMSCResult<Option<DMSCQueueMessage>> {
-        Err(DMSCError::Queue(KAFKA_WINDOWS_BUILD_NOTE.to_string()))
+        Err(DMSCError::Queue(KAFKA_UNAVAILABLE_MESSAGE.to_string()))
     }
 
     async fn ack(&self, _message_id: &str) -> DMSCResult<()> {
-        Err(DMSCError::Queue(KAFKA_WINDOWS_BUILD_NOTE.to_string()))
+        Err(DMSCError::Queue(KAFKA_UNAVAILABLE_MESSAGE.to_string()))
     }
 
     async fn nack(&self, _message_id: &str) -> DMSCResult<()> {
-        Err(DMSCError::Queue(KAFKA_WINDOWS_BUILD_NOTE.to_string()))
+        Err(DMSCError::Queue(KAFKA_UNAVAILABLE_MESSAGE.to_string()))
     }
 
     async fn pause(&self) -> DMSCResult<()> {
-        Err(DMSCError::Queue(KAFKA_WINDOWS_BUILD_NOTE.to_string()))
+        Err(DMSCError::Queue(KAFKA_UNAVAILABLE_MESSAGE.to_string()))
     }
 
     async fn resume(&self) -> DMSCResult<()> {
-        Err(DMSCError::Queue(KAFKA_WINDOWS_BUILD_NOTE.to_string()))
+        Err(DMSCError::Queue(KAFKA_UNAVAILABLE_MESSAGE.to_string()))
     }
 }

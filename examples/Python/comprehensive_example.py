@@ -39,6 +39,7 @@ Usage:
 
 from dmsc import (
     DMSCAppBuilder, DMSCAppRuntime, DMSCServiceContext, DMSCResult,
+    DMSCLogConfig, DMSCLogLevel,
     DMSCAuthModule, DMSCAuthConfig, DMSCJWTManager, DMSCJWTClaims,
     DMSCCacheModule, DMSCCacheConfig, DMSCCachePolicy,
     DMSCQueueModule, DMSCQueueConfig, DMSCQueueManager, DMSCQueueMessage,
@@ -69,9 +70,9 @@ async def demonstrate_application_initialization():
     print("   Builder created successfully\n")
     
     print("2. Configuring logging...")
-    log_config = DMSCLogConfig.default()
+    log_config = DMSCLogConfig()
     log_config.set_level("info")
-    print(f"   Log level set to: {log_config.level().as_str()}\n")
+    print(f"   Log level set to: {log_config.get_level()}\n")
     
     print("3. Configuring observability...")
     obs_config = DMSCObservabilityConfig.default()

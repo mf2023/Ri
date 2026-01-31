@@ -16,12 +16,23 @@
 //! limitations under the License.
 
 use crate::core::DMSCResult;
-use crate::database::{DatabaseMetrics, DMSCDatabase, DMSCDatabaseConfig, DMSCDBResult, DMSCDBRow};
+use crate::database::{DMSCDatabase, DMSCDatabaseConfig, DMSCDBResult, DMSCDBRow};
 use dashmap::DashMap;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
 use tokio::sync::Semaphore;
 use tokio::time::{Duration, Instant};
+
+#[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
+#[derive(Debug, Clone, Default)]
+pub struct DatabaseMetrics {
+    pub active_connections: u64,
+    pub idle_connections: u64,
+    pub total_connections: u64,
+    pub queries_executed: u64,
+    pub query_duration_ms: f64,
+    pub errors: u64,
+}
 
 #[derive(Clone)]
 pub struct PooledDatabase {

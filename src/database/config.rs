@@ -58,15 +58,20 @@ use std::env;
 /// Each database type has specific connection requirements and may use different
 /// underlying drivers or client libraries.
 ///
-/// ## Database Support Matrix
+/// ## Currently Implemented
 ///
-/// | Database Type | Feature Flag | Primary Driver | Notes |
-/// |---------------|--------------|----------------|-------|
-/// | PostgreSQL | `postgres` | `sqlx` or `tokio-postgres` | Full async support |
-/// | MySQL | `mysql` | `sqlx` or `mysql` | Full async support |
-/// | SQLite | `sqlite` | `sqlx` or `rusqlite` | File-based or in-memory |
-/// | MongoDB | `mongodb` | `mongodb` | Document database |
-/// | Redis | `redis` | `redis` | Key-value store |
+/// | Database Type | Feature Flag | Status |
+/// |---------------|--------------|--------|
+/// | PostgreSQL | `postgres` | ✅ Available |
+/// | MySQL | `mysql` | ✅ Available |
+/// | SQLite | `sqlite` | ✅ Available |
+/// | MongoDB | `mongodb` | 🔜 Planned |
+/// | Redis | `redis` | 🔜 Planned |
+///
+/// ## Roadmap
+///
+/// MongoDB and Redis support are planned for future releases. The enum variants
+/// are reserved to maintain API stability when these features are added.
 ///
 /// ## Usage
 ///

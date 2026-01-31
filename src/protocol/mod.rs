@@ -1098,8 +1098,11 @@ impl DMSCGlobalProtocol {
 
     pub fn initialize(&mut self, config: DMSCProtocolConfig) -> bool {
         self.base.config = config;
-        *self.base.initialized.try_write().unwrap() = true;
-        true
+        if let Ok(mut guard) = self.base.initialized.try_write() {
+            *guard = true;
+            return true;
+        }
+        false
     }
 
     pub fn get_stats(&self) -> DMSCProtocolStats {
@@ -1140,8 +1143,11 @@ impl DMSCPrivateProtocol {
 
     pub fn initialize(&mut self, config: DMSCProtocolConfig) -> bool {
         self.base.config = config;
-        *self.base.initialized.try_write().unwrap() = true;
-        true
+        if let Ok(mut guard) = self.base.initialized.try_write() {
+            *guard = true;
+            return true;
+        }
+        false
     }
 
     pub fn get_stats(&self) -> DMSCProtocolStats {
@@ -1151,11 +1157,12 @@ impl DMSCPrivateProtocol {
     }
 
     pub fn get_health(&self) -> DMSCProtocolHealth {
-        if *self.base.initialized.try_read().unwrap() {
-            DMSCProtocolHealth::Healthy
-        } else {
-            DMSCProtocolHealth::Unknown
+        if let Ok(guard) = self.base.initialized.try_read() {
+            if *guard {
+                return DMSCProtocolHealth::Healthy;
+            }
         }
+        DMSCProtocolHealth::Unknown
     }
 
     pub fn shutdown(&mut self) -> bool {

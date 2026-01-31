@@ -70,16 +70,12 @@ gRPC server configuration struct.
 
 | Field | Type | Description | Default |
 |:--------|:-----|:-------------|:-------|
-| `host` | `String` | Server host | `"0.0.0.0"` |
+| `addr` | `String` | Server address | `"127.0.0.1"` |
 | `port` | `u16` | Server port | `50051` |
-| `max_concurrent_rpcs` | `u32` | Maximum concurrent RPCs | `100` |
-| `max_receive_message_size` | `u32` | Max receive message size (bytes) | `4194304` |
-| `max_send_message_size` | `u32` | Max send message size (bytes) | `4194304` |
-| `keepalive_time` | `Duration` | Keep-alive time | `30000ms` |
-| `keepalive_timeout` | `Duration` | Keep-alive timeout | `5000ms` |
-| `tls_enabled` | `bool` | Enable TLS | `false` |
-| `tls_cert_path` | `Option<String>` | TLS certificate path | `None` |
-| `tls_key_path` | `Option<String>` | TLS key path | `None` |
+| `max_concurrent_requests` | `u32` | Maximum concurrent requests | `100` |
+| `enable_tls` | `bool` | Enable TLS | `false` |
+| `cert_path` | `Option<String>` | TLS certificate path | `None` |
+| `key_path` | `Option<String>` | TLS key path | `None` |
 
 #### Configuration Example
 
@@ -87,17 +83,25 @@ gRPC server configuration struct.
 use dmsc::prelude::*;
 
 let config = DMSCGrpcConfig {
-    host: "0.0.0.0".to_string(),
+    addr: "127.0.0.1".to_string(),
     port: 50051,
-    max_concurrent_rpcs: 100,
-    max_receive_message_size: 4 * 1024 * 1024,
-    max_send_message_size: 4 * 1024 * 1024,
-    keepalive_time: Duration::from_secs(30),
-    keepalive_timeout: Duration::from_secs(5),
-    tls_enabled: false,
-    tls_cert_path: None,
-    tls_key_path: None,
+    max_concurrent_requests: 100,
+    enable_tls: false,
+    cert_path: None,
+    key_path: None,
 };
+```
+
+#### Python Configuration Example
+
+```python
+from dmsc.grpc import DMSCGrpcConfig
+
+config = DMSCGrpcConfig()
+config.set_addr("0.0.0.0")
+config.set_port(50051)
+config.set_max_concurrent_requests(100)
+config.set_enable_tls(False)
 ```
 
 ### DMSCGrpcServer

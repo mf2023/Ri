@@ -55,13 +55,11 @@ async def main():
     
     print("1. Creating gRPC configuration...")
     config = DMSCGrpcConfig()
-    config.set_host("0.0.0.0")
+    config.set_addr("0.0.0.0")
     config.set_port(50051)
-    config.set_max_concurrent_rpcs(100)
-    config.set_max_receive_message_size(4194304)
-    config.set_max_send_message_size(4194304)
-    print(f"   gRPC server configured on {config.host()}:{config.port()}")
-    print(f"   Max concurrent RPCs: {config.max_concurrent_rpcs()}\n")
+    config.set_max_concurrent_requests(100)
+    print(f"   gRPC server configured on {config.get_addr()}:{config.get_port()}")
+    print(f"   Max concurrent requests: {config.get_max_concurrent_requests()}\n")
     
     print("2. Creating gRPC server...")
     server = DMSCGrpcServer(config)
@@ -73,9 +71,8 @@ async def main():
     
     print("4. Creating gRPC client...")
     client_config = DMSCGrpcConfig()
-    client_config.set_host("localhost")
+    client_config.set_addr("localhost")
     client_config.set_port(50051)
-    client = DMSCGrpcClient(client_config)
     print("   gRPC client configured\n")
     
     print("5. gRPC statistics...")

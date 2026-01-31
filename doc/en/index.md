@@ -148,7 +148,7 @@ from dmsc import DMSCAppBuilder, DMSCLogConfig
 # Build service runtime
 app = DMSCAppBuilder() \
     .with_config("config.yaml") \
-    .with_logging(DMSCLogConfig.default()) \
+    .with_logging(DMSCLogConfig()) \
     .build()
 
 # Run business logic

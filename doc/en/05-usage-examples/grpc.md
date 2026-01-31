@@ -75,14 +75,10 @@ logging:
   console_enabled: true
 
 grpc:
-  host: "0.0.0.0"
+  addr: "0.0.0.0"
   port: 50051
-  max_concurrent_rpcs: 100
-  max_receive_message_size: 4194304
-  max_send_message_size: 4194304
-  keepalive_time: 30000
-  keepalive_timeout: 5000
-  tls_enabled: false
+  max_concurrent_requests: 100
+  enable_tls: false
 ```
 
 ### 4. Write Main Code

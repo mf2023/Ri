@@ -76,6 +76,54 @@ impl DMSCGrpcConfig {
     fn new() -> Self {
         Self::default()
     }
+    
+    fn get_addr(&self) -> String {
+        self.addr.clone()
+    }
+    
+    fn set_addr(&mut self, addr: String) {
+        self.addr = addr;
+    }
+    
+    fn get_port(&self) -> u16 {
+        self.port
+    }
+    
+    fn set_port(&mut self, port: u16) {
+        self.port = port;
+    }
+    
+    fn get_max_concurrent_requests(&self) -> u32 {
+        self.max_concurrent_requests
+    }
+    
+    fn set_max_concurrent_requests(&mut self, max_concurrent_requests: u32) {
+        self.max_concurrent_requests = max_concurrent_requests;
+    }
+    
+    fn get_enable_tls(&self) -> bool {
+        self.enable_tls
+    }
+    
+    fn set_enable_tls(&mut self, enable_tls: bool) {
+        self.enable_tls = enable_tls;
+    }
+    
+    fn get_cert_path(&self) -> Option<String> {
+        self.cert_path.clone()
+    }
+    
+    fn set_cert_path(&mut self, cert_path: Option<String>) {
+        self.cert_path = cert_path;
+    }
+    
+    fn get_key_path(&self) -> Option<String> {
+        self.key_path.clone()
+    }
+    
+    fn set_key_path(&mut self, key_path: Option<String>) {
+        self.key_path = key_path;
+    }
 }
 
 impl Default for DMSCGrpcConfig {
@@ -216,17 +264,22 @@ impl DMSCGrpcPythonService {
 #[cfg(feature = "pyo3")]
 impl DMSCGrpcService for DMSCGrpcPythonService {
     async fn handle_request(&self, method: &str, data: &[u8]) -> DMSCResult<Vec<u8>> {
-        let py = unsafe { Python::assume_attached() };
-        
         let method_str = method.to_string();
         let data_vec = data.to_vec();
         
-        let call_result = self.handler.call1(py, (method_str, data_vec));
+        let result = pyo3::Python::with_gil(|py| {
+            self.handler.call1(py, (method_str, data_vec))
+        });
         
-        match call_result {
+        match result {
             Ok(obj) => {
-                let bytes: Vec<u8> = obj.extract(py)?;
-                Ok(bytes)
+                let result_vec = pyo3::Python::with_gil(|py| {
+                    obj.extract::<Vec<u8>>(py)
+                });
+                match result_vec {
+                    Ok(bytes) => Ok(bytes),
+                    Err(e) => Err(DMSCError::Other(format!("Failed to extract response bytes: {:?}", e))),
+                }
             }
             Err(e) => Err(DMSCError::Other(format!("Python handler error: {:?}", e))),
         }

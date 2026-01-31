@@ -144,15 +144,15 @@ let config = DMSCDatabaseConfig::postgres()
 
 数据库类型枚举。
 
-#### 变体
-
 | 变体 | 描述 |
 |:--------|:-------------|
 | `Postgres` | PostgreSQL |
 | `MySQL` | MySQL |
 | `SQLite` | SQLite |
-| `MongoDB` | MongoDB |
-| `Redis` | Redis |
+| `MongoDB` | MongoDB（计划中） |
+| `Redis` | Redis（计划中） |
+
+**注意**: MongoDB和Redis支持正在开发中，将在后续版本中提供。
 
 <div align="center">
 
@@ -677,7 +677,7 @@ async fn main() -> DMSCResult<()> {
 - [gateway](./gateway.md): 网关模块，提供API网关功能
 - [grpc](./grpc.md): gRPC 模块，带服务注册和 Python 绑定
 - [hooks](./hooks.md): 钩子模块，提供生命周期钩子支持
-- [http](./http.md): HTTP模块，提供HTTP服务器和客户端功能
+- [gateway](./gateway.md): 网关模块，提供API网关功能
 - [log](./log.md): 日志模块，记录协议事件
 - [mq](./mq.md): 消息队列模块，提供消息队列支持
 - [observability](./observability.md): 可观测性模块，监控协议性能

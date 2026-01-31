@@ -398,7 +398,7 @@ async fn main() -> DMSCResult<()> {
 - [gateway](./gateway.md): Gateway module providing API gateway functionality
 - [grpc](./grpc.md): gRPC module with service registry and Python bindings
 - [hooks](./hooks.md): Hooks module providing lifecycle hook support
-- [http](./http.md): HTTP module providing HTTP server and client functionality
+- [gateway](./gateway.md): Gateway module providing API gateway functionality
 - [log](./log.md): Logging module for protocol events
 - [mq](./mq.md): Message queue module providing message queue support
 - [observability](./observability.md): Observability module for protocol performance monitoring
