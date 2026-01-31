@@ -622,21 +622,19 @@ jobs:
 
   collect-and-package:
     name: Collect and Package All Wheels
-    needs: build
+    needs: [build]
     runs-on: ubuntu-latest
     
     steps:
-      # Step 1: Download all artifacts from all build jobs
-      # Uses actions/download-artifact@v4 to collect wheels from all platforms
-      # merge-multiple downloads all artifacts into a single directory structure
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
       - name: Download all artifacts
         uses: actions/download-artifact@v4
         with:
           path: wheels
           merge-multiple: true
       
-      # Step 2: List all downloaded wheel files
-      # Shows what was collected from all platforms
       - name: List collected wheels
         run: |
           echo "=== All collected wheel files ==="
@@ -645,20 +643,14 @@ jobs:
           echo "=== Wheel count by platform ==="
           find wheels -name "*.whl" -type f | sed 's|.*/||' | sed 's|-.*-| - |' | cut -d'-' -f1-2 | sort | uniq -c
       
-      # Step 3: Create .tar.gz archive containing all wheels
-      # Archive name includes date for versioning: dmsc-wheels-YYYY-MM-DD.tar.gz
-      # This provides a single download for all platform wheels
       - name: Create tar.gz archive
         run: |
           TIMESTAMP=$(date +%Y-%m-%d)
           ARCHIVE_NAME="dmsc-wheels-${TIMESTAMP}.tar.gz"
           tar -czf "$ARCHIVE_NAME" -C wheels .
-          echo "=== Archive created: $ARCHIVE_NAME ==="
           ls -lh "$ARCHIVE_NAME"
           echo "ARCHIVE_NAME=$ARCHIVE_NAME" >> $GITHUB_ENV
       
-      # Step 4: Upload the combined tar.gz archive as artifact
-      # Single artifact containing all wheels for easy batch download
       - name: Upload combined archive
         uses: actions/upload-artifact@v4
         with:
@@ -666,19 +658,16 @@ jobs:
           path: ${{ env.ARCHIVE_NAME }}
           retention-days: 90
       
-      # Step 5: Display download links for reference
-      # Shows where to find both individual wheels and combined archive
       - name: Display download info
         run: |
           echo ""
           echo "✅ Build complete! Files available:"
           echo ""
-          echo "📦 Combined archive (all platforms):"
-          echo "   → dmsc-all-wheels / ${{ env.ARCHIVE_NAME }}"
+          echo "📦 Combined archive: dmsc-all-wheels / ${{ env.ARCHIVE_NAME }}"
           echo ""
           echo "🔹 Individual platform artifacts:"
-          echo "   → python-x86_64-unknown-linux-gnu (manylinux_2_28_x86_64 wheels)"
-          echo "   → python-aarch64-unknown-linux-gnu (manylinux_2_28_aarch64 wheels)"
-          echo "   → python-x86_64-apple-darwin (macOS x86_64 wheels)"
-          echo "   → python-aarch64-apple-darwin (macOS ARM64 wheels)"
-          echo "   → python-x86_64-pc-windows-msvc (Windows x64 wheels)"
+          echo "   → python-x86_64-unknown-linux-gnu"
+          echo "   → python-aarch64-unknown-linux-gnu"
+          echo "   → python-x86_64-apple-darwin"
+          echo "   → python-aarch64-apple-darwin"
+          echo "   → python-x86_64-pc-windows-msvc"
