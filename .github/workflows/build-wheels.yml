@@ -92,7 +92,13 @@ jobs:
         with:
           cmake-version: '3.28.x'
 
-      # Step 4: Build Rust library in release mode
+      # Step 4: Install system dependencies for rdkafka
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libcurl4-openssl-dev libsasl2-dev
+
+      # Step 5: Build Rust library in release mode
       # Compiles libdmsc as a cdylib for x86_64-unknown-linux-gnu target
       # Release mode enables optimizations (-O3) and LTO for maximum performance
       # Output location: target/release/libdmsc.so
@@ -132,8 +138,14 @@ jobs:
         uses: jwlawson/actions-setup-cmake@v2
         with:
           cmake-version: '3.28.x'
-      
-      # Step 4: Build Rust library in release mode
+
+      # Step 4: Install system dependencies for rdkafka
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libcurl4-openssl-dev libsasl2-dev
+
+      # Step 5: Build Rust library in release mode
       # Compiles libdmsc as a cdylib for aarch64-unknown-linux-gnu target
       # Native ARM64 compilation ensures correct code generation for the target arch
       # Output location: target/release/libdmsc.so
@@ -556,8 +568,15 @@ jobs:
         uses: arduino/setup-protoc@v3
         with:
           version: '33.x'
-      
-      # Step 4e: Configure OpenSSL for static linking on Linux builds
+
+      # Step 4e: Install system dependencies for rdkafka on Linux
+      - name: Install rdkafka dependencies
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libcurl4-openssl-dev libsasl2-dev
+
+      # Step 4f: Configure OpenSSL for static linking on Linux builds
       # This ensures all OpenSSL dependencies are statically linked into the binary
       # to avoid "libcrypto-*.so.3 not found" errors during auditwheel repair
       # OPENSSL_STATIC=1: Links OpenSSL statically
@@ -579,7 +598,7 @@ jobs:
           fi
           echo "OPENSSL_INCLUDE_DIR=/usr/include/openssl" >> $GITHUB_ENV
       
-      # Step 4f: Configure Rust linker for static linking on Linux builds
+      # Step 4g: Configure Rust linker for static linking on Linux builds
       # This ensures the final binary is fully statically linked
       # Configures build profile settings for optimal release builds
       - name: Configure static linking
