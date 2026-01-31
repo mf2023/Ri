@@ -619,55 +619,111 @@ jobs:
         with:
           name: python-${{ matrix.target }}-${{ matrix.python }}
           path: dist/
-
+  
+  # Job: Collect and package all build artifacts into a single tarball
+  # This job runs after all platform builds complete, downloads all artifacts
+  # and creates a comprehensive package containing wheels for all platforms
   collect-and-package:
-    name: Collect and Package All Wheels
-    needs: [build]
+    name: Collect and Package All Build Artifacts
+    # Run only after all build jobs complete successfully
+    needs: build
     runs-on: ubuntu-latest
     
+    # Steps execute in a Ubuntu environment for artifact manipulation
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-      
+      # Step 1: Download all build artifacts from previous platform-specific jobs
+      # Uses wildcard pattern to match all artifact names from build matrix
+      # Each artifact contains wheel files for a specific platform and Python version
       - name: Download all artifacts
         uses: actions/download-artifact@v4
         with:
-          path: wheels
-          merge-multiple: true
+          path: artifacts
+          merge-multiple: false
       
-      - name: List collected wheels
+      # Step 2: Display downloaded artifact structure for verification
+      # Shows directory listing to confirm all artifacts were collected
+      - name: List downloaded artifacts
         run: |
-          echo "=== All collected wheel files ==="
-          find wheels -name "*.whl" -type f | sort
+          echo "=== Downloaded artifacts structure ==="
+          find artifacts -type f -name "*.whl" | head -50
           echo ""
-          echo "=== Wheel count by platform ==="
-          find wheels -name "*.whl" -type f | sed 's|.*/||' | sed 's|-.*-| - |' | cut -d'-' -f1-2 | sort | uniq -c
+          echo "=== Total wheel files ==="
+          find artifacts -type f -name "*.whl" | wc -l
       
-      - name: Create tar.gz archive
+      # Step 3: Create a comprehensive tarball containing all build artifacts
+      # Combines all platform-specific wheels into a single distributable package
+      # Naming convention: dmsc-wheels-{timestamp}-{short_sha}.tar
+      # This provides both individual wheels and a consolidated package
+      - name: Create consolidated tarball
         run: |
-          TIMESTAMP=$(date +%Y-%m-%d)
-          ARCHIVE_NAME="dmsc-wheels-${TIMESTAMP}.tar.gz"
-          tar -czf "$ARCHIVE_NAME" -C wheels .
-          ls -lh "$ARCHIVE_NAME"
-          echo "ARCHIVE_NAME=$ARCHIVE_NAME" >> $GITHUB_ENV
+          TIMESTAMP=$(date +%Y%m%d%H%M%S)
+          SHORT_SHA=$(echo ${{ github.sha }} | cut -c1-8)
+          TARBALL_NAME="dmsc-wheels-${TIMESTAMP}-${SHORT_SHA}"
+          
+          echo "Creating consolidated tarball: ${TARBALL_NAME}.tar"
+          
+          # Create tarball with all wheel files
+          tar -cvf "${TARBALL_NAME}.tar" -C artifacts .
+          
+          # List tarball contents
+          echo ""
+          echo "=== Tarball contents ==="
+          tar -tvf "${TARBALL_NAME}.tar" | head -30
+          
+          # Verify tarball size
+          echo ""
+          echo "=== Tarball size ==="
+          ls -lh "${TARBALL_NAME}.tar"
+          
+          # Set output for next steps
+          echo "TARBALL_NAME=${TARBALL_NAME}" >> $GITHUB_ENV
       
-      - name: Upload combined archive
+      # Step 4: Upload the consolidated tarball as a release artifact
+      # This provides a single download containing all platform wheels
+      # Users can extract the tarball to get wheels for all platforms at once
+      - name: Upload consolidated tarball
         uses: actions/upload-artifact@v4
         with:
-          name: dmsc-all-wheels
-          path: ${{ env.ARCHIVE_NAME }}
+          name: dmsc-wheels-all-platforms
+          path: ${{ env.TARBALL_NAME }}.tar
           retention-days: 90
       
-      - name: Display download info
+      # Step 5: Create and upload manifest file documenting all included wheels
+      # The manifest helps users understand what platforms are included
+      - name: Create and upload manifest
         run: |
+          TIMESTAMP=$(date +%Y-%m-%d)
+          SHORT_SHA=$(echo ${{ github.sha }} | cut -c1-8)
+          
+          # Generate manifest
+          cat > dmsc-wheels-manifest.txt << EOF
+          DMSC Wheels Collection Manifest
+          =================================
+          Build Date: ${TIMESTAMP}
+          Git Commit: ${{ github.sha }}
+          Short SHA: ${SHORT_SHA}
+          GitHub Run: ${{ github.run_id }}
+          
+          Included Platforms:
+          EOF
+          
+          # Add platform information from artifact names
+          find artifacts -type d -mindepth 1 -maxdepth 1 | while read dir; do
+            echo "  - $(basename $dir)" >> dmsc-wheels-manifest.txt
+          done
+          
+          echo "" >> dmsc-wheels-manifest.txt
+          echo "Wheel Files:" >> dmsc-wheels-manifest.txt
+          echo "------------" >> dmsc-wheels-manifest.txt
+          find artifacts -type f -name "*.whl" | sort >> dmsc-wheels-manifest.txt
+          
           echo ""
-          echo "✅ Build complete! Files available:"
-          echo ""
-          echo "📦 Combined archive: dmsc-all-wheels / ${{ env.ARCHIVE_NAME }}"
-          echo ""
-          echo "🔹 Individual platform artifacts:"
-          echo "   → python-x86_64-unknown-linux-gnu"
-          echo "   → python-aarch64-unknown-linux-gnu"
-          echo "   → python-x86_64-apple-darwin"
-          echo "   → python-aarch64-apple-darwin"
-          echo "   → python-x86_64-pc-windows-msvc"
+          echo "=== Manifest contents ==="
+          cat dmsc-wheels-manifest.txt
+          
+          # Upload manifest
+          - name: Upload manifest
+            uses: actions/upload-artifact@v4
+            with:
+              name: dmsc-wheels-manifest
+              path: dmsc-wheels-manifest.txt
