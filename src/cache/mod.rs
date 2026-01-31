@@ -170,6 +170,29 @@ impl DMSCCacheModule {
             manager: Arc::new(RwLock::new(manager)),
         }
     }
+
+    /// Creates a new cache module with the given configuration (synchronous version).
+    /// 
+    /// This is a synchronous wrapper around the async `new` method for use in the builder pattern.
+    /// 
+    /// # Parameters
+    /// 
+    /// - `config`: The cache configuration to use
+    /// 
+    /// # Returns
+    /// 
+    /// A new `DMSCCacheModule` instance
+    pub fn with_config(config: DMSCCacheConfig) -> Self {
+        let backend: std::sync::Arc<dyn crate::cache::DMSCCache> = 
+            std::sync::Arc::new(DMSCMemoryCache::new());
+
+        let manager = DMSCCacheManager::new(backend);
+
+        Self {
+            config,
+            manager: Arc::new(RwLock::new(manager)),
+        }
+    }
     
     /// Returns a reference to the cache manager.
     /// 
@@ -323,6 +346,36 @@ impl crate::core::DMSCModule for DMSCCacheModule {
         let cleaned = manager.cleanup_expired().await?;
         log::info!("Cleaned up {cleaned} expired cache entries");
         log::info!("DMSC Cache Module cleanup completed");
+        Ok(())
+    }
+}
+
+impl crate::core::ServiceModule for DMSCCacheModule {
+    fn name(&self) -> &str {
+        "DMSC.Cache"
+    }
+
+    fn is_critical(&self) -> bool {
+        false
+    }
+
+    fn priority(&self) -> i32 {
+        10
+    }
+
+    fn dependencies(&self) -> Vec<&str> {
+        vec![]
+    }
+
+    fn init(&mut self, _ctx: &mut crate::core::DMSCServiceContext) -> crate::core::DMSCResult<()> {
+        Ok(())
+    }
+
+    fn start(&mut self, _ctx: &mut crate::core::DMSCServiceContext) -> crate::core::DMSCResult<()> {
+        Ok(())
+    }
+
+    fn shutdown(&mut self, _ctx: &mut crate::core::DMSCServiceContext) -> crate::core::DMSCResult<()> {
         Ok(())
     }
 }

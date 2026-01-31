@@ -45,9 +45,12 @@ impl DMSCGrpcServer {
         }
     }
 
-    fn register_service(&self, service_name: &str, handler: Py<PyAny>) {
-        let service = DMSCGrpcPythonService::new(service_name, handler);
-        self.registry.register(service);
+    fn register_service(&mut self, service_name: &str, handler: Py<PyAny>) {
+        Python::with_gil(|py| {
+            let handler_clone = handler.clone_ref(py);
+            let _service = DMSCGrpcPythonService::new(service_name, handler_clone);
+            self.registry.register(service_name, handler);
+        });
     }
 
     fn get_stats(&self) -> DMSCGrpcStats {
@@ -66,11 +69,11 @@ impl DMSCGrpcServer {
         *self.running.write().await = true;
 
         let stats = self.stats.clone();
-        let registry = self.registry.clone();
+        let _registry = self.registry.clone();
         let running = self.running.clone();
 
         tokio::spawn(async move {
-            let _ = Self::run_server(addr, stats, registry, shutdown_rx, running).await;
+            let _ = Self::run_server(addr, stats, _registry, shutdown_rx, running).await;
         });
 
         tracing::info!("gRPC server started on {}", addr);
@@ -80,9 +83,9 @@ impl DMSCGrpcServer {
     async fn run_server(
         addr: SocketAddr,
         stats: Arc<RwLock<DMSCGrpcStats>>,
-        registry: DMSCGrpcServiceRegistry,
+        _registry: DMSCGrpcServiceRegistry,
         mut shutdown_rx: mpsc::Receiver<()>,
-        running: Arc<RwLock<bool>>,
+        _running: Arc<RwLock<bool>>,
     ) {
         let listener = match tokio::net::TcpListener::bind(&addr).await {
             Ok(l) => l,

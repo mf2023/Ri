@@ -61,26 +61,112 @@ pub struct KyberCiphertext(pub Vec<u8>);
 
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
-pub struct KyberKEM;
+pub struct KyberKEM {
+    algorithm: Arc<std::sync::RwLock<KyberAlgorithm>>,
+}
+
+#[derive(Debug, Clone, Copy)]
+enum KyberAlgorithm {
+    Kyber512,
+    Kyber768,
+    Kyber1024,
+}
 
 impl KyberKEM {
     pub fn new() -> Self {
-        Self
+        Self {
+            algorithm: Arc::new(std::sync::RwLock::new(KyberAlgorithm::Kyber512)),
+        }
     }
 
+    pub fn with_algorithm(algorithm: super::DMSCPostQuantumAlgorithm) -> Self {
+        let algo = match algorithm {
+            super::DMSCPostQuantumAlgorithm::Kyber512 => KyberAlgorithm::Kyber512,
+            super::DMSCPostQuantumAlgorithm::Kyber768 => KyberAlgorithm::Kyber768,
+            super::DMSCPostQuantumAlgorithm::Kyber1024 => KyberAlgorithm::Kyber1024,
+            _ => KyberAlgorithm::Kyber512,
+        };
+        Self {
+            algorithm: Arc::new(std::sync::RwLock::new(algo)),
+        }
+    }
+
+    #[cfg(feature = "protocol")]
     pub fn keygen(&self) -> DMSCResult<(Vec<u8>, Vec<u8>)> {
-        let (pk, sk) = oqs::kem::Kyber512::keypair();
-        Ok((pk, sk))
+        use oqs::kem::Kem;
+
+        let algo = *self.algorithm.read().unwrap();
+        let kem = match algo {
+            KyberAlgorithm::Kyber512 => Kem::new(oqs::kem::Algorithm::Kyber512),
+            KyberAlgorithm::Kyber768 => Kem::new(oqs::kem::Algorithm::Kyber768),
+            KyberAlgorithm::Kyber1024 => Kem::new(oqs::kem::Algorithm::Kyber1024),
+        }.map_err(|e| DMSCError::Other(format!("Failed to initialize Kyber: {:?}", e)))?;
+
+        let (pk, sk) = kem.keypair();
+        Ok((pk.into_vec(), sk.into_vec()))
     }
 
+    #[cfg(not(feature = "protocol"))]
+    pub fn keygen(&self) -> DMSCResult<(Vec<u8>, Vec<u8>)> {
+        Err(DMSCError::Other(
+            "Post-quantum cryptography requires the 'protocol' feature. \
+             Enable with: cargo build --features protocol".to_string()
+        ))
+    }
+
+    #[cfg(feature = "protocol")]
     pub fn encapsulate(&self, public_key: &[u8]) -> DMSCResult<super::KEMResult> {
-        let (ciphertext, shared_secret) = oqs::kem::Kyber512::encapsulate(public_key);
-        Ok(super::KEMResult { ciphertext, shared_secret })
+        use oqs::kem::Kem;
+
+        let algo = *self.algorithm.read().unwrap();
+        let kem = match algo {
+            KyberAlgorithm::Kyber512 => Kem::new(oqs::kem::Algorithm::Kyber512),
+            KyberAlgorithm::Kyber768 => Kem::new(oqs::kem::Algorithm::Kyber768),
+            KyberAlgorithm::Kyber1024 => Kem::new(oqs::kem::Algorithm::Kyber1024),
+        }.map_err(|e| DMSCError::Other(format!("Failed to initialize Kyber: {:?}", e)))?;
+
+        let pk = kem.public_key_from_bytes(public_key)
+            .ok_or_else(|| DMSCError::Other("Invalid public key".to_string()))?;
+        let (ct, ss) = kem.encapsulate(&pk);
+        Ok(super::KEMResult {
+            ciphertext: ct.into_vec(),
+            shared_secret: ss.into_vec(),
+        })
     }
 
+    #[cfg(not(feature = "protocol"))]
+    pub fn encapsulate(&self, _public_key: &[u8]) -> DMSCResult<super::KEMResult> {
+        Err(DMSCError::Other(
+            "Post-quantum cryptography requires the 'protocol' feature. \
+             Enable with: cargo build --features protocol".to_string()
+        ))
+    }
+
+    #[cfg(feature = "protocol")]
     pub fn decapsulate(&self, ciphertext: &[u8], secret_key: &[u8]) -> DMSCResult<Vec<u8>> {
-        let shared_secret = oqs::kem::Kyber512::decapsulate(ciphertext, secret_key);
-        Ok(shared_secret)
+        use oqs::kem::Kem;
+
+        let algo = *self.algorithm.read().unwrap();
+        let kem = match algo {
+            KyberAlgorithm::Kyber512 => Kem::new(oqs::kem::Algorithm::Kyber512),
+            KyberAlgorithm::Kyber768 => Kem::new(oqs::kem::Algorithm::Kyber768),
+            KyberAlgorithm::Kyber1024 => Kem::new(oqs::kem::Algorithm::Kyber1024),
+        }.map_err(|e| DMSCError::Other(format!("Failed to initialize Kyber: {:?}", e)))?;
+
+        let ct = kem.ciphertext_from_bytes(ciphertext)
+            .ok_or_else(|| DMSCError::Other("Invalid ciphertext".to_string()))?;
+        let sk = kem.secret_key_from_bytes(secret_key)
+            .ok_or_else(|| DMSCError::Other("Invalid secret key".to_string()))?;
+        let ss = kem.decapsulate(&ct, &sk);
+        Ok(ss.into_vec())
+    }
+
+    #[cfg(not(feature = "protocol"))]
+    pub fn decapsulate(&self, _ciphertext: &[u8], _secret_key: &[u8]) -> DMSCResult<Vec<u8>> {
+        Err(DMSCError::Other(
+            "Post-quantum cryptography requires the 'protocol' feature. \
+             Enable with: cargo build --features protocol".to_string()
+        ))
     }
 }
 

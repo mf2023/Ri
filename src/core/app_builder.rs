@@ -375,6 +375,113 @@ impl DMSCAppBuilder {
         self.observability_config = Some(observability_config);
         Ok(self)
     }
+
+    /// Add cache module with configuration.
+    /// 
+    /// This method adds a cache module to the application with custom configuration.
+    /// The configuration is provided via a closure that receives a cache config builder.
+    /// 
+    /// # Parameters
+    /// 
+    /// - `config_fn`: Closure for configuring the cache module
+    /// 
+    /// # Returns
+    /// 
+    /// The updated `DMSCAppBuilder` instance for method chaining.
+    pub fn with_cache_module<F>(mut self, config_fn: F) -> Self
+    where
+        F: FnOnce(&mut crate::cache::DMSCCacheConfig) -> &mut crate::cache::DMSCCacheConfig,
+    {
+        let mut config = crate::cache::DMSCCacheConfig::default();
+        config_fn(&mut config);
+        let cache_module = crate::cache::DMSCCacheModule::with_config(config);
+        self.modules.push(ModuleSlot {
+            module: ModuleType::Sync(Box::new(cache_module)),
+            failed: false,
+        });
+        self
+    }
+
+    /// Add authentication module with configuration.
+    /// 
+    /// This method adds an authentication module to the application with custom configuration.
+    /// 
+    /// # Parameters
+    /// 
+    /// - `config_fn`: Closure for configuring the auth module
+    /// 
+    /// # Returns
+    /// 
+    /// The updated `DMSCAppBuilder` instance for method chaining.
+    pub fn with_auth_module<F>(mut self, config_fn: F) -> Self
+    where
+        F: FnOnce(&mut crate::auth::DMSCAuthConfig) -> &mut crate::auth::DMSCAuthConfig,
+    {
+        let mut config = crate::auth::DMSCAuthConfig::default();
+        config_fn(&mut config);
+        let auth_module = crate::auth::DMSCAuthModule::with_config(config);
+        self.modules.push(ModuleSlot {
+            module: ModuleType::Sync(Box::new(auth_module)),
+            failed: false,
+        });
+        self
+    }
+
+    /// Add queue module with configuration.
+    /// 
+    /// This method adds a message queue module to the application with custom configuration.
+    /// 
+    /// # Parameters
+    /// 
+    /// - `config_fn`: Closure for configuring the queue module
+    /// 
+    /// # Returns
+    /// 
+    /// The updated `DMSCAppBuilder` instance for method chaining.
+    pub fn with_queue_module<F>(mut self, config_fn: F) -> Self
+    where
+        F: FnOnce(&mut crate::queue::DMSCQueueConfig) -> &mut crate::queue::DMSCQueueConfig,
+    {
+        let mut config = crate::queue::DMSCQueueConfig::default();
+        config_fn(&mut config);
+        match crate::queue::DMSCQueueModule::with_config(config) {
+            Ok(queue_module) => {
+                self.modules.push(ModuleSlot {
+                    module: ModuleType::Sync(Box::new(queue_module)),
+                    failed: false,
+                });
+            }
+            Err(e) => {
+                log::error!("Failed to create queue module: {}", e);
+            }
+        }
+        self
+    }
+
+    /// Add device control module with configuration.
+    /// 
+    /// This method adds a device control module to the application with custom configuration.
+    /// 
+    /// # Parameters
+    /// 
+    /// - `config_fn`: Closure for configuring the device module
+    /// 
+    /// # Returns
+    /// 
+    /// The updated `DMSCAppBuilder` instance for method chaining.
+    pub fn with_device_module<F>(mut self, config_fn: F) -> Self
+    where
+        F: FnOnce(&mut crate::device::DMSCDeviceControlConfig) -> &mut crate::device::DMSCDeviceControlConfig,
+    {
+        let mut config = crate::device::DMSCDeviceControlConfig::default();
+        config_fn(&mut config);
+        let device_module = crate::device::DMSCDeviceControlModule::new().with_config(config);
+        self.modules.push(ModuleSlot {
+            module: ModuleType::Sync(Box::new(device_module)),
+            failed: false,
+        });
+        self
+    }
  
     /// Build the application runtime.
     /// 

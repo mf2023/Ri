@@ -79,8 +79,20 @@ jobs:
       # Step 1: Checkout repository source code
       # Clones the repository to access Cargo.toml and Rust source files
       - uses: actions/checkout@v4
-      
-      # Step 2: Build Rust library in release mode
+
+      # Step 2: Install protoc (Protocol Buffers compiler) for etcd-client build
+      - name: Install protoc
+        uses: arduino/setup-protoc@v3
+        with:
+          version: '33.x'
+
+      # Step 3: Install CMake for rdkafka build
+      - name: Install CMake
+        uses: jwlawson/actions-setup-cmake@v2
+        with:
+          cmake-version: '3.28.x'
+
+      # Step 4: Build Rust library in release mode
       # Compiles libdmsc as a cdylib for x86_64-unknown-linux-gnu target
       # Release mode enables optimizations (-O3) and LTO for maximum performance
       # Output location: target/release/libdmsc.so
@@ -189,7 +201,12 @@ jobs:
     runs-on: macos-15-intel
     steps:
       - uses: actions/checkout@v4
-      
+
+      - name: Install protoc
+        uses: arduino/setup-protoc@v3
+        with:
+          version: '33.x'
+
       - name: Install dependencies
         run: |
           brew update

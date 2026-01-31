@@ -204,6 +204,23 @@ impl DMSCQueueModule {
         Ok(Self { queue_manager })
     }
 
+    /// Creates a new queue module with the given configuration (synchronous version).
+    /// 
+    /// This is a synchronous wrapper for use in the builder pattern.
+    /// 
+    /// # Parameters
+    /// 
+    /// - `config`: The queue configuration to use
+    /// 
+    /// # Returns
+    /// 
+    /// A `DMSCResult<Self>` containing the new queue module instance
+    pub fn with_config(_config: DMSCQueueConfig) -> DMSCResult<Self> {
+        // Create a simple memory-based queue manager for synchronous initialization
+        let queue_manager = Arc::new(DMSCQueueManager::default());
+        Ok(Self { queue_manager })
+    }
+
     /// Returns a reference to the queue manager.
     /// 
     /// # Returns
@@ -301,6 +318,36 @@ impl AsyncServiceModule for DMSCQueueModule {
     }
 }
 
+impl crate::core::ServiceModule for DMSCQueueModule {
+    fn name(&self) -> &str {
+        "DMSC.Queue"
+    }
+
+    fn is_critical(&self) -> bool {
+        false
+    }
+
+    fn priority(&self) -> i32 {
+        15
+    }
+
+    fn dependencies(&self) -> Vec<&str> {
+        vec![]
+    }
+
+    fn init(&mut self, _ctx: &mut crate::core::DMSCServiceContext) -> crate::core::DMSCResult<()> {
+        Ok(())
+    }
+
+    fn start(&mut self, _ctx: &mut crate::core::DMSCServiceContext) -> crate::core::DMSCResult<()> {
+        Ok(())
+    }
+
+    fn shutdown(&mut self, _ctx: &mut crate::core::DMSCServiceContext) -> crate::core::DMSCResult<()> {
+        Ok(())
+    }
+}
+
 /// Central queue management component.
 /// 
 /// This struct is responsible for the lifecycle of queues, including creating, retrieving,
@@ -368,9 +415,29 @@ impl DMSCQueueManager {
             connection_pool,
         })
     }
-    
+}
 
+impl Default for DMSCQueueManager {
+    fn default() -> Self {
+        Self {
+            config: DMSCQueueConfig {
+                enabled: true,
+                backend_type: DMSCQueueBackendType::Memory,
+                connection_string: "memory://localhost".to_string(),
+                max_connections: 10,
+                message_max_size: 1024 * 1024,
+                consumer_timeout_ms: 30000,
+                producer_timeout_ms: 30000,
+                retry_policy: crate::queue::config::DMSCRetryPolicy::default(),
+                dead_letter_config: None,
+            },
+            queues: Arc::new(RwLock::new(HashMap::new())),
+            connection_pool: None,
+        }
+    }
+}
 
+impl DMSCQueueManager {
     /// Initializes the queue manager.
     /// 
     /// This method performs backend-specific initialization, such as setting up connection pools

@@ -282,6 +282,35 @@ impl DMSCAuthModule {
         }
     }
 
+    /// Creates a new authentication module with the given configuration (synchronous version).
+    /// 
+    /// This is a synchronous wrapper for use in the builder pattern.
+    /// 
+    /// # Parameters
+    /// 
+    /// - `config`: The authentication configuration to use
+    /// 
+    /// # Returns
+    /// 
+    /// A new `DMSCAuthModule` instance
+    pub fn with_config(config: DMSCAuthConfig) -> Self {
+        let jwt_manager = Arc::new(DMSCJWTManager::create(config.jwt_secret.clone(), config.jwt_expiry_secs));
+        let session_manager = Arc::new(RwLock::new(DMSCSessionManager::new(config.session_timeout_secs)));
+        let permission_manager = Arc::new(RwLock::new(DMSCPermissionManager::new()));
+        let cache = Arc::new(crate::cache::DMSCMemoryCache::new());
+        let oauth_manager = Arc::new(RwLock::new(DMSCOAuthManager::new(cache)));
+        let revocation_list = Arc::new(DMSCJWTRevocationList::new());
+
+        Self {
+            config,
+            jwt_manager,
+            session_manager,
+            permission_manager,
+            oauth_manager,
+            revocation_list,
+        }
+    }
+
     /// Creates a new authentication module with the given configuration asynchronously.
     /// 
     /// This method is preferred for async contexts as it avoids blocking the runtime
@@ -462,6 +491,36 @@ impl DMSCAuthModule {
     fn generate_test_token(&self, subject: &str, roles: Vec<String>, permissions: Vec<String>) -> PyResult<String> {
         self.jwt_manager.generate_token(subject, roles, permissions)
             .map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(e.to_string()))
+    }
+}
+
+impl crate::core::ServiceModule for DMSCAuthModule {
+    fn name(&self) -> &str {
+        "DMSC.Auth"
+    }
+
+    fn is_critical(&self) -> bool {
+        false
+    }
+
+    fn priority(&self) -> i32 {
+        20
+    }
+
+    fn dependencies(&self) -> Vec<&str> {
+        vec![]
+    }
+
+    fn init(&mut self, _ctx: &mut crate::core::DMSCServiceContext) -> crate::core::DMSCResult<()> {
+        Ok(())
+    }
+
+    fn start(&mut self, _ctx: &mut crate::core::DMSCServiceContext) -> crate::core::DMSCResult<()> {
+        Ok(())
+    }
+
+    fn shutdown(&mut self, _ctx: &mut crate::core::DMSCServiceContext) -> crate::core::DMSCResult<()> {
+        Ok(())
     }
 }
 

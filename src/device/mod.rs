@@ -1049,6 +1049,36 @@ impl crate::core::DMSCModule for DMSCDeviceControlModule {
     }
 }
 
+impl crate::core::ServiceModule for DMSCDeviceControlModule {
+    fn name(&self) -> &str {
+        "DMSC.DeviceControl"
+    }
+
+    fn is_critical(&self) -> bool {
+        false
+    }
+
+    fn priority(&self) -> i32 {
+        25
+    }
+
+    fn dependencies(&self) -> Vec<&str> {
+        vec![]
+    }
+
+    fn init(&mut self, _ctx: &mut crate::core::DMSCServiceContext) -> crate::core::DMSCResult<()> {
+        Ok(())
+    }
+
+    fn start(&mut self, _ctx: &mut crate::core::DMSCServiceContext) -> crate::core::DMSCResult<()> {
+        Ok(())
+    }
+
+    fn shutdown(&mut self, _ctx: &mut crate::core::DMSCServiceContext) -> crate::core::DMSCResult<()> {
+        Ok(())
+    }
+}
+
 fn parse_device_config(config_str: Option<&String>) -> crate::device::core::DMSCDeviceControlConfig {
     match config_str {
         Some(config) => {

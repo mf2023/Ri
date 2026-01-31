@@ -165,9 +165,9 @@ impl DMSCGrpcServiceRegistry {
 
     fn register(&mut self, service_name: &str, handler: Py<PyAny>) {
         let service = DMSCGrpcPythonService::new(service_name, handler);
-        let name = service.service_name();
+        let name = service.service_name().to_string();
         let mut services = self.services.blocking_write();
-        services.insert(name.to_string(), Arc::new(service));
+        services.insert(name, Arc::new(service));
     }
 
     fn list_services(&self) -> Vec<String> {
@@ -307,8 +307,11 @@ impl DMSCGrpcServiceRegistryPy {
     }
     
     fn register(&mut self, service_name: &str, handler: Py<PyAny>) {
-        let service = DMSCGrpcPythonService::new(service_name, handler);
-        self.registry.register(service);
+        Python::with_gil(|py| {
+            let handler_clone = handler.clone_ref(py);
+            let _service = DMSCGrpcPythonService::new(service_name, handler_clone);
+            self.registry.register(service_name, handler);
+        });
     }
     
     fn list_services(&self) -> Vec<String> {

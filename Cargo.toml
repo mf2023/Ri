@@ -80,7 +80,8 @@ pyo3 = { version = "0.27", features = ["extension-module"], optional = true }
 # Kafka message streaming support
 # Kafka client library for message streaming using rdkafka
 # Supports Kafka protocol and consumer/producer patterns
-rdkafka = { version = "0.38", default-features = false, features = ["tokio", "libz"], optional = true }
+# Uses cmake-build for cross-platform compatibility (Windows/Linux/macOS)
+rdkafka = { version = "0.38", default-features = false, features = ["tokio", "cmake-build"], optional = true }
 
 # DMSC core dependencies (always included)
 # Serialization and deserialization framework with derive macro support
@@ -179,6 +180,12 @@ tokio-rustls = { version = "0.24", optional = true } # For TLS support in gatewa
 # Future utilities extension for async operations
 # Provides additional combinators and utilities for futures
 futures = { version = "0.3", features = ["std"] } # For async operations
+
+# Future utilities for async stream operations
+futures-util = { version = "0.3", features = ["sink", "std"] }
+
+# HTTP types for WebSocket and gateway
+http = "1.0"
 
 # HTTP client for external API calls and service integration
 # Supports JSON response parsing and async requests
@@ -350,8 +357,8 @@ async-stream = { version = "0.3", optional = true }
 # WebSocket protocol support for full-duplex communication channels.
 
 # Async WebSocket client and server with tokio runtime
-tokio-tungstenite = { version = "0.24", optional = true }
-tungstenite = { version = "0.21", optional = true }
+tokio-tungstenite = { version = "0.24", optional = true, features = ["rustls-tls-webpki-roots"] }
+tungstenite = { version = "0.24", optional = true }
 
 # =============================================================================
 # Platform-Specific Dependencies
@@ -376,6 +383,10 @@ openssl-sys = { version = "0.9", features = ["vendored"], optional = true }
 # https://github.com/open-quantum-safe/liboqs
 # https://crates.io/crates/oqs
 oqs = { version = "0.11", optional = true }
+
+# Chinese National Cryptography Standards
+# sm-crypto provides SM2/SM3/SM4 implementations
+sm-crypto = { version = "0.1", optional = true }
 
 # =============================================================================
 # Feature Flags Configuration
@@ -497,7 +508,7 @@ kafka = ["rdkafka"]
 # =============================================================================
 # Enable post-quantum cryptography integration via oqs
 # Requires: liboqs C library installed + oqs Rust crate
-protocol = ["dep:oqs"]
+protocol = ["dep:oqs", "dep:sm-crypto"]
 
 # =============================================================================
 # Development Dependencies

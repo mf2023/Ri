@@ -61,26 +61,109 @@ pub struct DilithiumSignature(pub Vec<u8>);
 
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
-pub struct DilithiumSigner;
+pub struct DilithiumSigner {
+    algorithm: Arc<std::sync::RwLock<DilithiumAlgorithm>>,
+}
+
+#[derive(Debug, Clone, Copy)]
+enum DilithiumAlgorithm {
+    Dilithium2,
+    Dilithium3,
+    Dilithium5,
+}
 
 impl DilithiumSigner {
     pub fn new() -> Self {
-        Self
+        Self {
+            algorithm: Arc::new(std::sync::RwLock::new(DilithiumAlgorithm::Dilithium2)),
+        }
     }
 
+    pub fn with_algorithm(algorithm: super::DMSCPostQuantumAlgorithm) -> Self {
+        let algo = match algorithm {
+            super::DMSCPostQuantumAlgorithm::Dilithium2 => DilithiumAlgorithm::Dilithium2,
+            super::DMSCPostQuantumAlgorithm::Dilithium3 => DilithiumAlgorithm::Dilithium3,
+            super::DMSCPostQuantumAlgorithm::Dilithium5 => DilithiumAlgorithm::Dilithium5,
+            _ => DilithiumAlgorithm::Dilithium2,
+        };
+        Self {
+            algorithm: Arc::new(std::sync::RwLock::new(algo)),
+        }
+    }
+
+    #[cfg(feature = "protocol")]
     pub fn keygen(&self) -> DMSCResult<(Vec<u8>, Vec<u8>)> {
-        let (pk, sk) = oqs::sig::Dilithium2::keypair();
-        Ok((pk, sk))
+        use oqs::sig::Sig;
+
+        let algo = *self.algorithm.read().unwrap();
+        let sig = match algo {
+            DilithiumAlgorithm::Dilithium2 => Sig::new(oqs::sig::Algorithm::Dilithium2),
+            DilithiumAlgorithm::Dilithium3 => Sig::new(oqs::sig::Algorithm::Dilithium3),
+            DilithiumAlgorithm::Dilithium5 => Sig::new(oqs::sig::Algorithm::Dilithium5),
+        }.map_err(|e| DMSCError::Other(format!("Failed to initialize Dilithium: {:?}", e)))?;
+
+        let (pk, sk) = sig.keypair();
+        Ok((pk.into_vec(), sk.into_vec()))
     }
 
+    #[cfg(not(feature = "protocol"))]
+    pub fn keygen(&self) -> DMSCResult<(Vec<u8>, Vec<u8>)> {
+        Err(DMSCError::Other(
+            "Post-quantum cryptography requires the 'protocol' feature. \
+             Enable with: cargo build --features protocol".to_string()
+        ))
+    }
+
+    #[cfg(feature = "protocol")]
     pub fn sign(&self, secret_key: &[u8], message: &[u8]) -> DMSCResult<Vec<u8>> {
-        let signature = oqs::sig::Dilithium2::sign(secret_key, message);
-        Ok(signature)
+        use oqs::sig::Sig;
+
+        let algo = *self.algorithm.read().unwrap();
+        let sig = match algo {
+            DilithiumAlgorithm::Dilithium2 => Sig::new(oqs::sig::Algorithm::Dilithium2),
+            DilithiumAlgorithm::Dilithium3 => Sig::new(oqs::sig::Algorithm::Dilithium3),
+            DilithiumAlgorithm::Dilithium5 => Sig::new(oqs::sig::Algorithm::Dilithium5),
+        }.map_err(|e| DMSCError::Other(format!("Failed to initialize Dilithium: {:?}", e)))?;
+
+        let sk = sig.secret_key_from_bytes(secret_key)
+            .ok_or_else(|| DMSCError::Other("Invalid secret key".to_string()))?;
+        let signature = sig.sign(message, &sk);
+        Ok(signature.into_vec())
     }
 
+    #[cfg(not(feature = "protocol"))]
+    pub fn sign(&self, _secret_key: &[u8], _message: &[u8]) -> DMSCResult<Vec<u8>> {
+        Err(DMSCError::Other(
+            "Post-quantum cryptography requires the 'protocol' feature. \
+             Enable with: cargo build --features protocol".to_string()
+        ))
+    }
+
+    #[cfg(feature = "protocol")]
     pub fn verify(&self, public_key: &[u8], message: &[u8], signature: &[u8]) -> DMSCResult<bool> {
-        let result = oqs::sig::Dilithium2::verify(public_key, message, signature);
-        Ok(result)
+        use oqs::sig::Sig;
+
+        let algo = *self.algorithm.read().unwrap();
+        let sig = match algo {
+            DilithiumAlgorithm::Dilithium2 => Sig::new(oqs::sig::Algorithm::Dilithium2),
+            DilithiumAlgorithm::Dilithium3 => Sig::new(oqs::sig::Algorithm::Dilithium3),
+            DilithiumAlgorithm::Dilithium5 => Sig::new(oqs::sig::Algorithm::Dilithium5),
+        }.map_err(|e| DMSCError::Other(format!("Failed to initialize Dilithium: {:?}", e)))?;
+
+        let pk = sig.public_key_from_bytes(public_key)
+            .ok_or_else(|| DMSCError::Other("Invalid public key".to_string()))?;
+        let sig_bytes = sig.signature_from_bytes(signature)
+            .ok_or_else(|| DMSCError::Other("Invalid signature".to_string()))?;
+        let result = sig.verify(message, &sig_bytes, &pk);
+        Ok(result.is_ok())
+    }
+
+    #[cfg(not(feature = "protocol"))]
+    pub fn verify(&self, _public_key: &[u8], _message: &[u8], _signature: &[u8]) -> DMSCResult<bool> {
+        Err(DMSCError::Other(
+            "Post-quantum cryptography requires the 'protocol' feature. \
+             Enable with: cargo build --features protocol".to_string()
+        ))
     }
 }
 
