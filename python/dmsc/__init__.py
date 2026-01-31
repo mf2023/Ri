@@ -187,22 +187,16 @@ from .dmsc import (
     # =============================================================================
     # gRPC classes - gRPC server and client support (conditional on grpc feature)
     # =============================================================================
-    try:
-        DMSCGrpcConfig, DMSCGrpcStats, DMSCGrpcServiceRegistry,
-        DMSCGrpcPythonService, DMSCGrpcServiceRegistryPy,
-        DMSCGrpcServer, DMSCGrpcClient,
-    except ImportError:
-        pass,
+    DMSCGrpcConfig, DMSCGrpcStats, DMSCGrpcServiceRegistry,
+    DMSCGrpcPythonService, DMSCGrpcServiceRegistryPy,
+    DMSCGrpcServer, DMSCGrpcClient,
 
     # =============================================================================
     # WebSocket classes - WebSocket server and client support (conditional on websocket feature)
     # =============================================================================
-    try:
-        DMSCWSServerConfig, DMSCWSEvent, DMSCWSSessionInfo, DMSCWSServerStats,
-        DMSCWSPythonHandler, DMSCWSSessionManagerPy,
-        DMSCWSServer, DMSCWSClientConfig, DMSCWSClientStats, DMSCWSClient,
-    except ImportError:
-        pass,
+    DMSCWSServerConfig, DMSCWSEvent, DMSCWSSessionInfo, DMSCWSServerStats,
+    DMSCWSPythonHandler, DMSCWSSessionManagerPy,
+    DMSCWSServer, DMSCWSClientConfig, DMSCWSClientStats, DMSCWSClient,
 )
 
 # =============================================================================

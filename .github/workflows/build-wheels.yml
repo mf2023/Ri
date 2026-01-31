@@ -246,6 +246,8 @@ jobs:
     runs-on: ${{ matrix.runs-on }}
     env:
       PIP_DISABLE_PIP_VERSION_CHECK: '1'
+      CARGO_HTTP_TIMEOUT: '60'
+      CARGO_NET_GIT_FETCH_WITH_CLI: 'true'
     strategy:
       fail-fast: false
       matrix:

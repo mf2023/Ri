@@ -483,22 +483,6 @@ impl DMSCQueueManager {
             }
             #[cfg(feature = "redis")]
             DMSCQueueBackendType::Redis => {
-                if let Some(ref pool) = self.connection_pool {
-                    let conn = pool.get_connection().await?;
-                    // Extract the actual redis connection from the pooled connection
-                    if let Some(redis_conn) = conn.downcast_ref::<redis::aio::MultiplexedConnection>()
-                    {
-                        let queue = crate::queue::backends::DMSCRedisQueue::new_with_connection(
-                            name,
-                            redis_conn.clone(),
-                        )
-                        .await?;
-                        // Return connection to pool
-                        let _ = pool.return_connection(conn).await;
-                        return Ok(Arc::new(queue));
-                    }
-                }
-                // Fallback to direct connection if pool is not available
                 Ok(Arc::new(
                     crate::queue::backends::DMSCRedisQueue::new(
                         name,
