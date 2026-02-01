@@ -82,7 +82,7 @@ use async_trait::async_trait;
 use rdkafka::admin::{AdminClient, AdminOptions, NewTopic, TopicReplication};
 use rdkafka::client::DefaultClientContext;
 use rdkafka::config::{ClientConfig, RDKafkaLogLevel};
-use rdkafka::consumer::{ConsumerContext, StreamConsumer};
+use rdkafka::consumer::{ConsumerContext, DefaultConsumerContext, StreamConsumer};
 use rdkafka::message::{Header, OwnedHeaders};
 use rdkafka::producer::{FutureProducer, FutureRecord};
 use rdkafka::topic_partition_list::TopicPartitionList;
@@ -92,16 +92,14 @@ use tokio::sync::Mutex;
 use crate::core::{DMSCError, DMSCResult};
 use crate::queue::{DMSCQueue, DMSCQueueMessage, DMSCQueueProducer, DMSCQueueConsumer, DMSCQueueStats};
 
-struct KafkaConsumerContext;
-
-impl ConsumerContext for KafkaConsumerContext {}
+type KafkaConsumer = StreamConsumer<DefaultConsumerContext>;
 
 #[derive(Clone)]
 pub struct DMSCKafkaQueue {
     brokers: String,
     topic: String,
     producer: Arc<FutureProducer>,
-    consumer: Arc<StreamConsumer<Arc<KafkaConsumerContext>>>,
+    consumer: Arc<KafkaConsumer>,
     admin_client: Arc<AdminClient<DefaultClientContext>>,
 }
 
@@ -112,7 +110,7 @@ impl DMSCKafkaQueue {
         let producer = config.create::<FutureProducer>()
             .map_err(|e| DMSCError::Queue(format!("Failed to create Kafka producer: {}", e)))?;
 
-        let consumer = config.create::<StreamConsumer<Arc<KafkaConsumerContext>>>()
+        let consumer = config.create::<KafkaConsumer>()
             .map_err(|e| DMSCError::Queue(format!("Failed to create Kafka consumer: {}", e)))?;
 
         let admin_client = config.create::<AdminClient<DefaultClientContext>>()
@@ -143,16 +141,16 @@ impl DMSCKafkaQueue {
     }
 
     async fn ensure_topic_exists(&self) -> DMSCResult<()> {
-        let topics = self.admin_client.list_topics(None, None).await
-            .map_err(|e| DMSCError::Queue(format!("Failed to list Kafka topics: {}", e)))?;
+        let metadata = self.consumer.fetch_metadata(None, Duration::from_secs(5))
+            .map_err(|e| DMSCError::Queue(format!("Failed to get Kafka metadata: {}", e)))?;
 
-        let topic_names: Vec<&str> = topics.iter().map(|t| t.name.as_str()).collect();
+        let topic_exists = metadata.topics().iter().any(|t| t.name == self.topic);
 
-        if !topic_names.contains(&self.topic.as_str()) {
-            let new_topic = NewTopic::new(&self.topic, 1, TopicReplication::Factor(1));
+        if !topic_exists {
+            let new_topic = NewTopic::new(&self.topic, 1, TopicReplication::Fixed(1));
             let admin_options = AdminOptions::new();
 
-            self.admin_client.create_topics(vec![new_topic], Some(admin_options)).await
+            self.admin_client.create_topics(&[&new_topic], &admin_options).await
                 .map_err(|e| DMSCError::Queue(format!("Failed to create Kafka topic: {}", e)))?;
 
             tokio::time::sleep(Duration::from_secs(1)).await;
@@ -166,8 +164,8 @@ impl DMSCKafkaQueue {
             .await
             .map_err(|e| DMSCError::Queue(format!("Failed to get Kafka metadata: {}", e)))?;
 
-        if let Some(partition_count) = metadata.topics().first() {
-            Ok(partition_count.partitions().len() as i32)
+        if let Some(topic_meta) = metadata.topics().first() {
+            Ok(topic_meta.partitions().len() as i32)
         } else {
             Ok(0)
         }
@@ -205,7 +203,7 @@ impl DMSCQueue for DMSCKafkaQueue {
     }
 
     async fn get_stats(&self) -> DMSCResult<DMSCQueueStats> {
-        let partition_count = self.get_topic_metadata().await?;
+        let _partition_count = self.get_topic_metadata().await?;
         let topic = self.topic.clone();
 
         Ok(DMSCQueueStats {
@@ -224,7 +222,7 @@ impl DMSCQueue for DMSCKafkaQueue {
 
     async fn purge(&self) -> DMSCResult<()> {
         let admin_options = AdminOptions::new();
-        self.admin_client.delete_topics(vec![&self.topic], Some(admin_options)).await
+        self.admin_client.delete_topics(&[&self.topic], &admin_options).await
             .map_err(|e| DMSCError::Queue(format!("Failed to purge Kafka topic: {}", e)))?;
 
         tokio::time::sleep(Duration::from_secs(1)).await;
@@ -287,7 +285,7 @@ impl DMSCQueueProducer for KafkaQueueProducer {
 }
 
 pub struct KafkaQueueConsumer {
-    consumer: Arc<StreamConsumer<Arc<KafkaConsumerContext>>>,
+    consumer: Arc<KafkaConsumer>,
     topic: String,
     consumer_group: String,
     paused: Arc<Mutex<bool>>,
@@ -295,7 +293,7 @@ pub struct KafkaQueueConsumer {
 
 #[async_trait]
 impl DMSCQueueConsumer for KafkaQueueConsumer {
-    async fn receive(&self) -> DMSCResult<Option<DMSCQueueMessage>>> {
+    async fn receive(&self) -> DMSCResult<Option<DMSCQueueMessage>> {
         let paused = *self.paused.lock().await;
         if paused {
             return Ok(None);

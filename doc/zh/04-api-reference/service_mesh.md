@@ -311,7 +311,7 @@ circuit_breaker.record_success().await;
 circuit_breaker.record_failure().await;
 ```
 
-<div align="center>
+<div align="center">
 
 ## 负载均衡
 
@@ -335,7 +335,7 @@ load_balancer.add_server(DMSCBackendServer {
 }).await;
 ```
 
-<div align="center>
+<div align="center">
 
 ## 最佳实践
 

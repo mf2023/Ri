@@ -122,12 +122,12 @@ from .dmsc import (
     
     # =============================================================================
     # Service Mesh classes - Advanced service management including circuit breakers,
-    # health checks, rate limiting, and canary deployments
-    # =============================================================================
-    DMSCCircuitBreaker, DMSCCircuitBreakerConfig, DMSCCircuitBreakerState, DMSCCircuitBreakerMetrics,
-    DMSCHealthCheck, DMSCHealthCheckConfig, DMSCHealthCheckType, DMSCHttpHealthCheck, DMSCTcpHealthCheck,
-    DMSCRateLimiter, DMSCRateLimiterConfig, DMSCRateLimiterResult,
-    DMSCCanaryDeployment, DMSCCanaryConfig, DMSCCanaryMetrics,
+    # health checks, and rate limiting
+    # Note: DMSCCircuitBreaker, DMSCCircuitBreakerConfig, DMSCCircuitBreakerState, DMSCCircuitBreakerMetrics
+    # are already imported above in the Gateway classes section
+    DMSCHealthCheckConfig, DMSCHealthCheckType, DMSCHealthCheckResult,
+    DMSCHttpHealthCheckProvider, DMSCTcpHealthCheckProvider,
+    DMSCHealthChecker, DMSCHealthSummary,
     
     # =============================================================================
     # Auth classes - Authentication and authorization including JWT management,
@@ -254,11 +254,12 @@ __all__ = [
     'DMSCBackendServer', 'DMSCLoadBalancerServerStats',
     'DMSCLoadBalancer', 'DMSCLoadBalancerStrategy',
     
-    # Service mesh classes - Service discovery and traffic routing
+    # Service mesh classes - Service discovery, traffic routing, and health checking
     'DMSCServiceMesh', 'DMSCServiceMeshConfig', 'DMSCServiceDiscovery',
     'DMSCServiceInstance', 'DMSCServiceStatus', 'DMSCServiceMeshStats',
     'DMSCTrafficRoute', 'DMSCMatchCriteria', 'DMSCRouteAction', 'DMSCWeightedDestination',
     'DMSCTrafficManager', 'DMSCHealthChecker', 'DMSCHealthSummary', 'DMSCHealthCheckType',
+    'DMSCHealthCheckConfig', 'DMSCHealthCheckResult', 'DMSCHttpHealthCheckProvider', 'DMSCTcpHealthCheckProvider',
     
     # Auth classes - Authentication, authorization, and session management
     'DMSCAuthModule', 'DMSCAuthConfig', 'DMSCJWTManager', 'DMSCJWTClaims', 'DMSCJWTValidationOptions',
