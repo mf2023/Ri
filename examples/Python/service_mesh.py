@@ -1,5 +1,3 @@
-#!/usr/bin/env python3
-
 # Copyright © 2025-2026 Wenze Wei. All Rights Reserved.
 #
 # This file is part of DMSC.
@@ -20,204 +18,218 @@
 """
 DMSC Service Mesh Module Example
 
-This example demonstrates how to use the service mesh module in DMSC,
-including service discovery, health checks, and traffic management.
-
-Features Demonstrated:
-- Service registration and discovery
-- Health check configuration
-- Instance management
-- Service status monitoring
+This example demonstrates how to use the DMSC service mesh module for service
+discovery, traffic management, and health checking.
 """
 
-from dmsc import (
-    DMSCServiceMesh, DMSCServiceMeshConfig, 
-    DMSCServiceDiscovery, DMSCServiceInstance, DMSCServiceStatus,
-    DMSCTrafficManager, DMSCHealthChecker
-)
 import asyncio
+from dmsc import (
+    DMSCServiceMesh,
+    DMSCServiceMeshConfig,
+    DMSCServiceDiscovery,
+    DMSCServiceInstance,
+    DMSCServiceStatus,
+    DMSCServiceMeshStats,
+    DMSCServiceEndpoint,
+    DMSCServiceHealthStatus,
+    DMSCHealthChecker,
+    DMSCHealthSummary,
+    DMSCHealthCheckType,
+    DMSCTrafficManager,
+    DMSCTrafficRoute,
+    DMSCMatchCriteria,
+    DMSCRouteAction,
+    DMSCWeightedDestination,
+)
 
 
 async def main():
-    """
-    Main async entry point for the service mesh module example.
-    
-    This function demonstrates the complete service mesh workflow including:
-    - Service mesh configuration and initialization
-    - Service instance registration with metadata
-    - Service discovery and instance lookup
-    - Instance health status management
-    - Health check execution and reporting
-    - Service mesh statistics and monitoring
-    - Service deregistration and cleanup
-    
-    The example shows how DMSC handles service mesh functionality for
-    microservices architecture with dynamic service discovery and health monitoring.
-    """
-    print("=== DMSC Service Mesh Module Example ===\n")
-    
-    # Configuration Setup: Create service mesh configuration
-    # Parameters:
-    # - service_name: Name of this service instance for mesh identification
-    # - namespace: Logical grouping of services (e.g., Kubernetes namespace)
-    # - instance_id: Unique identifier for this service instance
-    # - host: Network host where this service is running
-    # - port: Network port where this service listens
-    # - health_check_interval_secs: How often to perform health checks (30 seconds)
-    # - failure_threshold: Consecutive failures before marking unhealthy (3)
-    # - recovery_threshold: Consecutive successes before marking healthy (2)
-    config = DMSCServiceMeshConfig(
-        service_name="dmsc-example",
-        namespace="default",
-        instance_id="instance-001",
-        host="localhost",
-        port=8080,
-        health_check_interval_secs=30,
-        failure_threshold=3,
-        recovery_threshold=2,
-    )
-    
-    # Module Initialization: Create service mesh instance
-    # The mesh provides service discovery, load balancing, and health management
-    print("1. Creating service mesh...")
-    service_mesh = await DMSCServiceMesh.create(config)
-    print("   Service mesh initialized\n")
-    
-    # Step 2: Register first service instance
-    # Demonstrates service registration with full metadata
-    # Services are registered to make them discoverable by other services
-    print("2. Registering service instance...")
-    
-    # Create service instance with connection and version information
-    # - service_name: Logical name of the service (user-service)
-    # - host: Where the service is running (localhost)
-    # - port: Service port (8081)
-    # - version: Service version for routing (v1.0.0)
-    instance = DMSCServiceInstance(
-        service_name="user-service",
-        host="localhost",
-        port=8081,
-        version="v1.0.0",
-    )
-    
-    # Register the instance with the service mesh
-    # Mesh will track this instance for discovery and health monitoring
-    await service_mesh.register_instance(instance)
-    print("   User service registered\n")
-    
-    # Step 3: Register additional service instance
-    # Demonstrates registering multiple instances of same service
-    # Multiple instances enable load balancing and high availability
-    print("3. Registering another instance...")
-    
-    instance2 = DMSCServiceInstance(
-        service_name="user-service",
-        host="localhost",
-        port=8082,
-        version="v1.0.0",
-    )
-    await service_mesh.register_instance(instance2)
-    print("   Second user service instance registered\n")
-    
-    # Step 4: Register different service type
-    # Demonstrates registering completely separate service
-    print("4. Registering order service...")
-    
-    order_instance = DMSCServiceInstance(
-        service_name="order-service",
-        host="localhost",
-        port=8083,
-        version="v1.0.0",
-    )
-    await service_mesh.register_instance(order_instance)
-    print("   Order service registered\n")
-    
-    # Step 5: Service discovery
-    # Demonstrates finding service instances by name
-    # Discovery is fundamental to microservices communication
-    print("5. Discovering services...")
-    
-    # Query for all instances of user-service
-    # Returns list of available instances with their metadata
-    instances = await service_mesh.discover_instances("user-service")
-    print(f"   Found {len(instances)} user-service instance(s):")
-    for instance in instances:
-        print(f"   - {instance.host()}:{instance.port()} (status: {instance.status()})")
-    print()
-    
-    # Step 6: List all registered services
-    # Demonstrates enumeration of all services in the mesh
-    print("6. Listing all registered services...")
-    
-    # Get list of unique service names in the mesh
-    services = await service_mesh.list_services()
-    print("   Registered services:")
-    for service in services:
-        # For each service, discover its instances
-        instances = await service_mesh.discover_instances(service)
-        print(f"   - {service}: {len(instances)} instance(s)")
-    print()
-    
-    # Step 7: Update instance health
-    # Demonstrates manual health status management
-    # Health status affects load balancer routing decisions
-    print("7. Updating instance health...")
-    
-    # Get instances and update first one's health
-    instances = await service_mesh.discover_instances("user-service")
-    if instances:
-        first_instance = instances[0]
-        
-        # Update health status to indicate instance state
-        # Status can be: Healthy, Unhealthy, Unknown, etc.
-        await service_mesh.update_instance_health(
-            first_instance.id(),
-            DMSCServiceStatus.Healthy,
-        )
-        print(f"   Updated instance {first_instance.id()} to Healthy\n")
-    
-    # Step 8: Run health checks
-    # Demonstrates automatic health monitoring
-    # Health checks verify service instances are responding correctly
-    print("8. Simulating health check...")
-    
-    # Execute health checks on all registered instances
-    # Returns comprehensive report with pass/fail status
-    health_report = await service_mesh.run_health_checks()
-    print("   Health check completed:")
-    print(f"   - Total checks: {health_report.total_checks()}")
-    print(f"   - Passed: {health_report.passed_checks()}")
-    print(f"   - Failed: {health_report.failed_checks()}\n")
-    
-    # Step 9: Get service mesh statistics
-    # Demonstrates aggregate monitoring of mesh state
-    print("9. Getting service mesh statistics...")
-    
-    # Get aggregated metrics about registered instances
-    stats = await service_mesh.get_statistics()
-    print("   Service mesh statistics:")
-    print(f"   - Total instances: {stats.total_instances()}")
-    print(f"   - Healthy instances: {stats.healthy_instances()}")
-    print(f"   - Unhealthy instances: {stats.unhealthy_instances()}")
-    print()
-    
-    # Step 10: Deregister service
-    # Demonstrates removing service from mesh
-    # Cleanup is important for scaling down or decommissioning services
-    print("10. Deregistering service...")
-    
-    # Remove specific instance from mesh
-    await service_mesh.deregister_instance("user-service", "instance-001")
-    print("   Deregistered user-service instance-001\n")
-    
-    # Step 11: Final discovery
-    # Verify instance was successfully removed
-    print("11. Final service discovery...")
-    
-    instances = await service_mesh.discover_instances("user-service")
-    print(f"   Remaining user-service instances: {len(instances)}\n")
-    
-    print("=== Service Mesh Example Completed ===")
+    # Create service mesh configuration
+    config = DMSCServiceMeshConfig()
+    config.service_name = "dmsc-example-service"
+    config.namespace = "production"
+    config.enable_service_discovery = True
+    config.enable_health_check = True
+    config.enable_traffic_management = True
+    config.discovery_interval_seconds = 30
+    config.health_check_interval_seconds = 10
+
+    # Initialize service mesh
+    service_mesh = DMSCServiceMesh(config)
+
+    # Create service discovery
+    print("Creating service discovery...")
+    discovery = DMSCServiceDiscovery()
+
+    # Register service instances
+    print("\nRegistering service instances...")
+
+    # User service instances
+    user_service_1 = DMSCServiceInstance()
+    user_service_1.instance_id = "user-service-1"
+    user_service_1.service_name = "user-service"
+    user_service_1.host = "192.168.1.10"
+    user_service_1.port = 8080
+    user_service_1.status = DMSCServiceStatus.HEALTHY
+    user_service_1.weight = 3
+    user_service_1.metadata = {"version": "1.0.0", "region": "us-east-1"}
+
+    user_service_2 = DMSCServiceInstance()
+    user_service_2.instance_id = "user-service-2"
+    user_service_2.service_name = "user-service"
+    user_service_2.host = "192.168.1.11"
+    user_service_2.port = 8080
+    user_service_2.status = DMSCServiceStatus.HEALTHY
+    user_service_2.weight = 2
+    user_service_2.metadata = {"version": "1.0.0", "region": "us-east-2"}
+
+    # Order service instances
+    order_service_1 = DMSCServiceInstance()
+    order_service_1.instance_id = "order-service-1"
+    order_service_1.service_name = "order-service"
+    order_service_1.host = "192.168.1.20"
+    order_service_1.port = 8081
+    order_service_1.status = DMSCServiceStatus.HEALTHY
+    order_service_1.weight = 1
+    order_service_1.metadata = {"version": "1.1.0", "region": "us-east-1"}
+
+    # Register services
+    discovery.register_service(user_service_1)
+    discovery.register_service(user_service_2)
+    discovery.register_service(order_service_1)
+
+    print(f"Registered 3 service instances")
+
+    # Discover services
+    print("\nDiscovering services...")
+    user_services = discovery.discover_services("user-service")
+    print(f"Found {len(user_services)} instances of user-service")
+
+    order_services = discovery.discover_services("order-service")
+    print(f"Found {len(order_services)} instances of order-service")
+
+    # Create service endpoints
+    print("\nCreating service endpoints...")
+
+    user_endpoint = DMSCServiceEndpoint()
+    user_endpoint.service_name = "user-service"
+    user_endpoint.address = "192.168.1.10:8080"
+    user_endpoint.protocol = "http"
+    user_endpoint.health_status = DMSCServiceHealthStatus.HEALTHY
+
+    order_endpoint = DMSCServiceEndpoint()
+    order_endpoint.service_name = "order-service"
+    order_endpoint.address = "192.168.1.20:8081"
+    order_endpoint.protocol = "http"
+    order_endpoint.health_status = DMSCServiceHealthStatus.HEALTHY
+
+    print(f"Created endpoints for user-service and order-service")
+
+    # Configure health checking
+    print("\nConfiguring health checking...")
+
+    health_checker = DMSCHealthChecker()
+    health_checker.check_type = DMSCHealthCheckType.HTTP
+    health_checker.interval_seconds = 10
+    health_checker.timeout_seconds = 5
+    health_checker.path = "/health"
+
+    # Perform health check
+    health_status = health_checker.check(user_endpoint)
+    print(f"Health check for user-service: {health_status}")
+
+    # Get health summary
+    health_summary = DMSCHealthSummary()
+    health_summary.total_services = 3
+    health_summary.healthy_services = 3
+    health_summary.unhealthy_services = 0
+    health_summary.unknown_services = 0
+
+    print(f"\nHealth summary:")
+    print(f"  Total: {health_summary.total_services}")
+    print(f"  Healthy: {health_summary.healthy_services}")
+    print(f"  Unhealthy: {health_summary.unhealthy_services}")
+
+    # Configure traffic management
+    print("\nConfiguring traffic management...")
+
+    traffic_manager = DMSCTrafficManager()
+
+    # Create traffic routes
+    route1 = DMSCTrafficRoute()
+    route1.name = "user-service-route"
+    route1.priority = 100
+
+    # Match criteria
+    match_criteria = DMSCMatchCriteria()
+    match_criteria.path = "/api/users/*"
+    match_criteria.methods = ["GET", "POST", "PUT", "DELETE"]
+    route1.match = match_criteria
+
+    # Route action
+    route_action = DMSCRouteAction()
+    route_action.route_to = "user-service"
+    route1.action = route_action
+
+    # Weighted destinations for canary deployment
+    canary_route = DMSCTrafficRoute()
+    canary_route.name = "canary-route"
+    canary_route.priority = 90
+
+    canary_match = DMSCMatchCriteria()
+    canary_match.headers = {"x-canary": "true"}
+    canary_route.match = canary_match
+
+    # Weighted destinations
+    stable_dest = DMSCWeightedDestination()
+    stable_dest.service = "user-service"
+    stable_dest.version = "1.0.0"
+    stable_dest.weight = 90
+
+    canary_dest = DMSCWeightedDestination()
+    canary_dest.service = "user-service"
+    canary_dest.version = "1.1.0"
+    canary_dest.weight = 10
+
+    canary_action = DMSCRouteAction()
+    canary_action.weighted_destinations = [stable_dest, canary_dest]
+    canary_route.action = canary_action
+
+    # Add routes to traffic manager
+    traffic_manager.add_route(route1)
+    traffic_manager.add_route(canary_route)
+
+    print(f"Added {len(traffic_manager.routes)} traffic routes")
+
+    # Get service mesh statistics
+    print("\nService mesh statistics:")
+    mesh_stats = DMSCServiceMeshStats()
+    mesh_stats.total_services = 2
+    mesh_stats.total_instances = 3
+    mesh_stats.healthy_instances = 3
+    mesh_stats.unhealthy_instances = 0
+    mesh_stats.total_requests = 10000
+    mesh_stats.average_latency_ms = 25.5
+
+    print(f"  Total services: {mesh_stats.total_services}")
+    print(f"  Total instances: {mesh_stats.total_instances}")
+    print(f"  Healthy instances: {mesh_stats.healthy_instances}")
+    print(f"  Total requests: {mesh_stats.total_requests}")
+    print(f"  Average latency: {mesh_stats.average_latency_ms}ms")
+
+    # Deregister a service
+    print("\nDeregistering service...")
+    discovery.deregister_service("user-service-2")
+    print("Deregistered user-service-2")
+
+    # List all services
+    print("\nAll registered services:")
+    all_services = discovery.list_services()
+    for service_name in all_services:
+        instances = discovery.discover_services(service_name)
+        print(f"  {service_name}: {len(instances)} instances")
+
+    print("\nService mesh operations completed successfully!")
 
 
 if __name__ == "__main__":

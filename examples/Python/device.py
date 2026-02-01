@@ -1,5 +1,3 @@
-#!/usr/bin/env python3
-
 # Copyright © 2025-2026 Wenze Wei. All Rights Reserved.
 #
 # This file is part of DMSC.
@@ -18,124 +16,234 @@
 # limitations under the License.
 
 """
-DMSC Device Management Module Example
+DMSC Device Module Example
 
-This example demonstrates how to use the device management module in DMSC,
-including device discovery, resource allocation, and device control.
-
-Features Demonstrated:
-- Device discovery
-- Resource allocation and scheduling
-- Device status monitoring
-- Resource pool management
+This example demonstrates how to use the DMSC device module for device
+management, discovery, and resource scheduling.
 """
 
-from dmsc import (
-    DMSCDeviceControlModule, DMSCDeviceControlConfig,
-    DMSCDevice, DMSCDeviceType, DMSCDeviceStatus, DMSCDeviceCapabilities,
-    DMSCResourceRequest, DMSCResourceAllocation, DMSCRequestSlaClass,
-    DMSCResourceWeights, DMSCAffinityRules, DMSCResourcePoolStatus
-)
 import asyncio
+from dmsc import (
+    DMSCDeviceControlModule,
+    DMSCDeviceControlConfig,
+    DMSCDeviceSchedulingConfig,
+    DMSCDevice,
+    DMSCDeviceType,
+    DMSCDeviceStatus,
+    DMSCDeviceCapabilities,
+    DMSCDeviceHealthMetrics,
+    DMSCDeviceController,
+    DMSCDeviceConfig,
+    DMSCNetworkDeviceInfo,
+    DMSCDiscoveryResult,
+    DMSCResourceRequest,
+    DMSCResourceAllocation,
+    DMSCRequestSlaClass,
+    DMSCResourceWeights,
+    DMSCAffinityRules,
+    DMSCResourcePoolStatus,
+    DMSCResourcePool,
+    DMSCResourcePoolConfig,
+    DMSCResourcePoolStatistics,
+    DMSCResourcePoolManager,
+    DMSCConnectionPoolStatistics,
+    DMSCResourceScheduler,
+    DMSCDeviceScheduler,
+    DMSCSchedulingPolicy,
+    DMSCAllocationRecord,
+    DMSCAllocationRequest,
+    DMSCAllocationStatistics,
+    DMSCDeviceTypeStatistics,
+    DMSCSchedulingRecommendation,
+    DMSCSchedulingRecommendationType,
+    DMSCDeviceDiscoveryEngine,
+)
 
 
 async def main():
-    """
-    Main async entry point for the device management module example.
-    
-    This function demonstrates the complete device management workflow including:
-    - Device module initialization and configuration
-    - Device discovery
-    - Resource allocation requests
-    - Device status monitoring
-    - Resource pool management
-    
-    The example shows how DMSC handles IoT device management with support
-    for different device types, capabilities, and lifecycle management.
-    """
-    print("=== DMSC Device Management Module Example ===\n")
-    
-    print("1. Creating device control module...")
-    device_module = DMSCDeviceControlModule.new()
-    print("   Device control module initialized\n")
-    
-    print("2. Discovering devices...")
-    try:
-        discovery_result = await device_module.discover_devices()
-        print(f"   Discovered {len(discovery_result.discovered_devices_impl())} new devices")
-        print(f"   Total devices: {discovery_result.total_devices_impl()}\n")
-    except Exception as e:
-        print(f"   Discovery failed: {e}\n")
-    
-    print("3. Getting device status...")
-    try:
-        devices = await device_module.get_device_status()
-        print(f"   Total devices: {len(devices)}")
-        for device in devices:
-            print(f"   - {device.id()}: type={device.device_type()}, status={device.status()}")
-        print()
-    except Exception as e:
-        print(f"   Failed to get device status: {e}\n")
-    
-    print("4. Creating resource request...")
-    resource_request = DMSCResourceRequest(
-        request_id="request-123",
-        device_type=DMSCDeviceType.Compute,
-        required_capabilities=DMSCDeviceCapabilities(
-            cpu_cores=4,
-            memory_gb=8.0,
-            storage_gb=100.0,
-            gpu_enabled=True,
-            network_speed_mbps=1000.0,
-        ),
-        priority=5,
-        timeout_secs=30,
-    )
-    print(f"   Resource request created: {resource_request.request_id()}\n")
-    
-    print("5. Allocating resource...")
-    try:
-        allocation = await device_module.allocate_resource(resource_request)
-        if allocation:
-            print(f"   Allocated device: {allocation.device_name()} (ID: {allocation.device_id()})")
-            print(f"   Allocation ID: {allocation.allocation_id()}")
-            print(f"   Expires at: {allocation.expires_at()}\n")
-            
-            print("6. Releasing resource...")
-            try:
-                await device_module.release_resource(allocation.allocation_id())
-                print("   Resource released successfully\n")
-            except Exception as e:
-                print(f"   Failed to release resource: {e}\n")
-        else:
-            print("   No suitable device found for allocation\n")
-    except Exception as e:
-        print(f"   Allocation failed: {e}\n")
-    
-    print("7. Getting resource pool status...")
-    pool_status = device_module.get_resource_pool_status()
-    print("   Resource pool status:")
-    for name, status in pool_status.items():
-        print(f"   - {name}: total={status.total_capacity}, available={status.available_capacity}, utilization={status.utilization_rate * 100.0:.1f}%")
-    print()
-    
-    print("8. Creating DMSCResourcePoolStatus manually...")
-    custom_status = DMSCResourcePoolStatus(
-        total_capacity=100,
-        available_capacity=75,
-        allocated_capacity=25,
-        pending_requests=5,
-        utilization_rate=0.25
-    )
-    print("   Custom resource pool status:")
-    print(f"   - Total capacity: {custom_status.total_capacity()}")
-    print(f"   - Available capacity: {custom_status.available_capacity()}")
-    print(f"   - Allocated capacity: {custom_status.allocated_capacity()}")
-    print(f"   - Pending requests: {custom_status.pending_requests()}")
-    print(f"   - Utilization rate: {custom_status.utilization_rate() * 100.0:.2f}%")
-    print()
-    
-    print("=== Device Management Example Completed ===")
+    # Create device control configuration
+    control_config = DMSCDeviceControlConfig()
+    control_config.enable_discovery = True
+    control_config.discovery_interval_seconds = 60
+    control_config.enable_health_check = True
+    control_config.health_check_interval_seconds = 30
+
+    # Create scheduling configuration
+    scheduling_config = DMSCDeviceSchedulingConfig()
+    scheduling_config.default_policy = DMSCSchedulingPolicy.BEST_FIT
+    scheduling_config.enable_preemption = False
+    scheduling_config.max_scheduling_latency_ms = 100
+
+    # Initialize device control module
+    device_module = DMSCDeviceControlModule(control_config, scheduling_config)
+
+    # Create device discovery engine
+    discovery_engine = DMSCDeviceDiscoveryEngine()
+
+    # Create devices
+    print("Creating devices...")
+
+    # IoT Device
+    iot_device = DMSCDevice()
+    iot_device.device_id = "iot_sensor_001"
+    iot_device.device_type = DMSCDeviceType.IOT
+    iot_device.name = "Temperature Sensor"
+    iot_device.status = DMSCDeviceStatus.ONLINE
+
+    iot_capabilities = DMSCDeviceCapabilities()
+    iot_capabilities.can_read = True
+    iot_capabilities.can_write = False
+    iot_capabilities.supported_protocols = ["MQTT", "HTTP"]
+    iot_capabilities.max_concurrent_connections = 100
+    iot_device.capabilities = iot_capabilities
+
+    iot_health = DMSCDeviceHealthMetrics()
+    iot_health.cpu_usage_percent = 15.5
+    iot_health.memory_usage_percent = 30.2
+    iot_health.network_latency_ms = 25.0
+    iot_health.is_healthy = True
+    iot_device.health = iot_health
+
+    # Edge Device
+    edge_device = DMSCDevice()
+    edge_device.device_id = "edge_gateway_001"
+    edge_device.device_type = DMSCDeviceType.EDGE
+    edge_device.name = "Edge Gateway"
+    edge_device.status = DMSCDeviceStatus.ONLINE
+
+    edge_capabilities = DMSCDeviceCapabilities()
+    edge_capabilities.can_read = True
+    edge_capabilities.can_write = True
+    edge_capabilities.supported_protocols = ["HTTP", "gRPC", "WebSocket"]
+    edge_capabilities.max_concurrent_connections = 1000
+    edge_device.capabilities = edge_capabilities
+
+    edge_health = DMSCDeviceHealthMetrics()
+    edge_health.cpu_usage_percent = 45.0
+    edge_health.memory_usage_percent = 60.5
+    edge_health.network_latency_ms = 10.0
+    edge_health.is_healthy = True
+    edge_device.health = edge_health
+
+    print(f"Created {DMSCDeviceType.IOT} device: {iot_device.name}")
+    print(f"Created {DMSCDeviceType.EDGE} device: {edge_device.name}")
+
+    # Create device controller
+    controller = DMSCDeviceController()
+
+    # Register devices
+    print("\nRegistering devices...")
+    controller.register_device(iot_device)
+    controller.register_device(edge_device)
+
+    # Get device status
+    print("\nDevice Status:")
+    iot_status = controller.get_device_status("iot_sensor_001")
+    edge_status = controller.get_device_status("edge_gateway_001")
+    print(f"IoT Sensor: {iot_status}")
+    print(f"Edge Gateway: {edge_status}")
+
+    # Create resource scheduler
+    scheduler = DMSCResourceScheduler()
+
+    # Create resource request
+    print("\nCreating resource request...")
+    resource_request = DMSCResourceRequest()
+    resource_request.request_id = "req_001"
+    resource_request.cpu_cores = 2
+    resource_request.memory_mb = 4096
+    resource_request.storage_gb = 50
+    resource_request.sla_class = DMSCRequestSlaClass.GOLD
+
+    resource_weights = DMSCResourceWeights()
+    resource_weights.cpu_weight = 0.4
+    resource_weights.memory_weight = 0.3
+    resource_weights.storage_weight = 0.2
+    resource_weights.network_weight = 0.1
+    resource_request.weights = resource_weights
+
+    affinity_rules = DMSCAffinityRules()
+    affinity_rules.preferred_devices = ["edge_gateway_001"]
+    affinity_rules.anti_affinity_devices = []
+    resource_request.affinity = affinity_rules
+
+    # Create allocation request
+    allocation_request = DMSCAllocationRequest()
+    allocation_request.request = resource_request
+    allocation_request.priority = 10
+    allocation_request.timeout_ms = 5000
+
+    print(f"Resource request created: {resource_request.request_id}")
+    print(f"  CPU: {resource_request.cpu_cores} cores")
+    print(f"  Memory: {resource_request.memory_mb} MB")
+    print(f"  Storage: {resource_request.storage_gb} GB")
+    print(f"  SLA Class: {resource_request.sla_class}")
+
+    # Create resource pool
+    print("\nCreating resource pool...")
+    pool_config = DMSCResourcePoolConfig()
+    pool_config.pool_name = "default_pool"
+    pool_config.max_devices = 100
+    pool_config.enable_auto_scaling = True
+
+    resource_pool = DMSCResourcePool(pool_config)
+
+    # Add devices to pool
+    resource_pool.add_device(iot_device)
+    resource_pool.add_device(edge_device)
+
+    # Get pool statistics
+    pool_stats = DMSCResourcePoolStatistics()
+    print(f"Pool statistics: {pool_stats.total_devices} devices")
+
+    # Create pool manager
+    pool_manager = DMSCResourcePoolManager()
+
+    # Create allocation record
+    print("\nCreating allocation record...")
+    allocation = DMSCResourceAllocation()
+    allocation.allocation_id = "alloc_001"
+    allocation.device_id = "edge_gateway_001"
+    allocation.request_id = "req_001"
+    allocation.allocated_at = 0
+    allocation.expires_at = 3600
+
+    allocation_record = DMSCAllocationRecord()
+    allocation_record.allocation = allocation
+    allocation_record.status = "active"
+
+    print(f"Allocation created: {allocation.allocation_id}")
+    print(f"  Device: {allocation.device_id}")
+    print(f"  Expires at: {allocation.expires_at}")
+
+    # Get allocation statistics
+    alloc_stats = DMSCAllocationStatistics()
+    print(f"\nAllocation statistics:")
+    print(f"  Total allocations: {alloc_stats.total_allocations}")
+    print(f"  Active allocations: {alloc_stats.active_allocations}")
+
+    # Create scheduling recommendation
+    recommendation = DMSCSchedulingRecommendation()
+    recommendation.recommendation_type = DMSCSchedulingRecommendationType.OPTIMAL
+    recommendation.device_id = "edge_gateway_001"
+    recommendation.confidence = 0.95
+    recommendation.reason = "Best resource match"
+
+    print(f"\nScheduling recommendation:")
+    print(f"  Type: {recommendation.recommendation_type}")
+    print(f"  Device: {recommendation.device_id}")
+    print(f"  Confidence: {recommendation.confidence}")
+
+    # Device discovery simulation
+    print("\nSimulating device discovery...")
+    discovery_result = DMSCDiscoveryResult()
+    discovery_result.devices_found = [iot_device, edge_device]
+    discovery_result.discovery_duration_ms = 150.0
+
+    print(f"Discovery completed in {discovery_result.discovery_duration_ms}ms")
+    print(f"Devices found: {len(discovery_result.devices_found)}")
+
+    print("\nDevice operations completed successfully!")
 
 
 if __name__ == "__main__":

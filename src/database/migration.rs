@@ -53,6 +53,7 @@ use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 pub struct DMSCDatabaseMigration {
     pub version: u32,
     pub name: String,

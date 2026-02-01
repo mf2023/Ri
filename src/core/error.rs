@@ -58,6 +58,9 @@
 //! }
 //! ```
 
+#[cfg(feature = "pyo3")]
+use pyo3::types::PyTracebackMethods;
+
 /// Core error type for DMSC. Represents all possible errors that can occur in the library.
 /// 
 /// This enum provides a comprehensive set of error variants, each tailored to a specific
@@ -410,7 +413,15 @@ impl std::convert::From<DMSCError> for pyo3::PyErr {
 #[cfg(feature = "pyo3")]
 impl std::convert::From<pyo3::PyErr> for DMSCError {
     fn from(error: pyo3::PyErr) -> Self {
-        DMSCError::Other(format!("Python error: {}", error))
+        let error_info = pyo3::Python::attach(|py| {
+            let traceback = error.traceback(py)
+                .and_then(|tb| tb.format().ok())
+                .unwrap_or_default();
+            let error_type = error.get_type(py).to_string();
+            let error_value = error.value(py).to_string();
+            format!("{}: {}\n{}", error_type, error_value, traceback)
+        });
+        DMSCError::Other(format!("Python error: {}", error_info))
     }
 }
 

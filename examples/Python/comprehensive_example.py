@@ -38,9 +38,9 @@ Usage:
 """
 
 from dmsc import (
-    DMSCAppBuilder, DMSCAppRuntime, DMSCServiceContext, DMSCResult,
+    DMSCAppRuntime, DMSCServiceContext, DMSCError,
     DMSCLogConfig, DMSCLogLevel,
-    DMSCAuthModule, DMSCAuthConfig, DMSCJWTManager, DMSCJWTClaims,
+    DMSCAuthModule, DMSCAuthConfig,
     DMSCCacheModule, DMSCCacheConfig, DMSCCachePolicy,
     DMSCQueueModule, DMSCQueueConfig, DMSCQueueManager, DMSCQueueMessage,
     DMSCServiceMesh, DMSCServiceMeshConfig,
@@ -65,9 +65,9 @@ async def demonstrate_application_initialization():
     """
     print("=== Application Initialization ===\n")
     
-    print("1. Creating application builder...")
-    builder = DMSCAppBuilder()
-    print("   Builder created successfully\n")
+    print("1. Creating application runtime...")
+    runtime = DMSCAppRuntime()
+    print("   Runtime created successfully\n")
     
     print("2. Configuring logging...")
     log_config = DMSCLogConfig()
@@ -80,14 +80,10 @@ async def demonstrate_application_initialization():
     obs_config.set_tracing_enabled(True)
     print("   Observability configured\n")
     
-    print("4. Building application...")
-    app = builder.with_logging(log_config).with_observability(obs_config).build()
-    print("   Application built successfully\n")
+    print("4. Application initialization complete!")
+    print(f"   Runtime info: {runtime.runtime_info()}\n")
     
-    print("5. Application initialization complete!")
-    print(f"   Runtime info: {app.runtime_info()}\n")
-    
-    return app
+    return runtime
 
 
 async def demonstrate_authentication():
@@ -95,8 +91,7 @@ async def demonstrate_authentication():
     Demonstrate authentication and authorization functionality.
     
     This function shows how to:
-    -    - Create and validate JWT tokens
- Configure authentication module
+    - Configure authentication module
     - Handle authentication context
     """
     print("=== Authentication Module ===\n")
@@ -111,32 +106,7 @@ async def demonstrate_authentication():
     auth_module = DMSCAuthModule(auth_config)
     print("   Auth module created\n")
     
-    print("3. Creating JWT token...")
-    claims = DMSCJWTClaims(
-        subject="user123",
-        issuer="dmsc-app",
-        audience="api",
-        expires_at=datetime.utcnow() + timedelta(hours=24),
-        issued_at=datetime.utcnow(),
-    )
-    claims.set_role("admin")
-    claims.set_permission("read:users")
-    claims.set_permission("write:users")
-    
-    token = auth_module.create_token(claims)
-    print(f"   Token created: {token[:50]}...\n")
-    
-    print("4. Validating JWT token...")
-    validation_result = auth_module.validate_token(token)
-    if validation_result.is_valid():
-        validated_claims = validation_result.claims()
-        print(f"   Token valid for user: {validated_claims.subject()}")
-        print(f"   Role: {validated_claims.role()}")
-        print(f"   Permissions: {validated_claims.permissions()}\n")
-    else:
-        print(f"   Token validation failed: {validation_result.error()}\n")
-    
-    print("5. Authentication demonstration complete!\n")
+    print("3. Authentication demonstration complete!\n")
 
 
 async def demonstrate_caching():
@@ -163,8 +133,8 @@ async def demonstrate_caching():
     
     print("3. Setting cache policy...")
     policy = DMSCCachePolicy()
-    policy.max_size = Some(100)
-    policy.ttl = Some(600)  # 600 seconds
+    policy.max_size = 100
+    policy.ttl = 600  # 600 seconds
     cache_module.set_policy("user_data", policy)
     print("   Cache policy set (LRU, 100 items, 600s TTL)\n")
     

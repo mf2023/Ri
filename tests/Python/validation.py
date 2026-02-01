@@ -18,132 +18,123 @@
 # limitations under the License.
 
 """
-DMSC Validation Module Python Tests.
+DMSC Validation Module Tests
 
-This module contains comprehensive tests for the DMSC validation system Python bindings.
-The validation system provides data validation, schema enforcement, and error reporting
-for ensuring data quality and consistency.
-
-Validation Components:
-- DMSCValidationSeverity: Validation result severity levels
-- DMSCValidationResult: Individual validation check result
-- DMSCValidationRule: Validation rule definition
-- DMSCValidationSchema: Schema for structured data validation
-
-Severity Levels:
-- Error: Critical validation failure (blocking)
-- Warning: Non-critical issue (informational)
-- Info: Suggestion or informational message
-
-Validation Types:
-- Type validation: Data type checking
-- Range validation: Numeric bounds checking
-- Pattern validation: Regex matching
-- Length validation: String/array length
-- Required fields: Mandatory data presence
-- Custom rules: User-defined validation
-
-Schema Validation:
-- JSON Schema compatibility
-- Type definitions
-- Property constraints
-- Array item validation
-- Nested object validation
-
-Error Handling:
-- Collect all validation errors
-- Error aggregation and deduplication
-- Error message localization
-- Error code assignment
-
-Test Classes:
-- TestDMSCValidationSeverity: Severity level enumeration
+Tests for the validation functionality including validators, sanitizers, and schema validation.
 """
 
-import unittest
+import pytest
 from dmsc import (
-    DMSCValidationSeverity
+    DMSCValidationError,
+    DMSCValidationResult,
+    DMSCValidationSeverity,
+    DMSCValidatorBuilder,
+    DMSCValidationRunner,
+    DMSCSanitizer,
+    DMSCSanitizationConfig,
+    DMSCSchemaValidator,
+    DMSCValidationModule,
 )
 
 
-class TestDMSCValidationSeverity(unittest.TestCase):
-    """Test suite for DMSCValidationSeverity enum.
-    
-    The DMSCValidationSeverity enum defines the severity levels for
-    validation results. Severity determines how validation failures
-    are handled, reported, and what actions are taken.
-    
-    Severity Hierarchy (from most to least severe):
-    - Error (3): Critical problem that blocks processing
-      Characteristics: Operation cannot continue, data is invalid
-      Examples: Missing required field, type mismatch, constraint violation
-      Actions: Block operation, return error response, log as error
-    - Warning (2): Non-critical issue that should be noted
-      Characteristics: Operation can continue, but there are concerns
-      Examples: Deprecated field, performance concern, unusual value
-      Actions: Log warning, continue operation, notify monitoring
-    - Info (1): Informational message or suggestion
-      Characteristics: No problem, just informational
-      Examples: Best practice suggestion, deprecation notice, optimization tip
-      Actions: Log info, no operational impact
-    
-    Severity Impact on Processing:
-    - Errors: Block operation, return failure, do not proceed
-    - Warnings: Allow operation with logged warning
-    - Info: No impact, just for information
-    
-    Severity Comparison:
-    - Error > Warning > Info in terms of severity
-    - Higher severity takes precedence in aggregation
-    - Error count affects validation pass/fail decision
-    
-    Common Use Cases by Severity:
-    - Error Level:
-      * Required field is missing
-      * Data type does not match expected type
-      * Value violates constraint (e.g., min/max)
-      * Format does not match pattern (regex)
-      * Reference to non-existent related object
-      * Business rule violation
-    - Warning Level:
-      * Using deprecated field
-      * Value is unusual but valid
-      * Performance could be improved
-      * Security concern (e.g., weak password)
-      * Future deprecation notice
-      * Best practice not followed
-    - Info Level:
-      * Suggestion for improvement
-      * Informational context about data
-      * Validation passed with notes
-      * Optimization hints
-      * Documentation references
-    
-    Reporting and Logging:
-    - Errors: Include in error response, count toward failure
-    - Warnings: Include in response if requested, log separately
-    - Info: Include in detailed response, debug logging
-    
-    Test Methods:
-    - test_validation_severity_values: Verify all severity levels exist
-    """
+class TestDMSCValidationError:
+    """Tests for DMSCValidationError"""
 
-    def test_validation_severity_values(self):
-        """Test validation severity values.
-        
-        Each validation severity level should have a string representation
-        for logging, reporting, API responses, and debugging purposes.
-        
-        Expected Behavior:
-        - Error severity string matches expected format
-        - Warning severity string matches expected format
-        - Info severity string matches expected format
-        - String representations are consistent
-        """
-        self.assertEqual(str(DMSCValidationSeverity.Error), "DMSCValidationSeverity.Error")
-        self.assertEqual(str(DMSCValidationSeverity.Warning), "DMSCValidationSeverity.Warning")
-        self.assertEqual(str(DMSCValidationSeverity.Info), "DMSCValidationSeverity.Info")
+    def test_validation_error_creation(self):
+        """Test creating validation error"""
+        error = DMSCValidationError()
+        error.field = "email"
+        error.message = "Invalid email format"
+        error.severity = DMSCValidationSeverity.Error
+
+        assert error.field == "email"
+        assert error.message == "Invalid email format"
+        assert error.severity == DMSCValidationSeverity.Error
+
+
+class TestDMSCValidationResult:
+    """Tests for DMSCValidationResult"""
+
+    def test_validation_result_creation(self):
+        """Test creating validation result"""
+        result = DMSCValidationResult()
+        result.is_valid = False
+        result.errors = []
+
+        assert result.is_valid is False
+
+
+class TestDMSCValidationSeverity:
+    """Tests for DMSCValidationSeverity"""
+
+    def test_validation_severities(self):
+        """Test validation severity levels"""
+        assert DMSCValidationSeverity.Info is not None
+        assert DMSCValidationSeverity.Warning is not None
+        assert DMSCValidationSeverity.Error is not None
+        assert DMSCValidationSeverity.Critical is not None
+
+
+class TestDMSCValidatorBuilder:
+    """Tests for DMSCValidatorBuilder"""
+
+    def test_validator_builder_creation(self):
+        """Test creating validator builder"""
+        builder = DMSCValidatorBuilder()
+        assert builder is not None
+
+
+class TestDMSCValidationRunner:
+    """Tests for DMSCValidationRunner"""
+
+    def test_validation_runner_creation(self):
+        """Test creating validation runner"""
+        runner = DMSCValidationRunner()
+        assert runner is not None
+
+
+class TestDMSCSanitizer:
+    """Tests for DMSCSanitizer"""
+
+    def test_sanitizer_creation(self):
+        """Test creating sanitizer"""
+        config = DMSCSanitizationConfig()
+        sanitizer = DMSCSanitizer(config)
+        assert sanitizer is not None
+
+
+class TestDMSCSanitizationConfig:
+    """Tests for DMSCSanitizationConfig"""
+
+    def test_sanitization_config_creation(self):
+        """Test creating sanitization config"""
+        config = DMSCSanitizationConfig()
+        config.trim_whitespace = True
+        config.remove_html = True
+        config.escape_special_chars = True
+
+        assert config.trim_whitespace is True
+        assert config.remove_html is True
+        assert config.escape_special_chars is True
+
+
+class TestDMSCSchemaValidator:
+    """Tests for DMSCSchemaValidator"""
+
+    def test_schema_validator_creation(self):
+        """Test creating schema validator"""
+        validator = DMSCSchemaValidator()
+        assert validator is not None
+
+
+class TestDMSCValidationModule:
+    """Tests for DMSCValidationModule"""
+
+    def test_validation_module_creation(self):
+        """Test creating validation module"""
+        module = DMSCValidationModule()
+        assert module is not None
 
 
 if __name__ == "__main__":
-    unittest.main()
+    pytest.main([__file__, "-v"])

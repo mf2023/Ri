@@ -319,14 +319,14 @@ app.run(|ctx: &DMSCServiceContext| async move {
 // Use file system in business logic
 app.run(|ctx: &DMSCServiceContext| async move {
     // Write to file
-    ctx.fs().write_file("data/config.json", r#"{"setting": "value"}"#).await?;
+    ctx.fs().atomic_write_text("data/config.json", r#"{"setting": "value"}"#)?;
     
     // Read from file
-    let content = ctx.fs().read_file("data/config.json").await?;
+    let content = ctx.fs().read_text("data/config.json")?;
     ctx.logger().info("fs", &format!("File content: {}", content))?;
     
     // Check if file exists
-    let exists = ctx.fs().file_exists("data/config.json").await?;
+    let exists = ctx.fs().exists("data/config.json");
     ctx.logger().info("fs", &format!("File exists: {}", exists))?;
     
     Ok(())

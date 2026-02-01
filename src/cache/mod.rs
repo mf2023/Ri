@@ -174,6 +174,7 @@ impl DMSCCacheModule {
     /// Creates a new cache module with the given configuration (synchronous version).
     /// 
     /// This is a synchronous wrapper around the async `new` method for use in the builder pattern.
+    /// For Redis and Hybrid backends, it will block on the current thread to create the backend.
     /// 
     /// # Parameters
     /// 
@@ -183,8 +184,57 @@ impl DMSCCacheModule {
     /// 
     /// A new `DMSCCacheModule` instance
     pub fn with_config(config: DMSCCacheConfig) -> Self {
-        let backend: std::sync::Arc<dyn crate::cache::DMSCCache> = 
-            std::sync::Arc::new(DMSCMemoryCache::new());
+        #[cfg(feature = "redis")]
+        let backend: std::sync::Arc<dyn crate::cache::DMSCCache> = match config.backend_type {
+            crate::cache::config::DMSCCacheBackendType::Memory => {
+                std::sync::Arc::new(DMSCMemoryCache::new())
+            }
+            crate::cache::config::DMSCCacheBackendType::Redis => {
+                match tokio::runtime::Handle::try_current() {
+                    Ok(handle) => {
+                        match handle.block_on(DMSCRedisCache::new(&config.redis_url)) {
+                            Ok(cache) => Arc::new(cache),
+                            Err(e) => {
+                                log::warn!("Failed to create Redis cache ({}): {}. Falling back to memory backend", config.redis_url, e);
+                                Arc::new(DMSCMemoryCache::new()) as Arc<dyn crate::cache::DMSCCache>
+                            }
+                        }
+                    }
+                    Err(_) => {
+                        log::warn!("No Tokio runtime available for Redis cache creation. Falling back to memory backend");
+                        Arc::new(DMSCMemoryCache::new()) as Arc<dyn crate::cache::DMSCCache>
+                    }
+                }
+            }
+            crate::cache::config::DMSCCacheBackendType::Hybrid => {
+                match tokio::runtime::Handle::try_current() {
+                    Ok(handle) => {
+                        match handle.block_on(DMSCHybridCache::new(&config.redis_url)) {
+                            Ok(backend) => Arc::new(backend),
+                            Err(e) => {
+                                log::warn!("Failed to create hybrid cache backend (Redis URL: {}): {}. Falling back to memory backend", config.redis_url, e);
+                                Arc::new(DMSCMemoryCache::new()) as Arc<dyn crate::cache::DMSCCache>
+                            }
+                        }
+                    }
+                    Err(_) => {
+                        log::warn!("No Tokio runtime available for hybrid cache creation. Falling back to memory backend");
+                        Arc::new(DMSCMemoryCache::new()) as Arc<dyn crate::cache::DMSCCache>
+                    }
+                }
+            }
+        };
+
+        #[cfg(not(feature = "redis"))]
+        let backend: std::sync::Arc<dyn crate::cache::DMSCCache> = match config.backend_type {
+            crate::cache::config::DMSCCacheBackendType::Memory => {
+                std::sync::Arc::new(DMSCMemoryCache::new())
+            }
+            crate::cache::config::DMSCCacheBackendType::Redis | crate::cache::config::DMSCCacheBackendType::Hybrid => {
+                log::warn!("Redis feature not enabled. Falling back to memory backend");
+                std::sync::Arc::new(DMSCMemoryCache::new())
+            }
+        };
 
         let manager = DMSCCacheManager::new(backend);
 

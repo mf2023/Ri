@@ -346,15 +346,10 @@ impl DMSCAppBuilder {
     /// 
     /// # Returns
     /// 
-    /// A `DMSCResult` containing the updated `DMSCAppBuilder` instance for method chaining.
-    /// 
-    /// # Errors
-    /// 
-    /// This method currently never returns an error, but returns `DMSCResult` for consistency
-    /// with other builder methods and to allow for future error handling.
-    pub fn with_logging(mut self, logging_config: crate::log::DMSCLogConfig) -> DMSCResult<Self> {
+    /// The updated `DMSCAppBuilder` instance for method chaining.
+    pub fn with_logging(mut self, logging_config: crate::log::DMSCLogConfig) -> Self {
         self.logging_config = Some(logging_config);
-        Ok(self)
+        self
     }
  
     /// Set custom observability configuration for the application.
@@ -365,15 +360,10 @@ impl DMSCAppBuilder {
     /// 
     /// # Returns
     /// 
-    /// A `DMSCResult` containing the updated `DMSCAppBuilder` instance for method chaining.
-    /// 
-    /// # Errors
-    /// 
-    /// This method currently never returns an error, but returns `DMSCResult` for consistency
-    /// with other builder methods and to allow for future error handling.
-    pub fn with_observability(mut self, observability_config: crate::observability::DMSCObservabilityConfig) -> DMSCResult<Self> {
+    /// The updated `DMSCAppBuilder` instance for method chaining.
+    pub fn with_observability(mut self, observability_config: crate::observability::DMSCObservabilityConfig) -> Self {
         self.observability_config = Some(observability_config);
-        Ok(self)
+        self
     }
 
     /// Add cache module with configuration.

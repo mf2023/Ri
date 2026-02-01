@@ -247,8 +247,12 @@ impl DMSCAuthModule {
     /// 
     /// # Returns
     /// 
-    /// A new `DMSCAuthModule` instance
-    pub async fn new(config: DMSCAuthConfig) -> Self {
+    /// A `DMSCResult` containing the new `DMSCAuthModule` instance
+    /// 
+    /// # Errors
+    /// 
+    /// Returns an error if Redis cache creation fails when Redis backend is configured
+    pub async fn new(config: DMSCAuthConfig) -> crate::core::error::DMSCResult<Self> {
         let jwt_manager = Arc::new(DMSCJWTManager::create(config.jwt_secret.clone(), config.jwt_expiry_secs));
         let session_manager = Arc::new(RwLock::new(DMSCSessionManager::new(config.session_timeout_secs)));
         let permission_manager = Arc::new(RwLock::new(DMSCPermissionManager::new()));
@@ -260,7 +264,7 @@ impl DMSCAuthModule {
             }
             crate::cache::DMSCCacheBackendType::Redis => {
                 let cache = crate::cache::DMSCRedisCache::new(&config.oauth_cache_redis_url).await
-                    .expect("Failed to create Redis cache for OAuth");
+                    .map_err(|e| crate::core::error::DMSCError::RedisError(format!("Failed to create Redis cache for OAuth: {}", e)))?;
                 Arc::new(cache)
             }
             _ => Arc::new(crate::cache::DMSCMemoryCache::new()),
@@ -272,14 +276,14 @@ impl DMSCAuthModule {
         let oauth_manager = Arc::new(RwLock::new(DMSCOAuthManager::new(cache)));
         let revocation_list = Arc::new(DMSCJWTRevocationList::new());
 
-        Self {
+        Ok(Self {
             config,
             jwt_manager,
             session_manager,
             permission_manager,
             oauth_manager,
             revocation_list,
-        }
+        })
     }
 
     /// Creates a new authentication module with the given configuration (synchronous version).
@@ -322,8 +326,12 @@ impl DMSCAuthModule {
     /// 
     /// # Returns
     /// 
-    /// A new `DMSCAuthModule` instance
-    pub async fn new_async(config: DMSCAuthConfig) -> Self {
+    /// A `DMSCResult` containing the new `DMSCAuthModule` instance
+    /// 
+    /// # Errors
+    /// 
+    /// Returns an error if Redis cache creation fails when Redis backend is configured
+    pub async fn new_async(config: DMSCAuthConfig) -> crate::core::error::DMSCResult<Self> {
         let jwt_manager = Arc::new(DMSCJWTManager::create(config.jwt_secret.clone(), config.jwt_expiry_secs));
         let session_manager = Arc::new(RwLock::new(DMSCSessionManager::new(config.session_timeout_secs)));
         let permission_manager = Arc::new(RwLock::new(DMSCPermissionManager::new_async().await));
@@ -335,7 +343,7 @@ impl DMSCAuthModule {
             }
             crate::cache::DMSCCacheBackendType::Redis => {
                 let cache = crate::cache::DMSCRedisCache::new(&config.oauth_cache_redis_url).await
-                    .expect("Failed to create Redis cache");
+                    .map_err(|e| crate::core::error::DMSCError::RedisError(format!("Failed to create Redis cache: {}", e)))?;
                 Arc::new(cache)
             }
             _ => Arc::new(crate::cache::DMSCMemoryCache::new()),
@@ -347,14 +355,14 @@ impl DMSCAuthModule {
         let oauth_manager = Arc::new(RwLock::new(DMSCOAuthManager::new(cache)));
         let revocation_list = Arc::new(DMSCJWTRevocationList::new());
 
-        Self {
+        Ok(Self {
             config,
             jwt_manager,
             session_manager,
             permission_manager,
             oauth_manager,
             revocation_list,
-        }
+        })
     }
 
     /// Returns a reference to the JWT revocation list.
@@ -444,9 +452,10 @@ impl DMSCAuthModule {
     #[new]
     fn py_new(config: DMSCAuthConfig) -> PyResult<Self> {
         let rt = Handle::current();
-        Ok(rt.block_on(async {
+        rt.block_on(async {
             Self::new(config).await
-        }))
+                .map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(e.to_string()))
+        })
     }
 
     #[getter]

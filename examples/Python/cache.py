@@ -1,5 +1,3 @@
-#!/usr/bin/env python3
-
 # Copyright © 2025-2026 Wenze Wei. All Rights Reserved.
 #
 # This file is part of DMSC.
@@ -20,129 +18,120 @@
 """
 DMSC Cache Module Example
 
-This example demonstrates how to use the caching module in DMSC,
-including in-memory cache operations and Redis backend integration.
-
-Features Demonstrated:
-- In-memory cache operations (get, set, delete)
-- TTL (Time-To-Live) based expiration
-- Cache statistics and monitoring
-- Multiple backend support
+This example demonstrates how to use the DMSC cache module for multi-backend
+caching with support for memory, Redis, and other backends.
 """
 
-from dmsc import (
-    DMSCCacheModule, DMSCCacheConfig, DMSCCacheBackendType,
-    DMSCCacheManager
-)
 import asyncio
-import time
+from dmsc import (
+    DMSCCacheModule,
+    DMSCCacheConfig,
+    DMSCCacheManager,
+    DMSCCacheBackendType,
+    DMSCCachePolicy,
+    DMSCCacheStats,
+    DMSCCachedValue,
+    DMSCCacheEvent,
+)
 
 
 async def main():
-    """
-    Main entry point for the cache module example.
-    
-    This function demonstrates the complete caching workflow including:
-    - Cache module initialization and configuration
-    - Basic CRUD operations (Create, Read, Delete)
-    - TTL-based expiration for temporary data
-    - Cache statistics monitoring
-    - Cache clearing operations
-    
-    The example shows how DMSC handles caching with features like
-    automatic expiration, hit/miss tracking, and memory management.
-    """
-    print("=== DMSC Cache Module Example ===\n")
-    
-    print("1. Creating cache module...")
-    cache_module = DMSCCacheModule()
-    print("   Cache module created\n")
-    
-    print("2. Getting cache manager...")
-    cache_manager = cache_module.cache_manager()
-    print("   Cache manager retrieved\n")
-    
-    async def run_cache_operations():
-        print("3. Basic Cache Operations")
-        print("   ------------------------")
-        
-        print("   Setting 'user:1001' = 'John Doe'")
-        await cache_manager.set("user:1001", "John Doe", None)
-        print("   ✓ Value set successfully\n")
-        
-        print("   Getting 'user:1001'...")
-        value = await cache_manager.get("user:1001")
-        if value:
-            print(f"   ✓ Found value: {value}\n")
-        else:
-            print("   ✗ Value not found\n")
-        
-        print("4. TTL-Based Expiration")
-        print("   ---------------------")
-        
-        print("   Setting 'temporary:key' with 5 second TTL")
-        await cache_manager.set("temporary:key", "This will expire", 5)
-        print("   ✓ Value set with TTL\n")
-        
-        print("   Checking 'temporary:key' before expiration...")
-        value = await cache_manager.get("temporary:key")
-        if value:
-            print(f"   ✓ Value still exists: {value}\n")
-        
-        print("   Waiting 6 seconds for TTL expiration...")
-        time.sleep(6)
-        print("   ✓ Wait complete\n")
-        
-        print("   Checking 'temporary:key' after expiration...")
-        value = await cache_manager.get("temporary:key")
-        if value is None:
-            print("   ✓ Value expired and removed\n")
-        
-        print("5. Cache Statistics")
-        print("   -----------------")
-        
-        stats = cache_manager.stats()
-        print(f"   Current cache stats:")
-        print(f"   - Hits: {stats.hits}")
-        print(f"   - Misses: {stats.misses}")
-        print(f"   - Size: {stats.entries}\n")
-        
-        print("6. Delete Operations")
-        print("   ------------------")
-        
-        print("   Deleting 'user:1001'...")
-        await cache_manager.delete("user:1001")
-        print("   ✓ Value deleted\n")
-        
-        print("   Verifying deletion...")
-        value = await cache_manager.get("user:1001")
-        if value is None:
-            print("   ✓ Value successfully deleted\n")
-        
-        print("7. Clear All Cache")
-        print("   ----------------")
-        
-        print("   Adding more values...")
-        await cache_manager.set("key1", "value1", None)
-        await cache_manager.set("key2", "value2", None)
-        await cache_manager.set("key3", "value3", None)
-        print("   ✓ Added 3 values\n")
-        
-        print("   Clearing all cache...")
-        await cache_manager.clear()
-        print("   ✓ Cache cleared\n")
-        
-        print("8. Final Statistics")
-        print("   -----------------")
-        
-        final_stats = cache_manager.stats()
-        print(f"   Final cache stats:")
-        print(f"   - Hits: {final_stats.hits}")
-        print(f"   - Misses: {final_stats.misses}")
-        print(f"   - Size: {final_stats.entries}\n")
-    
-    await run_cache_operations()
-    print("=== Cache Example Completed ===")
+    # Create cache configuration
+    config = DMSCCacheConfig()
+    config.backend_type = DMSCCacheBackendType.MEMORY
+    config.default_ttl_seconds = 300
+    config.max_size = 10000
+    config.enable_compression = True
+    config.compression_threshold = 1024
+
+    # Initialize cache module
+    cache_module = DMSCCacheModule(config)
+
+    # Create cache manager
+    manager = DMSCCacheManager()
+
+    # Create cache policy
+    policy = DMSCCachePolicy()
+    policy.ttl_seconds = 600
+    policy.max_size = 1000
+    policy.eviction_policy = "lru"
+
+    # Set values with different types
+    print("Setting cache values...")
+
+    # String value
+    string_value = DMSCCachedValue()
+    string_value.data = b"Hello, DMSC Cache!"
+    string_value.content_type = "text/plain"
+    manager.set("greeting", string_value, policy)
+
+    # JSON value
+    json_value = DMSCCachedValue()
+    json_value.data = b'{"name": "John", "age": 30, "city": "New York"}'
+    json_value.content_type = "application/json"
+    manager.set("user:123", json_value, policy)
+
+    # Binary value
+    binary_value = DMSCCachedValue()
+    binary_value.data = b"\x00\x01\x02\x03\x04\x05"
+    binary_value.content_type = "application/octet-stream"
+    manager.set("binary:data", binary_value, policy)
+
+    # Get values from cache
+    print("\nGetting cache values...")
+
+    greeting = manager.get("greeting")
+    if greeting:
+        print(f"Greeting: {greeting.data.decode('utf-8')}")
+
+    user = manager.get("user:123")
+    if user:
+        print(f"User data: {user.data.decode('utf-8')}")
+
+    # Check if key exists
+    exists = manager.exists("greeting")
+    print(f"\nKey 'greeting' exists: {exists}")
+
+    # Get cache statistics
+    print("\nCache Statistics:")
+    stats = DMSCCacheStats()
+    print(f"Cache hits: {stats.hits}")
+    print(f"Cache misses: {stats.misses}")
+    print(f"Hit rate: {stats.hit_rate:.2%}")
+    print(f"Total keys: {stats.total_keys}")
+    print(f"Memory usage: {stats.memory_usage_bytes} bytes")
+
+    # Delete a key
+    print("\nDeleting key 'binary:data'...")
+    manager.delete("binary:data")
+
+    # Verify deletion
+    exists_after_delete = manager.exists("binary:data")
+    print(f"Key 'binary:data' exists after delete: {exists_after_delete}")
+
+    # Set with custom TTL
+    print("\nSetting value with custom TTL...")
+    temp_value = DMSCCachedValue()
+    temp_value.data = b"This will expire soon"
+    temp_value.content_type = "text/plain"
+
+    custom_policy = DMSCCachePolicy()
+    custom_policy.ttl_seconds = 10
+    manager.set("temp:key", temp_value, custom_policy)
+    print("Value set with 10 second TTL")
+
+    # List all keys
+    print("\nAll cache keys:")
+    keys = manager.keys()
+    for key in keys:
+        print(f"  - {key}")
+
+    # Clear cache
+    print("\nClearing cache...")
+    manager.clear()
+    print("Cache cleared!")
+
+    print("\nCache operations completed successfully!")
 
 
 if __name__ == "__main__":

@@ -60,7 +60,7 @@ from .dmsc import (
     # Core classes - Fundamental framework components for application lifecycle,
     # configuration management, logging, hooks, and service context management
     # =============================================================================
-    DMSCAppRuntime, DMSCConfig, DMSCConfigManager, DMSCError,
+    DMSCAppBuilder, DMSCAppRuntime, DMSCConfig, DMSCConfigManager, DMSCError,
     DMSCFileSystem, DMSCHookBus, DMSCHookEvent, DMSCHookKind, DMSCLogConfig,
     DMSCLogLevel, DMSCLogger, DMSCModulePhase, DMSCServiceContext,
     
@@ -126,7 +126,6 @@ from .dmsc import (
     # Note: DMSCCircuitBreaker, DMSCCircuitBreakerConfig, DMSCCircuitBreakerState, DMSCCircuitBreakerMetrics
     # are already imported above in the Gateway classes section
     DMSCHealthCheckConfig, DMSCHealthCheckType, DMSCHealthCheckResult,
-    DMSCHttpHealthCheckProvider, DMSCTcpHealthCheckProvider,
     DMSCHealthChecker, DMSCHealthSummary,
     
     # =============================================================================
@@ -222,7 +221,7 @@ from .dmsc import (
 # =============================================================================
 __all__ = [
     # Core classes - Application framework, configuration, logging, and hooks
-    'DMSCAppRuntime', 'DMSCConfig', 'DMSCConfigManager', 'DMSCError',
+    'DMSCAppBuilder', 'DMSCAppRuntime', 'DMSCConfig', 'DMSCConfigManager', 'DMSCError',
     'DMSCFileSystem', 'DMSCHookBus', 'DMSCHookEvent', 'DMSCHookKind', 'DMSCLogConfig',
     'DMSCLogLevel', 'DMSCLogger', 'DMSCModulePhase', 'DMSCServiceContext',
     
@@ -259,7 +258,7 @@ __all__ = [
     'DMSCServiceInstance', 'DMSCServiceStatus', 'DMSCServiceMeshStats',
     'DMSCTrafficRoute', 'DMSCMatchCriteria', 'DMSCRouteAction', 'DMSCWeightedDestination',
     'DMSCTrafficManager', 'DMSCHealthChecker', 'DMSCHealthSummary', 'DMSCHealthCheckType',
-    'DMSCHealthCheckConfig', 'DMSCHealthCheckResult', 'DMSCHttpHealthCheckProvider', 'DMSCTcpHealthCheckProvider',
+    'DMSCHealthCheckConfig', 'DMSCHealthCheckResult',
     
     # Auth classes - Authentication, authorization, and session management
     'DMSCAuthModule', 'DMSCAuthConfig', 'DMSCJWTManager', 'DMSCJWTClaims', 'DMSCJWTValidationOptions',

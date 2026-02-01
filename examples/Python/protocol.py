@@ -1,12 +1,10 @@
-#!/usr/bin/env python3
-
 # Copyright © 2025-2026 Wenze Wei. All Rights Reserved.
 #
 # This file is part of DMSC.
 # The DMSC project belongs to the Dunimd Team.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
+# You may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
 #     http://www.apache.org/licenses/LICENSE-2.0
@@ -20,72 +18,181 @@
 """
 DMSC Protocol Module Example
 
-This example demonstrates how to use the protocol module in DMSC,
-including protocol management and connection handling.
-
-Features Demonstrated:
-- Protocol manager initialization
-- Protocol type configuration
-- Connection state monitoring
-- Protocol statistics
+This example demonstrates how to use the DMSC protocol module for protocol
+management, frame handling, and connection management.
 """
 
-import dmsc
-from dmsc.protocol import (
-    DMSCProtocolManager, DMSCProtocolType, DMSCProtocolConfig,
-    DMSCProtocolStatus, DMSCConnectionState, DMSCSecurityLevel
-)
 import asyncio
+from dmsc import (
+    DMSCProtocolManager,
+    DMSCProtocolType,
+    DMSCProtocolConfig,
+    DMSCProtocolStatus,
+    DMSCProtocolStats,
+    DMSCConnectionState,
+    DMSCConnectionStats,
+    DMSCProtocolHealth,
+    DMSCFrame,
+    DMSCFrameHeader,
+    DMSCFrameType,
+    DMSCConnectionInfo,
+    DMSCMessageFlags,
+    DMSCSecurityLevel,
+)
+from dmsc.protocol import (
+    DMSCFrameParser,
+    DMSCFrameBuilder,
+)
 
 
 async def main():
-    """
-    Main entry point for the protocol module example.
-    
-    This function demonstrates the complete protocol management workflow including:
-    - Protocol manager initialization
-    - Protocol configuration
-    - Connection state management
-    - Protocol statistics monitoring
-    
-    The example shows how DMSC handles multi-protocol support with
-    features like connection management and frame processing.
-    """
-    print("=== DMSC Protocol Module Example ===\n")
-    
-    print("1. Creating protocol manager...")
-    protocol_manager = DMSCProtocolManager()
-    print("   Protocol manager created\n")
-    
-    print("2. Configuring protocol types...")
-    tcp_config = DMSCProtocolConfig()
-    tcp_config.set_host("0.0.0.0")
-    tcp_config.set_port(8080)
-    tcp_config.set_security_level(DMSCSecurityLevel.NONE)
-    print(f"   TCP configuration: {tcp_config.host()}:{tcp_config.port()}")
-    print(f"   Security level: {tcp_config.security_level()}\n")
-    
-    print("3. Protocol types available...")
-    for protocol_type in DMSCProtocolType:
-        print(f"   - {protocol_type.name}\n")
-    
-    print("4. Connection states...")
-    for state in DMSCConnectionState:
-        print(f"   - {state.name}\n")
-    
-    print("5. Protocol status check...")
+    # Create protocol configuration
+    config = DMSCProtocolConfig()
+    config.protocol_type = DMSCProtocolType.CUSTOM
+    config.version = "1.0.0"
+    config.enable_compression = True
+    config.enable_encryption = True
+    config.security_level = DMSCSecurityLevel.HIGH
+    config.max_frame_size = 65536
+    config.keepalive_interval_seconds = 30
+
+    # Create protocol manager
+    print("Creating protocol manager...")
+    protocol_manager = DMSCProtocolManager(config)
+
+    # Create frame builder
+    print("\nCreating frames...")
+    frame_builder = DMSCFrameBuilder()
+
+    # Create frame header
+    header = DMSCFrameHeader()
+    header.frame_type = DMSCFrameType.DATA
+    header.version = 1
+    header.sequence_number = 1
+    header.flags = DMSCMessageFlags.ACK_REQUIRED
+    header.payload_length = 100
+
+    # Create frame
+    data_frame = DMSCFrame()
+    data_frame.header = header
+    data_frame.payload = b'{"message": "Hello, DMSC Protocol!"}'
+    data_frame.checksum = 12345
+
+    print(f"Created data frame:")
+    print(f"  Type: {data_frame.header.frame_type}")
+    print(f"  Sequence: {data_frame.header.sequence_number}")
+    print(f"  Payload length: {len(data_frame.payload)}")
+
+    # Create different frame types
+    # Handshake frame
+    handshake_header = DMSCFrameHeader()
+    handshake_header.frame_type = DMSCFrameType.HANDSHAKE
+    handshake_header.sequence_number = 0
+
+    handshake_frame = DMSCFrame()
+    handshake_frame.header = handshake_header
+    handshake_frame.payload = b'{"version": "1.0.0", "capabilities": ["compression", "encryption"]}'
+
+    # Heartbeat frame
+    heartbeat_header = DMSCFrameHeader()
+    heartbeat_header.frame_type = DMSCFrameType.HEARTBEAT
+    heartbeat_header.sequence_number = 999
+
+    heartbeat_frame = DMSCFrame()
+    heartbeat_frame.header = heartbeat_header
+    heartbeat_frame.payload = b''
+
+    print(f"\nCreated {3} frames (DATA, HANDSHAKE, HEARTBEAT)")
+
+    # Parse frames
+    print("\nParsing frames...")
+    frame_parser = DMSCFrameParser()
+
+    # Serialize and deserialize frame
+    serialized = frame_builder.build(data_frame)
+    print(f"Serialized frame: {len(serialized)} bytes")
+
+    parsed_frame = frame_parser.parse(serialized)
+    if parsed_frame:
+        print(f"Parsed frame type: {parsed_frame.header.frame_type}")
+        print(f"Parsed payload: {parsed_frame.payload}")
+
+    # Create connection info
+    print("\nCreating connection info...")
+    conn_info = DMSCConnectionInfo()
+    conn_info.connection_id = "conn_001"
+    conn_info.remote_address = "192.168.1.100:8080"
+    conn_info.local_address = "0.0.0.0:8080"
+    conn_info.state = DMSCConnectionState.ESTABLISHED
+    conn_info.security_level = DMSCSecurityLevel.HIGH
+    conn_info.established_at = 0
+    conn_info.last_activity_at = 1000
+
+    print(f"Connection info:")
+    print(f"  ID: {conn_info.connection_id}")
+    print(f"  Remote: {conn_info.remote_address}")
+    print(f"  State: {conn_info.state}")
+    print(f"  Security: {conn_info.security_level}")
+
+    # Create connection statistics
+    conn_stats = DMSCConnectionStats()
+    conn_stats.connection_id = "conn_001"
+    conn_stats.frames_sent = 100
+    conn_stats.frames_received = 95
+    conn_stats.bytes_sent = 1024000
+    conn_stats.bytes_received = 980000
+    conn_stats.errors_count = 0
+    conn_stats.latency_ms = 25.5
+
+    print(f"\nConnection statistics:")
+    print(f"  Frames sent: {conn_stats.frames_sent}")
+    print(f"  Frames received: {conn_stats.frames_received}")
+    print(f"  Bytes sent: {conn_stats.bytes_sent}")
+    print(f"  Bytes received: {conn_stats.bytes_received}")
+    print(f"  Latency: {conn_stats.latency_ms}ms")
+
+    # Get protocol statistics
+    print("\nProtocol statistics:")
+    protocol_stats = DMSCProtocolStats()
+    protocol_stats.total_connections = 10
+    protocol_stats.active_connections = 5
+    protocol_stats.total_frames_sent = 1000
+    protocol_stats.total_frames_received = 950
+    protocol_stats.total_bytes_sent = 10240000
+    protocol_stats.total_bytes_received = 9500000
+
+    print(f"  Total connections: {protocol_stats.total_connections}")
+    print(f"  Active connections: {protocol_stats.active_connections}")
+    print(f"  Total frames sent: {protocol_stats.total_frames_sent}")
+    print(f"  Total frames received: {protocol_stats.total_frames_received}")
+
+    # Check protocol health
+    print("\nProtocol health check:")
+    health = DMSCProtocolHealth()
+    health.is_healthy = True
+    health.error_rate = 0.01
+    health.average_latency_ms = 25.0
+    health.throughput_mbps = 100.0
+
+    print(f"  Healthy: {health.is_healthy}")
+    print(f"  Error rate: {health.error_rate:.2%}")
+    print(f"  Average latency: {health.average_latency_ms}ms")
+    print(f"  Throughput: {health.throughput_mbps} Mbps")
+
+    # Protocol status
+    print("\nProtocol status:")
     status = DMSCProtocolStatus()
-    status.set_state(DMSCConnectionState.DISCONNECTED)
-    print(f"   Current state: {status.state()}\n")
-    
-    print("6. Protocol statistics...")
-    print("   Protocol manager initialized successfully")
-    print("   - Multi-protocol support: enabled")
-    print("   - Connection management: active")
-    print("   - Frame processing: enabled")
-    print("   - Security levels: configured\n")
-    
-    print("=== Protocol Example Completed ===")
+    status.is_running = True
+    status.uptime_seconds = 3600
+    status.protocol_type = DMSCProtocolType.CUSTOM
+    status.version = "1.0.0"
+
+    print(f"  Running: {status.is_running}")
+    print(f"  Uptime: {status.uptime_seconds} seconds")
+    print(f"  Protocol: {status.protocol_type}")
+    print(f"  Version: {status.version}")
+
+    print("\nProtocol operations completed successfully!")
 
 
 if __name__ == "__main__":

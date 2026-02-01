@@ -110,6 +110,7 @@ pub struct KEMResult {
     pub shared_secret: Vec<u8>,
 }
 
+#[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 pub struct DMSCPostQuantumManager {
     algorithm: Arc<RwLock<DMSCPostQuantumAlgorithm>>,
     initialized_at: Arc<RwLock<Instant>>,

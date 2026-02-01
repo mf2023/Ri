@@ -303,6 +303,9 @@ pub mod py {
         m.add_class::<crate::core::DMSCHealthCheckConfig>()?;
         m.add_class::<crate::core::DMSCHealthReport>()?;
         m.add_class::<crate::core::DMSCHealthChecker>()?;
+        m.add_class::<crate::service_mesh::health_check::DMSCHealthCheckType>()?;
+        m.add_class::<crate::service_mesh::health_check::DMSCHealthSummary>()?;
+        m.add_class::<crate::service_mesh::traffic_management::DMSCTrafficManager>()?;
         
         // Add lifecycle types
         m.add_class::<crate::core::DMSCLifecycleObserver>()?;
@@ -498,6 +501,9 @@ pub mod py {
         m.add_class::<crate::device::scheduler::DMSCSchedulingRecommendation>()?;
         m.add_class::<crate::device::scheduler::DMSCSchedulingRecommendationType>()?;
         m.add_class::<crate::device::DMSCDeviceDiscoveryEngine>()?;
+        
+        // Add database migration type
+        m.add_class::<crate::database::DMSCDatabaseMigration>()?;
         
         // Create and add submodules
         create_device_module(m)?;

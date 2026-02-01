@@ -220,8 +220,8 @@ async fn main() -> DMSCResult<()> {
     // 构建服务运行时
     let app = DMSCAppBuilder::new()
         .with_config("config.yaml")?
-        .with_logging(DMSCLogConfig::default())?
-        .with_observability(DMSCObservabilityConfig::default())?
+        .with_logging(DMSCLogConfig::default())
+        .with_observability(DMSCObservabilityConfig::default())
         .build()?;
     
     // 运行业务逻辑

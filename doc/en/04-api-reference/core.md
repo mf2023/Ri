@@ -109,7 +109,7 @@ app.run(|ctx: &DMSCServiceContext| async move {
     let service_name = ctx.config().config().get_str("service.name").unwrap_or("unknown");
     
     // Access file system functionality
-    ctx.fs().write_file("data.txt", "content").await?;
+    ctx.fs().atomic_write_text("data.txt", "content")?;
     
     Ok(())
 }).await

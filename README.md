@@ -220,8 +220,8 @@ async fn main() -> DMSCResult<()> {
     // Build service runtime
     let app = DMSCAppBuilder::new()
         .with_config("config.yaml")?
-        .with_logging(DMSCLogConfig::default())?
-        .with_observability(DMSCObservabilityConfig::default())?
+        .with_logging(DMSCLogConfig::default())
+        .with_observability(DMSCObservabilityConfig::default())
         .build()?;
     
     // Run business logic

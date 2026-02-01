@@ -1,5 +1,3 @@
-#!/usr/bin/env python3
-
 # Copyright © 2025-2026 Wenze Wei. All Rights Reserved.
 #
 # This file is part of DMSC.
@@ -20,192 +18,195 @@
 """
 DMSC Database Module Example
 
-This example demonstrates how to use the database module in DMSC,
-including connection pool management, CRUD operations, and transactions.
-
-Features Demonstrated:
-- Connection pool configuration
-- CRUD operations (Create, Read, Update, Delete)
-- Parameterized queries to prevent SQL injection
-- Transactions with rollback support
-- Batch operations for bulk inserts
+This example demonstrates how to use the DMSC database module for database
+operations with connection pooling and ORM support.
 """
 
-import dmsc
-from dmsc.database import DMSCDatabasePool, DMSCDatabaseConfig
 import asyncio
+from dmsc import (
+    DMSCDatabaseConfig,
+    DMSCDatabasePool,
+    DMSCDBRow,
+    DMSCDBResult,
+)
+from dmsc.database import (
+    ColumnDefinition,
+    IndexDefinition,
+    ForeignKeyDefinition,
+    TableDefinition,
+    ComparisonOperator,
+    LogicalOperator,
+    Criteria,
+    JoinClause,
+    SortOrder,
+    Pagination,
+    QueryBuilder,
+    JoinType,
+    DMSCPyORMRepository,
+)
 
 
 async def main():
-    """
-    Main async entry point for the database module example.
-    
-    This function demonstrates the complete database workflow including:
-    - Connection pool creation and configuration
-    - Schema creation (CREATE TABLE)
-    - CRUD operations (Create, Read, Update, Delete)
-    - Parameterized query execution with SQL injection prevention
-    - Transaction management with commit/rollback
-    - Batch operations for efficient bulk data insertion
-    
-    The example uses PostgreSQL database to demonstrate DMSC's database
-    capabilities including connection pooling and async query execution.
-    """
-    print("=== DMSC Database Module Example ===\n")
-    
-    # Configuration Setup: Create database connection configuration
-    # This configuration establishes connection parameters for the database pool
-    # Using postgres() factory method for PostgreSQL-specific defaults
-    # Parameters:
-    # - host: Database server hostname or IP address
-    # - port: Database server port (PostgreSQL default: 5432)
-    # - database: Name of the database to connect to
-    # - user: Database username for authentication
-    # - password: Database password for authentication
-    # - max_connections: Maximum number of connections in the pool
-    # - min_idle_connections: Minimum number of idle connections to maintain
-    # - connection_timeout_secs: Maximum time to wait for a connection
-    config = DMSCDatabaseConfig.postgres(
-        host="localhost",
-        port=5432,
-        database="dmsc_example",
-        user="postgres",
-        password="password",
-        max_connections=10,
-        min_idle_connections=2,
-        connection_timeout_secs=30,
-    )
-    
-    # Step 1: Create connection pool
-    # Connection pools manage database connections efficiently:
-    # - Reuses connections to reduce overhead
-    # - Limits total connections to prevent overload
-    # - Provides thread-safe access to connections
-    # The pool automatically handles connection creation and health checks
-    print("1. Creating connection pool...")
-    pool = await DMSCDatabasePool.create(config)
-    print("   Connection pool created successfully\n")
-    
-    # Step 2: Create database schema (table)
-    # Execute DDL (Data Definition Language) statements
-    # CREATE TABLE IF NOT EXISTS ensures idempotent schema creation
-    print("2. Creating table...")
-    db = await pool.get()
-    await db.execute("""
-        CREATE TABLE IF NOT EXISTS users (
-            id SERIAL PRIMARY KEY,
-            name VARCHAR(100) NOT NULL,
-            email VARCHAR(255) UNIQUE NOT NULL,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        )
-    """)
-    print("   Table 'users' created or already exists\n")
-    
-    # Step 3: INSERT operation (Create)
-    # Demonstrates parameterized query execution for data insertion
-    # - Uses $1, $2 placeholders for parameter binding
-    # - Prevents SQL injection by separating data from query
-    # - RETURNING clause retrieves inserted record data
-    print("3. Inserting new user (Create)...")
-    db = await pool.get()
-    rows = await db.execute(
-        "INSERT INTO users (name, email) VALUES ($1, $2) RETURNING id, name, email, created_at",
-        ["John Doe", "john@example.com"],
-    )
-    if rows and len(rows) > 0:
-        row = rows[0]
-        print(f"   User inserted: id={row['id']}, name={row['name']}, email={row['email']}\n")
-    
-    # Step 4: SELECT operation (Read)
-    # Demonstrates query execution to retrieve data
-    # - Returns list of rows matching the query
-    # - Each row is a dictionary-like object
-    # - Query parameters prevent SQL injection
-    print("4. Querying users (Read)...")
-    db = await pool.get()
-    rows = await db.query("SELECT id, name, email FROM users ORDER BY id")
-    print(f"   Found {len(rows)} users:")
-    for row in rows:
-        print(f"   - id={row['id']}, name={row['name']}, email={row['email']}")
-    print()
-    
-    # Step 5: UPDATE operation (Update)
-    # Demonstrates data modification with parameterized queries
-    # - Returns number of affected rows
-    # - $1, $2 placeholders prevent SQL injection
-    print("5. Updating user (Update)...")
-    db = await pool.get()
-    affected = await db.execute(
-        "UPDATE users SET email = $1 WHERE name = $2",
-        ["john.doe@example.com", "John Doe"],
-    )
-    print(f"   Updated {affected} row(s)\n")
-    
-    # Step 6: Transaction management with rollback
-    # Demonstrates ACID transaction properties:
-    # - BEGIN: Start transaction
-    # - Execute multiple statements within transaction
-    # - ROLLBACK: Discard all changes (atomicity)
-    # Transactions ensure data consistency for complex operations
-    print("6. Using transaction (Rollback demo)...")
-    tx = await pool.begin_transaction()
-    
-    # Insert test user within transaction
-    await tx.execute("INSERT INTO users (name, email) VALUES ($1, $2)",
-        ["Test User", "test@example.com"])
-    print("   Inserted test user in transaction")
-    
-    # Rollback discards the insert, maintaining data integrity
-    await tx.rollback()
-    print("   Transaction rolled back\n")
-    
-    # Step 7: Verify rollback worked
-    # Query to check if test user was actually added
-    # This proves transaction rollback was successful
-    print("7. Verifying no test user was added...")
-    db = await pool.get()
-    rows = await db.query("SELECT COUNT(*) as count FROM users WHERE email = $1",
-        ["test@example.com"])
-    count = rows[0]['count'] if rows else 0
-    print(f"   Users with test@example.com: {count}\n")
-    
-    # Step 8: Batch insert operation
-    # Demonstrates efficient bulk data insertion
-    # - execute_many() processes multiple rows in single call
-    # - More efficient than individual inserts
-    # - Reduces database round-trips
-    print("8. Batch insert users...")
-    db = await pool.get()
-    users = [
-        ["Alice", "alice@example.com"],
-        ["Bob", "bob@example.com"],
-        ["Charlie", "charlie@example.com"],
-    ]
-    inserted = await db.execute_many(
-        "INSERT INTO users (name, email) VALUES ($1, $2)",
-        users,
-    )
-    print(f"   Batch inserted {inserted} user(s)\n")
-    
-    # Step 9: Aggregation query
-    # Demonstrates COUNT aggregation function
-    print("9. Final user count...")
-    db = await pool.get()
-    rows = await db.query("SELECT COUNT(*) as count FROM users")
-    count = rows[0]['count'] if rows else 0
-    print(f"   Total users in database: {count}\n")
-    
-    # Step 10: Cleanup operation
-    # Demonstrates DELETE operation with pattern matching
-    # - LIKE operator with % wildcard for pattern matching
-    # - Cleans up test data to maintain database hygiene
-    print("10. Cleanup (Delete test data)...")
-    db = await pool.get()
-    await db.execute("DELETE FROM users WHERE email LIKE $1", 
-        ["%.example.com"])
-    print("   Cleaned up test data\n")
-    
-    print("=== Database Example Completed ===")
+    # Create database configuration
+    config = DMSCDatabaseConfig()
+    config.database_type = "sqlite"
+    config.host = "localhost"
+    config.port = 5432
+    config.database = "dmsc_example"
+    config.username = "user"
+    config.password = "password"
+    config.max_connections = 10
+    config.min_connections = 2
+    config.connection_timeout_seconds = 30
+
+    # Create connection pool
+    pool = DMSCDatabasePool(config)
+
+    # Define table schema using ORM
+    print("Defining table schema...")
+
+    # Define columns for users table
+    id_column = ColumnDefinition()
+    id_column.name = "id"
+    id_column.data_type = "INTEGER"
+    id_column.primary_key = True
+    id_column.auto_increment = True
+
+    name_column = ColumnDefinition()
+    name_column.name = "name"
+    name_column.data_type = "VARCHAR(255)"
+    name_column.nullable = False
+
+    email_column = ColumnDefinition()
+    email_column.name = "email"
+    email_column.data_type = "VARCHAR(255)"
+    email_column.nullable = False
+    email_column.unique = True
+
+    age_column = ColumnDefinition()
+    age_column.name = "age"
+    age_column.data_type = "INTEGER"
+    age_column.nullable = True
+
+    # Define table
+    users_table = TableDefinition()
+    users_table.name = "users"
+    users_table.columns = [id_column, name_column, email_column, age_column]
+
+    # Create index
+    email_index = IndexDefinition()
+    email_index.name = "idx_email"
+    email_index.columns = ["email"]
+    email_index.unique = True
+    users_table.indexes = [email_index]
+
+    print(f"Table '{users_table.name}' defined with {len(users_table.columns)} columns")
+
+    # Create ORM repository
+    print("\nCreating ORM repository...")
+    user_repo = DMSCPyORMRepository()
+    user_repo.table_name = "users"
+    user_repo.table_definition = users_table
+
+    # Build queries using QueryBuilder
+    print("\nBuilding queries...")
+
+    query_builder = QueryBuilder()
+
+    # SELECT query
+    select_query = query_builder.select("users", ["id", "name", "email", "age"])
+    print(f"SELECT query built")
+
+    # INSERT query
+    insert_query = query_builder.insert("users", {
+        "name": "John Doe",
+        "email": "john@example.com",
+        "age": 30
+    })
+    print(f"INSERT query built")
+
+    # UPDATE query with criteria
+    update_criteria = Criteria()
+    update_criteria.column = "id"
+    update_criteria.operator = ComparisonOperator.EQUAL
+    update_criteria.value = 1
+
+    update_query = query_builder.update("users", {"age": 31}, [update_criteria])
+    print(f"UPDATE query built")
+
+    # DELETE query with criteria
+    delete_criteria = Criteria()
+    delete_criteria.column = "id"
+    delete_criteria.operator = ComparisonOperator.EQUAL
+    delete_criteria.value = 1
+
+    delete_query = query_builder.delete("users", [delete_criteria])
+    print(f"DELETE query built")
+
+    # JOIN query
+    join_clause = JoinClause()
+    join_clause.join_type = JoinType.INNER
+    join_clause.table = "orders"
+    join_clause.on_condition = "users.id = orders.user_id"
+
+    join_query = query_builder.select("users", ["users.name", "orders.total"])
+    print(f"JOIN query built")
+
+    # Query with pagination
+    pagination = Pagination()
+    pagination.page = 1
+    pagination.page_size = 10
+    pagination.offset = 0
+    pagination.limit = 10
+
+    print(f"Pagination: page {pagination.page}, size {pagination.page_size}")
+
+    # Query with sorting
+    sort_order = SortOrder()
+    sort_order.column = "created_at"
+    sort_order.direction = "DESC"
+
+    print(f"Sort order: {sort_order.column} {sort_order.direction}")
+
+    # Complex query with multiple criteria
+    criteria1 = Criteria()
+    criteria1.column = "age"
+    criteria1.operator = ComparisonOperator.GREATER_THAN
+    criteria1.value = 18
+
+    criteria2 = Criteria()
+    criteria2.column = "status"
+    criteria2.operator = ComparisonOperator.EQUAL
+    criteria2.value = "active"
+    criteria2.logical_op = LogicalOperator.AND
+
+    print(f"Complex criteria built with {LogicalOperator.AND} operator")
+
+    # Simulate query results
+    print("\nSimulating query results...")
+
+    result = DMSCDBResult()
+    result.row_count = 3
+    result.columns = ["id", "name", "email", "age"]
+
+    # Create sample rows
+    row1 = DMSCDBRow()
+    row1.values = {"id": 1, "name": "John Doe", "email": "john@example.com", "age": 30}
+
+    row2 = DMSCDBRow()
+    row2.values = {"id": 2, "name": "Jane Smith", "email": "jane@example.com", "age": 25}
+
+    row3 = DMSCDBRow()
+    row3.values = {"id": 3, "name": "Bob Johnson", "email": "bob@example.com", "age": 35}
+
+    print(f"Query returned {result.row_count} rows")
+    print(f"Columns: {result.columns}")
+
+    print("\nSample data:")
+    for row in [row1, row2, row3]:
+        print(f"  ID: {row.values['id']}, Name: {row.values['name']}, Email: {row.values['email']}, Age: {row.values['age']}")
+
+    print("\nDatabase operations completed successfully!")
 
 
 if __name__ == "__main__":

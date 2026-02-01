@@ -36,6 +36,7 @@ type KafkaConsumer = StreamConsumer<DefaultConsumerContext>;
 
 #[allow(dead_code)]
 #[derive(Clone)]
+#[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 pub struct DMSCKafkaQueue {
     brokers: String,
     topic: String,
