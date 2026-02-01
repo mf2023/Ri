@@ -261,6 +261,46 @@ println!("Utilization rate: {:.2}%", status.utilization_rate * 100.0);
 | `pending_requests` | `usize` | 等待请求数 |
 | `utilization_rate` | `f64` | 利用率 |
 
+#### Rust 示例
+
+```rust
+use dmsc::device::DMSCResourcePoolStatus;
+
+let status = DMSCResourcePoolStatus {
+    total_capacity: 100,
+    available_capacity: 75,
+    allocated_capacity: 25,
+    pending_requests: 5,
+    utilization_rate: 0.25,
+};
+
+println!("Total capacity: {}", status.total_capacity);
+println!("Available capacity: {}", status.available_capacity);
+println!("Allocated capacity: {}", status.allocated_capacity);
+println!("Pending requests: {}", status.pending_requests);
+println!("Utilization rate: {:.2}%", status.utilization_rate * 100.0);
+```
+
+#### Python 示例
+
+```python
+from dmsc import DMSCResourcePoolStatus
+
+status = DMSCResourcePoolStatus(
+    total_capacity=100,
+    available_capacity=75,
+    allocated_capacity=25,
+    pending_requests=5,
+    utilization_rate=0.25
+)
+
+print(f"Total capacity: {status.total_capacity()}")
+print(f"Available capacity: {status.available_capacity()}")
+print(f"Allocated capacity: {status.allocated_capacity()}")
+print(f"Pending requests: {status.pending_requests()}")
+print(f"Utilization rate: {status.utilization_rate() * 100.0:.2f}%")
+```
+
 <div align="center">
 
 ## 资源调度
@@ -436,14 +476,9 @@ for device in &discovery_result.discovered_devices {
 - [gateway](./gateway.md): 网关模块，提供API网关功能
 - [grpc](./grpc.md): gRPC 模块，带服务注册和 Python 绑定
 - [hooks](./hooks.md): 钩子模块，提供生命周期钩子支持
-- [http](./http.md): HTTP模块，提供HTTP服务器和客户端功能
 - [log](./log.md): 日志模块，记录协议事件
-- [mq](./mq.md): 消息队列模块，提供消息队列支持
 - [observability](./observability.md): 可观测性模块，监控协议性能
-- [orm](./orm.md): ORM 模块，带查询构建器和分页支持
 - [protocol](./protocol.md): 协议模块，提供通信协议支持
-- [security](./security.md): 安全模块，提供加密和解密功能
 - [service_mesh](./service_mesh.md): 服务网格模块，使用协议进行服务间通信
-- [storage](./storage.md): 存储模块，提供云存储支持
 - [validation](./validation.md): 验证模块，提供数据验证功能
 - [ws](./ws.md): WebSocket 模块，带 Python 绑定的实时通信

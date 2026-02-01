@@ -227,7 +227,7 @@ async def demonstrate_application():
     print("=== DMSC Complete Application ===\n")
     
     print("1. Application initialization...")
-    builder = DMSCAppBuilder.new()
+    builder = DMSCAppBuilder()
     app = builder.with_config("config.yaml").build()
     print("   Application initialized\n")
     
@@ -451,6 +451,5 @@ A: 使用`DMSCObservabilityModule`获取指标，通过Prometheus端点暴露。
 
 - 查看[认证示例](authentication.md)了解JWT和OAuth配置
 - 查看[缓存示例](caching.md)了解缓存策略
-- 查看[消息队列示例](mq.md)了解消息处理
 - 查看[服务网格示例](service_mesh.md)了解服务发现
 - 查看[可观测性示例](observability.md)了解指标和追踪

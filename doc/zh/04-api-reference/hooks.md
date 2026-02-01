@@ -47,7 +47,7 @@ use dmsc::hooks::{DMSCHookBus, DMSCHookKind, DMSCHookHandler};
 fn example() -> DMSCResult<()> {
     let mut hook_bus = DMSCHookBus::new();
     
-    hook_bus._register(
+    hook_bus.register(
         DMSCHookKind::Startup,
         "example.startup".to_string(),
         |ctx, event| {
@@ -57,7 +57,7 @@ fn example() -> DMSCResult<()> {
         }
     );
     
-    hook_bus._register(
+    hook_bus.register(
         DMSCHookKind::Shutdown,
         "example.shutdown".to_string(),
         |ctx, event| {
@@ -139,7 +139,7 @@ use dmsc::core::DMSCServiceContext;
 
 let mut hook_bus = DMSCHookBus::new();
 
-hook_bus._register(
+hook_bus.register(
     DMSCHookKind::Startup,
     "my_module.startup".to_string(),
     |ctx: &DMSCServiceContext, event: &DMSCHookEvent| {
@@ -152,7 +152,7 @@ hook_bus._register(
 ### 模块生命周期钩子
 
 ```rust
-hook_bus._register(
+hook_bus.register(
     DMSCHookKind::BeforeModulesInit,
     "my_module.before_init".to_string(),
     |ctx, event| {
@@ -161,7 +161,7 @@ hook_bus._register(
     }
 );
 
-hook_bus._register(
+hook_bus.register(
     DMSCHookKind::AfterModulesShutdown,
     "my_module.after_shutdown".to_string(),
     |ctx, event| {
@@ -176,7 +176,7 @@ hook_bus._register(
 ```rust
 use dmsc::hooks::{DMSCHookBus, DMSCHookKind, DMSCModulePhase};
 
-hook_bus._emit_with(
+hook_bus.emit_with(
     &DMSCHookKind::BeforeModulesInit,
     &ctx,
     Some("auth_module"),
@@ -197,7 +197,7 @@ use dmsc::prelude::*;
 use dmsc::hooks::{DMSCHookBus, DMSCHookKind};
 
 fn setup_startup_hooks(hook_bus: &mut DMSCHookBus) {
-    hook_bus._register(
+    hook_bus.register(
         DMSCHookKind::Startup,
         "db.initialize".to_string(),
         |ctx, _event| {
@@ -207,7 +207,7 @@ fn setup_startup_hooks(hook_bus: &mut DMSCHookBus) {
         }
     );
     
-    hook_bus._register(
+    hook_bus.register(
         DMSCHookKind::Startup,
         "cache.warmup".to_string(),
         |ctx, _event| {
@@ -217,7 +217,7 @@ fn setup_startup_hooks(hook_bus: &mut DMSCHookBus) {
         }
     );
     
-    hook_bus._register(
+    hook_bus.register(
         DMSCHookKind::Startup,
         "metrics.start".to_string(),
         |ctx, _event| {
@@ -233,7 +233,7 @@ fn setup_startup_hooks(hook_bus: &mut DMSCHookBus) {
 
 ```rust
 fn setup_shutdown_hooks(hook_bus: &mut DMSCHookBus) {
-    hook_bus._register(
+    hook_bus.register(
         DMSCHookKind::Shutdown,
         "cache.flush".to_string(),
         |ctx, _event| {
@@ -243,7 +243,7 @@ fn setup_shutdown_hooks(hook_bus: &mut DMSCHookBus) {
         }
     );
     
-    hook_bus._register(
+    hook_bus.register(
         DMSCHookKind::Shutdown,
         "db.disconnect".to_string(),
         |ctx, _event| {
@@ -253,7 +253,7 @@ fn setup_shutdown_hooks(hook_bus: &mut DMSCHookBus) {
         }
     );
     
-    hook_bus._register(
+    hook_bus.register(
         DMSCHookKind::Shutdown,
         "metrics.stop".to_string(),
         |ctx, _event| {
@@ -269,7 +269,7 @@ fn setup_shutdown_hooks(hook_bus: &mut DMSCHookBus) {
 
 ```rust
 fn setup_dependency_hooks(hook_bus: &mut DMSCHookBus) {
-    hook_bus._register(
+    hook_bus.register(
         DMSCHookKind::BeforeModulesInit,
         "dependencies.check".to_string(),
         |ctx, event| {
@@ -278,7 +278,7 @@ fn setup_dependency_hooks(hook_bus: &mut DMSCHookBus) {
         }
     );
     
-    hook_bus._register(
+    hook_bus.register(
         DMSCHookKind::AfterModulesInit,
         "dependencies.ready".to_string(),
         |ctx, event| {
@@ -300,7 +300,7 @@ fn setup_dependency_hooks(hook_bus: &mut DMSCHookBus) {
 ```rust
 use dmsc::core::DMSCError;
 
-hook_bus._register(
+hook_bus.register(
     DMSCHookKind::Startup,
     "critical.startup".to_string(),
     |ctx, event| {
@@ -341,14 +341,9 @@ hook_bus._register(
 - [fs](./fs.md): 文件系统模块，提供文件操作功能
 - [gateway](./gateway.md): 网关模块，提供API网关功能
 - [grpc](./grpc.md): gRPC 模块，带服务注册和 Python 绑定
-- [http](./http.md): HTTP模块，提供HTTP服务器和客户端功能
 - [log](./log.md): 日志模块，记录协议事件
-- [mq](./mq.md): 消息队列模块，提供消息队列支持
 - [observability](./observability.md): 可观测性模块，监控协议性能
-- [orm](./orm.md): ORM 模块，带查询构建器和分页支持
 - [protocol](./protocol.md): 协议模块，提供通信协议支持
-- [security](./security.md): 安全模块，提供加密和解密功能
 - [service_mesh](./service_mesh.md): 服务网格模块，使用协议进行服务间通信
-- [storage](./storage.md): 存储模块，提供云存储支持
 - [validation](./validation.md): 验证模块，提供数据验证功能
 - [ws](./ws.md): WebSocket 模块，带 Python 绑定的实时通信

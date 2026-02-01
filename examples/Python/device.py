@@ -34,7 +34,7 @@ from dmsc import (
     DMSCDeviceControlModule, DMSCDeviceControlConfig,
     DMSCDevice, DMSCDeviceType, DMSCDeviceStatus, DMSCDeviceCapabilities,
     DMSCResourceRequest, DMSCResourceAllocation, DMSCRequestSlaClass,
-    DMSCResourceWeights, DMSCAffinityRules
+    DMSCResourceWeights, DMSCAffinityRules, DMSCResourcePoolStatus
 )
 import asyncio
 
@@ -117,6 +117,22 @@ async def main():
     print("   Resource pool status:")
     for name, status in pool_status.items():
         print(f"   - {name}: total={status.total_capacity}, available={status.available_capacity}, utilization={status.utilization_rate * 100.0:.1f}%")
+    print()
+    
+    print("8. Creating DMSCResourcePoolStatus manually...")
+    custom_status = DMSCResourcePoolStatus(
+        total_capacity=100,
+        available_capacity=75,
+        allocated_capacity=25,
+        pending_requests=5,
+        utilization_rate=0.25
+    )
+    print("   Custom resource pool status:")
+    print(f"   - Total capacity: {custom_status.total_capacity()}")
+    print(f"   - Available capacity: {custom_status.available_capacity()}")
+    print(f"   - Allocated capacity: {custom_status.allocated_capacity()}")
+    print(f"   - Pending requests: {custom_status.pending_requests()}")
+    print(f"   - Utilization rate: {custom_status.utilization_rate() * 100.0:.2f}%")
     print()
     
     print("=== Device Management Example Completed ===")

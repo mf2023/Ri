@@ -183,6 +183,66 @@ let plaintext = pq_crypto.decrypt(&secret_key, &ciphertext)?;
 
 <div align="center">
 
+## 国密算法
+
+</div>
+
+### DMSCGuomi
+
+国密算法套件（SM2/SM3/SM4）。
+
+```rust
+use dmsc::protocol::guomi::{DMSCGuomi, SM2Signer, SM3, SM4};
+
+// SM2 签名
+let signer = SM2Signer::new()?;
+let (sm2_public, sm2_private) = signer.keygen()?;
+let signature = signer.sign(&sm2_private, &message)?;
+
+// SM3 哈希 - 返回 DMSCResult<[u8; 32]>
+let sm3 = SM3::new();
+let sm3_hash = sm3.hash(&data)?;
+
+// SM4 加密
+let sm4 = SM4::new();
+let sm4_key = [0u8; 16]; // 16字节密钥
+let encrypted = sm4.encrypt_ecb(&sm4_key, &data)?;
+```
+
+### SM2Signer
+
+SM2 椭圆曲线数字签名算法。
+
+| 方法 | 描述 | 参数 | 返回值 |
+|:--------|:-------------|:--------|:--------|
+| `new()` | 创建签名器 | 无 | `DMSCResult<Self>` |
+| `keygen()` | 生成密钥对 | 无 | `DMSCResult<(Vec<u8>, Vec<u8>)>` |
+| `sign(secret_key, message)` | 签名消息 | `secret_key: &[u8]`, `message: &[u8]` | `DMSCResult<Vec<u8>>` |
+| `verify(public_key, message, signature)` | 验证签名 | `public_key: &[u8]`, `message: &[u8]`, `signature: &[u8]` | `DMSCResult<bool>` |
+
+### SM3
+
+SM3 密码学哈希算法。
+
+| 方法 | 描述 | 参数 | 返回值 |
+|:--------|:-------------|:--------|:--------|
+| `new()` | 创建哈希器 | 无 | `Self` |
+| `hash(data)` | 计算哈希 | `data: &[u8]` | `DMSCResult<[u8; 32]>` |
+
+### SM4
+
+SM4 分组密码算法。
+
+| 方法 | 描述 | 参数 | 返回值 |
+|:--------|:-------------|:--------|:--------|
+| `new()` | 创建密码器 | 无 | `Self` |
+| `encrypt_ecb(key, plaintext)` | ECB 模式加密 | `key: &[u8; 16]`, `plaintext: &[u8]` | `DMSCResult<Vec<u8>>` |
+| `decrypt_ecb(key, ciphertext)` | ECB 模式解密 | `key: &[u8; 16]`, `ciphertext: &[u8]` | `DMSCResult<Vec<u8>>` |
+| `encrypt_cbc(key, iv, plaintext)` | CBC 模式加密 | `key: &[u8; 16]`, `iv: &[u8; 16]`, `plaintext: &[u8]` | `DMSCResult<Vec<u8>>` |
+| `decrypt_cbc(key, iv, ciphertext)` | CBC 模式解密 | `key: &[u8; 16]`, `iv: &[u8; 16]`, `ciphertext: &[u8]` | `DMSCResult<Vec<u8>>` |
+
+<div align="center">
+
 ## 硬件安全模块 (HSM)
 
 </div>
@@ -375,13 +435,9 @@ let state = state_manager.get_state(DMSCStateCategory::Device, "device:001").awa
 - [gateway](./gateway.md): 网关模块，提供API网关功能
 - [grpc](./grpc.md): gRPC 模块，带服务注册和 Python 绑定
 - [hooks](./hooks.md): 钩子模块，提供生命周期钩子支持
-- [http](./http.md): HTTP模块，提供HTTP服务器和客户端功能
 - [log](./log.md): 日志模块，记录协议事件
-- [mq](./mq.md): 消息队列模块，提供消息队列支持
 - [observability](./observability.md): 可观测性模块，监控协议性能
-- [orm](./orm.md): ORM 模块，带查询构建器和分页支持
-- [security](./security.md): 安全模块，提供加密和解密功能
+- [queue](./queue.md): 消息队列模块，提供消息队列支持
 - [service_mesh](./service_mesh.md): 服务网格模块，使用协议进行服务间通信
-- [storage](./storage.md): 存储模块，提供云存储支持
 - [validation](./validation.md): 验证模块，提供数据验证功能
 - [ws](./ws.md): WebSocket 模块，带 Python 绑定的实时通信

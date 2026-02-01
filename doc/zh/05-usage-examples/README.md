@@ -18,12 +18,15 @@
 | **认证与授权** | 使用JWT和OAuth进行认证 | [authentication.md](./authentication.md) |
 | **缓存使用** | 缓存的基本操作和高级用法 | [caching.md](./caching.md) |
 | **数据库操作** | 数据库连接、查询和事务管理 | [database.md](./database.md) |
+| **设备管理** | 设备控制、发现和智能调度 | [device.md](./device.md) |
+| **文件系统** | 安全的文件操作和管理 | [fs.md](./fs.md) |
+| **网关** | API网关，支持HTTP服务、路由、中间件、负载均衡、限流和熔断 | [gateway.md](./gateway.md) |
 | **gRPC服务** | 高性能 RPC，带服务注册和 Python 绑定 | [grpc.md](./grpc.md) |
-| **HTTP服务** | 构建Web应用和RESTful API | [http.md](./http.md) |
-| **消息队列** | 异步消息处理和事件驱动架构 | [mq.md](./mq.md) |
+| **生命周期钩子** | 启动和关闭的生命周期事件钩子 | [hooks.md](./hooks.md) |
+| **消息队列** | 异步消息处理和事件驱动架构 | [queue.md](./queue.md) |
 | **可观测性** | 分布式追踪、指标收集和监控 | [observability.md](./observability.md) |
-| **安全实践** | 加密、哈希和安全最佳实践 | [security.md](./security.md) |
-| **存储管理** | 文件上传下载和存储管理 | [storage.md](./storage.md) |
+| **协议** | 通信协议、加密和后量子密码学 | [protocol.md](./protocol.md) |
+| **服务网格** | 服务发现、健康检查和流量管理 | [service_mesh.md](./service_mesh.md) |
 | **数据验证** | 数据验证、清理和自定义验证器 | [validation.md](./validation.md) |
 | **WebSocket** | 实时双向通信，带 Python 绑定 | [ws.md](./ws.md) |
 

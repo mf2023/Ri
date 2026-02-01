@@ -29,8 +29,8 @@
 //! ```rust
 //! use dmsc::protocol::guomi::{DMSCGuomi, SM2Signer, SM3, SM4};
 //!
-//! // SM3 hashing
-//! let hash = DMSCGuomi::sm3_hash(b"Hello, World!");
+//! // SM3 hashing - returns DMSCResult<[u8; 32]>
+//! let hash = DMSCGuomi::sm3_hash(b"Hello, World!").unwrap();
 //!
 //! // SM4 encryption
 //! let key = [0u8; 16];
@@ -65,13 +65,15 @@ impl SM3 {
     }
 
     #[cfg(feature = "protocol")]
-    pub fn hash(&self, data: &[u8]) -> [u8; 32] {
-        sm3::hash(data)
+    pub fn hash(&self, data: &[u8]) -> DMSCResult<[u8; 32]> {
+        Ok(sm3::hash(data))
     }
 
     #[cfg(not(feature = "protocol"))]
-    pub fn hash(&self, _data: &[u8]) -> [u8; 32] {
-        panic!("国密算法 requires the 'protocol' feature. Enable with: cargo build --features protocol")
+    pub fn hash(&self, _data: &[u8]) -> DMSCResult<[u8; 32]> {
+        Err(DMSCError::Config(
+            "National Cryptographic Algorithm requires the 'protocol' feature. Enable with: cargo build --features protocol".to_string()
+        ))
     }
 }
 
@@ -89,8 +91,8 @@ impl SM3 {
         Self::new()
     }
 
-    fn hash_py(&self, data: &[u8]) -> [u8; 32] {
-        self.hash(data)
+    fn hash_py(&self, data: &[u8]) -> PyResult<[u8; 32]> {
+        self.hash(data).map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(e.to_string()))
     }
 }
 
@@ -282,7 +284,7 @@ impl DMSCGuomi {
     }
 
     /// Compute SM3 hash
-    pub fn sm3_hash(data: &[u8]) -> [u8; 32] {
+    pub fn sm3_hash(data: &[u8]) -> DMSCResult<[u8; 32]> {
         SM3::new().hash(data)
     }
 
@@ -377,8 +379,8 @@ impl DMSCGuomi {
     }
 
     #[staticmethod]
-    fn sm3_hash_py(data: &[u8]) -> [u8; 32] {
-        Self::sm3_hash(data)
+    fn sm3_hash_py(data: &[u8]) -> PyResult<[u8; 32]> {
+        Self::sm3_hash(data).map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(e.to_string()))
     }
 
     #[staticmethod]
@@ -410,17 +412,17 @@ mod tests {
     #[cfg(feature = "protocol")]
     fn test_sm3_hash() {
         let data = b"Hello, World!";
-        let hash = DMSCGuomi::sm3_hash(data);
+        let hash = DMSCGuomi::sm3_hash(data).unwrap();
 
         // SM3 should produce 32 bytes
         assert_eq!(hash.len(), 32);
 
         // Same input should produce same hash
-        let hash2 = DMSCGuomi::sm3_hash(data);
+        let hash2 = DMSCGuomi::sm3_hash(data).unwrap();
         assert_eq!(hash, hash2);
 
         // Different input should produce different hash
-        let hash3 = DMSCGuomi::sm3_hash(b"Different data");
+        let hash3 = DMSCGuomi::sm3_hash(b"Different data").unwrap();
         assert_ne!(hash, hash3);
     }
 

@@ -418,7 +418,5 @@ print(registry.list_services())
 - [config](./config.md): 配置模块，管理应用程序配置
 - [core](./core.md): 核心模块，提供错误处理和服务上下文
 - [database](./database.md): 数据库模块，提供数据库访问层
-- [http](./http.md): HTTP模块，提供HTTP服务器和客户端功能
 - [protocol](./protocol.md): 协议模块，提供通信协议支持
-- [security](./security.md): 安全模块，提供加密和解密功能
 - [service_mesh](./service_mesh.md): 服务网格模块，使用协议进行服务间通信

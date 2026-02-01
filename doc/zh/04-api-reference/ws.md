@@ -486,7 +486,7 @@ def on_connect(session_id, remote_addr):
     print(f"已连接: {session_id} 来自 {remote_addr}")
 
 def on_disconnect(session_id):
-    print(f("已断开连接: {session_id}")
+    print(f"已断开连接: {session_id}")
 
 def on_message(session_id, data):
     print(f"来自 {session_id} 的消息: {data.decode()}")
@@ -543,7 +543,5 @@ manager.send_to("session-123", b"你好！")
 - [config](./config.md): 配置模块，管理应用程序配置
 - [core](./core.md): 核心模块，提供错误处理和服务上下文
 - [grpc](./grpc.md): gRPC模块，提供RPC功能
-- [http](./http.md): HTTP模块，提供HTTP服务器和客户端功能
-- [mq](./mq.md): 消息队列模块，提供消息队列支持
 - [protocol](./protocol.md): 协议模块，提供通信协议支持
 - [service_mesh](./service_mesh.md): 服务网格模块，使用协议进行服务间通信

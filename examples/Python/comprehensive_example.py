@@ -66,7 +66,7 @@ async def demonstrate_application_initialization():
     print("=== Application Initialization ===\n")
     
     print("1. Creating application builder...")
-    builder = DMSCAppBuilder.new()
+    builder = DMSCAppBuilder()
     print("   Builder created successfully\n")
     
     print("2. Configuring logging...")
@@ -103,8 +103,8 @@ async def demonstrate_authentication():
     
     print("1. Creating authentication configuration...")
     auth_config = DMSCAuthConfig.default()
-    auth_config.set_jwt_secret("your-secret-key-here")
-    auth_config.set_token_expiry_hours(24)
+    auth_config.jwt_secret = "your-secret-key-here"
+    auth_config.jwt_expiry_secs = 24 * 3600  # 24 hours in seconds
     print("   Auth config created\n")
     
     print("2. Creating authentication module...")
@@ -151,10 +151,10 @@ async def demonstrate_caching():
     print("=== Cache Module ===\n")
     
     print("1. Creating cache configuration...")
-    cache_config = DMSCCacheConfig.memory(
-        max_size=1000,
-        default_ttl_seconds=300,
-    )
+    cache_config = DMSCCacheConfig()
+    cache_config.enabled = True
+    cache_config.default_ttl_secs = 300
+    cache_config.max_memory_mb = 1000
     print("   Cache config created (memory backend)\n")
     
     print("2. Creating cache module...")
@@ -162,8 +162,9 @@ async def demonstrate_caching():
     print("   Cache module created\n")
     
     print("3. Setting cache policy...")
-    policy = DMSCCachePolicy.lru(max_size=100)
-    policy.set_ttl(600)
+    policy = DMSCCachePolicy()
+    policy.max_size = Some(100)
+    policy.ttl = Some(600)  # 600 seconds
     cache_module.set_policy("user_data", policy)
     print("   Cache policy set (LRU, 100 items, 600s TTL)\n")
     
@@ -251,10 +252,10 @@ async def demonstrate_service_mesh():
     print("=== Service Mesh Module ===\n")
     
     print("1. Creating service mesh configuration...")
-    mesh_config = DMSCServiceMeshConfig.default()
-    mesh_config.set_enable_service_discovery(True)
-    mesh_config.set_enable_health_check(True)
-    mesh_config.set_health_check_interval(30)
+    mesh_config = DMSCServiceMeshConfig()
+    mesh_config.enable_service_discovery = True
+    mesh_config.enable_health_check = True
+    mesh_config.health_check_interval = 30
     print("   Mesh config created\n")
     
     print("2. Creating service mesh...")
@@ -265,16 +266,14 @@ async def demonstrate_service_mesh():
     await service_mesh.register_service(
         "user-service",
         "http://user-service:8080",
-        weight=100,
-        metadata={"version": "1.0.0"},
+        100,
     )
     print("   Registered 'user-service'\n")
-    
+
     await service_mesh.register_service(
         "order-service",
         "http://order-service:8080",
-        weight=80,
-        metadata={"version": "2.0.0"},
+        80,
     )
     print("   Registered 'order-service'\n")
     
@@ -303,31 +302,16 @@ async def demonstrate_observability():
     print("=== Observability Module ===\n")
     
     print("1. Creating observability configuration...")
-    obs_config = DMSCObservabilityConfig.default()
-    obs_config.set_metrics_enabled(True)
-    obs_config.set_tracing_enabled(True)
-    obs_config.set_prometheus_port(9090)
+    obs_config = DMSCObservabilityConfig()
+    obs_config.metrics_enabled = True
+    obs_config.tracing_enabled = True
     print("   Observability config created\n")
     
     print("2. Creating observability module...")
     obs_module = DMSCObservabilityModule(obs_config)
     print("   Observability module created\n")
     
-    print("3. Getting metrics registry...")
-    registry = obs_module.get_metrics_registry()
-    print("   Metrics registry obtained\n")
-    
-    print("4. Recording metrics...")
-    registry.counter("http_requests_total").increment(1)
-    registry.gauge("active_connections").set(42)
-    registry.histogram("request_duration_seconds").observe(0.156)
-    print("   Metrics recorded\n")
-    
-    print("5. Starting Prometheus exporter...")
-    obs_module.start_prometheus_exporter()
-    print("   Prometheus exporter started on port 9090\n")
-    
-    print("6. Observability demonstration complete!\n")
+    print("3. Observability demonstration complete!\n")
 
 
 async def demonstrate_database():
@@ -343,14 +327,13 @@ async def demonstrate_database():
     print("=== Database Module ===\n")
     
     print("1. Creating database configuration...")
-    db_config = DMSCDatabaseConfig.postgres(
-        host="localhost",
-        port=5432,
-        database="dmsc_db",
-        username="postgres",
-        password="password",
-        max_connections=10,
-    )
+    db_config = DMSCDatabaseConfig.create_postgres()
+    db_config.host = "localhost"
+    db_config.port = 5432
+    db_config.database = "dmsc_db"
+    db_config.username = "postgres"
+    db_config.password = "password"
+    db_config.max_connections = 10
     print("   Database config created (PostgreSQL)\n")
     
     print("2. Creating database pool...")

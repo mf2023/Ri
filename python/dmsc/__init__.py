@@ -118,7 +118,16 @@ from .dmsc import (
     DMSCServiceMesh, DMSCServiceMeshConfig, DMSCServiceDiscovery,
     DMSCServiceInstance, DMSCServiceStatus, DMSCServiceMeshStats,
     DMSCTrafficRoute, DMSCMatchCriteria, DMSCRouteAction, DMSCWeightedDestination,
-    DMSCTrafficManager, DMSCHealthChecker, DMSCHealthSummary,
+    DMSCTrafficManager, DMSCHealthChecker, DMSCHealthSummary, DMSCHealthCheckType,
+    
+    # =============================================================================
+    # Service Mesh classes - Advanced service management including circuit breakers,
+    # health checks, rate limiting, and canary deployments
+    # =============================================================================
+    DMSCCircuitBreaker, DMSCCircuitBreakerConfig, DMSCCircuitBreakerState, DMSCCircuitBreakerMetrics,
+    DMSCHealthCheck, DMSCHealthCheckConfig, DMSCHealthCheckType, DMSCHttpHealthCheck, DMSCTcpHealthCheck,
+    DMSCRateLimiter, DMSCRateLimiterConfig, DMSCRateLimiterResult,
+    DMSCCanaryDeployment, DMSCCanaryConfig, DMSCCanaryMetrics,
     
     # =============================================================================
     # Auth classes - Authentication and authorization including JWT management,
@@ -140,7 +149,7 @@ from .dmsc import (
     DMSCResourceAllocation, DMSCRequestSlaClass, DMSCResourceWeights,
     DMSCAffinityRules,
     DMSCResourcePool, DMSCResourcePoolConfig, DMSCResourcePoolStatistics, DMSCResourcePoolManager,
-    DMSCConnectionPoolStatistics,
+    DMSCResourcePoolStatus, DMSCConnectionPoolStatistics,
     DMSCResourceScheduler, DMSCDeviceScheduler, DMSCSchedulingPolicy,
     DMSCAllocationRecord, DMSCAllocationRequest, DMSCAllocationStatistics,
     DMSCDeviceTypeStatistics, DMSCSchedulingRecommendation, DMSCSchedulingRecommendationType,
@@ -249,7 +258,7 @@ __all__ = [
     'DMSCServiceMesh', 'DMSCServiceMeshConfig', 'DMSCServiceDiscovery',
     'DMSCServiceInstance', 'DMSCServiceStatus', 'DMSCServiceMeshStats',
     'DMSCTrafficRoute', 'DMSCMatchCriteria', 'DMSCRouteAction', 'DMSCWeightedDestination',
-    'DMSCTrafficManager', 'DMSCHealthChecker', 'DMSCHealthSummary',
+    'DMSCTrafficManager', 'DMSCHealthChecker', 'DMSCHealthSummary', 'DMSCHealthCheckType',
     
     # Auth classes - Authentication, authorization, and session management
     'DMSCAuthModule', 'DMSCAuthConfig', 'DMSCJWTManager', 'DMSCJWTClaims', 'DMSCJWTValidationOptions',
@@ -265,7 +274,7 @@ __all__ = [
     'DMSCResourceAllocation', 'DMSCRequestSlaClass', 'DMSCResourceWeights',
     'DMSCAffinityRules',
     'DMSCResourcePool', 'DMSCResourcePoolConfig', 'DMSCResourcePoolStatistics', 'DMSCResourcePoolManager',
-    'DMSCConnectionPoolStatistics',
+    'DMSCResourcePoolStatus', 'DMSCConnectionPoolStatistics',
     'DMSCResourceScheduler', 'DMSCDeviceScheduler', 'DMSCSchedulingPolicy',
     'DMSCAllocationRecord', 'DMSCAllocationRequest', 'DMSCAllocationStatistics',
     'DMSCDeviceTypeStatistics', 'DMSCSchedulingRecommendation', 'DMSCSchedulingRecommendationType',
@@ -321,6 +330,7 @@ class DMSCAppBuilder:
         app = (DMSCAppBuilder()
             .with_config("config.yaml")
             .with_logging(DMSCLogConfig())
+            .with_observability(DMSCObservabilityConfig())
             .build())
     """
     
@@ -338,9 +348,44 @@ class DMSCAppBuilder:
         self._builder.py_with_logging(config)
         return self
     
+    def with_observability(self, config: 'DMSCObservabilityConfig') -> 'DMSCAppBuilder':
+        """Configure observability with the provided config."""
+        self._builder.py_with_observability(config)
+        return self
+    
     def with_module(self, module) -> 'DMSCAppBuilder':
         """Add a module to the application."""
         self._builder.py_with_module(module)
+        return self
+    
+    def with_modules(self, modules: list) -> 'DMSCAppBuilder':
+        """Add multiple modules to the application."""
+        self._builder.py_with_modules(modules)
+        return self
+    
+    def with_async_module(self, module) -> 'DMSCAppBuilder':
+        """Add an async module to the application."""
+        self._builder.py_with_async_module(module)
+        return self
+    
+    def with_async_modules(self, modules: list) -> 'DMSCAppBuilder':
+        """Add multiple async modules to the application."""
+        self._builder.py_with_async_modules(modules)
+        return self
+    
+    def with_python_module(self, module) -> 'DMSCAppBuilder':
+        """Add a Python module to the application."""
+        self._builder.py_with_python_module(module)
+        return self
+    
+    def with_dms_module(self, module) -> 'DMSCAppBuilder':
+        """Add a DMSC module to the application."""
+        self._builder.py_with_dms_module(module)
+        return self
+    
+    def with_dms_modules(self, modules: list) -> 'DMSCAppBuilder':
+        """Add multiple DMSC modules to the application."""
+        self._builder.py_with_dms_modules(modules)
         return self
     
     def build(self) -> 'DMSCAppRuntime':

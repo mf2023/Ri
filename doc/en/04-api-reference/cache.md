@@ -197,6 +197,7 @@ Cache backend type enum.
 
 - [README](./README.md): Module overview with API reference summary and quick navigation
 - [auth](./auth.md): Authentication module handling user authentication and authorization
+- [cache](./cache.md): Cache module providing in-memory and distributed cache support
 - [config](./config.md): Configuration module managing application configuration
 - [core](./core.md): Core module providing error handling and service context
 - [database](./database.md): Database module providing database operation support
@@ -205,15 +206,11 @@ Cache backend type enum.
 - [gateway](./gateway.md): Gateway module providing API gateway functionality
 - [grpc](./grpc.md): gRPC module with service registry and Python bindings
 - [hooks](./hooks.md): Hooks module providing lifecycle hook support
-- [http](./http.md): HTTP module providing HTTP server and client functionality
 - [log](./log.md): Logging module for protocol events
-- [mq](./mq.md): Message queue module providing message queue support
 - [observability](./observability.md): Observability module for protocol performance monitoring
-- [orm](./orm.md): ORM module with query builder and pagination support
 - [protocol](./protocol.md): Protocol module providing communication protocol support
-- [security](./security.md): Security module providing encryption and decryption functions
+- [queue](./queue.md): Message queue module providing message queue support
 - [service_mesh](./service_mesh.md): Service mesh module using protocols for inter-service communication
-- [storage](./storage.md): Storage module providing cloud storage support
 - [validation](./validation.md): Validation module providing data validation functions
 - [ws](./ws.md): WebSocket module with Python bindings for real-time communication
 

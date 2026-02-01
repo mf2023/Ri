@@ -829,7 +829,5 @@ Through this example, you should have mastered the core functions and usage meth
 - [basic-app](./basic-app.md): Basic application example, learn how to create and run your first DMSC application
 - [database](./database.md): Database examples, learn database connection and query operations
 - [grpc](./grpc.md): gRPC examples, implement high-performance RPC calls
-- [http](./http.md): HTTP service examples, build Web applications and RESTful APIs
-- [mq](./mq.md): Message queue examples, implement asynchronous message processing
 - [protocol](./protocol.md): Protocol examples, implement custom communication protocols
 - [service_mesh](./service_mesh.md): Service mesh examples, implement inter-service communication

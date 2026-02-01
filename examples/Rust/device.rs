@@ -34,7 +34,7 @@
 //! - Device status monitoring
 //! - Resource pool management
 
-use dmsc::device::{DMSCDeviceControlModule, DMSCDeviceControlConfig, DMSCDevice, DMSCDeviceType, DMSCDeviceStatus, DMSCDeviceCapabilities};
+use dmsc::device::{DMSCDeviceControlModule, DMSCDeviceControlConfig, DMSCDevice, DMSCDeviceType, DMSCDeviceStatus, DMSCDeviceCapabilities, DMSCResourcePoolStatus};
 use dmsc::core::DMSCResult;
 
 /// Main entry point for the device management module example.
@@ -250,19 +250,36 @@ fn main() -> DMSCResult<()> {
         ).await?;
         println!("   Resource request created: {}\n", request.request_id());
 
-        // Step 12: Deregister a device
+        // Step 12: Resource pool status management
+        // Demonstrates resource pool monitoring and status tracking
+        println!("12. Resource pool status management...");
+        let pool_status = DMSCResourcePoolStatus::new(
+            100,   // total_capacity
+            75,    // available_capacity
+            25,    // allocated_capacity
+            5,     // pending_requests
+            0.25,  // utilization_rate
+        );
+        println!("   Resource pool status:");
+        println!("   - Total capacity: {}", pool_status.total_capacity());
+        println!("   - Available capacity: {}", pool_status.available_capacity());
+        println!("   - Allocated capacity: {}", pool_status.allocated_capacity());
+        println!("   - Pending requests: {}", pool_status.pending_requests());
+        println!("   - Utilization rate: {:.2}%\n", pool_status.utilization_rate() * 100.0);
+
+        // Step 13: Deregister a device
         // Demonstrates device removal from management
-        println!("12. Deregistering test device...");
+        println!("13. Deregistering test device...");
         device_module.deregister_device("actuator-01").await?;
         println!("   Deregistered actuator-01\n");
 
-        // Step 13: Verify final device count
+        // Step 14: Verify final device count
         // Demonstrates device count after removal
-        println!("13. Final device count...");
+        println!("14. Final device count...");
         let devices = device_module.list_devices().await?;
         println!("   Remaining devices: {}\n", devices.len());
 
         println!("=== Device Management Example Completed ===");
-        Ok::<(), DMSCError>(())
+        Ok::<(), dmsc::DMSCError>(())
     })?
 }

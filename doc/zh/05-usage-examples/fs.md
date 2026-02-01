@@ -329,13 +329,9 @@ fn cleanup_old_data(fs: &DMSCFileSystem) -> DMSCResult<()> {
 - [gateway](./gateway.md)：API网关示例
 - [grpc](./grpc.md)：gRPC 示例，实现高性能 RPC 调用
 - [hooks](./hooks.md)：钩子系统示例
-- [http](./http.md)：HTTP服务器和客户端示例
-- [mq](./mq.md)：消息队列示例
 - [observability](./observability.md)：可观测性示例
 - [protocol](./protocol.md)：协议模块示例
-- [security](./security.md)：安全和加密示例
 - [service_mesh](./service_mesh.md)：服务网格示例
-- [storage](./storage.md)：云存储示例
 - [validation](./validation.md)：数据验证示例
 - [websocket](./websocket.md)：WebSocket 示例，实现实时双向通信
 

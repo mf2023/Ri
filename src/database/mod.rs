@@ -167,8 +167,9 @@ pub use orm::{QueryBuilder, Criteria, SortOrder, Pagination, ComparisonOperator,
 use crate::core::{DMSCResult, DMSCError};
 use async_trait::async_trait;
 use thiserror::Error as ThisError;
+use serde::{Serialize, Deserialize};
 
-#[derive(Debug, ThisError)]
+#[derive(Debug, ThisError, Clone, Serialize, Deserialize)]
 pub enum DMSCDatabaseTransactionError {
     #[error("Transaction commit failed: {message}")]
     CommitFailed { message: String },

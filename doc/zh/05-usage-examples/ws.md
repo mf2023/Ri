@@ -829,7 +829,5 @@ if __name__ == "__main__":
 - [basic-app](./basic-app.md)：基础应用程序示例，学习如何创建和运行您的第一个 DMSC 应用程序
 - [database](./database.md)：数据库示例，学习数据库连接和查询操作
 - [grpc](./grpc.md)：gRPC 示例，实现高性能 RPC 调用
-- [http](./http.md)：HTTP 服务示例，构建 Web 应用程序和 RESTful API
-- [mq](./mq.md)：消息队列示例，实现异步消息处理
 - [protocol](./protocol.md)：协议示例，实现自定义通信协议
 - [service_mesh](./service_mesh.md)：服务网格示例，实现服务间通信

@@ -35,14 +35,20 @@ config模块包含以下子模块：
 |:--------|:-------------|:--------|:--------|
 | `new()` | 创建新的配置 | 无 | `DMSCConfig` |
 | `get(key)` | 获取配置值 | `key: &str` | `String` 或 `None` |
-| `get_f64(key)` | 获取 f64 值 | `key: &str` | `f64` |
-| `get_usize(key)` | 获取 usize 值 | `key: &str` | `usize` |
+| `get_str(key)` | 获取字符串值 | `key: &str` | `&str` 或 `None` |
+| `get_bool(key)` | 获取布尔值 | `key: &str` | `Option<bool>` |
+| `get_i64(key)` | 获取 i64 值 | `key: &str` | `Option<i64>` |
+| `get_u64(key)` | 获取 u64 值 | `key: &str` | `Option<u64>` |
+| `get_f32(key)` | 获取 f32 值 | `key: &str` | `Option<f32>` |
+| `get_f64(key)` | 获取 f64 值 | `key: &str` | `Option<f64>` |
+| `get_usize(key)` | 获取 usize 值 | `key: &str` | `Option<usize>` |
+| `get_i32(key)` | 获取 i32 值 | `key: &str` | `Option<i32>` |
+| `get_u32(key)` | 获取 u32 值 | `key: &str` | `Option<u32>` |
 | `set(key, value)` | 设置配置值 | `key: &str`, `value: &str` | 无 |
-| `contains(key)` | 检查键是否存在 | `key: &str` | `bool` |
-| `keys()` | 获取所有键 | 无 | `Vec<String>` |
-| `values()` | 获取所有值 | 无 | `Vec<String>` |
-| `len()` | 获取配置数量 | 无 | `usize` |
-| `is_empty()` | 检查是否为空 | 无 | `bool` |
+| `has_key(key)` | 检查键是否存在 | `key: &str` | `bool` |
+| `keys()` | 获取所有键 | 无 | `Vec<&str>` |
+| `all_values()` | 获取所有值 | 无 | `Vec<&str>` |
+| `count()` | 获取配置数量 | 无 | `usize` |
 | `merge(other)` | 合并配置 | `other: &DMSCConfig` | 无 |
 | `clear()` | 清空配置 | 无 | 无 |
 
@@ -284,52 +290,36 @@ let timeout = ctx.config().get_typed("service.timeout").unwrap_or(30);
 
 </div>  
 
-### 内置验证器
+### DMSCConfigValidator
+
+配置验证器，用于验证配置的完整性和有效性。
 
 ```rust
-use dmsc::prelude::*;
+use dmsc::config::DMSCConfigValidator;
 
-let config = DMSCConfigBuilder::new()
-    .add_source(DMSCConfigSource::File("config.yaml".to_string()))
-    .add_validator(RequiredValidator::new(vec![
-        "service.name",
-        "service.port",
-        "database.url",
-    ]))
-    .add_validator(RangeValidator::new("service.port", 1, 65535))
-    .add_validator(RegexValidator::new("service.host", r"^[a-zA-Z0-9.-]+$"))
-    .build()?;
+let mut validator = DMSCConfigValidator::new();
+validator.add_required("service.name".to_string());
+validator.add_port_check("service.port".to_string());
+validator.add_timeout_check("server.timeout".to_string());
+validator.add_secret_check("auth.jwt.secret".to_string());
+validator.add_url_check("database.url".to_string());
+validator.add_positive_int_check("pool.size".to_string());
+
+let config = DMSCConfigManager::new().config();
+validator.validate_config(&config)?;
 ```
 
-### 自定义验证器
+#### 方法
 
-```rust
-use dmsc::prelude::*;
-
-struct CustomValidator;
-
-impl ConfigValidator for CustomValidator {
-    fn validate(&self, config: &DMSCConfig) -> DMSCResult<()> {
-        let port: u16 = config.get_typed("service.port")?;
-        let host: String = config.get_typed("service.host")?;
-        
-        if port < 1024 && host != "localhost" {
-            return Err(DMSCError::new("INVALID_CONFIG", "Privileged ports require localhost"));
-        }
-        
-        Ok(())
-    }
-    
-    fn name(&self) -> &str {
-        "custom_validator"
-    }
-}
-
-let config = DMSCConfigBuilder::new()
-    .add_source(DMSCConfigSource::File("config.yaml".to_string()))
-    .add_validator(CustomValidator)
-    .build()?;
-```
+| 方法 | 描述 |
+|:--------|:-------------|
+| `add_required(key)` | 添加必需配置项检查 |
+| `add_port_check(key)` | 添加端口号验证 (1-65535) |
+| `add_timeout_check(key)` | 添加超时时间验证 (1-86400秒) |
+| `add_secret_check(key)` | 添加密钥强度检查 (最小8字符) |
+| `add_url_check(key)` | 添加URL格式验证 |
+| `add_positive_int_check(key)` | 添加正整数验证 |
+| `validate_config(config)` | 验证配置完整性 |
 
 <div align="center">
 
@@ -404,72 +394,9 @@ service:
 ```
 <div align="center">
 
-## 配置加密
+## 最佳实践
 
-</div>  
-
-### 敏感信息加密
-
-```rust
-// 加密配置值
-let encrypted_value = encrypt_config_value("secret-password", &encryption_key)?;
-config.set("database.password", encrypted_value)?;
-
-// 解密配置值
-let decrypted_value = decrypt_config_value(&encrypted_value, &encryption_key)?;
-```
-
-### 使用密钥管理服务
-
-```rust
-// 从AWS Secrets Manager获取配置
-let secret_config = get_secret_from_aws("my-service/config").await?;
-config.merge(secret_config)?;
-
-// 从HashiCorp Vault获取配置
-let vault_config = get_secret_from_vault("secret/my-service").await?;
-config.merge(vault_config)?;
-```
-
-<div align="center">
-
-## 配置调试
-
-</div>      
-
-### 配置信息
-
-```rust
-// 获取配置信息
-let info = config.get_info()?;
-println!("Config sources: {:?}", info.sources);
-println!("Last reload: {:?}", info.last_reload);
-println!("Total keys: {}", info.total_keys);
-
-// 导出配置
-let exported = config.export()?;
-println!("Current config: {}", exported);
-```
-
-### 配置差异
-
-```rust
-// 比较配置差异
-let diff = config.compare_with_file("new-config.yaml")?;
-for change in diff {
-    match change.change_type {
-        ConfigChangeType::Added => println!("Added: {}", change.key),
-        ConfigChangeType::Modified => println!("Modified: {} ({} -> {})", change.key, change.old_value, change.new_value),
-        ConfigChangeType::Removed => println!("Removed: {}", change.key),
-    }
-}
-```
-
-<div align="center">
-
-## 错误处理
-
-</div>  
+</div>
 
 ### 配置错误码
 
@@ -588,14 +515,9 @@ match ctx.config().get_typed::<u16>("service.port") {
 - [gateway](./gateway.md): 网关模块，提供API网关功能
 - [grpc](./grpc.md): gRPC 模块，带服务注册和 Python 绑定
 - [hooks](./hooks.md): 钩子模块，提供生命周期钩子支持
-- [http](./http.md): HTTP模块，提供HTTP服务器和客户端功能
 - [log](./log.md): 日志模块，记录协议事件
-- [mq](./mq.md): 消息队列模块，提供消息队列支持
 - [observability](./observability.md): 可观测性模块，监控协议性能
-- [orm](./orm.md): ORM 模块，带查询构建器和分页支持
 - [protocol](./protocol.md): 协议模块，提供通信协议支持
-- [security](./security.md): 安全模块，提供加密和解密功能
 - [service_mesh](./service_mesh.md): 服务网格模块，使用协议进行服务间通信
-- [storage](./storage.md): 存储模块，提供云存储支持
 - [validation](./validation.md): 验证模块，提供数据验证功能
 - [ws](./ws.md): WebSocket 模块，带 Python 绑定的实时通信

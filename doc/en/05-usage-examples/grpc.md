@@ -642,8 +642,6 @@ Through this example, you should have mastered the core functions and usage meth
 - [authentication](./authentication.md): Authentication examples, learn JWT, OAuth2 and RBAC authentication authorization
 - [basic-app](./basic-app.md): Basic application example, learn how to create and run your first DMSC application
 - [database](./database.md): Database examples, learn database connection and query operations
-- [http](./http.md): HTTP service examples, build Web applications and RESTful APIs
 - [websocket](./websocket.md): WebSocket examples, implement real-time bidirectional communication
-- [mq](./mq.md): Message queue examples, implement asynchronous message processing
 - [protocol](./protocol.md): Protocol examples, implement custom communication protocols
 - [service_mesh](./service_mesh.md): Service mesh examples, implement inter-service communication

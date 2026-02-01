@@ -1094,9 +1094,5 @@ Through this example, you can build high-performance, highly available distribut
 - [websocket](./websocket.md): WebSocket examples, implement real-time bidirectional communication
 
 - [database](./database.md): Database examples, learn database connection and query operations
-- [http](./http.md): HTTP service examples, build web applications and RESTful APIs
-- [mq](./mq.md): Message queue examples, implement asynchronous message processing and event-driven architecture
 - [observability](./observability.md): Observability examples, monitor application performance and health status
-- [security](./security.md): Security examples, encryption, hashing and security best practices
-- [storage](./storage.md): Storage examples, file upload/download and storage management
 - [validation](./validation.md): Validation examples, data validation and cleanup operations

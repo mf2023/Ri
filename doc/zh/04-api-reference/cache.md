@@ -73,14 +73,40 @@ let user = cache_manager.get_or_set("user:1", Some(3600), || async {
 
 | 方法 | 描述 | 参数 | 返回值 |
 |:--------|:-------------|:--------|:--------|
-| `get(key)` | 获取缓存值 | `key: &str` | `DMSCResult<Option<T>>` |
-| `set(key, value, ttl_seconds)` | 设置缓存值 | `key: &str`, `value: &T`, `ttl_seconds: Option<u64>` | `DMSCResult<()>` |
-| `delete(key)` | 删除缓存 | `key: &str` | `DMSCResult<bool>` |
+| `get(key)` | 获取缓存值 | `key: &str` | `DMSCResult<Option<String>>` |
+| `set(key, value, ttl_seconds)` | 设置缓存值 | `key: &str`, `value: &str`, `ttl_seconds: Option<u64>` | `DMSCResult<()>` |
+| `delete(key)` | 删除缓存 | `key: &str` | `DMSCResult<()>` |
 | `exists(key)` | 检查缓存是否存在 | `key: &str` | `bool` |
 | `clear()` | 清空所有缓存 | 无 | `DMSCResult<()>` |
 | `stats()` | 获取缓存统计 | 无 | `DMSCCacheStats` |
 | `cleanup_expired()` | 清理过期缓存 | 无 | `DMSCResult<usize>` |
-| `get_or_set(key, ttl_seconds, factory)` | 获取或设置缓存值 | `key: &str`, `ttl_seconds: Option<u64>`, `factory: F` 其中 `F: FnOnce() -> Fut`, `Fut: Future` | `DMSCResult<T>` |
+
+#### 使用示例
+
+```rust
+use dmsc::cache::DMSCCacheModule;
+
+let cache_module = DMSCCacheModule::new(config).await?;
+let cache_manager = cache_module.cache_manager();
+
+// 设置缓存
+cache_manager.set("key", "value", Some(3600)).await?;
+
+// 获取缓存
+let result = cache_manager.get("key").await?;
+match result {
+    Some(value) => println!("Cache hit: {}", value),
+    None => println!("Cache miss"),
+}
+
+// 检查缓存是否存在
+if cache_manager.exists("key") {
+    println!("Key exists");
+}
+
+// 删除缓存
+cache_manager.delete("key").await?;
+```
 
 ### DMSCCacheConfig
 
@@ -205,15 +231,10 @@ for (_, cached) in cache.iter() {
 - [gateway](./gateway.md): 网关模块，提供API网关功能
 - [grpc](./grpc.md): gRPC 模块，带服务注册和 Python 绑定
 - [hooks](./hooks.md): 钩子模块，提供生命周期钩子支持
-- [http](./http.md): HTTP模块，提供HTTP服务器和客户端功能
 - [log](./log.md): 日志模块，记录协议事件
-- [mq](./mq.md): 消息队列模块，提供消息队列支持
 - [observability](./observability.md): 可观测性模块，监控协议性能
-- [orm](./orm.md): ORM 模块，带查询构建器和分页支持
 - [protocol](./protocol.md): 协议模块，提供通信协议支持
-- [security](./security.md): 安全模块，提供加密和解密功能
 - [service_mesh](./service_mesh.md): 服务网格模块，使用协议进行服务间通信
-- [storage](./storage.md): 存储模块，提供云存储支持
 - [validation](./validation.md): 验证模块，提供数据验证功能
 - [ws](./ws.md): WebSocket 模块，带 Python 绑定的实时通信
 

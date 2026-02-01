@@ -227,7 +227,7 @@ async def demonstrate_application():
     print("=== DMSC Complete Application ===\n")
     
     print("1. Application initialization...")
-    builder = DMSCAppBuilder.new()
+    builder = DMSCAppBuilder()
     app = builder.with_config("config.yaml").build()
     print("   Application initialized\n")
     
@@ -451,6 +451,5 @@ For the complete example project, please refer to:
 
 - See [Authentication Example](authentication.md) for JWT and OAuth configuration
 - See [Caching Example](caching.md) for cache policies
-- See [Message Queue Example](mq.md) for message handling
 - See [Service Mesh Example](service_mesh.md) for service discovery
 - See [Observability Example](observability.md) for metrics and tracing

@@ -980,17 +980,86 @@ impl DMSCDeviceControlModule {
 /// This struct contains information about the current status of a resource pool, including capacity,
 /// allocation, and utilization.
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 pub struct DMSCResourcePoolStatus {
     /// Total capacity of the resource pool
+    #[pyo3(get, set)]
     pub total_capacity: usize,
     /// Available capacity in the resource pool
+    #[pyo3(get, set)]
     pub available_capacity: usize,
     /// Allocated capacity in the resource pool
+    #[pyo3(get, set)]
     pub allocated_capacity: usize,
     /// Number of pending resource requests
+    #[pyo3(get, set)]
     pub pending_requests: usize,
     /// Resource utilization rate (0.0 to 1.0)
+    #[pyo3(get, set)]
     pub utilization_rate: f64,
+}
+
+#[cfg(feature = "pyo3")]
+#[pyo3::prelude::pymethods]
+impl DMSCResourcePoolStatus {
+    #[new]
+    #[pyo3(signature = (total_capacity=0, available_capacity=0, allocated_capacity=0, pending_requests=0, utilization_rate=0.0))]
+    fn py_new(total_capacity: usize, available_capacity: usize, allocated_capacity: usize, pending_requests: usize, utilization_rate: f64) -> Self {
+        Self {
+            total_capacity,
+            available_capacity,
+            allocated_capacity,
+            pending_requests,
+            utilization_rate,
+        }
+    }
+    
+    #[staticmethod]
+    fn default_status() -> Self {
+        Self::default()
+    }
+    
+    #[pyo3(name = "total_capacity")]
+    fn total_capacity_impl(&self) -> usize {
+        self.total_capacity
+    }
+    
+    #[pyo3(name = "available_capacity")]
+    fn available_capacity_impl(&self) -> usize {
+        self.available_capacity
+    }
+    
+    #[pyo3(name = "allocated_capacity")]
+    fn allocated_capacity_impl(&self) -> usize {
+        self.allocated_capacity
+    }
+    
+    #[pyo3(name = "pending_requests")]
+    fn pending_requests_impl(&self) -> usize {
+        self.pending_requests
+    }
+    
+    #[pyo3(name = "utilization_rate")]
+    fn utilization_rate_impl(&self) -> f64 {
+        self.utilization_rate
+    }
+    
+    fn __str__(&self) -> String {
+        format!("DMSCResourcePoolStatus(total: {}, available: {}, allocated: {}, utilization: {:.2}%)",
+                self.total_capacity, self.available_capacity, self.allocated_capacity, self.utilization_rate)
+    }
+}
+
+impl Default for DMSCResourcePoolStatus {
+    fn default() -> Self {
+        Self {
+            total_capacity: 0,
+            available_capacity: 0,
+            allocated_capacity: 0,
+            pending_requests: 0,
+            utilization_rate: 0.0,
+        }
+    }
 }
 
 #[async_trait::async_trait]

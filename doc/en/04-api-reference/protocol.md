@@ -183,6 +183,66 @@ let plaintext = pq_crypto.decrypt(&secret_key, &ciphertext)?;
 
 <div align="center">
 
+## National Cryptography (Guomi)
+
+</div>
+
+### DMSCGuomi
+
+National cryptography algorithm suite (SM2/SM3/SM4).
+
+```rust
+use dmsc::protocol::guomi::{DMSCGuomi, SM2Signer, SM3, SM4};
+
+// SM2 signature
+let signer = SM2Signer::new()?;
+let (sm2_public, sm2_private) = signer.keygen()?;
+let signature = signer.sign(&sm2_private, &message)?;
+
+// SM3 hash - returns DMSCResult<[u8; 32]>
+let sm3 = SM3::new();
+let sm3_hash = sm3.hash(&data)?;
+
+// SM4 encryption
+let sm4 = SM4::new();
+let sm4_key = [0u8; 16]; // 16-byte key
+let encrypted = sm4.encrypt_ecb(&sm4_key, &data)?;
+```
+
+### SM2Signer
+
+SM2 elliptic curve digital signature algorithm.
+
+| Method | Description | Parameters | Returns |
+|:--------|:-------------|:--------|:--------|
+| `new()` | Create signer | None | `DMSCResult<Self>` |
+| `keygen()` | Generate key pair | None | `DMSCResult<(Vec<u8>, Vec<u8>)>` |
+| `sign(secret_key, message)` | Sign message | `secret_key: &[u8]`, `message: &[u8]` | `DMSCResult<Vec<u8>>` |
+| `verify(public_key, message, signature)` | Verify signature | `public_key: &[u8]`, `message: &[u8]`, `signature: &[u8]` | `DMSCResult<bool>` |
+
+### SM3
+
+SM3 cryptographic hash algorithm.
+
+| Method | Description | Parameters | Returns |
+|:--------|:-------------|:--------|:--------|
+| `new()` | Create hasher | None | `Self` |
+| `hash(data)` | Compute hash | `data: &[u8]` | `DMSCResult<[u8; 32]>` |
+
+### SM4
+
+SM4 block cipher algorithm.
+
+| Method | Description | Parameters | Returns |
+|:--------|:-------------|:--------|:--------|
+| `new()` | Create cipher | None | `Self` |
+| `encrypt_ecb(key, plaintext)` | ECB mode encryption | `key: &[u8; 16]`, `plaintext: &[u8]` | `DMSCResult<Vec<u8>>` |
+| `decrypt_ecb(key, ciphertext)` | ECB mode decryption | `key: &[u8; 16]`, `ciphertext: &[u8]` | `DMSCResult<Vec<u8>>` |
+| `encrypt_cbc(key, iv, plaintext)` | CBC mode encryption | `key: &[u8; 16]`, `iv: &[u8; 16]`, `plaintext: &[u8]` | `DMSCResult<Vec<u8>>` |
+| `decrypt_cbc(key, iv, ciphertext)` | CBC mode decryption | `key: &[u8; 16]`, `iv: &[u8; 16]`, `ciphertext: &[u8]` | `DMSCResult<Vec<u8>>` |
+
+<div align="center">
+
 ## Hardware Security Module (HSM)
 
 </div>
@@ -375,13 +435,9 @@ Protocol statistics.
 - [gateway](./gateway.md): Gateway module providing API gateway functionality
 - [grpc](./grpc.md): gRPC module with service registry and Python bindings
 - [hooks](./hooks.md): Hooks module providing lifecycle hook support
-- [http](./http.md): HTTP module providing HTTP server and client functionality
 - [log](./log.md): Logging module for protocol events
-- [mq](./mq.md): Message queue module providing message queue support
 - [observability](./observability.md): Observability module for protocol performance monitoring
-- [orm](./orm.md): ORM module with query builder and pagination support
-- [security](./security.md): Security module providing encryption and decryption functions
+- [queue](./queue.md): Message queue module providing message queue support
 - [service_mesh](./service_mesh.md): Service mesh module using protocols for inter-service communication
-- [storage](./storage.md): Storage module providing cloud storage support
 - [validation](./validation.md): Validation module providing data validation functions
 - [ws](./ws.md): WebSocket module with Python bindings for real-time communication

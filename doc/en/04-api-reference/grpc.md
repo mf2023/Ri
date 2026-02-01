@@ -418,7 +418,15 @@ print(registry.list_services())
 - [config](./config.md): Configuration module managing application configuration
 - [core](./core.md): Core module providing error handling and service context
 - [database](./database.md): Database module providing database access layer
-- [http](./http.md): HTTP module providing HTTP server and client functionality
+- [device](./device.md): Device module using protocols for device communication
+- [fs](./fs.md): Filesystem module providing file operation functions
+- [gateway](./gateway.md): Gateway module providing API gateway functionality
+- [grpc](./grpc.md): gRPC module with service registry and Python bindings
+- [hooks](./hooks.md): Hooks module providing lifecycle hook support
+- [log](./log.md): Logging module for protocol events
+- [observability](./observability.md): Observability module for protocol performance monitoring
 - [protocol](./protocol.md): Protocol module providing communication protocol support
-- [security](./security.md): Security module providing encryption and decryption functions
+- [queue](./queue.md): Message queue module providing message queue support
 - [service_mesh](./service_mesh.md): Service mesh module using protocols for inter-service communication
+- [validation](./validation.md): Validation module providing data validation functions
+- [ws](./ws.md): WebSocket module with Python bindings for real-time communication

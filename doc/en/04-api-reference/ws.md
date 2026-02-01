@@ -543,7 +543,5 @@ manager.send_to("session-123", b"Hello!")
 - [config](./config.md): Configuration module managing application configuration
 - [core](./core.md): Core module providing error handling and service context
 - [grpc](./grpc.md): gRPC module providing RPC functionality
-- [http](./http.md): HTTP module providing HTTP server and client functionality
-- [mq](./mq.md): Message queue module providing message queue support
 - [protocol](./protocol.md): Protocol module providing communication protocol support
 - [service_mesh](./service_mesh.md): Service mesh module using protocols for inter-service communication

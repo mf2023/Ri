@@ -497,19 +497,21 @@ National cryptography algorithms are suitable for scenarios requiring compliance
 | **SM4** | Block cipher | Data encryption | GM/T 0002 |
 
 ```rust
-use dmsc::protocol::guomi::DMSCGmCrypto;
+use dmsc::protocol::guomi::{DMSCGuomi, SM2Signer, SM3, SM4};
 
 // SM2 signature
-let gm_crypto = DMSCGmCrypto::new();
-let (sm2_public, sm2_private) = gm_crypto.generate_sm2_keypair()?;
-let signature = gm_crypto.sm2_sign(&message, &sm2_private)?;
+let signer = SM2Signer::new()?;
+let (sm2_public, sm2_private) = signer.keygen()?;
+let signature = signer.sign(&sm2_private, &message)?;
 
-// SM3 hash
-let sm3_hash = gm_crypto.sm3_hash(&data)?;
+// SM3 hash - returns DMSCResult<[u8; 32]>
+let sm3 = SM3::new();
+let sm3_hash = sm3.hash(&data)?;
 
 // SM4 encryption
-let sm4_key = gm_crypto.generate_sm4_key()?;
-let encrypted = gm_crypto.sm4_encrypt(&data, &sm4_key)?;
+let sm4 = SM4::new();
+let sm4_key = [0u8; 16]; // 16-byte key
+let encrypted = sm4.encrypt_ecb(&sm4_key, &data)?;
 ```
 
 #### 11.4.2 Compliance Requirements

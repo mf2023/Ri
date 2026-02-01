@@ -21,18 +21,14 @@ This directory contains detailed API documentation for each core module of DMSC.
 | **database** | Database access layer with ORM support | [database.md](./database.md) |
 | **device** | Device control, discovery, and intelligent scheduling | [device.md](./device.md) |
 | **fs** | Secure file system operations and management | [fs.md](./fs.md) |
-| **gateway** | API gateway with load balancing, rate limiting, and circuit breaking | [gateway.md](./gateway.md) |
+| **gateway** | API gateway with HTTP server, routing, middleware, load balancing, rate limiting, and circuit breaking | [gateway.md](./gateway.md) |
 | **grpc** | High-performance RPC with service registry and Python bindings | [grpc.md](./grpc.md) |
 | **hooks** | Lifecycle event hooks (Startup, Shutdown, etc.) | [hooks.md](./hooks.md) |
-| **http** | HTTP server and client with request/response handling | [http.md](./http.md) |
 | **log** | Structured logging with tracing context integration | [log.md](./log.md) |
-| **mq** | Message queue abstraction (Kafka, RabbitMQ, Redis, Memory) | [mq.md](./mq.md) |
 | **observability** | Metrics, tracing, and Grafana integration | [observability.md](./observability.md) |
-| **orm** | Type-safe ORM with query builder and pagination | [orm.md](./orm.md) |
-| **protocol** | Communication protocol support | [protocol.md](./protocol.md) |
-| **security** | Encryption, decryption, and security utilities | [security.md](./security.md) |
+| **protocol** | Communication protocol support with encryption, post-quantum crypto, and HSM | [protocol.md](./protocol.md) |
+| **queue** | Message queue abstraction (Kafka, RabbitMQ, Redis, Memory) | [queue.md](./queue.md) |
 | **service_mesh** | Service discovery, health checking, and traffic management | [service_mesh.md](./service_mesh.md) |
-| **storage** | Cloud storage abstraction (S3, OSS, COS) | [storage.md](./storage.md) |
 | **validation** | Data validation and sanitization | [validation.md](./validation.md) |
 | **ws** | WebSocket real-time communication with Python bindings | [ws.md](./ws.md) |
 

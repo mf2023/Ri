@@ -138,6 +138,10 @@ pub mod prelude {
     #[cfg(feature = "pyo3")]
     pub use crate::core::{DMSCHealthStatus, DMSCHealthCheckResult, DMSCHealthCheckConfig, DMSCHealthReport, DMSCHealthChecker};
     
+    /// Service mesh health check types
+    #[cfg(feature = "pyo3")]
+    pub use crate::service_mesh::health_check::{DMSCHealthCheckType, DMSCHealthSummary};
+    
     /// Lifecycle management
     #[cfg(feature = "pyo3")]
     pub use crate::core::DMSCLifecycleObserver;
@@ -478,6 +482,7 @@ pub mod py {
         m.add_class::<crate::device::DMSCRequestSlaClass>()?;
         m.add_class::<crate::device::DMSCResourceWeights>()?;
         m.add_class::<crate::device::DMSCAffinityRules>()?;
+        m.add_class::<crate::device::DMSCResourcePoolStatus>()?;
         m.add_class::<crate::device::pool::DMSCResourcePool>()?;
         m.add_class::<crate::device::pool::DMSCResourcePoolConfig>()?;
         m.add_class::<crate::device::pool::DMSCResourcePoolStatistics>()?;
