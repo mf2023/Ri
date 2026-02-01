@@ -4,7 +4,7 @@
 
 **Version: 0.1.6**
 
-**Last modified date: 2026-01-30**
+**Last modified date: 2026-02-01**
 
 本目录包含DMSC各个核心功能的使用示例，帮助您快速理解和使用DMSC框架。
 

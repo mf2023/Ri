@@ -4,7 +4,7 @@
 
 **Version: 0.1.6**
 
-**Last modified date: 2026-01-30**
+**Last modified date: 2026-02-01**
 
 The core module is the foundation of DMSC, providing runtime, error handling, service context, and module system functionality.
 

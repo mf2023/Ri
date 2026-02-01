@@ -10,7 +10,7 @@
 </p>
 
 <p align="center">
-  <strong>Version: 0.1.6</strong> | <strong>Last modified date: 2026-01-30</strong>
+  <strong>Version: 0.1.6</strong> | <strong>Last modified date: 2026-02-01</strong>
 </p>
 
 <a href="https://space.bilibili.com/3493284091529457" target="_blank">

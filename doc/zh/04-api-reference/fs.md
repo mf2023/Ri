@@ -4,7 +4,7 @@
 
 **Version: 0.1.6**
 
-**Last modified date: 2026-01-30**
+**Last modified date: 2026-02-01**
 
 fs模块提供安全的文件系统操作功能，支持原子写入、目录管理和分类目录组织。
 

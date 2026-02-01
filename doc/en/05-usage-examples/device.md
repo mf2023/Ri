@@ -4,7 +4,7 @@
 
 **Version: 0.1.6**
 
-**Last modified date: 2026-01-30**
+**Last modified date: 2026-02-01**
 
 This example demonstrates how to use the device module for device discovery, resource scheduling, and resource pool management.
 
