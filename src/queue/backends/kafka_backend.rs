@@ -17,75 +17,15 @@
 
 #![allow(non_snake_case)]
 
-//! # Kafka Queue Backend
-//!
-//! This module provides a Kafka implementation for the DMSC queue system. It allows
-//! sending and receiving messages using Apache Kafka as the underlying message broker.
-//!
-//! ## Key Components
-//!
-//! - **DMSCKafkaQueue**: Main Kafka queue implementation
-//! - **KafkaQueueProducer**: Kafka producer implementation
-//! - **KafkaQueueConsumer**: Kafka consumer implementation
-//!
-//! ## Design Principles
-//!
-//! 1. **Async Trait Implementation**: Implements the DMSCQueue, DMSCQueueProducer, and DMSCQueueConsumer traits
-//! 2. **Kafka Integration**: Uses the rdkafka crate for Kafka connectivity
-//! 3. **Thread Safety**: Uses Arc for safe sharing of connections and producers
-//! 4. **Future-based API**: Leverages async/await for non-blocking operations
-//! 5. **Consumer Groups**: Supports Kafka consumer groups for distributed consumption
-//! 6. **Error Handling**: Comprehensive error handling with DMSCResult
-//! 7. **Topic-based Queue**: Uses Kafka topics for message routing
-//! 8. **Partition Support**: Supports message partitioning by key
-//! 9. **Offset Management**: Tracks consumer offsets for reliable message delivery
-//! 10. **Stats Support**: Provides queue statistics
-//!
-//! ## Usage
-//!
-//! ```rust
-//! use dmsc::prelude::*;
-//!
-//! async fn example() -> DMSCResult<()> {
-//!     // Create a new Kafka queue
-//!     let queue = DMSCKafkaQueue::new("localhost:9092", "test-topic").await?;
-//!
-//!     // Create a producer
-//!     let producer = queue.create_producer().await?;
-//!
-//!     // Create a message
-//!     let message = DMSCQueueMessage {
-//!         id: "12345".to_string(),
-//!         payload: b"Hello, Kafka!".to_vec(),
-//!         headers: vec![("key1".to_string(), "value1".to_string())],
-//!         timestamp: chrono::Utc::now().timestamp_millis() as u64,
-//!         priority: 0,
-//!     };
-//!
-//!     // Send the message
-//!     producer.send(message).await?;
-//!
-//!     // Create a consumer
-//!     let consumer = queue.create_consumer("test-consumer-group").await?;
-//!
-//!     // Receive messages
-//!     if let Some(received_message) = consumer.receive().await? {
-//!         println!("Received message: {:?}", received_message);
-//!         consumer.ack(&received_message.id).await?;
-//!     }
-//!
-//!     Ok(())
-//! }
-//! ```
-
 use async_trait::async_trait;
 use rdkafka::admin::{AdminClient, AdminOptions, NewTopic, TopicReplication};
 use rdkafka::client::DefaultClientContext;
 use rdkafka::config::{ClientConfig, RDKafkaLogLevel};
-use rdkafka::consumer::{ConsumerContext, DefaultConsumerContext, StreamConsumer};
-use rdkafka::message::{Header, OwnedHeaders};
+use rdkafka::consumer::{Consumer, DefaultConsumerContext, StreamConsumer};
+use rdkafka::message::{BorrowedHeaders, Headers, Message};
 use rdkafka::producer::{FutureProducer, FutureRecord};
 use rdkafka::topic_partition_list::TopicPartitionList;
+use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::Duration;
 use tokio::sync::Mutex;
@@ -94,6 +34,7 @@ use crate::queue::{DMSCQueue, DMSCQueueMessage, DMSCQueueProducer, DMSCQueueCons
 
 type KafkaConsumer = StreamConsumer<DefaultConsumerContext>;
 
+#[allow(dead_code)]
 #[derive(Clone)]
 pub struct DMSCKafkaQueue {
     brokers: String,
@@ -105,15 +46,25 @@ pub struct DMSCKafkaQueue {
 
 impl DMSCKafkaQueue {
     pub async fn new(brokers: &str, topic: &str) -> DMSCResult<Self> {
-        let config = Self::create_base_config(brokers);
+        let mut config = ClientConfig::new();
+        config.set("bootstrap.servers", brokers);
+        config.set("message.timeout.ms", "30000");
+        config.set("request.timeout.ms", "10000");
+        config.set("session.timeout.ms", "30000");
+        config.set("enable.auto.commit", "false");
+        config.set("auto.offset.reset", "earliest");
+        config.set_log_level(RDKafkaLogLevel::Warning);
 
-        let producer = config.create::<FutureProducer>()
+        let producer: FutureProducer = config
+            .create::<FutureProducer>()
             .map_err(|e| DMSCError::Queue(format!("Failed to create Kafka producer: {}", e)))?;
 
-        let consumer = config.create::<KafkaConsumer>()
+        let consumer: KafkaConsumer = config
+            .create::<KafkaConsumer>()
             .map_err(|e| DMSCError::Queue(format!("Failed to create Kafka consumer: {}", e)))?;
 
-        let admin_client = config.create::<AdminClient<DefaultClientContext>>()
+        let admin_client: AdminClient<DefaultClientContext> = config
+            .create::<AdminClient<DefaultClientContext>>()
             .map_err(|e| DMSCError::Queue(format!("Failed to create Kafka admin client: {}", e)))?;
 
         let queue = Self {
@@ -129,28 +80,17 @@ impl DMSCKafkaQueue {
         Ok(queue)
     }
 
-    fn create_base_config(brokers: &str) -> ClientConfig {
-        ClientConfig::new()
-            .set("bootstrap.servers", brokers)
-            .set("message.timeout.ms", "30000")
-            .set("request.timeout.ms", "10000")
-            .set("session.timeout.ms", "30000")
-            .set("enable.auto.commit", "false")
-            .set("auto.offset.reset", "earliest")
-            .set_log_level(RDKafkaLogLevel::Warning)
-    }
-
     async fn ensure_topic_exists(&self) -> DMSCResult<()> {
         let metadata = self.consumer.fetch_metadata(None, Duration::from_secs(5))
             .map_err(|e| DMSCError::Queue(format!("Failed to get Kafka metadata: {}", e)))?;
 
-        let topic_exists = metadata.topics().iter().any(|t| t.name == self.topic);
+        let topic_exists = metadata.topics().iter().any(|t| t.name() == self.topic);
 
         if !topic_exists {
             let new_topic = NewTopic::new(&self.topic, 1, TopicReplication::Fixed(1));
             let admin_options = AdminOptions::new();
 
-            self.admin_client.create_topics(&[&new_topic], &admin_options).await
+            self.admin_client.create_topics(std::slice::from_ref(&new_topic), &admin_options).await
                 .map_err(|e| DMSCError::Queue(format!("Failed to create Kafka topic: {}", e)))?;
 
             tokio::time::sleep(Duration::from_secs(1)).await;
@@ -161,7 +101,6 @@ impl DMSCKafkaQueue {
 
     async fn get_topic_metadata(&self) -> DMSCResult<i32> {
         let metadata = self.consumer.fetch_metadata(Some(&self.topic), Duration::from_secs(5))
-            .await
             .map_err(|e| DMSCError::Queue(format!("Failed to get Kafka metadata: {}", e)))?;
 
         if let Some(topic_meta) = metadata.topics().first() {
@@ -222,7 +161,7 @@ impl DMSCQueue for DMSCKafkaQueue {
 
     async fn purge(&self) -> DMSCResult<()> {
         let admin_options = AdminOptions::new();
-        self.admin_client.delete_topics(&[&self.topic], &admin_options).await
+        self.admin_client.delete_topics(std::slice::from_ref(&self.topic.as_str()), &admin_options).await
             .map_err(|e| DMSCError::Queue(format!("Failed to purge Kafka topic: {}", e)))?;
 
         tokio::time::sleep(Duration::from_secs(1)).await;
@@ -251,24 +190,10 @@ impl DMSCQueueProducer for KafkaQueueProducer {
         };
 
         let key = message.id.as_bytes();
-        let headers: Vec<Header> = message.headers
-            .into_iter()
-            .filter_map(|(k, v)| {
-                if !k.is_empty() {
-                    Some(Header {
-                        key: &k,
-                        value: Some(v.into_bytes()),
-                    })
-                } else {
-                    None
-                }
-            })
-            .collect();
 
         let future_record = FutureRecord::to(&self.topic)
             .key(key)
-            .payload(&payload)
-            .headers(OwnedHeaders::from(headers));
+            .payload(&payload);
 
         self.producer.send(future_record, Duration::from_secs(10)).await
             .map_err(|(e, _)| DMSCError::Queue(format!("Failed to send message to Kafka: {}", e)))?;
@@ -284,6 +209,7 @@ impl DMSCQueueProducer for KafkaQueueProducer {
     }
 }
 
+#[allow(dead_code)]
 pub struct KafkaQueueConsumer {
     consumer: Arc<KafkaConsumer>,
     topic: String,
@@ -305,20 +231,23 @@ impl DMSCQueueConsumer for KafkaQueueConsumer {
             Ok(Ok(msg)) => {
                 let payload = msg.payload().unwrap_or(&[]).to_vec();
                 let key = msg.key().map(|k| String::from_utf8_lossy(k).to_string()).unwrap_or_default();
-                let timestamp = msg.timestamp().map(|t| t.timestamp_millis() as u64).unwrap_or(0);
+                let timestamp = msg.timestamp().to_millis().unwrap_or(0) as u64;
 
-                let headers: Vec<(String, String)> = msg.headers()
-                    .map(|h| h.iter().filter_map(|header| {
-                        header.value.map(|v| (header.key.to_string(), String::from_utf8_lossy(v).to_string()))
-                    }).collect())
+                let headers: HashMap<String, String> = msg.headers()
+                    .map(|h: &BorrowedHeaders| {
+                        h.iter().filter_map(|header| {
+                            header.value.map(|v| (header.key.to_string(), String::from_utf8_lossy(v).to_string()))
+                        }).collect()
+                    })
                     .unwrap_or_default();
 
                 let message = DMSCQueueMessage {
                     id: key,
                     payload,
                     headers,
-                    timestamp,
-                    priority: 0,
+                    timestamp: std::time::UNIX_EPOCH + Duration::from_millis(timestamp),
+                    retry_count: 0,
+                    max_retries: 3,
                 };
 
                 Ok(Some(message))
