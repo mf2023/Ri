@@ -1,11 +1,137 @@
 <div align="center">
 
 <h1 style="display: flex; flex-direction: column; align-items: center; gap: 12px; margin-bottom: 8px;">
-  <span style="display: flex; align-items: center; gap: 12px;"><img src="../assets/svg/dmsc.svg" width="48" height="48" alt="DMSC">Dunimd Middleware Service</span>
+  <span style="display: flex; align-items: center; gap: 12px;"><img src="assets/svg/dmsc.svg" width="48" height="48" alt="DMSC">Dunimd Middleware Service</span>
   <span style="font-size: 0.6em; color: #666; font-weight: normal;">Changelog</span>
 </h1>
 
 </div>
+
+## [0.1.6] - 2026-02-01
+
+## This version is a beta version with incomplete functionality and may pose risks. It is not recommended for production environments or official use.
+
+### ✨ Added
+
+#### Core Module
+- Added `with_cache_module()` method to DMSCAppBuilder for cache module configuration
+- Added `with_auth_module()` method to DMSCAppBuilder for auth module configuration
+- Added `with_queue_module()` method to DMSCAppBuilder for queue module configuration
+- Added `with_device_module()` method to DMSCAppBuilder for device module configuration
+- Changed `with_logging()` and `with_observability()` return types from `DMSCResult<Self>` to `Self`
+
+#### Python Bindings
+- Added DMSCAppBuilder to Python bindings (previously Rust-only)
+- Added DMSCHealthCheckType enum export
+- Added DMSCHealthSummary struct export
+- Added DMSCTrafficManager export
+- Added Python ORM Repository support (py_repository.rs)
+- Added comprehensive Python import tests (tests/Python/dmsc_imports.py)
+- Added comprehensive Python example (examples/Python/comprehensive_example.py)
+
+#### Cache Module
+- Added `with_config()` method to DMSCCacheModule for backend-based configuration
+
+#### Project Configuration
+- Added `.cargo/config.toml` for Cargo configuration
+- Added `CODE_OF_CONDUCT.md`
+- Added `CONTRIBUTING.md`
+- Added `SECURITY.md`
+- Added project logo `assets/svg/dmsc.svg`
+
+### 🔧 Changed
+
+#### Documentation Restructure
+- Renamed `mq.md` to `queue.md` (message queue documentation unified)
+- Removed `http.md`, `orm.md`, `security.md`, `storage.md` (content merged into other docs)
+- Added comprehensive `ws.md` (WebSocket documentation)
+- Updated all API reference documentation
+- Updated all usage example documentation
+
+#### Python Examples
+- Completely rewrote all Python examples to match actual API
+
+#### Rust Source
+- Improved error handling in auth module (replaced expect() with proper error returns)
+- Improved PyErr to DMSCError conversion
+- Updated post-quantum cryptography implementations (dilithium, falcon, guomi, kyber)
+- Improved Kafka backend and queue manager
+
+### 🗑️ Removed
+
+- Removed `src/queue/backends/kafka_windows_stub.rs`
+
+### 🐛 Fixed
+
+- Fixed missing Python type exports in lib.rs
+- Fixed auth module RedisError import reference
+- Fixed cache module with_config() backend creation
+- Fixed README.md and README.zh.md code examples
+
+---
+
+## [0.1.6] - 2026-02-01
+
+## 此版本为测试版，功能尚不完整，可能存在风险，不推荐用于生产环境或正式用途。
+
+### ✨ 新增功能
+
+#### 核心模块
+- 新增 `with_cache_module()` 方法到 DMSCAppBuilder 用于缓存模块配置
+- 新增 `with_auth_module()` 方法到 DMSCAppBuilder 用于认证模块配置
+- 新增 `with_queue_module()` 方法到 DMSCAppBuilder 用于队列模块配置
+- 新增 `with_device_module()` 方法到 DMSCAppBuilder 用于设备模块配置
+- 修改 `with_logging()` 和 `with_observability()` 返回类型从 `DMSCResult<Self>` 改为 `Self`
+
+#### Python 绑定
+- 新增 DMSCAppBuilder 到 Python 绑定（之前仅 Rust 可用）
+- 新增 DMSCHealthCheckType 枚举导出
+- 新增 DMSCHealthSummary 结构体导出
+- 新增 DMSCTrafficManager 导出
+- 新增 Python ORM Repository 支持 (py_repository.rs)
+- 新增 Python 导入测试 (tests/Python/dmsc_imports.py)
+- 新增综合 Python 示例 (examples/Python/comprehensive_example.py)
+
+#### 缓存模块
+- 新增 `with_config()` 方法到 DMSCCacheModule 用于基于配置的后端初始化
+
+#### 项目配置
+- 新增 `.cargo/config.toml` Cargo 配置文件
+- 新增 `CODE_OF_CONDUCT.md` 行为准则
+- 新增 `CONTRIBUTING.md` 贡献指南
+- 新增 `SECURITY.md` 安全政策
+- 新增项目 Logo `assets/svg/dmsc.svg`
+
+### 🔧 改进优化
+
+#### 文档重组
+- 重命名 `mq.md` 为 `queue.md`（消息队列文档统一）
+- 删除 `http.md`、`orm.md`、`security.md`、`storage.md`（内容合并到其他文档）
+- 新增完整 `ws.md`（WebSocket 文档）
+- 更新所有 API 参考文档
+- 更新所有使用示例文档
+
+#### Python 示例
+- 完全重写所有 Python 示例以匹配实际 API
+
+#### Rust 源码
+- 改进认证模块错误处理（用 proper error returns 替代 expect()）
+- 改进 PyErr 到 DMSCError 的转换
+- 更新后量子加密实现（dilithium、falcon、guomi、kyber）
+- 改进 Kafka 后端和队列管理器
+
+### 🗑️ 移除内容
+
+- 删除 `src/queue/backends/kafka_windows_stub.rs`
+
+### 🐛 问题修复
+
+- 修复 lib.rs 中缺失的 Python 类型导出
+- 修复认证模块 RedisError 导入引用
+- 修复缓存模块 with_config() 后端创建
+- 修复 README.md 和 README.zh.md 代码示例
+
+---
 
 ## [0.1.5] - 2026-01-24
 
@@ -413,7 +539,7 @@
 
 ## [0.1.3] - 2026-01-04
 
-## 该版本为测试版，功能尚不完整，可能存在风险，不推荐用于生产环境或正式用途。
+## 此版本为测试版，功能尚不完整，可能存在风险，不推荐用于生产环境或正式用途。
 
 ### ✨ 新增功能
 
