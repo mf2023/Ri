@@ -73,13 +73,14 @@ let user = cache_manager.get_or_set("user:1", Some(3600), || async {
 
 | 方法 | 描述 | 参数 | 返回值 |
 |:--------|:-------------|:--------|:--------|
-| `get(key)` | 获取缓存值 | `key: &str` | `DMSCResult<Option<String>>` |
-| `set(key, value, ttl_seconds)` | 设置缓存值 | `key: &str`, `value: &str`, `ttl_seconds: Option<u64>` | `DMSCResult<()>` |
-| `delete(key)` | 删除缓存 | `key: &str` | `DMSCResult<()>` |
+| `get(key)` | 获取缓存值 | `key: &str` | `DMSCResult<Option<T>>` |
+| `set(key, value, ttl_seconds)` | 设置缓存值 | `key: &str`, `value: &T`, `ttl_seconds: Option<u64>` | `DMSCResult<()>` |
+| `delete(key)` | 删除缓存 | `key: &str` | `DMSCResult<bool>` |
 | `exists(key)` | 检查缓存是否存在 | `key: &str` | `bool` |
 | `clear()` | 清空所有缓存 | 无 | `DMSCResult<()>` |
 | `stats()` | 获取缓存统计 | 无 | `DMSCCacheStats` |
 | `cleanup_expired()` | 清理过期缓存 | 无 | `DMSCResult<usize>` |
+| `get_or_set(key, ttl_seconds, factory)` | 获取或设置缓存值 | `key: &str`, `ttl_seconds: Option<u64>`, `factory: F` where `F: FnOnce() -> Fut`, `Fut: Future` | `DMSCResult<T>` |
 
 #### 使用示例
 

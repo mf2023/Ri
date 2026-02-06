@@ -48,7 +48,7 @@ Add the following dependencies to your `Cargo.toml` file:
 
 ```toml
 [dependencies]
-dms = { git = "https://github.com/mf2023/DMSC" }
+dmsc = { git = "https://github.com/mf2023/DMSC" }
 tokio = { version = "1.0", features = ["full"] }
 serde = { version = "1.0", features = ["derive"] }
 ```
@@ -136,9 +136,9 @@ async fn main() -> DMSCResult<()> {
         ctx.logger().info("auth", &format!("Has user access: {}", has_user_access))?;
         
         // OAuth2 configuration example
-        let oauth_manager = ctx.module::<DMSCAuthModule>().await?.oauth_manager("github");
-        if let Some(oauth) = oauth_manager {
-            let auth_url = oauth.get_auth_url("state123").await?;
+        let oauth_manager = ctx.module::<DMSCAuthModule>().await?.oauth_manager();
+        let oauth = oauth_manager.read().await;
+        if let Ok(Some(auth_url)) = oauth.get_auth_url("github", "state123").await {
             ctx.logger().info("oauth", &format!("GitHub auth URL: {}", auth_url))?;
         }
         
@@ -266,22 +266,32 @@ After running the example, you should see output similar to the following:
 
 ```rust
 // In a real application, you need to implement an HTTP endpoint to handle OAuth2 callbacks
-async fn handle_oauth_callback(ctx: &DMSCServiceContext, code: String) -> DMSCResult<serde_json::Value> {
-    let oauth_manager = ctx.module::<DMSCAuthModule>().await?.oauth_manager("github").unwrap();
-    let token = oauth_manager.exchange_code("client_id", "client_secret", &code, "callback_url").await?;
-    let user_info = oauth_manager.get_user_info(&token.access_token).await?;
-    Ok(user_info)
+async fn handle_oauth_callback(ctx: &DMSCServiceContext, code: &str) -> DMSCResult<serde_json::Value> {
+    let auth_module = ctx.module::<DMSCAuthModule>().await?;
+    let oauth_manager = auth_module.oauth_manager();
+    let oauth = oauth_manager.read().await;
+    let token = oauth.exchange_code_for_token("github", code, "http://localhost:8080/callback").await?;
+    if let Some(token) = token {
+        let user_info = oauth.get_user_info("github", &token.access_token).await?;
+        Ok(serde_json::json!(user_info))
+    } else {
+        Err(DMSCError::Other("Failed to exchange code for token".to_string()))
+    }
 }
 ```
 
 ### 2. Implement Refresh Token Mechanism
 
 ```rust
+// Generate JWT with refresh token support
 let jwt_manager = ctx.module::<DMSCAuthModule>().await?.jwt_manager();
-let token = jwt_manager.generate_token("user123", vec!["admin"], vec!["read", "write"])?;
+let claims = DMSCJWTClaims::new("user123", vec!["user".to_string()], vec!["read".to_string()])
+    .with_refresh_token();
+let access_token = jwt_manager.generate_token_with_claims(&claims)?;
 
-// Refresh token is not directly supported, generate a new token
-let new_token = jwt_manager.generate_token("user123", vec!["admin"], vec!["read", "write"])?;
+// To refresh, generate a new token with the same claims
+let new_claims = DMSCJWTClaims::new("user123", vec!["user".to_string()], vec!["read".to_string()]);
+let new_access_token = jwt_manager.generate_token_with_claims(&new_claims)?;
 ```
 
 ### 3. Implement More Complex Permission Models
@@ -289,13 +299,15 @@ let new_token = jwt_manager.generate_token("user123", vec!["admin"], vec!["read"
 ```rust
 // Define more complex permission rules
 let permission_manager = ctx.module::<DMSCAuthModule>().await?.permission_manager();
-let permission_rules = vec![
-    ("admin", vec!["create", "read", "update", "delete"]),
-    ("user", vec!["read"]),
-];
+let pm = permission_manager.read().await;
 
-// Check permissions for specific resources
-let can_edit_resource = permission_manager.check_permission("admin", "edit").await?;
+// Create roles and permissions
+pm.create_role("admin", vec!["create", "read", "update", "delete"]).await?;
+pm.create_role("user", vec!["read"]).await?;
+
+// Check specific permissions
+let can_edit = pm.check_permission("admin", "edit").await?;
+let can_read = pm.check_permission("user", "read").await?;
 ```
 
 <div align="center">

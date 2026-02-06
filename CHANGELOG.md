@@ -67,6 +67,12 @@
 - Fixed auth module RedisError import reference
 - Fixed cache module with_config() backend creation
 - Fixed README.md and README.zh.md code examples
+- Fixed documentation code examples (missing semicolons, incorrect package names)
+- Fixed DMSCAppBuilder method return types in documentation (with_logging, with_observability)
+- Fixed OAuth API documentation to match actual implementation
+- Fixed DMSCCacheManager method signatures in Chinese documentation
+- Fixed DMSCAppRuntime documentation (removed non-existent methods)
+- Ensured Chinese and English documentation consistency
 
 ---
 
@@ -130,6 +136,12 @@
 - 修复认证模块 RedisError 导入引用
 - 修复缓存模块 with_config() 后端创建
 - 修复 README.md 和 README.zh.md 代码示例
+- 修复文档代码示例（缺失分号、错误的包名）
+- 修复 DMSCAppBuilder 方法返回类型文档（with_logging、with_observability）
+- 修复 OAuth API 文档以匹配实际实现
+- 修复中文文档中 DMSCCacheManager 方法签名
+- 修复 DMSCAppRuntime 文档（删除不存在的方法）
+- 确保中英文文档一致性
 
 ---
 

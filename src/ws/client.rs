@@ -78,20 +78,24 @@ impl DMSCWSClientStats {
         self.last_connected_at = Some(chrono::Utc::now().timestamp() as u64);
     }
 
+    #[allow(dead_code)]
     fn record_message_sent(&mut self, size: usize) {
         self.total_messages_sent += 1;
         self.total_bytes_sent += size as u64;
     }
 
+    #[allow(dead_code)]
     fn record_message_received(&mut self, size: usize) {
         self.total_messages_received += 1;
         self.total_bytes_received += size as u64;
     }
 
+    #[allow(dead_code)]
     fn record_connection_error(&mut self) {
         self.connection_errors += 1;
     }
 
+    #[allow(dead_code)]
     fn record_message_error(&mut self) {
         self.message_errors += 1;
     }

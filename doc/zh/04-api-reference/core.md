@@ -37,8 +37,8 @@ core模块包含以下子模块：
 |:--------|:-------------|:--------|:--------|
 | `new()` | 创建新的应用构建器 | 无 | `DMSCAppBuilder` |
 | `with_config(path)` | 添加配置文件 | `path: impl Into<String>` | `DMSCResult<Self>` |
-| `with_logging(config)` | 设置日志配置 | `config: DMSCLogConfig` | `DMSCResult<Self>` |
-| `with_observability(config)` | 设置可观测性配置 | `config: DMSCObservabilityConfig` | `DMSCResult<Self>` |
+| `with_logging(config)` | 设置日志配置 | `config: DMSCLogConfig` | `Self` |
+| `with_observability(config)` | 设置可观测性配置 | `config: DMSCObservabilityConfig` | `Self` |
 | `with_module(module)` | 添加同步模块 | `module: Box<dyn ServiceModule>` | `Self` |
 | `with_async_module(module)` | 添加异步模块 | `module: Box<dyn AsyncServiceModule>` | `Self` |
 | `with_python_module(module)` | 添加Python模块（需要pyo3特性） | `module: DMSCPythonModuleAdapter` | `Self` |
@@ -68,8 +68,6 @@ let app = DMSCAppBuilder::new()
 | 方法 | 描述 | 参数 | 返回值 |
 |:--------|:-------------|:--------|:--------|
 | `run<F>(f)` | 运行应用，执行提供的业务逻辑 | `f: F`，其中 `F: Fn(&DMSCServiceContext) -> Fut` | `DMSCResult<()>` |
-| `hook_bus()` | 获取钩子总线 | 无 | `&DMSCHookBus` |
-| `stop()` | 停止应用 | 无 | `DMSCResult<()>` |
 
 #### 使用示例
 

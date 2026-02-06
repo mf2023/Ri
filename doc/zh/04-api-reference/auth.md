@@ -153,6 +153,7 @@ let auth_config = DMSCAuthConfig {
 </div>
 
 - [README](./README.md): 模块概览，提供API参考文档总览和快速导航
+- [auth](./auth.md): 认证模块，处理用户认证和授权
 - [cache](./cache.md): 缓存模块，提供内存缓存和分布式缓存支持
 - [config](./config.md): 配置模块，管理应用程序配置
 - [core](./core.md): 核心模块，提供错误处理和服务上下文

@@ -106,7 +106,7 @@ async fn main() -> DMSCResult<()> {
         ctx.logger().info(
             "config", 
             &format!("Logging level: {}", log_level)
-        )?
+        )?;
         
         // 等待3秒，模拟业务运行
         tokio::time::sleep(tokio::time::Duration::from_secs(3)).await;

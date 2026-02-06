@@ -48,7 +48,7 @@ cd dms-auth-example
 
 ```toml
 [dependencies]
-dms = { git = "https://github.com/mf2023/DMSC" }
+dmsc = { git = "https://github.com/mf2023/DMSC" }
 tokio = { version = "1.0", features = ["full"] }
 serde = { version = "1.0", features = ["derive"] }
 ```
@@ -136,9 +136,9 @@ async fn main() -> DMSCResult<()> {
         ctx.logger().info("auth", &format!("Has user access: {}", has_user_access))?;
         
         // OAuth2配置示例
-        let oauth_manager = ctx.module::<DMSCAuthModule>().await?.oauth_manager("github");
-        if let Some(oauth) = oauth_manager {
-            let auth_url = oauth.get_auth_url("state123").await?;
+        let oauth_manager = ctx.module::<DMSCAuthModule>().await?.oauth_manager();
+        let oauth = oauth_manager.read().await;
+        if let Ok(Some(auth_url)) = oauth.get_auth_url("github", "state123").await {
             ctx.logger().info("oauth", &format!("GitHub auth URL: {}", auth_url))?;
         }
         
@@ -266,10 +266,17 @@ cargo run
 
 ```rust
 // 在实际应用中，您需要实现一个HTTP端点来处理OAuth2回调
-async fn handle_oauth_callback(ctx: &DMSCServiceContext, code: &str) -> DMSCResult<String> {
-    let token = ctx.auth().oauth_exchange_token("github", code).await?;
-    let user_info = ctx.auth().oauth_get_user_info("github", &token).await?;
-    Ok(user_info)
+async fn handle_oauth_callback(ctx: &DMSCServiceContext, code: &str) -> DMSCResult<serde_json::Value> {
+    let auth_module = ctx.module::<DMSCAuthModule>().await?;
+    let oauth_manager = auth_module.oauth_manager();
+    let oauth = oauth_manager.read().await;
+    let token = oauth.exchange_code_for_token("github", code, "http://localhost:8080/callback").await?;
+    if let Some(token) = token {
+        let user_info = oauth.get_user_info("github", &token.access_token).await?;
+        Ok(serde_json::json!(user_info))
+    } else {
+        Err(DMSCError::Other("Failed to exchange code for token".to_string()))
+    }
 }
 ```
 
@@ -277,28 +284,30 @@ async fn handle_oauth_callback(ctx: &DMSCServiceContext, code: &str) -> DMSCResu
 
 ```rust
 // 生成包含刷新令牌的JWT
-let (access_token, refresh_token) = ctx.auth().generate_jwt_with_refresh(&user).await?;
+let jwt_manager = ctx.module::<DMSCAuthModule>().await?.jwt_manager();
+let claims = DMSCJWTClaims::new("user123", vec!["user".to_string()], vec!["read".to_string()])
+    .with_refresh_token();
+let access_token = jwt_manager.generate_token_with_claims(&claims)?;
 
-// 使用刷新令牌获取新的访问令牌
-let new_access_token = ctx.auth().refresh_jwt(&refresh_token).await?;
+// 使用刷新令牌获取新的访问令牌（需要重新生成）
+let new_claims = DMSCJWTClaims::new("user123", vec!["user".to_string()], vec!["read".to_string()]);
+let new_access_token = jwt_manager.generate_token_with_claims(&new_claims)?;
 ```
 
 ### 3. 实现更复杂的权限模型
 
 ```rust
 // 定义更复杂的权限规则
-let permission_rules = vec![
-    ("admin", vec!["create", "read", "update", "delete"]),
-    ("user", vec!["read"]),
-];
+let permission_manager = ctx.module::<DMSCAuthModule>().await?.permission_manager();
+let pm = permission_manager.read().await;
 
-// 检查特定资源的权限
-let can_edit_resource = ctx.auth().check_resource_permission(
-    &user.role, 
-    "resource_type", 
-    "resource_id", 
-    "edit"
-).await?;
+// 创建角色和权限
+pm.create_role("admin", vec!["create", "read", "update", "delete"]).await?;
+pm.create_role("user", vec!["read"]).await?;
+
+// 检查特定权限
+let can_edit = pm.check_permission("admin", "edit").await?;
+let can_read = pm.check_permission("user", "read").await?;
 ```
 
 <div align="center">

@@ -37,8 +37,8 @@ Application builder for configuring and building DMSC applications.
 |:--------|:-------------|:--------|:--------|
 | `new()` | Create a new application builder | None | `DMSCAppBuilder` |
 | `with_config(path)` | Add configuration file | `path: impl Into<String>` | `DMSCResult<Self>` |
-| `with_logging(config)` | Set logging configuration | `config: DMSCLogConfig` | `DMSCResult<Self>` |
-| `with_observability(config)` | Set observability configuration | `config: DMSCObservabilityConfig` | `DMSCResult<Self>` |
+| `with_logging(config)` | Set logging configuration | `config: DMSCLogConfig` | `Self` |
+| `with_observability(config)` | Set observability configuration | `config: DMSCObservabilityConfig` | `Self` |
 | `with_module(module)` | Add internal synchronous module | `module: Box<dyn ServiceModule>` | `Self` |
 | `with_async_module(module)` | Add internal asynchronous module | `module: Box<dyn AsyncServiceModule>` | `Self` |
 | `with_python_module(module)` | Add Python module (requires pyo3 feature) | `module: DMSCPythonModuleAdapter` | `Self` |
@@ -68,8 +68,6 @@ Application runtime for managing DMSC application lifecycle.
 | Method | Description | Parameters | Return Value |
 |:--------|:-------------|:--------|:--------|
 | `run<F>(f)` | Run the application, executing the provided business logic | `f: F` where `F: Fn(&DMSCServiceContext) -> Fut` | `DMSCResult<()>` |
-| `hook_bus()` | Get the hook bus | None | `&DMSCHookBus` |
-| `stop()` | Stop the application | None | `DMSCResult<()>` |
 
 #### Usage Example
 
