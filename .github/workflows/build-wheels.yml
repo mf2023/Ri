@@ -885,9 +885,9 @@ jobs:
   # This makes the library available to other Rust projects via cargo
   ################################################################################
   publish-crate:
-    # Depends on build-rust-linux job completing successfully
-    # Uses Linux x64 build as the primary crate artifact
-    needs: build-rust-linux
+    # Depends on all Rust build jobs completing successfully
+    # Ensures the crate compiles on all supported platforms before publishing
+    needs: [build-rust-linux, build-rust-linux-arm64, build-rust-windows, build-rust-macos]
     
     # Conditional: Only run for production releases (not test releases)
     # Checks if this is a release event and the release name doesn't contain "Test"
@@ -928,3 +928,47 @@ jobs:
         run: cargo publish --token ${{ secrets.CARGO_REGISTRY_TOKEN }}
         env:
           CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
+
+  ################################################################################
+  # Job: Sync Release to Gitee
+  ################################################################################
+  # Creates the same release on Gitee with title, description, and tag
+  # Runs for both test and production releases
+  # This ensures the Chinese mirror (Gitee) has the same release information
+  ################################################################################
+  sync-to-gitee:
+    # Depends on all build jobs completing successfully
+    needs: [build-rust-linux, build-rust-linux-arm64, build-rust-windows, build-rust-macos, build-python]
+    
+    # Conditional: Run for any release (both test and production)
+    if: github.event_name == 'release'
+    
+    # Use Ubuntu latest for API calls
+    runs-on: ubuntu-latest
+    
+    steps:
+      # Step 1: Sync release information to Gitee using API
+      # Uses GITEE_TOKEN secret for authentication
+      # Creates a release with the same tag, name, and body as GitHub
+      - name: Sync Release to Gitee
+        run: |
+          RELEASE_TAG="${{ github.event.release.tag_name }}"
+          RELEASE_NAME="${{ github.event.release.name }}"
+          RELEASE_BODY="${{ github.event.release.body }}"
+          
+          # Gitee API endpoint for creating releases
+          GITEE_API="https://gitee.com/api/v5/repos/dunimd/dmsc/releases"
+          
+          # Create release on Gitee using curl POST request
+          curl -X POST "$GITEE_API" \
+            -H "Content-Type: application/json" \
+            -d "{
+              \"access_token\": \"${{ secrets.GITEE_TOKEN }}\",
+              \"tag_name\": \"$RELEASE_TAG\",
+              \"name\": \"$RELEASE_NAME\",
+              \"body\": \"$RELEASE_BODY\",
+              \"prerelease\": false,
+              \"target_commitish\": \"master\"
+            }"
+        env:
+          GITEE_TOKEN: ${{ secrets.GITEE_TOKEN }}
