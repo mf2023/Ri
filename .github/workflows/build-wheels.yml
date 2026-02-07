@@ -15,13 +15,18 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# =============================================================================
+################################################################################
 # Workflow: Build and Publish DMSC
-# =============================================================================
-# Purpose: Build on every push, publish and sync release only on GitHub Release
+################################################################################
+#
+# Purpose:
+# This GitHub Actions workflow builds the DMSC Rust library and generates
+# distributable Python wheel packages (.whl files) for multiple platforms,
+# architectures, and Python versions. The workflow ensures binary compatibility
+# across the supported target environments.
 #
 # Trigger Rules:
-# 1. Every push to main/master - builds only (CI check)
+# 1. Every push to main/master branch - builds only (CI check)
 # 2. GitHub Release published - builds, publishes, and syncs to Gitee
 #
 # Release Types:
@@ -33,37 +38,64 @@
 # - PYPI_API_TOKEN: API token for PyPI (production)
 # - PYPI_TEST_API_TOKEN: API token for TestPyPI (testing)
 # - GITEE_TOKEN: Gitee API token for release sync
-# =============================================================================
+#
+# Architecture Overview:
+# 1. Context Determination Phase: Analyzes trigger event to decide build vs publish
+# 2. Rust Library Compilation Phase: Builds libdmsc as cdylib for 4 platforms
+# 3. Python Wheel Generation Phase: Generates wheels for all platform/Python combos
+# 4. Publishing Phase (Release only): Publishes to crates.io, PyPI, and syncs to Gitee
+#
+# Supported Platforms:
+# - Linux: x64 (x86_64-unknown-linux-gnu) and ARM64 (aarch64-unknown-linux-gnu)
+# - Windows: x64 (x86_64-pc-windows-msvc)
+# - macOS: x64 (x86_64-apple-darwin) and ARM64 (aarch64-apple-darwin)
+#
+# Supported Python Versions: 3.8, 3.9, 3.10, 3.11, 3.12, 3.13, 3.14
+################################################################################
 
+# Workflow name displayed in GitHub Actions UI
 name: Build and Publish DMSC
 
-# =============================================================================
+################################################################################
 # Trigger Configuration
-# =============================================================================
+################################################################################
+# Defines when this workflow should be executed
+
 on:
-  # Trigger 1: Every push to main/master branch - builds only
+  # Trigger 1: Every push to main/master branch - builds only (CI check)
+  # This ensures wheels are built automatically when code is merged to master
   push:
     branches: [main, master]
+  
   # Trigger 2: GitHub Release published - builds, publishes, and syncs
+  # This triggers the full release pipeline including publishing to registries
   release:
     types: [published]
 
-# =============================================================================
+################################################################################
 # Jobs Definition
-# =============================================================================
+################################################################################
+# Each job runs in a separate runner environment and can execute in parallel
+
 jobs:
 
-  # ===========================================================================
+  ################################################################################
   # Job 1: Determine Build Context
-  # ===========================================================================
+  ################################################################################
   # Analyzes the trigger event to determine what actions to take:
   # - build_only: true if just building for CI (push to branch)
   # - is_release: true if triggered by GitHub Release
   # - is_test_release: true if Release title contains "Test"
   # - should_publish: true if should publish to PyPI/crates.io
-  # ===========================================================================
+  #
+  # This job outputs variables used by subsequent jobs to conditionally
+  # execute publish steps only when appropriate.
+  ################################################################################
   determine-context:
+    # Use Ubuntu latest runner for shell script execution
     runs-on: ubuntu-latest
+    
+    # Define outputs that can be used by other jobs
     outputs:
       build_only: ${{ steps.context.outputs.build_only }}
       is_release: ${{ steps.context.outputs.is_release }}
@@ -72,7 +104,10 @@ jobs:
       release_tag: ${{ steps.context.outputs.release_tag }}
       release_name: ${{ steps.context.outputs.release_name }}
       release_body: ${{ steps.context.outputs.release_body }}
+    
     steps:
+      # Step 1: Determine build context based on trigger event
+      # This script analyzes the GitHub event type and release name to set output variables
       - name: Determine build context
         id: context
         run: |
@@ -103,6 +138,7 @@ jobs:
             echo "Branch push detected - build only, no publish"
           fi
 
+          # Set outputs for use by other jobs
           echo "build_only=$BUILD_ONLY" >> $GITHUB_OUTPUT
           echo "is_release=$IS_RELEASE" >> $GITHUB_OUTPUT
           echo "is_test_release=$IS_TEST_RELEASE" >> $GITHUB_OUTPUT
@@ -114,53 +150,104 @@ jobs:
           echo "$RELEASE_BODY" >> $GITHUB_OUTPUT
           echo "EOF" >> $GITHUB_OUTPUT
 
-  # ===========================================================================
+  ################################################################################
   # Job 2: Build and Test Rust Code
-  # ===========================================================================
+  ################################################################################
   # Builds the Rust library on multiple platforms to ensure code compiles
   # This job runs on EVERY push (for CI verification)
   # Tests 4 platforms: Linux x64, Linux ARM64, Windows x64, macOS x64
-  # ===========================================================================
+  #
+  # Build Strategy:
+  # - Native compilation on matching architecture runners (no cross-compilation)
+  # - Linux ARM64 uses ubuntu-24.04-arm for proper ARM64 native builds
+  # - macOS x64 uses macos-15-intel (available until Aug 2027) for Intel builds
+  # - Each platform installs required dependencies: protoc, CMake, system libs
+  ################################################################################
   build-rust:
+    # Depends on determine-context job to complete first
     needs: determine-context
+    
+    # Use the runner specified in the matrix configuration
     runs-on: ${{ matrix.os }}
+    
+    # Matrix strategy configuration
     strategy:
+      # Continue building other matrix combinations even if one fails
       fail-fast: false
+      
+      # Matrix defines all platform combinations to build
       matrix:
         include:
+          # Linux x64 build configuration
           - os: ubuntu-latest
             target: x86_64-unknown-linux-gnu
+          # Linux ARM64 build configuration
           - os: ubuntu-24.04-arm
             target: aarch64-unknown-linux-gnu
+          # Windows x64 build configuration
           - os: windows-latest
             target: x86_64-pc-windows-msvc
+          # macOS x64 build configuration
           - os: macos-15-intel
             target: x86_64-apple-darwin
+    
     steps:
+      # Step 1: Checkout repository source code
+      # Clones the repository to access Cargo.toml and Rust source files
       - uses: actions/checkout@v4
 
+      # Step 2: Install Rust toolchain with target support
+      # Uses dtolnay/rust-toolchain for modern Rust installation
+      # Installs stable Rust and adds the target platform for cross-compilation
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
         with:
           targets: ${{ matrix.target }}
 
+      # Step 3: Install protoc (Protocol Buffers compiler) for etcd-client build
+      # The etcd-client crate requires protoc to compile Protocol Buffer definitions
+      # This is needed because DMSC includes etcd integration for service discovery
       - name: Install protoc
         uses: arduino/setup-protoc@v3
         with:
           version: '33.x'
           repo-token: ${{ secrets.GITHUB_TOKEN }}
 
+      # Step 4: Install CMake for rdkafka build
+      # rdkafka (Kafka client library) requires CMake to build its C dependencies
+      # DMSC uses Kafka for message streaming capabilities
       - name: Install CMake
         uses: jwlawson/actions-setup-cmake@v2
         with:
           cmake-version: '3.28.x'
 
+      # Step 5: Install system dependencies for rdkafka on Ubuntu
+      # Conditional: Only runs on Linux platforms
+      # Installs curl and SASL libraries required by the Kafka C client
       - name: Install dependencies (Ubuntu)
         if: runner.os == 'Linux'
         run: |
           sudo apt-get update
           sudo apt-get install -y libcurl4-openssl-dev libsasl2-dev
 
+      # Step 6: Install dependencies for macOS builds
+      # Conditional: Only runs on macOS platforms
+      # Installs cmake and pkg-config via Homebrew for building native dependencies
+      # Also configures Python development libraries for PyO3 linking
+      - name: Install dependencies (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          brew update
+          brew install cmake pkg-config || true
+          brew upgrade cmake pkg-config || true
+          # Configure Python paths for PyO3 linking
+          echo "PKG_CONFIG_PATH=$(python3-config --prefix)/lib/pkgconfig:$PKG_CONFIG_PATH" >> $GITHUB_ENV
+          echo "LDFLAGS=$(python3-config --ldflags)" >> $GITHUB_ENV
+          echo "CFLAGS=$(python3-config --cflags)" >> $GITHUB_ENV
+
+      # Step 7: Cache Rust dependencies to speed up builds
+      # Caches cargo registry and target directory to avoid re-downloading crates
+      # Uses matrix target in cache key for platform-specific caching
       - name: Cache Rust dependencies
         uses: actions/cache@v4
         with:
@@ -173,27 +260,76 @@ jobs:
             rust-check-${{ matrix.target }}-
             rust-check-
 
+      # Step 8: Build Rust library in release mode
+      # Compiles libdmsc as a cdylib for the specified target
+      # Release mode enables optimizations (-O3) and LTO for maximum performance
       - name: Build Rust code
         run: cargo build --release --target ${{ matrix.target }}
 
-  # ===========================================================================
+  ################################################################################
   # Job 3: Build Python Wheels for All Platforms
-  # ===========================================================================
-  # Builds Python wheels for multiple platforms and Python versions
-  # This job runs on EVERY push (for CI verification)
-  # ===========================================================================
+  ################################################################################
+  # This matrix job generates distributable Python wheel packages (.whl files) for all
+  # supported combinations of platforms, architectures, and Python versions (3.8 through 3.14)
+  #
+  # Matrix Configuration Strategy:
+  # - Each matrix entry specifies a unique combination of Python version, runner OS, Rust target,
+  #   and manylinux compatibility tag (for Linux wheels)
+  # - Linux builds use Docker container with manylinux image for glibc compatibility
+  # - macOS and Windows builds use native runners as they use platform-specific formats
+  # - fail-fast: false ensures all matrix combinations are attempted even if one fails
+  #
+  # Platform and Architecture Coverage:
+  # - Linux x64 (x86_64-unknown-linux-gnu): manylinux_2_39 for glibc compatibility
+  # - Linux arm64 (aarch64-unknown-linux-gnu): manylinux_2_39 for glibc compatibility
+  # - Windows x64 (x86_64-pc-windows-msvc): native windows-latest runner
+  # - macOS x64 (x86_64-apple-darwin): macos-15-intel runner
+  # - macOS arm64 (aarch64-apple-darwin): macos-15 native ARM64 runner
+  #
+  # Python Version Support: 3.8, 3.9, 3.10, 3.11, 3.12, 3.13, 3.14
+  #
+  # Build Process:
+  # 1. Checkout repository
+  # 2. Set up Python interpreter matching matrix.python version
+  # 3. Set up Rust toolchain
+  # 4. Configure macOS linker for PyO3 compatibility
+  # 5. Install protoc and CMake for all platforms
+  # 6. Install rdkafka dependencies on Linux
+  # 7. Configure OpenSSL static linking on Linux
+  # 8. Install maturin build tool and pip dependencies
+  # 9. Build wheel using maturin with appropriate target
+  # 10. Repair Linux wheel with auditwheel for manylinux compatibility
+  # 11. Upload built wheel artifact for collection in release
+  ################################################################################
   build-wheels:
+    # Depends on determine-context job to complete first
     needs: determine-context
+    
+    # Use the runner specified in the matrix configuration
     runs-on: ${{ matrix.runs-on }}
+    
+    # Environment variables for the job
     env:
+      # Disable pip version check to avoid unnecessary warnings
       PIP_DISABLE_PIP_VERSION_CHECK: '1'
+      # Increase Cargo HTTP timeout for slower networks
       CARGO_HTTP_TIMEOUT: '60'
+      # Use git CLI for fetching to improve compatibility
       CARGO_NET_GIT_FETCH_WITH_CLI: 'true'
+    
+    # Matrix strategy configuration
     strategy:
+      # Continue building other matrix combinations even if one fails
       fail-fast: false
+      
+      # Matrix defines all platform/architecture/Python combinations to build
       matrix:
         include:
-          # Linux x64
+          ##########################################################################
+          # Linux x64 Matrix Entries
+          ##########################################################################
+          # Using manylinux_2_39 for compatibility with modern glibc
+          
           - python: '3.8'
             runs-on: ubuntu-latest
             target: x86_64-unknown-linux-gnu
@@ -229,7 +365,13 @@ jobs:
             target: x86_64-unknown-linux-gnu
             manylinux: manylinux_2_39
             docker: true
-          # Linux ARM64
+          
+          ##########################################################################
+          # Linux ARM64 Matrix Entries
+          ##########################################################################
+          # Native ARM64 builds on ubuntu-24.04-arm
+          # Using manylinux_2_39 for consistency with x64 builds
+          
           - python: '3.8'
             runs-on: ubuntu-24.04-arm
             target: aarch64-unknown-linux-gnu
@@ -265,7 +407,13 @@ jobs:
             target: aarch64-unknown-linux-gnu
             manylinux: manylinux_2_39
             docker: false
-          # Windows x64
+          
+          ##########################################################################
+          # Windows x64 Matrix Entries
+          ##########################################################################
+          # null manylinux indicates platform-specific wheel format (win-amd64)
+          # Uses Windows-specific ABI (x86_64-pc-windows-msvc) for optimal performance
+          
           - python: '3.8'
             runs-on: windows-latest
             target: x86_64-pc-windows-msvc
@@ -294,7 +442,14 @@ jobs:
             runs-on: windows-latest
             target: x86_64-pc-windows-msvc
             manylinux: null
-          # macOS x64
+          
+          ##########################################################################
+          # macOS x64 Matrix Entries
+          ##########################################################################
+          # Note: macOS-15-intel is x64 runner (will be available until Aug 2027)
+          # macOS wheels use null manylinux as they are platform-specific (.whl format)
+          # macOS-15-intel runner required because modern macOS runners only support ARM64
+          
           - python: '3.8'
             runs-on: macos-15-intel
             target: x86_64-apple-darwin
@@ -323,7 +478,14 @@ jobs:
             runs-on: macos-15-intel
             target: x86_64-apple-darwin
             manylinux: null
-          # macOS ARM64
+          
+          ##########################################################################
+          # macOS ARM64 Matrix Entries
+          ##########################################################################
+          # Requires Python 3.8+ with universal2 support or arm64-specific build
+          # Native ARM64 compilation provides optimal performance on Apple Silicon
+          # macOS-15 runner provides ARM64-native environment for aarch64-apple-darwin target
+          
           - python: '3.8'
             runs-on: macos-15
             target: aarch64-apple-darwin
@@ -353,19 +515,39 @@ jobs:
             target: aarch64-apple-darwin
             manylinux: null
 
+    # Build steps executed for each matrix combination
     steps:
+      # Step 1: Checkout repository source code to the workflow runner
+      # This action clones the repository contents, making source code and configuration
+      # files available for the build process. Uses v4 for latest features and security.
       - uses: actions/checkout@v4
 
+      # Step 2: Set up Python interpreter matching matrix.python version
+      # Installs the specified Python version using actions/setup-python@v5
+      # The Python version is determined by the matrix configuration (3.8-3.14)
+      # This enables running Python-based build tools and tests
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python }}
 
+      # Step 3: Install Rust stable toolchain for compilation
+      # Uses dtolnay/rust-toolchain to install Rust stable channel
+      # This modern action replaces deprecated actions-rs/toolchain and supports
+      # the new Environment Files approach for output handling
+      # Required for compiling the Rust library component of the package
+      # The toolchain is added to PATH for cargo and rustc access
       - name: Set up Rust
         uses: dtolnay/rust-toolchain@master
         with:
           toolchain: stable
 
+      # Step 4: Configure macOS linker settings for dynamic library linking
+      # Conditional: Only runs when targeting macOS platforms (x64 or ARM64)
+      # Creates .cargo/config.toml with linker flags to allow undefined symbols
+      # This is required for PyO3 bindings to work correctly on macOS
+      # The -undefined dynamic_lookup flag tells the linker to defer symbol resolution
+      # for Python symbols until runtime, which is necessary for Python extension modules
       - name: Configure macOS linker
         if: matrix.target == 'x86_64-apple-darwin' || matrix.target == 'aarch64-apple-darwin'
         run: |
@@ -376,12 +558,26 @@ jobs:
           echo '[target.aarch64-apple-darwin]' >> .cargo/config.toml
           echo 'rustflags = ["-C", "link-arg=-undefined", "-C", "link-arg=dynamic_lookup"]' >> .cargo/config.toml
 
-      - name: Install protoc for macOS
+      # Step 5: Install protoc and CMake for macOS
+      # Conditional: Only runs on macOS platforms
+      # Uses Homebrew to install protobuf (protoc), cmake, and pkg-config
+      # protoc is required by etcd-client for Protocol Buffer compilation
+      # cmake is required by rdkafka for building Kafka client C dependencies
+      # pkg-config is used by build scripts to locate system libraries
+      # The || true ensures the build continues even if packages are already installed
+      # The upgrade step ensures we have the latest versions
+      - name: Install protoc and CMake for macOS
         if: runner.os == 'macOS'
         run: |
-          brew install protobuf
+          brew update
+          brew install protobuf cmake pkg-config || true
+          brew upgrade protobuf cmake pkg-config || true
           echo "PROTOC=$(brew --prefix protobuf)/bin/protoc" >> $GITHUB_ENV
 
+      # Step 6: Cache pip dependencies to avoid rate limits
+      # Using GitHub Actions cache to store pip packages
+      # This significantly speeds up builds and avoids PyPI rate limits
+      # Caches are stored per Python version and target platform
       - name: Cache pip packages
         uses: actions/cache@v4
         with:
@@ -394,6 +590,10 @@ jobs:
             pip-${{ matrix.python }}-${{ matrix.target }}-
             pip-${{ matrix.python }}-
 
+      # Step 7: Cache Rust cargo registry to speed up builds
+      # Caching cargo registry and target directory significantly reduces build times
+      # by avoiding re-downloading and re-compiling dependencies
+      # Uses matrix target in cache key for platform-specific caching
       - name: Cache Rust dependencies
         uses: actions/cache@v4
         with:
@@ -406,6 +606,11 @@ jobs:
             rust-${{ matrix.target }}-
             rust-
 
+      # Step 8: Install protoc for Windows and Linux builds
+      # Conditional: Only runs on Windows and Linux platforms (not macOS)
+      # protoc is needed to compile .proto files for the etcd-client dependency
+      # Uses arduino/setup-protoc action for consistent installation across platforms
+      # repo-token is required for Windows to authenticate with GitHub API
       - name: Install protoc
         if: runner.os == 'Windows' || runner.os == 'Linux'
         uses: arduino/setup-protoc@v3
@@ -413,12 +618,37 @@ jobs:
           version: '33.x'
           repo-token: ${{ secrets.GITHUB_TOKEN }}
 
+      # Step 9: Install CMake for Windows and Linux builds
+      # Conditional: Only runs on Windows and Linux platforms
+      # CMake is required by rdkafka to build its C dependencies
+      # Uses jwlawson/actions-setup-cmake for consistent CMake installation
+      # Version 3.28.x provides modern CMake features required by rdkafka
+      - name: Install CMake
+        if: runner.os == 'Windows' || runner.os == 'Linux'
+        uses: jwlawson/actions-setup-cmake@v2
+        with:
+          cmake-version: '3.28.x'
+
+      # Step 10: Install system dependencies for rdkafka on Linux
+      # Conditional: Only runs on Linux platforms
+      # Installs curl and SASL libraries required by the Kafka C client library
+      # libcurl4-openssl-dev provides HTTP client functionality for Kafka
+      # libsasl2-dev provides authentication support for Kafka connections
       - name: Install rdkafka dependencies
         if: runner.os == 'Linux'
         run: |
           sudo apt-get update
           sudo apt-get install -y libcurl4-openssl-dev libsasl2-dev
 
+      # Step 11: Configure OpenSSL for static linking on Linux builds
+      # This ensures all OpenSSL dependencies are statically linked into the binary
+      # to avoid "libcrypto-*.so.3 not found" errors during auditwheel repair
+      # Environment variables:
+      # - OPENSSL_STATIC=1: Links OpenSSL statically
+      # - VENDORED_OPENSSL_SSL=1: Forces openssl crate to use vendored OpenSSL
+      # - PKG_CONFIG_ALLOW_CROSS=1: Allows cross-compilation with pkg-config
+      # - OPENSSL_LIB_DIR: Architecture-specific library directory
+      # - OPENSSL_INCLUDE_DIR: OpenSSL header files location
       - name: Configure OpenSSL static linking
         if: runner.os == 'Linux'
         run: |
@@ -433,6 +663,12 @@ jobs:
           fi
           echo "OPENSSL_INCLUDE_DIR=/usr/include/openssl" >> $GITHUB_ENV
 
+      # Step 12: Configure Rust linker for static linking on Linux builds
+      # This ensures the final binary is fully statically linked
+      # Configures build profile settings for optimal release builds:
+      # - lto = true: Enable Link Time Optimization for maximum performance
+      # - codegen-units = 1: Single codegen unit for better optimization
+      # - strip = true: Remove debug symbols to reduce binary size
       - name: Configure static linking
         if: runner.os == 'Linux'
         run: |
@@ -440,19 +676,43 @@ jobs:
           printf '[profile.release]\n' > .cargo/config.toml
           printf 'lto = true\ncodegen-units = 1\nstrip = true\n' >> .cargo/config.toml
 
+      # Step 13: Upgrade pip and install build dependencies
+      # Upgrading pip before installation helps avoid API rate limits
+      # and ensures using the latest versions of build tools
+      # Using pip cache to avoid repeated downloads from PyPI
+      # Configures Tsinghua University PyPI mirror for faster downloads in China
       - name: Upgrade pip
         run: |
           python -m pip install --upgrade pip setuptools wheel
           pip config set global.index-url https://pypi.tuna.tsinghua.edu.cn/simple
 
+      # Step 14: Install build dependencies (maturin and auditwheel)
+      # maturin: Rust/Python build tool that creates Python wheels from Rust libraries
+      # auditwheel: Tool for repairing Linux wheel distribution tags
+      # Both are essential for building portable Python packages with native extensions
       - name: Install dependencies
         run: pip install maturin auditwheel --quiet
 
+      # Step 15: Build Python wheel for non-Docker platforms (macOS, Windows, Linux ARM64)
+      # Conditional: Executes when docker: false or null (native builds without manylinux container)
+      # Uses maturin to build the wheel with release optimizations
+      # Outputs to dist/ directory for artifact collection
+      # --target specifies the Rust target triple for cross-compilation if needed
+      # --release enables release mode optimizations
+      # -o dist specifies the output directory for the built wheel
       - name: Build wheel (non-Docker)
         if: matrix.docker != true
         run: |
           maturin build --release --target ${{ matrix.target }} -o dist
 
+      # Step 16: Build and repair Linux wheel using manylinux Docker container
+      # Conditional: Executes when docker: true (Linux x64 builds)
+      # First builds the wheel in wheelhouse/ directory
+      # Then uses auditwheel to repair and tag the wheel for manylinux compatibility
+      # The --plat flag sets the platform tag (e.g., manylinux_2_39_x86_64)
+      # This ensures the wheel can be installed on older Linux distributions
+      # with older glibc versions, providing broader compatibility
+      # Note: OpenSSL is statically linked, so auditwheel won't have issues
       - name: Build Linux wheel with auditwheel repair
         if: matrix.docker == true
         run: |
@@ -461,62 +721,97 @@ jobs:
           maturin build --release --target "$TARGET" -o wheelhouse
           auditwheel repair wheelhouse/*.whl -w dist --plat ${{ matrix.manylinux }}_${ARCH}
 
+      # Step 17: List generated wheel files for debugging and verification
+      # Shell: bash required for glob patterns and ls command
+      # Displays all files in dist/ directory or shows message if empty
+      # Helps verify wheel generation was successful
       - name: List generated files
         shell: bash
         run: |
           ls -la dist/ 2>/dev/null || echo "No files in dist"
 
+      # Step 18: Upload built wheel artifact for collection and release
+      # Uses actions/upload-artifact@v4 to upload wheel files
+      # Artifact name includes target platform and Python version for identification
+      # Artifacts are available for 90 days by default in GitHub Actions
+      # These artifacts are used by the publish jobs to upload to PyPI
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: python-${{ matrix.target }}-${{ matrix.python }}
           path: dist/
 
-  # ===========================================================================
+  ################################################################################
   # Job 4: Publish to crates.io (Production Only)
-  # ===========================================================================
+  ################################################################################
+  # Publishes the Rust crate to crates.io registry
   # Only runs when GitHub Release title does NOT contain "Test"
-  # ===========================================================================
+  # This makes the library available to other Rust projects via cargo
+  ################################################################################
   publish-crate:
+    # Depends on previous jobs completing successfully
     needs: [determine-context, build-rust, build-wheels]
+    
+    # Conditional: Only run for production releases (not test releases)
     if: needs.determine-context.outputs.should_publish == 'true' && needs.determine-context.outputs.is_test_release == 'false'
+    
+    # Use Ubuntu latest for publishing
     runs-on: ubuntu-latest
+    
     steps:
+      # Step 1: Checkout repository source code
       - uses: actions/checkout@v4
 
+      # Step 2: Install Rust toolchain
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
 
+      # Step 3: Install protoc for etcd-client build
       - name: Install protoc
         uses: arduino/setup-protoc@v3
         with:
           version: '33.x'
 
+      # Step 4: Install CMake for rdkafka build
       - name: Install CMake
         uses: jwlawson/actions-setup-cmake@v2
         with:
           cmake-version: '3.28.x'
 
+      # Step 5: Install system dependencies for rdkafka
       - name: Install system dependencies
         run: |
           sudo apt-get update
           sudo apt-get install -y libcurl4-openssl-dev libsasl2-dev
 
+      # Step 6: Publish to crates.io using cargo publish
+      # Uses the CARGO_REGISTRY_TOKEN secret for authentication
       - name: Publish to crates.io
         run: cargo publish --token ${{ secrets.CARGO_REGISTRY_TOKEN }}
         env:
           CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
 
-  # ===========================================================================
+  ################################################################################
   # Job 5: Publish to PyPI (Production Only)
-  # ===========================================================================
+  ################################################################################
+  # Publishes Python wheels to PyPI (Python Package Index)
   # Only runs when GitHub Release title does NOT contain "Test"
-  # ===========================================================================
+  # This makes the package available via pip install
+  ################################################################################
   publish-pypi:
+    # Depends on previous jobs completing successfully
     needs: [determine-context, build-rust, build-wheels]
+    
+    # Conditional: Only run for production releases (not test releases)
     if: needs.determine-context.outputs.should_publish == 'true' && needs.determine-context.outputs.is_test_release == 'false'
+    
+    # Use Ubuntu latest for publishing
     runs-on: ubuntu-latest
+    
     steps:
+      # Step 1: Download all wheel artifacts from build-wheels job
+      # Uses pattern matching to download all python-* artifacts
+      # merge-multiple combines all artifacts into a single directory
       - name: Download all artifacts
         uses: actions/download-artifact@v4
         with:
@@ -524,14 +819,19 @@ jobs:
           pattern: python-*
           merge-multiple: true
 
+      # Step 2: Set up Python environment
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
 
+      # Step 3: Install twine for uploading to PyPI
       - name: Install twine
         run: pip install twine
 
+      # Step 4: Upload wheels to PyPI using twine
+      # Uses PYPI_API_TOKEN secret for authentication
+      # TWINE_USERNAME is set to __token__ for API token authentication
       - name: Publish to PyPI
         run: |
           twine upload dist/*.whl
@@ -539,16 +839,25 @@ jobs:
           TWINE_USERNAME: __token__
           TWINE_PASSWORD: ${{ secrets.PYPI_API_TOKEN }}
 
-  # ===========================================================================
+  ################################################################################
   # Job 6: Publish to TestPyPI (Test Releases Only)
-  # ===========================================================================
+  ################################################################################
+  # Publishes Python wheels to TestPyPI (testing instance of PyPI)
   # Only runs when GitHub Release title contains "Test"
-  # ===========================================================================
+  # Used for testing the release process before production release
+  ################################################################################
   publish-testpypi:
+    # Depends on previous jobs completing successfully
     needs: [determine-context, build-rust, build-wheels]
+    
+    # Conditional: Only run for test releases
     if: needs.determine-context.outputs.is_test_release == 'true'
+    
+    # Use Ubuntu latest for publishing
     runs-on: ubuntu-latest
+    
     steps:
+      # Step 1: Download all wheel artifacts from build-wheels job
       - name: Download all artifacts
         uses: actions/download-artifact@v4
         with:
@@ -556,14 +865,19 @@ jobs:
           pattern: python-*
           merge-multiple: true
 
+      # Step 2: Set up Python environment
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
 
+      # Step 3: Install twine for uploading to TestPyPI
       - name: Install twine
         run: pip install twine
 
+      # Step 4: Upload wheels to TestPyPI using twine
+      # Uses PYPI_TEST_API_TOKEN secret for authentication
+      # Repository URL points to TestPyPI instead of production PyPI
       - name: Publish to TestPyPI
         run: |
           twine upload --repository-url https://test.pypi.org/legacy/ dist/*.whl
@@ -571,27 +885,37 @@ jobs:
           TWINE_USERNAME: __token__
           TWINE_PASSWORD: ${{ secrets.PYPI_TEST_API_TOKEN }}
 
-  # ===========================================================================
+  ################################################################################
   # Job 7: Sync Release to Gitee
-  # ===========================================================================
+  ################################################################################
   # Creates the same release on Gitee with title, description, and tag
   # Runs for both test and production releases
-  # ===========================================================================
+  # This ensures the Chinese mirror (Gitee) has the same release information
+  ################################################################################
   sync-to-gitee:
+    # Depends on previous jobs completing successfully
     needs: [determine-context, build-rust, build-wheels]
+    
+    # Conditional: Run for any release (both test and production)
     if: needs.determine-context.outputs.is_release == 'true'
+    
+    # Use Ubuntu latest for API calls
     runs-on: ubuntu-latest
+    
     steps:
+      # Step 1: Sync release information to Gitee using API
+      # Uses GITEE_TOKEN secret for authentication
+      # Creates a release with the same tag, name, and body as GitHub
       - name: Sync Release to Gitee
         run: |
           RELEASE_TAG="${{ needs.determine-context.outputs.release_tag }}"
           RELEASE_NAME="${{ needs.determine-context.outputs.release_name }}"
           RELEASE_BODY="${{ needs.determine-context.outputs.release_body }}"
           
-          # Gitee API endpoint
+          # Gitee API endpoint for creating releases
           GITEE_API="https://gitee.com/api/v5/repos/dunimd/dmsc/releases"
           
-          # Create release on Gitee
+          # Create release on Gitee using curl POST request
           curl -X POST "$GITEE_API" \
             -H "Content-Type: application/json" \
             -d "{
