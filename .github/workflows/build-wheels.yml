@@ -247,8 +247,7 @@ jobs:
         if: runner.os == 'macOS'
         run: |
           brew update
-          brew install cmake pkg-config || true
-          brew upgrade cmake pkg-config || true
+          brew reinstall cmake pkg-config
           # Configure Python paths for PyO3 linking
           echo "PKG_CONFIG_PATH=$(python3-config --prefix)/lib/pkgconfig:$PKG_CONFIG_PATH" >> $GITHUB_ENV
           echo "LDFLAGS=$(python3-config --ldflags)" >> $GITHUB_ENV
@@ -272,8 +271,10 @@ jobs:
       # Step 10: Build Rust library in release mode
       # Compiles libdmsc as a cdylib for the specified target
       # Release mode enables optimizations (-O3) and LTO for maximum performance
+      # Note: Disables pyo3 feature since this job doesn't build Python wheels
+      # and pyo3 requires Python development libraries to link
       - name: Build Rust code
-        run: cargo build --release --target ${{ matrix.target }}
+        run: cargo build --release --target ${{ matrix.target }} --no-default-features --features "websocket cache auth queue gateway service_mesh observability protocol"
 
   ################################################################################
   # Job 3: Build Python Wheels for All Platforms
