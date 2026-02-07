@@ -950,25 +950,30 @@ jobs:
       # Step 1: Sync release information to Gitee using API
       # Uses GITEE_TOKEN secret for authentication
       # Creates a release with the same tag, name, and body as GitHub
+      # Note: Using jq to properly escape JSON special characters in release body
       - name: Sync Release to Gitee
         run: |
-          RELEASE_TAG="${{ github.event.release.tag_name }}"
-          RELEASE_NAME="${{ github.event.release.name }}"
-          RELEASE_BODY="${{ github.event.release.body }}"
-          
           # Gitee API endpoint for creating releases
           GITEE_API="https://gitee.com/api/v5/repos/dunimd/dmsc/releases"
+          
+          # Create JSON payload using jq to properly escape special characters
+          jq -n \
+            --arg token "${{ secrets.GITEE_TOKEN }}" \
+            --arg tag "${{ github.event.release.tag_name }}" \
+            --arg name "${{ github.event.release.name }}" \
+            --arg body "${{ github.event.release.body }}" \
+            '{
+              access_token: $token,
+              tag_name: $tag,
+              name: $name,
+              body: $body,
+              prerelease: false,
+              target_commitish: "master"
+            }' > payload.json
           
           # Create release on Gitee using curl POST request
           curl -X POST "$GITEE_API" \
             -H "Content-Type: application/json" \
-            -d "{
-              \"access_token\": \"${{ secrets.GITEE_TOKEN }}\",
-              \"tag_name\": \"$RELEASE_TAG\",
-              \"name\": \"$RELEASE_NAME\",
-              \"body\": \"$RELEASE_BODY\",
-              \"prerelease\": false,
-              \"target_commitish\": \"master\"
-            }"
+            -d @payload.json
         env:
           GITEE_TOKEN: ${{ secrets.GITEE_TOKEN }}
