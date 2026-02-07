@@ -204,7 +204,16 @@ jobs:
         with:
           targets: ${{ matrix.target }}
 
-      # Step 3: Install protoc (Protocol Buffers compiler) for etcd-client build
+      # Step 3: Set up Python for PyO3 linking on macOS
+      # Conditional: Only runs on macOS platforms
+      # PyO3 requires Python development libraries to link against
+      - name: Set up Python
+        if: runner.os == 'macOS'
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      # Step 4: Install protoc (Protocol Buffers compiler) for etcd-client build
       # The etcd-client crate requires protoc to compile Protocol Buffer definitions
       # This is needed because DMSC includes etcd integration for service discovery
       - name: Install protoc
@@ -213,7 +222,7 @@ jobs:
           version: '33.x'
           repo-token: ${{ secrets.GITHUB_TOKEN }}
 
-      # Step 4: Install CMake for rdkafka build
+      # Step 6: Install CMake for rdkafka build
       # rdkafka (Kafka client library) requires CMake to build its C dependencies
       # DMSC uses Kafka for message streaming capabilities
       - name: Install CMake
@@ -221,7 +230,7 @@ jobs:
         with:
           cmake-version: '3.28.x'
 
-      # Step 5: Install system dependencies for rdkafka on Ubuntu
+      # Step 7: Install system dependencies for rdkafka on Ubuntu
       # Conditional: Only runs on Linux platforms
       # Installs curl and SASL libraries required by the Kafka C client
       - name: Install dependencies (Ubuntu)
@@ -230,7 +239,7 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y libcurl4-openssl-dev libsasl2-dev
 
-      # Step 6: Install dependencies for macOS builds
+      # Step 8: Install dependencies for macOS builds
       # Conditional: Only runs on macOS platforms
       # Installs cmake and pkg-config via Homebrew for building native dependencies
       # Also configures Python development libraries for PyO3 linking
@@ -245,7 +254,7 @@ jobs:
           echo "LDFLAGS=$(python3-config --ldflags)" >> $GITHUB_ENV
           echo "CFLAGS=$(python3-config --cflags)" >> $GITHUB_ENV
 
-      # Step 7: Cache Rust dependencies to speed up builds
+      # Step 9: Cache Rust dependencies to speed up builds
       # Caches cargo registry and target directory to avoid re-downloading crates
       # Uses matrix target in cache key for platform-specific caching
       - name: Cache Rust dependencies
@@ -260,7 +269,7 @@ jobs:
             rust-check-${{ matrix.target }}-
             rust-check-
 
-      # Step 8: Build Rust library in release mode
+      # Step 10: Build Rust library in release mode
       # Compiles libdmsc as a cdylib for the specified target
       # Release mode enables optimizations (-O3) and LTO for maximum performance
       - name: Build Rust code
@@ -564,14 +573,12 @@ jobs:
       # protoc is required by etcd-client for Protocol Buffer compilation
       # cmake is required by rdkafka for building Kafka client C dependencies
       # pkg-config is used by build scripts to locate system libraries
-      # The || true ensures the build continues even if packages are already installed
-      # The upgrade step ensures we have the latest versions
+      # First runs brew update to get latest package info, then reinstalls to ensure latest versions
       - name: Install protoc and CMake for macOS
         if: runner.os == 'macOS'
         run: |
           brew update
-          brew install protobuf cmake pkg-config || true
-          brew upgrade protobuf cmake pkg-config || true
+          brew reinstall protobuf cmake pkg-config
           echo "PROTOC=$(brew --prefix protobuf)/bin/protoc" >> $GITHUB_ENV
 
       # Step 6: Cache pip dependencies to avoid rate limits
