@@ -16,9 +16,209 @@
 //! limitations under the License.
 
 //! # Hooks Module C API
+//!
+//! This module provides C language bindings for DMSC's hook system. The hooks module enables
+//! extensible application behavior through a publish-subscribe pattern where components can
+//! register callback functions (hooks) that are invoked at specific points in the application
+//! lifecycle or in response to specific events. This C API enables C/C++ applications to
+//! leverage DMSC's extensibility mechanisms for building modular and customizable applications.
+//!
+//! ## Module Architecture
+//!
+//! The hooks module centers around a single primary component:
+//!
+//! - **DMSCHookBus**: Central event bus for registering hooks and dispatching events. The hook
+//!   bus manages the complete lifecycle of hooks including registration, invocation, and
+//!   unregistration. It provides a thread-safe mechanism for components to communicate through
+//!   loosely-coupled event handlers.
+//!
+//! ## Hook Concepts
+//!
+//! The hook system implements several key concepts:
+//!
+//! - **Hooks**: Callback functions registered at specific points in the application lifecycle.
+//!   Hooks can modify behavior, perform side effects, or transform data as it flows through
+//!   the system.
+//!
+//! - **Hook Points**: Well-defined locations in the code where registered hooks are invoked.
+//!   Common hook points include application startup, shutdown, request processing, error
+//!   handling, and custom business events.
+//!
+//! - **Hook Priority**: Ordering mechanism that controls the sequence of hook execution when
+//!   multiple hooks are registered at the same hook point. Higher priority hooks execute first.
+//!
+//! - **Hook Context**: Data passed to hooks containing information about the event and allowing
+//!   hooks to communicate through shared context.
+//!
+//! - **Hook Filters**: Capability for hooks to filter whether they should be invoked based on
+//!   event properties without full registration overhead.
+//!
+//! ## Hook Types
+//!
+//! The system supports various hook types for different use cases:
+//!
+//! - **Synchronous Hooks**: Execute immediately when the hook point is reached. Most common
+//!   type for application extension. Blocking until all hooks complete.
+//!
+//! - **Asynchronous Hooks**: Execute in the background without blocking the main flow. Useful
+//!   for logging, metrics, or long-running operations that shouldn't delay primary processing.
+//!
+//! - **One-Time Hooks**: Execute only once, then automatically unregister. Useful for
+//!   initialization or cleanup tasks that should run a single time.
+//!
+//! - **Conditional Hooks**: Only execute when specific conditions are met. Conditions checked
+//!   before invoking the hook function, reducing overhead for hooks that rarely apply.
+//!
+//! - **Transform Hooks**: Modify data passing through the hook point. Data is passed to the
+//!   hook, transformed, and passed to the next hook or back to the caller.
+//!
+//! ## Hook Bus Architecture
+//!
+//! The hook bus implements a centralized event distribution system:
+//!
+//! - **Event Dispatching**: Efficient routing of events to registered hooks based on hook point.
+//!   Supports both synchronous and asynchronous dispatch.
+//!
+//! - **Hook Registration**: Thread-safe registration of hooks with priority, filters, and
+//!   configuration options. Supports registration during any phase of application lifecycle.
+//!
+//! - **Error Handling**: Configurable behavior when hooks return errors including stop-on-error,
+//!   continue-with-error, and error logging strategies.
+//!
+//! - **Performance Optimization**: Batch dispatch, hook filtering, and lazy evaluation minimize
+//!   overhead for high-frequency hook points.
+//!
+//! ## Common Hook Points
+//!
+//! The DMSC framework defines standard hook points:
+//!
+//! - **Application Lifecycle Hooks**: pre_startup, post_startup, pre_shutdown, post_shutdown
+//! - **Request Processing Hooks**: pre_request, post_request, on_error
+//! - **Configuration Hooks**: pre_config_load, post_config_load, on_config_change
+//! - **Logging Hooks**: on_log_message, on_log_level_change
+//! - **Custom Application Hooks**: Application-defined event types
+//!
+//! ## Hook Priority System
+//!
+//! Hooks execute in priority order from highest to lowest:
+//!
+//! - **System Hooks** (1000-900): Reserved for DMSC framework internal use
+//! - **High Priority** (800-600): Critical application extensions
+//! - **Normal Priority** (500-400): Standard application hooks
+//! - **Low Priority** (300-200): Monitoring and observability hooks
+//! - **System Low** (100-0): Reserved for cleanup and finalization
+//!
+//! Equal priority hooks execute in registration order. Consider using explicit priorities
+//! rather than relying on registration order for reproducibility.
+//!
+//! ## Memory Management
+//!
+//! All C API objects use opaque pointers with manual memory management:
+//!
+//! - Constructor functions allocate new instances on the heap
+//! - Destructor functions must be called to release memory
+//! - Hook callbacks must be properly unregistered before freeing context
+//! - Hook context data must be freed by the application
+//!
+//! ## Thread Safety
+//!
+//! The underlying implementations are thread-safe:
+//!
+//! - Hook registration is safe from any thread
+//! - Hook invocation occurs in the context of the triggering code
+//! - Asynchronous hooks run in a thread pool
+//! - Concurrent hook dispatch uses internal synchronization
+//!
+//! ## Performance Characteristics
+//!
+//! Hook operations have the following performance profiles:
+//!
+//! - Hook registration: O(1) amortized
+//! - Hook lookup: O(log n) where n is registered hook count
+//! - Synchronous dispatch: O(n * t) where n is hook count, t is execution time
+//! - Asynchronous dispatch: O(1) to queue, O(n * t) in thread pool
+//!
+//! ## Usage Example
+//!
+//! ```c
+//! // Create hook bus instance
+//! DMSCHookBus* bus = dmsc_hook_bus_new();
+//! if (bus == NULL) {
+//!     fprintf(stderr, "Failed to create hook bus\n");
+//!     return ERROR_INIT;
+//! }
+//!
+//! // Register startup hook
+//! int startup_result = dmsc_hook_bus_register(
+//!     bus,
+//!     "pre_startup",
+//!     500,  // normal priority
+//!     on_startup_hook,
+//!     NULL  // user data
+//! );
+//!
+//! if (startup_result != 0) {
+//!     fprintf(stderr, "Failed to register startup hook\n");
+//! }
+//!
+//! // Register request processing hook
+//! dmsc_hook_bus_register(bus, "pre_request", 500, on_pre_request, NULL);
+//! dmsc_hook_bus_register(bus, "post_request", 500, on_post_request, NULL);
+//!
+//! // Register shutdown hook
+//! dmsc_hook_bus_register(bus, "pre_shutdown", 300, on_shutdown, NULL);
+//!
+//! // Trigger custom event
+//! DMSCHookContext* context = dmsc_hook_context_create();
+//! dmsc_hook_context_set_string(context, "event_name", "user_action");
+//! dmsc_hook_context_set_int(context, "user_id", 12345);
+//!
+//! dmsc_hook_bus_dispatch(bus, "on_user_action", context);
+//!
+//! dmsc_hook_context_free(context);
+//!
+//! // Unregister hooks before shutdown
+//! dmsc_hook_bus_unregister(bus, "pre_startup", on_startup_hook);
+//! dmsc_hook_bus_unregister(bus, "pre_request", on_pre_request);
+//! dmsc_hook_bus_unregister(bus, "post_request", on_post_request);
+//! dmsc_hook_bus_unregister(bus, "pre_shutdown", on_shutdown);
+//!
+//! // Cleanup
+//! dmsc_hook_bus_free(bus);
+//! ```
+//!
+//! ## Hook Callback Signature
+//!
+//! Hook callbacks must conform to the following signature:
+//!
+//! ```c
+//! typedef int (*DMSCHookCallback)(
+//!     const char* hook_point,      // Name of the hook point
+//!     DMSCHookContext* context,     // Event context data
+//!     void* user_data              // User-provided data
+//! );
+//! ```
+//!
+//! Return values:
+//!
+//! - 0: Success, continue processing other hooks
+//! - Positive: Success with value, stop processing if configured
+//! - Negative: Error, stop processing if configured
+//!
+//! ## Dependencies
+//!
+//! This module depends on the following DMSC components:
+//!
+//! - `crate::hooks`: Rust hooks module implementation
+//! - `crate::prelude`: Common types and traits
+//!
+//! ## Feature Flags
+//!
+//! The hooks module is always enabled as it provides fundamental extensibility
+//! infrastructure for DMSC applications.
 
 use crate::hooks::DMSCHookBus;
-use std::ffi::{c_char, c_int};
+
 
 c_wrapper!(CDMSCHookBus, DMSCHookBus);
 
