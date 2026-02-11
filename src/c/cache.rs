@@ -145,144 +145,14 @@
 
 use crate::cache::{DMSCCacheConfig, DMSCCacheManager, DMSCMemoryCache};
 
-
-/// Opaque C wrapper structure for DMSCCacheConfig.
-///
-/// Provides C-compatible memory layout for cache configuration parameters.
-/// The wrapper encapsulates all cache tuning parameters including capacity limits,
-/// eviction policies, TTL settings, and backend connection properties.
-///
-/// # Configuration Parameters
-///
-/// The cache configuration controls the following aspects:
-///
-/// - **Capacity Limits**: Maximum number of entries or total memory usage
-/// - **Eviction Policy**: Algorithm used when capacity is reached (LRU, LFU, etc.)
-/// - **Time-to-Live**: Default expiration time for cached entries
-/// - **Backend Selection**: In-memory, Redis, or Memcached configuration
-/// - **Serialization**: Format and options for data serialization
-/// - **Connection Pool**: Pool size and connection timeout for distributed backends
-///
-/// # Memory Layout
-///
-/// The structure uses #[repr(C)] ensuring binary compatibility:
-/// - Consistent field alignment across Rust versions
-/// - Predictable size for FFI boundaries
-/// - No hidden padding affecting pointer arithmetic
 c_wrapper!(CDMSCCacheConfig, DMSCCacheConfig);
 
-/// Opaque C wrapper structure for DMSCCacheManager.
-///
-/// Central management interface for cache operations. The cache manager provides
-/// unified access to cache backends with automatic failover and load balancing.
-/// Implements connection pooling and provides high-level abstractions for common
-/// cache operations.
-///
-/// # Manager Responsibilities
-///
-/// The cache manager handles:
-///
-/// - Backend selection and health monitoring
-/// - Connection pool management
-/// - Request routing and load distribution
-/// - Cache operation orchestration
-/// - Metrics collection and reporting
-///
-/// # Backend Support
-///
-/// The manager supports multiple cache backends:
-///
-/// - In-memory cache for local caching
-/// - Redis for distributed caching
-/// - Memcached for high-performance key-value storage
-/// - Custom backends via plugin interface
-///
-/// # Performance Optimization
-///
-/// The manager implements several optimizations:
-///
-/// - Automatic request batching for network backends
-/// - Connection multiplexing to reduce overhead
-/// - Predictive prefetching based on access patterns
-/// - Compressed storage for large values
 c_wrapper!(CDMSCCacheManager, DMSCCacheManager);
 
-/// Opaque C wrapper structure for DMSCMemoryCache.
-///
-/// High-performance in-memory cache implementation using concurrent data structures.
-/// Optimized for single-instance deployments or as local cache tier in distributed
-/// caching architectures.
-///
-/// # Implementation Details
-///
-/// The memory cache uses:
-///
-/// - DashMap for concurrent access without explicit locking
-/// - Linked hash map for LRU tracking
-/// - Incremental eviction to prevent stop-the-world pauses
-/// - Automatic memory pressure handling
-///
-/// # Capacity Management
-///
-/// Memory usage is controlled through:
-///
-/// - Entry count limits
-/// - Maximum memory allocation
-/// - Weighted entry sizes
-/// - Automatic eviction triggers
-///
-/// # Thread Safety
-///
-/// Concurrent access is safe without external synchronization:
-///
-/// - Lock-free reads for high read throughput
-/// - Fine-grained locking for writes
-/// - Atomic counter updates
-/// - Safe memory reclamation
 c_wrapper!(CDMSCMemoryCache, DMSCMemoryCache);
 
-/// Creates a new CDMSCCacheConfig instance with default configuration values.
-///
-/// Initializes a cache configuration object with sensible production defaults:
-/// - Default maximum entries: 10,000
-/// - Default TTL: 3600 seconds (1 hour)
-/// - Default eviction policy: LRU
-/// - Default serializer: JSON
-///
-/// # Returns
-///
-/// Pointer to newly allocated CDMSCCacheConfig on success, or NULL if memory
-/// allocation fails. The returned pointer must be freed using dmsc_cache_config_free().
-///
-/// # Default Configuration
-///
-/// The default configuration is suitable for most use cases:
-/// - Moderate cache capacity for typical applications
-/// - One-hour TTL balances freshness with cache efficiency
-/// - LRU eviction adapts to access patterns automatically
-/// - JSON serialization for human-readable cached data
-///
-/// # Customization
-///
-/// After creation, configuration can be customized:
-/// - dmsc_cache_config_set_max_size() for capacity adjustment
-/// - dmsc_cache_config_set_ttl() for expiration tuning
-/// - dmsc_cache_config_set_eviction_policy() for algorithm selection
 c_constructor!(dmsc_cache_config_new, CDMSCCacheConfig, DMSCCacheConfig, DMSCCacheConfig::default());
 
-/// Frees a previously allocated CDMSCCacheConfig instance.
-///
-/// Releases all memory associated with the configuration object including any
-/// internally allocated strings, connection parameters, or sub-objects.
-///
-/// # Parameters
-///
-/// - `config`: Pointer to CDMSCCacheConfig to free. NULL is safe and returns immediately.
-///
-/// # Safety
-///
-/// Safe to call with NULL. Calling with already-freed pointer is undefined behavior.
-/// Implement proper ownership tracking to prevent double-free vulnerabilities.
 c_destructor!(dmsc_cache_config_free, CDMSCCacheConfig);
 
 /// Creates a new DMSCMemoryCache instance.
@@ -330,7 +200,7 @@ c_destructor!(dmsc_cache_config_free, CDMSCCacheConfig);
 /// For optimal performance:
 ///
 /// - Configure capacity before heavy usage
-•   - Batch similar operations together
+/// - Batch similar operations together
 /// - Use appropriate serialization format
 /// - Monitor cache hit rate for tuning
 #[no_mangle]
@@ -339,26 +209,4 @@ pub extern "C" fn dmsc_memory_cache_new() -> *mut CDMSCMemoryCache {
     Box::into_raw(Box::new(CDMSCMemoryCache::new(cache)))
 }
 
-/// Frees a previously allocated DMSCMemoryCache instance.
-///
-/// Releases all memory held by the cache including all cached entries and
-/// internal data structures. After this function returns, the pointer is invalid.
-///
-/// # Parameters
-///
-/// - `cache`: Pointer to DMSCMemoryCache to free. NULL is safe and returns immediately.
-///
-/// # Behavior
-///
-/// The destructor:
-///
-/// - Clears all cached entries
-/// - Releases internal data structures
-/// - Frees allocated memory
-/// - Invalidates the pointer
-///
-/// # Memory Cleanup
-///
-/// All cached values are automatically freed during destruction. No manual
-/// cleanup of individual entries is required before calling this function.
 c_destructor!(dmsc_memory_cache_free, CDMSCMemoryCache);

@@ -84,7 +84,7 @@
 //!   device-like behavior required by the application.
 //!
 //! ## Device Lifecycle
-!
+//!
 //! Devices transition through well-defined lifecycle states:
 //!
 //! 1. **DISCOVERED**: Device detected but not yet configured or available for use
@@ -214,158 +214,10 @@
 use crate::device::{DMSCDevice, DMSCDeviceController, DMSCDeviceScheduler, DMSCDeviceType};
 use std::ffi::c_char;
 
-/// Opaque C wrapper structure for DMSCDevice.
-///
-/// Fundamental device abstraction representing any computational resource. Each device
-/// instance encapsulates identity, type, capabilities, and state information.
-///
-/// # Device Properties
-///
-/// Each device maintains the following core properties:
-///
-/// - **Name**: Unique identifier for the device within the system namespace.
-///   Names should be descriptive and follow naming conventions for the device type.
-///
-/// - **Type**: Category of device as defined in DMSCDeviceType enumeration.
-///   Determines available operations and expected behavior patterns.
-///
-/// - **State**: Current operational state including availability, allocation status,
-///   and error conditions.
-///
-/// - **Capabilities**: Set of supported operations and features advertised by the device.
-///
-/// - **Metrics**: Dynamic performance and operational measurements updated periodically.
-///
-/// # Device Identification
-///
-/// Devices are identified through multiple mechanisms:
-///
-/// - **Name**: Human-readable identifier used for application-level reference
-/// - **UUID**: Globally unique identifier suitable for persistent references
-/// - **Physical Address**: Hardware-specific address or path for physical devices
-/// - **Logical ID**: System-assigned identifier for internal tracking
-///
-/// # Lifetime Management
-///
-/// Device instances have the following lifecycle:
-///
-/// 1. Created via dmsc_device_new() or discovered through device enumeration
-/// 2. Configured with required settings before first use
-/// 3. Initialized to prepare for operational use
-/// 4. Allocated to consumers for exclusive or shared access
-/// 5. Used for device-specific operations
-/// 6. Released back to available pool
-/// 7. Cleaned up via dmsc_device_free() when no longer needed
-///
-/// # Thread Safety
-///
-/// Device objects are thread-safe for read operations:
-///
-/// - Property queries can be performed concurrently
-/// - Metric sampling supports concurrent access
-/// - Control operations require external synchronization
-/// - Consider using device controller for coordinated access
 c_wrapper!(CDMSCDevice, DMSCDevice);
 
-/// Opaque C wrapper structure for DMSCDeviceController.
-///
-/// Device control interface providing operational methods for device manipulation.
-/// Controllers handle device initialization, configuration, and lifecycle management.
-///
-/// # Controller Responsibilities
-///
-/// The device controller manages:
-///
-/// - **Initialization**: Prepare device for operational use including resource
-///   allocation, driver loading, and health verification.
-/// - **Configuration**: Apply runtime settings including operating modes, power
-///   management, and feature enablement.
-/// - **Activation/Deactivation**: Transition device between operational and standby
-///   states for power management and resource optimization.
-/// - **Error Recovery**: Detect, report, and optionally recover from error
-///   conditions including timeout, hardware failure, and resource exhaustion.
-/// - **Monitoring**: Track device health and operational metrics for observability
-///   and alerting.
-///
-/// # Control Operations
-///
-/// Controllers provide standardized operations across device types:
-///
-/// - initialize(): Prepare device for first use
-/// - configure(key, value): Apply configuration setting
-/// - activate(): Transition to operational state
-/// - deactivate(): Transition to standby state
-/// - reset(): Return to known-good state
-/// - shutdown(): Gracefully power down
-///
-/// # Error Handling
-///
-/// Controller operations return error codes indicating outcome:
-///
-/// - 0: Success
-/// - Negative: System error (specific codes by device type)
-/// - Positive: Warning condition (operation succeeded with notes)
-///
-/// # Thread Safety
-///
-/// Controllers are not thread-safe:
-///
-/// - Single controller instance should not be used concurrently
-•   - Use separate controllers for multi-threaded access
-/// - Consider device scheduler for coordinated sharing
 c_wrapper!(CDMSCDeviceController, DMSCDeviceController);
 
-/// Opaque C wrapper structure for DMSCDeviceScheduler.
-///
-/// Resource scheduling component for coordinating device usage across multiple requestors.
-/// The scheduler implements allocation policies and prioritization.
-///
-/// # Scheduling Responsibilities
-///
-/// The device scheduler handles:
-///
-/// - **Request Queuing**: Accept and queue device allocation requests with
-///   associated priority and requirements.
-/// - **Resource Matching**: Match requests to suitable devices based on type,
-///   capabilities, and availability.
-/// - **Policy Enforcement**: Apply configured scheduling policies including
-///   fairness, priority, and deadline constraints.
-/// - **Allocation Management**: Track device allocation state and ensure proper
-///   release when requests complete or are cancelled.
-/// - **Metrics Collection**: Record scheduling statistics including wait times,
-///   utilization, and queue depths.
-///
-/// # Allocation Flow
-///
-/// The typical allocation flow proceeds as follows:
-///
-/// 1. Submit allocation request with device type, priority, and requirements
-/// 2. Request enters queue based on priority and scheduling policy
-/// 3. Scheduler matches request to available device when possible
-/// 4. Device transitions to ALLOCATED state
-/// 5. Device reference returned to requestor
-/// 6. Requestor uses device for desired operations
-/// 7. Requestor releases device when complete
-/// 8. Device returns to AVAILABLE state
-///
-/// # Policy Configuration
-///
-/// The scheduler supports multiple configuration options:
-///
-/// - Default scheduling policy (FIFO, priority, fair-share, deadline)
-/// - Queue limits and overflow handling
-/// - Timeout behavior for waiting requests
-/// - Preemption settings for priority scheduling
-/// - Fair-share weights per consumer
-///
-/// # Thread Safety
-///
-/// The scheduler is fully thread-safe:
-///
-/// - Concurrent request submission supported
-/// - Multiple threads can wait for allocation
-/// - Internal synchronization handles race conditions
-/// - Safe for use in high-concurrency scenarios
 c_wrapper!(CDMSCDeviceScheduler, DMSCDeviceScheduler);
 
 /// Device type enumeration values.
@@ -481,29 +333,4 @@ pub extern "C" fn dmsc_device_new(name: *const c_char, device_type: i32) -> *mut
     }
 }
 
-/// Frees a previously allocated DMSCDevice instance.
-///
-/// Releases all memory associated with the device including any allocated resources,
-/// cached metrics, or internal state. The device must not be in ALLOCATED state
-/// when freed.
-///
-/// # Parameters
-///
-/// - `device`: Pointer to DMSCDevice to free. If NULL, the function returns
-///   immediately without error.
-///
-/// # Preconditions
-///
-/// Before freeing a device:
-///
-/// 1. Ensure device is not currently allocated to a consumer
-/// 2. Release from any scheduler if registered
-/// 3. Destroy associated controller if created
-/// 4. Complete any pending operations
-///
-/// # Safety
-///
-/// This function is safe to call with NULL. Calling with a pointer that has
-/// already been freed results in undefined behavior. Ensure proper synchronization
-/// when freeing devices accessed from multiple threads.
 c_destructor!(dmsc_device_free, CDMSCDevice);

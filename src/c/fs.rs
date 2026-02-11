@@ -204,53 +204,6 @@
 use crate::fs::DMSCFileSystem;
 
 
-/// Opaque C wrapper structure for DMSCFileSystem.
-///
-/// Unified file system abstraction providing portable file and directory operations
-/// across different operating systems.
-///
-/// # Core Responsibilities
-///
-/// The file system wrapper manages:
-///
-/// - **Path Management**: Path normalization, joining, resolution, and component extraction.
-///   Handles platform-specific path conventions uniformly.
-/// - **File Operations**: Reading, writing, creating, deleting, and modifying files with
-///   configurable modes and options.
-/// - **Directory Operations**: Creating, listing, traversing, and removing directories.
-/// - **Metadata Access**: Querying and modifying file attributes including size, timestamps,
-///   permissions, and file type.
-/// - **Symbolic Links**: Creating, resolving, and detecting symbolic links.
-///
-/// # Platform Abstraction
-///
-/// The file system abstraction normalizes platform differences:
-///
-/// - **Path Separators**: Automatic conversion between Windows (\) and Unix (/) separators.
-/// - **Root Directories**: Handles drive letters (Windows) and mount points (Unix).
-/// - **Path Length Limits**: Abstracts platform-specific path length constraints.
-/// - **Special Characters**: Handles reserved characters and naming restrictions.
-/// - **Line Endings**: Configurable text/binary mode for line ending translation.
-///
-/// # Instance Lifecycle
-///
-/// File system instances are created once and reused:
-///
-/// 1. Create via dmsc_fs_new_auto() or filesystem-specific constructor
-/// 2. Use for multiple file operations
-/// 3. Free via dmsc_fs_free() when no longer needed
-///
-/// Creating multiple instances for the same filesystem is supported and may be
-/// necessary for concurrent operations on some platforms.
-///
-/// # Thread Safety
-///
-/// The file system instance is thread-safe for most operations:
-///
-/// - Metadata queries can be performed concurrently
-/// - Path resolution is thread-safe
-/// - File operations require external synchronization
-/// - Consider using Tokio async runtime for concurrent file I/O
 c_wrapper!(CDMSCFileSystem, DMSCFileSystem);
 
 /// Creates a new DMSCFileSystem instance with automatic root directory detection.
@@ -313,35 +266,4 @@ pub extern "C" fn dmsc_fs_new_auto() -> *mut CDMSCFileSystem {
     }
 }
 
-/// Frees a previously allocated DMSCFileSystem instance.
-///
-/// Releases all memory associated with the file system instance including any
-/// cached paths, handles, or internal state.
-///
-/// # Parameters
-///
-/// - `fs`: Pointer to DMSCFileSystem to free. If NULL, the function returns
-///   immediately without error.
-///
-/// # Preconditions
-///
-/// Before freeing a file system instance:
-///
-/// 1. Ensure all open file handles are closed
-/// 2. Complete any ongoing file operations
-/// 3. Release any directory iterators
-///
-/// # Safety
-///
-/// This function is safe to call with NULL. Calling with a pointer that has
-/// already been freed results in undefined behavior.
-///
-/// # Behavior
-///
-/// The destructor:
-///
-/// - Closes any open file handles
-/// - Releases cached resources
-/// - Clears internal buffers
-/// - Frees allocated memory
 c_destructor!(dmsc_fs_free, CDMSCFileSystem);

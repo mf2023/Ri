@@ -157,7 +157,7 @@
 //! - Middleware should be stateless when possible
 //!
 //! ## Performance Characteristics
-!
+//!
 //! Gateway operations have the following performance profiles:
 //!
 //! - Request routing: O(log n) for route lookup with path parameters
@@ -216,172 +216,12 @@
 use crate::gateway::{DMSCGateway, DMSCGatewayConfig, DMSCRouter};
 
 
-/// Opaque C wrapper structure for DMSCGateway.
-///
-/// Core gateway server implementation handling HTTP request processing, middleware composition,
-/// and response generation. The gateway acts as the entry point for all incoming API requests.
-///
-/// # Gateway Responsibilities
-///
-/// The gateway server manages:
-///
-/// - **Request Acceptance**: Accept incoming TCP connections and parse HTTP requests
-/// - **Request Processing**: Apply middleware chain and route matching
-/// - **Backend Communication**: Forward requests to backend services and receive responses
-/// - **Response Generation**: Apply response middleware and send responses to clients
-/// - **Connection Management**: Handle keep-alive, timeouts, and connection lifecycle
-/// - **Health Monitoring**: Track backend health and remove unhealthy instances
-///
-/// # Server Architecture
-///
-/// The gateway uses a multi-threaded architecture:
-///
-/// - **Acceptor Thread**: Accepts incoming connections and distributes to worker threads
-/// - **Worker Threads**: Process requests through middleware and routing
-/// - **Backend Pool**: Manages connections to backend services
-/// - **Metrics Collector**: Tracks request statistics and performance metrics
-///
-/// # Request Processing Pipeline
-///
-/// Requests flow through the gateway:
-///
-/// 1. Connection accepted and HTTP request parsed
-/// 2. Request enters middleware chain (authentication, logging, etc.)
-/// 3. Router matches request to registered route
-/// 4. Request optionally transformed before backend forwarding
-/// 5. Backend selected via load balancing algorithm
-/// 6. Request forwarded to backend service
-/// 7. Response received and transformed if needed
-/// 8. Response middleware applied (compression, caching, etc.)
-/// 9. Response sent to client
-///
-/// # Thread Safety
-///
-/// The gateway server is fully thread-safe:
-///
-/// - Concurrent request handling supported
-/// - Dynamic route updates may require synchronization
-/// - Configuration changes may require restart
-/// - Metrics collection is lock-free for performance
 c_wrapper!(CDMSCGateway, DMSCGateway);
 
-/// Opaque C wrapper structure for DMSCGatewayConfig.
-///
-/// Configuration container for gateway server parameters controlling resource allocation,
-/// security settings, and behavioral characteristics.
-///
-/// # Configuration Parameters
-///
-/// The gateway configuration controls:
-///
-/// - **Network Settings**: Listen address, port, and binding options
-/// - **Thread Configuration**: Number of worker threads, connection queue size
-/// - **Timeout Settings**: Request timeout, keep-alive duration, slow request threshold
-/// - **TLS Configuration**: Certificate paths, cipher suites, HTTP/2 settings
-/// - **Rate Limiting**: Global and per-client rate limits
-/// - **Circuit Breaker**: Failure thresholds and recovery settings
-/// - **Logging**: Log level, format, and output destinations
-///
-/// # Memory Layout
-///
-/// The structure uses #[repr(C)] ensuring binary compatibility:
-/// - Consistent field alignment across Rust versions
-/// - Predictable size for FFI boundaries
-/// - No hidden padding affecting pointer arithmetic
 c_wrapper!(CDMSCGatewayConfig, DMSCGatewayConfig);
 
-/// Opaque C wrapper structure for DMSCRouter.
-///
-/// Request routing component responsible for matching incoming requests to registered routes
-/// based on method, path, headers, and other request attributes.
-///
-/// # Routing Responsibilities
-///
-/// The router handles:
-///
-/// - **Route Registration**: Adding routes with handlers and middleware
-/// - **Route Matching**: Finding matching route for incoming requests
-/// - **Parameter Extraction**: Capturing path parameters and query values
-/// - **Middleware Attachment**: Applying middleware to specific routes
-/// - **Route Groups**: Organizing routes with shared configuration
-/// - **Route Documentation**: Generating OpenAPI/Swagger documentation
-///
-/// # Route Matching Algorithm
-///
-/// The router uses an efficient matching algorithm:
-///
-/// 1. Match HTTP method (reject non-matching methods early)
-/// 2. Match path prefix
-/// 3. Match path pattern (static, parameterized, wildcard)
-/// 4. Match header conditions if specified
-/// 5. Match query conditions if specified
-/// 6. Return most specific match (parameterized over wildcard)
-///
-/// # Performance Optimization
-///
-/// The router implements several optimizations:
-///
-/// - **Prefix Trie**: Efficient path lookup using prefix tree structure
-/// - **Method Routing**: Separate trees per HTTP method for faster matching
-/// - **Cached Matches**: Recent route matches cached for performance
-/// - **Zero-Copy Parsing**: Path parsing minimizes memory allocation
-///
-/// # Thread Safety
-///
-/// The router supports concurrent read access:
-///
-/// - Route lookups are lock-free for read operations
-/// - Route registration may require write lock
-/// - Dynamic updates use atomic pointer swaps
-/// - Consider read-write lock for high-frequency updates
 c_wrapper!(CDMSCRouter, DMSCRouter);
 
-/// Creates a new DMSCGatewayConfig instance with default configuration values.
-///
-/// Initializes a gateway configuration object with sensible production defaults:
-/// - Default listen address: 0.0.0.0
-/// - Default port: 8080
-/// - Default worker threads: number of CPU cores
-/// - Default request timeout: 30 seconds
-/// - Default keep-alive: 75 seconds
-/// - Default rate limit: 1000 requests per minute
-///
-/// # Returns
-///
-/// Pointer to newly allocated DMSCGatewayConfig on success, or NULL if memory
-/// allocation fails. The returned pointer must be freed using dmsc_gateway_config_free().
-///
-/// # Default Configuration
-///
-/// The default configuration is suitable for most deployment scenarios:
-///
-/// - Listens on all network interfaces
-/// - Uses reasonable thread pool for multi-core systems
-/// - Provides adequate timeouts for typical API operations
-/// - Enables reasonable rate limiting out of the box
-///
-/// # Customization
-///
-/// After creation, configuration can be customized:
-///
-/// - dmsc_gateway_config_set_address() for custom bind address
-/// - dmsc_gateway_config_set_port() for custom port
-/// - dmsc_gateway_config_set_workers() for thread pool tuning
-/// - dmsc_gateway_config_set_timeout() for request timeout adjustment
-/// - dmsc_gateway_config_set_tls_cert() for HTTPS support
-c_constructor!(dmsc_gateway_config_new, DMSCGatewayConfig, DMSCGatewayConfig, DMSCGatewayConfig::default());
+c_constructor!(dmsc_gateway_config_new, CDMSCGatewayConfig, DMSCGatewayConfig, DMSCGatewayConfig::default());
 
-/// Frees a previously allocated DMSCGatewayConfig instance.
-///
-/// Releases all memory associated with the configuration object including any
-/// internally allocated certificates, TLS configurations, or sub-objects.
-///
-/// # Parameters
-///
-/// - `config`: Pointer to DMSCGatewayConfig to free. NULL is safe and returns immediately.
-///
-/// # Safety
-///
-/// Safe to call with NULL. Calling with already-freed pointer is undefined behavior.
-/// Implement proper ownership tracking to prevent double-free vulnerabilities.
 c_destructor!(dmsc_gateway_config_free, DMSCGatewayConfig);

@@ -108,167 +108,18 @@
 use crate::auth::{DMSCAuthConfig, DMSCJWTManager, DMSCSessionManager, DMSCPermissionManager, DMSCOAuthManager};
 use std::ffi::c_char;
 
-/// Opaque C wrapper structure for DMSCAuthConfig.
-///
-/// This structure provides C-compatible memory layout for the Rust authentication
-/// configuration type. The internal implementation details are hidden from C callers,
-/// ensuring ABI stability across Rust version updates. Instances must be created using
-/// dmsc_auth_config_new() and freed using dmsc_auth_config_free().
-///
-/// # Memory Layout
-///
-/// The structure uses #[repr(C)] attribute to ensure consistent memory layout:
-/// - Field alignment follows C ABI requirements
-/// - Size is predictable for FFI boundaries
-/// - No padding or alignment issues when passed between languages
-///
-/// # Thread Safety
-///
-/// This structure is not thread-safe. Concurrent access requires external synchronization.
-/// Consider using thread-local storage or mutexes for multi-threaded access patterns.
 c_wrapper!(CDMSCAuthConfig, DMSCAuthConfig);
 
-/// Opaque C wrapper structure for DMSCJWTManager.
-///
-/// Wraps the Rust JWT management implementation providing token generation and validation
-/// capabilities. The wrapper maintains ownership of the underlying JWT manager and
-/// delegates all operations to the Rust implementation. Thread-safe concurrent access
-/// is provided through internal synchronization primitives.
-///
-/// # Performance Characteristics
-///
-/// Token generation and validation operations have the following complexity:
-/// - Token generation: O(n) where n is the number of claims
-/// - Token validation: O(1) average case, O(n) worst case for expired tokens
-/// - Signature verification: O(1) using constant-time comparison
-///
-/// # Security Considerations
-///
-/// The JWT manager implements constant-time comparison for signature verification to
-/// prevent timing attacks. Token expiration is checked automatically during validation.
-/// Use sufficiently long secret keys (minimum 256 bits) for HMAC signatures.
 c_wrapper!(CDMSCJWTManager, DMSCJWTManager);
 
-/// Opaque C wrapper structure for DMSCSessionManager.
-///
-/// Provides C-compatible interface to the Rust session management system. Sessions are
-/// stored in memory with configurable expiration policies. The session manager handles
-/// automatic cleanup of expired sessions to prevent memory leaks in long-running processes.
-///
-/// # Session Lifecycle
-///
-/// Sessions transition through the following states:
-/// 1. CREATED: Session object allocated but not activated
-/// 2. ACTIVE: Session has been assigned a user and is tracking activity
-/// 3. IDLE: Session exists but user has not performed recent activity
-/// 4. EXPIRED: Session lifetime has elapsed
-/// 5. DESTROYED: Session explicitly invalidated or cleaned up
-///
-/// # Storage Implementation
-///
-/// Sessions are stored in a DashMap concurrent HashMap providing:
-/// - Lock-free reads for high-performance concurrent access
-/// - Fine-grained locking for writes minimizing contention
-/// - Automatic rehash and load factor management
 c_wrapper!(CDMSCSessionManager, DMSCSessionManager);
 
-/// Opaque C wrapper structure for DMSCPermissionManager.
-///
-/// Wraps the Rust role-based access control implementation. The permission manager
-/// evaluates authorization requests against defined roles and permissions. Supports
-/// hierarchical roles with inherited permissions and resource-level access control.
-///
-/// # Permission Model
-///
-/// The permission system implements a flexible RBAC model:
-/// - Users are assigned one or more roles
-/// - Roles contain collections of permissions
-/// - Permissions specify actions on resources
-/// - Role hierarchies allow permission inheritance
-///
-/// # Evaluation Performance
-///
-/// Permission checks are optimized for high-throughput scenarios:
-/// - Permission cache with automatic invalidation
-/// - Hierarchical role resolution at role assignment time
-/// - Constant-time permission lookup for common cases
 c_wrapper!(CDMSCPermissionManager, DMSCPermissionManager);
 
-/// Opaque C wrapper structure for DMSCOAuthManager.
-///
-/// Provides C interface to OAuth 2.0 authentication flow handling. The OAuth manager
-/// implements authorization code flow, implicit flow, and client credentials flow
-/// as defined in RFC 6749. Supports multiple OAuth providers with different endpoint
-/// configurations.
-///
-/// # OAuth 2.0 Flows Supported
-///
-/// 1. Authorization Code Flow (for web server applications)
-///    - User redirects to authorization endpoint
-///    - Authorization code returned via redirect
-///    - Code exchanged for access token server-side
-///
-/// 2. Implicit Flow (for single-page applications)
-///    - User redirects to authorization endpoint
-///    - Access token returned directly in URL fragment
-///
-/// 3. Client Credentials Flow (for machine-to-machine)
-///    - Client authenticates directly
-///    - Access token issued based on client credentials
-///
-/// # Provider Integration
-///
-/// The OAuth manager supports major providers including:
-/// - Google OAuth 2.0
-/// - Microsoft Azure AD
-/// - GitHub OAuth
-/// - Facebook Login
-/// - Custom OAuth providers via configuration
 c_wrapper!(CDMSCOAuthManager, DMSCOAuthManager);
 
-/// Creates a new CDMSCAuthConfig instance with default configuration values.
-///
-/// Initializes an authentication configuration object with sensible defaults:
-/// - Default JWT algorithm: HS256
-/// - Default token expiration: 3600 seconds (1 hour)
-/// - Default refresh token expiration: 86400 seconds (24 hours)
-/// - Default session timeout: 1800 seconds (30 minutes)
-///
-/// # Returns
-///
-/// Pointer to newly allocated CDMSCAuthConfig on success, or NULL if memory allocation
-/// fails. The returned pointer must be freed using dmsc_auth_config_free() to avoid
-/// memory leaks.
-///
-/// # Example
-///
-/// ```c
-/// CDMSCAuthConfig* config = dmsc_auth_config_new();
-/// if (config == NULL) {
-///     // Handle allocation failure
-///     return ERROR_MEMORY_ALLOCATION;
-/// }
-/// // Configure settings...
-/// dmsc_auth_config_free(config);
-/// ```
 c_constructor!(dmsc_auth_config_new, CDMSCAuthConfig, DMSCAuthConfig, DMSCAuthConfig::default());
 
-/// Frees a previously allocated CDMSCAuthConfig instance.
-///
-/// Releases all memory associated with the configuration object including any
-/// internally allocated strings, buffers, or sub-objects. After this function returns,
-/// the pointer becomes invalid and must not be used.
-///
-/// # Parameters
-///
-/// - `config`: Pointer to the CDMSCAuthConfig to free. If NULL, the function returns
-///   immediately without error.
-///
-/// # Safety
-///
-/// This function is safe to call with NULL pointer. Calling with a pointer that has
-/// already been freed results in undefined behavior. Double-free vulnerabilities must
-/// be prevented by the caller through proper ownership tracking.
 c_destructor!(dmsc_auth_config_free, CDMSCAuthConfig);
 
 /// Creates a new CDMSCJWTManager instance with specified secret and expiration.
@@ -326,15 +177,6 @@ pub extern "C" fn dmsc_jwt_manager_new(secret: *const c_char, expiry_secs: u64) 
     }
 }
 
-/// Frees a previously allocated CDMSCJWTManager instance.
-///
-/// Releases all resources held by the JWT manager including any cached tokens or
-/// internal state. After this function returns, the pointer becomes invalid.
-///
-/// # Parameters
-///
-/// - `manager`: Pointer to the CDMSCJWTManager to free. If NULL, the function returns
-///   immediately without error.
 c_destructor!(dmsc_jwt_manager_free, CDMSCJWTManager);
 
 /// Creates a new CDMSCSessionManager instance with specified session timeout.
@@ -370,11 +212,6 @@ pub extern "C" fn dmsc_session_manager_new(timeout_secs: u64) -> *mut CDMSCSessi
     Box::into_raw(Box::new(CDMSCSessionManager::new(manager)))
 }
 
-/// Frees a previously allocated CDMSCSessionManager instance.
-///
-/// # Parameters
-///
-/// - `manager`: Pointer to the CDMSCSessionManager to free. If NULL, returns immediately.
 c_destructor!(dmsc_session_manager_free, CDMSCSessionManager);
 
 /// Creates a new CDMSCPermissionManager instance.
@@ -405,9 +242,4 @@ pub extern "C" fn dmsc_permission_manager_new() -> *mut CDMSCPermissionManager {
     Box::into_raw(Box::new(CDMSCPermissionManager::new(manager)))
 }
 
-/// Frees a previously allocated CDMSCPermissionManager instance.
-///
-/// # Parameters
-///
-/// - `manager`: Pointer to the CDMSCPermissionManager to free. If NULL, returns immediately.
 c_destructor!(dmsc_permission_manager_free, CDMSCPermissionManager);

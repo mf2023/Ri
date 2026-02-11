@@ -195,6 +195,13 @@ impl DMSCGatewayConfig {
     }
 }
 
+impl DMSCGatewayConfig {
+    /// Creates a new DMSCGatewayConfig with default values.
+    pub fn new() -> Self {
+        Self::default()
+    }
+}
+
 impl Default for DMSCGatewayConfig {
     /// Returns the default configuration for the gateway.
     /// 

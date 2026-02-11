@@ -133,7 +133,7 @@
 //! required by all other DMSC components.
 
 use crate::prelude::{DMSCAppBuilder, DMSCConfig};
-use std::ffi::{c_char, c_int, CString};
+use std::ffi::{c_char, CString};
 
 /// Opaque C wrapper structure for DMSCAppBuilder.
 ///
