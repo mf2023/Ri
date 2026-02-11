@@ -2,9 +2,9 @@
 
 # Basic Application Example
 
-**Version: 0.1.6**
+**Version: 0.1.7**
 
-**Last modified date: 2026-02-01**
+**Last modified date: 2026-02-11**
 
 This example shows how to build a simple DMSC application, including application configuration, running, and basic functionality usage.
 
@@ -85,8 +85,8 @@ async fn main() -> DMSCResult<()> {
     // Build service runtime
     let app = DMSCAppBuilder::new()
         .with_config("config.yaml")?
-        .with_logging(DMSCLogConfig::default())?
-        .with_observability(DMSCObservabilityConfig::default())?
+        .with_logging(DMSCLogConfig::default())
+        .with_observability(DMSCObservabilityConfig::default())
         .build()?;
     
     // Run business logic

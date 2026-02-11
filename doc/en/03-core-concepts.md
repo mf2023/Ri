@@ -2,9 +2,9 @@
 
 # Core Concepts
 
-**Version: 0.1.6**
+**Version: 0.1.7**
 
-**Last modified date: 2026-02-01**
+**Last modified date: 2026-02-11**
 
 This chapter provides an in-depth introduction to DMSC's core design principles and key components, helping you better understand and use the DMSC framework.
 
@@ -66,7 +66,32 @@ DMSC provides complete Python bindings, allowing you to use all core features th
 - Support for sync and async service modules
 - Version: **0.1.6** (requires Python 3.8+)
 
-### 1.6 Module Composition
+### 1.6 C/C++ Module Support
+
+DMSC provides C/C++ FFI bindings through the `safer-ffi` crate, enabling cross-language integration:
+
+| C/C++ Module | Corresponding Rust Module | Description |
+|:-------------|:------------------------|:------------|
+| `dmsc_c` | core | Core runtime and service context |
+| `dmsc_c::auth` | auth | Authentication & authorization |
+| `dmsc_c::cache` | cache | Multi-backend cache abstraction |
+| `dmsc_c::config` | config | Configuration management |
+| `dmsc_c::database` | database | Database operations |
+| `dmsc_c::device` | device | Device management |
+| `dmsc_c::fs` | fs | File system operations |
+| `dmsc_c::gateway` | gateway | API gateway functionality |
+| `dmsc_c::log` | log | Structured logging |
+| `dmsc_c::observability` | observability | Metrics and tracing |
+| `dmsc_c::queue` | queue | Message queue operations |
+| `dmsc_c::service_mesh` | service_mesh | Service mesh functionality |
+
+**C/C++ Module Features:**
+- Header file generation via `safer-ffi`
+- Memory-safe FFI bindings
+- Support for C99 and C++11+
+- Version: **0.1.6** (requires `c` feature)
+
+### 1.7 Module Composition
 
 You can selectively compose the modules you need based on your application requirements:
 

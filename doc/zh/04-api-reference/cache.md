@@ -2,9 +2,9 @@
 
 # Cache API参考
 
-**Version: 0.1.6**
+**Version: 0.1.7**
 
-**Last modified date: 2026-02-01**
+**Last modified date: 2026-02-11**
 
 cache模块提供多后端缓存抽象，支持内存、Redis、混合等多种缓存后端。
 
@@ -35,7 +35,7 @@ cache模块包含以下子模块：
 
 | 方法 | 描述 | 参数 | 返回值 |
 |:--------|:-------------|:--------|:--------|
-| `cache_manager()` | 获取缓存管理器 | 无 | `Arc<DMSCCacheManager>` |
+| `cache_manager()` | 获取缓存管理器 | 无 | `Arc<RwLock<DMSCCacheManager>>` |
 | `backend()` | 获取当前使用的缓存后端类型 | 无 | `DMSCCacheBackendType` |
 
 #### 使用示例

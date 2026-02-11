@@ -2,9 +2,9 @@
 
 # 综合应用示例
 
-**Version: 0.1.6**
+**Version: 0.1.7**
 
-**Last modified date: 2026-02-01**
+**Last modified date: 2026-02-11**
 
 本示例展示如何构建一个完整的DMSC企业级应用，整合所有核心模块。
 

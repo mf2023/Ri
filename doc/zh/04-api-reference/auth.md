@@ -2,9 +2,9 @@
 
 # Auth API参考
 
-**Version: 0.1.6**
+**Version: 0.1.7**
 
-**Last modified date: 2026-02-01**
+**Last modified date: 2026-02-11**
 
 auth模块提供认证与授权功能，支持JWT、OAuth2和基于角色的访问控制。
 
@@ -36,7 +36,7 @@ auth模块包含以下子模块：
 | 方法 | 描述 | 参数 | 返回值 |
 |:--------|:-------------|:--------|:--------|
 | `jwt_manager()` | 获取JWT管理器 | 无 | `Arc<DMSCJWTManager>` |
-| `permission_manager()` | 获取权限管理器 | 无 | `Arc<DMSCPermissionManager>` |
+| `permission_manager()` | 获取权限管理器 | 无 | `Arc<RwLock<DMSCPermissionManager>>` |
 | `session_manager()` | 获取会话管理器 | 无 | `Arc<DMSCSessionManager>` |
 | `oauth_manager()` | 获取OAuth管理器 | 无 | `Arc<RwLock<DMSCOAuthManager>>` |
 

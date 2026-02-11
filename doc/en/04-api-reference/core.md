@@ -2,9 +2,9 @@
 
 # Core API Reference
 
-**Version: 0.1.6**
+**Version: 0.1.7**
 
-**Last modified date: 2026-02-01**
+**Last modified date: 2026-02-11**
 
 The core module is the foundation of DMSC, providing runtime, error handling, service context, and module system functionality.
 
@@ -53,8 +53,8 @@ Application builder for configuring and building DMSC applications.
 ```rust
 let app = DMSCAppBuilder::new()
     .with_config("config.yaml")?
-    .with_logging(DMSCLogConfig::default())?
-    .with_observability(DMSCObservabilityConfig::default())?
+    .with_logging(DMSCLogConfig::default())
+    .with_observability(DMSCObservabilityConfig::default())
     .with_dms_module(Box::new(MyCustomModule::new()))
     .build()?;
 ```
@@ -159,19 +159,19 @@ Async module trait for internal async modules in DMSC.
 
 #### Methods
 
-| Method | Description | Return Value | Default Implementation |
-|:--------|:-------------|:--------|:--------|
-| `name()` | Return module name | `&str` | None, must be implemented |
-| `is_critical()` | Indicate if the module is critical | `bool` | Returns `true` |
-| `priority()` | Return module priority | `i32` | Returns `0` |
-| `dependencies()` | Return module dependency list | `Vec<&str>` | Returns empty list |
-| `init(ctx)` | Async initialize module | `DMSCResult<()>` | Returns `Ok(())` |
-| `before_start(ctx)` | Async prepare for startup | `DMSCResult<()>` | Returns `Ok(())` |
-| `start(ctx)` | Async start module service | `DMSCResult<()>` | Returns `Ok(())` |
-| `after_start(ctx)` | Async perform post-startup operations | `DMSCResult<()>` | Returns `Ok(())` |
-| `before_shutdown(ctx)` | Async prepare for shutdown | `DMSCResult<()>` | Returns `Ok(())` |
-| `shutdown(ctx)` | Async stop module service | `DMSCResult<()>` | Returns `Ok(())` |
-| `after_shutdown(ctx)` | Async cleanup after shutdown | `DMSCResult<()>` | Returns `Ok(())` |
+| Method | Description | Parameters | Return Value | Default Implementation |
+|:--------|:-------------|:--------|:--------|:--------|
+| `name()` | Return module name | None | `&str` | None, must be implemented |
+| `is_critical()` | Indicate if the module is critical | None | `bool` | Returns `true` |
+| `priority()` | Return module priority | None | `i32` | Returns `0` |
+| `dependencies()` | Return module dependency list | None | `Vec<&str>` | Returns empty list |
+| `init(ctx)` | Async initialize module | `ctx: &mut DMSCServiceContext` | `DMSCResult<()>` | Returns `Ok(())` |
+| `before_start(ctx)` | Async prepare for startup | `ctx: &mut DMSCServiceContext` | `DMSCResult<()>` | Returns `Ok(())` |
+| `start(ctx)` | Async start module service | `ctx: &mut DMSCServiceContext` | `DMSCResult<()>` | Returns `Ok(())` |
+| `after_start(ctx)` | Async perform post-startup operations | `ctx: &mut DMSCServiceContext` | `DMSCResult<()>` | Returns `Ok(())` |
+| `before_shutdown(ctx)` | Async prepare for shutdown | `ctx: &mut DMSCServiceContext` | `DMSCResult<()>` | Returns `Ok(())` |
+| `shutdown(ctx)` | Async stop module service | `ctx: &mut DMSCServiceContext` | `DMSCResult<()>` | Returns `Ok(())` |
+| `after_shutdown(ctx)` | Async cleanup after shutdown | `ctx: &mut DMSCServiceContext` | `DMSCResult<()>` | Returns `Ok(())` |
 
 ### DMSCError
 
@@ -393,8 +393,8 @@ async fn main() -> DMSCResult<()> {
     // Build service runtime
     let app = DMSCAppBuilder::new()
         .with_config("config.yaml")?
-        .with_logging(DMSCLogConfig::default())?
-        .with_observability(DMSCObservabilityConfig::default())?
+        .with_logging(DMSCLogConfig::default())
+        .with_observability(DMSCObservabilityConfig::default())
         .build()?;
     
     // Run business logic

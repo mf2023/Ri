@@ -2,9 +2,9 @@
 
 # Troubleshooting
 
-**Version: 0.1.6**
+**Version: 0.1.7**
 
-**Last modified date: 2026-02-01**
+**Last modified date: 2026-02-11**
 
 This chapter introduces common issues and troubleshooting methods when using the DMSC framework, helping you quickly locate and resolve problems.
 

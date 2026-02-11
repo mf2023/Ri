@@ -2,9 +2,9 @@
 
 # Hooks System 使用指南
 
-**Version: 0.1.6**
+**Version: 0.1.7**
 
-**Last modified date: 2026-02-01**
+**Last modified date: 2026-02-11**
 
 本文档提供 DMSC Hooks System 的完整使用示例，演示如何利用事件驱动架构进行模块生命周期管理。
 

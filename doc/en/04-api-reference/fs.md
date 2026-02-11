@@ -2,9 +2,9 @@
 
 # FileSystem API Reference
 
-**Version: 0.1.6**
+**Version: 0.1.7**
 
-**Last modified date: 2026-02-01**
+**Last modified date: 2026-02-11**
 
 The fs module provides secure file system operations, supporting atomic writes, directory management, and categorized directory organization.
 

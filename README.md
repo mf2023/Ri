@@ -35,6 +35,9 @@ English | [简体中文](README.zh.md)
 <a href="https://pypi.org/project/dmsc/" target="_blank">
     <img alt="PyPI" src="https://img.shields.io/badge/PyPI-DMSC-3775A9?style=flat-square&logo=pypi"/>
 </a>
+<a href="https://docs.rs/dmsc/latest/dmsc/c/index.html" target="_blank">
+    <img alt="C API" src="https://img.shields.io/badge/C%2FC%2B%2B-API-00599C?style=flat-square&logo=c"/>
+</a>
 
 **DMSC (Dunimd Middleware Service)** — A high-performance Rust middleware framework that unifies backend infrastructure. Built for enterprise-scale with modular architecture, built-in observability, and distributed systems support.
 
@@ -68,6 +71,7 @@ DMSC adopts a highly modular architecture with 18 core modules, enabling on-dema
 | **service_mesh** | Service discovery, health checking, and traffic management |
 | **validation** | Input validation and data sanitization utilities |
 | **ws** | WebSocket server support with Python bindings (requires `websocket` feature) |
+| **c** | C/C++ FFI bindings for cross-language integration (requires `c` feature) |
 
 </div>
 
@@ -75,6 +79,7 @@ DMSC adopts a highly modular architecture with 18 core modules, enabling on-dema
 > - `grpc`: gRPC support (`--features grpc`)
 > - `websocket`: WebSocket support (`--features websocket`)
 > - `protocol`: Protocol abstraction layer (`--features protocol` or `full`)
+> - `c`: C/C++ FFI bindings (`--features c`)
 
 ### 🚀 Key Features
 

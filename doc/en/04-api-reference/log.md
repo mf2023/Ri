@@ -2,9 +2,9 @@
 
 # Log API Reference
 
-**Version: 0.1.6**
+**Version: 0.1.7**
 
-**Last modified date: 2026-02-01**
+**Last modified date: 2026-02-11**
 
 The log module provides structured logging with multi-backend support, supporting log levels, formatting, sampling, and log analysis features.
 
@@ -122,6 +122,7 @@ Log configuration structure.
 | `json_format` | `bool` | Use JSON format | `false` |
 | `rotate_when` | `String` | When to rotate ("size" or "none") | `"size"` |
 | `max_bytes` | `u64` | Max file size before rotation (bytes) | `10485760` |
+| `color_blocks` | `bool` | Use color blocks in log output | `true` |
 
 #### Configuration Example
 
@@ -137,6 +138,7 @@ let log_config = DMSCLogConfig {
     json_format: true,
     rotate_when: "size".to_string(),
     max_bytes: 10 * 1024 * 1024, // 10MB
+    color_blocks: true,          // Enable color blocks in log output
     ..Default::default()
 };
 ```
@@ -162,10 +164,17 @@ Log format enumeration type.
 
 #### Format Examples
 
-**Text Format:**
+**Text Format (with color blocks):**
 ```
-2024-01-15 10:30:45 [INFO] Application started
-2024-01-15 10:30:45 [WARN] Configuration file not found, using defaults
+🟩 | 2024-01-15 10:30:45.123 | INFO  | service | event=service_start | Application started | port=8080
+🟨 | 2024-01-15 10:30:45.456 | WARN  | cache   | event=cache_miss    | Key not found
+🟥 | 2024-01-15 10:30:45.789 | ERROR | db      | event=conn_failed   | Connection timeout | retry=3
+```
+
+**Text Format (without color blocks):**
+```
+2024-01-15 10:30:45.123 | INFO  | service | event=service_start | Application started | port=8080
+2024-01-15 10:30:45.456 | WARN  | cache   | event=cache_miss    | Key not found
 ```
 
 **JSON Format:**

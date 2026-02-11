@@ -2,7 +2,7 @@
 
 # gRPC Usage Examples
 
-**Version: 0.1.6**
+**Version: 0.1.7**
 
 **Last modified date: 2026-01-16**
 

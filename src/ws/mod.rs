@@ -231,7 +231,9 @@ impl DMSCWSSession {
     }
 
     pub fn get_info(&self) -> DMSCWSSessionInfo {
-        self.info.try_read().unwrap().clone()
+        self.info.try_read()
+            .map(|guard| guard.clone())
+            .unwrap_or_else(|_| DMSCWSSessionInfo::default())
     }
 }
 
@@ -308,10 +310,10 @@ use pyo3::prelude::*;
 
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 pub struct DMSCWSPythonHandler {
-    on_connect: Py<PyAny>,
-    on_disconnect: Py<PyAny>,
-    on_message: Py<PyAny>,
-    on_error: Py<PyAny>,
+    on_connect: Arc<Py<PyAny>>,
+    on_disconnect: Arc<Py<PyAny>>,
+    on_message: Arc<Py<PyAny>>,
+    on_error: Arc<Py<PyAny>>,
 }
 
 #[cfg(feature = "pyo3")]
@@ -325,10 +327,10 @@ impl DMSCWSPythonHandler {
         on_error: Py<PyAny>,
     ) -> Self {
         Self {
-            on_connect,
-            on_disconnect,
-            on_message,
-            on_error,
+            on_connect: Arc::new(on_connect),
+            on_disconnect: Arc::new(on_disconnect),
+            on_message: Arc::new(on_message),
+            on_error: Arc::new(on_error),
         }
     }
 }
@@ -337,33 +339,64 @@ impl DMSCWSPythonHandler {
 #[cfg(feature = "pyo3")]
 impl DMSCWSSessionHandler for DMSCWSPythonHandler {
     async fn on_connect(&self, session_id: &str, remote_addr: &str) -> DMSCResult<()> {
-        let py = unsafe { Python::assume_attached() };
-        let _ = self.on_connect.call(py, (session_id, remote_addr), None);
+        let on_connect = Arc::clone(&self.on_connect);
+        let session_id = session_id.to_string();
+        let remote_addr = remote_addr.to_string();
+        
+        tokio::task::spawn_blocking(move || {
+            Python::attach(|py| {
+                let handler = on_connect.clone_ref(py);
+                let _ = handler.call(py, (session_id, remote_addr), None);
+            });
+        }).await.ok();
+        
         Ok(())
     }
     
     async fn on_disconnect(&self, session_id: &str) -> DMSCResult<()> {
-        let py = unsafe { Python::assume_attached() };
-        let _ = self.on_disconnect.call(py, (session_id,), None);
+        let on_disconnect = Arc::clone(&self.on_disconnect);
+        let session_id = session_id.to_string();
+        
+        tokio::task::spawn_blocking(move || {
+            Python::attach(|py| {
+                let handler = on_disconnect.clone_ref(py);
+                let _ = handler.call(py, (session_id,), None);
+            });
+        }).await.ok();
+        
         Ok(())
     }
     
     async fn on_message(&self, session_id: &str, data: &[u8]) -> DMSCResult<Vec<u8>> {
-        let py = unsafe { Python::assume_attached() };
+        let on_message = Arc::clone(&self.on_message);
+        let session_id = session_id.to_string();
         let data_vec = data.to_vec();
         
-        match self.on_message.call(py, (session_id, data_vec), None) {
-            Ok(obj) => {
-                let result: Vec<u8> = obj.extract(py)?;
-                Ok(result)
-            }
-            Err(_) => Ok(vec![]),
-        }
+        let result = tokio::task::spawn_blocking(move || {
+            Python::attach(|py| {
+                let handler = on_message.clone_ref(py);
+                match handler.call(py, (session_id, data_vec), None) {
+                    Ok(obj) => obj.extract::<Vec<u8>>(py).ok(),
+                    Err(_) => None,
+                }
+            })
+        }).await.ok().flatten();
+        
+        Ok(result.unwrap_or_default())
     }
     
     async fn on_error(&self, session_id: &str, error: &str) -> DMSCResult<()> {
-        let py = unsafe { Python::assume_attached() };
-        let _ = self.on_error.call(py, (session_id, error), None);
+        let on_error = Arc::clone(&self.on_error);
+        let session_id = session_id.to_string();
+        let error = error.to_string();
+        
+        tokio::task::spawn_blocking(move || {
+            Python::attach(|py| {
+                let handler = on_error.clone_ref(py);
+                let _ = handler.call(py, (session_id, error), None);
+            });
+        }).await.ok();
+        
         Ok(())
     }
 }
@@ -385,21 +418,21 @@ impl DMSCWSSessionManagerPy {
     }
     
     fn get_session_count(&self) -> usize {
-        tokio::runtime::Runtime::new().unwrap().block_on(async {
-            self.manager.get_session_count().await
-        })
+        tokio::runtime::Handle::try_current()
+            .map(|handle| handle.block_on(async { self.manager.get_session_count().await }))
+            .unwrap_or(0)
     }
     
     fn get_all_sessions(&self) -> Vec<DMSCWSSessionInfo> {
-        tokio::runtime::Runtime::new().unwrap().block_on(async {
-            self.manager.get_all_sessions().await
-        })
+        tokio::runtime::Handle::try_current()
+            .map(|handle| handle.block_on(async { self.manager.get_all_sessions().await }))
+            .unwrap_or_default()
     }
     
     fn broadcast(&self, data: Vec<u8>) -> usize {
-        tokio::runtime::Runtime::new().unwrap().block_on(async {
-            self.manager.broadcast(&data).await.unwrap_or(0)
-        })
+        tokio::runtime::Handle::try_current()
+            .map(|handle| handle.block_on(async { self.manager.broadcast(&data).await.unwrap_or(0) }))
+            .unwrap_or(0)
     }
 }
 

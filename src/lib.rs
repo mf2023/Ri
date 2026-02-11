@@ -521,9 +521,7 @@ pub mod py {
         create_database_module(m)?;
         create_validation_module(m)?;
         create_protocol_module(m)?;
-        #[cfg(feature = "grpc")]
         create_grpc_module(m)?;
-        #[cfg(feature = "websocket")]
         create_ws_module(m)?;
 
         Ok(())
@@ -757,7 +755,6 @@ pub mod py {
         Ok(())
     }
     
-    #[cfg(feature = "grpc")]
     fn create_grpc_module(parent: &Bound<'_, PyModule>) -> PyResult<()> {
         let m = PyModule::new(parent.py(), "grpc")?;
         m.add_class::<crate::grpc::DMSCGrpcConfig>()?;
@@ -771,7 +768,6 @@ pub mod py {
         Ok(())
     }
     
-    #[cfg(feature = "websocket")]
     fn create_ws_module(parent: &Bound<'_, PyModule>) -> PyResult<()> {
         let m = PyModule::new(parent.py(), "ws")?;
         m.add_class::<crate::ws::DMSCWSServerConfig>()?;

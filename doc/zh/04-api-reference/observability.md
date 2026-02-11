@@ -2,9 +2,9 @@
 
 # Observability API参考
 
-**Version: 0.1.6**
+**Version: 0.1.7**
 
-**Last modified date: 2026-02-01**
+**Last modified date: 2026-02-11**
 
 observability模块提供系统可观测性支持，包括指标收集、分布式追踪等功能。
 

@@ -2,9 +2,9 @@
 
 # Core API参考
 
-**Version: 0.1.6**
+**Version: 0.1.7**
 
-**Last modified date: 2026-02-01**
+**Last modified date: 2026-02-11**
 
 core模块是DMSC的基础，提供运行时、错误处理、服务上下文和模块系统等核心功能。
 
@@ -53,8 +53,8 @@ core模块包含以下子模块：
 ```rust
 let app = DMSCAppBuilder::new()
     .with_config("config.yaml")?
-    .with_logging(DMSCLogConfig::default())?
-    .with_observability(DMSCObservabilityConfig::default())?
+    .with_logging(DMSCLogConfig::default())
+    .with_observability(DMSCObservabilityConfig::default())
     .with_dms_module(Box::new(MyCustomModule::new()))
     .build()?;
 ```
@@ -393,8 +393,8 @@ async fn main() -> DMSCResult<()> {
     // 构建服务运行时
     let app = DMSCAppBuilder::new()
         .with_config("config.yaml")?
-        .with_logging(DMSCLogConfig::default())?
-        .with_observability(DMSCObservabilityConfig::default())?
+        .with_logging(DMSCLogConfig::default())
+        .with_observability(DMSCObservabilityConfig::default())
         .build()?;
     
     // 运行业务逻辑

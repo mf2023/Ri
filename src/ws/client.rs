@@ -135,9 +135,9 @@ impl DMSCWSClient {
 
     fn is_connected_py(&self) -> bool {
         let connected = self.connected.clone();
-        tokio::runtime::Runtime::new().unwrap().block_on(async {
-            *connected.read().await
-        })
+        tokio::runtime::Handle::try_current()
+            .map(|handle| handle.block_on(async { *connected.read().await }))
+            .unwrap_or(false)
     }
 }
 
@@ -152,7 +152,9 @@ impl DMSCWSClient {
     }
 
     pub fn get_stats(&self) -> DMSCWSClientStats {
-        self.stats.try_read().unwrap().clone()
+        self.stats.try_read()
+            .map(|guard| guard.clone())
+            .unwrap_or_else(|_| DMSCWSClientStats::new())
     }
 
     pub async fn is_connected(&self) -> bool {

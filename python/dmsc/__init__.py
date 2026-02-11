@@ -49,7 +49,7 @@ Example Usage:
     gateway = DMSCGateway()
 """
 
-__version__ = "0.1.6"
+__version__ = "0.1.7"
 __author__ = "Dunimd Team"
 __license__ = "Apache-2.0"
 
@@ -340,52 +340,52 @@ class DMSCAppBuilder:
     
     def with_config(self, config_path: str) -> 'DMSCAppBuilder':
         """Add a configuration file path."""
-        self._builder.py_with_config(config_path)
+        self._builder = self._builder.py_with_config(config_path)
         return self
     
     def with_logging(self, config: 'DMSCLogConfig') -> 'DMSCAppBuilder':
         """Configure logging with the provided config."""
-        self._builder.py_with_logging(config)
+        self._builder = self._builder.py_with_logging(config)
         return self
     
     def with_observability(self, config: 'DMSCObservabilityConfig') -> 'DMSCAppBuilder':
         """Configure observability with the provided config."""
-        self._builder.py_with_observability(config)
+        self._builder = self._builder.py_with_observability(config)
         return self
     
     def with_module(self, module) -> 'DMSCAppBuilder':
         """Add a module to the application."""
-        self._builder.py_with_module(module)
+        self._builder = self._builder.py_with_module(module)
         return self
     
     def with_modules(self, modules: list) -> 'DMSCAppBuilder':
         """Add multiple modules to the application."""
-        self._builder.py_with_modules(modules)
+        self._builder = self._builder.py_with_modules(modules)
         return self
     
     def with_async_module(self, module) -> 'DMSCAppBuilder':
         """Add an async module to the application."""
-        self._builder.py_with_async_module(module)
+        self._builder = self._builder.py_with_async_module(module)
         return self
     
     def with_async_modules(self, modules: list) -> 'DMSCAppBuilder':
         """Add multiple async modules to the application."""
-        self._builder.py_with_async_modules(modules)
+        self._builder = self._builder.py_with_async_modules(modules)
         return self
     
     def with_python_module(self, module) -> 'DMSCAppBuilder':
         """Add a Python module to the application."""
-        self._builder.py_with_python_module(module)
+        self._builder = self._builder.py_with_python_module(module)
         return self
     
     def with_dms_module(self, module) -> 'DMSCAppBuilder':
         """Add a DMSC module to the application."""
-        self._builder.py_with_dms_module(module)
+        self._builder = self._builder.py_with_dms_module(module)
         return self
     
     def with_dms_modules(self, modules: list) -> 'DMSCAppBuilder':
         """Add multiple DMSC modules to the application."""
-        self._builder.py_with_dms_modules(modules)
+        self._builder = self._builder.py_with_dms_modules(modules)
         return self
     
     def build(self) -> 'DMSCAppRuntime':

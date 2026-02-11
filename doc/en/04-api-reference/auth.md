@@ -2,9 +2,9 @@
 
 # Auth API Reference
 
-**Version: 0.1.6**
+**Version: 0.1.7**
 
-**Last modified date: 2026-02-01**
+**Last modified date: 2026-02-11**
 
 The auth module provides authentication and authorization functionality, supporting JWT, OAuth2, and role-based access control.
 
@@ -36,7 +36,7 @@ The main interface for the authentication module, providing unified access to au
 | Method | Description | Parameters | Return Value |
 |:--------|:-------------|:--------|:--------|
 | `jwt_manager()` | Get JWT manager | None | `Arc<DMSCJWTManager>` |
-| `permission_manager()` | Get permission manager | None | `Arc<DMSCPermissionManager>` |
+| `permission_manager()` | Get permission manager | None | `Arc<RwLock<DMSCPermissionManager>>` |
 | `session_manager()` | Get session manager | None | `Arc<DMSCSessionManager>` |
 | `oauth_manager()` | Get OAuth manager | None | `Arc<RwLock<DMSCOAuthManager>>` |
 

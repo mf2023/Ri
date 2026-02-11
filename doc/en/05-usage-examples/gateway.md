@@ -2,9 +2,9 @@
 
 # API Gateway Usage Example
 
-**Version: 0.1.6**
+**Version: 0.1.7**
 
-**Last modified date: 2026-02-01**
+**Last modified date: 2026-02-11**
 
 This example demonstrates how to use the gateway module to build an API gateway, including routing, middleware, load balancing, rate limiting, and circuit breaking functionality.
 

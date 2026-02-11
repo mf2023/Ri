@@ -2,9 +2,9 @@
 
 # Service Mesh 使用指南
 
-**Version: 0.1.6**
+**Version: 0.1.7**
 
-**Last modified date: 2026-02-01**
+**Last modified date: 2026-02-11**
 
 本文档提供 DMSC 服务网格的完整使用示例，演示如何利用服务发现、健康检查、流量管理、负载均衡和熔断器等功能构建分布式系统。
 

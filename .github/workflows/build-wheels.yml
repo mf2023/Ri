@@ -556,6 +556,12 @@ jobs:
           toolchain: stable
           targets: x86_64-apple-darwin
 
+      - name: Configure macOS linker for PyO3
+        run: |
+          mkdir -p .cargo
+          echo '[target.x86_64-apple-darwin]' > .cargo/config.toml
+          echo 'rustflags = ["-C", "link-arg=-undefined", "-C", "link-arg=dynamic_lookup"]' >> .cargo/config.toml
+
       - name: Build C static library
         run: cargo build --release --target x86_64-apple-darwin --features c
 

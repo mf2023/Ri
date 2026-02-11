@@ -708,11 +708,9 @@ impl DMSCTracer {
 
     /// Export traces from Python
     #[pyo3(name = "export_traces")]
-    fn export_traces_impl(&self) -> PyResult<HashMap<String, Vec<pyo3::Py<pyo3::PyAny>>>> {
+    fn export_traces_impl(&self, py: pyo3::Python<'_>) -> PyResult<HashMap<String, Vec<pyo3::Py<pyo3::PyAny>>>> {
         let traces = self.export_traces();
         let mut result = HashMap::new();
-
-        let py = unsafe { pyo3::Python::assume_attached() };
 
         for (trace_id, spans) in traces {
             let mut span_list = Vec::new();
@@ -727,7 +725,7 @@ impl DMSCTracer {
                 span_dict.set_item("kind", format!("{:?}", span.kind))?;
                 span_dict.set_item("start_time", span.start_time)?;
                 span_dict.set_item("end_time", span.end_time)?;
-                span_dict.set_item("attributes", span.attributes)?;
+                span_dict.set_item("attributes", span.attributes.clone())?;
                 span_dict.set_item("events", span.events.len())?;
                 span_dict.set_item("status", format!("{:?}", span.status))?;
                 span_list.push(span_dict.into());

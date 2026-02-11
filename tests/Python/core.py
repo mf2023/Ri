@@ -26,6 +26,7 @@ configuration, logging, and file system operations.
 
 import pytest
 from dmsc import (
+    DMSCAppBuilder,
     DMSCAppRuntime,
     DMSCConfig,
     DMSCConfigManager,
@@ -48,19 +49,32 @@ from dmsc import (
 )
 
 
-class TestDMSCAppRuntime:
-    """Tests for DMSCAppRuntime"""
+class TestDMSCAppBuilder:
+    """Tests for DMSCAppBuilder"""
 
-    def test_app_runtime_creation(self):
-        """Test creating an application runtime - requires factory method"""
-        # DMSCAppRuntime cannot be created directly, it must be created via DMSCAppBuilder
-        # This is tested in app_builder tests
-        pass
+    def test_app_builder_creation(self):
+        """Test creating an application builder"""
+        builder = DMSCAppBuilder()
+        assert builder is not None
 
-    def test_app_runtime_with_hooks(self):
-        """Test application runtime with lifecycle hooks"""
-        # DMSCAppRuntime cannot be created directly
-        pass
+    def test_app_builder_with_config(self):
+        """Test application builder with config path"""
+        builder = DMSCAppBuilder()
+        builder.with_config("config.yaml")
+        assert builder is not None
+
+    def test_app_builder_with_logging(self):
+        """Test application builder with logging config"""
+        builder = DMSCAppBuilder()
+        log_config = DMSCLogConfig()
+        builder.with_logging(log_config)
+        assert builder is not None
+
+    def test_app_builder_chain(self):
+        """Test application builder method chaining"""
+        builder = DMSCAppBuilder()
+        result = builder.with_config("config.yaml").with_logging(DMSCLogConfig())
+        assert result is builder
 
 
 class TestDMSCConfig:
@@ -75,7 +89,7 @@ class TestDMSCConfig:
         """Test configuration with custom values - values must be strings"""
         config = DMSCConfig()
         config.set("database.host", "localhost")
-        config.set("database.port", "5432")  # String value
+        config.set("database.port", "5432")
 
         assert config.get("database.host") == "localhost"
         assert config.get("database.port") == "5432"
@@ -89,10 +103,10 @@ class TestDMSCConfigManager:
         manager = DMSCConfigManager()
         assert manager is not None
 
-    def test_config_loading(self):
-        """Test config manager exists - load_from_dict not available in Python"""
+    def test_config_manager_add_source(self):
+        """Test config manager add file source"""
         manager = DMSCConfigManager()
-        # load_from_dict is not exposed in Python bindings
+        manager.add_file_source("config.yaml")
         assert manager is not None
 
 
@@ -101,19 +115,16 @@ class TestDMSCLogger:
 
     def test_logger_creation(self):
         """Test logger requires filesystem"""
-        # DMSCLogger requires DMSCFileSystem as argument
         fs = DMSCFileSystem(".")
         log_config = DMSCLogConfig()
         logger = DMSCLogger(log_config, fs)
         assert logger is not None
 
     def test_logger_levels(self):
-        """Test logger with different levels - logger methods may vary"""
+        """Test logger with different levels"""
         fs = DMSCFileSystem(".")
         log_config = DMSCLogConfig()
         logger = DMSCLogger(log_config, fs)
-
-        # Just verify logger was created successfully
         assert logger is not None
 
 
@@ -121,15 +132,13 @@ class TestDMSCFileSystem:
     """Tests for DMSCFileSystem"""
 
     def test_file_system_creation(self):
-        """Test creating a file system handler - requires project_root"""
+        """Test creating a file system handler"""
         fs = DMSCFileSystem(".")
         assert fs is not None
 
     def test_file_operations(self):
         """Test basic file operations"""
         fs = DMSCFileSystem(".")
-
-        # Test file existence check
         exists = fs.exists("pyproject.toml")
         assert isinstance(exists, bool)
 
@@ -165,17 +174,25 @@ class TestDMSCHookBus:
 class TestDMSCHookEvent:
     """Tests for DMSCHookEvent"""
 
-    def test_hook_event_creation(self):
-        """Test DMSCHookEvent - cannot be created directly"""
-        # DMSCHookEvent is created internally by the system
-        pass
+    def test_hook_event_module_phase(self):
+        """Test DMSCHookEvent module phases exist"""
+        phases = [
+            DMSCModulePhase.INIT,
+            DMSCModulePhase.BEFORE_START,
+            DMSCModulePhase.START,
+            DMSCModulePhase.AFTER_START,
+            DMSCModulePhase.BEFORE_SHUTDOWN,
+            DMSCModulePhase.SHUTDOWN,
+            DMSCModulePhase.AFTER_SHUTDOWN,
+        ]
+        assert len(phases) == 7
 
 
 class TestDMSCHealthCheck:
     """Tests for health check functionality"""
 
     def test_health_check_config(self):
-        """Test health check configuration - requires constructor args"""
+        """Test health check configuration"""
         config = DMSCHealthCheckConfig(
             check_interval=30,
             timeout=5,
@@ -188,7 +205,7 @@ class TestDMSCHealthCheck:
         assert config.timeout == 5
 
     def test_health_check_result(self):
-        """Test health check result - requires constructor args"""
+        """Test health check result"""
         result = DMSCHealthCheckResult(
             name="test_check",
             status=DMSCHealthStatus.Healthy,
@@ -196,13 +213,11 @@ class TestDMSCHealthCheck:
         )
 
         assert result.name == "test_check"
-        # Compare status by string representation (lowercase)
         assert "healthy" in str(result.status).lower()
 
     def test_health_report(self):
-        """Test health report - attributes are read-only"""
+        """Test health report"""
         report = DMSCHealthReport()
-        # overall_status is read-only
         assert hasattr(report, 'overall_status')
 
 
@@ -224,9 +239,8 @@ class TestDMSCServiceContext:
         assert context is not None
 
     def test_service_context_with_logger(self):
-        """Test service context with logger - using logger property"""
+        """Test service context with logger property"""
         context = DMSCServiceContext()
-        # Service context may have logger property but no setter
         assert hasattr(context, 'logger')
 
 

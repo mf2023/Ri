@@ -2,9 +2,9 @@
 
 # Comprehensive Application Example
 
-**Version: 0.1.6**
+**Version: 0.1.7**
 
-**Last modified date: 2026-02-01**
+**Last modified date: 2026-02-11**
 
 This example shows how to build a complete DMSC enterprise application integrating all core modules.
 

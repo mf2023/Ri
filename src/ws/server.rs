@@ -289,7 +289,9 @@ impl DMSCWSServer {
     }
 
     pub fn get_stats(&self) -> DMSCWSServerStats {
-        self.stats.try_read().unwrap().clone()
+        self.stats.try_read()
+            .map(|guard| guard.clone())
+            .unwrap_or_else(|_| DMSCWSServerStats::new())
     }
 
     pub async fn get_session_info(&self, session_id: &str) -> Option<DMSCWSSessionInfo> {

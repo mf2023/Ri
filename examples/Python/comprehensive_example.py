@@ -30,23 +30,20 @@ Features Demonstrated:
 - Message queue production and consumption
 - Service mesh integration
 - Observability and metrics
-- Database operations
-- Gateway and routing configuration
 
 Usage:
     python comprehensive_example.py
 """
 
 from dmsc import (
-    DMSCAppRuntime, DMSCServiceContext, DMSCError,
+    DMSCAppBuilder, DMSCAppRuntime, DMSCError,
     DMSCLogConfig, DMSCLogLevel,
     DMSCAuthModule, DMSCAuthConfig,
-    DMSCCacheModule, DMSCCacheConfig, DMSCCachePolicy,
+    DMSCCacheModule, DMSCCacheConfig, DMSCCachePolicy, DMSCCacheBackendType,
     DMSCQueueModule, DMSCQueueConfig, DMSCQueueManager, DMSCQueueMessage,
     DMSCServiceMesh, DMSCServiceMeshConfig,
     DMSCObservabilityModule, DMSCObservabilityConfig, DMSCMetricsRegistry,
     DMSCGateway, DMSCGatewayConfig, DMSCRouter, DMSCRoute,
-    DMSCDatabaseConfig, DMSCDatabasePool, DMSCDBRow,
 )
 import asyncio
 from datetime import datetime, timedelta
@@ -61,29 +58,32 @@ async def demonstrate_application_initialization():
     - Create an application builder
     - Configure logging and observability
     - Build and run the application
-    - Access service context
     """
     print("=== Application Initialization ===\n")
     
-    print("1. Creating application runtime...")
-    runtime = DMSCAppRuntime()
-    print("   Runtime created successfully\n")
+    print("1. Creating application builder...")
+    builder = DMSCAppBuilder()
+    print("   Builder created successfully\n")
     
     print("2. Configuring logging...")
     log_config = DMSCLogConfig()
-    log_config.set_level("info")
-    print(f"   Log level set to: {log_config.get_level()}\n")
+    builder.with_logging(log_config)
+    print("   Logging configured\n")
     
     print("3. Configuring observability...")
     obs_config = DMSCObservabilityConfig.default()
-    obs_config.set_metrics_enabled(True)
-    obs_config.set_tracing_enabled(True)
+    builder.with_observability(obs_config)
     print("   Observability configured\n")
     
-    print("4. Application initialization complete!")
-    print(f"   Runtime info: {runtime.runtime_info()}\n")
+    print("4. Building application runtime...")
+    try:
+        runtime = builder.build()
+        print("   Runtime built successfully!")
+        print(f"   Runtime info: {runtime}\n")
+    except Exception as e:
+        print(f"   Note: Runtime build may require additional configuration: {e}\n")
     
-    return runtime
+    print("5. Application initialization complete!\n")
 
 
 async def demonstrate_authentication():
@@ -93,20 +93,40 @@ async def demonstrate_authentication():
     This function shows how to:
     - Configure authentication module
     - Handle authentication context
+    - Generate and validate JWT tokens
     """
     print("=== Authentication Module ===\n")
     
     print("1. Creating authentication configuration...")
     auth_config = DMSCAuthConfig.default()
-    auth_config.jwt_secret = "your-secret-key-here"
-    auth_config.jwt_expiry_secs = 24 * 3600  # 24 hours in seconds
-    print("   Auth config created\n")
+    print("   Auth config created with defaults\n")
     
     print("2. Creating authentication module...")
-    auth_module = DMSCAuthModule(auth_config)
-    print("   Auth module created\n")
+    try:
+        auth_module = DMSCAuthModule(auth_config)
+        print("   Auth module created\n")
+        
+        print("3. Generating test JWT token...")
+        token = auth_module.generate_test_token(
+            "user-123",
+            ["user", "admin"],
+            ["read:data", "write:data"]
+        )
+        print(f"   Generated token: {token[:50]}...\n")
+        
+        print("4. Validating JWT token...")
+        is_valid = auth_module.validate_jwt_token(token)
+        print(f"   Token is valid: {is_valid}\n")
+        
+        print("5. Checking auth module properties...")
+        print(f"   Enabled: {auth_module.is_enabled}")
+        print(f"   JWT expiry: {auth_module.jwt_expiry_secs} seconds")
+        print(f"   Session timeout: {auth_module.session_timeout_secs} seconds\n")
+        
+    except Exception as e:
+        print(f"   Note: Auth module initialization: {e}\n")
     
-    print("3. Authentication demonstration complete!\n")
+    print("6. Authentication demonstration complete!\n")
 
 
 async def demonstrate_caching():
@@ -115,8 +135,8 @@ async def demonstrate_caching():
     
     This function shows how to:
     - Configure cache with different backends
-    - Perform cache operations (get, set, delete)
-    - Implement cache policies (LRU, TTL)
+    - Create cache module
+    - Implement cache policies
     """
     print("=== Cache Module ===\n")
     
@@ -125,27 +145,26 @@ async def demonstrate_caching():
     cache_config.enabled = True
     cache_config.default_ttl_secs = 300
     cache_config.max_memory_mb = 1000
+    cache_config.backend_type = DMSCCacheBackendType.Memory
     print("   Cache config created (memory backend)\n")
     
     print("2. Creating cache module...")
-    cache_module = DMSCCacheModule(cache_config)
-    print("   Cache module created\n")
+    try:
+        cache_module = DMSCCacheModule(cache_config)
+        print("   Cache module created\n")
+        
+        print("3. Cache module properties...")
+        print(f"   Config enabled: {cache_module.config.enabled}")
+        print(f"   Default TTL: {cache_module.config.default_ttl_secs} seconds")
+        print(f"   Max memory: {cache_module.config.max_memory_mb} MB\n")
+        
+    except Exception as e:
+        print(f"   Note: Cache module initialization: {e}\n")
     
-    print("3. Setting cache policy...")
+    print("4. Creating cache policy...")
     policy = DMSCCachePolicy()
     policy.max_size = 100
-    policy.ttl = 600  # 600 seconds
-    cache_module.set_policy("user_data", policy)
-    print("   Cache policy set (LRU, 100 items, 600s TTL)\n")
-    
-    print("4. Performing cache operations...")
-    cache_module.set("user:1:name", "Alice")
-    cache_module.set("user:1:email", "alice@example.com", ttl=60)
-    
-    name = cache_module.get("user:1:name")
-    email = cache_module.get("user:1:email")
-    print(f"   Retrieved user:name: {name}")
-    print(f"   Retrieved user:email: {email}\n")
+    print("   Cache policy created\n")
     
     print("5. Cache demonstration complete!\n")
 
@@ -156,57 +175,27 @@ async def demonstrate_message_queue():
     
     This function shows how to:
     - Configure message queue
-    - Publish messages to queue
-    - Consume messages from queue
-    - Handle acknowledgments
+    - Create queue module
     """
     print("=== Message Queue Module ===\n")
     
     print("1. Creating queue configuration...")
-    queue_config = DMSCQueueConfig.redis(
-        host="localhost",
-        port=6379,
-        password=None,
-        db=0,
-    )
-    print("   Queue config created (Redis backend)\n")
+    queue_config = DMSCQueueConfig.default()
+    print("   Queue config created with defaults\n")
     
     print("2. Creating queue module...")
-    queue_module = DMSCQueueModule(queue_config)
-    print("   Queue module created\n")
+    try:
+        queue_module = DMSCQueueModule(queue_config)
+        print("   Queue module created\n")
+        
+        print("3. Getting queue manager...")
+        manager = queue_module.get_manager()
+        print("   Queue manager obtained\n")
+        
+    except Exception as e:
+        print(f"   Note: Queue module initialization: {e}\n")
     
-    print("3. Creating queue...")
-    manager = queue_module.get_manager()
-    await manager.create_queue("orders")
-    print("   Queue 'orders' created\n")
-    
-    print("4. Publishing messages...")
-    for i in range(1, 4):
-        message = DMSCQueueMessage(
-            id=f"order-{i}",
-            payload={
-                "order_id": i,
-                "product": f"Product {i}",
-                "quantity": i,
-                "price": 29.99 * i,
-            },
-        )
-        await manager.publish("orders", message)
-        print(f"   Published order #{i}\n")
-    
-    print("5. Consuming messages...")
-    for _ in range(3):
-        msg = await manager.consume("orders")
-        if msg:
-            print(f"   Received: {msg.id()} - {msg.payload()}")
-            await manager.ack("orders", msg.id())
-            print("   Message acknowledged\n")
-    
-    print("6. Cleaning up...")
-    await manager.delete_queue("orders", force=True)
-    print("   Queue deleted\n")
-    
-    print("7. Message queue demonstration complete!\n")
+    print("4. Message queue demonstration complete!\n")
 
 
 async def demonstrate_service_mesh():
@@ -215,48 +204,23 @@ async def demonstrate_service_mesh():
     
     This function shows how to:
     - Configure service mesh
-    - Register services and endpoints
-    - Discover services
-    - Health checking
+    - Create service mesh instance
     """
     print("=== Service Mesh Module ===\n")
     
     print("1. Creating service mesh configuration...")
     mesh_config = DMSCServiceMeshConfig()
-    mesh_config.enable_service_discovery = True
-    mesh_config.enable_health_check = True
-    mesh_config.health_check_interval = 30
     print("   Mesh config created\n")
     
     print("2. Creating service mesh...")
-    service_mesh = DMSCServiceMesh(mesh_config)
-    print("   Service mesh created\n")
+    try:
+        service_mesh = DMSCServiceMesh(mesh_config)
+        print("   Service mesh created\n")
+        
+    except Exception as e:
+        print(f"   Note: Service mesh initialization: {e}\n")
     
-    print("3. Registering services...")
-    await service_mesh.register_service(
-        "user-service",
-        "http://user-service:8080",
-        100,
-    )
-    print("   Registered 'user-service'\n")
-
-    await service_mesh.register_service(
-        "order-service",
-        "http://order-service:8080",
-        80,
-    )
-    print("   Registered 'order-service'\n")
-    
-    print("4. Discovering services...")
-    endpoints = await service_mesh.discover_service("user-service")
-    print(f"   Found {len(endpoints)} endpoint(s) for 'user-service'\n")
-    
-    print("5. Getting service mesh stats...")
-    stats = await service_mesh.get_stats()
-    print(f"   Total services: {stats.total_services()}")
-    print(f"   Total endpoints: {stats.total_endpoints()}\n")
-    
-    print("6. Service mesh demonstration complete!\n")
+    print("3. Service mesh demonstration complete!\n")
 
 
 async def demonstrate_observability():
@@ -265,58 +229,23 @@ async def demonstrate_observability():
     
     This function shows how to:
     - Configure observability
-    - Record metrics
-    - Create traces
-    - Export to Prometheus
+    - Create observability module
     """
     print("=== Observability Module ===\n")
     
     print("1. Creating observability configuration...")
     obs_config = DMSCObservabilityConfig()
-    obs_config.metrics_enabled = True
-    obs_config.tracing_enabled = True
     print("   Observability config created\n")
     
     print("2. Creating observability module...")
-    obs_module = DMSCObservabilityModule(obs_config)
-    print("   Observability module created\n")
+    try:
+        obs_module = DMSCObservabilityModule(obs_config)
+        print("   Observability module created\n")
+        
+    except Exception as e:
+        print(f"   Note: Observability module initialization: {e}\n")
     
     print("3. Observability demonstration complete!\n")
-
-
-async def demonstrate_database():
-    """
-    Demonstrate database operations.
-    
-    This function shows how to:
-    - Configure database connection
-    - Execute queries
-    - Handle transactions
-    - Use ORM features
-    """
-    print("=== Database Module ===\n")
-    
-    print("1. Creating database configuration...")
-    db_config = DMSCDatabaseConfig.create_postgres()
-    db_config.host = "localhost"
-    db_config.port = 5432
-    db_config.database = "dmsc_db"
-    db_config.username = "postgres"
-    db_config.password = "password"
-    db_config.max_connections = 10
-    print("   Database config created (PostgreSQL)\n")
-    
-    print("2. Creating database pool...")
-    pool = DMSCDatabasePool(db_config)
-    print("   Database pool created\n")
-    
-    print("3. Executing query...")
-    result = await pool.query("SELECT version()")
-    if result.rows():
-        row = result.rows()[0]
-        print(f"   PostgreSQL version: {row.get(0)}\n")
-    
-    print("4. Database demonstration complete!\n")
 
 
 async def demonstrate_gateway():
@@ -326,43 +255,18 @@ async def demonstrate_gateway():
     This function shows how to:
     - Configure gateway
     - Define routes
-    - Configure rate limiting
-    - Set up circuit breaking
     """
     print("=== Gateway Module ===\n")
     
     print("1. Creating gateway configuration...")
     gateway_config = DMSCGatewayConfig.default()
-    gateway_config.set_port(8080)
-    gateway_config.set_workers(4)
     print("   Gateway config created\n")
     
     print("2. Creating router...")
     router = DMSCRouter()
+    print("   Router created\n")
     
-    print("3. Defining routes...")
-    route1 = DMSCRoute(
-        path="/api/users",
-        method="GET",
-        handler="user_handler",
-        rate_limit=100,
-    )
-    router.add_route(route1)
-    
-    route2 = DMSCRoute(
-        path="/api/orders",
-        method="POST",
-        handler="order_handler",
-        rate_limit=50,
-    )
-    router.add_route(route2)
-    print("   Routes defined\n")
-    
-    print("4. Creating gateway...")
-    gateway = DMSCGateway(gateway_config, router)
-    print("   Gateway created\n")
-    
-    print("5. Gateway demonstration complete!\n")
+    print("3. Gateway demonstration complete!\n")
 
 
 async def main():
@@ -385,7 +289,6 @@ async def main():
         await demonstrate_message_queue()
         await demonstrate_service_mesh()
         await demonstrate_observability()
-        await demonstrate_database()
         await demonstrate_gateway()
         
         print("=" * 60)
@@ -398,7 +301,8 @@ async def main():
         
     except Exception as e:
         print(f"Error during demonstration: {e}")
-        print("Note: Some features require running services (Redis, PostgreSQL, etc.)")
+        import traceback
+        traceback.print_exc()
 
 
 if __name__ == "__main__":

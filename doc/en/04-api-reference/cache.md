@@ -2,9 +2,9 @@
 
 # Cache API Reference
 
-**Version: 0.1.6**
+**Version: 0.1.7**
 
-**Last modified date: 2026-02-01**
+**Last modified date: 2026-02-11**
 
 The cache module provides multi-backend cache abstraction, supporting memory, Redis, hybrid, and other cache backends.
 
@@ -35,7 +35,7 @@ The main interface for the cache module, providing unified access to cache servi
 
 | Method | Description | Parameters | Return Value |
 |:--------|:-------------|:--------|:--------|
-| `cache_manager()` | Get cache manager | None | `Arc<DMSCCacheManager>` |
+| `cache_manager()` | Get cache manager | None | `Arc<RwLock<DMSCCacheManager>>` |
 | `backend()` | Get current cache backend type | None | `DMSCCacheBackendType` |
 
 #### Usage Example

@@ -2,9 +2,9 @@
 
 # Queue API Reference
 
-**Version: 0.1.6**
+**Version: 0.1.7**
 
-**Last modified date: 2026-02-01**
+**Last modified date: 2026-02-11**
 
 The queue module provides a comprehensive queueing system with support for multiple backend implementations, enabling reliable message passing and task scheduling across distributed systems.
 

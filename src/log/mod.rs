@@ -88,8 +88,8 @@ pub use context::DMSCLogContext;
 /// Log level definition.
 /// 
 /// This enum defines the supported log levels in DMSC, ordered by severity from lowest to highest.
-#[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
-#[derive(Clone, Copy, Debug)]
+#[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass(eq, eq_int))]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum DMSCLogLevel {
     /// Debug level: Detailed information for debugging purposes
     Debug,
@@ -113,6 +113,20 @@ impl DMSCLogLevel {
             DMSCLogLevel::Info => "INFO",
             DMSCLogLevel::Warn => "WARN",
             DMSCLogLevel::Error => "ERROR",
+        }
+    }
+
+    /// Returns the color block emoji for the log level.
+    /// 
+    /// # Returns
+    /// 
+    /// A static string representing the color block emoji
+    pub fn color_block(&self) -> &'static str {
+        match self {
+            DMSCLogLevel::Debug => "🟦",
+            DMSCLogLevel::Info => "🟩",
+            DMSCLogLevel::Warn => "🟨",
+            DMSCLogLevel::Error => "🟥",
         }
     }
 
@@ -179,6 +193,29 @@ pub struct DMSCLogConfig {
     pub rotate_when: String,
     /// Maximum file size in bytes before rotation (used when rotate_when == "size")
     pub max_bytes: u64,
+    /// Whether to use color blocks in log output
+    pub color_blocks: bool,
+}
+
+#[cfg(feature = "pyo3")]
+#[pyo3::prelude::pymethods]
+impl DMSCLogConfig {
+    #[new]
+    fn py_new() -> Self {
+        Self::default()
+    }
+
+    /// Get color blocks flag
+    #[getter]
+    fn get_color_blocks(&self) -> bool {
+        self.color_blocks
+    }
+
+    /// Set color blocks flag
+    #[setter]
+    fn set_color_blocks(&mut self, value: bool) {
+        self.color_blocks = value;
+    }
 }
 
 impl DMSCLogConfig {
@@ -244,6 +281,10 @@ impl DMSCLogConfig {
 
         if let Some(v) = config.get_bool("log.file_enabled") {
             base.file_enabled = v;
+        }
+
+        if let Some(v) = config.get_bool("log.color_blocks") {
+            base.color_blocks = v;
         }
 
         base
@@ -319,6 +360,14 @@ impl DMSCLogConfig {
             }
         }
 
+        if let Ok(v) = std::env::var("DMSC_LOG_COLOR_BLOCKS") {
+            if v.eq_ignore_ascii_case("true") || v == "1" {
+                base.color_blocks = true;
+            } else if v.eq_ignore_ascii_case("false") || v == "0" {
+                base.color_blocks = false;
+            }
+        }
+
         base
     }
 }
@@ -335,111 +384,8 @@ impl Default for DMSCLogConfig {
             json_format: false,
             rotate_when: "size".to_string(),
             max_bytes: 10 * 1024 * 1024,
+            color_blocks: true,
         }
-    }
-}
-
-#[cfg(feature = "pyo3")]
-/// Python methods for DMSCLogConfig
-#[pyo3::prelude::pymethods]
-impl DMSCLogConfig {
-    #[new]
-    fn py_new() -> Self {
-        Self::default()
-    }
-    
-    /// Set log level from Python
-    fn set_level(&mut self, level: String) -> pyo3::PyResult<()>
-    {
-        let log_level = match level.to_ascii_lowercase().as_str() {
-            "debug" => DMSCLogLevel::Debug,
-            "info" => DMSCLogLevel::Info,
-            "warn" | "warning" => DMSCLogLevel::Warn,
-            "error" => DMSCLogLevel::Error,
-            _ => return Err(pyo3::exceptions::PyValueError::new_err(format!("Invalid log level: {level}"))),
-        };
-        self.level = log_level;
-        Ok(())
-    }
-    
-    /// Get log level as string from Python
-    fn get_level(&self) -> String {
-        self.level.as_str().to_lowercase()
-    }
-    
-    /// Set console enabled flag from Python
-    fn set_console_enabled(&mut self, enabled: bool) {
-        self.console_enabled = enabled;
-    }
-    
-    /// Get console enabled flag from Python
-    fn get_console_enabled(&self) -> bool {
-        self.console_enabled
-    }
-    
-    /// Set file enabled flag from Python
-    fn set_file_enabled(&mut self, enabled: bool) {
-        self.file_enabled = enabled;
-    }
-    
-    /// Get file enabled flag from Python
-    fn get_file_enabled(&self) -> bool {
-        self.file_enabled
-    }
-    
-    /// Set file name from Python
-    fn set_file_name(&mut self, file_name: String) {
-        self.file_name = file_name;
-    }
-    
-    /// Get file name from Python
-    fn get_file_name(&self) -> String {
-        self.file_name.clone()
-    }
-    
-    /// Set JSON format flag from Python
-    fn set_json_format(&mut self, json_format: bool) {
-        self.json_format = json_format;
-    }
-    
-    /// Get JSON format flag from Python
-    fn get_json_format(&self) -> bool {
-        self.json_format
-    }
-    
-    /// Set rotate when from Python
-    fn set_rotate_when(&mut self, rotate_when: String) {
-        self.rotate_when = rotate_when;
-    }
-    
-    /// Get rotate when from Python
-    fn get_rotate_when(&self) -> String {
-        self.rotate_when.clone()
-    }
-    
-    /// Set max bytes from Python
-    fn set_max_bytes(&mut self, max_bytes: u64) {
-        self.max_bytes = max_bytes;
-    }
-    
-    /// Get max bytes from Python
-    fn get_max_bytes(&self) -> u64 {
-        self.max_bytes
-    }
-    
-    /// Set sampling default from Python
-    fn set_sampling_default(&mut self, sampling_default: f32) -> pyo3::PyResult<()>
-    {
-        if sampling_default < 0.0 || sampling_default > 1.0 {
-            return Err(pyo3::exceptions::PyValueError::new_err("Sampling default must be between 0.0 and 1.0"));
-        }
-        self.sampling_default = sampling_default;
-        Ok(())
-    }
-    
-    /// Get sampling default from Python
-    fn get_sampling_default(&self) -> f32 {
-        self.sampling_default
     }
 }
 
@@ -483,6 +429,9 @@ struct LoggerImpl {
     /// Maximum file size in bytes before rotation (used when rotate_when == "size")
     #[allow(dead_code)]
     max_bytes: u64,
+    /// Whether to use color blocks in log output
+    #[allow(dead_code)]
+    color_blocks: bool,
     /// Log cache for batch writing
     log_cache: Arc<(Mutex<VecDeque<LogEntry>>, Condvar)>,
     /// Cache size limit
@@ -520,6 +469,7 @@ impl LoggerImpl {
         let bg_rotate_when = config.rotate_when.clone();
         let bg_max_bytes = config.max_bytes;
         let bg_console_enabled = config.console_enabled;
+        let bg_color_blocks = config.color_blocks;
         let bg_shutdown_flag = Arc::clone(&shutdown_flag);
         
         // Start background flush thread
@@ -538,7 +488,8 @@ impl LoggerImpl {
                         bg_json_format,
                         &bg_rotate_when,
                         bg_max_bytes,
-                        bg_console_enabled
+                        bg_console_enabled,
+                        bg_color_blocks
                     ).unwrap_or(());
                     break;
                 }
@@ -558,7 +509,8 @@ impl LoggerImpl {
                         bg_json_format,
                         &bg_rotate_when,
                         bg_max_bytes,
-                        bg_console_enabled
+                        bg_console_enabled,
+                        bg_color_blocks
                     ).unwrap_or(());
                     last_flush = now;
                 }
@@ -579,6 +531,7 @@ impl LoggerImpl {
             json_format: config.json_format,
             rotate_when: config.rotate_when.clone(),
             max_bytes: config.max_bytes,
+            color_blocks: config.color_blocks,
             log_cache,
             cache_size_limit,
             flush_interval_ms,
@@ -597,6 +550,7 @@ impl LoggerImpl {
     /// - `rotate_when`: When to rotate logs
     /// - `max_bytes`: Maximum file size before rotation
     /// - `console_enabled`: Whether console logging is enabled
+    /// - `color_blocks`: Whether to use color blocks in log output
     /// 
     /// # Returns
     /// 
@@ -608,7 +562,8 @@ impl LoggerImpl {
         json_format: bool,
         rotate_when: &str,
         max_bytes: u64,
-        console_enabled: bool
+        console_enabled: bool,
+        color_blocks: bool
     ) -> DMSCResult<()> {
         let (lock, _cvar) = &**log_cache;
         let mut cache = lock.lock().unwrap();
@@ -653,16 +608,6 @@ impl LoggerImpl {
                     .map(|(k, v)| (k.clone(), v.to_string()))
                     .collect();
                 
-                let ctx_str = if ctx_kv.is_empty() {
-                    String::new()
-                } else {
-                    let parts: Vec<String> = ctx_kv
-                        .iter()
-                        .map(|(k, v)| format!("{k}={v}"))
-                        .collect();
-                    format!(" ctx={{ {} }}", parts.join(", "))
-                };
-                
                 // Extract trace and span IDs if present
                 let trace_info = match (log_entry.context.get("trace_id"), log_entry.context.get("span_id")) {
                     (Some(trace), Some(span)) => format!(" trace_id={trace} span_id={span}"),
@@ -676,16 +621,42 @@ impl LoggerImpl {
                     .and_then(|v| v.as_str())
                     .unwrap_or(&log_entry.target);
                 
-                // Improved text log format with standardized fields
+                // Format context fields for display
+                let ctx_display = if ctx_kv.is_empty() {
+                    String::new()
+                } else {
+                    let parts: Vec<String> = ctx_kv
+                        .iter()
+                        .map(|(k, v)| format!("{}={}", k, v))
+                        .collect();
+                    format!(" | {}", parts.join(", "))
+                };
+                
+                // Format trace info for display
+                let trace_display = if trace_info.is_empty() {
+                    String::new()
+                } else {
+                    format!(" | {}", trace_info.trim())
+                };
+                
+                // New log format with optional color block and | separators
+                let color_block = if color_blocks {
+                    log_entry.level.color_block()
+                } else {
+                    ""
+                };
+                let color_sep = if color_blocks { " | " } else { "" };
                 format!(
-                    "{} [{}] {} event={}{} - {}{}",
+                    "{}{}{} | {:5} | {} | event={}{} | {}{}",
+                    color_block,
+                    color_sep,
                     log_entry.timestamp,
                     log_entry.level.as_str(),
                     log_entry.target,
                     event,
-                    trace_info,
+                    trace_display,
                     log_entry.message,
-                    ctx_str,
+                    ctx_display,
                 )
             };
             

@@ -589,16 +589,19 @@ impl DMSCAppBuilder {
         Self::new()
     }
 
-    fn py_with_config(&mut self, config_path: &str) {
+    fn py_with_config(&mut self, config_path: &str) -> PyResult<Self> {
         self.config_paths.push(config_path.to_string());
+        Ok(std::mem::take(self))
     }
 
-    fn py_with_logging(&mut self, logging_config: crate::log::DMSCLogConfig) {
+    fn py_with_logging(&mut self, logging_config: crate::log::DMSCLogConfig) -> PyResult<Self> {
         self.logging_config = Some(logging_config);
+        Ok(std::mem::take(self))
     }
 
-    fn py_with_observability(&mut self, observability_config: crate::observability::DMSCObservabilityConfig) {
+    fn py_with_observability(&mut self, observability_config: crate::observability::DMSCObservabilityConfig) -> PyResult<Self> {
         self.observability_config = Some(observability_config);
+        Ok(std::mem::take(self))
     }
 
     fn py_build(&mut self) -> PyResult<DMSCAppRuntime> {
@@ -606,58 +609,65 @@ impl DMSCAppBuilder {
         DMSCAppBuilder::build(builder).map_err(|e| pyo3::prelude::PyErr::from(e))
     }
 
-    fn py_with_module(&mut self, module: super::module::DMSCPythonServiceModule) {
+    fn py_with_module(&mut self, module: super::module::DMSCPythonServiceModule) -> PyResult<Self> {
         self.modules.push(crate::core::module_types::ModuleSlot {
             module: crate::core::module_types::ModuleType::Sync(Box::new(module)),
             failed: false,
         });
+        Ok(std::mem::take(self))
     }
 
-    fn py_with_python_module(&mut self, module: super::module::DMSCPythonModuleAdapter) {
+    fn py_with_python_module(&mut self, module: super::module::DMSCPythonModuleAdapter) -> PyResult<Self> {
         self.modules.push(crate::core::module_types::ModuleSlot {
             module: crate::core::module_types::ModuleType::Async(Box::new(module)),
             failed: false,
         });
+        Ok(std::mem::take(self))
     }
 
-    fn py_with_async_module(&mut self, module: super::module::DMSCPythonAsyncServiceModule) {
+    fn py_with_async_module(&mut self, module: super::module::DMSCPythonAsyncServiceModule) -> PyResult<Self> {
         self.modules.push(crate::core::module_types::ModuleSlot {
             module: crate::core::module_types::ModuleType::Async(Box::new(module)),
             failed: false,
         });
+        Ok(std::mem::take(self))
     }
 
-    fn py_with_dms_module(&mut self, module: super::module::DMSCPythonModuleAdapter) {
+    fn py_with_dms_module(&mut self, module: super::module::DMSCPythonModuleAdapter) -> PyResult<Self> {
         self.modules.push(crate::core::module_types::ModuleSlot {
             module: crate::core::module_types::ModuleType::Async(Box::new(module)),
             failed: false,
         });
+        Ok(std::mem::take(self))
     }
 
-    fn py_with_modules(&mut self, modules: Vec<super::module::DMSCPythonServiceModule>) {
+    fn py_with_modules(&mut self, modules: Vec<super::module::DMSCPythonServiceModule>) -> PyResult<Self> {
         for module in modules {
             self.modules.push(crate::core::module_types::ModuleSlot {
                 module: crate::core::module_types::ModuleType::Sync(Box::new(module)),
                 failed: false,
             });
         }
+        Ok(std::mem::take(self))
     }
 
-    fn py_with_async_modules(&mut self, modules: Vec<super::module::DMSCPythonAsyncServiceModule>) {
+    fn py_with_async_modules(&mut self, modules: Vec<super::module::DMSCPythonAsyncServiceModule>) -> PyResult<Self> {
         for module in modules {
             self.modules.push(crate::core::module_types::ModuleSlot {
                 module: crate::core::module_types::ModuleType::Async(Box::new(module)),
                 failed: false,
             });
         }
+        Ok(std::mem::take(self))
     }
 
-    fn py_with_dms_modules(&mut self, modules: Vec<super::module::DMSCPythonModuleAdapter>) {
+    fn py_with_dms_modules(&mut self, modules: Vec<super::module::DMSCPythonModuleAdapter>) -> PyResult<Self> {
         for module in modules {
             self.modules.push(crate::core::module_types::ModuleSlot {
                 module: crate::core::module_types::ModuleType::Async(Box::new(module)),
                 failed: false,
             });
         }
+        Ok(std::mem::take(self))
     }
 }

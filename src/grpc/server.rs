@@ -54,7 +54,9 @@ impl DMSCGrpcServer {
     }
 
     fn get_stats(&self) -> DMSCGrpcStats {
-        self.stats.try_read().unwrap().clone()
+        self.stats.try_read()
+            .map(|guard| guard.clone())
+            .unwrap_or_else(|_| DMSCGrpcStats::new())
     }
 }
 

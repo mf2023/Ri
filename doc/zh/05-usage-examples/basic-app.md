@@ -2,9 +2,9 @@
 
 # 基础应用示例
 
-**Version: 0.1.6**
+**Version: 0.1.7**
 
-**Last modified date: 2026-02-01**
+**Last modified date: 2026-02-11**
 
 本示例展示如何构建一个简单的DMSC应用，包括应用配置、运行和基本功能使用。
 
@@ -85,8 +85,8 @@ async fn main() -> DMSCResult<()> {
     // 构建服务运行时
     let app = DMSCAppBuilder::new()
         .with_config("config.yaml")?
-        .with_logging(DMSCLogConfig::default())?
-        .with_observability(DMSCObservabilityConfig::default())?
+        .with_logging(DMSCLogConfig::default())
+        .with_observability(DMSCObservabilityConfig::default())
         .build()?;
     
     // 运行业务逻辑
