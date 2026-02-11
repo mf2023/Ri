@@ -62,7 +62,7 @@
 ################################################################################
 
 # Workflow name displayed in GitHub Actions UI
-name: Build and Publish DMSC
+name: Build and Publish DMSC (Rust/C/Python)
 
 # =============================================================================
 # Trigger Configuration
@@ -320,6 +320,288 @@ jobs:
         with:
           name: rust-macos-x64
           path: target/x86_64-apple-darwin/release/libdmsc.*
+
+  ################################################################################
+  # Job: Build C/C++ Static Libraries and Headers for Linux x64
+  ################################################################################
+  # This job compiles the DMSC library as a static library (staticlib) for C/C++ usage
+  # Generates platform-specific static libraries (.a files) and C header files
+  ################################################################################
+  build-c-libs-linux:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install protoc
+        uses: arduino/setup-protoc@v3
+        with:
+          version: '33.x'
+
+      - name: Install CMake
+        uses: jwlawson/actions-setup-cmake@v2
+        with:
+          cmake-version: '3.28.x'
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libcurl4-openssl-dev libsasl2-dev
+
+      - name: Build C static library
+        run: cargo build --release --features c
+
+      - name: Generate C headers
+        run: |
+          mkdir -p include
+          # Generate header file with all exported functions
+          echo "/* DMSC C API Header - Auto-generated */" > include/dmsc.h
+          echo "#ifndef DMSC_H" >> include/dmsc.h
+          echo "#define DMSC_H" >> include/dmsc.h
+          echo "" >> include/dmsc.h
+          echo "#include <stdint.h>" >> include/dmsc.h
+          echo "#include <stddef.h>" >> include/dmsc.h
+          echo "" >> include/dmsc.h
+          echo "#ifdef __cplusplus" >> include/dmsc.h
+          echo "extern \"C\" {" >> include/dmsc.h
+          echo "#endif" >> include/dmsc.h
+          echo "" >> include/dmsc.h
+          echo "/* Library Management */" >> include/dmsc.h
+          echo "int dmsc_init(void);" >> include/dmsc.h
+          echo "void dmsc_cleanup(void);" >> include/dmsc.h
+          echo "const char* dmsc_version(void);" >> include/dmsc.h
+          echo "void dmsc_string_free(char* s);" >> include/dmsc.h
+          echo "" >> include/dmsc.h
+          echo "/* Core Module */" >> include/dmsc.h
+          echo "typedef struct CDMSCAppBuilder CDMSCAppBuilder;" >> include/dmsc.h
+          echo "typedef struct CDMSCConfig CDMSCConfig;" >> include/dmsc.h
+          echo "CDMSCAppBuilder* dmsc_app_builder_new(void);" >> include/dmsc.h
+          echo "void dmsc_app_builder_free(CDMSCAppBuilder* builder);" >> include/dmsc.h
+          echo "CDMSCConfig* dmsc_config_new(void);" >> include/dmsc.h
+          echo "void dmsc_config_free(CDMSCConfig* config);" >> include/dmsc.h
+          echo "char* dmsc_config_get_string(CDMSCConfig* config, const char* key);" >> include/dmsc.h
+          echo "int dmsc_config_set_string(CDMSCConfig* config, const char* key, const char* value);" >> include/dmsc.h
+          echo "" >> include/dmsc.h
+          echo "#ifdef __cplusplus" >> include/dmsc.h
+          echo "}" >> include/dmsc.h
+          echo "#endif" >> include/dmsc.h
+          echo "" >> include/dmsc.h
+          echo "#endif /* DMSC_H */" >> include/dmsc.h
+
+      - name: Upload C library artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: c-libs-linux-x64
+          path: |
+            target/release/libdmsc.a
+            include/dmsc.h
+
+  ################################################################################
+  # Job: Build C/C++ Static Libraries and Headers for Linux ARM64
+  ################################################################################
+  build-c-libs-linux-arm64:
+    runs-on: ubuntu-24.04-arm
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install protoc
+        uses: arduino/setup-protoc@v3
+        with:
+          version: '33.x'
+
+      - name: Install CMake
+        uses: jwlawson/actions-setup-cmake@v2
+        with:
+          cmake-version: '3.28.x'
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libcurl4-openssl-dev libsasl2-dev
+
+      - name: Build C static library
+        run: cargo build --release --features c
+
+      - name: Generate C headers
+        run: |
+          mkdir -p include
+          echo "/* DMSC C API Header - Auto-generated */" > include/dmsc.h
+          echo "#ifndef DMSC_H" >> include/dmsc.h
+          echo "#define DMSC_H" >> include/dmsc.h
+          echo "" >> include/dmsc.h
+          echo "#include <stdint.h>" >> include/dmsc.h
+          echo "#include <stddef.h>" >> include/dmsc.h
+          echo "" >> include/dmsc.h
+          echo "#ifdef __cplusplus" >> include/dmsc.h
+          echo "extern \"C\" {" >> include/dmsc.h
+          echo "#endif" >> include/dmsc.h
+          echo "" >> include/dmsc.h
+          echo "/* Library Management */" >> include/dmsc.h
+          echo "int dmsc_init(void);" >> include/dmsc.h
+          echo "void dmsc_cleanup(void);" >> include/dmsc.h
+          echo "const char* dmsc_version(void);" >> include/dmsc.h
+          echo "void dmsc_string_free(char* s);" >> include/dmsc.h
+          echo "" >> include/dmsc.h
+          echo "/* Core Module */" >> include/dmsc.h
+          echo "typedef struct CDMSCAppBuilder CDMSCAppBuilder;" >> include/dmsc.h
+          echo "typedef struct CDMSCConfig CDMSCConfig;" >> include/dmsc.h
+          echo "CDMSCAppBuilder* dmsc_app_builder_new(void);" >> include/dmsc.h
+          echo "void dmsc_app_builder_free(CDMSCAppBuilder* builder);" >> include/dmsc.h
+          echo "CDMSCConfig* dmsc_config_new(void);" >> include/dmsc.h
+          echo "void dmsc_config_free(CDMSCConfig* config);" >> include/dmsc.h
+          echo "char* dmsc_config_get_string(CDMSCConfig* config, const char* key);" >> include/dmsc.h
+          echo "int dmsc_config_set_string(CDMSCConfig* config, const char* key, const char* value);" >> include/dmsc.h
+          echo "" >> include/dmsc.h
+          echo "#ifdef __cplusplus" >> include/dmsc.h
+          echo "}" >> include/dmsc.h
+          echo "#endif" >> include/dmsc.h
+          echo "" >> include/dmsc.h
+          echo "#endif /* DMSC_H */" >> include/dmsc.h
+
+      - name: Upload C library artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: c-libs-linux-arm64
+          path: |
+            target/release/libdmsc.a
+            include/dmsc.h
+
+  ################################################################################
+  # Job: Build C/C++ Static Libraries and Headers for Windows x64
+  ################################################################################
+  build-c-libs-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install protoc
+        uses: arduino/setup-protoc@v3
+        with:
+          version: '33.x'
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Install CMake
+        uses: jwlawson/actions-setup-cmake@v2
+        with:
+          cmake-version: '3.28.x'
+
+      - name: Build C static library
+        run: cargo build --release --features c
+
+      - name: Generate C headers
+        shell: cmd
+        run: |
+          mkdir include 2>nul
+          echo /* DMSC C API Header - Auto-generated */ > include\dmsc.h
+          echo #ifndef DMSC_H >> include\dmsc.h
+          echo #define DMSC_H >> include\dmsc.h
+          echo. >> include\dmsc.h
+          echo #include ^<stdint.h^> >> include\dmsc.h
+          echo #include ^<stddef.h^> >> include\dmsc.h
+          echo. >> include\dmsc.h
+          echo #ifdef __cplusplus >> include\dmsc.h
+          echo extern "C" { >> include\dmsc.h
+          echo #endif >> include\dmsc.h
+          echo. >> include\dmsc.h
+          echo /* Library Management */ >> include\dmsc.h
+          echo int dmsc_init(void); >> include\dmsc.h
+          echo void dmsc_cleanup(void); >> include\dmsc.h
+          echo const char* dmsc_version(void); >> include\dmsc.h
+          echo void dmsc_string_free(char* s); >> include\dmsc.h
+          echo. >> include\dmsc.h
+          echo /* Core Module */ >> include\dmsc.h
+          echo typedef struct CDMSCAppBuilder CDMSCAppBuilder; >> include\dmsc.h
+          echo typedef struct CDMSCConfig CDMSCConfig; >> include\dmsc.h
+          echo CDMSCAppBuilder* dmsc_app_builder_new(void); >> include\dmsc.h
+          echo void dmsc_app_builder_free(CDMSCAppBuilder* builder); >> include\dmsc.h
+          echo CDMSCConfig* dmsc_config_new(void); >> include\dmsc.h
+          echo void dmsc_config_free(CDMSCConfig* config); >> include\dmsc.h
+          echo char* dmsc_config_get_string(CDMSCConfig* config, const char* key); >> include\dmsc.h
+          echo int dmsc_config_set_string(CDMSCConfig* config, const char* key, const char* value); >> include\dmsc.h
+          echo. >> include\dmsc.h
+          echo #ifdef __cplusplus >> include\dmsc.h
+          echo } >> include\dmsc.h
+          echo #endif >> include\dmsc.h
+          echo. >> include\dmsc.h
+          echo #endif /* DMSC_H */ >> include\dmsc.h
+
+      - name: Upload C library artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: c-libs-windows-x64
+          path: |
+            target/release/dmsc.lib
+            include/dmsc.h
+
+  ################################################################################
+  # Job: Build C/C++ Static Libraries and Headers for macOS x64
+  ################################################################################
+  build-c-libs-macos:
+    runs-on: macos-15-intel
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install protoc
+        uses: arduino/setup-protoc@v3
+        with:
+          version: '33.x'
+
+      - name: Install dependencies
+        run: |
+          brew update
+          brew install cmake pkg-config || true
+
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: stable
+          targets: x86_64-apple-darwin
+
+      - name: Build C static library
+        run: cargo build --release --target x86_64-apple-darwin --features c
+
+      - name: Generate C headers
+        run: |
+          mkdir -p include
+          echo "/* DMSC C API Header - Auto-generated */" > include/dmsc.h
+          echo "#ifndef DMSC_H" >> include/dmsc.h
+          echo "#define DMSC_H" >> include/dmsc.h
+          echo "" >> include/dmsc.h
+          echo "#include <stdint.h>" >> include/dmsc.h
+          echo "#include <stddef.h>" >> include/dmsc.h
+          echo "" >> include/dmsc.h
+          echo "#ifdef __cplusplus" >> include/dmsc.h
+          echo "extern \"C\" {" >> include/dmsc.h
+          echo "#endif" >> include/dmsc.h
+          echo "" >> include/dmsc.h
+          echo "/* Library Management */" >> include/dmsc.h
+          echo "int dmsc_init(void);" >> include/dmsc.h
+          echo "void dmsc_cleanup(void);" >> include/dmsc.h
+          echo "const char* dmsc_version(void);" >> include/dmsc.h
+          echo "void dmsc_string_free(char* s);" >> include/dmsc.h
+          echo "" >> include/dmsc.h
+          echo "/* Core Module */" >> include/dmsc.h
+          echo "typedef struct CDMSCAppBuilder CDMSCAppBuilder;" >> include/dmsc.h
+          echo "typedef struct CDMSCConfig CDMSCConfig;" >> include/dmsc.h
+          echo "CDMSCAppBuilder* dmsc_app_builder_new(void);" >> include/dmsc.h
+          echo "void dmsc_app_builder_free(CDMSCAppBuilder* builder);" >> include/dmsc.h
+          echo "CDMSCConfig* dmsc_config_new(void);" >> include/dmsc.h
+          echo "void dmsc_config_free(CDMSCConfig* config);" >> include/dmsc.h
+          echo "char* dmsc_config_get_string(CDMSCConfig* config, const char* key);" >> include/dmsc.h
+          echo "int dmsc_config_set_string(CDMSCConfig* config, const char* key, const char* value);" >> include/dmsc.h
+          echo "" >> include/dmsc.h
+          echo "#ifdef __cplusplus" >> include/dmsc.h
+          echo "}" >> include/dmsc.h
+          echo "#endif" >> include/dmsc.h
+          echo "" >> include/dmsc.h
+          echo "#endif /* DMSC_H */" >> include/dmsc.h
+
+      - name: Upload C library artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: c-libs-macos-x64
+          path: |
+            target/x86_64-apple-darwin/release/libdmsc.a
+            include/dmsc.h
 
   ################################################################################
   # Job: Build Python Wheels for All Platforms

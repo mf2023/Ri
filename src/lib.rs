@@ -82,6 +82,9 @@ pub mod grpc;
 /// WebSocket server and client support
 #[cfg(feature = "websocket")]
 pub mod ws;
+/// C/C++ API support
+#[cfg(feature = "c")]
+pub mod c;
 
 /// Common re-exports for convenient access to core functionality
 /// 

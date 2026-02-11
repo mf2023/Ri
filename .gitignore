@@ -74,6 +74,7 @@ rust-project.json
 # Trae IDE configuration directory
 # Contains Trae-specific settings and configurations
 .trae/
+.qoder/
 
 # Vim swap files
 # Created by Vim when editing files, used for crash recovery

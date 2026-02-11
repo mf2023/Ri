@@ -94,7 +94,8 @@ path = "src/lib.rs"
 # Library crate types for different use cases:
 # - "rlib": Rust static library for Rust-to-Rust linking
 # - "cdylib": C dynamic library for FFI and Python bindings via PyO3
-crate-type = ["rlib", "cdylib"]
+# - "staticlib": C static library for C/C++ linking
+crate-type = ["rlib", "cdylib", "staticlib"]
 
 # =============================================================================
 # Core Dependencies
@@ -107,6 +108,11 @@ crate-type = ["rlib", "cdylib"]
 # Optional to allow pure Rust builds without Python support
 # When enabled, allows Python code to import and use DMSC functionality
 pyo3 = { version = "0.27", features = ["extension-module"], optional = true }
+
+# Safer-FFI C/C++ bindings with proc_macros feature for generating C headers
+# Optional to allow pure Rust builds without C API support
+# When enabled, allows C/C++ code to link and use DMSC functionality
+safer-ffi = { version = "0.1", features = ["proc_macros"], optional = true }
 
 # Kafka message streaming support
 # Kafka client library for message streaming using rdkafka
@@ -446,6 +452,7 @@ sm-crypto = { version = "0.1", optional = true }
 # ALL FEATURES ENABLED - Complete functionality
 default = [
     "pyo3",
+    "c",
     "grpc",
     "websocket",
     "rabbitmq",
@@ -473,15 +480,26 @@ minimal = []
 # Full feature set
 # Enables all major features for complete middleware functionality
 full = [
-    "notify",
-    "prometheus",
-    "redis",
-    "hyper",
-    "sysinfo",
-    "reqwest",
-    "urlencoding",
+    "pyo3",
+    "c",
+    "grpc",
+    "websocket",
     "rabbitmq",
-    "pyo3"
+    "cache",
+    "queue",
+    "gateway",
+    "service_mesh",
+    "auth",
+    "observability",
+    "postgres",
+    "mysql",
+    "sqlite",
+    "http_client",
+    "system_info",
+    "config_hot_reload",
+    "protocol",
+    "etcd",
+    "kafka",
 ]
 
 # =============================================================================
@@ -498,6 +516,9 @@ parking_lot = []
 
 # Python binding support via PyO3
 pyo3 = ["dep:pyo3"]
+
+# C/C++ API support via safer-ffi
+c = ["dep:safer-ffi"]
 
 # RabbitMQ message queue support
 rabbitmq = ["dep:lapin"]
