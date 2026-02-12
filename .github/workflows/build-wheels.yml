@@ -548,19 +548,13 @@ jobs:
       - name: Install dependencies
         run: |
           brew update
-          brew install cmake pkg-config || true
+          brew install cmake pkg-config openssl || true
 
       - name: Set up Rust
         uses: dtolnay/rust-toolchain@master
         with:
           toolchain: stable
           targets: x86_64-apple-darwin
-
-      - name: Configure macOS linker for PyO3
-        run: |
-          mkdir -p .cargo
-          echo '[target.x86_64-apple-darwin]' > .cargo/config.toml
-          echo 'rustflags = ["-C", "link-arg=-undefined", "-C", "link-arg=dynamic_lookup"]' >> .cargo/config.toml
 
       - name: Build C static library
         run: cargo build --release --target x86_64-apple-darwin --features c
@@ -1321,4 +1315,36 @@ jobs:
           pip install -e . --no-build-isolation
 
       - name: Run Python tests
-        run: pytest tests/Python/ -v
+        run: pytest tests/python/ -v
+
+  ################################################################################
+  # Job: Run Rust Tests
+  ################################################################################
+  # This job runs cargo test to verify the Rust library works correctly
+  run-rust-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: stable
+
+      - name: Install protoc
+        uses: arduino/setup-protoc@v3
+        with:
+          version: '33.x'
+
+      - name: Install CMake
+        uses: jwlawson/actions-setup-cmake@v2
+        with:
+          cmake-version: '3.28.x'
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libcurl4-openssl-dev libsasl2-dev
+
+      - name: Run Rust tests
+        run: cargo test --no-default-features --features "pyo3,auth,cache,queue,gateway,observability,rabbitmq,protocol,sqlite,postgres,mysql,service_mesh,parking_lot,http_client,system_info,config_hot_reload,grpc,websocket,kafka,etcd"

@@ -710,10 +710,10 @@ impl DMSCTracer {
     #[pyo3(name = "export_traces")]
     fn export_traces_impl(&self, py: pyo3::Python<'_>) -> PyResult<HashMap<String, Vec<pyo3::Py<pyo3::PyAny>>>> {
         let traces = self.export_traces();
-        let mut result = HashMap::new();
+        let mut result = HashMap::with_capacity(traces.len());
 
         for (trace_id, spans) in traces {
-            let mut span_list = Vec::new();
+            let mut span_list = Vec::with_capacity(spans.len());
             for span in spans {
                 let span_dict = pyo3::types::PyDict::new(py);
                 span_dict.set_item("trace_id", span.trace_id.as_str())?;

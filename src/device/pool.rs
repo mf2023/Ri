@@ -189,7 +189,7 @@ impl DMSCResourcePool {
         Self {
             name: config.name,
             device_type: config.device_type,
-            devices: HashMap::new(),
+            devices: HashMap::with_capacity(16),
             total_capacity: 0,
             available_capacity: 0,
             allocated_capacity: 0,
@@ -435,6 +435,7 @@ impl DMSCResourcePool {
     /// # Returns
     /// 
     /// The pool name as a string slice
+    #[inline]
     pub fn name(&self) -> &str {
         &self.name
     }
@@ -444,6 +445,7 @@ impl DMSCResourcePool {
     /// # Returns
     /// 
     /// The device type as a `DMSCDeviceType` enum
+    #[inline]
     pub fn device_type(&self) -> DMSCDeviceType {
         self.device_type
     }
@@ -453,6 +455,7 @@ impl DMSCResourcePool {
     /// # Returns
     /// 
     /// A vector of `Arc<DMSCDevice>` containing all devices in the pool
+    #[inline]
     pub fn get_devices(&self) -> Vec<Arc<DMSCDevice>> {
         self.devices.values().cloned().collect()
     }
@@ -486,6 +489,7 @@ impl DMSCResourcePool {
     /// # Returns
     /// 
     /// `true` if the pool has available devices, `false` otherwise
+    #[inline]
     pub fn has_available_capacity(&self) -> bool {
         self.available_capacity > 0
     }
@@ -495,6 +499,7 @@ impl DMSCResourcePool {
     /// # Returns
     /// 
     /// The utilization rate as a floating-point number between 0.0 and 1.0
+    #[inline]
     pub fn utilization_rate(&self) -> f64 {
         if self.total_capacity > 0 {
             self.allocated_capacity as f64 / self.total_capacity as f64
@@ -566,7 +571,7 @@ impl DMSCResourcePool {
         };
         
         // Calculate device status distribution
-        let mut status_distribution = HashMap::new();
+        let mut status_distribution = HashMap::with_capacity(4);
         for device in &devices {
             *status_distribution.entry(device.status()).or_insert(0) += 1;
         }
@@ -705,7 +710,7 @@ impl DMSCConnectionPool {
     /// Creates a new connection pool
     pub fn new(max_connections: usize, connection_timeout: Duration, health_check_interval: Duration) -> Self {
         Self {
-            connections: HashMap::new(),
+            connections: HashMap::with_capacity(max_connections),
             max_connections,
             connection_timeout,
             health_check_interval,
@@ -1045,7 +1050,7 @@ impl Default for DMSCResourcePoolStatistics {
             average_health_score: 0.0,
             device_type: DMSCDeviceType::CPU,
             connection_pool_stats: None,
-            status_distribution: HashMap::new(),
+            status_distribution: HashMap::with_capacity(4),
             average_response_time_ms: 0.0,
             average_network_latency_ms: 0.0,
             average_disk_iops: 0.0,
@@ -1084,7 +1089,7 @@ impl DMSCResourcePoolManager {
     /// A new `DMSCResourcePoolManager` instance
     pub fn new() -> Self {
         Self {
-            pools: HashMap::new(),
+            pools: HashMap::with_capacity(8),
         }
     }
     
@@ -1225,7 +1230,7 @@ impl DMSCResourcePoolManager {
             device_type: DMSCDeviceType::Custom, // Multiple device types across pools
             connection_pool_stats: None, // No aggregated connection stats at manager level
             
-            status_distribution: HashMap::new(),
+            status_distribution: HashMap::with_capacity(4),
             average_response_time_ms: 0.0,
             average_network_latency_ms: 0.0,
             average_disk_iops: 0.0,

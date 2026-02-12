@@ -572,18 +572,33 @@ impl DMSCQueueConsumer for MemoryQueueConsumer {
                     let messages_clone = state.messages.clone();
                     let path_clone = path.clone();
 
-                    spawn_blocking(move || {
-                        let content = serde_json::to_string(&messages_clone).unwrap();
+                    let _ = spawn_blocking(move || {
+                        let content = serde_json::to_string(&messages_clone)
+                            .map_err(|e| {
+                                log::error!("Failed to serialize messages for persistence: {e}");
+                                crate::core::DMSCError::Serde(format!("Serialization failed: {e}"))
+                            })?;
                         let mut file = OpenOptions::new()
                             .write(true)
                             .create(true)
                             .truncate(true)
                             .open(path_clone)
-                            .unwrap();
-                        file.write_all(content.as_bytes()).unwrap();
+                            .map_err(|e| {
+                                log::error!("Failed to open persistence file: {e}");
+                                crate::core::DMSCError::Io(format!("File open failed: {e}"))
+                            })?;
+                        file.write_all(content.as_bytes())
+                            .map_err(|e| {
+                                log::error!("Failed to write persistence file: {e}");
+                                crate::core::DMSCError::Io(format!("File write failed: {e}"))
+                            })?;
+                        Ok::<(), crate::core::DMSCError>(())
                     })
                     .await
-                    .unwrap();
+                    .map_err(|e| {
+                        log::error!("Failed to execute persistence task: {e}");
+                        crate::core::DMSCError::Other(format!("Persistence task failed: {e}"))
+                    });
                 }
             }
         }

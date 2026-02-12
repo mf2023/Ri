@@ -181,6 +181,7 @@ impl DMSCRole {
     /// 
     /// # Returns
     /// `true` if the role has the permission, otherwise `false`
+    #[inline]
     pub fn has_permission(&self, permission_id: &str) -> bool {
         self.permissions.contains(permission_id)
     }
@@ -189,6 +190,7 @@ impl DMSCRole {
     /// 
     /// # Parameters
     /// - `permission_id`: Permission ID to add
+    #[inline]
     pub fn add_permission(&mut self, permission_id: String) {
         self.permissions.insert(permission_id);
     }
@@ -197,6 +199,7 @@ impl DMSCRole {
     /// 
     /// # Parameters
     /// - `permission_id`: Permission ID to remove
+    #[inline]
     pub fn remove_permission(&mut self, permission_id: &str) {
         self.permissions.remove(permission_id);
     }
@@ -470,7 +473,11 @@ impl DMSCPermissionManager {
         let user_roles = self.user_roles.read().await;
         let roles = self.roles.read().await;
         
-        let mut result = Vec::new();
+        let mut result = if let Some(user_role_ids) = user_roles.get(user_id) {
+            Vec::with_capacity(user_role_ids.len())
+        } else {
+            Vec::new()
+        };
         
         if let Some(user_role_ids) = user_roles.get(user_id) {
             for role_id in user_role_ids {
