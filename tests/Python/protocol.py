@@ -37,12 +37,7 @@ from dmsc import (
     DMSCFrameHeader,
     DMSCFrameType,
     DMSCConnectionInfo,
-    DMSCMessageFlags,
     DMSCSecurityLevel,
-)
-from dmsc.protocol import (
-    DMSCFrameParser,
-    DMSCFrameBuilder,
 )
 
 
@@ -62,15 +57,15 @@ class TestDMSCProtocolConfig:
     def test_protocol_config_creation(self):
         """Test creating protocol configuration"""
         config = DMSCProtocolConfig()
-        config.protocol_type = DMSCProtocolType.Custom
-        config.version = "1.0.0"
-        config.enable_compression = True
-        config.enable_encryption = True
+        config.default_protocol = DMSCProtocolType.Private
+        config.enable_security = True
         config.security_level = DMSCSecurityLevel.High
+        config.enable_state_sync = True
+        config.performance_optimization = True
 
-        assert config.protocol_type == DMSCProtocolType.Custom
-        assert config.version == "1.0.0"
-        assert config.enable_compression is True
+        assert config.default_protocol == DMSCProtocolType.Private
+        assert config.enable_security is True
+        assert config.security_level == DMSCSecurityLevel.High
 
 
 class TestDMSCFrame:
@@ -85,7 +80,8 @@ class TestDMSCFrame:
         frame = DMSCFrame()
         frame.header = header
         frame.payload = b"test data"
-        frame.checksum = 12345
+        frame.source_id = "source_device"
+        frame.target_id = "target_device"
 
         assert frame.header.frame_type == DMSCFrameType.Data
         assert frame.payload == b"test data"
@@ -100,8 +96,8 @@ class TestDMSCFrameHeader:
         header.frame_type = DMSCFrameType.Data
         header.version = 1
         header.sequence_number = 1
-        header.flags = DMSCMessageFlags.AckRequired
-        header.payload_length = 100
+        header.flags = 0
+        header.length = 100
 
         assert header.frame_type == DMSCFrameType.Data
         assert header.version == 1
@@ -115,13 +111,14 @@ class TestDMSCConnectionInfo:
         """Test creating connection info"""
         conn_info = DMSCConnectionInfo()
         conn_info.connection_id = "conn_001"
-        conn_info.remote_address = "192.168.1.100:8080"
-        conn_info.local_address = "0.0.0.0:8080"
-        conn_info.state = DMSCConnectionState.Established
+        conn_info.device_id = "device_001"
+        conn_info.address = "192.168.1.100:8080"
+        conn_info.protocol_type = DMSCProtocolType.Global
+        conn_info.state = DMSCConnectionState.Connected
         conn_info.security_level = DMSCSecurityLevel.High
 
         assert conn_info.connection_id == "conn_001"
-        assert conn_info.state == DMSCConnectionState.Established
+        assert conn_info.state == DMSCConnectionState.Connected
 
 
 class TestDMSCConnectionStats:
@@ -130,14 +127,14 @@ class TestDMSCConnectionStats:
     def test_connection_stats_creation(self):
         """Test creating connection statistics"""
         stats = DMSCConnectionStats()
-        stats.connection_id = "conn_001"
-        stats.frames_sent = 100
-        stats.frames_received = 95
+        stats.total_connections = 10
+        stats.active_connections = 5
         stats.bytes_sent = 1024000
         stats.bytes_received = 980000
+        stats.connection_duration_secs = 3600
 
-        assert stats.frames_sent == 100
-        assert stats.frames_received == 95
+        assert stats.total_connections == 10
+        assert stats.active_connections == 5
 
 
 class TestDMSCProtocolStats:
@@ -146,13 +143,15 @@ class TestDMSCProtocolStats:
     def test_protocol_stats_creation(self):
         """Test creating protocol statistics"""
         stats = DMSCProtocolStats()
-        stats.total_connections = 10
-        stats.active_connections = 5
-        stats.total_frames_sent = 1000
-        stats.total_frames_received = 950
+        stats.messages_sent = 1000
+        stats.messages_received = 950
+        stats.bytes_sent = 1024000
+        stats.bytes_received = 980000
+        stats.errors = 5
+        stats.avg_latency_ms = 25.0
 
-        assert stats.total_connections == 10
-        assert stats.active_connections == 5
+        assert stats.messages_sent == 1000
+        assert stats.messages_received == 950
 
 
 class TestDMSCProtocolHealth:
@@ -160,33 +159,8 @@ class TestDMSCProtocolHealth:
 
     def test_protocol_health_creation(self):
         """Test creating protocol health"""
-        health = DMSCProtocolHealth()
-        health.is_healthy = True
-        health.error_rate = 0.01
-        health.average_latency_ms = 25.0
-        health.throughput_mbps = 100.0
-
-        assert health.is_healthy is True
-        assert health.error_rate == 0.01
-
-
-class TestDMSCFrameBuilder:
-    """Tests for DMSCFrameBuilder"""
-
-    def test_frame_builder_creation(self):
-        """Test creating frame builder"""
-        builder = DMSCFrameBuilder()
-        assert builder is not None
-
-
-class TestDMSCFrameParser:
-    """Tests for DMSCFrameParser"""
-
-    def test_frame_parser_creation(self):
-        """Test creating frame parser"""
-        parser = DMSCFrameParser()
-        assert parser is not None
-
+        health = DMSCProtocolHealth.Healthy
+        assert health == DMSCProtocolHealth.Healthy
 
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])

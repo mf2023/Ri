@@ -4,7 +4,7 @@
 
 **Version: 0.1.7**
 
-**Last modified date: 2026-01-18**
+**Last modified date: 2026-02-11**
 
 The service_mesh module provides service mesh functionality, including service discovery, health checking, traffic management, and load balancing.
 
@@ -40,7 +40,7 @@ The main service mesh interface.
 | `get_all_endpoints(service_name)` | Get all endpoints regardless of health | `service_name: &str` | `DMSCResult<Vec<DMSCServiceEndpoint>>` |
 | `call_service(service_name, request_data)` | Call service | `service_name: &str`, `request_data: Vec<u8>` | `DMSCResult<Vec<u8>>` |
 | `update_service_health(service_name, endpoint, is_healthy)` | Update service health | `service_name: &str`, `endpoint: &str`, `is_healthy: bool` | `DMSCResult<()>` |
-| `get_stats()` | Get service mesh statistics | None | `DMSCResult<ServiceMeshStats>` |
+| `get_stats()` | Get service mesh statistics | None | `DMSCServiceMeshStats` |
 | `get_circuit_breaker()` | Get circuit breaker | None | `&DMSCCircuitBreaker` |
 | `get_load_balancer()` | Get load balancer | None | `&DMSCLoadBalancer` |
 | `get_health_checker()` | Get health checker | None | `&DMSCHealthChecker` |

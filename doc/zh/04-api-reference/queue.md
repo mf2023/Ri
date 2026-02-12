@@ -98,6 +98,10 @@ let queue_module = DMSCQueueModule::new(queue_config).await?;
 |:--------|:-------------|:--------|:--------|
 | `receive()` | 接收消息 | 无 | `DMSCResult<Option<DMSCQueueMessage>>` |
 | `receive_batch(max_count)` | 批量接收消息 | `max_count: usize` | `DMSCResult<Vec<DMSCQueueMessage>>` |
+| `ack(message_id)` | 确认消息 | `message_id: &str` | `DMSCResult<()>` |
+| `nack(message_id)` | 否定确认 | `message_id: &str` | `DMSCResult<()>` |
+| `pause()` | 暂停消费 | 无 | `DMSCResult<()>` |
+| `resume()` | 恢复消费 | 无 | `DMSCResult<()>` |
 
 ### DMSCQueueMessage
 

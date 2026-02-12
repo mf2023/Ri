@@ -98,6 +98,20 @@ JWT令牌管理器，负责JWT的生成和验证。
 | `get_token_expiry()` | 获取令牌过期时间 | 无 | `u64` |
 | `get_secret()` | 获取密钥 | 无 | `&str` |
 
+### DMSCJWTClaims
+
+JWT声明结构，包含令牌负载。
+
+#### 字段
+
+| 字段 | 类型 | 描述 |
+|:--------|:--------|:-------------|
+| `sub` | `String` | 主题声明 - 用户标识符 |
+| `exp` | `u64` | 过期时间（Unix时间戳） |
+| `iat` | `u64` | 签发时间（Unix时间戳） |
+| `roles` | `Vec<String>` | RBAC角色标识符列表 |
+| `permissions` | `Vec<String>` | 细粒度访问控制的权限标识符列表 |
+
 ### DMSCPermissionManager
 
 权限管理器，负责角色权限检查和资源访问控制。
@@ -145,6 +159,51 @@ let auth_config = DMSCAuthConfig {
     oauth_cache_redis_url: "redis://127.0.0.1:6379".to_string(),
 };
 ```
+
+### DMSCOAuthManager
+
+OAuth管理器，用于处理多个身份提供商。
+
+**重要说明**：OAuth令牌交换、用户信息获取、令牌刷新和令牌撤销操作需要启用`http_client`特性。如果没有启用此特性，这些方法将返回错误。
+
+要启用`http_client`特性，请在`Cargo.toml`中添加：
+
+```toml
+[dependencies]
+dmsc = { version = "0.1.7", features = ["http_client"] }
+```
+
+#### 方法
+
+| 方法 | 描述 | 参数 | 返回值 | 所需特性 |
+|:--------|:-------------|:--------|:--------|:--------|
+| `register_provider(provider)` | 注册OAuth提供商 | `provider: DMSCOAuthProvider` | `DMSCResult<()>` | 无 |
+| `get_provider(provider_id)` | 根据ID获取提供商 | `provider_id: &str` | `DMSCResult<Option<DMSCOAuthProvider>>` | 无 |
+| `get_auth_url(provider_id, state)` | 获取认证URL | `provider_id: &str`, `state: &str` | `DMSCResult<Option<String>>` | 无 |
+| `exchange_code_for_token(provider_id, code, redirect_uri)` | 用授权码交换令牌 | `provider_id: &str`, `code: &str`, `redirect_uri: &str` | `DMSCResult<Option<DMSCOAuthToken>>` | `http_client` |
+| `get_user_info(provider_id, access_token)` | 获取用户信息 | `provider_id: &str`, `access_token: &str` | `DMSCResult<Option<DMSCOAuthUserInfo>>` | `http_client` |
+| `refresh_token(provider_id, refresh_token)` | 刷新访问令牌 | `provider_id: &str`, `refresh_token: &str` | `DMSCResult<Option<DMSCOAuthToken>>` | `http_client` |
+| `revoke_token(provider_id, access_token)` | 撤销访问令牌 | `provider_id: &str`, `access_token: &str` | `DMSCResult<bool>` | `http_client` |
+| `list_providers()` | 列出所有提供商 | 无 | `DMSCResult<Vec<DMSCOAuthProvider>>` | 无 |
+
+### DMSCOAuthProvider
+
+OAuth提供商配置结构。
+
+#### 字段
+
+| 字段 | 类型 | 描述 | 是否必需 |
+|:--------|:--------|:-------------|:--------|
+| `id` | `String` | 唯一提供商标识符 | 是 |
+| `name` | `String` | 人类可读的提供商名称 | 是 |
+| `client_id` | `String` | OAuth客户端ID | 是 |
+| `client_secret` | `String` | OAuth客户端密钥 | 是 |
+| `auth_url` | `String` | 授权端点URL | 是 |
+| `token_url` | `String` | 令牌端点URL | 是 |
+| `user_info_url` | `String` | 用户信息端点URL | 是 |
+| `scopes` | `Vec<String>` | OAuth作用域 | 是 |
+| `enabled` | `bool` | 是否启用提供商 | 是 |
+| `redirect_uri` | `Option<String>` | OAuth回调的重定向URI | 否（默认为`http://localhost:8080/auth/callback`） |
 
 <div align="center">
 

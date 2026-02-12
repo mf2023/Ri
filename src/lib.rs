@@ -755,32 +755,38 @@ pub mod py {
         Ok(())
     }
     
-    fn create_grpc_module(parent: &Bound<'_, PyModule>) -> PyResult<()> {
-        let m = PyModule::new(parent.py(), "grpc")?;
-        m.add_class::<crate::grpc::DMSCGrpcConfig>()?;
-        m.add_class::<crate::grpc::DMSCGrpcStats>()?;
-        m.add_class::<crate::grpc::DMSCGrpcServiceRegistry>()?;
-        m.add_class::<crate::grpc::DMSCGrpcPythonService>()?;
-        m.add_class::<crate::grpc::DMSCGrpcServiceRegistryPy>()?;
-        m.add_class::<crate::grpc::DMSCGrpcServer>()?;
-        m.add_class::<crate::grpc::DMSCGrpcClient>()?;
-        parent.add_submodule(&m)?;
+    fn create_grpc_module(_parent: &Bound<'_, PyModule>) -> PyResult<()> {
+        #[cfg(feature = "grpc")]
+        {
+            let m = PyModule::new(_parent.py(), "grpc")?;
+            m.add_class::<crate::grpc::DMSCGrpcConfig>()?;
+            m.add_class::<crate::grpc::DMSCGrpcStats>()?;
+            m.add_class::<crate::grpc::DMSCGrpcServiceRegistry>()?;
+            m.add_class::<crate::grpc::DMSCGrpcPythonService>()?;
+            m.add_class::<crate::grpc::DMSCGrpcServiceRegistryPy>()?;
+            m.add_class::<crate::grpc::DMSCGrpcServer>()?;
+            m.add_class::<crate::grpc::DMSCGrpcClient>()?;
+            _parent.add_submodule(&m)?;
+        }
         Ok(())
     }
     
-    fn create_ws_module(parent: &Bound<'_, PyModule>) -> PyResult<()> {
-        let m = PyModule::new(parent.py(), "ws")?;
-        m.add_class::<crate::ws::DMSCWSServerConfig>()?;
-        m.add_class::<crate::ws::DMSCWSEvent>()?;
-        m.add_class::<crate::ws::DMSCWSSessionInfo>()?;
-        m.add_class::<crate::ws::DMSCWSServerStats>()?;
-        m.add_class::<crate::ws::DMSCWSPythonHandler>()?;
-        m.add_class::<crate::ws::DMSCWSSessionManagerPy>()?;
-        m.add_class::<crate::ws::DMSCWSServer>()?;
-        m.add_class::<crate::ws::DMSCWSClientConfig>()?;
-        m.add_class::<crate::ws::DMSCWSClientStats>()?;
-        m.add_class::<crate::ws::DMSCWSClient>()?;
-        parent.add_submodule(&m)?;
+    fn create_ws_module(_parent: &Bound<'_, PyModule>) -> PyResult<()> {
+        #[cfg(feature = "websocket")]
+        {
+            let m = PyModule::new(_parent.py(), "ws")?;
+            m.add_class::<crate::ws::DMSCWSServerConfig>()?;
+            m.add_class::<crate::ws::DMSCWSEvent>()?;
+            m.add_class::<crate::ws::DMSCWSSessionInfo>()?;
+            m.add_class::<crate::ws::DMSCWSServerStats>()?;
+            m.add_class::<crate::ws::DMSCWSPythonHandler>()?;
+            m.add_class::<crate::ws::DMSCWSSessionManagerPy>()?;
+            m.add_class::<crate::ws::DMSCWSServer>()?;
+            m.add_class::<crate::ws::DMSCWSClientConfig>()?;
+            m.add_class::<crate::ws::DMSCWSClientStats>()?;
+            m.add_class::<crate::ws::DMSCWSClient>()?;
+            _parent.add_submodule(&m)?;
+        }
         Ok(())
     }
 }

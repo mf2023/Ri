@@ -153,11 +153,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // - hits: Number of successful cache lookups
     // - misses: Number of failed cache lookups
     // - size: Current number of items in cache
-    let stats = cache_manager.get_stats().await?;
+    let stats = cache_manager.stats().await?;
     println!("   Current cache stats:");
-    println!("   - Hits: {}", stats.hits());
-    println!("   - Misses: {}", stats.misses());
-    println!("   - Size: {}\n", stats.size());
+    println!("   - Hits: {}", stats.hits);
+    println!("   - Misses: {}", stats.misses);
+    println!("   - Size: {}\n", stats.entries);
 
     // Section 4: Delete Operations
     // Demonstrates manual cache entry removal
@@ -203,11 +203,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Get updated statistics after all operations
     // Expected: size should be 0 after clear operation
-    let final_stats = cache_manager.get_stats().await?;
+    let final_stats = cache_manager.stats().await?;
     println!("   Final cache stats:");
-    println!("   - Hits: {}", final_stats.hits());
-    println!("   - Misses: {}", final_stats.misses());
-    println!("   - Size: {}\n", final_stats.size());
+    println!("   - Hits: {}", final_stats.hits);
+    println!("   - Misses: {}", final_stats.misses);
+    println!("   - Size: {}\n", final_stats.entries);
 
     println!("=== Cache Example Completed ===");
     Ok(())

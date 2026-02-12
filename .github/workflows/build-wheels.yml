@@ -1022,8 +1022,9 @@ jobs:
       # maturin: Rust/Python build tool that creates Python wheels from Rust libraries
       # auditwheel: Tool for repairing Linux wheel distribution tags
       # Both are essential for building portable Python packages with native extensions
+      # Using --pre flag to get pre-release versions for newer Python versions (3.14)
       - name: Install dependencies
-        run: pip install maturin auditwheel --quiet
+        run: pip install maturin auditwheel --pre --quiet
       
       # Step 13: Build Python wheel for non-Docker platforms (macOS, Windows, Linux ARM64)
       # Conditional: Executes when docker: false (native builds without manylinux container)
@@ -1265,3 +1266,59 @@ jobs:
             -d @payload.json
         env:
           GITEE_TOKEN: ${{ secrets.GITEE_TOKEN }}
+
+  ################################################################################
+  # Job: Run Python Tests
+  ################################################################################
+  # This job builds the Python package and runs pytest to verify the bindings work correctly
+  # Runs separately from compilation to isolate test failures from build failures
+  run-python-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: stable
+
+      - name: Install protoc
+        uses: arduino/setup-protoc@v3
+        with:
+          version: '33.x'
+
+      - name: Install CMake
+        uses: jwlawson/actions-setup-cmake@v2
+        with:
+          cmake-version: '3.28.x'
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libcurl4-openssl-dev libsasl2-dev
+
+      - name: Configure OpenSSL static linking
+        run: |
+          echo "OPENSSL_STATIC=1" >> $GITHUB_ENV
+          echo "VENDORED_OPENSSL_SSL=1" >> $GITHUB_ENV
+          echo "PKG_CONFIG_ALLOW_CROSS=1" >> $GITHUB_ENV
+
+      - name: Upgrade pip
+        run: |
+          python -m pip install --upgrade pip setuptools wheel
+          pip config set global.index-url https://pypi.tuna.tsinghua.edu.cn/simple
+
+      - name: Install test dependencies
+        run: pip install pytest maturin --pre
+
+      - name: Build and install package
+        run: |
+          pip install -e . --no-build-isolation
+
+      - name: Run Python tests
+        run: pytest tests/Python/ -v

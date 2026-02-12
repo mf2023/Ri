@@ -690,22 +690,138 @@ impl DMSCPermissionManager {
     }
     
     #[pyo3(name = "create_permission")]
-    fn create_permission_impl(&self, _permission: DMSCPermission) -> PyResult<()> {
-        Err(pyo3::exceptions::PyRuntimeError::new_err("Async permission creation not supported from Python yet"))
+    fn create_permission_impl(&self, permission: DMSCPermission) -> PyResult<()> {
+        let rt = tokio::runtime::Runtime::new().map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(e.to_string()))?;
+        rt.block_on(async {
+            self.create_permission(permission).await
+                .map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(e.to_string()))
+        })
     }
     
     #[pyo3(name = "create_role")]
-    fn create_role_impl(&self, _role: DMSCRole) -> PyResult<()> {
-        Err(pyo3::exceptions::PyRuntimeError::new_err("Async role creation not supported from Python yet"))
+    fn create_role_impl(&self, role: DMSCRole) -> PyResult<()> {
+        let rt = tokio::runtime::Runtime::new().map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(e.to_string()))?;
+        rt.block_on(async {
+            self.create_role(role).await
+                .map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(e.to_string()))
+        })
     }
     
     #[pyo3(name = "assign_role_to_user")]
-    fn assign_role_to_user_impl(&self, _user_id: String, _role_id: String) -> PyResult<()> {
-        Err(pyo3::exceptions::PyRuntimeError::new_err("Async role assignment not supported from Python yet"))
+    fn assign_role_to_user_impl(&self, user_id: String, role_id: String) -> PyResult<bool> {
+        let rt = tokio::runtime::Runtime::new().map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(e.to_string()))?;
+        rt.block_on(async {
+            self.assign_role_to_user(user_id, role_id).await
+                .map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(e.to_string()))
+        })
     }
     
     #[pyo3(name = "has_permission")]
-    fn has_permission_impl(&self, _user_id: String, _permission_id: String) -> PyResult<bool> {
-        Err(pyo3::exceptions::PyRuntimeError::new_err("Async permission checking not supported from Python yet"))
+    fn has_permission_impl(&self, user_id: String, permission_id: String) -> PyResult<bool> {
+        let rt = tokio::runtime::Runtime::new().map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(e.to_string()))?;
+        rt.block_on(async {
+            self.has_permission(&user_id, &permission_id).await
+                .map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(e.to_string()))
+        })
+    }
+    
+    #[pyo3(name = "get_user_roles")]
+    fn get_user_roles_impl(&self, user_id: String) -> PyResult<Vec<DMSCRole>> {
+        let rt = tokio::runtime::Runtime::new().map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(e.to_string()))?;
+        rt.block_on(async {
+            self.get_user_roles(&user_id).await
+                .map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(e.to_string()))
+        })
+    }
+    
+    #[pyo3(name = "get_user_permissions")]
+    fn get_user_permissions_impl(&self, user_id: String) -> PyResult<Vec<String>> {
+        let rt = tokio::runtime::Runtime::new().map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(e.to_string()))?;
+        rt.block_on(async {
+            self.get_user_permissions(&user_id).await
+                .map(|perms| perms.into_iter().collect())
+                .map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(e.to_string()))
+        })
+    }
+    
+    #[pyo3(name = "remove_role_from_user")]
+    fn remove_role_from_user_impl(&self, user_id: String, role_id: String) -> PyResult<bool> {
+        let rt = tokio::runtime::Runtime::new().map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(e.to_string()))?;
+        rt.block_on(async {
+            self.remove_role_from_user(&user_id, &role_id).await
+                .map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(e.to_string()))
+        })
+    }
+    
+    #[pyo3(name = "list_roles")]
+    fn list_roles_impl(&self) -> PyResult<Vec<DMSCRole>> {
+        let rt = tokio::runtime::Runtime::new().map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(e.to_string()))?;
+        rt.block_on(async {
+            self.list_roles().await
+                .map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(e.to_string()))
+        })
+    }
+    
+    #[pyo3(name = "list_permissions")]
+    fn list_permissions_impl(&self) -> PyResult<Vec<DMSCPermission>> {
+        let rt = tokio::runtime::Runtime::new().map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(e.to_string()))?;
+        rt.block_on(async {
+            self.list_permissions().await
+                .map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(e.to_string()))
+        })
+    }
+    
+    #[pyo3(name = "delete_role")]
+    fn delete_role_impl(&self, role_id: String) -> PyResult<bool> {
+        let rt = tokio::runtime::Runtime::new().map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(e.to_string()))?;
+        rt.block_on(async {
+            self.delete_role(&role_id).await
+                .map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(e.to_string()))
+        })
+    }
+    
+    #[pyo3(name = "delete_permission")]
+    fn delete_permission_impl(&self, permission_id: String) -> PyResult<bool> {
+        let rt = tokio::runtime::Runtime::new().map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(e.to_string()))?;
+        rt.block_on(async {
+            self.delete_permission(&permission_id).await
+                .map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(e.to_string()))
+        })
+    }
+    
+    #[pyo3(name = "get_role")]
+    fn get_role_impl(&self, role_id: String) -> PyResult<Option<DMSCRole>> {
+        let rt = tokio::runtime::Runtime::new().map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(e.to_string()))?;
+        rt.block_on(async {
+            self.get_role(&role_id).await
+                .map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(e.to_string()))
+        })
+    }
+    
+    #[pyo3(name = "get_permission")]
+    fn get_permission_impl(&self, permission_id: String) -> PyResult<Option<DMSCPermission>> {
+        let rt = tokio::runtime::Runtime::new().map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(e.to_string()))?;
+        rt.block_on(async {
+            self.get_permission(&permission_id).await
+                .map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(e.to_string()))
+        })
+    }
+    
+    #[pyo3(name = "has_any_permission")]
+    fn has_any_permission_impl(&self, user_id: String, permissions: Vec<String>) -> PyResult<bool> {
+        let rt = tokio::runtime::Runtime::new().map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(e.to_string()))?;
+        rt.block_on(async {
+            self.has_any_permission(&user_id, &permissions).await
+                .map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(e.to_string()))
+        })
+    }
+    
+    #[pyo3(name = "has_all_permissions")]
+    fn has_all_permissions_impl(&self, user_id: String, permissions: Vec<String>) -> PyResult<bool> {
+        let rt = tokio::runtime::Runtime::new().map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(e.to_string()))?;
+        rt.block_on(async {
+            self.has_all_permissions(&user_id, &permissions).await
+                .map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(e.to_string()))
+        })
     }
 }

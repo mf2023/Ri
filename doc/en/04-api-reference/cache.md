@@ -82,6 +82,23 @@ Cache manager, responsible for specific cache operations.
 | `cleanup_expired()` | Cleanup expired cache | None | `DMSCResult<usize>` |
 | `get_or_set(key, ttl_seconds, factory)` | Get or set cache value | `key: &str`, `ttl_seconds: Option<u64>`, `factory: F` where `F: FnOnce() -> Fut`, `Fut: Future` | `DMSCResult<T>` |
 
+### DMSCCacheStats
+
+Cache statistics structure.
+
+#### Fields
+
+| Field | Type | Description |
+|:--------|:--------|:-------------|
+| `hits` | `u64` | Number of cache hits |
+| `misses` | `u64` | Number of cache misses |
+| `entries` | `usize` | Number of entries in cache |
+| `memory_usage_bytes` | `usize` | Memory usage in bytes |
+| `avg_hit_rate` | `f64` | Average hit rate (0.0-1.0) |
+| `hit_count` | `u64` | Total hit count |
+| `miss_count` | `u64` | Total miss count |
+| `eviction_count` | `u64` | Number of evicted entries |
+
 ### DMSCCacheConfig
 
 Cache module configuration structure.

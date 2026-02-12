@@ -427,7 +427,6 @@ Device control configuration.
 </div>
 
 - [README](./README.md): Module overview with API reference summary and quick navigation
-- [README](./README.md): Module overview with API reference summary and quick navigation
 - [auth](./auth.md): Authentication module handling user authentication and authorization
 - [cache](./cache.md): Cache module providing in-memory and distributed cache support
 - [config](./config.md): Configuration module managing application configuration

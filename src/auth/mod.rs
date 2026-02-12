@@ -604,6 +604,7 @@ impl crate::core::DMSCModule for DMSCAuthModule {
                     user_info_url: get_oauth_url(provider_name, "userinfo"),
                     scopes: vec!["openid".to_string(), "profile".to_string(), "email".to_string()],
                     enabled: true,
+                    redirect_uri: None,
                 };
                 
                 let oauth_mgr = self.oauth_manager.write().await;

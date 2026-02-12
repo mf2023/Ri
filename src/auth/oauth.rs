@@ -81,7 +81,7 @@ extern crate urlencoding;
 /// OAuth provider configuration.
 ///
 /// This struct defines the configuration for an OAuth identity provider,
-/// including client credentials, endpoints, and scopes.
+/// including client credentials, endpoints, scopes, and redirect URI.
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DMSCOAuthProvider {
@@ -103,6 +103,8 @@ pub struct DMSCOAuthProvider {
     pub scopes: Vec<String>,
     /// Whether the provider is enabled for authentication
     pub enabled: bool,
+    /// Redirect URI for OAuth callback (defaults to "http://localhost:8080/auth/callback" if not set)
+    pub redirect_uri: Option<String>,
 }
 
 #[cfg(feature = "pyo3")]
@@ -119,6 +121,7 @@ impl DMSCOAuthProvider {
         user_info_url: String,
         scopes: Vec<String>,
         enabled: bool,
+        redirect_uri: Option<String>,
     ) -> Self {
         Self {
             id,
@@ -130,6 +133,7 @@ impl DMSCOAuthProvider {
             user_info_url,
             scopes,
             enabled,
+            redirect_uri,
         }
     }
 }
@@ -285,10 +289,13 @@ impl DMSCOAuthManager {
 
             let scope = provider.scopes.join(" ");
             let encoded_scope = scope.clone();
+            let redirect_uri = provider.redirect_uri.as_deref()
+                .unwrap_or("http://localhost:8080/auth/callback");
             let auth_url = format!(
-                "{}?client_id={}&redirect_uri=http://localhost:8080/auth/callback&response_type=code&scope={}&state={}",
+                "{}?client_id={}&redirect_uri={}&response_type=code&scope={}&state={}",
                 provider.auth_url,
                 provider.client_id,
+                urlencoding::encode(redirect_uri),
                 encoded_scope,
                 state
             );

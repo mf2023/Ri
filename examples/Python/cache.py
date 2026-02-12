@@ -38,11 +38,9 @@ from dmsc import (
 async def main():
     # Create cache configuration
     config = DMSCCacheConfig()
-    config.backend_type = DMSCCacheBackendType.MEMORY
-    config.default_ttl_seconds = 300
-    config.max_size = 10000
-    config.enable_compression = True
-    config.compression_threshold = 1024
+    config.backend_type = DMSCCacheBackendType.Memory
+    config.default_ttl_secs = 300
+    config.max_memory_mb = 512
 
     # Initialize cache module
     cache_module = DMSCCacheModule(config)

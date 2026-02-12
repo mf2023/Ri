@@ -908,65 +908,28 @@ async fn intelligent_cache_warmup() -> DMSCResult<()> {
 ### Adaptive Cache Strategy
 
 ```rust
-use dmsc::prelude::*;
-use std::collections::HashMap;
+use dmsc::cache::{DMSCCacheManager, DMSCCacheStats};
 
-// Dynamically adjust cache strategy
+// Dynamically adjust cache strategy based on real stats
 pub struct AdaptiveCacheManager {
     hit_rate_threshold: f64,
-    miss_rate_threshold: f64,
-    adjustment_interval: Duration,
 }
 
 impl AdaptiveCacheManager {
-    pub async fn optimize_cache_strategy(&self) -> DMSCResult<()> {
-        let stats = ctx.cache().get_detailed_stats()?;
+    pub async fn optimize_cache_strategy(&self, cache_manager: &DMSCCacheManager) -> dmsc::core::DMSCResult<()> {
+        // Get cache statistics
+        let stats = cache_manager.stats().await;
         
         // Analyze cache performance metrics
-        let hit_rate = stats.hit_rate;
-        let miss_rate = stats.miss_rate;
-        let avg_response_time = stats.avg_response_time;
+        let hit_rate = stats.avg_hit_rate;
         
-        // Dynamically adjust TTL
+        // Log current cache status
+        println!("Cache stats - Hits: {}, Misses: {}, Entries: {}", 
+            stats.hits, stats.misses, stats.entries);
+        
+        // Determine if cache is performing well
         if hit_rate < self.hit_rate_threshold {
-            // Low hit rate, increase TTL
-            ctx.cache().adjust_global_ttl(Duration::from_secs(3600))?;
-        } else if miss_rate > self.miss_rate_threshold {
-            // High miss rate, decrease TTL and optimize prefetch
-            ctx.cache().adjust_global_ttl(Duration::from_secs(900))?;
-            self.optimize_prefetch_strategy().await?;
-        }
-        
-        // Dynamically adjust cache size
-        if stats.memory_usage > 0.8 {
-            // High memory usage, enable more aggressive cleanup policy
-            ctx.cache().set_eviction_policy(DMSCEvictionPolicy::LFU)?;
-        } else {
-            ctx.cache().set_eviction_policy(DMSCEvictionPolicy::LRU)?;
-        }
-        
-        // Adjust compression strategy
-        if avg_response_time > Duration::from_millis(100) {
-            ctx.cache().enable_compression(true)?;
-            ctx.cache().set_compression_threshold(512)?; // Lower compression threshold
-        }
-        
-        Ok(())
-    }
-    
-    async fn optimize_prefetch_strategy(&self) -> DMSCResult<()> {
-        // Optimize prefetch strategy based on access patterns
-        let patterns = ctx.cache().analyze_access_patterns()?;
-        
-        for pattern in patterns {
-            if pattern.confidence > 0.8 {
-                // High confidence pattern, prefetch related data
-                for related_key in pattern.related_keys {
-                    if let Ok(data) = fetch_data_from_source(&related_key).await {
-                        ctx.cache().set(&related_key, data, Some(pattern.suggested_ttl))?;
-                    }
-                }
-            }
+            println!("Warning: Hit rate {} is below threshold {}", hit_rate, self.hit_rate_threshold);
         }
         
         Ok(())

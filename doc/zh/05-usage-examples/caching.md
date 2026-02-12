@@ -908,65 +908,28 @@ async fn intelligent_cache_warmup() -> DMSCResult<()> {
 ### 自适应缓存策略
 
 ```rust
-use dmsc::prelude::*;
-use std::collections::HashMap;
+use dmsc::cache::{DMSCCacheManager, DMSCCacheStats};
 
-// 动态调整缓存策略
+// 根据实际统计数据动态调整缓存策略
 pub struct AdaptiveCacheManager {
     hit_rate_threshold: f64,
-    miss_rate_threshold: f64,
-    adjustment_interval: Duration,
 }
 
 impl AdaptiveCacheManager {
-    pub async fn optimize_cache_strategy(&self) -> DMSCResult<()> {
-        let stats = ctx.cache().get_detailed_stats()?;
+    pub async fn optimize_cache_strategy(&self, cache_manager: &DMSCCacheManager) -> dmsc::core::DMSCResult<()> {
+        // 获取缓存统计信息
+        let stats = cache_manager.stats().await;
         
         // 分析缓存性能指标
-        let hit_rate = stats.hit_rate;
-        let miss_rate = stats.miss_rate;
-        let avg_response_time = stats.avg_response_time;
+        let hit_rate = stats.avg_hit_rate;
         
-        // 动态调整TTL
+        // 记录当前缓存状态
+        println!("缓存统计 - 命中: {}, 未命中: {}, 条目数: {}", 
+            stats.hits, stats.misses, stats.entries);
+        
+        // 判断缓存性能是否良好
         if hit_rate < self.hit_rate_threshold {
-            // 命中率低，增加TTL
-            ctx.cache().adjust_global_ttl(Duration::from_secs(3600))?;
-        } else if miss_rate > self.miss_rate_threshold {
-            // 未命中率高，减少TTL并优化预取
-            ctx.cache().adjust_global_ttl(Duration::from_secs(900))?;
-            self.optimize_prefetch_strategy().await?;
-        }
-        
-        // 动态调整缓存大小
-        if stats.memory_usage > 0.8 {
-            // 内存使用率高，启用更激进的清理策略
-            ctx.cache().set_eviction_policy(DMSCEvictionPolicy::LFU)?;
-        } else {
-            ctx.cache().set_eviction_policy(DMSCEvictionPolicy::LRU)?;
-        }
-        
-        // 调整压缩策略
-        if avg_response_time > Duration::from_millis(100) {
-            ctx.cache().enable_compression(true)?;
-            ctx.cache().set_compression_threshold(512)?; // 降低压缩阈值
-        }
-        
-        Ok(())
-    }
-    
-    async fn optimize_prefetch_strategy(&self) -> DMSCResult<()> {
-        // 基于访问模式优化预取策略
-        let patterns = ctx.cache().analyze_access_patterns()?;
-        
-        for pattern in patterns {
-            if pattern.confidence > 0.8 {
-                // 高置信度模式，预取相关数据
-                for related_key in pattern.related_keys {
-                    if let Ok(data) = fetch_data_from_source(&related_key).await {
-                        ctx.cache().set(&related_key, data, Some(pattern.suggested_ttl))?;
-                    }
-                }
-            }
+            println!("警告: 命中率 {} 低于阈值 {}", hit_rate, self.hit_rate_threshold);
         }
         
         Ok(())

@@ -98,6 +98,20 @@ JWT token manager, responsible for JWT generation and verification.
 | `get_token_expiry()` | Get token expiry time | None | `u64` |
 | `get_secret()` | Get secret key | None | `&str` |
 
+### DMSCJWTClaims
+
+JWT claims structure containing the token payload.
+
+#### Fields
+
+| Field | Type | Description |
+|:--------|:--------|:-------------|
+| `sub` | `String` | Subject claim - user identifier |
+| `exp` | `u64` | Expiration time (Unix timestamp) |
+| `iat` | `u64` | Issued at time (Unix timestamp) |
+| `roles` | `Vec<String>` | List of role identifiers for RBAC |
+| `permissions` | `Vec<String>` | List of permission identifiers for fine-grained access control |
+
 ### DMSCPermissionManager
 
 Permission manager, responsible for role permission checking and resource access control.
@@ -145,6 +159,51 @@ let auth_config = DMSCAuthConfig {
     oauth_cache_redis_url: "redis://127.0.0.1:6379".to_string(),
 };
 ```
+
+### DMSCOAuthManager
+
+OAuth manager for handling multiple identity providers.
+
+**Important**: OAuth token exchange, user info retrieval, token refresh, and token revocation operations require the `http_client` feature to be enabled. Without this feature, these methods will return an error.
+
+To enable the `http_client` feature, add it to your `Cargo.toml`:
+
+```toml
+[dependencies]
+dmsc = { version = "0.1.7", features = ["http_client"] }
+```
+
+#### Methods
+
+| Method | Description | Parameters | Return Value | Feature Required |
+|:--------|:-------------|:--------|:--------|:--------|
+| `register_provider(provider)` | Register OAuth provider | `provider: DMSCOAuthProvider` | `DMSCResult<()>` | None |
+| `get_provider(provider_id)` | Get provider by ID | `provider_id: &str` | `DMSCResult<Option<DMSCOAuthProvider>>` | None |
+| `get_auth_url(provider_id, state)` | Get authentication URL | `provider_id: &str`, `state: &str` | `DMSCResult<Option<String>>` | None |
+| `exchange_code_for_token(provider_id, code, redirect_uri)` | Exchange code for token | `provider_id: &str`, `code: &str`, `redirect_uri: &str` | `DMSCResult<Option<DMSCOAuthToken>>` | `http_client` |
+| `get_user_info(provider_id, access_token)` | Get user information | `provider_id: &str`, `access_token: &str` | `DMSCResult<Option<DMSCOAuthUserInfo>>` | `http_client` |
+| `refresh_token(provider_id, refresh_token)` | Refresh access token | `provider_id: &str`, `refresh_token: &str` | `DMSCResult<Option<DMSCOAuthToken>>` | `http_client` |
+| `revoke_token(provider_id, access_token)` | Revoke access token | `provider_id: &str`, `access_token: &str` | `DMSCResult<bool>` | `http_client` |
+| `list_providers()` | List all providers | None | `DMSCResult<Vec<DMSCOAuthProvider>>` | None |
+
+### DMSCOAuthProvider
+
+OAuth provider configuration structure.
+
+#### Fields
+
+| Field | Type | Description | Required |
+|:--------|:--------|:-------------|:--------|
+| `id` | `String` | Unique provider identifier | Yes |
+| `name` | `String` | Human-readable provider name | Yes |
+| `client_id` | `String` | OAuth client ID | Yes |
+| `client_secret` | `String` | OAuth client secret | Yes |
+| `auth_url` | `String` | Authorization endpoint URL | Yes |
+| `token_url` | `String` | Token endpoint URL | Yes |
+| `user_info_url` | `String` | User info endpoint URL | Yes |
+| `scopes` | `Vec<String>` | OAuth scopes | Yes |
+| `enabled` | `bool` | Whether provider is enabled | Yes |
+| `redirect_uri` | `Option<String>` | Redirect URI for OAuth callback | No (defaults to `http://localhost:8080/auth/callback`) |
 
 <div align="center">
 

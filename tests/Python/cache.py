@@ -62,10 +62,8 @@ class TestDMSCCacheManager:
         """Test setting and getting cache values"""
         manager = DMSCCacheManager()
 
-        # Set value
         manager.set("test_key", "test data", 300)
 
-        # Get value
         retrieved = manager.get("test_key")
         assert retrieved is not None
         assert retrieved == "test data"

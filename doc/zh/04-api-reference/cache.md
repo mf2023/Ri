@@ -82,6 +82,23 @@ let user = cache_manager.get_or_set("user:1", Some(3600), || async {
 | `cleanup_expired()` | 清理过期缓存 | 无 | `DMSCResult<usize>` |
 | `get_or_set(key, ttl_seconds, factory)` | 获取或设置缓存值 | `key: &str`, `ttl_seconds: Option<u64>`, `factory: F` where `F: FnOnce() -> Fut`, `Fut: Future` | `DMSCResult<T>` |
 
+### DMSCCacheStats
+
+缓存统计数据结构。
+
+#### 字段
+
+| 字段 | 类型 | 描述 |
+|:--------|:--------|:-------------|
+| `hits` | `u64` | 缓存命中次数 |
+| `misses` | `u64` | 缓存未命中次数 |
+| `entries` | `usize` | 缓存中的条目数 |
+| `memory_usage_bytes` | `usize` | 内存使用量（字节） |
+| `avg_hit_rate` | `f64` | 平均命中率 (0.0-1.0) |
+| `hit_count` | `u64` | 命中计数 |
+| `miss_count` | `u64` | 未命中计数 |
+| `eviction_count` | `u64` | 驱逐条目数 |
+
 #### 使用示例
 
 ```rust
