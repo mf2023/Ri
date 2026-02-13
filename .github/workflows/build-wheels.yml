@@ -1348,3 +1348,71 @@ jobs:
 
       - name: Run Rust tests
         run: cargo test --no-default-features --features "pyo3,auth,cache,queue,gateway,observability,rabbitmq,protocol,sqlite,postgres,mysql,service_mesh,parking_lot,http_client,system_info,config_hot_reload,grpc,websocket,kafka,etcd"
+
+  ################################################################################
+  # Job: Run Performance Benchmarks
+  ################################################################################
+  # This job runs cargo bench to measure performance metrics for all modules
+  # Runs on every workflow trigger to track performance regressions
+  # Benchmark results are uploaded as artifacts for analysis
+  run-benchmarks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: stable
+
+      - name: Install protoc
+        uses: arduino/setup-protoc@v3
+        with:
+          version: '33.x'
+
+      - name: Install CMake
+        uses: jwlawson/actions-setup-cmake@v2
+        with:
+          cmake-version: '3.28.x'
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libcurl4-openssl-dev libsasl2-dev
+
+      - name: Cache Rust dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: bench-rust-${{ hashFiles('**/Cargo.toml') }}
+          restore-keys: |
+            bench-rust-
+            rust-
+
+      - name: Run cache benchmarks
+        run: cargo bench --bench cache --no-default-features --features "pyo3,c,cache,queue,gateway,auth,protocol,grpc,websocket" -- --save-baseline cache-baseline
+
+      - name: Run queue benchmarks
+        run: cargo bench --bench queue --no-default-features --features "pyo3,c,cache,queue,gateway,auth,protocol,grpc,websocket" -- --save-baseline queue-baseline
+
+      - name: Run gateway benchmarks
+        run: cargo bench --bench gateway --no-default-features --features "pyo3,c,cache,queue,gateway,auth,protocol,grpc,websocket" -- --save-baseline gateway-baseline
+
+      - name: Run auth benchmarks
+        run: cargo bench --bench auth --no-default-features --features "pyo3,c,cache,queue,gateway,auth,protocol,grpc,websocket" -- --save-baseline auth-baseline
+
+      - name: Run protocol benchmarks
+        run: cargo bench --bench protocol --no-default-features --features "pyo3,c,cache,queue,gateway,auth,protocol,grpc,websocket" -- --save-baseline protocol-baseline
+
+      - name: Run core benchmarks
+        run: cargo bench --bench core --no-default-features --features "pyo3,c,cache,queue,gateway,auth,protocol,grpc,websocket" -- --save-baseline core-baseline
+
+      - name: Upload benchmark results
+        uses: actions/upload-artifact@v4
+        with:
+          name: benchmark-results
+          path: target/criterion/
+          retention-days: 30

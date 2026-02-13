@@ -584,3 +584,37 @@ protocol = ["dep:oqs", "dep:sm-crypto"]
 # Temporary file and directory creation for testing
 # Provides secure temporary directories that are automatically cleaned up
 tempfile = "3"
+
+# Criterion for benchmarking
+# Provides statistically rigorous performance testing
+criterion = { version = "0.5", features = ["html_reports"] }
+
+# =============================================================================
+# Benchmark Configuration
+# =============================================================================
+# Criterion benchmark harness configuration for performance testing.
+# Each benchmark file is run independently with its own harness.
+
+[[bench]]
+name = "cache"
+harness = false
+
+[[bench]]
+name = "queue"
+harness = false
+
+[[bench]]
+name = "gateway"
+harness = false
+
+[[bench]]
+name = "auth"
+harness = false
+
+[[bench]]
+name = "protocol"
+harness = false
+
+[[bench]]
+name = "core"
+harness = false

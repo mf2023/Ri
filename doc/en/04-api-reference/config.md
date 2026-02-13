@@ -574,6 +574,326 @@ The following types of configuration modifications require special caution and m
 
 <div align="center">
 
+## Configuration File Reference
+
+</div>
+
+This section provides detailed documentation for all configuration structures used in DMSC applications.
+
+### Complete Configuration File Example
+
+```yaml
+# config.yaml - Complete DMSC Configuration File
+
+# =============================================================================
+# Authentication Configuration
+# =============================================================================
+auth:
+  enabled: true                          # Enable authentication
+  jwt_secret: "your-secret-key"          # JWT secret (use env var in production)
+  jwt_expiry_secs: 3600                  # JWT token expiry (1 hour)
+  session_timeout_secs: 86400            # Session timeout (24 hours)
+  oauth_providers: []                    # OAuth providers: ["google", "github"]
+  enable_api_keys: true                  # Enable API key authentication
+  enable_session_auth: true              # Enable session authentication
+  oauth_cache_backend_type: "Memory"     # Cache backend: Memory, Redis, Hybrid
+  oauth_cache_redis_url: "redis://127.0.0.1:6379"
+
+# =============================================================================
+# Cache Configuration
+# =============================================================================
+cache:
+  enabled: true                          # Enable caching
+  default_ttl_secs: 3600                 # Default TTL (1 hour)
+  max_memory_mb: 512                     # Max memory usage (MB)
+  cleanup_interval_secs: 300             # Cleanup interval (5 minutes)
+  backend_type: "Memory"                 # Backend: Memory, Redis, Hybrid
+  redis_url: "redis://127.0.0.1:6379"    # Redis connection URL
+  redis_pool_size: 10                    # Redis connection pool size
+
+# =============================================================================
+# Logging Configuration
+# =============================================================================
+logging:
+  level: "INFO"                          # Log level: DEBUG, INFO, WARN, ERROR
+  console_enabled: true                  # Enable console output
+  file_enabled: true                     # Enable file output
+  sampling_default: 1.0                  # Sampling rate (0.0-1.0)
+  file_name: "app.log"                   # Log file name
+  json_format: false                     # Use JSON format
+  rotate_when: "size"                    # Rotation: size, none
+  max_bytes: 10485760                    # Max file size (10MB)
+  color_blocks: true                     # Use color blocks
+
+# =============================================================================
+# Gateway Configuration
+# =============================================================================
+gateway:
+  listen_address: "0.0.0.0"              # Listen address
+  listen_port: 8080                      # Listen port
+  max_connections: 1000                  # Max concurrent connections
+  request_timeout_seconds: 30            # Request timeout
+  enable_rate_limiting: true             # Enable rate limiting
+  enable_circuit_breaker: true           # Enable circuit breaker
+  enable_load_balancing: true            # Enable load balancing
+  cors_enabled: true                     # Enable CORS
+  cors_origins: ["*"]                    # Allowed origins
+  cors_methods: ["GET", "POST", "PUT", "DELETE"]
+  cors_headers: ["Content-Type", "Authorization"]
+  enable_logging: true                   # Enable request logging
+  log_level: "INFO"                      # Gateway log level
+
+# =============================================================================
+# Database Configuration
+# =============================================================================
+database:
+  database_type: "Postgres"              # Database: Postgres, MySQL, SQLite
+  host: "localhost"                      # Database host
+  port: 5432                             # Database port
+  database: "mydb"                       # Database name
+  username: "user"                       # Database username
+  password: "password"                   # Database password
+  max_connections: 10                    # Max connections
+  min_idle_connections: 1                # Min idle connections
+  connection_timeout_secs: 30            # Connection timeout
+  idle_timeout_secs: 600                 # Idle timeout (10 minutes)
+  max_lifetime_secs: 1800                # Max connection lifetime (30 minutes)
+  ssl_mode: "Prefer"                     # SSL mode: Disable, Prefer, Require
+
+# =============================================================================
+# Queue Configuration
+# =============================================================================
+queue:
+  enabled: true                          # Enable queue
+  backend_type: "Memory"                 # Backend: Memory, RabbitMQ, Kafka, Redis
+  connection_string: "memory://localhost"
+  max_connections: 10                    # Max connections
+  message_max_size: 1048576              # Max message size (1MB)
+  consumer_timeout_ms: 30000             # Consumer timeout (30s)
+  producer_timeout_ms: 5000              # Producer timeout (5s)
+  retry_policy:
+    max_retries: 3                       # Max retry attempts
+    initial_delay_ms: 100                # Initial delay
+    max_delay_ms: 5000                   # Max delay
+    multiplier: 2.0                      # Delay multiplier
+  dead_letter_config:
+    enabled: true                        # Enable dead letter queue
+    queue_name: "dead_letter"            # DLQ name
+    max_retention_secs: 86400            # Retention (24 hours)
+
+# =============================================================================
+# Observability Configuration
+# =============================================================================
+observability:
+  tracing_enabled: true                  # Enable distributed tracing
+  metrics_enabled: true                  # Enable metrics collection
+  tracing_sampling_rate: 0.1             # Sampling rate (10%)
+  tracing_sampling_strategy: "rate"      # Strategy: rate, probabilistic
+  metrics_window_size_secs: 300          # Metrics window (5 minutes)
+  metrics_bucket_size_secs: 10           # Bucket size (10 seconds)
+```
+
+### DMSCAuthConfig
+
+Authentication configuration for JWT, OAuth, and session management.
+
+| Field | Type | Default | Description |
+|:------|:-----|:--------|:------------|
+| `enabled` | `bool` | `true` | Enable authentication |
+| `jwt_secret` | `String` | Auto-generated | Secret key for JWT tokens |
+| `jwt_expiry_secs` | `u64` | `3600` | JWT token expiry in seconds |
+| `session_timeout_secs` | `u64` | `86400` | Session timeout in seconds |
+| `oauth_providers` | `Vec<String>` | `[]` | List of OAuth providers |
+| `enable_api_keys` | `bool` | `true` | Enable API key authentication |
+| `enable_session_auth` | `bool` | `true` | Enable session authentication |
+| `oauth_cache_backend_type` | `DMSCCacheBackendType` | `Memory` | OAuth token cache backend |
+| `oauth_cache_redis_url` | `String` | `"redis://127.0.0.1:6379"` | Redis URL for OAuth cache |
+
+**Environment Variables:**
+- `DMSC_JWT_SECRET`: Override JWT secret (recommended for production)
+
+### DMSCCacheConfig
+
+Cache system configuration for memory and Redis backends.
+
+| Field | Type | Default | Description |
+|:------|:-----|:--------|:------------|
+| `enabled` | `bool` | `true` | Enable caching |
+| `default_ttl_secs` | `u64` | `3600` | Default TTL in seconds |
+| `max_memory_mb` | `u64` | `512` | Maximum memory in MB |
+| `cleanup_interval_secs` | `u64` | `300` | Cleanup interval in seconds |
+| `backend_type` | `DMSCCacheBackendType` | `Memory` | Cache backend type |
+| `redis_url` | `String` | `"redis://127.0.0.1:6379"` | Redis connection URL |
+| `redis_pool_size` | `usize` | `10` | Redis connection pool size |
+
+**DMSCCacheBackendType Values:**
+- `Memory`: In-memory cache (fast, non-persistent)
+- `Redis`: Redis cache (persistent, distributed)
+- `Hybrid`: Memory + Redis (performance and persistence)
+
+### DMSCLogConfig
+
+Logging configuration for console and file output.
+
+| Field | Type | Default | Description |
+|:------|:-----|:--------|:------------|
+| `level` | `DMSCLogLevel` | `INFO` | Minimum log level |
+| `console_enabled` | `bool` | `true` | Enable console output |
+| `file_enabled` | `bool` | `true` | Enable file output |
+| `sampling_default` | `f32` | `1.0` | Default sampling rate (0.0-1.0) |
+| `file_name` | `String` | `"app.log"` | Log file name |
+| `json_format` | `bool` | `false` | Use JSON format |
+| `rotate_when` | `String` | `"size"` | Rotation trigger: "size" or "none" |
+| `max_bytes` | `u64` | `10485760` | Max file size before rotation |
+| `color_blocks` | `bool` | `true` | Use color blocks in output |
+
+**DMSCLogLevel Values:**
+- `DEBUG`: Debug-level messages
+- `INFO`: Informational messages
+- `WARN`: Warning messages
+- `ERROR`: Error messages
+
+### DMSCGatewayConfig
+
+API Gateway configuration for HTTP routing and CORS.
+
+| Field | Type | Default | Description |
+|:------|:-----|:--------|:------------|
+| `listen_address` | `String` | `"0.0.0.0"` | Listen address |
+| `listen_port` | `u16` | `8080` | Listen port |
+| `max_connections` | `usize` | `1000` | Max concurrent connections |
+| `request_timeout_seconds` | `u64` | `30` | Request timeout in seconds |
+| `enable_rate_limiting` | `bool` | `true` | Enable rate limiting |
+| `enable_circuit_breaker` | `bool` | `true` | Enable circuit breaker |
+| `enable_load_balancing` | `bool` | `true` | Enable load balancing |
+| `cors_enabled` | `bool` | `true` | Enable CORS |
+| `cors_origins` | `Vec<String>` | `["*"]` | Allowed CORS origins |
+| `cors_methods` | `Vec<String>` | `["GET", "POST", ...]` | Allowed CORS methods |
+| `cors_headers` | `Vec<String>` | `["Content-Type", ...]` | Allowed CORS headers |
+| `enable_logging` | `bool` | `true` | Enable request logging |
+| `log_level` | `String` | `"INFO"` | Gateway log level |
+
+### DMSCDatabaseConfig
+
+Database connection configuration for SQL databases.
+
+| Field | Type | Default | Description |
+|:------|:-----|:--------|:------------|
+| `database_type` | `DatabaseType` | `Postgres` | Database backend type |
+| `host` | `String` | `"localhost"` | Database host |
+| `port` | `u16` | `5432` | Database port |
+| `database` | `String` | Required | Database name |
+| `username` | `String` | Required | Database username |
+| `password` | `String` | Required | Database password |
+| `max_connections` | `u32` | `10` | Max connection pool size |
+| `min_idle_connections` | `u32` | `1` | Min idle connections |
+| `connection_timeout_secs` | `u64` | `30` | Connection timeout |
+| `idle_timeout_secs` | `u64` | `600` | Idle connection timeout |
+| `max_lifetime_secs` | `u64` | `1800` | Max connection lifetime |
+| `ssl_mode` | `SslMode` | `Prefer` | SSL/TLS mode |
+
+**DatabaseType Values:**
+- `Postgres`: PostgreSQL database
+- `MySQL`: MySQL database
+- `SQLite`: SQLite database (file-based)
+
+**SslMode Values:**
+- `Disable`: No SSL
+- `Prefer`: SSL preferred but not required
+- `Require`: SSL required
+
+### DMSCQueueConfig
+
+Message queue configuration for async processing.
+
+| Field | Type | Default | Description |
+|:------|:-----|:--------|:------------|
+| `enabled` | `bool` | `true` | Enable queue system |
+| `backend_type` | `DMSCQueueBackendType` | `Memory` | Queue backend type |
+| `connection_string` | `String` | `"memory://localhost"` | Backend connection string |
+| `max_connections` | `u32` | `10` | Max connections |
+| `message_max_size` | `usize` | `1048576` | Max message size (1MB) |
+| `consumer_timeout_ms` | `u64` | `30000` | Consumer timeout (30s) |
+| `producer_timeout_ms` | `u64` | `5000` | Producer timeout (5s) |
+| `retry_policy` | `DMSCRetryPolicy` | See below | Retry configuration |
+| `dead_letter_config` | `Option<DMSCDeadLetterConfig>` | `None` | Dead letter queue config |
+
+**DMSCQueueBackendType Values:**
+- `Memory`: In-memory queue (development/testing)
+- `RabbitMQ`: RabbitMQ backend
+- `Kafka`: Apache Kafka backend
+- `Redis`: Redis-based queue
+
+### DMSCObservabilityConfig
+
+Observability configuration for tracing and metrics.
+
+| Field | Type | Default | Description |
+|:------|:-----|:--------|:------------|
+| `tracing_enabled` | `bool` | `true` | Enable distributed tracing |
+| `metrics_enabled` | `bool` | `true` | Enable metrics collection |
+| `tracing_sampling_rate` | `f64` | `0.1` | Sampling rate (0.0-1.0) |
+| `tracing_sampling_strategy` | `String` | `"rate"` | Sampling strategy |
+| `metrics_window_size_secs` | `u64` | `300` | Metrics window (5 min) |
+| `metrics_bucket_size_secs` | `u64` | `10` | Bucket size (10 sec) |
+
+### Configuration File Locations
+
+DMSC uses the following directory structure:
+
+```
+project_root/
+├── config.yaml              # Main configuration file
+├── .dms/                    # Application data directory
+│   ├── logs/                # Log files
+│   │   └── app.log
+│   ├── cache/               # Cache files
+│   ├── reports/             # Generated reports
+│   ├── observability/       # Tracing/metrics data
+│   └── tmp/                 # Temporary files
+```
+
+### Loading Configuration
+
+**Rust:**
+```rust
+use dmsc::prelude::*;
+
+let app = DMSCAppBuilder::new()
+    .with_config("config.yaml")
+    .with_logging(DMSCLogConfig::default())
+    .build()?;
+
+// Access configuration
+let port: u16 = app.context().config().get_typed("gateway.listen_port")?;
+```
+
+**Python:**
+```python
+from dmsc import DMSCAppBuilder, DMSCLogConfig
+
+app = (DMSCAppBuilder()
+    .with_config("config.yaml")
+    .with_logging(DMSCLogConfig())
+    .build())
+```
+
+### Environment Variable Overrides
+
+Configuration values can be overridden using environment variables:
+
+```bash
+# Override using DMSC_ prefix
+export DMSC_AUTH_JWT_SECRET="production-secret"
+export DMSC_CACHE_BACKEND_TYPE="Redis"
+export DMSC_DATABASE_HOST="prod-db.example.com"
+export DMSC_GATEWAY_LISTEN_PORT="443"
+```
+
+Environment variable naming convention: `DMSC_<SECTION>_<KEY>` (uppercase, underscores)
+
+<div align="center">
+
 ## Related Modules
 
 </div>

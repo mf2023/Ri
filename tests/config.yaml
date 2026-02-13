@@ -1,0 +1,106 @@
+# Copyright © 2025-2026 Wenze Wei. All Rights Reserved.
+#
+# This file is part of DMSC.
+# The DMSC project belongs to the Dunimd Team.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# You may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+auth:
+  enabled: true
+  jwt_secret: "test-secret-key-for-testing-only"
+  jwt_expiry_secs: 3600
+  session_timeout_secs: 86400
+  oauth_providers: []
+  enable_api_keys: true
+  enable_session_auth: true
+  oauth_cache_backend_type: "Memory"
+  oauth_cache_redis_url: "redis://127.0.0.1:6379"
+
+cache:
+  enabled: true
+  default_ttl_secs: 300
+  max_memory_mb: 128
+  cleanup_interval_secs: 60
+  backend_type: "Memory"
+  redis_url: "redis://127.0.0.1:6379"
+  redis_pool_size: 5
+
+logging:
+  level: "DEBUG"
+  console_enabled: true
+  file_enabled: true
+  sampling_default: 1.0
+  file_name: "test.log"
+  json_format: false
+  rotate_when: "size"
+  max_bytes: 1048576
+  color_blocks: true
+
+gateway:
+  listen_address: "127.0.0.1"
+  listen_port: 8080
+  max_connections: 100
+  request_timeout_seconds: 10
+  enable_rate_limiting: false
+  enable_circuit_breaker: false
+  enable_load_balancing: false
+  cors_enabled: true
+  cors_origins:
+    - "*"
+  cors_methods:
+    - "GET"
+    - "POST"
+  cors_headers:
+    - "Content-Type"
+  enable_logging: true
+  log_level: "DEBUG"
+
+database:
+  database_type: "SQLite"
+  host: "localhost"
+  port: 5432
+  database: ".dms/data/test.db"
+  username: ""
+  password: ""
+  max_connections: 5
+  min_idle_connections: 1
+  connection_timeout_secs: 10
+  idle_timeout_secs: 300
+  max_lifetime_secs: 900
+  ssl_mode: "Disable"
+
+queue:
+  enabled: true
+  backend_type: "Memory"
+  connection_string: "memory://localhost"
+  max_connections: 5
+  message_max_size: 65536
+  consumer_timeout_ms: 5000
+  producer_timeout_ms: 1000
+  retry_policy:
+    max_retries: 2
+    initial_delay_ms: 50
+    max_delay_ms: 500
+    multiplier: 2.0
+  dead_letter_config:
+    enabled: false
+    queue_name: "test_dead_letter"
+    max_retention_secs: 3600
+
+observability:
+  tracing_enabled: true
+  metrics_enabled: true
+  tracing_sampling_rate: 1.0
+  tracing_sampling_strategy: "rate"
+  metrics_window_size_secs: 60
+  metrics_bucket_size_secs: 5

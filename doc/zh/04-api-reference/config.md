@@ -501,6 +501,326 @@ match ctx.config().get_typed::<u16>("service.port") {
 
 <div align="center">
 
+## 配置文件参考
+
+</div>
+
+本节提供DMSC应用程序中使用的所有配置结构的详细文档。
+
+### 完整配置文件示例
+
+```yaml
+# config.yaml - 完整DMSC配置文件
+
+# =============================================================================
+# 认证配置
+# =============================================================================
+auth:
+  enabled: true                          # 启用认证
+  jwt_secret: "your-secret-key"          # JWT密钥（生产环境请使用环境变量）
+  jwt_expiry_secs: 3600                  # JWT令牌过期时间（1小时）
+  session_timeout_secs: 86400            # 会话超时（24小时）
+  oauth_providers: []                    # OAuth提供商：["google", "github"]
+  enable_api_keys: true                  # 启用API密钥认证
+  enable_session_auth: true              # 启用会话认证
+  oauth_cache_backend_type: "Memory"     # 缓存后端：Memory, Redis, Hybrid
+  oauth_cache_redis_url: "redis://127.0.0.1:6379"
+
+# =============================================================================
+# 缓存配置
+# =============================================================================
+cache:
+  enabled: true                          # 启用缓存
+  default_ttl_secs: 3600                 # 默认TTL（1小时）
+  max_memory_mb: 512                     # 最大内存使用（MB）
+  cleanup_interval_secs: 300             # 清理间隔（5分钟）
+  backend_type: "Memory"                 # 后端类型：Memory, Redis, Hybrid
+  redis_url: "redis://127.0.0.1:6379"    # Redis连接URL
+  redis_pool_size: 10                    # Redis连接池大小
+
+# =============================================================================
+# 日志配置
+# =============================================================================
+logging:
+  level: "INFO"                          # 日志级别：DEBUG, INFO, WARN, ERROR
+  console_enabled: true                  # 启用控制台输出
+  file_enabled: true                     # 启用文件输出
+  sampling_default: 1.0                  # 采样率（0.0-1.0）
+  file_name: "app.log"                   # 日志文件名
+  json_format: false                     # 使用JSON格式
+  rotate_when: "size"                    # 轮转触发：size 或 none
+  max_bytes: 10485760                    # 轮转前最大文件大小（10MB）
+  color_blocks: true                     # 使用彩色块
+
+# =============================================================================
+# 网关配置
+# =============================================================================
+gateway:
+  listen_address: "0.0.0.0"              # 监听地址
+  listen_port: 8080                      # 监听端口
+  max_connections: 1000                  # 最大并发连接数
+  request_timeout_seconds: 30            # 请求超时
+  enable_rate_limiting: true             # 启用限流
+  enable_circuit_breaker: true           # 启用熔断器
+  enable_load_balancing: true            # 启用负载均衡
+  cors_enabled: true                     # 启用CORS
+  cors_origins: ["*"]                    # 允许的来源
+  cors_methods: ["GET", "POST", "PUT", "DELETE"]
+  cors_headers: ["Content-Type", "Authorization"]
+  enable_logging: true                   # 启用请求日志
+  log_level: "INFO"                      # 网关日志级别
+
+# =============================================================================
+# 数据库配置
+# =============================================================================
+database:
+  database_type: "Postgres"              # 数据库类型：Postgres, MySQL, SQLite
+  host: "localhost"                      # 数据库主机
+  port: 5432                             # 数据库端口
+  database: "mydb"                       # 数据库名称
+  username: "user"                       # 数据库用户名
+  password: "password"                   # 数据库密码
+  max_connections: 10                    # 最大连接数
+  min_idle_connections: 1                # 最小空闲连接数
+  connection_timeout_secs: 30            # 连接超时
+  idle_timeout_secs: 600                 # 空闲超时（10分钟）
+  max_lifetime_secs: 1800                # 最大连接生命周期（30分钟）
+  ssl_mode: "Prefer"                     # SSL模式：Disable, Prefer, Require
+
+# =============================================================================
+# 队列配置
+# =============================================================================
+queue:
+  enabled: true                          # 启用队列
+  backend_type: "Memory"                 # 后端类型：Memory, RabbitMQ, Kafka, Redis
+  connection_string: "memory://localhost"
+  max_connections: 10                    # 最大连接数
+  message_max_size: 1048576              # 最大消息大小（1MB）
+  consumer_timeout_ms: 30000             # 消费者超时（30秒）
+  producer_timeout_ms: 5000              # 生产者超时（5秒）
+  retry_policy:
+    max_retries: 3                       # 最大重试次数
+    initial_delay_ms: 100                # 初始延迟
+    max_delay_ms: 5000                   # 最大延迟
+    multiplier: 2.0                      # 延迟乘数
+  dead_letter_config:
+    enabled: true                        # 启用死信队列
+    queue_name: "dead_letter"            # 死信队列名称
+    max_retention_secs: 86400            # 保留时间（24小时）
+
+# =============================================================================
+# 可观测性配置
+# =============================================================================
+observability:
+  tracing_enabled: true                  # 启用分布式追踪
+  metrics_enabled: true                  # 启用指标收集
+  tracing_sampling_rate: 0.1             # 采样率（10%）
+  tracing_sampling_strategy: "rate"      # 策略：rate, probabilistic
+  metrics_window_size_secs: 300          # 指标窗口（5分钟）
+  metrics_bucket_size_secs: 10           # 桶大小（10秒）
+```
+
+### DMSCAuthConfig
+
+认证配置，用于JWT、OAuth和会话管理。
+
+| 字段 | 类型 | 默认值 | 描述 |
+|:------|:-----|:--------|:------------|
+| `enabled` | `bool` | `true` | 启用认证 |
+| `jwt_secret` | `String` | 自动生成 | JWT令牌密钥 |
+| `jwt_expiry_secs` | `u64` | `3600` | JWT令牌过期时间（秒） |
+| `session_timeout_secs` | `u64` | `86400` | 会话超时时间（秒） |
+| `oauth_providers` | `Vec<String>` | `[]` | OAuth提供商列表 |
+| `enable_api_keys` | `bool` | `true` | 启用API密钥认证 |
+| `enable_session_auth` | `bool` | `true` | 启用会话认证 |
+| `oauth_cache_backend_type` | `DMSCCacheBackendType` | `Memory` | OAuth令牌缓存后端 |
+| `oauth_cache_redis_url` | `String` | `"redis://127.0.0.1:6379"` | OAuth缓存的Redis URL |
+
+**环境变量：**
+- `DMSC_JWT_SECRET`: 覆盖JWT密钥（生产环境推荐使用）
+
+### DMSCCacheConfig
+
+缓存系统配置，用于内存和Redis后端。
+
+| 字段 | 类型 | 默认值 | 描述 |
+|:------|:-----|:--------|:------------|
+| `enabled` | `bool` | `true` | 启用缓存 |
+| `default_ttl_secs` | `u64` | `3600` | 默认TTL（秒） |
+| `max_memory_mb` | `u64` | `512` | 最大内存（MB） |
+| `cleanup_interval_secs` | `u64` | `300` | 清理间隔（秒） |
+| `backend_type` | `DMSCCacheBackendType` | `Memory` | 缓存后端类型 |
+| `redis_url` | `String` | `"redis://127.0.0.1:6379"` | Redis连接URL |
+| `redis_pool_size` | `usize` | `10` | Redis连接池大小 |
+
+**DMSCCacheBackendType 取值：**
+- `Memory`: 内存缓存（快速，非持久化）
+- `Redis`: Redis缓存（持久化，分布式）
+- `Hybrid`: 内存+Redis（性能与持久化兼顾）
+
+### DMSCLogConfig
+
+日志配置，用于控制台和文件输出。
+
+| 字段 | 类型 | 默认值 | 描述 |
+|:------|:-----|:--------|:------------|
+| `level` | `DMSCLogLevel` | `INFO` | 最低日志级别 |
+| `console_enabled` | `bool` | `true` | 启用控制台输出 |
+| `file_enabled` | `bool` | `true` | 启用文件输出 |
+| `sampling_default` | `f32` | `1.0` | 默认采样率（0.0-1.0） |
+| `file_name` | `String` | `"app.log"` | 日志文件名 |
+| `json_format` | `bool` | `false` | 使用JSON格式 |
+| `rotate_when` | `String` | `"size"` | 轮转触发："size" 或 "none" |
+| `max_bytes` | `u64` | `10485760` | 轮转前最大文件大小 |
+| `color_blocks` | `bool` | `true` | 使用彩色块输出 |
+
+**DMSCLogLevel 取值：**
+- `DEBUG`: 调试级别消息
+- `INFO`: 信息级别消息
+- `WARN`: 警告级别消息
+- `ERROR`: 错误级别消息
+
+### DMSCGatewayConfig
+
+API网关配置，用于HTTP路由和CORS。
+
+| 字段 | 类型 | 默认值 | 描述 |
+|:------|:-----|:--------|:------------|
+| `listen_address` | `String` | `"0.0.0.0"` | 监听地址 |
+| `listen_port` | `u16` | `8080` | 监听端口 |
+| `max_connections` | `usize` | `1000` | 最大并发连接数 |
+| `request_timeout_seconds` | `u64` | `30` | 请求超时（秒） |
+| `enable_rate_limiting` | `bool` | `true` | 启用限流 |
+| `enable_circuit_breaker` | `bool` | `true` | 启用熔断器 |
+| `enable_load_balancing` | `bool` | `true` | 启用负载均衡 |
+| `cors_enabled` | `bool` | `true` | 启用CORS |
+| `cors_origins` | `Vec<String>` | `["*"]` | 允许的CORS来源 |
+| `cors_methods` | `Vec<String>` | `["GET", "POST", ...]` | 允许的CORS方法 |
+| `cors_headers` | `Vec<String>` | `["Content-Type", ...]` | 允许的CORS头 |
+| `enable_logging` | `bool` | `true` | 启用请求日志 |
+| `log_level` | `String` | `"INFO"` | 网关日志级别 |
+
+### DMSCDatabaseConfig
+
+数据库连接配置，用于SQL数据库。
+
+| 字段 | 类型 | 默认值 | 描述 |
+|:------|:-----|:--------|:------------|
+| `database_type` | `DatabaseType` | `Postgres` | 数据库后端类型 |
+| `host` | `String` | `"localhost"` | 数据库主机 |
+| `port` | `u16` | `5432` | 数据库端口 |
+| `database` | `String` | 必填 | 数据库名称 |
+| `username` | `String` | 必填 | 数据库用户名 |
+| `password` | `String` | 必填 | 数据库密码 |
+| `max_connections` | `u32` | `10` | 最大连接池大小 |
+| `min_idle_connections` | `u32` | `1` | 最小空闲连接数 |
+| `connection_timeout_secs` | `u64` | `30` | 连接超时 |
+| `idle_timeout_secs` | `u64` | `600` | 空闲连接超时 |
+| `max_lifetime_secs` | `u64` | `1800` | 最大连接生命周期 |
+| `ssl_mode` | `SslMode` | `Prefer` | SSL/TLS模式 |
+
+**DatabaseType 取值：**
+- `Postgres`: PostgreSQL数据库
+- `MySQL`: MySQL数据库
+- `SQLite`: SQLite数据库（基于文件）
+
+**SslMode 取值：**
+- `Disable`: 禁用SSL
+- `Prefer`: 优先使用SSL但不强制
+- `Require`: 强制使用SSL
+
+### DMSCQueueConfig
+
+消息队列配置，用于异步处理。
+
+| 字段 | 类型 | 默认值 | 描述 |
+|:------|:-----|:--------|:------------|
+| `enabled` | `bool` | `true` | 启用队列系统 |
+| `backend_type` | `DMSCQueueBackendType` | `Memory` | 队列后端类型 |
+| `connection_string` | `String` | `"memory://localhost"` | 后端连接字符串 |
+| `max_connections` | `u32` | `10` | 最大连接数 |
+| `message_max_size` | `usize` | `1048576` | 最大消息大小（1MB） |
+| `consumer_timeout_ms` | `u64` | `30000` | 消费者超时（30秒） |
+| `producer_timeout_ms` | `u64` | `5000` | 生产者超时（5秒） |
+| `retry_policy` | `DMSCRetryPolicy` | 见下文 | 重试配置 |
+| `dead_letter_config` | `Option<DMSCDeadLetterConfig>` | `None` | 死信队列配置 |
+
+**DMSCQueueBackendType 取值：**
+- `Memory`: 内存队列（开发/测试）
+- `RabbitMQ`: RabbitMQ后端
+- `Kafka`: Apache Kafka后端
+- `Redis`: 基于Redis的队列
+
+### DMSCObservabilityConfig
+
+可观测性配置，用于追踪和指标。
+
+| 字段 | 类型 | 默认值 | 描述 |
+|:------|:-----|:--------|:------------|
+| `tracing_enabled` | `bool` | `true` | 启用分布式追踪 |
+| `metrics_enabled` | `bool` | `true` | 启用指标收集 |
+| `tracing_sampling_rate` | `f64` | `0.1` | 采样率（0.0-1.0） |
+| `tracing_sampling_strategy` | `String` | `"rate"` | 采样策略 |
+| `metrics_window_size_secs` | `u64` | `300` | 指标窗口（5分钟） |
+| `metrics_bucket_size_secs` | `u64` | `10` | 桶大小（10秒） |
+
+### 配置文件位置
+
+DMSC使用以下目录结构：
+
+```
+project_root/
+├── config.yaml              # 主配置文件
+├── .dms/                    # 应用数据目录
+│   ├── logs/                # 日志文件
+│   │   └── app.log
+│   ├── cache/               # 缓存文件
+│   ├── reports/             # 生成的报告
+│   ├── observability/       # 追踪/指标数据
+│   └── tmp/                 # 临时文件
+```
+
+### 加载配置
+
+**Rust:**
+```rust
+use dmsc::prelude::*;
+
+let app = DMSCAppBuilder::new()
+    .with_config("config.yaml")
+    .with_logging(DMSCLogConfig::default())
+    .build()?;
+
+// 访问配置
+let port: u16 = app.context().config().get_typed("gateway.listen_port")?;
+```
+
+**Python:**
+```python
+from dmsc import DMSCAppBuilder, DMSCLogConfig
+
+app = (DMSCAppBuilder()
+    .with_config("config.yaml")
+    .with_logging(DMSCLogConfig())
+    .build())
+```
+
+### 环境变量覆盖
+
+可以使用环境变量覆盖配置值：
+
+```bash
+# 使用 DMSC_ 前缀覆盖
+export DMSC_AUTH_JWT_SECRET="production-secret"
+export DMSC_CACHE_BACKEND_TYPE="Redis"
+export DMSC_DATABASE_HOST="prod-db.example.com"
+export DMSC_GATEWAY_LISTEN_PORT="443"
+```
+
+环境变量命名规范：`DMSC_<节>_<键>`（大写，下划线分隔）
+
+<div align="center">
+
 ## 相关模块
 
 </div>
