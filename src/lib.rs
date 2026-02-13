@@ -69,8 +69,7 @@ pub mod auth;
 /// Database abstraction layer with multiple backend support
 pub mod database;
 /// Protocol abstraction layer for multiple protocol support
-#[cfg(feature = "pyo3")]
-#[cfg_attr(feature = "pyo3", path = "protocol/mod.rs")]
+#[cfg(feature = "protocol")]
 pub mod protocol;
 /// Validation utilities for input validation and data sanitization
 pub mod validation;

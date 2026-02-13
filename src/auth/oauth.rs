@@ -279,6 +279,7 @@ impl DMSCOAuthManager {
     /// 
     /// # Returns
     /// `Some(String)` containing the authentication URL if the provider is enabled, otherwise `None`
+    #[cfg(feature = "auth")]
     pub async fn get_auth_url(&self, provider_id: &str, state: &str) -> crate::core::DMSCResult<Option<String>> {
         let providers = self.providers.read().await;
         
@@ -304,6 +305,15 @@ impl DMSCOAuthManager {
         } else {
             Ok(None)
         }
+    }
+
+    #[cfg(not(feature = "auth"))]
+    /// Gets the authentication URL for a provider.
+    ///
+    /// This method requires the `auth` feature to be enabled.
+    /// Without this feature, calling this method returns an error.
+    pub async fn get_auth_url(&self, _provider_id: &str, _state: &str) -> crate::core::DMSCResult<Option<String>> {
+        Err(crate::core::DMSCError::Other("Auth feature is not enabled. Enable the 'auth' feature to use OAuth functionality.".to_string()))
     }
 
     /// Exchanges an authorization code for an access token.

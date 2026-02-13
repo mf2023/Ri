@@ -184,3 +184,20 @@ features = [
 # This version is locked to maintain compatibility with maturin
 # PyO3 provides the FFI layer between Python and Rust code
 pyo3 = "^0.27"
+
+# =============================================================================
+# Pytest Configuration
+# =============================================================================
+# Configures pytest for running Python tests for the DMSC extension module.
+
+[tool.pytest.ini_options]
+# Test discovery paths
+testpaths = ["tests/Python"]
+# File patterns for test discovery (default: test_*.py and *_test.py)
+python_files = ["test_*.py", "*_test.py"]
+# Class patterns for test discovery
+python_classes = ["Test*"]
+# Function patterns for test discovery
+python_functions = ["test_*"]
+# Verbose output by default
+addopts = "-v"

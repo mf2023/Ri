@@ -120,7 +120,7 @@ fn bench_cache_batch_operations(c: &mut Criterion) {
         let key_refs: Vec<&str> = keys.iter().map(|s| s.as_str()).collect();
         let items: Vec<(&str, &str)> = (0..*size).map(|i| {
             let s = format!("batch_key_{}", i);
-            (Box::leak(s.into_boxed_str()), "value")
+            (Box::leak(s.into_boxed_str()) as &str, "value")
         }).collect();
         
         group.throughput(Throughput::Elements(*size as u64));

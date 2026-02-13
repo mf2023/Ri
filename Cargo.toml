@@ -97,6 +97,11 @@ path = "src/lib.rs"
 # - "staticlib": C static library for C/C++ linking
 crate-type = ["rlib", "cdylib", "staticlib"]
 
+# Disable doctest for library
+# Doctests require all example code to compile, which is not practical for
+# a middleware framework with many optional features and external dependencies
+doctest = false
+
 # =============================================================================
 # Core Dependencies
 # =============================================================================

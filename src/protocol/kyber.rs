@@ -95,7 +95,9 @@ impl KyberKEM {
     pub fn keygen(&self) -> DMSCResult<(Vec<u8>, Vec<u8>)> {
         use oqs::kem::Kem;
 
-        let algo = *self.algorithm.read().unwrap();
+        let algo = *self.algorithm.read().map_err(|e| 
+            DMSCError::InvalidState(format!("Lock error: {}", e))
+        )?;
         let kem = match algo {
             KyberAlgorithm::Kyber512 => Kem::new(oqs::kem::Algorithm::Kyber512),
             KyberAlgorithm::Kyber768 => Kem::new(oqs::kem::Algorithm::Kyber768),
@@ -118,7 +120,9 @@ impl KyberKEM {
     pub fn encapsulate(&self, public_key: &[u8]) -> DMSCResult<super::KEMResult> {
         use oqs::kem::Kem;
 
-        let algo = *self.algorithm.read().unwrap();
+        let algo = *self.algorithm.read().map_err(|e| 
+            DMSCError::InvalidState(format!("Lock error: {}", e))
+        )?;
         let kem = match algo {
             KyberAlgorithm::Kyber512 => Kem::new(oqs::kem::Algorithm::Kyber512),
             KyberAlgorithm::Kyber768 => Kem::new(oqs::kem::Algorithm::Kyber768),
@@ -146,7 +150,9 @@ impl KyberKEM {
     pub fn decapsulate(&self, ciphertext: &[u8], secret_key: &[u8]) -> DMSCResult<Vec<u8>> {
         use oqs::kem::Kem;
 
-        let algo = *self.algorithm.read().unwrap();
+        let algo = *self.algorithm.read().map_err(|e| 
+            DMSCError::InvalidState(format!("Lock error: {}", e))
+        )?;
         let kem = match algo {
             KyberAlgorithm::Kyber512 => Kem::new(oqs::kem::Algorithm::Kyber512),
             KyberAlgorithm::Kyber768 => Kem::new(oqs::kem::Algorithm::Kyber768),

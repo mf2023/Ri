@@ -97,7 +97,9 @@ impl FalconSigner {
     pub fn keygen(&self) -> DMSCResult<(Vec<u8>, Vec<u8>)> {
         use oqs::sig::Sig;
 
-        let algo = *self.algorithm.read().unwrap();
+        let algo = *self.algorithm.read().map_err(|e| 
+            DMSCError::InvalidState(format!("Lock error: {}", e))
+        )?;
         let sig = match algo {
             FalconAlgorithm::Falcon512 => Sig::new(oqs::sig::Algorithm::Falcon512),
             FalconAlgorithm::Falcon1024 => Sig::new(oqs::sig::Algorithm::Falcon1024),
@@ -119,7 +121,9 @@ impl FalconSigner {
     pub fn sign(&self, secret_key: &[u8], message: &[u8]) -> DMSCResult<Vec<u8>> {
         use oqs::sig::Sig;
 
-        let algo = *self.algorithm.read().unwrap();
+        let algo = *self.algorithm.read().map_err(|e| 
+            DMSCError::InvalidState(format!("Lock error: {}", e))
+        )?;
         let sig = match algo {
             FalconAlgorithm::Falcon512 => Sig::new(oqs::sig::Algorithm::Falcon512),
             FalconAlgorithm::Falcon1024 => Sig::new(oqs::sig::Algorithm::Falcon1024),
@@ -143,7 +147,9 @@ impl FalconSigner {
     pub fn verify(&self, public_key: &[u8], message: &[u8], signature: &[u8]) -> DMSCResult<bool> {
         use oqs::sig::Sig;
 
-        let algo = *self.algorithm.read().unwrap();
+        let algo = *self.algorithm.read().map_err(|e| 
+            DMSCError::InvalidState(format!("Lock error: {}", e))
+        )?;
         let sig = match algo {
             FalconAlgorithm::Falcon512 => Sig::new(oqs::sig::Algorithm::Falcon512),
             FalconAlgorithm::Falcon1024 => Sig::new(oqs::sig::Algorithm::Falcon1024),

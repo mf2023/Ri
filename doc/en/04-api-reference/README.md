@@ -4,7 +4,7 @@
 
 **Version: 0.1.7**
 
-**Last modified date: 2026-02-11**
+**Last modified date: 2026-02-13**
 
 This directory contains detailed API documentation for each core module of DMSC.
 
@@ -25,6 +25,7 @@ This directory contains detailed API documentation for each core module of DMSC.
 | **grpc** | High-performance RPC with service registry and Python bindings | [grpc.md](./grpc.md) |
 | **hooks** | Lifecycle event hooks (Startup, Shutdown, etc.) | [hooks.md](./hooks.md) |
 | **log** | Structured logging with tracing context integration | [log.md](./log.md) |
+| **module_rpc** | Inter-module RPC communication (service registration, invocation, load balancing) | [module_rpc.md](./module_rpc.md) |
 | **observability** | Metrics, tracing, and Grafana integration | [observability.md](./observability.md) |
 | **protocol** | Communication protocol support with encryption, post-quantum crypto, and HSM | [protocol.md](./protocol.md) |
 | **queue** | Message queue abstraction (Kafka, RabbitMQ, Redis, Memory) | [queue.md](./queue.md) |

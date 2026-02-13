@@ -301,15 +301,23 @@ pub mod database;
 pub mod device;
 pub mod fs;
 pub mod gateway;
+
+#[cfg(feature = "grpc")]
 pub mod grpc;
+
 pub mod hooks;
 pub mod log;
 pub mod module_rpc;
 pub mod observability;
+
+#[cfg(feature = "protocol")]
 pub mod protocol;
+
 pub mod queue;
 pub mod service_mesh;
 pub mod validation;
+
+#[cfg(feature = "websocket")]
 pub mod ws;
 
 /// Initialize the DMSC library

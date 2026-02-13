@@ -121,6 +121,7 @@ pub struct DMSCRabbitMQQueue {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
+#[allow(dead_code)]
 struct RabbitMQQueueInfo {
     name: String,
     messages: u64,
@@ -129,6 +130,7 @@ struct RabbitMQQueueInfo {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
+#[allow(dead_code)]
 struct RabbitMQMessageStats {
     publish: Option<u64>,
     deliver_no_ack: Option<u64>,

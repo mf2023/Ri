@@ -4,7 +4,7 @@
 
 **Version: 0.1.7**
 
-**Last modified date: 2026-02-11**
+**Last modified date: 2026-02-13**
 
 本目录包含DMSC各个核心模块的详细API文档。
 
@@ -25,6 +25,7 @@
 | **grpc** | 高性能 RPC，带服务注册和 Python 绑定 | [grpc.md](./grpc.md) |
 | **hooks** | 生命周期事件钩子（启动、关闭等） | [hooks.md](./hooks.md) |
 | **log** | 结构化日志与追踪上下文集成 | [log.md](./log.md) |
+| **module_rpc** | 模块间 RPC 通信（服务注册、调用、负载均衡） | [module_rpc.md](./module_rpc.md) |
 | **observability** | 指标、追踪和 Grafana 集成 | [observability.md](./observability.md) |
 | **protocol** | 通信协议支持，包含加密、后量子密码和 HSM | [protocol.md](./protocol.md) |
 | **queue** | 消息队列抽象（Kafka、RabbitMQ、Redis、内存） | [queue.md](./queue.md) |

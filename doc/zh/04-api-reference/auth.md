@@ -4,7 +4,7 @@
 
 **Version: 0.1.7**
 
-**Last modified date: 2026-02-11**
+**Last modified date: 2026-02-13**
 
 auth模块提供认证与授权功能，支持JWT、OAuth2和基于角色的访问控制。
 

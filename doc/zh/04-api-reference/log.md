@@ -4,7 +4,7 @@
 
 **Version: 0.1.7**
 
-**Last modified date: 2026-02-11**
+**Last modified date: 2026-02-13**
 
 log模块提供结构化日志记录与多后端支持，支持日志级别、格式化、采样等功能。
 

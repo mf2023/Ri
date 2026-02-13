@@ -4,7 +4,7 @@
 
 **Version: 0.1.7**
 
-**Last modified date: 2026-02-11**
+**Last modified date: 2026-02-13**
 
 ## Project Overview
 
@@ -69,7 +69,7 @@
 
 ## Modular Design
 
-DMSC adopts a highly modular architecture with 12 core modules, enabling on-demand composition and seamless extension:
+DMSC adopts a highly modular architecture with 18 core modules, enabling on-demand composition and seamless extension:
 
 | Module | Description |
 |:--------|:-------------|
@@ -77,14 +77,20 @@ DMSC adopts a highly modular architecture with 12 core modules, enabling on-dema
 | **cache** | Multi-backend cache abstraction (Memory, Redis, Hybrid) |
 | **config** | Multi-source configuration management with hot reload |
 | **core** | Runtime, error handling, and service context |
+| **database** | Database abstraction layer (ORM, connection pool, transactions) |
 | **device** | Device control, discovery, and intelligent scheduling |
 | **fs** | Secure file system operations and management |
 | **gateway** | API gateway with load balancing, rate limiting, and circuit breaking |
+| **grpc** | gRPC service support (client, server, interceptors) |
 | **hooks** | Lifecycle event hooks (Startup, Shutdown, etc.) |
 | **log** | Structured logging with tracing context integration |
+| **module_rpc** | Inter-module RPC communication (service registration, invocation, load balancing) |
 | **observability** | Metrics, tracing, and Grafana integration |
+| **protocol** | Protocol support (Chinese SM2/SM3/SM4, post-quantum cryptography) |
 | **queue** | Distributed queue abstraction (Kafka, RabbitMQ, Redis, Memory) |
 | **service_mesh** | Service discovery, health checking, and traffic management |
+| **validation** | Data validation (field validation, rule engine) |
+| **ws** | WebSocket support (client, server) |
 
 ### 🐍 Python Module Support
 
@@ -98,14 +104,20 @@ DMSC provides complete Python bindings, allowing you to use all core features th
 | **cache** | Multi-backend cache abstraction (Memory, Redis, Hybrid) |
 | **config** | Multi-source configuration management with hot reload |
 | **core** | Runtime, error handling, and service context |
+| **database** | Database abstraction layer (ORM, connection pool, transactions) |
 | **device** | Device control, discovery, and intelligent scheduling |
 | **fs** | Secure file system operations and management |
 | **gateway** | API gateway with load balancing, rate limiting, and circuit breaking |
+| **grpc** | gRPC service support (client, server, interceptors) |
 | **hooks** | Lifecycle event hooks (Startup, Shutdown, etc.) |
 | **log** | Structured logging with tracing context integration |
+| **module_rpc** | Inter-module RPC communication (service registration, invocation, load balancing) |
 | **observability** | Metrics, tracing, and Grafana integration |
+| **protocol** | Protocol support (Chinese SM2/SM3/SM4, post-quantum cryptography) |
 | **queue** | Distributed queue abstraction (Kafka, RabbitMQ, Redis, Memory) |
 | **service_mesh** | Service discovery, health checking, and traffic management |
+| **validation** | Data validation (field validation, rule engine) |
+| **ws** | WebSocket support (client, server) |
 
 **Python SDK Features:**
 - Native Python interfaces with seamless Rust core invocation
