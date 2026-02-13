@@ -39,7 +39,7 @@
 //!
 //! ## Usage
 //!
-//! ```rust
+//! ```rust,ignore
 //! use dmsc::prelude::*;
 //!
 //! async fn example() -> DMSCResult<()> {

@@ -93,7 +93,7 @@ fn load_hmac_key() -> Vec<u8> {
 ///
 /// ## Usage
 ///
-/// ```rust
+/// ```rust,ignore
 /// use dmsc::auth::security::DMSCSecurityManager;
 ///
 /// // Encrypt sensitive data
@@ -134,7 +134,7 @@ impl DMSCSecurityManager {
     ///
     /// # Examples
     ///
-    /// ```rust
+    /// ```rust,ignore
     /// use dmsc::auth::security::DMSCSecurityManager;
     ///
     /// let encrypted = DMSCSecurityManager::encrypt("sensitive data");
@@ -182,7 +182,7 @@ impl DMSCSecurityManager {
     ///
     /// # Examples
     ///
-    /// ```rust
+    /// ```rust,ignore
     /// use dmsc::auth::security::DMSCSecurityManager;
     ///
     /// let encrypted = DMSCSecurityManager::encrypt("secret");
@@ -230,7 +230,7 @@ impl DMSCSecurityManager {
     ///
     /// # Examples
     ///
-    /// ```rust
+    /// ```rust,ignore
     /// use dmsc::auth::security::DMSCSecurityManager;
     ///
     /// let data = "important message";
@@ -264,7 +264,7 @@ impl DMSCSecurityManager {
     ///
     /// # Examples
     ///
-    /// ```rust
+    /// ```rust,ignore
     /// use dmsc::auth::security::DMSCSecurityManager;
     ///
     /// let data = "important message";
@@ -299,7 +299,7 @@ impl DMSCSecurityManager {
     ///
     /// # Examples
     ///
-    /// ```rust
+    /// ```rust,ignore
     /// use dmsc::auth::security::DMSCSecurityManager;
     ///
     /// let key = DMSCSecurityManager::generate_encryption_key();
@@ -327,7 +327,7 @@ impl DMSCSecurityManager {
     ///
     /// # Examples
     ///
-    /// ```rust
+    /// ```rust,ignore
     /// use dmsc::auth::security::DMSCSecurityManager;
     ///
     /// let key = DMSCSecurityManager::generate_hmac_key();

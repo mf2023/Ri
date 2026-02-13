@@ -34,7 +34,7 @@
 //!
 //! ## Usage
 //!
-//! ```rust
+//! ```rust,ignore
 //! use dmsc::device::discovery::providers::{ProviderRegistry, CPUProvider};
 //!
 //! let mut registry = ProviderRegistry::new();

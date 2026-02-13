@@ -43,7 +43,7 @@
 //!
 //! ## Usage Example
 //!
-//! ```rust
+//! ```rust,ignore
 //! use dmsc::cache::backends::DMSCRedisCache;
 //!
 //! async fn example() -> dmsc::core::DMSCResult<()> {

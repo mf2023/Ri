@@ -348,7 +348,7 @@ jobs:
           sudo apt-get install -y libcurl4-openssl-dev libsasl2-dev
 
       - name: Build C static library
-        run: cargo build --release --features c
+        run: cargo build --release --no-default-features --features c
 
       - name: Generate C headers
         run: |
@@ -419,7 +419,7 @@ jobs:
           sudo apt-get install -y libcurl4-openssl-dev libsasl2-dev
 
       - name: Build C static library
-        run: cargo build --release --features c
+        run: cargo build --release --no-default-features --features c
 
       - name: Generate C headers
         run: |
@@ -485,7 +485,7 @@ jobs:
           cmake-version: '3.28.x'
 
       - name: Build C static library
-        run: cargo build --release --features c
+        run: cargo build --release --no-default-features --features c
 
       - name: Generate C headers
         shell: cmd
@@ -557,7 +557,7 @@ jobs:
           targets: x86_64-apple-darwin
 
       - name: Build C static library
-        run: cargo build --release --target x86_64-apple-darwin --features c
+        run: cargo build --release --target x86_64-apple-darwin --no-default-features --features c
 
       - name: Generate C headers
         run: |
@@ -1315,7 +1315,7 @@ jobs:
           pip install -e . --no-build-isolation
 
       - name: Run Python tests
-        run: pytest tests/python/ -v
+        run: pytest tests/Python/ -v
 
   ################################################################################
   # Job: Run Rust Tests

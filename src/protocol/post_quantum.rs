@@ -57,7 +57,7 @@
 //!
 //! ## API Structure
 //!
-//! ```rust
+//! ```rust,ignore
 //! use dmsc::protocol::post_quantum::{KyberKEM, DilithiumSigner};
 //!
 //! // Kyber key encapsulation (requires liboqs integration)

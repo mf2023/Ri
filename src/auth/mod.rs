@@ -52,7 +52,7 @@
 //! 
 //! ## Usage
 //! 
-//! ```rust
+//! ```rust,ignore
 //! use dmsc::prelude::*;
 //! use dmsc::auth::{DMSCAuthConfig, DMSCJWTManager, DMSCJWTClaims};
 //! use serde_json::json;

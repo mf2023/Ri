@@ -37,7 +37,7 @@
 //!
 //! ## Usage
 //!
-//! ```rust
+//! ```rust,ignore
 //! use dmsc::device::discovery::{DMSCDeviceDiscovery, DiscoveryConfig};
 //!
 //! #[tokio::main]

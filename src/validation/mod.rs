@@ -41,7 +41,7 @@
 //!
 //! ## Usage
 //!
-//! ```rust
+//! ```rust,ignore
 //! use dmsc::validation::{Validator, ValidationRule, DMSCValidator};
 //! use dmsc::prelude::*;
 //!

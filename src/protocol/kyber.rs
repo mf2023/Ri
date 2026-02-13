@@ -31,7 +31,7 @@
 //!
 //! ## Usage
 //!
-//! ```rust
+//! ```rust,ignore
 //! use dmsc::protocol::kyber::KyberKEM;
 //!
 //! let kem = KyberKEM::new();

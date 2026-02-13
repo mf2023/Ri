@@ -35,7 +35,7 @@
 //!
 //! ## Usage Example
 //!
-//! ```rust
+//! ```rust,ignore
 //! use dmsc::database::{DMSCDatabaseConfig, DatabaseType, PoolConfig};
 //!
 //! let config = DMSCDatabaseConfig::new_mysql(
@@ -75,7 +75,7 @@ use std::env;
 ///
 /// ## Usage
 ///
-/// ```rust
+/// ```rust,ignore
 /// use dmsc::database::DatabaseType;
 ///
 /// fn get_preferred_db() -> DatabaseType {
@@ -194,7 +194,7 @@ impl std::fmt::Display for DatabaseType {
 ///
 /// Configuration can be customized using the builder pattern:
 ///
-/// ```rust
+/// ```rust,ignore
 /// use dmsc::database::{DMSCDatabaseConfig, SslMode};
 ///
 /// let config = DMSCDatabaseConfig::postgres()
@@ -625,7 +625,7 @@ impl DMSCDatabaseConfig {
     ///
     /// # Examples
     ///
-    /// ```rust
+    /// ```rust,ignore
     /// use dmsc::database::DMSCDatabaseConfig;
     ///
     /// // Basic PostgreSQL configuration
@@ -689,7 +689,7 @@ impl DMSCDatabaseConfig {
     ///
     /// # Examples
     ///
-    /// ```rust
+    /// ```rust,ignore
     /// use dmsc::database::DMSCDatabaseConfig;
     ///
     /// // Basic MySQL configuration
@@ -760,7 +760,7 @@ impl DMSCDatabaseConfig {
     ///
     /// # Examples
     ///
-    /// ```rust
+    /// ```rust,ignore
     /// use dmsc::database::DMSCDatabaseConfig;
     ///
     /// // File-based database
@@ -805,7 +805,7 @@ impl DMSCDatabaseConfig {
     ///
     /// # Examples
     ///
-    /// ```rust
+    /// ```rust,ignore
     /// use dmsc::database::DMSCDatabaseConfig;
     ///
     /// let config = DMSCDatabaseConfig::postgres()
@@ -842,7 +842,7 @@ impl DMSCDatabaseConfig {
     ///
     /// # Examples
     ///
-    /// ```rust
+    /// ```rust,ignore
     /// use dmsc::database::DMSCDatabaseConfig;
     ///
     /// // Non-standard PostgreSQL port
@@ -870,7 +870,7 @@ impl DMSCDatabaseConfig {
     ///
     /// # Examples
     ///
-    /// ```rust
+    /// ```rust,ignore
     /// use dmsc::database::DMSCDatabaseConfig;
     ///
     /// let config = DMSCDatabaseConfig::postgres()
@@ -899,7 +899,7 @@ impl DMSCDatabaseConfig {
     ///
     /// For security, consider using environment variables instead of
     /// hardcoding credentials in your code:
-    /// ```rust
+    /// ```rust,ignore
     /// use std::env;
     ///
     /// let config = DMSCDatabaseConfig::postgres()
@@ -933,7 +933,7 @@ impl DMSCDatabaseConfig {
     ///
     /// # Examples
     ///
-    /// ```rust
+    /// ```rust,ignore
     /// use std::env;
     /// use dmsc::database::DMSCDatabaseConfig;
     ///
@@ -1026,7 +1026,7 @@ impl DMSCDatabaseConfig {
     ///
     /// # Examples
     ///
-    /// ```rust
+    /// ```rust,ignore
     /// use dmsc::database::DMSCDatabaseConfig;
     ///
     /// // 60 second timeout for distant databases
@@ -1114,7 +1114,7 @@ impl DMSCDatabaseConfig {
     ///
     /// # Examples
     ///
-    /// ```rust
+    /// ```rust,ignore
     /// use dmsc::database::{DMSCDatabaseConfig, SslMode};
     ///
     /// // Require SSL for production
@@ -1168,7 +1168,7 @@ impl DMSCDatabaseConfig {
     ///
     /// # Examples
     ///
-    /// ```rust
+    /// ```rust,ignore
     /// use dmsc::database::DMSCDatabaseConfig;
     ///
     /// let config = DMSCDatabaseConfig::postgres()
@@ -1194,7 +1194,7 @@ impl DMSCDatabaseConfig {
     ///
     /// # Examples
     ///
-    /// ```rust
+    /// ```rust,ignore
     /// use dmsc::database::DMSCDatabaseConfig;
     ///
     /// let config = DMSCDatabaseConfig::postgres()

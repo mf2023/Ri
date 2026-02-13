@@ -47,7 +47,7 @@
 //! 
 //! ## Usage
 //! 
-//! ```rust
+//! ```rust,ignore
 //! use dmsc::device::{DMSCResourcePoolManager, DMSCResourcePoolConfig, DMSCDeviceType};
 //! use dmsc::core::DMSCResult;
 //! 

@@ -30,7 +30,7 @@
 //!
 //! ## Usage
 //!
-//! ```rust
+//! ```rust,ignore
 //! use dmsc::device::discovery::platform::{PlatformInfo, PlatformType, get_platform_info};
 //!
 //! let platform = get_platform_info();

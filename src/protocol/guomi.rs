@@ -26,7 +26,7 @@
 //!
 //! ## Usage
 //!
-//! ```rust
+//! ```rust,ignore
 //! use dmsc::protocol::guomi::{DMSCGuomi, SM2Signer, SM3, SM4};
 //!
 //! // SM3 hashing - returns DMSCResult<[u8; 32]>

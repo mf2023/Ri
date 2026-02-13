@@ -18,28 +18,16 @@
 //! # Gateway Module Benchmarks
 //!
 //! This benchmark suite measures the performance of DMSC gateway operations.
-//! It tests various gateway components including:
-//! - Request handling
-//! - Routing
-//! - Middleware execution
-//! - Rate limiting
-//! - Circuit breaker
-//! - Load balancing
-//!
-//! ## Running Benchmarks
-//!
-//! ```bash
-//! cargo bench --bench gateway_benchmark
-//! ```
 
 use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion, Throughput};
 use dmsc::gateway::{DMSCGateway, DMSCGatewayRequest, DMSCGatewayResponse, DMSCRoute, DMSCRouter};
+use dmsc::gateway::{DMSCRateLimiter, DMSCRateLimitConfig, DMSCCircuitBreaker, DMSCCircuitBreakerConfig};
+use dmsc::gateway::{DMSCLoadBalancer, DMSCLoadBalancerStrategy};
 use std::collections::HashMap;
 use std::sync::Arc;
 
 fn bench_gateway_request_creation(c: &mut Criterion) {
     let mut group = c.benchmark_group("gateway_request_creation");
-    
     group.throughput(Throughput::Elements(1));
     
     group.bench_function("create_simple_request", |b| {
@@ -79,7 +67,6 @@ fn bench_gateway_request_creation(c: &mut Criterion) {
 
 fn bench_gateway_response_creation(c: &mut Criterion) {
     let mut group = c.benchmark_group("gateway_response_creation");
-    
     group.throughput(Throughput::Elements(1));
     
     group.bench_function("create_simple_response", |b| {
@@ -142,38 +129,41 @@ fn bench_router_operations(c: &mut Criterion) {
     });
     
     let mut group = c.benchmark_group("gateway_router");
-    
     group.throughput(Throughput::Elements(1));
     
     group.bench_function("add_route", |b| {
-        b.to_async(&rt).iter(|| async {
-            let route = DMSCRoute {
-                path: "/api/v1/new_route".to_string(),
-                method: "GET".to_string(),
-                handler: Arc::new(|req| {
-                    Box::pin(async move {
-                        Ok(DMSCGatewayResponse::new(200, b"OK".to_vec(), req.id.clone()))
-                    })
-                }),
-                ..Default::default()
-            };
-            router.add_route(route).await.unwrap();
-            black_box(());
+        b.iter(|| {
+            rt.block_on(async {
+                let route = DMSCRoute {
+                    path: "/api/v1/new_route".to_string(),
+                    method: "GET".to_string(),
+                    handler: Arc::new(|req| {
+                        Box::pin(async move {
+                            Ok(DMSCGatewayResponse::new(200, b"OK".to_vec(), req.id.clone()))
+                        })
+                    }),
+                    ..Default::default()
+                };
+                router.add_route(route).await.unwrap();
+                black_box(());
+            });
         });
     });
     
     group.bench_function("route_request", |b| {
-        b.to_async(&rt).iter(|| async {
-            let request = DMSCGatewayRequest::new(
-                "GET".to_string(),
-                "/api/v1/route_50".to_string(),
-                HashMap::new(),
-                HashMap::new(),
-                None,
-                "127.0.0.1:12345".to_string(),
-            );
-            let result = router.route(&request).await;
-            black_box(result);
+        b.iter(|| {
+            rt.block_on(async {
+                let request = DMSCGatewayRequest::new(
+                    "GET".to_string(),
+                    "/api/v1/route_50".to_string(),
+                    HashMap::new(),
+                    HashMap::new(),
+                    None,
+                    "127.0.0.1:12345".to_string(),
+                );
+                let result = router.route(&request).await;
+                black_box(result);
+            });
         });
     });
     
@@ -204,21 +194,22 @@ fn bench_gateway_handle_request(c: &mut Criterion) {
     });
     
     let mut group = c.benchmark_group("gateway_handle");
-    
     group.throughput(Throughput::Elements(1));
     
     group.bench_function("handle_simple_request", |b| {
-        b.to_async(&rt).iter(|| async {
-            let request = DMSCGatewayRequest::new(
-                "GET".to_string(),
-                "/api/v1/health".to_string(),
-                HashMap::new(),
-                HashMap::new(),
-                None,
-                "127.0.0.1:12345".to_string(),
-            );
-            let response = gateway.handle_request(request).await;
-            black_box(response);
+        b.iter(|| {
+            rt.block_on(async {
+                let request = DMSCGatewayRequest::new(
+                    "GET".to_string(),
+                    "/api/v1/health".to_string(),
+                    HashMap::new(),
+                    HashMap::new(),
+                    None,
+                    "127.0.0.1:12345".to_string(),
+                );
+                let response = gateway.handle_request(request).await;
+                black_box(response);
+            });
         });
     });
     
@@ -226,27 +217,26 @@ fn bench_gateway_handle_request(c: &mut Criterion) {
 }
 
 fn bench_rate_limiter(c: &mut Criterion) {
-    use dmsc::gateway::{DMSCRateLimiter, DMSCRateLimitConfig};
-    
     let rt = tokio::runtime::Runtime::new().unwrap();
     let rate_limiter = Arc::new(DMSCRateLimiter::new(DMSCRateLimitConfig::default()));
     
     let mut group = c.benchmark_group("gateway_rate_limiter");
-    
     group.throughput(Throughput::Elements(1));
     
     group.bench_function("check_request_allowed", |b| {
-        b.to_async(&rt).iter(|| async {
-            let request = DMSCGatewayRequest::new(
-                "GET".to_string(),
-                "/api/v1/test".to_string(),
-                HashMap::new(),
-                HashMap::new(),
-                None,
-                "127.0.0.1:12345".to_string(),
-            );
-            let allowed = rate_limiter.check_request(&request).await;
-            black_box(allowed);
+        b.iter(|| {
+            rt.block_on(async {
+                let request = DMSCGatewayRequest::new(
+                    "GET".to_string(),
+                    "/api/v1/test".to_string(),
+                    HashMap::new(),
+                    HashMap::new(),
+                    None,
+                    "127.0.0.1:12345".to_string(),
+                );
+                let allowed = rate_limiter.check_request(&request).await;
+                black_box(allowed);
+            });
         });
     });
     
@@ -254,12 +244,9 @@ fn bench_rate_limiter(c: &mut Criterion) {
 }
 
 fn bench_circuit_breaker(c: &mut Criterion) {
-    use dmsc::gateway::{DMSCCircuitBreaker, DMSCCircuitBreakerConfig};
-    
     let circuit_breaker = Arc::new(DMSCCircuitBreaker::new(DMSCCircuitBreakerConfig::default()));
     
     let mut group = c.benchmark_group("gateway_circuit_breaker");
-    
     group.throughput(Throughput::Elements(1));
     
     group.bench_function("allow_request", |b| {
@@ -287,8 +274,6 @@ fn bench_circuit_breaker(c: &mut Criterion) {
 }
 
 fn bench_load_balancer(c: &mut Criterion) {
-    use dmsc::gateway::{DMSCLoadBalancer, DMSCLoadBalancerStrategy};
-    
     let rt = tokio::runtime::Runtime::new().unwrap();
     let lb = Arc::new(DMSCLoadBalancer::new(DMSCLoadBalancerStrategy::RoundRobin));
     
@@ -299,13 +284,14 @@ fn bench_load_balancer(c: &mut Criterion) {
     });
     
     let mut group = c.benchmark_group("gateway_load_balancer");
-    
     group.throughput(Throughput::Elements(1));
     
     group.bench_function("select_server_round_robin", |b| {
-        b.to_async(&rt).iter(|| async {
-            let server = lb.select_server().await;
-            black_box(server);
+        b.iter(|| {
+            rt.block_on(async {
+                let server = lb.select_server().await;
+                black_box(server);
+            });
         });
     });
     

@@ -18,26 +18,15 @@
 //! # Authentication Module Benchmarks
 //!
 //! This benchmark suite measures the performance of DMSC authentication operations.
-//! It tests various auth components including:
-//! - JWT token generation
-//! - JWT token validation
-//! - Permission checking
-//! - Session management
-//!
-//! ## Running Benchmarks
-//!
-//! ```bash
-//! cargo bench --bench auth_benchmark
-//! ```
 
 use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion, Throughput};
 use dmsc::auth::jwt::DMSCJWTManager;
+use std::sync::Arc;
 
 fn bench_jwt_token_generation(c: &mut Criterion) {
     let manager = DMSCJWTManager::create("benchmark_secret_key_12345".to_string(), 3600);
     
     let mut group = c.benchmark_group("jwt_generation");
-    
     group.throughput(Throughput::Elements(1));
     
     group.bench_function("generate_token_no_roles", |b| {
@@ -84,7 +73,6 @@ fn bench_jwt_token_validation(c: &mut Criterion) {
     ).unwrap();
     
     let mut group = c.benchmark_group("jwt_validation");
-    
     group.throughput(Throughput::Elements(1));
     
     group.bench_function("validate_simple_token", |b| {
@@ -108,7 +96,6 @@ fn bench_jwt_round_trip(c: &mut Criterion) {
     let manager = DMSCJWTManager::create("benchmark_secret_key_12345".to_string(), 3600);
     
     let mut group = c.benchmark_group("jwt_round_trip");
-    
     group.throughput(Throughput::Elements(1));
     
     group.bench_function("generate_and_validate", |b| {
@@ -122,67 +109,8 @@ fn bench_jwt_round_trip(c: &mut Criterion) {
     group.finish();
 }
 
-fn bench_jwt_concurrent_operations(c: &mut Criterion) {
-    let rt = tokio::runtime::Runtime::new().unwrap();
-    let manager = Arc::new(DMSCJWTManager::create("benchmark_secret_key_12345".to_string(), 3600));
-    
-    let mut group = c.benchmark_group("jwt_concurrent");
-    
-    for concurrency in [10, 50, 100].iter() {
-        group.throughput(Throughput::Elements(*concurrency as u64));
-        
-        group.bench_with_input(
-            BenchmarkId::new("concurrent_generation", concurrency),
-            concurrency,
-            |b, _| {
-                b.to_async(&rt).iter(|| async {
-                    let mut tasks = Vec::new();
-                    for i in 0..*concurrency {
-                        let mgr = manager.clone();
-                        tasks.push(async move {
-                            mgr.generate_token(
-                                &format!("user_{}", i),
-                                vec!["user".to_string()],
-                                vec!["read".to_string()],
-                            ).unwrap()
-                        });
-                    }
-                    let tokens = futures::future::join_all(tasks).await;
-                    black_box(tokens);
-                });
-            },
-        );
-        
-        group.bench_with_input(
-            BenchmarkId::new("concurrent_validation", concurrency),
-            concurrency,
-            |b, _| {
-                let tokens: Vec<String> = (0..*concurrency)
-                    .map(|i| manager.generate_token(&format!("user_{}", i), vec![], vec![]).unwrap())
-                    .collect();
-                
-                b.to_async(&rt).iter(|| async {
-                    let mut tasks = Vec::new();
-                    for token in &tokens {
-                        let mgr = manager.clone();
-                        let t = token.clone();
-                        tasks.push(async move {
-                            mgr.validate_token(&t).unwrap()
-                        });
-                    }
-                    let claims = futures::future::join_all(tasks).await;
-                    black_box(claims);
-                });
-            },
-        );
-    }
-    
-    group.finish();
-}
-
 fn bench_jwt_manager_creation(c: &mut Criterion) {
     let mut group = c.benchmark_group("jwt_manager_creation");
-    
     group.throughput(Throughput::Elements(1));
     
     group.bench_function("create_manager", |b| {
@@ -195,14 +123,11 @@ fn bench_jwt_manager_creation(c: &mut Criterion) {
     group.finish();
 }
 
-use std::sync::Arc;
-
 criterion_group!(
     auth_benches,
     bench_jwt_token_generation,
     bench_jwt_token_validation,
     bench_jwt_round_trip,
-    bench_jwt_concurrent_operations,
     bench_jwt_manager_creation,
 );
 

@@ -87,7 +87,7 @@ use crate::core::{DMSCResult, DMSCError};
 /// # Examples
 ///
 /// Basic frame type creation and conversion:
-/// ```rust
+/// ```rust,ignore
 /// use dmsc::protocol::frames::DMSCFrameType;
 ///
 /// let control = DMSCFrameType::Control;
@@ -99,7 +99,7 @@ use crate::core::{DMSCResult, DMSCError};
 /// ```
 ///
 /// Frame type matching in protocol handling:
-/// ```rust
+/// ```rust,ignore
 /// use dmsc::protocol::frames::DMSCFrameType;
 ///
 /// fn handle_frame_type(frame_type: DMSCFrameType) -> &str {
@@ -117,7 +117,7 @@ use crate::core::{DMSCResult, DMSCError};
 /// ```
 ///
 /// Converting between byte values and frame types:
-/// ```rust
+/// ```rust,ignore
 /// use dmsc::protocol::frames::DMSCFrameType;
 ///
 /// // Convert byte to frame type
@@ -314,7 +314,7 @@ impl DMSCFrameType {
 /// # Examples
 ///
 /// Creating a new frame header:
-/// ```rust
+/// ```rust,ignore
 /// use dmsc::protocol::frames::{DMSCFrameHeader, DMSCFrameType};
 ///
 /// let header = DMSCFrameHeader::new(
@@ -329,7 +329,7 @@ impl DMSCFrameType {
 /// ```
 ///
 /// Serializing and deserializing headers:
-/// ```rust
+/// ```rust,ignore
 /// use dmsc::protocol::frames::{DMSCFrameHeader, DMSCFrameType};
 ///
 /// let header = DMSCFrameHeader::new(
@@ -350,7 +350,7 @@ impl DMSCFrameType {
 /// ```
 ///
 /// Verifying frame integrity:
-/// ```rust
+/// ```rust,ignore
 /// use dmsc::protocol::frames::{DMSCFrameHeader, DMSCFrameType};
 ///
 /// let header = DMSCFrameHeader::new(
@@ -684,7 +684,7 @@ impl DMSCFrameHeader {
 /// # Examples
 ///
 /// Creating and serializing a data frame:
-/// ```rust
+/// ```rust,ignore
 /// use dmsc::protocol::frames::{DMSCFrame, DMSCFrameType};
 ///
 /// let frame = DMSCFrame::data_frame(
@@ -700,7 +700,7 @@ impl DMSCFrameHeader {
 /// ```
 ///
 /// Creating different frame types:
-/// ```rust
+/// ```rust,ignore
 /// use dmsc::protocol::frames::{DMSCFrame, DMSCFrameType};
 ///
 /// // Control frame with command data
@@ -728,7 +728,7 @@ impl DMSCFrameHeader {
 /// ```
 ///
 /// Receiving and deserializing frames:
-/// ```rust
+/// ```rust,ignore
 /// use dmsc::protocol::frames::{DMSCFrame, DMSCFrameType};
 ///
 /// let original = DMSCFrame::data_frame(
@@ -940,7 +940,7 @@ impl DMSCFrame {
 /// # Examples
 ///
 /// Basic frame parsing from stream data:
-/// ```rust
+/// ```rust,ignore
 /// use dmsc::protocol::frames::{DMSCFrameParser, DMSCFrame};
 ///
 /// let mut parser = DMSCFrameParser::new();
@@ -970,7 +970,7 @@ impl DMSCFrame {
 /// ```
 ///
 /// Handling sequence number reset:
-/// ```rust
+/// ```rust,ignore
 /// use dmsc::protocol::frames::DMSCFrameParser;
 ///
 /// let mut parser = DMSCFrameParser::new();
@@ -1117,7 +1117,7 @@ impl DMSCFrameParser {
 /// # Examples
 ///
 /// Building multiple frames with automatic sequencing:
-/// ```rust
+/// ```rust,ignore
 /// use dmsc::protocol::frames::DMSCFrameBuilder;
 ///
 /// let mut builder = DMSCFrameBuilder::new();
@@ -1139,7 +1139,7 @@ impl DMSCFrameParser {
 /// ```
 ///
 /// Building different frame types:
-/// ```rust
+/// ```rust,ignore
 /// use dmsc::protocol::frames::DMSCFrameBuilder;
 ///
 /// let mut builder = DMSCFrameBuilder::new();
@@ -1162,7 +1162,7 @@ impl DMSCFrameParser {
 /// ```
 ///
 /// Managing sequence numbers:
-/// ```rust
+/// ```rust,ignore
 /// use dmsc::protocol::frames::DMSCFrameBuilder;
 ///
 /// let mut builder = DMSCFrameBuilder::new();

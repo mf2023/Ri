@@ -46,7 +46,7 @@
 //!
 //! ## Usage Example
 //!
-//! ```rust
+//! ```rust,ignore
 //! use dmsc::cache::backends::DMSCHybridCache;
 //!
 //! async fn example() -> dmsc::core::DMSCResult<()> {

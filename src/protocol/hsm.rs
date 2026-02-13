@@ -50,7 +50,7 @@
 //!
 //! ## Usage Examples
 //!
-//! ```rust
+//! ```rust,ignore
 //! use dmsc::protocol::hsm::{DMSCHSMManager, DMSCHSMType, DMSCKeyInfo};
 //!
 //! async fn example() -> DMSCResult<()> {

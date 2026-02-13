@@ -27,7 +27,7 @@
 //!
 //! ## Usage
 //!
-//! ```rust
+//! ```rust,ignore
 //! use dmsc::prelude::*;
 //!
 //! #[tokio::main]

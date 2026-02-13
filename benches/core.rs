@@ -18,17 +18,6 @@
 //! # Core Module Benchmarks
 //!
 //! This benchmark suite measures the performance of DMSC core operations.
-//! It tests various core components including:
-//! - Error handling
-//! - Context management
-//! - Module lifecycle
-//! - Concurrency primitives
-//!
-//! ## Running Benchmarks
-//!
-//! ```bash
-//! cargo bench --bench core_benchmark
-//! ```
 
 use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion, Throughput};
 use dmsc::core::error::DMSCError;
@@ -37,7 +26,6 @@ use tokio::sync::RwLock;
 
 fn bench_error_creation(c: &mut Criterion) {
     let mut group = c.benchmark_group("error_creation");
-    
     group.throughput(Throughput::Elements(1));
     
     group.bench_function("create_io_error", |b| {
@@ -73,7 +61,6 @@ fn bench_error_creation(c: &mut Criterion) {
 
 fn bench_error_display(c: &mut Criterion) {
     let mut group = c.benchmark_group("error_display");
-    
     group.throughput(Throughput::Elements(1));
     
     let error = DMSCError::IoError("Test IO error with some longer message".to_string());
@@ -93,89 +80,33 @@ fn bench_rwlock_operations(c: &mut Criterion) {
     let data = Arc::new(RwLock::new(0u64));
     
     let mut group = c.benchmark_group("rwlock");
-    
     group.throughput(Throughput::Elements(1));
     
     group.bench_function("read_lock", |b| {
-        b.to_async(&rt).iter(|| async {
-            let guard = data.read().await;
-            let value = *guard;
-            black_box(value);
+        b.iter(|| {
+            rt.block_on(async {
+                let guard = data.read().await;
+                let value = *guard;
+                black_box(value);
+            });
         });
     });
     
     group.bench_function("write_lock", |b| {
-        b.to_async(&rt).iter(|| async {
-            let mut guard = data.write().await;
-            *guard += 1;
-            black_box(());
+        b.iter(|| {
+            rt.block_on(async {
+                let mut guard = data.write().await;
+                *guard += 1;
+                black_box(());
+            });
         });
     });
-    
-    group.finish();
-}
-
-fn bench_concurrent_rwlock(c: &mut Criterion) {
-    let rt = tokio::runtime::Runtime::new().unwrap();
-    let data = Arc::new(RwLock::new(0u64));
-    
-    let mut group = c.benchmark_group("concurrent_rwlock");
-    
-    for concurrency in [10, 50, 100].iter() {
-        group.throughput(Throughput::Elements(*concurrency as u64));
-        
-        group.bench_with_input(
-            BenchmarkId::new("concurrent_reads", concurrency),
-            concurrency,
-            |b, _| {
-                b.to_async(&rt).iter(|| async {
-                    let mut tasks = Vec::new();
-                    for _ in 0..*concurrency {
-                        let d = data.clone();
-                        tasks.push(async move {
-                            let guard = d.read().await;
-                            *guard
-                        });
-                    }
-                    let results = futures::future::join_all(tasks).await;
-                    black_box(results);
-                });
-            },
-        );
-        
-        group.bench_with_input(
-            BenchmarkId::new("mixed_read_write", concurrency),
-            concurrency,
-            |b, _| {
-                b.to_async(&rt).iter(|| async {
-                    let mut tasks = Vec::new();
-                    for i in 0..*concurrency {
-                        let d = data.clone();
-                        if i % 10 == 0 {
-                            tasks.push(async move {
-                                let mut guard = d.write().await;
-                                *guard += 1;
-                            });
-                        } else {
-                            tasks.push(async move {
-                                let guard = d.read().await;
-                                *guard
-                            });
-                        }
-                    }
-                    let results = futures::future::join_all(tasks).await;
-                    black_box(results);
-                });
-            },
-        );
-    }
     
     group.finish();
 }
 
 fn bench_uuid_generation(c: &mut Criterion) {
     let mut group = c.benchmark_group("uuid_generation");
-    
     group.throughput(Throughput::Elements(1));
     
     group.bench_function("generate_v4", |b| {
@@ -208,7 +139,6 @@ fn bench_timestamp_operations(c: &mut Criterion) {
     use std::time::{SystemTime, UNIX_EPOCH};
     
     let mut group = c.benchmark_group("timestamp");
-    
     group.throughput(Throughput::Elements(1));
     
     group.bench_function("system_time_now", |b| {
@@ -245,7 +175,6 @@ fn bench_json_serialization(c: &mut Criterion) {
     use serde_json::json;
     
     let mut group = c.benchmark_group("json_serialization");
-    
     group.throughput(Throughput::Elements(1));
     
     group.bench_function("serialize_simple", |b| {
@@ -294,7 +223,6 @@ fn bench_json_serialization(c: &mut Criterion) {
 
 fn bench_string_operations(c: &mut Criterion) {
     let mut group = c.benchmark_group("string_operations");
-    
     group.throughput(Throughput::Elements(1));
     
     group.bench_function("string_format", |b| {
@@ -327,7 +255,6 @@ criterion_group!(
     bench_error_creation,
     bench_error_display,
     bench_rwlock_operations,
-    bench_concurrent_rwlock,
     bench_uuid_generation,
     bench_timestamp_operations,
     bench_json_serialization,

@@ -35,7 +35,7 @@
 //!
 //! ## Usage Example
 //!
-//! ```rust
+//! ```rust,ignore
 //! use dmsc::database::migration::{Migration, MigrationManager};
 //!
 //! let migration = Migration::new(

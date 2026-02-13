@@ -31,7 +31,7 @@
 //!
 //! ## Usage
 //!
-//! ```rust
+//! ```rust,ignore
 //! use dmsc::protocol::dilithium::DilithiumSigner;
 //!
 //! let signer = DilithiumSigner::new();

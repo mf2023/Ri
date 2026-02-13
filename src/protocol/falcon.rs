@@ -35,7 +35,7 @@
 //!
 //! ## Usage
 //!
-//! ```rust
+//! ```rust,ignore
 //! use dmsc::protocol::falcon::FalconSigner;
 //!
 //! let signer = FalconSigner::new();

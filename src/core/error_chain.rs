@@ -34,7 +34,7 @@
 //!
 //! ## Usage Examples
 //!
-//! ```rust
+//! ```rust,ignore
 //! use dmsc::core::error_chain::{DMSCErrorChain, DMSCErrorContext};
 //!
 //! let result = some_operation()

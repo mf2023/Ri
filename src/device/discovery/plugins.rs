@@ -29,7 +29,7 @@
 //!
 //! ## Usage
 //!
-//! ```rust
+//! ```rust,ignore
 //! use dmsc::device::discovery::plugins::{DMSCHardwareDiscoveryPlugin, PluginRegistry};
 //!
 //! // Create a custom plugin

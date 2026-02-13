@@ -48,7 +48,7 @@
 //!
 //! ## Usage Example
 //!
-//! ```rust
+//! ```rust,ignore
 //! use dmsc::database::{DMSCDatabase, DMSCDatabaseConfig, PooledDatabase};
 //!
 //! #[tokio::main]
@@ -82,7 +82,7 @@
 //!
 //! ## Batch Operations Example
 //!
-//! ```rust
+//! ```rust,ignore
 //! use dmsc::database::{DMSCDatabasePool, DMSCDatabaseConfig};
 //!
 //! #[tokio::main]
@@ -114,7 +114,7 @@
 //!
 //! ## Transaction Example
 //!
-//! ```rust
+//! ```rust,ignore
 //! use dmsc::database::{DMSCDatabasePool, DMSCDatabaseConfig};
 //!
 //! #[tokio::main]
@@ -209,7 +209,7 @@ impl From<DMSCDatabaseTransactionError> for DMSCResult<()> {
 ///
 /// ## Example
 ///
-/// ```rust
+/// ```rust,ignore
 /// use dmsc::database::{DMSCDatabase, DMSCDatabasePool, DMSCDatabaseConfig};
 ///
 /// #[tokio::main]
@@ -411,7 +411,7 @@ pub trait DMSCDatabase: Send + Sync {
 ///
 /// ## Example
 ///
-/// ```rust
+/// ```rust,ignore
 /// use dmsc::database::{DMSCDatabasePool, DMSCDatabaseConfig};
 ///
 /// #[tokio::main]

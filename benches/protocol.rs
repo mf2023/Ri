@@ -18,17 +18,6 @@
 //! # Protocol/Cryptography Module Benchmarks
 //!
 //! This benchmark suite measures the performance of DMSC protocol and crypto operations.
-//! It tests various cryptographic components including:
-//! - Post-quantum cryptography (Kyber KEM)
-//! - Digital signatures (Dilithium, Falcon)
-//! - Symmetric encryption (AES-GCM)
-//! - Hash functions
-//!
-//! ## Running Benchmarks
-//!
-//! ```bash
-//! cargo bench --bench protocol_benchmark
-//! ```
 
 use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion, Throughput};
 
@@ -38,7 +27,6 @@ fn bench_kyber_kem(c: &mut Criterion) {
     use dmsc::protocol::DMSCPostQuantumAlgorithm;
     
     let mut group = c.benchmark_group("kyber_kem");
-    
     group.throughput(Throughput::Elements(1));
     
     group.bench_function("kyber512_keygen", |b| {
@@ -96,7 +84,6 @@ fn bench_dilithium_signature(c: &mut Criterion) {
     use dmsc::protocol::DMSCPostQuantumAlgorithm;
     
     let mut group = c.benchmark_group("dilithium_signature");
-    
     group.throughput(Throughput::Elements(1));
     
     group.bench_function("dilithium2_keygen", |b| {
@@ -139,7 +126,6 @@ fn bench_falcon_signature(c: &mut Criterion) {
     use dmsc::protocol::DMSCPostQuantumAlgorithm;
     
     let mut group = c.benchmark_group("falcon_signature");
-    
     group.throughput(Throughput::Elements(1));
     
     group.bench_function("falcon512_keygen", |b| {

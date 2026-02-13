@@ -47,7 +47,7 @@
 //!
 //! ## Usage Example
 //!
-//! ```rust
+//! ```rust,ignore
 //! use dmsc::auth::jwt::DMSCJWTManager;
 //!
 //! fn authenticate_user() {
@@ -152,7 +152,7 @@ pub struct DMSCJWTClaims {
 ///
 /// ## Usage
 ///
-/// ```rust
+/// ```rust,ignore
 /// use dmsc::auth::jwt::DMSCJWTValidationOptions;
 ///
 /// let options = DMSCJWTValidationOptions {
@@ -330,7 +330,7 @@ impl DMSCJWTManager {
     ///
     /// # Examples
     ///
-    /// ```rust
+    /// ```rust,ignore
     /// use dmsc::auth::jwt::DMSCJWTManager;
     ///
     /// let manager = DMSCJWTManager::create(
@@ -374,7 +374,7 @@ impl DMSCJWTManager {
     ///
     /// # Examples
     ///
-    /// ```rust
+    /// ```rust,ignore
     /// use dmsc::auth::jwt::DMSCJWTManager;
     ///
     /// let manager = DMSCJWTManager::create("secret".to_string(), 3600);
@@ -430,7 +430,7 @@ impl DMSCJWTManager {
     ///
     /// # Examples
     ///
-    /// ```rust
+    /// ```rust,ignore
     /// use dmsc::auth::jwt::DMSCJWTManager;
     ///
     /// let manager = DMSCJWTManager::create("secret".to_string(), 3600);

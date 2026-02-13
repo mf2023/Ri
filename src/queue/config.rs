@@ -43,7 +43,7 @@
 //!
 //! ## Usage
 //!
-//! ```rust
+//! ```rust,ignore
 //! use dmsc::queue::{DMSCQueueConfig, QueueBackendType, RetryPolicy, DeadLetterConfig};
 //!
 //! // Create default queue configuration

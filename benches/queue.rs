@@ -18,58 +18,53 @@
 //! # Queue Module Benchmarks
 //!
 //! This benchmark suite measures the performance of DMSC queue operations.
-//! It tests various queue backends and operations including:
-//! - Memory queue send/receive operations
-//! - Message throughput
-//! - Batch operations
-//! - Consumer/producer patterns
-//!
-//! ## Running Benchmarks
-//!
-//! ```bash
-//! cargo bench --bench queue_benchmark
-//! ```
 
 use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion, Throughput};
 use dmsc::queue::backends::memory_backend::DMSCMemoryQueue;
 use dmsc::queue::{DMSCQueue, DMSCQueueMessage, DMSCQueueProducer, DMSCQueueConsumer};
 
 fn bench_queue_send(c: &mut Criterion) {
-    let rt = tokio::runtime::Runtime::new().unwrap();
-    
     let mut group = c.benchmark_group("queue_send");
-    
     group.throughput(Throughput::Elements(1));
     
     group.bench_function("send_small_message", |b| {
-        b.to_async(&rt).iter(|| async {
-            let queue = DMSCMemoryQueue::new("benchmark_queue");
-            let producer = queue.create_producer().await.unwrap();
-            let message = DMSCQueueMessage::new(b"small payload".to_vec());
-            producer.send(message).await.unwrap();
-            black_box(());
+        let rt = tokio::runtime::Runtime::new().unwrap();
+        b.iter(|| {
+            rt.block_on(async {
+                let queue = DMSCMemoryQueue::new("benchmark_queue");
+                let producer = queue.create_producer().await.unwrap();
+                let message = DMSCQueueMessage::new(b"small payload".to_vec());
+                producer.send(message).await.unwrap();
+                black_box(());
+            });
         });
     });
     
     group.bench_function("send_medium_message", |b| {
-        b.to_async(&rt).iter(|| async {
-            let queue = DMSCMemoryQueue::new("benchmark_queue");
-            let producer = queue.create_producer().await.unwrap();
-            let payload = vec![0u8; 1024];
-            let message = DMSCQueueMessage::new(payload);
-            producer.send(message).await.unwrap();
-            black_box(());
+        let rt = tokio::runtime::Runtime::new().unwrap();
+        let payload = vec![0u8; 1024];
+        b.iter(|| {
+            rt.block_on(async {
+                let queue = DMSCMemoryQueue::new("benchmark_queue");
+                let producer = queue.create_producer().await.unwrap();
+                let message = DMSCQueueMessage::new(payload.clone());
+                producer.send(message).await.unwrap();
+                black_box(());
+            });
         });
     });
     
     group.bench_function("send_large_message", |b| {
-        b.to_async(&rt).iter(|| async {
-            let queue = DMSCMemoryQueue::new("benchmark_queue");
-            let producer = queue.create_producer().await.unwrap();
-            let payload = vec![0u8; 65536];
-            let message = DMSCQueueMessage::new(payload);
-            producer.send(message).await.unwrap();
-            black_box(());
+        let rt = tokio::runtime::Runtime::new().unwrap();
+        let payload = vec![0u8; 65536];
+        b.iter(|| {
+            rt.block_on(async {
+                let queue = DMSCMemoryQueue::new("benchmark_queue");
+                let producer = queue.create_producer().await.unwrap();
+                let message = DMSCQueueMessage::new(payload.clone());
+                producer.send(message).await.unwrap();
+                black_box(());
+            });
         });
     });
     
@@ -89,14 +84,15 @@ fn bench_queue_receive(c: &mut Criterion) {
     });
     
     let mut group = c.benchmark_group("queue_receive");
-    
     group.throughput(Throughput::Elements(1));
     
     group.bench_function("receive_message", |b| {
-        b.to_async(&rt).iter(|| async {
-            let consumer = queue.create_consumer("benchmark_consumer").await.unwrap();
-            let result = consumer.receive().await.unwrap();
-            black_box(result);
+        b.iter(|| {
+            rt.block_on(async {
+                let consumer = queue.create_consumer("benchmark_consumer").await.unwrap();
+                let result = consumer.receive().await.unwrap();
+                black_box(result);
+            });
         });
     });
     
@@ -112,14 +108,16 @@ fn bench_queue_batch_operations(c: &mut Criterion) {
         group.throughput(Throughput::Elements(*size as u64));
         
         group.bench_with_input(BenchmarkId::new("send_batch", size), size, |b, _| {
-            b.to_async(&rt).iter(|| async {
-                let queue = DMSCMemoryQueue::new("batch_queue");
-                let producer = queue.create_producer().await.unwrap();
-                let messages: Vec<DMSCQueueMessage> = (0..*size)
-                    .map(|i| DMSCQueueMessage::new(format!("batch_{}", i).into_bytes()))
-                    .collect();
-                producer.send_batch(messages).await.unwrap();
-                black_box(());
+            b.iter(|| {
+                rt.block_on(async {
+                    let queue = DMSCMemoryQueue::new("batch_queue");
+                    let producer = queue.create_producer().await.unwrap();
+                    let messages: Vec<DMSCQueueMessage> = (0..*size)
+                        .map(|i| DMSCQueueMessage::new(format!("batch_{}", i).into_bytes()))
+                        .collect();
+                    producer.send_batch(messages).await.unwrap();
+                    black_box(());
+                });
             });
         });
     }
@@ -131,73 +129,43 @@ fn bench_queue_ack_operations(c: &mut Criterion) {
     let rt = tokio::runtime::Runtime::new().unwrap();
     
     let mut group = c.benchmark_group("queue_ack");
-    
     group.throughput(Throughput::Elements(1));
     
     group.bench_function("ack_message", |b| {
-        b.to_async(&rt).iter(|| async {
-            let queue = DMSCMemoryQueue::new("ack_queue");
-            let producer = queue.create_producer().await.unwrap();
-            let consumer = queue.create_consumer("ack_consumer").await.unwrap();
-            
-            let message = DMSCQueueMessage::new(b"test".to_vec());
-            producer.send(message).await.unwrap();
-            
-            if let Some(received) = consumer.receive().await.unwrap() {
-                consumer.ack(&received.id).await.unwrap();
-                black_box(());
-            }
+        b.iter(|| {
+            rt.block_on(async {
+                let queue = DMSCMemoryQueue::new("ack_queue");
+                let producer = queue.create_producer().await.unwrap();
+                let consumer = queue.create_consumer("ack_consumer").await.unwrap();
+                
+                let message = DMSCQueueMessage::new(b"test".to_vec());
+                producer.send(message).await.unwrap();
+                
+                if let Some(received) = consumer.receive().await.unwrap() {
+                    consumer.ack(&received.id).await.unwrap();
+                    black_box(());
+                }
+            });
         });
     });
     
     group.bench_function("nack_message", |b| {
-        b.to_async(&rt).iter(|| async {
-            let queue = DMSCMemoryQueue::new("nack_queue");
-            let producer = queue.create_producer().await.unwrap();
-            let consumer = queue.create_consumer("nack_consumer").await.unwrap();
-            
-            let message = DMSCQueueMessage::new(b"test".to_vec());
-            producer.send(message).await.unwrap();
-            
-            if let Some(received) = consumer.receive().await.unwrap() {
-                consumer.nack(&received.id).await.unwrap();
-                black_box(());
-            }
-        });
-    });
-    
-    group.finish();
-}
-
-fn bench_queue_throughput(c: &mut Criterion) {
-    let rt = tokio::runtime::Runtime::new().unwrap();
-    
-    let mut group = c.benchmark_group("queue_throughput");
-    
-    for size in [100, 1000, 10000].iter() {
-        group.throughput(Throughput::Elements(*size as u64));
-        
-        group.bench_with_input(BenchmarkId::new("producer_consumer", size), size, |b, _| {
-            b.to_async(&rt).iter(|| async {
-                let queue = DMSCMemoryQueue::new("throughput_queue");
+        b.iter(|| {
+            rt.block_on(async {
+                let queue = DMSCMemoryQueue::new("nack_queue");
                 let producer = queue.create_producer().await.unwrap();
-                let consumer = queue.create_consumer("throughput_consumer").await.unwrap();
+                let consumer = queue.create_consumer("nack_consumer").await.unwrap();
                 
-                for i in 0..*size {
-                    let message = DMSCQueueMessage::new(format!("msg_{}", i).into_bytes());
-                    producer.send(message).await.unwrap();
+                let message = DMSCQueueMessage::new(b"test".to_vec());
+                producer.send(message).await.unwrap();
+                
+                if let Some(received) = consumer.receive().await.unwrap() {
+                    consumer.nack(&received.id).await.unwrap();
+                    black_box(());
                 }
-                
-                for _ in 0..*size {
-                    if let Some(msg) = consumer.receive().await.unwrap() {
-                        consumer.ack(&msg.id).await.unwrap();
-                    }
-                }
-                
-                black_box(());
             });
         });
-    }
+    });
     
     group.finish();
 }
@@ -215,13 +183,14 @@ fn bench_queue_stats(c: &mut Criterion) {
     });
     
     let mut group = c.benchmark_group("queue_stats");
-    
     group.throughput(Throughput::Elements(1));
     
     group.bench_function("get_stats", |b| {
-        b.to_async(&rt).iter(|| async {
-            let stats = queue.get_stats().await.unwrap();
-            black_box(stats);
+        b.iter(|| {
+            rt.block_on(async {
+                let stats = queue.get_stats().await.unwrap();
+                black_box(stats);
+            });
         });
     });
     
@@ -230,7 +199,6 @@ fn bench_queue_stats(c: &mut Criterion) {
 
 fn bench_message_creation(c: &mut Criterion) {
     let mut group = c.benchmark_group("message_creation");
-    
     group.throughput(Throughput::Elements(1));
     
     group.bench_function("create_message", |b| {
@@ -257,7 +225,6 @@ criterion_group!(
     bench_queue_receive,
     bench_queue_batch_operations,
     bench_queue_ack_operations,
-    bench_queue_throughput,
     bench_queue_stats,
     bench_message_creation,
 );

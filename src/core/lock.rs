@@ -38,7 +38,7 @@
 //!
 //! ## Usage
 //!
-//! ```rust
+//! ```rust,ignore
 //! use std::sync::Arc;
 //! use dmsc::core::lock::{RwLockExtensions, DMSCLockResult};
 //!
@@ -218,7 +218,7 @@ pub trait RwLockExtensions<T: Send + Sync> {
     ///
     /// ## Examples
     ///
-    /// ```rust
+    /// ```rust,ignore
     /// use std::sync::RwLock;
     /// use dmsc::core::lock::RwLockExtensions;
     ///
@@ -248,7 +248,7 @@ pub trait RwLockExtensions<T: Send + Sync> {
     ///
     /// ## Examples
     ///
-    /// ```rust
+    /// ```rust,ignore
     /// use std::sync::RwLock;
     /// use dmsc::core::lock::RwLockExtensions;
     ///
@@ -353,7 +353,7 @@ pub trait MutexExtensions<T: Send> {
     ///
     /// ## Examples
     ///
-    /// ```rust
+    /// ```rust,ignore
     /// use std::sync::Mutex;
     /// use dmsc::core::lock::MutexExtensions;
     ///

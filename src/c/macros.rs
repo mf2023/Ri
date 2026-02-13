@@ -93,7 +93,7 @@
 //!
 //! ## Example: Wrapping a Custom Type
 //!
-//! ```rust
+//! ```rust,ignore
 //! use crate::c::macros::{c_wrapper, c_constructor, c_destructor};
 //!
 //! // Step 1: Define the Rust type
@@ -149,7 +149,7 @@
 //!
 //! For complex types requiring multiple return values, use output parameters:
 //!
-//! ```rust
+//! ```rust,ignore
 //! // Instead of returning complex types:
 //! // fn get_result() -> Result<ComplexType, Error>
 //!

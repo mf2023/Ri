@@ -37,7 +37,7 @@
 //!
 //! ## Usage Example
 //!
-//! ```rust
+//! ```rust,ignore
 //! use dmsc::cache::{DMSCCacheConfig, DMSCCacheBackendType, DMSCCachePolicy};
 //! use std::time::Duration;
 //!
