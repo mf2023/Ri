@@ -732,25 +732,28 @@ pub mod py {
         Ok(())
     }
     
-    fn create_protocol_module(parent: &Bound<'_, PyModule>) -> PyResult<()> {
-        let m = PyModule::new(parent.py(), "protocol")?;
-        m.add_class::<crate::protocol::DMSCProtocolManager>()?;
-        m.add_class::<crate::protocol::DMSCProtocolType>()?;
-        m.add_class::<crate::protocol::DMSCProtocolConfig>()?;
-        m.add_class::<crate::protocol::DMSCProtocolStatus>()?;
-        m.add_class::<crate::protocol::DMSCProtocolStats>()?;
-        m.add_class::<crate::protocol::DMSCConnectionState>()?;
-        m.add_class::<crate::protocol::DMSCConnectionStats>()?;
-        m.add_class::<crate::protocol::DMSCProtocolHealth>()?;
-        m.add_class::<crate::protocol::DMSCFrame>()?;
-        m.add_class::<crate::protocol::DMSCFrameHeader>()?;
-        m.add_class::<crate::protocol::DMSCFrameType>()?;
-        m.add_class::<crate::protocol::DMSCConnectionInfo>()?;
-        m.add_class::<crate::protocol::DMSCMessageFlags>()?;
-        m.add_class::<crate::protocol::DMSCSecurityLevel>()?;
-        m.add_class::<crate::protocol::frames::DMSCFrameParser>()?;
-        m.add_class::<crate::protocol::frames::DMSCFrameBuilder>()?;
-        parent.add_submodule(&m)?;
+    fn create_protocol_module(_parent: &Bound<'_, PyModule>) -> PyResult<()> {
+        #[cfg(feature = "protocol")]
+        {
+            let m = PyModule::new(_parent.py(), "protocol")?;
+            m.add_class::<crate::protocol::DMSCProtocolManager>()?;
+            m.add_class::<crate::protocol::DMSCProtocolType>()?;
+            m.add_class::<crate::protocol::DMSCProtocolConfig>()?;
+            m.add_class::<crate::protocol::DMSCProtocolStatus>()?;
+            m.add_class::<crate::protocol::DMSCProtocolStats>()?;
+            m.add_class::<crate::protocol::DMSCConnectionState>()?;
+            m.add_class::<crate::protocol::DMSCConnectionStats>()?;
+            m.add_class::<crate::protocol::DMSCProtocolHealth>()?;
+            m.add_class::<crate::protocol::DMSCFrame>()?;
+            m.add_class::<crate::protocol::DMSCFrameHeader>()?;
+            m.add_class::<crate::protocol::DMSCFrameType>()?;
+            m.add_class::<crate::protocol::DMSCConnectionInfo>()?;
+            m.add_class::<crate::protocol::DMSCMessageFlags>()?;
+            m.add_class::<crate::protocol::DMSCSecurityLevel>()?;
+            m.add_class::<crate::protocol::frames::DMSCFrameParser>()?;
+            m.add_class::<crate::protocol::frames::DMSCFrameBuilder>()?;
+            _parent.add_submodule(&m)?;
+        }
         Ok(())
     }
     

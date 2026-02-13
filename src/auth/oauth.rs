@@ -70,6 +70,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::RwLock;
+#[cfg(feature = "pyo3")]
 use tokio::runtime::Runtime;
 
 #[cfg(feature = "pyo3")]

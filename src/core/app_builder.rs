@@ -88,6 +88,7 @@ use super::analytics::DMSCLogAnalyticsModule;
 
 #[cfg(feature = "pyo3")]
 use pyo3::PyResult;
+#[cfg(feature = "pyo3")]
 use crate::core::app_runtime::DMSCAppRuntime;
 
 /// Public-facing application builder for DMSC.

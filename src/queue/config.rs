@@ -89,25 +89,25 @@ use std::str::FromStr;
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DMSCQueueConfig {
     /// Whether the queue system is enabled
-    #[pyo3(get, set)]
+    #[cfg_attr(feature = "pyo3", pyo3(get, set))]
     pub enabled: bool,
     /// The type of queue backend to use
-    #[pyo3(get, set)]
+    #[cfg_attr(feature = "pyo3", pyo3(get, set))]
     pub backend_type: DMSCQueueBackendType,
     /// Connection string for the queue backend
-    #[pyo3(get, set)]
+    #[cfg_attr(feature = "pyo3", pyo3(get, set))]
     pub connection_string: String,
     /// Maximum number of connections to the queue backend
-    #[pyo3(get, set)]
+    #[cfg_attr(feature = "pyo3", pyo3(get, set))]
     pub max_connections: u32,
     /// Maximum size of messages in bytes
-    #[pyo3(get, set)]
+    #[cfg_attr(feature = "pyo3", pyo3(get, set))]
     pub message_max_size: usize,
     /// Timeout for consumer operations in milliseconds
-    #[pyo3(get, set)]
+    #[cfg_attr(feature = "pyo3", pyo3(get, set))]
     pub consumer_timeout_ms: u64,
     /// Timeout for producer operations in milliseconds
-    #[pyo3(get, set)]
+    #[cfg_attr(feature = "pyo3", pyo3(get, set))]
     pub producer_timeout_ms: u64,
     /// Configuration for message retry behavior
     pub retry_policy: DMSCRetryPolicy,
@@ -192,16 +192,16 @@ impl FromStr for DMSCQueueBackendType {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DMSCRetryPolicy {
     /// Maximum number of retry attempts for a failed message
-    #[pyo3(get, set)]
+    #[cfg_attr(feature = "pyo3", pyo3(get, set))]
     pub max_retries: u32,
     /// Initial delay in milliseconds before the first retry
-    #[pyo3(get, set)]
+    #[cfg_attr(feature = "pyo3", pyo3(get, set))]
     pub initial_delay_ms: u64,
     /// Maximum delay in milliseconds between retries
-    #[pyo3(get, set)]
+    #[cfg_attr(feature = "pyo3", pyo3(get, set))]
     pub max_delay_ms: u64,
     /// Multiplier for exponential backoff (e.g., 2.0 for doubling delay each retry)
-    #[pyo3(get, set)]
+    #[cfg_attr(feature = "pyo3", pyo3(get, set))]
     pub backoff_multiplier: f64,
 }
 
@@ -248,16 +248,16 @@ impl DMSCRetryPolicy {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DMSCDeadLetterConfig {
     /// Whether dead letter queue functionality is enabled
-    #[pyo3(get, set)]
+    #[cfg_attr(feature = "pyo3", pyo3(get, set))]
     pub enabled: bool,
     /// Maximum number of retry attempts before a message is sent to the dead letter queue
-    #[pyo3(get, set)]
+    #[cfg_attr(feature = "pyo3", pyo3(get, set))]
     pub max_retry_count: u32,
     /// Name of the dead letter queue
-    #[pyo3(get, set)]
+    #[cfg_attr(feature = "pyo3", pyo3(get, set))]
     pub dead_letter_queue_name: String,
     /// Time-to-live for messages in the dead letter queue in hours
-    #[pyo3(get, set)]
+    #[cfg_attr(feature = "pyo3", pyo3(get, set))]
     pub ttl_hours: u32,
 }
 

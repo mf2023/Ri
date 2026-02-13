@@ -39,6 +39,7 @@ pub struct DMSCResourceScheduler {
 
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pymethods)]
 impl DMSCResourceScheduler {
+    #[cfg(feature = "pyo3")]
     #[new]
     fn new() -> Self {
         Self {
@@ -132,22 +133,22 @@ pub struct DMSCDeviceScheduler {
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 pub enum DMSCSchedulingPolicy {
     /// FirstFit: Select the first device that meets requirements
-    #[pyo3(name = "FIRSTFIT")]
+    #[cfg_attr(feature = "pyo3", pyo3(name = "FIRSTFIT"))]
     FirstFit,
     /// BestFit: Select the device that best matches the requirements
-    #[pyo3(name = "BESTFIT")]
+    #[cfg_attr(feature = "pyo3", pyo3(name = "BESTFIT"))]
     BestFit,
     /// WorstFit: Select the device with the most remaining capacity
-    #[pyo3(name = "WORSTFIT")]
+    #[cfg_attr(feature = "pyo3", pyo3(name = "WORSTFIT"))]
     WorstFit,
     /// RoundRobin: Select devices in rotation
-    #[pyo3(name = "ROUNDROBIN")]
+    #[cfg_attr(feature = "pyo3", pyo3(name = "ROUNDROBIN"))]
     RoundRobin,
     /// PriorityBased: Select device based on request priority and device health
-    #[pyo3(name = "PRIORITYBASED")]
+    #[cfg_attr(feature = "pyo3", pyo3(name = "PRIORITYBASED"))]
     PriorityBased,
     /// LoadBalanced: Select device with lowest current load
-    #[pyo3(name = "LOADBALANCED")]
+    #[cfg_attr(feature = "pyo3", pyo3(name = "LOADBALANCED"))]
     LoadBalanced,
 }
 
@@ -958,25 +959,25 @@ pub struct DMSCDeviceTypeStatistics {
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 pub enum DMSCSchedulingRecommendationType {
     /// Use the default policy for this device type
-    #[pyo3(name = "USE_DEFAULT_POLICY")]
+    #[cfg_attr(feature = "pyo3", pyo3(name = "USE_DEFAULT_POLICY"))]
     UseDefaultPolicy,
     /// Continue using the current policy
-    #[pyo3(name = "CONTINUE_CURRENT_POLICY")]
+    #[cfg_attr(feature = "pyo3", pyo3(name = "CONTINUE_CURRENT_POLICY"))]
     ContinueCurrentPolicy,
     /// Consider changing the scheduling policy
-    #[pyo3(name = "CONSIDER_POLICY_CHANGE")]
+    #[cfg_attr(feature = "pyo3", pyo3(name = "CONSIDER_POLICY_CHANGE"))]
     ConsiderPolicyChange,
     /// Optimize for long-running allocations
-    #[pyo3(name = "OPTIMIZE_FOR_LONG_RUNNING")]
+    #[cfg_attr(feature = "pyo3", pyo3(name = "OPTIMIZE_FOR_LONG_RUNNING"))]
     OptimizeForLongRunning,
     /// Optimize for short-running allocations
-    #[pyo3(name = "OPTIMIZE_FOR_SHORT_RUNNING")]
+    #[cfg_attr(feature = "pyo3", pyo3(name = "OPTIMIZE_FOR_SHORT_RUNNING"))]
     OptimizeForShortRunning,
     /// Use load balancing
-    #[pyo3(name = "LOAD_BALANCE")]
+    #[cfg_attr(feature = "pyo3", pyo3(name = "LOAD_BALANCE"))]
     LoadBalance,
     /// Use priority-based scheduling
-    #[pyo3(name = "PRIORITIZE")]
+    #[cfg_attr(feature = "pyo3", pyo3(name = "PRIORITIZE"))]
     Prioritize,
 }
 

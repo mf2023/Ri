@@ -744,21 +744,21 @@ pub enum DMSCCacheEvent {
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 pub struct DMSCCacheStats {
-    #[pyo3(get, set)]
+    #[cfg_attr(feature = "pyo3", pyo3(get, set))]
     pub hits: u64,
-    #[pyo3(get, set)]
+    #[cfg_attr(feature = "pyo3", pyo3(get, set))]
     pub misses: u64,
-    #[pyo3(get, set)]
+    #[cfg_attr(feature = "pyo3", pyo3(get, set))]
     pub entries: usize,
-    #[pyo3(get, set)]
+    #[cfg_attr(feature = "pyo3", pyo3(get, set))]
     pub memory_usage_bytes: usize,
-    #[pyo3(get, set)]
+    #[cfg_attr(feature = "pyo3", pyo3(get, set))]
     pub avg_hit_rate: f64,
-    #[pyo3(get, set)]
+    #[cfg_attr(feature = "pyo3", pyo3(get, set))]
     pub hit_count: u64,
-    #[pyo3(get, set)]
+    #[cfg_attr(feature = "pyo3", pyo3(get, set))]
     pub miss_count: u64,
-    #[pyo3(get, set)]
+    #[cfg_attr(feature = "pyo3", pyo3(get, set))]
     pub eviction_count: u64,
 }
 
@@ -812,15 +812,15 @@ impl DMSCCacheStats {
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 pub struct DMSCCachedValue {
     /// The cached value as a string
-    #[pyo3(get, set)]
+    #[cfg_attr(feature = "pyo3", pyo3(get, set))]
     pub value: String,
     /// Optional expiration timestamp (UNIX epoch seconds)
     /// If None, the value never expires based on TTL
-    #[pyo3(get, set)]
+    #[cfg_attr(feature = "pyo3", pyo3(get, set))]
     pub expires_at: Option<u64>,
     /// Optional last access timestamp (UNIX epoch seconds)
     /// Used for LRU-based cache eviction policies
-    #[pyo3(get, set)]
+    #[cfg_attr(feature = "pyo3", pyo3(get, set))]
     pub last_accessed: Option<u64>,
 }
 

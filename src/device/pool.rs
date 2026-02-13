@@ -141,19 +141,19 @@ pub struct DMSCResourcePool {
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 pub struct DMSCResourcePoolConfig {
     /// Name of the resource pool
-    #[pyo3(get, set)]
+    #[cfg_attr(feature = "pyo3", pyo3(get, set))]
     pub name: String,
     /// Type of devices that will be in the pool
-    #[pyo3(get, set)]
+    #[cfg_attr(feature = "pyo3", pyo3(get, set))]
     pub device_type: DMSCDeviceType,
     /// Maximum number of concurrent allocations allowed
-    #[pyo3(get, set)]
+    #[cfg_attr(feature = "pyo3", pyo3(get, set))]
     pub max_concurrent_allocations: usize,
     /// Timeout for device allocation in seconds
-    #[pyo3(get, set)]
+    #[cfg_attr(feature = "pyo3", pyo3(get, set))]
     pub allocation_timeout_secs: u64,
     /// Interval for health checks in seconds
-    #[pyo3(get, set)]
+    #[cfg_attr(feature = "pyo3", pyo3(get, set))]
     pub health_check_interval_secs: u64,
 }
 
@@ -912,34 +912,34 @@ impl DMSCConnectionPool {
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 pub struct DMSCConnectionPoolStatistics {
     /// Total number of connections
-    #[pyo3(get, set)]
+    #[cfg_attr(feature = "pyo3", pyo3(get, set))]
     pub total_connections: usize,
     /// Number of active connections
-    #[pyo3(get, set)]
+    #[cfg_attr(feature = "pyo3", pyo3(get, set))]
     pub active_connections: usize,
     /// Number of idle connections
-    #[pyo3(get, set)]
+    #[cfg_attr(feature = "pyo3", pyo3(get, set))]
     pub idle_connections: usize,
     /// Number of unhealthy connections
-    #[pyo3(get, set)]
+    #[cfg_attr(feature = "pyo3", pyo3(get, set))]
     pub unhealthy_connections: usize,
     /// Number of available connection slots
-    #[pyo3(get, set)]
+    #[cfg_attr(feature = "pyo3", pyo3(get, set))]
     pub available_slots: usize,
     /// Total successful operations across all connections
-    #[pyo3(get, set)]
+    #[cfg_attr(feature = "pyo3", pyo3(get, set))]
     pub total_successful_operations: u64,
     /// Total failed operations across all connections
-    #[pyo3(get, set)]
+    #[cfg_attr(feature = "pyo3", pyo3(get, set))]
     pub total_failed_operations: u64,
     /// Average response time across all connections
-    #[pyo3(get, set)]
+    #[cfg_attr(feature = "pyo3", pyo3(get, set))]
     pub average_response_time_ms: f64,
     /// Health check interval in seconds
-    #[pyo3(get, set)]
+    #[cfg_attr(feature = "pyo3", pyo3(get, set))]
     pub health_check_interval_secs: u64,
     /// Last health check timestamp (seconds since Unix epoch)
-    #[pyo3(get, set)]
+    #[cfg_attr(feature = "pyo3", pyo3(get, set))]
     pub last_health_check_secs: u64,
 }
 
@@ -968,71 +968,71 @@ impl Default for DMSCConnectionPoolStatistics {
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 pub struct DMSCResourcePoolStatistics {
     /// Total number of devices in the pool
-    #[pyo3(get, set)]
+    #[cfg_attr(feature = "pyo3", pyo3(get, set))]
     pub total_devices: usize,
     /// Number of available devices in the pool
-    #[pyo3(get, set)]
+    #[cfg_attr(feature = "pyo3", pyo3(get, set))]
     pub available_devices: usize,
     /// Number of allocated devices in the pool
-    #[pyo3(get, set)]
+    #[cfg_attr(feature = "pyo3", pyo3(get, set))]
     pub allocated_devices: usize,
     /// Utilization rate of the pool (0.0 - 1.0)
-    #[pyo3(get, set)]
+    #[cfg_attr(feature = "pyo3", pyo3(get, set))]
     pub utilization_rate: f64,
     /// Total compute units across all devices
-    #[pyo3(get, set)]
+    #[cfg_attr(feature = "pyo3", pyo3(get, set))]
     pub total_compute_units: usize,
     /// Total memory in gigabytes across all devices
-    #[pyo3(get, set)]
+    #[cfg_attr(feature = "pyo3", pyo3(get, set))]
     pub total_memory_gb: f64,
     /// Total storage in gigabytes across all devices
-    #[pyo3(get, set)]
+    #[cfg_attr(feature = "pyo3", pyo3(get, set))]
     pub total_storage_gb: f64,
     /// Total bandwidth in gigabits per second across all devices
-    #[pyo3(get, set)]
+    #[cfg_attr(feature = "pyo3", pyo3(get, set))]
     pub total_bandwidth_gbps: f64,
     /// Average health score across all devices
-    #[pyo3(get, set)]
+    #[cfg_attr(feature = "pyo3", pyo3(get, set))]
     pub average_health_score: f64,
     /// Type of devices in the pool
-    #[pyo3(get, set)]
+    #[cfg_attr(feature = "pyo3", pyo3(get, set))]
     pub device_type: DMSCDeviceType,
     /// Connection pool statistics
-    #[pyo3(get, set)]
+    #[cfg_attr(feature = "pyo3", pyo3(get, set))]
     pub connection_pool_stats: Option<DMSCConnectionPoolStatistics>,
     
     /// Device status distribution
-    #[pyo3(get, set)]
+    #[cfg_attr(feature = "pyo3", pyo3(get, set))]
     pub status_distribution: HashMap<DMSCDeviceStatus, usize>,
     /// Average response time in milliseconds
-    #[pyo3(get, set)]
+    #[cfg_attr(feature = "pyo3", pyo3(get, set))]
     pub average_response_time_ms: f64,
     /// Average network latency in milliseconds (for network devices)
-    #[pyo3(get, set)]
+    #[cfg_attr(feature = "pyo3", pyo3(get, set))]
     pub average_network_latency_ms: f64,
     /// Average disk IOPS (for storage devices)
-    #[pyo3(get, set)]
+    #[cfg_attr(feature = "pyo3", pyo3(get, set))]
     pub average_disk_iops: f64,
     /// Average battery level percentage (for battery-powered devices)
-    #[pyo3(get, set)]
+    #[cfg_attr(feature = "pyo3", pyo3(get, set))]
     pub average_battery_level_percent: f64,
     /// Average CPU usage percentage
-    #[pyo3(get, set)]
+    #[cfg_attr(feature = "pyo3", pyo3(get, set))]
     pub average_cpu_usage_percent: f64,
     /// Average memory usage percentage
-    #[pyo3(get, set)]
+    #[cfg_attr(feature = "pyo3", pyo3(get, set))]
     pub average_memory_usage_percent: f64,
     /// Average temperature in Celsius
-    #[pyo3(get, set)]
+    #[cfg_attr(feature = "pyo3", pyo3(get, set))]
     pub average_temperature_celsius: f64,
     /// Total error count across all devices
-    #[pyo3(get, set)]
+    #[cfg_attr(feature = "pyo3", pyo3(get, set))]
     pub total_error_count: u32,
     /// Average throughput across all devices
-    #[pyo3(get, set)]
+    #[cfg_attr(feature = "pyo3", pyo3(get, set))]
     pub average_throughput: f64,
     /// Average uptime in seconds
-    #[pyo3(get, set)]
+    #[cfg_attr(feature = "pyo3", pyo3(get, set))]
     pub average_uptime_seconds: f64,
 }
 

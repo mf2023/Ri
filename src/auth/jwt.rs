@@ -85,7 +85,6 @@
 //! - **roles**: List of role identifiers assigned to the user
 //! - **permissions**: List of permission identifiers granted to the subject
 
-#[cfg(feature = "pyo3")]
 use jsonwebtoken::{decode, encode, DecodingKey, EncodingKey, Header, Validation};
 use serde::{Deserialize, Serialize};
 use std::time::{SystemTime, UNIX_EPOCH};

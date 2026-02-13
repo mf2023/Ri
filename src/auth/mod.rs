@@ -123,6 +123,7 @@ use serde::Deserialize;
 use std::env;
 use std::sync::Arc;
 use tokio::sync::RwLock;
+#[cfg(feature = "pyo3")]
 use tokio::runtime::Handle;
 
 const DEFAULT_JWT_SECRET_ENV: &str = "DMSC_JWT_SECRET";

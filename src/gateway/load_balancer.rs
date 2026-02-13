@@ -164,6 +164,7 @@ pub struct DMSCBackendServer {
 
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pymethods)]
 impl DMSCBackendServer {
+    #[cfg(feature = "pyo3")]
     #[new]
     fn new(id: String, url: String) -> Self {
         Self {
@@ -176,14 +177,17 @@ impl DMSCBackendServer {
         }
     }
 
+    #[cfg(feature = "pyo3")]
     fn set_weight(&mut self, weight: u32) {
         self.weight = weight;
     }
 
+    #[cfg(feature = "pyo3")]
     fn set_max_connections(&mut self, max_connections: usize) {
         self.max_connections = max_connections;
     }
 
+    #[cfg(feature = "pyo3")]
     fn set_health_check_path(&mut self, path: String) {
         self.health_check_path = path;
     }
