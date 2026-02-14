@@ -82,25 +82,18 @@ use pyo3::prelude::*;
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 pub struct DMSCCacheConfig {
     /// Whether caching is enabled
-    #[cfg_attr(feature = "pyo3", pyo3(get, set))]
     pub enabled: bool,
     /// Default time-to-live in seconds
-    #[cfg_attr(feature = "pyo3", pyo3(get, set))]
     pub default_ttl_secs: u64,
     /// Maximum memory usage in megabytes
-    #[cfg_attr(feature = "pyo3", pyo3(get, set))]
     pub max_memory_mb: u64,
     /// Interval for cleaning up expired entries in seconds
-    #[cfg_attr(feature = "pyo3", pyo3(get, set))]
     pub cleanup_interval_secs: u64,
     /// Type of cache backend to use
-    #[cfg_attr(feature = "pyo3", pyo3(get, set))]
     pub backend_type: DMSCCacheBackendType,
     /// Redis connection URL (if using Redis or Hybrid backend)
-    #[cfg_attr(feature = "pyo3", pyo3(get, set))]
     pub redis_url: String,
     /// Redis connection pool size
-    #[cfg_attr(feature = "pyo3", pyo3(get, set))]
     pub redis_pool_size: usize,
 }
 
@@ -215,13 +208,10 @@ impl std::str::FromStr for DMSCCacheBackendType {
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 pub struct DMSCCachePolicy {
     /// Time-to-live for cache entries
-    #[cfg_attr(feature = "pyo3", pyo3(get, set))]
     pub ttl: Option<Duration>,
     /// Whether to refresh TTL on access
-    #[cfg_attr(feature = "pyo3", pyo3(get, set))]
     pub refresh_on_access: bool,
     /// Maximum size for cached data in bytes
-    #[cfg_attr(feature = "pyo3", pyo3(get, set))]
     pub max_size: Option<usize>,
 }
 

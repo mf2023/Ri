@@ -108,7 +108,6 @@ use pyo3::pymethods;
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 pub struct DMSCCacheModule {
     /// Cache configuration
-    #[cfg_attr(feature = "pyo3", pyo3(get, set))]
     config: DMSCCacheConfig,
     /// Cache manager wrapped in an async RwLock for thread-safe access
     manager: std::sync::Arc<tokio::sync::RwLock<DMSCCacheManager>>,

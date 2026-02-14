@@ -983,19 +983,14 @@ impl DMSCDeviceControlModule {
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 pub struct DMSCResourcePoolStatus {
     /// Total capacity of the resource pool
-    #[cfg_attr(feature = "pyo3", pyo3(get, set))]
     pub total_capacity: usize,
     /// Available capacity in the resource pool
-    #[cfg_attr(feature = "pyo3", pyo3(get, set))]
     pub available_capacity: usize,
     /// Allocated capacity in the resource pool
-    #[cfg_attr(feature = "pyo3", pyo3(get, set))]
     pub allocated_capacity: usize,
     /// Number of pending resource requests
-    #[cfg_attr(feature = "pyo3", pyo3(get, set))]
     pub pending_requests: usize,
     /// Resource utilization rate (0.0 to 1.0)
-    #[cfg_attr(feature = "pyo3", pyo3(get, set))]
     pub utilization_rate: f64,
 }
 

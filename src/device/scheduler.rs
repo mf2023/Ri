@@ -133,22 +133,16 @@ pub struct DMSCDeviceScheduler {
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 pub enum DMSCSchedulingPolicy {
     /// FirstFit: Select the first device that meets requirements
-    #[cfg_attr(feature = "pyo3", pyo3(name = "FIRSTFIT"))]
     FirstFit,
     /// BestFit: Select the device that best matches the requirements
-    #[cfg_attr(feature = "pyo3", pyo3(name = "BESTFIT"))]
     BestFit,
     /// WorstFit: Select the device with the most remaining capacity
-    #[cfg_attr(feature = "pyo3", pyo3(name = "WORSTFIT"))]
     WorstFit,
     /// RoundRobin: Select devices in rotation
-    #[cfg_attr(feature = "pyo3", pyo3(name = "ROUNDROBIN"))]
     RoundRobin,
     /// PriorityBased: Select device based on request priority and device health
-    #[cfg_attr(feature = "pyo3", pyo3(name = "PRIORITYBASED"))]
     PriorityBased,
     /// LoadBalanced: Select device with lowest current load
-    #[cfg_attr(feature = "pyo3", pyo3(name = "LOADBALANCED"))]
     LoadBalanced,
 }
 
@@ -959,25 +953,18 @@ pub struct DMSCDeviceTypeStatistics {
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 pub enum DMSCSchedulingRecommendationType {
     /// Use the default policy for this device type
-    #[cfg_attr(feature = "pyo3", pyo3(name = "USE_DEFAULT_POLICY"))]
     UseDefaultPolicy,
     /// Continue using the current policy
-    #[cfg_attr(feature = "pyo3", pyo3(name = "CONTINUE_CURRENT_POLICY"))]
     ContinueCurrentPolicy,
     /// Consider changing the scheduling policy
-    #[cfg_attr(feature = "pyo3", pyo3(name = "CONSIDER_POLICY_CHANGE"))]
     ConsiderPolicyChange,
     /// Optimize for long-running allocations
-    #[cfg_attr(feature = "pyo3", pyo3(name = "OPTIMIZE_FOR_LONG_RUNNING"))]
     OptimizeForLongRunning,
     /// Optimize for short-running allocations
-    #[cfg_attr(feature = "pyo3", pyo3(name = "OPTIMIZE_FOR_SHORT_RUNNING"))]
     OptimizeForShortRunning,
     /// Use load balancing
-    #[cfg_attr(feature = "pyo3", pyo3(name = "LOAD_BALANCE"))]
     LoadBalance,
     /// Use priority-based scheduling
-    #[cfg_attr(feature = "pyo3", pyo3(name = "PRIORITIZE"))]
     Prioritize,
 }
 
