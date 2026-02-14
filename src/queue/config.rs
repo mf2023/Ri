@@ -85,7 +85,7 @@ use std::str::FromStr;
 /// This structure contains all the configuration options for the queue system, including
 /// backend selection, connection settings, timeouts, retry policies, and dead letter queue
 /// configuration.
-#[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
+#[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass(get_all, set_all))]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DMSCQueueConfig {
     /// Whether the queue system is enabled
@@ -181,7 +181,7 @@ impl FromStr for DMSCQueueBackendType {
 ///
 /// This structure defines the retry policy for failed messages, including maximum retry
 /// attempts, initial delay, maximum delay, and backoff multiplier.
-#[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
+#[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass(get_all, set_all))]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DMSCRetryPolicy {
     /// Maximum number of retry attempts for a failed message
@@ -233,7 +233,7 @@ impl DMSCRetryPolicy {
 ///
 /// This structure defines the configuration for dead letter queues, which are used to store
 /// messages that have failed to process after maximum retry attempts.
-#[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
+#[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass(get_all, set_all))]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DMSCDeadLetterConfig {
     /// Whether dead letter queue functionality is enabled

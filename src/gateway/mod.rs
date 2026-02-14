@@ -145,7 +145,7 @@ pub use server::{DMSCGatewayServer, load_tls_config};
 /// 
 /// This struct defines the configuration options for the API gateway, including network settings,
 /// feature toggles, and CORS configuration.
-#[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
+#[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass(get_all, set_all))]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DMSCGatewayConfig {
     /// Address to listen on

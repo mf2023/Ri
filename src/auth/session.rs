@@ -74,7 +74,7 @@ use pyo3::PyResult;
 ///
 /// This struct represents a user session with metadata, expiration tracking,
 /// and custom data storage. Sessions are uniquely identified by UUIDs.
-#[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
+#[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass(get_all, set_all))]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DMSCSession {
     /// Unique session identifier generated using UUID v4

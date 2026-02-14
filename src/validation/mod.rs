@@ -71,6 +71,7 @@ pub enum DMSCValidationSeverity {
     Error,
     Warning,
     Info,
+    Critical,
 }
 
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]

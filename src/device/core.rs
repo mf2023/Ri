@@ -320,7 +320,7 @@ impl DMSCDeviceType {
 /// This struct defines the capabilities of a device, including compute power, memory, storage,
 /// bandwidth, and custom capabilities. It supports a fluent builder API for easy configuration.
 #[derive(Debug, Clone, Serialize, Deserialize)]
-#[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
+#[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass(get_all, set_all))]
 pub struct DMSCDeviceCapabilities {
     /// Number of compute units (e.g., CPU cores, GPU CUDA cores)
     pub compute_units: Option<usize>,
@@ -611,7 +611,7 @@ pub enum DMSCDeviceStatus {
 /// 
 /// This struct contains health metrics for monitoring device performance and reliability.
 #[derive(Debug, Clone, Serialize, Deserialize)]
-#[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
+#[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass(get_all, set_all))]
 pub struct DMSCDeviceHealthMetrics {
     /// CPU usage percentage (0-100)
     pub cpu_usage_percent: f64,

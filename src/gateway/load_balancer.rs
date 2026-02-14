@@ -162,11 +162,18 @@ pub struct DMSCBackendServer {
     pub is_healthy: bool,
 }
 
-#[cfg_attr(feature = "pyo3", pyo3::prelude::pymethods)]
 impl DMSCBackendServer {
-    #[cfg(feature = "pyo3")]
-    #[new]
-    fn new(id: String, url: String) -> Self {
+    /// Creates a new backend server with the specified ID and URL.
+    /// 
+    /// # Parameters
+    /// 
+    /// - `id`: Unique identifier for the server
+    /// - `url`: Base URL of the server
+    /// 
+    /// # Returns
+    /// 
+    /// A new `DMSCBackendServer` instance with default values
+    pub fn new(id: String, url: String) -> Self {
         Self {
             id,
             url,
@@ -175,6 +182,15 @@ impl DMSCBackendServer {
             health_check_path: "/health".to_string(),
             is_healthy: true,
         }
+    }
+}
+
+#[cfg_attr(feature = "pyo3", pyo3::prelude::pymethods)]
+impl DMSCBackendServer {
+    #[cfg(feature = "pyo3")]
+    #[new]
+    fn py_new(id: String, url: String) -> Self {
+        Self::new(id, url)
     }
 
     #[cfg(feature = "pyo3")]

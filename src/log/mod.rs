@@ -174,7 +174,7 @@ impl DMSCLogLevel {
 /// 
 /// This struct defines the configuration options for the DMSC logging system, including
 /// log level, output formats, sampling, and log rotation settings.
-#[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
+#[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass(get_all, set_all))]
 #[derive(Clone)]
 pub struct DMSCLogConfig {
     /// Minimum log level to be logged
@@ -203,18 +203,6 @@ impl DMSCLogConfig {
     #[new]
     fn py_new() -> Self {
         Self::default()
-    }
-
-    /// Get color blocks flag
-    #[getter]
-    fn get_color_blocks(&self) -> bool {
-        self.color_blocks
-    }
-
-    /// Set color blocks flag
-    #[setter]
-    fn set_color_blocks(&mut self, value: bool) {
-        self.color_blocks = value;
     }
 }
 

@@ -37,7 +37,7 @@ use uuid::Uuid;
 ///
 /// This struct stores metadata about a token that has been revoked,
 /// including when it was revoked, when it expires, and the reason for revocation.
-#[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
+#[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass(get_all, set_all))]
 #[derive(Debug, Clone)]
 pub struct DMSCRevokedTokenInfo {
     /// Unique identifier for the revocation record

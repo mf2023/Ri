@@ -78,13 +78,13 @@ class TestDMSCQueueConfig:
         """Test creating queue configuration"""
         config = DMSCQueueConfig()
         config.backend_type = DMSCQueueBackendType.Memory
-        config.max_queue_size = 10000
-        config.default_ttl_seconds = 3600
-        config.enable_dead_letter = True
+        config.max_connections = 100
+        config.consumer_timeout_ms = 30000
+        config.enabled = True
 
         assert config.backend_type == DMSCQueueBackendType.Memory
-        assert config.max_queue_size == 10000
-        assert config.enable_dead_letter is True
+        assert config.max_connections == 100
+        assert config.enabled is True
 
 
 class TestDMSCRetryPolicy:
@@ -94,12 +94,12 @@ class TestDMSCRetryPolicy:
         """Test creating retry policy"""
         policy = DMSCRetryPolicy()
         policy.max_retries = 3
-        policy.retry_delay_seconds = 5.0
-        policy.exponential_backoff = True
+        policy.initial_delay_ms = 5000
+        policy.backoff_multiplier = 2.0
 
         assert policy.max_retries == 3
-        assert policy.retry_delay_seconds == 5.0
-        assert policy.exponential_backoff is True
+        assert policy.initial_delay_ms == 5000
+        assert policy.backoff_multiplier == 2.0
 
 
 class TestDMSCDeadLetterConfig:
@@ -108,11 +108,11 @@ class TestDMSCDeadLetterConfig:
     def test_dead_letter_config_creation(self):
         """Test creating dead letter config"""
         config = DMSCDeadLetterConfig()
-        config.max_retries = 5
-        config.ttl_seconds = 86400
+        config.max_retry_count = 5
+        config.ttl_hours = 24
 
-        assert config.max_retries == 5
-        assert config.ttl_seconds == 86400
+        assert config.max_retry_count == 5
+        assert config.ttl_hours == 24
 
 
 class TestDMSCQueueStats:

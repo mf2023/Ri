@@ -137,8 +137,8 @@ class TestDMSCResourcePool:
     def test_resource_pool_creation(self):
         """Test creating resource pool"""
         config = DMSCResourcePoolConfig()
-        config.pool_name = "test_pool"
-        config.max_devices = 100
+        config.name = "test_pool"
+        config.max_concurrent_allocations = 100
 
         pool = DMSCResourcePool(config)
         assert pool is not None

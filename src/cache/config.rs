@@ -79,7 +79,7 @@ use pyo3::prelude::*;
 /// This struct contains all configuration options for the cache system,
 /// including backend selection, TTL settings, memory limits, and cleanup intervals.
 #[derive(Debug, Clone, Serialize, Deserialize)]
-#[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
+#[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass(get_all, set_all))]
 pub struct DMSCCacheConfig {
     /// Whether caching is enabled
     pub enabled: bool,
@@ -205,7 +205,7 @@ impl std::str::FromStr for DMSCCacheBackendType {
 /// This struct defines the caching policy for individual cache entries,
 /// including TTL, refresh behavior, and size limits.
 #[derive(Debug, Clone, Serialize, Deserialize)]
-#[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
+#[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass(get_all, set_all))]
 pub struct DMSCCachePolicy {
     /// Time-to-live for cache entries
     pub ttl: Option<Duration>,

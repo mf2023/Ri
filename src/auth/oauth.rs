@@ -83,7 +83,7 @@ extern crate urlencoding;
 ///
 /// This struct defines the configuration for an OAuth identity provider,
 /// including client credentials, endpoints, scopes, and redirect URI.
-#[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
+#[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass(get_all, set_all))]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DMSCOAuthProvider {
     /// Unique identifier for the OAuth provider
@@ -183,7 +183,7 @@ impl DMSCOAuthToken {
 ///
 /// This struct represents the user information retrieved from an OAuth provider,
 /// including user ID, email, name, and profile information.
-#[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
+#[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass(get_all, set_all))]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DMSCOAuthUserInfo {
     /// Unique user identifier from the OAuth provider

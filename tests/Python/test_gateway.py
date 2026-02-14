@@ -51,8 +51,8 @@ class TestDMSCGateway:
     def test_gateway_creation(self):
         """Test creating gateway"""
         config = DMSCGatewayConfig()
-        config.host = "0.0.0.0"
-        config.port = 8080
+        config.listen_address = "0.0.0.0"
+        config.listen_port = 8080
 
         gateway = DMSCGateway(config)
         assert gateway is not None
@@ -64,14 +64,14 @@ class TestDMSCGatewayConfig:
     def test_gateway_config_creation(self):
         """Test creating gateway configuration"""
         config = DMSCGatewayConfig()
-        config.host = "0.0.0.0"
-        config.port = 8080
+        config.listen_address = "0.0.0.0"
+        config.listen_port = 8080
         config.enable_rate_limiting = True
         config.enable_circuit_breaker = True
         config.enable_load_balancing = True
 
-        assert config.host == "0.0.0.0"
-        assert config.port == 8080
+        assert config.listen_address == "0.0.0.0"
+        assert config.listen_port == 8080
         assert config.enable_rate_limiting is True
 
 
@@ -117,7 +117,7 @@ class TestDMSCRateLimitConfig:
         config = DMSCRateLimitConfig()
         config.requests_per_second = 100
         config.burst_size = 150
-        config.window_size_seconds = 60
+        config.window_seconds = 60
 
         assert config.requests_per_second == 100
         assert config.burst_size == 150

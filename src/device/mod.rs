@@ -980,7 +980,7 @@ impl DMSCDeviceControlModule {
 /// This struct contains information about the current status of a resource pool, including capacity,
 /// allocation, and utilization.
 #[derive(Debug, Clone, Serialize, Deserialize)]
-#[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
+#[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass(get_all, set_all))]
 pub struct DMSCResourcePoolStatus {
     /// Total capacity of the resource pool
     pub total_capacity: usize,

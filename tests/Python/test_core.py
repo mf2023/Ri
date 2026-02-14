@@ -177,13 +177,13 @@ class TestDMSCHookEvent:
     def test_hook_event_module_phase(self):
         """Test DMSCHookEvent module phases exist"""
         phases = [
-            DMSCModulePhase.INIT,
-            DMSCModulePhase.BEFORE_START,
-            DMSCModulePhase.START,
-            DMSCModulePhase.AFTER_START,
-            DMSCModulePhase.BEFORE_SHUTDOWN,
-            DMSCModulePhase.SHUTDOWN,
-            DMSCModulePhase.AFTER_SHUTDOWN,
+            DMSCModulePhase.Init,
+            DMSCModulePhase.BeforeStart,
+            DMSCModulePhase.Start,
+            DMSCModulePhase.AfterStart,
+            DMSCModulePhase.BeforeShutdown,
+            DMSCModulePhase.Shutdown,
+            DMSCModulePhase.AfterShutdown,
         ]
         assert len(phases) == 7
 

@@ -138,7 +138,7 @@ pub struct DMSCResourcePool {
 /// This struct defines the configuration options for creating a resource pool, including
 /// name, device type, and various operational parameters.
 #[derive(Debug, Clone, Serialize, Deserialize)]
-#[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
+#[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass(get_all, set_all))]
 pub struct DMSCResourcePoolConfig {
     /// Name of the resource pool
     pub name: String,
@@ -904,7 +904,7 @@ impl DMSCConnectionPool {
 
 /// Connection pool statistics
 #[derive(Debug, Clone, Serialize, Deserialize)]
-#[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
+#[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass(get_all, set_all))]
 pub struct DMSCConnectionPoolStatistics {
     /// Total number of connections
     pub total_connections: usize,
@@ -950,7 +950,7 @@ impl Default for DMSCConnectionPoolStatistics {
 /// This struct contains comprehensive statistics for a resource pool, including device counts,
 /// utilization, total resources, and detailed health metrics.
 #[derive(Debug, Clone, Serialize, Deserialize)]
-#[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
+#[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass(get_all, set_all))]
 pub struct DMSCResourcePoolStatistics {
     /// Total number of devices in the pool
     pub total_devices: usize,

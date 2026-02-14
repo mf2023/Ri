@@ -242,7 +242,7 @@ impl RateLimitBucket {
 /// 
 /// This struct contains metrics about a rate limiter bucket, including the current
 /// number of available tokens and the total number of requests processed.
-#[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
+#[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass(get_all, set_all))]
 #[derive(Debug, Clone)]
 pub struct DMSCRateLimitStats {
     /// Current number of available tokens in the bucket

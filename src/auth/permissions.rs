@@ -117,7 +117,7 @@ impl DMSCPermission {
 ///
 /// Roles are collections of permissions that can be assigned to users.
 /// System roles cannot be deleted and are created automatically during initialization.
-#[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
+#[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass(get_all, set_all))]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DMSCRole {
     /// Unique role identifier

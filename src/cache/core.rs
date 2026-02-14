@@ -742,7 +742,7 @@ pub enum DMSCCacheEvent {
 
 /// Cache statistics
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]
-#[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
+#[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass(get_all, set_all))]
 pub struct DMSCCacheStats {
     pub hits: u64,
     pub misses: u64,
@@ -801,7 +801,7 @@ impl DMSCCacheStats {
 /// assert!(!cached.is_stale(300));
 /// ```
 #[derive(Debug, Clone, Serialize, Deserialize)]
-#[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
+#[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass(get_all, set_all))]
 pub struct DMSCCachedValue {
     /// The cached value as a string
     pub value: String,

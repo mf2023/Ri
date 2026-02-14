@@ -41,14 +41,14 @@ class TestDMSCGrpcConfig:
     def test_grpc_config_creation(self):
         """Test creating gRPC configuration"""
         config = DMSCGrpcConfig()
-        config.host = "0.0.0.0"
+        config.addr = "0.0.0.0"
         config.port = 50051
-        config.max_concurrent_streams = 100
-        config.enable_reflection = True
+        config.max_concurrent_requests = 100
+        config.enable_tls = False
 
-        assert config.host == "0.0.0.0"
+        assert config.addr == "0.0.0.0"
         assert config.port == 50051
-        assert config.max_concurrent_streams == 100
+        assert config.max_concurrent_requests == 100
 
 
 class TestDMSCGrpcServer:
@@ -67,7 +67,7 @@ class TestDMSCGrpcClient:
     def test_grpc_client_creation(self):
         """Test creating gRPC client"""
         config = DMSCGrpcConfig()
-        config.host = "localhost"
+        config.addr = "localhost"
         config.port = 50051
 
         client = DMSCGrpcClient(config)
