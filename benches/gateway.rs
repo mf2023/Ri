@@ -22,7 +22,8 @@
 use criterion::{black_box, criterion_group, criterion_main, Criterion, Throughput};
 use dmsc::gateway::{DMSCGateway, DMSCGatewayRequest, DMSCGatewayResponse, DMSCRoute, DMSCRouter};
 use dmsc::gateway::{DMSCRateLimiter, DMSCRateLimitConfig, DMSCCircuitBreaker, DMSCCircuitBreakerConfig};
-use dmsc::gateway::{DMSCLoadBalancer, DMSCLoadBalancerStrategy, DMSCBackendServer};
+use dmsc::gateway::{DMSCLoadBalancer, DMSCLoadBalancerStrategy};
+use dmsc::DMSCBackendServer;
 use std::collections::HashMap;
 use std::sync::Arc;
 
@@ -201,7 +202,7 @@ fn bench_rate_limiter(c: &mut Criterion) {
                     None,
                     "127.0.0.1:12345".to_string(),
                 );
-                let allowed = limiter.check(&request).await;
+                let allowed = limiter.check_request(&request).await;
                 black_box(allowed);
             });
         });
@@ -218,21 +219,19 @@ fn bench_circuit_breaker(c: &mut Criterion) {
     let mut group = c.benchmark_group("gateway_circuit_breaker");
     group.throughput(Throughput::Elements(1));
     
-    group.bench_function("is_allowed", |b| {
+    group.bench_function("is_closed", |b| {
         b.iter(|| {
             rt.block_on(async {
-                let allowed = cb.is_allowed().await;
-                black_box(allowed);
+                let closed = cb.is_closed();
+                black_box(closed);
             });
         });
     });
     
     group.bench_function("record_success", |b| {
         b.iter(|| {
-            rt.block_on(async {
-                cb.record_success().await;
-                black_box(());
-            });
+            cb.record_success();
+            black_box(());
         });
     });
     
