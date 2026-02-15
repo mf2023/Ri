@@ -23,7 +23,7 @@ use criterion::{black_box, criterion_group, criterion_main, Criterion, Throughpu
 use dmsc::gateway::{DMSCGateway, DMSCGatewayRequest, DMSCGatewayResponse, DMSCRoute, DMSCRouter};
 use dmsc::gateway::{DMSCRateLimiter, DMSCRateLimitConfig, DMSCCircuitBreaker, DMSCCircuitBreakerConfig};
 use dmsc::gateway::{DMSCLoadBalancer, DMSCLoadBalancerStrategy};
-use dmsc::DMSCBackendServer;
+use dmsc::prelude::DMSCBackendServer;
 use std::collections::HashMap;
 use std::sync::Arc;
 

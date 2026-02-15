@@ -116,7 +116,9 @@ use reqwest;
 use pyo3::PyResult;
 
 use crate::core::{DMSCResult, DMSCError};
-use crate::observability::{DMSCTracer, DMSCSpanKind, DMSCSpanStatus, DMSCContextCarrier};
+use crate::observability::{DMSCTracer, DMSCSpanKind, DMSCSpanStatus};
+#[cfg(feature = "http_client")]
+use crate::observability::DMSCContextCarrier;
 
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 #[derive(Debug, Clone, Serialize, Deserialize)]

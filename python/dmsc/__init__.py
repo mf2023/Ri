@@ -117,7 +117,7 @@ from .dmsc import (
     # =============================================================================
     DMSCServiceMesh, DMSCServiceMeshConfig, DMSCServiceDiscovery,
     DMSCServiceInstance, DMSCServiceStatus, DMSCServiceMeshStats,
-    DMSCServiceEndpoint,
+    DMSCServiceEndpoint, DMSCServiceHealthStatus,
     DMSCTrafficRoute, DMSCMatchCriteria, DMSCRouteAction, DMSCWeightedDestination,
     DMSCTrafficManager, DMSCHealthChecker, DMSCHealthSummary, DMSCHealthCheckType,
     
@@ -257,7 +257,7 @@ __all__ = [
     # Service mesh classes - Service discovery, traffic routing, and health checking
     'DMSCServiceMesh', 'DMSCServiceMeshConfig', 'DMSCServiceDiscovery',
     'DMSCServiceInstance', 'DMSCServiceStatus', 'DMSCServiceMeshStats',
-    'DMSCServiceEndpoint',
+    'DMSCServiceEndpoint', 'DMSCServiceHealthStatus',
     'DMSCTrafficRoute', 'DMSCMatchCriteria', 'DMSCRouteAction', 'DMSCWeightedDestination',
     'DMSCTrafficManager', 'DMSCHealthChecker', 'DMSCHealthSummary', 'DMSCHealthCheckType',
     'DMSCHealthCheckConfig', 'DMSCHealthCheckResult',
