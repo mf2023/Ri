@@ -203,6 +203,46 @@ pub enum DMSCServiceHealthStatus {
     Unknown,
 }
 
+#[cfg(feature = "pyo3")]
+#[pyo3::prelude::pymethods]
+impl DMSCServiceEndpoint {
+    #[new]
+    fn py_new(
+        service_name: String,
+        endpoint: String,
+        weight: u32,
+    ) -> Self {
+        Self {
+            service_name,
+            endpoint,
+            weight,
+            metadata: HashMap::new(),
+            health_status: DMSCServiceHealthStatus::Unknown,
+            last_health_check: SystemTime::now(),
+        }
+    }
+
+    #[getter]
+    fn service_name(&self) -> &str {
+        &self.service_name
+    }
+
+    #[getter]
+    fn endpoint(&self) -> &str {
+        &self.endpoint
+    }
+
+    #[getter]
+    fn weight(&self) -> u32 {
+        self.weight
+    }
+
+    #[getter]
+    fn health_status(&self) -> DMSCServiceHealthStatus {
+        self.health_status.clone()
+    }
+}
+
 /// Service discovery cache entry
 /// 
 /// This struct represents a cached entry for service discovery results.
@@ -226,6 +266,40 @@ pub struct DMSCServiceMeshStats {
     pub healthy_endpoints: usize,
     /// Number of unhealthy endpoints
     pub unhealthy_endpoints: usize,
+}
+
+#[cfg(feature = "pyo3")]
+#[pyo3::prelude::pymethods]
+impl DMSCServiceMeshStats {
+    #[new]
+    fn py_new() -> Self {
+        Self {
+            total_services: 0,
+            total_endpoints: 0,
+            healthy_endpoints: 0,
+            unhealthy_endpoints: 0,
+        }
+    }
+
+    #[getter]
+    fn total_services(&self) -> usize {
+        self.total_services
+    }
+
+    #[getter]
+    fn total_endpoints(&self) -> usize {
+        self.total_endpoints
+    }
+
+    #[getter]
+    fn healthy_endpoints(&self) -> usize {
+        self.healthy_endpoints
+    }
+
+    #[getter]
+    fn unhealthy_endpoints(&self) -> usize {
+        self.unhealthy_endpoints
+    }
 }
 
 /// Main service mesh struct implementing the DMSCModule trait.

@@ -362,6 +362,8 @@ pub mod py {
         m.add_class::<crate::service_mesh::DMSCServiceInstance>()?;
         m.add_class::<crate::service_mesh::DMSCServiceStatus>()?;
         m.add_class::<crate::service_mesh::DMSCServiceMeshStats>()?;
+        m.add_class::<crate::service_mesh::DMSCServiceEndpoint>()?;
+        m.add_class::<crate::service_mesh::DMSCServiceHealthStatus>()?;
         m.add_class::<crate::service_mesh::health_check::DMSCHealthChecker>()?;
         m.add_class::<crate::service_mesh::health_check::DMSCHealthSummary>()?;
         m.add_class::<crate::service_mesh::traffic_management::DMSCTrafficManager>()?;

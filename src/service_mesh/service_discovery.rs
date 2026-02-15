@@ -52,6 +52,54 @@ pub enum DMSCServiceStatus {
     Unhealthy,
 }
 
+#[cfg(feature = "pyo3")]
+#[pyo3::prelude::pymethods]
+impl DMSCServiceInstance {
+    #[new]
+    fn py_new(
+        id: String,
+        service_name: String,
+        host: String,
+        port: u16,
+    ) -> Self {
+        Self {
+            id,
+            service_name,
+            host,
+            port,
+            metadata: HashMap::new(),
+            registered_at: SystemTime::now(),
+            last_heartbeat: SystemTime::now(),
+            status: DMSCServiceStatus::Starting,
+        }
+    }
+
+    #[getter]
+    fn id(&self) -> &str {
+        &self.id
+    }
+
+    #[getter]
+    fn service_name(&self) -> &str {
+        &self.service_name
+    }
+
+    #[getter]
+    fn host(&self) -> &str {
+        &self.host
+    }
+
+    #[getter]
+    fn port(&self) -> u16 {
+        self.port
+    }
+
+    #[getter]
+    fn status(&self) -> DMSCServiceStatus {
+        self.status.clone()
+    }
+}
+
 #[derive(Clone)]
 pub struct DMSCServiceRegistry {
     services: Arc<RwLock<HashMap<String, Vec<DMSCServiceInstance>>>>,
