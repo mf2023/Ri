@@ -957,25 +957,29 @@ impl DMSCLogger {
         Self::new(&config, fs)
     }
 
-    fn debug(&self, target: &str, message: &str) -> PyResult<()> {
+    #[pyo3(name = "debug")]
+    fn py_debug(&self, target: &str, message: &str) -> pyo3::PyResult<()> {
         self.inner
             .log_message(DMSCLogLevel::Debug, target, message)
             .map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(e.to_string()))
     }
 
-    fn info(&self, target: &str, message: &str) -> PyResult<()> {
+    #[pyo3(name = "info")]
+    fn py_info(&self, target: &str, message: &str) -> pyo3::PyResult<()> {
         self.inner
             .log_message(DMSCLogLevel::Info, target, message)
             .map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(e.to_string()))
     }
 
-    fn warn(&self, target: &str, message: &str) -> PyResult<()> {
+    #[pyo3(name = "warn")]
+    fn py_warn(&self, target: &str, message: &str) -> pyo3::PyResult<()> {
         self.inner
             .log_message(DMSCLogLevel::Warn, target, message)
             .map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(e.to_string()))
     }
 
-    fn error(&self, target: &str, message: &str) -> PyResult<()> {
+    #[pyo3(name = "error")]
+    fn py_error(&self, target: &str, message: &str) -> pyo3::PyResult<()> {
         self.inner
             .log_message(DMSCLogLevel::Error, target, message)
             .map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(e.to_string()))

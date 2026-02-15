@@ -116,7 +116,7 @@ use reqwest;
 use pyo3::PyResult;
 
 use crate::core::{DMSCResult, DMSCError};
-use crate::observability::{DMSCTracer, DMSCSpanKind, DMSCSpanStatus, DMSCTraceContext, DMSCContextCarrier, DMSCTraceId, DMSCSpanId};
+use crate::observability::{DMSCTracer, DMSCSpanKind, DMSCSpanStatus, DMSCContextCarrier};
 
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -317,6 +317,7 @@ impl DMSCCircuitBreakerConfig {
     }
 }
 
+#[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DMSCRateLimitConfig {
     pub requests_per_second: u32,
@@ -606,7 +607,7 @@ impl DMSCTrafficManager {
             .post(url)
             .header("Content-Type", "application/octet-stream");
         
-        if let Some(tracer) = &self.tracer {
+        if let Some(_tracer) = &self.tracer {
             let mut headers = HashMap::new();
             DMSCContextCarrier::inject_current_into_headers(&mut headers);
             for (key, value) in headers {
