@@ -89,6 +89,7 @@ use std::sync::Arc;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::time::Instant;
 use tokio::sync::RwLock;
+use std::sync::RwLock as StdRwLock;
 
 #[cfg(feature = "gateway")]
 use hyper;
@@ -229,7 +230,7 @@ struct ServerStats {
     response_time_ms: AtomicUsize,
     
     /// Timestamp of when the server was last used
-    last_used: RwLock<Instant>,
+    last_used: StdRwLock<Instant>,
 }
 
 impl ServerStats {
@@ -246,7 +247,7 @@ impl ServerStats {
             total_requests: AtomicUsize::new(0),
             failed_requests: AtomicUsize::new(0),
             response_time_ms: AtomicUsize::new(0),
-            last_used: RwLock::new(Instant::now()),
+            last_used: StdRwLock::new(Instant::now()),
         }
     }
 
@@ -269,8 +270,9 @@ impl ServerStats {
     fn increment_connections(&self) {
         self.active_connections.fetch_add(1, Ordering::Relaxed);
         self.total_requests.fetch_add(1, Ordering::Relaxed);
-        let mut last_used = self.last_used.blocking_write();
-        *last_used = Instant::now();
+        if let Ok(mut last_used) = self.last_used.write() {
+            *last_used = Instant::now();
+        }
     }
 
     /// Decrements the active connection count.

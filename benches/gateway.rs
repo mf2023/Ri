@@ -70,7 +70,7 @@ fn bench_gateway_response_creation(c: &mut Criterion) {
                 &serde_json::json!({"status": "ok"}),
                 "request-123".to_string(),
             );
-            black_box(response);
+            let _ = black_box(response);
         });
     });
     
@@ -81,7 +81,7 @@ fn bench_gateway_response_creation(c: &mut Criterion) {
                 "Not Found".to_string(),
                 "request-123".to_string(),
             );
-            black_box(response);
+            let _ = black_box(response);
         });
     });
     
@@ -132,7 +132,7 @@ fn bench_router_operations(c: &mut Criterion) {
                     "127.0.0.1:12345".to_string(),
                 );
                 let result = router.route(&request).await;
-                black_box(result);
+                let _ = black_box(result);
             });
         });
     });
@@ -255,7 +255,7 @@ fn bench_load_balancer(c: &mut Criterion) {
         b.iter(|| {
             rt.block_on(async {
                 let server = lb.select_server(None).await;
-                black_box(server);
+                let _ = black_box(server);
             });
         });
     });

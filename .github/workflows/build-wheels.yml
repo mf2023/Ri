@@ -1016,9 +1016,9 @@ jobs:
       # maturin: Rust/Python build tool that creates Python wheels from Rust libraries
       # auditwheel: Tool for repairing Linux wheel distribution tags
       # Both are essential for building portable Python packages with native extensions
-      # Using --pre flag to get pre-release versions for newer Python versions (3.14)
+      # Using official PyPI for maturin to ensure latest version is available
       - name: Install dependencies
-        run: pip install maturin auditwheel --pre --quiet
+        run: pip install maturin auditwheel -i https://pypi.org/simple --quiet
       
       # Step 13: Build Python wheel for non-Docker platforms (macOS, Windows, Linux ARM64)
       # Conditional: Executes when docker: false (native builds without manylinux container)
@@ -1308,7 +1308,7 @@ jobs:
           pip config set global.index-url https://pypi.tuna.tsinghua.edu.cn/simple
 
       - name: Install test dependencies
-        run: pip install pytest maturin --pre
+        run: pip install pytest maturin -i https://pypi.org/simple
 
       - name: Build and install package
         run: |
