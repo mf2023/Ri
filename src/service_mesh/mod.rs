@@ -107,6 +107,7 @@ use pyo3::PyResult;
 use crate::core::{DMSCModule, DMSCResult, DMSCError};
 use crate::gateway::{DMSCCircuitBreaker, DMSCCircuitBreakerConfig, DMSCLoadBalancer, DMSCLoadBalancerStrategy};
 use crate::gateway::load_balancer::DMSCBackendServer;
+use crate::observability::{DMSCTracer, DMSCSpanKind, DMSCSpanStatus};
 
 pub mod service_discovery;
 pub mod health_check;
@@ -233,36 +234,19 @@ pub struct DMSCServiceMeshStats {
 /// health checking, traffic management, load balancing, and circuit breaking.
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 pub struct DMSCServiceMesh {
-    /// Service mesh configuration
     config: DMSCServiceMeshConfig,
-    /// Service discovery component
     service_discovery: Arc<DMSCServiceDiscovery>,
-    /// Health checking component
     health_checker: Arc<DMSCHealthChecker>,
-    /// Traffic management component
     traffic_manager: Arc<DMSCTrafficManager>,
-    /// Circuit breaker for preventing cascading failures
     circuit_breaker: Arc<DMSCCircuitBreaker>,
-    /// Load balancer for distributing traffic
     load_balancer: Arc<DMSCLoadBalancer>,
-    /// Map of service names to their endpoints, protected by a RwLock for thread-safe access
     services: Arc<RwLock<HashMap<String, Vec<DMSCServiceEndpoint>>>>,
-    /// Service discovery cache, protected by a RwLock for thread-safe access
     discovery_cache: Arc<RwLock<HashMap<String, ServiceDiscoveryCacheEntry>>>,
-    /// Cache expiration duration
     cache_expiration: Duration,
+    tracer: Option<Arc<DMSCTracer>>,
 }
 
 impl DMSCServiceMesh {
-    /// Creates a new service mesh instance with the given configuration.
-    /// 
-    /// # Parameters
-    /// 
-    /// - `config`: The service mesh configuration to use
-    /// 
-    /// # Returns
-    /// 
-    /// A `DMSCResult<Self>` containing the new service mesh instance
     pub fn new(config: DMSCServiceMeshConfig) -> DMSCResult<Self> {
         let service_discovery = Arc::new(DMSCServiceDiscovery::new(config.enable_service_discovery));
         let health_checker = Arc::new(DMSCHealthChecker::new(config.health_check_interval));
@@ -279,8 +263,24 @@ impl DMSCServiceMesh {
             load_balancer,
             services: Arc::new(RwLock::new(HashMap::new())),
             discovery_cache: Arc::new(RwLock::new(HashMap::new())),
-            cache_expiration: Duration::from_secs(30), // 30 seconds cache expiration
+            cache_expiration: Duration::from_secs(30),
+            tracer: None,
         })
+    }
+    
+    pub fn with_tracer(mut self, tracer: Arc<DMSCTracer>) -> Self {
+        self.tracer = Some(tracer.clone());
+        let mut traffic_manager = DMSCTrafficManager::new(self.config.enable_traffic_management);
+        traffic_manager.set_tracer(tracer);
+        self.traffic_manager = Arc::new(traffic_manager);
+        self
+    }
+    
+    pub fn set_tracer(&mut self, tracer: Arc<DMSCTracer>) {
+        self.tracer = Some(tracer.clone());
+        let mut traffic_manager = DMSCTrafficManager::new(self.config.enable_traffic_management);
+        traffic_manager.set_tracer(tracer);
+        self.traffic_manager = Arc::new(traffic_manager);
     }
 
     /// Registers a service endpoint with the service mesh.
@@ -453,13 +453,41 @@ impl DMSCServiceMesh {
     /// 
     /// A `DMSCResult<Vec<u8>>` containing the response from the service
     pub async fn call_service(&self, service_name: &str, request_data: Vec<u8>) -> DMSCResult<Vec<u8>> {
+        let span_id = if let Some(tracer) = &self.tracer {
+            let span_id = tracer.start_span_from_context(
+                format!("call_service:{}", service_name),
+                DMSCSpanKind::Client,
+            );
+            if let Some(ref sid) = span_id {
+                let _ = tracer.span_mut(sid, |span| {
+                    span.set_attribute("service_name".to_string(), service_name.to_string());
+                    span.set_attribute("request_size".to_string(), request_data.len().to_string());
+                });
+            }
+            span_id
+        } else {
+            None
+        };
+
+        let result = self.call_service_internal(service_name, request_data).await;
+
+        if let (Some(tracer), Some(sid)) = (&self.tracer, span_id) {
+            let status = match &result {
+                Ok(_) => DMSCSpanStatus::Ok,
+                Err(e) => DMSCSpanStatus::Error(e.to_string()),
+            };
+            let _ = tracer.end_span(&sid, status);
+        }
+
+        result
+    }
+    
+    async fn call_service_internal(&self, service_name: &str, request_data: Vec<u8>) -> DMSCResult<Vec<u8>> {
         let endpoints = self.discover_service(service_name).await?;
         
-        // Clear existing servers for this service and add discovered endpoints
         let mut existing_servers = self.load_balancer.get_healthy_servers().await;
         existing_servers.retain(|s| !s.id.starts_with(&format!("{service_name}-")));
         
-        // Add discovered endpoints as backend servers
         for ep in &endpoints {
             if ep.health_status == DMSCServiceHealthStatus::Healthy {
                 let server = DMSCBackendServer {

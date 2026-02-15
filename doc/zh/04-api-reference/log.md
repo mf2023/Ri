@@ -4,7 +4,7 @@
 
 **Version: 0.1.7**
 
-**Last modified date: 2026-02-13**
+**Last modified date: 2026-02-15**
 
 log模块提供结构化日志记录与多后端支持，支持日志级别、格式化、采样等功能。
 
@@ -30,48 +30,68 @@ log模块包含以下子模块：
 
 日志记录器主接口，提供统一的日志记录功能。
 
+#### 构造函数
+
+```python
+DMSCLogger(config: DMSCLogConfig, fs: DMSCFileSystem)
+```
+
+创建一个新的日志记录器实例。
+
 #### 方法
 
 | 方法 | 描述 | 参数 | 返回值 |
 |:--------|:-------------|:--------|:--------|
-| `trace(message)` | 记录跟踪日志 | `message: impl Display` | `()` |
-| `debug(message)` | 记录调试日志 | `message: impl Display` | `()` |
-| `info(message)` | 记录信息日志 | `message: impl Display` | `()` |
-| `warn(message)` | 记录警告日志 | `message: impl Display` | `()` |
-| `error(message)` | 记录错误日志 | `message: impl Display` | `()` |
-| `fatal(message)` | 记录致命日志 | `message: impl Display` | `()` |
-| `log(level, message)` | 记录指定级别日志 | `level: DMSCLogLevel`, `message: impl Display` | `()` |
-| `with_field(key, value)` | 添加字段到日志上下文 | `key: &str`, `value: impl Serialize` | `DMSCLogger` |
-| `with_fields(fields)` | 添加多个字段 | `fields: impl Serialize` | `DMSCLogger` |
-| `with_span(name)` | 创建日志跨度 | `name: &str` | `LogSpan` |
-| `flush()` | 刷新日志缓冲区 | 无 | `DMSCResult<()>` |
+| `debug(target, message)` | 记录调试日志 | `target: &str`, `message: &str` | `PyResult<()>` |
+| `info(target, message)` | 记录信息日志 | `target: &str`, `message: &str` | `PyResult<()>` |
+| `warn(target, message)` | 记录警告日志 | `target: &str`, `message: &str` | `PyResult<()>` |
+| `error(target, message)` | 记录错误日志 | `target: &str`, `message: &str` | `PyResult<()>` |
 
-#### 使用示例
+**参数说明：**
+- `target`: 日志目标标识，通常是模块或组件名称
+- `message`: 日志消息内容
+
+#### Python使用示例
+
+```python
+from dmsc import DMSCLogger, DMSCLogConfig, DMSCFileSystem
+
+# 创建日志配置
+config = DMSCLogConfig.default()
+
+# 创建文件系统
+fs = DMSCFileSystem()
+
+# 创建日志记录器
+logger = DMSCLogger(config, fs)
+
+# 记录日志
+logger.debug("my_module", "Debug message")
+logger.info("my_module", "Application started")
+logger.warn("my_module", "Configuration file not found, using defaults")
+logger.error("my_module", "Database connection failed")
+```
+
+#### Rust使用示例
 
 ```rust
-use dmsc::prelude::*;
+use dmsc::log::{DMSCLogger, DMSCLogConfig};
+use dmsc::fs::DMSCFileSystem;
 
-// 基本日志记录
-ctx.log().info("Application started");
-ctx.log().warn("Configuration file not found, using defaults");
-ctx.log().error("Database connection failed");
+// 创建日志配置
+let config = DMSCLogConfig::default();
 
-// 带字段的日志记录
-ctx.log()
-    .with_field("user_id", 12345)
-    .with_field("action", "login")
-    .info("User login successful");
+// 创建文件系统
+let fs = DMSCFileSystem::new();
 
-// 结构化日志记录
-let user_data = serde_json::json!({
-    "id": 12345,
-    "name": "John Doe",
-    "email": "john@example.com"
-});
+// 创建日志记录器
+let logger = DMSCLogger::new(&config, fs);
 
-ctx.log()
-    .with_fields(user_data)
-    .info("User profile updated");
+// 记录日志
+logger.debug("my_module", "Debug message")?;
+logger.info("my_module", "Application started")?;
+logger.warn("my_module", "Configuration file not found")?;
+logger.error("my_module", "Database connection failed")?;
 ```
 
 ### DMSCLogLevel
@@ -82,12 +102,10 @@ ctx.log()
 
 | 变体 | 描述 | 数值 |
 |:--------|:-------------|:-----|
-| `Trace` | 最详细的调试信息 | 0 |
-| `Debug` | 调试信息 | 1 |
-| `Info` | 一般信息 | 2 |
-| `Warn` | 警告信息 | 3 |
-| `Error` | 错误信息 | 4 |
-| `Fatal` | 致命错误 | 5 |
+| `Debug` | 调试信息 | 0 |
+| `Info` | 一般信息 | 1 |
+| `Warn` | 警告信息 | 2 |
+| `Error` | 错误信息 | 3 |
 
 #### 颜色方块
 
@@ -105,27 +123,25 @@ ctx.log()
 #### 文本格式（带颜色方块）
 
 ```
-🟩 | 2024-01-15 10:30:45.123 | INFO  | service | event=service_start | 应用程序已启动 | port=8080
-🟨 | 2024-01-15 10:30:45.456 | WARN  | cache   | event=cache_miss    | 缓存未命中
-🟥 | 2024-01-15 10:30:45.789 | ERROR | db      | event=conn_failed   | 连接超时 | retry=3
+🟩 | 2024-01-15 10:30:45.123 | INFO  | service | 应用程序已启动 | port=8080
+🟨 | 2024-01-15 10:30:45.456 | WARN  | cache   | 缓存未命中
+🟥 | 2024-01-15 10:30:45.789 | ERROR | db      | 连接超时 | retry=3
 ```
 
 格式说明：
 - `🟩` - 颜色方块（根据日志级别变化）
 - `2024-01-15 10:30:45.123` - 时间戳
 - `INFO` - 日志级别
-- `service` - 目标模块
-- `event=service_start` - 事件名称
+- `service` - 目标模块（target）
 - `应用程序已启动` - 日志消息
-- `port=8080` - 上下文字段
 
 #### 文本格式（不带颜色方块）
 
 当 `color_blocks` 设置为 `false` 时：
 
 ```
-2024-01-15 10:30:45.123 | INFO  | service | event=service_start | 应用程序已启动 | port=8080
-2024-01-15 10:30:45.456 | WARN  | cache   | event=cache_miss    | 缓存未命中
+2024-01-15 10:30:45.123 | INFO  | service | 应用程序已启动 | port=8080
+2024-01-15 10:30:45.456 | WARN  | cache   | 缓存未命中
 ```
 
 #### JSON格式
@@ -135,15 +151,21 @@ ctx.log()
   "timestamp": "2024-01-15T10:30:45.123Z",
   "level": "INFO",
   "target": "service",
-  "message": "应用程序已启动",
-  "event": "service_start",
-  "port": "8080"
+  "message": "应用程序已启动"
 }
 ```
 
 ### DMSCLogConfig
 
 日志配置结构体。
+
+#### 方法
+
+| 方法 | 描述 | 返回值 |
+|:--------|:-------------|:--------|
+| `default()` | 创建默认配置 | `DMSCLogConfig` |
+| `from_config(config)` | 从配置对象创建 | `DMSCLogConfig` |
+| `from_env()` | 从环境变量创建 | `DMSCLogConfig` |
 
 #### 字段
 
@@ -160,35 +182,28 @@ ctx.log()
 
 #### 配置示例
 
-```rust
-use dmsc::log::DMSCLogConfig;
+```python
+from dmsc import DMSCLogConfig, DMSCLogLevel
 
-let log_config = DMSCLogConfig {
-    level: DMSCLogLevel::Info,
-    console_enabled: true,
-    file_enabled: true,
-    sampling_default: 1.0,
-    file_name: "myapp.log".to_string(),
-    json_format: false,
-    rotate_when: "size".to_string(),
-    color_blocks: true,          // 在日志输出中启用颜色方块
-    ..Default::default()
-};
+# 使用默认配置
+config = DMSCLogConfig.default()
+
+# 从配置文件创建
+config = DMSCLogConfig.from_config(dmsc_config)
 ```
 
-<div align="center">
-
-## 日志过滤
-
-</div>
-
-### 级别过滤
-
 ```rust
-use dmsc::prelude::*;
+use dmsc::log::DMSCLogConfig;
+use dmsc::log::DMSCLogLevel;
 
-// 设置全局日志级别
-ctx.log().set_level(DMSCLogLevel::Warn);
+// 使用默认配置
+let config = DMSCLogConfig::default();
+
+// 从配置对象创建
+let config = DMSCLogConfig::from_config(&dmsc_config);
+
+// 从环境变量创建
+let config = DMSCLogConfig::from_env();
 ```
 
 <div align="center">
@@ -206,36 +221,15 @@ ctx.log().set_level(DMSCLogLevel::Warn);
 | `LOG_FORMAT_ERROR` | 日志格式错误 |
 | `LOG_BACKEND_ERROR` | 日志后端错误 |
 
-### 错误处理示例
-
-```rust
-use dmsc::prelude::*;
-
-match ctx.log().flush() {
-    Ok(_) => {
-        // 日志刷新成功
-    }
-    Err(DMSCError { code, .. }) if code == "LOG_FILE_PERMISSION_DENIED" => {
-        // 文件权限错误，回退到标准输出
-        ctx.log().set_backend(DMSCLogBackend::Stdout);
-        ctx.log().warn("Falling back to stdout logging due to file permission error");
-    }
-    Err(e) => {
-        // 其他错误
-        return Err(e);
-    }
-}
-```
-
 <div align="center">
 
 ## 最佳实践
 
 </div>
 
-1. **使用结构化日志**: 使用字段而不是字符串拼接
-2. **适当的日志级别**: 根据重要性选择合适的日志级别
-3. **避免记录敏感信息**: 不要记录密码、密钥等敏感信息
+1. **使用合适的日志级别**: 根据重要性选择合适的日志级别
+2. **避免记录敏感信息**: 不要记录密码、密钥等敏感信息
+3. **使用有意义的target**: 使用模块名或组件名作为target，便于日志过滤
 4. **定期轮转日志**: 使用日志轮转避免磁盘空间耗尽
 
 <div align="center">

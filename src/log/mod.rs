@@ -956,4 +956,28 @@ impl DMSCLogger {
     fn py_new(config: DMSCLogConfig, fs: DMSCFileSystem) -> Self {
         Self::new(&config, fs)
     }
+
+    fn debug(&self, target: &str, message: &str) -> PyResult<()> {
+        self.inner
+            .log_message(DMSCLogLevel::Debug, target, message)
+            .map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(e.to_string()))
+    }
+
+    fn info(&self, target: &str, message: &str) -> PyResult<()> {
+        self.inner
+            .log_message(DMSCLogLevel::Info, target, message)
+            .map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(e.to_string()))
+    }
+
+    fn warn(&self, target: &str, message: &str) -> PyResult<()> {
+        self.inner
+            .log_message(DMSCLogLevel::Warn, target, message)
+            .map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(e.to_string()))
+    }
+
+    fn error(&self, target: &str, message: &str) -> PyResult<()> {
+        self.inner
+            .log_message(DMSCLogLevel::Error, target, message)
+            .map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(e.to_string()))
+    }
 }

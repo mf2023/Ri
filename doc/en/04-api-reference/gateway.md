@@ -239,10 +239,12 @@ let server = load_balancer.select_server(None).await?;
 | Strategy | Description |
 |:--------|:-------------|
 | `RoundRobin` | Round robin |
+| `WeightedRoundRobin` | Weighted round robin |
 | `LeastConnections` | Least connections |
-| `Weighted` | Weighted |
 | `Random` | Random |
-| `IPHash` | IP hash |
+| `IpHash` | IP hash |
+| `LeastResponseTime` | Least response time |
+| `ConsistentHash` | Consistent hash |
 
 <div align="center">
 
@@ -298,7 +300,8 @@ use dmsc::gateway::{DMSCCircuitBreaker, DMSCCircuitBreakerConfig};
 let circuit_breaker_config = DMSCCircuitBreakerConfig {
     failure_threshold: 5,
     success_threshold: 2,
-    timeout_duration: Duration::from_secs(30),
+    timeout_seconds: 60,
+    monitoring_period_seconds: 30,
 };
 
 let circuit_breaker = DMSCCircuitBreaker::new(circuit_breaker_config);
@@ -319,9 +322,10 @@ Circuit breaker configuration.
 
 | Field | Type | Description | Default |
 |:--------|:-----|:-------------|:-------|
-| `failure_threshold` | `u32` | Failure threshold | `5` |
-| `success_threshold` | `u32` | Success threshold | `2` |
-| `timeout_duration` | `Duration` | Timeout duration | `30s` |
+| `failure_threshold` | `u32` | Failure threshold (consecutive failures to trigger circuit open) | `5` |
+| `success_threshold` | `u32` | Success threshold (consecutive successes to recover from half-open) | `3` |
+| `timeout_seconds` | `u64` | Timeout in seconds (wait time before attempting recovery) | `60` |
+| `monitoring_period_seconds` | `u64` | Monitoring period in seconds (time window for counting failures) | `30` |
 
 <div align="center">
 

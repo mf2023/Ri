@@ -116,6 +116,7 @@ use reqwest;
 use pyo3::PyResult;
 
 use crate::core::{DMSCResult, DMSCError};
+use crate::observability::{DMSCTracer, DMSCSpanKind, DMSCSpanStatus, DMSCTraceContext, DMSCContextCarrier, DMSCTraceId, DMSCSpanId};
 
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -130,6 +131,41 @@ pub struct DMSCTrafficRoute {
     pub fault_injection: Option<DMSCFaultInjection>,
 }
 
+#[cfg(feature = "pyo3")]
+#[pyo3::prelude::pymethods]
+impl DMSCTrafficRoute {
+    #[new]
+    fn py_new(name: String, source_service: String, destination_service: String) -> Self {
+        Self {
+            name,
+            source_service,
+            destination_service,
+            match_criteria: DMSCMatchCriteria {
+                path_prefix: None,
+                headers: HashMap::new(),
+                method: None,
+                query_parameters: HashMap::new(),
+            },
+            route_action: DMSCRouteAction::Route(vec![]),
+            retry_policy: None,
+            timeout: None,
+            fault_injection: None,
+        }
+    }
+    
+    fn get_name(&self) -> String {
+        self.name.clone()
+    }
+    
+    fn get_source_service(&self) -> String {
+        self.source_service.clone()
+    }
+    
+    fn get_destination_service(&self) -> String {
+        self.destination_service.clone()
+    }
+}
+
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DMSCMatchCriteria {
@@ -137,6 +173,28 @@ pub struct DMSCMatchCriteria {
     pub headers: HashMap<String, String>,
     pub method: Option<String>,
     pub query_parameters: HashMap<String, String>,
+}
+
+#[cfg(feature = "pyo3")]
+#[pyo3::prelude::pymethods]
+impl DMSCMatchCriteria {
+    #[new]
+    fn py_new() -> Self {
+        Self {
+            path_prefix: None,
+            headers: HashMap::new(),
+            method: None,
+            query_parameters: HashMap::new(),
+        }
+    }
+    
+    fn get_path_prefix(&self) -> Option<String> {
+        self.path_prefix.clone()
+    }
+    
+    fn get_method(&self) -> Option<String> {
+        self.method.clone()
+    }
 }
 
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
@@ -153,6 +211,27 @@ pub struct DMSCWeightedDestination {
     pub service: String,
     pub weight: u32,
     pub subset: Option<String>,
+}
+
+#[cfg(feature = "pyo3")]
+#[pyo3::prelude::pymethods]
+impl DMSCWeightedDestination {
+    #[new]
+    fn py_new(service: String, weight: u32) -> Self {
+        Self {
+            service,
+            weight,
+            subset: None,
+        }
+    }
+    
+    fn get_service(&self) -> String {
+        self.service.clone()
+    }
+    
+    fn get_weight(&self) -> u32 {
+        self.weight
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -204,14 +283,38 @@ pub struct DMSCTrafficManager {
     background_tasks: Arc<RwLock<Vec<JoinHandle<()>>>>,
     #[cfg(feature = "http_client")]
     http_client: reqwest::Client,
+    tracer: Option<Arc<DMSCTracer>>,
 }
 
+#[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DMSCCircuitBreakerConfig {
     pub consecutive_errors: u32,
     pub interval: Duration,
     pub base_ejection_time: Duration,
     pub max_ejection_percent: f64,
+}
+
+#[cfg(feature = "pyo3")]
+#[pyo3::prelude::pymethods]
+impl DMSCCircuitBreakerConfig {
+    #[new]
+    fn py_new(consecutive_errors: u32, max_ejection_percent: f64) -> Self {
+        Self {
+            consecutive_errors,
+            interval: Duration::from_secs(10),
+            base_ejection_time: Duration::from_secs(30),
+            max_ejection_percent,
+        }
+    }
+    
+    fn get_consecutive_errors(&self) -> u32 {
+        self.consecutive_errors
+    }
+    
+    fn get_max_ejection_percent(&self) -> f64 {
+        self.max_ejection_percent
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -236,7 +339,17 @@ impl DMSCTrafficManager {
                 .connect_timeout(Duration::from_secs(10))
                 .build()
                 .unwrap_or_else(|_| reqwest::Client::new()),
+            tracer: None,
         }
+    }
+    
+    pub fn with_tracer(mut self, tracer: Arc<DMSCTracer>) -> Self {
+        self.tracer = Some(tracer);
+        self
+    }
+    
+    pub fn set_tracer(&mut self, tracer: Arc<DMSCTracer>) {
+        self.tracer = Some(tracer);
     }
 
     pub async fn add_traffic_route(&self, route: DMSCTrafficRoute) -> DMSCResult<()> {
@@ -303,6 +416,36 @@ impl DMSCTrafficManager {
     }
 
     pub async fn route_request(&self, endpoint: &str, request_data: Vec<u8>) -> DMSCResult<Vec<u8>> {
+        let span_id = if let Some(tracer) = &self.tracer {
+            let span_id = tracer.start_span_from_context(
+                format!("route_request:{}", endpoint),
+                DMSCSpanKind::Client,
+            );
+            if let Some(ref sid) = span_id {
+                let _ = tracer.span_mut(sid, |span| {
+                    span.set_attribute("endpoint".to_string(), endpoint.to_string());
+                    span.set_attribute("request_size".to_string(), request_data.len().to_string());
+                });
+            }
+            span_id
+        } else {
+            None
+        };
+
+        let result = self.route_request_internal(endpoint, request_data).await;
+
+        if let (Some(tracer), Some(sid)) = (&self.tracer, span_id) {
+            let status = match &result {
+                Ok(_) => DMSCSpanStatus::Ok,
+                Err(e) => DMSCSpanStatus::Error(e.to_string()),
+            };
+            let _ = tracer.end_span(&sid, status);
+        }
+
+        result
+    }
+    
+    async fn route_request_internal(&self, endpoint: &str, request_data: Vec<u8>) -> DMSCResult<Vec<u8>> {
         if !self.enabled {
             return Ok(request_data);
         }
@@ -315,16 +458,12 @@ impl DMSCTrafficManager {
             return Err(DMSCError::ServiceMesh("Rate limit exceeded".to_string()));
         }
 
-        // Apply traffic policies to transform request data
-        let transformed_request = self.apply_traffic_policies(request_data).await?;
+        let transformed_request = self.apply_traffic_policies(request_data).await;
         
-        // Try to find matching routes
         if let Some(matching_route) = self.find_matching_route(endpoint).await {
-            // Apply the matched route
             return self.apply_route(&matching_route, endpoint, transformed_request).await;
         }
         
-        // If no matching route found, perform default HTTP call
         self.make_http_request(endpoint, transformed_request).await
     }
     
@@ -460,20 +599,27 @@ impl DMSCTrafficManager {
 
     #[cfg(feature = "http_client")]
     async fn make_http_request(&self, endpoint: &str, request_data: Vec<u8>) -> DMSCResult<Vec<u8>> {
-        // Parse endpoint URL
         let url = endpoint.parse::<reqwest::Url>()
             .map_err(|e| DMSCError::ServiceMesh(format!("Invalid endpoint URL: {e}")))?;
         
-        // Create HTTP request
-        let response = self.http_client
+        let mut request_builder = self.http_client
             .post(url)
-            .header("Content-Type", "application/octet-stream")
+            .header("Content-Type", "application/octet-stream");
+        
+        if let Some(tracer) = &self.tracer {
+            let mut headers = HashMap::new();
+            DMSCContextCarrier::inject_current_into_headers(&mut headers);
+            for (key, value) in headers {
+                request_builder = request_builder.header(key, value);
+            }
+        }
+        
+        let response = request_builder
             .body(request_data)
             .send()
             .await
             .map_err(|e| DMSCError::ServiceMesh(format!("HTTP request failed: {e}")))?;
         
-        // Check response status
         if !response.status().is_success() {
             return Err(DMSCError::ServiceMesh(format!(
                 "HTTP request failed with status: {}", 
@@ -481,7 +627,6 @@ impl DMSCTrafficManager {
             )));
         }
         
-        // Get response body
         let response_data = response
             .bytes()
             .await
@@ -496,8 +641,8 @@ impl DMSCTrafficManager {
         Err(DMSCError::ServiceMesh(format!("HTTP client is not enabled. Enable the 'http_client' feature to use HTTP requests.")))
     }
 
-    async fn apply_traffic_policies(&self, _request_data: Vec<u8>) -> DMSCResult<Vec<u8>> {
-        Ok(_request_data)
+    async fn apply_traffic_policies(&self, request_data: Vec<u8>) -> Vec<u8> {
+        request_data
     }
     
     /// Applies traffic splitting to determine the destination service
@@ -727,17 +872,71 @@ impl DMSCTrafficManager {
     
     /// Add traffic route from Python
     #[pyo3(name = "add_traffic_route")]
-    fn add_traffic_route_impl(&self, _route: DMSCTrafficRoute) -> PyResult<()> {
-        // For now, we'll return an error since we can't easily run async code from Python
-        // In a real implementation, you'd want to integrate with Python's async runtime
-        Err(pyo3::exceptions::PyRuntimeError::new_err("Async traffic management not supported from Python yet"))
+    fn add_traffic_route_impl(&self, route: DMSCTrafficRoute) -> PyResult<()> {
+        let rt = tokio::runtime::Runtime::new().map_err(|e| {
+            pyo3::exceptions::PyRuntimeError::new_err(format!("Failed to create runtime: {}", e))
+        })?;
+        
+        rt.block_on(async {
+            self.add_traffic_route(route)
+                .await
+                .map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(format!("Failed to add traffic route: {e}")))
+        })
     }
     
     /// Get traffic routes from Python
     #[pyo3(name = "get_traffic_routes")]
-    fn get_traffic_routes_impl(&self, _service_name: String) -> PyResult<Vec<DMSCTrafficRoute>> {
-        // For now, we'll return an error since we can't easily run async code from Python
-        // In a real implementation, you'd want to integrate with Python's async runtime
-        Err(pyo3::exceptions::PyRuntimeError::new_err("Async traffic management not supported from Python yet"))
+    fn get_traffic_routes_impl(&self, service_name: String) -> PyResult<Vec<DMSCTrafficRoute>> {
+        let rt = tokio::runtime::Runtime::new().map_err(|e| {
+            pyo3::exceptions::PyRuntimeError::new_err(format!("Failed to create runtime: {}", e))
+        })?;
+        
+        rt.block_on(async {
+            self.get_traffic_routes(&service_name)
+                .await
+                .map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(format!("Failed to get traffic routes: {e}")))
+        })
+    }
+    
+    /// Remove traffic route from Python
+    #[pyo3(name = "remove_traffic_route")]
+    fn remove_traffic_route_impl(&self, source_service: String, route_name: String) -> PyResult<()> {
+        let rt = tokio::runtime::Runtime::new().map_err(|e| {
+            pyo3::exceptions::PyRuntimeError::new_err(format!("Failed to create runtime: {}", e))
+        })?;
+        
+        rt.block_on(async {
+            self.remove_traffic_route(&source_service, &route_name)
+                .await
+                .map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(format!("Failed to remove traffic route: {e}")))
+        })
+    }
+    
+    /// Set circuit breaker config from Python
+    #[pyo3(name = "set_circuit_breaker_config")]
+    fn set_circuit_breaker_config_impl(&self, service: String, config: DMSCCircuitBreakerConfig) -> PyResult<()> {
+        let rt = tokio::runtime::Runtime::new().map_err(|e| {
+            pyo3::exceptions::PyRuntimeError::new_err(format!("Failed to create runtime: {}", e))
+        })?;
+        
+        rt.block_on(async {
+            self.set_circuit_breaker_config(&service, config)
+                .await
+                .map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(format!("Failed to set circuit breaker config: {e}")))
+        })
+    }
+    
+    /// Set rate limit config from Python
+    #[pyo3(name = "set_rate_limit_config")]
+    fn set_rate_limit_config_impl(&self, service: String, config: DMSCRateLimitConfig) -> PyResult<()> {
+        let rt = tokio::runtime::Runtime::new().map_err(|e| {
+            pyo3::exceptions::PyRuntimeError::new_err(format!("Failed to create runtime: {}", e))
+        })?;
+        
+        rt.block_on(async {
+            self.set_rate_limit_config(&service, config)
+                .await
+                .map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(format!("Failed to set rate limit config: {e}")))
+        })
     }
 }

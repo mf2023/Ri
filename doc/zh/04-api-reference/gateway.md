@@ -239,10 +239,12 @@ let server = load_balancer.select_server(None).await?;
 | 策略 | 描述 |
 |:--------|:-------------|
 | `RoundRobin` | 轮询 |
+| `WeightedRoundRobin` | 加权轮询 |
 | `LeastConnections` | 最少连接 |
-| `Weighted` | 加权 |
 | `Random` | 随机 |
-| `IPHash` | IP哈希 |
+| `IpHash` | IP哈希 |
+| `LeastResponseTime` | 最短响应时间 |
+| `ConsistentHash` | 一致性哈希 |
 
 <div align="center">
 
@@ -298,7 +300,8 @@ use dmsc::gateway::{DMSCCircuitBreaker, DMSCCircuitBreakerConfig};
 let circuit_breaker_config = DMSCCircuitBreakerConfig {
     failure_threshold: 5,
     success_threshold: 2,
-    timeout_duration: Duration::from_secs(30),
+    timeout_seconds: 60,
+    monitoring_period_seconds: 30,
 };
 
 let circuit_breaker = DMSCCircuitBreaker::new(circuit_breaker_config);
@@ -319,9 +322,10 @@ circuit_breaker.record_failure().await;
 
 | 字段 | 类型 | 描述 | 默认值 |
 |:--------|:-----|:-------------|:-------|
-| `failure_threshold` | `u32` | 失败阈值 | `5` |
-| `success_threshold` | `u32` | 成功阈值 | `2` |
-| `timeout_duration` | `Duration` | 超时时间 | `30s` |
+| `failure_threshold` | `u32` | 失败阈值（连续失败次数触发熔断） | `5` |
+| `success_threshold` | `u32` | 成功阈值（半开状态下连续成功次数恢复） | `3` |
+| `timeout_seconds` | `u64` | 熔断超时时间（秒），熔断后等待恢复的时间 | `60` |
+| `monitoring_period_seconds` | `u64` | 监控周期（秒），失败计数的时间窗口 | `30` |
 
 <div align="center">
 

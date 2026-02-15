@@ -337,6 +337,80 @@ load_balancer.add_server(DMSCBackendServer {
 
 <div align="center">
 
+## Distributed Tracing Integration
+
+</div>
+
+DMSC Service Mesh supports integration with distributed tracing systems, providing complete request chain tracing capabilities.
+
+### Enabling Tracing
+
+```rust
+use dmsc::prelude::*;
+use dmsc::service_mesh::{DMSCServiceMesh, DMSCServiceMeshConfig};
+use dmsc::observability::{DMSCTracer, init_tracer};
+use std::sync::Arc;
+
+async fn example_with_tracing() -> DMSCResult<()> {
+    // Initialize global tracer
+    init_tracer(1.0); // 100% sampling rate
+    
+    // Create service mesh configuration
+    let mesh_config = DMSCServiceMeshConfig::default();
+    
+    // Create service mesh instance
+    let mut service_mesh = DMSCServiceMesh::new(mesh_config)?;
+    
+    // Get tracer and set it to service mesh
+    let tracer = dmsc::observability::tracer()?;
+    service_mesh.set_tracer(tracer);
+    
+    // Now all service calls will automatically create tracing spans
+    service_mesh.register_service("user-service", "http://user-service:8080", 100, None).await?;
+    
+    let response = service_mesh.call_service("user-service", b"test".to_vec()).await?;
+    
+    Ok(())
+}
+```
+
+### Tracing Features
+
+When tracing is enabled, the following operations automatically create spans:
+
+| Operation | Span Type | Attributes |
+|:--------|:-------------|:--------|
+| `call_service` | Client | `service_name`, `request_size` |
+| `route_request` | Client | `endpoint`, `request_size` |
+| `register_health_check` | Internal | `service_name`, `endpoint`, `check_type` |
+
+### Trace Context Propagation
+
+Service mesh automatically propagates W3C Trace Context in HTTP requests:
+
+```rust
+// Trace context is automatically injected into HTTP request headers
+// traceparent: 00-{trace-id}-{parent-id}-{flags}
+// baggage: key1=value1,key2=value2
+```
+
+### Configuring Sampling Rate
+
+```rust
+use dmsc::observability::{DMSCTracer, DMSCSamplingStrategy};
+
+// Fixed sampling rate
+let tracer = DMSCTracer::new(0.1); // 10% sampling
+
+// Deterministic sampling (based on Trace ID)
+let tracer = DMSCTracer::with_strategy(DMSCSamplingStrategy::Deterministic(0.1));
+
+// Adaptive sampling (automatically adjusts based on load)
+let tracer = DMSCTracer::with_strategy(DMSCSamplingStrategy::Adaptive(0.1));
+```
+
+<div align="center">
+
 ## Best Practices
 
 </div>
@@ -347,6 +421,8 @@ load_balancer.add_server(DMSCBackendServer {
 4. **Enable circuit breaker protection**: Prevent cascading failures
 5. **Configure load balancing**: Properly distribute requests to different instances
 6. **Monitor service status**: Regularly check service mesh status
+7. **Enable distributed tracing**: Enable tracing in production for troubleshooting and performance analysis
+8. **Set appropriate sampling rate**: Use 10% or lower sampling rate in high-traffic scenarios to avoid storage overhead
 
 <div align="center">
 

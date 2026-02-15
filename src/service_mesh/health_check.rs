@@ -99,6 +99,7 @@ use pyo3::PyResult;
 use hyper;
 
 use crate::core::{DMSCResult, DMSCError};
+use crate::observability::{DMSCTracer, DMSCSpanKind, DMSCSpanStatus};
 
 /// Configuration for health checks.
 ///
@@ -142,6 +143,7 @@ impl Default for DMSCHealthCheckConfig {
 ///
 /// This struct contains detailed information about the result of a health check,
 /// including whether the service is healthy, response time, and error messages if any.
+#[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 #[derive(Debug, Clone)]
 pub struct DMSCHealthCheckResult {
     /// Name of the service being checked
@@ -158,6 +160,34 @@ pub struct DMSCHealthCheckResult {
     pub error_message: Option<String>,
     /// Timestamp when the health check was performed
     pub timestamp: SystemTime,
+}
+
+#[cfg(feature = "pyo3")]
+#[pyo3::prelude::pymethods]
+impl DMSCHealthCheckResult {
+    fn get_service_name(&self) -> String {
+        self.service_name.clone()
+    }
+    
+    fn get_endpoint(&self) -> String {
+        self.endpoint.clone()
+    }
+    
+    fn get_is_healthy(&self) -> bool {
+        self.is_healthy
+    }
+    
+    fn get_status_code(&self) -> Option<u16> {
+        self.status_code
+    }
+    
+    fn get_response_time_ms(&self) -> u64 {
+        self.response_time.as_millis() as u64
+    }
+    
+    fn get_error_message(&self) -> Option<String> {
+        self.error_message.clone()
+    }
 }
 
 /// Types of health checks supported.
@@ -396,26 +426,14 @@ impl DMSCHealthCheckProvider for DMSCGrpcHealthCheckProvider {
 /// registering health checks, starting background monitoring, and retrieving health status.
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 pub struct DMSCHealthChecker {
-    /// Interval between health checks
     check_interval: Duration,
-    /// Map of health check providers by type
     providers: Arc<RwLock<HashMap<DMSCHealthCheckType, Box<dyn DMSCHealthCheckProvider>>>>,
-    /// Map of service names to health check results
     check_results: Arc<RwLock<HashMap<String, Vec<DMSCHealthCheckResult>>>>,
-    /// Background task handles for continuous health monitoring
     background_tasks: Arc<RwLock<Vec<JoinHandle<()>>>>,
+    tracer: Option<Arc<DMSCTracer>>,
 }
 
 impl DMSCHealthChecker {
-    /// Creates a new health checker with the specified check interval.
-    ///
-    /// # Parameters
-    ///
-    /// - `check_interval`: Interval between health checks
-    ///
-    /// # Returns
-    ///
-    /// A new `DMSCHealthChecker` instance
     pub fn new(check_interval: Duration) -> Self {
         let mut providers: HashMap<DMSCHealthCheckType, Box<dyn DMSCHealthCheckProvider>> = HashMap::new();
         providers.insert(DMSCHealthCheckType::Http, Box::new(DMSCHttpHealthCheckProvider));
@@ -427,7 +445,17 @@ impl DMSCHealthChecker {
             providers: Arc::new(RwLock::new(providers)),
             check_results: Arc::new(RwLock::new(HashMap::new())),
             background_tasks: Arc::new(RwLock::new(Vec::new())),
+            tracer: None,
         }
+    }
+    
+    pub fn with_tracer(mut self, tracer: Arc<DMSCTracer>) -> Self {
+        self.tracer = Some(tracer);
+        self
+    }
+    
+    pub fn set_tracer(&mut self, tracer: Arc<DMSCTracer>) {
+        self.tracer = Some(tracer);
     }
     
 
@@ -447,6 +475,43 @@ impl DMSCHealthChecker {
     ///
     /// A `DMSCResult<()>` indicating success or failure
     pub async fn register_health_check(
+        &self,
+        service_name: &str,
+        endpoint: &str,
+        check_type: DMSCHealthCheckType,
+        config: DMSCHealthCheckConfig,
+    ) -> DMSCResult<()> {
+        let span_id = if let Some(tracer) = &self.tracer {
+            let span_id = tracer.start_span_from_context(
+                format!("health_check:{}", service_name),
+                DMSCSpanKind::Internal,
+            );
+            if let Some(ref sid) = span_id {
+                let _ = tracer.span_mut(sid, |span| {
+                    span.set_attribute("service_name".to_string(), service_name.to_string());
+                    span.set_attribute("endpoint".to_string(), endpoint.to_string());
+                    span.set_attribute("check_type".to_string(), format!("{:?}", check_type));
+                });
+            }
+            span_id
+        } else {
+            None
+        };
+
+        let result = self.register_health_check_internal(service_name, endpoint, check_type, config).await;
+
+        if let (Some(tracer), Some(sid)) = (&self.tracer, span_id) {
+            let status = match &result {
+                Ok(_) => DMSCSpanStatus::Ok,
+                Err(e) => DMSCSpanStatus::Error(e.to_string()),
+            };
+            let _ = tracer.end_span(&sid, status);
+        }
+
+        result
+    }
+    
+    async fn register_health_check_internal(
         &self,
         service_name: &str,
         endpoint: &str,
@@ -824,10 +889,58 @@ impl DMSCHealthChecker {
     
     /// Get service health summary from Python
     #[pyo3(name = "get_service_health_summary")]
-    fn get_service_health_summary_impl(&self, _service_name: String) -> PyResult<DMSCHealthSummary> {
-        // For now, we'll return an error since we can't easily run async code from Python
-        // In a real implementation, you'd want to integrate with Python's async runtime
-        Err(pyo3::exceptions::PyRuntimeError::new_err("Async health check not supported from Python yet"))
+    fn get_service_health_summary_impl(&self, service_name: String) -> PyResult<DMSCHealthSummary> {
+        let rt = tokio::runtime::Runtime::new().map_err(|e| {
+            pyo3::exceptions::PyRuntimeError::new_err(format!("Failed to create runtime: {}", e))
+        })?;
+        
+        rt.block_on(async {
+            self.get_service_health_summary(&service_name)
+                .await
+                .map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(format!("Failed to get health summary: {e}")))
+        })
+    }
+    
+    /// Start health check from Python
+    #[pyo3(name = "start_health_check")]
+    fn start_health_check_impl(&self, service_name: String, endpoint: String) -> PyResult<()> {
+        let rt = tokio::runtime::Runtime::new().map_err(|e| {
+            pyo3::exceptions::PyRuntimeError::new_err(format!("Failed to create runtime: {}", e))
+        })?;
+        
+        rt.block_on(async {
+            self.start_health_check(&service_name, &endpoint)
+                .await
+                .map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(format!("Failed to start health check: {e}")))
+        })
+    }
+    
+    /// Stop health check from Python
+    #[pyo3(name = "stop_health_check")]
+    fn stop_health_check_impl(&self, service_name: String, endpoint: String) -> PyResult<()> {
+        let rt = tokio::runtime::Runtime::new().map_err(|e| {
+            pyo3::exceptions::PyRuntimeError::new_err(format!("Failed to create runtime: {}", e))
+        })?;
+        
+        rt.block_on(async {
+            self.stop_health_check(&service_name, &endpoint)
+                .await
+                .map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(format!("Failed to stop health check: {e}")))
+        })
+    }
+    
+    /// Get health status from Python
+    #[pyo3(name = "get_health_status")]
+    fn get_health_status_impl(&self, service_name: String) -> PyResult<Vec<DMSCHealthCheckResult>> {
+        let rt = tokio::runtime::Runtime::new().map_err(|e| {
+            pyo3::exceptions::PyRuntimeError::new_err(format!("Failed to create runtime: {}", e))
+        })?;
+        
+        rt.block_on(async {
+            self.get_health_status(&service_name)
+                .await
+                .map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(format!("Failed to get health status: {e}")))
+        })
     }
 }
 
@@ -870,4 +983,41 @@ pub struct DMSCHealthSummary {
     pub last_check_time: Option<SystemTime>,
     /// Overall health status
     pub overall_status: DMSCHealthStatus,
+}
+
+#[cfg(feature = "pyo3")]
+#[pyo3::prelude::pymethods]
+impl DMSCHealthSummary {
+    fn get_service_name(&self) -> String {
+        self.service_name.clone()
+    }
+    
+    fn get_total_checks(&self) -> usize {
+        self.total_checks
+    }
+    
+    fn get_healthy_checks(&self) -> usize {
+        self.healthy_checks
+    }
+    
+    fn get_unhealthy_checks(&self) -> usize {
+        self.unhealthy_checks
+    }
+    
+    fn get_success_rate(&self) -> f64 {
+        self.success_rate
+    }
+    
+    fn get_average_response_time_ms(&self) -> u64 {
+        self.average_response_time.as_millis() as u64
+    }
+    
+    fn get_overall_status(&self) -> String {
+        match self.overall_status {
+            DMSCHealthStatus::Healthy => "Healthy".to_string(),
+            DMSCHealthStatus::Degraded => "Degraded".to_string(),
+            DMSCHealthStatus::Unhealthy => "Unhealthy".to_string(),
+            DMSCHealthStatus::Unknown => "Unknown".to_string(),
+        }
+    }
 }

@@ -337,6 +337,80 @@ load_balancer.add_server(DMSCBackendServer {
 
 <div align="center">
 
+## 分布式追踪集成
+
+</div>
+
+DMSC Service Mesh 支持与分布式追踪系统集成，提供完整的请求链路追踪能力。
+
+### 启用追踪
+
+```rust
+use dmsc::prelude::*;
+use dmsc::service_mesh::{DMSCServiceMesh, DMSCServiceMeshConfig};
+use dmsc::observability::{DMSCTracer, init_tracer};
+use std::sync::Arc;
+
+async fn example_with_tracing() -> DMSCResult<()> {
+    // 初始化全局追踪器
+    init_tracer(1.0); // 100% 采样率
+    
+    // 创建服务网格配置
+    let mesh_config = DMSCServiceMeshConfig::default();
+    
+    // 创建服务网格实例
+    let mut service_mesh = DMSCServiceMesh::new(mesh_config)?;
+    
+    // 获取追踪器并设置到服务网格
+    let tracer = dmsc::observability::tracer()?;
+    service_mesh.set_tracer(tracer);
+    
+    // 现在所有服务调用都会自动创建追踪span
+    service_mesh.register_service("user-service", "http://user-service:8080", 100, None).await?;
+    
+    let response = service_mesh.call_service("user-service", b"test".to_vec()).await?;
+    
+    Ok(())
+}
+```
+
+### 追踪功能
+
+当启用追踪后，以下操作会自动创建span：
+
+| 操作 | Span类型 | 属性 |
+|:--------|:-------------|:--------|
+| `call_service` | Client | `service_name`, `request_size` |
+| `route_request` | Client | `endpoint`, `request_size` |
+| `register_health_check` | Internal | `service_name`, `endpoint`, `check_type` |
+
+### Trace Context 传播
+
+服务网格会自动在HTTP请求中传播W3C Trace Context：
+
+```rust
+// Trace context 自动注入到HTTP请求头
+// traceparent: 00-{trace-id}-{parent-id}-{flags}
+// baggage: key1=value1,key2=value2
+```
+
+### 配置追踪采样率
+
+```rust
+use dmsc::observability::{DMSCTracer, DMSCSamplingStrategy};
+
+// 固定采样率
+let tracer = DMSCTracer::new(0.1); // 10% 采样
+
+// 确定性采样（基于Trace ID）
+let tracer = DMSCTracer::with_strategy(DMSCSamplingStrategy::Deterministic(0.1));
+
+// 自适应采样（根据负载自动调整）
+let tracer = DMSCTracer::with_strategy(DMSCSamplingStrategy::Adaptive(0.1));
+```
+
+<div align="center">
+
 ## 最佳实践
 
 </div>
@@ -347,6 +421,8 @@ load_balancer.add_server(DMSCBackendServer {
 4. **启用熔断保护**：防止级联故障
 5. **配置负载均衡**：合理分配请求到不同实例
 6. **监控服务状态**：定期检查服务网格状态
+7. **启用分布式追踪**：在生产环境中启用追踪，便于故障排查和性能分析
+8. **合理设置采样率**：高流量场景建议使用10%或更低采样率，避免存储开销
 
 <div align="center">
 
