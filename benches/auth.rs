@@ -19,9 +19,8 @@
 //!
 //! This benchmark suite measures the performance of DMSC authentication operations.
 
-use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion, Throughput};
-use dmsc::auth::jwt::DMSCJWTManager;
-use std::sync::Arc;
+use criterion::{black_box, criterion_group, criterion_main, Criterion, Throughput};
+use dmsc::auth::DMSCJWTManager;
 
 fn bench_jwt_token_generation(c: &mut Criterion) {
     let manager = DMSCJWTManager::create("benchmark_secret_key_12345".to_string(), 3600);
