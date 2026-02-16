@@ -7,6 +7,22 @@
 
 </div>
 
+## [0.1.7] - 2026-02-16
+
+## This version is a beta version with incomplete functionality and may pose risks. It is not recommended for production environments or official use.
+
+- Fix some known issues
+
+---
+
+## [0.1.7] - 2026-02-16
+
+## 此版本为测试版，功能尚不完整，可能存在风险，不推荐用于生产环境或正式用途。
+
+- 修复一些已知问题
+
+---
+
 ## [0.1.6] - 2026-02-01
 
 ## This version is a beta version with incomplete functionality and may pose risks. It is not recommended for production environments or official use.
