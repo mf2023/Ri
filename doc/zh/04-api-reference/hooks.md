@@ -4,7 +4,7 @@
 
 **Version: 0.1.7**
 
-**Last modified date: 2026-02-13**
+**Last modified date: 2026-02-17**
 
 hooks模块提供生命周期事件钩子系统，支持在应用启动、关闭等关键时刻执行自定义逻辑。
 

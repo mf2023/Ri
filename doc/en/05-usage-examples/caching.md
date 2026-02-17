@@ -4,7 +4,7 @@
 
 **Version: 0.1.7**
 
-**Last modified date: 2026-02-13**
+**Last modified date: 2026-02-17**
 
 This example demonstrates how to use DMSC's cache module for multiple cache backends and advanced caching features.
 

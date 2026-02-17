@@ -4,7 +4,7 @@
 
 **Version: 0.1.7**
 
-**Last modified date: 2026-02-13**
+**Last modified date: 2026-02-17**
 
 The config module provides multi-source configuration management and hot reload functionality, supporting multiple configuration sources such as files and environment variables.
 

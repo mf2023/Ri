@@ -4,7 +4,7 @@
 
 **Version: 0.1.7**
 
-**Last modified date: 2026-02-13**
+**Last modified date: 2026-02-17**
 
 本指南将帮助您快速上手DMSC，从安装到创建第一个应用。
 

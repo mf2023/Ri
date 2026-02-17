@@ -4,7 +4,7 @@
 
 **Version: 0.1.7**
 
-**Last modified date: 2026-02-13**
+**Last modified date: 2026-02-17**
 
 The auth module provides authentication and authorization functionality, supporting JWT, OAuth2, and role-based access control.
 
