@@ -905,15 +905,30 @@ jobs:
       # Creates .cargo/config.toml with linker flags to allow undefined symbols
       # This is required for PyO3 bindings to work correctly on macOS
       # The -undefined dynamic_lookup flag prevents linking errors for Python symbols
+      # Also fixes DNS issues on macos-15-intel runner by flushing DNS cache
       - name: Configure macOS linker
         if: matrix.target == 'x86_64-apple-darwin' || matrix.target == 'aarch64-apple-darwin'
         run: |
+          # Fix DNS resolution issues on macOS Intel runners
+          sudo dscacheutil -flushcache 2>/dev/null || true
+          sudo killall -HUP mDNSResponder 2>/dev/null || true
+          
+          # Configure git for better network handling
+          git config --global http.postBuffer 524288000
+          git config --global http.lowSpeedLimit 0
+          git config --global http.lowSpeedTime 999999
+          
           mkdir -p .cargo
           echo '[target.x86_64-apple-darwin]' > .cargo/config.toml
           echo 'rustflags = ["-C", "link-arg=-undefined", "-C", "link-arg=dynamic_lookup"]' >> .cargo/config.toml
           echo '' >> .cargo/config.toml
           echo '[target.aarch64-apple-darwin]' >> .cargo/config.toml
           echo 'rustflags = ["-C", "link-arg=-undefined", "-C", "link-arg=dynamic_lookup"]' >> .cargo/config.toml
+          echo '' >> .cargo/config.toml
+          echo '[net]' >> .cargo/config.toml
+          echo 'retry = 5' >> .cargo/config.toml
+          echo '[http]' >> .cargo/config.toml
+          echo 'timeout = 60' >> .cargo/config.toml
 
       # Step 4b: Install protoc for macOS (required by etcd-client)
       - name: Install protoc for macOS
