@@ -113,6 +113,7 @@ jobs:
         uses: arduino/setup-protoc@v3
         with:
           version: '33.x'
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
 
       # Step 3: Install CMake for rdkafka build
       # rdkafka (Kafka client library) requires CMake to build its C dependencies
@@ -169,6 +170,7 @@ jobs:
         uses: arduino/setup-protoc@v3
         with:
           version: '33.x'
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
       
       # Step 3: Install CMake for rdkafka build
       # Required for building Kafka client C dependencies
@@ -269,6 +271,7 @@ jobs:
         uses: arduino/setup-protoc@v3
         with:
           version: '33.x'
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
 
       # Step 3: Install macOS dependencies via Homebrew
       # Installs cmake and pkg-config for building native dependencies
@@ -336,6 +339,7 @@ jobs:
         uses: arduino/setup-protoc@v3
         with:
           version: '33.x'
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Install CMake
         uses: jwlawson/actions-setup-cmake@v2
@@ -407,6 +411,7 @@ jobs:
         uses: arduino/setup-protoc@v3
         with:
           version: '33.x'
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Install CMake
         uses: jwlawson/actions-setup-cmake@v2
@@ -544,6 +549,7 @@ jobs:
         uses: arduino/setup-protoc@v3
         with:
           version: '33.x'
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Install dependencies
         run: |
@@ -1207,6 +1213,7 @@ jobs:
         uses: arduino/setup-protoc@v3
         with:
           version: '33.x'
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
 
       # Step 4: Install CMake for rdkafka build
       - name: Install CMake
@@ -1300,6 +1307,7 @@ jobs:
         uses: arduino/setup-protoc@v3
         with:
           version: '33.x'
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Install CMake
         uses: jwlawson/actions-setup-cmake@v2
@@ -1350,6 +1358,7 @@ jobs:
         uses: arduino/setup-protoc@v3
         with:
           version: '33.x'
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Install CMake
         uses: jwlawson/actions-setup-cmake@v2
@@ -1384,6 +1393,7 @@ jobs:
         uses: arduino/setup-protoc@v3
         with:
           version: '33.x'
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Install CMake
         uses: jwlawson/actions-setup-cmake@v2
