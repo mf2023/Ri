@@ -988,6 +988,71 @@ impl DMSCEncryptedStateBackend {
         }
         Ok(&key.key)
     }
+
+    async fn encrypt_and_save(&self, state: &DMSCStateSnapshot) -> DMSCResult<()> {
+        let key = self.encryption_key.read().await;
+        let serialized = bincode::serialize(state)
+            .map_err(|e| DMSCError::Serialization(e.to_string()))?;
+
+        let key_bytes = key.key.expose_secret();
+        let aes_key = Key::<Aes256Gcm>::from_slice(key_bytes);
+        let cipher = Aes256Gcm::new(aes_key);
+
+        let mut nonce_bytes = [0u8; 12];
+        rand::thread_rng().fill_bytes(&mut nonce_bytes);
+        let nonce = Nonce::from_slice(&nonce_bytes);
+
+        let ciphertext = cipher.encrypt(nonce, serialized.as_slice())
+            .map_err(|e| DMSCError::CryptoError(e.to_string()))?;
+
+        let mut encrypted_data = nonce.to_vec();
+        encrypted_data.extend_from_slice(&ciphertext);
+
+        self.memory_backend.save_encrypted(encrypted_data).await
+    }
+
+    async fn decrypt_and_load(&self) -> DMSCResult<Option<DMSCStateSnapshot>> {
+        let encrypted_data = match self.memory_backend.load_encrypted().await? {
+            Some(data) => data,
+            None => return Ok(None),
+        };
+
+        if encrypted_data.len() < 12 + 16 {
+            return Ok(None);
+        }
+
+        let key = self.encryption_key.read().await;
+        let key_bytes = key.key.expose_secret();
+
+        let nonce = Nonce::from_slice(&encrypted_data[..12]);
+        let ciphertext = &encrypted_data[12..];
+
+        let aes_key = Key::<Aes256Gcm>::from_slice(key_bytes);
+        let cipher = Aes256Gcm::new(aes_key);
+
+        let decrypted = cipher.decrypt(nonce, ciphertext)
+            .map_err(|e| DMSCError::CryptoError(e.to_string()))?;
+
+        let state = bincode::deserialize(&decrypted)
+            .map_err(|e| DMSCError::Serialization(e.to_string()))?;
+
+        Ok(Some(state))
+    }
+}
+
+#[async_trait]
+impl DMSCStateBackend for DMSCEncryptedStateBackend {
+    async fn save_state(&self, state: &DMSCStateSnapshot) -> DMSCResult<()> {
+        self.encrypt_and_save(state).await
+    }
+
+    async fn load_state(&self) -> DMSCResult<Option<DMSCStateSnapshot>> {
+        self.decrypt_and_load().await
+    }
+
+    async fn delete_state(&self) -> DMSCResult<()> {
+        self.memory_backend.delete_state().await
+    }
 }
 
 /// Persistence configuration structure.
@@ -1437,6 +1502,17 @@ impl DMSCMemoryStateBackend {
             state: Arc::new(RwLock::new(None)),
             encrypted_state: Arc::new(RwLock::new(None)),
         }
+    }
+
+    /// Save encrypted state data.
+    async fn save_encrypted(&self, encrypted_data: Vec<u8>) -> DMSCResult<()> {
+        *self.encrypted_state.write().await = Some(encrypted_data);
+        Ok(())
+    }
+
+    /// Load encrypted state data.
+    async fn load_encrypted(&self) -> DMSCResult<Option<Vec<u8>>> {
+        Ok(self.encrypted_state.read().await.clone())
     }
 
     /// Encrypt state data using AES-256-GCM.

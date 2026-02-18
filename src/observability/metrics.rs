@@ -85,6 +85,11 @@ use std::sync::{Arc, RwLock};
 use std::time::{SystemTime, UNIX_EPOCH, Duration};
 use serde::{Serialize, Deserialize};
 
+#[cfg(feature = "pyo3")]
+use pyo3::prelude::*;
+#[cfg(feature = "pyo3")]
+use pyo3::Py;
+
 use crate::core::DMSCResult;
 use crate::core::lock::RwLockExtensions;
 
@@ -483,6 +488,16 @@ impl DMSCMetricsRegistry {
         Self::new()
     }
     
+    /// Register a metric from Python
+    #[pyo3(name = "register")]
+    fn register_py(&self, metric: &DMSCMetric) -> PyResult<()> {
+        let name = metric.config.name.clone();
+        let mut metrics = self.metrics.write_safe("metrics registry")
+            .map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(e.to_string()))?;
+        metrics.insert(name, Arc::new(DMSCMetric::new(metric.config.clone())));
+        Ok(())
+    }
+    
     /// Get a metric's current value by name from Python
     #[pyo3(name = "get_metric_value")]
     fn get_metric_value_impl(&self, name: &str) -> Option<f64> {
@@ -520,5 +535,54 @@ impl DMSCMetricsRegistry {
             Err(_) => return 0,
         };
         metrics.len()
+    }
+}
+
+#[cfg(feature = "pyo3")]
+#[pyo3::prelude::pymethods]
+impl DMSCMetricConfig {
+    #[new]
+    #[pyo3(signature = (name, metric_type, help="", buckets=None, quantiles=None))]
+    fn py_new(
+        name: String,
+        metric_type: DMSCMetricType,
+        help: &str,
+        buckets: Option<Vec<f64>>,
+        quantiles: Option<Vec<f64>>,
+    ) -> Self {
+        Self {
+            name,
+            metric_type,
+            help: help.to_string(),
+            buckets: buckets.unwrap_or_else(|| vec![0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1.0, 2.5, 5.0, 10.0]),
+            quantiles: quantiles.unwrap_or_else(|| vec![0.5, 0.9, 0.95, 0.99]),
+            max_age: Duration::from_secs(600),
+            age_buckets: 5,
+        }
+    }
+}
+
+#[cfg(feature = "pyo3")]
+#[pyo3::prelude::pymethods]
+impl DMSCMetric {
+    #[new]
+    fn py_new(config: DMSCMetricConfig) -> Self {
+        Self::new(config)
+    }
+    
+    #[pyo3(name = "record")]
+    fn record_py(&self, value: f64) -> PyResult<()> {
+        self.record(value, vec![])
+            .map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(e.to_string()))
+    }
+    
+    #[pyo3(name = "get_value")]
+    fn get_value_py(&self) -> f64 {
+        self.get_value()
+    }
+    
+    #[pyo3(name = "get_total_count")]
+    fn get_total_count_py(&self) -> u64 {
+        self.get_total_count()
     }
 }

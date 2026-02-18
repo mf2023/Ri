@@ -594,6 +594,9 @@ tempfile = "3"
 # Provides statistically rigorous performance testing
 criterion = { version = "0.5", features = ["html_reports"] }
 
+# Tokio runtime for async benchmarks
+tokio = { version = "1", features = ["full"] }
+
 # =============================================================================
 # Benchmark Configuration
 # =============================================================================
@@ -623,3 +626,8 @@ harness = false
 [[bench]]
 name = "core"
 harness = false
+
+[[bench]]
+name = "grpc"
+harness = false
+required-features = ["grpc"]

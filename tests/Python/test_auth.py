@@ -78,8 +78,9 @@ class TestDMSCJWTManager:
 
         token = jwt_manager.py_generate_token("user123", ["user"], ["read:data"])
 
-        is_valid = jwt_manager.validate_jwt_token(token)
-        assert is_valid is True
+        claims = jwt_manager.py_validate_token(token)
+        assert claims is not None
+        assert claims.subject == "user123"
 
 
 class TestDMSCJWTValidationOptions:

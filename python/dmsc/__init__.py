@@ -60,7 +60,9 @@ from .dmsc import (
     # Core classes - Fundamental framework components for application lifecycle,
     # configuration management, logging, hooks, and service context management
     # =============================================================================
-    DMSCAppBuilder, DMSCAppRuntime, DMSCConfig, DMSCConfigManager, DMSCError,
+    DMSCAppBuilder as _RustAppBuilder,
+    DMSCAppRuntime as _RustAppRuntime,
+    DMSCConfig, DMSCConfigManager, DMSCError,
     DMSCFileSystem, DMSCHookBus, DMSCHookEvent, DMSCHookKind, DMSCLogConfig,
     DMSCLogLevel, DMSCLogger, DMSCModulePhase, DMSCServiceContext,
     
@@ -322,6 +324,25 @@ __all__ = [
 ]
 
 
+class DMSCAppRuntime:
+    """Python wrapper for DMSC application runtime.
+    
+    This class provides a Pythonic interface to the Rust DMSCAppRuntime,
+    enabling access to the service context and application lifecycle.
+    """
+    
+    def __init__(self, runtime: _RustAppRuntime):
+        self._runtime = runtime
+    
+    def get_context(self) -> 'DMSCServiceContext':
+        """Get the service context from the runtime."""
+        return self._runtime.get_context()
+    
+    def run(self, callback) -> None:
+        """Run the application with the given callback."""
+        return self._runtime.py_run(callback)
+
+
 class DMSCAppBuilder:
     """Python wrapper for DMSC application builder.
     
@@ -337,8 +358,7 @@ class DMSCAppBuilder:
     """
     
     def __init__(self):
-        from .dmsc import DMSCAppBuilder as RustBuilder
-        self._builder = RustBuilder()
+        self._builder = _RustAppBuilder()
     
     def with_config(self, config_path: str) -> 'DMSCAppBuilder':
         """Add a configuration file path."""
@@ -392,4 +412,5 @@ class DMSCAppBuilder:
     
     def build(self) -> 'DMSCAppRuntime':
         """Build the application runtime."""
-        return self._builder.py_build()
+        runtime = self._builder.py_build()
+        return DMSCAppRuntime(runtime)

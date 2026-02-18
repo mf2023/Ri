@@ -18,10 +18,11 @@
 //! # gRPC Client Implementation
 //!
 //! This module provides the gRPC client implementation for DMSC.
+//! Supports unary RPC calls with retry and timeout support.
 
 use super::*;
 use std::time::Duration;
-use std::sync::atomic::AtomicU64;
+use std::sync::atomic::{AtomicU64, Ordering};
 
 #[pyclass]
 pub struct DMSCGrpcClient {
@@ -29,8 +30,10 @@ pub struct DMSCGrpcClient {
     endpoint: String,
     timeout: Duration,
     stats: Arc<RwLock<DMSCGrpcStats>>,
-    _request_id: Arc<AtomicU64>,
+    request_id: Arc<AtomicU64>,
     connected: Arc<RwLock<bool>>,
+    retry_count: u32,
+    retry_delay: Duration,
 }
 
 #[pymethods]
@@ -42,15 +45,63 @@ impl DMSCGrpcClient {
             endpoint,
             timeout: Duration::from_secs(30),
             stats: Arc::new(RwLock::new(DMSCGrpcStats::new())),
-            _request_id: Arc::new(AtomicU64::new(0)),
+            request_id: Arc::new(AtomicU64::new(0)),
             connected: Arc::new(RwLock::new(false)),
+            retry_count: 3,
+            retry_delay: Duration::from_millis(100),
         }
+    }
+
+    #[pyo3(signature = (timeout_secs=30))]
+    fn with_timeout_py(&mut self, timeout_secs: u64) {
+        self.timeout = Duration::from_secs(timeout_secs);
+    }
+
+    #[pyo3(signature = (count=3, delay_ms=100))]
+    fn with_retry_py(&mut self, count: u32, delay_ms: u64) {
+        self.retry_count = count;
+        self.retry_delay = Duration::from_millis(delay_ms);
     }
 
     fn get_stats(&self) -> DMSCGrpcStats {
         self.stats.try_read()
             .map(|guard| guard.clone())
             .unwrap_or_else(|_| DMSCGrpcStats::new())
+    }
+
+    fn is_connected_py(&self) -> bool {
+        self.channel.is_some()
+    }
+
+    fn get_endpoint(&self) -> String {
+        self.endpoint.clone()
+    }
+
+    fn connect_py(&mut self) -> PyResult<()> {
+        let rt = tokio::runtime::Runtime::new()
+            .map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(e.to_string()))?;
+        
+        rt.block_on(async {
+            self.connect().await
+        }).map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(e.to_string()))
+    }
+
+    fn disconnect_py(&mut self) {
+        if let Ok(rt) = tokio::runtime::Runtime::new() {
+            rt.block_on(async {
+                self.disconnect().await
+            });
+        }
+    }
+
+    #[pyo3(signature = (service_name, method, data))]
+    fn call_py(&mut self, service_name: String, method: String, data: Vec<u8>) -> PyResult<Vec<u8>> {
+        let rt = tokio::runtime::Runtime::new()
+            .map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(e.to_string()))?;
+        
+        rt.block_on(async {
+            self.call(&service_name, &method, &data).await
+        }).map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(e.to_string()))
     }
 }
 
@@ -60,13 +111,21 @@ impl DMSCGrpcClient {
         self
     }
 
+    pub fn with_retry(mut self, count: u32, delay: Duration) -> Self {
+        self.retry_count = count;
+        self.retry_delay = delay;
+        self
+    }
+
     pub async fn connect(&mut self) -> DMSCResult<()> {
-        let channel = tonic::transport::Channel::from_shared(self.endpoint.clone())
+        let endpoint = tonic::transport::Endpoint::from_shared(self.endpoint.clone())
             .map_err(|e| GrpcError::ConnectionFailed {
                 message: format!("Invalid endpoint: {}", e)
             })?
             .connect_timeout(self.timeout)
-            .connect()
+            .timeout(self.timeout);
+
+        let channel = endpoint.connect()
             .await
             .map_err(|e| GrpcError::ConnectionFailed {
                 message: format!("Connection failed: {}", e)
@@ -80,11 +139,15 @@ impl DMSCGrpcClient {
     }
 
     pub async fn is_connected(&self) -> bool {
-        *self.connected.read().await
+        *self.connected.read().await && self.channel.is_some()
     }
 
-    pub async fn call(&mut self, _method: &str, data: &[u8]) -> DMSCResult<Vec<u8>> {
-        let _channel = match &self.channel {
+    fn generate_request_id(&self) -> u64 {
+        self.request_id.fetch_add(1, Ordering::SeqCst)
+    }
+
+    pub async fn call(&mut self, service_name: &str, method: &str, data: &[u8]) -> DMSCResult<Vec<u8>> {
+        let channel = match &self.channel {
             Some(ch) => ch.clone(),
             None => {
                 return Err(GrpcError::Client {
@@ -99,14 +162,73 @@ impl DMSCGrpcClient {
             }.into());
         }
 
-        // Simplified gRPC call - just record stats and return data
-        // Full implementation would use tonic client
-        let mut stats = self.stats.write().await;
-        stats.record_request(data.len());
-        stats.record_response(data.len());
+        let request_id = self.generate_request_id();
+        let path = format!("/{}/{}", service_name, method);
 
-        // Placeholder response - in real implementation, this would make actual gRPC call
-        Ok(data.to_vec())
+        tracing::debug!("gRPC call: {} (request_id={})", path, request_id);
+
+        let mut last_error: Option<DMSCError> = None;
+        for attempt in 0..=self.retry_count {
+            if attempt > 0 {
+                tokio::time::sleep(self.retry_delay).await;
+                tracing::warn!("Retrying gRPC call (attempt {}/{})", attempt, self.retry_count);
+            }
+
+            match Self::execute_unary_call(channel.clone(), &path, data).await {
+                Ok(response) => {
+                    let mut stats = self.stats.write().await;
+                    stats.record_request(data.len());
+                    stats.record_response(response.len());
+                    return Ok(response);
+                }
+                Err(e) => {
+                    last_error = Some(e.clone());
+                    let mut stats = self.stats.write().await;
+                    stats.record_error();
+                    
+                    if !Self::is_retryable_error(&e) {
+                        return Err(e);
+                    }
+                }
+            }
+        }
+
+        Err(last_error.unwrap_or_else(|| GrpcError::Client {
+            message: "Unknown error after retries".to_string()
+        }.into()))
+    }
+
+    async fn execute_unary_call(
+        channel: tonic::transport::Channel,
+        path: &str,
+        data: &[u8],
+    ) -> DMSCResult<Vec<u8>> {
+        use tonic::client::Grpc;
+        use tonic::codec::ProstCodec;
+        
+        let codec = ProstCodec::<Vec<u8>, Vec<u8>>::new();
+        let mut client = Grpc::new(channel);
+        
+        let request = tonic::Request::new(data.to_vec());
+        let path_and_query: http::uri::PathAndQuery = path.parse()
+            .map_err(|e| GrpcError::Client {
+                message: format!("Invalid path: {}", e)
+            })?;
+        
+        let response = client.unary(request, path_and_query, codec)
+            .await
+            .map_err(|e| GrpcError::Client {
+                message: format!("RPC call failed: {}", e)
+            })?;
+
+        Ok(response.into_inner())
+    }
+
+    fn is_retryable_error(error: &DMSCError) -> bool {
+        let error_str = error.to_string();
+        error_str.contains("UNAVAILABLE") ||
+        error_str.contains("DEADLINE_EXCEEDED") ||
+        error_str.contains("RESOURCE_EXHAUSTED")
     }
 
     pub async fn disconnect(&mut self) {
@@ -118,8 +240,33 @@ impl DMSCGrpcClient {
 
 impl Drop for DMSCGrpcClient {
     fn drop(&mut self) {
-        let _ = tokio::runtime::Handle::current().block_on(async {
-            self.disconnect().await;
-        });
+        if self.channel.is_some() {
+            if let Ok(rt) = tokio::runtime::Runtime::new() {
+                rt.block_on(async {
+                    self.disconnect().await;
+                });
+            }
+        }
+    }
+}
+
+impl Default for DMSCGrpcClient {
+    fn default() -> Self {
+        Self::new("http://127.0.0.1:50051".to_string())
+    }
+}
+
+impl Clone for DMSCGrpcClient {
+    fn clone(&self) -> Self {
+        Self {
+            channel: self.channel.clone(),
+            endpoint: self.endpoint.clone(),
+            timeout: self.timeout,
+            stats: self.stats.clone(),
+            request_id: self.request_id.clone(),
+            connected: self.connected.clone(),
+            retry_count: self.retry_count,
+            retry_delay: self.retry_delay,
+        }
     }
 }

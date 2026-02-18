@@ -204,6 +204,43 @@ impl DMSCLogConfig {
     fn py_new() -> Self {
         Self::default()
     }
+
+    #[staticmethod]
+    #[pyo3(name = "default")]
+    fn default_py() -> Self {
+        Self::default()
+    }
+
+    #[staticmethod]
+    #[pyo3(signature = (level="info", console_enabled=true, file_enabled=false, file_name="dmsc.log", json_format=false, max_bytes=10485760, color_blocks=true))]
+    fn create(
+        level: &str,
+        console_enabled: bool,
+        file_enabled: bool,
+        file_name: &str,
+        json_format: bool,
+        max_bytes: u64,
+        color_blocks: bool,
+    ) -> Self {
+        let log_level = match level.to_uppercase().as_str() {
+            "DEBUG" => DMSCLogLevel::Debug,
+            "INFO" => DMSCLogLevel::Info,
+            "WARN" | "WARNING" => DMSCLogLevel::Warn,
+            "ERROR" => DMSCLogLevel::Error,
+            _ => DMSCLogLevel::Info,
+        };
+        Self {
+            level: log_level,
+            console_enabled,
+            file_enabled,
+            sampling_default: 1.0,
+            file_name: file_name.to_string(),
+            json_format,
+            rotate_when: "size".to_string(),
+            max_bytes,
+            color_blocks,
+        }
+    }
 }
 
 impl DMSCLogConfig {

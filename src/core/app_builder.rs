@@ -85,6 +85,7 @@ use super::module_sorter::sort_modules;
 use super::module_types::{ModuleSlot, ModuleType};
 use super::lifecycle::DMSCLifecycleObserver;
 use super::analytics::DMSCLogAnalyticsModule;
+use std::sync::Arc;
 
 #[cfg(feature = "pyo3")]
 use pyo3::PyResult;
@@ -568,7 +569,7 @@ impl DMSCAppBuilder {
         };
  
         let fs = crate::fs::DMSCFileSystem::new_with_roots(project_root, app_data_root);
- 
+
         // Use custom logging config if provided, otherwise create from config
         let log_config: crate::log::DMSCLogConfig = if let Some(log_config) = &self.logging_config {
             log_config.clone()
@@ -577,8 +578,9 @@ impl DMSCAppBuilder {
         };
         let logger = crate::log::DMSCLogger::new(&log_config, fs.clone());
         let hooks = crate::hooks::DMSCHookBus::new();
+        let metrics_registry = Some(Arc::new(crate::observability::DMSCMetricsRegistry::new()));
         
-        Ok(DMSCServiceContext::new_with(fs, logger, config_manager, hooks, None))
+        Ok(DMSCServiceContext::new_with(fs, logger, config_manager, hooks, metrics_registry))
     }
 }
  

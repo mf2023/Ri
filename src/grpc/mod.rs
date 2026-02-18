@@ -196,6 +196,29 @@ pub struct DMSCGrpcStats {
 
 #[pymethods]
 impl DMSCGrpcStats {
+    fn get_requests_received(&self) -> u64 {
+        self.requests_received
+    }
+
+    fn get_requests_completed(&self) -> u64 {
+        self.requests_completed
+    }
+
+    fn get_requests_failed(&self) -> u64 {
+        self.requests_failed
+    }
+
+    fn get_bytes_received(&self) -> u64 {
+        self.bytes_received
+    }
+
+    fn get_bytes_sent(&self) -> u64 {
+        self.bytes_sent
+    }
+
+    fn get_active_connections(&self) -> u64 {
+        self.active_connections
+    }
 }
 
 impl DMSCGrpcStats {
