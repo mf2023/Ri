@@ -68,7 +68,7 @@ name = "dmsc"
 
 # Package version - should match Cargo.toml version
 # Follows semantic versioning (MAJOR.MINOR.PATCH)
-version = "0.1.7"
+version = "0.1.8-beta.1"
 
 # Short description displayed on PyPI and package listings
 description = "Dunimd Middleware Service - A high-performance Rust middleware framework with modular architecture"
