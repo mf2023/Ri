@@ -19,7 +19,7 @@
 //!
 //! This benchmark suite measures the performance of DMSC core operations.
 
-use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion, Throughput};
+use criterion::{black_box, criterion_group, criterion_main, Criterion, Throughput};
 use dmsc::core::error::DMSCError;
 use std::sync::Arc;
 use tokio::sync::RwLock;
@@ -30,28 +30,28 @@ fn bench_error_creation(c: &mut Criterion) {
     
     group.bench_function("create_io_error", |b| {
         b.iter(|| {
-            let error = DMSCError::IoError("Test IO error".to_string());
+            let error = DMSCError::io("Test IO error");
             black_box(error);
         });
     });
     
     group.bench_function("create_config_error", |b| {
         b.iter(|| {
-            let error = DMSCError::ConfigError("Test config error".to_string());
+            let error = DMSCError::config("Test config error");
             black_box(error);
         });
     });
     
     group.bench_function("create_database_error", |b| {
         b.iter(|| {
-            let error = DMSCError::DatabaseError("Test database error".to_string());
+            let error = DMSCError::Other("Test database error".to_string());
             black_box(error);
         });
     });
     
     group.bench_function("create_validation_error", |b| {
         b.iter(|| {
-            let error = DMSCError::ValidationError("Test validation error".to_string());
+            let error = DMSCError::InvalidInput("Test validation error".to_string());
             black_box(error);
         });
     });
@@ -63,7 +63,7 @@ fn bench_error_display(c: &mut Criterion) {
     let mut group = c.benchmark_group("error_display");
     group.throughput(Throughput::Elements(1));
     
-    let error = DMSCError::IoError("Test IO error with some longer message".to_string());
+    let error = DMSCError::io("Test IO error with some longer message");
     
     group.bench_function("error_to_string", |b| {
         b.iter(|| {
