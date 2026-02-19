@@ -576,6 +576,7 @@ kafka = ["rdkafka"]
 
 # Post-quantum cryptography integration via oqs
 # Requires: liboqs C library installed + oqs Rust crate
+oqs = ["dep:oqs"]
 protocol = ["dep:oqs", "dep:sm-crypto"]
 
 # =============================================================================

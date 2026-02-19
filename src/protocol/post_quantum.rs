@@ -75,22 +75,16 @@
 //! ```
 
 use std::sync::Arc;
-use std::time::{Duration, Instant};
+use std::time::Instant;
 use tokio::sync::RwLock;
-use rand::RngCore;
-use subtle::ConstantTimeEq;
-use crate::core::{DMSCResult, DMSCError};
+use crate::core::DMSCResult;
 
 #[cfg(feature = "pyo3")]
 use pyo3::prelude::*;
 
-pub mod kyber;
-pub mod dilithium;
-pub mod falcon;
-
-pub use kyber::{KyberKEM, KyberPublicKey, KyberSecretKey, KyberCiphertext};
-pub use dilithium::{DilithiumSigner, DilithiumPublicKey, DilithiumSecretKey, DilithiumSignature};
-pub use falcon::{FalconSigner, FalconPublicKey, FalconSecretKey, FalconSignature};
+pub use super::kyber::{KyberKEM, KyberPublicKey, KyberSecretKey, KyberCiphertext};
+pub use super::dilithium::{DilithiumSigner, DilithiumPublicKey, DilithiumSecretKey, DilithiumSignature};
+pub use super::falcon::{FalconSigner, FalconPublicKey, FalconSecretKey, FalconSignature};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
@@ -144,15 +138,18 @@ impl DMSCPostQuantumManager {
     }
 
     pub fn security_level(&self) -> u8 {
-        match *self.algorithm.read() {
-            DMSCPostQuantumAlgorithm::Kyber512 => 1,
-            DMSCPostQuantumAlgorithm::Kyber768 => 3,
-            DMSCPostQuantumAlgorithm::Kyber1024 => 5,
-            DMSCPostQuantumAlgorithm::Dilithium2 => 1,
-            DMSCPostQuantumAlgorithm::Dilithium3 => 3,
-            DMSCPostQuantumAlgorithm::Dilithium5 => 5,
-            DMSCPostQuantumAlgorithm::Falcon512 => 1,
-            DMSCPostQuantumAlgorithm::Falcon1024 => 5,
+        match self.algorithm.try_read() {
+            Ok(guard) => match *guard {
+                DMSCPostQuantumAlgorithm::Kyber512 => 1,
+                DMSCPostQuantumAlgorithm::Kyber768 => 3,
+                DMSCPostQuantumAlgorithm::Kyber1024 => 5,
+                DMSCPostQuantumAlgorithm::Dilithium2 => 1,
+                DMSCPostQuantumAlgorithm::Dilithium3 => 3,
+                DMSCPostQuantumAlgorithm::Dilithium5 => 5,
+                DMSCPostQuantumAlgorithm::Falcon512 => 1,
+                DMSCPostQuantumAlgorithm::Falcon1024 => 5,
+            },
+            Err(_) => 1,
         }
     }
 }

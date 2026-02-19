@@ -21,147 +21,6 @@
 
 use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion, Throughput};
 
-#[cfg(feature = "protocol")]
-fn bench_kyber_kem(c: &mut Criterion) {
-    use dmsc::protocol::kyber::KyberKEM;
-    use dmsc::protocol::DMSCPostQuantumAlgorithm;
-    
-    let mut group = c.benchmark_group("kyber_kem");
-    group.throughput(Throughput::Elements(1));
-    
-    group.bench_function("kyber512_keygen", |b| {
-        let kem = KyberKEM::with_algorithm(DMSCPostQuantumAlgorithm::Kyber512);
-        b.iter(|| {
-            let result = kem.keygen().unwrap();
-            black_box(result);
-        });
-    });
-    
-    group.bench_function("kyber768_keygen", |b| {
-        let kem = KyberKEM::with_algorithm(DMSCPostQuantumAlgorithm::Kyber768);
-        b.iter(|| {
-            let result = kem.keygen().unwrap();
-            black_box(result);
-        });
-    });
-    
-    group.bench_function("kyber1024_keygen", |b| {
-        let kem = KyberKEM::with_algorithm(DMSCPostQuantumAlgorithm::Kyber1024);
-        b.iter(|| {
-            let result = kem.keygen().unwrap();
-            black_box(result);
-        });
-    });
-    
-    let kem = KyberKEM::new();
-    let (pk, sk) = kem.keygen().unwrap();
-    
-    group.bench_function("kyber_encapsulate", |b| {
-        b.iter(|| {
-            let result = kem.encapsulate(&pk).unwrap();
-            black_box(result);
-        });
-    });
-    
-    let kem_result = kem.encapsulate(&pk).unwrap();
-    
-    group.bench_function("kyber_decapsulate", |b| {
-        b.iter(|| {
-            let result = kem.decapsulate(&kem_result.ciphertext, &sk).unwrap();
-            black_box(result);
-        });
-    });
-    
-    group.finish();
-}
-
-#[cfg(not(feature = "protocol"))]
-fn bench_kyber_kem(_c: &mut Criterion) {}
-
-#[cfg(feature = "protocol")]
-fn bench_dilithium_signature(c: &mut Criterion) {
-    use dmsc::protocol::dilithium::DilithiumSigner;
-    use dmsc::protocol::DMSCPostQuantumAlgorithm;
-    
-    let mut group = c.benchmark_group("dilithium_signature");
-    group.throughput(Throughput::Elements(1));
-    
-    group.bench_function("dilithium2_keygen", |b| {
-        let signer = DilithiumSigner::with_algorithm(DMSCPostQuantumAlgorithm::Dilithium2);
-        b.iter(|| {
-            let result = signer.keygen().unwrap();
-            black_box(result);
-        });
-    });
-    
-    let signer = DilithiumSigner::new();
-    let (pk, sk) = signer.keygen().unwrap();
-    let message = b"Test message for benchmarking";
-    
-    group.bench_function("dilithium_sign", |b| {
-        b.iter(|| {
-            let result = signer.sign(message, &sk).unwrap();
-            black_box(result);
-        });
-    });
-    
-    let signature = signer.sign(message, &sk).unwrap();
-    
-    group.bench_function("dilithium_verify", |b| {
-        b.iter(|| {
-            let result = signer.verify(message, &signature, &pk).unwrap();
-            black_box(result);
-        });
-    });
-    
-    group.finish();
-}
-
-#[cfg(not(feature = "protocol"))]
-fn bench_dilithium_signature(_c: &mut Criterion) {}
-
-#[cfg(feature = "protocol")]
-fn bench_falcon_signature(c: &mut Criterion) {
-    use dmsc::protocol::falcon::FalconSigner;
-    use dmsc::protocol::DMSCPostQuantumAlgorithm;
-    
-    let mut group = c.benchmark_group("falcon_signature");
-    group.throughput(Throughput::Elements(1));
-    
-    group.bench_function("falcon512_keygen", |b| {
-        let signer = FalconSigner::with_algorithm(DMSCPostQuantumAlgorithm::Falcon512);
-        b.iter(|| {
-            let result = signer.keygen().unwrap();
-            black_box(result);
-        });
-    });
-    
-    let signer = FalconSigner::new();
-    let (pk, sk) = signer.keygen().unwrap();
-    let message = b"Test message for benchmarking";
-    
-    group.bench_function("falcon_sign", |b| {
-        b.iter(|| {
-            let result = signer.sign(message, &sk).unwrap();
-            black_box(result);
-        });
-    });
-    
-    let signature = signer.sign(message, &sk).unwrap();
-    
-    group.bench_function("falcon_verify", |b| {
-        b.iter(|| {
-            let result = signer.verify(message, &signature, &pk).unwrap();
-            black_box(result);
-        });
-    });
-    
-    group.finish();
-}
-
-#[cfg(not(feature = "protocol"))]
-fn bench_falcon_signature(_c: &mut Criterion) {}
-
 fn bench_aes_gcm_encryption(c: &mut Criterion) {
     use aes_gcm::{Aes256Gcm, KeyInit, Nonce};
     use aes_gcm::aead::Aead;
@@ -290,15 +149,45 @@ fn bench_hex_encoding(c: &mut Criterion) {
     group.finish();
 }
 
+fn bench_frame_parsing(c: &mut Criterion) {
+    use dmsc::protocol::{DMSCFrameBuilder, DMSCFrameParser};
+    
+    let mut group = c.benchmark_group("frame_parsing");
+    
+    let payload = vec![0u8; 256];
+    let mut builder = DMSCFrameBuilder::new();
+    let frame = builder.build_data_frame(payload.clone()).unwrap();
+    let frame_bytes = frame.to_bytes().unwrap();
+    
+    group.throughput(Throughput::Bytes(frame_bytes.len() as u64));
+    
+    group.bench_function("parse_frame", |b| {
+        b.iter(|| {
+            let mut parser = DMSCFrameParser::new();
+            parser.add_data(&frame_bytes);
+            let result = parser.parse_frame().unwrap();
+            black_box(result);
+        });
+    });
+    
+    group.bench_function("build_frame", |b| {
+        b.iter(|| {
+            let mut builder = DMSCFrameBuilder::new();
+            let result = builder.build_data_frame(payload.clone()).unwrap();
+            black_box(result);
+        });
+    });
+    
+    group.finish();
+}
+
 criterion_group!(
     protocol_benches,
-    bench_kyber_kem,
-    bench_dilithium_signature,
-    bench_falcon_signature,
     bench_aes_gcm_encryption,
     bench_hash_functions,
     bench_base64_encoding,
     bench_hex_encoding,
+    bench_frame_parsing,
 );
 
 criterion_main!(protocol_benches);

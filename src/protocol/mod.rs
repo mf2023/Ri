@@ -69,6 +69,23 @@ use pyo3::prelude::*;
 pub mod frames;
 pub use frames::{DMSCFrameBuilder, DMSCFrameParser};
 
+/// Post-quantum cryptography modules (requires oqs feature)
+#[cfg(feature = "oqs")]
+pub mod kyber;
+#[cfg(feature = "oqs")]
+pub mod dilithium;
+#[cfg(feature = "oqs")]
+pub mod falcon;
+#[cfg(feature = "oqs")]
+pub mod post_quantum;
+#[cfg(feature = "oqs")]
+pub use post_quantum::{
+    KyberKEM, KyberPublicKey, KyberSecretKey, KyberCiphertext,
+    DilithiumSigner, DilithiumPublicKey, DilithiumSecretKey, DilithiumSignature,
+    FalconSigner, FalconPublicKey, FalconSecretKey, FalconSignature,
+    DMSCPostQuantumAlgorithm, KEMResult,
+};
+
 /// Protocol type enumeration
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, std::hash::Hash)]
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]

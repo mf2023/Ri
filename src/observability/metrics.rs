@@ -87,8 +87,6 @@ use serde::{Serialize, Deserialize};
 
 #[cfg(feature = "pyo3")]
 use pyo3::prelude::*;
-#[cfg(feature = "pyo3")]
-use pyo3::Py;
 
 use crate::core::DMSCResult;
 use crate::core::lock::RwLockExtensions;
