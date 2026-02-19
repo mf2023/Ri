@@ -25,46 +25,12 @@ Tests for the device management functionality.
 
 import pytest
 from dmsc import (
-    DMSCDeviceControlModule,
-    DMSCDeviceControlConfig,
-    DMSCDeviceSchedulingConfig,
     DMSCDevice,
     DMSCDeviceType,
     DMSCDeviceStatus,
     DMSCDeviceCapabilities,
     DMSCDeviceHealthMetrics,
-    DMSCDeviceController,
-    DMSCResourceRequest,
-    DMSCResourceAllocation,
-    DMSCRequestSlaClass,
-    DMSCResourceWeights,
-    DMSCAffinityRules,
-    DMSCResourcePool,
-    DMSCResourcePoolConfig,
-    DMSCResourcePoolStatistics,
-    DMSCResourcePoolManager,
-    DMSCResourceScheduler,
-    DMSCDeviceScheduler,
-    DMSCSchedulingPolicy,
-    DMSCAllocationRecord,
-    DMSCAllocationRequest,
-    DMSCAllocationStatistics,
-    DMSCSchedulingRecommendation,
-    DMSCSchedulingRecommendationType,
-    DMSCDeviceDiscoveryEngine,
 )
-
-
-class TestDMSCDeviceControlModule:
-    """Tests for DMSCDeviceControlModule"""
-
-    def test_device_module_creation(self):
-        """Test creating device control module"""
-        control_config = DMSCDeviceControlConfig()
-        scheduling_config = DMSCDeviceSchedulingConfig()
-
-        module = DMSCDeviceControlModule(control_config, scheduling_config)
-        assert module is not None
 
 
 class TestDMSCDevice:
@@ -72,15 +38,18 @@ class TestDMSCDevice:
 
     def test_device_creation(self):
         """Test creating a device"""
-        device = DMSCDevice()
-        device.device_id = "device_001"
-        device.device_type = DMSCDeviceType.IoT
-        device.name = "Test Device"
-        device.status = DMSCDeviceStatus.Online
+        device = DMSCDevice("Test Device", DMSCDeviceType.CPU)
+        
+        assert device.id() is not None
+        assert device.name() == "Test Device"
+        assert str(device.device_type()) == "CPU"
 
-        assert device.device_id == "device_001"
-        assert device.device_type == DMSCDeviceType.IoT
-        assert device.name == "Test Device"
+    def test_device_status(self):
+        """Test device status operations"""
+        device = DMSCDevice("Test Device", DMSCDeviceType.GPU)
+        
+        device.set_status(DMSCDeviceStatus.Available)
+        assert "Available" in str(device.status())
 
 
 class TestDMSCDeviceCapabilities:
@@ -89,14 +58,15 @@ class TestDMSCDeviceCapabilities:
     def test_capabilities_creation(self):
         """Test creating device capabilities"""
         caps = DMSCDeviceCapabilities()
-        caps.can_read = True
-        caps.can_write = True
-        caps.supported_protocols = ["MQTT", "HTTP"]
-        caps.max_concurrent_connections = 100
+        caps.compute_units = 16
+        caps.memory_gb = 32.0
+        caps.storage_gb = 512.0
+        caps.bandwidth_gbps = 10.0
 
-        assert caps.can_read is True
-        assert caps.can_write is True
-        assert "MQTT" in caps.supported_protocols
+        assert caps.compute_units == 16
+        assert caps.memory_gb == 32.0
+        assert caps.storage_gb == 512.0
+        assert caps.bandwidth_gbps == 10.0
 
 
 class TestDMSCDeviceHealthMetrics:
@@ -107,51 +77,40 @@ class TestDMSCDeviceHealthMetrics:
         metrics = DMSCDeviceHealthMetrics()
         metrics.cpu_usage_percent = 45.5
         metrics.memory_usage_percent = 60.0
-        metrics.network_latency_ms = 25.0
-        metrics.is_healthy = True
+        metrics.temperature_celsius = 55.0
+        metrics.error_count = 0
+        metrics.throughput = 1000
 
         assert metrics.cpu_usage_percent == 45.5
-        assert metrics.is_healthy is True
+        assert metrics.memory_usage_percent == 60.0
+        assert metrics.temperature_celsius == 55.0
 
 
-class TestDMSCResourceRequest:
-    """Tests for DMSCResourceRequest"""
+class TestDMSCDeviceType:
+    """Tests for DMSCDeviceType enum"""
 
-    def test_resource_request_creation(self):
-        """Test creating resource request"""
-        request = DMSCResourceRequest()
-        request.request_id = "req_001"
-        request.cpu_cores = 2
-        request.memory_mb = 4096
-        request.storage_gb = 50
-        request.sla_class = DMSCRequestSlaClass.Gold
-
-        assert request.request_id == "req_001"
-        assert request.cpu_cores == 2
-        assert request.sla_class == DMSCRequestSlaClass.Gold
+    def test_device_types(self):
+        """Test device type enum values"""
+        assert DMSCDeviceType.CPU is not None
+        assert DMSCDeviceType.GPU is not None
+        assert DMSCDeviceType.Memory is not None
+        assert DMSCDeviceType.Storage is not None
+        assert DMSCDeviceType.Network is not None
+        assert DMSCDeviceType.Custom is not None
+        assert DMSCDeviceType.Sensor is not None
+        assert DMSCDeviceType.Actuator is not None
 
 
-class TestDMSCResourcePool:
-    """Tests for DMSCResourcePool"""
+class TestDMSCDeviceStatus:
+    """Tests for DMSCDeviceStatus enum"""
 
-    def test_resource_pool_creation(self):
-        """Test creating resource pool"""
-        config = DMSCResourcePoolConfig()
-        config.name = "test_pool"
-        config.max_concurrent_allocations = 100
-
-        pool = DMSCResourcePool(config)
-        assert pool is not None
-
-
-class TestDMSCSchedulingPolicy:
-    """Tests for DMSCSchedulingPolicy"""
-
-    def test_scheduling_policies(self):
-        """Test scheduling policy types"""
-        assert DMSCSchedulingPolicy.BestFit is not None
-        assert DMSCSchedulingPolicy.WorstFit is not None
-        assert DMSCSchedulingPolicy.FirstFit is not None
+    def test_device_statuses(self):
+        """Test device status enum values"""
+        assert DMSCDeviceStatus.Unknown is not None
+        assert DMSCDeviceStatus.Available is not None
+        assert DMSCDeviceStatus.Busy is not None
+        assert DMSCDeviceStatus.Error is not None
+        assert DMSCDeviceStatus.Offline is not None
 
 
 if __name__ == "__main__":

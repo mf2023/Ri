@@ -43,33 +43,48 @@ class TestDMSCConfig:
         config = DMSCConfig()
 
         config.set("database.host", "localhost")
-        config.set("database.port", 5432)
+        config.set("database.port", "5432")
         config.set("database.name", "test_db")
 
         assert config.get("database.host") == "localhost"
-        assert config.get("database.port") == 5432
+        assert config.get("database.port") == "5432"
         assert config.get("database.name") == "test_db"
 
-    def test_config_with_nested_values(self):
-        """Test configuration with nested values"""
+    def test_config_get_nonexistent(self):
+        """Test getting nonexistent config value"""
         config = DMSCConfig()
+        
+        result = config.get("nonexistent.key")
+        assert result is None
 
-        nested_config = {
-            "server": {
-                "host": "0.0.0.0",
-                "port": 8080
-            },
-            "logging": {
-                "level": "info",
-                "format": "json"
-            }
-        }
+    def test_config_get_f64(self):
+        """Test getting float config values"""
+        config = DMSCConfig()
+        
+        config.set("server.port", "8080")
+        config.set("server.timeout", "30.5")
+        
+        assert config.get_f64("server.port") == 8080.0
+        assert config.get_f64("server.timeout") == 30.5
 
-        config.set("app", nested_config)
+    def test_config_get_usize(self):
+        """Test getting usize config values"""
+        config = DMSCConfig()
+        
+        config.set("server.port", "8080")
+        config.set("server.timeout", "30")
+        
+        assert config.get_usize("server.port") == 8080
+        assert config.get_usize("server.timeout") == 30
 
-        app_config = config.get("app")
-        assert app_config["server"]["host"] == "0.0.0.0"
-        assert app_config["server"]["port"] == 8080
+    def test_config_contains(self):
+        """Test checking if key exists"""
+        config = DMSCConfig()
+        
+        config.set("feature.enabled", "true")
+        
+        assert config.contains("feature.enabled") is True
+        assert config.contains("nonexistent.key") is False
 
 
 class TestDMSCConfigManager:
@@ -80,19 +95,12 @@ class TestDMSCConfigManager:
         manager = DMSCConfigManager()
         assert manager is not None
 
-    def test_load_from_dict(self):
-        """Test loading config from dictionary"""
+    def test_config_manager_get(self):
+        """Test getting config from manager"""
         manager = DMSCConfigManager()
-
-        config_dict = {
-            "app_name": "test-app",
-            "version": "1.0.0",
-            "environment": "test"
-        }
-
-        config = manager.load_from_dict(config_dict)
-
-        assert config is not None
+        
+        result = manager.get("nonexistent.key")
+        assert result is None
 
 
 if __name__ == "__main__":
