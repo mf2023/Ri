@@ -86,6 +86,8 @@ use serde::{Serialize, Deserialize};
 pub use tracing::{DMSCTracer, DMSCTraceId, DMSCSpanId, DMSCSpan, DMSCSpanKind, DMSCSpanStatus, DMSCTracingContext, DMSCSamplingStrategy};
 pub use metrics::{DMSCMetricsRegistry, DMSCMetric, DMSCMetricConfig, DMSCMetricType, DMSCWindowStats, DMSCMetricSample};
 pub use propagation::{DMSCTraceContext, DMSCBaggage, DMSCContextCarrier, W3CTracePropagator};
+#[cfg(feature = "system_info")]
+pub use metrics_collector::{DMSCSystemMetricsCollector, DMSCSystemMetrics, DMSCCPUMetrics, DMSCMemoryMetrics, DMSCDiskMetrics, DMSCNetworkMetrics};
 
 use crate::core::{DMSCResult, DMSCServiceContext};
 

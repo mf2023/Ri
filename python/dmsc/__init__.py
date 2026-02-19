@@ -165,6 +165,8 @@ from .dmsc import (
     DMSCMetricsRegistry, DMSCTracer,
     DMSCMetricType, DMSCMetricConfig, DMSCMetricSample, DMSCMetric,
     DMSCObservabilityData,
+    DMSCSystemMetricsCollector, DMSCSystemMetrics,
+    DMSCCPUMetrics, DMSCMemoryMetrics, DMSCDiskMetrics, DMSCNetworkMetrics,
     
     # =============================================================================
     # Validation classes - Data validation, schema validation, sanitization,
@@ -289,6 +291,8 @@ __all__ = [
     'DMSCMetricsRegistry', 'DMSCTracer',
     'DMSCMetricType', 'DMSCMetricConfig', 'DMSCMetricSample', 'DMSCMetric',
     'DMSCObservabilityData',
+    'DMSCSystemMetricsCollector', 'DMSCSystemMetrics',
+    'DMSCCPUMetrics', 'DMSCMemoryMetrics', 'DMSCDiskMetrics', 'DMSCNetworkMetrics',
     
     # Validation classes - Data validation and sanitization
     'DMSCValidationError', 'DMSCValidationResult', 'DMSCValidationSeverity',

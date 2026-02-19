@@ -501,6 +501,7 @@ pub struct DMSCPerformanceMetrics {
 ///
 /// This struct represents CPU usage metrics.
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass(get_all))]
 pub struct DMSCCPUMetrics {
     /// Total CPU usage percentage
     pub total_usage_percent: f64,
@@ -516,6 +517,7 @@ pub struct DMSCCPUMetrics {
 ///
 /// This struct represents memory usage metrics.
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass(get_all))]
 pub struct DMSCMemoryMetrics {
     /// Total memory in bytes
     pub total_bytes: u64,
@@ -539,6 +541,7 @@ pub struct DMSCMemoryMetrics {
 ///
 /// This struct represents disk usage metrics.
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass(get_all))]
 pub struct DMSCDiskMetrics {
     /// Total disk space in bytes
     pub total_bytes: u64,
@@ -562,6 +565,7 @@ pub struct DMSCDiskMetrics {
 ///
 /// This struct represents network usage metrics.
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass(get_all))]
 pub struct DMSCNetworkMetrics {
     /// Total bytes received
     pub total_received_bytes: u64,
@@ -585,6 +589,7 @@ pub struct DMSCNetworkMetrics {
 ///
 /// This struct represents a snapshot of system metrics at a specific point in time.
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 pub struct DMSCSystemMetrics {
     /// CPU metrics
     pub cpu: DMSCCPUMetrics,
@@ -603,6 +608,7 @@ pub struct DMSCSystemMetrics {
 /// This struct collects system metrics using the sysinfo crate, providing cross-platform
 /// system monitoring capabilities.
 #[allow(dead_code)]
+#[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 pub struct DMSCSystemMetricsCollector {
     /// sysinfo System instance for collecting metrics
     system: System,
@@ -839,5 +845,53 @@ impl DMSCSystemMetricsCollector {
             received_packets,
             transmitted_packets,
         )
+    }
+}
+
+#[cfg(feature = "pyo3")]
+#[pyo3::prelude::pymethods]
+impl DMSCSystemMetricsCollector {
+    #[new]
+    fn py_new() -> Self {
+        Self::new()
+    }
+    
+    #[pyo3(name = "collect")]
+    fn py_collect(&mut self) -> DMSCSystemMetrics {
+        self.collect()
+    }
+    
+    #[pyo3(name = "refresh")]
+    fn py_refresh(&mut self) {
+        self.system.refresh_all();
+    }
+}
+
+#[cfg(feature = "pyo3")]
+#[pyo3::prelude::pymethods]
+impl DMSCSystemMetrics {
+    #[pyo3(name = "cpu")]
+    fn py_cpu(&self) -> DMSCCPUMetrics {
+        self.cpu.clone()
+    }
+    
+    #[pyo3(name = "memory")]
+    fn py_memory(&self) -> DMSCMemoryMetrics {
+        self.memory.clone()
+    }
+    
+    #[pyo3(name = "disk")]
+    fn py_disk(&self) -> DMSCDiskMetrics {
+        self.disk.clone()
+    }
+    
+    #[pyo3(name = "network")]
+    fn py_network(&self) -> DMSCNetworkMetrics {
+        self.network.clone()
+    }
+    
+    #[pyo3(name = "timestamp")]
+    fn py_timestamp(&self) -> u64 {
+        self.timestamp
     }
 }

@@ -301,4 +301,9 @@ impl DMSCServiceContext {
     fn metrics_registry_py(&self) -> Option<crate::observability::DMSCMetricsRegistry> {
         self.inner.metrics_registry.as_ref().map(|r| (**r).clone())
     }
+
+    #[pyo3(name = "hooks")]
+    fn hooks_py(&self) -> crate::hooks::DMSCHookBus {
+        crate::hooks::DMSCHookBus::new()
+    }
 }

@@ -400,6 +400,17 @@ pub mod py {
         m.add_class::<crate::observability::DMSCMetric>()?;
         m.add_class::<crate::observability::DMSCObservabilityData>()?;
         
+        // Add system metrics collector types (requires system_info feature)
+        #[cfg(feature = "system_info")]
+        {
+            m.add_class::<crate::observability::DMSCSystemMetricsCollector>()?;
+            m.add_class::<crate::observability::DMSCSystemMetrics>()?;
+            m.add_class::<crate::observability::DMSCCPUMetrics>()?;
+            m.add_class::<crate::observability::DMSCMemoryMetrics>()?;
+            m.add_class::<crate::observability::DMSCDiskMetrics>()?;
+            m.add_class::<crate::observability::DMSCNetworkMetrics>()?;
+        }
+        
         // Add validation types to main module
         m.add_class::<crate::validation::DMSCValidationError>()?;
         m.add_class::<crate::validation::DMSCValidationResult>()?;
@@ -616,6 +627,15 @@ pub mod py {
         m.add_class::<crate::observability::DMSCMetricConfig>()?;
         m.add_class::<crate::observability::DMSCMetricSample>()?;
         m.add_class::<crate::observability::DMSCMetric>()?;
+        #[cfg(feature = "system_info")]
+        {
+            m.add_class::<crate::observability::DMSCSystemMetricsCollector>()?;
+            m.add_class::<crate::observability::DMSCSystemMetrics>()?;
+            m.add_class::<crate::observability::DMSCCPUMetrics>()?;
+            m.add_class::<crate::observability::DMSCMemoryMetrics>()?;
+            m.add_class::<crate::observability::DMSCDiskMetrics>()?;
+            m.add_class::<crate::observability::DMSCNetworkMetrics>()?;
+        }
         parent.add_submodule(&m)?;
         Ok(())
     }
