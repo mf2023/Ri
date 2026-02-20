@@ -2,9 +2,9 @@
 
 # API网关使用示例
 
-**Version: 0.1.7**
+**Version: 0.1.8**
 
-**Last modified date: 2026-02-17**
+**Last modified date: 2026-02-20**
 
 本示例展示如何使用 gateway 模块构建 API 网关，包括路由、中间件、负载均衡、限流和熔断功能。
 

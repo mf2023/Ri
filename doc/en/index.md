@@ -10,7 +10,7 @@
 </p>
 
 <p align="center">
-  <strong>Version: 0.1.7</strong> | <strong>Last modified date: 2026-02-17</strong>
+  <strong>Version: 0.1.8</strong> | <strong>Last modified date: 2026-02-20</strong>
 </p>
 
 <a href="https://space.bilibili.com/3493284091529457" target="_blank">
@@ -39,6 +39,12 @@
 </a>
 <a href="https://pypi.org/project/dmsc/" target="_blank">
     <img alt="PyPI" src="https://img.shields.io/badge/PyPI-DMSC-3775A9?style=flat-square&logo=pypi"/>
+</a>
+<a href="https://docs.rs/dmsc/latest/dmsc/c/index.html" target="_blank">
+    <img alt="C/C++" src="https://img.shields.io/badge/C%2FC%2B%2B-API-00599C?style=flat-square&logo=c"/>
+</a>
+<a href="https://search.maven.org/artifact/com.dunimd/dmsc" target="_blank">
+    <img alt="Maven Central" src="https://img.shields.io/badge/Maven-DMSC-007396?style=flat-square&logo=apachemaven"/>
 </a>
 
 Welcome to the DMSC (Dunimd Middleware Service) documentation! This documentation will help you understand and use the DMSC framework to build high-performance, reliable, and secure backend applications.
@@ -146,7 +152,7 @@ DMSC provides complete Python bindings, allowing you to use all core features th
 **Python SDK Features:**
 - Native Python interfaces with seamless Rust core invocation
 - Support for sync and async service modules
-- Version: **0.1.7** (requires Python 3.8+)
+- Version: **0.1.8** (requires Python 3.8+)
 - Distributed via [PyPI](https://pypi.org/project/dmsc/)
 
 **Quick Start:**

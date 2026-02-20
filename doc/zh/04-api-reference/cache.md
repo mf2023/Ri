@@ -2,9 +2,9 @@
 
 # Cache API参考
 
-**Version: 0.1.7**
+**Version: 0.1.8**
 
-**Last modified date: 2026-02-17**
+**Last modified date: 2026-02-20**
 
 cache模块提供多后端缓存抽象，支持内存、Redis、混合等多种缓存后端。
 

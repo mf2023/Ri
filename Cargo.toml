@@ -50,7 +50,7 @@ name = "dmsc"
 
 # Semantic version of the package
 # Follows MAJOR.MINOR.PATCH format
-version = "0.1.8-beta.2"
+version = "0.1.8-beta.3"
 
 # Rust edition determines language features and behavior
 # 2021 edition provides disjoint capture in closures, panic macro consistency, etc.
@@ -118,6 +118,11 @@ pyo3 = { version = "0.27", features = ["extension-module"], optional = true }
 # Optional to allow pure Rust builds without C API support
 # When enabled, allows C/C++ code to link and use DMSC functionality
 safer-ffi = { version = "0.1", features = ["proc_macros"], optional = true }
+
+# JNI bindings for Java support
+# Optional to allow pure Rust builds without Java support
+# When enabled, allows Java code to use DMSC functionality via JNI
+jni = { version = "0.21", optional = true }
 
 # Kafka message streaming support
 # Kafka client library for message streaming using rdkafka
@@ -458,6 +463,7 @@ sm-crypto = { version = "0.1", optional = true }
 default = [
     "pyo3",
     "c",
+    "java",
     "grpc",
     "websocket",
     "rabbitmq",
@@ -486,6 +492,7 @@ minimal = []
 full = [
     "pyo3",
     "c",
+    "java",
     "grpc",
     "websocket",
     "rabbitmq",
@@ -523,6 +530,9 @@ pyo3 = ["dep:pyo3"]
 
 # C/C++ API support via safer-ffi
 c = ["dep:safer-ffi"]
+
+# Java binding support via JNI
+java = ["dep:jni"]
 
 # RabbitMQ message queue support
 rabbitmq = ["dep:lapin"]

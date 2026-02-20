@@ -2,9 +2,9 @@
 
 # Basic Application Example
 
-**Version: 0.1.7**
+**Version: 0.1.8**
 
-**Last modified date: 2026-02-17**
+**Last modified date: 2026-02-20**
 
 This example shows how to build a simple DMSC application, including application configuration, running, and basic functionality usage.
 

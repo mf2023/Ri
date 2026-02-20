@@ -2,9 +2,9 @@
 
 # 设备控制使用示例
 
-**Version: 0.1.7**
+**Version: 0.1.8**
 
-**Last modified date: 2026-02-17**
+**Last modified date: 2026-02-20**
 
 本示例展示如何使用 device 模块进行设备发现、资源调度和资源池管理。
 

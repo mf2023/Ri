@@ -2,9 +2,9 @@
 
 # 故障排除
 
-**Version: 0.1.7**
+**Version: 0.1.8**
 
-**Last modified date: 2026-02-17**
+**Last modified date: 2026-02-20**
 
 本章介绍使用DMSC框架时常见的问题和故障排除方法，帮助您快速定位和解决问题。
 

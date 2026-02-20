@@ -2,9 +2,9 @@
 
 # Module RPC API参考
 
-**Version: 0.1.7**
+**Version: 0.1.8**
 
-**Last modified date: 2026-02-17**
+**Last modified date: 2026-02-20**
 
 module_rpc模块提供模块间RPC（远程过程调用）通信能力，支持同步和异步方法调用。
 

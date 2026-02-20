@@ -2,9 +2,9 @@
 
 # ServiceMesh API Reference
 
-**Version: 0.1.7**
+**Version: 0.1.8**
 
-**Last modified date: 2026-02-17**
+**Last modified date: 2026-02-20**
 
 The service_mesh module provides service mesh functionality, including service discovery, health checking, traffic management, and load balancing.
 

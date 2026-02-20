@@ -36,7 +36,10 @@ English | [简体中文](README.zh.md)
     <img alt="PyPI" src="https://img.shields.io/badge/PyPI-DMSC-3775A9?style=flat-square&logo=pypi"/>
 </a>
 <a href="https://docs.rs/dmsc/latest/dmsc/c/index.html" target="_blank">
-    <img alt="C API" src="https://img.shields.io/badge/C%2FC%2B%2B-API-00599C?style=flat-square&logo=c"/>
+    <img alt="C/C++" src="https://img.shields.io/badge/C%2FC%2B%2B-API-00599C?style=flat-square&logo=c"/>
+</a>
+<a href="https://search.maven.org/artifact/com.dunimd/dmsc" target="_blank">
+    <img alt="Maven Central" src="https://img.shields.io/badge/Maven-DMSC-007396?style=flat-square&logo=apachemaven"/>
 </a>
 
 **DMSC (Dunimd Middleware Service)** — A high-performance Rust middleware framework that unifies backend infrastructure. Built for enterprise-scale with modular architecture, built-in observability, and distributed systems support.
@@ -72,6 +75,7 @@ DMSC adopts a highly modular architecture with 18 core modules, enabling on-dema
 | **validation** | Input validation and data sanitization utilities |
 | **ws** | WebSocket server support with Python bindings (requires `websocket` feature) |
 | **c** | C/C++ FFI bindings for cross-language integration (requires `c` feature) |
+| **java** | Java JNI bindings for Java application integration (requires `java` feature) |
 
 </div>
 
@@ -80,6 +84,7 @@ DMSC adopts a highly modular architecture with 18 core modules, enabling on-dema
 > - `websocket`: WebSocket support (`--features websocket`)
 > - `protocol`: Protocol abstraction layer (`--features protocol` or `full`)
 > - `c`: C/C++ FFI bindings (`--features c`)
+> - `java`: Java JNI bindings (`--features java`)
 
 ### 🚀 Key Features
 
@@ -388,6 +393,7 @@ Open source packages and their agreement information used by this project:
 | parking_lot | MIT |
 | log | MIT |
 | pyo3 | Apache 2.0 |
+| jni | Apache 2.0 |
 | tempfile | MIT |
 | tracing | MIT |
 | thiserror | MIT |

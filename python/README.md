@@ -30,9 +30,6 @@ English | [简体中文](README.zh.md)
 </a>
 
 
-<a href="https://crates.io/crates/dmsc" target="_blank">
-    <img alt="Crates.io" src="https://img.shields.io/badge/Crates-DMSC-000000?style=flat-square&logo=rust"/>
-</a>
 <a href="https://pypi.org/project/dmsc/" target="_blank">
     <img alt="PyPI" src="https://img.shields.io/badge/PyPI-DMSC-3775A9?style=flat-square&logo=pypi"/>
 </a>
@@ -200,7 +197,7 @@ pip install dmsc
 Or add to your `requirements.txt`:
 
 ```
-dmsc==0.1.7
+dmsc==0.1.8
 ```
 
 <h2 align="center">⚡ Quick Start</h2>

@@ -2,9 +2,9 @@
 
 # Database Usage Examples
 
-**Version: 0.1.7**
+**Version: 0.1.8**
 
-**Last modified date: 2026-02-17**
+**Last modified date: 2026-02-20**
 
 This example demonstrates how to use DMSC's database module for database connections, query building, transaction management, connection pooling, and migration functionality.
 

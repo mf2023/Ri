@@ -157,6 +157,7 @@ __pycache__/
 
 # Python environment marker
 .Python
+.pytest_cache/
 
 # Python build directories
 # Contains build artifacts from setup.py or pyproject.toml builds

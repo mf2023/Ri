@@ -2,9 +2,9 @@
 
 # API Reference
 
-**Version: 0.1.7**
+**Version: 0.1.8**
 
-**Last modified date: 2026-02-17**
+**Last modified date: 2026-02-20**
 
 This directory contains detailed API documentation for each core module of DMSC.
 

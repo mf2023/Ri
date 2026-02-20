@@ -2,9 +2,9 @@
 
 # Validation API参考
 
-**Version: 0.1.7**
+**Version: 0.1.8**
 
-**Last modified date: 2026-02-17**
+**Last modified date: 2026-02-20**
 
 validation模块提供数据验证与清理功能，支持多种验证规则和自定义验证器。
 
@@ -64,6 +64,7 @@ if result.is_valid {
 | `Error` | 错误 |
 | `Warning` | 警告 |
 | `Info` | 信息 |
+| `Critical` | 严重 |
 
 ### DMSCValidationError
 
@@ -76,6 +77,8 @@ if result.is_valid {
 | `field` | `String` | 字段名称 |
 | `message` | `String` | 错误消息 |
 | `code` | `String` | 错误代码 |
+| `severity` | `DMSCValidationSeverity` | 严重级别 |
+| `value` | `Option<Value>` | 可选值 |
 
 ### DMSCValidationResult
 
@@ -107,10 +110,26 @@ if result.is_valid {
 | `not_empty()` | 验证非空 |
 | `min_length(n)` | 最小长度 |
 | `max_length(n)` | 最大长度 |
+| `exact_length(n)` | 精确长度 |
 | `is_email()` | 验证邮箱格式 |
 | `is_url()` | 验证URL格式 |
 | `is_ip()` | 验证IP地址格式 |
+| `is_uuid()` | 验证UUID格式 |
+| `is_base64()` | 验证Base64格式 |
+| `min_value(n)` | 最小值 |
+| `max_value(n)` | 最大值 |
+| `range(min, max)` | 值范围 |
+| `matches_regex(pattern)` | 匹配正则表达式 |
 | `alphanumeric()` | 验证字母数字 |
+| `alphabetic()` | 验证字母 |
+| `numeric()` | 验证数字 |
+| `lowercase()` | 验证小写 |
+| `uppercase()` | 验证大写 |
+| `contains(substring)` | 包含子字符串 |
+| `starts_with(prefix)` | 以指定前缀开头 |
+| `ends_with(suffix)` | 以指定后缀结尾 |
+| `is_in(values)` | 值在列表中 |
+| `not_in(values)` | 值不在列表中 |
 | `build()` | 构建验证器 |
 
 #### 使用示例
@@ -124,12 +143,19 @@ let validator = DMSCValidatorBuilder::new("email")
     .is_email()
     .build();
 
-let result = validator.validate_value(Some(&"user@example.com"));
+let result = validator.validate_value(Some("user@example.com"));
 ```
 
 ### DMSCValidationRunner
 
 验证运行器，用于执行验证。
+
+#### 方法
+
+| 方法 | 描述 |
+|:--------|:-------------|
+| `validate(value)` | 验证字符串值 |
+| `validate_optional(value)` | 验证可选字符串 |
 
 <div align="center">
 
@@ -139,16 +165,17 @@ let result = validator.validate_value(Some(&"user@example.com"));
 
 ### DMSCSanitizer
 
-数据清理器枚举。
+数据清理器。
 
-#### 变体
+#### 方法
 
-| 变体 | 描述 |
+| 方法 | 描述 |
 |:--------|:-------------|
-| `Trim` | 去除空白 |
-| `ToLowercase` | 转为小写 |
-| `ToUppercase` | 转为大写 |
-| `RemoveHtml` | 移除HTML标签 |
+| `new()` | 创建新的清理器 |
+| `with_config(config)` | 使用配置创建 |
+| `sanitize(input)` | 清理输入字符串 |
+| `sanitize_email(input)` | 清理邮箱 |
+| `sanitize_filename(input)` | 清理文件名 |
 
 ### DMSCSanitizationConfig
 
@@ -161,6 +188,9 @@ let result = validator.validate_value(Some(&"user@example.com"));
 | `trim_whitespace` | `bool` | 去除空白 | `true` |
 | `lowercase` | `bool` | 转为小写 | `false` |
 | `uppercase` | `bool` | 转为大写 | `false` |
+| `remove_extra_spaces` | `bool` | 移除多余空格 | `false` |
+| `remove_html_tags` | `bool` | 移除HTML标签 | `false` |
+| `escape_special_chars` | `bool` | 转义特殊字符 | `false` |
 
 <div align="center">
 
@@ -175,7 +205,10 @@ let result = validator.validate_value(Some(&"user@example.com"));
 ```rust
 use dmsc::validation::DMSCSchemaValidator;
 
-let validator = DMSCSchemaValidator::new();
+let schema = r#"{"type": "string", "minLength": 5}"#;
+let validator = DMSCSchemaValidator::new(schema.to_string());
+
+let result = validator.validate_json(r#""hello""#.to_string());
 ```
 
 <div align="center">

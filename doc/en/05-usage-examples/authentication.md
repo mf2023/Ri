@@ -2,9 +2,9 @@
 
 # Authentication and Authorization Example
 
-**Version: 0.1.7**
+**Version: 0.1.8**
 
-**Last modified date: 2026-02-17**
+**Last modified date: 2026-02-20**
 
 This example demonstrates how to use DMSC's auth module for JWT and OAuth authentication and authorization.
 

@@ -82,7 +82,7 @@ Error: "TLS handshake failed: certificate validation error"
 
 **Environment:**
 - OS: Windows 11
-- DMSC Version: 0.1.7
+- DMSC Version: 0.1.8
 - Rust Version: 1.75.0
 ```
 

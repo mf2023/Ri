@@ -2,9 +2,9 @@
 
 # Auth API Reference
 
-**Version: 0.1.7**
+**Version: 0.1.8**
 
-**Last modified date: 2026-02-17**
+**Last modified date: 2026-02-20**
 
 The auth module provides authentication and authorization functionality, supporting JWT, OAuth2, and role-based access control.
 
@@ -170,7 +170,7 @@ To enable the `http_client` feature, add it to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-dmsc = { version = "0.1.7", features = ["http_client"] }
+dmsc = { version = "0.1.8", features = ["http_client"] }
 ```
 
 #### Methods

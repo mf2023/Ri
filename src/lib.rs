@@ -84,6 +84,9 @@ pub mod ws;
 /// C/C++ API support
 #[cfg(feature = "c")]
 pub mod c;
+/// Java JNI bindings support
+#[cfg(feature = "java")]
+pub mod java;
 
 /// Common re-exports for convenient access to core functionality
 /// 

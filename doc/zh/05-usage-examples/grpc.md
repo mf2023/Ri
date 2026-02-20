@@ -2,7 +2,7 @@
 
 # gRPC 使用示例
 
-**Version: 0.1.7**
+**Version: 0.1.8**
 
 **Last modified date: 2026-01-16**
 

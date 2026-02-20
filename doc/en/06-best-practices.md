@@ -2,9 +2,9 @@
 
 # Best Practices
 
-**Version: 0.1.7**
+**Version: 0.1.8**
 
-**Last modified date: 2026-02-17**
+**Last modified date: 2026-02-20**
 
 This chapter introduces best practices for using the DMSC framework to help you build efficient, reliable, and secure applications.
 

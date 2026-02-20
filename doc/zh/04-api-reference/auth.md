@@ -2,9 +2,9 @@
 
 # Auth API参考
 
-**Version: 0.1.7**
+**Version: 0.1.8**
 
-**Last modified date: 2026-02-17**
+**Last modified date: 2026-02-20**
 
 auth模块提供认证与授权功能，支持JWT、OAuth2和基于角色的访问控制。
 
@@ -170,7 +170,7 @@ OAuth管理器，用于处理多个身份提供商。
 
 ```toml
 [dependencies]
-dmsc = { version = "0.1.7", features = ["http_client"] }
+dmsc = { version = "0.1.8", features = ["http_client"] }
 ```
 
 #### 方法

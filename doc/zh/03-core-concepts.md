@@ -2,9 +2,9 @@
 
 # 核心概念
 
-**Version: 0.1.7**
+**Version: 0.1.8**
 
-**Last modified date: 2026-02-17**
+**Last modified date: 2026-02-20**
 
 本章深入介绍DMSC的核心设计理念和关键组件，帮助您更好地理解和使用DMSC框架。
 

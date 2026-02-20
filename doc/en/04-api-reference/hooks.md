@@ -2,9 +2,9 @@
 
 # Hooks API Reference
 
-**Version: 0.1.7**
+**Version: 0.1.8**
 
-**Last modified date: 2026-02-17**
+**Last modified date: 2026-02-20**
 
 The hooks module provides lifecycle event hook system, supporting custom logic execution at critical moments like application startup and shutdown.
 

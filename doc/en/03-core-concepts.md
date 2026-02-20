@@ -2,9 +2,9 @@
 
 # Core Concepts
 
-**Version: 0.1.7**
+**Version: 0.1.8**
 
-**Last modified date: 2026-02-17**
+**Last modified date: 2026-02-20**
 
 This chapter provides an in-depth introduction to DMSC's core design principles and key components, helping you better understand and use the DMSC framework.
 

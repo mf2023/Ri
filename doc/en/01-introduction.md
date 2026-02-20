@@ -2,9 +2,9 @@
 
 # DMSC Introduction
 
-**Version: 0.1.7**
+**Version: 0.1.8**
 
-**Last modified date: 2026-02-17**
+**Last modified date: 2026-02-20**
 
 ## Project Overview
 
@@ -122,7 +122,7 @@ DMSC provides complete Python bindings, allowing you to use all core features th
 **Python SDK Features:**
 - Native Python interfaces with seamless Rust core invocation
 - Support for sync and async service modules
-- Version: **0.1.7** (requires Python 3.8+)
+- Version: **0.1.8** (requires Python 3.8+)
 - Distributed via [PyPI](https://pypi.org/project/dmsc/)
 
 **Quick Start:**

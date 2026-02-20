@@ -2,9 +2,9 @@
 
 # Core API Reference
 
-**Version: 0.1.7**
+**Version: 0.1.8**
 
-**Last modified date: 2026-02-17**
+**Last modified date: 2026-02-20**
 
 The core module is the foundation of DMSC, providing runtime, error handling, service context, and module system functionality.
 

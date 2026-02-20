@@ -2,9 +2,9 @@
 
 # Usage Examples
 
-**Version: 0.1.7**
+**Version: 0.1.8**
 
-**Last modified date: 2026-02-17**
+**Last modified date: 2026-02-20**
 
 This directory contains usage examples for each core feature of DMSC, helping you quickly understand and use the DMSC framework.
 

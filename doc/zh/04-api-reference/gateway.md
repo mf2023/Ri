@@ -2,9 +2,9 @@
 
 # Gateway API参考
 
-**Version: 0.1.7**
+**Version: 0.1.8**
 
-**Last modified date: 2026-02-17**
+**Last modified date: 2026-02-20**
 
 gateway模块提供API网关功能，包括路由、中间件、负载均衡、限流和熔断支持。
 

@@ -49,7 +49,7 @@ Example Usage:
     gateway = DMSCGateway()
 """
 
-__version__ = "0.1.7"
+__version__ = "0.1.8"
 __author__ = "Dunimd Team"
 __license__ = "Apache-2.0"
 

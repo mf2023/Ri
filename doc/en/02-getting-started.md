@@ -2,9 +2,9 @@
 
 # Getting Started
 
-**Version: 0.1.7**
+**Version: 0.1.8**
 
-**Last modified date: 2026-02-17**
+**Last modified date: 2026-02-20**
 
 This guide will help you get started with DMSC, from installation to creating your first application.
 
@@ -171,7 +171,7 @@ pip install dmsc
 Or add to your `requirements.txt`:
 
 ```
-dmsc==0.1.7
+dmsc==0.1.8
 ```
 
 Verify the installation:

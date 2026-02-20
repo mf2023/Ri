@@ -2,9 +2,9 @@
 
 # Device API参考
 
-**Version: 0.1.7**
+**Version: 0.1.8**
 
-**Last modified date: 2026-02-17**
+**Last modified date: 2026-02-20**
 
 device模块提供智能设备控制功能，包括设备发现、资源调度和资源池管理。
 
