@@ -197,16 +197,16 @@ from .dmsc import (
     # =============================================================================
     # gRPC classes - gRPC server and client support
     # =============================================================================
-    DMSCGrpcConfig, DMSCGrpcStats, DMSCGrpcServiceRegistry,
+    DMSCGrpcConfig, DMSCGrpcStats,
     DMSCGrpcPythonService, DMSCGrpcServiceRegistryPy,
-    DMSCGrpcServer, DMSCGrpcClient,
+    DMSCGrpcServerPy, DMSCGrpcClientPy,
 
     # =============================================================================
     # WebSocket classes - WebSocket server and client support
     # =============================================================================
     DMSCWSServerConfig, DMSCWSEvent, DMSCWSSessionInfo, DMSCWSServerStats,
     DMSCWSPythonHandler, DMSCWSSessionManagerPy,
-    DMSCWSServer, DMSCWSClientConfig, DMSCWSClientStats, DMSCWSClient,
+    DMSCWSServerPy, DMSCWSClientConfig, DMSCWSClientStats, DMSCWSClientPy,
 )
 
 # =============================================================================
@@ -312,14 +312,14 @@ __all__ = [
     'DMSCPyORMRepository',
 
     # gRPC classes - gRPC server and client support
-    'DMSCGrpcConfig', 'DMSCGrpcStats', 'DMSCGrpcServiceRegistry',
+    'DMSCGrpcConfig', 'DMSCGrpcStats',
     'DMSCGrpcPythonService', 'DMSCGrpcServiceRegistryPy',
-    'DMSCGrpcServer', 'DMSCGrpcClient',
+    'DMSCGrpcServerPy', 'DMSCGrpcClientPy',
 
     # WebSocket classes - WebSocket server and client support
     'DMSCWSServerConfig', 'DMSCWSEvent', 'DMSCWSSessionInfo', 'DMSCWSServerStats',
     'DMSCWSPythonHandler', 'DMSCWSSessionManagerPy',
-    'DMSCWSServer', 'DMSCWSClientConfig', 'DMSCWSClientStats', 'DMSCWSClient',
+    'DMSCWSServerPy', 'DMSCWSClientConfig', 'DMSCWSClientStats', 'DMSCWSClientPy',
 
     # Submodules - Functional submodule references
     'device', 'cache', 'fs', 'hooks', 'observability',

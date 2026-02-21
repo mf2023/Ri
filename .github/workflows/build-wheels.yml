@@ -278,10 +278,10 @@ jobs:
       # Also upgrades pip, setuptools, and wheel for Python package building
       - name: Install dependencies
         run: |
-          brew update
-          brew install cmake pkg-config || true
-          brew upgrade cmake pkg-config || true
-          pip install --upgrade pip setuptools wheel || true
+          brew update --quiet 2>/dev/null || true
+          brew install --quiet cmake pkg-config 2>/dev/null || true
+          brew upgrade --quiet cmake pkg-config 2>/dev/null || true
+          pip install --upgrade pip setuptools wheel 2>/dev/null || true
       
       # Step 4: Set up Rust toolchain for x86_64-apple-darwin target
       # Installs stable Rust and adds the macOS x64 target
@@ -340,9 +340,9 @@ jobs:
 
       - name: Install dependencies
         run: |
-          brew update
-          brew install cmake pkg-config || true
-          pip install --upgrade pip setuptools wheel || true
+          brew update --quiet 2>/dev/null || true
+          brew install --quiet cmake pkg-config 2>/dev/null || true
+          pip install --upgrade pip setuptools wheel 2>/dev/null || true
       
       - name: Set up Rust
         uses: dtolnay/rust-toolchain@master
@@ -628,8 +628,8 @@ jobs:
 
       - name: Install dependencies
         run: |
-          brew update
-          brew install cmake pkg-config openssl || true
+          brew update --quiet 2>/dev/null || true
+          brew install --quiet cmake pkg-config openssl 2>/dev/null || true
 
       - name: Set up Rust
         uses: dtolnay/rust-toolchain@master
@@ -1154,7 +1154,7 @@ jobs:
       - name: Install protoc for macOS
         if: runner.os == 'macOS'
         run: |
-          brew install protobuf
+          brew install --quiet protobuf 2>/dev/null || true
           echo "PROTOC=$(brew --prefix protobuf)/bin/protoc" >> $GITHUB_ENV
 
       # Step 5: Cache pip dependencies to avoid rate limits
@@ -1791,8 +1791,8 @@ jobs:
 
       - name: Install dependencies
         run: |
-          brew update
-          brew install cmake pkg-config || true
+          brew update --quiet 2>/dev/null || true
+          brew install --quiet cmake pkg-config 2>/dev/null || true
 
       - name: Set up Rust
         uses: dtolnay/rust-toolchain@master
@@ -1822,8 +1822,8 @@ jobs:
 
       - name: Install dependencies
         run: |
-          brew update
-          brew install cmake pkg-config || true
+          brew update --quiet 2>/dev/null || true
+          brew install --quiet cmake pkg-config 2>/dev/null || true
 
       - name: Set up Rust
         uses: dtolnay/rust-toolchain@master

@@ -26,7 +26,7 @@ Tests for the gRPC functionality including server and client.
 import pytest
 from dmsc import (
     DMSCGrpcConfig,
-    DMSCGrpcClient,
+    DMSCGrpcClientPy,
     DMSCGrpcPythonService,
     DMSCGrpcStats,
 )
@@ -42,11 +42,11 @@ class TestDMSCGrpcConfig:
 
 
 class TestDMSCGrpcClient:
-    """Tests for DMSCGrpcClient"""
+    """Tests for DMSCGrpcClientPy"""
 
     def test_grpc_client_creation(self):
         """Test creating gRPC client - requires endpoint string"""
-        client = DMSCGrpcClient("http://localhost:50051")
+        client = DMSCGrpcClientPy("http://localhost:50051")
         assert client is not None
 
 
