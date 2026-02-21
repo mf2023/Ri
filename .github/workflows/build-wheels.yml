@@ -1470,7 +1470,7 @@ jobs:
           sudo apt-get install -y libcurl4-openssl-dev libsasl2-dev
 
       - name: Build JNI library
-        run: cargo build --release --no-default-features --features java
+        run: cargo build --release --features java
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
