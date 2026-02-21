@@ -532,7 +532,7 @@ pyo3 = ["dep:pyo3"]
 c = ["dep:safer-ffi"]
 
 # Java binding support via JNI
-java = ["dep:jni"]
+java = ["dep:jni", "grpc", "websocket", "rabbitmq", "cache", "queue", "gateway", "service_mesh", "auth", "observability", "postgres", "mysql", "sqlite", "http_client", "system_info", "config_hot_reload", "protocol", "kafka"]
 
 # RabbitMQ message queue support
 rabbitmq = ["dep:lapin"]
