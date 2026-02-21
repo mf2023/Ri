@@ -29,7 +29,7 @@ pub extern "system" fn Java_com_dunimd_dmsc_fs_DMSCFileSystem_new0(
     _env: JNIEnv,
     _class: JClass,
 ) -> jlong {
-    let fs = Box::new(DMSCFileSystem::new());
+    let fs = Box::new(DMSCFileSystem::new_auto_root().unwrap_or_else(|_| DMSCFileSystem::new_with_root(std::env::current_dir().unwrap_or_default())));
     Box::into_raw(fs) as jlong
 }
 

@@ -35,7 +35,7 @@ pub extern "system" fn Java_com_dunimd_dmsc_grpc_DMSCGrpcServer_new0(
 pub extern "system" fn Java_com_dunimd_dmsc_grpc_DMSCGrpcServer_free0(
     _env: JNIEnv,
     _class: JClass,
-    ptr: jlong,
+    _ptr: jlong,
 ) {
 }
 
@@ -51,6 +51,6 @@ pub extern "system" fn Java_com_dunimd_dmsc_grpc_DMSCGrpcClient_new0(
 pub extern "system" fn Java_com_dunimd_dmsc_grpc_DMSCGrpcClient_free0(
     _env: JNIEnv,
     _class: JClass,
-    ptr: jlong,
+    _ptr: jlong,
 ) {
 }

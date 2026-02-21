@@ -22,7 +22,7 @@
 use jni::JNIEnv;
 use jni::objects::JClass;
 use jni::sys::jlong;
-use crate::config::{DMSCConfig, DMSCConfigManager};
+use crate::config::DMSCConfigManager;
 
 #[no_mangle]
 pub extern "system" fn Java_com_dunimd_dmsc_config_DMSCConfigManager_new0(

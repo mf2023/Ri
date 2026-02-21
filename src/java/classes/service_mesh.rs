@@ -22,7 +22,7 @@
 use jni::JNIEnv;
 use jni::objects::JClass;
 use jni::sys::jlong;
-use crate::service_mesh::{DMSCServiceMesh, DMSCServiceMeshConfig, DMSCServiceDiscovery};
+use crate::service_mesh::DMSCServiceMesh;
 use crate::java::exception::check_not_null;
 
 #[no_mangle]

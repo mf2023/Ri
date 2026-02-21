@@ -20,10 +20,9 @@
 //! JNI bindings for DMSC gateway classes.
 
 use jni::JNIEnv;
-use jni::objects::{JClass, JObject, JString};
-use jni::sys::{jlong, jboolean};
-use crate::gateway::{DMSCGateway, DMSCGatewayConfig, DMSCRouter, DMSCRoute};
-use crate::java::exception::check_not_null;
+use jni::objects::JClass;
+use jni::sys::jlong;
+use crate::gateway::{DMSCGateway, DMSCGatewayConfig};
 
 #[no_mangle]
 pub extern "system" fn Java_com_dunimd_dmsc_gateway_DMSCGateway_new0(

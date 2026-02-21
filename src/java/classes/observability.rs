@@ -22,7 +22,7 @@
 use jni::JNIEnv;
 use jni::objects::JClass;
 use jni::sys::jlong;
-use crate::observability::{DMSCObservabilityModule, DMSCObservabilityConfig, DMSCTracer};
+use crate::observability::DMSCObservabilityModule;
 use crate::java::exception::check_not_null;
 
 #[no_mangle]

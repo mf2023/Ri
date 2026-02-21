@@ -20,8 +20,7 @@
 //! Provides utilities for converting between Rust and Java types.
 
 use jni::JNIEnv;
-use jni::objects::{JObject, JString, JValue, JValueOwned};
-use jni::signature::{JavaType, Primitive};
+use jni::objects::{JObject, JString, JValue};
 use std::collections::HashMap;
 
 /// Trait for types that can be converted to Java objects

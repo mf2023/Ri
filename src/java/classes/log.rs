@@ -23,13 +23,16 @@ use jni::JNIEnv;
 use jni::objects::JClass;
 use jni::sys::jlong;
 use crate::log::{DMSCLogger, DMSCLogConfig};
+use crate::fs::DMSCFileSystem;
 
 #[no_mangle]
 pub extern "system" fn Java_com_dunimd_dmsc_log_DMSCLogger_new0(
     _env: JNIEnv,
     _class: JClass,
 ) -> jlong {
-    let logger = Box::new(DMSCLogger::new());
+    let config = DMSCLogConfig::default();
+    let fs = DMSCFileSystem::new_auto_root().unwrap_or_else(|_| DMSCFileSystem::new_with_root(std::env::current_dir().unwrap_or_default()));
+    let logger = Box::new(DMSCLogger::new(&config, fs));
     Box::into_raw(logger) as jlong
 }
 

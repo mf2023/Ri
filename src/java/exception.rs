@@ -20,6 +20,7 @@
 //! Provides utilities for throwing and handling Java exceptions from Rust.
 
 use jni::JNIEnv;
+use jni::sys::jlong;
 
 /// DMSC Java exception types
 pub enum DMSCJavaException {

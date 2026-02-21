@@ -20,43 +20,43 @@
 //! Provides utilities for managing the Java Virtual Machine lifecycle
 //! and obtaining JNI environment pointers.
 
-use jni::JavaVM;
 use jni::JNIEnv;
-use std::sync::OnceLock;
+use jni::JavaVM;
+use jni::AttachGuard;
+use std::sync::{Arc, OnceLock};
 
-static JVM_INSTANCE: OnceLock<JavaVM> = OnceLock::new();
+static JVM_INSTANCE: OnceLock<Arc<JavaVM>> = OnceLock::new();
 
 /// DMSC Java context for managing JVM interactions
 pub struct DMSCJavaContext {
-    jvm: JavaVM,
+    jvm: Arc<JavaVM>,
 }
 
 impl DMSCJavaContext {
     /// Initialize the Java context from an existing JNIEnv
     pub fn init(env: JNIEnv) -> Self {
         let jvm = env.get_java_vm().expect("Failed to get JavaVM");
-        let ctx = Self { jvm };
-        JVM_INSTANCE.get_or_init(|| jvm);
-        ctx
+        let jvm_arc = Arc::new(jvm);
+        let _ = JVM_INSTANCE.set(jvm_arc.clone());
+        Self { jvm: jvm_arc }
     }
 
     /// Get the current JNIEnv
-    pub fn get_env(&self) -> JNIEnv {
+    pub fn get_env(&self) -> AttachGuard<'_> {
         self.jvm
             .attach_current_thread()
             .expect("Failed to attach current thread to JVM")
     }
 
     /// Get the global JVM instance
-    pub fn get_jvm() -> Option<&'static JavaVM> {
-        JVM_INSTANCE.get()
+    pub fn get_jvm() -> Option<Arc<JavaVM>> {
+        JVM_INSTANCE.get().cloned()
     }
 }
 
 /// Get the current JNIEnv from the global JVM instance
-pub fn get_env() -> Option<JNIEnv> {
-    JVM_INSTANCE.get().map(|jvm| {
-        jvm.attach_current_thread()
-            .expect("Failed to attach current thread to JVM")
+pub fn get_env() -> Option<AttachGuard<'static>> {
+    JVM_INSTANCE.get().and_then(|jvm| {
+        jvm.attach_current_thread().ok()
     })
 }

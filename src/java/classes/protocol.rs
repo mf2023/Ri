@@ -35,6 +35,6 @@ pub extern "system" fn Java_com_dunimd_dmsc_protocol_DMSCProtocolManager_new0(
 pub extern "system" fn Java_com_dunimd_dmsc_protocol_DMSCProtocolManager_free0(
     _env: JNIEnv,
     _class: JClass,
-    ptr: jlong,
+    _ptr: jlong,
 ) {
 }

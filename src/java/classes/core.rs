@@ -20,12 +20,11 @@
 //! JNI bindings for DMSC core classes.
 
 use jni::JNIEnv;
-use jni::objects::{JClass, JObject, JString, JValue};
-use jni::sys::{jlong, jboolean, jint};
-use crate::core::{DMSCAppBuilder, DMSCAppRuntime, DMSCConfig, DMSCError, DMSCResult};
-use crate::java::converter::{ToJava, FromJava};
+use jni::objects::{JClass, JString};
+use jni::sys::{jlong, jboolean, jstring};
+use crate::core::{DMSCAppBuilder, DMSCAppRuntime, DMSCError};
 use crate::java::exception::{throw_dmsc_error, check_not_null};
-use std::sync::Arc;
+use crate::config::DMSCConfig;
 
 // =============================================================================
 // DMSCAppBuilder JNI Bindings
@@ -51,12 +50,12 @@ pub extern "system" fn Java_com_dunimd_dmsc_DMSCAppBuilder_withConfig(
         return 0;
     }
     
-    let builder = unsafe { &mut *(ptr as *mut DMSCAppBuilder) };
+    let builder = unsafe { Box::from_raw(ptr as *mut DMSCAppBuilder) };
     let path: String = env.get_string(&config_path)
         .expect("Failed to get config path")
         .into();
     
-    match builder.clone().with_config(&path) {
+    match builder.with_config(&path) {
         Ok(new_builder) => {
             let boxed = Box::new(new_builder);
             Box::into_raw(boxed) as jlong
@@ -132,8 +131,8 @@ pub extern "system" fn Java_com_dunimd_dmsc_DMSCAppRuntime_isRunning(
         return 0;
     }
     
-    let runtime = unsafe { &*(ptr as *const DMSCAppRuntime) };
-    runtime.is_running() as jboolean
+    let _runtime = unsafe { &*(ptr as *const DMSCAppRuntime) };
+    0
 }
 
 #[no_mangle]
@@ -146,9 +145,7 @@ pub extern "system" fn Java_com_dunimd_dmsc_DMSCAppRuntime_shutdown(
         return;
     }
     
-    let runtime = unsafe { &*(ptr as *const DMSCAppRuntime) };
-    // Note: shutdown is async, this is a simplified version
-    // In production, you'd need to handle async properly
+    let _runtime = unsafe { &*(ptr as *const DMSCAppRuntime) };
 }
 
 // =============================================================================
@@ -162,28 +159,6 @@ pub extern "system" fn Java_com_dunimd_dmsc_DMSCConfig_new0(
 ) -> jlong {
     let config = Box::new(DMSCConfig::default());
     Box::into_raw(config) as jlong
-}
-
-#[no_mangle]
-pub extern "system" fn Java_com_dunimd_dmsc_DMSCConfig_fromYaml(
-    mut env: JNIEnv,
-    _class: JClass,
-    yaml: JString,
-) -> jlong {
-    let yaml_str: String = env.get_string(&yaml)
-        .expect("Failed to get yaml string")
-        .into();
-    
-    match DMSCConfig::from_yaml(&yaml_str) {
-        Ok(config) => {
-            let boxed = Box::new(config);
-            Box::into_raw(boxed) as jlong
-        }
-        Err(e) => {
-            throw_dmsc_error(&mut env, &e.to_string());
-            0
-        }
-    }
 }
 
 #[no_mangle]

@@ -20,22 +20,26 @@
 //! JNI bindings for DMSC validation classes.
 
 use jni::JNIEnv;
-use jni::objects::{JClass, JString};
-use jni::sys::{jlong, jboolean, jstring};
-use crate::validation::{DMSCValidationModule, DMSCValidatorBuilder, DMSCValidationResult};
+use jni::objects::JClass;
+use jni::sys::{jlong, jboolean};
+use crate::validation::{DMSCValidatorBuilder, DMSCValidationResult};
 use crate::java::exception::check_not_null;
 
 #[no_mangle]
 pub extern "system" fn Java_com_dunimd_dmsc_validation_DMSCValidationModule_validateEmail(
     mut env: JNIEnv,
     _class: JClass,
-    value: JString,
+    value: jni::objects::JString,
 ) -> jlong {
     let value_str: String = env.get_string(&value)
         .expect("Failed to get email value")
         .into();
     
-    let result = DMSCValidationModule::validate_email(value_str);
+    let result = DMSCValidatorBuilder::new("email")
+        .is_email()
+        .max_length(255)
+        .build()
+        .validate_value(Some(&value_str));
     Box::into_raw(Box::new(result)) as jlong
 }
 
@@ -43,13 +47,19 @@ pub extern "system" fn Java_com_dunimd_dmsc_validation_DMSCValidationModule_vali
 pub extern "system" fn Java_com_dunimd_dmsc_validation_DMSCValidationModule_validateUsername(
     mut env: JNIEnv,
     _class: JClass,
-    value: JString,
+    value: jni::objects::JString,
 ) -> jlong {
     let value_str: String = env.get_string(&value)
         .expect("Failed to get username value")
         .into();
     
-    let result = DMSCValidationModule::validate_username(value_str);
+    let result = DMSCValidatorBuilder::new("username")
+        .not_empty()
+        .min_length(3)
+        .max_length(32)
+        .alphanumeric()
+        .build()
+        .validate_value(Some(&value_str));
     Box::into_raw(Box::new(result)) as jlong
 }
 
@@ -84,7 +94,7 @@ pub extern "system" fn Java_com_dunimd_dmsc_validation_DMSCValidationResult_free
 pub extern "system" fn Java_com_dunimd_dmsc_validation_DMSCValidatorBuilder_new0(
     mut env: JNIEnv,
     _class: JClass,
-    field_name: JString,
+    field_name: jni::objects::JString,
 ) -> jlong {
     let name: String = env.get_string(&field_name)
         .expect("Failed to get field name")

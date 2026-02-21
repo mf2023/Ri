@@ -20,11 +20,10 @@
 //! JNI bindings for DMSC cache classes.
 
 use jni::JNIEnv;
-use jni::objects::{JClass, JObject, JString, JValue};
-use jni::sys::{jlong, jboolean, jstring};
+use jni::objects::{JClass, JString};
+use jni::sys::{jlong, jboolean, jint, jstring};
 use crate::cache::{DMSCCacheModule, DMSCCacheConfig, DMSCCacheBackendType, DMSCCacheStats};
-use crate::java::converter::{ToJava, FromJava};
-use crate::java::exception::{throw_dmsc_error, check_not_null};
+use crate::java::exception::check_not_null;
 
 // =============================================================================
 // DMSCCacheModule JNI Bindings
@@ -52,22 +51,19 @@ pub extern "system" fn Java_com_dunimd_dmsc_cache_DMSCCacheModule_set(
     ptr: jlong,
     key: JString,
     value: JString,
-    ttl_secs: jlong,
+    _ttl_secs: jlong,
 ) {
     if !check_not_null(&mut env, ptr, "DMSCCacheModule") {
         return;
     }
     
-    let module = unsafe { &*(ptr as *const DMSCCacheModule) };
-    let key_str: String = env.get_string(&key)
+    let _module = unsafe { &*(ptr as *const DMSCCacheModule) };
+    let _key_str: String = env.get_string(&key)
         .expect("Failed to get key")
         .into();
-    let value_str: String = env.get_string(&value)
+    let _value_str: String = env.get_string(&value)
         .expect("Failed to get value")
         .into();
-    
-    // Note: This is a simplified sync version
-    // In production, you'd need to handle async properly with tokio runtime
 }
 
 #[no_mangle]
@@ -81,12 +77,11 @@ pub extern "system" fn Java_com_dunimd_dmsc_cache_DMSCCacheModule_get(
         return std::ptr::null_mut();
     }
     
-    let module = unsafe { &*(ptr as *const DMSCCacheModule) };
-    let key_str: String = env.get_string(&key)
+    let _module = unsafe { &*(ptr as *const DMSCCacheModule) };
+    let _key_str: String = env.get_string(&key)
         .expect("Failed to get key")
         .into();
     
-    // Note: This is a simplified sync version
     std::ptr::null_mut()
 }
 
@@ -101,12 +96,10 @@ pub extern "system" fn Java_com_dunimd_dmsc_cache_DMSCCacheModule_delete(
         return;
     }
     
-    let module = unsafe { &*(ptr as *const DMSCCacheModule) };
-    let key_str: String = env.get_string(&key)
+    let _module = unsafe { &*(ptr as *const DMSCCacheModule) };
+    let _key_str: String = env.get_string(&key)
         .expect("Failed to get key")
         .into();
-    
-    // Note: This is a simplified sync version
 }
 
 #[no_mangle]
@@ -120,12 +113,11 @@ pub extern "system" fn Java_com_dunimd_dmsc_cache_DMSCCacheModule_exists(
         return 0;
     }
     
-    let module = unsafe { &*(ptr as *const DMSCCacheModule) };
-    let key_str: String = env.get_string(&key)
+    let _module = unsafe { &*(ptr as *const DMSCCacheModule) };
+    let _key_str: String = env.get_string(&key)
         .expect("Failed to get key")
         .into();
     
-    // Note: This is a simplified sync version
     0
 }
 
@@ -139,9 +131,8 @@ pub extern "system" fn Java_com_dunimd_dmsc_cache_DMSCCacheModule_getStats(
         return 0;
     }
     
-    let module = unsafe { &*(ptr as *const DMSCCacheModule) };
+    let _module = unsafe { &*(ptr as *const DMSCCacheModule) };
     
-    // Create stats object
     let stats = Box::new(DMSCCacheStats::default());
     Box::into_raw(stats) as jlong
 }

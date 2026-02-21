@@ -20,9 +20,9 @@
 //! JNI bindings for DMSC auth classes.
 
 use jni::JNIEnv;
-use jni::objects::{JClass, JObject, JString};
-use jni::sys::{jlong, jboolean, jstring};
-use crate::auth::{DMSCAuthModule, DMSCAuthConfig, DMSCJWTManager, DMSCJWTClaims};
+use jni::objects::{JClass, JString};
+use jni::sys::{jlong, jstring};
+use crate::auth::{DMSCAuthModule, DMSCAuthConfig};
 use crate::java::exception::check_not_null;
 
 #[no_mangle]
@@ -77,7 +77,7 @@ pub extern "system" fn Java_com_dunimd_dmsc_auth_DMSCJWTManager_generateToken(
     mut env: JNIEnv,
     _class: JClass,
     ptr: jlong,
-    claims_ptr: jlong,
+    _claims_ptr: jlong,
 ) -> jstring {
     if !check_not_null(&mut env, ptr, "DMSCJWTManager") {
         return std::ptr::null_mut();
@@ -90,7 +90,7 @@ pub extern "system" fn Java_com_dunimd_dmsc_auth_DMSCJWTManager_validateToken(
     mut env: JNIEnv,
     _class: JClass,
     ptr: jlong,
-    token: JString,
+    _token: JString,
 ) -> jlong {
     if !check_not_null(&mut env, ptr, "DMSCJWTManager") {
         return 0;

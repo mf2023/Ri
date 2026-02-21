@@ -22,8 +22,7 @@
 use jni::JNIEnv;
 use jni::objects::JClass;
 use jni::sys::jlong;
-use crate::database::{DMSCDatabaseConfig, DMSCDatabasePool, DMSCDBRow, DMSCDBResult};
-use crate::java::exception::check_not_null;
+use crate::database::DMSCDatabaseConfig;
 
 #[no_mangle]
 pub extern "system" fn Java_com_dunimd_dmsc_database_DMSCDatabaseConfig_new0(

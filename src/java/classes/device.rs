@@ -22,7 +22,7 @@
 use jni::JNIEnv;
 use jni::objects::JClass;
 use jni::sys::jlong;
-use crate::device::{DMSCDeviceControlModule, DMSCDevice, DMSCDeviceType};
+use crate::device::DMSCDeviceControlModule;
 use crate::java::exception::check_not_null;
 
 #[no_mangle]

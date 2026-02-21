@@ -20,9 +20,9 @@
 //! JNI bindings for DMSC queue classes.
 
 use jni::JNIEnv;
-use jni::objects::{JClass, JString};
-use jni::sys::{jlong, jstring};
-use crate::queue::{DMSCQueueModule, DMSCQueueConfig, DMSCQueueMessage};
+use jni::objects::JClass;
+use jni::sys::jlong;
+use crate::queue::{DMSCQueueModule, DMSCQueueConfig};
 use crate::java::exception::check_not_null;
 
 #[no_mangle]
