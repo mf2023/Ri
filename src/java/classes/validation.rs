@@ -26,7 +26,7 @@ use crate::validation::{DMSCValidatorBuilder, DMSCValidationResult};
 use crate::java::exception::check_not_null;
 
 #[no_mangle]
-pub extern "system" fn Java_com_dunimd_dmsc_validation_DMSCValidationModule_validateEmail(
+pub extern "system" fn Java_com_dunimd_dmsc_validation_DMSCValidationModule_nativeValidateEmail(
     mut env: JNIEnv,
     _class: JClass,
     value: jni::objects::JString,
@@ -44,7 +44,7 @@ pub extern "system" fn Java_com_dunimd_dmsc_validation_DMSCValidationModule_vali
 }
 
 #[no_mangle]
-pub extern "system" fn Java_com_dunimd_dmsc_validation_DMSCValidationModule_validateUsername(
+pub extern "system" fn Java_com_dunimd_dmsc_validation_DMSCValidationModule_nativeValidateUsername(
     mut env: JNIEnv,
     _class: JClass,
     value: jni::objects::JString,

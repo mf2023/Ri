@@ -1,4 +1,4 @@
-// Copyright © 2025-2026 Wenze Wei. All Rights Reserved.
+// Copyright 2025-2026 Wenze Wei. All Rights Reserved.
 //
 // This file is part of DMSC.
 // The DMSC project belongs to the Dunimd Team.
@@ -21,86 +21,44 @@ import com.dunimd.dmsc.NativeLoader;
 
 /**
  * Validation module for DMSC.
- * 
- * Provides data validation and sanitization functionality.
- * 
- * <p>Usage example:</p>
- * <pre>{@code
- * DMSCValidationResult result = DMSCValidationModule.validateEmail("user@example.com");
- * if (result.isValid()) {
- *     System.out.println("Email is valid");
- * } else {
- *     System.out.println("Email is invalid: " + result.getErrors());
- * }
- * }</pre>
  */
 public class DMSCValidationModule {
     static {
         NativeLoader.autoLoad();
     }
     
-    /**
-     * Validate an email address.
-     * 
-     * @param email the email address to validate
-     * @return the validation result
-     */
     public static DMSCValidationResult validateEmail(String email) {
-        long ptr = validateEmail0(email);
+        long ptr = nativeValidateEmail(email);
         return new DMSCValidationResult(ptr);
     }
     
-    private static native long validateEmail0(String email);
+    private static native long nativeValidateEmail(String email);
     
-    /**
-     * Validate a username.
-     * 
-     * @param username the username to validate
-     * @return the validation result
-     */
     public static DMSCValidationResult validateUsername(String username) {
-        long ptr = validateUsername0(username);
+        long ptr = nativeValidateUsername(username);
         return new DMSCValidationResult(ptr);
     }
     
-    private static native long validateUsername0(String username);
+    private static native long nativeValidateUsername(String username);
     
-    /**
-     * Validate a password.
-     * 
-     * @param password the password to validate
-     * @return the validation result
-     */
     public static DMSCValidationResult validatePassword(String password) {
-        long ptr = validatePassword0(password);
+        long ptr = nativeValidatePassword(password);
         return new DMSCValidationResult(ptr);
     }
     
-    private static native long validatePassword0(String password);
+    private static native long nativeValidatePassword(String password);
     
-    /**
-     * Validate a URL.
-     * 
-     * @param url the URL to validate
-     * @return the validation result
-     */
     public static DMSCValidationResult validateUrl(String url) {
-        long ptr = validateUrl0(url);
+        long ptr = nativeValidateUrl(url);
         return new DMSCValidationResult(ptr);
     }
     
-    private static native long validateUrl0(String url);
+    private static native long nativeValidateUrl(String url);
     
-    /**
-     * Validate an IP address.
-     * 
-     * @param ip the IP address to validate
-     * @return the validation result
-     */
     public static DMSCValidationResult validateIp(String ip) {
-        long ptr = validateIp0(ip);
+        long ptr = nativeValidateIp(ip);
         return new DMSCValidationResult(ptr);
     }
     
-    private static native long validateIp0(String ip);
+    private static native long nativeValidateIp(String ip);
 }
