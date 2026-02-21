@@ -198,7 +198,7 @@ from .dmsc import (
     # gRPC classes - gRPC server and client support
     # =============================================================================
     DMSCGrpcConfig, DMSCGrpcStats,
-    DMSCGrpcPythonService, DMSCGrpcServiceRegistryPy,
+    DMSCGrpcServiceRegistryPy,
     DMSCGrpcServerPy, DMSCGrpcClientPy,
 
     # =============================================================================
@@ -313,7 +313,7 @@ __all__ = [
 
     # gRPC classes - gRPC server and client support
     'DMSCGrpcConfig', 'DMSCGrpcStats',
-    'DMSCGrpcPythonService', 'DMSCGrpcServiceRegistryPy',
+    'DMSCGrpcServiceRegistryPy',
     'DMSCGrpcServerPy', 'DMSCGrpcClientPy',
 
     # WebSocket classes - WebSocket server and client support

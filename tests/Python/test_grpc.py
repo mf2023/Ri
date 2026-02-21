@@ -27,7 +27,6 @@ import pytest
 from dmsc import (
     DMSCGrpcConfig,
     DMSCGrpcClientPy,
-    DMSCGrpcPythonService,
     DMSCGrpcStats,
 )
 
@@ -48,14 +47,6 @@ class TestDMSCGrpcClient:
         """Test creating gRPC client - requires endpoint string"""
         client = DMSCGrpcClientPy("http://localhost:50051")
         assert client is not None
-
-
-class TestDMSCGrpcPythonService:
-    """Tests for DMSCGrpcPythonService"""
-
-    def test_python_service_creation(self):
-        """Test creating Python gRPC service - skip as it requires internal setup"""
-        pass
 
 
 class TestDMSCGrpcStats:

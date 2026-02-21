@@ -289,14 +289,12 @@ class TestGrpcImports:
         from dmsc import (
             DMSCGrpcConfig,
             DMSCGrpcStats,
-            DMSCGrpcPythonService,
             DMSCGrpcServiceRegistryPy,
             DMSCGrpcServerPy,
             DMSCGrpcClientPy,
         )
         assert DMSCGrpcConfig is not None
         assert DMSCGrpcStats is not None
-        assert DMSCGrpcPythonService is not None
         assert DMSCGrpcServiceRegistryPy is not None
         assert DMSCGrpcServerPy is not None
         assert DMSCGrpcClientPy is not None
