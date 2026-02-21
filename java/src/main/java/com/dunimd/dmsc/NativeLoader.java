@@ -121,11 +121,11 @@ public class NativeLoader {
     private static String getLibName(String os) {
         switch (os) {
             case "windows":
-                return "dmsc_java.dll";
+                return "dmsc.dll";
             case "macos":
-                return "libdmsc_java.dylib";
+                return "libdmsc.dylib";
             default:
-                return "libdmsc_java.so";
+                return "libdmsc.so";
         }
     }
     
