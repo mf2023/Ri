@@ -1,4 +1,4 @@
-//! Copyright © 2025-2026 Wenze Wei. All Rights Reserved.
+//! Copyright 2025-2026 Wenze Wei. All Rights Reserved.
 //!
 //! This file is part of DMSC.
 //! The DMSC project belongs to the Dunimd Team.
@@ -16,16 +16,6 @@
 //! limitations under the License.
 
 //! # WebSocket Support
-//!
-//! This module provides WebSocket server and client capabilities for DMSC.
-//!
-//! ## Key Components
-//!
-//! - **DMSCWSServer**: WebSocket server implementation
-//! - **DMSCWSServerConfig**: Configuration for WebSocket server
-//! - **DMSCWSSession**: WebSocket connection session
-//! - **DMSCWSEvent**: WebSocket events for session management
-//!
 
 use crate::core::{DMSCResult, DMSCError};
 use async_trait::async_trait;
@@ -37,6 +27,9 @@ use tokio::net::TcpListener;
 use tokio::sync::broadcast;
 use std::collections::HashMap;
 use tungstenite::Message;
+
+#[cfg(feature = "pyo3")]
+use pyo3::prelude::*;
 
 #[cfg(feature = "websocket")]
 mod server;
@@ -57,7 +50,6 @@ pub use client::DMSCWSClientConfig;
 pub use client::DMSCWSClientStats;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-#[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 pub struct DMSCWSServerConfig {
     pub addr: String,
     pub port: u16,
@@ -66,6 +58,43 @@ pub struct DMSCWSServerConfig {
     pub heartbeat_timeout: u64,
     pub max_message_size: usize,
     pub ping_interval: u64,
+}
+
+#[cfg(feature = "pyo3")]
+#[pyclass]
+pub struct DMSCWSServerConfigPy {
+    inner: DMSCWSServerConfig,
+}
+
+#[cfg(feature = "pyo3")]
+#[pymethods]
+impl DMSCWSServerConfigPy {
+    #[new]
+    fn new() -> Self {
+        Self {
+            inner: DMSCWSServerConfig::default(),
+        }
+    }
+    
+    #[getter]
+    fn get_addr(&self) -> String {
+        self.inner.addr.clone()
+    }
+    
+    #[setter]
+    fn set_addr(&mut self, addr: String) {
+        self.inner.addr = addr;
+    }
+    
+    #[getter]
+    fn get_port(&self) -> u16 {
+        self.inner.port
+    }
+    
+    #[setter]
+    fn set_port(&mut self, port: u16) {
+        self.inner.port = port;
+    }
 }
 
 impl Default for DMSCWSServerConfig {
@@ -83,7 +112,6 @@ impl Default for DMSCWSServerConfig {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-#[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 pub enum DMSCWSEvent {
     Connected { session_id: String },
     Disconnected { session_id: String },
@@ -92,7 +120,6 @@ pub enum DMSCWSEvent {
 }
 
 #[derive(Debug, Clone)]
-#[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 pub struct DMSCWSSessionInfo {
     pub session_id: String,
     pub remote_addr: String,
@@ -306,9 +333,7 @@ impl DMSCWSSessionManager {
 }
 
 #[cfg(feature = "pyo3")]
-use pyo3::prelude::*;
-
-#[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
+#[pyclass]
 pub struct DMSCWSPythonHandler {
     on_connect: Arc<Py<PyAny>>,
     on_disconnect: Arc<Py<PyAny>>,
@@ -335,8 +360,8 @@ impl DMSCWSPythonHandler {
     }
 }
 
-#[async_trait]
 #[cfg(feature = "pyo3")]
+#[async_trait]
 impl DMSCWSSessionHandler for DMSCWSPythonHandler {
     async fn on_connect(&self, session_id: &str, remote_addr: &str) -> DMSCResult<()> {
         let on_connect = Arc::clone(&self.on_connect);
@@ -437,7 +462,6 @@ impl DMSCWSSessionManagerPy {
 }
 
 #[derive(Debug, Clone)]
-#[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 pub struct DMSCWSServerStats {
     pub total_connections: u64,
     pub active_connections: u64,

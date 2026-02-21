@@ -1002,12 +1002,8 @@ jobs:
           # Windows ARM64 Matrix Entries
           ##########################################################################
           # Native Windows ARM64 builds on windows-11-arm runner
-          # Python ARM64 interpreters are available on Windows 11 ARM64
+          # Python ARM64 interpreters on Windows only support 3.11+
           
-          - python: '3.10'
-            runs-on: windows-11-arm
-            target: aarch64-pc-windows-msvc
-            manylinux: null
           - python: '3.11'
             runs-on: windows-11-arm
             target: aarch64-pc-windows-msvc
@@ -1845,12 +1841,12 @@ jobs:
           path: target/aarch64-apple-darwin/release/libdmsc.dylib
 
   ################################################################################
-  # Job: Build and Publish Java JAR to Maven Central
+  # Job: Publish Java Library to Maven Central
   ################################################################################
   # This job builds the Java JAR with embedded native libraries and publishes to Maven Central
   # Only runs for production releases (not test releases)
   ################################################################################
-  build-java-jar:
+  publish-maven:
     needs: [build-java-linux, build-java-linux-arm64, build-java-windows, build-java-windows-arm64, build-java-macos, build-java-macos-arm64]
     
     if: github.event_name == 'release' && !contains(github.event.release.name, 'Test')

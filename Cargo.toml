@@ -244,7 +244,8 @@ sysinfo = { version = "0.29", optional = true }
 
 # JWT (JSON Web Token) implementation for authentication
 # Handles token creation, validation, and claims management
-jsonwebtoken = "8"
+# Version 9.x supports ring 0.17 which is required for Windows ARM64
+jsonwebtoken = "9"
 
 # URL encoding and decoding support
 # Required for query string and path parameter handling

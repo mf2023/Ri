@@ -624,27 +624,20 @@ mod protocol_tests {
 #[cfg(feature = "pyo3")]
 #[pyo3::prelude::pymethods]
 impl DMSCProtocolManager {
-    /// Create new protocol manager
     #[new]
-    pub fn new() -> Self {
-        Self {
-            stats: Arc::new(RwLock::new(DMSCProtocolStats::new())),
-            default_protocol: DMSCProtocolType::Global,
-            connections: Arc::new(RwLock::new(HashMap::new())),
-            sequence_counter: Arc::new(AtomicU64::new(0)),
-            initialized: Arc::new(RwLock::new(false)),
-        }
+    fn new_py() -> Self {
+        Self::new()
     }
     
     #[getter]
-    fn get_stats(&self) -> DMSCProtocolStats {
+    fn get_stats_py(&self) -> DMSCProtocolStats {
         self.stats.try_read()
             .map(|guard| guard.clone())
             .unwrap_or_else(|_| DMSCProtocolStats::new())
     }
     
     #[getter]
-    fn get_default_protocol(&self) -> DMSCProtocolType {
+    fn get_default_protocol_py(&self) -> DMSCProtocolType {
         self.default_protocol
     }
     
@@ -765,6 +758,18 @@ impl DMSCProtocolManager {
             .ok()
             .map(|mut connections| connections.remove(connection_id).is_some())
             .unwrap_or(false)
+    }
+}
+
+impl DMSCProtocolManager {
+    pub fn new() -> Self {
+        Self {
+            stats: Arc::new(RwLock::new(DMSCProtocolStats::new())),
+            default_protocol: DMSCProtocolType::Global,
+            connections: Arc::new(RwLock::new(HashMap::new())),
+            sequence_counter: Arc::new(AtomicU64::new(0)),
+            initialized: Arc::new(RwLock::new(false)),
+        }
     }
 }
 

@@ -1,4 +1,4 @@
-//! Copyright © 2025-2026 Wenze Wei. All Rights Reserved.
+//! Copyright 2025-2026 Wenze Wei. All Rights Reserved.
 //!
 //! This file is part of DMSC.
 //! The DMSC project belongs to the Dunimd Team.
@@ -16,16 +16,15 @@
 //! limitations under the License.
 
 //! # gRPC Server Implementation
-//!
-//! This module provides the gRPC server implementation for DMSC.
-//! Supports service registration, request routing, and streaming RPC.
 
 use super::*;
 use tokio::sync::mpsc;
 use std::net::SocketAddr;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 
-#[pyclass]
+#[cfg(feature = "pyo3")]
+use pyo3::prelude::*;
+
 pub struct DMSCGrpcServer {
     config: DMSCGrpcConfig,
     stats: Arc<RwLock<DMSCGrpcStats>>,
@@ -34,10 +33,55 @@ pub struct DMSCGrpcServer {
     running: Arc<RwLock<bool>>,
 }
 
+#[cfg(feature = "pyo3")]
+#[pyclass]
+pub struct DMSCGrpcServerPy {
+    inner: DMSCGrpcServer,
+}
+
+#[cfg(feature = "pyo3")]
 #[pymethods]
-impl DMSCGrpcServer {
+impl DMSCGrpcServerPy {
     #[new]
     fn new(config: DMSCGrpcConfig) -> Self {
+        Self {
+            inner: DMSCGrpcServer::new(config),
+        }
+    }
+
+    fn get_stats(&self) -> DMSCGrpcStats {
+        self.inner.get_stats()
+    }
+
+    fn is_running(&self) -> bool {
+        self.inner.is_running_sync()
+    }
+
+    fn list_services(&self) -> Vec<String> {
+        self.inner.list_services()
+    }
+
+    fn start(&mut self) -> PyResult<()> {
+        let rt = tokio::runtime::Runtime::new()
+            .map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(e.to_string()))?;
+        
+        rt.block_on(async {
+            self.inner.start().await
+        }).map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(e.to_string()))
+    }
+
+    fn stop(&mut self) -> PyResult<()> {
+        let rt = tokio::runtime::Runtime::new()
+            .map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(e.to_string()))?;
+        
+        rt.block_on(async {
+            self.inner.stop().await
+        }).map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(e.to_string()))
+    }
+}
+
+impl DMSCGrpcServer {
+    pub fn new(config: DMSCGrpcConfig) -> Self {
         Self {
             config,
             stats: Arc::new(RwLock::new(DMSCGrpcStats::new())),
@@ -47,50 +91,22 @@ impl DMSCGrpcServer {
         }
     }
 
-    fn register_service(&mut self, service_name: &str, handler: Py<PyAny>) {
-        Python::attach(|py| {
-            let handler_clone = handler.clone_ref(py);
-            let _service = DMSCGrpcPythonService::new(service_name, handler_clone);
-            self.registry.register(service_name, handler);
-        });
-    }
-
-    fn get_stats(&self) -> DMSCGrpcStats {
+    pub fn get_stats(&self) -> DMSCGrpcStats {
         self.stats.try_read()
             .map(|guard| guard.clone())
             .unwrap_or_else(|_| DMSCGrpcStats::new())
     }
 
-    fn is_running_py(&self) -> bool {
+    pub fn is_running_sync(&self) -> bool {
         self.stats.try_read()
             .map(|guard| guard.active_connections > 0)
             .unwrap_or(false)
     }
 
-    fn list_services(&self) -> Vec<String> {
+    pub fn list_services(&self) -> Vec<String> {
         self.registry.list_services()
     }
 
-    fn start_py(&mut self) -> PyResult<()> {
-        let rt = tokio::runtime::Runtime::new()
-            .map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(e.to_string()))?;
-        
-        rt.block_on(async {
-            self.start().await
-        }).map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(e.to_string()))
-    }
-
-    fn stop_py(&mut self) -> PyResult<()> {
-        let rt = tokio::runtime::Runtime::new()
-            .map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(e.to_string()))?;
-        
-        rt.block_on(async {
-            self.stop().await
-        }).map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(e.to_string()))
-    }
-}
-
-impl DMSCGrpcServer {
     pub async fn start(&mut self) -> DMSCResult<()> {
         let addr: SocketAddr = format!("{}:{}", self.config.addr, self.config.port).parse()
             .map_err(|e| GrpcError::Server { message: format!("Invalid address: {}", e) })?;

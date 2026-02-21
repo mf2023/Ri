@@ -1,4 +1,4 @@
-//! Copyright © 2025-2026 Wenze Wei. All Rights Reserved.
+//! Copyright 2025-2026 Wenze Wei. All Rights Reserved.
 //!
 //! This file is part of DMSC.
 //! The DMSC project belongs to the Dunimd Team.
@@ -16,31 +16,6 @@
 //! limitations under the License.
 
 //! # gRPC Support
-//!
-//! This module provides gRPC server and client capabilities for DMSC using the tonic framework.
-//!
-//! ## Key Components
-//!
-//! - **DMSCGrpcServer**: gRPC server implementation with service registration
-//! - **DMSCGrpcClient**: gRPC client for making remote procedure calls
-//! - **DMSCGrpcConfig**: Configuration for gRPC server settings
-//!
-//! ## Usage
-//!
-//! ```rust,ignore
-//! use dmsc::prelude::*;
-//!
-//! #[tokio::main]
-//! async fn main() -> DMSCResult<()> {
-//!     let config = DMSCGrpcConfig::default();
-//!     let mut server = DMSCGrpcServer::new(config);
-//!
-//!     server.add_service(MyServiceImpl::new());
-//!
-//!     server.start().await?;
-//!     Ok(())
-//! }
-//! ```
 
 use crate::core::DMSCResult;
 use async_trait::async_trait;
@@ -48,6 +23,9 @@ use std::sync::Arc;
 use tokio::sync::RwLock;
 #[cfg(feature = "grpc")]
 use std::collections::HashMap;
+
+#[cfg(feature = "pyo3")]
+use pyo3::prelude::*;
 
 #[cfg(feature = "grpc")]
 mod server;
@@ -60,7 +38,6 @@ pub use server::DMSCGrpcServer;
 pub use client::DMSCGrpcClient;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-#[pyclass]
 pub struct DMSCGrpcConfig {
     pub addr: String,
     pub port: u16,
@@ -70,59 +47,68 @@ pub struct DMSCGrpcConfig {
     pub key_path: Option<String>,
 }
 
+#[cfg(feature = "pyo3")]
+#[pyclass]
+pub struct DMSCGrpcConfigPy {
+    inner: DMSCGrpcConfig,
+}
+
+#[cfg(feature = "pyo3")]
 #[pymethods]
-impl DMSCGrpcConfig {
+impl DMSCGrpcConfigPy {
     #[new]
     fn new() -> Self {
-        Self::default()
+        Self {
+            inner: DMSCGrpcConfig::default(),
+        }
     }
     
     fn get_addr(&self) -> String {
-        self.addr.clone()
+        self.inner.addr.clone()
     }
     
     fn set_addr(&mut self, addr: String) {
-        self.addr = addr;
+        self.inner.addr = addr;
     }
     
     fn get_port(&self) -> u16 {
-        self.port
+        self.inner.port
     }
     
     fn set_port(&mut self, port: u16) {
-        self.port = port;
+        self.inner.port = port;
     }
     
     fn get_max_concurrent_requests(&self) -> u32 {
-        self.max_concurrent_requests
+        self.inner.max_concurrent_requests
     }
     
     fn set_max_concurrent_requests(&mut self, max_concurrent_requests: u32) {
-        self.max_concurrent_requests = max_concurrent_requests;
+        self.inner.max_concurrent_requests = max_concurrent_requests;
     }
     
     fn get_enable_tls(&self) -> bool {
-        self.enable_tls
+        self.inner.enable_tls
     }
     
     fn set_enable_tls(&mut self, enable_tls: bool) {
-        self.enable_tls = enable_tls;
+        self.inner.enable_tls = enable_tls;
     }
     
     fn get_cert_path(&self) -> Option<String> {
-        self.cert_path.clone()
+        self.inner.cert_path.clone()
     }
     
     fn set_cert_path(&mut self, cert_path: Option<String>) {
-        self.cert_path = cert_path;
+        self.inner.cert_path = cert_path;
     }
     
     fn get_key_path(&self) -> Option<String> {
-        self.key_path.clone()
+        self.inner.key_path.clone()
     }
     
     fn set_key_path(&mut self, key_path: Option<String>) {
-        self.key_path = key_path;
+        self.inner.key_path = key_path;
     }
 }
 
@@ -148,29 +134,25 @@ pub trait DMSCGrpcService: Send + Sync {
 
 #[cfg(feature = "grpc")]
 #[derive(Clone)]
-#[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 pub struct DMSCGrpcServiceRegistry {
     pub services: Arc<RwLock<HashMap<String, Arc<dyn DMSCGrpcService>>>>,
 }
 
 #[cfg(feature = "grpc")]
-#[cfg_attr(feature = "pyo3", pyo3::prelude::pymethods)]
 impl DMSCGrpcServiceRegistry {
-    #[new]
-    fn new() -> Self {
+    pub fn new() -> Self {
         Self {
             services: Arc::new(RwLock::new(HashMap::new())),
         }
     }
 
-    fn register(&mut self, service_name: &str, handler: Py<PyAny>) {
-        let service = DMSCGrpcPythonService::new(service_name, handler);
+    pub fn register_service(&mut self, service: Arc<dyn DMSCGrpcService>) {
         let name = service.service_name().to_string();
         let mut services = self.services.blocking_write();
-        services.insert(name, Arc::new(service));
+        services.insert(name, service);
     }
 
-    fn list_services(&self) -> Vec<String> {
+    pub fn list_services(&self) -> Vec<String> {
         let services = self.services.blocking_read();
         services.keys().cloned().collect()
     }
@@ -184,7 +166,6 @@ impl Default for DMSCGrpcServiceRegistry {
 }
 
 #[derive(Debug, Clone)]
-#[pyclass]
 pub struct DMSCGrpcStats {
     pub requests_received: u64,
     pub requests_completed: u64,
@@ -194,30 +175,37 @@ pub struct DMSCGrpcStats {
     pub active_connections: u64,
 }
 
+#[cfg(feature = "pyo3")]
+#[pyclass]
+pub struct DMSCGrpcStatsPy {
+    inner: DMSCGrpcStats,
+}
+
+#[cfg(feature = "pyo3")]
 #[pymethods]
-impl DMSCGrpcStats {
+impl DMSCGrpcStatsPy {
     fn get_requests_received(&self) -> u64 {
-        self.requests_received
+        self.inner.requests_received
     }
 
     fn get_requests_completed(&self) -> u64 {
-        self.requests_completed
+        self.inner.requests_completed
     }
 
     fn get_requests_failed(&self) -> u64 {
-        self.requests_failed
+        self.inner.requests_failed
     }
 
     fn get_bytes_received(&self) -> u64 {
-        self.bytes_received
+        self.inner.bytes_received
     }
 
     fn get_bytes_sent(&self) -> u64 {
-        self.bytes_sent
+        self.inner.bytes_sent
     }
 
     fn get_active_connections(&self) -> u64 {
-        self.active_connections
+        self.inner.active_connections
     }
 }
 
@@ -255,24 +243,20 @@ impl DMSCGrpcStats {
     }
 }
 
-#[cfg(feature = "grpc")]
 impl Default for DMSCGrpcStats {
     fn default() -> Self {
         Self::new()
     }
 }
 
-#[cfg(feature = "pyo3")]
-use pyo3::prelude::*;
-
-#[cfg(feature = "pyo3")]
+#[cfg(all(feature = "grpc", feature = "pyo3"))]
 #[pyclass]
 pub struct DMSCGrpcPythonService {
     service_name: String,
     handler: Py<PyAny>,
 }
 
-#[cfg(feature = "pyo3")]
+#[cfg(all(feature = "grpc", feature = "pyo3"))]
 impl DMSCGrpcPythonService {
     pub fn new(service_name: &str, handler: Py<PyAny>) -> Self {
         Self {
@@ -282,9 +266,8 @@ impl DMSCGrpcPythonService {
     }
 }
 
-#[cfg(feature = "grpc")]
+#[cfg(all(feature = "grpc", feature = "pyo3"))]
 #[async_trait]
-#[cfg(feature = "pyo3")]
 impl DMSCGrpcService for DMSCGrpcPythonService {
     async fn handle_request(&self, method: &str, data: &[u8]) -> DMSCResult<Vec<u8>> {
         let method_str = method.to_string();
@@ -310,36 +293,6 @@ impl DMSCGrpcService for DMSCGrpcPythonService {
     
     fn service_name(&self) -> &'static str {
         Box::leak(self.service_name.clone().into_boxed_str())
-    }
-}
-
-#[cfg(feature = "pyo3")]
-#[pyclass]
-pub struct DMSCGrpcServiceRegistryPy {
-    registry: DMSCGrpcServiceRegistry,
-}
-
-#[cfg(feature = "pyo3")]
-#[pymethods]
-impl DMSCGrpcServiceRegistryPy {
-    #[new]
-    fn new() -> Self {
-        Self {
-            registry: DMSCGrpcServiceRegistry::new(),
-        }
-    }
-    
-    fn register(&mut self, service_name: &str, handler: Py<PyAny>) {
-        Python::attach(|py| {
-            let handler_clone = handler.clone_ref(py);
-            let _service = DMSCGrpcPythonService::new(service_name, handler_clone);
-            self.registry.register(service_name, handler);
-        });
-    }
-    
-    fn list_services(&self) -> Vec<String> {
-        let services = self.registry.services.blocking_read();
-        services.keys().cloned().collect()
     }
 }
 

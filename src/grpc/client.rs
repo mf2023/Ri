@@ -1,4 +1,4 @@
-//! Copyright © 2025-2026 Wenze Wei. All Rights Reserved.
+//! Copyright 2025-2026 Wenze Wei. All Rights Reserved.
 //!
 //! This file is part of DMSC.
 //! The DMSC project belongs to the Dunimd Team.
@@ -16,15 +16,14 @@
 //! limitations under the License.
 
 //! # gRPC Client Implementation
-//!
-//! This module provides the gRPC client implementation for DMSC.
-//! Supports unary RPC calls with retry and timeout support.
 
 use super::*;
 use std::time::Duration;
 use std::sync::atomic::{AtomicU64, Ordering};
 
-#[pyclass]
+#[cfg(feature = "pyo3")]
+use pyo3::prelude::*;
+
 pub struct DMSCGrpcClient {
     channel: Option<tonic::transport::Channel>,
     endpoint: String,
@@ -36,10 +35,75 @@ pub struct DMSCGrpcClient {
     retry_delay: Duration,
 }
 
+#[cfg(feature = "pyo3")]
+#[pyclass]
+pub struct DMSCGrpcClientPy {
+    inner: DMSCGrpcClient,
+}
+
+#[cfg(feature = "pyo3")]
 #[pymethods]
-impl DMSCGrpcClient {
+impl DMSCGrpcClientPy {
     #[new]
     fn new(endpoint: String) -> Self {
+        Self {
+            inner: DMSCGrpcClient::new(endpoint),
+        }
+    }
+
+    #[pyo3(signature = (timeout_secs=30))]
+    fn with_timeout(&mut self, timeout_secs: u64) {
+        self.inner.timeout = Duration::from_secs(timeout_secs);
+    }
+
+    #[pyo3(signature = (count=3, delay_ms=100))]
+    fn with_retry(&mut self, count: u32, delay_ms: u64) {
+        self.inner.retry_count = count;
+        self.inner.retry_delay = Duration::from_millis(delay_ms);
+    }
+
+    fn get_stats(&self) -> DMSCGrpcStats {
+        self.inner.get_stats()
+    }
+
+    fn is_connected(&self) -> bool {
+        self.inner.channel.is_some()
+    }
+
+    fn get_endpoint(&self) -> String {
+        self.inner.endpoint.clone()
+    }
+
+    fn connect(&mut self) -> PyResult<()> {
+        let rt = tokio::runtime::Runtime::new()
+            .map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(e.to_string()))?;
+        
+        rt.block_on(async {
+            self.inner.connect().await
+        }).map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(e.to_string()))
+    }
+
+    fn disconnect(&mut self) {
+        if let Ok(rt) = tokio::runtime::Runtime::new() {
+            rt.block_on(async {
+                self.inner.disconnect().await
+            });
+        }
+    }
+
+    #[pyo3(signature = (service_name, method, data))]
+    fn call(&mut self, service_name: String, method: String, data: Vec<u8>) -> PyResult<Vec<u8>> {
+        let rt = tokio::runtime::Runtime::new()
+            .map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(e.to_string()))?;
+        
+        rt.block_on(async {
+            self.inner.call(&service_name, &method, &data).await
+        }).map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(e.to_string()))
+    }
+}
+
+impl DMSCGrpcClient {
+    pub fn new(endpoint: String) -> Self {
         Self {
             channel: None,
             endpoint,
@@ -52,60 +116,6 @@ impl DMSCGrpcClient {
         }
     }
 
-    #[pyo3(signature = (timeout_secs=30))]
-    fn with_timeout_py(&mut self, timeout_secs: u64) {
-        self.timeout = Duration::from_secs(timeout_secs);
-    }
-
-    #[pyo3(signature = (count=3, delay_ms=100))]
-    fn with_retry_py(&mut self, count: u32, delay_ms: u64) {
-        self.retry_count = count;
-        self.retry_delay = Duration::from_millis(delay_ms);
-    }
-
-    fn get_stats(&self) -> DMSCGrpcStats {
-        self.stats.try_read()
-            .map(|guard| guard.clone())
-            .unwrap_or_else(|_| DMSCGrpcStats::new())
-    }
-
-    fn is_connected_py(&self) -> bool {
-        self.channel.is_some()
-    }
-
-    fn get_endpoint(&self) -> String {
-        self.endpoint.clone()
-    }
-
-    fn connect_py(&mut self) -> PyResult<()> {
-        let rt = tokio::runtime::Runtime::new()
-            .map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(e.to_string()))?;
-        
-        rt.block_on(async {
-            self.connect().await
-        }).map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(e.to_string()))
-    }
-
-    fn disconnect_py(&mut self) {
-        if let Ok(rt) = tokio::runtime::Runtime::new() {
-            rt.block_on(async {
-                self.disconnect().await
-            });
-        }
-    }
-
-    #[pyo3(signature = (service_name, method, data))]
-    fn call_py(&mut self, service_name: String, method: String, data: Vec<u8>) -> PyResult<Vec<u8>> {
-        let rt = tokio::runtime::Runtime::new()
-            .map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(e.to_string()))?;
-        
-        rt.block_on(async {
-            self.call(&service_name, &method, &data).await
-        }).map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(e.to_string()))
-    }
-}
-
-impl DMSCGrpcClient {
     pub fn with_timeout(mut self, timeout: Duration) -> Self {
         self.timeout = timeout;
         self
@@ -115,6 +125,12 @@ impl DMSCGrpcClient {
         self.retry_count = count;
         self.retry_delay = delay;
         self
+    }
+
+    pub fn get_stats(&self) -> DMSCGrpcStats {
+        self.stats.try_read()
+            .map(|guard| guard.clone())
+            .unwrap_or_else(|_| DMSCGrpcStats::new())
     }
 
     pub async fn connect(&mut self) -> DMSCResult<()> {

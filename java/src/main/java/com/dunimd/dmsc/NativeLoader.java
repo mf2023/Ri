@@ -27,14 +27,16 @@ import java.nio.file.*;
  * platform from the JAR file. Users do not need to manually configure anything.
  * 
  * Supported platforms:
- * - Windows (x64, x86)
+ * - Windows (x64, arm64)
  * - Linux (x64, arm64)
  * - macOS (x64, arm64)
+ * - Android (arm64-v8a, armeabi-v7a, x86_64)
  */
 public class NativeLoader {
     private static boolean loaded = false;
     private static final Object lock = new Object();
     private static final String TEMP_DIR_NAME = "dmsc-native";
+    private static final String LIBRARY_NAME = "dmsc";
     
     /**
      * Automatically load the native library for the current platform.
@@ -49,14 +51,11 @@ public class NativeLoader {
             }
             
             try {
-                String os = detectOS();
-                String arch = detectArch();
-                String libName = getLibName(os);
-                String libPath = "native/" + os + "/" + arch + "/" + libName;
-                
-                File tempFile = extractToTemp(libPath, libName);
-                System.load(tempFile.getAbsolutePath());
-                
+                if (isAndroid()) {
+                    loadAndroidLibrary();
+                } else {
+                    loadDesktopLibrary();
+                }
                 loaded = true;
             } catch (Exception e) {
                 throw new RuntimeException("Failed to load DMSC native library: " + e.getMessage(), e);
@@ -71,6 +70,39 @@ public class NativeLoader {
      */
     public static boolean isLoaded() {
         return loaded;
+    }
+    
+    /**
+     * Check if running on Android.
+     * 
+     * @return true if running on Android
+     */
+    private static boolean isAndroid() {
+        String javaVendor = System.getProperty("java.vendor", "");
+        String javaVmName = System.getProperty("java.vm.name", "");
+        return javaVendor.toLowerCase().contains("android") || 
+               javaVmName.toLowerCase().contains("android") ||
+               System.getProperty("java.specification.vendor", "").toLowerCase().contains("android");
+    }
+    
+    /**
+     * Load library on Android using System.loadLibrary.
+     */
+    private static void loadAndroidLibrary() {
+        System.loadLibrary(LIBRARY_NAME);
+    }
+    
+    /**
+     * Load library on desktop platforms by extracting from JAR.
+     */
+    private static void loadDesktopLibrary() throws IOException {
+        String os = detectOS();
+        String arch = detectArch();
+        String libName = getLibName(os);
+        String libPath = "native/" + os + "/" + arch + "/" + libName;
+        
+        File tempFile = extractToTemp(libPath, libName);
+        System.load(tempFile.getAbsolutePath());
     }
     
     /**
@@ -96,15 +128,17 @@ public class NativeLoader {
     /**
      * Detect the current CPU architecture.
      * 
-     * @return the architecture name (x64, x86, arm64)
+     * @return the architecture name (x64, arm64, x86)
      */
     private static String detectArch() {
         String arch = System.getProperty("os.arch").toLowerCase();
         
-        if (arch.contains("64") && !arch.contains("arm")) {
-            return "x64";
-        } else if (arch.contains("arm") || arch.contains("aarch")) {
+        if (arch.contains("aarch64") || arch.contains("arm64")) {
             return "arm64";
+        } else if (arch.contains("arm")) {
+            return "arm64";
+        } else if (arch.contains("64")) {
+            return "x64";
         } else if (arch.contains("86")) {
             return "x86";
         }
