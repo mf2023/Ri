@@ -579,4 +579,9 @@ impl DMSCAppRuntime {
     fn get_context(&self) -> PyResult<DMSCServiceContext> {
         Ok(self.ctx.clone())
     }
+
+    #[pyo3(name = "logger")]
+    fn logger_py(&self) -> crate::log::DMSCLogger {
+        self.ctx.logger().clone()
+    }
 }

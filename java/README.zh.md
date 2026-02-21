@@ -217,9 +217,10 @@ DMSCCacheModule cache = new DMSCCacheModule(config);
 
 | 平台 | 架构 |
 |------|------|
-| Windows | x64, x86 |
+| Windows | x64, arm64 |
 | Linux | x64, arm64 |
 | macOS | x64, arm64 |
+| Android | arm64-v8a, armeabi-v7a, x86_64 |
 
 <h2 align="center">❓ 常见问题</h2>
 

@@ -1,4 +1,4 @@
-//! Copyright © 2025-2026 Wenze Wei. All Rights Reserved.
+//! Copyright 2025-2026 Wenze Wei. All Rights Reserved.
 //!
 //! This file is part of DMSC.
 //! The DMSC project belongs to the Dunimd Team.
@@ -16,14 +16,16 @@
 //! limitations under the License.
 
 //! # WebSocket Client Implementation
-//!
-//! This module provides the WebSocket client implementation for DMSC.
 
 use super::*;
 use tokio_tungstenite::tungstenite::protocol::WebSocketConfig;
 
+#[cfg(feature = "pyo3")]
+#[allow(unused_imports)]
+use pyo3::prelude::*;
+
 #[derive(Debug, Clone)]
-#[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
+#[cfg_attr(feature = "pyo3", pyclass)]
 pub struct DMSCWSClientConfig {
     pub heartbeat_interval: u64,
     pub heartbeat_timeout: u64,
@@ -31,6 +33,75 @@ pub struct DMSCWSClientConfig {
     pub connect_timeout: u64,
     pub auto_reconnect: bool,
     pub reconnect_interval: u64,
+}
+
+#[cfg(feature = "pyo3")]
+#[pymethods]
+impl DMSCWSClientConfig {
+    #[new]
+    fn new() -> Self {
+        Self::default()
+    }
+    
+    #[getter]
+    fn get_heartbeat_interval(&self) -> u64 {
+        self.heartbeat_interval
+    }
+    
+    #[setter]
+    fn set_heartbeat_interval(&mut self, val: u64) {
+        self.heartbeat_interval = val;
+    }
+    
+    #[getter]
+    fn get_heartbeat_timeout(&self) -> u64 {
+        self.heartbeat_timeout
+    }
+    
+    #[setter]
+    fn set_heartbeat_timeout(&mut self, val: u64) {
+        self.heartbeat_timeout = val;
+    }
+    
+    #[getter]
+    fn get_max_message_size(&self) -> usize {
+        self.max_message_size
+    }
+    
+    #[setter]
+    fn set_max_message_size(&mut self, val: usize) {
+        self.max_message_size = val;
+    }
+    
+    #[getter]
+    fn get_connect_timeout(&self) -> u64 {
+        self.connect_timeout
+    }
+    
+    #[setter]
+    fn set_connect_timeout(&mut self, val: u64) {
+        self.connect_timeout = val;
+    }
+    
+    #[getter]
+    fn get_auto_reconnect(&self) -> bool {
+        self.auto_reconnect
+    }
+    
+    #[setter]
+    fn set_auto_reconnect(&mut self, val: bool) {
+        self.auto_reconnect = val;
+    }
+    
+    #[getter]
+    fn get_reconnect_interval(&self) -> u64 {
+        self.reconnect_interval
+    }
+    
+    #[setter]
+    fn set_reconnect_interval(&mut self, val: u64) {
+        self.reconnect_interval = val;
+    }
 }
 
 impl Default for DMSCWSClientConfig {
@@ -47,7 +118,7 @@ impl Default for DMSCWSClientConfig {
 }
 
 #[derive(Debug, Clone)]
-#[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
+#[cfg_attr(feature = "pyo3", pyclass)]
 pub struct DMSCWSClientStats {
     pub total_connections: u64,
     pub total_messages_sent: u64,
@@ -57,6 +128,50 @@ pub struct DMSCWSClientStats {
     pub connection_errors: u64,
     pub message_errors: u64,
     pub last_connected_at: Option<u64>,
+}
+
+#[cfg(feature = "pyo3")]
+#[pymethods]
+impl DMSCWSClientStats {
+    #[getter]
+    fn get_total_connections(&self) -> u64 {
+        self.total_connections
+    }
+    
+    #[getter]
+    fn get_total_messages_sent(&self) -> u64 {
+        self.total_messages_sent
+    }
+    
+    #[getter]
+    fn get_total_messages_received(&self) -> u64 {
+        self.total_messages_received
+    }
+    
+    #[getter]
+    fn get_total_bytes_sent(&self) -> u64 {
+        self.total_bytes_sent
+    }
+    
+    #[getter]
+    fn get_total_bytes_received(&self) -> u64 {
+        self.total_bytes_received
+    }
+    
+    #[getter]
+    fn get_connection_errors(&self) -> u64 {
+        self.connection_errors
+    }
+    
+    #[getter]
+    fn get_message_errors(&self) -> u64 {
+        self.message_errors
+    }
+    
+    #[getter]
+    fn get_last_connected_at(&self) -> Option<u64> {
+        self.last_connected_at
+    }
 }
 
 impl DMSCWSClientStats {
@@ -107,8 +222,6 @@ impl Default for DMSCWSClientStats {
     }
 }
 
-#[derive(Debug, Clone)]
-#[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 pub struct DMSCWSClient {
     config: DMSCWSClientConfig,
     stats: Arc<RwLock<DMSCWSClientStats>>,
@@ -117,31 +230,80 @@ pub struct DMSCWSClient {
 }
 
 #[cfg(feature = "pyo3")]
+#[pyclass]
+pub struct DMSCWSClientPy {
+    inner: DMSCWSClient,
+}
+
+#[cfg(feature = "pyo3")]
 #[pymethods]
-impl DMSCWSClient {
+impl DMSCWSClientPy {
     #[new]
     fn new(server_url: String) -> Self {
-        Self::with_config(server_url, DMSCWSClientConfig::default())
+        Self {
+            inner: DMSCWSClient::new(server_url),
+        }
     }
 
     #[staticmethod]
-    fn with_config_py(server_url: String, config: DMSCWSClientConfig) -> Self {
-        Self::with_config(server_url, config)
+    fn with_config(server_url: String, config: DMSCWSClientConfig) -> Self {
+        Self {
+            inner: DMSCWSClient::with_config(server_url, config),
+        }
     }
 
-    fn get_stats_py(&self) -> DMSCWSClientStats {
-        self.get_stats()
+    fn get_stats(&self) -> DMSCWSClientStats {
+        self.inner.get_stats()
     }
 
-    fn is_connected_py(&self) -> bool {
-        let connected = self.connected.clone();
+    fn is_connected(&self) -> bool {
         tokio::runtime::Handle::try_current()
-            .map(|handle| handle.block_on(async { *connected.read().await }))
+            .map(|handle| handle.block_on(async { self.inner.is_connected().await }))
             .unwrap_or(false)
+    }
+
+    fn connect(&mut self) -> PyResult<()> {
+        let rt = tokio::runtime::Runtime::new()
+            .map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(e.to_string()))?;
+        
+        rt.block_on(async {
+            self.inner.connect().await
+        }).map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(e.to_string()))
+    }
+
+    fn send(&self, data: Vec<u8>) -> PyResult<()> {
+        let rt = tokio::runtime::Runtime::new()
+            .map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(e.to_string()))?;
+        
+        rt.block_on(async {
+            self.inner.send(&data).await
+        }).map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(e.to_string()))
+    }
+
+    fn send_text(&self, text: String) -> PyResult<()> {
+        let rt = tokio::runtime::Runtime::new()
+            .map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(e.to_string()))?;
+        
+        rt.block_on(async {
+            self.inner.send_text(&text).await
+        }).map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(e.to_string()))
+    }
+
+    fn close(&mut self) -> PyResult<()> {
+        let rt = tokio::runtime::Runtime::new()
+            .map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(e.to_string()))?;
+        
+        rt.block_on(async {
+            self.inner.close().await
+        }).map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(e.to_string()))
     }
 }
 
 impl DMSCWSClient {
+    pub fn new(server_url: String) -> Self {
+        Self::with_config(server_url, DMSCWSClientConfig::default())
+    }
+
     pub fn with_config(server_url: String, config: DMSCWSClientConfig) -> Self {
         Self {
             config,
@@ -223,11 +385,19 @@ impl DMSCWSClient {
     }
 }
 
-impl Drop for DMSCWSClient {
-    fn drop(&mut self) {
-        let runtime = tokio::runtime::Handle::current();
-        let _ = runtime.block_on(async {
-            self.close().await.ok();
-        });
+impl Clone for DMSCWSClient {
+    fn clone(&self) -> Self {
+        Self {
+            config: self.config.clone(),
+            stats: self.stats.clone(),
+            connected: self.connected.clone(),
+            server_url: self.server_url.clone(),
+        }
+    }
+}
+
+impl Default for DMSCWSClient {
+    fn default() -> Self {
+        Self::new("ws://127.0.0.1:8080".to_string())
     }
 }

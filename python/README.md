@@ -115,7 +115,7 @@ DMSC adopts a highly modular architecture with 18 core modules, enabling on-dema
 <h2 align="center">🛠️ Installation & Environment</h2>
 
 ### Prerequisites
-- **Python**: 3.8+
+- **Python**: 3.8+ (Windows ARM64 requires 3.11+)
 - **pip**: Latest version
 - **Platforms**: Linux, macOS, Windows
 
@@ -439,7 +439,7 @@ A: Implement custom configuration loaders and register with DMSC configuration s
 A: The framework handles async operations internally, use the provided async interfaces.
 
 **Q: What Python versions are supported?**
-A: Python 3.8 and above are supported.
+A: Python 3.8 and above are supported. Note: Windows ARM64 requires Python 3.11+.
 
 **Q: Is the Rust backend included?**
 A: Yes, the package includes the compiled Rust backend with Python bindings.

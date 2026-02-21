@@ -37,7 +37,13 @@ pub use server::DMSCGrpcServer;
 #[cfg(feature = "grpc")]
 pub use client::DMSCGrpcClient;
 
+#[cfg(all(feature = "grpc", feature = "pyo3"))]
+pub use server::DMSCGrpcServerPy;
+#[cfg(all(feature = "grpc", feature = "pyo3"))]
+pub use client::DMSCGrpcClientPy;
+
 #[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "pyo3", pyclass)]
 pub struct DMSCGrpcConfig {
     pub addr: String,
     pub port: u16,
@@ -48,67 +54,71 @@ pub struct DMSCGrpcConfig {
 }
 
 #[cfg(feature = "pyo3")]
-#[pyclass]
-pub struct DMSCGrpcConfigPy {
-    inner: DMSCGrpcConfig,
-}
-
-#[cfg(feature = "pyo3")]
 #[pymethods]
-impl DMSCGrpcConfigPy {
+impl DMSCGrpcConfig {
     #[new]
     fn new() -> Self {
-        Self {
-            inner: DMSCGrpcConfig::default(),
-        }
+        Self::default()
     }
     
+    #[getter]
     fn get_addr(&self) -> String {
-        self.inner.addr.clone()
+        self.addr.clone()
     }
     
+    #[setter]
     fn set_addr(&mut self, addr: String) {
-        self.inner.addr = addr;
+        self.addr = addr;
     }
     
+    #[getter]
     fn get_port(&self) -> u16 {
-        self.inner.port
+        self.port
     }
     
+    #[setter]
     fn set_port(&mut self, port: u16) {
-        self.inner.port = port;
+        self.port = port;
     }
     
+    #[getter]
     fn get_max_concurrent_requests(&self) -> u32 {
-        self.inner.max_concurrent_requests
+        self.max_concurrent_requests
     }
     
+    #[setter]
     fn set_max_concurrent_requests(&mut self, max_concurrent_requests: u32) {
-        self.inner.max_concurrent_requests = max_concurrent_requests;
+        self.max_concurrent_requests = max_concurrent_requests;
     }
     
+    #[getter]
     fn get_enable_tls(&self) -> bool {
-        self.inner.enable_tls
+        self.enable_tls
     }
     
+    #[setter]
     fn set_enable_tls(&mut self, enable_tls: bool) {
-        self.inner.enable_tls = enable_tls;
+        self.enable_tls = enable_tls;
     }
     
+    #[getter]
     fn get_cert_path(&self) -> Option<String> {
-        self.inner.cert_path.clone()
+        self.cert_path.clone()
     }
     
+    #[setter]
     fn set_cert_path(&mut self, cert_path: Option<String>) {
-        self.inner.cert_path = cert_path;
+        self.cert_path = cert_path;
     }
     
+    #[getter]
     fn get_key_path(&self) -> Option<String> {
-        self.inner.key_path.clone()
+        self.key_path.clone()
     }
     
+    #[setter]
     fn set_key_path(&mut self, key_path: Option<String>) {
-        self.inner.key_path = key_path;
+        self.key_path = key_path;
     }
 }
 
@@ -165,7 +175,41 @@ impl Default for DMSCGrpcServiceRegistry {
     }
 }
 
+#[cfg(all(feature = "grpc", feature = "pyo3"))]
+#[pyclass]
+pub struct DMSCGrpcServiceRegistryPy {
+    registry: DMSCGrpcServiceRegistry,
+}
+
+#[cfg(all(feature = "grpc", feature = "pyo3"))]
+#[pymethods]
+impl DMSCGrpcServiceRegistryPy {
+    #[new]
+    fn new() -> Self {
+        Self {
+            registry: DMSCGrpcServiceRegistry::new(),
+        }
+    }
+    
+    fn register(&mut self, service_name: &str, handler: Py<PyAny>) {
+        let service = DMSCGrpcPythonService::new(service_name, handler);
+        self.registry.register_service(Arc::new(service));
+    }
+    
+    fn list_services(&self) -> Vec<String> {
+        self.registry.list_services()
+    }
+}
+
+#[cfg(all(feature = "grpc", feature = "pyo3"))]
+impl Default for DMSCGrpcServiceRegistryPy {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 #[derive(Debug, Clone)]
+#[cfg_attr(feature = "pyo3", pyclass)]
 pub struct DMSCGrpcStats {
     pub requests_received: u64,
     pub requests_completed: u64,
@@ -176,36 +220,36 @@ pub struct DMSCGrpcStats {
 }
 
 #[cfg(feature = "pyo3")]
-#[pyclass]
-pub struct DMSCGrpcStatsPy {
-    inner: DMSCGrpcStats,
-}
-
-#[cfg(feature = "pyo3")]
 #[pymethods]
-impl DMSCGrpcStatsPy {
+impl DMSCGrpcStats {
+    #[getter]
     fn get_requests_received(&self) -> u64 {
-        self.inner.requests_received
+        self.requests_received
     }
 
+    #[getter]
     fn get_requests_completed(&self) -> u64 {
-        self.inner.requests_completed
+        self.requests_completed
     }
 
+    #[getter]
     fn get_requests_failed(&self) -> u64 {
-        self.inner.requests_failed
+        self.requests_failed
     }
 
+    #[getter]
     fn get_bytes_received(&self) -> u64 {
-        self.inner.bytes_received
+        self.bytes_received
     }
 
+    #[getter]
     fn get_bytes_sent(&self) -> u64 {
-        self.inner.bytes_sent
+        self.bytes_sent
     }
 
+    #[getter]
     fn get_active_connections(&self) -> u64 {
-        self.inner.active_connections
+        self.active_connections
     }
 }
 

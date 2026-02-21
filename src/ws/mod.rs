@@ -49,7 +49,14 @@ pub use client::DMSCWSClientConfig;
 #[cfg(feature = "websocket")]
 pub use client::DMSCWSClientStats;
 
+#[cfg(all(feature = "websocket", feature = "pyo3"))]
+pub use server::DMSCWSServerPy;
+
+#[cfg(all(feature = "websocket", feature = "pyo3"))]
+pub use client::DMSCWSClientPy;
+
 #[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "pyo3", pyclass)]
 pub struct DMSCWSServerConfig {
     pub addr: String,
     pub port: u16,
@@ -61,39 +68,31 @@ pub struct DMSCWSServerConfig {
 }
 
 #[cfg(feature = "pyo3")]
-#[pyclass]
-pub struct DMSCWSServerConfigPy {
-    inner: DMSCWSServerConfig,
-}
-
-#[cfg(feature = "pyo3")]
 #[pymethods]
-impl DMSCWSServerConfigPy {
+impl DMSCWSServerConfig {
     #[new]
     fn new() -> Self {
-        Self {
-            inner: DMSCWSServerConfig::default(),
-        }
+        Self::default()
     }
     
     #[getter]
     fn get_addr(&self) -> String {
-        self.inner.addr.clone()
+        self.addr.clone()
     }
     
     #[setter]
     fn set_addr(&mut self, addr: String) {
-        self.inner.addr = addr;
+        self.addr = addr;
     }
     
     #[getter]
     fn get_port(&self) -> u16 {
-        self.inner.port
+        self.port
     }
     
     #[setter]
     fn set_port(&mut self, port: u16) {
-        self.inner.port = port;
+        self.port = port;
     }
 }
 
@@ -112,6 +111,7 @@ impl Default for DMSCWSServerConfig {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "pyo3", pyclass)]
 pub enum DMSCWSEvent {
     Connected { session_id: String },
     Disconnected { session_id: String },
@@ -120,6 +120,7 @@ pub enum DMSCWSEvent {
 }
 
 #[derive(Debug, Clone)]
+#[cfg_attr(feature = "pyo3", pyclass)]
 pub struct DMSCWSSessionInfo {
     pub session_id: String,
     pub remote_addr: String,
@@ -130,6 +131,55 @@ pub struct DMSCWSSessionInfo {
     pub bytes_received: u64,
     pub is_active: bool,
     pub last_heartbeat: u64,
+}
+
+#[cfg(feature = "pyo3")]
+#[pymethods]
+impl DMSCWSSessionInfo {
+    #[getter]
+    fn get_session_id(&self) -> String {
+        self.session_id.clone()
+    }
+    
+    #[getter]
+    fn get_remote_addr(&self) -> String {
+        self.remote_addr.clone()
+    }
+    
+    #[getter]
+    fn get_connected_at(&self) -> u64 {
+        self.connected_at
+    }
+    
+    #[getter]
+    fn get_messages_sent(&self) -> u64 {
+        self.messages_sent
+    }
+    
+    #[getter]
+    fn get_messages_received(&self) -> u64 {
+        self.messages_received
+    }
+    
+    #[getter]
+    fn get_bytes_sent(&self) -> u64 {
+        self.bytes_sent
+    }
+    
+    #[getter]
+    fn get_bytes_received(&self) -> u64 {
+        self.bytes_received
+    }
+    
+    #[getter]
+    fn get_is_active(&self) -> bool {
+        self.is_active
+    }
+    
+    #[getter]
+    fn get_last_heartbeat(&self) -> u64 {
+        self.last_heartbeat
+    }
 }
 
 impl Default for DMSCWSSessionInfo {
@@ -462,6 +512,7 @@ impl DMSCWSSessionManagerPy {
 }
 
 #[derive(Debug, Clone)]
+#[cfg_attr(feature = "pyo3", pyclass)]
 pub struct DMSCWSServerStats {
     pub total_connections: u64,
     pub active_connections: u64,
@@ -471,6 +522,50 @@ pub struct DMSCWSServerStats {
     pub total_bytes_received: u64,
     pub connection_errors: u64,
     pub message_errors: u64,
+}
+
+#[cfg(feature = "pyo3")]
+#[pymethods]
+impl DMSCWSServerStats {
+    #[getter]
+    fn get_total_connections(&self) -> u64 {
+        self.total_connections
+    }
+    
+    #[getter]
+    fn get_active_connections(&self) -> u64 {
+        self.active_connections
+    }
+    
+    #[getter]
+    fn get_total_messages_sent(&self) -> u64 {
+        self.total_messages_sent
+    }
+    
+    #[getter]
+    fn get_total_messages_received(&self) -> u64 {
+        self.total_messages_received
+    }
+    
+    #[getter]
+    fn get_total_bytes_sent(&self) -> u64 {
+        self.total_bytes_sent
+    }
+    
+    #[getter]
+    fn get_total_bytes_received(&self) -> u64 {
+        self.total_bytes_received
+    }
+    
+    #[getter]
+    fn get_connection_errors(&self) -> u64 {
+        self.connection_errors
+    }
+    
+    #[getter]
+    fn get_message_errors(&self) -> u64 {
+        self.message_errors
+    }
 }
 
 impl DMSCWSServerStats {

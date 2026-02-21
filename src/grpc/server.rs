@@ -23,6 +23,7 @@ use std::net::SocketAddr;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 
 #[cfg(feature = "pyo3")]
+#[allow(unused_imports)]
 use pyo3::prelude::*;
 
 pub struct DMSCGrpcServer {
@@ -43,9 +44,9 @@ pub struct DMSCGrpcServerPy {
 #[pymethods]
 impl DMSCGrpcServerPy {
     #[new]
-    fn new(config: DMSCGrpcConfig) -> Self {
+    fn new() -> Self {
         Self {
-            inner: DMSCGrpcServer::new(config),
+            inner: DMSCGrpcServer::new(DMSCGrpcConfig::default()),
         }
     }
 

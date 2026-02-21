@@ -134,7 +134,7 @@ DMSC adopts a highly modular architecture with 18 core modules, enabling on-dema
 ### Prerequisites
 - **Rust**: 1.65+ (2021 Edition)
 - **Cargo**: 1.65+
-- **Platforms**: Linux, macOS, Windows
+- **Platforms**: Linux (x64, arm64), macOS (x64, arm64), Windows (x64, arm64), Android (arm64-v8a, armeabi-v7a, x86_64)
 
 ### Build Dependencies
 

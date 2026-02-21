@@ -454,19 +454,17 @@ pub mod py {
         m.add_class::<crate::database::orm::DMSCPyORMRepository>()?;
 
         // Add grpc types to main module
-        #[cfg(feature = "grpc")]
+        #[cfg(all(feature = "grpc", feature = "pyo3"))]
         {
             m.add_class::<crate::grpc::DMSCGrpcConfig>()?;
             m.add_class::<crate::grpc::DMSCGrpcStats>()?;
-            m.add_class::<crate::grpc::DMSCGrpcServiceRegistry>()?;
-            m.add_class::<crate::grpc::DMSCGrpcPythonService>()?;
             m.add_class::<crate::grpc::DMSCGrpcServiceRegistryPy>()?;
-            m.add_class::<crate::grpc::DMSCGrpcServer>()?;
-            m.add_class::<crate::grpc::DMSCGrpcClient>()?;
+            m.add_class::<crate::grpc::DMSCGrpcServerPy>()?;
+            m.add_class::<crate::grpc::DMSCGrpcClientPy>()?;
         }
 
         // Add websocket types to main module
-        #[cfg(feature = "websocket")]
+        #[cfg(all(feature = "websocket", feature = "pyo3"))]
         {
             m.add_class::<crate::ws::DMSCWSServerConfig>()?;
             m.add_class::<crate::ws::DMSCWSEvent>()?;
@@ -474,10 +472,10 @@ pub mod py {
             m.add_class::<crate::ws::DMSCWSServerStats>()?;
             m.add_class::<crate::ws::DMSCWSPythonHandler>()?;
             m.add_class::<crate::ws::DMSCWSSessionManagerPy>()?;
-            m.add_class::<crate::ws::DMSCWSServer>()?;
+            m.add_class::<crate::ws::DMSCWSServerPy>()?;
             m.add_class::<crate::ws::DMSCWSClientConfig>()?;
             m.add_class::<crate::ws::DMSCWSClientStats>()?;
-            m.add_class::<crate::ws::DMSCWSClient>()?;
+            m.add_class::<crate::ws::DMSCWSClientPy>()?;
         }
 
         // Add module_rpc types to main module
@@ -784,23 +782,25 @@ pub mod py {
     }
     
     fn create_grpc_module(_parent: &Bound<'_, PyModule>) -> PyResult<()> {
-        #[cfg(feature = "grpc")]
+        #[cfg(all(feature = "grpc", feature = "pyo3"))]
         {
             let m = PyModule::new(_parent.py(), "grpc")?;
             m.add_class::<crate::grpc::DMSCGrpcConfig>()?;
             m.add_class::<crate::grpc::DMSCGrpcStats>()?;
-            m.add_class::<crate::grpc::DMSCGrpcServiceRegistry>()?;
-            m.add_class::<crate::grpc::DMSCGrpcPythonService>()?;
             m.add_class::<crate::grpc::DMSCGrpcServiceRegistryPy>()?;
-            m.add_class::<crate::grpc::DMSCGrpcServer>()?;
-            m.add_class::<crate::grpc::DMSCGrpcClient>()?;
+            m.add_class::<crate::grpc::DMSCGrpcServerPy>()?;
+            m.add_class::<crate::grpc::DMSCGrpcClientPy>()?;
             _parent.add_submodule(&m)?;
+        }
+        #[cfg(not(all(feature = "grpc", feature = "pyo3")))]
+        {
+            let _ = _parent;
         }
         Ok(())
     }
     
     fn create_ws_module(_parent: &Bound<'_, PyModule>) -> PyResult<()> {
-        #[cfg(feature = "websocket")]
+        #[cfg(all(feature = "websocket", feature = "pyo3"))]
         {
             let m = PyModule::new(_parent.py(), "ws")?;
             m.add_class::<crate::ws::DMSCWSServerConfig>()?;
@@ -809,11 +809,15 @@ pub mod py {
             m.add_class::<crate::ws::DMSCWSServerStats>()?;
             m.add_class::<crate::ws::DMSCWSPythonHandler>()?;
             m.add_class::<crate::ws::DMSCWSSessionManagerPy>()?;
-            m.add_class::<crate::ws::DMSCWSServer>()?;
+            m.add_class::<crate::ws::DMSCWSServerPy>()?;
             m.add_class::<crate::ws::DMSCWSClientConfig>()?;
             m.add_class::<crate::ws::DMSCWSClientStats>()?;
-            m.add_class::<crate::ws::DMSCWSClient>()?;
+            m.add_class::<crate::ws::DMSCWSClientPy>()?;
             _parent.add_submodule(&m)?;
+        }
+        #[cfg(not(all(feature = "websocket", feature = "pyo3")))]
+        {
+            let _ = _parent;
         }
         Ok(())
     }

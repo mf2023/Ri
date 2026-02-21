@@ -1,4 +1,4 @@
-//! Copyright © 2025-2026 Wenze Wei. All Rights Reserved.
+//! Copyright 2025-2026 Wenze Wei. All Rights Reserved.
 //!
 //! This file is part of DMSC.
 //! The DMSC project belongs to the Dunimd Team.
@@ -16,8 +16,6 @@
 //! limitations under the License.
 
 //! # WebSocket Server Implementation
-//!
-//! This module provides the WebSocket server implementation for DMSC.
 
 use super::*;
 use uuid::Uuid;
@@ -26,7 +24,10 @@ use tokio::time::Duration;
 use futures::StreamExt;
 use tungstenite::Message;
 
-#[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
+#[cfg(feature = "pyo3")]
+#[allow(unused_imports)]
+use pyo3::prelude::*;
+
 pub struct DMSCWSServer {
     config: DMSCWSServerConfig,
     stats: Arc<RwLock<DMSCWSServerStats>>,
@@ -35,6 +36,63 @@ pub struct DMSCWSServer {
     shutdown_tx: Option<mpsc::Sender<()>>,
     running: Arc<RwLock<bool>>,
     handler: Arc<RwLock<Option<Arc<dyn DMSCWSSessionHandler>>>>,
+}
+
+#[cfg(feature = "pyo3")]
+#[pyclass]
+pub struct DMSCWSServerPy {
+    inner: DMSCWSServer,
+}
+
+#[cfg(feature = "pyo3")]
+#[pymethods]
+impl DMSCWSServerPy {
+    #[new]
+    fn new(config: DMSCWSServerConfig) -> Self {
+        Self {
+            inner: DMSCWSServer::new(config),
+        }
+    }
+
+    fn get_stats(&self) -> DMSCWSServerStats {
+        self.inner.get_stats()
+    }
+
+    fn is_running(&self) -> bool {
+        tokio::runtime::Handle::try_current()
+            .map(|handle| handle.block_on(async { self.inner.is_running().await }))
+            .unwrap_or(false)
+    }
+
+    fn start(&mut self) -> PyResult<()> {
+        let rt = tokio::runtime::Runtime::new()
+            .map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(e.to_string()))?;
+        
+        rt.block_on(async {
+            self.inner.start().await
+        }).map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(e.to_string()))
+    }
+
+    fn stop(&mut self) -> PyResult<()> {
+        let rt = tokio::runtime::Runtime::new()
+            .map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(e.to_string()))?;
+        
+        rt.block_on(async {
+            self.inner.stop().await
+        }).map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(e.to_string()))
+    }
+
+    fn broadcast(&self, data: Vec<u8>) -> usize {
+        tokio::runtime::Handle::try_current()
+            .map(|handle| handle.block_on(async { self.inner.broadcast(&data).await.unwrap_or(0) }))
+            .unwrap_or(0)
+    }
+
+    fn get_active_session_count(&self) -> usize {
+        tokio::runtime::Handle::try_current()
+            .map(|handle| handle.block_on(async { self.inner.get_active_session_count().await }))
+            .unwrap_or(0)
+    }
 }
 
 impl DMSCWSServer {
@@ -311,5 +369,25 @@ impl DMSCWSServer {
 
     pub async fn get_active_session_count(&self) -> usize {
         self.session_manager.get_session_count().await
+    }
+}
+
+impl Clone for DMSCWSServer {
+    fn clone(&self) -> Self {
+        Self {
+            config: self.config.clone(),
+            stats: self.stats.clone(),
+            session_manager: self.session_manager.clone(),
+            event_tx: self.event_tx.clone(),
+            shutdown_tx: None,
+            running: self.running.clone(),
+            handler: self.handler.clone(),
+        }
+    }
+}
+
+impl Default for DMSCWSServer {
+    fn default() -> Self {
+        Self::new(DMSCWSServerConfig::default())
     }
 }
