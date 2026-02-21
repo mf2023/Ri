@@ -325,6 +325,81 @@ jobs:
           path: target/x86_64-apple-darwin/release/libdmsc.*
 
   ################################################################################
+  # Job: Build Rust Library for macOS ARM64
+  ################################################################################
+  build-rust-macos-arm64:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install protoc
+        uses: arduino/setup-protoc@v3
+        with:
+          version: '33.x'
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Install dependencies
+        run: |
+          brew update
+          brew install cmake pkg-config || true
+          pip install --upgrade pip setuptools wheel || true
+      
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: stable
+          targets: aarch64-apple-darwin
+
+      - name: Configure macOS linker for PyO3
+        run: |
+          mkdir -p .cargo
+          echo '[target.aarch64-apple-darwin]' > .cargo/config.toml
+          echo 'rustflags = ["-C", "link-arg=-undefined", "-C", "link-arg=dynamic_lookup"]' >> .cargo/config.toml
+      
+      - name: Build Rust library
+        run: cargo build --release --target aarch64-apple-darwin
+      
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: rust-macos-arm64
+          path: target/aarch64-apple-darwin/release/libdmsc.*
+
+  ################################################################################
+  # Job: Build Rust Library for Windows ARM64
+  ################################################################################
+  build-rust-windows-arm64:
+    runs-on: windows-11-arm
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install protoc
+        uses: arduino/setup-protoc@v3
+        with:
+          version: '33.x'
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Install CMake
+        uses: jwlawson/actions-setup-cmake@v2
+        with:
+          cmake-version: '3.28.x'
+
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: stable
+          targets: aarch64-pc-windows-msvc
+
+      - name: Build Rust library
+        run: cargo build --release --target aarch64-pc-windows-msvc
+      
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: rust-windows-arm64
+          path: target/aarch64-pc-windows-msvc/release/dmsc.dll
+
+  ################################################################################
   # Job: Build C/C++ Static Libraries and Headers for Linux x64
   ################################################################################
   # This job compiles the DMSC library as a static library (staticlib) for C/C++ usage
@@ -610,6 +685,150 @@ jobs:
             include/dmsc.h
 
   ################################################################################
+  # Job: Build C/C++ Static Libraries for macOS ARM64
+  ################################################################################
+  build-c-libs-macos-arm64:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install protoc
+        uses: arduino/setup-protoc@v3
+        with:
+          version: '33.x'
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Install dependencies
+        run: |
+          brew update
+          brew install cmake pkg-config openssl || true
+
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: stable
+          targets: aarch64-apple-darwin
+
+      - name: Build C static library
+        run: cargo build --release --target aarch64-apple-darwin --no-default-features --features c
+
+      - name: Generate C headers
+        run: |
+          mkdir -p include
+          echo "/* DMSC C API Header - Auto-generated */" > include/dmsc.h
+          echo "#ifndef DMSC_H" >> include/dmsc.h
+          echo "#define DMSC_H" >> include/dmsc.h
+          echo "" >> include/dmsc.h
+          echo "#include <stdint.h>" >> include/dmsc.h
+          echo "#include <stddef.h>" >> include/dmsc.h
+          echo "" >> include/dmsc.h
+          echo "#ifdef __cplusplus" >> include/dmsc.h
+          echo "extern \"C\" {" >> include/dmsc.h
+          echo "#endif" >> include/dmsc.h
+          echo "" >> include/dmsc.h
+          echo "/* Library Management */" >> include/dmsc.h
+          echo "int dmsc_init(void);" >> include/dmsc.h
+          echo "void dmsc_cleanup(void);" >> include/dmsc.h
+          echo "const char* dmsc_version(void);" >> include/dmsc.h
+          echo "void dmsc_string_free(char* s);" >> include/dmsc.h
+          echo "" >> include/dmsc.h
+          echo "/* Core Module */" >> include/dmsc.h
+          echo "typedef struct CDMSCAppBuilder CDMSCAppBuilder;" >> include/dmsc.h
+          echo "typedef struct CDMSCConfig CDMSCConfig;" >> include/dmsc.h
+          echo "CDMSCAppBuilder* dmsc_app_builder_new(void);" >> include/dmsc.h
+          echo "void dmsc_app_builder_free(CDMSCAppBuilder* builder);" >> include/dmsc.h
+          echo "CDMSCConfig* dmsc_config_new(void);" >> include/dmsc.h
+          echo "void dmsc_config_free(CDMSCConfig* config);" >> include/dmsc.h
+          echo "char* dmsc_config_get_string(CDMSCConfig* config, const char* key);" >> include/dmsc.h
+          echo "int dmsc_config_set_string(CDMSCConfig* config, const char* key, const char* value);" >> include/dmsc.h
+          echo "" >> include/dmsc.h
+          echo "#ifdef __cplusplus" >> include/dmsc.h
+          echo "}" >> include/dmsc.h
+          echo "#endif" >> include/dmsc.h
+          echo "" >> include/dmsc.h
+          echo "#endif /* DMSC_H */" >> include/dmsc.h
+
+      - name: Upload C library artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: c-libs-macos-arm64
+          path: |
+            target/aarch64-apple-darwin/release/libdmsc.a
+            include/dmsc.h
+
+  ################################################################################
+  # Job: Build C/C++ Static Libraries for Windows ARM64
+  ################################################################################
+  build-c-libs-windows-arm64:
+    runs-on: windows-11-arm
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install protoc
+        uses: arduino/setup-protoc@v3
+        with:
+          version: '33.x'
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Install CMake
+        uses: jwlawson/actions-setup-cmake@v2
+        with:
+          cmake-version: '3.28.x'
+
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: stable
+          targets: aarch64-pc-windows-msvc
+
+      - name: Build C static library
+        run: cargo build --release --target aarch64-pc-windows-msvc --no-default-features --features c
+
+      - name: Generate C headers
+        run: |
+          mkdir -p include
+          echo "/* DMSC C API Header - Auto-generated */" > include/dmsc.h
+          echo "#ifndef DMSC_H" >> include/dmsc.h
+          echo "#define DMSC_H" >> include/dmsc.h
+          echo "" >> include/dmsc.h
+          echo "#include <stdint.h>" >> include/dmsc.h
+          echo "#include <stddef.h>" >> include/dmsc.h
+          echo "" >> include/dmsc.h
+          echo "#ifdef __cplusplus" >> include/dmsc.h
+          echo "extern \"C\" {" >> include/dmsc.h
+          echo "#endif" >> include/dmsc.h
+          echo "" >> include/dmsc.h
+          echo "/* Library Management */" >> include/dmsc.h
+          echo "int dmsc_init(void);" >> include/dmsc.h
+          echo "void dmsc_cleanup(void);" >> include/dmsc.h
+          echo "const char* dmsc_version(void);" >> include/dmsc.h
+          echo "void dmsc_string_free(char* s);" >> include/dmsc.h
+          echo "" >> include/dmsc.h
+          echo "/* Core Module */" >> include/dmsc.h
+          echo "typedef struct CDMSCAppBuilder CDMSCAppBuilder;" >> include/dmsc.h
+          echo "typedef struct CDMSCConfig CDMSCConfig;" >> include/dmsc.h
+          echo "CDMSCAppBuilder* dmsc_app_builder_new(void);" >> include/dmsc.h
+          echo "void dmsc_app_builder_free(CDMSCAppBuilder* builder);" >> include/dmsc.h
+          echo "CDMSCConfig* dmsc_config_new(void);" >> include/dmsc.h
+          echo "void dmsc_config_free(CDMSCConfig* config);" >> include/dmsc.h
+          echo "char* dmsc_config_get_string(CDMSCConfig* config, const char* key);" >> include/dmsc.h
+          echo "int dmsc_config_set_string(CDMSCConfig* config, const char* key, const char* value);" >> include/dmsc.h
+          echo "" >> include/dmsc.h
+          echo "#ifdef __cplusplus" >> include/dmsc.h
+          echo "}" >> include/dmsc.h
+          echo "#endif" >> include/dmsc.h
+          echo "" >> include/dmsc.h
+          echo "#endif /* DMSC_H */" >> include/dmsc.h
+
+      - name: Upload C library artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: c-libs-windows-arm64
+          path: |
+            target/aarch64-pc-windows-msvc/release/dmsc.lib
+            include/dmsc.h
+
+  ################################################################################
   # Job: Build Python Wheels for All Platforms
   ################################################################################
   # This matrix job generates distributable Python wheel packages (.whl files) for all
@@ -780,32 +999,31 @@ jobs:
             manylinux: null
           
           ##########################################################################
-          # Windows ARM64 Matrix Entries (Disabled)
+          # Windows ARM64 Matrix Entries
           ##########################################################################
-          # Note: GitHub Actions windows-latest does not provide ARM64 Python interpreters
-          # Skipping ARM64 builds for Windows as ARM64 Windows runners are not available
-          # ARM64 Windows requires specialized Python interpreters not available in GitHub Actions
-          # The following entries are commented out to prevent build failures
-          # - python: '3.10'
-          #   runs-on: windows-latest
-          #   target: aarch64-pc-windows-msvc
-          #   manylinux: null
-          # - python: '3.11'
-          #   runs-on: windows-latest
-          #   target: aarch64-pc-windows-msvc
-          #   manylinux: null
-          # - python: '3.12'
-          #   runs-on: windows-latest
-          #   target: aarch64-pc-windows-msvc
-          #   manylinux: null
-          # - python: '3.13'
-          #   runs-on: windows-latest
-          #   target: aarch64-pc-windows-msvc
-          #   manylinux: null
-          # - python: '3.14'
-          #   runs-on: windows-latest
-          #   target: aarch64-pc-windows-msvc
-          #   manylinux: null
+          # Native Windows ARM64 builds on windows-11-arm runner
+          # Python ARM64 interpreters are available on Windows 11 ARM64
+          
+          - python: '3.10'
+            runs-on: windows-11-arm
+            target: aarch64-pc-windows-msvc
+            manylinux: null
+          - python: '3.11'
+            runs-on: windows-11-arm
+            target: aarch64-pc-windows-msvc
+            manylinux: null
+          - python: '3.12'
+            runs-on: windows-11-arm
+            target: aarch64-pc-windows-msvc
+            manylinux: null
+          - python: '3.13'
+            runs-on: windows-11-arm
+            target: aarch64-pc-windows-msvc
+            manylinux: null
+          - python: '3.14'
+            runs-on: windows-11-arm
+            target: aarch64-pc-windows-msvc
+            manylinux: null
           
           ##########################################################################
           # macOS x64 Matrix Entries
@@ -1533,6 +1751,37 @@ jobs:
           name: java-windows-x64
           path: target/release/dmsc.dll
 
+  build-java-windows-arm64:
+    runs-on: windows-11-arm
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install protoc
+        uses: arduino/setup-protoc@v3
+        with:
+          version: '33.x'
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Install CMake
+        uses: jwlawson/actions-setup-cmake@v2
+        with:
+          cmake-version: '3.28.x'
+
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: stable
+          targets: aarch64-pc-windows-msvc
+
+      - name: Build JNI library
+        run: cargo build --release --target aarch64-pc-windows-msvc --no-default-features --features java
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: java-windows-arm64
+          path: target/aarch64-pc-windows-msvc/release/dmsc.dll
+
   build-java-macos:
     runs-on: macos-15-intel
     steps:
@@ -1602,7 +1851,7 @@ jobs:
   # Only runs for production releases (not test releases)
   ################################################################################
   build-java-jar:
-    needs: [build-java-linux, build-java-linux-arm64, build-java-windows, build-java-macos, build-java-macos-arm64]
+    needs: [build-java-linux, build-java-linux-arm64, build-java-windows, build-java-windows-arm64, build-java-macos, build-java-macos-arm64]
     
     if: github.event_name == 'release' && !contains(github.event.release.name, 'Test')
     
@@ -1636,6 +1885,12 @@ jobs:
         with:
           name: java-windows-x64
           path: java/src/main/resources/native/windows/x64
+
+      - name: Download Windows ARM64 JNI library
+        uses: actions/download-artifact@v4
+        with:
+          name: java-windows-arm64
+          path: java/src/main/resources/native/windows/arm64
 
       - name: Download macOS x64 JNI library
         uses: actions/download-artifact@v4
