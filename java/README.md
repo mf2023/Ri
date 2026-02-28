@@ -7,7 +7,7 @@
 
 [English](README.md) | 简体中文
 
-[Help Documentation](../doc/en/index.md) | [Changelog](CHANGELOG.md) | [Security](../SECURITY.md) | [Contributing](../CONTRIBUTING.md) | [Code of Conduct](../CODE_OF_CONDUCT.md)
+[Help Documentation](https://mf2023.github.io/DMSC/dmsc/) | [Changelog](CHANGELOG.md) | [Security](../SECURITY.md) | [Contributing](../CONTRIBUTING.md) | [Code of Conduct](../CODE_OF_CONDUCT.md)
 
 <a href="https://space.bilibili.com/3493284091529457" target="_blank">
     <img alt="BiliBili" src="https://img.shields.io/badge/BiliBili-Dunimd-00A1D6?style=flat-square&logo=bilibili"/>
