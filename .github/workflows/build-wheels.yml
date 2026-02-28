@@ -1861,8 +1861,20 @@ jobs:
         with:
           java-version: '11'
           distribution: 'temurin'
-          gpg-private-key: ${{ secrets.GPG_PRIVATE_KEY }}
-          gpg-passphrase: MAVEN_GPG_PASSPHRASE
+
+      - name: Import GPG keys
+        run: |
+          # Configure GPG to not use pinentry (fixes some CI issues)
+          mkdir -p ~/.gnupg
+          echo "use-agent" >> ~/.gnupg/gpg.conf
+          echo "pinentry-mode loopback" >> ~/.gnupg/gpg.conf
+          echo "allow-loopback-pinentry" >> ~/.gnupg/gpg.conf
+          
+          # Import the private key
+          echo "${{ secrets.GPG_PRIVATE_KEY }}" | gpg --batch --import
+          
+          # List keys to verify import
+          gpg --list-secret-keys --keyid-format=long
 
       - name: Download Linux x64 JNI library
         uses: actions/download-artifact@v4
@@ -1904,9 +1916,27 @@ jobs:
         run: |
           cd java
           mkdir -p ~/.m2
-          echo '<settings><servers><server><id>central</id><username>${CENTRAL_USERNAME}</username><password>${CENTRAL_PASSWORD}</password></server></servers></settings>' > ~/.m2/settings.xml
-          mvn clean deploy -P release -DskipTests
+          cat > ~/.m2/settings.xml << 'EOF'
+          <settings>
+            <servers>
+              <server>
+                <id>central</id>
+                <username>${CENTRAL_USERNAME}</username>
+                <password>${CENTRAL_PASSWORD}</password>
+              </server>
+            </servers>
+            <profiles>
+              <profile>
+                <id>release</id>
+                <properties>
+                  <gpg.passphrase>${GPG_PASSPHRASE}</gpg.passphrase>
+                </properties>
+              </profile>
+            </profiles>
+          </settings>
+          EOF
+          mvn clean deploy -P release -DskipTests -Dgpg.passphrase="${{ secrets.GPG_PASSPHRASE }}"
         env:
           CENTRAL_USERNAME: ${{ secrets.CENTRAL_USERNAME }}
           CENTRAL_PASSWORD: ${{ secrets.CENTRAL_PASSWORD }}
-          MAVEN_GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
+          GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}

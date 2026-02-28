@@ -1,0 +1,106 @@
+# Copyright © 2025-2026 Wenze Wei. All Rights Reserved.
+#
+# This file is part of DMSC.
+# The DMSC project belongs to the Dunimd Team.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+################################################################################
+# DMSC Documentation Deployment Pipeline
+################################################################################
+#
+# Purpose:
+# This GitHub Actions workflow builds Rust documentation and deploys it to
+# GitHub Pages for public access.
+#
+# Trigger Conditions:
+# - On push to master or main branches
+# - Manual workflow dispatch for on-demand documentation updates
+#
+# Output:
+# - Documentation available at: https://<username>.github.io/<repo>/dmsc/
+################################################################################
+
+name: Deploy Docs
+
+on:
+  push:
+    branches:
+      - master
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
+jobs:
+  build-docs:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install system dependencies
+        run: sudo apt-get update && sudo apt-get install -y libcurl4-openssl-dev libsasl2-dev libssl-dev
+
+      - name: Cache Cargo dependencies
+        uses: actions/cache@v4
+        with:
+          path: ~/.cargo/registry,~/.cargo/git,target
+          key: ${{ runner.os }}-docs-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Install Python tools
+        run: pip install maturin pdoc
+
+      - name: Build Rust documentation
+        run: cargo doc --no-deps --features full
+
+      - name: Build Python wheel
+        run: maturin build --release --features pyo3 -o dist
+
+      - name: Install Python package
+        run: pip install dist/*.whl
+
+      - name: Build Python documentation
+        run: pdoc -o target/doc/python dmsc
+
+      - name: Add redirect index
+        run: |
+          echo '<!DOCTYPE html><html><head><meta http-equiv="refresh" content="0;url=dmsc/"></head><body><a href="dmsc/">Go to DMSC Documentation</a></body></html>' > target/doc/index.html
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: target/doc
+
+  deploy-docs:
+    needs: build-docs
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
