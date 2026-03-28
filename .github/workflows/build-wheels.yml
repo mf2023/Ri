@@ -1278,6 +1278,9 @@ jobs:
       # Uses maturin-action with manylinux support for glibc compatibility
       # This ensures the wheel is compatible with older glibc versions
       # The manylinux_2_17 tag supports glibc 2.17+ (CentOS 7+, Ubuntu 18.04+)
+      # before-script-linux installs build dependencies for vendored libraries:
+      # - perl-core: Required for building vendored OpenSSL
+      # - zlib-devel: Required for compression support in OpenSSL
       - name: Build Linux wheel with manylinux
         if: matrix.docker == true
         uses: PyO3/maturin-action@v1
@@ -1287,7 +1290,7 @@ jobs:
           manylinux: ${{ matrix.manylinux }}
           args: --release -o dist
           before-script-linux: |
-            yum install -y openssl-devel libffi-devel libcurl-devel cyrus-sasl-devel
+            yum install -y perl-core zlib-devel cmake3
       
       # Step 15: List generated wheel files for debugging and verification
       # Shell: bash required for glob patterns and ls command

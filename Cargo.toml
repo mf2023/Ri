@@ -128,7 +128,9 @@ jni = { version = "0.21", optional = true }
 # Kafka client library for message streaming using rdkafka
 # Supports Kafka protocol and consumer/producer patterns
 # Uses cmake-build for cross-platform compatibility (Windows/Linux/macOS)
-rdkafka = { version = "0.38", default-features = false, features = ["tokio", "cmake-build"], optional = true }
+# ssl-vendored: Bundles OpenSSL to avoid system OpenSSL version issues on older Linux
+# gssapi-vendored: Bundles Cyrus SASL for authentication support
+rdkafka = { version = "0.38", default-features = false, features = ["tokio", "cmake-build", "ssl-vendored", "gssapi-vendored"], optional = true }
 
 # DMSC core dependencies (always included)
 # Serialization and deserialization framework with derive macro support
