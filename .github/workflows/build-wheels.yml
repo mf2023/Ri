@@ -927,47 +927,48 @@ jobs:
           ##########################################################################
           # Linux ARM64 Matrix Entries
           ##########################################################################
-          # Native ARM64 builds on ubuntu-24.04-arm
+          # Native ARM64 builds on ubuntu-24.04-arm with manylinux container
           # Using manylinux_2_17 for maximum compatibility with older ARM64 systems:
           # - Ubuntu 18.04 ARM64, CentOS 7 ARM64, Debian 9+ ARM64
           # - AWS Graviton instances with older Amazon Linux
           # - Raspberry Pi OS based on Debian 9+
+          # docker: true enables manylinux container for glibc compatibility
           
           - python: '3.8'
             runs-on: ubuntu-24.04-arm
             target: aarch64-unknown-linux-gnu
             manylinux: manylinux_2_17
-            docker: false
+            docker: true
           - python: '3.9'
             runs-on: ubuntu-24.04-arm
             target: aarch64-unknown-linux-gnu
             manylinux: manylinux_2_17
-            docker: false
+            docker: true
           - python: '3.10'
             runs-on: ubuntu-24.04-arm
             target: aarch64-unknown-linux-gnu
             manylinux: manylinux_2_17
-            docker: false
+            docker: true
           - python: '3.11'
             runs-on: ubuntu-24.04-arm
             target: aarch64-unknown-linux-gnu
             manylinux: manylinux_2_17
-            docker: false
+            docker: true
           - python: '3.12'
             runs-on: ubuntu-24.04-arm
             target: aarch64-unknown-linux-gnu
             manylinux: manylinux_2_17
-            docker: false
+            docker: true
           - python: '3.13'
             runs-on: ubuntu-24.04-arm
             target: aarch64-unknown-linux-gnu
             manylinux: manylinux_2_17
-            docker: false
+            docker: true
           - python: '3.14'
             runs-on: ubuntu-24.04-arm
             target: aarch64-unknown-linux-gnu
             manylinux: manylinux_2_17
-            docker: false
+            docker: true
           
           ##########################################################################
           # Windows x64 Matrix Entries
@@ -1261,30 +1262,32 @@ jobs:
       - name: Install dependencies
         run: pip install maturin auditwheel -i https://pypi.org/simple --quiet
       
-      # Step 13: Build Python wheel for non-Docker platforms (macOS, Windows, Linux ARM64)
+      # Step 13: Build Python wheel for non-Docker platforms (macOS, Windows)
       # Conditional: Executes when docker: false (native builds without manylinux container)
       # Uses maturin to build the wheel with release optimizations
       # Outputs to dist/ directory for artifact collection
       # --target specifies the Rust target triple for cross-compilation if needed
+      # Note: Linux ARM64 now uses manylinux container for glibc compatibility
       - name: Build wheel (non-Docker)
         if: matrix.docker != true
         run: |
           maturin build --release --target ${{ matrix.target }} -o dist
       
-      # Step 14: Build and repair Linux wheel using manylinux Docker container
-      # Conditional: Executes when docker: true (Linux x64 builds)
-      # First builds the wheel in wheelhouse/ directory
-      # Then uses auditwheel to repair and tag the wheel for manylinux compatibility
-      # The --plat flag sets the platform tag (e.g., manylinux_2_39_x86_64)
-      # This ensures the wheel can be installed on older Linux distributions
-      # Note: OpenSSL is now statically linked, so auditwheel won't have issues
-      - name: Build Linux wheel with auditwheel repair
+      # Step 14: Build Linux wheel using manylinux Docker container
+      # Conditional: Executes when docker: true (Linux builds)
+      # Uses maturin-action with manylinux support for glibc compatibility
+      # This ensures the wheel is compatible with older glibc versions
+      # The manylinux_2_17 tag supports glibc 2.17+ (CentOS 7+, Ubuntu 18.04+)
+      - name: Build Linux wheel with manylinux
         if: matrix.docker == true
-        run: |
-          TARGET="${{ matrix.target }}"
-          ARCH="${TARGET%%-*}"
-          maturin build --release --target "$TARGET" -o wheelhouse
-          auditwheel repair wheelhouse/*.whl -w dist --plat ${{ matrix.manylinux }}_${ARCH}
+        uses: PyO3/maturin-action@v1
+        with:
+          command: build
+          target: ${{ matrix.target }}
+          manylinux: ${{ matrix.manylinux }}
+          args: --release -o dist
+          before-script-linux: |
+            yum install -y openssl-devel libffi-devel libcurl-devel cyrus-sasl-devel
       
       # Step 15: List generated wheel files for debugging and verification
       # Shell: bash required for glob patterns and ls command
