@@ -50,7 +50,7 @@ name = "dmsc"
 
 # Semantic version of the package
 # Follows MAJOR.MINOR.PATCH format
-version = "0.1.8-beta.3"
+version = "0.1.8"
 
 # Rust edition determines language features and behavior
 # 2021 edition provides disjoint capture in closures, panic macro consistency, etc.

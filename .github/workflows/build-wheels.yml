@@ -882,85 +882,91 @@ jobs:
           ##########################################################################
           # Linux x64 Matrix Entries
           ##########################################################################
-          # Python 3.11+ requires glibc 2.25+ (manylinux_2_27)
-          # Using manylinux_2_39 for compatibility with modern glibc
+          # Using manylinux_2_17 for maximum compatibility with older systems:
+          # - Ubuntu 18.04 (glibc 2.27), Ubuntu 16.04 (glibc 2.23)
+          # - CentOS 7 (glibc 2.17), Debian 9+ (glibc 2.24+)
+          # - RHEL 7+, Oracle Linux 7+
+          # This ensures wheels work on systems with glibc 2.17 or newer
           
           - python: '3.8'
             runs-on: ubuntu-latest
             target: x86_64-unknown-linux-gnu
-            manylinux: manylinux_2_39
+            manylinux: manylinux_2_17
             docker: true
           - python: '3.9'
             runs-on: ubuntu-latest
             target: x86_64-unknown-linux-gnu
-            manylinux: manylinux_2_39
+            manylinux: manylinux_2_17
             docker: true
           - python: '3.10'
             runs-on: ubuntu-latest
             target: x86_64-unknown-linux-gnu
-            manylinux: manylinux_2_39
+            manylinux: manylinux_2_17
             docker: true
           - python: '3.11'
             runs-on: ubuntu-latest
             target: x86_64-unknown-linux-gnu
-            manylinux: manylinux_2_39
+            manylinux: manylinux_2_17
             docker: true
           - python: '3.12'
             runs-on: ubuntu-latest
             target: x86_64-unknown-linux-gnu
-            manylinux: manylinux_2_39
+            manylinux: manylinux_2_17
             docker: true
           - python: '3.13'
             runs-on: ubuntu-latest
             target: x86_64-unknown-linux-gnu
-            manylinux: manylinux_2_39
+            manylinux: manylinux_2_17
             docker: true
           - python: '3.14'
             runs-on: ubuntu-latest
             target: x86_64-unknown-linux-gnu
-            manylinux: manylinux_2_39
+            manylinux: manylinux_2_17
             docker: true
           
           ##########################################################################
           # Linux ARM64 Matrix Entries
           ##########################################################################
           # Native ARM64 builds on ubuntu-24.04-arm
-          # Using manylinux_2_39 for consistency with x64 builds
+          # Using manylinux_2_17 for maximum compatibility with older ARM64 systems:
+          # - Ubuntu 18.04 ARM64, CentOS 7 ARM64, Debian 9+ ARM64
+          # - AWS Graviton instances with older Amazon Linux
+          # - Raspberry Pi OS based on Debian 9+
           
           - python: '3.8'
             runs-on: ubuntu-24.04-arm
             target: aarch64-unknown-linux-gnu
-            manylinux: manylinux_2_39
+            manylinux: manylinux_2_17
             docker: false
           - python: '3.9'
             runs-on: ubuntu-24.04-arm
             target: aarch64-unknown-linux-gnu
-            manylinux: manylinux_2_39
+            manylinux: manylinux_2_17
             docker: false
           - python: '3.10'
             runs-on: ubuntu-24.04-arm
             target: aarch64-unknown-linux-gnu
-            manylinux: manylinux_2_39
+            manylinux: manylinux_2_17
             docker: false
           - python: '3.11'
             runs-on: ubuntu-24.04-arm
             target: aarch64-unknown-linux-gnu
-            manylinux: manylinux_2_39
+            manylinux: manylinux_2_17
             docker: false
           - python: '3.12'
             runs-on: ubuntu-24.04-arm
             target: aarch64-unknown-linux-gnu
-            manylinux: manylinux_2_39
+            manylinux: manylinux_2_17
             docker: false
           - python: '3.13'
             runs-on: ubuntu-24.04-arm
             target: aarch64-unknown-linux-gnu
-            manylinux: manylinux_2_39
+            manylinux: manylinux_2_17
             docker: false
           - python: '3.14'
             runs-on: ubuntu-24.04-arm
             target: aarch64-unknown-linux-gnu
-            manylinux: manylinux_2_39
+            manylinux: manylinux_2_17
             docker: false
           
           ##########################################################################
