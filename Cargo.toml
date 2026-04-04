@@ -131,11 +131,6 @@ jni = { version = "0.21", optional = true }
 # ssl-vendored: Bundles OpenSSL to avoid system OpenSSL version issues on older Linux
 # gssapi-vendored: Bundles Cyrus SASL for authentication support (Linux only)
 # Note: On Windows, SSPI is used instead of GSSAPI for Kerberos authentication
-[target.'cfg(not(windows))'.dependencies]
-rdkafka = { version = "0.38", default-features = false, features = ["tokio", "cmake-build", "ssl-vendored", "gssapi-vendored"], optional = true }
-
-[target.'cfg(windows)'.dependencies]
-rdkafka = { version = "0.38", default-features = false, features = ["tokio", "cmake-build", "ssl-vendored"], optional = true }
 
 # DMSC core dependencies (always included)
 # Serialization and deserialization framework with derive macro support
@@ -440,6 +435,15 @@ tungstenite = { version = "0.24", optional = true }
 # Required for secure TLS connections on non-Windows platforms
 # The vendored feature builds OpenSSL from source, avoiding system dependency issues
 openssl-sys = { version = "0.9", features = ["vendored"], optional = true }
+
+# Kafka client library for non-Windows platforms
+# Uses gssapi-vendored for Kerberos authentication on Linux/macOS
+rdkafka = { version = "0.38", default-features = false, features = ["tokio", "cmake-build", "ssl-vendored", "gssapi-vendored"], optional = true }
+
+[target.'cfg(windows)'.dependencies]
+# Kafka client library for Windows
+# Uses Windows SSPI for Kerberos authentication (no gssapi-vendored needed)
+rdkafka = { version = "0.38", default-features = false, features = ["tokio", "cmake-build", "ssl-vendored"], optional = true }
 
 # =============================================================================
 # Post-Quantum Cryptography Dependencies
