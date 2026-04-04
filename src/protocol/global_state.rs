@@ -95,7 +95,7 @@ use uuid::Uuid;
 use zeroize::{Zeroize, ZeroizeOnDrop};
 use secrecy::{ExposeSecret, SecretVec};
 use aes_gcm::{Aes256Gcm, Key, Nonce, KeyInit};
-use rand::RngCore;
+use rand::Rng;
 
 use crate::core::{DMSCResult, DMSCError};
 use super::{DMSCProtocolType, DMSCProtocolConfig, DMSCProtocolStats, DMSCConnectionInfo, 
