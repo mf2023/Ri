@@ -54,6 +54,7 @@
 //! sharded_map.remove("key1").await;
 //! ```
 
+use std::borrow::Borrow;
 use std::collections::HashMap;
 use std::hash::{Hash, Hasher};
 use std::collections::hash_map::DefaultHasher;
@@ -65,14 +66,14 @@ use pyo3::pyclass;
 
 const DEFAULT_SHARD_COUNT: usize = 16;
 
-fn calculate_hash<K: Hash>(key: &K) -> u64 {
+fn calculate_hash<K: Hash + ?Sized>(key: &K) -> u64 {
     let mut hasher = DefaultHasher::new();
     key.hash(&mut hasher);
     hasher.finish()
 }
 
 #[inline]
-fn get_shard_index<K: Hash>(key: &K, shard_count: usize) -> usize {
+fn get_shard_index<K: Hash + ?Sized>(key: &K, shard_count: usize) -> usize {
     let hash = calculate_hash(key);
     (hash as usize) % shard_count
 }
@@ -127,29 +128,47 @@ where
         data.insert(key, value)
     }
 
-    pub async fn get(&self, key: &K) -> Option<V> {
-        let shard = self.get_shard(key);
+    pub async fn get<Q>(&self, key: &Q) -> Option<V>
+    where
+        K: Borrow<Q>,
+        Q: Hash + Eq + ?Sized,
+    {
+        let shard_index = get_shard_index(key, self.shard_count);
+        let shard = &self.shards[shard_index];
         let data = shard.data.read().await;
         data.get(key).cloned()
     }
 
-    pub async fn get_mut<F, R>(&self, key: &K, f: F) -> Option<R>
+    pub async fn get_mut<F, R, Q>(&self, key: &Q, f: F) -> Option<R>
     where
         F: FnOnce(&mut V) -> R,
+        K: Borrow<Q>,
+        Q: Hash + Eq + ?Sized,
     {
-        let shard = self.get_shard(key);
+        let shard_index = get_shard_index(key, self.shard_count);
+        let shard = &self.shards[shard_index];
         let mut data = shard.data.write().await;
         data.get_mut(key).map(f)
     }
 
-    pub async fn remove(&self, key: &K) -> Option<V> {
-        let shard = self.get_shard(key);
+    pub async fn remove<Q>(&self, key: &Q) -> Option<V>
+    where
+        K: Borrow<Q>,
+        Q: Hash + Eq + ?Sized,
+    {
+        let shard_index = get_shard_index(key, self.shard_count);
+        let shard = &self.shards[shard_index];
         let mut data = shard.data.write().await;
         data.remove(key)
     }
 
-    pub async fn contains_key(&self, key: &K) -> bool {
-        let shard = self.get_shard(key);
+    pub async fn contains_key<Q>(&self, key: &Q) -> bool
+    where
+        K: Borrow<Q>,
+        Q: Hash + Eq + ?Sized,
+    {
+        let shard_index = get_shard_index(key, self.shard_count);
+        let shard = &self.shards[shard_index];
         let data = shard.data.read().await;
         data.contains_key(key)
     }
@@ -307,11 +326,13 @@ where
     }
 }
 
+#[allow(dead_code)]
 pub struct DMSCShardedLockReadGuard<'a, K, V> {
     shard_index: usize,
     guard: tokio::sync::RwLockReadGuard<'a, HashMap<K, V>>,
 }
 
+#[allow(dead_code)]
 pub struct DMSCShardedLockWriteGuard<'a, K, V> {
     shard_index: usize,
     guard: tokio::sync::RwLockWriteGuard<'a, HashMap<K, V>>,
@@ -333,14 +354,14 @@ impl DMSCShardedLockStats {
         }
     }
 
-    pub fn load_factor(&self) -> f64 {
+    pub fn calc_load_factor(&self) -> f64 {
         if self.shard_count == 0 {
             return 0.0;
         }
         self.total_entries as f64 / self.shard_count as f64
     }
 
-    pub fn distribution_variance(&self) -> f64 {
+    pub fn calc_distribution_variance(&self) -> f64 {
         if self.shard_count == 0 || self.total_entries == 0 {
             return 0.0;
         }
@@ -374,10 +395,10 @@ impl DMSCShardedLockStats {
     }
 
     fn load_factor(&self) -> f64 {
-        self.load_factor()
+        self.calc_load_factor()
     }
 
     fn distribution_variance(&self) -> f64 {
-        self.distribution_variance()
+        self.calc_distribution_variance()
     }
 }

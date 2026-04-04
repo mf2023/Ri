@@ -5,22 +5,26 @@
   <span style="font-size: 0.6em; color: #666; font-weight: normal;">DMSC Library for Java</span>
 </h1>
 
-[English](README.md) | 简体中文
+English | [简体中文](README.zh.md)
 
 [Help Documentation](https://mf2023.github.io/DMSC/dmsc/) | [Changelog](CHANGELOG.md) | [Security](../SECURITY.md) | [Contributing](../CONTRIBUTING.md) | [Code of Conduct](../CODE_OF_CONDUCT.md)
 
-<a href="https://space.bilibili.com/3493284091529457" target="_blank">
-    <img alt="BiliBili" src="https://img.shields.io/badge/BiliBili-Dunimd-00A1D6?style=flat-square&logo=bilibili"/>
-</a>
 <a href="https://x.com/Dunimd2025" target="_blank">
     <img alt="X" src="https://img.shields.io/badge/X-Dunimd-000000?style=flat-square&logo=x"/>
 </a>
+<a href="https://space.bilibili.com/3493284091529457" target="_blank">
+    <img alt="BiliBili" src="https://img.shields.io/badge/BiliBili-Dunimd-00A1D6?style=flat-square&logo=bilibili"/>
+</a>
 
+
+<a href="https://github.com/mf2023/DMSC" target="_blank">
+    <img alt="GitHub" src="https://img.shields.io/badge/GitHub-DMSC-181717?style=flat-square&logo=github"/>
+</a>
 <a href="https://gitee.com/dunimd" target="_blank">
     <img alt="Gitee" src="https://img.shields.io/badge/Gitee-Dunimd-C71D23?style=flat-square&logo=gitee"/>
 </a>
-<a href="https://github.com/mf2023/DMSC" target="_blank">
-    <img alt="GitHub" src="https://img.shields.io/badge/GitHub-DMSC-181717?style=flat-square&logo=github"/>
+<a href="https://gitcode.com/dunimd/dmsc.git" target="_blank">
+    <img alt="GitCode" src="https://img.shields.io/badge/GitCode-DMSC-FF6B35?style=flat-square&logo=git"/>
 </a>
 <a href="https://huggingface.co/dunimd" target="_blank">
     <img alt="Hugging Face" src="https://img.shields.io/badge/Hugging%20Face-Dunimd-FFD21E?style=flat-square&logo=huggingface"/>
@@ -28,6 +32,7 @@
 <a href="https://modelscope.cn/organization/dunimd" target="_blank">
     <img alt="ModelScope" src="https://img.shields.io/badge/ModelScope-Dunimd-1E6CFF?style=flat-square&logo=data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTQiIGhlaWdodD0iMTQiIHZpZXdCb3g9IjAgMCAxNCAxNCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHBhdGggZD0iTTcuMDA2IDBDMy4xNDIgMCAwIDMuMTQyIDAgNy4wMDZTMy4xNDIgMTQuMDEyIDcuMDA2IDE0LjAxMkMxMC44NyAxNC4wMTIgMTQuMDEyIDEwLjg3IDE0LjAxMiA3LjAwNkMxNC4wMTIgMy4xNDIgMTAuODcgMCA3LjAwNiAwWiIgZmlsbD0iIzFFNkNGRiIvPgo8L3N2Zz4K"/>
 </a>
+
 
 <a href="https://search.maven.org/artifact/com.dunimd/dmsc" target="_blank">
     <img alt="Maven Central" src="https://img.shields.io/badge/Maven-DMSC-007396?style=flat-square&logo=apachemaven"/>
@@ -239,8 +244,9 @@ A: Set `logging.level` in the configuration file, supporting DEBUG/INFO/WARN/ERR
 <h2 align="center">🌏 Community & Citation</h2>
 
 - Welcome to submit Issues and PRs!
-- Gitee: https://gitee.com/dunimd/dmsc.git
 - Github: https://github.com/mf2023/DMSC.git
+- Gitee: https://gitee.com/dunimd/dmsc.git
+- GitCode: https://gitcode.com/dunimd/dmsc.git
 
 <div align="center">
 
@@ -260,10 +266,9 @@ This project uses **Apache License 2.0** open source agreement, see [LICENSE](LI
 
 <div align="center">
 
-| 📦 Package | 📜 License |
-|:-----------|:-----------|
-| jackson-databind | Apache 2.0 |
-| jni-rs | Apache 2.0 |
+| 📦 Package | 📜 License | 📦 Package | 📜 License |
+|:-----------|:-----------|:-----------|:-----------|
+| jackson-databind | Apache 2.0 | jni | MIT/Apache-2.0 |
 
 </div>  
 

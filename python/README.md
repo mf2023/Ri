@@ -9,18 +9,22 @@ English | [简体中文](README.zh.md)
 
 [Help Documentation](https://mf2023.github.io/DMSC/dmsc/) | [Changelog](CHANGELOG.md) | [Security](../SECURITY.md) | [Contributing](../CONTRIBUTING.md) | [Code of Conduct](../CODE_OF_CONDUCT.md)
 
-<a href="https://space.bilibili.com/3493284091529457" target="_blank">
-    <img alt="BiliBili" src="https://img.shields.io/badge/BiliBili-Dunimd-00A1D6?style=flat-square&logo=bilibili"/>
-</a>
 <a href="https://x.com/Dunimd2025" target="_blank">
     <img alt="X" src="https://img.shields.io/badge/X-Dunimd-000000?style=flat-square&logo=x"/>
 </a>
+<a href="https://space.bilibili.com/3493284091529457" target="_blank">
+    <img alt="BiliBili" src="https://img.shields.io/badge/BiliBili-Dunimd-00A1D6?style=flat-square&logo=bilibili"/>
+</a>
 
+
+<a href="https://github.com/mf2023/DMSC" target="_blank">
+    <img alt="GitHub" src="https://img.shields.io/badge/GitHub-DMSC-181717?style=flat-square&logo=github"/>
+</a>
 <a href="https://gitee.com/dunimd" target="_blank">
     <img alt="Gitee" src="https://img.shields.io/badge/Gitee-Dunimd-C71D23?style=flat-square&logo=gitee"/>
 </a>
-<a href="https://github.com/mf2023/DMSC" target="_blank">
-    <img alt="GitHub" src="https://img.shields.io/badge/GitHub-DMSC-181717?style=flat-square&logo=github"/>
+<a href="https://gitcode.com/dunimd/dmsc.git" target="_blank">
+    <img alt="GitCode" src="https://img.shields.io/badge/GitCode-DMSC-FF6B35?style=flat-square&logo=git"/>
 </a>
 <a href="https://huggingface.co/dunimd" target="_blank">
     <img alt="Hugging Face" src="https://img.shields.io/badge/Hugging%20Face-Dunimd-FFD21E?style=flat-square&logo=huggingface"/>
@@ -30,8 +34,8 @@ English | [简体中文](README.zh.md)
 </a>
 
 
-<a href="https://pypi.org/project/dmsc/" target="_blank">
-    <img alt="PyPI" src="https://img.shields.io/badge/PyPI-DMSC-3775A9?style=flat-square&logo=pypi"/>
+<a href="https://crates.io/crates/dmsc" target="_blank">
+    <img alt="Crates.io" src="https://img.shields.io/badge/Crates-DMSC-000000?style=flat-square&logo=rust"/>
 </a>
 
 **DMSC (Dunimd Middleware Service)** — A high-performance Rust middleware framework with Python bindings. Built for enterprise-scale with modular architecture, built-in observability, and distributed systems support.
@@ -498,8 +502,9 @@ A: Yes, the package includes the compiled Rust backend with Python bindings.
 <h2 align="center">🌏 Community & Citation</h2>
 
 - Welcome to submit Issues and PRs!
-- Gitee: https://gitee.com/dunimd/dmsc.git
 - Github: https://github.com/mf2023/DMSC.git
+- Gitee: https://gitee.com/dunimd/dmsc.git
+- GitCode: https://gitcode.com/dunimd/dmsc.git
 
 <div align="center">
 
@@ -519,17 +524,13 @@ This project uses **Apache License 2.0** open source agreement, see [LICENSE](LI
 
 <div align="center">
 
-| 📦 Package | 📜 License |
-|:-----------|:-----------|
-| setuptools | MIT |
-| setuptools-rust | MIT |
-| wheel | MIT |
-| pytest | MIT |
-| pytest-asyncio | Apache 2.0 |
-| black | MIT |
-| isort | MIT |
-| mypy | MIT |
-| pyo3 | Apache 2.0 |
+| 📦 Package | 📜 License | 📦 Package | 📜 License |
+|:-----------|:-----------|:-----------|:-----------|
+| setuptools | MIT | setuptools-rust | MIT |
+| wheel | MIT | pytest | MIT |
+| pytest-asyncio | Apache 2.0 | black | MIT |
+| isort | MIT | mypy | MIT |
+| pyo3 | MIT/Apache-2.0 | maturin | MIT/Apache-2.0 |
 
 </div>  
 

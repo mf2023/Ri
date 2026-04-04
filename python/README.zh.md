@@ -9,18 +9,22 @@
 
 [帮助文档](https://mf2023.github.io/DMSC/dmsc/) | [更新日志](CHANGELOG.md) | [安全](../SECURITY.md) | [贡献](../CONTRIBUTING.md) | [行为准则](../CODE_OF_CONDUCT.md)
 
-<a href="https://space.bilibili.com/3493284091529457" target="_blank">
-    <img alt="BiliBili" src="https://img.shields.io/badge/BiliBili-Dunimd-00A1D6?style=flat-square&logo=bilibili"/>
-</a>
 <a href="https://x.com/Dunimd2025" target="_blank">
     <img alt="X" src="https://img.shields.io/badge/X-Dunimd-000000?style=flat-square&logo=x"/>
 </a>
+<a href="https://space.bilibili.com/3493284091529457" target="_blank">
+    <img alt="BiliBili" src="https://img.shields.io/badge/BiliBili-Dunimd-00A1D6?style=flat-square&logo=bilibili"/>
+</a>
 
+
+<a href="https://github.com/mf2023/DMSC" target="_blank">
+    <img alt="GitHub" src="https://img.shields.io/badge/GitHub-DMSC-181717?style=flat-square&logo=github"/>
+</a>
 <a href="https://gitee.com/dunimd" target="_blank">
     <img alt="Gitee" src="https://img.shields.io/badge/Gitee-Dunimd-C71D23?style=flat-square&logo=gitee"/>
 </a>
-<a href="https://github.com/mf2023/DMSC" target="_blank">
-    <img alt="GitHub" src="https://img.shields.io/badge/GitHub-DMSC-181717?style=flat-square&logo=github"/>
+<a href="https://gitcode.com/dunimd/dmsc.git" target="_blank">
+    <img alt="GitCode" src="https://img.shields.io/badge/GitCode-DMSC-FF6B35?style=flat-square&logo=git"/>
 </a>
 <a href="https://huggingface.co/dunimd" target="_blank">
     <img alt="Hugging Face" src="https://img.shields.io/badge/Hugging%20Face-Dunimd-FFD21E?style=flat-square&logo=huggingface"/>
@@ -30,8 +34,8 @@
 </a>
 
 
-<a href="https://pypi.org/project/dmsc/" target="_blank">
-    <img alt="PyPI" src="https://img.shields.io/badge/PyPI-DMSC-3775A9?style=flat-square&logo=pypi"/>
+<a href="https://crates.io/crates/dmsc" target="_blank">
+    <img alt="Crates.io" src="https://img.shields.io/badge/Crates-DMSC-000000?style=flat-square&logo=rust"/>
 </a>
 
 **DMSC (Dunimd Middleware Service)** — 一个高性能的 Rust 中间件框架，带有 Python 绑定。专为企业级规模构建，具有模块化架构、内置可观测性和分布式系统支持。
@@ -498,8 +502,9 @@ A: 是的，该包包含了编译后的 Rust 后端和 Python 绑定。
 <h2 align="center">🌏 社区与引用</h2>
 
 - 欢迎提交 Issues 和 PRs！
-- Gitee: https://gitee.com/dunimd/dmsc.git
 - Github: https://github.com/mf2023/DMSC.git
+- Gitee: https://gitee.com/dunimd/dmsc.git
+- GitCode: https://gitcode.com/dunimd/dmsc.git
 
 <div align="center">
 
@@ -519,17 +524,13 @@ A: 是的，该包包含了编译后的 Rust 后端和 Python 绑定。
 
 <div align="center">
 
-| 📦 包 | 📜 许可证 |
-|:-----------|:-----------|
-| setuptools | MIT |
-| setuptools-rust | MIT |
-| wheel | MIT |
-| pytest | MIT |
-| pytest-asyncio | Apache 2.0 |
-| black | MIT |
-| isort | MIT |
-| mypy | MIT |
-| pyo3 | Apache 2.0 |
+| 📦 包 | 📜 许可证 | 📦 包 | 📜 许可证 |
+|:-----------|:-----------|:-----------|:-----------|
+| setuptools | MIT | setuptools-rust | MIT |
+| wheel | MIT | pytest | MIT |
+| pytest-asyncio | Apache 2.0 | black | MIT |
+| isort | MIT | mypy | MIT |
+| pyo3 | MIT/Apache-2.0 | maturin | MIT/Apache-2.0 |
 
 </div>  
 

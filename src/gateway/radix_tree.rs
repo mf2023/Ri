@@ -54,7 +54,6 @@ use std::collections::HashMap;
 use std::sync::{Arc, RwLock};
 
 use super::routing::{DMSCRoute, DMSCRouteHandler};
-use crate::core::DMSCResult;
 use crate::core::lock::RwLockExtensions;
 
 /// Represents the type of a path segment in the radix tree.
@@ -133,6 +132,7 @@ pub struct RouteMatch {
 /// - A route handler (if this node is a terminal)
 /// - Child nodes for further path segments
 /// - Parameter and wildcard children for dynamic matching
+#[derive(Clone)]
 pub struct RadixNode {
     /// The path segment this node represents
     pub segment: PathSegment,

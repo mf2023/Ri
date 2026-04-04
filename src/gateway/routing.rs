@@ -93,6 +93,7 @@ use crate::core::DMSCResult;
 use crate::core::lock::RwLockExtensions;
 use crate::gateway::middleware::DMSCMiddleware;
 use std::collections::HashMap;
+use std::fmt;
 use std::future::Future;
 use std::pin::Pin;
 use std::sync::Arc;
@@ -125,6 +126,17 @@ pub struct DMSCRoute {
     pub handler: DMSCRouteHandler,
     /// List of middleware attached to this route
     pub middleware: Vec<Arc<dyn DMSCMiddleware>>,
+}
+
+impl fmt::Debug for DMSCRoute {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("DMSCRoute")
+            .field("method", &self.method)
+            .field("path", &self.path)
+            .field("handler", &"<handler>")
+            .field("middleware_count", &self.middleware.len())
+            .finish()
+    }
 }
 
 impl DMSCRoute {
@@ -241,13 +253,14 @@ impl DMSCRouter {
     /// # Returns
     /// 
     /// A reference to the radix tree for the method
+    #[allow(dead_code)]
     fn get_or_create_tree(&self, method: &str) -> DMSCRadixTree {
         let trees = match self.trees.read_safe("trees for get_or_create") {
             Ok(t) => t,
             Err(_) => return DMSCRadixTree::new(),
         };
         
-        if let Some(tree) = trees.get(method) {
+        if let Some(_tree) = trees.get(method) {
             return DMSCRadixTree::new();
         }
         
@@ -498,6 +511,7 @@ impl DMSCRouter {
     /// # Returns
     /// 
     /// `true` if the route matches the request, `false` otherwise
+    #[allow(dead_code)]
     fn matches_route(&self, route_method: &str, route_path: &str, request_method: &str, request_path: &str) -> bool {
         if route_method != request_method {
             return false;
@@ -550,7 +564,7 @@ impl DMSCRouter {
     /// 
     /// This method removes all routes from the router, clears all radix trees, and clears the route cache.
     pub fn clear_routes(&self) {
-        let mut trees = match self.trees.write_safe("trees for clear") {
+        let trees = match self.trees.write_safe("trees for clear") {
             Ok(t) => t,
             Err(e) => {
                 log::error!("Failed to acquire trees write lock: {}", e);

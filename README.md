@@ -8,18 +8,22 @@ English | [简体中文](README.zh.md)
 
 [Help Documentation](https://mf2023.github.io/DMSC/dmsc/) | [Changelog](CHANGELOG.md) | [Security](SECURITY.md) | [Contributing](CONTRIBUTING.md) | [Code of Conduct](CODE_OF_CONDUCT.md)
 
-<a href="https://space.bilibili.com/3493284091529457" target="_blank">
-    <img alt="BiliBili" src="https://img.shields.io/badge/BiliBili-Dunimd-00A1D6?style=flat-square&logo=bilibili"/>
-</a>
 <a href="https://x.com/Dunimd2025" target="_blank">
     <img alt="X" src="https://img.shields.io/badge/X-Dunimd-000000?style=flat-square&logo=x"/>
 </a>
+<a href="https://space.bilibili.com/3493284091529457" target="_blank">
+    <img alt="BiliBili" src="https://img.shields.io/badge/BiliBili-Dunimd-00A1D6?style=flat-square&logo=bilibili"/>
+</a>
 
+
+<a href="https://github.com/mf2023/DMSC" target="_blank">
+    <img alt="GitHub" src="https://img.shields.io/badge/GitHub-DMSC-181717?style=flat-square&logo=github"/>
+</a>
 <a href="https://gitee.com/dunimd" target="_blank">
     <img alt="Gitee" src="https://img.shields.io/badge/Gitee-Dunimd-C71D23?style=flat-square&logo=gitee"/>
 </a>
-<a href="https://github.com/mf2023/DMSC" target="_blank">
-    <img alt="GitHub" src="https://img.shields.io/badge/GitHub-DMSC-181717?style=flat-square&logo=github"/>
+<a href="https://gitcode.com/dunimd/dmsc.git" target="_blank">
+    <img alt="GitCode" src="https://img.shields.io/badge/GitCode-DMSC-FF6B35?style=flat-square&logo=git"/>
 </a>
 <a href="https://huggingface.co/dunimd" target="_blank">
     <img alt="Hugging Face" src="https://img.shields.io/badge/Hugging%20Face-Dunimd-FFD21E?style=flat-square&logo=huggingface"/>
@@ -36,7 +40,7 @@ English | [简体中文](README.zh.md)
     <img alt="PyPI" src="https://img.shields.io/badge/PyPI-DMSC-3775A9?style=flat-square&logo=pypi"/>
 </a>
 <a href="https://docs.rs/dmsc/latest/dmsc/c/index.html" target="_blank">
-    <img alt="C/C++" src="https://img.shields.io/badge/C%2FC%2B%2B-API-00599C?style=flat-square&logo=c"/>
+    <img alt="C/C++" src="https://img.shields.io/badge/C%2FC%2B%2B-DMSC-00599C?style=flat-square&logo=c"/>
 </a>
 <a href="https://search.maven.org/artifact/com.dunimd/dmsc" target="_blank">
     <img alt="Maven Central" src="https://img.shields.io/badge/Maven-DMSC-007396?style=flat-square&logo=apachemaven"/>
@@ -209,13 +213,13 @@ Add DMSC to your project's `Cargo.toml`:
 
 ```toml
 [dependencies]
-dmsc = { git = "https://github.com/mf2023/DMSC" }
+dmsc = "0.1.8"
 ```
 
 Or use cargo add:
 
 ```bash
-cargo add dmsc --git https://github.com/mf2023/DMSC
+cargo add dmsc
 ```
 
 <h2 align="center">⚡ Quick Start</h2>
@@ -403,8 +407,9 @@ A: Use `DMSCAppBuilder::with_async_module` to add async modules, the framework h
 <h2 align="center">🌏 Community & Citation</h2>
 
 - Welcome to submit Issues and PRs!
-- Gitee: https://gitee.com/dunimd/dmsc.git
 - Github: https://github.com/mf2023/DMSC.git
+- Gitee: https://gitee.com/dunimd/dmsc.git
+- GitCode: https://gitcode.com/dunimd/dmsc.git
 
 
 <div align="center">
@@ -429,67 +434,45 @@ Open source packages and their agreement information used by this project:
 
 <div align="center">
 
-| 📦 Package | 📜 License |
-|:-----------|:-----------|
-| serde | Apache 2.0 |
-| serde_json | MIT |
-| serde_yaml | MIT |
-| tokio | MIT |
-| prometheus | Apache 2.0 |
-| redis | MIT |
-| hyper | MIT |
-| lapin | Apache 2.0 |
-| futures | MIT |
-| yaml-rust | MIT |
-| toml | MIT |
-| etcd-client | MIT |
-| sysinfo | MIT |
-| async-trait | MIT |
-| dashmap | MIT |
-| chrono | MIT |
-| uuid | Apache 2.0 |
-| rand | MIT |
-| notify | MIT |
-| jsonwebtoken | MIT |
-| reqwest | MIT |
-| urlencoding | MIT |
-| parking_lot | MIT |
-| log | MIT |
-| pyo3 | Apache 2.0 |
-| jni | Apache 2.0 |
-| tempfile | MIT |
-| tracing | MIT |
-| thiserror | MIT |
-| hex | MIT |
-| base64 | MIT |
-| regex | MIT |
-| url | Apache 2.0 |
-| aes-gcm | Apache 2.0 |
-| ring | Apache 2.0 |
-| lazy_static | MIT |
-| libloading | MIT |
-| zeroize | MIT/Apache-2.0 |
-| secrecy | MIT |
-| data-encoding | MIT |
-| crc32fast | MIT |
-| generic-array | MIT |
-| bincode | MIT |
-| typenum | MIT |
-| html-escape | MIT |
-| rustls | Apache 2.0/MIT |
-| rustls-pemfile | Apache 2.0/MIT |
-| webpki | ISC |
-| rustls-native-certs | Apache 2.0/MIT |
-| bytes | Apache 2.0 |
-| tonic | MIT |
-| prost | Apache 2.0 |
-| tokio-stream | MIT |
-| tower | MIT |
-| async-stream | MIT |
-| tokio-tungstenite | MIT |
-| tungstenite | MPL-2.0 |
-| num-bigint | MIT/Apache-2.0 |
-| oqs | MIT/Apache-2.0 |
+| 📦 Package | 📜 License | 📦 Package | 📜 License |
+|:-----------|:-----------|:-----------|:-----------|
+| serde | MIT/Apache-2.0 | serde_json | MIT/Apache-2.0 |
+| serde_yaml | MIT/Apache-2.0 | tokio | MIT |
+| futures | MIT/Apache-2.0 | futures-util | MIT/Apache-2.0 |
+| http | MIT/Apache-2.0 | hyper | MIT |
+| prometheus | MIT/Apache-2.0 | redis | MIT |
+| lapin | MIT/Apache-2.0 | rdkafka | MIT |
+| yaml-rust | MIT/Apache-2.0 | toml | MIT/Apache-2.0 |
+| etcd-client | MIT | sysinfo | MIT |
+| async-trait | MIT/Apache-2.0 | dashmap | MIT |
+| chrono | MIT | uuid | MIT/Apache-2.0 |
+| rand | MIT/Apache-2.0 | notify | CC0-1.0 |
+| jsonwebtoken | MIT | reqwest | MIT/Apache-2.0 |
+| urlencoding | MIT | parking_lot | MIT/Apache-2.0 |
+| log | MIT/Apache-2.0 | tracing | MIT |
+| pyo3 | MIT/Apache-2.0 | jni | MIT/Apache-2.0 |
+| safer-ffi | MIT | tempfile | MIT/Apache-2.0 |
+| thiserror | MIT/Apache-2.0 | hex | MIT/Apache-2.0 |
+| base64 | MIT/Apache-2.0 | regex | MIT/Apache-2.0 |
+| url | MIT/Apache-2.0 | aes-gcm | MIT/Apache-2.0 |
+| ring | ISC | lazy_static | MIT/Apache-2.0 |
+| libloading | ISC | zeroize | MIT/Apache-2.0 |
+| zeroize_derive | MIT/Apache-2.0 | secrecy | MIT |
+| erased-serde | MIT | data-encoding | MIT |
+| crc32fast | MIT/Apache-2.0 | generic-array | MIT |
+| bincode | MIT | typenum | MIT/Apache-2.0 |
+| html-escape | MIT | rustls | MIT/Apache-2.0 |
+| rustls-pemfile | MIT/Apache-2.0 | webpki | ISC |
+| rustls-native-certs | MIT/Apache-2.0 | tokio-rustls | MIT/Apache-2.0 |
+| bytes | MIT | tonic | MIT |
+| prost | MIT/Apache-2.0 | prost-types | MIT/Apache-2.0 |
+| tokio-stream | MIT | tower | MIT |
+| async-stream | MIT | tokio-tungstenite | MIT |
+| tungstenite | MIT | num-bigint | MIT/Apache-2.0 |
+| oqs | MIT/Apache-2.0 | sm-crypto | MIT |
+| openssl-sys | Apache-2.0 | tokio-postgres | MIT/Apache-2.0 |
+| rusqlite | MIT | sqlx | MIT/Apache-2.0 |
+| criterion | MIT/Apache-2.0 | | |
 
 </div>
 

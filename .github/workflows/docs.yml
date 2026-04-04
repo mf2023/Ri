@@ -202,16 +202,16 @@ jobs:
       - name: Add redirect index
         run: |
           cat > target/doc/index.html << 'EOF'
-<!DOCTYPE html>
-<html>
-<head>
-    <meta http-equiv="refresh" content="0;url=dmsc/">
-</head>
-<body>
-    <a href="dmsc/">Go to DMSC Documentation</a>
-</body>
-</html>
-EOF
+          <!DOCTYPE html>
+          <html>
+          <head>
+              <meta http-equiv="refresh" content="0;url=dmsc/">
+          </head>
+          <body>
+              <a href="dmsc/">Go to DMSC Documentation</a>
+          </body>
+          </html>
+          EOF
 
       # Step 12: Upload Pages Artifact
       # Packages the documentation directory as a Pages artifact for deployment.

@@ -405,7 +405,7 @@ impl DMSCDatabasePool {
     async fn do_scaling(&self, dynamic_config: &DynamicPoolConfig) -> DMSCResult<()> {
         let utilization = self.utilization_rate();
         let total = self.total_connections.load(Ordering::SeqCst) as u32;
-        let active = self.active_connections.load(Ordering::SeqCst) as u32;
+        let _active = self.active_connections.load(Ordering::SeqCst) as u32;
         
         if utilization > dynamic_config.scale_up_threshold {
             {
