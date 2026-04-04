@@ -20,13 +20,16 @@
 
 use crate::core::{DMSCResult, DMSCError};
 use crate::gateway::{DMSCGateway, DMSCGatewayConfig, DMSCGatewayRequest};
-use hyper::{Body, Request as HyperRequest, Response as HyperResponse, Server, StatusCode};
-use hyper::service::{make_service_fn, service_fn};
+use hyper::server::conn::http1;
+use hyper::service::service_fn;
+use hyper::{Request as HyperRequest, Response as HyperResponse, StatusCode};
+use hyper::body::Incoming;
 use std::collections::HashMap;
 use std::convert::Infallible;
 use std::net::SocketAddr;
 use std::sync::Arc;
 use tokio::sync::RwLock;
+use tokio::net::TcpListener;
 use tokio_rustls::rustls::ServerConfig;
 
 pub struct DMSCGatewayServer {
@@ -55,38 +58,65 @@ impl DMSCGatewayServer {
 
     pub async fn serve(&mut self) -> DMSCResult<()> {
         let addr = self.addr;
-        let (shutdown_tx, shutdown_rx) = tokio::sync::oneshot::channel();
+        let (shutdown_tx, mut shutdown_rx) = tokio::sync::oneshot::channel();
         self.shutdown_tx = Some(shutdown_tx);
 
         let gateway = self.gateway.clone();
         let config = self.config.clone();
 
-        let service = make_service_fn(move |_conn| {
-            let gateway = gateway.clone();
-            let config = config.clone();
-            async move {
-                Ok::<_, Infallible>(service_fn(move |req: HyperRequest<Body>| {
-                    Self::handle_request(req, gateway.clone(), config.clone())
-                }))
+        let listener = TcpListener::bind(addr).await
+            .map_err(|e| DMSCError::Other(format!("Failed to bind to {}: {}", addr, e)))?;
+
+        log::info!(target: "DMSC.Gateway", "Server listening on {}", addr);
+
+        loop {
+            tokio::select! {
+                accept_result = listener.accept() => {
+                    match accept_result {
+                        Ok((stream, remote_addr)) => {
+                            let gateway = gateway.clone();
+                            let config = config.clone();
+                            
+                            tokio::spawn(async move {
+                                let service = service_fn(move |req: HyperRequest<Incoming>| {
+                                    let gateway = gateway.clone();
+                                    let config = config.clone();
+                                    async move {
+                                        Self::handle_request(req, gateway, config).await
+                                    }
+                                });
+
+                                let io = hyper_util::rt::TokioIo::new(stream);
+                                
+                                if let Err(e) = http1::Builder::new()
+                                    .serve_connection(io, service)
+                                    .await
+                                {
+                                    log::error!(target: "DMSC.Gateway", "Connection error: {}", e);
+                                }
+                            });
+                        }
+                        Err(e) => {
+                            log::error!(target: "DMSC.Gateway", "Accept error: {}", e);
+                        }
+                    }
+                }
+                
+                _ = &mut shutdown_rx => {
+                    log::info!(target: "DMSC.Gateway", "Server shutting down");
+                    break;
+                }
             }
-        });
+        }
 
-        let server = Server::bind(&addr)
-            .http1_pipeline_flush(true)
-            .serve(service);
-
-        let graceful = server.with_graceful_shutdown(async {
-            shutdown_rx.await.ok();
-        });
-
-        graceful.await.map_err(|e| DMSCError::Other(format!("Server error: {}", e)))
+        Ok(())
     }
 
     async fn handle_request(
-        req: HyperRequest<Body>,
+        req: HyperRequest<Incoming>,
         gateway: Arc<DMSCGateway>,
         config: Arc<RwLock<DMSCGatewayConfig>>,
-    ) -> Result<HyperResponse<Body>, Infallible> {
+    ) -> Result<HyperResponse<String>, Infallible> {
         let request_id = uuid::Uuid::new_v4().to_string();
         let start = std::time::Instant::now();
 
@@ -207,7 +237,7 @@ impl DMSCGatewayServer {
             }
         }
 
-        let body = Body::from(response.body);
+        let body = String::from_utf8_lossy(&response.body).to_string();
         Ok(hyper_response.body(body).unwrap_or_else(|_| HyperResponse::default()))
     }
 

@@ -146,7 +146,7 @@ serde_json = "1"
 serde_yaml = "0.9"
 
 # Random number generation for session IDs, tokens, and cryptographic operations
-rand = "0.8"
+rand = "0.10"
 
 # Date and time handling with serde integration
 # Provides timezone-aware timestamps for logging and event tracking
@@ -178,7 +178,7 @@ async-trait = "0.1"
 
 # High-performance concurrent HashMap with lock-free reads
 # Used for shared state and caching in concurrent scenarios
-dashmap = "5.5"
+dashmap = "6"
 
 # Advanced synchronization primitives with better performance than std
 # Provides Mutex, RwLock, Condvar, and other synchronization types
@@ -216,7 +216,8 @@ redis = { version = "0.24", features = ["tokio-comp", "connection-manager"], opt
 
 # HTTP client and server library with HTTP/1 and HTTP/2 support
 # Core component for building API gateways and HTTP services
-hyper = { version = "0.14", features = ["client", "server", "http1", "http2", "tcp"], optional = true }
+hyper = { version = "1", features = ["client", "server", "http1", "http2"], optional = true }
+hyper-util = { version = "0.1", features = ["tokio"], optional = true }
 
 # RabbitMQ client with TLS support for message queuing
 # Provides reliable message queue functionality
@@ -224,7 +225,7 @@ lapin = { version = "2.3", features = ["rustls"], optional = true }
 
 # TLS support for tokio-based network operations
 # Required for secure HTTPS and WSS connections in gateway
-tokio-rustls = { version = "0.24", optional = true }
+tokio-rustls = { version = "0.26", optional = true }
 
 # Future utilities extension for async operations
 # Provides additional combinators and utilities for futures
@@ -246,8 +247,8 @@ sysinfo = { version = "0.29", optional = true }
 
 # JWT (JSON Web Token) implementation for authentication
 # Handles token creation, validation, and claims management
-# Version 9.x supports ring 0.17 which is required for Windows ARM64
-jsonwebtoken = "9"
+# Version 10.x provides improved security and performance
+jsonwebtoken = "10"
 
 # URL encoding and decoding support
 # Required for query string and path parameter handling
@@ -372,7 +373,7 @@ html-escape = "0.2"
 
 # TLS support for secure network connections
 # Provides modern TLS implementation with client and server support
-rustls = "0.22"
+rustls = "0.23"
 
 # PEM file parsing for TLS certificates and keys
 # Required for loading certificate files in PEM format
@@ -559,10 +560,10 @@ cache = ["redis"]
 queue = ["redis", "rabbitmq"]
 
 # API gateway with HTTP server and Redis integration
-gateway = ["hyper", "redis", "tokio-rustls"]
+gateway = ["hyper", "hyper-util", "redis", "tokio-rustls"]
 
 # Service mesh with distributed coordination
-service_mesh = ["redis", "hyper", "tokio-rustls"]
+service_mesh = ["redis", "hyper", "hyper-util", "tokio-rustls"]
 
 # URL encoding support for web handlers
 auth = ["urlencoding"]

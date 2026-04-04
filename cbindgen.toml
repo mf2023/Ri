@@ -39,7 +39,9 @@ include = []
 prefix = "CDMSC"
 
 # Rename types to follow C naming conventions
-renames = { "DMSCAppBuilder" = "CDMSCAppBuilder", "DMSCConfig" = "CDMSCConfig" }
+[export.rename]
+"DMSCAppBuilder" = "CDMSCAppBuilder"
+"DMSCConfig" = "CDMSCConfig"
 
 [fn]
 # Sort functions by name for better readability
