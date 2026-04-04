@@ -206,15 +206,23 @@ jobs:
         with:
           cmake-version: '3.28.x'
 
-      - name: Install OpenSSL
+      - name: Setup MSVC development environment
+        uses: ilammy/msvc-dev-cmd@v1
+
+      - name: Install OpenSSL via vcpkg
         run: |
-          choco install openssl -y
+          vcpkg install openssl:x64-windows
+          vcpkg integrate install
 
       - name: Set OpenSSL environment variables
         run: |
-          echo "OPENSSL_ROOT_DIR=C:\Program Files\OpenSSL-Win64" >> $env:GITHUB_ENV
-          echo "OPENSSL_INCLUDE_DIR=C:\Program Files\OpenSSL-Win64\include" >> $env:GITHUB_ENV
-          echo "OPENSSL_LIB_DIR=C:\Program Files\OpenSSL-Win64\lib" >> $env:GITHUB_ENV
+          $vcpkgRoot = "C:\vcpkg"
+          $opensslRoot = "$vcpkgRoot\installed\x64-windows"
+          echo "OPENSSL_ROOT_DIR=$opensslRoot" >> $env:GITHUB_ENV
+          echo "OPENSSL_INCLUDE_DIR=$opensslRoot\include" >> $env:GITHUB_ENV
+          echo "OPENSSL_LIB_DIR=$opensslRoot\lib" >> $env:GITHUB_ENV
+          echo "OPENSSL_STATIC=1" >> $env:GITHUB_ENV
+          echo "CMAKE_TOOLCHAIN_FILE=$vcpkgRoot\scripts\buildsystems\vcpkg.cmake" >> $env:GITHUB_ENV
 
       - name: Build
         run: cargo build --release
@@ -332,8 +340,26 @@ jobs:
           toolchain: stable
           targets: aarch64-pc-windows-msvc
 
+      - name: Setup MSVC development environment
+        uses: ilammy/msvc-dev-cmd@v1
+
+      - name: Install OpenSSL via vcpkg
+        run: |
+          vcpkg install openssl:arm64-windows
+          vcpkg integrate install
+
+      - name: Set OpenSSL environment variables
+        run: |
+          $vcpkgRoot = "C:\vcpkg"
+          $opensslRoot = "$vcpkgRoot\installed\arm64-windows"
+          echo "OPENSSL_ROOT_DIR=$opensslRoot" >> $env:GITHUB_ENV
+          echo "OPENSSL_INCLUDE_DIR=$opensslRoot\include" >> $env:GITHUB_ENV
+          echo "OPENSSL_LIB_DIR=$opensslRoot\lib" >> $env:GITHUB_ENV
+          echo "OPENSSL_STATIC=1" >> $env:GITHUB_ENV
+          echo "CMAKE_TOOLCHAIN_FILE=$vcpkgRoot\scripts\buildsystems\vcpkg.cmake" >> $env:GITHUB_ENV
+
       - name: Build Rust library
-        run: cargo build --release --target aarch64-pc-windows-msvc --no-default-features --features pyo3,c,grpc,websocket,rabbitmq,cache,queue,gateway,service_mesh,auth,observability,postgres,mysql,sqlite,http_client,system_info,config_hot_reload
+        run: cargo build --release --target aarch64-pc-windows-msvc
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
@@ -973,6 +999,36 @@ jobs:
           version: '33.x'
           repo-token: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Setup MSVC development environment (Windows)
+        if: runner.os == 'Windows'
+        uses: ilammy/msvc-dev-cmd@v1
+
+      - name: Install OpenSSL via vcpkg (Windows x64)
+        if: runner.os == 'Windows' && matrix.target == 'x86_64-pc-windows-msvc'
+        run: |
+          vcpkg install openssl:x64-windows
+          vcpkg integrate install
+          $vcpkgRoot = "C:\vcpkg"
+          $opensslRoot = "$vcpkgRoot\installed\x64-windows"
+          echo "OPENSSL_ROOT_DIR=$opensslRoot" >> $env:GITHUB_ENV
+          echo "OPENSSL_INCLUDE_DIR=$opensslRoot\include" >> $env:GITHUB_ENV
+          echo "OPENSSL_LIB_DIR=$opensslRoot\lib" >> $env:GITHUB_ENV
+          echo "OPENSSL_STATIC=1" >> $env:GITHUB_ENV
+          echo "CMAKE_TOOLCHAIN_FILE=$vcpkgRoot\scripts\buildsystems\vcpkg.cmake" >> $env:GITHUB_ENV
+
+      - name: Install OpenSSL via vcpkg (Windows ARM64)
+        if: runner.os == 'Windows' && matrix.target == 'aarch64-pc-windows-msvc'
+        run: |
+          vcpkg install openssl:arm64-windows
+          vcpkg integrate install
+          $vcpkgRoot = "C:\vcpkg"
+          $opensslRoot = "$vcpkgRoot\installed\arm64-windows"
+          echo "OPENSSL_ROOT_DIR=$opensslRoot" >> $env:GITHUB_ENV
+          echo "OPENSSL_INCLUDE_DIR=$opensslRoot\include" >> $env:GITHUB_ENV
+          echo "OPENSSL_LIB_DIR=$opensslRoot\lib" >> $env:GITHUB_ENV
+          echo "OPENSSL_STATIC=1" >> $env:GITHUB_ENV
+          echo "CMAKE_TOOLCHAIN_FILE=$vcpkgRoot\scripts\buildsystems\vcpkg.cmake" >> $env:GITHUB_ENV
+
       - name: Install rdkafka dependencies
         if: runner.os == 'Linux'
         run: |
@@ -1013,14 +1069,9 @@ jobs:
         run: pip install maturin auditwheel -i https://pypi.org/simple --quiet
 
       - name: Build wheel (non-Docker)
-        if: matrix.docker != true && matrix.target != 'aarch64-pc-windows-msvc'
+        if: matrix.docker != true
         run: |
           maturin build --release --target ${{ matrix.target }} -o dist
-
-      - name: Build wheel (Windows ARM64 - no kafka/oqs/java)
-        if: matrix.target == 'aarch64-pc-windows-msvc'
-        run: |
-          maturin build --release --target ${{ matrix.target }} -o dist --no-default-features --features pyo3,c,grpc,websocket,rabbitmq,cache,queue,gateway,service_mesh,auth,observability,postgres,mysql,sqlite,http_client,system_info,config_hot_reload
 
       - name: Build Linux wheel with manylinux
         if: matrix.docker == true
