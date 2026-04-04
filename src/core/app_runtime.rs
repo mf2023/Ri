@@ -4,7 +4,7 @@
 //! The DMSC project belongs to the Dunimd Team.
 //! 
 //! Licensed under the Apache License, Version 2.0 (the "License");
-//! you may not use this file except in compliance with the License.
+//! You may not use this file except in compliance with the License.
 //! You may obtain a copy of the License at
 //! 
 //!     http://www.apache.org/licenses/LICENSE-2.0
@@ -583,5 +583,33 @@ impl DMSCAppRuntime {
     #[pyo3(name = "logger")]
     fn logger_py(&self) -> crate::log::DMSCLogger {
         self.ctx.logger().clone()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_app_runtime_creation() {
+        let ctx = DMSCServiceContext::new();
+        let runtime = DMSCAppRuntime::new(ctx, vec![]);
+        assert!(runtime.modules.read().blocking_ref().is_empty());
+    }
+
+    #[tokio::test]
+    async fn test_app_runtime_run_with_empty_modules() {
+        let ctx = DMSCServiceContext::new();
+        let runtime = DMSCAppRuntime::new(ctx, vec![]);
+        let result = runtime.run(|_ctx| async { Ok(()) }).await;
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_app_runtime_clone() {
+        let ctx = DMSCServiceContext::new();
+        let runtime1 = DMSCAppRuntime::new(ctx, vec![]);
+        let runtime2 = runtime1.clone();
+        assert!(Arc::ptr_eq(&runtime1.modules, &runtime2.modules));
     }
 }

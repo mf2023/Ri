@@ -4,7 +4,7 @@
 //! The DMSC project belongs to the Dunimd Team.
 //! 
 //! Licensed under the Apache License, Version 2.0 (the "License");
-//! you may not use this file except in compliance with the License.
+//! You may not use this file except in compliance with the License.
 //! You may obtain a copy of the License at
 //! 
 //!     http://www.apache.org/licenses/LICENSE-2.0
@@ -672,5 +672,55 @@ impl DMSCAppBuilder {
             });
         }
         Ok(std::mem::take(self))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_app_builder_creation() {
+        let builder = DMSCAppBuilder::new();
+        assert!(builder.modules.is_empty());
+        assert!(builder.config_paths.is_empty());
+        assert!(builder.logging_config.is_none());
+        assert!(builder.observability_config.is_none());
+    }
+
+    #[test]
+    fn test_app_builder_with_config() {
+        let builder = DMSCAppBuilder::new()
+            .with_config("config.yaml")
+            .unwrap();
+        assert_eq!(builder.config_paths.len(), 1);
+        assert_eq!(builder.config_paths[0], "config.yaml");
+    }
+
+    #[test]
+    fn test_app_builder_method_chaining() {
+        let builder = DMSCAppBuilder::new()
+            .with_config("config.yaml")
+            .unwrap()
+            .with_logging(crate::log::DMSCLogConfig::default());
+        assert_eq!(builder.config_paths.len(), 1);
+        assert!(builder.logging_config.is_some());
+    }
+
+    #[test]
+    fn test_app_builder_with_observability() {
+        let builder = DMSCAppBuilder::new()
+            .with_observability(crate::observability::DMSCObservabilityConfig::default());
+        assert!(builder.observability_config.is_some());
+    }
+
+    #[test]
+    fn test_app_builder_with_multiple_configs() {
+        let builder = DMSCAppBuilder::new()
+            .with_config("config1.yaml")
+            .unwrap()
+            .with_config("config2.yaml")
+            .unwrap();
+        assert_eq!(builder.config_paths.len(), 2);
     }
 }

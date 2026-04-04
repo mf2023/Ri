@@ -309,16 +309,79 @@ DMSC supports multiple configuration sources in order of priority (lowest to hig
 
 ### Running Tests
 
+#### Multi-Language Testing
+
+DMSC provides comprehensive testing across all supported languages:
+
+- **Rust**: Core library tests with `cargo test`
+- **Python**: Python binding tests with `pytest`
+- **Java**: JNI binding tests with standard Java test runner
+- **C/C++**: C API tests with native compilers
+
+#### Test Coverage
+
+The tests verify:
+- ✅ Builder pattern behavior in all languages
+- ✅ Method chaining returns appropriate instances (language-specific)
+- ✅ Runtime creation and lifecycle management
+- ✅ Error handling and edge cases
+- ✅ Cross-language API consistency
+
+#### Running Rust Tests
+
 ```bash
-# Run all tests
+# Run all Rust tests
 cargo test
 
-# Run specific test module
-cargo test cache
+# Run specific test modules
+cargo test --lib app_builder
+cargo test --lib app_runtime
 
 # Run with verbose output
 cargo test -- --nocapture
+
+# Run with all features
+cargo test --all-features
 ```
+
+#### Running Python Tests
+
+```bash
+# Install Python package in development mode
+cd python
+pip install -e .
+
+# Run all Python tests
+python -m pytest tests/Python/ -v
+
+# Run specific test classes
+python -m pytest tests/Python/test_core.py::TestDMSCAppBuilderWrapper -v
+python -m pytest tests/Python/test_core.py::TestDMSCAppRuntimeWrapper -v
+```
+
+#### Running Java Tests
+
+```bash
+# Build JNI library
+cargo build --release --no-default-features --features java
+
+# Compile and run Java tests
+cd java
+javac -d build/classes/java/test -cp build/classes/java/main \
+  src/test/java/TestAll.java src/test/java/TestAppBuilder.java
+
+java -cp build/classes/java/test:build/classes/java/main \
+  -Djava.library.path=../target/release TestAll
+```
+
+#### API Behavior Across Languages
+
+| Language | Builder Pattern | Method Chaining | Reason |
+|----------|----------------|-----------------|--------|
+| **Rust** | Returns `Self` | Consumes original | Native builder pattern |
+| **Python** | Returns `self` | Same instance | Pythonic wrapper for PyO3 |
+| **Java** | Returns new instance | Immutable builder | Java best practice |
+| **C** | Returns new pointer | Memory management | C idioms |
 
 <h2 align="center">❓ Frequently Asked Questions</h2>
 

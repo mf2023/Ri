@@ -156,7 +156,7 @@ pub mod mysql;
 pub mod sqlite;
 
 pub use config::{DMSCDatabaseConfig, DatabaseType};
-pub use pool::{DMSCDatabasePool, PooledDatabase, DatabaseMetrics};
+pub use pool::{DMSCDatabasePool, PooledDatabase, DatabaseMetrics, DynamicPoolConfig};
 pub use row::DMSCDBRow;
 pub use result::DMSCDBResult;
 pub use migration::{DMSCDatabaseMigration, DMSCMigrationHistory, DMSCDatabaseMigrator};

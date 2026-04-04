@@ -17,24 +17,57 @@
 
 //! # gRPC Module Benchmarks
 //!
-//! This benchmark suite measures the performance of DMSC gRPC operations.
+//! This module provides performance benchmarks for the DMSC gRPC subsystem,
+//! measuring the creation and cloning operations of core gRPC components.
+//!
+//! ## Benchmark Categories
+//!
+//! 1. **Client Operations**: gRPC client creation and cloning
+//!
+//! 2. **Server Operations**: gRPC server creation and cloning
+//!
+//! 3. **Statistics**: gRPC stats tracking object overhead
+//!
+//! 4. **Configuration**: gRPC config object creation
+//!
+//! ## Feature Flag
+//!
+//! These benchmarks are conditionally compiled based on the `grpc` feature flag.
+//! They will only run when the `grpc` feature is enabled in Cargo.toml.
+//!
+//! ## gRPC Architecture
+//!
+//! DMSC's gRPC support provides:
+//! - High-performance RPC communication
+//! - Protocol Buffer serialization
+//! - Streaming support
+//! - Interceptors for middleware
+//!
+//! ## Testing Notes
+//!
+//! Benchmarks measure object allocation and cloning overhead.
+//! Actual RPC performance depends on network and serialization costs.
 
 use criterion::{black_box, criterion_group, criterion_main, Criterion, Throughput};
 
 #[cfg(feature = "grpc")]
 fn bench_grpc_client_creation(c: &mut Criterion) {
     use dmsc::grpc::DMSCGrpcClient;
-    
+
     let mut group = c.benchmark_group("grpc_client");
     group.throughput(Throughput::Elements(1));
-    
+
+    /// Client creation: Creates new gRPC client instance
+    /// Involves channel creation and connection setup
     group.bench_function("client_creation", |b| {
         b.iter(|| {
             let client = DMSCGrpcClient::default();
             black_box(client);
         });
     });
-    
+
+    /// Client cloning: Shares underlying channel
+    /// In gRPC, cloning is typically cheap (reference counted)
     group.bench_function("client_clone", |b| {
         let client = DMSCGrpcClient::default();
         b.iter(|| {
@@ -42,7 +75,7 @@ fn bench_grpc_client_creation(c: &mut Criterion) {
             black_box(cloned);
         });
     });
-    
+
     group.finish();
 }
 
@@ -52,10 +85,11 @@ fn bench_grpc_client_creation(_c: &mut Criterion) {}
 #[cfg(feature = "grpc")]
 fn bench_grpc_server_creation(c: &mut Criterion) {
     use dmsc::grpc::{DMSCGrpcServer, DMSCGrpcConfig};
-    
+
     let mut group = c.benchmark_group("grpc_server");
     group.throughput(Throughput::Elements(1));
-    
+
+    /// Server creation: Allocates server instance with default config
     group.bench_function("server_creation", |b| {
         b.iter(|| {
             let config = DMSCGrpcConfig::default();
@@ -63,7 +97,8 @@ fn bench_grpc_server_creation(c: &mut Criterion) {
             black_box((server, config));
         });
     });
-    
+
+    /// Server cloning: Shares underlying listener/port
     group.bench_function("server_clone", |b| {
         let server = DMSCGrpcServer::default();
         b.iter(|| {
@@ -71,7 +106,7 @@ fn bench_grpc_server_creation(c: &mut Criterion) {
             black_box(cloned);
         });
     });
-    
+
     group.finish();
 }
 
@@ -81,17 +116,20 @@ fn bench_grpc_server_creation(_c: &mut Criterion) {}
 #[cfg(feature = "grpc")]
 fn bench_grpc_stats(c: &mut Criterion) {
     use dmsc::grpc::DMSCGrpcStats;
-    
+
     let mut group = c.benchmark_group("grpc_stats");
     group.throughput(Throughput::Elements(1));
-    
+
+    /// Stats creation: Initializes counters and state tracking
     group.bench_function("stats_creation", |b| {
         b.iter(|| {
             let stats = DMSCGrpcStats::new();
             black_box(stats);
         });
     });
-    
+
+    /// Stats cloning: Shares underlying counters
+    /// Used for passing stats to multiple components
     group.bench_function("stats_clone", |b| {
         let stats = DMSCGrpcStats::new();
         b.iter(|| {
@@ -99,7 +137,7 @@ fn bench_grpc_stats(c: &mut Criterion) {
             black_box(cloned);
         });
     });
-    
+
     group.finish();
 }
 
@@ -109,17 +147,20 @@ fn bench_grpc_stats(_c: &mut Criterion) {}
 #[cfg(feature = "grpc")]
 fn bench_grpc_config(c: &mut Criterion) {
     use dmsc::grpc::DMSCGrpcConfig;
-    
+
     let mut group = c.benchmark_group("grpc_config");
     group.throughput(Throughput::Elements(1));
-    
+
+    /// Config creation: Default configuration values
+    /// Typically includes timeouts, buffer sizes, etc.
     group.bench_function("config_creation", |b| {
         b.iter(|| {
             let config = DMSCGrpcConfig::default();
             black_box(config);
         });
     });
-    
+
+    /// Config cloning: Deep copies configuration
     group.bench_function("config_clone", |b| {
         let config = DMSCGrpcConfig::default();
         b.iter(|| {
@@ -127,13 +168,17 @@ fn bench_grpc_config(c: &mut Criterion) {
             black_box(cloned);
         });
     });
-    
+
     group.finish();
 }
 
 #[cfg(not(feature = "grpc"))]
 fn bench_grpc_config(_c: &mut Criterion) {}
 
+/// Benchmark group registration for gRPC module benchmarks.
+///
+/// Note: When `grpc` feature is disabled, these benchmarks become no-ops.
+/// This allows the benchmark suite to compile without the grpc dependency.
 criterion_group!(
     grpc_benches,
     bench_grpc_client_creation,

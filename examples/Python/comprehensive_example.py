@@ -6,7 +6,7 @@
 # The DMSC project belongs to the Dunimd Team.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
+# You may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
 #     http://www.apache.org/licenses/LICENSE-2.0
@@ -55,27 +55,27 @@ async def demonstrate_application_initialization():
     Demonstrate application initialization with all core components.
     
     This function shows how to:
-    - Create an application builder
+    - Create an application builder with method chaining
     - Configure logging and observability
     - Build and run the application
     """
     print("=== Application Initialization ===\n")
     
-    print("1. Creating application builder...")
+    print("1. Creating application builder with method chaining...")
     builder = DMSCAppBuilder()
     print("   Builder created successfully\n")
     
-    print("2. Configuring logging...")
-    log_config = DMSCLogConfig()
-    builder.with_logging(log_config)
-    print("   Logging configured\n")
-    
-    print("3. Configuring observability...")
+    print("2. Configuring logging and observability with chaining...")
+    log_config = DMSCLogConfig.default()
     obs_config = DMSCObservabilityConfig.default()
-    builder.with_observability(obs_config)
-    print("   Observability configured\n")
     
-    print("4. Building application runtime...")
+    # Use method chaining - builder returns self for Pythonic API
+    builder = (builder
+        .with_logging(log_config)
+        .with_observability(obs_config))
+    print("   Logging and observability configured\n")
+    
+    print("3. Building application runtime...")
     try:
         runtime = builder.build()
         print("   Runtime built successfully!")
@@ -83,7 +83,7 @@ async def demonstrate_application_initialization():
     except Exception as e:
         print(f"   Note: Runtime build may require additional configuration: {e}\n")
     
-    print("5. Application initialization complete!\n")
+    print("4. Application initialization complete!\n")
 
 
 async def demonstrate_authentication():

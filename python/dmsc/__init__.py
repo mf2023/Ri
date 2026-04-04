@@ -333,17 +333,57 @@ class DMSCAppRuntime:
     
     This class provides a Pythonic interface to the Rust DMSCAppRuntime,
     enabling access to the service context and application lifecycle.
+    
+    Note:
+        This is a thin wrapper around the Rust DMSCAppRuntime (_RustAppRuntime).
+        The wrapper provides a consistent Python API while the actual implementation
+        resides in the Rust core. This design ensures zero-overhead access to the
+        Rust runtime while maintaining Pythonic usage patterns.
+    
+    The application runtime manages the complete lifecycle of DMSC applications,
+    including module initialization, startup, shutdown, and hook event emission.
+    
+    Attributes:
+        _runtime: The underlying Rust DMSCAppRuntime instance.
+    
+    Example:
+        >>> app = DMSCAppBuilder().with_config("config.yaml").build()
+        >>> app.run(lambda ctx: print("Application started"))
     """
     
     def __init__(self, runtime: _RustAppRuntime):
+        """Initialize the wrapper with a Rust runtime instance.
+        
+        Args:
+            runtime: The underlying Rust DMSCAppRuntime instance from the builder.
+        """
         self._runtime = runtime
     
     def get_context(self) -> 'DMSCServiceContext':
-        """Get the service context from the runtime."""
+        """Get the service context from the runtime.
+        
+        Returns:
+            DMSCServiceContext: The service context providing access to core
+                functionalities like logging, configuration, and filesystem.
+        """
         return self._runtime.get_context()
     
     def run(self, callback) -> None:
-        """Run the application with the given callback."""
+        """Run the application with the given callback.
+        
+        This method executes the complete application lifecycle, including
+        module initialization, startup, the provided callback, and shutdown.
+        
+        Args:
+            callback: A callable that will be invoked after all modules have
+                been initialized and started. The callback receives no arguments
+                in the Python binding (unlike Rust which receives the context).
+        
+        Example:
+            >>> def on_start():
+            ...     print("Application is running")
+            >>> app.run(on_start)
+        """
         return self._runtime.py_run(callback)
 
 
@@ -353,68 +393,203 @@ class DMSCAppBuilder:
     This class provides a Pythonic interface to the Rust DMSCAppBuilder,
     enabling configuration of DMSC applications with method chaining.
     
+    Note:
+        This is a thin wrapper around the Rust DMSCAppBuilder (_RustAppBuilder).
+        The wrapper is necessary because Rust's PyO3 bindings require reassignment
+        for builder methods (e.g., ``builder = builder.with_config(...)``), which
+        is not idiomatic in Python. This wrapper automatically handles the
+        reassignment internally, allowing natural method chaining without
+        explicit reassignment.
+        
+        **Why this wrapper exists:**
+        
+        - Rust builder methods return ``Self`` and consume the original builder
+        - PyO3 bindings expose this as ``builder = builder.method()`` pattern
+        - Python users expect ``builder.method().method()`` chaining without reassignment
+        - This wrapper bridges the gap between Rust and Python idioms
+        
+        **Design Rationale:**
+        
+        The wrapper maintains the same API surface as the Rust builder while
+        providing a more Pythonic experience. All method calls are delegated
+        to the underlying Rust implementation with zero overhead.
+    
+    Attributes:
+        _builder: The underlying Rust DMSCAppBuilder instance.
+    
     Example:
-        app = (DMSCAppBuilder()
-            .with_config("config.yaml")
-            .with_logging(DMSCLogConfig())
-            .with_observability(DMSCObservabilityConfig())
-            .build())
+        Basic usage with method chaining::
+        
+            from dmsc import DMSCAppBuilder, DMSCLogConfig
+            
+            app = (DMSCAppBuilder()
+                .with_config("config.yaml")
+                .with_logging(DMSCLogConfig())
+                .with_observability(DMSCObservabilityConfig())
+                .build())
+        
+        Adding modules::
+        
+            from dmsc import DMSCAppBuilder, DMSCCacheModule
+            
+            app = (DMSCAppBuilder()
+                .with_module(DMSCCacheModule())
+                .with_config("config.yaml")
+                .build())
+    
+    See Also:
+        DMSCAppRuntime: The runtime instance created by this builder.
+        DMSCServiceContext: The context provided to running applications.
     """
     
     def __init__(self):
+        """Initialize a new DMSC application builder.
+        
+        Creates a new builder instance with default settings. The builder
+        can then be configured using the ``with_*`` methods before calling
+        ``build()`` to create the application runtime.
+        """
         self._builder = _RustAppBuilder()
     
     def with_config(self, config_path: str) -> 'DMSCAppBuilder':
-        """Add a configuration file path."""
+        """Add a configuration file path.
+        
+        Args:
+            config_path: Path to the configuration file (YAML, TOML, or JSON).
+        
+        Returns:
+            DMSCAppBuilder: Self for method chaining.
+        
+        Example:
+            >>> builder.with_config("config.yaml").with_config("override.yaml")
+        """
         self._builder = self._builder.py_with_config(config_path)
         return self
     
     def with_logging(self, config: 'DMSCLogConfig') -> 'DMSCAppBuilder':
-        """Configure logging with the provided config."""
+        """Configure logging with the provided config.
+        
+        Args:
+            config: DMSCLogConfig instance with logging settings.
+        
+        Returns:
+            DMSCAppBuilder: Self for method chaining.
+        """
         self._builder = self._builder.py_with_logging(config)
         return self
     
     def with_observability(self, config: 'DMSCObservabilityConfig') -> 'DMSCAppBuilder':
-        """Configure observability with the provided config."""
+        """Configure observability with the provided config.
+        
+        Args:
+            config: DMSCObservabilityConfig instance with observability settings.
+        
+        Returns:
+            DMSCAppBuilder: Self for method chaining.
+        """
         self._builder = self._builder.py_with_observability(config)
         return self
     
     def with_module(self, module) -> 'DMSCAppBuilder':
-        """Add a module to the application."""
+        """Add a module to the application.
+        
+        Args:
+            module: A service module instance (sync or async).
+        
+        Returns:
+            DMSCAppBuilder: Self for method chaining.
+        """
         self._builder = self._builder.py_with_module(module)
         return self
     
     def with_modules(self, modules: list) -> 'DMSCAppBuilder':
-        """Add multiple modules to the application."""
+        """Add multiple modules to the application.
+        
+        Args:
+            modules: List of service module instances.
+        
+        Returns:
+            DMSCAppBuilder: Self for method chaining.
+        """
         self._builder = self._builder.py_with_modules(modules)
         return self
     
     def with_async_module(self, module) -> 'DMSCAppBuilder':
-        """Add an async module to the application."""
+        """Add an async module to the application.
+        
+        Args:
+            module: An async service module instance.
+        
+        Returns:
+            DMSCAppBuilder: Self for method chaining.
+        """
         self._builder = self._builder.py_with_async_module(module)
         return self
     
     def with_async_modules(self, modules: list) -> 'DMSCAppBuilder':
-        """Add multiple async modules to the application."""
+        """Add multiple async modules to the application.
+        
+        Args:
+            modules: List of async service module instances.
+        
+        Returns:
+            DMSCAppBuilder: Self for method chaining.
+        """
         self._builder = self._builder.py_with_async_modules(modules)
         return self
     
     def with_python_module(self, module) -> 'DMSCAppBuilder':
-        """Add a Python module to the application."""
+        """Add a Python module to the application.
+        
+        Args:
+            module: A Python module adapter instance.
+        
+        Returns:
+            DMSCAppBuilder: Self for method chaining.
+        """
         self._builder = self._builder.py_with_python_module(module)
         return self
     
     def with_dms_module(self, module) -> 'DMSCAppBuilder':
-        """Add a DMSC module to the application."""
+        """Add a DMSC module to the application.
+        
+        Args:
+            module: A DMSC module instance.
+        
+        Returns:
+            DMSCAppBuilder: Self for method chaining.
+        """
         self._builder = self._builder.py_with_dms_module(module)
         return self
     
     def with_dms_modules(self, modules: list) -> 'DMSCAppBuilder':
-        """Add multiple DMSC modules to the application."""
+        """Add multiple DMSC modules to the application.
+        
+        Args:
+            modules: List of DMSC module instances.
+        
+        Returns:
+            DMSCAppBuilder: Self for method chaining.
+        """
         self._builder = self._builder.py_with_dms_modules(modules)
         return self
     
     def build(self) -> 'DMSCAppRuntime':
-        """Build the application runtime."""
+        """Build the application runtime.
+        
+        Constructs the DMSCAppRuntime with all configured modules, logging,
+        observability, and configuration settings.
+        
+        Returns:
+            DMSCAppRuntime: The configured application runtime ready to run.
+        
+        Raises:
+            DMSCError: If the build process fails (e.g., invalid config,
+                circular module dependencies).
+        
+        Example:
+            >>> app = DMSCAppBuilder().with_config("config.yaml").build()
+            >>> app.run(lambda: print("Started"))
+        """
         runtime = self._builder.py_build()
         return DMSCAppRuntime(runtime)

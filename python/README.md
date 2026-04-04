@@ -344,34 +344,41 @@ count = manager.get_session_count()
 print(f"Active sessions: {count}")
 ```
 
-### ORM Usage Example (Rust API)
+### ORM Usage Example
 
-```rust
-use dmsc::database::{DMSCORMSimpleRepository, Criteria, Pagination, ComparisonOperator};
+```python
+from dmsc import DMSCDatabasePool, DMSCPyORMRepository
 
-#[derive(serde::Serialize, serde::Deserialize, Clone)]
-struct User {
-    id: String,
-    name: String,
-    email: String,
-}
+# Create database connection pool
+pool = DMSCDatabasePool("sqlite:///dmsc.db")
 
-// Create repository (Rust only)
-let repo = DMSCORMSimpleRepository::<User>::new("users");
+# Create ORM repository for "users" table
+repo = DMSCPyORMRepository(pool, "users")
 
-// Find all users
-let users = repo.find_all(&db).await?;
+# Find all users
+users = repo.find_all()
+for user in users:
+    print(f"User: {user}")
 
-// Query with criteria
-let criteria = Criteria::new("name", ComparisonOperator::Like, serde_json::json!("%John%"));
-let users = repo.find_many(&db, vec![criteria]).await?;
+# Find user by ID
+user = repo.find_by_id("123")
+if user:
+    print(f"Found user: {user}")
 
-// Paginated query
-let pagination = Pagination::new(1, 20);
-let (users, total) = repo.find_paginated(&db, pagination, vec![]).await?;
+# Count total users
+count = repo.count()
+print(f"Total users: {count}")
+
+# Check if user exists
+exists = repo.exists("123")
+print(f"User exists: {exists}")
+
+# Delete user by ID
+repo.delete("123")
+print("User deleted")
 ```
 
-> **Note**: The ORM module provides type-safe database operations in Rust. For Python, use SQLAlchemy or other ORM libraries directly.
+> **Note**: The Python ORM binding provides basic CRUD operations. For advanced queries with criteria, pagination, and complex filtering, you can extend the Python bindings or use the Rust API directly.
 
 <h2 align="center">🔧 Configuration</h2>
 
@@ -410,16 +417,60 @@ DMSC supports multiple configuration sources in order of priority (lowest to hig
 
 ### Running Tests
 
+#### Test Structure
+
+The Python tests are organized to verify both the wrapper classes and the underlying Rust bindings:
+
+- **TestDMSCAppBuilder**: Tests for the application builder wrapper
+- **TestDMSCAppRuntime**: Tests for the application runtime wrapper
+- **TestDMSCAppBuilderWrapper**: Tests for Python wrapper behavior (method chaining)
+- **TestDMSCAppRuntimeWrapper**: Tests for runtime wrapper behavior
+
+#### Wrapper Design Rationale
+
+The `DMSCAppBuilder` and `DMSCAppRuntime` classes are Python wrappers around the Rust implementations. These wrappers are necessary because:
+
+1. **PyO3 Binding Behavior**: Rust's PyO3 bindings require reassignment for builder methods (`builder = builder.with_config(...)`)
+2. **Pythonic API**: Python users expect natural method chaining without explicit reassignment
+3. **Automatic Handling**: The wrappers internally handle reassignment, providing a seamless experience
+
+Example of the wrapper behavior:
+
+```python
+# Python wrapper allows natural chaining
+builder = DMSCAppBuilder()
+result = builder.with_config("config.yaml")  # Returns the same instance
+assert result is builder  # True - same instance
+
+# Without the wrapper, you would need:
+# builder = builder.with_config("config.yaml")  # Required reassignment
+```
+
+#### Running Tests
+
 ```bash
 # Install development dependencies
 pip install -e .
 
-# Run Python tests
-python -m pytest tests/
+# Run all Python tests
+python -m pytest tests/Python/ -v
+
+# Run specific test classes
+python -m pytest tests/Python/test_core.py::TestDMSCAppBuilderWrapper -v
+python -m pytest tests/Python/test_core.py::TestDMSCAppRuntimeWrapper -v
 
 # Run specific test module
-python -m pytest tests/test_auth.py
+python -m pytest tests/Python/test_auth.py -v
 ```
+
+#### Test Coverage
+
+The tests verify:
+- ✅ Method chaining returns the same instance (Python wrapper behavior)
+- ✅ Internal `_builder` and `_runtime` attributes exist
+- ✅ All methods correctly delegate to Rust backend
+- ✅ Build process creates valid runtime instances
+- ✅ Error handling and edge cases
 
 <h2 align="center">❓ Frequently Asked Questions</h2>
 

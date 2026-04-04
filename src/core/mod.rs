@@ -85,6 +85,8 @@ pub mod analytics;
 pub mod health;
 /// Error chain utilities
 pub mod error_chain;
+/// Sharded lock implementation for improved concurrent performance
+pub mod concurrent;
 
 /// Main error type for DMSC operations
 pub use error::{DMSCError, DMSCResult};
@@ -120,3 +122,7 @@ pub use lifecycle::DMSCLifecycleObserver;
 /// Analytics module
 #[cfg(feature = "pyo3")]
 pub use analytics::DMSCLogAnalyticsModule;
+
+/// Sharded lock types
+#[cfg(feature = "pyo3")]
+pub use concurrent::DMSCShardedLockStats;

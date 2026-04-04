@@ -64,8 +64,8 @@
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::time::{SystemTime, UNIX_EPOCH};
-use tokio::sync::RwLock;
 use uuid::Uuid;
+use crate::core::concurrent::DMSCShardedLock;
 
 #[cfg(feature = "pyo3")]
 use pyo3::PyResult;
@@ -226,11 +226,8 @@ impl DMSCSession {
 /// the number of sessions per user and automatically cleans up expired sessions.
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 pub struct DMSCSessionManager {
-    /// Hash map of active sessions indexed by session ID
-    sessions: RwLock<HashMap<String, DMSCSession>>,
-    /// Default session timeout duration in seconds
+    sessions: DMSCShardedLock<String, DMSCSession>,
     timeout_secs: u64,
-    /// Maximum number of concurrent sessions allowed per user
     max_sessions_per_user: usize,
 }
 
@@ -250,7 +247,7 @@ impl DMSCSessionManager {
     /// Default maximum sessions per user is 5
     pub fn new(timeout_secs: u64) -> Self {
         Self {
-            sessions: RwLock::new(HashMap::new()),
+            sessions: DMSCShardedLock::with_default_shards(),
             timeout_secs,
             max_sessions_per_user: 5,
         }
@@ -269,25 +266,23 @@ impl DMSCSessionManager {
     /// # Notes
     /// - If the user has reached the maximum number of sessions, the oldest session is removed
     pub async fn create_session(&self, user_id: String, ip_address: Option<String>, user_agent: Option<String>) -> crate::core::DMSCResult<String> {
-        let mut sessions = self.sessions.write().await;
-        
-        // Check if user has too many sessions
-        let user_sessions: Vec<String> = sessions.values()
-            .filter(|s| s.user_id == user_id && !s.is_expired())
-            .map(|s| s.id.clone())
+        let user_sessions: Vec<(String, u64)> = self.sessions.collect_where(|_, s| s.user_id == user_id && !s.is_expired()).await
+            .into_iter()
+            .map(|s| (s.id.clone(), s.created_at))
             .collect();
         
         if user_sessions.len() >= self.max_sessions_per_user {
-            // Remove oldest session
-            if let Some(oldest_id) = user_sessions.iter().min() {
-                sessions.remove(oldest_id);
+            let mut sessions_with_time = user_sessions;
+            sessions_with_time.sort_by_key(|(_, t)| *t);
+            
+            if let Some((oldest_id, _)) = sessions_with_time.first() {
+                self.sessions.remove(oldest_id).await;
             }
         }
 
-        // Create new session
         let session = DMSCSession::new(user_id, self.timeout_secs, ip_address, user_agent);
         let session_id = session.id.clone();
-        sessions.insert(session_id.clone(), session);
+        self.sessions.insert(session_id.clone(), session).await;
         
         Ok(session_id)
     }
@@ -304,18 +299,20 @@ impl DMSCSessionManager {
     /// - Expired sessions are automatically removed and return `None`
     /// - The session's last accessed time is updated when retrieved
     pub async fn get_session(&self, session_id: &str) -> crate::core::DMSCResult<Option<DMSCSession>> {
-        let mut sessions = self.sessions.write().await;
+        let session = self.sessions.get(session_id).await;
         
-        if let Some(session) = sessions.get_mut(session_id) {
-            if session.is_expired() {
-                sessions.remove(session_id);
-                Ok(None)
-            } else {
-                session.touch();
-                Ok(Some(session.clone()))
+        match session {
+            Some(mut s) => {
+                if s.is_expired() {
+                    self.sessions.remove(session_id).await;
+                    Ok(None)
+                } else {
+                    s.touch();
+                    self.sessions.insert(session_id.to_string(), s.clone()).await;
+                    Ok(Some(s))
+                }
             }
-        } else {
-            Ok(None)
+            None => Ok(None),
         }
     }
 
@@ -331,21 +328,23 @@ impl DMSCSessionManager {
     /// # Notes
     /// - The session's last accessed time is updated when modified
     pub async fn update_session(&self, session_id: &str, data: HashMap<String, String>) -> crate::core::DMSCResult<bool> {
-        let mut sessions = self.sessions.write().await;
+        let session = self.sessions.get(session_id).await;
         
-        if let Some(session) = sessions.get_mut(session_id) {
-            if session.is_expired() {
-                sessions.remove(session_id);
-                Ok(false)
-            } else {
-                for (key, value) in data {
-                    session.set_data(key, value);
+        match session {
+            Some(mut s) => {
+                if s.is_expired() {
+                    self.sessions.remove(session_id).await;
+                    Ok(false)
+                } else {
+                    for (key, value) in data {
+                        s.set_data(key, value);
+                    }
+                    s.touch();
+                    self.sessions.insert(session_id.to_string(), s).await;
+                    Ok(true)
                 }
-                session.touch();
-                Ok(true)
             }
-        } else {
-            Ok(false)
+            None => Ok(false),
         }
     }
 
@@ -357,18 +356,20 @@ impl DMSCSessionManager {
     /// # Returns
     /// `true` if the session was extended successfully, `false` if the session doesn't exist or is expired
     pub async fn extend_session(&self, session_id: &str) -> crate::core::DMSCResult<bool> {
-        let mut sessions = self.sessions.write().await;
+        let session = self.sessions.get(session_id).await;
         
-        if let Some(session) = sessions.get_mut(session_id) {
-            if session.is_expired() {
-                sessions.remove(session_id);
-                Ok(false)
-            } else {
-                session.extend(self.timeout_secs);
-                Ok(true)
+        match session {
+            Some(mut s) => {
+                if s.is_expired() {
+                    self.sessions.remove(session_id).await;
+                    Ok(false)
+                } else {
+                    s.extend(self.timeout_secs);
+                    self.sessions.insert(session_id.to_string(), s).await;
+                    Ok(true)
+                }
             }
-        } else {
-            Ok(false)
+            None => Ok(false),
         }
     }
 
@@ -380,8 +381,7 @@ impl DMSCSessionManager {
     /// # Returns
     /// `true` if the session was destroyed successfully, `false` if the session doesn't exist
     pub async fn destroy_session(&self, session_id: &str) -> crate::core::DMSCResult<bool> {
-        let mut sessions = self.sessions.write().await;
-        Ok(sessions.remove(session_id).is_some())
+        Ok(self.sessions.remove(session_id).await.is_some())
     }
 
     /// Destroys all sessions for a user.
@@ -392,18 +392,7 @@ impl DMSCSessionManager {
     /// # Returns
     /// The number of sessions destroyed
     pub async fn destroy_user_sessions(&self, user_id: &str) -> crate::core::DMSCResult<usize> {
-        let mut sessions = self.sessions.write().await;
-        let mut count = 0;
-        
-        sessions.retain(|_, session| {
-            if session.user_id == user_id {
-                count += 1;
-                false
-            } else {
-                true
-            }
-        });
-        
+        let count = self.sessions.remove_where(|_, s| s.user_id == user_id).await;
         Ok(count)
     }
 
@@ -415,13 +404,7 @@ impl DMSCSessionManager {
     /// # Returns
     /// A vector of active sessions for the user
     pub async fn get_user_sessions(&self, user_id: &str) -> crate::core::DMSCResult<Vec<DMSCSession>> {
-        let sessions = self.sessions.read().await;
-        
-        let user_sessions: Vec<DMSCSession> = sessions.values()
-            .filter(|s| s.user_id == user_id && !s.is_expired())
-            .cloned()
-            .collect();
-        
+        let user_sessions = self.sessions.collect_where(|_, s| s.user_id == user_id && !s.is_expired()).await;
         Ok(user_sessions)
     }
 
@@ -430,18 +413,7 @@ impl DMSCSessionManager {
     /// # Returns
     /// The number of expired sessions cleaned up
     pub async fn cleanup_expired(&self) -> crate::core::DMSCResult<usize> {
-        let mut sessions = self.sessions.write().await;
-        let mut count = 0;
-        
-        sessions.retain(|_, session| {
-            if session.is_expired() {
-                count += 1;
-                false
-            } else {
-                true
-            }
-        });
-        
+        let count = self.sessions.remove_where(|_, s| s.is_expired()).await;
         Ok(count)
     }
 
@@ -449,8 +421,7 @@ impl DMSCSessionManager {
     /// 
     /// This method removes all sessions, regardless of their expiration status.
     pub async fn cleanup_all(&self) -> crate::core::DMSCResult<()> {
-        let mut sessions = self.sessions.write().await;
-        sessions.clear();
+        self.sessions.clear().await;
         Ok(())
     }
 

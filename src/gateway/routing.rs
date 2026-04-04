@@ -19,25 +19,32 @@
 
 //! # Routing Module
 //! 
-//! This module provides a flexible routing system for the DMSC gateway, allowing for
-//! defining API endpoints and their handlers with support for middleware.
+//! This module provides a flexible routing system for the DMSC gateway, using a Radix Tree
+//! for O(k) route lookup performance, where k is the path length.
 //! 
 //! ## Key Components
 //! 
 //! - **DMSCRouteHandler**: Type alias for route handler functions
 //! - **DMSCRoute**: Represents a single API route with method, path, handler, and middleware
-//! - **DMSCRouter**: Manages routes, provides route matching, and supports route mounting
+//! - **DMSCRouter**: Manages routes using radix trees for efficient O(k) lookup
 //! 
 //! ## Design Principles
 //! 
-//! 1. **Type Safety**: Uses type aliases for clear handler signatures
-//! 2. **Middleware Support**: Allows attaching middleware to individual routes
-//! 3. **Route Caching**: Caches route matches for improved performance
-//! 4. **Flexible Path Matching**: Supports exact paths, wildcards, and path parameters
-//! 5. **Method Support**: Supports all HTTP methods (GET, POST, PUT, DELETE, PATCH, OPTIONS)
-//! 6. **Route Mounting**: Allows mounting routers with prefixes for modularity
-//! 7. **Thread Safe**: Uses RwLock for safe operation in multi-threaded environments
-//! 8. **Async Compatibility**: Built with async/await patterns for modern Rust applications
+//! 1. **O(k) Performance**: Uses radix tree for route matching independent of route count
+//! 2. **Type Safety**: Uses type aliases for clear handler signatures
+//! 3. **Middleware Support**: Allows attaching middleware to individual routes
+//! 4. **Route Caching**: Caches route matches for improved performance
+//! 5. **Flexible Path Matching**: Supports exact paths, wildcards (`*path`), and path parameters (`:param`)
+//! 6. **Method Support**: Supports all HTTP methods (GET, POST, PUT, DELETE, PATCH, OPTIONS)
+//! 7. **Route Mounting**: Allows mounting routers with prefixes for modularity
+//! 8. **Thread Safe**: Uses RwLock for safe operation in multi-threaded environments
+//! 9. **Async Compatibility**: Built with async/await patterns for modern Rust applications
+//! 
+//! ## Path Pattern Syntax
+//! 
+//! - `/users/:id` - Matches `/users/123`, extracts `id = "123"`
+//! - `/files/*path` - Matches `/files/docs/readme.txt`, extracts `path = "docs/readme.txt"`
+//! - `/api/v1/users` - Exact match for static paths
 //! 
 //! ## Usage
 //! 
@@ -60,9 +67,15 @@
 //!         })
 //!     });
 //!     
-//!     // Add routes
+//!     // Add routes with O(k) lookup performance
 //!     router.get("/hello", hello_handler.clone());
 //!     router.post("/api/v1/users", hello_handler.clone());
+//!     
+//!     // Add route with path parameter
+//!     router.get("/users/:id", hello_handler.clone());
+//!     
+//!     // Add route with wildcard
+//!     router.get("/files/*path", hello_handler.clone());
 //!     
 //!     // Add route with middleware
 //!     let auth_middleware = Arc::new(DMSCAuthMiddleware::new("Authorization".to_string()));
@@ -75,6 +88,7 @@
 //! ```
 
 use super::{DMSCGatewayRequest, DMSCGatewayResponse};
+use super::radix_tree::DMSCRadixTree;
 use crate::core::DMSCResult;
 use crate::core::lock::RwLockExtensions;
 use crate::gateway::middleware::DMSCMiddleware;
@@ -186,11 +200,13 @@ impl DMSCRoute {
 
 /// Router for managing API routes and matching requests to handlers.
 /// 
-/// This struct maintains a collection of routes and provides methods for adding routes,
-/// matching requests to handlers, and mounting routers with prefixes.
+/// This struct maintains a collection of routes organized by HTTP method using
+/// radix trees for O(k) lookup performance, where k is the path length.
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 pub struct DMSCRouter {
-    /// Vector of registered routes
+    /// Radix trees for each HTTP method
+    trees: std::sync::RwLock<HashMap<String, DMSCRadixTree>>,
+    /// Vector of registered routes for backward compatibility and introspection
     routes: std::sync::RwLock<Vec<DMSCRoute>>,
     /// Cache of route matches for improved performance
     route_cache: std::sync::RwLock<HashMap<String, DMSCRoute>>,
@@ -210,19 +226,66 @@ impl DMSCRouter {
     /// A new `DMSCRouter` instance with empty routes and cache
     pub fn new() -> Self {
         Self {
+            trees: std::sync::RwLock::new(HashMap::new()),
             routes: std::sync::RwLock::new(Vec::new()),
             route_cache: std::sync::RwLock::new(HashMap::new()),
         }
     }
 
+    /// Gets or creates a radix tree for the given HTTP method.
+    /// 
+    /// # Parameters
+    /// 
+    /// - `method`: The HTTP method
+    /// 
+    /// # Returns
+    /// 
+    /// A reference to the radix tree for the method
+    fn get_or_create_tree(&self, method: &str) -> DMSCRadixTree {
+        let trees = match self.trees.read_safe("trees for get_or_create") {
+            Ok(t) => t,
+            Err(_) => return DMSCRadixTree::new(),
+        };
+        
+        if let Some(tree) = trees.get(method) {
+            return DMSCRadixTree::new();
+        }
+        
+        drop(trees);
+        
+        let mut trees_mut = match self.trees.write_safe("trees for create") {
+            Ok(t) => t,
+            Err(_) => return DMSCRadixTree::new(),
+        };
+        
+        let tree = DMSCRadixTree::new();
+        trees_mut.insert(method.to_string(), DMSCRadixTree::new());
+        tree
+    }
+
     /// Adds a route to the router.
     /// 
-    /// This method adds a route to the router's collection and clears the route cache.
+    /// This method adds a route to the router's radix tree and clears the route cache.
     /// 
     /// # Parameters
     /// 
     /// - `route`: The route to add to the router
     pub fn add_route(&self, route: DMSCRoute) {
+        let method = route.method.clone();
+        
+        let mut trees = match self.trees.write_safe("trees for add_route") {
+            Ok(t) => t,
+            Err(e) => {
+                log::error!("Failed to acquire trees write lock: {}", e);
+                return;
+            }
+        };
+        
+        let tree = trees.entry(method).or_insert_with(DMSCRadixTree::new);
+        tree.insert(route.clone());
+        
+        drop(trees);
+        
         let mut routes = match self.routes.write_safe("routes for add_route") {
             Ok(r) => r,
             Err(e) => {
@@ -232,7 +295,6 @@ impl DMSCRouter {
         };
         routes.push(route);
         
-        // Clear cache when routes are modified
         let mut cache = match self.route_cache.write_safe("cache for add_route") {
             Ok(c) => c,
             Err(e) => {
@@ -374,10 +436,10 @@ impl DMSCRouter {
         self.add_route(route);
     }
 
-    /// Finds a matching route for the given request.
+    /// Finds a matching route for the given request using radix tree.
     /// 
-    /// This method checks the route cache first, then searches through registered routes
-    /// to find a match. It returns the handler for the matching route, or an error if no route is found.
+    /// This method uses radix tree for O(k) route lookup where k is the path length.
+    /// It checks the route cache first, then searches the radix tree for the matching route.
     /// 
     /// # Parameters
     /// 
@@ -389,7 +451,6 @@ impl DMSCRouter {
     pub async fn route(&self, request: &DMSCGatewayRequest) -> DMSCResult<DMSCRouteHandler> {
         let cache_key = format!("{}:{}", request.method, request.path);
         
-        // Check cache first
         {
             let cache = match self.route_cache.read_safe("cache for route lookup") {
                 Ok(c) => c,
@@ -400,21 +461,20 @@ impl DMSCRouter {
             }
         }
 
-        // Find matching route
-        let routes = match self.routes.read_safe("routes for route lookup") {
-            Ok(r) => r,
-            Err(_) => return Err(crate::core::DMSCError::InvalidState("Failed to acquire routes read lock".to_string())),
+        let trees = match self.trees.read_safe("trees for route lookup") {
+            Ok(t) => t,
+            Err(_) => return Err(crate::core::DMSCError::InvalidState("Failed to acquire trees read lock".to_string())),
         };
-        for route in routes.iter() {
-            if self.matches_route(&route.method, &route.path, &request.method, &request.path) {
-                // Cache the result
+        
+        if let Some(tree) = trees.get(&request.method) {
+            if let Some(route_match) = tree.find(&request.path) {
                 let mut cache = match self.route_cache.write_safe("cache for route insert") {
                     Ok(c) => c,
-                    Err(_) => return Ok(route.handler.clone()), // Return anyway, cache miss is acceptable
+                    Err(_) => return Ok(route_match.route.handler.clone()),
                 };
-                cache.insert(cache_key.clone(), route.clone());
+                cache.insert(cache_key.clone(), route_match.route.clone());
                 
-                return Ok(route.handler.clone());
+                return Ok(route_match.route.handler.clone());
             }
         }
 
@@ -426,8 +486,7 @@ impl DMSCRouter {
 
     /// Checks if a route matches a request.
     /// 
-    /// This method implements route matching logic, including exact path matching,
-    /// wildcard matching, and basic path parameter matching.
+    /// This method implements route matching logic using the radix tree.
     /// 
     /// # Parameters
     /// 
@@ -440,37 +499,19 @@ impl DMSCRouter {
     /// 
     /// `true` if the route matches the request, `false` otherwise
     fn matches_route(&self, route_method: &str, route_path: &str, request_method: &str, request_path: &str) -> bool {
-        // Check method
         if route_method != request_method {
             return false;
         }
 
-        // Simple path matching (can be enhanced with proper path parameters)
-        if route_path == request_path {
-            return true;
-        }
-
-        // Handle wildcards
-        if route_path == "*" {
-            return true;
-        }
-
-        // Handle path parameters (basic implementation)
-        if route_path.contains(':') {
-            let route_parts: Vec<&str> = route_path.split('/').collect();
-            let request_parts: Vec<&str> = request_path.split('/').collect();
-
-            if route_parts.len() != request_parts.len() {
-                return false;
+        let trees = match self.trees.read_safe("trees for matches_route") {
+            Ok(t) => t,
+            Err(_) => return false,
+        };
+        
+        if let Some(tree) = trees.get(route_method) {
+            if let Some(route_match) = tree.find(request_path) {
+                return route_match.route.path == route_path;
             }
-
-            for (route_part, request_part) in route_parts.iter().zip(request_parts.iter()) {
-                if !route_part.starts_with(':') && route_part != request_part {
-                    return false;
-                }
-            }
-
-            return true;
         }
 
         false
@@ -507,8 +548,20 @@ impl DMSCRouter {
 
     /// Clears all routes from the router.
     /// 
-    /// This method removes all routes from the router and clears the route cache.
+    /// This method removes all routes from the router, clears all radix trees, and clears the route cache.
     pub fn clear_routes(&self) {
+        let mut trees = match self.trees.write_safe("trees for clear") {
+            Ok(t) => t,
+            Err(e) => {
+                log::error!("Failed to acquire trees write lock: {}", e);
+                return;
+            }
+        };
+        for tree in trees.values() {
+            tree.clear();
+        }
+        drop(trees);
+        
         let mut routes = match self.routes.write_safe("routes for clear") {
             Ok(r) => r,
             Err(e) => {

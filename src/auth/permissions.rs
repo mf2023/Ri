@@ -68,7 +68,7 @@
 
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
-use tokio::sync::RwLock;
+use crate::core::concurrent::DMSCShardedLock;
 
 #[cfg(feature = "pyo3")]
 use pyo3::PyResult;
@@ -214,12 +214,9 @@ impl DMSCRole {
 /// - Permission checking for users
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 pub struct DMSCPermissionManager {
-    /// Hash map of permissions indexed by permission ID
-    permissions: RwLock<HashMap<String, DMSCPermission>>,
-    /// Hash map of roles indexed by role ID
-    roles: RwLock<HashMap<String, DMSCRole>>,
-    /// Hash map of user role assignments indexed by user ID
-    user_roles: RwLock<HashMap<String, HashSet<String>>>,
+    permissions: DMSCShardedLock<String, DMSCPermission>,
+    roles: DMSCShardedLock<String, DMSCRole>,
+    user_roles: DMSCShardedLock<String, HashSet<String>>,
 }
 
 impl Default for DMSCPermissionManager {
@@ -243,13 +240,11 @@ impl DMSCPermissionManager {
     /// A new instance of `DMSCPermissionManager`
     pub fn new() -> Self {
         let mut manager = Self {
-            permissions: RwLock::new(HashMap::new()),
-            roles: RwLock::new(HashMap::new()),
-            user_roles: RwLock::new(HashMap::new()),
+            permissions: DMSCShardedLock::with_default_shards(),
+            roles: DMSCShardedLock::with_default_shards(),
+            user_roles: DMSCShardedLock::with_default_shards(),
         };
         
-        // Initialize with default system roles
-        // Note: This uses blocking_write which may block the async runtime
         manager.initialize_default_roles();
         manager
     }
@@ -267,77 +262,25 @@ impl DMSCPermissionManager {
     /// A new instance of `DMSCPermissionManager`
     pub async fn new_async() -> Self {
         let manager = Self {
-            permissions: RwLock::new(HashMap::new()),
-            roles: RwLock::new(HashMap::new()),
-            user_roles: RwLock::new(HashMap::new()),
+            permissions: DMSCShardedLock::with_default_shards(),
+            roles: DMSCShardedLock::with_default_shards(),
+            user_roles: DMSCShardedLock::with_default_shards(),
         };
         
-        // Initialize with default system roles asynchronously
         manager.initialize_default_roles_async().await;
         manager
     }
 
-    /// Initializes default system roles.
-    /// 
-    /// This method is called during construction to create the default admin
-    /// and user roles. It uses `blocking_write` because it's called from a
-    /// non-async context.
-    /// 
-    /// **Performance Note**: This method is called during initialization and uses
-    /// `blocking_write` to avoid async complexity in the constructor. In production
-    /// scenarios, consider using an async factory pattern or lazy initialization.
     fn initialize_default_roles(&mut self) {
-        // This would be called in blocking context, so we use blocking_write
-        // Note: In production, consider using an async factory pattern to avoid blocking
-        let mut roles = self.roles.blocking_write();
-        
-        // Admin role - all permissions
-        let admin_permissions: HashSet<String> = vec![
-            "*".to_string(), // Wildcard permission
-        ].into_iter().collect();
-        
-        let admin_role = DMSCRole {
-            id: "admin".to_string(),
-            name: "Administrator".to_string(),
-            description: "Full system access".to_string(),
-            permissions: admin_permissions,
-            is_system: true,
-        };
-        
-        roles.insert("admin".to_string(), admin_role);
-        
-        // User role - basic permissions
-        let user_permissions: HashSet<String> = vec![
-            "read:profile".to_string(),
-            "update:profile".to_string(),
-            "read:own_data".to_string(),
-        ].into_iter().collect();
-        
-        let user_role = DMSCRole {
-            id: "user".to_string(),
-            name: "User".to_string(),
-            description: "Standard user access".to_string(),
-            permissions: user_permissions,
-            is_system: true,
-        };
-        
-        roles.insert("user".to_string(), user_role);
+        let rt = tokio::runtime::Runtime::new().expect("Failed to create tokio runtime");
+        rt.block_on(async {
+            self.initialize_default_roles_async().await
+        });
     }
 
-    /// Initializes default system roles asynchronously.
-    /// 
-    /// This method is the async version of `initialize_default_roles` that avoids
-    /// using `blocking_write`. It should be used when creating the permission manager
-    /// in async contexts.
-    /// 
-    /// **Performance**: This method uses async write locks and is preferred for
-    /// async initialization scenarios.
     async fn initialize_default_roles_async(&self) {
-        let mut roles = self.roles.write().await;
-        
-        // Admin role - all permissions
         let admin_permissions: HashSet<String> = vec![
-            "*".to_string(), // Wildcard permission
+            "*".to_string(),
         ].into_iter().collect();
         
         let admin_role = DMSCRole {
@@ -348,9 +291,8 @@ impl DMSCPermissionManager {
             is_system: true,
         };
         
-        roles.insert("admin".to_string(), admin_role);
+        self.roles.insert("admin".to_string(), admin_role).await;
         
-        // User role - basic permissions
         let user_permissions: HashSet<String> = vec![
             "read:profile".to_string(),
             "update:profile".to_string(),
@@ -365,151 +307,80 @@ impl DMSCPermissionManager {
             is_system: true,
         };
         
-        roles.insert("user".to_string(), user_role);
+        self.roles.insert("user".to_string(), user_role).await;
     }
 
-    /// Creates a new permission.
-    /// 
-    /// # Parameters
-    /// - `permission`: Permission to create
-    /// 
-    /// # Returns
-    /// `Ok(())` if the permission was successfully created
     pub async fn create_permission(&self, permission: DMSCPermission) -> crate::core::DMSCResult<()> {
-        let mut permissions = self.permissions.write().await;
-        permissions.insert(permission.id.clone(), permission);
+        self.permissions.insert(permission.id.clone(), permission).await;
         Ok(())
     }
 
-    /// Gets a permission by ID.
-    /// 
-    /// # Parameters
-    /// - `permission_id`: Permission ID to retrieve
-    /// 
-    /// # Returns
-    /// `Some(DMSCPermission)` if the permission exists, otherwise `None`
     pub async fn get_permission(&self, permission_id: &str) -> crate::core::DMSCResult<Option<DMSCPermission>> {
-        let permissions = self.permissions.read().await;
-        Ok(permissions.get(permission_id).cloned())
+        Ok(self.permissions.get(permission_id).await)
     }
 
-    /// Creates a new role.
-    /// 
-    /// # Parameters
-    /// - `role`: Role to create
-    /// 
-    /// # Returns
-    /// `Ok(())` if the role was successfully created
     pub async fn create_role(&self, role: DMSCRole) -> crate::core::DMSCResult<()> {
-        let mut roles = self.roles.write().await;
-        roles.insert(role.id.clone(), role);
+        self.roles.insert(role.id.clone(), role).await;
         Ok(())
     }
 
-    /// Gets a role by ID.
-    /// 
-    /// # Parameters
-    /// - `role_id`: Role ID to retrieve
-    /// 
-    /// # Returns
-    /// `Some(DMSCRole)` if the role exists, otherwise `None`
     pub async fn get_role(&self, role_id: &str) -> crate::core::DMSCResult<Option<DMSCRole>> {
-        let roles = self.roles.read().await;
-        Ok(roles.get(role_id).cloned())
+        Ok(self.roles.get(role_id).await)
     }
 
-    /// Assigns a role to a user.
-    /// 
-    /// # Parameters
-    /// - `user_id`: User ID to assign the role to
-    /// - `role_id`: Role ID to assign
-    /// 
-    /// # Returns
-    /// `true` if the role was successfully assigned, `false` if the role doesn't exist
     pub async fn assign_role_to_user(&self, user_id: String, role_id: String) -> crate::core::DMSCResult<bool> {
-        // Check if role exists
-        let roles = self.roles.read().await;
-        if !roles.contains_key(&role_id) {
+        let role_exists = self.roles.contains_key(&role_id).await;
+        if !role_exists {
             return Ok(false);
         }
-        drop(roles);
 
-        let mut user_roles = self.user_roles.write().await;
-        let user_role_set = user_roles.entry(user_id).or_insert_with(HashSet::new);
-        let was_added = user_role_set.insert(role_id);
+        let user_role_set = self.user_roles.get(&user_id).await.unwrap_or_default();
+        let mut new_set = user_role_set.clone();
+        let was_added = new_set.insert(role_id);
+        self.user_roles.insert(user_id, new_set).await;
         Ok(was_added)
     }
 
-    /// Removes a role from a user.
-    /// 
-    /// # Parameters
-    /// - `user_id`: User ID to remove the role from
-    /// - `role_id`: Role ID to remove
-    /// 
-    /// # Returns
-    /// `true` if the role was successfully removed, `false` if the user didn't have the role
     pub async fn remove_role_from_user(&self, user_id: &str, role_id: &str) -> crate::core::DMSCResult<bool> {
-        let mut user_roles = self.user_roles.write().await;
+        let user_role_set = self.user_roles.get(user_id).await;
         
-        if let Some(user_role_set) = user_roles.get_mut(user_id) {
-            let was_removed = user_role_set.remove(role_id);
-            if user_role_set.is_empty() {
-                user_roles.remove(user_id);
-            }
-            Ok(was_removed)
-        } else {
-            Ok(false)
-        }
-    }
-
-    /// Gets all roles assigned to a user.
-    /// 
-    /// # Parameters
-    /// - `user_id`: User ID to retrieve roles for
-    /// 
-    /// # Returns
-    /// A vector of `DMSCRole` objects assigned to the user
-    pub async fn get_user_roles(&self, user_id: &str) -> crate::core::DMSCResult<Vec<DMSCRole>> {
-        let user_roles = self.user_roles.read().await;
-        let roles = self.roles.read().await;
-        
-        let mut result = if let Some(user_role_ids) = user_roles.get(user_id) {
-            Vec::with_capacity(user_role_ids.len())
-        } else {
-            Vec::new()
-        };
-        
-        if let Some(user_role_ids) = user_roles.get(user_id) {
-            for role_id in user_role_ids {
-                if let Some(role) = roles.get(role_id) {
-                    result.push(role.clone());
+        match user_role_set {
+            Some(mut set) => {
+                let was_removed = set.remove(role_id);
+                if set.is_empty() {
+                    self.user_roles.remove(user_id).await;
+                } else {
+                    self.user_roles.insert(user_id.to_string(), set).await;
                 }
+                Ok(was_removed)
             }
+            None => Ok(false),
         }
-        
-        Ok(result)
     }
 
-    /// Checks if a user has a specific permission.
-    /// 
-    /// # Parameters
-    /// - `user_id`: User ID to check
-    /// - `permission_id`: Permission ID to check for
-    /// 
-    /// # Returns
-    /// `true` if the user has the permission, otherwise `false`
-    /// 
-    /// # Notes
-    /// - Users with the wildcard permission ("*") have all permissions
-    /// - Permission checking is done by examining all roles assigned to the user
-    pub async fn has_permission(&self, user_id: &str, permission_id: &str) -> crate::core::DMSCResult<bool> {
-        let user_roles = self.user_roles.read().await;
-        let roles = self.roles.read().await;
+    pub async fn get_user_roles(&self, user_id: &str) -> crate::core::DMSCResult<Vec<DMSCRole>> {
+        let user_role_set = self.user_roles.get(user_id).await;
         
-        if let Some(user_role_ids) = user_roles.get(user_id) {
-            for role_id in user_role_ids {
-                if let Some(role) = roles.get(role_id) {
-                    // Check for wildcard permission
+        match user_role_set {
+            Some(role_ids) => {
+                let mut result = Vec::with_capacity(role_ids.len());
+                for role_id in role_ids {
+                    if let Some(role) = self.roles.get(&role_id).await {
+                        result.push(role);
+                    }
+                }
+                Ok(result)
+            }
+            None => Ok(Vec::new()),
+        }
+    }
+
+    pub async fn has_permission(&self, user_id: &str, permission_id: &str) -> crate::core::DMSCResult<bool> {
+        let user_role_set = self.user_roles.get(user_id).await;
+        
+        if let Some(role_ids) = user_role_set {
+            for role_id in role_ids {
+                if let Some(role) = self.roles.get(&role_id).await {
                     if role.permissions.contains("*") {
                         return Ok(true);
                     }
@@ -524,14 +395,6 @@ impl DMSCPermissionManager {
         Ok(false)
     }
 
-    /// Checks if a user has any of the specified permissions.
-    /// 
-    /// # Parameters
-    /// - `user_id`: User ID to check
-    /// - `permissions`: List of permission IDs to check for
-    /// 
-    /// # Returns
-    /// `true` if the user has at least one of the permissions, otherwise `false`
     pub async fn has_any_permission(&self, user_id: &str, permissions: &[String]) -> crate::core::DMSCResult<bool> {
         for permission in permissions {
             if self.has_permission(user_id, permission).await? {
@@ -541,14 +404,6 @@ impl DMSCPermissionManager {
         Ok(false)
     }
 
-    /// Checks if a user has all of the specified permissions.
-    /// 
-    /// # Parameters
-    /// - `user_id`: User ID to check
-    /// - `permissions`: List of permission IDs to check for
-    /// 
-    /// # Returns
-    /// `true` if the user has all of the permissions, otherwise `false`
     pub async fn has_all_permissions(&self, user_id: &str, permissions: &[String]) -> crate::core::DMSCResult<bool> {
         for permission in permissions {
             if !self.has_permission(user_id, permission).await? {
@@ -558,23 +413,15 @@ impl DMSCPermissionManager {
         Ok(true)
     }
 
-    /// Gets all permissions assigned to a user.
-    /// 
-    /// # Parameters
-    /// - `user_id`: User ID to retrieve permissions for
-    /// 
-    /// # Returns
-    /// A set of permission IDs assigned to the user
     pub async fn get_user_permissions(&self, user_id: &str) -> crate::core::DMSCResult<HashSet<String>> {
-        let user_roles = self.user_roles.read().await;
-        let roles = self.roles.read().await;
+        let user_role_set = self.user_roles.get(user_id).await;
         
         let mut permissions = HashSet::new();
         
-        if let Some(user_role_ids) = user_roles.get(user_id) {
-            for role_id in user_role_ids {
-                if let Some(role) = roles.get(role_id) {
-                    permissions.extend(role.permissions.clone());
+        if let Some(role_ids) = user_role_set {
+            for role_id in role_ids {
+                if let Some(role) = self.roles.get(&role_id).await {
+                    permissions.extend(role.permissions);
                 }
             }
         }
@@ -582,69 +429,35 @@ impl DMSCPermissionManager {
         Ok(permissions)
     }
 
-    /// Deletes a permission.
-    /// 
-    /// # Parameters
-    /// - `permission_id`: Permission ID to delete
-    /// 
-    /// # Returns
-    /// `true` if the permission was successfully deleted, otherwise `false`
     pub async fn delete_permission(&self, permission_id: &str) -> crate::core::DMSCResult<bool> {
-        let mut permissions = self.permissions.write().await;
-        Ok(permissions.remove(permission_id).is_some())
+        Ok(self.permissions.remove(permission_id).await.is_some())
     }
 
-    /// Deletes a role.
-    /// 
-    /// # Parameters
-    /// - `role_id`: Role ID to delete
-    /// 
-    /// # Returns
-    /// `true` if the role was successfully deleted, otherwise `false`
-    /// 
-    /// # Notes
-    /// - System roles cannot be deleted
-    /// - If the role is deleted, it is removed from all users
     pub async fn delete_role(&self, role_id: &str) -> crate::core::DMSCResult<bool> {
-        // Don't delete system roles
-        let roles = self.roles.read().await;
-        if let Some(role) = roles.get(role_id) {
-            if role.is_system {
+        let role = self.roles.get(role_id).await;
+        if let Some(r) = role {
+            if r.is_system {
                 return Ok(false);
             }
         }
-        drop(roles);
 
-        let mut roles = self.roles.write().await;
-        let was_deleted = roles.remove(role_id).is_some();
+        let was_deleted = self.roles.remove(role_id).await.is_some();
         
         if was_deleted {
-            // Remove role from all users
-            let mut user_roles = self.user_roles.write().await;
-            for user_role_set in user_roles.values_mut() {
-                user_role_set.remove(role_id);
-            }
+            self.user_roles.for_each_mut(|_, role_set| {
+                role_set.remove(role_id);
+            }).await;
         }
         
         Ok(was_deleted)
     }
 
-    /// Lists all permissions.
-    /// 
-    /// # Returns
-    /// A vector of all registered permissions
     pub async fn list_permissions(&self) -> crate::core::DMSCResult<Vec<DMSCPermission>> {
-        let permissions = self.permissions.read().await;
-        Ok(permissions.values().cloned().collect())
+        Ok(self.permissions.collect_all().await.into_values().collect())
     }
 
-    /// Lists all roles.
-    /// 
-    /// # Returns
-    /// A vector of all registered roles
     pub async fn list_roles(&self) -> crate::core::DMSCResult<Vec<DMSCRole>> {
-        let roles = self.roles.read().await;
-        Ok(roles.values().cloned().collect())
+        Ok(self.roles.collect_all().await.into_values().collect())
     }
 }
 

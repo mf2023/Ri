@@ -19,294 +19,232 @@
 # DMSC Rust Library and Python Wheel Build Pipeline
 ################################################################################
 #
-# Purpose:
-# This GitHub Actions workflow builds the DMSC Rust library and generates
-# distributable Python wheel packages (.whl files) for multiple platforms,
-# architectures, and Python versions. The workflow ensures binary compatibility
-# across the supported target environments.
+# PURPOSE:
+# This GitHub Actions workflow orchestrates the complete build process for DMSC,
+# a high-performance middleware framework written in Rust with Python bindings.
+# The pipeline generates distributable artifacts across multiple platforms.
 #
-# Architecture Overview:
-# 1. Rust Library Compilation Phase: Four dedicated jobs compile the Rust library
-#    (libdmsc) as a C dynamic library (cdylib) for each target platform:
-#    - Linux x64 (x86_64-unknown-linux-gnu)
-#    - Linux arm64 (aarch64-unknown-linux-gnu)
-#    - Windows x64 (x86_64-pc-windows-msvc)
-#    - macOS x64 (x86_64-apple-darwin)
+# ARTIFACT TYPES GENERATED:
+# 1. Rust Dynamic Libraries (cdylib): Native Rust binaries for each platform
+#    - Linux:   .so files (libdmsc.so)
+#    - Windows: .dll files (libdmsc.dll)
+#    - macOS:   .dylib files (libdmsc.dylib)
 #
-# 2. Python Wheel Generation Phase: A single matrix job generates Python wheels
-#    for all supported platform/architecture/Python version combinations.
-#    Each matrix entry builds a complete Python wheel with embedded Rust binary.
+# 2. Python Wheel Packages (.whl): Distributable Python packages with embedded
+#    Rust binaries, installable via pip
 #
-# Build Strategy:
-# - Native compilation on matching architecture runners (no cross-compilation)
-# - Linux ARM64 uses ubuntu-24.04-arm for proper ARM64 native builds
-# - macOS x64 uses macos-15-intel (available until Aug 2027) for Intel builds
-# - Docker-based manylinux images for Linux wheel compatibility guarantees
-# - maturin as the build tool (Rust/Python integration framework)
+# 3. C Static Libraries (.a/.lib): For C/C++ integration scenarios
+#    - Linux:   .a files (libdmsc.a)
+#    - Windows: .lib files (dmsc.lib)
+#    - macOS:   .a files (libdmsc.a)
 #
-# Supported Platforms:
-# - Linux: x64 and arm64 architectures
-# - Windows: x64 architecture
-# - macOS: x64 and arm64 (Apple Silicon) architectures
+# 4. C Header Files (.h): C API declarations for direct C/C++ usage
 #
-# Supported Python Versions: 3.8, 3.9, 3.10, 3.11, 3.12, 3.13, 3.14
+# ARCHITECTURE OVERVIEW:
+# The build process follows a two-phase approach:
 #
-# Trigger Conditions:
-# - Automatic: On push to master branch
-# - Manual: Workflow dispatch allows manual execution
+#   Phase 1: Rust Library Compilation
+#   ┌─────────────────────────────────────────────────────────────┐
+#   │  build-rust-linux        → libdmsc.so (x64)                │
+#   │  build-rust-linux-arm64  → libdmsc.so (ARM64)              │
+#   │  build-rust-windows      → libdmsc.dll (x64)                │
+#   │  build-rust-macos        → libdmsc.dylib (x64)              │
+#   │  build-rust-macos-arm64  → libdmsc.dylib (ARM64)            │
+#   │  build-rust-windows-arm64→ libdmsc.dll (ARM64)              │
+#   └─────────────────────────────────────────────────────────────┘
 #
-# Artifacts:
-# - Rust library artifacts (.so, .dll, .dylib files) per platform
-# - Python wheel artifacts (.whl files) per matrix combination
-# - Artifacts are uploaded using actions/upload-artifact@v4
+#   Phase 2: C Library Compilation (parallel with Phase 1)
+#   ┌─────────────────────────────────────────────────────────────┐
+#   │  build-c-libs-linux        → libdmsc.a + dmsc.h             │
+#   │  build-c-libs-linux-arm64  → libdmsc.a + dmsc.h             │
+#   │  build-c-libs-windows      → dmsc.lib + dmsc.h               │
+#   │  build-c-libs-macos        → libdmsc.a + dmsc.h             │
+#   │  build-c-libs-macos-arm64  → libdmsc.a + dmsc.h             │
+#   │  build-c-libs-windows-arm64→ dmsc.lib + dmsc.h             │
+#   └─────────────────────────────────────────────────────────────┘
+#
+#   Phase 3: Python Wheel Generation
+#   ┌─────────────────────────────────────────────────────────────┐
+#   │  build-python (matrix job)                                   │
+#   │  - 7 Python versions × 6 platforms = 42 wheel combinations   │
+#   │  - Each wheel includes pre-compiled Rust binary              │
+#   └─────────────────────────────────────────────────────────────┘
+#
+# SUPPORTED PLATFORMS AND ARCHITECTURES:
+# ┌─────────────┬──────────┬──────────────────────────────────────┐
+# │ Platform    │ Arch     │ Notes                                │
+# ├─────────────┼──────────┼──────────────────────────────────────┤
+# │ Linux       │ x64      │ glibc 2.17+ (manylinux2014)          │
+# │ Linux       │ ARM64    │ Native build on ubuntu-24.04-arm    │
+# │ Windows     │ x64      │ MSVC toolchain                       │
+# │ Windows     │ ARM64    │ Native build on windows-11-arm       │
+# │ macOS       │ x64      │ Intel Macs (until Aug 2027)         │
+# │ macOS       │ ARM64    │ Apple Silicon (M1/M2/M3/M4)          │
+# └─────────────┴──────────┴──────────────────────────────────────┘
+#
+# SUPPORTED PYTHON VERSIONS: 3.8, 3.9, 3.10, 3.11, 3.12, 3.13, 3.14
+#
+# TRIGGER CONDITIONS:
+# - push to master branch:    Automatic build for all platforms
+# - release published:        Full release pipeline + PyPI publishing
+# - workflow_dispatch:         Manual trigger for testing/verification
+#
+# BUILD TOOLCHAIN:
+# - maturin: Rust/Python integration build tool
+# - cargo:   Rust package manager and build system
+# - CMake:   Build system for C dependencies (rdkafka)
+# - protoc:  Protocol Buffers compiler (etcd-client dependency)
+#
+# KEY DEPENDENCIES:
+# - etcd-client: Service discovery and configuration management
+# - rdkafka:     Kafka message streaming client
+# - PyO3:        Rust/Python bindings generation
+#
+# ARTIFACT RETENTION:
+# - GitHub Actions artifacts: Available for 90 days
+# - PyPI packages: Permanently available after publication
 ################################################################################
 
-# Workflow name displayed in GitHub Actions UI
 name: Build and Publish DMSC (Rust/C/Python)
 
-# =============================================================================
-# Trigger Configuration
-# =============================================================================
-# Defines when this workflow should be executed
-
 on:
-  # Trigger 1: On push events to the master branch
-  # This ensures wheels are built automatically when code is merged to master
   push:
     branches:
       - master
-  
-  # Trigger 2: When a GitHub Release is published
-  # This triggers the full release pipeline including publishing to PyPI/TestPyPI
   release:
     types: [published]
-  
-  # Allow manual triggering from the GitHub Actions UI
-  # Useful for testing builds or re-running failed jobs
   workflow_dispatch:
-
-# =============================================================================
-# Job Definitions
-# =============================================================================
-# Each job runs in a separate runner environment and can execute in parallel
 
 jobs:
   ################################################################################
-  # Job: Build Rust Library for Linux x64
+  # RUST LIBRARY COMPILATION JOBS
   ################################################################################
-  # This job compiles the Rust library as a cdylib (C dynamic library) for Linux x64 architecture
-  # The compiled artifact is uploaded for use in subsequent Python wheel building jobs
-  # Uses native compilation since the ubuntu-latest runner matches the target platform
+  # These jobs compile the Rust library as a cdylib (C dynamic library) for each
+  # target platform. The cdylib format allows Python's ctypes or PyO3 to load
+  # the native Rust code at runtime.
+  #
+  # Build Output: Dynamic library files (.so/.dll/.dylib)
+  # Used by: Python wheel build jobs (via artifact download)
+  ################################################################################
+
   build-rust-linux:
-    # Use Ubuntu latest runner for Linux x64 builds
-    # This provides a native x86_64 environment for compilation
     runs-on: ubuntu-latest
     steps:
-      # Step 1: Checkout repository source code
-      # Clones the repository to access Cargo.toml and Rust source files
       - uses: actions/checkout@v4
 
-      # Step 2: Install protoc (Protocol Buffers compiler) for etcd-client build
-      # The etcd-client crate requires protoc to compile Protocol Buffer definitions
-      # This is needed because DMSC includes etcd integration for service discovery
       - name: Install protoc
         uses: arduino/setup-protoc@v3
         with:
           version: '33.x'
           repo-token: ${{ secrets.GITHUB_TOKEN }}
 
-      # Step 3: Install CMake for rdkafka build
-      # rdkafka (Kafka client library) requires CMake to build its C dependencies
-      # DMSC uses Kafka for message streaming capabilities
       - name: Install CMake
         uses: jwlawson/actions-setup-cmake@v2
         with:
           cmake-version: '3.28.x'
 
-      # Step 4: Install system dependencies for rdkafka
-      # rdkafka requires curl and SASL libraries for network and authentication support
-      # These are system-level dependencies needed by the Kafka C client library
       - name: Install system dependencies
         run: |
           sudo apt-get update
           sudo apt-get install -y libcurl4-openssl-dev libsasl2-dev
 
-      # Step 5: Build Rust library in release mode
-      # Compiles libdmsc as a cdylib for x86_64-unknown-linux-gnu target
-      # Release mode enables optimizations (-O3) and LTO for maximum performance
-      # Output location: target/release/libdmsc.so
       - name: Build
         run: cargo build --release
-      
-      # Step 6: Upload compiled library artifact
-      # Artifact is named rust-linux-x64 for identification in downloads
-      # Contains .so files (libdmsc.so) for Python wheel building on Linux x64
+
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: rust-linux-x64
           path: target/release/libdmsc.*
 
-  ################################################################################
-  # Job: Build Rust Library for Linux ARM64
-  ################################################################################
-  # NOTE: Switching from cross-compilation to native build on ARM64 Ubuntu runner
-  # Cross-compilation from x64 to ARM64 fails because:
-  # 1. ring crate requires native compilation for cryptographic operations
-  # 2. PyO3 linking issues with cross-compiled artifacts
-  # Using ubuntu-24.04-arm provides native ARM64 environment for proper compilation
   build-rust-linux-arm64:
-    # Use ARM64-specific Ubuntu runner for native ARM64 compilation
-    # This avoids cross-compilation issues with cryptographic and Python bindings
     runs-on: ubuntu-24.04-arm
     steps:
-      # Step 1: Checkout repository source code
-      # Clones repository for ARM64 native compilation environment
       - uses: actions/checkout@v4
-      
-      # Step 2: Install protoc (Protocol Buffers compiler) for etcd-client build
-      # Required for compiling Protocol Buffer definitions used by etcd-client
+
       - name: Install protoc
         uses: arduino/setup-protoc@v3
         with:
           version: '33.x'
           repo-token: ${{ secrets.GITHUB_TOKEN }}
-      
-      # Step 3: Install CMake for rdkafka build
-      # Required for building Kafka client C dependencies
+
       - name: Install CMake
         uses: jwlawson/actions-setup-cmake@v2
         with:
           cmake-version: '3.28.x'
 
-      # Step 4: Install system dependencies for rdkafka
-      # Install curl and SASL libraries required by Kafka client
       - name: Install system dependencies
         run: |
           sudo apt-get update
           sudo apt-get install -y libcurl4-openssl-dev libsasl2-dev
 
-      # Step 5: Build Rust library in release mode
-      # Compiles libdmsc as a cdylib for aarch64-unknown-linux-gnu target
-      # Native ARM64 compilation ensures correct code generation for the target arch
-      # Output location: target/release/libdmsc.so
       - name: Build
         run: cargo build --release
-      
-      # Step 6: Upload compiled library artifact
-      # Artifact is named rust-linux-arm64 for identification
-      # Contains .so files for Python wheel building on Linux ARM64 platforms
+
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: rust-linux-arm64
           path: target/release/libdmsc.*
 
-  ################################################################################
-  # Job: Build Rust Library for Windows x64
-  ################################################################################
-  # Compiles Rust library as cdylib for Windows x64 (x86_64-pc-windows-msvc target)
-  # Uses windows-latest runner for native compilation without cross-compilation overhead
-  # The resulting .dll file is suitable for use with Python on Windows x64 systems
   build-rust-windows:
-    # Use Windows latest runner for native Windows x64 builds
-    # Provides MSVC toolchain and Windows SDK for compilation
     runs-on: windows-latest
     steps:
-      # Step 1: Checkout repository source code
-      # Clones repository on Windows runner for native compilation
       - uses: actions/checkout@v4
-      
-      # Step 2: Install protoc (Protocol Buffers compiler) for etcd-client build
-      # etcd-client requires protoc to compile .proto files during build
-      # repo-token is required for Windows to authenticate with GitHub API
+
       - name: Install protoc
         uses: arduino/setup-protoc@v3
         with:
           version: '33.x'
           repo-token: ${{ secrets.GITHUB_TOKEN }}
-      
-      # Step 3: Install CMake for rdkafka build
-      # Required for building Kafka client dependencies on Windows
+
       - name: Install CMake
         uses: jwlawson/actions-setup-cmake@v2
         with:
           cmake-version: '3.28.x'
-      
-      # Step 4: Build Rust library in release mode
-      # Compiles libdmsc as a cdylib for x86_64-pc-windows-msvc target
-      # Default MSVC toolchain on Windows provides optimal Windows compatibility
-      # Output location: target/release/libdmsc.dll
+
       - name: Build
         run: cargo build --release
-      
-      # Step 5: Upload compiled library artifact
-      # Artifact is named rust-windows-x64 for identification
-      # Contains .dll files for Python wheel building on Windows x64 platforms
+
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: rust-windows-x64
           path: target/release/libdmsc.*
 
-  ################################################################################
-  # Job: Build Rust Library for macOS x64
-  ################################################################################
-  # Note: macOS-15-intel is x64 runner (will be available until Aug 2027)
-  # Required because newer macOS runners only support ARM64 natively
-  # This job runs on Intel-based macOS runners to produce x64 (x86_64-apple-darwin) binaries
-  # Native compilation on Intel Mac provides optimal build performance for x64 targets
-  # Compiles Rust library as cdylib for macOS x64 architecture
-  # The resulting .dylib file is suitable for use with Python on macOS x64 systems
   build-rust-macos:
-    # Use Intel-based macOS runner for x64 builds
-    # macos-15-intel provides native x86_64 environment for Intel Macs
     runs-on: macos-15-intel
     steps:
-      # Step 1: Checkout repository source code
       - uses: actions/checkout@v4
 
-      # Step 2: Install protoc for etcd-client build
       - name: Install protoc
         uses: arduino/setup-protoc@v3
         with:
           version: '33.x'
           repo-token: ${{ secrets.GITHUB_TOKEN }}
 
-      # Step 3: Install macOS dependencies via Homebrew
-      # Installs cmake and pkg-config for building native dependencies
-      # Also upgrades pip, setuptools, and wheel for Python package building
       - name: Install dependencies
         run: |
           brew update --quiet 2>/dev/null || true
           brew install --quiet cmake pkg-config 2>/dev/null || true
           brew upgrade --quiet cmake pkg-config 2>/dev/null || true
           pip install --upgrade pip setuptools wheel 2>/dev/null || true
-      
-      # Step 4: Set up Rust toolchain for x86_64-apple-darwin target
-      # Installs stable Rust and adds the macOS x64 target
+
       - name: Set up Rust
         uses: dtolnay/rust-toolchain@master
         with:
           toolchain: stable
           targets: x86_64-apple-darwin
 
-      # Step 5: Configure macOS linker for PyO3 cdylib builds
-      # This configuration allows Python C API symbols to be resolved at load time
-      # instead of link time, which is required for Python extension modules on macOS
-      # The -undefined dynamic_lookup flag tells the linker to defer symbol resolution
       - name: Configure macOS linker for PyO3
         run: |
           mkdir -p .cargo
           echo '[target.x86_64-apple-darwin]' > .cargo/config.toml
           echo 'rustflags = ["-C", "link-arg=-undefined", "-C", "link-arg=dynamic_lookup"]' >> .cargo/config.toml
-      
-      # Step 6: Build Rust library for x86_64-apple-darwin target
+
       - name: Build Rust library
         run: cargo build --release --target x86_64-apple-darwin
-      
-      # Step 7: List build artifacts for debugging
-      # Displays the contents of the release directory to verify build success
+
       - name: List artifacts
         run: |
           echo "=== Contents of target/x86_64-apple-darwin/release/ ==="
@@ -314,19 +252,13 @@ jobs:
           echo ""
           echo "=== Looking for libdmsc files ==="
           find target -name "libdmsc*" -type f 2>/dev/null || echo "No libdmsc files found"
-      
-      # Step 8: Upload compiled library artifact
-      # Artifact is named rust-macos-x64 for identification
-      # Contains .dylib files for Python wheel building on macOS x64
+
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: rust-macos-x64
           path: target/x86_64-apple-darwin/release/libdmsc.*
 
-  ################################################################################
-  # Job: Build Rust Library for macOS ARM64
-  ################################################################################
   build-rust-macos-arm64:
     runs-on: macos-15
     steps:
@@ -343,7 +275,7 @@ jobs:
           brew update --quiet 2>/dev/null || true
           brew install --quiet cmake pkg-config 2>/dev/null || true
           pip install --upgrade pip setuptools wheel 2>/dev/null || true
-      
+
       - name: Set up Rust
         uses: dtolnay/rust-toolchain@master
         with:
@@ -355,19 +287,16 @@ jobs:
           mkdir -p .cargo
           echo '[target.aarch64-apple-darwin]' > .cargo/config.toml
           echo 'rustflags = ["-C", "link-arg=-undefined", "-C", "link-arg=dynamic_lookup"]' >> .cargo/config.toml
-      
+
       - name: Build Rust library
         run: cargo build --release --target aarch64-apple-darwin
-      
+
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: rust-macos-arm64
           path: target/aarch64-apple-darwin/release/libdmsc.*
 
-  ################################################################################
-  # Job: Build Rust Library for Windows ARM64
-  ################################################################################
   build-rust-windows-arm64:
     runs-on: windows-11-arm
     steps:
@@ -392,7 +321,7 @@ jobs:
 
       - name: Build Rust library
         run: cargo build --release --target aarch64-pc-windows-msvc
-      
+
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
@@ -400,11 +329,16 @@ jobs:
           path: target/aarch64-pc-windows-msvc/release/dmsc.dll
 
   ################################################################################
-  # Job: Build C/C++ Static Libraries and Headers for Linux x64
+  # C LIBRARY COMPILATION JOBS
   ################################################################################
-  # This job compiles the DMSC library as a static library (staticlib) for C/C++ usage
-  # Generates platform-specific static libraries (.a files) and C header files
+  # These jobs compile the Rust library as a static library (.a/.lib) for C/C++
+  # integration. Static linking is preferred for C applications as it avoids
+  # runtime library dependencies.
+  #
+  # Build Output: Static library files + C header file
+  # Used by: C/C++ applications linking against DMSC
   ################################################################################
+
   build-c-libs-linux:
     runs-on: ubuntu-latest
     steps:
@@ -432,39 +366,45 @@ jobs:
       - name: Generate C headers
         run: |
           mkdir -p include
-          # Generate header file with all exported functions
-          echo "/* DMSC C API Header - Auto-generated */" > include/dmsc.h
-          echo "#ifndef DMSC_H" >> include/dmsc.h
-          echo "#define DMSC_H" >> include/dmsc.h
-          echo "" >> include/dmsc.h
-          echo "#include <stdint.h>" >> include/dmsc.h
-          echo "#include <stddef.h>" >> include/dmsc.h
-          echo "" >> include/dmsc.h
-          echo "#ifdef __cplusplus" >> include/dmsc.h
-          echo "extern \"C\" {" >> include/dmsc.h
-          echo "#endif" >> include/dmsc.h
-          echo "" >> include/dmsc.h
-          echo "/* Library Management */" >> include/dmsc.h
-          echo "int dmsc_init(void);" >> include/dmsc.h
-          echo "void dmsc_cleanup(void);" >> include/dmsc.h
-          echo "const char* dmsc_version(void);" >> include/dmsc.h
-          echo "void dmsc_string_free(char* s);" >> include/dmsc.h
-          echo "" >> include/dmsc.h
-          echo "/* Core Module */" >> include/dmsc.h
-          echo "typedef struct CDMSCAppBuilder CDMSCAppBuilder;" >> include/dmsc.h
-          echo "typedef struct CDMSCConfig CDMSCConfig;" >> include/dmsc.h
-          echo "CDMSCAppBuilder* dmsc_app_builder_new(void);" >> include/dmsc.h
-          echo "void dmsc_app_builder_free(CDMSCAppBuilder* builder);" >> include/dmsc.h
-          echo "CDMSCConfig* dmsc_config_new(void);" >> include/dmsc.h
-          echo "void dmsc_config_free(CDMSCConfig* config);" >> include/dmsc.h
-          echo "char* dmsc_config_get_string(CDMSCConfig* config, const char* key);" >> include/dmsc.h
-          echo "int dmsc_config_set_string(CDMSCConfig* config, const char* key, const char* value);" >> include/dmsc.h
-          echo "" >> include/dmsc.h
-          echo "#ifdef __cplusplus" >> include/dmsc.h
-          echo "}" >> include/dmsc.h
-          echo "#endif" >> include/dmsc.h
-          echo "" >> include/dmsc.h
-          echo "#endif /* DMSC_H */" >> include/dmsc.h
+          cat > include/dmsc.h << 'HEADER_EOF'
+/* DMSC C API Header - Auto-generated */
+/* This header provides C API declarations for DMSC library */
+#ifndef DMSC_H
+#define DMSC_H
+
+#include <stdint.h>
+#include <stddef.h>
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+/* Library Management Functions */
+int dmsc_init(void);
+void dmsc_cleanup(void);
+const char* dmsc_version(void);
+void dmsc_string_free(char* s);
+
+/* Core Module - Application Builder */
+typedef struct CDMSCAppBuilder CDMSCAppBuilder;
+typedef struct CDMSCConfig CDMSCConfig;
+
+/* Application Builder API */
+CDMSCAppBuilder* dmsc_app_builder_new(void);
+void dmsc_app_builder_free(CDMSCAppBuilder* builder);
+
+/* Configuration API */
+CDMSCConfig* dmsc_config_new(void);
+void dmsc_config_free(CDMSCConfig* config);
+char* dmsc_config_get_string(CDMSCConfig* config, const char* key);
+int dmsc_config_set_string(CDMSCConfig* config, const char* key, const char* value);
+
+#ifdef __cplusplus
+}
+#endif
+
+#endif /* DMSC_H */
+HEADER_EOF
 
       - name: Upload C library artifact
         uses: actions/upload-artifact@v4
@@ -474,9 +414,6 @@ jobs:
             target/release/libdmsc.a
             include/dmsc.h
 
-  ################################################################################
-  # Job: Build C/C++ Static Libraries and Headers for Linux ARM64
-  ################################################################################
   build-c-libs-linux-arm64:
     runs-on: ubuntu-24.04-arm
     steps:
@@ -504,38 +441,45 @@ jobs:
       - name: Generate C headers
         run: |
           mkdir -p include
-          echo "/* DMSC C API Header - Auto-generated */" > include/dmsc.h
-          echo "#ifndef DMSC_H" >> include/dmsc.h
-          echo "#define DMSC_H" >> include/dmsc.h
-          echo "" >> include/dmsc.h
-          echo "#include <stdint.h>" >> include/dmsc.h
-          echo "#include <stddef.h>" >> include/dmsc.h
-          echo "" >> include/dmsc.h
-          echo "#ifdef __cplusplus" >> include/dmsc.h
-          echo "extern \"C\" {" >> include/dmsc.h
-          echo "#endif" >> include/dmsc.h
-          echo "" >> include/dmsc.h
-          echo "/* Library Management */" >> include/dmsc.h
-          echo "int dmsc_init(void);" >> include/dmsc.h
-          echo "void dmsc_cleanup(void);" >> include/dmsc.h
-          echo "const char* dmsc_version(void);" >> include/dmsc.h
-          echo "void dmsc_string_free(char* s);" >> include/dmsc.h
-          echo "" >> include/dmsc.h
-          echo "/* Core Module */" >> include/dmsc.h
-          echo "typedef struct CDMSCAppBuilder CDMSCAppBuilder;" >> include/dmsc.h
-          echo "typedef struct CDMSCConfig CDMSCConfig;" >> include/dmsc.h
-          echo "CDMSCAppBuilder* dmsc_app_builder_new(void);" >> include/dmsc.h
-          echo "void dmsc_app_builder_free(CDMSCAppBuilder* builder);" >> include/dmsc.h
-          echo "CDMSCConfig* dmsc_config_new(void);" >> include/dmsc.h
-          echo "void dmsc_config_free(CDMSCConfig* config);" >> include/dmsc.h
-          echo "char* dmsc_config_get_string(CDMSCConfig* config, const char* key);" >> include/dmsc.h
-          echo "int dmsc_config_set_string(CDMSCConfig* config, const char* key, const char* value);" >> include/dmsc.h
-          echo "" >> include/dmsc.h
-          echo "#ifdef __cplusplus" >> include/dmsc.h
-          echo "}" >> include/dmsc.h
-          echo "#endif" >> include/dmsc.h
-          echo "" >> include/dmsc.h
-          echo "#endif /* DMSC_H */" >> include/dmsc.h
+          cat > include/dmsc.h << 'HEADER_EOF'
+/* DMSC C API Header - Auto-generated for ARM64 Linux */
+/* This header provides C API declarations for DMSC library */
+#ifndef DMSC_H
+#define DMSC_H
+
+#include <stdint.h>
+#include <stddef.h>
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+/* Library Management Functions */
+int dmsc_init(void);
+void dmsc_cleanup(void);
+const char* dmsc_version(void);
+void dmsc_string_free(char* s);
+
+/* Core Module - Application Builder */
+typedef struct CDMSCAppBuilder CDMSCAppBuilder;
+typedef struct CDMSCConfig CDMSCConfig;
+
+/* Application Builder API */
+CDMSCAppBuilder* dmsc_app_builder_new(void);
+void dmsc_app_builder_free(CDMSCAppBuilder* builder);
+
+/* Configuration API */
+CDMSCConfig* dmsc_config_new(void);
+void dmsc_config_free(CDMSCConfig* config);
+char* dmsc_config_get_string(CDMSCConfig* config, const char* key);
+int dmsc_config_set_string(CDMSCConfig* config, const char* key, const char* value);
+
+#ifdef __cplusplus
+}
+#endif
+
+#endif /* DMSC_H */
+HEADER_EOF
 
       - name: Upload C library artifact
         uses: actions/upload-artifact@v4
@@ -545,9 +489,6 @@ jobs:
             target/release/libdmsc.a
             include/dmsc.h
 
-  ################################################################################
-  # Job: Build C/C++ Static Libraries and Headers for Windows x64
-  ################################################################################
   build-c-libs-windows:
     runs-on: windows-latest
     steps:
@@ -571,7 +512,7 @@ jobs:
         shell: cmd
         run: |
           mkdir include 2>nul
-          echo /* DMSC C API Header - Auto-generated */ > include\dmsc.h
+          echo /* DMSC C API Header - Auto-generated for Windows x64 */ > include\dmsc.h
           echo #ifndef DMSC_H >> include\dmsc.h
           echo #define DMSC_H >> include\dmsc.h
           echo. >> include\dmsc.h
@@ -582,17 +523,21 @@ jobs:
           echo extern "C" { >> include\dmsc.h
           echo #endif >> include\dmsc.h
           echo. >> include\dmsc.h
-          echo /* Library Management */ >> include\dmsc.h
+          echo /* Library Management Functions */ >> include\dmsc.h
           echo int dmsc_init(void); >> include\dmsc.h
           echo void dmsc_cleanup(void); >> include\dmsc.h
           echo const char* dmsc_version(void); >> include\dmsc.h
           echo void dmsc_string_free(char* s); >> include\dmsc.h
           echo. >> include\dmsc.h
-          echo /* Core Module */ >> include\dmsc.h
+          echo /* Core Module - Application Builder */ >> include\dmsc.h
           echo typedef struct CDMSCAppBuilder CDMSCAppBuilder; >> include\dmsc.h
           echo typedef struct CDMSCConfig CDMSCConfig; >> include\dmsc.h
+          echo. >> include\dmsc.h
+          echo /* Application Builder API */ >> include\dmsc.h
           echo CDMSCAppBuilder* dmsc_app_builder_new(void); >> include\dmsc.h
           echo void dmsc_app_builder_free(CDMSCAppBuilder* builder); >> include\dmsc.h
+          echo. >> include\dmsc.h
+          echo /* Configuration API */ >> include\dmsc.h
           echo CDMSCConfig* dmsc_config_new(void); >> include\dmsc.h
           echo void dmsc_config_free(CDMSCConfig* config); >> include\dmsc.h
           echo char* dmsc_config_get_string(CDMSCConfig* config, const char* key); >> include\dmsc.h
@@ -602,7 +547,7 @@ jobs:
           echo } >> include\dmsc.h
           echo #endif >> include\dmsc.h
           echo. >> include\dmsc.h
-          echo #endif /* DMSC_H */ >> include\dmsc.h
+          echo #endif >> include\dmsc.h
 
       - name: Upload C library artifact
         uses: actions/upload-artifact@v4
@@ -612,9 +557,6 @@ jobs:
             target/release/dmsc.lib
             include/dmsc.h
 
-  ################################################################################
-  # Job: Build C/C++ Static Libraries and Headers for macOS x64
-  ################################################################################
   build-c-libs-macos:
     runs-on: macos-15-intel
     steps:
@@ -643,38 +585,45 @@ jobs:
       - name: Generate C headers
         run: |
           mkdir -p include
-          echo "/* DMSC C API Header - Auto-generated */" > include/dmsc.h
-          echo "#ifndef DMSC_H" >> include/dmsc.h
-          echo "#define DMSC_H" >> include/dmsc.h
-          echo "" >> include/dmsc.h
-          echo "#include <stdint.h>" >> include/dmsc.h
-          echo "#include <stddef.h>" >> include/dmsc.h
-          echo "" >> include/dmsc.h
-          echo "#ifdef __cplusplus" >> include/dmsc.h
-          echo "extern \"C\" {" >> include/dmsc.h
-          echo "#endif" >> include/dmsc.h
-          echo "" >> include/dmsc.h
-          echo "/* Library Management */" >> include/dmsc.h
-          echo "int dmsc_init(void);" >> include/dmsc.h
-          echo "void dmsc_cleanup(void);" >> include/dmsc.h
-          echo "const char* dmsc_version(void);" >> include/dmsc.h
-          echo "void dmsc_string_free(char* s);" >> include/dmsc.h
-          echo "" >> include/dmsc.h
-          echo "/* Core Module */" >> include/dmsc.h
-          echo "typedef struct CDMSCAppBuilder CDMSCAppBuilder;" >> include/dmsc.h
-          echo "typedef struct CDMSCConfig CDMSCConfig;" >> include/dmsc.h
-          echo "CDMSCAppBuilder* dmsc_app_builder_new(void);" >> include/dmsc.h
-          echo "void dmsc_app_builder_free(CDMSCAppBuilder* builder);" >> include/dmsc.h
-          echo "CDMSCConfig* dmsc_config_new(void);" >> include/dmsc.h
-          echo "void dmsc_config_free(CDMSCConfig* config);" >> include/dmsc.h
-          echo "char* dmsc_config_get_string(CDMSCConfig* config, const char* key);" >> include/dmsc.h
-          echo "int dmsc_config_set_string(CDMSCConfig* config, const char* key, const char* value);" >> include/dmsc.h
-          echo "" >> include/dmsc.h
-          echo "#ifdef __cplusplus" >> include/dmsc.h
-          echo "}" >> include/dmsc.h
-          echo "#endif" >> include/dmsc.h
-          echo "" >> include/dmsc.h
-          echo "#endif /* DMSC_H */" >> include/dmsc.h
+          cat > include/dmsc.h << 'HEADER_EOF'
+/* DMSC C API Header - Auto-generated for macOS x64 */
+/* This header provides C API declarations for DMSC library */
+#ifndef DMSC_H
+#define DMSC_H
+
+#include <stdint.h>
+#include <stddef.h>
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+/* Library Management Functions */
+int dmsc_init(void);
+void dmsc_cleanup(void);
+const char* dmsc_version(void);
+void dmsc_string_free(char* s);
+
+/* Core Module - Application Builder */
+typedef struct CDMSCAppBuilder CDMSCAppBuilder;
+typedef struct CDMSCConfig CDMSCConfig;
+
+/* Application Builder API */
+CDMSCAppBuilder* dmsc_app_builder_new(void);
+void dmsc_app_builder_free(CDMSCAppBuilder* builder);
+
+/* Configuration API */
+CDMSCConfig* dmsc_config_new(void);
+void dmsc_config_free(CDMSCConfig* config);
+char* dmsc_config_get_string(CDMSCConfig* config, const char* key);
+int dmsc_config_set_string(CDMSCConfig* config, const char* key, const char* value);
+
+#ifdef __cplusplus
+}
+#endif
+
+#endif /* DMSC_H */
+HEADER_EOF
 
       - name: Upload C library artifact
         uses: actions/upload-artifact@v4
@@ -684,9 +633,6 @@ jobs:
             target/x86_64-apple-darwin/release/libdmsc.a
             include/dmsc.h
 
-  ################################################################################
-  # Job: Build C/C++ Static Libraries for macOS ARM64
-  ################################################################################
   build-c-libs-macos-arm64:
     runs-on: macos-15
     steps:
@@ -715,38 +661,45 @@ jobs:
       - name: Generate C headers
         run: |
           mkdir -p include
-          echo "/* DMSC C API Header - Auto-generated */" > include/dmsc.h
-          echo "#ifndef DMSC_H" >> include/dmsc.h
-          echo "#define DMSC_H" >> include/dmsc.h
-          echo "" >> include/dmsc.h
-          echo "#include <stdint.h>" >> include/dmsc.h
-          echo "#include <stddef.h>" >> include/dmsc.h
-          echo "" >> include/dmsc.h
-          echo "#ifdef __cplusplus" >> include/dmsc.h
-          echo "extern \"C\" {" >> include/dmsc.h
-          echo "#endif" >> include/dmsc.h
-          echo "" >> include/dmsc.h
-          echo "/* Library Management */" >> include/dmsc.h
-          echo "int dmsc_init(void);" >> include/dmsc.h
-          echo "void dmsc_cleanup(void);" >> include/dmsc.h
-          echo "const char* dmsc_version(void);" >> include/dmsc.h
-          echo "void dmsc_string_free(char* s);" >> include/dmsc.h
-          echo "" >> include/dmsc.h
-          echo "/* Core Module */" >> include/dmsc.h
-          echo "typedef struct CDMSCAppBuilder CDMSCAppBuilder;" >> include/dmsc.h
-          echo "typedef struct CDMSCConfig CDMSCConfig;" >> include/dmsc.h
-          echo "CDMSCAppBuilder* dmsc_app_builder_new(void);" >> include/dmsc.h
-          echo "void dmsc_app_builder_free(CDMSCAppBuilder* builder);" >> include/dmsc.h
-          echo "CDMSCConfig* dmsc_config_new(void);" >> include/dmsc.h
-          echo "void dmsc_config_free(CDMSCConfig* config);" >> include/dmsc.h
-          echo "char* dmsc_config_get_string(CDMSCConfig* config, const char* key);" >> include/dmsc.h
-          echo "int dmsc_config_set_string(CDMSCConfig* config, const char* key, const char* value);" >> include/dmsc.h
-          echo "" >> include/dmsc.h
-          echo "#ifdef __cplusplus" >> include/dmsc.h
-          echo "}" >> include/dmsc.h
-          echo "#endif" >> include/dmsc.h
-          echo "" >> include/dmsc.h
-          echo "#endif /* DMSC_H */" >> include/dmsc.h
+          cat > include/dmsc.h << 'HEADER_EOF'
+/* DMSC C API Header - Auto-generated for macOS ARM64 */
+/* This header provides C API declarations for DMSC library */
+#ifndef DMSC_H
+#define DMSC_H
+
+#include <stdint.h>
+#include <stddef.h>
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+/* Library Management Functions */
+int dmsc_init(void);
+void dmsc_cleanup(void);
+const char* dmsc_version(void);
+void dmsc_string_free(char* s);
+
+/* Core Module - Application Builder */
+typedef struct CDMSCAppBuilder CDMSCAppBuilder;
+typedef struct CDMSCConfig CDMSCConfig;
+
+/* Application Builder API */
+CDMSCAppBuilder* dmsc_app_builder_new(void);
+void dmsc_app_builder_free(CDMSCAppBuilder* builder);
+
+/* Configuration API */
+CDMSCConfig* dmsc_config_new(void);
+void dmsc_config_free(CDMSCConfig* config);
+char* dmsc_config_get_string(CDMSCConfig* config, const char* key);
+int dmsc_config_set_string(CDMSCConfig* config, const char* key, const char* value);
+
+#ifdef __cplusplus
+}
+#endif
+
+#endif /* DMSC_H */
+HEADER_EOF
 
       - name: Upload C library artifact
         uses: actions/upload-artifact@v4
@@ -756,9 +709,6 @@ jobs:
             target/aarch64-apple-darwin/release/libdmsc.a
             include/dmsc.h
 
-  ################################################################################
-  # Job: Build C/C++ Static Libraries for Windows ARM64
-  ################################################################################
   build-c-libs-windows-arm64:
     runs-on: windows-11-arm
     steps:
@@ -787,38 +737,45 @@ jobs:
       - name: Generate C headers
         run: |
           mkdir -p include
-          echo "/* DMSC C API Header - Auto-generated */" > include/dmsc.h
-          echo "#ifndef DMSC_H" >> include/dmsc.h
-          echo "#define DMSC_H" >> include/dmsc.h
-          echo "" >> include/dmsc.h
-          echo "#include <stdint.h>" >> include/dmsc.h
-          echo "#include <stddef.h>" >> include/dmsc.h
-          echo "" >> include/dmsc.h
-          echo "#ifdef __cplusplus" >> include/dmsc.h
-          echo "extern \"C\" {" >> include/dmsc.h
-          echo "#endif" >> include/dmsc.h
-          echo "" >> include/dmsc.h
-          echo "/* Library Management */" >> include/dmsc.h
-          echo "int dmsc_init(void);" >> include/dmsc.h
-          echo "void dmsc_cleanup(void);" >> include/dmsc.h
-          echo "const char* dmsc_version(void);" >> include/dmsc.h
-          echo "void dmsc_string_free(char* s);" >> include/dmsc.h
-          echo "" >> include/dmsc.h
-          echo "/* Core Module */" >> include/dmsc.h
-          echo "typedef struct CDMSCAppBuilder CDMSCAppBuilder;" >> include/dmsc.h
-          echo "typedef struct CDMSCConfig CDMSCConfig;" >> include/dmsc.h
-          echo "CDMSCAppBuilder* dmsc_app_builder_new(void);" >> include/dmsc.h
-          echo "void dmsc_app_builder_free(CDMSCAppBuilder* builder);" >> include/dmsc.h
-          echo "CDMSCConfig* dmsc_config_new(void);" >> include/dmsc.h
-          echo "void dmsc_config_free(CDMSCConfig* config);" >> include/dmsc.h
-          echo "char* dmsc_config_get_string(CDMSCConfig* config, const char* key);" >> include/dmsc.h
-          echo "int dmsc_config_set_string(CDMSCConfig* config, const char* key, const char* value);" >> include/dmsc.h
-          echo "" >> include/dmsc.h
-          echo "#ifdef __cplusplus" >> include/dmsc.h
-          echo "}" >> include/dmsc.h
-          echo "#endif" >> include/dmsc.h
-          echo "" >> include/dmsc.h
-          echo "#endif /* DMSC_H */" >> include/dmsc.h
+          cat > include/dmsc.h << 'HEADER_EOF'
+/* DMSC C API Header - Auto-generated for Windows ARM64 */
+/* This header provides C API declarations for DMSC library */
+#ifndef DMSC_H
+#define DMSC_H
+
+#include <stdint.h>
+#include <stddef.h>
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+/* Library Management Functions */
+int dmsc_init(void);
+void dmsc_cleanup(void);
+const char* dmsc_version(void);
+void dmsc_string_free(char* s);
+
+/* Core Module - Application Builder */
+typedef struct CDMSCAppBuilder CDMSCAppBuilder;
+typedef struct CDMSCConfig CDMSCConfig;
+
+/* Application Builder API */
+CDMSCAppBuilder* dmsc_app_builder_new(void);
+void dmsc_app_builder_free(CDMSCAppBuilder* builder);
+
+/* Configuration API */
+CDMSCConfig* dmsc_config_new(void);
+void dmsc_config_free(CDMSCConfig* config);
+char* dmsc_config_get_string(CDMSCConfig* config, const char* key);
+int dmsc_config_set_string(CDMSCConfig* config, const char* key, const char* value);
+
+#ifdef __cplusplus
+}
+#endif
+
+#endif /* DMSC_H */
+HEADER_EOF
 
       - name: Upload C library artifact
         uses: actions/upload-artifact@v4
@@ -829,65 +786,40 @@ jobs:
             include/dmsc.h
 
   ################################################################################
-  # Job: Build Python Wheels for All Platforms
+  # PYTHON WHEEL BUILD JOB (MATRIX)
   ################################################################################
-  # This matrix job generates distributable Python wheel packages (.whl files) for all
-  # supported combinations of platforms, architectures, and Python versions (3.8 through 3.14)
+  # This job generates Python wheel packages (.whl) for all supported platforms,
+  # architectures, and Python versions. It uses maturin as the build tool to
+  # compile the Rust library and generate Python bindings in a single step.
   #
-  # Matrix Configuration Strategy:
-  # - Each matrix entry specifies a unique combination of Python version, runner OS, Rust target,
-  #   and manylinux compatibility tag (for Linux wheels)
-  # - Linux builds use Docker container with manylinux image for glibc compatibility
-  # - macOS and Windows builds use native runners as they use platform-specific formats
-  # - fail-fast: false ensures all matrix combinations are attempted even if one fails
+  # MATRIX STRATEGY:
+  # The matrix generates 42 unique build combinations:
+  # - 7 Python versions (3.8-3.14)
+  # - 6 platform/architecture targets
   #
-  # Platform and Architecture Coverage:
-  # - Linux x64 (x86_64-unknown-linux-gnu): manylinux2014 Docker image for glibc 2.17 compatibility
-  # - Linux arm64 (aarch64-unknown-linux-gnu): manylinux_2_17 Docker image for glibc 2.17 compatibility
-  # - Windows x64 (x86_64-pc-windows-msvc): native windows-latest runner
-  # - macOS x64 (x86_64-apple-darwin): macos-15-intel runner
-  # - macOS arm64 (aarch64-apple-darwin): macos-15 native ARM64 runner
+  # For Linux builds, a manylinux Docker container is used to ensure binary
+  # compatibility with older glibc versions (2.17+).
   #
-  # Python Version Support: 3.8, 3.9, 3.10, 3.11, 3.12, 3.13, 3.14
+  # For macOS and Windows, native runners are used with platform-specific formats.
   #
-  # Build Process:
-  # 1. Checkout repository
-  # 2. Set up Docker for Linux builds (manylinux compatibility)
-  # 3. Set up Python interpreter matching matrix.python version
-  # 4. Install maturin build tool and pip dependencies
-  # 5. Build wheel using maturin with appropriate target and compatibility settings
-  # 6. Upload built wheel artifact for collection in release
+  # BUILD OUTPUT: Python wheel files (.whl) installable via pip
+  # ARTIFACT NAME: python-{target}-{python_version}
+  ################################################################################
+
   build-python:
-    # Use the runner specified in the matrix configuration
     runs-on: ${{ matrix.runs-on }}
-    
-    # Environment variables for the job
     env:
-      # Disable pip version check to avoid unnecessary warnings
       PIP_DISABLE_PIP_VERSION_CHECK: '1'
-      # Increase Cargo HTTP timeout for slower networks
       CARGO_HTTP_TIMEOUT: '60'
-      # Use git CLI for fetching to improve compatibility
       CARGO_NET_GIT_FETCH_WITH_CLI: 'true'
-    
-    # Matrix strategy configuration
+
     strategy:
-      # Continue building other matrix combinations even if one fails
-      # This ensures maximum coverage even with partial failures
       fail-fast: false
-      
-      # Matrix defines all platform/architecture/Python combinations to build
       matrix:
         include:
-          ##########################################################################
-          # Linux x64 Matrix Entries
-          ##########################################################################
-          # Using manylinux_2_17 for maximum compatibility with older systems:
-          # - Ubuntu 18.04 (glibc 2.27), Ubuntu 16.04 (glibc 2.23)
-          # - CentOS 7 (glibc 2.17), Debian 9+ (glibc 2.24+)
-          # - RHEL 7+, Oracle Linux 7+
-          # This ensures wheels work on systems with glibc 2.17 or newer
-          
+          # Linux x64: 7 Python versions (3.8-3.14)
+          # Uses manylinux_2_17 container for glibc 2.17+ compatibility
+          # Supports: Ubuntu 18.04+, CentOS 7+, Debian 9+, RHEL 7+
           - python: '3.8'
             runs-on: ubuntu-latest
             target: x86_64-unknown-linux-gnu
@@ -923,17 +855,10 @@ jobs:
             target: x86_64-unknown-linux-gnu
             manylinux: manylinux_2_17
             docker: true
-          
-          ##########################################################################
-          # Linux ARM64 Matrix Entries
-          ##########################################################################
-          # Native ARM64 builds on ubuntu-24.04-arm with manylinux container
-          # Using manylinux_2_17 for maximum compatibility with older ARM64 systems:
-          # - Ubuntu 18.04 ARM64, CentOS 7 ARM64, Debian 9+ ARM64
-          # - AWS Graviton instances with older Amazon Linux
-          # - Raspberry Pi OS based on Debian 9+
-          # docker: true enables manylinux container for glibc compatibility
-          
+
+          # Linux ARM64: 7 Python versions (3.8-3.14)
+          # Native ARM64 build on ubuntu-24.04-arm runner
+          # Supports: AWS Graviton, Raspberry Pi OS, older ARM64 Linux
           - python: '3.8'
             runs-on: ubuntu-24.04-arm
             target: aarch64-unknown-linux-gnu
@@ -969,13 +894,9 @@ jobs:
             target: aarch64-unknown-linux-gnu
             manylinux: manylinux_2_17
             docker: true
-          
-          ##########################################################################
-          # Windows x64 Matrix Entries
-          ##########################################################################
-          # null manylinux indicates platform-specific wheel format (win-amd64)
-          # Uses Windows-specific ABI (x86_64-pc-windows-msvc) for optimal performance
-          
+
+          # Windows x64: 7 Python versions (3.8-3.14)
+          # Native Windows build using MSVC toolchain
           - python: '3.8'
             runs-on: windows-latest
             target: x86_64-pc-windows-msvc
@@ -1004,13 +925,9 @@ jobs:
             runs-on: windows-latest
             target: x86_64-pc-windows-msvc
             manylinux: null
-          
-          ##########################################################################
-          # Windows ARM64 Matrix Entries
-          ##########################################################################
-          # Native Windows ARM64 builds on windows-11-arm runner
-          # Python ARM64 interpreters on Windows only support 3.11+
-          
+
+          # Windows ARM64: 4 Python versions (3.11-3.14)
+          # Python ARM64 on Windows only supports 3.11+
           - python: '3.11'
             runs-on: windows-11-arm
             target: aarch64-pc-windows-msvc
@@ -1027,14 +944,10 @@ jobs:
             runs-on: windows-11-arm
             target: aarch64-pc-windows-msvc
             manylinux: null
-          
-          ##########################################################################
-          # macOS x64 Matrix Entries
-          ##########################################################################
-          # Note: macOS-15-intel is x64 runner (will be available until Aug 2027)
-          # macOS wheels use null manylinux as they are platform-specific (.whl format)
-          # macOS-15-intel runner required because modern macOS runners only support ARM64
-          
+
+          # macOS x64: 7 Python versions (3.8-3.14)
+          # Uses macos-15-intel runner (available until Aug 2027)
+          # Newer macOS runners only support ARM64 natively
           - python: '3.8'
             runs-on: macos-15-intel
             target: x86_64-apple-darwin
@@ -1063,14 +976,9 @@ jobs:
             runs-on: macos-15-intel
             target: x86_64-apple-darwin
             manylinux: null
-          
-          ##########################################################################
-          # macOS ARM64 Matrix Entries
-          ##########################################################################
-          # Requires Python 3.8+ with universal2 support or arm64-specific build
-          # Native ARM64 compilation provides optimal performance on Apple Silicon
-          # macOS-15 runner provides ARM64-native environment for aarch64-apple-darwin target
-          
+
+          # macOS ARM64: 7 Python versions (3.8-3.14)
+          # Native Apple Silicon build on macos-15 runner
           - python: '3.8'
             runs-on: macos-15
             target: aarch64-apple-darwin
@@ -1099,74 +1007,51 @@ jobs:
             runs-on: macos-15
             target: aarch64-apple-darwin
             manylinux: null
-    
-    # Build steps executed for each matrix combination
+
     steps:
-      # Step 1: Checkout repository source code to the workflow runner
-      # This action clones the repository contents, making source code and configuration
-      # files available for the build process. Uses v4 for latest features and security.
       - uses: actions/checkout@v4
-      
-      # Step 2: Set up Python interpreter matching matrix.python version
-      # Installs the specified Python version using actions/setup-python@v5
-      # The Python version is determined by the matrix configuration (3.8-3.14)
-      # This enables running Python-based build tools and tests
+
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python }}
-      
-      # Step 3: Install Rust stable toolchain for compilation
-      # Uses dtolnay/rust-toolchain to install Rust stable channel
-      # This modern action replaces deprecated actions-rs/toolchain and supports
-      # the new Environment Files approach for output handling
-      # Required for compiling the Rust library component of the package
-      # The toolchain is added to PATH for cargo and rustc access
+
       - name: Set up Rust
         uses: dtolnay/rust-toolchain@master
         with:
           toolchain: stable
-      
-      # Step 4: Configure macOS linker settings for dynamic library linking
-      # Conditional: Only runs when targeting macOS platforms (x64 or ARM64)
-      # Creates .cargo/config.toml with linker flags to allow undefined symbols
-      # This is required for PyO3 bindings to work correctly on macOS
-      # The -undefined dynamic_lookup flag prevents linking errors for Python symbols
-      # Also fixes DNS issues on macos-15-intel runner by flushing DNS cache
+
       - name: Configure macOS linker
         if: matrix.target == 'x86_64-apple-darwin' || matrix.target == 'aarch64-apple-darwin'
         run: |
-          # Fix DNS resolution issues on macOS Intel runners
           sudo dscacheutil -flushcache 2>/dev/null || true
           sudo killall -HUP mDNSResponder 2>/dev/null || true
-          
-          # Configure git for better network handling
+
           git config --global http.postBuffer 524288000
           git config --global http.lowSpeedLimit 0
           git config --global http.lowSpeedTime 999999
-          
-          mkdir -p .cargo
-          echo '[target.x86_64-apple-darwin]' > .cargo/config.toml
-          echo 'rustflags = ["-C", "link-arg=-undefined", "-C", "link-arg=dynamic_lookup"]' >> .cargo/config.toml
-          echo '' >> .cargo/config.toml
-          echo '[target.aarch64-apple-darwin]' >> .cargo/config.toml
-          echo 'rustflags = ["-C", "link-arg=-undefined", "-C", "link-arg=dynamic_lookup"]' >> .cargo/config.toml
-          echo '' >> .cargo/config.toml
-          echo '[net]' >> .cargo/config.toml
-          echo 'retry = 5' >> .cargo/config.toml
-          echo '[http]' >> .cargo/config.toml
-          echo 'timeout = 60' >> .cargo/config.toml
 
-      # Step 4b: Install protoc for macOS (required by etcd-client)
+          mkdir -p .cargo
+          cat >> .cargo/config.toml << 'CARGO_EOF'
+[target.x86_64-apple-darwin]
+rustflags = ["-C", "link-arg=-undefined", "-C", "link-arg=dynamic_lookup"]
+
+[target.aarch64-apple-darwin]
+rustflags = ["-C", "link-arg=-undefined", "-C", "link-arg=dynamic_lookup"]
+
+[net]
+retry = 5
+
+[http]
+timeout = 60
+CARGO_EOF
+
       - name: Install protoc for macOS
         if: runner.os == 'macOS'
         run: |
           brew install --quiet protobuf 2>/dev/null || true
           echo "PROTOC=$(brew --prefix protobuf)/bin/protoc" >> $GITHUB_ENV
 
-      # Step 5: Cache pip dependencies to avoid rate limits
-      # Using GitHub Actions cache to store pip packages
-      # This significantly speeds up builds and avoids PyPI rate limits
       - name: Cache pip packages
         uses: actions/cache@v4
         with:
@@ -1178,9 +1063,7 @@ jobs:
           restore-keys: |
             pip-${{ matrix.python }}-${{ matrix.target }}-
             pip-${{ matrix.python }}-
-      
-      # Step 6: Cache Rust cargo registry to speed up builds
-      # Caching cargo registry and target directory significantly reduces build times
+
       - name: Cache Rust dependencies
         uses: actions/cache@v4
         with:
@@ -1193,9 +1076,6 @@ jobs:
             rust-${{ matrix.target }}-
             rust-
 
-      # Step 7: Install protoc for Windows and Linux builds (required by etcd-client)
-      # Conditional: Only runs on Windows and Linux platforms (not macOS)
-      # protoc is needed to compile .proto files for the etcd-client dependency
       - name: Install protoc
         if: runner.os == 'Windows' || runner.os == 'Linux'
         uses: arduino/setup-protoc@v3
@@ -1203,23 +1083,12 @@ jobs:
           version: '33.x'
           repo-token: ${{ secrets.GITHUB_TOKEN }}
 
-      # Step 8: Install system dependencies for rdkafka on Linux
-      # Conditional: Only runs on Linux platforms
-      # Installs curl and SASL libraries required by the Kafka C client
       - name: Install rdkafka dependencies
         if: runner.os == 'Linux'
         run: |
           sudo apt-get update
           sudo apt-get install -y libcurl4-openssl-dev libsasl2-dev
 
-      # Step 9: Configure OpenSSL for static linking on Linux builds
-      # This ensures all OpenSSL dependencies are statically linked into the binary
-      # to avoid "libcrypto-*.so.3 not found" errors during auditwheel repair
-      # OPENSSL_STATIC=1: Links OpenSSL statically
-      # VENDORED_OPENSSL_SSL: Forces openssl crate to use vendored OpenSSL
-      # OPENSSL_LIB_DIR and OPENSSL_INCLUDE_DIR: Must match target architecture
-      # - x86_64: /usr/lib/x86_64-linux-gnu, /usr/include/openssl
-      # - aarch64: /usr/lib/aarch64-linux-gnu, /usr/include/openssl
       - name: Configure OpenSSL static linking
         if: runner.os == 'Linux'
         run: |
@@ -1233,54 +1102,31 @@ jobs:
             echo "OPENSSL_LIB_DIR=/usr/lib/x86_64-linux-gnu" >> $GITHUB_ENV
           fi
           echo "OPENSSL_INCLUDE_DIR=/usr/include/openssl" >> $GITHUB_ENV
-      
-      # Step 10: Configure Rust linker for static linking on Linux builds
-      # This ensures the final binary is fully statically linked
-      # Configures build profile settings for optimal release builds
+
       - name: Configure static linking
         if: runner.os == 'Linux'
         run: |
           mkdir -p .cargo
-          printf '[profile.release]\n' > .cargo/config.toml
-          printf 'lto = true\ncodegen-units = 1\nstrip = true\n' >> .cargo/config.toml
-      
-      # Step 11: Upgrade pip and install build dependencies
-      # Upgrading pip before installation helps avoid API rate limits
-      # and ensures using the latest versions of build tools
-      # Using pip cache to avoid repeated downloads from PyPI
-      # Configures Tsinghua University PyPI mirror for faster downloads in China
+          cat > .cargo/config.toml << 'CARGO_EOF'
+[profile.release]
+lto = true
+codegen-units = 1
+strip = true
+CARGO_EOF
+
       - name: Upgrade pip
         run: |
           python -m pip install --upgrade pip setuptools wheel
           pip config set global.index-url https://pypi.tuna.tsinghua.edu.cn/simple
 
-      # Step 12: Install build dependencies (maturin and auditwheel)
-      # maturin: Rust/Python build tool that creates Python wheels from Rust libraries
-      # auditwheel: Tool for repairing Linux wheel distribution tags
-      # Both are essential for building portable Python packages with native extensions
-      # Using official PyPI for maturin to ensure latest version is available
       - name: Install dependencies
         run: pip install maturin auditwheel -i https://pypi.org/simple --quiet
-      
-      # Step 13: Build Python wheel for non-Docker platforms (macOS, Windows)
-      # Conditional: Executes when docker: false (native builds without manylinux container)
-      # Uses maturin to build the wheel with release optimizations
-      # Outputs to dist/ directory for artifact collection
-      # --target specifies the Rust target triple for cross-compilation if needed
-      # Note: Linux ARM64 now uses manylinux container for glibc compatibility
+
       - name: Build wheel (non-Docker)
         if: matrix.docker != true
         run: |
           maturin build --release --target ${{ matrix.target }} -o dist
-      
-      # Step 14: Build Linux wheel using manylinux Docker container
-      # Conditional: Executes when docker: true (Linux builds)
-      # Uses maturin-action with manylinux support for glibc compatibility
-      # This ensures the wheel is compatible with older glibc versions
-      # The manylinux_2_17 tag supports glibc 2.17+ (CentOS 7+, Ubuntu 18.04+)
-      # before-script-linux installs build dependencies for vendored libraries:
-      # - perl-core: Required for building vendored OpenSSL
-      # - zlib-devel: Required for compression support in OpenSSL
+
       - name: Build Linux wheel with manylinux
         if: matrix.docker == true
         uses: PyO3/maturin-action@v1
@@ -1291,20 +1137,12 @@ jobs:
           args: --release -o dist
           before-script-linux: |
             yum install -y perl-core zlib-devel cmake3
-      
-      # Step 15: List generated wheel files for debugging and verification
-      # Shell: bash required for glob patterns and ls command
-      # Displays all files in dist/ directory or shows message if empty
-      # Helps verify wheel generation was successful
+
       - name: List generated files
         shell: bash
         run: |
           ls -la dist/ 2>/dev/null || echo "No files in dist"
-      
-      # Step 16: Upload built wheel artifact for collection and release
-      # Uses actions/upload-artifact@v4 to upload wheel files
-      # Artifact name includes target platform and Python version for identification
-      # Artifacts are available for 90 days by default in GitHub Actions
+
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
@@ -1312,27 +1150,27 @@ jobs:
           path: dist/
 
   ################################################################################
-  # Job: Publish to PyPI (Production Releases)
+  # PYPI PUBLISHING JOBS
   ################################################################################
-  # Publishes Python wheels to PyPI (Python Package Index) when a GitHub Release is published
-  # Only runs when GitHub Release title does NOT contain "Test"
-  # This makes the package available via pip install
+  # These jobs publish the built Python wheels to PyPI (or TestPyPI for testing).
+  # They run only when a GitHub Release is published and depend on the build-python
+  # job completing successfully.
+  #
+  # publish-pypi:   Publishes to production PyPI (for production releases)
+  # publish-testpypi: Publishes to TestPyPI (for test releases)
+  #
+  # PUBLICATION REQUIREMENTS:
+  # - GitHub secret PYPI_API_TOKEN must be configured
+  # - Release title determines target repository:
+  #   - Contains "Test": → TestPyPI
+  #   - No "Test":        → PyPI (production)
   ################################################################################
+
   publish-pypi:
-    # Depends on build-python job completing successfully
     needs: build-python
-    
-    # Conditional: Only run for production releases (not test releases)
-    # Checks if this is a release event and the release name doesn't contain "Test"
     if: github.event_name == 'release' && !contains(github.event.release.name, 'Test')
-    
-    # Use Ubuntu latest for publishing
     runs-on: ubuntu-latest
-    
     steps:
-      # Step 1: Download all wheel artifacts from build-python job
-      # Uses pattern matching to download all python-* artifacts
-      # merge-multiple combines all artifacts into a single directory
       - name: Download all artifacts
         uses: actions/download-artifact@v4
         with:
@@ -1340,19 +1178,14 @@ jobs:
           pattern: python-*
           merge-multiple: true
 
-      # Step 2: Set up Python environment
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
 
-      # Step 3: Install twine for uploading to PyPI
       - name: Install twine
         run: pip install twine
 
-      # Step 4: Upload wheels to PyPI using twine
-      # Uses PYPI_API_TOKEN secret for authentication
-      # TWINE_USERNAME is set to __token__ for API token authentication
       - name: Publish to PyPI
         run: |
           twine upload dist/*.whl
@@ -1360,26 +1193,11 @@ jobs:
           TWINE_USERNAME: __token__
           TWINE_PASSWORD: ${{ secrets.PYPI_API_TOKEN }}
 
-  ################################################################################
-  # Job: Publish to TestPyPI (Test Releases)
-  ################################################################################
-  # Publishes Python wheels to TestPyPI (testing instance of PyPI) when a GitHub Release is published
-  # Only runs when GitHub Release title contains "Test"
-  # Used for testing the release process before production release
-  ################################################################################
   publish-testpypi:
-    # Depends on build-python job completing successfully
     needs: build-python
-    
-    # Conditional: Only run for test releases
-    # Checks if this is a release event and the release name contains "Test"
     if: github.event_name == 'release' && contains(github.event.release.name, 'Test')
-    
-    # Use Ubuntu latest for publishing
     runs-on: ubuntu-latest
-    
     steps:
-      # Step 1: Download all wheel artifacts from build-python job
       - name: Download all artifacts
         uses: actions/download-artifact@v4
         with:
@@ -1387,568 +1205,17 @@ jobs:
           pattern: python-*
           merge-multiple: true
 
-      # Step 2: Set up Python environment
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
 
-      # Step 3: Install twine for uploading to TestPyPI
       - name: Install twine
         run: pip install twine
 
-      # Step 4: Upload wheels to TestPyPI using twine
-      # Uses PYPI_TEST_API_TOKEN secret for authentication
-      # Repository URL points to TestPyPI instead of production PyPI
       - name: Publish to TestPyPI
         run: |
           twine upload --repository-url https://test.pypi.org/legacy/ dist/*.whl
         env:
           TWINE_USERNAME: __token__
-          TWINE_PASSWORD: ${{ secrets.PYPI_TEST_API_TOKEN }}
-
-  ################################################################################
-  # Job: Publish to crates.io (Production Releases)
-  ################################################################################
-  # Publishes the Rust crate to crates.io registry when a GitHub Release is published
-  # Only runs when GitHub Release title does NOT contain "Test"
-  # This makes the library available to other Rust projects via cargo
-  ################################################################################
-  publish-crate:
-    # Depends on all Rust build jobs completing successfully
-    # Ensures the crate compiles on all supported platforms before publishing
-    needs: [build-rust-linux, build-rust-linux-arm64, build-rust-windows, build-rust-macos]
-    
-    # Conditional: Only run for production releases (not test releases)
-    # Checks if this is a release event and the release name doesn't contain "Test"
-    if: github.event_name == 'release' && !contains(github.event.release.name, 'Test')
-    
-    # Use Ubuntu latest for publishing
-    runs-on: ubuntu-latest
-    
-    steps:
-      # Step 1: Checkout repository source code
-      - uses: actions/checkout@v4
-
-      # Step 2: Install Rust toolchain
-      - name: Install Rust
-        uses: dtolnay/rust-toolchain@stable
-
-      # Step 3: Install protoc for etcd-client build
-      - name: Install protoc
-        uses: arduino/setup-protoc@v3
-        with:
-          version: '33.x'
-          repo-token: ${{ secrets.GITHUB_TOKEN }}
-
-      # Step 4: Install CMake for rdkafka build
-      - name: Install CMake
-        uses: jwlawson/actions-setup-cmake@v2
-        with:
-          cmake-version: '3.28.x'
-
-      # Step 5: Install system dependencies for rdkafka
-      - name: Install system dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y libcurl4-openssl-dev libsasl2-dev
-
-      # Step 6: Publish to crates.io using cargo publish
-      # Uses the CARGO_REGISTRY_TOKEN secret for authentication
-      - name: Publish to crates.io
-        run: cargo publish --token ${{ secrets.CARGO_REGISTRY_TOKEN }}
-        env:
-          CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
-
-  ################################################################################
-  # Job: Sync Release to Gitee
-  ################################################################################
-  # Creates the same release on Gitee with title, description, and tag
-  # Runs for both test and production releases
-  # This ensures the Chinese mirror (Gitee) has the same release information
-  ################################################################################
-  sync-to-gitee:
-    # Depends on all build jobs completing successfully
-    needs: [build-rust-linux, build-rust-linux-arm64, build-rust-windows, build-rust-macos, build-python]
-    
-    # Conditional: Run for any release (both test and production)
-    if: github.event_name == 'release'
-    
-    # Use Ubuntu latest for API calls
-    runs-on: ubuntu-latest
-    
-    steps:
-      # Step 1: Sync release information to Gitee using API
-      # Uses GITEE_TOKEN secret for authentication
-      # Creates a release with the same tag, name, and body as GitHub
-      # Note: Using jq to properly escape JSON special characters in release body
-      - name: Sync Release to Gitee
-        run: |
-          # Gitee API endpoint for creating releases
-          GITEE_API="https://gitee.com/api/v5/repos/dunimd/dmsc/releases"
-          
-          # Create JSON payload using jq to properly escape special characters
-          jq -n \
-            --arg token "${{ secrets.GITEE_TOKEN }}" \
-            --arg tag "${{ github.event.release.tag_name }}" \
-            --arg name "${{ github.event.release.name }}" \
-            --arg body "${{ github.event.release.body }}" \
-            '{
-              access_token: $token,
-              tag_name: $tag,
-              name: $name,
-              body: $body,
-              prerelease: false,
-              target_commitish: "master"
-            }' > payload.json
-          
-          # Create release on Gitee using curl POST request
-          curl -X POST "$GITEE_API" \
-            -H "Content-Type: application/json" \
-            -d @payload.json
-        env:
-          GITEE_TOKEN: ${{ secrets.GITEE_TOKEN }}
-
-  ################################################################################
-  # Job: Run Python Tests
-  ################################################################################
-  # This job builds the Python package and runs pytest to verify the bindings work correctly
-  # Runs separately from compilation to isolate test failures from build failures
-  run-python-tests:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.12'
-
-      - name: Set up Rust
-        uses: dtolnay/rust-toolchain@master
-        with:
-          toolchain: stable
-
-      - name: Install protoc
-        uses: arduino/setup-protoc@v3
-        with:
-          version: '33.x'
-          repo-token: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Install CMake
-        uses: jwlawson/actions-setup-cmake@v2
-        with:
-          cmake-version: '3.28.x'
-
-      - name: Install system dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y libcurl4-openssl-dev libsasl2-dev
-
-      - name: Configure OpenSSL static linking
-        run: |
-          echo "OPENSSL_STATIC=1" >> $GITHUB_ENV
-          echo "VENDORED_OPENSSL_SSL=1" >> $GITHUB_ENV
-          echo "PKG_CONFIG_ALLOW_CROSS=1" >> $GITHUB_ENV
-
-      - name: Upgrade pip
-        run: |
-          python -m pip install --upgrade pip setuptools wheel
-          pip config set global.index-url https://pypi.tuna.tsinghua.edu.cn/simple
-
-      - name: Install test dependencies
-        run: pip install pytest maturin -i https://pypi.org/simple
-
-      - name: Build and install package
-        run: |
-          pip install -e . --no-build-isolation
-
-      - name: Run Python tests
-        run: pytest tests/Python/ -v
-
-  ################################################################################
-  # Job: Run Rust Tests
-  ################################################################################
-  # This job runs cargo test to verify the Rust library works correctly
-  run-rust-tests:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Set up Rust
-        uses: dtolnay/rust-toolchain@master
-        with:
-          toolchain: stable
-
-      - name: Install protoc
-        uses: arduino/setup-protoc@v3
-        with:
-          version: '33.x'
-          repo-token: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Install CMake
-        uses: jwlawson/actions-setup-cmake@v2
-        with:
-          cmake-version: '3.28.x'
-
-      - name: Install system dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y libcurl4-openssl-dev libsasl2-dev
-
-      - name: Run Rust tests
-        run: cargo test --no-default-features --features "pyo3,auth,cache,queue,gateway,observability,rabbitmq,protocol,sqlite,postgres,mysql,service_mesh,parking_lot,http_client,system_info,config_hot_reload,grpc,websocket,kafka,etcd"
-
-  ################################################################################
-  # Job: Run Performance Benchmarks
-  ################################################################################
-  # This job runs cargo bench to measure performance metrics for all modules
-  # Runs on every workflow trigger to track performance regressions
-  # Benchmark results are uploaded as artifacts for analysis
-  run-benchmarks:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Set up Rust
-        uses: dtolnay/rust-toolchain@master
-        with:
-          toolchain: stable
-
-      - name: Install protoc
-        uses: arduino/setup-protoc@v3
-        with:
-          version: '33.x'
-          repo-token: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Install CMake
-        uses: jwlawson/actions-setup-cmake@v2
-        with:
-          cmake-version: '3.28.x'
-
-      - name: Install system dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y libcurl4-openssl-dev libsasl2-dev
-
-      - name: Cache Rust dependencies
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-            target
-          key: bench-rust-${{ hashFiles('**/Cargo.toml') }}
-          restore-keys: |
-            bench-rust-
-            rust-
-
-      - name: Run cache benchmarks
-        run: cargo bench --bench cache --no-default-features --features "pyo3,c,cache,queue,gateway,auth,protocol,grpc,websocket" -- --save-baseline cache-baseline
-
-      - name: Run queue benchmarks
-        run: cargo bench --bench queue --no-default-features --features "pyo3,c,cache,queue,gateway,auth,protocol,grpc,websocket" -- --save-baseline queue-baseline
-
-      - name: Run gateway benchmarks
-        run: cargo bench --bench gateway --no-default-features --features "pyo3,c,cache,queue,gateway,auth,protocol,grpc,websocket" -- --save-baseline gateway-baseline
-
-      - name: Run auth benchmarks
-        run: cargo bench --bench auth --no-default-features --features "pyo3,c,cache,queue,gateway,auth,protocol,grpc,websocket" -- --save-baseline auth-baseline
-
-      - name: Run protocol benchmarks
-        run: cargo bench --bench protocol --no-default-features --features "pyo3,c,cache,queue,gateway,auth,protocol,grpc,websocket" -- --save-baseline protocol-baseline
-
-      - name: Run core benchmarks
-        run: cargo bench --bench core --no-default-features --features "pyo3,c,cache,queue,gateway,auth,protocol,grpc,websocket" -- --save-baseline core-baseline
-
-      - name: Upload benchmark results
-        uses: actions/upload-artifact@v4
-        with:
-          name: benchmark-results
-          path: target/criterion/
-          retention-days: 30
-
-  ################################################################################
-  # Job: Build Java JNI Libraries for All Platforms
-  ################################################################################
-  # This job compiles the DMSC library as a JNI dynamic library for Java usage
-  # Generates platform-specific JNI libraries (.dll, .so, .dylib)
-  ################################################################################
-  build-java-linux:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Install protoc
-        uses: arduino/setup-protoc@v3
-        with:
-          version: '33.x'
-          repo-token: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Install CMake
-        uses: jwlawson/actions-setup-cmake@v2
-        with:
-          cmake-version: '3.28.x'
-
-      - name: Install system dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y libcurl4-openssl-dev libsasl2-dev
-
-      - name: Build JNI library
-        run: cargo build --release --no-default-features --features java
-
-      - name: Upload artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: java-linux-x64
-          path: target/release/libdmsc.so
-
-  build-java-linux-arm64:
-    runs-on: ubuntu-24.04-arm
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Install protoc
-        uses: arduino/setup-protoc@v3
-        with:
-          version: '33.x'
-          repo-token: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Install CMake
-        uses: jwlawson/actions-setup-cmake@v2
-        with:
-          cmake-version: '3.28.x'
-
-      - name: Install system dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y libcurl4-openssl-dev libsasl2-dev
-
-      - name: Build JNI library
-        run: cargo build --release --no-default-features --features java
-
-      - name: Upload artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: java-linux-arm64
-          path: target/release/libdmsc.so
-
-  build-java-windows:
-    runs-on: windows-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Install protoc
-        uses: arduino/setup-protoc@v3
-        with:
-          version: '33.x'
-          repo-token: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Install CMake
-        uses: jwlawson/actions-setup-cmake@v2
-        with:
-          cmake-version: '3.28.x'
-
-      - name: Build JNI library
-        run: cargo build --release --no-default-features --features java
-
-      - name: Upload artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: java-windows-x64
-          path: target/release/dmsc.dll
-
-  build-java-windows-arm64:
-    runs-on: windows-11-arm
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Install protoc
-        uses: arduino/setup-protoc@v3
-        with:
-          version: '33.x'
-          repo-token: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Install CMake
-        uses: jwlawson/actions-setup-cmake@v2
-        with:
-          cmake-version: '3.28.x'
-
-      - name: Set up Rust
-        uses: dtolnay/rust-toolchain@master
-        with:
-          toolchain: stable
-          targets: aarch64-pc-windows-msvc
-
-      - name: Build JNI library
-        run: cargo build --release --target aarch64-pc-windows-msvc --no-default-features --features java
-
-      - name: Upload artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: java-windows-arm64
-          path: target/aarch64-pc-windows-msvc/release/dmsc.dll
-
-  build-java-macos:
-    runs-on: macos-15-intel
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Install protoc
-        uses: arduino/setup-protoc@v3
-        with:
-          version: '33.x'
-          repo-token: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Install dependencies
-        run: |
-          brew update --quiet 2>/dev/null || true
-          brew install --quiet cmake pkg-config 2>/dev/null || true
-
-      - name: Set up Rust
-        uses: dtolnay/rust-toolchain@master
-        with:
-          toolchain: stable
-          targets: x86_64-apple-darwin
-
-      - name: Build JNI library
-        run: cargo build --release --target x86_64-apple-darwin --no-default-features --features java
-
-      - name: Upload artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: java-macos-x64
-          path: target/x86_64-apple-darwin/release/libdmsc.dylib
-
-  build-java-macos-arm64:
-    runs-on: macos-15
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Install protoc
-        uses: arduino/setup-protoc@v3
-        with:
-          version: '33.x'
-          repo-token: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Install dependencies
-        run: |
-          brew update --quiet 2>/dev/null || true
-          brew install --quiet cmake pkg-config 2>/dev/null || true
-
-      - name: Set up Rust
-        uses: dtolnay/rust-toolchain@master
-        with:
-          toolchain: stable
-          targets: aarch64-apple-darwin
-
-      - name: Build JNI library
-        run: cargo build --release --target aarch64-apple-darwin --no-default-features --features java
-
-      - name: Upload artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: java-macos-arm64
-          path: target/aarch64-apple-darwin/release/libdmsc.dylib
-
-  ################################################################################
-  # Job: Publish Java Library to Maven Central
-  ################################################################################
-  # This job builds the Java JAR with embedded native libraries and publishes to Maven Central
-  # Only runs for production releases (not test releases)
-  ################################################################################
-  publish-maven:
-    needs: [build-java-linux, build-java-linux-arm64, build-java-windows, build-java-windows-arm64, build-java-macos, build-java-macos-arm64]
-    
-    if: github.event_name == 'release' && !contains(github.event.release.name, 'Test')
-    
-    runs-on: ubuntu-latest
-    
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Set up JDK 11
-        uses: actions/setup-java@v6
-        with:
-          java-version: '11'
-          distribution: 'temurin'
-
-      - name: Import GPG keys
-        run: |
-          # Configure GPG to not use pinentry (fixes some CI issues)
-          mkdir -p ~/.gnupg
-          echo "use-agent" >> ~/.gnupg/gpg.conf
-          echo "pinentry-mode loopback" >> ~/.gnupg/gpg.conf
-          echo "allow-loopback-pinentry" >> ~/.gnupg/gpg.conf
-          
-          # Import the private key
-          echo "${{ secrets.GPG_PRIVATE_KEY }}" | gpg --batch --import
-          
-          # List keys to verify import
-          gpg --list-secret-keys --keyid-format=long
-
-      - name: Download Linux x64 JNI library
-        uses: actions/download-artifact@v4
-        with:
-          name: java-linux-x64
-          path: java/src/main/resources/native/linux/x64
-
-      - name: Download Linux ARM64 JNI library
-        uses: actions/download-artifact@v4
-        with:
-          name: java-linux-arm64
-          path: java/src/main/resources/native/linux/arm64
-
-      - name: Download Windows x64 JNI library
-        uses: actions/download-artifact@v4
-        with:
-          name: java-windows-x64
-          path: java/src/main/resources/native/windows/x64
-
-      - name: Download Windows ARM64 JNI library
-        uses: actions/download-artifact@v4
-        with:
-          name: java-windows-arm64
-          path: java/src/main/resources/native/windows/arm64
-
-      - name: Download macOS x64 JNI library
-        uses: actions/download-artifact@v4
-        with:
-          name: java-macos-x64
-          path: java/src/main/resources/native/macos/x64
-
-      - name: Download macOS ARM64 JNI library
-        uses: actions/download-artifact@v4
-        with:
-          name: java-macos-arm64
-          path: java/src/main/resources/native/macos/arm64
-
-      - name: Build and deploy to Maven Central
-        run: |
-          cd java
-          mkdir -p ~/.m2
-          cat > ~/.m2/settings.xml << 'EOF'
-          <settings>
-            <servers>
-              <server>
-                <id>central</id>
-                <username>${CENTRAL_USERNAME}</username>
-                <password>${CENTRAL_PASSWORD}</password>
-              </server>
-            </servers>
-            <profiles>
-              <profile>
-                <id>release</id>
-                <properties>
-                  <gpg.passphrase>${GPG_PASSPHRASE}</gpg.passphrase>
-                </properties>
-              </profile>
-            </profiles>
-          </settings>
-          EOF
-          mvn clean deploy -P release -DskipTests -Dgpg.passphrase="${{ secrets.GPG_PASSPHRASE }}"
-        env:
-          CENTRAL_USERNAME: ${{ secrets.CENTRAL_USERNAME }}
-          CENTRAL_PASSWORD: ${{ secrets.CENTRAL_PASSWORD }}
-          GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
+          TWINE_PASSWORD: ${{ secrets.PYPI_API_TOKEN }}

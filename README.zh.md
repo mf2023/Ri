@@ -309,16 +309,79 @@ DMSC 支持多种配置源，按优先级排序（从低到高）：
 
 ### 运行测试
 
+#### 多语言测试
+
+DMSC 为所有支持的语言提供全面的测试：
+
+- **Rust**：使用 `cargo test` 的核心库测试
+- **Python**：使用 `pytest` 的 Python 绑定测试
+- **Java**：使用标准 Java 测试运行器的 JNI 绑定测试
+- **C/C++**：使用原生编译器的 C API 测试
+
+#### 测试覆盖
+
+测试验证：
+- ✅ 所有语言的构建器模式行为
+- ✅ 方法链式调用返回适当的实例（语言特定）
+- ✅ 运行时创建和生命周期管理
+- ✅ 错误处理和边界情况
+- ✅ 跨语言 API 一致性
+
+#### 运行 Rust 测试
+
 ```bash
-# 运行所有测试
+# 运行所有 Rust 测试
 cargo test
 
 # 运行特定测试模块
-cargo test cache
+cargo test --lib app_builder
+cargo test --lib app_runtime
 
 # 带详细输出运行
 cargo test -- --nocapture
+
+# 使用所有特性运行
+cargo test --all-features
 ```
+
+#### 运行 Python 测试
+
+```bash
+# 以开发模式安装 Python 包
+cd python
+pip install -e .
+
+# 运行所有 Python 测试
+python -m pytest tests/Python/ -v
+
+# 运行特定测试类
+python -m pytest tests/Python/test_core.py::TestDMSCAppBuilderWrapper -v
+python -m pytest tests/Python/test_core.py::TestDMSCAppRuntimeWrapper -v
+```
+
+#### 运行 Java 测试
+
+```bash
+# 构建 JNI 库
+cargo build --release --no-default-features --features java
+
+# 编译并运行 Java 测试
+cd java
+javac -d build/classes/java/test -cp build/classes/java/main \
+  src/test/java/TestAll.java src/test/java/TestAppBuilder.java
+
+java -cp build/classes/java/test:build/classes/java/main \
+  -Djava.library.path=../target/release TestAll
+```
+
+#### 跨语言 API 行为
+
+| 语言 | 构建器模式 | 方法链式调用 | 原因 |
+|------|-----------|-------------|------|
+| **Rust** | 返回 `Self` | 消费原对象 | 原生构建器模式 |
+| **Python** | 返回 `self` | 同一个实例 | PyO3 的 Pythonic 包装器 |
+| **Java** | 返回新实例 | 不可变构建器 | Java 最佳实践 |
+| **C** | 返回新指针 | 内存管理 | C 语言习惯 |
 
 <h2 align="center">❓ 常见问题</h2>
 

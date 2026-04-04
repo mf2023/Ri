@@ -15,97 +15,239 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# =============================================================================
+################################################################################
 # Cargo Configuration for DMSC Build System
-# =============================================================================
-# This file configures the Cargo build environment for the DMSC project.
-# It defines dependency registry settings, network behavior, HTTP settings,
-# and release profile optimizations. These configurations affect how Cargo
-# downloads dependencies, handles network failures, and compiles release builds.
+################################################################################
 #
-# Relationship to Project:
-# - This config is used by all Cargo build operations in the DMSC project
-# - Settings here affect both local development builds and CI/CD pipeline builds
-# - The release profile settings directly impact the performance of production binaries
-# - Network settings help ensure reliable dependency downloads across different environments
+# PURPOSE:
+# This configuration file defines the build environment settings for the DMSC
+# Rust project. It customizes Cargo's behavior for dependency management, network
+# operations, and release build optimizations.
+#
+# SCOPE:
+# These settings apply to all Cargo operations within the DMSC workspace, including:
+# - Local development builds (cargo build, cargo test)
+# - CI/CD pipeline builds (GitHub Actions workflows)
+# - Release builds for distribution (cargo build --release)
+#
+# FILE LOCATION:
+# This file resides at .cargo/config.toml in the project root and is typically
+# NOT committed to version control. Users may have their own .cargo/config.toml
+# for local customization.
+#
+# SECTIONS:
+# 1. Registry Configuration   - crates.io interaction settings
+# 2. Network Configuration    - Connection and retry behavior
+# 3. HTTP Configuration       - HTTP client settings for downloads
+# 4. Release Profile          - Optimization settings for production builds
+#
+# IMPACT ON BUILD:
+# - Registry settings affect initial crate resolution time
+# - Network settings improve reliability in constrained environments
+# - Release profile directly impacts runtime performance and binary size
+################################################################################
 
 # =============================================================================
 # Registry Configuration
 # =============================================================================
-# Configures how Cargo interacts with the crates.io package registry.
-# The sparse protocol reduces download time by fetching only necessary metadata.
+# Configures how Cargo interacts with the crates.io package registry and
+# alternative registries. These settings affect dependency resolution and
+# crate downloading behavior.
+#
+# crates.io Registry:
+# The official Rust package registry hosting over 100,000 crates.
+# By default, Cargo uses the git-based index which downloads the entire crate
+# index (~300MB). The sparse protocol reduces this to on-demand metadata fetching.
 
 [registries.crates-io]
-# Use sparse index protocol for faster crate resolution
-# Traditional protocol downloads the entire crate index (~300MB)
-# Sparse protocol fetches only required metadata on-demand, reducing initial fetch
-# This significantly speeds up fresh builds and CI pipeline execution
+# Protocol for accessing crates.io registry
+# Values:
+#   - "sparse" (recommended): Uses HTTPS sparse index protocol
+#     * Fetches only required metadata on-demand
+#     * Faster initial resolution (no full index download)
+#     * Reduced bandwidth usage
+#     * Supported since Rust 1.66
+#   - "git": Uses traditional git index
+#     * Clones entire registry index
+#     * Faster subsequent operations after initial clone
+#     * Higher storage requirements
+#
+# Benefits of sparse protocol:
+# - Significantly faster first build for fresh checkouts
+# - Reduced network transfer for CI/CD pipelines
+# - Lower disk space requirements
+# - Better performance across high-latency connections
 protocol = "sparse"
 
 # =============================================================================
 # Network Configuration
 # =============================================================================
-# Controls network behavior for dependency downloads and git operations.
-# These settings improve reliability in environments with unstable network connections.
+# Controls network behavior for dependency downloads, git operations, and
+# external service communication. These settings improve build reliability
+# in environments with unstable or restricted network connectivity.
 
 [net]
 # Number of retry attempts for failed network requests
-# When downloading crates or fetching git repositories, Cargo will retry up to 3 times
-# This helps overcome transient network failures without failing the entire build
+# Applies to:
+# - Crate downloads from registries
+# - Git repository fetches for dependencies
+# - Any HTTP/HTTPS requests made by Cargo
+#
+# When a network request fails (timeout, connection reset, etc.), Cargo will
+# automatically retry up to this many times before giving up.
+#
+# Recommended values:
+# - 3: Standard for most environments
+# - 5+: Recommended for CI/CD or unreliable networks
+# - 0: Disable retries (not recommended)
 retry = 3
 
-# Use command-line git for fetching git dependencies instead of libgit2
-# Some corporate proxies and firewalls work better with native git CLI
-# This setting ensures compatibility across different network environments
+# Use command-line git instead of libgit2 for git operations
+# When set to true, Cargo will invoke the system `git` CLI for cloning and
+# fetching git-based dependencies instead of using the built-in libgit2 library.
+#
+# Benefits of CLI mode:
+# - Better compatibility with corporate proxies and firewalls
+# - Respects user's git configuration (~/.gitconfig)
+# - Handles authentication via git credential helpers
+# - Avoids libgit2 bugs and limitations
+#
+# Use cases:
+# - Environments with strict proxy requirements
+# - When using git authentication agents
+# - Debugging git-related issues (easier to trace)
 git-fetch-with-cli = true
 
 # =============================================================================
 # HTTP Configuration
 # =============================================================================
-# Configures HTTP client behavior for downloading crates and making API requests.
+# Configures the HTTP client behavior for downloading crates and interacting
+# with web services. These settings affect all HTTP/HTTPS traffic from Cargo.
 
 [http]
-# Timeout in seconds for HTTP requests to crates.io and other registries
-# If a download takes longer than 30 seconds, it will be cancelled and retried
-# This prevents builds from hanging indefinitely on slow connections
+# Timeout in seconds for HTTP requests to registries and services
+# If a request takes longer than this duration, it will be cancelled and
+# potentially retried (if retry > 0).
+#
+# Factors affecting optimal timeout:
+# - Network latency to registry servers
+# - Size of crate being downloaded
+# - Server response time under load
+# - Proxy traversal time
+#
+# Recommended values:
+# - 30: Good default for most regions
+# - 60+: For high-latency regions or heavy crate downloads
+# - 10-15: Only for very fast, reliable connections
 timeout = 30
 
-# Enable HTTP/2 multiplexing for parallel requests over a single connection
-# This allows multiple crate downloads to share one TCP connection
-# Reduces connection overhead and improves download speed for multiple crates
+# Enable HTTP/2 multiplexing for parallel requests
+# HTTP/2 multiplexing allows multiple simultaneous requests over a single
+# TCP connection, improving efficiency when downloading multiple crates.
+#
+# Benefits:
+# - Reduced connection overhead (fewer TCP handshakes)
+# - Better bandwidth utilization
+# - Lower latency for parallel downloads
+# - Reduced load on registry servers
+#
+# Requirements:
+# - Server must support HTTP/2 (crates.io does)
+# - Underlying SSL/TLS library must support ALPN
+#
+# Note: This is automatically enabled for HTTPS on most platforms when
+# the TLS backend supports it (rustls, OpenSSL with ALPN support).
 multiplexing = true
 
 # =============================================================================
 # Release Profile Configuration
 # =============================================================================
-# Defines optimization settings for release builds of the DMSC library.
-# These settings directly impact the performance and size of production binaries.
-# Used when running: cargo build --release
+# Defines optimization settings applied when building with --release flag.
+# These settings produce production-ready binaries with maximum performance,
+# but increase compilation time significantly.
 #
-# Impact on DMSC:
-# - The DMSC middleware framework requires high performance for production use
-# - These optimizations ensure minimal latency and maximum throughput
-# - Binary size reduction helps with container image sizes and deployment speed
+# Profile Activation:
+# Applied automatically when running: cargo build --release
+# Also used by: cargo test --release, cargo bench
+#
+# Impact Assessment:
+# - LTO: 20-50% longer compile time, 10-30% faster runtime
+# - codegen-units=1: 30-50% longer compile time, 5-15% faster runtime
+# - strip: Minimal compile time impact, 5-15% smaller binary
+#
+# Trade-offs:
+# These optimizations prioritize runtime performance and binary size over
+# compilation speed. For development builds, use default (debug) profile
+# for faster iteration cycles.
 
 [profile.release]
-# Enable Link Time Optimization (LTO) for maximum performance
-# LTO analyzes the entire program at link time, enabling cross-crate optimizations
-# - true: Enable full LTO (slowest build, fastest runtime)
-# - false: Disable LTO (fastest build, slower runtime)
-# - "thin": Use thin LTO (balance between build time and performance)
-# Full LTO is enabled here because DMSC is a performance-critical middleware
+# Link Time Optimization (LTO)
+# LTO is a whole-program optimization technique that performs optimization
+# across crate boundaries at the linking stage.
+#
+# Values and behavior:
+# - true or "full": Full LTO across all crates
+#   * Maximum runtime performance improvement
+#   * Slowest compilation
+#   * Highest memory usage during linking
+#   * Best for stable, production builds
+#
+# - "thin": Thin LTO (lighter-weight alternative)
+#   * Good runtime improvement (~80% of full LTO)
+#   * Faster than full LTO
+#   * Lower memory requirements
+#   * Good balance for most production use cases
+#
+# - false: Disable LTO
+#   * Fastest compilation
+#   * No cross-crate optimization
+#   * Only intra-crate optimizations apply
+#   * Not recommended for production
+#
+# DMSC Rationale:
+# Full LTO is enabled because DMSC is a performance-critical middleware
+# framework where every microsecond matters. The slower compilation is
+# acceptable since release builds are typically done less frequently.
 lto = true
 
-# Set codegen units to 1 for maximum optimization
-# By default, Rust splits compilation into multiple codegen units for parallel builds
-# Setting to 1 disables parallelism but allows better optimization across the crate
-# This trades longer compile times for better runtime performance
-# Essential for DMSC as a middleware where every microsecond matters
+# Number of codegen units for parallel compilation
+# Rust compiler splits compilation into parallel units for faster builds.
+# More units = faster compilation but less optimization opportunity.
+#
+# Values:
+# - 16 (default): Maximum parallelism, minimum optimization
+# - 1: Minimum parallelism, maximum optimization
+# - 4-8: Balance between speed and optimization
+#
+# Trade-offs:
+# - codegen-units=1 allows LLVM to see the entire crate during optimization
+# - Enables better inlining decisions across modules
+# - Better dead code elimination
+# - Improved constant propagation
+#
+# DMSC Rationale:
+# Set to 1 for maximum runtime performance. DMSC's middleware nature
+# requires optimal code generation. The longer compilation time is
+# acceptable for release builds.
 codegen-units = 1
 
-# Strip debug symbols from the final binary
-# - true: Remove all debug symbols (smallest binary, no debugging)
-# - false: Keep debug symbols (larger binary, allows debugging)
-# - "debuginfo": Keep only debug info
-# Stripping reduces binary size significantly, important for container deployments
+# Strip debug symbols from binary
+# Debug symbols are used for debugging and stack traces but increase
+# binary size significantly. They are not needed for production.
+#
+# Values:
+# - true: Strip all debug symbols (smallest binary, no debugging info)
+# - false: Keep debug symbols (larger binary, enables debugging)
+# - "debuginfo": Keep only debug information, strip other symbols
+#
+# Benefits of stripping:
+# - 20-50% smaller binary size
+# - Faster load times
+# - Reduced memory footprint
+# - No impact on runtime performance
+#
+# DMSC Rationale:
+# Enabled for production deployment. Reduces container image sizes,
+# speeds up deployment, and reduces memory usage. Debug symbols can
+# be preserved separately if needed for production debugging.
 strip = true

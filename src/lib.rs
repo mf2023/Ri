@@ -452,6 +452,8 @@ pub mod py {
         m.add_class::<crate::database::DMSCDBRow>()?;
         m.add_class::<crate::database::DMSCDBResult>()?;
         m.add_class::<crate::database::orm::DMSCPyORMRepository>()?;
+        m.add_class::<crate::database::DynamicPoolConfig>()?;
+        m.add_class::<crate::database::DatabaseMetrics>()?;
 
         // Add grpc types to main module
         #[cfg(all(feature = "grpc", feature = "pyo3"))]
@@ -724,8 +726,11 @@ pub mod py {
     fn create_database_module(parent: &Bound<'_, PyModule>) -> PyResult<()> {
         let m = PyModule::new(parent.py(), "database")?;
         m.add_class::<crate::database::DMSCDatabaseConfig>()?;
+        m.add_class::<crate::database::DMSCDatabasePool>()?;
         m.add_class::<crate::database::DMSCDBRow>()?;
         m.add_class::<crate::database::DMSCDBResult>()?;
+        m.add_class::<crate::database::DynamicPoolConfig>()?;
+        m.add_class::<crate::database::DatabaseMetrics>()?;
         m.add_class::<crate::database::orm::ColumnDefinition>()?;
         m.add_class::<crate::database::orm::IndexDefinition>()?;
         m.add_class::<crate::database::orm::ForeignKeyDefinition>()?;

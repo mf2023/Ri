@@ -20,6 +20,12 @@ import com.dunimd.dmsc.protocol.*;
 import com.dunimd.dmsc.hooks.*;
 import com.dunimd.dmsc.modulerpc.*;
 
+/**
+ * Comprehensive test suite for all DMSC Java bindings.
+ *
+ * This test file is located in the unified tests directory (tests/Java/)
+ * rather than in the source code directory, following the project's testing convention.
+ */
 public class TestAll {
     public static void main(String[] args) {
         System.out.println("=== DMSC Java Binding Test ===\n");
@@ -35,6 +41,26 @@ public class TestAll {
             passed++;
         } catch (Exception e) {
             System.out.println("[FAIL] DMSCAppBuilder: " + e.getMessage());
+            failed++;
+        }
+        
+        // Test DMSCAppBuilder chaining (returns new instance)
+        try {
+            DMSCAppBuilder builder1 = new DMSCAppBuilder();
+            DMSCAppBuilder builder2 = builder1.withConfig("config.yaml");
+            
+            if (builder1 != builder2) {
+                System.out.println("[PASS] DMSCAppBuilder chaining creates new instance");
+                passed++;
+            } else {
+                System.out.println("[FAIL] DMSCAppBuilder chaining should create new instance");
+                failed++;
+            }
+            
+            builder1.close();
+            builder2.close();
+        } catch (Exception e) {
+            System.out.println("[FAIL] DMSCAppBuilder chaining: " + e.getMessage());
             failed++;
         }
         

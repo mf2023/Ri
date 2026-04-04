@@ -344,34 +344,41 @@ count = manager.get_session_count()
 print(f"活动会话: {count}")
 ```
 
-### ORM 使用示例（Rust API）
+### ORM 使用示例
 
-```rust
-use dmsc::database::{DMSCORMSimpleRepository, Criteria, Pagination, ComparisonOperator};
+```python
+from dmsc import DMSCDatabasePool, DMSCPyORMRepository
 
-#[derive(serde::Serialize, serde::Deserialize, Clone)]
-struct User {
-    id: String,
-    name: String,
-    email: String,
-}
+# 创建数据库连接池
+pool = DMSCDatabasePool("sqlite:///dmsc.db")
 
-// 创建仓储（仅 Rust）
-let repo = DMSCORMSimpleRepository::<User>::new("users");
+# 为 "users" 表创建 ORM 仓储
+repo = DMSCPyORMRepository(pool, "users")
 
-// 查找所有用户
-let users = repo.find_all(&db).await?;
+# 查找所有用户
+users = repo.find_all()
+for user in users:
+    print(f"用户: {user}")
 
-// 带条件的查询
-let criteria = Criteria::new("name", ComparisonOperator::Like, serde_json::json!("%John%"));
-let users = repo.find_many(&db, vec![criteria]).await?;
+# 根据 ID 查找用户
+user = repo.find_by_id("123")
+if user:
+    print(f"找到用户: {user}")
 
-// 分页查询
-let pagination = Pagination::new(1, 20);
-let (users, total) = repo.find_paginated(&db, pagination, vec![]).await?;
+# 统计用户总数
+count = repo.count()
+print(f"用户总数: {count}")
+
+# 检查用户是否存在
+exists = repo.exists("123")
+print(f"用户是否存在: {exists}")
+
+# 根据 ID 删除用户
+repo.delete("123")
+print("用户已删除")
 ```
 
-> **注意**：ORM 模块在 Rust 中提供类型安全的数据库操作。在 Python 中，请直接使用 SQLAlchemy 或其他 ORM 库。
+> **注意**：Python ORM 绑定提供基本的 CRUD 操作。对于高级查询（条件查询、分页、复杂过滤），可以扩展 Python 绑定或直接使用 Rust API。
 
 <h2 align="center">🔧 配置</h2>
 
@@ -410,16 +417,60 @@ DMSC 支持多种配置源，按优先级排序（从低到高）：
 
 ### 运行测试
 
+#### 测试结构
+
+Python 测试组织为验证包装类和底层 Rust 绑定：
+
+- **TestDMSCAppBuilder**：应用程序构建器包装类的测试
+- **TestDMSCAppRuntime**：应用程序运行时包装类的测试
+- **TestDMSCAppBuilderWrapper**：Python 包装器行为测试（方法链式调用）
+- **TestDMSCAppRuntimeWrapper**：运行时包装器行为测试
+
+#### 包装类设计原理
+
+`DMSCAppBuilder` 和 `DMSCAppRuntime` 类是 Rust 实现的 Python 包装器。这些包装器是必要的，因为：
+
+1. **PyO3 绑定行为**：Rust 的 PyO3 绑定要求构建器方法重新赋值（`builder = builder.with_config(...)`）
+2. **Pythonic API**：Python 用户期望自然的方法链式调用，无需显式重新赋值
+3. **自动处理**：包装器内部处理重新赋值，提供无缝体验
+
+包装器行为示例：
+
+```python
+# Python 包装器允许自然链式调用
+builder = DMSCAppBuilder()
+result = builder.with_config("config.yaml")  # 返回同一个实例
+assert result is builder  # True - 同一个实例
+
+# 如果没有包装器，你需要：
+# builder = builder.with_config("config.yaml")  # 必须重新赋值
+```
+
+#### 运行测试
+
 ```bash
 # 安装开发依赖
 pip install -e .
 
-# 运行 Python 测试
-python -m pytest tests/
+# 运行所有 Python 测试
+python -m pytest tests/Python/ -v
+
+# 运行特定测试类
+python -m pytest tests/Python/test_core.py::TestDMSCAppBuilderWrapper -v
+python -m pytest tests/Python/test_core.py::TestDMSCAppRuntimeWrapper -v
 
 # 运行特定测试模块
-python -m pytest tests/test_auth.py
+python -m pytest tests/Python/test_auth.py -v
 ```
+
+#### 测试覆盖
+
+测试验证：
+- ✅ 方法链式调用返回同一个实例（Python 包装器行为）
+- ✅ 内部 `_builder` 和 `_runtime` 属性存在
+- ✅ 所有方法正确委托给 Rust 后端
+- ✅ 构建过程创建有效的运行时实例
+- ✅ 错误处理和边界情况
 
 <h2 align="center">❓ 常见问题</h2>
 

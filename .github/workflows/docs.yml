@@ -4,7 +4,7 @@
 # The DMSC project belongs to the Dunimd Team.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
+# You may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
 #     http://www.apache.org/licenses/LICENSE-2.0
@@ -19,16 +19,59 @@
 # DMSC Documentation Deployment Pipeline
 ################################################################################
 #
-# Purpose:
-# This GitHub Actions workflow builds Rust documentation and deploys it to
-# GitHub Pages for public access.
+# PURPOSE:
+# This workflow automates the build and deployment of DMSC project documentation
+# to GitHub Pages. It generates and publishes comprehensive API documentation
+# for both the Rust library and Python bindings.
 #
-# Trigger Conditions:
-# - On push to master or main branches
-# - Manual workflow dispatch for on-demand documentation updates
+# DOCUMENTATION COMPONENTS GENERATED:
+# 1. Rust API Documentation (cargo doc)
+#    - Automatically generated from Rust source code doc comments
+#    - Uses --no-deps to document only the local crate, not dependencies
+#    - Uses --features full to include all feature-gated code
 #
-# Output:
-# - Documentation available at: https://<username>.github.io/<repo>/dmsc/
+# 2. Python API Documentation (pdoc)
+#    - Generated from Python docstrings using pdoc tool
+#    - Targets the dmsc Python package
+#    - Provides Python-specific API reference
+#
+# 3. Redirect Index
+#    - Auto-generated HTML redirect from root to documentation
+#    - Ensures users land on the correct documentation page
+#
+# OUTPUT LOCATION: target/doc/
+# PUBLISHING TARGET: GitHub Pages (https://<username>.github.io/<repo>/dmsc/)
+#
+# TRIGGER CONDITIONS:
+# - push to master or main branches: Automatic deployment
+# - workflow_dispatch: Manual trigger for on-demand updates
+#
+# PERMISSIONS REQUIRED:
+# - contents: read - Required to checkout repository
+# - pages: write - Required to deploy to GitHub Pages
+# - id-token: write - Required for OpenID Connect authentication
+#
+# CONCURRENCY SETTINGS:
+# - Group: "pages" ensures only one deployment runs at a time
+# - cancel-in-progress: false allows ongoing deployments to complete
+#
+# DEPENDENCIES:
+# - Rust toolchain (stable)
+# - Python 3.11 with maturin and pdoc
+# - System packages: libcurl4-openssl-dev, libsasl2-dev, libssl-dev, protobuf-compiler
+#
+# DEPLOYMENT FLOW:
+#   1. Checkout source code
+#   2. Install Rust toolchain and Python environment
+#   3. Install system dependencies (OpenSSL, SASL, protobuf)
+#   4. Cache Cargo dependencies for faster builds
+#   5. Build Rust documentation
+#   6. Build Python wheel with maturin
+#   7. Install Python package locally
+#   8. Generate Python documentation with pdoc
+#   9. Create redirect index.html
+#   10. Upload Pages artifact
+#   11. Deploy to GitHub Pages
 ################################################################################
 
 name: Deploy Docs
@@ -50,49 +93,149 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  ################################################################################
+  # Job: Build Documentation
+  ################################################################################
+  # This job builds all documentation components and prepares them for deployment.
+  # It runs on ubuntu-latest runner and produces a Pages artifact.
+  #
+  # Build Steps Overview:
+  # 1. Checkout repository at the triggering commit
+  # 2. Set up Rust stable toolchain
+  # 3. Set up Python 3.11
+  # 4. Install system dependencies required for building dependencies
+  # 5. Cache Cargo registry and build artifacts
+  # 6. Install maturin and pdoc Python tools
+  # 7. Generate Rust API documentation
+  # 8. Build Python wheel package
+  # 9. Install the Python package locally
+  # 10. Generate Python API documentation
+  # 11. Create redirect index.html
+  # 12. Upload artifact for GitHub Pages deployment
+  ################################################################################
+
   build-docs:
     runs-on: ubuntu-latest
     steps:
+      # Step 1: Checkout Repository
+      # Clones the repository to access source code for documentation generation.
+      # Uses actions/checkout@v4 for latest features and security updates.
       - uses: actions/checkout@v4
 
+      # Step 2: Set Up Rust Toolchain
+      # Installs the stable Rust toolchain which is required to compile the
+      # Rust library and generate API documentation.
+      # Uses dtolnay/rust-toolchain for reliable Rust installation.
       - uses: dtolnay/rust-toolchain@stable
 
+      # Step 3: Set Up Python Environment
+      # Configures Python 3.11 for building the Python wheel and generating
+      # Python documentation. Python is needed to run maturin and pdoc tools.
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
 
+      # Step 4: Install System Dependencies
+      # These system packages are required for building native dependencies
+      # that the Rust crate links against:
+      # - libcurl4-openssl-dev: HTTP client library (for rdkafka, etcd-client)
+      # - libsasl2-dev: SASL authentication library (for Kafka authentication)
+      # - libssl-dev: SSL/TLS library (for secure communications)
+      # - protobuf-compiler: Protocol Buffers compiler (for etcd-client)
       - name: Install system dependencies
         run: sudo apt-get update && sudo apt-get install -y libcurl4-openssl-dev libsasl2-dev libssl-dev protobuf-compiler
 
+      # Step 5: Cache Cargo Dependencies
+      # Caches Cargo registry index, git checkouts, and target directory
+      # to significantly speed up subsequent builds by avoiding re-downloading
+      # and re-compiling dependencies.
       - name: Cache Cargo dependencies
         uses: actions/cache@v4
         with:
-          path: ~/.cargo/registry,~/.cargo/git,target
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
           key: ${{ runner.os }}-docs-${{ hashFiles('**/Cargo.lock') }}
 
+      # Step 6: Install Python Documentation Tools
+      # - maturin: Build tool for Python/Rust projects, generates wheel and bindings
+      # - pdoc: Documentation generator for Python projects
+      # pip install is used as these are Python packages.
       - name: Install Python tools
         run: pip install maturin pdoc
 
+      # Step 7: Build Rust API Documentation
+      # Generates HTML documentation from Rust source code doc comments.
+      # --no-deps: Only documents the local crate, not dependencies
+      # --features full: Enables all features to document complete API
+      # Output: target/doc/ directory with generated HTML
       - name: Build Rust documentation
         run: cargo doc --no-deps --features full
 
+      # Step 8: Build Python Wheel Package
+      # Uses maturin to build a Python wheel (.whl) containing the Rust library
+      # compiled as a Python extension module.
+      # --release: Uses release optimization profile
+      # --features pyo3: Enables PyO3 Python bindings
+      # -o dist: Outputs wheel to dist/ directory
       - name: Build Python wheel
         run: maturin build --release --features pyo3 -o dist
 
+      # Step 9: Install Python Package Locally
+      # Installs the built wheel into the Python environment so that pdoc
+      # can extract docstrings from the installed package.
       - name: Install Python package
         run: pip install dist/*.whl
 
+      # Step 10: Build Python API Documentation
+      # Uses pdoc to generate HTML documentation from Python docstrings.
+      # Targets the 'dmsc' module (the Python package name).
+      # Output: target/doc/python/ directory with generated HTML
       - name: Build Python documentation
         run: pdoc -o target/doc/python dmsc
 
+      # Step 11: Create Redirect Index
+      # Creates an index.html that automatically redirects users to the
+      # main documentation page. This provides a cleaner URL structure
+      # where accessing the root redirects to /dmsc/ documentation.
       - name: Add redirect index
         run: |
-          echo '<!DOCTYPE html><html><head><meta http-equiv="refresh" content="0;url=dmsc/"></head><body><a href="dmsc/">Go to DMSC Documentation</a></body></html>' > target/doc/index.html
+          cat > target/doc/index.html << 'EOF'
+<!DOCTYPE html>
+<html>
+<head>
+    <meta http-equiv="refresh" content="0;url=dmsc/">
+</head>
+<body>
+    <a href="dmsc/">Go to DMSC Documentation</a>
+</body>
+</html>
+EOF
 
+      # Step 12: Upload Pages Artifact
+      # Packages the documentation directory as a Pages artifact for deployment.
+      # Uses actions/upload-pages-artifact@v3 for GitHub Pages deployment.
+      # The artifact contains all HTML documentation ready for web hosting.
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
         with:
           path: target/doc
+
+  ################################################################################
+  # Job: Deploy to GitHub Pages
+  ################################################################################
+  # This job takes the documentation artifact and deploys it to GitHub Pages.
+  # It depends on build-docs completing successfully and uses OIDC for
+  # secure authentication with GitHub Pages.
+  #
+  # Deployment Requirements:
+  # - GitHub Pages must be enabled for the repository
+  # - environment 'github-pages' must be configured
+  # - OIDC token for secure deployment authentication
+  #
+  # Output: Published documentation at GitHub Pages URL
+  ################################################################################
 
   deploy-docs:
     needs: build-docs
@@ -101,6 +244,11 @@ jobs:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
+      # Step 1: Deploy to GitHub Pages
+      # Uses actions/deploy-pages@v4 to deploy the uploaded artifact.
+      # The deployment URL is stored in outputs.page_url for reference.
+      # GitHub Pages serves the documentation at:
+      # https://<username>.github.io/<repository>/dmsc/
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4

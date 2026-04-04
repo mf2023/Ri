@@ -127,12 +127,14 @@ use tokio::sync::RwLock;
 
 pub mod middleware;
 pub mod routing;
+pub mod radix_tree;
 pub mod circuit_breaker;
 pub mod load_balancer;
 pub mod rate_limiter;
 pub mod server;
 
 pub use routing::{DMSCRoute, DMSCRouter};
+pub use radix_tree::{DMSCRadixTree, RadixNode, PathSegment, SegmentType, RouteMatch};
 pub use middleware::{DMSCMiddleware, DMSCMiddlewareChain};
 pub use load_balancer::{DMSCLoadBalancer, DMSCLoadBalancerStrategy};
 pub use rate_limiter::{DMSCRateLimiter, DMSCRateLimitConfig};
