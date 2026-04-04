@@ -118,7 +118,7 @@ pub use security::DMSCSecurityManager;
 pub use revocation::{DMSCJWTRevocationList, DMSCRevokedTokenInfo};
 
 use crate::core::{DMSCResult, DMSCError, DMSCServiceContext};
-use rand::Rng;
+use rand::RngCore;
 use serde::Deserialize;
 use std::env;
 use std::sync::Arc;

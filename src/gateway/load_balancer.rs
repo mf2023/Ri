@@ -93,10 +93,6 @@ use std::sync::RwLock as StdRwLock;
 
 #[cfg(feature = "gateway")]
 use hyper;
-#[cfg(feature = "gateway")]
-use hyper_util::client::legacy::Client;
-#[cfg(feature = "gateway")]
-use hyper_util::rt::TokioExecutor;
 
 /// Load balancing strategies supported by DMSC.
 /// 
@@ -857,8 +853,7 @@ impl DMSCLoadBalancer {
                 }
             };
             
-            let client: Client<hyper::client::HttpConnector, String> = Client::builder(TokioExecutor::new()).build_http();
-            match client.get(uri).await {
+            match hyper::Client::new().get(uri).await {
                 Ok(response) => {
                     (200..300).contains(&response.status().as_u16())
                 },

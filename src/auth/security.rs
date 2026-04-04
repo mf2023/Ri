@@ -53,7 +53,7 @@ use aes_gcm::aead::Aead;
 use aes_gcm::{Aes256Gcm, KeyInit, Nonce};
 use base64::{engine::general_purpose::STANDARD, Engine as _};
 use generic_array::GenericArray;
-use rand::Rng;
+use rand::RngCore;
 use ring::hmac;
 use std::env;
 

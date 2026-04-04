@@ -97,10 +97,6 @@ use tokio::task::JoinHandle;
 use pyo3::PyResult;
 #[cfg(feature = "service_mesh")]
 use hyper;
-#[cfg(feature = "service_mesh")]
-use hyper_util::client::legacy::Client;
-#[cfg(feature = "service_mesh")]
-use hyper_util::rt::TokioExecutor;
 
 use crate::core::{DMSCResult, DMSCError};
 use crate::observability::{DMSCTracer, DMSCSpanKind, DMSCSpanStatus};
@@ -250,7 +246,7 @@ impl DMSCHealthCheckProvider for DMSCHttpHealthCheckProvider {
     async fn check_health(&self, endpoint: &str, _config: &DMSCHealthCheckConfig) -> DMSCResult<DMSCHealthCheckResult> {
         let start_time = SystemTime::now();
         
-        let client: Client<hyper::client::HttpConnector, String> = Client::builder(TokioExecutor::new()).build_http();
+        let client = hyper::Client::new();
 
         let uri: hyper::Uri = endpoint.parse()
             .map_err(|e| DMSCError::ServiceMesh(format!("Invalid URI: {e}")))?;
@@ -258,7 +254,7 @@ impl DMSCHealthCheckProvider for DMSCHttpHealthCheckProvider {
         let req = hyper::Request::builder()
             .method(_config.method.as_str())
             .uri(uri)
-            .body(String::new())
+            .body(hyper::Body::empty())
             .map_err(|e| DMSCError::ServiceMesh(format!("Failed to build request: {e}")))?;
 
         match client.request(req).await {
