@@ -71,7 +71,6 @@ derive_helper_methods = true
 # Enable macro expansion for better type resolution
 bitflags = true
 
-[language]
 # Generate C header (not C++)
 header = """/*
  * Copyright © 2025-2026 Wenze Wei. All Rights Reserved.

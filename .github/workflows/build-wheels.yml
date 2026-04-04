@@ -333,7 +333,7 @@ jobs:
           targets: aarch64-pc-windows-msvc
 
       - name: Build Rust library
-        run: cargo build --release --target aarch64-pc-windows-msvc --no-default-features --features pyo3,c,java,grpc,websocket,rabbitmq,cache,queue,gateway,service_mesh,auth,observability,postgres,mysql,sqlite,http_client,system_info,config_hot_reload
+        run: cargo build --release --target aarch64-pc-windows-msvc --no-default-features --features pyo3,c,grpc,websocket,rabbitmq,cache,queue,gateway,service_mesh,auth,observability,postgres,mysql,sqlite,http_client,system_info,config_hot_reload
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
@@ -1017,10 +1017,10 @@ jobs:
         run: |
           maturin build --release --target ${{ matrix.target }} -o dist
 
-      - name: Build wheel (Windows ARM64 - no kafka/oqs)
+      - name: Build wheel (Windows ARM64 - no kafka/oqs/java)
         if: matrix.target == 'aarch64-pc-windows-msvc'
         run: |
-          maturin build --release --target ${{ matrix.target }} -o dist --no-default-features --features pyo3,c,java,grpc,websocket,rabbitmq,cache,queue,gateway,service_mesh,auth,observability,postgres,mysql,sqlite,http_client,system_info,config_hot_reload
+          maturin build --release --target ${{ matrix.target }} -o dist --no-default-features --features pyo3,c,grpc,websocket,rabbitmq,cache,queue,gateway,service_mesh,auth,observability,postgres,mysql,sqlite,http_client,system_info,config_hot_reload
 
       - name: Build Linux wheel with manylinux
         if: matrix.docker == true
@@ -1029,6 +1029,7 @@ jobs:
           command: build
           target: ${{ matrix.target }}
           manylinux: ${{ matrix.manylinux }}
+          maturin-version: v1.8.3
           args: --release -o dist
           before-script-linux: |
             yum install -y perl-core zlib-devel libcurl-devel
