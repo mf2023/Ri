@@ -227,6 +227,39 @@ asyncio.run(main())
 
 ### Authentication Example
 
+DMSC provides comprehensive authentication support with JWT, sessions, OAuth, and API keys.
+
+#### Using DMSCAuthConfig
+
+```python
+from dmsc import DMSCAuthConfig, DMSCAuthModule
+
+# Method 1: Create with defaults
+config = DMSCAuthConfig()
+
+# Method 2: Create with custom settings
+config = DMSCAuthConfig(
+    enabled=True,
+    jwt_secret="your-secret-key",  # Optional, defaults to DMSC_JWT_SECRET env var
+    jwt_expiry_secs=3600,          # 1 hour
+    session_timeout_secs=86400,    # 24 hours
+    oauth_providers=["google", "github"],
+    enable_api_keys=True,
+    enable_session_auth=True
+)
+
+# Method 3: Create from environment
+config = DMSCAuthConfig.from_env()
+
+# Method 4: Use default factory
+config = DMSCAuthConfig.default()
+
+# Create auth module with config
+auth_module = DMSCAuthModule(config)
+```
+
+#### JWT Token Management
+
 ```python
 from dmsc import DMSCJWTManager
 
@@ -236,11 +269,40 @@ jwt_manager = DMSCJWTManager("your-secret-key", 3600)
 # Generate token with user ID, roles, and permissions
 token = jwt_manager.generate_token("user123", ["admin"], ["read", "write"])
 
-# Verify/validate token
-payload = jwt_manager.validate_token(token)
-print(f"User ID: {payload.sub}")
-print(f"Roles: {payload.roles}")
-print(f"Permissions: {payload.permissions}")
+# Validate token and get claims
+claims = jwt_manager.validate_token(token)
+print(f"User ID: {claims.sub}")
+print(f"Roles: {claims.roles}")
+print(f"Permissions: {claims.permissions}")
+
+# Get token expiry time
+expiry = jwt_manager.get_token_expiry()
+print(f"Token expires in {expiry} seconds")
+```
+
+#### Complete Auth Module Example
+
+```python
+from dmsc import DMSCAuthConfig, DMSCAuthModule
+
+# Create auth configuration
+config = DMSCAuthConfig(
+    enabled=True,
+    jwt_secret="secure-secret-key",
+    jwt_expiry_secs=3600,
+    oauth_providers=["google"]
+)
+
+# Create auth module
+auth_module = DMSCAuthModule(config)
+
+# Get JWT manager and generate token
+jwt_manager = auth_module.jwt_manager()
+token = jwt_manager.generate_token("user123", ["user"], ["read:data"])
+
+# Validate token
+claims = jwt_manager.validate_token(token)
+print(f"Authenticated user: {claims.sub}")
 ```
 
 ### Queue Management Example

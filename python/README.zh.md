@@ -227,6 +227,39 @@ asyncio.run(main())
 
 ### 认证示例
 
+DMSC 提供了全面的认证支持，包括 JWT、会话、OAuth 和 API 密钥。
+
+#### 使用 DMSCAuthConfig
+
+```python
+from dmsc import DMSCAuthConfig, DMSCAuthModule
+
+# 方式 1: 使用默认值创建
+config = DMSCAuthConfig()
+
+# 方式 2: 使用自定义设置创建
+config = DMSCAuthConfig(
+    enabled=True,
+    jwt_secret="your-secret-key",  # 可选，默认从 DMSC_JWT_SECRET 环境变量加载
+    jwt_expiry_secs=3600,          # 1 小时
+    session_timeout_secs=86400,    # 24 小时
+    oauth_providers=["google", "github"],
+    enable_api_keys=True,
+    enable_session_auth=True
+)
+
+# 方式 3: 从环境变量创建
+config = DMSCAuthConfig.from_env()
+
+# 方式 4: 使用默认工厂方法
+config = DMSCAuthConfig.default()
+
+# 使用配置创建认证模块
+auth_module = DMSCAuthModule(config)
+```
+
+#### JWT 令牌管理
+
 ```python
 from dmsc import DMSCJWTManager
 
@@ -236,11 +269,40 @@ jwt_manager = DMSCJWTManager("your-secret-key", 3600)
 # 生成令牌（需要用户 ID、角色、权限）
 token = jwt_manager.generate_token("user123", ["admin"], ["read", "write"])
 
+# 验证令牌并获取声明
+claims = jwt_manager.validate_token(token)
+print(f"用户 ID: {claims.sub}")
+print(f"角色: {claims.roles}")
+print(f"权限: {claims.permissions}")
+
+# 获取令牌过期时间
+expiry = jwt_manager.get_token_expiry()
+print(f"令牌将在 {expiry} 秒后过期")
+```
+
+#### 完整认证模块示例
+
+```python
+from dmsc import DMSCAuthConfig, DMSCAuthModule
+
+# 创建认证配置
+config = DMSCAuthConfig(
+    enabled=True,
+    jwt_secret="secure-secret-key",
+    jwt_expiry_secs=3600,
+    oauth_providers=["google"]
+)
+
+# 创建认证模块
+auth_module = DMSCAuthModule(config)
+
+# 获取 JWT 管理器并生成令牌
+jwt_manager = auth_module.jwt_manager()
+token = jwt_manager.generate_token("user123", ["user"], ["read:data"])
+
 # 验证令牌
-payload = jwt_manager.validate_token(token)
-print(f"用户 ID: {payload.sub}")
-print(f"角色: {payload.roles}")
-print(f"权限: {payload.permissions}")
+claims = jwt_manager.validate_token(token)
+print(f"已认证用户: {claims.sub}")
 ```
 
 ### 队列管理示例

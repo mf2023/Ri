@@ -35,9 +35,6 @@ parse_deps = false
 include = []
 
 [export]
-# The name of the header file to generate
-include_version = true
-
 # Prefix for all generated symbols to avoid naming conflicts
 prefix = "CDMSC"
 

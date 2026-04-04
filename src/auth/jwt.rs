@@ -304,6 +304,48 @@ impl DMSCJWTManager {
     pub fn py_get_token_expiry(&self) -> u64 {
         self.expiry_secs
     }
+
+    /// Generates a new JWT token for the specified user with roles and permissions.
+    ///
+    /// This is an alias for `py_generate_token` providing a more Pythonic API.
+    ///
+    /// # Parameters
+    ///
+    /// - `user_id`: The unique identifier of the user (subject claim)
+    /// - `roles`: A list of role identifiers assigned to the user
+    /// - `permissions`: A list of permission identifiers granted to the user
+    ///
+    /// # Returns
+    ///
+    /// The encoded JWT token string
+    #[pyo3(name = "generate_token")]
+    pub fn generate_token_py(&self, user_id: &str, roles: Vec<String>, permissions: Vec<String>) -> Result<String, DMSCError> {
+        self.py_generate_token(user_id, roles, permissions)
+    }
+
+    /// Validates a JWT token and returns the decoded claims.
+    ///
+    /// This is an alias for `py_validate_token` providing a more Pythonic API.
+    ///
+    /// # Parameters
+    ///
+    /// - `token`: The JWT token string to validate
+    ///
+    /// # Returns
+    ///
+    /// The decoded DMSCJWTClaims if validation succeeds
+    #[pyo3(name = "validate_token")]
+    pub fn validate_token_py(&self, token: &str) -> Result<DMSCJWTClaims, DMSCError> {
+        self.py_validate_token(token)
+    }
+
+    /// Returns the default token expiry time in seconds.
+    ///
+    /// This is an alias for `py_get_token_expiry` providing a more Pythonic API.
+    #[pyo3(name = "get_token_expiry")]
+    pub fn get_token_expiry_py(&self) -> u64 {
+        self.py_get_token_expiry()
+    }
 }
 
 impl DMSCJWTManager {

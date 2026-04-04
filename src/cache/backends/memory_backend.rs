@@ -83,9 +83,64 @@
 
 use dashmap::DashMap;
 use std::sync::Arc;
-use tokio::sync::RwLock;
+use std::sync::atomic::{AtomicU64, AtomicUsize, Ordering};
 use crate::cache::{DMSCCache, DMSCCachedValue, DMSCCacheStats};
 use crate::core::DMSCResult;
+
+/// Atomic cache statistics for lock-free performance tracking.
+struct AtomicCacheStats {
+    hits: AtomicU64,
+    misses: AtomicU64,
+    entries: AtomicUsize,
+    memory_usage_bytes: AtomicUsize,
+    eviction_count: AtomicU64,
+}
+
+impl AtomicCacheStats {
+    fn new() -> Self {
+        Self {
+            hits: AtomicU64::new(0),
+            misses: AtomicU64::new(0),
+            entries: AtomicUsize::new(0),
+            memory_usage_bytes: AtomicUsize::new(0),
+            eviction_count: AtomicU64::new(0),
+        }
+    }
+
+    fn increment_hits(&self) {
+        self.hits.fetch_add(1, Ordering::Relaxed);
+    }
+
+    fn increment_misses(&self) {
+        self.misses.fetch_add(1, Ordering::Relaxed);
+    }
+
+    fn increment_evictions(&self) {
+        self.eviction_count.fetch_add(1, Ordering::Relaxed);
+    }
+
+    fn to_cache_stats(&self) -> DMSCCacheStats {
+        let hits = self.hits.load(Ordering::Relaxed);
+        let misses = self.misses.load(Ordering::Relaxed);
+        let total = hits + misses;
+        let avg_hit_rate = if total > 0 {
+            hits as f64 / total as f64
+        } else {
+            0.0
+        };
+
+        DMSCCacheStats {
+            hits,
+            misses,
+            entries: self.entries.load(Ordering::Relaxed),
+            memory_usage_bytes: self.memory_usage_bytes.load(Ordering::Relaxed),
+            avg_hit_rate,
+            hit_count: hits,
+            miss_count: misses,
+            eviction_count: self.eviction_count.load(Ordering::Relaxed),
+        }
+    }
+}
 
 /// In-memory cache implementation using DashMap for high performance and thread safety.
 ///
@@ -94,8 +149,8 @@ use crate::core::DMSCResult;
 pub struct DMSCMemoryCache {
     /// Underlying storage using DashMap for concurrent access
     store: Arc<DashMap<String, DMSCCachedValue>>,
-    /// Cache statistics tracking hit count, miss count, and eviction count
-    stats: Arc<RwLock<DMSCCacheStats>>,
+    /// Cache statistics using atomic operations for lock-free performance
+    stats: Arc<AtomicCacheStats>,
 }
 
 impl Default for DMSCMemoryCache {
@@ -113,7 +168,7 @@ impl DMSCMemoryCache {
     pub fn new() -> Self {
         DMSCMemoryCache {
             store: Arc::new(DashMap::new()),
-            stats: Arc::new(RwLock::new(DMSCCacheStats::default())),
+            stats: Arc::new(AtomicCacheStats::new()),
         }
     }
 }
@@ -140,19 +195,15 @@ impl DMSCCache for DMSCMemoryCache {
                 if value.is_expired() {
                     drop(entry);
                     self.store.remove(key);
-                    let mut stats = self.stats.write().await;
-                stats.misses += 1;
-                
+                    self.stats.increment_misses();
                     Ok(None)
                 } else {
-                    let mut stats = self.stats.write().await;
-                stats.hits += 1;
+                    self.stats.increment_hits();
                     Ok(Some(value.value))
                 }
             }
             None => {
-                let mut stats = self.stats.write().await;
-                stats.misses += 1;
+                self.stats.increment_misses();
                 Ok(None)
             }
         }
@@ -228,7 +279,9 @@ impl DMSCCache for DMSCMemoryCache {
     ///
     /// A `DMSCCacheStats` struct containing cache statistics
     async fn stats(&self) -> DMSCCacheStats {
-        *self.stats.read().await
+        let mut stats = self.stats.to_cache_stats();
+        stats.entries = self.store.len();
+        stats
     }
     
     /// Cleans up all expired entries from the cache.

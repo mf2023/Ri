@@ -413,6 +413,203 @@ impl DMSCAuthModule {
 }
 
 #[cfg(feature = "pyo3")]
+#[pyo3::prelude::pymethods]
+impl DMSCAuthConfig {
+    /// Creates a new authentication configuration with the specified parameters.
+    ///
+    /// All parameters have sensible defaults, making it easy to create a basic configuration.
+    /// The JWT secret is automatically loaded from the `DMSC_JWT_SECRET` environment variable
+    /// if not provided.
+    ///
+    /// # Parameters
+    ///
+    /// - `enabled`: Whether authentication is enabled (default: true)
+    /// - `jwt_secret`: Secret key for JWT tokens (default: loaded from DMSC_JWT_SECRET env var)
+    /// - `jwt_expiry_secs`: JWT token expiry time in seconds (default: 3600)
+    /// - `session_timeout_secs`: Session timeout in seconds (default: 86400)
+    /// - `oauth_providers`: List of OAuth providers to enable (default: empty)
+    /// - `enable_api_keys`: Whether API key authentication is enabled (default: true)
+    /// - `enable_session_auth`: Whether session authentication is enabled (default: true)
+    /// - `oauth_cache_backend_type`: Cache backend type - "Memory" or "Redis" (default: "Memory")
+    /// - `oauth_cache_redis_url`: Redis URL for OAuth cache (default: "redis://127.0.0.1:6379")
+    ///
+    /// # Returns
+    ///
+    /// A new `DMSCAuthConfig` instance
+    ///
+    /// # Example
+    ///
+    /// ```python
+    /// from dmsc import DMSCAuthConfig
+    ///
+    /// # Create with defaults
+    /// config = DMSCAuthConfig()
+    ///
+    /// # Create with custom settings
+    /// config = DMSCAuthConfig(
+    ///     enabled=True,
+    ///     jwt_secret="my-secret-key",
+    ///     jwt_expiry_secs=7200,
+    ///     oauth_providers=["google", "github"]
+    /// )
+    /// ```
+    #[new]
+    #[pyo3(signature = (
+        enabled = true,
+        jwt_secret = "",
+        jwt_expiry_secs = 3600,
+        session_timeout_secs = 86400,
+        oauth_providers = vec![],
+        enable_api_keys = true,
+        enable_session_auth = true,
+        oauth_cache_backend_type = None,
+        oauth_cache_redis_url = "redis://127.0.0.1:6379"
+    ))]
+    fn py_new(
+        enabled: bool,
+        jwt_secret: &str,
+        jwt_expiry_secs: u64,
+        session_timeout_secs: u64,
+        oauth_providers: Vec<String>,
+        enable_api_keys: bool,
+        enable_session_auth: bool,
+        oauth_cache_backend_type: Option<String>,
+        oauth_cache_redis_url: &str,
+    ) -> Self {
+        let secret = if jwt_secret.is_empty() {
+            load_jwt_secret_from_env()
+        } else {
+            jwt_secret.to_string()
+        };
+        
+        #[cfg(feature = "cache")]
+        {
+            let backend_type = match oauth_cache_backend_type.as_deref() {
+                Some("Redis") => crate::cache::DMSCCacheBackendType::Redis,
+                _ => crate::cache::DMSCCacheBackendType::Memory,
+            };
+            
+            Self {
+                enabled,
+                jwt_secret: secret,
+                jwt_expiry_secs,
+                session_timeout_secs,
+                oauth_providers,
+                enable_api_keys,
+                enable_session_auth,
+                oauth_cache_backend_type: backend_type,
+                oauth_cache_redis_url: oauth_cache_redis_url.to_string(),
+            }
+        }
+        
+        #[cfg(not(feature = "cache"))]
+        {
+            let _ = oauth_cache_backend_type;
+            let _ = oauth_cache_redis_url;
+            
+            Self {
+                enabled,
+                jwt_secret: secret,
+                jwt_expiry_secs,
+                session_timeout_secs,
+                oauth_providers,
+                enable_api_keys,
+                enable_session_auth,
+            }
+        }
+    }
+
+    /// Creates a new authentication configuration with default values.
+    ///
+    /// This is a convenience method that creates a configuration with all default settings.
+    /// The JWT secret is loaded from the `DMSC_JWT_SECRET` environment variable.
+    ///
+    /// # Returns
+    ///
+    /// A new `DMSCAuthConfig` instance with default values
+    ///
+    /// # Example
+    ///
+    /// ```python
+    /// from dmsc import DMSCAuthConfig
+    ///
+    /// config = DMSCAuthConfig.default()
+    /// ```
+    #[staticmethod]
+    fn default() -> Self {
+        Self::default()
+    }
+
+    /// Creates a new authentication configuration from environment variables.
+    ///
+    /// This method loads the JWT secret from the `DMSC_JWT_SECRET` environment variable
+    /// and uses default values for all other settings.
+    ///
+    /// # Returns
+    ///
+    /// A new `DMSCAuthConfig` instance with values from environment
+    ///
+    /// # Example
+    ///
+    /// ```python
+    /// import os
+    /// from dmsc import DMSCAuthConfig
+    ///
+    /// os.environ["DMSC_JWT_SECRET"] = "my-secret-key"
+    /// config = DMSCAuthConfig.from_env()
+    /// ```
+    #[staticmethod]
+    fn from_env() -> Self {
+        Self {
+            jwt_secret: load_jwt_secret_from_env(),
+            ..Self::default()
+        }
+    }
+
+    /// Returns whether authentication is enabled.
+    #[getter]
+    fn get_enabled(&self) -> bool {
+        self.enabled
+    }
+
+    /// Returns the JWT secret key.
+    #[getter]
+    fn get_jwt_secret(&self) -> String {
+        self.jwt_secret.clone()
+    }
+
+    /// Returns the JWT token expiry time in seconds.
+    #[getter]
+    fn get_jwt_expiry_secs(&self) -> u64 {
+        self.jwt_expiry_secs
+    }
+
+    /// Returns the session timeout in seconds.
+    #[getter]
+    fn get_session_timeout_secs(&self) -> u64 {
+        self.session_timeout_secs
+    }
+
+    /// Returns the list of OAuth providers.
+    #[getter]
+    fn get_oauth_providers(&self) -> Vec<String> {
+        self.oauth_providers.clone()
+    }
+
+    /// Returns whether API key authentication is enabled.
+    #[getter]
+    fn get_enable_api_keys(&self) -> bool {
+        self.enable_api_keys
+    }
+
+    /// Returns whether session authentication is enabled.
+    #[getter]
+    fn get_enable_session_auth(&self) -> bool {
+        self.enable_session_auth
+    }
+}
+
+#[cfg(feature = "pyo3")]
 /// Python bindings for the DMSC Authentication Module.
 ///
 /// This module provides Python interface to DMSC authentication functionality,

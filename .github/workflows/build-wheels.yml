@@ -115,6 +115,9 @@ on:
     types: [published]
   workflow_dispatch:
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 jobs:
   ################################################################################
   # RUST LIBRARY COMPILATION JOBS
@@ -578,6 +581,83 @@ jobs:
             include/dmsc.h
 
   ################################################################################
+  # JAVA LIBRARY BUILD JOB
+  ################################################################################
+  # This job compiles the Java bindings and packages them into a JAR file.
+  # The Java bindings use JNI to call into the Rust library.
+  #
+  # Build Output: JAR file with embedded native libraries
+  # Used by: Java applications using DMSC
+  ################################################################################
+
+  build-java:
+    runs-on: ubuntu-latest
+    needs: [build-rust-linux, build-rust-linux-arm64, build-rust-windows, build-rust-macos, build-rust-macos-arm64]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 11
+        uses: actions/setup-java@v4
+        with:
+          java-version: '11'
+          distribution: 'temurin'
+
+      - name: Download Linux x64 native library
+        uses: actions/download-artifact@v4
+        with:
+          name: rust-linux-x64
+          path: native/linux-x64
+
+      - name: Download Linux ARM64 native library
+        uses: actions/download-artifact@v4
+        with:
+          name: rust-linux-arm64
+          path: native/linux-arm64
+
+      - name: Download Windows x64 native library
+        uses: actions/download-artifact@v4
+        with:
+          name: rust-windows-x64
+          path: native/windows-x64
+
+      - name: Download macOS x64 native library
+        uses: actions/download-artifact@v4
+        with:
+          name: rust-macos-x64
+          path: native/macos-x64
+
+      - name: Download macOS ARM64 native library
+        uses: actions/download-artifact@v4
+        with:
+          name: rust-macos-arm64
+          path: native/macos-arm64
+
+      - name: Organize native libraries
+        run: |
+          mkdir -p java/src/main/resources/native/linux-x64
+          mkdir -p java/src/main/resources/native/linux-arm64
+          mkdir -p java/src/main/resources/native/windows-x64
+          mkdir -p java/src/main/resources/native/macos-x64
+          mkdir -p java/src/main/resources/native/macos-arm64
+          
+          cp native/linux-x64/libdmsc.so java/src/main/resources/native/linux-x64/ 2>/dev/null || true
+          cp native/linux-arm64/libdmsc.so java/src/main/resources/native/linux-arm64/ 2>/dev/null || true
+          cp native/windows-x64/dmsc.dll java/src/main/resources/native/windows-x64/ 2>/dev/null || true
+          cp native/macos-x64/libdmsc.dylib java/src/main/resources/native/macos-x64/ 2>/dev/null || true
+          cp native/macos-arm64/libdmsc.dylib java/src/main/resources/native/macos-arm64/ 2>/dev/null || true
+
+      - name: Build with Maven
+        run: |
+          cd java
+          mvn clean package -DskipTests
+
+      - name: Upload JAR artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: java-library
+          path: java/target/dmsc-*.jar
+
+  ################################################################################
   # PYTHON WHEEL BUILD JOB (MATRIX)
   ################################################################################
   # This job generates Python wheel packages (.whl) for all supported platforms,
@@ -933,7 +1013,19 @@ jobs:
           manylinux: ${{ matrix.manylinux }}
           args: --release -o dist
           before-script-linux: |
-            yum install -y perl-core zlib-devel cmake3
+            yum install -y perl-core zlib-devel
+            # Install cmake (try cmake3 first, fallback to cmake)
+            yum install -y cmake3 || yum install -y cmake || true
+            # Configure correct Python version for maturin
+            PYTHON_VER="${{ matrix.python }}"
+            PYTHON_MAJOR=$(echo "$PYTHON_VER" | cut -d. -f1)
+            PYTHON_MINOR=$(echo "$PYTHON_VER" | cut -d. -f2)
+            PYTHON_BIN="/opt/python/cp${PYTHON_MAJOR}${PYTHON_MINOR}-cp${PYTHON_MAJOR}${PYTHON_MINOR}/bin/python"
+            if [ -f "$PYTHON_BIN" ]; then
+              export PATH="$(dirname $PYTHON_BIN):$PATH"
+              ln -sf "$PYTHON_BIN" /usr/local/bin/python3 || true
+              ln -sf "$PYTHON_BIN" /usr/local/bin/python || true
+            fi
 
       - name: List generated files
         shell: bash
