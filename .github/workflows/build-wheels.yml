@@ -363,48 +363,13 @@ jobs:
       - name: Build C static library
         run: cargo build --release --no-default-features --features c
 
+      - name: Install cbindgen
+        run: cargo install cbindgen
+
       - name: Generate C headers
         run: |
           mkdir -p include
-          cat > include/dmsc.h << 'HEADER_EOF'
-/* DMSC C API Header - Auto-generated */
-/* This header provides C API declarations for DMSC library */
-#ifndef DMSC_H
-#define DMSC_H
-
-#include <stdint.h>
-#include <stddef.h>
-
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-/* Library Management Functions */
-int dmsc_init(void);
-void dmsc_cleanup(void);
-const char* dmsc_version(void);
-void dmsc_string_free(char* s);
-
-/* Core Module - Application Builder */
-typedef struct CDMSCAppBuilder CDMSCAppBuilder;
-typedef struct CDMSCConfig CDMSCConfig;
-
-/* Application Builder API */
-CDMSCAppBuilder* dmsc_app_builder_new(void);
-void dmsc_app_builder_free(CDMSCAppBuilder* builder);
-
-/* Configuration API */
-CDMSCConfig* dmsc_config_new(void);
-void dmsc_config_free(CDMSCConfig* config);
-char* dmsc_config_get_string(CDMSCConfig* config, const char* key);
-int dmsc_config_set_string(CDMSCConfig* config, const char* key, const char* value);
-
-#ifdef __cplusplus
-}
-#endif
-
-#endif /* DMSC_H */
-HEADER_EOF
+          cbindgen --crate dmsc -o include/dmsc.h
 
       - name: Upload C library artifact
         uses: actions/upload-artifact@v4
@@ -438,48 +403,13 @@ HEADER_EOF
       - name: Build C static library
         run: cargo build --release --no-default-features --features c
 
+      - name: Install cbindgen
+        run: cargo install cbindgen
+
       - name: Generate C headers
         run: |
           mkdir -p include
-          cat > include/dmsc.h << 'HEADER_EOF'
-/* DMSC C API Header - Auto-generated for ARM64 Linux */
-/* This header provides C API declarations for DMSC library */
-#ifndef DMSC_H
-#define DMSC_H
-
-#include <stdint.h>
-#include <stddef.h>
-
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-/* Library Management Functions */
-int dmsc_init(void);
-void dmsc_cleanup(void);
-const char* dmsc_version(void);
-void dmsc_string_free(char* s);
-
-/* Core Module - Application Builder */
-typedef struct CDMSCAppBuilder CDMSCAppBuilder;
-typedef struct CDMSCConfig CDMSCConfig;
-
-/* Application Builder API */
-CDMSCAppBuilder* dmsc_app_builder_new(void);
-void dmsc_app_builder_free(CDMSCAppBuilder* builder);
-
-/* Configuration API */
-CDMSCConfig* dmsc_config_new(void);
-void dmsc_config_free(CDMSCConfig* config);
-char* dmsc_config_get_string(CDMSCConfig* config, const char* key);
-int dmsc_config_set_string(CDMSCConfig* config, const char* key, const char* value);
-
-#ifdef __cplusplus
-}
-#endif
-
-#endif /* DMSC_H */
-HEADER_EOF
+          cbindgen --crate dmsc -o include/dmsc.h
 
       - name: Upload C library artifact
         uses: actions/upload-artifact@v4
@@ -508,46 +438,13 @@ HEADER_EOF
       - name: Build C static library
         run: cargo build --release --no-default-features --features c
 
+      - name: Install cbindgen
+        run: cargo install cbindgen
+
       - name: Generate C headers
-        shell: cmd
         run: |
-          mkdir include 2>nul
-          echo /* DMSC C API Header - Auto-generated for Windows x64 */ > include\dmsc.h
-          echo #ifndef DMSC_H >> include\dmsc.h
-          echo #define DMSC_H >> include\dmsc.h
-          echo. >> include\dmsc.h
-          echo #include ^<stdint.h^> >> include\dmsc.h
-          echo #include ^<stddef.h^> >> include\dmsc.h
-          echo. >> include\dmsc.h
-          echo #ifdef __cplusplus >> include\dmsc.h
-          echo extern "C" { >> include\dmsc.h
-          echo #endif >> include\dmsc.h
-          echo. >> include\dmsc.h
-          echo /* Library Management Functions */ >> include\dmsc.h
-          echo int dmsc_init(void); >> include\dmsc.h
-          echo void dmsc_cleanup(void); >> include\dmsc.h
-          echo const char* dmsc_version(void); >> include\dmsc.h
-          echo void dmsc_string_free(char* s); >> include\dmsc.h
-          echo. >> include\dmsc.h
-          echo /* Core Module - Application Builder */ >> include\dmsc.h
-          echo typedef struct CDMSCAppBuilder CDMSCAppBuilder; >> include\dmsc.h
-          echo typedef struct CDMSCConfig CDMSCConfig; >> include\dmsc.h
-          echo. >> include\dmsc.h
-          echo /* Application Builder API */ >> include\dmsc.h
-          echo CDMSCAppBuilder* dmsc_app_builder_new(void); >> include\dmsc.h
-          echo void dmsc_app_builder_free(CDMSCAppBuilder* builder); >> include\dmsc.h
-          echo. >> include\dmsc.h
-          echo /* Configuration API */ >> include\dmsc.h
-          echo CDMSCConfig* dmsc_config_new(void); >> include\dmsc.h
-          echo void dmsc_config_free(CDMSCConfig* config); >> include\dmsc.h
-          echo char* dmsc_config_get_string(CDMSCConfig* config, const char* key); >> include\dmsc.h
-          echo int dmsc_config_set_string(CDMSCConfig* config, const char* key, const char* value); >> include\dmsc.h
-          echo. >> include\dmsc.h
-          echo #ifdef __cplusplus >> include\dmsc.h
-          echo } >> include\dmsc.h
-          echo #endif >> include\dmsc.h
-          echo. >> include\dmsc.h
-          echo #endif >> include\dmsc.h
+          mkdir include 2>nul || true
+          cbindgen --crate dmsc -o include/dmsc.h
 
       - name: Upload C library artifact
         uses: actions/upload-artifact@v4
@@ -582,48 +479,13 @@ HEADER_EOF
       - name: Build C static library
         run: cargo build --release --target x86_64-apple-darwin --no-default-features --features c
 
+      - name: Install cbindgen
+        run: cargo install cbindgen
+
       - name: Generate C headers
         run: |
           mkdir -p include
-          cat > include/dmsc.h << 'HEADER_EOF'
-/* DMSC C API Header - Auto-generated for macOS x64 */
-/* This header provides C API declarations for DMSC library */
-#ifndef DMSC_H
-#define DMSC_H
-
-#include <stdint.h>
-#include <stddef.h>
-
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-/* Library Management Functions */
-int dmsc_init(void);
-void dmsc_cleanup(void);
-const char* dmsc_version(void);
-void dmsc_string_free(char* s);
-
-/* Core Module - Application Builder */
-typedef struct CDMSCAppBuilder CDMSCAppBuilder;
-typedef struct CDMSCConfig CDMSCConfig;
-
-/* Application Builder API */
-CDMSCAppBuilder* dmsc_app_builder_new(void);
-void dmsc_app_builder_free(CDMSCAppBuilder* builder);
-
-/* Configuration API */
-CDMSCConfig* dmsc_config_new(void);
-void dmsc_config_free(CDMSCConfig* config);
-char* dmsc_config_get_string(CDMSCConfig* config, const char* key);
-int dmsc_config_set_string(CDMSCConfig* config, const char* key, const char* value);
-
-#ifdef __cplusplus
-}
-#endif
-
-#endif /* DMSC_H */
-HEADER_EOF
+          cbindgen --crate dmsc -o include/dmsc.h
 
       - name: Upload C library artifact
         uses: actions/upload-artifact@v4
@@ -658,48 +520,13 @@ HEADER_EOF
       - name: Build C static library
         run: cargo build --release --target aarch64-apple-darwin --no-default-features --features c
 
+      - name: Install cbindgen
+        run: cargo install cbindgen
+
       - name: Generate C headers
         run: |
           mkdir -p include
-          cat > include/dmsc.h << 'HEADER_EOF'
-/* DMSC C API Header - Auto-generated for macOS ARM64 */
-/* This header provides C API declarations for DMSC library */
-#ifndef DMSC_H
-#define DMSC_H
-
-#include <stdint.h>
-#include <stddef.h>
-
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-/* Library Management Functions */
-int dmsc_init(void);
-void dmsc_cleanup(void);
-const char* dmsc_version(void);
-void dmsc_string_free(char* s);
-
-/* Core Module - Application Builder */
-typedef struct CDMSCAppBuilder CDMSCAppBuilder;
-typedef struct CDMSCConfig CDMSCConfig;
-
-/* Application Builder API */
-CDMSCAppBuilder* dmsc_app_builder_new(void);
-void dmsc_app_builder_free(CDMSCAppBuilder* builder);
-
-/* Configuration API */
-CDMSCConfig* dmsc_config_new(void);
-void dmsc_config_free(CDMSCConfig* config);
-char* dmsc_config_get_string(CDMSCConfig* config, const char* key);
-int dmsc_config_set_string(CDMSCConfig* config, const char* key, const char* value);
-
-#ifdef __cplusplus
-}
-#endif
-
-#endif /* DMSC_H */
-HEADER_EOF
+          cbindgen --crate dmsc -o include/dmsc.h
 
       - name: Upload C library artifact
         uses: actions/upload-artifact@v4
@@ -734,48 +561,13 @@ HEADER_EOF
       - name: Build C static library
         run: cargo build --release --target aarch64-pc-windows-msvc --no-default-features --features c
 
+      - name: Install cbindgen
+        run: cargo install cbindgen
+
       - name: Generate C headers
         run: |
           mkdir -p include
-          cat > include/dmsc.h << 'HEADER_EOF'
-/* DMSC C API Header - Auto-generated for Windows ARM64 */
-/* This header provides C API declarations for DMSC library */
-#ifndef DMSC_H
-#define DMSC_H
-
-#include <stdint.h>
-#include <stddef.h>
-
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-/* Library Management Functions */
-int dmsc_init(void);
-void dmsc_cleanup(void);
-const char* dmsc_version(void);
-void dmsc_string_free(char* s);
-
-/* Core Module - Application Builder */
-typedef struct CDMSCAppBuilder CDMSCAppBuilder;
-typedef struct CDMSCConfig CDMSCConfig;
-
-/* Application Builder API */
-CDMSCAppBuilder* dmsc_app_builder_new(void);
-void dmsc_app_builder_free(CDMSCAppBuilder* builder);
-
-/* Configuration API */
-CDMSCConfig* dmsc_config_new(void);
-void dmsc_config_free(CDMSCConfig* config);
-char* dmsc_config_get_string(CDMSCConfig* config, const char* key);
-int dmsc_config_set_string(CDMSCConfig* config, const char* key, const char* value);
-
-#ifdef __cplusplus
-}
-#endif
-
-#endif /* DMSC_H */
-HEADER_EOF
+          cbindgen --crate dmsc -o include/dmsc.h
 
       - name: Upload C library artifact
         uses: actions/upload-artifact@v4
