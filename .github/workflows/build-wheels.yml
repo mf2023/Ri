@@ -825,18 +825,18 @@ jobs:
 
           mkdir -p .cargo
           cat >> .cargo/config.toml << 'CARGO_EOF'
-[target.x86_64-apple-darwin]
-rustflags = ["-C", "link-arg=-undefined", "-C", "link-arg=dynamic_lookup"]
+          [target.x86_64-apple-darwin]
+          rustflags = ["-C", "link-arg=-undefined", "-C", "link-arg=dynamic_lookup"]
 
-[target.aarch64-apple-darwin]
-rustflags = ["-C", "link-arg=-undefined", "-C", "link-arg=dynamic_lookup"]
+          [target.aarch64-apple-darwin]
+          rustflags = ["-C", "link-arg=-undefined", "-C", "link-arg=dynamic_lookup"]
 
-[net]
-retry = 5
+          [net]
+          retry = 5
 
-[http]
-timeout = 60
-CARGO_EOF
+          [http]
+          timeout = 60
+          CARGO_EOF
 
       - name: Install protoc for macOS
         if: runner.os == 'macOS'
@@ -900,11 +900,11 @@ CARGO_EOF
         run: |
           mkdir -p .cargo
           cat > .cargo/config.toml << 'CARGO_EOF'
-[profile.release]
-lto = true
-codegen-units = 1
-strip = true
-CARGO_EOF
+          [profile.release]
+          lto = true
+          codegen-units = 1
+          strip = true
+          CARGO_EOF
 
       - name: Upgrade pip
         run: |
