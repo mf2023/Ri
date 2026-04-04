@@ -1148,7 +1148,7 @@ jobs:
   # Only runs for production releases (not test releases)
   ################################################################################
   publish-maven:
-    needs: [build-java-linux, build-java-linux-arm64, build-java-windows, build-java-windows-arm64, build-java-macos, build-java-macos-arm64]
+    needs: [build-java]
     
     if: github.event_name == 'release' && !contains(github.event.release.name, 'Test')
     
@@ -1167,48 +1167,18 @@ jobs:
         run: |
           echo "${{ secrets.GPG_PRIVATE_KEY }}" | gpg --batch --import || true
 
-      - name: Download Linux x64 JNI library
+      - name: Download JAR artifact
         uses: actions/download-artifact@v4
         with:
-          name: java-linux-x64
-          path: java/src/main/resources/native/linux/x64
-
-      - name: Download Linux ARM64 JNI library
-        uses: actions/download-artifact@v4
-        with:
-          name: java-linux-arm64
-          path: java/src/main/resources/native/linux/arm64
-
-      - name: Download Windows x64 JNI library
-        uses: actions/download-artifact@v4
-        with:
-          name: java-windows-x64
-          path: java/src/main/resources/native/windows/x64
-
-      - name: Download Windows ARM64 JNI library
-        uses: actions/download-artifact@v4
-        with:
-          name: java-windows-arm64
-          path: java/src/main/resources/native/windows/arm64
-
-      - name: Download macOS x64 JNI library
-        uses: actions/download-artifact@v4
-        with:
-          name: java-macos-x64
-          path: java/src/main/resources/native/macos/x64
-
-      - name: Download macOS ARM64 JNI library
-        uses: actions/download-artifact@v4
-        with:
-          name: java-macos-arm64
-          path: java/src/main/resources/native/macos/arm64
+          name: java-library
+          path: java/target
 
       - name: Build and deploy to Maven Central
         run: |
           cd java
           mkdir -p ~/.m2
           echo '<settings><servers><server><id>central</id><username>${CENTRAL_USERNAME}</username><password>${CENTRAL_PASSWORD}</password></server></servers></settings>' > ~/.m2/settings.xml
-          mvn clean deploy -P release -DskipTests
+          mvn deploy -P release -DskipTests
         env:
           CENTRAL_USERNAME: ${{ secrets.CENTRAL_USERNAME }}
           CENTRAL_PASSWORD: ${{ secrets.CENTRAL_PASSWORD }}
