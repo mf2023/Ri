@@ -1267,3 +1267,52 @@ jobs:
         env:
           TWINE_USERNAME: __token__
           TWINE_PASSWORD: ${{ secrets.PYPI_TEST_API_TOKEN }}
+
+  ################################################################################
+  # Job: Sync Release to Gitee
+  ################################################################################
+  # Creates the same release on Gitee with title, description, and tag
+  # Runs for both test and production releases
+  # This ensures the Chinese mirror (Gitee) has the same release information
+  ################################################################################
+  sync-to-gitee:
+    # Depends on all build jobs completing successfully
+    needs: [build-rust-linux, build-rust-linux-arm64, build-rust-windows, build-rust-windows-arm64, build-rust-macos, build-rust-macos-arm64, build-python]
+    
+    # Conditional: Run for any release (both test and production)
+    if: github.event_name == 'release'
+    
+    # Use Ubuntu latest for API calls
+    runs-on: ubuntu-latest
+    
+    steps:
+      # Step 1: Sync release information to Gitee using API
+      # Uses GITEE_TOKEN secret for authentication
+      # Creates a release with the same tag, name, and body as GitHub
+      # Note: Using jq to properly escape JSON special characters in release body
+      - name: Sync Release to Gitee
+        run: |
+          # Gitee API endpoint for creating releases
+          GITEE_API="https://gitee.com/api/v5/repos/dunimd/dmsc/releases"
+          
+          # Create JSON payload using jq to properly escape special characters
+          jq -n \
+            --arg token "${{ secrets.GITEE_TOKEN }}" \
+            --arg tag "${{ github.event.release.tag_name }}" \
+            --arg name "${{ github.event.release.name }}" \
+            --arg body "${{ github.event.release.body }}" \
+            '{
+              access_token: $token,
+              tag_name: $tag,
+              name: $name,
+              body: $body,
+              prerelease: false,
+              target_commitish: "master"
+            }' > payload.json
+          
+          # Create release on Gitee using curl POST request
+          curl -X POST "$GITEE_API" \
+            -H "Content-Type: application/json" \
+            -d @payload.json
+        env:
+          GITEE_TOKEN: ${{ secrets.GITEE_TOKEN }}
