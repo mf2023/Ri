@@ -537,7 +537,7 @@ impl DMSCAuthConfig {
     /// ```
     #[staticmethod]
     fn default() -> Self {
-        Self::default()
+        <Self as Default>::default()
     }
 
     /// Creates a new authentication configuration from environment variables.

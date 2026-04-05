@@ -115,6 +115,7 @@ impl AtomicCacheStats {
         self.misses.fetch_add(1, Ordering::Relaxed);
     }
 
+    #[allow(dead_code)]
     fn increment_evictions(&self) {
         self.eviction_count.fetch_add(1, Ordering::Relaxed);
     }
