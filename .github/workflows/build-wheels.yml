@@ -359,7 +359,7 @@ jobs:
           echo "CMAKE_TOOLCHAIN_FILE=$vcpkgRoot\scripts\buildsystems\vcpkg.cmake" >> $env:GITHUB_ENV
 
       - name: Build Rust library
-        run: cargo build --release --target aarch64-pc-windows-msvc
+        run: cargo build --release --target aarch64-pc-windows-msvc --no-default-features --features pyo3,c,grpc,websocket,rabbitmq,cache,queue,gateway,service_mesh,auth,observability,postgres,mysql,sqlite,http_client,system_info,config_hot_reload,kafka
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
@@ -1068,10 +1068,15 @@ jobs:
       - name: Install dependencies
         run: pip install maturin auditwheel -i https://pypi.org/simple --quiet
 
-      - name: Build wheel (non-Docker)
-        if: matrix.docker != true
+      - name: Build wheel (non-Docker, non-Windows-ARM64)
+        if: matrix.docker != true && matrix.target != 'aarch64-pc-windows-msvc'
         run: |
           maturin build --release --target ${{ matrix.target }} -o dist
+
+      - name: Build wheel (Windows ARM64 - no protocol/oqs)
+        if: matrix.target == 'aarch64-pc-windows-msvc'
+        run: |
+          maturin build --release --target ${{ matrix.target }} -o dist --no-default-features --features pyo3,c,grpc,websocket,rabbitmq,cache,queue,gateway,service_mesh,auth,observability,postgres,mysql,sqlite,http_client,system_info,config_hot_reload,kafka
 
       - name: Build Linux wheel with manylinux
         if: matrix.docker == true

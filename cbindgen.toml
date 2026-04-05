@@ -100,9 +100,6 @@ associated_constants_in_body = true
 # Derive constructors for structs
 derive_constructor = true
 
-# Derive destructors for structs
-derive_destructor = true
-
 [enum]
 # Add prefix to enum variants
 prefix_with_name = true
