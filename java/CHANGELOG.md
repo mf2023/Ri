@@ -1,11 +1,25 @@
 <div align="center">
 
 <h1 style="display: flex; flex-direction: column; align-items: center; gap: 12px; margin-bottom: 8px;">
-  <span style="display: flex; align-items: center; gap: 12px;"><img src="../assets/svg/dmsc.svg" width="48" height="48" alt="DMSC">Dunimd Middleware Service</span>
+  <span style="display: flex; align-items: center; gap: 12px;"><img src="assets/svg/dmsc.svg" width="48" height="48" alt="DMSC">Dunimd Middleware Service</span>
   <span style="font-size: 0.6em; color: #666; font-weight: normal;">Changelog</span>
 </h1>
 
 </div>
+
+## [0.1.8] - 2026-04-05
+
+- Fix some known issues
+- Optimize the performance of some scenarios
+
+---
+
+## [0.1.8] - 2026-04-05
+
+- 修复一些已知问题
+- 优化部分场景性能
+
+---
 
 ## [0.1.7] - 2026-02-17
 

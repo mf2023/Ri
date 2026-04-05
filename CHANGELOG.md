@@ -7,6 +7,20 @@
 
 </div>
 
+## [0.1.8] - 2026-04-05
+
+- Fix some known issues
+- Optimize the performance of some scenarios
+
+---
+
+## [0.1.8] - 2026-04-05
+
+- 修复一些已知问题
+- 优化部分场景性能
+
+---
+
 ## [0.1.7] - 2026-02-17
 
 ## This version is a beta version with incomplete functionality and may pose risks. It is not recommended for production environments or official use.
