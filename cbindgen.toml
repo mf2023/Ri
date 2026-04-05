@@ -16,18 +16,8 @@
 # limitations under the License.
 
 # DMSC C API Header Generation Configuration
-#
-# This configuration file is used by cbindgen to automatically generate
-# C header files from Rust source code. The generated headers provide
-# C language bindings for DMSC's functionality.
-#
-# Usage:
-#   cbindgen --crate dmsc -o include/dmsc.h
-#
-# For more information on cbindgen configuration options, see:
-# https://github.com/mozilla/cbindgen/blob/master/docs.md
 
-# Generate C header (not C++)
+# Generate C header
 header = """/*
  * Copyright © 2025-2026 Wenze Wei. All Rights Reserved.
  *
@@ -71,52 +61,24 @@ sys_includes = ["stdint.h", "stddef.h", "stdbool.h"]
 cpp_compat = true
 
 [parse]
-# Parse dependencies for types
 parse_deps = false
-
-# Include non-public items (needed for internal types exposed via C API)
 include = []
 
 [export]
-# Prefix for all generated symbols to avoid naming conflicts
 prefix = "CDMSC"
 
-# Rename types to follow C naming conventions
 [export.rename]
 "DMSCAppBuilder" = "CDMSCAppBuilder"
 "DMSCConfig" = "CDMSCConfig"
 
 [fn]
-# Sort functions by name for better readability
 sort_by = "Name"
-
-# Add documentation comments to generated functions
 rename_args = "GeckoCase"
 
 [struct]
-# Generate associated constants in structs
 associated_constants_in_body = true
-
-# Derive constructors for structs
 derive_constructor = true
 
 [enum]
-# Add prefix to enum variants
 prefix_with_name = true
-
-# Use C-style enum declarations
 derive_helper_methods = true
-
-[macro_expansion]
-# Enable macro expansion for better type resolution
-bitflags = true
-
-[style]
-# Use 4-space indentation
-indent = "    "
-
-# Line length limit
-line_length = 100
-
-# Braces style
-braces = "SameLine"
