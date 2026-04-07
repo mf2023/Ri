@@ -15,14 +15,22 @@
 //! See the License for the specific language governing permissions and
 //! limitations under the License.
 
-//! # DMSC (Dunimd Middleware Service) Library
+//! # DMSC (Dunimd Middleware Service) / Ri Library
 //! 
-//! This is the main entry point for the DMSC library, which provides a comprehensive
+//! This is the main entry point for the DMSC/Ri library, which provides a comprehensive
 //! middleware service framework for building enterprise-grade backend applications.
+//! 
+//! ## Dual Naming Strategy
+//! 
+//! Starting from version 0.1.9, this library supports both "dmsc" and "Ri" as package names.
+//! In version 0.2.0, the library will fully transition to the "Ri" name.
+//! 
+//! - Use `dmsc` for backward compatibility
+//! - Use `Ri` for new projects and future-proofing
 //! 
 //! ## Core Modules
 //! 
-//! DMSC is organized into 12 core modules, each responsible for a specific set of functionalities:
+//! DMSC/Ri is organized into 12 core modules, each responsible for a specific set of functionalities:
 //! 
 //! - **core**: Core runtime, application builder, and service context
 //! - **fs**: Secure file system operations and management
@@ -90,7 +98,7 @@ pub mod java;
 
 /// Common re-exports for convenient access to core functionality
 /// 
-/// This module provides a single import point for all commonly used DMSC components,
+/// This module provides a single import point for all commonly used DMSC/Ri components,
 /// simplifying application code and reducing the number of import statements.
 /// 
 /// ## Usage
@@ -826,4 +834,22 @@ pub mod py {
         }
         Ok(())
     }
+}
+
+/// Ri: Alias for DMSC for dual naming strategy
+/// 
+/// Starting from version 0.1.9, the library supports both "dmsc" and "Ri" as package names.
+/// This alias allows users to import the library using either name.
+/// 
+/// ## Usage
+/// 
+/// ```rust
+/// // Using the traditional name
+/// use dmsc::prelude::*;
+/// 
+/// // Using the new name
+/// use Ri::prelude::*;
+/// ```
+pub mod Ri {
+    pub use super::*;
 }
