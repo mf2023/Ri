@@ -1,7 +1,7 @@
 //! Copyright © 2025-2026 Wenze Wei. All Rights Reserved.
 //!
-//! This file is part of DMSC.
-//! The DMSC project belongs to the Dunimd Team.
+//! This file is part of Ri.
+//! The Ri project belongs to the Dunimd Team.
 //!
 //! Licensed under the Apache License, Version 2.0 (the "License");
 //! You may not use this file except in compliance with the License.
@@ -17,21 +17,21 @@
 
 //! # Health Check Module
 //! 
-//! This module provides health checking functionality for the DMSC service mesh. It allows
+//! This module provides health checking functionality for the Ri service mesh. It allows
 //! monitoring the health of services using various protocols and provides comprehensive
 //! health status information.
 //! 
 //! ## Key Components
 //! 
-//! - **DMSCHealthCheckConfig**: Configuration for health checks
-//! - **DMSCHealthCheckResult**: Result of a health check
-//! - **DMSCHealthCheckType**: Supported health check types
-//! - **DMSCHealthCheckProvider**: Trait for implementing health check providers
-//! - **DMSCHttpHealthCheckProvider**: HTTP health check implementation
-//! - **DMSCTcpHealthCheckProvider**: TCP health check implementation
-//! - **DMSCHealthChecker**: Main health checking service
-//! - **DMSCHealthStatus**: Health status enum
-//! - **DMSCHealthSummary**: Summary of health check results
+//! - **RiHealthCheckConfig**: Configuration for health checks
+//! - **RiHealthCheckResult**: Result of a health check
+//! - **RiHealthCheckType**: Supported health check types
+//! - **RiHealthCheckProvider**: Trait for implementing health check providers
+//! - **RiHttpHealthCheckProvider**: HTTP health check implementation
+//! - **RiTcpHealthCheckProvider**: TCP health check implementation
+//! - **RiHealthChecker**: Main health checking service
+//! - **RiHealthStatus**: Health status enum
+//! - **RiHealthSummary**: Summary of health check results
 //! 
 //! ## Design Principles
 //! 
@@ -44,20 +44,20 @@
 //! 7. **Health Summary**: Aggregated health status with success rates and average response times
 //! 8. **Thread-safe**: Uses Arc and RwLock for safe concurrent access
 //! 9. **Graceful Shutdown**: Proper cleanup of background tasks
-//! 10. **Error Handling**: Comprehensive error handling with DMSCResult
+//! 10. **Error Handling**: Comprehensive error handling with RiResult
 //! 
 //! ## Usage
 //! 
 //! ```rust
-//! use dmsc::prelude::*;
+//! use ri::prelude::*;
 //! use std::time::Duration;
 //! 
-//! async fn example() -> DMSCResult<()> {
+//! async fn example() -> RiResult<()> {
 //!     // Create a health checker with 30-second intervals
-//!     let health_checker = DMSCHealthChecker::new(Duration::from_secs(30));
+//!     let health_checker = RiHealthChecker::new(Duration::from_secs(30));
 //!     
 //!     // Register a health check for a service
-//!     let config = DMSCHealthCheckConfig {
+//!     let config = RiHealthCheckConfig {
 //!         endpoint: "/health".to_string(),
 //!         method: "GET".to_string(),
 //!         timeout: Duration::from_secs(5),
@@ -69,7 +69,7 @@
 //!     health_checker.register_health_check(
 //!         "example-service",
 //!         "http://localhost:8080",
-//!         DMSCHealthCheckType::Http,
+//!         RiHealthCheckType::Http,
 //!         config
 //!     ).await?;
 //!     
@@ -98,15 +98,15 @@ use pyo3::PyResult;
 #[cfg(feature = "service_mesh")]
 use hyper;
 
-use crate::core::{DMSCResult, DMSCError};
-use crate::observability::{DMSCTracer, DMSCSpanKind, DMSCSpanStatus};
+use crate::core::{RiResult, RiError};
+use crate::observability::{RiTracer, RiSpanKind, RiSpanStatus};
 
 /// Configuration for health checks.
 ///
 /// This struct defines the parameters for performing health checks, including
 /// endpoint, HTTP method, timeout, expected status code, and custom headers.
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct DMSCHealthCheckConfig {
+pub struct RiHealthCheckConfig {
     /// Health check endpoint path
     pub endpoint: String,
     /// HTTP method to use for health checks
@@ -121,12 +121,12 @@ pub struct DMSCHealthCheckConfig {
     pub headers: HashMap<String, String>,
 }
 
-impl Default for DMSCHealthCheckConfig {
+impl Default for RiHealthCheckConfig {
     /// Creates a default health check configuration.
     ///
     /// # Returns
     ///
-    /// A `DMSCHealthCheckConfig` instance with default values
+    /// A `RiHealthCheckConfig` instance with default values
     fn default() -> Self {
         Self {
             endpoint: "/health".to_string(),
@@ -145,7 +145,7 @@ impl Default for DMSCHealthCheckConfig {
 /// including whether the service is healthy, response time, and error messages if any.
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 #[derive(Debug, Clone)]
-pub struct DMSCHealthCheckResult {
+pub struct RiHealthCheckResult {
     /// Name of the service being checked
     pub service_name: String,
     /// Endpoint used for the health check
@@ -164,7 +164,7 @@ pub struct DMSCHealthCheckResult {
 
 #[cfg(feature = "pyo3")]
 #[pyo3::prelude::pymethods]
-impl DMSCHealthCheckResult {
+impl RiHealthCheckResult {
     fn get_service_name(&self) -> String {
         self.service_name.clone()
     }
@@ -195,7 +195,7 @@ impl DMSCHealthCheckResult {
 /// This enum defines the different protocols that can be used for health checking.
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
-pub enum DMSCHealthCheckType {
+pub enum RiHealthCheckType {
     /// HTTP health check
     Http,
     /// TCP health check
@@ -211,7 +211,7 @@ pub enum DMSCHealthCheckType {
 /// This trait defines the interface for health check providers, allowing for
 /// different health check implementations based on protocol.
 #[async_trait]
-pub trait DMSCHealthCheckProvider: Send + Sync {
+pub trait RiHealthCheckProvider: Send + Sync {
     /// Performs a health check on the specified endpoint.
     ///
     /// # Parameters
@@ -221,17 +221,17 @@ pub trait DMSCHealthCheckProvider: Send + Sync {
     ///
     /// # Returns
     ///
-    /// A `DMSCResult<DMSCHealthCheckResult>` containing the health check result
-    async fn check_health(&self, endpoint: &str, config: &DMSCHealthCheckConfig) -> DMSCResult<DMSCHealthCheckResult>;
+    /// A `RiResult<RiHealthCheckResult>` containing the health check result
+    async fn check_health(&self, endpoint: &str, config: &RiHealthCheckConfig) -> RiResult<RiHealthCheckResult>;
 }
 
 /// HTTP health check provider.
 ///
-/// This struct implements the `DMSCHealthCheckProvider` trait for HTTP health checks.
-pub struct DMSCHttpHealthCheckProvider;
+/// This struct implements the `RiHealthCheckProvider` trait for HTTP health checks.
+pub struct RiHttpHealthCheckProvider;
 
 #[async_trait]
-impl DMSCHealthCheckProvider for DMSCHttpHealthCheckProvider {
+impl RiHealthCheckProvider for RiHttpHealthCheckProvider {
     /// Performs an HTTP health check on the specified endpoint.
     ///
     /// # Parameters
@@ -241,21 +241,21 @@ impl DMSCHealthCheckProvider for DMSCHttpHealthCheckProvider {
     ///
     /// # Returns
     ///
-    /// A `DMSCResult<DMSCHealthCheckResult>` containing the health check result
+    /// A `RiResult<RiHealthCheckResult>` containing the health check result
     #[cfg(feature = "service_mesh")]
-    async fn check_health(&self, endpoint: &str, _config: &DMSCHealthCheckConfig) -> DMSCResult<DMSCHealthCheckResult> {
+    async fn check_health(&self, endpoint: &str, _config: &RiHealthCheckConfig) -> RiResult<RiHealthCheckResult> {
         let start_time = SystemTime::now();
         
         let client = hyper::Client::new();
 
         let uri: hyper::Uri = endpoint.parse()
-            .map_err(|e| DMSCError::ServiceMesh(format!("Invalid URI: {e}")))?;
+            .map_err(|e| RiError::ServiceMesh(format!("Invalid URI: {e}")))?;
 
         let req = hyper::Request::builder()
             .method(_config.method.as_str())
             .uri(uri)
             .body(hyper::Body::empty())
-            .map_err(|e| DMSCError::ServiceMesh(format!("Failed to build request: {e}")))?;
+            .map_err(|e| RiError::ServiceMesh(format!("Failed to build request: {e}")))?;
 
         match client.request(req).await {
             Ok(response) => {
@@ -270,7 +270,7 @@ impl DMSCHealthCheckProvider for DMSCHttpHealthCheckProvider {
                     None
                 };
 
-                Ok(DMSCHealthCheckResult {
+                Ok(RiHealthCheckResult {
                     service_name: "unknown".to_string(),
                     endpoint: endpoint.to_string(),
                     is_healthy,
@@ -284,7 +284,7 @@ impl DMSCHealthCheckProvider for DMSCHttpHealthCheckProvider {
                 let response_time = SystemTime::now().duration_since(start_time)
                     .unwrap_or(Duration::from_secs(0));
 
-                Ok(DMSCHealthCheckResult {
+                Ok(RiHealthCheckResult {
                     service_name: "unknown".to_string(),
                     endpoint: endpoint.to_string(),
                     is_healthy: false,
@@ -298,9 +298,9 @@ impl DMSCHealthCheckProvider for DMSCHttpHealthCheckProvider {
     }
     
     #[cfg(not(feature = "service_mesh"))]
-    async fn check_health(&self, endpoint: &str, _config: &DMSCHealthCheckConfig) -> DMSCResult<DMSCHealthCheckResult> {
+    async fn check_health(&self, endpoint: &str, _config: &RiHealthCheckConfig) -> RiResult<RiHealthCheckResult> {
         // If service_mesh feature is not enabled, assume all endpoints are healthy
-        Ok(DMSCHealthCheckResult {
+        Ok(RiHealthCheckResult {
             service_name: "unknown".to_string(),
             endpoint: endpoint.to_string(),
             is_healthy: true,
@@ -314,11 +314,11 @@ impl DMSCHealthCheckProvider for DMSCHttpHealthCheckProvider {
 
 /// TCP health check provider.
 ///
-/// This struct implements the `DMSCHealthCheckProvider` trait for TCP health checks.
-pub struct DMSCTcpHealthCheckProvider;
+/// This struct implements the `RiHealthCheckProvider` trait for TCP health checks.
+pub struct RiTcpHealthCheckProvider;
 
 #[async_trait]
-impl DMSCHealthCheckProvider for DMSCTcpHealthCheckProvider {
+impl RiHealthCheckProvider for RiTcpHealthCheckProvider {
     /// Performs a TCP health check on the specified endpoint.
     ///
     /// # Parameters
@@ -328,8 +328,8 @@ impl DMSCHealthCheckProvider for DMSCTcpHealthCheckProvider {
     ///
     /// # Returns
     ///
-    /// A `DMSCResult<DMSCHealthCheckResult>` containing the health check result
-    async fn check_health(&self, endpoint: &str, _config: &DMSCHealthCheckConfig) -> DMSCResult<DMSCHealthCheckResult> {
+    /// A `RiResult<RiHealthCheckResult>` containing the health check result
+    async fn check_health(&self, endpoint: &str, _config: &RiHealthCheckConfig) -> RiResult<RiHealthCheckResult> {
         let start_time = SystemTime::now();
         
         match tokio::net::TcpStream::connect(endpoint).await {
@@ -337,7 +337,7 @@ impl DMSCHealthCheckProvider for DMSCTcpHealthCheckProvider {
                 let response_time = SystemTime::now().duration_since(start_time)
                     .unwrap_or(Duration::from_secs(0));
 
-                Ok(DMSCHealthCheckResult {
+                Ok(RiHealthCheckResult {
                     service_name: "unknown".to_string(),
                     endpoint: endpoint.to_string(),
                     is_healthy: true,
@@ -351,7 +351,7 @@ impl DMSCHealthCheckProvider for DMSCTcpHealthCheckProvider {
                 let response_time = SystemTime::now().duration_since(start_time)
                     .unwrap_or(Duration::from_secs(0));
 
-                Ok(DMSCHealthCheckResult {
+                Ok(RiHealthCheckResult {
                     service_name: "unknown".to_string(),
                     endpoint: endpoint.to_string(),
                     is_healthy: false,
@@ -367,11 +367,11 @@ impl DMSCHealthCheckProvider for DMSCTcpHealthCheckProvider {
 
 /// gRPC health check provider.
 ///
-/// This struct implements the `DMSCHealthCheckProvider` trait for gRPC health checks.
-pub struct DMSCGrpcHealthCheckProvider;
+/// This struct implements the `RiHealthCheckProvider` trait for gRPC health checks.
+pub struct RiGrpcHealthCheckProvider;
 
 #[async_trait]
-impl DMSCHealthCheckProvider for DMSCGrpcHealthCheckProvider {
+impl RiHealthCheckProvider for RiGrpcHealthCheckProvider {
     /// Performs a gRPC health check on the specified endpoint.
     ///
     /// # Parameters
@@ -381,8 +381,8 @@ impl DMSCHealthCheckProvider for DMSCGrpcHealthCheckProvider {
     ///
     /// # Returns
     ///
-    /// A `DMSCResult<DMSCHealthCheckResult>` containing the health check result
-    async fn check_health(&self, endpoint: &str, _config: &DMSCHealthCheckConfig) -> DMSCResult<DMSCHealthCheckResult> {
+    /// A `RiResult<RiHealthCheckResult>` containing the health check result
+    async fn check_health(&self, endpoint: &str, _config: &RiHealthCheckConfig) -> RiResult<RiHealthCheckResult> {
         let start_time = SystemTime::now();
         
         // Simple gRPC health check implementation using TCP connection
@@ -392,7 +392,7 @@ impl DMSCHealthCheckProvider for DMSCGrpcHealthCheckProvider {
                 let response_time = SystemTime::now().duration_since(start_time)
                     .unwrap_or(Duration::from_secs(0));
 
-                Ok(DMSCHealthCheckResult {
+                Ok(RiHealthCheckResult {
                     service_name: "unknown".to_string(),
                     endpoint: endpoint.to_string(),
                     is_healthy: true,
@@ -406,7 +406,7 @@ impl DMSCHealthCheckProvider for DMSCGrpcHealthCheckProvider {
                 let response_time = SystemTime::now().duration_since(start_time)
                     .unwrap_or(Duration::from_secs(0));
 
-                Ok(DMSCHealthCheckResult {
+                Ok(RiHealthCheckResult {
                     service_name: "unknown".to_string(),
                     endpoint: endpoint.to_string(),
                     is_healthy: false,
@@ -425,20 +425,20 @@ impl DMSCHealthCheckProvider for DMSCGrpcHealthCheckProvider {
 /// This struct provides the core functionality for managing health checks, including
 /// registering health checks, starting background monitoring, and retrieving health status.
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
-pub struct DMSCHealthChecker {
+pub struct RiHealthChecker {
     check_interval: Duration,
-    providers: Arc<RwLock<HashMap<DMSCHealthCheckType, Box<dyn DMSCHealthCheckProvider>>>>,
-    check_results: Arc<RwLock<HashMap<String, Vec<DMSCHealthCheckResult>>>>,
+    providers: Arc<RwLock<HashMap<RiHealthCheckType, Box<dyn RiHealthCheckProvider>>>>,
+    check_results: Arc<RwLock<HashMap<String, Vec<RiHealthCheckResult>>>>,
     background_tasks: Arc<RwLock<Vec<JoinHandle<()>>>>,
-    tracer: Option<Arc<DMSCTracer>>,
+    tracer: Option<Arc<RiTracer>>,
 }
 
-impl DMSCHealthChecker {
+impl RiHealthChecker {
     pub fn new(check_interval: Duration) -> Self {
-        let mut providers: HashMap<DMSCHealthCheckType, Box<dyn DMSCHealthCheckProvider>> = HashMap::new();
-        providers.insert(DMSCHealthCheckType::Http, Box::new(DMSCHttpHealthCheckProvider));
-        providers.insert(DMSCHealthCheckType::Tcp, Box::new(DMSCTcpHealthCheckProvider));
-        providers.insert(DMSCHealthCheckType::Grpc, Box::new(DMSCGrpcHealthCheckProvider));
+        let mut providers: HashMap<RiHealthCheckType, Box<dyn RiHealthCheckProvider>> = HashMap::new();
+        providers.insert(RiHealthCheckType::Http, Box::new(RiHttpHealthCheckProvider));
+        providers.insert(RiHealthCheckType::Tcp, Box::new(RiTcpHealthCheckProvider));
+        providers.insert(RiHealthCheckType::Grpc, Box::new(RiGrpcHealthCheckProvider));
 
         Self {
             check_interval,
@@ -449,12 +449,12 @@ impl DMSCHealthChecker {
         }
     }
     
-    pub fn with_tracer(mut self, tracer: Arc<DMSCTracer>) -> Self {
+    pub fn with_tracer(mut self, tracer: Arc<RiTracer>) -> Self {
         self.tracer = Some(tracer);
         self
     }
     
-    pub fn set_tracer(&mut self, tracer: Arc<DMSCTracer>) {
+    pub fn set_tracer(&mut self, tracer: Arc<RiTracer>) {
         self.tracer = Some(tracer);
     }
     
@@ -473,18 +473,18 @@ impl DMSCHealthChecker {
     ///
     /// # Returns
     ///
-    /// A `DMSCResult<()>` indicating success or failure
+    /// A `RiResult<()>` indicating success or failure
     pub async fn register_health_check(
         &self,
         service_name: &str,
         endpoint: &str,
-        check_type: DMSCHealthCheckType,
-        config: DMSCHealthCheckConfig,
-    ) -> DMSCResult<()> {
+        check_type: RiHealthCheckType,
+        config: RiHealthCheckConfig,
+    ) -> RiResult<()> {
         let span_id = if let Some(tracer) = &self.tracer {
             let span_id = tracer.start_span_from_context(
                 format!("health_check:{}", service_name),
-                DMSCSpanKind::Internal,
+                RiSpanKind::Internal,
             );
             if let Some(ref sid) = span_id {
                 let _ = tracer.span_mut(sid, |span| {
@@ -502,8 +502,8 @@ impl DMSCHealthChecker {
 
         if let (Some(tracer), Some(sid)) = (&self.tracer, span_id) {
             let status = match &result {
-                Ok(_) => DMSCSpanStatus::Ok,
-                Err(e) => DMSCSpanStatus::Error(e.to_string()),
+                Ok(_) => RiSpanStatus::Ok,
+                Err(e) => RiSpanStatus::Error(e.to_string()),
             };
             let _ = tracer.end_span(&sid, status);
         }
@@ -515,12 +515,12 @@ impl DMSCHealthChecker {
         &self,
         service_name: &str,
         endpoint: &str,
-        check_type: DMSCHealthCheckType,
-        config: DMSCHealthCheckConfig,
-    ) -> DMSCResult<()> {
+        check_type: RiHealthCheckType,
+        config: RiHealthCheckConfig,
+    ) -> RiResult<()> {
         let providers = self.providers.read().await;
         let provider = providers.get(&check_type)
-            .ok_or_else(|| DMSCError::ServiceMesh(format!("Health check provider for {check_type:?} not found")))?;
+            .ok_or_else(|| RiError::ServiceMesh(format!("Health check provider for {check_type:?} not found")))?;
 
         let result = provider.check_health(endpoint, &config).await?;
         
@@ -543,8 +543,8 @@ impl DMSCHealthChecker {
     /// 
     /// # Returns
     /// 
-    /// A `DMSCResult<()>` indicating success or failure
-    pub async fn start_health_check(&self, service_name: &str, endpoint: &str) -> DMSCResult<()> {
+    /// A `RiResult<()>` indicating success or failure
+    pub async fn start_health_check(&self, service_name: &str, endpoint: &str) -> RiResult<()> {
         let mut tasks = self.background_tasks.write().await;
         
         let service_name_clone = service_name.to_string();
@@ -555,17 +555,17 @@ impl DMSCHealthChecker {
 
         // Determine health check type based on endpoint URL scheme
         let check_type = if endpoint.starts_with("grpc://") || endpoint.starts_with("grpcs://") {
-            DMSCHealthCheckType::Grpc
+            RiHealthCheckType::Grpc
         } else if endpoint.starts_with("http://") || endpoint.starts_with("https://") {
-            DMSCHealthCheckType::Http
+            RiHealthCheckType::Http
         } else {
             // Assume TCP for other protocols
-            DMSCHealthCheckType::Tcp
+            RiHealthCheckType::Tcp
         };
 
         let task = tokio::spawn(async move {
             let mut interval = tokio::time::interval(check_interval);
-            let config = DMSCHealthCheckConfig::default();
+            let config = RiHealthCheckConfig::default();
             
             loop {
                 interval.tick().await;
@@ -610,8 +610,8 @@ impl DMSCHealthChecker {
     /// 
     /// # Returns
     /// 
-    /// A `DMSCResult<()>` indicating success or failure
-    pub async fn stop_health_check(&self, service_name: &str, _endpoint: &str) -> DMSCResult<()> {
+    /// A `RiResult<()>` indicating success or failure
+    pub async fn stop_health_check(&self, service_name: &str, _endpoint: &str) -> RiResult<()> {
         let mut results = self.check_results.write().await;
         results.remove(service_name);
         Ok(())
@@ -630,13 +630,13 @@ impl DMSCHealthChecker {
     /// 
     /// # Returns
     /// 
-    /// A `DMSCResult<()>` indicating success or failure
+    /// A `RiResult<()>` indicating success or failure
     pub async fn start_health_check_with_type(
         &self, 
         service_name: &str, 
         endpoint: &str,
-        check_type: DMSCHealthCheckType
-    ) -> DMSCResult<()> {
+        check_type: RiHealthCheckType
+    ) -> RiResult<()> {
         let mut tasks = self.background_tasks.write().await;
         
         let service_name_clone = service_name.to_string();
@@ -648,7 +648,7 @@ impl DMSCHealthChecker {
 
         let task = tokio::spawn(async move {
             let mut interval = tokio::time::interval(check_interval);
-            let config = DMSCHealthCheckConfig::default();
+            let config = RiHealthCheckConfig::default();
             
             loop {
                 interval.tick().await;
@@ -689,8 +689,8 @@ impl DMSCHealthChecker {
     ///
     /// # Returns
     ///
-    /// A `DMSCResult<Vec<DMSCHealthCheckResult>>` containing the health check results
-    pub async fn get_health_status(&self, service_name: &str) -> DMSCResult<Vec<DMSCHealthCheckResult>> {
+    /// A `RiResult<Vec<RiHealthCheckResult>>` containing the health check results
+    pub async fn get_health_status(&self, service_name: &str) -> RiResult<Vec<RiHealthCheckResult>> {
         let check_results = self.check_results.read().await;
         let results = check_results.get(service_name)
             .cloned()
@@ -707,8 +707,8 @@ impl DMSCHealthChecker {
     ///
     /// # Returns
     ///
-    /// A `DMSCResult<Option<DMSCHealthCheckResult>>` containing the latest health check result if available
-    pub async fn get_latest_health_status(&self, service_name: &str) -> DMSCResult<Option<DMSCHealthCheckResult>> {
+    /// A `RiResult<Option<RiHealthCheckResult>>` containing the latest health check result if available
+    pub async fn get_latest_health_status(&self, service_name: &str) -> RiResult<Option<RiHealthCheckResult>> {
         let check_results = self.check_results.read().await;
         let latest_result = check_results.get(service_name)
             .and_then(|results| results.last().cloned());
@@ -725,8 +725,8 @@ impl DMSCHealthChecker {
     ///
     /// # Returns
     ///
-    /// A `DMSCResult<Vec<DMSCHealthCheckResult>>` containing the filtered health check results
-    pub async fn get_health_status_within(&self, service_name: &str, time_window: Duration) -> DMSCResult<Vec<DMSCHealthCheckResult>> {
+    /// A `RiResult<Vec<RiHealthCheckResult>>` containing the filtered health check results
+    pub async fn get_health_status_within(&self, service_name: &str, time_window: Duration) -> RiResult<Vec<RiHealthCheckResult>> {
         let check_results = self.check_results.read().await;
         let now = SystemTime::now();
         
@@ -759,12 +759,12 @@ impl DMSCHealthChecker {
     ///
     /// # Returns
     ///
-    /// A `DMSCResult<DMSCHealthSummary>` containing the health summary
-    pub async fn get_service_health_summary(&self, service_name: &str) -> DMSCResult<DMSCHealthSummary> {
+    /// A `RiResult<RiHealthSummary>` containing the health summary
+    pub async fn get_service_health_summary(&self, service_name: &str) -> RiResult<RiHealthSummary> {
         let results = self.get_health_status(service_name).await?;
         
         if results.is_empty() {
-            return Ok(DMSCHealthSummary {
+            return Ok(RiHealthSummary {
                 service_name: service_name.to_string(),
                 total_checks: 0,
                 healthy_checks: 0,
@@ -772,7 +772,7 @@ impl DMSCHealthChecker {
                 success_rate: 0.0,
                 average_response_time: Duration::from_secs(0),
                 last_check_time: None,
-                overall_status: DMSCHealthStatus::Unknown,
+                overall_status: RiHealthStatus::Unknown,
             });
         }
 
@@ -789,14 +789,14 @@ impl DMSCHealthChecker {
         let last_check_time = results.last().map(|r| r.timestamp);
 
         let overall_status = if success_rate >= 80.0 {
-            DMSCHealthStatus::Healthy
+            RiHealthStatus::Healthy
         } else if success_rate >= 50.0 {
-            DMSCHealthStatus::Degraded
+            RiHealthStatus::Degraded
         } else {
-            DMSCHealthStatus::Unhealthy
+            RiHealthStatus::Unhealthy
         };
 
-        Ok(DMSCHealthSummary {
+        Ok(RiHealthSummary {
             service_name: service_name.to_string(),
             total_checks,
             healthy_checks,
@@ -815,8 +815,8 @@ impl DMSCHealthChecker {
     ///
     /// # Returns
     ///
-    /// A `DMSCResult<()>` indicating success or failure
-    pub async fn start_background_tasks(&self) -> DMSCResult<()> {
+    /// A `RiResult<()>` indicating success or failure
+    pub async fn start_background_tasks(&self) -> RiResult<()> {
         // Start periodic cleanup task to remove old health check results
         let check_results = Arc::clone(&self.check_results);
         let cleanup_interval = self.check_interval * 10; // Cleanup every 10 check intervals
@@ -859,8 +859,8 @@ impl DMSCHealthChecker {
     ///
     /// # Returns
     ///
-    /// A `DMSCResult<()>` indicating success or failure
-    pub async fn stop_background_tasks(&self) -> DMSCResult<()> {
+    /// A `RiResult<()>` indicating success or failure
+    pub async fn stop_background_tasks(&self) -> RiResult<()> {
         let mut tasks = self.background_tasks.write().await;
         for task in tasks.drain(..) {
             task.abort();
@@ -872,16 +872,16 @@ impl DMSCHealthChecker {
     ///
     /// # Returns
     ///
-    /// A `DMSCResult<bool>` indicating whether the health checker is healthy
-    pub async fn health_check(&self) -> DMSCResult<bool> {
+    /// A `RiResult<bool>` indicating whether the health checker is healthy
+    pub async fn health_check(&self) -> RiResult<bool> {
         Ok(true)
     }
 }
 
 #[cfg(feature = "pyo3")]
-/// Python bindings for DMSCHealthChecker
+/// Python bindings for RiHealthChecker
 #[pyo3::prelude::pymethods]
-impl DMSCHealthChecker {
+impl RiHealthChecker {
     #[new]
     fn py_new(check_interval: u64) -> PyResult<Self> {
         Ok(Self::new(Duration::from_secs(check_interval)))
@@ -889,7 +889,7 @@ impl DMSCHealthChecker {
     
     /// Get service health summary from Python
     #[pyo3(name = "get_service_health_summary")]
-    fn get_service_health_summary_impl(&self, service_name: String) -> PyResult<DMSCHealthSummary> {
+    fn get_service_health_summary_impl(&self, service_name: String) -> PyResult<RiHealthSummary> {
         let rt = tokio::runtime::Runtime::new().map_err(|e| {
             pyo3::exceptions::PyRuntimeError::new_err(format!("Failed to create runtime: {}", e))
         })?;
@@ -931,7 +931,7 @@ impl DMSCHealthChecker {
     
     /// Get health status from Python
     #[pyo3(name = "get_health_status")]
-    fn get_health_status_impl(&self, service_name: String) -> PyResult<Vec<DMSCHealthCheckResult>> {
+    fn get_health_status_impl(&self, service_name: String) -> PyResult<Vec<RiHealthCheckResult>> {
         let rt = tokio::runtime::Runtime::new().map_err(|e| {
             pyo3::exceptions::PyRuntimeError::new_err(format!("Failed to create runtime: {}", e))
         })?;
@@ -949,7 +949,7 @@ impl DMSCHealthChecker {
 /// This enum represents the overall health status of a service.
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 #[derive(Debug, Clone)]
-pub enum DMSCHealthStatus {
+pub enum RiHealthStatus {
     /// Service is healthy
     Healthy,
     /// Service is degraded but still functional
@@ -966,7 +966,7 @@ pub enum DMSCHealthStatus {
 /// total checks, success rate, average response time, and overall status.
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 #[derive(Debug, Clone)]
-pub struct DMSCHealthSummary {
+pub struct RiHealthSummary {
     /// Name of the service
     pub service_name: String,
     /// Total number of health checks performed
@@ -982,12 +982,12 @@ pub struct DMSCHealthSummary {
     /// Timestamp of the last health check
     pub last_check_time: Option<SystemTime>,
     /// Overall health status
-    pub overall_status: DMSCHealthStatus,
+    pub overall_status: RiHealthStatus,
 }
 
 #[cfg(feature = "pyo3")]
 #[pyo3::prelude::pymethods]
-impl DMSCHealthSummary {
+impl RiHealthSummary {
     fn get_service_name(&self) -> String {
         self.service_name.clone()
     }
@@ -1014,10 +1014,10 @@ impl DMSCHealthSummary {
     
     fn get_overall_status(&self) -> String {
         match self.overall_status {
-            DMSCHealthStatus::Healthy => "Healthy".to_string(),
-            DMSCHealthStatus::Degraded => "Degraded".to_string(),
-            DMSCHealthStatus::Unhealthy => "Unhealthy".to_string(),
-            DMSCHealthStatus::Unknown => "Unknown".to_string(),
+            RiHealthStatus::Healthy => "Healthy".to_string(),
+            RiHealthStatus::Degraded => "Degraded".to_string(),
+            RiHealthStatus::Unhealthy => "Unhealthy".to_string(),
+            RiHealthStatus::Unknown => "Unknown".to_string(),
         }
     }
 }

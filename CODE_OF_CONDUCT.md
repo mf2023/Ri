@@ -1,7 +1,7 @@
 <div align="center">
 
 <h1 style="display: flex; flex-direction: column; align-items: center; gap: 12px; margin-bottom: 8px;">
-  <span style="display: flex; align-items: center; gap: 12px;"><img src="assets/svg/dmsc.svg" width="48" height="48" alt="DMSC">Dunimd Middleware Service</span>
+  <span style="display: flex; align-items: center; gap: 12px;"><img src="assets/svg/ri.svg" width="48" height="48" alt="Ri">Ri</span>
   <span style="font-size: 0.6em; color: #666; font-weight: normal;">Code of Conduct</span>
 </h1>
 
@@ -9,7 +9,7 @@
 
 ## Our Pledge
 
-We as members, contributors, and leaders pledge to make participation in the DMSC (Dunimd Middleware Service) project and our community a harassment-free experience for everyone, regardless of age, body size, visible or invisible disability, ethnicity, sex characteristics, gender identity and expression, level of experience, education, socio-economic status, nationality, personal appearance, race, religion, or sexual identity and orientation.
+We as members, contributors, and leaders pledge to make participation in the Ri (Ri) project and our community a harassment-free experience for everyone, regardless of age, body size, visible or invisible disability, ethnicity, sex characteristics, gender identity and expression, level of experience, education, socio-economic status, nationality, personal appearance, race, religion, or sexual identity and orientation.
 
 We pledge to act and interact in ways that contribute to an open, welcoming, diverse, inclusive, and healthy community.
 
@@ -95,10 +95,10 @@ For answers to common questions about this code of conduct, see the FAQ at https
 
 This Code of Conduct applies to:
 
-* All GitHub repositories under the DMSC organization
+* All GitHub repositories under the Ri organization
 * GitHub Issues, Pull Requests, Discussions, and Wiki
 * Official communication channels (email, Slack, Discord, etc.)
-* Public events where DMSC is represented
+* Public events where Ri is represented
 * Social media interactions related to the project
 
 ## Community Values
@@ -185,9 +185,9 @@ For questions about this Code of Conduct, please contact:
 
 For general project inquiries and non-conduct issues, please use:
 
-- **Gitee Issues** (Primary): https://gitee.com/dunimd/dmsc/issues
-- **GitHub Issues** (Mirror): https://github.com/mf2023/DMSC/issues
-- **GitHub Discussions**: https://github.com/mf2023/DMSC/discussions
+- **Gitee Issues** (Primary): https://gitee.com/dunimd/ri/issues
+- **GitHub Issues** (Mirror): https://github.com/mf2023/Ri/issues
+- **GitHub Discussions**: https://github.com/mf2023/Ri/discussions
 
 ## License
 
@@ -199,4 +199,4 @@ This Code of Conduct is licensed under the [Creative Commons Attribution 4.0 Int
 
 **Version**: 1.0
 
-By participating in the DMSC community, you agree to abide by this Code of Conduct.
+By participating in the Ri community, you agree to abide by this Code of Conduct.

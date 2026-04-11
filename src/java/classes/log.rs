@@ -1,7 +1,7 @@
 //! Copyright © 2025-2026 Wenze Wei. All Rights Reserved.
 //!
-//! This file is part of DMSC.
-//! The DMSC project belongs to the Dunimd Team.
+//! This file is part of Ri.
+//! The Ri project belongs to the Dunimd Team.
 //!
 //! Licensed under the Apache License, Version 2.0 (the "License");
 //! You may not use this file except in compliance with the License.
@@ -17,34 +17,34 @@
 
 //! # Log Module JNI Bindings
 //!
-//! JNI bindings for DMSC log classes.
+//! JNI bindings for Ri log classes.
 
 use jni::JNIEnv;
 use jni::objects::JClass;
 use jni::sys::jlong;
-use crate::log::{DMSCLogger, DMSCLogConfig};
-use crate::fs::DMSCFileSystem;
+use crate::log::{RiLogger, RiLogConfig};
+use crate::fs::RiFileSystem;
 
 #[no_mangle]
-pub extern "system" fn Java_com_dunimd_dmsc_log_DMSCLogger_new0(
+pub extern "system" fn Java_com_dunimd_ri_log_RiLogger_new0(
     _env: JNIEnv,
     _class: JClass,
 ) -> jlong {
-    let config = DMSCLogConfig::default();
-    let fs = DMSCFileSystem::new_auto_root().unwrap_or_else(|_| DMSCFileSystem::new_with_root(std::env::current_dir().unwrap_or_default()));
-    let logger = Box::new(DMSCLogger::new(&config, fs));
+    let config = RiLogConfig::default();
+    let fs = RiFileSystem::new_auto_root().unwrap_or_else(|_| RiFileSystem::new_with_root(std::env::current_dir().unwrap_or_default()));
+    let logger = Box::new(RiLogger::new(&config, fs));
     Box::into_raw(logger) as jlong
 }
 
 #[no_mangle]
-pub extern "system" fn Java_com_dunimd_dmsc_log_DMSCLogger_free0(
+pub extern "system" fn Java_com_dunimd_ri_log_RiLogger_free0(
     _env: JNIEnv,
     _class: JClass,
     ptr: jlong,
 ) {
     if ptr != 0 {
         unsafe {
-            let _ = Box::from_raw(ptr as *mut DMSCLogger);
+            let _ = Box::from_raw(ptr as *mut RiLogger);
         }
     }
 }

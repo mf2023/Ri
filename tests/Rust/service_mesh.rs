@@ -1,7 +1,7 @@
 //! Copyright © 2025-2026 Wenze Wei. All Rights Reserved.
 //!
-//! This file is part of DMSC.
-//! The DMSC project belongs to the Dunimd Team.
+//! This file is part of Ri.
+//! The Ri project belongs to the Dunimd Team.
 //!
 //! Licensed under the Apache License, Version 2.0 (the "License");
 //! You may not use this file except in compliance with the License.
@@ -17,35 +17,35 @@
 
 //! # Service Mesh Module Tests
 //!
-//! This module contains comprehensive tests for the DMSC service mesh system,
+//! This module contains comprehensive tests for the Ri service mesh system,
 //! providing service discovery, health checking, traffic management, circuit breaking,
 //! and load balancing for building resilient microservice architectures.
 //!
 //! ## Test Coverage
 //!
-//! - **DMSCServiceMeshConfig**: Tests for service mesh configuration including feature
+//! - **RiServiceMeshConfig**: Tests for service mesh configuration including feature
 //!   toggles (discovery, health checks, traffic management), intervals, timeouts, and
 //!   retry policies
 //!
-//! - **DMSCServiceMesh**: Tests for the core service mesh orchestrating all components
+//! - **RiServiceMesh**: Tests for the core service mesh orchestrating all components
 //!   including service registry, health checker, traffic manager, circuit breaker, and
 //!   load balancer
 //!
-//! - **DMSCServiceInstance**: Tests for service instance representation including
+//! - **RiServiceInstance**: Tests for service instance representation including
 //!   identification, endpoint information, status, metadata, and heartbeat tracking
 //!
-//! - **DMSCHealthCheck**: Tests for health checking including result structures,
+//! - **RiHealthCheck**: Tests for health checking including result structures,
 //!   summary aggregation, success rate tracking, and response time monitoring
 //!
-//! - **DMSCTrafficRoute**: Tests for traffic routing including match criteria (path,
+//! - **RiTrafficRoute**: Tests for traffic routing including match criteria (path,
 //!   headers, method, query), weighted destinations, retry policies, timeouts, and
 //!   fault injection configuration
 //!
-//! - **DMSCServiceStatus**: Tests for service instance states (Running, Stopped, Unknown)
+//! - **RiServiceStatus**: Tests for service instance states (Running, Stopped, Unknown)
 //!
 //! ## Architecture
 //!
-//! The service mesh implements a sidecar-less architecture for DMSC services:
+//! The service mesh implements a sidecar-less architecture for Ri services:
 //! - **Service Discovery**: Registry mapping service names to healthy instances
 //! - **Health Checking**: Active and passive health verification with configurable intervals
 //! - **Traffic Management**: Advanced routing with subset-based deployments and traffic shifting
@@ -81,13 +81,13 @@
 //! - **Timeouts**: Request timeout enforcement
 //! - **Fault Injection**: Inject delays and aborts for chaos testing
 
-use dmsc::service_mesh::{DMSCServiceMeshConfig, DMSCServiceMesh, DMSCServiceHealthStatus, DMSCServiceEndpoint};
-use dmsc::service_mesh::{DMSCServiceInstance, DMSCServiceStatus};
-use dmsc::service_mesh::{DMSCHealthCheckResult, DMSCHealthSummary, DMSCHealthStatus};
-use dmsc::service_mesh::{DMSCTrafficRoute, DMSCMatchCriteria, DMSCRouteAction};
+use ri::service_mesh::{RiServiceMeshConfig, RiServiceMesh, RiServiceHealthStatus, RiServiceEndpoint};
+use ri::service_mesh::{RiServiceInstance, RiServiceStatus};
+use ri::service_mesh::{RiHealthCheckResult, RiHealthSummary, RiHealthStatus};
+use ri::service_mesh::{RiTrafficRoute, RiMatchCriteria, RiRouteAction};
 
 #[test]
-/// Tests DMSCServiceMeshConfig default configuration values.
+/// Tests RiServiceMeshConfig default configuration values.
 ///
 /// Verifies that the service mesh configuration has appropriate defaults
 /// for feature toggles, intervals, timeouts, and retry policies.
@@ -113,7 +113,7 @@ use dmsc::service_mesh::{DMSCTrafficRoute, DMSCMatchCriteria, DMSCRouteAction};
 /// All feature toggles are enabled by default, providing a fully
 /// functional service mesh without additional configuration.
 fn test_service_mesh_config_default() {
-    let config = DMSCServiceMeshConfig::default();
+    let config = RiServiceMeshConfig::default();
     
     // Verify feature toggles are enabled
     assert!(config.enable_service_discovery);
@@ -127,7 +127,7 @@ fn test_service_mesh_config_default() {
 }
 
 #[test]
-/// Tests DMSCServiceMesh creation and component initialization.
+/// Tests RiServiceMesh creation and component initialization.
 ///
 /// Verifies that a service mesh can be created with the specified
 /// configuration and all internal components are properly initialized.
@@ -147,10 +147,10 @@ fn test_service_mesh_config_default() {
 /// - All component accessors return valid references
 /// - The mesh is ready for service registration
 fn test_service_mesh_new() {
-    let config = DMSCServiceMeshConfig::default();
+    let config = RiServiceMeshConfig::default();
     
     // Create service mesh with default configuration
-    let service_mesh = DMSCServiceMesh::new(config).unwrap();
+    let service_mesh = RiServiceMesh::new(config).unwrap();
     
     // Verify all components are accessible
     let _ = service_mesh.get_service_discovery();
@@ -185,8 +185,8 @@ fn test_service_mesh_new() {
 /// - Discovery returns error for unregistered service
 /// - Service is available for health updates
 async fn test_service_mesh_register_service() {
-    let config = DMSCServiceMeshConfig::default();
-    let service_mesh = DMSCServiceMesh::new(config).unwrap();
+    let config = RiServiceMeshConfig::default();
+    let service_mesh = RiServiceMesh::new(config).unwrap();
     
     // Test registering a service
     let service_name = "test_service";
@@ -222,8 +222,8 @@ async fn test_service_mesh_register_service() {
 /// - Unhealthy service is excluded from discovery
 /// - Health updates are persisted in the registry
 async fn test_service_mesh_update_service_health() {
-    let config = DMSCServiceMeshConfig::default();
-    let service_mesh = DMSCServiceMesh::new(config).unwrap();
+    let config = RiServiceMeshConfig::default();
+    let service_mesh = RiServiceMesh::new(config).unwrap();
     
     // Register a service
     let service_name = "test_service";
@@ -253,7 +253,7 @@ async fn test_service_mesh_update_service_health() {
 }
 
 #[test]
-/// Tests DMSCServiceInstance creation and field access.
+/// Tests RiServiceInstance creation and field access.
 ///
 /// Verifies that service instances can be created with all required
 /// properties for identification, networking, and status tracking.
@@ -275,12 +275,12 @@ async fn test_service_mesh_update_service_health() {
 /// - Status matches the configured value
 /// - The instance is ready for registration
 fn test_service_instance_new() {
-    let instance = DMSCServiceInstance {
+    let instance = RiServiceInstance {
         id: "test_instance".to_string(),
         service_name: "test_service".to_string(),
         host: "localhost".to_string(),
         port: 8080,
-        status: DMSCServiceStatus::Running,
+        status: RiServiceStatus::Running,
         metadata: std::collections::HashMap::new(),
         registered_at: std::time::SystemTime::now(),
         last_heartbeat: std::time::SystemTime::now(),
@@ -295,11 +295,11 @@ fn test_service_instance_new() {
     assert_eq!(instance.port, 8080);
     
     // Verify status
-    assert_eq!(instance.status, DMSCServiceStatus::Running);
+    assert_eq!(instance.status, RiServiceStatus::Running);
 }
 
 #[test]
-/// Tests DMSCHealthCheckResult creation and field access.
+/// Tests RiHealthCheckResult creation and field access.
 ///
 /// Verifies that health check results capture all relevant information
 /// for service health assessment and monitoring.
@@ -320,7 +320,7 @@ fn test_service_instance_new() {
 /// - Response time is measured accurately
 /// - Error information is preserved when check fails
 fn test_health_check_result_new() {
-    let result = DMSCHealthCheckResult {
+    let result = RiHealthCheckResult {
         service_name: "test_service".to_string(),
         endpoint: "http://localhost:8080/health".to_string(),
         is_healthy: true,
@@ -341,7 +341,7 @@ fn test_health_check_result_new() {
 }
 
 #[test]
-/// Tests DMSCHealthSummary aggregation and statistics.
+/// Tests RiHealthSummary aggregation and statistics.
 ///
 /// Verifies that health check summaries correctly aggregate
 /// results from multiple checks with calculated statistics.
@@ -366,7 +366,7 @@ fn test_health_check_result_new() {
 /// - Success rate reflects actual pass/fail ratio
 /// - Response time is averaged correctly
 fn test_health_summary_new() {
-    let summary = DMSCHealthSummary {
+    let summary = RiHealthSummary {
         service_name: "test_service".to_string(),
         total_checks: 20,
         healthy_checks: 16,
@@ -374,7 +374,7 @@ fn test_health_summary_new() {
         success_rate: 80.0,
         average_response_time: std::time::Duration::from_millis(100),
         last_check_time: Some(std::time::SystemTime::now()),
-        overall_status: DMSCHealthStatus::Healthy,
+        overall_status: RiHealthStatus::Healthy,
     };
     
     // Verify counts
@@ -387,7 +387,7 @@ fn test_health_summary_new() {
 }
 
 #[test]
-/// Tests DMSCTrafficRoute creation with match criteria and actions.
+/// Tests RiTrafficRoute creation with match criteria and actions.
 ///
 /// Verifies that traffic routes can be configured with sophisticated
 /// routing logic including match criteria, weighted destinations,
@@ -418,7 +418,7 @@ fn test_health_summary_new() {
 /// - Weighted destinations are preserved
 fn test_traffic_route_new() {
     // Define match criteria for routing decisions
-    let match_criteria = DMSCMatchCriteria {
+    let match_criteria = RiMatchCriteria {
         path_prefix: Some("/api/v1/".to_string()),
         headers: std::collections::HashMap::new(),
         method: Some("GET".to_string()),
@@ -427,7 +427,7 @@ fn test_traffic_route_new() {
     
     // Define weighted destinations for traffic splitting
     let weighted_destinations = vec![
-        dmsc::service_mesh::DMSCWeightedDestination {        
+        ri::service_mesh::RiWeightedDestination {        
             service: "backend_service".to_string(),
             weight: 100,
             subset: None,
@@ -435,10 +435,10 @@ fn test_traffic_route_new() {
     ];
     
     // Define the routing action
-    let route_action = DMSCRouteAction::Route(weighted_destinations);
+    let route_action = RiRouteAction::Route(weighted_destinations);
     
     // Create the traffic route
-    let route = DMSCTrafficRoute {
+    let route = RiTrafficRoute {
         name: "test_route".to_string(),
         source_service: "frontend_service".to_string(),
         destination_service: "backend_service".to_string(),
@@ -456,7 +456,7 @@ fn test_traffic_route_new() {
 }
 
 #[test]
-/// Tests DMSCServiceHealthStatus enum variants and formatting.
+/// Tests RiServiceHealthStatus enum variants and formatting.
 ///
 /// Verifies that all health status variants exist and can be
 /// correctly formatted for logging and display purposes.
@@ -473,7 +473,7 @@ fn test_traffic_route_new() {
 /// can be used for logging and user interface display.
 fn test_service_health_status() {
     // Test all health status variants
-    assert_eq!(format!("{:?}", DMSCServiceHealthStatus::Healthy), "Healthy");
-    assert_eq!(format!("{:?}", DMSCServiceHealthStatus::Unhealthy), "Unhealthy");
-    assert_eq!(format!("{:?}", DMSCServiceHealthStatus::Unknown), "Unknown");
+    assert_eq!(format!("{:?}", RiServiceHealthStatus::Healthy), "Healthy");
+    assert_eq!(format!("{:?}", RiServiceHealthStatus::Unhealthy), "Unhealthy");
+    assert_eq!(format!("{:?}", RiServiceHealthStatus::Unknown), "Unknown");
 }

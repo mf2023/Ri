@@ -1,7 +1,7 @@
 //! Copyright © 2025-2026 Wenze Wei. All Rights Reserved.
 //!
-//! This file is part of DMSC.
-//! The DMSC project belongs to the Dunimd Team.
+//! This file is part of Ri.
+//! The Ri project belongs to the Dunimd Team.
 //!
 //! Licensed under the Apache License, Version 2.0 (the "License");
 //! You may not use this file except in compliance with the License.
@@ -22,46 +22,46 @@ use std::sync::Arc;
 use std::time::{Duration, Instant};
 use log::{info, warn, debug, error};
 
-use crate::core::{DMSCResult, DMSCError, DMSCServiceContext};
-use crate::hooks::{DMSCHookKind, DMSCModulePhase};
-use crate::protocol::global_state::DMSCSystemStatus;
-use super::super::{DMSCProtocolType, DMSCProtocol, DMSCProtocolConnection, DMSCProtocolAdapter, 
-                   DMSCGlobalStateManager, DMSCStateUpdate, DMSCStateCategory, DMSCSecurityLevel,
-                   DMSCProtocolStrategy, DMSCSecurityContext, DMSCPerformanceContext};
-use super::config::{DMSCIntegrationConfig};
-use super::connection::{DMSCConnectionCoordinator, DMSCCrossProtocolConnection, DMSCCrossProtocolConnectionState, 
-                      DMSCConnectionRoutingTable};
-use super::security::{DMSCSecurityCoordinator};
-use super::performance::{DMSCPerformanceCoordinator, DMSCPerformanceMetrics, DMSCCrossProtocolMetrics, 
-                        DMSCSystemPerformanceMetrics};
-use super::events::{DMSCIntegrationEventBus, DMSCIntegrationEvent, DMSCIntegrationEventType, 
-                   DMSCIntegrationStats};
+use crate::core::{RiResult, RiError, RiServiceContext};
+use crate::hooks::{RiHookKind, RiModulePhase};
+use crate::protocol::global_state::RiSystemStatus;
+use super::super::{RiProtocolType, RiProtocol, RiProtocolConnection, RiProtocolAdapter, 
+                   RiGlobalStateManager, RiStateUpdate, RiStateCategory, RiSecurityLevel,
+                   RiProtocolStrategy, RiSecurityContext, RiPerformanceContext};
+use super::config::{RiIntegrationConfig};
+use super::connection::{RiConnectionCoordinator, RiCrossProtocolConnection, RiCrossProtocolConnectionState, 
+                      RiConnectionRoutingTable};
+use super::security::{RiSecurityCoordinator};
+use super::performance::{RiPerformanceCoordinator, RiPerformanceMetrics, RiCrossProtocolMetrics, 
+                        RiSystemPerformanceMetrics};
+use super::events::{RiIntegrationEventBus, RiIntegrationEvent, RiIntegrationEventType, 
+                   RiIntegrationStats};
 
 #[derive(Debug, Clone)]
-pub enum DMSCExternalControlAction {
+pub enum RiExternalControlAction {
     TriggerHook {
-        hook: DMSCHookKind,
+        hook: RiHookKind,
         module: Option<String>,
-        phase: Option<DMSCModulePhase>,
+        phase: Option<RiModulePhase>,
     },
-    UpdateState(DMSCStateUpdate),
-    SetGlobalSystemStatus(DMSCSystemStatus),
+    UpdateState(RiStateUpdate),
+    SetGlobalSystemStatus(RiSystemStatus),
 }
 
 #[derive(Debug, Clone)]
-pub enum DMSCExternalControlResult {
+pub enum RiExternalControlResult {
     HookTriggered,
     StateUpdated,
 }
 
-pub struct DMSCControlCenter {
-    state_manager: Arc<DMSCGlobalStateManager>,
-    service_context: DMSCServiceContext,
+pub struct RiControlCenter {
+    state_manager: Arc<RiGlobalStateManager>,
+    service_context: RiServiceContext,
 }
 
-impl DMSCControlCenter {
-    pub fn new(state_manager: Arc<DMSCGlobalStateManager>, service_context: DMSCServiceContext) -> Self {
-        DMSCControlCenter {
+impl RiControlCenter {
+    pub fn new(state_manager: Arc<RiGlobalStateManager>, service_context: RiServiceContext) -> Self {
+        RiControlCenter {
             state_manager,
             service_context,
         }
@@ -69,72 +69,72 @@ impl DMSCControlCenter {
 
     pub async fn handle_action(
         &self,
-        action: DMSCExternalControlAction,
-    ) -> DMSCResult<DMSCExternalControlResult> {
+        action: RiExternalControlAction,
+    ) -> RiResult<RiExternalControlResult> {
         match action {
-            DMSCExternalControlAction::TriggerHook { hook, module, phase } => {
+            RiExternalControlAction::TriggerHook { hook, module, phase } => {
                 let hooks = self.service_context.hooks();
                 hooks.emit_with(&hook, &self.service_context, module.as_deref(), phase)?;
-                Ok(DMSCExternalControlResult::HookTriggered)
+                Ok(RiExternalControlResult::HookTriggered)
             }
-            DMSCExternalControlAction::UpdateState(update) => {
+            RiExternalControlAction::UpdateState(update) => {
                 self.state_manager.update_state(update).await?;
-                Ok(DMSCExternalControlResult::StateUpdated)
+                Ok(RiExternalControlResult::StateUpdated)
             }
-            DMSCExternalControlAction::SetGlobalSystemStatus(system_status) => {
+            RiExternalControlAction::SetGlobalSystemStatus(system_status) => {
                 let global_state = self.state_manager.get_global_state().await?;
-                let update = DMSCStateUpdate::Global {
+                let update = RiStateUpdate::Global {
                     system_status,
                     global_config: global_state.global_config,
                     active_protocols: global_state.active_protocols,
                 };
                 self.state_manager.update_state(update).await?;
-                Ok(DMSCExternalControlResult::StateUpdated)
+                Ok(RiExternalControlResult::StateUpdated)
             }
         }
     }
 }
 
 /// Global system integration coordinator.
-pub struct DMSCGlobalSystemIntegration {
+pub struct RiGlobalSystemIntegration {
     /// Integration configuration
-    config: Arc<tokio::sync::RwLock<DMSCIntegrationConfig>>,
+    config: Arc<tokio::sync::RwLock<RiIntegrationConfig>>,
     /// Protocol adapter for unified protocol interface
-    protocol_adapter: Arc<DMSCProtocolAdapter>,
+    protocol_adapter: Arc<RiProtocolAdapter>,
     /// Global state manager for state coordination
-    state_manager: Arc<DMSCGlobalStateManager>,
+    state_manager: Arc<RiGlobalStateManager>,
     /// Protocol registry
-    protocol_registry: Arc<tokio::sync::RwLock<HashMap<DMSCProtocolType, Arc<dyn DMSCProtocol>>>>,
+    protocol_registry: Arc<tokio::sync::RwLock<HashMap<RiProtocolType, Arc<dyn RiProtocol>>>>,
     /// Connection coordinator
-    connection_coordinator: Arc<DMSCConnectionCoordinator>,
+    connection_coordinator: Arc<RiConnectionCoordinator>,
     /// Security coordinator
-    security_coordinator: Arc<DMSCSecurityCoordinator>,
+    security_coordinator: Arc<RiSecurityCoordinator>,
     /// Performance coordinator
-    performance_coordinator: Arc<DMSCPerformanceCoordinator>,
+    performance_coordinator: Arc<RiPerformanceCoordinator>,
     /// Integration event bus
-    event_bus: Arc<DMSCIntegrationEventBus>,
+    event_bus: Arc<RiIntegrationEventBus>,
     /// Integration statistics
-    stats: Arc<tokio::sync::RwLock<DMSCIntegrationStats>>,
+    stats: Arc<tokio::sync::RwLock<RiIntegrationStats>>,
     /// Initialization status
     initialized: Arc<tokio::sync::RwLock<bool>>,
 }
 
-impl DMSCGlobalSystemIntegration {
+impl RiGlobalSystemIntegration {
     /// Create a new global system integration.
-    pub fn new(config: DMSCIntegrationConfig) -> Self {
-        let protocol_adapter = Arc::new(DMSCProtocolAdapter::new());
-        let state_manager = Arc::new(DMSCGlobalStateManager::new());
+    pub fn new(config: RiIntegrationConfig) -> Self {
+        let protocol_adapter = Arc::new(RiProtocolAdapter::new());
+        let state_manager = Arc::new(RiGlobalStateManager::new());
         
-        let connection_coordinator = Arc::new(DMSCConnectionCoordinator {
+        let connection_coordinator = Arc::new(RiConnectionCoordinator {
             connections: Arc::new(tokio::sync::RwLock::new(HashMap::new())),
-            routing_table: Arc::new(tokio::sync::RwLock::new(DMSCConnectionRoutingTable {
+            routing_table: Arc::new(tokio::sync::RwLock::new(RiConnectionRoutingTable {
                 entries: HashMap::new(),
-                default_protocol: DMSCProtocolType::Global,
+                default_protocol: RiProtocolType::Global,
                 routing_policies: vec![],
             })),
-            health_monitor: Arc::new(crate::protocol::integration::connection::DMSCConnectionHealthMonitor {
+            health_monitor: Arc::new(crate::protocol::integration::connection::RiConnectionHealthMonitor {
                 health_results: Arc::new(tokio::sync::RwLock::new(HashMap::new())),
-                config: Arc::new(crate::protocol::integration::connection::DMSCHealthCheckConfig {
+                config: Arc::new(crate::protocol::integration::connection::RiHealthCheckConfig {
                     check_interval: Duration::from_secs(30),
                     timeout: Duration::from_secs(5),
                     retry_attempts: 3,
@@ -144,30 +144,30 @@ impl DMSCGlobalSystemIntegration {
             }),
         });
         
-        let security_coordinator = Arc::new(DMSCSecurityCoordinator {
+        let security_coordinator = Arc::new(RiSecurityCoordinator {
             policies: Arc::new(tokio::sync::RwLock::new(vec![])),
-            enforcement_engine: Arc::new(crate::protocol::integration::security::DMSCSecurityEnforcementEngine {
+            enforcement_engine: Arc::new(crate::protocol::integration::security::RiSecurityEnforcementEngine {
                 rules: Arc::new(tokio::sync::RwLock::new(HashMap::new())),
                 actions: Arc::new(tokio::sync::RwLock::new(vec![])),
-                stats: Arc::new(tokio::sync::RwLock::new(crate::protocol::integration::security::DMSCEnforcementStats::default())),
+                stats: Arc::new(tokio::sync::RwLock::new(crate::protocol::integration::security::RiEnforcementStats::default())),
             }),
-            event_monitor: Arc::new(crate::protocol::integration::security::DMSCSecurityEventMonitor {
+            event_monitor: Arc::new(crate::protocol::integration::security::RiSecurityEventMonitor {
                 events: Arc::new(tokio::sync::RwLock::new(vec![])),
                 subscribers: Arc::new(tokio::sync::RwLock::new(vec![])),
-                stats: Arc::new(tokio::sync::RwLock::new(crate::protocol::integration::security::DMSCSecurityEventStats::default())),
+                stats: Arc::new(tokio::sync::RwLock::new(crate::protocol::integration::security::RiSecurityEventStats::default())),
             }),
         });
         
-        let performance_coordinator = Arc::new(DMSCPerformanceCoordinator {
-            metrics: Arc::new(tokio::sync::RwLock::new(DMSCPerformanceMetrics {
+        let performance_coordinator = Arc::new(RiPerformanceCoordinator {
+            metrics: Arc::new(tokio::sync::RwLock::new(RiPerformanceMetrics {
                 protocol_metrics: HashMap::new(),
-                cross_protocol_metrics: DMSCCrossProtocolMetrics {
+                cross_protocol_metrics: RiCrossProtocolMetrics {
                     cross_protocol_latency: Duration::from_millis(0),
                     protocol_switching_time: Duration::from_millis(0),
                     state_sync_time: Duration::from_millis(0),
                     message_routing_efficiency: 1.0,
                 },
-                system_metrics: DMSCSystemPerformanceMetrics {
+                system_metrics: RiSystemPerformanceMetrics {
                     cpu_utilization: 0.0,
                     memory_utilization: 0.0,
                     network_utilization: 0.0,
@@ -176,21 +176,21 @@ impl DMSCGlobalSystemIntegration {
                 last_update: Instant::now(),
             })),
             optimizations: Arc::new(tokio::sync::RwLock::new(vec![])),
-            monitor: Arc::new(crate::protocol::integration::performance::DMSCPerformanceMonitor {
-                config: Arc::new(crate::protocol::integration::performance::DMSCPerformanceMonitoringConfig {
+            monitor: Arc::new(crate::protocol::integration::performance::RiPerformanceMonitor {
+                config: Arc::new(crate::protocol::integration::performance::RiPerformanceMonitoringConfig {
                     monitoring_interval: Duration::from_secs(60),
-                    thresholds: crate::protocol::integration::performance::DMSCPerformanceThresholds {
+                    thresholds: crate::protocol::integration::performance::RiPerformanceThresholds {
                         max_latency: Duration::from_millis(1000),
                         min_throughput: 1000000, // 1MB/s
                         max_error_rate: 0.05, // 5%
                         max_cpu_utilization: 0.8, // 80%
                         max_memory_utilization: 0.8, // 80%
                     },
-                    alert_config: crate::protocol::integration::performance::DMSCPerformanceAlertConfig {
+                    alert_config: crate::protocol::integration::performance::RiPerformanceAlertConfig {
                         alert_enabled: true,
-                        alert_severity_levels: vec![crate::protocol::integration::performance::DMSCAlertSeverityLevel::Warning, 
-                                                   crate::protocol::integration::performance::DMSCAlertSeverityLevel::Error, 
-                                                   crate::protocol::integration::performance::DMSCAlertSeverityLevel::Critical],
+                        alert_severity_levels: vec![crate::protocol::integration::performance::RiAlertSeverityLevel::Warning, 
+                                                   crate::protocol::integration::performance::RiAlertSeverityLevel::Error, 
+                                                   crate::protocol::integration::performance::RiAlertSeverityLevel::Critical],
                         alert_destinations: vec!["console".to_string(), "log".to_string()],
                     },
                 }),
@@ -199,9 +199,9 @@ impl DMSCGlobalSystemIntegration {
             }),
         });
         
-        let event_bus = Arc::new(DMSCIntegrationEventBus {
+        let event_bus = Arc::new(RiIntegrationEventBus {
             subscribers: Arc::new(tokio::sync::RwLock::new(HashMap::new())),
-            stats: Arc::new(tokio::sync::RwLock::new(crate::protocol::integration::events::DMSCIntegrationEventStats::default())),
+            stats: Arc::new(tokio::sync::RwLock::new(crate::protocol::integration::events::RiIntegrationEventStats::default())),
         });
         
         Self {
@@ -213,27 +213,27 @@ impl DMSCGlobalSystemIntegration {
             security_coordinator,
             performance_coordinator,
             event_bus,
-            stats: Arc::new(tokio::sync::RwLock::new(DMSCIntegrationStats::default())),
+            stats: Arc::new(tokio::sync::RwLock::new(RiIntegrationStats::default())),
             initialized: Arc::new(tokio::sync::RwLock::new(false)),
         }
     }
     
     /// Initialize the global system integration.
-    pub async fn initialize(&self) -> DMSCResult<()> {
+    pub async fn initialize(&self) -> RiResult<()> {
         if *self.initialized.read().await {
             return Ok(());
         }
         
         // Initialize protocol adapter
-        let security_context = DMSCSecurityContext {
-            required_security_level: DMSCSecurityLevel::Standard,
-            threat_level: super::super::adapter::DMSCThreatLevel::Normal,
-            data_classification: super::super::adapter::DMSCDataClassification::Internal,
-            network_environment: super::super::adapter::DMSCNetworkEnvironment::Trusted,
+        let security_context = RiSecurityContext {
+            required_security_level: RiSecurityLevel::Standard,
+            threat_level: super::super::adapter::RiThreatLevel::Normal,
+            data_classification: super::super::adapter::RiDataClassification::Internal,
+            network_environment: super::super::adapter::RiNetworkEnvironment::Trusted,
             compliance_requirements: vec![],
         };
         
-        let strategy = DMSCProtocolStrategy::SecurityBased(security_context);
+        let strategy = RiProtocolStrategy::SecurityBased(security_context);
         let mut adapter = self.protocol_adapter.clone();
         adapter.initialize(strategy).await?;
         
@@ -245,18 +245,18 @@ impl DMSCGlobalSystemIntegration {
     }
     
     /// Register a protocol.
-    pub async fn register_protocol(&self, protocol_type: DMSCProtocolType) -> DMSCResult<()> {
+    pub async fn register_protocol(&self, protocol_type: RiProtocolType) -> RiResult<()> {
         if !*self.initialized.read().await {
-            return Err(DMSCError::InvalidState("Integration not initialized".to_string()));
+            return Err(RiError::InvalidState("Integration not initialized".to_string()));
         }
         
         // Create protocol instance based on type
-        let protocol: Box<dyn DMSCProtocol> = match protocol_type {
-            DMSCProtocolType::Global => {
-                Box::new(super::super::global::DMSCGlobalProtocol::new())
+        let protocol: Box<dyn RiProtocol> = match protocol_type {
+            RiProtocolType::Global => {
+                Box::new(super::super::global::RiGlobalProtocol::new())
             }
-            DMSCProtocolType::Private => {
-                Box::new(super::super::private::DMSCPrivateProtocol::new(super::super::private::DMSCPrivateProtocolConfig::default()))
+            RiProtocolType::Private => {
+                Box::new(super::super::private::RiPrivateProtocol::new(super::super::private::RiPrivateProtocolConfig::default()))
             }
         };
         
@@ -267,15 +267,15 @@ impl DMSCGlobalSystemIntegration {
         self.protocol_registry.write().await.insert(protocol_type, Arc::new(protocol));
         
         // Publish event
-        self.publish_event(DMSCIntegrationEventType::ProtocolRegistered, HashMap::new()).await?;
+        self.publish_event(RiIntegrationEventType::ProtocolRegistered, HashMap::new()).await?;
         
         Ok(())
     }
     
     /// Start protocol coordination.
-    pub async fn start_coordination(&self) -> DMSCResult<()> {
+    pub async fn start_coordination(&self) -> RiResult<()> {
         if !*self.initialized.read().await {
-            return Err(DMSCError::InvalidState("Integration not initialized".to_string()));
+            return Err(RiError::InvalidState("Integration not initialized".to_string()));
         }
         
         let config = self.config.read().await;
@@ -302,8 +302,8 @@ impl DMSCGlobalSystemIntegration {
     pub async fn select_protocol_for_device(
         &self,
         target_device: &str,
-        strategy: DMSCProtocolStrategy,
-    ) -> DMSCResult<DMSCProtocolType> {
+        strategy: RiProtocolStrategy,
+    ) -> RiResult<RiProtocolType> {
         // Check routing table first
         let routing_table = self.connection_coordinator.routing_table.read().await;
         if let Some(entry) = routing_table.entries.get(target_device) {
@@ -329,10 +329,10 @@ impl DMSCGlobalSystemIntegration {
     pub async fn send_cross_protocol_message(
         &self,
         target_device: &str,
-        source_protocol: DMSCProtocolType,
-        target_protocol: DMSCProtocolType,
+        source_protocol: RiProtocolType,
+        target_protocol: RiProtocolType,
         message: &[u8],
-    ) -> DMSCResult<Vec<u8>> {
+    ) -> RiResult<Vec<u8>> {
         let start_time = Instant::now();
         
         // Update statistics
@@ -340,7 +340,7 @@ impl DMSCGlobalSystemIntegration {
         
         // Validate protocols
         if source_protocol == target_protocol {
-            return Err(DMSCError::InvalidInput("Source and target protocols cannot be the same".to_string()));
+            return Err(RiError::InvalidInput("Source and target protocols cannot be the same".to_string()));
         }
         
         // Check security enforcement
@@ -366,10 +366,10 @@ impl DMSCGlobalSystemIntegration {
     async fn route_cross_protocol_message(
         &self,
         target_device: &str,
-        source_protocol: DMSCProtocolType,
-        target_protocol: DMSCProtocolType,
+        source_protocol: RiProtocolType,
+        target_protocol: RiProtocolType,
         message: &[u8],
-    ) -> DMSCResult<Vec<u8>> {
+    ) -> RiResult<Vec<u8>> {
         // Create cross-protocol connection if needed
         let connection_id = format!("cross-{}-{}-{}", source_protocol as u8, target_protocol as u8, target_device);
         
@@ -377,12 +377,12 @@ impl DMSCGlobalSystemIntegration {
         let mut connections = self.connection_coordinator.connections.write().await;
         if !connections.contains_key(&connection_id) {
             // Create new cross-protocol connection
-            let connection = DMSCCrossProtocolConnection {
+            let connection = RiCrossProtocolConnection {
                 connection_id: connection_id.clone(),
                 source_protocol,
                 target_protocol,
                 target_device: target_device.to_string(),
-                state: DMSCCrossProtocolConnectionState::Initializing,
+                state: RiCrossProtocolConnectionState::Initializing,
                 metadata: HashMap::new(),
                 established_at: Instant::now(),
                 last_activity: Instant::now(),
@@ -397,7 +397,7 @@ impl DMSCGlobalSystemIntegration {
         
         // Update connection state
         if let Some(connection) = connections.get_mut(&connection_id) {
-            connection.state = DMSCCrossProtocolConnectionState::Active;
+            connection.state = RiCrossProtocolConnectionState::Active;
             connection.last_activity = Instant::now();
         }
         
@@ -405,7 +405,7 @@ impl DMSCGlobalSystemIntegration {
     }
     
     /// Start connection health monitoring.
-    async fn start_connection_health_monitoring(&self) -> DMSCResult<()> {
+    async fn start_connection_health_monitoring(&self) -> RiResult<()> {
         let connections = Arc::clone(&self.connection_coordinator.connections);
         let config = self.config.read().await;
         let health_check_interval = config.health_check_interval;
@@ -439,7 +439,7 @@ impl DMSCGlobalSystemIntegration {
     }
     
     /// Start state synchronization.
-    async fn start_state_synchronization(&self) -> DMSCResult<()> {
+    async fn start_state_synchronization(&self) -> RiResult<()> {
         let state_manager = Arc::clone(&self.state_manager);
         let config = self.config.read().await;
         let state_sync_interval = config.state_sync_interval;
@@ -462,7 +462,7 @@ impl DMSCGlobalSystemIntegration {
     }
     
     /// Start performance monitoring.
-    async fn start_performance_monitoring(&self) -> DMSCResult<()> {
+    async fn start_performance_monitoring(&self) -> RiResult<()> {
         let stats = Arc::clone(&self.stats);
         let event_bus = Arc::clone(&self.event_bus);
         
@@ -481,7 +481,7 @@ impl DMSCGlobalSystemIntegration {
                 drop(stats);
                 
                 // Publish performance metrics event
-                if let Err(e) = event_bus.publish_event(DMSCIntegrationEventType::PerformanceMetrics, event_data).await {
+                if let Err(e) = event_bus.publish_event(RiIntegrationEventType::PerformanceMetrics, event_data).await {
                     error!("Failed to publish performance metrics: {}", e);
                 }
             }
@@ -491,8 +491,8 @@ impl DMSCGlobalSystemIntegration {
     }
     
     /// Publish integration event.
-    async fn publish_event(&self, event_type: DMSCIntegrationEventType, event_data: HashMap<String, String>) -> DMSCResult<()> {
-        let event = DMSCIntegrationEvent {
+    async fn publish_event(&self, event_type: RiIntegrationEventType, event_data: HashMap<String, String>) -> RiResult<()> {
+        let event = RiIntegrationEvent {
             event_id: uuid::Uuid::new_v4().to_string(),
             event_type,
             event_data,
@@ -515,12 +515,12 @@ impl DMSCGlobalSystemIntegration {
     }
     
     /// Get integration statistics.
-    pub async fn get_stats(&self) -> DMSCIntegrationStats {
+    pub async fn get_stats(&self) -> RiIntegrationStats {
         *self.stats.read().await
     }
     
     /// Shutdown the global system integration.
-    pub async fn shutdown(&mut self) -> DMSCResult<()> {
+    pub async fn shutdown(&mut self) -> RiResult<()> {
         // Shutdown protocol adapter
         let mut adapter = self.protocol_adapter.clone();
         adapter.shutdown().await?;

@@ -1,7 +1,7 @@
 //! Copyright © 2025-2026 Wenze Wei. All Rights Reserved.
 //!
-//! This file is part of DMSC.
-//! The DMSC project belongs to the Dunimd Team.
+//! This file is part of Ri.
+//! The Ri project belongs to the Dunimd Team.
 //!
 //! Licensed under the Apache License, Version 2.0 (the "License");
 //! You may not use this file except in compliance with the License.
@@ -17,7 +17,7 @@
 
 //! # Sharded Lock Implementation
 //!
-//! This module provides a sharded lock data structure (`DMSCShardedLock`) that
+//! This module provides a sharded lock data structure (`RiShardedLock`) that
 //! improves concurrent performance by reducing lock contention. Instead of using
 //! a single global lock, the data is partitioned into multiple shards, each with
 //! its own lock.
@@ -39,10 +39,10 @@
 //! ## Usage Example
 //!
 //! ```rust,ignore
-//! use dmsc::core::concurrent::DMSCShardedLock;
+//! use ri::core::concurrent::RiShardedLock;
 //! use std::collections::HashMap;
 //!
-//! let sharded_map = DMSCShardedLock::<String, String>::new(16);
+//! let sharded_map = RiShardedLock::<String, String>::new(16);
 //!
 //! // Insert a value
 //! sharded_map.insert("key1".to_string(), "value1".to_string()).await;
@@ -90,12 +90,12 @@ impl<K, V> Shard<K, V> {
     }
 }
 
-pub struct DMSCShardedLock<K, V> {
+pub struct RiShardedLock<K, V> {
     shards: Vec<Arc<Shard<K, V>>>,
     shard_count: usize,
 }
 
-impl<K, V> DMSCShardedLock<K, V>
+impl<K, V> RiShardedLock<K, V>
 where
     K: Hash + Eq + Clone + Send + Sync + 'static,
     V: Clone + Send + Sync + 'static,
@@ -316,7 +316,7 @@ where
     }
 }
 
-impl<K, V> Default for DMSCShardedLock<K, V>
+impl<K, V> Default for RiShardedLock<K, V>
 where
     K: Hash + Eq + Clone + Send + Sync + 'static,
     V: Clone + Send + Sync + 'static,
@@ -327,25 +327,25 @@ where
 }
 
 #[allow(dead_code)]
-pub struct DMSCShardedLockReadGuard<'a, K, V> {
+pub struct RiShardedLockReadGuard<'a, K, V> {
     shard_index: usize,
     guard: tokio::sync::RwLockReadGuard<'a, HashMap<K, V>>,
 }
 
 #[allow(dead_code)]
-pub struct DMSCShardedLockWriteGuard<'a, K, V> {
+pub struct RiShardedLockWriteGuard<'a, K, V> {
     shard_index: usize,
     guard: tokio::sync::RwLockWriteGuard<'a, HashMap<K, V>>,
 }
 
 #[cfg_attr(feature = "pyo3", pyclass)]
-pub struct DMSCShardedLockStats {
+pub struct RiShardedLockStats {
     pub shard_count: usize,
     pub total_entries: usize,
     pub shard_distribution: Vec<usize>,
 }
 
-impl DMSCShardedLockStats {
+impl RiShardedLockStats {
     pub fn new(shard_count: usize, total_entries: usize, shard_distribution: Vec<usize>) -> Self {
         Self {
             shard_count,
@@ -378,7 +378,7 @@ impl DMSCShardedLockStats {
 
 #[cfg(feature = "pyo3")]
 #[pyo3::prelude::pymethods]
-impl DMSCShardedLockStats {
+impl RiShardedLockStats {
     #[getter]
     fn shard_count(&self) -> usize {
         self.shard_count

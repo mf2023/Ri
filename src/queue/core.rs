@@ -1,7 +1,7 @@
 //! Copyright © 2025-2026 Wenze Wei. All Rights Reserved.
 //!
-//! This file is part of DMSC.
-//! The DMSC project belongs to the Dunimd Team.
+//! This file is part of Ri.
+//! The Ri project belongs to the Dunimd Team.
 //!
 //! Licensed under the Apache License, Version 2.0 (the "License");
 //! You may not use this file except in compliance with the License.
@@ -19,16 +19,16 @@
 
 //! # Queue Core Implementation
 //! 
-//! This file defines the core queueing interfaces and message structures for the DMSC queue system.
+//! This file defines the core queueing interfaces and message structures for the Ri queue system.
 //! It provides the fundamental building blocks for implementing various queue backends.
 //! 
 //! ## Key Components
 //! 
-//! - **DMSCQueueMessage**: Message structure for queue operations
+//! - **RiQueueMessage**: Message structure for queue operations
 //! - **QueueStats**: Statistics for queue monitoring
-//! - **DMSCQueueProducer**: Trait for producing messages to queues
-//! - **DMSCQueueConsumer**: Trait for consuming messages from queues
-//! - **DMSCQueue**: Main queue trait defining queue operations
+//! - **RiQueueProducer**: Trait for producing messages to queues
+//! - **RiQueueConsumer**: Trait for consuming messages from queues
+//! - **RiQueue**: Main queue trait defining queue operations
 //! 
 //! ## Design Principles
 //! 
@@ -43,17 +43,17 @@
 //! ## Usage
 //! 
 //! ```rust
-//! use dmsc::queue::{DMSCQueueMessage, DMSCQueueProducer, DMSCQueueConsumer, DMSCQueue};
-//! use dmsc::core::DMSCResult;
+//! use ri::queue::{RiQueueMessage, RiQueueProducer, RiQueueConsumer, RiQueue};
+//! use ri::core::RiResult;
 //! use serde_json::json;
 //! 
-//! async fn example(queue: &dyn DMSCQueue) -> DMSCResult<()> {
+//! async fn example(queue: &dyn RiQueue) -> RiResult<()> {
 //!     // Create a producer
 //!     let producer = queue.create_producer().await?;
 //!     
 //!     // Create a message
 //!     let payload = json!({ "key": "value" }).to_string().into_bytes();
-//!     let message = DMSCQueueMessage::new(payload)
+//!     let message = RiQueueMessage::new(payload)
 //!         .with_max_retries(5);
 //!     
 //!     // Send the message
@@ -80,11 +80,11 @@ use async_trait::async_trait;
 use serde::{Serialize, Deserialize};
 use std::collections::HashMap;
 use std::time::SystemTime;
-use crate::core::DMSCResult;
+use crate::core::RiResult;
 
 /// Error types for queue operations.
 #[derive(Debug, Clone)]
-pub enum DMSCQueueError {
+pub enum RiQueueError {
     /// Backend-specific error with descriptive message
     BackendError(String),
     /// Configuration error
@@ -99,24 +99,24 @@ pub enum DMSCQueueError {
     SerializationError(String),
 }
 
-impl std::fmt::Display for DMSCQueueError {
+impl std::fmt::Display for RiQueueError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            DMSCQueueError::BackendError(msg) => write!(f, "Queue backend error: {}", msg),
-            DMSCQueueError::ConfigError(msg) => write!(f, "Queue configuration error: {}", msg),
-            DMSCQueueError::ConnectionError(msg) => write!(f, "Queue connection error: {}", msg),
-            DMSCQueueError::MessageNotFound(msg) => write!(f, "Message not found: {}", msg),
-            DMSCQueueError::ConsumerGroupError(msg) => write!(f, "Consumer group error: {}", msg),
-            DMSCQueueError::SerializationError(msg) => write!(f, "Serialization error: {}", msg),
+            RiQueueError::BackendError(msg) => write!(f, "Queue backend error: {}", msg),
+            RiQueueError::ConfigError(msg) => write!(f, "Queue configuration error: {}", msg),
+            RiQueueError::ConnectionError(msg) => write!(f, "Queue connection error: {}", msg),
+            RiQueueError::MessageNotFound(msg) => write!(f, "Message not found: {}", msg),
+            RiQueueError::ConsumerGroupError(msg) => write!(f, "Consumer group error: {}", msg),
+            RiQueueError::SerializationError(msg) => write!(f, "Serialization error: {}", msg),
         }
     }
 }
 
-impl std::error::Error for DMSCQueueError {}
+impl std::error::Error for RiQueueError {}
 
-impl From<DMSCQueueError> for crate::core::DMSCError {
-    fn from(error: DMSCQueueError) -> Self {
-        crate::core::DMSCError::Queue(error.to_string())
+impl From<RiQueueError> for crate::core::RiError {
+    fn from(error: RiQueueError) -> Self {
+        crate::core::RiError::Queue(error.to_string())
     }
 }
 
@@ -126,7 +126,7 @@ impl From<DMSCQueueError> for crate::core::DMSCError {
 /// a unique ID, payload, headers, timestamp, and retry information.
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct DMSCQueueMessage {
+pub struct RiQueueMessage {
     /// Unique message ID
     pub id: String,
     /// Message payload as bytes
@@ -141,7 +141,7 @@ pub struct DMSCQueueMessage {
     pub max_retries: u32,
 }
 
-impl DMSCQueueMessage {
+impl RiQueueMessage {
     /// Creates a new message with the given payload.
     /// 
     /// # Parameters
@@ -150,7 +150,7 @@ impl DMSCQueueMessage {
     /// 
     /// # Returns
     /// 
-    /// A new `DMSCQueueMessage` instance
+    /// A new `RiQueueMessage` instance
     pub fn new(payload: Vec<u8>) -> Self {
         Self {
             id: uuid::Uuid::new_v4().to_string(),
@@ -170,7 +170,7 @@ impl DMSCQueueMessage {
     /// 
     /// # Returns
     /// 
-    /// The updated `DMSCQueueMessage` instance
+    /// The updated `RiQueueMessage` instance
     pub fn with_headers(mut self, headers: HashMap<String, String>) -> Self {
         self.headers = headers;
         self
@@ -184,7 +184,7 @@ impl DMSCQueueMessage {
     /// 
     /// # Returns
     /// 
-    /// The updated `DMSCQueueMessage` instance
+    /// The updated `RiQueueMessage` instance
     pub fn with_max_retries(mut self, max_retries: u32) -> Self {
         self.max_retries = max_retries;
         self
@@ -206,9 +206,9 @@ impl DMSCQueueMessage {
 }
 
 #[cfg(feature = "pyo3")]
-/// Python bindings for DMSCQueueMessage
+/// Python bindings for RiQueueMessage
 #[pyo3::prelude::pymethods]
-impl DMSCQueueMessage {
+impl RiQueueMessage {
     #[new]
     fn py_new(payload: Vec<u8>) -> Self {
         Self::new(payload)
@@ -233,7 +233,7 @@ impl DMSCQueueMessage {
 /// This struct contains comprehensive statistics about a queue's performance and usage.
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 #[derive(Debug, Clone)]
-pub struct DMSCQueueStats {
+pub struct RiQueueStats {
     /// Name of the queue
     pub queue_name: String,
     /// Current number of messages in the queue
@@ -257,9 +257,9 @@ pub struct DMSCQueueStats {
 }
 
 #[cfg(feature = "pyo3")]
-/// Python bindings for DMSCQueueStats
+/// Python bindings for RiQueueStats
 #[pyo3::prelude::pymethods]
-impl DMSCQueueStats {
+impl RiQueueStats {
     #[new]
     fn py_new(queue_name: String) -> Self {
         Self {
@@ -282,12 +282,12 @@ impl DMSCQueueStats {
 /// This trait defines the interface for sending messages to queues, including single message
 /// sends and batch sends.
 #[async_trait]
-pub trait DMSCQueueProducer: Send + Sync {
-    async fn send(&self, message: DMSCQueueMessage) -> DMSCResult<()>;
+pub trait RiQueueProducer: Send + Sync {
+    async fn send(&self, message: RiQueueMessage) -> RiResult<()>;
     
-    async fn send_batch(&self, messages: Vec<DMSCQueueMessage>) -> DMSCResult<()>;
+    async fn send_batch(&self, messages: Vec<RiQueueMessage>) -> RiResult<()>;
 
-    async fn send_multi(&self, messages: &[DMSCQueueMessage]) -> DMSCResult<()> {
+    async fn send_multi(&self, messages: &[RiQueueMessage]) -> RiResult<()> {
         for message in messages {
             self.send(message.clone()).await?;
         }
@@ -299,13 +299,13 @@ pub trait DMSCQueueProducer: Send + Sync {
 /// 
 /// This trait defines the interface for receiving and acknowledging messages from queues.
 #[async_trait]
-pub trait DMSCQueueConsumer: Send + Sync {
+pub trait RiQueueConsumer: Send + Sync {
     /// Receives a message from the queue.
     /// 
     /// # Returns
     /// 
-    /// A `DMSCResult<Option<DMSCQueueMessage>>` containing the message if available, or None if no message is available
-    async fn receive(&self) -> DMSCResult<Option<DMSCQueueMessage>>;
+    /// A `RiResult<Option<RiQueueMessage>>` containing the message if available, or None if no message is available
+    async fn receive(&self) -> RiResult<Option<RiQueueMessage>>;
     
     /// Acknowledges a message, indicating it has been successfully processed.
     /// 
@@ -315,8 +315,8 @@ pub trait DMSCQueueConsumer: Send + Sync {
     /// 
     /// # Returns
     /// 
-    /// A `DMSCResult<()>` indicating success or failure
-    async fn ack(&self, message_id: &str) -> DMSCResult<()>;
+    /// A `RiResult<()>` indicating success or failure
+    async fn ack(&self, message_id: &str) -> RiResult<()>;
     
     /// Negatively acknowledges a message, indicating it failed to process and should be retried.
     /// 
@@ -326,24 +326,24 @@ pub trait DMSCQueueConsumer: Send + Sync {
     /// 
     /// # Returns
     /// 
-    /// A `DMSCResult<()>` indicating success or failure
-    async fn nack(&self, message_id: &str) -> DMSCResult<()>;
+    /// A `RiResult<()>` indicating success or failure
+    async fn nack(&self, message_id: &str) -> RiResult<()>;
     
     /// Pauses message consumption.
     /// 
     /// # Returns
     /// 
-    /// A `DMSCResult<()>` indicating success or failure
-    async fn pause(&self) -> DMSCResult<()>;
+    /// A `RiResult<()>` indicating success or failure
+    async fn pause(&self) -> RiResult<()>;
     
     /// Resumes message consumption after pausing.
     /// 
     /// # Returns
     /// 
-    /// A `DMSCResult<()>` indicating success or failure
-    async fn resume(&self) -> DMSCResult<()>;
+    /// A `RiResult<()>` indicating success or failure
+    async fn resume(&self) -> RiResult<()>;
 
-    async fn receive_multi(&self, count: usize) -> DMSCResult<Vec<Option<DMSCQueueMessage>>> {
+    async fn receive_multi(&self, count: usize) -> RiResult<Vec<Option<RiQueueMessage>>> {
         let mut messages = Vec::with_capacity(count);
         for _ in 0..count {
             messages.push(self.receive().await?);
@@ -351,7 +351,7 @@ pub trait DMSCQueueConsumer: Send + Sync {
         Ok(messages)
     }
 
-    async fn ack_multi(&self, message_ids: &[String]) -> DMSCResult<()> {
+    async fn ack_multi(&self, message_ids: &[String]) -> RiResult<()> {
         for id in message_ids {
             self.ack(id).await?;
         }
@@ -364,13 +364,13 @@ pub trait DMSCQueueConsumer: Send + Sync {
 /// This trait defines the core operations for queues, including creating producers and consumers,
 /// getting statistics, purging queues, and deleting queues.
 #[async_trait]
-pub trait DMSCQueue: Send + Sync {
+pub trait RiQueue: Send + Sync {
     /// Creates a new producer for this queue.
     /// 
     /// # Returns
     /// 
-    /// A `DMSCResult<Box<dyn DMSCQueueProducer>>` containing the producer
-    async fn create_producer(&self) -> DMSCResult<Box<dyn DMSCQueueProducer>>;
+    /// A `RiResult<Box<dyn RiQueueProducer>>` containing the producer
+    async fn create_producer(&self) -> RiResult<Box<dyn RiQueueProducer>>;
     
     /// Creates a new consumer for this queue with the given consumer group.
     /// 
@@ -380,27 +380,27 @@ pub trait DMSCQueue: Send + Sync {
     /// 
     /// # Returns
     /// 
-    /// A `DMSCResult<Box<dyn DMSCQueueConsumer>>` containing the consumer
-    async fn create_consumer(&self, consumer_group: &str) -> DMSCResult<Box<dyn DMSCQueueConsumer>>;
+    /// A `RiResult<Box<dyn RiQueueConsumer>>` containing the consumer
+    async fn create_consumer(&self, consumer_group: &str) -> RiResult<Box<dyn RiQueueConsumer>>;
     
     /// Gets statistics for this queue.
     /// 
     /// # Returns
     /// 
-    /// A `DMSCResult<DMSCQueueStats>` containing the queue statistics
-    async fn get_stats(&self) -> DMSCResult<DMSCQueueStats>;
+    /// A `RiResult<RiQueueStats>` containing the queue statistics
+    async fn get_stats(&self) -> RiResult<RiQueueStats>;
     
     /// Purges all messages from this queue.
     /// 
     /// # Returns
     /// 
-    /// A `DMSCResult<()>` indicating success or failure
-    async fn purge(&self) -> DMSCResult<()>;
+    /// A `RiResult<()>` indicating success or failure
+    async fn purge(&self) -> RiResult<()>;
     
     /// Deletes this queue.
     /// 
     /// # Returns
     /// 
-    /// A `DMSCResult<()>` indicating success or failure
-    async fn delete(&self) -> DMSCResult<()>;
+    /// A `RiResult<()>` indicating success or failure
+    async fn delete(&self) -> RiResult<()>;
 }

@@ -1,7 +1,7 @@
 //! Copyright © 2025-2026 Wenze Wei. All Rights Reserved.
 //!
-//! This file is part of DMSC.
-//! The DMSC project belongs to the Dunimd Team.
+//! This file is part of Ri.
+//! The Ri project belongs to the Dunimd Team.
 //!
 //! Licensed under the Apache License, Version 2.0 (the "License");
 //! You may not use this file except in compliance with the License.
@@ -33,23 +33,23 @@ mod performance;
 mod events;
 
 // Re-export public API
-pub use self::core::{DMSCGlobalSystemIntegration, DMSCControlCenter, DMSCExternalControlAction, DMSCExternalControlResult};
-pub use self::config::{DMSCIntegrationConfig, DMSCSecurityEnforcementLevel};
-pub use self::connection::{DMSCCrossProtocolConnection, DMSCCrossProtocolConnectionState, 
-                           DMSCConnectionRoutingTable, DMSCRoutingEntry, DMSCRoutingPolicy, 
-                           DMSCRoutingCondition, DMSCRoutingAction, DMSCPerformanceCondition, 
-                           DMSCDeviceType};
-pub use self::security::{DMSCEnforcementRule, DMSCEnforcementCondition, DMSCEnforcementAction, 
-                         DMSCEnforcementRuleStatus, DMSCThreatCondition, DMSCThreatLevel, 
-                         DMSCThreatType, DMSCSecurityEvent, DMSCSecurityEventType, 
-                         DMSCSecurityEventSeverity, DMSCEnforcementStats, DMSCSecurityEventStats};
-pub use self::performance::{DMSCPerformanceMetrics, DMSCProtocolPerformanceMetrics, 
-                           DMSCCrossProtocolMetrics, DMSCSystemPerformanceMetrics, 
-                           DMSCPerformanceOptimization, DMSCPerformanceOptimizationType, 
-                           DMSCImplementationStatus, DMSCPerformanceMonitoringConfig, 
-                           DMSCPerformanceThresholds, DMSCPerformanceAlertConfig, 
-                           DMSCAlertSeverityLevel, DMSCPerformanceMonitoringResult, 
-                           DMSCPerformanceThresholdViolation, DMSCPerformanceAlert, 
-                           DMSCPerformanceAlertType};
-pub use self::events::{DMSCIntegrationEvent, DMSCIntegrationEventType, DMSCIntegrationEventStats, 
-                       DMSCIntegrationStats};
+pub use self::core::{RiGlobalSystemIntegration, RiControlCenter, RiExternalControlAction, RiExternalControlResult};
+pub use self::config::{RiIntegrationConfig, RiSecurityEnforcementLevel};
+pub use self::connection::{RiCrossProtocolConnection, RiCrossProtocolConnectionState, 
+                           RiConnectionRoutingTable, RiRoutingEntry, RiRoutingPolicy, 
+                           RiRoutingCondition, RiRoutingAction, RiPerformanceCondition, 
+                           RiDeviceType};
+pub use self::security::{RiEnforcementRule, RiEnforcementCondition, RiEnforcementAction, 
+                         RiEnforcementRuleStatus, RiThreatCondition, RiThreatLevel, 
+                         RiThreatType, RiSecurityEvent, RiSecurityEventType, 
+                         RiSecurityEventSeverity, RiEnforcementStats, RiSecurityEventStats};
+pub use self::performance::{RiPerformanceMetrics, RiProtocolPerformanceMetrics, 
+                           RiCrossProtocolMetrics, RiSystemPerformanceMetrics, 
+                           RiPerformanceOptimization, RiPerformanceOptimizationType, 
+                           RiImplementationStatus, RiPerformanceMonitoringConfig, 
+                           RiPerformanceThresholds, RiPerformanceAlertConfig, 
+                           RiAlertSeverityLevel, RiPerformanceMonitoringResult, 
+                           RiPerformanceThresholdViolation, RiPerformanceAlert, 
+                           RiPerformanceAlertType};
+pub use self::events::{RiIntegrationEvent, RiIntegrationEventType, RiIntegrationEventStats, 
+                       RiIntegrationStats};

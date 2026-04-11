@@ -1,7 +1,7 @@
 // Copyright © 2025-2026 Wenze Wei. All Rights Reserved.
 //
-// This file is part of DMSC.
-// The DMSC project belongs to the Dunimd Team.
+// This file is part of Ri.
+// The Ri project belongs to the Dunimd Team.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // You may not use this file except in compliance with the License.
@@ -15,13 +15,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package com.dunimd.dmsc;
+package com.dunimd.ri;
 
 import java.io.*;
 import java.nio.file.*;
 
 /**
- * Native library loader for DMSC.
+ * Native library loader for Ri.
  * 
  * This class automatically loads the appropriate native library for the current
  * platform from the JAR file. Users do not need to manually configure anything.
@@ -35,8 +35,8 @@ import java.nio.file.*;
 public class NativeLoader {
     private static boolean loaded = false;
     private static final Object lock = new Object();
-    private static final String TEMP_DIR_NAME = "dmsc-native";
-    private static final String LIBRARY_NAME = "dmsc";
+    private static final String TEMP_DIR_NAME = "ri-native";
+    private static final String LIBRARY_NAME = "ri";
     
     /**
      * Automatically load the native library for the current platform.
@@ -58,7 +58,7 @@ public class NativeLoader {
                 }
                 loaded = true;
             } catch (Exception e) {
-                throw new RuntimeException("Failed to load DMSC native library: " + e.getMessage(), e);
+                throw new RuntimeException("Failed to load Ri native library: " + e.getMessage(), e);
             }
         }
     }
@@ -155,11 +155,11 @@ public class NativeLoader {
     private static String getLibName(String os) {
         switch (os) {
             case "windows":
-                return "dmsc.dll";
+                return "ri.dll";
             case "macos":
-                return "libdmsc.dylib";
+                return "libri.dylib";
             default:
-                return "libdmsc.so";
+                return "libri.so";
         }
     }
     

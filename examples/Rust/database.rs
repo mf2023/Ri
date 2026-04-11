@@ -1,7 +1,7 @@
 //! Copyright © 2025-2026 Wenze Wei. All Rights Reserved.
 //!
-//! This file is part of DMSC.
-//! The DMSC project belongs to the Dunimd Team.
+//! This file is part of Ri.
+//! The Ri project belongs to the Dunimd Team.
 //!
 //! Licensed under the Apache License, Version 2.0 (the "License");
 //! You may not use this file except in compliance with the License.
@@ -15,9 +15,9 @@
 //! See the License for the specific language governing permissions and
 //! limitations under the License.
 
-//! # DMSC Database Module Example
+//! # Ri Database Module Example
 //!
-//! This example demonstrates how to use the database module in DMSC,
+//! This example demonstrates how to use the database module in Ri,
 //! including connection pool management, CRUD operations, and transactions.
 //!
 //! ## Running this Example
@@ -34,8 +34,8 @@
 //! - Transactions with rollback support
 //! - Batch operations for bulk inserts
 
-use dmsc::database::{DMSCDatabasePool, DMSCDatabaseConfig, DMSCDBRow};
-use dmsc::core::DMSCResult;
+use ri::database::{RiDatabasePool, RiDatabaseConfig, RiDBRow};
+use ri::core::RiResult;
 use serde_json::json;
 
 /// User struct for demo data mapping.
@@ -61,11 +61,11 @@ struct User {
 /// - Transaction management with commit and rollback capabilities
 /// - Batch operations for efficient bulk data insertion
 ///
-/// The example uses PostgreSQL database to demonstrate DMSC's database
+/// The example uses PostgreSQL database to demonstrate Ri's database
 /// capabilities including connection pooling, async query execution,
 /// and type-safe result handling in Rust.
-fn main() -> DMSCResult<()> {
-    println!("=== DMSC Database Module Example ===\n");
+fn main() -> RiResult<()> {
+    println!("=== Ri Database Module Example ===\n");
 
     // Create async runtime for handling asynchronous database operations
     // tokio::runtime::Runtime provides the executor for async/await code
@@ -84,11 +84,11 @@ fn main() -> DMSCResult<()> {
         // - max_connections: Maximum number of connections in the pool
         // - min_idle_connections: Minimum number of idle connections to maintain
         // - connection_timeout_secs: Maximum time to wait for a connection
-        // - build(): Finalizes configuration into DMSCDatabaseConfig struct
-        let config = DMSCDatabaseConfig::postgres()
+        // - build(): Finalizes configuration into RiDatabaseConfig struct
+        let config = RiDatabaseConfig::postgres()
             .host("localhost")
             .port(5432)
-            .database("dmsc")
+            .database("ri")
             .user("postgres")
             .password("password")
             .max_connections(10)
@@ -104,7 +104,7 @@ fn main() -> DMSCResult<()> {
         // - Automatically handles connection health checks
         // The pool automatically creates initial connections on creation
         println!("1. Creating connection pool...");
-        let pool = DMSCDatabasePool::new(config).await?;
+        let pool = RiDatabasePool::new(config).await?;
         println!("   Connection pool created successfully\n");
 
         // Step 2: Create database schema (table)
@@ -150,7 +150,7 @@ fn main() -> DMSCResult<()> {
         // Step 4: SELECT operation (Read)
         // Demonstrates query execution to retrieve data
         // Returns vector of rows matching the query
-        // Each row is a DMSCDBRow with typed access methods
+        // Each row is a RiDBRow with typed access methods
         println!("4. Querying users (Read)...");
         let db = pool.get().await?;
         let rows = db.query("SELECT id, name, email FROM users ORDER BY id", &[]).await?;
@@ -246,6 +246,6 @@ fn main() -> DMSCResult<()> {
         println!("   Cleaned up test data\n");
 
         println!("=== Database Example Completed ===");
-        Ok::<(), DMSCError>(())
+        Ok::<(), RiError>(())
     })?
 }

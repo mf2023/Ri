@@ -1,7 +1,7 @@
 //! Copyright © 2025-2026 Wenze Wei. All Rights Reserved.
 //!
-//! This file is part of DMSC.
-//! The DMSC project belongs to the Dunimd Team.
+//! This file is part of Ri.
+//! The Ri project belongs to the Dunimd Team.
 //!
 //! Licensed under the Apache License, Version 2.0 (the "License");
 //! You may not use this file except in compliance with the License.
@@ -17,15 +17,15 @@
 
 //! # Config Module JNI Bindings
 //!
-//! JNI bindings for DMSC config classes.
+//! JNI bindings for Ri config classes.
 
 use jni::JNIEnv;
 use jni::objects::JClass;
 use jni::sys::jlong;
-use crate::config::DMSCConfigManager;
+use crate::config::RiConfigManager;
 
 #[no_mangle]
-pub extern "system" fn Java_com_dunimd_dmsc_config_DMSCConfigManager_new0(
+pub extern "system" fn Java_com_dunimd_ri_config_RiConfigManager_new0(
     _env: JNIEnv,
     _class: JClass,
 ) -> jlong {
@@ -33,14 +33,14 @@ pub extern "system" fn Java_com_dunimd_dmsc_config_DMSCConfigManager_new0(
 }
 
 #[no_mangle]
-pub extern "system" fn Java_com_dunimd_dmsc_config_DMSCConfigManager_free0(
+pub extern "system" fn Java_com_dunimd_ri_config_RiConfigManager_free0(
     _env: JNIEnv,
     _class: JClass,
     ptr: jlong,
 ) {
     if ptr != 0 {
         unsafe {
-            let _ = Box::from_raw(ptr as *mut DMSCConfigManager);
+            let _ = Box::from_raw(ptr as *mut RiConfigManager);
         }
     }
 }

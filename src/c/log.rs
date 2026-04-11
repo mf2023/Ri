@@ -1,7 +1,7 @@
 //! Copyright © 2025-2026 Wenze Wei. All Rights Reserved.
 //!
-//! This file is part of DMSC.
-//! The DMSC project belongs to the Dunimd Team.
+//! This file is part of Ri.
+//! The Ri project belongs to the Dunimd Team.
 //!
 //! Licensed under the Apache License, Version 2.0 (the "License");
 //! You may not use this file except in compliance with the License.
@@ -17,21 +17,21 @@
 
 //! # Log Module C API
 //!
-//! This module provides C language bindings for DMSC's logging infrastructure. The logging module
+//! This module provides C language bindings for Ri's logging infrastructure. The logging module
 //! delivers structured, high-performance logging capabilities with multiple output destinations,
 //! configurable log levels, and rich formatting options. This C API enables C/C++ applications
-//! to leverage DMSC's logging system for comprehensive observability and debugging support.
+//! to leverage Ri's logging system for comprehensive observability and debugging support.
 //!
 //! ## Module Architecture
 //!
 //! The logging module comprises two primary components that together provide complete logging
 //! functionality:
 //!
-//! - **DMSCLogConfig**: Configuration container for logger initialization parameters including log
+//! - **RiLogConfig**: Configuration container for logger initialization parameters including log
 //!   level thresholds, output destinations, formatting options, and sink configurations. The
 //!   configuration object controls all aspects of logger behavior and resource allocation.
 //!
-//! - **DMSCLogger**: Primary logging interface providing methods for emitting log entries at
+//! - **RiLogger**: Primary logging interface providing methods for emitting log entries at
 //!   various severity levels. The logger instance handles log message formatting, filtering based
 //!   on configured levels, and routing to configured output sinks.
 //!
@@ -166,59 +166,59 @@
 //!
 //! ```c
 //! // Create log configuration
-//! DMSCLogConfig* config = dmsc_log_config_new();
+//! RiLogConfig* config = ri_log_config_new();
 //! if (config == NULL) {
 //!     fprintf(stderr, "Failed to create log config\n");
 //!     return ERROR_INIT;
 //! }
 //!
 //! // Configure logging
-//! dmsc_log_config_set_level(config, LOG_LEVEL_DEBUG);
-//! dmsc_log_config_set_format(config, "[%t] %l: %m");
-//! dmsc_log_config_set_console_sink(config, true);
+//! ri_log_config_set_level(config, LOG_LEVEL_DEBUG);
+//! ri_log_config_set_format(config, "[%t] %l: %m");
+//! ri_log_config_set_console_sink(config, true);
 //!
 //! // Enable file logging with rotation
-//! dmsc_log_config_set_file_sink(config, "/var/log/app.log", 10485760, 5);
+//! ri_log_config_set_file_sink(config, "/var/log/app.log", 10485760, 5);
 //!
 //! // Create logger instance
-//! DMSCLogger* logger = dmsc_logger_new(config);
+//! RiLogger* logger = ri_logger_new(config);
 //! if (logger == NULL) {
 //!     fprintf(stderr, "Failed to create logger\n");
-//!     dmsc_log_config_free(config);
+//!     ri_log_config_free(config);
 //!     return ERROR_INIT;
 //! }
 //!
 //! // Log messages at different levels
-//! dmsc_log_trace(logger, "Entering function calculate_metrics");
-//! dmsc_log_debug(logger, "Processing request %d for user %s", request_id, username);
-//! dmsc_log_info(logger, "User %s logged in successfully", username);
-//! dmsc_log_warn(logger, "Rate limit approaching threshold: %d/%d", current, max);
-//! dmsc_log_error(logger, "Failed to connect to database: %s", error_message);
-//! dmsc_log_fatal(logger, "Critical failure in payment processing");
+//! ri_log_trace(logger, "Entering function calculate_metrics");
+//! ri_log_debug(logger, "Processing request %d for user %s", request_id, username);
+//! ri_log_info(logger, "User %s logged in successfully", username);
+//! ri_log_warn(logger, "Rate limit approaching threshold: %d/%d", current, max);
+//! ri_log_error(logger, "Failed to connect to database: %s", error_message);
+//! ri_log_fatal(logger, "Critical failure in payment processing");
 //!
 //! // Structured logging with fields
-//! DMSCHookContext* fields = dmsc_hook_context_create();
-//! dmsc_hook_context_set_string(fields, "user_id", "12345");
-//! dmsc_hook_context_set_int(fields, "request_duration_ms", 150);
-//! dmsc_hook_context_set_string(fields, "endpoint", "/api/users");
+//! RiHookContext* fields = ri_hook_context_create();
+//! ri_hook_context_set_string(fields, "user_id", "12345");
+//! ri_hook_context_set_int(fields, "request_duration_ms", 150);
+//! ri_hook_context_set_string(fields, "endpoint", "/api/users");
 //!
-//! dmsc_log_with_fields(logger, LOG_LEVEL_INFO, "Request completed", fields);
-//! dmsc_hook_context_free(fields);
+//! ri_log_with_fields(logger, LOG_LEVEL_INFO, "Request completed", fields);
+//! ri_hook_context_free(fields);
 //!
 //! // Change log level at runtime
-//! dmsc_logger_set_level(logger, LOG_LEVEL_INFO);
+//! ri_logger_set_level(logger, LOG_LEVEL_INFO);
 //!
 //! // Flush pending logs
-//! dmsc_logger_flush(logger);
+//! ri_logger_flush(logger);
 //!
 //! // Cleanup
-//! dmsc_logger_free(logger);
-//! dmsc_log_config_free(config);
+//! ri_logger_free(logger);
+//! ri_log_config_free(config);
 //! ```
 //!
 //! ## Dependencies
 //!
-//! This module depends on the following DMSC components:
+//! This module depends on the following Ri components:
 //!
 //! - `crate::log`: Rust logging module implementation
 //! - `crate::prelude`: Common types and traits
@@ -227,7 +227,7 @@
 //! ## Feature Flags
 //!
 //! The logging module is always enabled as it provides fundamental observability
-//! infrastructure for DMSC applications.
+//! infrastructure for Ri applications.
 //!
 //! Additional sinks enabled by feature flags:
 //!
@@ -235,17 +235,17 @@
 //! - `log-journald`: Enable journald sink (systemd systems)
 //! - `log-network`: Enable network sink for remote logging
 
-use crate::log::{DMSCLogConfig, DMSCLogger};
+use crate::log::{RiLogConfig, RiLogger};
 
 
-c_wrapper!(CDMSCLogConfig, DMSCLogConfig);
-c_wrapper!(CDMSCLogger, DMSCLogger);
+c_wrapper!(CRiLogConfig, RiLogConfig);
+c_wrapper!(CRiLogger, RiLogger);
 
-// DMSCLogConfig constructors and destructors
+// RiLogConfig constructors and destructors
 c_constructor!(
-    dmsc_log_config_new,
-    CDMSCLogConfig,
-    DMSCLogConfig,
-    DMSCLogConfig::default()
+    ri_log_config_new,
+    CRiLogConfig,
+    RiLogConfig,
+    RiLogConfig::default()
 );
-c_destructor!(dmsc_log_config_free, CDMSCLogConfig);
+c_destructor!(ri_log_config_free, CRiLogConfig);

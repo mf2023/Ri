@@ -1,7 +1,7 @@
 # Copyright © 2025-2026 Wenze Wei. All Rights Reserved.
 #
-# This file is part of DMSC.
-# The DMSC project belongs to the Dunimd Team.
+# This file is part of Ri.
+# The Ri project belongs to the Dunimd Team.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # You may not use this file except in compliance with the License.
@@ -16,36 +16,36 @@
 # limitations under the License.
 
 """
-DMSC Gateway Module Example
+Ri Gateway Module Example
 
-This example demonstrates how to use the DMSC gateway module for API gateway
+This example demonstrates how to use the Ri gateway module for API gateway
 functionality including routing, rate limiting, circuit breaking, and load balancing.
 """
 
 import asyncio
-from dmsc import (
-    DMSCGateway,
-    DMSCGatewayConfig,
-    DMSCRoute,
-    DMSCRouter,
-    DMSCRateLimiter,
-    DMSCRateLimitConfig,
-    DMSCRateLimitStats,
-    DMSCSlidingWindowRateLimiter,
-    DMSCCircuitBreaker,
-    DMSCCircuitBreakerConfig,
-    DMSCCircuitBreakerState,
-    DMSCCircuitBreakerMetrics,
-    DMSCBackendServer,
-    DMSCLoadBalancerServerStats,
-    DMSCLoadBalancer,
-    DMSCLoadBalancerStrategy,
+from ri import (
+    RiGateway,
+    RiGatewayConfig,
+    RiRoute,
+    RiRouter,
+    RiRateLimiter,
+    RiRateLimitConfig,
+    RiRateLimitStats,
+    RiSlidingWindowRateLimiter,
+    RiCircuitBreaker,
+    RiCircuitBreakerConfig,
+    RiCircuitBreakerState,
+    RiCircuitBreakerMetrics,
+    RiBackendServer,
+    RiLoadBalancerServerStats,
+    RiLoadBalancer,
+    RiLoadBalancerStrategy,
 )
 
 
 async def main():
     # Create gateway configuration
-    config = DMSCGatewayConfig()
+    config = RiGatewayConfig()
     config.host = "0.0.0.0"
     config.port = 8080
     config.enable_rate_limiting = True
@@ -55,28 +55,28 @@ async def main():
     config.timeout_seconds = 30
 
     # Initialize gateway
-    gateway = DMSCGateway(config)
+    gateway = RiGateway(config)
 
     # Create router
-    router = DMSCRouter()
+    router = RiRouter()
 
     # Define routes
     print("Defining routes...")
 
     # API routes
-    user_route = DMSCRoute()
+    user_route = RiRoute()
     user_route.path = "/api/users"
     user_route.methods = ["GET", "POST", "PUT", "DELETE"]
     user_route.handler = "user_service"
     user_route.middleware = ["auth", "logging"]
 
-    order_route = DMSCRoute()
+    order_route = RiRoute()
     order_route.path = "/api/orders"
     order_route.methods = ["GET", "POST"]
     order_route.handler = "order_service"
     order_route.middleware = ["auth", "rate_limit"]
 
-    health_route = DMSCRoute()
+    health_route = RiRoute()
     health_route.path = "/health"
     health_route.methods = ["GET"]
     health_route.handler = "health_check"
@@ -92,12 +92,12 @@ async def main():
     # Configure rate limiting
     print("\nConfiguring rate limiting...")
 
-    rate_limit_config = DMSCRateLimitConfig()
+    rate_limit_config = RiRateLimitConfig()
     rate_limit_config.requests_per_second = 100
     rate_limit_config.burst_size = 150
     rate_limit_config.window_size_seconds = 60
 
-    rate_limiter = DMSCRateLimiter(rate_limit_config)
+    rate_limiter = RiRateLimiter(rate_limit_config)
 
     # Check rate limit
     client_id = "client_123"
@@ -105,19 +105,19 @@ async def main():
     print(f"Rate limit check for {client_id}: {is_allowed}")
 
     # Get rate limit statistics
-    rate_stats = DMSCRateLimitStats()
+    rate_stats = RiRateLimitStats()
     print(f"Rate limit stats: {rate_stats.total_requests} total requests")
 
     # Configure circuit breaker
     print("\nConfiguring circuit breaker...")
 
-    cb_config = DMSCCircuitBreakerConfig()
+    cb_config = RiCircuitBreakerConfig()
     cb_config.failure_threshold = 5
     cb_config.success_threshold = 3
     cb_config.timeout_seconds = 30
     cb_config.half_open_max_calls = 3
 
-    circuit_breaker = DMSCCircuitBreaker(cb_config)
+    circuit_breaker = RiCircuitBreaker(cb_config)
 
     # Record success/failure
     circuit_breaker.record_success()
@@ -128,7 +128,7 @@ async def main():
     print(f"Circuit breaker state: {cb_state}")
 
     # Get circuit breaker metrics
-    cb_metrics = DMSCCircuitBreakerMetrics()
+    cb_metrics = RiCircuitBreakerMetrics()
     print(f"Circuit breaker metrics:")
     print(f"  Success count: {cb_metrics.success_count}")
     print(f"  Failure count: {cb_metrics.failure_count}")
@@ -137,21 +137,21 @@ async def main():
     print("\nConfiguring load balancer...")
 
     # Create backend servers
-    server1 = DMSCBackendServer()
+    server1 = RiBackendServer()
     server1.id = "server_1"
     server1.host = "192.168.1.10"
     server1.port = 8081
     server1.weight = 3
     server1.is_healthy = True
 
-    server2 = DMSCBackendServer()
+    server2 = RiBackendServer()
     server2.id = "server_2"
     server2.host = "192.168.1.11"
     server2.port = 8081
     server2.weight = 2
     server2.is_healthy = True
 
-    server3 = DMSCBackendServer()
+    server3 = RiBackendServer()
     server3.id = "server_3"
     server3.host = "192.168.1.12"
     server3.port = 8081
@@ -159,8 +159,8 @@ async def main():
     server3.is_healthy = False
 
     # Create load balancer
-    lb = DMSCLoadBalancer()
-    lb.strategy = DMSCLoadBalancerStrategy.WEIGHTED_ROUND_ROBIN
+    lb = RiLoadBalancer()
+    lb.strategy = RiLoadBalancerStrategy.WEIGHTED_ROUND_ROBIN
 
     # Add servers
     lb.add_server(server1)
@@ -176,7 +176,7 @@ async def main():
         print(f"Next server: {next_server.id} ({next_server.host}:{next_server.port})")
 
     # Get load balancer statistics
-    lb_stats = DMSCLoadBalancerServerStats()
+    lb_stats = RiLoadBalancerServerStats()
     print(f"Load balancer stats:")
     print(f"  Active connections: {lb_stats.active_connections}")
     print(f"  Total requests: {lb_stats.total_requests}")

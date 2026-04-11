@@ -1,7 +1,7 @@
 // Copyright © 2025-2026 Wenze Wei. All Rights Reserved.
 //
-// This file is part of DMSC.
-// The DMSC project belongs to the Dunimd Team.
+// This file is part of Ri.
+// The Ri project belongs to the Dunimd Team.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // You may not use this file except in compliance with the License.
@@ -15,35 +15,35 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package com.dunimd.dmsc.auth;
+package com.dunimd.ri.auth;
 
-import com.dunimd.dmsc.NativeLoader;
+import com.dunimd.ri.NativeLoader;
 
 /**
- * JWT token manager for DMSC.
+ * JWT token manager for Ri.
  * 
  * Provides JWT token generation and validation.
  */
-public class DMSCJWTManager {
+public class RiJWTManager {
     private long nativePtr;
     
     static {
         NativeLoader.autoLoad();
     }
     
-    public DMSCJWTManager(long nativePtr) {
+    public RiJWTManager(long nativePtr) {
         this.nativePtr = nativePtr;
     }
     
-    public String generateToken(DMSCJWTClaims claims) {
+    public String generateToken(RiJWTClaims claims) {
         return generateToken0(nativePtr, claims.getNativePtr());
     }
     
     private native String generateToken0(long ptr, long claimsPtr);
     
-    public DMSCJWTClaims validateToken(String token) {
+    public RiJWTClaims validateToken(String token) {
         long claimsPtr = validateToken0(nativePtr, token);
-        return new DMSCJWTClaims(claimsPtr);
+        return new RiJWTClaims(claimsPtr);
     }
     
     private native long validateToken0(long ptr, String token);

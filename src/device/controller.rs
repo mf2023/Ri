@@ -1,7 +1,7 @@
 //! Copyright © 2025-2026 Wenze Wei. All Rights Reserved.
 //!
-//! This file is part of DMSC.
-//! The DMSC project belongs to the Dunimd Team.
+//! This file is part of Ri.
+//! The Ri project belongs to the Dunimd Team.
 //!
 //! Licensed under the Apache License, Version 2.0 (the "License");
 //! You may not use this file except in compliance with the License.
@@ -19,13 +19,13 @@
 
 //! # Device Controller
 //!
-//! This file implements the device controller for the DMSC framework, responsible for managing the
+//! This file implements the device controller for the Ri framework, responsible for managing the
 //! lifecycle and state of devices in the system. It provides functionality for device discovery,
 //! allocation, health monitoring, and state management.
 //!
 //! ## Key Components
 //!
-//! - **DMSCDeviceController**: Main device controller struct
+//! - **RiDeviceController**: Main device controller struct
 //! - **Device Discovery**: Scans the system/network for devices
 //! - **Device Allocation**: Manages device allocation and deallocation
 //! - **Health Monitoring**: Performs periodic health checks on devices
@@ -47,12 +47,12 @@
 //! ## Usage
 //!
 //! ```rust
-//! use dmsc::device::{DMSCDeviceController, DMSCDeviceType, DMSCDeviceCapabilities};
-//! use dmsc::core::DMSCResult;
+//! use ri::device::{RiDeviceController, RiDeviceType, RiDeviceCapabilities};
+//! use ri::core::RiResult;
 //!
-//! async fn example() -> DMSCResult<()> {
+//! async fn example() -> RiResult<()> {
 //!     // Create a new device controller
-//!     let mut controller = DMSCDeviceController::new();
+//!     let mut controller = RiDeviceController::new();
 //!     
 //!     // Add mock devices for testing
 //!     controller.add_mock_devices()?;
@@ -62,11 +62,11 @@
 //!     println!("Discovered {} devices", discovery_result.total_devices);
 //!     
 //!     // Find a suitable CPU device
-//!     let requirements = DMSCDeviceCapabilities::new()
+//!     let requirements = RiDeviceCapabilities::new()
 //!         .with_compute_units(8)
 //!         .with_memory_gb(16.0);
 //!     
-//!     if let Some(device) = controller.find_suitable_device(&DMSCDeviceType::CPU, &requirements).await? {
+//!     if let Some(device) = controller.find_suitable_device(&RiDeviceType::CPU, &requirements).await? {
 //!         println!("Found suitable device: {}", device.id());
 //!         
 //!         // Allocate the device
@@ -99,26 +99,26 @@ use pyo3::prelude::*;
 #[cfg(feature = "pyo3")]
 use pyo3::PyResult;
 
-use super::core::{DMSCDevice, DMSCDeviceCapabilities, DMSCDeviceStatus, DMSCDeviceType, DMSCDeviceControlConfig, DMSCNetworkDeviceInfo};
-use super::discovery::{DMSCDeviceDiscovery, DiscoveryConfig};
-use crate::core::DMSCResult;
-use crate::prelude::DMSCMetricsRegistry;
+use super::core::{RiDevice, RiDeviceCapabilities, RiDeviceStatus, RiDeviceType, RiDeviceControlConfig, RiNetworkDeviceInfo};
+use super::discovery::{RiDeviceDiscovery, DiscoveryConfig};
+use crate::core::RiResult;
+use crate::prelude::RiMetricsRegistry;
 #[cfg(not(target_os = "macos"))]
-use crate::prelude::DMSCError;
-// use super::scheduler::DMSCDeviceScheduler;
+use crate::prelude::RiError;
+// use super::scheduler::RiDeviceScheduler;
 
 /// Device controller - manages device lifecycle and state
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
-pub struct DMSCDeviceController {
-    devices: HashMap<String, Arc<RwLock<DMSCDevice>>>,
-    device_type_index: HashMap<DMSCDeviceType, Vec<String>>,
+pub struct RiDeviceController {
+    devices: HashMap<String, Arc<RwLock<RiDevice>>>,
+    device_type_index: HashMap<RiDeviceType, Vec<String>>,
     allocation_map: HashMap<String, String>,
-    discovery: Option<Arc<DMSCDeviceDiscovery>>,
+    discovery: Option<Arc<RiDeviceDiscovery>>,
 }
 
 #[cfg(feature = "pyo3")]
 #[pymethods]
-impl DMSCDeviceController {
+impl RiDeviceController {
     #[new]
     fn py_new() -> Self {
         Self::new()
@@ -130,7 +130,7 @@ impl DMSCDeviceController {
     }
     
     #[pyo3(name = "discover_devices")]
-    fn discover_devices_impl(&mut self) -> PyResult<super::DMSCDiscoveryResult> {
+    fn discover_devices_impl(&mut self) -> PyResult<super::RiDiscoveryResult> {
         let rt = tokio::runtime::Runtime::new().map_err(|e| {
             pyo3::exceptions::PyRuntimeError::new_err(format!("Failed to create runtime: {}", e))
         })?;
@@ -141,7 +141,7 @@ impl DMSCDeviceController {
     }
     
     #[pyo3(name = "discover_system_devices")]
-    fn discover_system_devices_impl(&mut self, config: &DMSCDeviceControlConfig) -> PyResult<()> {
+    fn discover_system_devices_impl(&mut self, config: &RiDeviceControlConfig) -> PyResult<()> {
         let rt = tokio::runtime::Runtime::new().map_err(|e| {
             pyo3::exceptions::PyRuntimeError::new_err(format!("Failed to create runtime: {}", e))
         })?;
@@ -152,7 +152,7 @@ impl DMSCDeviceController {
     }
     
     #[pyo3(name = "find_suitable_device")]
-    fn find_suitable_device_impl(&self, device_type: &DMSCDeviceType, requirements: &DMSCDeviceCapabilities) -> PyResult<Option<DMSCDevice>> {
+    fn find_suitable_device_impl(&self, device_type: &RiDeviceType, requirements: &RiDeviceCapabilities) -> PyResult<Option<RiDevice>> {
         let rt = tokio::runtime::Runtime::new().map_err(|e| {
             pyo3::exceptions::PyRuntimeError::new_err(format!("Failed to create runtime: {}", e))
         })?;
@@ -185,7 +185,7 @@ impl DMSCDeviceController {
     }
     
     #[pyo3(name = "get_all_devices")]
-    fn get_all_devices_impl(&self) -> Vec<DMSCDevice> {
+    fn get_all_devices_impl(&self) -> Vec<RiDevice> {
         self.get_all_devices()
     }
     
@@ -208,7 +208,7 @@ impl DMSCDeviceController {
     }
     
     #[pyo3(name = "get_device_health")]
-    fn get_device_health_impl(&self, device_id: &str) -> PyResult<super::core::DMSCDeviceHealthMetrics> {
+    fn get_device_health_impl(&self, device_id: &str) -> PyResult<super::core::RiDeviceHealthMetrics> {
         let rt = tokio::runtime::Runtime::new().map_err(|e| {
             pyo3::exceptions::PyRuntimeError::new_err(format!("Failed to create runtime: {}", e))
         })?;
@@ -219,7 +219,7 @@ impl DMSCDeviceController {
     }
     
     #[pyo3(name = "get_all_device_health")]
-    fn get_all_device_health_impl(&self) -> PyResult<std::collections::HashMap<String, super::core::DMSCDeviceHealthMetrics>> {
+    fn get_all_device_health_impl(&self) -> PyResult<std::collections::HashMap<String, super::core::RiDeviceHealthMetrics>> {
         let rt = tokio::runtime::Runtime::new().map_err(|e| {
             pyo3::exceptions::PyRuntimeError::new_err(format!("Failed to create runtime: {}", e))
         })?;
@@ -235,7 +235,7 @@ impl DMSCDeviceController {
     }
     
     #[pyo3(name = "get_devices_by_type")]
-    fn get_devices_by_type_impl(&self, device_type: &DMSCDeviceType) -> Vec<DMSCDevice> {
+    fn get_devices_by_type_impl(&self, device_type: &RiDeviceType) -> Vec<RiDevice> {
         let device_ids = match self.device_type_index.get(device_type) {
             Some(ids) => ids.clone(),
             None => return Vec::new(),
@@ -259,13 +259,13 @@ impl DMSCDeviceController {
     }
 }
 
-impl Default for DMSCDeviceController {
+impl Default for RiDeviceController {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl DMSCDeviceController {
+impl RiDeviceController {
     pub fn new() -> Self {
         Self {
             devices: HashMap::new(),
@@ -276,7 +276,7 @@ impl DMSCDeviceController {
     }
 
     /// Creates a new controller with the discovery engine
-    pub async fn with_discovery(discovery: Arc<DMSCDeviceDiscovery>) -> Self {
+    pub async fn with_discovery(discovery: Arc<RiDeviceDiscovery>) -> Self {
         Self {
             devices: HashMap::new(),
             device_type_index: HashMap::new(),
@@ -286,15 +286,15 @@ impl DMSCDeviceController {
     }
 
     /// Initializes the discovery engine
-    pub async fn init_discovery(&mut self) -> DMSCResult<()> {
+    pub async fn init_discovery(&mut self) -> RiResult<()> {
         let config = DiscoveryConfig::default();
-        let discovery = Arc::new(DMSCDeviceDiscovery::new(config).await?);
+        let discovery = Arc::new(RiDeviceDiscovery::new(config).await?);
         self.discovery = Some(discovery);
         Ok(())
     }
     
     /// Discover devices in the system
-    pub async fn discover_devices(&mut self) -> DMSCResult<super::DMSCDiscoveryResult> {
+    pub async fn discover_devices(&mut self) -> RiResult<super::RiDiscoveryResult> {
         // In a real implementation, this would scan the system/network for devices
         // For now, we'll simulate discovery and update existing mock devices
         
@@ -323,15 +323,15 @@ impl DMSCDeviceController {
         }
         
         // This line should never be reached due to the retry loop
-        Err(crate::core::DMSCError::Other("Device discovery failed after maximum retries".to_string()))
+        Err(crate::core::RiError::Other("Device discovery failed after maximum retries".to_string()))
     }
     
     /// Performs the actual device discovery logic with proper error handling.
     /// 
     /// # Returns
     /// 
-    /// A `DMSCResult<super::DMSCDiscoveryResult>` containing the discovery result if successful.
-    async fn perform_device_discovery(&mut self) -> DMSCResult<super::DMSCDiscoveryResult> {
+    /// A `RiResult<super::RiDiscoveryResult>` containing the discovery result if successful.
+    async fn perform_device_discovery(&mut self) -> RiResult<super::RiDiscoveryResult> {
         let mut discovered_devices = Vec::new();
         let mut updated_devices = Vec::new();
         let mut removed_devices = Vec::new();
@@ -348,52 +348,52 @@ impl DMSCDeviceController {
                     
                     // Realistic device status update based on health metrics
                     match device_type {
-                        DMSCDeviceType::CPU => {
+                        RiDeviceType::CPU => {
                             // CPU devices are affected by high CPU usage and temperature
                             if health_metrics.cpu_usage_percent > 95.0 || health_metrics.temperature_celsius > 90.0 {
-                                device.set_status(DMSCDeviceStatus::Degraded);
+                                device.set_status(RiDeviceStatus::Degraded);
                             } else if health_metrics.cpu_usage_percent > 80.0 || health_metrics.temperature_celsius > 80.0 {
-                                device.set_status(DMSCDeviceStatus::Busy);
-                            } else if device.status() != DMSCDeviceStatus::Allocated {
-                                device.set_status(DMSCDeviceStatus::Available);
+                                device.set_status(RiDeviceStatus::Busy);
+                            } else if device.status() != RiDeviceStatus::Allocated {
+                                device.set_status(RiDeviceStatus::Available);
                             }
                         },
-                        DMSCDeviceType::GPU => {
+                        RiDeviceType::GPU => {
                             // GPU devices are affected by high usage, temperature, and memory usage
                             if health_metrics.cpu_usage_percent > 95.0 || health_metrics.temperature_celsius > 95.0 {
-                                device.set_status(DMSCDeviceStatus::Degraded);
+                                device.set_status(RiDeviceStatus::Degraded);
                             } else if health_metrics.cpu_usage_percent > 85.0 || health_metrics.temperature_celsius > 85.0 {
-                                device.set_status(DMSCDeviceStatus::Busy);
-                            } else if device.status() != DMSCDeviceStatus::Allocated {
-                                device.set_status(DMSCDeviceStatus::Available);
+                                device.set_status(RiDeviceStatus::Busy);
+                            } else if device.status() != RiDeviceStatus::Allocated {
+                                device.set_status(RiDeviceStatus::Available);
                             }
                         },
-                        DMSCDeviceType::Network => {
+                        RiDeviceType::Network => {
                             // Network devices are affected by high latency
                             if health_metrics.network_latency_ms > 200.0 {
-                                device.set_status(DMSCDeviceStatus::Degraded);
+                                device.set_status(RiDeviceStatus::Degraded);
                             } else if health_metrics.network_latency_ms > 100.0 {
-                                device.set_status(DMSCDeviceStatus::Busy);
-                            } else if device.status() != DMSCDeviceStatus::Allocated {
-                                device.set_status(DMSCDeviceStatus::Available);
+                                device.set_status(RiDeviceStatus::Busy);
+                            } else if device.status() != RiDeviceStatus::Allocated {
+                                device.set_status(RiDeviceStatus::Available);
                             }
                         },
-                        DMSCDeviceType::Storage => {
+                        RiDeviceType::Storage => {
                             // Storage devices are affected by high response time
                             if health_metrics.response_time_ms > 100.0 {
-                                device.set_status(DMSCDeviceStatus::Degraded);
+                                device.set_status(RiDeviceStatus::Degraded);
                             } else if health_metrics.response_time_ms > 50.0 {
-                                device.set_status(DMSCDeviceStatus::Busy);
-                            } else if device.status() != DMSCDeviceStatus::Allocated {
-                                device.set_status(DMSCDeviceStatus::Available);
+                                device.set_status(RiDeviceStatus::Busy);
+                            } else if device.status() != RiDeviceStatus::Allocated {
+                                device.set_status(RiDeviceStatus::Available);
                             }
                         },
                         _ => {
                             // Default status update for other device types
                             if health_metrics.error_count > 5 {
-                                device.set_status(DMSCDeviceStatus::Degraded);
-                            } else if device.status() != DMSCDeviceStatus::Allocated {
-                                device.set_status(DMSCDeviceStatus::Available);
+                                device.set_status(RiDeviceStatus::Degraded);
+                            } else if device.status() != RiDeviceStatus::Allocated {
+                                device.set_status(RiDeviceStatus::Available);
                             }
                         }
                     }
@@ -466,7 +466,7 @@ impl DMSCDeviceController {
             removed_devices.push(device_id.to_string());
         }
 
-        Ok(super::DMSCDiscoveryResult {
+        Ok(super::RiDiscoveryResult {
             discovered_devices,
             updated_devices,
             removed_devices,
@@ -475,7 +475,7 @@ impl DMSCDeviceController {
     }
 
     /// Discover real system devices based on configuration
-    pub async fn discover_system_devices(&mut self, config: &DMSCDeviceControlConfig) -> DMSCResult<()> {
+    pub async fn discover_system_devices(&mut self, config: &RiDeviceControlConfig) -> RiResult<()> {
         // Discover CPU devices
         self.discover_cpu_devices(config).await?;
         
@@ -495,7 +495,7 @@ impl DMSCDeviceController {
     }
     
     /// Discover GPU devices from system
-    async fn discover_gpu_devices(&mut self, _config: &DMSCDeviceControlConfig) -> DMSCResult<()> {
+    async fn discover_gpu_devices(&mut self, _config: &RiDeviceControlConfig) -> RiResult<()> {
         #[cfg(target_os = "windows")]
         {
             // Try NVIDIA GPU discovery first
@@ -512,11 +512,11 @@ impl DMSCDeviceController {
                         let memory_mb = parts[1].trim().replace(" MiB", "").parse::<f64>().unwrap_or(0.0);
                         let memory_gb = memory_mb / 1024.0;
                         
-                        let gpu_device = DMSCDevice::new(
+                        let gpu_device = RiDevice::new(
                             format!("GPU-{}-{}", index + 1, name), 
-                            DMSCDeviceType::GPU
+                            RiDeviceType::GPU
                         ).with_capabilities(
-                            DMSCDeviceCapabilities::new()
+                            RiDeviceCapabilities::new()
                                 .with_compute_units(1000) // Estimate
                                 .with_memory_gb(memory_gb)
                         );
@@ -543,11 +543,11 @@ impl DMSCDeviceController {
                         let memory_mb = parts[1].trim().replace(" MiB", "").parse::<f64>().unwrap_or(0.0);
                         let memory_gb = memory_mb / 1024.0;
                         
-                        let gpu_device = DMSCDevice::new(
+                        let gpu_device = RiDevice::new(
                             format!("GPU-{}-{}", index + 1, name), 
-                            DMSCDeviceType::GPU
+                            RiDeviceType::GPU
                         ).with_capabilities(
-                            DMSCDeviceCapabilities::new()
+                            RiDeviceCapabilities::new()
                                 .with_compute_units(1000) // Estimate
                                 .with_memory_gb(memory_gb)
                         );
@@ -563,7 +563,7 @@ impl DMSCDeviceController {
     
     /// Discover storage devices from system
     #[allow(dead_code)]
-    async fn discover_storage_devices_impl(&mut self, _config: &DMSCDeviceControlConfig) -> DMSCResult<Vec<DMSCDevice>> {
+    async fn discover_storage_devices_impl(&mut self, _config: &RiDeviceControlConfig) -> RiResult<Vec<RiDevice>> {
         #[cfg(target_os = "windows")]
         {
             // Try NVIDIA GPU discovery first
@@ -580,11 +580,11 @@ impl DMSCDeviceController {
                         let memory_mb = parts[1].trim().replace(" MiB", "").parse::<f64>().unwrap_or(0.0);
                         let memory_gb = memory_mb / 1024.0;
                         
-                        let gpu_device = DMSCDevice::new(
+                        let gpu_device = RiDevice::new(
                             format!("GPU-{}-{}", index + 1, name), 
-                            DMSCDeviceType::GPU
+                            RiDeviceType::GPU
                         ).with_capabilities(
-                            DMSCDeviceCapabilities::new()
+                            RiDeviceCapabilities::new()
                                 .with_compute_units(1000) // Estimate
                                 .with_memory_gb(memory_gb)
                         );
@@ -611,11 +611,11 @@ impl DMSCDeviceController {
                         let memory_mb = parts[1].trim().replace(" MiB", "").parse::<f64>().unwrap_or(0.0);
                         let memory_gb = memory_mb / 1024.0;
                         
-                        let gpu_device = DMSCDevice::new(
+                        let gpu_device = RiDevice::new(
                             format!("GPU-{}-{}", index + 1, name), 
-                            DMSCDeviceType::GPU
+                            RiDeviceType::GPU
                         ).with_capabilities(
-                            DMSCDeviceCapabilities::new()
+                            RiDeviceCapabilities::new()
                                 .with_compute_units(1000) // Estimate
                                 .with_memory_gb(memory_gb)
                         );
@@ -630,13 +630,13 @@ impl DMSCDeviceController {
     }
     
     /// Discover memory devices from system
-    async fn discover_memory_devices(&mut self, _config: &DMSCDeviceControlConfig) -> DMSCResult<()> {
+    async fn discover_memory_devices(&mut self, _config: &RiDeviceControlConfig) -> RiResult<()> {
         #[cfg(target_os = "windows")]
         {
             let output = std::process::Command::new("wmic")
                 .args(["memorychip", "get", "Capacity,Speed", "/format:list"])
                 .output()
-                .map_err(|e| DMSCError::DeviceError(format!("Failed to query memory info: {e}")))?;
+                .map_err(|e| RiError::DeviceError(format!("Failed to query memory info: {e}")))?;
                 
             let memory_info = String::from_utf8_lossy(&output.stdout);
             
@@ -653,11 +653,11 @@ impl DMSCDeviceController {
             }
             
             if memory_modules > 0 {
-                let memory_device = DMSCDevice::new(
+                let memory_device = RiDevice::new(
                     format!("Memory-{}GB-total", total_capacity_gb.round() as u32), 
-                    DMSCDeviceType::Memory
+                    RiDeviceType::Memory
                 ).with_capabilities(
-                    DMSCDeviceCapabilities::new()
+                    RiDeviceCapabilities::new()
                         .with_memory_gb(total_capacity_gb)
                         .with_bandwidth_gbps(25.6) // Estimate for DDR4
                 );
@@ -675,11 +675,11 @@ impl DMSCDeviceController {
                             if let Ok(kb) = kb_str.parse::<f64>() {
                                 let total_gb = kb / (1024.0 * 1024.0);
                                 
-                                let memory_device = DMSCDevice::new(
+                                let memory_device = RiDevice::new(
                                     format!("Memory-{}GB-total", total_gb.round() as u32), 
-                                    DMSCDeviceType::Memory
+                                    RiDeviceType::Memory
                                 ).with_capabilities(
-                                    DMSCDeviceCapabilities::new()
+                                    RiDeviceCapabilities::new()
                                         .with_memory_gb(total_gb)
                                         .with_bandwidth_gbps(25.6) // Estimate for DDR4
                                 );
@@ -697,13 +697,13 @@ impl DMSCDeviceController {
     }
     
     /// Discover CPU devices from system
-    async fn discover_cpu_devices(&mut self, _config: &DMSCDeviceControlConfig) -> DMSCResult<()> {
+    async fn discover_cpu_devices(&mut self, _config: &RiDeviceControlConfig) -> RiResult<()> {
         #[cfg(target_os = "windows")]
         {
             let output = std::process::Command::new("wmic")
                 .args(["cpu", "get", "Name,NumberOfCores,NumberOfLogicalProcessors", "/format:list"])
                 .output()
-                .map_err(|e| DMSCError::DeviceError(format!("Failed to query CPU info: {e}")))?;
+                .map_err(|e| RiError::DeviceError(format!("Failed to query CPU info: {e}")))?;
                 
             let cpu_info = String::from_utf8_lossy(&output.stdout);
             
@@ -726,11 +726,11 @@ impl DMSCDeviceController {
             }
             
             if cpu_count > 0 {
-                let cpu_device = DMSCDevice::new(
+                let cpu_device = RiDevice::new(
                     format!("CPU-{total_cores}-cores-{total_threads}-threads"), 
-                    DMSCDeviceType::CPU
+                    RiDeviceType::CPU
                 ).with_capabilities(
-                    DMSCDeviceCapabilities::new()
+                    RiDeviceCapabilities::new()
                         .with_compute_units(total_cores)
                         .with_memory_gb(0.0)
                 );
@@ -743,7 +743,7 @@ impl DMSCDeviceController {
         {
             // Linux CPU discovery using /proc/cpuinfo
             let cpu_info = std::fs::read_to_string("/proc/cpuinfo")
-                .map_err(|e| DMSCError::DeviceError(format!("Failed to read cpuinfo: {}", e)))?;
+                .map_err(|e| RiError::DeviceError(format!("Failed to read cpuinfo: {}", e)))?;
                 
             let mut cpu_count = 0;
             let mut total_cores = 0;
@@ -761,11 +761,11 @@ impl DMSCDeviceController {
             let total_threads = cpu_count; // In Linux, processor count equals thread count
             
             if cpu_count > 0 {
-                let cpu_device = DMSCDevice::new(
+                let cpu_device = RiDevice::new(
                     format!("CPU-{}-cores-{}-threads", total_cores, total_threads), 
-                    DMSCDeviceType::CPU
+                    RiDeviceType::CPU
                 ).with_capabilities(
-                    DMSCDeviceCapabilities::new()
+                    RiDeviceCapabilities::new()
                         .with_compute_units(total_cores)
                         .with_memory_gb(0.0)
                 );
@@ -778,19 +778,19 @@ impl DMSCDeviceController {
     }
     
     /// Discover storage devices from system
-    async fn discover_storage_devices(&mut self, config: &DMSCDeviceControlConfig) -> DMSCResult<()> {
+    async fn discover_storage_devices(&mut self, config: &RiDeviceControlConfig) -> RiResult<()> {
         // Call the implementation
         self.discover_storage_devices_impl2(config).await
     }
     
     /// Discover storage devices from system (implementation)
-    async fn discover_storage_devices_impl2(&mut self, _config: &DMSCDeviceControlConfig) -> DMSCResult<()> {
+    async fn discover_storage_devices_impl2(&mut self, _config: &RiDeviceControlConfig) -> RiResult<()> {
         #[cfg(target_os = "windows")]
         {
             let output = std::process::Command::new("wmic")
                 .args(["diskdrive", "get", "Model,Size", "/format:list"])
                 .output()
-                .map_err(|e| DMSCError::DeviceError(format!("Failed to query disk info: {e}")))?;
+                .map_err(|e| RiError::DeviceError(format!("Failed to query disk info: {e}")))?;
                 
             let disk_info = String::from_utf8_lossy(&output.stdout);
             
@@ -809,11 +809,11 @@ impl DMSCDeviceController {
                         if let Some(size_bytes) = size_line.split('=').nth(1).and_then(|s| s.trim().parse::<u64>().ok()) {
                             let size_gb = size_bytes as f64 / (1024.0 * 1024.0 * 1024.0);
                             
-                            let storage_device = DMSCDevice::new(
+                            let storage_device = RiDevice::new(
                                 format!("Storage-{disk_counter}-{model}"), 
-                                DMSCDeviceType::Storage
+                                RiDeviceType::Storage
                             ).with_capabilities(
-                                DMSCDeviceCapabilities::new()
+                                RiDeviceCapabilities::new()
                                     .with_storage_gb(size_gb)
                                     .with_bandwidth_gbps(6.0) // SATA III estimate
                             );
@@ -844,11 +844,11 @@ impl DMSCDeviceController {
                             if let Ok(size_sectors) = size_str.trim().parse::<u64>() {
                                 let size_gb = (size_sectors * 512) as f64 / (1024.0 * 1024.0 * 1024.0);
                                 
-                                let storage_device = DMSCDevice::new(
+                                let storage_device = RiDevice::new(
                                     format!("Storage-{}-{}", index + 1, device_name), 
-                                    DMSCDeviceType::Storage
+                                    RiDeviceType::Storage
                                 ).with_capabilities(
-                                    DMSCDeviceCapabilities::new()
+                                    RiDeviceCapabilities::new()
                                         .with_storage_gb(size_gb)
                                         .with_bandwidth_gbps(6.0) // SATA III estimate
                                 );
@@ -865,7 +865,7 @@ impl DMSCDeviceController {
     }
     
     /// Discover real hardware devices using the new discovery engine
-    async fn discover_hardware_devices(&mut self) -> DMSCResult<Vec<DMSCDevice>> {
+    async fn discover_hardware_devices(&mut self) -> RiResult<Vec<RiDevice>> {
         // Use the new discovery engine if available
         if let Some(discovery) = &self.discovery {
             let devices = discovery.discover_all().await?;
@@ -873,20 +873,20 @@ impl DMSCDeviceController {
         }
 
         // Fallback to old discovery if no engine initialized
-        let mut temp_controller = DMSCDeviceController::new();
-        let config = DMSCDeviceControlConfig::default();
+        let mut temp_controller = RiDeviceController::new();
+        let config = RiDeviceControlConfig::default();
         temp_controller.discover_system_devices(&config).await?;
         Ok(temp_controller.get_all_devices())
     }
     
     /// Discover network devices from system
-    async fn discover_network_devices(&mut self, _config: &DMSCDeviceControlConfig) -> DMSCResult<()> {
+    async fn discover_network_devices(&mut self, _config: &RiDeviceControlConfig) -> RiResult<()> {
         #[cfg(target_os = "windows")]
         {
             let output = std::process::Command::new("wmic")
                 .args(["nic", "where", "NetEnabled=true", "get", "Name,Speed", "/format:list"])
                 .output()
-                .map_err(|e| DMSCError::DeviceError(format!("Failed to query network info: {e}")))?;
+                .map_err(|e| RiError::DeviceError(format!("Failed to query network info: {e}")))?;
                 
             let network_info = String::from_utf8_lossy(&output.stdout);
             
@@ -904,11 +904,11 @@ impl DMSCDeviceController {
                         if let Some(speed_bps) = speed_line.split('=').nth(1).and_then(|s| s.trim().parse::<u64>().ok()) {
                             let speed_gbps = speed_bps as f64 / (1000.0 * 1000.0 * 1000.0);
                             
-                            let network_device = DMSCDevice::new(
+                            let network_device = RiDevice::new(
                                 format!("Network-{network_counter}-{name}"), 
-                                DMSCDeviceType::Network
+                                RiDeviceType::Network
                             ).with_capabilities(
-                                DMSCDeviceCapabilities::new()
+                                RiDeviceCapabilities::new()
                                     .with_bandwidth_gbps(speed_gbps)
                             );
                             
@@ -938,11 +938,11 @@ impl DMSCDeviceController {
                             if let Ok(speed_mbps) = speed_str.trim().parse::<f64>() {
                                 let speed_gbps = speed_mbps / 1000.0;
                                 
-                                let network_device = DMSCDevice::new(
+                                let network_device = RiDevice::new(
                                     format!("Network-{}-{}", index + 1, interface_name), 
-                                    DMSCDeviceType::Network
+                                    RiDeviceType::Network
                                 ).with_capabilities(
-                                    DMSCDeviceCapabilities::new()
+                                    RiDeviceCapabilities::new()
                                         .with_bandwidth_gbps(speed_gbps)
                                 );
                                 
@@ -959,8 +959,8 @@ impl DMSCDeviceController {
     
     /// Helper method to add a discovered device
     #[allow(dead_code)]
-    async fn add_device(&mut self, mut device: DMSCDevice, location: String) -> DMSCResult<()> {
-        device.set_status(DMSCDeviceStatus::Available);
+    async fn add_device(&mut self, mut device: RiDevice, location: String) -> RiResult<()> {
+        device.set_status(RiDeviceStatus::Available);
         device.set_location(location);
         
         let device_id = device.id().to_string();
@@ -977,44 +977,44 @@ impl DMSCDeviceController {
 
     /// Create a device from network discovery (for remote devices)
     #[allow(dead_code)]
-    fn create_discovered_device(&self, device_info: &DMSCNetworkDeviceInfo) -> DMSCDevice {
+    fn create_discovered_device(&self, device_info: &RiNetworkDeviceInfo) -> RiDevice {
         let device_type_enum = match device_info.device_type.as_str() {
-            "CPU" => DMSCDeviceType::CPU,
-            "GPU" => DMSCDeviceType::GPU,
-            "Memory" => DMSCDeviceType::Memory,
-            "Storage" => DMSCDeviceType::Storage,
-            "Network" => DMSCDeviceType::Network,
-            _ => DMSCDeviceType::Custom,
+            "CPU" => RiDeviceType::CPU,
+            "GPU" => RiDeviceType::GPU,
+            "Memory" => RiDeviceType::Memory,
+            "Storage" => RiDeviceType::Storage,
+            "Network" => RiDeviceType::Network,
+            _ => RiDeviceType::Custom,
         };
         
         let name = format!("Discovered-{}-{}", device_info.device_type, device_info.id);
-        let mut device = DMSCDevice::new(name, device_type_enum);
+        let mut device = RiDevice::new(name, device_type_enum);
 
         // Add discovered capabilities
-        let mut capabilities = DMSCDeviceCapabilities::new();
+        let mut capabilities = RiDeviceCapabilities::new();
 
         match device_type_enum {
-            DMSCDeviceType::CPU => {
+            RiDeviceType::CPU => {
                 capabilities = capabilities
                     .with_compute_units(device_info.compute_units.unwrap_or(8))
                     .with_memory_gb(device_info.memory_gb.unwrap_or(16.0));
             }
-            DMSCDeviceType::GPU => {
+            RiDeviceType::GPU => {
                 capabilities = capabilities
                     .with_compute_units(device_info.compute_units.unwrap_or(1000))
                     .with_memory_gb(device_info.memory_gb.unwrap_or(8.0));
             }
-            DMSCDeviceType::Memory => {
+            RiDeviceType::Memory => {
                 capabilities = capabilities
                     .with_memory_gb(device_info.memory_gb.unwrap_or(64.0))
                     .with_bandwidth_gbps(device_info.bandwidth_gbps.unwrap_or(25.6));
             }
-            DMSCDeviceType::Storage => {
+            RiDeviceType::Storage => {
                 capabilities = capabilities
                     .with_storage_gb(device_info.storage_gb.unwrap_or(1000.0))
                     .with_bandwidth_gbps(device_info.bandwidth_gbps.unwrap_or(6.0));
             }
-            DMSCDeviceType::Network => {
+            RiDeviceType::Network => {
                 capabilities = capabilities
                     .with_bandwidth_gbps(device_info.bandwidth_gbps.unwrap_or(1.0));
             }
@@ -1022,7 +1022,7 @@ impl DMSCDeviceController {
         }
 
         device = device.with_capabilities(capabilities);
-        device.set_status(DMSCDeviceStatus::Available);
+        device.set_status(RiDeviceStatus::Available);
         device.set_location(format!("Network Discovery: {}", device_info.source));
 
         device
@@ -1031,16 +1031,16 @@ impl DMSCDeviceController {
     /// Find a suitable device for the given requirements
     pub async fn find_suitable_device(
         &self,
-        device_type: &DMSCDeviceType,
-        requirements: &DMSCDeviceCapabilities,
-    ) -> DMSCResult<Option<DMSCDevice>> {
+        device_type: &RiDeviceType,
+        requirements: &RiDeviceCapabilities,
+    ) -> RiResult<Option<RiDevice>> {
         let device_ids = match self.device_type_index.get(device_type) {
             Some(ids) => ids.clone(),
             None => return Ok(None),
         };
 
         // Find the best available device
-        let mut best_device: Option<DMSCDevice> = None;
+        let mut best_device: Option<RiDevice> = None;
         let mut best_score = 0u32;
 
         for device_id in device_ids {
@@ -1063,13 +1063,13 @@ impl DMSCDeviceController {
     }
     
     /// Initialize metrics for device monitoring
-    pub fn initialize_metrics(&mut self, metrics_registry: &DMSCMetricsRegistry) -> DMSCResult<()> {
-        use crate::observability::{DMSCMetric, DMSCMetricConfig, DMSCMetricType};
+    pub fn initialize_metrics(&mut self, metrics_registry: &RiMetricsRegistry) -> RiResult<()> {
+        use crate::observability::{RiMetric, RiMetricConfig, RiMetricType};
         use std::sync::Arc;
         
         // Register device count metric
-        let device_total_config = DMSCMetricConfig {
-            metric_type: DMSCMetricType::Gauge,
+        let device_total_config = RiMetricConfig {
+            metric_type: RiMetricType::Gauge,
             name: "dms_devices_total".to_string(),
             help: "Total number of discovered devices".to_string(),
             buckets: vec![],
@@ -1077,13 +1077,13 @@ impl DMSCDeviceController {
             max_age: std::time::Duration::from_secs(300),
             age_buckets: 5,
         };
-        let device_total_metric = Arc::new(DMSCMetric::new(device_total_config));
+        let device_total_metric = Arc::new(RiMetric::new(device_total_config));
         metrics_registry.register(device_total_metric.clone())?;
         
         // Register device type metrics
         for device_type in self.device_type_index.keys() {
-            let device_type_config = DMSCMetricConfig {
-                metric_type: DMSCMetricType::Gauge,
+            let device_type_config = RiMetricConfig {
+                metric_type: RiMetricType::Gauge,
                 name: format!("dms_devices_{}_total", device_type.to_string().to_lowercase()),
                 help: format!("Total number of {device_type} devices"),
                 buckets: vec![],
@@ -1091,14 +1091,14 @@ impl DMSCDeviceController {
                 max_age: std::time::Duration::from_secs(300),
                 age_buckets: 5,
             };
-            let device_type_metric = Arc::new(DMSCMetric::new(device_type_config));
+            let device_type_metric = Arc::new(RiMetric::new(device_type_config));
             metrics_registry.register(device_type_metric.clone())?;
         }
         
         Ok(())
     }
 
-    fn calculate_device_score(&self, device: &DMSCDevice) -> u32 {
+    fn calculate_device_score(&self, device: &RiDevice) -> u32 {
         let mut score = device.health_score() as u32 * 100;
 
         // Add capability-based scoring
@@ -1128,7 +1128,7 @@ impl DMSCDeviceController {
         &mut self,
         device_id: &str,
         allocation_id: &str,
-    ) -> DMSCResult<()> {
+    ) -> RiResult<()> {
         if let Some(device_lock) = self.devices.get(device_id) {
             let mut device = device_lock.write().await;
 
@@ -1137,37 +1137,37 @@ impl DMSCDeviceController {
                     .insert(allocation_id.to_string(), device_id.to_string());
                 Ok(())
             } else {
-                Err(crate::core::DMSCError::DeviceAllocationFailed {
+                Err(crate::core::RiError::DeviceAllocationFailed {
                     device_id: device_id.to_string(),
                     reason: "Device not available".to_string(),
                 })
             }
         } else {
-            Err(crate::core::DMSCError::DeviceNotFound {
+            Err(crate::core::RiError::DeviceNotFound {
                 device_id: device_id.to_string(),
             })
         }
     }
 
     /// Release a device by allocation ID
-    pub async fn release_device_by_allocation(&mut self, allocation_id: &str) -> DMSCResult<()> {
+    pub async fn release_device_by_allocation(&mut self, allocation_id: &str) -> RiResult<()> {
         if let Some(device_id) = self.allocation_map.remove(allocation_id) {
             if let Some(device_lock) = self.devices.get(&device_id) {
                 let mut device = device_lock.write().await;
                 device.release();
                 Ok(())
             } else {
-                Err(crate::core::DMSCError::DeviceNotFound { device_id })
+                Err(crate::core::RiError::DeviceNotFound { device_id })
             }
         } else {
-            Err(crate::core::DMSCError::AllocationNotFound {
+            Err(crate::core::RiError::AllocationNotFound {
                 allocation_id: allocation_id.to_string(),
             })
         }
     }
 
     /// Remove a device
-    async fn remove_device(&mut self, device_id: &str) -> DMSCResult<()> {
+    async fn remove_device(&mut self, device_id: &str) -> RiResult<()> {
         if let Some(device_lock) = self.devices.remove(device_id) {
             let device = device_lock.read().await;
             let device_type = device.device_type();
@@ -1187,7 +1187,7 @@ impl DMSCDeviceController {
     }
 
     /// Get all devices
-    pub fn get_all_devices(&self) -> Vec<DMSCDevice> {
+    pub fn get_all_devices(&self) -> Vec<RiDevice> {
         let mut devices = Vec::new();
 
         // This is a blocking operation - in a real implementation, we'd use async
@@ -1201,7 +1201,7 @@ impl DMSCDeviceController {
     }
 
     /// Release all devices (shutdown)
-    pub fn release_all_devices(&mut self) -> DMSCResult<()> {
+    pub fn release_all_devices(&mut self) -> RiResult<()> {
         // Clear all allocations
         self.allocation_map.clear();
 
@@ -1216,7 +1216,7 @@ impl DMSCDeviceController {
     }
 
     /// Perform health check on all devices
-    pub async fn perform_health_checks(&mut self) -> DMSCResult<Vec<(String, u8)>> {
+    pub async fn perform_health_checks(&mut self) -> RiResult<Vec<(String, u8)>> {
         let mut results = Vec::new();
 
         for (device_id, device_lock) in &self.devices {
@@ -1264,16 +1264,16 @@ impl DMSCDeviceController {
 
             // Update device status based on health score
             if health_score < 20 {
-                device.set_status(DMSCDeviceStatus::Error);
+                device.set_status(RiDeviceStatus::Error);
             } else if health_score < 50 {
-                device.set_status(DMSCDeviceStatus::Maintenance);
+                device.set_status(RiDeviceStatus::Maintenance);
             } else if health_score < 70 {
-                device.set_status(DMSCDeviceStatus::Degraded);
-            } else if device.status() == DMSCDeviceStatus::Error
-                || device.status() == DMSCDeviceStatus::Maintenance
-                || device.status() == DMSCDeviceStatus::Degraded
+                device.set_status(RiDeviceStatus::Degraded);
+            } else if device.status() == RiDeviceStatus::Error
+                || device.status() == RiDeviceStatus::Maintenance
+                || device.status() == RiDeviceStatus::Degraded
             {
-                device.set_status(DMSCDeviceStatus::Available);
+                device.set_status(RiDeviceStatus::Available);
             }
 
             results.push((device_id.to_string(), health_score));
@@ -1337,16 +1337,16 @@ impl DMSCDeviceController {
 
                     // Update device status based on health score
                     if health_score < 20 {
-                        device.set_status(DMSCDeviceStatus::Error);
+                        device.set_status(RiDeviceStatus::Error);
                     } else if health_score < 50 {
-                        device.set_status(DMSCDeviceStatus::Maintenance);
+                        device.set_status(RiDeviceStatus::Maintenance);
                     } else if health_score < 70 {
-                        device.set_status(DMSCDeviceStatus::Degraded);
-                    } else if device.status() == DMSCDeviceStatus::Error
-                        || device.status() == DMSCDeviceStatus::Maintenance
-                        || device.status() == DMSCDeviceStatus::Degraded
+                        device.set_status(RiDeviceStatus::Degraded);
+                    } else if device.status() == RiDeviceStatus::Error
+                        || device.status() == RiDeviceStatus::Maintenance
+                        || device.status() == RiDeviceStatus::Degraded
                     {
-                        device.set_status(DMSCDeviceStatus::Available);
+                        device.set_status(RiDeviceStatus::Available);
                     }
                 }
             }
@@ -1357,12 +1357,12 @@ impl DMSCDeviceController {
     pub async fn get_device_health(
         &self,
         device_id: &str,
-    ) -> DMSCResult<super::core::DMSCDeviceHealthMetrics> {
+    ) -> RiResult<super::core::RiDeviceHealthMetrics> {
         if let Some(device_lock) = self.devices.get(device_id) {
             let device = device_lock.read().await;
             Ok(device.health_metrics().clone())
         } else {
-            Err(crate::core::DMSCError::DeviceNotFound {
+            Err(crate::core::RiError::DeviceNotFound {
                 device_id: device_id.to_string(),
             })
         }
@@ -1371,7 +1371,7 @@ impl DMSCDeviceController {
     /// Get all device health metrics
     pub async fn get_all_device_health(
         &self,
-    ) -> DMSCResult<HashMap<String, super::core::DMSCDeviceHealthMetrics>> {
+    ) -> RiResult<HashMap<String, super::core::RiDeviceHealthMetrics>> {
         let mut health_map = HashMap::new();
 
         for (device_id, device_lock) in &self.devices {
@@ -1383,33 +1383,33 @@ impl DMSCDeviceController {
     }
 
     /// Create a mock device for discovery simulation
-    fn create_mock_device_for_discovery(&self) -> DMSCDevice {
-        use super::core::{DMSCDeviceCapabilities, DMSCDeviceType};
+    fn create_mock_device_for_discovery(&self) -> RiDevice {
+        use super::core::{RiDeviceCapabilities, RiDeviceType};
         
-        let device_types = [DMSCDeviceType::CPU,
-            DMSCDeviceType::GPU,
-            DMSCDeviceType::Memory,
-            DMSCDeviceType::Storage,
-            DMSCDeviceType::Network];
+        let device_types = [RiDeviceType::CPU,
+            RiDeviceType::GPU,
+            RiDeviceType::Memory,
+            RiDeviceType::Storage,
+            RiDeviceType::Network];
         
         let device_type = device_types[rand::random::<usize>() % device_types.len()];
         
         let device_name = match device_type {
-            DMSCDeviceType::CPU => format!("CPU-{}-cores", rand::random::<usize>() % 32 + 1),
-            DMSCDeviceType::GPU => format!("GPU-{}-GB", rand::random::<usize>() % 24 + 1),
-            DMSCDeviceType::Memory => format!("Memory-{}-GB", rand::random::<usize>() % 64 + 1),
-            DMSCDeviceType::Storage => format!("Storage-{}-TB", rand::random::<usize>() % 10 + 1),
-            DMSCDeviceType::Network => format!("Network-{}-Gbps", rand::random::<usize>() % 100 + 1),
-            DMSCDeviceType::Sensor => format!("Sensor-{}-units", rand::random::<usize>() % 100 + 1),
-            DMSCDeviceType::Actuator => format!("Actuator-{}-actions", rand::random::<usize>() % 50 + 1),
-            DMSCDeviceType::Custom => format!("Custom-{}-device", rand::random::<usize>() % 1000 + 1),
+            RiDeviceType::CPU => format!("CPU-{}-cores", rand::random::<usize>() % 32 + 1),
+            RiDeviceType::GPU => format!("GPU-{}-GB", rand::random::<usize>() % 24 + 1),
+            RiDeviceType::Memory => format!("Memory-{}-GB", rand::random::<usize>() % 64 + 1),
+            RiDeviceType::Storage => format!("Storage-{}-TB", rand::random::<usize>() % 10 + 1),
+            RiDeviceType::Network => format!("Network-{}-Gbps", rand::random::<usize>() % 100 + 1),
+            RiDeviceType::Sensor => format!("Sensor-{}-units", rand::random::<usize>() % 100 + 1),
+            RiDeviceType::Actuator => format!("Actuator-{}-actions", rand::random::<usize>() % 50 + 1),
+            RiDeviceType::Custom => format!("Custom-{}-device", rand::random::<usize>() % 1000 + 1),
         };
         
-        let capabilities = DMSCDeviceCapabilities::new()
+        let capabilities = RiDeviceCapabilities::new()
             .with_compute_units(rand::random::<usize>() % 1000 + 100)
             .with_memory_gb(rand::random::<f64>() * 64.0 + 1.0);
         
-        DMSCDevice::new(device_name, device_type)
+        RiDevice::new(device_name, device_type)
             .with_capabilities(capabilities)
     }
 }

@@ -1,7 +1,7 @@
 # Copyright © 2025-2026 Wenze Wei. All Rights Reserved.
 #
-# This file is part of DMSC.
-# The DMSC project belongs to the Dunimd Team.
+# This file is part of Ri.
+# The Ri project belongs to the Dunimd Team.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # You may not use this file except in compliance with the License.
@@ -16,9 +16,9 @@
 # limitations under the License.
 
 # =============================================================================
-# Python Project Configuration for DMSC
+# Python Project Configuration for Ri
 # =============================================================================
-# This file configures the Python packaging and build system for the DMSC
+# This file configures the Python packaging and build system for the Ri
 # Rust-Python hybrid middleware framework. It uses maturin as the build
 # backend to create Python extension modules from Rust source code.
 #
@@ -63,15 +63,15 @@ build-backend = "maturin"
 
 [project]
 # Package name on PyPI
-# Must match the name used in 'pip install dmsc'
-name = "dmsc"
+# Must match the name used in 'pip install ri'
+name = "ri"
 
 # Package version - should match Cargo.toml version
 # Follows semantic versioning (MAJOR.MINOR.PATCH)
 version = "0.1.8"
 
 # Short description displayed on PyPI and package listings
-description = "Dunimd Middleware Service - A high-performance Rust middleware framework with modular architecture"
+description = "Ri - A high-performance Rust middleware framework with modular architecture"
 
 # Path to the README file for long description on PyPI
 readme = "README.md"
@@ -106,14 +106,14 @@ classifiers = [
 ]
 
 # Minimum Python version requirement
-# DMSC requires Python 3.8+ for modern async/await syntax support
+# Ri requires Python 3.8+ for modern async/await syntax support
 requires-python = ">=3.8"
 
 # Keywords for PyPI search and categorization
 keywords = ["middleware", "rust", "async", "gateway", "service-mesh"]
 
 # Source code repository URL
-repository = "https://github.com/mf2023/DMSC"
+repository = "https://github.com/mf2023/Ri"
 
 # =============================================================================
 # Maturin Build Configuration
@@ -129,7 +129,7 @@ python-source = "python"
 
 # Rust features to enable during the build
 # These correspond to feature flags defined in Cargo.toml
-# Each feature enables specific functionality in the DMSC framework:
+# Each feature enables specific functionality in the Ri framework:
 # - pyo3: Python bindings support (required for Python extension)
 # - auth: Authentication and authorization modules
 # - cache: Caching layer with Redis support
@@ -187,7 +187,7 @@ pyo3 = "^0.27"
 # =============================================================================
 # Pytest Configuration
 # =============================================================================
-# Configures pytest for running Python tests for the DMSC extension module.
+# Configures pytest for running Python tests for the Ri extension module.
 
 [tool.pytest.ini_options]
 # Test discovery paths

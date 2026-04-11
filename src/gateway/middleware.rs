@@ -1,7 +1,7 @@
 //! Copyright © 2025-2026 Wenze Wei. All Rights Reserved.
 //!
-//! This file is part of DMSC.
-//! The DMSC project belongs to the Dunimd Team.
+//! This file is part of Ri.
+//! The Ri project belongs to the Dunimd Team.
 //!
 //! Licensed under the Apache License, Version 2.0 (the "License");
 //! You may not use this file except in compliance with the License.
@@ -19,13 +19,13 @@
 
 //! # Middleware Module
 //! 
-//! This module provides a flexible middleware system for the DMSC gateway, allowing for
+//! This module provides a flexible middleware system for the Ri gateway, allowing for
 //! request processing and modification through a chain of middleware components.
 //! 
 //! ## Key Components
 //! 
-//! - **DMSCMiddleware**: Trait defining the middleware interface
-//! - **DMSCMiddlewareChain**: Manages a chain of middleware components
+//! - **RiMiddleware**: Trait defining the middleware interface
+//! - **RiMiddlewareChain**: Manages a chain of middleware components
 //! - **Built-in Middleware**: Auth, CORS, Logging, Request ID, and Rate Limiting implementations
 //! 
 //! ## Design Principles
@@ -42,32 +42,32 @@
 //! ## Usage
 //! 
 //! ```rust
-//! use dmsc::prelude::*;
+//! use ri::prelude::*;
 //! use std::sync::Arc;
 //! 
-//! async fn example() -> DMSCResult<()> {
+//! async fn example() -> RiResult<()> {
 //!     // Create a middleware chain
-//!     let mut chain = DMSCMiddlewareChain::new();
+//!     let mut chain = RiMiddlewareChain::new();
 //!     
 //!     // Add built-in middleware
-//!     chain.add(Arc::new(DMSCLoggingMiddleware::new("info".to_string())));
-//!     chain.add(Arc::new(DMSCAuthMiddleware::new("Authorization".to_string())));
-//!     chain.add(Arc::new(DMSCCorsMiddleware::new(
+//!     chain.add(Arc::new(RiLoggingMiddleware::new("info".to_string())));
+//!     chain.add(Arc::new(RiAuthMiddleware::new("Authorization".to_string())));
+//!     chain.add(Arc::new(RiCorsMiddleware::new(
 //!         vec!["*".to_string()],
 //!         vec!["GET".to_string(), "POST".to_string()],
 //!         vec!["Content-Type".to_string(), "Authorization".to_string()]
 //!     )));
 //!     
 //!     // Create a request and execute the middleware chain
-//!     let mut request = DMSCGatewayRequest::new("GET".to_string(), "/api/v1/resource".to_string());
+//!     let mut request = RiGatewayRequest::new("GET".to_string(), "/api/v1/resource".to_string());
 //!     chain.execute(&mut request).await?;
 //!     
 //!     Ok(())
 //! }
 //! ```
 
-use super::DMSCGatewayRequest;
-use crate::core::DMSCResult;
+use super::RiGatewayRequest;
+use crate::core::RiResult;
 use async_trait::async_trait;
 use std::sync::Arc;
 
@@ -76,7 +76,7 @@ use std::sync::Arc;
 /// All middleware components must implement this trait, which provides methods for
 /// executing middleware logic and identifying the middleware.
 #[async_trait]
-pub trait DMSCMiddleware: Send + Sync {
+pub trait RiMiddleware: Send + Sync {
     /// Executes the middleware logic on a request.
     /// 
     /// This method is called for each request passing through the middleware chain.
@@ -88,8 +88,8 @@ pub trait DMSCMiddleware: Send + Sync {
     /// 
     /// # Returns
     /// 
-    /// A `DMSCResult<()>` indicating success or failure
-    async fn execute(&self, request: &mut DMSCGatewayRequest) -> DMSCResult<()>;
+    /// A `RiResult<()>` indicating success or failure
+    async fn execute(&self, request: &mut RiGatewayRequest) -> RiResult<()>;
     
     /// Gets the name of the middleware.
     /// 
@@ -106,23 +106,23 @@ pub trait DMSCMiddleware: Send + Sync {
 /// 
 /// This struct maintains a list of middleware instances and provides methods for
 /// adding, removing, and executing middleware in sequence.
-pub struct DMSCMiddlewareChain {
+pub struct RiMiddlewareChain {
     /// Vector of middleware instances in the order they should be executed
-    middlewares: Vec<Arc<dyn DMSCMiddleware>>,
+    middlewares: Vec<Arc<dyn RiMiddleware>>,
 }
 
-impl Default for DMSCMiddlewareChain {
+impl Default for RiMiddlewareChain {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl DMSCMiddlewareChain {
+impl RiMiddlewareChain {
     /// Creates a new empty middleware chain.
     /// 
     /// # Returns
     /// 
-    /// A new `DMSCMiddlewareChain` instance with no middleware
+    /// A new `RiMiddlewareChain` instance with no middleware
     pub fn new() -> Self {
         Self {
             middlewares: Vec::new(),
@@ -134,7 +134,7 @@ impl DMSCMiddlewareChain {
     /// # Parameters
     /// 
     /// - `middleware`: The middleware to add to the chain
-    pub fn add(&mut self, middleware: Arc<dyn DMSCMiddleware>) {
+    pub fn add(&mut self, middleware: Arc<dyn RiMiddleware>) {
         self.middlewares.push(middleware);
     }
 
@@ -149,8 +149,8 @@ impl DMSCMiddlewareChain {
     /// 
     /// # Returns
     /// 
-    /// A `DMSCResult<()>` indicating success or failure
-    pub async fn execute(&self, request: &mut DMSCGatewayRequest) -> DMSCResult<()> {
+    /// A `RiResult<()>` indicating success or failure
+    pub async fn execute(&self, request: &mut RiGatewayRequest) -> RiResult<()> {
         for middleware in &self.middlewares {
             // Record middleware execution time
             let start = std::time::Instant::now();
@@ -195,12 +195,12 @@ impl DMSCMiddlewareChain {
 /// Authentication middleware for validating request credentials.
 /// 
 /// This middleware checks for and validates authorization headers in requests.
-pub struct DMSCAuthMiddleware {
+pub struct RiAuthMiddleware {
     /// Name of the authorization header to check
     auth_header: String,
 }
 
-impl DMSCAuthMiddleware {
+impl RiAuthMiddleware {
     /// Creates a new authentication middleware instance.
     /// 
     /// # Parameters
@@ -209,14 +209,14 @@ impl DMSCAuthMiddleware {
     /// 
     /// # Returns
     /// 
-    /// A new `DMSCAuthMiddleware` instance
+    /// A new `RiAuthMiddleware` instance
     pub fn new(auth_header: String) -> Self {
         Self { auth_header }
     }
 }
 
 #[async_trait]
-impl DMSCMiddleware for DMSCAuthMiddleware {
+impl RiMiddleware for RiAuthMiddleware {
     /// Validates the authorization header in the request.
     /// 
     /// This implementation checks for a Bearer token in the specified authorization header.
@@ -228,18 +228,18 @@ impl DMSCMiddleware for DMSCAuthMiddleware {
     /// 
     /// # Returns
     /// 
-    /// A `DMSCResult<()>` indicating success or failure
-    async fn execute(&self, request: &mut DMSCGatewayRequest) -> DMSCResult<()> {
+    /// A `RiResult<()>` indicating success or failure
+    async fn execute(&self, request: &mut RiGatewayRequest) -> RiResult<()> {
         // Check for authorization header
         if let Some(auth_header) = request.headers.get(&self.auth_header) {
             // Basic auth validation - in a real implementation, this would validate JWT tokens
             if let Some(token) = auth_header.strip_prefix("Bearer ") {
                 if token.is_empty() {
-                    return Err(crate::core::DMSCError::Other("Empty bearer token".to_string()));
+                    return Err(crate::core::RiError::Other("Empty bearer token".to_string()));
                 }
                 // Here you would validate the JWT token using your auth module
             } else {
-                return Err(crate::core::DMSCError::Other("Invalid authorization header format".to_string()));
+                return Err(crate::core::RiError::Other("Invalid authorization header format".to_string()));
             }
         } else {
             // Allow requests without auth for public endpoints
@@ -261,7 +261,7 @@ impl DMSCMiddleware for DMSCAuthMiddleware {
 /// CORS (Cross-Origin Resource Sharing) middleware.
 /// 
 /// This middleware validates CORS headers and ensures requests come from allowed origins.
-pub struct DMSCCorsMiddleware {
+pub struct RiCorsMiddleware {
     /// List of allowed origins for CORS requests
     allowed_origins: Vec<String>,
     /// List of allowed HTTP methods for CORS requests
@@ -272,7 +272,7 @@ pub struct DMSCCorsMiddleware {
     allowed_headers: Vec<String>,
 }
 
-impl DMSCCorsMiddleware {
+impl RiCorsMiddleware {
     /// Creates a new CORS middleware instance.
     /// 
     /// # Parameters
@@ -283,7 +283,7 @@ impl DMSCCorsMiddleware {
     /// 
     /// # Returns
     /// 
-    /// A new `DMSCCorsMiddleware` instance
+    /// A new `RiCorsMiddleware` instance
     pub fn new(
         allowed_origins: Vec<String>,
         allowed_methods: Vec<String>,
@@ -312,7 +312,7 @@ impl DMSCCorsMiddleware {
 }
 
 #[async_trait]
-impl DMSCMiddleware for DMSCCorsMiddleware {
+impl RiMiddleware for RiCorsMiddleware {
     /// Validates CORS headers in the request.
     /// 
     /// This implementation checks if the request origin is in the list of allowed origins.
@@ -323,14 +323,14 @@ impl DMSCMiddleware for DMSCCorsMiddleware {
     /// 
     /// # Returns
     /// 
-    /// A `DMSCResult<()>` indicating success or failure
-    async fn execute(&self, request: &mut DMSCGatewayRequest) -> DMSCResult<()> {
+    /// A `RiResult<()>` indicating success or failure
+    async fn execute(&self, request: &mut RiGatewayRequest) -> RiResult<()> {
         // CORS preflight handling would be done at the response level
         // This middleware just validates the request
         
         if let Some(origin) = request.headers.get("origin") {
             if !self.is_origin_allowed(origin) {
-                return Err(crate::core::DMSCError::Other("Origin not allowed".to_string()));
+                return Err(crate::core::RiError::Other("Origin not allowed".to_string()));
             }
         }
         
@@ -350,13 +350,13 @@ impl DMSCMiddleware for DMSCCorsMiddleware {
 /// Logging middleware for recording request details.
 /// 
 /// This middleware logs request information such as method, path, and remote address.
-pub struct DMSCLoggingMiddleware {
+pub struct RiLoggingMiddleware {
     /// Log level for the middleware
     #[allow(dead_code)]
     log_level: String,
 }
 
-impl DMSCLoggingMiddleware {
+impl RiLoggingMiddleware {
     /// Creates a new logging middleware instance.
     /// 
     /// # Parameters
@@ -365,14 +365,14 @@ impl DMSCLoggingMiddleware {
     /// 
     /// # Returns
     /// 
-    /// A new `DMSCLoggingMiddleware` instance
+    /// A new `RiLoggingMiddleware` instance
     pub fn new(log_level: String) -> Self {
         Self { log_level }
     }
 }
 
 #[async_trait]
-impl DMSCMiddleware for DMSCLoggingMiddleware {
+impl RiMiddleware for RiLoggingMiddleware {
     /// Logs request details.
     /// 
     /// This implementation prints request information to the console.
@@ -384,8 +384,8 @@ impl DMSCMiddleware for DMSCLoggingMiddleware {
     /// 
     /// # Returns
     /// 
-    /// A `DMSCResult<()>` indicating success or failure
-    async fn execute(&self, request: &mut DMSCGatewayRequest) -> DMSCResult<()> {
+    /// A `RiResult<()>` indicating success or failure
+    async fn execute(&self, request: &mut RiGatewayRequest) -> RiResult<()> {
         // In a real implementation, this would log the request details
         // For now, we'll just allow it through
         log::info!("[{}] {} {} from {}", 
@@ -410,31 +410,31 @@ impl DMSCMiddleware for DMSCLoggingMiddleware {
 /// Request ID middleware for processing request IDs.
 /// 
 /// This middleware handles request ID generation and processing.
-/// Note: Request IDs are already generated in `DMSCGatewayRequest::new`.
-pub struct DMSCRequestIdMiddleware;
+/// Note: Request IDs are already generated in `RiGatewayRequest::new`.
+pub struct RiRequestIdMiddleware;
 
-impl Default for DMSCRequestIdMiddleware {
+impl Default for RiRequestIdMiddleware {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl DMSCRequestIdMiddleware {
+impl RiRequestIdMiddleware {
     /// Creates a new request ID middleware instance.
     /// 
     /// # Returns
     /// 
-    /// A new `DMSCRequestIdMiddleware` instance
+    /// A new `RiRequestIdMiddleware` instance
     pub fn new() -> Self {
         Self
     }
 }
 
 #[async_trait]
-impl DMSCMiddleware for DMSCRequestIdMiddleware {
+impl RiMiddleware for RiRequestIdMiddleware {
     /// Processes the request ID in the request.
     /// 
-    /// This implementation is a no-op since request IDs are generated in `DMSCGatewayRequest::new`.
+    /// This implementation is a no-op since request IDs are generated in `RiGatewayRequest::new`.
     /// It can be extended for additional request ID processing.
     /// 
     /// # Parameters
@@ -443,9 +443,9 @@ impl DMSCMiddleware for DMSCRequestIdMiddleware {
     /// 
     /// # Returns
     /// 
-    /// A `DMSCResult<()>` indicating success or failure
-    async fn execute(&self, _request: &mut DMSCGatewayRequest) -> DMSCResult<()> {
-        // Request ID is already generated in DMSCGatewayRequest::new
+    /// A `RiResult<()>` indicating success or failure
+    async fn execute(&self, _request: &mut RiGatewayRequest) -> RiResult<()> {
+        // Request ID is already generated in RiGatewayRequest::new
         // This middleware can be used for additional request ID processing
         Ok(())
     }
@@ -463,12 +463,12 @@ impl DMSCMiddleware for DMSCRequestIdMiddleware {
 /// Rate limiting middleware for controlling request rates.
 /// 
 /// This middleware limits the number of requests from a client within a specified time window.
-pub struct DMSCRateLimitMiddleware {
+pub struct RiRateLimitMiddleware {
     /// Rate limiter instance for enforcing rate limits
-    rate_limiter: Arc<crate::gateway::DMSCRateLimiter>,
+    rate_limiter: Arc<crate::gateway::RiRateLimiter>,
 }
 
-impl DMSCRateLimitMiddleware {
+impl RiRateLimitMiddleware {
     /// Creates a new rate limiting middleware instance.
     /// 
     /// # Parameters
@@ -477,8 +477,8 @@ impl DMSCRateLimitMiddleware {
     /// 
     /// # Returns
     /// 
-    /// A new `DMSCRateLimitMiddleware` instance
-    pub fn new(rate_limiter: Arc<crate::gateway::DMSCRateLimiter>) -> Self {
+    /// A new `RiRateLimitMiddleware` instance
+    pub fn new(rate_limiter: Arc<crate::gateway::RiRateLimiter>) -> Self {
         Self {
             rate_limiter,
         }
@@ -486,10 +486,10 @@ impl DMSCRateLimitMiddleware {
 }
 
 #[async_trait]
-impl DMSCMiddleware for DMSCRateLimitMiddleware {
+impl RiMiddleware for RiRateLimitMiddleware {
     /// Applies rate limiting to the request.
     /// 
-    /// This implementation uses the DMSCRateLimiter to check if the request should be allowed
+    /// This implementation uses the RiRateLimiter to check if the request should be allowed
     /// based on rate limiting rules. If the request exceeds the rate limit, an error is returned.
     /// 
     /// # Parameters
@@ -498,11 +498,11 @@ impl DMSCMiddleware for DMSCRateLimitMiddleware {
     /// 
     /// # Returns
     /// 
-    /// A `DMSCResult<()>` indicating success or failure. Returns error if rate limit exceeded.
-    async fn execute(&self, request: &mut DMSCGatewayRequest) -> DMSCResult<()> {
+    /// A `RiResult<()>` indicating success or failure. Returns error if rate limit exceeded.
+    async fn execute(&self, request: &mut RiGatewayRequest) -> RiResult<()> {
         // Check rate limit using the rate limiter
         if !self.rate_limiter.check_request(request).await {
-            return Err(crate::core::DMSCError::Other("Rate limit exceeded".to_string()));
+            return Err(crate::core::RiError::Other("Rate limit exceeded".to_string()));
         }
         
         Ok(())

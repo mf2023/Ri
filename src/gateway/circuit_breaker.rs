@@ -1,7 +1,7 @@
 //! Copyright © 2025-2026 Wenze Wei. All Rights Reserved.
 //!
-//! This file is part of DMSC.
-//! The DMSC project belongs to the Dunimd Team.
+//! This file is part of Ri.
+//! The Ri project belongs to the Dunimd Team.
 //!
 //! Licensed under the Apache License, Version 2.0 (the "License");
 //! You may not use this file except in compliance with the License.
@@ -24,11 +24,11 @@
 //! 
 //! ## Key Components
 //! 
-//! - **DMSCCircuitBreakerState**: Enum representing the three states of a circuit breaker (Closed, Open, HalfOpen)
-//! - **DMSCCircuitBreakerConfig**: Configuration for circuit breaker behavior
-//! - **DMSCCircuitBreaker**: Basic circuit breaker implementation
-//! - **DMSCAdvancedCircuitBreaker**: Advanced circuit breaker with error-type specific thresholds
-//! - **DMSCCircuitBreakerMetrics**: Metrics for monitoring circuit breaker performance
+//! - **RiCircuitBreakerState**: Enum representing the three states of a circuit breaker (Closed, Open, HalfOpen)
+//! - **RiCircuitBreakerConfig**: Configuration for circuit breaker behavior
+//! - **RiCircuitBreaker**: Basic circuit breaker implementation
+//! - **RiAdvancedCircuitBreaker**: Advanced circuit breaker with error-type specific thresholds
+//! - **RiCircuitBreakerMetrics**: Metrics for monitoring circuit breaker performance
 //! 
 //! ## Design Principles
 //! 
@@ -43,12 +43,12 @@
 //! ## Usage
 //! 
 //! ```rust
-//! use dmsc::prelude::*;
+//! use ri::prelude::*;
 //! 
-//! async fn example() -> DMSCResult<()> {
+//! async fn example() -> RiResult<()> {
 //!     // Create a circuit breaker with default configuration
-//!     let cb_config = DMSCCircuitBreakerConfig::default();
-//!     let cb = DMSCCircuitBreaker::new(cb_config);
+//!     let cb_config = RiCircuitBreakerConfig::default();
+//!     let cb = RiCircuitBreaker::new(cb_config);
 //!     
 //!     // Execute a risky operation with circuit breaker protection
 //!     let result = cb.execute(async || {
@@ -67,7 +67,7 @@
 //! }
 //! ```
 
-use crate::core::DMSCResult;
+use crate::core::RiResult;
 use std::collections::HashMap;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicUsize, Ordering};
@@ -80,7 +80,7 @@ use tokio::sync::RwLock;
 /// patterns of the protected operations.
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
-pub enum DMSCCircuitBreakerState {
+pub enum RiCircuitBreakerState {
     /// **Closed State**: Normal operation. Requests are allowed to pass through.
     /// The circuit breaker monitors for failures.
     Closed,
@@ -100,7 +100,7 @@ pub enum DMSCCircuitBreakerState {
 /// transitions between states.
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
-pub struct DMSCCircuitBreakerConfig {
+pub struct RiCircuitBreakerConfig {
     /// Number of consecutive failures required to open the circuit breaker from Closed state.
     pub failure_threshold: u32,
     
@@ -116,7 +116,7 @@ pub struct DMSCCircuitBreakerConfig {
 
 #[cfg(feature = "pyo3")]
 #[pyo3::prelude::pymethods]
-impl DMSCCircuitBreakerConfig {
+impl RiCircuitBreakerConfig {
     #[new]
     fn py_new() -> Self {
         Self::default()
@@ -165,7 +165,7 @@ impl DMSCCircuitBreakerConfig {
     }
 }
 
-impl Default for DMSCCircuitBreakerConfig {
+impl Default for RiCircuitBreakerConfig {
     /// Creates a default configuration for the circuit breaker.
     /// 
     /// Default values:
@@ -190,7 +190,7 @@ impl Default for DMSCCircuitBreakerConfig {
 #[derive(Debug)]
 struct CircuitBreakerStats {
     /// Current state of the circuit breaker (Closed, Open, HalfOpen)
-    state: RwLock<DMSCCircuitBreakerState>,
+    state: RwLock<RiCircuitBreakerState>,
     
     /// Total count of failures since the circuit breaker was created
     failure_count: AtomicUsize,
@@ -218,7 +218,7 @@ impl CircuitBreakerStats {
     #[allow(dead_code)]
     fn new() -> Self {
         Self {
-            state: RwLock::new(DMSCCircuitBreakerState::Closed),
+            state: RwLock::new(RiCircuitBreakerState::Closed),
             failure_count: AtomicUsize::new(0),
             success_count: AtomicUsize::new(0),
             last_failure_time: RwLock::new(None),
@@ -234,27 +234,27 @@ impl CircuitBreakerStats {
     /// - Resets consecutive failure count
     /// - Increments consecutive success count
     /// - Transitions from HalfOpen to Closed if success threshold is met
-    async fn record_success(&self, config: &DMSCCircuitBreakerConfig) {
+    async fn record_success(&self, config: &RiCircuitBreakerConfig) {
         self.success_count.fetch_add(1, Ordering::Relaxed);
         self.consecutive_failures.store(0, Ordering::Relaxed);
         self.consecutive_successes.fetch_add(1, Ordering::Relaxed);
 
         let state = self.state.read().await;
         match *state {
-            DMSCCircuitBreakerState::HalfOpen => {
+            RiCircuitBreakerState::HalfOpen => {
                 let successes = self.consecutive_successes.load(Ordering::Relaxed);
                 if successes >= config.success_threshold as usize {
                     drop(state);
                     let mut state_write = self.state.write().await;
-                    *state_write = DMSCCircuitBreakerState::Closed;
+                    *state_write = RiCircuitBreakerState::Closed;
                     self.consecutive_successes.store(0, Ordering::Relaxed);
                     self.failure_count.store(0, Ordering::Relaxed);
                     *self.last_state_change.write().await = Instant::now();
                 }
             }
-            DMSCCircuitBreakerState::Open => {
+            RiCircuitBreakerState::Open => {
             }
-            DMSCCircuitBreakerState::Closed => {
+            RiCircuitBreakerState::Closed => {
                 self.consecutive_failures.store(0, Ordering::Relaxed);
             }
         }
@@ -268,7 +268,7 @@ impl CircuitBreakerStats {
     /// - Updates last failure time
     /// - Transitions from Closed to Open if failure threshold is met
     /// - Transitions from HalfOpen to Open on any failure
-    async fn record_failure(&self, config: &DMSCCircuitBreakerConfig) {
+    async fn record_failure(&self, config: &RiCircuitBreakerConfig) {
         self.failure_count.fetch_add(1, Ordering::Relaxed);
         self.consecutive_successes.store(0, Ordering::Relaxed);
         self.consecutive_failures.fetch_add(1, Ordering::Relaxed);
@@ -276,24 +276,24 @@ impl CircuitBreakerStats {
 
         let state = self.state.read().await;
         match *state {
-            DMSCCircuitBreakerState::Closed => {
+            RiCircuitBreakerState::Closed => {
                 let failures = self.consecutive_failures.load(Ordering::Relaxed);
                 if failures >= config.failure_threshold as usize {
                     drop(state);
                     let mut state_write = self.state.write().await;
-                    *state_write = DMSCCircuitBreakerState::Open;
+                    *state_write = RiCircuitBreakerState::Open;
                     self.consecutive_failures.store(0, Ordering::Relaxed);
                     *self.last_state_change.write().await = Instant::now();
                 }
             }
-            DMSCCircuitBreakerState::HalfOpen => {
+            RiCircuitBreakerState::HalfOpen => {
                 // Any failure in HalfOpen state immediately opens the circuit
                 drop(state);
                 let mut state_write = self.state.write().await;
-                *state_write = DMSCCircuitBreakerState::Open;
+                *state_write = RiCircuitBreakerState::Open;
                 *self.last_state_change.write().await = Instant::now();
             }
-            DMSCCircuitBreakerState::Open => {
+            RiCircuitBreakerState::Open => {
                 // Already open - no state change needed
             }
         }
@@ -310,9 +310,9 @@ impl CircuitBreakerStats {
     /// # Returns
     /// 
     /// `true` if the timeout has elapsed and a reset should be attempted, `false` otherwise
-    async fn should_attempt_reset(&self, config: &DMSCCircuitBreakerConfig) -> bool {
+    async fn should_attempt_reset(&self, config: &RiCircuitBreakerConfig) -> bool {
         let state = self.state.read().await;
-        if let DMSCCircuitBreakerState::Open = *state {
+        if let RiCircuitBreakerState::Open = *state {
             let last_change = *self.last_state_change.read().await;
             Instant::now().duration_since(last_change) >= Duration::from_secs(config.timeout_seconds)
         } else {
@@ -326,7 +326,7 @@ impl CircuitBreakerStats {
     /// should test if the service has recovered.
     async fn transition_to_half_open(&self) {
         let mut state = self.state.write().await;
-        *state = DMSCCircuitBreakerState::HalfOpen;
+        *state = RiCircuitBreakerState::HalfOpen;
         *self.last_state_change.write().await = Instant::now();
     }
 
@@ -334,8 +334,8 @@ impl CircuitBreakerStats {
     /// 
     /// # Returns
     /// 
-    /// The current `DMSCCircuitBreakerState` (Closed, Open, or HalfOpen)
-    async fn get_state(&self) -> DMSCCircuitBreakerState {
+    /// The current `RiCircuitBreakerState` (Closed, Open, or HalfOpen)
+    async fn get_state(&self) -> RiCircuitBreakerState {
         self.state.read().await.clone()
     }
 
@@ -346,16 +346,16 @@ impl CircuitBreakerStats {
     /// 
     /// # Returns
     /// 
-    /// A `DMSCCircuitBreakerMetrics` struct containing the current statistics
+    /// A `RiCircuitBreakerMetrics` struct containing the current statistics
     #[allow(dead_code)]
-    fn get_stats(&self) -> DMSCCircuitBreakerMetrics {
+    fn get_stats(&self) -> RiCircuitBreakerMetrics {
         let state_str = match self.state.blocking_read().clone() {
-            DMSCCircuitBreakerState::Closed => "Closed",
-            DMSCCircuitBreakerState::Open => "Open",
-            DMSCCircuitBreakerState::HalfOpen => "HalfOpen",
+            RiCircuitBreakerState::Closed => "Closed",
+            RiCircuitBreakerState::Open => "Open",
+            RiCircuitBreakerState::HalfOpen => "HalfOpen",
         };
 
-        DMSCCircuitBreakerMetrics {
+        RiCircuitBreakerMetrics {
             state: state_str.to_string(),
             failure_count: self.failure_count.load(Ordering::Relaxed),
             success_count: self.success_count.load(Ordering::Relaxed),
@@ -371,7 +371,7 @@ impl CircuitBreakerStats {
 /// success and failure counts, consecutive success/failure streaks, and current state.
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
-pub struct DMSCCircuitBreakerMetrics {
+pub struct RiCircuitBreakerMetrics {
     /// Current state of the circuit breaker as a string
     pub state: String,
 
@@ -390,7 +390,7 @@ pub struct DMSCCircuitBreakerMetrics {
 
 #[cfg(feature = "pyo3")]
 #[pyo3::prelude::pymethods]
-impl DMSCCircuitBreakerMetrics {
+impl RiCircuitBreakerMetrics {
     #[new]
     fn py_new(state: String, failure_count: usize, success_count: usize, consecutive_failures: usize, consecutive_successes: usize) -> Self {
         Self {
@@ -429,15 +429,15 @@ impl DMSCCircuitBreakerMetrics {
 /// by monitoring the success and failure patterns of operations and transitioning between states
 /// (Closed, Open, HalfOpen) based on configurable thresholds.
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
-pub struct DMSCCircuitBreaker {
+pub struct RiCircuitBreaker {
     /// Configuration for the circuit breaker behavior
-    config: DMSCCircuitBreakerConfig,
+    config: RiCircuitBreakerConfig,
     
     /// Internal statistics and state management
     stats: Arc<CircuitBreakerStats>,
 }
 
-impl DMSCCircuitBreaker {
+impl RiCircuitBreaker {
     /// Creates a new circuit breaker with the specified configuration.
     /// 
     /// # Parameters
@@ -446,8 +446,8 @@ impl DMSCCircuitBreaker {
     /// 
     /// # Returns
     /// 
-    /// A new `DMSCCircuitBreaker` instance
-    pub fn new(config: DMSCCircuitBreakerConfig) -> Self {
+    /// A new `RiCircuitBreaker` instance
+    pub fn new(config: RiCircuitBreakerConfig) -> Self {
         Self {
             config,
             stats: Arc::new(CircuitBreakerStats::new()),
@@ -470,8 +470,8 @@ impl DMSCCircuitBreaker {
         });
         
         match state {
-            DMSCCircuitBreakerState::Closed => true,
-            DMSCCircuitBreakerState::Open => {
+            RiCircuitBreakerState::Closed => true,
+            RiCircuitBreakerState::Open => {
                 let last_change = futures::executor::block_on(async {
                     let guard = self.stats.last_state_change.read().await;
                     *guard
@@ -479,7 +479,7 @@ impl DMSCCircuitBreaker {
                 if last_change.elapsed() >= Duration::from_secs(self.config.timeout_seconds) {
                     futures::executor::block_on(async {
                         let mut state = self.stats.state.write().await;
-                        *state = DMSCCircuitBreakerState::HalfOpen;
+                        *state = RiCircuitBreakerState::HalfOpen;
                         *self.stats.last_state_change.write().await = Instant::now();
                     });
                     true
@@ -487,7 +487,7 @@ impl DMSCCircuitBreaker {
                     false
                 }
             }
-            DMSCCircuitBreakerState::HalfOpen => true,
+            RiCircuitBreakerState::HalfOpen => true,
         }
     }
 
@@ -522,12 +522,12 @@ impl DMSCCircuitBreaker {
     /// # Returns
     /// 
     /// The result of the operation, or an error if the circuit breaker is open
-    pub async fn execute<F, R>(&self, operation: F) -> DMSCResult<R>
+    pub async fn execute<F, R>(&self, operation: F) -> RiResult<R>
     where
-        F: std::future::Future<Output = DMSCResult<R>>,
+        F: std::future::Future<Output = RiResult<R>>,
     {
         if !self.allow_request() {
-            return Err(crate::core::DMSCError::ServiceMesh("Circuit breaker is open".to_string()));
+            return Err(crate::core::RiError::ServiceMesh("Circuit breaker is open".to_string()));
         }
 
         match operation.await {
@@ -546,8 +546,8 @@ impl DMSCCircuitBreaker {
     /// 
     /// # Returns
     /// 
-    /// The current `DMSCCircuitBreakerState` (Closed, Open, or HalfOpen)
-    pub fn get_state(&self) -> DMSCCircuitBreakerState {
+    /// The current `RiCircuitBreakerState` (Closed, Open, or HalfOpen)
+    pub fn get_state(&self) -> RiCircuitBreakerState {
         futures::executor::block_on(async {
             self.stats.get_state().await
         })
@@ -557,18 +557,18 @@ impl DMSCCircuitBreaker {
     ///
     /// # Returns
     ///
-    /// A `DMSCCircuitBreakerMetrics` struct containing the current statistics
-    pub fn get_stats(&self) -> DMSCCircuitBreakerMetrics {
+    /// A `RiCircuitBreakerMetrics` struct containing the current statistics
+    pub fn get_stats(&self) -> RiCircuitBreakerMetrics {
         let state_str = match futures::executor::block_on(async {
             let state = self.stats.state.read().await;
             state.clone()
         }) {
-            DMSCCircuitBreakerState::Closed => "Closed",
-            DMSCCircuitBreakerState::Open => "Open",
-            DMSCCircuitBreakerState::HalfOpen => "HalfOpen",
+            RiCircuitBreakerState::Closed => "Closed",
+            RiCircuitBreakerState::Open => "Open",
+            RiCircuitBreakerState::HalfOpen => "HalfOpen",
         };
 
-        DMSCCircuitBreakerMetrics {
+        RiCircuitBreakerMetrics {
             state: state_str.to_string(),
             failure_count: self.stats.failure_count.load(Ordering::Relaxed),
             success_count: self.stats.success_count.load(Ordering::Relaxed),
@@ -581,8 +581,8 @@ impl DMSCCircuitBreaker {
     /// 
     /// # Returns
     /// 
-    /// A reference to the `DMSCCircuitBreakerConfig` used by this circuit breaker
-    pub fn get_config(&self) -> DMSCCircuitBreakerConfig {
+    /// A reference to the `RiCircuitBreakerConfig` used by this circuit breaker
+    pub fn get_config(&self) -> RiCircuitBreakerConfig {
         self.config.clone()
     }
 
@@ -592,7 +592,7 @@ impl DMSCCircuitBreaker {
     pub fn reset(&self) {
         futures::executor::block_on(async move {
             let mut state = self.stats.state.write().await;
-            *state = DMSCCircuitBreakerState::Closed;
+            *state = RiCircuitBreakerState::Closed;
             self.stats.failure_count.store(0, Ordering::Relaxed);
             self.stats.success_count.store(0, Ordering::Relaxed);
             self.stats.consecutive_failures.store(0, Ordering::Relaxed);
@@ -607,7 +607,7 @@ impl DMSCCircuitBreaker {
     pub fn force_open(&self) {
         futures::executor::block_on(async move {
             let mut state = self.stats.state.write().await;
-            *state = DMSCCircuitBreakerState::Open;
+            *state = RiCircuitBreakerState::Open;
             *self.stats.last_state_change.write().await = Instant::now();
         });
     }
@@ -618,7 +618,7 @@ impl DMSCCircuitBreaker {
     pub fn force_close(&self) {
         futures::executor::block_on(async move {
             let mut state = self.stats.state.write().await;
-            *state = DMSCCircuitBreakerState::Closed;
+            *state = RiCircuitBreakerState::Closed;
             *self.stats.last_state_change.write().await = Instant::now();
         });
     }
@@ -651,17 +651,17 @@ impl DMSCCircuitBreaker {
 
     pub fn is_open(&self) -> bool {
         let state = futures::executor::block_on(self.stats.state.read());
-        matches!(*state, DMSCCircuitBreakerState::Open)
+        matches!(*state, RiCircuitBreakerState::Open)
     }
 
     pub fn is_closed(&self) -> bool {
         let state = futures::executor::block_on(self.stats.state.read());
-        matches!(*state, DMSCCircuitBreakerState::Closed)
+        matches!(*state, RiCircuitBreakerState::Closed)
     }
 
     pub fn is_half_open(&self) -> bool {
         let state = futures::executor::block_on(self.stats.state.read());
-        matches!(*state, DMSCCircuitBreakerState::HalfOpen)
+        matches!(*state, RiCircuitBreakerState::HalfOpen)
     }
 }
 
@@ -669,9 +669,9 @@ impl DMSCCircuitBreaker {
 /// 
 /// This struct extends the basic circuit breaker functionality by maintaining separate statistics
 /// for different error types, allowing for more granular control over circuit breaker behavior.
-pub struct DMSCAdvancedCircuitBreaker {
+pub struct RiAdvancedCircuitBreaker {
     /// Configuration for the circuit breaker behavior
-    config: DMSCCircuitBreakerConfig,
+    config: RiCircuitBreakerConfig,
     
     /// Error-type specific statistics and state management
     stats_by_error: RwLock<HashMap<String, Arc<CircuitBreakerStats>>>,
@@ -680,7 +680,7 @@ pub struct DMSCAdvancedCircuitBreaker {
     default_stats: Arc<CircuitBreakerStats>,
 }
 
-impl DMSCAdvancedCircuitBreaker {
+impl RiAdvancedCircuitBreaker {
     /// Creates a new advanced circuit breaker with the specified configuration.
     /// 
     /// # Parameters
@@ -689,8 +689,8 @@ impl DMSCAdvancedCircuitBreaker {
     /// 
     /// # Returns
     /// 
-    /// A new `DMSCAdvancedCircuitBreaker` instance
-    pub fn new(config: DMSCCircuitBreakerConfig) -> Self {
+    /// A new `RiAdvancedCircuitBreaker` instance
+    pub fn new(config: RiCircuitBreakerConfig) -> Self {
         Self {
             config,
             stats_by_error: RwLock::new(HashMap::new()),
@@ -753,8 +753,8 @@ impl DMSCAdvancedCircuitBreaker {
         let state = stats.get_state().await;
         
         match state {
-            DMSCCircuitBreakerState::Closed => true,
-            DMSCCircuitBreakerState::Open => {
+            RiCircuitBreakerState::Closed => true,
+            RiCircuitBreakerState::Open => {
                 if stats.should_attempt_reset(&self.config).await {
                     stats.transition_to_half_open().await;
                     true
@@ -762,7 +762,7 @@ impl DMSCAdvancedCircuitBreaker {
                     false
                 }
             }
-            DMSCCircuitBreakerState::HalfOpen => true,
+            RiCircuitBreakerState::HalfOpen => true,
         }
     }
 }

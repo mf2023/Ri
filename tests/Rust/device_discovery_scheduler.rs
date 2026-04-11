@@ -1,7 +1,7 @@
 //! Copyright © 2025-2026 Wenze Wei. All Rights Reserved.
 //!
-//! This file is part of DMSC.
-//! The DMSC project belongs to the Dunimd Team.
+//! This file is part of Ri.
+//! The Ri project belongs to the Dunimd Team.
 //!
 //! Licensed under the Apache License, Version 2.0 (the "License");
 //! You may not use this file except in compliance with the License.
@@ -15,14 +15,14 @@
 //! See the License for the specific language governing permissions and
 //! limitations under the License.
 
-use dmsc::device::{DMSCDevice, DMSCDeviceType, DMSCDeviceCapabilities};
-use dmsc::device::discovery_scheduler::{DMSCDeviceDiscoveryEngine, DMSCResourceScheduler, DeviceScanResult, ResourceRequest};
+use ri::device::{RiDevice, RiDeviceType, RiDeviceCapabilities};
+use ri::device::discovery_scheduler::{RiDeviceDiscoveryEngine, RiResourceScheduler, DeviceScanResult, ResourceRequest};
 
-/// Device discovery and resource scheduling test module for DMSC tooling.
+/// Device discovery and resource scheduling test module for Ri tooling.
 ///
 /// This module provides comprehensive test coverage for the device management
 /// components that handle hardware resource discovery and scheduling in the
-/// DMSC tooling layer. The tests validate device detection, capability matching,
+/// Ri tooling layer. The tests validate device detection, capability matching,
 /// and resource allocation strategies.
 ///
 /// ## Test Coverage
@@ -61,7 +61,7 @@ Tests verify that scheduling decisions correctly balance multiple
 /// requirements including memory, compute, bandwidth, and custom features.
 
 #[test]
-/// Tests DMSCDeviceDiscoveryEngine device discovery from scan results.
+/// Tests RiDeviceDiscoveryEngine device discovery from scan results.
 ///
 /// Verifies that the discovery engine can transform raw scan results
 /// into device representations with proper type classification.
@@ -79,7 +79,7 @@ Tests verify that scheduling decisions correctly balance multiple
 ///    - Other accelerators use type inference
 ///
 /// 3. **Device Output**: Transformed device representation
-///    - DMSCDevice with unique ID
+///    - RiDevice with unique ID
 ///    - Classified device type
 ///    - Initial status set to Unknown
 ///
@@ -97,7 +97,7 @@ Tests verify that scheduling decisions correctly balance multiple
 /// - The device has GPU type classification
 /// - Device count matches input count
 fn test_device_discovery_engine() {
-    let mut engine = DMSCDeviceDiscoveryEngine::new();
+    let mut engine = RiDeviceDiscoveryEngine::new();
     
     let scan_results = vec![
         DeviceScanResult {
@@ -112,11 +112,11 @@ fn test_device_discovery_engine() {
     
     let devices = engine.discover_devices(scan_results);
     assert_eq!(devices.len(), 1);
-    assert_eq!(devices[0].device_type(), DMSCDeviceType::GPU);
+    assert_eq!(devices[0].device_type(), RiDeviceType::GPU);
 }
 
 #[test]
-/// Tests DMSCResourceScheduler device selection for resource requests.
+/// Tests RiResourceScheduler device selection for resource requests.
 ///
 /// Verifies that the scheduler can match resource requests to
 /// available devices based on capability requirements.
@@ -150,7 +150,7 @@ fn test_device_discovery_engine() {
 /// - The returned device ID matches the input device
 /// - The selected device satisfies all requirements
 fn test_resource_scheduler() {
-    let mut scheduler = DMSCResourceScheduler::new();
+    let mut scheduler = RiResourceScheduler::new();
     
     let request = ResourceRequest {
         request_id: "req_1".to_string(),
@@ -163,10 +163,10 @@ fn test_resource_scheduler() {
     };
     
     let devices = vec![
-        DMSCDevice::new(
+        RiDevice::new(
             "GPU 1".to_string(),
-            DMSCDeviceType::GPU,
-        ).with_capabilities(DMSCDeviceCapabilities {
+            RiDeviceType::GPU,
+        ).with_capabilities(RiDeviceCapabilities {
             memory_gb: Some(16.0),
             compute_units: Some(512),
             storage_gb: Some(1000.0),

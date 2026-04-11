@@ -1,7 +1,7 @@
 # Copyright © 2025-2026 Wenze Wei. All Rights Reserved.
 #
-# This file is part of DMSC.
-# The DMSC project belongs to the Dunimd Team.
+# This file is part of Ri.
+# The Ri project belongs to the Dunimd Team.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # You may not use this file except in compliance with the License.
@@ -16,10 +16,10 @@
 # limitations under the License.
 
 # =============================================================================
-# Cargo Package Configuration for DMSC
+# Cargo Package Configuration for Ri
 # =============================================================================
 # This file defines the Rust package metadata, dependencies, and feature flags
-# for the DMSC (Dunimd Middleware Service) project. DMSC is a high-performance
+# for the Ri (Ri) project. Ri is a high-performance
 # middleware framework built with Rust, featuring modular architecture for
 # building distributed systems, API gateways, and microservices.
 #
@@ -46,7 +46,7 @@
 
 [package]
 # Package name used for crate publishing and dependency references
-name = "dmsc"
+name = "ri"
 
 # Semantic version of the package
 # Follows MAJOR.MINOR.PATCH format
@@ -60,10 +60,10 @@ edition = "2021"
 authors = ["Dunimd Team"]
 
 # Short description for crates.io and package managers
-description = "Dunimd Middleware Service - A high-performance Rust middleware framework with modular architecture"
+description = "Ri - A high-performance Rust middleware framework with modular architecture"
 
 # Source code repository URL
-repository = "https://github.com/mf2023/DMSC"
+repository = "https://github.com/mf2023/Ri"
 
 # Path to README file for crates.io rendering
 readme = "README.md"
@@ -86,7 +86,7 @@ license = "Apache-2.0"
 
 [lib]
 # Library name (used for the output file)
-name = "dmsc"
+name = "ri"
 
 # Path to the library source file
 path = "src/lib.rs"
@@ -111,17 +111,17 @@ doctest = false
 [dependencies]
 # PyO3 Python bindings with extension-module feature for building Python extensions
 # Optional to allow pure Rust builds without Python support
-# When enabled, allows Python code to import and use DMSC functionality
+# When enabled, allows Python code to import and use Ri functionality
 pyo3 = { version = "0.27", features = ["extension-module"], optional = true }
 
 # Safer-FFI C/C++ bindings with proc_macros feature for generating C headers
 # Optional to allow pure Rust builds without C API support
-# When enabled, allows C/C++ code to link and use DMSC functionality
+# When enabled, allows C/C++ code to link and use Ri functionality
 safer-ffi = { version = "0.1", features = ["proc_macros"], optional = true }
 
 # JNI bindings for Java support
 # Optional to allow pure Rust builds without Java support
-# When enabled, allows Java code to use DMSC functionality via JNI
+# When enabled, allows Java code to use Ri functionality via JNI
 jni = { version = "0.21", optional = true }
 
 # Kafka message streaming support
@@ -132,7 +132,7 @@ jni = { version = "0.21", optional = true }
 # gssapi-vendored: Bundles Cyrus SASL for authentication support (Linux only)
 # Note: On Windows, SSPI is used instead of GSSAPI for Kerberos authentication
 
-# DMSC core dependencies (always included)
+# Ri core dependencies (always included)
 # Serialization and deserialization framework with derive macro support
 # Used for configuration parsing, API serialization, and data transformation
 serde = { version = "1", features = ["derive"] }

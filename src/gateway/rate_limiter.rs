@@ -1,7 +1,7 @@
 //! Copyright © 2025-2026 Wenze Wei. All Rights Reserved.
 //!
-//! This file is part of DMSC.
-//! The DMSC project belongs to the Dunimd Team.
+//! This file is part of Ri.
+//! The Ri project belongs to the Dunimd Team.
 //!
 //! Licensed under the Apache License, Version 2.0 (the "License");
 //! You may not use this file except in compliance with the License.
@@ -19,15 +19,15 @@
 
 //! # Rate Limiter Module
 //! 
-//! This module provides rate limiting functionality for the DMSC gateway, allowing for
+//! This module provides rate limiting functionality for the Ri gateway, allowing for
 //! controlling the rate of requests from clients to prevent abuse and ensure fair usage.
 //! 
 //! ## Key Components
 //! 
-//! - **DMSCRateLimitConfig**: Configuration for rate limiting behavior
-//! - **DMSCRateLimiter**: Token bucket based rate limiter implementation
-//! - **DMSCSlidingWindowRateLimiter**: Sliding window based rate limiter for fine-grained control
-//! - **DMSCRateLimitStats**: Metrics for monitoring rate limiter performance
+//! - **RiRateLimitConfig**: Configuration for rate limiting behavior
+//! - **RiRateLimiter**: Token bucket based rate limiter implementation
+//! - **RiSlidingWindowRateLimiter**: Sliding window based rate limiter for fine-grained control
+//! - **RiRateLimitStats**: Metrics for monitoring rate limiter performance
 //! 
 //! ## Design Principles
 //! 
@@ -43,11 +43,11 @@
 //! ## Usage
 //! 
 //! ```rust
-//! use dmsc::prelude::*;
+//! use ri::prelude::*;
 //! 
 //! async fn example() {
 //!     // Create a rate limiter with default configuration
-//!     let mut limiter = DMSCRateLimiter::new(DMSCRateLimitConfig::default());
+//!     let mut limiter = RiRateLimiter::new(RiRateLimitConfig::default());
 //!     
 //!     // Check if a request should be allowed
 //!     let client_ip = "192.168.1.1";
@@ -64,7 +64,7 @@
 //!     }
 //!     
 //!     // Create a sliding window rate limiter
-//!     let sliding_limiter = DMSCSlidingWindowRateLimiter::new(100, 60);
+//!     let sliding_limiter = RiSlidingWindowRateLimiter::new(100, 60);
 //!     if sliding_limiter.allow_request().await {
 //!         println!("Sliding window request allowed");
 //!     }
@@ -83,7 +83,7 @@ use std::time::{Duration, Instant};
 /// including the steady rate, burst capacity, and window duration.
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 #[derive(Debug, Clone)]
-pub struct DMSCRateLimitConfig {
+pub struct RiRateLimitConfig {
     /// Maximum number of requests allowed per second in steady state
     pub requests_per_second: u32,
     
@@ -96,7 +96,7 @@ pub struct DMSCRateLimitConfig {
 
 #[cfg(feature = "pyo3")]
 #[pyo3::prelude::pymethods]
-impl DMSCRateLimitConfig {
+impl RiRateLimitConfig {
     #[new]
     fn py_new() -> Self {
         Self::default()
@@ -136,7 +136,7 @@ impl DMSCRateLimitConfig {
     }
 }
 
-impl Default for DMSCRateLimitConfig {
+impl Default for RiRateLimitConfig {
     /// Creates a default rate limit configuration.
     /// 
     /// Default values:
@@ -199,7 +199,7 @@ impl RateLimitBucket {
     /// # Returns
     /// 
     /// `true` if tokens were successfully consumed, `false` otherwise
-    async fn try_consume(&self, tokens: usize, config: &DMSCRateLimitConfig) -> bool {
+    async fn try_consume(&self, tokens: usize, config: &RiRateLimitConfig) -> bool {
         let now = Instant::now();
         let mut last_update = self.last_update.write().await;
         
@@ -229,9 +229,9 @@ impl RateLimitBucket {
     /// 
     /// # Returns
     /// 
-    /// A `DMSCRateLimitStats` struct containing current tokens and total requests
-    fn get_stats(&self) -> DMSCRateLimitStats {
-        DMSCRateLimitStats {
+    /// A `RiRateLimitStats` struct containing current tokens and total requests
+    fn get_stats(&self) -> RiRateLimitStats {
+        RiRateLimitStats {
             current_tokens: self.tokens.load(Ordering::Relaxed),
             total_requests: self.request_count.load(Ordering::Relaxed),
         }
@@ -244,7 +244,7 @@ impl RateLimitBucket {
 /// number of available tokens and the total number of requests processed.
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass(get_all, set_all))]
 #[derive(Debug, Clone)]
-pub struct DMSCRateLimitStats {
+pub struct RiRateLimitStats {
     /// Current number of available tokens in the bucket
     pub current_tokens: usize,
 
@@ -254,7 +254,7 @@ pub struct DMSCRateLimitStats {
 
 #[cfg(feature = "pyo3")]
 #[pyo3::prelude::pymethods]
-impl DMSCRateLimitStats {
+impl RiRateLimitStats {
     #[new]
     fn py_new(current_tokens: usize, total_requests: usize) -> Self {
         Self {
@@ -277,15 +277,15 @@ impl DMSCRateLimitStats {
 /// This struct implements the token bucket algorithm for rate limiting, allowing
 /// for both steady-state rate limiting and temporary bursts of requests.
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
-pub struct DMSCRateLimiter {
+pub struct RiRateLimiter {
     /// Configuration for rate limiting behavior
-    config: DMSCRateLimitConfig,
+    config: RiRateLimitConfig,
     
     /// Map of key to token bucket instances
     buckets: RwLock<HashMap<String, Arc<RateLimitBucket>>>,
 }
 
-impl DMSCRateLimiter {
+impl RiRateLimiter {
     /// Creates a new rate limiter with the specified configuration.
     /// 
     /// # Parameters
@@ -294,8 +294,8 @@ impl DMSCRateLimiter {
     /// 
     /// # Returns
     /// 
-    /// A new `DMSCRateLimiter` instance
-    pub fn new(config: DMSCRateLimitConfig) -> Self {
+    /// A new `RiRateLimiter` instance
+    pub fn new(config: RiRateLimitConfig) -> Self {
         Self {
             config,
             buckets: RwLock::new(HashMap::new()),
@@ -313,7 +313,7 @@ impl DMSCRateLimiter {
     /// # Returns
     /// 
     /// `true` if the request should be allowed, `false` otherwise
-    pub async fn check_request(&self, request: &crate::gateway::DMSCGatewayRequest) -> bool {
+    pub async fn check_request(&self, request: &crate::gateway::RiGatewayRequest) -> bool {
         // Use client IP as the key for rate limiting
         let key = request.remote_addr.clone();
         self.check_rate_limit(&key, 1)
@@ -362,8 +362,8 @@ impl DMSCRateLimiter {
     /// 
     /// # Returns
     /// 
-    /// An `Option<DMSCRateLimitStats>` with the statistics, or `None` if no bucket exists for the key
-    pub fn get_stats(&self, key: &str) -> Option<DMSCRateLimitStats> {
+    /// An `Option<RiRateLimitStats>` with the statistics, or `None` if no bucket exists for the key
+    pub fn get_stats(&self, key: &str) -> Option<RiRateLimitStats> {
         futures::executor::block_on(async {
             let buckets = self.buckets.read().await;
             buckets.get(key).map(|bucket| bucket.get_stats())
@@ -385,8 +385,8 @@ impl DMSCRateLimiter {
     /// 
     /// # Returns
     /// 
-    /// A `HashMap<String, DMSCRateLimitStats>` with statistics for all keys
-    pub fn get_all_stats(&self) -> HashMap<String, DMSCRateLimitStats> {
+    /// A `HashMap<String, RiRateLimitStats>` with statistics for all keys
+    pub fn get_all_stats(&self) -> HashMap<String, RiRateLimitStats> {
         futures::executor::block_on(async {
             let buckets = self.buckets.read().await;
             let mut stats = HashMap::new();
@@ -427,8 +427,8 @@ impl DMSCRateLimiter {
     /// 
     /// # Returns
     /// 
-    /// A reference to the current `DMSCRateLimitConfig`
-    pub fn get_config(&self) -> DMSCRateLimitConfig {
+    /// A reference to the current `RiRateLimitConfig`
+    pub fn get_config(&self) -> RiRateLimitConfig {
         self.config.clone()
     }
 
@@ -439,7 +439,7 @@ impl DMSCRateLimiter {
     /// # Parameters
     /// 
     /// - `config`: The new rate limit configuration
-    pub async fn update_config(&mut self, config: DMSCRateLimitConfig) {
+    pub async fn update_config(&mut self, config: RiRateLimitConfig) {
         self.config = config;
         
         let mut buckets = self.buckets.write().await;
@@ -472,7 +472,7 @@ impl DMSCRateLimiter {
 /// This struct implements a sliding window rate limiter, which provides more precise
 /// rate limiting by tracking all requests within a sliding time window.
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
-pub struct DMSCSlidingWindowRateLimiter {
+pub struct RiSlidingWindowRateLimiter {
     /// Maximum number of requests allowed within the window
     max_requests: u32,
     /// Duration of the sliding window
@@ -481,7 +481,7 @@ pub struct DMSCSlidingWindowRateLimiter {
     requests: RwLock<Vec<Instant>>,
 }
 
-impl DMSCSlidingWindowRateLimiter {
+impl RiSlidingWindowRateLimiter {
     /// Creates a new sliding window rate limiter.
     /// 
     /// # Parameters
@@ -491,7 +491,7 @@ impl DMSCSlidingWindowRateLimiter {
     /// 
     /// # Returns
     /// 
-    /// A new `DMSCSlidingWindowRateLimiter` instance
+    /// A new `RiSlidingWindowRateLimiter` instance
     pub fn new(max_requests: u32, window_seconds: u64) -> Self {
         Self {
             max_requests,

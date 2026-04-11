@@ -1,7 +1,7 @@
 //! Copyright © 2025-2026 Wenze Wei. All Rights Reserved.
 //!
-//! This file is part of DMSC.
-//! The DMSC project belongs to the Dunimd Team.
+//! This file is part of Ri.
+//! The Ri project belongs to the Dunimd Team.
 //!
 //! Licensed under the Apache License, Version 2.0 (the "License");
 //! You may not use this file except in compliance with the License.
@@ -19,23 +19,23 @@
 
 //! # Metrics Collector
 //!
-//! This file implements a comprehensive metrics collection system for the DMSC framework. It provides
+//! This file implements a comprehensive metrics collection system for the Ri framework. It provides
 //! tools for collecting, analyzing, and reporting performance and system metrics. The system includes
 //! sliding window data structures for time-series data, quantile calculators for performance analysis,
 //! and system metrics collectors for monitoring CPU, memory, disk, and network usage.
 //!
 //! ## Key Components
 //!
-//! - **DMSCSlidingWindow**: Sliding window for time-series data collection
-//! - **DMSCQuantileCalculator**: Quantile calculator for performance metrics
-//! - **DMSCPerformanceCollector**: Performance metrics collector with sliding window and quantile calculation
-//! - **DMSCPerformanceMetrics**: Performance metrics snapshot structure
-//! - **DMSCCPUMetrics**: CPU metrics structure
-//! - **DMSCMemoryMetrics**: Memory metrics structure
-//! - **DMSCDiskMetrics**: Disk metrics structure
-//! - **DMSCNetworkMetrics**: Network metrics structure
-//! - **DMSCSystemMetrics**: System metrics snapshot structure
-//! - **DMSCSystemMetricsCollector**: System metrics collector
+//! - **RiSlidingWindow**: Sliding window for time-series data collection
+//! - **RiQuantileCalculator**: Quantile calculator for performance metrics
+//! - **RiPerformanceCollector**: Performance metrics collector with sliding window and quantile calculation
+//! - **RiPerformanceMetrics**: Performance metrics snapshot structure
+//! - **RiCPUMetrics**: CPU metrics structure
+//! - **RiMemoryMetrics**: Memory metrics structure
+//! - **RiDiskMetrics**: Disk metrics structure
+//! - **RiNetworkMetrics**: Network metrics structure
+//! - **RiSystemMetrics**: System metrics snapshot structure
+//! - **RiSystemMetricsCollector**: System metrics collector
 //!
 //! ## Design Principles
 //!
@@ -51,12 +51,12 @@
 //! ## Usage
 //!
 //! ```rust
-//! use dmsc::observability::{DMSCPerformanceCollector, DMSCSystemMetricsCollector};
+//! use ri::observability::{RiPerformanceCollector, RiSystemMetricsCollector};
 //! use std::time::Duration;
 //!
 //! fn example() {
 //!     // Create a performance collector with a 1-minute window and 5-second buckets
-//!     let mut perf_collector = DMSCPerformanceCollector::new(
+//!     let mut perf_collector = RiPerformanceCollector::new(
 //!         Duration::from_secs(60),
 //!         Duration::from_secs(5)
 //!     );
@@ -71,7 +71,7 @@
 //!     println!("Error rate: {:.2}%", perf_metrics.error_rate * 100.0);
 //!     
 //!     // Create a system metrics collector
-//!     let mut sys_collector = DMSCSystemMetricsCollector::new();
+//!     let mut sys_collector = RiSystemMetricsCollector::new();
 //!     
 //!     // Collect system metrics
 //!     let sys_metrics = sys_collector.collect();
@@ -93,7 +93,7 @@ use sysinfo::{CpuExt, DiskExt, NetworkExt, System, SystemExt};
 /// data points.
 #[allow(dead_code)]
 #[derive(Debug, Clone)]
-pub struct DMSCSlidingWindow<T> {
+pub struct RiSlidingWindow<T> {
     /// Total size of the sliding window
     _window_size: Duration,
     /// Size of each bucket within the window
@@ -120,7 +120,7 @@ struct WindowBucket<T> {
 }
 
 #[allow(dead_code)]
-impl<T> DMSCSlidingWindow<T> {
+impl<T> RiSlidingWindow<T> {
     /// Creates a new sliding window with the specified window size and bucket size.
     ///
     /// # Parameters
@@ -130,7 +130,7 @@ impl<T> DMSCSlidingWindow<T> {
     ///
     /// # Returns
     ///
-    /// A new DMSCSlidingWindow instance
+    /// A new RiSlidingWindow instance
     pub fn new(window_size: Duration, bucket_size: Duration) -> Self {
         let bucket_count = (window_size.as_millis() / bucket_size.as_millis()).max(1) as usize;
         let mut buckets = VecDeque::with_capacity(bucket_count);
@@ -226,25 +226,25 @@ impl<T> DMSCSlidingWindow<T> {
 /// It sorts the data and uses linear interpolation for non-integer indices.
 #[allow(dead_code)]
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct DMSCQuantileCalculator {
+pub struct RiQuantileCalculator {
     /// Sorted list of data points
     sorted_data: Vec<f64>,
 }
 
 #[allow(dead_code)]
-impl Default for DMSCQuantileCalculator {
+impl Default for RiQuantileCalculator {
     fn default() -> Self {
         Self::new()
     }
 }
 
 #[allow(dead_code)]
-impl DMSCQuantileCalculator {
+impl RiQuantileCalculator {
     /// Creates a new quantile calculator.
     ///
     /// # Returns
     ///
-    /// A new DMSCQuantileCalculator instance
+    /// A new RiQuantileCalculator instance
     pub fn new() -> Self {
         Self {
             sorted_data: Vec::new(),
@@ -376,19 +376,19 @@ impl DMSCQuantileCalculator {
 /// This struct collects performance metrics using sliding windows and provides quantile-based
 /// performance analysis.
 #[allow(dead_code)]
-pub struct DMSCPerformanceCollector {
+pub struct RiPerformanceCollector {
     /// Sliding window for latency data
-    latency_window: DMSCSlidingWindow<f64>,
+    latency_window: RiSlidingWindow<f64>,
     /// Sliding window for throughput data
-    throughput_window: DMSCSlidingWindow<u64>,
+    throughput_window: RiSlidingWindow<u64>,
     /// Sliding window for error rate data
-    error_rate_window: DMSCSlidingWindow<bool>,
+    error_rate_window: RiSlidingWindow<bool>,
     /// Quantile calculator for performance analysis
-    quantile_calculator: DMSCQuantileCalculator,
+    quantile_calculator: RiQuantileCalculator,
 }
 
 #[allow(dead_code)]
-impl DMSCPerformanceCollector {
+impl RiPerformanceCollector {
     /// Creates a new performance collector with the specified window size and bucket size.
     ///
     /// # Parameters
@@ -398,13 +398,13 @@ impl DMSCPerformanceCollector {
     ///
     /// # Returns
     ///
-    /// A new DMSCPerformanceCollector instance
+    /// A new RiPerformanceCollector instance
     pub fn new(window_size: Duration, bucket_size: Duration) -> Self {
         Self {
-            latency_window: DMSCSlidingWindow::new(window_size, bucket_size),
-            throughput_window: DMSCSlidingWindow::new(window_size, bucket_size),
-            error_rate_window: DMSCSlidingWindow::new(window_size, bucket_size),
-            quantile_calculator: DMSCQuantileCalculator::new(),
+            latency_window: RiSlidingWindow::new(window_size, bucket_size),
+            throughput_window: RiSlidingWindow::new(window_size, bucket_size),
+            error_rate_window: RiSlidingWindow::new(window_size, bucket_size),
+            quantile_calculator: RiQuantileCalculator::new(),
         }
     }
 
@@ -424,8 +424,8 @@ impl DMSCPerformanceCollector {
     ///
     /// # Returns
     ///
-    /// A DMSCPerformanceMetrics instance containing the current performance metrics
-    pub fn get_metrics(&mut self) -> DMSCPerformanceMetrics {
+    /// A RiPerformanceMetrics instance containing the current performance metrics
+    pub fn get_metrics(&mut self) -> RiPerformanceMetrics {
         let latencies: Vec<f64> = self
             .latency_window
             .get_data_points()
@@ -458,7 +458,7 @@ impl DMSCPerformanceCollector {
             0.0
         };
 
-        DMSCPerformanceMetrics {
+        RiPerformanceMetrics {
             p50_latency_ms: p50,
             p95_latency_ms: p95,
             p99_latency_ms: p99,
@@ -476,7 +476,7 @@ impl DMSCPerformanceCollector {
 ///
 /// This struct represents a snapshot of performance metrics at a specific point in time.
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct DMSCPerformanceMetrics {
+pub struct RiPerformanceMetrics {
     /// 50th percentile latency in milliseconds
     pub p50_latency_ms: f64,
     /// 95th percentile latency in milliseconds
@@ -502,7 +502,7 @@ pub struct DMSCPerformanceMetrics {
 /// This struct represents CPU usage metrics.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass(get_all))]
-pub struct DMSCCPUMetrics {
+pub struct RiCPUMetrics {
     /// Total CPU usage percentage
     pub total_usage_percent: f64,
     /// Per-core CPU usage percentages
@@ -518,7 +518,7 @@ pub struct DMSCCPUMetrics {
 /// This struct represents memory usage metrics.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass(get_all))]
-pub struct DMSCMemoryMetrics {
+pub struct RiMemoryMetrics {
     /// Total memory in bytes
     pub total_bytes: u64,
     /// Used memory in bytes
@@ -542,7 +542,7 @@ pub struct DMSCMemoryMetrics {
 /// This struct represents disk usage metrics.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass(get_all))]
-pub struct DMSCDiskMetrics {
+pub struct RiDiskMetrics {
     /// Total disk space in bytes
     pub total_bytes: u64,
     /// Used disk space in bytes
@@ -566,7 +566,7 @@ pub struct DMSCDiskMetrics {
 /// This struct represents network usage metrics.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass(get_all))]
-pub struct DMSCNetworkMetrics {
+pub struct RiNetworkMetrics {
     /// Total bytes received
     pub total_received_bytes: u64,
     /// Total bytes transmitted
@@ -590,15 +590,15 @@ pub struct DMSCNetworkMetrics {
 /// This struct represents a snapshot of system metrics at a specific point in time.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
-pub struct DMSCSystemMetrics {
+pub struct RiSystemMetrics {
     /// CPU metrics
-    pub cpu: DMSCCPUMetrics,
+    pub cpu: RiCPUMetrics,
     /// Memory metrics
-    pub memory: DMSCMemoryMetrics,
+    pub memory: RiMemoryMetrics,
     /// Disk metrics
-    pub disk: DMSCDiskMetrics,
+    pub disk: RiDiskMetrics,
     /// Network metrics
-    pub network: DMSCNetworkMetrics,
+    pub network: RiNetworkMetrics,
     /// Timestamp of the metrics collection (Unix timestamp in milliseconds)
     pub timestamp: u64,
 }
@@ -609,7 +609,7 @@ pub struct DMSCSystemMetrics {
 /// system monitoring capabilities.
 #[allow(dead_code)]
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
-pub struct DMSCSystemMetricsCollector {
+pub struct RiSystemMetricsCollector {
     /// sysinfo System instance for collecting metrics
     system: System,
     /// Last network bytes received
@@ -625,19 +625,19 @@ pub struct DMSCSystemMetricsCollector {
 }
 
 #[allow(dead_code)]
-impl Default for DMSCSystemMetricsCollector {
+impl Default for RiSystemMetricsCollector {
     fn default() -> Self {
         Self::new()
     }
 }
 
 #[allow(dead_code)]
-impl DMSCSystemMetricsCollector {
+impl RiSystemMetricsCollector {
     /// Creates a new system metrics collector.
     ///
     /// # Returns
     ///
-    /// A new DMSCSystemMetricsCollector instance
+    /// A new RiSystemMetricsCollector instance
     pub fn new() -> Self {
         let mut system = System::new_all();
         system.refresh_all();
@@ -659,8 +659,8 @@ impl DMSCSystemMetricsCollector {
     ///
     /// # Returns
     ///
-    /// A DMSCSystemMetrics instance containing the current system metrics
-    pub fn collect(&mut self) -> DMSCSystemMetrics {
+    /// A RiSystemMetrics instance containing the current system metrics
+    pub fn collect(&mut self) -> RiSystemMetrics {
         self.system.refresh_all();
 
         let cpu = self.get_cpu_metrics();
@@ -670,7 +670,7 @@ impl DMSCSystemMetricsCollector {
 
         let timestamp = chrono::Utc::now().timestamp_millis() as u64;
         
-        DMSCSystemMetrics {
+        RiSystemMetrics {
             cpu,
             memory,
             disk,
@@ -683,8 +683,8 @@ impl DMSCSystemMetricsCollector {
     ///
     /// # Returns
     ///
-    /// A DMSCCPUMetrics instance containing the CPU metrics
-    fn get_cpu_metrics(&self) -> DMSCCPUMetrics {
+    /// A RiCPUMetrics instance containing the CPU metrics
+    fn get_cpu_metrics(&self) -> RiCPUMetrics {
         let total_usage = self.system.global_cpu_info().cpu_usage();
         let per_core_usage: Vec<f64> = self
             .system
@@ -695,7 +695,7 @@ impl DMSCSystemMetricsCollector {
 
         // Note: sysinfo crate doesn't expose context switches and interrupts on all platforms
         // These values will be 0 on platforms where they're not available
-        DMSCCPUMetrics {
+        RiCPUMetrics {
             total_usage_percent: total_usage as f64,
             per_core_usage,
             context_switches: 0,
@@ -707,8 +707,8 @@ impl DMSCSystemMetricsCollector {
     ///
     /// # Returns
     ///
-    /// A DMSCMemoryMetrics instance containing the memory metrics
-    fn get_memory_metrics(&self) -> DMSCMemoryMetrics {
+    /// A RiMemoryMetrics instance containing the memory metrics
+    fn get_memory_metrics(&self) -> RiMemoryMetrics {
         let total = self.system.total_memory();
         let used = self.system.used_memory();
         let free = self.system.free_memory();
@@ -723,7 +723,7 @@ impl DMSCSystemMetricsCollector {
             0.0
         };
 
-        DMSCMemoryMetrics {
+        RiMemoryMetrics {
             total_bytes: total,
             used_bytes: used,
             free_bytes: free,
@@ -739,8 +739,8 @@ impl DMSCSystemMetricsCollector {
     ///
     /// # Returns
     ///
-    /// A DMSCDiskMetrics instance containing the disk metrics
-    fn get_disk_metrics(&self) -> DMSCDiskMetrics {
+    /// A RiDiskMetrics instance containing the disk metrics
+    fn get_disk_metrics(&self) -> RiDiskMetrics {
         // Get first disk for now
         if let Some(disk) = self.system.disks().first() {
             let total = disk.total_space();
@@ -750,7 +750,7 @@ impl DMSCSystemMetricsCollector {
 
             // Note: sysinfo crate doesn't expose I/O statistics on all platforms
             // These values will be 0 on platforms where they're not available
-            DMSCDiskMetrics {
+            RiDiskMetrics {
                 total_bytes: total,
                 used_bytes: used,
                 free_bytes: available,
@@ -761,7 +761,7 @@ impl DMSCSystemMetricsCollector {
                 write_count: 0,
             }
         } else {
-            DMSCDiskMetrics {
+            RiDiskMetrics {
                 total_bytes: 0,
                 used_bytes: 0,
                 free_bytes: 0,
@@ -778,8 +778,8 @@ impl DMSCSystemMetricsCollector {
     ///
     /// # Returns
     ///
-    /// A DMSCNetworkMetrics instance containing the network metrics
-    fn get_network_metrics(&mut self) -> DMSCNetworkMetrics {
+    /// A RiNetworkMetrics instance containing the network metrics
+    fn get_network_metrics(&mut self) -> RiNetworkMetrics {
         let (received_bytes, transmitted_bytes, received_packets, transmitted_packets) =
             Self::get_network_total(&self.system);
 
@@ -805,7 +805,7 @@ impl DMSCSystemMetricsCollector {
         self.last_network_transmitted_packets = transmitted_packets;
         self.last_network_time = now;
 
-        DMSCNetworkMetrics {
+        RiNetworkMetrics {
             total_received_bytes: received_bytes,
             total_transmitted_bytes: transmitted_bytes,
             received_bytes_per_sec,
@@ -850,14 +850,14 @@ impl DMSCSystemMetricsCollector {
 
 #[cfg(feature = "pyo3")]
 #[pyo3::prelude::pymethods]
-impl DMSCSystemMetricsCollector {
+impl RiSystemMetricsCollector {
     #[new]
     fn py_new() -> Self {
         Self::new()
     }
     
     #[pyo3(name = "collect")]
-    fn py_collect(&mut self) -> DMSCSystemMetrics {
+    fn py_collect(&mut self) -> RiSystemMetrics {
         self.collect()
     }
     
@@ -869,24 +869,24 @@ impl DMSCSystemMetricsCollector {
 
 #[cfg(feature = "pyo3")]
 #[pyo3::prelude::pymethods]
-impl DMSCSystemMetrics {
+impl RiSystemMetrics {
     #[pyo3(name = "cpu")]
-    fn py_cpu(&self) -> DMSCCPUMetrics {
+    fn py_cpu(&self) -> RiCPUMetrics {
         self.cpu.clone()
     }
     
     #[pyo3(name = "memory")]
-    fn py_memory(&self) -> DMSCMemoryMetrics {
+    fn py_memory(&self) -> RiMemoryMetrics {
         self.memory.clone()
     }
     
     #[pyo3(name = "disk")]
-    fn py_disk(&self) -> DMSCDiskMetrics {
+    fn py_disk(&self) -> RiDiskMetrics {
         self.disk.clone()
     }
     
     #[pyo3(name = "network")]
-    fn py_network(&self) -> DMSCNetworkMetrics {
+    fn py_network(&self) -> RiNetworkMetrics {
         self.network.clone()
     }
     

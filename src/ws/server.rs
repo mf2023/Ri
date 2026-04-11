@@ -1,7 +1,7 @@
 //! Copyright 2025-2026 Wenze Wei. All Rights Reserved.
 //!
-//! This file is part of DMSC.
-//! The DMSC project belongs to the Dunimd Team.
+//! This file is part of Ri.
+//! The Ri project belongs to the Dunimd Team.
 //!
 //! Licensed under the Apache License, Version 2.0 (the "License");
 //! You may not use this file except in compliance with the License.
@@ -28,33 +28,33 @@ use tungstenite::Message;
 #[allow(unused_imports)]
 use pyo3::prelude::*;
 
-pub struct DMSCWSServer {
-    config: DMSCWSServerConfig,
-    stats: Arc<RwLock<DMSCWSServerStats>>,
-    session_manager: Arc<DMSCWSSessionManager>,
-    event_tx: Arc<RwLock<Option<broadcast::Sender<DMSCWSEvent>>>>,
+pub struct RiWSServer {
+    config: RiWSServerConfig,
+    stats: Arc<RwLock<RiWSServerStats>>,
+    session_manager: Arc<RiWSSessionManager>,
+    event_tx: Arc<RwLock<Option<broadcast::Sender<RiWSEvent>>>>,
     shutdown_tx: Option<mpsc::Sender<()>>,
     running: Arc<RwLock<bool>>,
-    handler: Arc<RwLock<Option<Arc<dyn DMSCWSSessionHandler>>>>,
+    handler: Arc<RwLock<Option<Arc<dyn RiWSSessionHandler>>>>,
 }
 
 #[cfg(feature = "pyo3")]
 #[pyclass]
-pub struct DMSCWSServerPy {
-    inner: DMSCWSServer,
+pub struct RiWSServerPy {
+    inner: RiWSServer,
 }
 
 #[cfg(feature = "pyo3")]
 #[pymethods]
-impl DMSCWSServerPy {
+impl RiWSServerPy {
     #[new]
-    fn new(config: DMSCWSServerConfig) -> Self {
+    fn new(config: RiWSServerConfig) -> Self {
         Self {
-            inner: DMSCWSServer::new(config),
+            inner: RiWSServer::new(config),
         }
     }
 
-    fn get_stats(&self) -> DMSCWSServerStats {
+    fn get_stats(&self) -> RiWSServerStats {
         self.inner.get_stats()
     }
 
@@ -95,12 +95,12 @@ impl DMSCWSServerPy {
     }
 }
 
-impl DMSCWSServer {
-    pub fn new(config: DMSCWSServerConfig) -> Self {
+impl RiWSServer {
+    pub fn new(config: RiWSServerConfig) -> Self {
         Self {
             config,
-            stats: Arc::new(RwLock::new(DMSCWSServerStats::new())),
-            session_manager: Arc::new(DMSCWSSessionManager::new(1000)),
+            stats: Arc::new(RwLock::new(RiWSServerStats::new())),
+            session_manager: Arc::new(RiWSSessionManager::new(1000)),
             event_tx: Arc::new(RwLock::new(None)),
             shutdown_tx: None,
             running: Arc::new(RwLock::new(false)),
@@ -108,11 +108,11 @@ impl DMSCWSServer {
         }
     }
 
-    pub async fn set_handler<H: DMSCWSSessionHandler + 'static>(&self, handler: H) {
+    pub async fn set_handler<H: RiWSSessionHandler + 'static>(&self, handler: H) {
         *self.handler.write().await = Some(Arc::new(handler));
     }
 
-    pub async fn start(&mut self) -> DMSCResult<()> {
+    pub async fn start(&mut self) -> RiResult<()> {
         let addr: SocketAddr = format!("{}:{}", self.config.addr, self.config.port)
             .parse()
             .map_err(|e| WSError::Server {
@@ -157,10 +157,10 @@ impl DMSCWSServer {
 
     async fn accept_connections(
         listener: TcpListener,
-        session_manager: Arc<DMSCWSSessionManager>,
-        stats: Arc<RwLock<DMSCWSServerStats>>,
-        handler: Arc<RwLock<Option<Arc<dyn DMSCWSSessionHandler>>>>,
-        config: DMSCWSServerConfig,
+        session_manager: Arc<RiWSSessionManager>,
+        stats: Arc<RwLock<RiWSServerStats>>,
+        handler: Arc<RwLock<Option<Arc<dyn RiWSSessionHandler>>>>,
+        config: RiWSServerConfig,
         mut shutdown_rx: mpsc::Receiver<()>,
         running: Arc<RwLock<bool>>,
     ) {
@@ -185,7 +185,7 @@ impl DMSCWSServer {
                             let (_sender, receiver) = ws_stream.split();
                             let (tx, rx) = mpsc::channel(100);
 
-                            let session = Arc::new(DMSCWSSession::new(
+                            let session = Arc::new(RiWSSession::new(
                                 session_id.clone(),
                                 tx,
                                 receiver,
@@ -254,11 +254,11 @@ impl DMSCWSServer {
     }
 
     async fn handle_session(
-        session: Arc<DMSCWSSession>,
+        session: Arc<RiWSSession>,
         mut rx: mpsc::Receiver<std::result::Result<Message, tokio_tungstenite::tungstenite::Error>>,
-        handler: Arc<RwLock<Option<Arc<dyn DMSCWSSessionHandler>>>>,
-        session_manager: Arc<DMSCWSSessionManager>,
-        stats: Arc<RwLock<DMSCWSServerStats>>,
+        handler: Arc<RwLock<Option<Arc<dyn RiWSSessionHandler>>>>,
+        session_manager: Arc<RiWSSessionManager>,
+        stats: Arc<RwLock<RiWSServerStats>>,
     ) {
         let session_id = session.id.clone();
 
@@ -326,7 +326,7 @@ impl DMSCWSServer {
         }
     }
 
-    pub async fn stop(&mut self) -> DMSCResult<()> {
+    pub async fn stop(&mut self) -> RiResult<()> {
         *self.running.write().await = false;
 
         let sessions = self.session_manager.get_all_sessions().await;
@@ -346,18 +346,18 @@ impl DMSCWSServer {
         Ok(())
     }
 
-    pub fn get_stats(&self) -> DMSCWSServerStats {
+    pub fn get_stats(&self) -> RiWSServerStats {
         self.stats.try_read()
             .map(|guard| guard.clone())
-            .unwrap_or_else(|_| DMSCWSServerStats::new())
+            .unwrap_or_else(|_| RiWSServerStats::new())
     }
 
-    pub async fn get_session_info(&self, session_id: &str) -> Option<DMSCWSSessionInfo> {
+    pub async fn get_session_info(&self, session_id: &str) -> Option<RiWSSessionInfo> {
         self.session_manager.get_session(session_id).await
             .map(|s| s.get_info())
     }
 
-    pub async fn broadcast(&self, data: &[u8]) -> DMSCResult<usize> {
+    pub async fn broadcast(&self, data: &[u8]) -> RiResult<usize> {
         let count = self.session_manager.broadcast(data).await?;
         self.stats.write().await.record_message_sent(data.len() * count);
         Ok(count)
@@ -372,7 +372,7 @@ impl DMSCWSServer {
     }
 }
 
-impl Clone for DMSCWSServer {
+impl Clone for RiWSServer {
     fn clone(&self) -> Self {
         Self {
             config: self.config.clone(),
@@ -386,8 +386,8 @@ impl Clone for DMSCWSServer {
     }
 }
 
-impl Default for DMSCWSServer {
+impl Default for RiWSServer {
     fn default() -> Self {
-        Self::new(DMSCWSServerConfig::default())
+        Self::new(RiWSServerConfig::default())
     }
 }

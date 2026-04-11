@@ -1,7 +1,7 @@
 //! Copyright © 2025-2026 Wenze Wei. All Rights Reserved.
 //!
-//! This file is part of DMSC.
-//! The DMSC project belongs to the Dunimd Team.
+//! This file is part of Ri.
+//! The Ri project belongs to the Dunimd Team.
 //!
 //! Licensed under the Apache License, Version 2.0 (the "License");
 //! You may not use this file except in compliance with the License.
@@ -19,16 +19,16 @@
 
 //! # Resource Pool Management
 //! 
-//! This file implements resource pool management for the DMSC framework, providing a way to group
+//! This file implements resource pool management for the Ri framework, providing a way to group
 //! similar devices together for efficient resource allocation and management. It includes both
 //! single resource pools and a resource pool manager for handling multiple pools.
 //! 
 //! ## Key Components
 //! 
-//! - **DMSCResourcePool**: Manages a pool of similar devices
-//! - **DMSCResourcePoolConfig**: Configuration for resource pools
-//! - **DMSCResourcePoolStatistics**: Statistics for monitoring resource pools
-//! - **DMSCResourcePoolManager**: Manages multiple resource pools
+//! - **RiResourcePool**: Manages a pool of similar devices
+//! - **RiResourcePoolConfig**: Configuration for resource pools
+//! - **RiResourcePoolStatistics**: Statistics for monitoring resource pools
+//! - **RiResourcePoolManager**: Manages multiple resource pools
 //! 
 //! ## Design Principles
 //! 
@@ -42,23 +42,23 @@
 //! 8. **Device Type Segregation**: Each pool contains devices of a single type
 //! 9. **Arc-Based Sharing**: Uses Arc for safe concurrent access to devices
 //! 10. **Serialization Support**: All structures support serialization/deserialization
-//! 11. **Builder Pattern**: Configurable through DMSCResourcePoolConfig
+//! 11. **Builder Pattern**: Configurable through RiResourcePoolConfig
 //! 12. **Resource Optimization**: Calculates total compute, memory, storage, and bandwidth
 //! 
 //! ## Usage
 //! 
 //! ```rust,ignore
-//! use dmsc::device::{DMSCResourcePoolManager, DMSCResourcePoolConfig, DMSCDeviceType};
-//! use dmsc::core::DMSCResult;
+//! use ri::device::{RiResourcePoolManager, RiResourcePoolConfig, RiDeviceType};
+//! use ri::core::RiResult;
 //! 
-//! fn example() -> DMSCResult<()> {
+//! fn example() -> RiResult<()> {
 //!     // Create a resource pool manager
-//!     let mut manager = DMSCResourcePoolManager::new();
+//!     let mut manager = RiResourcePoolManager::new();
 //!     
 //!     // Create a resource pool configuration
-//!     let config = DMSCResourcePoolConfig {
+//!     let config = RiResourcePoolConfig {
 //!         name: "cpu-pool-1".to_string(),
-//!         device_type: DMSCDeviceType::CPU,
+//!         device_type: RiDeviceType::CPU,
 //!         max_concurrent_allocations: 10,
 //!         allocation_timeout_secs: 60,
 //!         health_check_interval_secs: 30,
@@ -73,7 +73,7 @@
 //!              stats.total_devices, stats.utilization_rate * 100.0);
 //!     
 //!     // Get all pools by device type
-//!     let cpu_pools = manager.get_pools_by_type(DMSCDeviceType::CPU);
+//!     let cpu_pools = manager.get_pools_by_type(RiDeviceType::CPU);
 //!     println!("Found {} CPU pools", cpu_pools.len());
 //!     
 //!     // Get overall statistics
@@ -89,7 +89,7 @@ use std::collections::HashMap;
 use std::time::Duration;
 use serde::{Serialize, Deserialize};
 
-use super::core::{DMSCDevice, DMSCDeviceType, DMSCDeviceStatus};
+use super::core::{RiDevice, RiDeviceType, RiDeviceStatus};
 
 
 /// Resource pool for managing multiple similar devices
@@ -98,13 +98,13 @@ use super::core::{DMSCDevice, DMSCDeviceType, DMSCDeviceStatus};
 /// allocation status, and capacity. It provides methods for adding/removing devices,
 /// allocating/releasing devices, and collecting statistics.
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
-pub struct DMSCResourcePool {
+pub struct RiResourcePool {
     /// Name of the resource pool
     name: String,
     /// Type of devices in the pool
-    device_type: DMSCDeviceType,
+    device_type: RiDeviceType,
     /// Map of device IDs to device instances
-    devices: HashMap<String, Arc<DMSCDevice>>,
+    devices: HashMap<String, Arc<RiDevice>>,
     /// Total capacity of the pool (number of devices)
     total_capacity: usize,
     /// Available capacity (number of devices not allocated)
@@ -130,7 +130,7 @@ pub struct DMSCResourcePool {
     /// Available bandwidth in Gbps (not allocated)
     available_bandwidth_gbps: f64,
     /// Connection pool state for lifecycle management
-    connection_pool: Arc<RwLock<DMSCConnectionPool>>,
+    connection_pool: Arc<RwLock<RiConnectionPool>>,
 }
 
 /// Configuration for a resource pool
@@ -139,11 +139,11 @@ pub struct DMSCResourcePool {
 /// name, device type, and various operational parameters.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass(get_all, set_all))]
-pub struct DMSCResourcePoolConfig {
+pub struct RiResourcePoolConfig {
     /// Name of the resource pool
     pub name: String,
     /// Type of devices that will be in the pool
-    pub device_type: DMSCDeviceType,
+    pub device_type: RiDeviceType,
     /// Maximum number of concurrent allocations allowed
     pub max_concurrent_allocations: usize,
     /// Timeout for device allocation in seconds
@@ -152,11 +152,11 @@ pub struct DMSCResourcePoolConfig {
     pub health_check_interval_secs: u64,
 }
 
-impl Default for DMSCResourcePoolConfig {
+impl Default for RiResourcePoolConfig {
     fn default() -> Self {
         Self {
             name: "default_pool".to_string(),
-            device_type: DMSCDeviceType::CPU,
+            device_type: RiDeviceType::CPU,
             max_concurrent_allocations: 10,
             allocation_timeout_secs: 60,
             health_check_interval_secs: 30,
@@ -164,7 +164,7 @@ impl Default for DMSCResourcePoolConfig {
     }
 }
 
-impl DMSCResourcePool {
+impl RiResourcePool {
     /// Creates a new resource pool with the given configuration
     /// 
     /// # Parameters
@@ -173,9 +173,9 @@ impl DMSCResourcePool {
     /// 
     /// # Returns
     /// 
-    /// A new `DMSCResourcePool` instance with the specified configuration
-    pub fn new(config: DMSCResourcePoolConfig) -> Self {
-        let connection_pool = Arc::new(RwLock::new(DMSCConnectionPool::new(
+    /// A new `RiResourcePool` instance with the specified configuration
+    pub fn new(config: RiResourcePoolConfig) -> Self {
+        let connection_pool = Arc::new(RwLock::new(RiConnectionPool::new(
             config.max_concurrent_allocations,
             Duration::from_secs(config.allocation_timeout_secs),
             Duration::from_secs(config.health_check_interval_secs),
@@ -213,7 +213,7 @@ impl DMSCResourcePool {
     /// # Returns
     /// 
     /// `true` if the device was successfully added, `false` otherwise
-    pub fn add_device(&mut self, device: Arc<DMSCDevice>) -> bool {
+    pub fn add_device(&mut self, device: Arc<RiDevice>) -> bool {
         // Check if device type matches pool device type
         if device.device_type() != self.device_type {
             return false;
@@ -311,8 +311,8 @@ impl DMSCResourcePool {
     /// 
     /// # Returns
     /// 
-    /// An `Option<Arc<DMSCDevice>>` containing the allocated device if successful, `None` otherwise
-    pub fn allocate(&mut self, _allocation_id: &str) -> Option<Arc<DMSCDevice>> {
+    /// An `Option<Arc<RiDevice>>` containing the allocated device if successful, `None` otherwise
+    pub fn allocate(&mut self, _allocation_id: &str) -> Option<Arc<RiDevice>> {
         // Check if there's available capacity
         if self.available_capacity == 0 {
             return None;
@@ -405,14 +405,14 @@ impl DMSCResourcePool {
     
     /// Gets the current status of the pool
     /// 
-    /// This method returns a DMSCResourcePoolStatus struct containing information about the pool's
+    /// This method returns a RiResourcePoolStatus struct containing information about the pool's
     /// capacity, allocation, and utilization.
     /// 
     /// # Returns
     /// 
-    /// A `DMSCResourcePoolStatus` struct with the current pool status
-    pub fn get_status(&self) -> super::DMSCResourcePoolStatus {
-        super::DMSCResourcePoolStatus {
+    /// A `RiResourcePoolStatus` struct with the current pool status
+    pub fn get_status(&self) -> super::RiResourcePoolStatus {
+        super::RiResourcePoolStatus {
             total_capacity: self.total_capacity,
             available_capacity: self.available_capacity,
             allocated_capacity: self.allocated_capacity,
@@ -439,9 +439,9 @@ impl DMSCResourcePool {
     /// 
     /// # Returns
     /// 
-    /// The device type as a `DMSCDeviceType` enum
+    /// The device type as a `RiDeviceType` enum
     #[inline]
-    pub fn device_type(&self) -> DMSCDeviceType {
+    pub fn device_type(&self) -> RiDeviceType {
         self.device_type
     }
     
@@ -449,9 +449,9 @@ impl DMSCResourcePool {
     /// 
     /// # Returns
     /// 
-    /// A vector of `Arc<DMSCDevice>` containing all devices in the pool
+    /// A vector of `Arc<RiDevice>` containing all devices in the pool
     #[inline]
-    pub fn get_devices(&self) -> Vec<Arc<DMSCDevice>> {
+    pub fn get_devices(&self) -> Vec<Arc<RiDevice>> {
         self.devices.values().cloned().collect()
     }
     
@@ -459,8 +459,8 @@ impl DMSCResourcePool {
     /// 
     /// # Returns
     /// 
-    /// A vector of `Arc<DMSCDevice>` containing only available devices
-    pub fn get_available_devices(&self) -> Vec<Arc<DMSCDevice>> {
+    /// A vector of `Arc<RiDevice>` containing only available devices
+    pub fn get_available_devices(&self) -> Vec<Arc<RiDevice>> {
         self.devices.values()
             .filter(|device| device.is_available())
             .cloned()
@@ -471,8 +471,8 @@ impl DMSCResourcePool {
     /// 
     /// # Returns
     /// 
-    /// A vector of `Arc<DMSCDevice>` containing only allocated devices
-    pub fn get_allocated_devices(&self) -> Vec<Arc<DMSCDevice>> {
+    /// A vector of `Arc<RiDevice>` containing only allocated devices
+    pub fn get_allocated_devices(&self) -> Vec<Arc<RiDevice>> {
         self.devices.values()
             .filter(|device| device.is_allocated())
             .cloned()
@@ -521,8 +521,8 @@ impl DMSCResourcePool {
     /// 
     /// # Returns
     /// 
-    /// A `DMSCResourcePoolStatistics` struct with comprehensive pool statistics
-    pub fn get_statistics(&self) -> DMSCResourcePoolStatistics {
+    /// A `RiResourcePoolStatistics` struct with comprehensive pool statistics
+    pub fn get_statistics(&self) -> RiResourcePoolStatistics {
         let devices = self.get_devices();
         let available_devices = self.get_available_devices();
         let allocated_devices = self.get_allocated_devices();
@@ -599,7 +599,7 @@ impl DMSCResourcePool {
         
         let device_count = devices.len() as f64;
         
-        DMSCResourcePoolStatistics {
+        RiResourcePoolStatistics {
             total_devices: devices.len(),
             available_devices: available_devices.len(),
             allocated_devices: allocated_devices.len(),
@@ -630,9 +630,9 @@ impl DMSCResourcePool {
 /// Connection pool for managing device connections with lifecycle and health monitoring
 #[derive(Debug, Clone)]
 #[allow(dead_code)]
-pub struct DMSCConnectionPool {
+pub struct RiConnectionPool {
     /// Active connections with their metadata
-    connections: HashMap<String, DMSCConnectionInfo>,
+    connections: HashMap<String, RiConnectionInfo>,
     /// Maximum number of connections allowed
     max_connections: usize,
     /// Connection timeout duration
@@ -651,7 +651,7 @@ pub struct DMSCConnectionPool {
 
 /// Connection information for tracking individual connections
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct DMSCConnectionInfo {
+pub struct RiConnectionInfo {
     /// Connection ID
     pub connection_id: String,
     /// Device ID this connection is associated with
@@ -663,14 +663,14 @@ pub struct DMSCConnectionInfo {
     /// Last activity timestamp (seconds since Unix epoch)
     pub last_activity_secs: u64,
     /// Connection state
-    pub state: DMSCConnectionState,
+    pub state: RiConnectionState,
     /// Connection health metrics
-    pub health_metrics: DMSCConnectionHealthMetrics,
+    pub health_metrics: RiConnectionHealthMetrics,
 }
 
 /// Connection state enumeration
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub enum DMSCConnectionState {
+pub enum RiConnectionState {
     /// Connection is establishing
     Connecting,
     /// Connection is active and healthy
@@ -687,7 +687,7 @@ pub enum DMSCConnectionState {
 
 /// Connection health metrics
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
-pub struct DMSCConnectionHealthMetrics {
+pub struct RiConnectionHealthMetrics {
     /// Number of successful operations
     pub successful_operations: u64,
     /// Number of failed operations
@@ -701,7 +701,7 @@ pub struct DMSCConnectionHealthMetrics {
 }
 
 #[allow(dead_code)]
-impl DMSCConnectionPool {
+impl RiConnectionPool {
     /// Creates a new connection pool
     pub fn new(max_connections: usize, connection_timeout: Duration, health_check_interval: Duration) -> Self {
         Self {
@@ -721,7 +721,7 @@ impl DMSCConnectionPool {
     
     /// Adds a new connection to the pool
     pub fn add_connection(&mut self, device_id: String, address: String) {
-        let connection_info = DMSCConnectionInfo {
+        let connection_info = RiConnectionInfo {
             connection_id: device_id.clone(),
             device_id: device_id.clone(),
             address,
@@ -733,8 +733,8 @@ impl DMSCConnectionPool {
                 .duration_since(std::time::UNIX_EPOCH)
                 .unwrap_or_default()
                 .as_secs(),
-            state: DMSCConnectionState::Active,
-            health_metrics: DMSCConnectionHealthMetrics::default(),
+            state: RiConnectionState::Active,
+            health_metrics: RiConnectionHealthMetrics::default(),
         };
         
         self.connections.insert(device_id, connection_info);
@@ -747,7 +747,7 @@ impl DMSCConnectionPool {
     }
     
     /// Gets connection information
-    pub fn get_connection(&self, connection_id: &str) -> Option<&DMSCConnectionInfo> {
+    pub fn get_connection(&self, connection_id: &str) -> Option<&RiConnectionInfo> {
         self.connections.get(connection_id)
     }
     
@@ -758,8 +758,8 @@ impl DMSCConnectionPool {
                 .duration_since(std::time::UNIX_EPOCH)
                 .unwrap_or(Duration::from_secs(0))
                 .as_secs();
-            if connection.state == DMSCConnectionState::Idle {
-                connection.state = DMSCConnectionState::Active;
+            if connection.state == RiConnectionState::Idle {
+                connection.state = RiConnectionState::Active;
             }
             true
         } else {
@@ -813,57 +813,57 @@ impl DMSCConnectionPool {
                 .as_secs();
             let elapsed_secs = current_time.saturating_sub(connection.last_activity_secs);
             
-            if connection.state == DMSCConnectionState::Active && elapsed_secs > self.connection_timeout.as_secs() {
-                connection.state = DMSCConnectionState::Idle;
+            if connection.state == RiConnectionState::Active && elapsed_secs > self.connection_timeout.as_secs() {
+                connection.state = RiConnectionState::Idle;
             }
             
             // Check for unhealthy connections
             if connection.health_metrics.uptime_percentage < 90.0 {
-                connection.state = DMSCConnectionState::Unhealthy;
+                connection.state = RiConnectionState::Unhealthy;
             } else if let Some(last_error_secs) = connection.health_metrics.last_error_secs {
                 let current_secs = std::time::SystemTime::now()
                     .duration_since(std::time::UNIX_EPOCH)
                     .unwrap_or(Duration::from_secs(0))
                     .as_secs();
                 if current_secs.saturating_sub(last_error_secs) < 60 {
-                    connection.state = DMSCConnectionState::Unhealthy;
+                    connection.state = RiConnectionState::Unhealthy;
                 }
             }
             
             // Close connections that have been unhealthy for too long
-            if connection.state == DMSCConnectionState::Unhealthy &&
+            if connection.state == RiConnectionState::Unhealthy &&
                connection.health_metrics.failed_operations > 10 {
-                connection.state = DMSCConnectionState::Closing;
+                connection.state = RiConnectionState::Closing;
             }
         }
         
         // Remove closed connections
-        self.connections.retain(|_, conn| conn.state != DMSCConnectionState::Closed);
+        self.connections.retain(|_, conn| conn.state != RiConnectionState::Closed);
     }
     
     /// Gets the number of active connections
     pub fn active_connections(&self) -> usize {
         self.connections.values()
-            .filter(|conn| conn.state == DMSCConnectionState::Active)
+            .filter(|conn| conn.state == RiConnectionState::Active)
             .count()
     }
     
     /// Gets the number of idle connections
     pub fn idle_connections(&self) -> usize {
         self.connections.values()
-            .filter(|conn| conn.state == DMSCConnectionState::Idle)
+            .filter(|conn| conn.state == RiConnectionState::Idle)
             .count()
     }
     
     /// Gets the number of unhealthy connections
     pub fn unhealthy_connections(&self) -> usize {
         self.connections.values()
-            .filter(|conn| conn.state == DMSCConnectionState::Unhealthy)
+            .filter(|conn| conn.state == RiConnectionState::Unhealthy)
             .count()
     }
     
     /// Gets overall connection pool statistics
-    pub fn get_statistics(&self) -> DMSCConnectionPoolStatistics {
+    pub fn get_statistics(&self) -> RiConnectionPoolStatistics {
         let total_connections = self.connections.len();
         let active_connections = self.active_connections();
         let idle_connections = self.idle_connections();
@@ -887,7 +887,7 @@ impl DMSCConnectionPool {
         
         let last_health_check_secs = self.last_health_check_secs;
         
-        DMSCConnectionPoolStatistics {
+        RiConnectionPoolStatistics {
             total_connections,
             active_connections,
             idle_connections,
@@ -905,7 +905,7 @@ impl DMSCConnectionPool {
 /// Connection pool statistics
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass(get_all, set_all))]
-pub struct DMSCConnectionPoolStatistics {
+pub struct RiConnectionPoolStatistics {
     /// Total number of connections
     pub total_connections: usize,
     /// Number of active connections
@@ -928,7 +928,7 @@ pub struct DMSCConnectionPoolStatistics {
     pub last_health_check_secs: u64,
 }
 
-impl Default for DMSCConnectionPoolStatistics {
+impl Default for RiConnectionPoolStatistics {
     fn default() -> Self {
         Self {
             total_connections: 0,
@@ -951,7 +951,7 @@ impl Default for DMSCConnectionPoolStatistics {
 /// utilization, total resources, and detailed health metrics.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass(get_all, set_all))]
-pub struct DMSCResourcePoolStatistics {
+pub struct RiResourcePoolStatistics {
     /// Total number of devices in the pool
     pub total_devices: usize,
     /// Number of available devices in the pool
@@ -971,12 +971,12 @@ pub struct DMSCResourcePoolStatistics {
     /// Average health score across all devices
     pub average_health_score: f64,
     /// Type of devices in the pool
-    pub device_type: DMSCDeviceType,
+    pub device_type: RiDeviceType,
     /// Connection pool statistics
-    pub connection_pool_stats: Option<DMSCConnectionPoolStatistics>,
+    pub connection_pool_stats: Option<RiConnectionPoolStatistics>,
     
     /// Device status distribution
-    pub status_distribution: HashMap<DMSCDeviceStatus, usize>,
+    pub status_distribution: HashMap<RiDeviceStatus, usize>,
     /// Average response time in milliseconds
     pub average_response_time_ms: f64,
     /// Average network latency in milliseconds (for network devices)
@@ -999,7 +999,7 @@ pub struct DMSCResourcePoolStatistics {
     pub average_uptime_seconds: f64,
 }
 
-impl Default for DMSCResourcePoolStatistics {
+impl Default for RiResourcePoolStatistics {
     fn default() -> Self {
         Self {
             total_devices: 0,
@@ -1011,7 +1011,7 @@ impl Default for DMSCResourcePoolStatistics {
             total_storage_gb: 0.0,
             total_bandwidth_gbps: 0.0,
             average_health_score: 0.0,
-            device_type: DMSCDeviceType::CPU,
+            device_type: RiDeviceType::CPU,
             connection_pool_stats: None,
             status_distribution: HashMap::with_capacity(4),
             average_response_time_ms: 0.0,
@@ -1033,23 +1033,23 @@ impl Default for DMSCResourcePoolStatistics {
 /// This struct manages multiple resource pools, providing methods for creating, retrieving,
 /// and removing pools, as well as getting overall statistics.
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
-pub struct DMSCResourcePoolManager {
+pub struct RiResourcePoolManager {
     /// Map of pool names to resource pools
-    pools: HashMap<String, Arc<DMSCResourcePool>>,
+    pools: HashMap<String, Arc<RiResourcePool>>,
 }
 
-impl Default for DMSCResourcePoolManager {
+impl Default for RiResourcePoolManager {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl DMSCResourcePoolManager {
+impl RiResourcePoolManager {
     /// Creates a new resource pool manager
     /// 
     /// # Returns
     /// 
-    /// A new `DMSCResourcePoolManager` instance
+    /// A new `RiResourcePoolManager` instance
     pub fn new() -> Self {
         Self {
             pools: HashMap::with_capacity(8),
@@ -1066,9 +1066,9 @@ impl DMSCResourcePoolManager {
     /// 
     /// # Returns
     /// 
-    /// An `Arc<DMSCResourcePool>` to the newly created pool
-    pub fn create_pool(&mut self, config: DMSCResourcePoolConfig) -> Arc<DMSCResourcePool> {
-        let pool = Arc::new(DMSCResourcePool::new(config));
+    /// An `Arc<RiResourcePool>` to the newly created pool
+    pub fn create_pool(&mut self, config: RiResourcePoolConfig) -> Arc<RiResourcePool> {
+        let pool = Arc::new(RiResourcePool::new(config));
         self.pools.insert(pool.name().to_string(), pool.clone());
         pool
     }
@@ -1081,8 +1081,8 @@ impl DMSCResourcePoolManager {
     /// 
     /// # Returns
     /// 
-    /// An `Option<Arc<DMSCResourcePool>>` containing the pool if found, `None` otherwise
-    pub fn get_pool(&self, name: &str) -> Option<Arc<DMSCResourcePool>> {
+    /// An `Option<Arc<RiResourcePool>>` containing the pool if found, `None` otherwise
+    pub fn get_pool(&self, name: &str) -> Option<Arc<RiResourcePool>> {
         self.pools.get(name).cloned()
     }
     
@@ -1094,8 +1094,8 @@ impl DMSCResourcePoolManager {
     /// 
     /// # Returns
     /// 
-    /// An `Option<Arc<DMSCResourcePool>>` containing the removed pool if found, `None` otherwise
-    pub fn remove_pool(&mut self, name: &str) -> Option<Arc<DMSCResourcePool>> {
+    /// An `Option<Arc<RiResourcePool>>` containing the removed pool if found, `None` otherwise
+    pub fn remove_pool(&mut self, name: &str) -> Option<Arc<RiResourcePool>> {
         self.pools.remove(name)
     }
     
@@ -1103,8 +1103,8 @@ impl DMSCResourcePoolManager {
     /// 
     /// # Returns
     /// 
-    /// A vector of `Arc<DMSCResourcePool>` containing all resource pools
-    pub fn get_all_pools(&self) -> Vec<Arc<DMSCResourcePool>> {
+    /// A vector of `Arc<RiResourcePool>` containing all resource pools
+    pub fn get_all_pools(&self) -> Vec<Arc<RiResourcePool>> {
         self.pools.values().cloned().collect()
     }
     
@@ -1116,8 +1116,8 @@ impl DMSCResourcePoolManager {
     /// 
     /// # Returns
     /// 
-    /// A vector of `Arc<DMSCResourcePool>` containing all pools of the specified device type
-    pub fn get_pools_by_type(&self, device_type: DMSCDeviceType) -> Vec<Arc<DMSCResourcePool>> {
+    /// A vector of `Arc<RiResourcePool>` containing all pools of the specified device type
+    pub fn get_pools_by_type(&self, device_type: RiDeviceType) -> Vec<Arc<RiResourcePool>> {
         self.pools.values()
             .filter(|pool| pool.device_type() == device_type)
             .cloned()
@@ -1131,8 +1131,8 @@ impl DMSCResourcePoolManager {
     /// 
     /// # Returns
     /// 
-    /// A `DMSCResourcePoolStatistics` struct with overall statistics for all pools
-    pub fn get_overall_statistics(&self) -> DMSCResourcePoolStatistics {
+    /// A `RiResourcePoolStatistics` struct with overall statistics for all pools
+    pub fn get_overall_statistics(&self) -> RiResourcePoolStatistics {
         let pools = self.get_all_pools();
         
         // Calculate total devices and allocated devices across all pools
@@ -1180,7 +1180,7 @@ impl DMSCResourcePoolManager {
             0.0
         };
         
-        DMSCResourcePoolStatistics {
+        RiResourcePoolStatistics {
             total_devices,
             available_devices: total_devices - allocated_devices,
             allocated_devices,
@@ -1190,7 +1190,7 @@ impl DMSCResourcePoolManager {
             total_storage_gb,
             total_bandwidth_gbps,
             average_health_score,
-            device_type: DMSCDeviceType::Custom, // Multiple device types across pools
+            device_type: RiDeviceType::Custom, // Multiple device types across pools
             connection_pool_stats: None, // No aggregated connection stats at manager level
             
             status_distribution: HashMap::with_capacity(4),
@@ -1210,14 +1210,14 @@ impl DMSCResourcePoolManager {
 
 #[cfg(feature = "pyo3")]
 #[pyo3::prelude::pymethods]
-impl DMSCResourcePoolConfig {
+impl RiResourcePoolConfig {
     #[new]
     fn py_new() -> Self {
         Self::default()
     }
     
     #[staticmethod]
-    fn py_new_with_name(name: String, device_type: DMSCDeviceType) -> Self {
+    fn py_new_with_name(name: String, device_type: RiDeviceType) -> Self {
         Self {
             name,
             device_type,
@@ -1230,7 +1230,7 @@ impl DMSCResourcePoolConfig {
 
 #[cfg(feature = "pyo3")]
 #[pyo3::prelude::pymethods]
-impl DMSCResourcePoolStatistics {
+impl RiResourcePoolStatistics {
     #[new]
     fn py_new() -> Self {
         Self::default()
@@ -1239,7 +1239,7 @@ impl DMSCResourcePoolStatistics {
 
 #[cfg(feature = "pyo3")]
 #[pyo3::prelude::pymethods]
-impl DMSCResourcePoolManager {
+impl RiResourcePoolManager {
     #[new]
     fn py_new() -> Self {
         Self::new()

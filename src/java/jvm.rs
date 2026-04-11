@@ -1,7 +1,7 @@
 //! Copyright © 2025-2026 Wenze Wei. All Rights Reserved.
 //!
-//! This file is part of DMSC.
-//! The DMSC project belongs to the Dunimd Team.
+//! This file is part of Ri.
+//! The Ri project belongs to the Dunimd Team.
 //!
 //! Licensed under the Apache License, Version 2.0 (the "License");
 //! You may not use this file except in compliance with the License.
@@ -27,12 +27,12 @@ use std::sync::{Arc, OnceLock};
 
 static JVM_INSTANCE: OnceLock<Arc<JavaVM>> = OnceLock::new();
 
-/// DMSC Java context for managing JVM interactions
-pub struct DMSCJavaContext {
+/// Ri Java context for managing JVM interactions
+pub struct RiJavaContext {
     jvm: Arc<JavaVM>,
 }
 
-impl DMSCJavaContext {
+impl RiJavaContext {
     /// Initialize the Java context from an existing JNIEnv
     pub fn init(env: JNIEnv) -> Self {
         let jvm = env.get_java_vm().expect("Failed to get JavaVM");

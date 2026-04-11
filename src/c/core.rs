@@ -1,7 +1,7 @@
 //! Copyright © 2025-2026 Wenze Wei. All Rights Reserved.
 //!
-//! This file is part of DMSC.
-//! The DMSC project belongs to the Dunimd Team.
+//! This file is part of Ri.
+//! The Ri project belongs to the Dunimd Team.
 //!
 //! Licensed under the Apache License, Version 2.0 (the "License");
 //! You may not use this file except in compliance with the License.
@@ -17,25 +17,25 @@
 
 //! # Core Module C API
 //!
-//! This module provides C language bindings for DMSC's core application infrastructure.
-//! The core module serves as the foundation for building DMSC applications, providing
+//! This module provides C language bindings for Ri's core application infrastructure.
+//! The core module serves as the foundation for building Ri applications, providing
 //! application lifecycle management, configuration handling, and initialization routines.
-//! This C API enables C/C++ applications to leverage DMSC's powerful application builder
+//! This C API enables C/C++ applications to leverage Ri's powerful application builder
 //! and configuration management capabilities.
 //!
 //! ## Module Architecture
 //!
 //! The core module comprises two essential components that form the backbone of any
-//! DMSC application:
+//! Ri application:
 //!
-//! - **DMSCAppBuilder**: Fluent builder pattern implementation for constructing DMSC
+//! - **RiAppBuilder**: Fluent builder pattern implementation for constructing Ri
 //!   applications with type-safe configuration. The builder supports registration of
 //!   modules, services, and middleware components through a declarative API. It handles
 //!   dependency injection, service discovery, and lifecycle coordination across all
-//!   registered components. The builder produces a fully initialized DMSCApp instance
+//!   registered components. The builder produces a fully initialized RiApp instance
 //!   ready for execution.
 //!
-//! - **DMSCConfig**: Unified configuration management interface supporting multiple
+//! - **RiConfig**: Unified configuration management interface supporting multiple
 //!   configuration sources including environment variables, command-line arguments,
 //!   configuration files (YAML, TOML, JSON), and remote configuration services.
 //!   The configuration system provides type-safe value retrieval with automatic
@@ -44,7 +44,7 @@
 //!
 //! ## Application Lifecycle
 //!
-//! DMSC applications follow a well-defined lifecycle:
+//! Ri applications follow a well-defined lifecycle:
 //!
 //! 1. **Initialization Phase**: Application builder creates and configures components.
 //!    Services are registered, dependencies are wired, and configuration is loaded.
@@ -97,32 +97,32 @@
 //!
 //! ```c
 //! // Create application configuration
-//! CDMSCConfig* config = dmsc_config_new();
+//! CRiConfig* config = ri_config_new();
 //!
 //! // Load configuration from file
-//! int result = dmsc_config_load_file(config, "config.yaml");
+//! int result = ri_config_load_file(config, "config.yaml");
 //!
 //! // Get configuration value
-//! char* value = dmsc_config_get_string(config, "database.url");
+//! char* value = ri_config_get_string(config, "database.url");
 //!
 //! // Create application builder
-//! CDMSCAppBuilder* builder = dmsc_app_builder_new();
+//! CRiAppBuilder* builder = ri_app_builder_new();
 //!
 //! // Configure builder with configuration
-//! dmsc_app_builder_configure(builder, config);
+//! ri_app_builder_configure(builder, config);
 //!
 //! // Build and run application
-//! dmsc_app_builder_build(builder);
+//! ri_app_builder_build(builder);
 //!
 //! // Cleanup
-//! dmsc_app_builder_free(builder);
-//! dmsc_config_free(config);
-//! dmsc_string_free(value);
+//! ri_app_builder_free(builder);
+//! ri_config_free(config);
+//! ri_string_free(value);
 //! ```
 //!
 //! ## Dependencies
 //!
-//! This module depends on the following DMSC components:
+//! This module depends on the following Ri components:
 //!
 //! - `crate::core`: Rust core module implementation
 //! - `crate::prelude`: Common types and traits
@@ -130,15 +130,15 @@
 //! ## Feature Flags
 //!
 //! The core module is always enabled as it provides fundamental infrastructure
-//! required by all other DMSC components.
+//! required by all other Ri components.
 
-use crate::prelude::{DMSCAppBuilder, DMSCConfig};
+use crate::prelude::{RiAppBuilder, RiConfig};
 use std::ffi::{c_char, CString};
 
-/// Opaque C wrapper structure for DMSCAppBuilder.
+/// Opaque C wrapper structure for RiAppBuilder.
 ///
 /// Provides C-compatible interface to the Rust application builder implementation.
-/// The builder uses the fluent builder pattern to construct DMSC applications with
+/// The builder uses the fluent builder pattern to construct Ri applications with
 /// proper dependency injection and lifecycle management.
 ///
 /// # Builder Responsibilities
@@ -156,11 +156,11 @@ use std::ffi::{c_char, CString};
 /// The builder implements a fluent interface allowing method chaining:
 ///
 /// ```c
-/// dmsc_app_builder_register_module(builder, module_a);
-/// dmsc_app_builder_register_module(builder, module_b);
-/// dmsc_app_builder_configure(builder, config);
-/// dmsc_app_builder_with_middleware(builder, middleware_1);
-/// dmsc_app_builder_with_middleware(builder, middleware_2);
+/// ri_app_builder_register_module(builder, module_a);
+/// ri_app_builder_register_module(builder, module_b);
+/// ri_app_builder_configure(builder, config);
+/// ri_app_builder_with_middleware(builder, middleware_1);
+/// ri_app_builder_with_middleware(builder, middleware_2);
 /// ```
 ///
 /// # Thread Safety
@@ -169,11 +169,11 @@ use std::ffi::{c_char, CString};
 /// single thread before application startup. Concurrent builder access results
 /// in undefined behavior.
 #[repr(C)]
-pub struct CDMSCAppBuilder {
-    inner: DMSCAppBuilder,
+pub struct CRiAppBuilder {
+    inner: RiAppBuilder,
 }
 
-/// Opaque C wrapper structure for DMSCConfig.
+/// Opaque C wrapper structure for RiConfig.
 ///
 /// Provides C-compatible interface to the unified configuration management system.
 /// The configuration object provides type-safe access to configuration values
@@ -211,20 +211,20 @@ pub struct CDMSCAppBuilder {
 ///
 /// Invalid type requests return default values or trigger validation errors.
 #[repr(C)]
-pub struct CDMSCConfig {
-    inner: DMSCConfig,
+pub struct CRiConfig {
+    inner: RiConfig,
 }
 
-/// Creates a new CDMSCAppBuilder instance.
+/// Creates a new CRiAppBuilder instance.
 ///
 /// Initializes an empty application builder ready for component registration.
 /// The builder starts with default configuration and no registered modules.
 ///
 /// # Returns
 ///
-/// Pointer to newly allocated CDMSCAppBuilder on success. Never returns NULL
+/// Pointer to newly allocated CRiAppBuilder on success. Never returns NULL
 /// as the implementation uses infallible construction. The returned pointer
-/// must be freed using dmsc_app_builder_free().
+/// must be freed using ri_app_builder_free().
 ///
 /// # Initial State
 ///
@@ -238,31 +238,31 @@ pub struct CDMSCConfig {
 /// # Usage Pattern
 ///
 /// ```c
-/// CDMSCAppBuilder* builder = dmsc_app_builder_new();
+/// CRiAppBuilder* builder = ri_app_builder_new();
 /// if (builder == NULL) {
 ///     // Handle allocation failure
 ///     return ERROR_MEMORY_ALLOCATION;
 /// }
 ///
 /// // Register modules and configure
-/// dmsc_app_builder_register_module(builder, http_module);
-/// dmsc_app_builder_register_module(builder, database_module);
+/// ri_app_builder_register_module(builder, http_module);
+/// ri_app_builder_register_module(builder, database_module);
 ///
 /// // Build and run
-/// dmsc_app_builder_build(builder);
+/// ri_app_builder_build(builder);
 ///
 /// // Cleanup
-/// dmsc_app_builder_free(builder);
+/// ri_app_builder_free(builder);
 /// ```
 #[no_mangle]
-pub extern "C" fn dmsc_app_builder_new() -> *mut CDMSCAppBuilder {
-    let builder = CDMSCAppBuilder {
-        inner: DMSCAppBuilder::new(),
+pub extern "C" fn ri_app_builder_new() -> *mut CRiAppBuilder {
+    let builder = CRiAppBuilder {
+        inner: RiAppBuilder::new(),
     };
     Box::into_raw(Box::new(builder))
 }
 
-/// Frees a previously allocated CDMSCAppBuilder instance.
+/// Frees a previously allocated CRiAppBuilder instance.
 ///
 /// Releases all memory associated with the builder including any registered
 /// configurations, module references, or internal state. After this function
@@ -270,7 +270,7 @@ pub extern "C" fn dmsc_app_builder_new() -> *mut CDMSCAppBuilder {
 ///
 /// # Parameters
 ///
-/// - `builder`: Pointer to CDMSCAppBuilder to free. If NULL, the function
+/// - `builder`: Pointer to CRiAppBuilder to free. If NULL, the function
 ///   returns immediately without error.
 ///
 /// # Behavior
@@ -287,7 +287,7 @@ pub extern "C" fn dmsc_app_builder_new() -> *mut CDMSCAppBuilder {
 /// This function is safe to call with NULL. Calling with a pointer that has
 /// already been freed results in undefined behavior.
 #[no_mangle]
-pub extern "C" fn dmsc_app_builder_free(builder: *mut CDMSCAppBuilder) {
+pub extern "C" fn ri_app_builder_free(builder: *mut CRiAppBuilder) {
     if !builder.is_null() {
         unsafe {
             let _ = Box::from_raw(builder);
@@ -295,7 +295,7 @@ pub extern "C" fn dmsc_app_builder_free(builder: *mut CDMSCAppBuilder) {
     }
 }
 
-/// Creates a new CDMSCConfig instance.
+/// Creates a new CRiConfig instance.
 ///
 /// Initializes an empty configuration object with no loaded sources.
 /// The configuration starts with default values and requires explicit
@@ -303,9 +303,9 @@ pub extern "C" fn dmsc_app_builder_free(builder: *mut CDMSCAppBuilder) {
 ///
 /// # Returns
 ///
-/// Pointer to newly allocated CDMSCConfig on success. Never returns NULL
+/// Pointer to newly allocated CRiConfig on success. Never returns NULL
 /// as the implementation uses infallible construction. The returned pointer
-/// must be freed using dmsc_config_free().
+/// must be freed using ri_config_free().
 ///
 /// # Initial State
 ///
@@ -319,35 +319,35 @@ pub extern "C" fn dmsc_app_builder_free(builder: *mut CDMSCAppBuilder) {
 /// # Usage Pattern
 ///
 /// ```c
-/// CDMSCConfig* config = dmsc_config_new();
+/// CRiConfig* config = ri_config_new();
 /// if (config == NULL) {
 ///     // Handle allocation failure
 ///     return ERROR_MEMORY_ALLOCATION;
 /// }
 ///
 /// // Load from file
-/// int load_result = dmsc_config_load_file(config, "config.yaml");
+/// int load_result = ri_config_load_file(config, "config.yaml");
 /// if (load_result != 0) {
 ///     // Handle load failure
 /// }
 ///
 /// // Access configuration values
-/// char* host = dmsc_config_get_string(config, "server.host");
-/// int port = dmsc_config_get_int(config, "server.port");
+/// char* host = ri_config_get_string(config, "server.host");
+/// int port = ri_config_get_int(config, "server.port");
 ///
 /// // Cleanup
-/// dmsc_config_free(config);
-/// dmsc_string_free(host);
+/// ri_config_free(config);
+/// ri_string_free(host);
 /// ```
 #[no_mangle]
-pub extern "C" fn dmsc_config_new() -> *mut CDMSCConfig {
-    let config = CDMSCConfig {
-        inner: DMSCConfig::new(),
+pub extern "C" fn ri_config_new() -> *mut CRiConfig {
+    let config = CRiConfig {
+        inner: RiConfig::new(),
     };
     Box::into_raw(Box::new(config))
 }
 
-/// Frees a previously allocated CDMSCConfig instance.
+/// Frees a previously allocated CRiConfig instance.
 ///
 /// Releases all memory associated with the configuration including any
 /// loaded values, watched files, or internal caches. After this function
@@ -355,7 +355,7 @@ pub extern "C" fn dmsc_config_new() -> *mut CDMSCConfig {
 ///
 /// # Parameters
 ///
-/// - `config`: Pointer to CDMSCConfig to free. If NULL, the function returns
+/// - `config`: Pointer to CRiConfig to free. If NULL, the function returns
 ///   immediately without error.
 ///
 /// # Behavior
@@ -372,7 +372,7 @@ pub extern "C" fn dmsc_config_new() -> *mut CDMSCConfig {
 /// This function is safe to call with NULL. Calling with a pointer that has
 /// already been freed results in undefined behavior.
 #[no_mangle]
-pub extern "C" fn dmsc_config_free(config: *mut CDMSCConfig) {
+pub extern "C" fn ri_config_free(config: *mut CRiConfig) {
     if !config.is_null() {
         unsafe {
             let _ = Box::from_raw(config);
@@ -388,7 +388,7 @@ pub extern "C" fn dmsc_config_free(config: *mut CDMSCConfig) {
 ///
 /// # Parameters
 ///
-/// - `config`: Pointer to CDMSCConfig containing the configuration. Must not
+/// - `config`: Pointer to CRiConfig containing the configuration. Must not
 ///   be NULL. If NULL, the function returns NULL.
 /// - `key`: Pointer to null-terminated C string specifying the configuration key.
 ///   Keys use dot notation for hierarchical access (e.g., "database.connections.max").
@@ -398,7 +398,7 @@ pub extern "C" fn dmsc_config_free(config: *mut CDMSCConfig) {
 ///
 /// Pointer to newly allocated C string containing the configuration value on
 /// success. The caller is responsible for freeing the returned string using
-/// dmsc_string_free(). Returns NULL if:
+/// ri_string_free(). Returns NULL if:
 ///
 /// - `config` is NULL
 /// - `key` is NULL
@@ -417,10 +417,10 @@ pub extern "C" fn dmsc_config_free(config: *mut CDMSCConfig) {
 /// # Example
 ///
 /// ```c
-/// char* database_url = dmsc_config_get_string(config, "database.url");
+/// char* database_url = ri_config_get_string(config, "database.url");
 /// if (database_url != NULL) {
 ///     printf("Database URL: %s\n", database_url);
-///     dmsc_string_free(database_url);
+///     ri_string_free(database_url);
 /// } else {
 ///     printf("Database URL not configured\n");
 /// }
@@ -429,10 +429,10 @@ pub extern "C" fn dmsc_config_free(config: *mut CDMSCConfig) {
 /// # Memory Management
 ///
 /// The returned string is newly allocated. Callers must release it using
-/// dmsc_string_free() to prevent memory leaks. Do not use free() directly.
+/// ri_string_free() to prevent memory leaks. Do not use free() directly.
 #[no_mangle]
-pub extern "C" fn dmsc_config_get_string(
-    config: *mut CDMSCConfig,
+pub extern "C" fn ri_config_get_string(
+    config: *mut CRiConfig,
     key: *const c_char,
 ) -> *mut c_char {
     if config.is_null() || key.is_null() {

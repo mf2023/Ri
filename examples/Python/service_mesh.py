@@ -1,7 +1,7 @@
 # Copyright © 2025-2026 Wenze Wei. All Rights Reserved.
 #
-# This file is part of DMSC.
-# The DMSC project belongs to the Dunimd Team.
+# This file is part of Ri.
+# The Ri project belongs to the Dunimd Team.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # You may not use this file except in compliance with the License.
@@ -16,37 +16,37 @@
 # limitations under the License.
 
 """
-DMSC Service Mesh Module Example
+Ri Service Mesh Module Example
 
-This example demonstrates how to use the DMSC service mesh module for service
+This example demonstrates how to use the Ri service mesh module for service
 discovery, traffic management, and health checking.
 """
 
 import asyncio
-from dmsc import (
-    DMSCServiceMesh,
-    DMSCServiceMeshConfig,
-    DMSCServiceDiscovery,
-    DMSCServiceInstance,
-    DMSCServiceStatus,
-    DMSCServiceMeshStats,
-    DMSCServiceEndpoint,
-    DMSCServiceHealthStatus,
-    DMSCHealthChecker,
-    DMSCHealthSummary,
-    DMSCHealthCheckType,
-    DMSCTrafficManager,
-    DMSCTrafficRoute,
-    DMSCMatchCriteria,
-    DMSCRouteAction,
-    DMSCWeightedDestination,
+from ri import (
+    RiServiceMesh,
+    RiServiceMeshConfig,
+    RiServiceDiscovery,
+    RiServiceInstance,
+    RiServiceStatus,
+    RiServiceMeshStats,
+    RiServiceEndpoint,
+    RiServiceHealthStatus,
+    RiHealthChecker,
+    RiHealthSummary,
+    RiHealthCheckType,
+    RiTrafficManager,
+    RiTrafficRoute,
+    RiMatchCriteria,
+    RiRouteAction,
+    RiWeightedDestination,
 )
 
 
 async def main():
     # Create service mesh configuration
-    config = DMSCServiceMeshConfig()
-    config.service_name = "dmsc-example-service"
+    config = RiServiceMeshConfig()
+    config.service_name = "ri-example-service"
     config.namespace = "production"
     config.enable_service_discovery = True
     config.enable_health_check = True
@@ -55,41 +55,41 @@ async def main():
     config.health_check_interval_seconds = 10
 
     # Initialize service mesh
-    service_mesh = DMSCServiceMesh(config)
+    service_mesh = RiServiceMesh(config)
 
     # Create service discovery
     print("Creating service discovery...")
-    discovery = DMSCServiceDiscovery()
+    discovery = RiServiceDiscovery()
 
     # Register service instances
     print("\nRegistering service instances...")
 
     # User service instances
-    user_service_1 = DMSCServiceInstance()
+    user_service_1 = RiServiceInstance()
     user_service_1.instance_id = "user-service-1"
     user_service_1.service_name = "user-service"
     user_service_1.host = "192.168.1.10"
     user_service_1.port = 8080
-    user_service_1.status = DMSCServiceStatus.HEALTHY
+    user_service_1.status = RiServiceStatus.HEALTHY
     user_service_1.weight = 3
     user_service_1.metadata = {"version": "1.0.0", "region": "us-east-1"}
 
-    user_service_2 = DMSCServiceInstance()
+    user_service_2 = RiServiceInstance()
     user_service_2.instance_id = "user-service-2"
     user_service_2.service_name = "user-service"
     user_service_2.host = "192.168.1.11"
     user_service_2.port = 8080
-    user_service_2.status = DMSCServiceStatus.HEALTHY
+    user_service_2.status = RiServiceStatus.HEALTHY
     user_service_2.weight = 2
     user_service_2.metadata = {"version": "1.0.0", "region": "us-east-2"}
 
     # Order service instances
-    order_service_1 = DMSCServiceInstance()
+    order_service_1 = RiServiceInstance()
     order_service_1.instance_id = "order-service-1"
     order_service_1.service_name = "order-service"
     order_service_1.host = "192.168.1.20"
     order_service_1.port = 8081
-    order_service_1.status = DMSCServiceStatus.HEALTHY
+    order_service_1.status = RiServiceStatus.HEALTHY
     order_service_1.weight = 1
     order_service_1.metadata = {"version": "1.1.0", "region": "us-east-1"}
 
@@ -111,25 +111,25 @@ async def main():
     # Create service endpoints
     print("\nCreating service endpoints...")
 
-    user_endpoint = DMSCServiceEndpoint()
+    user_endpoint = RiServiceEndpoint()
     user_endpoint.service_name = "user-service"
     user_endpoint.address = "192.168.1.10:8080"
     user_endpoint.protocol = "http"
-    user_endpoint.health_status = DMSCServiceHealthStatus.HEALTHY
+    user_endpoint.health_status = RiServiceHealthStatus.HEALTHY
 
-    order_endpoint = DMSCServiceEndpoint()
+    order_endpoint = RiServiceEndpoint()
     order_endpoint.service_name = "order-service"
     order_endpoint.address = "192.168.1.20:8081"
     order_endpoint.protocol = "http"
-    order_endpoint.health_status = DMSCServiceHealthStatus.HEALTHY
+    order_endpoint.health_status = RiServiceHealthStatus.HEALTHY
 
     print(f"Created endpoints for user-service and order-service")
 
     # Configure health checking
     print("\nConfiguring health checking...")
 
-    health_checker = DMSCHealthChecker()
-    health_checker.check_type = DMSCHealthCheckType.HTTP
+    health_checker = RiHealthChecker()
+    health_checker.check_type = RiHealthCheckType.HTTP
     health_checker.interval_seconds = 10
     health_checker.timeout_seconds = 5
     health_checker.path = "/health"
@@ -139,7 +139,7 @@ async def main():
     print(f"Health check for user-service: {health_status}")
 
     # Get health summary
-    health_summary = DMSCHealthSummary()
+    health_summary = RiHealthSummary()
     health_summary.total_services = 3
     health_summary.healthy_services = 3
     health_summary.unhealthy_services = 0
@@ -153,45 +153,45 @@ async def main():
     # Configure traffic management
     print("\nConfiguring traffic management...")
 
-    traffic_manager = DMSCTrafficManager()
+    traffic_manager = RiTrafficManager()
 
     # Create traffic routes
-    route1 = DMSCTrafficRoute()
+    route1 = RiTrafficRoute()
     route1.name = "user-service-route"
     route1.priority = 100
 
     # Match criteria
-    match_criteria = DMSCMatchCriteria()
+    match_criteria = RiMatchCriteria()
     match_criteria.path = "/api/users/*"
     match_criteria.methods = ["GET", "POST", "PUT", "DELETE"]
     route1.match = match_criteria
 
     # Route action
-    route_action = DMSCRouteAction()
+    route_action = RiRouteAction()
     route_action.route_to = "user-service"
     route1.action = route_action
 
     # Weighted destinations for canary deployment
-    canary_route = DMSCTrafficRoute()
+    canary_route = RiTrafficRoute()
     canary_route.name = "canary-route"
     canary_route.priority = 90
 
-    canary_match = DMSCMatchCriteria()
+    canary_match = RiMatchCriteria()
     canary_match.headers = {"x-canary": "true"}
     canary_route.match = canary_match
 
     # Weighted destinations
-    stable_dest = DMSCWeightedDestination()
+    stable_dest = RiWeightedDestination()
     stable_dest.service = "user-service"
     stable_dest.version = "1.0.0"
     stable_dest.weight = 90
 
-    canary_dest = DMSCWeightedDestination()
+    canary_dest = RiWeightedDestination()
     canary_dest.service = "user-service"
     canary_dest.version = "1.1.0"
     canary_dest.weight = 10
 
-    canary_action = DMSCRouteAction()
+    canary_action = RiRouteAction()
     canary_action.weighted_destinations = [stable_dest, canary_dest]
     canary_route.action = canary_action
 
@@ -203,7 +203,7 @@ async def main():
 
     # Get service mesh statistics
     print("\nService mesh statistics:")
-    mesh_stats = DMSCServiceMeshStats()
+    mesh_stats = RiServiceMeshStats()
     mesh_stats.total_services = 2
     mesh_stats.total_instances = 3
     mesh_stats.healthy_instances = 3

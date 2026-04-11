@@ -1,7 +1,7 @@
 //! Copyright © 2025-2026 Wenze Wei. All Rights Reserved.
 //!
-//! This file is part of DMSC.
-//! The DMSC project belongs to the Dunimd Team.
+//! This file is part of Ri.
+//! The Ri project belongs to the Dunimd Team.
 //!
 //! Licensed under the Apache License, Version 2.0 (the "License");
 //! You may not use this file except in compliance with the License.
@@ -15,8 +15,8 @@
 //! See the License for the specific language governing permissions and
 //! limitations under the License.
 
-use crate::core::DMSCResult;
-use crate::database::{DMSCDatabase, DMSCDBResult};
+use crate::core::RiResult;
+use crate::database::{RiDatabase, RiDBResult};
 use async_trait::async_trait;
 use serde::Serialize;
 
@@ -28,7 +28,7 @@ pub enum TransactionLevel {
     Serializable,
 }
 
-pub enum DMSCDBTransactionStatus {
+pub enum RiDBTransactionStatus {
     Active,
     Committed,
     RolledBack,
@@ -36,37 +36,37 @@ pub enum DMSCDBTransactionStatus {
 }
 
 #[async_trait]
-pub trait DMSCDBTransaction: Send + Sync {
+pub trait RiDBTransaction: Send + Sync {
     fn is_active(&self) -> bool;
 
-    async fn commit(&mut self) -> DMSCResult<()>;
+    async fn commit(&mut self) -> RiResult<()>;
 
-    async fn rollback(&mut self) -> DMSCResult<()>;
+    async fn rollback(&mut self) -> RiResult<()>;
 
-    async fn savepoint(&mut self, name: &str) -> DMSCResult<()>;
+    async fn savepoint(&mut self, name: &str) -> RiResult<()>;
 
-    async fn rollback_to_savepoint(&mut self, name: &str) -> DMSCResult<()>;
+    async fn rollback_to_savepoint(&mut self, name: &str) -> RiResult<()>;
 
-    async fn execute(&mut self, sql: &str) -> DMSCResult<u64>;
+    async fn execute(&mut self, sql: &str) -> RiResult<u64>;
 
-    async fn execute_with_params(&mut self, sql: &str, params: &[&dyn Serialize]) -> DMSCResult<u64>;
+    async fn execute_with_params(&mut self, sql: &str, params: &[&dyn Serialize]) -> RiResult<u64>;
 
-    async fn query(&mut self, sql: &str) -> DMSCResult<DMSCDBResult>;
+    async fn query(&mut self, sql: &str) -> RiResult<RiDBResult>;
 
-    async fn query_with_params(&mut self, sql: &str, params: &[&dyn Serialize]) -> DMSCResult<DMSCDBResult>;
+    async fn query_with_params(&mut self, sql: &str, params: &[&dyn Serialize]) -> RiResult<RiDBResult>;
 
-    async fn query_one(&mut self, sql: &str) -> DMSCResult<Option<crate::database::DMSCDBRow>>;
+    async fn query_one(&mut self, sql: &str) -> RiResult<Option<crate::database::RiDBRow>>;
 
-    async fn query_one_with_params(&mut self, sql: &str, params: &[&dyn Serialize]) -> DMSCResult<Option<crate::database::DMSCDBRow>>;
+    async fn query_one_with_params(&mut self, sql: &str, params: &[&dyn Serialize]) -> RiResult<Option<crate::database::RiDBRow>>;
 }
 
-pub struct DatabaseTransaction<T: DMSCDatabase> {
+pub struct DatabaseTransaction<T: RiDatabase> {
     db: Arc<T>,
     active: bool,
     level: TransactionLevel,
 }
 
-impl<T: DMSCDatabase> DatabaseTransaction<T> {
+impl<T: RiDatabase> DatabaseTransaction<T> {
     pub fn new(db: Arc<T>, level: TransactionLevel) -> Self {
         Self {
             db,
@@ -77,14 +77,14 @@ impl<T: DMSCDatabase> DatabaseTransaction<T> {
 }
 
 #[async_trait]
-impl<T: DMSCDatabase + Clone + Send + Sync> DMSCDBTransaction for DatabaseTransaction<T> {
+impl<T: RiDatabase + Clone + Send + Sync> RiDBTransaction for DatabaseTransaction<T> {
     fn is_active(&self) -> bool {
         self.active
     }
 
-    async fn commit(&mut self) -> DMSCResult<()> {
+    async fn commit(&mut self) -> RiResult<()> {
         if !self.active {
-            return Err(crate::core::DMSCError::InvalidState(
+            return Err(crate::core::RiError::InvalidState(
                 "Transaction is not active".to_string(),
             ));
         }
@@ -93,9 +93,9 @@ impl<T: DMSCDatabase + Clone + Send + Sync> DMSCDBTransaction for DatabaseTransa
         Ok(())
     }
 
-    async fn rollback(&mut self) -> DMSCResult<()> {
+    async fn rollback(&mut self) -> RiResult<()> {
         if !self.active {
-            return Err(crate::core::DMSCError::InvalidState(
+            return Err(crate::core::RiError::InvalidState(
                 "Transaction is not active".to_string(),
             ));
         }
@@ -104,9 +104,9 @@ impl<T: DMSCDatabase + Clone + Send + Sync> DMSCDBTransaction for DatabaseTransa
         Ok(())
     }
 
-    async fn savepoint(&mut self, name: &str) -> DMSCResult<()> {
+    async fn savepoint(&mut self, name: &str) -> RiResult<()> {
         if !self.active {
-            return Err(crate::core::DMSCError::InvalidState(
+            return Err(crate::core::RiError::InvalidState(
                 "Transaction is not active".to_string(),
             ));
         }
@@ -115,9 +115,9 @@ impl<T: DMSCDatabase + Clone + Send + Sync> DMSCDBTransaction for DatabaseTransa
         Ok(())
     }
 
-    async fn rollback_to_savepoint(&mut self, name: &str) -> DMSCResult<()> {
+    async fn rollback_to_savepoint(&mut self, name: &str) -> RiResult<()> {
         if !self.active {
-            return Err(crate::core::DMSCError::InvalidState(
+            return Err(crate::core::RiError::InvalidState(
                 "Transaction is not active".to_string(),
             ));
         }
@@ -126,54 +126,54 @@ impl<T: DMSCDatabase + Clone + Send + Sync> DMSCDBTransaction for DatabaseTransa
         Ok(())
     }
 
-    async fn execute(&mut self, sql: &str) -> DMSCResult<u64> {
+    async fn execute(&mut self, sql: &str) -> RiResult<u64> {
         if !self.active {
-            return Err(crate::core::DMSCError::InvalidState(
+            return Err(crate::core::RiError::InvalidState(
                 "Transaction is not active".to_string(),
             ));
         }
         self.db.execute(sql).await
     }
 
-    async fn execute_with_params(&mut self, sql: &str, params: &[&dyn Serialize]) -> DMSCResult<u64> {
+    async fn execute_with_params(&mut self, sql: &str, params: &[&dyn Serialize]) -> RiResult<u64> {
         if !self.active {
-            return Err(crate::core::DMSCError::InvalidState(
+            return Err(crate::core::RiError::InvalidState(
                 "Transaction is not active".to_string(),
             ));
         }
         self.db.execute_with_params(sql, params).await
     }
 
-    async fn query(&mut self, sql: &str) -> DMSCResult<DMSCDBResult> {
+    async fn query(&mut self, sql: &str) -> RiResult<RiDBResult> {
         if !self.active {
-            return Err(crate::core::DMSCError::InvalidState(
+            return Err(crate::core::RiError::InvalidState(
                 "Transaction is not active".to_string(),
             ));
         }
         self.db.query(sql).await
     }
 
-    async fn query_with_params(&mut self, sql: &str, params: &[&dyn Serialize]) -> DMSCResult<DMSCDBResult> {
+    async fn query_with_params(&mut self, sql: &str, params: &[&dyn Serialize]) -> RiResult<RiDBResult> {
         if !self.active {
-            return Err(crate::core::DMSCError::InvalidState(
+            return Err(crate::core::RiError::InvalidState(
                 "Transaction is not active".to_string(),
             ));
         }
         self.db.query_with_params(sql, params).await
     }
 
-    async fn query_one(&mut self, sql: &str) -> DMSCResult<Option<crate::database::DMSCDBRow>> {
+    async fn query_one(&mut self, sql: &str) -> RiResult<Option<crate::database::RiDBRow>> {
         if !self.active {
-            return Err(crate::core::DMSCError::InvalidState(
+            return Err(crate::core::RiError::InvalidState(
                 "Transaction is not active".to_string(),
             ));
         }
         self.db.query_one(sql).await
     }
 
-    async fn query_one_with_params(&mut self, sql: &str, params: &[&dyn Serialize]) -> DMSCResult<Option<crate::database::DMSCDBRow>> {
+    async fn query_one_with_params(&mut self, sql: &str, params: &[&dyn Serialize]) -> RiResult<Option<crate::database::RiDBRow>> {
         if !self.active {
-            return Err(crate::core::DMSCError::InvalidState(
+            return Err(crate::core::RiError::InvalidState(
                 "Transaction is not active".to_string(),
             ));
         }
@@ -181,7 +181,7 @@ impl<T: DMSCDatabase + Clone + Send + Sync> DMSCDBTransaction for DatabaseTransa
     }
 }
 
-impl<T: DMSCDatabase> Drop for DatabaseTransaction<T> {
+impl<T: RiDatabase> Drop for DatabaseTransaction<T> {
     fn drop(&mut self) {
         if self.active {
             let _ = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {

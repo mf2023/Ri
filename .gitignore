@@ -1,7 +1,7 @@
 # Copyright © 2025-2026 Wenze Wei. All Rights Reserved.
 #
-# This file is part of DMSC.
-# The DMSC project belongs to the Dunimd project team.
+# This file is part of Ri.
+# The Ri project belongs to the Dunimd project team.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # You may not use this file except in compliance with the License.
@@ -16,14 +16,14 @@
 # limitations under the License.
 
 # =============================================================================
-# DMSC Project Git Ignore Configuration
+# Ri Project Git Ignore Configuration
 # =============================================================================
 # This file specifies patterns for files and directories that Git should ignore.
 # These are typically build artifacts, temporary files, IDE configurations,
 # and other files that should not be committed to version control.
 #
 # Project Context:
-# - DMSC is a Rust-Python hybrid middleware framework
+# - Ri is a Rust-Python hybrid middleware framework
 # - This .gitignore covers both Rust and Python build artifacts
 # - Also includes common IDE and OS-specific files
 # - Keeps the repository clean by excluding generated files
@@ -40,8 +40,8 @@
 target/
 
 # Cargo.lock is typically committed for applications but ignored for libraries
-# DMSC is a library, so Cargo.lock is ignored to allow dependency resolution flexibility
-# Applications using DMSC should commit their own Cargo.lock
+# Ri is a library, so Cargo.lock is ignored to allow dependency resolution flexibility
+# Applications using Ri should commit their own Cargo.lock
 Cargo.lock
 
 # Rust backup files created by some editors during save operations
@@ -137,7 +137,7 @@ ehthumbs.db
 # Python Build Artifacts
 # =============================================================================
 # Python-specific build output and cache directories
-# DMSC includes Python bindings, so Python artifacts must be ignored
+# Ri includes Python bindings, so Python artifacts must be ignored
 
 # Python cache directory
 # Contains compiled Python bytecode (__pycache__ directories)

@@ -2,8 +2,8 @@
 
 # Copyright © 2025-2026 Wenze Wei. All Rights Reserved.
 #
-# This file is part of DMSC.
-# The DMSC project belongs to the Dunimd Team.
+# This file is part of Ri.
+# The Ri project belongs to the Dunimd Team.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # You may not use this file except in compliance with the License.
@@ -18,86 +18,86 @@
 # limitations under the License.
 
 """
-DMSC Validation Module Tests
+Ri Validation Module Tests
 
 Tests for the validation functionality including schema validation and sanitization.
 """
 
 import pytest
-from dmsc import (
-    DMSCValidationError,
-    DMSCValidationResult,
-    DMSCValidatorBuilder,
-    DMSCValidationRunner,
-    DMSCSanitizer,
-    DMSCSanitizationConfig,
-    DMSCSchemaValidator,
-    DMSCValidationModule,
+from ri import (
+    RiValidationError,
+    RiValidationResult,
+    RiValidatorBuilder,
+    RiValidationRunner,
+    RiSanitizer,
+    RiSanitizationConfig,
+    RiSchemaValidator,
+    RiValidationModule,
 )
 
 
-class TestDMSCValidationError:
-    """Tests for DMSCValidationError"""
+class TestRiValidationError:
+    """Tests for RiValidationError"""
 
     def test_validation_error_creation(self):
         """Test creating validation error - skip as it requires internal setup"""
         pass
 
 
-class TestDMSCValidationResult:
-    """Tests for DMSCValidationResult"""
+class TestRiValidationResult:
+    """Tests for RiValidationResult"""
 
     def test_validation_result_creation(self):
         """Test creating validation result"""
-        result = DMSCValidationResult(True)
+        result = RiValidationResult(True)
         assert result is not None
 
 
-class TestDMSCValidatorBuilder:
-    """Tests for DMSCValidatorBuilder"""
+class TestRiValidatorBuilder:
+    """Tests for RiValidatorBuilder"""
 
     def test_validator_builder_creation(self):
         """Test creating validator builder"""
-        builder = DMSCValidatorBuilder("test_field")
+        builder = RiValidatorBuilder("test_field")
         assert builder is not None
 
 
-class TestDMSCValidationRunner:
-    """Tests for DMSCValidationRunner"""
+class TestRiValidationRunner:
+    """Tests for RiValidationRunner"""
 
     def test_validation_runner_creation(self):
         """Test creating validation runner"""
-        runner = DMSCValidationRunner("test_field")
+        runner = RiValidationRunner("test_field")
         assert runner is not None
 
 
-class TestDMSCSanitizer:
-    """Tests for DMSCSanitizer"""
+class TestRiSanitizer:
+    """Tests for RiSanitizer"""
 
     def test_sanitizer_creation(self):
         """Test creating sanitizer - skip as it requires internal config"""
         pass
 
 
-class TestDMSCSanitizationConfig:
-    """Tests for DMSCSanitizationConfig"""
+class TestRiSanitizationConfig:
+    """Tests for RiSanitizationConfig"""
 
     def test_sanitization_config_creation(self):
         """Test creating sanitization config - skip as it requires internal setup"""
         pass
 
 
-class TestDMSCSchemaValidator:
-    """Tests for DMSCSchemaValidator"""
+class TestRiSchemaValidator:
+    """Tests for RiSchemaValidator"""
 
     def test_schema_validator_creation(self):
         """Test creating schema validator - requires string schema"""
-        validator = DMSCSchemaValidator('{"type": "object"}')
+        validator = RiSchemaValidator('{"type": "object"}')
         assert validator is not None
 
 
-class TestDMSCValidationModule:
-    """Tests for DMSCValidationModule"""
+class TestRiValidationModule:
+    """Tests for RiValidationModule"""
 
     def test_validation_module_creation(self):
         """Test creating validation module - skip as it requires internal setup"""

@@ -1,7 +1,7 @@
 //! Copyright © 2025-2026 Wenze Wei. All Rights Reserved.
 //!
-//! This file is part of DMSC.
-//! The DMSC project belongs to the Dunimd Team.
+//! This file is part of Ri.
+//! The Ri project belongs to the Dunimd Team.
 //!
 //! Licensed under the Apache License, Version 2.0 (the "License");
 //! You may not use this file except in compliance with the License.
@@ -20,17 +20,17 @@
 //! # Protocol Frame Format Module
 //!
 //! This module implements the real protocol frame format with serialization,
-//! checksums, and frame integrity verification for the DMSC private protocol.
+//! checksums, and frame integrity verification for the Ri private protocol.
 
 use std::convert::TryInto;
 use serde::{Deserialize, Serialize};
 use crc32fast::Hasher;
 
-use crate::core::{DMSCResult, DMSCError};
+use crate::core::{RiResult, RiError};
 
 /// Protocol frame type enumeration defining the categories of protocol frames.
 ///
-/// This enumeration classifies all protocol frames used in the DMSC protocol
+/// This enumeration classifies all protocol frames used in the Ri protocol
 /// for network communication. Each frame type serves a specific purpose in
 /// the communication lifecycle, from initial connection establishment through
 /// data transmission, authentication, and connection maintenance. Frame type
@@ -60,15 +60,15 @@ use crate::core::{DMSCResult, DMSCError};
 /// When compiled with the `pyo3` feature, this enum provides Python bindings
 /// for frame type identification:
 /// ```python
-/// from dmsc import DMSCFrameType
+/// from ri import RiFrameType
 ///
 /// # Identify frame types for protocol handling
-/// control_type = DMSCFrameType.Control()
-/// data_type = DMSCFrameType.Data()
-/// auth_type = DMSCFrameType.Auth()
+/// control_type = RiFrameType.Control()
+/// data_type = RiFrameType.Data()
+/// auth_type = RiFrameType.Auth()
 ///
 /// # Convert between types and byte values
-/// frame_type_value = DMSCFrameType.from_u8(0x01)
+/// frame_type_value = RiFrameType.from_u8(0x01)
 /// byte_value = data_type.to_u8()  # Returns 0x02
 /// ```
 ///
@@ -88,10 +88,10 @@ use crate::core::{DMSCResult, DMSCError};
 ///
 /// Basic frame type creation and conversion:
 /// ```rust,ignore
-/// use dmsc::protocol::frames::DMSCFrameType;
+/// use ri::protocol::frames::RiFrameType;
 ///
-/// let control = DMSCFrameType::Control;
-/// let data = DMSCFrameType::Data;
+/// let control = RiFrameType::Control;
+/// let data = RiFrameType::Data;
 ///
 /// assert_eq!(control as u8, 0x01);
 /// assert_eq!(data as u8, 0x02);
@@ -100,37 +100,37 @@ use crate::core::{DMSCResult, DMSCError};
 ///
 /// Frame type matching in protocol handling:
 /// ```rust,ignore
-/// use dmsc::protocol::frames::DMSCFrameType;
+/// use ri::protocol::frames::RiFrameType;
 ///
-/// fn handle_frame_type(frame_type: DMSCFrameType) -> &str {
+/// fn handle_frame_type(frame_type: RiFrameType) -> &str {
 ///     match frame_type {
-///         DMSCFrameType::Control => "Control frame - managing protocol state",
-///         DMSCFrameType::Data => "Data frame - processing payload",
-///         DMSCFrameType::Auth => "Auth frame - handling authentication",
-///         DMSCFrameType::KeepAlive => "Keep-alive frame - verifying connection",
-///         DMSCFrameType::Error => "Error frame - reporting error condition",
-///         DMSCFrameType::Encrypted => "Encrypted frame - processing secure payload",
+///         RiFrameType::Control => "Control frame - managing protocol state",
+///         RiFrameType::Data => "Data frame - processing payload",
+///         RiFrameType::Auth => "Auth frame - handling authentication",
+///         RiFrameType::KeepAlive => "Keep-alive frame - verifying connection",
+///         RiFrameType::Error => "Error frame - reporting error condition",
+///         RiFrameType::Encrypted => "Encrypted frame - processing secure payload",
 ///     }
 /// }
 ///
-/// assert_eq!(handle_frame_type(DMSCFrameType::Data), "Data frame - processing payload");
+/// assert_eq!(handle_frame_type(RiFrameType::Data), "Data frame - processing payload");
 /// ```
 ///
 /// Converting between byte values and frame types:
 /// ```rust,ignore
-/// use dmsc::protocol::frames::DMSCFrameType;
+/// use ri::protocol::frames::RiFrameType;
 ///
 /// // Convert byte to frame type
-/// let frame_type = DMSCFrameType::from_u8(0x03);
-/// assert_eq!(frame_type, Some(DMSCFrameType::Auth));
+/// let frame_type = RiFrameType::from_u8(0x03);
+/// assert_eq!(frame_type, Some(RiFrameType::Auth));
 ///
 /// // Invalid byte value returns None
-/// let invalid = DMSCFrameType::from_u8(0xFF);
+/// let invalid = RiFrameType::from_u8(0xFF);
 /// assert_eq!(invalid, None);
 /// ```
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
-pub enum DMSCFrameType {
+pub enum RiFrameType {
     /// Control frame for protocol management operations.
     ///
     /// Control frames manage the protocol state machine and handle connection
@@ -238,16 +238,16 @@ pub enum DMSCFrameType {
     Encrypted = 0x06,
 }
 
-impl DMSCFrameType {
+impl RiFrameType {
     /// Convert from byte to frame type
     pub fn from_u8(value: u8) -> Option<Self> {
         match value {
-            0x01 => Some(DMSCFrameType::Control),
-            0x02 => Some(DMSCFrameType::Data),
-            0x03 => Some(DMSCFrameType::Auth),
-            0x04 => Some(DMSCFrameType::KeepAlive),
-            0x05 => Some(DMSCFrameType::Error),
-            0x06 => Some(DMSCFrameType::Encrypted),
+            0x01 => Some(RiFrameType::Control),
+            0x02 => Some(RiFrameType::Data),
+            0x03 => Some(RiFrameType::Auth),
+            0x04 => Some(RiFrameType::KeepAlive),
+            0x05 => Some(RiFrameType::Error),
+            0x06 => Some(RiFrameType::Encrypted),
             _ => None,
         }
     }
@@ -283,8 +283,8 @@ impl DMSCFrameType {
 ///
 /// ## Magic Number Validation
 ///
-/// The magic number `0x444D5350` decodes to ASCII "DMSP" (DMSC Protocol) and
-/// serves as a quick validation that incoming data represents a valid DMSC
+/// The magic number `0x444D5350` decodes to ASCII "DMSP" (Ri Protocol) and
+/// serves as a quick validation that incoming data represents a valid Ri
 /// frame. Receiving a frame with an invalid magic number indicates either
 /// protocol mismatch or data corruption.
 ///
@@ -292,11 +292,11 @@ impl DMSCFrameType {
 ///
 /// When compiled with the `pyo3` feature, this struct provides Python bindings:
 /// ```python
-/// from dmsc import DMSCFrameHeader
+/// from ri import RiFrameHeader
 ///
 /// # Create new header for a data frame
-/// header = DMSCFrameHeader.new(
-///     frame_type=DMSCFrameHeader.FrameType.Data,
+/// header = RiFrameHeader.new(
+///     frame_type=RiFrameHeader.FrameType.Data,
 ///     payload_length=1024,
 ///     sequence_number=42
 /// )
@@ -315,25 +315,25 @@ impl DMSCFrameType {
 ///
 /// Creating a new frame header:
 /// ```rust,ignore
-/// use dmsc::protocol::frames::{DMSCFrameHeader, DMSCFrameType};
+/// use ri::protocol::frames::{RiFrameHeader, RiFrameType};
 ///
-/// let header = DMSCFrameHeader::new(
-///     DMSCFrameType::Data,
+/// let header = RiFrameHeader::new(
+///     RiFrameType::Data,
 ///     1024,           // payload length
 ///     42              // sequence number
 /// ).expect("Failed to create frame header");
 ///
-/// assert_eq!(header.magic, DMSCFrameHeader::MAGIC);
-/// assert_eq!(header.version, DMSCFrameHeader::VERSION);
-/// assert_eq!(header.frame_type, DMSCFrameType::Data as u8);
+/// assert_eq!(header.magic, RiFrameHeader::MAGIC);
+/// assert_eq!(header.version, RiFrameHeader::VERSION);
+/// assert_eq!(header.frame_type, RiFrameType::Data as u8);
 /// ```
 ///
 /// Serializing and deserializing headers:
 /// ```rust,ignore
-/// use dmsc::protocol::frames::{DMSCFrameHeader, DMSCFrameType};
+/// use ri::protocol::frames::{RiFrameHeader, RiFrameType};
 ///
-/// let header = DMSCFrameHeader::new(
-///     DMSCFrameType::Control,
+/// let header = RiFrameHeader::new(
+///     RiFrameType::Control,
 ///     256,
 ///     100
 /// ).expect("Failed to create header");
@@ -341,7 +341,7 @@ impl DMSCFrameType {
 /// let bytes = header.to_bytes();
 /// assert_eq!(bytes.len(), 32);
 ///
-/// let reconstructed = DMSCFrameHeader::from_bytes(&bytes)
+/// let reconstructed = RiFrameHeader::from_bytes(&bytes)
 ///     .expect("Failed to parse header");
 ///
 /// assert_eq!(header.magic, reconstructed.magic);
@@ -351,10 +351,10 @@ impl DMSCFrameType {
 ///
 /// Verifying frame integrity:
 /// ```rust,ignore
-/// use dmsc::protocol::frames::{DMSCFrameHeader, DMSCFrameType};
+/// use ri::protocol::frames::{RiFrameHeader, RiFrameType};
 ///
-/// let header = DMSCFrameHeader::new(
-///     DMSCFrameType::Data,
+/// let header = RiFrameHeader::new(
+///     RiFrameType::Data,
 ///     512,
 ///     200
 /// ).expect("Failed to create header");
@@ -371,13 +371,13 @@ impl DMSCFrameType {
 /// ```
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
-pub struct DMSCFrameHeader {
-    /// Frame magic number identifying the DMSC protocol (4 bytes).
+pub struct RiFrameHeader {
+    /// Frame magic number identifying the Ri protocol (4 bytes).
     ///
-    /// The magic number is a 32-bit constant that uniquely identifies DMSC
+    /// The magic number is a 32-bit constant that uniquely identifies Ri
     /// protocol frames. It serves as a quick validation mechanism to detect
-    /// non-DMSC data or protocol version mismatches. The value 0x444D5350
-    /// corresponds to the ASCII encoding of "DMSP" (DMSC Protocol).
+    /// non-Ri data or protocol version mismatches. The value 0x444D5350
+    /// corresponds to the ASCII encoding of "DMSP" (Ri Protocol).
     ///
     /// ## Magic Number Details
     ///
@@ -397,7 +397,7 @@ pub struct DMSCFrameHeader {
     ///
     /// The frame type specifies how the frame payload should be interpreted
     /// and processed. This 8-bit field identifies one of six possible frame
-    /// types defined in the DMSCFrameType enumeration.
+    /// types defined in the RiFrameType enumeration.
     pub frame_type: u8,
 
     /// Protocol version for compatibility checking (1 byte).
@@ -478,11 +478,11 @@ pub struct DMSCFrameHeader {
     pub checksum: u32,
 }
 
-impl DMSCFrameHeader {
+impl RiFrameHeader {
     /// Frame magic number constant for protocol identification.
     ///
-    /// This 32-bit constant uniquely identifies DMSC protocol frames. The value
-    /// 0x444D5350 corresponds to the ASCII encoding of "DMSP" (DMSC Protocol).
+    /// This 32-bit constant uniquely identifies Ri protocol frames. The value
+    /// 0x444D5350 corresponds to the ASCII encoding of "DMSP" (Ri Protocol).
     /// This magic number is placed at the beginning of every frame header and
     /// is validated upon frame receipt to confirm protocol compatibility.
     ///
@@ -498,10 +498,10 @@ impl DMSCFrameHeader {
     /// When receiving frame data, the magic number should be validated first
     /// before attempting to parse other header fields. A mismatch indicates:
     ///
-    /// 1. The received data is not a DMSC frame
+    /// 1. The received data is not a Ri frame
     /// 2. Data corruption may have occurred
     /// 3. The remote endpoint may be using a different protocol
-    pub const MAGIC: u32 = 0x444D5350; // "DMSCP" in ASCII
+    pub const MAGIC: u32 = 0x444D5350; // "RiP" in ASCII
     
     /// Current protocol version identifier.
     ///
@@ -523,10 +523,10 @@ impl DMSCFrameHeader {
     pub const VERSION: u8 = 0x01;
     
     /// Create a new frame header
-    pub fn new(frame_type: DMSCFrameType, payload_length: u32, sequence_number: u32) -> DMSCResult<Self> {
+    pub fn new(frame_type: RiFrameType, payload_length: u32, sequence_number: u32) -> RiResult<Self> {
         let timestamp = std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)
-            .map_err(|e| DMSCError::InvalidState(format!("System time error: {}", e)))?
+            .map_err(|e| RiError::InvalidState(format!("System time error: {}", e)))?
             .as_secs();
             
         Ok(Self {
@@ -582,25 +582,25 @@ impl DMSCFrameHeader {
     }
     
     /// Deserialize header from bytes
-    pub fn from_bytes(bytes: &[u8]) -> DMSCResult<Self> {
+    pub fn from_bytes(bytes: &[u8]) -> RiResult<Self> {
         if bytes.len() < 32 {
-            return Err(DMSCError::FrameError("Invalid header length".to_string()));
+            return Err(RiError::FrameError("Invalid header length".to_string()));
         }
         
         let magic = u32::from_be_bytes(bytes[0..4].try_into()
-            .map_err(|_| DMSCError::FrameError("Invalid magic number bytes".to_string()))?);
+            .map_err(|_| RiError::FrameError("Invalid magic number bytes".to_string()))?);
         let frame_type = bytes[4];
         let version = bytes[5];
         let flags = u16::from_be_bytes(bytes[6..8].try_into()
-            .map_err(|_| DMSCError::FrameError("Invalid flags bytes".to_string()))?);
+            .map_err(|_| RiError::FrameError("Invalid flags bytes".to_string()))?);
         let payload_length = u32::from_be_bytes(bytes[8..12].try_into()
-            .map_err(|_| DMSCError::FrameError("Invalid payload length bytes".to_string()))?);
+            .map_err(|_| RiError::FrameError("Invalid payload length bytes".to_string()))?);
         let sequence_number = u32::from_be_bytes(bytes[12..16].try_into()
-            .map_err(|_| DMSCError::FrameError("Invalid sequence number bytes".to_string()))?);
+            .map_err(|_| RiError::FrameError("Invalid sequence number bytes".to_string()))?);
         let timestamp = u64::from_be_bytes(bytes[16..24].try_into()
-            .map_err(|_| DMSCError::FrameError("Invalid timestamp bytes".to_string()))?);
+            .map_err(|_| RiError::FrameError("Invalid timestamp bytes".to_string()))?);
         let checksum = u32::from_be_bytes(bytes[24..28].try_into()
-            .map_err(|_| DMSCError::FrameError("Invalid checksum bytes".to_string()))?);
+            .map_err(|_| RiError::FrameError("Invalid checksum bytes".to_string()))?);
         
         Ok(Self {
             magic,
@@ -617,8 +617,8 @@ impl DMSCFrameHeader {
 
 /// Complete protocol frame combining header and payload data.
 ///
-/// A DMSCFrame represents the fundamental unit of data transmission in the
-/// DMSC protocol. Each frame consists of a fixed 32-byte header containing
+/// A RiFrame represents the fundamental unit of data transmission in the
+/// Ri protocol. Each frame consists of a fixed 32-byte header containing
 /// protocol metadata and a variable-length payload containing the actual
 /// application data. Frames are serialized for network transmission and
 /// deserialized upon receipt using CRC32 checksums for integrity verification.
@@ -647,7 +647,7 @@ impl DMSCFrameHeader {
 /// ## Frame Validity
 ///
 /// A frame is considered valid when:
-/// - The magic number matches the DMSC protocol identifier
+/// - The magic number matches the Ri protocol identifier
 /// - The protocol version is supported
 /// - The CRC32 checksum matches the computed checksum
 /// - The payload length matches the actual payload size
@@ -658,11 +658,11 @@ impl DMSCFrameHeader {
 ///
 /// When compiled with the `pyo3` feature, this struct provides Python bindings:
 /// ```python
-/// from dmsc import DMSCFrame, DMSCFrameType
+/// from ri import RiFrame, RiFrameType
 ///
 /// # Create a data frame
-/// frame = DMSCFrame.data_frame(
-///     data=b"Hello, DMSC Protocol!",
+/// frame = RiFrame.data_frame(
+///     data=b"Hello, Ri Protocol!",
 ///     sequence_number=1
 /// )
 ///
@@ -677,17 +677,17 @@ impl DMSCFrameHeader {
 /// print(f"Valid: {frame.is_valid()}")
 ///
 /// # Deserialize received frame
-/// received = DMSCFrame.from_bytes(frame_bytes)
-/// assert received.payload == b"Hello, DMSC Protocol!"
+/// received = RiFrame.from_bytes(frame_bytes)
+/// assert received.payload == b"Hello, Ri Protocol!"
 /// ```
 ///
 /// # Examples
 ///
 /// Creating and serializing a data frame:
 /// ```rust,ignore
-/// use dmsc::protocol::frames::{DMSCFrame, DMSCFrameType};
+/// use ri::protocol::frames::{RiFrame, RiFrameType};
 ///
-/// let frame = DMSCFrame::data_frame(
+/// let frame = RiFrame::data_frame(
 ///     b"Hello, World!".to_vec(),
 ///     42
 /// ).expect("Failed to create frame");
@@ -701,26 +701,26 @@ impl DMSCFrameHeader {
 ///
 /// Creating different frame types:
 /// ```rust,ignore
-/// use dmsc::protocol::frames::{DMSCFrame, DMSCFrameType};
+/// use ri::protocol::frames::{RiFrame, RiFrameType};
 ///
 /// // Control frame with command data
-/// let control = DMSCFrame::control_frame(
+/// let control = RiFrame::control_frame(
 ///     vec![0x01, 0x02, 0x03],
 ///     1
 /// ).expect("Failed to create control frame");
 ///
 /// // Authentication frame with credentials
-/// let auth = DMSCFrame::auth_frame(
+/// let auth = RiFrame::auth_frame(
 ///     b"token=abc123".to_vec(),
 ///     2
 /// ).expect("Failed to create auth frame");
 ///
 /// // Keep-alive frame (no payload)
-/// let keepalive = DMSCFrame::keepalive_frame(3)
+/// let keepalive = RiFrame::keepalive_frame(3)
 ///     .expect("Failed to create keepalive frame");
 ///
 /// // Error frame with code and message
-/// let error = DMSCFrame::error_frame(
+/// let error = RiFrame::error_frame(
 ///     0x0401,
 ///     "Connection timeout".to_string(),
 ///     4
@@ -729,9 +729,9 @@ impl DMSCFrameHeader {
 ///
 /// Receiving and deserializing frames:
 /// ```rust,ignore
-/// use dmsc::protocol::frames::{DMSCFrame, DMSCFrameType};
+/// use ri::protocol::frames::{RiFrame, RiFrameType};
 ///
-/// let original = DMSCFrame::data_frame(
+/// let original = RiFrame::data_frame(
 ///     b"Received data".to_vec(),
 ///     100
 /// ).expect("Failed to create frame");
@@ -739,7 +739,7 @@ impl DMSCFrameHeader {
 /// let bytes = original.to_bytes().expect("Failed to serialize");
 ///
 /// // Simulate network transmission
-/// let received = DMSCFrame::from_bytes(&bytes)
+/// let received = RiFrame::from_bytes(&bytes)
 ///     .expect("Failed to deserialize frame");
 ///
 /// assert_eq!(received.sequence_number(), 100);
@@ -748,13 +748,13 @@ impl DMSCFrameHeader {
 /// ```
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
-pub struct DMSCFrame {
+pub struct RiFrame {
     /// Frame header containing protocol metadata.
     ///
     /// The header provides essential information for frame processing including
     /// the frame type, sequence number, timestamp, and integrity checksum.
     /// It is always exactly 32 bytes in size and uses big-endian byte ordering.
-    pub header: DMSCFrameHeader,
+    pub header: RiFrameHeader,
 
     /// Frame payload containing application data.
     ///
@@ -769,43 +769,43 @@ pub struct DMSCFrame {
     pub payload: Vec<u8>,
 }
 
-impl DMSCFrame {
+impl RiFrame {
     /// Create a new frame
-    pub fn new(frame_type: DMSCFrameType, payload: Vec<u8>, sequence_number: u32) -> DMSCResult<Self> {
-        let header = DMSCFrameHeader::new(frame_type, payload.len() as u32, sequence_number)?;
+    pub fn new(frame_type: RiFrameType, payload: Vec<u8>, sequence_number: u32) -> RiResult<Self> {
+        let header = RiFrameHeader::new(frame_type, payload.len() as u32, sequence_number)?;
         Ok(Self { header, payload })
     }
     
     /// Create a control frame
-    pub fn control_frame(control_data: Vec<u8>, sequence_number: u32) -> DMSCResult<Self> {
-        Self::new(DMSCFrameType::Control, control_data, sequence_number)
+    pub fn control_frame(control_data: Vec<u8>, sequence_number: u32) -> RiResult<Self> {
+        Self::new(RiFrameType::Control, control_data, sequence_number)
     }
     
     /// Create a data frame
-    pub fn data_frame(data: Vec<u8>, sequence_number: u32) -> DMSCResult<Self> {
-        Self::new(DMSCFrameType::Data, data, sequence_number)
+    pub fn data_frame(data: Vec<u8>, sequence_number: u32) -> RiResult<Self> {
+        Self::new(RiFrameType::Data, data, sequence_number)
     }
     
     /// Create an authentication frame
-    pub fn auth_frame(auth_data: Vec<u8>, sequence_number: u32) -> DMSCResult<Self> {
-        Self::new(DMSCFrameType::Auth, auth_data, sequence_number)
+    pub fn auth_frame(auth_data: Vec<u8>, sequence_number: u32) -> RiResult<Self> {
+        Self::new(RiFrameType::Auth, auth_data, sequence_number)
     }
     
     /// Create a keep-alive frame
-    pub fn keepalive_frame(sequence_number: u32) -> DMSCResult<Self> {
-        Self::new(DMSCFrameType::KeepAlive, vec![], sequence_number)
+    pub fn keepalive_frame(sequence_number: u32) -> RiResult<Self> {
+        Self::new(RiFrameType::KeepAlive, vec![], sequence_number)
     }
     
     /// Create an error frame
-    pub fn error_frame(error_code: u32, error_message: String, sequence_number: u32) -> DMSCResult<Self> {
+    pub fn error_frame(error_code: u32, error_message: String, sequence_number: u32) -> RiResult<Self> {
         let mut payload = Vec::new();
         payload.extend_from_slice(&error_code.to_be_bytes());
         payload.extend_from_slice(error_message.as_bytes());
-        Self::new(DMSCFrameType::Error, payload, sequence_number)
+        Self::new(RiFrameType::Error, payload, sequence_number)
     }
     
     /// Serialize frame to bytes
-    pub fn to_bytes(&self) -> DMSCResult<Vec<u8>> {
+    pub fn to_bytes(&self) -> RiResult<Vec<u8>> {
         let mut header = self.header.clone();
         
         // Calculate and set checksum
@@ -819,41 +819,41 @@ impl DMSCFrame {
     }
     
     /// Deserialize frame from bytes
-    pub fn from_bytes(bytes: &[u8]) -> DMSCResult<Self> {
+    pub fn from_bytes(bytes: &[u8]) -> RiResult<Self> {
         if bytes.len() < 32 {
-            return Err(DMSCError::FrameError("Frame too short".to_string()));
+            return Err(RiError::FrameError("Frame too short".to_string()));
         }
         
-        let header = DMSCFrameHeader::from_bytes(&bytes[0..32])?;
+        let header = RiFrameHeader::from_bytes(&bytes[0..32])?;
         
         // Verify magic number
-        if header.magic != DMSCFrameHeader::MAGIC {
-            return Err(DMSCError::FrameError(format!("Invalid magic number: 0x{:08X}", header.magic)));
+        if header.magic != RiFrameHeader::MAGIC {
+            return Err(RiError::FrameError(format!("Invalid magic number: 0x{:08X}", header.magic)));
         }
         
         // Verify version
-        if header.version != DMSCFrameHeader::VERSION {
-            return Err(DMSCError::FrameError(format!("Unsupported version: {}", header.version)));
+        if header.version != RiFrameHeader::VERSION {
+            return Err(RiError::FrameError(format!("Unsupported version: {}", header.version)));
         }
         
         // Check payload length
         if bytes.len() < 32 + header.payload_length as usize {
-            return Err(DMSCError::FrameError("Incomplete frame".to_string()));
+            return Err(RiError::FrameError("Incomplete frame".to_string()));
         }
         
         let payload = bytes[32..32 + header.payload_length as usize].to_vec();
         
         // Verify checksum
         if !header.verify_checksum(&payload) {
-            return Err(DMSCError::FrameError("Checksum verification failed".to_string()));
+            return Err(RiError::FrameError("Checksum verification failed".to_string()));
         }
         
         Ok(Self { header, payload })
     }
     
     /// Get frame type
-    pub fn frame_type(&self) -> Option<DMSCFrameType> {
-        DMSCFrameType::from_u8(self.header.frame_type)
+    pub fn frame_type(&self) -> Option<RiFrameType> {
+        RiFrameType::from_u8(self.header.frame_type)
     }
     
     /// Get sequence number
@@ -868,15 +868,15 @@ impl DMSCFrame {
     
     /// Check if frame is valid
     pub fn is_valid(&self) -> bool {
-        self.header.magic == DMSCFrameHeader::MAGIC &&
-        self.header.version == DMSCFrameHeader::VERSION &&
+        self.header.magic == RiFrameHeader::MAGIC &&
+        self.header.version == RiFrameHeader::VERSION &&
         self.header.verify_checksum(&self.payload)
     }
 }
 
 /// Frame parser for reading and assembling protocol frames from stream data.
 ///
-/// The DMSCFrameParser handles the incremental parsing of frame data from network
+/// The RiFrameParser handles the incremental parsing of frame data from network
 /// streams or byte sources. Network protocols often deliver data in chunks that
 /// may not align with protocol frame boundaries. This parser accumulates incoming
 /// data in an internal buffer and extracts complete frames when sufficient data
@@ -914,10 +914,10 @@ impl DMSCFrame {
 ///
 /// When compiled with the `pyo3` feature, this struct provides Python bindings:
 /// ```python
-/// from dmsc import DMSCFrameParser
+/// from ri import RiFrameParser
 ///
 /// # Create parser for incoming stream data
-/// parser = DMSCFrameParser.new()
+/// parser = RiFrameParser.new()
 ///
 /// # Simulate receiving data chunks
 /// chunks = [
@@ -941,14 +941,14 @@ impl DMSCFrame {
 ///
 /// Basic frame parsing from stream data:
 /// ```rust,ignore
-/// use dmsc::protocol::frames::{DMSCFrameParser, DMSCFrame};
+/// use ri::protocol::frames::{RiFrameParser, RiFrame};
 ///
-/// let mut parser = DMSCFrameParser::new();
+/// let mut parser = RiFrameParser::new();
 ///
 /// // Simulate receiving frame data in chunks
-/// let frame1 = DMSCFrame::data_frame(b"First message".to_vec(), 0)
+/// let frame1 = RiFrame::data_frame(b"First message".to_vec(), 0)
 ///     .expect("Failed to create frame");
-/// let frame2 = DMSCFrame::data_frame(b"Second message".to_vec(), 1)
+/// let frame2 = RiFrame::data_frame(b"Second message".to_vec(), 1)
 ///     .expect("Failed to create frame");
 ///
 /// let bytes1 = frame1.to_bytes().expect("Failed to serialize");
@@ -971,9 +971,9 @@ impl DMSCFrame {
 ///
 /// Handling sequence number reset:
 /// ```rust,ignore
-/// use dmsc::protocol::frames::DMSCFrameParser;
+/// use ri::protocol::frames::RiFrameParser;
 ///
-/// let mut parser = DMSCFrameParser::new();
+/// let mut parser = RiFrameParser::new();
 ///
 /// // Parse some frames
 /// parser.add_data(&some_data);
@@ -1003,7 +1003,7 @@ impl DMSCFrame {
 /// - Buffer memory is only reclaimed when frames are successfully parsed
 /// - Large frames may cause temporary buffer growth; configure appropriate limits
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
-pub struct DMSCFrameParser {
+pub struct RiFrameParser {
     /// Internal buffer for accumulating incoming data.
     ///
     /// The buffer holds bytes that have been received but not yet assembled
@@ -1019,7 +1019,7 @@ pub struct DMSCFrameParser {
     next_sequence: u32,
 }
 
-impl DMSCFrameParser {
+impl RiFrameParser {
     pub fn new() -> Self {
         Self {
             buffer: Vec::new(),
@@ -1031,12 +1031,12 @@ impl DMSCFrameParser {
         self.buffer.extend_from_slice(data);
     }
     
-    pub fn parse_frame(&mut self) -> DMSCResult<Option<DMSCFrame>> {
+    pub fn parse_frame(&mut self) -> RiResult<Option<RiFrame>> {
         if self.buffer.len() < 32 {
             return Ok(None);
         }
         
-        let header = DMSCFrameHeader::from_bytes(&self.buffer[0..32])?;
+        let header = RiFrameHeader::from_bytes(&self.buffer[0..32])?;
         let total_length = 32 + header.payload_length as usize;
         
         if self.buffer.len() < total_length {
@@ -1044,7 +1044,7 @@ impl DMSCFrameParser {
         }
         
         let frame_bytes = self.buffer[0..total_length].to_vec();
-        let frame = DMSCFrame::from_bytes(&frame_bytes)?;
+        let frame = RiFrame::from_bytes(&frame_bytes)?;
         
         if frame.header.sequence_number != self.next_sequence {
             return Ok(None);
@@ -1071,7 +1071,7 @@ impl DMSCFrameParser {
 
 /// Frame builder for creating protocol frames with automatic sequence numbering.
 ///
-/// The DMSCFrameBuilder provides a convenient interface for constructing DMSC frames
+/// The RiFrameBuilder provides a convenient interface for constructing Ri frames
 /// while automatically managing sequence numbers. Rather than manually tracking and
 /// incrementing sequence numbers for each frame, the builder maintains an internal
 /// counter that is automatically incremented after each frame construction. This
@@ -1097,10 +1097,10 @@ impl DMSCFrameParser {
 ///
 /// When compiled with the `pyo3` feature, this struct provides Python bindings:
 /// ```python
-/// from dmsc import DMSCFrameBuilder
+/// from ri import RiFrameBuilder
 ///
 /// # Create builder for convenient frame construction
-/// builder = DMSCFrameBuilder.new()
+/// builder = RiFrameBuilder.new()
 ///
 /// # Build frames without manually tracking sequence numbers
 /// control_frame = builder.build_control_frame(b"\x01\x02\x03")
@@ -1118,9 +1118,9 @@ impl DMSCFrameParser {
 ///
 /// Building multiple frames with automatic sequencing:
 /// ```rust,ignore
-/// use dmsc::protocol::frames::DMSCFrameBuilder;
+/// use ri::protocol::frames::RiFrameBuilder;
 ///
-/// let mut builder = DMSCFrameBuilder::new();
+/// let mut builder = RiFrameBuilder::new();
 ///
 /// // Build a series of data frames
 /// let frame1 = builder.build_data_frame(b"Message 1".to_vec())
@@ -1140,9 +1140,9 @@ impl DMSCFrameParser {
 ///
 /// Building different frame types:
 /// ```rust,ignore
-/// use dmsc::protocol::frames::DMSCFrameBuilder;
+/// use ri::protocol::frames::RiFrameBuilder;
 ///
-/// let mut builder = DMSCFrameBuilder::new();
+/// let mut builder = RiFrameBuilder::new();
 ///
 /// // Control frame
 /// let control = builder.build_control_frame(vec![0x01, 0x00, 0x01])
@@ -1163,9 +1163,9 @@ impl DMSCFrameParser {
 ///
 /// Managing sequence numbers:
 /// ```rust,ignore
-/// use dmsc::protocol::frames::DMSCFrameBuilder;
+/// use ri::protocol::frames::RiFrameBuilder;
 ///
-/// let mut builder = DMSCFrameBuilder::new();
+/// let mut builder = RiFrameBuilder::new();
 ///
 /// // Build some frames
 /// let _ = builder.build_data_frame(b"Frame 0".to_vec()).unwrap();
@@ -1197,7 +1197,7 @@ impl DMSCFrameParser {
 /// - Sequence number operations are O(1)
 /// - Minimal heap allocation for small payloads
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
-pub struct DMSCFrameBuilder {
+pub struct RiFrameBuilder {
     /// Internal counter for automatic sequence number generation.
     ///
     /// This counter tracks the sequence number to assign to the next frame
@@ -1206,37 +1206,37 @@ pub struct DMSCFrameBuilder {
     next_sequence: u32,
 }
 
-impl DMSCFrameBuilder {
+impl RiFrameBuilder {
     pub fn new() -> Self {
         Self { next_sequence: 0 }
     }
     
-    pub fn build_control_frame(&mut self, control_data: Vec<u8>) -> DMSCResult<DMSCFrame> {
-        let frame = DMSCFrame::control_frame(control_data, self.next_sequence)?;
+    pub fn build_control_frame(&mut self, control_data: Vec<u8>) -> RiResult<RiFrame> {
+        let frame = RiFrame::control_frame(control_data, self.next_sequence)?;
         self.next_sequence = self.next_sequence.wrapping_add(1);
         Ok(frame)
     }
     
-    pub fn build_data_frame(&mut self, data: Vec<u8>) -> DMSCResult<DMSCFrame> {
-        let frame = DMSCFrame::data_frame(data, self.next_sequence)?;
+    pub fn build_data_frame(&mut self, data: Vec<u8>) -> RiResult<RiFrame> {
+        let frame = RiFrame::data_frame(data, self.next_sequence)?;
         self.next_sequence = self.next_sequence.wrapping_add(1);
         Ok(frame)
     }
     
-    pub fn build_auth_frame(&mut self, auth_data: Vec<u8>) -> DMSCResult<DMSCFrame> {
-        let frame = DMSCFrame::auth_frame(auth_data, self.next_sequence)?;
+    pub fn build_auth_frame(&mut self, auth_data: Vec<u8>) -> RiResult<RiFrame> {
+        let frame = RiFrame::auth_frame(auth_data, self.next_sequence)?;
         self.next_sequence = self.next_sequence.wrapping_add(1);
         Ok(frame)
     }
     
-    pub fn build_keepalive_frame(&mut self) -> DMSCResult<DMSCFrame> {
-        let frame = DMSCFrame::keepalive_frame(self.next_sequence)?;
+    pub fn build_keepalive_frame(&mut self) -> RiResult<RiFrame> {
+        let frame = RiFrame::keepalive_frame(self.next_sequence)?;
         self.next_sequence = self.next_sequence.wrapping_add(1);
         Ok(frame)
     }
     
-    pub fn build_error_frame(&mut self, error_code: u32, error_message: String) -> DMSCResult<DMSCFrame> {
-        let frame = DMSCFrame::error_frame(error_code, error_message, self.next_sequence)?;
+    pub fn build_error_frame(&mut self, error_code: u32, error_message: String) -> RiResult<RiFrame> {
+        let frame = RiFrame::error_frame(error_code, error_message, self.next_sequence)?;
         self.next_sequence = self.next_sequence.wrapping_add(1);
         Ok(frame)
     }

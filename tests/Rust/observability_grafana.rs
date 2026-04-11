@@ -1,7 +1,7 @@
 //! Copyright © 2025-2026 Wenze Wei. All Rights Reserved.
 //!
-//! This file is part of DMSC.
-//! The DMSC project belongs to the Dunimd Team.
+//! This file is part of Ri.
+//! The Ri project belongs to the Dunimd Team.
 //!
 //! Licensed under the Apache License, Version 2.0 (the "License");
 //! You may not use this file except in compliance with the License.
@@ -15,7 +15,7 @@
 //! See the License for the specific language governing permissions and
 //! limitations under the License.
 
-use dmsc::observability::grafana::{DMSCGrafanaDashboard, DMSCGrafanaPanel, DMSCGridPos};
+use ri::observability::grafana::{RiGrafanaDashboard, RiGrafanaPanel, RiGridPos};
 
 /// Observability Grafana dashboard test module for visualization configuration.
 ///
@@ -58,7 +58,7 @@ Tests verify that the generated JSON matches the expected structure including
 /// coordinates or allowed to flow naturally based on available space.
 
 #[test]
-/// Tests DMSCGrafanaDashboard creation and panel management.
+/// Tests RiGrafanaDashboard creation and panel management.
 ///
 /// Verifies that Grafana dashboards can be created with proper metadata
 /// and that visualization panels can be added with appropriate configuration
@@ -102,14 +102,14 @@ Tests verify that the generated JSON matches the expected structure including
 /// - Serialized JSON contains expected titles
 fn test_grafana_dashboard() {
     // Create a new dashboard with specified title
-    let mut dashboard = DMSCGrafanaDashboard::new("Test Dashboard");
+    let mut dashboard = RiGrafanaDashboard::new("Test Dashboard");
     
     // Define a visualization panel with configuration
-    let panel = DMSCGrafanaPanel {
+    let panel = RiGrafanaPanel {
         title: "CPU Usage".to_string(),
         query: "cpu_usage_percent".to_string(),
         panel_type: "graph".to_string(),
-        grid_pos: DMSCGridPos { h: 8, w: 12, x: 0, y: 0 },
+        grid_pos: RiGridPos { h: 8, w: 12, x: 0, y: 0 },
     };
     
     // Add panel to dashboard

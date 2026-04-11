@@ -1,7 +1,7 @@
 //! Copyright © 2025-2026 Wenze Wei. All Rights Reserved.
 //!
-//! This file is part of DMSC.
-//! The DMSC project belongs to the Dunimd Team.
+//! This file is part of Ri.
+//! The Ri project belongs to the Dunimd Team.
 //!
 //! Licensed under the Apache License, Version 2.0 (the "License");
 //! You may not use this file except in compliance with the License.
@@ -17,33 +17,33 @@
 
 //! # Gateway Module Tests
 //!
-//! This module contains comprehensive tests for the DMSC API gateway system,
+//! This module contains comprehensive tests for the Ri API gateway system,
 //! covering request/response handling, routing, middleware processing, load balancing,
 //! rate limiting, and circuit breaker functionality for building resilient API services.
 //!
 //! ## Test Coverage
 //!
-//! - **DMSCGatewayConfig**: Tests for gateway configuration including network settings
+//! - **RiGatewayConfig**: Tests for gateway configuration including network settings
 //!   (listen address, port, max connections), feature toggles (rate limiting, circuit
 //!   breaker, load balancing), CORS settings, and logging configuration
 //!
-//! - **DMSCGatewayRequest**: Tests for request object creation and properties including
+//! - **RiGatewayRequest**: Tests for request object creation and properties including
 //!   HTTP method, path, headers, query parameters, body, and remote address
 //!
-//! - **DMSCGatewayResponse**: Tests for response construction including status codes,
+//! - **RiGatewayResponse**: Tests for response construction including status codes,
 //!   headers, body content, JSON responses, and error responses
 //!
-//! - **DMSCRouter**: Tests for route registration, route matching, and route counting
+//! - **RiRouter**: Tests for route registration, route matching, and route counting
 //!
-//! - **DMSCMiddleware**: Tests for middleware chain execution and the interceptor pattern
+//! - **RiMiddleware**: Tests for middleware chain execution and the interceptor pattern
 //!   for request/response processing
 //!
-//! - **DMSCLoadBalancer**: Tests for load balancing strategies (RoundRobin, LeastConn,
+//! - **RiLoadBalancer**: Tests for load balancing strategies (RoundRobin, LeastConn,
 //!   Random), backend server management, and healthy server selection
 //!
-//! - **DMSCRateLimiter**: Tests for rate limiting configuration and request throttling
+//! - **RiRateLimiter**: Tests for rate limiting configuration and request throttling
 //!
-//! - **DMSCCircuitBreaker**: Tests for circuit breaker states (Closed, Open, Half-Open)
+//! - **RiCircuitBreaker**: Tests for circuit breaker states (Closed, Open, Half-Open)
 //!   and fault tolerance patterns
 //!
 //! ## Architecture
@@ -77,29 +77,29 @@
 //! - Errors in middleware short-circuit the chain and return error responses
 //! - The chain pattern enables separation of concerns (auth, logging, compression, etc.)
 
-use dmsc::gateway::{
-    DMSCGatewayConfig,
-    DMSCGatewayRequest,
-    DMSCGatewayResponse,
-    DMSCGateway,
-    DMSCRoute,
-    DMSCRouter,
-    DMSCMiddleware,
-    DMSCMiddlewareChain,
-    DMSCLoadBalancer,
-    DMSCLoadBalancerStrategy,
-    DMSCRateLimiter,
-    DMSCRateLimitConfig,
-    DMSCCircuitBreaker,
-    DMSCCircuitBreakerConfig,
+use ri::gateway::{
+    RiGatewayConfig,
+    RiGatewayRequest,
+    RiGatewayResponse,
+    RiGateway,
+    RiRoute,
+    RiRouter,
+    RiMiddleware,
+    RiMiddlewareChain,
+    RiLoadBalancer,
+    RiLoadBalancerStrategy,
+    RiRateLimiter,
+    RiRateLimitConfig,
+    RiCircuitBreaker,
+    RiCircuitBreakerConfig,
 };
-use dmsc::gateway::load_balancer::DMSCBackendServer;
-use dmsc::prelude::DMSCResult;
+use ri::gateway::load_balancer::RiBackendServer;
+use ri::prelude::RiResult;
 use std::collections::HashMap;
 use std::sync::Arc;
 
 #[test]
-/// Tests DMSCGatewayConfig default configuration values.
+/// Tests RiGatewayConfig default configuration values.
 ///
 /// Verifies that the default gateway configuration has appropriate values
 /// for network settings, feature toggles, CORS, and logging.
@@ -123,7 +123,7 @@ use std::sync::Arc;
 /// All configuration fields have sensible defaults suitable for
 /// typical API gateway deployments.
 fn test_gateway_config_default() {
-    let config = DMSCGatewayConfig::default();
+    let config = RiGatewayConfig::default();
     
     assert_eq!(config.listen_address, "0.0.0.0");
     assert_eq!(config.listen_port, 8080);
@@ -139,7 +139,7 @@ fn test_gateway_config_default() {
 }
 
 #[test]
-/// Tests DMSCGatewayRequest creation and properties.
+/// Tests RiGatewayRequest creation and properties.
 ///
 /// Verifies that a gateway request can be created with all required
 /// properties including HTTP method, path, headers, query parameters,
@@ -168,7 +168,7 @@ fn test_gateway_request_new() {
     let body = None::<Vec<u8>>;
     let remote_addr = "127.0.0.1:12345".to_string();
     
-    let request = DMSCGatewayRequest::new(
+    let request = RiGatewayRequest::new(
         method.clone(),
         path.clone(),
         headers.clone(),
@@ -187,7 +187,7 @@ fn test_gateway_request_new() {
 }
 
 #[test]
-/// Tests DMSCGatewayResponse creation with status, body, and request ID.
+/// Tests RiGatewayResponse creation with status, body, and request ID.
 ///
 /// Verifies that a gateway response can be created with the essential
 /// properties and that default headers are added automatically.
@@ -207,7 +207,7 @@ fn test_gateway_response_new() {
     let body = b"test_body".to_vec();
     let request_id = "test_request_id".to_string();
     
-    let response = DMSCGatewayResponse::new(status_code, body.clone(), request_id.clone());
+    let response = RiGatewayResponse::new(status_code, body.clone(), request_id.clone());
     
     assert_eq!(response.status_code, status_code);
     assert_eq!(response.body, body);
@@ -217,7 +217,7 @@ fn test_gateway_response_new() {
 }
 
 #[test]
-/// Tests DMSCGatewayResponse header addition with with_header().
+/// Tests RiGatewayResponse header addition with with_header().
 ///
 /// Verifies that custom headers can be added to responses using
 /// the builder pattern through with_header() method.
@@ -232,14 +232,14 @@ fn test_gateway_response_with_header() {
     let body = b"test_body".to_vec();
     let request_id = "test_request_id".to_string();
     
-    let response = DMSCGatewayResponse::new(status_code, body.clone(), request_id.clone())
+    let response = RiGatewayResponse::new(status_code, body.clone(), request_id.clone())
         .with_header("Custom-Header".to_string(), "Custom-Value".to_string());
     
     assert_eq!(response.headers.get("Custom-Header"), Some(&"Custom-Value".to_string()));
 }
 
 #[test]
-/// Tests DMSCGatewayResponse JSON creation with json() factory.
+/// Tests RiGatewayResponse JSON creation with json() factory.
 ///
 /// Verifies that JSON responses can be created easily using the
 /// json() factory method which sets the Content-Type header.
@@ -261,7 +261,7 @@ fn test_gateway_response_json() {
     
     let data = serde_json::json!({"key": "value"});
     
-    let response = DMSCGatewayResponse::json(status_code, &data, request_id.clone()).unwrap();
+    let response = RiGatewayResponse::json(status_code, &data, request_id.clone()).unwrap();
     
     assert_eq!(response.status_code, status_code);
     assert_eq!(response.request_id, request_id);
@@ -270,7 +270,7 @@ fn test_gateway_response_json() {
 }
 
 #[test]
-/// Tests DMSCGatewayResponse error creation with error() factory.
+/// Tests RiGatewayResponse error creation with error() factory.
 ///
 /// Verifies that error responses can be created easily using the
 /// error() factory method for standardized error handling.
@@ -291,7 +291,7 @@ fn test_gateway_response_error() {
     let message = "Not Found".to_string();
     let request_id = "test_request_id".to_string();
     
-    let response = DMSCGatewayResponse::error(status_code, message.clone(), request_id.clone());
+    let response = RiGatewayResponse::error(status_code, message.clone(), request_id.clone());
     
     assert_eq!(response.status_code, status_code);
     assert_eq!(response.request_id, request_id);
@@ -300,7 +300,7 @@ fn test_gateway_response_error() {
 }
 
 #[tokio::test]
-/// Tests DMSCGateway creation and initial state.
+/// Tests RiGateway creation and initial state.
 ///
 /// Verifies that a gateway can be created successfully and starts
 /// with empty routes and middleware chain.
@@ -316,7 +316,7 @@ fn test_gateway_response_error() {
 /// - Gateway is created without errors
 /// - Initial state is as expected
 async fn test_gateway_new() {
-    let gateway = DMSCGateway::new();
+    let gateway = RiGateway::new();
     
     // Verify gateway components are created
     assert_eq!(gateway.router().route_count(), 0);
@@ -324,7 +324,7 @@ async fn test_gateway_new() {
 }
 
 #[tokio::test]
-/// Tests DMSCRouter route registration with add_route().
+/// Tests RiRouter route registration with add_route().
 ///
 /// Verifies that routes can be registered with the router and that
 /// the route count is updated accordingly.
@@ -341,20 +341,20 @@ async fn test_gateway_new() {
 /// - Route count increases by 1
 /// - Route is available for matching
 async fn test_gateway_router() {
-    let router = DMSCRouter::new();
+    let router = RiRouter::new();
     
     // Test adding a route
-    let handler = Arc::new(|request: DMSCGatewayRequest| {
+    let handler = Arc::new(|request: RiGatewayRequest| {
         Box::pin(async move {
-            Ok(DMSCGatewayResponse::new(
+            Ok(RiGatewayResponse::new(
                 200,
                 b"test_response".to_vec(),
                 request.id,
             ))
-        }) as std::pin::Pin<Box<dyn std::future::Future<Output = DMSCResult<DMSCGatewayResponse>> + Send>>
+        }) as std::pin::Pin<Box<dyn std::future::Future<Output = RiResult<RiGatewayResponse>> + Send>>
     });
 
-    let route = DMSCRoute::new(
+    let route = RiRoute::new(
         "GET".to_string(),
         "/test".to_string(),
         handler,
@@ -366,7 +366,7 @@ async fn test_gateway_router() {
 }
 
 #[tokio::test]
-/// Tests DMSCMiddlewareChain middleware execution.
+/// Tests RiMiddlewareChain middleware execution.
 ///
 /// Verifies that middlewares can be added to the chain and that
 /// they are executed in order when processing requests.
@@ -386,11 +386,11 @@ async fn test_gateway_middleware_chain() {
     struct TestMiddleware;
 
     #[async_trait::async_trait]
-    impl DMSCMiddleware for TestMiddleware {
+    impl RiMiddleware for TestMiddleware {
         async fn execute(
             &self,
-            request: &mut DMSCGatewayRequest,
-        ) -> DMSCResult<()> {
+            request: &mut RiGatewayRequest,
+        ) -> RiResult<()> {
             request
                 .headers
                 .insert("X-Custom-Middleware".to_string(), "applied".to_string());
@@ -402,11 +402,11 @@ async fn test_gateway_middleware_chain() {
         }
     }
 
-    let mut middleware_chain = DMSCMiddlewareChain::new();
+    let mut middleware_chain = RiMiddlewareChain::new();
 
     middleware_chain.add(Arc::new(TestMiddleware));
 
-    let mut request = DMSCGatewayRequest::new(
+    let mut request = RiGatewayRequest::new(
         "GET".to_string(),
         "/test".to_string(),
         HashMap::new(),
@@ -425,7 +425,7 @@ async fn test_gateway_middleware_chain() {
 }
 
 #[tokio::test]
-/// Tests DMSCGateway request handling with handle_request().
+/// Tests RiGateway request handling with handle_request().
 ///
 /// Verifies that the gateway can handle requests through the
 /// complete request-response cycle including routing and middleware.
@@ -444,21 +444,21 @@ async fn test_gateway_middleware_chain() {
 /// - Handler response is returned
 /// - Status code matches expected value
 async fn test_gateway_handle_request() {
-    let gateway = DMSCGateway::new();
+    let gateway = RiGateway::new();
     let router = gateway.router();
     
     // Add a test route
-    let handler = Arc::new(|request: DMSCGatewayRequest| {
+    let handler = Arc::new(|request: RiGatewayRequest| {
         Box::pin(async move {
-            Ok(DMSCGatewayResponse::new(
+            Ok(RiGatewayResponse::new(
                 200,
                 b"test_response".to_vec(),
                 request.id,
             ))
-        }) as std::pin::Pin<Box<dyn std::future::Future<Output = DMSCResult<DMSCGatewayResponse>> + Send>>
+        }) as std::pin::Pin<Box<dyn std::future::Future<Output = RiResult<RiGatewayResponse>> + Send>>
     });
 
-    let route = DMSCRoute::new(
+    let route = RiRoute::new(
         "GET".to_string(),
         "/test".to_string(),
         handler,
@@ -467,7 +467,7 @@ async fn test_gateway_handle_request() {
     router.add_route(route);
     
     // Create a test request
-    let request = DMSCGatewayRequest::new(
+    let request = RiGatewayRequest::new(
         "GET".to_string(),
         "/test".to_string(),
         std::collections::HashMap::new(),
@@ -485,7 +485,7 @@ async fn test_gateway_handle_request() {
 }
 
 #[tokio::test]
-/// Tests DMSCGateway 404 response for unmatched routes.
+/// Tests RiGateway 404 response for unmatched routes.
 ///
 /// Verifies that the gateway returns a 404 status code when
 /// no matching route is found for the request path.
@@ -501,10 +501,10 @@ async fn test_gateway_handle_request() {
 /// - Non-existent route returns 404
 /// - Error message is included
 async fn test_gateway_handle_request_not_found() {
-    let gateway = DMSCGateway::new();
+    let gateway = RiGateway::new();
     
     // Create a test request to a non-existent route
-    let request = DMSCGatewayRequest::new(
+    let request = RiGatewayRequest::new(
         "GET".to_string(),
         "/non_existent_route".to_string(),
         std::collections::HashMap::new(),
@@ -521,7 +521,7 @@ async fn test_gateway_handle_request_not_found() {
 }
 
 #[tokio::test]
-/// Tests DMSCLoadBalancer server management and selection.
+/// Tests RiLoadBalancer server management and selection.
 ///
 /// Verifies that the load balancer can manage backend servers
 /// and select healthy servers using the configured strategy.
@@ -538,14 +538,14 @@ async fn test_gateway_handle_request_not_found() {
 /// - All servers are retrieved as healthy
 /// - Selected server matches pattern
 async fn test_load_balancer_new() {
-    let load_balancer = DMSCLoadBalancer::new(DMSCLoadBalancerStrategy::RoundRobin);
+    let load_balancer = RiLoadBalancer::new(RiLoadBalancerStrategy::RoundRobin);
     
     // Test adding targets
-    let server1 = DMSCBackendServer::new(
+    let server1 = RiBackendServer::new(
         "server1".to_string(),
         "http://localhost:8001".to_string(),
     );
-    let server2 = DMSCBackendServer::new(
+    let server2 = RiBackendServer::new(
         "server2".to_string(),
         "http://localhost:8002".to_string(),
     );
@@ -563,7 +563,7 @@ async fn test_load_balancer_new() {
 }
 
 #[tokio::test]
-/// Tests DMSCRateLimiter request throttling.
+/// Tests RiRateLimiter request throttling.
 ///
 /// Verifies that the rate limiter can check if requests should
 /// be allowed based on the configured rate limit settings.
@@ -579,16 +579,16 @@ async fn test_load_balancer_new() {
 /// - Initial request is allowed
 /// - Rate limiting operates correctly
 async fn test_rate_limiter_new() {
-    let config = DMSCRateLimitConfig {
+    let config = RiRateLimitConfig {
         requests_per_second: 100,
         burst_size: 200,
         window_seconds: 1,
     };
     
-    let rate_limiter = DMSCRateLimiter::new(config);
+    let rate_limiter = RiRateLimiter::new(config);
     
     // Test checking a request
-    let request = DMSCGatewayRequest::new(
+    let request = RiGatewayRequest::new(
         "GET".to_string(),
         "/test".to_string(),
         std::collections::HashMap::new(),
@@ -602,7 +602,7 @@ async fn test_rate_limiter_new() {
 }
 
 #[tokio::test]
-/// Tests DMSCCircuitBreaker state management.
+/// Tests RiCircuitBreaker state management.
 ///
 /// Verifies that the circuit breaker tracks success and failure
 /// counts and allows requests in the appropriate states.
@@ -618,14 +618,14 @@ async fn test_rate_limiter_new() {
 /// - Initial state allows requests
 /// - Success/failure recording works
 async fn test_circuit_breaker_new() {
-    let config = DMSCCircuitBreakerConfig {
+    let config = RiCircuitBreakerConfig {
         failure_threshold: 5,
         success_threshold: 3,
         timeout_seconds: 30,
         monitoring_period_seconds: 30,
     };
     
-    let circuit_breaker = DMSCCircuitBreaker::new(config);
+    let circuit_breaker = RiCircuitBreaker::new(config);
     
     // Test allowing requests initially
     let allowed = circuit_breaker.allow_request().await;

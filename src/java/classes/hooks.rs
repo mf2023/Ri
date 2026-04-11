@@ -1,7 +1,7 @@
 //! Copyright © 2025-2026 Wenze Wei. All Rights Reserved.
 //!
-//! This file is part of DMSC.
-//! The DMSC project belongs to the Dunimd Team.
+//! This file is part of Ri.
+//! The Ri project belongs to the Dunimd Team.
 //!
 //! Licensed under the Apache License, Version 2.0 (the "License");
 //! You may not use this file except in compliance with the License.
@@ -17,31 +17,31 @@
 
 //! # Hooks Module JNI Bindings
 //!
-//! JNI bindings for DMSC hooks classes.
+//! JNI bindings for Ri hooks classes.
 
 use jni::JNIEnv;
 use jni::objects::JClass;
 use jni::sys::jlong;
-use crate::hooks::DMSCHookBus;
+use crate::hooks::RiHookBus;
 
 #[no_mangle]
-pub extern "system" fn Java_com_dunimd_dmsc_hooks_DMSCHookBus_new0(
+pub extern "system" fn Java_com_dunimd_ri_hooks_RiHookBus_new0(
     _env: JNIEnv,
     _class: JClass,
 ) -> jlong {
-    let bus = Box::new(DMSCHookBus::new());
+    let bus = Box::new(RiHookBus::new());
     Box::into_raw(bus) as jlong
 }
 
 #[no_mangle]
-pub extern "system" fn Java_com_dunimd_dmsc_hooks_DMSCHookBus_free0(
+pub extern "system" fn Java_com_dunimd_ri_hooks_RiHookBus_free0(
     _env: JNIEnv,
     _class: JClass,
     ptr: jlong,
 ) {
     if ptr != 0 {
         unsafe {
-            let _ = Box::from_raw(ptr as *mut DMSCHookBus);
+            let _ = Box::from_raw(ptr as *mut RiHookBus);
         }
     }
 }

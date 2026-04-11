@@ -1,7 +1,7 @@
 //! Copyright © 2025-2026 Wenze Wei. All Rights Reserved.
 //!
-//! This file is part of DMSC.
-//! The DMSC project belongs to the Dunimd Team.
+//! This file is part of Ri.
+//! The Ri project belongs to the Dunimd Team.
 //!
 //! Licensed under the Apache License, Version 2.0 (the "License");
 //! You may not use this file except in compliance with the License.
@@ -20,40 +20,40 @@
 
 //! # RabbitMQ Queue Backend
 //! 
-//! This module provides a RabbitMQ implementation for the DMSC queue system. It allows
+//! This module provides a RabbitMQ implementation for the Ri queue system. It allows
 //! sending and receiving messages using RabbitMQ as the underlying message broker.
 //! 
 //! ## Key Components
 //! 
-//! - **DMSCRabbitMQQueue**: Main RabbitMQ queue implementation
+//! - **RiRabbitMQQueue**: Main RabbitMQ queue implementation
 //! - **RabbitMQProducer**: RabbitMQ producer implementation
 //! - **RabbitMQConsumer**: RabbitMQ consumer implementation
 //! 
 //! ## Design Principles
 //! 
-//! 1. **Async Trait Implementation**: Implements the DMSCQueue, DMSCQueueProducer, and DMSCQueueConsumer traits
+//! 1. **Async Trait Implementation**: Implements the RiQueue, RiQueueProducer, and RiQueueConsumer traits
 //! 2. **RabbitMQ Integration**: Uses the lapin crate for RabbitMQ connectivity
 //! 3. **Thread Safety**: Uses Arc for safe sharing of connections, channels, and consumers
 //! 4. **Future-based API**: Leverages async/await for non-blocking operations
 //! 5. **Durable Queues**: Configured with durable queues for message persistence
-//! 6. **Error Handling**: Comprehensive error handling with DMSCResult
+//! 6. **Error Handling**: Comprehensive error handling with RiResult
 //! 7. **Stream-based Consumer**: Uses StreamExt for efficient message processing
 //! 8. **Batch Support**: Provides batch sending functionality
 //! 
 //! ## Usage
 //! 
 //! ```rust
-//! use dmsc::prelude::*;
+//! use ri::prelude::*;
 //! 
-//! async fn example() -> DMSCResult<()> {
+//! async fn example() -> RiResult<()> {
 //!     // Create a new RabbitMQ queue
-//!     let queue = DMSCRabbitMQQueue::new("test-queue", "amqp://guest:guest@localhost:5672/%2f").await?;
+//!     let queue = RiRabbitMQQueue::new("test-queue", "amqp://guest:guest@localhost:5672/%2f").await?;
 //!     
 //!     // Create a producer
 //!     let producer = queue.create_producer().await?;
 //!     
 //!     // Create a message
-//!     let message = DMSCQueueMessage {
+//!     let message = RiQueueMessage {
 //!         id: "12345".to_string(),
 //!         payload: b"Hello, RabbitMQ!".to_vec(),
 //!         headers: vec![("key1".to_string(), "value1".to_string())],
@@ -91,14 +91,14 @@ use serde::{Deserialize, Serialize};
 use reqwest;
 #[cfg(feature = "http_client")]
 use urlencoding;
-use crate::core::DMSCResult;
-use crate::queue::{DMSCQueue, DMSCQueueMessage, DMSCQueueProducer, DMSCQueueConsumer, DMSCQueueStats};
+use crate::core::RiResult;
+use crate::queue::{RiQueue, RiQueueMessage, RiQueueProducer, RiQueueConsumer, RiQueueStats};
 
-/// RabbitMQ queue implementation for the DMSC queue system.
+/// RabbitMQ queue implementation for the Ri queue system.
 ///
-/// This struct provides a RabbitMQ implementation of the DMSCQueue trait, allowing
+/// This struct provides a RabbitMQ implementation of the RiQueue trait, allowing
 /// sending and receiving messages using RabbitMQ as the underlying message broker.
-pub struct DMSCRabbitMQQueue {
+pub struct RiRabbitMQQueue {
     /// Queue name
     name: String,
     /// RabbitMQ connection
@@ -140,7 +140,7 @@ struct RabbitMQMessageStats {
     get: Option<u64>,
 }
 
-impl DMSCRabbitMQQueue {
+impl RiRabbitMQQueue {
     /// Creates a new RabbitMQ queue instance.
     ///
     /// # Parameters
@@ -150,8 +150,8 @@ impl DMSCRabbitMQQueue {
     ///
     /// # Returns
     ///
-    /// A new DMSCRabbitMQQueue instance wrapped in DMSCResult
-    pub async fn new(name: &str, connection_string: &str) -> DMSCResult<Self> {
+    /// A new RiRabbitMQQueue instance wrapped in RiResult
+    pub async fn new(name: &str, connection_string: &str) -> RiResult<Self> {
         let connection = Connection::connect(connection_string, ConnectionProperties::default()).await?;
         Self::new_with_connection(name, connection).await
     }
@@ -165,8 +165,8 @@ impl DMSCRabbitMQQueue {
     ///
     /// # Returns
     ///
-    /// A new DMSCRabbitMQQueue instance wrapped in DMSCResult
-    pub async fn new_with_connection(name: &str, connection: lapin::Connection) -> DMSCResult<Self> {
+    /// A new RiRabbitMQQueue instance wrapped in RiResult
+    pub async fn new_with_connection(name: &str, connection: lapin::Connection) -> RiResult<Self> {
         let channel = connection.create_channel().await?;
         
         let queue = channel
@@ -203,14 +203,14 @@ impl DMSCRabbitMQQueue {
     ///
     /// # Returns
     ///
-    /// A new DMSCRabbitMQQueue instance wrapped in DMSCResult
+    /// A new RiRabbitMQQueue instance wrapped in RiResult
     pub async fn new_with_management(
         name: &str,
         connection: lapin::Connection,
         management_url: &str,
         management_username: &str,
         management_password: &str,
-    ) -> DMSCResult<Self> {
+    ) -> RiResult<Self> {
         let channel = connection.create_channel().await?;
         
         let queue = channel
@@ -243,15 +243,15 @@ impl DMSCRabbitMQQueue {
     ///
     /// # Returns
     ///
-    /// Detailed DMSCQueueStats wrapped in DMSCResult
+    /// Detailed RiQueueStats wrapped in RiResult
     #[cfg(feature = "http_client")]
-    async fn fetch_rabbitmq_stats(&self) -> DMSCResult<DMSCQueueStats> {
+    async fn fetch_rabbitmq_stats(&self) -> RiResult<RiQueueStats> {
         let (Some(management_url), Some(username), Some(password)) = (
             &self.management_url,
             &self.management_username,
             &self.management_password,
         ) else {
-            return Err(crate::core::DMSCError::Other(
+            return Err(crate::core::RiError::Other(
                 "Management API not configured. Use new_with_management() to enable.".to_string(),
             ));
         };
@@ -268,10 +268,10 @@ impl DMSCRabbitMQQueue {
             .basic_auth(username, Some(password))
             .send()
             .await
-            .map_err(|e| crate::core::DMSCError::Other(format!("Failed to connect to RabbitMQ Management API: {}", e)))?;
+            .map_err(|e| crate::core::RiError::Other(format!("Failed to connect to RabbitMQ Management API: {}", e)))?;
 
         if !response.status().is_success() {
-            return Err(crate::core::DMSCError::Other(format!(
+            return Err(crate::core::RiError::Other(format!(
                 "RabbitMQ Management API returned error: {}",
                 response.status()
             )));
@@ -280,7 +280,7 @@ impl DMSCRabbitMQQueue {
         let queue_info: RabbitMQQueueInfo = response
             .json()
             .await
-            .map_err(|e| crate::core::DMSCError::Other(format!("Failed to parse RabbitMQ response: {}", e)))?;
+            .map_err(|e| crate::core::RiError::Other(format!("Failed to parse RabbitMQ response: {}", e)))?;
 
         let processed_messages = queue_info
             .message_stats
@@ -294,7 +294,7 @@ impl DMSCRabbitMQQueue {
             .and_then(|s| s.redeliver)
             .unwrap_or(0);
 
-        Ok(DMSCQueueStats {
+        Ok(RiQueueStats {
             queue_name: queue_info.name,
             message_count: queue_info.messages,
             consumer_count: queue_info.consumers as u32,
@@ -308,7 +308,7 @@ impl DMSCRabbitMQQueue {
         })
     }
     
-    async fn get_basic_stats(&self) -> DMSCResult<DMSCQueueStats> {
+    async fn get_basic_stats(&self) -> RiResult<RiQueueStats> {
         let queue_info = self.channel
             .queue_declare(
                 &self.name,
@@ -320,7 +320,7 @@ impl DMSCRabbitMQQueue {
             )
             .await?;
         
-        Ok(DMSCQueueStats {
+        Ok(RiQueueStats {
             queue_name: self.name.clone(),
             message_count: queue_info.message_count() as u64,
             consumer_count: queue_info.consumer_count() as u32,
@@ -337,13 +337,13 @@ impl DMSCRabbitMQQueue {
 }
 
 #[async_trait]
-impl DMSCQueue for DMSCRabbitMQQueue {
+impl RiQueue for RiRabbitMQQueue {
     /// Creates a new producer for the RabbitMQ queue.
     ///
     /// # Returns
     ///
-    /// A new DMSCQueueProducer instance wrapped in DMSCResult
-    async fn create_producer(&self) -> DMSCResult<Box<dyn DMSCQueueProducer>> {
+    /// A new RiQueueProducer instance wrapped in RiResult
+    async fn create_producer(&self) -> RiResult<Box<dyn RiQueueProducer>> {
         Ok(Box::new(RabbitMQProducer {
             channel: self.channel.clone(),
             queue_name: self.name.clone(),
@@ -358,8 +358,8 @@ impl DMSCQueue for DMSCRabbitMQQueue {
     ///
     /// # Returns
     ///
-    /// A new DMSCQueueConsumer instance wrapped in DMSCResult
-    async fn create_consumer(&self, consumer_group: &str) -> DMSCResult<Box<dyn DMSCQueueConsumer>> {
+    /// A new RiQueueConsumer instance wrapped in RiResult
+    async fn create_consumer(&self, consumer_group: &str) -> RiResult<Box<dyn RiQueueConsumer>> {
         let consumer = self.channel
             .basic_consume(
                 &self.name,
@@ -379,8 +379,8 @@ impl DMSCQueue for DMSCRabbitMQQueue {
     ///
     /// # Returns
     ///
-    /// DMSCQueueStats containing detailed queue statistics wrapped in DMSCResult
-    async fn get_stats(&self) -> DMSCResult<DMSCQueueStats> {
+    /// RiQueueStats containing detailed queue statistics wrapped in RiResult
+    async fn get_stats(&self) -> RiResult<RiQueueStats> {
         #[cfg(feature = "http_client")]
         match self.fetch_rabbitmq_stats().await {
             Ok(detailed_stats) => Ok(detailed_stats),
@@ -396,14 +396,14 @@ impl DMSCQueue for DMSCRabbitMQQueue {
     ///
     /// # Returns
     ///
-    /// DMSCResult indicating success or failure
+    /// RiResult indicating success or failure
 
     /// Purges all messages from the RabbitMQ queue.
     ///
     /// # Returns
     ///
-    /// DMSCResult indicating success or failure
-    async fn purge(&self) -> DMSCResult<()> {
+    /// RiResult indicating success or failure
+    async fn purge(&self) -> RiResult<()> {
         self.channel.queue_purge(&self.name, Default::default()).await?;
         Ok(())
     }
@@ -412,8 +412,8 @@ impl DMSCQueue for DMSCRabbitMQQueue {
     ///
     /// # Returns
     ///
-    /// DMSCResult indicating success or failure
-    async fn delete(&self) -> DMSCResult<()> {
+    /// RiResult indicating success or failure
+    async fn delete(&self) -> RiResult<()> {
         self.channel.queue_delete(&self.name, Default::default()).await?;
         Ok(())
     }
@@ -421,7 +421,7 @@ impl DMSCQueue for DMSCRabbitMQQueue {
 
 /// RabbitMQ producer implementation.
 ///
-/// This struct provides a RabbitMQ implementation of the DMSCQueueProducer trait,
+/// This struct provides a RabbitMQ implementation of the RiQueueProducer trait,
 /// allowing sending messages to RabbitMQ queues.
 struct RabbitMQProducer {
     /// RabbitMQ channel
@@ -431,7 +431,7 @@ struct RabbitMQProducer {
 }
 
 #[async_trait]
-impl DMSCQueueProducer for RabbitMQProducer {
+impl RiQueueProducer for RabbitMQProducer {
     /// Sends a single message to the RabbitMQ queue.
     ///
     /// # Parameters
@@ -440,8 +440,8 @@ impl DMSCQueueProducer for RabbitMQProducer {
     ///
     /// # Returns
     ///
-    /// DMSCResult indicating success or failure
-    async fn send(&self, message: DMSCQueueMessage) -> DMSCResult<()> {
+    /// RiResult indicating success or failure
+    async fn send(&self, message: RiQueueMessage) -> RiResult<()> {
         let payload = serde_json::to_vec(&message)?;
         
         self.channel
@@ -465,8 +465,8 @@ impl DMSCQueueProducer for RabbitMQProducer {
     ///
     /// # Returns
     ///
-    /// DMSCResult indicating success or failure
-    async fn send_batch(&self, messages: Vec<DMSCQueueMessage>) -> DMSCResult<()> {
+    /// RiResult indicating success or failure
+    async fn send_batch(&self, messages: Vec<RiQueueMessage>) -> RiResult<()> {
         for message in messages {
             self.send(message).await?;
         }
@@ -502,13 +502,13 @@ impl RabbitMQConsumer {
 }
 
 #[async_trait]
-impl DMSCQueueConsumer for RabbitMQConsumer {
+impl RiQueueConsumer for RabbitMQConsumer {
     /// Receives a message from the RabbitMQ queue.
     ///
     /// # Returns
     ///
     /// An Option containing the received message, or None if the consumer is paused
-    async fn receive(&self) -> DMSCResult<Option<DMSCQueueMessage>> {
+    async fn receive(&self) -> RiResult<Option<RiQueueMessage>> {
         let paused = *self.paused.lock().await;
         if paused {
             return Ok(None);
@@ -518,7 +518,7 @@ impl DMSCQueueConsumer for RabbitMQConsumer {
         
         match consumer.next().await {
             Some(delivery_result) => {
-                let delivery = delivery_result.map_err(|e| crate::core::DMSCError::Other(format!("Consumer error: {e}")))?;
+                let delivery = delivery_result.map_err(|e| crate::core::RiError::Other(format!("Consumer error: {e}")))?;
                 
                 let _message_id = {
                     let delivery_tag = delivery.delivery_tag;
@@ -530,7 +530,7 @@ impl DMSCQueueConsumer for RabbitMQConsumer {
                     message_id
                 };
                 
-                let message: DMSCQueueMessage = serde_json::from_slice(&delivery.data)?;
+                let message: RiQueueMessage = serde_json::from_slice(&delivery.data)?;
                 
                 Ok(Some(message))
             },
@@ -548,8 +548,8 @@ impl DMSCQueueConsumer for RabbitMQConsumer {
     ///
     /// # Returns
     ///
-    /// DMSCResult indicating success or failure
-    async fn ack(&self, message_id: &str) -> DMSCResult<()> {
+    /// RiResult indicating success or failure
+    async fn ack(&self, message_id: &str) -> RiResult<()> {
         log::debug!("Acknowledging message: {}", message_id);
         
         let delivery_tag = {
@@ -562,7 +562,7 @@ impl DMSCQueueConsumer for RabbitMQConsumer {
         if let Some(tag) = delivery_tag {
             let channel = self.channel.clone();
             channel.basic_ack(tag, BasicAckOptions { multiple: false }).await
-                .map_err(|e| crate::core::DMSCError::Other(format!("Failed to ack message: {e}")))?;
+                .map_err(|e| crate::core::RiError::Other(format!("Failed to ack message: {e}")))?;
             
             let mut tags = self.delivery_tags.lock().await;
             tags.remove(&tag);
@@ -585,8 +585,8 @@ impl DMSCQueueConsumer for RabbitMQConsumer {
     ///
     /// # Returns
     ///
-    /// DMSCResult indicating success or failure
-    async fn nack(&self, message_id: &str) -> DMSCResult<()> {
+    /// RiResult indicating success or failure
+    async fn nack(&self, message_id: &str) -> RiResult<()> {
         log::debug!("Negatively acknowledging message: {}", message_id);
         
         let delivery_tag = {
@@ -600,7 +600,7 @@ impl DMSCQueueConsumer for RabbitMQConsumer {
             let channel = self.channel.clone();
             use lapin::options::BasicNackOptions;
             channel.basic_nack(tag, BasicNackOptions { multiple: false, requeue: true }).await
-                .map_err(|e| crate::core::DMSCError::Other(format!("Failed to nack message: {e}")))?;
+                .map_err(|e| crate::core::RiError::Other(format!("Failed to nack message: {e}")))?;
             
             let mut tags = self.delivery_tags.lock().await;
             tags.remove(&tag);
@@ -617,8 +617,8 @@ impl DMSCQueueConsumer for RabbitMQConsumer {
     ///
     /// # Returns
     ///
-    /// DMSCResult indicating success or failure
-    async fn pause(&self) -> DMSCResult<()> {
+    /// RiResult indicating success or failure
+    async fn pause(&self) -> RiResult<()> {
         let mut paused = self.paused.lock().await;
         *paused = true;
         Ok(())
@@ -628,8 +628,8 @@ impl DMSCQueueConsumer for RabbitMQConsumer {
     ///
     /// # Returns
     ///
-    /// DMSCResult indicating success or failure
-    async fn resume(&self) -> DMSCResult<()> {
+    /// RiResult indicating success or failure
+    async fn resume(&self) -> RiResult<()> {
         let mut paused = self.paused.lock().await;
         *paused = false;
         Ok(())

@@ -1,7 +1,7 @@
 //! Copyright © 2025-2026 Wenze Wei. All Rights Reserved.
 //!
-//! This file is part of DMSC.
-//! The DMSC project belongs to the Dunimd Team.
+//! This file is part of Ri.
+//! The Ri project belongs to the Dunimd Team.
 //!
 //! Licensed under the Apache License, Version 2.0 (the "License");
 //! You may not use this file except in compliance with the License.
@@ -19,16 +19,16 @@
 
 //! # Hooks System
 //! 
-//! This module provides an event bus system for DMSC, enabling communication between components
+//! This module provides an event bus system for Ri, enabling communication between components
 //! during various lifecycle events. It supports both synchronous and asynchronous module lifecycle
 //! phases, and allows for custom event handlers to be registered.
 //! 
 //! ## Key Components
 //! 
-//! - **DMSCHookKind**: Enum defining the different types of hooks
-//! - **DMSCModulePhase**: Enum defining the different module lifecycle phases
-//! - **DMSCHookEvent**: Struct representing a hook event
-//! - **DMSCHookBus**: Event bus for registering and emitting hooks
+//! - **RiHookKind**: Enum defining the different types of hooks
+//! - **RiModulePhase**: Enum defining the different module lifecycle phases
+//! - **RiHookEvent**: Struct representing a hook event
+//! - **RiHookBus**: Event bus for registering and emitting hooks
 //! 
 //! ## Design Principles
 //! 
@@ -42,47 +42,47 @@
 //! ## Usage
 //! 
 //! ```rust
-//! use dmsc::prelude::*;
+//! use ri::prelude::*;
 //! 
-//! fn example() -> DMSCResult<()> {
+//! fn example() -> RiResult<()> {
 //!     // Create a hook bus
-//!     let mut hook_bus = DMSCHookBus::new();
+//!     let mut hook_bus = RiHookBus::new();
 //!     
 //!     // Register a hook handler
-//!     hook_bus.register(DMSCHookKind::Startup, "example.startup".to_string(), |ctx, event| {
+//!     hook_bus.register(RiHookKind::Startup, "example.startup".to_string(), |ctx, event| {
 //!         // Handle startup event
 //!         Ok(())
 //!     });
 //!     
 //!     // Create a service context (usually provided by the runtime)
-//!     let ctx = DMSCServiceContext::new();
+//!     let ctx = RiServiceContext::new();
 //!     
 //!     // Emit a hook event
-//!     hook_bus.emit(&DMSCHookKind::Startup, &ctx)?;
+//!     hook_bus.emit(&RiHookKind::Startup, &ctx)?;
 //!     
 //!     Ok(())
 //! }
 
 use std::collections::HashMap;
 
-use crate::core::{DMSCResult, DMSCServiceContext};
+use crate::core::{RiResult, RiServiceContext};
 
 // Type aliases for complex types
 /// Type alias for a hook handler function
-pub type DMSCHookHandler = Box<dyn Fn(&DMSCServiceContext, &DMSCHookEvent) -> DMSCResult<()> + Send + Sync>;
+pub type RiHookHandler = Box<dyn Fn(&RiServiceContext, &RiHookEvent) -> RiResult<()> + Send + Sync>;
 
 /// Type alias for a hook handler entry (ID + handler)
-pub type DMSCHookHandlerEntry = (DMSCHookId, DMSCHookHandler);
+pub type RiHookHandlerEntry = (RiHookId, RiHookHandler);
 
 /// Type alias for a collection of hook handlers grouped by hook kind
-pub type DMSCHookHandlersMap = HashMap<DMSCHookKind, Vec<DMSCHookHandlerEntry>>;
+pub type RiHookHandlersMap = HashMap<RiHookKind, Vec<RiHookHandlerEntry>>;
 
 /// Hook kind definition.
 /// 
 /// This enum defines the different types of hooks that can be emitted during the application lifecycle.
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 #[derive(Eq, Hash, PartialEq, Clone, Copy, Debug)]
-pub enum DMSCHookKind {
+pub enum RiHookKind {
     /// Emitted when the application starts up
     Startup,
     /// Emitted when the application shuts down
@@ -109,7 +109,7 @@ pub enum DMSCHookKind {
 /// including both synchronous and asynchronous phases.
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 #[derive(Eq, Hash, PartialEq, Clone, Copy, Debug)]
-pub enum DMSCModulePhase {
+pub enum RiModulePhase {
     /// Synchronous initialization phase
     Init,
     /// Synchronous phase before starting
@@ -140,7 +140,7 @@ pub enum DMSCModulePhase {
     AsyncAfterShutdown,
 }
 
-impl DMSCModulePhase {
+impl RiModulePhase {
     /// Returns the string representation of the module phase.
     /// 
     /// # Returns
@@ -148,20 +148,20 @@ impl DMSCModulePhase {
     /// A static string representing the module phase (e.g., "init", "start", "async_shutdown")
     pub fn as_str(&self) -> &'static str {
         match self {
-            DMSCModulePhase::Init => "init",
-            DMSCModulePhase::BeforeStart => "before_start",
-            DMSCModulePhase::Start => "start",
-            DMSCModulePhase::AfterStart => "after_start",
-            DMSCModulePhase::BeforeShutdown => "before_shutdown",
-            DMSCModulePhase::Shutdown => "shutdown",
-            DMSCModulePhase::AfterShutdown => "after_shutdown",
-            DMSCModulePhase::AsyncInit => "async_init",
-            DMSCModulePhase::AsyncBeforeStart => "async_before_start",
-            DMSCModulePhase::AsyncStart => "async_start",
-            DMSCModulePhase::AsyncAfterStart => "async_after_start",
-            DMSCModulePhase::AsyncBeforeShutdown => "async_before_shutdown",
-            DMSCModulePhase::AsyncShutdown => "async_shutdown",
-            DMSCModulePhase::AsyncAfterShutdown => "async_after_shutdown",
+            RiModulePhase::Init => "init",
+            RiModulePhase::BeforeStart => "before_start",
+            RiModulePhase::Start => "start",
+            RiModulePhase::AfterStart => "after_start",
+            RiModulePhase::BeforeShutdown => "before_shutdown",
+            RiModulePhase::Shutdown => "shutdown",
+            RiModulePhase::AfterShutdown => "after_shutdown",
+            RiModulePhase::AsyncInit => "async_init",
+            RiModulePhase::AsyncBeforeStart => "async_before_start",
+            RiModulePhase::AsyncStart => "async_start",
+            RiModulePhase::AsyncAfterStart => "async_after_start",
+            RiModulePhase::AsyncBeforeShutdown => "async_before_shutdown",
+            RiModulePhase::AsyncShutdown => "async_shutdown",
+            RiModulePhase::AsyncAfterShutdown => "async_after_shutdown",
         }
     }
 }
@@ -172,25 +172,25 @@ impl DMSCModulePhase {
 /// information about the hook kind, the module (if applicable), and the module phase (if applicable).
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 #[derive(Clone, Debug)]
-pub struct DMSCHookEvent {
+pub struct RiHookEvent {
     /// The kind of hook that was triggered
-    pub kind: DMSCHookKind,
+    pub kind: RiHookKind,
     /// The name of the module associated with the event (if any)
     pub module: Option<String>,
     /// The module phase associated with the event (if any)
-    pub phase: Option<DMSCModulePhase>,
+    pub phase: Option<RiModulePhase>,
 }
 
-impl DMSCHookEvent {
+impl RiHookEvent {
     /// Creates a new hook event.
-    pub fn new(kind: DMSCHookKind, module: Option<String>, phase: Option<DMSCModulePhase>) -> Self {
+    pub fn new(kind: RiHookKind, module: Option<String>, phase: Option<RiModulePhase>) -> Self {
         Self { kind, module, phase }
     }
 
     /// Creates a config reload event.
     pub fn config_reload(_path: String, _timestamp: chrono::DateTime<chrono::Utc>) -> Self {
         Self { 
-            kind: DMSCHookKind::ConfigReload, 
+            kind: RiHookKind::ConfigReload, 
             module: Some("config_manager".to_string()), 
             phase: None,
         }
@@ -200,30 +200,30 @@ impl DMSCHookEvent {
 /// Type alias for hook IDs.
 /// 
 /// Hook IDs are used to identify hook handlers and can be used for debugging and logging purposes.
-pub type DMSCHookId = String;
+pub type RiHookId = String;
 
 /// Hook bus for registering and emitting hooks.
 /// 
 /// This struct manages the registration of hook handlers and the emission of hook events.
 /// It allows multiple handlers to be registered for the same hook kind.
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
-pub struct DMSCHookBus {
+pub struct RiHookBus {
     /// Internal storage for hook handlers, organized by hook kind
-    handlers: DMSCHookHandlersMap,
+    handlers: RiHookHandlersMap,
 }
 
-impl Default for DMSCHookBus {
+impl Default for RiHookBus {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl DMSCHookBus {
+impl RiHookBus {
     /// Creates a new hook bus instance.
     /// 
-    /// Returns a new `DMSCHookBus` instance with no registered handlers.
+    /// Returns a new `RiHookBus` instance with no registered handlers.
     pub fn new() -> Self {
-        DMSCHookBus { handlers: HashMap::new() }
+        RiHookBus { handlers: HashMap::new() }
     }
 
     /// Registers a hook handler for a specific hook kind.
@@ -234,10 +234,10 @@ impl DMSCHookBus {
     /// - `id`: A unique ID for the hook handler
     /// - `handler`: The handler function to execute when the hook is emitted
     /// 
-    /// The handler function takes a `DMSCServiceContext` and a `DMSCHookEvent` and returns a `DMSCResult<()>`. 
-    pub fn register<F>(&mut self, kind: DMSCHookKind, id: DMSCHookId, handler: F)
+    /// The handler function takes a `RiServiceContext` and a `RiHookEvent` and returns a `RiResult<()>`. 
+    pub fn register<F>(&mut self, kind: RiHookKind, id: RiHookId, handler: F)
     where
-        F: Fn(&DMSCServiceContext, &DMSCHookEvent) -> DMSCResult<()> + Send + Sync + 'static,
+        F: Fn(&RiServiceContext, &RiHookEvent) -> RiResult<()> + Send + Sync + 'static,
     {
         self.handlers.entry(kind).or_default().push((id, Box::new(handler)));
     }
@@ -251,8 +251,8 @@ impl DMSCHookBus {
     /// 
     /// # Returns
     /// 
-    /// A `DMSCResult<()>` indicating success or failure
-    pub fn emit(&self, kind: &DMSCHookKind, ctx: &DMSCServiceContext) -> DMSCResult<()> {
+    /// A `RiResult<()>` indicating success or failure
+    pub fn emit(&self, kind: &RiHookKind, ctx: &RiServiceContext) -> RiResult<()> {
         self.emit_with(kind, ctx, None, None)
     }
 
@@ -267,15 +267,15 @@ impl DMSCHookBus {
     /// 
     /// # Returns
     /// 
-    /// A `DMSCResult<()>` indicating success or failure
+    /// A `RiResult<()>` indicating success or failure
     pub fn emit_with(
         &self,
-        kind: &DMSCHookKind,
-        ctx: &DMSCServiceContext,
+        kind: &RiHookKind,
+        ctx: &RiServiceContext,
         module: Option<&str>,
-        phase: Option<DMSCModulePhase>,
-    ) -> DMSCResult<()> {
-        let event = DMSCHookEvent {
+        phase: Option<RiModulePhase>,
+    ) -> RiResult<()> {
+        let event = RiHookEvent {
             kind: *kind,
             module: module.map(|s| s.to_string()),
             phase,
@@ -291,7 +291,7 @@ impl DMSCHookBus {
 
 #[cfg(feature = "pyo3")]
 #[pyo3::prelude::pymethods]
-impl DMSCHookBus {
+impl RiHookBus {
     #[new]
     fn py_new() -> Self {
         Self::new()

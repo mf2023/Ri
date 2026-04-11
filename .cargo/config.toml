@@ -1,7 +1,7 @@
 # Copyright © 2025-2026 Wenze Wei. All Rights Reserved.
 #
-# This file is part of DMSC.
-# The DMSC project belongs to the Dunimd Team.
+# This file is part of Ri.
+# The Ri project belongs to the Dunimd Team.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # You may not use this file except in compliance with the License.
@@ -16,16 +16,16 @@
 # limitations under the License.
 
 ################################################################################
-# Cargo Configuration for DMSC Build System
+# Cargo Configuration for Ri Build System
 ################################################################################
 #
 # PURPOSE:
-# This configuration file defines the build environment settings for the DMSC
+# This configuration file defines the build environment settings for the Ri
 # Rust project. It customizes Cargo's behavior for dependency management, network
 # operations, and release build optimizations.
 #
 # SCOPE:
-# These settings apply to all Cargo operations within the DMSC workspace, including:
+# These settings apply to all Cargo operations within the Ri workspace, including:
 # - Local development builds (cargo build, cargo test)
 # - CI/CD pipeline builds (GitHub Actions workflows)
 # - Release builds for distribution (cargo build --release)
@@ -204,8 +204,8 @@ multiplexing = true
 #   * Only intra-crate optimizations apply
 #   * Not recommended for production
 #
-# DMSC Rationale:
-# Full LTO is enabled because DMSC is a performance-critical middleware
+# Ri Rationale:
+# Full LTO is enabled because Ri is a performance-critical middleware
 # framework where every microsecond matters. The slower compilation is
 # acceptable since release builds are typically done less frequently.
 lto = true
@@ -225,8 +225,8 @@ lto = true
 # - Better dead code elimination
 # - Improved constant propagation
 #
-# DMSC Rationale:
-# Set to 1 for maximum runtime performance. DMSC's middleware nature
+# Ri Rationale:
+# Set to 1 for maximum runtime performance. Ri's middleware nature
 # requires optimal code generation. The longer compilation time is
 # acceptable for release builds.
 codegen-units = 1
@@ -246,7 +246,7 @@ codegen-units = 1
 # - Reduced memory footprint
 # - No impact on runtime performance
 #
-# DMSC Rationale:
+# Ri Rationale:
 # Enabled for production deployment. Reduces container image sizes,
 # speeds up deployment, and reduces memory usage. Debug symbols can
 # be preserved separately if needed for production debugging.

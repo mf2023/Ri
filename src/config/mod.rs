@@ -1,7 +1,7 @@
 //! Copyright © 2025-2026 Wenze Wei. All Rights Reserved.
 //!
-//! This file is part of DMSC.
-//! The DMSC project belongs to the Dunimd Team.
+//! This file is part of Ri.
+//! The Ri project belongs to the Dunimd Team.
 //!
 //! Licensed under the Apache License, Version 2.0 (the "License");
 //! You may not use this file except in compliance with the License.
@@ -17,14 +17,14 @@
 
 //! # Configuration Management
 //! 
-//! This module provides a comprehensive configuration management system for DMSC, supporting
+//! This module provides a comprehensive configuration management system for Ri, supporting
 //! multiple configuration sources, hot reload, and flexible configuration access.
 //! 
 //! ## Key Components
 //! 
-//! - **DMSCConfig**: Basic configuration storage with typed access methods
-//! - **DMSCConfigManager**: Configuration manager that handles multiple sources and hot reload
-//! - **DMSCConfigSource**: Internal enum for different configuration source types
+//! - **RiConfig**: Basic configuration storage with typed access methods
+//! - **RiConfigManager**: Configuration manager that handles multiple sources and hot reload
+//! - **RiConfigSource**: Internal enum for different configuration source types
 //! 
 //! ## Design Principles
 //! 
@@ -38,11 +38,11 @@
 //! ## Usage
 //! 
 //! ```rust
-//! use dmsc::prelude::*;
+//! use ri::prelude::*;
 //! 
-//! fn example() -> DMSCResult<()> {
+//! fn example() -> RiResult<()> {
 //!     // Create a new config manager
-//!     let mut config_manager = DMSCConfigManager::new();
+//!     let mut config_manager = RiConfigManager::new();
 //!     
 //!     // Add configuration sources
 //!     config_manager.add_file_source("config.yaml");
@@ -72,9 +72,9 @@ use yaml_rust::{YamlLoader, Yaml};
 use notify::{RecommendedWatcher, RecursiveMode, Watcher};
 
 #[cfg(feature = "pyo3")]
-use crate::hooks::DMSCHookKind;
+use crate::hooks::RiHookKind;
 #[cfg(feature = "pyo3")]
-use crate::core::DMSCServiceContext;
+use crate::core::RiServiceContext;
 
 /// Basic configuration storage with typed access methods.
 /// 
@@ -82,23 +82,23 @@ use crate::core::DMSCServiceContext;
 /// type-safe methods for accessing values as different types.
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 #[derive(Clone)]
-pub struct DMSCConfig {
+pub struct RiConfig {
     /// Internal storage for configuration values
     values: HashMap<String, String>,
 }
 
-impl Default for DMSCConfig {
+impl Default for RiConfig {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl DMSCConfig {
+impl RiConfig {
     /// Creates a new empty configuration.
     /// 
-    /// Returns a new `DMSCConfig` instance with an empty key-value store.
+    /// Returns a new `RiConfig` instance with an empty key-value store.
     pub fn new() -> Self {
-        DMSCConfig { values: HashMap::new() }
+        RiConfig { values: HashMap::new() }
     }
 
     /// Sets a configuration value.
@@ -303,7 +303,7 @@ impl DMSCConfig {
     /// # Parameters
     /// 
     /// - `other`: The other configuration to merge into this one
-    pub fn merge(&mut self, other: &DMSCConfig) {
+    pub fn merge(&mut self, other: &RiConfig) {
         for (k, v) in &other.values {
             self.values.insert(k.clone(), v.clone());
         }
@@ -404,9 +404,9 @@ impl DMSCConfig {
 }
 
 #[cfg(feature = "pyo3")]
-/// Python constructor for DMSCConfig
+/// Python constructor for RiConfig
 #[pyo3::prelude::pymethods]
-impl DMSCConfig {
+impl RiConfig {
     #[new]
     fn py_new() -> Self {
         Self::new()
@@ -456,9 +456,9 @@ impl DMSCConfig {
 /// Internal enum for different configuration source types.
 /// 
 /// This enum represents the different types of configuration sources that the
-/// `DMSCConfigManager` can handle.
+/// `RiConfigManager` can handle.
 #[derive(Clone)]
-enum DMSCConfigSource {
+enum RiConfigSource {
     /// File-based configuration source
     File(PathBuf),
     /// Environment variable configuration source
@@ -471,14 +471,14 @@ enum DMSCConfigSource {
 /// and provides access to the configuration. It supports hot reload and multiple
 /// configuration formats.
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
-pub struct DMSCConfigManager {
+pub struct RiConfigManager {
     /// Internal configuration storage
-    config: Arc<RwLock<DMSCConfig>>,
+    config: Arc<RwLock<RiConfig>>,
     /// List of configuration sources to load from
-    sources: Vec<DMSCConfigSource>,
+    sources: Vec<RiConfigSource>,
     /// Optional hook bus for emitting config reload events
     #[cfg(feature = "pyo3")]
-    hooks: Option<Arc<crate::hooks::DMSCHookBus>>,
+    hooks: Option<Arc<crate::hooks::RiHookBus>>,
     /// Hot reload watcher handle
     #[cfg(feature = "config_hot_reload")]
     watcher: Option<Arc<RecommendedWatcher>>,
@@ -491,15 +491,15 @@ pub struct DMSCConfigManager {
     change_callback: Option<Arc<dyn Fn() + Send + Sync>>,
 }
 
-impl Default for DMSCConfigManager {
+impl Default for RiConfigManager {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl Clone for DMSCConfigManager {
+impl Clone for RiConfigManager {
     fn clone(&self) -> Self {
-        DMSCConfigManager {
+        RiConfigManager {
             config: self.config.clone(),
             sources: self.sources.clone(),
             #[cfg(feature = "pyo3")]
@@ -514,13 +514,13 @@ impl Clone for DMSCConfigManager {
     }
 }
 
-impl DMSCConfigManager {
+impl RiConfigManager {
     /// Creates a new empty configuration manager.
     /// 
-    /// Returns a new `DMSCConfigManager` instance with no configuration sources.
+    /// Returns a new `RiConfigManager` instance with no configuration sources.
     pub fn new() -> Self {
-        DMSCConfigManager {
-            config: Arc::new(RwLock::new(DMSCConfig::new())),
+        RiConfigManager {
+            config: Arc::new(RwLock::new(RiConfig::new())),
             sources: Vec::new(),
             #[cfg(feature = "pyo3")]
             hooks: None,
@@ -543,11 +543,11 @@ impl DMSCConfigManager {
     /// 
     /// # Returns
     /// 
-    /// A new `DMSCConfigManager` instance with the provided hook bus
+    /// A new `RiConfigManager` instance with the provided hook bus
     #[cfg(feature = "pyo3")]
-    pub fn with_hooks(hooks: Arc<crate::hooks::DMSCHookBus>) -> Self {
-        DMSCConfigManager {
-            config: Arc::new(RwLock::new(DMSCConfig::new())),
+    pub fn with_hooks(hooks: Arc<crate::hooks::RiHookBus>) -> Self {
+        RiConfigManager {
+            config: Arc::new(RwLock::new(RiConfig::new())),
             sources: Vec::new(),
             hooks: Some(hooks),
             #[cfg(feature = "config_hot_reload")]
@@ -567,16 +567,16 @@ impl DMSCConfigManager {
     /// 
     /// Supported file formats: JSON, YAML, TOML
     pub fn add_file_source(&mut self, path: impl AsRef<Path>) {
-        self.sources.push(DMSCConfigSource::File(path.as_ref().to_path_buf()));
+        self.sources.push(RiConfigSource::File(path.as_ref().to_path_buf()));
     }
 
     /// Adds environment variables as a configuration source.
     /// 
-    /// Environment variables with the prefix `DMSC_` are loaded as configuration values.
+    /// Environment variables with the prefix `Ri_` are loaded as configuration values.
     /// Double underscores (`__`) in environment variable names are converted to dots.
-    /// For example, `DMSC_SERVER__PORT=8080` becomes `server.port=8080`.
+    /// For example, `Ri_SERVER__PORT=8080` becomes `server.port=8080`.
     pub fn add_environment_source(&mut self) {
-        self.sources.push(DMSCConfigSource::Environment);
+        self.sources.push(RiConfigSource::Environment);
     }
 
     /// Notifies registered hooks when configuration is reloaded.
@@ -584,13 +584,13 @@ impl DMSCConfigManager {
     fn notify_config_reload(&self, _path: &str) {
         if let Some(hooks) = &self.hooks {
             let _ = hooks.emit_with(
-                &DMSCHookKind::ConfigReload,
-                &DMSCServiceContext::new_default().unwrap_or_else(|_| {
-                    DMSCServiceContext::new_with(
-                        crate::fs::DMSCFileSystem::new_auto_root().unwrap_or_else(|_| crate::fs::DMSCFileSystem::new_with_root(std::env::current_dir().unwrap_or_default())),
-                        crate::log::DMSCLogger::new(&crate::log::DMSCLogConfig::default(), crate::fs::DMSCFileSystem::new_with_root(std::env::current_dir().unwrap_or_default())),
-                        crate::config::DMSCConfigManager::new(),
-                        crate::hooks::DMSCHookBus::new(),
+                &RiHookKind::ConfigReload,
+                &RiServiceContext::new_default().unwrap_or_else(|_| {
+                    RiServiceContext::new_with(
+                        crate::fs::RiFileSystem::new_auto_root().unwrap_or_else(|_| crate::fs::RiFileSystem::new_with_root(std::env::current_dir().unwrap_or_default())),
+                        crate::log::RiLogger::new(&crate::log::RiLogConfig::default(), crate::fs::RiFileSystem::new_with_root(std::env::current_dir().unwrap_or_default())),
+                        crate::config::RiConfigManager::new(),
+                        crate::hooks::RiHookBus::new(),
                         None,
                     )
                 }),
@@ -607,18 +607,18 @@ impl DMSCConfigManager {
     /// 
     /// # Returns
     /// 
-    /// A `Result<(), DMSCError>` indicating success or failure
-    pub fn load(&mut self) -> Result<(), crate::core::DMSCError> {
-        let mut cfg = DMSCConfig::new();
+    /// A `Result<(), RiError>` indicating success or failure
+    pub fn load(&mut self) -> Result<(), crate::core::RiError> {
+        let mut cfg = RiConfig::new();
 
         for source in &self.sources {
             match source {
-                DMSCConfigSource::File(path) => {
+                RiConfigSource::File(path) => {
                     self.load_file(path, &mut cfg)?;
                     #[cfg(feature = "pyo3")]
                     self.notify_config_reload(path.to_str().unwrap_or(""));
                 }
-                DMSCConfigSource::Environment => {
+                RiConfigSource::Environment => {
                     self.load_environment(&mut cfg);
                 }
             }
@@ -631,15 +631,15 @@ impl DMSCConfigManager {
 
     /// Creates a new configuration manager with default sources.
     /// 
-    /// This method creates a new `DMSCConfigManager` with the following default sources:
+    /// This method creates a new `RiConfigManager` with the following default sources:
     /// 1. Configuration files in the `config` directory (dms.yaml, dms.yml, dms.toml, dms.json)
-    /// 2. Environment variables with the prefix `DMSC_`
+    /// 2. Environment variables with the prefix `Ri_`
     /// 
     /// It also loads the configuration immediately.
     /// 
     /// # Returns
     /// 
-    /// A new `DMSCConfigManager` instance with default sources and loaded configuration
+    /// A new `RiConfigManager` instance with default sources and loaded configuration
     pub fn new_default() -> Self {
         let mut manager = Self::new();
         
@@ -675,8 +675,8 @@ impl DMSCConfigManager {
     /// 
     /// # Returns
     /// 
-    /// A `Result<(), DMSCError>` indicating success or failure
-    fn load_file(&self, path: &Path, cfg: &mut DMSCConfig) -> Result<(), crate::core::DMSCError> {
+    /// A `Result<(), RiError>` indicating success or failure
+    fn load_file(&self, path: &Path, cfg: &mut RiConfig) -> Result<(), crate::core::RiError> {
         if !path.exists() {
             return Ok(());
         }
@@ -719,7 +719,7 @@ impl DMSCConfigManager {
     /// - `value`: The JSON value to flatten
     /// - `prefix`: The current prefix for keys (used for recursion)
     /// - `cfg`: The configuration object to load values into
-    fn flatten_json(&self, value: &serde_json::Value, prefix: &str, cfg: &mut DMSCConfig) {
+    fn flatten_json(&self, value: &serde_json::Value, prefix: &str, cfg: &mut RiConfig) {
         Self::flatten_json_static(value, prefix, cfg);
     }
 
@@ -732,7 +732,7 @@ impl DMSCConfigManager {
     /// - `value`: The JSON value to flatten
     /// - `prefix`: The current prefix for keys (used for recursion)
     /// - `cfg`: The configuration object to load values into
-    fn flatten_json_static(value: &serde_json::Value, prefix: &str, cfg: &mut DMSCConfig) {
+    fn flatten_json_static(value: &serde_json::Value, prefix: &str, cfg: &mut RiConfig) {
         match value {
             serde_json::Value::Object(map) => {
                 for (k, v) in map {
@@ -774,7 +774,7 @@ impl DMSCConfigManager {
     /// - `value`: The YAML value to flatten
     /// - `prefix`: The current prefix for keys (used for recursion)
     /// - `cfg`: The configuration object to load values into
-    fn flatten_yaml(&self, value: &Yaml, prefix: &str, cfg: &mut DMSCConfig) {
+    fn flatten_yaml(&self, value: &Yaml, prefix: &str, cfg: &mut RiConfig) {
         Self::flatten_yaml_static(value, prefix, cfg);
     }
 
@@ -787,7 +787,7 @@ impl DMSCConfigManager {
     /// - `value`: The YAML value to flatten
     /// - `prefix`: The current prefix for keys (used for recursion)
     /// - `cfg`: The configuration object to load values into
-    fn flatten_yaml_static(value: &Yaml, prefix: &str, cfg: &mut DMSCConfig) {
+    fn flatten_yaml_static(value: &Yaml, prefix: &str, cfg: &mut RiConfig) {
         match value {
             Yaml::Hash(map) => {
                 for (k, v) in map {
@@ -837,7 +837,7 @@ impl DMSCConfigManager {
     /// - `value`: The TOML value to flatten
     /// - `prefix`: The current prefix for keys (used for recursion)
     /// - `cfg`: The configuration object to load values into
-    fn flatten_toml(&self, value: &toml::Value, prefix: &str, cfg: &mut DMSCConfig) {
+    fn flatten_toml(&self, value: &toml::Value, prefix: &str, cfg: &mut RiConfig) {
         Self::flatten_toml_static(value, prefix, cfg);
     }
 
@@ -850,7 +850,7 @@ impl DMSCConfigManager {
     /// - `value`: The TOML value to flatten
     /// - `prefix`: The current prefix for keys (used for recursion)
     /// - `cfg`: The configuration object to load values into
-    fn flatten_toml_static(value: &toml::Value, prefix: &str, cfg: &mut DMSCConfig) {
+    fn flatten_toml_static(value: &toml::Value, prefix: &str, cfg: &mut RiConfig) {
         match value {
             toml::Value::Table(table) => {
                 for (k, v) in table {
@@ -888,15 +888,15 @@ impl DMSCConfigManager {
 
     /// Loads configuration from environment variables.
     /// 
-    /// This method loads environment variables with the prefix `DMSC_` into the configuration.
+    /// This method loads environment variables with the prefix `Ri_` into the configuration.
     /// Double underscores (`__`) in environment variable names are converted to dots.
     /// 
     /// # Parameters
     /// 
     /// - `cfg`: The configuration object to load values into
-    fn load_environment(&self, cfg: &mut DMSCConfig) {
+    fn load_environment(&self, cfg: &mut RiConfig) {
         for (name, value) in std::env::vars() {
-            if let Some(rest) = name.strip_prefix("DMSC_") {
+            if let Some(rest) = name.strip_prefix("Ri_") {
                 let key_parts: Vec<String> = rest
                     .split("__")
                     .map(|part| part.to_ascii_lowercase())
@@ -917,9 +917,9 @@ impl DMSCConfigManager {
     /// 
     /// # Returns
     /// 
-    /// A `Result<(), DMSCError>` indicating success or failure
+    /// A `Result<(), RiError>` indicating success or failure
     #[cfg(feature = "config_hot_reload")]
-    pub async fn start_watcher(&mut self) -> Result<(), crate::core::DMSCError> {
+    pub async fn start_watcher(&mut self) -> Result<(), crate::core::RiError> {
         self.start_watcher_with_callback::<fn()>(None).await
     }
 
@@ -935,9 +935,9 @@ impl DMSCConfigManager {
     /// 
     /// # Returns
     /// 
-    /// A `Result<(), DMSCError>` indicating success or failure
+    /// A `Result<(), RiError>` indicating success or failure
     #[cfg(feature = "config_hot_reload")]
-    pub async fn start_watcher_with_callback<F>(&mut self, callback: Option<Arc<dyn Fn() + Send + Sync>>) -> Result<(), crate::core::DMSCError> {
+    pub async fn start_watcher_with_callback<F>(&mut self, callback: Option<Arc<dyn Fn() + Send + Sync>>) -> Result<(), crate::core::RiError> {
         let (tx, mut rx) = tokio::sync::mpsc::channel::<notify::Result<notify::Event>>(100);
         
         let mut watcher = RecommendedWatcher::new(
@@ -945,15 +945,15 @@ impl DMSCConfigManager {
                 let _ = tx.blocking_send(res);
             },
             notify::Config::default(),
-        ).map_err(|e| crate::core::DMSCError::Config(format!("Failed to create config watcher: {}", e)))?;
+        ).map_err(|e| crate::core::RiError::Config(format!("Failed to create config watcher: {}", e)))?;
         
         let mut monitored = Vec::new();
         
         for source in &self.sources {
-            if let DMSCConfigSource::File(path) = source {
+            if let RiConfigSource::File(path) = source {
                 if path.exists() {
                     watcher.watch(path, RecursiveMode::NonRecursive)
-                        .map_err(|e| crate::core::DMSCError::Config(format!("Failed to watch config file {}: {}", path.display(), e)))?;
+                        .map_err(|e| crate::core::RiError::Config(format!("Failed to watch config file {}: {}", path.display(), e)))?;
                     monitored.push(path.clone());
                 }
             }
@@ -1016,9 +1016,9 @@ impl DMSCConfigManager {
     /// 
     /// # Returns
     /// 
-    /// A `Result<(), DMSCError>` indicating success or failure
+    /// A `Result<(), RiError>` indicating success or failure
     #[cfg(feature = "config_hot_reload")]
-    async fn reload_file(&self, path: &PathBuf) -> Result<(), crate::core::DMSCError> {
+    async fn reload_file(&self, path: &PathBuf) -> Result<(), crate::core::RiError> {
         let mut new_config = self.config.read().expect("Failed to lock config for reading").clone();
         self.load_file(path, &mut new_config)?;
         
@@ -1033,9 +1033,9 @@ impl DMSCConfigManager {
     /// 
     /// # Returns
     /// 
-    /// A `Result<(), DMSCError>` indicating success or failure
+    /// A `Result<(), RiError>` indicating success or failure
     #[cfg(feature = "config_hot_reload")]
-    pub async fn stop_watcher(&mut self) -> Result<(), crate::core::DMSCError> {
+    pub async fn stop_watcher(&mut self) -> Result<(), crate::core::RiError> {
         let task = self.watcher_task.write().await.take();
         if let Some(task) = task {
             task.abort();
@@ -1064,9 +1064,9 @@ impl DMSCConfigManager {
     /// 
     /// # Returns
     /// 
-    /// A `Result<(), DMSCError>` indicating success or failure
+    /// A `Result<(), RiError>` indicating success or failure
     #[cfg(not(feature = "config_hot_reload"))]
-    pub async fn start_watcher(&mut self) -> Result<(), crate::core::DMSCError> {
+    pub async fn start_watcher(&mut self) -> Result<(), crate::core::RiError> {
         Ok(())
     }
 
@@ -1074,8 +1074,8 @@ impl DMSCConfigManager {
     /// 
     /// # Returns
     /// 
-    /// A `DMSCConfig` clone of the loaded configuration
-    pub fn config(&self) -> DMSCConfig {
+    /// A `RiConfig` clone of the loaded configuration
+    pub fn config(&self) -> RiConfig {
         self.config.read().expect("Failed to lock config for reading").clone()
     }
 
@@ -1083,16 +1083,16 @@ impl DMSCConfigManager {
     /// 
     /// # Returns
     /// 
-    /// A `std::sync::RwLockWriteGuard<DMSCConfig>` for the loaded configuration
-    pub fn config_mut(&mut self) -> std::sync::RwLockWriteGuard<'_, DMSCConfig> {
+    /// A `std::sync::RwLockWriteGuard<RiConfig>` for the loaded configuration
+    pub fn config_mut(&mut self) -> std::sync::RwLockWriteGuard<'_, RiConfig> {
         self.config.write().expect("Failed to lock config for writing")
     }
 }
 
 #[cfg(feature = "pyo3")]
-/// Python constructor for DMSCConfigManager
+/// Python constructor for RiConfigManager
 #[pyo3::prelude::pymethods]
-impl DMSCConfigManager {
+impl RiConfigManager {
     #[new]
     fn py_new() -> Self {
         Self::new()
@@ -1112,9 +1112,9 @@ impl DMSCConfigManager {
 
     /// Adds environment variables as a configuration source from Python
     ///
-    /// Environment variables are prefixed with `DMSC_` and double underscores
+    /// Environment variables are prefixed with `Ri_` and double underscores
     /// are converted to dots (`.`) in the configuration key hierarchy.
-    /// Example: `DMSC_DATABASE__HOST` becomes `database.host`
+    /// Example: `Ri_DATABASE__HOST` becomes `database.host`
     #[pyo3(name = "add_environment_source")]
     fn add_environment_source_impl(&mut self) {
         self.add_environment_source();
@@ -1136,7 +1136,7 @@ impl DMSCConfigManager {
     /// ## Example
     ///
     /// ```python
-    /// manager = DMSCConfigManager.new_default()
+    /// manager = RiConfigManager.new_default()
     /// value = manager.get("server.port")
     /// if value:
     ///     print(f"Server port: {value}")
@@ -1149,7 +1149,7 @@ impl DMSCConfigManager {
 
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 #[derive(Clone, Debug)]
-pub struct DMSCConfigValidator {
+pub struct RiConfigValidator {
     required_keys: Vec<String>,
     port_keys: Vec<String>,
     timeout_keys: Vec<String>,
@@ -1158,15 +1158,15 @@ pub struct DMSCConfigValidator {
     positive_int_keys: Vec<String>,
 }
 
-impl Default for DMSCConfigValidator {
+impl Default for RiConfigValidator {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl DMSCConfigValidator {
+impl RiConfigValidator {
     pub fn new() -> Self {
-        DMSCConfigValidator {
+        RiConfigValidator {
             required_keys: Vec::new(),
             port_keys: vec!["server.port".to_string(), "cache.redis.port".to_string(), "database.port".to_string()],
             timeout_keys: vec!["server.timeout".to_string(), "cache.ttl".to_string(), "session.timeout".to_string()],
@@ -1206,10 +1206,10 @@ impl DMSCConfigValidator {
         self
     }
 
-    pub fn validate_config(&self, config: &DMSCConfig) -> Result<(), crate::core::DMSCError> {
+    pub fn validate_config(&self, config: &RiConfig) -> Result<(), crate::core::RiError> {
         for key in &self.required_keys {
             if !config.has_key(key) {
-                return Err(crate::core::DMSCError::Config(format!(
+                return Err(crate::core::RiError::Config(format!(
                     "Missing required configuration key: {}", key
                 )));
             }
@@ -1218,7 +1218,7 @@ impl DMSCConfigValidator {
         for key in &self.port_keys {
             if let Some(port) = config.get_port(key) {
                 if port == 0 {
-                    return Err(crate::core::DMSCError::Config(format!(
+                    return Err(crate::core::RiError::Config(format!(
                         "Invalid port number for {}: must be between 1 and 65535", key
                     )));
                 }
@@ -1228,7 +1228,7 @@ impl DMSCConfigValidator {
         for key in &self.timeout_keys {
             if let Some(timeout) = config.get_timeout_secs(key) {
                 if timeout == 0 {
-                    return Err(crate::core::DMSCError::Config(format!(
+                    return Err(crate::core::RiError::Config(format!(
                         "Invalid timeout for {}: must be between 1 and 86400 seconds", key
                     )));
                 }
@@ -1238,12 +1238,12 @@ impl DMSCConfigValidator {
         for key in &self.secret_keys {
             if let Some(secret) = config.get_str(key) {
                 if secret.len() < 8 {
-                    return Err(crate::core::DMSCError::Config(format!(
+                    return Err(crate::core::RiError::Config(format!(
                         "Secret key {} is too short: minimum length is 8 characters", key
                     )));
                 }
                 if secret == "secret" || secret == "password" || secret == "123456" {
-                    return Err(crate::core::DMSCError::Config(format!(
+                    return Err(crate::core::RiError::Config(format!(
                         "Insecure secret key detected for {}: using default or weak value", key
                     )));
                 }
@@ -1257,7 +1257,7 @@ impl DMSCConfigValidator {
                     && !url.starts_with("mysql://") && !url.starts_with("amqp://")
                     && !url.starts_with("kafka://") && !url.starts_with("sqlite://")
                 {
-                    return Err(crate::core::DMSCError::Config(format!(
+                    return Err(crate::core::RiError::Config(format!(
                         "Invalid URL format for {}: {}", key, url
                     )));
                 }
@@ -1267,7 +1267,7 @@ impl DMSCConfigValidator {
         for key in &self.positive_int_keys {
             if let Some(value) = config.get_u32(key) {
                 if value == 0 {
-                    return Err(crate::core::DMSCError::Config(format!(
+                    return Err(crate::core::RiError::Config(format!(
                         "Invalid value for {}: must be a positive integer", key
                     )));
                 }
@@ -1279,12 +1279,12 @@ impl DMSCConfigValidator {
 
     pub fn validate_with_requirements(
         &self,
-        config: &DMSCConfig,
+        config: &RiConfig,
         requirements: &[String],
-    ) -> Result<(), crate::core::DMSCError> {
+    ) -> Result<(), crate::core::RiError> {
         for key in requirements {
             if !config.has_key(key) {
-                return Err(crate::core::DMSCError::Config(format!(
+                return Err(crate::core::RiError::Config(format!(
                     "Missing required configuration key: {}", key
                 )));
             }
@@ -1295,7 +1295,7 @@ impl DMSCConfigValidator {
 
 #[cfg(feature = "pyo3")]
 #[pyo3::prelude::pymethods]
-impl DMSCConfigValidator {
+impl RiConfigValidator {
     #[new]
     fn py_new() -> Self {
         Self::new()
@@ -1332,7 +1332,7 @@ impl DMSCConfigValidator {
     }
 
     #[pyo3(name = "validate")]
-    fn py_validate(&self, config: &DMSCConfig) -> bool {
+    fn py_validate(&self, config: &RiConfig) -> bool {
         self.validate_config(config).is_ok()
     }
 }

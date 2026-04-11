@@ -1,7 +1,7 @@
 //! Copyright © 2025-2026 Wenze Wei. All Rights Reserved.
 //!
-//! This file is part of DMSC.
-//! The DMSC project belongs to the Dunimd Team.
+//! This file is part of Ri.
+//! The Ri project belongs to the Dunimd Team.
 //!
 //! Licensed under the Apache License, Version 2.0 (the "License");
 //! You may not use this file except in compliance with the License.
@@ -17,25 +17,25 @@
 
 //! # Module RPC C API
 //!
-//! This module provides C language bindings for DMSC's module RPC (Remote Procedure Call) system.
-//! The module RPC system enables communication between different modules within the DMSC framework,
+//! This module provides C language bindings for Ri's module RPC (Remote Procedure Call) system.
+//! The module RPC system enables communication between different modules within the Ri framework,
 //! providing a high-performance, type-safe mechanism for inter-module service calls. This C API
-//! enables C/C++ modules to participate in DMSC's distributed architecture by registering services,
+//! enables C/C++ modules to participate in Ri's distributed architecture by registering services,
 //! making remote calls, and handling asynchronous responses.
 //!
 //! ## Module Architecture
 //!
 //! The module RPC system comprises three primary components:
 //!
-//! - **DMSCModuleRPC**: Central RPC router and dispatcher managing service registration, method
+//! - **RiModuleRPC**: Central RPC router and dispatcher managing service registration, method
 //!   routing, and call dispatch across modules. The router handles the complete lifecycle of
 //!   RPC operations including request routing, response aggregation, and error handling.
 //!
-//! - **DMSCModuleClient**: Client interface for making RPC calls to registered services. The
+//! - **RiModuleClient**: Client interface for making RPC calls to registered services. The
 //!   client provides synchronous and asynchronous call capabilities with automatic serialization,
 //!   connection management, and retry logic.
 //!
-//! - **DMSCModuleEndpoint**: Connection endpoint for module communication, managing the transport
+//! - **RiModuleEndpoint**: Connection endpoint for module communication, managing the transport
 //!   layer, protocol negotiation, and message framing. Endpoints can be local (in-process) or
 //!   remote (network-based).
 //!
@@ -160,14 +160,14 @@
 //!
 //! ```c
 //! // Create RPC router instance
-//! DMSCModuleRPC* rpc = dmsc_module_rpc_new();
+//! RiModuleRPC* rpc = ri_module_rpc_new();
 //! if (rpc == NULL) {
 //!     fprintf(stderr, "Failed to create RPC router\n");
 //!     return ERROR_INIT;
 //! }
 //!
 //! // Register a service module
-//! int result = dmsc_module_rpc_register_service(
+//! int result = ri_module_rpc_register_service(
 //!     rpc,
 //!     "UserService",
 //!     user_service_handler,
@@ -179,21 +179,21 @@
 //! }
 //!
 //! // Create client for remote service
-//! DMSCModuleClient* client = dmsc_module_client_new(rpc);
+//! RiModuleClient* client = ri_module_client_new(rpc);
 //! if (client == NULL) {
 //!     fprintf(stderr, "Failed to create RPC client\n");
-//!     dmsc_module_rpc_free(rpc);
+//!     ri_module_rpc_free(rpc);
 //!     return ERROR_INIT;
 //! }
 //!
 //! // Configure request
-//! DMSCUserRequest request = DMSCUSER_REQUEST_INIT;
+//! RiUserRequest request = RiUSER_REQUEST_INIT;
 //! request.user_id = 12345;
 //! request.include_profile = true;
 //!
 //! // Execute synchronous RPC call
-//! DMSCUserResponse response = DMSCUSER_RESPONSE_INIT;
-//! int status = dmsc_module_client_call(
+//! RiUserResponse response = RiUSER_RESPONSE_INIT;
+//! int status = ri_module_client_call(
 //!     client,
 //!     "UserService.GetUser",
 //!     &request,
@@ -204,18 +204,18 @@
 //! if (status == 0) {
 //!     printf("User: %s %s\n", response.first_name, response.last_name);
 //! } else {
-//!     const char* error = dmsc_module_client_last_error(client);
+//!     const char* error = ri_module_client_last_error(client);
 //!     fprintf(stderr, "RPC error: %s (code: %d)\n", error, status);
 //! }
 //!
 //! // Cleanup
-//! dmsc_module_client_free(client);
-//! dmsc_module_rpc_free(rpc);
+//! ri_module_client_free(client);
+//! ri_module_rpc_free(rpc);
 //! ```
 //!
 //! ## Dependencies
 //!
-//! This module depends on the following DMSC components:
+//! This module depends on the following Ri components:
 //!
 //! - `crate::module_rpc`: Rust module RPC implementation
 //! - `crate::prelude`: Common types and traits
@@ -232,17 +232,17 @@
 //! - module-rpc-streaming: Enable streaming RPC calls
 //! - module-rpc-metrics: Enable RPC metrics collection
 
-use crate::module_rpc::{DMSCModuleClient, DMSCModuleEndpoint, DMSCModuleRPC};
+use crate::module_rpc::{RiModuleClient, RiModuleEndpoint, RiModuleRPC};
 
 
-c_wrapper!(CDMSCModuleRPC, DMSCModuleRPC);
-c_wrapper!(CDMSCModuleClient, DMSCModuleClient);
-c_wrapper!(CDMSCModuleEndpoint, DMSCModuleEndpoint);
+c_wrapper!(CRiModuleRPC, RiModuleRPC);
+c_wrapper!(CRiModuleClient, RiModuleClient);
+c_wrapper!(CRiModuleEndpoint, RiModuleEndpoint);
 
-// DMSCModuleRPC constructors and destructors
+// RiModuleRPC constructors and destructors
 #[no_mangle]
-pub extern "C" fn dmsc_module_rpc_new() -> *mut CDMSCModuleRPC {
-    let rpc = DMSCModuleRPC::new();
-    Box::into_raw(Box::new(CDMSCModuleRPC::new(rpc)))
+pub extern "C" fn ri_module_rpc_new() -> *mut CRiModuleRPC {
+    let rpc = RiModuleRPC::new();
+    Box::into_raw(Box::new(CRiModuleRPC::new(rpc)))
 }
-c_destructor!(dmsc_module_rpc_free, CDMSCModuleRPC);
+c_destructor!(ri_module_rpc_free, CRiModuleRPC);

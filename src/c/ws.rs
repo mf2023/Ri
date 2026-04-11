@@ -1,7 +1,7 @@
 //! Copyright © 2025-2026 Wenze Wei. All Rights Reserved.
 //!
-//! This file is part of DMSC.
-//! The DMSC project belongs to the Dunimd Team.
+//! This file is part of Ri.
+//! The Ri project belongs to the Dunimd Team.
 //!
 //! Licensed under the Apache License, Version 2.0 (the "License");
 //! You may not use this file except in compliance with the License.
@@ -17,10 +17,10 @@
 
 //! # WebSocket Module C API
 //!
-//! This module provides C language bindings for DMSC's WebSocket communication infrastructure. The WebSocket
+//! This module provides C language bindings for Ri's WebSocket communication infrastructure. The WebSocket
 //! module delivers full-duplex, real-time communication capabilities for building interactive applications,
 //! live dashboards, chat systems, gaming backends, and streaming services. This C API enables C/C++
-//! applications to leverage DMSC's WebSocket functionality for building responsive, bidirectional communication
+//! applications to leverage Ri's WebSocket functionality for building responsive, bidirectional communication
 //! layers over persistent connections.
 //!
 //! ## Module Architecture
@@ -28,15 +28,15 @@
 //! The WebSocket module comprises three primary components that together provide complete WebSocket
 //! communication capabilities:
 //!
-//! - **DMSCWSServerConfig**: Configuration container for WebSocket server parameters including connection
+//! - **RiWSServerConfig**: Configuration container for WebSocket server parameters including connection
 //!   limits, message size limits, heartbeat settings, and security options. The configuration object
 //!   controls server behavior, resource allocation, and operational characteristics.
 //!
-//! - **DMSCWSSession**: Individual WebSocket connection representation, tracking connection state,
+//! - **RiWSSession**: Individual WebSocket connection representation, tracking connection state,
 //!   session metadata, message queues, and communication properties. Each session represents a unique
 //!   client connection to the WebSocket server.
 //!
-//! - **DMSCWSSessionManager**: Central manager for all WebSocket sessions, handling session lifecycle,
+//! - **RiWSSessionManager**: Central manager for all WebSocket sessions, handling session lifecycle,
 //!   broadcasting, routing, and connection administration. The manager handles the complete WebSocket
 //!   communication workflow including connection handling, message distribution, and cleanup.
 //!
@@ -225,70 +225,70 @@
 //!
 //! ```c
 //! // Create WebSocket server configuration
-//! DMSCWSServerConfig* config = dmsc_ws_server_config_new();
+//! RiWSServerConfig* config = ri_ws_server_config_new();
 //! if (config == NULL) {
 //!     fprintf(stderr, "Failed to create WebSocket config\n");
 //!     return ERROR_INIT;
 //! }
 //!
 //! // Configure server settings
-//! dmsc_ws_server_config_set_host(config, "0.0.0.0");
-//! dmsc_ws_server_config_set_port(config, 8080);
-//! dmsc_ws_server_config_set_max_connections(config, 10000);
-//! dmsc_ws_server_config_set_max_message_size(config, 1024 * 1024);  // 1MB
-//! dmsc_ws_server_config_set_ping_interval(config, 30000);  // 30 seconds
-//! dmsc_ws_server_config_set_ping_timeout(config, 5000);  // 5 seconds
+//! ri_ws_server_config_set_host(config, "0.0.0.0");
+//! ri_ws_server_config_set_port(config, 8080);
+//! ri_ws_server_config_set_max_connections(config, 10000);
+//! ri_ws_server_config_set_max_message_size(config, 1024 * 1024);  // 1MB
+//! ri_ws_server_config_set_ping_interval(config, 30000);  // 30 seconds
+//! ri_ws_server_config_set_ping_timeout(config, 5000);  // 5 seconds
 //!
 //! // Enable compression
-//! dmsc_ws_server_config_set_compression_enabled(config, true);
-//! dmsc_ws_server_config_set_compression_level(config, 6);
+//! ri_ws_server_config_set_compression_enabled(config, true);
+//! ri_ws_server_config_set_compression_level(config, 6);
 //!
 //! // Enable security features
-//! dmsc_ws_server_config_set_origin_validation(config, true);
-//! dmsc_ws_server_config_add_allowed_origin(config, "https://example.com");
-//! dmsc_ws_server_config_set_rate_limit_enabled(config, true);
-//! dmsc_ws_server_config_set_rate_limit_messages(config, 100);
-//! dmsc_ws_server_config_set_rate_limit_window(config, 1000);  // 1 second
+//! ri_ws_server_config_set_origin_validation(config, true);
+//! ri_ws_server_config_add_allowed_origin(config, "https://example.com");
+//! ri_ws_server_config_set_rate_limit_enabled(config, true);
+//! ri_ws_server_config_set_rate_limit_messages(config, 100);
+//! ri_ws_server_config_set_rate_limit_window(config, 1000);  // 1 second
 //!
 //! // Create session manager
-//! DMSCWSSessionManager* manager = dmsc_ws_session_manager_new(config);
+//! RiWSSessionManager* manager = ri_ws_session_manager_new(config);
 //! if (manager == NULL) {
 //!     fprintf(stderr, "Failed to create session manager\n");
-//!     dmsc_ws_server_config_free(config);
+//!     ri_ws_server_config_free(config);
 //!     return ERROR_INIT;
 //! }
 //!
 //! // Start WebSocket server
-//! int result = dmsc_ws_session_manager_start(manager);
+//! int result = ri_ws_session_manager_start(manager);
 //! if (result != 0) {
 //!     fprintf(stderr, "Failed to start WebSocket server: %d\n", result);
-//!     dmsc_ws_session_manager_free(manager);
-//!     dmsc_ws_server_config_free(config);
+//!     ri_ws_session_manager_free(manager);
+//!     ri_ws_server_config_free(config);
 //!     return ERROR_START;
 //! }
 //!
 //! printf("WebSocket server started on port %d\n",
-//!        dmsc_ws_server_config_get_port(config));
+//!        ri_ws_server_config_get_port(config));
 //!
 //! // Set up event callbacks
-//! dmsc_ws_session_manager_set_on_connect(manager, on_connect_callback, NULL);
-//! dmsc_ws_session_manager_set_on_message(manager, on_message_callback, NULL);
-//! dmsc_ws_session_manager_set_on_close(manager, on_close_callback, NULL);
-//! dmsc_ws_session_manager_set_on_error(manager, on_error_callback, NULL);
+//! ri_ws_session_manager_set_on_connect(manager, on_connect_callback, NULL);
+//! ri_ws_session_manager_set_on_message(manager, on_message_callback, NULL);
+//! ri_ws_session_manager_set_on_close(manager, on_close_callback, NULL);
+//! ri_ws_session_manager_set_on_error(manager, on_error_callback, NULL);
 //!
 //! // Application main loop - process events
 //! while (running) {
 //!     // Handle events with timeout
-//!     dmsc_ws_session_manager_poll(manager, 1000);  // 1 second timeout
+//!     ri_ws_session_manager_poll(manager, 1000);  // 1 second timeout
 //!
 //!     // Process pending operations
 //!     process_application_tasks();
 //!
 //!     // Periodic tasks
 //!     if (should_check_health()) {
-//!         uint32_t active_count = dmsc_ws_session_manager_get_active_count(manager);
-//!         uint32_t total_count = dmsc_ws_session_manager_get_total_count(manager);
-//!         uint64_t total_messages = dmsc_ws_session_manager_get_total_messages(manager);
+//!         uint32_t active_count = ri_ws_session_manager_get_active_count(manager);
+//!         uint32_t total_count = ri_ws_session_manager_get_total_count(manager);
+//!         uint64_t total_messages = ri_ws_session_manager_get_total_messages(manager);
 //!
 //!         printf("Active sessions: %u/%u, Messages: %lu\n",
 //!                active_count, total_count, total_messages);
@@ -297,60 +297,60 @@
 //!
 //! // Broadcast message to all clients
 //! const char* broadcast_msg = "{\"type\": \"broadcast\", \"message\": \"Hello all!\"}";
-//! int send_count = dmsc_ws_session_manager_broadcast(manager, broadcast_msg, strlen(broadcast_msg));
+//! int send_count = ri_ws_session_manager_broadcast(manager, broadcast_msg, strlen(broadcast_msg));
 //! printf("Broadcast sent to %d clients\n", send_count);
 //!
 //! // Get session information
-//! uint32_t session_count = dmsc_ws_session_manager_get_session_ids(manager, session_ids, max_sessions);
+//! uint32_t session_count = ri_ws_session_manager_get_session_ids(manager, session_ids, max_sessions);
 //!
 //! for (uint32_t i = 0; i < session_count && i < 10; i++) {
-//!     DMSCWSSession* session = dmsc_ws_session_manager_get_session(manager, session_ids[i]);
+//!     RiWSSession* session = ri_ws_session_manager_get_session(manager, session_ids[i]);
 //!     if (session != NULL) {
-//!         const char* remote_addr = dmsc_ws_session_get_remote_addr(session);
-//!         uint64_t connected_at = dmsc_ws_session_get_connected_at(session);
-//!         uint64_t messages_sent = dmsc_ws_session_get_messages_sent(session);
-//!         uint64_t bytes_sent = dmsc_ws_session_get_bytes_sent(session);
+//!         const char* remote_addr = ri_ws_session_get_remote_addr(session);
+//!         uint64_t connected_at = ri_ws_session_get_connected_at(session);
+//!         uint64_t messages_sent = ri_ws_session_get_messages_sent(session);
+//!         uint64_t bytes_sent = ri_ws_session_get_bytes_sent(session);
 //!
 //!         printf("Session %u: %s, connected: %lu, sent: %lu/%lu\n",
 //!                session_ids[i], remote_addr, connected_at, messages_sent, bytes_sent);
 //!
 //!         // Send message to specific session
-//!         dmsc_ws_session_send(session, "Welcome!", 8);
+//!         ri_ws_session_send(session, "Welcome!", 8);
 //!
-//!         dmsc_ws_session_free(session);
+//!         ri_ws_session_free(session);
 //!     }
 //! }
 //!
 //! // Room management example
 //! const char* room_name = "chat_room_1";
-//! dmsc_ws_session_manager_join_room(manager, session_ids[0], room_name);
+//! ri_ws_session_manager_join_room(manager, session_ids[0], room_name);
 //!
 //! // Send to room members only
 //! const char* room_msg = "{\"type\": \"room\", \"content\": \"Hello room!\"}";
-//! int room_count = dmsc_ws_session_manager_send_to_room(manager, room_name, room_msg, strlen(room_msg));
+//! int room_count = ri_ws_session_manager_send_to_room(manager, room_name, room_msg, strlen(room_msg));
 //! printf("Room message sent to %d clients\n", room_count);
 //!
 //! // Send to room except sender
-//! dmsc_ws_session_manager_send_to_room_except(
+//! ri_ws_session_manager_send_to_room_except(
 //!     manager, room_name, session_ids[0],
 //!     room_msg, strlen(room_msg)
 //! );
 //!
 //! // Leave room
-//! dmsc_ws_session_manager_leave_room(manager, session_ids[0], room_name);
+//! ri_ws_session_manager_leave_room(manager, session_ids[0], room_name);
 //!
 //! // Get room members
 //! uint32_t room_members[100];
-//! uint32_t room_count = dmsc_ws_session_manager_get_room_members(
+//! uint32_t room_count = ri_ws_session_manager_get_room_members(
 //!     manager, room_name, room_members, 100
 //! );
 //! printf("Room '%s' has %u members\n", room_name, room_count);
 //!
 //! // Graceful shutdown
 //! printf("Shutting down WebSocket server...\n");
-//! dmsc_ws_session_manager_stop(manager, 5000);  // 5 second timeout
-//! dmsc_ws_session_manager_free(manager);
-//! dmsc_ws_server_config_free(config);
+//! ri_ws_session_manager_stop(manager, 5000);  // 5 second timeout
+//! ri_ws_session_manager_free(manager);
+//! ri_ws_server_config_free(config);
 //!
 //! printf("WebSocket server shutdown complete\n");
 //! ```
@@ -362,15 +362,15 @@
 //! ```c
 //! // Connection established
 //! typedef void (*DMSWSConnectCallback)(
-//!     DMSCWSSessionManager* manager,
-//!     DMSCWSSession* session,
+//!     RiWSSessionManager* manager,
+//!     RiWSSession* session,
 //!     void* user_data
 //! );
 //!
 //! // Message received
 //! typedef void (*DMSWSMessageCallback)(
-//!     DMSCWSSessionManager* manager,
-//!     DMSCWSSession* session,
+//!     RiWSSessionManager* manager,
+//!     RiWSSession* session,
 //!     DMSWSMessageType type,
 //!     const char* data,
 //!     size_t length,
@@ -379,8 +379,8 @@
 //!
 //! // Connection closed
 //! typedef void (*DMSWSCloseCallback)(
-//!     DMSCWSSessionManager* manager,
-//!     DMSCWSSession* session,
+//!     RiWSSessionManager* manager,
+//!     RiWSSession* session,
 //!     uint16_t code,
 //!     const char* reason,
 //!     void* user_data
@@ -388,8 +388,8 @@
 //!
 //! // Error occurred
 //! typedef void (*DMSWSErrorCallback)(
-//!     DMSCWSSessionManager* manager,
-//!     DMSCWSSession* session,
+//!     RiWSSessionManager* manager,
+//!     RiWSSession* session,
 //!     int error_code,
 //!     const char* error_message,
 //!     void* user_data
@@ -398,7 +398,7 @@
 //!
 //! ## Dependencies
 //!
-//! This module depends on the following DMSC components:
+//! This module depends on the following Ri components:
 //!
 //! - `crate::ws`: Rust WebSocket module implementation
 //! - `crate::prelude`: Common types and traits
@@ -418,18 +418,18 @@
 //! - `ws-tls`: Enable TLS/WSS support
 //! - `ws-rate-limit`: Enable rate limiting
 
-use crate::ws::{DMSCWSServerConfig, DMSCWSSession, DMSCWSSessionManager};
+use crate::ws::{RiWSServerConfig, RiWSSession, RiWSSessionManager};
 
 
-c_wrapper!(CDMSCWSServerConfig, DMSCWSServerConfig);
-c_wrapper!(CDMSCWSSession, DMSCWSSession);
-c_wrapper!(CDMSCWSSessionManager, DMSCWSSessionManager);
+c_wrapper!(CRiWSServerConfig, RiWSServerConfig);
+c_wrapper!(CRiWSSession, RiWSSession);
+c_wrapper!(CRiWSSessionManager, RiWSSessionManager);
 
-// DMSCWSServerConfig constructors and destructors
+// RiWSServerConfig constructors and destructors
 c_constructor!(
-    dmsc_ws_server_config_new,
-    CDMSCWSServerConfig,
-    DMSCWSServerConfig,
-    DMSCWSServerConfig::default()
+    ri_ws_server_config_new,
+    CRiWSServerConfig,
+    RiWSServerConfig,
+    RiWSServerConfig::default()
 );
-c_destructor!(dmsc_ws_server_config_free, CDMSCWSServerConfig);
+c_destructor!(ri_ws_server_config_free, CRiWSServerConfig);

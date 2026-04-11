@@ -1,7 +1,7 @@
 //! Copyright © 2025-2026 Wenze Wei. All Rights Reserved.
 //!
-//! This file is part of DMSC.
-//! The DMSC project belongs to the Dunimd Team.
+//! This file is part of Ri.
+//! The Ri project belongs to the Dunimd Team.
 //!
 //! Licensed under the Apache License, Version 2.0 (the "License");
 //! You may not use this file except in compliance with the License.
@@ -18,7 +18,7 @@
 //! # Protocol/Cryptography Module Benchmarks
 //!
 //! This module provides performance benchmarks for cryptographic operations and
-//! protocol-level data transformations used by DMSC.
+//! protocol-level data transformations used by Ri.
 //!
 //! ## Benchmark Categories
 //!
@@ -34,7 +34,7 @@
 //!
 //! ## Cryptography Notes
 //!
-//! DMSC uses:
+//! Ri uses:
 //! - AES-256-GCM for symmetric encryption
 //! - SHA family for hashing (via ring crate)
 //! - These are industry-standard cryptographic primitives
@@ -53,7 +53,7 @@ use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criteri
 /// - Confidentiality (encryption)
 /// - Authenticity (HMAC-like authentication tag)
 ///
-/// Used in DMSC for:
+/// Used in Ri for:
 /// - Secure session storage
 /// - Token encryption
 /// - Sensitive data at rest
@@ -225,7 +225,7 @@ fn bench_hex_encoding(c: &mut Criterion) {
 
 /// Benchmark: Protocol frame parsing and building.
 ///
-/// DMSC uses a custom framing protocol for messages:
+/// Ri uses a custom framing protocol for messages:
 /// - Frame header with metadata
 /// - Length-prefixed payload
 /// - Checksum for integrity
@@ -235,13 +235,13 @@ fn bench_hex_encoding(c: &mut Criterion) {
 /// - Stream processing
 /// - Protocol compliance
 fn bench_frame_parsing(c: &mut Criterion) {
-    use dmsc::protocol::{DMSCFrameBuilder, DMSCFrameParser};
+    use ri::protocol::{RiFrameBuilder, RiFrameParser};
 
     let mut group = c.benchmark_group("frame_parsing");
 
     /// Create test frame with 256-byte payload
     let payload = vec![0u8; 256];
-    let mut builder = DMSCFrameBuilder::new();
+    let mut builder = RiFrameBuilder::new();
     let frame = builder.build_data_frame(payload.clone()).unwrap();
     let frame_bytes = frame.to_bytes().unwrap();
 
@@ -250,7 +250,7 @@ fn bench_frame_parsing(c: &mut Criterion) {
     /// Parsing: Convert raw bytes to structured frame
     group.bench_function("parse_frame", |b| {
         b.iter(|| {
-            let mut parser = DMSCFrameParser::new();
+            let mut parser = RiFrameParser::new();
             parser.add_data(&frame_bytes);
             let result = parser.parse_frame().unwrap();
             black_box(result);
@@ -260,7 +260,7 @@ fn bench_frame_parsing(c: &mut Criterion) {
     /// Building: Convert structured frame to bytes
     group.bench_function("build_frame", |b| {
         b.iter(|| {
-            let mut builder = DMSCFrameBuilder::new();
+            let mut builder = RiFrameBuilder::new();
             let result = builder.build_data_frame(payload.clone()).unwrap();
             black_box(result);
         });

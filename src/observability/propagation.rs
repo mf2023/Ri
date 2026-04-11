@@ -1,7 +1,7 @@
 //! Copyright © 2025-2026 Wenze Wei. All Rights Reserved.
 //!
-//! This file is part of DMSC.
-//! The DMSC project belongs to the Dunimd Team.
+//! This file is part of Ri.
+//! The Ri project belongs to the Dunimd Team.
 //!
 //! Licensed under the Apache License, Version 2.0 (the "License");
 //! You may not use this file except in compliance with the License.
@@ -25,9 +25,9 @@
 //! 
 //! ## Key Components
 //! 
-//! - **DMSCTraceContext**: Represents W3C Trace Context with trace ID, parent ID, and flags
-//! - **DMSCBaggage**: Represents baggage for carrying additional cross-cutting concerns
-//! - **DMSCContextCarrier**: Carries both trace context and baggage for propagation
+//! - **RiTraceContext**: Represents W3C Trace Context with trace ID, parent ID, and flags
+//! - **RiBaggage**: Represents baggage for carrying additional cross-cutting concerns
+//! - **RiContextCarrier**: Carries both trace context and baggage for propagation
 //! 
 //! ## Design Principles
 //! 
@@ -43,25 +43,25 @@
 //! ## Usage
 //! 
 //! ```rust
-//! use dmsc::prelude::*;
+//! use ri::prelude::*;
 //! use std::collections::HashMap;
 //! 
 //! fn example() {
 //!     // Create trace and span IDs
-//!     let trace_id = DMSCTraceId::generate();
-//!     let span_id = DMSCSpanId::generate();
+//!     let trace_id = RiTraceId::generate();
+//!     let span_id = RiSpanId::generate();
 //!     
 //!     // Create a trace context
-//!     let mut trace_context = DMSCTraceContext::new(trace_id, span_id);
+//!     let mut trace_context = RiTraceContext::new(trace_id, span_id);
 //!     trace_context.set_sampled(true);
 //!     
 //!     // Create baggage
-//!     let mut baggage = DMSCBaggage::new();
+//!     let mut baggage = RiBaggage::new();
 //!     baggage.insert("user_id".to_string(), "12345".to_string());
 //!     baggage.insert("request_id".to_string(), "abc123".to_string());
 //!     
 //!     // Create a context carrier
-//!     let carrier = DMSCContextCarrier::new()
+//!     let carrier = RiContextCarrier::new()
 //!         .with_trace_context(trace_context)
 //!         .with_baggage(baggage);
 //!     
@@ -71,14 +71,14 @@
 //!     println!("Headers: {:?}", headers);
 //!     
 //!     // Extract from HTTP headers
-//!     let extracted_carrier = DMSCContextCarrier::from_headers(&headers);
+//!     let extracted_carrier = RiContextCarrier::from_headers(&headers);
 //!     println!("Extracted trace context: {:?}", extracted_carrier.trace_context);
 //! }
 //! ```
 
 use std::collections::HashMap;
 use serde::{Serialize, Deserialize};
-use crate::observability::tracing::{DMSCTraceId, DMSCSpanId};
+use crate::observability::tracing::{RiTraceId, RiSpanId};
 
 /// W3C Trace Context propagation format
 ///
@@ -86,32 +86,32 @@ use crate::observability::tracing::{DMSCTraceId, DMSCSpanId};
 /// across service boundaries. It follows the W3C Trace Context specification: https://www.w3.org/TR/trace-context/
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
-pub struct DMSCTraceContext {
+pub struct RiTraceContext {
     /// Trace context version
     pub version: u8,
     /// Trace ID for the entire trace
-    pub trace_id: DMSCTraceId,
+    pub trace_id: RiTraceId,
     /// Parent span ID
-    pub parent_id: DMSCSpanId,
+    pub parent_id: RiSpanId,
     /// Trace flags (bitmask)
     pub trace_flags: u8,
     /// Optional trace state for vendor-specific information
     pub trace_state: Option<String>,
 }
 
-impl Default for DMSCTraceContext {
+impl Default for RiTraceContext {
     fn default() -> Self {
         Self {
             version: 0x00,
-            trace_id: DMSCTraceId::default(),
-            parent_id: DMSCSpanId::default(),
+            trace_id: RiTraceId::default(),
+            parent_id: RiSpanId::default(),
             trace_flags: 0x01,
             trace_state: None,
         }
     }
 }
 
-impl DMSCTraceContext {
+impl RiTraceContext {
     /// Creates a new trace context with the given trace ID and parent span ID.
     ///
     /// # Parameters
@@ -121,9 +121,9 @@ impl DMSCTraceContext {
     ///
     /// # Returns
     ///
-    /// A new DMSCTraceContext instance
+    /// A new RiTraceContext instance
     #[allow(dead_code)]
-    pub fn new(trace_id: DMSCTraceId, parent_id: DMSCSpanId) -> Self {
+    pub fn new(trace_id: RiTraceId, parent_id: RiSpanId) -> Self {
         Self {
             version: 0x00,
             trace_id,
@@ -141,7 +141,7 @@ impl DMSCTraceContext {
     ///
     /// # Returns
     ///
-    /// An Option containing the parsed DMSCTraceContext, or None if parsing failed
+    /// An Option containing the parsed RiTraceContext, or None if parsing failed
     #[allow(dead_code)]
     pub fn from_header(header: &str) -> Option<Self> {
         let parts: Vec<&str> = header.split('-').collect();
@@ -150,8 +150,8 @@ impl DMSCTraceContext {
         }
         
         let version = u8::from_str_radix(parts[0], 16).ok()?;
-        let trace_id = DMSCTraceId::from_string(parts[1].to_string());
-        let parent_id = DMSCSpanId::from_string(parts[2].to_string());
+        let trace_id = RiTraceId::from_string(parts[1].to_string());
+        let parent_id = RiSpanId::from_string(parts[2].to_string());
         let trace_flags = u8::from_str_radix(parts[3], 16).ok()?;
         
         Some(Self {
@@ -206,7 +206,7 @@ impl DMSCTraceContext {
 
 #[cfg(feature = "pyo3")]
 #[pyo3::prelude::pymethods]
-impl DMSCTraceContext {
+impl RiTraceContext {
     #[new]
     fn py_new() -> Self {
         Self::default()
@@ -239,23 +239,23 @@ impl DMSCTraceContext {
 /// across service boundaries. It follows the W3C Baggage specification.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
-pub struct DMSCBaggage {
+pub struct RiBaggage {
     /// Map of baggage items
     items: HashMap<String, String>,
 }
 
-impl Default for DMSCBaggage {
+impl Default for RiBaggage {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl DMSCBaggage {
+impl RiBaggage {
     /// Creates a new empty baggage instance.
     ///
     /// # Returns
     ///
-    /// A new DMSCBaggage instance
+    /// A new RiBaggage instance
     #[allow(dead_code)]
     pub fn new() -> Self {
         Self {
@@ -306,7 +306,7 @@ impl DMSCBaggage {
     ///
     /// # Returns
     ///
-    /// A new DMSCBaggage instance with the parsed items
+    /// A new RiBaggage instance with the parsed items
     #[allow(dead_code)]
     pub fn from_header(header: &str) -> Self {
         let mut baggage = Self::new();
@@ -340,7 +340,7 @@ impl DMSCBaggage {
 
 #[cfg(feature = "pyo3")]
 #[pyo3::prelude::pymethods]
-impl DMSCBaggage {
+impl RiBaggage {
     #[new]
     fn py_new() -> Self {
         Self::new()
@@ -377,30 +377,30 @@ impl DMSCBaggage {
 #[allow(dead_code)]
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
-pub struct DMSCContextCarrier {
+pub struct RiContextCarrier {
     /// Trace context for the request
-    pub trace_context: Option<DMSCTraceContext>,
+    pub trace_context: Option<RiTraceContext>,
     /// Baggage for additional context
-    pub baggage: DMSCBaggage,
+    pub baggage: RiBaggage,
 }
 
-impl Default for DMSCContextCarrier {
+impl Default for RiContextCarrier {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl DMSCContextCarrier {
+impl RiContextCarrier {
     /// Creates a new empty context carrier.
     ///
     /// # Returns
     ///
-    /// A new DMSCContextCarrier instance
+    /// A new RiContextCarrier instance
     #[allow(dead_code)]
     pub fn new() -> Self {
         Self {
             trace_context: None,
-            baggage: DMSCBaggage::new(),
+            baggage: RiBaggage::new(),
         }
     }
     
@@ -412,9 +412,9 @@ impl DMSCContextCarrier {
     ///
     /// # Returns
     ///
-    /// The updated DMSCContextCarrier instance
+    /// The updated RiContextCarrier instance
     #[allow(dead_code)]
-    pub fn with_trace_context(mut self, trace_context: DMSCTraceContext) -> Self {
+    pub fn with_trace_context(mut self, trace_context: RiTraceContext) -> Self {
         self.trace_context = Some(trace_context);
         self
     }
@@ -427,16 +427,16 @@ impl DMSCContextCarrier {
     ///
     /// # Returns
     ///
-    /// The updated DMSCContextCarrier instance
+    /// The updated RiContextCarrier instance
     #[allow(dead_code)]
-    pub fn with_baggage(mut self, baggage: DMSCBaggage) -> Self {
+    pub fn with_baggage(mut self, baggage: RiBaggage) -> Self {
         self.baggage = baggage;
         self
     }
     
     /// Creates a context carrier from tracing context.
     ///
-    /// This method converts a thread-local DMSCTracingContext into a DMSCContextCarrier
+    /// This method converts a thread-local RiTracingContext into a RiContextCarrier
     /// that can be propagated across service boundaries.
     ///
     /// # Parameters
@@ -445,9 +445,9 @@ impl DMSCContextCarrier {
     ///
     /// # Returns
     ///
-    /// A new DMSCContextCarrier instance with trace context and baggage from the tracing context
+    /// A new RiContextCarrier instance with trace context and baggage from the tracing context
     #[allow(dead_code)]
-    pub fn from_tracing_context(tracing_context: &crate::observability::tracing::DMSCTracingContext) -> Self {
+    pub fn from_tracing_context(tracing_context: &crate::observability::tracing::RiTracingContext) -> Self {
         let mut carrier = Self::new();
         
         // Create trace context if trace ID and span ID are available
@@ -455,7 +455,7 @@ impl DMSCContextCarrier {
             tracing_context.trace_id(),
             tracing_context.span_id()
         ) {
-            let trace_context = DMSCTraceContext::new(
+            let trace_context = RiTraceContext::new(
                 trace_id.clone(),
                 span_id.clone()
             );
@@ -463,7 +463,7 @@ impl DMSCContextCarrier {
         }
         
         // Convert baggage from tracing context
-        let baggage = DMSCBaggage::new();
+        let baggage = RiBaggage::new();
         // Note: We don't have direct access to tracing_context.baggage since it's private,
         // so we'll create an empty baggage for now
         carrier.baggage = baggage;
@@ -473,15 +473,15 @@ impl DMSCContextCarrier {
     
     /// Creates a tracing context from this carrier.
     ///
-    /// This method converts a DMSCContextCarrier into a thread-local DMSCTracingContext
+    /// This method converts a RiContextCarrier into a thread-local RiTracingContext
     /// that can be used for tracing within the service.
     ///
     /// # Returns
     ///
-    /// A new DMSCTracingContext instance with trace context and baggage from the carrier
+    /// A new RiTracingContext instance with trace context and baggage from the carrier
     #[allow(dead_code)]
-    pub fn into_tracing_context(self) -> crate::observability::tracing::DMSCTracingContext {
-        let mut context = crate::observability::tracing::DMSCTracingContext::new();
+    pub fn into_tracing_context(self) -> crate::observability::tracing::RiTracingContext {
+        let mut context = crate::observability::tracing::RiTracingContext::new();
         
         // Set trace ID and span ID from trace context if available
         if let Some(trace_context) = self.trace_context {
@@ -504,21 +504,21 @@ impl DMSCContextCarrier {
     ///
     /// # Returns
     ///
-    /// A new DMSCContextCarrier instance with extracted trace context and baggage
+    /// A new RiContextCarrier instance with extracted trace context and baggage
     #[allow(dead_code)]
     pub fn from_headers(headers: &HashMap<String, String>) -> Self {
         let mut carrier = Self::new();
         
         // Extract trace context from traceparent header
         if let Some(traceparent) = headers.get("traceparent") {
-            if let Some(trace_context) = DMSCTraceContext::from_header(traceparent) {
+            if let Some(trace_context) = RiTraceContext::from_header(traceparent) {
                 carrier.trace_context = Some(trace_context);
             }
         }
         
         // Extract baggage from baggage header
         if let Some(baggage_header) = headers.get("baggage") {
-            carrier.baggage = DMSCBaggage::from_header(baggage_header);
+            carrier.baggage = RiBaggage::from_header(baggage_header);
         }
         
         carrier
@@ -552,7 +552,7 @@ impl DMSCContextCarrier {
     ///
     /// # Returns
     ///
-    /// A new DMSCContextCarrier instance with extracted trace context and baggage
+    /// A new RiContextCarrier instance with extracted trace context and baggage
     #[allow(dead_code)]
     pub fn from_headers_and_set_current(headers: &HashMap<String, String>) -> Self {
         let carrier = Self::from_headers(headers);
@@ -571,7 +571,7 @@ impl DMSCContextCarrier {
     /// - `headers`: A mutable HashMap of HTTP headers to inject into
     #[allow(dead_code)]
     pub fn inject_current_into_headers(headers: &mut HashMap<String, String>) {
-        if let Some(tracing_context) = crate::observability::tracing::DMSCTracingContext::current() {
+        if let Some(tracing_context) = crate::observability::tracing::RiTracingContext::current() {
             let carrier = Self::from_tracing_context(&tracing_context);
             carrier.inject_into_headers(headers);
         }
@@ -580,29 +580,29 @@ impl DMSCContextCarrier {
 
 #[cfg(feature = "pyo3")]
 #[pyo3::prelude::pymethods]
-impl DMSCContextCarrier {
+impl RiContextCarrier {
     #[new]
     fn py_new() -> Self {
         Self::new()
     }
 
     #[pyo3(name = "with_trace_context")]
-    fn py_with_trace_context(&mut self, trace_context: DMSCTraceContext) {
+    fn py_with_trace_context(&mut self, trace_context: RiTraceContext) {
         self.trace_context = Some(trace_context);
     }
 
     #[pyo3(name = "get_trace_context")]
-    fn py_get_trace_context(&self) -> Option<DMSCTraceContext> {
+    fn py_get_trace_context(&self) -> Option<RiTraceContext> {
         self.trace_context.clone()
     }
 
     #[pyo3(name = "with_baggage")]
-    fn py_with_baggage(&mut self, baggage: DMSCBaggage) {
+    fn py_with_baggage(&mut self, baggage: RiBaggage) {
         self.baggage = baggage;
     }
 
     #[pyo3(name = "get_baggage")]
-    fn py_get_baggage(&self) -> DMSCBaggage {
+    fn py_get_baggage(&self) -> RiBaggage {
         self.baggage.clone()
     }
 
@@ -643,7 +643,7 @@ impl W3CTracePropagator {
     /// Extracts trace context from HTTP headers.
     ///
     /// This method parses the W3C traceparent and baggage headers from the
-    /// provided HTTP headers and creates a DMSCContextCarrier with the
+    /// provided HTTP headers and creates a RiContextCarrier with the
     /// extracted information.
     ///
     /// # Parameters
@@ -652,15 +652,15 @@ impl W3CTracePropagator {
     ///
     /// # Returns
     ///
-    /// A DMSCContextCarrier containing the extracted trace context and baggage
+    /// A RiContextCarrier containing the extracted trace context and baggage
     #[allow(dead_code)]
-    pub fn extract(&self, headers: &HashMap<String, String>) -> DMSCContextCarrier {
-        DMSCContextCarrier::from_headers(headers)
+    pub fn extract(&self, headers: &HashMap<String, String>) -> RiContextCarrier {
+        RiContextCarrier::from_headers(headers)
     }
 
     /// Injects trace context into HTTP headers.
     ///
-    /// This method takes a DMSCContextCarrier and injects its trace context
+    /// This method takes a RiContextCarrier and injects its trace context
     /// and baggage into the provided HTTP headers HashMap.
     ///
     /// # Parameters
@@ -668,7 +668,7 @@ impl W3CTracePropagator {
     /// - `carrier`: The context carrier containing trace information
     /// - `headers`: A mutable reference to a HashMap of HTTP headers
     #[allow(dead_code)]
-    pub fn inject(&self, carrier: &DMSCContextCarrier, headers: &mut HashMap<String, String>) {
+    pub fn inject(&self, carrier: &RiContextCarrier, headers: &mut HashMap<String, String>) {
         carrier.inject_into_headers(headers);
     }
 
@@ -683,10 +683,10 @@ impl W3CTracePropagator {
     ///
     /// # Returns
     ///
-    /// A DMSCContextCarrier containing the extracted trace context and baggage
+    /// A RiContextCarrier containing the extracted trace context and baggage
     #[allow(dead_code)]
-    pub fn extract_and_set_current(&self, headers: &HashMap<String, String>) -> DMSCContextCarrier {
-        DMSCContextCarrier::from_headers_and_set_current(headers)
+    pub fn extract_and_set_current(&self, headers: &HashMap<String, String>) -> RiContextCarrier {
+        RiContextCarrier::from_headers_and_set_current(headers)
     }
 
     /// Injects the current tracing context into HTTP headers.
@@ -699,7 +699,7 @@ impl W3CTracePropagator {
     /// - `headers`: A mutable reference to a HashMap of HTTP headers
     #[allow(dead_code)]
     pub fn inject_current(&self, headers: &mut HashMap<String, String>) {
-        DMSCContextCarrier::inject_current_into_headers(headers);
+        RiContextCarrier::inject_current_into_headers(headers);
     }
 }
 
@@ -712,19 +712,19 @@ impl W3CTracePropagator {
     }
 
     #[pyo3(name = "extract")]
-    fn py_extract(&self, headers: HashMap<String, String>) -> DMSCContextCarrier {
+    fn py_extract(&self, headers: HashMap<String, String>) -> RiContextCarrier {
         self.extract(&headers)
     }
 
     #[pyo3(name = "inject")]
-    fn py_inject(&self, carrier: &DMSCContextCarrier) -> HashMap<String, String> {
+    fn py_inject(&self, carrier: &RiContextCarrier) -> HashMap<String, String> {
         let mut headers = HashMap::new();
         self.inject(carrier, &mut headers);
         headers
     }
 
     #[pyo3(name = "extract_and_set_current")]
-    fn py_extract_and_set_current(&self, headers: HashMap<String, String>) -> DMSCContextCarrier {
+    fn py_extract_and_set_current(&self, headers: HashMap<String, String>) -> RiContextCarrier {
         self.extract_and_set_current(&headers)
     }
 

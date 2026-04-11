@@ -1,7 +1,7 @@
 //! Copyright © 2025-2026 Wenze Wei. All Rights Reserved.
 //!
-//! This file is part of DMSC.
-//! The DMSC project belongs to the Dunimd Team.
+//! This file is part of Ri.
+//! The Ri project belongs to the Dunimd Team.
 //!
 //! Licensed under the Apache License, Version 2.0 (the "License");
 //! You may not use this file except in compliance with the License.
@@ -25,12 +25,12 @@
 //! 
 //! ## Security Components
 //! 
-//! - **DMSCCryptoSuite**: Cryptographic algorithm selection
-//! - **DMSCDeviceAuthProtocol**: Hardware-based device authentication
-//! - **DMSCPostQuantumCrypto**: Quantum-resistant key exchange and encryption
-//! - **DMSCObfuscationLayer**: Traffic pattern obfuscation
-//! - **DMSCNationalCrypto**: National cryptographic standards (SM2/SM3/SM4)
-//! - **DMSCAntiForensic**: Anti-forensic and anti-analysis features
+//! - **RiCryptoSuite**: Cryptographic algorithm selection
+//! - **RiDeviceAuthProtocol**: Hardware-based device authentication
+//! - **RiPostQuantumCrypto**: Quantum-resistant key exchange and encryption
+//! - **RiObfuscationLayer**: Traffic pattern obfuscation
+//! - **RiNationalCrypto**: National cryptographic standards (SM2/SM3/SM4)
+//! - **RiAntiForensic**: Anti-forensic and anti-analysis features
 //! 
 //! ## Cryptographic Algorithms
 //! 
@@ -58,16 +58,16 @@
 //! ## Usage Examples
 //! 
 //! ```rust
-//! use dmsc::protocol::security::{DMSCCryptoSuite, DMSCDeviceAuthProtocol, DMSCPostQuantumCrypto};
+//! use ri::protocol::security::{RiCryptoSuite, RiDeviceAuthProtocol, RiPostQuantumCrypto};
 //! 
-//! async fn example() -> DMSCResult<()> {
+//! async fn example() -> RiResult<()> {
 //!     // Initialize device authentication
-//!     let device_auth = DMSCDeviceAuthProtocol::new();
+//!     let device_auth = RiDeviceAuthProtocol::new();
 //!     device_auth.initialize().await?;
 //!     
 //!     // Perform quantum-resistant key exchange
-//!     let post_quantum = DMSCPostQuantumCrypto::new();
-//!     post_quantum.initialize(&DMSCCryptoSuite::PostQuantum).await?;
+//!     let post_quantum = RiPostQuantumCrypto::new();
+//!     post_quantum.initialize(&RiCryptoSuite::PostQuantum).await?;
 //!     
 //!     // Authenticate device
 //!     device_auth.authenticate_device("target-device").await?;
@@ -85,8 +85,8 @@ use tokio::net::TcpStream;
 use tokio::sync::RwLock;
 use rand::Rng;
 
-use crate::core::{DMSCResult, DMSCError};
-use super::DMSCProtocolConfig;
+use crate::core::{RiResult, RiError};
+use super::RiProtocolConfig;
 
 /// Cryptographic suite enumeration for protocol security configuration.
 ///
@@ -115,7 +115,7 @@ use super::DMSCProtocolConfig;
 /// | Hybrid | 9 | Partial | Multi-Framework |
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
-pub enum DMSCCryptoSuite {
+pub enum RiCryptoSuite {
     /// National cryptographic standards (SM2/SM3/SM4)
     ///
     /// Implements Chinese National Standard cryptographic algorithms required for
@@ -146,20 +146,20 @@ pub enum DMSCCryptoSuite {
     Hybrid,
 }
 
-impl DMSCCryptoSuite {
+impl RiCryptoSuite {
     /// Get the security level of this cryptographic suite.
     pub fn security_level(&self) -> u8 {
         match self {
-            DMSCCryptoSuite::NationalStandard => 8,
-            DMSCCryptoSuite::International => 7,
-            DMSCCryptoSuite::PostQuantum => 10,
-            DMSCCryptoSuite::Hybrid => 9,
+            RiCryptoSuite::NationalStandard => 8,
+            RiCryptoSuite::International => 7,
+            RiCryptoSuite::PostQuantum => 10,
+            RiCryptoSuite::Hybrid => 9,
         }
     }
     
     /// Check if this suite provides quantum resistance.
     pub fn is_quantum_resistant(&self) -> bool {
-        matches!(self, DMSCCryptoSuite::PostQuantum | DMSCCryptoSuite::Hybrid)
+        matches!(self, RiCryptoSuite::PostQuantum | RiCryptoSuite::Hybrid)
     }
 }
 
@@ -197,7 +197,7 @@ impl DMSCCryptoSuite {
 /// - **Maximum**: Maximum privacy requirements with tolerance for overhead
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
-pub enum DMSCObfuscationLevel {
+pub enum RiObfuscationLevel {
     /// No obfuscation
     ///
     /// Protocol traffic is transmitted in standard format without any pattern
@@ -233,15 +233,15 @@ pub enum DMSCObfuscationLevel {
     Maximum,
 }
 
-impl DMSCObfuscationLevel {
+impl RiObfuscationLevel {
     /// Get the obfuscation strength level.
     pub fn strength(&self) -> u8 {
         match self {
-            DMSCCryptoSuite::NationalStandard => 0,
-            DMSCCryptoSuite::Basic => 3,
-            DMSCCryptoSuite::Medium => 6,
-            DMSCCryptoSuite::High => 8,
-            DMSCCryptoSuite::Maximum => 10,
+            RiCryptoSuite::NationalStandard => 0,
+            RiCryptoSuite::Basic => 3,
+            RiCryptoSuite::Medium => 6,
+            RiCryptoSuite::High => 8,
+            RiCryptoSuite::Maximum => 10,
         }
     }
 }
@@ -285,7 +285,7 @@ impl DMSCObfuscationLevel {
 /// In production deployments, integrate with actual hardware security modules
 /// (TPM 2.0, HSM, Secure Element) for real hardware root of trust.
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
-pub struct DMSCDeviceAuthProtocol {
+pub struct RiDeviceAuthProtocol {
     /// Device certificate storage with thread-safe access.
     ///
     /// Contains all known device certificates indexed by device ID.
@@ -420,17 +420,17 @@ struct AuthChallenge {
 
 use std::collections::HashSet;
 
-impl DMSCDeviceAuthProtocol {
+impl RiDeviceAuthProtocol {
     /// Creates a new device authentication protocol instance.
     ///
-    /// Returns a newly initialized DMSCDeviceAuthProtocol with empty certificate
+    /// Returns a newly initialized RiDeviceAuthProtocol with empty certificate
     /// storage, no trusted devices, and uninitialized state. Call `initialize()`
     /// before performing any authentication operations.
     ///
     /// ## Example
     ///
     /// ```rust
-    /// let auth_protocol = DMSCDeviceAuthProtocol::new();
+    /// let auth_protocol = RiDeviceAuthProtocol::new();
     /// auth_protocol.initialize().await?;
     /// ```
     ///
@@ -484,9 +484,9 @@ impl DMSCDeviceAuthProtocol {
     ///
     /// ## Errors
     ///
-    /// Returns DMSCError::AlreadyInitialized if protocol is already initialized.
-    /// Returns DMSCError::CryptoError if key generation or storage fails.
-    pub async fn initialize(&self) -> DMSCResult<()> {
+    /// Returns RiError::AlreadyInitialized if protocol is already initialized.
+    /// Returns RiError::CryptoError if key generation or storage fails.
+    pub async fn initialize(&self) -> RiResult<()> {
         let mut init = self.initialized.write().await;
         if *init {
             return Ok(());
@@ -530,19 +530,19 @@ impl DMSCDeviceAuthProtocol {
     ///
     /// ## Errors
     ///
-    /// Returns DMSCError::CryptoError if:
+    /// Returns RiError::CryptoError if:
     /// - Random number generation fails
     /// - Key pair parsing fails
-    fn generate_device_keypair(&self) -> DMSCResult<(Vec<u8>, Vec<u8>)> {
+    fn generate_device_keypair(&self) -> RiResult<(Vec<u8>, Vec<u8>)> {
         use ring::signature::{self, KeyPair};
         use ring::rand::SystemRandom;
         
         let rng = SystemRandom::new();
         let pkcs8_bytes = signature::Ed25519KeyPair::generate_pkcs8(&rng)
-            .map_err(|e| DMSCError::CryptoError(format!("Failed to generate Ed25519 key: {}", e)))?;
+            .map_err(|e| RiError::CryptoError(format!("Failed to generate Ed25519 key: {}", e)))?;
         
         let key_pair = signature::Ed25519KeyPair::from_pkcs8(pkcs8_bytes.as_ref())
-            .map_err(|e| DMSCError::CryptoError(format!("Failed to parse Ed25519 key: {}", e)))?;
+            .map_err(|e| RiError::CryptoError(format!("Failed to parse Ed25519 key: {}", e)))?;
         
         let public_key = key_pair.public_key().as_ref().to_vec();
         let private_key = pkcs8_bytes.as_ref().to_vec();
@@ -584,12 +584,12 @@ impl DMSCDeviceAuthProtocol {
     ///
     /// ## Errors
     ///
-    /// Returns DMSCError::NotInitialized if protocol not initialized.
-    /// Returns DMSCError::CryptoError if signature verification fails.
-    /// Returns DMSCError::CryptoError if device certificate not found.
-    pub async fn authenticate_device(&self, device_id: &str) -> DMSCResult<bool> {
+    /// Returns RiError::NotInitialized if protocol not initialized.
+    /// Returns RiError::CryptoError if signature verification fails.
+    /// Returns RiError::CryptoError if device certificate not found.
+    pub async fn authenticate_device(&self, device_id: &str) -> RiResult<bool> {
         if !*self.initialized.read().await {
-            return Err(DMSCError::NotInitialized);
+            return Err(RiError::NotInitialized);
         }
         
         // Generate authentication challenge
@@ -620,13 +620,13 @@ impl DMSCDeviceAuthProtocol {
     /// The generated challenge is stored in the challenges HashMap keyed by
     /// challenge_id. This allows retrieval during verification and prevents
     /// replay attacks using expired or replayed challenges.
-    async fn generate_challenge(&self, device_id: &str) -> DMSCResult<AuthChallenge> {
+    async fn generate_challenge(&self, device_id: &str) -> RiResult<AuthChallenge> {
         use ring::rand::SystemRandom;
         
         let rng = SystemRandom::new();
         let mut challenge_data = vec![0u8; 32];
         rng.fill(&mut challenge_data)
-            .map_err(|e| DMSCError::CryptoError(format!("Failed to generate challenge: {}", e)))?;
+            .map_err(|e| RiError::CryptoError(format!("Failed to generate challenge: {}", e)))?;
         
         let challenge = AuthChallenge {
             challenge_id: format!("challenge_{}_{}", device_id, std::time::SystemTime::now()
@@ -651,14 +651,14 @@ impl DMSCDeviceAuthProtocol {
     /// ## Network Communication
     ///
     /// - **Challenge Transmission**: Send challenge_data to device
-    /// - **Protocol**: Custom DMSC protocol or secure channel
+    /// - **Protocol**: Custom Ri protocol or secure channel
     /// - **Timeout**: Should implement per-operation timeout
     ///
     /// ## Response Format
     ///
     /// The expected response is an Ed25519 signature over the challenge_data,
     /// which is exactly 64 bytes in length.
-    async fn send_challenge_to_device(&self, challenge: &AuthChallenge) -> DMSCResult<Vec<u8>> {
+    async fn send_challenge_to_device(&self, challenge: &AuthChallenge) -> RiResult<Vec<u8>> {
         // In a real implementation, this would send the challenge over the network
         // and receive a signed response from the device
         
@@ -668,12 +668,12 @@ impl DMSCDeviceAuthProtocol {
             use ring::signature;
             
             let key_pair = signature::Ed25519KeyPair::from_pkcs8(private_key)
-                .map_err(|e| DMSCError::CryptoError(format!("Failed to parse Ed25519 key: {}", e)))?;
+                .map_err(|e| RiError::CryptoError(format!("Failed to parse Ed25519 key: {}", e)))?;
             
             let signature = key_pair.sign(&challenge.challenge_data);
             Ok(signature.as_ref().to_vec())
         } else {
-            Err(DMSCError::CryptoError("Device key pair not found".to_string()))
+            Err(RiError::CryptoError("Device key pair not found".to_string()))
         }
     }
 
@@ -709,7 +709,7 @@ impl DMSCDeviceAuthProtocol {
     /// - **Side Channel**: Consider implementing constant-time verification
     /// - **Error Handling**: Don't reveal which check failed (security through
     ///   obscurity is not sufficient but reduces information leakage)
-    async fn verify_challenge_response(&self, challenge: &AuthChallenge, response: &[u8]) -> DMSCResult<bool> {
+    async fn verify_challenge_response(&self, challenge: &AuthChallenge, response: &[u8]) -> RiResult<bool> {
         // Check if challenge is still valid
         if Instant::now().duration_since(challenge.created_at) > challenge.valid_for {
             return Ok(false);
@@ -719,10 +719,10 @@ impl DMSCDeviceAuthProtocol {
         let certificates = self.certificates.read().await;
         let device_cert = certificates.values()
             .find(|cert| cert.device_id == challenge.challenge_id.split('_').nth(1).unwrap_or(""))
-            .ok_or_else(|| DMSCError::CryptoError("Device certificate not found".to_string()))?;
+            .ok_or_else(|| RiError::CryptoError("Device certificate not found".to_string()))?;
         
         if device_cert.public_key.is_empty() {
-            return Err(DMSCError::CryptoError("Device has no public key".to_string()));
+            return Err(RiError::CryptoError("Device has no public key".to_string()));
         }
         
         // Verify the signature using the device's public key
@@ -755,7 +755,7 @@ impl DMSCDeviceAuthProtocol {
     /// 4. Receive and verify signature response
     /// 5. Validate device certificate chain
     /// 6. Add device to trusted list on success
-    async fn perform_full_authentication(&self, device_id: &str) -> DMSCResult<()> {
+    async fn perform_full_authentication(&self, device_id: &str) -> RiResult<()> {
         // Generate authentication challenge
         let challenge = self.generate_challenge().await?;
         self.challenges.write().await.insert(challenge.challenge_id.clone(), challenge.clone());
@@ -782,7 +782,7 @@ impl DMSCDeviceAuthProtocol {
     /// - Uses rand::thread_rng() for convenience
     /// - Suitable for most authentication scenarios
     /// - Consider SystemRandom for highest security requirements
-    async fn generate_challenge(&self) -> DMSCResult<AuthChallenge> {
+    async fn generate_challenge(&self) -> RiResult<AuthChallenge> {
         let mut rng = rand::thread_rng();
         let mut challenge_data = vec![0u8; 32];
         rng.fill(&mut challenge_data[..]);
@@ -805,7 +805,7 @@ impl DMSCDeviceAuthProtocol {
     /// This method uses rand::thread_rng() which is suitable for most purposes.
     /// For highest security requirements, use a cryptographically secure RNG
     /// like ring::rand::SystemRandom or the operating system's entropy source.
-    async fn generate_device_key(&self) -> DMSCResult<Vec<u8>> {
+    async fn generate_device_key(&self) -> RiResult<Vec<u8>> {
         let mut rng = rand::thread_rng();
         let mut key = vec![0u8; 32];
         rng.fill(&mut key[..]);
@@ -827,7 +827,7 @@ impl DMSCDeviceAuthProtocol {
     /// - Read from device manufacturing ID register
     /// - Store in tamper-evident storage
     /// - Bind to hardware (TPM, secure boot)
-    async fn get_device_id(&self) -> DMSCResult<String> {
+    async fn get_device_id(&self) -> RiResult<String> {
         Ok(format!("dms-device-{}", uuid::Uuid::new_v4()))
     }
     
@@ -853,7 +853,7 @@ impl DMSCDeviceAuthProtocol {
     /// - Validate complete certificate chains
     /// - Implement CRL checking and OCSP stapling
     /// - Use hardware-protected private keys
-    async fn load_device_certificates_from_secure_storage(&self) -> DMSCResult<()> {
+    async fn load_device_certificates_from_secure_storage(&self) -> RiResult<()> {
         // In a production environment, this would:
         // 1. Access secure storage (TPM, HSM, or encrypted filesystem)
         // 2. Load device certificates with proper validation
@@ -867,7 +867,7 @@ impl DMSCDeviceAuthProtocol {
         let certificate = DeviceCertificate {
             device_id: device_id.clone(),
             public_key: public_key.clone(),
-            issuer: "DMSC-Root-CA".to_string(),
+            issuer: "Ri-Root-CA".to_string(),
             valid_until: Instant::now() + Duration::from_secs(365 * 24 * 60 * 60), // 1 year
             revoked: false,
         };
@@ -908,13 +908,13 @@ impl DMSCDeviceAuthProtocol {
     /// - Use actual HSM (AWS CloudHSM, Azure Dedicated HSM, etc.)
     /// - Implement proper HSM authentication
     /// - Configure key backup and recovery
-    async fn initialize_hardware_security_module(&self) -> DMSCResult<()> {
+    async fn initialize_hardware_security_module(&self) -> RiResult<()> {
         // Software-based HSM simulation using secure key storage
         // In a real implementation, this would connect to physical HSM
 
         // Generate master key pair for the HSM
         let master_key = crate::protocol::crypto::ECDSASigner::generate()
-            .map_err(|e| DMSCError::CryptoError(format!("Failed to generate HSM master key: {}", e)))?;
+            .map_err(|e| RiError::CryptoError(format!("Failed to generate HSM master key: {}", e)))?;
 
         // Store master key securely (in memory for this implementation)
         // Note: In production, this would be stored in actual HSM
@@ -951,7 +951,7 @@ impl DMSCDeviceAuthProtocol {
     ///    - Implement automatic key rotation schedule
     ///    - Support graceful transition between key versions
     ///    - Archive old keys securely
-    async fn setup_secure_key_storage(&self) -> DMSCResult<()> {
+    async fn setup_secure_key_storage(&self) -> RiResult<()> {
         // In a production environment, this would:
         // 1. Initialize secure key storage (TPM, HSM, or encrypted keystore)
         // 2. Generate or import master keys
@@ -979,7 +979,7 @@ impl DMSCDeviceAuthProtocol {
     }
 }
 
-impl Default for DMSCDeviceAuthProtocol {
+impl Default for RiDeviceAuthProtocol {
     fn default() -> Self {
         Self::new()
     }
@@ -1065,13 +1065,13 @@ struct KeyExchangeState {
 /// ## Usage
 ///
 /// ```rust
-/// let post_quantum = DMSCPostQuantumCrypto::new();
-/// post_quantum.initialize(&DMSCCryptoSuite::PostQuantum).await?;
+/// let post_quantum = RiPostQuantumCrypto::new();
+/// post_quantum.initialize(&RiCryptoSuite::PostQuantum).await?;
 ///
 /// // Perform key exchange with remote peer
 /// post_quantum.perform_key_exchange(&tcp_stream).await?;
 /// ```
-pub struct DMSCPostQuantumCrypto {
+pub struct RiPostQuantumCrypto {
     /// Key exchange state with thread-safe access.
     ///
     /// Contains all state required for key exchange operations including
@@ -1086,25 +1086,25 @@ pub struct DMSCPostQuantumCrypto {
     initialized: Arc<RwLock<bool>>,
 }
 
-impl Default for DMSCPostQuantumCrypto {
+impl Default for RiPostQuantumCrypto {
     fn default() -> Self {
         Self::new()
     }
 }
 
 /// Traffic obfuscation layer.
-pub struct DMSCObfuscationLayer {
+pub struct RiObfuscationLayer {
     /// Obfuscation configuration
     config: Arc<RwLock<ObfuscationConfig>>,
     /// Pattern generators for different obfuscation levels
-    pattern_generators: Arc<RwLock<HashMap<DMSCObfuscationLevel, Box<dyn PatternGenerator>>>>,
+    pattern_generators: Arc<RwLock<HashMap<RiObfuscationLevel, Box<dyn PatternGenerator>>>>,
 }
 
 /// Obfuscation configuration.
 #[derive(Debug, Clone)]
 struct ObfuscationConfig {
     /// Current obfuscation level
-    level: DMSCObfuscationLevel,
+    level: RiObfuscationLevel,
     /// Pattern rotation interval
     rotation_interval: Duration,
     /// Last pattern rotation
@@ -1115,29 +1115,29 @@ struct ObfuscationConfig {
 #[async_trait]
 trait PatternGenerator: Send + Sync {
     /// Generate obfuscated pattern.
-    async fn generate_pattern(&self, data: &[u8]) -> DMSCResult<Vec<u8>>;
+    async fn generate_pattern(&self, data: &[u8]) -> RiResult<Vec<u8>>;
     
     /// Parse obfuscated pattern back to original data.
-    async fn parse_pattern(&self, pattern: &[u8]) -> DMSCResult<Vec<u8>>;
+    async fn parse_pattern(&self, pattern: &[u8]) -> RiResult<Vec<u8>>;
     
     /// Get the pattern type identifier.
     fn pattern_type(&self) -> &'static str;
 }
 
-impl DMSCObfuscationLayer {
+impl RiObfuscationLayer {
     /// Create a new obfuscation layer.
     pub fn new() -> Self {
-        let mut generators: HashMap<DMSCObfuscationLevel, Box<dyn PatternGenerator>> = HashMap::new();
+        let mut generators: HashMap<RiObfuscationLevel, Box<dyn PatternGenerator>> = HashMap::new();
         
         // Register pattern generators
-        generators.insert(DMSCObfuscationLevel::Basic, Box::new(BasicPatternGenerator::new()));
-        generators.insert(DMSCObfuscationLevel::Medium, Box::new(HttpPatternGenerator::new()));
-        generators.insert(DMSCObfuscationLevel::High, Box::new(ComplexPatternGenerator::new()));
-        generators.insert(DMSCObfuscationLevel::Maximum, Box::new(PolymorphicPatternGenerator::new()));
+        generators.insert(RiObfuscationLevel::Basic, Box::new(BasicPatternGenerator::new()));
+        generators.insert(RiObfuscationLevel::Medium, Box::new(HttpPatternGenerator::new()));
+        generators.insert(RiObfuscationLevel::High, Box::new(ComplexPatternGenerator::new()));
+        generators.insert(RiObfuscationLevel::Maximum, Box::new(PolymorphicPatternGenerator::new()));
         
         Self {
             config: Arc::new(RwLock::new(ObfuscationConfig {
-                level: DMSCObfuscationLevel::None,
+                level: RiObfuscationLevel::None,
                 rotation_interval: Duration::from_secs(600), // 10 minutes
                 last_rotation: Instant::now(),
             })),
@@ -1146,7 +1146,7 @@ impl DMSCObfuscationLayer {
     }
     
     /// Initialize the obfuscation layer.
-    pub async fn initialize(&self, level: DMSCObfuscationLevel) -> DMSCResult<()> {
+    pub async fn initialize(&self, level: RiObfuscationLevel) -> RiResult<()> {
         let mut config = self.config.write().await;
         config.level = level;
         config.last_rotation = Instant::now();
@@ -1154,11 +1154,11 @@ impl DMSCObfuscationLayer {
     }
     
     /// Obfuscate address for connection.
-    pub async fn obfuscate_address(&self, address: &str) -> DMSCResult<String> {
+    pub async fn obfuscate_address(&self, address: &str) -> RiResult<String> {
         let config = self.config.read().await;
         
         match config.level {
-            DMSCObfuscationLevel::None => Ok(address.to_string()),
+            RiObfuscationLevel::None => Ok(address.to_string()),
             _ => {
                 // Simple address obfuscation (in real implementation would be more sophisticated)
                 Ok(format!("obfuscated-{}", uuid::Uuid::new_v4()))
@@ -1167,7 +1167,7 @@ impl DMSCObfuscationLayer {
     }
     
     /// Obfuscate data for transmission.
-    pub async fn obfuscate_data(&self, data: &[u8]) -> DMSCResult<Vec<u8>> {
+    pub async fn obfuscate_data(&self, data: &[u8]) -> RiResult<Vec<u8>> {
         let config = self.config.read().await;
         let generators = self.pattern_generators.read().await;
         
@@ -1179,7 +1179,7 @@ impl DMSCObfuscationLayer {
     }
     
     /// Parse obfuscated data back to original.
-    pub async fn parse_obfuscated_data(&self, pattern: &[u8]) -> DMSCResult<Vec<u8>> {
+    pub async fn parse_obfuscated_data(&self, pattern: &[u8]) -> RiResult<Vec<u8>> {
         let config = self.config.read().await;
         let generators = self.pattern_generators.read().await;
         
@@ -1191,7 +1191,7 @@ impl DMSCObfuscationLayer {
     }
 }
 
-impl Default for DMSCObfuscationLayer {
+impl Default for RiObfuscationLayer {
     fn default() -> Self {
         Self::new()
     }
@@ -1215,7 +1215,7 @@ impl BasicPatternGenerator {
 
 #[async_trait]
 impl PatternGenerator for BasicPatternGenerator {
-    async fn generate_pattern(&self, data: &[u8]) -> DMSCResult<Vec<u8>> {
+    async fn generate_pattern(&self, data: &[u8]) -> RiResult<Vec<u8>> {
         let mut result = Vec::new();
         
         // Simple XOR obfuscation
@@ -1226,7 +1226,7 @@ impl PatternGenerator for BasicPatternGenerator {
         Ok(result)
     }
     
-    async fn parse_pattern(&self, pattern: &[u8]) -> DMSCResult<Vec<u8>> {
+    async fn parse_pattern(&self, pattern: &[u8]) -> RiResult<Vec<u8>> {
         // XOR is symmetric, so same operation for parsing
         self.generate_pattern(pattern).await
     }
@@ -1236,18 +1236,18 @@ impl PatternGenerator for BasicPatternGenerator {
     }
 }
 
-impl Default for DMSCRandomPadding {
+impl Default for RiRandomPadding {
     fn default() -> Self {
         Self::new()
     }
 }
 
 /// Random padding generator for traffic shaping.
-pub struct DMSCRandomPadding {
+pub struct RiRandomPadding {
     rng: rand::rngs::ThreadRng,
 }
 
-impl DMSCRandomPadding {
+impl RiRandomPadding {
     /// Create a new random padding generator.
     pub fn new() -> Self {
         Self {
@@ -1256,7 +1256,7 @@ impl DMSCRandomPadding {
     }
     
     /// Add random padding to data to obfuscate packet sizes.
-    pub fn add_padding(&self, data: &[u8], min_size: usize, max_size: usize) -> DMSCResult<Vec<u8>> {
+    pub fn add_padding(&self, data: &[u8], min_size: usize, max_size: usize) -> RiResult<Vec<u8>> {
         use rand::Rng;
         
         let mut rng = rand::thread_rng();
@@ -1276,15 +1276,15 @@ impl DMSCRandomPadding {
     }
     
     /// Remove random padding from data.
-    pub fn remove_padding(&self, padded_data: &[u8]) -> DMSCResult<Vec<u8>> {
+    pub fn remove_padding(&self, padded_data: &[u8]) -> RiResult<Vec<u8>> {
         if padded_data.len() < 4 {
-            return Err(DMSCError::CryptoError("Invalid padded data length".to_string()));
+            return Err(RiError::CryptoError("Invalid padded data length".to_string()));
         }
         
         let data_len = u32::from_be_bytes([padded_data[0], padded_data[1], padded_data[2], padded_data[3]]) as usize;
         
         if padded_data.len() < 4 + data_len {
-            return Err(DMSCError::CryptoError("Invalid padded data format".to_string()));
+            return Err(RiError::CryptoError("Invalid padded data format".to_string()));
         }
         
         Ok(padded_data[4..4 + data_len].to_vec())
@@ -1307,12 +1307,12 @@ impl HttpPatternGenerator {
 
 #[async_trait]
 impl PatternGenerator for HttpPatternGenerator {
-    async fn generate_pattern(&self, data: &[u8]) -> DMSCResult<Vec<u8>> {
+    async fn generate_pattern(&self, data: &[u8]) -> RiResult<Vec<u8>> {
         // Encode data as hex
         let encoded_data = hex::encode(data);
         let timestamp = std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)
-            .map_err(|e| DMSCError::InvalidState(format!("System time error: {}", e)))?
+            .map_err(|e| RiError::InvalidState(format!("System time error: {}", e)))?
             .as_secs();
         
         let http_request = self.template
@@ -1322,21 +1322,21 @@ impl PatternGenerator for HttpPatternGenerator {
         Ok(http_request.into_bytes())
     }
     
-    async fn parse_pattern(&self, pattern: &[u8]) -> DMSCResult<Vec<u8>> {
+    async fn parse_pattern(&self, pattern: &[u8]) -> RiResult<Vec<u8>> {
         let http_str = String::from_utf8(pattern.to_vec())
-            .map_err(|_| DMSCError::InvalidData("Invalid HTTP pattern".to_string()))?;
+            .map_err(|_| RiError::InvalidData("Invalid HTTP pattern".to_string()))?;
         
         // Extract data from HTTP request line
         if let Some(start) = http_str.find("id=") {
             if let Some(end) = http_str[start..].find("&") {
                 let encoded_data = &http_str[start + 3..start + end];
                 hex::decode(encoded_data)
-                    .map_err(|_| DMSCError::InvalidData("Invalid hex encoding".to_string()))
+                    .map_err(|_| RiError::InvalidData("Invalid hex encoding".to_string()))
             } else {
-                Err(DMSCError::InvalidData("Invalid HTTP pattern format".to_string()))
+                Err(RiError::InvalidData("Invalid HTTP pattern format".to_string()))
             }
         } else {
-            Err(DMSCError::InvalidData("No data found in HTTP pattern".to_string()))
+            Err(RiError::InvalidData("No data found in HTTP pattern".to_string()))
         }
     }
     
@@ -1374,7 +1374,7 @@ impl ComplexPatternGenerator {
 
 #[async_trait]
 impl PatternGenerator for ComplexPatternGenerator {
-    async fn generate_pattern(&self, data: &[u8]) -> DMSCResult<Vec<u8>> {
+    async fn generate_pattern(&self, data: &[u8]) -> RiResult<Vec<u8>> {
         let mut result = data.to_vec();
         
         // Apply all transformation layers
@@ -1385,7 +1385,7 @@ impl PatternGenerator for ComplexPatternGenerator {
         Ok(result)
     }
     
-    async fn parse_pattern(&self, pattern: &[u8]) -> DMSCResult<Vec<u8>> {
+    async fn parse_pattern(&self, pattern: &[u8]) -> RiResult<Vec<u8>> {
         let mut result = pattern.to_vec();
         
         // Apply inverse transformations in reverse order
@@ -1433,7 +1433,7 @@ impl PolymorphicPatternGenerator {
 
 #[async_trait]
 impl PatternGenerator for PolymorphicPatternGenerator {
-    async fn generate_pattern(&self, data: &[u8]) -> DMSCResult<Vec<u8>> {
+    async fn generate_pattern(&self, data: &[u8]) -> RiResult<Vec<u8>> {
         // Occasionally rotate patterns
         if rand::random::<f64>() < 0.1 {
             self.rotate_pattern().await;
@@ -1443,7 +1443,7 @@ impl PatternGenerator for PolymorphicPatternGenerator {
         generator.generate_pattern(data).await
     }
     
-    async fn parse_pattern(&self, pattern: &[u8]) -> DMSCResult<Vec<u8>> {
+    async fn parse_pattern(&self, pattern: &[u8]) -> RiResult<Vec<u8>> {
         let generator = self.current_pattern.read().await;
         generator.parse_pattern(pattern).await
     }

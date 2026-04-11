@@ -1,7 +1,7 @@
 //! Copyright © 2025-2026 Wenze Wei. All Rights Reserved.
 //!
-//! This file is part of DMSC.
-//! The DMSC project belongs to the Dunimd Team.
+//! This file is part of Ri.
+//! The Ri project belongs to the Dunimd Team.
 //!
 //! Licensed under the Apache License, Version 2.0 (the "License");
 //! You may not use this file except in compliance with the License.
@@ -17,27 +17,27 @@
 
 //! # C/C++ API Module
 //!
-//! This module provides comprehensive C language bindings for the DMSC framework, enabling
-//! C and C++ applications to leverage DMSC's capabilities including application lifecycle
+//! This module provides comprehensive C language bindings for the Ri framework, enabling
+//! C and C++ applications to leverage Ri's capabilities including application lifecycle
 //! management, authentication, caching, database access, file operations, gateway services,
 //! gRPC communication, event hooks, logging, module RPC, observability, protocol handling,
 //! message queuing, service mesh integration, validation, and WebSocket communication.
 //!
 //! The C API follows C conventions for memory management, error handling, and type conventions
-//! while providing access to DMSC's robust Rust implementation. This allows applications written
-//! in C or C++ to benefit from DMSC's safety guarantees, performance optimizations, and
+//! while providing access to Ri's robust Rust implementation. This allows applications written
+//! in C or C++ to benefit from Ri's safety guarantees, performance optimizations, and
 //! architectural patterns without requiring a full Rust codebase.
 //!
 //! ## Module Architecture
 //!
 //! The C API module is organized into functional submodules, each providing bindings for a
-//! specific DMSC capability. The module also provides global initialization functions,
+//! specific Ri capability. The module also provides global initialization functions,
 //! version information, and utility functions for managing C strings returned by the API.
 //!
 //! ### Core Submodules
 //!
 //! - **core**: Application initialization, configuration management, and lifecycle control.
-//!   Provides the entry point for DMSC-based applications with automatic resource management.
+//!   Provides the entry point for Ri-based applications with automatic resource management.
 //!
 //! - **auth**: Authentication and authorization services including JWT token handling,
 //!   session management, credential validation, and permission checking.
@@ -62,7 +62,7 @@
 //! - **grpc**: gRPC server and client support for RPC communication with Protocol Buffer
 //!   serialization, streaming, and connection management.
 //!
-//! - **module_rpc**: Inter-module RPC communication within the DMSC framework for
+//! - **module_rpc**: Inter-module RPC communication within the Ri framework for
 //!   distributed service coordination.
 //!
 //! - **ws**: WebSocket protocol support for full-duplex communication with session
@@ -93,12 +93,12 @@
 //!
 //! ## Global Initialization
 //!
-//! The DMSC library must be initialized before using any other API functions:
+//! The Ri library must be initialized before using any other API functions:
 //!
 //! ```c
-//! int result = dmsc_init();
+//! int result = ri_init();
 //! if (result != 0) {
-//!     fprintf(stderr, "Failed to initialize DMSC library\n");
+//!     fprintf(stderr, "Failed to initialize Ri library\n");
 //!     return result;
 //! }
 //! ```
@@ -109,14 +109,14 @@
 //! - Signal handler registration
 //! - Runtime state initialization
 //!
-//! When the application is finished using DMSC, cleanup must be called:
+//! When the application is finished using Ri, cleanup must be called:
 //!
 //! ```c
-//! dmsc_cleanup();
+//! ri_cleanup();
 //! ```
 //!
 //! Cleanup releases all global resources and ensures proper shutdown sequence.
-//! All DMSC objects must be freed before calling cleanup to prevent resource leaks.
+//! All Ri objects must be freed before calling cleanup to prevent resource leaks.
 //!
 //! ## Memory Management
 //!
@@ -126,7 +126,7 @@
 //!   All objects must be freed using the corresponding destructor function.
 //!
 //! - **String Handling**: String-returning functions allocate C strings that must
-//!   be freed using dmsc_string_free(). Do not use standard free() on these strings.
+//!   be freed using ri_string_free(). Do not use standard free() on these strings.
 //!
 //! - **NULL Safety**: All functions handle NULL pointers gracefully, returning
 //!   error codes or NULL outputs rather than causing undefined behavior.
@@ -138,27 +138,27 @@
 //!
 //! ```c
 //! // Create an object
-//! DMSCLogger* logger = dmsc_logger_new(config);
+//! RiLogger* logger = ri_logger_new(config);
 //! if (logger == NULL) {
 //!     fprintf(stderr, "Failed to create logger\n");
-//!     dmsc_log_config_free(config);
+//!     ri_log_config_free(config);
 //!     return ERROR_ALLOCATION;
 //! }
 //!
 //! // Use the object...
 //!
 //! // Free when done
-//! dmsc_logger_free(logger);
+//! ri_logger_free(logger);
 //!
 //! // For strings returned by the API
-//! const char* version = dmsc_version();
-//! printf("DMSC version: %s\n", version);
-//! dmsc_string_free((char*)version);  // Cast to non-const for free
+//! const char* version = ri_version();
+//! printf("Ri version: %s\n", version);
+//! ri_string_free((char*)version);  // Cast to non-const for free
 //! ```
 //!
 //! ## Error Handling
 //!
-//! All DMSC C API functions follow consistent error handling patterns:
+//! All Ri C API functions follow consistent error handling patterns:
 //!
 //! - **Return Codes**: Integer return codes where 0 indicates success
 //! - **NULL Objects**: Constructor functions return NULL on allocation failure
@@ -177,13 +177,13 @@
 //!
 //! ## Thread Safety
 //!
-//! The DMSC C API is designed for thread-safe concurrent access:
+//! The Ri C API is designed for thread-safe concurrent access:
 //!
 //! - **Object-Level Safety**: Individual objects are safe for concurrent use from
 //!   multiple threads unless documented otherwise.
 //!
 //! - **Global State**: Global initialization is thread-safe; subsequent calls to
-//!   dmsc_init() from multiple threads are handled correctly.
+//!   ri_init() from multiple threads are handled correctly.
 //!
 //! - **Resource Sharing**: Objects can be shared across threads following the
 //!   same patterns as the underlying Rust implementation.
@@ -193,77 +193,77 @@
 //!
 //! ## Usage Example
 //!
-//! A complete example demonstrating DMSC C API usage:
+//! A complete example demonstrating Ri C API usage:
 //!
 //! ```c
 //! #include <stdio.h>
-//! #include "dmsc.h"
+//! #include "ri.h"
 //!
 //! int main(int argc, char* argv[]) {
-//!     // Initialize DMSC library
-//!     int result = dmsc_init();
+//!     // Initialize Ri library
+//!     int result = ri_init();
 //!     if (result != 0) {
-//!         fprintf(stderr, "DMSC initialization failed: %d\n", result);
+//!         fprintf(stderr, "Ri initialization failed: %d\n", result);
 //!         return 1;
 //!     }
 //!
 //!     // Get version information
-//!     const char* version = dmsc_version();
-//!     printf("DMSC Version: %s\n", version);
-//!     dmsc_string_free((char*)version);
+//!     const char* version = ri_version();
+//!     printf("Ri Version: %s\n", version);
+//!     ri_string_free((char*)version);
 //!
 //!     // Create configuration
-//!     DMSCAppConfig* config = dmsc_app_config_new();
-//!     dmsc_app_config_set_name(config, "MyApplication");
-//!     dmsc_app_config_set_environment(config, "production");
+//!     RiAppConfig* config = ri_app_config_new();
+//!     ri_app_config_set_name(config, "MyApplication");
+//!     ri_app_config_set_environment(config, "production");
 //!
 //!     // Create application instance
-//!     DMSCApplication* app = dmsc_application_new(config);
-//!     dmsc_app_config_free(config);
+//!     RiApplication* app = ri_application_new(config);
+//!     ri_app_config_free(config);
 //!
 //!     if (app == NULL) {
 //!         fprintf(stderr, "Failed to create application\n");
-//!         dmsc_cleanup();
+//!         ri_cleanup();
 //!         return 1;
 //!     }
 //!
 //!     // Start application
-//!     result = dmsc_application_start(app);
+//!     result = ri_application_start(app);
 //!     if (result != 0) {
 //!         fprintf(stderr, "Failed to start application: %d\n", result);
-//!         dmsc_application_free(app);
-//!         dmsc_cleanup();
+//!         ri_application_free(app);
+//!         ri_cleanup();
 //!         return 1;
 //!     }
 //!
 //!     printf("Application running. Press Ctrl+C to stop.\n");
 //!
 //!     // Wait for shutdown signal
-//!     // Application runs until dmsc_application_stop() is called
+//!     // Application runs until ri_application_stop() is called
 //!
 //!     // Graceful shutdown
-//!     dmsc_application_stop(app);
-//!     dmsc_application_free(app);
+//!     ri_application_stop(app);
+//!     ri_application_free(app);
 //!
 //!     // Cleanup library
-//!     dmsc_cleanup();
+//!     ri_cleanup();
 //!
-//!     printf("DMSC shutdown complete.\n");
+//!     printf("Ri shutdown complete.\n");
 //!     return 0;
 //! }
 //! ```
 //!
 //! ## Build Integration
 //!
-//! To use the DMSC C API in a C/C++ project:
+//! To use the Ri C API in a C/C++ project:
 //!
 //! 1. **Compilation**: Include the generated C headers and link against the
-//!    DMSC shared or static library.
+//!    Ri shared or static library.
 //!
-//! 2. **Header Files**: Include the main DMSC header which provides access
+//! 2. **Header Files**: Include the main Ri header which provides access
 //!    to all submodule interfaces through a unified API surface.
 //!
-//! 3. **Linking**: Link against the DMSC library using appropriate linker flags
+//! 3. **Linking**: Link against the Ri library using appropriate linker flags
 //!    for your build system.
 //!
 //! ## Dependencies
@@ -278,7 +278,7 @@
 //!
 //! ## Feature Flags
 //!
-//! The DMSC C API supports feature flags for conditional compilation:
+//! The Ri C API supports feature flags for conditional compilation:
 //!
 //! - **default**: Core functionality with common features
 //! - **gateway**: Enable API gateway features
@@ -320,27 +320,27 @@ pub mod validation;
 #[cfg(feature = "websocket")]
 pub mod ws;
 
-/// Initialize the DMSC library
+/// Initialize the Ri library
 #[no_mangle]
-pub extern "C" fn dmsc_init() -> c_int {
+pub extern "C" fn ri_init() -> c_int {
     0
 }
 
-/// Cleanup the DMSC library
+/// Cleanup the Ri library
 #[no_mangle]
-pub extern "C" fn dmsc_cleanup() {
+pub extern "C" fn ri_cleanup() {
 }
 
-/// Get DMSC version
+/// Get Ri version
 #[no_mangle]
-pub extern "C" fn dmsc_version() -> *mut c_char {
+pub extern "C" fn ri_version() -> *mut c_char {
     let c_str = CString::new(env!("CARGO_PKG_VERSION")).unwrap();
     c_str.into_raw()
 }
 
-/// Free a string returned by DMSC
+/// Free a string returned by Ri
 #[no_mangle]
-pub extern "C" fn dmsc_string_free(s: *mut c_char) {
+pub extern "C" fn ri_string_free(s: *mut c_char) {
     if !s.is_null() {
         unsafe {
             let _ = CString::from_raw(s);

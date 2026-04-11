@@ -1,7 +1,7 @@
 //! Copyright 2025-2026 Wenze Wei. All Rights Reserved.
 //!
-//! This file is part of DMSC.
-//! The DMSC project belongs to the Dunimd Team.
+//! This file is part of Ri.
+//! The Ri project belongs to the Dunimd Team.
 //!
 //! Licensed under the Apache License, Version 2.0 (the "License");
 //! You may not use this file except in compliance with the License.
@@ -26,7 +26,7 @@ use pyo3::prelude::*;
 
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "pyo3", pyclass)]
-pub struct DMSCWSClientConfig {
+pub struct RiWSClientConfig {
     pub heartbeat_interval: u64,
     pub heartbeat_timeout: u64,
     pub max_message_size: usize,
@@ -37,7 +37,7 @@ pub struct DMSCWSClientConfig {
 
 #[cfg(feature = "pyo3")]
 #[pymethods]
-impl DMSCWSClientConfig {
+impl RiWSClientConfig {
     #[new]
     fn new() -> Self {
         Self::default()
@@ -104,7 +104,7 @@ impl DMSCWSClientConfig {
     }
 }
 
-impl Default for DMSCWSClientConfig {
+impl Default for RiWSClientConfig {
     fn default() -> Self {
         Self {
             heartbeat_interval: 30,
@@ -119,7 +119,7 @@ impl Default for DMSCWSClientConfig {
 
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "pyo3", pyclass)]
-pub struct DMSCWSClientStats {
+pub struct RiWSClientStats {
     pub total_connections: u64,
     pub total_messages_sent: u64,
     pub total_messages_received: u64,
@@ -132,7 +132,7 @@ pub struct DMSCWSClientStats {
 
 #[cfg(feature = "pyo3")]
 #[pymethods]
-impl DMSCWSClientStats {
+impl RiWSClientStats {
     #[getter]
     fn get_total_connections(&self) -> u64 {
         self.total_connections
@@ -174,7 +174,7 @@ impl DMSCWSClientStats {
     }
 }
 
-impl DMSCWSClientStats {
+impl RiWSClientStats {
     pub fn new() -> Self {
         Self {
             total_connections: 0,
@@ -216,43 +216,43 @@ impl DMSCWSClientStats {
     }
 }
 
-impl Default for DMSCWSClientStats {
+impl Default for RiWSClientStats {
     fn default() -> Self {
         Self::new()
     }
 }
 
-pub struct DMSCWSClient {
-    config: DMSCWSClientConfig,
-    stats: Arc<RwLock<DMSCWSClientStats>>,
+pub struct RiWSClient {
+    config: RiWSClientConfig,
+    stats: Arc<RwLock<RiWSClientStats>>,
     connected: Arc<RwLock<bool>>,
     server_url: String,
 }
 
 #[cfg(feature = "pyo3")]
 #[pyclass]
-pub struct DMSCWSClientPy {
-    inner: DMSCWSClient,
+pub struct RiWSClientPy {
+    inner: RiWSClient,
 }
 
 #[cfg(feature = "pyo3")]
 #[pymethods]
-impl DMSCWSClientPy {
+impl RiWSClientPy {
     #[new]
     fn new(server_url: String) -> Self {
         Self {
-            inner: DMSCWSClient::new(server_url),
+            inner: RiWSClient::new(server_url),
         }
     }
 
     #[staticmethod]
-    fn with_config(server_url: String, config: DMSCWSClientConfig) -> Self {
+    fn with_config(server_url: String, config: RiWSClientConfig) -> Self {
         Self {
-            inner: DMSCWSClient::with_config(server_url, config),
+            inner: RiWSClient::with_config(server_url, config),
         }
     }
 
-    fn get_stats(&self) -> DMSCWSClientStats {
+    fn get_stats(&self) -> RiWSClientStats {
         self.inner.get_stats()
     }
 
@@ -299,31 +299,31 @@ impl DMSCWSClientPy {
     }
 }
 
-impl DMSCWSClient {
+impl RiWSClient {
     pub fn new(server_url: String) -> Self {
-        Self::with_config(server_url, DMSCWSClientConfig::default())
+        Self::with_config(server_url, RiWSClientConfig::default())
     }
 
-    pub fn with_config(server_url: String, config: DMSCWSClientConfig) -> Self {
+    pub fn with_config(server_url: String, config: RiWSClientConfig) -> Self {
         Self {
             config,
-            stats: Arc::new(RwLock::new(DMSCWSClientStats::new())),
+            stats: Arc::new(RwLock::new(RiWSClientStats::new())),
             connected: Arc::new(RwLock::new(false)),
             server_url,
         }
     }
 
-    pub fn get_stats(&self) -> DMSCWSClientStats {
+    pub fn get_stats(&self) -> RiWSClientStats {
         self.stats.try_read()
             .map(|guard| guard.clone())
-            .unwrap_or_else(|_| DMSCWSClientStats::new())
+            .unwrap_or_else(|_| RiWSClientStats::new())
     }
 
     pub async fn is_connected(&self) -> bool {
         *self.connected.read().await
     }
 
-    pub async fn connect(&mut self) -> DMSCResult<()> {
+    pub async fn connect(&mut self) -> RiResult<()> {
         if *self.connected.read().await {
             return Ok(());
         }
@@ -356,7 +356,7 @@ impl DMSCWSClient {
         Ok(())
     }
 
-    pub async fn send(&self, _data: &[u8]) -> DMSCResult<()> {
+    pub async fn send(&self, _data: &[u8]) -> RiResult<()> {
         if !*self.connected.read().await {
             return Err(WSError::Connection {
                 message: "Not connected to WebSocket server".to_string()
@@ -365,7 +365,7 @@ impl DMSCWSClient {
         Ok(())
     }
 
-    pub async fn send_text(&self, _text: &str) -> DMSCResult<()> {
+    pub async fn send_text(&self, _text: &str) -> RiResult<()> {
         if !*self.connected.read().await {
             return Err(WSError::Connection {
                 message: "Not connected to WebSocket server".to_string()
@@ -374,7 +374,7 @@ impl DMSCWSClient {
         Ok(())
     }
 
-    pub async fn close(&mut self) -> DMSCResult<()> {
+    pub async fn close(&mut self) -> RiResult<()> {
         *self.connected.write().await = false;
         tracing::info!("WebSocket client disconnected from {}", self.server_url);
         Ok(())
@@ -385,7 +385,7 @@ impl DMSCWSClient {
     }
 }
 
-impl Clone for DMSCWSClient {
+impl Clone for RiWSClient {
     fn clone(&self) -> Self {
         Self {
             config: self.config.clone(),
@@ -396,7 +396,7 @@ impl Clone for DMSCWSClient {
     }
 }
 
-impl Default for DMSCWSClient {
+impl Default for RiWSClient {
     fn default() -> Self {
         Self::new("ws://127.0.0.1:8080".to_string())
     }

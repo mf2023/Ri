@@ -1,7 +1,7 @@
 //! Copyright © 2025-2026 Wenze Wei. All Rights Reserved.
 //!
-//! This file is part of DMSC.
-//! The DMSC project belongs to the Dunimd Team.
+//! This file is part of Ri.
+//! The Ri project belongs to the Dunimd Team.
 //!
 //! Licensed under the Apache License, Version 2.0 (the "License");
 //! You may not use this file except in compliance with the License.
@@ -19,7 +19,7 @@
 
 //! # Log Context
 //! 
-//! This module provides a thread-local logging context for DMSC, similar to MDC (Mapped Diagnostic Context)
+//! This module provides a thread-local logging context for Ri, similar to MDC (Mapped Diagnostic Context)
 //! with built-in support for distributed tracing. It allows adding contextual information to logs
 //! that will be automatically included in all log messages from the same thread.
 //! 
@@ -41,34 +41,34 @@
 //! ## Usage
 //! 
 //! ```rust
-//! use dmsc::prelude::*;
+//! use ri::prelude::*;
 //! 
 //! fn example() {
 //!     // Set a context value
-//!     DMSCLogContext::put("user_id", "12345");
+//!     RiLogContext::put("user_id", "12345");
 //!     
 //!     // Set distributed tracing context
-//!     DMSCLogContext::set_trace_id(DMSCLogContext::generate_trace_id());
-//!     DMSCLogContext::set_span_id(DMSCLogContext::generate_span_id());
+//!     RiLogContext::set_trace_id(RiLogContext::generate_trace_id());
+//!     RiLogContext::set_span_id(RiLogContext::generate_span_id());
 //!     
 //!     // Get a context value
-//!     if let Some(user_id) = DMSCLogContext::get("user_id") {
+//!     if let Some(user_id) = RiLogContext::get("user_id") {
 //!         println!("User ID: {}", user_id);
 //!     }
 //!     
 //!     // Get all context values
-//!     let all_ctx = DMSCLogContext::get_all();
+//!     let all_ctx = RiLogContext::get_all();
 //!     println!("All context: {:?}", all_ctx);
 //!     
 //!     // Remove a context value
-//!     DMSCLogContext::remove("user_id");
+//!     RiLogContext::remove("user_id");
 //!     
 //!     // Clear all context values
-//!     DMSCLogContext::clear();
+//!     RiLogContext::clear();
 //! }
 //! ```
 
-// Logging context for DMSC, similar to MDC with distributed tracing support.
+// Logging context for Ri, similar to MDC with distributed tracing support.
 
 use std::cell::RefCell;
 use std::collections::HashMap;
@@ -83,14 +83,14 @@ thread_local! {
     static LOGONTEXT: RefCell<HashMap<String, String>> = RefCell::new(HashMap::new());
 }
 
-/// Log context for DMSC, similar to MDC with distributed tracing support.
+/// Log context for Ri, similar to MDC with distributed tracing support.
 /// 
 /// This struct provides a thread-local logging context that can be used to add
 /// contextual information to logs. It includes built-in support for distributed tracing
 /// with trace IDs, span IDs, and parent span IDs.
-pub struct DMSCLogContext;
+pub struct RiLogContext;
 
-impl DMSCLogContext {
+impl RiLogContext {
     /// Puts a key-value pair into the log context.
     /// 
     /// # Parameters

@@ -1,7 +1,7 @@
 //! Copyright © 2025-2026 Wenze Wei. All Rights Reserved.
 //!
-//! This file is part of DMSC.
-//! The DMSC project belongs to the Dunimd Team.
+//! This file is part of Ri.
+//! The Ri project belongs to the Dunimd Team.
 //!
 //! Licensed under the Apache License, Version 2.0 (the "License");
 //! You may not use this file except in compliance with the License.
@@ -17,8 +17,8 @@
 
 //! # Authentication Module Benchmarks
 //!
-//! This module provides performance benchmarks for the DMSC authentication system,
-//! specifically measuring JWT (JSON Web Token) operations provided by DMSCJWTManager.
+//! This module provides performance benchmarks for the Ri authentication system,
+//! specifically measuring JWT (JSON Web Token) operations provided by RiJWTManager.
 //!
 //! ## Benchmark Categories
 //!
@@ -57,7 +57,7 @@
 //! - Stored securely (environment variables, secrets management)
 
 use criterion::{black_box, criterion_group, criterion_main, Criterion, Throughput};
-use dmsc::auth::DMSCJWTManager;
+use ri::auth::RiJWTManager;
 
 /// Benchmarks for JWT token generation operations.
 ///
@@ -70,7 +70,7 @@ use dmsc::auth::DMSCJWTManager;
 /// - Number of roles attached to the token
 /// - Number of permissions/claims included
 fn bench_jwt_token_generation(c: &mut Criterion) {
-    let manager = DMSCJWTManager::create("benchmark_secret_key_12345".to_string(), 3600);
+    let manager = RiJWTManager::create("benchmark_secret_key_12345".to_string(), 3600);
 
     let mut group = c.benchmark_group("jwt_generation");
     group.throughput(Throughput::Elements(1));
@@ -127,7 +127,7 @@ fn bench_jwt_token_generation(c: &mut Criterion) {
 ///
 /// Validation is typically more frequent than generation in production systems.
 fn bench_jwt_token_validation(c: &mut Criterion) {
-    let manager = DMSCJWTManager::create("benchmark_secret_key_12345".to_string(), 3600);
+    let manager = RiJWTManager::create("benchmark_secret_key_12345".to_string(), 3600);
 
     /// Pre-generate tokens outside the benchmark loop to isolate validation cost
     let simple_token = manager.generate_token("user123", vec![], vec![]).unwrap();
@@ -168,7 +168,7 @@ fn bench_jwt_token_validation(c: &mut Criterion) {
 ///
 /// This represents a real-world authenticated request flow.
 fn bench_jwt_round_trip(c: &mut Criterion) {
-    let manager = DMSCJWTManager::create("benchmark_secret_key_12345".to_string(), 3600);
+    let manager = RiJWTManager::create("benchmark_secret_key_12345".to_string(), 3600);
 
     let mut group = c.benchmark_group("jwt_round_trip");
     group.throughput(Throughput::Elements(1));
@@ -202,7 +202,7 @@ fn bench_jwt_manager_creation(c: &mut Criterion) {
 
     group.bench_function("create_manager", |b| {
         b.iter(|| {
-            let manager = DMSCJWTManager::create("secret_key".to_string(), 3600);
+            let manager = RiJWTManager::create("secret_key".to_string(), 3600);
             black_box(manager);
         });
     });

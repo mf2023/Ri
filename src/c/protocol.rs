@@ -1,7 +1,7 @@
 //! Copyright © 2025-2026 Wenze Wei. All Rights Reserved.
 //!
-//! This file is part of DMSC.
-//! The DMSC project belongs to the Dunimd Team.
+//! This file is part of Ri.
+//! The Ri project belongs to the Dunimd Team.
 //!
 //! Licensed under the Apache License, Version 2.0 (the "License");
 //! You may not use this file except in compliance with the License.
@@ -17,9 +17,9 @@
 
 //! # Protocol Module C API
 //!
-//! This module provides C language bindings for DMSC's protocol handling infrastructure. The protocol
+//! This module provides C language bindings for Ri's protocol handling infrastructure. The protocol
 //! module delivers comprehensive support for encoding, decoding, and transforming data across various
-//! wire formats and communication protocols. This C API enables C/C++ applications to leverage DMSC's
+//! wire formats and communication protocols. This C API enables C/C++ applications to leverage Ri's
 //! protocol capabilities for building interoperable distributed systems with standardized data exchange.
 //!
 //! ## Module Architecture
@@ -27,16 +27,16 @@
 //! The protocol module comprises three primary components that together provide complete protocol
 //! management capabilities:
 //!
-//! - **DMSCProtocolConfig**: Configuration container for protocol codec parameters including encoding
+//! - **RiProtocolConfig**: Configuration container for protocol codec parameters including encoding
 //!   formats, framing options, compression settings, and validation rules. The configuration object
 //!   controls how data is serialized and deserialized, ensuring consistent behavior across the
 //!   application.
 //!
-//! - **DMSCProtocolManager**: Central manager for protocol registration, codec lookup, and protocol
+//! - **RiProtocolManager**: Central manager for protocol registration, codec lookup, and protocol
 //!   negotiation. The manager handles the complete lifecycle of protocol operations including codec
 //!   selection, error handling, and protocol switching.
 //!
-//! - **DMSCFrame**: Low-level frame abstraction for message framing and boundary management. Frames
+//! - **RiFrame**: Low-level frame abstraction for message framing and boundary management. Frames
 //!   provide the foundation for streaming protocols, handling message boundaries, chunking, and
 //!   reassembly.
 //!
@@ -170,27 +170,27 @@
 //!
 //! ```c
 //! // Create protocol configuration
-//! DMSCProtocolConfig* config = dmsc_protocol_config_new();
+//! RiProtocolConfig* config = ri_protocol_config_new();
 //! if (config == NULL) {
 //!     fprintf(stderr, "Failed to create protocol config\n");
 //!     return ERROR_INIT;
 //! }
 //!
 //! // Configure protocol settings
-//! dmsc_protocol_config_set_format(config, PROTOCOL_FORMAT_MSGPACK);
-//! dmsc_protocol_config_set_compression(config, COMPRESSION_SNAPPY);
-//! dmsc_protocol_config_set_validation_enabled(config, true);
+//! ri_protocol_config_set_format(config, PROTOCOL_FORMAT_MSGPACK);
+//! ri_protocol_config_set_compression(config, COMPRESSION_SNAPPY);
+//! ri_protocol_config_set_validation_enabled(config, true);
 //!
 //! // Create protocol manager
-//! DMSCProtocolManager* manager = dmsc_protocol_manager_new(config);
+//! RiProtocolManager* manager = ri_protocol_manager_new(config);
 //! if (manager == NULL) {
 //!     fprintf(stderr, "Failed to create protocol manager\n");
-//!     dmsc_protocol_config_free(config);
+//!     ri_protocol_config_free(config);
 //!     return ERROR_INIT;
 //! }
 //!
 //! // Register custom schema
-//! int result = dmsc_protocol_manager_register_schema(
+//! int result = ri_protocol_manager_register_schema(
 //!     manager,
 //!     "UserMessage",
 //!     user_schema_definition,
@@ -202,11 +202,11 @@
 //! }
 //!
 //! // Create frame for streaming
-//! DMSCFrame* frame = dmsc_frame_new();
+//! RiFrame* frame = ri_frame_new();
 //! if (frame == NULL) {
 //!     fprintf(stderr, "Failed to create frame\n");
-//!     dmsc_protocol_manager_free(manager);
-//!     dmsc_protocol_config_free(config);
+//!     ri_protocol_manager_free(manager);
+//!     ri_protocol_config_free(config);
 //!     return ERROR_INIT;
 //! }
 //!
@@ -217,7 +217,7 @@
 //! char* output_buffer = NULL;
 //! size_t output_len = 0;
 //!
-//! result = dmsc_protocol_manager_encode(
+//! result = ri_protocol_manager_encode(
 //!     manager,
 //!     "UserMessage",
 //!     input_data,
@@ -233,7 +233,7 @@
 //!     char* decoded_buffer = NULL;
 //!     size_t decoded_len = 0;
 //!
-//!         int decode_result = dmsc_protocol_manager_decode(
+//!         int decode_result = ri_protocol_manager_decode(
 //!             manager,
 //!             "UserMessage",
 //!             output_buffer,
@@ -244,24 +244,24 @@
 //!
 //!         if (decode_result == 0) {
 //!             printf("Decoded: %.*s\n", (int)decoded_len, decoded_buffer);
-//!             dmsc_string_free(decoded_buffer);
+//!             ri_string_free(decoded_buffer);
 //!         }
 //!
-//!     dmsc_string_free(output_buffer);
+//!     ri_string_free(output_buffer);
 //! }
 //!
 //! // Frame the message for transport
-//! dmsc_frame_reset(frame);
-//! dmsc_frame_append(frame, output_buffer, output_len);
+//! ri_frame_reset(frame);
+//! ri_frame_append(frame, output_buffer, output_len);
 //!
 //! // Read framed data
-//! const char* frame_data = dmsc_frame_data(frame);
-//! size_t frame_size = dmsc_frame_size(frame);
+//! const char* frame_data = ri_frame_data(frame);
+//! size_t frame_size = ri_frame_size(frame);
 //!
 //! // Cleanup
-//! dmsc_frame_free(frame);
-//! dmsc_protocol_manager_free(manager);
-//! dmsc_protocol_config_free(config);
+//! ri_frame_free(frame);
+//! ri_protocol_manager_free(manager);
+//! ri_protocol_config_free(config);
 //! ```
 //!
 //! ## Protocol Negotiation
@@ -282,7 +282,7 @@
 //!
 //! ## Dependencies
 //!
-//! This module depends on the following DMSC components:
+//! This module depends on the following Ri components:
 //!
 //! - `crate::protocol`: Rust protocol module implementation
 //! - `crate::prelude`: Common types and traits
@@ -300,18 +300,18 @@
 //! - `protocol-bson`: Enable BSON support
 //! - `protocol-compression`: Enable compression codecs
 
-use crate::protocol::{DMSCFrame, DMSCProtocolConfig, DMSCProtocolManager};
+use crate::protocol::{RiFrame, RiProtocolConfig, RiProtocolManager};
 
 
-c_wrapper!(CDMSCProtocolConfig, DMSCProtocolConfig);
-c_wrapper!(CDMSCProtocolManager, DMSCProtocolManager);
-c_wrapper!(CDMSCFrame, DMSCFrame);
+c_wrapper!(CRiProtocolConfig, RiProtocolConfig);
+c_wrapper!(CRiProtocolManager, RiProtocolManager);
+c_wrapper!(CRiFrame, RiFrame);
 
-// DMSCProtocolConfig constructors and destructors
+// RiProtocolConfig constructors and destructors
 c_constructor!(
-    dmsc_protocol_config_new,
-    CDMSCProtocolConfig,
-    DMSCProtocolConfig,
-    DMSCProtocolConfig::default()
+    ri_protocol_config_new,
+    CRiProtocolConfig,
+    RiProtocolConfig,
+    RiProtocolConfig::default()
 );
-c_destructor!(dmsc_protocol_config_free, CDMSCProtocolConfig);
+c_destructor!(ri_protocol_config_free, CRiProtocolConfig);

@@ -1,287 +1,287 @@
 // Copyright 2025-2026 Wenze Wei. All Rights Reserved.
 //
-// Test all DMSC Java bindings
+// Test all Ri Java bindings
 
-import com.dunimd.dmsc.*;
-import com.dunimd.dmsc.cache.*;
-import com.dunimd.dmsc.validation.*;
-import com.dunimd.dmsc.auth.*;
-import com.dunimd.dmsc.gateway.*;
-import com.dunimd.dmsc.queue.*;
-import com.dunimd.dmsc.database.*;
-import com.dunimd.dmsc.servicemesh.*;
-import com.dunimd.dmsc.observability.*;
-import com.dunimd.dmsc.device.*;
-import com.dunimd.dmsc.log.*;
-import com.dunimd.dmsc.fs.*;
-import com.dunimd.dmsc.grpc.*;
-import com.dunimd.dmsc.ws.*;
-import com.dunimd.dmsc.protocol.*;
-import com.dunimd.dmsc.hooks.*;
-import com.dunimd.dmsc.modulerpc.*;
+import com.dunimd.ri.*;
+import com.dunimd.ri.cache.*;
+import com.dunimd.ri.validation.*;
+import com.dunimd.ri.auth.*;
+import com.dunimd.ri.gateway.*;
+import com.dunimd.ri.queue.*;
+import com.dunimd.ri.database.*;
+import com.dunimd.ri.servicemesh.*;
+import com.dunimd.ri.observability.*;
+import com.dunimd.ri.device.*;
+import com.dunimd.ri.log.*;
+import com.dunimd.ri.fs.*;
+import com.dunimd.ri.grpc.*;
+import com.dunimd.ri.ws.*;
+import com.dunimd.ri.protocol.*;
+import com.dunimd.ri.hooks.*;
+import com.dunimd.ri.modulerpc.*;
 
 /**
- * Comprehensive test suite for all DMSC Java bindings.
+ * Comprehensive test suite for all Ri Java bindings.
  *
  * This test file is located in the unified tests directory (tests/Java/)
  * rather than in the source code directory, following the project's testing convention.
  */
 public class TestAll {
     public static void main(String[] args) {
-        System.out.println("=== DMSC Java Binding Test ===\n");
+        System.out.println("=== Ri Java Binding Test ===\n");
         
         int passed = 0;
         int failed = 0;
         
-        // Test DMSCAppBuilder
+        // Test RiAppBuilder
         try {
-            DMSCAppBuilder builder = new DMSCAppBuilder();
-            System.out.println("[PASS] DMSCAppBuilder created");
+            RiAppBuilder builder = new RiAppBuilder();
+            System.out.println("[PASS] RiAppBuilder created");
             builder.close();
             passed++;
         } catch (Exception e) {
-            System.out.println("[FAIL] DMSCAppBuilder: " + e.getMessage());
+            System.out.println("[FAIL] RiAppBuilder: " + e.getMessage());
             failed++;
         }
         
-        // Test DMSCAppBuilder chaining (returns new instance)
+        // Test RiAppBuilder chaining (returns new instance)
         try {
-            DMSCAppBuilder builder1 = new DMSCAppBuilder();
-            DMSCAppBuilder builder2 = builder1.withConfig("config.yaml");
+            RiAppBuilder builder1 = new RiAppBuilder();
+            RiAppBuilder builder2 = builder1.withConfig("config.yaml");
             
             if (builder1 != builder2) {
-                System.out.println("[PASS] DMSCAppBuilder chaining creates new instance");
+                System.out.println("[PASS] RiAppBuilder chaining creates new instance");
                 passed++;
             } else {
-                System.out.println("[FAIL] DMSCAppBuilder chaining should create new instance");
+                System.out.println("[FAIL] RiAppBuilder chaining should create new instance");
                 failed++;
             }
             
             builder1.close();
             builder2.close();
         } catch (Exception e) {
-            System.out.println("[FAIL] DMSCAppBuilder chaining: " + e.getMessage());
+            System.out.println("[FAIL] RiAppBuilder chaining: " + e.getMessage());
             failed++;
         }
         
-        // Test DMSCConfig
+        // Test RiConfig
         try {
-            DMSCConfig config = new DMSCConfig();
-            System.out.println("[PASS] DMSCConfig created");
+            RiConfig config = new RiConfig();
+            System.out.println("[PASS] RiConfig created");
             config.close();
             passed++;
         } catch (Exception e) {
-            System.out.println("[FAIL] DMSCConfig: " + e.getMessage());
+            System.out.println("[FAIL] RiConfig: " + e.getMessage());
             failed++;
         }
         
-        // Test DMSCCacheModule
+        // Test RiCacheModule
         try {
-            DMSCCacheConfig cacheConfig = new DMSCCacheConfig();
-            DMSCCacheModule cache = new DMSCCacheModule(cacheConfig);
-            System.out.println("[PASS] DMSCCacheModule created");
+            RiCacheConfig cacheConfig = new RiCacheConfig();
+            RiCacheModule cache = new RiCacheModule(cacheConfig);
+            System.out.println("[PASS] RiCacheModule created");
             cache.close();
             cacheConfig.close();
             passed++;
         } catch (Exception e) {
-            System.out.println("[FAIL] DMSCCacheModule: " + e.getMessage());
+            System.out.println("[FAIL] RiCacheModule: " + e.getMessage());
             failed++;
         }
         
-        // Test DMSCValidationModule
+        // Test RiValidationModule
         try {
-            DMSCValidationResult result = DMSCValidationModule.validateEmail("test@example.com");
-            System.out.println("[PASS] DMSCValidationModule.validateEmail: valid=" + result.isValid());
+            RiValidationResult result = RiValidationModule.validateEmail("test@example.com");
+            System.out.println("[PASS] RiValidationModule.validateEmail: valid=" + result.isValid());
             result.close();
             passed++;
         } catch (Exception e) {
-            System.out.println("[FAIL] DMSCValidationModule: " + e.getMessage());
+            System.out.println("[FAIL] RiValidationModule: " + e.getMessage());
             failed++;
         }
         
-        // Test DMSCAuthModule
+        // Test RiAuthModule
         try {
-            DMSCAuthConfig authConfig = new DMSCAuthConfig();
-            DMSCAuthModule auth = new DMSCAuthModule(authConfig);
-            System.out.println("[PASS] DMSCAuthModule created");
+            RiAuthConfig authConfig = new RiAuthConfig();
+            RiAuthModule auth = new RiAuthModule(authConfig);
+            System.out.println("[PASS] RiAuthModule created");
             auth.close();
             authConfig.close();
             passed++;
         } catch (Exception e) {
-            System.out.println("[FAIL] DMSCAuthModule: " + e.getMessage());
+            System.out.println("[FAIL] RiAuthModule: " + e.getMessage());
             failed++;
         }
         
-        // Test DMSCGateway
+        // Test RiGateway
         try {
-            DMSCGateway gateway = new DMSCGateway();
-            System.out.println("[PASS] DMSCGateway created");
+            RiGateway gateway = new RiGateway();
+            System.out.println("[PASS] RiGateway created");
             gateway.close();
             passed++;
         } catch (Exception e) {
-            System.out.println("[FAIL] DMSCGateway: " + e.getMessage());
+            System.out.println("[FAIL] RiGateway: " + e.getMessage());
             failed++;
         }
         
-        // Test DMSCQueueModule
+        // Test RiQueueModule
         try {
-            DMSCQueueConfig queueConfig = new DMSCQueueConfig();
-            DMSCQueueModule queue = new DMSCQueueModule(queueConfig);
-            System.out.println("[PASS] DMSCQueueModule created");
+            RiQueueConfig queueConfig = new RiQueueConfig();
+            RiQueueModule queue = new RiQueueModule(queueConfig);
+            System.out.println("[PASS] RiQueueModule created");
             queue.close();
             queueConfig.close();
             passed++;
         } catch (Exception e) {
-            System.out.println("[FAIL] DMSCQueueModule: " + e.getMessage());
+            System.out.println("[FAIL] RiQueueModule: " + e.getMessage());
             failed++;
         }
         
-        // Test DMSCDatabaseConfig
+        // Test RiDatabaseConfig
         try {
-            DMSCDatabaseConfig dbConfig = new DMSCDatabaseConfig();
-            System.out.println("[PASS] DMSCDatabaseConfig created");
+            RiDatabaseConfig dbConfig = new RiDatabaseConfig();
+            System.out.println("[PASS] RiDatabaseConfig created");
             dbConfig.close();
             passed++;
         } catch (Exception e) {
-            System.out.println("[FAIL] DMSCDatabaseConfig: " + e.getMessage());
+            System.out.println("[FAIL] RiDatabaseConfig: " + e.getMessage());
             failed++;
         }
         
-        // Test DMSCServiceMesh
+        // Test RiServiceMesh
         try {
-            DMSCServiceMeshConfig meshConfig = new DMSCServiceMeshConfig();
-            DMSCServiceMesh mesh = new DMSCServiceMesh(meshConfig);
-            System.out.println("[PASS] DMSCServiceMesh created");
+            RiServiceMeshConfig meshConfig = new RiServiceMeshConfig();
+            RiServiceMesh mesh = new RiServiceMesh(meshConfig);
+            System.out.println("[PASS] RiServiceMesh created");
             mesh.close();
             meshConfig.close();
             passed++;
         } catch (Exception e) {
-            System.out.println("[FAIL] DMSCServiceMesh: " + e.getMessage());
+            System.out.println("[FAIL] RiServiceMesh: " + e.getMessage());
             failed++;
         }
         
-        // Test DMSCObservabilityModule
+        // Test RiObservabilityModule
         try {
-            DMSCObservabilityConfig obsConfig = new DMSCObservabilityConfig();
-            DMSCObservabilityModule obs = new DMSCObservabilityModule(obsConfig);
-            System.out.println("[PASS] DMSCObservabilityModule created");
+            RiObservabilityConfig obsConfig = new RiObservabilityConfig();
+            RiObservabilityModule obs = new RiObservabilityModule(obsConfig);
+            System.out.println("[PASS] RiObservabilityModule created");
             obs.close();
             obsConfig.close();
             passed++;
         } catch (Exception e) {
-            System.out.println("[FAIL] DMSCObservabilityModule: " + e.getMessage());
+            System.out.println("[FAIL] RiObservabilityModule: " + e.getMessage());
             failed++;
         }
         
-        // Test DMSCDeviceControlModule
+        // Test RiDeviceControlModule
         try {
-            DMSCDeviceControlConfig deviceConfig = new DMSCDeviceControlConfig();
-            DMSCDeviceControlModule device = new DMSCDeviceControlModule(deviceConfig);
-            System.out.println("[PASS] DMSCDeviceControlModule created");
+            RiDeviceControlConfig deviceConfig = new RiDeviceControlConfig();
+            RiDeviceControlModule device = new RiDeviceControlModule(deviceConfig);
+            System.out.println("[PASS] RiDeviceControlModule created");
             device.close();
             deviceConfig.close();
             passed++;
         } catch (Exception e) {
-            System.out.println("[FAIL] DMSCDeviceControlModule: " + e.getMessage());
+            System.out.println("[FAIL] RiDeviceControlModule: " + e.getMessage());
             failed++;
         }
         
-        // Test DMSCLogger
+        // Test RiLogger
         try {
-            DMSCLogger logger = new DMSCLogger();
-            System.out.println("[PASS] DMSCLogger created");
+            RiLogger logger = new RiLogger();
+            System.out.println("[PASS] RiLogger created");
             logger.close();
             passed++;
         } catch (Exception e) {
-            System.out.println("[FAIL] DMSCLogger: " + e.getMessage());
+            System.out.println("[FAIL] RiLogger: " + e.getMessage());
             failed++;
         }
         
-        // Test DMSCFileSystem
+        // Test RiFileSystem
         try {
-            DMSCFileSystem fs = new DMSCFileSystem();
-            System.out.println("[PASS] DMSCFileSystem created");
+            RiFileSystem fs = new RiFileSystem();
+            System.out.println("[PASS] RiFileSystem created");
             fs.close();
             passed++;
         } catch (Exception e) {
-            System.out.println("[FAIL] DMSCFileSystem: " + e.getMessage());
+            System.out.println("[FAIL] RiFileSystem: " + e.getMessage());
             failed++;
         }
         
-        // Test DMSCGrpcServer
+        // Test RiGrpcServer
         try {
-            DMSCGrpcServer grpcServer = new DMSCGrpcServer();
-            System.out.println("[PASS] DMSCGrpcServer created");
+            RiGrpcServer grpcServer = new RiGrpcServer();
+            System.out.println("[PASS] RiGrpcServer created");
             grpcServer.close();
             passed++;
         } catch (Exception e) {
-            System.out.println("[FAIL] DMSCGrpcServer: " + e.getMessage());
+            System.out.println("[FAIL] RiGrpcServer: " + e.getMessage());
             failed++;
         }
         
-        // Test DMSCGrpcClient
+        // Test RiGrpcClient
         try {
-            DMSCGrpcClient grpcClient = new DMSCGrpcClient();
-            System.out.println("[PASS] DMSCGrpcClient created");
+            RiGrpcClient grpcClient = new RiGrpcClient();
+            System.out.println("[PASS] RiGrpcClient created");
             grpcClient.close();
             passed++;
         } catch (Exception e) {
-            System.out.println("[FAIL] DMSCGrpcClient: " + e.getMessage());
+            System.out.println("[FAIL] RiGrpcClient: " + e.getMessage());
             failed++;
         }
         
-        // Test DMSCWSServer
+        // Test RiWSServer
         try {
-            DMSCWSServer wsServer = new DMSCWSServer();
-            System.out.println("[PASS] DMSCWSServer created");
+            RiWSServer wsServer = new RiWSServer();
+            System.out.println("[PASS] RiWSServer created");
             wsServer.close();
             passed++;
         } catch (Exception e) {
-            System.out.println("[FAIL] DMSCWSServer: " + e.getMessage());
+            System.out.println("[FAIL] RiWSServer: " + e.getMessage());
             failed++;
         }
         
-        // Test DMSCWSClient
+        // Test RiWSClient
         try {
-            DMSCWSClient wsClient = new DMSCWSClient();
-            System.out.println("[PASS] DMSCWSClient created");
+            RiWSClient wsClient = new RiWSClient();
+            System.out.println("[PASS] RiWSClient created");
             wsClient.close();
             passed++;
         } catch (Exception e) {
-            System.out.println("[FAIL] DMSCWSClient: " + e.getMessage());
+            System.out.println("[FAIL] RiWSClient: " + e.getMessage());
             failed++;
         }
         
-        // Test DMSCProtocolManager
+        // Test RiProtocolManager
         try {
-            DMSCProtocolManager protocol = new DMSCProtocolManager();
-            System.out.println("[PASS] DMSCProtocolManager created");
+            RiProtocolManager protocol = new RiProtocolManager();
+            System.out.println("[PASS] RiProtocolManager created");
             protocol.close();
             passed++;
         } catch (Exception e) {
-            System.out.println("[FAIL] DMSCProtocolManager: " + e.getMessage());
+            System.out.println("[FAIL] RiProtocolManager: " + e.getMessage());
             failed++;
         }
         
-        // Test DMSCHookBus
+        // Test RiHookBus
         try {
-            DMSCHookBus hookBus = new DMSCHookBus();
-            System.out.println("[PASS] DMSCHookBus created");
+            RiHookBus hookBus = new RiHookBus();
+            System.out.println("[PASS] RiHookBus created");
             hookBus.close();
             passed++;
         } catch (Exception e) {
-            System.out.println("[FAIL] DMSCHookBus: " + e.getMessage());
+            System.out.println("[FAIL] RiHookBus: " + e.getMessage());
             failed++;
         }
         
-        // Test DMSCModuleRPC
+        // Test RiModuleRPC
         try {
-            DMSCModuleRPC moduleRpc = new DMSCModuleRPC();
-            System.out.println("[PASS] DMSCModuleRPC created");
+            RiModuleRPC moduleRpc = new RiModuleRPC();
+            System.out.println("[PASS] RiModuleRPC created");
             moduleRpc.close();
             passed++;
         } catch (Exception e) {
-            System.out.println("[FAIL] DMSCModuleRPC: " + e.getMessage());
+            System.out.println("[FAIL] RiModuleRPC: " + e.getMessage());
             failed++;
         }
         

@@ -1,7 +1,7 @@
 //! Copyright © 2025-2026 Wenze Wei. All Rights Reserved.
 //!
-//! This file is part of DMSC.
-//! The DMSC project belongs to the Dunimd Team.
+//! This file is part of Ri.
+//! The Ri project belongs to the Dunimd Team.
 //!
 //! Licensed under the Apache License, Version 2.0 (the "License");
 //! You may not use this file except in compliance with the License.
@@ -19,22 +19,22 @@
 
 //! # Distributed Tracing
 //!
-//! This file implements a comprehensive distributed tracing system for the DMSC framework. It provides
+//! This file implements a comprehensive distributed tracing system for the Ri framework. It provides
 //! tools for creating, managing, and propagating trace information across asynchronous operations
 //! and distributed systems. The tracing system follows the W3C Trace Context standard and integrates
 //! with tokio's context propagation mechanism.
 //!
 //! ## Key Components
 //!
-//! - **DMSCSpanId**: Unique identifier for a span
-//! - **DMSCTraceId**: Unique identifier for a trace
-//! - **DMSCSpanKind**: Enumeration of span types (Server, Client, Producer, Consumer, Internal)
-//! - **DMSCSpanStatus**: Status of a span (Ok, Error, Unset)
-//! - **DMSCSpan**: A single distributed tracing span with attributes, events, and status
-//! - **DMSCSpanEvent**: Timed events within a span
-//! - **DMSCTracingContext**: Thread-local tracing context for propagation
-//! - **DMSCTracer**: Distributed tracer for creating and managing spans
-//! - **DMSCTracerManager**: Manager for multiple tracer instances
+//! - **RiSpanId**: Unique identifier for a span
+//! - **RiTraceId**: Unique identifier for a trace
+//! - **RiSpanKind**: Enumeration of span types (Server, Client, Producer, Consumer, Internal)
+//! - **RiSpanStatus**: Status of a span (Ok, Error, Unset)
+//! - **RiSpan**: A single distributed tracing span with attributes, events, and status
+//! - **RiSpanEvent**: Timed events within a span
+//! - **RiTracingContext**: Thread-local tracing context for propagation
+//! - **RiTracer**: Distributed tracer for creating and managing spans
+//! - **RiTracerManager**: Manager for multiple tracer instances
 //! - **DefaultTracerManager**: Global tracer manager instance
 //!
 //! ## Design Principles
@@ -53,10 +53,10 @@
 //! ## Usage
 //!
 //! ```rust
-//! use dmsc::observability::{init_tracer, tracer, DMSCSpanKind, DMSCSpanStatus};
-//! use dmsc::core::DMSCResult;
+//! use ri::observability::{init_tracer, tracer, RiSpanKind, RiSpanStatus};
+//! use ri::core::RiResult;
 //!
-//! async fn example() -> DMSCResult<()> {
+//! async fn example() -> RiResult<()> {
 //!     // Initialize the global tracer with 100% sampling rate
 //!     init_tracer(1.0);
 //!     
@@ -67,7 +67,7 @@
 //!     let trace_id = tracer.start_trace("example_trace").unwrap();
 //!     
 //!     // Start a child span
-//!     let span_id = tracer.start_span_from_context("child_span", DMSCSpanKind::Internal).unwrap();
+//!     let span_id = tracer.start_span_from_context("child_span", RiSpanKind::Internal).unwrap();
 //!     
 //!     // Add an attribute to the span
 //!     tracer.span_mut(&span_id, |span| {
@@ -82,7 +82,7 @@
 //!     })?;
 //!     
 //!     // End the child span with OK status
-//!     tracer.end_span(&span_id, DMSCSpanStatus::Ok)?;
+//!     tracer.end_span(&span_id, RiSpanStatus::Ok)?;
 //!     
 //!     Ok(())
 //! }
@@ -95,8 +95,8 @@ use std::sync::{Arc, RwLock};
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use uuid::Uuid;
 
-use crate::core::DMSCResult;
-use crate::core::DMSCError;
+use crate::core::RiResult;
+use crate::core::RiError;
 use crate::core::lock::RwLockExtensions;
 
 #[cfg(feature = "pyo3")]
@@ -104,15 +104,15 @@ use pyo3::prelude::*;
 
 /// Distributed tracing span ID
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
-pub struct DMSCSpanId(String);
+pub struct RiSpanId(String);
 
-impl Default for DMSCSpanId {
+impl Default for RiSpanId {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl DMSCSpanId {
+impl RiSpanId {
     pub fn new() -> Self {
         Self(Uuid::new_v4().to_string())
     }
@@ -128,15 +128,15 @@ impl DMSCSpanId {
 
 /// Distributed tracing trace ID
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
-pub struct DMSCTraceId(String);
+pub struct RiTraceId(String);
 
-impl Default for DMSCTraceId {
+impl Default for RiTraceId {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl DMSCTraceId {
+impl RiTraceId {
     pub fn new() -> Self {
         Self(Uuid::new_v4().to_string())
     }
@@ -152,7 +152,7 @@ impl DMSCTraceId {
 
 /// Span kind enumeration
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub enum DMSCSpanKind {
+pub enum RiSpanKind {
     Server,
     Client,
     Producer,
@@ -162,7 +162,7 @@ pub enum DMSCSpanKind {
 
 /// Span status
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub enum DMSCSpanStatus {
+pub enum RiSpanStatus {
     Ok,
     Error(String),
     Unset,
@@ -170,25 +170,25 @@ pub enum DMSCSpanStatus {
 
 /// A distributed tracing span
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct DMSCSpan {
-    pub trace_id: DMSCTraceId,
-    pub span_id: DMSCSpanId,
-    pub parent_span_id: Option<DMSCSpanId>,
+pub struct RiSpan {
+    pub trace_id: RiTraceId,
+    pub span_id: RiSpanId,
+    pub parent_span_id: Option<RiSpanId>,
     pub name: String,
-    pub kind: DMSCSpanKind,
+    pub kind: RiSpanKind,
     pub start_time: u64, // microseconds since epoch
     pub end_time: Option<u64>,
     pub attributes: HashMap<String, String>,
-    pub events: Vec<DMSCSpanEvent>,
-    pub status: DMSCSpanStatus,
+    pub events: Vec<RiSpanEvent>,
+    pub status: RiSpanStatus,
 }
 
-impl DMSCSpan {
+impl RiSpan {
     pub fn new(
-        trace_id: DMSCTraceId,
-        parent_span_id: Option<DMSCSpanId>,
+        trace_id: RiTraceId,
+        parent_span_id: Option<RiSpanId>,
         name: String,
-        kind: DMSCSpanKind,
+        kind: RiSpanKind,
     ) -> Self {
         let start_time = SystemTime::now()
             .duration_since(UNIX_EPOCH)
@@ -197,7 +197,7 @@ impl DMSCSpan {
 
         Self {
             trace_id,
-            span_id: DMSCSpanId::new(),
+            span_id: RiSpanId::new(),
             parent_span_id,
             name,
             kind,
@@ -205,7 +205,7 @@ impl DMSCSpan {
             end_time: None,
             attributes: HashMap::new(),
             events: Vec::new(),
-            status: DMSCSpanStatus::Unset,
+            status: RiSpanStatus::Unset,
         }
     }
 
@@ -219,14 +219,14 @@ impl DMSCSpan {
             .unwrap_or(Duration::from_secs(0))
             .as_micros() as u64;
 
-        self.events.push(DMSCSpanEvent {
+        self.events.push(RiSpanEvent {
             name,
             timestamp,
             attributes,
         });
     }
 
-    pub fn end(&mut self, status: DMSCSpanStatus) {
+    pub fn end(&mut self, status: RiSpanStatus) {
         let end_time = SystemTime::now()
             .duration_since(UNIX_EPOCH)
             .unwrap_or(Duration::from_secs(0))
@@ -248,7 +248,7 @@ impl DMSCSpan {
 
 /// Span event for recording timed occurrences
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct DMSCSpanEvent {
+pub struct RiSpanEvent {
     pub name: String,
     pub timestamp: u64, // microseconds since epoch
     pub attributes: HashMap<String, String>,
@@ -256,24 +256,24 @@ pub struct DMSCSpanEvent {
 
 /// Thread-local tracing context
 #[derive(Debug, Clone)]
-pub struct DMSCTracingContext {
-    current_trace_id: Option<DMSCTraceId>,
-    current_span_id: Option<DMSCSpanId>,
+pub struct RiTracingContext {
+    current_trace_id: Option<RiTraceId>,
+    current_span_id: Option<RiSpanId>,
     baggage: HashMap<String, String>,
 }
 
 // Thread-local storage for tracing context
 thread_local! {
-    static CURRENTONTEXT: RefCell<Option<DMSCTracingContext>> = const { RefCell::new(None) };
+    static CURRENTONTEXT: RefCell<Option<RiTracingContext>> = const { RefCell::new(None) };
 }
 
-impl Default for DMSCTracingContext {
+impl Default for RiTracingContext {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl DMSCTracingContext {
+impl RiTracingContext {
     pub fn new() -> Self {
         Self {
             current_trace_id: None,
@@ -282,12 +282,12 @@ impl DMSCTracingContext {
         }
     }
 
-    pub fn with_trace_id(mut self, trace_id: DMSCTraceId) -> Self {
+    pub fn with_trace_id(mut self, trace_id: RiTraceId) -> Self {
         self.current_trace_id = Some(trace_id);
         self
     }
 
-    pub fn with_span_id(mut self, span_id: DMSCSpanId) -> Self {
+    pub fn with_span_id(mut self, span_id: RiSpanId) -> Self {
         self.current_span_id = Some(span_id);
         self
     }
@@ -300,11 +300,11 @@ impl DMSCTracingContext {
         self.baggage.get(key)
     }
 
-    pub fn trace_id(&self) -> Option<&DMSCTraceId> {
+    pub fn trace_id(&self) -> Option<&RiTraceId> {
         self.current_trace_id.as_ref()
     }
 
-    pub fn span_id(&self) -> Option<&DMSCSpanId> {
+    pub fn span_id(&self) -> Option<&RiSpanId> {
         self.current_span_id.as_ref()
     }
 
@@ -323,7 +323,7 @@ impl DMSCTracingContext {
     }
 
     /// Create a new context with the same trace ID but new span ID
-    pub fn new_child(&self, span_id: DMSCSpanId) -> Self {
+    pub fn new_child(&self, span_id: RiSpanId) -> Self {
         Self {
             current_trace_id: self.current_trace_id.clone(),
             current_span_id: Some(span_id),
@@ -334,7 +334,7 @@ impl DMSCTracingContext {
 
 /// Sampling strategy enumeration
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub enum DMSCSamplingStrategy {
+pub enum RiSamplingStrategy {
     /// Fixed rate sampling (0.0 to 1.0)
     Rate(f64),
     /// Trace ID-based deterministic sampling
@@ -345,27 +345,27 @@ pub enum DMSCSamplingStrategy {
 
 /// Distributed tracer
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
-pub struct DMSCTracer {
-    spans: Arc<RwLock<HashMap<DMSCTraceId, Vec<DMSCSpan>>>>,
-    active_spans: Arc<RwLock<HashMap<DMSCSpanId, DMSCSpan>>>,
-    sampling_strategy: DMSCSamplingStrategy,
+pub struct RiTracer {
+    spans: Arc<RwLock<HashMap<RiTraceId, Vec<RiSpan>>>>,
+    active_spans: Arc<RwLock<HashMap<RiSpanId, RiSpan>>>,
+    sampling_strategy: RiSamplingStrategy,
     adaptive_window: Arc<RwLock<Vec<u64>>>,
     max_adaptive_window: usize,
 }
 
-impl DMSCTracer {
+impl RiTracer {
     pub fn new(sampling_rate: f64) -> Self {
         Self {
             spans: Arc::new(RwLock::new(HashMap::new())),
             active_spans: Arc::new(RwLock::new(HashMap::new())),
-            sampling_strategy: DMSCSamplingStrategy::Rate(sampling_rate.clamp(0.0, 1.0)),
+            sampling_strategy: RiSamplingStrategy::Rate(sampling_rate.clamp(0.0, 1.0)),
             adaptive_window: Arc::new(RwLock::new(Vec::new())),
             max_adaptive_window: 100,
         }
     }
     
     /// Create a new tracer with a custom sampling strategy
-    pub fn with_strategy(strategy: DMSCSamplingStrategy) -> Self {
+    pub fn with_strategy(strategy: RiSamplingStrategy) -> Self {
         Self {
             spans: Arc::new(RwLock::new(HashMap::new())),
             active_spans: Arc::new(RwLock::new(HashMap::new())),
@@ -376,13 +376,13 @@ impl DMSCTracer {
     }
 
     /// Start a new trace and set it as current context
-    pub fn start_trace(&self, name: String) -> Option<DMSCTraceId> {
+    pub fn start_trace(&self, name: String) -> Option<RiTraceId> {
         if !self.should_sample() {
             return None;
         }
 
-        let trace_id = DMSCTraceId::new();
-        let span = DMSCSpan::new(trace_id.clone(), None, name, DMSCSpanKind::Server);
+        let trace_id = RiTraceId::new();
+        let span = RiSpan::new(trace_id.clone(), None, name, RiSpanKind::Server);
 
         let span_id = span.span_id.clone();
         {
@@ -395,7 +395,7 @@ impl DMSCTracer {
         }
 
         // Set current context
-        let context = DMSCTracingContext::new()
+        let context = RiTracingContext::new()
             .with_trace_id(trace_id.clone())
             .with_span_id(span_id);
         context.set_as_current();
@@ -406,16 +406,16 @@ impl DMSCTracer {
     /// Start a new span in existing trace, using current context if available
     pub fn start_span(
         &self,
-        trace_id: Option<&DMSCTraceId>,
-        parent_span_id: Option<DMSCSpanId>,
+        trace_id: Option<&RiTraceId>,
+        parent_span_id: Option<RiSpanId>,
         name: String,
-        kind: DMSCSpanKind,
-    ) -> Option<DMSCSpanId> {
+        kind: RiSpanKind,
+    ) -> Option<RiSpanId> {
         // Try to get trace_id from current context if not provided
         let resolved_trace_id = match trace_id {
             Some(id) => id.clone(),
             None => {
-                if let Some(context) = DMSCTracingContext::current() {
+                if let Some(context) = RiTracingContext::current() {
                     if let Some(id) = context.trace_id() {
                         id.clone()
                     } else {
@@ -430,7 +430,7 @@ impl DMSCTracer {
         // Try to get parent_span_id from current context if not provided
         let resolved_parent_span_id = match parent_span_id {
             Some(id) => Some(id.clone()),
-            None => DMSCTracingContext::current().and_then(|context| context.span_id().cloned()),
+            None => RiTracingContext::current().and_then(|context| context.span_id().cloned()),
         };
 
         let spans = match self.spans.read_safe("spans for span check") {
@@ -441,7 +441,7 @@ impl DMSCTracer {
             return None;
         }
 
-        let span = DMSCSpan::new(
+        let span = RiSpan::new(
             resolved_trace_id.clone(),
             resolved_parent_span_id,
             name,
@@ -455,12 +455,12 @@ impl DMSCTracer {
         }
 
         // Update current context with new span
-        if let Some(context) = DMSCTracingContext::current() {
+        if let Some(context) = RiTracingContext::current() {
             let new_context = context.new_child(span_id.clone());
             new_context.set_as_current();
         } else {
             // Create new context if none exists
-            let context = DMSCTracingContext::new()
+            let context = RiTracingContext::new()
                 .with_trace_id(resolved_trace_id)
                 .with_span_id(span_id.clone());
             context.set_as_current();
@@ -470,12 +470,12 @@ impl DMSCTracer {
     }
 
     /// Start a new span using current context
-    pub fn start_span_from_context(&self, name: String, kind: DMSCSpanKind) -> Option<DMSCSpanId> {
+    pub fn start_span_from_context(&self, name: String, kind: RiSpanKind) -> Option<RiSpanId> {
         self.start_span(None, None, name, kind)
     }
 
     /// End a span and restore parent span context if available
-    pub fn end_span(&self, span_id: &DMSCSpanId, status: DMSCSpanStatus) -> DMSCResult<()> {
+    pub fn end_span(&self, span_id: &RiSpanId, status: RiSpanStatus) -> RiResult<()> {
         let mut active_spans = self.active_spans.write_safe("active spans for end span")?;
 
         if let Some(mut span) = active_spans.remove(span_id) {
@@ -497,14 +497,14 @@ impl DMSCTracer {
                 // Try to find parent span in active spans
                 let active_spans = self.active_spans.read_safe("active spans for parent check")?;
                 if active_spans.get(&parent_span_id).is_some() {
-                    let context = DMSCTracingContext::new()
+                    let context = RiTracingContext::new()
                         .with_trace_id(trace_id)
                         .with_span_id(parent_span_id);
                     context.set_as_current();
                 }
             } else {
                 // No parent span, clear context
-                let context = DMSCTracingContext::new();
+                let context = RiTracingContext::new();
                 context.set_as_current();
             }
         }
@@ -513,9 +513,9 @@ impl DMSCTracer {
     }
 
     /// Get span for modification
-    pub fn span_mut<F>(&self, span_id: &DMSCSpanId, f: F) -> DMSCResult<()>
+    pub fn span_mut<F>(&self, span_id: &RiSpanId, f: F) -> RiResult<()>
     where
-        F: FnOnce(&mut DMSCSpan),
+        F: FnOnce(&mut RiSpan),
     {
         let mut active_spans = self.active_spans.write_safe("active spans for span_mut")?;
 
@@ -523,12 +523,12 @@ impl DMSCTracer {
             f(span);
             Ok(())
         } else {
-            Err(crate::core::DMSCError::Other("Span not found".to_string()))
+            Err(crate::core::RiError::Other("Span not found".to_string()))
         }
     }
 
     /// Export completed traces
-    pub fn export_traces(&self) -> HashMap<DMSCTraceId, Vec<DMSCSpan>> {
+    pub fn export_traces(&self) -> HashMap<RiTraceId, Vec<RiSpan>> {
         match self.spans.read_safe("spans for export") {
             Ok(spans) => spans.clone(),
             Err(_) => HashMap::new(),
@@ -553,7 +553,7 @@ impl DMSCTracer {
 
     fn should_sample(&self) -> bool {
         match &self.sampling_strategy {
-            DMSCSamplingStrategy::Rate(rate) => {
+            RiSamplingStrategy::Rate(rate) => {
                 if *rate >= 1.0 {
                     true
                 } else if *rate <= 0.0 {
@@ -564,7 +564,7 @@ impl DMSCTracer {
                     rng.gen::<f64>() < *rate
                 }
             }
-            DMSCSamplingStrategy::Deterministic(rate) => {
+            RiSamplingStrategy::Deterministic(rate) => {
                 if *rate >= 1.0 {
                     true
                 } else if *rate <= 0.0 {
@@ -589,7 +589,7 @@ impl DMSCTracer {
                     hash_f64 < *rate
                 }
             }
-            DMSCSamplingStrategy::Adaptive(target_rate) => {
+            RiSamplingStrategy::Adaptive(target_rate) => {
                 if *target_rate >= 1.0 {
                     true
                 } else if *target_rate <= 0.0 {
@@ -639,7 +639,7 @@ impl DMSCTracer {
 
 #[cfg(feature = "pyo3")]
 #[pyo3::prelude::pymethods]
-impl DMSCTracer {
+impl RiTracer {
     /// Create a new tracer from Python with a sampling rate
     #[new]
     fn py_new(sampling_rate: f64) -> Self {
@@ -659,11 +659,11 @@ impl DMSCTracer {
     #[pyo3(name = "start_span_from_context")]
     fn start_span_from_context_impl(&self, name: String, kind: String) -> PyResult<Option<String>> {
         let span_kind = match kind.as_str() {
-            "Server" => DMSCSpanKind::Server,
-            "Client" => DMSCSpanKind::Client,
-            "Producer" => DMSCSpanKind::Producer,
-            "Consumer" => DMSCSpanKind::Consumer,
-            _ => DMSCSpanKind::Internal,
+            "Server" => RiSpanKind::Server,
+            "Client" => RiSpanKind::Client,
+            "Producer" => RiSpanKind::Producer,
+            "Consumer" => RiSpanKind::Consumer,
+            _ => RiSpanKind::Internal,
         };
 
         match self.start_span_from_context(name, span_kind) {
@@ -675,11 +675,11 @@ impl DMSCTracer {
     /// End a span from Python
     #[pyo3(name = "end_span")]
     fn end_span_impl(&self, span_id: String, status: String) -> PyResult<()> {
-        let span_id_obj = DMSCSpanId::from_string(span_id);
+        let span_id_obj = RiSpanId::from_string(span_id);
         let span_status = match status.as_str() {
-            "Ok" => DMSCSpanStatus::Ok,
-            "Error" => DMSCSpanStatus::Error("Python error".to_string()),
-            _ => DMSCSpanStatus::Unset,
+            "Ok" => RiSpanStatus::Ok,
+            "Error" => RiSpanStatus::Error("Python error".to_string()),
+            _ => RiSpanStatus::Unset,
         };
 
         self.end_span(&span_id_obj, span_status)
@@ -689,7 +689,7 @@ impl DMSCTracer {
     /// Set span attribute from Python
     #[pyo3(name = "span_set_attribute")]
     fn span_set_attribute_impl(&self, span_id: String, key: String, value: String) -> PyResult<()> {
-        let span_id_obj = DMSCSpanId::from_string(span_id);
+        let span_id_obj = RiSpanId::from_string(span_id);
         self.span_mut(&span_id_obj, |span| {
             span.set_attribute(key, value);
         })
@@ -699,7 +699,7 @@ impl DMSCTracer {
     /// Add span event from Python
     #[pyo3(name = "span_add_event")]
     fn span_add_event_impl(&self, span_id: String, name: String, attributes: HashMap<String, String>) -> PyResult<()> {
-        let span_id_obj = DMSCSpanId::from_string(span_id);
+        let span_id_obj = RiSpanId::from_string(span_id);
         self.span_mut(&span_id_obj, |span| {
             span.add_event(name, attributes);
         })
@@ -749,18 +749,18 @@ impl DMSCTracer {
 }
 
 /// Tracer manager for managing multiple tracer instances
-pub struct DMSCTracerManager {
-    tracers: HashMap<String, Arc<DMSCTracer>>,
+pub struct RiTracerManager {
+    tracers: HashMap<String, Arc<RiTracer>>,
     default_tracer: Option<String>,
 }
 
-impl Default for DMSCTracerManager {
+impl Default for RiTracerManager {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl DMSCTracerManager {
+impl RiTracerManager {
     pub fn new() -> Self {
         Self {
             tracers: HashMap::new(),
@@ -768,7 +768,7 @@ impl DMSCTracerManager {
         }
     }
 
-    pub fn register_tracer(&mut self, name: &str, tracer: Arc<DMSCTracer>) {
+    pub fn register_tracer(&mut self, name: &str, tracer: Arc<RiTracer>) {
         self.tracers.insert(name.to_string(), tracer);
         if self.default_tracer.is_none() {
             self.default_tracer = Some(name.to_string());
@@ -776,11 +776,11 @@ impl DMSCTracerManager {
     }
 
     #[allow(dead_code)]
-    pub fn get_tracer(&self, name: &str) -> Option<&Arc<DMSCTracer>> {
+    pub fn get_tracer(&self, name: &str) -> Option<&Arc<RiTracer>> {
         self.tracers.get(name)
     }
 
-    pub fn get_default_tracer(&self) -> Option<&Arc<DMSCTracer>> {
+    pub fn get_default_tracer(&self) -> Option<&Arc<RiTracer>> {
         if let Some(default_name) = &self.default_tracer {
             self.tracers.get(default_name)
         } else {
@@ -812,13 +812,13 @@ impl DMSCTracerManager {
 
 /// Default tracer manager instance
 pub struct DefaultTracerManager {
-    inner: Arc<RwLock<DMSCTracerManager>>,
+    inner: Arc<RwLock<RiTracerManager>>,
 }
 
 impl Default for DefaultTracerManager {
     fn default() -> Self {
         Self {
-            inner: Arc::new(RwLock::new(DMSCTracerManager::new())),
+            inner: Arc::new(RwLock::new(RiTracerManager::new())),
         }
     }
 }
@@ -829,39 +829,39 @@ impl DefaultTracerManager {
         Default::default()
     }
 
-    pub async fn register_tracer(&self, name: &str, sampling_rate: f64) -> DMSCResult<()> {
-        let tracer = Arc::new(DMSCTracer::new(sampling_rate));
+    pub async fn register_tracer(&self, name: &str, sampling_rate: f64) -> RiResult<()> {
+        let tracer = Arc::new(RiTracer::new(sampling_rate));
         let mut manager = self.inner.write_safe("tracer manager for register")?;
         manager.register_tracer(name, tracer);
         Ok(())
     }
     
-    pub async fn register_tracer_with_strategy(&self, name: &str, strategy: DMSCSamplingStrategy) -> DMSCResult<()> {
-        let tracer = Arc::new(DMSCTracer::with_strategy(strategy));
+    pub async fn register_tracer_with_strategy(&self, name: &str, strategy: RiSamplingStrategy) -> RiResult<()> {
+        let tracer = Arc::new(RiTracer::with_strategy(strategy));
         let mut manager = self.inner.write_safe("tracer manager for register with strategy")?;
         manager.register_tracer(name, tracer);
         Ok(())
     }
 
     #[allow(dead_code)]
-    pub async fn get_tracer(&self, name: &str) -> DMSCResult<Option<Arc<DMSCTracer>>> {
+    pub async fn get_tracer(&self, name: &str) -> RiResult<Option<Arc<RiTracer>>> {
         let manager = self.inner.read_safe("tracer manager for get")?;
         Ok(manager.get_tracer(name).cloned())
     }
 
-    pub async fn get_default_tracer(&self) -> DMSCResult<Option<Arc<DMSCTracer>>> {
+    pub async fn get_default_tracer(&self) -> RiResult<Option<Arc<RiTracer>>> {
         let manager = self.inner.read_safe("tracer manager for get default")?;
         Ok(manager.get_default_tracer().cloned())
     }
 
     #[allow(dead_code)]
-    pub async fn set_default_tracer(&self, name: &str) -> DMSCResult<bool> {
+    pub async fn set_default_tracer(&self, name: &str) -> RiResult<bool> {
         let mut manager = self.inner.write_safe("tracer manager for set default")?;
         Ok(manager.set_default_tracer(name))
     }
 
     #[allow(dead_code)]
-    pub async fn remove_tracer(&self, name: &str) -> DMSCResult<bool> {
+    pub async fn remove_tracer(&self, name: &str) -> RiResult<bool> {
         let mut manager = self.inner.write_safe("tracer manager for remove")?;
         Ok(manager.remove_tracer(name))
     }
@@ -891,11 +891,11 @@ pub fn init_tracer(sampling_rate: f64) {
 }
 
 /// Initialize global tracer with custom sampling strategy
-pub fn init_tracer_with_strategy(strategy: DMSCSamplingStrategy) {
+pub fn init_tracer_with_strategy(strategy: RiSamplingStrategy) {
     let rate = match strategy {
-        DMSCSamplingStrategy::Rate(rate) => rate,
-        DMSCSamplingStrategy::Deterministic(rate) => rate,
-        DMSCSamplingStrategy::Adaptive(rate) => rate,
+        RiSamplingStrategy::Rate(rate) => rate,
+        RiSamplingStrategy::Deterministic(rate) => rate,
+        RiSamplingStrategy::Adaptive(rate) => rate,
     };
     
     let runtime = match tokio::runtime::Builder::new_current_thread()
@@ -917,14 +917,14 @@ pub fn init_tracer_with_strategy(strategy: DMSCSamplingStrategy) {
 }
 
 /// Get global tracer (backward compatibility)
-pub fn tracer() -> Result<Arc<DMSCTracer>, Box<DMSCError>> {
+pub fn tracer() -> Result<Arc<RiTracer>, Box<RiError>> {
     let runtime = match tokio::runtime::Builder::new_current_thread()
         .enable_all()
         .build()
     {
         Ok(r) => r,
         Err(e) => {
-            return Err(Box::new(DMSCError::Other(format!(
+            return Err(Box::new(RiError::Other(format!(
                 "Failed to create tokio runtime for tracer: {}",
                 e
             ))));
@@ -935,11 +935,11 @@ pub fn tracer() -> Result<Arc<DMSCTracer>, Box<DMSCError>> {
         match DEFAULT_TRACER_MANAGER.get_default_tracer().await {
             Ok(Some(tracer)) => Ok(tracer),
             Ok(None) => {
-                Err(Box::new(DMSCError::Other(
+                Err(Box::new(RiError::Other(
                     "Tracer not initialized".to_string(),
                 )))
             }
-            Err(e) => Err(Box::new(DMSCError::Other(format!(
+            Err(e) => Err(Box::new(RiError::Other(format!(
                 "Failed to get tracer: {}",
                 e
             )))),

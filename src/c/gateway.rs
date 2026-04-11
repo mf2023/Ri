@@ -1,7 +1,7 @@
 //! Copyright © 2025-2026 Wenze Wei. All Rights Reserved.
 //!
-//! This file is part of DMSC.
-//! The DMSC project belongs to the Dunimd Team.
+//! This file is part of Ri.
+//! The Ri project belongs to the Dunimd Team.
 //!
 //! Licensed under the Apache License, Version 2.0 (the "License");
 //! You may not use this file except in compliance with the License.
@@ -17,9 +17,9 @@
 
 //! # Gateway Module C API
 //!
-//! This module provides C language bindings for DMSC's API gateway subsystem. The gateway module
+//! This module provides C language bindings for Ri's API gateway subsystem. The gateway module
 //! delivers high-performance HTTP request routing, load balancing, rate limiting, and request/response
-//! transformation capabilities. This C API enables C/C++ applications to leverage DMSC's gateway
+//! transformation capabilities. This C API enables C/C++ applications to leverage Ri's gateway
 //! functionality for building scalable API endpoints with enterprise-grade features.
 //!
 //! ## Module Architecture
@@ -27,16 +27,16 @@
 //! The gateway module comprises three primary components that together provide complete API gateway
 //! functionality:
 //!
-//! - **DMSCGateway**: Core gateway server implementation handling HTTP request processing,
+//! - **RiGateway**: Core gateway server implementation handling HTTP request processing,
 //!   middleware composition, and response generation. The gateway acts as the entry point for
 //!   all incoming API requests, applying configured middleware chains and routing requests to
 //!   appropriate backend services.
 //!
-//! - **DMSCGatewayConfig**: Configuration container for gateway server parameters including listen
+//! - **RiGatewayConfig**: Configuration container for gateway server parameters including listen
 //!   address, thread pool sizing, TLS settings, and middleware configuration. The configuration
 //!   object controls resource allocation, security settings, and behavioral characteristics.
 //!
-//! - **DMSCRouter**: Request routing component responsible for matching incoming requests to
+//! - **RiRouter**: Request routing component responsible for matching incoming requests to
 //!   registered routes based on method, path, headers, and other request attributes. The router
 //!   supports complex routing patterns including path parameters, wildcards, and regex matching.
 //!
@@ -169,39 +169,39 @@
 //!
 //! ```c
 //! // Create gateway configuration
-//! DMSCGatewayConfig* config = dmsc_gateway_config_new();
-//! dmsc_gateway_config_set_address(config, "0.0.0.0", 8080);
-//! dmsc_gateway_config_set_workers(config, 4);
-//! dmsc_gateway_config_set_tls_enabled(config, false);
+//! RiGatewayConfig* config = ri_gateway_config_new();
+//! ri_gateway_config_set_address(config, "0.0.0.0", 8080);
+//! ri_gateway_config_set_workers(config, 4);
+//! ri_gateway_config_set_tls_enabled(config, false);
 //!
 //! // Create gateway instance
-//! DMSCGateway* gateway = dmsc_gateway_new(config);
+//! RiGateway* gateway = ri_gateway_new(config);
 //!
 //! // Create router and configure routes
-//! DMSCRouter* router = dmsc_router_new();
+//! RiRouter* router = ri_router_new();
 //!
 //! // Register routes
-//! dmsc_router_add_route(router, "GET", "/api/users", handle_users);
-//! dmsc_router_add_route(router, "POST", "/api/users", create_user);
-//! dmsc_router_add_route(router, "GET", "/api/users/:id", get_user_by_id);
+//! ri_router_add_route(router, "GET", "/api/users", handle_users);
+//! ri_router_add_route(router, "POST", "/api/users", create_user);
+//! ri_router_add_route(router, "GET", "/api/users/:id", get_user_by_id);
 //!
 //! // Mount router on gateway
-//! dmsc_gateway_mount(gateway, "/api", router);
+//! ri_gateway_mount(gateway, "/api", router);
 //!
 //! // Start gateway
-//! dmsc_gateway_start(gateway);
+//! ri_gateway_start(gateway);
 //!
 //! // Graceful shutdown on signal
-//! // dmsc_gateway_shutdown(gateway);
+//! // ri_gateway_shutdown(gateway);
 //!
 //! // Cleanup
-//! dmsc_gateway_free(gateway);
-//! dmsc_gateway_config_free(config);
+//! ri_gateway_free(gateway);
+//! ri_gateway_config_free(config);
 //! ```
 //!
 //! ## Dependencies
 //!
-//! This module depends on the following DMSC components:
+//! This module depends on the following Ri components:
 //!
 //! - `crate::gateway`: Rust gateway module implementation
 //! - `crate::prelude`: Common types and traits
@@ -213,15 +213,15 @@
 //! The gateway module is enabled by default with the "gateway" feature flag.
 //! Disable this feature to reduce binary size when gateway functionality is not required.
 
-use crate::gateway::{DMSCGateway, DMSCGatewayConfig, DMSCRouter};
+use crate::gateway::{RiGateway, RiGatewayConfig, RiRouter};
 
 
-c_wrapper!(CDMSCGateway, DMSCGateway);
+c_wrapper!(CRiGateway, RiGateway);
 
-c_wrapper!(CDMSCGatewayConfig, DMSCGatewayConfig);
+c_wrapper!(CRiGatewayConfig, RiGatewayConfig);
 
-c_wrapper!(CDMSCRouter, DMSCRouter);
+c_wrapper!(CRiRouter, RiRouter);
 
-c_constructor!(dmsc_gateway_config_new, CDMSCGatewayConfig, DMSCGatewayConfig, DMSCGatewayConfig::default());
+c_constructor!(ri_gateway_config_new, CRiGatewayConfig, RiGatewayConfig, RiGatewayConfig::default());
 
-c_destructor!(dmsc_gateway_config_free, DMSCGatewayConfig);
+c_destructor!(ri_gateway_config_free, RiGatewayConfig);

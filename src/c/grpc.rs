@@ -1,7 +1,7 @@
 //! Copyright © 2025-2026 Wenze Wei. All Rights Reserved.
 //!
-//! This file is part of DMSC.
-//! The DMSC project belongs to the Dunimd Team.
+//! This file is part of Ri.
+//! The Ri project belongs to the Dunimd Team.
 //!
 //! Licensed under the Apache License, Version 2.0 (the "License");
 //! You may not use this file except in compliance with the License.
@@ -17,10 +17,10 @@
 
 //! # gRPC Module C API
 //!
-//! This module provides C language bindings for DMSC's gRPC communication layer. The gRPC module
+//! This module provides C language bindings for Ri's gRPC communication layer. The gRPC module
 //! delivers high-performance Remote Procedure Call (RPC) capabilities using Protocol Buffers for
 //! efficient serialization and HTTP/2 for transport. This C API enables C/C++ applications to
-//! leverage DMSC's gRPC functionality for building distributed systems with strongly-typed service
+//! leverage Ri's gRPC functionality for building distributed systems with strongly-typed service
 //! contracts and bidirectional streaming support.
 //!
 //! ## Module Architecture
@@ -28,16 +28,16 @@
 //! The gRPC module comprises three primary components that together provide complete gRPC
 //! functionality:
 //!
-//! - **DMSCGrpcServer**: gRPC server implementation handling service registration, request
+//! - **RiGrpcServer**: gRPC server implementation handling service registration, request
 //!   processing, and response streaming. The server manages the complete lifecycle of gRPC
 //!   services including method dispatch, interceptor chaining, and connection management.
 //!
-//! - **DMSCGrpcClient**: gRPC client implementation for invoking remote procedures with automatic
+//! - **RiGrpcClient**: gRPC client implementation for invoking remote procedures with automatic
 //!   serialization, connection pooling, and retry logic. The client supports all gRPC calling
 //!   patterns including unary calls, server streaming, client streaming, and bidirectional
 //!   streaming.
 //!
-//! - **DMSCGrpcChannel**: Low-level channel abstraction managing the underlying HTTP/2 connection
+//! - **RiGrpcChannel**: Low-level channel abstraction managing the underlying HTTP/2 connection
 //!   pool, transport security, and protocol negotiation. Channels provide the foundation for
 //!   client communication and can be shared across multiple client instances.
 //!
@@ -184,21 +184,21 @@
 //!
 //! ```c
 //! // Create gRPC channel with connection pooling
-//! DMSCGrpcChannel* channel = dmsc_grpc_channel_new("localhost", 50051);
-//! dmsc_grpc_channel_set_tls_enabled(channel, true);
-//! dmsc_grpc_channel_set_connection_pool_size(channel, 10);
+//! RiGrpcChannel* channel = ri_grpc_channel_new("localhost", 50051);
+//! ri_grpc_channel_set_tls_enabled(channel, true);
+//! ri_grpc_channel_set_connection_pool_size(channel, 10);
 //!
 //! // Create client stub
-//! DMSCGrpcClient* client = dmsc_grpc_client_new(channel);
+//! RiGrpcClient* client = ri_grpc_client_new(channel);
 //!
 //! // Configure request
-//! DMSCUserRequest request = DMSCGUSER_REQUEST_INIT;
+//! RiUserRequest request = RiGUSER_REQUEST_INIT;
 //! request.user_id = 12345;
 //! request.include_profile = true;
 //!
 //! // Execute unary call
-//! DMSCUserResponse response = DMSCGUSER_RESPONSE_INIT;
-//! int status = dmsc_grpc_client_unary_call(
+//! RiUserResponse response = RiGUSER_RESPONSE_INIT;
+//! int status = ri_grpc_client_unary_call(
 //!     client,
 //!     "UserService.GetUser",
 //!     &request,
@@ -209,38 +209,38 @@
 //! if (status == 0) {
 //!     printf("User: %s %s\n", response.first_name, response.last_name);
 //! } else {
-//!     const char* error = dmsc_grpc_client_last_error(client);
+//!     const char* error = ri_grpc_client_last_error(client);
 //!     fprintf(stderr, "gRPC error: %s (code: %d)\n", error, status);
 //! }
 //!
 //! // Create stream for server streaming
-//! DMSCNotificationRequest stream_request = DMSCGNOTIFICATION_REQUEST_INIT;
+//! RiNotificationRequest stream_request = RiGNOTIFICATION_REQUEST_INIT;
 //! stream_request.notification_type = NOTIFICATION_TYPE_ALL;
 //! stream_request.start_time = time(NULL);
 //!
-//! DMSCGrpcStream* stream = dmsc_grpc_client_server_stream(
+//! RiGrpcStream* stream = ri_grpc_client_server_stream(
 //!     client,
 //!     "NotificationService.Subscribe",
 //!     &stream_request
 //! );
 //!
 //! // Read streaming responses
-//! DMSCNotification notification;
-//! while (dmsc_grpc_stream_read(stream, &notification) == 0) {
+//! RiNotification notification;
+//! while (ri_grpc_stream_read(stream, &notification) == 0) {
 //!     printf("Notification: %s\n", notification.message);
-//!     dmsc_grpc_notification_destroy(&notification);
+//!     ri_grpc_notification_destroy(&notification);
 //! }
 //!
-//! dmsc_grpc_stream_free(stream);
+//! ri_grpc_stream_free(stream);
 //!
 //! // Cleanup
-//! dmsc_grpc_client_free(client);
-//! dmsc_grpc_channel_free(channel);
+//! ri_grpc_client_free(client);
+//! ri_grpc_channel_free(channel);
 //! ```
 //!
 //! ## Dependencies
 //!
-//! This module depends on the following DMSC components and external libraries:
+//! This module depends on the following Ri components and external libraries:
 //!
 //! - `crate::grpc`: Rust gRPC module implementation
 //! - `crate::prelude`: Common types and traits
@@ -258,11 +258,11 @@
 //!
 //! Disable these features to reduce binary size when gRPC is not required.
 
-use crate::grpc::{DMSCGrpcClient, DMSCGrpcServer};
+use crate::grpc::{RiGrpcClient, RiGrpcServer};
 
 
-c_wrapper!(CDMSCGrpcServer, DMSCGrpcServer);
+c_wrapper!(CRiGrpcServer, RiGrpcServer);
 
-c_wrapper!(CDMSCGrpcClient, DMSCGrpcClient);
+c_wrapper!(CRiGrpcClient, RiGrpcClient);
 
 

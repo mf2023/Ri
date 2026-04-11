@@ -1,7 +1,7 @@
 # Copyright © 2025-2026 Wenze Wei. All Rights Reserved.
 #
-# This file is part of DMSC.
-# The DMSC project belongs to the Dunimd Team.
+# This file is part of Ri.
+# The Ri project belongs to the Dunimd Team.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # You may not use this file except in compliance with the License.
@@ -16,40 +16,40 @@
 # limitations under the License.
 
 """
-DMSC Cache Module Example
+Ri Cache Module Example
 
-This example demonstrates how to use the DMSC cache module for multi-backend
+This example demonstrates how to use the Ri cache module for multi-backend
 caching with support for memory, Redis, and other backends.
 """
 
 import asyncio
-from dmsc import (
-    DMSCCacheModule,
-    DMSCCacheConfig,
-    DMSCCacheManager,
-    DMSCCacheBackendType,
-    DMSCCachePolicy,
-    DMSCCacheStats,
-    DMSCCachedValue,
-    DMSCCacheEvent,
+from ri import (
+    RiCacheModule,
+    RiCacheConfig,
+    RiCacheManager,
+    RiCacheBackendType,
+    RiCachePolicy,
+    RiCacheStats,
+    RiCachedValue,
+    RiCacheEvent,
 )
 
 
 async def main():
     # Create cache configuration
-    config = DMSCCacheConfig()
-    config.backend_type = DMSCCacheBackendType.Memory
+    config = RiCacheConfig()
+    config.backend_type = RiCacheBackendType.Memory
     config.default_ttl_secs = 300
     config.max_memory_mb = 512
 
     # Initialize cache module
-    cache_module = DMSCCacheModule(config)
+    cache_module = RiCacheModule(config)
 
     # Create cache manager
-    manager = DMSCCacheManager()
+    manager = RiCacheManager()
 
     # Create cache policy
-    policy = DMSCCachePolicy()
+    policy = RiCachePolicy()
     policy.ttl_seconds = 600
     policy.max_size = 1000
     policy.eviction_policy = "lru"
@@ -58,19 +58,19 @@ async def main():
     print("Setting cache values...")
 
     # String value
-    string_value = DMSCCachedValue()
-    string_value.data = b"Hello, DMSC Cache!"
+    string_value = RiCachedValue()
+    string_value.data = b"Hello, Ri Cache!"
     string_value.content_type = "text/plain"
     manager.set("greeting", string_value, policy)
 
     # JSON value
-    json_value = DMSCCachedValue()
+    json_value = RiCachedValue()
     json_value.data = b'{"name": "John", "age": 30, "city": "New York"}'
     json_value.content_type = "application/json"
     manager.set("user:123", json_value, policy)
 
     # Binary value
-    binary_value = DMSCCachedValue()
+    binary_value = RiCachedValue()
     binary_value.data = b"\x00\x01\x02\x03\x04\x05"
     binary_value.content_type = "application/octet-stream"
     manager.set("binary:data", binary_value, policy)
@@ -92,7 +92,7 @@ async def main():
 
     # Get cache statistics
     print("\nCache Statistics:")
-    stats = DMSCCacheStats()
+    stats = RiCacheStats()
     print(f"Cache hits: {stats.hits}")
     print(f"Cache misses: {stats.misses}")
     print(f"Hit rate: {stats.hit_rate:.2%}")
@@ -109,11 +109,11 @@ async def main():
 
     # Set with custom TTL
     print("\nSetting value with custom TTL...")
-    temp_value = DMSCCachedValue()
+    temp_value = RiCachedValue()
     temp_value.data = b"This will expire soon"
     temp_value.content_type = "text/plain"
 
-    custom_policy = DMSCCachePolicy()
+    custom_policy = RiCachePolicy()
     custom_policy.ttl_seconds = 10
     manager.set("temp:key", temp_value, custom_policy)
     print("Value set with 10 second TTL")

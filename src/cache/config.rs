@@ -1,7 +1,7 @@
 //! Copyright © 2025-2026 Wenze Wei. All Rights Reserved.
 //!
-//! This file is part of DMSC.
-//! The DMSC project belongs to the Dunimd Team.
+//! This file is part of Ri.
+//! The Ri project belongs to the Dunimd Team.
 //!
 //! Licensed under the Apache License, Version 2.0 (the "License");
 //! You may not use this file except in compliance with the License.
@@ -22,9 +22,9 @@
 //!
 //! ## Key Components
 //!
-//! - **[`DMSCCacheConfig`](DMSCCacheConfig)**: Main cache configuration structure
-//! - **[`DMSCCacheBackendType`](DMSCCacheBackendType)**: Enum for selecting cache backend type
-//! - **[`DMSCCachePolicy`](DMSCCachePolicy)**: Per-entry cache policy with TTL and size limits
+//! - **[`RiCacheConfig`](RiCacheConfig)**: Main cache configuration structure
+//! - **[`RiCacheBackendType`](RiCacheBackendType)**: Enum for selecting cache backend type
+//! - **[`RiCachePolicy`](RiCachePolicy)**: Per-entry cache policy with TTL and size limits
 //!
 //! ## Design Principles
 //!
@@ -38,28 +38,28 @@
 //! ## Usage Example
 //!
 //! ```rust,ignore
-//! use dmsc::cache::{DMSCCacheConfig, DMSCCacheBackendType, DMSCCachePolicy};
+//! use ri::cache::{RiCacheConfig, RiCacheBackendType, RiCachePolicy};
 //! use std::time::Duration;
 //!
 //! // Create default cache configuration
-//! let default_config = DMSCCacheConfig::default();
+//! let default_config = RiCacheConfig::default();
 //!
 //! // Create custom cache configuration
-//! let custom_config = DMSCCacheConfig {
+//! let custom_config = RiCacheConfig {
 //!     enabled: true,
 //!     default_ttl_secs: 7200, // 2 hours
 //!     max_memory_mb: 1024,
 //!     cleanup_interval_secs: 600, // 10 minutes
-//!     backend_type: DMSCCacheBackendType::Hybrid,
+//!     backend_type: RiCacheBackendType::Hybrid,
 //!     redis_url: "redis://localhost:6379/1".to_string(),
 //!     redis_pool_size: 20,
 //! };
 //!
 //! // Parse backend type from string
-//! let backend_type: DMSCCacheBackendType = "redis".parse().unwrap();
+//! let backend_type: RiCacheBackendType = "redis".parse().unwrap();
 //!
 //! // Create a custom cache policy
-//! let cache_policy = DMSCCachePolicy {
+//! let cache_policy = RiCachePolicy {
 //!     ttl: Some(Duration::from_secs(1800)), // 30 minutes
 //!     refresh_on_access: true,
 //!     max_size: Some(1024 * 1024), // 1MB
@@ -80,7 +80,7 @@ use pyo3::prelude::*;
 /// including backend selection, TTL settings, memory limits, and cleanup intervals.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass(get_all, set_all))]
-pub struct DMSCCacheConfig {
+pub struct RiCacheConfig {
     /// Whether caching is enabled
     pub enabled: bool,
     /// Default time-to-live in seconds
@@ -90,14 +90,14 @@ pub struct DMSCCacheConfig {
     /// Interval for cleaning up expired entries in seconds
     pub cleanup_interval_secs: u64,
     /// Type of cache backend to use
-    pub backend_type: DMSCCacheBackendType,
+    pub backend_type: RiCacheBackendType,
     /// Redis connection URL (if using Redis or Hybrid backend)
     pub redis_url: String,
     /// Redis connection pool size
     pub redis_pool_size: usize,
 }
 
-impl Default for DMSCCacheConfig {
+impl Default for RiCacheConfig {
     /// Creates a default cache configuration with sensible values.
     ///
     /// Default values:
@@ -110,14 +110,14 @@ impl Default for DMSCCacheConfig {
     /// - redis_pool_size: 10
     ///
     /// # Returns
-    /// A new `DMSCCacheConfig` instance with default values
+    /// A new `RiCacheConfig` instance with default values
     fn default() -> Self {
         Self {
             enabled: true,
             default_ttl_secs: 3600, // 1 hour
             max_memory_mb: 512,
             cleanup_interval_secs: 300, // 5 minutes
-            backend_type: DMSCCacheBackendType::Memory,
+            backend_type: RiCacheBackendType::Memory,
             redis_url: "redis://127.0.0.1:6379".to_string(),
             redis_pool_size: 10,
         }
@@ -126,7 +126,7 @@ impl Default for DMSCCacheConfig {
 
 #[cfg(feature = "pyo3")]
 #[pymethods]
-impl DMSCCacheConfig {
+impl RiCacheConfig {
     #[new]
     fn py_new() -> Self {
         Self::default()
@@ -140,10 +140,10 @@ impl DMSCCacheConfig {
 
 /// Cache backend type enumeration.
 ///
-/// Defines the different cache backend types supported by DMSC.
+/// Defines the different cache backend types supported by Ri.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
-pub enum DMSCCacheBackendType {
+pub enum RiCacheBackendType {
     /// In-memory cache (fast, non-persistent)
     Memory,
     /// Redis cache (persistent, distributed)
@@ -152,41 +152,41 @@ pub enum DMSCCacheBackendType {
     Hybrid,
 }
 
-impl DMSCCacheBackendType {
-    /// Converts a string to a `DMSCCacheBackendType`.
+impl RiCacheBackendType {
+    /// Converts a string to a `RiCacheBackendType`.
     ///
     /// This method provides a custom string conversion for cache backend types.
     ///
     /// # Parameters
     ///
-    /// - `s`: String to convert to `DMSCCacheBackendType`
+    /// - `s`: String to convert to `RiCacheBackendType`
     ///
     /// # Returns
     ///
-    /// A `DMSCCacheBackendType` based on the input string
+    /// A `RiCacheBackendType` based on the input string
     ///
     /// # Mapping
     ///
-    /// - "redis" -> `DMSCCacheBackendType::Redis`
-    /// - "hybrid" -> `DMSCCacheBackendType::Hybrid`
-    /// - Any other value -> `DMSCCacheBackendType::Memory`
+    /// - "redis" -> `RiCacheBackendType::Redis`
+    /// - "hybrid" -> `RiCacheBackendType::Hybrid`
+    /// - Any other value -> `RiCacheBackendType::Memory`
     pub fn from_str_custom(s: &str) -> Self {
         match s.to_lowercase().as_str() {
-            "redis" => DMSCCacheBackendType::Redis,
-            "hybrid" => DMSCCacheBackendType::Hybrid,
-            _ => DMSCCacheBackendType::Memory,
+            "redis" => RiCacheBackendType::Redis,
+            "hybrid" => RiCacheBackendType::Hybrid,
+            _ => RiCacheBackendType::Memory,
         }
     }
 }
 
-/// Implements standard FromStr trait for DMSCCacheBackendType
-impl std::str::FromStr for DMSCCacheBackendType {
+/// Implements standard FromStr trait for RiCacheBackendType
+impl std::str::FromStr for RiCacheBackendType {
     type Err = ();
 
-    /// Parses a string to a `DMSCCacheBackendType`.
+    /// Parses a string to a `RiCacheBackendType`.
     ///
     /// This implementation of the standard `FromStr` trait allows for easy
-    /// parsing of strings to `DMSCCacheBackendType` using the `parse()` method.
+    /// parsing of strings to `RiCacheBackendType` using the `parse()` method.
     ///
     /// # Parameters
     ///
@@ -194,7 +194,7 @@ impl std::str::FromStr for DMSCCacheBackendType {
     ///
     /// # Returns
     ///
-    /// `Ok(DMSCCacheBackendType)` if parsing succeeds, otherwise `Ok(DMSCCacheBackendType::Memory)`
+    /// `Ok(RiCacheBackendType)` if parsing succeeds, otherwise `Ok(RiCacheBackendType::Memory)`
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         Ok(Self::from_str_custom(s))
     }
@@ -206,7 +206,7 @@ impl std::str::FromStr for DMSCCacheBackendType {
 /// including TTL, refresh behavior, and size limits.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass(get_all, set_all))]
-pub struct DMSCCachePolicy {
+pub struct RiCachePolicy {
     /// Time-to-live for cache entries
     pub ttl: Option<Duration>,
     /// Whether to refresh TTL on access
@@ -215,7 +215,7 @@ pub struct DMSCCachePolicy {
     pub max_size: Option<usize>,
 }
 
-impl Default for DMSCCachePolicy {
+impl Default for RiCachePolicy {
     /// Creates a default cache policy with sensible values.
     ///
     /// Default values:
@@ -225,7 +225,7 @@ impl Default for DMSCCachePolicy {
     ///
     /// # Returns
     ///
-    /// A new `DMSCCachePolicy` instance with default values
+    /// A new `RiCachePolicy` instance with default values
     fn default() -> Self {
         Self {
             ttl: Some(Duration::from_secs(3600)),
@@ -237,7 +237,7 @@ impl Default for DMSCCachePolicy {
 
 #[cfg(feature = "pyo3")]
 #[pymethods]
-impl DMSCCachePolicy {
+impl RiCachePolicy {
     #[new]
     fn new() -> Self {
         Self::default()

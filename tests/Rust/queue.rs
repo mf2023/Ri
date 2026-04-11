@@ -1,7 +1,7 @@
 //! Copyright © 2025-2026 Wenze Wei. All Rights Reserved.
 //!
-//! This file is part of DMSC.
-//! The DMSC project belongs to the Dunimd Team.
+//! This file is part of Ri.
+//! The Ri project belongs to the Dunimd Team.
 //!
 //! Licensed under the Apache License, Version 2.0 (the "License");
 //! You may not use this file except in compliance with the License.
@@ -17,23 +17,23 @@
 
 //! # Queue Module Tests
 //!
-//! This module contains comprehensive tests for the DMSC message queue system,
+//! This module contains comprehensive tests for the Ri message queue system,
 //! covering message lifecycle, producer-consumer patterns, queue management operations,
 //! and various backend implementations for asynchronous task processing.
 //!
 //! ## Test Coverage
 //!
-//! - **DMSCQueueMessage**: Tests for message structure including unique identification,
+//! - **RiQueueMessage**: Tests for message structure including unique identification,
 //!   payload storage, header management, retry tracking, and delivery confirmation
 //!
-//! - **DMSCMemoryQueue**: Tests for in-memory queue implementation covering message
+//! - **RiMemoryQueue**: Tests for in-memory queue implementation covering message
 //!   production, consumption with consumer groups, batch operations, statistics, and
 //!   queue lifecycle management (purge, delete)
 //!
-//! - **DMSCQueueManager**: Tests for queue management including creation, retrieval,
+//! - **RiQueueManager**: Tests for queue management including creation, retrieval,
 //!   listing, deletion, and queue registry maintenance
 //!
-//! - **DMSCQueueConfig**: Tests for queue configuration including backend selection,
+//! - **RiQueueConfig**: Tests for queue configuration including backend selection,
 //!   connection settings, and queue-specific parameters
 //!
 //! - **Consumer Groups**: Tests for consumer group semantics allowing multiple consumers
@@ -70,14 +70,14 @@
 //! - **Receive Batch**: Multiple messages delivered for batch processing
 //! - **Benefits**: Reduced latency, improved throughput, better resource utilization
 
-use dmsc::queue::{DMSCQueueMessage, DMSCQueue, DMSCQueueConfig, QueueBackendType, DMSCQueueManager, DMSCQueueModule};
-use dmsc::queue::backends::DMSCMemoryQueue;
+use ri::queue::{RiQueueMessage, RiQueue, RiQueueConfig, QueueBackendType, RiQueueManager, RiQueueModule};
+use ri::queue::backends::RiMemoryQueue;
 
 #[test]
 fn test_queue_message_new() {
     let payload = b"test_payload".to_vec();
     
-    let message = DMSCQueueMessage::new(payload.clone());
+    let message = RiQueueMessage::new(payload.clone());
     
     assert!(!message.id.is_empty());
     assert_eq!(message.payload, payload);
@@ -94,7 +94,7 @@ fn test_queue_message_with_headers() {
     headers.insert("key1".to_string(), "value1".to_string());
     headers.insert("key2".to_string(), "value2".to_string());
     
-    let message = DMSCQueueMessage::new(payload.clone())
+    let message = RiQueueMessage::new(payload.clone())
         .with_headers(headers.clone());
     
     assert_eq!(message.headers, headers);
@@ -104,7 +104,7 @@ fn test_queue_message_with_headers() {
 fn test_queue_message_with_max_retries() {
     let payload = b"test_payload".to_vec();
     
-    let message = DMSCQueueMessage::new(payload.clone())
+    let message = RiQueueMessage::new(payload.clone())
         .with_max_retries(5);
     
     assert_eq!(message.max_retries, 5);
@@ -114,7 +114,7 @@ fn test_queue_message_with_max_retries() {
 fn test_queue_message_retry() {
     let payload = b"test_payload".to_vec();
     
-    let mut message = DMSCQueueMessage::new(payload.clone())
+    let mut message = RiQueueMessage::new(payload.clone())
         .with_max_retries(3);
     
     // Test initial state
@@ -135,19 +135,19 @@ fn test_queue_message_retry() {
 
 #[tokio::test]
 async fn test_memory_queue_create_producer() {
-    let queue = DMSCMemoryQueue::new("test_queue");
+    let queue = RiMemoryQueue::new("test_queue");
     
     // Test creating a producer
     let producer = queue.create_producer().await.unwrap();
     
     // Verify producer works by sending a message
-    let message = DMSCQueueMessage::new(b"test_payload".to_vec());
+    let message = RiQueueMessage::new(b"test_payload".to_vec());
     producer.send(message).await.unwrap();
 }
 
 #[tokio::test]
 async fn test_memory_queue_create_consumer() {
-    let queue = DMSCMemoryQueue::new("test_queue");
+    let queue = RiMemoryQueue::new("test_queue");
     
     // Test creating a consumer
     let consumer = queue.create_consumer("test_consumer_group").await.unwrap();
@@ -159,7 +159,7 @@ async fn test_memory_queue_create_consumer() {
 
 #[tokio::test]
 async fn test_memory_queue_send_receive() {
-    let queue = DMSCMemoryQueue::new("test_queue");
+    let queue = RiMemoryQueue::new("test_queue");
     
     // Create producer and consumer
     let producer = queue.create_producer().await.unwrap();
@@ -167,7 +167,7 @@ async fn test_memory_queue_send_receive() {
     
     // Send a message
     let payload = b"test_payload".to_vec();
-    let message = DMSCQueueMessage::new(payload.clone());
+    let message = RiQueueMessage::new(payload.clone());
     producer.send(message.clone()).await.unwrap();
     
     // Receive the message
@@ -183,16 +183,16 @@ async fn test_memory_queue_send_receive() {
 
 #[tokio::test]
 async fn test_memory_queue_send_batch() {
-    let queue = DMSCMemoryQueue::new("test_queue");
+    let queue = RiMemoryQueue::new("test_queue");
     
     // Create producer
     let producer = queue.create_producer().await.unwrap();
     
     // Create multiple messages
     let messages = vec![
-        DMSCQueueMessage::new(b"payload1".to_vec()),
-        DMSCQueueMessage::new(b"payload2".to_vec()),
-        DMSCQueueMessage::new(b"payload3".to_vec()),
+        RiQueueMessage::new(b"payload1".to_vec()),
+        RiQueueMessage::new(b"payload2".to_vec()),
+        RiQueueMessage::new(b"payload3".to_vec()),
     ];
     
     // Send messages in batch
@@ -205,7 +205,7 @@ async fn test_memory_queue_send_batch() {
 
 #[tokio::test]
 async fn test_memory_queue_get_stats() {
-    let queue = DMSCMemoryQueue::new("test_queue");
+    let queue = RiMemoryQueue::new("test_queue");
     
     // Get initial stats
     let stats = queue.get_stats().await.unwrap();
@@ -218,11 +218,11 @@ async fn test_memory_queue_get_stats() {
 
 #[tokio::test]
 async fn test_memory_queue_purge() {
-    let queue = DMSCMemoryQueue::new("test_queue");
+    let queue = RiMemoryQueue::new("test_queue");
     
     // Send some messages
     let producer = queue.create_producer().await.unwrap();
-    let message = DMSCQueueMessage::new(b"test_payload".to_vec());
+    let message = RiQueueMessage::new(b"test_payload".to_vec());
     producer.send(message).await.unwrap();
     
     // Verify messages were sent
@@ -239,11 +239,11 @@ async fn test_memory_queue_purge() {
 
 #[tokio::test]
 async fn test_memory_queue_delete() {
-    let queue = DMSCMemoryQueue::new("test_queue");
+    let queue = RiMemoryQueue::new("test_queue");
     
     // Send some messages
     let producer = queue.create_producer().await.unwrap();
-    let message = DMSCQueueMessage::new(b"test_payload".to_vec());
+    let message = RiQueueMessage::new(b"test_payload".to_vec());
     producer.send(message).await.unwrap();
     
     // Delete the queue
@@ -256,14 +256,14 @@ async fn test_memory_queue_delete() {
 
 #[tokio::test]
 async fn test_memory_queue_consumer_pause_resume() {
-    let queue = DMSCMemoryQueue::new("test_queue");
+    let queue = RiMemoryQueue::new("test_queue");
     
     // Create producer and consumer
     let producer = queue.create_producer().await.unwrap();
     let consumer = queue.create_consumer("test_consumer_group").await.unwrap();
     
     // Send a message
-    let message = DMSCQueueMessage::new(b"test_payload".to_vec());
+    let message = RiQueueMessage::new(b"test_payload".to_vec());
     producer.send(message).await.unwrap();
     
     // Pause the consumer
@@ -283,10 +283,10 @@ async fn test_memory_queue_consumer_pause_resume() {
 
 #[tokio::test]
 async fn test_queue_manager_new() {
-    let config = DMSCQueueConfig::default();
+    let config = RiQueueConfig::default();
     
     // Test creating a queue manager
-    let queue_manager = DMSCQueueManager::new(config).await.unwrap();
+    let queue_manager = RiQueueManager::new(config).await.unwrap();
     
     // Test initializing the queue manager
     queue_manager.init().await.unwrap();
@@ -297,22 +297,22 @@ async fn test_queue_manager_new() {
 
 #[tokio::test]
 async fn test_queue_manager_create_queue() {
-    let config = DMSCQueueConfig::default();
-    let queue_manager = DMSCQueueManager::new(config).await.unwrap();
+    let config = RiQueueConfig::default();
+    let queue_manager = RiQueueManager::new(config).await.unwrap();
     
     // Test creating a queue
     let queue = queue_manager.create_queue("test_queue").await.unwrap();
     
     // Verify queue works by creating a producer
     let producer = queue.create_producer().await.unwrap();
-    let message = DMSCQueueMessage::new(b"test_payload".to_vec());
+    let message = RiQueueMessage::new(b"test_payload".to_vec());
     producer.send(message).await.unwrap();
 }
 
 #[tokio::test]
 async fn test_queue_manager_get_queue() {
-    let config = DMSCQueueConfig::default();
-    let queue_manager = DMSCQueueManager::new(config).await.unwrap();
+    let config = RiQueueConfig::default();
+    let queue_manager = RiQueueManager::new(config).await.unwrap();
     
     // Create a queue
     queue_manager.create_queue("test_queue").await.unwrap();
@@ -328,8 +328,8 @@ async fn test_queue_manager_get_queue() {
 
 #[tokio::test]
 async fn test_queue_manager_list_queues() {
-    let config = DMSCQueueConfig::default();
-    let queue_manager = DMSCQueueManager::new(config).await.unwrap();
+    let config = RiQueueConfig::default();
+    let queue_manager = RiQueueManager::new(config).await.unwrap();
     
     // Test initial state
     let queues = queue_manager.list_queues().await;
@@ -350,8 +350,8 @@ async fn test_queue_manager_list_queues() {
 
 #[tokio::test]
 async fn test_queue_manager_delete_queue() {
-    let config = DMSCQueueConfig::default();
-    let queue_manager = DMSCQueueManager::new(config).await.unwrap();
+    let config = RiQueueConfig::default();
+    let queue_manager = RiQueueManager::new(config).await.unwrap();
     
     // Create a queue
     queue_manager.create_queue("test_queue").await.unwrap();
@@ -366,10 +366,10 @@ async fn test_queue_manager_delete_queue() {
 
 #[tokio::test]
 async fn test_queue_module_new() {
-    let config = DMSCQueueConfig::default();
+    let config = RiQueueConfig::default();
     
     // Test creating a queue module
-    let queue_module = DMSCQueueModule::new(config).await.unwrap();
+    let queue_module = RiQueueModule::new(config).await.unwrap();
     
     // Verify queue manager is accessible
     let queue_manager = queue_module.queue_manager();
@@ -379,7 +379,7 @@ async fn test_queue_module_new() {
 }
 
 #[tokio::test]
-/// Tests DMSCQueueConfig default configuration values.
+/// Tests RiQueueConfig default configuration values.
 ///
 /// Verifies that the default queue configuration has appropriate
 /// values for queue settings and backend selection.
@@ -405,7 +405,7 @@ async fn test_queue_module_new() {
 /// typical message queue deployments. The memory backend is ideal
 /// for testing and development scenarios.
 async fn test_queue_config_default() {
-    let config = DMSCQueueConfig::default();
+    let config = RiQueueConfig::default();
     
     assert!(config.enabled);
     assert_eq!(config.backend_type, QueueBackendType::Memory);

@@ -1,7 +1,7 @@
 # Copyright © 2025-2026 Wenze Wei. All Rights Reserved.
 #
-# This file is part of DMSC.
-# The DMSC project belongs to the Dunimd Team.
+# This file is part of Ri.
+# The Ri project belongs to the Dunimd Team.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # You may not use this file except in compliance with the License.
@@ -16,36 +16,36 @@
 # limitations under the License.
 
 """
-DMSC Auth Module Example
+Ri Auth Module Example
 
-This example demonstrates how to use the DMSC authentication module
+This example demonstrates how to use the Ri authentication module
 for JWT, OAuth, and session management.
 """
 
 import asyncio
-from dmsc import (
-    DMSCAuthModule,
-    DMSCAuthConfig,
-    DMSCJWTManager,
-    DMSCJWTClaims,
-    DMSCJWTValidationOptions,
-    DMSCSessionManager,
-    DMSCSession,
-    DMSCPermissionManager,
-    DMSCPermission,
-    DMSCRole,
-    DMSCOAuthManager,
-    DMSCOAuthToken,
-    DMSCOAuthUserInfo,
-    DMSCOAuthProvider,
-    DMSCJWTRevocationList,
-    DMSCRevokedTokenInfo,
+from ri import (
+    RiAuthModule,
+    RiAuthConfig,
+    RiJWTManager,
+    RiJWTClaims,
+    RiJWTValidationOptions,
+    RiSessionManager,
+    RiSession,
+    RiPermissionManager,
+    RiPermission,
+    RiRole,
+    RiOAuthManager,
+    RiOAuthToken,
+    RiOAuthUserInfo,
+    RiOAuthProvider,
+    RiJWTRevocationList,
+    RiRevokedTokenInfo,
 )
 
 
 async def main():
     # Create authentication configuration
-    auth_config = DMSCAuthConfig()
+    auth_config = RiAuthConfig()
     auth_config.jwt_secret = "your-secret-key-here"
     auth_config.jwt_algorithm = "HS256"
     auth_config.token_expiry_seconds = 3600
@@ -54,16 +54,16 @@ async def main():
     auth_config.enable_session = True
 
     # Initialize auth module
-    auth_module = DMSCAuthModule(auth_config)
+    auth_module = RiAuthModule(auth_config)
 
     # Create JWT manager
-    jwt_manager = DMSCJWTManager()
+    jwt_manager = RiJWTManager()
 
     # Create JWT claims
-    claims = DMSCJWTClaims()
+    claims = RiJWTClaims()
     claims.sub = "user123"
-    claims.iss = "dmsc-auth"
-    claims.aud = "dmsc-api"
+    claims.iss = "ri-auth"
+    claims.aud = "ri-api"
     claims.exp = 3600
     claims.iat = 0
     claims.custom_claims = {"role": "admin", "department": "engineering"}
@@ -75,11 +75,11 @@ async def main():
 
     # Validate JWT token
     print("\nValidating JWT token...")
-    validation_options = DMSCJWTValidationOptions()
+    validation_options = RiJWTValidationOptions()
     validation_options.validate_exp = True
     validation_options.validate_nbf = True
     validation_options.validate_aud = True
-    validation_options.expected_audience = "dmsc-api"
+    validation_options.expected_audience = "ri-api"
     validation_options.leeway_seconds = 60
 
     validated_claims = jwt_manager.validate_token(token, validation_options)
@@ -89,23 +89,23 @@ async def main():
         print(f"Custom claims: {validated_claims.custom_claims}")
 
     # Create permission manager
-    perm_manager = DMSCPermissionManager()
+    perm_manager = RiPermissionManager()
 
     # Define permissions
-    read_perm = DMSCPermission()
+    read_perm = RiPermission()
     read_perm.name = "read:users"
     read_perm.description = "Can read user data"
 
-    write_perm = DMSCPermission()
+    write_perm = RiPermission()
     write_perm.name = "write:users"
     write_perm.description = "Can modify user data"
 
     # Define roles
-    admin_role = DMSCRole()
+    admin_role = RiRole()
     admin_role.name = "admin"
     admin_role.permissions = ["read:users", "write:users"]
 
-    user_role = DMSCRole()
+    user_role = RiRole()
     user_role.name = "user"
     user_role.permissions = ["read:users"]
 
@@ -118,11 +118,11 @@ async def main():
     print(f"User has write permission: {has_write}")
 
     # Create session manager
-    session_manager = DMSCSessionManager()
+    session_manager = RiSessionManager()
 
     # Create a session
     print("\nCreating session...")
-    session = DMSCSession()
+    session = RiSession()
     session.session_id = "sess_123456"
     session.user_id = "user123"
     session.data = {"login_time": "2025-01-01T00:00:00Z", "ip": "192.168.1.1"}
@@ -137,10 +137,10 @@ async def main():
         print(f"Retrieved session for user: {retrieved_session.user_id}")
 
     # Create OAuth manager
-    oauth_manager = DMSCOAuthManager()
+    oauth_manager = RiOAuthManager()
 
     # Configure OAuth providers
-    google_provider = DMSCOAuthProvider()
+    google_provider = RiOAuthProvider()
     google_provider.name = "google"
     google_provider.client_id = "google-client-id"
     google_provider.client_secret = "google-client-secret"
@@ -148,7 +148,7 @@ async def main():
     google_provider.token_url = "https://oauth2.googleapis.com/token"
     google_provider.scopes = ["openid", "email", "profile"]
 
-    github_provider = DMSCOAuthProvider()
+    github_provider = RiOAuthProvider()
     github_provider.name = "github"
     github_provider.client_id = "github-client-id"
     github_provider.client_secret = "github-client-secret"
@@ -157,7 +157,7 @@ async def main():
     github_provider.scopes = ["user:email", "read:user"]
 
     # Create OAuth token
-    oauth_token = DMSCOAuthToken()
+    oauth_token = RiOAuthToken()
     oauth_token.access_token = "oauth_access_token_123"
     oauth_token.refresh_token = "oauth_refresh_token_456"
     oauth_token.token_type = "Bearer"
@@ -167,10 +167,10 @@ async def main():
     print("\nOAuth configuration completed!")
 
     # Create revocation list for token blacklisting
-    revocation_list = DMSCJWTRevocationList()
+    revocation_list = RiJWTRevocationList()
 
     # Revoke a token
-    revoked_info = DMSCRevokedTokenInfo()
+    revoked_info = RiRevokedTokenInfo()
     revoked_info.token_id = "token_123"
     revoked_info.revoked_at = 0
     revoked_info.reason = "User logout"

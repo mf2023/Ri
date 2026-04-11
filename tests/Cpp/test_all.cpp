@@ -1,8 +1,8 @@
 /*
  * Copyright © 2025-2026 Wenze Wei. All Rights Reserved.
  *
- * This file is part of DMSC.
- * The DMSC project belongs to the Dunimd Team.
+ * This file is part of Ri.
+ * The Ri project belongs to the Dunimd Team.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * You may not use this file except in compliance with the License.
@@ -17,135 +17,135 @@
  * limitations under the License.
  */
 
-#include <dmsc.hpp>
+#include <ri.hpp>
 #include <iostream>
 #include <memory>
 
 /**
- * Test all DMSC C++ bindings.
+ * Test all Ri C++ bindings.
  *
  * This test file is located in the unified tests directory (tests/Cpp/)
  * rather than in the source code directory, following the project's testing convention.
  */
 int main() {
-    std::cout << "=== DMSC C++ Binding Test ===" << std::endl << std::endl;
+    std::cout << "=== Ri C++ Binding Test ===" << std::endl << std::endl;
     
     int passed = 0;
     int failed = 0;
     
-    /* Test DMSCAppBuilder */
-    std::cout << "Testing DMSCAppBuilder..." << std::endl;
+    /* Test RiAppBuilder */
+    std::cout << "Testing RiAppBuilder..." << std::endl;
     try {
-        dmsc::DMSCAppBuilder builder;
-        std::cout << "[PASS] DMSCAppBuilder created" << std::endl;
+        ri::RiAppBuilder builder;
+        std::cout << "[PASS] RiAppBuilder created" << std::endl;
         passed++;
-    } catch (const dmsc::DMSCError& e) {
-        std::cout << "[FAIL] DMSCAppBuilder: " << e.what() << std::endl;
+    } catch (const ri::RiError& e) {
+        std::cout << "[FAIL] RiAppBuilder: " << e.what() << std::endl;
         failed++;
     }
     
-    /* Test DMSCAppBuilder chaining (returns new object) */
-    std::cout << std::endl << "Testing DMSCAppBuilder chaining..." << std::endl;
+    /* Test RiAppBuilder chaining (returns new object) */
+    std::cout << std::endl << "Testing RiAppBuilder chaining..." << std::endl;
     try {
-        dmsc::DMSCAppBuilder builder1;
-        dmsc::DMSCAppBuilder builder2 = builder1.with_config("config.yaml");
+        ri::RiAppBuilder builder1;
+        ri::RiAppBuilder builder2 = builder1.with_config("config.yaml");
         
-        std::cout << "[PASS] DMSCAppBuilder chaining creates new object" << std::endl;
+        std::cout << "[PASS] RiAppBuilder chaining creates new object" << std::endl;
         passed++;
-    } catch (const dmsc::DMSCError& e) {
-        std::cout << "[FAIL] DMSCAppBuilder chaining: " << e.what() << std::endl;
+    } catch (const ri::RiError& e) {
+        std::cout << "[FAIL] RiAppBuilder chaining: " << e.what() << std::endl;
         failed++;
     }
     
-    /* Test DMSCConfig */
-    std::cout << std::endl << "Testing DMSCConfig..." << std::endl;
+    /* Test RiConfig */
+    std::cout << std::endl << "Testing RiConfig..." << std::endl;
     try {
-        dmsc::DMSCConfig config;
-        std::cout << "[PASS] DMSCConfig created" << std::endl;
+        ri::RiConfig config;
+        std::cout << "[PASS] RiConfig created" << std::endl;
         passed++;
-    } catch (const dmsc::DMSCError& e) {
-        std::cout << "[FAIL] DMSCConfig: " << e.what() << std::endl;
+    } catch (const ri::RiError& e) {
+        std::cout << "[FAIL] RiConfig: " << e.what() << std::endl;
         failed++;
     }
     
-    /* Test DMSCCacheModule */
-    std::cout << std::endl << "Testing DMSCCacheModule..." << std::endl;
+    /* Test RiCacheModule */
+    std::cout << std::endl << "Testing RiCacheModule..." << std::endl;
     try {
-        dmsc::DMSCCacheConfig config;
-        dmsc::DMSCCacheModule cache(config);
-        std::cout << "[PASS] DMSCCacheModule created" << std::endl;
+        ri::RiCacheConfig config;
+        ri::RiCacheModule cache(config);
+        std::cout << "[PASS] RiCacheModule created" << std::endl;
         passed++;
-    } catch (const dmsc::DMSCError& e) {
-        std::cout << "[FAIL] DMSCCacheModule: " << e.what() << std::endl;
+    } catch (const ri::RiError& e) {
+        std::cout << "[FAIL] RiCacheModule: " << e.what() << std::endl;
         failed++;
     }
     
-    /* Test DMSCAuthModule */
-    std::cout << std::endl << "Testing DMSCAuthModule..." << std::endl;
+    /* Test RiAuthModule */
+    std::cout << std::endl << "Testing RiAuthModule..." << std::endl;
     try {
-        dmsc::DMSCAuthConfig config;
-        dmsc::DMSCAuthModule auth(config);
-        std::cout << "[PASS] DMSCAuthModule created" << std::endl;
+        ri::RiAuthConfig config;
+        ri::RiAuthModule auth(config);
+        std::cout << "[PASS] RiAuthModule created" << std::endl;
         passed++;
-    } catch (const dmsc::DMSCError& e) {
-        std::cout << "[FAIL] DMSCAuthModule: " << e.what() << std::endl;
+    } catch (const ri::RiError& e) {
+        std::cout << "[FAIL] RiAuthModule: " << e.what() << std::endl;
         failed++;
     }
     
-    /* Test DMSCGateway */
-    std::cout << std::endl << "Testing DMSCGateway..." << std::endl;
+    /* Test RiGateway */
+    std::cout << std::endl << "Testing RiGateway..." << std::endl;
     try {
-        dmsc::DMSCGateway gateway;
-        std::cout << "[PASS] DMSCGateway created" << std::endl;
+        ri::RiGateway gateway;
+        std::cout << "[PASS] RiGateway created" << std::endl;
         passed++;
-    } catch (const dmsc::DMSCError& e) {
-        std::cout << "[FAIL] DMSCGateway: " << e.what() << std::endl;
+    } catch (const ri::RiError& e) {
+        std::cout << "[FAIL] RiGateway: " << e.what() << std::endl;
         failed++;
     }
     
-    /* Test DMSCQueueModule */
-    std::cout << std::endl << "Testing DMSCQueueModule..." << std::endl;
+    /* Test RiQueueModule */
+    std::cout << std::endl << "Testing RiQueueModule..." << std::endl;
     try {
-        dmsc::DMSCQueueConfig config;
-        dmsc::DMSCQueueModule queue(config);
-        std::cout << "[PASS] DMSCQueueModule created" << std::endl;
+        ri::RiQueueConfig config;
+        ri::RiQueueModule queue(config);
+        std::cout << "[PASS] RiQueueModule created" << std::endl;
         passed++;
-    } catch (const dmsc::DMSCError& e) {
-        std::cout << "[FAIL] DMSCQueueModule: " << e.what() << std::endl;
+    } catch (const ri::RiError& e) {
+        std::cout << "[FAIL] RiQueueModule: " << e.what() << std::endl;
         failed++;
     }
     
-    /* Test DMSCServiceMesh */
-    std::cout << std::endl << "Testing DMSCServiceMesh..." << std::endl;
+    /* Test RiServiceMesh */
+    std::cout << std::endl << "Testing RiServiceMesh..." << std::endl;
     try {
-        dmsc::DMSCServiceMeshConfig config;
-        dmsc::DMSCServiceMesh mesh(config);
-        std::cout << "[PASS] DMSCServiceMesh created" << std::endl;
+        ri::RiServiceMeshConfig config;
+        ri::RiServiceMesh mesh(config);
+        std::cout << "[PASS] RiServiceMesh created" << std::endl;
         passed++;
-    } catch (const dmsc::DMSCError& e) {
-        std::cout << "[FAIL] DMSCServiceMesh: " << e.what() << std::endl;
+    } catch (const ri::RiError& e) {
+        std::cout << "[FAIL] RiServiceMesh: " << e.what() << std::endl;
         failed++;
     }
     
-    /* Test DMSCLogger */
-    std::cout << std::endl << "Testing DMSCLogger..." << std::endl;
+    /* Test RiLogger */
+    std::cout << std::endl << "Testing RiLogger..." << std::endl;
     try {
-        dmsc::DMSCLogger logger;
-        std::cout << "[PASS] DMSCLogger created" << std::endl;
+        ri::RiLogger logger;
+        std::cout << "[PASS] RiLogger created" << std::endl;
         passed++;
-    } catch (const dmsc::DMSCError& e) {
-        std::cout << "[FAIL] DMSCLogger: " << e.what() << std::endl;
+    } catch (const ri::RiError& e) {
+        std::cout << "[FAIL] RiLogger: " << e.what() << std::endl;
         failed++;
     }
     
-    /* Test DMSCFileSystem */
-    std::cout << std::endl << "Testing DMSCFileSystem..." << std::endl;
+    /* Test RiFileSystem */
+    std::cout << std::endl << "Testing RiFileSystem..." << std::endl;
     try {
-        dmsc::DMSCFileSystem fs;
-        std::cout << "[PASS] DMSCFileSystem created" << std::endl;
+        ri::RiFileSystem fs;
+        std::cout << "[PASS] RiFileSystem created" << std::endl;
         passed++;
-    } catch (const dmsc::DMSCError& e) {
-        std::cout << "[FAIL] DMSCFileSystem: " << e.what() << std::endl;
+    } catch (const ri::RiError& e) {
+        std::cout << "[FAIL] RiFileSystem: " << e.what() << std::endl;
         failed++;
     }
     

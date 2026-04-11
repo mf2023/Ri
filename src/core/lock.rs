@@ -1,7 +1,7 @@
 //! Copyright © 2025-2026 Wenze Wei. All Rights Reserved.
 //!
-//! This file is part of DMSC.
-//! The DMSC project belongs to the Dunimd Team.
+//! This file is part of Ri.
+//! The Ri project belongs to the Dunimd Team.
 //!
 //! Licensed under the Apache License, Version 2.0 (the "License");
 //! You may not use this file except in compliance with the License.
@@ -24,8 +24,8 @@
 //!
 //! ## Key Components
 //!
-//! - **DMSCLockError**: Specialized error type for lock-related failures
-//! - **DMSCLockResult**: Result type alias for lock operations
+//! - **RiLockError**: Specialized error type for lock-related failures
+//! - **RiLockResult**: Result type alias for lock operations
 //! - **RwLockExtensions**: Extension traits for standard `RwLock` types
 //! - **MutexExtensions**: Extension traits for standard `Mutex` types
 //!
@@ -40,7 +40,7 @@
 //!
 //! ```rust,ignore
 //! use std::sync::Arc;
-//! use dmsc::core::lock::{RwLockExtensions, DMSCLockResult};
+//! use ri::core::lock::{RwLockExtensions, RiLockResult};
 //!
 //! struct SharedState {
 //!     counter: u64,
@@ -56,7 +56,7 @@
 //!     }
 //! }
 //!
-//! fn example() -> DMSCLockResult<()> {
+//! fn example() -> RiLockResult<()> {
 //!     let state = Arc::new(RwLock::new(SharedState { counter: 0 }));
 //!
 //!     // Write lock with error handling
@@ -88,12 +88,12 @@ use pyo3::pyclass;
 /// context about the lock's purpose for better debugging.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "pyo3", pyclass)]
-pub struct DMSCLockError {
+pub struct RiLockError {
     context: String,
     is_poisoned: bool,
 }
 
-impl DMSCLockError {
+impl RiLockError {
     /// Creates a new lock error with the given context.
     ///
     /// # Arguments
@@ -102,7 +102,7 @@ impl DMSCLockError {
     ///
     /// # Returns
     ///
-    ///     A new `DMSCLockError` instance
+    ///     A new `RiLockError` instance
     pub fn new(context: &str) -> Self {
         Self {
             context: context.to_string(),
@@ -118,7 +118,7 @@ impl DMSCLockError {
     ///
     /// # Returns
     ///
-    ///     A new `DMSCLockError` instance marked as poisoned
+    ///     A new `RiLockError` instance marked as poisoned
     pub fn poisoned(context: &str) -> Self {
         Self {
             context: context.to_string(),
@@ -132,7 +132,7 @@ impl DMSCLockError {
     }
 }
 
-impl fmt::Display for DMSCLockError {
+impl fmt::Display for RiLockError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         if self.is_poisoned {
             write!(f, "Lock poisoned during acquisition: {}", self.context)
@@ -142,11 +142,11 @@ impl fmt::Display for DMSCLockError {
     }
 }
 
-impl std::error::Error for DMSCLockError {}
+impl std::error::Error for RiLockError {}
 
 #[cfg(feature = "pyo3")]
 #[pyo3::prelude::pymethods]
-impl DMSCLockError {
+impl RiLockError {
     #[new]
     fn new_py(context: String, is_poisoned: bool) -> Self {
         Self {
@@ -186,7 +186,7 @@ impl DMSCLockError {
     }
 
     fn __repr__(&self) -> String {
-        format!("DMSCLockError {{ context: {:?}, is_poisoned: {} }}", self.context, self.is_poisoned)
+        format!("RiLockError {{ context: {:?}, is_poisoned: {} }}", self.context, self.is_poisoned)
     }
 }
 
@@ -194,7 +194,7 @@ impl DMSCLockError {
 ///
 /// This type alias simplifies error handling for lock-related operations,
 /// providing a consistent return type for all lock acquisitions.
-pub type DMSCLockResult<T> = Result<T, DMSCLockError>;
+pub type RiLockResult<T> = Result<T, RiLockError>;
 
 /// Extension trait providing safe read lock acquisition for `RwLock`.
 ///
@@ -214,13 +214,13 @@ pub trait RwLockExtensions<T: Send + Sync> {
     /// ## Returns
     ///
     /// - `Ok(RwLockReadGuard<T>)` if the lock was acquired successfully
-    /// - `Err(DMSCLockError)` if the lock could not be acquired
+    /// - `Err(RiLockError)` if the lock could not be acquired
     ///
     /// ## Examples
     ///
     /// ```rust,ignore
     /// use std::sync::RwLock;
-    /// use dmsc::core::lock::RwLockExtensions;
+    /// use ri::core::lock::RwLockExtensions;
     ///
     /// let lock = RwLock::new(42);
     ///
@@ -229,7 +229,7 @@ pub trait RwLockExtensions<T: Send + Sync> {
     ///     Err(e) => println!("Failed to acquire lock: {}", e),
     /// }
     /// ```
-    fn read_safe(&self, context: &str) -> DMSCLockResult<RwLockReadGuard<'_, T>>;
+    fn read_safe(&self, context: &str) -> RiLockResult<RwLockReadGuard<'_, T>>;
     
     /// Acquires a write lock safely, returning a Result instead of panicking.
     ///
@@ -244,13 +244,13 @@ pub trait RwLockExtensions<T: Send + Sync> {
     /// ## Returns
     ///
     /// - `Ok(RwLockWriteGuard<T>)` if the lock was acquired successfully
-    /// - `Err(DMSCLockError)` if the lock could not be acquired
+    /// - `Err(RiLockError)` if the lock could not be acquired
     ///
     /// ## Examples
     ///
     /// ```rust,ignore
     /// use std::sync::RwLock;
-    /// use dmsc::core::lock::RwLockExtensions;
+    /// use ri::core::lock::RwLockExtensions;
     ///
     /// let lock = RwLock::new(42);
     ///
@@ -262,7 +262,7 @@ pub trait RwLockExtensions<T: Send + Sync> {
     ///     Err(e) => println!("Failed to acquire lock: {}", e),
     /// }
     /// ```
-    fn write_safe(&self, context: &str) -> DMSCLockResult<RwLockWriteGuard<'_, T>>;
+    fn write_safe(&self, context: &str) -> RiLockResult<RwLockWriteGuard<'_, T>>;
     
     /// Attempts to acquire a read lock, returning immediately if unavailable.
     ///
@@ -277,8 +277,8 @@ pub trait RwLockExtensions<T: Send + Sync> {
     ///
     /// - `Ok(Some(RwLockReadGuard<T>))` if the lock was acquired
     /// - `Ok(None)` if the lock is held by a writer
-    /// - `Err(DMSCLockError)` if the lock is poisoned
-    fn try_read_safe(&self, context: &str) -> DMSCLockResult<Option<RwLockReadGuard<'_, T>>>;
+    /// - `Err(RiLockError)` if the lock is poisoned
+    fn try_read_safe(&self, context: &str) -> RiLockResult<Option<RwLockReadGuard<'_, T>>>;
     
     /// Attempts to acquire a write lock, returning immediately if unavailable.
     ///
@@ -293,38 +293,38 @@ pub trait RwLockExtensions<T: Send + Sync> {
     ///
     /// - `Ok(Some(RwLockWriteGuard<T>))` if the lock was acquired
     /// - `Ok(None)` if the lock is held by readers or a writer
-    /// - `Err(DMSCLockError)` if the lock is poisoned
-    fn try_write_safe(&self, context: &str) -> DMSCLockResult<Option<RwLockWriteGuard<'_, T>>>;
+    /// - `Err(RiLockError)` if the lock is poisoned
+    fn try_write_safe(&self, context: &str) -> RiLockResult<Option<RwLockWriteGuard<'_, T>>>;
 }
 
 impl<T: Send + Sync> RwLockExtensions<T> for RwLock<T> {
-    fn read_safe(&self, context: &str) -> DMSCLockResult<RwLockReadGuard<'_, T>> {
+    fn read_safe(&self, context: &str) -> RiLockResult<RwLockReadGuard<'_, T>> {
         RwLock::read(self).map_err(|_| {
-            DMSCLockError::poisoned(context)
+            RiLockError::poisoned(context)
         })
     }
     
-    fn write_safe(&self, context: &str) -> DMSCLockResult<RwLockWriteGuard<'_, T>> {
+    fn write_safe(&self, context: &str) -> RiLockResult<RwLockWriteGuard<'_, T>> {
         RwLock::write(self).map_err(|_| {
-            DMSCLockError::poisoned(context)
+            RiLockError::poisoned(context)
         })
     }
     
-    fn try_read_safe(&self, context: &str) -> DMSCLockResult<Option<RwLockReadGuard<'_, T>>> {
+    fn try_read_safe(&self, context: &str) -> RiLockResult<Option<RwLockReadGuard<'_, T>>> {
         match RwLock::try_read(self) {
             Ok(guard) => Ok(Some(guard)),
             Err(std::sync::TryLockError::Poisoned(_)) => {
-                Err(DMSCLockError::poisoned(context))
+                Err(RiLockError::poisoned(context))
             }
             Err(std::sync::TryLockError::WouldBlock) => Ok(None),
         }
     }
     
-    fn try_write_safe(&self, context: &str) -> DMSCLockResult<Option<RwLockWriteGuard<'_, T>>> {
+    fn try_write_safe(&self, context: &str) -> RiLockResult<Option<RwLockWriteGuard<'_, T>>> {
         match RwLock::try_write(self) {
             Ok(guard) => Ok(Some(guard)),
             Err(std::sync::TryLockError::Poisoned(_)) => {
-                Err(DMSCLockError::poisoned(context))
+                Err(RiLockError::poisoned(context))
             }
             Err(std::sync::TryLockError::WouldBlock) => Ok(None),
         }
@@ -349,13 +349,13 @@ pub trait MutexExtensions<T: Send> {
     /// ## Returns
     ///
     /// - `Ok(MutexGuard<T>)` if the lock was acquired successfully
-    /// - `Err(DMSCLockError)` if the lock could not be acquired
+    /// - `Err(RiLockError)` if the lock could not be acquired
     ///
     /// ## Examples
     ///
     /// ```rust,ignore
     /// use std::sync::Mutex;
-    /// use dmsc::core::lock::MutexExtensions;
+    /// use ri::core::lock::MutexExtensions;
     ///
     /// let mutex = Mutex::new(42);
     ///
@@ -364,7 +364,7 @@ pub trait MutexExtensions<T: Send> {
     ///     Err(e) => println!("Failed to acquire lock: {}", e),
     /// }
     /// ```
-    fn lock_safe(&self, context: &str) -> DMSCLockResult<MutexGuard<'_, T>>;
+    fn lock_safe(&self, context: &str) -> RiLockResult<MutexGuard<'_, T>>;
     
     /// Attempts to acquire the lock, returning immediately if unavailable.
     ///
@@ -379,29 +379,29 @@ pub trait MutexExtensions<T: Send> {
     ///
     /// - `Ok(Some(MutexGuard<T>))` if the lock was acquired
     /// - `Ok(None)` if the lock is held by another thread
-    /// - `Err(DMSCLockError)` if the lock is poisoned
-    fn try_lock_safe(&self, context: &str) -> DMSCLockResult<Option<MutexGuard<'_, T>>>;
+    /// - `Err(RiLockError)` if the lock is poisoned
+    fn try_lock_safe(&self, context: &str) -> RiLockResult<Option<MutexGuard<'_, T>>>;
 }
 
 impl<T: Send> MutexExtensions<T> for Mutex<T> {
-    fn lock_safe(&self, context: &str) -> DMSCLockResult<MutexGuard<'_, T>> {
+    fn lock_safe(&self, context: &str) -> RiLockResult<MutexGuard<'_, T>> {
         Mutex::lock(self).map_err(|_| {
-            DMSCLockError::poisoned(context)
+            RiLockError::poisoned(context)
         })
     }
     
-    fn try_lock_safe(&self, context: &str) -> DMSCLockResult<Option<MutexGuard<'_, T>>> {
+    fn try_lock_safe(&self, context: &str) -> RiLockResult<Option<MutexGuard<'_, T>>> {
         match Mutex::try_lock(self) {
             Ok(guard) => Ok(Some(guard)),
             Err(std::sync::TryLockError::Poisoned(_)) => {
-                Err(DMSCLockError::poisoned(context))
+                Err(RiLockError::poisoned(context))
             }
             Err(std::sync::TryLockError::WouldBlock) => Ok(None),
         }
     }
 }
 
-/// Utility function to convert from `PoisonError` to `DMSCLockError`.
+/// Utility function to convert from `PoisonError` to `RiLockError`.
 ///
 /// This conversion is useful when working with standard library types that
 /// return `PoisonError` and you want to convert to our custom lock error type.
@@ -413,9 +413,9 @@ impl<T: Send> MutexExtensions<T> for Mutex<T> {
 ///
 /// ## Returns
 ///
-/// A `DMSCLockError` with the appropriate context and poisoned flag
-pub fn from_poison_error<T>(_error: PoisonError<T>, context: &str) -> DMSCLockError {
-    DMSCLockError::poisoned(context)
+/// A `RiLockError` with the appropriate context and poisoned flag
+pub fn from_poison_error<T>(_error: PoisonError<T>, context: &str) -> RiLockError {
+    RiLockError::poisoned(context)
 }
 
 #[cfg(test)]
@@ -469,10 +469,10 @@ mod tests {
 
     #[test]
     fn test_lock_error_display() {
-        let error = DMSCLockError::new("test context");
+        let error = RiLockError::new("test context");
         assert_eq!(error.to_string(), "Lock acquisition failed: test context");
         
-        let poisoned = DMSCLockError::poisoned("poisoned lock");
+        let poisoned = RiLockError::poisoned("poisoned lock");
         assert_eq!(poisoned.to_string(), "Lock poisoned during acquisition: poisoned lock");
         assert!(poisoned.is_poisoned());
     }

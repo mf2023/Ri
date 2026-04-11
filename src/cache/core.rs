@@ -1,7 +1,7 @@
 //! Copyright © 2025-2026 Wenze Wei. All Rights Reserved.
 //!
-//! This file is part of DMSC.
-//! The DMSC project belongs to the Dunimd Team.
+//! This file is part of Ri.
+//! The Ri project belongs to the Dunimd Team.
 //!
 //! Licensed under the Apache License, Version 2.0 (the "License");
 //! You may not use this file except in compliance with the License.
@@ -17,20 +17,20 @@
 
 //! # Core Module
 //!
-//! This module provides the core abstractions and data structures for the DMSC caching system.
+//! This module provides the core abstractions and data structures for the Ri caching system.
 //! It defines the foundational traits, event types, statistics, and value wrappers that all
 //! cache backend implementations rely upon.
 //!
 //! ## Key Components
 //!
-//! - **[`DMSCCache`](DMSCCache)**: Core trait defining the cache interface with async operations
-//! - **[`DMSCCacheEvent`](DMSCCacheEvent)**: Event types for cache monitoring and consistency
-//! - **[`DMSCCacheStats`](DMSCCacheStats)**: Statistics tracking for cache performance monitoring
-//! - **[`DMSCCachedValue`](DMSCCachedValue)**: Wrapper for cached values with TTL and LRU support
+//! - **[`RiCache`](RiCache)**: Core trait defining the cache interface with async operations
+//! - **[`RiCacheEvent`](RiCacheEvent)**: Event types for cache monitoring and consistency
+//! - **[`RiCacheStats`](RiCacheStats)**: Statistics tracking for cache performance monitoring
+//! - **[`RiCachedValue`](RiCachedValue)**: Wrapper for cached values with TTL and LRU support
 //!
 //! ## Design Principles
 //!
-//! 1. **Trait-based Architecture**: All backends implement the DMSCCache trait for consistency
+//! 1. **Trait-based Architecture**: All backends implement the RiCache trait for consistency
 //! 2. **Async-first**: Full async/await support for non-blocking cache operations
 //! 3. **Thread Safety**: All implementations are Send + Sync for concurrent access
 //! 4. **Extensibility**: Easy to add new cache backends by implementing the trait
@@ -40,12 +40,12 @@
 //! ## Usage Example
 //!
 //! ```rust
-//! use dmsc::cache::{DMSCCache, DMSCCacheEvent, DMSCCacheStats, DMSCCachedValue};
-//! use dmsc::cache::backends::DMSCMemoryCache;
+//! use ri::cache::{RiCache, RiCacheEvent, RiCacheStats, RiCachedValue};
+//! use ri::cache::backends::RiMemoryCache;
 //!
-//! async fn example() -> dmsc::core::DMSCResult<()> {
+//! async fn example() -> ri::core::RiResult<()> {
 //!     // Create a memory cache backend
-//!     let cache = DMSCMemoryCache::new();
+//!     let cache = RiMemoryCache::new();
 //!
 //!     // Set a value with 1-hour TTL
 //!     cache.set("user:123", "{\"name\": \"Alice\"}", Some(3600)).await?;
@@ -58,7 +58,7 @@
 //!     let exists = cache.exists("user:123").await;
 //!
 //!     // Get cache statistics
-//!     let stats: DMSCCacheStats = cache.stats().await;
+//!     let stats: RiCacheStats = cache.stats().await;
 //!
 //!     // Clean up expired entries
 //!     let cleaned = cache.cleanup_expired().await?;
@@ -67,25 +67,25 @@
 //! }
 //! ```
 
-use crate::core::{DMSCResult, DMSCError};
+use crate::core::{RiResult, RiError};
 use std::time::Duration;
 use serde::{Serialize, Deserialize};
 
 #[cfg(feature = "pyo3")]
 use pyo3::prelude::*;
 
-/// Cache trait for DMSC cache implementations.
+/// Cache trait for Ri cache implementations.
 ///
-/// This trait defines the core interface for all cache backends in DMSC.
+/// This trait defines the core interface for all cache backends in Ri.
 /// Implementations must provide thread-safe, asynchronous cache operations
 /// with support for TTL-based expiration and comprehensive statistics tracking.
 ///
 /// ## Implementations
 ///
-/// DMSC provides several built-in implementations:
-/// - **[`DMSCMemoryCache`](super::backends::DMSCMemoryCache)**: In-memory cache using DashMap
-/// - **[`DMSCRedisCache`](super::backends::DMSCRedisCache)**: Distributed cache using Redis
-/// - **[`DMSCHybridCache`](super::backends::DMSCHybridCache)**: Multi-layer cache combining memory and Redis
+/// Ri provides several built-in implementations:
+/// - **[`RiMemoryCache`](super::backends::RiMemoryCache)**: In-memory cache using DashMap
+/// - **[`RiRedisCache`](super::backends::RiRedisCache)**: Distributed cache using Redis
+/// - **[`RiHybridCache`](super::backends::RiHybridCache)**: Multi-layer cache combining memory and Redis
 ///
 /// ## Thread Safety
 ///
@@ -108,11 +108,11 @@ use pyo3::prelude::*;
 /// ## Example
 ///
 /// ```rust
-/// use dmsc::cache::DMSCCache;
-/// use dmsc::cache::backends::DMSCMemoryCache;
+/// use ri::cache::RiCache;
+/// use ri::cache::backends::RiMemoryCache;
 ///
-/// async fn example() -> dmsc::core::DMSCResult<()> {
-///     let cache = DMSCMemoryCache::new();
+/// async fn example() -> ri::core::RiResult<()> {
+///     let cache = RiMemoryCache::new();
 ///
 ///     // Store a value with 1-hour TTL
 ///     cache.set("user:123", "Alice", Some(3600)).await?;
@@ -135,7 +135,7 @@ use pyo3::prelude::*;
 /// }
 /// ```
 #[async_trait::async_trait]
-pub trait DMSCCache: Send + Sync {
+pub trait RiCache: Send + Sync {
     /// Retrieves a value from the cache by key.
     ///
     /// This method looks up the specified key in the cache. If the key exists
@@ -160,18 +160,18 @@ pub trait DMSCCache: Send + Sync {
     ///
     /// # Returns
     ///
-    /// A `DMSCResult<Option<String>>` containing:
+    /// A `RiResult<Option<String>>` containing:
     /// - `Ok(Some(value))` if the key exists and is not expired
     /// - `Ok(None)` if the key doesn't exist or has expired
-    /// - `Err(DMSCError)` if an error occurred during the operation
+    /// - `Err(RiError)` if an error occurred during the operation
     ///
     /// # Examples
     ///
     /// ```rust
-    /// use dmsc::cache::backends::DMSCMemoryCache;
+    /// use ri::cache::backends::RiMemoryCache;
     ///
-    /// async fn example() -> dmsc::core::DMSCResult<()> {
-    ///     let cache = DMSCMemoryCache::new();
+    /// async fn example() -> ri::core::RiResult<()> {
+    ///     let cache = RiMemoryCache::new();
     ///
     ///     // Key doesn't exist
     ///     let result = cache.get("missing").await?;
@@ -187,7 +187,7 @@ pub trait DMSCCache: Send + Sync {
     ///     Ok(())
     /// }
     /// ```
-    async fn get(&self, key: &str) -> DMSCResult<Option<String>>;
+    async fn get(&self, key: &str) -> RiResult<Option<String>>;
 
     /// Stores a value in the cache with an optional TTL.
     ///
@@ -217,15 +217,15 @@ pub trait DMSCCache: Send + Sync {
     ///
     /// # Returns
     ///
-    /// A `DMSCResult<()>` indicating success or failure
+    /// A `RiResult<()>` indicating success or failure
     ///
     /// # Examples
     ///
     /// ```rust
-    /// use dmsc::cache::backends::DMSCMemoryCache;
+    /// use ri::cache::backends::RiMemoryCache;
     ///
-    /// async fn example() -> dmsc::core::DMSCResult<()> {
-    ///     let cache = DMSCMemoryCache::new();
+    /// async fn example() -> ri::core::RiResult<()> {
+    ///     let cache = RiMemoryCache::new();
     ///
     ///     // Store a value without expiration
     ///     cache.set("persistent", "data", None).await?;
@@ -236,7 +236,7 @@ pub trait DMSCCache: Send + Sync {
     ///     Ok(())
     /// }
     /// ```
-    async fn set(&self, key: &str, value: &str, ttl_seconds: Option<u64>) -> DMSCResult<()>;
+    async fn set(&self, key: &str, value: &str, ttl_seconds: Option<u64>) -> RiResult<()>;
 
     /// Removes a value from the cache by key.
     ///
@@ -255,18 +255,18 @@ pub trait DMSCCache: Send + Sync {
     ///
     /// # Returns
     ///
-    /// A `DMSCResult<bool>` containing:
+    /// A `RiResult<bool>` containing:
     /// - `Ok(true)` if the key was found and deleted
     /// - `Ok(false)` if the key didn't exist
-    /// - `Err(DMSCError)` if an error occurred during the operation
+    /// - `Err(RiError)` if an error occurred during the operation
     ///
     /// # Examples
     ///
     /// ```rust
-    /// use dmsc::cache::backends::DMSCMemoryCache;
+    /// use ri::cache::backends::RiMemoryCache;
     ///
-    /// async fn example() -> dmsc::core::DMSCResult<()> {
-    ///     let cache = DMSCMemoryCache::new();
+    /// async fn example() -> ri::core::RiResult<()> {
+    ///     let cache = RiMemoryCache::new();
     ///
     ///     // Delete non-existent key
     ///     let deleted = cache.delete("missing").await?;
@@ -280,7 +280,7 @@ pub trait DMSCCache: Send + Sync {
     ///     Ok(())
     /// }
     /// ```
-    async fn delete(&self, key: &str) -> DMSCResult<bool>;
+    async fn delete(&self, key: &str) -> RiResult<bool>;
 
     /// Removes all entries from the cache.
     ///
@@ -295,15 +295,15 @@ pub trait DMSCCache: Send + Sync {
     ///
     /// # Returns
     ///
-    /// A `DMSCResult<()>` indicating success or failure
+    /// A `RiResult<()>` indicating success or failure
     ///
     /// # Examples
     ///
     /// ```rust
-    /// use dmsc::cache::backends::DMSCMemoryCache;
+    /// use ri::cache::backends::RiMemoryCache;
     ///
-    /// async fn example() -> dmsc::core::DMSCResult<()> {
-    ///     let cache = DMSCMemoryCache::new();
+    /// async fn example() -> ri::core::RiResult<()> {
+    ///     let cache = RiMemoryCache::new();
     ///
     ///     // Add some entries
     ///     cache.set("a", "1", None).await?;
@@ -319,7 +319,7 @@ pub trait DMSCCache: Send + Sync {
     ///     Ok(())
     /// }
     /// ```
-    async fn clear(&self) -> DMSCResult<()>;
+    async fn clear(&self) -> RiResult<()>;
 
     /// Returns current cache statistics.
     ///
@@ -342,15 +342,15 @@ pub trait DMSCCache: Send + Sync {
     ///
     /// # Returns
     ///
-    /// A `DMSCCacheStats` struct containing all cache metrics
+    /// A `RiCacheStats` struct containing all cache metrics
     ///
     /// # Examples
     ///
     /// ```rust
-    /// use dmsc::cache::backends::DMSCMemoryCache;
+    /// use ri::cache::backends::RiMemoryCache;
     ///
     /// async fn example() {
-    ///     let cache = DMSCMemoryCache::new();
+    ///     let cache = RiMemoryCache::new();
     ///
     ///     // Perform some cache operations
     ///     let _ = cache.get("missing").await;
@@ -363,7 +363,7 @@ pub trait DMSCCache: Send + Sync {
     ///     println!("Hit rate: {:.1}%", stats.avg_hit_rate * 100.0);
     /// }
     /// ```
-    async fn stats(&self) -> DMSCCacheStats;
+    async fn stats(&self) -> RiCacheStats;
 
     /// Removes all expired entries from the cache.
     ///
@@ -384,15 +384,15 @@ pub trait DMSCCache: Send + Sync {
     ///
     /// # Returns
     ///
-    /// A `DMSCResult<usize>` containing the number of expired entries removed
+    /// A `RiResult<usize>` containing the number of expired entries removed
     ///
     /// # Examples
     ///
     /// ```rust
-    /// use dmsc::cache::backends::DMSCMemoryCache;
+    /// use ri::cache::backends::RiMemoryCache;
     ///
-    /// async fn example() -> dmsc::core::DMSCResult<()> {
-    ///     let cache = DMSCMemoryCache::new();
+    /// async fn example() -> ri::core::RiResult<()> {
+    ///     let cache = RiMemoryCache::new();
     ///
     ///     // Add entries with short TTL
     ///     cache.set("short-lived", "data", Some(1)).await?;
@@ -407,7 +407,7 @@ pub trait DMSCCache: Send + Sync {
     ///     Ok(())
     /// }
     /// ```
-    async fn cleanup_expired(&self) -> DMSCResult<usize>;
+    async fn cleanup_expired(&self) -> RiResult<usize>;
 
     /// Checks if a key exists in the cache and is not expired.
     ///
@@ -435,10 +435,10 @@ pub trait DMSCCache: Send + Sync {
     /// # Examples
     ///
     /// ```rust
-    /// use dmsc::cache::backends::DMSCMemoryCache;
+    /// use ri::cache::backends::RiMemoryCache;
     ///
-    /// async fn example() -> dmsc::core::DMSCResult<()> {
-    ///     let cache = DMSCMemoryCache::new();
+    /// async fn example() -> ri::core::RiResult<()> {
+    ///     let cache = RiMemoryCache::new();
     ///
     ///     assert!(!cache.exists("missing").await);
     ///
@@ -467,15 +467,15 @@ pub trait DMSCCache: Send + Sync {
     ///
     /// # Returns
     ///
-    /// A `DMSCResult<Vec<String>>` containing all cache keys
+    /// A `RiResult<Vec<String>>` containing all cache keys
     ///
     /// # Examples
     ///
     /// ```rust
-    /// use dmsc::cache::backends::DMSCMemoryCache;
+    /// use ri::cache::backends::RiMemoryCache;
     ///
-    /// async fn example() -> dmsc::core::DMSCResult<()> {
-    ///     let cache = DMSCMemoryCache::new();
+    /// async fn example() -> ri::core::RiResult<()> {
+    ///     let cache = RiMemoryCache::new();
     ///
     ///     cache.set("a", "1", None).await?;
     ///     cache.set("b", "2", None).await?;
@@ -487,7 +487,7 @@ pub trait DMSCCache: Send + Sync {
     ///     Ok(())
     /// }
     /// ```
-    async fn keys(&self) -> DMSCResult<Vec<String>>;
+    async fn keys(&self) -> RiResult<Vec<String>>;
 
     /// Retrieves multiple values from the cache in a single operation.
     ///
@@ -505,15 +505,15 @@ pub trait DMSCCache: Send + Sync {
     ///
     /// # Returns
     ///
-    /// A `DMSCResult<Vec<Option<String>>>` containing values in key order
+    /// A `RiResult<Vec<Option<String>>>` containing values in key order
     ///
     /// # Examples
     ///
     /// ```rust
-    /// use dmsc::cache::backends::DMSCMemoryCache;
+    /// use ri::cache::backends::RiMemoryCache;
     ///
-    /// async fn example() -> dmsc::core::DMSCResult<()> {
-    ///     let cache = DMSCMemoryCache::new();
+    /// async fn example() -> ri::core::RiResult<()> {
+    ///     let cache = RiMemoryCache::new();
     ///
     ///     cache.set("a", "1", None).await?;
     ///     cache.set("b", "2", None).await?;
@@ -528,7 +528,7 @@ pub trait DMSCCache: Send + Sync {
     ///     Ok(())
     /// }
     /// ```
-    async fn get_multi(&self, keys: &[&str]) -> DMSCResult<Vec<Option<String>>> {
+    async fn get_multi(&self, keys: &[&str]) -> RiResult<Vec<Option<String>>> {
         let mut results = Vec::with_capacity(keys.len());
         for &key in keys {
             results.push(self.get(key).await?);
@@ -548,15 +548,15 @@ pub trait DMSCCache: Send + Sync {
     ///
     /// # Returns
     ///
-    /// A `DMSCResult<()>` indicating success or failure
+    /// A `RiResult<()>` indicating success or failure
     ///
     /// # Examples
     ///
     /// ```rust
-    /// use dmsc::cache::backends::DMSCMemoryCache;
+    /// use ri::cache::backends::RiMemoryCache;
     ///
-    /// async fn example() -> dmsc::core::DMSCResult<()> {
-    ///     let cache = DMSCMemoryCache::new();
+    /// async fn example() -> ri::core::RiResult<()> {
+    ///     let cache = RiMemoryCache::new();
     ///
     ///     let items = vec![
     ///         ("a", "1"),
@@ -569,7 +569,7 @@ pub trait DMSCCache: Send + Sync {
     ///     Ok(())
     /// }
     /// ```
-    async fn set_multi(&self, items: &[(&str, &str)], ttl_seconds: Option<u64>) -> DMSCResult<()> {
+    async fn set_multi(&self, items: &[(&str, &str)], ttl_seconds: Option<u64>) -> RiResult<()> {
         for &(key, value) in items {
             self.set(key, value, ttl_seconds).await?;
         }
@@ -591,15 +591,15 @@ pub trait DMSCCache: Send + Sync {
     ///
     /// # Returns
     ///
-    /// A `DMSCResult<usize>` containing the number of keys deleted
+    /// A `RiResult<usize>` containing the number of keys deleted
     ///
     /// # Examples
     ///
     /// ```rust
-    /// use dmsc::cache::backends::DMSCMemoryCache;
+    /// use ri::cache::backends::RiMemoryCache;
     ///
-    /// async fn example() -> dmsc::core::DMSCResult<()> {
-    ///     let cache = DMSCMemoryCache::new();
+    /// async fn example() -> ri::core::RiResult<()> {
+    ///     let cache = RiMemoryCache::new();
     ///
     ///     cache.set("a", "1", None).await?;
     ///     cache.set("b", "2", None).await?;
@@ -611,7 +611,7 @@ pub trait DMSCCache: Send + Sync {
     ///     Ok(())
     /// }
     /// ```
-    async fn delete_multi(&self, keys: &[&str]) -> DMSCResult<usize> {
+    async fn delete_multi(&self, keys: &[&str]) -> RiResult<usize> {
         let mut count = 0;
         for &key in keys {
             if self.delete(key).await? {
@@ -631,15 +631,15 @@ pub trait DMSCCache: Send + Sync {
     ///
     /// # Returns
     ///
-    /// A `DMSCResult<Vec<bool>>` indicating existence of each key
+    /// A `RiResult<Vec<bool>>` indicating existence of each key
     ///
     /// # Examples
     ///
     /// ```rust
-    /// use dmsc::cache::backends::DMSCMemoryCache;
+    /// use ri::cache::backends::RiMemoryCache;
     ///
-    /// async fn example() -> dmsc::core::DMSCResult<()> {
-    ///     let cache = DMSCMemoryCache::new();
+    /// async fn example() -> ri::core::RiResult<()> {
+    ///     let cache = RiMemoryCache::new();
     ///
     ///     cache.set("a", "1", None).await?;
     ///
@@ -649,7 +649,7 @@ pub trait DMSCCache: Send + Sync {
     ///     Ok(())
     /// }
     /// ```
-    async fn exists_multi(&self, keys: &[&str]) -> DMSCResult<Vec<bool>> {
+    async fn exists_multi(&self, keys: &[&str]) -> RiResult<Vec<bool>> {
         let mut results = Vec::with_capacity(keys.len());
         for &key in keys {
             results.push(self.exists(key).await);
@@ -680,15 +680,15 @@ pub trait DMSCCache: Send + Sync {
     ///
     /// # Returns
     ///
-    /// A `DMSCResult<usize>` containing the number of keys deleted
+    /// A `RiResult<usize>` containing the number of keys deleted
     ///
     /// # Examples
     ///
     /// ```rust
-    /// use dmsc::cache::backends::DMSCMemoryCache;
+    /// use ri::cache::backends::RiMemoryCache;
     ///
-    /// async fn example() -> dmsc::core::DMSCResult<()> {
-    ///     let cache = DMSCMemoryCache::new();
+    /// async fn example() -> ri::core::RiResult<()> {
+    ///     let cache = RiMemoryCache::new();
     ///
     ///     cache.set("user:123:profile", "data", None).await?;
     ///     cache.set("user:123:settings", "data", None).await?;
@@ -700,10 +700,10 @@ pub trait DMSCCache: Send + Sync {
     ///     Ok(())
     /// }
     /// ```
-    async fn delete_by_pattern(&self, pattern: &str) -> DMSCResult<usize> {
+    async fn delete_by_pattern(&self, pattern: &str) -> RiResult<usize> {
         let keys = self.keys().await?;
         let regex = regex::Regex::new(pattern)
-            .map_err(|e| DMSCError::Other(format!("Invalid pattern: {}", e)))?;
+            .map_err(|e| RiError::Other(format!("Invalid pattern: {}", e)))?;
         let mut count = 0;
         for key in keys {
             if regex.is_match(&key) {
@@ -719,7 +719,7 @@ pub trait DMSCCache: Send + Sync {
 /// Cache event types for monitoring and consistency
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
-pub enum DMSCCacheEvent {
+pub enum RiCacheEvent {
     /// Cache hit event
     Hit { key: String },
     /// Cache miss event
@@ -743,7 +743,7 @@ pub enum DMSCCacheEvent {
 /// Cache statistics
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass(get_all, set_all))]
-pub struct DMSCCacheStats {
+pub struct RiCacheStats {
     pub hits: u64,
     pub misses: u64,
     pub entries: usize,
@@ -754,7 +754,7 @@ pub struct DMSCCacheStats {
     pub eviction_count: u64,
 }
 
-impl Default for DMSCCacheStats {
+impl Default for RiCacheStats {
     fn default() -> Self {
         Self {
             hits: 0,
@@ -771,7 +771,7 @@ impl Default for DMSCCacheStats {
 
 #[cfg(feature = "pyo3")]
 #[pymethods]
-impl DMSCCacheStats {
+impl RiCacheStats {
     #[new]
     fn py_new() -> Self {
         Self::default()
@@ -793,16 +793,16 @@ impl DMSCCacheStats {
 /// # Examples
 ///
 /// ```
-/// use dmsc::cache::DMSCCachedValue;
+/// use ri::cache::RiCachedValue;
 ///
-/// let cached = DMSCCachedValue::new("test_data".to_string(), Some(3600));
+/// let cached = RiCachedValue::new("test_data".to_string(), Some(3600));
 /// assert!(!cached.is_expired());
 /// cached.touch();
 /// assert!(!cached.is_stale(300));
 /// ```
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass(get_all, set_all))]
-pub struct DMSCCachedValue {
+pub struct RiCachedValue {
     /// The cached value as a string
     pub value: String,
     /// Optional expiration timestamp (UNIX epoch seconds)
@@ -813,7 +813,7 @@ pub struct DMSCCachedValue {
     pub last_accessed: Option<u64>,
 }
 
-impl DMSCCachedValue {
+impl RiCachedValue {
     /// Creates a new cached value with optional TTL.
     /// 
     /// # Parameters
@@ -831,13 +831,13 @@ impl DMSCCachedValue {
     /// # Examples
     /// 
     /// ```
-    /// use dmsc::cache::DMSCCachedValue;
+    /// use ri::cache::RiCachedValue;
     /// 
     /// // Create a value that expires in 1 hour
-    /// let cached = DMSCCachedValue::new("data".to_string(), Some(3600));
+    /// let cached = RiCachedValue::new("data".to_string(), Some(3600));
     /// 
     /// // Create a value that never expires
-    /// let persistent = DMSCCachedValue::new("persistent".to_string(), None);
+    /// let persistent = RiCachedValue::new("persistent".to_string(), None);
     /// ```
     pub fn new(value: String, ttl_seconds: Option<u64>) -> Self {
         let now = std::time::SystemTime::now()
@@ -856,9 +856,9 @@ impl DMSCCachedValue {
         }
     }
     
-    pub fn deserialize<T: serde::de::DeserializeOwned>(&self) -> crate::core::DMSCResult<T> {
+    pub fn deserialize<T: serde::de::DeserializeOwned>(&self) -> crate::core::RiResult<T> {
         serde_json::from_str(&self.value)
-            .map_err(|e| crate::core::DMSCError::Other(format!("Deserialization error: {e}")))
+            .map_err(|e| crate::core::RiError::Other(format!("Deserialization error: {e}")))
     }
     
     pub fn is_expired(&self) -> bool {
@@ -914,9 +914,9 @@ impl DMSCCachedValue {
     /// # Examples
     /// 
     /// ```
-    /// use dmsc::cache::DMSCCachedValue;
+    /// use ri::cache::RiCachedValue;
     /// 
-    /// let mut cached = DMSCCachedValue::new("data".to_string(), None);
+    /// let mut cached = RiCachedValue::new("data".to_string(), None);
     /// 
     /// // Immediately after creation, not stale
     /// assert!(!cached.is_stale(300));
@@ -939,7 +939,7 @@ impl DMSCCachedValue {
 
 #[cfg(feature = "pyo3")]
 #[pymethods]
-impl DMSCCachedValue {
+impl RiCachedValue {
     #[new]
     fn py_new(value: String, ttl_seconds: Option<u64>) -> Self {
         Self::new(value, ttl_seconds)

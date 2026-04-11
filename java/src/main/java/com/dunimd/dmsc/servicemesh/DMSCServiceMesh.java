@@ -1,7 +1,7 @@
 // Copyright © 2025-2026 Wenze Wei. All Rights Reserved.
 //
-// This file is part of DMSC.
-// The DMSC project belongs to the Dunimd Team.
+// This file is part of Ri.
+// The Ri project belongs to the Dunimd Team.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // You may not use this file except in compliance with the License.
@@ -15,23 +15,23 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package com.dunimd.dmsc.servicemesh;
+package com.dunimd.ri.servicemesh;
 
-import com.dunimd.dmsc.NativeLoader;
+import com.dunimd.ri.NativeLoader;
 
 /**
- * Service mesh module for DMSC.
+ * Service mesh module for Ri.
  * 
  * Provides service discovery, load balancing, and distributed coordination.
  */
-public class DMSCServiceMesh {
+public class RiServiceMesh {
     private long nativePtr;
     
     static {
         NativeLoader.autoLoad();
     }
     
-    public DMSCServiceMesh(DMSCServiceMeshConfig config) {
+    public RiServiceMesh(RiServiceMeshConfig config) {
         this.nativePtr = new0(config.getNativePtr());
     }
     

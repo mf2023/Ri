@@ -1,7 +1,7 @@
 //! Copyright © 2025-2026 Wenze Wei. All Rights Reserved.
 //!
-//! This file is part of DMSC.
-//! The DMSC project belongs to the Dunimd Team.
+//! This file is part of Ri.
+//! The Ri project belongs to the Dunimd Team.
 //!
 //! Licensed under the Apache License, Version 2.0 (the "License");
 //! You may not use this file except in compliance with the License.
@@ -17,35 +17,35 @@
 
 //! # Observability Module JNI Bindings
 //!
-//! JNI bindings for DMSC observability classes.
+//! JNI bindings for Ri observability classes.
 
 use jni::JNIEnv;
 use jni::objects::JClass;
 use jni::sys::jlong;
-use crate::observability::DMSCObservabilityModule;
+use crate::observability::RiObservabilityModule;
 use crate::java::exception::check_not_null;
 
 #[no_mangle]
-pub extern "system" fn Java_com_dunimd_dmsc_observability_DMSCObservabilityModule_new0(
+pub extern "system" fn Java_com_dunimd_ri_observability_RiObservabilityModule_new0(
     mut env: JNIEnv,
     _class: JClass,
     config_ptr: jlong,
 ) -> jlong {
-    if !check_not_null(&mut env, config_ptr, "DMSCObservabilityConfig") {
+    if !check_not_null(&mut env, config_ptr, "RiObservabilityConfig") {
         return 0;
     }
     0
 }
 
 #[no_mangle]
-pub extern "system" fn Java_com_dunimd_dmsc_observability_DMSCObservabilityModule_free0(
+pub extern "system" fn Java_com_dunimd_ri_observability_RiObservabilityModule_free0(
     _env: JNIEnv,
     _class: JClass,
     ptr: jlong,
 ) {
     if ptr != 0 {
         unsafe {
-            let _ = Box::from_raw(ptr as *mut DMSCObservabilityModule);
+            let _ = Box::from_raw(ptr as *mut RiObservabilityModule);
         }
     }
 }

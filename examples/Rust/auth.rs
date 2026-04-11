@@ -1,7 +1,7 @@
 //! Copyright © 2025-2026 Wenze Wei. All Rights Reserved.
 //!
-//! This file is part of DMSC.
-//! The DMSC project belongs to the Dunimd Team.
+//! This file is part of Ri.
+//! The Ri project belongs to the Dunimd Team.
 //!
 //! Licensed under the Apache License, Version 2.0 (the "License");
 //! You may not use this file except in compliance with the License.
@@ -15,9 +15,9 @@
 //! See the License for the specific language governing permissions and
 //! limitations under the License.
 
-//! # DMSC Authentication Module Example
+//! # Ri Authentication Module Example
 //!
-//! This example demonstrates how to use the authentication module in DMSC,
+//! This example demonstrates how to use the authentication module in Ri,
 //! including JWT token generation, validation, and session management.
 //!
 //! ## Running this Example
@@ -33,8 +33,8 @@
 //! - Token revocation
 //! - Permission-based access control
 
-use dmsc::auth::{DMSCAuthModule, DMSCAuthConfig};
-use dmsc::core::{DMSCResult, DMSCError};
+use ri::auth::{RiAuthModule, RiAuthConfig};
+use ri::core::{RiResult, RiError};
 
 /// Main entry point for the authentication module example.
 ///
@@ -47,10 +47,10 @@ use dmsc::core::{DMSCResult, DMSCError};
 /// - Session extension and permission verification
 ///
 /// The example creates a complete authentication scenario showing how
-/// DMSC handles user authentication, session tracking, and access control
+/// Ri handles user authentication, session tracking, and access control
 /// in a Rust async runtime environment.
-fn main() -> DMSCResult<()> {
-    println!("=== DMSC Authentication Module Example ===\n");
+fn main() -> RiResult<()> {
+    println!("=== Ri Authentication Module Example ===\n");
 
     // Configuration Setup: Create authentication configuration with security settings
     // - enabled: Enable/disable authentication module (true = authentication required)
@@ -60,7 +60,7 @@ fn main() -> DMSCResult<()> {
     // - oauth_providers: List of OAuth providers for social login (empty for local auth)
     // - enable_api_keys: Enable API key-based authentication for service-to-service calls
     // - enable_session_auth: Enable session-based authentication for web clients
-    let auth_config = DMSCAuthConfig {
+    let auth_config = RiAuthConfig {
         enabled: true,
         jwt_secret: "your-secret-key-here".to_string(),
         jwt_expiry_secs: 3600,
@@ -78,7 +78,7 @@ fn main() -> DMSCResult<()> {
     rt.block_on(async {
         // Module Initialization: Create authentication module instance with configuration
         // The module provides JWT management and session management capabilities
-        let auth_module = DMSCAuthModule::new(auth_config).await;
+        let auth_module = RiAuthModule::new(auth_config).await;
         
         // Get JWT manager for token operations (generation and validation)
         // JWT manager handles token lifecycle: create, validate, refresh, revoke
@@ -102,7 +102,7 @@ fn main() -> DMSCResult<()> {
         // Step 2: Validate the generated JWT token
         // Validates token signature, expiration, and claims
         // Returns: Claims struct containing subject, expiration, roles, permissions
-        // Throws: DMSCError if token is invalid, expired, or signature mismatch
+        // Throws: RiError if token is invalid, expired, or signature mismatch
         println!("2. Validating JWT token...");
         let claims = jwt_manager.validate_token(&token)?;
         println!("   Token valid for user: {}", claims.sub);
@@ -158,6 +158,6 @@ fn main() -> DMSCResult<()> {
         println!("   Has 'superuser' role: {}\n", has_superuser);
 
         println!("=== Authentication Example Completed ===");
-        Ok::<(), DMSCError>(())
+        Ok::<(), RiError>(())
     })
 }

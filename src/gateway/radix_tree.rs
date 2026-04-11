@@ -1,7 +1,7 @@
 //! Copyright © 2025-2026 Wenze Wei. All Rights Reserved.
 //!
-//! This file is part of DMSC.
-//! The DMSC project belongs to the Dunimd Team.
+//! This file is part of Ri.
+//! The Ri project belongs to the Dunimd Team.
 //!
 //! Licensed under the Apache License, Version 2.0 (the "License");
 //! You may not use this file except in compliance with the License.
@@ -53,7 +53,7 @@
 use std::collections::HashMap;
 use std::sync::{Arc, RwLock};
 
-use super::routing::{DMSCRoute, DMSCRouteHandler};
+use super::routing::{RiRoute, RiRouteHandler};
 use crate::core::lock::RwLockExtensions;
 
 /// Represents the type of a path segment in the radix tree.
@@ -121,7 +121,7 @@ impl PathSegment {
 #[derive(Debug, Clone)]
 pub struct RouteMatch {
     /// The matched route
-    pub route: DMSCRoute,
+    pub route: RiRoute,
     /// Extracted path parameters
     pub params: HashMap<String, String>,
 }
@@ -137,9 +137,9 @@ pub struct RadixNode {
     /// The path segment this node represents
     pub segment: PathSegment,
     /// Route handler if this node is a terminal
-    pub handler: Option<DMSCRouteHandler>,
+    pub handler: Option<RiRouteHandler>,
     /// Route data if this node is a terminal
-    pub route_data: Option<DMSCRoute>,
+    pub route_data: Option<RiRoute>,
     /// Static children (exact match segments)
     pub children: HashMap<String, Arc<RwLock<RadixNode>>>,
     /// Parameter child (for `:param` segments)
@@ -250,25 +250,25 @@ impl RadixNode {
 /// 
 /// This implementation provides O(k) lookup time where k is the path length,
 /// making it significantly faster than linear search for large numbers of routes.
-pub struct DMSCRadixTree {
+pub struct RiRadixTree {
     /// Root node of the tree
     root: Arc<RwLock<RadixNode>>,
     /// Number of routes in the tree
     route_count: RwLock<usize>,
 }
 
-impl Default for DMSCRadixTree {
+impl Default for RiRadixTree {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl DMSCRadixTree {
+impl RiRadixTree {
     /// Creates a new empty radix tree.
     /// 
     /// # Returns
     /// 
-    /// A new `DMSCRadixTree` instance
+    /// A new `RiRadixTree` instance
     pub fn new() -> Self {
         Self {
             root: Arc::new(RwLock::new(RadixNode::root())),
@@ -297,7 +297,7 @@ impl DMSCRadixTree {
     /// # Parameters
     /// 
     /// - `route`: The route to insert
-    pub fn insert(&self, route: DMSCRoute) {
+    pub fn insert(&self, route: RiRoute) {
         let segments = Self::parse_path(&route.path);
         let handler = route.handler.clone();
         let route_clone = route.clone();
@@ -656,11 +656,11 @@ mod tests {
     use std::pin::Pin;
     use std::future::Future;
 
-    fn create_test_handler() -> DMSCRouteHandler {
+    fn create_test_handler() -> RiRouteHandler {
         Arc::new(|_req| {
             Box::pin(async move {
-                Ok(crate::gateway::DMSCGatewayResponse::new(200, b"OK".to_vec(), String::new()))
-            }) as Pin<Box<dyn Future<Output = DMSCResult<crate::gateway::DMSCGatewayResponse>> + Send>>
+                Ok(crate::gateway::RiGatewayResponse::new(200, b"OK".to_vec(), String::new()))
+            }) as Pin<Box<dyn Future<Output = RiResult<crate::gateway::RiGatewayResponse>> + Send>>
         })
     }
 
@@ -690,7 +690,7 @@ mod tests {
 
     #[test]
     fn test_parse_path() {
-        let segments = DMSCRadixTree::parse_path("/api/v1/users");
+        let segments = RiRadixTree::parse_path("/api/v1/users");
         assert_eq!(segments.len(), 3);
         assert_eq!(segments[0].value, "api");
         assert_eq!(segments[1].value, "v1");
@@ -699,7 +699,7 @@ mod tests {
 
     #[test]
     fn test_parse_path_with_param() {
-        let segments = DMSCRadixTree::parse_path("/users/:id");
+        let segments = RiRadixTree::parse_path("/users/:id");
         assert_eq!(segments.len(), 2);
         assert_eq!(segments[0].segment_type, SegmentType::Static);
         assert_eq!(segments[1].segment_type, SegmentType::Param);
@@ -707,7 +707,7 @@ mod tests {
 
     #[test]
     fn test_parse_path_with_wildcard() {
-        let segments = DMSCRadixTree::parse_path("/files/*path");
+        let segments = RiRadixTree::parse_path("/files/*path");
         assert_eq!(segments.len(), 2);
         assert_eq!(segments[0].segment_type, SegmentType::Static);
         assert_eq!(segments[1].segment_type, SegmentType::Wildcard);
@@ -715,8 +715,8 @@ mod tests {
 
     #[test]
     fn test_radix_tree_insert_and_find() {
-        let tree = DMSCRadixTree::new();
-        let route = DMSCRoute::new(
+        let tree = RiRadixTree::new();
+        let route = RiRoute::new(
             "GET".to_string(),
             "/api/users".to_string(),
             create_test_handler(),
@@ -731,8 +731,8 @@ mod tests {
 
     #[test]
     fn test_radix_tree_find_with_param() {
-        let tree = DMSCRadixTree::new();
-        let route = DMSCRoute::new(
+        let tree = RiRadixTree::new();
+        let route = RiRoute::new(
             "GET".to_string(),
             "/users/:id".to_string(),
             create_test_handler(),
@@ -748,8 +748,8 @@ mod tests {
 
     #[test]
     fn test_radix_tree_find_with_wildcard() {
-        let tree = DMSCRadixTree::new();
-        let route = DMSCRoute::new(
+        let tree = RiRadixTree::new();
+        let route = RiRoute::new(
             "GET".to_string(),
             "/files/*path".to_string(),
             create_test_handler(),
@@ -765,8 +765,8 @@ mod tests {
 
     #[test]
     fn test_radix_tree_remove() {
-        let tree = DMSCRadixTree::new();
-        let route = DMSCRoute::new(
+        let tree = RiRadixTree::new();
+        let route = RiRoute::new(
             "GET".to_string(),
             "/api/users".to_string(),
             create_test_handler(),
@@ -785,8 +785,8 @@ mod tests {
 
     #[test]
     fn test_radix_tree_no_match() {
-        let tree = DMSCRadixTree::new();
-        let route = DMSCRoute::new(
+        let tree = RiRadixTree::new();
+        let route = RiRoute::new(
             "GET".to_string(),
             "/api/users".to_string(),
             create_test_handler(),
@@ -800,10 +800,10 @@ mod tests {
 
     #[test]
     fn test_radix_tree_clear() {
-        let tree = DMSCRadixTree::new();
+        let tree = RiRadixTree::new();
         
         for i in 0..10 {
-            let route = DMSCRoute::new(
+            let route = RiRoute::new(
                 "GET".to_string(),
                 format!("/api/route_{}", i),
                 create_test_handler(),

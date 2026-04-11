@@ -1,7 +1,7 @@
 //! Copyright © 2025-2026 Wenze Wei. All Rights Reserved.
 //!
-//! This file is part of DMSC.
-//! The DMSC project belongs to the Dunimd Team.
+//! This file is part of Ri.
+//! The Ri project belongs to the Dunimd Team.
 //!
 //! Licensed under the Apache License, Version 2.0 (the "License");
 //! You may not use this file except in compliance with the License.
@@ -162,7 +162,7 @@
 //!
 //! ## Dependencies
 //!
-//! This module is self-contained within the DMSC C API layer:
+//! This module is self-contained within the Ri C API layer:
 //!
 //! - No external crate dependencies
 //! - Uses only standard library types (Box, std::ffi)

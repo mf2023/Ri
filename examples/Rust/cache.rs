@@ -1,7 +1,7 @@
 //! Copyright © 2025-2026 Wenze Wei. All Rights Reserved.
 //!
-//! This file is part of DMSC.
-//! The DMSC project belongs to the Dunimd Team.
+//! This file is part of Ri.
+//! The Ri project belongs to the Dunimd Team.
 //!
 //! Licensed under the Apache License, Version 2.0 (the "License");
 //! You may not use this file except in compliance with the License.
@@ -15,9 +15,9 @@
 //! See the License for the specific language governing permissions and
 //! limitations under the License.
 
-//! # DMSC Cache Module Example
+//! # Ri Cache Module Example
 //!
-//! This example demonstrates how to use the caching module in DMSC,
+//! This example demonstrates how to use the caching module in Ri,
 //! including in-memory cache operations and Redis backend integration.
 //!
 //! ## Running this Example
@@ -33,7 +33,7 @@
 //! - Cache statistics and monitoring
 //! - Multiple backend support
 
-use dmsc::{DMSCAppBuilder, DMSCCacheModule, DMSCCacheManager};
+use ri::{RiAppBuilder, RiCacheModule, RiCacheManager};
 use std::time::Duration;
 
 /// Async main function for the cache module example.
@@ -45,17 +45,17 @@ use std::time::Duration;
 /// - Cache statistics monitoring (hits, misses, size)
 /// - Cache clearing operations
 ///
-/// The example shows how DMSC handles caching with features like
+/// The example shows how Ri handles caching with features like
 /// automatic expiration, hit/miss tracking, and memory management
 /// in a Rust async environment.
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    println!("=== DMSC Cache Module Example ===\n");
+    println!("=== Ri Cache Module Example ===\n");
 
     // Application Builder: Create application with cache module
-    // DMSCAppBuilder provides a fluent API for configuring modules
+    // RiAppBuilder provides a fluent API for configuring modules
     // The builder pattern allows for chained configuration calls
-    let app = DMSCAppBuilder::new()
+    let app = RiAppBuilder::new()
         .with_cache_module(|cache| {
             // Configure cache module with closure-based settings
             cache.with_config(|config| {
@@ -72,7 +72,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .build()?;
 
     // Get cache module from built application
-    let cache_module = app.get_module::<DMSCCacheModule>();
+    let cache_module = app.get_module::<RiCacheModule>();
     
     // Get cache manager for cache operations
     // The manager provides thread-safe operations for cache manipulation

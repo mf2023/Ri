@@ -1,7 +1,7 @@
 // Copyright © 2025-2026 Wenze Wei. All Rights Reserved.
 //
-// This file is part of DMSC.
-// The DMSC project belongs to the Dunimd Team.
+// This file is part of Ri.
+// The Ri project belongs to the Dunimd Team.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // You may not use this file except in compliance with the License.
@@ -15,14 +15,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package com.dunimd.dmsc.cache;
+package com.dunimd.ri.cache;
 
-import com.dunimd.dmsc.NativeLoader;
+import com.dunimd.ri.NativeLoader;
 
 /**
- * Cache configuration for DMSC.
+ * Cache configuration for Ri.
  */
-public class DMSCCacheConfig {
+public class RiCacheConfig {
     private long nativePtr;
     
     static {
@@ -30,9 +30,9 @@ public class DMSCCacheConfig {
     }
     
     /**
-     * Create a new DMSCCacheConfig with default values.
+     * Create a new RiCacheConfig with default values.
      */
-    public DMSCCacheConfig() {
+    public RiCacheConfig() {
         this.nativePtr = new0();
     }
     
@@ -53,7 +53,7 @@ public class DMSCCacheConfig {
      * @param enabled true to enable caching
      * @return this config instance
      */
-    public DMSCCacheConfig setEnabled(boolean enabled) {
+    public RiCacheConfig setEnabled(boolean enabled) {
         setEnabled0(nativePtr, enabled);
         return this;
     }
@@ -66,7 +66,7 @@ public class DMSCCacheConfig {
      * @param ttlSecs the default TTL in seconds
      * @return this config instance
      */
-    public DMSCCacheConfig setDefaultTtlSecs(long ttlSecs) {
+    public RiCacheConfig setDefaultTtlSecs(long ttlSecs) {
         setDefaultTtlSecs0(nativePtr, ttlSecs);
         return this;
     }
@@ -79,7 +79,7 @@ public class DMSCCacheConfig {
      * @param backendType the backend type
      * @return this config instance
      */
-    public DMSCCacheConfig setBackendType(DMSCCacheBackendType backendType) {
+    public RiCacheConfig setBackendType(RiCacheBackendType backendType) {
         setBackendType0(nativePtr, backendType.ordinal());
         return this;
     }
@@ -92,7 +92,7 @@ public class DMSCCacheConfig {
      * @param url the Redis URL
      * @return this config instance
      */
-    public DMSCCacheConfig setRedisUrl(String url) {
+    public RiCacheConfig setRedisUrl(String url) {
         setRedisUrl0(nativePtr, url);
         return this;
     }

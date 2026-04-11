@@ -1,7 +1,7 @@
 //! Copyright © 2025-2026 Wenze Wei. All Rights Reserved.
 //!
-//! This file is part of DMSC.
-//! The DMSC project belongs to the Dunimd Team.
+//! This file is part of Ri.
+//! The Ri project belongs to the Dunimd Team.
 //!
 //! Licensed under the Apache License, Version 2.0 (the "License");
 //! You may not use this file except in compliance with the License.
@@ -19,18 +19,18 @@
 
 //! # Metrics Collection and Aggregation Module
 //! 
-//! This module provides a comprehensive metrics collection and aggregation system for DMSC.
+//! This module provides a comprehensive metrics collection and aggregation system for Ri.
 //! It supports various metric types, sliding window aggregation, and Prometheus-compatible export.
 //! 
 //! ## Key Components
 //! 
-//! - **DMSCMetricType**: Enum defining supported metric types (Counter, Gauge, Histogram, Summary)
-//! - **DMSCMetricSample**: Represents a single metric sample with timestamp, value, and labels
-//! - **DMSCMetricConfig**: Configuration for creating metrics
-//! - **DMSCSlidingWindow**: Internal sliding time window for metric aggregation
-//! - **DMSCWindowStats**: Aggregated statistics from the sliding window
-//! - **DMSCMetric**: Individual metric with sliding window aggregation
-//! - **DMSCMetricsRegistry**: Registry for managing multiple metrics
+//! - **RiMetricType**: Enum defining supported metric types (Counter, Gauge, Histogram, Summary)
+//! - **RiMetricSample**: Represents a single metric sample with timestamp, value, and labels
+//! - **RiMetricConfig**: Configuration for creating metrics
+//! - **RiSlidingWindow**: Internal sliding time window for metric aggregation
+//! - **RiWindowStats**: Aggregated statistics from the sliding window
+//! - **RiMetric**: Individual metric with sliding window aggregation
+//! - **RiMetricsRegistry**: Registry for managing multiple metrics
 //! 
 //! ## Design Principles
 //! 
@@ -46,16 +46,16 @@
 //! ## Usage
 //! 
 //! ```rust
-//! use dmsc::prelude::*;
+//! use ri::prelude::*;
 //! use std::time::Duration;
 //! 
-//! fn example() -> DMSCResult<()> {
+//! fn example() -> RiResult<()> {
 //!     // Create a metrics registry
-//!     let registry = DMSCMetricsRegistry::new();
+//!     let registry = RiMetricsRegistry::new();
 //!     
 //!     // Configure a counter metric
-//!     let counter_config = DMSCMetricConfig {
-//!         metric_type: DMSCMetricType::Counter,
+//!     let counter_config = RiMetricConfig {
+//!         metric_type: RiMetricType::Counter,
 //!         name: "http_requests_total".to_string(),
 //!         help: "Total number of HTTP requests".to_string(),
 //!         buckets: Vec::new(),
@@ -65,7 +65,7 @@
 //!     };
 //!     
 //!     // Create and register the metric
-//!     let counter = Arc::new(DMSCMetric::new(counter_config));
+//!     let counter = Arc::new(RiMetric::new(counter_config));
 //!     registry.register(counter.clone())?;
 //!     
 //!     // Record some metrics
@@ -88,13 +88,13 @@ use serde::{Serialize, Deserialize};
 #[cfg(feature = "pyo3")]
 use pyo3::prelude::*;
 
-use crate::core::DMSCResult;
+use crate::core::RiResult;
 use crate::core::lock::RwLockExtensions;
 
 /// Metric types supported
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
-pub enum DMSCMetricType {
+pub enum RiMetricType {
     Counter,
     Gauge,
     Histogram,
@@ -104,7 +104,7 @@ pub enum DMSCMetricType {
 /// A single metric sample
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
-pub struct DMSCMetricSample {
+pub struct RiMetricSample {
     pub timestamp: u64, // seconds since epoch
     pub value: f64,
     pub labels: Vec<(String, String)>,
@@ -113,8 +113,8 @@ pub struct DMSCMetricSample {
 /// Metric configuration
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
-pub struct DMSCMetricConfig {
-    pub metric_type: DMSCMetricType,
+pub struct RiMetricConfig {
+    pub metric_type: RiMetricType,
     pub name: String,
     pub help: String,
     pub buckets: Vec<f64>, // for histogram
@@ -125,18 +125,18 @@ pub struct DMSCMetricConfig {
 
 /// Sliding time window for metric aggregation
 #[allow(dead_code)]
-struct DMSCSlidingWindow {
+struct RiSlidingWindow {
     #[allow(dead_code)]
     window_size: Duration,
     #[allow(dead_code)]
     bucket_size: Duration,
-    buckets: VecDeque<Vec<DMSCMetricSample>>,
-    current_bucket: Vec<DMSCMetricSample>,
+    buckets: VecDeque<Vec<RiMetricSample>>,
+    current_bucket: Vec<RiMetricSample>,
     #[allow(dead_code)]
     last_rotation: u64,
 }
 
-impl DMSCSlidingWindow {
+impl RiSlidingWindow {
     fn new(window_size: Duration, bucket_size: Duration) -> Self {
         let bucket_count = window_size.as_secs().div_ceil(bucket_size.as_secs());
         
@@ -180,13 +180,13 @@ impl DMSCSlidingWindow {
     }
     
     #[allow(dead_code)]
-    fn add_sample(&mut self, sample: DMSCMetricSample) {
+    fn add_sample(&mut self, sample: RiMetricSample) {
         self.rotate_if_needed();
         self.current_bucket.push(sample);
     }
     
     #[allow(dead_code)]
-    fn get_samples(&self) -> Vec<DMSCMetricSample> {
+    fn get_samples(&self) -> Vec<RiMetricSample> {
         let mut all_samples = Vec::new();
         
         for bucket in &self.buckets {
@@ -198,11 +198,11 @@ impl DMSCSlidingWindow {
     }
     
     #[allow(dead_code)]
-    fn get_window_stats(&self) -> DMSCWindowStats {
+    fn get_window_stats(&self) -> RiWindowStats {
         let samples = self.get_samples();
         
         if samples.is_empty() {
-            return DMSCWindowStats::default();
+            return RiWindowStats::default();
         }
         
         let mut sorted_values: Vec<f64> = samples.iter().map(|s| s.value).collect();
@@ -227,7 +227,7 @@ impl DMSCSlidingWindow {
         let p95 = Self::quantile(&sorted_values, 0.95);
         let p99 = Self::quantile(&sorted_values, 0.99);
         
-        DMSCWindowStats {
+        RiWindowStats {
             count: count as u64,
             sum,
             min,
@@ -262,7 +262,7 @@ impl DMSCSlidingWindow {
 
 /// Window statistics
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct DMSCWindowStats {
+pub struct RiWindowStats {
     pub count: u64,
     pub sum: f64,
     pub min: f64,
@@ -275,7 +275,7 @@ pub struct DMSCWindowStats {
     pub p99: f64,
 }
 
-impl Default for DMSCWindowStats {
+impl Default for RiWindowStats {
     fn default() -> Self {
         Self {
             count: 0,
@@ -294,17 +294,17 @@ impl Default for DMSCWindowStats {
 
 /// A single metric with sliding window aggregation
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
-pub struct DMSCMetric {
-    config: DMSCMetricConfig,
-    sliding_window: RwLock<DMSCSlidingWindow>,
+pub struct RiMetric {
+    config: RiMetricConfig,
+    sliding_window: RwLock<RiSlidingWindow>,
     total_count: RwLock<u64>,
     #[allow(dead_code)]
     total_sum: RwLock<f64>,
 }
 
-impl DMSCMetric {
-    pub fn new(config: DMSCMetricConfig) -> Self {
-        let sliding_window = DMSCSlidingWindow::new(
+impl RiMetric {
+    pub fn new(config: RiMetricConfig) -> Self {
+        let sliding_window = RiSlidingWindow::new(
             Duration::from_secs(300), // 5 minute window
             Duration::from_secs(10),  // 10 second buckets
         );
@@ -318,8 +318,8 @@ impl DMSCMetric {
     }
     
     #[allow(dead_code)]
-    fn record(&self, value: f64, labels: Vec<(String, String)>) -> DMSCResult<()> {
-        let sample = DMSCMetricSample {
+    fn record(&self, value: f64, labels: Vec<(String, String)>) -> RiResult<()> {
+        let sample = RiMetricSample {
             timestamp: Self::current_timestamp(),
             value,
             labels,
@@ -344,10 +344,10 @@ impl DMSCMetric {
     }
     
     #[allow(dead_code)]
-    fn get_stats(&self) -> DMSCWindowStats {
+    fn get_stats(&self) -> RiWindowStats {
         match self.sliding_window.read_safe("sliding window stats") {
             Ok(window) => window.get_window_stats(),
-            Err(_) => DMSCWindowStats::default(),
+            Err(_) => RiWindowStats::default(),
         }
     }
     
@@ -367,7 +367,7 @@ impl DMSCMetric {
         }
     }
     
-    fn get_config(&self) -> &DMSCMetricConfig {
+    fn get_config(&self) -> &RiMetricConfig {
         &self.config
     }
 
@@ -390,38 +390,38 @@ impl DMSCMetric {
 /// Metrics registry to manage multiple metrics
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 #[derive(Clone)]
-pub struct DMSCMetricsRegistry {
-    metrics: Arc<RwLock<HashMap<String, Arc<DMSCMetric>>>>,
+pub struct RiMetricsRegistry {
+    metrics: Arc<RwLock<HashMap<String, Arc<RiMetric>>>>,
 }
 
-impl Default for DMSCMetricsRegistry {
+impl Default for RiMetricsRegistry {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl DMSCMetricsRegistry {
+impl RiMetricsRegistry {
     pub fn new() -> Self {
         Self {
             metrics: Arc::new(RwLock::new(HashMap::new())),
         }
     }
     
-    pub fn register(&self, metric: Arc<DMSCMetric>) -> DMSCResult<()> {
+    pub fn register(&self, metric: Arc<RiMetric>) -> RiResult<()> {
         let name = metric.get_config().name.clone();
         let mut metrics = self.metrics.write_safe("metrics registry")?;
         metrics.insert(name, metric);
         Ok(())
     }
     
-    pub fn get_metric(&self, name: &str) -> Option<Arc<DMSCMetric>> {
+    pub fn get_metric(&self, name: &str) -> Option<Arc<RiMetric>> {
         match self.metrics.read_safe("metrics registry") {
             Ok(metrics) => metrics.get(name).cloned(),
             Err(_) => None,
         }
     }
     
-    pub fn get_all_metrics(&self) -> HashMap<String, Arc<DMSCMetric>> {
+    pub fn get_all_metrics(&self) -> HashMap<String, Arc<RiMetric>> {
         match self.metrics.read_safe("metrics registry") {
             Ok(metrics) => metrics.clone(),
             Err(_) => HashMap::new(),
@@ -447,13 +447,13 @@ impl DMSCMetricsRegistry {
             // Write metric value
             let stats = metric.get_stats();
             match config.metric_type {
-                DMSCMetricType::Counter => {
+                RiMetricType::Counter => {
                     output.push_str(&format!("{} {}\n", name, metric.get_total_count()));
                 }
-                DMSCMetricType::Gauge => {
+                RiMetricType::Gauge => {
                     output.push_str(&format!("{} {}\n", name, stats.mean));
                 }
-                DMSCMetricType::Histogram => {
+                RiMetricType::Histogram => {
                     output.push_str(&format!("{}_count {}\n", name, stats.count));
                     output.push_str(&format!("{}_sum {}\n", name, stats.sum));
                     output.push_str(&format!("{}_min {}\n", name, stats.min));
@@ -464,7 +464,7 @@ impl DMSCMetricsRegistry {
                     output.push_str(&format!("{}_p95 {}\n", name, stats.p95));
                     output.push_str(&format!("{}_p99 {}\n", name, stats.p99));
                 }
-                DMSCMetricType::Summary => {
+                RiMetricType::Summary => {
                     output.push_str(&format!("{} {}\n", name, stats.mean));
                 }
             }
@@ -477,9 +477,9 @@ impl DMSCMetricsRegistry {
 }
 
 #[cfg(feature = "pyo3")]
-/// Python methods for DMSCMetricsRegistry
+/// Python methods for RiMetricsRegistry
 #[pyo3::prelude::pymethods]
-impl DMSCMetricsRegistry {
+impl RiMetricsRegistry {
     /// Create a new metrics registry from Python
     #[new]
     fn py_new() -> Self {
@@ -488,11 +488,11 @@ impl DMSCMetricsRegistry {
     
     /// Register a metric from Python
     #[pyo3(name = "register")]
-    fn register_py(&self, metric: &DMSCMetric) -> PyResult<()> {
+    fn register_py(&self, metric: &RiMetric) -> PyResult<()> {
         let name = metric.config.name.clone();
         let mut metrics = self.metrics.write_safe("metrics registry")
             .map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(e.to_string()))?;
-        metrics.insert(name, Arc::new(DMSCMetric::new(metric.config.clone())));
+        metrics.insert(name, Arc::new(RiMetric::new(metric.config.clone())));
         Ok(())
     }
     
@@ -538,12 +538,12 @@ impl DMSCMetricsRegistry {
 
 #[cfg(feature = "pyo3")]
 #[pyo3::prelude::pymethods]
-impl DMSCMetricConfig {
+impl RiMetricConfig {
     #[new]
     #[pyo3(signature = (name, metric_type, help="", buckets=None, quantiles=None))]
     fn py_new(
         name: String,
-        metric_type: DMSCMetricType,
+        metric_type: RiMetricType,
         help: &str,
         buckets: Option<Vec<f64>>,
         quantiles: Option<Vec<f64>>,
@@ -562,9 +562,9 @@ impl DMSCMetricConfig {
 
 #[cfg(feature = "pyo3")]
 #[pyo3::prelude::pymethods]
-impl DMSCMetric {
+impl RiMetric {
     #[new]
-    fn py_new(config: DMSCMetricConfig) -> Self {
+    fn py_new(config: RiMetricConfig) -> Self {
         Self::new(config)
     }
     

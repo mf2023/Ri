@@ -1,7 +1,7 @@
 //! Copyright © 2025-2026 Wenze Wei. All Rights Reserved.
 //!
-//! This file is part of DMSC.
-//! The DMSC project belongs to the Dunimd Team.
+//! This file is part of Ri.
+//! The Ri project belongs to the Dunimd Team.
 //!
 //! Licensed under the Apache License, Version 2.0 (the "License");
 //! You may not use this file except in compliance with the License.
@@ -17,7 +17,7 @@
 
 //! # Security Utilities Module
 //!
-//! This module provides security-related utilities for DMSC, including:
+//! This module provides security-related utilities for Ri, including:
 //! - Configuration encryption and decryption using AES-256-GCM
 //! - Sensitive data protection with HMAC-SHA256 signing
 //! - Cryptographic key generation and management
@@ -36,8 +36,8 @@
 //! ## Key Management
 //!
 //! Encryption and HMAC keys are loaded from environment variables:
-//! - `DMSC_ENCRYPTION_KEY`: 32-byte hex-encoded key for encryption
-//! - `DMSC_HMAC_KEY`: 32-byte hex-encoded key for HMAC
+//! - `Ri_ENCRYPTION_KEY`: 32-byte hex-encoded key for encryption
+//! - `Ri_HMAC_KEY`: 32-byte hex-encoded key for HMAC
 //!
 //! If not set, keys are generated randomly using cryptographically secure
 //! random number generators.
@@ -57,8 +57,8 @@ use rand::RngCore;
 use ring::hmac;
 use std::env;
 
-const ENCRYPTION_KEY_ENV: &str = "DMSC_ENCRYPTION_KEY";
-const HMAC_KEY_ENV: &str = "DMSC_HMAC_KEY";
+const ENCRYPTION_KEY_ENV: &str = "Ri_ENCRYPTION_KEY";
+const HMAC_KEY_ENV: &str = "Ri_HMAC_KEY";
 const DEFAULT_KEY_LENGTH: usize = 32;
 const NONCE_LENGTH: usize = 12;
 
@@ -81,7 +81,7 @@ fn load_hmac_key() -> Vec<u8> {
     load_or_generate_key(HMAC_KEY_ENV, DEFAULT_KEY_LENGTH)
 }
 
-/// Security utilities manager for DMSC.
+/// Security utilities manager for Ri.
 ///
 /// This struct provides static methods for encryption, decryption, HMAC signing,
 /// and key management operations. It is designed as a singleton utility class
@@ -94,23 +94,23 @@ fn load_hmac_key() -> Vec<u8> {
 /// ## Usage
 ///
 /// ```rust,ignore
-/// use dmsc::auth::security::DMSCSecurityManager;
+/// use ri::auth::security::RiSecurityManager;
 ///
 /// // Encrypt sensitive data
-/// let encrypted = DMSCSecurityManager::encrypt("secret data");
+/// let encrypted = RiSecurityManager::encrypt("secret data");
 ///
 /// // Decrypt data
-/// let decrypted = DMSCSecurityManager::decrypt(&encrypted);
+/// let decrypted = RiSecurityManager::decrypt(&encrypted);
 ///
 /// // Sign data with HMAC
-/// let signature = DMSCSecurityManager::hmac_sign("data to sign");
+/// let signature = RiSecurityManager::hmac_sign("data to sign");
 ///
 /// // Verify HMAC signature
-/// let is_valid = DMSCSecurityManager::hmac_verify("data to verify", &signature);
+/// let is_valid = RiSecurityManager::hmac_verify("data to verify", &signature);
 /// ```
-pub struct DMSCSecurityManager;
+pub struct RiSecurityManager;
 
-impl DMSCSecurityManager {
+impl RiSecurityManager {
     /// Encrypts plaintext data using AES-256-GCM.
     ///
     /// This method encrypts the input string using AES-256-GCM (Galois/Counter Mode),
@@ -135,9 +135,9 @@ impl DMSCSecurityManager {
     /// # Examples
     ///
     /// ```rust,ignore
-    /// use dmsc::auth::security::DMSCSecurityManager;
+    /// use ri::auth::security::RiSecurityManager;
     ///
-    /// let encrypted = DMSCSecurityManager::encrypt("sensitive data");
+    /// let encrypted = RiSecurityManager::encrypt("sensitive data");
     /// println!("Encrypted: {}", encrypted);
     /// ```
     pub fn encrypt(plaintext: &str) -> String {
@@ -183,10 +183,10 @@ impl DMSCSecurityManager {
     /// # Examples
     ///
     /// ```rust,ignore
-    /// use dmsc::auth::security::DMSCSecurityManager;
+    /// use ri::auth::security::RiSecurityManager;
     ///
-    /// let encrypted = DMSCSecurityManager::encrypt("secret");
-    /// let decrypted = DMSCSecurityManager::decrypt(&encrypted);
+    /// let encrypted = RiSecurityManager::encrypt("secret");
+    /// let decrypted = RiSecurityManager::decrypt(&encrypted);
     ///
     /// match decrypted {
     ///     Some(text) => println!("Decrypted: {}", text),
@@ -231,10 +231,10 @@ impl DMSCSecurityManager {
     /// # Examples
     ///
     /// ```rust,ignore
-    /// use dmsc::auth::security::DMSCSecurityManager;
+    /// use ri::auth::security::RiSecurityManager;
     ///
     /// let data = "important message";
-    /// let signature = DMSCSecurityManager::hmac_sign(data);
+    /// let signature = RiSecurityManager::hmac_sign(data);
     /// println!("Signature: {}", signature);
     /// ```
     pub fn hmac_sign(data: &str) -> String {
@@ -265,12 +265,12 @@ impl DMSCSecurityManager {
     /// # Examples
     ///
     /// ```rust,ignore
-    /// use dmsc::auth::security::DMSCSecurityManager;
+    /// use ri::auth::security::RiSecurityManager;
     ///
     /// let data = "important message";
-    /// let signature = DMSCSecurityManager::hmac_sign(data);
+    /// let signature = RiSecurityManager::hmac_sign(data);
     ///
-    /// if DMSCSecurityManager::hmac_verify(data, &signature) {
+    /// if RiSecurityManager::hmac_verify(data, &signature) {
     ///     println!("Signature is valid!");
     /// } else {
     ///     println!("Signature is invalid!");
@@ -291,7 +291,7 @@ impl DMSCSecurityManager {
     /// ## Usage
     ///
     /// This method can be used to generate keys for initial configuration or key rotation.
-    /// Store the generated key securely and set it via the `DMSC_ENCRYPTION_KEY` environment variable.
+    /// Store the generated key securely and set it via the `Ri_ENCRYPTION_KEY` environment variable.
     ///
     /// # Returns
     ///
@@ -300,9 +300,9 @@ impl DMSCSecurityManager {
     /// # Examples
     ///
     /// ```rust,ignore
-    /// use dmsc::auth::security::DMSCSecurityManager;
+    /// use ri::auth::security::RiSecurityManager;
     ///
-    /// let key = DMSCSecurityManager::generate_encryption_key();
+    /// let key = RiSecurityManager::generate_encryption_key();
     /// println!("New encryption key: {}", key);
     /// ```
     pub fn generate_encryption_key() -> String {
@@ -319,7 +319,7 @@ impl DMSCSecurityManager {
     /// ## Usage
     ///
     /// This method can be used to generate keys for initial configuration or key rotation.
-    /// Store the generated key securely and set it via theDMSC_HMAC_KEY` environment variable.
+    /// Store the generated key securely and set it via theRi_HMAC_KEY` environment variable.
     ///
     /// # Returns
     ///
@@ -328,9 +328,9 @@ impl DMSCSecurityManager {
     /// # Examples
     ///
     /// ```rust,ignore
-    /// use dmsc::auth::security::DMSCSecurityManager;
+    /// use ri::auth::security::RiSecurityManager;
     ///
-    /// let key = DMSCSecurityManager::generate_hmac_key();
+    /// let key = RiSecurityManager::generate_hmac_key();
     /// println!("New HMAC key: {}", key);
     /// ```
     pub fn generate_hmac_key() -> String {

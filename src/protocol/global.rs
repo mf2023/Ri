@@ -1,7 +1,7 @@
 //! Copyright © 2025-2026 Wenze Wei. All Rights Reserved.
 //!
-//! This file is part of DMSC.
-//! The DMSC project belongs to the Dunimd Team.
+//! This file is part of Ri.
+//! The Ri project belongs to the Dunimd Team.
 //!
 //! Licensed under the Apache License, Version 2.0 (the "License");
 //! You may not use this file except in compliance with the License.
@@ -19,7 +19,7 @@
 
 //! # Global Protocol Module
 //! 
-//! This module implements the standard global communication protocol for DMSC.
+//! This module implements the standard global communication protocol for Ri.
 //! It provides reliable, efficient communication with optional encryption and
 //! compression support.
 //! 
@@ -38,17 +38,17 @@
 //! 
 //! 1. **Transport Layer**: TCP connections with optional TLS
 //! 2. **Message Layer**: Framed message protocol with length prefixes
-//! 3. **Application Layer**: DMSC-specific message handling
+//! 3. **Application Layer**: Ri-specific message handling
 //! 
 //! ## Usage
 //! 
 //! ```rust
-//! use dmsc::protocol::{DMSCGlobalProtocol, DMSCProtocolConfig};
+//! use ri::protocol::{RiGlobalProtocol, RiProtocolConfig};
 //! 
-//! async fn example() -> DMSCResult<()> {
-//!     let mut protocol = DMSCGlobalProtocol::new();
+//! async fn example() -> RiResult<()> {
+//!     let mut protocol = RiGlobalProtocol::new();
 //!     
-//!     let config = DMSCProtocolConfig::Global {
+//!     let config = RiProtocolConfig::Global {
 //!         enable_encryption: true,
 //!         compression_level: 6,
 //!         connection_timeout: Duration::from_secs(30),
@@ -72,35 +72,35 @@ use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::TcpStream;
 use tokio::sync::RwLock;
 
-use crate::core::{DMSCResult, DMSCError};
-use super::{DMSCProtocol, DMSCProtocolConfig, DMSCProtocolType, DMSCProtocolConnection, 
-            DMSCProtocolStats, DMSCMessageFlags, DMSCConnectionInfo, DMSCSecurityLevel};
+use crate::core::{RiResult, RiError};
+use super::{RiProtocol, RiProtocolConfig, RiProtocolType, RiProtocolConnection, 
+            RiProtocolStats, RiMessageFlags, RiConnectionInfo, RiSecurityLevel};
 
 /// Global protocol implementation.
-pub struct DMSCGlobalProtocol {
+pub struct RiGlobalProtocol {
     /// Protocol configuration
-    config: Option<DMSCProtocolConfig>,
+    config: Option<RiProtocolConfig>,
     /// Connection pool for efficient connection reuse
-    connection_pool: Arc<RwLock<HashMap<String, Arc<DMSCGlobalConnection>>>>,
+    connection_pool: Arc<RwLock<HashMap<String, Arc<RiGlobalConnection>>>>,
     /// Protocol statistics
-    stats: Arc<RwLock<DMSCProtocolStats>>,
+    stats: Arc<RwLock<RiProtocolStats>>,
     /// Whether the protocol is ready
     ready: Arc<RwLock<bool>>,
 }
 
-impl DMSCGlobalProtocol {
+impl RiGlobalProtocol {
     /// Create a new global protocol instance.
     pub fn new() -> Self {
         Self {
             config: None,
             connection_pool: Arc::new(RwLock::new(HashMap::new())),
-            stats: Arc::new(RwLock::new(DMSCProtocolStats::default())),
+            stats: Arc::new(RwLock::new(RiProtocolStats::default())),
             ready: Arc::new(RwLock::new(false)),
         }
     }
     
     /// Get connection from pool or create new one.
-    async fn get_or_create_connection(&self, target_id: &str) -> DMSCResult<Arc<DMSCGlobalConnection>> {
+    async fn get_or_create_connection(&self, target_id: &str) -> RiResult<Arc<RiGlobalConnection>> {
         let mut pool = self.connection_pool.write().await;
         
         if let Some(connection) = pool.get(target_id) {
@@ -113,7 +113,7 @@ impl DMSCGlobalProtocol {
         }
         
         // Create new connection
-        let connection = Arc::new(DMSCGlobalConnection::new(target_id.to_string()).await?);
+        let connection = Arc::new(RiGlobalConnection::new(target_id.to_string()).await?);
         pool.insert(target_id.to_string(), Arc::clone(&connection));
         
         Ok(connection)
@@ -122,7 +122,7 @@ impl DMSCGlobalProtocol {
     /// Update statistics.
     async fn update_stats<F>(&self, updater: F)
     where
-        F: FnOnce(&mut DMSCProtocolStats),
+        F: FnOnce(&mut RiProtocolStats),
     {
         let mut stats = self.stats.write().await;
         updater(&mut *stats);
@@ -130,23 +130,23 @@ impl DMSCGlobalProtocol {
 }
 
 #[async_trait]
-impl DMSCProtocol for DMSCGlobalProtocol {
-    fn protocol_type(&self) -> DMSCProtocolType {
-        DMSCProtocolType::Global
+impl RiProtocol for RiGlobalProtocol {
+    fn protocol_type(&self) -> RiProtocolType {
+        RiProtocolType::Global
     }
     
-    async fn initialize(&mut self, config: DMSCProtocolConfig) -> DMSCResult<()> {
+    async fn initialize(&mut self, config: RiProtocolConfig) -> RiResult<()> {
         // Validate configuration
         match &config {
-            DMSCProtocolConfig::Global { compression_level, connection_timeout, .. } => {
+            RiProtocolConfig::Global { compression_level, connection_timeout, .. } => {
                 if *compression_level > 9 {
-                    return Err(DMSCError::InvalidConfiguration("Compression level must be 0-9".to_string()));
+                    return Err(RiError::InvalidConfiguration("Compression level must be 0-9".to_string()));
                 }
                 if connection_timeout.as_secs() == 0 {
-                    return Err(DMSCError::InvalidConfiguration("Connection timeout must be positive".to_string()));
+                    return Err(RiError::InvalidConfiguration("Connection timeout must be positive".to_string()));
                 }
             }
-            _ => return Err(DMSCError::InvalidConfiguration("Invalid configuration type for global protocol".to_string())),
+            _ => return Err(RiError::InvalidConfiguration("Invalid configuration type for global protocol".to_string())),
         }
         
         self.config = Some(config);
@@ -155,9 +155,9 @@ impl DMSCProtocol for DMSCGlobalProtocol {
         Ok(())
     }
     
-    async fn connect(&self, target_id: &str) -> DMSCResult<Box<dyn DMSCProtocolConnection>> {
+    async fn connect(&self, target_id: &str) -> RiResult<Box<dyn RiProtocolConnection>> {
         if !*self.ready.read().await {
-            return Err(DMSCError::InvalidState("Protocol not initialized".to_string()));
+            return Err(RiError::InvalidState("Protocol not initialized".to_string()));
         }
         
         // Update connection attempts
@@ -168,7 +168,7 @@ impl DMSCProtocol for DMSCGlobalProtocol {
         // Update successful connections
         self.update_stats(|stats| stats.successful_connections += 1).await;
         
-        Ok(Box::new(DMSCGlobalConnectionWrapper {
+        Ok(Box::new(RiGlobalConnectionWrapper {
             inner: connection,
             stats: Arc::clone(&self.stats),
         }))
@@ -178,11 +178,11 @@ impl DMSCProtocol for DMSCGlobalProtocol {
         *self.ready.blocking_read()
     }
     
-    fn get_stats(&self) -> DMSCProtocolStats {
+    fn get_stats(&self) -> RiProtocolStats {
         *self.stats.blocking_read()
     }
     
-    async fn shutdown(&mut self) -> DMSCResult<()> {
+    async fn shutdown(&mut self) -> RiResult<()> {
         // Clear connection pool
         self.connection_pool.write().await.clear();
         
@@ -193,14 +193,14 @@ impl DMSCProtocol for DMSCGlobalProtocol {
     }
 }
 
-impl Default for DMSCGlobalProtocol {
+impl Default for RiGlobalProtocol {
     fn default() -> Self {
         Self::new()
     }
 }
 
 /// Global protocol connection implementation.
-struct DMSCGlobalConnection {
+struct RiGlobalConnection {
     /// Connection ID
     connection_id: String,
     /// Target address
@@ -215,16 +215,16 @@ struct DMSCGlobalConnection {
     active: Arc<RwLock<bool>>,
 }
 
-impl DMSCGlobalConnection {
+impl RiGlobalConnection {
     /// Create a new global connection.
-    async fn new(target_id: String) -> DMSCResult<Self> {
+    async fn new(target_id: String) -> RiResult<Self> {
         // Parse target address
         let addr: SocketAddr = target_id.parse()
-            .map_err(|_| DMSCError::InvalidConfiguration(format!("Invalid target address: {}", target_id)))?;
+            .map_err(|_| RiError::InvalidConfiguration(format!("Invalid target address: {}", target_id)))?;
         
         // Connect to target
         let stream = TcpStream::connect(addr).await
-            .map_err(|e| DMSCError::ConnectionFailed(format!("Failed to connect to {}: {}", target_id, e)))?;
+            .map_err(|e| RiError::ConnectionFailed(format!("Failed to connect to {}: {}", target_id, e)))?;
         
         let connection_id = format!("global-{}", uuid::Uuid::new_v4());
         let now = Instant::now();
@@ -271,25 +271,25 @@ impl DMSCGlobalConnection {
     }
 }
 
-/// Wrapper for global connection to implement DMSCProtocolConnection trait.
-struct DMSCGlobalConnectionWrapper {
-    inner: Arc<DMSCGlobalConnection>,
-    stats: Arc<RwLock<DMSCProtocolStats>>,
+/// Wrapper for global connection to implement RiProtocolConnection trait.
+struct RiGlobalConnectionWrapper {
+    inner: Arc<RiGlobalConnection>,
+    stats: Arc<RwLock<RiProtocolStats>>,
 }
 
 #[async_trait]
-impl DMSCProtocolConnection for DMSCGlobalConnectionWrapper {
-    async fn send_message(&self, data: &[u8]) -> DMSCResult<Vec<u8>> {
-        self.send_message_with_flags(data, DMSCMessageFlags::default()).await
+impl RiProtocolConnection for RiGlobalConnectionWrapper {
+    async fn send_message(&self, data: &[u8]) -> RiResult<Vec<u8>> {
+        self.send_message_with_flags(data, RiMessageFlags::default()).await
     }
     
-    async fn send_message_with_flags(&self, data: &[u8], flags: DMSCMessageFlags) -> DMSCResult<Vec<u8>> {
+    async fn send_message_with_flags(&self, data: &[u8], flags: RiMessageFlags) -> RiResult<Vec<u8>> {
         // Update activity
         self.inner.update_activity().await;
         
         // Check connection
         if !self.inner.check_connection().await {
-            return Err(DMSCError::ConnectionFailed("Connection is not active".to_string()));
+            return Err(RiError::ConnectionFailed("Connection is not active".to_string()));
         }
         
         let mut stream = self.inner.stream.write().await;
@@ -297,15 +297,15 @@ impl DMSCProtocolConnection for DMSCGlobalConnectionWrapper {
             // Send message length (4 bytes, big-endian)
             let len = data.len() as u32;
             tcp_stream.write_all(&len.to_be_bytes()).await
-                .map_err(|e| DMSCError::ConnectionFailed(format!("Failed to send message length: {}", e)))?;
+                .map_err(|e| RiError::ConnectionFailed(format!("Failed to send message length: {}", e)))?;
             
             // Send message data
             tcp_stream.write_all(data).await
-                .map_err(|e| DMSCError::ConnectionFailed(format!("Failed to send message data: {}", e)))?;
+                .map_err(|e| RiError::ConnectionFailed(format!("Failed to send message data: {}", e)))?;
             
             // Flush the stream
             tcp_stream.flush().await
-                .map_err(|e| DMSCError::ConnectionFailed(format!("Failed to flush stream: {}", e)))?;
+                .map_err(|e| RiError::ConnectionFailed(format!("Failed to flush stream: {}", e)))?;
             
             // Update statistics
             self.stats.write().await.messages_sent += 1;
@@ -313,17 +313,17 @@ impl DMSCProtocolConnection for DMSCGlobalConnectionWrapper {
             
             self.receive_message().await
         } else {
-            Err(DMSCError::ConnectionFailed("No active stream".to_string()))
+            Err(RiError::ConnectionFailed("No active stream".to_string()))
         }
     }
     
-    async fn receive_message(&self) -> DMSCResult<Vec<u8>> {
+    async fn receive_message(&self) -> RiResult<Vec<u8>> {
         // Update activity
         self.inner.update_activity().await;
         
         // Check connection
         if !self.inner.check_connection().await {
-            return Err(DMSCError::ConnectionFailed("Connection is not active".to_string()));
+            return Err(RiError::ConnectionFailed("Connection is not active".to_string()));
         }
         
         let mut stream = self.inner.stream.write().await;
@@ -331,19 +331,19 @@ impl DMSCProtocolConnection for DMSCGlobalConnectionWrapper {
             // Read message length (4 bytes, big-endian)
             let mut len_bytes = [0u8; 4];
             tcp_stream.read_exact(&mut len_bytes).await
-                .map_err(|e| DMSCError::ConnectionFailed(format!("Failed to read message length: {}", e)))?;
+                .map_err(|e| RiError::ConnectionFailed(format!("Failed to read message length: {}", e)))?;
             
             let len = u32::from_be_bytes(len_bytes) as usize;
             
             // Validate message length
             if len > 1024 * 1024 * 100 { // 100MB limit
-                return Err(DMSCError::InvalidData("Message too large".to_string()));
+                return Err(RiError::InvalidData("Message too large".to_string()));
             }
             
             // Read message data
             let mut data = vec![0u8; len];
             tcp_stream.read_exact(&mut data).await
-                .map_err(|e| DMSCError::ConnectionFailed(format!("Failed to read message data: {}", e)))?;
+                .map_err(|e| RiError::ConnectionFailed(format!("Failed to read message data: {}", e)))?;
             
             // Update statistics
             self.stats.write().await.messages_received += 1;
@@ -351,7 +351,7 @@ impl DMSCProtocolConnection for DMSCGlobalConnectionWrapper {
             
             Ok(data)
         } else {
-            Err(DMSCError::ConnectionFailed("No active stream".to_string()))
+            Err(RiError::ConnectionFailed("No active stream".to_string()))
         }
     }
     
@@ -359,18 +359,18 @@ impl DMSCProtocolConnection for DMSCGlobalConnectionWrapper {
         *self.inner.active.blocking_read()
     }
     
-    fn get_connection_info(&self) -> DMSCConnectionInfo {
-        DMSCConnectionInfo {
+    fn get_connection_info(&self) -> RiConnectionInfo {
+        RiConnectionInfo {
             connection_id: self.inner.connection_id.clone(),
             target_id: self.inner.target_id.clone(),
-            protocol_type: DMSCProtocolType::Global,
+            protocol_type: RiProtocolType::Global,
             established_at: self.inner.established_at,
             last_activity: *self.inner.last_activity.blocking_read(),
-            security_level: DMSCSecurityLevel::Basic, // Global protocol uses basic security
+            security_level: RiSecurityLevel::Basic, // Global protocol uses basic security
         }
     }
     
-    async fn close(&self) -> DMSCResult<()> {
+    async fn close(&self) -> RiResult<()> {
         *self.inner.active.write().await = false;
         self.inner.stream.write().await.take();
         Ok(())

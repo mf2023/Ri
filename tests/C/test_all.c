@@ -1,8 +1,8 @@
 /*
  * Copyright © 2025-2026 Wenze Wei. All Rights Reserved.
  *
- * This file is part of DMSC.
- * The DMSC project belongs to the Dunimd Team.
+ * This file is part of Ri.
+ * The Ri project belongs to the Dunimd Team.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * You may not use this file except in compliance with the License.
@@ -17,179 +17,179 @@
  * limitations under the License.
  */
 
-#include <dmsc.h>
+#include <ri.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdbool.h>
 
 /**
- * Test all DMSC C bindings.
+ * Test all Ri C bindings.
  *
  * This test file is located in the unified tests directory (tests/C/)
  * rather than in the source code directory, following the project's testing convention.
  */
 int main(void) {
-    printf("=== DMSC C Binding Test ===\n\n");
+    printf("=== Ri C Binding Test ===\n\n");
     
     int passed = 0;
     int failed = 0;
     
-    /* Test DMSCAppBuilder */
-    printf("Testing DMSCAppBuilder...\n");
-    DMSCAppBuilder* builder = dmsc_app_builder_new();
+    /* Test RiAppBuilder */
+    printf("Testing RiAppBuilder...\n");
+    RiAppBuilder* builder = ri_app_builder_new();
     if (builder != NULL) {
-        printf("[PASS] DMSCAppBuilder created\n");
-        dmsc_app_builder_free(builder);
+        printf("[PASS] RiAppBuilder created\n");
+        ri_app_builder_free(builder);
         passed++;
     } else {
-        printf("[FAIL] DMSCAppBuilder creation failed\n");
+        printf("[FAIL] RiAppBuilder creation failed\n");
         failed++;
     }
     
-    /* Test DMSCAppBuilder chaining (returns new pointer) */
-    printf("\nTesting DMSCAppBuilder chaining...\n");
-    DMSCAppBuilder* builder1 = dmsc_app_builder_new();
+    /* Test RiAppBuilder chaining (returns new pointer) */
+    printf("\nTesting RiAppBuilder chaining...\n");
+    RiAppBuilder* builder1 = ri_app_builder_new();
     if (builder1 != NULL) {
-        DMSCAppBuilder* builder2 = dmsc_app_builder_with_config(builder1, "config.yaml");
+        RiAppBuilder* builder2 = ri_app_builder_with_config(builder1, "config.yaml");
         
         if (builder2 != NULL && builder1 != builder2) {
-            printf("[PASS] DMSCAppBuilder chaining creates new instance\n");
+            printf("[PASS] RiAppBuilder chaining creates new instance\n");
             passed++;
         } else {
-            printf("[FAIL] DMSCAppBuilder chaining should create new instance\n");
+            printf("[FAIL] RiAppBuilder chaining should create new instance\n");
             failed++;
         }
         
-        dmsc_app_builder_free(builder1);
+        ri_app_builder_free(builder1);
         if (builder2 != NULL) {
-            dmsc_app_builder_free(builder2);
+            ri_app_builder_free(builder2);
         }
     } else {
         printf("[FAIL] Failed to create builder for chaining test\n");
         failed++;
     }
     
-    /* Test DMSCConfig */
-    printf("\nTesting DMSCConfig...\n");
-    DMSCConfig* config = dmsc_config_new();
+    /* Test RiConfig */
+    printf("\nTesting RiConfig...\n");
+    RiConfig* config = ri_config_new();
     if (config != NULL) {
-        printf("[PASS] DMSCConfig created\n");
-        dmsc_config_free(config);
+        printf("[PASS] RiConfig created\n");
+        ri_config_free(config);
         passed++;
     } else {
-        printf("[FAIL] DMSCConfig creation failed\n");
+        printf("[FAIL] RiConfig creation failed\n");
         failed++;
     }
     
-    /* Test DMSCCacheModule */
-    printf("\nTesting DMSCCacheModule...\n");
-    DMSCCacheConfig* cache_config = dmsc_cache_config_new();
+    /* Test RiCacheModule */
+    printf("\nTesting RiCacheModule...\n");
+    RiCacheConfig* cache_config = ri_cache_config_new();
     if (cache_config != NULL) {
-        DMSCCacheModule* cache = dmsc_cache_module_new(cache_config);
+        RiCacheModule* cache = ri_cache_module_new(cache_config);
         if (cache != NULL) {
-            printf("[PASS] DMSCCacheModule created\n");
-            dmsc_cache_module_free(cache);
+            printf("[PASS] RiCacheModule created\n");
+            ri_cache_module_free(cache);
             passed++;
         } else {
-            printf("[FAIL] DMSCCacheModule creation failed\n");
+            printf("[FAIL] RiCacheModule creation failed\n");
             failed++;
         }
-        dmsc_cache_config_free(cache_config);
+        ri_cache_config_free(cache_config);
     } else {
-        printf("[FAIL] DMSCCacheConfig creation failed\n");
+        printf("[FAIL] RiCacheConfig creation failed\n");
         failed++;
     }
     
-    /* Test DMSCAuthModule */
-    printf("\nTesting DMSCAuthModule...\n");
-    DMSCAuthConfig* auth_config = dmsc_auth_config_new();
+    /* Test RiAuthModule */
+    printf("\nTesting RiAuthModule...\n");
+    RiAuthConfig* auth_config = ri_auth_config_new();
     if (auth_config != NULL) {
-        DMSCAuthModule* auth = dmsc_auth_module_new(auth_config);
+        RiAuthModule* auth = ri_auth_module_new(auth_config);
         if (auth != NULL) {
-            printf("[PASS] DMSCAuthModule created\n");
-            dmsc_auth_module_free(auth);
+            printf("[PASS] RiAuthModule created\n");
+            ri_auth_module_free(auth);
             passed++;
         } else {
-            printf("[FAIL] DMSCAuthModule creation failed\n");
+            printf("[FAIL] RiAuthModule creation failed\n");
             failed++;
         }
-        dmsc_auth_config_free(auth_config);
+        ri_auth_config_free(auth_config);
     } else {
-        printf("[FAIL] DMSCAuthConfig creation failed\n");
+        printf("[FAIL] RiAuthConfig creation failed\n");
         failed++;
     }
     
-    /* Test DMSCGateway */
-    printf("\nTesting DMSCGateway...\n");
-    DMSCGateway* gateway = dmsc_gateway_new();
+    /* Test RiGateway */
+    printf("\nTesting RiGateway...\n");
+    RiGateway* gateway = ri_gateway_new();
     if (gateway != NULL) {
-        printf("[PASS] DMSCGateway created\n");
-        dmsc_gateway_free(gateway);
+        printf("[PASS] RiGateway created\n");
+        ri_gateway_free(gateway);
         passed++;
     } else {
-        printf("[FAIL] DMSCGateway creation failed\n");
+        printf("[FAIL] RiGateway creation failed\n");
         failed++;
     }
     
-    /* Test DMSCQueueModule */
-    printf("\nTesting DMSCQueueModule...\n");
-    DMSCQueueConfig* queue_config = dmsc_queue_config_new();
+    /* Test RiQueueModule */
+    printf("\nTesting RiQueueModule...\n");
+    RiQueueConfig* queue_config = ri_queue_config_new();
     if (queue_config != NULL) {
-        DMSCQueueModule* queue = dmsc_queue_module_new(queue_config);
+        RiQueueModule* queue = ri_queue_module_new(queue_config);
         if (queue != NULL) {
-            printf("[PASS] DMSCQueueModule created\n");
-            dmsc_queue_module_free(queue);
+            printf("[PASS] RiQueueModule created\n");
+            ri_queue_module_free(queue);
             passed++;
         } else {
-            printf("[FAIL] DMSCQueueModule creation failed\n");
+            printf("[FAIL] RiQueueModule creation failed\n");
             failed++;
         }
-        dmsc_queue_config_free(queue_config);
+        ri_queue_config_free(queue_config);
     } else {
-        printf("[FAIL] DMSCQueueConfig creation failed\n");
+        printf("[FAIL] RiQueueConfig creation failed\n");
         failed++;
     }
     
-    /* Test DMSCServiceMesh */
-    printf("\nTesting DMSCServiceMesh...\n");
-    DMSCServiceMeshConfig* mesh_config = dmsc_service_mesh_config_new();
+    /* Test RiServiceMesh */
+    printf("\nTesting RiServiceMesh...\n");
+    RiServiceMeshConfig* mesh_config = ri_service_mesh_config_new();
     if (mesh_config != NULL) {
-        DMSCServiceMesh* mesh = dmsc_service_mesh_new(mesh_config);
+        RiServiceMesh* mesh = ri_service_mesh_new(mesh_config);
         if (mesh != NULL) {
-            printf("[PASS] DMSCServiceMesh created\n");
-            dmsc_service_mesh_free(mesh);
+            printf("[PASS] RiServiceMesh created\n");
+            ri_service_mesh_free(mesh);
             passed++;
         } else {
-            printf("[FAIL] DMSCServiceMesh creation failed\n");
+            printf("[FAIL] RiServiceMesh creation failed\n");
             failed++;
         }
-        dmsc_service_mesh_config_free(mesh_config);
+        ri_service_mesh_config_free(mesh_config);
     } else {
-        printf("[FAIL] DMSCServiceMeshConfig creation failed\n");
+        printf("[FAIL] RiServiceMeshConfig creation failed\n");
         failed++;
     }
     
-    /* Test DMSCLogger */
-    printf("\nTesting DMSCLogger...\n");
-    DMSCLogger* logger = dmsc_logger_new();
+    /* Test RiLogger */
+    printf("\nTesting RiLogger...\n");
+    RiLogger* logger = ri_logger_new();
     if (logger != NULL) {
-        printf("[PASS] DMSCLogger created\n");
-        dmsc_logger_free(logger);
+        printf("[PASS] RiLogger created\n");
+        ri_logger_free(logger);
         passed++;
     } else {
-        printf("[FAIL] DMSCLogger creation failed\n");
+        printf("[FAIL] RiLogger creation failed\n");
         failed++;
     }
     
-    /* Test DMSCFileSystem */
-    printf("\nTesting DMSCFileSystem...\n");
-    DMSCFileSystem* fs = dmsc_file_system_new();
+    /* Test RiFileSystem */
+    printf("\nTesting RiFileSystem...\n");
+    RiFileSystem* fs = ri_file_system_new();
     if (fs != NULL) {
-        printf("[PASS] DMSCFileSystem created\n");
-        dmsc_file_system_free(fs);
+        printf("[PASS] RiFileSystem created\n");
+        ri_file_system_free(fs);
         passed++;
     } else {
-        printf("[FAIL] DMSCFileSystem creation failed\n");
+        printf("[FAIL] RiFileSystem creation failed\n");
         failed++;
     }
     

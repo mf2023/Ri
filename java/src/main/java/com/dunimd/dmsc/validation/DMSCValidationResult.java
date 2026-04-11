@@ -1,7 +1,7 @@
 // Copyright © 2025-2026 Wenze Wei. All Rights Reserved.
 //
-// This file is part of DMSC.
-// The DMSC project belongs to the Dunimd Team.
+// This file is part of Ri.
+// The Ri project belongs to the Dunimd Team.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // You may not use this file except in compliance with the License.
@@ -15,21 +15,21 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package com.dunimd.dmsc.validation;
+package com.dunimd.ri.validation;
 
-import com.dunimd.dmsc.NativeLoader;
+import com.dunimd.ri.NativeLoader;
 
 /**
- * Validation result for DMSC.
+ * Validation result for Ri.
  */
-public class DMSCValidationResult {
+public class RiValidationResult {
     private long nativePtr;
     
     static {
         NativeLoader.autoLoad();
     }
     
-    DMSCValidationResult(long ptr) {
+    RiValidationResult(long ptr) {
         this.nativePtr = ptr;
     }
     

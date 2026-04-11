@@ -1,7 +1,7 @@
 //! Copyright © 2025-2026 Wenze Wei. All Rights Reserved.
 //!
-//! This file is part of DMSC.
-//! The DMSC project belongs to the Dunimd Team.
+//! This file is part of Ri.
+//! The Ri project belongs to the Dunimd Team.
 //!
 //! Licensed under the Apache License, Version 2.0 (the "License");
 //! You may not use this file except in compliance with the License.
@@ -18,15 +18,15 @@
 //! # Module RPC Communication
 //!
 //! This module provides inter-module RPC (Remote Procedure Call) communication capabilities
-//! for DMSC, enabling modules to call each other's methods synchronously or asynchronously.
+//! for Ri, enabling modules to call each other's methods synchronously or asynchronously.
 //!
 //! ## Key Components
 //!
-//! - **DMSCModuleRPC**: Main RPC coordinator managing endpoints and method calls
-//! - **DMSCModuleClient**: Client for making RPC calls to other modules
-//! - **DMSCModuleEndpoint**: Endpoint definition for a module's exposed methods
-//! - **DMSCMethodCall**: Represents an RPC method call request
-//! - **DMSCMethodResponse**: Represents an RPC method call response
+//! - **RiModuleRPC**: Main RPC coordinator managing endpoints and method calls
+//! - **RiModuleClient**: Client for making RPC calls to other modules
+//! - **RiModuleEndpoint**: Endpoint definition for a module's exposed methods
+//! - **RiMethodCall**: Represents an RPC method call request
+//! - **RiMethodResponse**: Represents an RPC method call response
 //!
 //! ## Design Principles
 //!
@@ -40,14 +40,14 @@
 //! ## Usage
 //!
 //! ```rust,ignore
-//! use dmsc::prelude::*;
+//! use ri::prelude::*;
 //!
-//! async fn example() -> DMSCResult<()> {
+//! async fn example() -> RiResult<()> {
 //!     // Create RPC coordinator
-//!     let rpc = DMSCModuleRPC::new();
+//!     let rpc = RiModuleRPC::new();
 //!
 //!     // Register a module endpoint
-//!     let endpoint = DMSCModuleEndpoint::new("user_service");
+//!     let endpoint = RiModuleEndpoint::new("user_service");
 //!     endpoint.register_method("get_user", |_params| async {
 //!         Ok(vec![b"user_data"])
 //!     });
@@ -55,7 +55,7 @@
 //!     rpc.register_endpoint(endpoint).await;
 //!
 //!     // Create a client to call methods
-//!     let client = DMSCModuleClient::new(rpc.clone());
+//!     let client = RiModuleClient::new(rpc.clone());
 //!
 //!     // Call a method on another module
 //!     let response = client.call("user_service", "get_user", vec![]).await?;
@@ -71,11 +71,11 @@ use std::sync::Arc;
 use tokio::sync::RwLock;
 use tokio::time::{Duration, timeout};
 
-use crate::core::DMSCResult;
+use crate::core::RiResult;
 
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
-pub struct DMSCMethodCall {
+pub struct RiMethodCall {
     pub method_name: String,
     pub params: Vec<u8>,
     pub timeout_ms: u64,
@@ -83,14 +83,14 @@ pub struct DMSCMethodCall {
 
 #[cfg(feature = "pyo3")]
 #[pyo3::prelude::pymethods]
-impl DMSCMethodCall {
+impl RiMethodCall {
     #[new]
     fn py_new(method_name: String, params: Vec<u8>) -> Self {
         Self::new(method_name, params)
     }
 }
 
-impl DMSCMethodCall {
+impl RiMethodCall {
     pub fn new(method_name: String, params: Vec<u8>) -> Self {
         Self {
             method_name,
@@ -107,7 +107,7 @@ impl DMSCMethodCall {
 
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
-pub struct DMSCMethodResponse {
+pub struct RiMethodResponse {
     pub success: bool,
     pub data: Vec<u8>,
     pub error: String,
@@ -116,14 +116,14 @@ pub struct DMSCMethodResponse {
 
 #[cfg(feature = "pyo3")]
 #[pyo3::prelude::pymethods]
-impl DMSCMethodResponse {
+impl RiMethodResponse {
     #[new]
     fn py_new() -> Self {
         Self::default()
     }
 }
 
-impl DMSCMethodResponse {
+impl RiMethodResponse {
     pub fn new() -> Self {
         Self {
             success: false,
@@ -165,43 +165,43 @@ impl DMSCMethodResponse {
     }
 }
 
-impl Default for DMSCMethodResponse {
+impl Default for RiMethodResponse {
     fn default() -> Self {
         Self::new()
     }
 }
 
-type DMSCMethodHandler = Arc<dyn Fn(Vec<u8>) -> DMSCResult<Vec<u8>> + Send + Sync>;
+type RiMethodHandler = Arc<dyn Fn(Vec<u8>) -> RiResult<Vec<u8>> + Send + Sync>;
 
 #[async_trait::async_trait]
-pub trait DMSCMethodHandlerAsync: Send + Sync {
-    async fn call(&self, params: Vec<u8>) -> DMSCMethodResponse;
+pub trait RiMethodHandlerAsync: Send + Sync {
+    async fn call(&self, params: Vec<u8>) -> RiMethodResponse;
 }
 
 struct SyncMethodHandler {
-    handler: DMSCMethodHandler,
+    handler: RiMethodHandler,
 }
 
 #[async_trait::async_trait]
-impl DMSCMethodHandlerAsync for SyncMethodHandler {
-    async fn call(&self, params: Vec<u8>) -> DMSCMethodResponse {
+impl RiMethodHandlerAsync for SyncMethodHandler {
+    async fn call(&self, params: Vec<u8>) -> RiMethodResponse {
         match (self.handler)(params) {
-            Ok(data) => DMSCMethodResponse::success_data(data),
-            Err(e) => DMSCMethodResponse::error_msg(e.to_string()),
+            Ok(data) => RiMethodResponse::success_data(data),
+            Err(e) => RiMethodResponse::error_msg(e.to_string()),
         }
     }
 }
 
 #[derive(Clone)]
-pub struct DMSCMethodRegistration {
+pub struct RiMethodRegistration {
     name: String,
-    handler: Arc<dyn DMSCMethodHandlerAsync>,
+    handler: Arc<dyn RiMethodHandlerAsync>,
 }
 
-impl DMSCMethodRegistration {
+impl RiMethodRegistration {
     pub fn new<S: Into<String>>(
         name: S,
-        handler: Arc<dyn DMSCMethodHandlerAsync>,
+        handler: Arc<dyn RiMethodHandlerAsync>,
     ) -> Self {
         Self {
             name: name.into(),
@@ -213,13 +213,13 @@ impl DMSCMethodRegistration {
         &self.name
     }
 
-    pub async fn call(&self, params: Vec<u8>, timeout_ms: u64) -> DMSCMethodResponse {
+    pub async fn call(&self, params: Vec<u8>, timeout_ms: u64) -> RiMethodResponse {
         if timeout_ms == 0 {
             self.handler.call(params).await
         } else {
             match timeout(Duration::from_millis(timeout_ms), self.handler.call(params)).await {
                 Ok(response) => response,
-                Err(_) => DMSCMethodResponse::timeout(),
+                Err(_) => RiMethodResponse::timeout(),
             }
         }
     }
@@ -227,14 +227,14 @@ impl DMSCMethodRegistration {
 
 #[derive(Clone)]
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
-pub struct DMSCModuleEndpoint {
+pub struct RiModuleEndpoint {
     module_name: String,
-    methods: Arc<RwLock<HashMap<String, DMSCMethodRegistration>>>,
+    methods: Arc<RwLock<HashMap<String, RiMethodRegistration>>>,
 }
 
 #[cfg(feature = "pyo3")]
 #[pyo3::prelude::pymethods]
-impl DMSCModuleEndpoint {
+impl RiModuleEndpoint {
     #[new]
     fn py_new(module_name: String) -> Self {
         Self::new(&module_name)
@@ -252,7 +252,7 @@ impl DMSCModuleEndpoint {
     }
 }
 
-impl DMSCModuleEndpoint {
+impl RiModuleEndpoint {
     pub fn new(module_name: &str) -> Self {
         Self {
             module_name: module_name.to_string(),
@@ -266,9 +266,9 @@ impl DMSCModuleEndpoint {
 
     pub fn register_method<H>(&self, name: &str, handler: H) -> &Self
     where
-        H: Fn(Vec<u8>) -> DMSCResult<Vec<u8>> + Send + Sync + 'static,
+        H: Fn(Vec<u8>) -> RiResult<Vec<u8>> + Send + Sync + 'static,
     {
-        let registration = DMSCMethodRegistration::new(
+        let registration = RiMethodRegistration::new(
             name,
             Arc::new(SyncMethodHandler {
                 handler: Arc::new(handler),
@@ -281,12 +281,12 @@ impl DMSCModuleEndpoint {
 
     pub async fn register_method_async<H>(&self, name: &str, handler: H) -> &Self
     where
-        H: Fn(Vec<u8>) -> DMSCResult<Vec<u8>> + Send + Sync + 'static,
+        H: Fn(Vec<u8>) -> RiResult<Vec<u8>> + Send + Sync + 'static,
     {
         self.register_method(name, handler)
     }
 
-    pub async fn get_method(&self, name: &str) -> Option<DMSCMethodRegistration> {
+    pub async fn get_method(&self, name: &str) -> Option<RiMethodRegistration> {
         let methods = self.methods.read().await;
         methods.get(name).cloned()
     }
@@ -299,12 +299,12 @@ impl DMSCModuleEndpoint {
 
 #[derive(Clone)]
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
-pub struct DMSCModuleRPC {
-    endpoints: Arc<RwLock<HashMap<String, Arc<DMSCModuleEndpoint>>>>,
+pub struct RiModuleRPC {
+    endpoints: Arc<RwLock<HashMap<String, Arc<RiModuleEndpoint>>>>,
     default_timeout: Duration,
 }
 
-impl DMSCModuleRPC {
+impl RiModuleRPC {
     pub fn new() -> Self {
         Self {
             endpoints: Arc::new(RwLock::new(HashMap::new())),
@@ -317,7 +317,7 @@ impl DMSCModuleRPC {
         self
     }
 
-    pub async fn register_endpoint(&self, endpoint: DMSCModuleEndpoint) {
+    pub async fn register_endpoint(&self, endpoint: RiModuleEndpoint) {
         let mut endpoints = self.endpoints.write().await;
         endpoints.insert(endpoint.module_name().to_string(), Arc::new(endpoint));
     }
@@ -327,7 +327,7 @@ impl DMSCModuleRPC {
         endpoints.remove(module_name);
     }
 
-    pub async fn get_endpoint(&self, module_name: &str) -> Option<Arc<DMSCModuleEndpoint>> {
+    pub async fn get_endpoint(&self, module_name: &str) -> Option<Arc<RiModuleEndpoint>> {
         let endpoints = self.endpoints.read().await;
         endpoints.get(module_name).cloned()
     }
@@ -338,7 +338,7 @@ impl DMSCModuleRPC {
         method_name: &str,
         params: Vec<u8>,
         timeout_ms: Option<u64>,
-    ) -> DMSCMethodResponse {
+    ) -> RiMethodResponse {
         let endpoint = self.get_endpoint(module_name).await;
 
         if let Some(ep) = endpoint {
@@ -346,13 +346,13 @@ impl DMSCModuleRPC {
                 let timeout = timeout_ms.unwrap_or(self.default_timeout.as_millis() as u64);
                 return method.call(params, timeout).await;
             }
-            return DMSCMethodResponse::error_msg(format!(
+            return RiMethodResponse::error_msg(format!(
                 "Method '{}' not found on module '{}'",
                 method_name, module_name
             ));
         }
 
-        DMSCMethodResponse::error_msg(format!(
+        RiMethodResponse::error_msg(format!(
             "Module '{}' not found",
             module_name
         ))
@@ -364,7 +364,7 @@ impl DMSCModuleRPC {
     }
 }
 
-impl Default for DMSCModuleRPC {
+impl Default for RiModuleRPC {
     fn default() -> Self {
         Self::new()
     }
@@ -372,12 +372,12 @@ impl Default for DMSCModuleRPC {
 
 #[derive(Clone)]
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
-pub struct DMSCModuleClient {
-    rpc: Arc<DMSCModuleRPC>,
+pub struct RiModuleClient {
+    rpc: Arc<RiModuleRPC>,
 }
 
-impl DMSCModuleClient {
-    pub fn new(rpc: Arc<DMSCModuleRPC>) -> Self {
+impl RiModuleClient {
+    pub fn new(rpc: Arc<RiModuleRPC>) -> Self {
         Self { rpc }
     }
 
@@ -386,7 +386,7 @@ impl DMSCModuleClient {
         module_name: &str,
         method_name: &str,
         params: Vec<u8>,
-    ) -> DMSCMethodResponse {
+    ) -> RiMethodResponse {
         self.rpc.call_method(module_name, method_name, params, None).await
     }
 
@@ -396,16 +396,16 @@ impl DMSCModuleClient {
         method_name: &str,
         params: Vec<u8>,
         timeout_ms: u64,
-    ) -> DMSCMethodResponse {
+    ) -> RiMethodResponse {
         self.rpc
             .call_method(module_name, method_name, params, Some(timeout_ms))
             .await
     }
 }
 
-impl fmt::Debug for DMSCModuleRPC {
+impl fmt::Debug for RiModuleRPC {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("DMSCModuleRPC")
+        f.debug_struct("RiModuleRPC")
             .field("default_timeout", &self.default_timeout)
             .finish()
     }

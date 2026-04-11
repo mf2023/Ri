@@ -1,7 +1,7 @@
 //! Copyright © 2025-2026 Wenze Wei. All Rights Reserved.
 //!
-//! This file is part of DMSC.
-//! The DMSC project belongs to the Dunimd Team.
+//! This file is part of Ri.
+//! The Ri project belongs to the Dunimd Team.
 //!
 //! Licensed under the Apache License, Version 2.0 (the "License");
 //! You may not use this file except in compliance with the License.
@@ -19,14 +19,14 @@
 
 //! # Queue Manager Implementation
 //! 
-//! This file defines the queue management components for the DMSC queue system, including the
+//! This file defines the queue management components for the Ri queue system, including the
 //! queue module and queue manager. These components provide the infrastructure for creating,
 //! managing, and shutting down queues across different backend implementations.
 //! 
 //! ## Key Components
 //! 
-//! - **DMSCQueueModule**: Main queue module implementing the `AsyncServiceModule` trait
-//! - **DMSCQueueManager**: Central queue management component responsible for queue lifecycle
+//! - **RiQueueModule**: Main queue module implementing the `AsyncServiceModule` trait
+//! - **RiQueueManager**: Central queue management component responsible for queue lifecycle
 //! 
 //! ## Design Principles
 //! 
@@ -42,14 +42,14 @@
 //! ## Usage
 //! 
 //! ```rust
-//! use dmsc::prelude::*;
-//! use dmsc::queue::{DMSCQueueConfig, DMSCQueueBackendType};
+//! use ri::prelude::*;
+//! use ri::queue::{RiQueueConfig, RiQueueBackendType};
 //! 
-//! async fn example() -> DMSCResult<()> {
+//! async fn example() -> RiResult<()> {
 //!     // Create queue configuration
-//!     let queue_config = DMSCQueueConfig {
+//!     let queue_config = RiQueueConfig {
 //!         enabled: true,
-//!         backend_type: DMSCQueueBackendType::Memory,
+//!         backend_type: RiQueueBackendType::Memory,
 //!         default_queue_name: "default".to_string(),
 //!         max_retry_count: 3,
 //!         retry_delay_ms: 1000,
@@ -58,7 +58,7 @@
 //!     };
 //!     
 //!     // Create queue module
-//!     let queue_module = DMSCQueueModule::new(queue_config).await?;
+//!     let queue_module = RiQueueModule::new(queue_config).await?;
     //!     
     //!     // Get queue manager
     //!     let queue_manager = queue_module.queue_manager();
@@ -78,15 +78,15 @@ use std::sync::Arc;
 use std::collections::HashMap;
 use tokio::sync::RwLock;
 use async_trait::async_trait;
-use crate::core::{DMSCResult, AsyncServiceModule, DMSCServiceContext};
-use crate::queue::{DMSCQueue, DMSCQueueConfig, DMSCQueueBackendType};
+use crate::core::{RiResult, AsyncServiceModule, RiServiceContext};
+use crate::queue::{RiQueue, RiQueueConfig, RiQueueBackendType};
 
 #[cfg(feature = "pyo3")]
 use pyo3::PyResult;
 
 /// Connection pool for external queue backends
 struct QueueConnectionPool {
-    backend_type: DMSCQueueBackendType,
+    backend_type: RiQueueBackendType,
     connections: Arc<RwLock<Vec<Arc<dyn std::any::Any + Send + Sync>>>>,
     max_connections: usize,
     #[allow(dead_code)]
@@ -94,7 +94,7 @@ struct QueueConnectionPool {
 }
 
 impl QueueConnectionPool {
-    fn new(backend_type: DMSCQueueBackendType, connection_string: String, max_connections: usize) -> Self {
+    fn new(backend_type: RiQueueBackendType, connection_string: String, max_connections: usize) -> Self {
         Self {
             backend_type,
             connections: Arc::new(RwLock::new(Vec::new())),
@@ -104,7 +104,7 @@ impl QueueConnectionPool {
     }
 
     #[allow(dead_code)]
-    async fn get_connection(&self) -> DMSCResult<Arc<dyn std::any::Any + Send + Sync>> {
+    async fn get_connection(&self) -> RiResult<Arc<dyn std::any::Any + Send + Sync>> {
         let mut connections = self.connections.write().await;
         
         if let Some(conn) = connections.pop() {
@@ -117,7 +117,7 @@ impl QueueConnectionPool {
             return Ok(conn);
         }
 
-        Err(crate::core::DMSCError::Other("Connection pool exhausted".to_string()))
+        Err(crate::core::RiError::Other("Connection pool exhausted".to_string()))
     }
 
     async fn return_connection(&self, connection: Arc<dyn std::any::Any + Send + Sync>) {
@@ -127,46 +127,46 @@ impl QueueConnectionPool {
         }
     }
 
-    async fn create_connection(&self) -> DMSCResult<Arc<dyn std::any::Any + Send + Sync>> {
+    async fn create_connection(&self) -> RiResult<Arc<dyn std::any::Any + Send + Sync>> {
         match self.backend_type {
             #[cfg(feature = "rabbitmq")]
-            DMSCQueueBackendType::RabbitMQ => {
+            RiQueueBackendType::RabbitMQ => {
                 use lapin::{Connection, ConnectionProperties};
                 let conn = Connection::connect(&self.connection_string, ConnectionProperties::default()).await?;
                 Ok(Arc::new(conn))
             }
             #[cfg(not(feature = "rabbitmq"))]
-            DMSCQueueBackendType::RabbitMQ => {
-                Err(crate::core::DMSCError::Config(
+            RiQueueBackendType::RabbitMQ => {
+                Err(crate::core::RiError::Config(
                     "RabbitMQ support is disabled. Enable the 'rabbitmq' feature to use RabbitMQ backend.".to_string(),
                 ))
             }
             #[cfg(feature = "redis")]
-            DMSCQueueBackendType::Redis => {
+            RiQueueBackendType::Redis => {
                 use redis::Client;
                 let client = Client::open(self.connection_string.as_str())?;
                 let conn = client.get_multiplexed_async_connection().await?;
                 Ok(Arc::new(conn))
             }
             #[cfg(not(feature = "redis"))]
-            DMSCQueueBackendType::Redis => {
-                Err(crate::core::DMSCError::Config(
+            RiQueueBackendType::Redis => {
+                Err(crate::core::RiError::Config(
                     "Redis support is disabled. Enable the 'redis' feature to use Redis backend.".to_string(),
                 ))
             }
             #[cfg(all(feature = "kafka", not(windows)))]
-            DMSCQueueBackendType::Kafka => {
+            RiQueueBackendType::Kafka => {
                 // For Kafka, we don't need persistent connections like RabbitMQ/Redis
                 // The Kafka client manages its own connections internally
                 Ok(Arc::new(()))
             }
             #[cfg(any(not(feature = "kafka"), windows))]
-            DMSCQueueBackendType::Kafka => {
-                Err(crate::core::DMSCError::Config(
+            RiQueueBackendType::Kafka => {
+                Err(crate::core::RiError::Config(
                     "Kafka support is disabled. Enable the 'kafka' feature to use Kafka backend.".to_string(),
                 ))
             }
-            DMSCQueueBackendType::Memory => {
+            RiQueueBackendType::Memory => {
                 // Memory queue doesn't require any external connections
                 Ok(Arc::new(()))
             }
@@ -182,14 +182,14 @@ impl QueueConnectionPool {
 /// Main queue module implementing the async service module trait.
 /// 
 /// This module provides the main entry point for the queue system, integrating with the
-/// DMSC service module system for lifecycle management.
+/// Ri service module system for lifecycle management.
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
-pub struct DMSCQueueModule {
+pub struct RiQueueModule {
     /// The queue manager instance
-    queue_manager: Arc<DMSCQueueManager>,
+    queue_manager: Arc<RiQueueManager>,
 }
 
-impl DMSCQueueModule {
+impl RiQueueModule {
     /// Creates a new queue module with the given configuration.
     /// 
     /// # Parameters
@@ -198,9 +198,9 @@ impl DMSCQueueModule {
     /// 
     /// # Returns
     /// 
-    /// A `DMSCResult<Self>` containing the new queue module instance
-    pub async fn new(config: DMSCQueueConfig) -> DMSCResult<Self> {
-        let queue_manager = Arc::new(DMSCQueueManager::new(config).await?);
+    /// A `RiResult<Self>` containing the new queue module instance
+    pub async fn new(config: RiQueueConfig) -> RiResult<Self> {
+        let queue_manager = Arc::new(RiQueueManager::new(config).await?);
         Ok(Self { queue_manager })
     }
 
@@ -214,10 +214,10 @@ impl DMSCQueueModule {
     /// 
     /// # Returns
     /// 
-    /// A `DMSCResult<Self>` containing the new queue module instance
-    pub fn with_config(_config: DMSCQueueConfig) -> DMSCResult<Self> {
+    /// A `RiResult<Self>` containing the new queue module instance
+    pub fn with_config(_config: RiQueueConfig) -> RiResult<Self> {
         // Create a simple memory-based queue manager for synchronous initialization
-        let queue_manager = Arc::new(DMSCQueueManager::default());
+        let queue_manager = Arc::new(RiQueueManager::default());
         Ok(Self { queue_manager })
     }
 
@@ -225,30 +225,30 @@ impl DMSCQueueModule {
     /// 
     /// # Returns
     /// 
-    /// An Arc<DMSCQueueManager> providing thread-safe access to the queue manager
-    pub fn queue_manager(&self) -> Arc<DMSCQueueManager> {
+    /// An Arc<RiQueueManager> providing thread-safe access to the queue manager
+    pub fn queue_manager(&self) -> Arc<RiQueueManager> {
         self.queue_manager.clone()
     }
 }
 
 #[cfg(feature = "pyo3")]
-/// Python bindings for DMSCQueueModule
+/// Python bindings for RiQueueModule
 #[pyo3::prelude::pymethods]
-impl DMSCQueueModule {
+impl RiQueueModule {
     #[new]
     fn py_new() -> PyResult<Self> {
-        use crate::queue::DMSCQueueConfig;
-        use crate::queue::DMSCQueueBackendType;
+        use crate::queue::RiQueueConfig;
+        use crate::queue::RiQueueBackendType;
         
-        let config = DMSCQueueConfig {
+        let config = RiQueueConfig {
             enabled: true,
-            backend_type: DMSCQueueBackendType::Memory,
+            backend_type: RiQueueBackendType::Memory,
             connection_string: "memory://localhost".to_string(),
             max_connections: 10,
             message_max_size: 1024 * 1024,
             consumer_timeout_ms: 30000,
             producer_timeout_ms: 30000,
-            retry_policy: crate::queue::config::DMSCRetryPolicy::default(),
+            retry_policy: crate::queue::config::RiRetryPolicy::default(),
             dead_letter_config: None,
         };
         
@@ -265,7 +265,7 @@ impl DMSCQueueModule {
 }
 
 #[async_trait]
-impl AsyncServiceModule for DMSCQueueModule {
+impl AsyncServiceModule for RiQueueModule {
     /// Initializes the queue module.
     /// 
     /// This method delegates to the queue manager's initialization method.
@@ -276,8 +276,8 @@ impl AsyncServiceModule for DMSCQueueModule {
     /// 
     /// # Returns
     /// 
-    /// A `DMSCResult<()>` indicating success or failure
-    async fn init(&mut self, _ctx: &mut DMSCServiceContext) -> DMSCResult<()> {
+    /// A `RiResult<()>` indicating success or failure
+    async fn init(&mut self, _ctx: &mut RiServiceContext) -> RiResult<()> {
         self.queue_manager.init().await
     }
 
@@ -291,8 +291,8 @@ impl AsyncServiceModule for DMSCQueueModule {
     /// 
     /// # Returns
     /// 
-    /// A `DMSCResult<()>` indicating success or failure
-    async fn after_shutdown(&mut self, _ctx: &mut DMSCServiceContext) -> DMSCResult<()> {
+    /// A `RiResult<()>` indicating success or failure
+    async fn after_shutdown(&mut self, _ctx: &mut RiServiceContext) -> RiResult<()> {
         self.queue_manager.shutdown().await
     }
 
@@ -318,9 +318,9 @@ impl AsyncServiceModule for DMSCQueueModule {
     }
 }
 
-impl crate::core::ServiceModule for DMSCQueueModule {
+impl crate::core::ServiceModule for RiQueueModule {
     fn name(&self) -> &str {
-        "DMSC.Queue"
+        "Ri.Queue"
     }
 
     fn is_critical(&self) -> bool {
@@ -335,15 +335,15 @@ impl crate::core::ServiceModule for DMSCQueueModule {
         vec![]
     }
 
-    fn init(&mut self, _ctx: &mut crate::core::DMSCServiceContext) -> crate::core::DMSCResult<()> {
+    fn init(&mut self, _ctx: &mut crate::core::RiServiceContext) -> crate::core::RiResult<()> {
         Ok(())
     }
 
-    fn start(&mut self, _ctx: &mut crate::core::DMSCServiceContext) -> crate::core::DMSCResult<()> {
+    fn start(&mut self, _ctx: &mut crate::core::RiServiceContext) -> crate::core::RiResult<()> {
         Ok(())
     }
 
-    fn shutdown(&mut self, _ctx: &mut crate::core::DMSCServiceContext) -> crate::core::DMSCResult<()> {
+    fn shutdown(&mut self, _ctx: &mut crate::core::RiServiceContext) -> crate::core::RiResult<()> {
         Ok(())
     }
 }
@@ -353,16 +353,16 @@ impl crate::core::ServiceModule for DMSCQueueModule {
 /// This struct is responsible for the lifecycle of queues, including creating, retrieving,
 /// listing, and deleting queues. It manages queues across different backend implementations.
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
-pub struct DMSCQueueManager {
+pub struct RiQueueManager {
     /// Queue configuration
-    config: DMSCQueueConfig,
+    config: RiQueueConfig,
     /// Map of queue names to queue instances, protected by a RwLock for thread-safe access
-    queues: Arc<RwLock<HashMap<String, Arc<dyn DMSCQueue>>>>,
+    queues: Arc<RwLock<HashMap<String, Arc<dyn RiQueue>>>>,
     /// Connection pool for external backends
     connection_pool: Option<Arc<QueueConnectionPool>>,
 }
 
-impl DMSCQueueManager {
+impl RiQueueManager {
     /// Creates a new queue manager with the given configuration.
     /// 
     /// # Parameters
@@ -371,13 +371,13 @@ impl DMSCQueueManager {
     /// 
     /// # Returns
     /// 
-    /// A `DMSCResult<Self>` containing the new queue manager instance
-    pub async fn new(config: DMSCQueueConfig) -> DMSCResult<Self> {
+    /// A `RiResult<Self>` containing the new queue manager instance
+    pub async fn new(config: RiQueueConfig) -> RiResult<Self> {
         let backend_type = config.backend_type.clone();
         let connection_string = config.connection_string.clone();
         
         let connection_pool = match backend_type {
-            DMSCQueueBackendType::RabbitMQ | DMSCQueueBackendType::Redis => {
+            RiQueueBackendType::RabbitMQ | RiQueueBackendType::Redis => {
                 Some(Arc::new(QueueConnectionPool::new(
                     backend_type,
                     connection_string,
@@ -385,7 +385,7 @@ impl DMSCQueueManager {
                 )))
             }
             #[cfg(all(feature = "kafka", not(windows)))]
-            DMSCQueueBackendType::Kafka => {
+            RiQueueBackendType::Kafka => {
                 Some(Arc::new(QueueConnectionPool::new(
                     backend_type,
                     connection_string,
@@ -393,14 +393,14 @@ impl DMSCQueueManager {
                 )))
             }
             #[cfg(any(not(feature = "kafka"), windows))]
-            DMSCQueueBackendType::Kafka => {
+            RiQueueBackendType::Kafka => {
                 None
             }
             _ => None,
         };
 
         Ok(Self {
-            config: DMSCQueueConfig {
+            config: RiQueueConfig {
                 enabled: config.enabled,
                 backend_type: config.backend_type.clone(),
                 connection_string: config.connection_string.clone(),
@@ -417,18 +417,18 @@ impl DMSCQueueManager {
     }
 }
 
-impl Default for DMSCQueueManager {
+impl Default for RiQueueManager {
     fn default() -> Self {
         Self {
-            config: DMSCQueueConfig {
+            config: RiQueueConfig {
                 enabled: true,
-                backend_type: DMSCQueueBackendType::Memory,
+                backend_type: RiQueueBackendType::Memory,
                 connection_string: "memory://localhost".to_string(),
                 max_connections: 10,
                 message_max_size: 1024 * 1024,
                 consumer_timeout_ms: 30000,
                 producer_timeout_ms: 30000,
-                retry_policy: crate::queue::config::DMSCRetryPolicy::default(),
+                retry_policy: crate::queue::config::RiRetryPolicy::default(),
                 dead_letter_config: None,
             },
             queues: Arc::new(RwLock::new(HashMap::new())),
@@ -437,7 +437,7 @@ impl Default for DMSCQueueManager {
     }
 }
 
-impl DMSCQueueManager {
+impl RiQueueManager {
     /// Initializes the queue manager.
     /// 
     /// This method performs backend-specific initialization, such as setting up connection pools
@@ -445,8 +445,8 @@ impl DMSCQueueManager {
     /// 
     /// # Returns
     /// 
-    /// A `DMSCResult<()>` indicating success or failure
-    pub async fn init(&self) -> DMSCResult<()> {
+    /// A `RiResult<()>` indicating success or failure
+    pub async fn init(&self) -> RiResult<()> {
         // Initialize connection pool for external backends
         if let Some(ref pool) = self.connection_pool {
             // Pre-create a few connections for better performance
@@ -469,8 +469,8 @@ impl DMSCQueueManager {
     /// 
     /// # Returns
     /// 
-    /// A `DMSCResult<Arc<dyn DMSCQueue>>` containing the queue instance
-    pub async fn create_queue(&self, name: &str) -> DMSCResult<Arc<dyn DMSCQueue>> {
+    /// A `RiResult<Arc<dyn RiQueue>>` containing the queue instance
+    pub async fn create_queue(&self, name: &str) -> RiResult<Arc<dyn RiQueue>> {
         let mut queues = self.queues.write().await;
         
         if let Some(queue) = queues.get(name) {
@@ -494,21 +494,21 @@ impl DMSCQueueManager {
     /// 
     /// # Returns
     /// 
-    /// A `DMSCResult<Arc<dyn DMSCQueue>>` containing the created queue instance
-    async fn create_backend_queue(&self, name: &str) -> DMSCResult<Arc<dyn DMSCQueue>> {
+    /// A `RiResult<Arc<dyn RiQueue>>` containing the created queue instance
+    async fn create_backend_queue(&self, name: &str) -> RiResult<Arc<dyn RiQueue>> {
         match self.config.backend_type {
-            DMSCQueueBackendType::Memory => {
-                Ok(Arc::new(crate::queue::backends::DMSCMemoryQueue::new(name)))
+            RiQueueBackendType::Memory => {
+                Ok(Arc::new(crate::queue::backends::RiMemoryQueue::new(name)))
             }
             #[cfg(feature = "rabbitmq")]
-            DMSCQueueBackendType::RabbitMQ => {
+            RiQueueBackendType::RabbitMQ => {
                 if let Some(ref pool) = self.connection_pool {
                     let conn = pool.get_connection().await?;
                     // Extract the actual lapin connection from the pooled connection
                     if let Some(_lapin_conn) = conn.downcast_ref::<lapin::Connection>() {
                         // Since lapin::Connection doesn't implement Clone, we need to create a new connection
                         // This is a workaround - in a real system, you'd want to use connection pooling properly
-                        let queue = crate::queue::backends::DMSCRabbitMQQueue::new(
+                        let queue = crate::queue::backends::RiRabbitMQQueue::new(
                             name,
                             &self.config.connection_string,
                         )
@@ -519,7 +519,7 @@ impl DMSCQueueManager {
                     }
                 }
                 Ok(Arc::new(
-                    crate::queue::backends::DMSCRabbitMQQueue::new(
+                    crate::queue::backends::RiRabbitMQQueue::new(
                         name,
                         &self.config.connection_string,
                     )
@@ -527,15 +527,15 @@ impl DMSCQueueManager {
                 ))
             }
             #[cfg(not(feature = "rabbitmq"))]
-            DMSCQueueBackendType::RabbitMQ => {
-                Err(crate::core::DMSCError::Config(
+            RiQueueBackendType::RabbitMQ => {
+                Err(crate::core::RiError::Config(
                     "RabbitMQ support is disabled. Enable the 'rabbitmq' feature to use RabbitMQ backend.".to_string(),
                 ))
             }
             #[cfg(all(feature = "kafka", not(windows)))]
-            DMSCQueueBackendType::Kafka => {
+            RiQueueBackendType::Kafka => {
                 Ok(Arc::new(
-                    crate::queue::backends::DMSCKafkaQueue::new(
+                    crate::queue::backends::RiKafkaQueue::new(
                         name,
                         &self.config.connection_string,
                     )
@@ -543,15 +543,15 @@ impl DMSCQueueManager {
                 ))
             }
             #[cfg(any(not(feature = "kafka"), windows))]
-            DMSCQueueBackendType::Kafka => {
-                Err(crate::core::DMSCError::Config(
+            RiQueueBackendType::Kafka => {
+                Err(crate::core::RiError::Config(
                     "Kafka support is disabled. Enable the 'kafka' feature to use Kafka backend.".to_string(),
                 ))
             }
             #[cfg(feature = "redis")]
-            DMSCQueueBackendType::Redis => {
+            RiQueueBackendType::Redis => {
                 Ok(Arc::new(
-                    crate::queue::backends::DMSCRedisQueue::new(
+                    crate::queue::backends::RiRedisQueue::new(
                         name,
                         &self.config.connection_string,
                     )
@@ -559,8 +559,8 @@ impl DMSCQueueManager {
                 ))
             }
             #[cfg(not(feature = "redis"))]
-            DMSCQueueBackendType::Redis => {
-                Err(crate::core::DMSCError::Config(
+            RiQueueBackendType::Redis => {
+                Err(crate::core::RiError::Config(
                     "Redis support is disabled. Enable the 'redis' feature to use Redis backend.".to_string(),
                 ))
             }
@@ -575,8 +575,8 @@ impl DMSCQueueManager {
     /// 
     /// # Returns
     /// 
-    /// An `Option<Arc<dyn DMSCQueue>>` containing the queue instance if it exists, or None otherwise
-    pub async fn get_queue(&self, name: &str) -> Option<Arc<dyn DMSCQueue>> {
+    /// An `Option<Arc<dyn RiQueue>>` containing the queue instance if it exists, or None otherwise
+    pub async fn get_queue(&self, name: &str) -> Option<Arc<dyn RiQueue>> {
         let queues = self.queues.read().await;
         queues.get(name).cloned()
     }
@@ -602,8 +602,8 @@ impl DMSCQueueManager {
     /// 
     /// # Returns
     /// 
-    /// A `DMSCResult<()>` indicating success or failure
-    pub async fn delete_queue(&self, name: &str) -> DMSCResult<()> {
+    /// A `RiResult<()>` indicating success or failure
+    pub async fn delete_queue(&self, name: &str) -> RiResult<()> {
         let mut queues = self.queues.write().await;
         if let Some(queue) = queues.remove(name) {
             queue.delete().await?;
@@ -617,8 +617,8 @@ impl DMSCQueueManager {
     /// 
     /// # Returns
     /// 
-    /// A `DMSCResult<()>` indicating success or failure
-    pub async fn shutdown(&self) -> DMSCResult<()> {
+    /// A `RiResult<()>` indicating success or failure
+    pub async fn shutdown(&self) -> RiResult<()> {
         let mut queues = self.queues.write().await;
         for (_, queue) in queues.drain() {
             // Cleanup each queue
@@ -636,7 +636,7 @@ impl DMSCQueueManager {
 
 #[cfg(feature = "pyo3")]
 #[pyo3::prelude::pymethods]
-impl DMSCQueueManager {
+impl RiQueueManager {
     #[pyo3(name = "create_queue")]
     fn create_queue_impl(&self, name: String) -> PyResult<String> {
         let rt = tokio::runtime::Runtime::new().map_err(|e| {

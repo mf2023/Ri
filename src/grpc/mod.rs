@@ -1,7 +1,7 @@
 //! Copyright 2025-2026 Wenze Wei. All Rights Reserved.
 //!
-//! This file is part of DMSC.
-//! The DMSC project belongs to the Dunimd Team.
+//! This file is part of Ri.
+//! The Ri project belongs to the Dunimd Team.
 //!
 //! Licensed under the Apache License, Version 2.0 (the "License");
 //! You may not use this file except in compliance with the License.
@@ -17,7 +17,7 @@
 
 //! # gRPC Support
 
-use crate::core::DMSCResult;
+use crate::core::RiResult;
 use async_trait::async_trait;
 use std::sync::Arc;
 use tokio::sync::RwLock;
@@ -33,18 +33,18 @@ mod server;
 mod client;
 
 #[cfg(feature = "grpc")]
-pub use server::DMSCGrpcServer;
+pub use server::RiGrpcServer;
 #[cfg(feature = "grpc")]
-pub use client::DMSCGrpcClient;
+pub use client::RiGrpcClient;
 
 #[cfg(all(feature = "grpc", feature = "pyo3"))]
-pub use server::DMSCGrpcServerPy;
+pub use server::RiGrpcServerPy;
 #[cfg(all(feature = "grpc", feature = "pyo3"))]
-pub use client::DMSCGrpcClientPy;
+pub use client::RiGrpcClientPy;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "pyo3", pyclass)]
-pub struct DMSCGrpcConfig {
+pub struct RiGrpcConfig {
     pub addr: String,
     pub port: u16,
     pub max_concurrent_requests: u32,
@@ -55,7 +55,7 @@ pub struct DMSCGrpcConfig {
 
 #[cfg(feature = "pyo3")]
 #[pymethods]
-impl DMSCGrpcConfig {
+impl RiGrpcConfig {
     #[new]
     fn new() -> Self {
         Self::default()
@@ -122,7 +122,7 @@ impl DMSCGrpcConfig {
     }
 }
 
-impl Default for DMSCGrpcConfig {
+impl Default for RiGrpcConfig {
     fn default() -> Self {
         Self {
             addr: "127.0.0.1".to_string(),
@@ -137,26 +137,26 @@ impl Default for DMSCGrpcConfig {
 
 #[cfg(feature = "grpc")]
 #[async_trait]
-pub trait DMSCGrpcService: Send + Sync {
-    async fn handle_request(&self, method: &str, data: &[u8]) -> DMSCResult<Vec<u8>>;
+pub trait RiGrpcService: Send + Sync {
+    async fn handle_request(&self, method: &str, data: &[u8]) -> RiResult<Vec<u8>>;
     fn service_name(&self) -> &'static str;
 }
 
 #[cfg(feature = "grpc")]
 #[derive(Clone)]
-pub struct DMSCGrpcServiceRegistry {
-    pub services: Arc<RwLock<HashMap<String, Arc<dyn DMSCGrpcService>>>>,
+pub struct RiGrpcServiceRegistry {
+    pub services: Arc<RwLock<HashMap<String, Arc<dyn RiGrpcService>>>>,
 }
 
 #[cfg(feature = "grpc")]
-impl DMSCGrpcServiceRegistry {
+impl RiGrpcServiceRegistry {
     pub fn new() -> Self {
         Self {
             services: Arc::new(RwLock::new(HashMap::new())),
         }
     }
 
-    pub fn register_service(&mut self, service: Arc<dyn DMSCGrpcService>) {
+    pub fn register_service(&mut self, service: Arc<dyn RiGrpcService>) {
         let name = service.service_name().to_string();
         let mut services = self.services.blocking_write();
         services.insert(name, service);
@@ -169,7 +169,7 @@ impl DMSCGrpcServiceRegistry {
 }
 
 #[cfg(feature = "grpc")]
-impl Default for DMSCGrpcServiceRegistry {
+impl Default for RiGrpcServiceRegistry {
     fn default() -> Self {
         Self::new()
     }
@@ -177,22 +177,22 @@ impl Default for DMSCGrpcServiceRegistry {
 
 #[cfg(all(feature = "grpc", feature = "pyo3"))]
 #[pyclass]
-pub struct DMSCGrpcServiceRegistryPy {
-    registry: DMSCGrpcServiceRegistry,
+pub struct RiGrpcServiceRegistryPy {
+    registry: RiGrpcServiceRegistry,
 }
 
 #[cfg(all(feature = "grpc", feature = "pyo3"))]
 #[pymethods]
-impl DMSCGrpcServiceRegistryPy {
+impl RiGrpcServiceRegistryPy {
     #[new]
     fn new() -> Self {
         Self {
-            registry: DMSCGrpcServiceRegistry::new(),
+            registry: RiGrpcServiceRegistry::new(),
         }
     }
     
     fn register(&mut self, service_name: &str, handler: Py<PyAny>) {
-        let service = DMSCGrpcPythonService::new(service_name, handler);
+        let service = RiGrpcPythonService::new(service_name, handler);
         self.registry.register_service(Arc::new(service));
     }
     
@@ -202,7 +202,7 @@ impl DMSCGrpcServiceRegistryPy {
 }
 
 #[cfg(all(feature = "grpc", feature = "pyo3"))]
-impl Default for DMSCGrpcServiceRegistryPy {
+impl Default for RiGrpcServiceRegistryPy {
     fn default() -> Self {
         Self::new()
     }
@@ -210,7 +210,7 @@ impl Default for DMSCGrpcServiceRegistryPy {
 
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "pyo3", pyclass)]
-pub struct DMSCGrpcStats {
+pub struct RiGrpcStats {
     pub requests_received: u64,
     pub requests_completed: u64,
     pub requests_failed: u64,
@@ -221,7 +221,7 @@ pub struct DMSCGrpcStats {
 
 #[cfg(feature = "pyo3")]
 #[pymethods]
-impl DMSCGrpcStats {
+impl RiGrpcStats {
     #[getter]
     fn get_requests_received(&self) -> u64 {
         self.requests_received
@@ -253,7 +253,7 @@ impl DMSCGrpcStats {
     }
 }
 
-impl DMSCGrpcStats {
+impl RiGrpcStats {
     pub fn new() -> Self {
         Self {
             requests_received: 0,
@@ -287,7 +287,7 @@ impl DMSCGrpcStats {
     }
 }
 
-impl Default for DMSCGrpcStats {
+impl Default for RiGrpcStats {
     fn default() -> Self {
         Self::new()
     }
@@ -295,13 +295,13 @@ impl Default for DMSCGrpcStats {
 
 #[cfg(all(feature = "grpc", feature = "pyo3"))]
 #[pyclass]
-pub struct DMSCGrpcPythonService {
+pub struct RiGrpcPythonService {
     service_name: String,
     handler: Py<PyAny>,
 }
 
 #[cfg(all(feature = "grpc", feature = "pyo3"))]
-impl DMSCGrpcPythonService {
+impl RiGrpcPythonService {
     pub fn new(service_name: &str, handler: Py<PyAny>) -> Self {
         Self {
             service_name: service_name.to_string(),
@@ -312,8 +312,8 @@ impl DMSCGrpcPythonService {
 
 #[cfg(all(feature = "grpc", feature = "pyo3"))]
 #[async_trait]
-impl DMSCGrpcService for DMSCGrpcPythonService {
-    async fn handle_request(&self, method: &str, data: &[u8]) -> DMSCResult<Vec<u8>> {
+impl RiGrpcService for RiGrpcPythonService {
+    async fn handle_request(&self, method: &str, data: &[u8]) -> RiResult<Vec<u8>> {
         let method_str = method.to_string();
         let data_vec = data.to_vec();
         
@@ -328,10 +328,10 @@ impl DMSCGrpcService for DMSCGrpcPythonService {
                 });
                 match result_vec {
                     Ok(bytes) => Ok(bytes),
-                    Err(e) => Err(DMSCError::Other(format!("Failed to extract response bytes: {:?}", e))),
+                    Err(e) => Err(RiError::Other(format!("Failed to extract response bytes: {:?}", e))),
                 }
             }
-            Err(e) => Err(DMSCError::Other(format!("Python handler error: {:?}", e))),
+            Err(e) => Err(RiError::Other(format!("Python handler error: {:?}", e))),
         }
     }
     
@@ -354,10 +354,10 @@ pub enum GrpcError {
     Timeout,
 }
 
-impl From<GrpcError> for DMSCError {
+impl From<GrpcError> for RiError {
     fn from(error: GrpcError) -> Self {
-        DMSCError::Other(format!("gRPC error: {}", error))
+        RiError::Other(format!("gRPC error: {}", error))
     }
 }
 
-use crate::core::DMSCError;
+use crate::core::RiError;

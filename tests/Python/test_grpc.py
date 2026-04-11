@@ -2,8 +2,8 @@
 
 # Copyright © 2025-2026 Wenze Wei. All Rights Reserved.
 #
-# This file is part of DMSC.
-# The DMSC project belongs to the Dunimd Team.
+# This file is part of Ri.
+# The Ri project belongs to the Dunimd Team.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # You may not use this file except in compliance with the License.
@@ -18,39 +18,39 @@
 # limitations under the License.
 
 """
-DMSC gRPC Module Tests
+Ri gRPC Module Tests
 
 Tests for the gRPC functionality including server and client.
 """
 
 import pytest
-from dmsc import (
-    DMSCGrpcConfig,
-    DMSCGrpcClientPy,
-    DMSCGrpcStats,
+from ri import (
+    RiGrpcConfig,
+    RiGrpcClientPy,
+    RiGrpcStats,
 )
 
 
-class TestDMSCGrpcConfig:
-    """Tests for DMSCGrpcConfig"""
+class TestRiGrpcConfig:
+    """Tests for RiGrpcConfig"""
 
     def test_grpc_config_creation(self):
         """Test creating gRPC configuration"""
-        config = DMSCGrpcConfig()
+        config = RiGrpcConfig()
         assert config is not None
 
 
-class TestDMSCGrpcClient:
-    """Tests for DMSCGrpcClientPy"""
+class TestRiGrpcClient:
+    """Tests for RiGrpcClientPy"""
 
     def test_grpc_client_creation(self):
         """Test creating gRPC client - requires endpoint string"""
-        client = DMSCGrpcClientPy("http://localhost:50051")
+        client = RiGrpcClientPy("http://localhost:50051")
         assert client is not None
 
 
-class TestDMSCGrpcStats:
-    """Tests for DMSCGrpcStats"""
+class TestRiGrpcStats:
+    """Tests for RiGrpcStats"""
 
     def test_grpc_stats_creation(self):
         """Test creating gRPC stats - skip as it requires internal setup"""

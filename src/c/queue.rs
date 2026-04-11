@@ -1,7 +1,7 @@
 //! Copyright © 2025-2026 Wenze Wei. All Rights Reserved.
 //!
-//! This file is part of DMSC.
-//! The DMSC project belongs to the Dunimd Team.
+//! This file is part of Ri.
+//! The Ri project belongs to the Dunimd Team.
 //!
 //! Licensed under the Apache License, Version 2.0 (the "License");
 //! You may not use this file except in compliance with the License.
@@ -17,10 +17,10 @@
 
 //! # Queue Module C API
 //!
-//! This module provides C language bindings for DMSC's message queue infrastructure. The queue module
+//! This module provides C language bindings for Ri's message queue infrastructure. The queue module
 //! delivers high-performance asynchronous message processing with reliable delivery guarantees, multiple
 //! queue semantics, and comprehensive routing capabilities. This C API enables C/C++ applications to
-//! leverage DMSC's messaging functionality for building event-driven architectures, task distribution
+//! leverage Ri's messaging functionality for building event-driven architectures, task distribution
 //! systems, and distributed processing pipelines.
 //!
 //! ## Module Architecture
@@ -28,15 +28,15 @@
 //! The queue module comprises three primary components that together provide complete messaging
 //! functionality:
 //!
-//! - **DMSCQueueConfig**: Configuration container for queue parameters including queue type selection,
+//! - **RiQueueConfig**: Configuration container for queue parameters including queue type selection,
 //!   delivery guarantees, persistence settings, and consumer group configuration. The configuration object
 //!   controls queue behavior, resource allocation, and operational characteristics.
 //!
-//! - **DMSCQueueManager**: Central manager for queue lifecycle, message routing, and subscription
+//! - **RiQueueManager**: Central manager for queue lifecycle, message routing, and subscription
 //!   management. The manager handles the complete messaging workflow including message production,
 //!   consumption, acknowledgment, and dead-letter handling.
 //!
-//! - **DMSCQueueMessage**: Message abstraction representing individual messages in the queue system.
+//! - **RiQueueMessage**: Message abstraction representing individual messages in the queue system.
 //!   Messages encapsulate payload data, metadata, headers, delivery properties, and routing information.
 //!
 //! ## Queue Types
@@ -181,79 +181,79 @@
 //!
 //! ```c
 //! // Create queue configuration
-//! DMSCQueueConfig* config = dmsc_queue_config_new();
+//! RiQueueConfig* config = ri_queue_config_new();
 //! if (config == NULL) {
 //!     fprintf(stderr, "Failed to create queue config\n");
 //!     return ERROR_INIT;
 //! }
 //!
 //! // Configure queue settings
-//! dmsc_queue_config_set_queue_type(config, QUEUE_TYPE_FIFO);
-//! dmsc_queue_config_set_delivery_guarantee(config, DELIVERY_AT_LEAST_ONCE);
-//! dmsc_queue_config_set_persistence_enabled(config, true);
-//! dmsc_queue_config_set_consumer_count(config, 4);
+//! ri_queue_config_set_queue_type(config, QUEUE_TYPE_FIFO);
+//! ri_queue_config_set_delivery_guarantee(config, DELIVERY_AT_LEAST_ONCE);
+//! ri_queue_config_set_persistence_enabled(config, true);
+//! ri_queue_config_set_consumer_count(config, 4);
 //!
 //! // Create queue manager
-//! DMSCQueueManager* manager = dmsc_queue_manager_new(config);
+//! RiQueueManager* manager = ri_queue_manager_new(config);
 //! if (manager == NULL) {
 //!     fprintf(stderr, "Failed to create queue manager\n");
-//!     dmsc_queue_config_free(config);
+//!     ri_queue_config_free(config);
 //!     return ERROR_INIT;
 //! }
 //!
 //! // Create a message
-//! DMSCQueueMessage* message = dmsc_queue_message_new();
+//! RiQueueMessage* message = ri_queue_message_new();
 //! if (message == NULL) {
 //!     fprintf(stderr, "Failed to create message\n");
-//!     dmsc_queue_manager_free(manager);
-//!     dmsc_queue_config_free(config);
+//!     ri_queue_manager_free(manager);
+//!     ri_queue_config_free(config);
 //!     return ERROR_INIT;
 //! }
 //!
 //! // Configure message
 //! const char* payload = "{\"event\": \"user_login\", \"user_id\": 12345}";
-//! dmsc_queue_message_set_payload(message, payload, strlen(payload));
-//! dmsc_queue_message_set_correlation_id(message, "login-2024-001");
-//! dmsc_queue_message_set_priority(message, 5);
+//! ri_queue_message_set_payload(message, payload, strlen(payload));
+//! ri_queue_message_set_correlation_id(message, "login-2024-001");
+//! ri_queue_message_set_priority(message, 5);
 //!
 //! // Set headers
-//! dmsc_queue_message_set_header(message, "source", "auth-service");
-//! dmsc_queue_message_set_header(message, "version", "1.0");
+//! ri_queue_message_set_header(message, "source", "auth-service");
+//! ri_queue_message_set_header(message, "version", "1.0");
 //!
 //! // Publish message to queue
-//! int result = dmsc_queue_manager_publish(manager, "user-events", message);
+//! int result = ri_queue_manager_publish(manager, "user-events", message);
 //! if (result != 0) {
 //!     fprintf(stderr, "Failed to publish message: %d\n", result);
-//!     dmsc_queue_message_free(message);
-//!     dmsc_queue_manager_free(manager);
-//!     dmsc_queue_config_free(config);
+//!     ri_queue_message_free(message);
+//!     ri_queue_manager_free(manager);
+//!     ri_queue_config_free(config);
 //!     return ERROR_PUBLISH;
 //! }
 //!
 //! printf("Message published successfully\n");
 //!
 //! // Consume messages (blocking)
-//! DMSCQueueMessage* consumed = NULL;
-//! result = dmsc_queue_manager_consume(manager, "user-events", &consumed, 10000);
+//! RiQueueMessage* consumed = NULL;
+//! result = ri_queue_manager_consume(manager, "user-events", &consumed, 10000);
 //!
 //! if (result == 0 && consumed != NULL) {
 //!     // Process message
-//!     const char* received_payload = dmsc_queue_message_get_payload(consumed);
-//!     size_t payload_size = dmsc_queue_message_get_payload_size(consumed);
+//!     const char* received_payload = ri_queue_message_get_payload(consumed);
+//!     size_t payload_size = ri_queue_message_get_payload_size(consumed);
 //!
 //!     printf("Received: %.*s\n", (int)payload_size, received_payload);
 //!
 //!     // Get message metadata
-//!     const char* msg_id = dmsc_queue_message_get_id(consumed);
-//!     const char* corr_id = dmsc_queue_message_get_correlation_id(consumed);
-//!     uint64_t timestamp = dmsc_queue_message_get_timestamp(consumed);
+//!     const char* msg_id = ri_queue_message_get_id(consumed);
+//!     const char* corr_id = ri_queue_message_get_correlation_id(consumed);
+//!     uint64_t timestamp = ri_queue_message_get_timestamp(consumed);
 //!
 //!     // Process message...
 //!
 //!     // Acknowledge successful processing
-//!     dmsc_queue_manager_ack(manager, consumed);
+//!     ri_queue_manager_ack(manager, consumed);
 //!
-//!     dmsc_queue_message_free(consumed);
+//!     ri_queue_message_free(consumed);
 //! } else if (result == TIMEOUT) {
 //!     printf("No messages available within timeout\n");
 //! } else {
@@ -261,7 +261,7 @@
 //! }
 //!
 //! // Subscribe to a queue for continuous consumption
-//! DMSCConsumerHandle* consumer = dmsc_queue_manager_subscribe(
+//! RiConsumerHandle* consumer = ri_queue_manager_subscribe(
 //!     manager,
 //!     "user-events",
 //!     message_handler_callback,
@@ -275,13 +275,13 @@
 //!     // Application continues running...
 //!
 //!     // Stop consumer when done
-//!     dmsc_queue_manager_unsubscribe(consumer);
+//!     ri_queue_manager_unsubscribe(consumer);
 //! }
 //!
 //! // Cleanup
-//! dmsc_queue_message_free(message);
-//! dmsc_queue_manager_free(manager);
-//! dmsc_queue_config_free(config);
+//! ri_queue_message_free(message);
+//! ri_queue_manager_free(manager);
+//! ri_queue_config_free(config);
 //! ```
 //!
 //! ## Message Handler Callback
@@ -290,8 +290,8 @@
 //!
 //! ```c
 //! typedef int (*DMSQueueMessageHandler)(
-//!     DMSCQueueManager* manager,
-//!     DMSCQueueMessage* message,
+//!     RiQueueManager* manager,
+//!     RiQueueMessage* message,
 //!     void* user_data
 //! );
 //! ```
@@ -304,7 +304,7 @@
 //!
 //! ## Dependencies
 //!
-//! This module depends on the following DMSC components:
+//! This module depends on the following Ri components:
 //!
 //! - `crate::queue`: Rust queue module implementation
 //! - `crate::prelude`: Common types and traits
@@ -322,18 +322,18 @@
 //! - `queue-kafka`: Enable Apache Kafka backend support
 //! - `queue-sqs`: Enable AWS SQS backend support
 
-use crate::queue::{DMSCQueueConfig, DMSCQueueManager, DMSCQueueMessage};
+use crate::queue::{RiQueueConfig, RiQueueManager, RiQueueMessage};
 
 
-c_wrapper!(CDMSCQueueConfig, DMSCQueueConfig);
-c_wrapper!(CDMSCQueueManager, DMSCQueueManager);
-c_wrapper!(CDMSCQueueMessage, DMSCQueueMessage);
+c_wrapper!(CRiQueueConfig, RiQueueConfig);
+c_wrapper!(CRiQueueManager, RiQueueManager);
+c_wrapper!(CRiQueueMessage, RiQueueMessage);
 
-// DMSCQueueConfig constructors and destructors
+// RiQueueConfig constructors and destructors
 c_constructor!(
-    dmsc_queue_config_new,
-    CDMSCQueueConfig,
-    DMSCQueueConfig,
-    DMSCQueueConfig::default()
+    ri_queue_config_new,
+    CRiQueueConfig,
+    RiQueueConfig,
+    RiQueueConfig::default()
 );
-c_destructor!(dmsc_queue_config_free, CDMSCQueueConfig);
+c_destructor!(ri_queue_config_free, CRiQueueConfig);

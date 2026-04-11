@@ -1,7 +1,7 @@
 // Copyright © 2025-2026 Wenze Wei. All Rights Reserved.
 //
-// This file is part of DMSC.
-// The DMSC project belongs to the Dunimd Team.
+// This file is part of Ri.
+// The Ri project belongs to the Dunimd Team.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // You may not use this file except in compliance with the License.
@@ -15,26 +15,26 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import com.dunimd.dmsc.auth.DMSCAuthModule;
-import com.dunimd.dmsc.auth.DMSCAuthConfig;
-import com.dunimd.dmsc.auth.DMSCJWTManager;
-import com.dunimd.dmsc.auth.DMSCJWTClaims;
-import com.dunimd.dmsc.DMSCError;
+import com.dunimd.ri.auth.RiAuthModule;
+import com.dunimd.ri.auth.RiAuthConfig;
+import com.dunimd.ri.auth.RiJWTManager;
+import com.dunimd.ri.auth.RiJWTClaims;
+import com.dunimd.ri.RiError;
 
 /**
- * DMSC Auth Module Example for Java.
+ * Ri Auth Module Example for Java.
  *
- * This example demonstrates how to use the DMSC authentication module
+ * This example demonstrates how to use the Ri authentication module
  * for JWT token generation and validation.
  */
 public class AuthExample {
     public static void main(String[] args) {
-        System.out.println("=== DMSC Auth Module Example - Java ===\n");
+        System.out.println("=== Ri Auth Module Example - Java ===\n");
 
         try {
             // Create authentication configuration
             System.out.println("1. Creating authentication configuration...");
-            DMSCAuthConfig authConfig = new DMSCAuthConfig();
+            RiAuthConfig authConfig = new RiAuthConfig();
             authConfig.setEnabled(true);
             authConfig.setJwtSecret("your-secret-key-here");
             authConfig.setJwtExpirySecs(3600);
@@ -43,7 +43,7 @@ public class AuthExample {
 
             // Initialize auth module
             System.out.println("2. Creating authentication module...");
-            DMSCAuthModule authModule = new DMSCAuthModule(authConfig);
+            RiAuthModule authModule = new RiAuthModule(authConfig);
             System.out.println("   Auth module created\n");
 
             // Generate JWT token
@@ -73,8 +73,8 @@ public class AuthExample {
 
             System.out.println("=== Auth Example Completed ===");
 
-        } catch (DMSCError e) {
-            System.err.println("DMSC Error: " + e.getMessage());
+        } catch (RiError e) {
+            System.err.println("Ri Error: " + e.getMessage());
             e.printStackTrace();
             System.exit(1);
         } catch (Exception e) {

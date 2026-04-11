@@ -1,12 +1,20 @@
+> **⚠️ IMPORTANT NOTICE**
+>
+> **DMSC → RI** starting from version **0.1.9** | CLI tools included | [📖 Read Migration Guide](./ANNOUNCEMENT.md)
+>
+> All `DMSC*` types → `RI*` | Package: `dmsc` → `ri`
+
+---
+
 <div align="center">
 
 <h1 style="display: flex; flex-direction: column; align-items: center; gap: 8px; margin-bottom: 8px;">
-  <span style="display: flex; align-items: center; gap: 12px;"><img src="assets/svg/dmsc.svg" width="36" height="36" alt="DMSC">Dunimd Middleware Service</span>
+  <span style="display: flex; align-items: center; gap: 12px;"><img src="assets/svg/ri.svg" width="36" height="36" alt="Ri">Ri</span>
 </h1>
 
 English | [简体中文](README.zh.md)
 
-[Help Documentation](https://mf2023.github.io/DMSC/dmsc/) | [Changelog](CHANGELOG.md) | [Security](SECURITY.md) | [Contributing](CONTRIBUTING.md) | [Code of Conduct](CODE_OF_CONDUCT.md)
+[Help Documentation](https://mf2023.github.io/Ri/ri/) | [Changelog](CHANGELOG.md) | [Security](SECURITY.md) | [Contributing](CONTRIBUTING.md) | [Code of Conduct](CODE_OF_CONDUCT.md)
 
 <a href="https://x.com/Dunimd2025" target="_blank">
     <img alt="X" src="https://img.shields.io/badge/X-Dunimd-000000?style=flat-square&logo=x"/>
@@ -16,14 +24,14 @@ English | [简体中文](README.zh.md)
 </a>
 
 
-<a href="https://github.com/mf2023/DMSC" target="_blank">
-    <img alt="GitHub" src="https://img.shields.io/badge/GitHub-DMSC-181717?style=flat-square&logo=github"/>
+<a href="https://github.com/mf2023/Ri" target="_blank">
+    <img alt="GitHub" src="https://img.shields.io/badge/GitHub-Ri-181717?style=flat-square&logo=github"/>
 </a>
 <a href="https://gitee.com/dunimd" target="_blank">
     <img alt="Gitee" src="https://img.shields.io/badge/Gitee-Dunimd-C71D23?style=flat-square&logo=gitee"/>
 </a>
-<a href="https://gitcode.com/dunimd/dmsc.git" target="_blank">
-    <img alt="GitCode" src="https://img.shields.io/badge/GitCode-DMSC-FF6B35?style=flat-square&logo=git"/>
+<a href="https://gitcode.com/dunimd/ri.git" target="_blank">
+    <img alt="GitCode" src="https://img.shields.io/badge/GitCode-Ri-FF6B35?style=flat-square&logo=git"/>
 </a>
 <a href="https://huggingface.co/dunimd" target="_blank">
     <img alt="Hugging Face" src="https://img.shields.io/badge/Hugging%20Face-Dunimd-FFD21E?style=flat-square&logo=huggingface"/>
@@ -33,27 +41,27 @@ English | [简体中文](README.zh.md)
 </a>
 
 
-<a href="https://crates.io/crates/dmsc" target="_blank">
-    <img alt="Crates.io" src="https://img.shields.io/badge/Crates-DMSC-000000?style=flat-square&logo=rust"/>
+<a href="https://crates.io/crates/ri" target="_blank">
+    <img alt="Crates.io" src="https://img.shields.io/badge/Crates-Ri-000000?style=flat-square&logo=rust"/>
 </a>
-<a href="https://pypi.org/project/dmsc/" target="_blank">
-    <img alt="PyPI" src="https://img.shields.io/badge/PyPI-DMSC-3775A9?style=flat-square&logo=pypi"/>
+<a href="https://pypi.org/project/ri/" target="_blank">
+    <img alt="PyPI" src="https://img.shields.io/badge/PyPI-Ri-3775A9?style=flat-square&logo=pypi"/>
 </a>
-<a href="https://docs.rs/dmsc/latest/dmsc/c/index.html" target="_blank">
-    <img alt="C/C++" src="https://img.shields.io/badge/C%2FC%2B%2B-DMSC-00599C?style=flat-square&logo=c"/>
+<a href="https://docs.rs/ri/latest/ri/c/index.html" target="_blank">
+    <img alt="C/C++" src="https://img.shields.io/badge/C%2FC%2B%2B-Ri-00599C?style=flat-square&logo=c"/>
 </a>
-<a href="https://search.maven.org/artifact/com.dunimd/dmsc" target="_blank">
-    <img alt="Maven Central" src="https://img.shields.io/badge/Maven-DMSC-007396?style=flat-square&logo=apachemaven"/>
+<a href="https://search.maven.org/artifact/com.dunimd/ri" target="_blank">
+    <img alt="Maven Central" src="https://img.shields.io/badge/Maven-Ri-007396?style=flat-square&logo=apachemaven"/>
 </a>
 
-**DMSC (Dunimd Middleware Service)** — A high-performance Rust middleware framework that unifies backend infrastructure. Built for enterprise-scale with modular architecture, built-in observability, and distributed systems support.
+**Ri (Ri)** — A high-performance Rust middleware framework that unifies backend infrastructure. Built for enterprise-scale with modular architecture, built-in observability, and distributed systems support.
 
 </div>
 
 <h2 align="center">🏗️ Core Architecture</h2>
 
 ### 📐 Modular Design
-DMSC adopts a highly modular architecture with 18 core modules, enabling on-demand composition and seamless extension:
+Ri adopts a highly modular architecture with 18 core modules, enabling on-demand composition and seamless extension:
 
 <div align="center">
 
@@ -209,17 +217,17 @@ sudo yum install -y cmake gcc-c++ make
 
 ### Quick Setup
 
-Add DMSC to your project's `Cargo.toml`:
+Add Ri to your project's `Cargo.toml`:
 
 ```toml
 [dependencies]
-dmsc = "0.1.8"
+ri = "0.1.8"
 ```
 
 Or use cargo add:
 
 ```bash
-cargo add dmsc
+cargo add ri
 ```
 
 <h2 align="center">⚡ Quick Start</h2>
@@ -227,20 +235,20 @@ cargo add dmsc
 ### Core API Usage
 
 ```rust
-use dmsc::prelude::*;
+use ri::prelude::*;
 
 #[tokio::main]
-async fn main() -> DMSCResult<()> {
+async fn main() -> RiResult<()> {
     // Build service runtime
-    let app = DMSCAppBuilder::new()
+    let app = RiAppBuilder::new()
         .with_config("config.yaml")?
-        .with_logging(DMSCLogConfig::default())
-        .with_observability(DMSCObservabilityConfig::default())
+        .with_logging(RiLogConfig::default())
+        .with_observability(RiObservabilityConfig::default())
         .build()?;
     
     // Run business logic
-    app.run(|ctx: &DMSCServiceContext| async move {
-        ctx.logger().info("service", "DMSC service started")?;
+    app.run(|ctx: &RiServiceContext| async move {
+        ctx.logger().info("service", "Ri service started")?;
         // Your business code here
         Ok(())
     }).await
@@ -250,24 +258,24 @@ async fn main() -> DMSCResult<()> {
 ### Observability Example
 
 ```rust
-use dmsc::prelude::*;
-use dmsc::observability::{DMSCTracer, DMSCSpanKind, DMSCSpanStatus};
+use ri::prelude::*;
+use ri::observability::{RiTracer, RiSpanKind, RiSpanStatus};
 
 #[tracing::instrument(name = "user_service", skip(ctx))]
-async fn get_user(ctx: &DMSCServiceContext, user_id: u64) -> DMSCResult<User> {
+async fn get_user(ctx: &RiServiceContext, user_id: u64) -> RiResult<User> {
     let user = fetch_user_from_db(user_id).await?;
     Ok(user)
 }
 ```
 
-Or using DMSCTracer directly:
+Or using RiTracer directly:
 
 ```rust
-use dmsc::prelude::*;
-use dmsc::observability::DMSCTracer;
+use ri::prelude::*;
+use ri::observability::RiTracer;
 
-async fn get_user(ctx: &DMSCServiceContext, user_id: u64) -> DMSCResult<User> {
-    let tracer = DMSCTracer::new(1.0);
+async fn get_user(ctx: &RiServiceContext, user_id: u64) -> RiResult<User> {
+    let tracer = RiTracer::new(1.0);
     let _span = tracer.span("get_user")
         .with_attribute("user_id", user_id.to_string())
         .start();
@@ -304,10 +312,10 @@ resource:
 
 ### Configuration Sources
 
-DMSC supports multiple configuration sources in order of priority (lowest to highest):
+Ri supports multiple configuration sources in order of priority (lowest to highest):
 1. Configuration files (YAML, TOML, JSON)
 2. Custom configuration via code
-3. Environment variables (prefixed with `DMSC_`)
+3. Environment variables (prefixed with `Ri_`)
 
 <h2 align="center">🧪 Development & Testing</h2>
 
@@ -315,7 +323,7 @@ DMSC supports multiple configuration sources in order of priority (lowest to hig
 
 #### Multi-Language Testing
 
-DMSC provides comprehensive testing across all supported languages:
+Ri provides comprehensive testing across all supported languages:
 
 - **Rust**: Core library tests with `cargo test`
 - **Python**: Python binding tests with `pytest`
@@ -359,8 +367,8 @@ pip install -e .
 python -m pytest tests/Python/ -v
 
 # Run specific test classes
-python -m pytest tests/Python/test_core.py::TestDMSCAppBuilderWrapper -v
-python -m pytest tests/Python/test_core.py::TestDMSCAppRuntimeWrapper -v
+python -m pytest tests/Python/test_core.py::TestRiAppBuilderWrapper -v
+python -m pytest tests/Python/test_core.py::TestRiAppRuntimeWrapper -v
 ```
 
 #### Running Java Tests
@@ -390,7 +398,7 @@ java -cp build/classes/java/test:build/classes/java/main \
 <h2 align="center">❓ Frequently Asked Questions</h2>
 
 **Q: How to add a new module?**
-A: Implement the `DMSCModule` trait and register it via `DMSCAppBuilder::with_module`.
+A: Implement the `RiModule` trait and register it via `RiAppBuilder::with_module`.
 
 **Q: How to configure logging level?**
 A: Set `logging.level` in the configuration file, supporting DEBUG/INFO/WARN/ERROR levels.
@@ -399,17 +407,17 @@ A: Set `logging.level` in the configuration file, supporting DEBUG/INFO/WARN/ERR
 A: Set `observability.metrics_enabled: true` and configure `prometheus_port` in the configuration file.
 
 **Q: How to extend configuration sources?**
-A: Implement a custom configuration loader and register it with `DMSCConfigManager`.
+A: Implement a custom configuration loader and register it with `RiConfigManager`.
 
 **Q: How to handle asynchronous tasks?**
-A: Use `DMSCAppBuilder::with_async_module` to add async modules, the framework handles async lifecycle automatically.
+A: Use `RiAppBuilder::with_async_module` to add async modules, the framework handles async lifecycle automatically.
 
 <h2 align="center">🌏 Community & Citation</h2>
 
 - Welcome to submit Issues and PRs!
-- Github: https://github.com/mf2023/DMSC.git
-- Gitee: https://gitee.com/dunimd/dmsc.git
-- GitCode: https://gitcode.com/dunimd/dmsc.git
+- Github: https://github.com/mf2023/Ri.git
+- Gitee: https://gitee.com/dunimd/ri.git
+- GitCode: https://gitcode.com/dunimd/ri.git
 
 
 <div align="center">

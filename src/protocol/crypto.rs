@@ -1,7 +1,7 @@
 //! Copyright © 2025-2026 Wenze Wei. All Rights Reserved.
 //!
-//! This file is part of DMSC.
-//! The DMSC project belongs to the Dunimd Team.
+//! This file is part of Ri.
+//! The Ri project belongs to the Dunimd Team.
 //!
 //! Licensed under the Apache License, Version 2.0 (the "License");
 //! You may not use this file except in compliance with the License.
@@ -37,7 +37,7 @@ use ring::rand::{SecureRandom, SystemRandom};
 use data_encoding::{BASE64, HEX};
 use std::collections::HashMap;
 
-use crate::core::{DMSCResult, DMSCError};
+use crate::core::{RiResult, RiError};
 
 /// Crypto engine errors
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -116,7 +116,7 @@ impl std::error::Error for CryptoError {}
 ///
 /// When compiled with the `pyo3` feature, this struct provides Python bindings:
 /// ```python
-/// from dmsc import AES256GCM
+/// from ri import AES256GCM
 ///
 /// # Create new cipher with random key
 /// cipher = AES256GCM.new()
@@ -135,7 +135,7 @@ impl std::error::Error for CryptoError {}
 ///
 /// Basic encryption and decryption:
 /// ```rust
-/// use dmsc::protocol::crypto::AES256GCM;
+/// use ri::protocol::crypto::AES256GCM;
 ///
 /// let cipher = AES256GCM::new().expect("Failed to create cipher");
 ///
@@ -155,7 +155,7 @@ impl std::error::Error for CryptoError {}
 ///
 /// Using an existing key (e.g., from key exchange):
 /// ```rust
-/// use dmsc::protocol::crypto::AES256GCM;
+/// use ri::protocol::crypto::AES256GCM;
 ///
 /// let key = [0x42u8; 32]; // In practice, use a securely generated key
 /// let cipher = AES256GCM::with_key(key);
@@ -181,11 +181,11 @@ pub struct AES256GCM {
 
 impl AES256GCM {
     /// Create new AES-256-GCM instance with random key
-    pub fn new() -> DMSCResult<Self> {
+    pub fn new() -> RiResult<Self> {
         let rng = Arc::new(SystemRandom::new());
         let mut key = [0u8; 32];
         rng.fill(&mut key)
-            .map_err(|e| DMSCError::CryptoError(format!("Failed to generate AES key: {}", e)))?;
+            .map_err(|e| RiError::CryptoError(format!("Failed to generate AES key: {}", e)))?;
         
         Ok(Self { key, rng })
     }
@@ -197,9 +197,9 @@ impl AES256GCM {
     }
     
     /// Encrypt data with AES-256-GCM
-    pub fn encrypt(&self, plaintext: &[u8], additional_data: Option<&[u8]>) -> DMSCResult<Vec<u8>> {
+    pub fn encrypt(&self, plaintext: &[u8], additional_data: Option<&[u8]>) -> RiResult<Vec<u8>> {
         let key = aead::UnboundKey::new(&aead::AES_256_GCM, &self.key)
-            .map_err(|e| DMSCError::CryptoError(format!("Failed to create AES key: {}", e)))?;
+            .map_err(|e| RiError::CryptoError(format!("Failed to create AES key: {}", e)))?;
         
         let key = aead::LessSafeKey::new(key);
         let nonce = self.generate_nonce()?;
@@ -209,18 +209,18 @@ impl AES256GCM {
         
         key.seal_in_place_append_tag(
             aead::Nonce::try_assume_unique_for_key(&nonce)
-                .map_err(|e| DMSCError::CryptoError(format!("Invalid nonce: {}", e)))?,
+                .map_err(|e| RiError::CryptoError(format!("Invalid nonce: {}", e)))?,
             aead::Aad::from(additional_data.unwrap_or(&[])),
             &mut ciphertext[..plaintext.len()],
-        ).map_err(|e| DMSCError::CryptoError(format!("Encryption failed: {}", e)))?;
+        ).map_err(|e| RiError::CryptoError(format!("Encryption failed: {}", e)))?;
         
         Ok(ciphertext)
     }
     
     /// Decrypt data with AES-256-GCM
-    pub fn decrypt(&self, ciphertext: &[u8], additional_data: Option<&[u8]>) -> DMSCResult<Vec<u8>> {
+    pub fn decrypt(&self, ciphertext: &[u8], additional_data: Option<&[u8]>) -> RiResult<Vec<u8>> {
         if ciphertext.len() < 12 + 16 { // nonce + tag
-            return Err(DMSCError::CryptoError("Invalid ciphertext length".to_string()));
+            return Err(RiError::CryptoError("Invalid ciphertext length".to_string()));
         }
         
         let (data, nonce_tag) = ciphertext.split_at(ciphertext.len() - 28);
@@ -228,7 +228,7 @@ impl AES256GCM {
         let tag = &nonce_tag[12..];
         
         let key = aead::UnboundKey::new(&aead::AES_256_GCM, &self.key)
-            .map_err(|e| DMSCError::CryptoError(format!("Failed to create AES key: {}", e)))?;
+            .map_err(|e| RiError::CryptoError(format!("Failed to create AES key: {}", e)))?;
         
         let key = aead::LessSafeKey::new(key);
         let mut plaintext = data.to_vec();
@@ -236,19 +236,19 @@ impl AES256GCM {
         
         let decrypted_len = key.open_in_place(
             aead::Nonce::try_assume_unique_for_key(nonce)
-                .map_err(|e| DMSCError::CryptoError(format!("Invalid nonce: {}", e)))?,
+                .map_err(|e| RiError::CryptoError(format!("Invalid nonce: {}", e)))?,
             aead::Aad::from(additional_data.unwrap_or(&[])),
             &mut plaintext,
-        ).map_err(|e| DMSCError::CryptoError(format!("Decryption failed: {}", e)))?;
+        ).map_err(|e| RiError::CryptoError(format!("Decryption failed: {}", e)))?;
         
         plaintext.truncate(decrypted_len.len());
         Ok(plaintext)
     }
     
-    fn generate_nonce(&self) -> DMSCResult<[u8; 12]> {
+    fn generate_nonce(&self) -> RiResult<[u8; 12]> {
         let mut nonce = [0u8; 12];
         self.rng.fill(&mut nonce)
-            .map_err(|e| DMSCError::CryptoError(format!("Failed to generate nonce: {}", e)))?;
+            .map_err(|e| RiError::CryptoError(format!("Failed to generate nonce: {}", e)))?;
         Ok(nonce)
     }
     
@@ -327,7 +327,7 @@ impl AES256GCM {
 ///
 /// When compiled with the `pyo3` feature, this struct provides Python bindings:
 /// ```python
-/// from dmsc import ChaCha20Poly1305
+/// from ri import ChaCha20Poly1305
 ///
 /// # Create new cipher with random key
 /// cipher = ChaCha20Poly1305.new()
@@ -346,7 +346,7 @@ impl AES256GCM {
 ///
 /// Basic encryption and decryption:
 /// ```rust
-/// use dmsc::protocol::crypto::ChaCha20Poly1305;
+/// use ri::protocol::crypto::ChaCha20Poly1305;
 ///
 /// let cipher = ChaCha20Poly1305::new().expect("Failed to create cipher");
 ///
@@ -364,7 +364,7 @@ impl AES256GCM {
 ///
 /// Comparing with AES-256-GCM:
 /// ```rust
-/// use dmsc::protocol::crypto::{AES256GCM, ChaCha20Poly1305};
+/// use ri::protocol::crypto::{AES256GCM, ChaCha20Poly1305};
 ///
 /// let aes_cipher = AES256GCM::new().expect("Failed to create AES cipher");
 /// let chacha_cipher = ChaCha20Poly1305::new().expect("Failed to create ChaCha20 cipher");
@@ -395,33 +395,33 @@ pub struct ChaCha20Poly1305 {
 
 impl ChaCha20Poly1305 {
     /// Create new ChaCha20-Poly1305 instance
-    pub fn new() -> DMSCResult<Self> {
+    pub fn new() -> RiResult<Self> {
         let rng = Arc::new(SystemRandom::new());
         let mut key = [0u8; 32];
         rng.fill(&mut key)
-            .map_err(|e| DMSCError::CryptoError(format!("Failed to generate ChaCha20 key: {}", e)))?;
+            .map_err(|e| RiError::CryptoError(format!("Failed to generate ChaCha20 key: {}", e)))?;
         
         Ok(Self { key, rng })
     }
     
     /// Encrypt data with ChaCha20-Poly1305
-    pub fn encrypt(&self, plaintext: &[u8], additional_data: Option<&[u8]>) -> DMSCResult<Vec<u8>> {
+    pub fn encrypt(&self, plaintext: &[u8], additional_data: Option<&[u8]>) -> RiResult<Vec<u8>> {
         let key = aead::UnboundKey::new(&aead::CHACHA20_POLY1305, &self.key)
-            .map_err(|e| DMSCError::CryptoError(format!("Failed to create ChaCha20 key: {}", e)))?;
+            .map_err(|e| RiError::CryptoError(format!("Failed to create ChaCha20 key: {}", e)))?;
         
         let key = aead::LessSafeKey::new(key);
         let mut nonce = [0u8; 12];
         self.rng.fill(&mut nonce)
-            .map_err(|e| DMSCError::CryptoError(format!("Failed to generate nonce: {}", e)))?;
+            .map_err(|e| RiError::CryptoError(format!("Failed to generate nonce: {}", e)))?;
         
         let mut ciphertext = plaintext.to_vec();
         
         key.seal_in_place_append_tag(
             aead::Nonce::try_assume_unique_for_key(&nonce)
-                .map_err(|e| DMSCError::CryptoError(format!("Invalid nonce: {}", e)))?,
+                .map_err(|e| RiError::CryptoError(format!("Invalid nonce: {}", e)))?,
             aead::Aad::from(additional_data.unwrap_or(&[])),
             &mut ciphertext,
-        ).map_err(|e| DMSCError::CryptoError(format!("Encryption failed: {}", e)))?;
+        ).map_err(|e| RiError::CryptoError(format!("Encryption failed: {}", e)))?;
         
         // Prepend nonce to ciphertext
         let mut result = nonce.to_vec();
@@ -431,47 +431,47 @@ impl ChaCha20Poly1305 {
     }
     
     /// Decrypt data with ChaCha20-Poly1305
-    pub fn decrypt(&self, ciphertext: &[u8], additional_data: Option<&[u8]>) -> DMSCResult<Vec<u8>> {
+    pub fn decrypt(&self, ciphertext: &[u8], additional_data: Option<&[u8]>) -> RiResult<Vec<u8>> {
         if ciphertext.len() < 12 {
-            return Err(DMSCError::CryptoError("Invalid ciphertext length".to_string()));
+            return Err(RiError::CryptoError("Invalid ciphertext length".to_string()));
         }
         
         let (nonce, encrypted_data) = ciphertext.split_at(12);
         
         let key = aead::UnboundKey::new(&aead::CHACHA20_POLY1305, &self.key)
-            .map_err(|e| DMSCError::CryptoError(format!("Failed to create ChaCha20 key: {}", e)))?;
+            .map_err(|e| RiError::CryptoError(format!("Failed to create ChaCha20 key: {}", e)))?;
         
         let key = aead::LessSafeKey::new(key);
         let mut plaintext = encrypted_data.to_vec();
         
         let decrypted_len = key.open_in_place(
             aead::Nonce::try_assume_unique_for_key(nonce)
-                .map_err(|e| DMSCError::CryptoError(format!("Invalid nonce: {}", e)))?,
+                .map_err(|e| RiError::CryptoError(format!("Invalid nonce: {}", e)))?,
             aead::Aad::from(additional_data.unwrap_or(&[])),
             &mut plaintext,
-        ).map_err(|e| DMSCError::CryptoError(format!("Decryption failed: {}", e)))?;
+        ).map_err(|e| RiError::CryptoError(format!("Decryption failed: {}", e)))?;
         
         plaintext.truncate(decrypted_len.len());
         Ok(plaintext)
     }
 
     /// Generate a digital signature using ECDSA with P-256 curve and SHA-256
-    pub fn sign_ecdsa(&self, data: &[u8], private_key: &[u8]) -> DMSCResult<Vec<u8>> {
+    pub fn sign_ecdsa(&self, data: &[u8], private_key: &[u8]) -> RiResult<Vec<u8>> {
         let rng = SystemRandom::new();
         let key_pair = signature::EcdsaKeyPair::from_pkcs8(
             &signature::ECDSA_P256_SHA256_FIXED_SIGNING,
             private_key,
             &rng
-        ).map_err(|e| DMSCError::CryptoError(format!("Failed to create ECDSA key: {}", e)))?;
+        ).map_err(|e| RiError::CryptoError(format!("Failed to create ECDSA key: {}", e)))?;
         
         let signature = key_pair.sign(&rng, data)
-            .map_err(|e| DMSCError::CryptoError(format!("Failed to sign: {}", e)))?;
+            .map_err(|e| RiError::CryptoError(format!("Failed to sign: {}", e)))?;
         
         Ok(signature.as_ref().to_vec())
     }
 
     /// Verify a digital signature using ECDSA with P-256 curve and SHA-256
-    pub fn verify_ecdsa(&self, data: &[u8], signature: &[u8], public_key: &[u8]) -> DMSCResult<bool> {
+    pub fn verify_ecdsa(&self, data: &[u8], signature: &[u8], public_key: &[u8]) -> RiResult<bool> {
         let public_key = signature::UnparsedPublicKey::new(
             &signature::ECDSA_P256_SHA256_FIXED,
             public_key
@@ -484,7 +484,7 @@ impl ChaCha20Poly1305 {
     }
 
     /// Generate a digital signature using Ed25519
-    pub fn sign_ed25519(&self, data: &[u8], private_key: &[u8]) -> DMSCResult<Vec<u8>> {
+    pub fn sign_ed25519(&self, data: &[u8], private_key: &[u8]) -> RiResult<Vec<u8>> {
         let key_pair = Ed25519KeyPair::from_pkcs8(private_key)
             .map_err(|_| CryptoError::InvalidKey)?;
         
@@ -493,7 +493,7 @@ impl ChaCha20Poly1305 {
     }
 
     /// Verify a digital signature using Ed25519
-    pub fn verify_ed25519(&self, data: &[u8], signature: &[u8], public_key: &[u8]) -> DMSCResult<bool> {
+    pub fn verify_ed25519(&self, data: &[u8], signature: &[u8], public_key: &[u8]) -> RiResult<bool> {
         let public_key = signature::UnparsedPublicKey::new(
             &signature::ED25519,
             public_key
@@ -506,13 +506,13 @@ impl ChaCha20Poly1305 {
     }
 
     /// Generate an Ed25519 key pair
-    pub fn generate_ed25519_keypair(&self) -> DMSCResult<(Vec<u8>, Vec<u8>)> {
+    pub fn generate_ed25519_keypair(&self) -> RiResult<(Vec<u8>, Vec<u8>)> {
         let rng = SystemRandom::new();
         let pkcs8_bytes = signature::Ed25519KeyPair::generate_pkcs8(&rng)
-            .map_err(|e| DMSCError::CryptoError(format!("Failed to generate Ed25519 key: {}", e)))?;
+            .map_err(|e| RiError::CryptoError(format!("Failed to generate Ed25519 key: {}", e)))?;
         
         let key_pair = signature::Ed25519KeyPair::from_pkcs8(pkcs8_bytes.as_ref())
-            .map_err(|e| DMSCError::CryptoError(format!("Failed to parse Ed25519 key: {}", e)))?;
+            .map_err(|e| RiError::CryptoError(format!("Failed to parse Ed25519 key: {}", e)))?;
         
         let public_key = key_pair.public_key().as_ref().to_vec();
         let private_key = pkcs8_bytes.as_ref().to_vec();
@@ -521,18 +521,18 @@ impl ChaCha20Poly1305 {
     }
 
     /// Generate an ECDSA P-256 key pair
-    pub fn generate_ecdsa_keypair(&self) -> DMSCResult<(Vec<u8>, Vec<u8>)> {
+    pub fn generate_ecdsa_keypair(&self) -> RiResult<(Vec<u8>, Vec<u8>)> {
         let rng = SystemRandom::new();
         let pkcs8_bytes = signature::EcdsaKeyPair::generate_pkcs8(
             &signature::ECDSA_P256_SHA256_FIXED_SIGNING,
             &rng
-        ).map_err(|e| DMSCError::CryptoError(format!("Failed to generate ECDSA key: {}", e)))?;
+        ).map_err(|e| RiError::CryptoError(format!("Failed to generate ECDSA key: {}", e)))?;
         
         let key_pair = signature::EcdsaKeyPair::from_pkcs8(
             &signature::ECDSA_P256_SHA256_FIXED_SIGNING,
             pkcs8_bytes.as_ref(),
             &rng
-        ).map_err(|e| DMSCError::CryptoError(format!("Failed to parse ECDSA key: {}", e)))?;
+        ).map_err(|e| RiError::CryptoError(format!("Failed to parse ECDSA key: {}", e)))?;
         
         let public_key = key_pair.public_key().as_ref().to_vec();
         let private_key = pkcs8_bytes.as_ref().to_vec();
@@ -588,7 +588,7 @@ impl ChaCha20Poly1305 {
 ///
 /// When compiled with the `pyo3` feature, this struct provides Python bindings:
 /// ```python
-/// from dmsc import SM4Cipher
+/// from ri import SM4Cipher
 ///
 /// # Create new cipher with random key
 /// cipher = SM4Cipher.new()
@@ -606,7 +606,7 @@ impl ChaCha20Poly1305 {
 ///
 /// Basic CBC mode encryption and decryption:
 /// ```rust
-/// use dmsc::protocol::crypto::SM4Cipher;
+/// use ri::protocol::crypto::SM4Cipher;
 ///
 /// let cipher = SM4Cipher::new().expect("Failed to create SM4 cipher");
 ///
@@ -625,7 +625,7 @@ impl ChaCha20Poly1305 {
 ///
 /// Using a specific IV for deterministic encryption:
 /// ```rust
-/// use dmsc::protocol::crypto::SM4Cipher;
+/// use ri::protocol::crypto::SM4Cipher;
 ///
 /// let cipher = SM4Cipher::new().expect("Failed to create SM4 cipher");
 ///
@@ -653,23 +653,23 @@ pub struct SM4Cipher {
 
 impl SM4Cipher {
     /// Create new SM4 cipher instance
-    pub fn new() -> DMSCResult<Self> {
+    pub fn new() -> RiResult<Self> {
         let rng = Arc::new(SystemRandom::new());
         let mut key = [0u8; 16];
         rng.fill(&mut key)
-            .map_err(|e| DMSCError::CryptoError(format!("Failed to generate SM4 key: {}", e)))?;
+            .map_err(|e| RiError::CryptoError(format!("Failed to generate SM4 key: {}", e)))?;
         
         Ok(Self { key, rng })
     }
     
     /// Encrypt data with SM4 in CBC mode
-    pub fn encrypt_cbc(&self, plaintext: &[u8], iv: Option<&[u8; 16]>) -> DMSCResult<Vec<u8>> {
+    pub fn encrypt_cbc(&self, plaintext: &[u8], iv: Option<&[u8; 16]>) -> RiResult<Vec<u8>> {
         let mut iv = if let Some(iv) = iv {
             *iv
         } else {
             let mut new_iv = [0u8; 16];
             self.rng.fill(&mut new_iv)
-                .map_err(|e| DMSCError::CryptoError(format!("Failed to generate IV: {}", e)))?;
+                .map_err(|e| RiError::CryptoError(format!("Failed to generate IV: {}", e)))?;
             new_iv
         };
         
@@ -695,9 +695,9 @@ impl SM4Cipher {
     }
     
     /// Decrypt data with SM4 in CBC mode
-    pub fn decrypt_cbc(&self, ciphertext: &[u8]) -> DMSCResult<Vec<u8>> {
+    pub fn decrypt_cbc(&self, ciphertext: &[u8]) -> RiResult<Vec<u8>> {
         if ciphertext.len() < 32 || ciphertext.len() % 16 != 0 {
-            return Err(DMSCError::CryptoError("Invalid ciphertext length".to_string()));
+            return Err(RiError::CryptoError("Invalid ciphertext length".to_string()));
         }
         
         let (iv, encrypted_data) = ciphertext.split_at(16);
@@ -726,7 +726,7 @@ impl SM4Cipher {
         self.pkcs7_unpad(&plaintext)
     }
     
-    fn sm4_encrypt_block(&self, block: &[u8; 16]) -> DMSCResult<[u8; 16]> {
+    fn sm4_encrypt_block(&self, block: &[u8; 16]) -> RiResult<[u8; 16]> {
         // Real SM4 implementation following Chinese National Standard GB/T 32907-2016
         // This implementation includes the complete SM4 encryption algorithm
         
@@ -759,7 +759,7 @@ impl SM4Cipher {
         Ok(result)
     }
     
-    fn sm4_decrypt_block(&self, block: &[u8; 16]) -> DMSCResult<[u8; 16]> {
+    fn sm4_decrypt_block(&self, block: &[u8; 16]) -> RiResult<[u8; 16]> {
         // Real SM4 decryption using the same key schedule
         let rk = self.expand_key();
         let mut x = [
@@ -865,25 +865,25 @@ impl SM4Cipher {
         result
     }
     
-    fn pkcs7_unpad(&self, data: &[u8]) -> DMSCResult<Vec<u8>> {
+    fn pkcs7_unpad(&self, data: &[u8]) -> RiResult<Vec<u8>> {
         if data.is_empty() {
-            return Err(DMSCError::CryptoError("Empty data".to_string()));
+            return Err(RiError::CryptoError("Empty data".to_string()));
         }
         
         let pad_len = data[data.len() - 1] as usize;
         if pad_len > 16 || pad_len == 0 {
-            return Err(DMSCError::CryptoError("Invalid padding".to_string()));
+            return Err(RiError::CryptoError("Invalid padding".to_string()));
         }
         
         let data_len = data.len() - pad_len;
         if data_len < 0 {
-            return Err(DMSCError::CryptoError("Invalid padding length".to_string()));
+            return Err(RiError::CryptoError("Invalid padding length".to_string()));
         }
         
         // Verify padding
         for i in 0..pad_len {
             if data[data.len() - 1 - i] != pad_len as u8 {
-                return Err(DMSCError::CryptoError("Invalid padding".to_string()));
+                return Err(RiError::CryptoError("Invalid padding".to_string()));
             }
         }
         
@@ -1076,26 +1076,26 @@ pub struct ECDSASigner {
 
 impl ECDSASigner {
     /// Generate new ECDSA key pair (P-256 curve)
-    pub fn generate() -> DMSCResult<Self> {
+    pub fn generate() -> RiResult<Self> {
         let rng = SystemRandom::new();
         let pkcs8_bytes = signature::EcdsaKeyPair::generate_pkcs8(
             &signature::ECDSA_P256_SHA256_FIXED_SIGNING,
             &rng,
-        ).map_err(|e| DMSCError::CryptoError(format!("Failed to generate ECDSA key: {}", e)))?;
+        ).map_err(|e| RiError::CryptoError(format!("Failed to generate ECDSA key: {}", e)))?;
         
         let key_pair = signature::EcdsaKeyPair::from_pkcs8(
             &signature::ECDSA_P256_SHA256_FIXED_SIGNING,
             pkcs8_bytes.as_ref(),
-        ).map_err(|e| DMSCError::CryptoError(format!("Failed to parse ECDSA key: {}", e)))?;
+        ).map_err(|e| RiError::CryptoError(format!("Failed to parse ECDSA key: {}", e)))?;
         
         Ok(Self { key_pair })
     }
     
     /// Sign message
-    pub fn sign(&self, message: &[u8]) -> DMSCResult<Vec<u8>> {
+    pub fn sign(&self, message: &[u8]) -> RiResult<Vec<u8>> {
         let rng = SystemRandom::new();
         let signature = self.key_pair.sign(&rng, message)
-            .map_err(|e| DMSCError::CryptoError(format!("Failed to sign message: {}", e)))?;
+            .map_err(|e| RiError::CryptoError(format!("Failed to sign message: {}", e)))?;
         
         Ok(signature.as_ref().to_vec())
     }
@@ -1111,7 +1111,7 @@ pub struct ECDSAVerifier;
 
 impl ECDSAVerifier {
     /// Verify ECDSA signature
-    pub fn verify(public_key: &[u8], message: &[u8], signature: &[u8]) -> DMSCResult<bool> {
+    pub fn verify(public_key: &[u8], message: &[u8], signature: &[u8]) -> RiResult<bool> {
         let public_key = signature::UnparsedPublicKey::new(
             &signature::ECDSA_P256_SHA256_FIXED,
             public_key,
@@ -1131,19 +1131,19 @@ pub struct Ed25519Signer {
 
 impl Ed25519Signer {
     /// Generate new Ed25519 key pair
-    pub fn generate() -> DMSCResult<Self> {
+    pub fn generate() -> RiResult<Self> {
         let rng = SystemRandom::new();
         let pkcs8_bytes = signature::Ed25519KeyPair::generate_pkcs8(&rng)
-            .map_err(|e| DMSCError::CryptoError(format!("Failed to generate Ed25519 key: {}", e)))?;
+            .map_err(|e| RiError::CryptoError(format!("Failed to generate Ed25519 key: {}", e)))?;
         
         let key_pair = signature::Ed25519KeyPair::from_pkcs8(pkcs8_bytes.as_ref())
-            .map_err(|e| DMSCError::CryptoError(format!("Failed to parse Ed25519 key: {}", e)))?;
+            .map_err(|e| RiError::CryptoError(format!("Failed to parse Ed25519 key: {}", e)))?;
         
         Ok(Self { key_pair })
     }
     
     /// Sign message
-    pub fn sign(&self, message: &[u8]) -> DMSCResult<Vec<u8>> {
+    pub fn sign(&self, message: &[u8]) -> RiResult<Vec<u8>> {
         let signature = self.key_pair.sign(message);
         Ok(signature.as_ref().to_vec())
     }
@@ -1161,30 +1161,30 @@ pub struct ECDHKeyExchange {
 
 impl ECDHKeyExchange {
     /// Generate new ECDH key pair (P-256 curve)
-    pub fn generate() -> DMSCResult<Self> {
+    pub fn generate() -> RiResult<Self> {
         let rng = SystemRandom::new();
         let private_key = agreement::EphemeralPrivateKey::generate(&agreement::ECDH_P256, &rng)
-            .map_err(|e| DMSCError::CryptoError(format!("Failed to generate ECDH key: {}", e)))?;
+            .map_err(|e| RiError::CryptoError(format!("Failed to generate ECDH key: {}", e)))?;
         
         Ok(Self { private_key })
     }
     
     /// Perform key exchange
-    pub fn compute_shared_secret(self, peer_public_key: &[u8]) -> DMSCResult<Vec<u8>> {
+    pub fn compute_shared_secret(self, peer_public_key: &[u8]) -> RiResult<Vec<u8>> {
         let public_key = agreement::UnparsedPublicKey::new(&agreement::ECDH_P256, peer_public_key);
         
         agreement::agree_ephemeral(
             self.private_key,
             &public_key,
-            DMSCError::CryptoError("Invalid peer public key".to_string()),
+            RiError::CryptoError("Invalid peer public key".to_string()),
             |shared_secret| Ok(shared_secret.to_vec()),
-        ).map_err(|e| DMSCError::CryptoError(format!("Key exchange failed: {}", e)))
+        ).map_err(|e| RiError::CryptoError(format!("Key exchange failed: {}", e)))
     }
     
     /// Get public key for sharing
     pub fn public_key(&self) -> Vec<u8> {
         self.private_key.compute_public_key()
-            .map_err(|e| DMSCError::CryptoError(format!("Failed to compute public key: {}", e)))
+            .map_err(|e| RiError::CryptoError(format!("Failed to compute public key: {}", e)))
             .unwrap_or_else(|_| Vec::new())
     }
 }
@@ -1196,30 +1196,30 @@ pub struct X25519KeyExchange {
 
 impl X25519KeyExchange {
     /// Generate new X25519 key pair
-    pub fn generate() -> DMSCResult<Self> {
+    pub fn generate() -> RiResult<Self> {
         let rng = SystemRandom::new();
         let private_key = agreement::EphemeralPrivateKey::generate(&agreement::X25519, &rng)
-            .map_err(|e| DMSCError::CryptoError(format!("Failed to generate X25519 key: {}", e)))?;
+            .map_err(|e| RiError::CryptoError(format!("Failed to generate X25519 key: {}", e)))?;
         
         Ok(Self { private_key })
     }
     
     /// Perform key exchange
-    pub fn compute_shared_secret(self, peer_public_key: &[u8]) -> DMSCResult<Vec<u8>> {
+    pub fn compute_shared_secret(self, peer_public_key: &[u8]) -> RiResult<Vec<u8>> {
         let public_key = agreement::UnparsedPublicKey::new(&agreement::X25519, peer_public_key);
         
         agreement::agree_ephemeral(
             self.private_key,
             &public_key,
-            DMSCError::CryptoError("Invalid peer public key".to_string()),
+            RiError::CryptoError("Invalid peer public key".to_string()),
             |shared_secret| Ok(shared_secret.to_vec()),
-        ).map_err(|e| DMSCError::CryptoError(format!("Key exchange failed: {}", e)))
+        ).map_err(|e| RiError::CryptoError(format!("Key exchange failed: {}", e)))
     }
     
     /// Get public key for sharing
     pub fn public_key(&self) -> Vec<u8> {
         self.private_key.compute_public_key()
-            .map_err(|e| DMSCError::CryptoError(format!("Failed to compute public key: {}", e)))
+            .map_err(|e| RiError::CryptoError(format!("Failed to compute public key: {}", e)))
             .unwrap_or_else(|_| Vec::new())
     }
 }
@@ -1238,26 +1238,26 @@ impl SecureRNG {
     }
     
     /// Generate random bytes
-    pub fn generate(&self, len: usize) -> DMSCResult<Vec<u8>> {
+    pub fn generate(&self, len: usize) -> RiResult<Vec<u8>> {
         let mut bytes = vec![0u8; len];
         self.rng.fill(&mut bytes)
-            .map_err(|e| DMSCError::CryptoError(format!("Failed to generate random bytes: {}", e)))?;
+            .map_err(|e| RiError::CryptoError(format!("Failed to generate random bytes: {}", e)))?;
         Ok(bytes)
     }
     
     /// Generate random u32
-    pub fn generate_u32(&self) -> DMSCResult<u32> {
+    pub fn generate_u32(&self) -> RiResult<u32> {
         let mut bytes = [0u8; 4];
         self.rng.fill(&mut bytes)
-            .map_err(|e| DMSCError::CryptoError(format!("Failed to generate random u32: {}", e)))?;
+            .map_err(|e| RiError::CryptoError(format!("Failed to generate random u32: {}", e)))?;
         Ok(u32::from_le_bytes(bytes))
     }
     
     /// Generate random u64
-    pub fn generate_u64(&self) -> DMSCResult<u64> {
+    pub fn generate_u64(&self) -> RiResult<u64> {
         let mut bytes = [0u8; 8];
         self.rng.fill(&mut bytes)
-            .map_err(|e| DMSCError::CryptoError(format!("Failed to generate random u64: {}", e)))?;
+            .map_err(|e| RiError::CryptoError(format!("Failed to generate random u64: {}", e)))?;
         Ok(u64::from_le_bytes(bytes))
     }
 }
@@ -1316,7 +1316,7 @@ mod crypto_tests {
         let key = [0u8; 32];
         let nonce = [0u8; 12];
 
-        let cipher = DMSCChacha20Poly1305::new(&key, &nonce);
+        let cipher = RiChacha20Poly1305::new(&key, &nonce);
         let plaintext = b"ChaCha20 Poly1305 test";
 
         let ciphertext = cipher.encrypt(plaintext, None).unwrap();
@@ -1329,7 +1329,7 @@ mod crypto_tests {
     #[test]
     fn test_sm4_cbc_encrypt_decrypt() {
         let key = [0u8; 16];
-        let cipher = DMSCSM4Cbc::new(&key);
+        let cipher = RiSM4Cbc::new(&key);
 
         let plaintext = b"SM4 CBC test message with padding";
 
@@ -1341,7 +1341,7 @@ mod crypto_tests {
     #[test]
     fn test_sm4_cbc_padding() {
         let key = [0u8; 16];
-        let cipher = DMSCSM4Cbc::new(&key);
+        let cipher = RiSM4Cbc::new(&key);
 
         // Test with exactly 16 bytes (one block)
         let plaintext = b"Exactly16bytes!!";
@@ -1361,15 +1361,15 @@ mod crypto_tests {
         let key = b"test_key";
         let data = b"test_data";
 
-        let hmac = DMSCHmac::hmac_sha256(key, data);
+        let hmac = RiHmac::hmac_sha256(key, data);
         assert_eq!(hmac.len(), 32);
 
         // Verify same input produces same output
-        let hmac2 = DMSCHmac::hmac_sha256(key, data);
+        let hmac2 = RiHmac::hmac_sha256(key, data);
         assert_eq!(hmac, hmac2);
 
         // Verify different key produces different output
-        let hmac3 = DMSCHmac::hmac_sha256(b"different_key", data);
+        let hmac3 = RiHmac::hmac_sha256(b"different_key", data);
         assert_ne!(hmac, hmac3);
     }
 
@@ -1380,15 +1380,15 @@ mod crypto_tests {
         let iterations = 1000;
         let output_len = 32;
 
-        let derived = DMSCPbkdf2::derive_key(password, salt, iterations, output_len);
+        let derived = RiPbkdf2::derive_key(password, salt, iterations, output_len);
         assert_eq!(derived.len(), output_len);
 
         // Same input produces same output
-        let derived2 = DMSCPbkdf2::derive_key(password, salt, iterations, output_len);
+        let derived2 = RiPbkdf2::derive_key(password, salt, iterations, output_len);
         assert_eq!(derived, derived2);
 
         // Different iterations produces different output
-        let derived3 = DMSCPbkdf2::derive_key(password, salt, iterations + 1, output_len);
+        let derived3 = RiPbkdf2::derive_key(password, salt, iterations + 1, output_len);
         assert_ne!(derived, derived3);
     }
 
@@ -1396,20 +1396,20 @@ mod crypto_tests {
     fn test_scrypt_derivation() {
         let password = "test_password";
         let salt = b"unique_salt";
-        let params = DMSCSCRYPTParams::standard();
+        let params = RiSCRYPTParams::standard();
 
-        let derived = DMSCScrypt::derive_key(password, salt, &params);
+        let derived = RiScrypt::derive_key(password, salt, &params);
         assert_eq!(derived.len(), 64);
 
         // Same input produces same output
-        let derived2 = DMSCScrypt::derive_key(password, salt, &params);
+        let derived2 = RiScrypt::derive_key(password, salt, &params);
         assert_eq!(derived, derived2);
     }
 
     #[test]
     fn test_x25519_key_exchange() {
-        let alice_private = DMSCPrivateKey::generate_x25519();
-        let bob_private = DMSCPrivateKey::generate_x25519();
+        let alice_private = RiPrivateKey::generate_x25519();
+        let bob_private = RiPrivateKey::generate_x25519();
 
         let alice_public = alice_private.public_key_x25519();
         let bob_public = bob_private.public_key_x25519();
@@ -1422,7 +1422,7 @@ mod crypto_tests {
 
     #[test]
     fn test_random_bytes_generation() {
-        let rng = DMSCRandom::new();
+        let rng = RiRandom::new();
         let bytes1 = rng.generate(32).unwrap();
         let bytes2 = rng.generate(32).unwrap();
 
@@ -1434,7 +1434,7 @@ mod crypto_tests {
     }
 }
 
-pub use self::crypto::DMSCCryptoEngine;
+pub use self::crypto::RiCryptoEngine;
 pub use self::crypto::CryptoError;
 
 

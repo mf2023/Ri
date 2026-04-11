@@ -1,7 +1,7 @@
 //! Copyright © 2025-2026 Wenze Wei. All Rights Reserved.
 //!
-//! This file is part of DMSC.
-//! The DMSC project belongs to the Dunimd Team.
+//! This file is part of Ri.
+//! The Ri project belongs to the Dunimd Team.
 //!
 //! Licensed under the Apache License, Version 2.0 (the "License");
 //! You may not use this file except in compliance with the License.
@@ -21,13 +21,13 @@ use std::time::Duration;
 
 /// Integration configuration structure.
 #[derive(Debug, Clone)]
-pub struct DMSCIntegrationConfig {
+pub struct RiIntegrationConfig {
     /// Enable protocol coordination
     pub enable_protocol_coordination: bool,
     /// Enable state synchronization
     pub enable_state_sync: bool,
     /// Security enforcement level
-    pub security_enforcement_level: DMSCSecurityEnforcementLevel,
+    pub security_enforcement_level: RiSecurityEnforcementLevel,
     /// Performance optimization enabled
     pub performance_optimization: bool,
     /// Fault tolerance enabled
@@ -44,7 +44,7 @@ pub struct DMSCIntegrationConfig {
 
 /// Security enforcement level enumeration.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum DMSCSecurityEnforcementLevel {
+pub enum RiSecurityEnforcementLevel {
     /// No security enforcement
     None,
     /// Basic security enforcement
@@ -57,12 +57,12 @@ pub enum DMSCSecurityEnforcementLevel {
     Maximum,
 }
 
-impl Default for DMSCIntegrationConfig {
+impl Default for RiIntegrationConfig {
     fn default() -> Self {
         Self {
             enable_protocol_coordination: true,
             enable_state_sync: true,
-            security_enforcement_level: DMSCSecurityEnforcementLevel::Standard,
+            security_enforcement_level: RiSecurityEnforcementLevel::Standard,
             performance_optimization: true,
             fault_tolerance: true,
             cross_protocol_timeout: Duration::from_secs(30),

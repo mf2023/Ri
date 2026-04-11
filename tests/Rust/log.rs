@@ -1,7 +1,7 @@
 //! Copyright © 2025-2026 Wenze Wei. All Rights Reserved.
 //!
-//! This file is part of DMSC.
-//! The DMSC project belongs to the Dunimd Team.
+//! This file is part of Ri.
+//! The Ri project belongs to the Dunimd Team.
 //!
 //! Licensed under the Apache License, Version 2.0 (the "License");
 //! You may not use this file except in compliance with the License.
@@ -17,24 +17,24 @@
 
 //! # Logging Module Tests
 //!
-//! This module contains comprehensive tests for the DMSC logging system, providing
+//! This module contains comprehensive tests for the Ri logging system, providing
 //! structured, contextual logging capabilities with configurable output destinations,
 //! log levels, and sampling strategies for production observability.
 //!
 //! ## Test Coverage
 //!
-//! - **DMSCLogLevel**: Tests for log severity levels (Debug, Info, Warn, Error) with
+//! - **RiLogLevel**: Tests for log severity levels (Debug, Info, Warn, Error) with
 //!   string representations for configuration and display purposes
 //!
-//! - **DMSCLogConfig**: Tests for logging configuration including level thresholds,
+//! - **RiLogConfig**: Tests for logging configuration including level thresholds,
 //!   console and file output toggles, sampling rates, log rotation settings, and
 //!   format options (plain text vs JSON)
 //!
-//! - **DMSCLogContext**: Tests for thread-local and global log context management
+//! - **RiLogContext**: Tests for thread-local and global log context management
 //!   supporting structured logging with key-value pairs, context inheritance, and
 //!   distributed tracing support (trace_id, span_id, parent_span_id)
 //!
-//! - **DMSCLogger**: Tests for the logging interface including level-based filtering,
+//! - **RiLogger**: Tests for the logging interface including level-based filtering,
 //!   contextual log enrichment, JSON formatting, and output routing
 //!
 //! ## Design Principles
@@ -85,12 +85,12 @@
 //! - All context key-value pairs
 //! - Trace and span identifiers (if present)
 
-use dmsc::log::{DMSCLogContext, DMSCLogLevel, DMSCLogConfig, DMSCLogger};
-use dmsc::fs::DMSCFileSystem;
+use ri::log::{RiLogContext, RiLogLevel, RiLogConfig, RiLogger};
+use ri::fs::RiFileSystem;
 use tempfile::tempdir;
 
 #[test]
-/// Tests DMSCLogLevel conversion to string with as_str().
+/// Tests RiLogLevel conversion to string with as_str().
 ///
 /// Verifies that each log level correctly returns its string
 /// representation for logging output and filtering purposes.
@@ -107,15 +107,15 @@ use tempfile::tempdir;
 ///
 /// Each level returns the correct uppercase string representation
 fn test_log_level_as_str() {
-    assert_eq!(DMSCLogLevel::Debug.as_str(), "DEBUG");
-    assert_eq!(DMSCLogLevel::Info.as_str(), "INFO");
-    assert_eq!(DMSCLogLevel::Warn.as_str(), "WARN");
-    assert_eq!(DMSCLogLevel::Error.as_str(), "ERROR");
+    assert_eq!(RiLogLevel::Debug.as_str(), "DEBUG");
+    assert_eq!(RiLogLevel::Info.as_str(), "INFO");
+    assert_eq!(RiLogLevel::Warn.as_str(), "WARN");
+    assert_eq!(RiLogLevel::Error.as_str(), "ERROR");
 }
 
 #[test]
 fn test_log_config_default() {
-    let config = DMSCLogConfig::default();
+    let config = RiLogConfig::default();
     assert_eq!(config.level.as_str(), "INFO");
     assert!(config.console_enabled);
     assert!(config.file_enabled);
@@ -129,43 +129,43 @@ fn test_log_config_default() {
 #[test]
 fn test_log_context_put_get() {
     // Clear any existing context first
-    DMSCLogContext::clear();
+    RiLogContext::clear();
     
     // Test put and get
-    DMSCLogContext::put("test_key", "test_value");
-    assert_eq!(DMSCLogContext::get("test_key"), Some("test_value".to_string()));
+    RiLogContext::put("test_key", "test_value");
+    assert_eq!(RiLogContext::get("test_key"), Some("test_value".to_string()));
     
     // Test non-existent key
-    assert_eq!(DMSCLogContext::get("non_existent_key"), None);
+    assert_eq!(RiLogContext::get("non_existent_key"), None);
     
     // Test remove
-    DMSCLogContext::remove("test_key");
-    assert_eq!(DMSCLogContext::get("test_key"), None);
+    RiLogContext::remove("test_key");
+    assert_eq!(RiLogContext::get("test_key"), None);
 }
 
 #[test]
 fn test_log_context_put_all() {
     // Clear any existing context first
-    DMSCLogContext::clear();
+    RiLogContext::clear();
     
     let mut values = std::collections::HashMap::new();
     values.insert("key1".to_string(), "value1".to_string());
     values.insert("key2".to_string(), "value2".to_string());
     
-    DMSCLogContext::put_all(values);
-    assert_eq!(DMSCLogContext::get("key1"), Some("value1".to_string()));
-    assert_eq!(DMSCLogContext::get("key2"), Some("value2".to_string()));
+    RiLogContext::put_all(values);
+    assert_eq!(RiLogContext::get("key1"), Some("value1".to_string()));
+    assert_eq!(RiLogContext::get("key2"), Some("value2".to_string()));
 }
 
 #[test]
 fn test_log_context_get_all() {
     // Clear any existing context first
-    DMSCLogContext::clear();
+    RiLogContext::clear();
     
-    DMSCLogContext::put("key1", "value1");
-    DMSCLogContext::put("key2", "value2");
+    RiLogContext::put("key1", "value1");
+    RiLogContext::put("key2", "value2");
     
-    let all = DMSCLogContext::get_all();
+    let all = RiLogContext::get_all();
     assert_eq!(all.get("key1"), Some(&"value1".to_string()));
     assert_eq!(all.get("key2"), Some(&"value2".to_string()));
     assert_eq!(all.len(), 2);
@@ -174,51 +174,51 @@ fn test_log_context_get_all() {
 #[test]
 fn test_log_context_clear() {
     // Clear any existing context first
-    DMSCLogContext::clear();
+    RiLogContext::clear();
     
-    DMSCLogContext::put("key1", "value1");
-    DMSCLogContext::put("key2", "value2");
-    assert_eq!(DMSCLogContext::get_all().len(), 2);
+    RiLogContext::put("key1", "value1");
+    RiLogContext::put("key2", "value2");
+    assert_eq!(RiLogContext::get_all().len(), 2);
     
-    DMSCLogContext::clear();
-    assert_eq!(DMSCLogContext::get_all().len(), 0);
+    RiLogContext::clear();
+    assert_eq!(RiLogContext::get_all().len(), 0);
 }
 
 #[test]
 fn test_log_context_tracing_support() {
     // Clear any existing context first
-    DMSCLogContext::clear();
+    RiLogContext::clear();
     
     // Test trace id
     let trace_id = "test-trace-id-123";
-    DMSCLogContext::set_trace_id(trace_id);
-    assert_eq!(DMSCLogContext::get_trace_id(), Some(trace_id.to_string()));
+    RiLogContext::set_trace_id(trace_id);
+    assert_eq!(RiLogContext::get_trace_id(), Some(trace_id.to_string()));
     
     // Test span id
     let span_id = "test-span-id-456";
-    DMSCLogContext::set_span_id(span_id);
-    assert_eq!(DMSCLogContext::get_span_id(), Some(span_id.to_string()));
+    RiLogContext::set_span_id(span_id);
+    assert_eq!(RiLogContext::get_span_id(), Some(span_id.to_string()));
     
     // Test parent span id
     let parent_span_id = "test-parent-span-id-789";
-    DMSCLogContext::set_parent_span_id(parent_span_id);
-    assert_eq!(DMSCLogContext::get_parent_span_id(), Some(parent_span_id.to_string()));
+    RiLogContext::set_parent_span_id(parent_span_id);
+    assert_eq!(RiLogContext::get_parent_span_id(), Some(parent_span_id.to_string()));
     
     // Test generate trace id
-    let generated_trace_id = DMSCLogContext::generate_trace_id();
+    let generated_trace_id = RiLogContext::generate_trace_id();
     assert!(!generated_trace_id.is_empty());
     
     // Test generate span id
-    let generated_span_id = DMSCLogContext::generate_span_id();
+    let generated_span_id = RiLogContext::generate_span_id();
     assert!(!generated_span_id.is_empty());
 }
 
 #[test]
 fn test_logger_creation() {
     let temp_dir = tempdir().unwrap();
-    let fs = DMSCFileSystem::new_with_root(temp_dir.path().to_path_buf());
-    let config = DMSCLogConfig::default();
-    let logger = DMSCLogger::new(&config, fs);
+    let fs = RiFileSystem::new_with_root(temp_dir.path().to_path_buf());
+    let config = RiLogConfig::default();
+    let logger = RiLogger::new(&config, fs);
     // Just test that creation works without panicking
     assert!(logger.info("test_target", "test_message").is_ok());
 }
@@ -226,13 +226,13 @@ fn test_logger_creation() {
 #[test]
 fn test_logger_different_levels() {
     let temp_dir = tempdir().unwrap();
-    let fs = DMSCFileSystem::new_with_root(temp_dir.path().to_path_buf());
+    let fs = RiFileSystem::new_with_root(temp_dir.path().to_path_buf());
     
     // Test with Info level
-    let mut config = DMSCLogConfig::default();
-    config.level = DMSCLogLevel::Info;
+    let mut config = RiLogConfig::default();
+    config.level = RiLogLevel::Info;
     config.console_enabled = false; // Disable console output for tests
-    let logger = DMSCLogger::new(&config, fs.clone());
+    let logger = RiLogger::new(&config, fs.clone());
     
     // All levels should work without errors
     assert!(logger.debug("test_target", "debug_message").is_ok());
@@ -241,10 +241,10 @@ fn test_logger_different_levels() {
     assert!(logger.error("test_target", "error_message").is_ok());
     
     // Test with Error level
-    let mut config = DMSCLogConfig::default();
-    config.level = DMSCLogLevel::Error;
+    let mut config = RiLogConfig::default();
+    config.level = RiLogLevel::Error;
     config.console_enabled = false;
-    let logger = DMSCLogger::new(&config, fs);
+    let logger = RiLogger::new(&config, fs);
     
     // All levels should still work without errors
     assert!(logger.debug("test_target", "debug_message").is_ok());
@@ -256,12 +256,12 @@ fn test_logger_different_levels() {
 #[test]
 fn test_logger_with_json_format() {
     let temp_dir = tempdir().unwrap();
-    let fs = DMSCFileSystem::new_with_root(temp_dir.path().to_path_buf());
+    let fs = RiFileSystem::new_with_root(temp_dir.path().to_path_buf());
     
-    let mut config = DMSCLogConfig::default();
+    let mut config = RiLogConfig::default();
     config.json_format = true;
     config.console_enabled = false; // Disable console output for tests
-    let logger = DMSCLogger::new(&config, fs);
+    let logger = RiLogger::new(&config, fs);
     
     // Should work without errors
     assert!(logger.info("test_target", "test_message").is_ok());
@@ -270,19 +270,19 @@ fn test_logger_with_json_format() {
 #[test]
 fn test_logger_with_context() {
     let temp_dir = tempdir().unwrap();
-    let fs = DMSCFileSystem::new_with_root(temp_dir.path().to_path_buf());
+    let fs = RiFileSystem::new_with_root(temp_dir.path().to_path_buf());
     
-    let mut config = DMSCLogConfig::default();
+    let mut config = RiLogConfig::default();
     config.console_enabled = false; // Disable console output for tests
-    let logger = DMSCLogger::new(&config, fs);
+    let logger = RiLogger::new(&config, fs);
     
     // Clear any existing context first
-    DMSCLogContext::clear();
+    RiLogContext::clear();
     
     // Set context and log
-    DMSCLogContext::put("test_context_key", "test_context_value");
+    RiLogContext::put("test_context_key", "test_context_value");
     assert!(logger.info("test_target", "test_message").is_ok());
     
     // Clear context
-    DMSCLogContext::clear();
+    RiLogContext::clear();
 }

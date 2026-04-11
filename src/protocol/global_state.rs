@@ -1,7 +1,7 @@
 //! Copyright © 2025-2026 Wenze Wei. All Rights Reserved.
 //!
-//! This file is part of DMSC.
-//! The DMSC project belongs to the Dunimd Team.
+//! This file is part of Ri.
+//! The Ri project belongs to the Dunimd Team.
 //!
 //! Licensed under the Apache License, Version 2.0 (the "License");
 //! You may not use this file except in compliance with the License.
@@ -19,7 +19,7 @@
 
 //! # Global State Manager Module
 //! 
-//! This module provides centralized state management for the DMSC system,
+//! This module provides centralized state management for the Ri system,
 //! enabling coordination between global systems and private communication
 //! protocols. It acts as the central nervous system that maintains consistency
 //! across all protocol implementations and system components.
@@ -55,19 +55,19 @@
 //! ## Usage Examples
 //! 
 //! ```rust
-//! use dmsc::protocol::global_state::{DMSCGlobalStateManager, DMSCStateUpdate, DMSCStateCategory};
+//! use ri::protocol::global_state::{RiGlobalStateManager, RiStateUpdate, RiStateCategory};
 //! 
-//! async fn example() -> DMSCResult<()> {
+//! async fn example() -> RiResult<()> {
 //!     // Create global state manager
-//!     let state_manager = DMSCGlobalStateManager::new();
+//!     let state_manager = RiGlobalStateManager::new();
 //!     
 //!     // Initialize state manager
 //!     state_manager.initialize().await?;
 //!     
 //!     // Update protocol state
-//!     let update = DMSCStateUpdate::Protocol {
-//!         protocol_type: DMSCProtocolType::Private,
-//!         status: DMSCProtocolStatus::Active,
+//!     let update = RiStateUpdate::Protocol {
+//!         protocol_type: RiProtocolType::Private,
+//!         status: RiProtocolStatus::Active,
 //!         config: protocol_config,
 //!         connections: active_connections,
 //!     };
@@ -97,45 +97,45 @@ use secrecy::{ExposeSecret, SecretVec};
 use aes_gcm::{Aes256Gcm, Key, Nonce, KeyInit};
 use rand::RngCore;
 
-use crate::core::{DMSCResult, DMSCError};
-use super::{DMSCProtocolType, DMSCProtocolConfig, DMSCProtocolStats, DMSCConnectionInfo, 
-            DMSCSecurityLevel, DMSCDeviceAuthStatus};
+use crate::core::{RiResult, RiError};
+use super::{RiProtocolType, RiProtocolConfig, RiProtocolStats, RiConnectionInfo, 
+            RiSecurityLevel, RiDeviceAuthStatus};
 
 /// Global state manager for coordinating system-wide state.
-pub struct DMSCGlobalStateManager {
+pub struct RiGlobalStateManager {
     /// Global system state
-    global_state: Arc<RwLock<DMSCGlobalState>>,
+    global_state: Arc<RwLock<RiGlobalState>>,
     /// Protocol-specific state
-    protocol_states: Arc<RwLock<HashMap<DMSCProtocolType, DMSCProtocolState>>>,
+    protocol_states: Arc<RwLock<HashMap<RiProtocolType, RiProtocolState>>>,
     /// Device-specific state
-    device_states: Arc<RwLock<HashMap<String, DMSCDeviceState>>>,
+    device_states: Arc<RwLock<HashMap<String, RiDeviceState>>>,
     /// Security state
-    security_state: Arc<RwLock<DMSCSecurityState>>,
+    security_state: Arc<RwLock<RiSecurityState>>,
     /// Performance state
-    performance_state: Arc<RwLock<DMSCPerformanceState>>,
+    performance_state: Arc<RwLock<RiPerformanceState>>,
     /// State change subscribers
-    state_subscribers: Arc<RwLock<Vec<broadcast::Sender<DMSCStateChange>>>>,
+    state_subscribers: Arc<RwLock<Vec<broadcast::Sender<RiStateChange>>>>,
     /// State version manager
-    version_manager: Arc<DMSCStateVersionManager>,
+    version_manager: Arc<RiStateVersionManager>,
     /// State persistence manager
-    persistence_manager: Arc<DMSCStatePersistenceManager>,
+    persistence_manager: Arc<RiStatePersistenceManager>,
     /// Whether the manager is initialized
     initialized: Arc<RwLock<bool>>,
 }
 
 /// Global system state structure.
 #[derive(Debug, Clone)]
-pub struct DMSCGlobalState {
+pub struct RiGlobalState {
     /// System identifier
     pub system_id: String,
     /// System status
-    pub system_status: DMSCSystemStatus,
+    pub system_status: RiSystemStatus,
     /// Global configuration
-    pub global_config: DMSCGlobalConfig,
+    pub global_config: RiGlobalConfig,
     /// Active protocols
-    pub active_protocols: Vec<DMSCProtocolType>,
+    pub active_protocols: Vec<RiProtocolType>,
     /// System capabilities
-    pub capabilities: Vec<DMSCCapability>,
+    pub capabilities: Vec<RiCapability>,
     /// Last update timestamp
     pub last_update: Instant,
     /// State version
@@ -144,17 +144,17 @@ pub struct DMSCGlobalState {
 
 /// Protocol-specific state structure.
 #[derive(Debug, Clone)]
-pub struct DMSCProtocolState {
+pub struct RiProtocolState {
     /// Protocol type
-    pub protocol_type: DMSCProtocolType,
+    pub protocol_type: RiProtocolType,
     /// Protocol status
-    pub status: DMSCProtocolStatus,
+    pub status: RiProtocolStatus,
     /// Protocol configuration
-    pub config: DMSCProtocolConfig,
+    pub config: RiProtocolConfig,
     /// Active connections
-    pub connections: Vec<DMSCConnectionInfo>,
+    pub connections: Vec<RiConnectionInfo>,
     /// Protocol statistics
-    pub stats: DMSCProtocolStats,
+    pub stats: RiProtocolStats,
     /// Last heartbeat
     pub last_heartbeat: Instant,
     /// Protocol version
@@ -163,19 +163,19 @@ pub struct DMSCProtocolState {
 
 /// Device-specific state structure.
 #[derive(Debug, Clone)]
-pub struct DMSCDeviceState {
+pub struct RiDeviceState {
     /// Device identifier
     pub device_id: String,
     /// Device type
-    pub device_type: DMSCDeviceType,
+    pub device_type: RiDeviceType,
     /// Device status
-    pub status: DMSCDeviceStatus,
+    pub status: RiDeviceStatus,
     /// Authentication status
-    pub auth_status: DMSCDeviceAuthStatus,
+    pub auth_status: RiDeviceAuthStatus,
     /// Device capabilities
-    pub capabilities: Vec<DMSCCapability>,
+    pub capabilities: Vec<RiCapability>,
     /// Supported protocols
-    pub supported_protocols: Vec<DMSCProtocolType>,
+    pub supported_protocols: Vec<RiProtocolType>,
     /// Last seen timestamp
     pub last_seen: Instant,
     /// Device metadata
@@ -184,41 +184,41 @@ pub struct DMSCDeviceState {
 
 /// Security state structure.
 #[derive(Debug, Clone)]
-pub struct DMSCSecurityState {
+pub struct RiSecurityState {
     /// Global security level
-    pub global_security_level: DMSCSecurityLevel,
+    pub global_security_level: RiSecurityLevel,
     /// Threat intelligence
-    pub threat_intelligence: DMSCThreatIntelligence,
+    pub threat_intelligence: RiThreatIntelligence,
     /// Active security policies
-    pub security_policies: Vec<DMSCSecurityPolicy>,
+    pub security_policies: Vec<RiSecurityPolicy>,
     /// Security incidents
-    pub security_incidents: Vec<DMSCSecurityIncident>,
+    pub security_incidents: Vec<RiSecurityIncident>,
     /// Compliance status
-    pub compliance_status: HashMap<String, DMSCComplianceStatus>,
+    pub compliance_status: HashMap<String, RiComplianceStatus>,
     /// Last security scan
     pub last_security_scan: Instant,
 }
 
 /// Performance state structure.
 #[derive(Debug, Clone)]
-pub struct DMSCPerformanceState {
+pub struct RiPerformanceState {
     /// System performance metrics
-    pub metrics: DMSCPerformanceMetrics,
+    pub metrics: RiPerformanceMetrics,
     /// Resource utilization
-    pub resource_utilization: DMSCResourceUtilization,
+    pub resource_utilization: RiResourceUtilization,
     /// Network performance
-    pub network_performance: DMSCNetworkPerformance,
+    pub network_performance: RiNetworkPerformance,
     /// Performance optimizations
-    pub optimizations: Vec<DMSCPerformanceOptimization>,
+    pub optimizations: Vec<RiPerformanceOptimization>,
     /// Performance alerts
-    pub alerts: Vec<DMSCPerformanceAlert>,
+    pub alerts: Vec<RiPerformanceAlert>,
     /// Last performance check
     pub last_performance_check: Instant,
 }
 
 /// System status enumeration.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum DMSCSystemStatus {
+pub enum RiSystemStatus {
     /// System is initializing
     Initializing,
     /// System is operational
@@ -233,7 +233,7 @@ pub enum DMSCSystemStatus {
 
 /// Protocol status enumeration.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum DMSCProtocolStatus {
+pub enum RiProtocolStatus {
     /// Protocol is inactive
     Inactive,
     /// Protocol is initializing
@@ -250,7 +250,7 @@ pub enum DMSCProtocolStatus {
 
 /// Device type enumeration.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum DMSCDeviceType {
+pub enum RiDeviceType {
     /// Server device
     Server,
     /// Client device
@@ -267,7 +267,7 @@ pub enum DMSCDeviceType {
 
 /// Device status enumeration.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum DMSCDeviceStatus {
+pub enum RiDeviceStatus {
     /// Device is offline
     Offline,
     /// Device is online
@@ -282,7 +282,7 @@ pub enum DMSCDeviceStatus {
 
 /// System capability structure.
 #[derive(Debug, Clone)]
-pub struct DMSCCapability {
+pub struct RiCapability {
     /// Capability name
     pub name: String,
     /// Capability version
@@ -290,25 +290,25 @@ pub struct DMSCCapability {
     /// Capability description
     pub description: String,
     /// Required protocols
-    pub required_protocols: Vec<DMSCProtocolType>,
+    pub required_protocols: Vec<RiProtocolType>,
 }
 
 /// Threat intelligence structure.
 #[derive(Debug, Clone)]
-pub struct DMSCThreatIntelligence {
+pub struct RiThreatIntelligence {
     /// Current threat level
-    pub threat_level: DMSCThreatLevel,
+    pub threat_level: RiThreatLevel,
     /// Active threats
-    pub active_threats: Vec<DMSCActiveThreat>,
+    pub active_threats: Vec<RiActiveThreat>,
     /// Threat indicators
-    pub threat_indicators: Vec<DMSCThreatIndicator>,
+    pub threat_indicators: Vec<RiThreatIndicator>,
     /// Last threat update
     pub last_update: Instant,
 }
 
 /// Threat level enumeration.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum DMSCThreatLevel {
+pub enum RiThreatLevel {
     /// Normal threat level
     Normal,
     /// Elevated threat level
@@ -321,24 +321,24 @@ pub enum DMSCThreatLevel {
 
 /// Active threat structure.
 #[derive(Debug, Clone)]
-pub struct DMSCActiveThreat {
+pub struct RiActiveThreat {
     /// Threat identifier
     pub threat_id: String,
     /// Threat type
-    pub threat_type: DMSCThreatType,
+    pub threat_type: RiThreatType,
     /// Threat severity
-    pub severity: DMSCThreatSeverity,
+    pub severity: RiThreatSeverity,
     /// Affected systems
     pub affected_systems: Vec<String>,
     /// Detection time
     pub detection_time: Instant,
     /// Mitigation status
-    pub mitigation_status: DMSCMitigationStatus,
+    pub mitigation_status: RiMitigationStatus,
 }
 
 /// Threat type enumeration.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum DMSCThreatType {
+pub enum RiThreatType {
     /// Malware threat
     Malware,
     /// Intrusion attempt
@@ -355,7 +355,7 @@ pub enum DMSCThreatType {
 
 /// Threat severity enumeration.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum DMSCThreatSeverity {
+pub enum RiThreatSeverity {
     /// Low severity
     Low,
     /// Medium severity
@@ -368,7 +368,7 @@ pub enum DMSCThreatSeverity {
 
 /// Mitigation status enumeration.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum DMSCMitigationStatus {
+pub enum RiMitigationStatus {
     /// Not mitigated
     NotMitigated,
     /// Partially mitigated
@@ -381,9 +381,9 @@ pub enum DMSCMitigationStatus {
 
 /// Threat indicator structure.
 #[derive(Debug, Clone)]
-pub struct DMSCThreatIndicator {
+pub struct RiThreatIndicator {
     /// Indicator type
-    pub indicator_type: DMSCThreatIndicatorType,
+    pub indicator_type: RiThreatIndicatorType,
     /// Indicator value
     pub value: String,
     /// Confidence level
@@ -398,7 +398,7 @@ pub struct DMSCThreatIndicator {
 
 /// Threat indicator type enumeration.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum DMSCThreatIndicatorType {
+pub enum RiThreatIndicatorType {
     /// IP address indicator
     IPAddress,
     /// Domain indicator
@@ -415,7 +415,7 @@ pub enum DMSCThreatIndicatorType {
 
 /// Security policy structure.
 #[derive(Debug, Clone)]
-pub struct DMSCSecurityPolicy {
+pub struct RiSecurityPolicy {
     /// Policy identifier
     pub policy_id: String,
     /// Policy name
@@ -423,44 +423,44 @@ pub struct DMSCSecurityPolicy {
     /// Policy description
     pub description: String,
     /// Policy rules
-    pub rules: Vec<DMSCSecurityRule>,
+    pub rules: Vec<RiSecurityRule>,
     /// Enforcement level
-    pub enforcement_level: DMSCEnforcementLevel,
+    pub enforcement_level: RiEnforcementLevel,
     /// Policy status
-    pub status: DMSCSecurityPolicyStatus,
+    pub status: RiSecurityPolicyStatus,
 }
 
 /// Security rule structure.
 #[derive(Debug, Clone)]
-pub struct DMSCSecurityRule {
+pub struct RiSecurityRule {
     /// Rule name
     pub rule_name: String,
     /// Rule condition
-    pub condition: DMSCSecurityCondition,
+    pub condition: RiSecurityCondition,
     /// Rule action
-    pub action: DMSCSecurityAction,
+    pub action: RiSecurityAction,
     /// Rule priority
     pub priority: u32,
 }
 
 /// Security condition enumeration.
 #[derive(Debug, Clone)]
-pub enum DMSCSecurityCondition {
+pub enum RiSecurityCondition {
     /// Threat level condition
-    ThreatLevel(DMSCThreatLevel),
+    ThreatLevel(RiThreatLevel),
     /// Data classification condition
-    DataClassification(DMSCDataClassification),
+    DataClassification(RiDataClassification),
     /// Network environment condition
-    NetworkEnvironment(DMSCNetworkEnvironment),
+    NetworkEnvironment(RiNetworkEnvironment),
     /// Device type condition
-    DeviceType(DMSCDeviceType),
+    DeviceType(RiDeviceType),
     /// Custom condition
     Custom(String),
 }
 
 /// Security action enumeration.
 #[derive(Debug, Clone)]
-pub enum DMSCSecurityAction {
+pub enum RiSecurityAction {
     /// Allow action
     Allow,
     /// Deny action
@@ -477,7 +477,7 @@ pub enum DMSCSecurityAction {
 
 /// Enforcement level enumeration.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum DMSCEnforcementLevel {
+pub enum RiEnforcementLevel {
     /// Permissive enforcement
     Permissive,
     /// Standard enforcement
@@ -490,7 +490,7 @@ pub enum DMSCEnforcementLevel {
 
 /// Security policy status enumeration.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum DMSCSecurityPolicyStatus {
+pub enum RiSecurityPolicyStatus {
     /// Policy is draft
     Draft,
     /// Policy is active
@@ -503,13 +503,13 @@ pub enum DMSCSecurityPolicyStatus {
 
 /// Security incident structure.
 #[derive(Debug, Clone)]
-pub struct DMSCSecurityIncident {
+pub struct RiSecurityIncident {
     /// Incident identifier
     pub incident_id: String,
     /// Incident type
-    pub incident_type: DMSCSecurityIncidentType,
+    pub incident_type: RiSecurityIncidentType,
     /// Incident severity
-    pub severity: DMSCSecurityIncidentSeverity,
+    pub severity: RiSecurityIncidentSeverity,
     /// Affected systems
     pub affected_systems: Vec<String>,
     /// Incident description
@@ -517,12 +517,12 @@ pub struct DMSCSecurityIncident {
     /// Detection time
     pub detection_time: Instant,
     /// Resolution status
-    pub resolution_status: DMSCResolutionStatus,
+    pub resolution_status: RiResolutionStatus,
 }
 
 /// Security incident type enumeration.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum DMSCSecurityIncidentType {
+pub enum RiSecurityIncidentType {
     /// Unauthorized access
     UnauthorizedAccess,
     /// Data breach
@@ -537,7 +537,7 @@ pub enum DMSCSecurityIncidentType {
 
 /// Security incident severity enumeration.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum DMSCSecurityIncidentSeverity {
+pub enum RiSecurityIncidentSeverity {
     /// Low severity
     Low,
     /// Medium severity
@@ -550,7 +550,7 @@ pub enum DMSCSecurityIncidentSeverity {
 
 /// Resolution status enumeration.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum DMSCResolutionStatus {
+pub enum RiResolutionStatus {
     /// Not resolved
     NotResolved,
     /// Under investigation
@@ -563,11 +563,11 @@ pub enum DMSCResolutionStatus {
 
 /// Compliance status structure.
 #[derive(Debug, Clone)]
-pub struct DMSCComplianceStatus {
+pub struct RiComplianceStatus {
     /// Compliance framework
     pub framework: String,
     /// Compliance level
-    pub level: DMSCComplianceLevel,
+    pub level: RiComplianceLevel,
     /// Last assessment
     pub last_assessment: Instant,
     /// Next assessment due
@@ -576,7 +576,7 @@ pub struct DMSCComplianceStatus {
 
 /// Compliance level enumeration.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum DMSCComplianceLevel {
+pub enum RiComplianceLevel {
     /// Non-compliant
     NonCompliant,
     /// Partially compliant
@@ -589,7 +589,7 @@ pub enum DMSCComplianceLevel {
 
 /// Data classification enumeration.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum DMSCDataClassification {
+pub enum RiDataClassification {
     /// Public data
     Public,
     /// Internal data
@@ -604,7 +604,7 @@ pub enum DMSCDataClassification {
 
 /// Network environment enumeration.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum DMSCNetworkEnvironment {
+pub enum RiNetworkEnvironment {
     /// Trusted internal network
     Trusted,
     /// Untrusted external network
@@ -617,7 +617,7 @@ pub enum DMSCNetworkEnvironment {
 
 /// Global configuration structure.
 #[derive(Debug, Clone)]
-pub struct DMSCGlobalConfig {
+pub struct RiGlobalConfig {
     /// System name
     pub system_name: String,
     /// System version
@@ -627,14 +627,14 @@ pub struct DMSCGlobalConfig {
     /// Connection timeout
     pub connection_timeout: Duration,
     /// Retry policy
-    pub retry_policy: DMSCRetryPolicy,
+    pub retry_policy: RiRetryPolicy,
     /// Logging configuration
-    pub logging_config: DMSCLoggingConfig,
+    pub logging_config: RiLoggingConfig,
 }
 
 /// Retry policy structure.
 #[derive(Debug, Clone)]
-pub struct DMSCRetryPolicy {
+pub struct RiRetryPolicy {
     /// Maximum retry attempts
     pub max_attempts: u32,
     /// Retry delay
@@ -647,18 +647,18 @@ pub struct DMSCRetryPolicy {
 
 /// Logging configuration structure.
 #[derive(Debug, Clone)]
-pub struct DMSCLoggingConfig {
+pub struct RiLoggingConfig {
     /// Log level
     pub log_level: String,
     /// Log destination
     pub log_destination: String,
     /// Log rotation policy
-    pub rotation_policy: DMSCRotationPolicy,
+    pub rotation_policy: RiRotationPolicy,
 }
 
 /// Rotation policy structure.
 #[derive(Debug, Clone)]
-pub struct DMSCRotationPolicy {
+pub struct RiRotationPolicy {
     /// Maximum file size
     pub max_file_size: u64,
     /// Maximum file count
@@ -669,7 +669,7 @@ pub struct DMSCRotationPolicy {
 
 /// Performance metrics structure.
 #[derive(Debug, Clone)]
-pub struct DMSCPerformanceMetrics {
+pub struct RiPerformanceMetrics {
     /// CPU utilization
     pub cpu_utilization: f32,
     /// Memory utilization
@@ -684,7 +684,7 @@ pub struct DMSCPerformanceMetrics {
 
 /// Resource utilization structure.
 #[derive(Debug, Clone)]
-pub struct DMSCResourceUtilization {
+pub struct RiResourceUtilization {
     /// CPU cores
     pub cpu_cores: u32,
     /// Memory total
@@ -699,7 +699,7 @@ pub struct DMSCResourceUtilization {
 
 /// Network performance structure.
 #[derive(Debug, Clone)]
-pub struct DMSCNetworkPerformance {
+pub struct RiNetworkPerformance {
     /// Network latency
     pub latency: Duration,
     /// Packet loss
@@ -712,20 +712,20 @@ pub struct DMSCNetworkPerformance {
 
 /// Performance optimization structure.
 #[derive(Debug, Clone)]
-pub struct DMSCPerformanceOptimization {
+pub struct RiPerformanceOptimization {
     /// Optimization type
-    pub optimization_type: DMSCOptimizationType,
+    pub optimization_type: RiOptimizationType,
     /// Optimization description
     pub description: String,
     /// Performance impact
     pub performance_impact: f32,
     /// Implementation status
-    pub implementation_status: DMSCImplementationStatus,
+    pub implementation_status: RiImplementationStatus,
 }
 
 /// Optimization type enumeration.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum DMSCOptimizationType {
+pub enum RiOptimizationType {
     /// Network optimization
     Network,
     /// Memory optimization
@@ -740,7 +740,7 @@ pub enum DMSCOptimizationType {
 
 /// Implementation status enumeration.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum DMSCImplementationStatus {
+pub enum RiImplementationStatus {
     /// Not implemented
     NotImplemented,
     /// In progress
@@ -753,22 +753,22 @@ pub enum DMSCImplementationStatus {
 
 /// Performance alert structure.
 #[derive(Debug, Clone)]
-pub struct DMSCPerformanceAlert {
+pub struct RiPerformanceAlert {
     /// Alert type
-    pub alert_type: DMSCPerformanceAlertType,
+    pub alert_type: RiPerformanceAlertType,
     /// Alert message
     pub message: String,
     /// Alert severity
-    pub severity: DMSCPerformanceAlertSeverity,
+    pub severity: RiPerformanceAlertSeverity,
     /// Alert time
     pub alert_time: Instant,
     /// Resolution status
-    pub resolution_status: DMSCResolutionStatus,
+    pub resolution_status: RiResolutionStatus,
 }
 
 /// Performance alert type enumeration.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum DMSCPerformanceAlertType {
+pub enum RiPerformanceAlertType {
     /// High CPU usage
     HighCPU,
     /// High memory usage
@@ -783,7 +783,7 @@ pub enum DMSCPerformanceAlertType {
 
 /// Performance alert severity enumeration.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum DMSCPerformanceAlertSeverity {
+pub enum RiPerformanceAlertSeverity {
     /// Warning severity
     Warning,
     /// Critical severity
@@ -794,13 +794,13 @@ pub enum DMSCPerformanceAlertSeverity {
 
 /// State change notification structure.
 #[derive(Debug, Clone)]
-pub struct DMSCStateChange {
+pub struct RiStateChange {
     /// Change type
-    pub change_type: DMSCStateChangeType,
+    pub change_type: RiStateChangeType,
     /// Change category
-    pub category: DMSCStateCategory,
+    pub category: RiStateCategory,
     /// Change data
-    pub data: DMSCStateChangeData,
+    pub data: RiStateChangeData,
     /// Change timestamp
     pub timestamp: Instant,
     /// Change version
@@ -809,7 +809,7 @@ pub struct DMSCStateChange {
 
 /// State change type enumeration.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum DMSCStateChangeType {
+pub enum RiStateChangeType {
     /// State created
     Created,
     /// State updated
@@ -822,7 +822,7 @@ pub enum DMSCStateChangeType {
 
 /// State category enumeration.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum DMSCStateCategory {
+pub enum RiStateCategory {
     /// Global state
     Global,
     /// Protocol state
@@ -837,71 +837,71 @@ pub enum DMSCStateCategory {
 
 /// State change data enumeration.
 #[derive(Debug, Clone)]
-pub enum DMSCStateChangeData {
+pub enum RiStateChangeData {
     /// Global state data
-    Global(DMSCGlobalState),
+    Global(RiGlobalState),
     /// Protocol state data
-    Protocol(DMSCProtocolState),
+    Protocol(RiProtocolState),
     /// Device state data
-    Device(DMSCDeviceState),
+    Device(RiDeviceState),
     /// Security state data
-    Security(DMSCSecurityState),
+    Security(RiSecurityState),
     /// Performance state data
-    Performance(DMSCPerformanceState),
+    Performance(RiPerformanceState),
 }
 
 /// State update enumeration.
 #[derive(Debug, Clone)]
-pub enum DMSCStateUpdate {
+pub enum RiStateUpdate {
     /// Global state update
     Global {
-        system_status: DMSCSystemStatus,
-        global_config: DMSCGlobalConfig,
-        active_protocols: Vec<DMSCProtocolType>,
+        system_status: RiSystemStatus,
+        global_config: RiGlobalConfig,
+        active_protocols: Vec<RiProtocolType>,
     },
     /// Protocol state update
     Protocol {
-        protocol_type: DMSCProtocolType,
-        status: DMSCProtocolStatus,
-        config: DMSCProtocolConfig,
-        connections: Vec<DMSCConnectionInfo>,
+        protocol_type: RiProtocolType,
+        status: RiProtocolStatus,
+        config: RiProtocolConfig,
+        connections: Vec<RiConnectionInfo>,
     },
     /// Device state update
     Device {
         device_id: String,
-        device_type: DMSCDeviceType,
-        status: DMSCDeviceStatus,
-        auth_status: DMSCDeviceAuthStatus,
-        capabilities: Vec<DMSCCapability>,
-        supported_protocols: Vec<DMSCProtocolType>,
+        device_type: RiDeviceType,
+        status: RiDeviceStatus,
+        auth_status: RiDeviceAuthStatus,
+        capabilities: Vec<RiCapability>,
+        supported_protocols: Vec<RiProtocolType>,
     },
     /// Security state update
     Security {
-        global_security_level: DMSCSecurityLevel,
-        threat_intelligence: DMSCThreatIntelligence,
-        security_policies: Vec<DMSCSecurityPolicy>,
+        global_security_level: RiSecurityLevel,
+        threat_intelligence: RiThreatIntelligence,
+        security_policies: Vec<RiSecurityPolicy>,
     },
     /// Performance state update
     Performance {
-        metrics: DMSCPerformanceMetrics,
-        resource_utilization: DMSCResourceUtilization,
-        network_performance: DMSCNetworkPerformance,
+        metrics: RiPerformanceMetrics,
+        resource_utilization: RiResourceUtilization,
+        network_performance: RiNetworkPerformance,
     },
 }
 
 /// State version manager for tracking state changes.
-struct DMSCStateVersionManager {
+struct RiStateVersionManager {
     /// Current version
     current_version: Arc<RwLock<u64>>,
     /// Version history
-    version_history: Arc<RwLock<Vec<DMSCStateVersion>>>,
+    version_history: Arc<RwLock<Vec<RiStateVersion>>>,
     /// Maximum history size
     max_history_size: usize,
 }
 
 /// State version structure.
 #[derive(Debug, Clone)]
-struct DMSCStateVersion {
+struct RiStateVersion {
     /// Version number
     version: u64,
     /// Version timestamp
@@ -909,30 +909,30 @@ struct DMSCStateVersion {
     /// Version hash
     version_hash: String,
     /// State snapshot
-    state_snapshot: DMSCStateSnapshot,
+    state_snapshot: RiStateSnapshot,
 }
 
 /// State snapshot structure.
 #[derive(Debug, Clone)]
-struct DMSCStateSnapshot {
+struct RiStateSnapshot {
     /// Global state snapshot
-    global_state: DMSCGlobalState,
+    global_state: RiGlobalState,
     /// Protocol states snapshot
-    protocol_states: HashMap<DMSCProtocolType, DMSCProtocolState>,
+    protocol_states: HashMap<RiProtocolType, RiProtocolState>,
     /// Device states snapshot
-    device_states: HashMap<String, DMSCDeviceState>,
+    device_states: HashMap<String, RiDeviceState>,
     /// Security state snapshot
-    security_state: DMSCSecurityState,
+    security_state: RiSecurityState,
     /// Performance state snapshot
-    performance_state: DMSCPerformanceState,
+    performance_state: RiPerformanceState,
 }
 
 /// State persistence manager for durable state storage.
-struct DMSCStatePersistenceManager {
+struct RiStatePersistenceManager {
     /// Persistence configuration
-    config: DMSCPersistenceConfig,
+    config: RiPersistenceConfig,
     /// Persistence backend
-    backend: Arc<dyn DMSCStateBackend>,
+    backend: Arc<dyn RiStateBackend>,
     /// State encryption key
     encryption_key: Arc<RwLock<Option<SecretVec<u8>>>>,
 }
@@ -960,17 +960,17 @@ impl StateEncryptionKey {
 }
 
 /// Encrypted state backend for secure persistence.
-struct DMSCEncryptedStateBackend {
+struct RiEncryptedStateBackend {
     /// Encryption key
     encryption_key: Arc<RwLock<StateEncryptionKey>>,
     /// Underlying memory backend
-    memory_backend: Arc<DMSCMemoryStateBackend>,
+    memory_backend: Arc<RiMemoryStateBackend>,
     /// Encryption interval
     key_rotation_interval: Duration,
 }
 
-impl DMSCEncryptedStateBackend {
-    fn new(encryption_key: Arc<RwLock<StateEncryptionKey>>, memory_backend: Arc<DMSCMemoryStateBackend>) -> Self {
+impl RiEncryptedStateBackend {
+    fn new(encryption_key: Arc<RwLock<StateEncryptionKey>>, memory_backend: Arc<RiMemoryStateBackend>) -> Self {
         Self {
             encryption_key,
             memory_backend,
@@ -978,7 +978,7 @@ impl DMSCEncryptedStateBackend {
         }
     }
 
-    async fn get_current_key(&self) -> DMSCResult<&SecretVec<u8>> {
+    async fn get_current_key(&self) -> RiResult<&SecretVec<u8>> {
         let key = self.encryption_key.read().await;
         if key.is_expired(self.key_rotation_interval) {
             drop(key);
@@ -989,10 +989,10 @@ impl DMSCEncryptedStateBackend {
         Ok(&key.key)
     }
 
-    async fn encrypt_and_save(&self, state: &DMSCStateSnapshot) -> DMSCResult<()> {
+    async fn encrypt_and_save(&self, state: &RiStateSnapshot) -> RiResult<()> {
         let key = self.encryption_key.read().await;
         let serialized = bincode::serialize(state)
-            .map_err(|e| DMSCError::Serialization(e.to_string()))?;
+            .map_err(|e| RiError::Serialization(e.to_string()))?;
 
         let key_bytes = key.key.expose_secret();
         let aes_key = Key::<Aes256Gcm>::from_slice(key_bytes);
@@ -1003,7 +1003,7 @@ impl DMSCEncryptedStateBackend {
         let nonce = Nonce::from_slice(&nonce_bytes);
 
         let ciphertext = cipher.encrypt(nonce, serialized.as_slice())
-            .map_err(|e| DMSCError::CryptoError(e.to_string()))?;
+            .map_err(|e| RiError::CryptoError(e.to_string()))?;
 
         let mut encrypted_data = nonce.to_vec();
         encrypted_data.extend_from_slice(&ciphertext);
@@ -1011,7 +1011,7 @@ impl DMSCEncryptedStateBackend {
         self.memory_backend.save_encrypted(encrypted_data).await
     }
 
-    async fn decrypt_and_load(&self) -> DMSCResult<Option<DMSCStateSnapshot>> {
+    async fn decrypt_and_load(&self) -> RiResult<Option<RiStateSnapshot>> {
         let encrypted_data = match self.memory_backend.load_encrypted().await? {
             Some(data) => data,
             None => return Ok(None),
@@ -1031,33 +1031,33 @@ impl DMSCEncryptedStateBackend {
         let cipher = Aes256Gcm::new(aes_key);
 
         let decrypted = cipher.decrypt(nonce, ciphertext)
-            .map_err(|e| DMSCError::CryptoError(e.to_string()))?;
+            .map_err(|e| RiError::CryptoError(e.to_string()))?;
 
         let state = bincode::deserialize(&decrypted)
-            .map_err(|e| DMSCError::Serialization(e.to_string()))?;
+            .map_err(|e| RiError::Serialization(e.to_string()))?;
 
         Ok(Some(state))
     }
 }
 
 #[async_trait]
-impl DMSCStateBackend for DMSCEncryptedStateBackend {
-    async fn save_state(&self, state: &DMSCStateSnapshot) -> DMSCResult<()> {
+impl RiStateBackend for RiEncryptedStateBackend {
+    async fn save_state(&self, state: &RiStateSnapshot) -> RiResult<()> {
         self.encrypt_and_save(state).await
     }
 
-    async fn load_state(&self) -> DMSCResult<Option<DMSCStateSnapshot>> {
+    async fn load_state(&self) -> RiResult<Option<RiStateSnapshot>> {
         self.decrypt_and_load().await
     }
 
-    async fn delete_state(&self) -> DMSCResult<()> {
+    async fn delete_state(&self) -> RiResult<()> {
         self.memory_backend.delete_state().await
     }
 }
 
 /// Persistence configuration structure.
 #[derive(Debug, Clone)]
-pub struct DMSCPersistenceConfig {
+pub struct RiPersistenceConfig {
     /// Persistence interval
     pub persistence_interval: Duration,
     /// Maximum state size
@@ -1070,56 +1070,56 @@ pub struct DMSCPersistenceConfig {
 
 /// State backend trait for pluggable persistence.
 #[async_trait]
-pub trait DMSCStateBackend: Send + Sync {
+pub trait RiStateBackend: Send + Sync {
     /// Save state
-    async fn save_state(&self, state: &DMSCStateSnapshot) -> DMSCResult<()>;
+    async fn save_state(&self, state: &RiStateSnapshot) -> RiResult<()>;
     /// Load state
-    async fn load_state(&self) -> DMSCResult<Option<DMSCStateSnapshot>>;
+    async fn load_state(&self) -> RiResult<Option<RiStateSnapshot>>;
     /// Delete state
-    async fn delete_state(&self) -> DMSCResult<()>;
+    async fn delete_state(&self) -> RiResult<()>;
 }
 
-impl DMSCGlobalStateManager {
+impl RiGlobalStateManager {
     /// Create a new global state manager.
     pub fn new() -> Self {
         let system_id = Uuid::new_v4().to_string();
-        let global_state = Arc::new(RwLock::new(DMSCGlobalState {
+        let global_state = Arc::new(RwLock::new(RiGlobalState {
             system_id: system_id.clone(),
-            system_status: DMSCSystemStatus::Initializing,
-            global_config: DMSCGlobalConfig {
-                system_name: "DMSC System".to_string(),
+            system_status: RiSystemStatus::Initializing,
+            global_config: RiGlobalConfig {
+                system_name: "Ri System".to_string(),
                 system_version: "1.0.0".to_string(),
                 max_connections: 1000,
                 connection_timeout: Duration::from_secs(30),
-                retry_policy: DMSCRetryPolicy {
+                retry_policy: RiRetryPolicy {
                     max_attempts: 3,
                     retry_delay: Duration::from_secs(1),
                     exponential_backoff: true,
                     max_retry_delay: Duration::from_secs(60),
                 },
-                logging_config: DMSCLoggingConfig {
+                logging_config: RiLoggingConfig {
                     log_level: "INFO".to_string(),
                     log_destination: "file".to_string(),
-                    rotation_policy: DMSCRotationPolicy {
+                    rotation_policy: RiRotationPolicy {
                         max_file_size: 100 * 1024 * 1024, // 100MB
                         max_file_count: 10,
                         rotation_interval: Duration::from_secs(86400), // 24 hours
                     },
                 },
             },
-            active_protocols: vec![DMSCProtocolType::Global],
+            active_protocols: vec![RiProtocolType::Global],
             capabilities: vec![],
             last_update: Instant::now(),
             version: 1,
         }));
         
-        let version_manager = Arc::new(DMSCStateVersionManager {
+        let version_manager = Arc::new(RiStateVersionManager {
             current_version: Arc::new(RwLock::new(1)),
             version_history: Arc::new(RwLock::new(Vec::new())),
             max_history_size: 1000,
         });
         
-        let persistence_config = DMSCPersistenceConfig {
+        let persistence_config = RiPersistenceConfig {
             persistence_interval: Duration::from_secs(300),
             max_state_size: 100 * 1024 * 1024,
             compression_enabled: true,
@@ -1127,13 +1127,13 @@ impl DMSCGlobalStateManager {
         };
 
         let encryption_key = Arc::new(RwLock::new(StateEncryptionKey::new()));
-        let memory_backend = Arc::new(DMSCMemoryStateBackend::new());
-        let encrypted_backend: Arc<dyn DMSCStateBackend> = Arc::new(DMSCEncryptedStateBackend::new(
+        let memory_backend = Arc::new(RiMemoryStateBackend::new());
+        let encrypted_backend: Arc<dyn RiStateBackend> = Arc::new(RiEncryptedStateBackend::new(
             Arc::clone(&encryption_key),
             memory_backend,
         ));
         
-        let persistence_manager = Arc::new(DMSCStatePersistenceManager {
+        let persistence_manager = Arc::new(RiStatePersistenceManager {
             config: persistence_config,
             backend: encrypted_backend,
             encryption_key: Arc::new(RwLock::new(None)),
@@ -1143,10 +1143,10 @@ impl DMSCGlobalStateManager {
             global_state,
             protocol_states: Arc::new(RwLock::new(HashMap::new())),
             device_states: Arc::new(RwLock::new(HashMap::new())),
-            security_state: Arc::new(RwLock::new(DMSCSecurityState {
-                global_security_level: DMSCSecurityLevel::Standard,
-                threat_intelligence: DMSCThreatIntelligence {
-                    threat_level: DMSCThreatLevel::Normal,
+            security_state: Arc::new(RwLock::new(RiSecurityState {
+                global_security_level: RiSecurityLevel::Standard,
+                threat_intelligence: RiThreatIntelligence {
+                    threat_level: RiThreatLevel::Normal,
                     active_threats: vec![],
                     threat_indicators: vec![],
                     last_update: Instant::now(),
@@ -1156,22 +1156,22 @@ impl DMSCGlobalStateManager {
                 compliance_status: HashMap::new(),
                 last_security_scan: Instant::now(),
             })),
-            performance_state: Arc::new(RwLock::new(DMSCPerformanceState {
-                metrics: DMSCPerformanceMetrics {
+            performance_state: Arc::new(RwLock::new(RiPerformanceState {
+                metrics: RiPerformanceMetrics {
                     cpu_utilization: 0.0,
                     memory_utilization: 0.0,
                     network_throughput: 0,
                     response_time: Duration::from_millis(0),
                     error_rate: 0.0,
                 },
-                resource_utilization: DMSCResourceUtilization {
+                resource_utilization: RiResourceUtilization {
                     cpu_cores: 1,
                     memory_total: 0,
                     memory_used: 0,
                     disk_total: 0,
                     disk_used: 0,
                 },
-                network_performance: DMSCNetworkPerformance {
+                network_performance: RiNetworkPerformance {
                     latency: Duration::from_millis(0),
                     packet_loss: 0.0,
                     bandwidth_utilization: 0.0,
@@ -1189,7 +1189,7 @@ impl DMSCGlobalStateManager {
     }
     
     /// Initialize the global state manager.
-    pub async fn initialize(&self) -> DMSCResult<()> {
+    pub async fn initialize(&self) -> RiResult<()> {
         if *self.initialized.read().await {
             return Ok(());
         }
@@ -1201,7 +1201,7 @@ impl DMSCGlobalStateManager {
         
         // Update system status
         let mut global_state = self.global_state.write().await;
-        global_state.system_status = DMSCSystemStatus::Operational;
+        global_state.system_status = RiSystemStatus::Operational;
         global_state.last_update = Instant::now();
         
         *self.initialized.write().await = true;
@@ -1209,25 +1209,25 @@ impl DMSCGlobalStateManager {
     }
     
     /// Update system state.
-    pub async fn update_state(&self, update: DMSCStateUpdate) -> DMSCResult<()> {
+    pub async fn update_state(&self, update: RiStateUpdate) -> RiResult<()> {
         if !*self.initialized.read().await {
-            return Err(DMSCError::InvalidState("State manager not initialized".to_string()));
+            return Err(RiError::InvalidState("State manager not initialized".to_string()));
         }
         
         match update {
-            DMSCStateUpdate::Global { system_status, global_config, active_protocols } => {
+            RiStateUpdate::Global { system_status, global_config, active_protocols } => {
                 self.update_global_state(system_status, global_config, active_protocols).await?;
             }
-            DMSCStateUpdate::Protocol { protocol_type, status, config, connections } => {
+            RiStateUpdate::Protocol { protocol_type, status, config, connections } => {
                 self.update_protocol_state(protocol_type, status, config, connections).await?;
             }
-            DMSCStateUpdate::Device { device_id, device_type, status, auth_status, capabilities, supported_protocols } => {
+            RiStateUpdate::Device { device_id, device_type, status, auth_status, capabilities, supported_protocols } => {
                 self.update_device_state(device_id, device_type, status, auth_status, capabilities, supported_protocols).await?;
             }
-            DMSCStateUpdate::Security { global_security_level, threat_intelligence, security_policies } => {
+            RiStateUpdate::Security { global_security_level, threat_intelligence, security_policies } => {
                 self.update_security_state(global_security_level, threat_intelligence, security_policies).await?;
             }
-            DMSCStateUpdate::Performance { metrics, resource_utilization, network_performance } => {
+            RiStateUpdate::Performance { metrics, resource_utilization, network_performance } => {
                 self.update_performance_state(metrics, resource_utilization, network_performance).await?;
             }
         }
@@ -1236,32 +1236,32 @@ impl DMSCGlobalStateManager {
     }
     
     /// Get global state.
-    pub async fn get_global_state(&self) -> DMSCResult<DMSCGlobalState> {
+    pub async fn get_global_state(&self) -> RiResult<RiGlobalState> {
         Ok(self.global_state.read().await.clone())
     }
     
     /// Get protocol state.
-    pub async fn get_protocol_state(&self, protocol_type: DMSCProtocolType) -> DMSCResult<Option<DMSCProtocolState>> {
+    pub async fn get_protocol_state(&self, protocol_type: RiProtocolType) -> RiResult<Option<RiProtocolState>> {
         Ok(self.protocol_states.read().await.get(&protocol_type).cloned())
     }
     
     /// Get device state.
-    pub async fn get_device_state(&self, device_id: &str) -> DMSCResult<Option<DMSCDeviceState>> {
+    pub async fn get_device_state(&self, device_id: &str) -> RiResult<Option<RiDeviceState>> {
         Ok(self.device_states.read().await.get(device_id).cloned())
     }
     
     /// Get security state.
-    pub async fn get_security_state(&self) -> DMSCResult<DMSCSecurityState> {
+    pub async fn get_security_state(&self) -> RiResult<RiSecurityState> {
         Ok(self.security_state.read().await.clone())
     }
     
     /// Get performance state.
-    pub async fn get_performance_state(&self) -> DMSCResult<DMSCPerformanceState> {
+    pub async fn get_performance_state(&self) -> RiResult<RiPerformanceState> {
         Ok(self.performance_state.read().await.clone())
     }
     
     /// Subscribe to state changes.
-    pub async fn subscribe_state_changes(&self) -> DMSCResult<broadcast::Receiver<DMSCStateChange>> {
+    pub async fn subscribe_state_changes(&self) -> RiResult<broadcast::Receiver<RiStateChange>> {
         let (tx, rx) = broadcast::channel(1024);
         self.state_subscribers.write().await.push(tx);
         Ok(rx)
@@ -1270,10 +1270,10 @@ impl DMSCGlobalStateManager {
     /// Update global state.
     async fn update_global_state(
         &self,
-        system_status: DMSCSystemStatus,
-        global_config: DMSCGlobalConfig,
-        active_protocols: Vec<DMSCProtocolType>,
-    ) -> DMSCResult<()> {
+        system_status: RiSystemStatus,
+        global_config: RiGlobalConfig,
+        active_protocols: Vec<RiProtocolType>,
+    ) -> RiResult<()> {
         let mut global_state = self.global_state.write().await;
         global_state.system_status = system_status;
         global_state.global_config = global_config;
@@ -1281,10 +1281,10 @@ impl DMSCGlobalStateManager {
         global_state.last_update = Instant::now();
         global_state.version += 1;
         
-        let state_change = DMSCStateChange {
-            change_type: DMSCStateChangeType::Updated,
-            category: DMSCStateCategory::Global,
-            data: DMSCStateChangeData::Global(global_state.clone()),
+        let state_change = RiStateChange {
+            change_type: RiStateChangeType::Updated,
+            category: RiStateCategory::Global,
+            data: RiStateChangeData::Global(global_state.clone()),
             timestamp: Instant::now(),
             version: global_state.version,
         };
@@ -1298,27 +1298,27 @@ impl DMSCGlobalStateManager {
     /// Update protocol state.
     async fn update_protocol_state(
         &self,
-        protocol_type: DMSCProtocolType,
-        status: DMSCProtocolStatus,
-        config: DMSCProtocolConfig,
-        connections: Vec<DMSCConnectionInfo>,
-    ) -> DMSCResult<()> {
-        let protocol_state = DMSCProtocolState {
+        protocol_type: RiProtocolType,
+        status: RiProtocolStatus,
+        config: RiProtocolConfig,
+        connections: Vec<RiConnectionInfo>,
+    ) -> RiResult<()> {
+        let protocol_state = RiProtocolState {
             protocol_type,
             status,
             config,
             connections,
-            stats: DMSCProtocolStats::default(),
+            stats: RiProtocolStats::default(),
             last_heartbeat: Instant::now(),
             protocol_version: "1.0.0".to_string(),
         };
         
         self.protocol_states.write().await.insert(protocol_type, protocol_state.clone());
         
-        let state_change = DMSCStateChange {
-            change_type: DMSCStateChangeType::Updated,
-            category: DMSCStateCategory::Protocol,
-            data: DMSCStateChangeData::Protocol(protocol_state),
+        let state_change = RiStateChange {
+            change_type: RiStateChangeType::Updated,
+            category: RiStateCategory::Protocol,
+            data: RiStateChangeData::Protocol(protocol_state),
             timestamp: Instant::now(),
             version: self.get_next_version().await,
         };
@@ -1333,13 +1333,13 @@ impl DMSCGlobalStateManager {
     async fn update_device_state(
         &self,
         device_id: String,
-        device_type: DMSCDeviceType,
-        status: DMSCDeviceStatus,
-        auth_status: DMSCDeviceAuthStatus,
-        capabilities: Vec<DMSCCapability>,
-        supported_protocols: Vec<DMSCProtocolType>,
-    ) -> DMSCResult<()> {
-        let device_state = DMSCDeviceState {
+        device_type: RiDeviceType,
+        status: RiDeviceStatus,
+        auth_status: RiDeviceAuthStatus,
+        capabilities: Vec<RiCapability>,
+        supported_protocols: Vec<RiProtocolType>,
+    ) -> RiResult<()> {
+        let device_state = RiDeviceState {
             device_id: device_id.clone(),
             device_type,
             status,
@@ -1352,10 +1352,10 @@ impl DMSCGlobalStateManager {
         
         self.device_states.write().await.insert(device_id.clone(), device_state.clone());
         
-        let state_change = DMSCStateChange {
-            change_type: DMSCStateChangeType::Updated,
-            category: DMSCStateCategory::Device,
-            data: DMSCStateChangeData::Device(device_state),
+        let state_change = RiStateChange {
+            change_type: RiStateChangeType::Updated,
+            category: RiStateCategory::Device,
+            data: RiStateChangeData::Device(device_state),
             timestamp: Instant::now(),
             version: self.get_next_version().await,
         };
@@ -1369,20 +1369,20 @@ impl DMSCGlobalStateManager {
     /// Update security state.
     async fn update_security_state(
         &self,
-        global_security_level: DMSCSecurityLevel,
-        threat_intelligence: DMSCThreatIntelligence,
-        security_policies: Vec<DMSCSecurityPolicy>,
-    ) -> DMSCResult<()> {
+        global_security_level: RiSecurityLevel,
+        threat_intelligence: RiThreatIntelligence,
+        security_policies: Vec<RiSecurityPolicy>,
+    ) -> RiResult<()> {
         let mut security_state = self.security_state.write().await;
         security_state.global_security_level = global_security_level;
         security_state.threat_intelligence = threat_intelligence;
         security_state.security_policies = security_policies;
         security_state.last_security_scan = Instant::now();
         
-        let state_change = DMSCStateChange {
-            change_type: DMSCStateChangeType::Updated,
-            category: DMSCStateCategory::Security,
-            data: DMSCStateChangeData::Security(security_state.clone()),
+        let state_change = RiStateChange {
+            change_type: RiStateChangeType::Updated,
+            category: RiStateCategory::Security,
+            data: RiStateChangeData::Security(security_state.clone()),
             timestamp: Instant::now(),
             version: self.get_next_version().await,
         };
@@ -1396,20 +1396,20 @@ impl DMSCGlobalStateManager {
     /// Update performance state.
     async fn update_performance_state(
         &self,
-        metrics: DMSCPerformanceMetrics,
-        resource_utilization: DMSCResourceUtilization,
-        network_performance: DMSCNetworkPerformance,
-    ) -> DMSCResult<()> {
+        metrics: RiPerformanceMetrics,
+        resource_utilization: RiResourceUtilization,
+        network_performance: RiNetworkPerformance,
+    ) -> RiResult<()> {
         let mut performance_state = self.performance_state.write().await;
         performance_state.metrics = metrics;
         performance_state.resource_utilization = resource_utilization;
         performance_state.network_performance = network_performance;
         performance_state.last_performance_check = Instant::now();
         
-        let state_change = DMSCStateChange {
-            change_type: DMSCStateChangeType::Updated,
-            category: DMSCStateCategory::Performance,
-            data: DMSCStateChangeData::Performance(performance_state.clone()),
+        let state_change = RiStateChange {
+            change_type: RiStateChangeType::Updated,
+            category: RiStateCategory::Performance,
+            data: RiStateChangeData::Performance(performance_state.clone()),
             timestamp: Instant::now(),
             version: self.get_next_version().await,
         };
@@ -1421,7 +1421,7 @@ impl DMSCGlobalStateManager {
     }
     
     /// Notify state change to subscribers.
-    async fn notify_state_change(&self, change: DMSCStateChange) -> DMSCResult<()> {
+    async fn notify_state_change(&self, change: RiStateChange) -> RiResult<()> {
         let subscribers = self.state_subscribers.read().await;
         for subscriber in subscribers.iter() {
             let _ = subscriber.send(change.clone());
@@ -1430,21 +1430,21 @@ impl DMSCGlobalStateManager {
     }
     
     /// Persist current state.
-    async fn persist_current_state(&self) -> DMSCResult<()> {
+    async fn persist_current_state(&self) -> RiResult<()> {
         let snapshot = self.create_state_snapshot().await?;
         self.persistence_manager.backend.save_state(&snapshot).await?;
         Ok(())
     }
     
     /// Create state snapshot.
-    async fn create_state_snapshot(&self) -> DMSCResult<DMSCStateSnapshot> {
+    async fn create_state_snapshot(&self) -> RiResult<RiStateSnapshot> {
         let global_state = self.global_state.read().await.clone();
         let protocol_states = self.protocol_states.read().await.clone();
         let device_states = self.device_states.read().await.clone();
         let security_state = self.security_state.read().await.clone();
         let performance_state = self.performance_state.read().await.clone();
         
-        Ok(DMSCStateSnapshot {
+        Ok(RiStateSnapshot {
             global_state,
             protocol_states,
             device_states,
@@ -1454,7 +1454,7 @@ impl DMSCGlobalStateManager {
     }
     
     /// Restore state from snapshot.
-    async fn restore_state(&self, snapshot: DMSCStateSnapshot) -> DMSCResult<()> {
+    async fn restore_state(&self, snapshot: RiStateSnapshot) -> RiResult<()> {
         *self.global_state.write().await = snapshot.global_state;
         *self.protocol_states.write().await = snapshot.protocol_states;
         *self.device_states.write().await = snapshot.device_states;
@@ -1471,7 +1471,7 @@ impl DMSCGlobalStateManager {
     }
     
     /// Shutdown the global state manager.
-    pub async fn shutdown(&mut self) -> DMSCResult<()> {
+    pub async fn shutdown(&mut self) -> RiResult<()> {
         // Persist final state
         self.persist_current_state().await?;
         
@@ -1483,19 +1483,19 @@ impl DMSCGlobalStateManager {
     }
 }
 
-impl Default for DMSCGlobalStateManager {
+impl Default for RiGlobalStateManager {
     fn default() -> Self {
         Self::new()
     }
 }
 
 /// Memory-based state backend implementation.
-struct DMSCMemoryStateBackend {
-    state: Arc<RwLock<Option<DMSCStateSnapshot>>>,
+struct RiMemoryStateBackend {
+    state: Arc<RwLock<Option<RiStateSnapshot>>>,
     encrypted_state: Arc<RwLock<Option<Vec<u8>>>>,
 }
 
-impl DMSCMemoryStateBackend {
+impl RiMemoryStateBackend {
     /// Create a new memory state backend.
     fn new() -> Self {
         Self {
@@ -1505,20 +1505,20 @@ impl DMSCMemoryStateBackend {
     }
 
     /// Save encrypted state data.
-    async fn save_encrypted(&self, encrypted_data: Vec<u8>) -> DMSCResult<()> {
+    async fn save_encrypted(&self, encrypted_data: Vec<u8>) -> RiResult<()> {
         *self.encrypted_state.write().await = Some(encrypted_data);
         Ok(())
     }
 
     /// Load encrypted state data.
-    async fn load_encrypted(&self) -> DMSCResult<Option<Vec<u8>>> {
+    async fn load_encrypted(&self) -> RiResult<Option<Vec<u8>>> {
         Ok(self.encrypted_state.read().await.clone())
     }
 
     /// Encrypt state data using AES-256-GCM.
-    fn encrypt_state(state: &DMSCStateSnapshot, key: &[u8]) -> DMSCResult<Vec<u8>> {
+    fn encrypt_state(state: &RiStateSnapshot, key: &[u8]) -> RiResult<Vec<u8>> {
         let serialized = bincode::serialize(state)
-            .map_err(|e| DMSCError::Serialization(e.to_string()))?;
+            .map_err(|e| RiError::Serialization(e.to_string()))?;
 
         let key = Key::<Aes256Gcm>::from_slice(key);
         let cipher = Aes256Gcm::new(key);
@@ -1528,7 +1528,7 @@ impl DMSCMemoryStateBackend {
         let nonce = Nonce::from_slice(&nonce);
 
         let ciphertext = cipher.encrypt(nonce, serialized.as_slice())
-            .map_err(|e| DMSCError::CryptoError(e.to_string()))?;
+            .map_err(|e| RiError::CryptoError(e.to_string()))?;
 
         let mut result = nonce.to_vec();
         result.extend_from_slice(&ciphertext);
@@ -1536,7 +1536,7 @@ impl DMSCMemoryStateBackend {
     }
 
     /// Decrypt state data using AES-256-GCM.
-    fn decrypt_state(encrypted_data: &[u8], key: &[u8]) -> DMSCResult<Option<DMSCStateSnapshot>> {
+    fn decrypt_state(encrypted_data: &[u8], key: &[u8]) -> RiResult<Option<RiStateSnapshot>> {
         if encrypted_data.len() < 12 + 16 {
             return Ok(None);
         }
@@ -1548,27 +1548,27 @@ impl DMSCMemoryStateBackend {
         let cipher = Aes256Gcm::new(key);
 
         let decrypted = cipher.decrypt(nonce, ciphertext)
-            .map_err(|e| DMSCError::CryptoError(e.to_string()))?;
+            .map_err(|e| RiError::CryptoError(e.to_string()))?;
 
         let state = bincode::deserialize(&decrypted)
-            .map_err(|e| DMSCError::Serialization(e.to_string()))?;
+            .map_err(|e| RiError::Serialization(e.to_string()))?;
 
         Ok(Some(state))
     }
 }
 
 #[async_trait]
-impl DMSCStateBackend for DMSCMemoryStateBackend {
-    async fn save_state(&self, state: &DMSCStateSnapshot) -> DMSCResult<()> {
+impl RiStateBackend for RiMemoryStateBackend {
+    async fn save_state(&self, state: &RiStateSnapshot) -> RiResult<()> {
         *self.state.write().await = Some(state.clone());
         Ok(())
     }
     
-    async fn load_state(&self) -> DMSCResult<Option<DMSCStateSnapshot>> {
+    async fn load_state(&self) -> RiResult<Option<RiStateSnapshot>> {
         Ok(self.state.read().await.clone())
     }
     
-    async fn delete_state(&self) -> DMSCResult<()> {
+    async fn delete_state(&self) -> RiResult<()> {
         self.state.write().await.take();
         self.encrypted_state.write().await.take();
         Ok(())

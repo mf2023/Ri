@@ -1,7 +1,7 @@
 //! Copyright © 2025-2026 Wenze Wei. All Rights Reserved.
 //!
-//! This file is part of DMSC.
-//! The DMSC project belongs to the Dunimd Team.
+//! This file is part of Ri.
+//! The Ri project belongs to the Dunimd Team.
 //!
 //! Licensed under the Apache License, Version 2.0 (the "License");
 //! You may not use this file except in compliance with the License.
@@ -17,23 +17,23 @@
 
 //! # Traffic Management Module
 //! 
-//! This module provides traffic management functionality for the DMSC service mesh. It allows
+//! This module provides traffic management functionality for the Ri service mesh. It allows
 //! configuring and managing traffic routes, traffic splits, circuit breakers, rate limits,
 //! and fault injection for services in the mesh.
 //! 
 //! ## Key Components
 //! 
-//! - **DMSCTrafficRoute**: Configuration for routing traffic between services
-//! - **DMSCMatchCriteria**: Criteria for matching requests to routes
-//! - **DMSCRouteAction**: Action to take for matched requests
-//! - **DMSCWeightedDestination**: Weighted destination for traffic splitting
-//! - **DMSCRetryPolicy**: Configuration for request retries
-//! - **DMSCFaultInjection**: Configuration for fault injection
-//! - **DMSCTrafficSplit**: Configuration for splitting traffic between service subsets
-//! - **DMSCSubset**: Service subset definition for traffic splitting
-//! - **DMSCTrafficManager**: Main traffic management service
-//! - **DMSCCircuitBreakerConfig**: Configuration for circuit breakers
-//! - **DMSCRateLimitConfig**: Configuration for rate limiting
+//! - **RiTrafficRoute**: Configuration for routing traffic between services
+//! - **RiMatchCriteria**: Criteria for matching requests to routes
+//! - **RiRouteAction**: Action to take for matched requests
+//! - **RiWeightedDestination**: Weighted destination for traffic splitting
+//! - **RiRetryPolicy**: Configuration for request retries
+//! - **RiFaultInjection**: Configuration for fault injection
+//! - **RiTrafficSplit**: Configuration for splitting traffic between service subsets
+//! - **RiSubset**: Service subset definition for traffic splitting
+//! - **RiTrafficManager**: Main traffic management service
+//! - **RiCircuitBreakerConfig**: Configuration for circuit breakers
+//! - **RiRateLimitConfig**: Configuration for rate limiting
 //! 
 //! ## Design Principles
 //! 
@@ -51,34 +51,34 @@
 //! ## Usage
 //! 
 //! ```rust
-//! use dmsc::prelude::*;
+//! use ri::prelude::*;
 //! use std::time::Duration;
 //! 
-//! async fn example() -> DMSCResult<()> {
+//! async fn example() -> RiResult<()> {
 //!     // Create a traffic manager
-//!     let traffic_manager = DMSCTrafficManager::new(true);
+//!     let traffic_manager = RiTrafficManager::new(true);
 //!     
 //!     // Create a traffic route
-//!     let route = DMSCTrafficRoute {
+//!     let route = RiTrafficRoute {
 //!         name: "http-route".to_string(),
 //!         source_service: "gateway".to_string(),
 //!         destination_service: "backend".to_string(),
-//!         match_criteria: DMSCMatchCriteria {
+//!         match_criteria: RiMatchCriteria {
 //!             path_prefix: Some("/api".to_string()),
 //!             headers: HashMap::new(),
 //!             method: Some("GET".to_string()),
 //!             query_parameters: HashMap::new(),
 //!         },
-//!         route_action: DMSCRouteAction::Route(vec![DMSCWeightedDestination {
+//!         route_action: RiRouteAction::Route(vec![RiWeightedDestination {
 //!             service: "backend-v1".to_string(),
 //!             weight: 80,
 //!             subset: None,
-//!         }, DMSCWeightedDestination {
+//!         }, RiWeightedDestination {
 //!             service: "backend-v2".to_string(),
 //!             weight: 20,
 //!             subset: None,
 //!         }]),
-//!         retry_policy: Some(DMSCRetryPolicy {
+//!         retry_policy: Some(RiRetryPolicy {
 //!             attempts: 3,
 //!             per_try_timeout: Duration::from_secs(1),
 //!             retry_on: vec!["5xx".to_string()],
@@ -91,7 +91,7 @@
 //!     traffic_manager.add_traffic_route(route).await?;
 //!     
 //!     // Set a circuit breaker
-//!     let cb_config = DMSCCircuitBreakerConfig {
+//!     let cb_config = RiCircuitBreakerConfig {
 //!         consecutive_errors: 5,
 //!         interval: Duration::from_secs(10),
 //!         base_ejection_time: Duration::from_secs(30),
@@ -115,40 +115,40 @@ use reqwest;
 #[cfg(feature = "pyo3")]
 use pyo3::PyResult;
 
-use crate::core::{DMSCResult, DMSCError};
-use crate::observability::{DMSCTracer, DMSCSpanKind, DMSCSpanStatus};
+use crate::core::{RiResult, RiError};
+use crate::observability::{RiTracer, RiSpanKind, RiSpanStatus};
 #[cfg(feature = "http_client")]
-use crate::observability::DMSCContextCarrier;
+use crate::observability::RiContextCarrier;
 
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct DMSCTrafficRoute {
+pub struct RiTrafficRoute {
     pub name: String,
     pub source_service: String,
     pub destination_service: String,
-    pub match_criteria: DMSCMatchCriteria,
-    pub route_action: DMSCRouteAction,
-    pub retry_policy: Option<DMSCRetryPolicy>,
+    pub match_criteria: RiMatchCriteria,
+    pub route_action: RiRouteAction,
+    pub retry_policy: Option<RiRetryPolicy>,
     pub timeout: Option<Duration>,
-    pub fault_injection: Option<DMSCFaultInjection>,
+    pub fault_injection: Option<RiFaultInjection>,
 }
 
 #[cfg(feature = "pyo3")]
 #[pyo3::prelude::pymethods]
-impl DMSCTrafficRoute {
+impl RiTrafficRoute {
     #[new]
     fn py_new(name: String, source_service: String, destination_service: String) -> Self {
         Self {
             name,
             source_service,
             destination_service,
-            match_criteria: DMSCMatchCriteria {
+            match_criteria: RiMatchCriteria {
                 path_prefix: None,
                 headers: HashMap::new(),
                 method: None,
                 query_parameters: HashMap::new(),
             },
-            route_action: DMSCRouteAction::Route(vec![]),
+            route_action: RiRouteAction::Route(vec![]),
             retry_policy: None,
             timeout: None,
             fault_injection: None,
@@ -170,7 +170,7 @@ impl DMSCTrafficRoute {
 
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct DMSCMatchCriteria {
+pub struct RiMatchCriteria {
     pub path_prefix: Option<String>,
     pub headers: HashMap<String, String>,
     pub method: Option<String>,
@@ -179,7 +179,7 @@ pub struct DMSCMatchCriteria {
 
 #[cfg(feature = "pyo3")]
 #[pyo3::prelude::pymethods]
-impl DMSCMatchCriteria {
+impl RiMatchCriteria {
     #[new]
     fn py_new() -> Self {
         Self {
@@ -201,15 +201,15 @@ impl DMSCMatchCriteria {
 
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub enum DMSCRouteAction {
-    Route(Vec<DMSCWeightedDestination>),
+pub enum RiRouteAction {
+    Route(Vec<RiWeightedDestination>),
     Redirect(String),
     DirectResponse(u16, String),
 }
 
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct DMSCWeightedDestination {
+pub struct RiWeightedDestination {
     pub service: String,
     pub weight: u32,
     pub subset: Option<String>,
@@ -217,7 +217,7 @@ pub struct DMSCWeightedDestination {
 
 #[cfg(feature = "pyo3")]
 #[pyo3::prelude::pymethods]
-impl DMSCWeightedDestination {
+impl RiWeightedDestination {
     #[new]
     fn py_new(service: String, weight: u32) -> Self {
         Self {
@@ -237,60 +237,60 @@ impl DMSCWeightedDestination {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct DMSCRetryPolicy {
+pub struct RiRetryPolicy {
     pub attempts: u32,
     pub per_try_timeout: Duration,
     pub retry_on: Vec<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct DMSCFaultInjection {
-    pub delay: Option<DMSCDelayFault>,
-    pub abort: Option<DMSCAbortFault>,
+pub struct RiFaultInjection {
+    pub delay: Option<RiDelayFault>,
+    pub abort: Option<RiAbortFault>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct DMSCDelayFault {
+pub struct RiDelayFault {
     pub percentage: f64,
     pub fixed_delay: Duration,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct DMSCAbortFault {
+pub struct RiAbortFault {
     pub percentage: f64,
     pub http_status: u16,
 }
 
 #[derive(Debug, Clone)]
-pub struct DMSCTrafficSplit {
+pub struct RiTrafficSplit {
     pub service: String,
-    pub subsets: HashMap<String, DMSCSubset>,
+    pub subsets: HashMap<String, RiSubset>,
     pub default_subset: String,
 }
 
 #[derive(Debug, Clone)]
-pub struct DMSCSubset {
+pub struct RiSubset {
     pub name: String,
     pub labels: HashMap<String, String>,
     pub weight: u32,
 }
 
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
-pub struct DMSCTrafficManager {
+pub struct RiTrafficManager {
     enabled: bool,
-    routes: Arc<RwLock<HashMap<String, Vec<DMSCTrafficRoute>>>>,
-    traffic_splits: Arc<RwLock<HashMap<String, DMSCTrafficSplit>>>,
-    circuit_breakers: Arc<RwLock<HashMap<String, DMSCCircuitBreakerConfig>>>,
-    rate_limits: Arc<RwLock<HashMap<String, DMSCRateLimitConfig>>>,
+    routes: Arc<RwLock<HashMap<String, Vec<RiTrafficRoute>>>>,
+    traffic_splits: Arc<RwLock<HashMap<String, RiTrafficSplit>>>,
+    circuit_breakers: Arc<RwLock<HashMap<String, RiCircuitBreakerConfig>>>,
+    rate_limits: Arc<RwLock<HashMap<String, RiRateLimitConfig>>>,
     background_tasks: Arc<RwLock<Vec<JoinHandle<()>>>>,
     #[cfg(feature = "http_client")]
     http_client: reqwest::Client,
-    tracer: Option<Arc<DMSCTracer>>,
+    tracer: Option<Arc<RiTracer>>,
 }
 
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct DMSCCircuitBreakerConfig {
+pub struct RiCircuitBreakerConfig {
     pub consecutive_errors: u32,
     pub interval: Duration,
     pub base_ejection_time: Duration,
@@ -299,7 +299,7 @@ pub struct DMSCCircuitBreakerConfig {
 
 #[cfg(feature = "pyo3")]
 #[pyo3::prelude::pymethods]
-impl DMSCCircuitBreakerConfig {
+impl RiCircuitBreakerConfig {
     #[new]
     fn py_new(consecutive_errors: u32, max_ejection_percent: f64) -> Self {
         Self {
@@ -321,13 +321,13 @@ impl DMSCCircuitBreakerConfig {
 
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct DMSCRateLimitConfig {
+pub struct RiRateLimitConfig {
     pub requests_per_second: u32,
     pub burst_size: u32,
     pub window: Duration,
 }
 
-impl DMSCTrafficManager {
+impl RiTrafficManager {
     pub fn new(enabled: bool) -> Self {
         Self {
             enabled,
@@ -346,18 +346,18 @@ impl DMSCTrafficManager {
         }
     }
     
-    pub fn with_tracer(mut self, tracer: Arc<DMSCTracer>) -> Self {
+    pub fn with_tracer(mut self, tracer: Arc<RiTracer>) -> Self {
         self.tracer = Some(tracer);
         self
     }
     
-    pub fn set_tracer(&mut self, tracer: Arc<DMSCTracer>) {
+    pub fn set_tracer(&mut self, tracer: Arc<RiTracer>) {
         self.tracer = Some(tracer);
     }
 
-    pub async fn add_traffic_route(&self, route: DMSCTrafficRoute) -> DMSCResult<()> {
+    pub async fn add_traffic_route(&self, route: RiTrafficRoute) -> RiResult<()> {
         if !self.enabled {
-            return Err(DMSCError::ServiceMesh("Traffic management is disabled".to_string()));
+            return Err(RiError::ServiceMesh("Traffic management is disabled".to_string()));
         }
 
         let mut routes = self.routes.write().await;
@@ -368,9 +368,9 @@ impl DMSCTrafficManager {
         Ok(())
     }
 
-    pub async fn remove_traffic_route(&self, source_service: &str, route_name: &str) -> DMSCResult<()> {
+    pub async fn remove_traffic_route(&self, source_service: &str, route_name: &str) -> RiResult<()> {
         if !self.enabled {
-            return Err(DMSCError::ServiceMesh("Traffic management is disabled".to_string()));
+            return Err(RiError::ServiceMesh("Traffic management is disabled".to_string()));
         }
 
         let mut routes = self.routes.write().await;
@@ -385,9 +385,9 @@ impl DMSCTrafficManager {
         Ok(())
     }
 
-    pub async fn get_traffic_routes(&self, source_service: &str) -> DMSCResult<Vec<DMSCTrafficRoute>> {
+    pub async fn get_traffic_routes(&self, source_service: &str) -> RiResult<Vec<RiTrafficRoute>> {
         if !self.enabled {
-            return Err(DMSCError::ServiceMesh("Traffic management is disabled".to_string()));
+            return Err(RiError::ServiceMesh("Traffic management is disabled".to_string()));
         }
 
         let routes = self.routes.read().await;
@@ -398,9 +398,9 @@ impl DMSCTrafficManager {
         Ok(service_routes)
     }
 
-    pub async fn create_traffic_split(&self, split: DMSCTrafficSplit) -> DMSCResult<()> {
+    pub async fn create_traffic_split(&self, split: RiTrafficSplit) -> RiResult<()> {
         if !self.enabled {
-            return Err(DMSCError::ServiceMesh("Traffic management is disabled".to_string()));
+            return Err(RiError::ServiceMesh("Traffic management is disabled".to_string()));
         }
 
         let mut traffic_splits = self.traffic_splits.write().await;
@@ -409,20 +409,20 @@ impl DMSCTrafficManager {
         Ok(())
     }
 
-    pub async fn get_traffic_split(&self, service: &str) -> DMSCResult<Option<DMSCTrafficSplit>> {
+    pub async fn get_traffic_split(&self, service: &str) -> RiResult<Option<RiTrafficSplit>> {
         if !self.enabled {
-            return Err(DMSCError::ServiceMesh("Traffic management is disabled".to_string()));
+            return Err(RiError::ServiceMesh("Traffic management is disabled".to_string()));
         }
 
         let traffic_splits = self.traffic_splits.read().await;
         Ok(traffic_splits.get(service).cloned())
     }
 
-    pub async fn route_request(&self, endpoint: &str, request_data: Vec<u8>) -> DMSCResult<Vec<u8>> {
+    pub async fn route_request(&self, endpoint: &str, request_data: Vec<u8>) -> RiResult<Vec<u8>> {
         let span_id = if let Some(tracer) = &self.tracer {
             let span_id = tracer.start_span_from_context(
                 format!("route_request:{}", endpoint),
-                DMSCSpanKind::Client,
+                RiSpanKind::Client,
             );
             if let Some(ref sid) = span_id {
                 let _ = tracer.span_mut(sid, |span| {
@@ -439,8 +439,8 @@ impl DMSCTrafficManager {
 
         if let (Some(tracer), Some(sid)) = (&self.tracer, span_id) {
             let status = match &result {
-                Ok(_) => DMSCSpanStatus::Ok,
-                Err(e) => DMSCSpanStatus::Error(e.to_string()),
+                Ok(_) => RiSpanStatus::Ok,
+                Err(e) => RiSpanStatus::Error(e.to_string()),
             };
             let _ = tracer.end_span(&sid, status);
         }
@@ -448,7 +448,7 @@ impl DMSCTrafficManager {
         result
     }
     
-    async fn route_request_internal(&self, endpoint: &str, request_data: Vec<u8>) -> DMSCResult<Vec<u8>> {
+    async fn route_request_internal(&self, endpoint: &str, request_data: Vec<u8>) -> RiResult<Vec<u8>> {
         if !self.enabled {
             return Ok(request_data);
         }
@@ -458,7 +458,7 @@ impl DMSCTrafficManager {
         }
 
         if self.should_rate_limit(endpoint).await? {
-            return Err(DMSCError::ServiceMesh("Rate limit exceeded".to_string()));
+            return Err(RiError::ServiceMesh("Rate limit exceeded".to_string()));
         }
 
         let transformed_request = self.apply_traffic_policies(request_data).await;
@@ -471,7 +471,7 @@ impl DMSCTrafficManager {
     }
     
     /// Finds a matching traffic route for the given endpoint
-    async fn find_matching_route(&self, endpoint: &str) -> Option<DMSCTrafficRoute> {
+    async fn find_matching_route(&self, endpoint: &str) -> Option<RiTrafficRoute> {
         let routes = self.routes.read().await;
         
         // Iterate through all routes to find a match
@@ -487,7 +487,7 @@ impl DMSCTrafficManager {
     }
     
     /// Checks if a route matches the given endpoint
-    fn is_route_match(&self, _route: &DMSCTrafficRoute, _endpoint: &str) -> bool {
+    fn is_route_match(&self, _route: &RiTrafficRoute, _endpoint: &str) -> bool {
         #[cfg(feature = "http_client")]
         if let Ok(url) = _endpoint.parse::<reqwest::Url>() {
             let host = url.host_str().unwrap_or("");
@@ -499,10 +499,10 @@ impl DMSCTrafficManager {
     }
     
     /// Applies a matched route to the request
-    async fn apply_route(&self, route: &DMSCTrafficRoute, original_endpoint: &str, request_data: Vec<u8>) -> DMSCResult<Vec<u8>> {
+    async fn apply_route(&self, route: &RiTrafficRoute, original_endpoint: &str, request_data: Vec<u8>) -> RiResult<Vec<u8>> {
         // Handle different route actions
         match &route.route_action {
-            DMSCRouteAction::Route(destinations) => {
+            RiRouteAction::Route(destinations) => {
                 // Select destination index based on weights
                 let selected_index = self.select_destination_index(destinations).await;
                 let mut selected_destination = destinations[selected_index].clone();
@@ -524,11 +524,11 @@ impl DMSCTrafficManager {
                     self.make_http_request(new_endpoint.as_str(), request_data).await
                 }
             },
-            DMSCRouteAction::Redirect(redirect_uri) => {
+            RiRouteAction::Redirect(redirect_uri) => {
                 // Handle redirect action
-                Err(DMSCError::ServiceMesh(format!("Redirect to: {}", redirect_uri)))
+                Err(RiError::ServiceMesh(format!("Redirect to: {}", redirect_uri)))
             },
-            DMSCRouteAction::DirectResponse(_status, body) => {
+            RiRouteAction::DirectResponse(_status, body) => {
                 // Return direct response without making a network call
                 Ok(body.clone().into())
             }
@@ -536,7 +536,7 @@ impl DMSCTrafficManager {
     }
     
     /// Selects a destination index based on weights
-    async fn select_destination_index(&self, destinations: &[DMSCWeightedDestination]) -> usize {
+    async fn select_destination_index(&self, destinations: &[RiWeightedDestination]) -> usize {
         if destinations.len() == 1 {
             return 0;
         }
@@ -562,14 +562,14 @@ impl DMSCTrafficManager {
     }
     
     /// Replaces the original endpoint with the selected destination
-    async fn replace_endpoint(&self, original_endpoint: &str, _destination: &DMSCWeightedDestination) -> String {
+    async fn replace_endpoint(&self, original_endpoint: &str, _destination: &RiWeightedDestination) -> String {
         // Simple replacement logic for demonstration
         // In a full implementation, this would use a more sophisticated approach
         original_endpoint.to_string()
     }
     
     /// Retries a request according to the retry policy
-    async fn retry_request(&self, endpoint: &str, request_data: Vec<u8>, retry_policy: &DMSCRetryPolicy) -> DMSCResult<Vec<u8>> {
+    async fn retry_request(&self, endpoint: &str, request_data: Vec<u8>, retry_policy: &RiRetryPolicy) -> RiResult<Vec<u8>> {
         let max_attempts = retry_policy.attempts;
         
         for attempt in 1..=max_attempts {
@@ -590,20 +590,20 @@ impl DMSCTrafficManager {
             }
         }
         
-        Err(DMSCError::ServiceMesh("All retry attempts failed".to_string()))
+        Err(RiError::ServiceMesh("All retry attempts failed".to_string()))
     }
     
     /// Checks if a request should be retried based on the error and retry policy
-    fn should_retry(&self, _error: &DMSCError, retry_policy: &DMSCRetryPolicy) -> bool {
+    fn should_retry(&self, _error: &RiError, retry_policy: &RiRetryPolicy) -> bool {
         // Check if error should be retried based on retry_on conditions
         // Simple implementation for demonstration
         retry_policy.retry_on.iter().any(|s| s == "5xx" || s == "all")
     }
 
     #[cfg(feature = "http_client")]
-    async fn make_http_request(&self, endpoint: &str, request_data: Vec<u8>) -> DMSCResult<Vec<u8>> {
+    async fn make_http_request(&self, endpoint: &str, request_data: Vec<u8>) -> RiResult<Vec<u8>> {
         let url = endpoint.parse::<reqwest::Url>()
-            .map_err(|e| DMSCError::ServiceMesh(format!("Invalid endpoint URL: {e}")))?;
+            .map_err(|e| RiError::ServiceMesh(format!("Invalid endpoint URL: {e}")))?;
         
         let mut request_builder = self.http_client
             .post(url)
@@ -611,7 +611,7 @@ impl DMSCTrafficManager {
         
         if let Some(_tracer) = &self.tracer {
             let mut headers = HashMap::new();
-            DMSCContextCarrier::inject_current_into_headers(&mut headers);
+            RiContextCarrier::inject_current_into_headers(&mut headers);
             for (key, value) in headers {
                 request_builder = request_builder.header(key, value);
             }
@@ -621,10 +621,10 @@ impl DMSCTrafficManager {
             .body(request_data)
             .send()
             .await
-            .map_err(|e| DMSCError::ServiceMesh(format!("HTTP request failed: {e}")))?;
+            .map_err(|e| RiError::ServiceMesh(format!("HTTP request failed: {e}")))?;
         
         if !response.status().is_success() {
-            return Err(DMSCError::ServiceMesh(format!(
+            return Err(RiError::ServiceMesh(format!(
                 "HTTP request failed with status: {}", 
                 response.status()
             )));
@@ -633,15 +633,15 @@ impl DMSCTrafficManager {
         let response_data = response
             .bytes()
             .await
-            .map_err(|e| DMSCError::ServiceMesh(format!("Failed to read response body: {e}")))?
+            .map_err(|e| RiError::ServiceMesh(format!("Failed to read response body: {e}")))?
             .to_vec();
         
         Ok(response_data)
     }
     
     #[cfg(not(feature = "http_client"))]
-    async fn make_http_request(&self, _endpoint: &str, _request_data: Vec<u8>) -> DMSCResult<Vec<u8>> {
-        Err(DMSCError::ServiceMesh(format!("HTTP client is not enabled. Enable the 'http_client' feature to use HTTP requests.")))
+    async fn make_http_request(&self, _endpoint: &str, _request_data: Vec<u8>) -> RiResult<Vec<u8>> {
+        Err(RiError::ServiceMesh(format!("HTTP client is not enabled. Enable the 'http_client' feature to use HTTP requests.")))
     }
 
     async fn apply_traffic_policies(&self, request_data: Vec<u8>) -> Vec<u8> {
@@ -684,13 +684,13 @@ impl DMSCTrafficManager {
         }
     }
 
-    fn should_inject_fault(&self) -> Option<DMSCFaultInjection> {
+    fn should_inject_fault(&self) -> Option<RiFaultInjection> {
         use rand::Rng;
         let mut rng = rand::thread_rng();
         
         if rng.gen_bool(0.01) {
-            Some(DMSCFaultInjection {
-                delay: Some(DMSCDelayFault {
+            Some(RiFaultInjection {
+                delay: Some(RiDelayFault {
                     percentage: 0.5,
                     fixed_delay: Duration::from_millis(100),
                 }),
@@ -701,7 +701,7 @@ impl DMSCTrafficManager {
         }
     }
 
-    async fn inject_fault(&self, fault: &DMSCFaultInjection) -> DMSCResult<()> {
+    async fn inject_fault(&self, fault: &RiFaultInjection) -> RiResult<()> {
         if let Some(delay) = &fault.delay {
             use rand::Rng;
             let mut rng = rand::thread_rng();
@@ -716,7 +716,7 @@ impl DMSCTrafficManager {
             let mut rng = rand::thread_rng();
             
             if rng.gen_bool(abort.percentage) {
-                return Err(DMSCError::ServiceMesh(format!("Fault injection: HTTP {}", abort.http_status)));
+                return Err(RiError::ServiceMesh(format!("Fault injection: HTTP {}", abort.http_status)));
             }
         }
 
@@ -724,7 +724,7 @@ impl DMSCTrafficManager {
     }
 
     /// Implements a sliding window rate limiter using the leaky bucket algorithm
-    async fn should_rate_limit(&self, endpoint: &str) -> DMSCResult<bool> {
+    async fn should_rate_limit(&self, endpoint: &str) -> RiResult<bool> {
         let rate_limits = self.rate_limits.read().await;
         
         // Check if there's a rate limit configured for this endpoint
@@ -747,7 +747,7 @@ impl DMSCTrafficManager {
             }
             
             impl RateLimiter {
-                fn new(config: &DMSCRateLimitConfig) -> Self {
+                fn new(config: &RiRateLimitConfig) -> Self {
                     let rate = config.requests_per_second as f64;
                     Self {
                         capacity: config.burst_size,
@@ -792,13 +792,13 @@ impl DMSCTrafficManager {
             }
             
             let mut limiters = RATE_LIMITERS.lock()
-                .map_err(|e| DMSCError::ServiceMesh(format!("Failed to acquire rate limiter lock: {}", e)))?;
+                .map_err(|e| RiError::ServiceMesh(format!("Failed to acquire rate limiter lock: {}", e)))?;
             if limiters.is_none() {
                 *limiters = Some(HashMap::new());
             }
             
             let limiters = limiters.as_mut()
-                .ok_or_else(|| DMSCError::InvalidState("Rate limiters not initialized".to_string()))?;
+                .ok_or_else(|| RiError::InvalidState("Rate limiters not initialized".to_string()))?;
             
             // Get or create rate limiter for this endpoint
             let limiter = limiters.entry(endpoint.to_string())
@@ -811,9 +811,9 @@ impl DMSCTrafficManager {
         }
     }
 
-    pub async fn set_circuit_breaker_config(&self, service: &str, config: DMSCCircuitBreakerConfig) -> DMSCResult<()> {
+    pub async fn set_circuit_breaker_config(&self, service: &str, config: RiCircuitBreakerConfig) -> RiResult<()> {
         if !self.enabled {
-            return Err(DMSCError::ServiceMesh("Traffic management is disabled".to_string()));
+            return Err(RiError::ServiceMesh("Traffic management is disabled".to_string()));
         }
 
         let mut circuit_breakers = self.circuit_breakers.write().await;
@@ -822,9 +822,9 @@ impl DMSCTrafficManager {
         Ok(())
     }
 
-    pub async fn set_rate_limit_config(&self, service: &str, config: DMSCRateLimitConfig) -> DMSCResult<()> {
+    pub async fn set_rate_limit_config(&self, service: &str, config: RiRateLimitConfig) -> RiResult<()> {
         if !self.enabled {
-            return Err(DMSCError::ServiceMesh("Traffic management is disabled".to_string()));
+            return Err(RiError::ServiceMesh("Traffic management is disabled".to_string()));
         }
 
         let mut rate_limits = self.rate_limits.write().await;
@@ -833,17 +833,17 @@ impl DMSCTrafficManager {
         Ok(())
     }
 
-    pub async fn get_circuit_breaker_config(&self, service: &str) -> DMSCResult<Option<DMSCCircuitBreakerConfig>> {
+    pub async fn get_circuit_breaker_config(&self, service: &str) -> RiResult<Option<RiCircuitBreakerConfig>> {
         let circuit_breakers = self.circuit_breakers.read().await;
         Ok(circuit_breakers.get(service).cloned())
     }
 
-    pub async fn get_rate_limit_config(&self, service: &str) -> DMSCResult<Option<DMSCRateLimitConfig>> {
+    pub async fn get_rate_limit_config(&self, service: &str) -> RiResult<Option<RiRateLimitConfig>> {
         let rate_limits = self.rate_limits.read().await;
         Ok(rate_limits.get(service).cloned())
     }
 
-    pub async fn start_background_tasks(&self) -> DMSCResult<()> {
+    pub async fn start_background_tasks(&self) -> RiResult<()> {
         if !self.enabled {
             return Ok(());
         }
@@ -851,7 +851,7 @@ impl DMSCTrafficManager {
         Ok(())
     }
 
-    pub async fn stop_background_tasks(&self) -> DMSCResult<()> {
+    pub async fn stop_background_tasks(&self) -> RiResult<()> {
         let mut tasks = self.background_tasks.write().await;
         for task in tasks.drain(..) {
             task.abort();
@@ -859,15 +859,15 @@ impl DMSCTrafficManager {
         Ok(())
     }
 
-    pub async fn health_check(&self) -> DMSCResult<bool> {
+    pub async fn health_check(&self) -> RiResult<bool> {
         Ok(self.enabled)
     }
 }
 
 #[cfg(feature = "pyo3")]
-/// Python bindings for DMSCTrafficManager
+/// Python bindings for RiTrafficManager
 #[pyo3::prelude::pymethods]
-impl DMSCTrafficManager {
+impl RiTrafficManager {
     #[new]
     fn py_new(enabled: bool) -> PyResult<Self> {
         Ok(Self::new(enabled))
@@ -875,7 +875,7 @@ impl DMSCTrafficManager {
     
     /// Add traffic route from Python
     #[pyo3(name = "add_traffic_route")]
-    fn add_traffic_route_impl(&self, route: DMSCTrafficRoute) -> PyResult<()> {
+    fn add_traffic_route_impl(&self, route: RiTrafficRoute) -> PyResult<()> {
         let rt = tokio::runtime::Runtime::new().map_err(|e| {
             pyo3::exceptions::PyRuntimeError::new_err(format!("Failed to create runtime: {}", e))
         })?;
@@ -889,7 +889,7 @@ impl DMSCTrafficManager {
     
     /// Get traffic routes from Python
     #[pyo3(name = "get_traffic_routes")]
-    fn get_traffic_routes_impl(&self, service_name: String) -> PyResult<Vec<DMSCTrafficRoute>> {
+    fn get_traffic_routes_impl(&self, service_name: String) -> PyResult<Vec<RiTrafficRoute>> {
         let rt = tokio::runtime::Runtime::new().map_err(|e| {
             pyo3::exceptions::PyRuntimeError::new_err(format!("Failed to create runtime: {}", e))
         })?;
@@ -917,7 +917,7 @@ impl DMSCTrafficManager {
     
     /// Set circuit breaker config from Python
     #[pyo3(name = "set_circuit_breaker_config")]
-    fn set_circuit_breaker_config_impl(&self, service: String, config: DMSCCircuitBreakerConfig) -> PyResult<()> {
+    fn set_circuit_breaker_config_impl(&self, service: String, config: RiCircuitBreakerConfig) -> PyResult<()> {
         let rt = tokio::runtime::Runtime::new().map_err(|e| {
             pyo3::exceptions::PyRuntimeError::new_err(format!("Failed to create runtime: {}", e))
         })?;
@@ -931,7 +931,7 @@ impl DMSCTrafficManager {
     
     /// Set rate limit config from Python
     #[pyo3(name = "set_rate_limit_config")]
-    fn set_rate_limit_config_impl(&self, service: String, config: DMSCRateLimitConfig) -> PyResult<()> {
+    fn set_rate_limit_config_impl(&self, service: String, config: RiRateLimitConfig) -> PyResult<()> {
         let rt = tokio::runtime::Runtime::new().map_err(|e| {
             pyo3::exceptions::PyRuntimeError::new_err(format!("Failed to create runtime: {}", e))
         })?;

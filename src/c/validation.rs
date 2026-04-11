@@ -1,7 +1,7 @@
 //! Copyright © 2025-2026 Wenze Wei. All Rights Reserved.
 //!
-//! This file is part of DMSC.
-//! The DMSC project belongs to the Dunimd Team.
+//! This file is part of Ri.
+//! The Ri project belongs to the Dunimd Team.
 //!
 //! Licensed under the Apache License, Version 2.0 (the "License");
 //! You may not use this file except in compliance with the License.
@@ -17,10 +17,10 @@
 
 //! # Validation Module C API
 //!
-//! This module provides C language bindings for DMSC's validation and sanitization infrastructure. The
+//! This module provides C language bindings for Ri's validation and sanitization infrastructure. The
 //! validation module delivers comprehensive data validation, sanitization, and transformation capabilities
 //! for ensuring data integrity and security across the application. This C API enables C/C++ applications
-//! to leverage DMSC's validation functionality for building robust input handling, data transformation,
+//! to leverage Ri's validation functionality for building robust input handling, data transformation,
 //! and security enforcement layers.
 //!
 //! ## Module Architecture
@@ -28,15 +28,15 @@
 //! The validation module comprises three primary components that together provide complete validation
 //! and sanitization capabilities:
 //!
-//! - **DMSCValidationResult**: Result container for validation operations, encapsulating validation
+//! - **RiValidationResult**: Result container for validation operations, encapsulating validation
 //!   outcomes including success/failure status, error messages, and detailed field-level validation
 //!   results. The result object provides comprehensive feedback about validation outcomes.
 //!
-//! - **DMSCValidatorBuilder**: Fluent builder interface for constructing complex validation rules.
+//! - **RiValidatorBuilder**: Fluent builder interface for constructing complex validation rules.
 //!   The builder supports chaining multiple validation constraints, custom validation functions, and
 //!   conditional validation logic.
 //!
-//! - **DMSCSanitizer**: Sanitization engine for cleaning, normalizing, and transforming input data.
+//! - **RiSanitizer**: Sanitization engine for cleaning, normalizing, and transforming input data.
 //!   Sanitizers apply transformations to remove or neutralize potentially harmful content while preserving
 //!   valid data.
 //!
@@ -210,38 +210,38 @@
 //!
 //! ```c
 //! // Create validation result for checking
-//! DMSCValidationResult* result = dmsc_validation_result_valid();
+//! RiValidationResult* result = ri_validation_result_valid();
 //! if (result == NULL) {
 //!     fprintf(stderr, "Failed to create validation result\n");
 //!     return ERROR_INIT;
 //! }
 //!
 //! // Create validator builder
-//! DMSCValidatorBuilder* builder = dmsc_validator_builder_new();
+//! RiValidatorBuilder* builder = ri_validator_builder_new();
 //! if (builder == NULL) {
 //!     fprintf(stderr, "Failed to create validator builder\n");
-//!     dmsc_validation_result_free(result);
+//!     ri_validation_result_free(result);
 //!     return ERROR_INIT;
 //! }
 //!
 //! // Configure validation rules for a user struct
-//! dmsc_validator_builder_required(builder, "username");
-//! dmsc_validator_builder_required(builder, "email");
-//! dmsc_validator_builder_required(builder, "password");
+//! ri_validator_builder_required(builder, "username");
+//! ri_validator_builder_required(builder, "email");
+//! ri_validator_builder_required(builder, "password");
 //!
 //! // String validation: username
-//! dmsc_validator_builder_string(builder, "username")
+//! ri_validator_builder_string(builder, "username")
 //!     .min_length(builder, 3, "Username must be at least 3 characters")
 //!     .max_length(builder, 50, "Username must be at most 50 characters")
 //!     .pattern(builder, "^[a-zA-Z0-9_]+$", "Username can only contain alphanumeric characters and underscores")
 //!     .alphanumeric(builder, "Username must be alphanumeric");
 //!
 //! // Email validation with format checking
-//! dmsc_validator_builder_email(builder, "email", true)
+//! ri_validator_builder_email(builder, "email", true)
 //!     .normalize(builder, true);
 //!
 //! // Password validation with complexity requirements
-//! dmsc_validator_builder_string(builder, "password")
+//! ri_validator_builder_string(builder, "password")
 //!     .min_length(builder, 8, "Password must be at least 8 characters")
 //!     .regex(builder, ".*[A-Z].*", "Password must contain an uppercase letter")
 //!     .regex(builder, ".*[a-z].*", "Password must contain a lowercase letter")
@@ -249,29 +249,29 @@
 //!     .regex(builder, ".*[!@#$%^&*].*", "Password must contain a special character");
 //!
 //! // Numeric validation: age
-//! dmsc_validator_builder_number(builder, "age")
+//! ri_validator_builder_number(builder, "age")
 //!     .min(builder, 18, "User must be at least 18 years old")
 //!     .max(builder, 120, "Age must be realistic")
 //!     .integer(builder, true);
 //!
 //! // Array validation: roles
-//! dmsc_validator_builder_array(builder, "roles")
+//! ri_validator_builder_array(builder, "roles")
 //!     .min_length(builder, 1, "User must have at least one role")
 //!     .max_length(builder, 10, "User cannot have more than 10 roles")
 //!     .element_string(builder)
 //!         .in_list(builder, (char*[]){"admin", "user", "guest"}, 3, "Invalid role");
 //!
 //! // Conditional validation: admin email requires corporate domain
-//! dmsc_validator_builder_when(builder, "role", "admin")
+//! ri_validator_builder_when(builder, "role", "admin")
 //!     .required(builder, "email")
 //!     .custom(builder, admin_email_validator, "Admin email must use corporate domain");
 //!
 //! // Build the validator
-//! DMSCValidator* validator = dmsc_validator_builder_build(builder);
+//! RiValidator* validator = ri_validator_builder_build(builder);
 //! if (validator == NULL) {
 //!     fprintf(stderr, "Failed to build validator\n");
-//!     dmsc_validator_builder_free(builder);
-//!     dmsc_validation_result_free(result);
+//!     ri_validator_builder_free(builder);
+//!     ri_validation_result_free(result);
 //!     return ERROR_INIT;
 //! }
 //!
@@ -281,13 +281,13 @@
 //!     "\"password\": \"SecurePass123!\", \"age\": 25, \"roles\": [\"user\"]}";
 //!
 //! // Validate the input
-//! int is_valid = dmsc_validator_validate(validator, input_data, strlen(input_data), result);
+//! int is_valid = ri_validator_validate(validator, input_data, strlen(input_data), result);
 //!
 //! if (is_valid) {
 //!     printf("Validation passed!\n");
 //!
 //!     // Get sanitized output
-//!     const char* sanitized = dmsc_validation_result_get_sanitized(result);
+//!     const char* sanitized = ri_validation_result_get_sanitized(result);
 //!     if (sanitized != NULL) {
 //!         printf("Sanitized: %s\n", sanitized);
 //!     }
@@ -295,70 +295,70 @@
 //!     printf("Validation failed:\n");
 
 //!     // Get error count
-//!     int error_count = dmsc_validation_result_get_error_count(result);
+//!     int error_count = ri_validation_result_get_error_count(result);
 //!     printf("Number of errors: %d\n", error_count);
 
 //!     // Iterate through errors
 //!     for (int i = 0; i < error_count; i++) {
-//!         const char* field = dmsc_validation_result_get_error_field(result, i);
-//!         const char* message = dmsc_validation_result_get_error_message(result, i);
-//!         int code = dmsc_validation_result_get_error_code(result, i);
+//!         const char* field = ri_validation_result_get_error_field(result, i);
+//!         const char* message = ri_validation_result_get_error_message(result, i);
+//!         int code = ri_validation_result_get_error_code(result, i);
 //!
 //!         printf("  - Field '%s': %s (code: %d)\n", field, message, code);
 //!     }
 //!
 //!     // Check for specific error
-//!     if (dmsc_validation_result_has_error_code(result, ERROR_PASSWORD_WEAK)) {
+//!     if (ri_validation_result_has_error_code(result, ERROR_PASSWORD_WEAK)) {
 //!         printf("Password strength validation failed\n");
 //!     }
 //! }
 //!
 //! // Sanitize input separately
-//! DMSCSanitizer* sanitizer = dmsc_sanitizer_new();
+//! RiSanitizer* sanitizer = ri_sanitizer_new();
 //! if (sanitizer == NULL) {
 //!     fprintf(stderr, "Failed to create sanitizer\n");
-//!     dmsc_validator_free(validator);
-//!     dmsc_validator_builder_free(builder);
-//!     dmsc_validation_result_free(result);
+//!     ri_validator_free(validator);
+//!     ri_validator_builder_free(builder);
+//!     ri_validation_result_free(result);
 //!     return ERROR_INIT;
 //! }
 //!
 //! // Configure sanitization
-//! dmsc_sanitizer_trim(sanitizer, true);
-//! dmsc_sanitizer_collapse_whitespace(sanitizer, true);
-//! dmsc_sanitizer_remove_control_chars(sanitizer, true);
-//! dmsc_sanitizer_normalize_unicode(sanitizer, NFC);
+//! ri_sanitizer_trim(sanitizer, true);
+//! ri_sanitizer_collapse_whitespace(sanitizer, true);
+//! ri_sanitizer_remove_control_chars(sanitizer, true);
+//! ri_sanitizer_normalize_unicode(sanitizer, NFC);
 //!
 //! // Apply sanitization
 //! const char* dirty_input = "  Hello   World\t\n";
 //! char* clean_output = NULL;
 //!
-//! int sanitize_result = dmsc_sanitizer_sanitize(sanitizer, dirty_input, strlen(dirty_input), &clean_output);
+//! int sanitize_result = ri_sanitizer_sanitize(sanitizer, dirty_input, strlen(dirty_input), &clean_output);
 //!
 //! if (sanitize_result == 0 && clean_output != NULL) {
 //!     printf("Sanitized: '%s'\n", clean_output);
-//!     dmsc_string_free(clean_output);
+//!     ri_string_free(clean_output);
 //! }
 //!
 //! // HTML sanitization for web content
-//! dmsc_sanitizer_html_allowed_tags(sanitizer, (char*[]){"p", "br", "b", "i", "a"}, 5);
-//! dmsc_sanitizer_html_allowed_attributes(sanitizer, (char*[]){"href", "title"}, 2);
+//! ri_sanitizer_html_allowed_tags(sanitizer, (char*[]){"p", "br", "b", "i", "a"}, 5);
+//! ri_sanitizer_html_allowed_attributes(sanitizer, (char*[]){"href", "title"}, 2);
 //!
 //! const char* html_input = "<p>Hello <script>alert('xss')</script></p>";
 //! clean_output = NULL;
 //!
-//! sanitize_result = dmsc_sanitizer_sanitize_html(sanitizer, html_input, strlen(html_input), &clean_output);
+//! sanitize_result = ri_sanitizer_sanitize_html(sanitizer, html_input, strlen(html_input), &clean_output);
 //!
 //! if (sanitize_result == 0 && clean_output != NULL) {
 //!     printf("HTML Sanitized: %s\n", clean_output);  // Output: <p>Hello </p>
-//!     dmsc_string_free(clean_output);
+//!     ri_string_free(clean_output);
 //! }
 //!
 //! // Cleanup
-//! dmsc_sanitizer_free(sanitizer);
-//! dmsc_validator_free(validator);
-//! dmsc_validator_builder_free(builder);
-//! dmsc_validation_result_free(result);
+//! ri_sanitizer_free(sanitizer);
+//! ri_validator_free(validator);
+//! ri_validator_builder_free(builder);
+//! ri_validation_result_free(result);
 //!
 //! printf("Validation example complete\n");
 //! ```
@@ -369,7 +369,7 @@
 //!
 //! ```c
 //! // Type-specific builders
-//! dmsc_validator_builder_string(builder, field_name)
+//! ri_validator_builder_string(builder, field_name)
 //!     .min_length(builder, min, message)
 //!     .max_length(builder, max, message)
 //!     .pattern(builder, regex, message)
@@ -384,7 +384,7 @@
 //!     .trim(builder)
 //!     .normalize(builder, form);
 //!
-//! dmsc_validator_builder_number(builder, field_name)
+//! ri_validator_builder_number(builder, field_name)
 //!     .min(builder, value, message)
 //!     .max(builder, value, message)
 //!     .positive(builder, message)
@@ -393,18 +393,18 @@
 //!     .integer(builder, strict)
 //!     .precision(builder, max_decimals);
 //!
-//! dmsc_validator_builder_boolean(builder, field_name)
+//! ri_validator_builder_boolean(builder, field_name)
 //!     .truthy(builder, true_values, count)
 //!     .falsy(builder, false_values, count);
 //!
-//! dmsc_validator_builder_array(builder, field_name)
+//! ri_validator_builder_array(builder, field_name)
 //!     .min_length(builder, min, message)
 //!     .max_length(builder, max, message)
 //!     .unique(builder, message)
 //!     .sorted(builder, ascending)
 //!     .element_type(builder, element_validator);
 //!
-//! dmsc_validator_builder_object(builder, field_name)
+//! ri_validator_builder_object(builder, field_name)
 //!     .required(builder, nested_field)
 //!     .optional(builder, nested_field)
 //!     .nested(builder, nested_validator);
@@ -412,7 +412,7 @@
 //!
 //! ## Dependencies
 //!
-//! This module depends on the following DMSC components:
+//! This module depends on the following Ri components:
 //!
 //! - `crate::validation`: Rust validation module implementation
 //! - `crate::prelude`: Common types and traits
@@ -432,17 +432,17 @@
 //! - `validation-phone`: Enable phone number validation
 //! - `validation-i18n`: Enable internationalization support
 
-use crate::validation::{DMSCSanitizer, DMSCValidationResult, DMSCValidatorBuilder};
+use crate::validation::{RiSanitizer, RiValidationResult, RiValidatorBuilder};
 
 
-c_wrapper!(CDMSCValidationResult, DMSCValidationResult);
-c_wrapper!(CDMSCValidatorBuilder, DMSCValidatorBuilder);
-c_wrapper!(CDMSCSanitizer, DMSCSanitizer);
+c_wrapper!(CRiValidationResult, RiValidationResult);
+c_wrapper!(CRiValidatorBuilder, RiValidatorBuilder);
+c_wrapper!(CRiSanitizer, RiSanitizer);
 
-// DMSCValidationResult constructors and destructors
+// RiValidationResult constructors and destructors
 #[no_mangle]
-pub extern "C" fn dmsc_validation_result_valid() -> *mut CDMSCValidationResult {
-    let result = DMSCValidationResult::valid();
-    Box::into_raw(Box::new(CDMSCValidationResult::new(result)))
+pub extern "C" fn ri_validation_result_valid() -> *mut CRiValidationResult {
+    let result = RiValidationResult::valid();
+    Box::into_raw(Box::new(CRiValidationResult::new(result)))
 }
-c_destructor!(dmsc_validation_result_free, CDMSCValidationResult);
+c_destructor!(ri_validation_result_free, CRiValidationResult);

@@ -1,7 +1,7 @@
 //! Copyright © 2025 Wenze Wei. All Rights Reserved.
 //! 
-//! This file is part of DMSC.
-//! The DMSC project belongs to the Dunimd Team.
+//! This file is part of Ri.
+//! The Ri project belongs to the Dunimd Team.
 //! 
 //! Licensed under the Apache License, Version 2.0 (the "License");
 //! You may not use this file except in compliance with the License.
@@ -18,15 +18,15 @@
 use std::time::{Instant, Duration};
 use std::collections::{HashMap, VecDeque};
 use serde::{Serialize, Deserialize};
-use crate::device::{DMSCDevice, DMSCDeviceType, DMSCDeviceCapabilities};
+use crate::device::{RiDevice, RiDeviceType, RiDeviceCapabilities};
 
 /// # Device Discovery and Resource Scheduling
 /// 
-/// This file implements advanced device discovery and resource scheduling algorithms for DMSC.
+/// This file implements advanced device discovery and resource scheduling algorithms for Ri.
 /// It provides two main components:
 /// 
-/// 1. **DMSCDeviceDiscoveryEngine**: Advanced device discovery using machine learning and heuristics
-/// 2. **DMSCResourceScheduler**: Resource scheduling algorithm using performance history and policies
+/// 1. **RiDeviceDiscoveryEngine**: Advanced device discovery using machine learning and heuristics
+/// 2. **RiResourceScheduler**: Resource scheduling algorithm using performance history and policies
 /// 
 /// ## Design Principles
 /// 
@@ -40,11 +40,11 @@ use crate::device::{DMSCDevice, DMSCDeviceType, DMSCDeviceCapabilities};
 /// ## Usage Examples
 /// 
 /// ```rust
-/// use dmsc::device::{DMSCDeviceDiscoveryEngine, DMSCResourceScheduler, ResourceRequest, DeviceScanResult};
+/// use ri::device::{RiDeviceDiscoveryEngine, RiResourceScheduler, ResourceRequest, DeviceScanResult};
 /// 
 /// fn example() {
 ///     // Create discovery engine
-///     let mut discovery_engine = DMSCDeviceDiscoveryEngine::new();
+///     let mut discovery_engine = RiDeviceDiscoveryEngine::new();
 ///     
 ///     // Create scan results
 ///     let scan_results = vec![
@@ -62,7 +62,7 @@ use crate::device::{DMSCDevice, DMSCDeviceType, DMSCDeviceCapabilities};
 ///     let discovered_devices = discovery_engine.discover_devices(scan_results);
 ///     
 ///     // Create resource scheduler
-///     let mut scheduler = DMSCResourceScheduler::new();
+///     let mut scheduler = RiResourceScheduler::new();
 ///     
 ///     // Create resource request
 ///     let request = ResourceRequest {
@@ -88,7 +88,7 @@ use crate::device::{DMSCDevice, DMSCDeviceType, DMSCDeviceCapabilities};
 /// them to match discovered devices based on identification patterns.
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
-pub struct DMSCDeviceDiscoveryEngine {
+pub struct RiDeviceDiscoveryEngine {
     /// Device fingerprint database mapping fingerprint IDs to their details
     fingerprints: HashMap<String, DeviceFingerprint>,
     /// Discovery history for pattern recognition and learning
@@ -104,9 +104,9 @@ pub struct DMSCDeviceDiscoveryEngine {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 struct DeviceFingerprint {
     /// Type of device this fingerprint identifies
-    device_type: DMSCDeviceType,
+    device_type: RiDeviceType,
     /// Capabilities associated with this device type
-    capabilities: DMSCDeviceCapabilities,
+    capabilities: RiDeviceCapabilities,
     /// Identification patterns used to match this device type
     identification_patterns: Vec<IdentificationPattern>,
     /// Base confidence score for this fingerprint
@@ -142,18 +142,18 @@ struct DiscoveryRecord {
     /// Device information collected during discovery
     device_info: HashMap<String, String>,
     /// Identified device type (if confidence threshold was met)
-    identified_type: Option<DMSCDeviceType>,
+    identified_type: Option<RiDeviceType>,
     /// Confidence score for the identification
     confidence: f64,
 }
 
-impl Default for DMSCDeviceDiscoveryEngine {
+impl Default for RiDeviceDiscoveryEngine {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl DMSCDeviceDiscoveryEngine {
+impl RiDeviceDiscoveryEngine {
     #[cfg(not(feature = "pyo3"))]
     pub fn new() -> Self {
         let mut engine = Self {
@@ -168,7 +168,7 @@ impl DMSCDeviceDiscoveryEngine {
     }
     
     #[cfg(not(feature = "pyo3"))]
-    pub fn discover_devices(&mut self, scan_results: Vec<DeviceScanResult>) -> Vec<DMSCDevice> {
+    pub fn discover_devices(&mut self, scan_results: Vec<DeviceScanResult>) -> Vec<RiDevice> {
         let mut discovered_devices = Vec::new();
         
         for scan_result in scan_results {
@@ -192,9 +192,9 @@ impl DMSCDeviceDiscoveryEngine {
     /// 
     /// # Returns
     /// 
-    /// An `Option<DMSCDevice>` containing the identified device if a match was found with
+    /// An `Option<RiDevice>` containing the identified device if a match was found with
     /// sufficient confidence, or `None` if no match was found.
-    fn identify_device(&mut self, scan_result: DeviceScanResult) -> Option<DMSCDevice> {
+    fn identify_device(&mut self, scan_result: DeviceScanResult) -> Option<RiDevice> {
         let device_info = scan_result.device_info;
         
         // Try to match against known fingerprints
@@ -220,7 +220,7 @@ impl DMSCDeviceDiscoveryEngine {
                 None => return None,
             };
             
-            let device = DMSCDevice::new(
+            let device = RiDevice::new(
                 scan_result.device_name.clone(),
                 fingerprint.device_type,
             ).with_capabilities(fingerprint.capabilities.clone());
@@ -312,7 +312,7 @@ impl DMSCDeviceDiscoveryEngine {
     /// - `device_info`: Device information collected during discovery
     /// - `identified_type`: Identified device type (if any)
     /// - `confidence`: Confidence score for the identification
-    fn record_discovery(&mut self, device_id: String, device_info: HashMap<String, String>, identified_type: Option<DMSCDeviceType>, confidence: f64) {
+    fn record_discovery(&mut self, device_id: String, device_info: HashMap<String, String>, identified_type: Option<RiDeviceType>, confidence: f64) {
         let record = DiscoveryRecord {
             timestamp: std::time::SystemTime::now()
                 .duration_since(std::time::UNIX_EPOCH)
@@ -340,8 +340,8 @@ impl DMSCDeviceDiscoveryEngine {
     fn initialize_default_fingerprints(&mut self) {
         // GPU Device Fingerprint
         let gpu_fingerprint = DeviceFingerprint {
-            device_type: DMSCDeviceType::GPU,
-            capabilities: DMSCDeviceCapabilities {
+            device_type: RiDeviceType::GPU,
+            capabilities: RiDeviceCapabilities {
                 memory_gb: Some(16.0),
                 compute_units: Some(512),
                 storage_gb: Some(500.0),
@@ -365,8 +365,8 @@ impl DMSCDeviceDiscoveryEngine {
         
         // TPU Device Fingerprint
         let tpu_fingerprint = DeviceFingerprint {
-            device_type: DMSCDeviceType::Custom, // Using Custom for TPU until we have a proper TPU type
-            capabilities: DMSCDeviceCapabilities {
+            device_type: RiDeviceType::Custom, // Using Custom for TPU until we have a proper TPU type
+            capabilities: RiDeviceCapabilities {
                 memory_gb: Some(32.0),
                 compute_units: Some(128),
                 storage_gb: Some(1000.0),
@@ -432,7 +432,7 @@ impl DMSCDeviceDiscoveryEngine {
 
 #[cfg(feature = "pyo3")]
 #[pyo3::prelude::pymethods]
-impl DMSCDeviceDiscoveryEngine {
+impl RiDeviceDiscoveryEngine {
     #[new]
     pub fn new() -> Self {
         let mut engine = Self {
@@ -444,7 +444,7 @@ impl DMSCDeviceDiscoveryEngine {
         engine
     }
 
-    pub fn discover_devices(&mut self, scan_results: Vec<DeviceScanResult>) -> Vec<DMSCDevice> {
+    pub fn discover_devices(&mut self, scan_results: Vec<DeviceScanResult>) -> Vec<RiDevice> {
         let mut discovered_devices = Vec::new();
         for scan_result in scan_results {
             if let Some(device) = self.identify_device(scan_result) {
@@ -527,7 +527,7 @@ pub struct DiscoveryStats {
 /// This scheduler uses device performance history, current load, and custom policies
 /// to intelligently allocate resources to the most suitable devices.
 #[derive(Debug, Clone)]
-pub struct DMSCResourceScheduler {
+pub struct RiResourceScheduler {
     /// Device performance history mapping device IDs to performance records
     performance_history: HashMap<String, Vec<PerformanceRecord>>,
     /// Current device loads (0.0 to 1.0)
@@ -599,13 +599,13 @@ enum PolicyAction {
     PriorityBased,
 }
 
-impl Default for DMSCResourceScheduler {
+impl Default for RiResourceScheduler {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl DMSCResourceScheduler {
+impl RiResourceScheduler {
     /// Create a new resource scheduler with default settings.
     /// 
     /// This method initializes the scheduler with empty performance history, device loads,
@@ -613,7 +613,7 @@ impl DMSCResourceScheduler {
     /// 
     /// # Returns
     /// 
-    /// A new `DMSCResourceScheduler` instance with default settings.
+    /// A new `RiResourceScheduler` instance with default settings.
     pub fn new() -> Self {
         Self {
             performance_history: HashMap::new(),
@@ -638,10 +638,10 @@ impl DMSCResourceScheduler {
     pub fn schedule_resource(
         &mut self,
         request: &ResourceRequest,
-        available_devices: &[DMSCDevice],
+        available_devices: &[RiDevice],
     ) -> Option<String> {
         // Filter devices that meet requirements
-        let suitable_devices: Vec<&DMSCDevice> = available_devices
+        let suitable_devices: Vec<&RiDevice> = available_devices
             .iter()
             .filter(|device| self.meets_requirements(device, request))
             .collect();
@@ -681,7 +681,7 @@ impl DMSCResourceScheduler {
     /// # Returns
     /// 
     /// `true` if the device meets all requirements, `false` otherwise.
-    fn meets_requirements(&self, device: &DMSCDevice, request: &ResourceRequest) -> bool {
+    fn meets_requirements(&self, device: &RiDevice, request: &ResourceRequest) -> bool {
         let capabilities = device.capabilities();
         
         // Check memory requirement
@@ -749,7 +749,7 @@ impl DMSCResourceScheduler {
     /// # Returns
     /// 
     /// A score between 0.0 and potentially over 100.0, where higher scores indicate better suitability.
-    fn calculate_device_score(&self, device: &DMSCDevice, request: &ResourceRequest) -> f64 {
+    fn calculate_device_score(&self, device: &RiDevice, request: &ResourceRequest) -> f64 {
         let device_id = device.id();
         let base_score = 100.0;
         let mut score = base_score;
@@ -843,7 +843,7 @@ impl DMSCResourceScheduler {
     /// The updated score after applying the policy adjustment.
     fn apply_policy_score_adjustment(
         &self,
-        device: &DMSCDevice,
+        device: &RiDevice,
         request: &ResourceRequest,
         policy: &SchedulingPolicy,
         current_score: f64,
@@ -901,7 +901,7 @@ impl DMSCResourceScheduler {
     /// `true` if the condition is met, `false` otherwise.
     fn evaluate_condition(
         &self,
-        device: &DMSCDevice,
+        device: &RiDevice,
         request: &ResourceRequest,
         condition: &PolicyCondition,
     ) -> bool {
@@ -909,14 +909,14 @@ impl DMSCResourceScheduler {
             "device_type" => {
                 // Convert device type to numeric value for comparison
                 match device.device_type() {
-                    DMSCDeviceType::GPU => 1.0,
-                    DMSCDeviceType::Memory => 2.0,
-                    DMSCDeviceType::CPU => 3.0,
-                    DMSCDeviceType::Storage => 4.0,
-                    DMSCDeviceType::Network => 5.0,
-                    DMSCDeviceType::Sensor => 6.0,
-                    DMSCDeviceType::Actuator => 7.0,
-                    DMSCDeviceType::Custom => 8.0,
+                    RiDeviceType::GPU => 1.0,
+                    RiDeviceType::Memory => 2.0,
+                    RiDeviceType::CPU => 3.0,
+                    RiDeviceType::Storage => 4.0,
+                    RiDeviceType::Network => 5.0,
+                    RiDeviceType::Sensor => 6.0,
+                    RiDeviceType::Actuator => 7.0,
+                    RiDeviceType::Custom => 8.0,
                 }
             }
             "request_priority" => request.priority as f64,

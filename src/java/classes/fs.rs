@@ -1,7 +1,7 @@
 //! Copyright © 2025-2026 Wenze Wei. All Rights Reserved.
 //!
-//! This file is part of DMSC.
-//! The DMSC project belongs to the Dunimd Team.
+//! This file is part of Ri.
+//! The Ri project belongs to the Dunimd Team.
 //!
 //! Licensed under the Apache License, Version 2.0 (the "License");
 //! You may not use this file except in compliance with the License.
@@ -17,31 +17,31 @@
 
 //! # FS Module JNI Bindings
 //!
-//! JNI bindings for DMSC filesystem classes.
+//! JNI bindings for Ri filesystem classes.
 
 use jni::JNIEnv;
 use jni::objects::JClass;
 use jni::sys::jlong;
-use crate::fs::DMSCFileSystem;
+use crate::fs::RiFileSystem;
 
 #[no_mangle]
-pub extern "system" fn Java_com_dunimd_dmsc_fs_DMSCFileSystem_new0(
+pub extern "system" fn Java_com_dunimd_ri_fs_RiFileSystem_new0(
     _env: JNIEnv,
     _class: JClass,
 ) -> jlong {
-    let fs = Box::new(DMSCFileSystem::new_auto_root().unwrap_or_else(|_| DMSCFileSystem::new_with_root(std::env::current_dir().unwrap_or_default())));
+    let fs = Box::new(RiFileSystem::new_auto_root().unwrap_or_else(|_| RiFileSystem::new_with_root(std::env::current_dir().unwrap_or_default())));
     Box::into_raw(fs) as jlong
 }
 
 #[no_mangle]
-pub extern "system" fn Java_com_dunimd_dmsc_fs_DMSCFileSystem_free0(
+pub extern "system" fn Java_com_dunimd_ri_fs_RiFileSystem_free0(
     _env: JNIEnv,
     _class: JClass,
     ptr: jlong,
 ) {
     if ptr != 0 {
         unsafe {
-            let _ = Box::from_raw(ptr as *mut DMSCFileSystem);
+            let _ = Box::from_raw(ptr as *mut RiFileSystem);
         }
     }
 }

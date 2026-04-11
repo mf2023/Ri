@@ -1,7 +1,7 @@
 //! Copyright © 2025-2026 Wenze Wei. All Rights Reserved.
 //!
-//! This file is part of DMSC.
-//! The DMSC project belongs to the Dunimd Team.
+//! This file is part of Ri.
+//! The Ri project belongs to the Dunimd Team.
 //!
 //! Licensed under the Apache License, Version 2.0 (the "License");
 //! You may not use this file except in compliance with the License.
@@ -23,23 +23,23 @@ use std::time::Instant;
 use tokio::sync::{RwLock, mpsc};
 use uuid::Uuid;
 
-use crate::core::{DMSCResult};
+use crate::core::{RiResult};
 
 /// Integration event bus for event-driven coordination.
-pub struct DMSCIntegrationEventBus {
+pub struct RiIntegrationEventBus {
     /// Event subscribers
-    pub subscribers: Arc<RwLock<HashMap<DMSCIntegrationEventType, Vec<mpsc::Sender<DMSCIntegrationEvent>>>>>,
+    pub subscribers: Arc<RwLock<HashMap<RiIntegrationEventType, Vec<mpsc::Sender<RiIntegrationEvent>>>>>,
     /// Event statistics
-    pub stats: Arc<RwLock<DMSCIntegrationEventStats>>,
+    pub stats: Arc<RwLock<RiIntegrationEventStats>>,
 }
 
 /// Integration event structure.
 #[derive(Debug, Clone)]
-pub struct DMSCIntegrationEvent {
+pub struct RiIntegrationEvent {
     /// Event identifier
     pub event_id: String,
     /// Event type
-    pub event_type: DMSCIntegrationEventType,
+    pub event_type: RiIntegrationEventType,
     /// Event data
     pub event_data: HashMap<String, String>,
     /// Event timestamp
@@ -50,7 +50,7 @@ pub struct DMSCIntegrationEvent {
 
 /// Integration event type enumeration.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub enum DMSCIntegrationEventType {
+pub enum RiIntegrationEventType {
     /// Protocol registered
     ProtocolRegistered,
     /// Protocol unregistered
@@ -75,18 +75,18 @@ pub enum DMSCIntegrationEventType {
 
 /// Integration event statistics structure.
 #[derive(Debug, Default)]
-pub struct DMSCIntegrationEventStats {
+pub struct RiIntegrationEventStats {
     /// Total events
     pub total_events: u64,
     /// Events by type
-    pub events_by_type: HashMap<DMSCIntegrationEventType, u64>,
+    pub events_by_type: HashMap<RiIntegrationEventType, u64>,
     /// Average event processing time
     pub avg_event_processing_time_ms: u64,
 }
 
 /// Integration statistics structure.
 #[derive(Debug, Default)]
-pub struct DMSCIntegrationStats {
+pub struct RiIntegrationStats {
     /// Total cross-protocol messages
     pub total_cross_protocol_messages: u64,
     /// Successful cross-protocol messages
@@ -107,10 +107,10 @@ pub struct DMSCIntegrationStats {
     pub avg_protocol_switching_time_ms: u64,
 }
 
-impl DMSCIntegrationEventBus {
+impl RiIntegrationEventBus {
     /// Publish an integration event.
-    pub async fn publish_event(&self, event_type: DMSCIntegrationEventType, event_data: HashMap<String, String>) -> DMSCResult<()> {
-        let event = DMSCIntegrationEvent {
+    pub async fn publish_event(&self, event_type: RiIntegrationEventType, event_data: HashMap<String, String>) -> RiResult<()> {
+        let event = RiIntegrationEvent {
             event_id: Uuid::new_v4().to_string(),
             event_type,
             event_data,

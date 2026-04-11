@@ -1,7 +1,7 @@
 //! Copyright © 2025-2026 Wenze Wei. All Rights Reserved.
 //!
-//! This file is part of DMSC.
-//! The DMSC project belongs to the Dunimd Team.
+//! This file is part of Ri.
+//! The Ri project belongs to the Dunimd Team.
 //!
 //! Licensed under the Apache License, Version 2.0 (the "License");
 //! You may not use this file except in compliance with the License.
@@ -17,27 +17,27 @@
 
 //! # Device Control Module
 //! 
-//! This module provides comprehensive smart device control functionality for DMSC, including device
+//! This module provides comprehensive smart device control functionality for Ri, including device
 //! discovery, control, and resource scheduling. It enables efficient management of devices and
 //! their resources across distributed environments.
 //! 
 //! ## Key Components
 //! 
-//! - **DMSCDeviceControlModule**: Main device control module implementing service module traits
-//! - **DMSCDevice**: Device representation with type, status, and capabilities
-//! - **DMSCDeviceType**: Enum defining supported device types
-//! - **DMSCDeviceStatus**: Enum defining device statuses
-//! - **DMSCDeviceCapabilities**: Device capabilities structure
-//! - **DMSCDeviceController**: Device controller for managing devices
-//! - **DMSCDeviceScheduler**: Device scheduler for resource allocation
-//! - **DMSCResourcePool**: Resource pool for managing device resources
-//! - **DMSCResourcePoolManager**: Manager for multiple resource pools
-//! - **DMSCResourcePoolStatistics**: Statistics for resource pool monitoring
-//! - **DMSCDeviceControlConfig**: Configuration for device control behavior
-//! - **DMSCDiscoveryResult**: Result structure for device discovery
-//! - **DMSCResourceRequest**: Request structure for resource allocation
-//! - **DMSCResourceAllocation**: Result structure for resource allocation
-//! - **DMSCResourcePoolStatus**: Status structure for resource pools
+//! - **RiDeviceControlModule**: Main device control module implementing service module traits
+//! - **RiDevice**: Device representation with type, status, and capabilities
+//! - **RiDeviceType**: Enum defining supported device types
+//! - **RiDeviceStatus**: Enum defining device statuses
+//! - **RiDeviceCapabilities**: Device capabilities structure
+//! - **RiDeviceController**: Device controller for managing devices
+//! - **RiDeviceScheduler**: Device scheduler for resource allocation
+//! - **RiResourcePool**: Resource pool for managing device resources
+//! - **RiResourcePoolManager**: Manager for multiple resource pools
+//! - **RiResourcePoolStatistics**: Statistics for resource pool monitoring
+//! - **RiDeviceControlConfig**: Configuration for device control behavior
+//! - **RiDiscoveryResult**: Result structure for device discovery
+//! - **RiResourceRequest**: Request structure for resource allocation
+//! - **RiResourceAllocation**: Result structure for resource allocation
+//! - **RiResourcePoolStatus**: Status structure for resource pools
 //! 
 //! ## Design Principles
 //! 
@@ -56,12 +56,12 @@
 //! ## Usage
 //! 
 //! ```rust
-//! use dmsc::prelude::*;
-//! use dmsc::device::{DMSCDeviceControlConfig, DMSCResourceRequest, DMSCDeviceType, DMSCDeviceCapabilities};
+//! use ri::prelude::*;
+//! use ri::device::{RiDeviceControlConfig, RiResourceRequest, RiDeviceType, RiDeviceCapabilities};
 //! 
-//! async fn example() -> DMSCResult<()> {
+//! async fn example() -> RiResult<()> {
 //!     // Create device control configuration
-//!     let device_config = DMSCDeviceControlConfig {
+//!     let device_config = RiDeviceControlConfig {
 //!         discovery_enabled: true,
 //!         discovery_interval_secs: 30,
 //!         auto_scheduling_enabled: true,
@@ -70,7 +70,7 @@
 //!     };
 //!     
 //!     // Create device control module
-//!     let device_module = DMSCDeviceControlModule::new()
+//!     let device_module = RiDeviceControlModule::new()
 //!         .with_config(device_config);
 //!     
 //!     // Discover devices
@@ -84,10 +84,10 @@
 //!     println!("Current devices: {:?}", devices);
 //!     
 //!     // Create resource request
-//!     let resource_request = DMSCResourceRequest {
+//!     let resource_request = RiResourceRequest {
 //!         request_id: "request-123".to_string(),
-//!         device_type: DMSCDeviceType::Compute,
-//!         required_capabilities: DMSCDeviceCapabilities {
+//!         device_type: RiDeviceType::Compute,
+//!         required_capabilities: RiDeviceCapabilities {
 //!             cpu_cores: Some(4),
 //!             memory_gb: Some(8.0),
 //!             storage_gb: Some(100.0),
@@ -126,21 +126,21 @@ use serde::{Serialize, Deserialize};
 use tokio::sync::RwLock;
 use std::collections::HashMap;
 
-use crate::observability::{DMSCMetricsRegistry, DMSCMetric, DMSCMetricConfig, DMSCMetricType};
+use crate::observability::{RiMetricsRegistry, RiMetric, RiMetricConfig, RiMetricType};
 
 #[cfg(feature = "pyo3")]
 use pyo3::prelude::*;
 
 
-pub use core::{DMSCDevice, DMSCDeviceType, DMSCDeviceStatus, DMSCDeviceCapabilities, DMSCDeviceControlConfig, DMSCDeviceConfig, DMSCNetworkDeviceInfo, DMSCDeviceHealthMetrics};
-pub use controller::DMSCDeviceController;
-pub use pool::{DMSCResourcePool, DMSCResourcePoolManager, DMSCConnectionPoolStatistics};
-pub use scheduler::DMSCDeviceScheduler;
-pub use discovery_scheduler::{DMSCDeviceDiscoveryEngine, DMSCResourceScheduler};
+pub use core::{RiDevice, RiDeviceType, RiDeviceStatus, RiDeviceCapabilities, RiDeviceControlConfig, RiDeviceConfig, RiNetworkDeviceInfo, RiDeviceHealthMetrics};
+pub use controller::RiDeviceController;
+pub use pool::{RiResourcePool, RiResourcePoolManager, RiConnectionPoolStatistics};
+pub use scheduler::RiDeviceScheduler;
+pub use discovery_scheduler::{RiDeviceDiscoveryEngine, RiResourceScheduler};
 
 // Re-export discovery module types
 pub use discovery::{
-    DMSCDeviceDiscovery,
+    RiDeviceDiscovery,
     DiscoveryConfig,
     DiscoveryStats,
     DiscoveryStrategy,
@@ -150,34 +150,34 @@ pub use discovery::{
     Architecture,
     PlatformCompatibility,
     ProviderRegistry,
-    DMSCHardwareProvider,
+    RiHardwareProvider,
     PluginRegistry,
-    DMSCHardwareDiscoveryPlugin,
+    RiHardwareDiscoveryPlugin,
     PluginMetadata,
     PluginStatus,
     PluginError,
     AsyncDiscovery,
 };
 
-use crate::core::{DMSCResult, DMSCServiceContext};
+use crate::core::{RiResult, RiServiceContext};
 
 
-/// Main device control module for DMSC.
+/// Main device control module for Ri.
 /// 
 /// This module provides comprehensive smart device control functionality, including device discovery,
 /// control, and resource scheduling. It manages devices and their resources across distributed environments.
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
-pub struct DMSCDeviceControlModule {
+pub struct RiDeviceControlModule {
     /// Device controller for managing devices
-    controller: Arc<RwLock<DMSCDeviceController>>,
+    controller: Arc<RwLock<RiDeviceController>>,
     /// Device scheduler for resource allocation
-    scheduler: Arc<RwLock<DMSCDeviceScheduler>>,
+    scheduler: Arc<RwLock<RiDeviceScheduler>>,
     /// Discovery engine for device discovery
-    discovery_engine: Arc<RwLock<DMSCResourceScheduler>>,
+    discovery_engine: Arc<RwLock<RiResourceScheduler>>,
     /// Map of resource pool names to resource pool instances
-    resource_pools: HashMap<String, Arc<DMSCResourcePool>>,
+    resource_pools: HashMap<String, Arc<RiResourcePool>>,
     /// Device control configuration
-    config: DMSCDeviceControlConfig,
+    config: RiDeviceControlConfig,
 }
 
 /// Scheduling configuration for device control module
@@ -186,7 +186,7 @@ pub struct DMSCDeviceControlModule {
 /// for device control operations.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
-pub struct DMSCDeviceSchedulingConfig {
+pub struct RiDeviceSchedulingConfig {
     /// Whether device discovery is enabled
     pub discovery_enabled: bool,
     /// Interval between device discovery scans in seconds
@@ -199,7 +199,7 @@ pub struct DMSCDeviceSchedulingConfig {
     pub resource_allocation_timeout_secs: u64,
 }
 
-impl Default for DMSCDeviceSchedulingConfig {
+impl Default for RiDeviceSchedulingConfig {
     fn default() -> Self {
         Self {
             discovery_enabled: true,
@@ -213,7 +213,7 @@ impl Default for DMSCDeviceSchedulingConfig {
 
 #[cfg(feature = "pyo3")]
 #[pymethods]
-impl DMSCDeviceSchedulingConfig {
+impl RiDeviceSchedulingConfig {
     #[new]
     fn py_new() -> Self {
         Self::default()
@@ -231,11 +231,11 @@ impl DMSCDeviceSchedulingConfig {
 /// discovered, updated, and removed devices.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
-pub struct DMSCDiscoveryResult {
+pub struct RiDiscoveryResult {
     /// Newly discovered devices
-    pub discovered_devices: Vec<DMSCDevice>,
+    pub discovered_devices: Vec<RiDevice>,
     /// Devices with updated information
-    pub updated_devices: Vec<DMSCDevice>,
+    pub updated_devices: Vec<RiDevice>,
     /// IDs of removed devices
     pub removed_devices: Vec<String>, // device IDs
     /// Total number of devices after discovery
@@ -244,7 +244,7 @@ pub struct DMSCDiscoveryResult {
 
 #[cfg(feature = "pyo3")]
 #[pymethods]
-impl DMSCDiscoveryResult {
+impl RiDiscoveryResult {
     #[new]
     fn py_new() -> Self {
         Self {
@@ -260,11 +260,11 @@ impl DMSCDiscoveryResult {
         Self::default()
     }
     
-    fn discovered_devices_impl(&self) -> Vec<DMSCDevice> {
+    fn discovered_devices_impl(&self) -> Vec<RiDevice> {
         self.discovered_devices.clone()
     }
     
-    fn updated_devices_impl(&self) -> Vec<DMSCDevice> {
+    fn updated_devices_impl(&self) -> Vec<RiDevice> {
         self.updated_devices.clone()
     }
     
@@ -277,13 +277,13 @@ impl DMSCDiscoveryResult {
     }
     
     fn __str__(&self) -> String {
-        format!("DMSCDiscoveryResult(discovered: {}, updated: {}, removed: {}, total: {})", 
+        format!("RiDiscoveryResult(discovered: {}, updated: {}, removed: {}, total: {})", 
                 self.discovered_devices.len(), self.updated_devices.len(), 
                 self.removed_devices.len(), self.total_devices)
     }
 }
 
-impl Default for DMSCDiscoveryResult {
+impl Default for RiDiscoveryResult {
     fn default() -> Self {
         Self {
             discovered_devices: Vec::new(),
@@ -301,33 +301,33 @@ impl Default for DMSCDiscoveryResult {
 /// and affinity rules. New fields are optional to preserve backward compatibility.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
-pub struct DMSCResourceRequest {
+pub struct RiResourceRequest {
     /// Unique request ID
     pub request_id: String,
     /// Required device type
-    pub device_type: DMSCDeviceType,
+    pub device_type: RiDeviceType,
     /// Required device capabilities
-    pub required_capabilities: DMSCDeviceCapabilities,
+    pub required_capabilities: RiDeviceCapabilities,
     /// Request priority (1-10, higher is more important)
     pub priority: u8, // 1-10, higher is more important
     /// Request timeout in seconds
     pub timeout_secs: u64,
     /// Optional SLA class for this request (e.g. Critical / High / Medium / Low)
-    pub sla_class: Option<DMSCRequestSlaClass>,
+    pub sla_class: Option<RiRequestSlaClass>,
     /// Optional multi-dimensional resource weights to influence scheduling decisions
-    pub resource_weights: Option<DMSCResourceWeights>,
+    pub resource_weights: Option<RiResourceWeights>,
     /// Optional affinity rules describing preferred/required device labels
-    pub affinity: Option<DMSCAffinityRules>,
+    pub affinity: Option<RiAffinityRules>,
     /// Optional anti-affinity rules describing labels or devices to avoid
-    pub anti_affinity: Option<DMSCAffinityRules>,
+    pub anti_affinity: Option<RiAffinityRules>,
 }
 
 #[cfg(feature = "pyo3")]
 #[pymethods]
-impl DMSCResourceRequest {
+impl RiResourceRequest {
     #[new]
     #[pyo3(signature = (request_id, device_type, required_capabilities, priority=5, timeout_secs=60))]
-    fn py_new(request_id: String, device_type: DMSCDeviceType, required_capabilities: DMSCDeviceCapabilities, priority: u8, timeout_secs: u64) -> Self {
+    fn py_new(request_id: String, device_type: RiDeviceType, required_capabilities: RiDeviceCapabilities, priority: u8, timeout_secs: u64) -> Self {
         Self {
             request_id,
             device_type,
@@ -347,12 +347,12 @@ impl DMSCResourceRequest {
     }
     
     #[pyo3(name = "device_type")]
-    fn device_type_impl(&self) -> DMSCDeviceType {
+    fn device_type_impl(&self) -> RiDeviceType {
         self.device_type
     }
     
     #[pyo3(name = "required_capabilities")]
-    fn required_capabilities_impl(&self) -> DMSCDeviceCapabilities {
+    fn required_capabilities_impl(&self) -> RiDeviceCapabilities {
         self.required_capabilities.clone()
     }
     
@@ -367,22 +367,22 @@ impl DMSCResourceRequest {
     }
     
     #[pyo3(name = "sla_class")]
-    fn sla_class_impl(&self) -> Option<DMSCRequestSlaClass> {
+    fn sla_class_impl(&self) -> Option<RiRequestSlaClass> {
         self.sla_class
     }
     
     #[pyo3(name = "resource_weights")]
-    fn resource_weights_impl(&self) -> Option<DMSCResourceWeights> {
+    fn resource_weights_impl(&self) -> Option<RiResourceWeights> {
         self.resource_weights.clone()
     }
     
     #[pyo3(name = "affinity")]
-    fn affinity_impl(&self) -> Option<DMSCAffinityRules> {
+    fn affinity_impl(&self) -> Option<RiAffinityRules> {
         self.affinity.clone()
     }
     
     #[pyo3(name = "anti_affinity")]
-    fn anti_affinity_impl(&self) -> Option<DMSCAffinityRules> {
+    fn anti_affinity_impl(&self) -> Option<RiAffinityRules> {
         self.anti_affinity.clone()
     }
     
@@ -397,27 +397,27 @@ impl DMSCResourceRequest {
     }
     
     #[pyo3(name = "set_sla_class")]
-    fn set_sla_class_impl(&mut self, sla_class: Option<DMSCRequestSlaClass>) {
+    fn set_sla_class_impl(&mut self, sla_class: Option<RiRequestSlaClass>) {
         self.sla_class = sla_class;
     }
     
     #[pyo3(name = "set_resource_weights")]
-    fn set_resource_weights_impl(&mut self, resource_weights: Option<DMSCResourceWeights>) {
+    fn set_resource_weights_impl(&mut self, resource_weights: Option<RiResourceWeights>) {
         self.resource_weights = resource_weights;
     }
     
     #[pyo3(name = "set_affinity")]
-    fn set_affinity_impl(&mut self, affinity: Option<DMSCAffinityRules>) {
+    fn set_affinity_impl(&mut self, affinity: Option<RiAffinityRules>) {
         self.affinity = affinity;
     }
     
     #[pyo3(name = "set_anti_affinity")]
-    fn set_anti_affinity_impl(&mut self, anti_affinity: Option<DMSCAffinityRules>) {
+    fn set_anti_affinity_impl(&mut self, anti_affinity: Option<RiAffinityRules>) {
         self.anti_affinity = anti_affinity;
     }
     
     fn __str__(&self) -> String {
-        format!("DMSCResourceRequest(id: {}, type: {:?}, priority: {}, timeout: {}s)", 
+        format!("RiResourceRequest(id: {}, type: {:?}, priority: {}, timeout: {}s)", 
                 self.request_id, self.device_type, self.priority, self.timeout_secs)
     }
 }
@@ -428,7 +428,7 @@ impl DMSCResourceRequest {
 /// use this information to trade off between latency, availability, and resource usage.
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
-pub enum DMSCRequestSlaClass {
+pub enum RiRequestSlaClass {
     /// Mission critical requests that should be served with the highest priority
     Critical,
     /// High priority requests
@@ -441,13 +441,13 @@ pub enum DMSCRequestSlaClass {
 
 #[cfg(feature = "pyo3")]
 #[pymethods]
-impl DMSCRequestSlaClass {
+impl RiRequestSlaClass {
     fn __str__(&self) -> String {
         match self {
-            DMSCRequestSlaClass::Critical => "Critical".to_string(),
-            DMSCRequestSlaClass::High => "High".to_string(),
-            DMSCRequestSlaClass::Medium => "Medium".to_string(),
-            DMSCRequestSlaClass::Low => "Low".to_string(),
+            RiRequestSlaClass::Critical => "Critical".to_string(),
+            RiRequestSlaClass::High => "High".to_string(),
+            RiRequestSlaClass::Medium => "Medium".to_string(),
+            RiRequestSlaClass::Low => "Low".to_string(),
         }
     }
 }
@@ -459,7 +459,7 @@ impl DMSCRequestSlaClass {
 /// weights when computing fitness scores.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
-pub struct DMSCResourceWeights {
+pub struct RiResourceWeights {
     /// Weight for compute resources (e.g. CPU cores, GPU units)
     pub compute_weight: f64,
     /// Weight for memory capacity
@@ -472,7 +472,7 @@ pub struct DMSCResourceWeights {
 
 #[cfg(feature = "pyo3")]
 #[pymethods]
-impl DMSCResourceWeights {
+impl RiResourceWeights {
     #[new]
     #[pyo3(signature = (compute_weight=1.0, memory_weight=1.0, storage_weight=1.0, bandwidth_weight=1.0))]
     fn py_new(compute_weight: f64, memory_weight: f64, storage_weight: f64, bandwidth_weight: f64) -> Self {
@@ -508,12 +508,12 @@ impl DMSCResourceWeights {
     fn set_bandwidth_weight_impl(&mut self, weight: f64) { self.bandwidth_weight = weight; }
     
     fn __str__(&self) -> String {
-        format!("DMSCResourceWeights(compute: {}, memory: {}, storage: {}, bandwidth: {})", 
+        format!("RiResourceWeights(compute: {}, memory: {}, storage: {}, bandwidth: {})", 
                 self.compute_weight, self.memory_weight, self.storage_weight, self.bandwidth_weight)
     }
 }
 
-impl Default for DMSCResourceWeights {
+impl Default for RiResourceWeights {
     fn default() -> Self {
         Self {
             compute_weight: 1.0,
@@ -530,7 +530,7 @@ impl Default for DMSCResourceWeights {
 /// using device metadata such as location, zone, rack, tenant, etc.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
-pub struct DMSCAffinityRules {
+pub struct RiAffinityRules {
     /// Labels that must be present with matching values
     pub required_labels: HashMap<String, String>,
     /// Labels that are preferred (but not strictly required)
@@ -541,7 +541,7 @@ pub struct DMSCAffinityRules {
 
 #[cfg(feature = "pyo3")]
 #[pymethods]
-impl DMSCAffinityRules {
+impl RiAffinityRules {
     #[new]
     fn py_new() -> Self {
         Self {
@@ -572,12 +572,12 @@ impl DMSCAffinityRules {
     }
     
     fn __str__(&self) -> String {
-        format!("DMSCAffinityRules(required: {}, preferred: {}, forbidden: {})", 
+        format!("RiAffinityRules(required: {}, preferred: {}, forbidden: {})", 
                 self.required_labels.len(), self.preferred_labels.len(), self.forbidden_labels.len())
     }
 }
 
-impl Default for DMSCAffinityRules {
+impl Default for RiAffinityRules {
     fn default() -> Self {
         Self {
             required_labels: HashMap::new(),
@@ -593,7 +593,7 @@ impl Default for DMSCAffinityRules {
 /// device, allocation time, and expiration time.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
-pub struct DMSCResourceAllocation {
+pub struct RiResourceAllocation {
     /// Unique allocation ID
     pub allocation_id: String,
     /// ID of the allocated device
@@ -605,14 +605,14 @@ pub struct DMSCResourceAllocation {
     /// Time when the allocation expires
     pub expires_at: chrono::DateTime<chrono::Utc>,
     /// Original resource request
-    pub request: DMSCResourceRequest,
+    pub request: RiResourceRequest,
 }
 
 #[cfg(feature = "pyo3")]
 #[pymethods]
-impl DMSCResourceAllocation {
+impl RiResourceAllocation {
     #[new]
-    fn py_new(allocation_id: String, device_id: String, device_name: String, request: DMSCResourceRequest) -> Self {
+    fn py_new(allocation_id: String, device_id: String, device_name: String, request: RiResourceRequest) -> Self {
         let now = chrono::Utc::now();
         let expires_at = now + chrono::TimeDelta::seconds(request.timeout_secs as i64);
         
@@ -652,7 +652,7 @@ impl DMSCResourceAllocation {
     }
     
     #[pyo3(name = "request")]
-    fn request_impl(&self) -> DMSCResourceRequest {
+    fn request_impl(&self) -> RiResourceRequest {
         self.request.clone()
     }
     
@@ -667,35 +667,35 @@ impl DMSCResourceAllocation {
     }
     
     fn __str__(&self) -> String {
-        format!("DMSCResourceAllocation(id: {}, device: {} ({}), expires: {})", 
+        format!("RiResourceAllocation(id: {}, device: {} ({}), expires: {})", 
                 self.allocation_id, self.device_name, self.device_id, self.expires_at)
     }
 }
 
-impl Default for DMSCDeviceControlModule {
+impl Default for RiDeviceControlModule {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl DMSCDeviceControlModule {
+impl RiDeviceControlModule {
     /// Creates a new device control module with default configuration.
     /// 
     /// # Returns
     /// 
-    /// A new `DMSCDeviceControlModule` instance with default configuration
+    /// A new `RiDeviceControlModule` instance with default configuration
     pub fn new() -> Self {
-        let controller = Arc::new(RwLock::new(DMSCDeviceController::new()));
-        let resource_pool_manager = Arc::new(RwLock::new(DMSCResourcePoolManager::new()));
-        let scheduler = Arc::new(RwLock::new(DMSCDeviceScheduler::new(resource_pool_manager)));
-        let discovery_engine = Arc::new(RwLock::new(DMSCResourceScheduler::new()));
+        let controller = Arc::new(RwLock::new(RiDeviceController::new()));
+        let resource_pool_manager = Arc::new(RwLock::new(RiResourcePoolManager::new()));
+        let scheduler = Arc::new(RwLock::new(RiDeviceScheduler::new(resource_pool_manager)));
+        let discovery_engine = Arc::new(RwLock::new(RiResourceScheduler::new()));
         
         Self {
             controller,
             scheduler,
             discovery_engine,
             resource_pools: HashMap::new(),
-            config: crate::device::core::DMSCDeviceControlConfig::default(),
+            config: crate::device::core::RiDeviceControlConfig::default(),
         }
     }
     
@@ -707,8 +707,8 @@ impl DMSCDeviceControlModule {
     /// 
     /// # Returns
     /// 
-    /// The updated `DMSCDeviceControlModule` instance
-    pub fn with_config(mut self, config: crate::device::core::DMSCDeviceControlConfig) -> Self {
+    /// The updated `RiDeviceControlModule` instance
+    pub fn with_config(mut self, config: crate::device::core::RiDeviceControlConfig) -> Self {
         self.config = config;
         self
     }
@@ -720,12 +720,12 @@ impl DMSCDeviceControlModule {
     /// 
     /// # Returns
     /// 
-    /// A `DMSCResult<DMSCDiscoveryResult>` containing the discovery results
-    pub async fn discover_devices(&self) -> DMSCResult<DMSCDiscoveryResult> {
+    /// A `RiResult<RiDiscoveryResult>` containing the discovery results
+    pub async fn discover_devices(&self) -> RiResult<RiDiscoveryResult> {
         if !self.config.enable_cpu_discovery && !self.config.enable_gpu_discovery && 
            !self.config.enable_memory_discovery && !self.config.enable_storage_discovery && 
            !self.config.enable_network_discovery {
-            return Ok(DMSCDiscoveryResult {
+            return Ok(RiDiscoveryResult {
                 discovered_devices: vec![],
                 updated_devices: vec![],
                 removed_devices: vec![],
@@ -748,16 +748,16 @@ impl DMSCDeviceControlModule {
     /// 
     /// # Returns
     /// 
-    /// A `DMSCResult<Option<DMSCResourceAllocation>>` containing the allocation result if successful,
+    /// A `RiResult<Option<RiResourceAllocation>>` containing the allocation result if successful,
     /// or None if allocation failed or auto-scheduling is disabled
-    pub async fn allocate_resource(&self, request: DMSCResourceRequest) -> DMSCResult<Option<DMSCResourceAllocation>> {
+    pub async fn allocate_resource(&self, request: RiResourceRequest) -> RiResult<Option<RiResourceAllocation>> {
         // Check if any device type scheduling is enabled
         let scheduling_enabled = match request.device_type {
-            DMSCDeviceType::CPU => self.config.enable_cpu_discovery,
-            DMSCDeviceType::GPU => self.config.enable_gpu_discovery,
-            DMSCDeviceType::Memory => self.config.enable_memory_discovery,
-            DMSCDeviceType::Storage => self.config.enable_storage_discovery,
-            DMSCDeviceType::Network => self.config.enable_network_discovery,
+            RiDeviceType::CPU => self.config.enable_cpu_discovery,
+            RiDeviceType::GPU => self.config.enable_gpu_discovery,
+            RiDeviceType::Memory => self.config.enable_memory_discovery,
+            RiDeviceType::Storage => self.config.enable_storage_discovery,
+            RiDeviceType::Network => self.config.enable_network_discovery,
             _ => true, // Default to enabled for unknown types
         };
         
@@ -765,7 +765,7 @@ impl DMSCDeviceControlModule {
             return Ok(None);
         }
 
-        let allocation_request = crate::device::scheduler::DMSCAllocationRequest {
+        let allocation_request = crate::device::scheduler::RiAllocationRequest {
             device_type: request.device_type,
             capabilities: request.required_capabilities,
             priority: request.priority as u32,
@@ -780,13 +780,13 @@ impl DMSCDeviceControlModule {
         let device = scheduler.select_device(&allocation_request).await;
 
         if let Some(device) = device {
-            let allocation = DMSCResourceAllocation {
+            let allocation = RiResourceAllocation {
                 allocation_id: uuid::Uuid::new_v4().to_string(),
                 device_id: device.id().to_string(),
                 device_name: device.name().to_string(),
                 allocated_at: chrono::Utc::now(),
                 expires_at: chrono::Utc::now() + chrono::Duration::seconds(allocation_request.timeout_secs as i64),
-                request: DMSCResourceRequest {
+                request: RiResourceRequest {
                     request_id: request.request_id,
                     device_type: allocation_request.device_type,
                     required_capabilities: allocation_request.capabilities,
@@ -819,8 +819,8 @@ impl DMSCDeviceControlModule {
     /// 
     /// # Returns
     /// 
-    /// A `DMSCResult<()>` indicating success or failure
-    pub async fn release_resource(&self, allocation_id: &str) -> DMSCResult<()> {
+    /// A `RiResult<()>` indicating success or failure
+    pub async fn release_resource(&self, allocation_id: &str) -> RiResult<()> {
         let mut controller = self.controller.write().await;
         controller.release_device_by_allocation(allocation_id).await
     }
@@ -831,8 +831,8 @@ impl DMSCDeviceControlModule {
     /// 
     /// # Returns
     /// 
-    /// A `DMSCResult<Vec<DMSCDevice>>` containing all managed devices
-    pub async fn get_device_status(&self) -> DMSCResult<Vec<DMSCDevice>> {
+    /// A `RiResult<Vec<RiDevice>>` containing all managed devices
+    pub async fn get_device_status(&self) -> RiResult<Vec<RiDevice>> {
         let controller = self.controller.read().await;
         Ok(controller.get_all_devices())
     }
@@ -843,8 +843,8 @@ impl DMSCDeviceControlModule {
     /// 
     /// # Returns
     /// 
-    /// A `HashMap<String, DMSCResourcePoolStatus>` containing the status of all resource pools
-    pub fn get_resource_pool_status(&self) -> HashMap<String, DMSCResourcePoolStatus> {
+    /// A `HashMap<String, RiResourcePoolStatus>` containing the status of all resource pools
+    pub fn get_resource_pool_status(&self) -> HashMap<String, RiResourcePoolStatus> {
         let mut status = HashMap::new();
         for (pool_name, pool) in &self.resource_pools {
             status.insert(pool_name.clone(), pool.get_status());
@@ -869,12 +869,12 @@ impl DMSCDeviceControlModule {
     /// 
     /// # Returns
     /// 
-    /// A `DMSCResult<()>` indicating success or failure
+    /// A `RiResult<()>` indicating success or failure
     #[allow(dead_code)]
-    fn create_device_metrics(&self, registry: Arc<DMSCMetricsRegistry>) -> DMSCResult<()> {
+    fn create_device_metrics(&self, registry: Arc<RiMetricsRegistry>) -> RiResult<()> {
         // Device total metric (Gauge)
-        let device_total_config = DMSCMetricConfig {
-            metric_type: DMSCMetricType::Gauge,
+        let device_total_config = RiMetricConfig {
+            metric_type: RiMetricType::Gauge,
             name: "dms_device_total".to_string(),
             help: "Total number of devices by type and status".to_string(),
             buckets: vec![],
@@ -882,12 +882,12 @@ impl DMSCDeviceControlModule {
             max_age: std::time::Duration::from_secs(300),
             age_buckets: 5,
         };
-        let device_total_metric = Arc::new(DMSCMetric::new(device_total_config));
+        let device_total_metric = Arc::new(RiMetric::new(device_total_config));
         registry.register(device_total_metric)?;
         
         // Allocation attempts metric (Counter)
-        let allocation_attempts_config = DMSCMetricConfig {
-            metric_type: DMSCMetricType::Counter,
+        let allocation_attempts_config = RiMetricConfig {
+            metric_type: RiMetricType::Counter,
             name: "dms_device_allocation_attempts_total".to_string(),
             help: "Total number of device allocation attempts".to_string(),
             buckets: vec![],
@@ -895,12 +895,12 @@ impl DMSCDeviceControlModule {
             max_age: std::time::Duration::from_secs(0),
             age_buckets: 0,
         };
-        let allocation_attempts_metric = Arc::new(DMSCMetric::new(allocation_attempts_config));
+        let allocation_attempts_metric = Arc::new(RiMetric::new(allocation_attempts_config));
         registry.register(allocation_attempts_metric)?;
         
         // Allocation success metric (Counter)
-        let allocation_success_config = DMSCMetricConfig {
-            metric_type: DMSCMetricType::Counter,
+        let allocation_success_config = RiMetricConfig {
+            metric_type: RiMetricType::Counter,
             name: "dms_device_allocation_success_total".to_string(),
             help: "Total number of successful device allocations".to_string(),
             buckets: vec![],
@@ -908,12 +908,12 @@ impl DMSCDeviceControlModule {
             max_age: std::time::Duration::from_secs(0),
             age_buckets: 0,
         };
-        let allocation_success_metric = Arc::new(DMSCMetric::new(allocation_success_config));
+        let allocation_success_metric = Arc::new(RiMetric::new(allocation_success_config));
         registry.register(allocation_success_metric)?;
         
         // Allocation failure metric (Counter)
-        let allocation_failure_config = DMSCMetricConfig {
-            metric_type: DMSCMetricType::Counter,
+        let allocation_failure_config = RiMetricConfig {
+            metric_type: RiMetricType::Counter,
             name: "dms_device_allocation_failure_total".to_string(),
             help: "Total number of failed device allocations".to_string(),
             buckets: vec![],
@@ -921,12 +921,12 @@ impl DMSCDeviceControlModule {
             max_age: std::time::Duration::from_secs(0),
             age_buckets: 0,
         };
-        let allocation_failure_metric = Arc::new(DMSCMetric::new(allocation_failure_config));
+        let allocation_failure_metric = Arc::new(RiMetric::new(allocation_failure_config));
         registry.register(allocation_failure_metric)?;
         
         // Discovery attempts metric (Counter)
-        let discovery_attempts_config = DMSCMetricConfig {
-            metric_type: DMSCMetricType::Counter,
+        let discovery_attempts_config = RiMetricConfig {
+            metric_type: RiMetricType::Counter,
             name: "dms_device_discovery_attempts_total".to_string(),
             help: "Total number of device discovery attempts".to_string(),
             buckets: vec![],
@@ -934,12 +934,12 @@ impl DMSCDeviceControlModule {
             max_age: std::time::Duration::from_secs(0),
             age_buckets: 0,
         };
-        let discovery_attempts_metric = Arc::new(DMSCMetric::new(discovery_attempts_config));
+        let discovery_attempts_metric = Arc::new(RiMetric::new(discovery_attempts_config));
         registry.register(discovery_attempts_metric)?;
         
         // Discovery success metric (Counter)
-        let discovery_success_config = DMSCMetricConfig {
-            metric_type: DMSCMetricType::Counter,
+        let discovery_success_config = RiMetricConfig {
+            metric_type: RiMetricType::Counter,
             name: "dms_device_discovery_success_total".to_string(),
             help: "Total number of successful device discoveries".to_string(),
             buckets: vec![],
@@ -947,12 +947,12 @@ impl DMSCDeviceControlModule {
             max_age: std::time::Duration::from_secs(0),
             age_buckets: 0,
         };
-        let discovery_success_metric = Arc::new(DMSCMetric::new(discovery_success_config));
+        let discovery_success_metric = Arc::new(RiMetric::new(discovery_success_config));
         registry.register(discovery_success_metric)?;
         
         // Resource utilization metric (Gauge)
-        let resource_utilization_config = DMSCMetricConfig {
-            metric_type: DMSCMetricType::Gauge,
+        let resource_utilization_config = RiMetricConfig {
+            metric_type: RiMetricType::Gauge,
             name: "dms_device_resource_utilization".to_string(),
             help: "Resource utilization by device type".to_string(),
             buckets: vec![],
@@ -960,7 +960,7 @@ impl DMSCDeviceControlModule {
             max_age: std::time::Duration::from_secs(300),
             age_buckets: 5,
         };
-        let resource_utilization_metric = Arc::new(DMSCMetric::new(resource_utilization_config));
+        let resource_utilization_metric = Arc::new(RiMetric::new(resource_utilization_config));
         registry.register(resource_utilization_metric)?;
         
         Ok(())
@@ -969,7 +969,7 @@ impl DMSCDeviceControlModule {
 
 #[cfg(feature = "pyo3")]
 #[pyo3::prelude::pymethods]
-impl DMSCDeviceControlModule {
+impl RiDeviceControlModule {
     fn get_config(&self) -> String {
         format!("{:?}", self.config)
     }
@@ -981,7 +981,7 @@ impl DMSCDeviceControlModule {
 /// allocation, and utilization.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass(get_all, set_all))]
-pub struct DMSCResourcePoolStatus {
+pub struct RiResourcePoolStatus {
     /// Total capacity of the resource pool
     pub total_capacity: usize,
     /// Available capacity in the resource pool
@@ -996,7 +996,7 @@ pub struct DMSCResourcePoolStatus {
 
 #[cfg(feature = "pyo3")]
 #[pyo3::prelude::pymethods]
-impl DMSCResourcePoolStatus {
+impl RiResourcePoolStatus {
     #[new]
     #[pyo3(signature = (total_capacity=0, available_capacity=0, allocated_capacity=0, pending_requests=0, utilization_rate=0.0))]
     fn py_new(total_capacity: usize, available_capacity: usize, allocated_capacity: usize, pending_requests: usize, utilization_rate: f64) -> Self {
@@ -1040,12 +1040,12 @@ impl DMSCResourcePoolStatus {
     }
     
     fn __str__(&self) -> String {
-        format!("DMSCResourcePoolStatus(total: {}, available: {}, allocated: {}, utilization: {:.2}%)",
+        format!("RiResourcePoolStatus(total: {}, available: {}, allocated: {}, utilization: {:.2}%)",
                 self.total_capacity, self.available_capacity, self.allocated_capacity, self.utilization_rate)
     }
 }
 
-impl Default for DMSCResourcePoolStatus {
+impl Default for RiResourcePoolStatus {
     fn default() -> Self {
         Self {
             total_capacity: 0,
@@ -1058,14 +1058,14 @@ impl Default for DMSCResourcePoolStatus {
 }
 
 #[async_trait::async_trait]
-impl crate::core::DMSCModule for DMSCDeviceControlModule {
+impl crate::core::RiModule for RiDeviceControlModule {
     /// Returns the name of the device control module.
     /// 
     /// # Returns
     /// 
     /// The module name as a string
     fn name(&self) -> &str {
-        "DMSC.DeviceControl"
+        "Ri.DeviceControl"
     }
     
     /// Indicates whether the device control module is critical.
@@ -1087,7 +1087,7 @@ impl crate::core::DMSCModule for DMSCDeviceControlModule {
     /// 1. Loads configuration from the service context
     /// 2. Initializes real device discovery based on system hardware
     /// 3. Sets up resource scheduling and management
-    async fn init(&mut self, ctx: &mut DMSCServiceContext) -> DMSCResult<()> {
+    async fn init(&mut self, ctx: &mut RiServiceContext) -> RiResult<()> {
         let binding = ctx.config();
         let cfg = binding.config();
         let device_config = parse_device_config(cfg.get("device"));
@@ -1096,7 +1096,7 @@ impl crate::core::DMSCModule for DMSCDeviceControlModule {
         controller.discover_system_devices(&device_config).await?;
         drop(controller);
         
-        let discovery_engine = DMSCResourceScheduler::new();
+        let discovery_engine = RiResourceScheduler::new();
         
         let mut discovery_guard = self.discovery_engine.write().await;
         *discovery_guard = discovery_engine;
@@ -1108,14 +1108,14 @@ impl crate::core::DMSCModule for DMSCDeviceControlModule {
         }
         
         let logger = ctx.logger();
-        logger.info("DMSC.DeviceControl", "Device control module initialized with real hardware discovery")?;
+        logger.info("Ri.DeviceControl", "Device control module initialized with real hardware discovery")?;
         Ok(())
     }
 }
 
-impl crate::core::ServiceModule for DMSCDeviceControlModule {
+impl crate::core::ServiceModule for RiDeviceControlModule {
     fn name(&self) -> &str {
-        "DMSC.DeviceControl"
+        "Ri.DeviceControl"
     }
 
     fn is_critical(&self) -> bool {
@@ -1130,41 +1130,41 @@ impl crate::core::ServiceModule for DMSCDeviceControlModule {
         vec![]
     }
 
-    fn init(&mut self, _ctx: &mut crate::core::DMSCServiceContext) -> crate::core::DMSCResult<()> {
+    fn init(&mut self, _ctx: &mut crate::core::RiServiceContext) -> crate::core::RiResult<()> {
         Ok(())
     }
 
-    fn start(&mut self, _ctx: &mut crate::core::DMSCServiceContext) -> crate::core::DMSCResult<()> {
+    fn start(&mut self, _ctx: &mut crate::core::RiServiceContext) -> crate::core::RiResult<()> {
         Ok(())
     }
 
-    fn shutdown(&mut self, _ctx: &mut crate::core::DMSCServiceContext) -> crate::core::DMSCResult<()> {
+    fn shutdown(&mut self, _ctx: &mut crate::core::RiServiceContext) -> crate::core::RiResult<()> {
         Ok(())
     }
 }
 
-fn parse_device_config(config_str: Option<&String>) -> crate::device::core::DMSCDeviceControlConfig {
+fn parse_device_config(config_str: Option<&String>) -> crate::device::core::RiDeviceControlConfig {
     match config_str {
         Some(config) => {
             let trimmed = config.trim();
             if trimmed.starts_with('{') {
-                if let Ok(result) = serde_json::from_str::<crate::device::core::DMSCDeviceControlConfig>(trimmed) {
+                if let Ok(result) = serde_json::from_str::<crate::device::core::RiDeviceControlConfig>(trimmed) {
                     return result;
                 }
             }
             if trimmed.starts_with("---") || trimmed.contains("discovery_enabled:") {
-                if let Ok(result) = serde_yaml::from_str::<crate::device::core::DMSCDeviceControlConfig>(trimmed) {
+                if let Ok(result) = serde_yaml::from_str::<crate::device::core::RiDeviceControlConfig>(trimmed) {
                     return result;
                 }
             }
             if trimmed.contains('[') || trimmed.contains("discovery_enabled") {
-                if let Ok(result) = toml::from_str::<crate::device::core::DMSCDeviceControlConfig>(trimmed) {
+                if let Ok(result) = toml::from_str::<crate::device::core::RiDeviceControlConfig>(trimmed) {
                     return result;
                 }
             }
-            serde_json::from_str::<crate::device::core::DMSCDeviceControlConfig>(trimmed)
+            serde_json::from_str::<crate::device::core::RiDeviceControlConfig>(trimmed)
                 .unwrap_or_default()
         }
-        None => crate::device::core::DMSCDeviceControlConfig::default(),
+        None => crate::device::core::RiDeviceControlConfig::default(),
     }
 }

@@ -2,8 +2,8 @@
 
 # Copyright © 2025-2026 Wenze Wei. All Rights Reserved.
 #
-# This file is part of DMSC.
-# The DMSC project belongs to the Dunimd Team.
+# This file is part of Ri.
+# The Ri project belongs to the Dunimd Team.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # You may not use this file except in compliance with the License.
@@ -18,76 +18,76 @@
 # limitations under the License.
 
 """
-DMSC Cache Module Tests
+Ri Cache Module Tests
 
 Tests for the cache functionality including cache operations,
 policies, and statistics.
 """
 
 import pytest
-from dmsc import (
-    DMSCCacheModule,
-    DMSCCacheConfig,
-    DMSCCacheBackendType,
-    DMSCCacheStats,
-    DMSCCachedValue,
+from ri import (
+    RiCacheModule,
+    RiCacheConfig,
+    RiCacheBackendType,
+    RiCacheStats,
+    RiCachedValue,
 )
 
 
-class TestDMSCCacheModule:
-    """Tests for DMSCCacheModule"""
+class TestRiCacheModule:
+    """Tests for RiCacheModule"""
 
     def test_cache_module_creation(self):
         """Test creating cache module"""
-        config = DMSCCacheConfig.default_config()
-        config.backend_type = DMSCCacheBackendType.Memory
+        config = RiCacheConfig.default_config()
+        config.backend_type = RiCacheBackendType.Memory
         config.default_ttl_secs = 300
 
-        cache_module = DMSCCacheModule(config)
+        cache_module = RiCacheModule(config)
         assert cache_module is not None
 
 
-class TestDMSCCacheConfig:
-    """Tests for DMSCCacheConfig"""
+class TestRiCacheConfig:
+    """Tests for RiCacheConfig"""
 
     def test_cache_config_creation(self):
         """Test creating cache configuration"""
-        config = DMSCCacheConfig.default_config()
-        config.backend_type = DMSCCacheBackendType.Memory
+        config = RiCacheConfig.default_config()
+        config.backend_type = RiCacheBackendType.Memory
         config.default_ttl_secs = 300
         config.max_memory_mb = 512
         config.enabled = True
 
-        assert str(config.backend_type) == "DMSCCacheBackendType.Memory"
+        assert str(config.backend_type) == "RiCacheBackendType.Memory"
         assert config.default_ttl_secs == 300
         assert config.max_memory_mb == 512
         assert config.enabled is True
 
 
-class TestDMSCCachedValue:
-    """Tests for DMSCCachedValue"""
+class TestRiCachedValue:
+    """Tests for RiCachedValue"""
 
     def test_cached_value_creation(self):
         """Test creating cached value"""
-        value = DMSCCachedValue("test data", 3600)
+        value = RiCachedValue("test data", 3600)
 
         assert value.value == "test data"
         assert value.expires_at is not None
 
     def test_cached_value_no_ttl(self):
         """Test creating cached value without TTL"""
-        value = DMSCCachedValue("persistent data", None)
+        value = RiCachedValue("persistent data", None)
 
         assert value.value == "persistent data"
         assert value.expires_at is None
 
 
-class TestDMSCCacheStats:
-    """Tests for DMSCCacheStats"""
+class TestRiCacheStats:
+    """Tests for RiCacheStats"""
 
     def test_cache_stats_creation(self):
         """Test creating cache statistics"""
-        stats = DMSCCacheStats()
+        stats = RiCacheStats()
         stats.hits = 100
         stats.misses = 20
         stats.entries = 50
@@ -99,14 +99,14 @@ class TestDMSCCacheStats:
         assert stats.memory_usage_bytes == 1024000
 
 
-class TestDMSCCacheBackendType:
-    """Tests for DMSCCacheBackendType"""
+class TestRiCacheBackendType:
+    """Tests for RiCacheBackendType"""
 
     def test_backend_types(self):
         """Test cache backend types"""
-        assert DMSCCacheBackendType.Memory is not None
-        assert DMSCCacheBackendType.Redis is not None
-        assert DMSCCacheBackendType.Hybrid is not None
+        assert RiCacheBackendType.Memory is not None
+        assert RiCacheBackendType.Redis is not None
+        assert RiCacheBackendType.Hybrid is not None
 
 
 if __name__ == "__main__":

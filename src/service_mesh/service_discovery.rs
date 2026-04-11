@@ -1,7 +1,7 @@
 //! Copyright © 2025-2026 Wenze Wei. All Rights Reserved.
 //!
-//! This file is part of DMSC.
-//! The DMSC project belongs to the Dunimd Team.
+//! This file is part of Ri.
+//! The Ri project belongs to the Dunimd Team.
 //!
 //! Licensed under the Apache License, Version 2.0 (the "License");
 //! You may not use this file except in compliance with the License.
@@ -27,11 +27,11 @@ use etcd_client::{Client, PutOptions};
 #[cfg(feature = "etcd")]
 use tokio::sync::Mutex;
 
-use crate::core::{DMSCResult, DMSCError};
+use crate::core::{RiResult, RiError};
 
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct DMSCServiceInstance {
+pub struct RiServiceInstance {
     pub id: String,
     pub service_name: String,
     pub host: String,
@@ -39,12 +39,12 @@ pub struct DMSCServiceInstance {
     pub metadata: HashMap<String, String>,
     pub registered_at: SystemTime,
     pub last_heartbeat: SystemTime,
-    pub status: DMSCServiceStatus,
+    pub status: RiServiceStatus,
 }
 
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-pub enum DMSCServiceStatus {
+pub enum RiServiceStatus {
     Starting,
     Running,
     Stopping,
@@ -54,7 +54,7 @@ pub enum DMSCServiceStatus {
 
 #[cfg(feature = "pyo3")]
 #[pyo3::prelude::pymethods]
-impl DMSCServiceInstance {
+impl RiServiceInstance {
     #[new]
     fn py_new(
         id: String,
@@ -70,7 +70,7 @@ impl DMSCServiceInstance {
             metadata: HashMap::new(),
             registered_at: SystemTime::now(),
             last_heartbeat: SystemTime::now(),
-            status: DMSCServiceStatus::Starting,
+            status: RiServiceStatus::Starting,
         }
     }
 
@@ -95,23 +95,23 @@ impl DMSCServiceInstance {
     }
 
     #[getter]
-    fn status(&self) -> DMSCServiceStatus {
+    fn status(&self) -> RiServiceStatus {
         self.status.clone()
     }
 }
 
 #[derive(Clone)]
-pub struct DMSCServiceRegistry {
-    services: Arc<RwLock<HashMap<String, Vec<DMSCServiceInstance>>>>,
-    instance_index: Arc<RwLock<HashMap<String, DMSCServiceInstance>>>,
+pub struct RiServiceRegistry {
+    services: Arc<RwLock<HashMap<String, Vec<RiServiceInstance>>>>,
+    instance_index: Arc<RwLock<HashMap<String, RiServiceInstance>>>,
     #[cfg(feature = "etcd")]
     etcd_client: Option<Arc<Mutex<Client>>>,
     _etcd_prefix: String,
 }
 
-impl std::fmt::Debug for DMSCServiceRegistry {
+impl std::fmt::Debug for RiServiceRegistry {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let mut debug_struct = f.debug_struct("DMSCServiceRegistry");
+        let mut debug_struct = f.debug_struct("RiServiceRegistry");
         debug_struct.field("services", &self.services)
             .field("instance_index", &self.instance_index);
         
@@ -123,13 +123,13 @@ impl std::fmt::Debug for DMSCServiceRegistry {
     }
 }
 
-impl Default for DMSCServiceRegistry {
+impl Default for RiServiceRegistry {
     fn default() -> Self {
         Self::new(None, "/dms/services".to_string())
     }
 }
 
-impl DMSCServiceRegistry {
+impl RiServiceRegistry {
     #[cfg(feature = "etcd")]
     pub fn new(etcd_client: Option<Client>, etcd_prefix: String) -> Self {
         Self {
@@ -149,7 +149,7 @@ impl DMSCServiceRegistry {
         }
     }
 
-    pub async fn register_service(&self, instance: DMSCServiceInstance) -> DMSCResult<()> {
+    pub async fn register_service(&self, instance: RiServiceInstance) -> RiResult<()> {
         // Update in-memory registry
         let mut services = self.services.write().await;
         let mut instance_index = self.instance_index.write().await;
@@ -170,14 +170,14 @@ impl DMSCServiceRegistry {
             let mut client_guard = client.lock().await;
             client_guard.put(key.as_bytes(), value.as_bytes(), Some(PutOptions::new().with_lease(300)))
                 .await
-                .map_err(|e| DMSCError::ServiceMesh(format!("Failed to register service in etcd: {}", e)))?;
+                .map_err(|e| RiError::ServiceMesh(format!("Failed to register service in etcd: {}", e)))?;
             drop(client_guard);
         }
 
         Ok(())
     }
 
-    pub async fn deregister_service(&self, instance_id: &str) -> DMSCResult<()> {
+    pub async fn deregister_service(&self, instance_id: &str) -> RiResult<()> {
         let mut instance_index = self.instance_index.write().await;
         
         if let Some(instance) = instance_index.remove(instance_id) {
@@ -198,7 +198,7 @@ impl DMSCServiceRegistry {
                 let mut client_guard = client.lock().await;
                 client_guard.delete(key.as_bytes(), None)
                     .await
-                    .map_err(|e| DMSCError::ServiceMesh(format!("Failed to deregister service in etcd: {}", e)))?;
+                    .map_err(|e| RiError::ServiceMesh(format!("Failed to deregister service in etcd: {}", e)))?;
                 drop(client_guard);
             }
         }
@@ -206,7 +206,7 @@ impl DMSCServiceRegistry {
         Ok(())
     }
 
-    pub async fn get_service_instances(&self, service_name: &str) -> DMSCResult<Vec<DMSCServiceInstance>> {
+    pub async fn get_service_instances(&self, service_name: &str) -> RiResult<Vec<RiServiceInstance>> {
         let services = self.services.read().await;
         let instances = services.get(service_name)
             .cloned()
@@ -215,13 +215,13 @@ impl DMSCServiceRegistry {
         Ok(instances)
     }
 
-    pub async fn get_all_services(&self) -> DMSCResult<Vec<String>> {
+    pub async fn get_all_services(&self) -> RiResult<Vec<String>> {
         let services = self.services.read().await;
         let service_names: Vec<String> = services.keys().cloned().collect();
         Ok(service_names)
     }
 
-    pub async fn update_heartbeat(&self, instance_id: &str) -> DMSCResult<()> {
+    pub async fn update_heartbeat(&self, instance_id: &str) -> RiResult<()> {
         let mut instance_index = self.instance_index.write().await;
         
         if let Some(instance) = instance_index.get_mut(instance_id) {
@@ -235,7 +235,7 @@ impl DMSCServiceRegistry {
                 let mut client_guard = client.lock().await;
                 client_guard.put(key.as_bytes(), value.as_bytes(), None)
                     .await
-                    .map_err(|e| DMSCError::ServiceMesh(format!("Failed to update service heartbeat in etcd: {}", e)))?;
+                    .map_err(|e| RiError::ServiceMesh(format!("Failed to update service heartbeat in etcd: {}", e)))?;
                 drop(client_guard);
             }
         }
@@ -243,7 +243,7 @@ impl DMSCServiceRegistry {
         Ok(())
     }
     
-    pub async fn update_instance_status(&self, instance_id: &str, status: DMSCServiceStatus) -> DMSCResult<()> {
+    pub async fn update_instance_status(&self, instance_id: &str, status: RiServiceStatus) -> RiResult<()> {
         let mut instance_index = self.instance_index.write().await;
         
         if let Some(instance) = instance_index.get_mut(instance_id) {
@@ -258,7 +258,7 @@ impl DMSCServiceRegistry {
                 let mut client_guard = client.lock().await;
                 client_guard.put(key.as_bytes(), value.as_bytes(), None)
                     .await
-                    .map_err(|e| DMSCError::ServiceMesh(format!("Failed to update service status in etcd: {}", e)))?;
+                    .map_err(|e| RiError::ServiceMesh(format!("Failed to update service status in etcd: {}", e)))?;
                 drop(client_guard);
             }
         }
@@ -266,17 +266,17 @@ impl DMSCServiceRegistry {
         Ok(())
     }
 
-    pub async fn get_healthy_instances(&self, service_name: &str) -> DMSCResult<Vec<DMSCServiceInstance>> {
+    pub async fn get_healthy_instances(&self, service_name: &str) -> RiResult<Vec<RiServiceInstance>> {
         let instances = self.get_service_instances(service_name).await?;
-        let healthy_instances: Vec<DMSCServiceInstance> = instances
+        let healthy_instances: Vec<RiServiceInstance> = instances
             .into_iter()
-            .filter(|inst| inst.status == DMSCServiceStatus::Running)
+            .filter(|inst| inst.status == RiServiceStatus::Running)
             .collect();
 
         Ok(healthy_instances)
     }
 
-    pub async fn cleanup_expired_instances(&self, expiration_duration: Duration) -> DMSCResult<()> {
+    pub async fn cleanup_expired_instances(&self, expiration_duration: Duration) -> RiResult<()> {
         let now = SystemTime::now();
         let mut expired_instances = Vec::new();
 
@@ -300,14 +300,14 @@ impl DMSCServiceRegistry {
     
     /// Sync registry from etcd
     #[cfg(feature = "etcd")]
-    pub async fn sync_from_etcd(&self) -> DMSCResult<()> {
+    pub async fn sync_from_etcd(&self) -> RiResult<()> {
         if let Some(client) = &self.etcd_client {
             // List all services from etcd
             let prefix = format!("{}/", self._etcd_prefix);
             let mut client_guard = client.lock().await;
             let response = client_guard.get(prefix.as_bytes(), Some(etcd_client::GetOptions::new().with_prefix()))
                 .await
-                .map_err(|e| DMSCError::ServiceMesh(format!("Failed to sync from etcd: {}", e)))?;
+                .map_err(|e| RiError::ServiceMesh(format!("Failed to sync from etcd: {}", e)))?;
             drop(client_guard);
             
             // Clear current in-memory registry
@@ -318,7 +318,7 @@ impl DMSCServiceRegistry {
             
             // Reconstruct from etcd data
             for kv in response.kvs() {
-                let instance: DMSCServiceInstance = serde_json::from_slice(kv.value())?;
+                let instance: RiServiceInstance = serde_json::from_slice(kv.value())?;
                 
                 services.entry(instance.service_name.clone())
                     .or_insert_with(Vec::new)
@@ -333,7 +333,7 @@ impl DMSCServiceRegistry {
     
     /// Start etcd watcher to sync changes in real-time
     #[cfg(feature = "etcd")]
-    pub async fn start_etcd_watcher(&self) -> DMSCResult<JoinHandle<()>> {
+    pub async fn start_etcd_watcher(&self) -> RiResult<JoinHandle<()>> {
         if let Some(client) = &self.etcd_client {
             let client = client.clone();
             let prefix = self._etcd_prefix.clone();
@@ -372,20 +372,20 @@ impl DMSCServiceRegistry {
             
             Ok(handle)
         } else {
-            Err(DMSCError::ServiceMesh("No etcd client available".to_string()))
+            Err(RiError::ServiceMesh("No etcd client available".to_string()))
         }
     }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct DMSCEtcdConfig {
+pub struct RiEtcdConfig {
     pub endpoints: Vec<String>,
     pub username: Option<String>,
     pub password: Option<String>,
     pub prefix: String,
 }
 
-impl Default for DMSCEtcdConfig {
+impl Default for RiEtcdConfig {
     fn default() -> Self {
         Self {
             endpoints: vec!["http://localhost:2379".to_string()],
@@ -398,19 +398,19 @@ impl Default for DMSCEtcdConfig {
 
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 #[derive(Debug, Clone)]
-pub struct DMSCServiceDiscovery {
+pub struct RiServiceDiscovery {
     enabled: bool,
-    registry: Arc<DMSCServiceRegistry>,
+    registry: Arc<RiServiceRegistry>,
     background_tasks: Arc<RwLock<Vec<JoinHandle<()>>>>,
     cleanup_interval: Duration,
-    _etcd_config: Option<DMSCEtcdConfig>,
+    _etcd_config: Option<RiEtcdConfig>,
 }
 
-impl DMSCServiceDiscovery {
+impl RiServiceDiscovery {
     pub fn new(enabled: bool) -> Self {
         Self {
             enabled,
-            registry: Arc::new(DMSCServiceRegistry::new(None, "/dms/services".to_string())),
+            registry: Arc::new(RiServiceRegistry::new(None, "/dms/services".to_string())),
             background_tasks: Arc::new(RwLock::new(Vec::new())),
             cleanup_interval: Duration::from_secs(60),
             _etcd_config: None,
@@ -418,13 +418,13 @@ impl DMSCServiceDiscovery {
     }
     
     #[cfg(feature = "etcd")]
-    pub async fn new_with_etcd(enabled: bool, etcd_config: DMSCEtcdConfig) -> DMSCResult<Self> {
+    pub async fn new_with_etcd(enabled: bool, etcd_config: RiEtcdConfig) -> RiResult<Self> {
         // Create etcd client
         let client = Client::connect(etcd_config.endpoints.clone(), None)
             .await
-            .map_err(|e| DMSCError::ServiceMesh(format!("Failed to connect to etcd: {}", e)))?;
+            .map_err(|e| RiError::ServiceMesh(format!("Failed to connect to etcd: {}", e)))?;
         
-        let registry = Arc::new(DMSCServiceRegistry::new(Some(client), etcd_config.prefix.clone()));
+        let registry = Arc::new(RiServiceRegistry::new(Some(client), etcd_config.prefix.clone()));
         
         let discovery = Self {
             enabled,
@@ -446,13 +446,13 @@ impl DMSCServiceDiscovery {
         host: &str,
         port: u16,
         metadata: HashMap<String, String>,
-    ) -> DMSCResult<String> {
+    ) -> RiResult<String> {
         if !self.enabled {
-            return Err(DMSCError::ServiceMesh("Service discovery is disabled".to_string()));
+            return Err(RiError::ServiceMesh("Service discovery is disabled".to_string()));
         }
 
         let instance_id = format!("{service_name}:{host}:{port}");
-        let instance = DMSCServiceInstance {
+        let instance = RiServiceInstance {
             id: instance_id.clone(),
             service_name: service_name.to_string(),
             host: host.to_string(),
@@ -460,62 +460,62 @@ impl DMSCServiceDiscovery {
             metadata,
             registered_at: SystemTime::now(),
             last_heartbeat: SystemTime::now(),
-            status: DMSCServiceStatus::Starting,
+            status: RiServiceStatus::Starting,
         };
 
         self.registry.register_service(instance).await?;
         Ok(instance_id)
     }
 
-    pub async fn deregister_service(&self, instance_id: &str) -> DMSCResult<()> {
+    pub async fn deregister_service(&self, instance_id: &str) -> RiResult<()> {
         if !self.enabled {
-            return Err(DMSCError::ServiceMesh("Service discovery is disabled".to_string()));
+            return Err(RiError::ServiceMesh("Service discovery is disabled".to_string()));
         }
 
         self.registry.deregister_service(instance_id).await
     }
 
-    pub async fn discover_service(&self, service_name: &str) -> DMSCResult<Vec<DMSCServiceInstance>> {
+    pub async fn discover_service(&self, service_name: &str) -> RiResult<Vec<RiServiceInstance>> {
         if !self.enabled {
-            return Err(DMSCError::ServiceMesh("Service discovery is disabled".to_string()));
+            return Err(RiError::ServiceMesh("Service discovery is disabled".to_string()));
         }
 
         self.registry.get_healthy_instances(service_name).await
     }
 
-    pub async fn update_heartbeat(&self, instance_id: &str) -> DMSCResult<()> {
+    pub async fn update_heartbeat(&self, instance_id: &str) -> RiResult<()> {
         if !self.enabled {
-            return Err(DMSCError::ServiceMesh("Service discovery is disabled".to_string()));
+            return Err(RiError::ServiceMesh("Service discovery is disabled".to_string()));
         }
 
         self.registry.update_heartbeat(instance_id).await
     }
     
-    pub async fn set_service_status(&self, instance_id: &str, status: DMSCServiceStatus) -> DMSCResult<()> {
+    pub async fn set_service_status(&self, instance_id: &str, status: RiServiceStatus) -> RiResult<()> {
         if !self.enabled {
-            return Err(DMSCError::ServiceMesh("Service discovery is disabled".to_string()));
+            return Err(RiError::ServiceMesh("Service discovery is disabled".to_string()));
         }
 
         self.registry.update_instance_status(instance_id, status).await
     }
 
-    pub async fn get_service_instances(&self, service_name: &str) -> DMSCResult<Vec<DMSCServiceInstance>> {
+    pub async fn get_service_instances(&self, service_name: &str) -> RiResult<Vec<RiServiceInstance>> {
         if !self.enabled {
-            return Err(DMSCError::ServiceMesh("Service discovery is disabled".to_string()));
+            return Err(RiError::ServiceMesh("Service discovery is disabled".to_string()));
         }
 
         self.registry.get_service_instances(service_name).await
     }
 
-    pub async fn get_all_services(&self) -> DMSCResult<Vec<String>> {
+    pub async fn get_all_services(&self) -> RiResult<Vec<String>> {
         if !self.enabled {
-            return Err(DMSCError::ServiceMesh("Service discovery is disabled".to_string()));
+            return Err(RiError::ServiceMesh("Service discovery is disabled".to_string()));
         }
 
         self.registry.get_all_services().await
     }
 
-    pub async fn start_background_tasks(&self) -> DMSCResult<()> {
+    pub async fn start_background_tasks(&self) -> RiResult<()> {
         if !self.enabled {
             return Ok(());
         }
@@ -561,7 +561,7 @@ impl DMSCServiceDiscovery {
         Ok(())
     }
 
-    pub async fn stop_background_tasks(&self) -> DMSCResult<()> {
+    pub async fn stop_background_tasks(&self) -> RiResult<()> {
         let mut tasks = self.background_tasks.write().await;
         for task in tasks.drain(..) {
             task.abort();
@@ -569,7 +569,7 @@ impl DMSCServiceDiscovery {
         Ok(())
     }
 
-    pub async fn health_check(&self) -> DMSCResult<bool> {
+    pub async fn health_check(&self) -> RiResult<bool> {
         Ok(self.enabled)
     }
 }

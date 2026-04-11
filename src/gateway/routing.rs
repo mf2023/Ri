@@ -1,7 +1,7 @@
 //! Copyright © 2025-2026 Wenze Wei. All Rights Reserved.
 //!
-//! This file is part of DMSC.
-//! The DMSC project belongs to the Dunimd Team.
+//! This file is part of Ri.
+//! The Ri project belongs to the Dunimd Team.
 //!
 //! Licensed under the Apache License, Version 2.0 (the "License");
 //! You may not use this file except in compliance with the License.
@@ -19,14 +19,14 @@
 
 //! # Routing Module
 //! 
-//! This module provides a flexible routing system for the DMSC gateway, using a Radix Tree
+//! This module provides a flexible routing system for the Ri gateway, using a Radix Tree
 //! for O(k) route lookup performance, where k is the path length.
 //! 
 //! ## Key Components
 //! 
-//! - **DMSCRouteHandler**: Type alias for route handler functions
-//! - **DMSCRoute**: Represents a single API route with method, path, handler, and middleware
-//! - **DMSCRouter**: Manages routes using radix trees for efficient O(k) lookup
+//! - **RiRouteHandler**: Type alias for route handler functions
+//! - **RiRoute**: Represents a single API route with method, path, handler, and middleware
+//! - **RiRouter**: Manages routes using radix trees for efficient O(k) lookup
 //! 
 //! ## Design Principles
 //! 
@@ -49,20 +49,20 @@
 //! ## Usage
 //! 
 //! ```rust
-//! use dmsc::prelude::*;
+//! use ri::prelude::*;
 //! use std::sync::Arc;
 //! 
-//! async fn example() -> DMSCResult<()> {
+//! async fn example() -> RiResult<()> {
 //!     // Create a router
-//!     let router = Arc::new(DMSCRouter::new());
+//!     let router = Arc::new(RiRouter::new());
 //!     
 //!     // Create a simple handler
 //!     let hello_handler = Arc::new(|req| {
 //!         Box::pin(async move {
-//!             Ok(DMSCGatewayResponse {
+//!             Ok(RiGatewayResponse {
 //!                 status_code: 200,
 //!                 headers: HashMap::new(),
-//!                 body: "Hello, DMSC!".as_bytes().to_vec(),
+//!                 body: "Hello, Ri!".as_bytes().to_vec(),
 //!             })
 //!         })
 //!     });
@@ -78,8 +78,8 @@
 //!     router.get("/files/*path", hello_handler.clone());
 //!     
 //!     // Add route with middleware
-//!     let auth_middleware = Arc::new(DMSCAuthMiddleware::new("Authorization".to_string()));
-//!     let protected_route = DMSCRoute::new("GET".to_string(), "/api/v1/protected".to_string(), hello_handler)
+//!     let auth_middleware = Arc::new(RiAuthMiddleware::new("Authorization".to_string()));
+//!     let protected_route = RiRoute::new("GET".to_string(), "/api/v1/protected".to_string(), hello_handler)
 //!         .with_middleware(auth_middleware);
 //!     router.add_route(protected_route);
 //!     
@@ -87,11 +87,11 @@
 //! }
 //! ```
 
-use super::{DMSCGatewayRequest, DMSCGatewayResponse};
-use super::radix_tree::DMSCRadixTree;
-use crate::core::DMSCResult;
+use super::{RiGatewayRequest, RiGatewayResponse};
+use super::radix_tree::RiRadixTree;
+use crate::core::RiResult;
 use crate::core::lock::RwLockExtensions;
-use crate::gateway::middleware::DMSCMiddleware;
+use crate::gateway::middleware::RiMiddleware;
 use std::collections::HashMap;
 use std::fmt;
 use std::future::Future;
@@ -105,8 +105,8 @@ use pyo3::PyResult;
 /// 
 /// This type represents an asynchronous function that takes a gateway request and returns
 /// a gateway response. It is wrapped in an Arc to allow safe sharing across threads.
-pub type DMSCRouteHandler = Arc<
-    dyn Fn(DMSCGatewayRequest) -> Pin<Box<dyn Future<Output = DMSCResult<DMSCGatewayResponse>> + Send>>
+pub type RiRouteHandler = Arc<
+    dyn Fn(RiGatewayRequest) -> Pin<Box<dyn Future<Output = RiResult<RiGatewayResponse>> + Send>>
         + Send
         + Sync,
 >;
@@ -117,20 +117,20 @@ pub type DMSCRouteHandler = Arc<
 /// including the HTTP method, path pattern, request handler, and attached middleware.
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 #[derive(Clone)]
-pub struct DMSCRoute {
+pub struct RiRoute {
     /// HTTP method for this route (GET, POST, PUT, DELETE, PATCH, OPTIONS)
     pub method: String,
     /// Path pattern for this route (e.g., "/api/v1/users", "/users/:id")
     pub path: String,
     /// Request handler for this route
-    pub handler: DMSCRouteHandler,
+    pub handler: RiRouteHandler,
     /// List of middleware attached to this route
-    pub middleware: Vec<Arc<dyn DMSCMiddleware>>,
+    pub middleware: Vec<Arc<dyn RiMiddleware>>,
 }
 
-impl fmt::Debug for DMSCRoute {
+impl fmt::Debug for RiRoute {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("DMSCRoute")
+        f.debug_struct("RiRoute")
             .field("method", &self.method)
             .field("path", &self.path)
             .field("handler", &"<handler>")
@@ -139,7 +139,7 @@ impl fmt::Debug for DMSCRoute {
     }
 }
 
-impl DMSCRoute {
+impl RiRoute {
     /// Creates a new route with the specified method, path, and handler.
     /// 
     /// # Parameters
@@ -150,11 +150,11 @@ impl DMSCRoute {
     /// 
     /// # Returns
     /// 
-    /// A new `DMSCRoute` instance with no middleware attached
+    /// A new `RiRoute` instance with no middleware attached
     pub fn new(
         method: String,
         path: String,
-        handler: DMSCRouteHandler,
+        handler: RiRouteHandler,
     ) -> Self {
         Self {
             method,
@@ -174,28 +174,28 @@ impl DMSCRoute {
     /// 
     /// # Returns
     /// 
-    /// A new `DMSCRoute` instance with the middleware attached
-    pub fn with_middleware(mut self, middleware: Arc<dyn DMSCMiddleware>) -> Self {
+    /// A new `RiRoute` instance with the middleware attached
+    pub fn with_middleware(mut self, middleware: Arc<dyn RiMiddleware>) -> Self {
         self.middleware.push(middleware);
         self
     }
 }
 
 #[cfg(feature = "pyo3")]
-/// Python bindings for DMSCRoute
+/// Python bindings for RiRoute
 #[pyo3::prelude::pymethods]
-impl DMSCRoute {
+impl RiRoute {
     #[new]
     fn py_new(method: String, path: String) -> PyResult<Self> {
-        use crate::gateway::{DMSCGatewayRequest, DMSCGatewayResponse};
+        use crate::gateway::{RiGatewayRequest, RiGatewayResponse};
         
         // Create a simple default handler for Python usage
-        let handler = Arc::new(|_req: DMSCGatewayRequest| -> Pin<Box<dyn Future<Output = Result<DMSCGatewayResponse, crate::core::DMSCError>> + Send>> {
+        let handler = Arc::new(|_req: RiGatewayRequest| -> Pin<Box<dyn Future<Output = Result<RiGatewayResponse, crate::core::RiError>> + Send>> {
             Box::pin(async move {
-                Ok(DMSCGatewayResponse {
+                Ok(RiGatewayResponse {
                     status_code: 200,
                     headers: std::collections::HashMap::new(),
-                    body: b"Hello from DMSC Python!".to_vec(),
+                    body: b"Hello from Ri Python!".to_vec(),
                     request_id: String::new(),
                 })
             })
@@ -215,27 +215,27 @@ impl DMSCRoute {
 /// This struct maintains a collection of routes organized by HTTP method using
 /// radix trees for O(k) lookup performance, where k is the path length.
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
-pub struct DMSCRouter {
+pub struct RiRouter {
     /// Radix trees for each HTTP method
-    trees: std::sync::RwLock<HashMap<String, DMSCRadixTree>>,
+    trees: std::sync::RwLock<HashMap<String, RiRadixTree>>,
     /// Vector of registered routes for backward compatibility and introspection
-    routes: std::sync::RwLock<Vec<DMSCRoute>>,
+    routes: std::sync::RwLock<Vec<RiRoute>>,
     /// Cache of route matches for improved performance
-    route_cache: std::sync::RwLock<HashMap<String, DMSCRoute>>,
+    route_cache: std::sync::RwLock<HashMap<String, RiRoute>>,
 }
 
-impl Default for DMSCRouter {
+impl Default for RiRouter {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl DMSCRouter {
+impl RiRouter {
     /// Creates a new router with no routes.
     /// 
     /// # Returns
     /// 
-    /// A new `DMSCRouter` instance with empty routes and cache
+    /// A new `RiRouter` instance with empty routes and cache
     pub fn new() -> Self {
         Self {
             trees: std::sync::RwLock::new(HashMap::new()),
@@ -254,25 +254,25 @@ impl DMSCRouter {
     /// 
     /// A reference to the radix tree for the method
     #[allow(dead_code)]
-    fn get_or_create_tree(&self, method: &str) -> DMSCRadixTree {
+    fn get_or_create_tree(&self, method: &str) -> RiRadixTree {
         let trees = match self.trees.read_safe("trees for get_or_create") {
             Ok(t) => t,
-            Err(_) => return DMSCRadixTree::new(),
+            Err(_) => return RiRadixTree::new(),
         };
         
         if let Some(_tree) = trees.get(method) {
-            return DMSCRadixTree::new();
+            return RiRadixTree::new();
         }
         
         drop(trees);
         
         let mut trees_mut = match self.trees.write_safe("trees for create") {
             Ok(t) => t,
-            Err(_) => return DMSCRadixTree::new(),
+            Err(_) => return RiRadixTree::new(),
         };
         
-        let tree = DMSCRadixTree::new();
-        trees_mut.insert(method.to_string(), DMSCRadixTree::new());
+        let tree = RiRadixTree::new();
+        trees_mut.insert(method.to_string(), RiRadixTree::new());
         tree
     }
 
@@ -283,7 +283,7 @@ impl DMSCRouter {
     /// # Parameters
     /// 
     /// - `route`: The route to add to the router
-    pub fn add_route(&self, route: DMSCRoute) {
+    pub fn add_route(&self, route: RiRoute) {
         let method = route.method.clone();
         
         let mut trees = match self.trees.write_safe("trees for add_route") {
@@ -294,7 +294,7 @@ impl DMSCRouter {
             }
         };
         
-        let tree = trees.entry(method).or_insert_with(DMSCRadixTree::new);
+        let tree = trees.entry(method).or_insert_with(RiRadixTree::new);
         tree.insert(route.clone());
         
         drop(trees);
@@ -320,9 +320,9 @@ impl DMSCRouter {
 }
 
 #[cfg(feature = "pyo3")]
-/// Python bindings for DMSCRouter
+/// Python bindings for RiRouter
 #[pyo3::prelude::pymethods]
-impl DMSCRouter {
+impl RiRouter {
     #[new]
     fn py_new() -> Self {
         Self::new()
@@ -330,43 +330,43 @@ impl DMSCRouter {
     
     /// Adds a GET route to the router from Python
     fn add_get_route(&self, path: String) {
-        let route = DMSCRoute::py_new("GET".to_string(), path).expect("Failed to create route");
+        let route = RiRoute::py_new("GET".to_string(), path).expect("Failed to create route");
         self.add_route(route);
     }
     
     /// Adds a POST route to the router from Python
     fn add_post_route(&self, path: String) {
-        let route = DMSCRoute::py_new("POST".to_string(), path).expect("Failed to create route");
+        let route = RiRoute::py_new("POST".to_string(), path).expect("Failed to create route");
         self.add_route(route);
     }
     
     /// Adds a PUT route to the router from Python
     fn add_put_route(&self, path: String) {
-        let route = DMSCRoute::py_new("PUT".to_string(), path).expect("Failed to create route");
+        let route = RiRoute::py_new("PUT".to_string(), path).expect("Failed to create route");
         self.add_route(route);
     }
     
     /// Adds a DELETE route to the router from Python
     fn add_delete_route(&self, path: String) {
-        let route = DMSCRoute::py_new("DELETE".to_string(), path).expect("Failed to create route");
+        let route = RiRoute::py_new("DELETE".to_string(), path).expect("Failed to create route");
         self.add_route(route);
     }
     
     /// Adds a PATCH route to the router from Python
     fn add_patch_route(&self, path: String) {
-        let route = DMSCRoute::py_new("PATCH".to_string(), path).expect("Failed to create route");
+        let route = RiRoute::py_new("PATCH".to_string(), path).expect("Failed to create route");
         self.add_route(route);
     }
     
     /// Adds an OPTIONS route to the router from Python
     fn add_options_route(&self, path: String) {
-        let route = DMSCRoute::py_new("OPTIONS".to_string(), path).expect("Failed to create route");
+        let route = RiRoute::py_new("OPTIONS".to_string(), path).expect("Failed to create route");
         self.add_route(route);
     }
     
     /// Adds a custom route to the router from Python
     fn add_custom_route(&self, method: String, path: String) {
-        let route = DMSCRoute::py_new(method, path).expect("Failed to create route");
+        let route = RiRoute::py_new(method, path).expect("Failed to create route");
         self.add_route(route);
     }
     
@@ -381,7 +381,7 @@ impl DMSCRouter {
     }
 }
 
-impl DMSCRouter {
+impl RiRouter {
 
     /// Adds a GET route to the router.
     /// 
@@ -389,8 +389,8 @@ impl DMSCRouter {
     /// 
     /// - `path`: Path pattern for the route
     /// - `handler`: Request handler for the route
-    pub fn get(&self, path: &str, handler: DMSCRouteHandler) {
-        let route = DMSCRoute::new("GET".to_string(), path.to_string(), handler);
+    pub fn get(&self, path: &str, handler: RiRouteHandler) {
+        let route = RiRoute::new("GET".to_string(), path.to_string(), handler);
         self.add_route(route);
     }
 
@@ -400,8 +400,8 @@ impl DMSCRouter {
     /// 
     /// - `path`: Path pattern for the route
     /// - `handler`: Request handler for the route
-    pub fn post(&self, path: &str, handler: DMSCRouteHandler) {
-        let route = DMSCRoute::new("POST".to_string(), path.to_string(), handler);
+    pub fn post(&self, path: &str, handler: RiRouteHandler) {
+        let route = RiRoute::new("POST".to_string(), path.to_string(), handler);
         self.add_route(route);
     }
 
@@ -411,8 +411,8 @@ impl DMSCRouter {
     /// 
     /// - `path`: Path pattern for the route
     /// - `handler`: Request handler for the route
-    pub fn put(&self, path: &str, handler: DMSCRouteHandler) {
-        let route = DMSCRoute::new("PUT".to_string(), path.to_string(), handler);
+    pub fn put(&self, path: &str, handler: RiRouteHandler) {
+        let route = RiRoute::new("PUT".to_string(), path.to_string(), handler);
         self.add_route(route);
     }
 
@@ -422,8 +422,8 @@ impl DMSCRouter {
     /// 
     /// - `path`: Path pattern for the route
     /// - `handler`: Request handler for the route
-    pub fn delete(&self, path: &str, handler: DMSCRouteHandler) {
-        let route = DMSCRoute::new("DELETE".to_string(), path.to_string(), handler);
+    pub fn delete(&self, path: &str, handler: RiRouteHandler) {
+        let route = RiRoute::new("DELETE".to_string(), path.to_string(), handler);
         self.add_route(route);
     }
 
@@ -433,8 +433,8 @@ impl DMSCRouter {
     /// 
     /// - `path`: Path pattern for the route
     /// - `handler`: Request handler for the route
-    pub fn patch(&self, path: &str, handler: DMSCRouteHandler) {
-        let route = DMSCRoute::new("PATCH".to_string(), path.to_string(), handler);
+    pub fn patch(&self, path: &str, handler: RiRouteHandler) {
+        let route = RiRoute::new("PATCH".to_string(), path.to_string(), handler);
         self.add_route(route);
     }
 
@@ -444,8 +444,8 @@ impl DMSCRouter {
     /// 
     /// - `path`: Path pattern for the route
     /// - `handler`: Request handler for the route
-    pub fn options(&self, path: &str, handler: DMSCRouteHandler) {
-        let route = DMSCRoute::new("OPTIONS".to_string(), path.to_string(), handler);
+    pub fn options(&self, path: &str, handler: RiRouteHandler) {
+        let route = RiRoute::new("OPTIONS".to_string(), path.to_string(), handler);
         self.add_route(route);
     }
 
@@ -460,14 +460,14 @@ impl DMSCRouter {
     /// 
     /// # Returns
     /// 
-    /// A `DMSCResult<DMSCRouteHandler>` with the matching handler, or an error if no route is found
-    pub async fn route(&self, request: &DMSCGatewayRequest) -> DMSCResult<DMSCRouteHandler> {
+    /// A `RiResult<RiRouteHandler>` with the matching handler, or an error if no route is found
+    pub async fn route(&self, request: &RiGatewayRequest) -> RiResult<RiRouteHandler> {
         let cache_key = format!("{}:{}", request.method, request.path);
         
         {
             let cache = match self.route_cache.read_safe("cache for route lookup") {
                 Ok(c) => c,
-                Err(_) => return Err(crate::core::DMSCError::InvalidState("Failed to acquire cache read lock".to_string())),
+                Err(_) => return Err(crate::core::RiError::InvalidState("Failed to acquire cache read lock".to_string())),
             };
             if let Some(cached_route) = cache.get(&cache_key) {
                 return Ok(cached_route.handler.clone());
@@ -476,7 +476,7 @@ impl DMSCRouter {
 
         let trees = match self.trees.read_safe("trees for route lookup") {
             Ok(t) => t,
-            Err(_) => return Err(crate::core::DMSCError::InvalidState("Failed to acquire trees read lock".to_string())),
+            Err(_) => return Err(crate::core::RiError::InvalidState("Failed to acquire trees read lock".to_string())),
         };
         
         if let Some(tree) = trees.get(&request.method) {
@@ -491,7 +491,7 @@ impl DMSCRouter {
             }
         }
 
-        Err(crate::core::DMSCError::Other(format!(
+        Err(crate::core::RiError::Other(format!(
             "No route found for {} {}",
             request.method, request.path
         )))
@@ -540,7 +540,7 @@ impl DMSCRouter {
     /// 
     /// - `prefix`: The prefix to prepend to all mounted routes
     /// - `router`: The router to mount
-    pub fn mount(&self, prefix: &str, router: &DMSCRouter) {
+    pub fn mount(&self, prefix: &str, router: &RiRouter) {
         let routes = match router.routes.read_safe("routes for mount") {
             Ok(r) => r,
             Err(_) => return,

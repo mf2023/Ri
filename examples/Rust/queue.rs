@@ -1,7 +1,7 @@
 //! Copyright © 2025-2026 Wenze Wei. All Rights Reserved.
 //!
-//! This file is part of DMSC.
-//! The DMSC project belongs to the Dunimd Team.
+//! This file is part of Ri.
+//! The Ri project belongs to the Dunimd Team.
 //!
 //! Licensed under the Apache License, Version 2.0 (the "License");
 //! You may not use this file except in compliance with the License.
@@ -15,9 +15,9 @@
 //! See the License for the specific language governing permissions and
 //! limitations under the License.
 
-//! # DMSC Message Queue Module Example
+//! # Ri Message Queue Module Example
 //!
-//! This example demonstrates how to use the message queue module in DMSC,
+//! This example demonstrates how to use the message queue module in Ri,
 //! including queue creation, message publishing, and consumer patterns.
 //!
 //! ## Running this Example
@@ -34,8 +34,8 @@
 //! - Dead letter queue handling
 //! - Queue statistics and monitoring
 
-use dmsc::queue::{DMSCQueueModule, DMSCQueueConfig, DMSCQueueManager, DMSCQueueMessage, DMSCRetryPolicy, DMSCDeadLetterConfig};
-use dmsc::core::DMSCResult;
+use ri::queue::{RiQueueModule, RiQueueConfig, RiQueueManager, RiQueueMessage, RiRetryPolicy, RiDeadLetterConfig};
+use ri::core::RiResult;
 
 /// Main entry point for the message queue module example.
 ///
@@ -49,11 +49,11 @@ use dmsc::core::DMSCResult;
 /// - Retry policy configuration for failed message handling
 /// - Queue listing and cleanup operations
 ///
-/// The example shows how DMSC handles asynchronous messaging with features
+/// The example shows how Ri handles asynchronous messaging with features
 /// like reliable delivery, dead letter handling, and retry mechanisms
 /// in a Rust async runtime environment.
-fn main() -> DMSCResult<()> {
-    println!("=== DMSC Message Queue Module Example ===\n");
+fn main() -> RiResult<()> {
+    println!("=== Ri Message Queue Module Example ===\n");
 
     // Create async runtime for handling asynchronous queue operations
     let rt = tokio::runtime::Runtime::new().unwrap();
@@ -67,8 +67,8 @@ fn main() -> DMSCResult<()> {
         // - port: Redis server port (default: 6379)
         // - password: Redis authentication password (None for no auth)
         // - db: Redis database number (0-15)
-        // - build(): Finalizes configuration into DMSCQueueConfig struct
-        let queue_config = DMSCQueueConfig::redis()
+        // - build(): Finalizes configuration into RiQueueConfig struct
+        let queue_config = RiQueueConfig::redis()
             .with_host("localhost")
             .with_port(6379)
             .with_password(None)
@@ -78,7 +78,7 @@ fn main() -> DMSCResult<()> {
         // Module Initialization: Create queue module instance
         // The module provides messaging capabilities with reliable delivery
         println!("1. Creating queue module...");
-        let queue_module = DMSCQueueModule::new(queue_config).await?;
+        let queue_module = RiQueueModule::new(queue_config).await?;
         
         // Get queue manager for queue operations
         // The manager provides operations for queue manipulation and messaging
@@ -89,7 +89,7 @@ fn main() -> DMSCResult<()> {
         // Demonstrates basic queue creation without additional configuration
         // create_queue() parameters:
         // - name: &str unique queue identifier
-        // - dlq_config: Option<DMSCDeadLetterConfig> for DLQ setup
+        // - dlq_config: Option<RiDeadLetterConfig> for DLQ setup
         // Passing None means no dead letter queue for this queue
         println!("2. Creating 'orders' queue...");
         manager.create_queue("orders", None).await?;
@@ -105,7 +105,7 @@ fn main() -> DMSCResult<()> {
         // - max_retries: Number of retry attempts before moving to DLQ
         // - ttl_secs: Time-to-live for messages in DLQ (24 hours)
         // - build(): Finalizes configuration
-        let dlq_config = DMSCDeadLetterConfig::new()
+        let dlq_config = RiDeadLetterConfig::new()
             .with_queue_name("notifications_dlq")
             .with_max_retries(3)
             .with_ttl_secs(86400)
@@ -124,10 +124,10 @@ fn main() -> DMSCResult<()> {
         // Each message has unique ID and payload data
         for i in 1..=5 {
             // Create message with order details using builder pattern
-            // DMSCQueueMessage::new() creates message with:
+            // RiQueueMessage::new() creates message with:
             // - id: Unique message identifier
             // - payload: serde_json::Value containing message data
-            let message = DMSCQueueMessage::new(
+            let message = RiQueueMessage::new(
                 format!("order-{}", i),
                 serde_json::json!({
                     "order_id": i,
@@ -157,7 +157,7 @@ fn main() -> DMSCResult<()> {
         
         // Publish each notification message
         for (key, content) in &notifications {
-            let message = DMSCQueueMessage::new(
+            let message = RiQueueMessage::new(
                 key.to_string(),
                 serde_json::json!({
                     "type": key,
@@ -238,7 +238,7 @@ fn main() -> DMSCResult<()> {
         // - multiplier: Delay multiplier for exponential backoff (2x)
         // - max_delay_ms: Maximum delay cap (30 seconds)
         // Retry pattern: 1s, 2s, 4s, 8s, 16s, 30s
-        let retry_policy = DMSCRetryPolicy::new()
+        let retry_policy = RiRetryPolicy::new()
             .with_max_retries(3)
             .with_initial_delay_ms(1000)
             .with_multiplier(2.0)
@@ -272,6 +272,6 @@ fn main() -> DMSCResult<()> {
         println!("   Test queues deleted\n");
 
         println!("=== Message Queue Example Completed ===");
-        Ok::<(), DMSCError>(())
+        Ok::<(), RiError>(())
     })?
 }

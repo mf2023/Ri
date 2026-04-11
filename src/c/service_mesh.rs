@@ -1,7 +1,7 @@
 //! Copyright © 2025-2026 Wenze Wei. All Rights Reserved.
 //!
-//! This file is part of DMSC.
-//! The DMSC project belongs to the Dunimd Team.
+//! This file is part of Ri.
+//! The Ri project belongs to the Dunimd Team.
 //!
 //! Licensed under the Apache License, Version 2.0 (the "License");
 //! You may not use this file except in compliance with the License.
@@ -17,10 +17,10 @@
 
 //! # Service Mesh Module C API
 //!
-//! This module provides C language bindings for DMSC's service mesh infrastructure. The service mesh
+//! This module provides C language bindings for Ri's service mesh infrastructure. The service mesh
 //! module delivers comprehensive service-to-service communication capabilities including service discovery,
 //! load balancing, circuit breaking, traffic routing, and observability for distributed systems. This
-//! C API enables C/C++ applications to leverage DMSC's service mesh functionality for building resilient,
+//! C API enables C/C++ applications to leverage Ri's service mesh functionality for building resilient,
 //! observable, and manageable microservices architectures.
 //!
 //! ## Module Architecture
@@ -28,15 +28,15 @@
 //! The service mesh module comprises three primary components that together provide complete service
 //! management capabilities:
 //!
-//! - **DMSCServiceMesh**: Central service mesh controller managing service registry, traffic routing,
+//! - **RiServiceMesh**: Central service mesh controller managing service registry, traffic routing,
 //!   and communication policies across all connected services. The mesh controller handles the complete
 //!   lifecycle of service communication including discovery, routing, load balancing, and failure handling.
 //!
-//! - **DMSCServiceMeshConfig**: Configuration container for service mesh parameters including discovery
+//! - **RiServiceMeshConfig**: Configuration container for service mesh parameters including discovery
 //!   settings, traffic management policies, circuit breaker thresholds, and observability options.
 //!   The configuration object controls mesh behavior, resource allocation, and operational characteristics.
 //!
-//! - **DMSCServiceEndpoint**: Individual service endpoint representation within the mesh, tracking
+//! - **RiServiceEndpoint**: Individual service endpoint representation within the mesh, tracking
 //!   service instance metadata, health status, load metrics, and communication properties. Endpoints
 //!   represent actual running instances of services that can receive traffic.
 //!
@@ -199,115 +199,115 @@
 //!
 //! ```c
 //! // Create service mesh configuration
-//! DMSCServiceMeshConfig* config = dmsc_service_mesh_config_new();
+//! RiServiceMeshConfig* config = ri_service_mesh_config_new();
 //! if (config == NULL) {
 //!     fprintf(stderr, "Failed to create service mesh config\n");
 //!     return ERROR_INIT;
 //! }
 //!
 //! // Configure mesh settings
-//! dmsc_service_mesh_config_set_enable_mtls(config, true);
-//! dmsc_service_mesh_config_set_enable_circuit_breaker(config, true);
-//! dmsc_service_mesh_config_set_enable_tracing(config, true);
-//! dmsc_service_mesh_config_set_enable_metrics(config, true);
+//! ri_service_mesh_config_set_enable_mtls(config, true);
+//! ri_service_mesh_config_set_enable_circuit_breaker(config, true);
+//! ri_service_mesh_config_set_enable_tracing(config, true);
+//! ri_service_mesh_config_set_enable_metrics(config, true);
 //!
 //! // Configure circuit breaker
-//! dmsc_service_mesh_config_set_circuit_breaker_failure_rate(config, 0.5);
-//! dmsc_service_mesh_config_set_circuit_breaker_timeout_ms(config, 30000);
+//! ri_service_mesh_config_set_circuit_breaker_failure_rate(config, 0.5);
+//! ri_service_mesh_config_set_circuit_breaker_timeout_ms(config, 30000);
 //!
 //! // Configure load balancing
-//! dmsc_service_mesh_config_set_load_balancing_algorithm(config, LB_LEAST_REQUESTS);
+//! ri_service_mesh_config_set_load_balancing_algorithm(config, LB_LEAST_REQUESTS);
 //!
 //! // Create service mesh controller
-//! DMSCServiceMesh* mesh = dmsc_service_mesh_new(config);
+//! RiServiceMesh* mesh = ri_service_mesh_new(config);
 //! if (mesh == NULL) {
 //!     fprintf(stderr, "Failed to create service mesh\n");
-//!     dmsc_service_mesh_config_free(config);
+//!     ri_service_mesh_config_free(config);
 //!     return ERROR_INIT;
 //! }
 //!
 //! // Start the mesh controller
-//! int result = dmsc_service_mesh_start(mesh);
+//! int result = ri_service_mesh_start(mesh);
 //! if (result != 0) {
 //!     fprintf(stderr, "Failed to start service mesh: %d\n", result);
-//!     dmsc_service_mesh_free(mesh);
-//!     dmsc_service_mesh_config_free(config);
+//!     ri_service_mesh_free(mesh);
+//!     ri_service_mesh_config_free(config);
 //!     return ERROR_START;
 //! }
 //!
 //! printf("Service mesh started successfully\n");
 //!
 //! // Register a service endpoint
-//! DMSCServiceEndpoint* endpoint = dmsc_service_endpoint_new();
+//! RiServiceEndpoint* endpoint = ri_service_endpoint_new();
 //! if (endpoint == NULL) {
 //!     fprintf(stderr, "Failed to create service endpoint\n");
-//!     dmsc_service_mesh_stop(mesh);
-//!     dmsc_service_mesh_free(mesh);
-//!     dmsc_service_mesh_config_free(config);
+//!     ri_service_mesh_stop(mesh);
+//!     ri_service_mesh_free(mesh);
+//!     ri_service_mesh_config_free(config);
 //!     return ERROR_INIT;
 //! }
 //!
-//! dmsc_service_endpoint_set_name(endpoint, "user-service");
-//! dmsc_service_endpoint_set_host(endpoint, "10.0.1.5");
-//! dmsc_service_endpoint_set_port(endpoint, 8080);
-//! dmsc_service_endpoint_set_version(endpoint, "v1.2.3");
-//! dmsc_service_endpoint_set_health_check_url(endpoint, "/health");
+//! ri_service_endpoint_set_name(endpoint, "user-service");
+//! ri_service_endpoint_set_host(endpoint, "10.0.1.5");
+//! ri_service_endpoint_set_port(endpoint, 8080);
+//! ri_service_endpoint_set_version(endpoint, "v1.2.3");
+//! ri_service_endpoint_set_health_check_url(endpoint, "/health");
 //!
-//! result = dmsc_service_mesh_register(mesh, endpoint);
+//! result = ri_service_mesh_register(mesh, endpoint);
 //! if (result != 0) {
 //!     fprintf(stderr, "Failed to register endpoint: %d\n", result);
-//!     dmsc_service_endpoint_free(endpoint);
+//!     ri_service_endpoint_free(endpoint);
 //! } else {
 //!     printf("Service endpoint registered successfully\n");
 //! }
 //!
 //! // Get service information
-//! const char* service_name = dmsc_service_endpoint_get_name(endpoint);
-//! const char* service_version = dmsc_service_endpoint_get_version(endpoint);
-//! uint32_t healthy_count = dmsc_service_mesh_get_healthy_count(mesh, service_name);
+//! const char* service_name = ri_service_endpoint_get_name(endpoint);
+//! const char* service_version = ri_service_endpoint_get_version(endpoint);
+//! uint32_t healthy_count = ri_service_mesh_get_healthy_count(mesh, service_name);
 //!
 //! printf("Service: %s (version: %s), healthy instances: %u\n",
 //!        service_name, service_version, healthy_count);
 //!
 //! // Discover a service
-//! DMSCServiceEndpoint* discovered = NULL;
-//! result = dmsc_service_mesh_discover(mesh, "user-service", &discovered);
+//! RiServiceEndpoint* discovered = NULL;
+//! result = ri_service_mesh_discover(mesh, "user-service", &discovered);
 //!
 //! if (result == 0 && discovered != NULL) {
-//!     const char* host = dmsc_service_endpoint_get_host(discovered);
-//!     uint16_t port = dmsc_service_endpoint_get_port(discovered);
+//!     const char* host = ri_service_endpoint_get_host(discovered);
+//!     uint16_t port = ri_service_endpoint_get_port(discovered);
 //!
 //!     printf("Discovered service at %s:%d\n", host, port);
 //!
-//!     dmsc_service_endpoint_free(discovered);
+//!     ri_service_endpoint_free(discovered);
 //! }
 //!
 //! // Update service mesh configuration at runtime
-//! dmsc_service_mesh_config_set_circuit_breaker_failure_rate(mesh, 0.3);
-//! dmsc_service_mesh_reload_config(mesh);
+//! ri_service_mesh_config_set_circuit_breaker_failure_rate(mesh, 0.3);
+//! ri_service_mesh_reload_config(mesh);
 //!
 //! // Get service mesh statistics
-//! uint64_t total_requests = dmsc_service_mesh_get_total_requests(mesh);
-//! uint64_t failed_requests = dmsc_service_mesh_get_failed_requests(mesh);
+//! uint64_t total_requests = ri_service_mesh_get_total_requests(mesh);
+//! uint64_t failed_requests = ri_service_mesh_get_failed_requests(mesh);
 //!
 //! printf("Mesh stats: %lu total requests, %lu failed\n",
 //!        total_requests, failed_requests);
 //!
 //! // Deregister service when shutting down
-//! dmsc_service_mesh_deregister(mesh, endpoint);
+//! ri_service_mesh_deregister(mesh, endpoint);
 //!
 //! // Graceful shutdown
-//! dmsc_service_mesh_stop(mesh);
-//! dmsc_service_endpoint_free(endpoint);
-//! dmsc_service_mesh_free(mesh);
-//! dmsc_service_mesh_config_free(config);
+//! ri_service_mesh_stop(mesh);
+//! ri_service_endpoint_free(endpoint);
+//! ri_service_mesh_free(mesh);
+//! ri_service_mesh_config_free(config);
 //!
 //! printf("Service mesh shutdown complete\n");
 //! ```
 //!
 //! ## Dependencies
 //!
-//! This module depends on the following DMSC components:
+//! This module depends on the following Ri components:
 //!
 //! - `crate::service_mesh`: Rust service mesh module implementation
 //! - `crate::prelude`: Common types and traits
@@ -327,18 +327,18 @@
 //! - `service-mesh-metrics`: Enable metrics collection
 //! - `service-mesh-dns`: Enable DNS-based service discovery
 
-use crate::service_mesh::{DMSCServiceEndpoint, DMSCServiceMesh, DMSCServiceMeshConfig};
+use crate::service_mesh::{RiServiceEndpoint, RiServiceMesh, RiServiceMeshConfig};
 
 
-c_wrapper!(CDMSCServiceMesh, DMSCServiceMesh);
-c_wrapper!(CDMSCServiceMeshConfig, DMSCServiceMeshConfig);
-c_wrapper!(CDMSCServiceEndpoint, DMSCServiceEndpoint);
+c_wrapper!(CRiServiceMesh, RiServiceMesh);
+c_wrapper!(CRiServiceMeshConfig, RiServiceMeshConfig);
+c_wrapper!(CRiServiceEndpoint, RiServiceEndpoint);
 
-// DMSCServiceMeshConfig constructors and destructors
+// RiServiceMeshConfig constructors and destructors
 c_constructor!(
-    dmsc_service_mesh_config_new,
-    CDMSCServiceMeshConfig,
-    DMSCServiceMeshConfig,
-    DMSCServiceMeshConfig::default()
+    ri_service_mesh_config_new,
+    CRiServiceMeshConfig,
+    RiServiceMeshConfig,
+    RiServiceMeshConfig::default()
 );
-c_destructor!(dmsc_service_mesh_config_free, CDMSCServiceMeshConfig);
+c_destructor!(ri_service_mesh_config_free, CRiServiceMeshConfig);

@@ -1,7 +1,7 @@
 //! Copyright © 2025-2026 Wenze Wei. All Rights Reserved.
 //!
-//! This file is part of DMSC.
-//! The DMSC project belongs to the Dunimd Team.
+//! This file is part of Ri.
+//! The Ri project belongs to the Dunimd Team.
 //!
 //! Licensed under the Apache License, Version 2.0 (the "License");
 //! You may not use this file except in compliance with the License.
@@ -21,7 +21,7 @@
 //!
 //! This module provides a Redis-based cache implementation that offers persistence,
 //! distributed caching capabilities, and automatic expiration handling. It implements
-//! the [`DMSCCache`](crate::cache::DMSCCache) trait for consistency with other cache backends.
+//! the [`RiCache`](crate::cache::RiCache) trait for consistency with other cache backends.
 //!
 //! ## Key Features
 //!
@@ -37,18 +37,18 @@
 //!
 //! 1. **Reliability**: Leverages Redis' proven persistence and clustering capabilities
 //! 2. **Efficiency**: Connection pooling for optimal resource utilization
-//! 3. **Consistency**: Same interface as other backends via DMSCCache trait
+//! 3. **Consistency**: Same interface as other backends via RiCache trait
 //! 4. **Observability**: Comprehensive statistics for monitoring cache performance
 //! 5. **Safety First**: Pattern-based operations prevent accidental data loss
 //!
 //! ## Usage Example
 //!
 //! ```rust,ignore
-//! use dmsc::cache::backends::DMSCRedisCache;
+//! use ri::cache::backends::RiRedisCache;
 //!
-//! async fn example() -> dmsc::core::DMSCResult<()> {
+//! async fn example() -> ri::core::RiResult<()> {
 //!     // Create a Redis cache instance
-//!     let redis_cache = DMSCRedisCache::new("redis://localhost:6379").await?;
+//!     let redis_cache = RiRedisCache::new("redis://localhost:6379").await?;
 //!
 //!     // Set a value with expiration
 //!     redis_cache.set("user:123", "{\"name\": \"Alice\"}", Some(3600)).await?;
@@ -75,21 +75,21 @@ use redis::{AsyncCommands, Client};
 use redis::aio::ConnectionManager;
 use std::sync::Arc;
 use std::ops::AddAssign;
-use crate::cache::{DMSCCache, DMSCCacheStats};
-use crate::core::DMSCResult;
+use crate::cache::{RiCache, RiCacheStats};
+use crate::core::RiResult;
 
 /// Redis cache implementation.
 ///
 /// This struct provides a Redis-based cache implementation that leverages Redis'
 /// persistence, distributed capabilities, and built-in expiration mechanism.
-pub struct DMSCRedisCache {
+pub struct RiRedisCache {
     /// Redis connection manager for efficient connection pooling
     connection: Arc<ConnectionManager>,
     /// Thread-safe statistics tracking
     stats: Arc<dashmap::DashMap<&'static str, u64>>,
 }
 
-impl DMSCRedisCache {
+impl RiRedisCache {
     /// Creates a new Redis cache instance.
     ///
     /// # Parameters
@@ -98,17 +98,17 @@ impl DMSCRedisCache {
     ///
     /// # Returns
     ///
-    /// A new instance of `DMSCRedisCache`
+    /// A new instance of `RiRedisCache`
     ///
     /// # Errors
     ///
     /// Returns an error if the Redis client cannot be created or if the connection fails
-    pub async fn new(redis_url: &str) -> crate::core::DMSCResult<Self> {
+    pub async fn new(redis_url: &str) -> crate::core::RiResult<Self> {
         let client = Client::open(redis_url)
-            .map_err(|e| crate::core::DMSCError::Other(format!("Redis client error: {e}")))?;
+            .map_err(|e| crate::core::RiError::Other(format!("Redis client error: {e}")))?;
 
         let connection = ConnectionManager::new(client).await
-            .map_err(|e| crate::core::DMSCError::Other(format!("Redis connection error: {e}")))?;
+            .map_err(|e| crate::core::RiError::Other(format!("Redis connection error: {e}")))?;
 
         let stats = dashmap::DashMap::new();
         stats.insert("hit_count", 0);
@@ -123,7 +123,7 @@ impl DMSCRedisCache {
 }
 
 #[async_trait::async_trait]
-impl DMSCCache for DMSCRedisCache {
+impl RiCache for RiRedisCache {
     /// Gets a value from Redis cache.
     ///
     /// # Parameters
@@ -140,7 +140,7 @@ impl DMSCCache for DMSCRedisCache {
     /// 2. Attempts to parse as JSON string
     /// 3. Updates hit/miss statistics accordingly
     /// 4. Returns the parsed string value
-    async fn get(&self, key: &str) -> DMSCResult<Option<String>> {
+    async fn get(&self, key: &str) -> RiResult<Option<String>> {
         let mut conn = (*self.connection).clone();
 
         let result: redis::RedisResult<String> = conn.get(key).await;
@@ -193,7 +193,7 @@ impl DMSCCache for DMSCRedisCache {
     ///
     /// 1. Serializes the string value
     /// 2. Uses SET or SETEX command depending on TTL specification
-    async fn set(&self, key: &str, value: &str, ttl_seconds: Option<u64>) -> crate::core::DMSCResult<()> {
+    async fn set(&self, key: &str, value: &str, ttl_seconds: Option<u64>) -> crate::core::RiResult<()> {
         let mut conn = (*self.connection).clone();
 
         let result: redis::RedisResult<()> = match ttl_seconds {
@@ -205,7 +205,7 @@ impl DMSCCache for DMSCRedisCache {
             }
         };
 
-        result.map_err(|e| crate::core::DMSCError::Other(format!("Redis set error: {e}")))?;
+        result.map_err(|e| crate::core::RiError::Other(format!("Redis set error: {e}")))?;
         Ok(())
     }
 
@@ -218,10 +218,10 @@ impl DMSCCache for DMSCRedisCache {
     /// # Returns
     ///
     /// `Ok(true)` if the key was found and deleted, `Ok(false)` if the key didn't exist
-    async fn delete(&self, key: &str) -> crate::core::DMSCResult<bool> {
+    async fn delete(&self, key: &str) -> crate::core::RiResult<bool> {
         let mut conn = (*self.connection).clone();
         let result: redis::RedisResult<bool> = conn.del(key).await;
-        result.map_err(|e| crate::core::DMSCError::Other(format!("Redis delete error: {e}")))
+        result.map_err(|e| crate::core::RiError::Other(format!("Redis delete error: {e}")))
     }
 
     /// Checks if a key exists in Redis cache.
@@ -244,18 +244,18 @@ impl DMSCCache for DMSCRedisCache {
     ///
     /// # Returns
     ///
-    /// A `DMSCResult<Vec<String>>` containing all cache keys matching the DMSC pattern
-    async fn keys(&self) -> crate::core::DMSCResult<Vec<String>> {
+    /// A `RiResult<Vec<String>>` containing all cache keys matching the Ri pattern
+    async fn keys(&self) -> crate::core::RiResult<Vec<String>> {
         let mut conn = (*self.connection).clone();
 
-        let pattern = "dmsc:cache:*";
+        let pattern = "ri:cache:*";
         let keys: Vec<String> = conn.keys(pattern).await
-            .map_err(|e| crate::core::DMSCError::Other(format!("Redis keys error: {e}")))?;
+            .map_err(|e| crate::core::RiError::Other(format!("Redis keys error: {e}")))?;
 
         Ok(keys)
     }
 
-    /// Clears all DMSC-related cache entries from Redis.
+    /// Clears all Ri-related cache entries from Redis.
     ///
     /// # Returns
     ///
@@ -263,19 +263,19 @@ impl DMSCCache for DMSCRedisCache {
     ///
     /// # Notes
     ///
-    /// - Uses the pattern "dmsc:cache:*" to avoid clearing all Redis data
-    /// - Only clears keys matching the DMSC cache pattern
-    async fn clear(&self) -> crate::core::DMSCResult<()> {
+    /// - Uses the pattern "ri:cache:*" to avoid clearing all Redis data
+    /// - Only clears keys matching the Ri cache pattern
+    async fn clear(&self) -> crate::core::RiResult<()> {
         let mut conn = (*self.connection).clone();
 
         // Use a specific pattern to avoid clearing all Redis data
-        let pattern = "dmsc:cache:*";
+        let pattern = "ri:cache:*";
         let keys: Vec<String> = conn.keys(pattern).await
-            .map_err(|e| crate::core::DMSCError::Other(format!("Redis keys error: {e}")))?;
+            .map_err(|e| crate::core::RiError::Other(format!("Redis keys error: {e}")))?;
 
         if !keys.is_empty() {
             conn.del::<_, ()>(keys).await
-                .map_err(|e| crate::core::DMSCError::Other(format!("Redis clear error: {e}")))?;
+                .map_err(|e| crate::core::RiError::Other(format!("Redis clear error: {e}")))?;
         }
 
         Ok(())
@@ -285,7 +285,7 @@ impl DMSCCache for DMSCRedisCache {
     ///
     /// # Returns
     ///
-    /// A `DMSCCacheStats` struct containing cache statistics
+    /// A `RiCacheStats` struct containing cache statistics
     ///
     /// # Statistics Included
     ///
@@ -295,7 +295,7 @@ impl DMSCCache for DMSCRedisCache {
     /// - Error count (used as eviction count)
     /// - Average hit rate
     /// - Memory usage (always 0 as Redis manages memory)
-    async fn stats(&self) -> DMSCCacheStats {
+    async fn stats(&self) -> RiCacheStats {
         let hit_count = self.stats.get("hit_count")
             .map(|entry| *entry.value())
             .unwrap_or(0);
@@ -319,7 +319,7 @@ impl DMSCCache for DMSCRedisCache {
             Err(_) => 0,
         };
 
-        DMSCCacheStats {
+        RiCacheStats {
             hits: hit_count,
             misses: miss_count,
             entries: total_keys,
@@ -340,7 +340,7 @@ impl DMSCCache for DMSCRedisCache {
     /// # Notes
     ///
     /// Redis uses an active expiration policy with lazy deletion, so no manual cleanup is needed
-    async fn cleanup_expired(&self) -> crate::core::DMSCResult<usize> {
+    async fn cleanup_expired(&self) -> crate::core::RiResult<usize> {
         // Redis automatically handles expiration
         Ok(0)
     }

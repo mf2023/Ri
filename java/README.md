@@ -1,13 +1,13 @@
 <div align="center">
 
 <h1 style="display: flex; flex-direction: column; align-items: center; gap: 12px; margin-bottom: 8px;">
-  <span style="display: flex; align-items: center; gap: 12px;"><img src="../assets/svg/dmsc.svg" width="48" height="48" alt="DMSC">Dunimd Middleware Service</span>
-  <span style="font-size: 0.6em; color: #666; font-weight: normal;">DMSC Library for Java</span>
+  <span style="display: flex; align-items: center; gap: 12px;"><img src="../assets/svg/ri.svg" width="48" height="48" alt="Ri">Ri</span>
+  <span style="font-size: 0.6em; color: #666; font-weight: normal;">Ri Library for Java</span>
 </h1>
 
 English | [简体中文](README.zh.md)
 
-[Help Documentation](https://mf2023.github.io/DMSC/dmsc/) | [Changelog](CHANGELOG.md) | [Security](../SECURITY.md) | [Contributing](../CONTRIBUTING.md) | [Code of Conduct](../CODE_OF_CONDUCT.md)
+[Help Documentation](https://mf2023.github.io/Ri/ri/) | [Changelog](CHANGELOG.md) | [Security](../SECURITY.md) | [Contributing](../CONTRIBUTING.md) | [Code of Conduct](../CODE_OF_CONDUCT.md)
 
 <a href="https://x.com/Dunimd2025" target="_blank">
     <img alt="X" src="https://img.shields.io/badge/X-Dunimd-000000?style=flat-square&logo=x"/>
@@ -17,14 +17,14 @@ English | [简体中文](README.zh.md)
 </a>
 
 
-<a href="https://github.com/mf2023/DMSC" target="_blank">
-    <img alt="GitHub" src="https://img.shields.io/badge/GitHub-DMSC-181717?style=flat-square&logo=github"/>
+<a href="https://github.com/mf2023/Ri" target="_blank">
+    <img alt="GitHub" src="https://img.shields.io/badge/GitHub-Ri-181717?style=flat-square&logo=github"/>
 </a>
 <a href="https://gitee.com/dunimd" target="_blank">
     <img alt="Gitee" src="https://img.shields.io/badge/Gitee-Dunimd-C71D23?style=flat-square&logo=gitee"/>
 </a>
-<a href="https://gitcode.com/dunimd/dmsc.git" target="_blank">
-    <img alt="GitCode" src="https://img.shields.io/badge/GitCode-DMSC-FF6B35?style=flat-square&logo=git"/>
+<a href="https://gitcode.com/dunimd/ri.git" target="_blank">
+    <img alt="GitCode" src="https://img.shields.io/badge/GitCode-Ri-FF6B35?style=flat-square&logo=git"/>
 </a>
 <a href="https://huggingface.co/dunimd" target="_blank">
     <img alt="Hugging Face" src="https://img.shields.io/badge/Hugging%20Face-Dunimd-FFD21E?style=flat-square&logo=huggingface"/>
@@ -34,18 +34,18 @@ English | [简体中文](README.zh.md)
 </a>
 
 
-<a href="https://search.maven.org/artifact/com.dunimd/dmsc" target="_blank">
-    <img alt="Maven Central" src="https://img.shields.io/badge/Maven-DMSC-007396?style=flat-square&logo=apachemaven"/>
+<a href="https://search.maven.org/artifact/com.dunimd/ri" target="_blank">
+    <img alt="Maven Central" src="https://img.shields.io/badge/Maven-Ri-007396?style=flat-square&logo=apachemaven"/>
 </a>
 
-**DMSC (Dunimd Middleware Service)** — A high-performance Rust middleware framework with Java bindings. Built for enterprise-scale with modular architecture, built-in observability, and distributed systems support.
+**Ri (Ri)** — A high-performance Rust middleware framework with Java bindings. Built for enterprise-scale with modular architecture, built-in observability, and distributed systems support.
 
 </div>
 
 <h2 align="center">🏗️ Core Architecture</h2>
 
 ### 📐 Modular Design
-DMSC adopts a highly modular architecture with 18 core modules, enabling on-demand composition and seamless extension:
+Ri adopts a highly modular architecture with 18 core modules, enabling on-demand composition and seamless extension:
 
 <div align="center">
 
@@ -86,7 +86,7 @@ DMSC adopts a highly modular architecture with 18 core modules, enabling on-dema
 ```xml
 <dependency>
     <groupId>com.dunimd</groupId>
-    <artifactId>dmsc</artifactId>
+    <artifactId>ri</artifactId>
     <version>0.1.8</version>
 </dependency>
 ```
@@ -94,7 +94,7 @@ DMSC adopts a highly modular architecture with 18 core modules, enabling on-dema
 #### Gradle
 
 ```groovy
-implementation 'com.dunimd:dmsc:0.1.8'
+implementation 'com.dunimd:ri:0.1.8'
 ```
 
 <h2 align="center">⚡ Quick Start</h2>
@@ -102,18 +102,18 @@ implementation 'com.dunimd:dmsc:0.1.8'
 ### Core API Usage
 
 ```java
-import com.dunimd.dmsc.*;
+import com.dunimd.ri.*;
 
 public class Main {
     public static void main(String[] args) {
         // Build service runtime
-        DMSCAppRuntime runtime = new DMSCAppBuilder()
+        RiAppRuntime runtime = new RiAppBuilder()
             .withConfig("config.yaml")
             .build();
         
         // Check running status
         if (runtime.isRunning()) {
-            System.out.println("DMSC is running!");
+            System.out.println("Ri is running!");
         }
         
         // Shutdown application
@@ -125,16 +125,16 @@ public class Main {
 ### Cache Management Example
 
 ```java
-import com.dunimd.dmsc.cache.*;
+import com.dunimd.ri.cache.*;
 
 // Create cache config
-DMSCCacheConfig config = new DMSCCacheConfig()
+RiCacheConfig config = new RiCacheConfig()
     .setEnabled(true)
     .setDefaultTtlSecs(3600)
-    .setBackendType(DMSCCacheBackendType.Memory);
+    .setBackendType(RiCacheBackendType.Memory);
 
 // Create cache module
-DMSCCacheModule cache = new DMSCCacheModule(config);
+RiCacheModule cache = new RiCacheModule(config);
 
 // Set cache value
 cache.set("user:123", "John Doe", 3600);
@@ -148,7 +148,7 @@ if (cache.exists("user:123")) {
 }
 
 // Get statistics
-DMSCCacheStats stats = cache.getStats();
+RiCacheStats stats = cache.getStats();
 System.out.println("Hits: " + stats.getHits());
 System.out.println("Hit rate: " + stats.getHitRate());
 ```
@@ -156,31 +156,31 @@ System.out.println("Hit rate: " + stats.getHitRate());
 ### Validation Example
 
 ```java
-import com.dunimd.dmsc.validation.*;
+import com.dunimd.ri.validation.*;
 
 // Validate email
-DMSCValidationResult emailResult = DMSCValidationModule.validateEmail("user@example.com");
+RiValidationResult emailResult = RiValidationModule.validateEmail("user@example.com");
 if (emailResult.isValid()) {
     System.out.println("Email is valid");
 }
 
 // Using validator builder
-DMSCValidatorBuilder builder = new DMSCValidatorBuilder("email")
+RiValidatorBuilder builder = new RiValidatorBuilder("email")
     .notEmpty()
     .maxLength(255)
     .isEmail();
 
-DMSCValidationRunner runner = builder.build();
-DMSCValidationResult result = runner.validate("user@example.com");
+RiValidationRunner runner = builder.build();
+RiValidationResult result = runner.validate("user@example.com");
 ```
 
 ### Configuration Management Example
 
 ```java
-import com.dunimd.dmsc.*;
+import com.dunimd.ri.*;
 
 // Create config from YAML
-DMSCConfig config = DMSCConfig.fromYaml("key: value");
+RiConfig config = RiConfig.fromYaml("key: value");
 
 // Get config value
 String value = config.get("key");
@@ -210,11 +210,11 @@ observability:
 
 <h2 align="center">🚀 Auto-Loading Mechanism</h2>
 
-DMSC Java bindings use an auto-loading mechanism. Users don't need to manually configure native library paths:
+Ri Java bindings use an auto-loading mechanism. Users don't need to manually configure native library paths:
 
 ```java
 // No manual loading required, auto-loads on first use
-DMSCCacheModule cache = new DMSCCacheModule(config);
+RiCacheModule cache = new RiCacheModule(config);
 // NativeLoader.autoLoad() is called automatically
 ```
 
@@ -236,7 +236,7 @@ A: JDK 8 and above are supported.
 A: Yes, the package includes the compiled Rust backend with JNI bindings, embedded in the JAR file.
 
 **Q: How to handle exceptions?**
-A: Use try-catch to catch `DMSCError` exceptions.
+A: Use try-catch to catch `RiError` exceptions.
 
 **Q: How to configure logging level?**
 A: Set `logging.level` in the configuration file, supporting DEBUG/INFO/WARN/ERROR levels.
@@ -244,9 +244,9 @@ A: Set `logging.level` in the configuration file, supporting DEBUG/INFO/WARN/ERR
 <h2 align="center">🌏 Community & Citation</h2>
 
 - Welcome to submit Issues and PRs!
-- Github: https://github.com/mf2023/DMSC.git
-- Gitee: https://gitee.com/dunimd/dmsc.git
-- GitCode: https://gitcode.com/dunimd/dmsc.git
+- Github: https://github.com/mf2023/Ri.git
+- Gitee: https://gitee.com/dunimd/ri.git
+- GitCode: https://gitcode.com/dunimd/ri.git
 
 <div align="center">
 

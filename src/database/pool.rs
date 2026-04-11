@@ -1,7 +1,7 @@
 //! Copyright © 2025-2026 Wenze Wei. All Rights Reserved.
 //!
-//! This file is part of DMSC.
-//! The DMSC project belongs to the Dunimd Team.
+//! This file is part of Ri.
+//! The Ri project belongs to the Dunimd Team.
 //!
 //! Licensed under the Apache License, Version 2.0 (the "License");
 //! You may not use this file except in compliance with the License.
@@ -15,8 +15,8 @@
 //! See the License for the specific language governing permissions and
 //! limitations under the License.
 
-use crate::core::DMSCResult;
-use crate::database::{DMSCDatabase, DMSCDatabaseConfig, DMSCDBResult, DMSCDBRow};
+use crate::core::RiResult;
+use crate::database::{RiDatabase, RiDatabaseConfig, RiDBResult, RiDBRow};
 use dashmap::DashMap;
 use std::sync::atomic::{AtomicU64, AtomicBool, Ordering};
 use std::sync::Arc;
@@ -145,12 +145,12 @@ impl DynamicPoolConfig {
 #[derive(Clone)]
 pub struct PooledDatabase {
     id: u32,
-    inner: Arc<dyn DMSCDatabase>,
-    pool: Arc<DMSCDatabasePool>,
+    inner: Arc<dyn RiDatabase>,
+    pool: Arc<RiDatabasePool>,
 }
 
 impl PooledDatabase {
-    pub fn new(id: u32, inner: Arc<dyn DMSCDatabase>, pool: Arc<DMSCDatabasePool>) -> Self {
+    pub fn new(id: u32, inner: Arc<dyn RiDatabase>, pool: Arc<RiDatabasePool>) -> Self {
         Self { id, inner, pool }
     }
 
@@ -158,19 +158,19 @@ impl PooledDatabase {
         self.id
     }
 
-    pub async fn execute(&self, sql: &str) -> DMSCResult<u64> {
+    pub async fn execute(&self, sql: &str) -> RiResult<u64> {
         self.inner.execute(sql).await
     }
 
-    pub async fn query(&self, sql: &str) -> DMSCResult<DMSCDBResult> {
+    pub async fn query(&self, sql: &str) -> RiResult<RiDBResult> {
         self.inner.query(sql).await
     }
 
-    pub async fn query_one(&self, sql: &str) -> DMSCResult<Option<DMSCDBRow>> {
+    pub async fn query_one(&self, sql: &str) -> RiResult<Option<RiDBRow>> {
         self.inner.query_one(sql).await
     }
 
-    pub async fn ping(&self) -> DMSCResult<bool> {
+    pub async fn ping(&self) -> RiResult<bool> {
         self.inner.ping().await
     }
 
@@ -184,24 +184,24 @@ impl PooledDatabase {
 }
 
 #[async_trait::async_trait]
-impl DMSCDatabase for PooledDatabase {
+impl RiDatabase for PooledDatabase {
     fn database_type(&self) -> crate::database::DatabaseType {
         self.inner.database_type()
     }
 
-    async fn execute(&self, sql: &str) -> DMSCResult<u64> {
+    async fn execute(&self, sql: &str) -> RiResult<u64> {
         self.inner.execute(sql).await
     }
 
-    async fn query(&self, sql: &str) -> DMSCResult<DMSCDBResult> {
+    async fn query(&self, sql: &str) -> RiResult<RiDBResult> {
         self.inner.query(sql).await
     }
 
-    async fn query_one(&self, sql: &str) -> DMSCResult<Option<DMSCDBRow>> {
+    async fn query_one(&self, sql: &str) -> RiResult<Option<RiDBRow>> {
         self.inner.query_one(sql).await
     }
 
-    async fn ping(&self) -> DMSCResult<bool> {
+    async fn ping(&self) -> RiResult<bool> {
         self.inner.ping().await
     }
 
@@ -209,33 +209,33 @@ impl DMSCDatabase for PooledDatabase {
         self.inner.is_connected()
     }
 
-    async fn close(&self) -> DMSCResult<()> {
+    async fn close(&self) -> RiResult<()> {
         self.pool.close().await
     }
 
-    async fn batch_execute(&self, sql: &str, params: &[Vec<serde_json::Value>]) -> DMSCResult<Vec<u64>> {
+    async fn batch_execute(&self, sql: &str, params: &[Vec<serde_json::Value>]) -> RiResult<Vec<u64>> {
         self.inner.batch_execute(sql, params).await
     }
 
-    async fn batch_query(&self, sql: &str, params: &[Vec<serde_json::Value>]) -> DMSCResult<Vec<DMSCDBResult>> {
+    async fn batch_query(&self, sql: &str, params: &[Vec<serde_json::Value>]) -> RiResult<Vec<RiDBResult>> {
         self.inner.batch_query(sql, params).await
     }
 
-    async fn execute_with_params(&self, sql: &str, params: &[serde_json::Value]) -> DMSCResult<u64> {
+    async fn execute_with_params(&self, sql: &str, params: &[serde_json::Value]) -> RiResult<u64> {
         self.inner.execute_with_params(sql, params).await
     }
 
-    async fn query_with_params(&self, sql: &str, params: &[serde_json::Value]) -> DMSCResult<DMSCDBResult> {
+    async fn query_with_params(&self, sql: &str, params: &[serde_json::Value]) -> RiResult<RiDBResult> {
         self.inner.query_with_params(sql, params).await
     }
 
-    async fn transaction(&self) -> DMSCResult<Box<dyn crate::database::DMSCDatabaseTransaction>> {
+    async fn transaction(&self) -> RiResult<Box<dyn crate::database::RiDatabaseTransaction>> {
         self.inner.transaction().await
     }
 }
 
 struct PoolConnection {
-    db: Arc<dyn DMSCDatabase>,
+    db: Arc<dyn RiDatabase>,
     acquired_at: Instant,
     created_at: Instant,
 }
@@ -269,8 +269,8 @@ impl LowUtilizationTracker {
 }
 
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
-pub struct DMSCDatabasePool {
-    config: DMSCDatabaseConfig,
+pub struct RiDatabasePool {
+    config: RiDatabaseConfig,
     connections: Arc<DashMap<u32, PoolConnection>>,
     available: Arc<DashMap<u32, PoolConnection>>,
     connection_ids: Arc<AtomicU64>,
@@ -288,8 +288,8 @@ pub struct DMSCDatabasePool {
     current_max_connections: Arc<AtomicU64>,
 }
 
-impl DMSCDatabasePool {
-    pub async fn new(config: DMSCDatabaseConfig) -> DMSCResult<Self> {
+impl RiDatabasePool {
+    pub async fn new(config: RiDatabaseConfig) -> RiResult<Self> {
         let dynamic_config = DynamicPoolConfig {
             enable_dynamic_scaling: true,
             scale_up_threshold: 0.8,
@@ -337,21 +337,21 @@ impl DMSCDatabasePool {
         Ok(pool)
     }
 
-    async fn create_connection(&self) -> DMSCResult<Arc<dyn DMSCDatabase>> {
+    async fn create_connection(&self) -> RiResult<Arc<dyn RiDatabase>> {
         match self.config.database_type {
             #[cfg(feature = "postgres")]
             crate::database::DatabaseType::Postgres => {
                 let connection_string = self.config.connection_string();
                 let db = crate::database::postgres::PostgresDatabase::new(&connection_string, self.config.clone()).await
-                    .map_err(|e| crate::core::DMSCError::Config(e.to_string()))?;
-                Ok(Arc::new(db) as Arc<dyn DMSCDatabase>)
+                    .map_err(|e| crate::core::RiError::Config(e.to_string()))?;
+                Ok(Arc::new(db) as Arc<dyn RiDatabase>)
             }
             #[cfg(feature = "mysql")]
             crate::database::DatabaseType::MySQL => {
                 let connection_string = self.config.connection_string();
                 let db = crate::database::mysql::MySQLDatabase::new(&connection_string, self.config.clone()).await
-                    .map_err(|e| crate::core::DMSCError::Config(e.to_string()))?;
-                Ok(Arc::new(db) as Arc<dyn DMSCDatabase>)
+                    .map_err(|e| crate::core::RiError::Config(e.to_string()))?;
+                Ok(Arc::new(db) as Arc<dyn RiDatabase>)
             }
             #[cfg(feature = "sqlite")]
             crate::database::DatabaseType::SQLite => {
@@ -360,11 +360,11 @@ impl DMSCDatabasePool {
                     crate::database::sqlite::SQLiteDatabase::new(&url, self.config.clone())
                 );
                 match db {
-                    Ok(db) => Ok(Arc::new(db) as Arc<dyn DMSCDatabase>),
-                    Err(e) => Err(crate::core::DMSCError::Config(e.to_string())),
+                    Ok(db) => Ok(Arc::new(db) as Arc<dyn RiDatabase>),
+                    Err(e) => Err(crate::core::RiError::Config(e.to_string())),
                 }
             }
-            _ => Err(crate::core::DMSCError::Config("Unsupported database type".to_string())),
+            _ => Err(crate::core::RiError::Config("Unsupported database type".to_string())),
         }
     }
 
@@ -379,7 +379,7 @@ impl DMSCDatabasePool {
         (active as f64) / (total as f64)
     }
 
-    pub async fn check_and_scale(&self) -> DMSCResult<()> {
+    pub async fn check_and_scale(&self) -> RiResult<()> {
         let dynamic_config = self.dynamic_config.read().unwrap().clone();
         
         if !dynamic_config.enable_dynamic_scaling {
@@ -402,7 +402,7 @@ impl DMSCDatabasePool {
         result
     }
 
-    async fn do_scaling(&self, dynamic_config: &DynamicPoolConfig) -> DMSCResult<()> {
+    async fn do_scaling(&self, dynamic_config: &DynamicPoolConfig) -> RiResult<()> {
         let utilization = self.utilization_rate();
         let total = self.total_connections.load(Ordering::SeqCst) as u32;
         let _active = self.active_connections.load(Ordering::SeqCst) as u32;
@@ -525,8 +525,8 @@ impl DMSCDatabasePool {
         self.current_max_connections.store(new_total, Ordering::SeqCst);
     }
 
-    pub async fn get(&self) -> DMSCResult<PooledDatabase> {
-        let _permit = self.semaphore.acquire().await.map_err(|e| crate::core::DMSCError::Config(e.to_string()))?;
+    pub async fn get(&self) -> RiResult<PooledDatabase> {
+        let _permit = self.semaphore.acquire().await.map_err(|e| crate::core::RiError::Config(e.to_string()))?;
 
         let mut reused_db = None;
         let mut reused_id = None;
@@ -586,7 +586,7 @@ impl DMSCDatabasePool {
         let _ = self.check_and_scale().await;
     }
 
-    pub async fn close(&self) -> DMSCResult<()> {
+    pub async fn close(&self) -> RiResult<()> {
         self.semaphore.close();
         for entry in self.connections.iter() {
             let _ = entry.value().db.close().await;
@@ -636,7 +636,7 @@ impl DMSCDatabasePool {
         self.current_max_connections.load(Ordering::SeqCst) as u32
     }
 
-    pub async fn force_scale_up(&self, count: u32) -> DMSCResult<()> {
+    pub async fn force_scale_up(&self, count: u32) -> RiResult<()> {
         let dynamic_config = self.dynamic_config.read().unwrap().clone();
         let total = self.total_connections.load(Ordering::SeqCst) as u32;
         
@@ -668,7 +668,7 @@ impl DMSCDatabasePool {
         Ok(())
     }
 
-    pub async fn force_scale_down(&self, count: u32) -> DMSCResult<()> {
+    pub async fn force_scale_down(&self, count: u32) -> RiResult<()> {
         let dynamic_config = self.dynamic_config.read().unwrap().clone();
         let total = self.total_connections.load(Ordering::SeqCst) as u32;
         
@@ -687,9 +687,9 @@ impl DMSCDatabasePool {
 
 #[cfg(feature = "pyo3")]
 #[pyo3::prelude::pymethods]
-impl DMSCDatabasePool {
+impl RiDatabasePool {
     #[new]
-    fn py_new(config: DMSCDatabaseConfig) -> Self {
+    fn py_new(config: RiDatabaseConfig) -> Self {
         let dynamic_config = DynamicPoolConfig {
             enable_dynamic_scaling: true,
             scale_up_threshold: 0.8,
@@ -733,7 +733,7 @@ impl DMSCDatabasePool {
         )
     }
 
-    fn get_config(&self) -> DMSCDatabaseConfig {
+    fn get_config(&self) -> RiDatabaseConfig {
         self.config.clone()
     }
 
@@ -794,7 +794,7 @@ impl DMSCDatabasePool {
     }
 }
 
-impl Clone for DMSCDatabasePool {
+impl Clone for RiDatabasePool {
     fn clone(&self) -> Self {
         Self {
             config: self.config.clone(),

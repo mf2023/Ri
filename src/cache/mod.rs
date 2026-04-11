@@ -1,7 +1,7 @@
 //! Copyright © 2025-2026 Wenze Wei. All Rights Reserved.
 //!
-//! This file is part of DMSC.
-//! The DMSC project belongs to the Dunimd Team.
+//! This file is part of Ri.
+//! The Ri project belongs to the Dunimd Team.
 //!
 //! Licensed under the Apache License, Version 2.0 (the "License");
 //! You may not use this file except in compliance with the License.
@@ -17,20 +17,20 @@
 
 //! # Cache Module
 //! 
-//! This module provides a comprehensive caching abstraction for DMSC, offering a unified interface
+//! This module provides a comprehensive caching abstraction for Ri, offering a unified interface
 //! with support for multiple backend implementations. It enables efficient data caching with
 //! configurable policies and backend selection.
 //! 
 //! ## Key Components
 //! 
-//! - **DMSCCacheModule**: Main cache module implementing both sync and async service module traits
-//! - **DMSCCacheManager**: Central cache management component
-//! - **DMSCCache**: Unified cache interface implemented by all backends
-//! - **DMSCCacheConfig**: Configuration for cache behavior
+//! - **RiCacheModule**: Main cache module implementing both sync and async service module traits
+//! - **RiCacheManager**: Central cache management component
+//! - **RiCache**: Unified cache interface implemented by all backends
+//! - **RiCacheConfig**: Configuration for cache behavior
 //! - **Backend Implementations**:
-//!   - **DMSCMemoryCache**: In-memory cache implementation (internal)
-//!   - **DMSCRedisCache**: Redis-based distributed cache (internal)
-//!   - **DMSCHybridCache**: Combined memory and Redis cache for optimal performance (internal)
+//!   - **RiMemoryCache**: In-memory cache implementation (internal)
+//!   - **RiRedisCache**: Redis-based distributed cache (internal)
+//!   - **RiHybridCache**: Combined memory and Redis cache for optimal performance (internal)
 //! 
 //! ## Design Principles
 //! 
@@ -46,22 +46,22 @@
 //! ## Usage
 //! 
 //! ```rust,ignore
-//! use dmsc::prelude::*;
+//! use ri::prelude::*;
 //! 
-//! async fn example() -> DMSCResult<()> {
+//! async fn example() -> RiResult<()> {
 //!     // Create cache configuration
-//!     let cache_config = DMSCCacheConfig {
+//!     let cache_config = RiCacheConfig {
 //!         enabled: true,
 //!         default_ttl_secs: 3600,
 //!         max_memory_mb: 512,
 //!         cleanup_interval_secs: 300,
-//!         backend_type: DMSCCacheBackendType::Memory,
+//!         backend_type: RiCacheBackendType::Memory,
 //!         redis_url: "redis://127.0.0.1:6379".to_string(),
 //!         redis_pool_size: 10,
 //!     };
 //!     
 //!     // Create cache module
-//!     let cache_module = DMSCCacheModule::new(cache_config);
+//!     let cache_module = RiCacheModule::new(cache_config);
 //!     
 //!     // Get cache manager
 //!     let cache_manager = cache_module.cache_manager();
@@ -85,35 +85,35 @@ mod manager;
 mod backends;
 mod config;
 
-pub use config::{DMSCCacheConfig, DMSCCacheBackendType, DMSCCachePolicy};
-pub use manager::{DMSCCacheManager, DMSCCacheEvent};
-pub use core::{DMSCCachedValue, DMSCCacheStats, DMSCCache, DMSCCacheEvent as CoreCacheEvent};
+pub use config::{RiCacheConfig, RiCacheBackendType, RiCachePolicy};
+pub use manager::{RiCacheManager, RiCacheEvent};
+pub use core::{RiCachedValue, RiCacheStats, RiCache, RiCacheEvent as CoreCacheEvent};
 // Re-export backend implementations
-pub use backends::DMSCMemoryCache;
+pub use backends::RiMemoryCache;
 #[cfg(feature = "redis")]
-pub use backends::{DMSCRedisCache, DMSCHybridCache};
+pub use backends::{RiRedisCache, RiHybridCache};
 
-use crate::core::{DMSCResult, DMSCServiceContext};
+use crate::core::{RiResult, RiServiceContext};
 use std::sync::Arc;
 use tokio::sync::RwLock;
 
 #[cfg(feature = "pyo3")]
 use pyo3::pymethods;
 
-/// Main cache module for DMSC.
+/// Main cache module for Ri.
 /// 
 /// This module provides a unified caching abstraction with support for multiple backend implementations.
 /// It implements both the `AsyncServiceModule` and `ServiceModule` traits for seamless integration
-/// into the DMSC application lifecycle.
+/// into the Ri application lifecycle.
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
-pub struct DMSCCacheModule {
+pub struct RiCacheModule {
     /// Cache configuration
-    config: DMSCCacheConfig,
+    config: RiCacheConfig,
     /// Cache manager wrapped in an async RwLock for thread-safe access
-    manager: std::sync::Arc<tokio::sync::RwLock<DMSCCacheManager>>,
+    manager: std::sync::Arc<tokio::sync::RwLock<RiCacheManager>>,
 }
 
-impl DMSCCacheModule {
+impl RiCacheModule {
     /// Creates a new cache module with the given configuration.
     /// 
     /// This method initializes the cache manager with the appropriate backend based on the
@@ -125,44 +125,44 @@ impl DMSCCacheModule {
     /// 
     /// # Returns
     /// 
-    /// A new `DMSCCacheModule` instance
-    pub async fn new(config: DMSCCacheConfig) -> Self {
+    /// A new `RiCacheModule` instance
+    pub async fn new(config: RiCacheConfig) -> Self {
         #[cfg(feature = "redis")]
-        let backend: std::sync::Arc<dyn crate::cache::DMSCCache> = match config.backend_type {
-            crate::cache::config::DMSCCacheBackendType::Memory => {
-                std::sync::Arc::new(DMSCMemoryCache::new())
+        let backend: std::sync::Arc<dyn crate::cache::RiCache> = match config.backend_type {
+            crate::cache::config::RiCacheBackendType::Memory => {
+                std::sync::Arc::new(RiMemoryCache::new())
             }
-            crate::cache::config::DMSCCacheBackendType::Redis => {
-                match DMSCRedisCache::new(&config.redis_url).await {
+            crate::cache::config::RiCacheBackendType::Redis => {
+                match RiRedisCache::new(&config.redis_url).await {
                     Ok(cache) => Arc::new(cache),
                     Err(e) => {
                         log::warn!("Failed to create Redis cache ({}): {}. Falling back to memory backend", config.redis_url, e);
-                        Arc::new(DMSCMemoryCache::new()) as Arc<dyn crate::cache::DMSCCache>
+                        Arc::new(RiMemoryCache::new()) as Arc<dyn crate::cache::RiCache>
                     }
                 }
             }
-            crate::cache::config::DMSCCacheBackendType::Hybrid => {
-                match DMSCHybridCache::new(&config.redis_url).await {
+            crate::cache::config::RiCacheBackendType::Hybrid => {
+                match RiHybridCache::new(&config.redis_url).await {
                     Ok(backend) => Arc::new(backend),
                     Err(e) => {
                         log::warn!("Failed to create hybrid cache backend (Redis URL: {}): {}. Falling back to memory backend", config.redis_url, e);
-                        Arc::new(DMSCMemoryCache::new()) as Arc<dyn crate::cache::DMSCCache>
+                        Arc::new(RiMemoryCache::new()) as Arc<dyn crate::cache::RiCache>
                     }
                 }
             }
         };
 
         #[cfg(not(feature = "redis"))]
-        let backend: std::sync::Arc<dyn crate::cache::DMSCCache> = match config.backend_type {
-            crate::cache::config::DMSCCacheBackendType::Memory => {
-                std::sync::Arc::new(DMSCMemoryCache::new())
+        let backend: std::sync::Arc<dyn crate::cache::RiCache> = match config.backend_type {
+            crate::cache::config::RiCacheBackendType::Memory => {
+                std::sync::Arc::new(RiMemoryCache::new())
             }
-            crate::cache::config::DMSCCacheBackendType::Redis | crate::cache::config::DMSCCacheBackendType::Hybrid => {
-                std::sync::Arc::new(DMSCMemoryCache::new())
+            crate::cache::config::RiCacheBackendType::Redis | crate::cache::config::RiCacheBackendType::Hybrid => {
+                std::sync::Arc::new(RiMemoryCache::new())
             }
         };
 
-        let manager = DMSCCacheManager::new(backend);
+        let manager = RiCacheManager::new(backend);
 
         Self {
             config,
@@ -181,61 +181,61 @@ impl DMSCCacheModule {
     /// 
     /// # Returns
     /// 
-    /// A new `DMSCCacheModule` instance
-    pub fn with_config(config: DMSCCacheConfig) -> Self {
+    /// A new `RiCacheModule` instance
+    pub fn with_config(config: RiCacheConfig) -> Self {
         #[cfg(feature = "redis")]
-        let backend: std::sync::Arc<dyn crate::cache::DMSCCache> = match config.backend_type {
-            crate::cache::config::DMSCCacheBackendType::Memory => {
-                std::sync::Arc::new(DMSCMemoryCache::new())
+        let backend: std::sync::Arc<dyn crate::cache::RiCache> = match config.backend_type {
+            crate::cache::config::RiCacheBackendType::Memory => {
+                std::sync::Arc::new(RiMemoryCache::new())
             }
-            crate::cache::config::DMSCCacheBackendType::Redis => {
+            crate::cache::config::RiCacheBackendType::Redis => {
                 match tokio::runtime::Handle::try_current() {
                     Ok(handle) => {
-                        match handle.block_on(DMSCRedisCache::new(&config.redis_url)) {
+                        match handle.block_on(RiRedisCache::new(&config.redis_url)) {
                             Ok(cache) => Arc::new(cache),
                             Err(e) => {
                                 log::warn!("Failed to create Redis cache ({}): {}. Falling back to memory backend", config.redis_url, e);
-                                Arc::new(DMSCMemoryCache::new()) as Arc<dyn crate::cache::DMSCCache>
+                                Arc::new(RiMemoryCache::new()) as Arc<dyn crate::cache::RiCache>
                             }
                         }
                     }
                     Err(_) => {
                         log::warn!("No Tokio runtime available for Redis cache creation. Falling back to memory backend");
-                        Arc::new(DMSCMemoryCache::new()) as Arc<dyn crate::cache::DMSCCache>
+                        Arc::new(RiMemoryCache::new()) as Arc<dyn crate::cache::RiCache>
                     }
                 }
             }
-            crate::cache::config::DMSCCacheBackendType::Hybrid => {
+            crate::cache::config::RiCacheBackendType::Hybrid => {
                 match tokio::runtime::Handle::try_current() {
                     Ok(handle) => {
-                        match handle.block_on(DMSCHybridCache::new(&config.redis_url)) {
+                        match handle.block_on(RiHybridCache::new(&config.redis_url)) {
                             Ok(backend) => Arc::new(backend),
                             Err(e) => {
                                 log::warn!("Failed to create hybrid cache backend (Redis URL: {}): {}. Falling back to memory backend", config.redis_url, e);
-                                Arc::new(DMSCMemoryCache::new()) as Arc<dyn crate::cache::DMSCCache>
+                                Arc::new(RiMemoryCache::new()) as Arc<dyn crate::cache::RiCache>
                             }
                         }
                     }
                     Err(_) => {
                         log::warn!("No Tokio runtime available for hybrid cache creation. Falling back to memory backend");
-                        Arc::new(DMSCMemoryCache::new()) as Arc<dyn crate::cache::DMSCCache>
+                        Arc::new(RiMemoryCache::new()) as Arc<dyn crate::cache::RiCache>
                     }
                 }
             }
         };
 
         #[cfg(not(feature = "redis"))]
-        let backend: std::sync::Arc<dyn crate::cache::DMSCCache> = match config.backend_type {
-            crate::cache::config::DMSCCacheBackendType::Memory => {
-                std::sync::Arc::new(DMSCMemoryCache::new())
+        let backend: std::sync::Arc<dyn crate::cache::RiCache> = match config.backend_type {
+            crate::cache::config::RiCacheBackendType::Memory => {
+                std::sync::Arc::new(RiMemoryCache::new())
             }
-            crate::cache::config::DMSCCacheBackendType::Redis | crate::cache::config::DMSCCacheBackendType::Hybrid => {
+            crate::cache::config::RiCacheBackendType::Redis | crate::cache::config::RiCacheBackendType::Hybrid => {
                 log::warn!("Redis feature not enabled. Falling back to memory backend");
-                std::sync::Arc::new(DMSCMemoryCache::new())
+                std::sync::Arc::new(RiMemoryCache::new())
             }
         };
 
-        let manager = DMSCCacheManager::new(backend);
+        let manager = RiCacheManager::new(backend);
 
         Self {
             config,
@@ -250,17 +250,17 @@ impl DMSCCacheModule {
     /// 
     /// # Returns
     /// 
-    /// An Arc<RwLock<DMSCCacheManager>> providing thread-safe access to the cache manager
-    pub fn cache_manager(&self) -> Arc<RwLock<DMSCCacheManager>> {
+    /// An Arc<RwLock<RiCacheManager>> providing thread-safe access to the cache manager
+    pub fn cache_manager(&self) -> Arc<RwLock<RiCacheManager>> {
         self.manager.clone()
     }
 }
 
 #[cfg(feature = "pyo3")]
 #[pymethods]
-impl DMSCCacheModule {
+impl RiCacheModule {
     #[new]
-    fn py_new(config: DMSCCacheConfig) -> Result<Self, pyo3::PyErr> {
+    fn py_new(config: RiCacheConfig) -> Result<Self, pyo3::PyErr> {
         let rt = match tokio::runtime::Runtime::new() {
             Ok(r) => r,
             Err(e) => {
@@ -281,14 +281,14 @@ impl DMSCCacheModule {
 }
 
 #[async_trait::async_trait]
-impl crate::core::DMSCModule for DMSCCacheModule {
+impl crate::core::RiModule for RiCacheModule {
     /// Returns the name of the cache module.
     /// 
     /// # Returns
     /// 
     /// The module name as a string
     fn name(&self) -> &str {
-        "DMSC.Cache"
+        "Ri.Cache"
     }
     
     /// Indicates whether the cache module is critical.
@@ -318,9 +318,9 @@ impl crate::core::DMSCModule for DMSCCacheModule {
     /// 
     /// # Returns
     /// 
-    /// A `DMSCResult<()>` indicating success or failure
-    async fn init(&mut self, ctx: &mut DMSCServiceContext) -> DMSCResult<()> {
-        log::info!("Initializing DMSC Cache Module");
+    /// A `RiResult<()>` indicating success or failure
+    async fn init(&mut self, ctx: &mut RiServiceContext) -> RiResult<()> {
+        log::info!("Initializing Ri Cache Module");
         
         // Load configuration
         let binding = ctx.config();
@@ -329,43 +329,43 @@ impl crate::core::DMSCModule for DMSCCacheModule {
         // Update configuration if provided
         if let Some(cache_config) = cfg.get("cache") {
             self.config = serde_yaml::from_str(cache_config)
-                .unwrap_or_else(|_| DMSCCacheConfig::default());
+                .unwrap_or_else(|_| RiCacheConfig::default());
         } else {
-            self.config = DMSCCacheConfig::default();
+            self.config = RiCacheConfig::default();
         }
         
         // Initialize the cache manager based on configuration
         match self.config.backend_type {
-            crate::cache::config::DMSCCacheBackendType::Memory => {
-                let backend = Arc::new(DMSCMemoryCache::new());
-                let manager = DMSCCacheManager::new(backend);
+            crate::cache::config::RiCacheBackendType::Memory => {
+                let backend = Arc::new(RiMemoryCache::new());
+                let manager = RiCacheManager::new(backend);
                 *self.manager.write().await = manager;
             }
             #[cfg(feature = "redis")]
-            crate::cache::config::DMSCCacheBackendType::Redis => {
-                let backend = Arc::new(DMSCRedisCache::new(&self.config.redis_url).await?);
-                let manager = DMSCCacheManager::new(backend);
+            crate::cache::config::RiCacheBackendType::Redis => {
+                let backend = Arc::new(RiRedisCache::new(&self.config.redis_url).await?);
+                let manager = RiCacheManager::new(backend);
                 *self.manager.write().await = manager;
             }
             #[cfg(feature = "redis")]
-            crate::cache::config::DMSCCacheBackendType::Hybrid => {
-                let backend = Arc::new(DMSCHybridCache::new(&self.config.redis_url).await?);
-                let manager = DMSCCacheManager::new(backend);
+            crate::cache::config::RiCacheBackendType::Hybrid => {
+                let backend = Arc::new(RiHybridCache::new(&self.config.redis_url).await?);
+                let manager = RiCacheManager::new(backend);
                 *self.manager.write().await = manager;
             }
             #[cfg(not(feature = "redis"))]
-            crate::cache::config::DMSCCacheBackendType::Redis | crate::cache::config::DMSCCacheBackendType::Hybrid => {
+            crate::cache::config::RiCacheBackendType::Redis | crate::cache::config::RiCacheBackendType::Hybrid => {
                 // Fallback to memory cache if Redis is not enabled
-                let backend = Arc::new(DMSCMemoryCache::new());
-                let manager = DMSCCacheManager::new(backend);
+                let backend = Arc::new(RiMemoryCache::new());
+                let manager = RiCacheManager::new(backend);
                 *self.manager.write().await = manager;
             }
         }
         
                 // Log successful initialization
-        if let Ok(fs) = crate::fs::DMSCFileSystem::new_auto_root() {
-            let logger = crate::log::DMSCLogger::new(&crate::log::DMSCLogConfig::default(), fs);
-            let _ = logger.info("cache", "DMSC Cache Module initialized successfully");
+        if let Ok(fs) = crate::fs::RiFileSystem::new_auto_root() {
+            let logger = crate::log::RiLogger::new(&crate::log::RiLogConfig::default(), fs);
+            let _ = logger.info("cache", "Ri Cache Module initialized successfully");
         }
         Ok(())
     }
@@ -383,9 +383,9 @@ impl crate::core::DMSCModule for DMSCCacheModule {
     /// 
     /// # Returns
     /// 
-    /// A `DMSCResult<()>` indicating success or failure
-    async fn after_shutdown(&mut self, _ctx: &mut DMSCServiceContext) -> DMSCResult<()> {
-        log::info!("Cleaning up DMSC Cache Module");
+    /// A `RiResult<()>` indicating success or failure
+    async fn after_shutdown(&mut self, _ctx: &mut RiServiceContext) -> RiResult<()> {
+        log::info!("Cleaning up Ri Cache Module");
         
         let manager = self.manager.read().await;
         let stats = manager.stats().await;
@@ -394,14 +394,14 @@ impl crate::core::DMSCModule for DMSCCacheModule {
         // Cleanup expired entries
         let cleaned = manager.cleanup_expired().await?;
         log::info!("Cleaned up {cleaned} expired cache entries");
-        log::info!("DMSC Cache Module cleanup completed");
+        log::info!("Ri Cache Module cleanup completed");
         Ok(())
     }
 }
 
-impl crate::core::ServiceModule for DMSCCacheModule {
+impl crate::core::ServiceModule for RiCacheModule {
     fn name(&self) -> &str {
-        "DMSC.Cache"
+        "Ri.Cache"
     }
 
     fn is_critical(&self) -> bool {
@@ -416,15 +416,15 @@ impl crate::core::ServiceModule for DMSCCacheModule {
         vec![]
     }
 
-    fn init(&mut self, _ctx: &mut crate::core::DMSCServiceContext) -> crate::core::DMSCResult<()> {
+    fn init(&mut self, _ctx: &mut crate::core::RiServiceContext) -> crate::core::RiResult<()> {
         Ok(())
     }
 
-    fn start(&mut self, _ctx: &mut crate::core::DMSCServiceContext) -> crate::core::DMSCResult<()> {
+    fn start(&mut self, _ctx: &mut crate::core::RiServiceContext) -> crate::core::RiResult<()> {
         Ok(())
     }
 
-    fn shutdown(&mut self, _ctx: &mut crate::core::DMSCServiceContext) -> crate::core::DMSCResult<()> {
+    fn shutdown(&mut self, _ctx: &mut crate::core::RiServiceContext) -> crate::core::RiResult<()> {
         Ok(())
     }
 }

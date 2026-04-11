@@ -1,7 +1,7 @@
 //! Copyright © 2025-2026 Wenze Wei. All Rights Reserved.
 //!
-//! This file is part of DMSC.
-//! The DMSC project belongs to the Dunimd Team.
+//! This file is part of Ri.
+//! The Ri project belongs to the Dunimd Team.
 //!
 //! Licensed under the Apache License, Version 2.0 (the "License");
 //! You may not use this file except in compliance with the License.
@@ -21,10 +21,10 @@ use sqlx::{Row, Column};
 use std::sync::Arc;
 use tokio::sync::Mutex;
 
-use crate::core::{DMSCResult, DMSCError};
+use crate::core::{RiResult, RiError};
 use crate::database::{
-    DMSCDatabase, DMSCDatabaseConfig, DatabaseType,
-    DMSCDBResult, DMSCDBRow
+    RiDatabase, RiDatabaseConfig, DatabaseType,
+    RiDBResult, RiDBRow
 };
 
 #[derive(Clone)]
@@ -32,19 +32,19 @@ use crate::database::{
 #[allow(dead_code)]
 pub struct PostgresDatabase {
     pool: PgPool,
-    config: DMSCDatabaseConfig,
+    config: RiDatabaseConfig,
 }
 
 impl PostgresDatabase {
-    pub async fn new(database_url: &str, config: DMSCDatabaseConfig) -> Result<Self, DMSCError> {
+    pub async fn new(database_url: &str, config: RiDatabaseConfig) -> Result<Self, RiError> {
         let pool = PgPool::connect(database_url)
             .await
-            .map_err(|e| DMSCError::Other(format!("Failed to connect to PostgreSQL: {}", e)))?;
+            .map_err(|e| RiError::Other(format!("Failed to connect to PostgreSQL: {}", e)))?;
         
         Ok(Self { pool, config })
     }
 
-    fn row_to_dmsc_row(row: &PgRow) -> DMSCDBRow {
+    fn row_to_ri_row(row: &PgRow) -> RiDBRow {
         let columns: Vec<String> = (0..row.len())
             .map(|i| row.column(i).name().to_string())
             .collect();
@@ -53,7 +53,7 @@ impl PostgresDatabase {
             .map(|idx| Self::value_to_json(row, idx))
             .collect();
 
-        DMSCDBRow { columns, values }
+        RiDBRow { columns, values }
     }
 
     fn value_to_json(row: &PgRow, idx: usize) -> Option<serde_json::Value> {
@@ -85,59 +85,59 @@ impl PostgresDatabase {
 }
 
 #[async_trait]
-impl DMSCDatabase for PostgresDatabase {
+impl RiDatabase for PostgresDatabase {
     fn database_type(&self) -> DatabaseType {
         DatabaseType::Postgres
     }
 
-    async fn execute(&self, sql: &str) -> DMSCResult<u64> {
+    async fn execute(&self, sql: &str) -> RiResult<u64> {
         let result = sqlx::query::<sqlx::Postgres>(sql)
             .execute(&self.pool)
             .await
-            .map_err(|e| DMSCError::Other(format!("PostgreSQL execute error: {}", e)))?;
+            .map_err(|e| RiError::Other(format!("PostgreSQL execute error: {}", e)))?;
         Ok(result.rows_affected())
     }
 
-    async fn query(&self, sql: &str) -> DMSCResult<DMSCDBResult> {
+    async fn query(&self, sql: &str) -> RiResult<RiDBResult> {
         let rows = sqlx::query::<sqlx::Postgres>(sql)
             .fetch_all(&self.pool)
             .await
-            .map_err(|e| DMSCError::Other(format!("PostgreSQL query error: {}", e)))?;
+            .map_err(|e| RiError::Other(format!("PostgreSQL query error: {}", e)))?;
 
-        let dmsc_rows: Vec<DMSCDBRow> = rows.iter()
-            .map(|row| Self::row_to_dmsc_row(row))
+        let ri_rows: Vec<RiDBRow> = rows.iter()
+            .map(|row| Self::row_to_ri_row(row))
             .collect();
 
-        Ok(DMSCDBResult::with_rows(dmsc_rows))
+        Ok(RiDBResult::with_rows(ri_rows))
     }
 
-    async fn query_one(&self, sql: &str) -> DMSCResult<Option<DMSCDBRow>> {
+    async fn query_one(&self, sql: &str) -> RiResult<Option<RiDBRow>> {
         let row = sqlx::query::<sqlx::Postgres>(sql)
             .fetch_optional(&self.pool)
             .await
-            .map_err(|e| DMSCError::Other(format!("PostgreSQL query_one error: {}", e)))?;
+            .map_err(|e| RiError::Other(format!("PostgreSQL query_one error: {}", e)))?;
 
-        Ok(row.map(|r| Self::row_to_dmsc_row(&r)))
+        Ok(row.map(|r| Self::row_to_ri_row(&r)))
     }
 
-    async fn ping(&self) -> DMSCResult<bool> {
+    async fn ping(&self) -> RiResult<bool> {
         sqlx::query::<sqlx::Postgres>("SELECT 1")
             .fetch_one(&self.pool)
             .await
             .map(|_| true)
-            .map_err(|e| DMSCError::Other(format!("PostgreSQL ping error: {}", e)))
+            .map_err(|e| RiError::Other(format!("PostgreSQL ping error: {}", e)))
     }
 
     fn is_connected(&self) -> bool {
         !self.pool.is_closed()
     }
 
-    async fn close(&self) -> DMSCResult<()> {
+    async fn close(&self) -> RiResult<()> {
         self.pool.close().await;
         Ok(())
     }
 
-    async fn batch_execute(&self, sql: &str, params: &[Vec<serde_json::Value>]) -> DMSCResult<Vec<u64>> {
+    async fn batch_execute(&self, sql: &str, params: &[Vec<serde_json::Value>]) -> RiResult<Vec<u64>> {
         let mut results = Vec::with_capacity(params.len());
         for param_set in params {
             let result = self.execute_with_params(sql, param_set).await?;
@@ -146,7 +146,7 @@ impl DMSCDatabase for PostgresDatabase {
         Ok(results)
     }
 
-    async fn batch_query(&self, sql: &str, params: &[Vec<serde_json::Value>]) -> DMSCResult<Vec<DMSCDBResult>> {
+    async fn batch_query(&self, sql: &str, params: &[Vec<serde_json::Value>]) -> RiResult<Vec<RiDBResult>> {
         let mut results = Vec::with_capacity(params.len());
         for param_set in params {
             let result = self.query_with_params(sql, param_set).await?;
@@ -155,7 +155,7 @@ impl DMSCDatabase for PostgresDatabase {
         Ok(results)
     }
 
-    async fn execute_with_params(&self, sql: &str, params: &[serde_json::Value]) -> DMSCResult<u64> {
+    async fn execute_with_params(&self, sql: &str, params: &[serde_json::Value]) -> RiResult<u64> {
         let mut query = sqlx::query::<sqlx::Postgres>(sql);
         
         for param in params {
@@ -165,11 +165,11 @@ impl DMSCDatabase for PostgresDatabase {
         let result = query
             .execute(&self.pool)
             .await
-            .map_err(|e| DMSCError::Other(format!("PostgreSQL execute_with_params error: {}", e)))?;
+            .map_err(|e| RiError::Other(format!("PostgreSQL execute_with_params error: {}", e)))?;
         Ok(result.rows_affected())
     }
 
-    async fn query_with_params(&self, sql: &str, params: &[serde_json::Value]) -> DMSCResult<DMSCDBResult> {
+    async fn query_with_params(&self, sql: &str, params: &[serde_json::Value]) -> RiResult<RiDBResult> {
         let mut query = sqlx::query::<sqlx::Postgres>(sql);
         
         for param in params {
@@ -179,18 +179,18 @@ impl DMSCDatabase for PostgresDatabase {
         let rows = query
             .fetch_all(&self.pool)
             .await
-            .map_err(|e| DMSCError::Other(format!("PostgreSQL query_with_params error: {}", e)))?;
+            .map_err(|e| RiError::Other(format!("PostgreSQL query_with_params error: {}", e)))?;
 
-        let dmsc_rows: Vec<DMSCDBRow> = rows.iter()
-            .map(|row| Self::row_to_dmsc_row(row))
+        let ri_rows: Vec<RiDBRow> = rows.iter()
+            .map(|row| Self::row_to_ri_row(row))
             .collect();
 
-        Ok(DMSCDBResult::with_rows(dmsc_rows))
+        Ok(RiDBResult::with_rows(ri_rows))
     }
 
-    async fn transaction(&self) -> DMSCResult<Box<dyn crate::database::DMSCDatabaseTransaction>> {
+    async fn transaction(&self) -> RiResult<Box<dyn crate::database::RiDatabaseTransaction>> {
         let tx = self.pool.begin().await
-            .map_err(|e| DMSCError::Other(format!("PostgreSQL transaction begin error: {}", e)))?;
+            .map_err(|e| RiError::Other(format!("PostgreSQL transaction begin error: {}", e)))?;
 
         Ok(Box::new(PostgresTransaction::new(tx)))
     }
@@ -209,55 +209,55 @@ impl PostgresTransaction {
 }
 
 #[async_trait::async_trait]
-impl crate::database::DMSCDatabaseTransaction for PostgresTransaction {
-    async fn execute(&self, sql: &str) -> DMSCResult<u64> {
+impl crate::database::RiDatabaseTransaction for PostgresTransaction {
+    async fn execute(&self, sql: &str) -> RiResult<u64> {
         let mut guard = self.tx.lock().await;
         let tx = guard.as_mut()
-            .ok_or_else(|| DMSCError::Other("PostgreSQL transaction already closed".to_string()))?;
+            .ok_or_else(|| RiError::Other("PostgreSQL transaction already closed".to_string()))?;
         
         let result = sqlx::query::<sqlx::Postgres>(sql)
             .execute(&mut **tx)
             .await
-            .map_err(|e| DMSCError::Other(format!("PostgreSQL transaction execute error: {}", e)))?;
+            .map_err(|e| RiError::Other(format!("PostgreSQL transaction execute error: {}", e)))?;
         Ok(result.rows_affected())
     }
 
-    async fn query(&self, sql: &str) -> DMSCResult<DMSCDBResult> {
+    async fn query(&self, sql: &str) -> RiResult<RiDBResult> {
         let mut guard = self.tx.lock().await;
         let tx = guard.as_mut()
-            .ok_or_else(|| DMSCError::Other("PostgreSQL transaction already closed".to_string()))?;
+            .ok_or_else(|| RiError::Other("PostgreSQL transaction already closed".to_string()))?;
         
         let rows = sqlx::query::<sqlx::Postgres>(sql)
             .fetch_all(&mut **tx)
             .await
-            .map_err(|e| DMSCError::Other(format!("PostgreSQL transaction query error: {}", e)))?;
+            .map_err(|e| RiError::Other(format!("PostgreSQL transaction query error: {}", e)))?;
 
-        let dmsc_rows: Vec<DMSCDBRow> = rows.iter()
-            .map(|row| PostgresDatabase::row_to_dmsc_row(row))
+        let ri_rows: Vec<RiDBRow> = rows.iter()
+            .map(|row| PostgresDatabase::row_to_ri_row(row))
             .collect();
 
-        Ok(DMSCDBResult::with_rows(dmsc_rows))
+        Ok(RiDBResult::with_rows(ri_rows))
     }
 
-    async fn commit(&self) -> DMSCResult<()> {
+    async fn commit(&self) -> RiResult<()> {
         let mut guard = self.tx.lock().await;
         let tx = guard.take()
-            .ok_or_else(|| DMSCError::Other("PostgreSQL transaction already closed".to_string()))?;
+            .ok_or_else(|| RiError::Other("PostgreSQL transaction already closed".to_string()))?;
         
         tx.commit().await
-            .map_err(|e| DMSCError::Other(format!("PostgreSQL transaction commit error: {}", e)))
+            .map_err(|e| RiError::Other(format!("PostgreSQL transaction commit error: {}", e)))
     }
 
-    async fn rollback(&self) -> DMSCResult<()> {
+    async fn rollback(&self) -> RiResult<()> {
         let mut guard = self.tx.lock().await;
         let tx = guard.take()
-            .ok_or_else(|| DMSCError::Other("PostgreSQL transaction already closed".to_string()))?;
+            .ok_or_else(|| RiError::Other("PostgreSQL transaction already closed".to_string()))?;
         
         tx.rollback().await
-            .map_err(|e| DMSCError::Other(format!("PostgreSQL transaction rollback error: {}", e)))
+            .map_err(|e| RiError::Other(format!("PostgreSQL transaction rollback error: {}", e)))
     }
 
-    async fn close(&self) -> DMSCResult<()> {
+    async fn close(&self) -> RiResult<()> {
         self.rollback().await
     }
 }
@@ -279,7 +279,7 @@ impl PostgresDatabase {
                     format!("Failed to connect to PostgreSQL: {}", e),
                 ))?;
 
-            let db_config = DMSCDatabaseConfig::postgres()
+            let db_config = RiDatabaseConfig::postgres()
                 .host("localhost")
                 .port(5432)
                 .database("postgres")
@@ -290,25 +290,25 @@ impl PostgresDatabase {
         })
     }
 
-    pub fn execute_sync(&self, sql: &str) -> Result<u64, DMSCError> {
+    pub fn execute_sync(&self, sql: &str) -> Result<u64, RiError> {
         let rt = tokio::runtime::Runtime::new()
-            .map_err(|e| DMSCError::Other(format!("Failed to create Tokio runtime: {}", e)))?;
+            .map_err(|e| RiError::Other(format!("Failed to create Tokio runtime: {}", e)))?;
         rt.block_on(async {
             self.execute(sql).await
         })
     }
 
-    pub fn query_sync(&self, sql: &str) -> Result<DMSCDBResult, DMSCError> {
+    pub fn query_sync(&self, sql: &str) -> Result<RiDBResult, RiError> {
         let rt = tokio::runtime::Runtime::new()
-            .map_err(|e| DMSCError::Other(format!("Failed to create Tokio runtime: {}", e)))?;
+            .map_err(|e| RiError::Other(format!("Failed to create Tokio runtime: {}", e)))?;
         rt.block_on(async {
             self.query(sql).await
         })
     }
 
-    pub fn ping_sync(&self) -> Result<bool, DMSCError> {
+    pub fn ping_sync(&self) -> Result<bool, RiError> {
         let rt = tokio::runtime::Runtime::new()
-            .map_err(|e| DMSCError::Other(format!("Failed to create Tokio runtime: {}", e)))?;
+            .map_err(|e| RiError::Other(format!("Failed to create Tokio runtime: {}", e)))?;
         rt.block_on(async {
             self.ping().await
         })

@@ -1,7 +1,7 @@
 //! Copyright © 2025-2026 Wenze Wei. All Rights Reserved.
 //!
-//! This file is part of DMSC.
-//! The DMSC project belongs to the Dunimd Team.
+//! This file is part of Ri.
+//! The Ri project belongs to the Dunimd Team.
 //!
 //! Licensed under the Apache License, Version 2.0 (the "License");
 //! You may not use this file except in compliance with the License.
@@ -17,17 +17,17 @@
 
 //! # Observability Module
 //! 
-//! This module provides comprehensive observability capabilities for DMSC, including distributed tracing
+//! This module provides comprehensive observability capabilities for Ri, including distributed tracing
 //! and metrics collection. It follows modern observability best practices to help monitor, debug, and
-//! optimize DMSC applications.
+//! optimize Ri applications.
 //! 
 //! ## Key Components
 //! 
-//! - **DMSCObservabilityModule**: Main observability module
-//! - **DMSCTracer**: Distributed tracing implementation
-//! - **DMSCMetricsRegistry**: Metrics collection and aggregation
-//! - **DMSCObservabilityConfig**: Configuration for observability features
-//! - **DMSCObservabilityData**: Exported observability data structure
+//! - **RiObservabilityModule**: Main observability module
+//! - **RiTracer**: Distributed tracing implementation
+//! - **RiMetricsRegistry**: Metrics collection and aggregation
+//! - **RiObservabilityConfig**: Configuration for observability features
+//! - **RiObservabilityData**: Exported observability data structure
 //! 
 //! ## Design Principles
 //! 
@@ -42,14 +42,14 @@
 //! ## Usage
 //! 
 //! ```rust
-//! use dmsc::prelude::*;
+//! use ri::prelude::*;
 //! 
-//! fn example() -> DMSCResult<()> {
-//!     // Create a DMSC app builder
-//!     let mut builder = DMSCAppBuilder::new();
+//! fn example() -> RiResult<()> {
+//!     // Create a Ri app builder
+//!     let mut builder = RiAppBuilder::new();
 //!     
 //!     // Configure observability
-//!     let observability_config = DMSCObservabilityConfig {
+//!     let observability_config = RiObservabilityConfig {
 //!         tracing_enabled: true,
 //!         metrics_enabled: true,
 //!         tracing_sampling_rate: 0.5, // 50% sampling rate
@@ -58,7 +58,7 @@
 //!     };
 //!     
 //!     // Add observability module to the app
-//!     let observability_module = DMSCObservabilityModule::new()
+//!     let observability_module = RiObservabilityModule::new()
 //!         .with_config(observability_config);
 //!     
 //!     builder.add_module(Box::new(observability_module));
@@ -83,36 +83,36 @@ pub mod grafana;
 use std::sync::Arc;
 use serde::{Serialize, Deserialize};
 
-pub use tracing::{DMSCTracer, DMSCTraceId, DMSCSpanId, DMSCSpan, DMSCSpanKind, DMSCSpanStatus, DMSCTracingContext, DMSCSamplingStrategy};
-pub use metrics::{DMSCMetricsRegistry, DMSCMetric, DMSCMetricConfig, DMSCMetricType, DMSCWindowStats, DMSCMetricSample};
-pub use propagation::{DMSCTraceContext, DMSCBaggage, DMSCContextCarrier, W3CTracePropagator};
+pub use tracing::{RiTracer, RiTraceId, RiSpanId, RiSpan, RiSpanKind, RiSpanStatus, RiTracingContext, RiSamplingStrategy};
+pub use metrics::{RiMetricsRegistry, RiMetric, RiMetricConfig, RiMetricType, RiWindowStats, RiMetricSample};
+pub use propagation::{RiTraceContext, RiBaggage, RiContextCarrier, W3CTracePropagator};
 #[cfg(feature = "system_info")]
-pub use metrics_collector::{DMSCSystemMetricsCollector, DMSCSystemMetrics, DMSCCPUMetrics, DMSCMemoryMetrics, DMSCDiskMetrics, DMSCNetworkMetrics};
+pub use metrics_collector::{RiSystemMetricsCollector, RiSystemMetrics, RiCPUMetrics, RiMemoryMetrics, RiDiskMetrics, RiNetworkMetrics};
 
-use crate::core::{DMSCResult, DMSCServiceContext};
+use crate::core::{RiResult, RiServiceContext};
 
 
-/// Main observability module for DMSC.
+/// Main observability module for Ri.
 /// 
 /// This module provides distributed tracing and metrics collection capabilities, following modern
 /// observability best practices. It implements the `ServiceModule` trait for seamless integration
-/// with the DMSC application lifecycle.
+/// with the Ri application lifecycle.
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
-pub struct DMSCObservabilityModule {
+pub struct RiObservabilityModule {
     /// Distributed tracer instance
-    tracer: Option<Arc<DMSCTracer>>,
+    tracer: Option<Arc<RiTracer>>,
     /// Metrics registry for collecting and aggregating metrics
-    metrics_registry: Option<Arc<DMSCMetricsRegistry>>,
+    metrics_registry: Option<Arc<RiMetricsRegistry>>,
     /// Configuration for observability features
-    config: DMSCObservabilityConfig,
+    config: RiObservabilityConfig,
 }
 
 /// Configuration for the observability module.
 /// 
-/// This struct defines the configuration options for tracing and metrics collection in DMSC.
+/// This struct defines the configuration options for tracing and metrics collection in Ri.
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct DMSCObservabilityConfig {
+pub struct RiObservabilityConfig {
     /// Whether distributed tracing is enabled
     pub tracing_enabled: bool,
     /// Whether metrics collection is enabled
@@ -127,7 +127,7 @@ pub struct DMSCObservabilityConfig {
     pub metrics_bucket_size_secs: u64,
 }
 
-impl Default for DMSCObservabilityConfig {
+impl Default for RiObservabilityConfig {
     /// Returns the default configuration for observability.
     /// 
     /// Default values:
@@ -150,9 +150,9 @@ impl Default for DMSCObservabilityConfig {
 }
 
 #[cfg(feature = "pyo3")]
-/// Python methods for DMSCObservabilityConfig
+/// Python methods for RiObservabilityConfig
 #[pyo3::prelude::pymethods]
-impl DMSCObservabilityConfig {
+impl RiObservabilityConfig {
     #[new]
     fn py_new() -> Self {
         Self::default()
@@ -224,23 +224,23 @@ impl DMSCObservabilityConfig {
     }
 }
 
-impl Default for DMSCObservabilityModule {
+impl Default for RiObservabilityModule {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl DMSCObservabilityModule {
+impl RiObservabilityModule {
     /// Creates a new observability module with default configuration.
     /// 
     /// # Returns
     /// 
-    /// A new `DMSCObservabilityModule` instance with default configuration
+    /// A new `RiObservabilityModule` instance with default configuration
     pub fn new() -> Self {
         Self {
             tracer: None,
             metrics_registry: None,
-            config: DMSCObservabilityConfig::default(),
+            config: RiObservabilityConfig::default(),
         }
     }
     
@@ -252,8 +252,8 @@ impl DMSCObservabilityModule {
     /// 
     /// # Returns
     /// 
-    /// The updated `DMSCObservabilityModule` instance
-    pub fn with_config(mut self, config: DMSCObservabilityConfig) -> Self {
+    /// The updated `RiObservabilityModule` instance
+    pub fn with_config(mut self, config: RiObservabilityConfig) -> Self {
         self.config = config;
         self
     }
@@ -274,7 +274,7 @@ impl DMSCObservabilityModule {
     /// This method creates and configures the metrics registry for collecting and aggregating metrics.
     fn init_metrics(&mut self) {
         if self.config.metrics_enabled {
-            let registry = Arc::new(DMSCMetricsRegistry::new());
+            let registry = Arc::new(RiMetricsRegistry::new());
             self.metrics_registry = Some(registry);
         }
     }
@@ -295,12 +295,12 @@ impl DMSCObservabilityModule {
     /// 
     /// # Returns
     /// 
-    /// A `DMSCResult<()>` indicating success or failure
-    fn create_service_metrics(&self) -> DMSCResult<()> {
+    /// A `RiResult<()>` indicating success or failure
+    fn create_service_metrics(&self) -> RiResult<()> {
         if let Some(registry) = &self.metrics_registry {
             // Request duration histogram
-            let request_duration_config = DMSCMetricConfig {
-                metric_type: DMSCMetricType::Histogram,
+            let request_duration_config = RiMetricConfig {
+                metric_type: RiMetricType::Histogram,
                 name: "dms_request_duration_seconds".to_string(),
                 help: "Request duration in seconds".to_string(),
                 buckets: vec![0.001, 0.005, 0.01, 0.05, 0.1, 0.5, 1.0, 5.0], // seconds
@@ -309,12 +309,12 @@ impl DMSCObservabilityModule {
                 age_buckets: 5,
             };
             
-            let request_duration_metric = Arc::new(DMSCMetric::new(request_duration_config));
+            let request_duration_metric = Arc::new(RiMetric::new(request_duration_config));
             registry.register(request_duration_metric)?;
             
             // Request counter
-            let request_counter_config = DMSCMetricConfig {
-                metric_type: DMSCMetricType::Counter,
+            let request_counter_config = RiMetricConfig {
+                metric_type: RiMetricType::Counter,
                 name: "dms_requests_total".to_string(),
                 help: "Total number of requests".to_string(),
                 buckets: vec![],
@@ -323,12 +323,12 @@ impl DMSCObservabilityModule {
                 age_buckets: 0,
             };
             
-            let request_counter_metric = Arc::new(DMSCMetric::new(request_counter_config));
+            let request_counter_metric = Arc::new(RiMetric::new(request_counter_config));
             registry.register(request_counter_metric)?;
             
             // Error counter
-            let error_counter_config = DMSCMetricConfig {
-                metric_type: DMSCMetricType::Counter,
+            let error_counter_config = RiMetricConfig {
+                metric_type: RiMetricType::Counter,
                 name: "dms_errors_total".to_string(),
                 help: "Total number of errors".to_string(),
                 buckets: vec![],
@@ -337,12 +337,12 @@ impl DMSCObservabilityModule {
                 age_buckets: 0,
             };
             
-            let error_counter_metric = Arc::new(DMSCMetric::new(error_counter_config));
+            let error_counter_metric = Arc::new(RiMetric::new(error_counter_config));
             registry.register(error_counter_metric)?;
             
             // Active connections gauge
-            let connections_gauge_config = DMSCMetricConfig {
-                metric_type: DMSCMetricType::Gauge,
+            let connections_gauge_config = RiMetricConfig {
+                metric_type: RiMetricType::Gauge,
                 name: "dms_active_connections".to_string(),
                 help: "Number of active connections".to_string(),
                 buckets: vec![],
@@ -351,12 +351,12 @@ impl DMSCObservabilityModule {
                 age_buckets: 0,
             };
             
-            let connections_gauge_metric = Arc::new(DMSCMetric::new(connections_gauge_config));
+            let connections_gauge_metric = Arc::new(RiMetric::new(connections_gauge_config));
             registry.register(connections_gauge_metric)?;
             
             // Service startup time gauge
-            let startup_time_config = DMSCMetricConfig {
-                metric_type: DMSCMetricType::Gauge,
+            let startup_time_config = RiMetricConfig {
+                metric_type: RiMetricType::Gauge,
                 name: "dms_service_startup_time_seconds".to_string(),
                 help: "Service startup time in seconds".to_string(),
                 buckets: vec![],
@@ -365,12 +365,12 @@ impl DMSCObservabilityModule {
                 age_buckets: 0,
             };
             
-            let startup_time_metric = Arc::new(DMSCMetric::new(startup_time_config));
+            let startup_time_metric = Arc::new(RiMetric::new(startup_time_config));
             registry.register(startup_time_metric)?;
             
             // Module initialization time histogram
-            let module_init_config = DMSCMetricConfig {
-                metric_type: DMSCMetricType::Histogram,
+            let module_init_config = RiMetricConfig {
+                metric_type: RiMetricType::Histogram,
                 name: "dms_module_init_time_seconds".to_string(),
                 help: "Module initialization time in seconds".to_string(),
                 buckets: vec![0.001, 0.005, 0.01, 0.05, 0.1, 0.5, 1.0, 5.0],
@@ -379,12 +379,12 @@ impl DMSCObservabilityModule {
                 age_buckets: 5,
             };
             
-            let module_init_metric = Arc::new(DMSCMetric::new(module_init_config));
+            let module_init_metric = Arc::new(RiMetric::new(module_init_config));
             registry.register(module_init_metric)?;
             
             // Request queue length gauge
-            let queue_length_config = DMSCMetricConfig {
-                metric_type: DMSCMetricType::Gauge,
+            let queue_length_config = RiMetricConfig {
+                metric_type: RiMetricType::Gauge,
                 name: "dms_request_queue_length".to_string(),
                 help: "Request queue length".to_string(),
                 buckets: vec![],
@@ -393,12 +393,12 @@ impl DMSCObservabilityModule {
                 age_buckets: 0,
             };
             
-            let queue_length_metric = Arc::new(DMSCMetric::new(queue_length_config));
+            let queue_length_metric = Arc::new(RiMetric::new(queue_length_config));
             registry.register(queue_length_metric)?;
             
             // Middleware execution time histogram
-            let middleware_time_config = DMSCMetricConfig {
-                metric_type: DMSCMetricType::Histogram,
+            let middleware_time_config = RiMetricConfig {
+                metric_type: RiMetricType::Histogram,
                 name: "dms_middleware_duration_seconds".to_string(),
                 help: "Middleware execution time in seconds".to_string(),
                 buckets: vec![0.001, 0.005, 0.01, 0.05, 0.1, 0.5],
@@ -407,13 +407,13 @@ impl DMSCObservabilityModule {
                 age_buckets: 5,
             };
             
-            let middleware_time_metric = Arc::new(DMSCMetric::new(middleware_time_config));
+            let middleware_time_metric = Arc::new(RiMetric::new(middleware_time_config));
             registry.register(middleware_time_metric)?;
             
             // Cache metrics
             // Cache hit counter
-            let cache_hit_config = DMSCMetricConfig {
-                metric_type: DMSCMetricType::Counter,
+            let cache_hit_config = RiMetricConfig {
+                metric_type: RiMetricType::Counter,
                 name: "dms_cache_hits_total".to_string(),
                 help: "Total number of cache hits".to_string(),
                 buckets: vec![],
@@ -422,12 +422,12 @@ impl DMSCObservabilityModule {
                 age_buckets: 0,
             };
             
-            let cache_hit_metric = Arc::new(DMSCMetric::new(cache_hit_config));
+            let cache_hit_metric = Arc::new(RiMetric::new(cache_hit_config));
             registry.register(cache_hit_metric)?;
             
             // Cache miss counter
-            let cache_miss_config = DMSCMetricConfig {
-                metric_type: DMSCMetricType::Counter,
+            let cache_miss_config = RiMetricConfig {
+                metric_type: RiMetricType::Counter,
                 name: "dms_cache_misses_total".to_string(),
                 help: "Total number of cache misses".to_string(),
                 buckets: vec![],
@@ -436,12 +436,12 @@ impl DMSCObservabilityModule {
                 age_buckets: 0,
             };
             
-            let cache_miss_metric = Arc::new(DMSCMetric::new(cache_miss_config));
+            let cache_miss_metric = Arc::new(RiMetric::new(cache_miss_config));
             registry.register(cache_miss_metric)?;
             
             // Cache entries gauge
-            let cache_entries_config = DMSCMetricConfig {
-                metric_type: DMSCMetricType::Gauge,
+            let cache_entries_config = RiMetricConfig {
+                metric_type: RiMetricType::Gauge,
                 name: "dms_cache_entries".to_string(),
                 help: "Number of cache entries".to_string(),
                 buckets: vec![],
@@ -450,12 +450,12 @@ impl DMSCObservabilityModule {
                 age_buckets: 0,
             };
             
-            let cache_entries_metric = Arc::new(DMSCMetric::new(cache_entries_config));
+            let cache_entries_metric = Arc::new(RiMetric::new(cache_entries_config));
             registry.register(cache_entries_metric)?;
             
             // Cache memory usage gauge
-            let cache_memory_config = DMSCMetricConfig {
-                metric_type: DMSCMetricType::Gauge,
+            let cache_memory_config = RiMetricConfig {
+                metric_type: RiMetricType::Gauge,
                 name: "dms_cache_memory_usage_bytes".to_string(),
                 help: "Cache memory usage in bytes".to_string(),
                 buckets: vec![],
@@ -464,12 +464,12 @@ impl DMSCObservabilityModule {
                 age_buckets: 0,
             };
             
-            let cache_memory_metric = Arc::new(DMSCMetric::new(cache_memory_config));
+            let cache_memory_metric = Arc::new(RiMetric::new(cache_memory_config));
             registry.register(cache_memory_metric)?;
             
             // Cache eviction counter
-            let cache_eviction_config = DMSCMetricConfig {
-                metric_type: DMSCMetricType::Counter,
+            let cache_eviction_config = RiMetricConfig {
+                metric_type: RiMetricType::Counter,
                 name: "dms_cache_evictions_total".to_string(),
                 help: "Total number of cache evictions".to_string(),
                 buckets: vec![],
@@ -478,13 +478,13 @@ impl DMSCObservabilityModule {
                 age_buckets: 0,
             };
             
-            let cache_eviction_metric = Arc::new(DMSCMetric::new(cache_eviction_config));
+            let cache_eviction_metric = Arc::new(RiMetric::new(cache_eviction_config));
             registry.register(cache_eviction_metric)?;
             
             // Database metrics
             // Database query time histogram
-            let db_query_config = DMSCMetricConfig {
-                metric_type: DMSCMetricType::Histogram,
+            let db_query_config = RiMetricConfig {
+                metric_type: RiMetricType::Histogram,
                 name: "dms_db_query_duration_seconds".to_string(),
                 help: "Database query execution time in seconds".to_string(),
                 buckets: vec![0.001, 0.005, 0.01, 0.05, 0.1, 0.5, 1.0, 5.0],
@@ -493,12 +493,12 @@ impl DMSCObservabilityModule {
                 age_buckets: 5,
             };
             
-            let db_query_metric = Arc::new(DMSCMetric::new(db_query_config));
+            let db_query_metric = Arc::new(RiMetric::new(db_query_config));
             registry.register(db_query_metric)?;
             
             // Database active connections gauge
-            let db_active_connections_config = DMSCMetricConfig {
-                metric_type: DMSCMetricType::Gauge,
+            let db_active_connections_config = RiMetricConfig {
+                metric_type: RiMetricType::Gauge,
                 name: "dms_db_active_connections".to_string(),
                 help: "Number of active database connections".to_string(),
                 buckets: vec![],
@@ -507,12 +507,12 @@ impl DMSCObservabilityModule {
                 age_buckets: 0,
             };
             
-            let db_active_connections_metric = Arc::new(DMSCMetric::new(db_active_connections_config));
+            let db_active_connections_metric = Arc::new(RiMetric::new(db_active_connections_config));
             registry.register(db_active_connections_metric)?;
             
             // Database idle connections gauge
-            let db_idle_connections_config = DMSCMetricConfig {
-                metric_type: DMSCMetricType::Gauge,
+            let db_idle_connections_config = RiMetricConfig {
+                metric_type: RiMetricType::Gauge,
                 name: "dms_db_idle_connections".to_string(),
                 help: "Number of idle database connections".to_string(),
                 buckets: vec![],
@@ -521,12 +521,12 @@ impl DMSCObservabilityModule {
                 age_buckets: 0,
             };
             
-            let db_idle_connections_metric = Arc::new(DMSCMetric::new(db_idle_connections_config));
+            let db_idle_connections_metric = Arc::new(RiMetric::new(db_idle_connections_config));
             registry.register(db_idle_connections_metric)?;
             
             // Database connection timeouts counter
-            let db_timeout_config = DMSCMetricConfig {
-                metric_type: DMSCMetricType::Counter,
+            let db_timeout_config = RiMetricConfig {
+                metric_type: RiMetricType::Counter,
                 name: "dms_db_connection_timeouts_total".to_string(),
                 help: "Total number of database connection timeouts".to_string(),
                 buckets: vec![],
@@ -535,12 +535,12 @@ impl DMSCObservabilityModule {
                 age_buckets: 0,
             };
             
-            let db_timeout_metric = Arc::new(DMSCMetric::new(db_timeout_config));
+            let db_timeout_metric = Arc::new(RiMetric::new(db_timeout_config));
             registry.register(db_timeout_metric)?;
             
             // Database errors counter
-            let db_errors_config = DMSCMetricConfig {
-                metric_type: DMSCMetricType::Counter,
+            let db_errors_config = RiMetricConfig {
+                metric_type: RiMetricType::Counter,
                 name: "dms_db_errors_total".to_string(),
                 help: "Total number of database errors".to_string(),
                 buckets: vec![],
@@ -549,12 +549,12 @@ impl DMSCObservabilityModule {
                 age_buckets: 0,
             };
             
-            let db_errors_metric = Arc::new(DMSCMetric::new(db_errors_config));
+            let db_errors_metric = Arc::new(RiMetric::new(db_errors_config));
             registry.register(db_errors_metric)?;
             
             // Database transactions counter
-            let db_transactions_config = DMSCMetricConfig {
-                metric_type: DMSCMetricType::Counter,
+            let db_transactions_config = RiMetricConfig {
+                metric_type: RiMetricType::Counter,
                 name: "dms_db_transactions_total".to_string(),
                 help: "Total number of database transactions".to_string(),
                 buckets: vec![],
@@ -563,12 +563,12 @@ impl DMSCObservabilityModule {
                 age_buckets: 0,
             };
             
-            let db_transactions_metric = Arc::new(DMSCMetric::new(db_transactions_config));
+            let db_transactions_metric = Arc::new(RiMetric::new(db_transactions_config));
             registry.register(db_transactions_metric)?;
             
             // Database transaction commits counter
-            let db_commits_config = DMSCMetricConfig {
-                metric_type: DMSCMetricType::Counter,
+            let db_commits_config = RiMetricConfig {
+                metric_type: RiMetricType::Counter,
                 name: "dms_db_transaction_commits_total".to_string(),
                 help: "Total number of database transaction commits".to_string(),
                 buckets: vec![],
@@ -577,12 +577,12 @@ impl DMSCObservabilityModule {
                 age_buckets: 0,
             };
             
-            let db_commits_metric = Arc::new(DMSCMetric::new(db_commits_config));
+            let db_commits_metric = Arc::new(RiMetric::new(db_commits_config));
             registry.register(db_commits_metric)?;
             
             // Database transaction rollbacks counter
-            let db_rollbacks_config = DMSCMetricConfig {
-                metric_type: DMSCMetricType::Counter,
+            let db_rollbacks_config = RiMetricConfig {
+                metric_type: RiMetricType::Counter,
                 name: "dms_db_transaction_rollbacks_total".to_string(),
                 help: "Total number of database transaction rollbacks".to_string(),
                 buckets: vec![],
@@ -591,7 +591,7 @@ impl DMSCObservabilityModule {
                 age_buckets: 0,
             };
             
-            let db_rollbacks_metric = Arc::new(DMSCMetric::new(db_rollbacks_config));
+            let db_rollbacks_metric = Arc::new(RiMetric::new(db_rollbacks_config));
             registry.register(db_rollbacks_metric)?;
         }
         
@@ -605,9 +605,9 @@ impl DMSCObservabilityModule {
     /// 
     /// # Returns
     /// 
-    /// A `DMSCObservabilityData` struct containing the exported observability data
-    pub fn export_data(&self) -> DMSCObservabilityData {
-        DMSCObservabilityData {
+    /// A `RiObservabilityData` struct containing the exported observability data
+    pub fn export_data(&self) -> RiObservabilityData {
+        RiObservabilityData {
             metrics: {
                 #[cfg(feature = "observability")]
                 {
@@ -626,11 +626,11 @@ impl DMSCObservabilityModule {
 
 /// Exported observability data structure.
 /// 
-/// This struct represents the observability data that can be exported from the DMSC system,
+/// This struct represents the observability data that can be exported from the Ri system,
 /// including metrics in Prometheus format and information about active traces and spans.
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct DMSCObservabilityData {
+pub struct RiObservabilityData {
     /// Metrics data in Prometheus format
     pub metrics: String,
     /// Number of active traces
@@ -640,9 +640,9 @@ pub struct DMSCObservabilityData {
 }
 
 #[cfg(feature = "pyo3")]
-/// Python methods for DMSCObservabilityData
+/// Python methods for RiObservabilityData
 #[pyo3::prelude::pymethods]
-impl DMSCObservabilityData {
+impl RiObservabilityData {
     /// Create new observability data from Python
     #[new]
     fn py_new(metrics: String, active_traces: usize, active_spans: usize) -> Self {
@@ -674,21 +674,21 @@ impl DMSCObservabilityData {
 
 #[cfg(feature = "pyo3")]
 #[pyo3::prelude::pymethods]
-impl DMSCObservabilityModule {
+impl RiObservabilityModule {
     fn get_metrics(&self) -> String {
         format!("ObservabilityModule with config: {:?}", self.config)
     }
 }
 
 #[async_trait::async_trait]
-impl crate::core::DMSCModule for DMSCObservabilityModule {
+impl crate::core::RiModule for RiObservabilityModule {
     /// Returns the name of the observability module.
     /// 
     /// # Returns
     /// 
     /// The module name as a string
     fn name(&self) -> &str {
-        "DMSC.Observability"
+        "Ri.Observability"
     }
     
     /// Indicates whether the observability module is critical.
@@ -720,13 +720,13 @@ impl crate::core::DMSCModule for DMSCObservabilityModule {
     /// 
     /// # Returns
     /// 
-    /// A `DMSCResult<()>` indicating success or failure
-    async fn init(&mut self, ctx: &mut DMSCServiceContext) -> DMSCResult<()> {
+    /// A `RiResult<()>` indicating success or failure
+    async fn init(&mut self, ctx: &mut RiServiceContext) -> RiResult<()> {
         // Load configuration
         let binding = ctx.config();
         let cfg = binding.config();
         
-        self.config = DMSCObservabilityConfig {
+        self.config = RiObservabilityConfig {
             tracing_enabled: cfg.get_bool("observability.tracing_enabled").unwrap_or(true),
             metrics_enabled: cfg.get_bool("observability.metrics_enabled").unwrap_or(true),
             tracing_sampling_rate: cfg.get_f32("observability.tracing_sampling_rate")
@@ -750,20 +750,20 @@ impl crate::core::DMSCModule for DMSCObservabilityModule {
         self.create_service_metrics()?;
         
         // Register lifecycle hooks
-        let hooks: &mut crate::hooks::DMSCHookBus = ctx.hooks_mut();
+        let hooks: &mut crate::hooks::RiHookBus = ctx.hooks_mut();
         
         // Hook into request lifecycle for automatic metrics collection
         hooks.register(
-            crate::hooks::DMSCHookKind::Startup,
+            crate::hooks::RiHookKind::Startup,
             "dms.observability.lifecycle".to_string(),
-            |_ctx, _event: &crate::hooks::DMSCHookEvent| {
+            |_ctx, _event: &crate::hooks::RiHookEvent| {
                 // Could add automatic span creation here
                 Ok(())
             },
         );
         
         let logger = ctx.logger();
-        logger.info("DMSC.Observability", "Observability module initialized")?;
+        logger.info("Ri.Observability", "Observability module initialized")?;
         
         Ok(())
     }
@@ -779,13 +779,13 @@ impl crate::core::DMSCModule for DMSCObservabilityModule {
     /// 
     /// # Returns
     /// 
-    /// A `DMSCResult<()>` indicating success or failure
-    async fn after_shutdown(&mut self, ctx: &mut DMSCServiceContext) -> DMSCResult<()> {
+    /// A `RiResult<()>` indicating success or failure
+    async fn after_shutdown(&mut self, ctx: &mut RiServiceContext) -> RiResult<()> {
         // Export final observability data
         let data = self.export_data();
         
         let logger = ctx.logger();
-        logger.info("DMSC.Observability", format!("Final observability data: {} active traces, {} active spans", 
+        logger.info("Ri.Observability", format!("Final observability data: {} active traces, {} active spans", 
             data.active_traces, data.active_spans))?;
         
         Ok(())

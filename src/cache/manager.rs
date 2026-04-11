@@ -1,7 +1,7 @@
 //! Copyright © 2025-2026 Wenze Wei. All Rights Reserved.
 //!
-//! This file is part of DMSC.
-//! The DMSC project belongs to the Dunimd Team.
+//! This file is part of Ri.
+//! The Ri project belongs to the Dunimd Team.
 //!
 //! Licensed under the Apache License, Version 2.0 (the "License");
 //! You may not use this file except in compliance with the License.
@@ -21,13 +21,13 @@ use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use std::collections::HashMap;
 use tokio::sync::{RwLock, broadcast};
-use crate::cache::core::{DMSCCache, DMSCCacheStats};
+use crate::cache::core::{RiCache, RiCacheStats};
 
 #[cfg(feature = "pyo3")]
 use pyo3::prelude::*;
 
 
-/// # DMSC Cache Manager
+/// # Ri Cache Manager
 /// 
 /// This file implements a cache manager that coordinates different cache backends with 
 /// consistency support across multiple instances. It provides a unified interface for cache 
@@ -38,14 +38,14 @@ use pyo3::prelude::*;
 /// 2. **Unified Interface**: Provides a consistent API regardless of the underlying cache backend
 /// 3. **Event-Driven Architecture**: Uses broadcast channels for efficient cache invalidation
 /// 4. **Thread Safety**: Implements thread-safe operations using Arc and RwLock
-/// 5. **Flexibility**: Supports any backend implementing the DMSCCache trait
+/// 5. **Flexibility**: Supports any backend implementing the RiCache trait
 /// 6. **Scalability**: Designed to handle high-throughput cache operations
 /// 
 /// ## Usage Examples
 /// ```rust
 /// // Create a cache manager with a Redis backend
-/// let redis_backend = Arc::new(DMSCRedisBackend::new(config).await?);
-/// let mut cache_manager = DMSCCacheManager::new(redis_backend);
+/// let redis_backend = Arc::new(RiRedisBackend::new(config).await?);
+/// let mut cache_manager = RiCacheManager::new(redis_backend);
 /// 
 /// // Start the consistency listener
 /// let listener_handle = cache_manager.start_consistency_listener().await;
@@ -68,7 +68,7 @@ use pyo3::prelude::*;
 /// remain consistent. Each event triggers a corresponding action on all cache instances.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
-pub enum DMSCCacheEvent {
+pub enum RiCacheEvent {
     /// Invalidate a specific cache key
     /// 
     /// **Parameters:**
@@ -89,31 +89,31 @@ pub enum DMSCCacheEvent {
 /// 
 /// This struct provides a unified interface for cache operations while ensuring cache
 /// consistency across multiple instances through event-driven architecture. It wraps
-/// any backend implementing the DMSCCache trait and adds consistency guarantees.
+/// any backend implementing the RiCache trait and adds consistency guarantees.
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
-pub struct DMSCCacheManager {
+pub struct RiCacheManager {
     /// The underlying cache backend implementation
-    backend: Arc<dyn DMSCCache + Send + Sync>,
+    backend: Arc<dyn RiCache + Send + Sync>,
     
     /// Broadcast sender for cache consistency events
-    event_sender: broadcast::Sender<DMSCCacheEvent>,
+    event_sender: broadcast::Sender<RiCacheEvent>,
     
     /// Broadcast receiver for cache consistency events (used internally)
-    event_receiver: Option<broadcast::Receiver<DMSCCacheEvent>>,
+    event_receiver: Option<broadcast::Receiver<RiCacheEvent>>,
     
     /// Map of subscribers to cache events (for internal use)
-    _subscribers: Arc<RwLock<HashMap<String, broadcast::Receiver<DMSCCacheEvent>>>>,
+    _subscribers: Arc<RwLock<HashMap<String, broadcast::Receiver<RiCacheEvent>>>>,
 }
 
-impl DMSCCacheManager {
+impl RiCacheManager {
     /// Create a new cache manager with the specified backend
     /// 
     /// **Parameters:**
     /// - `backend`: The underlying cache backend implementation
     /// 
     /// **Returns:**
-    /// - A new instance of `DMSCCacheManager`
-    pub fn new(backend: Arc<dyn DMSCCache + Send + Sync>) -> Self {
+    /// - A new instance of `RiCacheManager`
+    pub fn new(backend: Arc<dyn RiCache + Send + Sync>) -> Self {
         let (sender, receiver) = broadcast::channel(100);
         
         Self {
@@ -137,12 +137,12 @@ impl DMSCCacheManager {
         let mut receiver = match self.event_receiver.take() {
             Some(r) => r,
             None => {
-                log::error!("[DMSC.Cache] Event receiver already started or not initialized");
+                log::error!("[Ri.Cache] Event receiver already started or not initialized");
                 return tokio::spawn(async {});
             }
         };
         
-        log::info!("[DMSC.Cache] Starting cache consistency event listener");
+        log::info!("[Ri.Cache] Starting cache consistency event listener");
         
         tokio::spawn(async move {
             let mut event_count = 0;
@@ -150,42 +150,42 @@ impl DMSCCacheManager {
                 event_count += 1;
                 
                 match event {
-                    DMSCCacheEvent::Invalidate { key } => {
-                        log::info!("[DMSC.Cache] Processing invalidate event for key: {key}");
+                    RiCacheEvent::Invalidate { key } => {
+                        log::info!("[Ri.Cache] Processing invalidate event for key: {key}");
                         if let Err(e) = backend.delete(&key).await {
-                            log::error!("[DMSC.Cache] Failed to invalidate cache key {key}: {e}");
+                            log::error!("[Ri.Cache] Failed to invalidate cache key {key}: {e}");
                         } else {
-                            log::info!("[DMSC.Cache] Successfully invalidated cache key: {key}");
+                            log::info!("[Ri.Cache] Successfully invalidated cache key: {key}");
                         }
                     },
-                    DMSCCacheEvent::InvalidatePattern { pattern } => {
-                        log::info!("[DMSC.Cache] Processing invalidate pattern event: {pattern}");
+                    RiCacheEvent::InvalidatePattern { pattern } => {
+                        log::info!("[Ri.Cache] Processing invalidate pattern event: {pattern}");
                         match backend.delete_by_pattern(&pattern).await {
                             Ok(count) => {
-                                log::info!("[DMSC.Cache] Successfully invalidated {} cache keys matching pattern: {pattern}", count);
+                                log::info!("[Ri.Cache] Successfully invalidated {} cache keys matching pattern: {pattern}", count);
                             }
                             Err(e) => {
-                                log::error!("[DMSC.Cache] Failed to invalidate cache pattern {pattern}: {e}");
+                                log::error!("[Ri.Cache] Failed to invalidate cache pattern {pattern}: {e}");
                             }
                         }
                     },
-                    DMSCCacheEvent::Clear() => {
-                        log::info!("[DMSC.Cache] Processing clear cache event");
+                    RiCacheEvent::Clear() => {
+                        log::info!("[Ri.Cache] Processing clear cache event");
                         if let Err(e) = backend.clear().await {
-                            log::error!("[DMSC.Cache] Failed to clear cache: {e}");
+                            log::error!("[Ri.Cache] Failed to clear cache: {e}");
                         } else {
-                            log::info!("[DMSC.Cache] Successfully cleared cache");
+                            log::info!("[Ri.Cache] Successfully cleared cache");
                         }
                     },
                 }
                 
                 // Log event processing statistics periodically
                 if event_count % 100 == 0 {
-                    log::info!("[DMSC.Cache] Processed {event_count} cache consistency events");
+                    log::info!("[Ri.Cache] Processed {event_count} cache consistency events");
                 }
             }
             
-            log::info!("[DMSC.Cache] Cache consistency event listener stopped after processing {event_count} events");
+            log::info!("[Ri.Cache] Cache consistency event listener stopped after processing {event_count} events");
         })
     }
     
@@ -196,7 +196,7 @@ impl DMSCCacheManager {
     /// 
     /// **Returns:**
     /// - A broadcast receiver for cache events
-    pub fn subscribe(&self) -> broadcast::Receiver<DMSCCacheEvent> {
+    pub fn subscribe(&self) -> broadcast::Receiver<RiCacheEvent> {
         self.event_sender.subscribe()
     }
     
@@ -207,14 +207,14 @@ impl DMSCCacheManager {
     /// 
     /// **Parameters:**
     /// - `event`: The cache event to publish
-    pub fn publish_event(&self, event: DMSCCacheEvent) {
+    pub fn publish_event(&self, event: RiCacheEvent) {
         let event_type = match &event {
-            DMSCCacheEvent::Invalidate { key } => format!("Invalidate(key: {key})"),
-            DMSCCacheEvent::InvalidatePattern { pattern } => format!("InvalidatePattern(pattern: {pattern})"),
-            DMSCCacheEvent::Clear() => "Clear".to_string(),
+            RiCacheEvent::Invalidate { key } => format!("Invalidate(key: {key})"),
+            RiCacheEvent::InvalidatePattern { pattern } => format!("InvalidatePattern(pattern: {pattern})"),
+            RiCacheEvent::Clear() => "Clear".to_string(),
         };
         
-        log::info!("[DMSC.Cache] Publishing cache event: {event_type}");
+        log::info!("[Ri.Cache] Publishing cache event: {event_type}");
         let _ = self.event_sender.send(event);
     }
     
@@ -230,19 +230,19 @@ impl DMSCCacheManager {
     /// **Returns:**
     /// - `Ok(Some(T))` if the key exists and the value is valid
     /// - `Ok(None)` if the key does not exist
-    /// - `Err(DMSCError)` if an error occurs during retrieval or deserialization
-    pub async fn get<T: serde::de::DeserializeOwned>(&self, key: &str) -> crate::core::DMSCResult<Option<T>> {
-        log::debug!("[DMSC.Cache] Getting cache key: {key}");
+    /// - `Err(RiError)` if an error occurs during retrieval or deserialization
+    pub async fn get<T: serde::de::DeserializeOwned>(&self, key: &str) -> crate::core::RiResult<Option<T>> {
+        log::debug!("[Ri.Cache] Getting cache key: {key}");
         
         match self.backend.get(key).await? {
             Some(cached_value) => {
-                log::debug!("[DMSC.Cache] Cache hit for key: {key}");
+                log::debug!("[Ri.Cache] Cache hit for key: {key}");
                 let value = serde_json::from_str(&cached_value)
-                    .map_err(|e| crate::core::DMSCError::Other(format!("Deserialization error: {e}")))?;
+                    .map_err(|e| crate::core::RiError::Other(format!("Deserialization error: {e}")))?;
                 Ok(Some(value))
             }
             None => {
-                log::debug!("[DMSC.Cache] Cache miss for key: {key}");
+                log::debug!("[Ri.Cache] Cache miss for key: {key}");
                 Ok(None)
             }
         }
@@ -260,22 +260,22 @@ impl DMSCCacheManager {
     /// 
     /// **Returns:**
     /// - `Ok(())` if the value was successfully stored
-    /// - `Err(DMSCError)` if an error occurs during serialization or storage
-    pub async fn set<T: serde::Serialize>(&self, key: &str, value: &T, ttl_seconds: Option<u64>) -> crate::core::DMSCResult<()> {
-        log::debug!("[DMSC.Cache] Setting cache key: {key} with TTL: {ttl_seconds:?}");
+    /// - `Err(RiError)` if an error occurs during serialization or storage
+    pub async fn set<T: serde::Serialize>(&self, key: &str, value: &T, ttl_seconds: Option<u64>) -> crate::core::RiResult<()> {
+        log::debug!("[Ri.Cache] Setting cache key: {key} with TTL: {ttl_seconds:?}");
         
         let serialized = serde_json::to_string(value)
-            .map_err(|e| crate::core::DMSCError::Other(format!("Serialization error: {e}")))?;
+            .map_err(|e| crate::core::RiError::Other(format!("Serialization error: {e}")))?;
         
         let result = self.backend.set(key, &serialized, ttl_seconds).await;
         
         match &result {
-            Ok(_) => log::debug!("[DMSC.Cache] Successfully set cache key: {key}"),
-            Err(e) => log::error!("[DMSC.Cache] Failed to set cache key {key}: {e}"),
+            Ok(_) => log::debug!("[Ri.Cache] Successfully set cache key: {key}"),
+            Err(e) => log::error!("[Ri.Cache] Failed to set cache key {key}: {e}"),
         }
         
         // Publish invalidate event to ensure consistency across instances
-        self.publish_event(DMSCCacheEvent::Invalidate { key: key.to_string() });
+        self.publish_event(RiCacheEvent::Invalidate { key: key.to_string() });
         
         result
     }
@@ -291,20 +291,20 @@ impl DMSCCacheManager {
     /// **Returns:**
     /// - `Ok(true)` if the key was found and deleted
     /// - `Ok(false)` if the key didn't exist
-    /// - `Err(DMSCError)` if an error occurs during deletion
-    pub async fn delete(&self, key: &str) -> crate::core::DMSCResult<bool> {
-        log::debug!("[DMSC.Cache] Deleting cache key: {key}");
+    /// - `Err(RiError)` if an error occurs during deletion
+    pub async fn delete(&self, key: &str) -> crate::core::RiResult<bool> {
+        log::debug!("[Ri.Cache] Deleting cache key: {key}");
         
         let result = self.backend.delete(key).await;
         
         match &result {
-            Ok(true) => log::debug!("[DMSC.Cache] Successfully deleted cache key: {key}"),
-            Ok(false) => log::debug!("[DMSC.Cache] Cache key not found for deletion: {key}"),
-            Err(e) => log::error!("[DMSC.Cache] Failed to delete cache key {key}: {e}"),
+            Ok(true) => log::debug!("[Ri.Cache] Successfully deleted cache key: {key}"),
+            Ok(false) => log::debug!("[Ri.Cache] Cache key not found for deletion: {key}"),
+            Err(e) => log::error!("[Ri.Cache] Failed to delete cache key {key}: {e}"),
         }
         
         // Publish invalidate event to ensure consistency across instances
-        self.publish_event(DMSCCacheEvent::Invalidate { key: key.to_string() });
+        self.publish_event(RiCacheEvent::Invalidate { key: key.to_string() });
         
         result
     }
@@ -329,19 +329,19 @@ impl DMSCCacheManager {
     /// 
     /// **Returns:**
     /// - `Ok(())` if the cache was successfully cleared
-    /// - `Err(DMSCError)` if an error occurs during clearing
-    pub async fn clear(&self) -> crate::core::DMSCResult<()> {
-        log::info!("[DMSC.Cache] Clearing all cache entries");
+    /// - `Err(RiError)` if an error occurs during clearing
+    pub async fn clear(&self) -> crate::core::RiResult<()> {
+        log::info!("[Ri.Cache] Clearing all cache entries");
         
         let result = self.backend.clear().await;
         
         match &result {
-            Ok(_) => log::info!("[DMSC.Cache] Successfully cleared all cache entries"),
-            Err(e) => log::error!("[DMSC.Cache] Failed to clear cache: {e}"),
+            Ok(_) => log::info!("[Ri.Cache] Successfully cleared all cache entries"),
+            Err(e) => log::error!("[Ri.Cache] Failed to clear cache: {e}"),
         }
         
         // Publish clear event to ensure consistency across instances
-        self.publish_event(DMSCCacheEvent::Clear());
+        self.publish_event(RiCacheEvent::Clear());
         
         result
     }
@@ -356,9 +356,9 @@ impl DMSCCacheManager {
     /// 
     /// **Returns:**
     /// - `Ok(())` if the invalidation event was successfully published
-    pub async fn invalidate_pattern(&self, pattern: &str) -> crate::core::DMSCResult<()> {
+    pub async fn invalidate_pattern(&self, pattern: &str) -> crate::core::RiResult<()> {
         // Publish invalidate pattern event to ensure consistency across instances
-        self.publish_event(DMSCCacheEvent::InvalidatePattern { pattern: pattern.to_string() });
+        self.publish_event(RiCacheEvent::InvalidatePattern { pattern: pattern.to_string() });
         
         Ok(())
     }
@@ -369,19 +369,19 @@ impl DMSCCacheManager {
     /// and the number of entries.
     /// 
     /// **Returns:**
-    /// - A `DMSCCacheStats` struct containing the cache statistics
-    pub async fn stats(&self) -> DMSCCacheStats {
+    /// - A `RiCacheStats` struct containing the cache statistics
+    pub async fn stats(&self) -> RiCacheStats {
         let stats = self.backend.stats().await;
         
         // Log cache statistics for monitoring
-        log::info!("[DMSC.Cache] Cache Statistics: hits={}, misses={}, entries={}, hit_rate={:.2}%", 
+        log::info!("[Ri.Cache] Cache Statistics: hits={}, misses={}, entries={}, hit_rate={:.2}%", 
                  stats.hits, stats.misses, stats.entries, stats.avg_hit_rate * 100.0);
         
         // Monitor cache performance
         if stats.hits + stats.misses > 0 {
             let current_hit_rate = stats.hits as f64 / (stats.hits + stats.misses) as f64;
             if current_hit_rate < 0.5 && stats.hits + stats.misses > 100 {
-                log::warn!("[DMSC.Cache] Warning: Low cache hit rate ({:.2}%) with {} total operations", 
+                log::warn!("[Ri.Cache] Warning: Low cache hit rate ({:.2}%) with {} total operations", 
                          current_hit_rate * 100.0, stats.hits + stats.misses);
             }
         }
@@ -395,13 +395,13 @@ impl DMSCCacheManager {
     /// 
     /// **Returns:**
     /// - `Ok(usize)` with the number of expired entries cleaned up
-    /// - `Err(DMSCError)` if an error occurs during cleanup
-    pub async fn cleanup_expired(&self) -> crate::core::DMSCResult<usize> {
+    /// - `Err(RiError)` if an error occurs during cleanup
+    pub async fn cleanup_expired(&self) -> crate::core::RiResult<usize> {
         let cleaned = self.backend.cleanup_expired().await?;
         
         // Log cleanup results for monitoring
         if cleaned > 0 {
-            log::info!("[DMSC.Cache] Cleanup completed: {cleaned} expired entries removed");
+            log::info!("[Ri.Cache] Cleanup completed: {cleaned} expired entries removed");
         }
         
         Ok(cleaned)
@@ -421,21 +421,21 @@ impl DMSCCacheManager {
     /// 
     /// **Returns:**
     /// - `Ok(T)` with the retrieved or generated value
-    /// - `Err(DMSCError)` if an error occurs during retrieval, generation, or storage
-    pub async fn get_or_set<T, F>(&self, key: &str, ttl_seconds: Option<u64>, factory: F) -> crate::core::DMSCResult<T>
+    /// - `Err(RiError)` if an error occurs during retrieval, generation, or storage
+    pub async fn get_or_set<T, F>(&self, key: &str, ttl_seconds: Option<u64>, factory: F) -> crate::core::RiResult<T>
     where
         T: serde::Serialize + serde::de::DeserializeOwned + Clone,
-        F: FnOnce() -> crate::core::DMSCResult<T>,
+        F: FnOnce() -> crate::core::RiResult<T>,
     {
-        log::debug!("[DMSC.Cache] get_or_set operation for key: {key} with TTL: {ttl_seconds:?}");
+        log::debug!("[Ri.Cache] get_or_set operation for key: {key} with TTL: {ttl_seconds:?}");
         
         // Try to get from cache first
         if let Some(value) = self.get::<T>(key).await? {
-            log::debug!("[DMSC.Cache] get_or_set cache hit for key: {key}");
+            log::debug!("[Ri.Cache] get_or_set cache hit for key: {key}");
             return Ok(value);
         }
         
-        log::debug!("[DMSC.Cache] get_or_set cache miss for key: {key}, generating value");
+        log::debug!("[Ri.Cache] get_or_set cache miss for key: {key}, generating value");
         
         // If not found, generate the value
         let value = factory()?;
@@ -443,18 +443,18 @@ impl DMSCCacheManager {
         // Store in cache
         self.set(key, &value, ttl_seconds).await?;
         
-        log::debug!("[DMSC.Cache] get_or_set successfully generated and cached value for key: {key}");
+        log::debug!("[Ri.Cache] get_or_set successfully generated and cached value for key: {key}");
         Ok(value)
     }
 }
 
 #[cfg(feature = "pyo3")]
 #[pymethods]
-impl DMSCCacheManager {
+impl RiCacheManager {
     #[new]
     fn py_new() -> Self {
-        use crate::cache::backends::DMSCMemoryCache;
-        let backend = std::sync::Arc::new(DMSCMemoryCache::new());
+        use crate::cache::backends::RiMemoryCache;
+        let backend = std::sync::Arc::new(RiMemoryCache::new());
         Self::new(backend)
     }
     
@@ -520,7 +520,7 @@ impl DMSCCacheManager {
     }
     
     #[pyo3(name = "stats")]
-    fn stats_impl(&self) -> pyo3::PyResult<DMSCCacheStats> {
+    fn stats_impl(&self) -> pyo3::PyResult<RiCacheStats> {
         let rt = tokio::runtime::Runtime::new().map_err(|e| {
             pyo3::exceptions::PyRuntimeError::new_err(format!("Failed to create runtime: {}", e))
         })?;

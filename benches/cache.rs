@@ -1,7 +1,7 @@
 //! Copyright © 2025-2026 Wenze Wei. All Rights Reserved.
 //!
-//! This file is part of DMSC.
-//! The DMSC project belongs to the Dunimd Team.
+//! This file is part of Ri.
+//! The Ri project belongs to the Dunimd Team.
 //!
 //! Licensed under the Apache License, Version 2.0 (the "License");
 //! You may not use this file except in compliance with the License.
@@ -17,8 +17,8 @@
 
 //! # Cache Module Benchmarks
 //!
-//! This module provides performance benchmarks for the DMSC cache system,
-//! specifically measuring in-memory cache operations via DMSCMemoryCache.
+//! This module provides performance benchmarks for the Ri cache system,
+//! specifically measuring in-memory cache operations via RiMemoryCache.
 //!
 //! ## Benchmark Categories
 //!
@@ -39,7 +39,7 @@
 //!
 //! ## Cache Architecture Notes
 //!
-//! The DMSCMemoryCache provides an in-memory caching layer typically used for:
+//! The RiMemoryCache provides an in-memory caching layer typically used for:
 //! - Session storage
 //! - API response caching
 //! - Computed result memoization
@@ -52,7 +52,7 @@
 //! - Async operations are executed using tokio runtime
 
 use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion, Throughput};
-use dmsc::cache::{DMSCMemoryCache, DMSCCache};
+use ri::cache::{RiMemoryCache, RiCache};
 
 /// Benchmark: Cache SET operations with varying data sizes.
 ///
@@ -70,7 +70,7 @@ fn bench_cache_set(c: &mut Criterion) {
     /// Size: ~5 bytes
     group.bench_function("set_small_value", |b| {
         let rt = tokio::runtime::Runtime::new().unwrap();
-        let cache = DMSCMemoryCache::new();
+        let cache = RiMemoryCache::new();
         b.iter(|| {
             rt.block_on(async {
                 cache.set("key", "value", None).await.unwrap();
@@ -83,7 +83,7 @@ fn bench_cache_set(c: &mut Criterion) {
     /// Size: ~100 bytes
     group.bench_function("set_medium_value", |b| {
         let rt = tokio::runtime::Runtime::new().unwrap();
-        let cache = DMSCMemoryCache::new();
+        let cache = RiMemoryCache::new();
         let medium_value = "x".repeat(100);
         b.iter(|| {
             rt.block_on(async {
@@ -97,7 +97,7 @@ fn bench_cache_set(c: &mut Criterion) {
     /// Size: ~10KB
     group.bench_function("set_large_value", |b| {
         let rt = tokio::runtime::Runtime::new().unwrap();
-        let cache = DMSCMemoryCache::new();
+        let cache = RiMemoryCache::new();
         let large_value = "x".repeat(10000);
         b.iter(|| {
             rt.block_on(async {
@@ -111,7 +111,7 @@ fn bench_cache_set(c: &mut Criterion) {
     /// Important for session management and temporary caching
     group.bench_function("set_with_ttl", |b| {
         let rt = tokio::runtime::Runtime::new().unwrap();
-        let cache = DMSCMemoryCache::new();
+        let cache = RiMemoryCache::new();
         b.iter(|| {
             rt.block_on(async {
                 cache.set("key", "value", Some(3600)).await.unwrap();
@@ -132,7 +132,7 @@ fn bench_cache_set(c: &mut Criterion) {
 /// Understanding hit/miss ratio is critical for cache efficiency.
 fn bench_cache_get(c: &mut Criterion) {
     let rt = tokio::runtime::Runtime::new().unwrap();
-    let cache = DMSCMemoryCache::new();
+    let cache = RiMemoryCache::new();
 
     /// Pre-populate cache with 1000 entries
     /// This simulates a warmed-up cache state
@@ -178,7 +178,7 @@ fn bench_cache_get(c: &mut Criterion) {
 /// - Better network efficiency in distributed scenarios
 fn bench_cache_batch_operations(c: &mut Criterion) {
     let rt = tokio::runtime::Runtime::new().unwrap();
-    let cache = DMSCMemoryCache::new();
+    let cache = RiMemoryCache::new();
 
     let mut group = c.benchmark_group("cache_batch");
 
@@ -226,7 +226,7 @@ fn bench_cache_batch_operations(c: &mut Criterion) {
 /// - Cache coherence checks
 fn bench_cache_exists(c: &mut Criterion) {
     let rt = tokio::runtime::Runtime::new().unwrap();
-    let cache = DMSCMemoryCache::new();
+    let cache = RiMemoryCache::new();
 
     /// Pre-populate cache
     rt.block_on(async {
@@ -280,7 +280,7 @@ fn bench_cache_delete(c: &mut Criterion) {
     group.bench_function("delete_existing", |b| {
         b.iter(|| {
             rt.block_on(async {
-                let cache = DMSCMemoryCache::new();
+                let cache = RiMemoryCache::new();
                 cache.set("delete_key", "value", None).await.unwrap();
                 let result = cache.delete("delete_key").await.unwrap();
                 black_box(result);
@@ -290,7 +290,7 @@ fn bench_cache_delete(c: &mut Criterion) {
 
     /// Delete non-existent key: Should return false/None
     group.bench_function("delete_nonexistent", |b| {
-        let cache = DMSCMemoryCache::new();
+        let cache = RiMemoryCache::new();
         b.iter(|| {
             rt.block_on(async {
                 let result = cache.delete("nonexistent_key").await.unwrap();
@@ -312,7 +312,7 @@ fn bench_cache_delete(c: &mut Criterion) {
 /// Typically called for monitoring/observability purposes.
 fn bench_cache_stats(c: &mut Criterion) {
     let rt = tokio::runtime::Runtime::new().unwrap();
-    let cache = DMSCMemoryCache::new();
+    let cache = RiMemoryCache::new();
 
     /// Pre-populate cache
     rt.block_on(async {

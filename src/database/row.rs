@@ -1,7 +1,7 @@
 //! Copyright © 2025-2026 Wenze Wei. All Rights Reserved.
 //!
-//! This file is part of DMSC.
-//! The DMSC project belongs to the Dunimd Team.
+//! This file is part of Ri.
+//! The Ri project belongs to the Dunimd Team.
 //!
 //! Licensed under the Apache License, Version 2.0 (the "License");
 //! You may not use this file except in compliance with the License.
@@ -21,12 +21,12 @@ use std::collections::HashMap;
 
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 #[derive(Debug, Clone)]
-pub struct DMSCDBRow {
+pub struct RiDBRow {
     pub columns: Vec<String>,
     pub values: Vec<Option<serde_json::Value>>,
 }
 
-impl DMSCDBRow {
+impl RiDBRow {
     pub fn new() -> Self {
         Self {
             columns: Vec::new(),
@@ -88,8 +88,8 @@ impl DMSCDBRow {
         self.values[index].as_ref()
     }
 
-    pub fn try_get<T: for<'de> Deserialize<'de> + Send + Sync>(&self, name: &str) -> Result<T, crate::core::DMSCError> {
-        self.get(name).ok_or_else(|| crate::core::DMSCError::InvalidInput(format!("Column '{} not found or type mismatch", name)))
+    pub fn try_get<T: for<'de> Deserialize<'de> + Send + Sync>(&self, name: &str) -> Result<T, crate::core::RiError> {
+        self.get(name).ok_or_else(|| crate::core::RiError::InvalidInput(format!("Column '{} not found or type mismatch", name)))
     }
 
     pub fn get_i32(&self, name: &str) -> Option<i32> {
@@ -141,7 +141,7 @@ impl DMSCDBRow {
 
 #[cfg(feature = "pyo3")]
 #[pyo3::prelude::pymethods]
-impl DMSCDBRow {
+impl RiDBRow {
     #[new]
     fn py_new() -> Self {
         Self::new()
@@ -178,14 +178,14 @@ impl DMSCDBRow {
 }
 
 #[allow(dead_code)]
-pub struct DMSCRowBuilder {
-    row: DMSCDBRow,
+pub struct RiRowBuilder {
+    row: RiDBRow,
 }
 
 #[allow(dead_code)]
-impl DMSCRowBuilder {
+impl RiRowBuilder {
     pub fn new() -> Self {
-        Self { row: DMSCDBRow::new() }
+        Self { row: RiDBRow::new() }
     }
 
     pub fn add_column(mut self, name: &str) -> Self {
@@ -212,13 +212,13 @@ impl DMSCRowBuilder {
         self
     }
 
-    pub fn build(self) -> DMSCDBRow {
+    pub fn build(self) -> RiDBRow {
         self.row
     }
 }
 
 #[allow(dead_code)]
-impl Default for DMSCRowBuilder {
+impl Default for RiRowBuilder {
     fn default() -> Self {
         Self::new()
     }

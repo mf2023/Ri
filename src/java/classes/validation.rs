@@ -1,7 +1,7 @@
 //! Copyright © 2025-2026 Wenze Wei. All Rights Reserved.
 //!
-//! This file is part of DMSC.
-//! The DMSC project belongs to the Dunimd Team.
+//! This file is part of Ri.
+//! The Ri project belongs to the Dunimd Team.
 //!
 //! Licensed under the Apache License, Version 2.0 (the "License");
 //! You may not use this file except in compliance with the License.
@@ -17,16 +17,16 @@
 
 //! # Validation Module JNI Bindings
 //!
-//! JNI bindings for DMSC validation classes.
+//! JNI bindings for Ri validation classes.
 
 use jni::JNIEnv;
 use jni::objects::JClass;
 use jni::sys::{jlong, jboolean};
-use crate::validation::{DMSCValidatorBuilder, DMSCValidationResult};
+use crate::validation::{RiValidatorBuilder, RiValidationResult};
 use crate::java::exception::check_not_null;
 
 #[no_mangle]
-pub extern "system" fn Java_com_dunimd_dmsc_validation_DMSCValidationModule_nativeValidateEmail(
+pub extern "system" fn Java_com_dunimd_ri_validation_RiValidationModule_nativeValidateEmail(
     mut env: JNIEnv,
     _class: JClass,
     value: jni::objects::JString,
@@ -35,7 +35,7 @@ pub extern "system" fn Java_com_dunimd_dmsc_validation_DMSCValidationModule_nati
         .expect("Failed to get email value")
         .into();
     
-    let result = DMSCValidatorBuilder::new("email")
+    let result = RiValidatorBuilder::new("email")
         .is_email()
         .max_length(255)
         .build()
@@ -44,7 +44,7 @@ pub extern "system" fn Java_com_dunimd_dmsc_validation_DMSCValidationModule_nati
 }
 
 #[no_mangle]
-pub extern "system" fn Java_com_dunimd_dmsc_validation_DMSCValidationModule_nativeValidateUsername(
+pub extern "system" fn Java_com_dunimd_ri_validation_RiValidationModule_nativeValidateUsername(
     mut env: JNIEnv,
     _class: JClass,
     value: jni::objects::JString,
@@ -53,7 +53,7 @@ pub extern "system" fn Java_com_dunimd_dmsc_validation_DMSCValidationModule_nati
         .expect("Failed to get username value")
         .into();
     
-    let result = DMSCValidatorBuilder::new("username")
+    let result = RiValidatorBuilder::new("username")
         .not_empty()
         .min_length(3)
         .max_length(32)
@@ -64,34 +64,34 @@ pub extern "system" fn Java_com_dunimd_dmsc_validation_DMSCValidationModule_nati
 }
 
 #[no_mangle]
-pub extern "system" fn Java_com_dunimd_dmsc_validation_DMSCValidationResult_isValid(
+pub extern "system" fn Java_com_dunimd_ri_validation_RiValidationResult_isValid(
     mut env: JNIEnv,
     _class: JClass,
     ptr: jlong,
 ) -> jboolean {
-    if !check_not_null(&mut env, ptr, "DMSCValidationResult") {
+    if !check_not_null(&mut env, ptr, "RiValidationResult") {
         return 0;
     }
     
-    let result = unsafe { &*(ptr as *const DMSCValidationResult) };
+    let result = unsafe { &*(ptr as *const RiValidationResult) };
     result.is_valid as jboolean
 }
 
 #[no_mangle]
-pub extern "system" fn Java_com_dunimd_dmsc_validation_DMSCValidationResult_free0(
+pub extern "system" fn Java_com_dunimd_ri_validation_RiValidationResult_free0(
     _env: JNIEnv,
     _class: JClass,
     ptr: jlong,
 ) {
     if ptr != 0 {
         unsafe {
-            let _ = Box::from_raw(ptr as *mut DMSCValidationResult);
+            let _ = Box::from_raw(ptr as *mut RiValidationResult);
         }
     }
 }
 
 #[no_mangle]
-pub extern "system" fn Java_com_dunimd_dmsc_validation_DMSCValidatorBuilder_new0(
+pub extern "system" fn Java_com_dunimd_ri_validation_RiValidatorBuilder_new0(
     mut env: JNIEnv,
     _class: JClass,
     field_name: jni::objects::JString,
@@ -100,34 +100,34 @@ pub extern "system" fn Java_com_dunimd_dmsc_validation_DMSCValidatorBuilder_new0
         .expect("Failed to get field name")
         .into();
     
-    let builder = DMSCValidatorBuilder::new(&name);
+    let builder = RiValidatorBuilder::new(&name);
     Box::into_raw(Box::new(builder)) as jlong
 }
 
 #[no_mangle]
-pub extern "system" fn Java_com_dunimd_dmsc_validation_DMSCValidatorBuilder_build(
+pub extern "system" fn Java_com_dunimd_ri_validation_RiValidatorBuilder_build(
     mut env: JNIEnv,
     _class: JClass,
     ptr: jlong,
 ) -> jlong {
-    if !check_not_null(&mut env, ptr, "DMSCValidatorBuilder") {
+    if !check_not_null(&mut env, ptr, "RiValidatorBuilder") {
         return 0;
     }
     
-    let builder = unsafe { Box::from_raw(ptr as *mut DMSCValidatorBuilder) };
+    let builder = unsafe { Box::from_raw(ptr as *mut RiValidatorBuilder) };
     let runner = builder.build();
     Box::into_raw(Box::new(runner)) as jlong
 }
 
 #[no_mangle]
-pub extern "system" fn Java_com_dunimd_dmsc_validation_DMSCValidatorBuilder_free0(
+pub extern "system" fn Java_com_dunimd_ri_validation_RiValidatorBuilder_free0(
     _env: JNIEnv,
     _class: JClass,
     ptr: jlong,
 ) {
     if ptr != 0 {
         unsafe {
-            let _ = Box::from_raw(ptr as *mut DMSCValidatorBuilder);
+            let _ = Box::from_raw(ptr as *mut RiValidatorBuilder);
         }
     }
 }

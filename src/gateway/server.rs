@@ -1,7 +1,7 @@
 //! Copyright © 2025-2026 Wenze Wei. All Rights Reserved.
 //!
-//! This file is part of DMSC.
-//! The DMSC project belongs to the Dunimd Team.
+//! This file is part of Ri.
+//! The Ri project belongs to the Dunimd Team.
 //!
 //! Licensed under the Apache License, Version 2.0 (the "License");
 //! You may not use this file except in compliance with the License.
@@ -18,8 +18,8 @@
 #![cfg(feature = "gateway")]
 #![allow(non_snake_case)]
 
-use crate::core::{DMSCResult, DMSCError};
-use crate::gateway::{DMSCGateway, DMSCGatewayConfig, DMSCGatewayRequest};
+use crate::core::{RiResult, RiError};
+use crate::gateway::{RiGateway, RiGatewayConfig, RiGatewayRequest};
 use hyper::{Body, Request as HyperRequest, Response as HyperResponse, Server, StatusCode};
 use hyper::service::{make_service_fn, service_fn};
 use std::collections::HashMap;
@@ -29,16 +29,16 @@ use std::sync::Arc;
 use tokio::sync::RwLock;
 use tokio_rustls::rustls::ServerConfig;
 
-pub struct DMSCGatewayServer {
-    gateway: Arc<DMSCGateway>,
-    config: Arc<RwLock<DMSCGatewayConfig>>,
+pub struct RiGatewayServer {
+    gateway: Arc<RiGateway>,
+    config: Arc<RwLock<RiGatewayConfig>>,
     addr: SocketAddr,
     tls_config: Option<ServerConfig>,
     shutdown_tx: Option<tokio::sync::oneshot::Sender<()>>,
 }
 
-impl DMSCGatewayServer {
-    pub fn new(gateway: Arc<DMSCGateway>, config: Arc<RwLock<DMSCGatewayConfig>>, addr: SocketAddr) -> Self {
+impl RiGatewayServer {
+    pub fn new(gateway: Arc<RiGateway>, config: Arc<RwLock<RiGatewayConfig>>, addr: SocketAddr) -> Self {
         Self {
             gateway,
             config,
@@ -53,7 +53,7 @@ impl DMSCGatewayServer {
         self
     }
 
-    pub async fn serve(&mut self) -> DMSCResult<()> {
+    pub async fn serve(&mut self) -> RiResult<()> {
         let addr = self.addr;
         let (shutdown_tx, shutdown_rx) = tokio::sync::oneshot::channel();
         self.shutdown_tx = Some(shutdown_tx);
@@ -79,13 +79,13 @@ impl DMSCGatewayServer {
             shutdown_rx.await.ok();
         });
 
-        graceful.await.map_err(|e| DMSCError::Other(format!("Server error: {}", e)))
+        graceful.await.map_err(|e| RiError::Other(format!("Server error: {}", e)))
     }
 
     async fn handle_request(
         req: HyperRequest<Body>,
-        gateway: Arc<DMSCGateway>,
-        config: Arc<RwLock<DMSCGatewayConfig>>,
+        gateway: Arc<RiGateway>,
+        config: Arc<RwLock<RiGatewayConfig>>,
     ) -> Result<HyperResponse<Body>, Infallible> {
         let request_id = uuid::Uuid::new_v4().to_string();
         let start = std::time::Instant::now();
@@ -137,7 +137,7 @@ impl DMSCGatewayServer {
             Err(_) => None,
         };
 
-        let dmsc_request = DMSCGatewayRequest::new(
+        let ri_request = RiGatewayRequest::new(
             method.clone(),
             path.clone(),
             headers,
@@ -146,7 +146,7 @@ impl DMSCGatewayServer {
             remote_addr.clone(),
         );
 
-        let response = gateway.handle_request(dmsc_request).await;
+        let response = gateway.handle_request(ri_request).await;
 
         let duration_ms = start.elapsed().as_secs_f64() * 1000.0;
 
@@ -155,7 +155,7 @@ impl DMSCGatewayServer {
             match log_level.as_str() {
                 "debug" => {
                     log::debug!(
-                        target: "DMSC.Gateway",
+                        target: "Ri.Gateway",
                         "{} {} {} {} {}ms",
                         method,
                         path,
@@ -166,7 +166,7 @@ impl DMSCGatewayServer {
                 }
                 "info" => {
                     log::info!(
-                        target: "DMSC.Gateway",
+                        target: "Ri.Gateway",
                         "{} {} {} {}ms",
                         method,
                         path,
@@ -176,7 +176,7 @@ impl DMSCGatewayServer {
                 }
                 "warn" => {
                     log::warn!(
-                        target: "DMSC.Gateway",
+                        target: "Ri.Gateway",
                         "{} {} {} {}ms",
                         method,
                         path,
@@ -186,7 +186,7 @@ impl DMSCGatewayServer {
                 }
                 "error" => {
                     log::error!(
-                        target: "DMSC.Gateway",
+                        target: "Ri.Gateway",
                         "{} {} {} {}ms",
                         method,
                         path,
@@ -218,7 +218,7 @@ impl DMSCGatewayServer {
     }
 }
 
-impl Drop for DMSCGatewayServer {
+impl Drop for RiGatewayServer {
     fn drop(&mut self) {
         if let Some(tx) = self.shutdown_tx.take() {
             let _ = tx.send(());
@@ -229,11 +229,11 @@ impl Drop for DMSCGatewayServer {
 pub fn load_tls_config(
     cert_path: &str,
     key_path: &str,
-) -> DMSCResult<ServerConfig> {
+) -> RiResult<ServerConfig> {
     let cert = std::fs::read(cert_path)
-        .map_err(|e| DMSCError::Config(format!("Failed to read TLS certificate: {}", e)))?;
+        .map_err(|e| RiError::Config(format!("Failed to read TLS certificate: {}", e)))?;
     let key = std::fs::read(key_path)
-        .map_err(|e| DMSCError::Config(format!("Failed to read TLS key: {}", e)))?;
+        .map_err(|e| RiError::Config(format!("Failed to read TLS key: {}", e)))?;
 
     let cert_chain = tokio_rustls::rustls::Certificate(cert);
     let private_key = tokio_rustls::rustls::PrivateKey(key);
@@ -242,7 +242,7 @@ pub fn load_tls_config(
         .with_safe_defaults()
         .with_no_client_auth()
         .with_single_cert(vec![cert_chain], private_key)
-        .map_err(|e| DMSCError::Config(format!("Failed to build TLS config: {}", e)))?;
+        .map_err(|e| RiError::Config(format!("Failed to build TLS config: {}", e)))?;
 
     server_config.alpn_protocols = vec!["h2".into(), "http/1.1".into()];
 

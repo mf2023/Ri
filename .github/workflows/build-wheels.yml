@@ -1,7 +1,7 @@
 # Copyright © 2025-2026 Wenze Wei. All Rights Reserved.
 #
-# This file is part of DMSC.
-# The DMSC project belongs to the Dunimd Team.
+# This file is part of Ri.
+# The Ri project belongs to the Dunimd Team.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # You may not use this file except in compliance with the License.
@@ -16,27 +16,27 @@
 # limitations under the License.
 
 ################################################################################
-# DMSC Rust Library and Python Wheel Build Pipeline
+# Ri Rust Library and Python Wheel Build Pipeline
 ################################################################################
 #
 # PURPOSE:
-# This GitHub Actions workflow orchestrates the complete build process for DMSC,
+# This GitHub Actions workflow orchestrates the complete build process for Ri,
 # a high-performance middleware framework written in Rust with Python bindings.
 # The pipeline generates distributable artifacts across multiple platforms.
 #
 # ARTIFACT TYPES GENERATED:
 # 1. Rust Dynamic Libraries (cdylib): Native Rust binaries for each platform
-#    - Linux:   .so files (libdmsc.so)
-#    - Windows: .dll files (libdmsc.dll)
-#    - macOS:   .dylib files (libdmsc.dylib)
+#    - Linux:   .so files (libri.so)
+#    - Windows: .dll files (libri.dll)
+#    - macOS:   .dylib files (libri.dylib)
 #
 # 2. Python Wheel Packages (.whl): Distributable Python packages with embedded
 #    Rust binaries, installable via pip
 #
 # 3. C Static Libraries (.a/.lib): For C/C++ integration scenarios
-#    - Linux:   .a files (libdmsc.a)
-#    - Windows: .lib files (dmsc.lib)
-#    - macOS:   .a files (libdmsc.a)
+#    - Linux:   .a files (libri.a)
+#    - Windows: .lib files (ri.lib)
+#    - macOS:   .a files (libri.a)
 #
 # 4. C Header Files (.h): C API declarations for direct C/C++ usage
 #
@@ -45,22 +45,22 @@
 #
 #   Phase 1: Rust Library Compilation
 #   ┌─────────────────────────────────────────────────────────────┐
-#   │  build-rust-linux        → libdmsc.so (x64)                │
-#   │  build-rust-linux-arm64  → libdmsc.so (ARM64)              │
-#   │  build-rust-windows      → libdmsc.dll (x64)                │
-#   │  build-rust-macos        → libdmsc.dylib (x64)              │
-#   │  build-rust-macos-arm64  → libdmsc.dylib (ARM64)            │
-#   │  build-rust-windows-arm64→ libdmsc.dll (ARM64)              │
+#   │  build-rust-linux        → libri.so (x64)                │
+#   │  build-rust-linux-arm64  → libri.so (ARM64)              │
+#   │  build-rust-windows      → libri.dll (x64)                │
+#   │  build-rust-macos        → libri.dylib (x64)              │
+#   │  build-rust-macos-arm64  → libri.dylib (ARM64)            │
+#   │  build-rust-windows-arm64→ libri.dll (ARM64)              │
 #   └─────────────────────────────────────────────────────────────┘
 #
 #   Phase 2: C Library Compilation (parallel with Phase 1)
 #   ┌─────────────────────────────────────────────────────────────┐
-#   │  build-c-libs-linux        → libdmsc.a + dmsc.h             │
-#   │  build-c-libs-linux-arm64  → libdmsc.a + dmsc.h             │
-#   │  build-c-libs-windows      → dmsc.lib + dmsc.h               │
-#   │  build-c-libs-macos        → libdmsc.a + dmsc.h             │
-#   │  build-c-libs-macos-arm64  → libdmsc.a + dmsc.h             │
-#   │  build-c-libs-windows-arm64→ dmsc.lib + dmsc.h             │
+#   │  build-c-libs-linux        → libri.a + ri.h             │
+#   │  build-c-libs-linux-arm64  → libri.a + ri.h             │
+#   │  build-c-libs-windows      → ri.lib + ri.h               │
+#   │  build-c-libs-macos        → libri.a + ri.h             │
+#   │  build-c-libs-macos-arm64  → libri.a + ri.h             │
+#   │  build-c-libs-windows-arm64→ ri.lib + ri.h             │
 #   └─────────────────────────────────────────────────────────────┘
 #
 #   Phase 3: Python Wheel Generation
@@ -105,7 +105,7 @@
 # - PyPI packages: Permanently available after publication
 ################################################################################
 
-name: Build and Publish DMSC (Rust/C/Python)
+name: Build and Publish Ri (Rust/C/Python)
 
 on:
   push:
@@ -158,7 +158,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: rust-linux-x64
-          path: target/release/libdmsc.*
+          path: target/release/libri.*
 
   build-rust-linux-arm64:
     runs-on: ubuntu-24.04-arm
@@ -188,7 +188,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: rust-linux-arm64
-          path: target/release/libdmsc.*
+          path: target/release/libri.*
 
   build-rust-windows:
     runs-on: windows-latest
@@ -231,7 +231,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: rust-windows-x64
-          path: target/release/libdmsc.*
+          path: target/release/libri.*
 
   build-rust-macos:
     runs-on: macos-15-intel
@@ -271,14 +271,14 @@ jobs:
           echo "=== Contents of target/x86_64-apple-darwin/release/ ==="
           ls -la target/x86_64-apple-darwin/release/ 2>/dev/null || echo "Build directory not found"
           echo ""
-          echo "=== Looking for libdmsc files ==="
-          find target -name "libdmsc*" -type f 2>/dev/null || echo "No libdmsc files found"
+          echo "=== Looking for libri files ==="
+          find target -name "libri*" -type f 2>/dev/null || echo "No libri files found"
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: rust-macos-x64
-          path: target/x86_64-apple-darwin/release/libdmsc.*
+          path: target/x86_64-apple-darwin/release/libri.*
 
   build-rust-macos-arm64:
     runs-on: macos-15
@@ -316,7 +316,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: rust-macos-arm64
-          path: target/aarch64-apple-darwin/release/libdmsc.*
+          path: target/aarch64-apple-darwin/release/libri.*
 
   build-rust-windows-arm64:
     runs-on: windows-11-arm
@@ -365,7 +365,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: rust-windows-arm64
-          path: target/aarch64-pc-windows-msvc/release/dmsc.dll
+          path: target/aarch64-pc-windows-msvc/release/ri.dll
 
   ################################################################################
   # C LIBRARY COMPILATION JOBS
@@ -375,7 +375,7 @@ jobs:
   # runtime library dependencies.
   #
   # Build Output: Static library files + C header file
-  # Used by: C/C++ applications linking against DMSC
+  # Used by: C/C++ applications linking against Ri
   ################################################################################
 
   build-c-libs-linux:
@@ -408,15 +408,15 @@ jobs:
       - name: Generate C headers
         run: |
           mkdir -p include
-          cbindgen --crate dmsc -o include/dmsc.h
+          cbindgen --crate ri -o include/ri.h
 
       - name: Upload C library artifact
         uses: actions/upload-artifact@v4
         with:
           name: c-libs-linux-x64
           path: |
-            target/release/libdmsc.a
-            include/dmsc.h
+            target/release/libri.a
+            include/ri.h
 
   build-c-libs-linux-arm64:
     runs-on: ubuntu-24.04-arm
@@ -448,15 +448,15 @@ jobs:
       - name: Generate C headers
         run: |
           mkdir -p include
-          cbindgen --crate dmsc -o include/dmsc.h
+          cbindgen --crate ri -o include/ri.h
 
       - name: Upload C library artifact
         uses: actions/upload-artifact@v4
         with:
           name: c-libs-linux-arm64
           path: |
-            target/release/libdmsc.a
-            include/dmsc.h
+            target/release/libri.a
+            include/ri.h
 
   build-c-libs-windows:
     runs-on: windows-latest
@@ -483,15 +483,15 @@ jobs:
       - name: Generate C headers
         run: |
           mkdir include 2>nul || true
-          cbindgen --crate dmsc -o include/dmsc.h
+          cbindgen --crate ri -o include/ri.h
 
       - name: Upload C library artifact
         uses: actions/upload-artifact@v4
         with:
           name: c-libs-windows-x64
           path: |
-            target/release/dmsc.lib
-            include/dmsc.h
+            target/release/ri.lib
+            include/ri.h
 
   build-c-libs-macos:
     runs-on: macos-15-intel
@@ -524,15 +524,15 @@ jobs:
       - name: Generate C headers
         run: |
           mkdir -p include
-          cbindgen --crate dmsc -o include/dmsc.h
+          cbindgen --crate ri -o include/ri.h
 
       - name: Upload C library artifact
         uses: actions/upload-artifact@v4
         with:
           name: c-libs-macos-x64
           path: |
-            target/x86_64-apple-darwin/release/libdmsc.a
-            include/dmsc.h
+            target/x86_64-apple-darwin/release/libri.a
+            include/ri.h
 
   build-c-libs-macos-arm64:
     runs-on: macos-15
@@ -565,15 +565,15 @@ jobs:
       - name: Generate C headers
         run: |
           mkdir -p include
-          cbindgen --crate dmsc -o include/dmsc.h
+          cbindgen --crate ri -o include/ri.h
 
       - name: Upload C library artifact
         uses: actions/upload-artifact@v4
         with:
           name: c-libs-macos-arm64
           path: |
-            target/aarch64-apple-darwin/release/libdmsc.a
-            include/dmsc.h
+            target/aarch64-apple-darwin/release/libri.a
+            include/ri.h
 
   build-c-libs-windows-arm64:
     runs-on: windows-11-arm
@@ -606,15 +606,15 @@ jobs:
       - name: Generate C headers
         run: |
           mkdir -p include
-          cbindgen --crate dmsc -o include/dmsc.h
+          cbindgen --crate ri -o include/ri.h
 
       - name: Upload C library artifact
         uses: actions/upload-artifact@v4
         with:
           name: c-libs-windows-arm64
           path: |
-            target/aarch64-pc-windows-msvc/release/dmsc.lib
-            include/dmsc.h
+            target/aarch64-pc-windows-msvc/release/ri.lib
+            include/ri.h
 
   ################################################################################
   # JAVA LIBRARY BUILD JOB
@@ -623,7 +623,7 @@ jobs:
   # The Java bindings use JNI to call into the Rust library.
   #
   # Build Output: JAR file with embedded native libraries
-  # Used by: Java applications using DMSC
+  # Used by: Java applications using Ri
   ################################################################################
 
   build-java:
@@ -683,12 +683,12 @@ jobs:
           mkdir -p java/src/main/resources/native/macos-x64
           mkdir -p java/src/main/resources/native/macos-arm64
           
-          cp native/linux-x64/libdmsc.so java/src/main/resources/native/linux-x64/ 2>/dev/null || true
-          cp native/linux-arm64/libdmsc.so java/src/main/resources/native/linux-arm64/ 2>/dev/null || true
-          cp native/windows-x64/dmsc.dll java/src/main/resources/native/windows-x64/ 2>/dev/null || true
-          cp native/windows-arm64/dmsc.dll java/src/main/resources/native/windows-arm64/ 2>/dev/null || true
-          cp native/macos-x64/libdmsc.dylib java/src/main/resources/native/macos-x64/ 2>/dev/null || true
-          cp native/macos-arm64/libdmsc.dylib java/src/main/resources/native/macos-arm64/ 2>/dev/null || true
+          cp native/linux-x64/libri.so java/src/main/resources/native/linux-x64/ 2>/dev/null || true
+          cp native/linux-arm64/libri.so java/src/main/resources/native/linux-arm64/ 2>/dev/null || true
+          cp native/windows-x64/ri.dll java/src/main/resources/native/windows-x64/ 2>/dev/null || true
+          cp native/windows-arm64/ri.dll java/src/main/resources/native/windows-arm64/ 2>/dev/null || true
+          cp native/macos-x64/libri.dylib java/src/main/resources/native/macos-x64/ 2>/dev/null || true
+          cp native/macos-arm64/libri.dylib java/src/main/resources/native/macos-arm64/ 2>/dev/null || true
 
       - name: Build with Maven
         run: |
@@ -699,7 +699,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: java-library
-          path: java/target/dmsc-*.jar
+          path: java/target/ri-*.jar
 
   ################################################################################
   # PYTHON WHEEL BUILD JOB (MATRIX)
@@ -1293,7 +1293,7 @@ jobs:
       - name: Sync Release to Gitee
         run: |
           # Gitee API endpoint for creating releases
-          GITEE_API="https://gitee.com/api/v5/repos/dunimd/dmsc/releases"
+          GITEE_API="https://gitee.com/api/v5/repos/dunimd/ri/releases"
           
           # Create JSON payload using jq to properly escape special characters
           jq -n \

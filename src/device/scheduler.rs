@@ -1,7 +1,7 @@
 //! Copyright © 2025-2026 Wenze Wei. All Rights Reserved.
 //!
-//! This file is part of DMSC.
-//! The DMSC project belongs to the Dunimd Team.
+//! This file is part of Ri.
+//! The Ri project belongs to the Dunimd Team.
 //!
 //! Licensed under the Apache License, Version 2.0 (the "License");
 //! You may not use this file except in compliance with the License.
@@ -20,25 +20,25 @@
 use serde::{Serialize, Deserialize};
 use std::collections::HashMap;
 use chrono::{DateTime, Utc};
-use crate::device::DMSCResourceAllocation;
+use crate::device::RiResourceAllocation;
 use tokio::sync::RwLock;
 
-use super::core::{DMSCDevice, DMSCDeviceType, DMSCDeviceCapabilities};
-use super::pool::DMSCResourcePoolManager;
+use super::core::{RiDevice, RiDeviceType, RiDeviceCapabilities};
+use super::pool::RiResourcePoolManager;
 use std::sync::Arc;
 
 /// Resource scheduler for device management
 #[allow(dead_code)]
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
-pub struct DMSCResourceScheduler {
+pub struct RiResourceScheduler {
     /// Active allocations
-    allocations: Arc<RwLock<HashMap<String, DMSCResourceAllocation>>>,
+    allocations: Arc<RwLock<HashMap<String, RiResourceAllocation>>>,
     /// Allocation history for analytics
-    allocation_history: Arc<RwLock<Vec<DMSCResourceAllocation>>>,
+    allocation_history: Arc<RwLock<Vec<RiResourceAllocation>>>,
 }
 
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pymethods)]
-impl DMSCResourceScheduler {
+impl RiResourceScheduler {
     #[cfg(feature = "pyo3")]
     #[new]
     fn new() -> Self {
@@ -51,7 +51,7 @@ impl DMSCResourceScheduler {
 
 /// # Device Scheduler
 /// 
-/// This file implements a comprehensive device scheduler for DMSC, responsible for:
+/// This file implements a comprehensive device scheduler for Ri, responsible for:
 /// 1. Managing device resource allocation and scheduling
 /// 2. Implementing multiple scheduling algorithms
 /// 3. Recording allocation history and statistics
@@ -70,24 +70,24 @@ impl DMSCResourceScheduler {
 /// ## Usage Examples
 /// 
 /// ```rust
-/// use dmsc::device::{DMSCDeviceScheduler, DMSCAllocationRequest, DMSCDeviceType, DMSCDeviceCapabilities};
-/// use dmsc::device::pool::DMSCResourcePoolManager;
+/// use ri::device::{RiDeviceScheduler, RiAllocationRequest, RiDeviceType, RiDeviceCapabilities};
+/// use ri::device::pool::RiResourcePoolManager;
 /// use std::sync::{Arc, Mutex};
 /// 
 /// fn example() {
 ///     // Create resource pool manager
-///     let pool_manager = Arc::new(Mutex::new(DMSCResourcePoolManager::new()));
+///     let pool_manager = Arc::new(Mutex::new(RiResourcePoolManager::new()));
 ///     
 ///     // Create device scheduler
-///     let mut scheduler = DMSCDeviceScheduler::new(pool_manager);
+///     let mut scheduler = RiDeviceScheduler::new(pool_manager);
 ///     
 ///     // Set scheduling policy for GPUs
-///     scheduler.set_policy(DMSCDeviceType::GPU, dmsc::device::DMSCSchedulingPolicy::PriorityBased);
+///     scheduler.set_policy(RiDeviceType::GPU, ri::device::RiSchedulingPolicy::PriorityBased);
 ///     
 ///     // Create allocation request
-///     let request = DMSCAllocationRequest {
-///         device_type: DMSCDeviceType::GPU,
-///         capabilities: DMSCDeviceCapabilities {
+///     let request = RiAllocationRequest {
+///         device_type: RiDeviceType::GPU,
+///         capabilities: RiDeviceCapabilities {
 ///             memory_gb: Some(16.0),
 ///             compute_units: Some(512),
 ///             storage_gb: None,
@@ -118,11 +118,11 @@ impl DMSCResourceScheduler {
 /// the resource pool manager to access available devices and implements multiple
 /// scheduling policies per device type.
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
-pub struct DMSCDeviceScheduler {
-    scheduling_policies: HashMap<DMSCDeviceType, DMSCSchedulingPolicy>,
-    allocation_history: Arc<RwLock<Vec<DMSCAllocationRecord>>>,
-    resource_pool_manager: Arc<RwLock<DMSCResourcePoolManager>>,
-    round_robin_counters: Arc<RwLock<HashMap<DMSCDeviceType, usize>>>,
+pub struct RiDeviceScheduler {
+    scheduling_policies: HashMap<RiDeviceType, RiSchedulingPolicy>,
+    allocation_history: Arc<RwLock<Vec<RiAllocationRecord>>>,
+    resource_pool_manager: Arc<RwLock<RiResourcePoolManager>>,
+    round_robin_counters: Arc<RwLock<HashMap<RiDeviceType, usize>>>,
 }
 
 /// Scheduling policy enum - defines different algorithms for device selection
@@ -131,7 +131,7 @@ pub struct DMSCDeviceScheduler {
 /// device types. Each policy implements a different algorithm for selecting devices.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
-pub enum DMSCSchedulingPolicy {
+pub enum RiSchedulingPolicy {
     /// FirstFit: Select the first device that meets requirements
     FirstFit,
     /// BestFit: Select the device that best matches the requirements
@@ -152,13 +152,13 @@ pub enum DMSCSchedulingPolicy {
 /// the device used, capabilities required, allocation and release times, and success status.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
-pub struct DMSCAllocationRecord {
+pub struct RiAllocationRecord {
     /// Unique allocation identifier
     pub allocation_id: String,
     /// ID of the allocated device
     pub device_id: String,
     /// Type of the allocated device
-    pub device_type: DMSCDeviceType,
+    pub device_type: RiDeviceType,
     /// Time when the device was allocated
     pub allocated_at: DateTime<Utc>,
     /// Time when the device was released (if applicable)
@@ -168,7 +168,7 @@ pub struct DMSCAllocationRecord {
     /// Whether the allocation was successful
     pub success: bool,
     /// Capabilities required for this allocation
-    pub capabilities_required: DMSCDeviceCapabilities,
+    pub capabilities_required: RiDeviceCapabilities,
 }
 
 /// Allocation request - request for device resources
@@ -179,26 +179,26 @@ pub struct DMSCAllocationRecord {
 /// and are used only by advanced scheduling logic.
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
-pub struct DMSCAllocationRequest {
+pub struct RiAllocationRequest {
     /// Type of device requested
-    pub device_type: DMSCDeviceType,
+    pub device_type: RiDeviceType,
     /// Capabilities required from the device
-    pub capabilities: DMSCDeviceCapabilities,
+    pub capabilities: RiDeviceCapabilities,
     /// Priority of this request (0-255, higher = higher priority)
     pub priority: u32,
     /// Timeout in seconds for this request
     pub timeout_secs: u64,
     /// Optional SLA class propagated from the external resource request
-    pub sla_class: Option<super::DMSCRequestSlaClass>,
+    pub sla_class: Option<super::RiRequestSlaClass>,
     /// Optional resource weights propagated from the external resource request
-    pub resource_weights: Option<super::DMSCResourceWeights>,
+    pub resource_weights: Option<super::RiResourceWeights>,
     /// Optional affinity rules propagated from the external resource request
-    pub affinity: Option<super::DMSCAffinityRules>,
+    pub affinity: Option<super::RiAffinityRules>,
     /// Optional anti-affinity rules propagated from the external resource request
-    pub anti_affinity: Option<super::DMSCAffinityRules>,
+    pub anti_affinity: Option<super::RiAffinityRules>,
 }
 
-impl DMSCDeviceScheduler {
+impl RiDeviceScheduler {
     /// Create a new device scheduler with default policies and empty allocation history.
     /// 
     /// This method initializes the scheduler with default scheduling policies for each device type
@@ -210,19 +210,19 @@ impl DMSCDeviceScheduler {
     /// 
     /// # Returns
     /// 
-    /// A new `DMSCDeviceScheduler` instance with default policies and settings.
-    pub fn new(resource_pool_manager: Arc<RwLock<DMSCResourcePoolManager>>) -> Self {
+    /// A new `RiDeviceScheduler` instance with default policies and settings.
+    pub fn new(resource_pool_manager: Arc<RwLock<RiResourcePoolManager>>) -> Self {
         let mut scheduling_policies = HashMap::new();
         
         // Set default policies for different device types
-        scheduling_policies.insert(DMSCDeviceType::CPU, DMSCSchedulingPolicy::LoadBalanced);
-        scheduling_policies.insert(DMSCDeviceType::GPU, DMSCSchedulingPolicy::PriorityBased);
-        scheduling_policies.insert(DMSCDeviceType::Memory, DMSCSchedulingPolicy::BestFit);
-        scheduling_policies.insert(DMSCDeviceType::Storage, DMSCSchedulingPolicy::FirstFit);
-        scheduling_policies.insert(DMSCDeviceType::Network, DMSCSchedulingPolicy::RoundRobin);
-        scheduling_policies.insert(DMSCDeviceType::Sensor, DMSCSchedulingPolicy::FirstFit);
-        scheduling_policies.insert(DMSCDeviceType::Actuator, DMSCSchedulingPolicy::PriorityBased);
-        scheduling_policies.insert(DMSCDeviceType::Custom, DMSCSchedulingPolicy::LoadBalanced);
+        scheduling_policies.insert(RiDeviceType::CPU, RiSchedulingPolicy::LoadBalanced);
+        scheduling_policies.insert(RiDeviceType::GPU, RiSchedulingPolicy::PriorityBased);
+        scheduling_policies.insert(RiDeviceType::Memory, RiSchedulingPolicy::BestFit);
+        scheduling_policies.insert(RiDeviceType::Storage, RiSchedulingPolicy::FirstFit);
+        scheduling_policies.insert(RiDeviceType::Network, RiSchedulingPolicy::RoundRobin);
+        scheduling_policies.insert(RiDeviceType::Sensor, RiSchedulingPolicy::FirstFit);
+        scheduling_policies.insert(RiDeviceType::Actuator, RiSchedulingPolicy::PriorityBased);
+        scheduling_policies.insert(RiDeviceType::Custom, RiSchedulingPolicy::LoadBalanced);
         
         Self {
             scheduling_policies,
@@ -243,9 +243,9 @@ impl DMSCDeviceScheduler {
     /// 
     /// # Returns
     /// 
-    /// A reference to the `DMSCSchedulingPolicy` for the specified device type.
-    pub fn get_policy(&self, device_type: &DMSCDeviceType) -> &DMSCSchedulingPolicy {
-        self.scheduling_policies.get(device_type).unwrap_or(&DMSCSchedulingPolicy::FirstFit)
+    /// A reference to the `RiSchedulingPolicy` for the specified device type.
+    pub fn get_policy(&self, device_type: &RiDeviceType) -> &RiSchedulingPolicy {
+        self.scheduling_policies.get(device_type).unwrap_or(&RiSchedulingPolicy::FirstFit)
     }
     
     /// Set the scheduling policy for a specific device type.
@@ -256,7 +256,7 @@ impl DMSCDeviceScheduler {
     /// 
     /// - `device_type`: Device type to set the policy for
     /// - `policy`: Scheduling policy to use for this device type
-    pub fn set_policy(&mut self, device_type: DMSCDeviceType, policy: DMSCSchedulingPolicy) {
+    pub fn set_policy(&mut self, device_type: RiDeviceType, policy: RiSchedulingPolicy) {
         self.scheduling_policies.insert(device_type, policy);
     }
     
@@ -274,8 +274,8 @@ impl DMSCDeviceScheduler {
     /// 
     /// # Returns
     /// 
-    /// An `Arc<DMSCDevice>` if a suitable device was found, or `None` if no device meets the requirements.
-    pub async fn select_device(&self, request: &DMSCAllocationRequest) -> Option<Arc<DMSCDevice>> {
+    /// An `Arc<RiDevice>` if a suitable device was found, or `None` if no device meets the requirements.
+    pub async fn select_device(&self, request: &RiAllocationRequest) -> Option<Arc<RiDevice>> {
         let policy = self.get_policy(&request.device_type);
 
         let available_devices = {
@@ -286,7 +286,7 @@ impl DMSCDeviceScheduler {
                 return None;
             }
 
-            let mut devices: Vec<Arc<DMSCDevice>> = Vec::new();
+            let mut devices: Vec<Arc<RiDevice>> = Vec::new();
 
             for pool in &pools {
                 let pool_devices = pool.get_available_devices();
@@ -311,12 +311,12 @@ impl DMSCDeviceScheduler {
 
         // Stage 3: apply scheduling policy using the (optionally) scored list.
         match policy {
-            DMSCSchedulingPolicy::FirstFit => self.first_fit(&scored),
-            DMSCSchedulingPolicy::BestFit => self.best_fit(&scored, &request.capabilities),
-            DMSCSchedulingPolicy::WorstFit => self.worst_fit(&scored, &request.capabilities),
-            DMSCSchedulingPolicy::RoundRobin => self.round_robin(&scored, request.device_type).await,
-            DMSCSchedulingPolicy::PriorityBased => self.priority_based(&scored, request.priority),
-            DMSCSchedulingPolicy::LoadBalanced => self.load_balanced(&scored),
+            RiSchedulingPolicy::FirstFit => self.first_fit(&scored),
+            RiSchedulingPolicy::BestFit => self.best_fit(&scored, &request.capabilities),
+            RiSchedulingPolicy::WorstFit => self.worst_fit(&scored, &request.capabilities),
+            RiSchedulingPolicy::RoundRobin => self.round_robin(&scored, request.device_type).await,
+            RiSchedulingPolicy::PriorityBased => self.priority_based(&scored, request.priority),
+            RiSchedulingPolicy::LoadBalanced => self.load_balanced(&scored),
         }
     }
 
@@ -327,9 +327,9 @@ impl DMSCDeviceScheduler {
     /// the allocation request can be incorporated here.
     fn filter_candidates(
         &self,
-        devices: Vec<Arc<DMSCDevice>>,
-        request: &DMSCAllocationRequest,
-    ) -> Vec<Arc<DMSCDevice>> {
+        devices: Vec<Arc<RiDevice>>,
+        request: &RiAllocationRequest,
+    ) -> Vec<Arc<RiDevice>> {
         devices
             .into_iter()
             .filter(|device| device.capabilities().meets_requirements(&request.capabilities))
@@ -375,19 +375,19 @@ impl DMSCDeviceScheduler {
     /// candidate set.
     fn score_candidates(
         &self,
-        candidates: &[Arc<DMSCDevice>],
-        request: &DMSCAllocationRequest,
-    ) -> Vec<Arc<DMSCDevice>> {
+        candidates: &[Arc<RiDevice>],
+        request: &RiAllocationRequest,
+    ) -> Vec<Arc<RiDevice>> {
         if candidates.is_empty() {
             return Vec::new();
         }
 
         // Derive SLA multiplier
         let sla_multiplier: f64 = match request.sla_class {
-            Some(super::DMSCRequestSlaClass::Critical) => 1.5,
-            Some(super::DMSCRequestSlaClass::High) => 1.2,
-            Some(super::DMSCRequestSlaClass::Medium) => 1.0,
-            Some(super::DMSCRequestSlaClass::Low) => 0.8,
+            Some(super::RiRequestSlaClass::Critical) => 1.5,
+            Some(super::RiRequestSlaClass::High) => 1.2,
+            Some(super::RiRequestSlaClass::Medium) => 1.0,
+            Some(super::RiRequestSlaClass::Low) => 0.8,
             None => 1.0,
         };
 
@@ -398,7 +398,7 @@ impl DMSCDeviceScheduler {
                 None => (1.0, 1.0, 1.0, 1.0),
             };
 
-        let mut scored: Vec<(Arc<DMSCDevice>, f64)> = candidates
+        let mut scored: Vec<(Arc<RiDevice>, f64)> = candidates
             .iter()
             .cloned()
             .map(|device| {
@@ -492,7 +492,7 @@ impl DMSCDeviceScheduler {
     /// # Returns
     /// 
     /// The first device in the list, or `None` if the list is empty.
-    fn first_fit(&self, devices: &[Arc<DMSCDevice>]) -> Option<Arc<DMSCDevice>> {
+    fn first_fit(&self, devices: &[Arc<RiDevice>]) -> Option<Arc<RiDevice>> {
         devices.first().cloned()
     }
     
@@ -510,7 +510,7 @@ impl DMSCDeviceScheduler {
     /// # Returns
     /// 
     /// The device with the best fitness score, or `None` if no devices meet the requirements.
-    fn best_fit(&self, devices: &[Arc<DMSCDevice>], requirements: &DMSCDeviceCapabilities) -> Option<Arc<DMSCDevice>> {
+    fn best_fit(&self, devices: &[Arc<RiDevice>], requirements: &RiDeviceCapabilities) -> Option<Arc<RiDevice>> {
         devices.iter()
             .filter(|device| device.capabilities().meets_requirements(requirements))
             .min_by(|a, b| {
@@ -535,7 +535,7 @@ impl DMSCDeviceScheduler {
     /// # Returns
     /// 
     /// The device with the highest remaining capacity score, or `None` if no devices meet the requirements.
-    fn worst_fit(&self, devices: &[Arc<DMSCDevice>], requirements: &DMSCDeviceCapabilities) -> Option<Arc<DMSCDevice>> {
+    fn worst_fit(&self, devices: &[Arc<RiDevice>], requirements: &RiDeviceCapabilities) -> Option<Arc<RiDevice>> {
         devices.iter()
             .filter(|device| device.capabilities().meets_requirements(requirements))
             .max_by(|a, b| {
@@ -560,7 +560,7 @@ impl DMSCDeviceScheduler {
     /// # Returns
     /// 
     /// The next device in the rotation, or `None` if no devices meet the requirements.
-    async fn round_robin(&self, devices: &[Arc<DMSCDevice>], device_type: DMSCDeviceType) -> Option<Arc<DMSCDevice>> {
+    async fn round_robin(&self, devices: &[Arc<RiDevice>], device_type: RiDeviceType) -> Option<Arc<RiDevice>> {
         let mut counters = self.round_robin_counters.write().await;
         let counter = counters.entry(device_type)
             .or_insert(0);
@@ -584,7 +584,7 @@ impl DMSCDeviceScheduler {
     /// # Returns
     /// 
     /// The device with the highest priority-weighted health score, or `None` if no devices meet the requirements.
-    fn priority_based(&self, devices: &[Arc<DMSCDevice>], priority: u32) -> Option<Arc<DMSCDevice>> {
+    fn priority_based(&self, devices: &[Arc<RiDevice>], priority: u32) -> Option<Arc<RiDevice>> {
         // For higher priority requests, select devices with higher health scores
         devices.iter()
             .max_by(|a, b| {
@@ -607,7 +607,7 @@ impl DMSCDeviceScheduler {
     /// # Returns
     /// 
     /// The device with the lowest load (highest health score), or `None` if no devices meet the requirements.
-    fn load_balanced(&self, devices: &[Arc<DMSCDevice>]) -> Option<Arc<DMSCDevice>> {
+    fn load_balanced(&self, devices: &[Arc<RiDevice>]) -> Option<Arc<RiDevice>> {
         devices.iter()
             .min_by(|a, b| {
                 // Use health score as a proxy for load (inverse relationship)
@@ -629,7 +629,7 @@ impl DMSCDeviceScheduler {
     /// # Returns
     /// 
     /// A fitness score between 0.0 and potentially over 1.0, where lower scores indicate better fit.
-    fn calculate_fitness_score(&self, device_cap: &DMSCDeviceCapabilities, requirements: &DMSCDeviceCapabilities) -> f64 {
+    fn calculate_fitness_score(&self, device_cap: &RiDeviceCapabilities, requirements: &RiDeviceCapabilities) -> f64 {
         let mut score = 0.0;
         
         // Calculate memory fitness
@@ -665,7 +665,7 @@ impl DMSCDeviceScheduler {
     /// # Returns
     /// 
     /// A score representing the remaining capacity, where higher scores indicate more capacity.
-    fn calculate_remaining_capacity_score(&self, device_cap: &DMSCDeviceCapabilities) -> f64 {
+    fn calculate_remaining_capacity_score(&self, device_cap: &RiDeviceCapabilities) -> f64 {
         let mut score = 0.0;
         
         // Add memory capacity
@@ -697,7 +697,7 @@ impl DMSCDeviceScheduler {
     /// # Returns
     /// 
     /// An allocation ID if successful, or `None` if no suitable device was found.
-    pub async fn allocate(&self, request: &DMSCAllocationRequest) -> Option<String> {
+    pub async fn allocate(&self, request: &RiAllocationRequest) -> Option<String> {
         if let Some(device) = self.select_device(request).await {
             // Generate unique allocation ID
             let allocation_id = uuid::Uuid::new_v4().to_string();
@@ -725,8 +725,8 @@ impl DMSCDeviceScheduler {
     /// - `device_id`: ID of the allocated device
     /// - `device_type`: Type of the allocated device
     /// - `capabilities_required`: Capabilities required for this allocation
-    pub async fn record_allocation(&self, allocation_id: String, device_id: String, device_type: DMSCDeviceType, capabilities_required: DMSCDeviceCapabilities) {
-        let record = DMSCAllocationRecord {
+    pub async fn record_allocation(&self, allocation_id: String, device_id: String, device_type: RiDeviceType, capabilities_required: RiDeviceCapabilities) {
+        let record = RiAllocationRecord {
             allocation_id,
             device_id,
             device_type,
@@ -776,14 +776,14 @@ impl DMSCDeviceScheduler {
     /// 
     /// # Returns
     /// 
-    /// A `DMSCAllocationStatistics` struct containing comprehensive allocation statistics.
-    pub async fn get_statistics(&self) -> DMSCAllocationStatistics {
+    /// A `RiAllocationStatistics` struct containing comprehensive allocation statistics.
+    pub async fn get_statistics(&self) -> RiAllocationStatistics {
         let history = self.allocation_history.read().await;
         let total_allocations = history.len();
         let successful_allocations = history.iter().filter(|r| r.success).count();
         let failed_allocations = total_allocations - successful_allocations;
         
-        let completed_allocations: Vec<&DMSCAllocationRecord> = history.iter()
+        let completed_allocations: Vec<&RiAllocationRecord> = history.iter()
             .filter(|r| r.released_at.is_some())
             .collect();
         
@@ -798,9 +798,9 @@ impl DMSCDeviceScheduler {
         };
         
         let mut by_device_type = HashMap::new();
-        for device_type in [DMSCDeviceType::CPU, DMSCDeviceType::GPU, DMSCDeviceType::Memory, 
-            DMSCDeviceType::Storage, DMSCDeviceType::Network, DMSCDeviceType::Sensor, 
-            DMSCDeviceType::Actuator, DMSCDeviceType::Custom] {
+        for device_type in [RiDeviceType::CPU, RiDeviceType::GPU, RiDeviceType::Memory, 
+            RiDeviceType::Storage, RiDeviceType::Network, RiDeviceType::Sensor, 
+            RiDeviceType::Actuator, RiDeviceType::Custom] {
             let type_allocations = history.iter()
                 .filter(|r| r.device_type == device_type)
                 .count();
@@ -821,7 +821,7 @@ impl DMSCDeviceScheduler {
                     0.0
                 };
                 
-                by_device_type.insert(device_type, DMSCDeviceTypeStatistics {
+                by_device_type.insert(device_type, RiDeviceTypeStatistics {
                     total_allocations: type_allocations,
                     completed_allocations: type_completed,
                     average_duration_seconds: type_avg_duration,
@@ -829,7 +829,7 @@ impl DMSCDeviceScheduler {
             }
         }
         
-        DMSCAllocationStatistics {
+        RiAllocationStatistics {
             total_allocations,
             successful_allocations,
             failed_allocations,
@@ -844,19 +844,19 @@ impl DMSCDeviceScheduler {
     }
     
     /// Get scheduling recommendations based on historical data.
-    pub async fn get_recommendations(&self, device_type: &DMSCDeviceType) -> Vec<DMSCSchedulingRecommendation> {
+    pub async fn get_recommendations(&self, device_type: &RiDeviceType) -> Vec<RiSchedulingRecommendation> {
         let mut recommendations = Vec::new();
         
         let history = self.allocation_history.read().await;
-        let recent_allocations: Vec<&DMSCAllocationRecord> = history.iter()
+        let recent_allocations: Vec<&RiAllocationRecord> = history.iter()
             .filter(|r| r.device_type == *device_type)
             .rev()
             .take(100)
             .collect();
         
         if recent_allocations.is_empty() {
-            recommendations.push(DMSCSchedulingRecommendation {
-                recommendation_type: DMSCSchedulingRecommendationType::UseDefaultPolicy,
+            recommendations.push(RiSchedulingRecommendation {
+                recommendation_type: RiSchedulingRecommendationType::UseDefaultPolicy,
                 description: format!("No recent allocation data for {device_type:?}, using default policy"),
                 priority: 1,
                 confidence: 0.5,
@@ -872,8 +872,8 @@ impl DMSCDeviceScheduler {
             / recent_allocations.len() as f64;
         
         if success_rate < 0.8 {
-            recommendations.push(DMSCSchedulingRecommendation {
-                recommendation_type: DMSCSchedulingRecommendationType::ConsiderPolicyChange,
+            recommendations.push(RiSchedulingRecommendation {
+                recommendation_type: RiSchedulingRecommendationType::ConsiderPolicyChange,
                 description: format!("Low success rate ({:.1}%) for {:?}, consider changing scheduling policy", 
                     success_rate * 100.0, device_type),
                 priority: 3,
@@ -882,8 +882,8 @@ impl DMSCDeviceScheduler {
         }
         
         if avg_duration > 300.0 {
-            recommendations.push(DMSCSchedulingRecommendation {
-                recommendation_type: DMSCSchedulingRecommendationType::OptimizeForLongRunning,
+            recommendations.push(RiSchedulingRecommendation {
+                recommendation_type: RiSchedulingRecommendationType::OptimizeForLongRunning,
                 description: format!("Average allocation duration is {avg_duration:.1} seconds for {device_type:?}, consider load balancing"),
                 priority: 2,
                 confidence: 0.7,
@@ -891,16 +891,16 @@ impl DMSCDeviceScheduler {
         }
         
         if recent_allocations.len() > 50 && avg_duration < 60.0 {
-            recommendations.push(DMSCSchedulingRecommendation {
-                recommendation_type: DMSCSchedulingRecommendationType::OptimizeForShortRunning,
+            recommendations.push(RiSchedulingRecommendation {
+                recommendation_type: RiSchedulingRecommendationType::OptimizeForShortRunning,
                 description: format!("High frequency of short allocations for {device_type:?}, consider round-robin scheduling"),
                 priority: 2,
                 confidence: 0.6,
             });
         }
         
-        recommendations.push(DMSCSchedulingRecommendation {
-            recommendation_type: DMSCSchedulingRecommendationType::ContinueCurrentPolicy,
+        recommendations.push(RiSchedulingRecommendation {
+            recommendation_type: RiSchedulingRecommendationType::ContinueCurrentPolicy,
             description: format!("Current scheduling policy appears effective for {device_type:?}"),
             priority: 1,
             confidence: 0.9,
@@ -917,7 +917,7 @@ impl DMSCDeviceScheduler {
 /// durations, and breakdowns by device type.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
-pub struct DMSCAllocationStatistics {
+pub struct RiAllocationStatistics {
     /// Total number of allocations
     pub total_allocations: usize,
     /// Number of successful allocations
@@ -929,7 +929,7 @@ pub struct DMSCAllocationStatistics {
     /// Average duration of completed allocations in seconds
     pub average_duration_seconds: f64,
     /// Statistics broken down by device type
-    pub by_device_type: HashMap<DMSCDeviceType, DMSCDeviceTypeStatistics>,
+    pub by_device_type: HashMap<RiDeviceType, RiDeviceTypeStatistics>,
 }
 
 /// Device type statistics - metrics for a specific device type
@@ -937,7 +937,7 @@ pub struct DMSCAllocationStatistics {
 /// This struct contains allocation statistics for a specific device type.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
-pub struct DMSCDeviceTypeStatistics {
+pub struct RiDeviceTypeStatistics {
     /// Total number of allocations for this device type
     pub total_allocations: usize,
     /// Number of completed allocations for this device type
@@ -951,7 +951,7 @@ pub struct DMSCDeviceTypeStatistics {
 /// This enum defines the different types of scheduling recommendations that can be generated.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
-pub enum DMSCSchedulingRecommendationType {
+pub enum RiSchedulingRecommendationType {
     /// Use the default policy for this device type
     UseDefaultPolicy,
     /// Continue using the current policy
@@ -974,9 +974,9 @@ pub enum DMSCSchedulingRecommendationType {
 /// description, priority, and confidence level.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
-pub struct DMSCSchedulingRecommendation {
+pub struct RiSchedulingRecommendation {
     /// Type of recommendation
-    pub recommendation_type: DMSCSchedulingRecommendationType,
+    pub recommendation_type: RiSchedulingRecommendationType,
     /// Human-readable description of the recommendation
     pub description: String,
     /// Priority of the recommendation (1-10, higher = more important)

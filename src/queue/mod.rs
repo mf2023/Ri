@@ -1,7 +1,7 @@
 //! Copyright © 2025-2026 Wenze Wei. All Rights Reserved.
 //!
-//! This file is part of DMSC.
-//! The DMSC project belongs to the Dunimd Team.
+//! This file is part of Ri.
+//! The Ri project belongs to the Dunimd Team.
 //!
 //! Licensed under the Apache License, Version 2.0 (the "License");
 //! You may not use this file except in compliance with the License.
@@ -17,21 +17,21 @@
 
 //! # Queue Module
 //! 
-//! This module provides a comprehensive queueing system for DMSC, offering a unified interface
+//! This module provides a comprehensive queueing system for Ri, offering a unified interface
 //! with support for multiple backend implementations. It enables reliable message passing and
 //! task scheduling across distributed systems.
 //! 
 //! ## Key Components
 //! 
-//! - **DMSCQueueModule**: Main queue module implementing service module traits
-//! - **DMSCQueueManager**: Central queue management component
-//! - **DMSCQueue**: Unified queue interface implemented by all backends
-//! - **DMSCQueueConfig**: Configuration for queue behavior
-//! - **DMSCQueueMessage**: Message structure for queue operations
-//! - **DMSCQueueConsumer**: Interface for consuming messages from queues
-//! - **DMSCQueueProducer**: Interface for producing messages to queues
-//! - **DMSCQueueBackendType**: Enum defining supported queue backends
-//! - **DMSCQueueStats**: Statistics for queue monitoring
+//! - **RiQueueModule**: Main queue module implementing service module traits
+//! - **RiQueueManager**: Central queue management component
+//! - **RiQueue**: Unified queue interface implemented by all backends
+//! - **RiQueueConfig**: Configuration for queue behavior
+//! - **RiQueueMessage**: Message structure for queue operations
+//! - **RiQueueConsumer**: Interface for consuming messages from queues
+//! - **RiQueueProducer**: Interface for producing messages to queues
+//! - **RiQueueBackendType**: Enum defining supported queue backends
+//! - **RiQueueStats**: Statistics for queue monitoring
 //! 
 //! ## Design Principles
 //! 
@@ -47,7 +47,7 @@
 //! ## Usage
 //! 
 //! ```rust
-//! use dmsc::prelude::*;
+//! use ri::prelude::*;
 //! use serde::{Serialize, Deserialize};
 //! 
 //! #[derive(Debug, Serialize, Deserialize)]
@@ -56,11 +56,11 @@
 //!     data: String,
 //! }
 //! 
-//! async fn example() -> DMSCResult<()> {
+//! async fn example() -> RiResult<()> {
 //!     // Create queue configuration
-//!     let queue_config = DMSCQueueConfig {
+//!     let queue_config = RiQueueConfig {
 //!         enabled: true,
-//!         backend_type: DMSCQueueBackendType::Memory,
+//!         backend_type: RiQueueBackendType::Memory,
 //!         default_queue_name: "default".to_string(),
 //!         max_retry_count: 3,
 //!         retry_delay_ms: 1000,
@@ -68,7 +68,7 @@
 //!     };
 //!     
 //!     // Create queue module
-//!     let queue_module = DMSCQueueModule::new(queue_config);
+//!     let queue_module = RiQueueModule::new(queue_config);
 //!     
 //!     // Get queue manager
 //!     let queue_manager = queue_module.queue_manager();
@@ -83,7 +83,7 @@
 //!     // Create a task message
 //!     let task = Task {
 //!         id: "task-123".to_string(),
-//!         data: "Hello, DMSC Queue!".to_string(),
+//!         data: "Hello, Ri Queue!".to_string(),
 //!     };
 //!     
 //!     // Send message to queue
@@ -108,7 +108,7 @@ pub mod backends;
 mod config;
 mod manager;
 
-pub use core::{DMSCQueue, DMSCQueueMessage, DMSCQueueProducer, DMSCQueueConsumer, DMSCQueueStats, DMSCQueueError};
-pub use config::{DMSCQueueConfig, DMSCQueueBackendType, DMSCRetryPolicy, DMSCDeadLetterConfig};
-pub use manager::{DMSCQueueManager, DMSCQueueModule};
+pub use core::{RiQueue, RiQueueMessage, RiQueueProducer, RiQueueConsumer, RiQueueStats, RiQueueError};
+pub use config::{RiQueueConfig, RiQueueBackendType, RiRetryPolicy, RiDeadLetterConfig};
+pub use manager::{RiQueueManager, RiQueueModule};
 pub use backends::*;

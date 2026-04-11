@@ -1,7 +1,7 @@
 //! Copyright © 2025-2026 Wenze Wei. All Rights Reserved.
 //!
-//! This file is part of DMSC.
-//! The DMSC project belongs to the Dunimd Team.
+//! This file is part of Ri.
+//! The Ri project belongs to the Dunimd Team.
 //!
 //! Licensed under the Apache License, Version 2.0 (the "License");
 //! You may not use this file except in compliance with the License.
@@ -39,7 +39,7 @@ use uuid::Uuid;
 /// including when it was revoked, when it expires, and the reason for revocation.
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass(get_all, set_all))]
 #[derive(Debug, Clone)]
-pub struct DMSCRevokedTokenInfo {
+pub struct RiRevokedTokenInfo {
     /// Unique identifier for the revocation record
     pub token_id: String,
     /// User ID associated with the revoked token
@@ -54,7 +54,7 @@ pub struct DMSCRevokedTokenInfo {
 
 #[cfg(feature = "pyo3")]
 #[pyo3::prelude::pymethods]
-impl DMSCRevokedTokenInfo {
+impl RiRevokedTokenInfo {
     #[new]
     fn py_new(
         token_id: String,
@@ -91,11 +91,11 @@ impl DMSCRevokedTokenInfo {
 /// consider integrating with Redis or a database-backed storage solution
 /// to persist revocations across application restarts.
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
-pub struct DMSCJWTRevocationList {
+pub struct RiJWTRevocationList {
     /// Set of revoked token strings for O(1) lookup
     revoked_tokens: DashSet<String>,
-    /// Map of token string to DMSCRevokedTokenInfo for metadata storage
-    token_info: DashMap<String, DMSCRevokedTokenInfo>,
+    /// Map of token string to RiRevokedTokenInfo for metadata storage
+    token_info: DashMap<String, RiRevokedTokenInfo>,
     /// Maximum number of revoked tokens to store
     max_tokens: usize,
 }
@@ -105,7 +105,7 @@ use dashmap::DashMap;
 /// Default maximum number of revoked tokens to store in the list.
 const DEFAULT_MAX_REVOKED_TOKENS: usize = 10000;
 
-impl DMSCJWTRevocationList {
+impl RiJWTRevocationList {
     /// Creates a new JWT revocation list with default capacity.
     ///
     /// This constructor initializes an empty revocation list with the default
@@ -113,7 +113,7 @@ impl DMSCJWTRevocationList {
     ///
     /// # Returns
     ///
-    /// A new instance of `DMSCJWTRevocationList`
+    /// A new instance of `RiJWTRevocationList`
     pub fn new() -> Self {
         Self {
             revoked_tokens: DashSet::new(),
@@ -134,7 +134,7 @@ impl DMSCJWTRevocationList {
     ///
     /// # Returns
     ///
-    /// A new instance of `DMSCJWTRevocationList` with specified capacity
+    /// A new instance of `RiJWTRevocationList` with specified capacity
     pub fn with_capacity(capacity: usize) -> Self {
         Self {
             revoked_tokens: DashSet::with_capacity(capacity),
@@ -146,7 +146,7 @@ impl DMSCJWTRevocationList {
 
 #[cfg(feature = "pyo3")]
 #[pyo3::prelude::pymethods]
-impl DMSCJWTRevocationList {
+impl RiJWTRevocationList {
     #[new]
     fn py_new() -> Self {
         Self {
@@ -210,7 +210,7 @@ impl DMSCJWTRevocationList {
     }
 }
 
-impl DMSCJWTRevocationList {
+impl RiJWTRevocationList {
      /// Revokes a specific JWT token.
      ///
      /// This method adds a token to the revocation list with associated metadata.
@@ -240,7 +240,7 @@ impl DMSCJWTRevocationList {
 
         self.revoked_tokens.insert(token.to_string());
 
-        let info = DMSCRevokedTokenInfo {
+        let info = RiRevokedTokenInfo {
             token_id: Uuid::new_v4().to_string(),
             user_id: user_id.to_string(),
             revoked_at: now,
@@ -278,7 +278,7 @@ impl DMSCJWTRevocationList {
             if info.user_id == user_id {
                 self.revoked_tokens.insert(entry.key().clone());
 
-                let updated_info = DMSCRevokedTokenInfo {
+                let updated_info = RiRevokedTokenInfo {
                     token_id: info.token_id.clone(),
                     user_id: info.user_id.clone(),
                     revoked_at: info.revoked_at,
@@ -340,8 +340,8 @@ impl DMSCJWTRevocationList {
     ///
     /// # Returns
     ///
-    /// `Some(DMSCRevokedTokenInfo)` if the token is revoked, `None` otherwise
-    pub fn get_revocation_info(&self, token: &str) -> Option<DMSCRevokedTokenInfo> {
+    /// `Some(RiRevokedTokenInfo)` if the token is revoked, `None` otherwise
+    pub fn get_revocation_info(&self, token: &str) -> Option<RiRevokedTokenInfo> {
         self.token_info.get(token).map(|i| i.clone())
     }
 
@@ -412,7 +412,7 @@ impl DMSCJWTRevocationList {
     }
 }
 
-impl Default for DMSCJWTRevocationList {
+impl Default for RiJWTRevocationList {
     fn default() -> Self {
         Self::new()
     }

@@ -2,8 +2,8 @@
 
 # Copyright © 2025-2026 Wenze Wei. All Rights Reserved.
 #
-# This file is part of DMSC.
-# The DMSC project belongs to the Dunimd Team.
+# This file is part of Ri.
+# The Ri project belongs to the Dunimd Team.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # You may not use this file except in compliance with the License.
@@ -18,52 +18,52 @@
 # limitations under the License.
 
 """
-DMSC Auth Module Tests
+Ri Auth Module Tests
 
 Tests for the authentication and authorization functionality.
 """
 
 import pytest
-from dmsc import (
-    DMSCAuthModule,
-    DMSCAuthConfig,
-    DMSCJWTManager,
-    DMSCJWTValidationOptions,
-    DMSCSessionManager,
-    DMSCSession,
-    DMSCPermissionManager,
-    DMSCPermission,
-    DMSCRole,
-    DMSCOAuthManager,
-    DMSCOAuthToken,
-    DMSCOAuthUserInfo,
-    DMSCOAuthProvider,
-    DMSCJWTRevocationList,
-    DMSCRevokedTokenInfo,
+from ri import (
+    RiAuthModule,
+    RiAuthConfig,
+    RiJWTManager,
+    RiJWTValidationOptions,
+    RiSessionManager,
+    RiSession,
+    RiPermissionManager,
+    RiPermission,
+    RiRole,
+    RiOAuthManager,
+    RiOAuthToken,
+    RiOAuthUserInfo,
+    RiOAuthProvider,
+    RiJWTRevocationList,
+    RiRevokedTokenInfo,
 )
 
 
-class TestDMSCAuthModule:
-    """Tests for DMSCAuthModule"""
+class TestRiAuthModule:
+    """Tests for RiAuthModule"""
 
     def test_auth_module_creation(self):
-        """Test creating auth module - DMSCAuthModule requires config"""
-        # Skip this test as DMSCAuthConfig cannot be instantiated from Python
+        """Test creating auth module - RiAuthModule requires config"""
+        # Skip this test as RiAuthConfig cannot be instantiated from Python
         # The module is tested via integration tests
         pass
 
 
-class TestDMSCJWTManager:
-    """Tests for DMSCJWTManager"""
+class TestRiJWTManager:
+    """Tests for RiJWTManager"""
 
     def test_jwt_manager_creation(self):
         """Test creating JWT manager"""
-        jwt_manager = DMSCJWTManager("test-secret", 3600)
+        jwt_manager = RiJWTManager("test-secret", 3600)
         assert jwt_manager is not None
 
     def test_token_generation(self):
         """Test JWT token generation"""
-        jwt_manager = DMSCJWTManager("test-secret", 3600)
+        jwt_manager = RiJWTManager("test-secret", 3600)
 
         token = jwt_manager.py_generate_token("user123", ["user"], ["read:data"])
         assert token is not None
@@ -71,7 +71,7 @@ class TestDMSCJWTManager:
 
     def test_token_validation(self):
         """Test JWT token validation"""
-        jwt_manager = DMSCJWTManager("test-secret", 3600)
+        jwt_manager = RiJWTManager("test-secret", 3600)
 
         token = jwt_manager.py_generate_token("user123", ["user"], ["read:data"])
 
@@ -79,12 +79,12 @@ class TestDMSCJWTManager:
         assert claims is not None
 
 
-class TestDMSCJWTValidationOptions:
-    """Tests for DMSCJWTValidationOptions"""
+class TestRiJWTValidationOptions:
+    """Tests for RiJWTValidationOptions"""
 
     def test_validation_options_creation(self):
         """Test creating validation options"""
-        options = DMSCJWTValidationOptions(
+        options = RiJWTValidationOptions(
             validate_exp=True,
             validate_iat=True,
             required_roles=["user"],
@@ -93,21 +93,21 @@ class TestDMSCJWTValidationOptions:
         assert options is not None
 
 
-class TestDMSCSessionManager:
-    """Tests for DMSCSessionManager"""
+class TestRiSessionManager:
+    """Tests for RiSessionManager"""
 
     def test_session_manager_creation(self):
         """Test creating session manager"""
-        session_manager = DMSCSessionManager(86400)
+        session_manager = RiSessionManager(86400)
         assert session_manager is not None
 
 
-class TestDMSCSession:
-    """Tests for DMSCSession"""
+class TestRiSession:
+    """Tests for RiSession"""
 
     def test_session_creation(self):
         """Test creating a session"""
-        session = DMSCSession(
+        session = RiSession(
             id=None,
             user_id="user123",
             created_at=None,
@@ -121,21 +121,21 @@ class TestDMSCSession:
         assert session.user_id == "user123"
 
 
-class TestDMSCPermissionManager:
-    """Tests for DMSCPermissionManager"""
+class TestRiPermissionManager:
+    """Tests for RiPermissionManager"""
 
     def test_permission_manager_creation(self):
         """Test creating permission manager"""
-        perm_manager = DMSCPermissionManager()
+        perm_manager = RiPermissionManager()
         assert perm_manager is not None
 
 
-class TestDMSCPermission:
-    """Tests for DMSCPermission"""
+class TestRiPermission:
+    """Tests for RiPermission"""
 
     def test_permission_creation(self):
         """Test creating a permission"""
-        perm = DMSCPermission(
+        perm = RiPermission(
             id=None,
             name="read:users",
             description="Can read user data",
@@ -146,12 +146,12 @@ class TestDMSCPermission:
         assert perm is not None
 
 
-class TestDMSCRole:
-    """Tests for DMSCRole"""
+class TestRiRole:
+    """Tests for RiRole"""
 
     def test_role_creation(self):
         """Test creating a role"""
-        role = DMSCRole(
+        role = RiRole(
             id=None,
             name="admin",
             description="Administrator role",
@@ -162,21 +162,21 @@ class TestDMSCRole:
         assert role.name == "admin"
 
 
-class TestDMSCOAuthManager:
-    """Tests for DMSCOAuthManager"""
+class TestRiOAuthManager:
+    """Tests for RiOAuthManager"""
 
     def test_oauth_manager_creation(self):
         """Test creating OAuth manager"""
-        oauth_manager = DMSCOAuthManager()
+        oauth_manager = RiOAuthManager()
         assert oauth_manager is not None
 
 
-class TestDMSCOAuthToken:
-    """Tests for DMSCOAuthToken"""
+class TestRiOAuthToken:
+    """Tests for RiOAuthToken"""
 
     def test_oauth_token_creation(self):
         """Test creating OAuth token"""
-        token = DMSCOAuthToken(
+        token = RiOAuthToken(
             access_token="access_123",
             token_type="Bearer",
             refresh_token="refresh_456",
@@ -187,12 +187,12 @@ class TestDMSCOAuthToken:
         assert token is not None
 
 
-class TestDMSCOAuthUserInfo:
-    """Tests for DMSCOAuthUserInfo"""
+class TestRiOAuthUserInfo:
+    """Tests for RiOAuthUserInfo"""
 
     def test_oauth_user_info_creation(self):
         """Test creating OAuth user info"""
-        user_info = DMSCOAuthUserInfo(
+        user_info = RiOAuthUserInfo(
             id="user123",
             email="user@example.com",
             name="John Doe",
@@ -204,12 +204,12 @@ class TestDMSCOAuthUserInfo:
         assert user_info.email == "user@example.com"
 
 
-class TestDMSCOAuthProvider:
-    """Tests for DMSCOAuthProvider"""
+class TestRiOAuthProvider:
+    """Tests for RiOAuthProvider"""
 
     def test_oauth_provider_creation(self):
         """Test creating OAuth provider"""
-        provider = DMSCOAuthProvider(
+        provider = RiOAuthProvider(
             id="google",
             name="Google",
             client_id="client_123",
@@ -226,17 +226,17 @@ class TestDMSCOAuthProvider:
         assert provider.client_id == "client_123"
 
 
-class TestDMSCJWTRevocationList:
-    """Tests for DMSCJWTRevocationList"""
+class TestRiJWTRevocationList:
+    """Tests for RiJWTRevocationList"""
 
     def test_revocation_list_creation(self):
         """Test creating revocation list"""
-        revocation_list = DMSCJWTRevocationList()
+        revocation_list = RiJWTRevocationList()
         assert revocation_list is not None
 
     def test_token_revocation(self):
         """Test token revocation"""
-        revocation_list = DMSCJWTRevocationList()
+        revocation_list = RiJWTRevocationList()
 
         revocation_list.revoke_token("token_123", "user123", "User logout", 3600)
 
@@ -244,12 +244,12 @@ class TestDMSCJWTRevocationList:
         assert is_revoked is True
 
 
-class TestDMSCRevokedTokenInfo:
-    """Tests for DMSCRevokedTokenInfo"""
+class TestRiRevokedTokenInfo:
+    """Tests for RiRevokedTokenInfo"""
 
     def test_revoked_token_info_creation(self):
         """Test creating revoked token info"""
-        revoked_info = DMSCRevokedTokenInfo(
+        revoked_info = RiRevokedTokenInfo(
             token_id="token_123",
             user_id="user123",
             revoked_at=0,

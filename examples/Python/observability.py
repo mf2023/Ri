@@ -1,7 +1,7 @@
 # Copyright © 2025-2026 Wenze Wei. All Rights Reserved.
 #
-# This file is part of DMSC.
-# The DMSC project belongs to the Dunimd Team.
+# This file is part of Ri.
+# The Ri project belongs to the Dunimd Team.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # You may not use this file except in compliance with the License.
@@ -16,65 +16,65 @@
 # limitations under the License.
 
 """
-DMSC Observability Module Example
+Ri Observability Module Example
 
-This example demonstrates how to use the DMSC observability module for
+This example demonstrates how to use the Ri observability module for
 metrics collection, distributed tracing, and monitoring.
 """
 
 import asyncio
-from dmsc import (
-    DMSCObservabilityModule,
-    DMSCObservabilityConfig,
-    DMSCMetricsRegistry,
-    DMSCTracer,
-    DMSCMetricType,
-    DMSCMetricConfig,
-    DMSCMetricSample,
-    DMSCMetric,
-    DMSCObservabilityData,
+from ri import (
+    RiObservabilityModule,
+    RiObservabilityConfig,
+    RiMetricsRegistry,
+    RiTracer,
+    RiMetricType,
+    RiMetricConfig,
+    RiMetricSample,
+    RiMetric,
+    RiObservabilityData,
 )
 
 
 async def main():
     # Create observability configuration
-    config = DMSCObservabilityConfig()
+    config = RiObservabilityConfig()
     config.enable_metrics = True
     config.enable_tracing = True
     config.enable_logging = True
     config.metrics_export_interval_seconds = 60
     config.trace_sample_rate = 0.1
-    config.service_name = "dmsc-example-service"
+    config.service_name = "ri-example-service"
     config.service_version = "1.0.0"
 
     # Initialize observability module
-    observability = DMSCObservabilityModule(config)
+    observability = RiObservabilityModule(config)
 
     # Create metrics registry
-    metrics = DMSCMetricsRegistry()
+    metrics = RiMetricsRegistry()
 
     # Create metric configurations
     print("Creating metrics...")
 
     # Counter metric
-    request_count_config = DMSCMetricConfig()
+    request_count_config = RiMetricConfig()
     request_count_config.name = "http_requests_total"
     request_count_config.description = "Total HTTP requests"
-    request_count_config.metric_type = DMSCMetricType.COUNTER
+    request_count_config.metric_type = RiMetricType.COUNTER
     request_count_config.labels = ["method", "endpoint", "status"]
 
     # Gauge metric
-    active_connections_config = DMSCMetricConfig()
+    active_connections_config = RiMetricConfig()
     active_connections_config.name = "active_connections"
     active_connections_config.description = "Number of active connections"
-    active_connections_config.metric_type = DMSCMetricType.GAUGE
+    active_connections_config.metric_type = RiMetricType.GAUGE
     active_connections_config.labels = ["service"]
 
     # Histogram metric
-    request_duration_config = DMSCMetricConfig()
+    request_duration_config = RiMetricConfig()
     request_duration_config.name = "http_request_duration_seconds"
     request_duration_config.description = "HTTP request duration in seconds"
-    request_duration_config.metric_type = DMSCMetricType.HISTOGRAM
+    request_duration_config.metric_type = RiMetricType.HISTOGRAM
     request_duration_config.labels = ["method", "endpoint"]
     request_duration_config.buckets = [0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1.0, 2.5, 5.0]
 
@@ -107,12 +107,12 @@ async def main():
     # Create metric samples
     print("\nCreating metric samples...")
 
-    sample1 = DMSCMetricSample()
+    sample1 = RiMetricSample()
     sample1.value = 100.0
     sample1.timestamp = 0
     sample1.labels = {"metric": "cpu_usage"}
 
-    sample2 = DMSCMetricSample()
+    sample2 = RiMetricSample()
     sample2.value = 75.5
     sample2.timestamp = 0
     sample2.labels = {"metric": "memory_usage"}
@@ -122,7 +122,7 @@ async def main():
     # Create tracer for distributed tracing
     print("\nConfiguring distributed tracing...")
 
-    tracer = DMSCTracer()
+    tracer = RiTracer()
     tracer.service_name = config.service_name
     tracer.sample_rate = config.trace_sample_rate
 
@@ -153,7 +153,7 @@ async def main():
     # Get observability data
     print("\nGetting observability data...")
 
-    obs_data = DMSCObservabilityData()
+    obs_data = RiObservabilityData()
     obs_data.timestamp = 0
     obs_data.service_name = config.service_name
     obs_data.metrics_count = 3

@@ -1,7 +1,7 @@
 //! Copyright © 2025-2026 Wenze Wei. All Rights Reserved.
 //!
-//! This file is part of DMSC.
-//! The DMSC project belongs to the Dunimd Team.
+//! This file is part of Ri.
+//! The Ri project belongs to the Dunimd Team.
 //!
 //! Licensed under the Apache License, Version 2.0 (the "License");
 //! You may not use this file except in compliance with the License.
@@ -17,10 +17,10 @@
 
 //! # Database Module C API
 //!
-//! This module provides C language bindings for DMSC's database subsystem. The database
+//! This module provides C language bindings for Ri's database subsystem. The database
 //! module delivers unified database access patterns across multiple database backends,
 //! including PostgreSQL, MySQL, SQLite, and Redis. This C API enables C/C++ applications
-//! to leverage DMSC's sophisticated database management capabilities including connection
+//! to leverage Ri's sophisticated database management capabilities including connection
 //! pooling, transaction management, query building, and result set handling.
 //!
 //! ## Module Architecture
@@ -28,18 +28,18 @@
 //! The database module comprises three primary components that together provide a complete
 //! database access layer:
 //!
-//! - **DMSCDatabaseConfig**: Configuration container for database connection parameters.
+//! - **RiDatabaseConfig**: Configuration container for database connection parameters.
 //!   Manages connection strings, pool sizes, timeout settings, and backend-specific options.
 //!   The configuration object is required for initializing database pools and controls
 //!   resource allocation and behavior characteristics for all database operations.
 //!
-//! - **DMSCDatabasePool**: Connection pool management interface providing efficient
+//! - **RiDatabasePool**: Connection pool management interface providing efficient
 //!   database connection reuse across multiple concurrent requests. The pool implements
 //!   dynamic scaling, health checking, and automatic reconnection for maintaining
 //!   reliable database connectivity. Connection pooling significantly improves performance
 //!   by avoiding the overhead of establishing new connections for each operation.
 //!
-//! - **DMSCDBRow**: Result row abstraction providing type-safe access to query results.
+//! - **RiDBRow**: Result row abstraction providing type-safe access to query results.
 //!   The row object supports column-by-column access with automatic type conversion.
 //!   Multiple rows are typically returned as a collection that can be iterated efficiently.
 //!
@@ -147,34 +147,34 @@
 //!
 //! ```c
 //! // Create database configuration
-//! DMSCDatabaseConfig* config = dmsc_database_config_new();
-//! dmsc_database_config_set_connection_string(config, "postgresql://localhost/mydb");
-//! dmsc_database_config_set_pool_size(config, 10);
+//! RiDatabaseConfig* config = ri_database_config_new();
+//! ri_database_config_set_connection_string(config, "postgresql://localhost/mydb");
+//! ri_database_config_set_pool_size(config, 10);
 //!
 //! // Create connection pool
-//! DMSCDatabasePool* pool = dmsc_database_pool_new(config);
+//! RiDatabasePool* pool = ri_database_pool_new(config);
 //!
 //! // Execute query
-//! DMSCDBRow* row;
-//! int result = dmsc_database_pool_query(pool, "SELECT * FROM users WHERE id = $1", 1, &row);
+//! RiDBRow* row;
+//! int result = ri_database_pool_query(pool, "SELECT * FROM users WHERE id = $1", 1, &row);
 //!
 //! if (result == 0) {
 //!     // Process row
-//!     char* name = dmsc_db_row_get_string(row, "name");
-//!     int age = dmsc_db_row_get_int(row, "age");
+//!     char* name = ri_db_row_get_string(row, "name");
+//!     int age = ri_db_row_get_int(row, "age");
 //!
 //!     // Cleanup row
-//!     dmsc_db_row_free(row);
+//!     ri_db_row_free(row);
 //! }
 //!
 //! // Cleanup
-//! dmsc_database_pool_free(pool);
-//! dmsc_database_config_free(config);
+//! ri_database_pool_free(pool);
+//! ri_database_config_free(config);
 //! ```
 //!
 //! ## Dependencies
 //!
-//! This module depends on the following DMSC components:
+//! This module depends on the following Ri components:
 //!
 //! - `crate::database`: Rust database module implementation
 //! - `crate::prelude`: Common types and traits
@@ -188,15 +188,15 @@
 //! - "sqlite": SQLite database support
 //! - Disable features to reduce binary size
 
-use crate::database::{DMSCDatabaseConfig, DMSCDatabasePool, DMSCDBRow};
+use crate::database::{RiDatabaseConfig, RiDatabasePool, RiDBRow};
 
 
-c_wrapper!(CDMSCDatabaseConfig, DMSCDatabaseConfig);
+c_wrapper!(CRiDatabaseConfig, RiDatabaseConfig);
 
-c_wrapper!(CDMSCDatabasePool, DMSCDatabasePool);
+c_wrapper!(CRiDatabasePool, RiDatabasePool);
 
-c_wrapper!(CDMSCDBRow, DMSCDBRow);
+c_wrapper!(CRiDBRow, RiDBRow);
 
-c_constructor!(dmsc_database_config_new, CDMSCDatabaseConfig, DMSCDatabaseConfig, DMSCDatabaseConfig::default());
+c_constructor!(ri_database_config_new, CRiDatabaseConfig, RiDatabaseConfig, RiDatabaseConfig::default());
 
-c_destructor!(dmsc_database_config_free, CDMSCDatabaseConfig);
+c_destructor!(ri_database_config_free, CRiDatabaseConfig);

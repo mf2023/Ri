@@ -2,8 +2,8 @@
 
 # Copyright © 2025-2026 Wenze Wei. All Rights Reserved.
 #
-# This file is part of DMSC.
-# The DMSC project belongs to the Dunimd Team.
+# This file is part of Ri.
+# The Ri project belongs to the Dunimd Team.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # You may not use this file except in compliance with the License.
@@ -18,9 +18,9 @@
 # limitations under the License.
 
 """
-DMSC Comprehensive API Example.
+Ri Comprehensive API Example.
 
-This example demonstrates the complete DMSC API usage across all major modules,
+This example demonstrates the complete Ri API usage across all major modules,
 providing a production-ready pattern for building enterprise applications.
 
 Features Demonstrated:
@@ -35,15 +35,15 @@ Usage:
     python comprehensive_example.py
 """
 
-from dmsc import (
-    DMSCAppBuilder, DMSCAppRuntime, DMSCError,
-    DMSCLogConfig, DMSCLogLevel,
-    DMSCAuthModule, DMSCAuthConfig,
-    DMSCCacheModule, DMSCCacheConfig, DMSCCachePolicy, DMSCCacheBackendType,
-    DMSCQueueModule, DMSCQueueConfig, DMSCQueueManager, DMSCQueueMessage,
-    DMSCServiceMesh, DMSCServiceMeshConfig,
-    DMSCObservabilityModule, DMSCObservabilityConfig, DMSCMetricsRegistry,
-    DMSCGateway, DMSCGatewayConfig, DMSCRouter, DMSCRoute,
+from ri import (
+    RiAppBuilder, RiAppRuntime, RiError,
+    RiLogConfig, RiLogLevel,
+    RiAuthModule, RiAuthConfig,
+    RiCacheModule, RiCacheConfig, RiCachePolicy, RiCacheBackendType,
+    RiQueueModule, RiQueueConfig, RiQueueManager, RiQueueMessage,
+    RiServiceMesh, RiServiceMeshConfig,
+    RiObservabilityModule, RiObservabilityConfig, RiMetricsRegistry,
+    RiGateway, RiGatewayConfig, RiRouter, RiRoute,
 )
 import asyncio
 from datetime import datetime, timedelta
@@ -62,12 +62,12 @@ async def demonstrate_application_initialization():
     print("=== Application Initialization ===\n")
     
     print("1. Creating application builder with method chaining...")
-    builder = DMSCAppBuilder()
+    builder = RiAppBuilder()
     print("   Builder created successfully\n")
     
     print("2. Configuring logging and observability with chaining...")
-    log_config = DMSCLogConfig.default()
-    obs_config = DMSCObservabilityConfig.default()
+    log_config = RiLogConfig.default()
+    obs_config = RiObservabilityConfig.default()
     
     # Use method chaining - builder returns self for Pythonic API
     builder = (builder
@@ -98,12 +98,12 @@ async def demonstrate_authentication():
     print("=== Authentication Module ===\n")
     
     print("1. Creating authentication configuration...")
-    auth_config = DMSCAuthConfig.default()
+    auth_config = RiAuthConfig.default()
     print("   Auth config created with defaults\n")
     
     print("2. Creating authentication module...")
     try:
-        auth_module = DMSCAuthModule(auth_config)
+        auth_module = RiAuthModule(auth_config)
         print("   Auth module created\n")
         
         print("3. Generating test JWT token...")
@@ -141,16 +141,16 @@ async def demonstrate_caching():
     print("=== Cache Module ===\n")
     
     print("1. Creating cache configuration...")
-    cache_config = DMSCCacheConfig()
+    cache_config = RiCacheConfig()
     cache_config.enabled = True
     cache_config.default_ttl_secs = 300
     cache_config.max_memory_mb = 1000
-    cache_config.backend_type = DMSCCacheBackendType.Memory
+    cache_config.backend_type = RiCacheBackendType.Memory
     print("   Cache config created (memory backend)\n")
     
     print("2. Creating cache module...")
     try:
-        cache_module = DMSCCacheModule(cache_config)
+        cache_module = RiCacheModule(cache_config)
         print("   Cache module created\n")
         
         print("3. Cache module properties...")
@@ -162,7 +162,7 @@ async def demonstrate_caching():
         print(f"   Note: Cache module initialization: {e}\n")
     
     print("4. Creating cache policy...")
-    policy = DMSCCachePolicy()
+    policy = RiCachePolicy()
     policy.max_size = 100
     print("   Cache policy created\n")
     
@@ -180,12 +180,12 @@ async def demonstrate_message_queue():
     print("=== Message Queue Module ===\n")
     
     print("1. Creating queue configuration...")
-    queue_config = DMSCQueueConfig.default()
+    queue_config = RiQueueConfig.default()
     print("   Queue config created with defaults\n")
     
     print("2. Creating queue module...")
     try:
-        queue_module = DMSCQueueModule(queue_config)
+        queue_module = RiQueueModule(queue_config)
         print("   Queue module created\n")
         
         print("3. Getting queue manager...")
@@ -209,12 +209,12 @@ async def demonstrate_service_mesh():
     print("=== Service Mesh Module ===\n")
     
     print("1. Creating service mesh configuration...")
-    mesh_config = DMSCServiceMeshConfig()
+    mesh_config = RiServiceMeshConfig()
     print("   Mesh config created\n")
     
     print("2. Creating service mesh...")
     try:
-        service_mesh = DMSCServiceMesh(mesh_config)
+        service_mesh = RiServiceMesh(mesh_config)
         print("   Service mesh created\n")
         
     except Exception as e:
@@ -234,12 +234,12 @@ async def demonstrate_observability():
     print("=== Observability Module ===\n")
     
     print("1. Creating observability configuration...")
-    obs_config = DMSCObservabilityConfig()
+    obs_config = RiObservabilityConfig()
     print("   Observability config created\n")
     
     print("2. Creating observability module...")
     try:
-        obs_module = DMSCObservabilityModule(obs_config)
+        obs_module = RiObservabilityModule(obs_config)
         print("   Observability module created\n")
         
     except Exception as e:
@@ -259,11 +259,11 @@ async def demonstrate_gateway():
     print("=== Gateway Module ===\n")
     
     print("1. Creating gateway configuration...")
-    gateway_config = DMSCGatewayConfig.default()
+    gateway_config = RiGatewayConfig.default()
     print("   Gateway config created\n")
     
     print("2. Creating router...")
-    router = DMSCRouter()
+    router = RiRouter()
     print("   Router created\n")
     
     print("3. Gateway demonstration complete!\n")
@@ -271,14 +271,14 @@ async def demonstrate_gateway():
 
 async def main():
     """
-    Main entry point for comprehensive DMSC example.
+    Main entry point for comprehensive Ri example.
     
-    This function demonstrates the complete DMSC API usage across all major
+    This function demonstrates the complete Ri API usage across all major
     modules in a sequential manner, showing production-ready patterns for
     building enterprise applications.
     """
     print("=" * 60)
-    print("DMSC Comprehensive API Example")
+    print("Ri Comprehensive API Example")
     print("=" * 60)
     print()
     

@@ -1,7 +1,7 @@
 // Copyright © 2025-2026 Wenze Wei. All Rights Reserved.
 //
-// This file is part of DMSC.
-// The DMSC project belongs to the Dunimd Team.
+// This file is part of Ri.
+// The Ri project belongs to the Dunimd Team.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // You may not use this file except in compliance with the License.
@@ -15,44 +15,44 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package com.dunimd.dmsc;
+package com.dunimd.ri;
 
 /**
- * DMSC error exception.
+ * Ri error exception.
  * 
- * This exception is thrown when a DMSC operation fails.
+ * This exception is thrown when a Ri operation fails.
  */
-public class DMSCError extends RuntimeException {
+public class RiError extends RuntimeException {
     private static final long serialVersionUID = 1L;
     
     private String errorCode;
     
     /**
-     * Create a new DMSCError with a message.
+     * Create a new RiError with a message.
      * 
      * @param message the error message
      */
-    public DMSCError(String message) {
+    public RiError(String message) {
         super(message);
     }
     
     /**
-     * Create a new DMSCError with a message and cause.
+     * Create a new RiError with a message and cause.
      * 
      * @param message the error message
      * @param cause the cause of the error
      */
-    public DMSCError(String message, Throwable cause) {
+    public RiError(String message, Throwable cause) {
         super(message, cause);
     }
     
     /**
-     * Create a new DMSCError with a message and error code.
+     * Create a new RiError with a message and error code.
      * 
      * @param message the error message
      * @param errorCode the error code
      */
-    public DMSCError(String message, String errorCode) {
+    public RiError(String message, String errorCode) {
         super(message);
         this.errorCode = errorCode;
     }

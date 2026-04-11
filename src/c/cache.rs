@@ -1,7 +1,7 @@
 //! Copyright © 2025-2026 Wenze Wei. All Rights Reserved.
 //!
-//! This file is part of DMSC.
-//! The DMSC project belongs to the Dunimd Team.
+//! This file is part of Ri.
+//! The Ri project belongs to the Dunimd Team.
 //!
 //! Licensed under the Apache License, Version 2.0 (the "License");
 //! You may not use this file except in compliance with the License.
@@ -17,28 +17,28 @@
 
 //! # Cache Module C API
 //!
-//! This module provides C language bindings for DMSC's caching subsystem. The cache module
+//! This module provides C language bindings for Ri's caching subsystem. The cache module
 //! delivers high-performance in-memory data caching capabilities for accelerating application
 //! performance, reducing database load, and improving system throughput. This C API enables
-//! C/C++ applications to leverage DMSC's sophisticated caching infrastructure including memory
+//! C/C++ applications to leverage Ri's sophisticated caching infrastructure including memory
 //! caching, distributed caching support, and intelligent cache eviction policies.
 //!
 //! ## Module Architecture
 //!
 //! The caching module comprises three primary components:
 //!
-//! - **DMSCCacheConfig**: Configuration container for cache system parameters. Controls cache
+//! - **RiCacheConfig**: Configuration container for cache system parameters. Controls cache
 //!   size limits, eviction policies, expiration timeouts, and connection settings for
 //!   distributed cache backends. The configuration object is essential for initializing
 //!   cache managers with appropriate resource limits and behavior characteristics.
 //!
-//! - **DMSCCacheManager**: Central cache management interface providing unified operations
+//! - **RiCacheManager**: Central cache management interface providing unified operations
 //!   across different cache backends. Handles cache lifecycle, backend selection, and
 //!   provides high-level cache operations including get, set, delete, and invalidation.
 //!   The cache manager supports automatic serialization of complex types and provides
 //!   consistent API regardless of underlying storage implementation.
 //!
-//! - **DMSCMemoryCache**: In-memory cache implementation using concurrent data structures.
+//! - **RiMemoryCache**: In-memory cache implementation using concurrent data structures.
 //!   Provides thread-safe caching with O(1) average-case operations for read and write.
 //!   The memory cache implements sophisticated eviction policies to manage memory usage
 //!   and prevent unbounded growth. Ideal for single-instance deployments or as a
@@ -106,34 +106,34 @@
 //!
 //! ```c
 //! // Create cache configuration
-//! DMSCCacheConfig* config = dmsc_cache_config_new();
-//! dmsc_cache_config_set_max_size(config, 10000);
-//! dmsc_cache_config_set_ttl(config, 3600);
+//! RiCacheConfig* config = ri_cache_config_new();
+//! ri_cache_config_set_max_size(config, 10000);
+//! ri_cache_config_set_ttl(config, 3600);
 //!
 //! // Create memory cache instance
-//! DMSCMemoryCache* cache = dmsc_memory_cache_new();
+//! RiMemoryCache* cache = ri_memory_cache_new();
 //!
 //! // Store cached value
 //! const char* key = "user:12345";
 //! const char* value = "{\"name\":\"John\",\"age\":30}";
-//! dmsc_memory_cache_set(cache, key, value, strlen(value));
+//! ri_memory_cache_set(cache, key, value, strlen(value));
 //!
 //! // Retrieve cached value
 //! size_t value_len;
-//! char* cached = dmsc_memory_cache_get(cache, key, &value_len);
+//! char* cached = ri_memory_cache_get(cache, key, &value_len);
 //! if (cached != NULL) {
 //!     // Process cached data
 //!     free(cached);
 //! }
 //!
 //! // Cleanup
-//! dmsc_memory_cache_free(cache);
-//! dmsc_cache_config_free(config);
+//! ri_memory_cache_free(cache);
+//! ri_cache_config_free(config);
 //! ```
 //!
 //! ## Dependencies
 //!
-//! This module depends on the following DMSC components:
+//! This module depends on the following Ri components:
 //!
 //! - `crate::cache`: Rust cache implementation
 //! - `crate::prelude`: Common types and traits
@@ -143,19 +143,19 @@
 //! The cache module is enabled by default with the "cache" feature flag.
 //! Disable this feature to reduce binary size when caching is not required.
 
-use crate::cache::{DMSCCacheConfig, DMSCCacheManager, DMSCMemoryCache};
+use crate::cache::{RiCacheConfig, RiCacheManager, RiMemoryCache};
 
-c_wrapper!(CDMSCCacheConfig, DMSCCacheConfig);
+c_wrapper!(CRiCacheConfig, RiCacheConfig);
 
-c_wrapper!(CDMSCCacheManager, DMSCCacheManager);
+c_wrapper!(CRiCacheManager, RiCacheManager);
 
-c_wrapper!(CDMSCMemoryCache, DMSCMemoryCache);
+c_wrapper!(CRiMemoryCache, RiMemoryCache);
 
-c_constructor!(dmsc_cache_config_new, CDMSCCacheConfig, DMSCCacheConfig, DMSCCacheConfig::default());
+c_constructor!(ri_cache_config_new, CRiCacheConfig, RiCacheConfig, RiCacheConfig::default());
 
-c_destructor!(dmsc_cache_config_free, CDMSCCacheConfig);
+c_destructor!(ri_cache_config_free, CRiCacheConfig);
 
-/// Creates a new DMSCMemoryCache instance.
+/// Creates a new RiMemoryCache instance.
 ///
 /// Initializes an empty in-memory cache with default configuration. The cache
 /// starts empty and grows as entries are added. Memory usage is managed automatically
@@ -163,8 +163,8 @@ c_destructor!(dmsc_cache_config_free, CDMSCCacheConfig);
 ///
 /// # Returns
 ///
-/// Pointer to newly allocated DMSCMemoryCache on success, or NULL if memory
-/// allocation fails. The returned pointer must be freed using dmsc_memory_cache_free().
+/// Pointer to newly allocated RiMemoryCache on success, or NULL if memory
+/// allocation fails. The returned pointer must be freed using ri_memory_cache_free().
 ///
 /// # Initial State
 ///
@@ -178,21 +178,21 @@ c_destructor!(dmsc_cache_config_free, CDMSCCacheConfig);
 /// # Usage Pattern
 ///
 /// ```c
-/// DMSCMemoryCache* cache = dmsc_memory_cache_new();
+/// RiMemoryCache* cache = ri_memory_cache_new();
 /// if (cache == NULL) {
 ///     // Handle allocation failure
 ///     return ERROR_MEMORY_ALLOCATION;
 /// }
 ///
 /// // Configure capacity if needed
-/// dmsc_memory_cache_set_max_size(cache, 100000);
+/// ri_memory_cache_set_max_size(cache, 100000);
 ///
 /// // Use cache operations
-/// dmsc_memory_cache_set(cache, "key", "value", 5);
-/// char* value = dmsc_memory_cache_get(cache, "key", NULL);
+/// ri_memory_cache_set(cache, "key", "value", 5);
+/// char* value = ri_memory_cache_get(cache, "key", NULL);
 ///
 /// // Cleanup
-/// dmsc_memory_cache_free(cache);
+/// ri_memory_cache_free(cache);
 /// ```
 ///
 /// # Performance Considerations
@@ -204,9 +204,9 @@ c_destructor!(dmsc_cache_config_free, CDMSCCacheConfig);
 /// - Use appropriate serialization format
 /// - Monitor cache hit rate for tuning
 #[no_mangle]
-pub extern "C" fn dmsc_memory_cache_new() -> *mut CDMSCMemoryCache {
-    let cache = DMSCMemoryCache::new();
-    Box::into_raw(Box::new(CDMSCMemoryCache::new(cache)))
+pub extern "C" fn ri_memory_cache_new() -> *mut CRiMemoryCache {
+    let cache = RiMemoryCache::new();
+    Box::into_raw(Box::new(CRiMemoryCache::new(cache)))
 }
 
-c_destructor!(dmsc_memory_cache_free, CDMSCMemoryCache);
+c_destructor!(ri_memory_cache_free, CRiMemoryCache);

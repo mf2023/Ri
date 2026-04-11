@@ -1,13 +1,13 @@
 <div align="center">
 
 <h1 style="display: flex; flex-direction: column; align-items: center; gap: 12px; margin-bottom: 8px;">
-  <span style="display: flex; align-items: center; gap: 12px;"><img src="../assets/svg/dmsc.svg" width="48" height="48" alt="DMSC">Dunimd Middleware Service</span>
-  <span style="font-size: 0.6em; color: #666; font-weight: normal;">DMSC Library for Python</span>
+  <span style="display: flex; align-items: center; gap: 12px;"><img src="../assets/svg/ri.svg" width="48" height="48" alt="Ri">Ri</span>
+  <span style="font-size: 0.6em; color: #666; font-weight: normal;">Ri Library for Python</span>
 </h1>
 
 English | [简体中文](README.zh.md)
 
-[Help Documentation](https://mf2023.github.io/DMSC/dmsc/) | [Changelog](CHANGELOG.md) | [Security](../SECURITY.md) | [Contributing](../CONTRIBUTING.md) | [Code of Conduct](../CODE_OF_CONDUCT.md)
+[Help Documentation](https://mf2023.github.io/Ri/ri/) | [Changelog](CHANGELOG.md) | [Security](../SECURITY.md) | [Contributing](../CONTRIBUTING.md) | [Code of Conduct](../CODE_OF_CONDUCT.md)
 
 <a href="https://x.com/Dunimd2025" target="_blank">
     <img alt="X" src="https://img.shields.io/badge/X-Dunimd-000000?style=flat-square&logo=x"/>
@@ -17,14 +17,14 @@ English | [简体中文](README.zh.md)
 </a>
 
 
-<a href="https://github.com/mf2023/DMSC" target="_blank">
-    <img alt="GitHub" src="https://img.shields.io/badge/GitHub-DMSC-181717?style=flat-square&logo=github"/>
+<a href="https://github.com/mf2023/Ri" target="_blank">
+    <img alt="GitHub" src="https://img.shields.io/badge/GitHub-Ri-181717?style=flat-square&logo=github"/>
 </a>
 <a href="https://gitee.com/dunimd" target="_blank">
     <img alt="Gitee" src="https://img.shields.io/badge/Gitee-Dunimd-C71D23?style=flat-square&logo=gitee"/>
 </a>
-<a href="https://gitcode.com/dunimd/dmsc.git" target="_blank">
-    <img alt="GitCode" src="https://img.shields.io/badge/GitCode-DMSC-FF6B35?style=flat-square&logo=git"/>
+<a href="https://gitcode.com/dunimd/ri.git" target="_blank">
+    <img alt="GitCode" src="https://img.shields.io/badge/GitCode-Ri-FF6B35?style=flat-square&logo=git"/>
 </a>
 <a href="https://huggingface.co/dunimd" target="_blank">
     <img alt="Hugging Face" src="https://img.shields.io/badge/Hugging%20Face-Dunimd-FFD21E?style=flat-square&logo=huggingface"/>
@@ -34,18 +34,18 @@ English | [简体中文](README.zh.md)
 </a>
 
 
-<a href="https://crates.io/crates/dmsc" target="_blank">
-    <img alt="Crates.io" src="https://img.shields.io/badge/Crates-DMSC-000000?style=flat-square&logo=rust"/>
+<a href="https://crates.io/crates/ri" target="_blank">
+    <img alt="Crates.io" src="https://img.shields.io/badge/Crates-Ri-000000?style=flat-square&logo=rust"/>
 </a>
 
-**DMSC (Dunimd Middleware Service)** — A high-performance Rust middleware framework with Python bindings. Built for enterprise-scale with modular architecture, built-in observability, and distributed systems support.
+**Ri (Ri)** — A high-performance Rust middleware framework with Python bindings. Built for enterprise-scale with modular architecture, built-in observability, and distributed systems support.
 
 </div>
 
 <h2 align="center">🏗️ Core Architecture</h2>
 
 ### 📐 Modular Design
-DMSC adopts a highly modular architecture with 18 core modules, enabling on-demand composition and seamless extension:
+Ri adopts a highly modular architecture with 18 core modules, enabling on-demand composition and seamless extension:
 
 <div align="center">
 
@@ -70,7 +70,7 @@ DMSC adopts a highly modular architecture with 18 core modules, enabling on-dema
 | **validation** | Input validation and data sanitization utilities | ✅ Full |
 | **ws** | WebSocket server support | ✅ Full (handler + session manager) |
 
-> **Note**: For gRPC/WebSocket servers in Python, use native Python libraries like `grpcio` and `websockets`. The DMSC Rust API provides advanced features for high-performance scenarios.
+> **Note**: For gRPC/WebSocket servers in Python, use native Python libraries like `grpcio` and `websockets`. The Ri Rust API provides advanced features for high-performance scenarios.
 
 </div>
 
@@ -192,16 +192,16 @@ sudo yum install -y cmake gcc-c++ make
 
 ### Quick Setup
 
-Install DMSC Python package:
+Install Ri Python package:
 
 ```bash
-pip install dmsc
+pip install ri
 ```
 
 Or add to your `requirements.txt`:
 
 ```
-dmsc==0.1.8
+ri==0.1.8
 ```
 
 <h2 align="center">⚡ Quick Start</h2>
@@ -210,13 +210,13 @@ dmsc==0.1.8
 
 ```python
 import asyncio
-from dmsc import DMSCAppBuilder, DMSCLogConfig
+from ri import RiAppBuilder, RiLogConfig
 
 async def main():
     # Build service runtime (supports method chaining)
-    runtime = (DMSCAppBuilder()
+    runtime = (RiAppBuilder()
         .with_config("config.yaml")
-        .with_logging(DMSCLogConfig())
+        .with_logging(RiLogConfig())
         .build())
     
     # Run business logic
@@ -227,20 +227,20 @@ asyncio.run(main())
 
 ### Authentication Example
 
-DMSC provides comprehensive authentication support with JWT, sessions, OAuth, and API keys.
+Ri provides comprehensive authentication support with JWT, sessions, OAuth, and API keys.
 
-#### Using DMSCAuthConfig
+#### Using RiAuthConfig
 
 ```python
-from dmsc import DMSCAuthConfig, DMSCAuthModule
+from ri import RiAuthConfig, RiAuthModule
 
 # Method 1: Create with defaults
-config = DMSCAuthConfig()
+config = RiAuthConfig()
 
 # Method 2: Create with custom settings
-config = DMSCAuthConfig(
+config = RiAuthConfig(
     enabled=True,
-    jwt_secret="your-secret-key",  # Optional, defaults to DMSC_JWT_SECRET env var
+    jwt_secret="your-secret-key",  # Optional, defaults to Ri_JWT_SECRET env var
     jwt_expiry_secs=3600,          # 1 hour
     session_timeout_secs=86400,    # 24 hours
     oauth_providers=["google", "github"],
@@ -249,22 +249,22 @@ config = DMSCAuthConfig(
 )
 
 # Method 3: Create from environment
-config = DMSCAuthConfig.from_env()
+config = RiAuthConfig.from_env()
 
 # Method 4: Use default factory
-config = DMSCAuthConfig.default()
+config = RiAuthConfig.default()
 
 # Create auth module with config
-auth_module = DMSCAuthModule(config)
+auth_module = RiAuthModule(config)
 ```
 
 #### JWT Token Management
 
 ```python
-from dmsc import DMSCJWTManager
+from ri import RiJWTManager
 
 # Create JWT manager with secret and expiry (in seconds)
-jwt_manager = DMSCJWTManager("your-secret-key", 3600)
+jwt_manager = RiJWTManager("your-secret-key", 3600)
 
 # Generate token with user ID, roles, and permissions
 token = jwt_manager.generate_token("user123", ["admin"], ["read", "write"])
@@ -283,10 +283,10 @@ print(f"Token expires in {expiry} seconds")
 #### Complete Auth Module Example
 
 ```python
-from dmsc import DMSCAuthConfig, DMSCAuthModule
+from ri import RiAuthConfig, RiAuthModule
 
 # Create auth configuration
-config = DMSCAuthConfig(
+config = RiAuthConfig(
     enabled=True,
     jwt_secret="secure-secret-key",
     jwt_expiry_secs=3600,
@@ -294,7 +294,7 @@ config = DMSCAuthConfig(
 )
 
 # Create auth module
-auth_module = DMSCAuthModule(config)
+auth_module = RiAuthModule(config)
 
 # Get JWT manager and generate token
 jwt_manager = auth_module.jwt_manager()
@@ -308,10 +308,10 @@ print(f"Authenticated user: {claims.sub}")
 ### Queue Management Example
 
 ```python
-from dmsc import DMSCQueueManager
+from ri import RiQueueManager
 
 # Create queue manager (uses in-memory backend by default)
-queue_manager = DMSCQueueManager()
+queue_manager = RiQueueManager()
 
 # Create a queue
 queue_manager.create_queue("my_queue")
@@ -332,13 +332,13 @@ queue_manager.delete_queue("my_queue")
 ### Service Mesh Example
 
 ```python
-from dmsc.service_mesh import DMSCServiceMesh, DMSCServiceMeshConfig
+from ri.service_mesh import RiServiceMesh, RiServiceMeshConfig
 
 # Create service mesh config
-config = DMSCServiceMeshConfig()
+config = RiServiceMeshConfig()
 
 # Create service mesh
-service_mesh = DMSCServiceMesh(config)
+service_mesh = RiServiceMesh(config)
 
 # Register service
 service_mesh.register_service("user-service", "http://localhost:8080", 100)
@@ -352,10 +352,10 @@ for instance in instances:
 ### Cache Management Example
 
 ```python
-from dmsc import DMSCCacheManager
+from ri import RiCacheManager
 
 # Create cache manager with in-memory backend (default)
-cache_manager = DMSCCacheManager()
+cache_manager = RiCacheManager()
 
 # Set cache value
 cache_manager.set("user:123", '{"name": "John"}', ttl=3600)
@@ -371,10 +371,10 @@ if cache_manager.exists("user:123"):
 ### gRPC Service Example
 
 ```python
-from dmsc.grpc import DMSCGrpcServiceRegistryPy, DMSCGrpcConfig
+from ri.grpc import RiGrpcServiceRegistryPy, RiGrpcConfig
 
 # Create gRPC service registry
-registry = DMSCGrpcServiceRegistryPy()
+registry = RiGrpcServiceRegistryPy()
 
 # Define service handler
 def my_handler(method: str, data: bytes) -> bytes:
@@ -392,10 +392,10 @@ print(f"Services: {services}")
 ### WebSocket Handler Example
 
 ```python
-from dmsc.ws import DMSCWSPythonHandler, DMSCWSSessionManagerPy
+from ri.ws import RiWSPythonHandler, RiWSSessionManagerPy
 
 # Create WebSocket handler with callbacks
-handler = DMSCWSPythonHandler(
+handler = RiWSPythonHandler(
     on_connect=lambda session_id, remote_addr: print(f"Connected: {session_id}"),
     on_disconnect=lambda session_id: print(f"Disconnected: {session_id}"),
     on_message=lambda session_id, data: b"Echo: " + data,
@@ -403,7 +403,7 @@ handler = DMSCWSPythonHandler(
 )
 
 # Create session manager
-manager = DMSCWSSessionManagerPy(max_connections=1000)
+manager = RiWSSessionManagerPy(max_connections=1000)
 
 # Get session count
 count = manager.get_session_count()
@@ -413,13 +413,13 @@ print(f"Active sessions: {count}")
 ### ORM Usage Example
 
 ```python
-from dmsc import DMSCDatabasePool, DMSCPyORMRepository
+from ri import RiDatabasePool, RiPyORMRepository
 
 # Create database connection pool
-pool = DMSCDatabasePool("sqlite:///dmsc.db")
+pool = RiDatabasePool("sqlite:///ri.db")
 
 # Create ORM repository for "users" table
-repo = DMSCPyORMRepository(pool, "users")
+repo = RiPyORMRepository(pool, "users")
 
 # Find all users
 users = repo.find_all()
@@ -474,10 +474,10 @@ resource:
 
 ### Configuration Sources
 
-DMSC supports multiple configuration sources in order of priority (lowest to highest):
+Ri supports multiple configuration sources in order of priority (lowest to highest):
 1. Configuration files (YAML, TOML, JSON)
 2. Custom configuration via code
-3. Environment variables (prefixed with `DMSC_`)
+3. Environment variables (prefixed with `Ri_`)
 
 <h2 align="center">🧪 Development & Testing</h2>
 
@@ -487,14 +487,14 @@ DMSC supports multiple configuration sources in order of priority (lowest to hig
 
 The Python tests are organized to verify both the wrapper classes and the underlying Rust bindings:
 
-- **TestDMSCAppBuilder**: Tests for the application builder wrapper
-- **TestDMSCAppRuntime**: Tests for the application runtime wrapper
-- **TestDMSCAppBuilderWrapper**: Tests for Python wrapper behavior (method chaining)
-- **TestDMSCAppRuntimeWrapper**: Tests for runtime wrapper behavior
+- **TestRiAppBuilder**: Tests for the application builder wrapper
+- **TestRiAppRuntime**: Tests for the application runtime wrapper
+- **TestRiAppBuilderWrapper**: Tests for Python wrapper behavior (method chaining)
+- **TestRiAppRuntimeWrapper**: Tests for runtime wrapper behavior
 
 #### Wrapper Design Rationale
 
-The `DMSCAppBuilder` and `DMSCAppRuntime` classes are Python wrappers around the Rust implementations. These wrappers are necessary because:
+The `RiAppBuilder` and `RiAppRuntime` classes are Python wrappers around the Rust implementations. These wrappers are necessary because:
 
 1. **PyO3 Binding Behavior**: Rust's PyO3 bindings require reassignment for builder methods (`builder = builder.with_config(...)`)
 2. **Pythonic API**: Python users expect natural method chaining without explicit reassignment
@@ -504,7 +504,7 @@ Example of the wrapper behavior:
 
 ```python
 # Python wrapper allows natural chaining
-builder = DMSCAppBuilder()
+builder = RiAppBuilder()
 result = builder.with_config("config.yaml")  # Returns the same instance
 assert result is builder  # True - same instance
 
@@ -522,8 +522,8 @@ pip install -e .
 python -m pytest tests/Python/ -v
 
 # Run specific test classes
-python -m pytest tests/Python/test_core.py::TestDMSCAppBuilderWrapper -v
-python -m pytest tests/Python/test_core.py::TestDMSCAppRuntimeWrapper -v
+python -m pytest tests/Python/test_core.py::TestRiAppBuilderWrapper -v
+python -m pytest tests/Python/test_core.py::TestRiAppRuntimeWrapper -v
 
 # Run specific test module
 python -m pytest tests/Python/test_auth.py -v
@@ -541,7 +541,7 @@ The tests verify:
 <h2 align="center">❓ Frequently Asked Questions</h2>
 
 **Q: How to add a new module?**
-A: Use the existing module interfaces and register via DMSCAppBuilder.
+A: Use the existing module interfaces and register via RiAppBuilder.
 
 **Q: How to configure logging level?**
 A: Set `logging.level` in the configuration file, supporting DEBUG/INFO/WARN/ERROR levels.
@@ -550,7 +550,7 @@ A: Set `logging.level` in the configuration file, supporting DEBUG/INFO/WARN/ERR
 A: Set `observability.metrics_enabled: true` and configure `prometheus_port` in the configuration file.
 
 **Q: How to extend configuration sources?**
-A: Implement custom configuration loaders and register with DMSC configuration system.
+A: Implement custom configuration loaders and register with Ri configuration system.
 
 **Q: How to handle asynchronous tasks?**
 A: The framework handles async operations internally, use the provided async interfaces.
@@ -564,9 +564,9 @@ A: Yes, the package includes the compiled Rust backend with Python bindings.
 <h2 align="center">🌏 Community & Citation</h2>
 
 - Welcome to submit Issues and PRs!
-- Github: https://github.com/mf2023/DMSC.git
-- Gitee: https://gitee.com/dunimd/dmsc.git
-- GitCode: https://gitcode.com/dunimd/dmsc.git
+- Github: https://github.com/mf2023/Ri.git
+- Gitee: https://gitee.com/dunimd/ri.git
+- GitCode: https://gitcode.com/dunimd/ri.git
 
 <div align="center">
 

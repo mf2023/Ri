@@ -1,7 +1,7 @@
 # Copyright © 2025-2026 Wenze Wei. All Rights Reserved.
 #
-# This file is part of DMSC.
-# The DMSC project belongs to the Dunimd Team.
+# This file is part of Ri.
+# The Ri project belongs to the Dunimd Team.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # You may not use this file except in compliance with the License.
@@ -16,27 +16,27 @@
 # limitations under the License.
 
 """
-DMSC gRPC Module Example
+Ri gRPC Module Example
 
-This example demonstrates how to use the DMSC gRPC module for gRPC server
+This example demonstrates how to use the Ri gRPC module for gRPC server
 and client operations with service registry.
 """
 
 import asyncio
-from dmsc import (
-    DMSCGrpcConfig,
-    DMSCGrpcStats,
-    DMSCGrpcServiceRegistry,
-    DMSCGrpcPythonService,
-    DMSCGrpcServiceRegistryPy,
-    DMSCGrpcServer,
-    DMSCGrpcClient,
+from ri import (
+    RiGrpcConfig,
+    RiGrpcStats,
+    RiGrpcServiceRegistry,
+    RiGrpcPythonService,
+    RiGrpcServiceRegistryPy,
+    RiGrpcServer,
+    RiGrpcClient,
 )
 
 
 async def main():
     # Create gRPC configuration
-    config = DMSCGrpcConfig()
+    config = RiGrpcConfig()
     config.host = "0.0.0.0"
     config.port = 50051
     config.max_concurrent_streams = 100
@@ -46,20 +46,20 @@ async def main():
 
     # Create gRPC server
     print("Creating gRPC server...")
-    server = DMSCGrpcServer(config)
+    server = RiGrpcServer(config)
 
     # Create service registry
-    registry = DMSCGrpcServiceRegistryPy()
+    registry = RiGrpcServiceRegistryPy()
 
     # Define a Python gRPC service
     print("\nDefining gRPC services...")
 
-    user_service = DMSCGrpcPythonService()
+    user_service = RiGrpcPythonService()
     user_service.service_name = "UserService"
     user_service.methods = ["GetUser", "CreateUser", "UpdateUser", "DeleteUser"]
     user_service.proto_file = "user.proto"
 
-    order_service = DMSCGrpcPythonService()
+    order_service = RiGrpcPythonService()
     order_service.service_name = "OrderService"
     order_service.methods = ["GetOrder", "CreateOrder", "ListOrders"]
     order_service.proto_file = "order.proto"
@@ -82,16 +82,16 @@ async def main():
 
     # Create gRPC client
     print("\nCreating gRPC client...")
-    client_config = DMSCGrpcConfig()
+    client_config = RiGrpcConfig()
     client_config.host = "localhost"
     client_config.port = 50051
     client_config.timeout_seconds = 10
 
-    client = DMSCGrpcClient(client_config)
+    client = RiGrpcClient(client_config)
 
     # Get gRPC statistics
     print("\ngRPC Statistics:")
-    stats = DMSCGrpcStats()
+    stats = RiGrpcStats()
     print(f"Total requests: {stats.total_requests}")
     print(f"Active connections: {stats.active_connections}")
     print(f"Average latency: {stats.average_latency_ms}ms")

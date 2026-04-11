@@ -1,7 +1,7 @@
 //! Copyright © 2025-2026 Wenze Wei. All Rights Reserved.
 //!
-//! This file is part of DMSC.
-//! The DMSC project belongs to the Dunimd Team.
+//! This file is part of Ri.
+//! The Ri project belongs to the Dunimd Team.
 //!
 //! Licensed under the Apache License, Version 2.0 (the "License");
 //! You may not use this file except in compliance with the License.
@@ -20,7 +20,7 @@
 //! # JWT Authentication Module
 //!
 //! This module provides JSON Web Token (JWT) based authentication functionality
-//! for the DMSC framework. It includes JWT token generation, validation, and
+//! for the Ri framework. It includes JWT token generation, validation, and
 //! claims management.
 //!
 //! ## JSON Web Tokens
@@ -32,10 +32,10 @@
 //!
 //! ## Key Components
 //!
-//! - **DMSCJWTClaims**: Standard JWT claims including subject, expiration, issued at,
+//! - **RiJWTClaims**: Standard JWT claims including subject, expiration, issued at,
 //!   roles, and permissions
-//! - **DMSCJWTValidationOptions**: Configuration options for token validation
-//! - **DMSCJWTManager**: Core manager for token generation and validation
+//! - **RiJWTValidationOptions**: Configuration options for token validation
+//! - **RiJWTManager**: Core manager for token generation and validation
 //!
 //! ## Token Structure
 //!
@@ -48,10 +48,10 @@
 //! ## Usage Example
 //!
 //! ```rust,ignore
-//! use dmsc::auth::jwt::DMSCJWTManager;
+//! use ri::auth::jwt::RiJWTManager;
 //!
 //! fn authenticate_user() {
-//!     let manager = DMSCJWTManager::create(
+//!     let manager = RiJWTManager::create(
 //!         "your-secret-key".to_string(),
 //!         3600  // 1 hour expiry
 //!     );
@@ -89,11 +89,11 @@ use jsonwebtoken::{decode, encode, DecodingKey, EncodingKey, Header, Validation}
 use serde::{Deserialize, Serialize};
 use std::time::{SystemTime, UNIX_EPOCH};
 
-use crate::core::error::DMSCError;
+use crate::core::error::RiError;
 
 /// Represents the claims payload in a JWT token.
 ///
-/// This structure contains all the standard and custom claims for a DMSC JWT.
+/// This structure contains all the standard and custom claims for a Ri JWT.
 /// It follows the JWT standard specification with additional custom claims
 /// for role-based access control (RBAC).
 ///
@@ -114,7 +114,7 @@ use crate::core::error::DMSCError;
 /// with standard JWT libraries across different programming languages.
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 #[derive(Debug, Serialize, Deserialize, Clone)]
-pub struct DMSCJWTClaims {
+pub struct RiJWTClaims {
     /// Subject claim - identifies the principal (user ID)
     #[serde(rename = "sub")]
     pub sub: String,
@@ -152,9 +152,9 @@ pub struct DMSCJWTClaims {
 /// ## Usage
 ///
 /// ```rust,ignore
-/// use dmsc::auth::jwt::DMSCJWTValidationOptions;
+/// use ri::auth::jwt::RiJWTValidationOptions;
 ///
-/// let options = DMSCJWTValidationOptions {
+/// let options = RiJWTValidationOptions {
 ///     validate_exp: true,
 ///     validate_iat: true,
 ///     required_roles: vec!["user".to_string()],
@@ -164,7 +164,7 @@ pub struct DMSCJWTClaims {
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 #[derive(Debug, Clone)]
 #[allow(dead_code)]
-pub struct DMSCJWTValidationOptions {
+pub struct RiJWTValidationOptions {
     /// Whether to validate the expiration time claim
     pub validate_exp: bool,
 
@@ -180,7 +180,7 @@ pub struct DMSCJWTValidationOptions {
 
 #[cfg(feature = "pyo3")]
 #[pyo3::prelude::pymethods]
-impl DMSCJWTValidationOptions {
+impl RiJWTValidationOptions {
     #[new]
     fn py_new(
         validate_exp: bool,
@@ -197,7 +197,7 @@ impl DMSCJWTValidationOptions {
     }
 }
 
-impl Default for DMSCJWTValidationOptions {
+impl Default for RiJWTValidationOptions {
     fn default() -> Self {
         Self {
             validate_exp: true,
@@ -210,7 +210,7 @@ impl Default for DMSCJWTValidationOptions {
 
 /// Core JWT management structure.
 ///
-/// The `DMSCJWTManager` handles all JWT-related operations including token
+/// The `RiJWTManager` handles all JWT-related operations including token
 /// generation, validation, and secret key management. It uses the HS256
 /// (HMAC SHA-256) algorithm for signing tokens.
 ///
@@ -231,7 +231,7 @@ impl Default for DMSCJWTValidationOptions {
 /// The encoding/decoding operations are primarily CPU-bound due to the
 /// HMAC computation.
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
-pub struct DMSCJWTManager {
+pub struct RiJWTManager {
     /// The secret key used for signing and verifying tokens
     secret: String,
 
@@ -247,7 +247,7 @@ pub struct DMSCJWTManager {
 
 #[cfg(feature = "pyo3")]
 #[pyo3::prelude::pymethods]
-impl DMSCJWTManager {
+impl RiJWTManager {
     /// Creates a new JWT manager with the specified secret and expiry time.
     ///
     /// This constructor is used for Python bindings and creates a JWT manager
@@ -260,7 +260,7 @@ impl DMSCJWTManager {
     ///
     /// # Returns
     ///
-    /// A new instance of `DMSCJWTManager`
+    /// A new instance of `RiJWTManager`
     #[new]
     pub fn new(secret: String, expiry_secs: u64) -> Self {
         let secret_bytes = secret.as_bytes().to_vec();
@@ -283,7 +283,7 @@ impl DMSCJWTManager {
     /// # Returns
     ///
     /// The encoded JWT token string
-    pub fn py_generate_token(&self, user_id: &str, roles: Vec<String>, permissions: Vec<String>) -> Result<String, DMSCError> {
+    pub fn py_generate_token(&self, user_id: &str, roles: Vec<String>, permissions: Vec<String>) -> Result<String, RiError> {
         self.generate_token(user_id, roles, permissions)
     }
 
@@ -295,8 +295,8 @@ impl DMSCJWTManager {
     ///
     /// # Returns
     ///
-    /// The decoded DMSCJWTClaims if validation succeeds
-    pub fn py_validate_token(&self, token: &str) -> Result<DMSCJWTClaims, DMSCError> {
+    /// The decoded RiJWTClaims if validation succeeds
+    pub fn py_validate_token(&self, token: &str) -> Result<RiJWTClaims, RiError> {
         self.validate_token(token)
     }
 
@@ -319,7 +319,7 @@ impl DMSCJWTManager {
     ///
     /// The encoded JWT token string
     #[pyo3(name = "generate_token")]
-    pub fn generate_token_py(&self, user_id: &str, roles: Vec<String>, permissions: Vec<String>) -> Result<String, DMSCError> {
+    pub fn generate_token_py(&self, user_id: &str, roles: Vec<String>, permissions: Vec<String>) -> Result<String, RiError> {
         self.py_generate_token(user_id, roles, permissions)
     }
 
@@ -333,9 +333,9 @@ impl DMSCJWTManager {
     ///
     /// # Returns
     ///
-    /// The decoded DMSCJWTClaims if validation succeeds
+    /// The decoded RiJWTClaims if validation succeeds
     #[pyo3(name = "validate_token")]
-    pub fn validate_token_py(&self, token: &str) -> Result<DMSCJWTClaims, DMSCError> {
+    pub fn validate_token_py(&self, token: &str) -> Result<RiJWTClaims, RiError> {
         self.py_validate_token(token)
     }
 
@@ -348,7 +348,7 @@ impl DMSCJWTManager {
     }
 }
 
-impl DMSCJWTManager {
+impl RiJWTManager {
     /// Creates a new JWT manager with the specified secret and expiry time.
     ///
     /// This is the primary constructor for creating a JWT manager. It initializes
@@ -367,14 +367,14 @@ impl DMSCJWTManager {
     ///
     /// # Returns
     ///
-    /// A new instance of `DMSCJWTManager`
+    /// A new instance of `RiJWTManager`
     ///
     /// # Examples
     ///
     /// ```rust,ignore
-    /// use dmsc::auth::jwt::DMSCJWTManager;
+    /// use ri::auth::jwt::RiJWTManager;
     ///
-    /// let manager = DMSCJWTManager::create(
+    /// let manager = RiJWTManager::create(
     ///     "your-secret-key".to_string(),
     ///     3600  // 1 hour expiry
     /// );
@@ -411,14 +411,14 @@ impl DMSCJWTManager {
     ///
     /// # Returns
     ///
-    /// A Result containing the encoded JWT token string, or a DMSCError if encoding fails
+    /// A Result containing the encoded JWT token string, or a RiError if encoding fails
     ///
     /// # Examples
     ///
     /// ```rust,ignore
-    /// use dmsc::auth::jwt::DMSCJWTManager;
+    /// use ri::auth::jwt::RiJWTManager;
     ///
-    /// let manager = DMSCJWTManager::create("secret".to_string(), 3600);
+    /// let manager = RiJWTManager::create("secret".to_string(), 3600);
     ///
     /// let token = manager.generate_token(
     ///     "user123",
@@ -431,13 +431,13 @@ impl DMSCJWTManager {
     ///     Err(e) => println!("Failed to generate token: {:?}", e),
     /// }
     /// ```
-    pub fn generate_token(&self, user_id: &str, roles: Vec<String>, permissions: Vec<String>) -> Result<String, DMSCError> {
+    pub fn generate_token(&self, user_id: &str, roles: Vec<String>, permissions: Vec<String>) -> Result<String, RiError> {
         let now = SystemTime::now()
             .duration_since(UNIX_EPOCH)
-            .map_err(|e| DMSCError::Other(format!("System time error: {}", e)))?
+            .map_err(|e| RiError::Other(format!("System time error: {}", e)))?
             .as_secs();
 
-        let claims = DMSCJWTClaims {
+        let claims = RiJWTClaims {
             sub: user_id.to_string(),
             exp: now + self.expiry_secs,
             iat: now,
@@ -446,7 +446,7 @@ impl DMSCJWTManager {
         };
 
         encode(&Header::default(), &claims, &self.encoding_key)
-            .map_err(|e| DMSCError::Other(format!("JWT encoding failed: {}", e)))
+            .map_err(|e| RiError::Other(format!("JWT encoding failed: {}", e)))
     }
 
     /// Validates a JWT token and returns the decoded claims.
@@ -466,15 +466,15 @@ impl DMSCJWTManager {
     ///
     /// # Returns
     ///
-    /// A Result containing the decoded DMSCJWTClaims if validation succeeds,
-    /// or a DMSCError if validation fails (invalid signature, expired token, etc.)
+    /// A Result containing the decoded RiJWTClaims if validation succeeds,
+    /// or a RiError if validation fails (invalid signature, expired token, etc.)
     ///
     /// # Examples
     ///
     /// ```rust,ignore
-    /// use dmsc::auth::jwt::DMSCJWTManager;
+    /// use ri::auth::jwt::RiJWTManager;
     ///
-    /// let manager = DMSCJWTManager::create("secret".to_string(), 3600);
+    /// let manager = RiJWTManager::create("secret".to_string(), 3600);
     ///
     /// // First generate a token
     /// let token = manager.generate_token("user123", vec![], vec![]).unwrap();
@@ -487,10 +487,10 @@ impl DMSCJWTManager {
     ///     Err(e) => println!("Invalid token: {:?}", e),
     /// }
     /// ```
-    pub fn validate_token(&self, token: &str) -> Result<DMSCJWTClaims, DMSCError> {
+    pub fn validate_token(&self, token: &str) -> Result<RiJWTClaims, RiError> {
         let validation = Validation::default();
-        decode::<DMSCJWTClaims>(token, &self.decoding_key, &validation)
-            .map_err(|e| DMSCError::Other(format!("JWT decoding failed: {}", e)))
+        decode::<RiJWTClaims>(token, &self.decoding_key, &validation)
+            .map_err(|e| RiError::Other(format!("JWT decoding failed: {}", e)))
             .map(|token_data| token_data.claims)
     }
 

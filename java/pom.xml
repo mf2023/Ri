@@ -5,13 +5,13 @@
     <modelVersion>4.0.0</modelVersion>
 
     <groupId>com.dunimd</groupId>
-    <artifactId>dmsc</artifactId>
+    <artifactId>ri</artifactId>
     <version>0.1.8</version>
     <packaging>jar</packaging>
 
-    <name>DMSC</name>
-    <description>Dunimd Middleware Service - Java API</description>
-    <url>https://github.com/mf2023/DMSC</url>
+    <name>Ri</name>
+    <description>Ri - Java API</description>
+    <url>https://github.com/mf2023/Ri</url>
 
     <licenses>
         <license>
@@ -30,9 +30,9 @@
     </developers>
 
     <scm>
-        <connection>scm:git:git://github.com/mf2023/DMSC.git</connection>
-        <developerConnection>scm:git:ssh://github.com/mf2023/DMSC.git</developerConnection>
-        <url>https://github.com/mf2023/DMSC</url>
+        <connection>scm:git:git://github.com/mf2023/Ri.git</connection>
+        <developerConnection>scm:git:ssh://github.com/mf2023/Ri.git</developerConnection>
+        <url>https://github.com/mf2023/Ri</url>
     </scm>
 
     <properties>

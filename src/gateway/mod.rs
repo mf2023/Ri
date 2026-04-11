@@ -1,7 +1,7 @@
 //! Copyright © 2025-2026 Wenze Wei. All Rights Reserved.
 //!
-//! This file is part of DMSC.
-//! The DMSC project belongs to the Dunimd Team.
+//! This file is part of Ri.
+//! The Ri project belongs to the Dunimd Team.
 //!
 //! Licensed under the Apache License, Version 2.0 (the "License");
 //! You may not use this file except in compliance with the License.
@@ -19,49 +19,49 @@
 
 //! # Gateway Module
 //! 
-//! This module provides a comprehensive API gateway functionality for DMSC, offering routing, middleware support,
+//! This module provides a comprehensive API gateway functionality for Ri, offering routing, middleware support,
 //! load balancing, rate limiting, and circuit breaking capabilities.
 //! 
 //! ## Key Components
 //! 
-//! - **DMSCGateway**: Main gateway struct implementing the DMSCModule trait
-//! - **DMSCGatewayConfig**: Configuration for gateway behavior
-//! - **DMSCGatewayRequest**: Request structure for gateway operations
-//! - **DMSCGatewayResponse**: Response structure for gateway operations
-//! - **DMSCRoute**: Route definition for API endpoints
-//! - **DMSCRouter**: Router for handling request routing
-//! - **DMSCMiddleware**: Middleware interface for request processing
-//! - **DMSCMiddlewareChain**: Chain of middleware for sequential execution
-//! - **DMSCLoadBalancer**: Load balancing for distributing requests across multiple services
-//! - **DMSCLoadBalancerStrategy**: Load balancing strategies (RoundRobin, LeastConnections, etc.)
-//! - **DMSCRateLimiter**: Rate limiting for controlling request rates
-//! - **DMSCRateLimitConfig**: Configuration for rate limiting
-//! - **DMSCCircuitBreaker**: Circuit breaker for preventing cascading failures
-//! - **DMSCCircuitBreakerConfig**: Configuration for circuit breakers
+//! - **RiGateway**: Main gateway struct implementing the RiModule trait
+//! - **RiGatewayConfig**: Configuration for gateway behavior
+//! - **RiGatewayRequest**: Request structure for gateway operations
+//! - **RiGatewayResponse**: Response structure for gateway operations
+//! - **RiRoute**: Route definition for API endpoints
+//! - **RiRouter**: Router for handling request routing
+//! - **RiMiddleware**: Middleware interface for request processing
+//! - **RiMiddlewareChain**: Chain of middleware for sequential execution
+//! - **RiLoadBalancer**: Load balancing for distributing requests across multiple services
+//! - **RiLoadBalancerStrategy**: Load balancing strategies (RoundRobin, LeastConnections, etc.)
+//! - **RiRateLimiter**: Rate limiting for controlling request rates
+//! - **RiRateLimitConfig**: Configuration for rate limiting
+//! - **RiCircuitBreaker**: Circuit breaker for preventing cascading failures
+//! - **RiCircuitBreakerConfig**: Configuration for circuit breakers
 //! 
 //! ## Design Principles
 //! 
 //! 1. **Modular Design**: Separate components for routing, middleware, load balancing, rate limiting, and circuit breaking
 //! 2. **Async-First**: All gateway operations are asynchronous
-//! 3. **Configurable**: Highly configurable gateway behavior through DMSCGatewayConfig
+//! 3. **Configurable**: Highly configurable gateway behavior through RiGatewayConfig
 //! 4. **Middleware Support**: Extensible middleware system for request processing
 //! 5. **Resilience**: Built-in circuit breaker and rate limiting for service resilience
 //! 6. **Load Balancing**: Support for distributing requests across multiple service instances
 //! 7. **CORS Support**: Built-in CORS configuration for cross-origin requests
 //! 8. **Logging**: Comprehensive logging support
-//! 9. **Service Integration**: Implements DMSCModule trait for seamless integration into DMSC
+//! 9. **Service Integration**: Implements RiModule trait for seamless integration into Ri
 //! 10. **Thread-safe**: Uses Arc and RwLock for safe concurrent access
 //! 
 //! ## Usage
 //! 
 //! ```rust
-//! use dmsc::prelude::*;
-//! use dmsc::gateway::{DMSCGateway, DMSCGatewayConfig, DMSCRoute};
+//! use ri::prelude::*;
+//! use ri::gateway::{RiGateway, RiGatewayConfig, RiRoute};
 //! use std::collections::HashMap;
 //! 
-//! async fn example() -> DMSCResult<()> {
+//! async fn example() -> RiResult<()> {
 //!     // Create gateway configuration
-//!     let gateway_config = DMSCGatewayConfig {
+//!     let gateway_config = RiGatewayConfig {
 //!         listen_address: "0.0.0.0".to_string(),
 //!         listen_port: 8080,
 //!         max_connections: 10000,
@@ -78,17 +78,17 @@
 //!     };
 //!     
 //!     // Create gateway instance
-//!     let gateway = DMSCGateway::new();
+//!     let gateway = RiGateway::new();
 //!     
 //!     // Get router and add routes
 //!     let router = gateway.router();
 //!     
 //!     // Add a simple GET route
-//!     router.add_route(DMSCRoute {
+//!     router.add_route(RiRoute {
 //!         path: "/api/v1/health".to_string(),
 //!         method: "GET".to_string(),
 //!         handler: Arc::new(|req| Box::pin(async move {
-//!             Ok(DMSCGatewayResponse::json(200, &serde_json::json!({ "status": "ok" }), req.id.clone())?)
+//!             Ok(RiGatewayResponse::json(200, &serde_json::json!({ "status": "ok" }), req.id.clone())?)
 //!         })),
 //!         ..Default::default()
 //!     }).await?;
@@ -102,7 +102,7 @@
 //!     }))).await;
 //!     
 //!     // Handle a sample request
-//!     let sample_request = DMSCGatewayRequest::new(
+//!     let sample_request = RiGatewayRequest::new(
 //!         "GET".to_string(),
 //!         "/api/v1/health".to_string(),
 //!         HashMap::new(),
@@ -118,7 +118,7 @@
 //! }
 //! ```
 
-use crate::core::{DMSCModule, DMSCServiceContext};
+use crate::core::{RiModule, RiServiceContext};
 use log;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -133,23 +133,23 @@ pub mod load_balancer;
 pub mod rate_limiter;
 pub mod server;
 
-pub use routing::{DMSCRoute, DMSCRouter};
-pub use radix_tree::{DMSCRadixTree, RadixNode, PathSegment, SegmentType, RouteMatch};
-pub use middleware::{DMSCMiddleware, DMSCMiddlewareChain};
-pub use load_balancer::{DMSCLoadBalancer, DMSCLoadBalancerStrategy};
-pub use rate_limiter::{DMSCRateLimiter, DMSCRateLimitConfig};
-pub use circuit_breaker::{DMSCCircuitBreaker, DMSCCircuitBreakerConfig};
+pub use routing::{RiRoute, RiRouter};
+pub use radix_tree::{RiRadixTree, RadixNode, PathSegment, SegmentType, RouteMatch};
+pub use middleware::{RiMiddleware, RiMiddlewareChain};
+pub use load_balancer::{RiLoadBalancer, RiLoadBalancerStrategy};
+pub use rate_limiter::{RiRateLimiter, RiRateLimitConfig};
+pub use circuit_breaker::{RiCircuitBreaker, RiCircuitBreakerConfig};
 
 #[cfg(feature = "gateway")]
-pub use server::{DMSCGatewayServer, load_tls_config};
+pub use server::{RiGatewayServer, load_tls_config};
 
-/// Configuration for the DMSC Gateway.
+/// Configuration for the Ri Gateway.
 /// 
 /// This struct defines the configuration options for the API gateway, including network settings,
 /// feature toggles, and CORS configuration.
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass(get_all, set_all))]
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct DMSCGatewayConfig {
+pub struct RiGatewayConfig {
     /// Address to listen on
     pub listen_address: String,
     /// Port to listen on
@@ -179,9 +179,9 @@ pub struct DMSCGatewayConfig {
 }
 
 #[cfg(feature = "pyo3")]
-/// Python bindings for DMSCGatewayConfig
+/// Python bindings for RiGatewayConfig
 #[pyo3::prelude::pymethods]
-impl DMSCGatewayConfig {
+impl RiGatewayConfig {
     #[new]
     fn py_new() -> Self {
         Self::default()
@@ -197,14 +197,14 @@ impl DMSCGatewayConfig {
     }
 }
 
-impl DMSCGatewayConfig {
-    /// Creates a new DMSCGatewayConfig with default values.
+impl RiGatewayConfig {
+    /// Creates a new RiGatewayConfig with default values.
     pub fn new() -> Self {
         Self::default()
     }
 }
 
-impl Default for DMSCGatewayConfig {
+impl Default for RiGatewayConfig {
     /// Returns the default configuration for the gateway.
     /// 
     /// Default values:
@@ -246,7 +246,7 @@ impl Default for DMSCGatewayConfig {
 /// query parameters, body, and remote address.
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
-pub struct DMSCGatewayRequest {
+pub struct RiGatewayRequest {
     /// Unique request ID
     pub id: String,
     /// HTTP method (GET, POST, etc.)
@@ -265,7 +265,7 @@ pub struct DMSCGatewayRequest {
     pub timestamp: std::time::Instant,
 }
 
-impl DMSCGatewayRequest {
+impl RiGatewayRequest {
     /// Creates a new gateway request.
     /// 
     /// # Parameters
@@ -279,7 +279,7 @@ impl DMSCGatewayRequest {
     /// 
     /// # Returns
     /// 
-    /// A new `DMSCGatewayRequest` instance
+    /// A new `RiGatewayRequest` instance
     pub fn new(
         method: String,
         path: String,
@@ -307,7 +307,7 @@ impl DMSCGatewayRequest {
 /// headers, body, and request ID.
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
-pub struct DMSCGatewayResponse {
+pub struct RiGatewayResponse {
     /// HTTP status code
     pub status_code: u16,
     /// HTTP headers
@@ -318,7 +318,7 @@ pub struct DMSCGatewayResponse {
     pub request_id: String,
 }
 
-impl DMSCGatewayResponse {
+impl RiGatewayResponse {
     /// Creates a new gateway response.
     /// 
     /// # Parameters
@@ -329,7 +329,7 @@ impl DMSCGatewayResponse {
     /// 
     /// # Returns
     /// 
-    /// A new `DMSCGatewayResponse` instance
+    /// A new `RiGatewayResponse` instance
     pub fn new(status_code: u16, body: Vec<u8>, request_id: String) -> Self {
         let mut headers = HashMap::new();
         headers.insert("Content-Type".to_string(), "application/json".to_string());
@@ -352,7 +352,7 @@ impl DMSCGatewayResponse {
     /// 
     /// # Returns
     /// 
-    /// The updated `DMSCGatewayResponse` instance
+    /// The updated `RiGatewayResponse` instance
     pub fn with_header(mut self, key: String, value: String) -> Self {
         self.headers.insert(key, value);
         self
@@ -368,8 +368,8 @@ impl DMSCGatewayResponse {
     /// 
     /// # Returns
     /// 
-    /// A `DMSCResult<Self>` containing the JSON response
-    pub fn json<T: serde::Serialize>(status_code: u16, data: &T, request_id: String) -> crate::core::DMSCResult<Self> {
+    /// A `RiResult<Self>` containing the JSON response
+    pub fn json<T: serde::Serialize>(status_code: u16, data: &T, request_id: String) -> crate::core::RiResult<Self> {
         let body = serde_json::to_vec(data)?;
         Ok(Self::new(status_code, body, request_id))
     }
@@ -384,7 +384,7 @@ impl DMSCGatewayResponse {
     /// 
     /// # Returns
     /// 
-    /// A new `DMSCGatewayResponse` instance with error information
+    /// A new `RiGatewayResponse` instance with error information
     pub fn error(status_code: u16, message: String, request_id: String) -> Self {
         let error_body = serde_json::json!({
             "error": message,
@@ -396,49 +396,49 @@ impl DMSCGatewayResponse {
     }
 }
 
-/// Main gateway struct implementing the DMSCModule trait.
+/// Main gateway struct implementing the RiModule trait.
 /// 
 /// This struct provides the core gateway functionality, including request handling,
 /// routing, middleware execution, rate limiting, and circuit breaking.
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
-pub struct DMSCGateway {
+pub struct RiGateway {
     /// Gateway configuration, protected by a RwLock for thread-safe access
-    config: RwLock<DMSCGatewayConfig>,
+    config: RwLock<RiGatewayConfig>,
     /// Router for handling request routing
-    router: Arc<DMSCRouter>,
+    router: Arc<RiRouter>,
     /// Middleware chain for request processing
-    middleware_chain: Arc<DMSCMiddlewareChain>,
+    middleware_chain: Arc<RiMiddlewareChain>,
     /// Rate limiter for controlling request rates
-    rate_limiter: Option<Arc<DMSCRateLimiter>>,
+    rate_limiter: Option<Arc<RiRateLimiter>>,
     /// Circuit breaker for preventing cascading failures
-    circuit_breaker: Option<Arc<DMSCCircuitBreaker>>,
+    circuit_breaker: Option<Arc<RiCircuitBreaker>>,
 }
 
-impl Default for DMSCGateway {
+impl Default for RiGateway {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl DMSCGateway {
+impl RiGateway {
     /// Creates a new gateway instance with default configuration.
     /// 
     /// # Returns
     /// 
-    /// A new `DMSCGateway` instance
+    /// A new `RiGateway` instance
     pub fn new() -> Self {
-        let config = DMSCGatewayConfig::default();
-        let router = Arc::new(DMSCRouter::new());
-        let middleware_chain = Arc::new(DMSCMiddlewareChain::new());
+        let config = RiGatewayConfig::default();
+        let router = Arc::new(RiRouter::new());
+        let middleware_chain = Arc::new(RiMiddlewareChain::new());
         
         let rate_limiter = if config.enable_rate_limiting {
-            Some(Arc::new(DMSCRateLimiter::new(DMSCRateLimitConfig::default())))
+            Some(Arc::new(RiRateLimiter::new(RiRateLimitConfig::default())))
         } else {
             None
         };
         
         let circuit_breaker = if config.enable_circuit_breaker {
-            Some(Arc::new(DMSCCircuitBreaker::new(DMSCCircuitBreakerConfig::default())))
+            Some(Arc::new(RiCircuitBreaker::new(RiCircuitBreakerConfig::default())))
         } else {
             None
         };
@@ -456,8 +456,8 @@ impl DMSCGateway {
     /// 
     /// # Returns
     /// 
-    /// An Arc<DMSCRouter> providing thread-safe access to the router
-    pub fn router(&self) -> Arc<DMSCRouter> {
+    /// An Arc<RiRouter> providing thread-safe access to the router
+    pub fn router(&self) -> Arc<RiRouter> {
         self.router.clone()
     }
 
@@ -465,8 +465,8 @@ impl DMSCGateway {
     /// 
     /// # Returns
     /// 
-    /// An Arc<DMSCMiddlewareChain> providing thread-safe access to the middleware chain
-    pub fn middleware_chain(&self) -> Arc<DMSCMiddlewareChain> {
+    /// An Arc<RiMiddlewareChain> providing thread-safe access to the middleware chain
+    pub fn middleware_chain(&self) -> Arc<RiMiddlewareChain> {
         self.middleware_chain.clone()
     }
 
@@ -485,21 +485,21 @@ impl DMSCGateway {
     /// 
     /// # Returns
     /// 
-    /// A `DMSCGatewayResponse` containing the response to the request
-    pub async fn handle_request(&self, request: DMSCGatewayRequest) -> DMSCGatewayResponse {
+    /// A `RiGatewayResponse` containing the response to the request
+    pub async fn handle_request(&self, request: RiGatewayRequest) -> RiGatewayResponse {
         let request_id = request.id.clone();
         
         // Apply rate limiting
         if let Some(rate_limiter) = &self.rate_limiter {
             if !rate_limiter.check_request(&request).await {
-                return DMSCGatewayResponse::new(429, "Rate limit exceeded".to_string().into_bytes(), request_id);
+                return RiGatewayResponse::new(429, "Rate limit exceeded".to_string().into_bytes(), request_id);
             }
         }
 
         // Apply circuit breaker
         if let Some(circuit_breaker) = &self.circuit_breaker {
             if !circuit_breaker.allow_request() {
-                return DMSCGatewayResponse::new(503, "Service temporarily unavailable".to_string().into_bytes(), request_id);
+                return RiGatewayResponse::new(503, "Service temporarily unavailable".to_string().into_bytes(), request_id);
             }
         }
 
@@ -514,31 +514,31 @@ impl DMSCGateway {
                         match route_handler(request).await {
                             Ok(response) => response,
                             Err(e) => {
-                                DMSCGatewayResponse::new(500, format!("Internal server error: {e}").into_bytes(), request_id)
+                                RiGatewayResponse::new(500, format!("Internal server error: {e}").into_bytes(), request_id)
                             }
                         }
                     },
                     Err(e) => {
-                        DMSCGatewayResponse::new(404, format!("Route not found: {e}").into_bytes(), request_id)
+                        RiGatewayResponse::new(404, format!("Route not found: {e}").into_bytes(), request_id)
                     }
                 }
             },
             Err(e) => {
-                DMSCGatewayResponse::new(403, format!("Middleware error: {e}").into_bytes(), request_id)
+                RiGatewayResponse::new(403, format!("Middleware error: {e}").into_bytes(), request_id)
             }
         }
     }
 }
 
 #[async_trait::async_trait]
-impl DMSCModule for DMSCGateway {
+impl RiModule for RiGateway {
     /// Returns the name of the gateway module.
     /// 
     /// # Returns
     /// 
     /// The module name as a string
     fn name(&self) -> &str {
-        "DMSC.Gateway"
+        "Ri.Gateway"
     }
 
     /// Initializes the gateway module.
@@ -549,18 +549,18 @@ impl DMSCModule for DMSCGateway {
     /// 
     /// # Returns
     /// 
-    /// A `DMSCResult<()>` indicating success or failure
-    async fn init(&mut self, ctx: &mut DMSCServiceContext) -> crate::core::DMSCResult<()> {
+    /// A `RiResult<()>` indicating success or failure
+    async fn init(&mut self, ctx: &mut RiServiceContext) -> crate::core::RiResult<()> {
         let logger = ctx.logger();
-        logger.info("DMSC.Gateway", "Initializing API gateway module")?;
+        logger.info("Ri.Gateway", "Initializing API gateway module")?;
 
         let config = self.config.read().await;
         logger.info(
-            "DMSC.Gateway",
+            "Ri.Gateway",
             format!("Gateway will listen on {}:{}", config.listen_address, config.listen_port)
         )?;
 
-        logger.info("DMSC.Gateway", "API gateway module initialized successfully")?;
+        logger.info("Ri.Gateway", "API gateway module initialized successfully")?;
         Ok(())
     }
 
@@ -577,13 +577,13 @@ impl DMSCModule for DMSCGateway {
     /// 
     /// # Returns
     /// 
-    /// A `DMSCResult<()>` indicating success or failure
+    /// A `RiResult<()>` indicating success or failure
     /// 
     /// # Logs
     /// 
     /// Logs cleanup progress at INFO level for debugging purposes
-    async fn after_shutdown(&mut self, _ctx: &mut DMSCServiceContext) -> crate::core::DMSCResult<()> {
-        log::info!("Cleaning up DMSC Gateway Module");
+    async fn after_shutdown(&mut self, _ctx: &mut RiServiceContext) -> crate::core::RiResult<()> {
+        log::info!("Cleaning up Ri Gateway Module");
         
         if let Some(rate_limiter) = &self.rate_limiter {
             rate_limiter.clear_all_buckets();
@@ -598,15 +598,15 @@ impl DMSCModule for DMSCGateway {
         self.router.clear_routes();
         log::info!("Router cleanup completed");
         
-        log::info!("DMSC Gateway Module cleanup completed");
+        log::info!("Ri Gateway Module cleanup completed");
         Ok(())
     }
 }
 
 #[cfg(feature = "pyo3")]
-/// Python bindings for DMSCGateway
+/// Python bindings for RiGateway
 #[pyo3::prelude::pymethods]
-impl DMSCGateway {
+impl RiGateway {
     #[new]
     fn py_new() -> Self {
         Self::new()

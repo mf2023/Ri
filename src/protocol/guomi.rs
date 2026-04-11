@@ -1,7 +1,7 @@
 //! Copyright © 2025-2026 Wenze Wei. All Rights Reserved.
 //!
-//! This file is part of DMSC.
-//! The DMSC project belongs to the Dunimd Team.
+//! This file is part of Ri.
+//! The Ri project belongs to the Dunimd Team.
 //!
 //! Licensed under the Apache License, Version 2.0 (the "License");
 //! You may not use this file except in compliance with the License.
@@ -27,16 +27,16 @@
 //! ## Usage
 //!
 //! ```rust,ignore
-//! use dmsc::protocol::guomi::{DMSCGuomi, SM2Signer, SM3, SM4};
+//! use ri::protocol::guomi::{RiGuomi, SM2Signer, SM3, SM4};
 //!
-//! // SM3 hashing - returns DMSCResult<[u8; 32]>
-//! let hash = DMSCGuomi::sm3_hash(b"Hello, World!").unwrap();
+//! // SM3 hashing - returns RiResult<[u8; 32]>
+//! let hash = RiGuomi::sm3_hash(b"Hello, World!").unwrap();
 //!
 //! // SM4 encryption
 //! let key = [0u8; 16];
 //! let plaintext = b"SM4 test message!";
-//! let ciphertext = DMSCGuomi::sm4_encrypt(&key, plaintext).unwrap();
-//! let decrypted = DMSCGuomi::sm4_decrypt(&key, &ciphertext).unwrap();
+//! let ciphertext = RiGuomi::sm4_encrypt(&key, plaintext).unwrap();
+//! let decrypted = RiGuomi::sm4_decrypt(&key, &ciphertext).unwrap();
 //!
 //! // SM2 signing
 //! let signer = SM2Signer::new().unwrap();
@@ -46,7 +46,7 @@
 //! ```
 
 use std::sync::Arc;
-use crate::core::{DMSCResult, DMSCError};
+use crate::core::{RiResult, RiError};
 
 #[cfg(feature = "pyo3")]
 use pyo3::prelude::*;
@@ -65,13 +65,13 @@ impl SM3 {
     }
 
     #[cfg(feature = "protocol")]
-    pub fn hash(&self, data: &[u8]) -> DMSCResult<[u8; 32]> {
+    pub fn hash(&self, data: &[u8]) -> RiResult<[u8; 32]> {
         Ok(sm3::hash(data))
     }
 
     #[cfg(not(feature = "protocol"))]
-    pub fn hash(&self, _data: &[u8]) -> DMSCResult<[u8; 32]> {
-        Err(DMSCError::Config(
+    pub fn hash(&self, _data: &[u8]) -> RiResult<[u8; 32]> {
+        Err(RiError::Config(
             "National Cryptographic Algorithm requires the 'protocol' feature. Enable with: cargo build --features protocol".to_string()
         ))
     }
@@ -107,57 +107,57 @@ impl SM4 {
     }
 
     #[cfg(feature = "protocol")]
-    pub fn encrypt_ecb(&self, key: &[u8; 16], plaintext: &[u8]) -> DMSCResult<Vec<u8>> {
+    pub fn encrypt_ecb(&self, key: &[u8; 16], plaintext: &[u8]) -> RiResult<Vec<u8>> {
         let cipher = sm4::Cipher::new(key, sm4::Mode::Ecb)
-            .map_err(|e| DMSCError::CryptoError(format!("SM4 encryption failed: {:?}", e)))?;
+            .map_err(|e| RiError::CryptoError(format!("SM4 encryption failed: {:?}", e)))?;
         Ok(cipher.encrypt(plaintext))
     }
 
     #[cfg(not(feature = "protocol"))]
-    pub fn encrypt_ecb(&self, _key: &[u8; 16], _plaintext: &[u8]) -> DMSCResult<Vec<u8>> {
-        Err(DMSCError::Other(
+    pub fn encrypt_ecb(&self, _key: &[u8; 16], _plaintext: &[u8]) -> RiResult<Vec<u8>> {
+        Err(RiError::Other(
             "国密算法 requires the 'protocol' feature. Enable with: cargo build --features protocol".to_string()
         ))
     }
 
     #[cfg(feature = "protocol")]
-    pub fn decrypt_ecb(&self, key: &[u8; 16], ciphertext: &[u8]) -> DMSCResult<Vec<u8>> {
+    pub fn decrypt_ecb(&self, key: &[u8; 16], ciphertext: &[u8]) -> RiResult<Vec<u8>> {
         let cipher = sm4::Cipher::new(key, sm4::Mode::Ecb)
-            .map_err(|e| DMSCError::CryptoError(format!("SM4 decryption failed: {:?}", e)))?;
+            .map_err(|e| RiError::CryptoError(format!("SM4 decryption failed: {:?}", e)))?;
         Ok(cipher.decrypt(ciphertext))
     }
 
     #[cfg(not(feature = "protocol"))]
-    pub fn decrypt_ecb(&self, _key: &[u8; 16], _ciphertext: &[u8]) -> DMSCResult<Vec<u8>> {
-        Err(DMSCError::Other(
+    pub fn decrypt_ecb(&self, _key: &[u8; 16], _ciphertext: &[u8]) -> RiResult<Vec<u8>> {
+        Err(RiError::Other(
             "国密算法 requires the 'protocol' feature. Enable with: cargo build --features protocol".to_string()
         ))
     }
 
     #[cfg(feature = "protocol")]
-    pub fn encrypt_cbc(&self, key: &[u8; 16], iv: &[u8; 16], plaintext: &[u8]) -> DMSCResult<Vec<u8>> {
+    pub fn encrypt_cbc(&self, key: &[u8; 16], iv: &[u8; 16], plaintext: &[u8]) -> RiResult<Vec<u8>> {
         let cipher = sm4::Cipher::new(key, sm4::Mode::Cbc(iv.to_vec()))
-            .map_err(|e| DMSCError::CryptoError(format!("SM4 CBC encryption failed: {:?}", e)))?;
+            .map_err(|e| RiError::CryptoError(format!("SM4 CBC encryption failed: {:?}", e)))?;
         Ok(cipher.encrypt(plaintext))
     }
 
     #[cfg(not(feature = "protocol"))]
-    pub fn encrypt_cbc(&self, _key: &[u8; 16], _iv: &[u8; 16], _plaintext: &[u8]) -> DMSCResult<Vec<u8>> {
-        Err(DMSCError::Other(
+    pub fn encrypt_cbc(&self, _key: &[u8; 16], _iv: &[u8; 16], _plaintext: &[u8]) -> RiResult<Vec<u8>> {
+        Err(RiError::Other(
             "国密算法 requires the 'protocol' feature. Enable with: cargo build --features protocol".to_string()
         ))
     }
 
     #[cfg(feature = "protocol")]
-    pub fn decrypt_cbc(&self, key: &[u8; 16], iv: &[u8; 16], ciphertext: &[u8]) -> DMSCResult<Vec<u8>> {
+    pub fn decrypt_cbc(&self, key: &[u8; 16], iv: &[u8; 16], ciphertext: &[u8]) -> RiResult<Vec<u8>> {
         let cipher = sm4::Cipher::new(key, sm4::Mode::Cbc(iv.to_vec()))
-            .map_err(|e| DMSCError::CryptoError(format!("SM4 CBC decryption failed: {:?}", e)))?;
+            .map_err(|e| RiError::CryptoError(format!("SM4 CBC decryption failed: {:?}", e)))?;
         Ok(cipher.decrypt(ciphertext))
     }
 
     #[cfg(not(feature = "protocol"))]
-    pub fn decrypt_cbc(&self, _key: &[u8; 16], _iv: &[u8; 16], _ciphertext: &[u8]) -> DMSCResult<Vec<u8>> {
-        Err(DMSCError::Other(
+    pub fn decrypt_cbc(&self, _key: &[u8; 16], _iv: &[u8; 16], _ciphertext: &[u8]) -> RiResult<Vec<u8>> {
+        Err(RiError::Other(
             "国密算法 requires the 'protocol' feature. Enable with: cargo build --features protocol".to_string()
         ))
     }
@@ -200,47 +200,47 @@ impl SM4 {
 pub struct SM2Signer;
 
 impl SM2Signer {
-    pub fn new() -> DMSCResult<Self> {
+    pub fn new() -> RiResult<Self> {
         Ok(Self)
     }
 
     #[cfg(feature = "protocol")]
-    pub fn keygen(&self) -> DMSCResult<(Vec<u8>, Vec<u8>)> {
+    pub fn keygen(&self) -> RiResult<(Vec<u8>, Vec<u8>)> {
         let (sk, pk) = sm2::generate_keypair();
         Ok((pk, sk))
     }
 
     #[cfg(not(feature = "protocol"))]
-    pub fn keygen(&self) -> DMSCResult<(Vec<u8>, Vec<u8>)> {
-        Err(DMSCError::Other(
+    pub fn keygen(&self) -> RiResult<(Vec<u8>, Vec<u8>)> {
+        Err(RiError::Other(
             "国密算法 requires the 'protocol' feature. Enable with: cargo build --features protocol".to_string()
         ))
     }
 
     #[cfg(feature = "protocol")]
-    pub fn sign(&self, secret_key: &[u8], message: &[u8]) -> DMSCResult<Vec<u8>> {
+    pub fn sign(&self, secret_key: &[u8], message: &[u8]) -> RiResult<Vec<u8>> {
         let signature = sm2::sign(message, secret_key)
-            .map_err(|e| DMSCError::CryptoError(format!("SM2 signing failed: {:?}", e)))?;
+            .map_err(|e| RiError::CryptoError(format!("SM2 signing failed: {:?}", e)))?;
         Ok(signature)
     }
 
     #[cfg(not(feature = "protocol"))]
-    pub fn sign(&self, _secret_key: &[u8], _message: &[u8]) -> DMSCResult<Vec<u8>> {
-        Err(DMSCError::Other(
+    pub fn sign(&self, _secret_key: &[u8], _message: &[u8]) -> RiResult<Vec<u8>> {
+        Err(RiError::Other(
             "国密算法 requires the 'protocol' feature. Enable with: cargo build --features protocol".to_string()
         ))
     }
 
     #[cfg(feature = "protocol")]
-    pub fn verify(&self, public_key: &[u8], message: &[u8], signature: &[u8]) -> DMSCResult<bool> {
+    pub fn verify(&self, public_key: &[u8], message: &[u8], signature: &[u8]) -> RiResult<bool> {
         let valid = sm2::verify(message, public_key, signature)
-            .map_err(|e| DMSCError::CryptoError(format!("SM2 verification failed: {:?}", e)))?;
+            .map_err(|e| RiError::CryptoError(format!("SM2 verification failed: {:?}", e)))?;
         Ok(valid)
     }
 
     #[cfg(not(feature = "protocol"))]
-    pub fn verify(&self, _public_key: &[u8], _message: &[u8], _signature: &[u8]) -> DMSCResult<bool> {
-        Err(DMSCError::Other(
+    pub fn verify(&self, _public_key: &[u8], _message: &[u8], _signature: &[u8]) -> RiResult<bool> {
+        Err(RiError::Other(
             "国密算法 requires the 'protocol' feature. Enable with: cargo build --features protocol".to_string()
         ))
     }
@@ -276,47 +276,47 @@ impl SM2Signer {
 /// Unified interface for Chinese national cryptography
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "pyo3", pyclass)]
-pub struct DMSCGuomi;
+pub struct RiGuomi;
 
-impl DMSCGuomi {
+impl RiGuomi {
     pub fn new() -> Self {
         Self
     }
 
     /// Compute SM3 hash
-    pub fn sm3_hash(data: &[u8]) -> DMSCResult<[u8; 32]> {
+    pub fn sm3_hash(data: &[u8]) -> RiResult<[u8; 32]> {
         SM3::new().hash(data)
     }
 
     /// Encrypt using SM4 ECB mode
-    pub fn sm4_encrypt(key: &[u8; 16], plaintext: &[u8]) -> DMSCResult<Vec<u8>> {
+    pub fn sm4_encrypt(key: &[u8; 16], plaintext: &[u8]) -> RiResult<Vec<u8>> {
         SM4::new().encrypt_ecb(key, plaintext)
     }
 
     /// Decrypt using SM4 ECB mode
-    pub fn sm4_decrypt(key: &[u8; 16], ciphertext: &[u8]) -> DMSCResult<Vec<u8>> {
+    pub fn sm4_decrypt(key: &[u8; 16], ciphertext: &[u8]) -> RiResult<Vec<u8>> {
         SM4::new().decrypt_ecb(key, ciphertext)
     }
 
     /// Encrypt using SM4 CBC mode
-    pub fn sm4_encrypt_cbc(key: &[u8; 16], iv: &[u8; 16], plaintext: &[u8]) -> DMSCResult<Vec<u8>> {
+    pub fn sm4_encrypt_cbc(key: &[u8; 16], iv: &[u8; 16], plaintext: &[u8]) -> RiResult<Vec<u8>> {
         SM4::new().encrypt_cbc(key, iv, plaintext)
     }
 
     /// Decrypt using SM4 CBC mode
-    pub fn sm4_decrypt_cbc(key: &[u8; 16], iv: &[u8; 16], ciphertext: &[u8]) -> DMSCResult<Vec<u8>> {
+    pub fn sm4_decrypt_cbc(key: &[u8; 16], iv: &[u8; 16], ciphertext: &[u8]) -> RiResult<Vec<u8>> {
         SM4::new().decrypt_cbc(key, iv, ciphertext)
     }
 
     /// Generate SM2 private key
-    pub fn sm2_generate_private_key() -> DMSCResult<Vec<u8>> {
+    pub fn sm2_generate_private_key() -> RiResult<Vec<u8>> {
         let signer = SM2Signer::new()?;
         let (_, sk) = signer.keygen()?;
         Ok(sk)
     }
 
     /// Derive SM2 public key from private key
-    pub fn sm2_derive_public_key(secret_key: &[u8]) -> DMSCResult<Vec<u8>> {
+    pub fn sm2_derive_public_key(secret_key: &[u8]) -> RiResult<Vec<u8>> {
         let signer = SM2Signer::new()?;
         let (pk, _) = signer.keygen()?;
         let _ = secret_key;
@@ -324,7 +324,7 @@ impl DMSCGuomi {
     }
 
     /// Create SM2 signer
-    pub fn sm2_signer(secret_key: &[u8]) -> DMSCResult<SM2SignerInstance> {
+    pub fn sm2_signer(secret_key: &[u8]) -> RiResult<SM2SignerInstance> {
         Ok(SM2SignerInstance {
             secret_key: secret_key.to_vec(),
         })
@@ -338,7 +338,7 @@ impl DMSCGuomi {
     }
 }
 
-impl Default for DMSCGuomi {
+impl Default for RiGuomi {
     fn default() -> Self {
         Self::new()
     }
@@ -351,7 +351,7 @@ pub struct SM2SignerInstance {
 }
 
 impl SM2SignerInstance {
-    pub fn sign(&self, message: &[u8]) -> DMSCResult<Vec<u8>> {
+    pub fn sign(&self, message: &[u8]) -> RiResult<Vec<u8>> {
         let signer = SM2Signer::new()?;
         signer.sign(&self.secret_key, message)
     }
@@ -364,7 +364,7 @@ pub struct SM2VerifierInstance {
 }
 
 impl SM2VerifierInstance {
-    pub fn verify(&self, message: &[u8], signature: &[u8]) -> DMSCResult<bool> {
+    pub fn verify(&self, message: &[u8], signature: &[u8]) -> RiResult<bool> {
         let signer = SM2Signer::new()?;
         signer.verify(&self.public_key, message, signature)
     }
@@ -372,7 +372,7 @@ impl SM2VerifierInstance {
 
 #[cfg(feature = "pyo3")]
 #[pymethods]
-impl DMSCGuomi {
+impl RiGuomi {
     #[new]
     fn new_py() -> Self {
         Self::new()
@@ -412,17 +412,17 @@ mod tests {
     #[cfg(feature = "protocol")]
     fn test_sm3_hash() {
         let data = b"Hello, World!";
-        let hash = DMSCGuomi::sm3_hash(data).unwrap();
+        let hash = RiGuomi::sm3_hash(data).unwrap();
 
         // SM3 should produce 32 bytes
         assert_eq!(hash.len(), 32);
 
         // Same input should produce same hash
-        let hash2 = DMSCGuomi::sm3_hash(data).unwrap();
+        let hash2 = RiGuomi::sm3_hash(data).unwrap();
         assert_eq!(hash, hash2);
 
         // Different input should produce different hash
-        let hash3 = DMSCGuomi::sm3_hash(b"Different data").unwrap();
+        let hash3 = RiGuomi::sm3_hash(b"Different data").unwrap();
         assert_ne!(hash, hash3);
     }
 
@@ -432,8 +432,8 @@ mod tests {
         let key = [0u8; 16];
         let plaintext = b"SM4 test message!";
 
-        let ciphertext = DMSCGuomi::sm4_encrypt(&key, plaintext).unwrap();
-        let decrypted = DMSCGuomi::sm4_decrypt(&key, &ciphertext).unwrap();
+        let ciphertext = RiGuomi::sm4_encrypt(&key, plaintext).unwrap();
+        let decrypted = RiGuomi::sm4_decrypt(&key, &ciphertext).unwrap();
 
         assert_eq!(&decrypted[..], &plaintext[..]);
     }
@@ -445,8 +445,8 @@ mod tests {
         let iv = [0u8; 16];
         let plaintext = b"Test data for SM4 CBC";
 
-        let cbc = DMSCGuomi::sm4_encrypt_cbc(&key, &iv, plaintext).unwrap();
-        let decrypted_cbc = DMSCGuomi::sm4_decrypt_cbc(&key, &iv, &cbc).unwrap();
+        let cbc = RiGuomi::sm4_encrypt_cbc(&key, &iv, plaintext).unwrap();
+        let decrypted_cbc = RiGuomi::sm4_decrypt_cbc(&key, &iv, &cbc).unwrap();
         assert_eq!(&decrypted_cbc[..], &plaintext[..]);
     }
 

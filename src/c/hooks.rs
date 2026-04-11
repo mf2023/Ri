@@ -1,7 +1,7 @@
 //! Copyright © 2025-2026 Wenze Wei. All Rights Reserved.
 //!
-//! This file is part of DMSC.
-//! The DMSC project belongs to the Dunimd Team.
+//! This file is part of Ri.
+//! The Ri project belongs to the Dunimd Team.
 //!
 //! Licensed under the Apache License, Version 2.0 (the "License");
 //! You may not use this file except in compliance with the License.
@@ -17,17 +17,17 @@
 
 //! # Hooks Module C API
 //!
-//! This module provides C language bindings for DMSC's hook system. The hooks module enables
+//! This module provides C language bindings for Ri's hook system. The hooks module enables
 //! extensible application behavior through a publish-subscribe pattern where components can
 //! register callback functions (hooks) that are invoked at specific points in the application
 //! lifecycle or in response to specific events. This C API enables C/C++ applications to
-//! leverage DMSC's extensibility mechanisms for building modular and customizable applications.
+//! leverage Ri's extensibility mechanisms for building modular and customizable applications.
 //!
 //! ## Module Architecture
 //!
 //! The hooks module centers around a single primary component:
 //!
-//! - **DMSCHookBus**: Central event bus for registering hooks and dispatching events. The hook
+//! - **RiHookBus**: Central event bus for registering hooks and dispatching events. The hook
 //!   bus manages the complete lifecycle of hooks including registration, invocation, and
 //!   unregistration. It provides a thread-safe mechanism for components to communicate through
 //!   loosely-coupled event handlers.
@@ -90,7 +90,7 @@
 //!
 //! ## Common Hook Points
 //!
-//! The DMSC framework defines standard hook points:
+//! The Ri framework defines standard hook points:
 //!
 //! - **Application Lifecycle Hooks**: pre_startup, post_startup, pre_shutdown, post_shutdown
 //! - **Request Processing Hooks**: pre_request, post_request, on_error
@@ -102,7 +102,7 @@
 //!
 //! Hooks execute in priority order from highest to lowest:
 //!
-//! - **System Hooks** (1000-900): Reserved for DMSC framework internal use
+//! - **System Hooks** (1000-900): Reserved for Ri framework internal use
 //! - **High Priority** (800-600): Critical application extensions
 //! - **Normal Priority** (500-400): Standard application hooks
 //! - **Low Priority** (300-200): Monitoring and observability hooks
@@ -142,14 +142,14 @@
 //!
 //! ```c
 //! // Create hook bus instance
-//! DMSCHookBus* bus = dmsc_hook_bus_new();
+//! RiHookBus* bus = ri_hook_bus_new();
 //! if (bus == NULL) {
 //!     fprintf(stderr, "Failed to create hook bus\n");
 //!     return ERROR_INIT;
 //! }
 //!
 //! // Register startup hook
-//! int startup_result = dmsc_hook_bus_register(
+//! int startup_result = ri_hook_bus_register(
 //!     bus,
 //!     "pre_startup",
 //!     500,  // normal priority
@@ -162,29 +162,29 @@
 //! }
 //!
 //! // Register request processing hook
-//! dmsc_hook_bus_register(bus, "pre_request", 500, on_pre_request, NULL);
-//! dmsc_hook_bus_register(bus, "post_request", 500, on_post_request, NULL);
+//! ri_hook_bus_register(bus, "pre_request", 500, on_pre_request, NULL);
+//! ri_hook_bus_register(bus, "post_request", 500, on_post_request, NULL);
 //!
 //! // Register shutdown hook
-//! dmsc_hook_bus_register(bus, "pre_shutdown", 300, on_shutdown, NULL);
+//! ri_hook_bus_register(bus, "pre_shutdown", 300, on_shutdown, NULL);
 //!
 //! // Trigger custom event
-//! DMSCHookContext* context = dmsc_hook_context_create();
-//! dmsc_hook_context_set_string(context, "event_name", "user_action");
-//! dmsc_hook_context_set_int(context, "user_id", 12345);
+//! RiHookContext* context = ri_hook_context_create();
+//! ri_hook_context_set_string(context, "event_name", "user_action");
+//! ri_hook_context_set_int(context, "user_id", 12345);
 //!
-//! dmsc_hook_bus_dispatch(bus, "on_user_action", context);
+//! ri_hook_bus_dispatch(bus, "on_user_action", context);
 //!
-//! dmsc_hook_context_free(context);
+//! ri_hook_context_free(context);
 //!
 //! // Unregister hooks before shutdown
-//! dmsc_hook_bus_unregister(bus, "pre_startup", on_startup_hook);
-//! dmsc_hook_bus_unregister(bus, "pre_request", on_pre_request);
-//! dmsc_hook_bus_unregister(bus, "post_request", on_post_request);
-//! dmsc_hook_bus_unregister(bus, "pre_shutdown", on_shutdown);
+//! ri_hook_bus_unregister(bus, "pre_startup", on_startup_hook);
+//! ri_hook_bus_unregister(bus, "pre_request", on_pre_request);
+//! ri_hook_bus_unregister(bus, "post_request", on_post_request);
+//! ri_hook_bus_unregister(bus, "pre_shutdown", on_shutdown);
 //!
 //! // Cleanup
-//! dmsc_hook_bus_free(bus);
+//! ri_hook_bus_free(bus);
 //! ```
 //!
 //! ## Hook Callback Signature
@@ -192,9 +192,9 @@
 //! Hook callbacks must conform to the following signature:
 //!
 //! ```c
-//! typedef int (*DMSCHookCallback)(
+//! typedef int (*RiHookCallback)(
 //!     const char* hook_point,      // Name of the hook point
-//!     DMSCHookContext* context,     // Event context data
+//!     RiHookContext* context,     // Event context data
 //!     void* user_data              // User-provided data
 //! );
 //! ```
@@ -207,7 +207,7 @@
 //!
 //! ## Dependencies
 //!
-//! This module depends on the following DMSC components:
+//! This module depends on the following Ri components:
 //!
 //! - `crate::hooks`: Rust hooks module implementation
 //! - `crate::prelude`: Common types and traits
@@ -215,17 +215,17 @@
 //! ## Feature Flags
 //!
 //! The hooks module is always enabled as it provides fundamental extensibility
-//! infrastructure for DMSC applications.
+//! infrastructure for Ri applications.
 
-use crate::hooks::DMSCHookBus;
+use crate::hooks::RiHookBus;
 
 
-c_wrapper!(CDMSCHookBus, DMSCHookBus);
+c_wrapper!(CRiHookBus, RiHookBus);
 
-// DMSCHookBus constructors and destructors
+// RiHookBus constructors and destructors
 #[no_mangle]
-pub extern "C" fn dmsc_hook_bus_new() -> *mut CDMSCHookBus {
-    let bus = DMSCHookBus::new();
-    Box::into_raw(Box::new(CDMSCHookBus::new(bus)))
+pub extern "C" fn ri_hook_bus_new() -> *mut CRiHookBus {
+    let bus = RiHookBus::new();
+    Box::into_raw(Box::new(CRiHookBus::new(bus)))
 }
-c_destructor!(dmsc_hook_bus_free, CDMSCHookBus);
+c_destructor!(ri_hook_bus_free, CRiHookBus);

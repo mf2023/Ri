@@ -1,7 +1,7 @@
 //! Copyright © 2025-2026 Wenze Wei. All Rights Reserved.
 //!
-//! This file is part of DMSC.
-//! The DMSC project belongs to the Dunimd Team.
+//! This file is part of Ri.
+//! The Ri project belongs to the Dunimd Team.
 //!
 //! Licensed under the Apache License, Version 2.0 (the "License");
 //! You may not use this file except in compliance with the License.
@@ -15,9 +15,9 @@
 //! See the License for the specific language governing permissions and
 //! limitations under the License.
 
-//! # DMSC Gateway Module Example
+//! # Ri Gateway Module Example
 //!
-//! This example demonstrates how to use the API gateway module in DMSC,
+//! This example demonstrates how to use the API gateway module in Ri,
 //! including routing, rate limiting, and circuit breaker patterns.
 //!
 //! ## Running this Example
@@ -33,14 +33,14 @@
 //! - Circuit breaker patterns
 //! - Load balancing strategies
 
-use dmsc::{
-    DMSCAppBuilder,
-    DMSCGateway,
-    DMSCRouter,
-    DMSCRoute,
-    DMSCRouteTarget,
-    DMSCRateLimiter,
-    DMSCCircuitBreaker,
+use ri::{
+    RiAppBuilder,
+    RiGateway,
+    RiRouter,
+    RiRoute,
+    RiRouteTarget,
+    RiRateLimiter,
+    RiCircuitBreaker,
 };
 use std::time::Duration;
 
@@ -54,61 +54,61 @@ use std::time::Duration;
 /// - Circuit breaker configuration and state management
 /// - Gateway statistics and monitoring
 ///
-/// The example shows how DMSC handles API gateway functionality with
+/// The example shows how Ri handles API gateway functionality with
 /// features like request routing, traffic control, and fault tolerance
 /// in a Rust async environment.
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    println!("=== DMSC Gateway Module Example ===\n");
+    println!("=== Ri Gateway Module Example ===\n");
 
     // Application Builder: Create application with gateway module
-    // DMSCAppBuilder provides a fluent API for configuring modules
+    // RiAppBuilder provides a fluent API for configuring modules
     // Gateway module contains nested sub-modules for different features
-    let app = DMSCAppBuilder::new()
+    let app = RiAppBuilder::new()
         .with_gateway_module(|gateway| {
             // Configure gateway with nested sub-modules
             // Each sub-module handles a specific gateway responsibility
             gateway
                 // Section 1: Router Configuration
-                // DMSCRouter manages API route definitions and lookup
+                // RiRouter manages API route definitions and lookup
                 .with_router(|router| {
                     router
                         // API route: User endpoint
                         // Supports GET (retrieve) and POST (create) methods
                         // Routes to user service at localhost:8081
-                        .add_route(DMSCRoute::new(
+                        .add_route(RiRoute::new(
                             "/api/users",
                             vec!["GET", "POST"],
-                            DMSCRouteTarget::new("http://localhost:8081"),
+                            RiRouteTarget::new("http://localhost:8081"),
                         ))
                         // API route: Product endpoint
                         // Read-only endpoint (GET only)
                         // Routes to product service at localhost:8082
-                        .add_route(DMSCRoute::new(
+                        .add_route(RiRoute::new(
                             "/api/products",
                             vec!["GET"],
-                            DMSCRouteTarget::new("http://localhost:8082"),
+                            RiRouteTarget::new("http://localhost:8082"),
                         ))
                         // Admin route with wildcard matching
                         // Catches all sub-paths under /api/admin/*
                         // Supports full CRUD operations
                         // Routes to admin service at localhost:8080
-                        .add_route(DMSCRoute::new(
+                        .add_route(RiRoute::new(
                             "/api/admin/*",
                             vec!["GET", "POST", "PUT", "DELETE"],
-                            DMSCRouteTarget::new("http://localhost:8080"),
+                            RiRouteTarget::new("http://localhost:8080"),
                         ))
                         // Health check endpoint
                         // Lightweight endpoint for service health monitoring
                         // Routes to health check handler
-                        .add_route(DMSCRoute::new(
+                        .add_route(RiRoute::new(
                             "/health",
                             vec!["GET"],
-                            DMSCRouteTarget::new("http://localhost:8080/health"),
+                            RiRouteTarget::new("http://localhost:8080/health"),
                         ))
                 })
                 // Section 2: Rate Limiter Configuration
-                // DMSCRateLimiter controls request rate to prevent abuse
+                // RiRateLimiter controls request rate to prevent abuse
                 .with_rate_limiter(|limiter| {
                     limiter
                         // requests_per_second: Maximum allowed requests per second
@@ -119,7 +119,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         .with_burst_size(200)
                 })
                 // Section 3: Circuit Breaker Configuration
-                // DMSCCircuitBreaker provides fault tolerance for downstream services
+                // RiCircuitBreaker provides fault tolerance for downstream services
                 .with_circuit_breaker(|breaker| {
                     breaker
                         // failure_threshold: Number of failures before opening circuit
@@ -133,7 +133,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .build()?;
 
     // Get gateway instance from built application
-    let gateway = app.get_module::<DMSCGateway>();
+    let gateway = app.get_module::<RiGateway>();
     
     // Get sub-modules for operations and inspection
     // - Router: For route management and lookup
@@ -167,7 +167,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Lookup exact match for user API
     // find_route() searches for matching route by path and method
-    // Returns Option<DMSCRoute> - Some(route) if found, None if not
+    // Returns Option<RiRoute> - Some(route) if found, None if not
     let user_route = router.find_route("/api/users", "GET");
     match user_route {
         // Pattern match to handle both found and not-found cases

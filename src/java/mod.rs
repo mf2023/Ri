@@ -1,7 +1,7 @@
 //! Copyright © 2025-2026 Wenze Wei. All Rights Reserved.
 //!
-//! This file is part of DMSC.
-//! The DMSC project belongs to the Dunimd Team.
+//! This file is part of Ri.
+//! The Ri project belongs to the Dunimd Team.
 //!
 //! Licensed under the Apache License, Version 2.0 (the "License");
 //! You may not use this file except in compliance with the License.
@@ -17,15 +17,15 @@
 
 //! # Java JNI Bindings Module
 //!
-//! This module provides Java JNI bindings for DMSC, enabling Java applications
-//! to use DMSC functionality through native method calls.
+//! This module provides Java JNI bindings for Ri, enabling Java applications
+//! to use Ri functionality through native method calls.
 //!
 //! ## Key Components
 //!
 //! - **jvm**: JVM lifecycle management
 //! - **converter**: Rust-Java type conversion utilities
 //! - **exception**: Java exception handling
-//! - **classes**: JNI bindings for all DMSC classes
+//! - **classes**: JNI bindings for all Ri classes
 //!
 //! ## Design Principles
 //!
@@ -39,6 +39,6 @@ pub mod converter;
 pub mod exception;
 pub mod classes;
 
-pub use jvm::DMSCJavaContext;
+pub use jvm::RiJavaContext;
 pub use converter::{JavaConvertible, ToJava, FromJava};
-pub use exception::{DMSCJavaException, throw_exception};
+pub use exception::{RiJavaException, throw_exception};

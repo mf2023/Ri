@@ -1,7 +1,7 @@
 //! Copyright © 2025-2026 Wenze Wei. All Rights Reserved.
 //!
-//! This file is part of DMSC.
-//! The DMSC project belongs to the Dunimd Team.
+//! This file is part of Ri.
+//! The Ri project belongs to the Dunimd Team.
 //!
 //! Licensed under the Apache License, Version 2.0 (the "License");
 //! You may not use this file except in compliance with the License.
@@ -19,17 +19,17 @@
 
 //! # Device Core Structures
 //! 
-//! This file defines the core data structures for device management in DMSC, including device types,
+//! This file defines the core data structures for device management in Ri, including device types,
 //! capabilities, status, health metrics, and the device representation itself. These structures form
 //! the foundation for device discovery, scheduling, and management.
 //! 
 //! ## Key Components
 //! 
-//! - **DMSCDeviceType**: Enum defining supported device types
-//! - **DMSCDeviceCapabilities**: Device capabilities structure
-//! - **DMSCDeviceStatus**: Enum defining device statuses
-//! - **DMSCDeviceHealthMetrics**: Device health metrics structure
-//! - **DMSCDevice**: Main device representation with status, capabilities, and health metrics
+//! - **RiDeviceType**: Enum defining supported device types
+//! - **RiDeviceCapabilities**: Device capabilities structure
+//! - **RiDeviceStatus**: Enum defining device statuses
+//! - **RiDeviceHealthMetrics**: Device health metrics structure
+//! - **RiDevice**: Main device representation with status, capabilities, and health metrics
 //! 
 //! ## Design Principles
 //! 
@@ -45,13 +45,13 @@
 //! ## Usage
 //! 
 //! ```rust
-//! use dmsc::device::{DMSCDevice, DMSCDeviceType, DMSCDeviceCapabilities};
+//! use ri::device::{RiDevice, RiDeviceType, RiDeviceCapabilities};
 //! 
 //! // Create a new device
-//! let mut device = DMSCDevice::new("server-1".to_string(), DMSCDeviceType::CPU);
+//! let mut device = RiDevice::new("server-1".to_string(), RiDeviceType::CPU);
 //! 
 //! // Configure device capabilities
-//! let capabilities = DMSCDeviceCapabilities::new()
+//! let capabilities = RiDeviceCapabilities::new()
 //!     .with_compute_units(16)
 //!     .with_memory_gb(32.0)
 //!     .with_storage_gb(1024.0)
@@ -59,10 +59,10 @@
 //! 
 //! // Set device capabilities and status
 //! device = device.with_capabilities(capabilities);
-//! device.set_status(dmsc::device::DMSCDeviceStatus::Available);
+//! device.set_status(ri::device::RiDeviceStatus::Available);
 //! 
 //! // Check if device meets requirements
-//! let requirements = DMSCDeviceCapabilities::new().with_compute_units(8);
+//! let requirements = RiDeviceCapabilities::new().with_compute_units(8);
 //! if device.capabilities().meets_requirements(&requirements) {
 //!     println!("Device meets requirements");
 //! }
@@ -78,7 +78,7 @@ use pyo3::prelude::*;
 /// Configuration for device control module
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
-pub struct DMSCDeviceControlConfig {
+pub struct RiDeviceControlConfig {
     /// Enable CPU discovery
     pub enable_cpu_discovery: bool,
     /// Enable GPU discovery  
@@ -95,7 +95,7 @@ pub struct DMSCDeviceControlConfig {
     pub max_devices_per_type: usize,
 }
 
-impl Default for DMSCDeviceControlConfig {
+impl Default for RiDeviceControlConfig {
     fn default() -> Self {
         Self {
             enable_cpu_discovery: true,
@@ -111,7 +111,7 @@ impl Default for DMSCDeviceControlConfig {
 
 #[cfg(feature = "pyo3")]
 #[pymethods]
-impl DMSCDeviceControlConfig {
+impl RiDeviceControlConfig {
     #[new]
     fn py_new() -> Self {
         Self::default()
@@ -125,7 +125,7 @@ impl DMSCDeviceControlConfig {
 
 #[cfg(feature = "pyo3")]
 #[pymethods]
-impl DMSCDeviceHealthMetrics {
+impl RiDeviceHealthMetrics {
     #[new]
     fn py_new() -> Self {
         Self::default()
@@ -140,7 +140,7 @@ impl DMSCDeviceHealthMetrics {
 /// Configuration for device module
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
-pub struct DMSCDeviceConfig {
+pub struct RiDeviceConfig {
     /// Enable CPU discovery
     pub enable_cpu_discovery: bool,
     /// Enable GPU discovery  
@@ -157,7 +157,7 @@ pub struct DMSCDeviceConfig {
     pub max_devices_per_type: usize,
 }
 
-impl Default for DMSCDeviceConfig {
+impl Default for RiDeviceConfig {
     fn default() -> Self {
         Self {
             enable_cpu_discovery: true,
@@ -173,7 +173,7 @@ impl Default for DMSCDeviceConfig {
 
 #[cfg(feature = "pyo3")]
 #[pymethods]
-impl DMSCDeviceConfig {
+impl RiDeviceConfig {
     #[new]
     fn py_new() -> Self {
         Self::default()
@@ -188,7 +188,7 @@ impl DMSCDeviceConfig {
 /// Network device information for remote device discovery
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
-pub struct DMSCNetworkDeviceInfo {
+pub struct RiNetworkDeviceInfo {
     /// Unique device identifier
     pub id: String,
     /// Device type (CPU, GPU, Memory, Storage, Network)
@@ -207,7 +207,7 @@ pub struct DMSCNetworkDeviceInfo {
 
 #[cfg(feature = "pyo3")]
 #[pymethods]
-impl DMSCNetworkDeviceInfo {
+impl RiNetworkDeviceInfo {
     #[new]
     fn py_new(id: String, device_type: String, source: String) -> Self {
         Self {
@@ -229,11 +229,11 @@ impl DMSCNetworkDeviceInfo {
 
 /// Device type enumeration
 /// 
-/// This enum defines the different types of devices supported by DMSC. Each device type
+/// This enum defines the different types of devices supported by Ri. Each device type
 /// has specific capabilities and use cases in the system.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
-pub enum DMSCDeviceType {
+pub enum RiDeviceType {
     /// Central Processing Unit - General purpose computing
     CPU,
     /// Graphics Processing Unit - Parallel computing and graphics
@@ -252,62 +252,62 @@ pub enum DMSCDeviceType {
     Custom,
 }
 
-impl std::fmt::Display for DMSCDeviceType {
+impl std::fmt::Display for RiDeviceType {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            DMSCDeviceType::CPU => write!(f, "CPU"),
-            DMSCDeviceType::GPU => write!(f, "GPU"),
-            DMSCDeviceType::Memory => write!(f, "Memory"),
-            DMSCDeviceType::Storage => write!(f, "Storage"),
-            DMSCDeviceType::Network => write!(f, "Network"),
-            DMSCDeviceType::Sensor => write!(f, "Sensor"),
-            DMSCDeviceType::Actuator => write!(f, "Actuator"),
-            DMSCDeviceType::Custom => write!(f, "Custom"),
+            RiDeviceType::CPU => write!(f, "CPU"),
+            RiDeviceType::GPU => write!(f, "GPU"),
+            RiDeviceType::Memory => write!(f, "Memory"),
+            RiDeviceType::Storage => write!(f, "Storage"),
+            RiDeviceType::Network => write!(f, "Network"),
+            RiDeviceType::Sensor => write!(f, "Sensor"),
+            RiDeviceType::Actuator => write!(f, "Actuator"),
+            RiDeviceType::Custom => write!(f, "Custom"),
         }
     }
 }
 
 #[cfg(feature = "pyo3")]
 #[pymethods]
-impl DMSCDeviceType {
+impl RiDeviceType {
     #[staticmethod]
     fn new_cpu() -> Self {
-        DMSCDeviceType::CPU
+        RiDeviceType::CPU
     }
     
     #[staticmethod]
     fn new_gpu() -> Self {
-        DMSCDeviceType::GPU
+        RiDeviceType::GPU
     }
     
     #[staticmethod]
     fn new_memory() -> Self {
-        DMSCDeviceType::Memory
+        RiDeviceType::Memory
     }
     
     #[staticmethod]
     fn new_storage() -> Self {
-        DMSCDeviceType::Storage
+        RiDeviceType::Storage
     }
     
     #[staticmethod]
     fn new_network() -> Self {
-        DMSCDeviceType::Network
+        RiDeviceType::Network
     }
     
     #[staticmethod]
     fn new_sensor() -> Self {
-        DMSCDeviceType::Sensor
+        RiDeviceType::Sensor
     }
     
     #[staticmethod]
     fn new_actuator() -> Self {
-        DMSCDeviceType::Actuator
+        RiDeviceType::Actuator
     }
     
     #[staticmethod]
     fn new_custom() -> Self {
-        DMSCDeviceType::Custom
+        RiDeviceType::Custom
     }
     
     fn __str__(&self) -> String {
@@ -321,7 +321,7 @@ impl DMSCDeviceType {
 /// bandwidth, and custom capabilities. It supports a fluent builder API for easy configuration.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass(get_all, set_all))]
-pub struct DMSCDeviceCapabilities {
+pub struct RiDeviceCapabilities {
     /// Number of compute units (e.g., CPU cores, GPU CUDA cores)
     pub compute_units: Option<usize>,
     /// Memory capacity in gigabytes
@@ -334,19 +334,19 @@ pub struct DMSCDeviceCapabilities {
     pub custom_capabilities: HashMap<String, String>,
 }
 
-impl Default for DMSCDeviceCapabilities {
+impl Default for RiDeviceCapabilities {
     /// Returns the default device capabilities (empty capabilities)
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl DMSCDeviceCapabilities {
+impl RiDeviceCapabilities {
     /// Creates a new empty device capabilities structure
     /// 
     /// # Returns
     /// 
-    /// A new `DMSCDeviceCapabilities` instance with no capabilities set
+    /// A new `RiDeviceCapabilities` instance with no capabilities set
     pub fn new() -> Self {
         Self {
             compute_units: None,
@@ -365,7 +365,7 @@ impl DMSCDeviceCapabilities {
     /// 
     /// # Returns
     /// 
-    /// The updated `DMSCDeviceCapabilities` instance
+    /// The updated `RiDeviceCapabilities` instance
     pub fn with_compute_units(mut self, units: usize) -> Self {
         self.compute_units = Some(units);
         self
@@ -379,7 +379,7 @@ impl DMSCDeviceCapabilities {
     /// 
     /// # Returns
     /// 
-    /// The updated `DMSCDeviceCapabilities` instance
+    /// The updated `RiDeviceCapabilities` instance
     pub fn with_memory_gb(mut self, memory: f64) -> Self {
         self.memory_gb = Some(memory);
         self
@@ -393,7 +393,7 @@ impl DMSCDeviceCapabilities {
     /// 
     /// # Returns
     /// 
-    /// The updated `DMSCDeviceCapabilities` instance
+    /// The updated `RiDeviceCapabilities` instance
     pub fn with_storage_gb(mut self, storage: f64) -> Self {
         self.storage_gb = Some(storage);
         self
@@ -407,7 +407,7 @@ impl DMSCDeviceCapabilities {
     /// 
     /// # Returns
     /// 
-    /// The updated `DMSCDeviceCapabilities` instance
+    /// The updated `RiDeviceCapabilities` instance
     pub fn with_bandwidth_gbps(mut self, bandwidth: f64) -> Self {
         self.bandwidth_gbps = Some(bandwidth);
         self
@@ -422,7 +422,7 @@ impl DMSCDeviceCapabilities {
     /// 
     /// # Returns
     /// 
-    /// The updated `DMSCDeviceCapabilities` instance
+    /// The updated `RiDeviceCapabilities` instance
     pub fn with_custom_capability(mut self, key: String, value: String) -> Self {
         self.custom_capabilities.insert(key, value);
         self
@@ -440,7 +440,7 @@ impl DMSCDeviceCapabilities {
     /// # Returns
     /// 
     /// `true` if the device meets all requirements, `false` otherwise
-    pub fn meets_requirements(&self, requirements: &DMSCDeviceCapabilities) -> bool {
+    pub fn meets_requirements(&self, requirements: &RiDeviceCapabilities) -> bool {
         // Check compute units requirement
         if let Some(required_units) = requirements.compute_units {
             if let Some(available_units) = self.compute_units {
@@ -504,7 +504,7 @@ impl DMSCDeviceCapabilities {
 
 #[cfg(feature = "pyo3")]
 #[pymethods]
-impl DMSCDeviceCapabilities {
+impl RiDeviceCapabilities {
     #[new]
     fn py_new() -> Self {
         Self::new()
@@ -576,7 +576,7 @@ impl DMSCDeviceCapabilities {
     }
     
     #[pyo3(name = "meets_requirements")]
-    fn meets_requirements_impl(&self, requirements: &DMSCDeviceCapabilities) -> bool {
+    fn meets_requirements_impl(&self, requirements: &RiDeviceCapabilities) -> bool {
         self.meets_requirements(requirements)
     }
 }
@@ -586,7 +586,7 @@ impl DMSCDeviceCapabilities {
 /// This enum defines the different statuses a device can have during its lifecycle.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
-pub enum DMSCDeviceStatus {
+pub enum RiDeviceStatus {
     /// Device status is unknown
     Unknown,
     /// Device is available for use
@@ -612,7 +612,7 @@ pub enum DMSCDeviceStatus {
 /// This struct contains health metrics for monitoring device performance and reliability.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass(get_all, set_all))]
-pub struct DMSCDeviceHealthMetrics {
+pub struct RiDeviceHealthMetrics {
     /// CPU usage percentage (0-100)
     pub cpu_usage_percent: f64,
     /// Memory usage percentage (0-100)
@@ -635,7 +635,7 @@ pub struct DMSCDeviceHealthMetrics {
     pub uptime_seconds: u64,
 }
 
-impl Default for DMSCDeviceHealthMetrics {
+impl Default for RiDeviceHealthMetrics {
     /// Returns default health metrics (all zero values)
     fn default() -> Self {
         Self {
@@ -655,23 +655,23 @@ impl Default for DMSCDeviceHealthMetrics {
 
 /// Smart device representation
 /// 
-/// This struct represents a smart device in the DMSC system, including its status, capabilities,
+/// This struct represents a smart device in the Ri system, including its status, capabilities,
 /// health metrics, and lifecycle information.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
-pub struct DMSCDevice {
+pub struct RiDevice {
     /// Unique device ID
     id: String,
     /// Device name
     name: String,
     /// Device type
-    device_type: DMSCDeviceType,
+    device_type: RiDeviceType,
     /// Current device status
-    status: DMSCDeviceStatus,
+    status: RiDeviceStatus,
     /// Device capabilities for resource allocation
-    capabilities: DMSCDeviceCapabilities,
+    capabilities: RiDeviceCapabilities,
     /// Current health metrics
-    health_metrics: DMSCDeviceHealthMetrics,
+    health_metrics: RiDeviceHealthMetrics,
     /// Physical location of the device (optional)
     location: Option<String>,
     /// Device group (for grouping devices)
@@ -686,7 +686,7 @@ pub struct DMSCDevice {
     current_allocation_id: Option<String>,
 }
 
-impl DMSCDevice {
+impl RiDevice {
     /// Creates a new device with the given name and type
     /// 
     /// # Parameters
@@ -696,15 +696,15 @@ impl DMSCDevice {
     /// 
     /// # Returns
     /// 
-    /// A new `DMSCDevice` instance with default capabilities and health metrics
-    pub fn new(name: String, device_type: DMSCDeviceType) -> Self {
+    /// A new `RiDevice` instance with default capabilities and health metrics
+    pub fn new(name: String, device_type: RiDeviceType) -> Self {
         Self {
             id: Uuid::new_v4().to_string(),
             name,
             device_type,
-            status: DMSCDeviceStatus::Unknown,
-            capabilities: DMSCDeviceCapabilities::new(),
-            health_metrics: DMSCDeviceHealthMetrics::default(),
+            status: RiDeviceStatus::Unknown,
+            capabilities: RiDeviceCapabilities::new(),
+            health_metrics: RiDeviceHealthMetrics::default(),
             location: None,
             group: None,
             tags: Vec::new(),
@@ -736,8 +736,8 @@ impl DMSCDevice {
     /// 
     /// # Returns
     /// 
-    /// The device type as a `DMSCDeviceType` enum
-    pub fn device_type(&self) -> DMSCDeviceType {
+    /// The device type as a `RiDeviceType` enum
+    pub fn device_type(&self) -> RiDeviceType {
         self.device_type
     }
     
@@ -745,8 +745,8 @@ impl DMSCDevice {
     /// 
     /// # Returns
     /// 
-    /// The device status as a `DMSCDeviceStatus` enum
-    pub fn status(&self) -> DMSCDeviceStatus {
+    /// The device status as a `RiDeviceStatus` enum
+    pub fn status(&self) -> RiDeviceStatus {
         self.status
     }
     
@@ -754,8 +754,8 @@ impl DMSCDevice {
     /// 
     /// # Returns
     /// 
-    /// A reference to the `DMSCDeviceCapabilities` structure
-    pub fn capabilities(&self) -> &DMSCDeviceCapabilities {
+    /// A reference to the `RiDeviceCapabilities` structure
+    pub fn capabilities(&self) -> &RiDeviceCapabilities {
         &self.capabilities
     }
     
@@ -763,8 +763,8 @@ impl DMSCDevice {
     /// 
     /// # Returns
     /// 
-    /// A reference to the `DMSCDeviceHealthMetrics` structure
-    pub fn health_metrics(&self) -> &DMSCDeviceHealthMetrics {
+    /// A reference to the `RiDeviceHealthMetrics` structure
+    pub fn health_metrics(&self) -> &RiDeviceHealthMetrics {
         &self.health_metrics
     }
     
@@ -773,7 +773,7 @@ impl DMSCDevice {
     /// # Parameters
     /// 
     /// - `status`: The new status to set
-    pub fn set_status(&mut self, status: DMSCDeviceStatus) {
+    pub fn set_status(&mut self, status: RiDeviceStatus) {
         self.status = status;
         self.last_seen = chrono::Utc::now();
     }
@@ -783,7 +783,7 @@ impl DMSCDevice {
     /// # Parameters
     /// 
     /// - `metrics`: The new health metrics to set
-    pub fn update_health_metrics(&mut self, metrics: DMSCDeviceHealthMetrics) {
+    pub fn update_health_metrics(&mut self, metrics: RiDeviceHealthMetrics) {
         self.health_metrics = metrics;
         self.last_seen = chrono::Utc::now();
     }
@@ -812,8 +812,8 @@ impl DMSCDevice {
     /// 
     /// # Returns
     /// 
-    /// The updated `DMSCDevice` instance
-    pub fn with_capabilities(mut self, capabilities: DMSCDeviceCapabilities) -> Self {
+    /// The updated `RiDevice` instance
+    pub fn with_capabilities(mut self, capabilities: RiDeviceCapabilities) -> Self {
         self.capabilities = capabilities;
         self
     }
@@ -859,7 +859,7 @@ impl DMSCDevice {
     /// 
     /// `true` if the device is available, `false` otherwise
     pub fn is_available(&self) -> bool {
-        self.status == DMSCDeviceStatus::Available && self.current_allocation_id.is_none()
+        self.status == RiDeviceStatus::Available && self.current_allocation_id.is_none()
     }
     
     /// Checks if the device is currently allocated
@@ -885,7 +885,7 @@ impl DMSCDevice {
     pub fn allocate(&mut self, allocation_id: &str) -> bool {
         if self.is_available() {
             self.current_allocation_id = Some(allocation_id.to_string());
-            self.status = DMSCDeviceStatus::Busy;
+            self.status = RiDeviceStatus::Busy;
             true
         } else {
             false
@@ -897,8 +897,8 @@ impl DMSCDevice {
     /// This method clears the allocation ID and sets the device status to Available if it was Busy.
     pub fn release(&mut self) {
         self.current_allocation_id = None;
-        if self.status == DMSCDeviceStatus::Busy {
-            self.status = DMSCDeviceStatus::Available;
+        if self.status == RiDeviceStatus::Busy {
+            self.status = RiDeviceStatus::Available;
         }
     }
     
@@ -986,14 +986,14 @@ impl DMSCDevice {
     /// A health score between 0 (worst) and 100 (best)
     pub fn health_score(&self) -> u8 {
         match self.status {
-            DMSCDeviceStatus::Available => 100,
-            DMSCDeviceStatus::Busy => 80,
-            DMSCDeviceStatus::Allocated => 80,
-            DMSCDeviceStatus::Maintenance => 60,
-            DMSCDeviceStatus::Degraded => 40,
-            DMSCDeviceStatus::Offline => 20,
-            DMSCDeviceStatus::Error => 10,
-            DMSCDeviceStatus::Unknown => 0,
+            RiDeviceStatus::Available => 100,
+            RiDeviceStatus::Busy => 80,
+            RiDeviceStatus::Allocated => 80,
+            RiDeviceStatus::Maintenance => 60,
+            RiDeviceStatus::Degraded => 40,
+            RiDeviceStatus::Offline => 20,
+            RiDeviceStatus::Error => 10,
+            RiDeviceStatus::Unknown => 0,
         }
     }
     
@@ -1023,7 +1023,7 @@ impl DMSCDevice {
     /// # Returns
     /// 
     /// A dynamic health score between 0 (worst) and 100 (best)
-    pub fn dynamic_health_score(&self, health_metrics: &DMSCDeviceHealthMetrics) -> u8 {
+    pub fn dynamic_health_score(&self, health_metrics: &RiDeviceHealthMetrics) -> u8 {
         let mut score = self.health_score() as f64;
         
         // Adjust score based on CPU usage
@@ -1047,7 +1047,7 @@ impl DMSCDevice {
         score -= error_penalty;
         
         // Adjust score based on network latency (for network devices)
-        if matches!(self.device_type, DMSCDeviceType::Network) {
+        if matches!(self.device_type, RiDeviceType::Network) {
             let latency_penalty = if health_metrics.network_latency_ms > 100.0 {
                 (health_metrics.network_latency_ms - 100.0) * 0.5
             } else {
@@ -1057,7 +1057,7 @@ impl DMSCDevice {
         }
         
         // Adjust score based on disk IOPS (for storage devices)
-        if matches!(self.device_type, DMSCDeviceType::Storage) {
+        if matches!(self.device_type, RiDeviceType::Storage) {
             let iops_penalty = if health_metrics.disk_iops < 100 {
                 (100.0 - health_metrics.disk_iops as f64) * 0.3
             } else {
@@ -1099,11 +1099,11 @@ impl DMSCDevice {
     /// # Returns
     /// 
     /// `true` if the device is healthy, `false` otherwise
-    pub fn is_healthy(&self, health_metrics: &DMSCDeviceHealthMetrics, timeout_secs: i64) -> bool {
+    pub fn is_healthy(&self, health_metrics: &RiDeviceHealthMetrics, timeout_secs: i64) -> bool {
         self.is_responsive(timeout_secs) && 
         self.dynamic_health_score(health_metrics) > 50 && 
-        self.status != DMSCDeviceStatus::Error && 
-        self.status != DMSCDeviceStatus::Offline
+        self.status != RiDeviceStatus::Error && 
+        self.status != RiDeviceStatus::Offline
     }
 
     /// Gets a reference to the device metadata
@@ -1118,14 +1118,14 @@ impl DMSCDevice {
 
 #[cfg(feature = "pyo3")]
 #[pymethods]
-impl DMSCDevice {
+impl RiDevice {
     #[new]
-    fn py_new(name: String, device_type: DMSCDeviceType) -> Self {
+    fn py_new(name: String, device_type: RiDeviceType) -> Self {
         Self::new(name, device_type)
     }
     
     #[staticmethod]
-    fn default_device(name: String, device_type: DMSCDeviceType) -> Self {
+    fn default_device(name: String, device_type: RiDeviceType) -> Self {
         Self::new(name, device_type)
     }
     
@@ -1140,32 +1140,32 @@ impl DMSCDevice {
     }
     
     #[pyo3(name = "device_type")]
-    fn device_type_impl(&self) -> DMSCDeviceType {
+    fn device_type_impl(&self) -> RiDeviceType {
         self.device_type()
     }
     
     #[pyo3(name = "status")]
-    fn status_impl(&self) -> DMSCDeviceStatus {
+    fn status_impl(&self) -> RiDeviceStatus {
         self.status()
     }
     
     #[pyo3(name = "capabilities")]
-    fn capabilities_impl(&self) -> DMSCDeviceCapabilities {
+    fn capabilities_impl(&self) -> RiDeviceCapabilities {
         self.capabilities().clone()
     }
     
     #[pyo3(name = "health_metrics")]
-    fn health_metrics_impl(&self) -> DMSCDeviceHealthMetrics {
+    fn health_metrics_impl(&self) -> RiDeviceHealthMetrics {
         self.health_metrics().clone()
     }
     
     #[pyo3(name = "set_status")]
-    fn set_status_impl(&mut self, status: DMSCDeviceStatus) {
+    fn set_status_impl(&mut self, status: RiDeviceStatus) {
         self.set_status(status)
     }
     
     #[pyo3(name = "update_health_metrics")]
-    fn update_health_metrics_impl(&mut self, metrics: DMSCDeviceHealthMetrics) {
+    fn update_health_metrics_impl(&mut self, metrics: RiDeviceHealthMetrics) {
         self.update_health_metrics(metrics)
     }
     
@@ -1180,7 +1180,7 @@ impl DMSCDevice {
     }
     
     #[pyo3(name = "with_capabilities")]
-    fn with_capabilities_impl(&self, capabilities: DMSCDeviceCapabilities) -> Self {
+    fn with_capabilities_impl(&self, capabilities: RiDeviceCapabilities) -> Self {
         self.clone().with_capabilities(capabilities)
     }
     
@@ -1265,12 +1265,12 @@ impl DMSCDevice {
     }
     
     #[pyo3(name = "dynamic_health_score")]
-    fn dynamic_health_score_impl(&self, health_metrics: DMSCDeviceHealthMetrics) -> u8 {
+    fn dynamic_health_score_impl(&self, health_metrics: RiDeviceHealthMetrics) -> u8 {
         self.dynamic_health_score(&health_metrics)
     }
     
     #[pyo3(name = "is_healthy")]
-    fn is_healthy_impl(&self, health_metrics: DMSCDeviceHealthMetrics, timeout_secs: i64) -> bool {
+    fn is_healthy_impl(&self, health_metrics: RiDeviceHealthMetrics, timeout_secs: i64) -> bool {
         self.is_healthy(&health_metrics, timeout_secs)
     }
     

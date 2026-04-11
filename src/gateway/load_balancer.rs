@@ -1,7 +1,7 @@
 //! Copyright © 2025-2026 Wenze Wei. All Rights Reserved.
 //!
-//! This file is part of DMSC.
-//! The DMSC project belongs to the Dunimd Team.
+//! This file is part of Ri.
+//! The Ri project belongs to the Dunimd Team.
 //!
 //! Licensed under the Apache License, Version 2.0 (the "License");
 //! You may not use this file except in compliance with the License.
@@ -25,10 +25,10 @@
 //! 
 //! ## Key Components
 //! 
-//! - **DMSCLoadBalancerStrategy**: Enum representing different load balancing algorithms
-//! - **DMSCBackendServer**: Represents a backend server with configuration and health status
-//! - **DMSCLoadBalancer**: Main load balancer implementation
-//! - **DMSCLoadBalancerServerStats**: Metrics for monitoring server performance
+//! - **RiLoadBalancerStrategy**: Enum representing different load balancing algorithms
+//! - **RiBackendServer**: Represents a backend server with configuration and health status
+//! - **RiLoadBalancer**: Main load balancer implementation
+//! - **RiLoadBalancerServerStats**: Metrics for monitoring server performance
 //! 
 //! ## Design Principles
 //! 
@@ -44,20 +44,20 @@
 //! ## Usage
 //! 
 //! ```rust
-//! use dmsc::prelude::*;
+//! use ri::prelude::*;
 //! use std::sync::Arc;
 //! 
-//! async fn example() -> DMSCResult<()> {
+//! async fn example() -> RiResult<()> {
 //!     // Create a load balancer with Round Robin strategy
-//!     let lb = Arc::new(DMSCLoadBalancer::new(DMSCLoadBalancerStrategy::RoundRobin));
+//!     let lb = Arc::new(RiLoadBalancer::new(RiLoadBalancerStrategy::RoundRobin));
 //!     
 //!     // Add backend servers
-//!     lb.add_server(DMSCBackendServer::new("server1".to_string(), "http://localhost:8081".to_string())
+//!     lb.add_server(RiBackendServer::new("server1".to_string(), "http://localhost:8081".to_string())
 //!         .with_weight(2)
 //!         .with_max_connections(200))
 //!         .await;
 //!     
-//!     lb.add_server(DMSCBackendServer::new("server2".to_string(), "http://localhost:8082".to_string())
+//!     lb.add_server(RiBackendServer::new("server2".to_string(), "http://localhost:8082".to_string())
 //!         .with_weight(1)
 //!         .with_max_connections(100))
 //!         .await;
@@ -83,7 +83,7 @@
 //! }
 //! ```
 
-use crate::core::DMSCResult;
+use crate::core::RiResult;
 use std::collections::HashMap;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicUsize, Ordering};
@@ -94,13 +94,13 @@ use std::sync::RwLock as StdRwLock;
 #[cfg(feature = "gateway")]
 use hyper;
 
-/// Load balancing strategies supported by DMSC.
+/// Load balancing strategies supported by Ri.
 /// 
 /// These strategies determine how the load balancer selects which backend server
 /// to route incoming requests to.
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
-pub enum DMSCLoadBalancerStrategy {
+pub enum RiLoadBalancerStrategy {
     /// **Round Robin**: Sequentially selects the next available server in rotation.
     /// 
     /// Simple and fair distribution, ideal for servers with similar capabilities.
@@ -143,7 +143,7 @@ pub enum DMSCLoadBalancerStrategy {
 /// including its ID, URL, weight, max connections, health check path, and health status.
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
-pub struct DMSCBackendServer {
+pub struct RiBackendServer {
     /// Unique identifier for the server
     pub id: String,
     
@@ -163,7 +163,7 @@ pub struct DMSCBackendServer {
     pub is_healthy: bool,
 }
 
-impl DMSCBackendServer {
+impl RiBackendServer {
     /// Creates a new backend server with the specified ID and URL.
     /// 
     /// # Parameters
@@ -173,7 +173,7 @@ impl DMSCBackendServer {
     /// 
     /// # Returns
     /// 
-    /// A new `DMSCBackendServer` instance with default values
+    /// A new `RiBackendServer` instance with default values
     pub fn new(id: String, url: String) -> Self {
         Self {
             id,
@@ -187,7 +187,7 @@ impl DMSCBackendServer {
 }
 
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pymethods)]
-impl DMSCBackendServer {
+impl RiBackendServer {
     #[cfg(feature = "pyo3")]
     #[new]
     fn py_new(id: String, url: String) -> Self {
@@ -306,13 +306,13 @@ impl ServerStats {
 
     /// Gets a snapshot of the current server statistics.
     ///
-    /// This method converts the internal statistics into a public-facing `DMSCLoadBalancerServerStats` struct.
+    /// This method converts the internal statistics into a public-facing `RiLoadBalancerServerStats` struct.
     ///
     /// # Returns
     ///
-    /// A `DMSCLoadBalancerServerStats` struct containing the current statistics
-    fn get_stats(&self) -> DMSCLoadBalancerServerStats {
-        DMSCLoadBalancerServerStats {
+    /// A `RiLoadBalancerServerStats` struct containing the current statistics
+    fn get_stats(&self) -> RiLoadBalancerServerStats {
+        RiLoadBalancerServerStats {
             active_connections: self.get_active_connections(),
             total_requests: self.total_requests.load(Ordering::Relaxed),
             failed_requests: self.failed_requests.load(Ordering::Relaxed),
@@ -327,7 +327,7 @@ impl ServerStats {
 /// performance, load, and reliability.
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
-pub struct DMSCLoadBalancerServerStats {
+pub struct RiLoadBalancerServerStats {
     /// Number of currently active connections to the server
     pub active_connections: usize,
 
@@ -346,12 +346,12 @@ pub struct DMSCLoadBalancerServerStats {
 /// This struct provides a comprehensive load balancing solution with support for multiple
 /// strategies, health checking, connection management, and detailed statistics.
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
-pub struct DMSCLoadBalancer {
+pub struct RiLoadBalancer {
     /// Load balancing strategy to use
-    strategy: DMSCLoadBalancerStrategy,
+    strategy: RiLoadBalancerStrategy,
     
     /// List of backend servers
-    servers: RwLock<Vec<DMSCBackendServer>>,
+    servers: RwLock<Vec<RiBackendServer>>,
     
     /// Statistics for each backend server
     server_stats: RwLock<HashMap<String, Arc<ServerStats>>>,
@@ -360,7 +360,7 @@ pub struct DMSCLoadBalancer {
     round_robin_counter: AtomicUsize,
 }
 
-impl Clone for DMSCLoadBalancer {
+impl Clone for RiLoadBalancer {
     /// Creates a clone of the load balancer.
     /// 
     /// Note: The clone will have the same strategy and counter, but empty servers and stats
@@ -375,7 +375,7 @@ impl Clone for DMSCLoadBalancer {
     }
 }
 
-impl DMSCLoadBalancer {
+impl RiLoadBalancer {
     /// Creates a new load balancer with the specified strategy.
     /// 
     /// # Parameters
@@ -384,8 +384,8 @@ impl DMSCLoadBalancer {
     /// 
     /// # Returns
     /// 
-    /// A new `DMSCLoadBalancer` instance with the specified strategy
-    pub fn new(strategy: DMSCLoadBalancerStrategy) -> Self {
+    /// A new `RiLoadBalancer` instance with the specified strategy
+    pub fn new(strategy: RiLoadBalancerStrategy) -> Self {
         Self {
             strategy,
             servers: RwLock::new(Vec::new()),
@@ -399,7 +399,7 @@ impl DMSCLoadBalancer {
     /// # Parameters
     /// 
     /// - `server`: The backend server to add
-    pub async fn add_server(&self, server: DMSCBackendServer) {
+    pub async fn add_server(&self, server: RiBackendServer) {
         let mut servers = self.servers.write().await;
         let mut stats = self.server_stats.write().await;
         
@@ -431,8 +431,8 @@ impl DMSCLoadBalancer {
     /// 
     /// # Returns
     /// 
-    /// A vector of healthy `DMSCBackendServer` instances
-    pub async fn get_healthy_servers(&self) -> Vec<DMSCBackendServer> {
+    /// A vector of healthy `RiBackendServer` instances
+    pub async fn get_healthy_servers(&self) -> Vec<RiBackendServer> {
         let servers = self.servers.read().await;
         servers.iter()
             .filter(|s| s.is_healthy)
@@ -451,18 +451,18 @@ impl DMSCLoadBalancer {
     /// 
     /// # Returns
     /// 
-    /// A `DMSCResult<DMSCBackendServer>` with the selected server, or an error if no servers are available
-    pub async fn select_server(&self, client_ip: Option<&str>) -> DMSCResult<DMSCBackendServer> {
+    /// A `RiResult<RiBackendServer>` with the selected server, or an error if no servers are available
+    pub async fn select_server(&self, client_ip: Option<&str>) -> RiResult<RiBackendServer> {
         let healthy_servers = self.get_healthy_servers().await;
         
         if healthy_servers.is_empty() {
-            return Err(crate::core::DMSCError::Other("No healthy servers available".to_string()));
+            return Err(crate::core::RiError::Other("No healthy servers available".to_string()));
         }
         
         let stats = self.server_stats.read().await;
         
         // Filter servers that have available connections
-        let available_servers: Vec<DMSCBackendServer> = healthy_servers.into_iter()
+        let available_servers: Vec<RiBackendServer> = healthy_servers.into_iter()
             .filter(|server| {
                 if let Some(server_stats) = stats.get(&server.id) {
                     let connections = server_stats.get_active_connections();
@@ -474,17 +474,17 @@ impl DMSCLoadBalancer {
             .collect();
         
         if available_servers.is_empty() {
-            return Err(crate::core::DMSCError::Other("No servers with available connections".to_string()));
+            return Err(crate::core::RiError::Other("No servers with available connections".to_string()));
         }
 
         let server = match self.strategy {
-            DMSCLoadBalancerStrategy::RoundRobin => self.select_round_robin(&available_servers).await,
-            DMSCLoadBalancerStrategy::WeightedRoundRobin => self.select_weighted_round_robin(&available_servers).await,
-            DMSCLoadBalancerStrategy::LeastConnections => self.select_least_connections(&available_servers).await,
-            DMSCLoadBalancerStrategy::Random => self.select_random(&available_servers),
-            DMSCLoadBalancerStrategy::IpHash => self.select_ip_hash(&available_servers, client_ip),
-            DMSCLoadBalancerStrategy::LeastResponseTime => self.select_least_response_time(&available_servers).await,
-            DMSCLoadBalancerStrategy::ConsistentHash => self.select_consistent_hash(&available_servers, client_ip),
+            RiLoadBalancerStrategy::RoundRobin => self.select_round_robin(&available_servers).await,
+            RiLoadBalancerStrategy::WeightedRoundRobin => self.select_weighted_round_robin(&available_servers).await,
+            RiLoadBalancerStrategy::LeastConnections => self.select_least_connections(&available_servers).await,
+            RiLoadBalancerStrategy::Random => self.select_random(&available_servers),
+            RiLoadBalancerStrategy::IpHash => self.select_ip_hash(&available_servers, client_ip),
+            RiLoadBalancerStrategy::LeastResponseTime => self.select_least_response_time(&available_servers).await,
+            RiLoadBalancerStrategy::ConsistentHash => self.select_consistent_hash(&available_servers, client_ip),
         };
 
         if let Some(server) = server {
@@ -494,7 +494,7 @@ impl DMSCLoadBalancer {
             }
             Ok(server)
         } else {
-            Err(crate::core::DMSCError::Other("Failed to select server".to_string()))
+            Err(crate::core::RiError::Other("Failed to select server".to_string()))
         }
     }
 
@@ -509,7 +509,7 @@ impl DMSCLoadBalancer {
     /// # Returns
     /// 
     /// The selected server, or `None` if no servers are available
-    async fn select_round_robin(&self, servers: &[DMSCBackendServer]) -> Option<DMSCBackendServer> {
+    async fn select_round_robin(&self, servers: &[RiBackendServer]) -> Option<RiBackendServer> {
         let counter = self.round_robin_counter.fetch_add(1, Ordering::Relaxed);
         let index = counter % servers.len();
         servers.get(index).cloned()
@@ -527,7 +527,7 @@ impl DMSCLoadBalancer {
     /// # Returns
     /// 
     /// The selected server, or `None` if no servers are available
-    async fn select_weighted_round_robin(&self, servers: &[DMSCBackendServer]) -> Option<DMSCBackendServer> {
+    async fn select_weighted_round_robin(&self, servers: &[RiBackendServer]) -> Option<RiBackendServer> {
         if servers.is_empty() {
             return None;
         }
@@ -560,7 +560,7 @@ impl DMSCLoadBalancer {
     /// # Returns
     /// 
     /// The selected server, or `None` if no servers are available
-    async fn select_least_connections(&self, servers: &[DMSCBackendServer]) -> Option<DMSCBackendServer> {
+    async fn select_least_connections(&self, servers: &[RiBackendServer]) -> Option<RiBackendServer> {
         let stats = self.server_stats.read().await;
         
         let mut best_server = None;
@@ -601,7 +601,7 @@ impl DMSCLoadBalancer {
     /// # Returns
     /// 
     /// The selected server, or `None` if no servers are available
-    fn select_random(&self, servers: &[DMSCBackendServer]) -> Option<DMSCBackendServer> {
+    fn select_random(&self, servers: &[RiBackendServer]) -> Option<RiBackendServer> {
         use rand::Rng;
         let mut rng = rand::thread_rng();
         let index = rng.gen_range(0..servers.len());
@@ -619,7 +619,7 @@ impl DMSCLoadBalancer {
     /// # Returns
     /// 
     /// The selected server, or `None` if no servers are available
-    async fn select_least_response_time(&self, servers: &[DMSCBackendServer]) -> Option<DMSCBackendServer> {
+    async fn select_least_response_time(&self, servers: &[RiBackendServer]) -> Option<RiBackendServer> {
         let stats = self.server_stats.read().await;
         
         let mut best_server = None;
@@ -651,7 +651,7 @@ impl DMSCLoadBalancer {
     /// # Returns
     /// 
     /// The selected server, or `None` if no servers are available
-    fn select_ip_hash(&self, servers: &[DMSCBackendServer], client_ip: Option<&str>) -> Option<DMSCBackendServer> {
+    fn select_ip_hash(&self, servers: &[RiBackendServer], client_ip: Option<&str>) -> Option<RiBackendServer> {
         if let Some(ip) = client_ip {
             let hash = self.hash_ip(ip);
             let index = hash as usize % servers.len();
@@ -692,7 +692,7 @@ impl DMSCLoadBalancer {
     /// # Returns
     /// 
     /// The selected server, or `None` if no servers are available
-    fn select_consistent_hash(&self, servers: &[DMSCBackendServer], client_ip: Option<&str>) -> Option<DMSCBackendServer> {
+    fn select_consistent_hash(&self, servers: &[RiBackendServer], client_ip: Option<&str>) -> Option<RiBackendServer> {
         if servers.is_empty() {
             return None;
         }
@@ -700,7 +700,7 @@ impl DMSCLoadBalancer {
         let key = client_ip.unwrap_or("127.0.0.1");
         
         // Create a sorted list of server hashes
-        let mut server_hashes: Vec<(u64, DMSCBackendServer)> = servers
+        let mut server_hashes: Vec<(u64, RiBackendServer)> = servers
             .iter()
             .map(|server| {
                 let hash = self.hash_ip(&server.id);
@@ -786,8 +786,8 @@ impl DMSCLoadBalancer {
     /// 
     /// # Returns
     /// 
-    /// An `Option<DMSCLoadBalancerServerStats>` with the server statistics, or `None` if the server doesn't exist
-    pub async fn get_server_stats(&self, server_id: &str) -> Option<DMSCLoadBalancerServerStats> {
+    /// An `Option<RiLoadBalancerServerStats>` with the server statistics, or `None` if the server doesn't exist
+    pub async fn get_server_stats(&self, server_id: &str) -> Option<RiLoadBalancerServerStats> {
         self.server_stats.read().await
             .get(server_id)
             .map(|stats| stats.get_stats())
@@ -797,8 +797,8 @@ impl DMSCLoadBalancer {
     ///
     /// # Returns
     ///
-    /// A `HashMap<String, DMSCLoadBalancerServerStats>` with statistics for all servers
-    pub async fn get_all_stats(&self) -> HashMap<String, DMSCLoadBalancerServerStats> {
+    /// A `HashMap<String, RiLoadBalancerServerStats>` with statistics for all servers
+    pub async fn get_all_stats(&self) -> HashMap<String, RiLoadBalancerServerStats> {
         let stats = self.server_stats.read().await;
         let mut result = HashMap::new();
         
@@ -845,8 +845,8 @@ impl DMSCLoadBalancer {
                 Ok(uri) => uri,
                 Err(e) => {
                     // Log warning for invalid health check URL
-        if let Ok(fs) = crate::fs::DMSCFileSystem::new_auto_root() {
-            let logger = crate::log::DMSCLogger::new(&crate::log::DMSCLogConfig::default(), fs);
+        if let Ok(fs) = crate::fs::RiFileSystem::new_auto_root() {
+            let logger = crate::log::RiLogger::new(&crate::log::RiLogConfig::default(), fs);
             let _ = logger.warn("load_balancer", format!("Invalid health check URL for server {server_id}: {e}"));
         }
                     return false;
@@ -911,8 +911,8 @@ impl DMSCLoadBalancer {
     /// 
     /// # Returns
     /// 
-    /// A reference to the current `DMSCLoadBalancerStrategy`
-    pub fn get_strategy(&self) -> &DMSCLoadBalancerStrategy {
+    /// A reference to the current `RiLoadBalancerStrategy`
+    pub fn get_strategy(&self) -> &RiLoadBalancerStrategy {
         &self.strategy
     }
 
@@ -921,7 +921,7 @@ impl DMSCLoadBalancer {
     /// # Parameters
     /// 
     /// - `strategy`: The new load balancing strategy to use
-    pub async fn set_strategy(&mut self, strategy: DMSCLoadBalancerStrategy) {
+    pub async fn set_strategy(&mut self, strategy: RiLoadBalancerStrategy) {
         self.strategy = strategy;
     }
 

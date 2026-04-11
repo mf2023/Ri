@@ -1,7 +1,7 @@
 //! Copyright © 2025-2026 Wenze Wei. All Rights Reserved.
 //!
-//! This file is part of DMSC.
-//! The DMSC project belongs to the Dunimd Team.
+//! This file is part of Ri.
+//! The Ri project belongs to the Dunimd Team.
 //!
 //! Licensed under the Apache License, Version 2.0 (the "License");
 //! You may not use this file except in compliance with the License.
@@ -17,38 +17,38 @@
 
 //! # Auth Module C API
 //!
-//! This module provides C language bindings for DMSC's authentication and authorization
+//! This module provides C language bindings for Ri's authentication and authorization
 //! subsystem. The authentication module is responsible for handling user authentication,
 //! session management, permission verification, and OAuth authentication flows. This C API
-//! enables C/C++ applications to integrate with DMSC's security features without requiring
+//! enables C/C++ applications to integrate with Ri's security features without requiring
 //! Rust runtime dependencies.
 //!
 //! ## Module Architecture
 //!
 //! The authentication module consists of five primary components:
 //!
-//! - **DMSCAuthConfig**: Centralized configuration container for authentication parameters.
+//! - **RiAuthConfig**: Centralized configuration container for authentication parameters.
 //!   Manages JWT secret keys, session timeouts, token expiration settings, and OAuth
 //!   provider configurations. This configuration object is required for initializing
 //!   authentication managers and controls security policy enforcement across the system.
 //!
-//! - **DMSCJWTManager**: JSON Web Token (JWT) generation and validation handler.
+//! - **RiJWTManager**: JSON Web Token (JWT) generation and validation handler.
 //!   Provides token creation with custom claims, signature verification using HMAC-SHA256,
 //!   expiration checking, and audience validation. The JWT manager supports both access
 //!   tokens and refresh tokens with configurable expiration periods. It implements RFC 7519
 //!   specification for secure stateless authentication in distributed systems.
 //!
-//! - **DMSCSessionManager**: Server-side session state management for stateful authentication.
+//! - **RiSessionManager**: Server-side session state management for stateful authentication.
 //!   Maintains active user sessions in memory with configurable timeout policies. Supports
 //!   session creation, validation, renewal, and invalidation. The session manager uses
 //!   DashMap for thread-safe concurrent access in multi-threaded server environments.
 //!
-//! - **DMSCPermissionManager**: Role-based access control (RBAC) permission evaluator.
+//! - **RiPermissionManager**: Role-based access control (RBAC) permission evaluator.
 //!   Manages user roles, permissions, and resource access policies. Supports hierarchical
 //!   role definitions with permission inheritance. The permission manager provides efficient
 //!   permission checking for high-throughput authorization decisions.
 //!
-//! - **DMSCOAuthManager**: OAuth 2.0 authentication flow handler for third-party integrations.
+//! - **RiOAuthManager**: OAuth 2.0 authentication flow handler for third-party integrations.
 //!   Implements authorization code flow for web applications, implicit flow for single-page
 //!   applications, and client credentials flow for machine-to-machine communication. Supports
 //!   multiple OAuth providers with configurable redirect URIs and scope requirements.
@@ -76,25 +76,25 @@
 //!
 //! ```c
 //! // Create authentication configuration
-//! CDMSCAuthConfig* config = dmsc_auth_config_new();
+//! CRiAuthConfig* config = ri_auth_config_new();
 //!
 //! // Create JWT manager with secret and expiration
-//! CDMSCJWTManager* jwt = dmsc_jwt_manager_new("your-secret-key", 3600);
+//! CRiJWTManager* jwt = ri_jwt_manager_new("your-secret-key", 3600);
 //!
 //! // Generate token for authenticated user
-//! const char* token = dmsc_jwt_manager_generate(jwt, "user-id", "admin");
+//! const char* token = ri_jwt_manager_generate(jwt, "user-id", "admin");
 //!
 //! // Validate token on subsequent requests
-//! bool valid = dmsc_jwt_manager_validate(jwt, token);
+//! bool valid = ri_jwt_manager_validate(jwt, token);
 //!
 //! // Cleanup resources
-//! dmsc_jwt_manager_free(jwt);
-//! dmsc_auth_config_free(config);
+//! ri_jwt_manager_free(jwt);
+//! ri_auth_config_free(config);
 //! ```
 //!
 //! ## Dependencies
 //!
-//! This module depends on the following core DMSC modules:
+//! This module depends on the following core Ri modules:
 //!
 //! - `crate::auth`: Rust implementation of authentication logic
 //! - `crate::prelude`: Common types and traits
@@ -105,24 +105,24 @@
 //! Disable this feature to reduce binary size in deployments that do not require
 //! authentication capabilities.
 
-use crate::auth::{DMSCAuthConfig, DMSCJWTManager, DMSCSessionManager, DMSCPermissionManager, DMSCOAuthManager};
+use crate::auth::{RiAuthConfig, RiJWTManager, RiSessionManager, RiPermissionManager, RiOAuthManager};
 use std::ffi::c_char;
 
-c_wrapper!(CDMSCAuthConfig, DMSCAuthConfig);
+c_wrapper!(CRiAuthConfig, RiAuthConfig);
 
-c_wrapper!(CDMSCJWTManager, DMSCJWTManager);
+c_wrapper!(CRiJWTManager, RiJWTManager);
 
-c_wrapper!(CDMSCSessionManager, DMSCSessionManager);
+c_wrapper!(CRiSessionManager, RiSessionManager);
 
-c_wrapper!(CDMSCPermissionManager, DMSCPermissionManager);
+c_wrapper!(CRiPermissionManager, RiPermissionManager);
 
-c_wrapper!(CDMSCOAuthManager, DMSCOAuthManager);
+c_wrapper!(CRiOAuthManager, RiOAuthManager);
 
-c_constructor!(dmsc_auth_config_new, CDMSCAuthConfig, DMSCAuthConfig, DMSCAuthConfig::default());
+c_constructor!(ri_auth_config_new, CRiAuthConfig, RiAuthConfig, RiAuthConfig::default());
 
-c_destructor!(dmsc_auth_config_free, CDMSCAuthConfig);
+c_destructor!(ri_auth_config_free, CRiAuthConfig);
 
-/// Creates a new CDMSCJWTManager instance with specified secret and expiration.
+/// Creates a new CRiJWTManager instance with specified secret and expiration.
 ///
 /// Initializes a JWT manager for token generation and validation. The manager uses
 /// HMAC-SHA256 (HS256) algorithm for signing tokens. The secret key must be kept
@@ -138,7 +138,7 @@ c_destructor!(dmsc_auth_config_free, CDMSCAuthConfig);
 ///
 /// # Returns
 ///
-/// Pointer to newly allocated CDMSCJWTManager on success, or NULL if:
+/// Pointer to newly allocated CRiJWTManager on success, or NULL if:
 /// - `secret` parameter is NULL
 /// - Memory allocation fails
 /// - Secret contains invalid UTF-8 sequences
@@ -154,7 +154,7 @@ c_destructor!(dmsc_auth_config_free, CDMSCAuthConfig);
 /// # Example
 ///
 /// ```c
-/// CDMSCJWTManager* jwt = dmsc_jwt_manager_new(
+/// CRiJWTManager* jwt = ri_jwt_manager_new(
 ///     "your-256-bit-secret-key-here",
 ///     3600  // 1 hour expiration
 /// );
@@ -163,7 +163,7 @@ c_destructor!(dmsc_auth_config_free, CDMSCAuthConfig);
 /// }
 /// ```
 #[no_mangle]
-pub extern "C" fn dmsc_jwt_manager_new(secret: *const c_char, expiry_secs: u64) -> *mut CDMSCJWTManager {
+pub extern "C" fn ri_jwt_manager_new(secret: *const c_char, expiry_secs: u64) -> *mut CRiJWTManager {
     if secret.is_null() {
         return std::ptr::null_mut();
     }
@@ -172,14 +172,14 @@ pub extern "C" fn dmsc_jwt_manager_new(secret: *const c_char, expiry_secs: u64) 
             Ok(s) => s,
             Err(_) => return std::ptr::null_mut(),
         };
-        let manager = DMSCJWTManager::create(secret_str.to_string(), expiry_secs);
-        Box::into_raw(Box::new(CDMSCJWTManager::new(manager)))
+        let manager = RiJWTManager::create(secret_str.to_string(), expiry_secs);
+        Box::into_raw(Box::new(CRiJWTManager::new(manager)))
     }
 }
 
-c_destructor!(dmsc_jwt_manager_free, CDMSCJWTManager);
+c_destructor!(ri_jwt_manager_free, CRiJWTManager);
 
-/// Creates a new CDMSCSessionManager instance with specified session timeout.
+/// Creates a new CRiSessionManager instance with specified session timeout.
 ///
 /// Initializes a session manager for stateful authentication sessions. Sessions track
 /// authenticated user state and provide automatic timeout management for security.
@@ -192,7 +192,7 @@ c_destructor!(dmsc_jwt_manager_free, CDMSCJWTManager);
 ///
 /// # Returns
 ///
-/// Pointer to newly allocated CDMSCSessionManager. Never returns NULL as the
+/// Pointer to newly allocated CRiSessionManager. Never returns NULL as the
 /// implementation uses unwrap for default configuration.
 ///
 /// # Session Behavior
@@ -207,21 +207,21 @@ c_destructor!(dmsc_jwt_manager_free, CDMSCJWTManager);
 /// - Session count exceeds maximum capacity
 /// - Manual cleanup function is called
 #[no_mangle]
-pub extern "C" fn dmsc_session_manager_new(timeout_secs: u64) -> *mut CDMSCSessionManager {
-    let manager = DMSCSessionManager::new(timeout_secs);
-    Box::into_raw(Box::new(CDMSCSessionManager::new(manager)))
+pub extern "C" fn ri_session_manager_new(timeout_secs: u64) -> *mut CRiSessionManager {
+    let manager = RiSessionManager::new(timeout_secs);
+    Box::into_raw(Box::new(CRiSessionManager::new(manager)))
 }
 
-c_destructor!(dmsc_session_manager_free, CDMSCSessionManager);
+c_destructor!(ri_session_manager_free, CRiSessionManager);
 
-/// Creates a new CDMSCPermissionManager instance.
+/// Creates a new CRiPermissionManager instance.
 ///
 /// Initializes an empty permission manager with default configuration. Roles and
 /// permissions must be added through configuration or management APIs before use.
 ///
 /// # Returns
 ///
-/// Pointer to newly allocated CDMSCPermissionManager. Never returns NULL.
+/// Pointer to newly allocated CRiPermissionManager. Never returns NULL.
 ///
 /// # Initial State
 ///
@@ -237,9 +237,9 @@ c_destructor!(dmsc_session_manager_free, CDMSCSessionManager);
 /// - User role assignments
 /// - Resource permission mappings
 #[no_mangle]
-pub extern "C" fn dmsc_permission_manager_new() -> *mut CDMSCPermissionManager {
-    let manager = DMSCPermissionManager::new();
-    Box::into_raw(Box::new(CDMSCPermissionManager::new(manager)))
+pub extern "C" fn ri_permission_manager_new() -> *mut CRiPermissionManager {
+    let manager = RiPermissionManager::new();
+    Box::into_raw(Box::new(CRiPermissionManager::new(manager)))
 }
 
-c_destructor!(dmsc_permission_manager_free, CDMSCPermissionManager);
+c_destructor!(ri_permission_manager_free, CRiPermissionManager);

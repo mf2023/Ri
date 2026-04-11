@@ -1,7 +1,7 @@
 //! Copyright © 2025-2026 Wenze Wei. All Rights Reserved.
 //!
-//! This file is part of DMSC.
-//! The DMSC project belongs to the Dunimd Team.
+//! This file is part of Ri.
+//! The Ri project belongs to the Dunimd Team.
 //!
 //! Licensed under the Apache License, Version 2.0 (the "License");
 //! You may not use this file except in compliance with the License.
@@ -15,9 +15,9 @@
 //! See the License for the specific language governing permissions and
 //! limitations under the License.
 
-use dmsc::observability::prometheus::DMSCPrometheusExporter;
+use ri::observability::prometheus::RiPrometheusExporter;
 
-/// Observability Prometheus metrics export test module for DMSC tooling.
+/// Observability Prometheus metrics export test module for Ri tooling.
 ///
 /// This module provides comprehensive test coverage for the Prometheus metrics
 /// exporter component that generates Prometheus-compatible metric output for
@@ -60,7 +60,7 @@ use dmsc::observability::prometheus::DMSCPrometheusExporter;
 /// metrics.
 
 #[test]
-/// Tests basic DMSCPrometheusExporter functionality for metrics handling.
+/// Tests basic RiPrometheusExporter functionality for metrics handling.
 ///
 /// Verifies that the Prometheus exporter can register counters and gauges,
 /// update their values, and render output in Prometheus exposition format.
@@ -93,7 +93,7 @@ use dmsc::observability::prometheus::DMSCPrometheusExporter;
 /// - Rendered output contains both metric names
 /// - The output is valid Prometheus exposition format
 fn test_prometheus_exporter() {
-    let exporter = DMSCPrometheusExporter::new().unwrap();
+    let exporter = RiPrometheusExporter::new().unwrap();
     
     // Register and increment a counter metric
     exporter.register_counter("test_counter", "A test counter").unwrap();
@@ -140,12 +140,12 @@ fn test_prometheus_exporter() {
 /// - Dashboard contains panels for all registered metrics
 /// - Panel count matches registered metrics
 fn test_grafana_dashboard_generation() {
-    let exporter = DMSCPrometheusExporter::new().unwrap();
+    let exporter = RiPrometheusExporter::new().unwrap();
     
     // Generate default dashboard from registered metrics
     let dashboard = exporter.generate_default_dashboard().unwrap();
     
     // Verify dashboard structure
-    assert_eq!(dashboard.title, "DMSC Metrics Dashboard");
+    assert_eq!(dashboard.title, "Ri Metrics Dashboard");
     assert_eq!(dashboard.panels.len(), 3);
 }

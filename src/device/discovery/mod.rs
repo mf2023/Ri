@@ -1,7 +1,7 @@
 //! Copyright © 2025-2026 Wenze Wei. All Rights Reserved.
 //!
-//! This file is part of DMSC.
-//! The DMSC project belongs to the Dunimd Team.
+//! This file is part of Ri.
+//! The Ri project belongs to the Dunimd Team.
 //!
 //! Licensed under the Apache License, Version 2.0 (the "License");
 //! You may not use this file except in compliance with the License.
@@ -22,9 +22,9 @@
 //!
 //! ## Architecture
 //!
-//! - **DMSCDeviceDiscovery**: Main discovery engine combining providers and plugins
-//! - **DMSCHardwareProvider**: Trait for built-in hardware providers
-//! - **DMSCHardwareDiscoveryPlugin**: Trait for custom discovery plugins
+//! - **RiDeviceDiscovery**: Main discovery engine combining providers and plugins
+//! - **RiHardwareProvider**: Trait for built-in hardware providers
+//! - **RiHardwareDiscoveryPlugin**: Trait for custom discovery plugins
 //! - **PlatformInfo**: Cross-platform detection and compatibility info
 //!
 //! ## Features
@@ -38,19 +38,19 @@
 //! ## Usage
 //!
 //! ```rust,ignore
-//! use dmsc::device::discovery::{DMSCDeviceDiscovery, DiscoveryConfig};
+//! use ri::device::discovery::{RiDeviceDiscovery, DiscoveryConfig};
 //!
 //! #[tokio::main]
 //! async fn main() -> Result<(), Box<dyn std::error::Error>> {
 //!     let config = DiscoveryConfig::default();
-//!     let discovery = DMSCDeviceDiscovery::new(config).await?;
+//!     let discovery = RiDeviceDiscovery::new(config).await?;
 //!
 //!     // Discover all devices
 //!     let devices = discovery.discover_all().await?;
 //!     println!("Discovered {} devices", devices.len());
 //!
 //!     // Discover specific category
-//!     let cpus = discovery.discover_category(dmsc::device::HardwareCategory::CPU).await?;
+//!     let cpus = discovery.discover_category(ri::device::HardwareCategory::CPU).await?;
 //!     println!("Found {} CPUs", cpus.len());
 //!
 //!     Ok(())
@@ -71,7 +71,7 @@ pub use platform::{
 };
 
 pub use providers::{
-    DMSCHardwareProvider,
+    RiHardwareProvider,
     ProviderRegistry,
     DiscoveryResult,
     CPUProvider,
@@ -83,7 +83,7 @@ pub use providers::{
 };
 
 pub use plugins::{
-    DMSCHardwareDiscoveryPlugin,
+    RiHardwareDiscoveryPlugin,
     PluginRegistry,
     PluginMetadata,
     PluginStatus,
@@ -97,8 +97,8 @@ use std::sync::Arc;
 use tokio::sync::RwLock;
 use serde::{Serialize, Deserialize};
 
-use super::core::{DMSCDevice, DMSCDeviceType, DMSCDeviceCapabilities};
-use super::DMSCResult;
+use super::core::{RiDevice, RiDeviceType, RiDeviceCapabilities};
+use super::RiResult;
 
 /// Discovery configuration
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -170,18 +170,18 @@ pub struct DiscoveryStats {
 
 /// Main device discovery engine
 #[derive(Clone)]
-pub struct DMSCDeviceDiscovery {
+pub struct RiDeviceDiscovery {
     config: Arc<DiscoveryConfig>,
     platform: Arc<PlatformInfo>,
     provider_registry: Arc<ProviderRegistry>,
     plugin_registry: Arc<RwLock<PluginRegistry>>,
     stats: Arc<RwLock<DiscoveryStats>>,
-    discovered_devices: Arc<RwLock<HashMap<String, DMSCDevice>>>,
+    discovered_devices: Arc<RwLock<HashMap<String, RiDevice>>>,
 }
 
-impl DMSCDeviceDiscovery {
+impl RiDeviceDiscovery {
     /// Creates a new device discovery engine
-    pub async fn new(config: DiscoveryConfig) -> DMSCResult<Self> {
+    pub async fn new(config: DiscoveryConfig) -> RiResult<Self> {
         let platform = Arc::new(PlatformInfo::new());
         let provider_registry = Arc::new(ProviderRegistry::new());
         let plugin_registry = PluginRegistry::new();
@@ -208,12 +208,12 @@ impl DMSCDeviceDiscovery {
     }
 
     /// Creates a discovery engine with default configuration
-    pub async fn with_defaults() -> DMSCResult<Self> {
+    pub async fn with_defaults() -> RiResult<Self> {
         Self::new(DiscoveryConfig::default()).await
     }
 
     /// Discovers all enabled device categories
-    pub async fn discover_all(&self) -> DMSCResult<Vec<DMSCDevice>> {
+    pub async fn discover_all(&self) -> RiResult<Vec<RiDevice>> {
         let start_time = std::time::Instant::now();
         let mut all_devices = Vec::new();
         let mut providers_used = 0;
@@ -310,11 +310,11 @@ impl DMSCDeviceDiscovery {
     }
 
     /// Discovers devices of a specific category
-    pub async fn discover_category(&self, category: HardwareCategory) -> DMSCResult<Vec<DMSCDevice>> {
+    pub async fn discover_category(&self, category: HardwareCategory) -> RiResult<Vec<RiDevice>> {
         let start_time = std::time::Instant::now();
 
         let devices = self.provider_registry.discover_devices(&category, &self.platform).await
-            .map_err(|e| crate::core::DMSCError::Other(format!("Discovery failed: {}", e)))?;
+            .map_err(|e| crate::core::RiError::Other(format!("Discovery failed: {}", e)))?;
 
         // Update statistics
         let elapsed = start_time.elapsed().as_millis();
@@ -325,39 +325,39 @@ impl DMSCDeviceDiscovery {
     }
 
     /// Discovers devices using registered plugins
-    pub async fn discover_with_plugins(&self) -> DMSCResult<Vec<DMSCDevice>> {
+    pub async fn discover_with_plugins(&self) -> RiResult<Vec<RiDevice>> {
         let devices = self.plugin_registry.read().await.discover_all(&self.platform).await
-            .map_err(|e| crate::core::DMSCError::Other(format!("Plugin discovery failed: {}", e)))?;
+            .map_err(|e| crate::core::RiError::Other(format!("Plugin discovery failed: {}", e)))?;
         Ok(devices)
     }
 
     /// Discovers CPU devices
-    pub async fn discover_cpus(&self) -> DMSCResult<Vec<DMSCDevice>> {
+    pub async fn discover_cpus(&self) -> RiResult<Vec<RiDevice>> {
         self.discover_category(HardwareCategory::CPU).await
     }
 
     /// Discovers memory devices
-    pub async fn discover_memory(&self) -> DMSCResult<Vec<DMSCDevice>> {
+    pub async fn discover_memory(&self) -> RiResult<Vec<RiDevice>> {
         self.discover_category(HardwareCategory::Memory).await
     }
 
     /// Discovers storage devices
-    pub async fn discover_storage(&self) -> DMSCResult<Vec<DMSCDevice>> {
+    pub async fn discover_storage(&self) -> RiResult<Vec<RiDevice>> {
         self.discover_category(HardwareCategory::Storage).await
     }
 
     /// Discovers network devices
-    pub async fn discover_network(&self) -> DMSCResult<Vec<DMSCDevice>> {
+    pub async fn discover_network(&self) -> RiResult<Vec<RiDevice>> {
         self.discover_category(HardwareCategory::Network).await
     }
 
     /// Discovers GPU devices
-    pub async fn discover_gpus(&self) -> DMSCResult<Vec<DMSCDevice>> {
+    pub async fn discover_gpus(&self) -> RiResult<Vec<RiDevice>> {
         self.discover_category(HardwareCategory::GPU).await
     }
 
     /// Discovers USB devices
-    pub async fn discover_usb(&self) -> DMSCResult<Vec<DMSCDevice>> {
+    pub async fn discover_usb(&self) -> RiResult<Vec<RiDevice>> {
         self.discover_category(HardwareCategory::USB).await
     }
 
@@ -372,12 +372,12 @@ impl DMSCDeviceDiscovery {
     }
 
     /// Returns all discovered devices
-    pub async fn get_discovered_devices(&self) -> Vec<DMSCDevice> {
+    pub async fn get_discovered_devices(&self) -> Vec<RiDevice> {
         self.discovered_devices.read().await.values().cloned().collect()
     }
 
     /// Returns a device by ID
-    pub async fn get_device(&self, id: &str) -> Option<DMSCDevice> {
+    pub async fn get_device(&self, id: &str) -> Option<RiDevice> {
         self.discovered_devices.read().await.get(id).cloned()
     }
 
@@ -387,12 +387,12 @@ impl DMSCDeviceDiscovery {
     }
 
     /// Registers a custom hardware provider
-    pub async fn register_provider<P: DMSCHardwareProvider + 'static>(&self, provider: P) {
+    pub async fn register_provider<P: RiHardwareProvider + 'static>(&self, provider: P) {
         self.provider_registry.register(Box::new(provider)).await;
     }
 
     /// Registers a custom discovery plugin
-    pub async fn register_plugin(&mut self, plugin: Box<dyn DMSCHardwareDiscoveryPlugin>) {
+    pub async fn register_plugin(&mut self, plugin: Box<dyn RiHardwareDiscoveryPlugin>) {
         self.plugin_registry.write().await.register(plugin).await.ok();
     }
 
@@ -438,43 +438,43 @@ impl DMSCDeviceDiscovery {
     }
 
     /// Creates mock devices for testing/fallback
-    async fn create_mock_devices(&self) -> DMSCResult<Vec<DMSCDevice>> {
+    async fn create_mock_devices(&self) -> RiResult<Vec<RiDevice>> {
         let mut devices = Vec::new();
 
         // Create a mock CPU
         if self.config.enable_cpu_discovery {
-            let cpu_capabilities = DMSCDeviceCapabilities::new()
+            let cpu_capabilities = RiDeviceCapabilities::new()
                 .with_compute_units(self.platform.cpu_cores)
                 .with_memory_gb(self.platform.total_memory as f64 / (1024.0 * 1024.0 * 1024.0));
 
-            let cpu = DMSCDevice::new(
+            let cpu = RiDevice::new(
                 format!("Mock CPU ({} cores)", self.platform.cpu_cores),
-                DMSCDeviceType::CPU,
+                RiDeviceType::CPU,
             ).with_capabilities(cpu_capabilities);
             devices.push(cpu);
         }
 
         // Create a mock memory
         if self.config.enable_memory_discovery {
-            let mem_capabilities = DMSCDeviceCapabilities::new()
+            let mem_capabilities = RiDeviceCapabilities::new()
                 .with_compute_units(0)
                 .with_memory_gb(self.platform.total_memory as f64 / (1024.0 * 1024.0 * 1024.0));
 
-            let memory = DMSCDevice::new(
+            let memory = RiDevice::new(
                 format!("Mock Memory ({:.2} GB)", self.platform.total_memory as f64 / (1024.0 * 1024.0 * 1024.0)),
-                DMSCDeviceType::Memory,
+                RiDeviceType::Memory,
             ).with_capabilities(mem_capabilities);
             devices.push(memory);
         }
 
         // Create a mock network adapter
         if self.config.enable_network_discovery {
-            let net_capabilities = DMSCDeviceCapabilities::new()
+            let net_capabilities = RiDeviceCapabilities::new()
                 .with_bandwidth_gbps(1.0);
 
-            let network = DMSCDevice::new(
+            let network = RiDevice::new(
                 "Mock Loopback Interface".to_string(),
-                DMSCDeviceType::Network,
+                RiDeviceType::Network,
             ).with_capabilities(net_capabilities);
             devices.push(network);
         }
@@ -485,14 +485,14 @@ impl DMSCDeviceDiscovery {
 
 /// Async discovery operation with progress tracking
 pub struct AsyncDiscovery {
-    discovery: Arc<DMSCDeviceDiscovery>,
+    discovery: Arc<RiDeviceDiscovery>,
     current_progress: Arc<RwLock<f32>>,
     is_cancelled: Arc<RwLock<bool>>,
 }
 
 impl AsyncDiscovery {
     /// Creates a new async discovery operation
-    pub fn new(discovery: Arc<DMSCDeviceDiscovery>) -> Self {
+    pub fn new(discovery: Arc<RiDeviceDiscovery>) -> Self {
         Self {
             discovery,
             current_progress: Arc::new(RwLock::new(0.0)),
@@ -501,12 +501,12 @@ impl AsyncDiscovery {
     }
 
     /// Discovers all devices with progress tracking
-    pub async fn discover_all(&self) -> DMSCResult<Vec<DMSCDevice>> {
+    pub async fn discover_all(&self) -> RiResult<Vec<RiDevice>> {
         *self.current_progress.write().await = 0.0;
 
         *self.current_progress.write().await = 0.1; // 10% - Starting
         if *self.is_cancelled.read().await {
-            return Err(crate::core::DMSCError::Other("Discovery cancelled".to_string()));
+            return Err(crate::core::RiError::Other("Discovery cancelled".to_string()));
         }
 
         let result = self.discovery.discover_all().await;
@@ -527,14 +527,14 @@ impl AsyncDiscovery {
     }
 }
 
-/// Extension trait for DMSCDeviceController to integrate discovery
+/// Extension trait for RiDeviceController to integrate discovery
 #[async_trait::async_trait]
 pub trait DeviceDiscoveryExtension {
     /// Performs device discovery and returns discovered devices
-    async fn perform_discovery(&mut self) -> DMSCResult<Vec<DMSCDevice>>;
+    async fn perform_discovery(&mut self) -> RiResult<Vec<RiDevice>>;
 
     /// Returns the discovery engine
-    fn discovery_engine(&self) -> Option<&DMSCDeviceDiscovery>;
+    fn discovery_engine(&self) -> Option<&RiDeviceDiscovery>;
 }
 
 use std::collections::HashMap;

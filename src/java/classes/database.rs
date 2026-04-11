@@ -1,7 +1,7 @@
 //! Copyright © 2025-2026 Wenze Wei. All Rights Reserved.
 //!
-//! This file is part of DMSC.
-//! The DMSC project belongs to the Dunimd Team.
+//! This file is part of Ri.
+//! The Ri project belongs to the Dunimd Team.
 //!
 //! Licensed under the Apache License, Version 2.0 (the "License");
 //! You may not use this file except in compliance with the License.
@@ -17,31 +17,31 @@
 
 //! # Database Module JNI Bindings
 //!
-//! JNI bindings for DMSC database classes.
+//! JNI bindings for Ri database classes.
 
 use jni::JNIEnv;
 use jni::objects::JClass;
 use jni::sys::jlong;
-use crate::database::DMSCDatabaseConfig;
+use crate::database::RiDatabaseConfig;
 
 #[no_mangle]
-pub extern "system" fn Java_com_dunimd_dmsc_database_DMSCDatabaseConfig_new0(
+pub extern "system" fn Java_com_dunimd_ri_database_RiDatabaseConfig_new0(
     _env: JNIEnv,
     _class: JClass,
 ) -> jlong {
-    let config = Box::new(DMSCDatabaseConfig::default());
+    let config = Box::new(RiDatabaseConfig::default());
     Box::into_raw(config) as jlong
 }
 
 #[no_mangle]
-pub extern "system" fn Java_com_dunimd_dmsc_database_DMSCDatabaseConfig_free0(
+pub extern "system" fn Java_com_dunimd_ri_database_RiDatabaseConfig_free0(
     _env: JNIEnv,
     _class: JClass,
     ptr: jlong,
 ) {
     if ptr != 0 {
         unsafe {
-            let _ = Box::from_raw(ptr as *mut DMSCDatabaseConfig);
+            let _ = Box::from_raw(ptr as *mut RiDatabaseConfig);
         }
     }
 }

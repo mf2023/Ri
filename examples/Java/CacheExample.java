@@ -1,7 +1,7 @@
 // Copyright © 2025-2026 Wenze Wei. All Rights Reserved.
 //
-// This file is part of DMSC.
-// The DMSC project belongs to the Dunimd Team.
+// This file is part of Ri.
+// The Ri project belongs to the Dunimd Team.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // You may not use this file except in compliance with the License.
@@ -15,34 +15,34 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import com.dunimd.dmsc.cache.DMSCCacheModule;
-import com.dunimd.dmsc.cache.DMSCCacheConfig;
-import com.dunimd.dmsc.cache.DMSCCacheBackendType;
-import com.dunimd.dmsc.DMSCError;
+import com.dunimd.ri.cache.RiCacheModule;
+import com.dunimd.ri.cache.RiCacheConfig;
+import com.dunimd.ri.cache.RiCacheBackendType;
+import com.dunimd.ri.RiError;
 
 /**
- * DMSC Cache Module Example for Java.
+ * Ri Cache Module Example for Java.
  *
- * This example demonstrates how to use the DMSC cache module for multi-backend
+ * This example demonstrates how to use the Ri cache module for multi-backend
  * caching with support for memory backend.
  */
 public class CacheExample {
     public static void main(String[] args) {
-        System.out.println("=== DMSC Cache Module Example - Java ===\n");
+        System.out.println("=== Ri Cache Module Example - Java ===\n");
 
         try {
             // Create cache configuration
             System.out.println("1. Creating cache configuration...");
-            DMSCCacheConfig config = new DMSCCacheConfig();
+            RiCacheConfig config = new RiCacheConfig();
             config.setEnabled(true);
-            config.setBackendType(DMSCCacheBackendType.Memory);
+            config.setBackendType(RiCacheBackendType.Memory);
             config.setDefaultTtlSecs(300);
             config.setMaxMemoryMb(512);
             System.out.println("   Cache config created (memory backend)\n");
 
             // Initialize cache module
             System.out.println("2. Creating cache module...");
-            DMSCCacheModule cacheModule = new DMSCCacheModule(config);
+            RiCacheModule cacheModule = new RiCacheModule(config);
             System.out.println("   Cache module created\n");
 
             // Display cache configuration
@@ -57,8 +57,8 @@ public class CacheExample {
 
             System.out.println("=== Cache Example Completed ===");
 
-        } catch (DMSCError e) {
-            System.err.println("DMSC Error: " + e.getMessage());
+        } catch (RiError e) {
+            System.err.println("Ri Error: " + e.getMessage());
             e.printStackTrace();
             System.exit(1);
         } catch (Exception e) {

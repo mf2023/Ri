@@ -1,7 +1,7 @@
 //! Copyright © 2025-2026 Wenze Wei. All Rights Reserved.
 //!
-//! This file is part of DMSC.
-//! The DMSC project belongs to the Dunimd Team.
+//! This file is part of Ri.
+//! The Ri project belongs to the Dunimd Team.
 //!
 //! Licensed under the Apache License, Version 2.0 (the "License");
 //! You may not use this file except in compliance with the License.
@@ -22,36 +22,36 @@ use std::sync::Arc;
 use std::time::{Duration, Instant};
 use tokio::sync::RwLock;
 
-use super::super::{DMSCProtocolType};
+use super::super::{RiProtocolType};
 
 /// Performance coordinator for cross-protocol performance optimization.
-pub struct DMSCPerformanceCoordinator {
+pub struct RiPerformanceCoordinator {
     /// Performance metrics
-    pub metrics: Arc<RwLock<DMSCPerformanceMetrics>>,
+    pub metrics: Arc<RwLock<RiPerformanceMetrics>>,
     /// Performance optimizations
-    pub optimizations: Arc<RwLock<Vec<DMSCPerformanceOptimization>>>,
+    pub optimizations: Arc<RwLock<Vec<RiPerformanceOptimization>>>,
     /// Performance monitoring
-    pub monitor: Arc<DMSCPerformanceMonitor>,
+    pub monitor: Arc<RiPerformanceMonitor>,
 }
 
 /// Performance metrics structure.
 #[derive(Debug, Clone)]
-pub struct DMSCPerformanceMetrics {
+pub struct RiPerformanceMetrics {
     /// Protocol performance metrics
-    pub protocol_metrics: HashMap<DMSCProtocolType, DMSCProtocolPerformanceMetrics>,
+    pub protocol_metrics: HashMap<RiProtocolType, RiProtocolPerformanceMetrics>,
     /// Cross-protocol metrics
-    pub cross_protocol_metrics: DMSCCrossProtocolMetrics,
+    pub cross_protocol_metrics: RiCrossProtocolMetrics,
     /// System performance metrics
-    pub system_metrics: DMSCSystemPerformanceMetrics,
+    pub system_metrics: RiSystemPerformanceMetrics,
     /// Last update time
     pub last_update: Instant,
 }
 
 /// Protocol performance metrics structure.
 #[derive(Debug, Clone)]
-pub struct DMSCProtocolPerformanceMetrics {
+pub struct RiProtocolPerformanceMetrics {
     /// Protocol type
-    pub protocol_type: DMSCProtocolType,
+    pub protocol_type: RiProtocolType,
     /// Average latency
     pub avg_latency: Duration,
     /// Throughput
@@ -66,7 +66,7 @@ pub struct DMSCProtocolPerformanceMetrics {
 
 /// Cross-protocol metrics structure.
 #[derive(Debug, Clone)]
-pub struct DMSCCrossProtocolMetrics {
+pub struct RiCrossProtocolMetrics {
     /// Cross-protocol latency
     pub cross_protocol_latency: Duration,
     /// Protocol switching time
@@ -79,7 +79,7 @@ pub struct DMSCCrossProtocolMetrics {
 
 /// System performance metrics structure.
 #[derive(Debug, Clone)]
-pub struct DMSCSystemPerformanceMetrics {
+pub struct RiSystemPerformanceMetrics {
     /// CPU utilization
     pub cpu_utilization: f32,
     /// Memory utilization
@@ -92,24 +92,24 @@ pub struct DMSCSystemPerformanceMetrics {
 
 /// Performance optimization structure.
 #[derive(Debug, Clone)]
-pub struct DMSCPerformanceOptimization {
+pub struct RiPerformanceOptimization {
     /// Optimization identifier
     pub optimization_id: String,
     /// Optimization type
-    pub optimization_type: DMSCPerformanceOptimizationType,
+    pub optimization_type: RiPerformanceOptimizationType,
     /// Optimization description
     pub description: String,
     /// Performance impact
     pub performance_impact: f32,
     /// Implementation status
-    pub implementation_status: DMSCImplementationStatus,
+    pub implementation_status: RiImplementationStatus,
     /// Optimization parameters
     pub parameters: HashMap<String, String>,
 }
 
 /// Performance optimization type enumeration.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum DMSCPerformanceOptimizationType {
+pub enum RiPerformanceOptimizationType {
     /// Protocol optimization
     Protocol,
     /// Connection optimization
@@ -124,7 +124,7 @@ pub enum DMSCPerformanceOptimizationType {
 
 /// Implementation status enumeration.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum DMSCImplementationStatus {
+pub enum RiImplementationStatus {
     /// Not implemented
     NotImplemented,
     /// In progress
@@ -136,29 +136,29 @@ pub enum DMSCImplementationStatus {
 }
 
 /// Performance monitor structure.
-pub struct DMSCPerformanceMonitor {
+pub struct RiPerformanceMonitor {
     /// Monitoring configuration
-    pub config: Arc<DMSCPerformanceMonitoringConfig>,
+    pub config: Arc<RiPerformanceMonitoringConfig>,
     /// Monitoring results
-    pub results: Arc<RwLock<Vec<DMSCPerformanceMonitoringResult>>>,
+    pub results: Arc<RwLock<Vec<RiPerformanceMonitoringResult>>>,
     /// Performance alerts
-    pub alerts: Arc<RwLock<Vec<DMSCPerformanceAlert>>>,
+    pub alerts: Arc<RwLock<Vec<RiPerformanceAlert>>>,
 }
 
 /// Performance monitoring configuration structure.
 #[derive(Debug, Clone)]
-pub struct DMSCPerformanceMonitoringConfig {
+pub struct RiPerformanceMonitoringConfig {
     /// Monitoring interval
     pub monitoring_interval: Duration,
     /// Performance thresholds
-    pub thresholds: DMSCPerformanceThresholds,
+    pub thresholds: RiPerformanceThresholds,
     /// Alert configuration
-    pub alert_config: DMSCPerformanceAlertConfig,
+    pub alert_config: RiPerformanceAlertConfig,
 }
 
 /// Performance thresholds structure.
 #[derive(Debug, Clone)]
-pub struct DMSCPerformanceThresholds {
+pub struct RiPerformanceThresholds {
     /// Maximum latency threshold
     pub max_latency: Duration,
     /// Minimum throughput threshold
@@ -173,18 +173,18 @@ pub struct DMSCPerformanceThresholds {
 
 /// Performance alert configuration structure.
 #[derive(Debug, Clone)]
-pub struct DMSCPerformanceAlertConfig {
+pub struct RiPerformanceAlertConfig {
     /// Alert enabled
     pub alert_enabled: bool,
     /// Alert severity levels
-    pub alert_severity_levels: Vec<DMSCAlertSeverityLevel>,
+    pub alert_severity_levels: Vec<RiAlertSeverityLevel>,
     /// Alert destinations
     pub alert_destinations: Vec<String>,
 }
 
 /// Alert severity level enumeration.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum DMSCAlertSeverityLevel {
+pub enum RiAlertSeverityLevel {
     /// Information severity
     Information,
     /// Warning severity
@@ -197,22 +197,22 @@ pub enum DMSCAlertSeverityLevel {
 
 /// Performance monitoring result structure.
 #[derive(Debug, Clone)]
-pub struct DMSCPerformanceMonitoringResult {
+pub struct RiPerformanceMonitoringResult {
     /// Result identifier
     pub result_id: String,
     /// Monitoring timestamp
     pub timestamp: Instant,
     /// Performance metrics
-    pub metrics: DMSCPerformanceMetrics,
+    pub metrics: RiPerformanceMetrics,
     /// Threshold violations
-    pub threshold_violations: Vec<DMSCPerformanceThresholdViolation>,
+    pub threshold_violations: Vec<RiPerformanceThresholdViolation>,
     /// Recommendations
     pub recommendations: Vec<String>,
 }
 
 /// Performance threshold violation structure.
 #[derive(Debug, Clone)]
-pub struct DMSCPerformanceThresholdViolation {
+pub struct RiPerformanceThresholdViolation {
     /// Violated threshold
     pub threshold: String,
     /// Actual value
@@ -220,20 +220,20 @@ pub struct DMSCPerformanceThresholdViolation {
     /// Threshold value
     pub threshold_value: f64,
     /// Violation severity
-    pub severity: DMSCAlertSeverityLevel,
+    pub severity: RiAlertSeverityLevel,
 }
 
 /// Performance alert structure.
 #[derive(Debug, Clone)]
-pub struct DMSCPerformanceAlert {
+pub struct RiPerformanceAlert {
     /// Alert identifier
     pub alert_id: String,
     /// Alert type
-    pub alert_type: DMSCPerformanceAlertType,
+    pub alert_type: RiPerformanceAlertType,
     /// Alert message
     pub message: String,
     /// Alert severity
-    pub severity: DMSCAlertSeverityLevel,
+    pub severity: RiAlertSeverityLevel,
     /// Alert time
     pub alert_time: Instant,
     /// Alert data
@@ -242,7 +242,7 @@ pub struct DMSCPerformanceAlert {
 
 /// Performance alert type enumeration.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum DMSCPerformanceAlertType {
+pub enum RiPerformanceAlertType {
     /// High latency alert
     HighLatency,
     /// Low throughput alert
@@ -255,79 +255,79 @@ pub enum DMSCPerformanceAlertType {
     ProtocolSwitchingPerformance,
 }
 
-impl DMSCPerformanceCoordinator {
+impl RiPerformanceCoordinator {
     pub fn new() -> Self {
         Self {
-            metrics: Arc::new(RwLock::new(DMSCPerformanceMetrics::new())),
+            metrics: Arc::new(RwLock::new(RiPerformanceMetrics::new())),
             optimizations: Arc::new(RwLock::new(Vec::new())),
-            monitor: Arc::new(DMSCPerformanceMonitor::new()),
+            monitor: Arc::new(RiPerformanceMonitor::new()),
         }
     }
 
-    pub async fn collect_metrics(&self) -> DMSCPerformanceMetrics {
+    pub async fn collect_metrics(&self) -> RiPerformanceMetrics {
         let mut metrics = self.metrics.write().await;
         metrics.last_update = Instant::now();
         metrics.clone()
     }
 
-    pub async fn add_optimization(&self, optimization: DMSCPerformanceOptimization) {
+    pub async fn add_optimization(&self, optimization: RiPerformanceOptimization) {
         let mut optimizations = self.optimizations.write().await;
         optimizations.push(optimization);
     }
 
-    pub async fn get_optimizations(&self) -> Vec<DMSCPerformanceOptimization> {
+    pub async fn get_optimizations(&self) -> Vec<RiPerformanceOptimization> {
         self.optimizations.read().await.clone()
     }
 
-    pub async fn check_thresholds(&self) -> Vec<DMSCPerformanceThresholdViolation> {
+    pub async fn check_thresholds(&self) -> Vec<RiPerformanceThresholdViolation> {
         let metrics = self.metrics.read().await;
         let config = self.monitor.config.clone();
         let mut violations = Vec::new();
 
         for (_, protocol_metrics) in &metrics.protocol_metrics {
             if protocol_metrics.avg_latency > config.thresholds.max_latency {
-                violations.push(DMSCPerformanceThresholdViolation {
+                violations.push(RiPerformanceThresholdViolation {
                     threshold: "max_latency".to_string(),
                     actual_value: protocol_metrics.avg_latency.as_secs_f64(),
                     threshold_value: config.thresholds.max_latency.as_secs_f64(),
-                    severity: DMSCAlertSeverityLevel::Warning,
+                    severity: RiAlertSeverityLevel::Warning,
                 });
             }
 
             if protocol_metrics.throughput < config.thresholds.min_throughput {
-                violations.push(DMSCPerformanceThresholdViolation {
+                violations.push(RiPerformanceThresholdViolation {
                     threshold: "min_throughput".to_string(),
                     actual_value: protocol_metrics.throughput as f64,
                     threshold_value: config.thresholds.min_throughput as f64,
-                    severity: DMSCAlertSeverityLevel::Warning,
+                    severity: RiAlertSeverityLevel::Warning,
                 });
             }
 
             if protocol_metrics.error_rate > config.thresholds.max_error_rate {
-                violations.push(DMSCPerformanceThresholdViolation {
+                violations.push(RiPerformanceThresholdViolation {
                     threshold: "max_error_rate".to_string(),
                     actual_value: protocol_metrics.error_rate as f64,
                     threshold_value: config.thresholds.max_error_rate as f64,
-                    severity: DMSCAlertSeverityLevel::Error,
+                    severity: RiAlertSeverityLevel::Error,
                 });
             }
         }
 
         if metrics.system_metrics.cpu_utilization > config.thresholds.max_cpu_utilization {
-            violations.push(DMSCPerformanceThresholdViolation {
+            violations.push(RiPerformanceThresholdViolation {
                 threshold: "max_cpu_utilization".to_string(),
                 actual_value: metrics.system_metrics.cpu_utilization as f64,
                 threshold_value: config.thresholds.max_cpu_utilization as f64,
-                severity: DMSCAlertSeverityLevel::Critical,
+                severity: RiAlertSeverityLevel::Critical,
             });
         }
 
         if metrics.system_metrics.memory_utilization > config.thresholds.max_memory_utilization {
-            violations.push(DMSCPerformanceThresholdViolation {
+            violations.push(RiPerformanceThresholdViolation {
                 threshold: "max_memory_utilization".to_string(),
                 actual_value: metrics.system_metrics.memory_utilization as f64,
                 threshold_value: config.thresholds.max_memory_utilization as f64,
-                severity: DMSCAlertSeverityLevel::Critical,
+                severity: RiAlertSeverityLevel::Critical,
             });
         }
 
@@ -336,15 +336,15 @@ impl DMSCPerformanceCoordinator {
 
     pub async fn update_protocol_metrics(
         &self,
-        protocol_type: DMSCProtocolType,
-        metrics: DMSCProtocolPerformanceMetrics,
+        protocol_type: RiProtocolType,
+        metrics: RiProtocolPerformanceMetrics,
     ) {
         let mut perf_metrics = self.metrics.write().await;
         perf_metrics.protocol_metrics.insert(protocol_type, metrics);
         perf_metrics.last_update = Instant::now();
     }
 
-    pub async fn update_system_metrics(&self, metrics: DMSCSystemPerformanceMetrics) {
+    pub async fn update_system_metrics(&self, metrics: RiSystemPerformanceMetrics) {
         let mut perf_metrics = self.metrics.write().await;
         perf_metrics.system_metrics = metrics;
         perf_metrics.last_update = Instant::now();
@@ -384,31 +384,31 @@ impl DMSCPerformanceCoordinator {
     }
 }
 
-impl Default for DMSCPerformanceCoordinator {
+impl Default for RiPerformanceCoordinator {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl DMSCPerformanceMetrics {
+impl RiPerformanceMetrics {
     pub fn new() -> Self {
         Self {
             protocol_metrics: HashMap::new(),
-            cross_protocol_metrics: DMSCCrossProtocolMetrics::default(),
-            system_metrics: DMSCSystemPerformanceMetrics::default(),
+            cross_protocol_metrics: RiCrossProtocolMetrics::default(),
+            system_metrics: RiSystemPerformanceMetrics::default(),
             last_update: Instant::now(),
         }
     }
 }
 
-impl Default for DMSCPerformanceMetrics {
+impl Default for RiPerformanceMetrics {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl DMSCProtocolPerformanceMetrics {
-    pub fn new(protocol_type: DMSCProtocolType) -> Self {
+impl RiProtocolPerformanceMetrics {
+    pub fn new(protocol_type: RiProtocolType) -> Self {
         Self {
             protocol_type,
             avg_latency: Duration::from_millis(0),
@@ -433,7 +433,7 @@ impl DMSCProtocolPerformanceMetrics {
     }
 }
 
-impl Default for DMSCCrossProtocolMetrics {
+impl Default for RiCrossProtocolMetrics {
     fn default() -> Self {
         Self {
             cross_protocol_latency: Duration::from_millis(0),
@@ -444,7 +444,7 @@ impl Default for DMSCCrossProtocolMetrics {
     }
 }
 
-impl Default for DMSCSystemPerformanceMetrics {
+impl Default for RiSystemPerformanceMetrics {
     fn default() -> Self {
         Self {
             cpu_utilization: 0.0,
@@ -455,9 +455,9 @@ impl Default for DMSCSystemPerformanceMetrics {
     }
 }
 
-impl DMSCPerformanceOptimization {
+impl RiPerformanceOptimization {
     pub fn new(
-        optimization_type: DMSCPerformanceOptimizationType,
+        optimization_type: RiPerformanceOptimizationType,
         description: String,
         performance_impact: f32,
     ) -> Self {
@@ -466,7 +466,7 @@ impl DMSCPerformanceOptimization {
             optimization_type,
             description,
             performance_impact,
-            implementation_status: DMSCImplementationStatus::NotImplemented,
+            implementation_status: RiImplementationStatus::NotImplemented,
             parameters: HashMap::new(),
         }
     }
@@ -477,24 +477,24 @@ impl DMSCPerformanceOptimization {
     }
 
     pub fn mark_implemented(&mut self) {
-        self.implementation_status = DMSCImplementationStatus::Implemented;
+        self.implementation_status = RiImplementationStatus::Implemented;
     }
 
     pub fn mark_tested(&mut self) {
-        self.implementation_status = DMSCImplementationStatus::Tested;
+        self.implementation_status = RiImplementationStatus::Tested;
     }
 }
 
-impl DMSCPerformanceMonitor {
+impl RiPerformanceMonitor {
     pub fn new() -> Self {
         Self {
-            config: Arc::new(DMSCPerformanceMonitoringConfig::default()),
+            config: Arc::new(RiPerformanceMonitoringConfig::default()),
             results: Arc::new(RwLock::new(Vec::new())),
             alerts: Arc::new(RwLock::new(Vec::new())),
         }
     }
 
-    pub fn with_config(config: DMSCPerformanceMonitoringConfig) -> Self {
+    pub fn with_config(config: RiPerformanceMonitoringConfig) -> Self {
         Self {
             config: Arc::new(config),
             results: Arc::new(RwLock::new(Vec::new())),
@@ -502,7 +502,7 @@ impl DMSCPerformanceMonitor {
         }
     }
 
-    pub async fn record_result(&self, result: DMSCPerformanceMonitoringResult) {
+    pub async fn record_result(&self, result: RiPerformanceMonitoringResult) {
         let mut results = self.results.write().await;
         results.push(result);
         
@@ -511,8 +511,8 @@ impl DMSCPerformanceMonitor {
         }
     }
 
-    pub async fn create_alert(&self, alert_type: DMSCPerformanceAlertType, message: String, severity: DMSCAlertSeverityLevel) {
-        let alert = DMSCPerformanceAlert {
+    pub async fn create_alert(&self, alert_type: RiPerformanceAlertType, message: String, severity: RiAlertSeverityLevel) {
+        let alert = RiPerformanceAlert {
             alert_id: uuid::Uuid::new_v4().to_string(),
             alert_type,
             message,
@@ -525,7 +525,7 @@ impl DMSCPerformanceMonitor {
         alerts.push(alert);
     }
 
-    pub async fn get_alerts(&self) -> Vec<DMSCPerformanceAlert> {
+    pub async fn get_alerts(&self) -> Vec<RiPerformanceAlert> {
         self.alerts.read().await.clone()
     }
 
@@ -533,29 +533,29 @@ impl DMSCPerformanceMonitor {
         self.alerts.write().await.clear();
     }
 
-    pub async fn get_latest_results(&self, count: usize) -> Vec<DMSCPerformanceMonitoringResult> {
+    pub async fn get_latest_results(&self, count: usize) -> Vec<RiPerformanceMonitoringResult> {
         let results = self.results.read().await;
         results.iter().rev().take(count).cloned().collect()
     }
 }
 
-impl Default for DMSCPerformanceMonitor {
+impl Default for RiPerformanceMonitor {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl Default for DMSCPerformanceMonitoringConfig {
+impl Default for RiPerformanceMonitoringConfig {
     fn default() -> Self {
         Self {
             monitoring_interval: Duration::from_secs(60),
-            thresholds: DMSCPerformanceThresholds::default(),
-            alert_config: DMSCPerformanceAlertConfig::default(),
+            thresholds: RiPerformanceThresholds::default(),
+            alert_config: RiPerformanceAlertConfig::default(),
         }
     }
 }
 
-impl Default for DMSCPerformanceThresholds {
+impl Default for RiPerformanceThresholds {
     fn default() -> Self {
         Self {
             max_latency: Duration::from_millis(1000),
@@ -567,23 +567,23 @@ impl Default for DMSCPerformanceThresholds {
     }
 }
 
-impl Default for DMSCPerformanceAlertConfig {
+impl Default for RiPerformanceAlertConfig {
     fn default() -> Self {
         Self {
             alert_enabled: true,
             alert_severity_levels: vec![
-                DMSCAlertSeverityLevel::Information,
-                DMSCAlertSeverityLevel::Warning,
-                DMSCAlertSeverityLevel::Error,
-                DMSCAlertSeverityLevel::Critical,
+                RiAlertSeverityLevel::Information,
+                RiAlertSeverityLevel::Warning,
+                RiAlertSeverityLevel::Error,
+                RiAlertSeverityLevel::Critical,
             ],
             alert_destinations: vec!["log".to_string()],
         }
     }
 }
 
-impl DMSCPerformanceMonitoringResult {
-    pub fn new(metrics: DMSCPerformanceMetrics) -> Self {
+impl RiPerformanceMonitoringResult {
+    pub fn new(metrics: RiPerformanceMetrics) -> Self {
         Self {
             result_id: uuid::Uuid::new_v4().to_string(),
             timestamp: Instant::now(),
@@ -593,7 +593,7 @@ impl DMSCPerformanceMonitoringResult {
         }
     }
 
-    pub fn with_violations(mut self, violations: Vec<DMSCPerformanceThresholdViolation>) -> Self {
+    pub fn with_violations(mut self, violations: Vec<RiPerformanceThresholdViolation>) -> Self {
         self.threshold_violations = violations;
         self
     }
@@ -604,8 +604,8 @@ impl DMSCPerformanceMonitoringResult {
     }
 }
 
-impl DMSCPerformanceThresholdViolation {
-    pub fn new(threshold: String, actual_value: f64, threshold_value: f64, severity: DMSCAlertSeverityLevel) -> Self {
+impl RiPerformanceThresholdViolation {
+    pub fn new(threshold: String, actual_value: f64, threshold_value: f64, severity: RiAlertSeverityLevel) -> Self {
         Self {
             threshold,
             actual_value,
@@ -615,12 +615,12 @@ impl DMSCPerformanceThresholdViolation {
     }
 
     pub fn is_critical(&self) -> bool {
-        matches!(self.severity, DMSCAlertSeverityLevel::Critical)
+        matches!(self.severity, RiAlertSeverityLevel::Critical)
     }
 }
 
-impl DMSCPerformanceAlert {
-    pub fn new(alert_type: DMSCPerformanceAlertType, message: String, severity: DMSCAlertSeverityLevel) -> Self {
+impl RiPerformanceAlert {
+    pub fn new(alert_type: RiPerformanceAlertType, message: String, severity: RiAlertSeverityLevel) -> Self {
         Self {
             alert_id: uuid::Uuid::new_v4().to_string(),
             alert_type,
@@ -637,4 +637,4 @@ impl DMSCPerformanceAlert {
     }
 }
 
-use crate::core::{DMSCResult, DMSCError};
+use crate::core::{RiResult, RiError};

@@ -1,7 +1,7 @@
 //! Copyright © 2025-2026 Wenze Wei. All Rights Reserved.
 //!
-//! This file is part of DMSC.
-//! The DMSC project belongs to the Dunimd Team.
+//! This file is part of Ri.
+//! The Ri project belongs to the Dunimd Team.
 //!
 //! Licensed under the Apache License, Version 2.0 (the "License");
 //! You may not use this file except in compliance with the License.
@@ -19,13 +19,13 @@
 
 //! # Queue Configuration
 //!
-//! This file defines the configuration structures for the DMSC queue system. These structures
+//! This file defines the configuration structures for the Ri queue system. These structures
 //! provide a centralized way to configure queue behavior, including backend selection,
 //! connection settings, retry policies, and dead letter queue configuration.
 //!
 //! ## Key Components
 //!
-//! - **DMSCQueueConfig**: Main queue configuration structure
+//! - **RiQueueConfig**: Main queue configuration structure
 //! - **QueueBackendType**: Enum for supported queue backends
 //! - **RetryPolicy**: Configuration for message retry behavior
 //! - **DeadLetterConfig**: Configuration for dead letter queue functionality
@@ -44,13 +44,13 @@
 //! ## Usage
 //!
 //! ```rust,ignore
-//! use dmsc::queue::{DMSCQueueConfig, QueueBackendType, RetryPolicy, DeadLetterConfig};
+//! use ri::queue::{RiQueueConfig, QueueBackendType, RetryPolicy, DeadLetterConfig};
 //!
 //! // Create default queue configuration
-//! let default_config = DMSCQueueConfig::default();
+//! let default_config = RiQueueConfig::default();
 //!
 //! // Create custom queue configuration
-//! let custom_config = DMSCQueueConfig {
+//! let custom_config = RiQueueConfig {
 //!     enabled: true,
 //!     backend_type: QueueBackendType::RabbitMQ,
 //!     connection_string: "amqp://guest:guest@localhost:5672/".to_string(),
@@ -87,11 +87,11 @@ use std::str::FromStr;
 /// configuration.
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass(get_all, set_all))]
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct DMSCQueueConfig {
+pub struct RiQueueConfig {
     /// Whether the queue system is enabled
     pub enabled: bool,
     /// The type of queue backend to use
-    pub backend_type: DMSCQueueBackendType,
+    pub backend_type: RiQueueBackendType,
     /// Connection string for the queue backend
     pub connection_string: String,
     /// Maximum number of connections to the queue backend
@@ -103,27 +103,27 @@ pub struct DMSCQueueConfig {
     /// Timeout for producer operations in milliseconds
     pub producer_timeout_ms: u64,
     /// Configuration for message retry behavior
-    pub retry_policy: DMSCRetryPolicy,
+    pub retry_policy: RiRetryPolicy,
     /// Configuration for dead letter queue functionality
-    pub dead_letter_config: Option<DMSCDeadLetterConfig>,
+    pub dead_letter_config: Option<RiDeadLetterConfig>,
 }
 
-impl Default for DMSCQueueConfig {
+impl Default for RiQueueConfig {
     /// Creates a new queue configuration with sensible default values.
     ///
     /// # Returns
     ///
-    /// A `DMSCQueueConfig` instance with default values
+    /// A `RiQueueConfig` instance with default values
     fn default() -> Self {
         Self {
             enabled: true,
-            backend_type: DMSCQueueBackendType::Memory,
+            backend_type: RiQueueBackendType::Memory,
             connection_string: "memory://localhost".to_string(),
             max_connections: 10,
             message_max_size: 1024 * 1024, // 1MB
             consumer_timeout_ms: 30000,    // 30 seconds
             producer_timeout_ms: 5000,     // 5 seconds
-            retry_policy: DMSCRetryPolicy::default(),
+            retry_policy: RiRetryPolicy::default(),
             dead_letter_config: None,
         }
     }
@@ -131,10 +131,10 @@ impl Default for DMSCQueueConfig {
 
 /// Enum representing supported queue backend types.
 ///
-/// This enum defines the different queue backends that can be used with the DMSC queue system.
+/// This enum defines the different queue backends that can be used with the Ri queue system.
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-pub enum DMSCQueueBackendType {
+pub enum RiQueueBackendType {
     /// In-memory queue implementation for testing and development
     Memory,
     /// RabbitMQ queue backend for production use
@@ -147,14 +147,14 @@ pub enum DMSCQueueBackendType {
 
 #[cfg(feature = "pyo3")]
 #[pyo3::prelude::pymethods]
-impl DMSCQueueBackendType {
+impl RiQueueBackendType {
     #[staticmethod]
     fn from_string(s: String) -> Self {
-        s.parse().unwrap_or(DMSCQueueBackendType::Memory)
+        s.parse().unwrap_or(RiQueueBackendType::Memory)
     }
 }
 
-impl FromStr for DMSCQueueBackendType {
+impl FromStr for RiQueueBackendType {
     type Err = String;
 
     /// Parses a string into a QueueBackendType.
@@ -168,10 +168,10 @@ impl FromStr for DMSCQueueBackendType {
     /// A `Result<Self, Self::Err>` containing the parsed backend type or an error
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s.to_lowercase().as_str() {
-            "memory" => Ok(DMSCQueueBackendType::Memory),
-            "rabbitmq" => Ok(DMSCQueueBackendType::RabbitMQ),
-            "kafka" => Ok(DMSCQueueBackendType::Kafka),
-            "redis" => Ok(DMSCQueueBackendType::Redis),
+            "memory" => Ok(RiQueueBackendType::Memory),
+            "rabbitmq" => Ok(RiQueueBackendType::RabbitMQ),
+            "kafka" => Ok(RiQueueBackendType::Kafka),
+            "redis" => Ok(RiQueueBackendType::Redis),
             _ => Err(format!("Unknown queue backend type: {s}")),
         }
     }
@@ -183,7 +183,7 @@ impl FromStr for DMSCQueueBackendType {
 /// attempts, initial delay, maximum delay, and backoff multiplier.
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass(get_all, set_all))]
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct DMSCRetryPolicy {
+pub struct RiRetryPolicy {
     /// Maximum number of retry attempts for a failed message
     pub max_retries: u32,
     /// Initial delay in milliseconds before the first retry
@@ -194,12 +194,12 @@ pub struct DMSCRetryPolicy {
     pub backoff_multiplier: f64,
 }
 
-impl Default for DMSCRetryPolicy {
+impl Default for RiRetryPolicy {
     /// Creates a new retry policy with sensible default values.
     ///
     /// # Returns
     ///
-    /// A `DMSCRetryPolicy` instance with default values
+    /// A `RiRetryPolicy` instance with default values
     fn default() -> Self {
         Self {
             max_retries: 3,
@@ -212,7 +212,7 @@ impl Default for DMSCRetryPolicy {
 
 #[cfg(feature = "pyo3")]
 #[pyo3::prelude::pymethods]
-impl DMSCRetryPolicy {
+impl RiRetryPolicy {
     #[new]
     fn py_new() -> Self {
         Self::default()
@@ -235,7 +235,7 @@ impl DMSCRetryPolicy {
 /// messages that have failed to process after maximum retry attempts.
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass(get_all, set_all))]
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct DMSCDeadLetterConfig {
+pub struct RiDeadLetterConfig {
     /// Whether dead letter queue functionality is enabled
     pub enabled: bool,
     /// Maximum number of retry attempts before a message is sent to the dead letter queue
@@ -246,7 +246,7 @@ pub struct DMSCDeadLetterConfig {
     pub ttl_hours: u32,
 }
 
-impl Default for DMSCDeadLetterConfig {
+impl Default for RiDeadLetterConfig {
     fn default() -> Self {
         Self {
             enabled: false,
@@ -259,7 +259,7 @@ impl Default for DMSCDeadLetterConfig {
 
 #[cfg(feature = "pyo3")]
 #[pyo3::prelude::pymethods]
-impl DMSCDeadLetterConfig {
+impl RiDeadLetterConfig {
     #[new]
     fn py_new() -> Self {
         Self::default()
@@ -277,9 +277,9 @@ impl DMSCDeadLetterConfig {
 }
 
 #[cfg(feature = "pyo3")]
-/// Python bindings for DMSCQueueConfig
+/// Python bindings for RiQueueConfig
 #[pyo3::prelude::pymethods]
-impl DMSCQueueConfig {
+impl RiQueueConfig {
     #[new]
     fn py_new() -> Self {
         Self::default()
@@ -289,7 +289,7 @@ impl DMSCQueueConfig {
     fn py_new_with_memory_backend() -> Self {
         Self {
             enabled: true,
-            backend_type: DMSCQueueBackendType::Memory,
+            backend_type: RiQueueBackendType::Memory,
             connection_string: "memory://localhost".to_string(),
             ..Self::default()
         }
@@ -299,7 +299,7 @@ impl DMSCQueueConfig {
     fn py_new_with_redis_backend(connection_string: String) -> Self {
         Self {
             enabled: true,
-            backend_type: DMSCQueueBackendType::Redis,
+            backend_type: RiQueueBackendType::Redis,
             connection_string,
             ..Self::default()
         }

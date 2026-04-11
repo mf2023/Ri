@@ -1,7 +1,7 @@
 //! Copyright © 2025-2026 Wenze Wei. All Rights Reserved.
 //!
-//! This file is part of DMSC.
-//! The DMSC project belongs to the Dunimd Team.
+//! This file is part of Ri.
+//! The Ri project belongs to the Dunimd Team.
 //!
 //! Licensed under the Apache License, Version 2.0 (the "License");
 //! You may not use this file except in compliance with the License.
@@ -29,15 +29,15 @@ use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::Duration;
 use tokio::sync::Mutex;
-use crate::core::{DMSCError, DMSCResult};
-use crate::queue::{DMSCQueue, DMSCQueueMessage, DMSCQueueProducer, DMSCQueueConsumer, DMSCQueueStats};
+use crate::core::{RiError, RiResult};
+use crate::queue::{RiQueue, RiQueueMessage, RiQueueProducer, RiQueueConsumer, RiQueueStats};
 
 type KafkaConsumer = StreamConsumer<DefaultConsumerContext>;
 
 #[allow(dead_code)]
 #[derive(Clone)]
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
-pub struct DMSCKafkaQueue {
+pub struct RiKafkaQueue {
     brokers: String,
     topic: String,
     producer: Arc<FutureProducer>,
@@ -45,8 +45,8 @@ pub struct DMSCKafkaQueue {
     admin_client: Arc<AdminClient<DefaultClientContext>>,
 }
 
-impl DMSCKafkaQueue {
-    pub async fn new(brokers: &str, topic: &str) -> DMSCResult<Self> {
+impl RiKafkaQueue {
+    pub async fn new(brokers: &str, topic: &str) -> RiResult<Self> {
         let mut config = ClientConfig::new();
         config.set("bootstrap.servers", brokers);
         config.set("message.timeout.ms", "30000");
@@ -58,15 +58,15 @@ impl DMSCKafkaQueue {
 
         let producer: FutureProducer = config
             .create::<FutureProducer>()
-            .map_err(|e| DMSCError::Queue(format!("Failed to create Kafka producer: {}", e)))?;
+            .map_err(|e| RiError::Queue(format!("Failed to create Kafka producer: {}", e)))?;
 
         let consumer: KafkaConsumer = config
             .create::<KafkaConsumer>()
-            .map_err(|e| DMSCError::Queue(format!("Failed to create Kafka consumer: {}", e)))?;
+            .map_err(|e| RiError::Queue(format!("Failed to create Kafka consumer: {}", e)))?;
 
         let admin_client: AdminClient<DefaultClientContext> = config
             .create::<AdminClient<DefaultClientContext>>()
-            .map_err(|e| DMSCError::Queue(format!("Failed to create Kafka admin client: {}", e)))?;
+            .map_err(|e| RiError::Queue(format!("Failed to create Kafka admin client: {}", e)))?;
 
         let queue = Self {
             brokers: brokers.to_string(),
@@ -81,9 +81,9 @@ impl DMSCKafkaQueue {
         Ok(queue)
     }
 
-    async fn ensure_topic_exists(&self) -> DMSCResult<()> {
+    async fn ensure_topic_exists(&self) -> RiResult<()> {
         let metadata = self.consumer.fetch_metadata(None, Duration::from_secs(5))
-            .map_err(|e| DMSCError::Queue(format!("Failed to get Kafka metadata: {}", e)))?;
+            .map_err(|e| RiError::Queue(format!("Failed to get Kafka metadata: {}", e)))?;
 
         let topic_exists = metadata.topics().iter().any(|t| t.name() == self.topic);
 
@@ -92,7 +92,7 @@ impl DMSCKafkaQueue {
             let admin_options = AdminOptions::new();
 
             self.admin_client.create_topics(std::slice::from_ref(&new_topic), &admin_options).await
-                .map_err(|e| DMSCError::Queue(format!("Failed to create Kafka topic: {}", e)))?;
+                .map_err(|e| RiError::Queue(format!("Failed to create Kafka topic: {}", e)))?;
 
             tokio::time::sleep(Duration::from_secs(1)).await;
         }
@@ -100,9 +100,9 @@ impl DMSCKafkaQueue {
         Ok(())
     }
 
-    async fn get_topic_metadata(&self) -> DMSCResult<i32> {
+    async fn get_topic_metadata(&self) -> RiResult<i32> {
         let metadata = self.consumer.fetch_metadata(Some(&self.topic), Duration::from_secs(5))
-            .map_err(|e| DMSCError::Queue(format!("Failed to get Kafka metadata: {}", e)))?;
+            .map_err(|e| RiError::Queue(format!("Failed to get Kafka metadata: {}", e)))?;
 
         if let Some(topic_meta) = metadata.topics().first() {
             Ok(topic_meta.partitions().len() as i32)
@@ -113,15 +113,15 @@ impl DMSCKafkaQueue {
 }
 
 #[async_trait]
-impl DMSCQueue for DMSCKafkaQueue {
-    async fn create_producer(&self) -> DMSCResult<Box<dyn DMSCQueueProducer>> {
+impl RiQueue for RiKafkaQueue {
+    async fn create_producer(&self) -> RiResult<Box<dyn RiQueueProducer>> {
         Ok(Box::new(KafkaQueueProducer {
             producer: self.producer.clone(),
             topic: self.topic.clone(),
         }))
     }
 
-    async fn create_consumer(&self, consumer_group: &str) -> DMSCResult<Box<dyn DMSCQueueConsumer>> {
+    async fn create_consumer(&self, consumer_group: &str) -> RiResult<Box<dyn RiQueueConsumer>> {
         let consumer = self.consumer.clone();
 
         let mut partition_list = TopicPartitionList::new();
@@ -132,7 +132,7 @@ impl DMSCQueue for DMSCKafkaQueue {
         }
 
         consumer.assign(&partition_list)
-            .map_err(|e| DMSCError::Queue(format!("Failed to assign partitions: {}", e)))?;
+            .map_err(|e| RiError::Queue(format!("Failed to assign partitions: {}", e)))?;
 
         Ok(Box::new(KafkaQueueConsumer {
             consumer,
@@ -142,11 +142,11 @@ impl DMSCQueue for DMSCKafkaQueue {
         }))
     }
 
-    async fn get_stats(&self) -> DMSCResult<DMSCQueueStats> {
+    async fn get_stats(&self) -> RiResult<RiQueueStats> {
         let _partition_count = self.get_topic_metadata().await?;
         let topic = self.topic.clone();
 
-        Ok(DMSCQueueStats {
+        Ok(RiQueueStats {
             queue_name: topic.clone(),
             message_count: 0,
             consumer_count: 1,
@@ -160,10 +160,10 @@ impl DMSCQueue for DMSCKafkaQueue {
         })
     }
 
-    async fn purge(&self) -> DMSCResult<()> {
+    async fn purge(&self) -> RiResult<()> {
         let admin_options = AdminOptions::new();
         self.admin_client.delete_topics(std::slice::from_ref(&self.topic.as_str()), &admin_options).await
-            .map_err(|e| DMSCError::Queue(format!("Failed to purge Kafka topic: {}", e)))?;
+            .map_err(|e| RiError::Queue(format!("Failed to purge Kafka topic: {}", e)))?;
 
         tokio::time::sleep(Duration::from_secs(1)).await;
         self.ensure_topic_exists().await?;
@@ -171,7 +171,7 @@ impl DMSCQueue for DMSCKafkaQueue {
         Ok(())
     }
 
-    async fn delete(&self) -> DMSCResult<()> {
+    async fn delete(&self) -> RiResult<()> {
         self.purge().await
     }
 }
@@ -182,8 +182,8 @@ pub struct KafkaQueueProducer {
 }
 
 #[async_trait]
-impl DMSCQueueProducer for KafkaQueueProducer {
-    async fn send(&self, message: DMSCQueueMessage) -> DMSCResult<()> {
+impl RiQueueProducer for KafkaQueueProducer {
+    async fn send(&self, message: RiQueueMessage) -> RiResult<()> {
         let payload = if message.payload.is_empty() {
             vec![]
         } else {
@@ -197,12 +197,12 @@ impl DMSCQueueProducer for KafkaQueueProducer {
             .payload(&payload);
 
         self.producer.send(future_record, Duration::from_secs(10)).await
-            .map_err(|(e, _)| DMSCError::Queue(format!("Failed to send message to Kafka: {}", e)))?;
+            .map_err(|(e, _)| RiError::Queue(format!("Failed to send message to Kafka: {}", e)))?;
 
         Ok(())
     }
 
-    async fn send_batch(&self, messages: Vec<DMSCQueueMessage>) -> DMSCResult<()> {
+    async fn send_batch(&self, messages: Vec<RiQueueMessage>) -> RiResult<()> {
         for message in messages {
             self.send(message).await?;
         }
@@ -219,8 +219,8 @@ pub struct KafkaQueueConsumer {
 }
 
 #[async_trait]
-impl DMSCQueueConsumer for KafkaQueueConsumer {
-    async fn receive(&self) -> DMSCResult<Option<DMSCQueueMessage>> {
+impl RiQueueConsumer for KafkaQueueConsumer {
+    async fn receive(&self) -> RiResult<Option<RiQueueMessage>> {
         let paused = *self.paused.lock().await;
         if paused {
             return Ok(None);
@@ -242,7 +242,7 @@ impl DMSCQueueConsumer for KafkaQueueConsumer {
                     })
                     .unwrap_or_default();
 
-                let message = DMSCQueueMessage {
+                let message = RiQueueMessage {
                     id: key,
                     payload,
                     headers,
@@ -253,29 +253,29 @@ impl DMSCQueueConsumer for KafkaQueueConsumer {
 
                 Ok(Some(message))
             }
-            Ok(Err(e)) => Err(DMSCError::Queue(format!("Kafka receive error: {}", e))),
+            Ok(Err(e)) => Err(RiError::Queue(format!("Kafka receive error: {}", e))),
             Err(_) => Ok(None),
         }
     }
 
-    async fn ack(&self, _message_id: &str) -> DMSCResult<()> {
+    async fn ack(&self, _message_id: &str) -> RiResult<()> {
         self.consumer.commit_consumer_state(rdkafka::consumer::CommitMode::Sync)
-            .map_err(|e| DMSCError::Queue(format!("Failed to commit offset: {}", e)))?;
+            .map_err(|e| RiError::Queue(format!("Failed to commit offset: {}", e)))?;
         Ok(())
     }
 
-    async fn nack(&self, message_id: &str) -> DMSCResult<()> {
+    async fn nack(&self, message_id: &str) -> RiResult<()> {
         log::info!("Message negatively acknowledged: {}", message_id);
         Ok(())
     }
 
-    async fn pause(&self) -> DMSCResult<()> {
+    async fn pause(&self) -> RiResult<()> {
         let mut paused = self.paused.lock().await;
         *paused = true;
         Ok(())
     }
 
-    async fn resume(&self) -> DMSCResult<()> {
+    async fn resume(&self) -> RiResult<()> {
         let mut paused = self.paused.lock().await;
         *paused = false;
         Ok(())

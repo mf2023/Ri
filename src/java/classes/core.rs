@@ -1,7 +1,7 @@
 //! Copyright © 2025-2026 Wenze Wei. All Rights Reserved.
 //!
-//! This file is part of DMSC.
-//! The DMSC project belongs to the Dunimd Team.
+//! This file is part of Ri.
+//! The Ri project belongs to the Dunimd Team.
 //!
 //! Licensed under the Apache License, Version 2.0 (the "License");
 //! You may not use this file except in compliance with the License.
@@ -17,40 +17,40 @@
 
 //! # Core Module JNI Bindings
 //!
-//! JNI bindings for DMSC core classes.
+//! JNI bindings for Ri core classes.
 
 use jni::JNIEnv;
 use jni::objects::{JClass, JString};
 use jni::sys::{jlong, jboolean, jstring};
-use crate::core::{DMSCAppBuilder, DMSCAppRuntime, DMSCError};
-use crate::java::exception::{throw_dmsc_error, check_not_null};
-use crate::config::DMSCConfig;
+use crate::core::{RiAppBuilder, RiAppRuntime, RiError};
+use crate::java::exception::{throw_ri_error, check_not_null};
+use crate::config::RiConfig;
 
 // =============================================================================
-// DMSCAppBuilder JNI Bindings
+// RiAppBuilder JNI Bindings
 // =============================================================================
 
 #[no_mangle]
-pub extern "system" fn Java_com_dunimd_dmsc_DMSCAppBuilder_new0(
+pub extern "system" fn Java_com_dunimd_ri_RiAppBuilder_new0(
     _env: JNIEnv,
     _class: JClass,
 ) -> jlong {
-    let builder = Box::new(DMSCAppBuilder::new());
+    let builder = Box::new(RiAppBuilder::new());
     Box::into_raw(builder) as jlong
 }
 
 #[no_mangle]
-pub extern "system" fn Java_com_dunimd_dmsc_DMSCAppBuilder_withConfig(
+pub extern "system" fn Java_com_dunimd_ri_RiAppBuilder_withConfig(
     mut env: JNIEnv,
     _class: JClass,
     ptr: jlong,
     config_path: JString,
 ) -> jlong {
-    if !check_not_null(&mut env, ptr, "DMSCAppBuilder") {
+    if !check_not_null(&mut env, ptr, "RiAppBuilder") {
         return 0;
     }
     
-    let builder = unsafe { Box::from_raw(ptr as *mut DMSCAppBuilder) };
+    let builder = unsafe { Box::from_raw(ptr as *mut RiAppBuilder) };
     let path: String = env.get_string(&config_path)
         .expect("Failed to get config path")
         .into();
@@ -61,23 +61,23 @@ pub extern "system" fn Java_com_dunimd_dmsc_DMSCAppBuilder_withConfig(
             Box::into_raw(boxed) as jlong
         }
         Err(e) => {
-            throw_dmsc_error(&mut env, &e.to_string());
+            throw_ri_error(&mut env, &e.to_string());
             0
         }
     }
 }
 
 #[no_mangle]
-pub extern "system" fn Java_com_dunimd_dmsc_DMSCAppBuilder_build(
+pub extern "system" fn Java_com_dunimd_ri_RiAppBuilder_build(
     mut env: JNIEnv,
     _class: JClass,
     ptr: jlong,
 ) -> jlong {
-    if !check_not_null(&mut env, ptr, "DMSCAppBuilder") {
+    if !check_not_null(&mut env, ptr, "RiAppBuilder") {
         return 0;
     }
     
-    let builder = unsafe { Box::from_raw(ptr as *mut DMSCAppBuilder) };
+    let builder = unsafe { Box::from_raw(ptr as *mut RiAppBuilder) };
     
     match builder.build() {
         Ok(runtime) => {
@@ -85,107 +85,107 @@ pub extern "system" fn Java_com_dunimd_dmsc_DMSCAppBuilder_build(
             Box::into_raw(boxed) as jlong
         }
         Err(e) => {
-            throw_dmsc_error(&mut env, &e.to_string());
+            throw_ri_error(&mut env, &e.to_string());
             0
         }
     }
 }
 
 #[no_mangle]
-pub extern "system" fn Java_com_dunimd_dmsc_DMSCAppBuilder_free0(
+pub extern "system" fn Java_com_dunimd_ri_RiAppBuilder_free0(
     _env: JNIEnv,
     _class: JClass,
     ptr: jlong,
 ) {
     if ptr != 0 {
         unsafe {
-            let _ = Box::from_raw(ptr as *mut DMSCAppBuilder);
+            let _ = Box::from_raw(ptr as *mut RiAppBuilder);
         }
     }
 }
 
 // =============================================================================
-// DMSCAppRuntime JNI Bindings
+// RiAppRuntime JNI Bindings
 // =============================================================================
 
 #[no_mangle]
-pub extern "system" fn Java_com_dunimd_dmsc_DMSCAppRuntime_free0(
+pub extern "system" fn Java_com_dunimd_ri_RiAppRuntime_free0(
     _env: JNIEnv,
     _class: JClass,
     ptr: jlong,
 ) {
     if ptr != 0 {
         unsafe {
-            let _ = Box::from_raw(ptr as *mut DMSCAppRuntime);
+            let _ = Box::from_raw(ptr as *mut RiAppRuntime);
         }
     }
 }
 
 #[no_mangle]
-pub extern "system" fn Java_com_dunimd_dmsc_DMSCAppRuntime_isRunning(
+pub extern "system" fn Java_com_dunimd_ri_RiAppRuntime_isRunning(
     mut env: JNIEnv,
     _class: JClass,
     ptr: jlong,
 ) -> jboolean {
-    if !check_not_null(&mut env, ptr, "DMSCAppRuntime") {
+    if !check_not_null(&mut env, ptr, "RiAppRuntime") {
         return 0;
     }
     
-    let _runtime = unsafe { &*(ptr as *const DMSCAppRuntime) };
+    let _runtime = unsafe { &*(ptr as *const RiAppRuntime) };
     0
 }
 
 #[no_mangle]
-pub extern "system" fn Java_com_dunimd_dmsc_DMSCAppRuntime_shutdown(
+pub extern "system" fn Java_com_dunimd_ri_RiAppRuntime_shutdown(
     mut env: JNIEnv,
     _class: JClass,
     ptr: jlong,
 ) {
-    if !check_not_null(&mut env, ptr, "DMSCAppRuntime") {
+    if !check_not_null(&mut env, ptr, "RiAppRuntime") {
         return;
     }
     
-    let _runtime = unsafe { &*(ptr as *const DMSCAppRuntime) };
+    let _runtime = unsafe { &*(ptr as *const RiAppRuntime) };
 }
 
 // =============================================================================
-// DMSCConfig JNI Bindings
+// RiConfig JNI Bindings
 // =============================================================================
 
 #[no_mangle]
-pub extern "system" fn Java_com_dunimd_dmsc_DMSCConfig_new0(
+pub extern "system" fn Java_com_dunimd_ri_RiConfig_new0(
     _env: JNIEnv,
     _class: JClass,
 ) -> jlong {
-    let config = Box::new(DMSCConfig::default());
+    let config = Box::new(RiConfig::default());
     Box::into_raw(config) as jlong
 }
 
 #[no_mangle]
-pub extern "system" fn Java_com_dunimd_dmsc_DMSCConfig_free0(
+pub extern "system" fn Java_com_dunimd_ri_RiConfig_free0(
     _env: JNIEnv,
     _class: JClass,
     ptr: jlong,
 ) {
     if ptr != 0 {
         unsafe {
-            let _ = Box::from_raw(ptr as *mut DMSCConfig);
+            let _ = Box::from_raw(ptr as *mut RiConfig);
         }
     }
 }
 
 #[no_mangle]
-pub extern "system" fn Java_com_dunimd_dmsc_DMSCConfig_get(
+pub extern "system" fn Java_com_dunimd_ri_RiConfig_get(
     mut env: JNIEnv,
     _class: JClass,
     ptr: jlong,
     key: JString,
 ) -> jstring {
-    if !check_not_null(&mut env, ptr, "DMSCConfig") {
+    if !check_not_null(&mut env, ptr, "RiConfig") {
         return std::ptr::null_mut();
     }
     
-    let config = unsafe { &*(ptr as *const DMSCConfig) };
+    let config = unsafe { &*(ptr as *const RiConfig) };
     let key_str: String = env.get_string(&key)
         .expect("Failed to get key")
         .into();
@@ -201,34 +201,34 @@ pub extern "system" fn Java_com_dunimd_dmsc_DMSCConfig_get(
 }
 
 // =============================================================================
-// DMSCError JNI Bindings
+// RiError JNI Bindings
 // =============================================================================
 
 #[no_mangle]
-pub extern "system" fn Java_com_dunimd_dmsc_DMSCError_getMessage(
+pub extern "system" fn Java_com_dunimd_ri_RiError_getMessage(
     mut env: JNIEnv,
     _class: JClass,
     ptr: jlong,
 ) -> jstring {
-    if !check_not_null(&mut env, ptr, "DMSCError") {
+    if !check_not_null(&mut env, ptr, "RiError") {
         return std::ptr::null_mut();
     }
     
-    let error = unsafe { &*(ptr as *const DMSCError) };
+    let error = unsafe { &*(ptr as *const RiError) };
     env.new_string(error.to_string())
         .expect("Failed to create Java string")
         .into_raw()
 }
 
 #[no_mangle]
-pub extern "system" fn Java_com_dunimd_dmsc_DMSCError_free0(
+pub extern "system" fn Java_com_dunimd_ri_RiError_free0(
     _env: JNIEnv,
     _class: JClass,
     ptr: jlong,
 ) {
     if ptr != 0 {
         unsafe {
-            let _ = Box::from_raw(ptr as *mut DMSCError);
+            let _ = Box::from_raw(ptr as *mut RiError);
         }
     }
 }

@@ -2,8 +2,8 @@
 
 # Copyright © 2025-2026 Wenze Wei. All Rights Reserved.
 #
-# This file is part of DMSC.
-# The DMSC project belongs to the Dunimd Team.
+# This file is part of Ri.
+# The Ri project belongs to the Dunimd Team.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # You may not use this file except in compliance with the License.
@@ -18,91 +18,91 @@
 # limitations under the License.
 
 """
-DMSC Protocol Module Tests
+Ri Protocol Module Tests
 
 Tests for the protocol functionality including frames and connections.
 """
 
 import pytest
-from dmsc import (
-    DMSCProtocolManager,
-    DMSCProtocolConfig,
-    DMSCFrameBuilder,
-    DMSCFrameParser,
-    DMSCFrameHeader,
-    DMSCFrame,
-    DMSCConnectionInfo,
-    DMSCConnectionStats,
-    DMSCProtocolStats,
+from ri import (
+    RiProtocolManager,
+    RiProtocolConfig,
+    RiFrameBuilder,
+    RiFrameParser,
+    RiFrameHeader,
+    RiFrame,
+    RiConnectionInfo,
+    RiConnectionStats,
+    RiProtocolStats,
 )
 
 
-class TestDMSCProtocolManager:
-    """Tests for DMSCProtocolManager"""
+class TestRiProtocolManager:
+    """Tests for RiProtocolManager"""
 
     def test_protocol_manager_creation(self):
         """Test creating protocol manager - skip as it requires internal config"""
         pass
 
 
-class TestDMSCProtocolConfig:
-    """Tests for DMSCProtocolConfig"""
+class TestRiProtocolConfig:
+    """Tests for RiProtocolConfig"""
 
     def test_protocol_config_creation(self):
         """Test creating protocol config - skip as it requires internal setup"""
         pass
 
 
-class TestDMSCFrameBuilder:
-    """Tests for DMSCFrameBuilder"""
+class TestRiFrameBuilder:
+    """Tests for RiFrameBuilder"""
 
     def test_frame_builder_creation(self):
         """Test creating frame builder - cannot instantiate directly"""
         pass
 
 
-class TestDMSCFrameParser:
-    """Tests for DMSCFrameParser"""
+class TestRiFrameParser:
+    """Tests for RiFrameParser"""
 
     def test_frame_parser_creation(self):
         """Test creating frame parser - cannot instantiate directly"""
         pass
 
 
-class TestDMSCFrame:
-    """Tests for DMSCFrame"""
+class TestRiFrame:
+    """Tests for RiFrame"""
 
     def test_frame_creation(self):
         """Test creating frame - skip as it requires internal setup"""
         pass
 
 
-class TestDMSCFrameHeader:
-    """Tests for DMSCFrameHeader"""
+class TestRiFrameHeader:
+    """Tests for RiFrameHeader"""
 
     def test_frame_header_creation(self):
         """Test creating frame header - skip as it requires internal setup"""
         pass
 
 
-class TestDMSCConnectionInfo:
-    """Tests for DMSCConnectionInfo"""
+class TestRiConnectionInfo:
+    """Tests for RiConnectionInfo"""
 
     def test_connection_info_creation(self):
         """Test creating connection info - skip as it requires internal setup"""
         pass
 
 
-class TestDMSCConnectionStats:
-    """Tests for DMSCConnectionStats"""
+class TestRiConnectionStats:
+    """Tests for RiConnectionStats"""
 
     def test_connection_stats_creation(self):
         """Test creating connection stats - skip as it requires internal setup"""
         pass
 
 
-class TestDMSCProtocolStats:
-    """Tests for DMSCProtocolStats"""
+class TestRiProtocolStats:
+    """Tests for RiProtocolStats"""
 
     def test_protocol_stats_creation(self):
         """Test creating protocol stats - skip as it requires internal setup"""

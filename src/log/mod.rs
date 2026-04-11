@@ -1,7 +1,7 @@
 //! Copyright © 2025-2026 Wenze Wei. All Rights Reserved.
 //!
-//! This file is part of DMSC.
-//! The DMSC project belongs to the Dunimd Team.
+//! This file is part of Ri.
+//! The Ri project belongs to the Dunimd Team.
 //!
 //! Licensed under the Apache License, Version 2.0 (the "License");
 //! You may not use this file except in compliance with the License.
@@ -19,16 +19,16 @@
 
 //! # Logging System
 //! 
-//! This module provides a comprehensive logging system for DMSC, supporting multiple output formats,
+//! This module provides a comprehensive logging system for Ri, supporting multiple output formats,
 //! log levels, and configurable logging behavior. It includes support for structured logging,
 //! distributed tracing integration, and log rotation.
 //! 
 //! ## Key Components
 //! 
-//! - **DMSCLogLevel**: Enum defining supported log levels (Debug, Info, Warn, Error)
-//! - **DMSCLogConfig**: Configuration struct for logging behavior
-//! - **DMSCLogContext**: Thread-local context for adding contextual information to logs
-//! - **DMSCLogger**: Public-facing logger class for application use
+//! - **RiLogLevel**: Enum defining supported log levels (Debug, Info, Warn, Error)
+//! - **RiLogConfig**: Configuration struct for logging behavior
+//! - **RiLogContext**: Thread-local context for adding contextual information to logs
+//! - **RiLogger**: Public-facing logger class for application use
 //! - **LoggerImpl**: Internal logger implementation
 //! 
 //! ## Design Principles
@@ -36,7 +36,7 @@
 //! 1. **Multiple Outputs**: Supports both console and file logging
 //! 2. **Structured Logging**: Supports both text and JSON formats
 //! 3. **Distributed Tracing**: Integrates with distributed tracing context
-//! 4. **Configurable**: Highly configurable through `DMSCLogConfig`
+//! 4. **Configurable**: Highly configurable through `RiLogConfig`
 //! 5. **Performance**: Includes sampling support for high-volume logging
 //! 6. **Log Rotation**: Supports size-based log rotation
 //! 7. **Contextual Logging**: Allows adding contextual information to logs
@@ -44,17 +44,17 @@
 //! ## Usage
 //! 
 //! ```rust,ignore
-//! use dmsc::prelude::*;
+//! use ri::prelude::*;
 //! 
-//! fn example() -> DMSCResult<()> {
+//! fn example() -> RiResult<()> {
 //!     // Create a default log configuration
-//!     let log_config = DMSCLogConfig::default();
+//!     let log_config = RiLogConfig::default();
 //!     
 //!     // Create a file system instance (usually provided by the service context)
-//!     let fs = DMSCFileSystem::new();
+//!     let fs = RiFileSystem::new();
 //!     
 //!     // Create a logger
-//!     let logger = DMSCLogger::new(&log_config, fs);
+//!     let logger = RiLogger::new(&log_config, fs);
 //!     
 //!     // Log messages at different levels
 //!     logger.debug("example", "Debug message")?;
@@ -66,7 +66,7 @@
 //! }
 //! ```
 
-// Logging module for DMSC.
+// Logging module for Ri.
 // This is a first-stage implementation using std only; can be extended later.
 
 use std::fmt::Debug;
@@ -75,22 +75,22 @@ use std::thread;
 use std::time::Duration;
 use std::collections::VecDeque;
 
-use crate::core::DMSCResult;
-use crate::fs::DMSCFileSystem;
+use crate::core::RiResult;
+use crate::fs::RiFileSystem;
 use rand;
 use serde_json::json;
 use std::fs as stdfs;
 use std::time::SystemTime;
 use std::time::UNIX_EPOCH;
 mod context;
-pub use context::DMSCLogContext;
+pub use context::RiLogContext;
 
 /// Log level definition.
 /// 
-/// This enum defines the supported log levels in DMSC, ordered by severity from lowest to highest.
+/// This enum defines the supported log levels in Ri, ordered by severity from lowest to highest.
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass(eq, eq_int))]
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum DMSCLogLevel {
+pub enum RiLogLevel {
     /// Debug level: Detailed information for debugging purposes
     Debug,
     /// Info level: General information about application operation
@@ -101,7 +101,7 @@ pub enum DMSCLogLevel {
     Error,
 }
 
-impl DMSCLogLevel {
+impl RiLogLevel {
     /// Returns the string representation of the log level.
     /// 
     /// # Returns
@@ -109,10 +109,10 @@ impl DMSCLogLevel {
     /// A static string representing the log level ("DEBUG", "INFO", "WARN", or "ERROR")
     pub fn as_str(&self) -> &'static str {
         match self {
-            DMSCLogLevel::Debug => "DEBUG",
-            DMSCLogLevel::Info => "INFO",
-            DMSCLogLevel::Warn => "WARN",
-            DMSCLogLevel::Error => "ERROR",
+            RiLogLevel::Debug => "DEBUG",
+            RiLogLevel::Info => "INFO",
+            RiLogLevel::Warn => "WARN",
+            RiLogLevel::Error => "ERROR",
         }
     }
 
@@ -123,28 +123,28 @@ impl DMSCLogLevel {
     /// A static string representing the color block emoji
     pub fn color_block(&self) -> &'static str {
         match self {
-            DMSCLogLevel::Debug => "🟦",
-            DMSCLogLevel::Info => "🟩",
-            DMSCLogLevel::Warn => "🟨",
-            DMSCLogLevel::Error => "🟥",
+            RiLogLevel::Debug => "🟦",
+            RiLogLevel::Info => "🟩",
+            RiLogLevel::Warn => "🟨",
+            RiLogLevel::Error => "🟥",
         }
     }
 
     /// Parses a log level from an environment variable.
     /// 
-    /// Reads the `DMSC_LOG_LEVEL` environment variable and returns the corresponding log level.
+    /// Reads the `Ri_LOG_LEVEL` environment variable and returns the corresponding log level.
     /// If the environment variable is not set or contains an invalid value, returns `None`.
     /// 
     /// # Returns
     /// 
-    /// An `Option<DMSCLogLevel>` containing the parsed log level
+    /// An `Option<RiLogLevel>` containing the parsed log level
     pub fn from_env() -> Option<Self> {
-        std::env::var("DMSC_LOG_LEVEL").ok().and_then(|s| {
+        std::env::var("Ri_LOG_LEVEL").ok().and_then(|s| {
             match s.to_ascii_uppercase().as_str() {
-                "DEBUG" => Some(DMSCLogLevel::Debug),
-                "INFO" => Some(DMSCLogLevel::Info),
-                "WARN" | "WARNING" => Some(DMSCLogLevel::Warn),
-                "ERROR" => Some(DMSCLogLevel::Error),
+                "DEBUG" => Some(RiLogLevel::Debug),
+                "INFO" => Some(RiLogLevel::Info),
+                "WARN" | "WARNING" => Some(RiLogLevel::Warn),
+                "ERROR" => Some(RiLogLevel::Error),
                 _ => None,
             }
         })
@@ -158,13 +158,13 @@ impl DMSCLogLevel {
     /// 
     /// # Returns
     /// 
-    /// An `Option<DMSCLogLevel>` containing the parsed log level
+    /// An `Option<RiLogLevel>` containing the parsed log level
     pub fn from_str(s: &str) -> Option<Self> {
         match s.to_ascii_uppercase().as_str() {
-            "DEBUG" => Some(DMSCLogLevel::Debug),
-            "INFO" => Some(DMSCLogLevel::Info),
-            "WARN" | "WARNING" => Some(DMSCLogLevel::Warn),
-            "ERROR" => Some(DMSCLogLevel::Error),
+            "DEBUG" => Some(RiLogLevel::Debug),
+            "INFO" => Some(RiLogLevel::Info),
+            "WARN" | "WARNING" => Some(RiLogLevel::Warn),
+            "ERROR" => Some(RiLogLevel::Error),
             _ => None,
         }
     }
@@ -172,13 +172,13 @@ impl DMSCLogLevel {
 
 /// Public logging configuration class.
 /// 
-/// This struct defines the configuration options for the DMSC logging system, including
+/// This struct defines the configuration options for the Ri logging system, including
 /// log level, output formats, sampling, and log rotation settings.
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass(get_all, set_all))]
 #[derive(Clone)]
-pub struct DMSCLogConfig {
+pub struct RiLogConfig {
     /// Minimum log level to be logged
-    pub level: DMSCLogLevel,
+    pub level: RiLogLevel,
     /// Whether console logging is enabled
     pub console_enabled: bool,
     /// Whether file logging is enabled
@@ -199,7 +199,7 @@ pub struct DMSCLogConfig {
 
 #[cfg(feature = "pyo3")]
 #[pyo3::prelude::pymethods]
-impl DMSCLogConfig {
+impl RiLogConfig {
     #[new]
     fn py_new() -> Self {
         Self::default()
@@ -212,7 +212,7 @@ impl DMSCLogConfig {
     }
 
     #[staticmethod]
-    #[pyo3(signature = (level="info", console_enabled=true, file_enabled=false, file_name="dmsc.log", json_format=false, max_bytes=10485760, color_blocks=true))]
+    #[pyo3(signature = (level="info", console_enabled=true, file_enabled=false, file_name="ri.log", json_format=false, max_bytes=10485760, color_blocks=true))]
     fn create(
         level: &str,
         console_enabled: bool,
@@ -223,11 +223,11 @@ impl DMSCLogConfig {
         color_blocks: bool,
     ) -> Self {
         let log_level = match level.to_uppercase().as_str() {
-            "DEBUG" => DMSCLogLevel::Debug,
-            "INFO" => DMSCLogLevel::Info,
-            "WARN" | "WARNING" => DMSCLogLevel::Warn,
-            "ERROR" => DMSCLogLevel::Error,
-            _ => DMSCLogLevel::Info,
+            "DEBUG" => RiLogLevel::Debug,
+            "INFO" => RiLogLevel::Info,
+            "WARN" | "WARNING" => RiLogLevel::Warn,
+            "ERROR" => RiLogLevel::Error,
+            _ => RiLogLevel::Info,
         };
         Self {
             level: log_level,
@@ -243,10 +243,10 @@ impl DMSCLogConfig {
     }
 }
 
-impl DMSCLogConfig {
-    /// Creates a log configuration from a `DMSCConfig` instance.
+impl RiLogConfig {
+    /// Creates a log configuration from a `RiConfig` instance.
     /// 
-    /// This method reads logging configuration from a `DMSCConfig` instance, using the following keys:
+    /// This method reads logging configuration from a `RiConfig` instance, using the following keys:
     /// - log.level: Log level (DEBUG, INFO, WARN, ERROR)
     /// - log.console_enabled: Whether console logging is enabled
     /// - log.file_enabled: Whether file logging is enabled
@@ -258,16 +258,16 @@ impl DMSCLogConfig {
     /// 
     /// # Parameters
     /// 
-    /// - `config`: The `DMSCConfig` instance to read from
+    /// - `config`: The `RiConfig` instance to read from
     /// 
     /// # Returns
     /// 
-    /// A `DMSCLogConfig` instance with configuration from the given `DMSCConfig`
-    pub fn from_config(config: &crate::config::DMSCConfig) -> Self {
-        let mut base = DMSCLogConfig::default();
+    /// A `RiLogConfig` instance with configuration from the given `RiConfig`
+    pub fn from_config(config: &crate::config::RiConfig) -> Self {
+        let mut base = RiLogConfig::default();
 
         if let Some(level_str) = config.get_str("log.level") {
-            if let Some(level) = DMSCLogLevel::from_str(level_str) {
+            if let Some(level) = RiLogLevel::from_str(level_str) {
                 base.level = level;
             }
         }
@@ -318,50 +318,50 @@ impl DMSCLogConfig {
     /// Creates a log configuration from environment variables.
     /// 
     /// This method reads logging configuration from environment variables:
-    /// - DMSC_LOG_LEVEL: Log level (DEBUG, INFO, WARN, ERROR)
-    /// - DMSC_LOG_CONSOLE_ENABLED: Whether console logging is enabled (true/false)
-    /// - DMSC_LOG_FILE_ENABLED: Whether file logging is enabled (true/false)
-    /// - DMSC_LOG_SAMPLING_DEFAULT: Default sampling rate (0.0-1.0)
-    /// - DMSC_LOG_FILE_NAME: Name of the log file
-    /// - DMSC_LOG_FILE_FORMAT: Log format ("json" for JSON format)
-    /// - DMSC_LOG_ROTATE_WHEN: When to rotate logs
-    /// - DMSC_LOG_MAX_BYTES: Maximum file size before rotation
+    /// - Ri_LOG_LEVEL: Log level (DEBUG, INFO, WARN, ERROR)
+    /// - Ri_LOG_CONSOLE_ENABLED: Whether console logging is enabled (true/false)
+    /// - Ri_LOG_FILE_ENABLED: Whether file logging is enabled (true/false)
+    /// - Ri_LOG_SAMPLING_DEFAULT: Default sampling rate (0.0-1.0)
+    /// - Ri_LOG_FILE_NAME: Name of the log file
+    /// - Ri_LOG_FILE_FORMAT: Log format ("json" for JSON format)
+    /// - Ri_LOG_ROTATE_WHEN: When to rotate logs
+    /// - Ri_LOG_MAX_BYTES: Maximum file size before rotation
     /// 
     /// # Returns
     /// 
-    /// A `DMSCLogConfig` instance with configuration from environment variables
+    /// A `RiLogConfig` instance with configuration from environment variables
     pub fn from_env() -> Self {
-        let mut base = DMSCLogConfig::default();
+        let mut base = RiLogConfig::default();
 
-        if let Some(level) = DMSCLogLevel::from_env() {
+        if let Some(level) = RiLogLevel::from_env() {
             base.level = level;
         }
 
-        if let Ok(v) = std::env::var("DMSC_LOG_SAMPLING_DEFAULT") {
+        if let Ok(v) = std::env::var("Ri_LOG_SAMPLING_DEFAULT") {
             if let Ok(rate) = v.parse::<f32>() {
                 base.sampling_default = rate.clamp(0.0, 1.0);
             }
         }
 
-        if let Ok(file_name) = std::env::var("DMSC_LOG_FILE_NAME") {
+        if let Ok(file_name) = std::env::var("Ri_LOG_FILE_NAME") {
             if !file_name.is_empty() {
                 base.file_name = file_name;
             }
         }
 
-        if let Ok(fmt) = std::env::var("DMSC_LOG_FILE_FORMAT") {
+        if let Ok(fmt) = std::env::var("Ri_LOG_FILE_FORMAT") {
             if fmt.eq_ignore_ascii_case("json") {
                 base.json_format = true;
             }
         }
 
-        if let Ok(rotate) = std::env::var("DMSC_LOG_ROTATE_WHEN") {
+        if let Ok(rotate) = std::env::var("Ri_LOG_ROTATE_WHEN") {
             if !rotate.is_empty() {
                 base.rotate_when = rotate;
             }
         }
 
-        if let Ok(v) = std::env::var("DMSC_LOG_MAX_BYTES") {
+        if let Ok(v) = std::env::var("Ri_LOG_MAX_BYTES") {
             if let Ok(bytes) = v.parse::<u64>() {
                 if bytes > 0 {
                     base.max_bytes = bytes;
@@ -369,7 +369,7 @@ impl DMSCLogConfig {
             }
         }
 
-        if let Ok(v) = std::env::var("DMSC_LOG_CONSOLE_ENABLED") {
+        if let Ok(v) = std::env::var("Ri_LOG_CONSOLE_ENABLED") {
             if v.eq_ignore_ascii_case("true") || v == "1" {
                 base.console_enabled = true;
             } else if v.eq_ignore_ascii_case("false") || v == "0" {
@@ -377,7 +377,7 @@ impl DMSCLogConfig {
             }
         }
 
-        if let Ok(v) = std::env::var("DMSC_LOG_FILE_ENABLED") {
+        if let Ok(v) = std::env::var("Ri_LOG_FILE_ENABLED") {
             if v.eq_ignore_ascii_case("true") || v == "1" {
                 base.file_enabled = true;
             } else if v.eq_ignore_ascii_case("false") || v == "0" {
@@ -385,7 +385,7 @@ impl DMSCLogConfig {
             }
         }
 
-        if let Ok(v) = std::env::var("DMSC_LOG_COLOR_BLOCKS") {
+        if let Ok(v) = std::env::var("Ri_LOG_COLOR_BLOCKS") {
             if v.eq_ignore_ascii_case("true") || v == "1" {
                 base.color_blocks = true;
             } else if v.eq_ignore_ascii_case("false") || v == "0" {
@@ -397,11 +397,11 @@ impl DMSCLogConfig {
     }
 }
 
-/// Default implementation for DMSCLogConfig
-impl Default for DMSCLogConfig {
+/// Default implementation for RiLogConfig
+impl Default for RiLogConfig {
     fn default() -> Self {
-        DMSCLogConfig {
-            level: DMSCLogLevel::Info,
+        RiLogConfig {
+            level: RiLogLevel::Info,
             console_enabled: true,
             file_enabled: true,
             sampling_default: 1.0,
@@ -416,7 +416,7 @@ impl Default for DMSCLogConfig {
 
 /// Log entry for caching
 struct LogEntry {
-    level: DMSCLogLevel,
+    level: RiLogLevel,
     target: String,
     message: String,
     timestamp: String,
@@ -430,10 +430,10 @@ struct LogEntry {
 #[derive(Clone)]
 struct LoggerImpl {
     /// Minimum log level to be logged
-    level: DMSCLogLevel,
+    level: RiLogLevel,
     /// File system instance for writing log files
     #[allow(dead_code)]
-    fs: DMSCFileSystem,
+    fs: RiFileSystem,
     /// Default sampling rate
     sampling_default: f32,
     /// Whether console logging is enabled
@@ -474,13 +474,13 @@ impl LoggerImpl {
     /// 
     /// # Parameters
     /// 
-    /// - `config`: The `DMSCLogConfig` instance to use for configuration
-    /// - `fs`: The `DMSCFileSystem` instance to use for writing log files
+    /// - `config`: The `RiLogConfig` instance to use for configuration
+    /// - `fs`: The `RiFileSystem` instance to use for writing log files
     /// 
     /// # Returns
     /// 
     /// A new `LoggerImpl` instance
-    fn new(config: &DMSCLogConfig, fs: DMSCFileSystem) -> Self {
+    fn new(config: &RiLogConfig, fs: RiFileSystem) -> Self {
         let log_cache = Arc::new((Mutex::new(VecDeque::new()), Condvar::new()));
         let shutdown_flag = Arc::new(Mutex::new(false));
         let cache_size_limit = 1000;
@@ -579,17 +579,17 @@ impl LoggerImpl {
     /// 
     /// # Returns
     /// 
-    /// A `DMSCResult` indicating success or failure
+    /// A `RiResult` indicating success or failure
     fn flush_cache(
         log_cache: &Arc<(Mutex<VecDeque<LogEntry>>, Condvar)>,
-        fs: &DMSCFileSystem,
+        fs: &RiFileSystem,
         file_name: &str,
         json_format: bool,
         rotate_when: &str,
         max_bytes: u64,
         console_enabled: bool,
         color_blocks: bool
-    ) -> DMSCResult<()> {
+    ) -> RiResult<()> {
         let (lock, _cvar) = &**log_cache;
         let mut cache = lock.lock().unwrap();
         
@@ -714,7 +714,7 @@ impl LoggerImpl {
                             let base = log_file.file_name().and_then(|s| s.to_str()).unwrap_or("dms.log");
                             let ts = SystemTime::now()
                                 .duration_since(UNIX_EPOCH)
-                                .map_err(|e| crate::core::DMSCError::Other(format!("timestamp error: {e}")))?;
+                                .map_err(|e| crate::core::RiError::Other(format!("timestamp error: {e}")))?;
                             let rotated = parent.join(format!("{}.{}", base, ts.as_millis()));
                             let _ = stdfs::rename(&log_file, &rotated);
                         }
@@ -739,7 +739,7 @@ impl LoggerImpl {
     /// # Returns
     /// 
     /// `true` if the message should be logged, `false` otherwise
-    fn should_log(&self, level: DMSCLogLevel) -> bool {
+    fn should_log(&self, level: RiLogLevel) -> bool {
         (level as u8) >= (self.level as u8)
     }
 
@@ -839,8 +839,8 @@ impl LoggerImpl {
     /// 
     /// # Returns
     /// 
-    /// A `DMSCResult` indicating success or failure
-    fn log_message<T: Debug>(&self, level: DMSCLogLevel, target: &str, message: T) -> DMSCResult<()> {
+    /// A `RiResult` indicating success or failure
+    fn log_message<T: Debug>(&self, level: RiLogLevel, target: &str, message: T) -> RiResult<()> {
         if !self.should_log(level) {
             return Ok(());
         }
@@ -852,7 +852,7 @@ impl LoggerImpl {
 
         let ts = Self::now_timestamp();
         let message_str = format!("{message:?}");
-        let ctx_kv = DMSCLogContext::get_all();
+        let ctx_kv = RiLogContext::get_all();
 
         // Create log entry with structured data
         let mut log_entry_context = serde_json::Map::new();
@@ -863,13 +863,13 @@ impl LoggerImpl {
         log_entry_context.insert("message".to_string(), json!(message_str));
         
         // Add distributed tracing fields if present
-        if let Some(trace_id) = DMSCLogContext::get_trace_id() {
+        if let Some(trace_id) = RiLogContext::get_trace_id() {
             log_entry_context.insert("trace_id".to_string(), json!(trace_id));
         }
-        if let Some(span_id) = DMSCLogContext::get_span_id() {
+        if let Some(span_id) = RiLogContext::get_span_id() {
             log_entry_context.insert("span_id".to_string(), json!(span_id));
         }
-        if let Some(parent_span_id) = DMSCLogContext::get_parent_span_id() {
+        if let Some(parent_span_id) = RiLogContext::get_parent_span_id() {
             log_entry_context.insert("parent_span_id".to_string(), json!(parent_span_id));
         }
         
@@ -905,28 +905,28 @@ impl LoggerImpl {
 
 /// Public-facing logger class.
 /// 
-/// This struct provides the public API for logging in DMSC, wrapping the internal `LoggerImpl`.
+/// This struct provides the public API for logging in Ri, wrapping the internal `LoggerImpl`.
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 #[derive(Clone)]
-pub struct DMSCLogger {
+pub struct RiLogger {
     /// Internal logger implementation
     inner: LoggerImpl,
 }
 
-impl DMSCLogger {
+impl RiLogger {
     /// Creates a new logger instance.
     /// 
     /// # Parameters
     /// 
-    /// - `config`: The `DMSCLogConfig` instance to use for configuration
-    /// - `fs`: The `DMSCFileSystem` instance to use for writing log files
+    /// - `config`: The `RiLogConfig` instance to use for configuration
+    /// - `fs`: The `RiFileSystem` instance to use for writing log files
     /// 
     /// # Returns
     /// 
-    /// A new `DMSCLogger` instance
-    pub fn new(config: &DMSCLogConfig, fs: DMSCFileSystem) -> Self {
+    /// A new `RiLogger` instance
+    pub fn new(config: &RiLogConfig, fs: RiFileSystem) -> Self {
         let inner = LoggerImpl::new(config, fs);
-        DMSCLogger { inner }
+        RiLogger { inner }
     }
 
     /// Logs a debug message.
@@ -938,9 +938,9 @@ impl DMSCLogger {
     /// 
     /// # Returns
     /// 
-    /// A `DMSCResult` indicating success or failure
-    pub fn debug<T: Debug>(&self, target: &str, message: T) -> DMSCResult<()> {
-        self.inner.log_message(DMSCLogLevel::Debug, target, message)
+    /// A `RiResult` indicating success or failure
+    pub fn debug<T: Debug>(&self, target: &str, message: T) -> RiResult<()> {
+        self.inner.log_message(RiLogLevel::Debug, target, message)
     }
 
     /// Logs an info message.
@@ -952,9 +952,9 @@ impl DMSCLogger {
     /// 
     /// # Returns
     /// 
-    /// A `DMSCResult` indicating success or failure
-    pub fn info<T: Debug>(&self, target: &str, message: T) -> DMSCResult<()> {
-        self.inner.log_message(DMSCLogLevel::Info, target, message)
+    /// A `RiResult` indicating success or failure
+    pub fn info<T: Debug>(&self, target: &str, message: T) -> RiResult<()> {
+        self.inner.log_message(RiLogLevel::Info, target, message)
     }
 
     /// Logs a warning message.
@@ -966,9 +966,9 @@ impl DMSCLogger {
     /// 
     /// # Returns
     /// 
-    /// A `DMSCResult` indicating success or failure
-    pub fn warn<T: Debug>(&self, target: &str, message: T) -> DMSCResult<()> {
-        self.inner.log_message(DMSCLogLevel::Warn, target, message)
+    /// A `RiResult` indicating success or failure
+    pub fn warn<T: Debug>(&self, target: &str, message: T) -> RiResult<()> {
+        self.inner.log_message(RiLogLevel::Warn, target, message)
     }
 
     /// Logs an error message.
@@ -980,45 +980,45 @@ impl DMSCLogger {
     /// 
     /// # Returns
     /// 
-    /// A `DMSCResult` indicating success or failure
-    pub fn error<T: Debug>(&self, target: &str, message: T) -> DMSCResult<()> {
-        self.inner.log_message(DMSCLogLevel::Error, target, message)
+    /// A `RiResult` indicating success or failure
+    pub fn error<T: Debug>(&self, target: &str, message: T) -> RiResult<()> {
+        self.inner.log_message(RiLogLevel::Error, target, message)
     }
 }
 
 #[cfg(feature = "pyo3")]
 #[pyo3::prelude::pymethods]
-impl DMSCLogger {
+impl RiLogger {
     #[new]
-    fn py_new(config: DMSCLogConfig, fs: DMSCFileSystem) -> Self {
+    fn py_new(config: RiLogConfig, fs: RiFileSystem) -> Self {
         Self::new(&config, fs)
     }
 
     #[pyo3(name = "debug")]
     fn py_debug(&self, target: &str, message: &str) -> pyo3::PyResult<()> {
         self.inner
-            .log_message(DMSCLogLevel::Debug, target, message)
+            .log_message(RiLogLevel::Debug, target, message)
             .map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(e.to_string()))
     }
 
     #[pyo3(name = "info")]
     fn py_info(&self, target: &str, message: &str) -> pyo3::PyResult<()> {
         self.inner
-            .log_message(DMSCLogLevel::Info, target, message)
+            .log_message(RiLogLevel::Info, target, message)
             .map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(e.to_string()))
     }
 
     #[pyo3(name = "warn")]
     fn py_warn(&self, target: &str, message: &str) -> pyo3::PyResult<()> {
         self.inner
-            .log_message(DMSCLogLevel::Warn, target, message)
+            .log_message(RiLogLevel::Warn, target, message)
             .map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(e.to_string()))
     }
 
     #[pyo3(name = "error")]
     fn py_error(&self, target: &str, message: &str) -> pyo3::PyResult<()> {
         self.inner
-            .log_message(DMSCLogLevel::Error, target, message)
+            .log_message(RiLogLevel::Error, target, message)
             .map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(e.to_string()))
     }
 }

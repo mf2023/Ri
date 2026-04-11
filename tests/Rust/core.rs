@@ -1,7 +1,7 @@
 //! Copyright © 2025-2026 Wenze Wei. All Rights Reserved.
 //!
-//! This file is part of DMSC.
-//! The DMSC project belongs to the Dunimd Team.
+//! This file is part of Ri.
+//! The Ri project belongs to the Dunimd Team.
 //!
 //! Licensed under the Apache License, Version 2.0 (the "License");
 //! You may not use this file except in compliance with the License.
@@ -17,12 +17,12 @@
 
 //! # Core Module Comprehensive Tests
 //!
-//! This file contains comprehensive tests for the DMSC core module based on the documentation.
+//! This file contains comprehensive tests for the Ri core module based on the documentation.
 //! Tests cover all documented APIs and usage patterns.
 
-use dmsc::core::{DMSCAppBuilder, DMSCServiceContext, DMSCError, DMSCModule};
-use dmsc::log::DMSCLogConfig;
-use dmsc::core::lock::{DMSCLockError, RwLockExtensions, MutexExtensions};
+use ri::core::{RiAppBuilder, RiServiceContext, RiError, RiModule};
+use ri::log::RiLogConfig;
+use ri::core::lock::{RiLockError, RwLockExtensions, MutexExtensions};
 use std::sync::{RwLock, Mutex};
 use tokio::runtime::Runtime;
 
@@ -30,7 +30,7 @@ mod app_builder_tests {
     use super::*;
 
     #[test]
-    /// Tests DMSCAppBuilder creation with new() constructor.
+    /// Tests RiAppBuilder creation with new() constructor.
     ///
     /// Verifies that an application builder can be created successfully
     /// and is ready for configuration with default settings.
@@ -40,12 +40,12 @@ mod app_builder_tests {
     /// - Builder is created without errors
     /// - The builder is ready for configuration methods
     fn test_app_builder_new() {
-        let builder = DMSCAppBuilder::new();
+        let builder = RiAppBuilder::new();
         assert!(builder.with_config("test.yaml").is_ok());
     }
 
     #[test]
-    /// Tests DMSCAppBuilder configuration loading with with_config().
+    /// Tests RiAppBuilder configuration loading with with_config().
     ///
     /// Verifies that the builder can load configuration from a YAML file
     /// and that subsequent configuration methods can be chained.
@@ -61,21 +61,21 @@ mod app_builder_tests {
     /// - Configuration file is processed successfully
     /// - Builder state is updated with loaded configuration
     fn test_app_builder_with_config_string() {
-        let result = DMSCAppBuilder::new().with_config("config.yaml");
+        let result = RiAppBuilder::new().with_config("config.yaml");
         assert!(result.is_ok());
         let builder = result.unwrap();
-        assert!(builder.with_logging(DMSCLogConfig::default()).is_ok());
+        assert!(builder.with_logging(RiLogConfig::default()).is_ok());
     }
 
     #[test]
-    /// Tests DMSCAppBuilder logging configuration with with_logging().
+    /// Tests RiAppBuilder logging configuration with with_logging().
     ///
     /// Verifies that the builder can be configured with logging settings
-    /// using a DMSCLogConfig instance.
+    /// using a RiLogConfig instance.
     ///
     /// ## Logging Configuration
     ///
-    /// - The with_logging() method accepts a DMSCLogConfig
+    /// - The with_logging() method accepts a RiLogConfig
     /// - Logging configuration controls log level, output, and formatting
     /// - Returns a Result for error handling
     ///
@@ -84,13 +84,13 @@ mod app_builder_tests {
     /// - Logging configuration is accepted successfully
     /// - The builder can be used for further configuration
     fn test_app_builder_with_logging() {
-        let config = DMSCLogConfig::default();
-        let result = DMSCAppBuilder::new().with_logging(config);
+        let config = RiLogConfig::default();
+        let result = RiAppBuilder::new().with_logging(config);
         assert!(result.is_ok());
     }
 
     #[test]
-    /// Tests DMSCAppBuilder method chaining for fluent configuration.
+    /// Tests RiAppBuilder method chaining for fluent configuration.
     ///
     /// Verifies that multiple configuration methods can be chained
     /// together in a fluent API pattern for clean configuration code.
@@ -107,25 +107,25 @@ mod app_builder_tests {
     /// - build() completes the configuration and creates the app
     /// - The resulting application is ready for use
     fn test_app_builder_chaining() {
-        let app = DMSCAppBuilder::new()
+        let app = RiAppBuilder::new()
             .with_config("config.yaml")
             .unwrap()
-            .with_logging(DMSCLogConfig::default())
+            .with_logging(RiLogConfig::default())
             .unwrap()
             .build();
         assert!(app.is_ok());
     }
 
     #[test]
-    /// Tests DMSCAppBuilder module registration with with_dms_module().
+    /// Tests RiAppBuilder module registration with with_dms_module().
     ///
-    /// Verifies that custom DMSC modules can be registered with the
+    /// Verifies that custom Ri modules can be registered with the
     /// application builder for extensible functionality.
     ///
     ## Module Registration
     ///
-    /// - Modules implement the DMSCModule trait
-    /// - Modules are registered using Box<dyn DMSCModule>
+    /// - Modules implement the RiModule trait
+    /// - Modules are registered using Box<dyn RiModule>
     /// - Multiple modules can be registered for the application
     ///
     /// ## Expected Behavior
@@ -135,18 +135,18 @@ mod app_builder_tests {
     fn test_app_builder_with_dms_module() {
         struct TestDmsModule;
         #[async_trait::async_trait]
-        impl DMSCModule for TestDmsModule {
+        impl RiModule for TestDmsModule {
             fn name(&self) -> &str { "test_dms" }
         }
 
-        let app = DMSCAppBuilder::new()
+        let app = RiAppBuilder::new()
             .with_dms_module(Box::new(TestDmsModule))
             .build();
         assert!(app.is_ok());
     }
 
     #[test]
-    /// Tests DMSCAppBuilder build without explicit configuration.
+    /// Tests RiAppBuilder build without explicit configuration.
     ///
     /// Verifies that the builder can create an application without
     /// providing explicit configuration files.
@@ -162,7 +162,7 @@ mod app_builder_tests {
     /// - Application is created with defaults
     /// - No configuration errors are returned
     fn test_app_builder_build_without_config() {
-        let app = DMSCAppBuilder::new().build();
+        let app = RiAppBuilder::new().build();
         assert!(app.is_ok());
     }
 }
@@ -171,7 +171,7 @@ mod service_context_tests {
     use super::*;
 
     #[test]
-    /// Tests DMSCServiceContext creation with new_default().
+    /// Tests RiServiceContext creation with new_default().
     ///
     /// Verifies that a service context can be created with default
     /// configuration and initializes all core components.
@@ -181,19 +181,19 @@ mod service_context_tests {
     /// - Service context is created successfully
     /// - All subsystems are initialized
     fn test_service_context_new_default() {
-        let ctx = DMSCServiceContext::new_default();
+        let ctx = RiServiceContext::new_default();
         assert!(ctx.is_ok());
     }
 
     #[test]
-    /// Tests DMSCServiceContext filesystem access through fs().
+    /// Tests RiServiceContext filesystem access through fs().
     ///
     /// Verifies that the service context provides access to the
     /// filesystem abstraction layer for file operations.
     ///
     /// ## Filesystem Access
     ///
-    /// - The fs() method returns a DMSCFileSystem instance
+    /// - The fs() method returns a RiFileSystem instance
     /// - Filesystem provides project root and category directories
     /// - File operations are available through this interface
     ///
@@ -202,20 +202,20 @@ mod service_context_tests {
     /// - Filesystem is accessible through the context
     /// - The project root directory exists
     fn test_service_context_fs_access() {
-        let ctx = DMSCServiceContext::new_default().unwrap();
+        let ctx = RiServiceContext::new_default().unwrap();
         let fs = ctx.fs();
         assert!(fs.project_root().exists());
     }
 
     #[test]
-    /// Tests DMSCServiceContext logger access through logger().
+    /// Tests RiServiceContext logger access through logger().
     ///
     /// Verifies that the service context provides access to the
     /// logging subsystem for application logging.
     ///
     /// ## Logger Access
     ///
-    /// - The logger() method returns a DMSCLogger instance
+    /// - The logger() method returns a RiLogger instance
     /// - Logger supports different log levels
     /// - Logging is configured according to settings
     ///
@@ -224,13 +224,13 @@ mod service_context_tests {
     /// - Logger is accessible through the context
     /// - Logging operations succeed
     fn test_service_context_logger_access() {
-        let ctx = DMSCServiceContext::new_default().unwrap();
+        let ctx = RiServiceContext::new_default().unwrap();
         let logger = ctx.logger();
         assert!(logger.info("test", "Logger access test").is_ok());
     }
 
     #[test]
-    /// Tests DMSCServiceContext configuration access through config().
+    /// Tests RiServiceContext configuration access through config().
     ///
     /// Verifies that the service context provides access to the
     /// configuration subsystem for application settings.
@@ -246,13 +246,13 @@ mod service_context_tests {
     /// - Configuration is accessible through the context
     /// - Non-existent keys return None
     fn test_service_context_config_access() {
-        let ctx = DMSCServiceContext::new_default().unwrap();
+        let ctx = RiServiceContext::new_default().unwrap();
         let config = ctx.config();
         assert!(config.config().get_str("nonexistent").is_none());
     }
 
     #[test]
-    /// Tests DMSCServiceContext hooks access through hooks().
+    /// Tests RiServiceContext hooks access through hooks().
     ///
     /// Verifies that the service context provides access to the
     /// hooks subsystem for lifecycle event handling.
@@ -267,23 +267,23 @@ mod service_context_tests {
     ///
     /// - Hooks subsystem is accessible
     fn test_service_context_hooks_access() {
-        let ctx = DMSCServiceContext::new_default().unwrap();
+        let ctx = RiServiceContext::new_default().unwrap();
         let _hooks = ctx.hooks();
     }
 }
 
-mod dmsc_module_tests {
+mod ri_module_tests {
     use super::*;
 
     #[test]
-    /// Tests custom DMSCModule creation and registration.
+    /// Tests custom RiModule creation and registration.
     ///
-    /// Verifies that custom modules can implement the DMSCModule
+    /// Verifies that custom modules can implement the RiModule
     /// trait with custom name, priority, and dependencies.
     ///
     /// ## Module Implementation
     ///
-    /// - Modules must implement the DMSCModule trait
+    /// - Modules must implement the RiModule trait
     /// - Required methods: name(), is_critical(), priority(), dependencies()
     /// - Modules can have custom initialization and shutdown logic
     ///
@@ -291,10 +291,10 @@ mod dmsc_module_tests {
     ///
     /// - Custom module is created successfully
     /// - Module can be registered with the application builder
-    fn test_custom_dmsc_module_build() {
+    fn test_custom_ri_module_build() {
         struct CustomModule;
         #[async_trait::async_trait]
-        impl DMSCModule for CustomModule {
+        impl RiModule for CustomModule {
             fn name(&self) -> &str { "custom" }
             fn is_critical(&self) -> bool { false }
             fn priority(&self) -> i32 { 10 }
@@ -303,7 +303,7 @@ mod dmsc_module_tests {
 
         let runtime = Runtime::new().unwrap();
         let result = runtime.block_on(async {
-            DMSCAppBuilder::new()
+            RiAppBuilder::new()
                 .with_dms_module(Box::new(CustomModule))
                 .build()
         });
@@ -311,7 +311,7 @@ mod dmsc_module_tests {
     }
 
     #[test]
-    /// Tests custom DMSCModule execution with run().
+    /// Tests custom RiModule execution with run().
     ///
     /// Verifies that custom modules can execute async code
     /// when the application runs.
@@ -326,16 +326,16 @@ mod dmsc_module_tests {
     ///
     /// - Module executes without errors
     /// - Async code runs to completion
-    fn test_custom_dmsc_module_run() {
+    fn test_custom_ri_module_run() {
         struct TestModule;
         #[async_trait::async_trait]
-        impl DMSCModule for TestModule {
+        impl RiModule for TestModule {
             fn name(&self) -> &str { "test" }
         }
 
         let runtime = Runtime::new().unwrap();
         let result = runtime.block_on(async {
-            let app = DMSCAppBuilder::new()
+            let app = RiAppBuilder::new()
                 .with_dms_module(Box::new(TestModule))
                 .build()
                 .unwrap();
@@ -352,28 +352,28 @@ mod error_tests {
     use super::*;
 
     #[test]
-    /// Tests DMSCError IO variant message formatting.
+    /// Tests RiError IO variant message formatting.
     ///
     /// Verifies that IO errors are properly formatted with
     /// descriptive error messages.
     ///
     /// ## Error Variants
     ///
-    /// - DMSCError::Io - Input/output errors
-    /// - DMSCError::Config - Configuration errors
-    /// - DMSCError::Other - Generic errors
+    /// - RiError::Io - Input/output errors
+    /// - RiError::Config - Configuration errors
+    /// - RiError::Other - Generic errors
     ///
     /// ## Expected Behavior
     ///
     /// - IO errors contain "IO error" in the message
     fn test_error_io_variant() {
-        let error = DMSCError::Io("test io error".to_string());
+        let error = RiError::Io("test io error".to_string());
         let msg = error.to_string();
         assert!(msg.contains("IO error"));
     }
 
     #[test]
-    /// Tests DMSCError Config variant message formatting.
+    /// Tests RiError Config variant message formatting.
     ///
     /// Verifies that configuration errors are properly formatted
     /// with descriptive error messages.
@@ -382,13 +382,13 @@ mod error_tests {
     ///
     /// - Config errors contain "Configuration error" in the message
     fn test_error_config_variant() {
-        let error = DMSCError::Config("test config error".to_string());
+        let error = RiError::Config("test config error".to_string());
         let msg = error.to_string();
         assert!(msg.contains("Configuration error"));
     }
 
     #[test]
-    /// Tests DMSCError Other variant message preservation.
+    /// Tests RiError Other variant message preservation.
     ///
     /// Verifies that generic errors preserve the original
     /// error message.
@@ -397,31 +397,31 @@ mod error_tests {
     ///
     /// - Other errors contain the original message
     fn test_error_other_variant() {
-        let error = DMSCError::Other("test error".to_string());
+        let error = RiError::Other("test error".to_string());
         let msg = error.to_string();
         assert!(msg.contains("test error"));
     }
 
     #[test]
-    /// Tests DMSCError conversion from std::io::Error.
+    /// Tests RiError conversion from std::io::Error.
     ///
     /// Verifies that standard IO errors can be converted
-    /// into DMSCError with proper message translation.
+    /// into RiError with proper message translation.
     ///
     /// ## Error Conversion
     ///
-    /// - std::io::Error implements Into<DMSCError>
-    /// - IO error kinds are translated to DMSCError::Io
+    /// - std::io::Error implements Into<RiError>
+    /// - IO error kinds are translated to RiError::Io
     /// - Original error context is preserved
     ///
     /// ## Expected Behavior
     ///
-    /// - IO errors are converted to DMSCError::Io
+    /// - IO errors are converted to RiError::Io
     /// - The message contains "IO error"
     fn test_error_from_io() {
         let io_err = std::io::Error::new(std::io::ErrorKind::NotFound, "file not found");
-        let dmsc_err: DMSCError = io_err.into();
-        let msg = dmsc_err.to_string();
+        let ri_err: RiError = io_err.into();
+        let msg = ri_err.to_string();
         assert!(msg.contains("IO error"));
     }
 }
@@ -430,7 +430,7 @@ mod lock_tests {
     use super::*;
 
     #[test]
-    /// Tests DMSCLockError creation with new().
+    /// Tests RiLockError creation with new().
     ///
     /// Verifies that lock errors can be created with custom
     /// context information.
@@ -440,13 +440,13 @@ mod lock_tests {
     /// - Error is created with the specified context
     /// - The error is not marked as poisoned
     fn test_lock_error_new() {
-        let error = DMSCLockError::new("test context");
+        let error = RiLockError::new("test context");
         assert!(!error.is_poisoned());
         assert_eq!(error.context(), "test context");
     }
 
     #[test]
-    /// Tests DMSCLockError poisoned state with poisoned().
+    /// Tests RiLockError poisoned state with poisoned().
     ///
     /// Verifies that lock errors can indicate a poisoned
     /// lock state.
@@ -462,7 +462,7 @@ mod lock_tests {
     /// - Error is marked as poisoned
     /// - The context is preserved
     fn test_lock_error_poisoned() {
-        let error = DMSCLockError::poisoned("poisoned lock");
+        let error = RiLockError::poisoned("poisoned lock");
         assert!(error.is_poisoned());
         assert_eq!(error.context(), "poisoned lock");
     }

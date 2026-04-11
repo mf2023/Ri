@@ -1,7 +1,7 @@
 //! Copyright © 2025-2026 Wenze Wei. All Rights Reserved.
 //!
-//! This file is part of DMSC.
-//! The DMSC project belongs to the Dunimd Team.
+//! This file is part of Ri.
+//! The Ri project belongs to the Dunimd Team.
 //!
 //! Licensed under the Apache License, Version 2.0 (the "License");
 //! You may not use this file except in compliance with the License.
@@ -15,8 +15,8 @@
 //! See the License for the specific language governing permissions and
 //! limitations under the License.
 
-use dmsc::observability::propagation::{DMSCTraceContext, DMSCBaggage, DMSCContextCarrier};
-use dmsc::observability::tracing::{DMSCTraceId, DMSCSpanId};
+use ri::observability::propagation::{RiTraceContext, RiBaggage, RiContextCarrier};
+use ri::observability::tracing::{RiTraceId, RiSpanId};
 
 /// Observability trace context propagation test module for distributed tracing.
 ///
@@ -61,7 +61,7 @@ use dmsc::observability::tracing::{DMSCTraceId, DMSCSpanId};
 /// special characters and empty values.
 
 #[test]
-/// Tests DMSCTraceContext W3C Trace Context header format serialization.
+/// Tests RiTraceContext W3C Trace Context header format serialization.
 ///
 /// Verifies that trace context can be serialized to and deserialized from
 /// the W3C Trace Context standard header format, ensuring interoperability
@@ -94,11 +94,11 @@ use dmsc::observability::tracing::{DMSCTraceId, DMSCSpanId};
 /// - Sampling flag is correctly encoded and accessible
 fn test_trace_context_header_format() {
     // Create trace and span IDs from hexadecimal strings
-    let trace_id = DMSCTraceId::from_string("0123456789abcdef0123456789abcdef".to_string());
-    let parent_id = DMSCSpanId::from_string("fedcba9876543210".to_string());
+    let trace_id = RiTraceId::from_string("0123456789abcdef0123456789abcdef".to_string());
+    let parent_id = RiSpanId::from_string("fedcba9876543210".to_string());
     
     // Construct trace context
-    let context = DMSCTraceContext::new(trace_id.clone(), parent_id.clone());
+    let context = RiTraceContext::new(trace_id.clone(), parent_id.clone());
     
     // Serialize to W3C header format
     let header = context.to_header();
@@ -107,7 +107,7 @@ fn test_trace_context_header_format() {
     assert_eq!(header, "00-0123456789abcdef0123456789abcdef-fedcba9876543210-01");
     
     // Deserialize back from header
-    let parsed = DMSCTraceContext::from_header(&header).unwrap();
+    let parsed = RiTraceContext::from_header(&header).unwrap();
     
     // Verify trace ID preserved
     assert_eq!(parsed.trace_id.as_str(), trace_id.as_str());
@@ -118,7 +118,7 @@ fn test_trace_context_header_format() {
 }
 
 #[test]
-/// Tests DMSCBaggage header format for distributed context propagation.
+/// Tests RiBaggage header format for distributed context propagation.
 ///
 /// Verifies that baggage entries (key-value pairs) can be serialized to
 /// and deserialized from HTTP header format, enabling correlation of
@@ -155,7 +155,7 @@ fn test_trace_context_header_format() {
 /// - Special characters in values are handled correctly
 fn test_baggage_header_format() {
     // Create an empty baggage container
-    let mut baggage = DMSCBaggage::new();
+    let mut baggage = RiBaggage::new();
     
     // Insert baggage entries
     baggage.insert("user.id".to_string(), "12345".to_string());
@@ -169,7 +169,7 @@ fn test_baggage_header_format() {
     assert!(header.contains("tenant.id=acme-corp"));
     
     // Deserialize back from header
-    let parsed = DMSCBaggage::from_header(&header);
+    let parsed = RiBaggage::from_header(&header);
     
     // Verify entries were restored
     assert_eq!(parsed.get("user.id").unwrap(), "12345");

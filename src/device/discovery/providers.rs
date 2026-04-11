@@ -1,7 +1,7 @@
 //! Copyright © 2025-2026 Wenze Wei. All Rights Reserved.
 //!
-//! This file is part of DMSC.
-//! The DMSC project belongs to the Dunimd Team.
+//! This file is part of Ri.
+//! The Ri project belongs to the Dunimd Team.
 //!
 //! Licensed under the Apache License, Version 2.0 (the "License");
 //! You may not use this file except in compliance with the License.
@@ -23,7 +23,7 @@
 //!
 //! ## Architecture
 //!
-//! - **DMSCHardwareProvider**: Trait defining the provider interface
+//! - **RiHardwareProvider**: Trait defining the provider interface
 //! - **CPUProvider**: Discovers CPU devices
 //! - **MemoryProvider**: Discovers memory devices
 //! - **StorageProvider**: Discovers storage devices
@@ -35,7 +35,7 @@
 //! ## Usage
 //!
 //! ```rust,ignore
-//! use dmsc::device::discovery::providers::{ProviderRegistry, CPUProvider};
+//! use ri::device::discovery::providers::{ProviderRegistry, CPUProvider};
 //!
 //! let mut registry = ProviderRegistry::new();
 //! registry.register(Box::new(CPUProvider::new()));
@@ -47,7 +47,7 @@
 use async_trait::async_trait;
 use std::sync::Arc;
 use tokio::sync::RwLock;
-use super::super::core::{DMSCDevice, DMSCDeviceType, DMSCDeviceCapabilities};
+use super::super::core::{RiDevice, RiDeviceType, RiDeviceCapabilities};
 use super::platform::{PlatformInfo, HardwareCategory};
 
 /// Result type for hardware discovery
@@ -55,7 +55,7 @@ pub type DiscoveryResult<T> = Result<T, String>;
 
 /// Trait for hardware discovery providers
 #[async_trait]
-pub trait DMSCHardwareProvider: Send + Sync {
+pub trait RiHardwareProvider: Send + Sync {
     /// Returns the provider name
     fn name(&self) -> &str;
 
@@ -63,7 +63,7 @@ pub trait DMSCHardwareProvider: Send + Sync {
     fn categories(&self) -> Vec<HardwareCategory>;
 
     /// Discovers devices of this type
-    async fn discover(&self, platform: &PlatformInfo) -> DiscoveryResult<Vec<DMSCDevice>>;
+    async fn discover(&self, platform: &PlatformInfo) -> DiscoveryResult<Vec<RiDevice>>;
 
     /// Returns the priority of this provider (lower = higher priority)
     fn priority(&self) -> u32;
@@ -91,7 +91,7 @@ impl Default for CPUProvider {
 }
 
 #[async_trait]
-impl DMSCHardwareProvider for CPUProvider {
+impl RiHardwareProvider for CPUProvider {
     fn name(&self) -> &str {
         "CPUProvider"
     }
@@ -100,7 +100,7 @@ impl DMSCHardwareProvider for CPUProvider {
         vec![HardwareCategory::CPU]
     }
 
-    async fn discover(&self, platform: &PlatformInfo) -> DiscoveryResult<Vec<DMSCDevice>> {
+    async fn discover(&self, platform: &PlatformInfo) -> DiscoveryResult<Vec<RiDevice>> {
         let mut devices = Vec::new();
 
         // Get CPU information based on platform
@@ -150,7 +150,7 @@ impl Default for MemoryProvider {
 }
 
 #[async_trait]
-impl DMSCHardwareProvider for MemoryProvider {
+impl RiHardwareProvider for MemoryProvider {
     fn name(&self) -> &str {
         "MemoryProvider"
     }
@@ -159,7 +159,7 @@ impl DMSCHardwareProvider for MemoryProvider {
         vec![HardwareCategory::Memory]
     }
 
-    async fn discover(&self, platform: &PlatformInfo) -> DiscoveryResult<Vec<DMSCDevice>> {
+    async fn discover(&self, platform: &PlatformInfo) -> DiscoveryResult<Vec<RiDevice>> {
         let mut devices = Vec::new();
 
         match platform.platform_type {
@@ -207,7 +207,7 @@ impl Default for StorageProvider {
 }
 
 #[async_trait]
-impl DMSCHardwareProvider for StorageProvider {
+impl RiHardwareProvider for StorageProvider {
     fn name(&self) -> &str {
         "StorageProvider"
     }
@@ -216,7 +216,7 @@ impl DMSCHardwareProvider for StorageProvider {
         vec![HardwareCategory::Storage]
     }
 
-    async fn discover(&self, platform: &PlatformInfo) -> DiscoveryResult<Vec<DMSCDevice>> {
+    async fn discover(&self, platform: &PlatformInfo) -> DiscoveryResult<Vec<RiDevice>> {
         let mut devices = Vec::new();
 
         match platform.platform_type {
@@ -264,7 +264,7 @@ impl Default for NetworkProvider {
 }
 
 #[async_trait]
-impl DMSCHardwareProvider for NetworkProvider {
+impl RiHardwareProvider for NetworkProvider {
     fn name(&self) -> &str {
         "NetworkProvider"
     }
@@ -273,7 +273,7 @@ impl DMSCHardwareProvider for NetworkProvider {
         vec![HardwareCategory::Network]
     }
 
-    async fn discover(&self, platform: &PlatformInfo) -> DiscoveryResult<Vec<DMSCDevice>> {
+    async fn discover(&self, platform: &PlatformInfo) -> DiscoveryResult<Vec<RiDevice>> {
         let mut devices = Vec::new();
 
         match platform.platform_type {
@@ -321,7 +321,7 @@ impl Default for GPUProvider {
 }
 
 #[async_trait]
-impl DMSCHardwareProvider for GPUProvider {
+impl RiHardwareProvider for GPUProvider {
     fn name(&self) -> &str {
         "GPUProvider"
     }
@@ -330,7 +330,7 @@ impl DMSCHardwareProvider for GPUProvider {
         vec![HardwareCategory::GPU]
     }
 
-    async fn discover(&self, platform: &PlatformInfo) -> DiscoveryResult<Vec<DMSCDevice>> {
+    async fn discover(&self, platform: &PlatformInfo) -> DiscoveryResult<Vec<RiDevice>> {
         let mut devices = Vec::new();
 
         match platform.platform_type {
@@ -379,7 +379,7 @@ impl Default for USBProvider {
 }
 
 #[async_trait]
-impl DMSCHardwareProvider for USBProvider {
+impl RiHardwareProvider for USBProvider {
     fn name(&self) -> &str {
         "USBProvider"
     }
@@ -388,7 +388,7 @@ impl DMSCHardwareProvider for USBProvider {
         vec![HardwareCategory::USB]
     }
 
-    async fn discover(&self, platform: &PlatformInfo) -> DiscoveryResult<Vec<DMSCDevice>> {
+    async fn discover(&self, platform: &PlatformInfo) -> DiscoveryResult<Vec<RiDevice>> {
         let mut devices = Vec::new();
 
         match platform.platform_type {
@@ -421,7 +421,7 @@ impl DMSCHardwareProvider for USBProvider {
 /// Provider Registry - manages all hardware discovery providers
 #[derive(Default)]
 pub struct ProviderRegistry {
-    providers: Arc<RwLock<Vec<Arc<dyn DMSCHardwareProvider>>>>,
+    providers: Arc<RwLock<Vec<Arc<dyn RiHardwareProvider>>>>,
 }
 
 impl ProviderRegistry {
@@ -433,7 +433,7 @@ impl ProviderRegistry {
     }
 
     /// Registers a provider
-    pub async fn register(&self, provider: Box<dyn DMSCHardwareProvider>) {
+    pub async fn register(&self, provider: Box<dyn RiHardwareProvider>) {
         let mut providers = self.providers.write().await;
         providers.push(Arc::from(provider));
         // Sort by priority
@@ -455,7 +455,7 @@ impl ProviderRegistry {
         &self,
         category: &HardwareCategory,
         platform: &PlatformInfo,
-    ) -> DiscoveryResult<Vec<DMSCDevice>> {
+    ) -> DiscoveryResult<Vec<RiDevice>> {
         let providers = self.providers.read().await;
         let mut all_devices = Vec::new();
 
@@ -472,7 +472,7 @@ impl ProviderRegistry {
     }
 
     /// Discovers all available devices
-    pub async fn discover_all(&self, platform: &PlatformInfo) -> DiscoveryResult<Vec<DMSCDevice>> {
+    pub async fn discover_all(&self, platform: &PlatformInfo) -> DiscoveryResult<Vec<RiDevice>> {
         let providers = self.providers.read().await;
         let mut all_devices = Vec::new();
 
@@ -497,16 +497,16 @@ impl ProviderRegistry {
 /// Creates a default device with basic capabilities
 fn create_device(
     name: String,
-    device_type: DMSCDeviceType,
-    capabilities: DMSCDeviceCapabilities,
-) -> DMSCDevice {
-    DMSCDevice::new(name, device_type)
+    device_type: RiDeviceType,
+    capabilities: RiDeviceCapabilities,
+) -> RiDevice {
+    RiDevice::new(name, device_type)
         .with_capabilities(capabilities)
 }
 
 // Platform-specific discovery implementations
 
-async fn discover_linux_cpus(_platform: &PlatformInfo) -> DiscoveryResult<Vec<DMSCDevice>> {
+async fn discover_linux_cpus(_platform: &PlatformInfo) -> DiscoveryResult<Vec<RiDevice>> {
     let mut devices = Vec::new();
 
     // Read CPU info from /proc/cpuinfo
@@ -526,13 +526,13 @@ async fn discover_linux_cpus(_platform: &PlatformInfo) -> DiscoveryResult<Vec<DM
         }
 
         if core_count > 0 {
-            let capabilities = DMSCDeviceCapabilities::new()
+            let capabilities = RiDeviceCapabilities::new()
                 .with_compute_units(core_count)
                 .with_memory_gb(0.0); // Memory will be set by memory provider
 
             let device = create_device(
                 format!("CPU: {}", model_name),
-                DMSCDeviceType::CPU,
+                RiDeviceType::CPU,
                 capabilities,
             );
             devices.push(device);
@@ -542,7 +542,7 @@ async fn discover_linux_cpus(_platform: &PlatformInfo) -> DiscoveryResult<Vec<DM
     Ok(devices)
 }
 
-async fn discover_macos_cpus(_platform: &PlatformInfo) -> DiscoveryResult<Vec<DMSCDevice>> {
+async fn discover_macos_cpus(_platform: &PlatformInfo) -> DiscoveryResult<Vec<RiDevice>> {
     let mut devices = Vec::new();
 
     // Use sysctl for CPU info
@@ -565,13 +565,13 @@ async fn discover_macos_cpus(_platform: &PlatformInfo) -> DiscoveryResult<Vec<DM
         .map(|p| p.get())
         .unwrap_or(1);
 
-    let capabilities = DMSCDeviceCapabilities::new()
+    let capabilities = RiDeviceCapabilities::new()
         .with_compute_units(core_count)
         .with_memory_gb(0.0);
 
     let device = create_device(
         format!("CPU: {}", model_name),
-        DMSCDeviceType::CPU,
+        RiDeviceType::CPU,
         capabilities,
     );
     devices.push(device);
@@ -579,7 +579,7 @@ async fn discover_macos_cpus(_platform: &PlatformInfo) -> DiscoveryResult<Vec<DM
     Ok(devices)
 }
 
-async fn discover_windows_cpus(_platform: &PlatformInfo) -> DiscoveryResult<Vec<DMSCDevice>> {
+async fn discover_windows_cpus(_platform: &PlatformInfo) -> DiscoveryResult<Vec<RiDevice>> {
     let mut devices = Vec::new();
 
     let output = std::process::Command::new("wmic")
@@ -606,13 +606,13 @@ async fn discover_windows_cpus(_platform: &PlatformInfo) -> DiscoveryResult<Vec<
         .map(|p| p.get())
         .unwrap_or(1);
 
-    let capabilities = DMSCDeviceCapabilities::new()
+    let capabilities = RiDeviceCapabilities::new()
         .with_compute_units(core_count)
         .with_memory_gb(0.0);
 
     let device = create_device(
         format!("CPU: {}", model_name),
-        DMSCDeviceType::CPU,
+        RiDeviceType::CPU,
         capabilities,
     );
     devices.push(device);
@@ -620,47 +620,47 @@ async fn discover_windows_cpus(_platform: &PlatformInfo) -> DiscoveryResult<Vec<
     Ok(devices)
 }
 
-async fn discover_generic_cpus(platform: &PlatformInfo) -> DiscoveryResult<Vec<DMSCDevice>> {
-    let capabilities = DMSCDeviceCapabilities::new()
+async fn discover_generic_cpus(platform: &PlatformInfo) -> DiscoveryResult<Vec<RiDevice>> {
+    let capabilities = RiDeviceCapabilities::new()
         .with_compute_units(platform.cpu_cores)
         .with_memory_gb(0.0);
 
     let device = create_device(
         format!("Generic CPU ({} cores)", platform.cpu_cores),
-        DMSCDeviceType::CPU,
+        RiDeviceType::CPU,
         capabilities,
     );
 
     Ok(vec![device])
 }
 
-async fn discover_linux_memory(platform: &PlatformInfo) -> DiscoveryResult<Vec<DMSCDevice>> {
-    let capabilities = DMSCDeviceCapabilities::new()
+async fn discover_linux_memory(platform: &PlatformInfo) -> DiscoveryResult<Vec<RiDevice>> {
+    let capabilities = RiDeviceCapabilities::new()
         .with_compute_units(0)
         .with_memory_gb(platform.total_memory as f64 / (1024.0 * 1024.0 * 1024.0));
 
     let device = create_device(
         format!("System Memory ({:.2} GB)", platform.total_memory as f64 / (1024.0 * 1024.0 * 1024.0)),
-        DMSCDeviceType::Memory,
+        RiDeviceType::Memory,
         capabilities,
     );
 
     Ok(vec![device])
 }
 
-async fn discover_macos_memory(platform: &PlatformInfo) -> DiscoveryResult<Vec<DMSCDevice>> {
+async fn discover_macos_memory(platform: &PlatformInfo) -> DiscoveryResult<Vec<RiDevice>> {
     discover_linux_memory(platform).await
 }
 
-async fn discover_windows_memory(platform: &PlatformInfo) -> DiscoveryResult<Vec<DMSCDevice>> {
+async fn discover_windows_memory(platform: &PlatformInfo) -> DiscoveryResult<Vec<RiDevice>> {
     discover_linux_memory(platform).await
 }
 
-async fn discover_generic_memory(platform: &PlatformInfo) -> DiscoveryResult<Vec<DMSCDevice>> {
+async fn discover_generic_memory(platform: &PlatformInfo) -> DiscoveryResult<Vec<RiDevice>> {
     discover_linux_memory(platform).await
 }
 
-async fn discover_linux_storage(_platform: &PlatformInfo) -> DiscoveryResult<Vec<DMSCDevice>> {
+async fn discover_linux_storage(_platform: &PlatformInfo) -> DiscoveryResult<Vec<RiDevice>> {
     let mut devices = Vec::new();
 
     // Read /proc/mounts to find mounted filesystems
@@ -674,12 +674,12 @@ async fn discover_linux_storage(_platform: &PlatformInfo) -> DiscoveryResult<Vec
                 if device.starts_with("/dev/") && !seen.contains(device) {
                     seen.insert(device);
 
-                    let capabilities = DMSCDeviceCapabilities::new()
+                    let capabilities = RiDeviceCapabilities::new()
                         .with_storage_gb(100.0);
 
-                    let device_info = DMSCDevice::new(
+                    let device_info = RiDevice::new(
                         device.to_string(),
-                        DMSCDeviceType::Storage,
+                        RiDeviceType::Storage,
                     ).with_capabilities(capabilities);
                     devices.push(device_info);
                 }
@@ -690,7 +690,7 @@ async fn discover_linux_storage(_platform: &PlatformInfo) -> DiscoveryResult<Vec
     Ok(devices)
 }
 
-async fn discover_macos_storage(_platform: &PlatformInfo) -> DiscoveryResult<Vec<DMSCDevice>> {
+async fn discover_macos_storage(_platform: &PlatformInfo) -> DiscoveryResult<Vec<RiDevice>> {
     let mut devices = Vec::new();
 
     let output = std::process::Command::new("df")
@@ -706,12 +706,12 @@ async fn discover_macos_storage(_platform: &PlatformInfo) -> DiscoveryResult<Vec
                     let device = parts[0];
                     if !seen.contains(device) && device.starts_with("/dev/") {
                         seen.insert(device);
-                        let capabilities = DMSCDeviceCapabilities::new()
+                        let capabilities = RiDeviceCapabilities::new()
                             .with_storage_gb(100.0);
 
-                        let device_info = DMSCDevice::new(
+                        let device_info = RiDevice::new(
                             device.to_string(),
-                            DMSCDeviceType::Storage,
+                            RiDeviceType::Storage,
                         ).with_capabilities(capabilities);
                         devices.push(device_info);
                     }
@@ -723,7 +723,7 @@ async fn discover_macos_storage(_platform: &PlatformInfo) -> DiscoveryResult<Vec
     Ok(devices)
 }
 
-async fn discover_windows_storage(_platform: &PlatformInfo) -> DiscoveryResult<Vec<DMSCDevice>> {
+async fn discover_windows_storage(_platform: &PlatformInfo) -> DiscoveryResult<Vec<RiDevice>> {
     let mut devices = Vec::new();
 
     let output = std::process::Command::new("wmic")
@@ -735,12 +735,12 @@ async fn discover_windows_storage(_platform: &PlatformInfo) -> DiscoveryResult<V
             for line in String::from_utf8_lossy(&output.stdout).lines() {
                 if line.starts_with("Name=") {
                     let drive = &line[5..];
-                    let capabilities = DMSCDeviceCapabilities::new()
+                    let capabilities = RiDeviceCapabilities::new()
                         .with_storage_gb(100.0);
 
-                    let device_info = DMSCDevice::new(
+                    let device_info = RiDevice::new(
                         drive.to_string(),
-                        DMSCDeviceType::Storage,
+                        RiDeviceType::Storage,
                     ).with_capabilities(capabilities);
                     devices.push(device_info);
                 }
@@ -751,20 +751,20 @@ async fn discover_windows_storage(_platform: &PlatformInfo) -> DiscoveryResult<V
     Ok(devices)
 }
 
-async fn discover_generic_storage(_platform: &PlatformInfo) -> DiscoveryResult<Vec<DMSCDevice>> {
-    let capabilities = DMSCDeviceCapabilities::new()
+async fn discover_generic_storage(_platform: &PlatformInfo) -> DiscoveryResult<Vec<RiDevice>> {
+    let capabilities = RiDeviceCapabilities::new()
         .with_storage_gb(100.0);
 
     let device = create_device(
         "Generic Storage".to_string(),
-        DMSCDeviceType::Storage,
+        RiDeviceType::Storage,
         capabilities,
     );
 
     Ok(vec![device])
 }
 
-async fn discover_linux_network(_platform: &PlatformInfo) -> DiscoveryResult<Vec<DMSCDevice>> {
+async fn discover_linux_network(_platform: &PlatformInfo) -> DiscoveryResult<Vec<RiDevice>> {
     let mut devices = Vec::new();
 
     if let Ok(content) = std::fs::read_to_string("/proc/net/dev") {
@@ -773,12 +773,12 @@ async fn discover_linux_network(_platform: &PlatformInfo) -> DiscoveryResult<Vec
             if parts.len() >= 2 {
                 let interface = parts[0].trim();
                 if !interface.is_empty() && interface != "lo" {
-                    let capabilities = DMSCDeviceCapabilities::new()
+                    let capabilities = RiDeviceCapabilities::new()
                         .with_bandwidth_gbps(1.0);
 
-                    let device = DMSCDevice::new(
+                    let device = RiDevice::new(
                         format!("Network Interface: {}", interface),
-                        DMSCDeviceType::Network,
+                        RiDeviceType::Network,
                     ).with_capabilities(capabilities);
                     devices.push(device);
                 }
@@ -789,7 +789,7 @@ async fn discover_linux_network(_platform: &PlatformInfo) -> DiscoveryResult<Vec
     Ok(devices)
 }
 
-async fn discover_macos_network(_platform: &PlatformInfo) -> DiscoveryResult<Vec<DMSCDevice>> {
+async fn discover_macos_network(_platform: &PlatformInfo) -> DiscoveryResult<Vec<RiDevice>> {
     let mut devices = Vec::new();
 
     let output = std::process::Command::new("ifconfig")
@@ -802,12 +802,12 @@ async fn discover_macos_network(_platform: &PlatformInfo) -> DiscoveryResult<Vec
                 if parts.len() >= 1 {
                     let interface = parts[0].trim();
                     if !interface.is_empty() {
-                        let capabilities = DMSCDeviceCapabilities::new()
+                        let capabilities = RiDeviceCapabilities::new()
                             .with_bandwidth_gbps(1.0);
 
-                        let device = DMSCDevice::new(
+                        let device = RiDevice::new(
                             format!("Network Interface: {}", interface),
-                            DMSCDeviceType::Network,
+                            RiDeviceType::Network,
                         ).with_capabilities(capabilities);
                         devices.push(device);
                     }
@@ -819,7 +819,7 @@ async fn discover_macos_network(_platform: &PlatformInfo) -> DiscoveryResult<Vec
     Ok(devices)
 }
 
-async fn discover_windows_network(_platform: &PlatformInfo) -> DiscoveryResult<Vec<DMSCDevice>> {
+async fn discover_windows_network(_platform: &PlatformInfo) -> DiscoveryResult<Vec<RiDevice>> {
     let mut devices = Vec::new();
 
     let output = std::process::Command::new("wmic")
@@ -831,12 +831,12 @@ async fn discover_windows_network(_platform: &PlatformInfo) -> DiscoveryResult<V
             for line in String::from_utf8_lossy(&output.stdout).lines() {
                 if line.starts_with("Description=") {
                     let name = &line[12..];
-                    let capabilities = DMSCDeviceCapabilities::new()
+                    let capabilities = RiDeviceCapabilities::new()
                         .with_bandwidth_gbps(1.0);
 
-                    let device = DMSCDevice::new(
+                    let device = RiDevice::new(
                         name.to_string(),
-                        DMSCDeviceType::Network,
+                        RiDeviceType::Network,
                     ).with_capabilities(capabilities);
                     devices.push(device);
                 }
@@ -847,20 +847,20 @@ async fn discover_windows_network(_platform: &PlatformInfo) -> DiscoveryResult<V
     Ok(devices)
 }
 
-async fn discover_generic_network(_platform: &PlatformInfo) -> DiscoveryResult<Vec<DMSCDevice>> {
-    let capabilities = DMSCDeviceCapabilities::new()
+async fn discover_generic_network(_platform: &PlatformInfo) -> DiscoveryResult<Vec<RiDevice>> {
+    let capabilities = RiDeviceCapabilities::new()
         .with_bandwidth_gbps(1.0);
 
     let device = create_device(
         "Generic Network Adapter".to_string(),
-        DMSCDeviceType::Network,
+        RiDeviceType::Network,
         capabilities,
     );
 
     Ok(vec![device])
 }
 
-async fn discover_linux_gpus(_platform: &PlatformInfo) -> DiscoveryResult<Vec<DMSCDevice>> {
+async fn discover_linux_gpus(_platform: &PlatformInfo) -> DiscoveryResult<Vec<RiDevice>> {
     let mut devices = Vec::new();
 
     // Check for NVIDIA GPUs
@@ -874,13 +874,13 @@ async fn discover_linux_gpus(_platform: &PlatformInfo) -> DiscoveryResult<Vec<DM
                 let parts: Vec<&str> = line.split(',').collect();
                 if parts.len() >= 1 {
                     let name = parts[0].trim();
-                    let capabilities = DMSCDeviceCapabilities::new()
+                    let capabilities = RiDeviceCapabilities::new()
                         .with_compute_units(1)
                         .with_memory_gb(8.0);
 
-                    let device = DMSCDevice::new(
+                    let device = RiDevice::new(
                         format!("NVIDIA GPU: {}", name),
-                        DMSCDeviceType::GPU,
+                        RiDeviceType::GPU,
                     ).with_capabilities(capabilities);
                     devices.push(device);
                 }
@@ -893,13 +893,13 @@ async fn discover_linux_gpus(_platform: &PlatformInfo) -> DiscoveryResult<Vec<DM
         for entry in amd_dirs.flatten() {
             if let Ok(path) = entry.path().join("device").read_link() {
                 if path.to_string_lossy().contains("pci") {
-                    let capabilities = DMSCDeviceCapabilities::new()
+                    let capabilities = RiDeviceCapabilities::new()
                         .with_compute_units(1)
                         .with_memory_gb(4.0);
 
-                    let device = DMSCDevice::new(
+                    let device = RiDevice::new(
                         format!("GPU: {}", entry.file_name().to_string_lossy()),
-                        DMSCDeviceType::GPU,
+                        RiDeviceType::GPU,
                     ).with_capabilities(capabilities);
                     devices.push(device);
                 }
@@ -910,7 +910,7 @@ async fn discover_linux_gpus(_platform: &PlatformInfo) -> DiscoveryResult<Vec<DM
     Ok(devices)
 }
 
-async fn discover_macos_gpus(_platform: &PlatformInfo) -> DiscoveryResult<Vec<DMSCDevice>> {
+async fn discover_macos_gpus(_platform: &PlatformInfo) -> DiscoveryResult<Vec<RiDevice>> {
     let mut devices = Vec::new();
 
     let output = std::process::Command::new("system_profiler")
@@ -920,13 +920,13 @@ async fn discover_macos_gpus(_platform: &PlatformInfo) -> DiscoveryResult<Vec<DM
     if let Ok(output) = output {
         if output.status.success() {
             let content = String::from_utf8_lossy(&output.stdout);
-            let capabilities = DMSCDeviceCapabilities::new()
+            let capabilities = RiDeviceCapabilities::new()
                 .with_compute_units(1)
                 .with_memory_gb(4.0);
 
-            let device = DMSCDevice::new(
+            let device = RiDevice::new(
                 format!("GPU: {}", content.lines().next().unwrap_or("Unknown")),
-                DMSCDeviceType::GPU,
+                RiDeviceType::GPU,
             ).with_capabilities(capabilities);
             devices.push(device);
         }
@@ -935,7 +935,7 @@ async fn discover_macos_gpus(_platform: &PlatformInfo) -> DiscoveryResult<Vec<DM
     Ok(devices)
 }
 
-async fn discover_windows_gpus(_platform: &PlatformInfo) -> DiscoveryResult<Vec<DMSCDevice>> {
+async fn discover_windows_gpus(_platform: &PlatformInfo) -> DiscoveryResult<Vec<RiDevice>> {
     let mut devices = Vec::new();
 
     let output = std::process::Command::new("wmic")
@@ -947,13 +947,13 @@ async fn discover_windows_gpus(_platform: &PlatformInfo) -> DiscoveryResult<Vec<
             for line in String::from_utf8_lossy(&output.stdout).lines() {
                 if line.starts_with("Name=") {
                     let name = &line[5..];
-                    let capabilities = DMSCDeviceCapabilities::new()
+                    let capabilities = RiDeviceCapabilities::new()
                         .with_compute_units(1)
                         .with_memory_gb(4.0);
 
-                    let device = DMSCDevice::new(
+                    let device = RiDevice::new(
                         name.to_string(),
-                        DMSCDeviceType::GPU,
+                        RiDeviceType::GPU,
                     ).with_capabilities(capabilities);
                     devices.push(device);
                 }
@@ -964,32 +964,32 @@ async fn discover_windows_gpus(_platform: &PlatformInfo) -> DiscoveryResult<Vec<
     Ok(devices)
 }
 
-async fn discover_generic_gpus(_platform: &PlatformInfo) -> DiscoveryResult<Vec<DMSCDevice>> {
-    let capabilities = DMSCDeviceCapabilities::new()
+async fn discover_generic_gpus(_platform: &PlatformInfo) -> DiscoveryResult<Vec<RiDevice>> {
+    let capabilities = RiDeviceCapabilities::new()
         .with_compute_units(1)
         .with_memory_gb(4.0);
 
     let device = create_device(
         "Generic GPU".to_string(),
-        DMSCDeviceType::GPU,
+        RiDeviceType::GPU,
         capabilities,
     );
 
     Ok(vec![device])
 }
 
-async fn discover_linux_usb(_platform: &PlatformInfo) -> DiscoveryResult<Vec<DMSCDevice>> {
+async fn discover_linux_usb(_platform: &PlatformInfo) -> DiscoveryResult<Vec<RiDevice>> {
     let mut devices = Vec::new();
 
     if let Ok(usb_dirs) = std::fs::read_dir("/sys/bus/usb/devices") {
         for entry in usb_dirs.flatten() {
             if let Ok(id) = entry.file_name().into_string() {
                 if !id.is_empty() && !id.starts_with('.') {
-                    let capabilities = DMSCDeviceCapabilities::new();
+                    let capabilities = RiDeviceCapabilities::new();
 
-                    let device = DMSCDevice::new(
+                    let device = RiDevice::new(
                         format!("USB Device: {}", id),
-                        DMSCDeviceType::Custom,
+                        RiDeviceType::Custom,
                     ).with_capabilities(capabilities);
                     devices.push(device);
                 }
@@ -1000,7 +1000,7 @@ async fn discover_linux_usb(_platform: &PlatformInfo) -> DiscoveryResult<Vec<DMS
     Ok(devices)
 }
 
-async fn discover_macos_usb(_platform: &PlatformInfo) -> DiscoveryResult<Vec<DMSCDevice>> {
+async fn discover_macos_usb(_platform: &PlatformInfo) -> DiscoveryResult<Vec<RiDevice>> {
     let mut devices = Vec::new();
 
     let output = std::process::Command::new("system_profiler")
@@ -1010,11 +1010,11 @@ async fn discover_macos_usb(_platform: &PlatformInfo) -> DiscoveryResult<Vec<DMS
     if let Ok(output) = output {
         if output.status.success() {
             let content = String::from_utf8_lossy(&output.stdout);
-            let capabilities = DMSCDeviceCapabilities::new();
+            let capabilities = RiDeviceCapabilities::new();
 
-            let device = DMSCDevice::new(
+            let device = RiDevice::new(
                 format!("USB: {}", content.lines().next().unwrap_or("Unknown")),
-                DMSCDeviceType::Custom,
+                RiDeviceType::Custom,
             ).with_capabilities(capabilities);
             devices.push(device);
         }
@@ -1023,7 +1023,7 @@ async fn discover_macos_usb(_platform: &PlatformInfo) -> DiscoveryResult<Vec<DMS
     Ok(devices)
 }
 
-async fn discover_windows_usb(_platform: &PlatformInfo) -> DiscoveryResult<Vec<DMSCDevice>> {
+async fn discover_windows_usb(_platform: &PlatformInfo) -> DiscoveryResult<Vec<RiDevice>> {
     let mut devices = Vec::new();
 
     let output = std::process::Command::new("wmic")
@@ -1035,11 +1035,11 @@ async fn discover_windows_usb(_platform: &PlatformInfo) -> DiscoveryResult<Vec<D
             for line in String::from_utf8_lossy(&output.stdout).lines() {
                 if line.starts_with("Name=") {
                     let name = &line[5..];
-                    let capabilities = DMSCDeviceCapabilities::new();
+                    let capabilities = RiDeviceCapabilities::new();
 
-                    let device = DMSCDevice::new(
+                    let device = RiDevice::new(
                         name.to_string(),
-                        DMSCDeviceType::Custom,
+                        RiDeviceType::Custom,
                     ).with_capabilities(capabilities);
                     devices.push(device);
                 }

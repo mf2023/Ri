@@ -1,7 +1,7 @@
 //! Copyright © 2025-2026 Wenze Wei. All Rights Reserved.
 //!
-//! This file is part of DMSC.
-//! The DMSC project belongs to the Dunimd Team.
+//! This file is part of Ri.
+//! The Ri project belongs to the Dunimd Team.
 //!
 //! Licensed under the Apache License, Version 2.0 (the "License");
 //! You may not use this file except in compliance with the License.
@@ -17,12 +17,12 @@
 
 //! # Database Configuration
 //!
-//! This module provides database configuration types and settings for DMSC.
+//! This module provides database configuration types and settings for Ri.
 //! It supports multiple database backends including MySQL, PostgreSQL, SQLite, and in-memory databases.
 //!
 //! ## Key Components
 //!
-//! - **DMSCDatabaseConfig**: Enum for different database configurations
+//! - **RiDatabaseConfig**: Enum for different database configurations
 //! - **DatabaseType**: Enum for supported database engines
 //! - **PoolConfig**: Connection pool configuration settings
 //!
@@ -36,9 +36,9 @@
 //! ## Usage Example
 //!
 //! ```rust,ignore
-//! use dmsc::database::{DMSCDatabaseConfig, DatabaseType, PoolConfig};
+//! use ri::database::{RiDatabaseConfig, DatabaseType, PoolConfig};
 //!
-//! let config = DMSCDatabaseConfig::new_mysql(
+//! let config = RiDatabaseConfig::new_mysql(
 //!     "localhost",
 //!     3306,
 //!     "root",
@@ -54,7 +54,7 @@ use std::env;
 
 /// Enumeration of supported database engine types.
 ///
-/// This enum represents the different database backends that DMSC can connect to.
+/// This enum represents the different database backends that Ri can connect to.
 /// Each database type has specific connection requirements and may use different
 /// underlying drivers or client libraries.
 ///
@@ -76,7 +76,7 @@ use std::env;
 /// ## Usage
 ///
 /// ```rust,ignore
-/// use dmsc::database::DatabaseType;
+/// use ri::database::DatabaseType;
 ///
 /// fn get_preferred_db() -> DatabaseType {
 ///     DatabaseType::Postgres
@@ -171,7 +171,7 @@ impl std::fmt::Display for DatabaseType {
     }
 }
 
-/// Configuration for database connections in DMSC.
+/// Configuration for database connections in Ri.
 ///
 /// This struct encapsulates all configuration options needed to establish and manage
 /// database connections. It supports multiple database backends through the `DatabaseType`
@@ -179,25 +179,25 @@ impl std::fmt::Display for DatabaseType {
 ///
 /// ## Connection Pooling
 ///
-/// DMSC uses connection pooling to efficiently manage database connections.
+/// Ri uses connection pooling to efficiently manage database connections.
 /// The pool maintains a set of connections that are reused across requests,
 /// reducing the overhead of establishing new connections.
 ///
 /// ## Configuration Methods
 ///
 /// The struct provides several factory methods for creating configurations:
-/// - [`postgres()`][DMSCDatabaseConfig::postgres] - PostgreSQL with default settings
-/// - [`mysql()`][DMSCDatabaseConfig::mysql] - MySQL with default settings
-/// - [`sqlite(path)`][DMSCDatabaseConfig::sqlite] - SQLite at specified path
+/// - [`postgres()`][RiDatabaseConfig::postgres] - PostgreSQL with default settings
+/// - [`mysql()`][RiDatabaseConfig::mysql] - MySQL with default settings
+/// - [`sqlite(path)`][RiDatabaseConfig::sqlite] - SQLite at specified path
 ///
 /// ## Builder Pattern
 ///
 /// Configuration can be customized using the builder pattern:
 ///
 /// ```rust,ignore
-/// use dmsc::database::{DMSCDatabaseConfig, SslMode};
+/// use ri::database::{RiDatabaseConfig, SslMode};
 ///
-/// let config = DMSCDatabaseConfig::postgres()
+/// let config = RiDatabaseConfig::postgres()
 ///     .host("db.example.com")
 ///     .port(5432)
 ///     .database("myapp")
@@ -211,11 +211,11 @@ impl std::fmt::Display for DatabaseType {
 /// ## Environment Variables
 ///
 /// Default values can be overridden using environment variables:
-/// - `DMSC_DB_HOST` - Database server hostname
-/// - `DMSC_DB_PORT` - Database server port
-/// - `DMSC_DB_NAME` - Database name
-/// - `DMSC_DB_USER` - Database username
-/// - `DMSC_DB_PASSWORD` - Database password
+/// - `Ri_DB_HOST` - Database server hostname
+/// - `Ri_DB_PORT` - Database server port
+/// - `Ri_DB_NAME` - Database name
+/// - `Ri_DB_USER` - Database username
+/// - `Ri_DB_PASSWORD` - Database password
 ///
 /// ## Thread Safety
 ///
@@ -224,7 +224,7 @@ impl std::fmt::Display for DatabaseType {
 /// to the database manager.
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct DMSCDatabaseConfig {
+pub struct RiDatabaseConfig {
     /// The type of database backend to connect to.
     ///
     /// This determines which driver and connection logic will be used.
@@ -369,7 +369,7 @@ pub struct DMSCDatabaseConfig {
 
 #[cfg(feature = "pyo3")]
 #[pyo3::prelude::pymethods]
-impl DMSCDatabaseConfig {
+impl RiDatabaseConfig {
     #[new]
     fn py_new(
         database_type: DatabaseType,
@@ -586,7 +586,7 @@ impl Default for SslMode {
     }
 }
 
-impl DMSCDatabaseConfig {
+impl RiDatabaseConfig {
     /// Creates a configuration for PostgreSQL with default settings.
     ///
     /// This factory method initializes a configuration with sensible defaults
@@ -595,11 +595,11 @@ impl DMSCDatabaseConfig {
     ///
     /// ## Defaults
     ///
-    /// - Host: `localhost` (or `DMSC_DB_HOST` env var)
-    /// - Port: `5432` (or `DMSC_DB_PORT` env var)
-    /// - Database: `dmsc` (or `DMSC_DB_NAME` env var)
-    /// - Username: `dmsc` (or `DMSC_DB_USER` env var)
-    /// - Password: empty (or `DMSC_DB_PASSWORD` env var)
+    /// - Host: `localhost` (or `Ri_DB_HOST` env var)
+    /// - Port: `5432` (or `Ri_DB_PORT` env var)
+    /// - Database: `ri` (or `Ri_DB_NAME` env var)
+    /// - Username: `ri` (or `Ri_DB_USER` env var)
+    /// - Password: empty (or `Ri_DB_PASSWORD` env var)
     /// - Max connections: 10
     /// - Min idle: 2
     /// - Connection timeout: 30 seconds
@@ -612,40 +612,40 @@ impl DMSCDatabaseConfig {
     ///
     /// Default values are read from environment variables if available:
     /// ```bash
-    /// export DMSC_DB_HOST=db.example.com
-    /// export DMSC_DB_PORT=5432
-    /// export DMSC_DB_NAME=myapp
-    /// export DMSC_DB_USER=admin
-    /// export DMSC_DB_PASSWORD=secret
+    /// export Ri_DB_HOST=db.example.com
+    /// export Ri_DB_PORT=5432
+    /// export Ri_DB_NAME=myapp
+    /// export Ri_DB_USER=admin
+    /// export Ri_DB_PASSWORD=secret
     /// ```
     ///
     /// # Returns
     ///
-    /// A new `DMSCDatabaseConfig` instance configured for PostgreSQL
+    /// A new `RiDatabaseConfig` instance configured for PostgreSQL
     ///
     /// # Examples
     ///
     /// ```rust,ignore
-    /// use dmsc::database::DMSCDatabaseConfig;
+    /// use ri::database::RiDatabaseConfig;
     ///
     /// // Basic PostgreSQL configuration
-    /// let config = DMSCDatabaseConfig::postgres();
+    /// let config = RiDatabaseConfig::postgres();
     ///
     /// // With environment variable overrides
-    /// // (assumes DMSC_DB_* variables are set)
-    /// let config = DMSCDatabaseConfig::postgres();
+    /// // (assumes Ri_DB_* variables are set)
+    /// let config = RiDatabaseConfig::postgres();
     /// ```
     pub fn postgres() -> Self {
         Self {
             database_type: DatabaseType::Postgres,
-            host: env::var("DMSC_DB_HOST").unwrap_or_else(|_| "localhost".to_string()),
-            port: env::var("DMSC_DB_PORT")
+            host: env::var("Ri_DB_HOST").unwrap_or_else(|_| "localhost".to_string()),
+            port: env::var("Ri_DB_PORT")
                 .unwrap_or_else(|_| "5432".to_string())
                 .parse()
                 .unwrap_or(5432),
-            database: env::var("DMSC_DB_NAME").unwrap_or_else(|_| "dmsc".to_string()),
-            username: env::var("DMSC_DB_USER").unwrap_or_else(|_| "dmsc".to_string()),
-            password: env::var("DMSC_DB_PASSWORD").unwrap_or_else(|_| "".to_string()),
+            database: env::var("Ri_DB_NAME").unwrap_or_else(|_| "ri".to_string()),
+            username: env::var("Ri_DB_USER").unwrap_or_else(|_| "ri".to_string()),
+            password: env::var("Ri_DB_PASSWORD").unwrap_or_else(|_| "".to_string()),
             max_connections: 10,
             min_idle_connections: 2,
             connection_timeout_secs: 30,
@@ -664,11 +664,11 @@ impl DMSCDatabaseConfig {
     ///
     /// ## Defaults
     ///
-    /// - Host: `localhost` (or `DMSC_DB_HOST` env var)
-    /// - Port: `3306` (or `DMSC_DB_PORT` env var)
-    /// - Database: `dmsc` (or `DMSC_DB_NAME` env var)
-    /// - Username: `dmsc` (or `DMSC_DB_USER` env var)
-    /// - Password: empty (or `DMSC_DB_PASSWORD` env var)
+    /// - Host: `localhost` (or `Ri_DB_HOST` env var)
+    /// - Port: `3306` (or `Ri_DB_PORT` env var)
+    /// - Database: `ri` (or `Ri_DB_NAME` env var)
+    /// - Username: `ri` (or `Ri_DB_USER` env var)
+    /// - Password: empty (or `Ri_DB_PASSWORD` env var)
     /// - Max connections: 10
     /// - Min idle: 2
     /// - Connection timeout: 30 seconds
@@ -685,18 +685,18 @@ impl DMSCDatabaseConfig {
     ///
     /// # Returns
     ///
-    /// A new `DMSCDatabaseConfig` instance configured for MySQL
+    /// A new `RiDatabaseConfig` instance configured for MySQL
     ///
     /// # Examples
     ///
     /// ```rust,ignore
-    /// use dmsc::database::DMSCDatabaseConfig;
+    /// use ri::database::RiDatabaseConfig;
     ///
     /// // Basic MySQL configuration
-    /// let config = DMSCDatabaseConfig::mysql();
+    /// let config = RiDatabaseConfig::mysql();
     ///
     /// // Customized configuration
-    /// let config = DMSCDatabaseConfig::mysql()
+    /// let config = RiDatabaseConfig::mysql()
     ///     .host("db.example.com")
     ///     .database("myapp")
     ///     .user("app_user")
@@ -705,14 +705,14 @@ impl DMSCDatabaseConfig {
     pub fn mysql() -> Self {
         Self {
             database_type: DatabaseType::MySQL,
-            host: env::var("DMSC_DB_HOST").unwrap_or_else(|_| "localhost".to_string()),
-            port: env::var("DMSC_DB_PORT")
+            host: env::var("Ri_DB_HOST").unwrap_or_else(|_| "localhost".to_string()),
+            port: env::var("Ri_DB_PORT")
                 .unwrap_or_else(|_| "3306".to_string())
                 .parse()
                 .unwrap_or(3306),
-            database: env::var("DMSC_DB_NAME").unwrap_or_else(|_| "dmsc".to_string()),
-            username: env::var("DMSC_DB_USER").unwrap_or_else(|_| "dmsc".to_string()),
-            password: env::var("DMSC_DB_PASSWORD").unwrap_or_else(|_| "".to_string()),
+            database: env::var("Ri_DB_NAME").unwrap_or_else(|_| "ri".to_string()),
+            username: env::var("Ri_DB_USER").unwrap_or_else(|_| "ri".to_string()),
+            password: env::var("Ri_DB_PASSWORD").unwrap_or_else(|_| "".to_string()),
             max_connections: 10,
             min_idle_connections: 2,
             connection_timeout_secs: 30,
@@ -756,21 +756,21 @@ impl DMSCDatabaseConfig {
     ///
     /// # Returns
     ///
-    /// A new `DMSCDatabaseConfig` instance configured for SQLite
+    /// A new `RiDatabaseConfig` instance configured for SQLite
     ///
     /// # Examples
     ///
     /// ```rust,ignore
-    /// use dmsc::database::DMSCDatabaseConfig;
+    /// use ri::database::RiDatabaseConfig;
     ///
     /// // File-based database
-    /// let config = DMSCDatabaseConfig::sqlite("./data/myapp.db");
+    /// let config = RiDatabaseConfig::sqlite("./data/myapp.db");
     ///
     /// // In-memory database (for testing)
-    /// let config = DMSCDatabaseConfig::sqlite(":memory:");
+    /// let config = RiDatabaseConfig::sqlite(":memory:");
     ///
     /// // Absolute path
-    /// let config = DMSCDatabaseConfig::sqlite("/var/lib/dmsc/database.db");
+    /// let config = RiDatabaseConfig::sqlite("/var/lib/ri/database.db");
     /// ```
     pub fn sqlite(path: &str) -> Self {
         Self {
@@ -806,12 +806,12 @@ impl DMSCDatabaseConfig {
     /// # Examples
     ///
     /// ```rust,ignore
-    /// use dmsc::database::DMSCDatabaseConfig;
+    /// use ri::database::RiDatabaseConfig;
     ///
-    /// let config = DMSCDatabaseConfig::postgres()
+    /// let config = RiDatabaseConfig::postgres()
     ///     .host("db.example.com");
     ///
-    /// let config = DMSCDatabaseConfig::mysql()
+    /// let config = RiDatabaseConfig::mysql()
     ///     .host("192.168.1.100");
     /// ```
     pub fn host(mut self, host: &str) -> Self {
@@ -843,10 +843,10 @@ impl DMSCDatabaseConfig {
     /// # Examples
     ///
     /// ```rust,ignore
-    /// use dmsc::database::DMSCDatabaseConfig;
+    /// use ri::database::RiDatabaseConfig;
     ///
     /// // Non-standard PostgreSQL port
-    /// let config = DMSCDatabaseConfig::postgres()
+    /// let config = RiDatabaseConfig::postgres()
     ///     .port(15432);
     /// ```
     pub fn port(mut self, port: u16) -> Self {
@@ -871,9 +871,9 @@ impl DMSCDatabaseConfig {
     /// # Examples
     ///
     /// ```rust,ignore
-    /// use dmsc::database::DMSCDatabaseConfig;
+    /// use ri::database::RiDatabaseConfig;
     ///
-    /// let config = DMSCDatabaseConfig::postgres()
+    /// let config = RiDatabaseConfig::postgres()
     ///     .database("production_db");
     /// ```
     pub fn database(mut self, database: &str) -> Self {
@@ -902,7 +902,7 @@ impl DMSCDatabaseConfig {
     /// ```rust,ignore
     /// use std::env;
     ///
-    /// let config = DMSCDatabaseConfig::postgres()
+    /// let config = RiDatabaseConfig::postgres()
     ///     .user(&env::var("DB_USER").unwrap());
     /// ```
     pub fn user(mut self, user: &str) -> Self {
@@ -935,9 +935,9 @@ impl DMSCDatabaseConfig {
     ///
     /// ```rust,ignore
     /// use std::env;
-    /// use dmsc::database::DMSCDatabaseConfig;
+    /// use ri::database::RiDatabaseConfig;
     ///
-    /// let config = DMSCDatabaseConfig::postgres()
+    /// let config = RiDatabaseConfig::postgres()
     ///     .password(&env::var("DB_PASSWORD").unwrap());
     /// ```
     pub fn password(mut self, password: &str) -> Self {
@@ -1027,10 +1027,10 @@ impl DMSCDatabaseConfig {
     /// # Examples
     ///
     /// ```rust,ignore
-    /// use dmsc::database::DMSCDatabaseConfig;
+    /// use ri::database::RiDatabaseConfig;
     ///
     /// // 60 second timeout for distant databases
-    /// let config = DMSCDatabaseConfig::postgres()
+    /// let config = RiDatabaseConfig::postgres()
     ///     .connection_timeout_secs(60);
     /// ```
     pub fn connection_timeout_secs(mut self, secs: u64) -> Self {
@@ -1115,10 +1115,10 @@ impl DMSCDatabaseConfig {
     /// # Examples
     ///
     /// ```rust,ignore
-    /// use dmsc::database::{DMSCDatabaseConfig, SslMode};
+    /// use ri::database::{RiDatabaseConfig, SslMode};
     ///
     /// // Require SSL for production
-    /// let config = DMSCDatabaseConfig::postgres()
+    /// let config = RiDatabaseConfig::postgres()
     ///     .ssl_mode(SslMode::Require);
     /// ```
     pub fn ssl_mode(mut self, mode: SslMode) -> Self {
@@ -1159,19 +1159,19 @@ impl DMSCDatabaseConfig {
     /// Builds the final configuration.
     ///
     /// This method finalizes the configuration and returns the complete
-    /// `DMSCDatabaseConfig` instance. It is the terminal method in the
+    /// `RiDatabaseConfig` instance. It is the terminal method in the
     /// builder chain.
     ///
     /// # Returns
     ///
-    /// The complete configuration ready for use with `DMSCDatabaseManager`
+    /// The complete configuration ready for use with `RiDatabaseManager`
     ///
     /// # Examples
     ///
     /// ```rust,ignore
-    /// use dmsc::database::DMSCDatabaseConfig;
+    /// use ri::database::RiDatabaseConfig;
     ///
-    /// let config = DMSCDatabaseConfig::postgres()
+    /// let config = RiDatabaseConfig::postgres()
     ///     .host("localhost")
     ///     .database("myapp")
     ///     .user("app")
@@ -1179,7 +1179,7 @@ impl DMSCDatabaseConfig {
     ///     .max_connections(10)
     ///     .build();
     /// ```
-    pub fn build(self) -> DMSCDatabaseConfig {
+    pub fn build(self) -> RiDatabaseConfig {
         self
     }
 
@@ -1195,9 +1195,9 @@ impl DMSCDatabaseConfig {
     /// # Examples
     ///
     /// ```rust,ignore
-    /// use dmsc::database::DMSCDatabaseConfig;
+    /// use ri::database::RiDatabaseConfig;
     ///
-    /// let config = DMSCDatabaseConfig::postgres()
+    /// let config = RiDatabaseConfig::postgres()
     ///     .host("localhost")
     ///     .port(5432)
     ///     .database("myapp")
@@ -1238,7 +1238,7 @@ impl DMSCDatabaseConfig {
     }
 }
 
-impl Default for DMSCDatabaseConfig {
+impl Default for RiDatabaseConfig {
     fn default() -> Self {
         Self::postgres()
     }

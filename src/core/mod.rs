@@ -1,7 +1,7 @@
 //! Copyright © 2025-2026 Wenze Wei. All Rights Reserved.
 //! 
-//! This file is part of DMSC.
-//! The DMSC project belongs to the Dunimd Team.
+//! This file is part of Ri.
+//! The Ri project belongs to the Dunimd Team.
 //! 
 //! Licensed under the Apache License, Version 2.0 (the "License");
 //! You may not use this file except in compliance with the License.
@@ -17,15 +17,15 @@
 
 //! # Core Runtime Module
 //! 
-//! The core module provides the fundamental building blocks for DMSC applications,
+//! The core module provides the fundamental building blocks for Ri applications,
 //! including the application builder, service context, error handling, and module lifecycle management.
 //! 
 //! ## Key Components
 //! 
 //! - **error**: Error handling with custom error types and result aliases
 //! - **context**: Service context for accessing core functionalities
-//! - **module**: Module system for extending DMSC with custom functionality
-//! - **runtime**: Application runtime and builder for constructing DMSC applications
+//! - **module**: Module system for extending Ri with custom functionality
+//! - **runtime**: Application runtime and builder for constructing Ri applications
 //! - **lifecycle**: Lifecycle management for modules
 //! - **analytics**: Basic analytics and telemetry support
 //! 
@@ -35,7 +35,7 @@
 //! 
 //! 1. **Dependency Injection**: Components are accessed through the service context, 
 //!    allowing for easy mocking and testing
-//! 2. **Builder Pattern**: The `DMSCAppBuilder` provides a fluent API for configuring applications
+//! 2. **Builder Pattern**: The `RiAppBuilder` provides a fluent API for configuring applications
 //! 3. **Module System**: A flexible module system allows for easy extension
 //! 4. **Error Handling**: A unified error type simplifies error management across modules
 //! 5. **Async First**: Full support for asynchronous operations
@@ -43,17 +43,17 @@
 //! ## Usage Example
 //!
 //! ```rust
-//! use dmsc::prelude::*;
+//! use ri::prelude::*;
 //!
 //! #[tokio::main]
-//! async fn main() -> DMSCResult<()> {
-//!     let app = DMSCAppBuilder::new()
+//! async fn main() -> RiResult<()> {
+//!     let app = RiAppBuilder::new()
 //!         .with_config("config.yaml")?
 //!         .with_module(Box::new(MyModule::new()))
 //!         .build()?;
 //!
 //!     app.run(|ctx| async move {
-//!         ctx.logger().info("service", "DMSC service started")?;
+//!         ctx.logger().info("service", "Ri service started")?;
 //!         Ok(())
 //!     }).await
 //! }
@@ -65,13 +65,13 @@ pub mod error;
 pub mod lock;
 /// Service context for accessing core functionalities
 pub mod context;
-/// Module system for extending DMSC with custom functionality
+/// Module system for extending Ri with custom functionality
 pub mod module;
-/// Application runtime and builder for constructing DMSC applications
+/// Application runtime and builder for constructing Ri applications
 pub mod runtime;
-/// Application builder for constructing DMSC applications
+/// Application builder for constructing Ri applications
 pub mod app_builder;
-/// Application runtime for managing DMSC application lifecycle
+/// Application runtime for managing Ri application lifecycle
 pub mod app_runtime;
 /// Module types for distinguishing between sync and async modules
 pub mod module_types;
@@ -88,41 +88,41 @@ pub mod error_chain;
 /// Sharded lock implementation for improved concurrent performance
 pub mod concurrent;
 
-/// Main error type for DMSC operations
-pub use error::{DMSCError, DMSCResult};
+/// Main error type for Ri operations
+pub use error::{RiError, RiResult};
 /// Service context providing access to core functionalities
-pub use context::DMSCServiceContext;
-/// Module traits for extending DMSC functionality
-pub use module::DMSCModule;
-/// Application builder and runtime for constructing DMSC applications
-pub use runtime::{DMSCAppBuilder, DMSCAppRuntime};
+pub use context::RiServiceContext;
+/// Module traits for extending Ri functionality
+pub use module::RiModule;
+/// Application builder and runtime for constructing Ri applications
+pub use runtime::{RiAppBuilder, RiAppRuntime};
 /// Internal module traits
 pub use module::{ServiceModule, AsyncServiceModule};
 
 /// Lock utilities
 #[cfg(feature = "pyo3")]
-pub use lock::{DMSCLockError, DMSCLockResult, RwLockExtensions, MutexExtensions, from_poison_error};
+pub use lock::{RiLockError, RiLockResult, RwLockExtensions, MutexExtensions, from_poison_error};
 
 /// Python module bindings
 #[cfg(feature = "pyo3")]
-pub use module::{DMSCPythonModule, DMSCPythonModuleAdapter, DMSCPythonServiceModule, DMSCPythonAsyncServiceModule};
+pub use module::{RiPythonModule, RiPythonModuleAdapter, RiPythonServiceModule, RiPythonAsyncServiceModule};
 
 /// Error chain utilities
 #[cfg(feature = "pyo3")]
-pub use error_chain::{DMSCErrorChain, DMSCErrorChainIter, DMSCErrorContext, DMSCOptionErrorContext};
+pub use error_chain::{RiErrorChain, RiErrorChainIter, RiErrorContext, RiOptionErrorContext};
 
 /// Health check types
 #[cfg(feature = "pyo3")]
-pub use health::{DMSCHealthStatus, DMSCHealthCheckResult, DMSCHealthCheckConfig, DMSCHealthReport, DMSCHealthChecker};
+pub use health::{RiHealthStatus, RiHealthCheckResult, RiHealthCheckConfig, RiHealthReport, RiHealthChecker};
 
 /// Lifecycle management
 #[cfg(feature = "pyo3")]
-pub use lifecycle::DMSCLifecycleObserver;
+pub use lifecycle::RiLifecycleObserver;
 
 /// Analytics module
 #[cfg(feature = "pyo3")]
-pub use analytics::DMSCLogAnalyticsModule;
+pub use analytics::RiLogAnalyticsModule;
 
 /// Sharded lock types
 #[cfg(feature = "pyo3")]
-pub use concurrent::DMSCShardedLockStats;
+pub use concurrent::RiShardedLockStats;

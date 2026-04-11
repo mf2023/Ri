@@ -1,17 +1,17 @@
 <div align="center">
 
 <h1 style="display: flex; flex-direction: column; align-items: center; gap: 12px; margin-bottom: 8px;">
-  <span style="display: flex; align-items: center; gap: 12px;"><img src="assets/svg/dmsc.svg" width="48" height="48" alt="DMSC">Dunimd Middleware Service</span>
+  <span style="display: flex; align-items: center; gap: 12px;"><img src="assets/svg/ri.svg" width="48" height="48" alt="Ri">Ri</span>
   <span style="font-size: 0.6em; color: #666; font-weight: normal;">Security Policy</span>
 </h1>
 
 </div>
 
-The DMSC (Dunimd Middleware Service) project takes security seriously. This document outlines our security policy, including supported versions, how to report vulnerabilities, and our disclosure process.
+The Ri (Ri) project takes security seriously. This document outlines our security policy, including supported versions, how to report vulnerabilities, and our disclosure process.
 
 ## Supported Versions
 
-The following versions of DMSC are currently supported with security updates:
+The following versions of Ri are currently supported with security updates:
 
 | Version | Supported          | Status                |
 | ------- | ------------------ | --------------------- |
@@ -22,7 +22,7 @@ We provide security updates for the latest minor version in each major version s
 
 ## Reporting a Vulnerability
 
-If you discover a security vulnerability in DMSC, please report it to us as soon as possible. We appreciate your efforts to responsibly disclose your findings.
+If you discover a security vulnerability in Ri, please report it to us as soon as possible. We appreciate your efforts to responsibly disclose your findings.
 
 ### How to Report
 
@@ -33,14 +33,14 @@ Instead, please report security vulnerabilities via:
 📧 **Email**: dunimd@outlook.com
 
 For general questions and non-security issues, please use:
-- **Gitee Issues** (Primary): https://gitee.com/dunimd/dmsc/issues
-- **GitHub Issues** (Mirror): https://github.com/mf2023/DMSC/issues
+- **Gitee Issues** (Primary): https://gitee.com/dunimd/ri/issues
+- **GitHub Issues** (Mirror): https://github.com/mf2023/Ri/issues
 
 Please include the following information in your report:
 
 - **Description**: A clear and concise description of the vulnerability
 - **Impact**: What kind of vulnerability is it and what impact could it have
-- **Affected Versions**: Which versions of DMSC are affected
+- **Affected Versions**: Which versions of Ri are affected
 - **Steps to Reproduce**: Detailed steps to reproduce the vulnerability
 - **Proof of Concept**: If possible, include a proof-of-concept or exploit code
 - **Suggested Fix**: If you have suggestions for how to fix the vulnerability
@@ -71,7 +71,7 @@ Our target response times are:
 
 ### Cryptographic Modules
 
-DMSC includes several cryptographic implementations:
+Ri includes several cryptographic implementations:
 
 #### Post-Quantum Cryptography
 - **Kyber**: Key Encapsulation Mechanism (KEM) based on Module-LWE
@@ -126,11 +126,11 @@ These implementations use the [sm-crypto](https://crates.io/crates/sm-crypto) cr
 
 ## Security Best Practices
 
-When using DMSC in your applications:
+When using Ri in your applications:
 
 ### 1. Keep Dependencies Updated
 
-Regularly update DMSC and its dependencies to receive security patches:
+Regularly update Ri and its dependencies to receive security patches:
 
 ```bash
 cargo update
@@ -139,11 +139,11 @@ cargo audit  # Use cargo-audit to check for known vulnerabilities
 
 ### 2. Use Latest Stable Version
 
-Always use the latest stable version of DMSC to ensure you have the latest security fixes.
+Always use the latest stable version of Ri to ensure you have the latest security fixes.
 
 ### 3. Enable Security Features
 
-Build DMSC with security features enabled:
+Build Ri with security features enabled:
 
 ```bash
 cargo build --release --features "protocol,auth"
@@ -236,19 +236,19 @@ The following environment variables affect security:
 | Variable | Description | Security Impact |
 |----------|-------------|-----------------|
 | `RUST_LOG` | Logging level | May expose sensitive data if set to `trace` |
-| `DMSC_ENV` | Environment (dev/staging/prod) | Affects security defaults |
+| `Ri_ENV` | Environment (dev/staging/prod) | Affects security defaults |
 
 ### Configuration Options
 
 Review security-related configuration options in:
 
-- `DMSCAuthConfig` - Authentication settings
-- `DMSCGatewayConfig` - Gateway security settings
-- `DMSCWSClientConfig` - WebSocket security settings
+- `RiAuthConfig` - Authentication settings
+- `RiGatewayConfig` - Gateway security settings
+- `RiWSClientConfig` - WebSocket security settings
 
 ## Third-Party Security Audits
 
-We welcome third-party security audits. If you are conducting a security audit of DMSC:
+We welcome third-party security audits. If you are conducting a security audit of Ri:
 
 1. Please follow responsible disclosure practices
 2. Contact us in advance if you plan to publish findings
@@ -270,9 +270,9 @@ For security-related inquiries:
 
 For general questions and non-security issues, please use:
 
-- **Gitee Issues** (Primary): https://gitee.com/dunimd/dmsc/issues
-- **GitHub Issues** (Mirror): https://github.com/mf2023/DMSC/issues
-- **GitHub Discussions**: https://github.com/mf2023/DMSC/discussions
+- **Gitee Issues** (Primary): https://gitee.com/dunimd/ri/issues
+- **GitHub Issues** (Mirror): https://github.com/mf2023/Ri/issues
+- **GitHub Discussions**: https://github.com/mf2023/Ri/discussions
 
 ## Acknowledgments
 

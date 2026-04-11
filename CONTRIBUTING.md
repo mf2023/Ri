@@ -1,15 +1,15 @@
 <div align="center">
 
 <h1 style="display: flex; flex-direction: column; align-items: center; gap: 12px; margin-bottom: 8px;">
-  <span style="display: flex; align-items: center; gap: 12px;"><img src="assets/svg/dmsc.svg" width="48" height="48" alt="DMSC">Dunimd Middleware Service</span>
+  <span style="display: flex; align-items: center; gap: 12px;"><img src="assets/svg/ri.svg" width="48" height="48" alt="Ri">Ri</span>
   <span style="font-size: 0.6em; color: #666; font-weight: normal;">Contributing Guide</span>
 </h1>
 
 </div>
 
-First off, thank you for considering contributing to DMSC (Dunimd Middleware Service)! It's people like you that make DMSC such a great tool.
+First off, thank you for considering contributing to Ri (Ri)! It's people like you that make Ri such a great tool.
 
-This document provides guidelines and instructions for contributing to the DMSC project. By participating, you are expected to uphold this code and help us maintain a welcoming and productive community.
+This document provides guidelines and instructions for contributing to the Ri project. By participating, you are expected to uphold this code and help us maintain a welcoming and productive community.
 
 ## Table of Contents
 
@@ -44,17 +44,17 @@ This project and everyone participating in it is governed by our [Code of Conduc
 
 ### Reporting Bugs
 
-Before creating bug reports, please check the [existing issues](https://github.com/mf2023/DMSC/issues) to see if the problem has already been reported. When you are creating a bug report, please include as many details as possible:
+Before creating bug reports, please check the [existing issues](https://github.com/mf2023/Ri/issues) to see if the problem has already been reported. When you are creating a bug report, please include as many details as possible:
 
 #### Before Submitting a Bug Report
 
-- **Check the [documentation](https://github.com/mf2023/DMSC/tree/master/doc)** for information that might help
-- **Check if the bug has already been reported** by searching on GitHub under [Issues](https://github.com/mf2023/DMSC/issues)
-- **Determine which repository the problem should be reported in** (DMSC has multiple related repositories)
+- **Check the [documentation](https://github.com/mf2023/Ri/tree/master/doc)** for information that might help
+- **Check if the bug has already been reported** by searching on GitHub under [Issues](https://github.com/mf2023/Ri/issues)
+- **Determine which repository the problem should be reported in** (Ri has multiple related repositories)
 
 #### How to Submit a Good Bug Report
 
-Bugs are tracked as [GitHub issues](https://github.com/mf2023/DMSC/issues). Create an issue and provide the following information:
+Bugs are tracked as [GitHub issues](https://github.com/mf2023/Ri/issues). Create an issue and provide the following information:
 
 - **Use a clear and descriptive title** for the issue to identify the problem
 - **Describe the exact steps to reproduce the problem** in as many details as possible
@@ -70,7 +70,7 @@ Bugs are tracked as [GitHub issues](https://github.com/mf2023/DMSC/issues). Crea
 WebSocket client fails to connect when using TLS on Windows
 
 **Steps to Reproduce:**
-1. Create a DMSCWSClient instance
+1. Create a RiWSClient instance
 2. Call connect() with wss:// URL
 3. Observe the error
 
@@ -82,18 +82,18 @@ Error: "TLS handshake failed: certificate validation error"
 
 **Environment:**
 - OS: Windows 11
-- DMSC Version: 0.1.8
+- Ri Version: 0.1.8
 - Rust Version: 1.75.0
 ```
 
 ### Suggesting Enhancements
 
-Enhancement suggestions are tracked as [GitHub issues](https://github.com/mf2023/DMSC/issues). When creating an enhancement suggestion, please include:
+Enhancement suggestions are tracked as [GitHub issues](https://github.com/mf2023/Ri/issues). When creating an enhancement suggestion, please include:
 
 - **Use a clear and descriptive title** for the issue to identify the suggestion
 - **Provide a step-by-step description of the suggested enhancement** in as many details as possible
 - **Provide specific examples to demonstrate the enhancement**
-- **Explain why this enhancement would be useful** to most DMSC users
+- **Explain why this enhancement would be useful** to most Ri users
 - **List some other middleware frameworks or libraries where this enhancement exists**
 
 ### Pull Requests
@@ -131,8 +131,8 @@ For building with Kafka support on Windows:
 #### Clone the Repository
 
 ```bash
-git clone https://github.com/mf2023/DMSC.git
-cd DMSC
+git clone https://github.com/mf2023/Ri.git
+cd Ri
 ```
 
 #### Install Python Dependencies (for Python bindings)
@@ -265,7 +265,7 @@ Since commit messages are minimal, detailed change information is maintained in:
 ## Project Structure
 
 ```
-DMSC/
+Ri/
 ├── src/                    # Rust source code
 │   ├── auth/              # Authentication and authorization
 │   ├── cache/             # Caching module
@@ -280,7 +280,7 @@ DMSC/
 │   ├── service_mesh/      # Service mesh functionality
 │   └── ws/                # WebSocket client and server
 ├── python/                # Python bindings
-│   └── dmsc/             # Python package
+│   └── ri/             # Python package
 ├── doc/                   # Documentation
 │   ├── en/               # English documentation
 │   └── zh/               # Chinese documentation
@@ -316,14 +316,14 @@ Each module should:
 
 ### Communication Channels
 
-- **Gitee Issues** (Primary): Bug reports, feature requests, and general discussion - https://gitee.com/dunimd/dmsc/issues
-- **GitHub Issues** (Mirror): Alternative access - https://github.com/mf2023/DMSC/issues
+- **Gitee Issues** (Primary): Bug reports, feature requests, and general discussion - https://gitee.com/dunimd/ri/issues
+- **GitHub Issues** (Mirror): Alternative access - https://github.com/mf2023/Ri/issues
 - **GitHub Discussions**: For questions and community interaction
 
 ### Repositories
 
-- **Gitee** (Primary): https://gitee.com/dunimd/dmsc.git
-- **GitHub** (Mirror): https://github.com/mf2023/DMSC.git
+- **Gitee** (Primary): https://gitee.com/dunimd/ri.git
+- **GitHub** (Mirror): https://github.com/mf2023/Ri.git
 
 ### Recognition
 
@@ -331,8 +331,8 @@ Contributors will be recognized in our [CHANGELOG.md](CHANGELOG.md) and release 
 
 ## License
 
-By contributing to DMSC, you agree that your contributions will be licensed under the [Apache License 2.0](LICENSE).
+By contributing to Ri, you agree that your contributions will be licensed under the [Apache License 2.0](LICENSE).
 
 ---
 
-Thank you for contributing to DMSC! 🎉
+Thank you for contributing to Ri! 🎉

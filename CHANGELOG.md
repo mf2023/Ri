@@ -1,7 +1,7 @@
 <div align="center">
 
 <h1 style="display: flex; flex-direction: column; align-items: center; gap: 12px; margin-bottom: 8px;">
-  <span style="display: flex; align-items: center; gap: 12px;"><img src="assets/svg/dmsc.svg" width="48" height="48" alt="DMSC">Dunimd Middleware Service</span>
+  <span style="display: flex; align-items: center; gap: 12px;"><img src="assets/svg/dmsc.svg" width="48" height="48" alt="Ri">Ri</span>
   <span style="font-size: 0.6em; color: #666; font-weight: normal;">Changelog</span>
 </h1>
 
@@ -44,23 +44,23 @@
 ### ✨ Added
 
 #### Core Module
-- Added `with_cache_module()` method to DMSCAppBuilder for cache module configuration
-- Added `with_auth_module()` method to DMSCAppBuilder for auth module configuration
-- Added `with_queue_module()` method to DMSCAppBuilder for queue module configuration
-- Added `with_device_module()` method to DMSCAppBuilder for device module configuration
-- Changed `with_logging()` and `with_observability()` return types from `DMSCResult<Self>` to `Self`
+- Added `with_cache_module()` method to RiAppBuilder for cache module configuration
+- Added `with_auth_module()` method to RiAppBuilder for auth module configuration
+- Added `with_queue_module()` method to RiAppBuilder for queue module configuration
+- Added `with_device_module()` method to RiAppBuilder for device module configuration
+- Changed `with_logging()` and `with_observability()` return types from `RiResult<Self>` to `Self`
 
 #### Python Bindings
-- Added DMSCAppBuilder to Python bindings (previously Rust-only)
-- Added DMSCHealthCheckType enum export
-- Added DMSCHealthSummary struct export
-- Added DMSCTrafficManager export
+- Added RiAppBuilder to Python bindings (previously Rust-only)
+- Added RiHealthCheckType enum export
+- Added RiHealthSummary struct export
+- Added RiTrafficManager export
 - Added Python ORM Repository support (py_repository.rs)
 - Added comprehensive Python import tests (tests/Python/dmsc_imports.py)
 - Added comprehensive Python example (examples/Python/comprehensive_example.py)
 
 #### Cache Module
-- Added `with_config()` method to DMSCCacheModule for backend-based configuration
+- Added `with_config()` method to RiCacheModule for backend-based configuration
 
 #### Project Configuration
 - Added `.cargo/config.toml` for Cargo configuration
@@ -83,7 +83,7 @@
 
 #### Rust Source
 - Improved error handling in auth module (replaced expect() with proper error returns)
-- Improved PyErr to DMSCError conversion
+- Improved PyErr to RiError conversion
 - Updated post-quantum cryptography implementations (dilithium, falcon, guomi, kyber)
 - Improved Kafka backend and queue manager
 
@@ -98,10 +98,10 @@
 - Fixed cache module with_config() backend creation
 - Fixed README.md and README.zh.md code examples
 - Fixed documentation code examples (missing semicolons, incorrect package names)
-- Fixed DMSCAppBuilder method return types in documentation (with_logging, with_observability)
+- Fixed RiAppBuilder method return types in documentation (with_logging, with_observability)
 - Fixed OAuth API documentation to match actual implementation
-- Fixed DMSCCacheManager method signatures in Chinese documentation
-- Fixed DMSCAppRuntime documentation (removed non-existent methods)
+- Fixed RiCacheManager method signatures in Chinese documentation
+- Fixed RiAppRuntime documentation (removed non-existent methods)
 - Ensured Chinese and English documentation consistency
 
 ---
@@ -113,23 +113,23 @@
 ### ✨ 新增功能
 
 #### 核心模块
-- 新增 `with_cache_module()` 方法到 DMSCAppBuilder 用于缓存模块配置
-- 新增 `with_auth_module()` 方法到 DMSCAppBuilder 用于认证模块配置
-- 新增 `with_queue_module()` 方法到 DMSCAppBuilder 用于队列模块配置
-- 新增 `with_device_module()` 方法到 DMSCAppBuilder 用于设备模块配置
-- 修改 `with_logging()` 和 `with_observability()` 返回类型从 `DMSCResult<Self>` 改为 `Self`
+- 新增 `with_cache_module()` 方法到 RiAppBuilder 用于缓存模块配置
+- 新增 `with_auth_module()` 方法到 RiAppBuilder 用于认证模块配置
+- 新增 `with_queue_module()` 方法到 RiAppBuilder 用于队列模块配置
+- 新增 `with_device_module()` 方法到 RiAppBuilder 用于设备模块配置
+- 修改 `with_logging()` 和 `with_observability()` 返回类型从 `RiResult<Self>` 改为 `Self`
 
 #### Python 绑定
-- 新增 DMSCAppBuilder 到 Python 绑定（之前仅 Rust 可用）
-- 新增 DMSCHealthCheckType 枚举导出
-- 新增 DMSCHealthSummary 结构体导出
-- 新增 DMSCTrafficManager 导出
+- 新增 RiAppBuilder 到 Python 绑定（之前仅 Rust 可用）
+- 新增 RiHealthCheckType 枚举导出
+- 新增 RiHealthSummary 结构体导出
+- 新增 RiTrafficManager 导出
 - 新增 Python ORM Repository 支持 (py_repository.rs)
 - 新增 Python 导入测试 (tests/Python/dmsc_imports.py)
 - 新增综合 Python 示例 (examples/Python/comprehensive_example.py)
 
 #### 缓存模块
-- 新增 `with_config()` 方法到 DMSCCacheModule 用于基于配置的后端初始化
+- 新增 `with_config()` 方法到 RiCacheModule 用于基于配置的后端初始化
 
 #### 项目配置
 - 新增 `.cargo/config.toml` Cargo 配置文件
@@ -152,7 +152,7 @@
 
 #### Rust 源码
 - 改进认证模块错误处理（用 proper error returns 替代 expect()）
-- 改进 PyErr 到 DMSCError 的转换
+- 改进 PyErr 到 RiError 的转换
 - 更新后量子加密实现（dilithium、falcon、guomi、kyber）
 - 改进 Kafka 后端和队列管理器
 
@@ -167,10 +167,10 @@
 - 修复缓存模块 with_config() 后端创建
 - 修复 README.md 和 README.zh.md 代码示例
 - 修复文档代码示例（缺失分号、错误的包名）
-- 修复 DMSCAppBuilder 方法返回类型文档（with_logging、with_observability）
+- 修复 RiAppBuilder 方法返回类型文档（with_logging、with_observability）
 - 修复 OAuth API 文档以匹配实际实现
-- 修复中文文档中 DMSCCacheManager 方法签名
-- 修复 DMSCAppRuntime 文档（删除不存在的方法）
+- 修复中文文档中 RiCacheManager 方法签名
+- 修复 RiAppRuntime 文档（删除不存在的方法）
 - 确保中英文文档一致性
 
 ---
@@ -183,8 +183,8 @@
 
 #### WebSocket Client Support
 - Added WebSocket client implementation (src/ws/client.rs)
-- Added DMSCFrameParser for protocol frame parsing
-- Added DMSCFrameBuilder for protocol frame construction
+- Added RiFrameParser for protocol frame parsing
+- Added RiFrameBuilder for protocol frame construction
 
 #### Python Test Suite
 - Added comprehensive Python test suite (tests/Python/)
@@ -193,58 +193,58 @@
 
 #### Python Examples
 - Added Python usage examples (examples/Python/)
-- Added 10 example files demonstrating various DMSC features
+- Added 10 example files demonstrating various Ri features
 - Added examples for authentication, caching, device management, and more
 
 #### Health Check Subsystem
-- Added DMSCHealthStatus enum for health state representation
-- Added DMSCHealthCheckResult struct for individual check results
-- Added DMSCHealthCheckConfig struct for check configuration
-- Added DMSCHealthReport struct for comprehensive health reports
-- Added DMSCHealthChecker trait for custom health check implementations
+- Added RiHealthStatus enum for health state representation
+- Added RiHealthCheckResult struct for individual check results
+- Added RiHealthCheckConfig struct for check configuration
+- Added RiHealthReport struct for comprehensive health reports
+- Added RiHealthChecker trait for custom health check implementations
 
 #### Lifecycle Management
-- Added DMSCLifecycleObserver for module lifecycle monitoring
-- Added DMSCLogAnalyticsModule for log analytics
+- Added RiLifecycleObserver for module lifecycle monitoring
+- Added RiLogAnalyticsModule for log analytics
 
 #### Error Chain Support
-- Added DMSCErrorChain for comprehensive error chain traversal
-- Added DMSCErrorChainIter for iterator-based error traversal
-- Added DMSCErrorContext for contextual error information
-- Added DMSCOptionErrorContext for optional error context
+- Added RiErrorChain for comprehensive error chain traversal
+- Added RiErrorChainIter for iterator-based error traversal
+- Added RiErrorContext for contextual error information
+- Added RiOptionErrorContext for optional error context
 
 #### Distributed Lock
-- Added DMSCLockError for lock operation errors
+- Added RiLockError for lock operation errors
 
 #### Python Module Integration
-- Added DMSCPythonModule for Python module integration
-- Added DMSCPythonModuleAdapter for module adaptation
-- Added DMSCPythonServiceModule for service module support
-- Added DMSCPythonAsyncServiceModule for async service modules
+- Added RiPythonModule for Python module integration
+- Added RiPythonModuleAdapter for module adaptation
+- Added RiPythonServiceModule for service module support
+- Added RiPythonAsyncServiceModule for async service modules
 
 #### Auth Module Enhancements
-- Added DMSCJWTClaims for comprehensive JWT claims
-- Added DMSCJWTValidationOptions for JWT validation configuration
-- Added DMSCOAuthProvider enum for OAuth provider selection
-- Added DMSCJWTRevocationList for token revocation
-- Added DMSCRevokedTokenInfo for revoked token metadata
+- Added RiJWTClaims for comprehensive JWT claims
+- Added RiJWTValidationOptions for JWT validation configuration
+- Added RiOAuthProvider enum for OAuth provider selection
+- Added RiJWTRevocationList for token revocation
+- Added RiRevokedTokenInfo for revoked token metadata
 
 #### Device Module Enhancements
-- Added DMSCDeviceSchedulingConfig for scheduling configuration
-- Added DMSCResourceScheduler for resource scheduling
-- Added DMSCDeviceScheduler for device-level scheduling
-- Added DMSCSchedulingPolicy for scheduling strategy
-- Added DMSCAllocationRecord for allocation tracking
-- Added DMSCAllocationRequest for allocation requests
-- Added DMSCAllocationStatistics for allocation metrics
-- Added DMSCSchedulingRecommendation for scheduling suggestions
-- Added DMSCSchedulingRecommendationType for recommendation types
-- Added DMSCDeviceTypeStatistics for device type metrics
+- Added RiDeviceSchedulingConfig for scheduling configuration
+- Added RiResourceScheduler for resource scheduling
+- Added RiDeviceScheduler for device-level scheduling
+- Added RiSchedulingPolicy for scheduling strategy
+- Added RiAllocationRecord for allocation tracking
+- Added RiAllocationRequest for allocation requests
+- Added RiAllocationStatistics for allocation metrics
+- Added RiSchedulingRecommendation for scheduling suggestions
+- Added RiSchedulingRecommendationType for recommendation types
+- Added RiDeviceTypeStatistics for device type metrics
 
 #### Service Mesh Enhancements
-- Added DMSCServiceMeshStats for service mesh statistics
-- Added DMSCTrafficManager for traffic management
-- Added DMSCHealthChecker for health checking
+- Added RiServiceMeshStats for service mesh statistics
+- Added RiTrafficManager for traffic management
+- Added RiHealthChecker for health checking
 
 #### Database ORM Enhancements
 - Added ColumnDefinition for column schema
@@ -261,11 +261,11 @@
 - Added JoinType for join types
 
 #### Gateway Enhancements
-- Added DMSCBackendServer for backend server representation
+- Added RiBackendServer for backend server representation
 - Added LoadBalancerServerStats for load balancer statistics
 
 #### Observability
-- Added DMSCObservabilityData for unified observability data
+- Added RiObservabilityData for unified observability data
 
 ### 🔧 Changed
 
@@ -274,9 +274,9 @@
 - Improved protocol safety and stability
 
 #### Auth Module
-- Renamed JWTClaims to DMSCJWTClaims following DMSC naming convention
-- Renamed JWTRevocationList to DMSCJWTRevocationList
-- Added DMSC prefix to OAuth provider types
+- Renamed JWTClaims to RiJWTClaims following Ri naming convention
+- Renamed JWTRevocationList to RiJWTRevocationList
+- Added Ri prefix to OAuth provider types
 
 #### Device Module
 - Enhanced device scheduling capabilities
@@ -289,8 +289,8 @@
 ### 🗑️ Removed
 
 #### Python API
-- Removed DMSCAppBuilder from Python bindings (Rust-only)
-- Removed DMSCSecurityManager from Python bindings (simplified)
+- Removed RiAppBuilder from Python bindings (Rust-only)
+- Removed RiSecurityManager from Python bindings (simplified)
 
 #### Deprecated Tests
 - Removed tests/core/core_error_chain.rs
@@ -312,8 +312,8 @@
 
 #### WebSocket客户端支持
 - 新增WebSocket客户端实现（src/ws/client.rs）
-- 新增DMSCFrameParser用于协议帧解析
-- 新增DMSCFrameBuilder用于协议帧构建
+- 新增RiFrameParser用于协议帧解析
+- 新增RiFrameBuilder用于协议帧构建
 
 #### Python测试套件
 - 新增Python测试套件（tests/Python/）
@@ -322,58 +322,58 @@
 
 #### Python示例
 - 新增Python使用示例（examples/Python/）
-- 新增10个示例文件，展示各种DMSC功能
+- 新增10个示例文件，展示各种Ri功能
 - 新增认证、缓存、设备管理等功能示例
 
 #### 健康检查子系统
-- 新增DMSCHealthStatus枚举用于健康状态表示
-- 新增DMSCHealthCheckResult结构体用于单个检查结果
-- 新增DMSCHealthCheckConfig结构体用于检查配置
-- 新增DMSCHealthReport结构体用于综合健康报告
-- 新增DMSCHealthChecker特征用于自定义健康检查实现
+- 新增RiHealthStatus枚举用于健康状态表示
+- 新增RiHealthCheckResult结构体用于单个检查结果
+- 新增RiHealthCheckConfig结构体用于检查配置
+- 新增RiHealthReport结构体用于综合健康报告
+- 新增RiHealthChecker特征用于自定义健康检查实现
 
 #### 生命周期管理
-- 新增DMSCLifecycleObserver用于模块生命周期监控
-- 新增DMSCLogAnalyticsModule用于日志分析
+- 新增RiLifecycleObserver用于模块生命周期监控
+- 新增RiLogAnalyticsModule用于日志分析
 
 #### 错误链支持
-- 新增DMSCErrorChain用于综合错误链遍历
-- 新增DMSCErrorChainIter用于迭代器式错误遍历
-- 新增DMSCErrorContext用于上下文错误信息
-- 新增DMSCOptionErrorContext用于可选错误上下文
+- 新增RiErrorChain用于综合错误链遍历
+- 新增RiErrorChainIter用于迭代器式错误遍历
+- 新增RiErrorContext用于上下文错误信息
+- 新增RiOptionErrorContext用于可选错误上下文
 
 #### 分布式锁
-- 新增DMSCLockError用于锁操作错误
+- 新增RiLockError用于锁操作错误
 
 #### Python模块集成
-- 新增DMSCPythonModule用于Python模块集成
-- 新增DMSCPythonModuleAdapter用于模块适配
-- 新增DMSCPythonServiceModule用于服务模块支持
-- 新增DMSCPythonAsyncServiceModule用于异步服务模块
+- 新增RiPythonModule用于Python模块集成
+- 新增RiPythonModuleAdapter用于模块适配
+- 新增RiPythonServiceModule用于服务模块支持
+- 新增RiPythonAsyncServiceModule用于异步服务模块
 
 #### 认证模块增强
-- 新增DMSCJWTClaims用于综合JWT声明
-- 新增DMSCJWTValidationOptions用于JWT验证配置
-- 新增DMSCOAuthProvider枚举用于OAuth提供商选择
-- 新增DMSCJWTRevocationList用于令牌撤销
-- 新增DMSCRevokedTokenInfo用于撤销令牌元数据
+- 新增RiJWTClaims用于综合JWT声明
+- 新增RiJWTValidationOptions用于JWT验证配置
+- 新增RiOAuthProvider枚举用于OAuth提供商选择
+- 新增RiJWTRevocationList用于令牌撤销
+- 新增RiRevokedTokenInfo用于撤销令牌元数据
 
 #### 设备模块增强
-- 新增DMSCDeviceSchedulingConfig用于调度配置
-- 新增DMSCResourceScheduler用于资源调度
-- 新增DMSCDeviceScheduler用于设备级调度
-- 新增DMSCSchedulingPolicy用于调度策略
-- 新增DMSCAllocationRecord用于分配追踪
-- 新增DMSCAllocationRequest用于分配请求
-- 新增DMSCAllocationStatistics用于分配指标
-- 新增DMSCSchedulingRecommendation用于调度建议
-- 新增DMSCSchedulingRecommendationType用于建议类型
-- 新增DMSCDeviceTypeStatistics用于设备类型指标
+- 新增RiDeviceSchedulingConfig用于调度配置
+- 新增RiResourceScheduler用于资源调度
+- 新增RiDeviceScheduler用于设备级调度
+- 新增RiSchedulingPolicy用于调度策略
+- 新增RiAllocationRecord用于分配追踪
+- 新增RiAllocationRequest用于分配请求
+- 新增RiAllocationStatistics用于分配指标
+- 新增RiSchedulingRecommendation用于调度建议
+- 新增RiSchedulingRecommendationType用于建议类型
+- 新增RiDeviceTypeStatistics用于设备类型指标
 
 #### 服务网格增强
-- 新增DMSCServiceMeshStats用于服务网格统计
-- 新增DMSCTrafficManager用于流量管理
-- 新增DMSCHealthChecker用于健康检查
+- 新增RiServiceMeshStats用于服务网格统计
+- 新增RiTrafficManager用于流量管理
+- 新增RiHealthChecker用于健康检查
 
 #### 数据库ORM增强
 - 新增ColumnDefinition用于列模式定义
@@ -390,11 +390,11 @@
 - 新增JoinType用于连接类型
 
 #### 网关增强
-- 新增DMSCBackendServer用于后端服务器表示
+- 新增RiBackendServer用于后端服务器表示
 - 新增LoadBalancerServerStats用于负载均衡器统计
 
 #### 可观测性
-- 新增DMSCObservabilityData用于统一可观测性数据
+- 新增RiObservabilityData用于统一可观测性数据
 
 ### 🔧 改进优化
 
@@ -403,9 +403,9 @@
 - 提升协议安全性和稳定性
 
 #### 认证模块
-- 将JWTClaims重命名为DMSCJWTClaims，遵循DMSC命名规范
-- 将JWTRevocationList重命名为DMSCJWTRevocationList
-- OAuth提供商类型添加DMSC前缀
+- 将JWTClaims重命名为RiJWTClaims，遵循Ri命名规范
+- 将JWTRevocationList重命名为RiJWTRevocationList
+- OAuth提供商类型添加Ri前缀
 
 #### 设备模块
 - 增强设备调度能力
@@ -418,8 +418,8 @@
 ### 🗑️ 移除内容
 
 #### Python API
-- 从Python绑定中移除DMSCAppBuilder（仅Rust可用）
-- 从Python绑定中移除DMSCSecurityManager（已简化）
+- 从Python绑定中移除RiAppBuilder（仅Rust可用）
+- 从Python绑定中移除RiSecurityManager（已简化）
 
 #### 废弃测试
 - 移除tests/core/core_error_chain.rs
@@ -448,17 +448,17 @@
 - Added PluginRegistry for plugin lifecycle management
 
 #### Cache Module Enhancements
-- Added bulk operations to DMSCCache trait (get_multi, set_multi, delete_multi, exists_multi)
+- Added bulk operations to RiCache trait (get_multi, set_multi, delete_multi, exists_multi)
 - Added keys() method for cache key enumeration
 - Added delete_by_pattern() for pattern-based cache invalidation
-- Added last_accessed field to DMSCCachedValue for LRU support
+- Added last_accessed field to RiCachedValue for LRU support
 - Added touch() and is_stale() methods for cache entry tracking
-- Added async new() method to DMSCCacheModule with Redis auto-fallback
+- Added async new() method to RiCacheModule with Redis auto-fallback
 
 #### Logging Module Enhancements
-- Added DMSCLogLevel::from_env() for environment-based log level configuration
-- Added DMSCLogLevel::from_str() for string parsing
-- Added DMSCLogConfig::from_env() for environment-based logging configuration
+- Added RiLogLevel::from_env() for environment-based log level configuration
+- Added RiLogLevel::from_str() for string parsing
+- Added RiLogConfig::from_env() for environment-based logging configuration
 
 ### 🔧 Changed
 
@@ -489,17 +489,17 @@
 - 新增PluginRegistry，支持插件生命周期管理
 
 #### 缓存模块增强
-- 新增批量操作到DMSCCache特征（get_multi、set_multi、delete_multi、exists_multi）
+- 新增批量操作到RiCache特征（get_multi、set_multi、delete_multi、exists_multi）
 - 新增keys()方法用于缓存键枚举
 - 新增delete_by_pattern()用于模式匹配缓存失效
-- 新增last_accessed字段到DMSCCachedValue，支持LRU
+- 新增last_accessed字段到RiCachedValue，支持LRU
 - 新增touch()和is_stale()方法用于缓存条目追踪
-- 新增DMSCCacheModule的异步new()方法，支持Redis自动降级
+- 新增RiCacheModule的异步new()方法，支持Redis自动降级
 
 #### 日志模块增强
-- 新增DMSCLogLevel::from_env()，支持基于环境的日志级别配置
-- 新增DMSCLogLevel::from_str()，支持字符串解析
-- 新增DMSCLogConfig::from_env()，支持基于环境的日志配置
+- 新增RiLogLevel::from_env()，支持基于环境的日志级别配置
+- 新增RiLogLevel::from_str()，支持字符串解析
+- 新增RiLogConfig::from_env()，支持基于环境的日志配置
 
 ### 🔧 改进优化
 
@@ -522,30 +522,30 @@
 ### ✨ Added
 
 #### Python Module Support
-- Added Python module adapter support, including DMSCPythonModule, DMSCPythonModuleAdapter, DMSCPythonServiceModule, DMSCPythonAsyncServiceModule
+- Added Python module adapter support, including RiPythonModule, RiPythonModuleAdapter, RiPythonServiceModule, RiPythonAsyncServiceModule
 - Created modular Python submodule structure (dmsc.log, dmsc.config, dmsc.device, dmsc.cache, dmsc.fs, dmsc.hooks, dmsc.observability, dmsc.queue, dmsc.gateway, dmsc.service_mesh, dmsc.auth)
 - Each submodule contains corresponding type bindings, providing clearer API organization
 
 #### Device Module Enhancements
-- Added DMSCDiscoveryResult type for structured device discovery result representation
-- Added DMSCResourceRequest type for standardized resource request definition
-- Added DMSCRequestSlaClass type for SLA-level resource request classification
-- Added DMSCResourceWeights type for flexible resource weight configuration
-- Added DMSCAffinityRules type for affinity rule definition and application
-- Added DMSCResourceAllocation type for resource allocation result representation
-- Added DMSCDeviceStatus enum for standardized device status definition
-- Added DMSCDeviceCapabilities struct for detailed device capability description
-- Added DMSCDeviceHealthMetrics struct for device health metrics collection and representation
+- Added RiDiscoveryResult type for structured device discovery result representation
+- Added RiResourceRequest type for standardized resource request definition
+- Added RiRequestSlaClass type for SLA-level resource request classification
+- Added RiResourceWeights type for flexible resource weight configuration
+- Added RiAffinityRules type for affinity rule definition and application
+- Added RiResourceAllocation type for resource allocation result representation
+- Added RiDeviceStatus enum for standardized device status definition
+- Added RiDeviceCapabilities struct for detailed device capability description
+- Added RiDeviceHealthMetrics struct for device health metrics collection and representation
 
 #### Observability Module Enhancements
-- Added DMSCObservabilityData type for unified observability data structure representation
-- Added DMSCMetricsRegistry type for metrics registry creation and management
-- Added DMSCTracer type for standardized distributed tracing implementation
+- Added RiObservabilityData type for unified observability data structure representation
+- Added RiMetricsRegistry type for metrics registry creation and management
+- Added RiTracer type for standardized distributed tracing implementation
 
 #### Service Mesh Module Enhancements
-- Added DMSCServiceInstance type for standardized service instance representation
-- Added DMSCHealthChecker type for unified health check implementation
-- Added DMSCTrafficManager type for flexible traffic management configuration
+- Added RiServiceInstance type for standardized service instance representation
+- Added RiHealthChecker type for unified health check implementation
+- Added RiTrafficManager type for flexible traffic management configuration
 
 ### 🔧 Changed
 
@@ -586,30 +586,30 @@
 ### ✨ 新增功能
 
 #### Python模块化支持
-- 新增Python模块适配器支持，包括DMSCPythonModule、DMSCPythonModuleAdapter、DMSCPythonServiceModule、DMSCPythonAsyncServiceModule
+- 新增Python模块适配器支持，包括RiPythonModule、RiPythonModuleAdapter、RiPythonServiceModule、RiPythonAsyncServiceModule
 - 创建模块化的Python子模块结构（dmsc.log、dmsc.config、dmsc.device、dmsc.cache、dmsc.fs、dmsc.hooks、dmsc.observability、dmsc.queue、dmsc.gateway、dmsc.service_mesh、dmsc.auth）
 - 每个子模块包含对应的类型绑定，提供更清晰的API组织结构
 
 #### 设备模块增强
-- 新增DMSCDiscoveryResult类型，支持设备发现结果的结构化表示
-- 新增DMSCResourceRequest类型，支持资源请求的标准化定义
-- 新增DMSCRequestSlaClass类型，支持SLA级别的资源请求分类
-- 新增DMSCResourceWeights类型，支持资源权重的灵活配置
-- 新增DMSCAffinityRules类型，支持亲和性规则的定义和应用
-- 新增DMSCResourceAllocation类型，支持资源分配结果的表示
-- 新增DMSCDeviceStatus枚举，标准化设备状态定义
-- 新增DMSCDeviceCapabilities结构体，支持设备能力的详细描述
-- 新增DMSCDeviceHealthMetrics结构体，支持设备健康指标的采集和表示
+- 新增RiDiscoveryResult类型，支持设备发现结果的结构化表示
+- 新增RiResourceRequest类型，支持资源请求的标准化定义
+- 新增RiRequestSlaClass类型，支持SLA级别的资源请求分类
+- 新增RiResourceWeights类型，支持资源权重的灵活配置
+- 新增RiAffinityRules类型，支持亲和性规则的定义和应用
+- 新增RiResourceAllocation类型，支持资源分配结果的表示
+- 新增RiDeviceStatus枚举，标准化设备状态定义
+- 新增RiDeviceCapabilities结构体，支持设备能力的详细描述
+- 新增RiDeviceHealthMetrics结构体，支持设备健康指标的采集和表示
 
 #### 可观测性模块增强
-- 新增DMSCObservabilityData类型，统一可观测性数据的结构化表示
-- 新增DMSCMetricsRegistry类型，支持指标注册表的创建和管理
-- 新增DMSCTracer类型，支持分布式追踪的标准化实现
+- 新增RiObservabilityData类型，统一可观测性数据的结构化表示
+- 新增RiMetricsRegistry类型，支持指标注册表的创建和管理
+- 新增RiTracer类型，支持分布式追踪的标准化实现
 
 #### 服务网格模块增强
-- 新增DMSCServiceInstance类型，支持服务实例的标准化表示
-- 新增DMSCHealthChecker类型，支持健康检查的统一实现
-- 新增DMSCTrafficManager类型，支持流量管理的灵活配置
+- 新增RiServiceInstance类型，支持服务实例的标准化表示
+- 新增RiHealthChecker类型，支持健康检查的统一实现
+- 新增RiTrafficManager类型，支持流量管理的灵活配置
 
 ### 🔧 改进优化
 

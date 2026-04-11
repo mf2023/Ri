@@ -2,8 +2,8 @@
 
 # Copyright © 2025-2026 Wenze Wei. All Rights Reserved.
 #
-# This file is part of DMSC.
-# The DMSC project belongs to the Dunimd Team.
+# This file is part of Ri.
+# The Ri project belongs to the Dunimd Team.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # You may not use this file except in compliance with the License.
@@ -18,29 +18,29 @@
 # limitations under the License.
 
 """
-DMSC Log Module Tests
+Ri Log Module Tests
 
 Tests for the logging functionality.
 """
 
 import pytest
-from dmsc import (
-    DMSCLogConfig,
-    DMSCLogger,
+from ri import (
+    RiLogConfig,
+    RiLogger,
 )
 
 
-class TestDMSCLogConfig:
-    """Tests for DMSCLogConfig"""
+class TestRiLogConfig:
+    """Tests for RiLogConfig"""
 
     def test_log_config_creation(self):
         """Test creating log configuration"""
-        config = DMSCLogConfig()
+        config = RiLogConfig()
         assert config is not None
 
 
-class TestDMSCLogger:
-    """Tests for DMSCLogger"""
+class TestRiLogger:
+    """Tests for RiLogger"""
 
     def test_logger_creation(self):
         """Test creating logger - skip as it requires filesystem"""

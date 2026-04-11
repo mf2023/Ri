@@ -1,7 +1,7 @@
 //! Copyright © 2025-2026 Wenze Wei. All Rights Reserved.
 //! 
-//! This file is part of DMSC.
-//! The DMSC project belongs to the Dunimd Team.
+//! This file is part of Ri.
+//! The Ri project belongs to the Dunimd Team.
 //! 
 //! Licensed under the Apache License, Version 2.0 (the "License");
 //! You may not use this file except in compliance with the License.
@@ -19,25 +19,25 @@
 
 //! # Application Runtime and Builder
 //! 
-//! This module provides the application runtime and builder for constructing DMSC applications.
-//! The `DMSCAppBuilder` follows the builder pattern for fluent configuration, while the `DMSCAppRuntime`
+//! This module provides the application runtime and builder for constructing Ri applications.
+//! The `RiAppBuilder` follows the builder pattern for fluent configuration, while the `RiAppRuntime`
 //! manages the application lifecycle and module execution.
 //! 
 //! ## Key Components
 //! 
-//! - **DMSCAppBuilder**: Fluent API for configuring and building DMSC applications
-//! - **DMSCAppRuntime**: Manages the application lifecycle and module execution
+//! - **RiAppBuilder**: Fluent API for configuring and building Ri applications
+//! - **RiAppRuntime**: Manages the application lifecycle and module execution
 //! 
 //! ## Design Principles
 //! 
-//! 1. **Builder Pattern**: The `DMSCAppBuilder` provides a fluent API for configuring applications
+//! 1. **Builder Pattern**: The `RiAppBuilder` provides a fluent API for configuring applications
 //! 2. **Module Lifecycle**: Modules go through a well-defined lifecycle with init, start, and shutdown phases
 //! 3. **Dependency Resolution**: Modules are sorted based on dependencies and priority
 //! 4. **Async Support**: Full support for both synchronous and asynchronous modules
 //! 5. **Fault Tolerance**: Non-critical modules can fail without crashing the entire application
 
 // Re-export from app_builder.rs
-pub use super::app_builder::DMSCAppBuilder;
+pub use super::app_builder::RiAppBuilder;
 
 // Re-export from app_runtime.rs
-pub use super::app_runtime::DMSCAppRuntime;
+pub use super::app_runtime::RiAppRuntime;

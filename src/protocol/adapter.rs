@@ -1,7 +1,7 @@
 //! Copyright © 2025-2026 Wenze Wei. All Rights Reserved.
 //!
-//! This file is part of DMSC.
-//! The DMSC project belongs to the Dunimd Team.
+//! This file is part of Ri.
+//! The Ri project belongs to the Dunimd Team.
 //!
 //! Licensed under the Apache License, Version 2.0 (the "License");
 //! You may not use this file except in compliance with the License.
@@ -52,22 +52,22 @@
 //! ## Usage Examples
 //! 
 //! ```rust
-//! use dmsc::protocol::adapter::{DMSCProtocolAdapter, DMSCProtocolStrategy, DMSCSecurityContext};
+//! use ri::protocol::adapter::{RiProtocolAdapter, RiProtocolStrategy, RiSecurityContext};
 //! 
-//! async fn example() -> DMSCResult<()> {
+//! async fn example() -> RiResult<()> {
 //!     // Create protocol adapter
-//!     let mut adapter = DMSCProtocolAdapter::new();
+//!     let mut adapter = RiProtocolAdapter::new();
 //!     
 //!     // Define security context
-//!     let security_context = DMSCSecurityContext {
-//!         required_security_level: DMSCSecurityLevel::High,
-//!         threat_level: DMSCThreatLevel::Elevated,
-//!         data_classification: DMSCDataClassification::Confidential,
-//!         network_environment: DMSCNetworkEnvironment::Untrusted,
+//!     let security_context = RiSecurityContext {
+//!         required_security_level: RiSecurityLevel::High,
+//!         threat_level: RiThreatLevel::Elevated,
+//!         data_classification: RiDataClassification::Confidential,
+//!         network_environment: RiNetworkEnvironment::Untrusted,
 //!     };
 //!     
 //!     // Initialize adapter with strategy
-//!     adapter.initialize(DMSCProtocolStrategy::SecurityBased(security_context)).await?;
+//!     adapter.initialize(RiProtocolStrategy::SecurityBased(security_context)).await?;
 //!     
 //!     // Connect using optimal protocol
 //!     let connection = adapter.connect("target-device").await?;
@@ -76,7 +76,7 @@
 //!     let response = connection.send_message(b"sensitive data").await?;
 //!     
 //!     // Dynamically switch protocol if needed
-//!     adapter.switch_protocol(DMSCProtocolType::Private).await?;
+//!     adapter.switch_protocol(RiProtocolType::Private).await?;
 //!     
 //!     Ok(())
 //! }
@@ -89,71 +89,71 @@ use async_trait::async_trait;
 use tokio::sync::RwLock;
 use log::{info, warn, debug};
 
-use crate::core::{DMSCResult, DMSCError};
-use super::{DMSCProtocol, DMSCProtocolType, DMSCProtocolConfig, DMSCProtocolConnection, 
-            DMSCProtocolStats, DMSCMessageFlags, DMSCConnectionInfo, DMSCSecurityLevel};
+use crate::core::{RiResult, RiError};
+use super::{RiProtocol, RiProtocolType, RiProtocolConfig, RiProtocolConnection, 
+            RiProtocolStats, RiMessageFlags, RiConnectionInfo, RiSecurityLevel};
 
 /// Protocol strategy for determining optimal protocol selection.
 #[derive(Debug, Clone)]
-pub enum DMSCProtocolStrategy {
+pub enum RiProtocolStrategy {
     /// Security-based strategy (prioritizes security)
-    SecurityBased(DMSCSecurityContext),
+    SecurityBased(RiSecurityContext),
     /// Performance-based strategy (prioritizes speed)
-    PerformanceBased(DMSCPerformanceContext),
+    PerformanceBased(RiPerformanceContext),
     /// Adaptive strategy (balances security and performance)
-    Adaptive(DMSCAdaptiveContext),
+    Adaptive(RiAdaptiveContext),
     /// Manual strategy (explicit protocol selection)
-    Manual(DMSCProtocolType),
+    Manual(RiProtocolType),
 }
 
 /// Security context for protocol selection.
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
-pub struct DMSCSecurityContext {
+pub struct RiSecurityContext {
     /// Required security level
-    pub required_security_level: DMSCSecurityLevel,
+    pub required_security_level: RiSecurityLevel,
     /// Current threat level
-    pub threat_level: DMSCThreatLevel,
+    pub threat_level: RiThreatLevel,
     /// Data classification level
-    pub data_classification: DMSCDataClassification,
+    pub data_classification: RiDataClassification,
     /// Network environment
-    pub network_environment: DMSCNetworkEnvironment,
+    pub network_environment: RiNetworkEnvironment,
     /// Compliance requirements
-    pub compliance_requirements: Vec<DMSCComplianceRequirement>,
+    pub compliance_requirements: Vec<RiComplianceRequirement>,
 }
 
 /// Performance context for protocol selection.
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
-pub struct DMSCPerformanceContext {
+pub struct RiPerformanceContext {
     /// Required throughput (bytes/second)
     pub required_throughput: u64,
     /// Maximum acceptable latency (milliseconds)
     pub max_latency_ms: u64,
     /// Network bandwidth constraints
-    pub bandwidth_constraints: DMSCBandwidthConstraints,
+    pub bandwidth_constraints: RiBandwidthConstraints,
     /// Connection stability requirements
-    pub stability_requirements: DMSCStabilityRequirements,
+    pub stability_requirements: RiStabilityRequirements,
 }
 
 /// Adaptive context for balanced protocol selection.
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
-pub struct DMSCAdaptiveContext {
+pub struct RiAdaptiveContext {
     /// Security weight (0.0 - 1.0)
     pub security_weight: f32,
     /// Performance weight (0.0 - 1.0)
     pub performance_weight: f32,
     /// Adaptation triggers
-    pub adaptation_triggers: Vec<DMSCAdaptationTrigger>,
+    pub adaptation_triggers: Vec<RiAdaptationTrigger>,
     /// Learning parameters
-    pub learning_params: DMSCLearningParameters,
+    pub learning_params: RiLearningParameters,
 }
 
 /// Threat level enumeration.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
-pub enum DMSCThreatLevel {
+pub enum RiThreatLevel {
     /// Normal threat level
     Normal,
     /// Elevated threat level
@@ -167,7 +167,7 @@ pub enum DMSCThreatLevel {
 /// Data classification enumeration.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
-pub enum DMSCDataClassification {
+pub enum RiDataClassification {
     /// Public data
     Public,
     /// Internal data
@@ -183,7 +183,7 @@ pub enum DMSCDataClassification {
 /// Network environment enumeration.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
-pub enum DMSCNetworkEnvironment {
+pub enum RiNetworkEnvironment {
     /// Trusted internal network
     Trusted,
     /// Untrusted external network
@@ -197,7 +197,7 @@ pub enum DMSCNetworkEnvironment {
 /// Compliance requirement enumeration.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
-pub enum DMSCComplianceRequirement {
+pub enum RiComplianceRequirement {
     /// GDPR compliance
     GDPR,
     /// HIPAA compliance
@@ -213,7 +213,7 @@ pub enum DMSCComplianceRequirement {
 /// Bandwidth constraints structure.
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
-pub struct DMSCBandwidthConstraints {
+pub struct RiBandwidthConstraints {
     /// Available bandwidth (bits/second)
     pub available_bandwidth: u64,
     /// Burst capacity (bits)
@@ -225,7 +225,7 @@ pub struct DMSCBandwidthConstraints {
 /// Stability requirements structure.
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
-pub struct DMSCStabilityRequirements {
+pub struct RiStabilityRequirements {
     /// Maximum acceptable packet loss (0.0 - 1.0)
     pub max_packet_loss: f32,
     /// Maximum acceptable jitter (milliseconds)
@@ -237,7 +237,7 @@ pub struct DMSCStabilityRequirements {
 /// Adaptation trigger enumeration.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
-pub enum DMSCAdaptationTrigger {
+pub enum RiAdaptationTrigger {
     /// Security breach detected
     SecurityBreach,
     /// Performance degradation detected
@@ -251,7 +251,7 @@ pub enum DMSCAdaptationTrigger {
 /// Learning parameters structure.
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
-pub struct DMSCLearningParameters {
+pub struct RiLearningParameters {
     /// Learning rate (0.0 - 1.0)
     pub learning_rate: f32,
     /// Adaptation window (seconds)
@@ -263,7 +263,7 @@ pub struct DMSCLearningParameters {
 /// Network condition enumeration for adaptive decisions.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
-pub enum DMSCNetworkCondition {
+pub enum RiNetworkCondition {
     /// Excellent network conditions
     Excellent,
     /// Good network conditions
@@ -276,36 +276,36 @@ pub enum DMSCNetworkCondition {
 
 /// Protocol adapter for unified protocol interface.
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
-pub struct DMSCProtocolAdapter {
+pub struct RiProtocolAdapter {
     /// Protocol strategy
-    strategy: Arc<RwLock<Option<DMSCProtocolStrategy>>>,
+    strategy: Arc<RwLock<Option<RiProtocolStrategy>>>,
     /// Available protocols
-    protocols: Arc<RwLock<HashMap<DMSCProtocolType, Box<dyn DMSCProtocol>>>>,
+    protocols: Arc<RwLock<HashMap<RiProtocolType, Box<dyn RiProtocol>>>>,
     /// Active protocol
-    active_protocol: Arc<RwLock<Option<DMSCProtocolType>>>,
+    active_protocol: Arc<RwLock<Option<RiProtocolType>>>,
     /// Connection state manager
-    connection_manager: Arc<DMSCConnectionManager>,
+    connection_manager: Arc<RiConnectionManager>,
     /// Protocol statistics
-    stats: Arc<RwLock<DMSCProtocolAdapterStats>>,
+    stats: Arc<RwLock<RiProtocolAdapterStats>>,
     /// Whether the adapter is initialized
     initialized: Arc<RwLock<bool>>,
 }
 
 /// Connection manager for state preservation during protocol switches.
-struct DMSCConnectionManager {
+struct RiConnectionManager {
     /// Active connections
-    connections: Arc<RwLock<HashMap<String, Arc<dyn DMSCProtocolConnection>>>>,
+    connections: Arc<RwLock<HashMap<String, Arc<dyn RiProtocolConnection>>>>,
     /// Connection metadata
-    metadata: Arc<RwLock<HashMap<String, DMSCConnectionMetadata>>>,
+    metadata: Arc<RwLock<HashMap<String, RiConnectionMetadata>>>,
 }
 
 /// Connection metadata for state preservation.
 #[derive(Debug, Clone)]
-struct DMSCConnectionMetadata {
+struct RiConnectionMetadata {
     /// Original protocol type
-    original_protocol: DMSCProtocolType,
+    original_protocol: RiProtocolType,
     /// Current protocol type
-    current_protocol: DMSCProtocolType,
+    current_protocol: RiProtocolType,
     /// Connection establishment time
     established_at: Instant,
     /// Last protocol switch time
@@ -318,7 +318,7 @@ struct DMSCConnectionMetadata {
 
 /// Protocol adapter statistics.
 #[derive(Debug, Default)]
-struct DMSCProtocolAdapterStats {
+struct RiProtocolAdapterStats {
     /// Total protocol switches
     pub protocol_switches: u64,
     /// Successful switches
@@ -332,13 +332,13 @@ struct DMSCProtocolAdapterStats {
     /// Average switch time (milliseconds)
     pub avg_switch_time_ms: u64,
     /// Protocol-specific switch statistics
-    pub protocol_switch_stats: HashMap<DMSCProtocolType, u64>,
+    pub protocol_switch_stats: HashMap<RiProtocolType, u64>,
 }
 
-impl DMSCProtocolAdapter {
+impl RiProtocolAdapter {
     /// Create a new protocol adapter.
     pub fn new() -> Self {
-        let connection_manager = Arc::new(DMSCConnectionManager {
+        let connection_manager = Arc::new(RiConnectionManager {
             connections: Arc::new(RwLock::new(HashMap::new())),
             metadata: Arc::new(RwLock::new(HashMap::new())),
         });
@@ -348,13 +348,13 @@ impl DMSCProtocolAdapter {
             protocols: Arc::new(RwLock::new(HashMap::new())),
             active_protocol: Arc::new(RwLock::new(None)),
             connection_manager,
-            stats: Arc::new(RwLock::new(DMSCProtocolAdapterStats::default())),
+            stats: Arc::new(RwLock::new(RiProtocolAdapterStats::default())),
             initialized: Arc::new(RwLock::new(false)),
         }
     }
     
     /// Initialize the protocol adapter with a strategy.
-    pub async fn initialize(&mut self, strategy: DMSCProtocolStrategy) -> DMSCResult<()> {
+    pub async fn initialize(&mut self, strategy: RiProtocolStrategy) -> RiResult<()> {
         *self.strategy.write().await = Some(strategy.clone());
         
         // Determine initial protocol based on strategy
@@ -366,24 +366,24 @@ impl DMSCProtocolAdapter {
     }
     
     /// Register a protocol implementation.
-    pub async fn register_protocol(&self, protocol_type: DMSCProtocolType, protocol: Box<dyn DMSCProtocol>) -> DMSCResult<()> {
+    pub async fn register_protocol(&self, protocol_type: RiProtocolType, protocol: Box<dyn RiProtocol>) -> RiResult<()> {
         self.protocols.write().await.insert(protocol_type, protocol);
         Ok(())
     }
     
     /// Connect using the optimal protocol.
-    pub async fn connect(&self, target_id: &str) -> DMSCResult<Box<dyn DMSCProtocolConnection>> {
+    pub async fn connect(&self, target_id: &str) -> RiResult<Box<dyn RiProtocolConnection>> {
         if !*self.initialized.read().await {
-            return Err(DMSCError::InvalidState("Protocol adapter not initialized".to_string()));
+            return Err(RiError::InvalidState("Protocol adapter not initialized".to_string()));
         }
         
         let active_protocol = self.active_protocol.read().await;
         let protocol_type = active_protocol.ok_or_else(|| 
-            DMSCError::InvalidState("No active protocol selected".to_string()))?;
+            RiError::InvalidState("No active protocol selected".to_string()))?;
         
         let protocols = self.protocols.read().await;
         let protocol = protocols.get(&protocol_type)
-            .ok_or_else(|| DMSCError::NotFound(format!("Protocol {:?} not registered", protocol_type)))?;
+            .ok_or_else(|| RiError::NotFound(format!("Protocol {:?} not registered", protocol_type)))?;
         
         let connection = protocol.connect(target_id).await?;
         
@@ -395,7 +395,7 @@ impl DMSCProtocolAdapter {
             protocol_type,
         ).await?;
         
-        Ok(Box::new(DMSCProtocolConnectionWrapper {
+        Ok(Box::new(RiProtocolConnectionWrapper {
             connection_id,
             connection_manager: Arc::clone(&self.connection_manager),
             stats: Arc::clone(&self.stats),
@@ -403,7 +403,7 @@ impl DMSCProtocolAdapter {
     }
     
     /// Switch to a different protocol.
-    pub async fn switch_protocol(&self, new_protocol_type: DMSCProtocolType) -> DMSCResult<()> {
+    pub async fn switch_protocol(&self, new_protocol_type: RiProtocolType) -> RiResult<()> {
         let start_time = Instant::now();
         
         // Update statistics
@@ -424,7 +424,7 @@ impl DMSCProtocolAdapter {
         if !protocols.contains_key(&new_protocol_type) {
             self.stats.write().await.failed_switches += 1;
             warn!("Protocol {:?} not available for switch", new_protocol_type);
-            return Err(DMSCError::NotFound(format!("Protocol {:?} not available", new_protocol_type)));
+            return Err(RiError::NotFound(format!("Protocol {:?} not available", new_protocol_type)));
         }
         
         // Perform protocol switch
@@ -444,8 +444,8 @@ impl DMSCProtocolAdapter {
 
         // Log the switch for monitoring with detailed context
         let switch_type = match (current_protocol, new_protocol_type) {
-            (DMSCProtocolType::Global, DMSCProtocolType::Private) => "SECURITY_UPGRADE",
-            (DMSCProtocolType::Private, DMSCProtocolType::Global) => "PERFORMANCE_UPGRADE",
+            (RiProtocolType::Global, RiProtocolType::Private) => "SECURITY_UPGRADE",
+            (RiProtocolType::Private, RiProtocolType::Global) => "PERFORMANCE_UPGRADE",
             _ => "NEUTRAL_SWITCH",
         };
 
@@ -458,13 +458,13 @@ impl DMSCProtocolAdapter {
     }
     
     /// Get the currently active protocol.
-    pub async fn get_active_protocol(&self) -> DMSCResult<DMSCProtocolType> {
+    pub async fn get_active_protocol(&self) -> RiResult<RiProtocolType> {
         self.active_protocol.read().await
-            .ok_or_else(|| DMSCError::InvalidState("No active protocol selected".to_string()))
+            .ok_or_else(|| RiError::InvalidState("No active protocol selected".to_string()))
     }
     
     /// Update protocol strategy.
-    pub async fn update_strategy(&self, new_strategy: DMSCProtocolStrategy) -> DMSCResult<()> {
+    pub async fn update_strategy(&self, new_strategy: RiProtocolStrategy) -> RiResult<()> {
         *self.strategy.write().await = Some(new_strategy.clone());
         
         // Re-evaluate optimal protocol
@@ -481,25 +481,25 @@ impl DMSCProtocolAdapter {
     }
     
     /// Select optimal protocol based on strategy.
-    async fn select_optimal_protocol(&self, strategy: &DMSCProtocolStrategy) -> DMSCResult<DMSCProtocolType> {
+    async fn select_optimal_protocol(&self, strategy: &RiProtocolStrategy) -> RiResult<RiProtocolType> {
         match strategy {
-            DMSCProtocolStrategy::SecurityBased(context) => {
+            RiProtocolStrategy::SecurityBased(context) => {
                 self.select_security_based_protocol(context).await
             }
-            DMSCProtocolStrategy::PerformanceBased(context) => {
+            RiProtocolStrategy::PerformanceBased(context) => {
                 self.select_performance_based_protocol(context).await
             }
-            DMSCProtocolStrategy::Adaptive(context) => {
+            RiProtocolStrategy::Adaptive(context) => {
                 self.select_adaptive_protocol(context).await
             }
-            DMSCProtocolStrategy::Manual(protocol_type) => {
+            RiProtocolStrategy::Manual(protocol_type) => {
                 Ok(*protocol_type)
             }
         }
     }
     
     /// Select protocol based on security requirements.
-    async fn select_security_based_protocol(&self, context: &DMSCSecurityContext) -> DMSCResult<DMSCProtocolType> {
+    async fn select_security_based_protocol(&self, context: &RiSecurityContext) -> RiResult<RiProtocolType> {
         // Check if protocols are available
         let protocols = self.protocols.read().await;
         
@@ -512,83 +512,83 @@ impl DMSCProtocolAdapter {
         match security_score {
             score if score >= 80 => {
                 // High security requirements - prefer private protocol if available
-                if protocols.contains_key(&DMSCProtocolType::Private) {
+                if protocols.contains_key(&RiProtocolType::Private) {
                     info!("Selected Private protocol for high security requirements (score: {})", security_score);
-                    Ok(DMSCProtocolType::Private)
-                } else if protocols.contains_key(&DMSCProtocolType::Global) {
+                    Ok(RiProtocolType::Private)
+                } else if protocols.contains_key(&RiProtocolType::Global) {
                     warn!("Private protocol not available, falling back to Global for high security requirements");
-                    Ok(DMSCProtocolType::Global)
+                    Ok(RiProtocolType::Global)
                 } else {
-                    Err(DMSCError::NotFound("No suitable protocol available for high security requirements".to_string()))
+                    Err(RiError::NotFound("No suitable protocol available for high security requirements".to_string()))
                 }
             }
             score if score >= 40 => {
                 // Medium security requirements - check threat level and data classification
-                if context.threat_level as u8 >= DMSCThreatLevel::Elevated as u8 ||
-                   context.data_classification as u8 >= DMSCDataClassification::Confidential as u8 {
-                    if protocols.contains_key(&DMSCProtocolType::Private) {
+                if context.threat_level as u8 >= RiThreatLevel::Elevated as u8 ||
+                   context.data_classification as u8 >= RiDataClassification::Confidential as u8 {
+                    if protocols.contains_key(&RiProtocolType::Private) {
                         info!("Selected Private protocol for medium security with elevated threat/confidential data");
-                        Ok(DMSCProtocolType::Private)
+                        Ok(RiProtocolType::Private)
                     } else {
                         warn!("Private protocol not available for medium security requirements, using Global");
-                        Ok(DMSCProtocolType::Global)
+                        Ok(RiProtocolType::Global)
                     }
                 } else {
                     info!("Selected Global protocol for medium security requirements");
-                    Ok(DMSCProtocolType::Global)
+                    Ok(RiProtocolType::Global)
                 }
             }
             _ => {
                 // Low security requirements - prefer global protocol for performance
-                if protocols.contains_key(&DMSCProtocolType::Global) {
+                if protocols.contains_key(&RiProtocolType::Global) {
                     debug!("Selected Global protocol for low security requirements");
-                    Ok(DMSCProtocolType::Global)
-                } else if protocols.contains_key(&DMSCProtocolType::Private) {
+                    Ok(RiProtocolType::Global)
+                } else if protocols.contains_key(&RiProtocolType::Private) {
                     warn!("Global protocol not available, using Private for low security requirements");
-                    Ok(DMSCProtocolType::Private)
+                    Ok(RiProtocolType::Private)
                 } else {
-                    Err(DMSCError::NotFound("No suitable protocol available for low security requirements".to_string()))
+                    Err(RiError::NotFound("No suitable protocol available for low security requirements".to_string()))
                 }
             }
         }
     }
     
     /// Calculate security score based on context.
-    fn calculate_security_score(&self, context: &DMSCSecurityContext) -> u8 {
+    fn calculate_security_score(&self, context: &RiSecurityContext) -> u8 {
         let mut score = 0u8;
         
         // Security level contribution (0-40 points)
         score += match context.required_security_level {
-            DMSCSecurityLevel::None => 0,
-            DMSCSecurityLevel::Basic => 10,
-            DMSCSecurityLevel::Standard => 25,
-            DMSCSecurityLevel::High => 35,
-            DMSCSecurityLevel::Maximum => 40,
+            RiSecurityLevel::None => 0,
+            RiSecurityLevel::Basic => 10,
+            RiSecurityLevel::Standard => 25,
+            RiSecurityLevel::High => 35,
+            RiSecurityLevel::Maximum => 40,
         };
         
         // Threat level contribution (0-25 points)
         score += match context.threat_level {
-            DMSCThreatLevel::Normal => 0,
-            DMSCThreatLevel::Elevated => 15,
-            DMSCThreatLevel::High => 20,
-            DMSCThreatLevel::Critical => 25,
+            RiThreatLevel::Normal => 0,
+            RiThreatLevel::Elevated => 15,
+            RiThreatLevel::High => 20,
+            RiThreatLevel::Critical => 25,
         };
         
         // Data classification contribution (0-20 points)
         score += match context.data_classification {
-            DMSCDataClassification::Public => 0,
-            DMSCDataClassification::Internal => 5,
-            DMSCDataClassification::Confidential => 15,
-            DMSCDataClassification::Secret => 18,
-            DMSCDataClassification::TopSecret => 20,
+            RiDataClassification::Public => 0,
+            RiDataClassification::Internal => 5,
+            RiDataClassification::Confidential => 15,
+            RiDataClassification::Secret => 18,
+            RiDataClassification::TopSecret => 20,
         };
         
         // Network environment contribution (0-10 points)
         score += match context.network_environment {
-            DMSCNetworkEnvironment::Trusted => 0,
-            DMSCNetworkEnvironment::Unknown => 5,
-            DMSCNetworkEnvironment::Untrusted => 8,
-            DMSCNetworkEnvironment::Hostile => 10,
+            RiNetworkEnvironment::Trusted => 0,
+            RiNetworkEnvironment::Unknown => 5,
+            RiNetworkEnvironment::Untrusted => 8,
+            RiNetworkEnvironment::Hostile => 10,
         };
         
         // Compliance requirements contribution (0-5 points)
@@ -600,7 +600,7 @@ impl DMSCProtocolAdapter {
     }
     
     /// Select protocol based on performance requirements.
-    async fn select_performance_based_protocol(&self, context: &DMSCPerformanceContext) -> DMSCResult<DMSCProtocolType> {
+    async fn select_performance_based_protocol(&self, context: &RiPerformanceContext) -> RiResult<RiProtocolType> {
         // Check if protocols are available
         let protocols = self.protocols.read().await;
         
@@ -613,55 +613,55 @@ impl DMSCProtocolAdapter {
         match performance_score {
             score if score >= 80 => {
                 // High performance requirements - prefer Global protocol for better throughput
-                if protocols.contains_key(&DMSCProtocolType::Global) {
+                if protocols.contains_key(&RiProtocolType::Global) {
                     info!("Selected Global protocol for high performance requirements (score: {})", performance_score);
-                    Ok(DMSCProtocolType::Global)
-                } else if protocols.contains_key(&DMSCProtocolType::Private) {
+                    Ok(RiProtocolType::Global)
+                } else if protocols.contains_key(&RiProtocolType::Private) {
                     warn!("Global protocol not available, using Private for high performance requirements");
-                    Ok(DMSCProtocolType::Private)
+                    Ok(RiProtocolType::Private)
                 } else {
-                    Err(DMSCError::NotFound("No suitable protocol available for high performance requirements".to_string()))
+                    Err(RiError::NotFound("No suitable protocol available for high performance requirements".to_string()))
                 }
             }
             score if score >= 40 => {
                 // Medium performance requirements - balance between Global and Private
                 if context.required_throughput >= 1000 || context.max_latency_ms <= 50 {
                     // High throughput or low latency needs - prefer Global
-                    if protocols.contains_key(&DMSCProtocolType::Global) {
+                    if protocols.contains_key(&RiProtocolType::Global) {
                         info!("Selected Global protocol for medium performance with high throughput/low latency needs");
-                        Ok(DMSCProtocolType::Global)
+                        Ok(RiProtocolType::Global)
                     } else {
                         warn!("Global protocol not available for medium performance requirements, using Private");
-                        Ok(DMSCProtocolType::Private)
+                        Ok(RiProtocolType::Private)
                     }
                 } else {
                     // Moderate requirements - prefer Private for stability
-                    if protocols.contains_key(&DMSCProtocolType::Private) {
+                    if protocols.contains_key(&RiProtocolType::Private) {
                         info!("Selected Private protocol for medium performance with stability focus");
-                        Ok(DMSCProtocolType::Private)
+                        Ok(RiProtocolType::Private)
                     } else {
                         warn!("Private protocol not available for medium performance requirements, using Global");
-                        Ok(DMSCProtocolType::Global)
+                        Ok(RiProtocolType::Global)
                     }
                 }
             }
             _ => {
                 // Low performance requirements - prefer Private for stability and security
-                if protocols.contains_key(&DMSCProtocolType::Private) {
+                if protocols.contains_key(&RiProtocolType::Private) {
                     debug!("Selected Private protocol for low performance requirements");
-                    Ok(DMSCProtocolType::Private)
-                } else if protocols.contains_key(&DMSCProtocolType::Global) {
+                    Ok(RiProtocolType::Private)
+                } else if protocols.contains_key(&RiProtocolType::Global) {
                     warn!("Private protocol not available, using Global for low performance requirements");
-                    Ok(DMSCProtocolType::Global)
+                    Ok(RiProtocolType::Global)
                 } else {
-                    Err(DMSCError::NotFound("No suitable protocol available for low performance requirements".to_string()))
+                    Err(RiError::NotFound("No suitable protocol available for low performance requirements".to_string()))
                 }
             }
         }
     }
     
     /// Calculate performance score based on context.
-    fn calculate_performance_score(&self, context: &DMSCPerformanceContext) -> u8 {
+    fn calculate_performance_score(&self, context: &RiPerformanceContext) -> u8 {
         let mut score = 0u8;
         
         // Throughput contribution (0-40 points)
@@ -713,7 +713,7 @@ impl DMSCProtocolAdapter {
     }
     
     /// Select protocol based on adaptive learning.
-    async fn select_adaptive_protocol(&self, context: &DMSCAdaptiveContext) -> DMSCResult<DMSCProtocolType> {
+    async fn select_adaptive_protocol(&self, context: &RiAdaptiveContext) -> RiResult<RiProtocolType> {
         let security_score = self.calculate_security_score(&context.security_context);
         let performance_score = self.calculate_performance_score(&context.performance_context);
         let adaptive_score = self.calculate_adaptive_score(security_score, performance_score, context);
@@ -731,10 +731,10 @@ impl DMSCProtocolAdapter {
         match adaptive_score {
             score if score >= 70 => {
                 // High adaptive score - follow learned preference with bias towards performance
-                let selected_protocol = if learned_preference == DMSCProtocolType::Global {
-                    DMSCProtocolType::Global
+                let selected_protocol = if learned_preference == RiProtocolType::Global {
+                    RiProtocolType::Global
                 } else {
-                    DMSCProtocolType::Private
+                    RiProtocolType::Private
                 };
                 
                 if protocols.contains_key(&selected_protocol) {
@@ -743,12 +743,12 @@ impl DMSCProtocolAdapter {
                     Ok(selected_protocol)
                 } else {
                     // Fallback to available protocol
-                    let fallback = if protocols.contains_key(&DMSCProtocolType::Global) {
-                        DMSCProtocolType::Global
-                    } else if protocols.contains_key(&DMSCProtocolType::Private) {
-                        DMSCProtocolType::Private
+                    let fallback = if protocols.contains_key(&RiProtocolType::Global) {
+                        RiProtocolType::Global
+                    } else if protocols.contains_key(&RiProtocolType::Private) {
+                        RiProtocolType::Private
                     } else {
-                        return Err(DMSCError::NotFound("No suitable protocol available for adaptive selection".to_string()));
+                        return Err(RiError::NotFound("No suitable protocol available for adaptive selection".to_string()));
                     };
                     warn!("Preferred protocol {:?} not available, falling back to {:?}", selected_protocol, fallback);
                     Ok(fallback)
@@ -756,8 +756,8 @@ impl DMSCProtocolAdapter {
             }
             score if score >= 40 => {
                 // Medium adaptive score - balance between learned preference and security
-                let selected_protocol = if context.security_context.required_security_level as u8 >= DMSCSecurityLevel::Standard as u8 {
-                    DMSCProtocolType::Private  // Security preference
+                let selected_protocol = if context.security_context.required_security_level as u8 >= RiSecurityLevel::Standard as u8 {
+                    RiProtocolType::Private  // Security preference
                 } else {
                     learned_preference  // Use learned preference
                 };
@@ -766,10 +766,10 @@ impl DMSCProtocolAdapter {
                     info!("Selected {:?} protocol for balanced security/performance (score: {})", selected_protocol, adaptive_score);
                     Ok(selected_protocol)
                 } else {
-                    let fallback = if protocols.contains_key(&DMSCProtocolType::Private) {
-                        DMSCProtocolType::Private
+                    let fallback = if protocols.contains_key(&RiProtocolType::Private) {
+                        RiProtocolType::Private
                     } else {
-                        DMSCProtocolType::Global
+                        RiProtocolType::Global
                     };
                     warn!("Balanced selection preferred {:?} not available, using {:?}", selected_protocol, fallback);
                     Ok(fallback)
@@ -777,21 +777,21 @@ impl DMSCProtocolAdapter {
             }
             _ => {
                 // Low adaptive score - be conservative and prefer Private for security
-                if protocols.contains_key(&DMSCProtocolType::Private) {
+                if protocols.contains_key(&RiProtocolType::Private) {
                     info!("Selected Private protocol for low adaptive score with security focus (score: {})", adaptive_score);
-                    Ok(DMSCProtocolType::Private)
-                } else if protocols.contains_key(&DMSCProtocolType::Global) {
+                    Ok(RiProtocolType::Private)
+                } else if protocols.contains_key(&RiProtocolType::Global) {
                     warn!("Private protocol not available for low adaptive score, using Global");
-                    Ok(DMSCProtocolType::Global)
+                    Ok(RiProtocolType::Global)
                 } else {
-                    Err(DMSCError::NotFound("No suitable protocol available for conservative selection".to_string()))
+                    Err(RiError::NotFound("No suitable protocol available for conservative selection".to_string()))
                 }
             }
         }
     }
     
     /// Calculate adaptive score based on context.
-    fn calculate_adaptive_score(&self, context: &DMSCAdaptiveContext) -> u8 {
+    fn calculate_adaptive_score(&self, context: &RiAdaptiveContext) -> u8 {
         let mut score = 0u8;
         
         // Weight-based calculation (0-50 points for security, 0-50 for performance)
@@ -804,10 +804,10 @@ impl DMSCProtocolAdapter {
         // Adaptation triggers adjustment (±20 points)
         for trigger in &context.adaptation_triggers {
             match trigger {
-                DMSCAdaptationTrigger::SecurityBreach => score = score.saturating_add(20),
-                DMSCAdaptationTrigger::PerformanceDegradation => score = score.saturating_sub(15),
-                DMSCAdaptationTrigger::NetworkChange => score = score.saturating_sub(10),
-                DMSCAdaptationTrigger::Manual => score = score.saturating_add(5),
+                RiAdaptationTrigger::SecurityBreach => score = score.saturating_add(20),
+                RiAdaptationTrigger::PerformanceDegradation => score = score.saturating_sub(15),
+                RiAdaptationTrigger::NetworkChange => score = score.saturating_sub(10),
+                RiAdaptationTrigger::Manual => score = score.saturating_add(5),
             }
         }
         
@@ -820,12 +820,12 @@ impl DMSCProtocolAdapter {
     }
     
     /// Get learned protocol preference from historical data.
-    async fn get_learned_protocol_preference(&self, context: &DMSCAdaptiveContext) -> f32 {
+    async fn get_learned_protocol_preference(&self, context: &RiAdaptiveContext) -> f32 {
         // Analyze historical performance data from stats
         let stats = self.stats.read().await;
         
         // Calculate success rates for each protocol
-        let global_success_rate = if let Some(global_switches) = stats.protocol_switches.get(&DMSCProtocolType::Global) {
+        let global_success_rate = if let Some(global_switches) = stats.protocol_switches.get(&RiProtocolType::Global) {
             if *global_switches > 0 {
                 (stats.successful_switches as f32 / *global_switches as f32) * 100.0
             } else {
@@ -835,7 +835,7 @@ impl DMSCProtocolAdapter {
             50.0
         };
         
-        let private_success_rate = if let Some(private_switches) = stats.protocol_switches.get(&DMSCProtocolType::Private) {
+        let private_success_rate = if let Some(private_switches) = stats.protocol_switches.get(&RiProtocolType::Private) {
             if *private_switches > 0 {
                 (stats.successful_switches as f32 / *private_switches as f32) * 100.0
             } else {
@@ -858,22 +858,22 @@ impl DMSCProtocolAdapter {
     }
     
     /// Assess current network conditions.
-    async fn assess_current_network_conditions(&self) -> DMSCNetworkCondition {
+    async fn assess_current_network_conditions(&self) -> RiNetworkCondition {
         // This is a simplified implementation
         // In a real system, this would measure actual network metrics
         
         // For now, return good condition as default
         // This could be enhanced with actual network probing
-        DMSCNetworkCondition::Good
+        RiNetworkCondition::Good
     }
     
     /// Get adapter statistics.
-    pub async fn get_stats(&self) -> DMSCProtocolAdapterStats {
+    pub async fn get_stats(&self) -> RiProtocolAdapterStats {
         *self.stats.read().await
     }
     
     /// Shutdown the protocol adapter.
-    pub async fn shutdown(&mut self) -> DMSCResult<()> {
+    pub async fn shutdown(&mut self) -> RiResult<()> {
         // Clear all connections
         self.connection_manager.clear_all_connections().await?;
         
@@ -888,21 +888,21 @@ impl DMSCProtocolAdapter {
     }
 }
 
-impl Default for DMSCProtocolAdapter {
+impl Default for RiProtocolAdapter {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl DMSCConnectionManager {
+impl RiConnectionManager {
     /// Store a connection with metadata.
     async fn store_connection(
         &self,
         connection_id: String,
-        connection: Box<dyn DMSCProtocolConnection>,
-        protocol_type: DMSCProtocolType,
-    ) -> DMSCResult<()> {
-        let metadata = DMSCConnectionMetadata {
+        connection: Box<dyn RiProtocolConnection>,
+        protocol_type: RiProtocolType,
+    ) -> RiResult<()> {
+        let metadata = RiConnectionMetadata {
             original_protocol: protocol_type,
             current_protocol: protocol_type,
             established_at: Instant::now(),
@@ -918,7 +918,7 @@ impl DMSCConnectionManager {
     }
     
     /// Clear all connections.
-    async fn clear_all_connections(&self) -> DMSCResult<()> {
+    async fn clear_all_connections(&self) -> RiResult<()> {
         self.connections.write().await.clear();
         self.metadata.write().await.clear();
         Ok(())
@@ -926,34 +926,34 @@ impl DMSCConnectionManager {
 }
 
 /// Wrapper for protocol connections managed by the adapter.
-struct DMSCProtocolConnectionWrapper {
+struct RiProtocolConnectionWrapper {
     connection_id: String,
-    connection_manager: Arc<DMSCConnectionManager>,
-    stats: Arc<RwLock<DMSCProtocolAdapterStats>>,
+    connection_manager: Arc<RiConnectionManager>,
+    stats: Arc<RwLock<RiProtocolAdapterStats>>,
 }
 
 #[async_trait]
-impl DMSCProtocolConnection for DMSCProtocolConnectionWrapper {
-    async fn send_message(&self, data: &[u8]) -> DMSCResult<Vec<u8>> {
+impl RiProtocolConnection for RiProtocolConnectionWrapper {
+    async fn send_message(&self, data: &[u8]) -> RiResult<Vec<u8>> {
         let connections = self.connection_manager.connections.read().await;
         let connection = connections.get(&self.connection_id)
-            .ok_or_else(|| DMSCError::NotFound(format!("Connection {} not found", self.connection_id)))?;
+            .ok_or_else(|| RiError::NotFound(format!("Connection {} not found", self.connection_id)))?;
         
         connection.send_message(data).await
     }
     
-    async fn send_message_with_flags(&self, data: &[u8], flags: DMSCMessageFlags) -> DMSCResult<Vec<u8>> {
+    async fn send_message_with_flags(&self, data: &[u8], flags: RiMessageFlags) -> RiResult<Vec<u8>> {
         let connections = self.connection_manager.connections.read().await;
         let connection = connections.get(&self.connection_id)
-            .ok_or_else(|| DMSCError::NotFound(format!("Connection {} not found", self.connection_id)))?;
+            .ok_or_else(|| RiError::NotFound(format!("Connection {} not found", self.connection_id)))?;
         
         connection.send_message_with_flags(data, flags).await
     }
     
-    async fn receive_message(&self) -> DMSCResult<Vec<u8>> {
+    async fn receive_message(&self) -> RiResult<Vec<u8>> {
         let connections = self.connection_manager.connections.read().await;
         let connection = connections.get(&self.connection_id)
-            .ok_or_else(|| DMSCError::NotFound(format!("Connection {} not found", self.connection_id)))?;
+            .ok_or_else(|| RiError::NotFound(format!("Connection {} not found", self.connection_id)))?;
         
         connection.receive_message().await
     }
@@ -970,19 +970,19 @@ impl DMSCProtocolConnection for DMSCProtocolConnectionWrapper {
         }
     }
     
-    fn get_connection_info(&self) -> DMSCConnectionInfo {
+    fn get_connection_info(&self) -> RiConnectionInfo {
         // This would need proper implementation
-        DMSCConnectionInfo {
+        RiConnectionInfo {
             connection_id: self.connection_id.clone(),
             target_id: "adapter-target".to_string(),
-            protocol_type: DMSCProtocolType::Global,
+            protocol_type: RiProtocolType::Global,
             established_at: Instant::now(),
             last_activity: Instant::now(),
-            security_level: DMSCSecurityLevel::Standard,
+            security_level: RiSecurityLevel::Standard,
         }
     }
     
-    async fn close(&self) -> DMSCResult<()> {
+    async fn close(&self) -> RiResult<()> {
         let mut connections = self.connection_manager.connections.write().await;
         connections.remove(&self.connection_id);
         

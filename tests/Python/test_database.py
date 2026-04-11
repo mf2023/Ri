@@ -2,8 +2,8 @@
 
 # Copyright © 2025-2026 Wenze Wei. All Rights Reserved.
 #
-# This file is part of DMSC.
-# The DMSC project belongs to the Dunimd Team.
+# This file is part of Ri.
+# The Ri project belongs to the Dunimd Team.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # You may not use this file except in compliance with the License.
@@ -18,60 +18,60 @@
 # limitations under the License.
 
 """
-DMSC Database Module Tests
+Ri Database Module Tests
 
 Tests for the database functionality including connection pooling and ORM.
 """
 
 import pytest
-from dmsc import (
-    DMSCDatabaseConfig,
-    DMSCDatabasePool,
-    DMSCDBRow,
-    DMSCDBResult,
+from ri import (
+    RiDatabaseConfig,
+    RiDatabasePool,
+    RiDBRow,
+    RiDBResult,
 )
 
 
-class TestDMSCDatabaseConfig:
-    """Tests for DMSCDatabaseConfig"""
+class TestRiDatabaseConfig:
+    """Tests for RiDatabaseConfig"""
 
     def test_database_config_creation(self):
         """Test creating database configuration"""
-        config = DMSCDatabaseConfig.create_sqlite()
+        config = RiDatabaseConfig.create_sqlite()
         assert config is not None
 
     def test_database_config_postgres(self):
         """Test creating postgres configuration"""
-        config = DMSCDatabaseConfig.create_postgres()
+        config = RiDatabaseConfig.create_postgres()
         assert config is not None
 
 
-class TestDMSCDatabasePool:
-    """Tests for DMSCDatabasePool"""
+class TestRiDatabasePool:
+    """Tests for RiDatabasePool"""
 
     def test_pool_creation(self):
         """Test creating connection pool"""
-        config = DMSCDatabaseConfig.create_sqlite()
-        pool = DMSCDatabasePool(config)
+        config = RiDatabaseConfig.create_sqlite()
+        pool = RiDatabasePool(config)
         assert pool is not None
 
 
-class TestDMSCDBRow:
-    """Tests for DMSCDBRow"""
+class TestRiDBRow:
+    """Tests for RiDBRow"""
 
     def test_row_creation(self):
         """Test creating database row"""
-        row = DMSCDBRow()
+        row = RiDBRow()
         assert row is not None
         assert row.is_empty_row() is True
 
 
-class TestDMSCDBResult:
-    """Tests for DMSCDBResult"""
+class TestRiDBResult:
+    """Tests for RiDBResult"""
 
     def test_result_creation(self):
         """Test creating query result"""
-        result = DMSCDBResult()
+        result = RiDBResult()
         assert result is not None
         assert result.is_empty_result() is True
 

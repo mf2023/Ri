@@ -1,7 +1,7 @@
 //! Copyright © 2025-2026 Wenze Wei. All Rights Reserved.
 //!
-//! This file is part of DMSC.
-//! The DMSC project belongs to the Dunimd Team.
+//! This file is part of Ri.
+//! The Ri project belongs to the Dunimd Team.
 //!
 //! Licensed under the Apache License, Version 2.0 (the "License");
 //! You may not use this file except in compliance with the License.
@@ -19,18 +19,18 @@
 
 //! # Error Handling
 //! 
-//! This module provides the core error handling types for DMSC, including the `DMSCError` enum
-//! and `DMSCResult` type alias. It defines a comprehensive set of error variants for different
-//! error scenarios encountered in the DMSC library.
+//! This module provides the core error handling types for Ri, including the `RiError` enum
+//! and `RiResult` type alias. It defines a comprehensive set of error variants for different
+//! error scenarios encountered in the Ri library.
 //! 
 //! ## Key Components
 //! 
-//! - **DMSCError**: Enum representing all possible errors in DMSC
-//! - **DMSCResult**: Type alias for `Result<T, DMSCError>` used throughout the library
+//! - **RiError**: Enum representing all possible errors in Ri
+//! - **RiResult**: Type alias for `Result<T, RiError>` used throughout the library
 //! 
 //! ## Design Principles
 //! 
-//! 1. **Comprehensive Coverage**: Covers all major error categories encountered in DMSC
+//! 1. **Comprehensive Coverage**: Covers all major error categories encountered in Ri
 //! 2. **Type Safety**: Each error variant provides specific context about the error
 //! 3. **Easy Conversion**: Implements `From` traits for common external error types
 //! 4. **Human-Readable**: Provides clear, descriptive error messages
@@ -39,15 +39,15 @@
 //! ## Usage
 //! 
 //! ```rust
-//! use dmsc::prelude::*;
+//! use ri::prelude::*;
 //! 
-//! fn example_function() -> DMSCResult<()> {
+//! fn example_function() -> RiResult<()> {
 //!     // Return a custom error
-//!     Err(DMSCError::Other("An error occurred"))
+//!     Err(RiError::Other("An error occurred"))
 //! }
 //! 
 //! #[tokio::main]
-//! async fn main() -> DMSCResult<()> {
+//! async fn main() -> RiResult<()> {
 //!     match example_function() {
 //!         Ok(_) => println!("Success"),
 //!         Err(err) => {
@@ -61,14 +61,14 @@
 #[cfg(feature = "pyo3")]
 use pyo3::types::PyTracebackMethods;
 
-/// Core error type for DMSC. Represents all possible errors that can occur in the library.
+/// Core error type for Ri. Represents all possible errors that can occur in the library.
 /// 
 /// This enum provides a comprehensive set of error variants, each tailored to a specific
-/// error scenario encountered in DMSC. It includes variants for I/O errors, serialization errors,
+/// error scenario encountered in Ri. It includes variants for I/O errors, serialization errors,
 /// configuration errors, module errors, and more.
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub enum DMSCError {
+pub enum RiError {
     /// I/O operation failed. Contains a descriptive error message.
     Io(String),
     /// Serialization or deserialization failed. Contains a descriptive error message.
@@ -129,11 +129,11 @@ pub enum DMSCError {
     Database(String),
 }
 
-/// Result type alias for DMSC operations. Used throughout the library.
+/// Result type alias for Ri operations. Used throughout the library.
 /// 
 /// This type alias simplifies error handling by providing a consistent result type
-/// for all DMSC operations. It wraps the standard `Result` type with `DMSCError` as the error type.
-pub type DMSCResult<T> = Result<T, DMSCError>;
+/// for all Ri operations. It wraps the standard `Result` type with `RiError` as the error type.
+pub type RiResult<T> = Result<T, RiError>;
 
 /// Implements Display trait for human-readable error messages.
 /// 
@@ -141,79 +141,79 @@ pub type DMSCResult<T> = Result<T, DMSCError>;
 /// the error category, followed by the specific error details. This enables
 /// developers to quickly identify the source and nature of errors during
 /// development and debugging.
-impl std::fmt::Display for DMSCError {
+impl std::fmt::Display for RiError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            DMSCError::Io(err) => write!(f, "IO error: {err}"),
-            DMSCError::Serde(err) => write!(f, "Serialization error: {err}"),
-            DMSCError::Config(msg) => write!(f, "Configuration error: {msg}"),
-            DMSCError::Hook(msg) => write!(f, "Hook error: {msg}"),
-            DMSCError::Prometheus(err) => write!(f, "Prometheus error: {err}"),
-            DMSCError::ServiceMesh(err) => write!(f, "Service mesh error: {err}"),
-            DMSCError::InvalidState(msg) => write!(f, "Invalid state: {msg}"),
-            DMSCError::InvalidInput(msg) => write!(f, "Invalid input: {msg}"),
-            DMSCError::SecurityViolation(msg) => write!(f, "Security violation: {msg}"),
-            DMSCError::DeviceNotFound { device_id } => write!(f, "Device not found: {device_id}"),
-            DMSCError::DeviceAllocationFailed { device_id, reason } => {
+            RiError::Io(err) => write!(f, "IO error: {err}"),
+            RiError::Serde(err) => write!(f, "Serialization error: {err}"),
+            RiError::Config(msg) => write!(f, "Configuration error: {msg}"),
+            RiError::Hook(msg) => write!(f, "Hook error: {msg}"),
+            RiError::Prometheus(err) => write!(f, "Prometheus error: {err}"),
+            RiError::ServiceMesh(err) => write!(f, "Service mesh error: {err}"),
+            RiError::InvalidState(msg) => write!(f, "Invalid state: {msg}"),
+            RiError::InvalidInput(msg) => write!(f, "Invalid input: {msg}"),
+            RiError::SecurityViolation(msg) => write!(f, "Security violation: {msg}"),
+            RiError::DeviceNotFound { device_id } => write!(f, "Device not found: {device_id}"),
+            RiError::DeviceAllocationFailed { device_id, reason } => {
                 write!(f, "Device allocation failed for {device_id}: {reason}")
             }
-            DMSCError::AllocationNotFound { allocation_id } => {
+            RiError::AllocationNotFound { allocation_id } => {
                 write!(f, "Allocation not found: {allocation_id}")
             }
-            DMSCError::ModuleNotFound { module_name } => {
+            RiError::ModuleNotFound { module_name } => {
                 write!(f, "Module not found: {module_name}")
             }
-            DMSCError::ModuleInitFailed { module_name, reason } => {
+            RiError::ModuleInitFailed { module_name, reason } => {
                 write!(f, "Module initialization failed for {module_name}: {reason}")
             }
-            DMSCError::ModuleStartFailed { module_name, reason } => {
+            RiError::ModuleStartFailed { module_name, reason } => {
                 write!(f, "Module start failed for {module_name}: {reason}")
             }
-            DMSCError::ModuleShutdownFailed { module_name, reason } => {
+            RiError::ModuleShutdownFailed { module_name, reason } => {
                 write!(f, "Module shutdown failed for {module_name}: {reason}")
             }
-            DMSCError::CircularDependency { modules } => {
+            RiError::CircularDependency { modules } => {
                 write!(f, "Circular dependency detected: {}", modules.join(" -> "))
             }
-            DMSCError::MissingDependency { module_name, dependency } => {
+            RiError::MissingDependency { module_name, dependency } => {
                 write!(f, "Module {module_name} depends on missing module: {dependency}")
             }
-            DMSCError::Other(msg) => write!(f, "{msg}"),
-            DMSCError::ExternalError(msg) => write!(f, "External error: {msg}"),
-            DMSCError::PoolError(msg) => write!(f, "Pool error: {msg}"),
-            DMSCError::DeviceError(msg) => write!(f, "Device error: {msg}"),
-            DMSCError::RedisError(msg) => write!(f, "Redis error: {msg}"),
-            DMSCError::HttpClientError(msg) => write!(f, "HTTP client error: {msg}"),
-            DMSCError::TomlError(msg) => write!(f, "TOML error: {msg}"),
-            DMSCError::YamlError(msg) => write!(f, "YAML error: {msg}"),
-            DMSCError::Queue(msg) => write!(f, "Queue error: {msg}"),
-            DMSCError::FrameError(msg) => write!(f, "Frame error: {msg}"),
-            DMSCError::Database(msg) => write!(f, "Database error: {msg}"),
+            RiError::Other(msg) => write!(f, "{msg}"),
+            RiError::ExternalError(msg) => write!(f, "External error: {msg}"),
+            RiError::PoolError(msg) => write!(f, "Pool error: {msg}"),
+            RiError::DeviceError(msg) => write!(f, "Device error: {msg}"),
+            RiError::RedisError(msg) => write!(f, "Redis error: {msg}"),
+            RiError::HttpClientError(msg) => write!(f, "HTTP client error: {msg}"),
+            RiError::TomlError(msg) => write!(f, "TOML error: {msg}"),
+            RiError::YamlError(msg) => write!(f, "YAML error: {msg}"),
+            RiError::Queue(msg) => write!(f, "Queue error: {msg}"),
+            RiError::FrameError(msg) => write!(f, "Frame error: {msg}"),
+            RiError::Database(msg) => write!(f, "Database error: {msg}"),
         }
     }
 }
 
-impl std::error::Error for DMSCError {}
+impl std::error::Error for RiError {}
 
-/// Enables automatic conversion from standard I/O errors to DMSC errors.
-/// This implementation wraps std::io::Error instances into DMSCError::Io variants,
+/// Enables automatic conversion from standard I/O errors to Ri errors.
+/// This implementation wraps std::io::Error instances into RiError::Io variants,
 /// allowing seamless error propagation when working with file operations, network I/O,
 /// and other standard I/O operations.
-impl From<std::io::Error> for DMSCError {
+impl From<std::io::Error> for RiError {
     fn from(error: std::io::Error) -> Self {
-        DMSCError::Io(format!("I/O operation failed: {}", error))
+        RiError::Io(format!("I/O operation failed: {}", error))
     }
 }
 
 /// Enhanced error formatting with suggestions.
 /// Provides consistent error messages with actionable suggestions for resolution.
-pub struct DMSCErrorFormatter<'a> {
-    error: &'a DMSCError,
+pub struct RiErrorFormatter<'a> {
+    error: &'a RiError,
 }
 
-impl<'a> DMSCErrorFormatter<'a> {
+impl<'a> RiErrorFormatter<'a> {
     /// Creates a new error formatter for the given error.
-    pub fn new(error: &'a DMSCError) -> Self {
+    pub fn new(error: &'a RiError) -> Self {
         Self { error }
     }
 
@@ -231,35 +231,35 @@ impl<'a> DMSCErrorFormatter<'a> {
     /// Returns an actionable suggestion for the error.
     fn get_suggestion(&self) -> Option<&'static str> {
         match self.error {
-            DMSCError::Io(_) => Some("Check file permissions and disk space"),
-            DMSCError::Serde(_) => Some("Verify data format matches expected schema"),
-            DMSCError::Config(_) => Some("Review configuration file syntax and required fields"),
-            DMSCError::Hook(_) => Some("Check hook implementation for errors and ensure proper registration"),
-            DMSCError::Prometheus(_) => Some("Verify Prometheus server is running and metrics endpoint is accessible"),
-            DMSCError::ServiceMesh(_) => Some("Check service mesh configuration and network connectivity"),
-            DMSCError::InvalidState(_) => Some("Ensure module is in correct state before performing operation"),
-            DMSCError::InvalidInput(_) => Some("Validate input data against expected format and constraints"),
-            DMSCError::SecurityViolation(_) => Some("Review security policies and access permissions"),
-            DMSCError::DeviceNotFound { .. } => Some("Verify device ID exists and is properly registered"),
-            DMSCError::DeviceAllocationFailed { .. } => Some("Check device availability and allocation constraints"),
-            DMSCError::AllocationNotFound { .. } => Some("Verify allocation ID is correct and hasn't expired"),
-            DMSCError::ModuleNotFound { .. } => Some("Ensure module is registered and feature flag is enabled"),
-            DMSCError::ModuleInitFailed { .. } => Some("Check module dependencies and initialization parameters"),
-            DMSCError::ModuleStartFailed { .. } => Some("Review module start sequence and resource availability"),
-            DMSCError::ModuleShutdownFailed { .. } => Some("Ensure no active connections before shutdown"),
-            DMSCError::CircularDependency { .. } => Some("Restructure module dependencies to eliminate cycles"),
-            DMSCError::MissingDependency { .. } => Some("Add required module to application configuration"),
-            DMSCError::Other(_) => None,
-            DMSCError::ExternalError(_) => Some("Check external service status and credentials"),
-            DMSCError::PoolError(_) => Some("Verify connection pool configuration and database availability"),
-            DMSCError::DeviceError(_) => Some("Check device connection and configuration"),
-            DMSCError::RedisError(_) => Some("Verify Redis server is running and connection parameters are correct"),
-            DMSCError::HttpClientError(_) => Some("Check network connectivity and target server availability"),
-            DMSCError::TomlError(_) => Some("Validate TOML syntax and required sections"),
-            DMSCError::YamlError(_) => Some("Validate YAML syntax and indentation"),
-            DMSCError::Queue(_) => Some("Check message queue service status and queue configuration"),
-            DMSCError::FrameError(_) => Some("Check frame format and protocol compatibility"),
-            DMSCError::Database(_) => Some("Verify database connection and query syntax"),
+            RiError::Io(_) => Some("Check file permissions and disk space"),
+            RiError::Serde(_) => Some("Verify data format matches expected schema"),
+            RiError::Config(_) => Some("Review configuration file syntax and required fields"),
+            RiError::Hook(_) => Some("Check hook implementation for errors and ensure proper registration"),
+            RiError::Prometheus(_) => Some("Verify Prometheus server is running and metrics endpoint is accessible"),
+            RiError::ServiceMesh(_) => Some("Check service mesh configuration and network connectivity"),
+            RiError::InvalidState(_) => Some("Ensure module is in correct state before performing operation"),
+            RiError::InvalidInput(_) => Some("Validate input data against expected format and constraints"),
+            RiError::SecurityViolation(_) => Some("Review security policies and access permissions"),
+            RiError::DeviceNotFound { .. } => Some("Verify device ID exists and is properly registered"),
+            RiError::DeviceAllocationFailed { .. } => Some("Check device availability and allocation constraints"),
+            RiError::AllocationNotFound { .. } => Some("Verify allocation ID is correct and hasn't expired"),
+            RiError::ModuleNotFound { .. } => Some("Ensure module is registered and feature flag is enabled"),
+            RiError::ModuleInitFailed { .. } => Some("Check module dependencies and initialization parameters"),
+            RiError::ModuleStartFailed { .. } => Some("Review module start sequence and resource availability"),
+            RiError::ModuleShutdownFailed { .. } => Some("Ensure no active connections before shutdown"),
+            RiError::CircularDependency { .. } => Some("Restructure module dependencies to eliminate cycles"),
+            RiError::MissingDependency { .. } => Some("Add required module to application configuration"),
+            RiError::Other(_) => None,
+            RiError::ExternalError(_) => Some("Check external service status and credentials"),
+            RiError::PoolError(_) => Some("Verify connection pool configuration and database availability"),
+            RiError::DeviceError(_) => Some("Check device connection and configuration"),
+            RiError::RedisError(_) => Some("Verify Redis server is running and connection parameters are correct"),
+            RiError::HttpClientError(_) => Some("Check network connectivity and target server availability"),
+            RiError::TomlError(_) => Some("Validate TOML syntax and required sections"),
+            RiError::YamlError(_) => Some("Validate YAML syntax and indentation"),
+            RiError::Queue(_) => Some("Check message queue service status and queue configuration"),
+            RiError::FrameError(_) => Some("Check frame format and protocol compatibility"),
+            RiError::Database(_) => Some("Verify database connection and query syntax"),
         }
     }
 }
@@ -268,104 +268,104 @@ impl<'a> DMSCErrorFormatter<'a> {
 /// This helper function provides enhanced error messages that include
 /// suggestions for resolving the issue.
 #[inline]
-pub fn format_error(error: &DMSCError) -> String {
-    DMSCErrorFormatter::new(error).format()
+pub fn format_error(error: &RiError) -> String {
+    RiErrorFormatter::new(error).format()
 }
 
 /// Logs an error with enhanced formatting.
 /// This helper function logs the error with its suggestion for debugging.
 #[inline]
-pub fn log_error(error: &DMSCError) {
+pub fn log_error(error: &RiError) {
     log::error!("{}", format_error(error));
 }
 
 /// Enables automatic conversion from JSON serialization/deserialization errors.
-/// This implementation wraps serde_json::Error instances into DMSCError::Serde variants,
+/// This implementation wraps serde_json::Error instances into RiError::Serde variants,
 /// providing consistent error handling for JSON parsing and generation operations.
-impl From<serde_json::Error> for DMSCError {
+impl From<serde_json::Error> for RiError {
     fn from(error: serde_json::Error) -> Self {
-        DMSCError::Serde(error.to_string())
+        RiError::Serde(error.to_string())
     }
 }
 
-/// Enables automatic conversion from Prometheus metrics errors to DMSC errors.
+/// Enables automatic conversion from Prometheus metrics errors to Ri errors.
 /// This implementation is conditionally compiled with the "observability" feature.
-/// Prometheus errors are wrapped into DMSCError::Prometheus variants.
+/// Prometheus errors are wrapped into RiError::Prometheus variants.
 #[cfg(feature = "observability")]
-impl From<prometheus::Error> for DMSCError {
+impl From<prometheus::Error> for RiError {
     fn from(error: prometheus::Error) -> Self {
-        DMSCError::Prometheus(error.to_string())
+        RiError::Prometheus(error.to_string())
     }
 }
 
-/// Enables automatic conversion from Redis client errors to DMSC errors.
+/// Enables automatic conversion from Redis client errors to Ri errors.
 /// This implementation is conditionally compiled with the "redis" feature.
-/// Redis errors are wrapped into DMSCError::RedisError variants, providing
+/// Redis errors are wrapped into RiError::RedisError variants, providing
 /// consistent error handling for Redis connection and operation failures.
 #[cfg(feature = "redis")]
-impl From<redis::RedisError> for DMSCError {
+impl From<redis::RedisError> for RiError {
     fn from(error: redis::RedisError) -> Self {
-        DMSCError::RedisError(error.to_string())
+        RiError::RedisError(error.to_string())
     }
 }
 
-/// Enables automatic conversion from HTTP client errors to DMSC errors.
+/// Enables automatic conversion from HTTP client errors to Ri errors.
 /// This implementation is conditionally compiled with the "http_client" feature.
 /// HTTP request failures, timeouts, and network errors are wrapped into
-/// DMSCError::HttpClientError variants for consistent error handling.
+/// RiError::HttpClientError variants for consistent error handling.
 #[cfg(feature = "http_client")]
-impl From<reqwest::Error> for DMSCError {
+impl From<reqwest::Error> for RiError {
     fn from(error: reqwest::Error) -> Self {
-        DMSCError::HttpClientError(error.to_string())
+        RiError::HttpClientError(error.to_string())
     }
 }
 
-/// Enables automatic conversion from TOML parsing errors to DMSC errors.
-/// This implementation wraps toml::de::Error instances into DMSCError::TomlError variants,
+/// Enables automatic conversion from TOML parsing errors to Ri errors.
+/// This implementation wraps toml::de::Error instances into RiError::TomlError variants,
 /// providing consistent error handling for TOML configuration file parsing.
-impl From<toml::de::Error> for DMSCError {
+impl From<toml::de::Error> for RiError {
     fn from(error: toml::de::Error) -> Self {
-        DMSCError::TomlError(error.to_string())
+        RiError::TomlError(error.to_string())
     }
 }
 
-/// Enables automatic conversion from TOML serialization errors to DMSC errors.
-/// This implementation wraps toml::ser::Error instances into DMSCError::TomlError variants,
+/// Enables automatic conversion from TOML serialization errors to Ri errors.
+/// This implementation wraps toml::ser::Error instances into RiError::TomlError variants,
 /// providing consistent error handling for TOML configuration generation.
-impl From<toml::ser::Error> for DMSCError {
+impl From<toml::ser::Error> for RiError {
     fn from(error: toml::ser::Error) -> Self {
-        DMSCError::TomlError(error.to_string())
+        RiError::TomlError(error.to_string())
     }
 }
 
-/// Enables automatic conversion from YAML parsing errors to DMSC errors.
-/// This implementation wraps serde_yaml::Error instances into DMSCError::YamlError variants,
+/// Enables automatic conversion from YAML parsing errors to Ri errors.
+/// This implementation wraps serde_yaml::Error instances into RiError::YamlError variants,
 /// providing consistent error handling for YAML configuration file parsing.
-impl From<serde_yaml::Error> for DMSCError {
+impl From<serde_yaml::Error> for RiError {
     fn from(error: serde_yaml::Error) -> Self {
-        DMSCError::YamlError(error.to_string())
+        RiError::YamlError(error.to_string())
     }
 }
 
-/// Enables automatic conversion from RabbitMQ client errors to DMSC errors.
+/// Enables automatic conversion from RabbitMQ client errors to Ri errors.
 /// This implementation is conditionally compiled with the "rabbitmq" feature.
-/// RabbitMQ connection and channel errors are wrapped into DMSCError::Other variants
+/// RabbitMQ connection and channel errors are wrapped into RiError::Other variants
 /// with a "RabbitMQ error:" prefix for consistent error categorization.
 #[cfg(feature = "rabbitmq")]
-impl From<lapin::Error> for DMSCError {
+impl From<lapin::Error> for RiError {
     fn from(error: lapin::Error) -> Self {
-        DMSCError::Other(format!("RabbitMQ error: {error}"))
+        RiError::Other(format!("RabbitMQ error: {error}"))
     }
 }
 
-/// Enables automatic conversion from Kafka client errors to DMSC errors.
+/// Enables automatic conversion from Kafka client errors to Ri errors.
 /// This implementation is conditionally compiled with the "kafka" feature on non-Windows platforms.
-/// Kafka producer, consumer, and administration errors are wrapped into DMSCError::Queue variants
+/// Kafka producer, consumer, and administration errors are wrapped into RiError::Queue variants
 /// for consistent error handling in message queue operations.
 #[cfg(all(feature = "kafka", not(windows)))]
-impl From<rdkafka::error::KafkaError> for DMSCError {
+impl From<rdkafka::error::KafkaError> for RiError {
     fn from(error: rdkafka::error::KafkaError) -> Self {
-        DMSCError::Queue(format!("Kafka error: {}", error))
+        RiError::Queue(format!("Kafka error: {}", error))
     }
 }
 
@@ -373,45 +373,45 @@ impl From<rdkafka::error::KafkaError> for DMSCError {
 /// This prevents compilation errors on Windows where rdkafka is not available.
 /// The actual Kafka functionality is disabled on Windows via the kafka_stub module.
 #[cfg(all(feature = "kafka", windows))]
-impl From<rdkafka::error::KafkaError> for DMSCError {
+impl From<rdkafka::error::KafkaError> for RiError {
     fn from(error: rdkafka::error::KafkaError) -> Self {
-        DMSCError::Queue(format!("Kafka error: {}", error))
+        RiError::Queue(format!("Kafka error: {}", error))
     }
 }
 
-impl From<tokio::time::error::Elapsed> for DMSCError {
+impl From<tokio::time::error::Elapsed> for RiError {
     fn from(error: tokio::time::error::Elapsed) -> Self {
-        DMSCError::Io(format!("Operation timed out: {}", error))
+        RiError::Io(format!("Operation timed out: {}", error))
     }
 }
 
-impl From<std::str::Utf8Error> for DMSCError {
+impl From<std::str::Utf8Error> for RiError {
     fn from(error: std::str::Utf8Error) -> Self {
-        DMSCError::Serde(format!("UTF-8 conversion error: {}", error))
+        RiError::Serde(format!("UTF-8 conversion error: {}", error))
     }
 }
 
-impl From<tokio::sync::TryLockError> for DMSCError {
+impl From<tokio::sync::TryLockError> for RiError {
     fn from(error: tokio::sync::TryLockError) -> Self {
-        DMSCError::InvalidState(format!("Lock acquisition failed: {}", error))
+        RiError::InvalidState(format!("Lock acquisition failed: {}", error))
     }
 }
 
-impl From<super::lock::DMSCLockError> for DMSCError {
-    fn from(error: super::lock::DMSCLockError) -> Self {
-        DMSCError::InvalidState(format!("Lock error: {}", error))
+impl From<super::lock::RiLockError> for RiError {
+    fn from(error: super::lock::RiLockError) -> Self {
+        RiError::InvalidState(format!("Lock error: {}", error))
     }
 }
 
 #[cfg(feature = "pyo3")]
-impl std::convert::From<DMSCError> for pyo3::PyErr {
-    fn from(error: DMSCError) -> Self {
+impl std::convert::From<RiError> for pyo3::PyErr {
+    fn from(error: RiError) -> Self {
         pyo3::exceptions::PyRuntimeError::new_err(error.to_string())
     }
 }
 
 #[cfg(feature = "pyo3")]
-impl std::convert::From<pyo3::PyErr> for DMSCError {
+impl std::convert::From<pyo3::PyErr> for RiError {
     fn from(error: pyo3::PyErr) -> Self {
         let error_info = pyo3::Python::attach(|py| {
             let traceback = error.traceback(py)
@@ -421,15 +421,15 @@ impl std::convert::From<pyo3::PyErr> for DMSCError {
             let error_value = error.value(py).to_string();
             format!("{}: {}\n{}", error_type, error_value, traceback)
         });
-        DMSCError::Other(format!("Python error: {}", error_info))
+        RiError::Other(format!("Python error: {}", error_info))
     }
 }
 
 #[cfg(feature = "pyo3")]
-/// Python bindings for DMSCError.
+/// Python bindings for RiError.
 ///
-/// This implementation provides a Python interface for the DMSCError type, enabling
-/// Python applications to create, inspect, and handle DMSC errors. The bindings expose
+/// This implementation provides a Python interface for the RiError type, enabling
+/// Python applications to create, inspect, and handle Ri errors. The bindings expose
 /// factory methods for creating specific error types and predicate methods for checking
 /// error variants at runtime.
 ///
@@ -442,7 +442,7 @@ impl std::convert::From<pyo3::PyErr> for DMSCError {
 ///     # Some operation that might fail
 ///     pass
 /// except Exception as e:
-///     if isinstance(e, dms.DMSCError):
+///     if isinstance(e, dms.RiError):
 ///         print(f"Error type: {type(e)}")
 ///         if e.is_io():
 ///             print("I/O error occurred")
@@ -454,7 +454,7 @@ impl std::convert::From<pyo3::PyErr> for DMSCError {
 /// - **Inspection methods**: Check the error variant at runtime
 /// - **String representation**: __str__ and __repr__ for display
 #[pyo3::prelude::pymethods]
-impl DMSCError {
+impl RiError {
     /// Returns the string representation of the error.
     ///
     /// This method implements the Python __str__ protocol, returning a human-readable
@@ -479,7 +479,7 @@ impl DMSCError {
         format!("{:?}", self)
     }
 
-    /// Creates a new DMSCError from a string message.
+    /// Creates a new RiError from a string message.
     ///
     /// This factory method creates an Other variant error containing the provided
     /// message. It serves as a generic error constructor for custom error scenarios
@@ -489,10 +489,10 @@ impl DMSCError {
     ///     message: The error message describing the failure
     ///
     /// Returns:
-    ///     A new DMSCError instance with Other variant
+    ///     A new RiError instance with Other variant
     #[staticmethod]
     pub fn from_str(message: &str) -> Self {
-        DMSCError::Other(message.to_string())
+        RiError::Other(message.to_string())
     }
 
     /// Creates a new IO error.
@@ -504,10 +504,10 @@ impl DMSCError {
     ///     message: A description of the I/O failure
     ///
     /// Returns:
-    ///     A new DMSCError instance with Io variant
+    ///     A new RiError instance with Io variant
     #[staticmethod]
     pub fn io(message: &str) -> Self {
-        DMSCError::Io(message.to_string())
+        RiError::Io(message.to_string())
     }
 
     /// Creates a new serialization error.
@@ -520,10 +520,10 @@ impl DMSCError {
     ///     message: A description of the serialization failure
     ///
     /// Returns:
-    ///     A new DMSCError instance with Serde variant
+    ///     A new RiError instance with Serde variant
     #[staticmethod]
     pub fn serde(message: &str) -> Self {
-        DMSCError::Serde(message.to_string())
+        RiError::Serde(message.to_string())
     }
 
     /// Creates a new configuration error.
@@ -536,10 +536,10 @@ impl DMSCError {
     ///     message: A description of the configuration error
     ///
     /// Returns:
-    ///     A new DMSCError instance with Config variant
+    ///     A new RiError instance with Config variant
     #[staticmethod]
     pub fn config(message: &str) -> Self {
-        DMSCError::Config(message.to_string())
+        RiError::Config(message.to_string())
     }
 
     /// Creates a new hook execution error.
@@ -551,10 +551,10 @@ impl DMSCError {
     ///     message: A description of the hook execution failure
     ///
     /// Returns:
-    ///     A new DMSCError instance with Hook variant
+    ///     A new RiError instance with Hook variant
     #[staticmethod]
     pub fn hook(message: &str) -> Self {
-        DMSCError::Hook(message.to_string())
+        RiError::Hook(message.to_string())
     }
 
     /// Checks if this error is an IO error.
@@ -565,7 +565,7 @@ impl DMSCError {
     /// Returns:
     ///     true if the error is an Io variant, false otherwise
     pub fn is_io(&self) -> bool {
-        matches!(self, DMSCError::Io(_))
+        matches!(self, RiError::Io(_))
     }
 
     /// Checks if this error is a serialization error.
@@ -576,7 +576,7 @@ impl DMSCError {
     /// Returns:
     ///     true if the error is a Serde variant, false otherwise
     pub fn is_serde(&self) -> bool {
-        matches!(self, DMSCError::Serde(_))
+        matches!(self, RiError::Serde(_))
     }
 
     /// Checks if this error is a configuration error.
@@ -587,7 +587,7 @@ impl DMSCError {
     /// Returns:
     ///     true if the error is a Config variant, false otherwise
     pub fn is_config(&self) -> bool {
-        matches!(self, DMSCError::Config(_))
+        matches!(self, RiError::Config(_))
     }
 
     /// Checks if this error is a hook error.
@@ -598,7 +598,7 @@ impl DMSCError {
     /// Returns:
     ///     true if the error is a Hook variant, false otherwise
     pub fn is_hook(&self) -> bool {
-        matches!(self, DMSCError::Hook(_))
+        matches!(self, RiError::Hook(_))
     }
 
     /// Checks if this error is a Prometheus metrics error.
@@ -609,7 +609,7 @@ impl DMSCError {
     /// Returns:
     ///     true if the error is a Prometheus variant, false otherwise
     pub fn is_prometheus(&self) -> bool {
-        matches!(self, DMSCError::Prometheus(_))
+        matches!(self, RiError::Prometheus(_))
     }
 
     /// Checks if this error is a service mesh error.
@@ -620,7 +620,7 @@ impl DMSCError {
     /// Returns:
     ///     true if the error is a ServiceMesh variant, false otherwise
     pub fn is_service_mesh(&self) -> bool {
-        matches!(self, DMSCError::ServiceMesh(_))
+        matches!(self, RiError::ServiceMesh(_))
     }
 
     /// Checks if this error is an invalid state error.
@@ -631,7 +631,7 @@ impl DMSCError {
     /// Returns:
     ///     true if the error is an InvalidState variant, false otherwise
     pub fn is_invalid_state(&self) -> bool {
-        matches!(self, DMSCError::InvalidState(_))
+        matches!(self, RiError::InvalidState(_))
     }
 
     /// Checks if this error is an invalid input error.
@@ -642,7 +642,7 @@ impl DMSCError {
     /// Returns:
     ///     true if the error is an InvalidInput variant, false otherwise
     pub fn is_invalid_input(&self) -> bool {
-        matches!(self, DMSCError::InvalidInput(_))
+        matches!(self, RiError::InvalidInput(_))
     }
 
     /// Checks if this error is a security violation error.
@@ -653,7 +653,7 @@ impl DMSCError {
     /// Returns:
     ///     true if the error is a SecurityViolation variant, false otherwise
     pub fn is_security_violation(&self) -> bool {
-        matches!(self, DMSCError::SecurityViolation(_))
+        matches!(self, RiError::SecurityViolation(_))
     }
 
     /// Checks if this error is a device not found error.
@@ -664,7 +664,7 @@ impl DMSCError {
     /// Returns:
     ///     true if the error is a DeviceNotFound variant, false otherwise
     pub fn is_device_not_found(&self) -> bool {
-        matches!(self, DMSCError::DeviceNotFound { .. })
+        matches!(self, RiError::DeviceNotFound { .. })
     }
 
     /// Checks if this error is a device allocation failed error.
@@ -675,7 +675,7 @@ impl DMSCError {
     /// Returns:
     ///     true if the error is a DeviceAllocationFailed variant, false otherwise
     pub fn is_device_allocation_failed(&self) -> bool {
-        matches!(self, DMSCError::DeviceAllocationFailed { .. })
+        matches!(self, RiError::DeviceAllocationFailed { .. })
     }
 
     /// Checks if this error is an allocation not found error.
@@ -686,7 +686,7 @@ impl DMSCError {
     /// Returns:
     ///     true if the error is an AllocationNotFound variant, false otherwise
     pub fn is_allocation_not_found(&self) -> bool {
-        matches!(self, DMSCError::AllocationNotFound { .. })
+        matches!(self, RiError::AllocationNotFound { .. })
     }
 
     /// Checks if this error is a module not found error.
@@ -697,7 +697,7 @@ impl DMSCError {
     /// Returns:
     ///     true if the error is a ModuleNotFound variant, false otherwise
     pub fn is_module_not_found(&self) -> bool {
-        matches!(self, DMSCError::ModuleNotFound { .. })
+        matches!(self, RiError::ModuleNotFound { .. })
     }
 
     /// Checks if this error is a module initialization failed error.
@@ -708,7 +708,7 @@ impl DMSCError {
     /// Returns:
     ///     true if the error is a ModuleInitFailed variant, false otherwise
     pub fn is_module_init_failed(&self) -> bool {
-        matches!(self, DMSCError::ModuleInitFailed { .. })
+        matches!(self, RiError::ModuleInitFailed { .. })
     }
 
     /// Checks if this error is a module start failed error.
@@ -719,7 +719,7 @@ impl DMSCError {
     /// Returns:
     ///     true if the error is a ModuleStartFailed variant, false otherwise
     pub fn is_module_start_failed(&self) -> bool {
-        matches!(self, DMSCError::ModuleStartFailed { .. })
+        matches!(self, RiError::ModuleStartFailed { .. })
     }
 
     /// Checks if this error is a module shutdown failed error.
@@ -730,7 +730,7 @@ impl DMSCError {
     /// Returns:
     ///     true if the error is a ModuleShutdownFailed variant, false otherwise
     pub fn is_module_shutdown_failed(&self) -> bool {
-        matches!(self, DMSCError::ModuleShutdownFailed { .. })
+        matches!(self, RiError::ModuleShutdownFailed { .. })
     }
 
     /// Checks if this error is a circular dependency error.
@@ -741,7 +741,7 @@ impl DMSCError {
     /// Returns:
     ///     true if the error is a CircularDependency variant, false otherwise
     pub fn is_circular_dependency(&self) -> bool {
-        matches!(self, DMSCError::CircularDependency { .. })
+        matches!(self, RiError::CircularDependency { .. })
     }
 
     /// Checks if this error is a missing dependency error.
@@ -752,7 +752,7 @@ impl DMSCError {
     /// Returns:
     ///     true if the error is a MissingDependency variant, false otherwise
     pub fn is_missing_dependency(&self) -> bool {
-        matches!(self, DMSCError::MissingDependency { .. })
+        matches!(self, RiError::MissingDependency { .. })
     }
 
     /// Checks if this error is a generic other error.
@@ -763,7 +763,7 @@ impl DMSCError {
     /// Returns:
     ///     true if the error is an Other variant, false otherwise
     pub fn is_other(&self) -> bool {
-        matches!(self, DMSCError::Other(_))
+        matches!(self, RiError::Other(_))
     }
 
     /// Checks if this error is an external error.
@@ -774,7 +774,7 @@ impl DMSCError {
     /// Returns:
     ///     true if the error is an ExternalError variant, false otherwise
     pub fn is_external_error(&self) -> bool {
-        matches!(self, DMSCError::ExternalError(_))
+        matches!(self, RiError::ExternalError(_))
     }
 
     /// Checks if this error is a connection pool error.
@@ -785,7 +785,7 @@ impl DMSCError {
     /// Returns:
     ///     true if the error is a PoolError variant, false otherwise
     pub fn is_pool_error(&self) -> bool {
-        matches!(self, DMSCError::PoolError(_))
+        matches!(self, RiError::PoolError(_))
     }
 
     /// Checks if this error is a device error.
@@ -796,7 +796,7 @@ impl DMSCError {
     /// Returns:
     ///     true if the error is a DeviceError variant, false otherwise
     pub fn is_device_error(&self) -> bool {
-        matches!(self, DMSCError::DeviceError(_))
+        matches!(self, RiError::DeviceError(_))
     }
 
     /// Checks if this error is a Redis error.
@@ -807,7 +807,7 @@ impl DMSCError {
     /// Returns:
     ///     true if the error is a RedisError variant, false otherwise
     pub fn is_redis_error(&self) -> bool {
-        matches!(self, DMSCError::RedisError(_))
+        matches!(self, RiError::RedisError(_))
     }
 
     /// Checks if this error is an HTTP client error.
@@ -818,7 +818,7 @@ impl DMSCError {
     /// Returns:
     ///     true if the error is an HttpClientError variant, false otherwise
     pub fn is_http_client_error(&self) -> bool {
-        matches!(self, DMSCError::HttpClientError(_))
+        matches!(self, RiError::HttpClientError(_))
     }
 
     /// Checks if this error is a TOML parsing error.
@@ -829,7 +829,7 @@ impl DMSCError {
     /// Returns:
     ///     true if the error is a TomlError variant, false otherwise
     pub fn is_toml_error(&self) -> bool {
-        matches!(self, DMSCError::TomlError(_))
+        matches!(self, RiError::TomlError(_))
     }
 
     /// Checks if this error is a YAML parsing error.
@@ -840,7 +840,7 @@ impl DMSCError {
     /// Returns:
     ///     true if the error is a YamlError variant, false otherwise
     pub fn is_yaml_error(&self) -> bool {
-        matches!(self, DMSCError::YamlError(_))
+        matches!(self, RiError::YamlError(_))
     }
 
     /// Checks if this error is a queue error.
@@ -851,6 +851,6 @@ impl DMSCError {
     /// Returns:
     ///     true if the error is a Queue variant, false otherwise
     pub fn is_queue(&self) -> bool {
-        matches!(self, DMSCError::Queue(_))
+        matches!(self, RiError::Queue(_))
     }
 }

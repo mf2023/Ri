@@ -1,7 +1,7 @@
 //! Copyright © 2025-2026 Wenze Wei. All Rights Reserved.
 //!
-//! This file is part of DMSC.
-//! The DMSC project belongs to the Dunimd Team.
+//! This file is part of Ri.
+//! The Ri project belongs to the Dunimd Team.
 //!
 //! Licensed under the Apache License, Version 2.0 (the "License");
 //! You may not use this file except in compliance with the License.
@@ -19,16 +19,16 @@
 
 //! # Protocol Module
 //!
-//! This module provides protocol implementations for DMSC, including
+//! This module provides protocol implementations for Ri, including
 //! global protocol, private protocol, post-quantum cryptography, and
 //! integration features.
 //!
 //! ## Features
 //!
-//! - **DMSCProtocol**: Main protocol interface (trait definition)
-//! - **DMSCGlobalProtocol**: Global protocol implementation (basic implementation)
-//! - **DMSCPrivateProtocol**: Private protocol implementation (basic implementation)
-//! - **DMSCCrypto**: Cryptographic operations
+//! - **RiProtocol**: Main protocol interface (trait definition)
+//! - **RiGlobalProtocol**: Global protocol implementation (basic implementation)
+//! - **RiPrivateProtocol**: Private protocol implementation (basic implementation)
+//! - **RiCrypto**: Cryptographic operations
 //! - **Post-Quantum Cryptography**: Kyber, Dilithium, Falcon implementations using liboqs
 //!
 //! ## Security Status
@@ -60,14 +60,14 @@ use async_trait::async_trait;
 use tokio::sync::RwLock;
 use serde::{Serialize, Deserialize};
 
-use crate::core::{DMSCResult, DMSCError};
+use crate::core::{RiResult, RiError};
 
 #[cfg(feature = "pyo3")]
 use pyo3::prelude::*;
 
 /// Frame definitions for binary protocol encoding
 pub mod frames;
-pub use frames::{DMSCFrameBuilder, DMSCFrameParser};
+pub use frames::{RiFrameBuilder, RiFrameParser};
 
 /// Post-quantum cryptography modules (requires oqs feature)
 #[cfg(feature = "oqs")]
@@ -83,13 +83,13 @@ pub use post_quantum::{
     KyberKEM, KyberPublicKey, KyberSecretKey, KyberCiphertext,
     DilithiumSigner, DilithiumPublicKey, DilithiumSecretKey, DilithiumSignature,
     FalconSigner, FalconPublicKey, FalconSecretKey, FalconSignature,
-    DMSCPostQuantumAlgorithm, KEMResult,
+    RiPostQuantumAlgorithm, KEMResult,
 };
 
 /// Protocol type enumeration
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, std::hash::Hash)]
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
-pub enum DMSCProtocolType {
+pub enum RiProtocolType {
     /// Standard global protocol
     Global = 0,
     /// Enhanced private protocol
@@ -99,7 +99,7 @@ pub enum DMSCProtocolType {
 /// Protocol status
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
-pub enum DMSCProtocolStatus {
+pub enum RiProtocolStatus {
     /// Protocol is inactive
     Inactive,
     /// Protocol is initializing
@@ -113,7 +113,7 @@ pub enum DMSCProtocolStatus {
 /// Connection state
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
-pub enum DMSCConnectionState {
+pub enum RiConnectionState {
     /// Connection is disconnected
     Disconnected,
     /// Connection is connecting
@@ -127,7 +127,7 @@ pub enum DMSCConnectionState {
 /// Security level
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
-pub enum DMSCSecurityLevel {
+pub enum RiSecurityLevel {
     /// No security
     None,
     /// Standard security
@@ -141,36 +141,36 @@ pub enum DMSCSecurityLevel {
 /// Protocol configuration
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
-pub struct DMSCProtocolConfig {
+pub struct RiProtocolConfig {
     /// Default protocol type
-    pub default_protocol: DMSCProtocolType,
+    pub default_protocol: RiProtocolType,
     /// Whether security is enabled
     pub enable_security: bool,
     /// Security level
-    pub security_level: DMSCSecurityLevel,
+    pub security_level: RiSecurityLevel,
     /// Whether state synchronization is enabled
     pub enable_state_sync: bool,
     /// Whether performance optimization is enabled
     pub performance_optimization: bool,
 }
 
-impl Default for DMSCProtocolConfig {
+impl Default for RiProtocolConfig {
     fn default() -> Self {
         Self {
-            default_protocol: DMSCProtocolType::Global,
+            default_protocol: RiProtocolType::Global,
             enable_security: true,
-            security_level: DMSCSecurityLevel::Standard,
+            security_level: RiSecurityLevel::Standard,
             enable_state_sync: true,
             performance_optimization: true,
         }
     }
 }
 
-impl DMSCProtocolConfig {
+impl RiProtocolConfig {
     /// Validate the configuration.
-    pub fn validate(&self) -> DMSCResult<()> {
-        if self.security_level == DMSCSecurityLevel::None && self.enable_security {
-            return Err(DMSCError::Config(
+    pub fn validate(&self) -> RiResult<()> {
+        if self.security_level == RiSecurityLevel::None && self.enable_security {
+            return Err(RiError::Config(
                 "Security level cannot be None when security is enabled".to_string()
             ));
         }
@@ -181,9 +181,9 @@ impl DMSCProtocolConfig {
     /// Create a secure configuration.
     pub fn secure() -> Self {
         Self {
-            default_protocol: DMSCProtocolType::Private,
+            default_protocol: RiProtocolType::Private,
             enable_security: true,
-            security_level: DMSCSecurityLevel::High,
+            security_level: RiSecurityLevel::High,
             enable_state_sync: true,
             performance_optimization: true,
         }
@@ -192,9 +192,9 @@ impl DMSCProtocolConfig {
     /// Create a maximum security configuration with post-quantum cryptography.
     pub fn maximum_security() -> Self {
         Self {
-            default_protocol: DMSCProtocolType::Private,
+            default_protocol: RiProtocolType::Private,
             enable_security: true,
-            security_level: DMSCSecurityLevel::Military,
+            security_level: RiSecurityLevel::Military,
             enable_state_sync: true,
             performance_optimization: false,
         }
@@ -204,7 +204,7 @@ impl DMSCProtocolConfig {
 /// Protocol statistics
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
-pub struct DMSCProtocolStats {
+pub struct RiProtocolStats {
     /// Total messages sent
     pub messages_sent: u64,
     /// Total messages received
@@ -219,7 +219,7 @@ pub struct DMSCProtocolStats {
     pub avg_latency_ms: f64,
 }
 
-impl DMSCProtocolStats {
+impl RiProtocolStats {
     pub fn new() -> Self {
         Self {
             messages_sent: 0,
@@ -249,7 +249,7 @@ impl DMSCProtocolStats {
 /// Connection statistics
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
-pub struct DMSCConnectionStats {
+pub struct RiConnectionStats {
     /// Total connections
     pub total_connections: u64,
     /// Active connections
@@ -262,7 +262,7 @@ pub struct DMSCConnectionStats {
     pub connection_duration_secs: u64,
 }
 
-impl Default for DMSCConnectionStats {
+impl Default for RiConnectionStats {
     fn default() -> Self {
         Self {
             total_connections: 0,
@@ -277,7 +277,7 @@ impl Default for DMSCConnectionStats {
 /// Protocol health status
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
-pub enum DMSCProtocolHealth {
+pub enum RiProtocolHealth {
     /// Healthy
     Healthy,
     /// Degraded
@@ -288,16 +288,16 @@ pub enum DMSCProtocolHealth {
     Unknown,
 }
 
-impl Default for DMSCProtocolHealth {
+impl Default for RiProtocolHealth {
     fn default() -> Self {
-        DMSCProtocolHealth::Unknown
+        RiProtocolHealth::Unknown
     }
 }
 
 /// Message flags for protocol messages
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
-pub struct DMSCMessageFlags {
+pub struct RiMessageFlags {
     /// Whether the message is compressed
     pub compressed: bool,
     /// Whether the message is encrypted
@@ -308,7 +308,7 @@ pub struct DMSCMessageFlags {
     pub priority: bool,
 }
 
-impl Default for DMSCMessageFlags {
+impl Default for RiMessageFlags {
     fn default() -> Self {
         Self {
             compressed: false,
@@ -322,7 +322,7 @@ impl Default for DMSCMessageFlags {
 /// Connection information
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
-pub struct DMSCConnectionInfo {
+pub struct RiConnectionInfo {
     /// Connection ID
     pub connection_id: String,
     /// Remote device ID
@@ -330,26 +330,26 @@ pub struct DMSCConnectionInfo {
     /// Connection address
     pub address: String,
     /// Protocol type
-    pub protocol_type: DMSCProtocolType,
+    pub protocol_type: RiProtocolType,
     /// Connection state
-    pub state: DMSCConnectionState,
+    pub state: RiConnectionState,
     /// Security level
-    pub security_level: DMSCSecurityLevel,
+    pub security_level: RiSecurityLevel,
     /// Connection timestamp
     pub connected_at: u64,
     /// Last activity timestamp
     pub last_activity: u64,
 }
 
-impl Default for DMSCConnectionInfo {
+impl Default for RiConnectionInfo {
     fn default() -> Self {
         Self {
             connection_id: String::new(),
             device_id: String::new(),
             address: String::new(),
-            protocol_type: DMSCProtocolType::Global,
-            state: DMSCConnectionState::Disconnected,
-            security_level: DMSCSecurityLevel::None,
+            protocol_type: RiProtocolType::Global,
+            state: RiConnectionState::Disconnected,
+            security_level: RiSecurityLevel::None,
             connected_at: 0,
             last_activity: 0,
         }
@@ -359,7 +359,7 @@ impl Default for DMSCConnectionInfo {
 /// Frame type enumeration
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
-pub enum DMSCFrameType {
+pub enum RiFrameType {
     /// Data frame
     Data = 0,
     /// Control frame
@@ -375,11 +375,11 @@ pub enum DMSCFrameType {
 /// Frame header
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
-pub struct DMSCFrameHeader {
+pub struct RiFrameHeader {
     /// Protocol version (major.minor as u8)
     pub version: u8,
     /// Frame type
-    pub frame_type: DMSCFrameType,
+    pub frame_type: RiFrameType,
     /// Sequence number
     pub sequence_number: u64,
     /// Message length
@@ -392,11 +392,11 @@ pub struct DMSCFrameHeader {
     pub auth_tag_offset: u16,
 }
 
-impl Default for DMSCFrameHeader {
+impl Default for RiFrameHeader {
     fn default() -> Self {
         Self {
             version: 1,
-            frame_type: DMSCFrameType::Data,
+            frame_type: RiFrameType::Data,
             sequence_number: 0,
             length: 0,
             timestamp: 0,
@@ -406,7 +406,7 @@ impl Default for DMSCFrameHeader {
     }
 }
 
-impl DMSCFrameHeader {
+impl RiFrameHeader {
     /// Get major version number.
     pub fn major_version(&self) -> u8 {
         self.version >> 4
@@ -426,9 +426,9 @@ impl DMSCFrameHeader {
 /// Protocol frame
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
-pub struct DMSCFrame {
+pub struct RiFrame {
     /// Frame header
-    pub header: DMSCFrameHeader,
+    pub header: RiFrameHeader,
     /// Frame payload
     pub payload: Vec<u8>,
     /// Source device ID
@@ -437,10 +437,10 @@ pub struct DMSCFrame {
     pub target_id: String,
 }
 
-impl Default for DMSCFrame {
+impl Default for RiFrame {
     fn default() -> Self {
         Self {
-            header: DMSCFrameHeader::default(),
+            header: RiFrameHeader::default(),
             payload: Vec::new(),
             source_id: String::new(),
             target_id: String::new(),
@@ -450,44 +450,44 @@ impl Default for DMSCFrame {
 
 /// Core protocol trait
 #[async_trait]
-pub trait DMSCProtocol {
+pub trait RiProtocol {
     /// Get protocol type
-    fn protocol_type(&self) -> DMSCProtocolType;
+    fn protocol_type(&self) -> RiProtocolType;
     
     /// Check if protocol is ready
     async fn is_ready(&self) -> bool;
     
     /// Initialize protocol
-    async fn initialize(&mut self, config: DMSCProtocolConfig) -> DMSCResult<()>;
+    async fn initialize(&mut self, config: RiProtocolConfig) -> RiResult<()>;
     
     /// Send message
-    async fn send_message(&mut self, target: &str, data: &[u8]) -> DMSCResult<Vec<u8>>;
+    async fn send_message(&mut self, target: &str, data: &[u8]) -> RiResult<Vec<u8>>;
     
     /// Send message with flags
-    async fn send_message_with_flags(&mut self, target: &str, data: &[u8], flags: DMSCMessageFlags) -> DMSCResult<Vec<u8>>;
+    async fn send_message_with_flags(&mut self, target: &str, data: &[u8], flags: RiMessageFlags) -> RiResult<Vec<u8>>;
     
     /// Receive message
-    async fn receive_message(&mut self) -> DMSCResult<Vec<u8>>;
+    async fn receive_message(&mut self) -> RiResult<Vec<u8>>;
     
     /// Get connection info
-    async fn get_connection_info(&self, connection_id: &str) -> DMSCResult<DMSCConnectionInfo>;
+    async fn get_connection_info(&self, connection_id: &str) -> RiResult<RiConnectionInfo>;
     
     /// Close connection
-    async fn close_connection(&mut self, connection_id: &str) -> DMSCResult<()>;
+    async fn close_connection(&mut self, connection_id: &str) -> RiResult<()>;
     
     /// Get protocol statistics
-    fn get_stats(&self) -> DMSCProtocolStats;
+    fn get_stats(&self) -> RiProtocolStats;
     
     /// Get protocol health
-    async fn get_health(&self) -> DMSCProtocolHealth;
+    async fn get_health(&self) -> RiProtocolHealth;
     
     /// Shutdown protocol
-    async fn shutdown(&mut self) -> DMSCResult<()>;
+    async fn shutdown(&mut self) -> RiResult<()>;
 }
 
 /// Protocol connection trait
 #[async_trait]
-pub trait DMSCProtocolConnection {
+pub trait RiProtocolConnection {
     /// Get connection ID
     fn connection_id(&self) -> &str;
     
@@ -495,34 +495,34 @@ pub trait DMSCProtocolConnection {
     fn remote_device_id(&self) -> &str;
     
     /// Get protocol type
-    fn protocol_type(&self) -> DMSCProtocolType;
+    fn protocol_type(&self) -> RiProtocolType;
     
     /// Check if connection is active
     fn is_active(&self) -> bool;
     
     /// Send data
-    async fn send(&mut self, data: &[u8]) -> DMSCResult<usize>;
+    async fn send(&mut self, data: &[u8]) -> RiResult<usize>;
     
     /// Receive data
-    async fn receive(&mut self, buffer: &mut [u8]) -> DMSCResult<usize>;
+    async fn receive(&mut self, buffer: &mut [u8]) -> RiResult<usize>;
     
     /// Get statistics
-    fn get_stats(&self) -> DMSCConnectionStats;
+    fn get_stats(&self) -> RiConnectionStats;
     
     /// Close connection
-    async fn close(&mut self) -> DMSCResult<()>;
+    async fn close(&mut self) -> RiResult<()>;
 }
 
 /// Protocol manager
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
-pub struct DMSCProtocolManager {
+pub struct RiProtocolManager {
     /// Protocol statistics
-    pub stats: Arc<RwLock<DMSCProtocolStats>>,
+    pub stats: Arc<RwLock<RiProtocolStats>>,
     /// Default protocol type
-    pub default_protocol: DMSCProtocolType,
+    pub default_protocol: RiProtocolType,
     /// Active connections
-    connections: Arc<RwLock<HashMap<String, DMSCConnectionInfo>>>,
+    connections: Arc<RwLock<HashMap<String, RiConnectionInfo>>>,
     /// Message sequence counter
     sequence_counter: Arc<AtomicU64>,
     /// Protocol initialized state
@@ -535,50 +535,50 @@ mod protocol_tests {
 
     #[test]
     fn test_protocol_config_default() {
-        let config = DMSCProtocolConfig::default();
-        assert_eq!(config.default_protocol, DMSCProtocolType::Global);
+        let config = RiProtocolConfig::default();
+        assert_eq!(config.default_protocol, RiProtocolType::Global);
         assert!(config.enable_security);
-        assert_eq!(config.security_level, DMSCSecurityLevel::Standard);
+        assert_eq!(config.security_level, RiSecurityLevel::Standard);
     }
 
     #[test]
     fn test_protocol_config_secure() {
-        let config = DMSCProtocolConfig::secure();
-        assert_eq!(config.default_protocol, DMSCProtocolType::Private);
+        let config = RiProtocolConfig::secure();
+        assert_eq!(config.default_protocol, RiProtocolType::Private);
         assert!(config.enable_security);
-        assert_eq!(config.security_level, DMSCSecurityLevel::High);
+        assert_eq!(config.security_level, RiSecurityLevel::High);
     }
 
     #[test]
     fn test_protocol_config_maximum_security() {
-        let config = DMSCProtocolConfig::maximum_security();
-        assert_eq!(config.default_protocol, DMSCProtocolType::Private);
+        let config = RiProtocolConfig::maximum_security();
+        assert_eq!(config.default_protocol, RiProtocolType::Private);
         assert!(config.enable_security);
-        assert_eq!(config.security_level, DMSCSecurityLevel::Military);
+        assert_eq!(config.security_level, RiSecurityLevel::Military);
     }
 
     #[test]
     fn test_protocol_config_validation() {
-        let mut config = DMSCProtocolConfig::default();
+        let mut config = RiProtocolConfig::default();
 
         // Valid config should pass
         assert!(config.validate().is_ok());
 
         // None security level with security enabled should fail
-        config.security_level = DMSCSecurityLevel::None;
+        config.security_level = RiSecurityLevel::None;
         assert!(config.validate().is_err());
     }
 
     #[test]
     fn test_frame_header_version() {
-        let header = DMSCFrameHeader::default();
+        let header = RiFrameHeader::default();
         assert_eq!(header.major_version(), 0);
         assert_eq!(header.minor_version(), 1);
     }
 
     #[test]
     fn test_frame_header_supports_feature() {
-        let header = DMSCFrameHeader {
+        let header = RiFrameHeader {
             flags: 0b00000011,
             ..Default::default()
         };
@@ -590,7 +590,7 @@ mod protocol_tests {
 
     #[test]
     fn test_protocol_stats() {
-        let stats = DMSCProtocolStats::new();
+        let stats = RiProtocolStats::new();
         assert_eq!(stats.messages_sent, 0);
         assert_eq!(stats.messages_received, 0);
         assert_eq!(stats.errors, 0);
@@ -598,51 +598,51 @@ mod protocol_tests {
 
     #[test]
     fn test_connection_info() {
-        let mut info = DMSCConnectionInfo::default();
+        let mut info = RiConnectionInfo::default();
         info.device_id = "test-device".to_string();
-        info.state = DMSCConnectionState::Connected;
+        info.state = RiConnectionState::Connected;
         assert_eq!(info.device_id, "test-device");
-        assert_eq!(info.state, DMSCConnectionState::Connected);
-        assert_eq!(info.security_level, DMSCSecurityLevel::None);
+        assert_eq!(info.state, RiConnectionState::Connected);
+        assert_eq!(info.security_level, RiSecurityLevel::None);
     }
 
     #[test]
     fn test_protocol_type_values() {
-        assert_eq!(DMSCProtocolType::Global as u8, 0);
-        assert_eq!(DMSCProtocolType::Private as u8, 1);
+        assert_eq!(RiProtocolType::Global as u8, 0);
+        assert_eq!(RiProtocolType::Private as u8, 1);
     }
 
     #[test]
     fn test_security_level_values() {
-        assert_eq!(DMSCSecurityLevel::None as u8, 0);
-        assert_eq!(DMSCSecurityLevel::Standard as u8, 1);
-        assert_eq!(DMSCSecurityLevel::High as u8, 2);
-        assert_eq!(DMSCSecurityLevel::Military as u8, 3);
+        assert_eq!(RiSecurityLevel::None as u8, 0);
+        assert_eq!(RiSecurityLevel::Standard as u8, 1);
+        assert_eq!(RiSecurityLevel::High as u8, 2);
+        assert_eq!(RiSecurityLevel::Military as u8, 3);
     }
 }
 
 #[cfg(feature = "pyo3")]
 #[pyo3::prelude::pymethods]
-impl DMSCProtocolManager {
+impl RiProtocolManager {
     #[new]
     fn new_py() -> Self {
         Self::new()
     }
     
     #[getter]
-    fn get_stats_py(&self) -> DMSCProtocolStats {
+    fn get_stats_py(&self) -> RiProtocolStats {
         self.stats.try_read()
             .map(|guard| guard.clone())
-            .unwrap_or_else(|_| DMSCProtocolStats::new())
+            .unwrap_or_else(|_| RiProtocolStats::new())
     }
     
     #[getter]
-    fn get_default_protocol_py(&self) -> DMSCProtocolType {
+    fn get_default_protocol_py(&self) -> RiProtocolType {
         self.default_protocol
     }
     
     /// Initialize manager
-    pub fn initialize(&mut self, config: DMSCProtocolConfig) -> PyResult<()> {
+    pub fn initialize(&mut self, config: RiProtocolConfig) -> PyResult<()> {
         self.default_protocol = config.default_protocol;
         
         let mut initialized = self.initialized.try_write()
@@ -662,10 +662,10 @@ impl DMSCProtocolManager {
         
         let sequence = self.sequence_counter.fetch_add(1, Ordering::SeqCst);
         
-        let frame = DMSCFrame {
-            header: DMSCFrameHeader {
+        let frame = RiFrame {
+            header: RiFrameHeader {
                 version: 1,
-                frame_type: DMSCFrameType::Data,
+                frame_type: RiFrameType::Data,
                 sequence_number: sequence,
                 length: data.len() as u32,
                 timestamp,
@@ -683,7 +683,7 @@ impl DMSCProtocolManager {
                 if let Ok(mut stats) = self.stats.try_write() {
                     stats.record_error();
                 }
-                let error_response = DMSCProtocolResponse {
+                let error_response = RiProtocolResponse {
                     success: false,
                     sequence_number: sequence,
                     target_id: target.to_string(),
@@ -702,7 +702,7 @@ impl DMSCProtocolManager {
         
         let response_data = self.build_response_data(target, &frame, sequence, timestamp);
         
-        let response = DMSCProtocolResponse {
+        let response = RiProtocolResponse {
             success: true,
             sequence_number: sequence,
             target_id: target.to_string(),
@@ -718,7 +718,7 @@ impl DMSCProtocolManager {
         serde_json::to_vec(&response).unwrap_or_else(|_| b"{\"success\":true,\"message\":\"Message sent\"}".to_vec())
     }
     
-    fn build_response_data(&self, target: &str, frame: &DMSCFrame, sequence: u64, timestamp: u64) -> Vec<u8> {
+    fn build_response_data(&self, target: &str, frame: &RiFrame, sequence: u64, timestamp: u64) -> Vec<u8> {
         let mut response = HashMap::<String, serde_json::Value>::new();
         
         response.insert("status".to_string(), serde_json::Value::String("delivered".to_string()));
@@ -741,12 +741,12 @@ impl DMSCProtocolManager {
     }
     
     /// Send message with flags (sync version for Python)
-    pub fn send_message_with_flags(&self, target: &str, data: &[u8], _flags: DMSCMessageFlags) -> Vec<u8> {
+    pub fn send_message_with_flags(&self, target: &str, data: &[u8], _flags: RiMessageFlags) -> Vec<u8> {
         self.send_message(target, data)
     }
     
     /// Get connection info (sync version for Python)
-    pub fn get_connection_info(&self, connection_id: &str) -> Option<DMSCConnectionInfo> {
+    pub fn get_connection_info(&self, connection_id: &str) -> Option<RiConnectionInfo> {
         self.connections.try_read()
             .ok()
             .and_then(|connections| connections.get(connection_id).cloned())
@@ -761,11 +761,11 @@ impl DMSCProtocolManager {
     }
 }
 
-impl DMSCProtocolManager {
+impl RiProtocolManager {
     pub fn new() -> Self {
         Self {
-            stats: Arc::new(RwLock::new(DMSCProtocolStats::new())),
-            default_protocol: DMSCProtocolType::Global,
+            stats: Arc::new(RwLock::new(RiProtocolStats::new())),
+            default_protocol: RiProtocolType::Global,
             connections: Arc::new(RwLock::new(HashMap::new())),
             sequence_counter: Arc::new(AtomicU64::new(0)),
             initialized: Arc::new(RwLock::new(false)),
@@ -773,7 +773,7 @@ impl DMSCProtocolManager {
     }
 }
 
-impl Default for DMSCProtocolManager {
+impl Default for RiProtocolManager {
     fn default() -> Self {
         Self::new()
     }
@@ -782,7 +782,7 @@ impl Default for DMSCProtocolManager {
 /// Protocol response structure
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
-pub struct DMSCProtocolResponse {
+pub struct RiProtocolResponse {
     /// Whether the operation was successful
     pub success: bool,
     /// Sequence number matching the request
@@ -795,7 +795,7 @@ pub struct DMSCProtocolResponse {
     pub timestamp: u64,
 }
 
-impl Default for DMSCProtocolResponse {
+impl Default for RiProtocolResponse {
     fn default() -> Self {
         Self {
             success: false,
@@ -825,9 +825,9 @@ pub enum ProtocolError {
     NotSupported,
 }
 
-impl From<ProtocolError> for DMSCError {
+impl From<ProtocolError> for RiError {
     fn from(error: ProtocolError) -> Self {
-        DMSCError::Other(format!("Protocol error: {}", error))
+        RiError::Other(format!("Protocol error: {}", error))
     }
 }
 
@@ -837,27 +837,27 @@ impl From<serde_json::Error> for ProtocolError {
     }
 }
 
-impl From<ProtocolError> for DMSCResult<()> {
+impl From<ProtocolError> for RiResult<()> {
     fn from(error: ProtocolError) -> Self {
         Err(error.into())
     }
 }
 
 #[derive(Debug, Clone)]
-pub struct DMSCBaseProtocol {
-    config: DMSCProtocolConfig,
-    stats: Arc<RwLock<DMSCProtocolStats>>,
-    connections: Arc<RwLock<HashMap<String, DMSCConnectionInfo>>>,
+pub struct RiBaseProtocol {
+    config: RiProtocolConfig,
+    stats: Arc<RwLock<RiProtocolStats>>,
+    connections: Arc<RwLock<HashMap<String, RiConnectionInfo>>>,
     sequence_counter: Arc<AtomicU64>,
     initialized: Arc<RwLock<bool>>,
     _receiver_id: String,
 }
 
-impl DMSCBaseProtocol {
+impl RiBaseProtocol {
     pub fn new(receiver_id: String) -> Self {
         Self {
-            config: DMSCProtocolConfig::default(),
-            stats: Arc::new(RwLock::new(DMSCProtocolStats::new())),
+            config: RiProtocolConfig::default(),
+            stats: Arc::new(RwLock::new(RiProtocolStats::new())),
             connections: Arc::new(RwLock::new(HashMap::new())),
             sequence_counter: Arc::new(AtomicU64::new(0)),
             initialized: Arc::new(RwLock::new(false)),
@@ -869,12 +869,12 @@ impl DMSCBaseProtocol {
         *self.initialized.read().await
     }
     
-    pub async fn initialize(&mut self, config: DMSCProtocolConfig) {
+    pub async fn initialize(&mut self, config: RiProtocolConfig) {
         self.config = config;
         *self.initialized.write().await = true;
     }
 
-    pub async fn send_message(&mut self, _target: &str, data: &[u8]) -> DMSCResult<Vec<u8>> {
+    pub async fn send_message(&mut self, _target: &str, data: &[u8]) -> RiResult<Vec<u8>> {
         if !*self.initialized.read().await {
             return Err(ProtocolError::NotInitialized.into());
         }
@@ -883,7 +883,7 @@ impl DMSCBaseProtocol {
 
         self.stats.write().await.record_sent(data.len());
 
-        let mut builder = DMSCFrameBuilder::new();
+        let mut builder = RiFrameBuilder::new();
         builder.set_sequence(sequence);
         let frame = builder.build_data_frame(data.to_vec())
             .map_err(|e| ProtocolError::Serialization {
@@ -900,14 +900,14 @@ impl DMSCBaseProtocol {
         Ok(frame_bytes)
     }
     
-    pub async fn receive_message(&mut self) -> DMSCResult<Vec<u8>> {
+    pub async fn receive_message(&mut self) -> RiResult<Vec<u8>> {
         if !*self.initialized.read().await {
             return Err(ProtocolError::NotInitialized.into());
         }
 
         let sequence = self.sequence_counter.fetch_add(1, Ordering::SeqCst) as u32;
 
-        let mut builder = DMSCFrameBuilder::new();
+        let mut builder = RiFrameBuilder::new();
         builder.set_sequence(sequence);
         let frame = builder.build_keepalive_frame()
             .map_err(|e| ProtocolError::Serialization {
@@ -924,7 +924,7 @@ impl DMSCBaseProtocol {
         Ok(frame_bytes)
     }
     
-    pub async fn get_connection_info(&self, connection_id: &str) -> DMSCResult<DMSCConnectionInfo> {
+    pub async fn get_connection_info(&self, connection_id: &str) -> RiResult<RiConnectionInfo> {
         let connections = self.connections.read().await;
         connections.get(connection_id)
             .cloned()
@@ -933,7 +933,7 @@ impl DMSCBaseProtocol {
             }.into())
     }
     
-    pub async fn close_connection(&mut self, connection_id: &str) -> DMSCResult<()> {
+    pub async fn close_connection(&mut self, connection_id: &str) -> RiResult<()> {
         let mut connections = self.connections.write().await;
         if connections.remove(connection_id).is_some() {
             Ok(())
@@ -944,17 +944,17 @@ impl DMSCBaseProtocol {
         }
     }
     
-    pub fn get_stats(&self) -> DMSCProtocolStats {
+    pub fn get_stats(&self) -> RiProtocolStats {
         self.stats.try_read()
             .map(|guard| guard.clone())
-            .unwrap_or_else(|_| DMSCProtocolStats::new())
+            .unwrap_or_else(|_| RiProtocolStats::new())
     }
     
-    pub async fn get_health(&self) -> DMSCProtocolHealth {
+    pub async fn get_health(&self) -> RiProtocolHealth {
         if *self.initialized.read().await {
-            DMSCProtocolHealth::Healthy
+            RiProtocolHealth::Healthy
         } else {
-            DMSCProtocolHealth::Unknown
+            RiProtocolHealth::Unknown
         }
     }
     
@@ -965,44 +965,44 @@ impl DMSCBaseProtocol {
 
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
-pub struct DMSCGlobalProtocol {
-    base: DMSCBaseProtocol,
+pub struct RiGlobalProtocol {
+    base: RiBaseProtocol,
 }
 
-impl DMSCGlobalProtocol {
+impl RiGlobalProtocol {
     pub fn new() -> Self {
         Self {
-            base: DMSCBaseProtocol::new(String::from("receiver")),
+            base: RiBaseProtocol::new(String::from("receiver")),
         }
     }
 }
 
-impl Default for DMSCGlobalProtocol {
+impl Default for RiGlobalProtocol {
     fn default() -> Self {
         Self::new()
     }
 }
 
 #[async_trait]
-impl DMSCProtocol for DMSCGlobalProtocol {
-    fn protocol_type(&self) -> DMSCProtocolType {
-        DMSCProtocolType::Global
+impl RiProtocol for RiGlobalProtocol {
+    fn protocol_type(&self) -> RiProtocolType {
+        RiProtocolType::Global
     }
 
     async fn is_ready(&self) -> bool {
         self.base.is_ready().await
     }
 
-    async fn initialize(&mut self, config: DMSCProtocolConfig) -> DMSCResult<()> {
+    async fn initialize(&mut self, config: RiProtocolConfig) -> RiResult<()> {
         self.base.initialize(config).await;
         Ok(())
     }
 
-    async fn send_message(&mut self, target: &str, data: &[u8]) -> DMSCResult<Vec<u8>> {
+    async fn send_message(&mut self, target: &str, data: &[u8]) -> RiResult<Vec<u8>> {
         self.base.send_message(target, data).await
     }
 
-    async fn send_message_with_flags(&mut self, target: &str, data: &[u8], flags: DMSCMessageFlags) -> DMSCResult<Vec<u8>> {
+    async fn send_message_with_flags(&mut self, target: &str, data: &[u8], flags: RiMessageFlags) -> RiResult<Vec<u8>> {
         let response = self.base.send_message(target, data).await?;
         if flags.encrypted {
             self.base.stats.write().await.record_error();
@@ -1010,27 +1010,27 @@ impl DMSCProtocol for DMSCGlobalProtocol {
         Ok(response)
     }
 
-    async fn receive_message(&mut self) -> DMSCResult<Vec<u8>> {
+    async fn receive_message(&mut self) -> RiResult<Vec<u8>> {
         self.base.receive_message().await
     }
 
-    async fn get_connection_info(&self, connection_id: &str) -> DMSCResult<DMSCConnectionInfo> {
+    async fn get_connection_info(&self, connection_id: &str) -> RiResult<RiConnectionInfo> {
         self.base.get_connection_info(connection_id).await
     }
 
-    async fn close_connection(&mut self, connection_id: &str) -> DMSCResult<()> {
+    async fn close_connection(&mut self, connection_id: &str) -> RiResult<()> {
         self.base.close_connection(connection_id).await
     }
 
-    fn get_stats(&self) -> DMSCProtocolStats {
+    fn get_stats(&self) -> RiProtocolStats {
         self.base.get_stats()
     }
 
-    async fn get_health(&self) -> DMSCProtocolHealth {
+    async fn get_health(&self) -> RiProtocolHealth {
         self.base.get_health().await
     }
 
-    async fn shutdown(&mut self) -> DMSCResult<()> {
+    async fn shutdown(&mut self) -> RiResult<()> {
         self.base.shutdown().await;
         Ok(())
     }
@@ -1038,44 +1038,44 @@ impl DMSCProtocol for DMSCGlobalProtocol {
 
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
-pub struct DMSCPrivateProtocol {
-    base: DMSCBaseProtocol,
+pub struct RiPrivateProtocol {
+    base: RiBaseProtocol,
 }
 
-impl DMSCPrivateProtocol {
+impl RiPrivateProtocol {
     pub fn new() -> Self {
         Self {
-            base: DMSCBaseProtocol::new(String::from("private_receiver")),
+            base: RiBaseProtocol::new(String::from("private_receiver")),
         }
     }
 }
 
-impl Default for DMSCPrivateProtocol {
+impl Default for RiPrivateProtocol {
     fn default() -> Self {
         Self::new()
     }
 }
 
 #[async_trait]
-impl DMSCProtocol for DMSCPrivateProtocol {
-    fn protocol_type(&self) -> DMSCProtocolType {
-        DMSCProtocolType::Private
+impl RiProtocol for RiPrivateProtocol {
+    fn protocol_type(&self) -> RiProtocolType {
+        RiProtocolType::Private
     }
 
     async fn is_ready(&self) -> bool {
         self.base.is_ready().await
     }
 
-    async fn initialize(&mut self, config: DMSCProtocolConfig) -> DMSCResult<()> {
+    async fn initialize(&mut self, config: RiProtocolConfig) -> RiResult<()> {
         self.base.initialize(config).await;
         Ok(())
     }
 
-    async fn send_message(&mut self, target: &str, data: &[u8]) -> DMSCResult<Vec<u8>> {
+    async fn send_message(&mut self, target: &str, data: &[u8]) -> RiResult<Vec<u8>> {
         self.base.send_message(target, data).await
     }
 
-    async fn send_message_with_flags(&mut self, target: &str, data: &[u8], flags: DMSCMessageFlags) -> DMSCResult<Vec<u8>> {
+    async fn send_message_with_flags(&mut self, target: &str, data: &[u8], flags: RiMessageFlags) -> RiResult<Vec<u8>> {
         let response = self.base.send_message(target, data).await?;
         if !flags.encrypted {
             self.base.stats.write().await.record_error();
@@ -1083,27 +1083,27 @@ impl DMSCProtocol for DMSCPrivateProtocol {
         Ok(response)
     }
 
-    async fn receive_message(&mut self) -> DMSCResult<Vec<u8>> {
+    async fn receive_message(&mut self) -> RiResult<Vec<u8>> {
         self.base.receive_message().await
     }
 
-    async fn get_connection_info(&self, connection_id: &str) -> DMSCResult<DMSCConnectionInfo> {
+    async fn get_connection_info(&self, connection_id: &str) -> RiResult<RiConnectionInfo> {
         self.base.get_connection_info(connection_id).await
     }
 
-    async fn close_connection(&mut self, connection_id: &str) -> DMSCResult<()> {
+    async fn close_connection(&mut self, connection_id: &str) -> RiResult<()> {
         self.base.close_connection(connection_id).await
     }
 
-    fn get_stats(&self) -> DMSCProtocolStats {
+    fn get_stats(&self) -> RiProtocolStats {
         self.base.get_stats()
     }
 
-    async fn get_health(&self) -> DMSCProtocolHealth {
+    async fn get_health(&self) -> RiProtocolHealth {
         self.base.get_health().await
     }
 
-    async fn shutdown(&mut self) -> DMSCResult<()> {
+    async fn shutdown(&mut self) -> RiResult<()> {
         self.base.shutdown().await;
         Ok(())
     }
@@ -1111,14 +1111,14 @@ impl DMSCProtocol for DMSCPrivateProtocol {
 
 #[cfg(feature = "pyo3")]
 #[pyo3::prelude::pymethods]
-impl DMSCGlobalProtocol {
+impl RiGlobalProtocol {
     pub fn is_ready_sync(&self) -> bool {
         self.base.initialized.try_read()
             .map(|guard| *guard)
             .unwrap_or(false)
     }
 
-    pub fn initialize(&mut self, config: DMSCProtocolConfig) -> bool {
+    pub fn initialize(&mut self, config: RiProtocolConfig) -> bool {
         self.base.config = config;
         if let Ok(mut guard) = self.base.initialized.try_write() {
             *guard = true;
@@ -1127,22 +1127,22 @@ impl DMSCGlobalProtocol {
         false
     }
 
-    pub fn get_stats(&self) -> DMSCProtocolStats {
+    pub fn get_stats(&self) -> RiProtocolStats {
         self.base.stats.try_read()
             .map(|guard| guard.clone())
-            .unwrap_or_else(|_| DMSCProtocolStats::new())
+            .unwrap_or_else(|_| RiProtocolStats::new())
     }
 
-    pub fn get_health(&self) -> DMSCProtocolHealth {
+    pub fn get_health(&self) -> RiProtocolHealth {
         self.base.initialized.try_read()
             .map(|guard| {
                 if *guard {
-                    DMSCProtocolHealth::Healthy
+                    RiProtocolHealth::Healthy
                 } else {
-                    DMSCProtocolHealth::Unknown
+                    RiProtocolHealth::Unknown
                 }
             })
-            .unwrap_or(DMSCProtocolHealth::Unknown)
+            .unwrap_or(RiProtocolHealth::Unknown)
     }
 
     pub fn shutdown(&mut self) -> bool {
@@ -1156,14 +1156,14 @@ impl DMSCGlobalProtocol {
 
 #[cfg(feature = "pyo3")]
 #[pyo3::prelude::pymethods]
-impl DMSCPrivateProtocol {
+impl RiPrivateProtocol {
     pub fn is_ready_sync(&self) -> bool {
         self.base.initialized.try_read()
             .map(|guard| *guard)
             .unwrap_or(false)
     }
 
-    pub fn initialize(&mut self, config: DMSCProtocolConfig) -> bool {
+    pub fn initialize(&mut self, config: RiProtocolConfig) -> bool {
         self.base.config = config;
         if let Ok(mut guard) = self.base.initialized.try_write() {
             *guard = true;
@@ -1172,19 +1172,19 @@ impl DMSCPrivateProtocol {
         false
     }
 
-    pub fn get_stats(&self) -> DMSCProtocolStats {
+    pub fn get_stats(&self) -> RiProtocolStats {
         self.base.stats.try_read()
             .map(|guard| guard.clone())
-            .unwrap_or_else(|_| DMSCProtocolStats::new())
+            .unwrap_or_else(|_| RiProtocolStats::new())
     }
 
-    pub fn get_health(&self) -> DMSCProtocolHealth {
+    pub fn get_health(&self) -> RiProtocolHealth {
         if let Ok(guard) = self.base.initialized.try_read() {
             if *guard {
-                return DMSCProtocolHealth::Healthy;
+                return RiProtocolHealth::Healthy;
             }
         }
-        DMSCProtocolHealth::Unknown
+        RiProtocolHealth::Unknown
     }
 
     pub fn shutdown(&mut self) -> bool {

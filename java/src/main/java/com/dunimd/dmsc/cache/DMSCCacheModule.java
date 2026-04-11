@@ -1,7 +1,7 @@
 // Copyright © 2025-2026 Wenze Wei. All Rights Reserved.
 //
-// This file is part of DMSC.
-// The DMSC project belongs to the Dunimd Team.
+// This file is part of Ri.
+// The Ri project belongs to the Dunimd Team.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // You may not use this file except in compliance with the License.
@@ -15,28 +15,28 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package com.dunimd.dmsc.cache;
+package com.dunimd.ri.cache;
 
-import com.dunimd.dmsc.NativeLoader;
+import com.dunimd.ri.NativeLoader;
 
 /**
- * Cache module for DMSC.
+ * Cache module for Ri.
  * 
  * Provides multi-backend caching with support for Memory, Redis, and Hybrid backends.
  * 
  * <p>Usage example:</p>
  * <pre>{@code
- * DMSCCacheConfig config = new DMSCCacheConfig()
+ * RiCacheConfig config = new RiCacheConfig()
  *     .setEnabled(true)
  *     .setDefaultTtlSecs(3600)
- *     .setBackendType(DMSCCacheBackendType.Memory);
+ *     .setBackendType(RiCacheBackendType.Memory);
  * 
- * DMSCCacheModule cache = new DMSCCacheModule(config);
+ * RiCacheModule cache = new RiCacheModule(config);
  * cache.set("key", "value", 3600);
  * String value = cache.get("key");
  * }</pre>
  */
-public class DMSCCacheModule {
+public class RiCacheModule {
     private long nativePtr;
     
     static {
@@ -44,11 +44,11 @@ public class DMSCCacheModule {
     }
     
     /**
-     * Create a new DMSCCacheModule with the given configuration.
+     * Create a new RiCacheModule with the given configuration.
      * 
      * @param config the cache configuration
      */
-    public DMSCCacheModule(DMSCCacheConfig config) {
+    public RiCacheModule(RiCacheConfig config) {
         this.nativePtr = new0(config.getNativePtr());
     }
     
@@ -107,9 +107,9 @@ public class DMSCCacheModule {
      * 
      * @return the cache statistics
      */
-    public DMSCCacheStats getStats() {
+    public RiCacheStats getStats() {
         long statsPtr = getStats0(nativePtr);
-        return new DMSCCacheStats(statsPtr);
+        return new RiCacheStats(statsPtr);
     }
     
     private native long getStats0(long ptr);

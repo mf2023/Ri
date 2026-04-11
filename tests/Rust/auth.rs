@@ -1,7 +1,7 @@
 //! Copyright © 2025-2026 Wenze Wei. All Rights Reserved.
 //!
-//! This file is part of DMSC.
-//! The DMSC project belongs to the Dunimd Team.
+//! This file is part of Ri.
+//! The Ri project belongs to the Dunimd Team.
 //!
 //! Licensed under the Apache License, Version 2.0 (the "License");
 //! You may not use this file except in compliance with the License.
@@ -17,25 +17,25 @@
 
 //! # Auth Module Tests
 //!
-//! This module contains comprehensive tests for the DMSC authentication system,
+//! This module contains comprehensive tests for the Ri authentication system,
 //! covering JWT management, session handling, permissions, and configuration.
 //!
 //! ## Test Coverage
 //!
-//! - **DMSCAuthConfig**: Tests for authentication configuration creation and defaults
-//! - **DMSCJWTClaims**: Tests for JWT claims structure and serialization
-//! - **DMSCJWTValidationOptions**: Tests for JWT validation options configuration
-//! - **DMSCPermission**: Tests for permission structure and operations
-//! - **DMSCRole**: Tests for role structure with permission management
-//! - **DMSCSession**: Tests for session creation, timeout, and validation
+//! - **RiAuthConfig**: Tests for authentication configuration creation and defaults
+//! - **RiJWTClaims**: Tests for JWT claims structure and serialization
+//! - **RiJWTValidationOptions**: Tests for JWT validation options configuration
+//! - **RiPermission**: Tests for permission structure and operations
+//! - **RiRole**: Tests for role structure with permission management
+//! - **RiSession**: Tests for session creation, timeout, and validation
 
-use dmsc::auth::{DMSCAuthConfig, DMSCJWTClaims, DMSCJWTValidationOptions, DMSCPermission, DMSCRole, DMSCSession};
+use ri::auth::{RiAuthConfig, RiJWTClaims, RiJWTValidationOptions, RiPermission, RiRole, RiSession};
 use std::time::Duration;
 
 #[test]
-/// Tests DMSCAuthConfig default creation.
+/// Tests RiAuthConfig default creation.
 fn test_auth_config_default() {
-    let config = DMSCAuthConfig::default();
+    let config = RiAuthConfig::default();
     assert!(config.enabled);
     assert_eq!(config.jwt_expiry_secs, 3600);
     assert_eq!(config.session_timeout_secs, 86400);
@@ -44,7 +44,7 @@ fn test_auth_config_default() {
 }
 
 #[test]
-/// Tests DMSCAuthConfig with custom settings.
+/// Tests RiAuthConfig with custom settings.
 ///
 /// This test verifies that the builder pattern correctly updates
 /// all configuration options to custom values.
@@ -62,7 +62,7 @@ fn test_auth_config_default() {
 /// - Custom secret is properly stored
 /// - Custom timeouts are applied correctly
 fn test_auth_config_custom() {
-    let config = DMSCAuthConfig::new()
+    let config = RiAuthConfig::new()
         .enabled(false)
         .jwt_secret("test-secret".to_string())
         .jwt_expiry_secs(7200)
@@ -75,7 +75,7 @@ fn test_auth_config_custom() {
 }
 
 #[test]
-/// Tests DMSCJWTClaims creation and fields.
+/// Tests RiJWTClaims creation and fields.
 ///
 /// This test verifies that JWT claims can be created with all
 /// standard and custom fields populated.
@@ -100,7 +100,7 @@ fn test_auth_config_custom() {
 /// - Optional fields are properly wrapped in Some/None
 /// - Collections (roles, permissions) have correct lengths
 fn test_jwt_claims_creation() {
-    let claims = DMSCJWTClaims {
+    let claims = RiJWTClaims {
         sub: "user-123".to_string(),
         name: Some("Test User".to_string()),
         email: Some("test@example.com".to_string()),
@@ -109,7 +109,7 @@ fn test_jwt_claims_creation() {
         issued_at: Some(1000000),
         expires_at: Some(2000000),
         not_before: Some(500000),
-        issuer: Some("dmsc".to_string()),
+        issuer: Some("ri".to_string()),
         audience: Some(vec!["api".to_string()]),
         jwt_id: Some("jwt-123".to_string()),
         custom_claims: None,
@@ -122,7 +122,7 @@ fn test_jwt_claims_creation() {
 }
 
 #[test]
-/// Tests DMSCJWTClaims with minimal fields.
+/// Tests RiJWTClaims with minimal fields.
 ///
 /// This test verifies that JWT claims can be created with only
 /// the required fields, with all optional fields set to None.
@@ -138,7 +138,7 @@ fn test_jwt_claims_creation() {
 /// - Optional fields are correctly None
 /// - Empty collections are represented as empty Vec
 fn test_jwt_claims_minimal() {
-    let claims = DMSCJWTClaims {
+    let claims = RiJWTClaims {
         sub: "user-456".to_string(),
         name: None,
         email: None,
@@ -159,7 +159,7 @@ fn test_jwt_claims_minimal() {
 }
 
 #[test]
-/// Tests DMSCJWTValidationOptions default values.
+/// Tests RiJWTValidationOptions default values.
 ///
 /// This test verifies that default validation options enforce
 /// maximum security by validating all token components.
@@ -179,7 +179,7 @@ fn test_jwt_claims_minimal() {
 /// - Tokens must pass all checks to be considered valid
 /// - Expired sessions within grace period are still accepted
 fn test_jwt_validation_options_default() {
-    let options = DMSCJWTValidationOptions::default();
+    let options = RiJWTValidationOptions::default();
     assert!(options.verify_signature);
     assert!(options.verify_expiration);
     assert!(options.verify_not_before);
@@ -189,7 +189,7 @@ fn test_jwt_validation_options_default() {
 }
 
 #[test]
-/// Tests DMSCJWTValidationOptions custom configuration.
+/// Tests RiJWTValidationOptions custom configuration.
 ///
 /// This test verifies that validation options can be selectively
 /// disabled for specific use cases like testing or development.
@@ -209,7 +209,7 @@ fn test_jwt_validation_options_default() {
 /// - Enabled validations remain true
 /// - Custom configuration overrides defaults
 fn test_jwt_validation_options_custom() {
-    let options = DMSCJWTValidationOptions::new()
+    let options = RiJWTValidationOptions::new()
         .verify_signature(false)
         .verify_expiration(false)
         .verify_not_before(false)
@@ -223,7 +223,7 @@ fn test_jwt_validation_options_custom() {
 }
 
 #[test]
-/// Tests DMSCPermission creation and operations.
+/// Tests RiPermission creation and operations.
 ///
 /// This test verifies that permissions are created with action,
 /// resource, and optional description fields.
@@ -245,7 +245,7 @@ fn test_jwt_validation_options_custom() {
 /// - Permission fields are correctly stored
 /// - Optional description is properly wrapped
 fn test_permission_creation() {
-    let permission = DMSCPermission::new("read", "posts", Some("Read access to posts"));
+    let permission = RiPermission::new("read", "posts", Some("Read access to posts"));
 
     assert_eq!(permission.action, "read");
     assert_eq!(permission.resource, "posts");
@@ -253,18 +253,18 @@ fn test_permission_creation() {
 }
 
 #[test]
-/// Tests DMSCPermission equality and comparison.
+/// Tests RiPermission equality and comparison.
 fn test_permission_equality() {
-    let perm1 = DMSCPermission::new("write", "users", None);
-    let perm2 = DMSCPermission::new("write", "users", None);
-    let perm3 = DMSCPermission::new("read", "users", None);
+    let perm1 = RiPermission::new("write", "users", None);
+    let perm2 = RiPermission::new("write", "users", None);
+    let perm3 = RiPermission::new("read", "users", None);
 
     assert_eq!(perm1, perm2);
     assert_ne!(perm1, perm3);
 }
 
 #[test]
-/// Tests DMSCRole creation and permission management.
+/// Tests RiRole creation and permission management.
 ///
 /// This test verifies that roles can be created with name and
 /// description, and permissions can be added and checked.
@@ -288,14 +288,14 @@ fn test_permission_equality() {
 /// - Added permissions are correctly stored
 /// - `has_permission()` returns true for granted permissions
 fn test_role_creation() {
-    let mut role = DMSCRole::new("admin", "Administrator role");
+    let mut role = RiRole::new("admin", "Administrator role");
 
     assert_eq!(role.name, "admin");
     assert_eq!(role.description, "Administrator role");
     assert!(role.permissions.is_empty());
 
-    let read_perm = DMSCPermission::new("read", "*", None);
-    let write_perm = DMSCPermission::new("write", "*", None);
+    let read_perm = RiPermission::new("read", "*", None);
+    let write_perm = RiPermission::new("write", "*", None);
 
     role.add_permission(read_perm.clone());
     role.add_permission(write_perm.clone());
@@ -306,7 +306,7 @@ fn test_role_creation() {
 }
 
 #[test]
-/// Tests DMSCRole permission removal.
+/// Tests RiRole permission removal.
 ///
 /// This test verifies that permissions can be removed from
 /// a role and that `has_permission()` returns false after removal.
@@ -323,8 +323,8 @@ fn test_role_creation() {
 /// - Permission no longer exists after removal
 /// - Role state is correctly updated
 fn test_role_permission_removal() {
-    let mut role = DMSCRole::new("editor", "Editor role");
-    let perm = DMSCPermission::new("edit", "articles", None);
+    let mut role = RiRole::new("editor", "Editor role");
+    let perm = RiPermission::new("edit", "articles", None);
 
     role.add_permission(perm.clone());
     assert!(role.has_permission(&perm));
@@ -334,7 +334,7 @@ fn test_role_permission_removal() {
 }
 
 #[test]
-/// Tests DMSCSession creation and basic properties.
+/// Tests RiSession creation and basic properties.
 ///
 /// This test verifies that sessions are created with session ID,
 /// user ID, and default valid state.
@@ -360,7 +360,7 @@ fn test_role_permission_removal() {
 /// - Session is initially valid
 /// - Session is not initially expired
 fn test_session_creation() {
-    let session = DMSCSession::new("session-123", "user-456");
+    let session = RiSession::new("session-123", "user-456");
 
     assert_eq!(session.session_id, "session-123");
     assert_eq!(session.user_id, "user-456");
@@ -369,9 +369,9 @@ fn test_session_creation() {
 }
 
 #[test]
-/// Tests DMSCSession timeout and expiration.
+/// Tests RiSession timeout and expiration.
 fn test_session_timeout() {
-    let mut session = DMSCSession::new("session-789", "user-123");
+    let mut session = RiSession::new("session-789", "user-123");
     let now = std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
         .unwrap()
@@ -383,7 +383,7 @@ fn test_session_timeout() {
 }
 
 #[test]
-/// Tests DMSCSession touch and extend operations.
+/// Tests RiSession touch and extend operations.
 ///
 /// This test verifies that sessions can be updated to track
 /// recent activity and extend their validity period.
@@ -404,7 +404,7 @@ fn test_session_timeout() {
 /// - `extend()` moves expires_at into the future
 /// - Extended session has expiry after current time
 fn test_session_touch_extend() {
-    let mut session = DMSCSession::new("session-abc", "user-xyz");
+    let mut session = RiSession::new("session-abc", "user-xyz");
     let initial_accessed = session.last_accessed;
 
     session.touch();
@@ -419,7 +419,7 @@ fn test_session_touch_extend() {
 }
 
 #[test]
-/// Tests DMSCSession invalidation.
+/// Tests RiSession invalidation.
 ///
 /// This test verifies that sessions can be explicitly invalidated
 /// to force user logout or security-related termination.
@@ -437,7 +437,7 @@ fn test_session_touch_extend() {
 /// - Session is not valid after invalidation
 /// - Invalidated session cannot be used for authentication
 fn test_session_invalidation() {
-    let mut session = DMSCSession::new("session-def", "user-ghi");
+    let mut session = RiSession::new("session-def", "user-ghi");
     assert!(session.is_valid());
 
     session.invalidate();
@@ -445,7 +445,7 @@ fn test_session_invalidation() {
 }
 
 #[test]
-/// Tests DMSCAuthConfig builder pattern.
+/// Tests RiAuthConfig builder pattern.
 ///
 /// This test verifies that the builder pattern correctly chains
 /// configuration methods and produces a valid configuration.
@@ -463,7 +463,7 @@ fn test_session_invalidation() {
 /// - Final configuration has all specified values
 /// - Unspecified values use defaults
 fn test_auth_config_builder() {
-    let config = DMSCAuthConfig::new()
+    let config = RiAuthConfig::new()
         .enabled(true)
         .jwt_secret("my-secret-key")
         .jwt_expiry_secs(7200)

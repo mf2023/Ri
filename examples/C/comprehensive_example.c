@@ -1,8 +1,8 @@
 /*
  * Copyright © 2025-2026 Wenze Wei. All Rights Reserved.
  *
- * This file is part of DMSC.
- * The DMSC project belongs to the Dunimd Team.
+ * This file is part of Ri.
+ * The Ri project belongs to the Dunimd Team.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * You may not use this file except in compliance with the License.
@@ -19,12 +19,12 @@
 
 #include <stdio.h>
 #include <stdlib.h>
-#include <dmsc.h>
+#include <ri.h>
 
 /**
- * DMSC Comprehensive API Example for C.
+ * Ri Comprehensive API Example for C.
  *
- * This example demonstrates the complete DMSC API usage across all major modules,
+ * This example demonstrates the complete Ri API usage across all major modules,
  * providing a production-ready pattern for building enterprise applications.
  *
  * Features Demonstrated:
@@ -34,12 +34,12 @@
  * - Error handling and resource cleanup
  *
  * Usage:
- *     gcc comprehensive_example.c -o comprehensive_example -ldmsc
+ *     gcc comprehensive_example.c -o comprehensive_example -lri
  *     ./comprehensive_example
  */
 int main(void) {
     printf("============================================================\n");
-    printf("DMSC Comprehensive API Example - C\n");
+    printf("Ri Comprehensive API Example - C\n");
     printf("============================================================\n\n");
 
     int passed = 0;
@@ -49,7 +49,7 @@ int main(void) {
     printf("=== Application Initialization ===\n\n");
 
     printf("1. Creating application builder...\n");
-    DMSCAppBuilder* builder = dmsc_app_builder_new();
+    RiAppBuilder* builder = ri_app_builder_new();
     if (builder != NULL) {
         printf("   Builder created successfully\n\n");
         passed++;
@@ -59,11 +59,11 @@ int main(void) {
     }
 
     printf("2. Building application runtime...\n");
-    DMSCAppRuntime* runtime = dmsc_app_builder_build(builder);
+    RiAppRuntime* runtime = ri_app_builder_build(builder);
     if (runtime != NULL) {
         printf("   Runtime built successfully!\n\n");
         passed++;
-        dmsc_app_runtime_free(runtime);
+        ri_app_runtime_free(runtime);
     } else {
         printf("   Note: Runtime build may require additional configuration\n\n");
         passed++;
@@ -75,10 +75,10 @@ int main(void) {
     printf("=== Authentication Module ===\n\n");
 
     printf("1. Creating authentication configuration...\n");
-    DMSCAuthConfig* auth_config = dmsc_auth_config_new();
+    RiAuthConfig* auth_config = ri_auth_config_new();
     if (auth_config != NULL) {
-        dmsc_auth_config_set_jwt_secret(auth_config, "your-secret-key-here");
-        dmsc_auth_config_set_jwt_expiry_secs(auth_config, 3600);
+        ri_auth_config_set_jwt_secret(auth_config, "your-secret-key-here");
+        ri_auth_config_set_jwt_expiry_secs(auth_config, 3600);
         printf("   Auth config created\n\n");
         passed++;
     } else {
@@ -87,17 +87,17 @@ int main(void) {
     }
 
     printf("2. Creating authentication module...\n");
-    DMSCAuthModule* auth_module = dmsc_auth_module_new(auth_config);
+    RiAuthModule* auth_module = ri_auth_module_new(auth_config);
     if (auth_module != NULL) {
         printf("   Auth module created\n\n");
         passed++;
 
         printf("3. Checking auth module properties...\n");
-        printf("   Enabled: %s\n", dmsc_auth_module_is_enabled(auth_module) ? "true" : "false");
-        printf("   JWT expiry: %llu seconds\n", dmsc_auth_module_get_jwt_expiry_secs(auth_module));
-        printf("   Session timeout: %llu seconds\n\n", dmsc_auth_module_get_session_timeout_secs(auth_module));
+        printf("   Enabled: %s\n", ri_auth_module_is_enabled(auth_module) ? "true" : "false");
+        printf("   JWT expiry: %llu seconds\n", ri_auth_module_get_jwt_expiry_secs(auth_module));
+        printf("   Session timeout: %llu seconds\n\n", ri_auth_module_get_session_timeout_secs(auth_module));
 
-        dmsc_auth_module_free(auth_module);
+        ri_auth_module_free(auth_module);
     } else {
         printf("   Note: Auth module initialization failed\n\n");
         passed++;
@@ -109,11 +109,11 @@ int main(void) {
     printf("=== Cache Module ===\n\n");
 
     printf("1. Creating cache configuration...\n");
-    DMSCCacheConfig* cache_config = dmsc_cache_config_new();
+    RiCacheConfig* cache_config = ri_cache_config_new();
     if (cache_config != NULL) {
-        dmsc_cache_config_set_enabled(cache_config, true);
-        dmsc_cache_config_set_default_ttl_secs(cache_config, 300);
-        dmsc_cache_config_set_max_memory_mb(cache_config, 512);
+        ri_cache_config_set_enabled(cache_config, true);
+        ri_cache_config_set_default_ttl_secs(cache_config, 300);
+        ri_cache_config_set_max_memory_mb(cache_config, 512);
         printf("   Cache config created (memory backend)\n\n");
         passed++;
     } else {
@@ -122,17 +122,17 @@ int main(void) {
     }
 
     printf("2. Creating cache module...\n");
-    DMSCCacheModule* cache_module = dmsc_cache_module_new(cache_config);
+    RiCacheModule* cache_module = ri_cache_module_new(cache_config);
     if (cache_module != NULL) {
         printf("   Cache module created\n\n");
         passed++;
 
         printf("3. Cache module properties...\n");
-        printf("   Config enabled: %s\n", dmsc_cache_config_is_enabled(cache_config) ? "true" : "false");
-        printf("   Default TTL: %llu seconds\n", dmsc_cache_config_get_default_ttl_secs(cache_config));
-        printf("   Max memory: %llu MB\n\n", dmsc_cache_config_get_max_memory_mb(cache_config));
+        printf("   Config enabled: %s\n", ri_cache_config_is_enabled(cache_config) ? "true" : "false");
+        printf("   Default TTL: %llu seconds\n", ri_cache_config_get_default_ttl_secs(cache_config));
+        printf("   Max memory: %llu MB\n\n", ri_cache_config_get_max_memory_mb(cache_config));
 
-        dmsc_cache_module_free(cache_module);
+        ri_cache_module_free(cache_module);
     } else {
         printf("   Note: Cache module initialization failed\n\n");
         passed++;
@@ -141,9 +141,9 @@ int main(void) {
     printf("4. Cache demonstration complete!\n\n");
 
     /* Cleanup */
-    dmsc_auth_config_free(auth_config);
-    dmsc_cache_config_free(cache_config);
-    dmsc_app_builder_free(builder);
+    ri_auth_config_free(auth_config);
+    ri_cache_config_free(cache_config);
+    ri_app_builder_free(builder);
 
     printf("============================================================\n");
     printf("All demonstrations completed successfully!\n");

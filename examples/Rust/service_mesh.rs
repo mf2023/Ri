@@ -1,7 +1,7 @@
 //! Copyright © 2025-2026 Wenze Wei. All Rights Reserved.
 //!
-//! This file is part of DMSC.
-//! The DMSC project belongs to the Dunimd Team.
+//! This file is part of Ri.
+//! The Ri project belongs to the Dunimd Team.
 //!
 //! Licensed under the Apache License, Version 2.0 (the "License");
 //! You may not use this file except in compliance with the License.
@@ -15,9 +15,9 @@
 //! See the License for the specific language governing permissions and
 //! limitations under the License.
 
-//! # DMSC Service Mesh Module Example
+//! # Ri Service Mesh Module Example
 //!
-//! This example demonstrates how to use the service mesh module in DMSC,
+//! This example demonstrates how to use the service mesh module in Ri,
 //! including service discovery, health checks, and traffic management.
 //!
 //! ## Running this Example
@@ -33,8 +33,8 @@
 //! - Instance management
 //! - Service status monitoring
 
-use dmsc::service_mesh::{DMSCServiceMesh, DMSCServiceMeshConfig, DMSCServiceDiscovery, DMSCServiceInstance, DMSCServiceStatus};
-use dmsc::core::DMSCResult;
+use ri::service_mesh::{RiServiceMesh, RiServiceMeshConfig, RiServiceDiscovery, RiServiceInstance, RiServiceStatus};
+use ri::core::RiResult;
 
 /// Main entry point for the service mesh module example.
 ///
@@ -47,11 +47,11 @@ use dmsc::core::DMSCResult;
 /// - Service mesh statistics and monitoring
 /// - Service deregistration and cleanup
 ///
-/// The example shows how DMSC handles service mesh functionality for
+/// The example shows how Ri handles service mesh functionality for
 /// microservices architecture with dynamic service discovery and health monitoring
 /// in a Rust async runtime environment.
-fn main() -> DMSCResult<()> {
-    println!("=== DMSC Service Mesh Module Example ===\n");
+fn main() -> RiResult<()> {
+    println!("=== Ri Service Mesh Module Example ===\n");
 
     // Create async runtime for handling asynchronous service mesh operations
     let rt = tokio::runtime::Runtime::new().unwrap();
@@ -68,9 +68,9 @@ fn main() -> DMSCResult<()> {
         // - health_check_interval_secs: How often to perform health checks (30 seconds)
         // - failure_threshold: Consecutive failures before marking unhealthy (3)
         // - recovery_threshold: Consecutive successes before marking healthy (2)
-        // - build(): Finalizes configuration into DMSCServiceMeshConfig struct
-        let config = DMSCServiceMeshConfig::new()
-            .with_service_name("dmsc-example")
+        // - build(): Finalizes configuration into RiServiceMeshConfig struct
+        let config = RiServiceMeshConfig::new()
+            .with_service_name("ri-example")
             .with_namespace("default")
             .with_instance_id("instance-001")
             .with_host("localhost")
@@ -83,7 +83,7 @@ fn main() -> DMSCResult<()> {
         // Module Initialization: Create service mesh instance
         // The mesh provides service discovery, load balancing, and health management
         println!("1. Creating service mesh...");
-        let service_mesh = DMSCServiceMesh::new(config).await?;
+        let service_mesh = RiServiceMesh::new(config).await?;
         println!("   Service mesh initialized\n");
 
         // Step 2: Register first service instance
@@ -92,12 +92,12 @@ fn main() -> DMSCResult<()> {
         println!("2. Registering service instance...");
 
         // Create service instance with connection and version information
-        // DMSCServiceInstance::new() parameters:
+        // RiServiceInstance::new() parameters:
         // - service_name: Logical name of the service (user-service)
         // - host: Where the service is running (localhost)
         // - port: Service port (8081)
         // - version: Service version for routing (v1.0.0)
-        let instance = DMSCServiceInstance::new(
+        let instance = RiServiceInstance::new(
             "user-service".to_string(),
             "localhost".to_string(),
             8081,
@@ -107,7 +107,7 @@ fn main() -> DMSCResult<()> {
         // Register the instance with the service mesh
         // Mesh will track this instance for discovery and health monitoring
         // Parameters:
-        // - instance: DMSCServiceInstance containing service details
+        // - instance: RiServiceInstance containing service details
         service_mesh.register_instance(instance).await?;
         println!("   User service registered\n");
 
@@ -116,7 +116,7 @@ fn main() -> DMSCResult<()> {
         // Multiple instances enable load balancing and high availability
         println!("3. Registering another instance...");
         
-        let instance2 = DMSCServiceInstance::new(
+        let instance2 = RiServiceInstance::new(
             "user-service".to_string(),
             "localhost".to_string(),
             8082,
@@ -130,7 +130,7 @@ fn main() -> DMSCResult<()> {
         // Different service types are tracked separately in the mesh
         println!("4. Registering order service...");
         
-        let order_instance = DMSCServiceInstance::new(
+        let order_instance = RiServiceInstance::new(
             "order-service".to_string(),
             "localhost".to_string(),
             8083,
@@ -190,7 +190,7 @@ fn main() -> DMSCResult<()> {
             // This is useful for maintenance mode or temporary issues
             service_mesh.update_instance_health(
                 first_instance.id(),
-                DMSCServiceStatus::Healthy,
+                RiServiceStatus::Healthy,
             ).await?;
             println!("   Updated instance {} to Healthy\n", first_instance.id());
         }
@@ -243,6 +243,6 @@ fn main() -> DMSCResult<()> {
         println!("   Remaining user-service instances: {}\n", instances.len());
 
         println!("=== Service Mesh Example Completed ===");
-        Ok::<(), DMSCError>(())
+        Ok::<(), RiError>(())
     })?
 }

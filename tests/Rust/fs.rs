@@ -1,7 +1,7 @@
 //! Copyright © 2025-2026 Wenze Wei. All Rights Reserved.
 //!
-//! This file is part of DMSC.
-//! The DMSC project belongs to the Dunimd Team.
+//! This file is part of Ri.
+//! The Ri project belongs to the Dunimd Team.
 //!
 //! Licensed under the Apache License, Version 2.0 (the "License");
 //! You may not use this file except in compliance with the License.
@@ -17,13 +17,13 @@
 
 //! # FileSystem Module Tests
 //!
-//! This module contains comprehensive tests for the DMSC filesystem abstraction layer,
+//! This module contains comprehensive tests for the Ri filesystem abstraction layer,
 //! covering filesystem initialization, safe directory operations, atomic file operations,
 //! JSON serialization/deserialization, and category-based path management.
 //!
 //! ## Test Coverage
 //!
-//! - **DMSCFileSystem Initialization**: Tests for filesystem root setup including explicit
+//! - **RiFileSystem Initialization**: Tests for filesystem root setup including explicit
 //!   root path configuration and automatic root detection based on system conventions
 //! - **Directory Operations**: Tests for safe directory creation, parent directory
 //!   enforcement, and recursive directory handling
@@ -38,7 +38,7 @@
 //!
 //! ## Design Principles
 //!
-//! The DMSCFileSystem abstraction provides a safe, consistent interface for filesystem
+//! The RiFileSystem abstraction provides a safe, consistent interface for filesystem
 //! operations with the following principles:
 //! - **Path Safety**: All paths are normalized and validated to prevent path traversal
 //!   attacks and ensure operations stay within the project root
@@ -77,12 +77,12 @@
 //! 4. The rename operation is atomic on most filesystems, ensuring either complete
 //!    old or complete new content is visible
 
-use dmsc::fs::DMSCFileSystem;
+use ri::fs::RiFileSystem;
 use std::path::PathBuf;
 use tempfile::tempdir;
 
 #[test]
-/// Tests DMSCFileSystem creation with explicit root path.
+/// Tests RiFileSystem creation with explicit root path.
 ///
 /// Verifies that a filesystem can be created with a specific root directory
 /// using the new_with_root() constructor. The filesystem should use this
@@ -95,12 +95,12 @@ use tempfile::tempdir;
 /// - The root path exists (it's the temp directory)
 fn test_fs_new_with_root() {
     let temp_dir = tempdir().unwrap();
-    let fs = DMSCFileSystem::new_with_root(temp_dir.path().to_path_buf());
+    let fs = RiFileSystem::new_with_root(temp_dir.path().to_path_buf());
     assert_eq!(fs.project_root(), temp_dir.path());
 }
 
 #[test]
-/// Tests DMSCFileSystem automatic root detection.
+/// Tests RiFileSystem automatic root detection.
 ///
 /// Verifies that the filesystem can automatically detect and use an
 /// appropriate project root based on system conventions. The auto-detected
@@ -112,7 +112,7 @@ fn test_fs_new_with_root() {
 /// - The project_root() returns a valid, existing path
 /// - The root is suitable for file operations
 fn test_fs_new_auto_root() {
-    let fs = DMSCFileSystem::new_auto_root().unwrap();
+    let fs = RiFileSystem::new_auto_root().unwrap();
     assert!(fs.project_root().exists());
 }
 
@@ -135,7 +135,7 @@ fn test_fs_new_auto_root() {
 /// - The directory exists after the operation
 fn test_fs_safe_mkdir() {
     let temp_dir = tempdir().unwrap();
-    let fs = DMSCFileSystem::new_with_root(temp_dir.path().to_path_buf());
+    let fs = RiFileSystem::new_with_root(temp_dir.path().to_path_buf());
     let new_dir = temp_dir.path().join("test_dir");
     let result = fs.safe_mkdir(&new_dir).unwrap();
     assert_eq!(result, new_dir);
@@ -161,7 +161,7 @@ fn test_fs_safe_mkdir() {
 /// - The parent directory exists after the operation
 fn test_fs_ensure_parent_dir() {
     let temp_dir = tempdir().unwrap();
-    let fs = DMSCFileSystem::new_with_root(temp_dir.path().to_path_buf());
+    let fs = RiFileSystem::new_with_root(temp_dir.path().to_path_buf());
     let file_path = temp_dir.path().join("parent_dir").join("child_file.txt");
     let result = fs.ensure_parent_dir(&file_path).unwrap();
     assert_eq!(result, temp_dir.path().join("parent_dir"));
@@ -187,9 +187,9 @@ fn test_fs_ensure_parent_dir() {
 /// - The atomic write completes without errors
 fn test_fs_atomic_write_text() {
     let temp_dir = tempdir().unwrap();
-    let fs = DMSCFileSystem::new_with_root(temp_dir.path().to_path_buf());
+    let fs = RiFileSystem::new_with_root(temp_dir.path().to_path_buf());
     let file_path = temp_dir.path().join("test_file.txt");
-    let content = "Hello, DMSC!";
+    let content = "Hello, Ri!";
     fs.atomic_write_text(&file_path, content).unwrap();
     let read_content = fs.read_text(&file_path).unwrap();
     assert_eq!(read_content, content);
@@ -208,9 +208,9 @@ fn test_fs_atomic_write_text() {
 /// - Binary data is preserved without modification
 fn test_fs_atomic_write_bytes() {
     let temp_dir = tempdir().unwrap();
-    let fs = DMSCFileSystem::new_with_root(temp_dir.path().to_path_buf());
+    let fs = RiFileSystem::new_with_root(temp_dir.path().to_path_buf());
     let file_path = temp_dir.path().join("test_bytes.bin");
-    let content = b"Hello, DMSC in bytes!";
+    let content = b"Hello, Ri in bytes!";
     fs.atomic_write_bytes(&file_path, content).unwrap();
     let read_content = fs.read_text(&file_path).unwrap();
     assert_eq!(read_content, String::from_utf8_lossy(content));
@@ -243,7 +243,7 @@ fn test_fs_read_json() {
     }
     
     let temp_dir = tempdir().unwrap();
-    let fs = DMSCFileSystem::new_with_root(temp_dir.path().to_path_buf());
+    let fs = RiFileSystem::new_with_root(temp_dir.path().to_path_buf());
     let file_path = temp_dir.path().join("test.json");
     let test_data = TestData { name: "test".to_string(), value: 42 };
     let json_str = serde_json::to_string(&test_data).unwrap();
@@ -266,7 +266,7 @@ fn test_fs_read_json() {
 /// - The check is accurate and immediate
 fn test_fs_exists() {
     let temp_dir = tempdir().unwrap();
-    let fs = DMSCFileSystem::new_with_root(temp_dir.path().to_path_buf());
+    let fs = RiFileSystem::new_with_root(temp_dir.path().to_path_buf());
     let file_path = temp_dir.path().join("test_file.txt");
     assert!(!fs.exists(&file_path));
     fs.atomic_write_text(&file_path, "test").unwrap();
@@ -286,7 +286,7 @@ fn test_fs_exists() {
 /// - Attempting to remove non-existent files may error
 fn test_fs_remove_file() {
     let temp_dir = tempdir().unwrap();
-    let fs = DMSCFileSystem::new_with_root(temp_dir.path().to_path_buf());
+    let fs = RiFileSystem::new_with_root(temp_dir.path().to_path_buf());
     let file_path = temp_dir.path().join("test_file.txt");
     fs.atomic_write_text(&file_path, "test").unwrap();
     assert!(fs.exists(&file_path));
@@ -307,7 +307,7 @@ fn test_fs_remove_file() {
 /// - The operation is recursive (handles nested structures)
 fn test_fs_remove_dir_all() {
     let temp_dir = tempdir().unwrap();
-    let fs = DMSCFileSystem::new_with_root(temp_dir.path().to_path_buf());
+    let fs = RiFileSystem::new_with_root(temp_dir.path().to_path_buf());
     let dir_path = temp_dir.path().join("test_dir");
     fs.safe_mkdir(&dir_path).unwrap();
     let file_path = dir_path.join("test_file.txt");
@@ -337,10 +337,10 @@ fn test_fs_remove_dir_all() {
 /// - The destination content matches the source
 fn test_fs_copy_file() {
     let temp_dir = tempdir().unwrap();
-    let fs = DMSCFileSystem::new_with_root(temp_dir.path().to_path_buf());
+    let fs = RiFileSystem::new_with_root(temp_dir.path().to_path_buf());
     let src_path = temp_dir.path().join("src.txt");
     let dst_path = temp_dir.path().join("dst.txt");
-    let content = "Hello, DMSC!";
+    let content = "Hello, Ri!";
     fs.atomic_write_text(&src_path, content).unwrap();
     fs.copy_file(&src_path, &dst_path).unwrap();
     let dst_content = fs.read_text(&dst_path).unwrap();
@@ -365,10 +365,10 @@ fn test_fs_copy_file() {
 /// - The appended content follows the original
 fn test_fs_append_text() {
     let temp_dir = tempdir().unwrap();
-    let fs = DMSCFileSystem::new_with_root(temp_dir.path().to_path_buf());
+    let fs = RiFileSystem::new_with_root(temp_dir.path().to_path_buf());
     let file_path = temp_dir.path().join("test_file.txt");
     let content1 = "Hello, ";
-    let content2 = "DMSC!";
+    let content2 = "Ri!";
     fs.atomic_write_text(&file_path, content1).unwrap();
     fs.append_text(&file_path, content2).unwrap();
     let read_content = fs.read_text(&file_path).unwrap();
@@ -402,7 +402,7 @@ fn test_fs_write_json() {
     }
     
     let temp_dir = tempdir().unwrap();
-    let fs = DMSCFileSystem::new_with_root(temp_dir.path().to_path_buf());
+    let fs = RiFileSystem::new_with_root(temp_dir.path().to_path_buf());
     let file_path = temp_dir.path().join("test.json");
     let test_data = TestData { name: "test".to_string(), value: 42 };
     fs.write_json(&file_path, &test_data).unwrap();
@@ -434,7 +434,7 @@ fn test_fs_write_json() {
 /// - Directories can be used for file operations
 fn test_fs_category_dirs() {
     let temp_dir = tempdir().unwrap();
-    let fs = DMSCFileSystem::new_with_root(temp_dir.path().to_path_buf());
+    let fs = RiFileSystem::new_with_root(temp_dir.path().to_path_buf());
     
     assert!(fs.app_dir().exists());
     assert!(fs.logs_dir().exists());
@@ -457,7 +457,7 @@ fn test_fs_category_dirs() {
 /// - The path starts with the category directory
 fn test_fs_ensure_category_path() {
     let temp_dir = tempdir().unwrap();
-    let fs = DMSCFileSystem::new_with_root(temp_dir.path().to_path_buf());
+    let fs = RiFileSystem::new_with_root(temp_dir.path().to_path_buf());
     
     let path = fs.ensure_category_path("logs", "test.log");
     assert!(path.parent().unwrap().exists());
@@ -483,7 +483,7 @@ fn test_fs_ensure_category_path() {
 /// - Invalid paths are rejected or normalized
 fn test_fs_normalize_under_category() {
     let temp_dir = tempdir().unwrap();
-    let fs = DMSCFileSystem::new_with_root(temp_dir.path().to_path_buf());
+    let fs = RiFileSystem::new_with_root(temp_dir.path().to_path_buf());
     
     let path = fs.normalize_under_category("cache", "subdir/test.cache");
     assert!(path.starts_with(fs.cache_dir()));

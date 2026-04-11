@@ -1,7 +1,7 @@
 //! Copyright © 2025-2026 Wenze Wei. All Rights Reserved.
 //!
-//! This file is part of DMSC.
-//! The DMSC project belongs to the Dunimd Team.
+//! This file is part of Ri.
+//! The Ri project belongs to the Dunimd Team.
 //!
 //! Licensed under the Apache License, Version 2.0 (the "License");
 //! You may not use this file except in compliance with the License.
@@ -17,25 +17,25 @@
 
 //! # Authentication Module
 //! 
-//! This module provides comprehensive authentication and authorization functionality for DMSC,
+//! This module provides comprehensive authentication and authorization functionality for Ri,
 //! offering multiple authentication methods and a robust permission system.
 //! 
 //! ## Key Components
 //! 
-//! - **DMSCAuthModule**: Main auth module implementing service module traits
-//! - **DMSCAuthConfig**: Configuration for authentication behavior
-//! - **DMSCJWTManager**: JWT token management for stateless authentication
-//! - **DMSCSessionManager**: Session management for stateful authentication
-//! - **DMSCPermissionManager**: Permission and role management
-//! - **DMSCOAuthManager**: OAuth provider integration
-//! - **DMSCJWTClaims**: JWT token claims structure
-//! - **DMSCJWTValidationOptions**: JWT validation options
-//! - **DMSCOAuthProvider**: OAuth provider interface
-//! - **DMSCOAuthToken**: OAuth token structure
-//! - **DMSCOAuthUserInfo**: OAuth user information
-//! - **DMSCPermission**: Permission structure
-//! - **DMSCRole**: Role structure with permissions
-//! - **DMSCSession**: Session structure
+//! - **RiAuthModule**: Main auth module implementing service module traits
+//! - **RiAuthConfig**: Configuration for authentication behavior
+//! - **RiJWTManager**: JWT token management for stateless authentication
+//! - **RiSessionManager**: Session management for stateful authentication
+//! - **RiPermissionManager**: Permission and role management
+//! - **RiOAuthManager**: OAuth provider integration
+//! - **RiJWTClaims**: JWT token claims structure
+//! - **RiJWTValidationOptions**: JWT validation options
+//! - **RiOAuthProvider**: OAuth provider interface
+//! - **RiOAuthToken**: OAuth token structure
+//! - **RiOAuthUserInfo**: OAuth user information
+//! - **RiPermission**: Permission structure
+//! - **RiRole**: Role structure with permissions
+//! - **RiSession**: Session structure
 //! 
 //! ## Design Principles
 //! 
@@ -53,13 +53,13 @@
 //! ## Usage
 //! 
 //! ```rust,ignore
-//! use dmsc::prelude::*;
-//! use dmsc::auth::{DMSCAuthConfig, DMSCJWTManager, DMSCJWTClaims};
+//! use ri::prelude::*;
+//! use ri::auth::{RiAuthConfig, RiJWTManager, RiJWTClaims};
 //! use serde_json::json;
 //! 
-//! async fn example() -> DMSCResult<()> {
+//! async fn example() -> RiResult<()> {
 //!     // Create auth configuration
-//!     let auth_config = DMSCAuthConfig {
+//!     let auth_config = RiAuthConfig {
 //!         enabled: true,
 //!         jwt_secret: "secure-secret-key".to_string(),
 //!         jwt_expiry_secs: 3600,
@@ -70,13 +70,13 @@
 //!     };
 //!     
 //!     // Create auth module
-//!     let auth_module = DMSCAuthModule::new(auth_config);
+//!     let auth_module = RiAuthModule::new(auth_config);
 //!     
 //!     // Get JWT manager
 //!     let jwt_manager = auth_module.jwt_manager();
 //!     
 //!     // Create JWT claims
-//!     let claims = DMSCJWTClaims {
+//!     let claims = RiJWTClaims {
 //!         sub: "user-123".to_string(),
 //!         email: "user@example.com".to_string(),
 //!         roles: vec!["user".to_string()],
@@ -110,14 +110,14 @@ mod session;
 mod security;
 mod revocation;
 
-pub use jwt::{DMSCJWTManager, DMSCJWTClaims, DMSCJWTValidationOptions};
-pub use oauth::{DMSCOAuthManager, DMSCOAuthToken, DMSCOAuthUserInfo, DMSCOAuthProvider};
-pub use permissions::{DMSCPermissionManager, DMSCPermission, DMSCRole};
-pub use session::{DMSCSessionManager, DMSCSession};
-pub use security::DMSCSecurityManager;
-pub use revocation::{DMSCJWTRevocationList, DMSCRevokedTokenInfo};
+pub use jwt::{RiJWTManager, RiJWTClaims, RiJWTValidationOptions};
+pub use oauth::{RiOAuthManager, RiOAuthToken, RiOAuthUserInfo, RiOAuthProvider};
+pub use permissions::{RiPermissionManager, RiPermission, RiRole};
+pub use session::{RiSessionManager, RiSession};
+pub use security::RiSecurityManager;
+pub use revocation::{RiJWTRevocationList, RiRevokedTokenInfo};
 
-use crate::core::{DMSCResult, DMSCError, DMSCServiceContext};
+use crate::core::{RiResult, RiError, RiServiceContext};
 use rand::RngCore;
 use serde::Deserialize;
 use std::env;
@@ -126,7 +126,7 @@ use tokio::sync::RwLock;
 #[cfg(feature = "pyo3")]
 use tokio::runtime::Handle;
 
-const DEFAULT_JWT_SECRET_ENV: &str = "DMSC_JWT_SECRET";
+const DEFAULT_JWT_SECRET_ENV: &str = "Ri_JWT_SECRET";
 const FALLBACK_SECRET_LENGTH: usize = 64;
 
 fn load_jwt_secret_from_env() -> String {
@@ -137,10 +137,10 @@ fn load_jwt_secret_from_env() -> String {
     })
 }
 
-fn load_oauth_env_var(provider_name: &str, suffix: &str) -> Result<String, DMSCError> {
-    let env_var = format!("DMSC_OAUTH_{}_{}", provider_name.to_uppercase(), suffix);
+fn load_oauth_env_var(provider_name: &str, suffix: &str) -> Result<String, RiError> {
+    let env_var = format!("Ri_OAUTH_{}_{}", provider_name.to_uppercase(), suffix);
     env::var(&env_var).map_err(|_| {
-        DMSCError::Config(format!(
+        RiError::Config(format!(
             "OAuth {} is not set for provider '{}'. Please set the environment variable {}",
             suffix.to_lowercase(),
             provider_name,
@@ -166,15 +166,15 @@ use pyo3::PyResult;
 /// 
 /// ## Security
 /// 
-/// The JWT secret is loaded from the `DMSC_JWT_SECRET` environment variable. If not set,
+/// The JWT secret is loaded from the `Ri_JWT_SECRET` environment variable. If not set,
 /// a cryptographically secure random secret is generated automatically.
 /// 
-/// **Important**: For production environments, always set the `DMSC_JWT_SECRET` environment
+/// **Important**: For production environments, always set the `Ri_JWT_SECRET` environment
 /// variable to a strong, unique value. Do not rely on auto-generated secrets in production.
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 #[derive(Debug, Clone)]
 #[derive(Deserialize)]
-pub struct DMSCAuthConfig {
+pub struct RiAuthConfig {
     /// Whether authentication is enabled
     pub enabled: bool,
     /// Secret key for JWT token generation and validation
@@ -191,13 +191,13 @@ pub struct DMSCAuthConfig {
     pub enable_session_auth: bool,
     /// OAuth token cache backend type (Memory or Redis)
     #[cfg(feature = "cache")]
-    pub oauth_cache_backend_type: crate::cache::DMSCCacheBackendType,
+    pub oauth_cache_backend_type: crate::cache::RiCacheBackendType,
     /// Redis URL for OAuth token cache (used when backend is Redis)
     #[cfg(feature = "cache")]
     pub oauth_cache_redis_url: String,
 }
 
-impl Default for DMSCAuthConfig {
+impl Default for RiAuthConfig {
     fn default() -> Self {
         Self {
             enabled: true,
@@ -208,34 +208,34 @@ impl Default for DMSCAuthConfig {
             enable_api_keys: true,
             enable_session_auth: true,
             #[cfg(feature = "cache")]
-            oauth_cache_backend_type: crate::cache::DMSCCacheBackendType::Memory,
+            oauth_cache_backend_type: crate::cache::RiCacheBackendType::Memory,
             #[cfg(feature = "cache")]
             oauth_cache_redis_url: "redis://127.0.0.1:6379".to_string(),
         }
     }
 }
 
-/// Main authentication module for DMSC.
+/// Main authentication module for Ri.
 /// 
 /// This module provides comprehensive authentication and authorization functionality,
 /// including JWT management, session management, permission management, and OAuth integration.
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
-pub struct DMSCAuthModule {
+pub struct RiAuthModule {
     /// Authentication configuration
-    config: DMSCAuthConfig,
+    config: RiAuthConfig,
     /// JWT manager for stateless authentication
-    jwt_manager: Arc<DMSCJWTManager>,
+    jwt_manager: Arc<RiJWTManager>,
     /// Session manager for stateful authentication, protected by a RwLock for thread-safe access
-    session_manager: Arc<RwLock<DMSCSessionManager>>,
+    session_manager: Arc<RwLock<RiSessionManager>>,
     /// Permission manager for role-based access control, protected by a RwLock for thread-safe access
-    permission_manager: Arc<RwLock<DMSCPermissionManager>>,
+    permission_manager: Arc<RwLock<RiPermissionManager>>,
     /// OAuth manager for OAuth provider integration, protected by a RwLock for thread-safe access
-    oauth_manager: Arc<RwLock<DMSCOAuthManager>>,
+    oauth_manager: Arc<RwLock<RiOAuthManager>>,
     /// JWT token revocation list for token invalidation
-    revocation_list: Arc<DMSCJWTRevocationList>,
+    revocation_list: Arc<RiJWTRevocationList>,
 }
 
-impl DMSCAuthModule {
+impl RiAuthModule {
     /// Creates a new authentication module with the given configuration.
     /// 
     /// **Performance Note**: This method creates a permission manager using the synchronous
@@ -248,34 +248,34 @@ impl DMSCAuthModule {
     /// 
     /// # Returns
     /// 
-    /// A `DMSCResult` containing the new `DMSCAuthModule` instance
+    /// A `RiResult` containing the new `RiAuthModule` instance
     /// 
     /// # Errors
     /// 
     /// Returns an error if Redis cache creation fails when Redis backend is configured
-    pub async fn new(config: DMSCAuthConfig) -> crate::core::error::DMSCResult<Self> {
-        let jwt_manager = Arc::new(DMSCJWTManager::create(config.jwt_secret.clone(), config.jwt_expiry_secs));
-        let session_manager = Arc::new(RwLock::new(DMSCSessionManager::new(config.session_timeout_secs)));
-        let permission_manager = Arc::new(RwLock::new(DMSCPermissionManager::new()));
+    pub async fn new(config: RiAuthConfig) -> crate::core::error::RiResult<Self> {
+        let jwt_manager = Arc::new(RiJWTManager::create(config.jwt_secret.clone(), config.jwt_expiry_secs));
+        let session_manager = Arc::new(RwLock::new(RiSessionManager::new(config.session_timeout_secs)));
+        let permission_manager = Arc::new(RwLock::new(RiPermissionManager::new()));
         
         #[cfg(feature = "cache")]
-        let cache: Arc<dyn crate::cache::DMSCCache> = match config.oauth_cache_backend_type {
-            crate::cache::DMSCCacheBackendType::Memory => {
-                Arc::new(crate::cache::DMSCMemoryCache::new())
+        let cache: Arc<dyn crate::cache::RiCache> = match config.oauth_cache_backend_type {
+            crate::cache::RiCacheBackendType::Memory => {
+                Arc::new(crate::cache::RiMemoryCache::new())
             }
-            crate::cache::DMSCCacheBackendType::Redis => {
-                let cache = crate::cache::DMSCRedisCache::new(&config.oauth_cache_redis_url).await
-                    .map_err(|e| crate::core::error::DMSCError::RedisError(format!("Failed to create Redis cache for OAuth: {}", e)))?;
+            crate::cache::RiCacheBackendType::Redis => {
+                let cache = crate::cache::RiRedisCache::new(&config.oauth_cache_redis_url).await
+                    .map_err(|e| crate::core::error::RiError::RedisError(format!("Failed to create Redis cache for OAuth: {}", e)))?;
                 Arc::new(cache)
             }
-            _ => Arc::new(crate::cache::DMSCMemoryCache::new()),
+            _ => Arc::new(crate::cache::RiMemoryCache::new()),
         };
         
         #[cfg(not(feature = "cache"))]
-        let cache = Arc::new(crate::cache::DMSCMemoryCache::new());
+        let cache = Arc::new(crate::cache::RiMemoryCache::new());
         
-        let oauth_manager = Arc::new(RwLock::new(DMSCOAuthManager::new(cache)));
-        let revocation_list = Arc::new(DMSCJWTRevocationList::new());
+        let oauth_manager = Arc::new(RwLock::new(RiOAuthManager::new(cache)));
+        let revocation_list = Arc::new(RiJWTRevocationList::new());
 
         Ok(Self {
             config,
@@ -297,14 +297,14 @@ impl DMSCAuthModule {
     /// 
     /// # Returns
     /// 
-    /// A new `DMSCAuthModule` instance
-    pub fn with_config(config: DMSCAuthConfig) -> Self {
-        let jwt_manager = Arc::new(DMSCJWTManager::create(config.jwt_secret.clone(), config.jwt_expiry_secs));
-        let session_manager = Arc::new(RwLock::new(DMSCSessionManager::new(config.session_timeout_secs)));
-        let permission_manager = Arc::new(RwLock::new(DMSCPermissionManager::new()));
-        let cache = Arc::new(crate::cache::DMSCMemoryCache::new());
-        let oauth_manager = Arc::new(RwLock::new(DMSCOAuthManager::new(cache)));
-        let revocation_list = Arc::new(DMSCJWTRevocationList::new());
+    /// A new `RiAuthModule` instance
+    pub fn with_config(config: RiAuthConfig) -> Self {
+        let jwt_manager = Arc::new(RiJWTManager::create(config.jwt_secret.clone(), config.jwt_expiry_secs));
+        let session_manager = Arc::new(RwLock::new(RiSessionManager::new(config.session_timeout_secs)));
+        let permission_manager = Arc::new(RwLock::new(RiPermissionManager::new()));
+        let cache = Arc::new(crate::cache::RiMemoryCache::new());
+        let oauth_manager = Arc::new(RwLock::new(RiOAuthManager::new(cache)));
+        let revocation_list = Arc::new(RiJWTRevocationList::new());
 
         Self {
             config,
@@ -327,34 +327,34 @@ impl DMSCAuthModule {
     /// 
     /// # Returns
     /// 
-    /// A `DMSCResult` containing the new `DMSCAuthModule` instance
+    /// A `RiResult` containing the new `RiAuthModule` instance
     /// 
     /// # Errors
     /// 
     /// Returns an error if Redis cache creation fails when Redis backend is configured
-    pub async fn new_async(config: DMSCAuthConfig) -> crate::core::error::DMSCResult<Self> {
-        let jwt_manager = Arc::new(DMSCJWTManager::create(config.jwt_secret.clone(), config.jwt_expiry_secs));
-        let session_manager = Arc::new(RwLock::new(DMSCSessionManager::new(config.session_timeout_secs)));
-        let permission_manager = Arc::new(RwLock::new(DMSCPermissionManager::new_async().await));
+    pub async fn new_async(config: RiAuthConfig) -> crate::core::error::RiResult<Self> {
+        let jwt_manager = Arc::new(RiJWTManager::create(config.jwt_secret.clone(), config.jwt_expiry_secs));
+        let session_manager = Arc::new(RwLock::new(RiSessionManager::new(config.session_timeout_secs)));
+        let permission_manager = Arc::new(RwLock::new(RiPermissionManager::new_async().await));
         
         #[cfg(feature = "cache")]
-        let cache: Arc<dyn crate::cache::DMSCCache> = match config.oauth_cache_backend_type {
-            crate::cache::DMSCCacheBackendType::Memory => {
-                Arc::new(crate::cache::DMSCMemoryCache::new())
+        let cache: Arc<dyn crate::cache::RiCache> = match config.oauth_cache_backend_type {
+            crate::cache::RiCacheBackendType::Memory => {
+                Arc::new(crate::cache::RiMemoryCache::new())
             }
-            crate::cache::DMSCCacheBackendType::Redis => {
-                let cache = crate::cache::DMSCRedisCache::new(&config.oauth_cache_redis_url).await
-                    .map_err(|e| crate::core::error::DMSCError::RedisError(format!("Failed to create Redis cache: {}", e)))?;
+            crate::cache::RiCacheBackendType::Redis => {
+                let cache = crate::cache::RiRedisCache::new(&config.oauth_cache_redis_url).await
+                    .map_err(|e| crate::core::error::RiError::RedisError(format!("Failed to create Redis cache: {}", e)))?;
                 Arc::new(cache)
             }
-            _ => Arc::new(crate::cache::DMSCMemoryCache::new()),
+            _ => Arc::new(crate::cache::RiMemoryCache::new()),
         };
         
         #[cfg(not(feature = "cache"))]
-        let cache = Arc::new(crate::cache::DMSCMemoryCache::new());
+        let cache = Arc::new(crate::cache::RiMemoryCache::new());
         
-        let oauth_manager = Arc::new(RwLock::new(DMSCOAuthManager::new(cache)));
-        let revocation_list = Arc::new(DMSCJWTRevocationList::new());
+        let oauth_manager = Arc::new(RwLock::new(RiOAuthManager::new(cache)));
+        let revocation_list = Arc::new(RiJWTRevocationList::new());
 
         Ok(Self {
             config,
@@ -370,8 +370,8 @@ impl DMSCAuthModule {
     /// 
     /// # Returns
     /// 
-    /// An Arc<DMSCJWTRevocationList> providing thread-safe access to the token revocation list
-    pub fn revocation_list(&self) -> Arc<DMSCJWTRevocationList> {
+    /// An Arc<RiJWTRevocationList> providing thread-safe access to the token revocation list
+    pub fn revocation_list(&self) -> Arc<RiJWTRevocationList> {
         self.revocation_list.clone()
     }
 
@@ -379,8 +379,8 @@ impl DMSCAuthModule {
     /// 
     /// # Returns
     /// 
-    /// An Arc<DMSCJWTManager> providing thread-safe access to the JWT manager
-    pub fn jwt_manager(&self) -> Arc<DMSCJWTManager> {
+    /// An Arc<RiJWTManager> providing thread-safe access to the JWT manager
+    pub fn jwt_manager(&self) -> Arc<RiJWTManager> {
         self.jwt_manager.clone()
     }
 
@@ -388,8 +388,8 @@ impl DMSCAuthModule {
     /// 
     /// # Returns
     /// 
-    /// An Arc<RwLock<DMSCSessionManager>> providing thread-safe access to the session manager
-    pub fn session_manager(&self) -> Arc<RwLock<DMSCSessionManager>> {
+    /// An Arc<RwLock<RiSessionManager>> providing thread-safe access to the session manager
+    pub fn session_manager(&self) -> Arc<RwLock<RiSessionManager>> {
         self.session_manager.clone()
     }
 
@@ -397,8 +397,8 @@ impl DMSCAuthModule {
     /// 
     /// # Returns
     /// 
-    /// An Arc<RwLock<DMSCPermissionManager>> providing thread-safe access to the permission manager
-    pub fn permission_manager(&self) -> Arc<RwLock<DMSCPermissionManager>> {
+    /// An Arc<RwLock<RiPermissionManager>> providing thread-safe access to the permission manager
+    pub fn permission_manager(&self) -> Arc<RwLock<RiPermissionManager>> {
         self.permission_manager.clone()
     }
 
@@ -406,25 +406,25 @@ impl DMSCAuthModule {
     /// 
     /// # Returns
     /// 
-    /// An Arc<RwLock<DMSCOAuthManager>> providing thread-safe access to the OAuth manager
-    pub fn oauth_manager(&self) -> Arc<RwLock<DMSCOAuthManager>> {
+    /// An Arc<RwLock<RiOAuthManager>> providing thread-safe access to the OAuth manager
+    pub fn oauth_manager(&self) -> Arc<RwLock<RiOAuthManager>> {
         self.oauth_manager.clone()
     }
 }
 
 #[cfg(feature = "pyo3")]
 #[pyo3::prelude::pymethods]
-impl DMSCAuthConfig {
+impl RiAuthConfig {
     /// Creates a new authentication configuration with the specified parameters.
     ///
     /// All parameters have sensible defaults, making it easy to create a basic configuration.
-    /// The JWT secret is automatically loaded from the `DMSC_JWT_SECRET` environment variable
+    /// The JWT secret is automatically loaded from the `Ri_JWT_SECRET` environment variable
     /// if not provided.
     ///
     /// # Parameters
     ///
     /// - `enabled`: Whether authentication is enabled (default: true)
-    /// - `jwt_secret`: Secret key for JWT tokens (default: loaded from DMSC_JWT_SECRET env var)
+    /// - `jwt_secret`: Secret key for JWT tokens (default: loaded from Ri_JWT_SECRET env var)
     /// - `jwt_expiry_secs`: JWT token expiry time in seconds (default: 3600)
     /// - `session_timeout_secs`: Session timeout in seconds (default: 86400)
     /// - `oauth_providers`: List of OAuth providers to enable (default: empty)
@@ -435,18 +435,18 @@ impl DMSCAuthConfig {
     ///
     /// # Returns
     ///
-    /// A new `DMSCAuthConfig` instance
+    /// A new `RiAuthConfig` instance
     ///
     /// # Example
     ///
     /// ```python
-    /// from dmsc import DMSCAuthConfig
+    /// from ri import RiAuthConfig
     ///
     /// # Create with defaults
-    /// config = DMSCAuthConfig()
+    /// config = RiAuthConfig()
     ///
     /// # Create with custom settings
-    /// config = DMSCAuthConfig(
+    /// config = RiAuthConfig(
     ///     enabled=True,
     ///     jwt_secret="my-secret-key",
     ///     jwt_expiry_secs=7200,
@@ -485,8 +485,8 @@ impl DMSCAuthConfig {
         #[cfg(feature = "cache")]
         {
             let backend_type = match oauth_cache_backend_type.as_deref() {
-                Some("Redis") => crate::cache::DMSCCacheBackendType::Redis,
-                _ => crate::cache::DMSCCacheBackendType::Memory,
+                Some("Redis") => crate::cache::RiCacheBackendType::Redis,
+                _ => crate::cache::RiCacheBackendType::Memory,
             };
             
             Self {
@@ -522,18 +522,18 @@ impl DMSCAuthConfig {
     /// Creates a new authentication configuration with default values.
     ///
     /// This is a convenience method that creates a configuration with all default settings.
-    /// The JWT secret is loaded from the `DMSC_JWT_SECRET` environment variable.
+    /// The JWT secret is loaded from the `Ri_JWT_SECRET` environment variable.
     ///
     /// # Returns
     ///
-    /// A new `DMSCAuthConfig` instance with default values
+    /// A new `RiAuthConfig` instance with default values
     ///
     /// # Example
     ///
     /// ```python
-    /// from dmsc import DMSCAuthConfig
+    /// from ri import RiAuthConfig
     ///
-    /// config = DMSCAuthConfig.default()
+    /// config = RiAuthConfig.default()
     /// ```
     #[staticmethod]
     fn default() -> Self {
@@ -542,21 +542,21 @@ impl DMSCAuthConfig {
 
     /// Creates a new authentication configuration from environment variables.
     ///
-    /// This method loads the JWT secret from the `DMSC_JWT_SECRET` environment variable
+    /// This method loads the JWT secret from the `Ri_JWT_SECRET` environment variable
     /// and uses default values for all other settings.
     ///
     /// # Returns
     ///
-    /// A new `DMSCAuthConfig` instance with values from environment
+    /// A new `RiAuthConfig` instance with values from environment
     ///
     /// # Example
     ///
     /// ```python
     /// import os
-    /// from dmsc import DMSCAuthConfig
+    /// from ri import RiAuthConfig
     ///
-    /// os.environ["DMSC_JWT_SECRET"] = "my-secret-key"
-    /// config = DMSCAuthConfig.from_env()
+    /// os.environ["Ri_JWT_SECRET"] = "my-secret-key"
+    /// config = RiAuthConfig.from_env()
     /// ```
     #[staticmethod]
     fn from_env() -> Self {
@@ -610,10 +610,10 @@ impl DMSCAuthConfig {
 }
 
 #[cfg(feature = "pyo3")]
-/// Python bindings for the DMSC Authentication Module.
+/// Python bindings for the Ri Authentication Module.
 ///
-/// This module provides Python interface to DMSC authentication functionality,
-/// enabling Python applications to leverage DMSC's authentication capabilities.
+/// This module provides Python interface to Ri authentication functionality,
+/// enabling Python applications to leverage Ri's authentication capabilities.
 ///
 /// ## Supported Operations
 ///
@@ -625,10 +625,10 @@ impl DMSCAuthConfig {
 /// ## Python Usage Example
 ///
 /// ```python
-/// from dmsc import DMSCAuthConfig, DMSCJWTManager
+/// from ri import RiAuthConfig, RiJWTManager
 ///
 /// # Create auth configuration
-/// config = DMSCAuthConfig(
+/// config = RiAuthConfig(
 ///     enabled=True,
 ///     jwt_secret="secure-secret-key",
 ///     jwt_expiry_secs=3600,
@@ -639,16 +639,16 @@ impl DMSCAuthConfig {
 /// )
 ///
 /// # Create auth module
-/// auth_module = DMSCAuthModule(config)
+/// auth_module = RiAuthModule(config)
 ///
 /// # Get JWT manager and generate token
 /// jwt_manager = auth_module.jwt_manager()
 /// token = jwt_manager.generate_token("user123", ["user"], ["read:data"])
 /// ```
 #[pyo3::prelude::pymethods]
-impl DMSCAuthModule {
+impl RiAuthModule {
     #[new]
-    fn py_new(config: DMSCAuthConfig) -> PyResult<Self> {
+    fn py_new(config: RiAuthConfig) -> PyResult<Self> {
         let rt = Handle::current();
         rt.block_on(async {
             Self::new(config).await
@@ -657,7 +657,7 @@ impl DMSCAuthModule {
     }
 
     #[getter]
-    fn get_config(&self) -> DMSCAuthConfig {
+    fn get_config(&self) -> RiAuthConfig {
         self.config.clone()
     }
 
@@ -701,9 +701,9 @@ impl DMSCAuthModule {
     }
 }
 
-impl crate::core::ServiceModule for DMSCAuthModule {
+impl crate::core::ServiceModule for RiAuthModule {
     fn name(&self) -> &str {
-        "DMSC.Auth"
+        "Ri.Auth"
     }
 
     fn is_critical(&self) -> bool {
@@ -718,28 +718,28 @@ impl crate::core::ServiceModule for DMSCAuthModule {
         vec![]
     }
 
-    fn init(&mut self, _ctx: &mut crate::core::DMSCServiceContext) -> crate::core::DMSCResult<()> {
+    fn init(&mut self, _ctx: &mut crate::core::RiServiceContext) -> crate::core::RiResult<()> {
         Ok(())
     }
 
-    fn start(&mut self, _ctx: &mut crate::core::DMSCServiceContext) -> crate::core::DMSCResult<()> {
+    fn start(&mut self, _ctx: &mut crate::core::RiServiceContext) -> crate::core::RiResult<()> {
         Ok(())
     }
 
-    fn shutdown(&mut self, _ctx: &mut crate::core::DMSCServiceContext) -> crate::core::DMSCResult<()> {
+    fn shutdown(&mut self, _ctx: &mut crate::core::RiServiceContext) -> crate::core::RiResult<()> {
         Ok(())
     }
 }
 
 #[async_trait::async_trait]
-impl crate::core::DMSCModule for DMSCAuthModule {
+impl crate::core::RiModule for RiAuthModule {
     /// Returns the name of the authentication module.
     /// 
     /// # Returns
     /// 
     /// The module name as a string
     fn name(&self) -> &str {
-        "DMSC.Auth"
+        "Ri.Auth"
     }
 
     /// Indicates whether the authentication module is critical.
@@ -769,9 +769,9 @@ impl crate::core::DMSCModule for DMSCAuthModule {
     /// 
     /// # Returns
     /// 
-    /// A `DMSCResult<()>` indicating success or failure
-    async fn init(&mut self, ctx: &mut DMSCServiceContext) -> DMSCResult<()> {
-        log::info!("Initializing DMSC Auth Module");
+    /// A `RiResult<()>` indicating success or failure
+    async fn init(&mut self, ctx: &mut RiServiceContext) -> RiResult<()> {
+        log::info!("Initializing Ri Auth Module");
 
         // Load configuration
         let binding = ctx.config();
@@ -780,11 +780,11 @@ impl crate::core::DMSCModule for DMSCAuthModule {
         // Update configuration if provided
         if let Some(auth_config) = cfg.get("auth") {
             self.config = serde_yaml::from_str(auth_config)
-                .unwrap_or_else(|_| DMSCAuthConfig::default());
+                .unwrap_or_else(|_| RiAuthConfig::default());
         }
 
         // Initialize JWT manager with new config
-        self.jwt_manager = Arc::new(DMSCJWTManager::create(self.config.jwt_secret.clone(), self.config.jwt_expiry_secs));
+        self.jwt_manager = Arc::new(RiJWTManager::create(self.config.jwt_secret.clone(), self.config.jwt_expiry_secs));
 
         // Initialize OAuth providers if configured
         if !self.config.oauth_providers.is_empty() {
@@ -792,7 +792,7 @@ impl crate::core::DMSCModule for DMSCAuthModule {
                 let client_id = load_oauth_env_var(provider_name, "CLIENT_ID")?;
                 let client_secret = load_oauth_env_var(provider_name, "CLIENT_SECRET")?;
 
-                let provider_config = crate::auth::oauth::DMSCOAuthProvider {
+                let provider_config = crate::auth::oauth::RiOAuthProvider {
                     id: provider_name.clone(),
                     name: provider_name.clone(),
                     client_id,
@@ -811,7 +811,7 @@ impl crate::core::DMSCModule for DMSCAuthModule {
             }
         }
 
-        log::info!("DMSC Auth Module initialized successfully");
+        log::info!("Ri Auth Module initialized successfully");
         Ok(())
     }
 
@@ -825,15 +825,15 @@ impl crate::core::DMSCModule for DMSCAuthModule {
     /// 
     /// # Returns
     /// 
-    /// A `DMSCResult<()>` indicating success or failure
-    async fn after_shutdown(&mut self, _ctx: &mut DMSCServiceContext) -> DMSCResult<()> {
-        log::info!("Cleaning up DMSC Auth Module");
+    /// A `RiResult<()>` indicating success or failure
+    async fn after_shutdown(&mut self, _ctx: &mut RiServiceContext) -> RiResult<()> {
+        log::info!("Cleaning up Ri Auth Module");
         
         // Cleanup sessions
         let session_mgr = self.session_manager.write().await;
         session_mgr.cleanup_all().await?;
         
-        log::info!("DMSC Auth Module cleanup completed");
+        log::info!("Ri Auth Module cleanup completed");
         Ok(())
     }
 }

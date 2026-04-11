@@ -1,7 +1,7 @@
 //! Copyright © 2025-2026 Wenze Wei. All Rights Reserved.
 //!
-//! This file is part of DMSC.
-//! The DMSC project belongs to the Dunimd Team.
+//! This file is part of Ri.
+//! The Ri project belongs to the Dunimd Team.
 //!
 //! Licensed under the Apache License, Version 2.0 (the "License");
 //! You may not use this file except in compliance with the License.
@@ -23,13 +23,13 @@ pub mod rabbitmq_backend;
 #[cfg(feature = "redis")]
 pub mod redis_backend;
 
-pub use memory_backend::DMSCMemoryQueue;
+pub use memory_backend::RiMemoryQueue;
 #[cfg(feature = "rabbitmq")]
-pub use rabbitmq_backend::DMSCRabbitMQQueue;
+pub use rabbitmq_backend::RiRabbitMQQueue;
 #[cfg(feature = "redis")]
-pub use redis_backend::DMSCRedisQueue;
+pub use redis_backend::RiRedisQueue;
 
 #[cfg(feature = "kafka")]
 pub mod kafka_backend;
 #[cfg(feature = "kafka")]
-pub use kafka_backend::DMSCKafkaQueue;
+pub use kafka_backend::RiKafkaQueue;

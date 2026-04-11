@@ -1,7 +1,7 @@
 //! Copyright © 2025-2026 Wenze Wei. All Rights Reserved.
 //!
-//! This file is part of DMSC.
-//! The DMSC project belongs to the Dunimd Team.
+//! This file is part of Ri.
+//! The Ri project belongs to the Dunimd Team.
 //!
 //! Licensed under the Apache License, Version 2.0 (the "License");
 //! You may not use this file except in compliance with the License.
@@ -24,9 +24,9 @@
 //! 
 //! ## Key Components
 //! 
-//! - **DMSCGridPos**: Represents the grid position of a panel on a dashboard
-//! - **DMSCGrafanaPanel**: Represents a single Grafana panel with title, query, type, and position
-//! - **DMSCGrafanaDashboard**: Represents a Grafana dashboard with multiple panels
+//! - **RiGridPos**: Represents the grid position of a panel on a dashboard
+//! - **RiGrafanaPanel**: Represents a single Grafana panel with title, query, type, and position
+//! - **RiGrafanaDashboard**: Represents a Grafana dashboard with multiple panels
 //! 
 //! ## Design Principles
 //! 
@@ -40,18 +40,18 @@
 //! ## Usage
 //! 
 //! ```rust
-//! use dmsc::prelude::*;
+//! use ri::prelude::*;
 //! 
-//! fn example() -> DMSCResult<()> {
+//! fn example() -> RiResult<()> {
 //!     // Create a new dashboard
-//!     let mut dashboard = DMSCGrafanaDashboard::new("DMSC Metrics");
+//!     let mut dashboard = RiGrafanaDashboard::new("Ri Metrics");
 //!     
 //!     // Create a panel
-//!     let panel = DMSCGrafanaPanel {
+//!     let panel = RiGrafanaPanel {
 //!         title: "Request Rate".to_string(),
 //!         query: "rate(http_requests_total[5m])".to_string(),
 //!         panel_type: "graph".to_string(),
-//!         grid_pos: DMSCGridPos {
+//!         grid_pos: RiGridPos {
 //!             h: 8,
 //!             w: 12,
 //!             x: 0,
@@ -71,11 +71,11 @@
 //! ```
 
 use serde::{Serialize, Deserialize};
-use crate::core::DMSCResult;
+use crate::core::RiResult;
 
 /// Grafana target configuration for data sources
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct DMSCGrafanaTarget {
+pub struct RiGrafanaTarget {
     pub expr: String,
     pub ref_id: String,
     pub legend_format: Option<String>,
@@ -84,7 +84,7 @@ pub struct DMSCGrafanaTarget {
 
 /// Grafana grid position configuration
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct DMSCGridPos {
+pub struct RiGridPos {
     pub h: i32,
     pub w: i32,
     pub x: i32,
@@ -93,12 +93,12 @@ pub struct DMSCGridPos {
 
 /// Grafana panel configuration
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct DMSCGrafanaPanel {
+pub struct RiGrafanaPanel {
     pub id: i32,
     pub title: String,
     pub type_: String,
-    pub targets: Vec<DMSCGrafanaTarget>,
-    pub grid_pos: DMSCGridPos,
+    pub targets: Vec<RiGrafanaTarget>,
+    pub grid_pos: RiGridPos,
     pub field_config: serde_json::Value,
     pub options: serde_json::Value,
     pub description: Option<String>,
@@ -107,25 +107,25 @@ pub struct DMSCGrafanaPanel {
 
 /// Grafana time range configuration
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct DMSCGrafanaTimeRange {
+pub struct RiGrafanaTimeRange {
     pub from: String,
     pub to: String,
 }
 
 /// Grafana dashboard tag
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct DMSCGrafanaTag {
+pub struct RiGrafanaTag {
     pub term: String,
     pub color: Option<String>,
 }
 
 /// Grafana dashboard configuration
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct DMSCGrafanaDashboard {
+pub struct RiGrafanaDashboard {
     pub title: String,
-    pub panels: Vec<DMSCGrafanaPanel>,
-    pub tags: Vec<DMSCGrafanaTag>,
-    pub time: DMSCGrafanaTimeRange,
+    pub panels: Vec<RiGrafanaPanel>,
+    pub tags: Vec<RiGrafanaTag>,
+    pub time: RiGrafanaTimeRange,
     pub refresh: String,
     pub timezone: String,
     pub schema_version: i32,
@@ -134,18 +134,18 @@ pub struct DMSCGrafanaDashboard {
 }
 
 /// Grafana dashboard generator
-pub struct DMSCGrafanaDashboardGenerator {
+pub struct RiGrafanaDashboardGenerator {
     next_panel_id: i32,
 }
 
 #[allow(dead_code)]
-impl DMSCGrafanaDashboard {
+impl RiGrafanaDashboard {
     pub fn new(title: &str) -> Self {
-        DMSCGrafanaDashboard {
+        RiGrafanaDashboard {
             title: title.to_string(),
             panels: Vec::new(),
-            tags: vec![DMSCGrafanaTag { term: "dms".to_string(), color: Some("#1F77B4".to_string()) }],
-            time: DMSCGrafanaTimeRange { from: "now-1h".to_string(), to: "now".to_string() },
+            tags: vec![RiGrafanaTag { term: "dms".to_string(), color: Some("#1F77B4".to_string()) }],
+            time: RiGrafanaTimeRange { from: "now-1h".to_string(), to: "now".to_string() },
             refresh: "5s".to_string(),
             timezone: "browser".to_string(),
             schema_version: 38,
@@ -154,19 +154,19 @@ impl DMSCGrafanaDashboard {
         }
     }
     
-    pub fn add_panel(&mut self, panel: DMSCGrafanaPanel) -> DMSCResult<()> {
+    pub fn add_panel(&mut self, panel: RiGrafanaPanel) -> RiResult<()> {
         self.panels.push(panel);
         Ok(())
     }
     
-    pub fn to_json(&self) -> DMSCResult<String> {
-        serde_json::to_string(self).map_err(|e| crate::core::DMSCError::Serde(e.to_string()))
+    pub fn to_json(&self) -> RiResult<String> {
+        serde_json::to_string(self).map_err(|e| crate::core::RiError::Serde(e.to_string()))
     }
 }
 
-impl DMSCGrafanaDashboardGenerator {
+impl RiGrafanaDashboardGenerator {
     pub fn new() -> Self {
-        DMSCGrafanaDashboardGenerator {
+        RiGrafanaDashboardGenerator {
             next_panel_id: 1,
         }
     }
@@ -192,13 +192,13 @@ impl DMSCGrafanaDashboardGenerator {
     }
     
     /// Create a new dashboard with default settings
-    pub fn create_dashboard(&self, title: &str) -> DMSCGrafanaDashboard {
-        DMSCGrafanaDashboard::new(title)
+    pub fn create_dashboard(&self, title: &str) -> RiGrafanaDashboard {
+        RiGrafanaDashboard::new(title)
     }
     
     /// Create a Prometheus target
-    pub fn create_prometheus_target(&self, expr: &str, ref_id: &str, legend_format: Option<&str>) -> DMSCGrafanaTarget {
-        DMSCGrafanaTarget {
+    pub fn create_prometheus_target(&self, expr: &str, ref_id: &str, legend_format: Option<&str>) -> RiGrafanaTarget {
+        RiGrafanaTarget {
             expr: expr.to_string(),
             ref_id: ref_id.to_string(),
             legend_format: legend_format.map(|s| s.to_string()),
@@ -207,16 +207,16 @@ impl DMSCGrafanaDashboardGenerator {
     }
     
     /// Create a new panel with default settings
-    pub fn create_panel(&mut self, title: &str, panel_type: &str, x: i32, y: i32, w: i32, h: i32) -> DMSCGrafanaPanel {
+    pub fn create_panel(&mut self, title: &str, panel_type: &str, x: i32, y: i32, w: i32, h: i32) -> RiGrafanaPanel {
         let panel_id = self.next_panel_id;
         self.next_panel_id += 1;
         
-        DMSCGrafanaPanel {
+        RiGrafanaPanel {
             id: panel_id,
             title: title.to_string(),
             type_: panel_type.to_string(),
             targets: Vec::new(),
-            grid_pos: DMSCGridPos { h, w, x, y },
+            grid_pos: RiGridPos { h, w, x, y },
             field_config: serde_json::json!({ "defaults": {}, "overrides": [] }),
             options: serde_json::json!({}),
             description: None,
@@ -225,7 +225,7 @@ impl DMSCGrafanaDashboardGenerator {
     }
     
     /// Create a graph panel for request rate
-    pub fn create_request_rate_panel(&mut self, x: i32, y: i32, w: i32, h: i32) -> DMSCGrafanaPanel {
+    pub fn create_request_rate_panel(&mut self, x: i32, y: i32, w: i32, h: i32) -> RiGrafanaPanel {
         let mut panel = self.create_panel("Request Rate", "timeseries", x, y, w, h);
         panel.targets.push(self.create_prometheus_target(
             "rate(dms_requests_total[5m])",
@@ -236,7 +236,7 @@ impl DMSCGrafanaDashboardGenerator {
     }
     
     /// Create a graph panel for request duration
-    pub fn create_request_duration_panel(&mut self, x: i32, y: i32, w: i32, h: i32) -> DMSCGrafanaPanel {
+    pub fn create_request_duration_panel(&mut self, x: i32, y: i32, w: i32, h: i32) -> RiGrafanaPanel {
         let mut panel = self.create_panel("Request Duration", "timeseries", x, y, w, h);
         panel.targets.push(self.create_prometheus_target(
             "histogram_quantile(0.95, sum(rate(dms_request_duration_seconds_bucket[5m])) by (le))",
@@ -252,7 +252,7 @@ impl DMSCGrafanaDashboardGenerator {
     }
     
     /// Create a stat panel for active connections
-    pub fn create_active_connections_panel(&mut self, x: i32, y: i32, w: i32, h: i32) -> DMSCGrafanaPanel {
+    pub fn create_active_connections_panel(&mut self, x: i32, y: i32, w: i32, h: i32) -> RiGrafanaPanel {
         let mut panel = self.create_panel("Active Connections", "stat", x, y, w, h);
         panel.targets.push(self.create_prometheus_target(
             "dms_active_connections",
@@ -263,7 +263,7 @@ impl DMSCGrafanaDashboardGenerator {
     }
     
     /// Create a graph panel for error rate
-    pub fn create_error_rate_panel(&mut self, x: i32, y: i32, w: i32, h: i32) -> DMSCGrafanaPanel {
+    pub fn create_error_rate_panel(&mut self, x: i32, y: i32, w: i32, h: i32) -> RiGrafanaPanel {
         let mut panel = self.create_panel("Error Rate", "timeseries", x, y, w, h);
         panel.targets.push(self.create_prometheus_target(
             "rate(dms_errors_total[5m])",
@@ -274,7 +274,7 @@ impl DMSCGrafanaDashboardGenerator {
     }
     
     /// Create a graph panel for cache metrics
-    pub fn create_cache_metrics_panel(&mut self, x: i32, y: i32, w: i32, h: i32) -> DMSCGrafanaPanel {
+    pub fn create_cache_metrics_panel(&mut self, x: i32, y: i32, w: i32, h: i32) -> RiGrafanaPanel {
         let mut panel = self.create_panel("Cache Metrics", "timeseries", x, y, w, h);
         panel.targets.push(self.create_prometheus_target(
             "rate(dms_cache_hits_total[5m])",
@@ -290,7 +290,7 @@ impl DMSCGrafanaDashboardGenerator {
     }
     
     /// Create a graph panel for database query time
-    pub fn create_db_query_time_panel(&mut self, x: i32, y: i32, w: i32, h: i32) -> DMSCGrafanaPanel {
+    pub fn create_db_query_time_panel(&mut self, x: i32, y: i32, w: i32, h: i32) -> RiGrafanaPanel {
         let mut panel = self.create_panel("Database Query Time", "timeseries", x, y, w, h);
         panel.targets.push(self.create_prometheus_target(
             "histogram_quantile(0.95, sum(rate(dms_db_query_duration_seconds_bucket[5m])) by (le))",
@@ -300,9 +300,9 @@ impl DMSCGrafanaDashboardGenerator {
         panel
     }
     
-    /// Generate a default DMSC dashboard with common metrics panels
-    pub fn generate_default_dashboard(&mut self) -> DMSCResult<DMSCGrafanaDashboard> {
-        let mut dashboard = self.create_dashboard("DMSC Default Dashboard");
+    /// Generate a default Ri dashboard with common metrics panels
+    pub fn generate_default_dashboard(&mut self) -> RiResult<RiGrafanaDashboard> {
+        let mut dashboard = self.create_dashboard("Ri Default Dashboard");
         
         // First row: Request metrics
         dashboard.add_panel(self.create_request_rate_panel(0, 0, 12, 8))?;
@@ -332,7 +332,7 @@ impl DMSCGrafanaDashboardGenerator {
     /// # Returns
     /// 
     /// A Grafana dashboard automatically generated based on the provided metrics
-    pub fn generate_auto_dashboard(&mut self, metrics: Vec<&str>, dashboard_title: &str) -> DMSCResult<DMSCGrafanaDashboard> {
+    pub fn generate_auto_dashboard(&mut self, metrics: Vec<&str>, dashboard_title: &str) -> RiResult<RiGrafanaDashboard> {
         let mut dashboard = self.create_dashboard(dashboard_title);
         
         // Analyze metrics and group by type
@@ -392,7 +392,7 @@ impl DMSCGrafanaDashboardGenerator {
     }
     
     /// Create a counter panel for a metric
-    pub fn create_counter_panel(&mut self, metric_name: &str, x: i32, y: i32, w: i32, h: i32) -> DMSCGrafanaPanel {
+    pub fn create_counter_panel(&mut self, metric_name: &str, x: i32, y: i32, w: i32, h: i32) -> RiGrafanaPanel {
         let title = self.title_case(metric_name);
         let query = format!("rate({}[5m])", metric_name);
         
@@ -402,7 +402,7 @@ impl DMSCGrafanaDashboardGenerator {
     }
     
     /// Create a gauge panel for a metric
-    pub fn create_gauge_panel(&mut self, metric_name: &str, x: i32, y: i32, w: i32, h: i32) -> DMSCGrafanaPanel {
+    pub fn create_gauge_panel(&mut self, metric_name: &str, x: i32, y: i32, w: i32, h: i32) -> RiGrafanaPanel {
         let title = self.title_case(metric_name);
         
         let mut panel = self.create_panel(&title, "stat", x, y, w, h);
@@ -411,7 +411,7 @@ impl DMSCGrafanaDashboardGenerator {
     }
     
     /// Create a histogram panel for a metric
-    pub fn create_histogram_panel(&mut self, metric_name: &str, x: i32, y: i32, w: i32, h: i32) -> DMSCGrafanaPanel {
+    pub fn create_histogram_panel(&mut self, metric_name: &str, x: i32, y: i32, w: i32, h: i32) -> RiGrafanaPanel {
         let title = self.title_case(metric_name);
         let query_95 = format!("histogram_quantile(0.95, sum(rate({}_bucket[5m])) by (le))", metric_name);
         let query_50 = format!("histogram_quantile(0.5, sum(rate({}_bucket[5m])) by (le))", metric_name);

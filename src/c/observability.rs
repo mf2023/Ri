@@ -1,7 +1,7 @@
 //! Copyright © 2025-2026 Wenze Wei. All Rights Reserved.
 //!
-//! This file is part of DMSC.
-//! The DMSC project belongs to the Dunimd Team.
+//! This file is part of Ri.
+//! The Ri project belongs to the Dunimd Team.
 //!
 //! Licensed under the Apache License, Version 2.0 (the "License");
 //! You may not use this file except in compliance with the License.
@@ -17,9 +17,9 @@
 
 //! # Observability Module C API
 //!
-//! This module provides C language bindings for DMSC's observability infrastructure. The observability
+//! This module provides C language bindings for Ri's observability infrastructure. The observability
 //! module delivers comprehensive system monitoring capabilities including distributed tracing, metrics
-//! collection, and health checking. This C API enables C/C++ applications to leverage DMSC's
+//! collection, and health checking. This C API enables C/C++ applications to leverage Ri's
 //! observability features for understanding system behavior, debugging issues, and monitoring performance
 //! in production environments.
 //!
@@ -28,16 +28,16 @@
 //! The observability module comprises three primary components that together provide complete
 //! monitoring and tracing capabilities:
 //!
-//! - **DMSCObservabilityConfig**: Configuration container for observability infrastructure parameters
+//! - **RiObservabilityConfig**: Configuration container for observability infrastructure parameters
 //!   including tracing settings, metrics collection options, export destinations, and sampling
 //!   configurations. The configuration object controls resource allocation, export strategies, and
 //!   behavioral characteristics for all observability features.
 //!
-//! - **DMSCTracer**: Distributed tracing interface for creating and managing trace spans, propagating
+//! - **RiTracer**: Distributed tracing interface for creating and managing trace spans, propagating
 //!   context across service boundaries, and exporting trace data to analysis systems. The tracer
 //!   implements OpenTelemetry-compatible tracing with automatic instrumentation support.
 //!
-//! - **DMSCMetricsRegistry**: Metrics collection and aggregation system supporting multiple metric types
+//! - **RiMetricsRegistry**: Metrics collection and aggregation system supporting multiple metric types
 //!   including counters, gauges, histograms, and summaries. The registry manages metric lifecycle,
 //!   provides dimensional labeling, and exports metrics to monitoring backends.
 //!
@@ -165,48 +165,48 @@
 //!
 //! ```c
 //! // Create observability configuration
-//! DMSCObservabilityConfig* config = dmsc_observability_config_new();
+//! RiObservabilityConfig* config = ri_observability_config_new();
 //! if (config == NULL) {
 //!     fprintf(stderr, "Failed to create observability config\n");
 //!     return ERROR_INIT;
 //! }
 //!
 //! // Configure tracing
-//! dmsc_observability_config_set_tracing_enabled(config, true);
-//! dmsc_observability_config_set_tracing_samplerate(config, 0.1);  // 10% sampling
-//! dmsc_observability_config_set_tracing_exporter(config, "otlp");
+//! ri_observability_config_set_tracing_enabled(config, true);
+//! ri_observability_config_set_tracing_samplerate(config, 0.1);  // 10% sampling
+//! ri_observability_config_set_tracing_exporter(config, "otlp");
 //!
 //! // Configure metrics
-//! dmsc_observability_config_set_metrics_enabled(config, true);
-//! dmsc_observability_config_set_metrics_export_interval(config, 60000);  // 60 seconds
+//! ri_observability_config_set_metrics_enabled(config, true);
+//! ri_observability_config_set_metrics_export_interval(config, 60000);  // 60 seconds
 //!
 //! // Configure health checks
-//! dmsc_observability_config_set_health_check_enabled(config, true);
+//! ri_observability_config_set_health_check_enabled(config, true);
 //!
 //! // Create tracer instance
-//! DMSCTracer* tracer = dmsc_tracer_new(config);
+//! RiTracer* tracer = ri_tracer_new(config);
 //! if (tracer == NULL) {
 //!     fprintf(stderr, "Failed to create tracer\n");
-//!     dmsc_observability_config_free(config);
+//!     ri_observability_config_free(config);
 //!     return ERROR_INIT;
 //! }
 //!
 //! // Create metrics registry
-//! DMSCMetricsRegistry* metrics = dmsc_metrics_registry_new(config);
+//! RiMetricsRegistry* metrics = ri_metrics_registry_new(config);
 //! if (metrics == NULL) {
 //!     fprintf(stderr, "Failed to create metrics registry\n");
-//!     dmsc_tracer_free(tracer);
-//!     dmsc_observability_config_free(config);
+//!     ri_tracer_free(tracer);
+//!     ri_observability_config_free(config);
 //!     return ERROR_INIT;
 //! }
 //!
 //! // Create a span for tracing
-//! DMSCTraceSpan* span = dmsc_tracer_start_span(tracer, "handle_request");
-//! dmsc_trace_span_set_attribute(span, "http.method", "GET");
-//! dmsc_trace_span_set_attribute(span, "http.url", "/api/users");
+//! RiTraceSpan* span = ri_tracer_start_span(tracer, "handle_request");
+//! ri_trace_span_set_attribute(span, "http.method", "GET");
+//! ri_trace_span_set_attribute(span, "http.url", "/api/users");
 //!
 //! // Record metrics
-//! dmsc_metrics_registry_counter_increment(metrics, "http_requests_total",
+//! ri_metrics_registry_counter_increment(metrics, "http_requests_total",
 //!     1,  // value
 //!     2,  // label count
 //!     "method", "GET",       // label name, value
@@ -217,18 +217,18 @@
 //! // ... application logic ...
 //!
 //! // End span
-//! dmsc_trace_span_end(span);
+//! ri_trace_span_end(span);
 //!
 //! // Graceful shutdown
-//! dmsc_tracer_shutdown(tracer);  // Flush remaining traces
-//! dmsc_tracer_free(tracer);
-//! dmsc_metrics_registry_free(metrics);
-//! dmsc_observability_config_free(config);
+//! ri_tracer_shutdown(tracer);  // Flush remaining traces
+//! ri_tracer_free(tracer);
+//! ri_metrics_registry_free(metrics);
+//! ri_observability_config_free(config);
 //! ```
 //!
 //! ## Dependencies
 //!
-//! This module depends on the following DMSC components:
+//! This module depends on the following Ri components:
 //!
 //! - `crate::observability`: Rust observability module implementation
 //! - `crate::prelude`: Common types and traits
@@ -248,18 +248,18 @@
 //! - observability-opentelemetry: Enable OpenTelemetry export
 //! - observability-prometheus: Enable Prometheus export
 
-use crate::observability::{DMSCMetricsRegistry, DMSCObservabilityConfig, DMSCTracer};
+use crate::observability::{RiMetricsRegistry, RiObservabilityConfig, RiTracer};
 
 
-c_wrapper!(CDMSCObservabilityConfig, DMSCObservabilityConfig);
-c_wrapper!(CDMSCTracer, DMSCTracer);
-c_wrapper!(CDMSCMetricsRegistry, DMSCMetricsRegistry);
+c_wrapper!(CRiObservabilityConfig, RiObservabilityConfig);
+c_wrapper!(CRiTracer, RiTracer);
+c_wrapper!(CRiMetricsRegistry, RiMetricsRegistry);
 
-// DMSCObservabilityConfig constructors and destructors
+// RiObservabilityConfig constructors and destructors
 c_constructor!(
-    dmsc_observability_config_new,
-    CDMSCObservabilityConfig,
-    DMSCObservabilityConfig,
-    DMSCObservabilityConfig::default()
+    ri_observability_config_new,
+    CRiObservabilityConfig,
+    RiObservabilityConfig,
+    RiObservabilityConfig::default()
 );
-c_destructor!(dmsc_observability_config_free, CDMSCObservabilityConfig);
+c_destructor!(ri_observability_config_free, CRiObservabilityConfig);

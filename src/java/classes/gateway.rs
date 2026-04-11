@@ -1,7 +1,7 @@
 //! Copyright © 2025-2026 Wenze Wei. All Rights Reserved.
 //!
-//! This file is part of DMSC.
-//! The DMSC project belongs to the Dunimd Team.
+//! This file is part of Ri.
+//! The Ri project belongs to the Dunimd Team.
 //!
 //! Licensed under the Apache License, Version 2.0 (the "License");
 //! You may not use this file except in compliance with the License.
@@ -17,53 +17,53 @@
 
 //! # Gateway Module JNI Bindings
 //!
-//! JNI bindings for DMSC gateway classes.
+//! JNI bindings for Ri gateway classes.
 
 use jni::JNIEnv;
 use jni::objects::JClass;
 use jni::sys::jlong;
-use crate::gateway::{DMSCGateway, DMSCGatewayConfig};
+use crate::gateway::{RiGateway, RiGatewayConfig};
 
 #[no_mangle]
-pub extern "system" fn Java_com_dunimd_dmsc_gateway_DMSCGateway_new0(
+pub extern "system" fn Java_com_dunimd_ri_gateway_RiGateway_new0(
     _env: JNIEnv,
     _class: JClass,
 ) -> jlong {
-    let gateway = Box::new(DMSCGateway::new());
+    let gateway = Box::new(RiGateway::new());
     Box::into_raw(gateway) as jlong
 }
 
 #[no_mangle]
-pub extern "system" fn Java_com_dunimd_dmsc_gateway_DMSCGateway_free0(
+pub extern "system" fn Java_com_dunimd_ri_gateway_RiGateway_free0(
     _env: JNIEnv,
     _class: JClass,
     ptr: jlong,
 ) {
     if ptr != 0 {
         unsafe {
-            let _ = Box::from_raw(ptr as *mut DMSCGateway);
+            let _ = Box::from_raw(ptr as *mut RiGateway);
         }
     }
 }
 
 #[no_mangle]
-pub extern "system" fn Java_com_dunimd_dmsc_gateway_DMSCGatewayConfig_new0(
+pub extern "system" fn Java_com_dunimd_ri_gateway_RiGatewayConfig_new0(
     _env: JNIEnv,
     _class: JClass,
 ) -> jlong {
-    let config = Box::new(DMSCGatewayConfig::default());
+    let config = Box::new(RiGatewayConfig::default());
     Box::into_raw(config) as jlong
 }
 
 #[no_mangle]
-pub extern "system" fn Java_com_dunimd_dmsc_gateway_DMSCGatewayConfig_free0(
+pub extern "system" fn Java_com_dunimd_ri_gateway_RiGatewayConfig_free0(
     _env: JNIEnv,
     _class: JClass,
     ptr: jlong,
 ) {
     if ptr != 0 {
         unsafe {
-            let _ = Box::from_raw(ptr as *mut DMSCGatewayConfig);
+            let _ = Box::from_raw(ptr as *mut RiGatewayConfig);
         }
     }
 }

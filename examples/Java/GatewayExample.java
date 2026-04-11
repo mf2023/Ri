@@ -1,7 +1,7 @@
 // Copyright © 2025-2026 Wenze Wei. All Rights Reserved.
 //
-// This file is part of DMSC.
-// The DMSC project belongs to the Dunimd Team.
+// This file is part of Ri.
+// The Ri project belongs to the Dunimd Team.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // You may not use this file except in compliance with the License.
@@ -15,24 +15,24 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import com.dunimd.dmsc.gateway.DMSCGateway;
-import com.dunimd.dmsc.gateway.DMSCGatewayConfig;
-import com.dunimd.dmsc.DMSCError;
+import com.dunimd.ri.gateway.RiGateway;
+import com.dunimd.ri.gateway.RiGatewayConfig;
+import com.dunimd.ri.RiError;
 
 /**
- * DMSC Gateway Module Example for Java.
+ * Ri Gateway Module Example for Java.
  *
- * This example demonstrates how to use the DMSC gateway module for API gateway
+ * This example demonstrates how to use the Ri gateway module for API gateway
  * functionality including routing and rate limiting.
  */
 public class GatewayExample {
     public static void main(String[] args) {
-        System.out.println("=== DMSC Gateway Module Example - Java ===\n");
+        System.out.println("=== Ri Gateway Module Example - Java ===\n");
 
         try {
             // Create gateway configuration
             System.out.println("1. Creating gateway configuration...");
-            DMSCGatewayConfig config = new DMSCGatewayConfig();
+            RiGatewayConfig config = new RiGatewayConfig();
             config.setHost("0.0.0.0");
             config.setPort(8080);
             config.setEnableRateLimiting(true);
@@ -43,7 +43,7 @@ public class GatewayExample {
 
             // Initialize gateway
             System.out.println("2. Creating gateway...");
-            DMSCGateway gateway = new DMSCGateway(config);
+            RiGateway gateway = new RiGateway(config);
             System.out.println("   Gateway created\n");
 
             // Display gateway configuration
@@ -60,8 +60,8 @@ public class GatewayExample {
 
             System.out.println("=== Gateway Example Completed ===");
 
-        } catch (DMSCError e) {
-            System.err.println("DMSC Error: " + e.getMessage());
+        } catch (RiError e) {
+            System.err.println("Ri Error: " + e.getMessage());
             e.printStackTrace();
             System.exit(1);
         } catch (Exception e) {

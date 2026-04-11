@@ -1,7 +1,7 @@
 // Copyright © 2025-2026 Wenze Wei. All Rights Reserved.
 //
-// This file is part of DMSC.
-// The DMSC project belongs to the Dunimd Team.
+// This file is part of Ri.
+// The Ri project belongs to the Dunimd Team.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // You may not use this file except in compliance with the License.
@@ -15,17 +15,17 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package com.dunimd.dmsc;
+package com.dunimd.ri;
 
 /**
- * Application runtime for DMSC applications.
+ * Application runtime for Ri applications.
  * 
- * This class represents a running DMSC application instance.
+ * This class represents a running Ri application instance.
  */
-public class DMSCAppRuntime {
+public class RiAppRuntime {
     private long nativePtr;
     
-    DMSCAppRuntime(long ptr) {
+    RiAppRuntime(long ptr) {
         this.nativePtr = ptr;
     }
     

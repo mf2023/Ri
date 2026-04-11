@@ -1,7 +1,7 @@
 //! Copyright 2025-2026 Wenze Wei. All Rights Reserved.
 //!
-//! This file is part of DMSC.
-//! The DMSC project belongs to the Dunimd Team.
+//! This file is part of Ri.
+//! The Ri project belongs to the Dunimd Team.
 //!
 //! Licensed under the Apache License, Version 2.0 (the "License");
 //! You may not use this file except in compliance with the License.
@@ -26,31 +26,31 @@ use tokio::io::{AsyncReadExt, AsyncWriteExt};
 #[allow(unused_imports)]
 use pyo3::prelude::*;
 
-pub struct DMSCGrpcServer {
-    config: DMSCGrpcConfig,
-    stats: Arc<RwLock<DMSCGrpcStats>>,
-    registry: DMSCGrpcServiceRegistry,
+pub struct RiGrpcServer {
+    config: RiGrpcConfig,
+    stats: Arc<RwLock<RiGrpcStats>>,
+    registry: RiGrpcServiceRegistry,
     shutdown_tx: Option<mpsc::Sender<()>>,
     running: Arc<RwLock<bool>>,
 }
 
 #[cfg(feature = "pyo3")]
 #[pyclass]
-pub struct DMSCGrpcServerPy {
-    inner: DMSCGrpcServer,
+pub struct RiGrpcServerPy {
+    inner: RiGrpcServer,
 }
 
 #[cfg(feature = "pyo3")]
 #[pymethods]
-impl DMSCGrpcServerPy {
+impl RiGrpcServerPy {
     #[new]
     fn new() -> Self {
         Self {
-            inner: DMSCGrpcServer::new(DMSCGrpcConfig::default()),
+            inner: RiGrpcServer::new(RiGrpcConfig::default()),
         }
     }
 
-    fn get_stats(&self) -> DMSCGrpcStats {
+    fn get_stats(&self) -> RiGrpcStats {
         self.inner.get_stats()
     }
 
@@ -81,21 +81,21 @@ impl DMSCGrpcServerPy {
     }
 }
 
-impl DMSCGrpcServer {
-    pub fn new(config: DMSCGrpcConfig) -> Self {
+impl RiGrpcServer {
+    pub fn new(config: RiGrpcConfig) -> Self {
         Self {
             config,
-            stats: Arc::new(RwLock::new(DMSCGrpcStats::new())),
-            registry: DMSCGrpcServiceRegistry::new(),
+            stats: Arc::new(RwLock::new(RiGrpcStats::new())),
+            registry: RiGrpcServiceRegistry::new(),
             shutdown_tx: None,
             running: Arc::new(RwLock::new(false)),
         }
     }
 
-    pub fn get_stats(&self) -> DMSCGrpcStats {
+    pub fn get_stats(&self) -> RiGrpcStats {
         self.stats.try_read()
             .map(|guard| guard.clone())
-            .unwrap_or_else(|_| DMSCGrpcStats::new())
+            .unwrap_or_else(|_| RiGrpcStats::new())
     }
 
     pub fn is_running_sync(&self) -> bool {
@@ -108,7 +108,7 @@ impl DMSCGrpcServer {
         self.registry.list_services()
     }
 
-    pub async fn start(&mut self) -> DMSCResult<()> {
+    pub async fn start(&mut self) -> RiResult<()> {
         let addr: SocketAddr = format!("{}:{}", self.config.addr, self.config.port).parse()
             .map_err(|e| GrpcError::Server { message: format!("Invalid address: {}", e) })?;
 
@@ -132,8 +132,8 @@ impl DMSCGrpcServer {
 
     async fn run_server(
         addr: SocketAddr,
-        stats: Arc<RwLock<DMSCGrpcStats>>,
-        registry: DMSCGrpcServiceRegistry,
+        stats: Arc<RwLock<RiGrpcStats>>,
+        registry: RiGrpcServiceRegistry,
         mut shutdown_rx: mpsc::Receiver<()>,
         running: Arc<RwLock<bool>>,
         max_concurrent: usize,
@@ -186,8 +186,8 @@ impl DMSCGrpcServer {
     async fn handle_connection(
         mut stream: tokio::net::TcpStream,
         peer_addr: SocketAddr,
-        stats: Arc<RwLock<DMSCGrpcStats>>,
-        registry: DMSCGrpcServiceRegistry,
+        stats: Arc<RwLock<RiGrpcStats>>,
+        registry: RiGrpcServiceRegistry,
     ) {
         tracing::debug!("gRPC client connected from {}", peer_addr);
 
@@ -220,9 +220,9 @@ impl DMSCGrpcServer {
     async fn process_request(
         stream: &mut tokio::net::TcpStream,
         request_data: &[u8],
-        stats: &Arc<RwLock<DMSCGrpcStats>>,
-        registry: &DMSCGrpcServiceRegistry,
-    ) -> DMSCResult<()> {
+        stats: &Arc<RwLock<RiGrpcStats>>,
+        registry: &RiGrpcServiceRegistry,
+    ) -> RiResult<()> {
         let request_str = String::from_utf8_lossy(request_data);
         
         let (service_name, method_name) = Self::parse_request_path(&request_str)?;
@@ -273,7 +273,7 @@ impl DMSCGrpcServer {
         Ok(())
     }
 
-    fn parse_request_path(request_str: &str) -> DMSCResult<(String, String)> {
+    fn parse_request_path(request_str: &str) -> RiResult<(String, String)> {
         for line in request_str.lines() {
             if line.contains(":path") {
                 let parts: Vec<&str> = line.split_whitespace().collect();
@@ -330,7 +330,7 @@ impl DMSCGrpcServer {
         response
     }
 
-    pub async fn stop(&mut self) -> DMSCResult<()> {
+    pub async fn stop(&mut self) -> RiResult<()> {
         *self.running.write().await = false;
 
         if let Some(tx) = self.shutdown_tx.take() {
@@ -348,7 +348,7 @@ impl DMSCGrpcServer {
     }
 }
 
-impl Clone for DMSCGrpcServer {
+impl Clone for RiGrpcServer {
     fn clone(&self) -> Self {
         Self {
             config: self.config.clone(),
@@ -360,8 +360,8 @@ impl Clone for DMSCGrpcServer {
     }
 }
 
-impl Default for DMSCGrpcServer {
+impl Default for RiGrpcServer {
     fn default() -> Self {
-        Self::new(DMSCGrpcConfig::default())
+        Self::new(RiGrpcConfig::default())
     }
 }

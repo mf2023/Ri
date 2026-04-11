@@ -1,7 +1,7 @@
 //! Copyright © 2025-2026 Wenze Wei. All Rights Reserved.
 //!
-//! This file is part of DMSC.
-//! The DMSC project belongs to the Dunimd Team.
+//! This file is part of Ri.
+//! The Ri project belongs to the Dunimd Team.
 //!
 //! Licensed under the Apache License, Version 2.0 (the "License");
 //! You may not use this file except in compliance with the License.
@@ -15,19 +15,19 @@
 //! See the License for the specific language governing permissions and
 //! limitations under the License.
 
-use crate::database::DMSCDBRow;
+use crate::database::RiDBRow;
 use std::sync::Arc;
 
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 #[derive(Debug, Clone)]
-pub struct DMSCDBResult {
-    rows: Arc<Vec<DMSCDBRow>>,
+pub struct RiDBResult {
+    rows: Arc<Vec<RiDBRow>>,
     row_count: usize,
     affected_rows: u64,
     last_insert_id: Option<i64>,
 }
 
-impl DMSCDBResult {
+impl RiDBResult {
     pub fn new() -> Self {
         Self {
             rows: Arc::new(Vec::new()),
@@ -37,7 +37,7 @@ impl DMSCDBResult {
         }
     }
 
-    pub fn with_rows(rows: Vec<DMSCDBRow>) -> Self {
+    pub fn with_rows(rows: Vec<RiDBRow>) -> Self {
         let row_count = rows.len();
         Self {
             rows: Arc::new(rows),
@@ -80,38 +80,38 @@ impl DMSCDBResult {
         self.row_count
     }
 
-    pub fn rows(&self) -> &[DMSCDBRow] {
+    pub fn rows(&self) -> &[RiDBRow] {
         &self.rows
     }
 
-    pub fn iter(&self) -> impl Iterator<Item = &DMSCDBRow> {
+    pub fn iter(&self) -> impl Iterator<Item = &RiDBRow> {
         self.rows.iter()
     }
 
-    pub fn first(&self) -> Option<&DMSCDBRow> {
+    pub fn first(&self) -> Option<&RiDBRow> {
         self.rows.first()
     }
 
-    pub fn last(&self) -> Option<&DMSCDBRow> {
+    pub fn last(&self) -> Option<&RiDBRow> {
         self.rows.last()
     }
 
-    pub fn get(&self, index: usize) -> Option<&DMSCDBRow> {
+    pub fn get(&self, index: usize) -> Option<&RiDBRow> {
         self.rows.get(index)
     }
 
-    pub fn into_rows(self) -> Vec<DMSCDBRow> {
+    pub fn into_rows(self) -> Vec<RiDBRow> {
         Arc::try_unwrap(self.rows).unwrap_or_else(|arc| (*arc).clone())
     }
 
-    pub fn to_vec(&self) -> Vec<DMSCDBRow> {
+    pub fn to_vec(&self) -> Vec<RiDBRow> {
         self.rows.iter().cloned().collect()
     }
 }
 
 #[cfg(feature = "pyo3")]
 #[pyo3::prelude::pymethods]
-impl DMSCDBResult {
+impl RiDBResult {
     #[new]
     fn py_new() -> Self {
         Self::new()
@@ -137,20 +137,20 @@ impl DMSCDBResult {
         self.row_count()
     }
 
-    fn to_rows(&self) -> Vec<DMSCDBRow> {
+    fn to_rows(&self) -> Vec<RiDBRow> {
         self.to_vec()
     }
 }
 
-impl Default for DMSCDBResult {
+impl Default for RiDBResult {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl IntoIterator for DMSCDBResult {
-    type Item = DMSCDBRow;
-    type IntoIter = std::vec::IntoIter<DMSCDBRow>;
+impl IntoIterator for RiDBResult {
+    type Item = RiDBRow;
+    type IntoIter = std::vec::IntoIter<RiDBRow>;
 
     fn into_iter(self) -> Self::IntoIter {
         self.into_rows().into_iter()

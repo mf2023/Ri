@@ -1,7 +1,7 @@
 //! Copyright © 2025-2026 Wenze Wei. All Rights Reserved.
 //!
-//! This file is part of DMSC.
-//! The DMSC project belongs to the Dunimd Team.
+//! This file is part of Ri.
+//! The Ri project belongs to the Dunimd Team.
 //!
 //! Licensed under the Apache License, Version 2.0 (the "License");
 //! You may not use this file except in compliance with the License.
@@ -19,19 +19,19 @@
 
 //! # Cache Backends Module
 //! 
-//! This module provides various cache backend implementations for the DMSC cache system. 
+//! This module provides various cache backend implementations for the Ri cache system. 
 //! It includes in-memory, Redis, and hybrid cache backends, allowing users to choose 
 //! the appropriate cache implementation based on their requirements.
 //! 
 //! ## Available Backends
 //! 
-//! - **DMSCMemoryCache**: In-memory cache implementation using DashMap for high performance
-//! - **DMSCRedisCache**: Redis-based cache implementation for distributed systems
-//! - **DMSCHybridCache**: Hybrid cache combining in-memory and Redis cache for optimal performance
+//! - **RiMemoryCache**: In-memory cache implementation using DashMap for high performance
+//! - **RiRedisCache**: Redis-based cache implementation for distributed systems
+//! - **RiHybridCache**: Hybrid cache combining in-memory and Redis cache for optimal performance
 //! 
 //! ## Design Principles
 //! 
-//! 1. **Unified Interface**: All backends implement the DMSCCache trait for consistent usage
+//! 1. **Unified Interface**: All backends implement the RiCache trait for consistent usage
 //! 2. **Performance Focus**: Each backend is optimized for its specific use case
 //! 3. **Thread Safety**: All backends are thread-safe for concurrent access
 //! 4. **Expiration Support**: Built-in support for cache entry expiration
@@ -43,17 +43,17 @@
 //! ## Usage
 //! 
 //! ```rust
-//! use dmsc::prelude::*;
+//! use ri::prelude::*;
 //! 
-//! async fn example() -> DMSCResult<()> {
+//! async fn example() -> RiResult<()> {
 //!     // Create an in-memory cache
-//!     let memory_cache = DMSCMemoryCache::new();
+//!     let memory_cache = RiMemoryCache::new();
 //!     
 //!     // Create a Redis cache
-//!     let redis_cache = DMSCRedisCache::new("redis://localhost:6379").await?;
+//!     let redis_cache = RiRedisCache::new("redis://localhost:6379").await?;
 //!     
 //!     // Create a hybrid cache
-//!     let hybrid_cache = DMSCHybridCache::new("redis://localhost:6379").await?;
+//!     let hybrid_cache = RiHybridCache::new("redis://localhost:6379").await?;
 //!     
 //!     Ok(())
 //! }
@@ -69,10 +69,10 @@ pub mod redis_backend;
 pub mod hybrid_backend;
 
 /// In-memory cache implementation using DashMap for high performance
-pub use memory_backend::DMSCMemoryCache;
+pub use memory_backend::RiMemoryCache;
 /// Redis-based cache implementation for distributed systems
 #[cfg(feature = "redis")]
-pub use redis_backend::DMSCRedisCache;
+pub use redis_backend::RiRedisCache;
 /// Hybrid cache combining in-memory and Redis cache for optimal performance
 #[cfg(feature = "redis")]
-pub use hybrid_backend::DMSCHybridCache;
+pub use hybrid_backend::RiHybridCache;

@@ -1,7 +1,7 @@
 //! Copyright © 2025-2026 Wenze Wei. All Rights Reserved.
 //!
-//! This file is part of DMSC.
-//! The DMSC project belongs to the Dunimd Team.
+//! This file is part of Ri.
+//! The Ri project belongs to the Dunimd Team.
 //!
 //! Licensed under the Apache License, Version 2.0 (the "License");
 //! You may not use this file except in compliance with the License.
@@ -17,18 +17,18 @@
 
 //! # Database Module
 //!
-//! This module provides a comprehensive database abstraction layer for DMSC,
+//! This module provides a comprehensive database abstraction layer for Ri,
 //! supporting multiple database backends with a unified interface.
 //!
 //! ## Key Components
 //!
-//! - **DMSCDatabase**: Trait defining the database interface for all supported databases
-//! - **DMSCDatabasePool**: Connection pool management with automatic reuse and health checks
-//! - **DMSCDatabaseConfig**: Builder-style configuration for database connections
-//! - **DMSCDatabaseMigrator**: Database schema migration management
-//! - **DMSCDBRow**: Row representation with type-safe column access
-//! - **DMSCDBResult**: Query result set with iterator support
-//! - **DMSCDatabaseTransaction**: ACID transaction support for data integrity
+//! - **RiDatabase**: Trait defining the database interface for all supported databases
+//! - **RiDatabasePool**: Connection pool management with automatic reuse and health checks
+//! - **RiDatabaseConfig**: Builder-style configuration for database connections
+//! - **RiDatabaseMigrator**: Database schema migration management
+//! - **RiDBRow**: Row representation with type-safe column access
+//! - **RiDBResult**: Query result set with iterator support
+//! - **RiDatabaseTransaction**: ACID transaction support for data integrity
 //!
 //! ## Supported Databases
 //!
@@ -49,11 +49,11 @@
 //! ## Usage Example
 //!
 //! ```rust,ignore
-//! use dmsc::database::{DMSCDatabase, DMSCDatabaseConfig, PooledDatabase};
+//! use ri::database::{RiDatabase, RiDatabaseConfig, PooledDatabase};
 //!
 //! #[tokio::main]
-//! async fn main() -> DMSCResult<()> {
-//!     let config = DMSCDatabaseConfig::postgres()
+//! async fn main() -> RiResult<()> {
+//!     let config = RiDatabaseConfig::postgres()
 //!         .host("localhost")
 //!         .port(5432)
 //!         .database("mydb")
@@ -64,7 +64,7 @@
 //!         .connection_timeout_secs(30)
 //!         .build();
 //!
-//!     let pool = DMSCDatabasePool::new(config).await?;
+//!     let pool = RiDatabasePool::new(config).await?;
 //!     let db = pool.get().await?;
 //!
 //!     // Execute a query with parameter binding
@@ -83,16 +83,16 @@
 //! ## Batch Operations Example
 //!
 //! ```rust,ignore
-//! use dmsc::database::{DMSCDatabasePool, DMSCDatabaseConfig};
+//! use ri::database::{RiDatabasePool, RiDatabaseConfig};
 //!
 //! #[tokio::main]
-//! async fn main() -> DMSCResult<()> {
-//!     let config = DMSCDatabaseConfig::postgres()
+//! async fn main() -> RiResult<()> {
+//!     let config = RiDatabaseConfig::postgres()
 //!         .host("localhost")
 //!         .database("mydb")
 //!         .build();
 //!
-//!     let pool = DMSCDatabasePool::new(config).await?;
+//!     let pool = RiDatabasePool::new(config).await?;
 //!     let db = pool.get().await?;
 //!
 //!     // Batch insert users
@@ -115,16 +115,16 @@
 //! ## Transaction Example
 //!
 //! ```rust,ignore
-//! use dmsc::database::{DMSCDatabasePool, DMSCDatabaseConfig};
+//! use ri::database::{RiDatabasePool, RiDatabaseConfig};
 //!
 //! #[tokio::main]
-//! async fn main() -> DMSCResult<()> {
-//!     let config = DMSCDatabaseConfig::postgres()
+//! async fn main() -> RiResult<()> {
+//!     let config = RiDatabaseConfig::postgres()
 //!         .host("localhost")
 //!         .database("mydb")
 //!         .build();
 //!
-//!     let pool = DMSCDatabasePool::new(config).await?;
+//!     let pool = RiDatabasePool::new(config).await?;
 //!     let db = pool.get().await?;
 //!
 //!     // Start transaction
@@ -155,22 +155,22 @@ pub mod mysql;
 #[cfg(feature = "sqlite")]
 pub mod sqlite;
 
-pub use config::{DMSCDatabaseConfig, DatabaseType};
-pub use pool::{DMSCDatabasePool, PooledDatabase, DatabaseMetrics, DynamicPoolConfig};
-pub use row::DMSCDBRow;
-pub use result::DMSCDBResult;
-pub use migration::{DMSCDatabaseMigration, DMSCMigrationHistory, DMSCDatabaseMigrator};
+pub use config::{RiDatabaseConfig, DatabaseType};
+pub use pool::{RiDatabasePool, PooledDatabase, DatabaseMetrics, DynamicPoolConfig};
+pub use row::RiDBRow;
+pub use result::RiDBResult;
+pub use migration::{RiDatabaseMigration, RiMigrationHistory, RiDatabaseMigrator};
 pub use orm::{QueryBuilder, Criteria, SortOrder, Pagination, ComparisonOperator, 
     TableDefinition, ColumnDefinition, IndexDefinition, ForeignKeyDefinition,
-    DMSCORMSimpleRepository, DMSCORMCrudRepository, DMSCORMRepository};
+    RiORMSimpleRepository, RiORMCrudRepository, RiORMRepository};
 
-use crate::core::{DMSCResult, DMSCError};
+use crate::core::{RiResult, RiError};
 use async_trait::async_trait;
 use thiserror::Error as ThisError;
 use serde::{Serialize, Deserialize};
 
 #[derive(Debug, ThisError, Clone, Serialize, Deserialize)]
-pub enum DMSCDatabaseTransactionError {
+pub enum RiDatabaseTransactionError {
     #[error("Transaction commit failed: {message}")]
     CommitFailed { message: String },
     #[error("Transaction rollback failed: {message}")]
@@ -181,14 +181,14 @@ pub enum DMSCDatabaseTransactionError {
     OperationFailed { message: String },
 }
 
-impl From<DMSCDatabaseTransactionError> for DMSCError {
-    fn from(e: DMSCDatabaseTransactionError) -> Self {
-        DMSCError::Database(e.to_string())
+impl From<RiDatabaseTransactionError> for RiError {
+    fn from(e: RiDatabaseTransactionError) -> Self {
+        RiError::Database(e.to_string())
     }
 }
 
-impl From<DMSCDatabaseTransactionError> for DMSCResult<()> {
-    fn from(e: DMSCDatabaseTransactionError) -> Self {
+impl From<RiDatabaseTransactionError> for RiResult<()> {
+    fn from(e: RiDatabaseTransactionError) -> Self {
         Err(e.into())
     }
 }
@@ -210,16 +210,16 @@ impl From<DMSCDatabaseTransactionError> for DMSCResult<()> {
 /// ## Example
 ///
 /// ```rust,ignore
-/// use dmsc::database::{DMSCDatabase, DMSCDatabasePool, DMSCDatabaseConfig};
+/// use ri::database::{RiDatabase, RiDatabasePool, RiDatabaseConfig};
 ///
 /// #[tokio::main]
-/// async fn main() -> DMSCResult<()> {
-///     let config = DMSCDatabaseConfig::postgres()
+/// async fn main() -> RiResult<()> {
+///     let config = RiDatabaseConfig::postgres()
 ///         .host("localhost")
 ///         .database("mydb")
 ///         .build();
 ///
-///     let pool = DMSCDatabasePool::new(config).await?;
+///     let pool = RiDatabasePool::new(config).await?;
 ///     let db = pool.get().await?;
 ///
 ///     // Execute a statement
@@ -235,7 +235,7 @@ impl From<DMSCDatabaseTransactionError> for DMSCResult<()> {
 /// }
 /// ```
 #[async_trait]
-pub trait DMSCDatabase: Send + Sync {
+pub trait RiDatabase: Send + Sync {
     /// Returns the type of database this instance connects to.
     ///
     /// This can be used to identify which database backend is in use
@@ -254,7 +254,7 @@ pub trait DMSCDatabase: Send + Sync {
     /// ## Returns
     ///
     /// The number of rows affected, or an error if execution fails.
-    async fn execute(&self, sql: &str) -> DMSCResult<u64>;
+    async fn execute(&self, sql: &str) -> RiResult<u64>;
 
     /// Executes a SQL query and returns all matching rows.
     ///
@@ -268,7 +268,7 @@ pub trait DMSCDatabase: Send + Sync {
     /// ## Returns
     ///
     /// A result set containing all matching rows, or an error if the query fails.
-    async fn query(&self, sql: &str) -> DMSCResult<DMSCDBResult>;
+    async fn query(&self, sql: &str) -> RiResult<RiDBResult>;
 
     /// Executes a SQL query and returns at most one row.
     ///
@@ -282,7 +282,7 @@ pub trait DMSCDatabase: Send + Sync {
     /// ## Returns
     ///
     /// `Some(row)` if a row was found, `None` if no rows match, or an error.
-    async fn query_one(&self, sql: &str) -> DMSCResult<Option<DMSCDBRow>>;
+    async fn query_one(&self, sql: &str) -> RiResult<Option<RiDBRow>>;
 
     /// Checks if the database connection is alive.
     ///
@@ -292,7 +292,7 @@ pub trait DMSCDatabase: Send + Sync {
     /// ## Returns
     ///
     /// `true` if the connection is healthy, `false` otherwise.
-    async fn ping(&self) -> DMSCResult<bool>;
+    async fn ping(&self) -> RiResult<bool>;
 
     /// Checks if the database connection is currently connected.
     ///
@@ -308,7 +308,7 @@ pub trait DMSCDatabase: Send + Sync {
     /// This method should be called when the connection is no longer needed
     /// to release resources. After calling this method, the connection
     /// should not be used.
-    async fn close(&self) -> DMSCResult<()>;
+    async fn close(&self) -> RiResult<()>;
 
     /// Executes the same SQL statement multiple times with different parameters.
     ///
@@ -323,7 +323,7 @@ pub trait DMSCDatabase: Send + Sync {
     /// ## Returns
     ///
     /// A vector of affected row counts, one for each execution.
-    async fn batch_execute(&self, sql: &str, params: &[Vec<serde_json::Value>]) -> DMSCResult<Vec<u64>> {
+    async fn batch_execute(&self, sql: &str, params: &[Vec<serde_json::Value>]) -> RiResult<Vec<u64>> {
         let mut results = Vec::with_capacity(params.len());
         for param_set in params {
             let result = self.execute_with_params(sql, param_set).await?;
@@ -345,7 +345,7 @@ pub trait DMSCDatabase: Send + Sync {
     /// ## Returns
     ///
     /// A vector of result sets, one for each query.
-    async fn batch_query(&self, sql: &str, params: &[Vec<serde_json::Value>]) -> DMSCResult<Vec<DMSCDBResult>> {
+    async fn batch_query(&self, sql: &str, params: &[Vec<serde_json::Value>]) -> RiResult<Vec<RiDBResult>> {
         let mut results = Vec::with_capacity(params.len());
         for param_set in params {
             let result = self.query_with_params(sql, param_set).await?;
@@ -367,7 +367,7 @@ pub trait DMSCDatabase: Send + Sync {
     /// ## Returns
     ///
     /// The number of rows affected.
-    async fn execute_with_params(&self, sql: &str, params: &[serde_json::Value]) -> DMSCResult<u64>;
+    async fn execute_with_params(&self, sql: &str, params: &[serde_json::Value]) -> RiResult<u64>;
 
     /// Executes a SQL query with parameters.
     ///
@@ -382,7 +382,7 @@ pub trait DMSCDatabase: Send + Sync {
     /// ## Returns
     ///
     /// A result set containing all matching rows.
-    async fn query_with_params(&self, sql: &str, params: &[serde_json::Value]) -> DMSCResult<DMSCDBResult>;
+    async fn query_with_params(&self, sql: &str, params: &[serde_json::Value]) -> RiResult<RiDBResult>;
 
     /// Starts a new database transaction.
     ///
@@ -393,7 +393,7 @@ pub trait DMSCDatabase: Send + Sync {
     ///
     /// A transaction handle that can be used to execute operations
     /// within the transaction.
-    async fn transaction(&self) -> DMSCResult<Box<dyn DMSCDatabaseTransaction>>;
+    async fn transaction(&self) -> RiResult<Box<dyn RiDatabaseTransaction>>;
 }
 
 /// Trait representing a database transaction.
@@ -404,7 +404,7 @@ pub trait DMSCDatabase: Send + Sync {
 ///
 /// ## Transaction Lifecycle
 ///
-/// 1. **Begin**: Transaction starts with `DMSCDatabase::transaction()`
+/// 1. **Begin**: Transaction starts with `RiDatabase::transaction()`
 /// 2. **Execute**: Run SQL statements within the transaction
 /// 3. **Commit**: Save all changes with `commit()`
 ///    OR **Rollback**: Discard all changes with `rollback()`
@@ -412,16 +412,16 @@ pub trait DMSCDatabase: Send + Sync {
 /// ## Example
 ///
 /// ```rust,ignore
-/// use dmsc::database::{DMSCDatabasePool, DMSCDatabaseConfig};
+/// use ri::database::{RiDatabasePool, RiDatabaseConfig};
 ///
 /// #[tokio::main]
-/// async fn main() -> DMSCResult<()> {
-///     let config = DMSCDatabaseConfig::postgres()
+/// async fn main() -> RiResult<()> {
+///     let config = RiDatabaseConfig::postgres()
 ///         .host("localhost")
 ///         .database("mydb")
 ///         .build();
 ///
-///     let pool = DMSCDatabasePool::new(config).await?;
+///     let pool = RiDatabasePool::new(config).await?;
 ///     let db = pool.get().await?;
 ///
 ///     let mut tx = db.transaction().await?;
@@ -441,16 +441,16 @@ pub trait DMSCDatabase: Send + Sync {
 /// `rollback()`, it will automatically be rolled back to ensure no
 /// partial changes are persisted.
 #[async_trait]
-pub trait DMSCDatabaseTransaction: Send + Sync {
+pub trait RiDatabaseTransaction: Send + Sync {
     /// Executes a SQL statement within the transaction.
     ///
-    /// See [`DMSCDatabase::execute()`] for more details.
-    async fn execute(&self, sql: &str) -> DMSCResult<u64>;
+    /// See [`RiDatabase::execute()`] for more details.
+    async fn execute(&self, sql: &str) -> RiResult<u64>;
 
     /// Executes a SQL query within the transaction.
     ///
-    /// See [`DMSCDatabase::query()`] for more details.
-    async fn query(&self, sql: &str) -> DMSCResult<DMSCDBResult>;
+    /// See [`RiDatabase::query()`] for more details.
+    async fn query(&self, sql: &str) -> RiResult<RiDBResult>;
 
     /// Commits all changes made within the transaction.
     ///
@@ -462,7 +462,7 @@ pub trait DMSCDatabaseTransaction: Send + Sync {
     /// Returns an error if the commit fails. In this case, the
     /// transaction should be considered failed and no further
     /// operations should be attempted.
-    async fn commit(&self) -> DMSCResult<()>;
+    async fn commit(&self) -> RiResult<()>;
 
     /// Rolls back all changes made within the transaction.
     ///
@@ -474,12 +474,12 @@ pub trait DMSCDatabaseTransaction: Send + Sync {
     /// Returns an error if the rollback fails. In this case, the
     /// transaction state is uncertain and the database should be
     /// checked for consistency.
-    async fn rollback(&self) -> DMSCResult<()>;
+    async fn rollback(&self) -> RiResult<()>;
 
     /// Closes the transaction without committing.
     ///
     /// If the transaction has not been committed, this will implicitly
     /// roll back any changes. This method is primarily for cleanup
     /// and should not be used as a substitute for explicit rollback.
-    async fn close(&self) -> DMSCResult<()>;
+    async fn close(&self) -> RiResult<()>;
 }

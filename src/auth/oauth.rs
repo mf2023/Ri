@@ -1,7 +1,7 @@
 //! Copyright © 2025 Wenze Wei. All Rights Reserved.
 //! 
-//! This file is part of DMSC.
-//! The DMSC project belongs to the Dunimd Team.
+//! This file is part of Ri.
+//! The Ri project belongs to the Dunimd Team.
 //! 
 //! Licensed under the Apache License, Version 2.0 (the "License");
 //! You may not use this file except in compliance with the License.
@@ -15,7 +15,7 @@
 //! See the License for the specific language governing permissions and
 //! limitations under the License.
 
-//! OAuth 2.0 authentication implementation for DMSC.
+//! OAuth 2.0 authentication implementation for Ri.
 //! 
 //! This module provides OAuth 2.0 authentication functionality, including support for
 //! multiple identity providers, token management, and user information retrieval.
@@ -24,18 +24,18 @@
 //! # Design Principles
 //! - **Multi-Provider Support**: Allows registration of multiple OAuth providers
 //! - **Thread Safety**: Uses RwLock for concurrent access to provider configuration
-//! - **Caching**: Integrates with DMSC cache for token storage
+//! - **Caching**: Integrates with Ri cache for token storage
 //! - **Async Operations**: All network operations are asynchronous
 //! - **Extensibility**: Designed to support additional OAuth flows and providers
 //! 
 //! # Usage Examples
 //! ```rust
 //! // Create an OAuth manager with a cache
-//! let cache = Arc::new(crate::cache::backends::memory_backend::DMSCMemoryCache::new());
-//! let oauth_manager = DMSCOAuthManager::new(cache);
+//! let cache = Arc::new(crate::cache::backends::memory_backend::RiMemoryCache::new());
+//! let oauth_manager = RiOAuthManager::new(cache);
 //! 
 //! // Register a Google OAuth provider
-//! let google_provider = DMSCOAuthProvider {
+//! let google_provider = RiOAuthProvider {
 //!     id: "google".to_string(),
 //!     name: "Google".to_string(),
 //!     client_id: "client_id".to_string(),
@@ -85,7 +85,7 @@ extern crate urlencoding;
 /// including client credentials, endpoints, scopes, and redirect URI.
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass(get_all, set_all))]
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct DMSCOAuthProvider {
+pub struct RiOAuthProvider {
     /// Unique identifier for the OAuth provider
     pub id: String,
     /// Human-readable name of the provider (e.g., "Google", "GitHub")
@@ -110,7 +110,7 @@ pub struct DMSCOAuthProvider {
 
 #[cfg(feature = "pyo3")]
 #[pyo3::prelude::pymethods]
-impl DMSCOAuthProvider {
+impl RiOAuthProvider {
     #[new]
     fn py_new(
         id: String,
@@ -145,7 +145,7 @@ impl DMSCOAuthProvider {
 /// including access token, refresh token, and expiration information.
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct DMSCOAuthToken {
+pub struct RiOAuthToken {
     /// Access token for making authenticated API requests
     pub access_token: String,
     /// Refresh token for obtaining new access tokens when expired
@@ -160,7 +160,7 @@ pub struct DMSCOAuthToken {
 
 #[cfg(feature = "pyo3")]
 #[pyo3::prelude::pymethods]
-impl DMSCOAuthToken {
+impl RiOAuthToken {
     #[new]
     fn py_new(
         access_token: String,
@@ -185,7 +185,7 @@ impl DMSCOAuthToken {
 /// including user ID, email, name, and profile information.
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass(get_all, set_all))]
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct DMSCOAuthUserInfo {
+pub struct RiOAuthUserInfo {
     /// Unique user identifier from the OAuth provider
     pub id: String,
     /// User's email address from the provider
@@ -200,7 +200,7 @@ pub struct DMSCOAuthUserInfo {
 
 #[cfg(feature = "pyo3")]
 #[pyo3::prelude::pymethods]
-impl DMSCOAuthUserInfo {
+impl RiOAuthUserInfo {
     #[new]
     fn py_new(
         id: String,
@@ -222,25 +222,25 @@ impl DMSCOAuthUserInfo {
 /// OAuth manager for handling multiple identity providers.
 ///
 /// This struct manages OAuth providers, handles token exchange, and retrieves user information.
-/// It supports concurrent access through RwLock and integrates with the DMSC cache system
+/// It supports concurrent access through RwLock and integrates with the Ri cache system
 /// for token storage.
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
-pub struct DMSCOAuthManager {
+pub struct RiOAuthManager {
     /// Hash map of registered OAuth providers indexed by provider ID
-    providers: RwLock<HashMap<String, DMSCOAuthProvider>>,
+    providers: RwLock<HashMap<String, RiOAuthProvider>>,
     /// Cache implementation for storing OAuth tokens
-    _token_cache: Arc<dyn crate::cache::DMSCCache>,
+    _token_cache: Arc<dyn crate::cache::RiCache>,
 }
 
-impl DMSCOAuthManager {
+impl RiOAuthManager {
     /// Creates a new OAuth manager with the specified cache.
     /// 
     /// # Parameters
     /// - `cache`: Cache implementation for storing tokens
     /// 
     /// # Returns
-    /// A new instance of `DMSCOAuthManager`
-    pub fn new(cache: Arc<dyn crate::cache::DMSCCache>) -> Self {
+    /// A new instance of `RiOAuthManager`
+    pub fn new(cache: Arc<dyn crate::cache::RiCache>) -> Self {
         Self {
             providers: RwLock::new(HashMap::new()),
             _token_cache: cache,
@@ -254,7 +254,7 @@ impl DMSCOAuthManager {
     /// 
     /// # Returns
     /// `Ok(())` if the provider was successfully registered
-    pub async fn register_provider(&self, provider: DMSCOAuthProvider) -> crate::core::DMSCResult<()> {
+    pub async fn register_provider(&self, provider: RiOAuthProvider) -> crate::core::RiResult<()> {
         let mut providers = self.providers.write().await;
         providers.insert(provider.id.clone(), provider);
         Ok(())
@@ -266,8 +266,8 @@ impl DMSCOAuthManager {
     /// - `provider_id`: Unique identifier of the provider
     /// 
     /// # Returns
-    /// `Some(DMSCOAuthProvider)` if the provider exists, otherwise `None`
-    pub async fn get_provider(&self, provider_id: &str) -> crate::core::DMSCResult<Option<DMSCOAuthProvider>> {
+    /// `Some(RiOAuthProvider)` if the provider exists, otherwise `None`
+    pub async fn get_provider(&self, provider_id: &str) -> crate::core::RiResult<Option<RiOAuthProvider>> {
         let providers = self.providers.read().await;
         Ok(providers.get(provider_id).cloned())
     }
@@ -281,7 +281,7 @@ impl DMSCOAuthManager {
     /// # Returns
     /// `Some(String)` containing the authentication URL if the provider is enabled, otherwise `None`
     #[cfg(feature = "auth")]
-    pub async fn get_auth_url(&self, provider_id: &str, state: &str) -> crate::core::DMSCResult<Option<String>> {
+    pub async fn get_auth_url(&self, provider_id: &str, state: &str) -> crate::core::RiResult<Option<String>> {
         let providers = self.providers.read().await;
         
         if let Some(provider) = providers.get(provider_id) {
@@ -313,8 +313,8 @@ impl DMSCOAuthManager {
     ///
     /// This method requires the `auth` feature to be enabled.
     /// Without this feature, calling this method returns an error.
-    pub async fn get_auth_url(&self, _provider_id: &str, _state: &str) -> crate::core::DMSCResult<Option<String>> {
-        Err(crate::core::DMSCError::Other("Auth feature is not enabled. Enable the 'auth' feature to use OAuth functionality.".to_string()))
+    pub async fn get_auth_url(&self, _provider_id: &str, _state: &str) -> crate::core::RiResult<Option<String>> {
+        Err(crate::core::RiError::Other("Auth feature is not enabled. Enable the 'auth' feature to use OAuth functionality.".to_string()))
     }
 
     /// Exchanges an authorization code for an access token.
@@ -325,14 +325,14 @@ impl DMSCOAuthManager {
     /// - `redirect_uri`: Redirect URI used in the authentication request
     /// 
     /// # Returns
-    /// `Some(DMSCOAuthToken)` if the code exchange was successful, otherwise `None`
+    /// `Some(RiOAuthToken)` if the code exchange was successful, otherwise `None`
     #[cfg(feature = "http_client")]
     pub async fn exchange_code_for_token(
         &self,
         provider_id: &str,
         code: &str,
         redirect_uri: &str,
-    ) -> crate::core::DMSCResult<Option<DMSCOAuthToken>> {
+    ) -> crate::core::RiResult<Option<RiOAuthToken>> {
         let providers = self.providers.read().await;
         
         if let Some(provider) = providers.get(provider_id) {
@@ -354,16 +354,16 @@ impl DMSCOAuthManager {
                 .form(&params)
                 .send()
                 .await
-                .map_err(|e| crate::core::DMSCError::ExternalError(e.to_string()))?;
+                .map_err(|e| crate::core::RiError::ExternalError(e.to_string()))?;
 
             if response.status().is_success() {
                 let token_data: serde_json::Value = response.json().await
-                    .map_err(|e| crate::core::DMSCError::ExternalError(e.to_string()))?;
+                    .map_err(|e| crate::core::RiError::ExternalError(e.to_string()))?;
 
-                let token = DMSCOAuthToken {
+                let token = RiOAuthToken {
                     access_token: token_data["access_token"]
                         .as_str()
-                        .ok_or_else(|| crate::core::DMSCError::ExternalError("Missing access_token".to_string()))?
+                        .ok_or_else(|| crate::core::RiError::ExternalError("Missing access_token".to_string()))?
                         .to_string(),
                     refresh_token: token_data["refresh_token"].as_str().map(String::from),
                     expires_in: token_data["expires_in"].as_i64(),
@@ -403,8 +403,8 @@ impl DMSCOAuthManager {
         _provider_id: &str,
         _code: &str,
         _redirect_uri: &str,
-    ) -> crate::core::DMSCResult<Option<DMSCOAuthToken>> {
-        Err(crate::core::DMSCError::Other("HTTP client is not enabled. Enable the 'http_client' feature to use OAuth functionality.".to_string()))
+    ) -> crate::core::RiResult<Option<RiOAuthToken>> {
+        Err(crate::core::RiError::Other("HTTP client is not enabled. Enable the 'http_client' feature to use OAuth functionality.".to_string()))
     }
 
     /// Retrieves user information from an OAuth provider.
@@ -414,13 +414,13 @@ impl DMSCOAuthManager {
     /// - `access_token`: Access token for authentication
     /// 
     /// # Returns
-    /// `Some(DMSCOAuthUserInfo)` if the user information was successfully retrieved, otherwise `None`
+    /// `Some(RiOAuthUserInfo)` if the user information was successfully retrieved, otherwise `None`
     #[cfg(feature = "http_client")]
     pub async fn get_user_info(
         &self,
         provider_id: &str,
         access_token: &str,
-    ) -> crate::core::DMSCResult<Option<DMSCOAuthUserInfo>> {
+    ) -> crate::core::RiResult<Option<RiOAuthUserInfo>> {
         let providers = self.providers.read().await;
         
         if let Some(provider) = providers.get(provider_id) {
@@ -434,20 +434,20 @@ impl DMSCOAuthManager {
                 .bearer_auth(access_token)
                 .send()
                 .await
-                .map_err(|e| crate::core::DMSCError::ExternalError(e.to_string()))?;
+                .map_err(|e| crate::core::RiError::ExternalError(e.to_string()))?;
 
             if response.status().is_success() {
                 let user_data: serde_json::Value = response.json().await
-                    .map_err(|e| crate::core::DMSCError::ExternalError(e.to_string()))?;
+                    .map_err(|e| crate::core::RiError::ExternalError(e.to_string()))?;
 
-                let user_info = DMSCOAuthUserInfo {
+                let user_info = RiOAuthUserInfo {
                     id: user_data["id"]
                         .as_str()
-                        .ok_or_else(|| crate::core::DMSCError::ExternalError("Missing user id".to_string()))?
+                        .ok_or_else(|| crate::core::RiError::ExternalError("Missing user id".to_string()))?
                         .to_string(),
                     email: user_data["email"]
                         .as_str()
-                        .ok_or_else(|| crate::core::DMSCError::ExternalError("Missing email".to_string()))?
+                        .ok_or_else(|| crate::core::RiError::ExternalError("Missing email".to_string()))?
                         .to_string(),
                     name: user_data["name"].as_str().map(String::from),
                     avatar_url: user_data["avatar_url"].as_str().map(String::from),
@@ -481,8 +481,8 @@ impl DMSCOAuthManager {
         &self,
         _provider_id: &str,
         _access_token: &str,
-    ) -> crate::core::DMSCResult<Option<DMSCOAuthUserInfo>> {
-        Err(crate::core::DMSCError::Other("HTTP client is not enabled. Enable the 'http_client' feature to use OAuth functionality.".to_string()))
+    ) -> crate::core::RiResult<Option<RiOAuthUserInfo>> {
+        Err(crate::core::RiError::Other("HTTP client is not enabled. Enable the 'http_client' feature to use OAuth functionality.".to_string()))
     }
 
     /// Refreshes an access token using a refresh token.
@@ -492,13 +492,13 @@ impl DMSCOAuthManager {
     /// - `refresh_token`: Refresh token for obtaining a new access token
     /// 
     /// # Returns
-    /// `Some(DMSCOAuthToken)` if the token refresh was successful, otherwise `None`
+    /// `Some(RiOAuthToken)` if the token refresh was successful, otherwise `None`
     #[cfg(feature = "http_client")]
     pub async fn refresh_token(
         &self,
         provider_id: &str,
         refresh_token: &str,
-    ) -> crate::core::DMSCResult<Option<DMSCOAuthToken>> {
+    ) -> crate::core::RiResult<Option<RiOAuthToken>> {
         let providers = self.providers.read().await;
         
         if let Some(provider) = providers.get(provider_id) {
@@ -519,16 +519,16 @@ impl DMSCOAuthManager {
                 .form(&params)
                 .send()
                 .await
-                .map_err(|e| crate::core::DMSCError::ExternalError(e.to_string()))?;
+                .map_err(|e| crate::core::RiError::ExternalError(e.to_string()))?;
 
             if response.status().is_success() {
                 let token_data: serde_json::Value = response.json().await
-                    .map_err(|e| crate::core::DMSCError::ExternalError(e.to_string()))?;
+                    .map_err(|e| crate::core::RiError::ExternalError(e.to_string()))?;
 
-                let token = DMSCOAuthToken {
+                let token = RiOAuthToken {
                     access_token: token_data["access_token"]
                         .as_str()
-                        .ok_or_else(|| crate::core::DMSCError::ExternalError("Missing access_token".to_string()))?
+                        .ok_or_else(|| crate::core::RiError::ExternalError("Missing access_token".to_string()))?
                         .to_string(),
                     refresh_token: token_data["refresh_token"].as_str().map(String::from),
                     expires_in: token_data["expires_in"].as_i64(),
@@ -566,8 +566,8 @@ impl DMSCOAuthManager {
         &self,
         _provider_id: &str,
         _refresh_token: &str,
-    ) -> crate::core::DMSCResult<Option<DMSCOAuthToken>> {
-        Err(crate::core::DMSCError::Other("HTTP client is not enabled. Enable the 'http_client' feature to use OAuth functionality.".to_string()))
+    ) -> crate::core::RiResult<Option<RiOAuthToken>> {
+        Err(crate::core::RiError::Other("HTTP client is not enabled. Enable the 'http_client' feature to use OAuth functionality.".to_string()))
     }
 
     /// Revokes an access token.
@@ -583,7 +583,7 @@ impl DMSCOAuthManager {
         &self,
         provider_id: &str,
         access_token: &str,
-    ) -> crate::core::DMSCResult<bool> {
+    ) -> crate::core::RiResult<bool> {
         let providers = self.providers.read().await;
         
         if let Some(provider) = providers.get(provider_id) {
@@ -603,7 +603,7 @@ impl DMSCOAuthManager {
                 .form(&params)
                 .send()
                 .await
-                .map_err(|e| crate::core::DMSCError::ExternalError(e.to_string()))?;
+                .map_err(|e| crate::core::RiError::ExternalError(e.to_string()))?;
 
             Ok(response.status().is_success())
         } else {
@@ -629,15 +629,15 @@ impl DMSCOAuthManager {
         &self,
         _provider_id: &str,
         _access_token: &str,
-    ) -> crate::core::DMSCResult<bool> {
-        Err(crate::core::DMSCError::Other("HTTP client is not enabled. Enable the 'http_client' feature to use OAuth functionality.".to_string()))
+    ) -> crate::core::RiResult<bool> {
+        Err(crate::core::RiError::Other("HTTP client is not enabled. Enable the 'http_client' feature to use OAuth functionality.".to_string()))
     }
 
     /// Lists all registered OAuth providers.
     /// 
     /// # Returns
     /// A vector of all registered OAuth providers
-    pub async fn list_providers(&self) -> crate::core::DMSCResult<Vec<DMSCOAuthProvider>> {
+    pub async fn list_providers(&self) -> crate::core::RiResult<Vec<RiOAuthProvider>> {
         let providers = self.providers.read().await;
         Ok(providers.values().cloned().collect())
     }
@@ -649,7 +649,7 @@ impl DMSCOAuthManager {
     /// 
     /// # Returns
     /// `true` if the provider was successfully disabled, otherwise `false`
-    pub async fn disable_provider(&self, provider_id: &str) -> crate::core::DMSCResult<bool> {
+    pub async fn disable_provider(&self, provider_id: &str) -> crate::core::RiResult<bool> {
         let mut providers = self.providers.write().await;
         
         if let Some(provider) = providers.get_mut(provider_id) {
@@ -667,7 +667,7 @@ impl DMSCOAuthManager {
     /// 
     /// # Returns
     /// `true` if the provider was successfully enabled, otherwise `false`
-    pub async fn enable_provider(&self, provider_id: &str) -> crate::core::DMSCResult<bool> {
+    pub async fn enable_provider(&self, provider_id: &str) -> crate::core::RiResult<bool> {
         let mut providers = self.providers.write().await;
         
         if let Some(provider) = providers.get_mut(provider_id) {
@@ -682,7 +682,7 @@ impl DMSCOAuthManager {
 #[cfg(feature = "pyo3")]
 /// Python bindings for the OAuth Manager.
 ///
-/// This module provides Python interface to DMSC OAuth functionality,
+/// This module provides Python interface to Ri OAuth functionality,
 /// enabling Python applications to integrate with OAuth identity providers.
 ///
 /// ## Supported Operations
@@ -696,13 +696,13 @@ impl DMSCOAuthManager {
 /// ## Python Usage Example
 ///
 /// ```python
-/// from dmsc import DMSCOAuthProvider, DMSCOAuthManager
+/// from ri import RiOAuthProvider, RiOAuthManager
 ///
 /// # Create OAuth manager
-/// oauth_manager = DMSCOAuthManager()
+/// oauth_manager = RiOAuthManager()
 ///
 /// # Register a provider
-/// provider = DMSCOAuthProvider(
+/// provider = RiOAuthProvider(
 ///     id="google",
 ///     name="Google",
 ///     client_id="your_client_id",
@@ -716,15 +716,15 @@ impl DMSCOAuthManager {
 /// # Note: Async operations require Python 3.7+ with asyncio
 /// ```
 #[pyo3::prelude::pymethods]
-impl DMSCOAuthManager {
+impl RiOAuthManager {
     #[new]
     fn py_new() -> PyResult<Self> {
-        let cache = Arc::new(crate::cache::DMSCMemoryCache::new());
+        let cache = Arc::new(crate::cache::RiMemoryCache::new());
         Ok(Self::new(cache))
     }
     
     #[pyo3(name = "register_provider")]
-    fn register_provider_impl(&self, provider: DMSCOAuthProvider) -> PyResult<bool> {
+    fn register_provider_impl(&self, provider: RiOAuthProvider) -> PyResult<bool> {
         let rt = Runtime::new().map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(e.to_string()))?;
         rt.block_on(async {
             self.register_provider(provider).await?;
@@ -733,7 +733,7 @@ impl DMSCOAuthManager {
     }
     
     #[pyo3(name = "get_provider")]
-    fn get_provider_impl(&self, provider_id: String) -> PyResult<Option<DMSCOAuthProvider>> {
+    fn get_provider_impl(&self, provider_id: String) -> PyResult<Option<RiOAuthProvider>> {
         let rt = Runtime::new().map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(e.to_string()))?;
         rt.block_on(async {
             self.get_provider(&provider_id).await.map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(e.to_string()))
@@ -749,7 +749,7 @@ impl DMSCOAuthManager {
     }
     
     #[pyo3(name = "exchange_code_for_token")]
-    fn exchange_code_for_token_impl(&self, provider_id: String, code: String, redirect_uri: String) -> PyResult<Option<DMSCOAuthToken>> {
+    fn exchange_code_for_token_impl(&self, provider_id: String, code: String, redirect_uri: String) -> PyResult<Option<RiOAuthToken>> {
         let rt = Runtime::new().map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(e.to_string()))?;
         rt.block_on(async {
             self.exchange_code_for_token(&provider_id, &code, &redirect_uri).await.map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(e.to_string()))
@@ -757,7 +757,7 @@ impl DMSCOAuthManager {
     }
     
     #[pyo3(name = "get_user_info")]
-    fn get_user_info_impl(&self, provider_id: String, access_token: String) -> PyResult<Option<DMSCOAuthUserInfo>> {
+    fn get_user_info_impl(&self, provider_id: String, access_token: String) -> PyResult<Option<RiOAuthUserInfo>> {
         let rt = Runtime::new().map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(e.to_string()))?;
         rt.block_on(async {
             self.get_user_info(&provider_id, &access_token).await.map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(e.to_string()))
@@ -765,7 +765,7 @@ impl DMSCOAuthManager {
     }
     
     #[pyo3(name = "refresh_token")]
-    fn refresh_token_impl(&self, provider_id: String, refresh_token: String) -> PyResult<Option<DMSCOAuthToken>> {
+    fn refresh_token_impl(&self, provider_id: String, refresh_token: String) -> PyResult<Option<RiOAuthToken>> {
         let rt = Runtime::new().map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(e.to_string()))?;
         rt.block_on(async {
             self.refresh_token(&provider_id, &refresh_token).await.map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(e.to_string()))
@@ -781,7 +781,7 @@ impl DMSCOAuthManager {
     }
     
     #[pyo3(name = "list_providers")]
-    fn list_providers_impl(&self) -> PyResult<Vec<DMSCOAuthProvider>> {
+    fn list_providers_impl(&self) -> PyResult<Vec<RiOAuthProvider>> {
         let rt = Runtime::new().map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(e.to_string()))?;
         rt.block_on(async {
             self.list_providers().await.map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(e.to_string()))

@@ -1,7 +1,7 @@
 //! Copyright © 2025-2026 Wenze Wei. All Rights Reserved.
 //! 
-//! This file is part of DMSC.
-//! The DMSC project belongs to the Dunimd Team.
+//! This file is part of Ri.
+//! The Ri project belongs to the Dunimd Team.
 //! 
 //! Licensed under the Apache License, Version 2.0 (the "License");
 //! You may not use this file except in compliance with the License.
@@ -19,26 +19,26 @@
 
 //! # Application Builder
 //!
-//! This module provides the application builder for constructing DMSC applications.
-//! The `DMSCAppBuilder` follows the builder pattern for fluent configuration,
+//! This module provides the application builder for constructing Ri applications.
+//! The `RiAppBuilder` follows the builder pattern for fluent configuration,
 //! enabling developers to compose applications from various modules, configuration
 //! sources, and runtime settings in a declarative manner.
 //!
 //! ## Builder Pattern
 //!
 //! The builder pattern allows step-by-step construction of complex objects.
-//! Each method on `DMSCAppBuilder` configures a specific aspect of the application
+//! Each method on `RiAppBuilder` configures a specific aspect of the application
 //! and returns the builder for method chaining. This results in a fluent API
 //! that is both readable and type-safe.
 //!
 //! ## Module Registration
 //!
-//! Modules are the primary extension point for DMSC applications. The builder
+//! Modules are the primary extension point for Ri applications. The builder
 //! supports multiple types of modules:
 //!
 //! - **Synchronous modules**: Implement `ServiceModule` trait for sync operations
 //! - **Asynchronous modules**: Implement `AsyncServiceModule` trait for async operations
-//! - **DMSC modules**: Implement public `DMSCModule` trait (converted to async internally)
+//! - **Ri modules**: Implement public `RiModule` trait (converted to async internally)
 //! - **Python modules**: Modules created from Python code (with pyo3 feature)
 //!
 //! ## Configuration Management
@@ -52,18 +52,18 @@
 //! ## Usage Example
 //!
 //! ```rust
-//! use dmsc::prelude::*;
+//! use ri::prelude::*;
 //!
 //! #[tokio::main]
-//! async fn main() -> DMSCResult<()> {
-//!     let app = DMSCAppBuilder::new()
+//! async fn main() -> RiResult<()> {
+//!     let app = RiAppBuilder::new()
 //!         .with_config("config.yaml")?
 //!         .with_module(Box::new(MySyncModule::new()))
 //!         .with_async_module(Box::new(MyAsyncModule::new()))
 //!         .build()?;
 //!
 //!     app.run(|ctx| async move {
-//!         ctx.logger().info("service", "DMSC service started")?;
+//!         ctx.logger().info("service", "Ri service started")?;
 //!         Ok(())
 //!     }).await
 //! }
@@ -71,79 +71,79 @@
 //!
 //! ## Thread Safety
 //!
-//! The `DMSCAppBuilder` is designed to be used in a single-threaded context
+//! The `RiAppBuilder` is designed to be used in a single-threaded context
 //! during application construction. After calling `build()`, the resulting
-//! `DMSCAppRuntime` is safe to use across multiple threads.
+//! `RiAppRuntime` is safe to use across multiple threads.
 //!
 //! ## Error Handling
 //!
-//! All builder methods that can fail return `DMSCResult`, enabling proper
+//! All builder methods that can fail return `RiResult`, enabling proper
 //! error handling through the `?` operator or explicit match statements.
 
-use crate::core::{DMSCResult, DMSCServiceContext, ServiceModule, AsyncServiceModule};
+use crate::core::{RiResult, RiServiceContext, ServiceModule, AsyncServiceModule};
 use super::module_sorter::sort_modules;
 use super::module_types::{ModuleSlot, ModuleType};
-use super::lifecycle::DMSCLifecycleObserver;
-use super::analytics::DMSCLogAnalyticsModule;
+use super::lifecycle::RiLifecycleObserver;
+use super::analytics::RiLogAnalyticsModule;
 use std::sync::Arc;
 
 #[cfg(feature = "pyo3")]
 use pyo3::PyResult;
 #[cfg(feature = "pyo3")]
-use crate::core::app_runtime::DMSCAppRuntime;
+use crate::core::app_runtime::RiAppRuntime;
 
-/// Public-facing application builder for DMSC.
+/// Public-facing application builder for Ri.
 /// 
-/// The `DMSCAppBuilder` provides a fluent API for configuring and building DMSC applications.
+/// The `RiAppBuilder` provides a fluent API for configuring and building Ri applications.
 /// It follows the builder pattern, allowing users to configure various aspects of the application
 /// before building the final runtime.
 /// 
 /// ## Usage
 /// 
 /// ```rust
-/// use dmsc::prelude::*;
+/// use ri::prelude::*;
 /// 
 /// #[tokio::main]
-/// async fn main() -> DMSCResult<()> {
-///     let app = DMSCAppBuilder::new()
+/// async fn main() -> RiResult<()> {
+///     let app = RiAppBuilder::new()
 ///         .with_config("config.yaml")?
 ///         .with_module(Box::new(MySyncModule::new()))
 ///         .with_async_module(Box::new(MyAsyncModule::new()))
 ///         .build()?;
 ///     
 ///     app.run(|ctx| async move {
-///         ctx.logger().info("service", "DMSC service started")?;
+///         ctx.logger().info("service", "Ri service started")?;
 ///         Ok(())
 ///     }).await
 /// }
 /// ```
 
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
-pub struct DMSCAppBuilder {
+pub struct RiAppBuilder {
     /// Vector of modules with their state, including both sync and async modules
     modules: Vec<ModuleSlot>, 
     /// Configuration file paths to load
     config_paths: Vec<String>, 
     /// Custom logging configuration (optional)
-    logging_config: Option<crate::log::DMSCLogConfig>, 
+    logging_config: Option<crate::log::RiLogConfig>, 
     /// Custom observability configuration (optional)
-    observability_config: Option<crate::observability::DMSCObservabilityConfig>, 
+    observability_config: Option<crate::observability::RiObservabilityConfig>, 
 }
  
-impl Default for DMSCAppBuilder {
+impl Default for RiAppBuilder {
     fn default() -> Self {
         Self::new()
     }
 }
  
-impl DMSCAppBuilder {
+impl RiAppBuilder {
     /// Create a new empty application builder.
     /// 
     /// # Returns
     /// 
-    /// A new `DMSCAppBuilder` instance with default settings.
+    /// A new `RiAppBuilder` instance with default settings.
     pub fn new() -> Self {
-        DMSCAppBuilder {
+        RiAppBuilder {
             modules: Vec::new(),
             config_paths: Vec::new(),
             logging_config: None,
@@ -159,7 +159,7 @@ impl DMSCAppBuilder {
     /// 
     /// # Returns
     /// 
-    /// The updated `DMSCAppBuilder` instance for method chaining.
+    /// The updated `RiAppBuilder` instance for method chaining.
     pub fn with_module(mut self, module: Box<dyn ServiceModule>) -> Self {
         self.modules.push(ModuleSlot { module: ModuleType::Sync(module), failed: false });
         self
@@ -168,7 +168,7 @@ impl DMSCAppBuilder {
     /// Add a Python module to the application.
     /// 
     /// This method adds a module created from Python code to the application.
-    /// The module will be treated as an asynchronous DMSC module.
+    /// The module will be treated as an asynchronous Ri module.
     /// 
     /// # Parameters
     /// 
@@ -176,9 +176,9 @@ impl DMSCAppBuilder {
     /// 
     /// # Returns
     /// 
-    /// The updated `DMSCAppBuilder` instance for method chaining.
+    /// The updated `RiAppBuilder` instance for method chaining.
     #[cfg(feature = "pyo3")]
-    pub fn with_python_module(mut self, module: crate::core::module::DMSCPythonModuleAdapter) -> Self {
+    pub fn with_python_module(mut self, module: crate::core::module::RiPythonModuleAdapter) -> Self {
         self.modules.push(ModuleSlot { 
             module: ModuleType::Async(Box::new(module)), 
             failed: false 
@@ -194,30 +194,30 @@ impl DMSCAppBuilder {
     /// 
     /// # Returns
     /// 
-    /// The updated `DMSCAppBuilder` instance for method chaining.
+    /// The updated `RiAppBuilder` instance for method chaining.
     pub fn with_async_module(mut self, module: Box<dyn AsyncServiceModule>) -> Self {
         self.modules.push(ModuleSlot { module: ModuleType::Async(module), failed: false });
         self
     }
  
-    /// Add a DMSC module to the application.
+    /// Add a Ri module to the application.
     /// 
-    /// This method adds a module implementing the public `DMSCModule` trait to the application.
+    /// This method adds a module implementing the public `RiModule` trait to the application.
     /// The module will be treated as an asynchronous module.
     /// 
     /// # Parameters
     /// 
-    /// - `module`: A boxed module implementing `DMSCModule`
+    /// - `module`: A boxed module implementing `RiModule`
     /// 
     /// # Returns
     /// 
-    /// The updated `DMSCAppBuilder` instance for method chaining.
-    pub fn with_dms_module(mut self, module: Box<dyn crate::core::DMSCModule>) -> Self {
-        // Wrap DMSCModule into AsyncServiceModule adapter
-        struct DMSCModuleAdapter(Box<dyn crate::core::DMSCModule + Send + Sync + 'static>);
+    /// The updated `RiAppBuilder` instance for method chaining.
+    pub fn with_dms_module(mut self, module: Box<dyn crate::core::RiModule>) -> Self {
+        // Wrap RiModule into AsyncServiceModule adapter
+        struct RiModuleAdapter(Box<dyn crate::core::RiModule + Send + Sync + 'static>);
         
         #[async_trait::async_trait]
-        impl AsyncServiceModule for DMSCModuleAdapter {
+        impl AsyncServiceModule for RiModuleAdapter {
             fn name(&self) -> &str {
                 self.0.name()
             }
@@ -234,37 +234,37 @@ impl DMSCAppBuilder {
                 self.0.dependencies()
             }
             
-            async fn init(&mut self, ctx: &mut DMSCServiceContext) -> DMSCResult<()> {
+            async fn init(&mut self, ctx: &mut RiServiceContext) -> RiResult<()> {
                 self.0.init(ctx).await
             }
             
-            async fn before_start(&mut self, ctx: &mut DMSCServiceContext) -> DMSCResult<()> {
+            async fn before_start(&mut self, ctx: &mut RiServiceContext) -> RiResult<()> {
                 self.0.before_start(ctx).await
             }
             
-            async fn start(&mut self, ctx: &mut DMSCServiceContext) -> DMSCResult<()> {
+            async fn start(&mut self, ctx: &mut RiServiceContext) -> RiResult<()> {
                 self.0.start(ctx).await
             }
             
-            async fn after_start(&mut self, ctx: &mut DMSCServiceContext) -> DMSCResult<()> {
+            async fn after_start(&mut self, ctx: &mut RiServiceContext) -> RiResult<()> {
                 self.0.after_start(ctx).await
             }
             
-            async fn before_shutdown(&mut self, ctx: &mut DMSCServiceContext) -> DMSCResult<()> {
+            async fn before_shutdown(&mut self, ctx: &mut RiServiceContext) -> RiResult<()> {
                 self.0.before_shutdown(ctx).await
             }
             
-            async fn shutdown(&mut self, ctx: &mut DMSCServiceContext) -> DMSCResult<()> {
+            async fn shutdown(&mut self, ctx: &mut RiServiceContext) -> RiResult<()> {
                 self.0.shutdown(ctx).await
             }
             
-            async fn after_shutdown(&mut self, ctx: &mut DMSCServiceContext) -> DMSCResult<()> {
+            async fn after_shutdown(&mut self, ctx: &mut RiServiceContext) -> RiResult<()> {
                 self.0.after_shutdown(ctx).await
             }
         }
         
         self.modules.push(ModuleSlot { 
-            module: ModuleType::Async(Box::new(DMSCModuleAdapter(module))), 
+            module: ModuleType::Async(Box::new(RiModuleAdapter(module))), 
             failed: false 
         });
         self
@@ -278,7 +278,7 @@ impl DMSCAppBuilder {
     /// 
     /// # Returns
     /// 
-    /// The updated `DMSCAppBuilder` instance for method chaining.
+    /// The updated `RiAppBuilder` instance for method chaining.
     pub fn with_modules(mut self, modules: Vec<Box<dyn ServiceModule>>) -> Self {
         for module in modules {
             self.modules.push(ModuleSlot { module: ModuleType::Sync(module), failed: false });
@@ -294,7 +294,7 @@ impl DMSCAppBuilder {
     /// 
     /// # Returns
     /// 
-    /// The updated `DMSCAppBuilder` instance for method chaining.
+    /// The updated `RiAppBuilder` instance for method chaining.
     pub fn with_async_modules(mut self, modules: Vec<Box<dyn AsyncServiceModule>>) -> Self {
         for module in modules {
             self.modules.push(ModuleSlot { module: ModuleType::Async(module), failed: false });
@@ -302,19 +302,19 @@ impl DMSCAppBuilder {
         self
     }
     
-    /// Add multiple DMSC modules to the application.
+    /// Add multiple Ri modules to the application.
     /// 
-    /// This method adds multiple modules implementing the public `DMSCModule` trait to the application.
+    /// This method adds multiple modules implementing the public `RiModule` trait to the application.
     /// Each module will be treated as an asynchronous module.
     /// 
     /// # Parameters
     /// 
-    /// - `modules`: A vector of boxed modules implementing `DMSCModule`
+    /// - `modules`: A vector of boxed modules implementing `RiModule`
     /// 
     /// # Returns
     /// 
-    /// The updated `DMSCAppBuilder` instance for method chaining.
-    pub fn with_dms_modules(mut self, modules: Vec<Box<dyn crate::core::DMSCModule>>) -> Self {
+    /// The updated `RiAppBuilder` instance for method chaining.
+    pub fn with_dms_modules(mut self, modules: Vec<Box<dyn crate::core::RiModule>>) -> Self {
         for module in modules {
             self = self.with_dms_module(module);
         }
@@ -329,13 +329,13 @@ impl DMSCAppBuilder {
     /// 
     /// # Returns
     /// 
-    /// A `DMSCResult` containing the updated `DMSCAppBuilder` instance for method chaining.
+    /// A `RiResult` containing the updated `RiAppBuilder` instance for method chaining.
     /// 
     /// # Errors
     /// 
-    /// This method currently never returns an error, but returns `DMSCResult` for consistency
+    /// This method currently never returns an error, but returns `RiResult` for consistency
     /// with other builder methods and to allow for future error handling.
-    pub fn with_config(mut self, config_path: impl Into<String>) -> DMSCResult<Self> {
+    pub fn with_config(mut self, config_path: impl Into<String>) -> RiResult<Self> {
         self.config_paths.push(config_path.into());
         Ok(self)
     }
@@ -348,8 +348,8 @@ impl DMSCAppBuilder {
     /// 
     /// # Returns
     /// 
-    /// The updated `DMSCAppBuilder` instance for method chaining.
-    pub fn with_logging(mut self, logging_config: crate::log::DMSCLogConfig) -> Self {
+    /// The updated `RiAppBuilder` instance for method chaining.
+    pub fn with_logging(mut self, logging_config: crate::log::RiLogConfig) -> Self {
         self.logging_config = Some(logging_config);
         self
     }
@@ -362,8 +362,8 @@ impl DMSCAppBuilder {
     /// 
     /// # Returns
     /// 
-    /// The updated `DMSCAppBuilder` instance for method chaining.
-    pub fn with_observability(mut self, observability_config: crate::observability::DMSCObservabilityConfig) -> Self {
+    /// The updated `RiAppBuilder` instance for method chaining.
+    pub fn with_observability(mut self, observability_config: crate::observability::RiObservabilityConfig) -> Self {
         self.observability_config = Some(observability_config);
         self
     }
@@ -379,14 +379,14 @@ impl DMSCAppBuilder {
     /// 
     /// # Returns
     /// 
-    /// The updated `DMSCAppBuilder` instance for method chaining.
+    /// The updated `RiAppBuilder` instance for method chaining.
     pub fn with_cache_module<F>(mut self, config_fn: F) -> Self
     where
-        F: FnOnce(&mut crate::cache::DMSCCacheConfig) -> &mut crate::cache::DMSCCacheConfig,
+        F: FnOnce(&mut crate::cache::RiCacheConfig) -> &mut crate::cache::RiCacheConfig,
     {
-        let mut config = crate::cache::DMSCCacheConfig::default();
+        let mut config = crate::cache::RiCacheConfig::default();
         config_fn(&mut config);
-        let cache_module = crate::cache::DMSCCacheModule::with_config(config);
+        let cache_module = crate::cache::RiCacheModule::with_config(config);
         self.modules.push(ModuleSlot {
             module: ModuleType::Sync(Box::new(cache_module)),
             failed: false,
@@ -404,14 +404,14 @@ impl DMSCAppBuilder {
     /// 
     /// # Returns
     /// 
-    /// The updated `DMSCAppBuilder` instance for method chaining.
+    /// The updated `RiAppBuilder` instance for method chaining.
     pub fn with_auth_module<F>(mut self, config_fn: F) -> Self
     where
-        F: FnOnce(&mut crate::auth::DMSCAuthConfig) -> &mut crate::auth::DMSCAuthConfig,
+        F: FnOnce(&mut crate::auth::RiAuthConfig) -> &mut crate::auth::RiAuthConfig,
     {
-        let mut config = crate::auth::DMSCAuthConfig::default();
+        let mut config = crate::auth::RiAuthConfig::default();
         config_fn(&mut config);
-        let auth_module = crate::auth::DMSCAuthModule::with_config(config);
+        let auth_module = crate::auth::RiAuthModule::with_config(config);
         self.modules.push(ModuleSlot {
             module: ModuleType::Sync(Box::new(auth_module)),
             failed: false,
@@ -429,14 +429,14 @@ impl DMSCAppBuilder {
     /// 
     /// # Returns
     /// 
-    /// The updated `DMSCAppBuilder` instance for method chaining.
+    /// The updated `RiAppBuilder` instance for method chaining.
     pub fn with_queue_module<F>(mut self, config_fn: F) -> Self
     where
-        F: FnOnce(&mut crate::queue::DMSCQueueConfig) -> &mut crate::queue::DMSCQueueConfig,
+        F: FnOnce(&mut crate::queue::RiQueueConfig) -> &mut crate::queue::RiQueueConfig,
     {
-        let mut config = crate::queue::DMSCQueueConfig::default();
+        let mut config = crate::queue::RiQueueConfig::default();
         config_fn(&mut config);
-        match crate::queue::DMSCQueueModule::with_config(config) {
+        match crate::queue::RiQueueModule::with_config(config) {
             Ok(queue_module) => {
                 self.modules.push(ModuleSlot {
                     module: ModuleType::Sync(Box::new(queue_module)),
@@ -460,14 +460,14 @@ impl DMSCAppBuilder {
     /// 
     /// # Returns
     /// 
-    /// The updated `DMSCAppBuilder` instance for method chaining.
+    /// The updated `RiAppBuilder` instance for method chaining.
     pub fn with_device_module<F>(mut self, config_fn: F) -> Self
     where
-        F: FnOnce(&mut crate::device::DMSCDeviceControlConfig) -> &mut crate::device::DMSCDeviceControlConfig,
+        F: FnOnce(&mut crate::device::RiDeviceControlConfig) -> &mut crate::device::RiDeviceControlConfig,
     {
-        let mut config = crate::device::DMSCDeviceControlConfig::default();
+        let mut config = crate::device::RiDeviceControlConfig::default();
         config_fn(&mut config);
-        let device_module = crate::device::DMSCDeviceControlModule::new().with_config(config);
+        let device_module = crate::device::RiDeviceControlModule::new().with_config(config);
         self.modules.push(ModuleSlot {
             module: ModuleType::Sync(Box::new(device_module)),
             failed: false,
@@ -487,16 +487,16 @@ impl DMSCAppBuilder {
     /// 
     /// # Returns
     /// 
-    /// A `DMSCResult` containing the built `DMSCAppRuntime` instance, or an error if building fails.
+    /// A `RiResult` containing the built `RiAppRuntime` instance, or an error if building fails.
     /// 
     /// # Errors
     /// 
     /// - If configuration loading fails
     /// - If service context creation fails
     /// - If module sorting fails due to circular dependencies
-    pub fn build(mut self) -> DMSCResult<super::app_runtime::DMSCAppRuntime> {
+    pub fn build(mut self) -> RiResult<super::app_runtime::RiAppRuntime> {
         // Create config manager with specified config paths
-        let mut config_manager = crate::config::DMSCConfigManager::new();
+        let mut config_manager = crate::config::RiConfigManager::new();
         
         // Add specified config files
         for path in &self.config_paths {
@@ -526,13 +526,13 @@ impl DMSCAppBuilder {
         let ctx = self.create_service_context(config_manager)?;
         
         // Add core modules
-        self.modules.push(ModuleSlot { module: ModuleType::Sync(Box::new(DMSCLogAnalyticsModule::new())), failed: false });
-        self.modules.push(ModuleSlot { module: ModuleType::Sync(Box::new(DMSCLifecycleObserver::new())), failed: false });
+        self.modules.push(ModuleSlot { module: ModuleType::Sync(Box::new(RiLogAnalyticsModule::new())), failed: false });
+        self.modules.push(ModuleSlot { module: ModuleType::Sync(Box::new(RiLifecycleObserver::new())), failed: false });
         
         // Sort modules based on dependencies and priority
         self.modules = sort_modules(self.modules)?;
         
-        let runtime = super::app_runtime::DMSCAppRuntime::new(ctx, self.modules);
+        let runtime = super::app_runtime::RiAppRuntime::new(ctx, self.modules);
         Ok(runtime)
     }
     
@@ -550,43 +550,43 @@ impl DMSCAppBuilder {
     /// 
     /// # Returns
     /// 
-    /// A `DMSCResult` containing the created `DMSCServiceContext` instance, or an error if creation fails.
+    /// A `RiResult` containing the created `RiServiceContext` instance, or an error if creation fails.
     /// 
     /// # Errors
     /// 
     /// - If project root directory detection fails
     /// - If file system creation fails
     /// - If logger creation fails
-    fn create_service_context(&self, config_manager: crate::config::DMSCConfigManager) -> DMSCResult<DMSCServiceContext> {
+    fn create_service_context(&self, config_manager: crate::config::RiConfigManager) -> RiResult<RiServiceContext> {
         let cfg = config_manager.config();
  
         let project_root = std::env::current_dir()
-            .map_err(|e| crate::core::DMSCError::Other(format!("detect project root failed: {e}")))?;
+            .map_err(|e| crate::core::RiError::Other(format!("detect project root failed: {e}")))?;
         let app_data_root = if let Some(root_str) = cfg.get_str("fs.app_data_root") {
             project_root.join(root_str)
         } else {
             project_root.join(".dms")
         };
  
-        let fs = crate::fs::DMSCFileSystem::new_with_roots(project_root, app_data_root);
+        let fs = crate::fs::RiFileSystem::new_with_roots(project_root, app_data_root);
 
         // Use custom logging config if provided, otherwise create from config
-        let log_config: crate::log::DMSCLogConfig = if let Some(log_config) = &self.logging_config {
+        let log_config: crate::log::RiLogConfig = if let Some(log_config) = &self.logging_config {
             log_config.clone()
         } else {
-            crate::log::DMSCLogConfig::from_config(&cfg)
+            crate::log::RiLogConfig::from_config(&cfg)
         };
-        let logger = crate::log::DMSCLogger::new(&log_config, fs.clone());
-        let hooks = crate::hooks::DMSCHookBus::new();
-        let metrics_registry = Some(Arc::new(crate::observability::DMSCMetricsRegistry::new()));
+        let logger = crate::log::RiLogger::new(&log_config, fs.clone());
+        let hooks = crate::hooks::RiHookBus::new();
+        let metrics_registry = Some(Arc::new(crate::observability::RiMetricsRegistry::new()));
         
-        Ok(DMSCServiceContext::new_with(fs, logger, config_manager, hooks, metrics_registry))
+        Ok(RiServiceContext::new_with(fs, logger, config_manager, hooks, metrics_registry))
     }
 }
  
 #[cfg(feature = "pyo3")]
 #[pyo3::prelude::pymethods]
-impl DMSCAppBuilder {
+impl RiAppBuilder {
     #[new]
     fn py_new() -> Self {
         Self::new()
@@ -597,22 +597,22 @@ impl DMSCAppBuilder {
         Ok(std::mem::take(self))
     }
 
-    fn py_with_logging(&mut self, logging_config: crate::log::DMSCLogConfig) -> PyResult<Self> {
+    fn py_with_logging(&mut self, logging_config: crate::log::RiLogConfig) -> PyResult<Self> {
         self.logging_config = Some(logging_config);
         Ok(std::mem::take(self))
     }
 
-    fn py_with_observability(&mut self, observability_config: crate::observability::DMSCObservabilityConfig) -> PyResult<Self> {
+    fn py_with_observability(&mut self, observability_config: crate::observability::RiObservabilityConfig) -> PyResult<Self> {
         self.observability_config = Some(observability_config);
         Ok(std::mem::take(self))
     }
 
-    fn py_build(&mut self) -> PyResult<DMSCAppRuntime> {
+    fn py_build(&mut self) -> PyResult<RiAppRuntime> {
         let builder = std::mem::take(self);
-        DMSCAppBuilder::build(builder).map_err(|e| pyo3::prelude::PyErr::from(e))
+        RiAppBuilder::build(builder).map_err(|e| pyo3::prelude::PyErr::from(e))
     }
 
-    fn py_with_module(&mut self, module: super::module::DMSCPythonServiceModule) -> PyResult<Self> {
+    fn py_with_module(&mut self, module: super::module::RiPythonServiceModule) -> PyResult<Self> {
         self.modules.push(crate::core::module_types::ModuleSlot {
             module: crate::core::module_types::ModuleType::Sync(Box::new(module)),
             failed: false,
@@ -620,7 +620,7 @@ impl DMSCAppBuilder {
         Ok(std::mem::take(self))
     }
 
-    fn py_with_python_module(&mut self, module: super::module::DMSCPythonModuleAdapter) -> PyResult<Self> {
+    fn py_with_python_module(&mut self, module: super::module::RiPythonModuleAdapter) -> PyResult<Self> {
         self.modules.push(crate::core::module_types::ModuleSlot {
             module: crate::core::module_types::ModuleType::Async(Box::new(module)),
             failed: false,
@@ -628,7 +628,7 @@ impl DMSCAppBuilder {
         Ok(std::mem::take(self))
     }
 
-    fn py_with_async_module(&mut self, module: super::module::DMSCPythonAsyncServiceModule) -> PyResult<Self> {
+    fn py_with_async_module(&mut self, module: super::module::RiPythonAsyncServiceModule) -> PyResult<Self> {
         self.modules.push(crate::core::module_types::ModuleSlot {
             module: crate::core::module_types::ModuleType::Async(Box::new(module)),
             failed: false,
@@ -636,7 +636,7 @@ impl DMSCAppBuilder {
         Ok(std::mem::take(self))
     }
 
-    fn py_with_dms_module(&mut self, module: super::module::DMSCPythonModuleAdapter) -> PyResult<Self> {
+    fn py_with_dms_module(&mut self, module: super::module::RiPythonModuleAdapter) -> PyResult<Self> {
         self.modules.push(crate::core::module_types::ModuleSlot {
             module: crate::core::module_types::ModuleType::Async(Box::new(module)),
             failed: false,
@@ -644,7 +644,7 @@ impl DMSCAppBuilder {
         Ok(std::mem::take(self))
     }
 
-    fn py_with_modules(&mut self, modules: Vec<super::module::DMSCPythonServiceModule>) -> PyResult<Self> {
+    fn py_with_modules(&mut self, modules: Vec<super::module::RiPythonServiceModule>) -> PyResult<Self> {
         for module in modules {
             self.modules.push(crate::core::module_types::ModuleSlot {
                 module: crate::core::module_types::ModuleType::Sync(Box::new(module)),
@@ -654,7 +654,7 @@ impl DMSCAppBuilder {
         Ok(std::mem::take(self))
     }
 
-    fn py_with_async_modules(&mut self, modules: Vec<super::module::DMSCPythonAsyncServiceModule>) -> PyResult<Self> {
+    fn py_with_async_modules(&mut self, modules: Vec<super::module::RiPythonAsyncServiceModule>) -> PyResult<Self> {
         for module in modules {
             self.modules.push(crate::core::module_types::ModuleSlot {
                 module: crate::core::module_types::ModuleType::Async(Box::new(module)),
@@ -664,7 +664,7 @@ impl DMSCAppBuilder {
         Ok(std::mem::take(self))
     }
 
-    fn py_with_dms_modules(&mut self, modules: Vec<super::module::DMSCPythonModuleAdapter>) -> PyResult<Self> {
+    fn py_with_dms_modules(&mut self, modules: Vec<super::module::RiPythonModuleAdapter>) -> PyResult<Self> {
         for module in modules {
             self.modules.push(crate::core::module_types::ModuleSlot {
                 module: crate::core::module_types::ModuleType::Async(Box::new(module)),
@@ -681,7 +681,7 @@ mod tests {
 
     #[test]
     fn test_app_builder_creation() {
-        let builder = DMSCAppBuilder::new();
+        let builder = RiAppBuilder::new();
         assert!(builder.modules.is_empty());
         assert!(builder.config_paths.is_empty());
         assert!(builder.logging_config.is_none());
@@ -690,7 +690,7 @@ mod tests {
 
     #[test]
     fn test_app_builder_with_config() {
-        let builder = DMSCAppBuilder::new()
+        let builder = RiAppBuilder::new()
             .with_config("config.yaml")
             .unwrap();
         assert_eq!(builder.config_paths.len(), 1);
@@ -699,24 +699,24 @@ mod tests {
 
     #[test]
     fn test_app_builder_method_chaining() {
-        let builder = DMSCAppBuilder::new()
+        let builder = RiAppBuilder::new()
             .with_config("config.yaml")
             .unwrap()
-            .with_logging(crate::log::DMSCLogConfig::default());
+            .with_logging(crate::log::RiLogConfig::default());
         assert_eq!(builder.config_paths.len(), 1);
         assert!(builder.logging_config.is_some());
     }
 
     #[test]
     fn test_app_builder_with_observability() {
-        let builder = DMSCAppBuilder::new()
-            .with_observability(crate::observability::DMSCObservabilityConfig::default());
+        let builder = RiAppBuilder::new()
+            .with_observability(crate::observability::RiObservabilityConfig::default());
         assert!(builder.observability_config.is_some());
     }
 
     #[test]
     fn test_app_builder_with_multiple_configs() {
-        let builder = DMSCAppBuilder::new()
+        let builder = RiAppBuilder::new()
             .with_config("config1.yaml")
             .unwrap()
             .with_config("config2.yaml")

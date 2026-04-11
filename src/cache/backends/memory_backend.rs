@@ -1,7 +1,7 @@
 //! Copyright © 2025-2026 Wenze Wei. All Rights Reserved.
 //!
-//! This file is part of DMSC.
-//! The DMSC project belongs to the Dunimd Team.
+//! This file is part of Ri.
+//! The Ri project belongs to the Dunimd Team.
 //!
 //! Licensed under the Apache License, Version 2.0 (the "License");
 //! You may not use this file except in compliance with the License.
@@ -20,7 +20,7 @@
 //! # In-memory Cache Backend
 //! 
 //! This module provides an in-memory cache implementation using DashMap for high performance
-//! and thread safety. It implements the DMSCCache trait, providing all standard cache operations
+//! and thread safety. It implements the RiCache trait, providing all standard cache operations
 //! with automatic expiration handling and comprehensive statistics.
 //! 
 //! ## Key Features
@@ -37,7 +37,7 @@
 //! 1. **Non-blocking**: Uses DashMap for lock-free concurrent access
 //! 2. **Automatic Expiration**: Expired entries are removed when accessed
 //! 3. **Statistics-driven**: Comprehensive cache statistics for monitoring
-//! 4. **Simple API**: Implements the standard DMSCCache trait
+//! 4. **Simple API**: Implements the standard RiCache trait
 //! 5. **Memory Efficient**: Automatically cleans up expired entries
 //! 6. **Thread-safe**: Safe for use in multi-threaded applications
 //! 7. **Fast Access**: In-memory storage for minimal latency
@@ -46,15 +46,15 @@
 //! ## Usage
 //! 
 //! ```rust
-//! use dmsc::prelude::*;
+//! use ri::prelude::*;
 //! use std::time::Duration;
 //! 
-//! async fn example() -> DMSCResult<()> {
+//! async fn example() -> RiResult<()> {
 //!     // Create a new in-memory cache
-//!     let cache = DMSCMemoryCache::new();
+//!     let cache = RiMemoryCache::new();
 //!     
 //!     // Create a cached value with 1-hour expiration
-//!     let value = DMSCCachedValue::new(b"test_value".to_vec(), Duration::from_secs(3600));
+//!     let value = RiCachedValue::new(b"test_value".to_vec(), Duration::from_secs(3600));
 //!     
 //!     // Set the value in the cache
 //!     cache.set("test_key", value).await?;
@@ -84,8 +84,8 @@
 use dashmap::DashMap;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicU64, AtomicUsize, Ordering};
-use crate::cache::{DMSCCache, DMSCCachedValue, DMSCCacheStats};
-use crate::core::DMSCResult;
+use crate::cache::{RiCache, RiCachedValue, RiCacheStats};
+use crate::core::RiResult;
 
 /// Atomic cache statistics for lock-free performance tracking.
 struct AtomicCacheStats {
@@ -120,7 +120,7 @@ impl AtomicCacheStats {
         self.eviction_count.fetch_add(1, Ordering::Relaxed);
     }
 
-    fn to_cache_stats(&self) -> DMSCCacheStats {
+    fn to_cache_stats(&self) -> RiCacheStats {
         let hits = self.hits.load(Ordering::Relaxed);
         let misses = self.misses.load(Ordering::Relaxed);
         let total = hits + misses;
@@ -130,7 +130,7 @@ impl AtomicCacheStats {
             0.0
         };
 
-        DMSCCacheStats {
+        RiCacheStats {
             hits,
             misses,
             entries: self.entries.load(Ordering::Relaxed),
@@ -147,27 +147,27 @@ impl AtomicCacheStats {
 ///
 /// This struct provides an in-memory cache with automatic expiration handling, comprehensive
 /// statistics, and thread-safe concurrent access.
-pub struct DMSCMemoryCache {
+pub struct RiMemoryCache {
     /// Underlying storage using DashMap for concurrent access
-    store: Arc<DashMap<String, DMSCCachedValue>>,
+    store: Arc<DashMap<String, RiCachedValue>>,
     /// Cache statistics using atomic operations for lock-free performance
     stats: Arc<AtomicCacheStats>,
 }
 
-impl Default for DMSCMemoryCache {
+impl Default for RiMemoryCache {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl DMSCMemoryCache {
+impl RiMemoryCache {
     /// Creates a new in-memory cache instance.
     ///
     /// # Returns
     ///
-    /// A new DMSCMemoryCache instance
+    /// A new RiMemoryCache instance
     pub fn new() -> Self {
-        DMSCMemoryCache {
+        RiMemoryCache {
             store: Arc::new(DashMap::new()),
             stats: Arc::new(AtomicCacheStats::new()),
         }
@@ -175,7 +175,7 @@ impl DMSCMemoryCache {
 }
 
 #[async_trait::async_trait]
-impl DMSCCache for DMSCMemoryCache {
+impl RiCache for RiMemoryCache {
     /// Gets a value from the cache by key.
     ///
     /// This method checks if the value exists and is not expired. If the value is expired,
@@ -188,8 +188,8 @@ impl DMSCCache for DMSCMemoryCache {
     ///
     /// # Returns
     ///
-    /// An `Option<DMSCCachedValue>` containing the value if it exists and is not expired, or None otherwise
-    async fn get(&self, key: &str) -> DMSCResult<Option<String>> {
+    /// An `Option<RiCachedValue>` containing the value if it exists and is not expired, or None otherwise
+    async fn get(&self, key: &str) -> RiResult<Option<String>> {
         match self.store.get(key) {
             Some(entry) => {
                 let value = entry.clone();
@@ -219,9 +219,9 @@ impl DMSCCache for DMSCMemoryCache {
     ///
     /// # Returns
     ///
-    /// A `DMSCResult<()>` indicating success or failure
-    async fn set(&self, key: &str, value: &str, ttl_seconds: Option<u64>) -> crate::core::DMSCResult<()> {
-        let cached_value = DMSCCachedValue::new(value.to_string(), ttl_seconds);
+    /// A `RiResult<()>` indicating success or failure
+    async fn set(&self, key: &str, value: &str, ttl_seconds: Option<u64>) -> crate::core::RiResult<()> {
+        let cached_value = RiCachedValue::new(value.to_string(), ttl_seconds);
         self.store.insert(key.to_string(), cached_value);
         Ok(())
     }
@@ -234,8 +234,8 @@ impl DMSCCache for DMSCMemoryCache {
     ///
     /// # Returns
     ///
-    /// A `DMSCResult<bool>` indicating whether the key was found and deleted
-    async fn delete(&self, key: &str) -> crate::core::DMSCResult<bool> {
+    /// A `RiResult<bool>` indicating whether the key was found and deleted
+    async fn delete(&self, key: &str) -> crate::core::RiResult<bool> {
         Ok(self.store.remove(key).is_some())
     }
     
@@ -268,8 +268,8 @@ impl DMSCCache for DMSCMemoryCache {
     ///
     /// # Returns
     ///
-    /// A `DMSCResult<()>` indicating success or failure
-    async fn clear(&self) -> crate::core::DMSCResult<()> {
+    /// A `RiResult<()>` indicating success or failure
+    async fn clear(&self) -> crate::core::RiResult<()> {
         self.store.clear();
         Ok(())
     }
@@ -278,8 +278,8 @@ impl DMSCCache for DMSCMemoryCache {
     ///
     /// # Returns
     ///
-    /// A `DMSCCacheStats` struct containing cache statistics
-    async fn stats(&self) -> DMSCCacheStats {
+    /// A `RiCacheStats` struct containing cache statistics
+    async fn stats(&self) -> RiCacheStats {
         let mut stats = self.stats.to_cache_stats();
         stats.entries = self.store.len();
         stats
@@ -289,8 +289,8 @@ impl DMSCCache for DMSCMemoryCache {
     ///
     /// # Returns
     ///
-    /// A `DMSCResult<usize>` containing the number of expired entries cleaned up
-    async fn cleanup_expired(&self) -> crate::core::DMSCResult<usize> {
+    /// A `RiResult<usize>` containing the number of expired entries cleaned up
+    async fn cleanup_expired(&self) -> crate::core::RiResult<usize> {
         let mut cleaned = 0;
         let keys: Vec<String> = self.store.iter().map(|entry| entry.key().clone()).collect();
         
@@ -311,8 +311,8 @@ impl DMSCCache for DMSCMemoryCache {
     ///
     /// # Returns
     ///
-    /// A `DMSCResult<Vec<String>>` containing all cache keys
-    async fn keys(&self) -> crate::core::DMSCResult<Vec<String>> {
+    /// A `RiResult<Vec<String>>` containing all cache keys
+    async fn keys(&self) -> crate::core::RiResult<Vec<String>> {
         let keys: Vec<String> = self.store.iter().map(|entry| entry.key().clone()).collect();
         Ok(keys)
     }

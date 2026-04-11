@@ -1,7 +1,7 @@
 //! Copyright © 2025-2026 Wenze Wei. All Rights Reserved.
 //!
-//! This file is part of DMSC.
-//! The DMSC project belongs to the Dunimd Team.
+//! This file is part of Ri.
+//! The Ri project belongs to the Dunimd Team.
 //!
 //! Licensed under the Apache License, Version 2.0 (the "License");
 //! You may not use this file except in compliance with the License.
@@ -15,7 +15,7 @@
 //! See the License for the specific language governing permissions and
 //! limitations under the License.
 
-use dmsc::observability::metrics_collector::{DMSCSlidingWindow, DMSCQuantileCalculator, DMSCPerformanceCollector};
+use ri::observability::metrics_collector::{RiSlidingWindow, RiQuantileCalculator, RiPerformanceCollector};
 use std::time::Duration;
 
 /// Observability metrics collector test module for performance monitoring.
@@ -61,7 +61,7 @@ Tests verify that recorded metrics accurately reflect the underlying
 /// observations with appropriate precision for alerting purposes.
 
 #[test]
-/// Tests DMSCSlidingWindow data structure for time-bounded data retention.
+/// Tests RiSlidingWindow data structure for time-bounded data retention.
 ///
 /// Verifies that the sliding window implementation correctly maintains
 /// data points within a configurable time horizon, supporting efficient
@@ -91,7 +91,7 @@ Tests verify that recorded metrics accurately reflect the underlying
 /// - The window correctly stores and reports count
 fn test_sliding_window() {
     // Create a sliding window with 10-second total duration and 1-second buckets
-    let mut window = DMSCSlidingWindow::<i32>::new(
+    let mut window = RiSlidingWindow::<i32>::new(
         Duration::from_secs(10),
         Duration::from_secs(1),
     );
@@ -107,7 +107,7 @@ fn test_sliding_window() {
 }
 
 #[test]
-/// Tests DMSCQuantileCalculator for percentile calculation accuracy.
+/// Tests RiQuantileCalculator for percentile calculation accuracy.
 ///
 /// Verifies that the quantile calculator correctly computes percentiles
 /// from a stream of measurements, validating edge cases for minimum (0th),
@@ -139,7 +139,7 @@ fn test_sliding_window() {
 /// - Median query returns the middle value
 /// - Maximum query returns the largest value
 fn test_quantile_calculator() {
-    let mut calc = DMSCQuantileCalculator::new();
+    let mut calc = RiQuantileCalculator::new();
     
     // Add test values
     calc.add(1.0);
@@ -155,7 +155,7 @@ fn test_quantile_calculator() {
 }
 
 #[test]
-/// Tests DMSCPerformanceCollector for request metrics aggregation.
+/// Tests RiPerformanceCollector for request metrics aggregation.
 ///
 /// Verifies that the performance collector correctly aggregates request
 /// timing data including counts, latency distributions, and error rate
@@ -192,7 +192,7 @@ fn test_quantile_calculator() {
 /// - The 33% error rate tolerance allows for floating-point precision
 fn test_performance_collector() {
     // Create a performance collector with 60-second analysis window
-    let mut collector = DMSCPerformanceCollector::new(
+    let mut collector = RiPerformanceCollector::new(
         Duration::from_secs(60),
         Duration::from_secs(5),
     );

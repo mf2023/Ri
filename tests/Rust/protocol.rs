@@ -1,7 +1,7 @@
 //! Copyright © 2025-2026 Wenze Wei. All Rights Reserved.
 //!
-//! This file is part of DMSC.
-//! The DMSC project belongs to the Dunimd Team.
+//! This file is part of Ri.
+//! The Ri project belongs to the Dunimd Team.
 //!
 //! Licensed under the Apache License, Version 2.0 (the "License");
 //! You may not use this file except in compliance with the License.
@@ -17,24 +17,24 @@
 
 //! # Protocol Module Tests
 //!
-//! This module contains comprehensive tests for the DMSC protocol system,
+//! This module contains comprehensive tests for the Ri protocol system,
 //! covering protocol configuration, frame parsing, and protocol state management.
 //!
 //! ## Test Coverage
 //!
-//! - **DMSCProtocolConfig**: Tests for configuration creation with custom settings
-//! - **DMSCProtocolFrameType**: Tests for frame type enum variants and conversions
-//! - **DMSCProtocolState**: Tests for protocol state transitions and initialization
-//! - **DMSCProtocolStats**: Tests for statistics tracking and cloning
-//! - **DMSCProtocolHealth**: Tests for health status enum variants
+//! - **RiProtocolConfig**: Tests for configuration creation with custom settings
+//! - **RiProtocolFrameType**: Tests for frame type enum variants and conversions
+//! - **RiProtocolState**: Tests for protocol state transitions and initialization
+//! - **RiProtocolStats**: Tests for statistics tracking and cloning
+//! - **RiProtocolHealth**: Tests for health status enum variants
 
-use dmsc::protocol::{DMSCProtocolConfig, DMSCProtocolFrameType, DMSCProtocolState, DMSCProtocolStats, DMSCProtocolHealth};
+use ri::protocol::{RiProtocolConfig, RiProtocolFrameType, RiProtocolState, RiProtocolStats, RiProtocolHealth};
 use std::time::Duration;
 
 #[test]
-/// Tests DMSCProtocolConfig default creation.
+/// Tests RiProtocolConfig default creation.
 fn test_protocol_config_default() {
-    let config = DMSCProtocolConfig::default();
+    let config = RiProtocolConfig::default();
     assert_eq!(config.max_frame_size, 65536);
     assert_eq!(config.default_timeout_secs, 30);
     assert_eq!(config.heartbeat_interval_secs, 15);
@@ -43,9 +43,9 @@ fn test_protocol_config_default() {
 }
 
 #[test]
-/// Tests DMSCProtocolConfig with custom settings.
+/// Tests RiProtocolConfig with custom settings.
 fn test_protocol_config_custom() {
-    let config = DMSCProtocolConfig::new()
+    let config = RiProtocolConfig::new()
         .max_frame_size(131072)
         .default_timeout_secs(60)
         .heartbeat_interval_secs(30)
@@ -60,28 +60,28 @@ fn test_protocol_config_custom() {
 }
 
 #[test]
-/// Tests DMSCProtocolFrameType enum variants.
+/// Tests RiProtocolFrameType enum variants.
 fn test_protocol_frame_type_variants() {
-    assert_eq!(DMSCProtocolFrameType::Data as u8, 0x01);
-    assert_eq!(DMSCProtocolFrameType::Control as u8, 0x02);
-    assert_eq!(DMSCProtocolFrameType::Auth as u8, 0x03);
-    assert_eq!(DMSCProtocolFrameType::Heartbeat as u8, 0x04);
-    assert_eq!(DMSCProtocolFrameType::Error as u8, 0x05);
+    assert_eq!(RiProtocolFrameType::Data as u8, 0x01);
+    assert_eq!(RiProtocolFrameType::Control as u8, 0x02);
+    assert_eq!(RiProtocolFrameType::Auth as u8, 0x03);
+    assert_eq!(RiProtocolFrameType::Heartbeat as u8, 0x04);
+    assert_eq!(RiProtocolFrameType::Error as u8, 0x05);
 }
 
 #[test]
-/// Tests DMSCProtocolState initialization.
+/// Tests RiProtocolState initialization.
 fn test_protocol_state_initialization() {
-    let state = DMSCProtocolState::new();
+    let state = RiProtocolState::new();
     assert!(!state.is_initialized());
     assert!(!state.is_connected());
     assert!(!state.is_authenticated());
 }
 
 #[test]
-/// Tests DMSCProtocolState transitions.
+/// Tests RiProtocolState transitions.
 fn test_protocol_state_transitions() {
-    let mut state = DMSCProtocolState::new();
+    let mut state = RiProtocolState::new();
 
     state.set_initialized(true);
     assert!(state.is_initialized());
@@ -98,9 +98,9 @@ fn test_protocol_state_transitions() {
 }
 
 #[test]
-/// Tests DMSCProtocolStats creation and cloning.
+/// Tests RiProtocolStats creation and cloning.
 fn test_protocol_stats() {
-    let stats = DMSCProtocolStats::new();
+    let stats = RiProtocolStats::new();
     assert_eq!(stats.messages_sent(), 0);
     assert_eq!(stats.messages_received(), 0);
     assert_eq!(stats.bytes_sent(), 0);
@@ -112,9 +112,9 @@ fn test_protocol_stats() {
 }
 
 #[test]
-/// Tests DMSCProtocolStats recording operations.
+/// Tests RiProtocolStats recording operations.
 fn test_protocol_stats_recording() {
-    let mut stats = DMSCProtocolStats::new();
+    let mut stats = RiProtocolStats::new();
 
     stats.record_sent(100);
     assert_eq!(stats.bytes_sent(), 100);
@@ -129,18 +129,18 @@ fn test_protocol_stats_recording() {
 }
 
 #[test]
-/// Tests DMSCProtocolHealth enum variants.
+/// Tests RiProtocolHealth enum variants.
 fn test_protocol_health_variants() {
-    assert_eq!(DMSCProtocolHealth::Healthy.to_string(), "healthy");
-    assert_eq!(DMSCProtocolHealth::Degraded.to_string(), "degraded");
-    assert_eq!(DMSCProtocolHealth::Unhealthy.to_string(), "unhealthy");
-    assert_eq!(DMSCProtocolHealth::Unknown.to_string(), "unknown");
+    assert_eq!(RiProtocolHealth::Healthy.to_string(), "healthy");
+    assert_eq!(RiProtocolHealth::Degraded.to_string(), "degraded");
+    assert_eq!(RiProtocolHealth::Unhealthy.to_string(), "unhealthy");
+    assert_eq!(RiProtocolHealth::Unknown.to_string(), "unknown");
 }
 
 #[test]
-/// Tests DMSCProtocolConfig builder pattern.
+/// Tests RiProtocolConfig builder pattern.
 fn test_protocol_config_builder() {
-    let config = DMSCProtocolConfig::new()
+    let config = RiProtocolConfig::new()
         .max_frame_size(1024)
         .default_timeout_secs(10)
         .heartbeat_interval_secs(5)

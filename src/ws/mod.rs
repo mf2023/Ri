@@ -1,7 +1,7 @@
 //! Copyright 2025-2026 Wenze Wei. All Rights Reserved.
 //!
-//! This file is part of DMSC.
-//! The DMSC project belongs to the Dunimd Team.
+//! This file is part of Ri.
+//! The Ri project belongs to the Dunimd Team.
 //!
 //! Licensed under the Apache License, Version 2.0 (the "License");
 //! You may not use this file except in compliance with the License.
@@ -17,7 +17,7 @@
 
 //! # WebSocket Support
 
-use crate::core::{DMSCResult, DMSCError};
+use crate::core::{RiResult, RiError};
 use async_trait::async_trait;
 use std::sync::Arc;
 use tokio::sync::RwLock;
@@ -38,26 +38,26 @@ mod server;
 mod client;
 
 #[cfg(feature = "websocket")]
-pub use server::DMSCWSServer;
+pub use server::RiWSServer;
 
 #[cfg(feature = "websocket")]
-pub use client::DMSCWSClient;
+pub use client::RiWSClient;
 
 #[cfg(feature = "websocket")]
-pub use client::DMSCWSClientConfig;
+pub use client::RiWSClientConfig;
 
 #[cfg(feature = "websocket")]
-pub use client::DMSCWSClientStats;
+pub use client::RiWSClientStats;
 
 #[cfg(all(feature = "websocket", feature = "pyo3"))]
-pub use server::DMSCWSServerPy;
+pub use server::RiWSServerPy;
 
 #[cfg(all(feature = "websocket", feature = "pyo3"))]
-pub use client::DMSCWSClientPy;
+pub use client::RiWSClientPy;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "pyo3", pyclass)]
-pub struct DMSCWSServerConfig {
+pub struct RiWSServerConfig {
     pub addr: String,
     pub port: u16,
     pub max_connections: usize,
@@ -69,7 +69,7 @@ pub struct DMSCWSServerConfig {
 
 #[cfg(feature = "pyo3")]
 #[pymethods]
-impl DMSCWSServerConfig {
+impl RiWSServerConfig {
     #[new]
     fn new() -> Self {
         Self::default()
@@ -96,7 +96,7 @@ impl DMSCWSServerConfig {
     }
 }
 
-impl Default for DMSCWSServerConfig {
+impl Default for RiWSServerConfig {
     fn default() -> Self {
         Self {
             addr: "127.0.0.1".to_string(),
@@ -112,7 +112,7 @@ impl Default for DMSCWSServerConfig {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "pyo3", pyclass)]
-pub enum DMSCWSEvent {
+pub enum RiWSEvent {
     Connected { session_id: String },
     Disconnected { session_id: String },
     Message { session_id: String, data: Vec<u8> },
@@ -121,7 +121,7 @@ pub enum DMSCWSEvent {
 
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "pyo3", pyclass)]
-pub struct DMSCWSSessionInfo {
+pub struct RiWSSessionInfo {
     pub session_id: String,
     pub remote_addr: String,
     pub connected_at: u64,
@@ -135,7 +135,7 @@ pub struct DMSCWSSessionInfo {
 
 #[cfg(feature = "pyo3")]
 #[pymethods]
-impl DMSCWSSessionInfo {
+impl RiWSSessionInfo {
     #[getter]
     fn get_session_id(&self) -> String {
         self.session_id.clone()
@@ -182,7 +182,7 @@ impl DMSCWSSessionInfo {
     }
 }
 
-impl Default for DMSCWSSessionInfo {
+impl Default for RiWSSessionInfo {
     fn default() -> Self {
         Self {
             session_id: String::new(),
@@ -199,11 +199,11 @@ impl Default for DMSCWSSessionInfo {
 }
 
 #[async_trait]
-pub trait DMSCWSSessionHandler: Send + Sync {
-    async fn on_connect(&self, session_id: &str, remote_addr: &str) -> DMSCResult<()>;
-    async fn on_disconnect(&self, session_id: &str) -> DMSCResult<()>;
-    async fn on_message(&self, session_id: &str, data: &[u8]) -> DMSCResult<Vec<u8>>;
-    async fn on_error(&self, session_id: &str, error: &str) -> DMSCResult<()>;
+pub trait RiWSSessionHandler: Send + Sync {
+    async fn on_connect(&self, session_id: &str, remote_addr: &str) -> RiResult<()>;
+    async fn on_disconnect(&self, session_id: &str) -> RiResult<()>;
+    async fn on_message(&self, session_id: &str, data: &[u8]) -> RiResult<Vec<u8>>;
+    async fn on_error(&self, session_id: &str, error: &str) -> RiResult<()>;
 }
 
 #[derive(Debug, thiserror::Error)]
@@ -222,20 +222,20 @@ pub enum WSError {
     InvalidFormat,
 }
 
-impl From<WSError> for DMSCError {
+impl From<WSError> for RiError {
     fn from(error: WSError) -> Self {
-        DMSCError::Other(format!("WebSocket error: {}", error))
+        RiError::Other(format!("WebSocket error: {}", error))
     }
 }
 
-pub struct DMSCWSSession {
+pub struct RiWSSession {
     pub id: String,
     pub sender: tokio::sync::mpsc::Sender<std::result::Result<Message, tokio_tungstenite::tungstenite::Error>>,
     pub receiver: SplitStream<tokio_tungstenite::WebSocketStream<tokio::net::TcpStream>>,
-    pub info: Arc<RwLock<DMSCWSSessionInfo>>,
+    pub info: Arc<RwLock<RiWSSessionInfo>>,
 }
 
-impl DMSCWSSession {
+impl RiWSSession {
     pub fn new(
         id: String,
         sender: tokio::sync::mpsc::Sender<std::result::Result<Message, tokio_tungstenite::tungstenite::Error>>,
@@ -248,7 +248,7 @@ impl DMSCWSSession {
             id,
             sender,
             receiver,
-            info: Arc::new(RwLock::new(DMSCWSSessionInfo {
+            info: Arc::new(RwLock::new(RiWSSessionInfo {
                 session_id,
                 remote_addr,
                 connected_at: now,
@@ -262,7 +262,7 @@ impl DMSCWSSession {
         }
     }
 
-    pub async fn send(&self, data: &[u8]) -> DMSCResult<()> {
+    pub async fn send(&self, data: &[u8]) -> RiResult<()> {
         let message = Message::Binary(data.to_vec());
         
         self.sender.send(Ok(message))
@@ -278,7 +278,7 @@ impl DMSCWSSession {
         Ok(())
     }
 
-    pub async fn send_text(&self, text: &str) -> DMSCResult<()> {
+    pub async fn send_text(&self, text: &str) -> RiResult<()> {
         let message = Message::Text(text.to_string());
         
         self.sender.send(Ok(message))
@@ -294,7 +294,7 @@ impl DMSCWSSession {
         Ok(())
     }
 
-    pub async fn close(&self) -> DMSCResult<()> {
+    pub async fn close(&self) -> RiResult<()> {
         self.sender.send(Ok(Message::Close(None)))
             .await
             .map_err(|e| WSError::Session {
@@ -307,19 +307,19 @@ impl DMSCWSSession {
         Ok(())
     }
 
-    pub fn get_info(&self) -> DMSCWSSessionInfo {
+    pub fn get_info(&self) -> RiWSSessionInfo {
         self.info.try_read()
             .map(|guard| guard.clone())
-            .unwrap_or_else(|_| DMSCWSSessionInfo::default())
+            .unwrap_or_else(|_| RiWSSessionInfo::default())
     }
 }
 
-pub struct DMSCWSSessionManager {
-    sessions: Arc<RwLock<HashMap<String, Arc<DMSCWSSession>>>>,
+pub struct RiWSSessionManager {
+    sessions: Arc<RwLock<HashMap<String, Arc<RiWSSession>>>>,
     max_connections: usize,
 }
 
-impl Clone for DMSCWSSessionManager {
+impl Clone for RiWSSessionManager {
     fn clone(&self) -> Self {
         Self {
             sessions: self.sessions.clone(),
@@ -328,7 +328,7 @@ impl Clone for DMSCWSSessionManager {
     }
 }
 
-impl DMSCWSSessionManager {
+impl RiWSSessionManager {
     pub fn new(max_connections: usize) -> Self {
         Self {
             sessions: Arc::new(RwLock::new(HashMap::new())),
@@ -336,7 +336,7 @@ impl DMSCWSSessionManager {
         }
     }
 
-    pub async fn add_session(&self, session: Arc<DMSCWSSession>) -> DMSCResult<()> {
+    pub async fn add_session(&self, session: Arc<RiWSSession>) -> RiResult<()> {
         let mut sessions = self.sessions.write().await;
         
         if sessions.len() >= self.max_connections {
@@ -354,12 +354,12 @@ impl DMSCWSSessionManager {
         sessions.remove(session_id);
     }
 
-    pub async fn get_session(&self, session_id: &str) -> Option<Arc<DMSCWSSession>> {
+    pub async fn get_session(&self, session_id: &str) -> Option<Arc<RiWSSession>> {
         let sessions = self.sessions.read().await;
         sessions.get(session_id).cloned()
     }
 
-    pub async fn broadcast(&self, data: &[u8]) -> DMSCResult<usize> {
+    pub async fn broadcast(&self, data: &[u8]) -> RiResult<usize> {
         let sessions = self.sessions.read().await;
         let mut count = 0;
 
@@ -376,7 +376,7 @@ impl DMSCWSSessionManager {
         self.sessions.read().await.len()
     }
 
-    pub async fn get_all_sessions(&self) -> Vec<DMSCWSSessionInfo> {
+    pub async fn get_all_sessions(&self) -> Vec<RiWSSessionInfo> {
         let sessions = self.sessions.read().await;
         sessions.values().map(|s| s.get_info()).collect()
     }
@@ -384,7 +384,7 @@ impl DMSCWSSessionManager {
 
 #[cfg(feature = "pyo3")]
 #[pyclass]
-pub struct DMSCWSPythonHandler {
+pub struct RiWSPythonHandler {
     on_connect: Arc<Py<PyAny>>,
     on_disconnect: Arc<Py<PyAny>>,
     on_message: Arc<Py<PyAny>>,
@@ -393,7 +393,7 @@ pub struct DMSCWSPythonHandler {
 
 #[cfg(feature = "pyo3")]
 #[pymethods]
-impl DMSCWSPythonHandler {
+impl RiWSPythonHandler {
     #[new]
     fn new(
         on_connect: Py<PyAny>,
@@ -412,8 +412,8 @@ impl DMSCWSPythonHandler {
 
 #[cfg(feature = "pyo3")]
 #[async_trait]
-impl DMSCWSSessionHandler for DMSCWSPythonHandler {
-    async fn on_connect(&self, session_id: &str, remote_addr: &str) -> DMSCResult<()> {
+impl RiWSSessionHandler for RiWSPythonHandler {
+    async fn on_connect(&self, session_id: &str, remote_addr: &str) -> RiResult<()> {
         let on_connect = Arc::clone(&self.on_connect);
         let session_id = session_id.to_string();
         let remote_addr = remote_addr.to_string();
@@ -428,7 +428,7 @@ impl DMSCWSSessionHandler for DMSCWSPythonHandler {
         Ok(())
     }
     
-    async fn on_disconnect(&self, session_id: &str) -> DMSCResult<()> {
+    async fn on_disconnect(&self, session_id: &str) -> RiResult<()> {
         let on_disconnect = Arc::clone(&self.on_disconnect);
         let session_id = session_id.to_string();
         
@@ -442,7 +442,7 @@ impl DMSCWSSessionHandler for DMSCWSPythonHandler {
         Ok(())
     }
     
-    async fn on_message(&self, session_id: &str, data: &[u8]) -> DMSCResult<Vec<u8>> {
+    async fn on_message(&self, session_id: &str, data: &[u8]) -> RiResult<Vec<u8>> {
         let on_message = Arc::clone(&self.on_message);
         let session_id = session_id.to_string();
         let data_vec = data.to_vec();
@@ -460,7 +460,7 @@ impl DMSCWSSessionHandler for DMSCWSPythonHandler {
         Ok(result.unwrap_or_default())
     }
     
-    async fn on_error(&self, session_id: &str, error: &str) -> DMSCResult<()> {
+    async fn on_error(&self, session_id: &str, error: &str) -> RiResult<()> {
         let on_error = Arc::clone(&self.on_error);
         let session_id = session_id.to_string();
         let error = error.to_string();
@@ -478,17 +478,17 @@ impl DMSCWSSessionHandler for DMSCWSPythonHandler {
 
 #[cfg(feature = "pyo3")]
 #[pyclass]
-pub struct DMSCWSSessionManagerPy {
-    manager: DMSCWSSessionManager,
+pub struct RiWSSessionManagerPy {
+    manager: RiWSSessionManager,
 }
 
 #[cfg(feature = "pyo3")]
 #[pymethods]
-impl DMSCWSSessionManagerPy {
+impl RiWSSessionManagerPy {
     #[new]
     fn new(max_connections: usize) -> Self {
         Self {
-            manager: DMSCWSSessionManager::new(max_connections),
+            manager: RiWSSessionManager::new(max_connections),
         }
     }
     
@@ -498,7 +498,7 @@ impl DMSCWSSessionManagerPy {
             .unwrap_or(0)
     }
     
-    fn get_all_sessions(&self) -> Vec<DMSCWSSessionInfo> {
+    fn get_all_sessions(&self) -> Vec<RiWSSessionInfo> {
         tokio::runtime::Handle::try_current()
             .map(|handle| handle.block_on(async { self.manager.get_all_sessions().await }))
             .unwrap_or_default()
@@ -513,7 +513,7 @@ impl DMSCWSSessionManagerPy {
 
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "pyo3", pyclass)]
-pub struct DMSCWSServerStats {
+pub struct RiWSServerStats {
     pub total_connections: u64,
     pub active_connections: u64,
     pub total_messages_sent: u64,
@@ -526,7 +526,7 @@ pub struct DMSCWSServerStats {
 
 #[cfg(feature = "pyo3")]
 #[pymethods]
-impl DMSCWSServerStats {
+impl RiWSServerStats {
     #[getter]
     fn get_total_connections(&self) -> u64 {
         self.total_connections
@@ -568,7 +568,7 @@ impl DMSCWSServerStats {
     }
 }
 
-impl DMSCWSServerStats {
+impl RiWSServerStats {
     pub fn new() -> Self {
         Self {
             total_connections: 0,
@@ -615,7 +615,7 @@ impl DMSCWSServerStats {
     }
 }
 
-impl Default for DMSCWSServerStats {
+impl Default for RiWSServerStats {
     fn default() -> Self {
         Self::new()
     }

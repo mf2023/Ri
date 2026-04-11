@@ -1,7 +1,7 @@
 //! Copyright © 2025-2026 Wenze Wei. All Rights Reserved.
 //!
-//! This file is part of DMSC.
-//! The DMSC project belongs to the Dunimd Team.
+//! This file is part of Ri.
+//! The Ri project belongs to the Dunimd Team.
 //!
 //! Licensed under the Apache License, Version 2.0 (the "License");
 //! You may not use this file except in compliance with the License.
@@ -22,10 +22,10 @@
 use jni::JNIEnv;
 use jni::sys::jlong;
 
-/// DMSC Java exception types
-pub enum DMSCJavaException {
-    /// General DMSC error
-    DMSCErrors,
+/// Ri Java exception types
+pub enum RiJavaException {
+    /// General Ri error
+    RiErrors,
     /// Configuration error
     ConfigError,
     /// Validation error
@@ -44,25 +44,25 @@ pub enum DMSCJavaException {
     IllegalArgumentError,
 }
 
-impl DMSCJavaException {
+impl RiJavaException {
     /// Get the Java class name for this exception type
     pub fn class_name(&self) -> &'static str {
         match self {
-            DMSCJavaException::DMSCErrors => "com/dunimd/dmsc/DMSCError",
-            DMSCJavaException::ConfigError => "com/dunimd/dmsc/DMSCConfigError",
-            DMSCJavaException::ValidationError => "com/dunimd/dmsc/validation/DMSCValidationError",
-            DMSCJavaException::AuthError => "com/dunimd/dmsc/auth/DMSCAuthError",
-            DMSCJavaException::DatabaseError => "com/dunimd/dmsc/database/DMSCDatabaseError",
-            DMSCJavaException::CacheError => "com/dunimd/dmsc/cache/DMSCCacheError",
-            DMSCJavaException::NetworkError => "com/dunimd/dmsc/DMSCNetworkError",
-            DMSCJavaException::NullPointerError => "java/lang/NullPointerException",
-            DMSCJavaException::IllegalArgumentError => "java/lang/IllegalArgumentException",
+            RiJavaException::RiErrors => "com/dunimd/ri/RiError",
+            RiJavaException::ConfigError => "com/dunimd/ri/RiConfigError",
+            RiJavaException::ValidationError => "com/dunimd/ri/validation/RiValidationError",
+            RiJavaException::AuthError => "com/dunimd/ri/auth/RiAuthError",
+            RiJavaException::DatabaseError => "com/dunimd/ri/database/RiDatabaseError",
+            RiJavaException::CacheError => "com/dunimd/ri/cache/RiCacheError",
+            RiJavaException::NetworkError => "com/dunimd/ri/RiNetworkError",
+            RiJavaException::NullPointerError => "java/lang/NullPointerException",
+            RiJavaException::IllegalArgumentError => "java/lang/IllegalArgumentException",
         }
     }
 }
 
 /// Throw a Java exception from Rust
-pub fn throw_exception(env: &mut JNIEnv, exception_type: DMSCJavaException, message: &str) {
+pub fn throw_exception(env: &mut JNIEnv, exception_type: RiJavaException, message: &str) {
     let class_name = exception_type.class_name();
     
     if let Err(e) = env.throw_new(class_name, message) {
@@ -70,19 +70,19 @@ pub fn throw_exception(env: &mut JNIEnv, exception_type: DMSCJavaException, mess
     }
 }
 
-/// Throw a DMSC error exception
-pub fn throw_dmsc_error(env: &mut JNIEnv, message: &str) {
-    throw_exception(env, DMSCJavaException::DMSCErrors, message);
+/// Throw a Ri error exception
+pub fn throw_ri_error(env: &mut JNIEnv, message: &str) {
+    throw_exception(env, RiJavaException::RiErrors, message);
 }
 
 /// Throw a null pointer exception
 pub fn throw_null_pointer(env: &mut JNIEnv, message: &str) {
-    throw_exception(env, DMSCJavaException::NullPointerError, message);
+    throw_exception(env, RiJavaException::NullPointerError, message);
 }
 
 /// Throw an illegal argument exception
 pub fn throw_illegal_argument(env: &mut JNIEnv, message: &str) {
-    throw_exception(env, DMSCJavaException::IllegalArgumentError, message);
+    throw_exception(env, RiJavaException::IllegalArgumentError, message);
 }
 
 /// Check if a Java object is null and throw exception if so

@@ -2,8 +2,8 @@
 
 # Copyright © 2025-2026 Wenze Wei. All Rights Reserved.
 #
-# This file is part of DMSC.
-# The DMSC project belongs to the Dunimd Team.
+# This file is part of Ri.
+# The Ri project belongs to the Dunimd Team.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # You may not use this file except in compliance with the License.
@@ -18,63 +18,63 @@
 # limitations under the License.
 
 """
-DMSC Gateway Module Tests
+Ri Gateway Module Tests
 
 Tests for the API gateway functionality including routing, rate limiting,
 circuit breaking, and load balancing.
 """
 
 import pytest
-from dmsc import (
-    DMSCGateway,
-    DMSCRoute,
-    DMSCRateLimiter,
-    DMSCRateLimitConfig,
-    DMSCCircuitBreaker,
-    DMSCCircuitBreakerConfig,
-    DMSCLoadBalancer,
-    DMSCBackendServer,
-    DMSCGatewayConfig,
+from ri import (
+    RiGateway,
+    RiRoute,
+    RiRateLimiter,
+    RiRateLimitConfig,
+    RiCircuitBreaker,
+    RiCircuitBreakerConfig,
+    RiLoadBalancer,
+    RiBackendServer,
+    RiGatewayConfig,
 )
 
 
-class TestDMSCGateway:
-    """Tests for DMSCGateway"""
+class TestRiGateway:
+    """Tests for RiGateway"""
 
     def test_gateway_creation(self):
         """Test creating gateway - uses default config"""
-        gateway = DMSCGateway()
+        gateway = RiGateway()
         assert gateway is not None
 
 
-class TestDMSCRoute:
-    """Tests for DMSCRoute"""
+class TestRiRoute:
+    """Tests for RiRoute"""
 
     def test_route_creation(self):
         """Test creating a route"""
-        route = DMSCRoute("GET", "/api/test")
+        route = RiRoute("GET", "/api/test")
         assert route is not None
 
 
-class TestDMSCRateLimiter:
-    """Tests for DMSCRateLimiter"""
+class TestRiRateLimiter:
+    """Tests for RiRateLimiter"""
 
     def test_rate_limiter_creation(self):
         """Test creating rate limiter - skip as it requires internal config"""
         pass
 
 
-class TestDMSCRateLimitConfig:
-    """Tests for DMSCRateLimitConfig"""
+class TestRiRateLimitConfig:
+    """Tests for RiRateLimitConfig"""
 
     def test_rate_limit_config_creation(self):
         """Test creating rate limit config"""
-        config = DMSCRateLimitConfig()
+        config = RiRateLimitConfig()
         assert config is not None
 
 
-class TestDMSCCircuitBreaker:
-    """Tests for DMSCCircuitBreaker"""
+class TestRiCircuitBreaker:
+    """Tests for RiCircuitBreaker"""
 
     def test_circuit_breaker_creation(self):
         """Test creating circuit breaker - skip as it requires internal config"""
@@ -85,29 +85,29 @@ class TestDMSCCircuitBreaker:
         pass
 
 
-class TestDMSCCircuitBreakerConfig:
-    """Tests for DMSCCircuitBreakerConfig"""
+class TestRiCircuitBreakerConfig:
+    """Tests for RiCircuitBreakerConfig"""
 
     def test_circuit_breaker_config_creation(self):
         """Test creating circuit breaker config"""
-        config = DMSCCircuitBreakerConfig()
+        config = RiCircuitBreakerConfig()
         assert config is not None
 
 
-class TestDMSCLoadBalancer:
-    """Tests for DMSCLoadBalancer"""
+class TestRiLoadBalancer:
+    """Tests for RiLoadBalancer"""
 
     def test_load_balancer_creation(self):
         """Test creating load balancer - skip as it requires internal config"""
         pass
 
 
-class TestDMSCBackendServer:
-    """Tests for DMSCBackendServer"""
+class TestRiBackendServer:
+    """Tests for RiBackendServer"""
 
     def test_backend_server_creation(self):
         """Test creating backend server"""
-        server = DMSCBackendServer("server1", "http://localhost:8080")
+        server = RiBackendServer("server1", "http://localhost:8080")
         assert server is not None
 
 

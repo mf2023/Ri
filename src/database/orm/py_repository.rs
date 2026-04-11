@@ -1,7 +1,7 @@
 //! Copyright © 2025-2026 Wenze Wei. All Rights Reserved.
 //!
-//! This file is part of DMSC.
-//! The DMSC project belongs to the Dunimd Team.
+//! This file is part of Ri.
+//! The Ri project belongs to the Dunimd Team.
 //!
 //! Licensed under the Apache License, Version 2.0 (the "License");
 //! You may not use this file except in compliance with the License.
@@ -15,25 +15,25 @@
 //! See the License for the specific language governing permissions and
 //! limitations under the License.
 
-use crate::core::DMSCResult;
-use crate::database::{DMSCDatabase, DMSCDatabasePool};
+use crate::core::RiResult;
+use crate::database::{RiDatabase, RiDatabasePool};
 use pyo3::prelude::*;
 use pyo3::types::{PyDict, PyList};
 use tokio::runtime::Runtime;
 
 #[pyclass]
-pub struct DMSCPyORMRepository {
-    pool: DMSCDatabasePool,
+pub struct RiPyORMRepository {
+    pool: RiDatabasePool,
     table_name: String,
     rt: Runtime,
 }
 
 #[pymethods]
-impl DMSCPyORMRepository {
+impl RiPyORMRepository {
     #[new]
     #[pyo3(signature = (pool, table_name))]
-    pub fn new(pool: DMSCDatabasePool, table_name: &str) -> PyResult<Self> {
-        let rt = Runtime::new().map_err(|e| pyo3::PyErr::from(crate::core::DMSCError::Other(e.to_string())))?;
+    pub fn new(pool: RiDatabasePool, table_name: &str) -> PyResult<Self> {
+        let rt = Runtime::new().map_err(|e| pyo3::PyErr::from(crate::core::RiError::Other(e.to_string())))?;
         Ok(Self {
             pool,
             table_name: table_name.to_string(),
@@ -99,7 +99,7 @@ impl DMSCPyORMRepository {
     }
 }
 
-impl DMSCPyORMRepository {
+impl RiPyORMRepository {
     fn json_to_py(py: Python, key: String, value: serde_json::Value, dict: &Bound<PyDict>) {
         match value {
             serde_json::Value::Null => {},
@@ -133,7 +133,7 @@ impl DMSCPyORMRepository {
         }
     }
 
-    async fn find_all_impl(&self) -> DMSCResult<Vec<serde_json::Value>> {
+    async fn find_all_impl(&self) -> RiResult<Vec<serde_json::Value>> {
         let db = self.pool.get().await?;
         let sql = format!("SELECT * FROM {}", self.table_name);
         let result = db.query(&sql).await?;
@@ -145,7 +145,7 @@ impl DMSCPyORMRepository {
         Ok(entities)
     }
 
-    async fn find_by_id_impl(&self, id: &str) -> DMSCResult<Option<serde_json::Value>> {
+    async fn find_by_id_impl(&self, id: &str) -> RiResult<Option<serde_json::Value>> {
         let db = self.pool.get().await?;
         let sql = format!("SELECT * FROM {} WHERE id = ?", self.table_name);
         let result = db.query_with_params(&sql, &[serde_json::json!(id)]).await?;
@@ -157,7 +157,7 @@ impl DMSCPyORMRepository {
         }
     }
 
-    async fn count_impl(&self) -> DMSCResult<u64> {
+    async fn count_impl(&self) -> RiResult<u64> {
         let db = self.pool.get().await?;
         let sql = format!("SELECT COUNT(*) as total FROM {}", self.table_name);
         if let Some(row) = db.query_one(&sql).await? {
@@ -167,14 +167,14 @@ impl DMSCPyORMRepository {
         }
     }
 
-    async fn exists_impl(&self, id: &str) -> DMSCResult<bool> {
+    async fn exists_impl(&self, id: &str) -> RiResult<bool> {
         let db = self.pool.get().await?;
         let sql = format!("SELECT 1 FROM {} WHERE id = ? LIMIT 1", self.table_name);
         let result = db.query_with_params(&sql, &[serde_json::json!(id)]).await?;
         Ok(!result.is_empty())
     }
 
-    async fn delete_impl(&self, id: &str) -> DMSCResult<()> {
+    async fn delete_impl(&self, id: &str) -> RiResult<()> {
         let db = self.pool.get().await?;
         let sql = format!("DELETE FROM {} WHERE id = ?", self.table_name);
         db.execute_with_params(&sql, &[serde_json::json!(id)]).await?;

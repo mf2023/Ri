@@ -1,7 +1,7 @@
 # Copyright © 2025-2026 Wenze Wei. All Rights Reserved.
 #
-# This file is part of DMSC.
-# The DMSC project belongs to the Dunimd Team.
+# This file is part of Ri.
+# The Ri project belongs to the Dunimd Team.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # You may not use this file except in compliance with the License.
@@ -16,66 +16,66 @@
 # limitations under the License.
 
 """
-DMSC Protocol Module Example
+Ri Protocol Module Example
 
-This example demonstrates how to use the DMSC protocol module for protocol
+This example demonstrates how to use the Ri protocol module for protocol
 management, frame handling, and connection management.
 """
 
 import asyncio
-from dmsc import (
-    DMSCProtocolManager,
-    DMSCProtocolType,
-    DMSCProtocolConfig,
-    DMSCProtocolStatus,
-    DMSCProtocolStats,
-    DMSCConnectionState,
-    DMSCConnectionStats,
-    DMSCProtocolHealth,
-    DMSCFrame,
-    DMSCFrameHeader,
-    DMSCFrameType,
-    DMSCConnectionInfo,
-    DMSCMessageFlags,
-    DMSCSecurityLevel,
+from ri import (
+    RiProtocolManager,
+    RiProtocolType,
+    RiProtocolConfig,
+    RiProtocolStatus,
+    RiProtocolStats,
+    RiConnectionState,
+    RiConnectionStats,
+    RiProtocolHealth,
+    RiFrame,
+    RiFrameHeader,
+    RiFrameType,
+    RiConnectionInfo,
+    RiMessageFlags,
+    RiSecurityLevel,
 )
-from dmsc.protocol import (
-    DMSCFrameParser,
-    DMSCFrameBuilder,
+from ri.protocol import (
+    RiFrameParser,
+    RiFrameBuilder,
 )
 
 
 async def main():
     # Create protocol configuration
-    config = DMSCProtocolConfig()
-    config.protocol_type = DMSCProtocolType.CUSTOM
+    config = RiProtocolConfig()
+    config.protocol_type = RiProtocolType.CUSTOM
     config.version = "1.0.0"
     config.enable_compression = True
     config.enable_encryption = True
-    config.security_level = DMSCSecurityLevel.HIGH
+    config.security_level = RiSecurityLevel.HIGH
     config.max_frame_size = 65536
     config.keepalive_interval_seconds = 30
 
     # Create protocol manager
     print("Creating protocol manager...")
-    protocol_manager = DMSCProtocolManager(config)
+    protocol_manager = RiProtocolManager(config)
 
     # Create frame builder
     print("\nCreating frames...")
-    frame_builder = DMSCFrameBuilder()
+    frame_builder = RiFrameBuilder()
 
     # Create frame header
-    header = DMSCFrameHeader()
-    header.frame_type = DMSCFrameType.DATA
+    header = RiFrameHeader()
+    header.frame_type = RiFrameType.DATA
     header.version = 1
     header.sequence_number = 1
-    header.flags = DMSCMessageFlags.ACK_REQUIRED
+    header.flags = RiMessageFlags.ACK_REQUIRED
     header.payload_length = 100
 
     # Create frame
-    data_frame = DMSCFrame()
+    data_frame = RiFrame()
     data_frame.header = header
-    data_frame.payload = b'{"message": "Hello, DMSC Protocol!"}'
+    data_frame.payload = b'{"message": "Hello, Ri Protocol!"}'
     data_frame.checksum = 12345
 
     print(f"Created data frame:")
@@ -85,20 +85,20 @@ async def main():
 
     # Create different frame types
     # Handshake frame
-    handshake_header = DMSCFrameHeader()
-    handshake_header.frame_type = DMSCFrameType.HANDSHAKE
+    handshake_header = RiFrameHeader()
+    handshake_header.frame_type = RiFrameType.HANDSHAKE
     handshake_header.sequence_number = 0
 
-    handshake_frame = DMSCFrame()
+    handshake_frame = RiFrame()
     handshake_frame.header = handshake_header
     handshake_frame.payload = b'{"version": "1.0.0", "capabilities": ["compression", "encryption"]}'
 
     # Heartbeat frame
-    heartbeat_header = DMSCFrameHeader()
-    heartbeat_header.frame_type = DMSCFrameType.HEARTBEAT
+    heartbeat_header = RiFrameHeader()
+    heartbeat_header.frame_type = RiFrameType.HEARTBEAT
     heartbeat_header.sequence_number = 999
 
-    heartbeat_frame = DMSCFrame()
+    heartbeat_frame = RiFrame()
     heartbeat_frame.header = heartbeat_header
     heartbeat_frame.payload = b''
 
@@ -106,7 +106,7 @@ async def main():
 
     # Parse frames
     print("\nParsing frames...")
-    frame_parser = DMSCFrameParser()
+    frame_parser = RiFrameParser()
 
     # Serialize and deserialize frame
     serialized = frame_builder.build(data_frame)
@@ -119,12 +119,12 @@ async def main():
 
     # Create connection info
     print("\nCreating connection info...")
-    conn_info = DMSCConnectionInfo()
+    conn_info = RiConnectionInfo()
     conn_info.connection_id = "conn_001"
     conn_info.remote_address = "192.168.1.100:8080"
     conn_info.local_address = "0.0.0.0:8080"
-    conn_info.state = DMSCConnectionState.ESTABLISHED
-    conn_info.security_level = DMSCSecurityLevel.HIGH
+    conn_info.state = RiConnectionState.ESTABLISHED
+    conn_info.security_level = RiSecurityLevel.HIGH
     conn_info.established_at = 0
     conn_info.last_activity_at = 1000
 
@@ -135,7 +135,7 @@ async def main():
     print(f"  Security: {conn_info.security_level}")
 
     # Create connection statistics
-    conn_stats = DMSCConnectionStats()
+    conn_stats = RiConnectionStats()
     conn_stats.connection_id = "conn_001"
     conn_stats.frames_sent = 100
     conn_stats.frames_received = 95
@@ -153,7 +153,7 @@ async def main():
 
     # Get protocol statistics
     print("\nProtocol statistics:")
-    protocol_stats = DMSCProtocolStats()
+    protocol_stats = RiProtocolStats()
     protocol_stats.total_connections = 10
     protocol_stats.active_connections = 5
     protocol_stats.total_frames_sent = 1000
@@ -168,7 +168,7 @@ async def main():
 
     # Check protocol health
     print("\nProtocol health check:")
-    health = DMSCProtocolHealth()
+    health = RiProtocolHealth()
     health.is_healthy = True
     health.error_rate = 0.01
     health.average_latency_ms = 25.0
@@ -181,10 +181,10 @@ async def main():
 
     # Protocol status
     print("\nProtocol status:")
-    status = DMSCProtocolStatus()
+    status = RiProtocolStatus()
     status.is_running = True
     status.uptime_seconds = 3600
-    status.protocol_type = DMSCProtocolType.CUSTOM
+    status.protocol_type = RiProtocolType.CUSTOM
     status.version = "1.0.0"
 
     print(f"  Running: {status.is_running}")

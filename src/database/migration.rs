@@ -1,7 +1,7 @@
 //! Copyright © 2025-2026 Wenze Wei. All Rights Reserved.
 //!
-//! This file is part of DMSC.
-//! The DMSC project belongs to the Dunimd Team.
+//! This file is part of Ri.
+//! The Ri project belongs to the Dunimd Team.
 //!
 //! Licensed under the Apache License, Version 2.0 (the "License");
 //! You may not use this file except in compliance with the License.
@@ -17,7 +17,7 @@
 
 //! # Database Migration
 //!
-//! This module provides database migration and schema management functionality for DMSC.
+//! This module provides database migration and schema management functionality for Ri.
 //! It handles version-controlled schema changes with support for up and down migrations.
 //!
 //! ## Key Components
@@ -36,7 +36,7 @@
 //! ## Usage Example
 //!
 //! ```rust,ignore
-//! use dmsc::database::migration::{Migration, MigrationManager};
+//! use ri::database::migration::{Migration, MigrationManager};
 //!
 //! let migration = Migration::new(
 //!     1,
@@ -54,7 +54,7 @@ use std::path::PathBuf;
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
-pub struct DMSCDatabaseMigration {
+pub struct RiDatabaseMigration {
     pub version: u32,
     pub name: String,
     pub sql_up: String,
@@ -62,7 +62,7 @@ pub struct DMSCDatabaseMigration {
     pub timestamp: chrono::DateTime<chrono::Utc>,
 }
 
-impl DMSCDatabaseMigration {
+impl RiDatabaseMigration {
     pub fn new(version: u32, name: &str, sql_up: &str, sql_down: Option<&str>) -> Self {
         Self {
             version,
@@ -75,14 +75,14 @@ impl DMSCDatabaseMigration {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub struct DMSCMigrationHistory {
+pub struct RiMigrationHistory {
     pub version: u32,
     pub name: String,
     pub applied_at: chrono::DateTime<chrono::Utc>,
     pub checksum: String,
 }
 
-impl DMSCMigrationHistory {
+impl RiMigrationHistory {
     pub fn new(version: u32, name: &str, checksum: &str) -> Self {
         Self {
             version,
@@ -94,12 +94,12 @@ impl DMSCMigrationHistory {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct DMSCDatabaseMigrator {
-    migrations: Vec<DMSCDatabaseMigration>,
+pub struct RiDatabaseMigrator {
+    migrations: Vec<RiDatabaseMigration>,
     migrations_dir: Option<PathBuf>,
 }
 
-impl DMSCDatabaseMigrator {
+impl RiDatabaseMigrator {
     pub fn new() -> Self {
         Self {
             migrations: Vec::new(),
@@ -112,32 +112,32 @@ impl DMSCDatabaseMigrator {
         self
     }
 
-    pub fn add_migration(&mut self, migration: DMSCDatabaseMigration) {
+    pub fn add_migration(&mut self, migration: RiDatabaseMigration) {
         self.migrations.push(migration);
         self.migrations.sort_by(|a, b| a.version.cmp(&b.version));
     }
 
-    pub fn add_migrations(&mut self, migrations: Vec<DMSCDatabaseMigration>) {
+    pub fn add_migrations(&mut self, migrations: Vec<RiDatabaseMigration>) {
         self.migrations.extend(migrations);
         self.migrations.sort_by(|a, b| a.version.cmp(&b.version));
     }
 
-    pub fn get_migrations(&self) -> &[DMSCDatabaseMigration] {
+    pub fn get_migrations(&self) -> &[RiDatabaseMigration] {
         &self.migrations
     }
 
-    pub fn get_migration(&self, version: u32) -> Option<&DMSCDatabaseMigration> {
+    pub fn get_migration(&self, version: u32) -> Option<&RiDatabaseMigration> {
         self.migrations.iter().find(|m| m.version == version)
     }
 
-    pub fn get_pending_migrations(&self, applied: &[DMSCMigrationHistory]) -> Vec<&DMSCDatabaseMigration> {
+    pub fn get_pending_migrations(&self, applied: &[RiMigrationHistory]) -> Vec<&RiDatabaseMigration> {
         let applied_versions: std::collections::HashSet<u32> = applied.iter().map(|h| h.version).collect();
         self.migrations.iter()
             .filter(|m| !applied_versions.contains(&m.version))
             .collect()
     }
 
-    pub fn get_applied_version(&self, applied: &[DMSCMigrationHistory]) -> Option<u32> {
+    pub fn get_applied_version(&self, applied: &[RiMigrationHistory]) -> Option<u32> {
         applied.iter()
             .map(|h| h.version)
             .max()
@@ -166,7 +166,7 @@ impl DMSCDatabaseMigrator {
                     let sql_content = std::fs::read_to_string(&path)?;
                     let version: u32 = file_name.split('_').next().unwrap_or("0").parse().unwrap_or(0);
                     let name = file_name.splitn(2, '_').nth(1).unwrap_or(file_name).to_string();
-                    self.add_migration(DMSCDatabaseMigration::new(version, &name, &sql_content, None));
+                    self.add_migration(RiDatabaseMigration::new(version, &name, &sql_content, None));
                 }
             }
         }
@@ -174,7 +174,7 @@ impl DMSCDatabaseMigrator {
     }
 }
 
-impl Default for DMSCDatabaseMigrator {
+impl Default for RiDatabaseMigrator {
     fn default() -> Self {
         Self::new()
     }

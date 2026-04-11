@@ -1,7 +1,7 @@
 # Copyright © 2025-2026 Wenze Wei. All Rights Reserved.
 #
-# This file is part of DMSC.
-# The DMSC project belongs to the Dunimd Team.
+# This file is part of Ri.
+# The Ri project belongs to the Dunimd Team.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # You may not use this file except in compliance with the License.
@@ -16,8 +16,8 @@
 # limitations under the License.
 
 """
-DMSC Python Tests Package
+Ri Python Tests Package
 
-This package contains all Python tests for the DMSC extension module.
+This package contains all Python tests for the Ri extension module.
 Tests verify that Python bindings correctly expose Rust types and functionality.
 """

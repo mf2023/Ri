@@ -1,7 +1,7 @@
 // Copyright © 2025-2026 Wenze Wei. All Rights Reserved.
 //
-// This file is part of DMSC.
-// The DMSC project belongs to the Dunimd Team.
+// This file is part of Ri.
+// The Ri project belongs to the Dunimd Team.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // You may not use this file except in compliance with the License.
@@ -15,24 +15,24 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package com.dunimd.dmsc.validation;
+package com.dunimd.ri.validation;
 
-import com.dunimd.dmsc.NativeLoader;
+import com.dunimd.ri.NativeLoader;
 
 /**
- * Validator builder for DMSC.
+ * Validator builder for Ri.
  * 
  * Provides a fluent API for building complex validation rules.
  * 
  * <p>Usage example:</p>
  * <pre>{@code
- * DMSCValidatorBuilder builder = new DMSCValidatorBuilder("email")
+ * RiValidatorBuilder builder = new RiValidatorBuilder("email")
  *     .notEmpty()
  *     .maxLength(255)
  *     .isEmail();
  * }</pre>
  */
-public class DMSCValidatorBuilder {
+public class RiValidatorBuilder {
     private long nativePtr;
     
     static {
@@ -40,11 +40,11 @@ public class DMSCValidatorBuilder {
     }
     
     /**
-     * Create a new DMSCValidatorBuilder for the given field.
+     * Create a new RiValidatorBuilder for the given field.
      * 
      * @param fieldName the field name to validate
      */
-    public DMSCValidatorBuilder(String fieldName) {
+    public RiValidatorBuilder(String fieldName) {
         this.nativePtr = new0(fieldName);
     }
     
@@ -55,7 +55,7 @@ public class DMSCValidatorBuilder {
      * 
      * @return this builder instance
      */
-    public DMSCValidatorBuilder notEmpty() {
+    public RiValidatorBuilder notEmpty() {
         notEmpty0(nativePtr);
         return this;
     }
@@ -68,7 +68,7 @@ public class DMSCValidatorBuilder {
      * @param min the minimum length
      * @return this builder instance
      */
-    public DMSCValidatorBuilder minLength(int min) {
+    public RiValidatorBuilder minLength(int min) {
         minLength0(nativePtr, min);
         return this;
     }
@@ -81,7 +81,7 @@ public class DMSCValidatorBuilder {
      * @param max the maximum length
      * @return this builder instance
      */
-    public DMSCValidatorBuilder maxLength(int max) {
+    public RiValidatorBuilder maxLength(int max) {
         maxLength0(nativePtr, max);
         return this;
     }
@@ -93,7 +93,7 @@ public class DMSCValidatorBuilder {
      * 
      * @return this builder instance
      */
-    public DMSCValidatorBuilder isEmail() {
+    public RiValidatorBuilder isEmail() {
         isEmail0(nativePtr);
         return this;
     }
@@ -105,9 +105,9 @@ public class DMSCValidatorBuilder {
      * 
      * @return the built validator
      */
-    public DMSCValidationRunner build() {
+    public RiValidationRunner build() {
         long runnerPtr = build0(nativePtr);
-        return new DMSCValidationRunner(runnerPtr);
+        return new RiValidationRunner(runnerPtr);
     }
     
     private native long build0(long ptr);

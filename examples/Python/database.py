@@ -1,7 +1,7 @@
 # Copyright © 2025-2026 Wenze Wei. All Rights Reserved.
 #
-# This file is part of DMSC.
-# The DMSC project belongs to the Dunimd Team.
+# This file is part of Ri.
+# The Ri project belongs to the Dunimd Team.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # You may not use this file except in compliance with the License.
@@ -16,20 +16,20 @@
 # limitations under the License.
 
 """
-DMSC Database Module Example
+Ri Database Module Example
 
-This example demonstrates how to use the DMSC database module for database
+This example demonstrates how to use the Ri database module for database
 operations with connection pooling and ORM support.
 """
 
 import asyncio
-from dmsc import (
-    DMSCDatabaseConfig,
-    DMSCDatabasePool,
-    DMSCDBRow,
-    DMSCDBResult,
+from ri import (
+    RiDatabaseConfig,
+    RiDatabasePool,
+    RiDBRow,
+    RiDBResult,
 )
-from dmsc.database import (
+from ri.database import (
     ColumnDefinition,
     IndexDefinition,
     ForeignKeyDefinition,
@@ -42,17 +42,17 @@ from dmsc.database import (
     Pagination,
     QueryBuilder,
     JoinType,
-    DMSCPyORMRepository,
+    RiPyORMRepository,
 )
 
 
 async def main():
     # Create database configuration
-    config = DMSCDatabaseConfig()
+    config = RiDatabaseConfig()
     config.database_type = "sqlite"
     config.host = "localhost"
     config.port = 5432
-    config.database = "dmsc_example"
+    config.database = "ri_example"
     config.username = "user"
     config.password = "password"
     config.max_connections = 10
@@ -60,7 +60,7 @@ async def main():
     config.connection_timeout_seconds = 30
 
     # Create connection pool
-    pool = DMSCDatabasePool(config)
+    pool = RiDatabasePool(config)
 
     # Define table schema using ORM
     print("Defining table schema...")
@@ -104,7 +104,7 @@ async def main():
 
     # Create ORM repository
     print("\nCreating ORM repository...")
-    user_repo = DMSCPyORMRepository()
+    user_repo = RiPyORMRepository()
     user_repo.table_name = "users"
     user_repo.table_definition = users_table
 
@@ -185,18 +185,18 @@ async def main():
     # Simulate query results
     print("\nSimulating query results...")
 
-    result = DMSCDBResult()
+    result = RiDBResult()
     result.row_count = 3
     result.columns = ["id", "name", "email", "age"]
 
     # Create sample rows
-    row1 = DMSCDBRow()
+    row1 = RiDBRow()
     row1.values = {"id": 1, "name": "John Doe", "email": "john@example.com", "age": 30}
 
-    row2 = DMSCDBRow()
+    row2 = RiDBRow()
     row2.values = {"id": 2, "name": "Jane Smith", "email": "jane@example.com", "age": 25}
 
-    row3 = DMSCDBRow()
+    row3 = RiDBRow()
     row3.values = {"id": 3, "name": "Bob Johnson", "email": "bob@example.com", "age": 35}
 
     print(f"Query returned {result.row_count} rows")

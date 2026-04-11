@@ -1,7 +1,7 @@
 //! Copyright © 2025-2026 Wenze Wei. All Rights Reserved.
 //!
-//! This file is part of DMSC.
-//! The DMSC project belongs to the Dunimd Team.
+//! This file is part of Ri.
+//! The Ri project belongs to the Dunimd Team.
 //!
 //! Licensed under the Apache License, Version 2.0 (the "License");
 //! You may not use this file except in compliance with the License.
@@ -34,19 +34,19 @@
 //! ## Usage Example
 //!
 //! ```rust
-//! use dmsc::core::module_sorter::sort_modules;
+//! use ri::core::module_sorter::sort_modules;
 //!
 //! let modules = vec![...]; // Module slots
 //! let sorted = sort_modules(modules)?;
 //! ```
 
-use crate::core::DMSCResult;
+use crate::core::RiResult;
 use std::collections::HashMap;
 use super::module_types::ModuleSlot;
 
 /// Sort modules based on dependencies and priority
 /// Uses topological sort to handle dependencies, and sorts by priority within the same dependency level
-pub(crate) fn sort_modules(modules: Vec<ModuleSlot>) -> DMSCResult<Vec<ModuleSlot>> {
+pub(crate) fn sort_modules(modules: Vec<ModuleSlot>) -> RiResult<Vec<ModuleSlot>> {
     let mut modules = modules;
     let mut result: Vec<ModuleSlot> = Vec::with_capacity(modules.len());
     
@@ -73,7 +73,7 @@ pub(crate) fn sort_modules(modules: Vec<ModuleSlot>) -> DMSCResult<Vec<ModuleSlo
                     // Dependency not found, check if it's already in result
                     let dep_in_result = result.iter().any(|slot| slot.module.name() == dep_name);
                     if !dep_in_result {
-                        return Err(crate::core::DMSCError::MissingDependency { 
+                        return Err(crate::core::RiError::MissingDependency { 
                             module_name: slot.module.name().to_string(), 
                             dependency: dep_name.to_string() 
                         });
@@ -92,7 +92,7 @@ pub(crate) fn sort_modules(modules: Vec<ModuleSlot>) -> DMSCResult<Vec<ModuleSlo
         
         // If no modules with in-degree 0, we have a circular dependency
         if zero_in_degree.is_empty() {
-            return Err(crate::core::DMSCError::CircularDependency { 
+            return Err(crate::core::RiError::CircularDependency { 
                 modules: modules.iter().map(|slot| slot.module.name().to_string()).collect() 
             });
         }

@@ -1,7 +1,7 @@
 //! Copyright © 2025-2026 Wenze Wei. All Rights Reserved.
 //!
-//! This file is part of DMSC.
-//! The DMSC project belongs to the Dunimd Team.
+//! This file is part of Ri.
+//! The Ri project belongs to the Dunimd Team.
 //!
 //! Licensed under the Apache License, Version 2.0 (the "License");
 //! You may not use this file except in compliance with the License.
@@ -23,23 +23,23 @@
 //!
 //! ## Architecture
 //!
-//! - **DMSCHardwareDiscoveryPlugin**: Trait for plugin implementations
+//! - **RiHardwareDiscoveryPlugin**: Trait for plugin implementations
 //! - **PluginRegistry**: Manages registered plugins
 //! - **PluginMetadata**: Plugin information and configuration
 //!
 //! ## Usage
 //!
 //! ```rust,ignore
-//! use dmsc::device::discovery::plugins::{DMSCHardwareDiscoveryPlugin, PluginRegistry};
+//! use ri::device::discovery::plugins::{RiHardwareDiscoveryPlugin, PluginRegistry};
 //!
 //! // Create a custom plugin
 //! struct MyCustomPlugin;
 //!
 //! #[async_trait::async_trait]
-//! impl DMSCHardwareDiscoveryPlugin for MyCustomPlugin {
+//! impl RiHardwareDiscoveryPlugin for MyCustomPlugin {
 //!     fn name(&self) -> &str { "MyCustomPlugin" }
 //!     fn version(&self) -> &str { "1.0.0" }
-//!     async fn discover(&self) -> Result<Vec<DMSCDevice>, String> {
+//!     async fn discover(&self) -> Result<Vec<RiDevice>, String> {
 //!         // Custom discovery logic
 //!         Ok(vec![])
 //!     }
@@ -58,7 +58,7 @@ use std::path::PathBuf;
 use libloading::{Library, Symbol};
 use thiserror::Error as ThisError;
 
-use super::super::core::DMSCDevice;
+use super::super::core::RiDevice;
 use super::platform::{PlatformInfo, HardwareCategory};
 
 /// Result type for plugin discovery operations
@@ -189,7 +189,7 @@ impl PluginMetadata {
 
 /// Trait for custom hardware discovery plugins
 #[async_trait]
-pub trait DMSCHardwareDiscoveryPlugin: Send + Sync {
+pub trait RiHardwareDiscoveryPlugin: Send + Sync {
     /// Returns the plugin metadata
     fn metadata(&self) -> PluginMetadata;
 
@@ -200,7 +200,7 @@ pub trait DMSCHardwareDiscoveryPlugin: Send + Sync {
     }
 
     /// Discovers hardware devices
-    async fn discover(&self, platform: &PlatformInfo) -> PluginResult<Vec<DMSCDevice>>;
+    async fn discover(&self, platform: &PlatformInfo) -> PluginResult<Vec<RiDevice>>;
 
     /// Called when the plugin is being unloaded
     async fn shutdown(&mut self) -> PluginResult<()> {
@@ -240,7 +240,7 @@ impl std::fmt::Display for PluginStatus {
 #[allow(dead_code)]
 struct PluginWrapper {
     metadata: PluginMetadata,
-    plugin: Arc<RwLock<Box<dyn DMSCHardwareDiscoveryPlugin>>>,
+    plugin: Arc<RwLock<Box<dyn RiHardwareDiscoveryPlugin>>>,
     status: Arc<RwLock<PluginStatus>>,
     config: Arc<RwLock<Option<String>>>,
     load_time: std::time::SystemTime,
@@ -248,7 +248,7 @@ struct PluginWrapper {
 }
 
 impl PluginWrapper {
-    pub fn new(plugin: Box<dyn DMSCHardwareDiscoveryPlugin>) -> Self {
+    pub fn new(plugin: Box<dyn RiHardwareDiscoveryPlugin>) -> Self {
         let metadata = plugin.metadata();
         let status = plugin.status();
 
@@ -263,7 +263,7 @@ impl PluginWrapper {
     }
 
     #[allow(dead_code)]
-    pub fn with_library(plugin: Box<dyn DMSCHardwareDiscoveryPlugin>, library: Arc<Library>) -> Self {
+    pub fn with_library(plugin: Box<dyn RiHardwareDiscoveryPlugin>, library: Arc<Library>) -> Self {
         let metadata = plugin.metadata();
         let status = plugin.status();
 
@@ -285,7 +285,7 @@ impl PluginWrapper {
         Ok(())
     }
 
-    pub async fn discover(&self, platform: &PlatformInfo) -> PluginResult<Vec<DMSCDevice>> {
+    pub async fn discover(&self, platform: &PlatformInfo) -> PluginResult<Vec<RiDevice>> {
         *self.status.write().await = PluginStatus::Discovering();
         let result = self.plugin.read().await.discover(platform).await;
         *self.status.write().await = PluginStatus::Ready();
@@ -332,7 +332,7 @@ impl PluginRegistry {
     }
 
     /// Registers a new plugin
-    pub async fn register(&mut self, plugin: Box<dyn DMSCHardwareDiscoveryPlugin>) -> PluginResult<String> {
+    pub async fn register(&mut self, plugin: Box<dyn RiHardwareDiscoveryPlugin>) -> PluginResult<String> {
         let metadata = plugin.metadata();
         let name = metadata.name.clone();
 
@@ -381,7 +381,7 @@ impl PluginRegistry {
         &self,
         name: &str,
         platform: &PlatformInfo,
-    ) -> PluginResult<Vec<DMSCDevice>> {
+    ) -> PluginResult<Vec<RiDevice>> {
         let enabled = self.enabled.read().await;
         if !enabled.contains(name) {
             return Err(PluginError::NotFound(name.to_string()));
@@ -396,7 +396,7 @@ impl PluginRegistry {
     }
 
     /// Discovers devices using all enabled plugins
-    pub async fn discover_all(&self, platform: &PlatformInfo) -> PluginResult<Vec<DMSCDevice>> {
+    pub async fn discover_all(&self, platform: &PlatformInfo) -> PluginResult<Vec<RiDevice>> {
         let enabled = self.enabled.read().await;
         let plugins = self.plugins.read().await;
 
@@ -477,9 +477,9 @@ impl PluginLoader {
     pub fn new() -> Self {
         let mut search_paths = Vec::new();
         search_paths.push(PathBuf::from("./plugins"));
-        search_paths.push(PathBuf::from("/usr/local/lib/dmsc/plugins"));
+        search_paths.push(PathBuf::from("/usr/local/lib/ri/plugins"));
         #[cfg(target_os = "macos")]
-        search_paths.push(PathBuf::from("/opt/homebrew/lib/dmsc/plugins"));
+        search_paths.push(PathBuf::from("/opt/homebrew/lib/ri/plugins"));
 
         Self {
             search_paths: Arc::new(RwLock::new(search_paths)),
@@ -576,7 +576,7 @@ impl PluginLoader {
     }
 
     /// Loads a specific plugin file
-    pub async fn load(&self, path: &PathBuf) -> PluginResult<Box<dyn DMSCHardwareDiscoveryPlugin>> {
+    pub async fn load(&self, path: &PathBuf) -> PluginResult<Box<dyn RiHardwareDiscoveryPlugin>> {
         tracing::info!("Loading plugin from: {}", path.display());
 
         if !path.exists() {
@@ -598,22 +598,22 @@ impl PluginLoader {
     }
 
     /// Loads a plugin from an already loaded library
-    fn load_plugin_from_library(&self, library: &Arc<Library>, path: &PathBuf) -> PluginResult<Box<dyn DMSCHardwareDiscoveryPlugin>> {
+    fn load_plugin_from_library(&self, library: &Arc<Library>, path: &PathBuf) -> PluginResult<Box<dyn RiHardwareDiscoveryPlugin>> {
         #[allow(improper_ctypes_definitions)]
-    type CreatePluginFn = unsafe extern "C" fn() -> *mut dyn DMSCHardwareDiscoveryPlugin;
+    type CreatePluginFn = unsafe extern "C" fn() -> *mut dyn RiHardwareDiscoveryPlugin;
 
         unsafe {
             let create_symbol: Symbol<CreatePluginFn> = library
-                .get(b"create_dmsc_plugin")
+                .get(b"create_ri_plugin")
                 .map_err(|e| PluginError::SymbolResolutionFailed(format!(
-                    "Failed to resolve create_dmsc_plugin symbol in {}: {}", path.display(), e
+                    "Failed to resolve create_ri_plugin symbol in {}: {}", path.display(), e
                 )))?;
 
             let plugin_ptr = create_symbol();
 
             if plugin_ptr.is_null() {
                 return Err(PluginError::LoadFailed(format!(
-                    "create_dmsc_plugin returned null pointer for {}", path.display()
+                    "create_ri_plugin returned null pointer for {}", path.display()
                 )));
             }
 
@@ -649,9 +649,9 @@ impl PluginLoader {
 
         unsafe {
             let metadata_symbol: Symbol<GetMetadataFn> = library
-                .get(b"get_dmsc_plugin_metadata")
+                .get(b"get_ri_plugin_metadata")
                 .map_err(|e| PluginError::SymbolResolutionFailed(format!(
-                    "Failed to resolve get_dmsc_plugin_metadata symbol in {}: {}", path.display(), e
+                    "Failed to resolve get_ri_plugin_metadata symbol in {}: {}", path.display(), e
                 )))?;
 
             let metadata = metadata_symbol();
@@ -682,9 +682,9 @@ impl PluginLoader {
 
         unsafe {
             let version_symbol: Symbol<GetVersionFn> = library
-                .get(b"get_dmsc_plugin_api_version")
+                .get(b"get_ri_plugin_api_version")
                 .map_err(|e| PluginError::SymbolResolutionFailed(format!(
-                    "Failed to resolve get_dmsc_plugin_api_version symbol in {}: {}", path.display(), e
+                    "Failed to resolve get_ri_plugin_api_version symbol in {}: {}", path.display(), e
                 )))?;
 
             let version = version_symbol();
@@ -695,7 +695,7 @@ impl PluginLoader {
         }
     }
 
-    /// Checks if a plugin file is compatible with the current DMSC version
+    /// Checks if a plugin file is compatible with the current Ri version
     pub async fn is_compatible(&self, path: &PathBuf) -> bool {
         const CURRENT_API_VERSION: u32 = 1;
 
@@ -720,7 +720,7 @@ pub struct CustomProviderPlugin {
     name: String,
     version: String,
     description: String,
-    discover_func: Arc<dyn Fn() -> Vec<DMSCDevice> + Send + Sync>,
+    discover_func: Arc<dyn Fn() -> Vec<RiDevice> + Send + Sync>,
     status: PluginStatus,
 }
 
@@ -728,7 +728,7 @@ impl CustomProviderPlugin {
     /// Creates a new custom provider plugin
     pub fn new<F>(name: &str, version: &str, description: &str, discover_func: F) -> Self
     where
-        F: Fn() -> Vec<DMSCDevice> + Send + Sync + 'static,
+        F: Fn() -> Vec<RiDevice> + Send + Sync + 'static,
     {
         Self {
             name: name.to_string(),
@@ -741,7 +741,7 @@ impl CustomProviderPlugin {
 }
 
 #[async_trait]
-impl DMSCHardwareDiscoveryPlugin for CustomProviderPlugin {
+impl RiHardwareDiscoveryPlugin for CustomProviderPlugin {
     fn metadata(&self) -> PluginMetadata {
         PluginMetadata::new(
             self.name.clone(),
@@ -751,7 +751,7 @@ impl DMSCHardwareDiscoveryPlugin for CustomProviderPlugin {
         )
     }
 
-    async fn discover(&self, _platform: &PlatformInfo) -> PluginResult<Vec<DMSCDevice>> {
+    async fn discover(&self, _platform: &PlatformInfo) -> PluginResult<Vec<RiDevice>> {
         let devices = (self.discover_func)();
         Ok(devices)
     }
@@ -762,9 +762,9 @@ impl DMSCHardwareDiscoveryPlugin for CustomProviderPlugin {
 }
 
 /// Utility function to create a custom discovery plugin from a closure
-pub fn create_custom_plugin<F>(name: &str, version: &str, description: &str, discover_fn: F) -> Box<dyn DMSCHardwareDiscoveryPlugin>
+pub fn create_custom_plugin<F>(name: &str, version: &str, description: &str, discover_fn: F) -> Box<dyn RiHardwareDiscoveryPlugin>
 where
-    F: Fn() -> Vec<DMSCDevice> + Send + Sync + 'static,
+    F: Fn() -> Vec<RiDevice> + Send + Sync + 'static,
 {
     Box::new(CustomProviderPlugin::new(name, version, description, discover_fn))
 }

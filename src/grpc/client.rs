@@ -1,7 +1,7 @@
 //! Copyright 2025-2026 Wenze Wei. All Rights Reserved.
 //!
-//! This file is part of DMSC.
-//! The DMSC project belongs to the Dunimd Team.
+//! This file is part of Ri.
+//! The Ri project belongs to the Dunimd Team.
 //!
 //! Licensed under the Apache License, Version 2.0 (the "License");
 //! You may not use this file except in compliance with the License.
@@ -25,11 +25,11 @@ use std::sync::atomic::{AtomicU64, Ordering};
 #[allow(unused_imports)]
 use pyo3::prelude::*;
 
-pub struct DMSCGrpcClient {
+pub struct RiGrpcClient {
     channel: Option<tonic::transport::Channel>,
     endpoint: String,
     timeout: Duration,
-    stats: Arc<RwLock<DMSCGrpcStats>>,
+    stats: Arc<RwLock<RiGrpcStats>>,
     request_id: Arc<AtomicU64>,
     connected: Arc<RwLock<bool>>,
     retry_count: u32,
@@ -38,17 +38,17 @@ pub struct DMSCGrpcClient {
 
 #[cfg(feature = "pyo3")]
 #[pyclass]
-pub struct DMSCGrpcClientPy {
-    inner: DMSCGrpcClient,
+pub struct RiGrpcClientPy {
+    inner: RiGrpcClient,
 }
 
 #[cfg(feature = "pyo3")]
 #[pymethods]
-impl DMSCGrpcClientPy {
+impl RiGrpcClientPy {
     #[new]
     fn new(endpoint: String) -> Self {
         Self {
-            inner: DMSCGrpcClient::new(endpoint),
+            inner: RiGrpcClient::new(endpoint),
         }
     }
 
@@ -63,7 +63,7 @@ impl DMSCGrpcClientPy {
         self.inner.retry_delay = Duration::from_millis(delay_ms);
     }
 
-    fn get_stats(&self) -> DMSCGrpcStats {
+    fn get_stats(&self) -> RiGrpcStats {
         self.inner.get_stats()
     }
 
@@ -103,13 +103,13 @@ impl DMSCGrpcClientPy {
     }
 }
 
-impl DMSCGrpcClient {
+impl RiGrpcClient {
     pub fn new(endpoint: String) -> Self {
         Self {
             channel: None,
             endpoint,
             timeout: Duration::from_secs(30),
-            stats: Arc::new(RwLock::new(DMSCGrpcStats::new())),
+            stats: Arc::new(RwLock::new(RiGrpcStats::new())),
             request_id: Arc::new(AtomicU64::new(0)),
             connected: Arc::new(RwLock::new(false)),
             retry_count: 3,
@@ -128,13 +128,13 @@ impl DMSCGrpcClient {
         self
     }
 
-    pub fn get_stats(&self) -> DMSCGrpcStats {
+    pub fn get_stats(&self) -> RiGrpcStats {
         self.stats.try_read()
             .map(|guard| guard.clone())
-            .unwrap_or_else(|_| DMSCGrpcStats::new())
+            .unwrap_or_else(|_| RiGrpcStats::new())
     }
 
-    pub async fn connect(&mut self) -> DMSCResult<()> {
+    pub async fn connect(&mut self) -> RiResult<()> {
         let endpoint = tonic::transport::Endpoint::from_shared(self.endpoint.clone())
             .map_err(|e| GrpcError::ConnectionFailed {
                 message: format!("Invalid endpoint: {}", e)
@@ -163,7 +163,7 @@ impl DMSCGrpcClient {
         self.request_id.fetch_add(1, Ordering::SeqCst)
     }
 
-    pub async fn call(&mut self, service_name: &str, method: &str, data: &[u8]) -> DMSCResult<Vec<u8>> {
+    pub async fn call(&mut self, service_name: &str, method: &str, data: &[u8]) -> RiResult<Vec<u8>> {
         let channel = match &self.channel {
             Some(ch) => ch.clone(),
             None => {
@@ -184,7 +184,7 @@ impl DMSCGrpcClient {
 
         tracing::debug!("gRPC call: {} (request_id={})", path, request_id);
 
-        let mut last_error: Option<DMSCError> = None;
+        let mut last_error: Option<RiError> = None;
         for attempt in 0..=self.retry_count {
             if attempt > 0 {
                 tokio::time::sleep(self.retry_delay).await;
@@ -219,7 +219,7 @@ impl DMSCGrpcClient {
         channel: tonic::transport::Channel,
         path: &str,
         data: &[u8],
-    ) -> DMSCResult<Vec<u8>> {
+    ) -> RiResult<Vec<u8>> {
         use tonic::client::Grpc;
         use tonic::codec::ProstCodec;
         
@@ -241,7 +241,7 @@ impl DMSCGrpcClient {
         Ok(response.into_inner())
     }
 
-    fn is_retryable_error(error: &DMSCError) -> bool {
+    fn is_retryable_error(error: &RiError) -> bool {
         let error_str = error.to_string();
         error_str.contains("UNAVAILABLE") ||
         error_str.contains("DEADLINE_EXCEEDED") ||
@@ -255,7 +255,7 @@ impl DMSCGrpcClient {
     }
 }
 
-impl Drop for DMSCGrpcClient {
+impl Drop for RiGrpcClient {
     fn drop(&mut self) {
         if self.channel.is_some() {
             if let Ok(rt) = tokio::runtime::Runtime::new() {
@@ -267,13 +267,13 @@ impl Drop for DMSCGrpcClient {
     }
 }
 
-impl Default for DMSCGrpcClient {
+impl Default for RiGrpcClient {
     fn default() -> Self {
         Self::new("http://127.0.0.1:50051".to_string())
     }
 }
 
-impl Clone for DMSCGrpcClient {
+impl Clone for RiGrpcClient {
     fn clone(&self) -> Self {
         Self {
             channel: self.channel.clone(),

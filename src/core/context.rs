@@ -1,7 +1,7 @@
 //! Copyright © 2025-2026 Wenze Wei. All Rights Reserved.
 //! 
-//! This file is part of DMSC.
-//! The DMSC project belongs to the Dunimd Team.
+//! This file is part of Ri.
+//! The Ri project belongs to the Dunimd Team.
 //! 
 //! Licensed under the Apache License, Version 2.0 (the "License");
 //! You may not use this file except in compliance with the License.
@@ -17,36 +17,36 @@
 
 //! # Service Context
 //! 
-//! The service context provides access to all core functionalities of DMSC,
+//! The service context provides access to all core functionalities of Ri,
 //! acting as a central hub for accessing various components such as logging,
 //! configuration, file system, and hooks.
 
 #![allow(non_snake_case)]
 
-use crate::fs::DMSCFileSystem;
-use crate::log::{DMSCLogConfig, DMSCLogger};
-use crate::config::DMSCConfigManager;
-use crate::hooks::DMSCHookBus;
-use crate::core::DMSCResult;
-use crate::observability::DMSCMetricsRegistry;
+use crate::fs::RiFileSystem;
+use crate::log::{RiLogConfig, RiLogger};
+use crate::config::RiConfigManager;
+use crate::hooks::RiHookBus;
+use crate::core::RiResult;
+use crate::observability::RiMetricsRegistry;
 use std::sync::Arc;
 
 /// Internal service context implementation. Not exposed directly to users.
 /// 
 /// This struct contains all the core components of the service context,
-/// but is wrapped by `DMSCServiceContext` for controlled access.
+/// but is wrapped by `RiServiceContext` for controlled access.
 #[derive(Clone)]
 pub struct ServiceContextInner {
     /// File system accessor for secure file operations
-    pub fs: DMSCFileSystem,
+    pub fs: RiFileSystem,
     /// Logger for structured logging
-    pub logger: Arc<DMSCLogger>,
+    pub logger: Arc<RiLogger>,
     /// Configuration manager for accessing application settings
-    pub config: Arc<DMSCConfigManager>,
+    pub config: Arc<RiConfigManager>,
     /// Hook bus for emitting and handling lifecycle events
-    pub hooks: Arc<DMSCHookBus>,
+    pub hooks: Arc<RiHookBus>,
     /// Metrics registry for observability (optional)
-    pub metrics_registry: Option<Arc<DMSCMetricsRegistry>>,
+    pub metrics_registry: Option<Arc<RiMetricsRegistry>>,
 }
 
 impl ServiceContextInner {
@@ -63,7 +63,7 @@ impl ServiceContextInner {
     /// # Returns
     /// 
     /// A new `ServiceContextInner` instance.
-    pub fn new(fs: DMSCFileSystem, logger: DMSCLogger, config: DMSCConfigManager, hooks: DMSCHookBus, metrics_registry: Option<Arc<DMSCMetricsRegistry>>) -> Self {
+    pub fn new(fs: RiFileSystem, logger: RiLogger, config: RiConfigManager, hooks: RiHookBus, metrics_registry: Option<Arc<RiMetricsRegistry>>) -> Self {
         ServiceContextInner { 
             fs, 
             logger: Arc::new(logger), 
@@ -76,10 +76,10 @@ impl ServiceContextInner {
 
 }
 
-/// Public-facing service context for DMSC applications.
+/// Public-facing service context for Ri applications.
 /// 
-/// The `DMSCServiceContext` is the primary way for modules and business logic to
-/// access core DMSC functionalities. It follows the dependency injection pattern,
+/// The `RiServiceContext` is the primary way for modules and business logic to
+/// access core Ri functionalities. It follows the dependency injection pattern,
 /// providing a centralized access point to all core components.
 /// 
 /// ## Design Principle
@@ -91,9 +91,9 @@ impl ServiceContextInner {
 /// ## Usage
 /// 
 /// ```rust
-/// use dmsc::prelude::*;
+/// use ri::prelude::*;
 /// 
-/// async fn handle_request(ctx: &DMSCServiceContext) -> DMSCResult<()> {
+/// async fn handle_request(ctx: &RiServiceContext) -> RiResult<()> {
 ///     // Access logger
 ///     ctx.logger().info("request", "Handling request");
 ///     
@@ -108,13 +108,13 @@ impl ServiceContextInner {
 /// ```
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 #[derive(Clone)]
-pub struct DMSCServiceContext {
+pub struct RiServiceContext {
     /// Internal implementation details
     inner: ServiceContextInner,
 }
 
-impl DMSCServiceContext {
-    /// Create a new `DMSCServiceContext` with the provided components.
+impl RiServiceContext {
+    /// Create a new `RiServiceContext` with the provided components.
     /// 
     /// This method is typically used by the framework itself during application startup,
     /// but can be used for testing or custom initialization.
@@ -129,35 +129,35 @@ impl DMSCServiceContext {
     /// 
     /// # Returns
     /// 
-    /// A new `DMSCServiceContext` instance.
-    pub fn new_with(fs: DMSCFileSystem, logger: DMSCLogger, config: DMSCConfigManager, hooks: DMSCHookBus, metrics_registry: Option<Arc<DMSCMetricsRegistry>>) -> Self {
+    /// A new `RiServiceContext` instance.
+    pub fn new_with(fs: RiFileSystem, logger: RiLogger, config: RiConfigManager, hooks: RiHookBus, metrics_registry: Option<Arc<RiMetricsRegistry>>) -> Self {
         let inner = ServiceContextInner::new(fs, logger, config, hooks, metrics_registry);
-        DMSCServiceContext { inner }
+        RiServiceContext { inner }
     }
     
 
 
-    /// Create a new `DMSCServiceContext` with default configuration.
+    /// Create a new `RiServiceContext` with default configuration.
     /// 
     /// This is the most common way to create a service context, as it handles
     /// the initialization of all core components automatically.
     /// 
     /// # Returns
     /// 
-    /// A `DMSCResult` containing the new service context, or an error if initialization failed.
+    /// A `RiResult` containing the new service context, or an error if initialization failed.
     /// 
     /// # Errors
     /// 
     /// - If the project root directory cannot be determined
     /// - If there are issues initializing any of the core components
-    pub fn new_default() -> DMSCResult<Self> {
+    pub fn new_default() -> RiResult<Self> {
         // Create default configuration manager
-        let config = DMSCConfigManager::new_default();
+        let config = RiConfigManager::new_default();
         let cfg = config.config();
 
         // Determine project root directory
         let project_root = std::env::current_dir()
-            .map_err(|e| crate::core::DMSCError::Other(format!("detect project root failed: {e}")))?;
+            .map_err(|e| crate::core::RiError::Other(format!("detect project root failed: {e}")))?;
         
         // Determine application data root directory
         let app_data_root = if let Some(root_str) = cfg.get_str("fs.app_data_root") {
@@ -167,24 +167,24 @@ impl DMSCServiceContext {
         };
 
         // Initialize file system
-        let fs = DMSCFileSystem::new_with_roots(project_root, app_data_root);
+        let fs = RiFileSystem::new_with_roots(project_root, app_data_root);
 
         // Initialize logging
-        let log_config = DMSCLogConfig::from_config(&cfg);
-        let logger = DMSCLogger::new(&log_config, fs.clone());
+        let log_config = RiLogConfig::from_config(&cfg);
+        let logger = RiLogger::new(&log_config, fs.clone());
         
         // Initialize hook bus
-        let hooks = DMSCHookBus::new();
+        let hooks = RiHookBus::new();
         
-        Ok(DMSCServiceContext::new_with(fs, logger, config, hooks, None))
+        Ok(RiServiceContext::new_with(fs, logger, config, hooks, None))
     }
 
     /// Get a reference to the file system accessor.
     /// 
     /// # Returns
     /// 
-    /// A reference to the `DMSCFileSystem` instance.
-    pub fn fs(&self) -> &DMSCFileSystem {
+    /// A reference to the `RiFileSystem` instance.
+    pub fn fs(&self) -> &RiFileSystem {
         &self.inner.fs
     }
     
@@ -194,8 +194,8 @@ impl DMSCServiceContext {
     /// 
     /// # Returns
     /// 
-    /// A reference to the `DMSCLogger` instance.
-    pub fn logger(&self) -> &DMSCLogger {
+    /// A reference to the `RiLogger` instance.
+    pub fn logger(&self) -> &RiLogger {
         self.inner.logger.as_ref()
     }
     
@@ -205,8 +205,8 @@ impl DMSCServiceContext {
     /// 
     /// # Returns
     /// 
-    /// A reference to the `DMSCConfigManager` instance.
-    pub fn config(&self) -> Arc<DMSCConfigManager> {
+    /// A reference to the `RiConfigManager` instance.
+    pub fn config(&self) -> Arc<RiConfigManager> {
         self.inner.config.clone()
     }
     
@@ -216,8 +216,8 @@ impl DMSCServiceContext {
     /// 
     /// # Returns
     /// 
-    /// A reference to the `DMSCHookBus` instance.
-    pub fn hooks(&self) -> Arc<DMSCHookBus> {
+    /// A reference to the `RiHookBus` instance.
+    pub fn hooks(&self) -> Arc<RiHookBus> {
         self.inner.hooks.clone()
     }
     
@@ -227,8 +227,8 @@ impl DMSCServiceContext {
     /// 
     /// # Returns
     /// 
-    /// A mutable reference to the `DMSCHookBus` instance.
-    pub fn hooks_mut(&mut self) -> &mut DMSCHookBus {
+    /// A mutable reference to the `RiHookBus` instance.
+    pub fn hooks_mut(&mut self) -> &mut RiHookBus {
         Arc::get_mut(&mut self.inner.hooks).expect("Cannot get mutable reference to hooks - shared ownership")
     }
 
@@ -236,8 +236,8 @@ impl DMSCServiceContext {
     /// 
     /// # Returns
     /// 
-    /// A mutable reference to the `DMSCConfigManager` instance.
-    pub fn config_mut(&mut self) -> &mut DMSCConfigManager {
+    /// A mutable reference to the `RiConfigManager` instance.
+    pub fn config_mut(&mut self) -> &mut RiConfigManager {
         Arc::get_mut(&mut self.inner.config).expect("Cannot get mutable reference to config - shared ownership")
     }
 
@@ -245,8 +245,8 @@ impl DMSCServiceContext {
     /// 
     /// # Returns
     /// 
-    /// A mutable reference to to the `DMSCFileSystem` instance.
-    pub fn fs_mut(&mut self) -> &mut DMSCFileSystem {
+    /// A mutable reference to to the `RiFileSystem` instance.
+    pub fn fs_mut(&mut self) -> &mut RiFileSystem {
         &mut self.inner.fs
     }
 
@@ -254,8 +254,8 @@ impl DMSCServiceContext {
     /// 
     /// # Returns
     /// 
-    /// A mutable reference to the `DMSCLogger` instance.
-    pub fn logger_mut(&mut self) -> &mut DMSCLogger {
+    /// A mutable reference to the `RiLogger` instance.
+    pub fn logger_mut(&mut self) -> &mut RiLogger {
         Arc::get_mut(&mut self.inner.logger).expect("Cannot get mutable reference to logger - shared ownership")
     }
 
@@ -263,17 +263,17 @@ impl DMSCServiceContext {
     /// 
     /// # Returns
     /// 
-    /// An optional reference to the `DMSCMetricsRegistry` instance.
-    pub fn metrics_registry(&self) -> Option<Arc<DMSCMetricsRegistry>> {
+    /// An optional reference to the `RiMetricsRegistry` instance.
+    pub fn metrics_registry(&self) -> Option<Arc<RiMetricsRegistry>> {
         self.inner.metrics_registry.clone()
     }
 }
 
 #[cfg(feature = "pyo3")]
-/// Python bindings for DMSCServiceContext
+/// Python bindings for RiServiceContext
 #[pyo3::prelude::pymethods]
-impl DMSCServiceContext {
-    /// Create a new DMSCServiceContext with default configuration
+impl RiServiceContext {
+    /// Create a new RiServiceContext with default configuration
     #[new]
     fn py_new() -> pyo3::PyResult<Self> {
         match Self::new_default() {
@@ -283,27 +283,27 @@ impl DMSCServiceContext {
     }
 
     #[pyo3(name = "fs")]
-    fn fs_py(&self) -> crate::fs::DMSCFileSystem {
+    fn fs_py(&self) -> crate::fs::RiFileSystem {
         self.inner.fs.clone()
     }
 
     #[pyo3(name = "logger")]
-    fn logger_py(&self) -> crate::log::DMSCLogger {
+    fn logger_py(&self) -> crate::log::RiLogger {
         (*self.inner.logger).clone()
     }
 
     #[pyo3(name = "config")]
-    fn config_py(&self) -> crate::config::DMSCConfigManager {
+    fn config_py(&self) -> crate::config::RiConfigManager {
         (*self.inner.config).clone()
     }
 
     #[pyo3(name = "metrics_registry")]
-    fn metrics_registry_py(&self) -> Option<crate::observability::DMSCMetricsRegistry> {
+    fn metrics_registry_py(&self) -> Option<crate::observability::RiMetricsRegistry> {
         self.inner.metrics_registry.as_ref().map(|r| (**r).clone())
     }
 
     #[pyo3(name = "hooks")]
-    fn hooks_py(&self) -> crate::hooks::DMSCHookBus {
-        crate::hooks::DMSCHookBus::new()
+    fn hooks_py(&self) -> crate::hooks::RiHookBus {
+        crate::hooks::RiHookBus::new()
     }
 }

@@ -1,7 +1,7 @@
 // Copyright © 2025-2026 Wenze Wei. All Rights Reserved.
 //
-// This file is part of DMSC.
-// The DMSC project belongs to the Dunimd Team.
+// This file is part of Ri.
+// The Ri project belongs to the Dunimd Team.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // You may not use this file except in compliance with the License.
@@ -15,42 +15,42 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package com.dunimd.dmsc;
+package com.dunimd.ri;
 
 /**
- * DMSC configuration class.
+ * Ri configuration class.
  * 
  * This class provides access to configuration values loaded from various sources.
  */
-public class DMSCConfig {
+public class RiConfig {
     private long nativePtr;
     
     /**
-     * Create a new DMSCConfig instance with default values.
+     * Create a new RiConfig instance with default values.
      */
-    public DMSCConfig() {
+    public RiConfig() {
         this.nativePtr = new0();
     }
     
     private native long new0();
     
     /**
-     * Create a DMSCConfig from YAML string.
+     * Create a RiConfig from YAML string.
      * 
      * @param yaml the YAML configuration string
-     * @return the DMSCConfig instance
+     * @return the RiConfig instance
      */
-    public static DMSCConfig fromYaml(String yaml) {
+    public static RiConfig fromYaml(String yaml) {
         long ptr = fromYaml0(yaml);
         if (ptr == 0) {
-            throw new DMSCError("Failed to parse YAML configuration");
+            throw new RiError("Failed to parse YAML configuration");
         }
-        return new DMSCConfig(ptr);
+        return new RiConfig(ptr);
     }
     
     private static native long fromYaml0(String yaml);
     
-    private DMSCConfig(long ptr) {
+    private RiConfig(long ptr) {
         this.nativePtr = ptr;
     }
     

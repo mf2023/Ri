@@ -1,7 +1,7 @@
 //! Copyright © 2025-2026 Wenze Wei. All Rights Reserved.
 //!
-//! This file is part of DMSC.
-//! The DMSC project belongs to the Dunimd Team.
+//! This file is part of Ri.
+//! The Ri project belongs to the Dunimd Team.
 //!
 //! Licensed under the Apache License, Version 2.0 (the "License");
 //! You may not use this file except in compliance with the License.
@@ -19,23 +19,23 @@
 
 //! # Redis Queue Backend
 //! 
-//! This module provides a Redis implementation for the DMSC queue system. It allows
+//! This module provides a Redis implementation for the Ri queue system. It allows
 //! sending and receiving messages using Redis lists as the underlying message broker.
 //! 
 //! ## Key Components
 //! 
-//! - **DMSCRedisQueue**: Main Redis queue implementation
+//! - **RiRedisQueue**: Main Redis queue implementation
 //! - **RedisQueueProducer**: Redis producer implementation
 //! - **RedisQueueConsumer**: Redis consumer implementation
 //! 
 //! ## Design Principles
 //! 
-//! 1. **Async Trait Implementation**: Implements the DMSCQueue, DMSCQueueProducer, and DMSCQueueConsumer traits
+//! 1. **Async Trait Implementation**: Implements the RiQueue, RiQueueProducer, and RiQueueConsumer traits
 //! 2. **Redis Integration**: Uses the redis crate for Redis connectivity
 //! 3. **Thread Safety**: Uses Arc for safe sharing of connections and consumers
 //! 4. **Future-based API**: Leverages async/await for non-blocking operations
 //! 5. **Blocking Operations**: Uses BLPOP for efficient blocking message consumption
-//! 6. **Error Handling**: Comprehensive error handling with DMSCResult
+//! 6. **Error Handling**: Comprehensive error handling with RiResult
 //! 7. **List-based Queue**: Uses Redis lists for simple FIFO queue functionality
 //! 8. **Batch Support**: Provides batch sending functionality
 //! 9. **Implicit Acknowledgment**: Acknowledgment is implicit when messages are popped from the list
@@ -44,17 +44,17 @@
 //! ## Usage
 //! 
 //! ```rust
-//! use dmsc::prelude::*;
+//! use ri::prelude::*;
 //! 
-//! async fn example() -> DMSCResult<()> {
+//! async fn example() -> RiResult<()> {
 //!     // Create a new Redis queue
-//!     let queue = DMSCRedisQueue::new("test-queue", "redis://localhost:6379").await?;
+//!     let queue = RiRedisQueue::new("test-queue", "redis://localhost:6379").await?;
 //!     
 //!     // Create a producer
 //!     let producer = queue.create_producer().await?;
 //!     
 //!     // Create a message
-//!     let message = DMSCQueueMessage {
+//!     let message = RiQueueMessage {
 //!         id: "12345".to_string(),
 //!         payload: b"Hello, Redis!".to_vec(),
 //!         headers: vec![("key1".to_string(), "value1".to_string())],
@@ -83,21 +83,21 @@ use redis::{AsyncCommands, Client};
 use std::sync::Arc;
 use std::time::Duration;
 use tokio::sync::Mutex;
-use crate::core::DMSCResult;
-use crate::queue::{DMSCQueue, DMSCQueueMessage, DMSCQueueProducer, DMSCQueueConsumer, DMSCQueueStats};
+use crate::core::RiResult;
+use crate::queue::{RiQueue, RiQueueMessage, RiQueueProducer, RiQueueConsumer, RiQueueStats};
 
-/// Redis queue implementation for the DMSC queue system.
+/// Redis queue implementation for the Ri queue system.
 ///
-/// This struct provides a Redis implementation of the DMSCQueue trait, allowing
+/// This struct provides a Redis implementation of the RiQueue trait, allowing
 /// sending and receiving messages using Redis lists as the underlying message broker.
-pub struct DMSCRedisQueue {
+pub struct RiRedisQueue {
     /// Queue name (Redis key)
     name: String,
     /// Redis client for connecting to Redis
     client: Arc<Client>,
 }
 
-impl DMSCRedisQueue {
+impl RiRedisQueue {
     /// Creates a new Redis queue instance.
     ///
     /// # Parameters
@@ -107,8 +107,8 @@ impl DMSCRedisQueue {
     ///
     /// # Returns
     ///
-    /// A new DMSCRedisQueue instance wrapped in DMSCResult
-    pub async fn new(name: &str, connection_string: &str) -> DMSCResult<Self> {
+    /// A new RiRedisQueue instance wrapped in RiResult
+    pub async fn new(name: &str, connection_string: &str) -> RiResult<Self> {
         let client = Client::open(connection_string)?;
         Self::new_with_client(name, client)
     }
@@ -122,8 +122,8 @@ impl DMSCRedisQueue {
     ///
     /// # Returns
     ///
-    /// A new DMSCRedisQueue instance wrapped in DMSCResult
-    pub fn new_with_client(name: &str, client: Client) -> DMSCResult<Self> {
+    /// A new RiRedisQueue instance wrapped in RiResult
+    pub fn new_with_client(name: &str, client: Client) -> RiResult<Self> {
         Ok(Self {
             name: name.to_string(),
             client: Arc::new(client),
@@ -139,8 +139,8 @@ impl DMSCRedisQueue {
     ///
     /// # Returns
     ///
-    /// A new DMSCRedisQueue instance wrapped in DMSCResult
-    pub async fn new_with_connection(name: &str, connection_string: &str) -> DMSCResult<Self> {
+    /// A new RiRedisQueue instance wrapped in RiResult
+    pub async fn new_with_connection(name: &str, connection_string: &str) -> RiResult<Self> {
         let client = Client::open(connection_string)?;
         Ok(Self {
             name: name.to_string(),
@@ -150,13 +150,13 @@ impl DMSCRedisQueue {
 }
 
 #[async_trait]
-impl DMSCQueue for DMSCRedisQueue {
+impl RiQueue for RiRedisQueue {
     /// Creates a new producer for the Redis queue.
     ///
     /// # Returns
     ///
-    /// A new DMSCQueueProducer instance wrapped in DMSCResult
-    async fn create_producer(&self) -> DMSCResult<Box<dyn DMSCQueueProducer>> {
+    /// A new RiQueueProducer instance wrapped in RiResult
+    async fn create_producer(&self) -> RiResult<Box<dyn RiQueueProducer>> {
         let conn = self.client.get_async_connection().await?;
         
         Ok(Box::new(RedisQueueProducer {
@@ -173,8 +173,8 @@ impl DMSCQueue for DMSCRedisQueue {
     ///
     /// # Returns
     ///
-    /// A new DMSCQueueConsumer instance wrapped in DMSCResult
-    async fn create_consumer(&self, _consumer_group: &str) -> DMSCResult<Box<dyn DMSCQueueConsumer>> {
+    /// A new RiQueueConsumer instance wrapped in RiResult
+    async fn create_consumer(&self, _consumer_group: &str) -> RiResult<Box<dyn RiQueueConsumer>> {
         let conn = self.client.get_async_connection().await?;
         
         Ok(Box::new(RedisQueueConsumer {
@@ -188,12 +188,12 @@ impl DMSCQueue for DMSCRedisQueue {
     ///
     /// # Returns
     ///
-    /// DMSCQueueStats containing queue statistics wrapped in DMSCResult
-    async fn get_stats(&self) -> DMSCResult<DMSCQueueStats> {
+    /// RiQueueStats containing queue statistics wrapped in RiResult
+    async fn get_stats(&self) -> RiResult<RiQueueStats> {
         let mut conn = self.client.get_async_connection().await?;
         let len: i64 = conn.llen(&self.name).await?;
         
-        Ok(DMSCQueueStats {
+        Ok(RiQueueStats {
             queue_name: self.name.clone(),
             message_count: len as u64,
             consumer_count: 0,
@@ -211,8 +211,8 @@ impl DMSCQueue for DMSCRedisQueue {
     ///
     /// # Returns
     ///
-    /// DMSCResult indicating success or failure
-    async fn purge(&self) -> DMSCResult<()> {
+    /// RiResult indicating success or failure
+    async fn purge(&self) -> RiResult<()> {
         let mut conn = self.client.get_async_connection().await?;
         conn.del::<_, ()>(&self.name).await?;
         Ok(())
@@ -225,15 +225,15 @@ impl DMSCQueue for DMSCRedisQueue {
     ///
     /// # Returns
     ///
-    /// DMSCResult indicating success or failure
-    async fn delete(&self) -> DMSCResult<()> {
+    /// RiResult indicating success or failure
+    async fn delete(&self) -> RiResult<()> {
         self.purge().await
     }
 }
 
 /// Redis queue producer implementation.
 ///
-/// This struct provides a Redis implementation of the DMSCQueueProducer trait,
+/// This struct provides a Redis implementation of the RiQueueProducer trait,
 /// allowing sending messages to Redis queues.
 struct RedisQueueProducer {
     /// Redis async connection
@@ -243,7 +243,7 @@ struct RedisQueueProducer {
 }
 
 #[async_trait]
-impl DMSCQueueProducer for RedisQueueProducer {
+impl RiQueueProducer for RedisQueueProducer {
     /// Sends a single message to the Redis queue.
     ///
     /// # Parameters
@@ -252,8 +252,8 @@ impl DMSCQueueProducer for RedisQueueProducer {
     ///
     /// # Returns
     ///
-    /// DMSCResult indicating success or failure
-    async fn send(&self, message: DMSCQueueMessage) -> DMSCResult<()> {
+    /// RiResult indicating success or failure
+    async fn send(&self, message: RiQueueMessage) -> RiResult<()> {
         let mut conn = self.connection.lock().await;
         let payload = serde_json::to_vec(&message)?;
         
@@ -269,8 +269,8 @@ impl DMSCQueueProducer for RedisQueueProducer {
     ///
     /// # Returns
     ///
-    /// DMSCResult indicating success or failure
-    async fn send_batch(&self, messages: Vec<DMSCQueueMessage>) -> DMSCResult<()> {
+    /// RiResult indicating success or failure
+    async fn send_batch(&self, messages: Vec<RiQueueMessage>) -> RiResult<()> {
         let mut conn = self.connection.lock().await;
         
         for message in messages {
@@ -283,7 +283,7 @@ impl DMSCQueueProducer for RedisQueueProducer {
 
 /// Redis queue consumer implementation.
 ///
-/// This struct provides a Redis implementation of the DMSCQueueConsumer trait,
+/// This struct provides a Redis implementation of the RiQueueConsumer trait,
 /// allowing receiving messages from Redis queues.
 struct RedisQueueConsumer {
     /// Redis async connection
@@ -295,14 +295,14 @@ struct RedisQueueConsumer {
 }
 
 #[async_trait]
-impl DMSCQueueConsumer for RedisQueueConsumer {
+impl RiQueueConsumer for RedisQueueConsumer {
     /// Receives a message from the Redis queue.
     ///
     /// # Returns
     ///
     /// An Option containing the received message, or None if the consumer is paused
     /// or the BLPOP operation timed out
-    async fn receive(&self) -> DMSCResult<Option<DMSCQueueMessage>> {
+    async fn receive(&self) -> RiResult<Option<RiQueueMessage>> {
         let paused = *self.paused.lock().await;
         if paused {
             return Ok(None);
@@ -314,7 +314,7 @@ impl DMSCQueueConsumer for RedisQueueConsumer {
         let result: Option<(String, Vec<u8>)> = conn.blpop(&self.queue_name, 5.0).await?;
         
         if let Some((_, payload)) = result {
-            let message: DMSCQueueMessage = serde_json::from_slice(&payload)?;
+            let message: RiQueueMessage = serde_json::from_slice(&payload)?;
             Ok(Some(message))
         } else {
             Ok(None)
@@ -332,8 +332,8 @@ impl DMSCQueueConsumer for RedisQueueConsumer {
     ///
     /// # Returns
     ///
-    /// DMSCResult indicating success or failure
-    async fn ack(&self, _message_id: &str) -> DMSCResult<()> {
+    /// RiResult indicating success or failure
+    async fn ack(&self, _message_id: &str) -> RiResult<()> {
         // In Redis list-based queue, acknowledgment is implicit when message is popped
         Ok(())
     }
@@ -350,8 +350,8 @@ impl DMSCQueueConsumer for RedisQueueConsumer {
     ///
     /// # Returns
     ///
-    /// DMSCResult indicating success or failure
-    async fn nack(&self, message_id: &str) -> DMSCResult<()> {
+    /// RiResult indicating success or failure
+    async fn nack(&self, message_id: &str) -> RiResult<()> {
         log::info!("Message negatively acknowledged: {message_id}");
 
         let mut conn = self.connection.lock().await;
@@ -390,8 +390,8 @@ impl DMSCQueueConsumer for RedisQueueConsumer {
     ///
     /// # Returns
     ///
-    /// DMSCResult indicating success or failure
-    async fn pause(&self) -> DMSCResult<()> {
+    /// RiResult indicating success or failure
+    async fn pause(&self) -> RiResult<()> {
         let mut paused = self.paused.lock().await;
         *paused = true;
         Ok(())
@@ -401,8 +401,8 @@ impl DMSCQueueConsumer for RedisQueueConsumer {
     ///
     /// # Returns
     ///
-    /// DMSCResult indicating success or failure
-    async fn resume(&self) -> DMSCResult<()> {
+    /// RiResult indicating success or failure
+    async fn resume(&self) -> RiResult<()> {
         let mut paused = self.paused.lock().await;
         *paused = false;
         Ok(())

@@ -1,7 +1,7 @@
 //! Copyright © 2025 Wenze Wei. All Rights Reserved.
 //! 
-//! This file is part of DMSC.
-//! The DMSC project belongs to the Dunimd Team.
+//! This file is part of Ri.
+//! The Ri project belongs to the Dunimd Team.
 //! 
 //! Licensed under the Apache License, Version 2.0 (the "License");
 //! You may not use this file except in compliance with the License.
@@ -15,7 +15,7 @@
 //! See the License for the specific language governing permissions and
 //! limitations under the License.
 
-//! Session management implementation for DMSC.
+//! Session management implementation for Ri.
 //! 
 //! This module provides session management functionality, including:
 //! - Session creation and validation
@@ -35,7 +35,7 @@
 //! # Usage Examples
 //! ```rust
 //! // Create a session manager with 30-minute timeout
-//! let session_manager = DMSCSessionManager::new(1800);
+//! let session_manager = RiSessionManager::new(1800);
 //! 
 //! // Create a new session for a user
 //! let session_id = session_manager.create_session(
@@ -65,7 +65,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::time::{SystemTime, UNIX_EPOCH};
 use uuid::Uuid;
-use crate::core::concurrent::DMSCShardedLock;
+use crate::core::concurrent::RiShardedLock;
 
 #[cfg(feature = "pyo3")]
 use pyo3::PyResult;
@@ -76,7 +76,7 @@ use pyo3::PyResult;
 /// and custom data storage. Sessions are uniquely identified by UUIDs.
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass(get_all, set_all))]
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct DMSCSession {
+pub struct RiSession {
     /// Unique session identifier generated using UUID v4
     pub id: String,
     /// User ID associated with this session
@@ -97,7 +97,7 @@ pub struct DMSCSession {
 
 #[cfg(feature = "pyo3")]
 #[pyo3::prelude::pymethods]
-impl DMSCSession {
+impl RiSession {
     #[new]
     fn py_new(
         id: Option<String>,
@@ -126,7 +126,7 @@ impl DMSCSession {
     }
 }
 
-impl DMSCSession {
+impl RiSession {
     /// Creates a new session for a user.
     /// 
     /// # Parameters
@@ -136,7 +136,7 @@ impl DMSCSession {
     /// - `user_agent`: Optional client user agent
     /// 
     /// # Returns
-    /// A new instance of `DMSCSession`
+    /// A new instance of `RiSession`
     pub fn new(user_id: String, timeout_secs: u64, ip_address: Option<String>, user_agent: Option<String>) -> Self {
         let now = SystemTime::now()
             .duration_since(UNIX_EPOCH)
@@ -225,13 +225,13 @@ impl DMSCSession {
 /// This struct manages session creation, validation, and cleanup. It limits
 /// the number of sessions per user and automatically cleans up expired sessions.
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
-pub struct DMSCSessionManager {
-    sessions: DMSCShardedLock<String, DMSCSession>,
+pub struct RiSessionManager {
+    sessions: RiShardedLock<String, RiSession>,
     timeout_secs: u64,
     max_sessions_per_user: usize,
 }
 
-impl DMSCSessionManager {
+impl RiSessionManager {
     /// Creates a new session manager with the specified timeout.
     ///
     /// # Parameters
@@ -240,14 +240,14 @@ impl DMSCSessionManager {
     ///
     /// # Returns
     ///
-    /// A new instance of `DMSCSessionManager`
+    /// A new instance of `RiSessionManager`
     ///
     /// # Notes
     ///
     /// Default maximum sessions per user is 5
     pub fn new(timeout_secs: u64) -> Self {
         Self {
-            sessions: DMSCShardedLock::with_default_shards(),
+            sessions: RiShardedLock::with_default_shards(),
             timeout_secs,
             max_sessions_per_user: 5,
         }
@@ -265,7 +265,7 @@ impl DMSCSessionManager {
     /// 
     /// # Notes
     /// - If the user has reached the maximum number of sessions, the oldest session is removed
-    pub async fn create_session(&self, user_id: String, ip_address: Option<String>, user_agent: Option<String>) -> crate::core::DMSCResult<String> {
+    pub async fn create_session(&self, user_id: String, ip_address: Option<String>, user_agent: Option<String>) -> crate::core::RiResult<String> {
         let user_sessions: Vec<(String, u64)> = self.sessions.collect_where(|_, s| s.user_id == user_id && !s.is_expired()).await
             .into_iter()
             .map(|s| (s.id.clone(), s.created_at))
@@ -280,7 +280,7 @@ impl DMSCSessionManager {
             }
         }
 
-        let session = DMSCSession::new(user_id, self.timeout_secs, ip_address, user_agent);
+        let session = RiSession::new(user_id, self.timeout_secs, ip_address, user_agent);
         let session_id = session.id.clone();
         self.sessions.insert(session_id.clone(), session).await;
         
@@ -293,12 +293,12 @@ impl DMSCSessionManager {
     /// - `session_id`: ID of the session to retrieve
     /// 
     /// # Returns
-    /// `Some(DMSCSession)` if the session exists and is not expired, otherwise `None`
+    /// `Some(RiSession)` if the session exists and is not expired, otherwise `None`
     /// 
     /// # Notes
     /// - Expired sessions are automatically removed and return `None`
     /// - The session's last accessed time is updated when retrieved
-    pub async fn get_session(&self, session_id: &str) -> crate::core::DMSCResult<Option<DMSCSession>> {
+    pub async fn get_session(&self, session_id: &str) -> crate::core::RiResult<Option<RiSession>> {
         let session = self.sessions.get(session_id).await;
         
         match session {
@@ -327,7 +327,7 @@ impl DMSCSessionManager {
     /// 
     /// # Notes
     /// - The session's last accessed time is updated when modified
-    pub async fn update_session(&self, session_id: &str, data: HashMap<String, String>) -> crate::core::DMSCResult<bool> {
+    pub async fn update_session(&self, session_id: &str, data: HashMap<String, String>) -> crate::core::RiResult<bool> {
         let session = self.sessions.get(session_id).await;
         
         match session {
@@ -355,7 +355,7 @@ impl DMSCSessionManager {
     /// 
     /// # Returns
     /// `true` if the session was extended successfully, `false` if the session doesn't exist or is expired
-    pub async fn extend_session(&self, session_id: &str) -> crate::core::DMSCResult<bool> {
+    pub async fn extend_session(&self, session_id: &str) -> crate::core::RiResult<bool> {
         let session = self.sessions.get(session_id).await;
         
         match session {
@@ -380,7 +380,7 @@ impl DMSCSessionManager {
     /// 
     /// # Returns
     /// `true` if the session was destroyed successfully, `false` if the session doesn't exist
-    pub async fn destroy_session(&self, session_id: &str) -> crate::core::DMSCResult<bool> {
+    pub async fn destroy_session(&self, session_id: &str) -> crate::core::RiResult<bool> {
         Ok(self.sessions.remove(session_id).await.is_some())
     }
 
@@ -391,7 +391,7 @@ impl DMSCSessionManager {
     /// 
     /// # Returns
     /// The number of sessions destroyed
-    pub async fn destroy_user_sessions(&self, user_id: &str) -> crate::core::DMSCResult<usize> {
+    pub async fn destroy_user_sessions(&self, user_id: &str) -> crate::core::RiResult<usize> {
         let count = self.sessions.remove_where(|_, s| s.user_id == user_id).await;
         Ok(count)
     }
@@ -403,7 +403,7 @@ impl DMSCSessionManager {
     /// 
     /// # Returns
     /// A vector of active sessions for the user
-    pub async fn get_user_sessions(&self, user_id: &str) -> crate::core::DMSCResult<Vec<DMSCSession>> {
+    pub async fn get_user_sessions(&self, user_id: &str) -> crate::core::RiResult<Vec<RiSession>> {
         let user_sessions = self.sessions.collect_where(|_, s| s.user_id == user_id && !s.is_expired()).await;
         Ok(user_sessions)
     }
@@ -412,7 +412,7 @@ impl DMSCSessionManager {
     /// 
     /// # Returns
     /// The number of expired sessions cleaned up
-    pub async fn cleanup_expired(&self) -> crate::core::DMSCResult<usize> {
+    pub async fn cleanup_expired(&self) -> crate::core::RiResult<usize> {
         let count = self.sessions.remove_where(|_, s| s.is_expired()).await;
         Ok(count)
     }
@@ -420,7 +420,7 @@ impl DMSCSessionManager {
     /// Cleans up all sessions.
     /// 
     /// This method removes all sessions, regardless of their expiration status.
-    pub async fn cleanup_all(&self) -> crate::core::DMSCResult<()> {
+    pub async fn cleanup_all(&self) -> crate::core::RiResult<()> {
         self.sessions.clear().await;
         Ok(())
     }
@@ -445,7 +445,7 @@ impl DMSCSessionManager {
 #[cfg(feature = "pyo3")]
 /// Python bindings for the Session Manager.
 ///
-/// This module provides Python interface to DMSC session management functionality,
+/// This module provides Python interface to Ri session management functionality,
 /// enabling Python applications to manage user sessions with expiration and data storage.
 ///
 /// ## Supported Operations
@@ -459,10 +459,10 @@ impl DMSCSessionManager {
 /// ## Python Usage Example
 ///
 /// ```python
-/// from dmsc import DMSCSessionManager
+/// from ri import RiSessionManager
 ///
 /// # Create session manager with 30-minute timeout
-/// session_manager = DMSCSessionManager(1800)
+/// session_manager = RiSessionManager(1800)
 ///
 /// # Create a new session
 /// session_id = session_manager.create_session(
@@ -493,7 +493,7 @@ impl DMSCSessionManager {
 /// For async scenarios, use the Rust API directly or implement async wrappers
 /// using Python's asyncio library.
 #[pyo3::prelude::pymethods]
-impl DMSCSessionManager {
+impl RiSessionManager {
     #[new]
     fn py_new(timeout_secs: u64) -> PyResult<Self> {
         Ok(Self::new(timeout_secs))
@@ -509,7 +509,7 @@ impl DMSCSessionManager {
     }
     
     #[pyo3(name = "get_session")]
-    fn get_session_impl(&self, session_id: String) -> PyResult<Option<DMSCSession>> {
+    fn get_session_impl(&self, session_id: String) -> PyResult<Option<RiSession>> {
         let rt = tokio::runtime::Runtime::new().map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(e.to_string()))?;
         rt.block_on(async {
             self.get_session(&session_id).await

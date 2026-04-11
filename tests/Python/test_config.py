@@ -2,8 +2,8 @@
 
 # Copyright © 2025-2026 Wenze Wei. All Rights Reserved.
 #
-# This file is part of DMSC.
-# The DMSC project belongs to the Dunimd Team.
+# This file is part of Ri.
+# The Ri project belongs to the Dunimd Team.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # You may not use this file except in compliance with the License.
@@ -18,29 +18,29 @@
 # limitations under the License.
 
 """
-DMSC Config Module Tests
+Ri Config Module Tests
 
 Tests for the configuration management functionality.
 """
 
 import pytest
-from dmsc import (
-    DMSCConfig,
-    DMSCConfigManager,
+from ri import (
+    RiConfig,
+    RiConfigManager,
 )
 
 
-class TestDMSCConfig:
-    """Tests for DMSCConfig"""
+class TestRiConfig:
+    """Tests for RiConfig"""
 
     def test_config_creation(self):
         """Test creating configuration"""
-        config = DMSCConfig()
+        config = RiConfig()
         assert config is not None
 
     def test_config_set_get(self):
         """Test setting and getting config values"""
-        config = DMSCConfig()
+        config = RiConfig()
 
         config.set("database.host", "localhost")
         config.set("database.port", "5432")
@@ -52,14 +52,14 @@ class TestDMSCConfig:
 
     def test_config_get_nonexistent(self):
         """Test getting nonexistent config value"""
-        config = DMSCConfig()
+        config = RiConfig()
         
         result = config.get("nonexistent.key")
         assert result is None
 
     def test_config_get_f64(self):
         """Test getting float config values"""
-        config = DMSCConfig()
+        config = RiConfig()
         
         config.set("server.port", "8080")
         config.set("server.timeout", "30.5")
@@ -69,7 +69,7 @@ class TestDMSCConfig:
 
     def test_config_get_usize(self):
         """Test getting usize config values"""
-        config = DMSCConfig()
+        config = RiConfig()
         
         config.set("server.port", "8080")
         config.set("server.timeout", "30")
@@ -79,7 +79,7 @@ class TestDMSCConfig:
 
     def test_config_contains(self):
         """Test checking if key exists"""
-        config = DMSCConfig()
+        config = RiConfig()
         
         config.set("feature.enabled", "true")
         
@@ -87,17 +87,17 @@ class TestDMSCConfig:
         assert config.contains("nonexistent.key") is False
 
 
-class TestDMSCConfigManager:
-    """Tests for DMSCConfigManager"""
+class TestRiConfigManager:
+    """Tests for RiConfigManager"""
 
     def test_config_manager_creation(self):
         """Test creating config manager"""
-        manager = DMSCConfigManager()
+        manager = RiConfigManager()
         assert manager is not None
 
     def test_config_manager_get(self):
         """Test getting config from manager"""
-        manager = DMSCConfigManager()
+        manager = RiConfigManager()
         
         result = manager.get("nonexistent.key")
         assert result is None

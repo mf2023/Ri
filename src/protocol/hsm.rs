@@ -1,7 +1,7 @@
 //! Copyright © 2025-2026 Wenze Wei. All Rights Reserved.
 //!
-//! This file is part of DMSC.
-//! The DMSC project belongs to the Dunimd Team.
+//! This file is part of Ri.
+//! The Ri project belongs to the Dunimd Team.
 //!
 //! Licensed under the Apache License, Version 2.0 (the "License");
 //! You may not use this file except in compliance with the License.
@@ -25,7 +25,7 @@
 //! # Hardware Security Module Integration Module
 //!
 //! This module provides hardware security module (HSM) integration capabilities
-//! for the DMSC framework, supporting PKCS#11 devices and TPM 2.0 chips. It
+//! for the Ri framework, supporting PKCS#11 devices and TPM 2.0 chips. It
 //! enables secure key storage and cryptographic operations using hardware
 //! security mechanisms.
 //!
@@ -51,11 +51,11 @@
 //! ## Usage Examples
 //!
 //! ```rust,ignore
-//! use dmsc::protocol::hsm::{DMSCHSMManager, DMSCHSMType, DMSCKeyInfo};
+//! use ri::protocol::hsm::{RiHSMManager, RiHSMType, RiKeyInfo};
 //!
-//! async fn example() -> DMSCResult<()> {
+//! async fn example() -> RiResult<()> {
 //!     // Initialize HSM manager
-//!     let mut manager = DMSCHSMManager::new();
+//!     let mut manager = RiHSMManager::new();
 //!
 //!     // Connect to PKCS#11 device
 //!     manager.connect_pkcs11("/usr/lib/pkcs11/opensc-pkcs11.so").await?;
@@ -80,11 +80,11 @@ use subtle::ConstantTimeEq;
 #[cfg(not(windows))]
 use pkcs11;
 
-use crate::core::{DMSCResult, DMSCError};
+use crate::core::{RiResult, RiError};
 
 /// HSM type enumeration.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-pub enum DMSCHSMType {
+pub enum RiHSMType {
     /// PKCS#11 compatible device
     PKCS11,
     /// TPM 2.0 chip
@@ -95,7 +95,7 @@ pub enum DMSCHSMType {
 
 /// HSM connection status.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum DMSCConnectionStatus {
+pub enum RiConnectionStatus {
     /// Not connected
     Disconnected,
     /// Connecting in progress
@@ -110,13 +110,13 @@ pub enum DMSCConnectionStatus {
 
 /// Key type enumeration for HSM operations.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub enum DMSCKeyType {
+pub enum RiKeyType {
     /// RSA key pair
     RSA { size: usize },
     /// ECDSA key pair
-    ECDSA { curve: DMSCECCurve },
+    ECDSA { curve: RiECCurve },
     /// EC EdDSA key pair
-    EdDSA { curve: DMSCECCurve },
+    EdDSA { curve: RiECCurve },
     /// Symmetric AES key
     AES { size: usize },
     /// Symmetric SM4 key (Chinese National Standard)
@@ -131,7 +131,7 @@ pub enum DMSCKeyType {
 
 /// Elliptic curve enumeration.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-pub enum DMSCECCurve {
+pub enum RiECCurve {
     /// P-256 curve
     P256,
     /// P-384 curve
@@ -146,11 +146,11 @@ pub enum DMSCECCurve {
 
 /// Key information structure.
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct DMSCKeyInfo {
+pub struct RiKeyInfo {
     /// Unique key identifier
     pub id: String,
     /// Key type
-    pub key_type: DMSCKeyType,
+    pub key_type: RiKeyType,
     /// Key label for identification
     pub label: String,
     /// Whether the key is sensitive
@@ -167,7 +167,7 @@ pub struct DMSCKeyInfo {
 
 /// HSM operation result structure.
 #[derive(Debug, Clone)]
-pub struct DMSCOperationResult<T> {
+pub struct RiOperationResult<T> {
     /// Operation result data
     pub data: T,
     /// Operation duration
@@ -178,11 +178,11 @@ pub struct DMSCOperationResult<T> {
 
 /// HSM event for monitoring.
 #[derive(Debug, Clone)]
-pub enum DMSCHSMEvent {
+pub enum RiHSMEvent {
     /// Connection established
-    Connected { hsm_type: DMSCHSMType, device_info: String },
+    Connected { hsm_type: RiHSMType, device_info: String },
     /// Connection lost
-    Disconnected { hsm_type: DMSCHSMType, reason: String },
+    Disconnected { hsm_type: RiHSMType, reason: String },
     /// Key operation performed
     KeyOperation { operation: String, key_id: String, duration: Duration },
     /// Error occurred
@@ -193,9 +193,9 @@ pub enum DMSCHSMEvent {
 
 /// HSM configuration structure.
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct DMSCHSMConfig {
+pub struct RiHSMConfig {
     /// HSM type to use
-    pub hsm_type: DMSCHSMType,
+    pub hsm_type: RiHSMType,
     /// PKCS#11 library path (for PKCS#11 devices)
     pub pkcs11_library: Option<String>,
     /// Slot number (for PKCS#11 devices)
@@ -218,10 +218,10 @@ pub struct DMSCHSMConfig {
     pub cache_ttl: Duration,
 }
 
-impl Default for DMSCHSMConfig {
+impl Default for RiHSMConfig {
     fn default() -> Self {
         Self {
-            hsm_type: DMSCHSMType::PKCS11,
+            hsm_type: RiHSMType::PKCS11,
             pkcs11_library: None,
             slot: None,
             token_label: None,
@@ -238,11 +238,11 @@ impl Default for DMSCHSMConfig {
 
 /// HSM statistics structure.
 #[derive(Debug, Clone)]
-pub struct DMSCHSMStatistics {
+pub struct RiHSMStatistics {
     /// Total connection count
     pub total_connections: Arc<RwLock<u64>>,
     /// Current connection status
-    pub current_status: Arc<RwLock<DMSCConnectionStatus>>,
+    pub current_status: Arc<RwLock<RiConnectionStatus>>,
     /// Total operations performed
     pub total_operations: Arc<RwLock<u64>>,
     /// Total hardware operations
@@ -259,12 +259,12 @@ pub struct DMSCHSMStatistics {
     pub connected_at: Arc<RwLock<Option<Instant>>>,
 }
 
-impl DMSCHSMStatistics {
+impl RiHSMStatistics {
     /// Create new statistics instance.
     pub fn new() -> Self {
         Self {
             total_connections: Arc::new(RwLock::new(0)),
-            current_status: Arc::new(RwLock::new(DMSCConnectionStatus::Disconnected)),
+            current_status: Arc::new(RwLock::new(RiConnectionStatus::Disconnected)),
             total_operations: Arc::new(RwLock::new(0)),
             hardware_operations: Arc::new(RwLock::new(0)),
             software_fallbacks: Arc::new(RwLock::new(0)),
@@ -303,14 +303,14 @@ impl DMSCHSMStatistics {
     }
 
     /// Record connection.
-    pub async fn record_connection(&self, status: DMSCConnectionStatus) {
+    pub async fn record_connection(&self, status: RiConnectionStatus) {
         let mut total_conns = self.total_connections.write().await;
         *total_conns += 1;
 
         let mut current_status = self.current_status.write().await;
         *current_status = status;
 
-        if status == DMSCConnectionStatus::Connected {
+        if status == RiConnectionStatus::Connected {
             let mut connected_at = self.connected_at.write().await;
             *connected_at = Some(Instant::now());
         }
@@ -319,7 +319,7 @@ impl DMSCHSMStatistics {
 
 /// Device information structure.
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct DMSCDeviceInfo {
+pub struct RiDeviceInfo {
     /// Manufacturer name
     pub manufacturer: String,
     /// Model name
@@ -338,54 +338,54 @@ pub struct DMSCDeviceInfo {
 
 /// HSM trait defining the interface for hardware security modules.
 #[async_trait]
-pub trait DMSCHSM: Send + Sync {
+pub trait RiHSM: Send + Sync {
     /// Connect to the HSM device.
-    async fn connect(&mut self, config: &DMSCHSMConfig) -> DMSCResult<DMSCDeviceInfo>;
+    async fn connect(&mut self, config: &RiHSMConfig) -> RiResult<RiDeviceInfo>;
 
     /// Disconnect from the HSM device.
-    async fn disconnect(&mut self) -> DMSCResult<()>;
+    async fn disconnect(&mut self) -> RiResult<()>;
 
     /// Check if connected.
     fn is_connected(&self) -> bool;
 
     /// Get the HSM type.
-    fn hsm_type(&self) -> DMSCHSMType;
+    fn hsm_type(&self) -> RiHSMType;
 
     /// Generate a new key pair in the HSM.
     async fn generate_key(
         &mut self,
-        key_type: DMSCKeyType,
+        key_type: RiKeyType,
         label: Option<&str>,
-    ) -> DMSCResult<String>;
+    ) -> RiResult<String>;
 
     /// Generate a symmetric key in the HSM.
     async fn generate_symmetric_key(
         &mut self,
-        key_type: DMSCKeyType,
+        key_type: RiKeyType,
         label: Option<&str>,
-    ) -> DMSCResult<String>;
+    ) -> RiResult<String>;
 
     /// Import a key into the HSM.
     async fn import_key(
         &mut self,
-        key_type: DMSCKeyType,
+        key_type: RiKeyType,
         key_data: &[u8],
         label: Option<&str>,
         extractable: bool,
-    ) -> DMSCResult<String>;
+    ) -> RiResult<String>;
 
     /// Export a public key from the HSM.
-    async fn export_public_key(&mut self, key_id: &str) -> DMSCResult<Vec<u8>>;
+    async fn export_public_key(&mut self, key_id: &str) -> RiResult<Vec<u8>>;
 
     /// Export a key (if extractable).
-    async fn export_key(&mut self, key_id: &str) -> DMSCResult<Vec<u8>>;
+    async fn export_key(&mut self, key_id: &str) -> RiResult<Vec<u8>>;
 
     /// Sign data using a private key in the HSM.
     async fn sign(
         &mut self,
         key_id: &str,
         data: &[u8],
-    ) -> DMSCResult<Vec<u8>>;
+    ) -> RiResult<Vec<u8>>;
 
     /// Verify a signature using a public key in the HSM.
     async fn verify(
@@ -393,21 +393,21 @@ pub trait DMSCHSM: Send + Sync {
         key_id: &str,
         data: &[u8],
         signature: &[u8],
-    ) -> DMSCResult<bool>;
+    ) -> RiResult<bool>;
 
     /// Encrypt data using a public key in the HSM.
     async fn encrypt(
         &mut self,
         key_id: &str,
         data: &[u8],
-    ) -> DMSCResult<Vec<u8>>;
+    ) -> RiResult<Vec<u8>>;
 
     /// Decrypt data using a private key in the HSM.
     async fn decrypt(
         &mut self,
         key_id: &str,
         ciphertext: &[u8],
-    ) -> DMSCResult<Vec<u8>>;
+    ) -> RiResult<Vec<u8>>;
 
     /// Encrypt data using a symmetric key in the HSM.
     async fn encrypt_symmetric(
@@ -415,7 +415,7 @@ pub trait DMSCHSM: Send + Sync {
         key_id: &str,
         data: &[u8],
         iv: Option<&[u8]>,
-    ) -> DMSCResult<Vec<u8>>;
+    ) -> RiResult<Vec<u8>>;
 
     /// Decrypt data using a symmetric key in the HSM.
     async fn decrypt_symmetric(
@@ -423,49 +423,49 @@ pub trait DMSCHSM: Send + Sync {
         key_id: &str,
         ciphertext: &[u8],
         iv: Option<&[u8]>,
-    ) -> DMSCResult<Vec<u8>>;
+    ) -> RiResult<Vec<u8>>;
 
     /// Generate a random number using the HSM.
-    async fn random(&mut self, size: usize) -> DMSCResult<Vec<u8>>;
+    async fn random(&mut self, size: usize) -> RiResult<Vec<u8>>;
 
     /// Get the hash of data using the HSM.
-    async fn hash(&mut self, algorithm: &str, data: &[u8]) -> DMSCResult<Vec<u8>>;
+    async fn hash(&mut self, algorithm: &str, data: &[u8]) -> RiResult<Vec<u8>>;
 
     /// Derive a key from another key using the HSM.
     async fn derive_key(
         &mut self,
         base_key_id: &str,
-        template: DMSCKeyType,
+        template: RiKeyType,
         label: Option<&str>,
-    ) -> DMSCResult<String>;
+    ) -> RiResult<String>;
 
     /// Delete a key from the HSM.
-    async fn delete_key(&mut self, key_id: &str) -> DMSCResult<()>;
+    async fn delete_key(&mut self, key_id: &str) -> RiResult<()>;
 
     /// List all keys in the HSM.
-    async fn list_keys(&mut self) -> DMSCResult<Vec<DMSCKeyInfo>>;
+    async fn list_keys(&mut self) -> RiResult<Vec<RiKeyInfo>>;
 
     /// Get information about a specific key.
-    async fn get_key_info(&mut self, key_id: &str) -> DMSCResult<DMSCKeyInfo>;
+    async fn get_key_info(&mut self, key_id: &str) -> RiResult<RiKeyInfo>;
 
     /// Get the device information.
-    fn get_device_info(&self) -> Option<DMSCDeviceInfo>;
+    fn get_device_info(&self) -> Option<RiDeviceInfo>;
 }
 
 #[cfg(not(windows))]
 /// PKCS#11 HSM implementation.
-pub struct DMSCPKCS11HSM {
-    config: Option<DMSCHSMConfig>,
+pub struct RiPKCS11HSM {
+    config: Option<RiHSMConfig>,
     connected: bool,
-    device_info: Option<DMSCDeviceInfo>,
+    device_info: Option<RiDeviceInfo>,
     library: Option<pkcs11::Ctx>,
     session: Option<pkcs11::Session>,
     slot: Option<pkcs11::Slot>,
-    statistics: Arc<DMSCHSMStatistics>,
+    statistics: Arc<RiHSMStatistics>,
 }
 
 #[cfg(not(windows))]
-impl DMSCPKCS11HSM {
+impl RiPKCS11HSM {
     /// Create new PKCS#11 HSM instance.
     pub fn new() -> Self {
         Self {
@@ -475,43 +475,43 @@ impl DMSCPKCS11HSM {
             library: None,
             session: None,
             slot: None,
-            statistics: Arc::new(DMSCHSMStatistics::new()),
+            statistics: Arc::new(RiHSMStatistics::new()),
         }
     }
 
     /// Initialize the PKCS#11 library.
-    fn initialize_library(&mut self, library_path: &str) -> DMSCResult<()> {
+    fn initialize_library(&mut self, library_path: &str) -> RiResult<()> {
         let library = pkcs11::Ctx::new(library_path)
-            .map_err(|e| DMSCError::CryptoError(format!("Failed to load PKCS#11 library: {}", e)))?;
+            .map_err(|e| RiError::CryptoError(format!("Failed to load PKCS#11 library: {}", e)))?;
 
         library.initialize()
-            .map_err(|e| DMSCError::CryptoError(format!("Failed to initialize PKCS#11: {}", e)))?;
+            .map_err(|e| RiError::CryptoError(format!("Failed to initialize PKCS#11: {}", e)))?;
 
         self.library = Some(library);
         Ok(())
     }
 
     /// Get available slots.
-    fn get_available_slots(&self) -> DMSCResult<Vec<pkcs11::Slot>> {
+    fn get_available_slots(&self) -> RiResult<Vec<pkcs11::Slot>> {
         let library = self.library.as_ref()
-            .ok_or_else(|| DMSCError::CryptoError("PKCS#11 library not loaded".to_string()))?;
+            .ok_or_else(|| RiError::CryptoError("PKCS#11 library not loaded".to_string()))?;
 
         let slots = library.get_slot_list(false)
-            .map_err(|e| DMSCError::CryptoError(format!("Failed to get slot list: {}", e)))?;
+            .map_err(|e| RiError::CryptoError(format!("Failed to get slot list: {}", e)))?;
 
         Ok(slots)
     }
 
     /// Find a slot by number or token label.
-    fn find_slot(&self, slot_number: Option<u32>, token_label: Option<&str>) -> DMSCResult<pkcs11::Slot> {
+    fn find_slot(&self, slot_number: Option<u32>, token_label: Option<&str>) -> RiResult<pkcs11::Slot> {
         let library = self.library.as_ref()
-            .ok_or_else(|| DMSCError::CryptoError("PKCS#11 library not loaded".to_string()))?;
+            .ok_or_else(|| RiError::CryptoError("PKCS#11 library not loaded".to_string()))?;
 
         let slots = self.get_available_slots()?;
 
         for slot in slots {
             let token_info = library.get_token_info(slot)
-                .map_err(|e| DMSCError::CryptoError(format!("Failed to get token info: {}", e)))?;
+                .map_err(|e| RiError::CryptoError(format!("Failed to get token info: {}", e)))?;
 
             if let Some(num) = slot_number {
                 if slot == num {
@@ -527,20 +527,20 @@ impl DMSCPKCS11HSM {
             }
         }
 
-        Err(DMSCError::CryptoError("Slot not found".to_string()))
+        Err(RiError::CryptoError("Slot not found".to_string()))
     }
 
     /// Open a session with the token.
-    fn open_session(&mut self, slot: pkcs11::Slot) -> DMSCResult<()> {
+    fn open_session(&mut self, slot: pkcs11::Slot) -> RiResult<()> {
         let library = self.library.as_ref()
-            .ok_or_else(|| DMSCError::CryptoError("PKCS#11 library not loaded".to_string()))?;
+            .ok_or_else(|| RiError::CryptoError("PKCS#11 library not loaded".to_string()))?;
 
         let session = library.open_session(
             slot,
             pkcs11::SessionType::Serial,
             None,
             None,
-        ).map_err(|e| DMSCError::CryptoError(format!("Failed to open session: {}", e)))?;
+        ).map_err(|e| RiError::CryptoError(format!("Failed to open session: {}", e)))?;
 
         self.session = Some(session);
         self.slot = Some(slot);
@@ -548,31 +548,31 @@ impl DMSCPKCS11HSM {
     }
 
     /// Authenticate to the token.
-    fn authenticate(&mut self, pin: Option<&str>) -> DMSCResult<()> {
+    fn authenticate(&mut self, pin: Option<&str>) -> RiResult<()> {
         let session = self.session.as_ref()
-            .ok_or_else(|| DMSCError::CryptoError("Session not open".to_string()))?;
+            .ok_or_else(|| RiError::CryptoError("Session not open".to_string()))?;
 
         let pin = pin.unwrap_or("");
 
         session.login(pkcs11::UserType::User, pin)
-            .map_err(|e| DMSCError::CryptoError(format!("Login failed: {}", e)))?;
+            .map_err(|e| RiError::CryptoError(format!("Login failed: {}", e)))?;
 
         Ok(())
     }
 
     /// Find objects by template.
-    fn find_objects(&self, template: &[pkcs11::Attribute]) -> DMSCResult<Vec<pkcs11::ObjectHandle>> {
+    fn find_objects(&self, template: &[pkcs11::Attribute]) -> RiResult<Vec<pkcs11::ObjectHandle>> {
         let session = self.session.as_ref()
-            .ok_or_else(|| DMSCError::CryptoError("Session not open".to_string()))?;
+            .ok_or_else(|| RiError::CryptoError("Session not open".to_string()))?;
 
         session.find_objects_init(template)
-            .map_err(|e| DMSCError::CryptoError(format!("Find objects init failed: {}", e)))?;
+            .map_err(|e| RiError::CryptoError(format!("Find objects init failed: {}", e)))?;
 
         let objects = session.find_objects(100)
-            .map_err(|e| DMSCError::CryptoError(format!("Find objects failed: {}", e)))?;
+            .map_err(|e| RiError::CryptoError(format!("Find objects failed: {}", e)))?;
 
         session.find_objects_final()
-            .map_err(|e| DMSCError::CryptoError(format!("Find objects final failed: {}", e)))?;
+            .map_err(|e| RiError::CryptoError(format!("Find objects final failed: {}", e)))?;
 
         Ok(objects)
     }
@@ -582,15 +582,15 @@ impl DMSCPKCS11HSM {
         &self,
         object: pkcs11::ObjectHandle,
         attribute: pkcs11::AttributeType,
-    ) -> DMSCResult<Vec<u8>> {
+    ) -> RiResult<Vec<u8>> {
         let session = self.session.as_ref()
-            .ok_or_else(|| DMSCError::CryptoError("Session not open".to_string()))?;
+            .ok_or_else(|| RiError::CryptoError("Session not open".to_string()))?;
 
         let attributes = session.get_attribute_value(object, &[attribute])
-            .map_err(|e| DMSCError::CryptoError(format!("Get attribute failed: {}", e)))?;
+            .map_err(|e| RiError::CryptoError(format!("Get attribute failed: {}", e)))?;
 
         if attributes.is_empty() {
-            return Err(DMSCError::CryptoError("Attribute not found".to_string()));
+            return Err(RiError::CryptoError("Attribute not found".to_string()));
         }
 
         Ok(attributes[0].value().to_vec())
@@ -599,14 +599,14 @@ impl DMSCPKCS11HSM {
 
 #[cfg(not(windows))]
 #[async_trait]
-impl DMSCHSM for DMSCPKCS11HSM {
-    async fn connect(&mut self, config: &DMSCHSMConfig) -> DMSCResult<DMSCDeviceInfo> {
+impl RiHSM for RiPKCS11HSM {
+    async fn connect(&mut self, config: &RiHSMConfig) -> RiResult<RiDeviceInfo> {
         let start = Instant::now();
 
         self.config = Some(config.clone());
 
         let library_path = config.pkcs11_library.as_ref()
-            .ok_or_else(|| DMSCError::CryptoError("PKCS#11 library path not configured".to_string()))?;
+            .ok_or_else(|| RiError::CryptoError("PKCS#11 library path not configured".to_string()))?;
 
         self.initialize_library(library_path)?;
 
@@ -622,12 +622,12 @@ impl DMSCHSM for DMSCPKCS11HSM {
 
         let library = match self.library.as_ref() {
             Some(l) => l,
-            None => return Err(DMSCError::Other("HSM library not initialized".to_string())),
+            None => return Err(RiError::Other("HSM library not initialized".to_string())),
         };
         let token_info = library.get_token_info(slot)
-            .map_err(|e| DMSCError::CryptoError(format!("Failed to get token info: {}", e)))?;
+            .map_err(|e| RiError::CryptoError(format!("Failed to get token info: {}", e)))?;
 
-        let device_info = DMSCDeviceInfo {
+        let device_info = RiDeviceInfo {
             manufacturer: String::from_utf8_lossy(&token_info.manufacturer_id).trim().to_string(),
             model: String::from_utf8_lossy(&token_info.model).trim().to_string(),
             serial_number: String::from_utf8_lossy(&token_info.serial_number).trim().to_string(),
@@ -640,12 +640,12 @@ impl DMSCHSM for DMSCPKCS11HSM {
         self.device_info = Some(device_info.clone());
         self.connected = true;
 
-        self.statistics.record_connection(DMSCConnectionStatus::Connected).await;
+        self.statistics.record_connection(RiConnectionStatus::Connected).await;
 
         Ok(device_info)
     }
 
-    async fn disconnect(&mut self) -> DMSCResult<()> {
+    async fn disconnect(&mut self) -> RiResult<()> {
         if let Some(session) = &self.session {
             session.logout()
                 .ok();
@@ -657,7 +657,7 @@ impl DMSCHSM for DMSCPKCS11HSM {
         self.slot = None;
         self.connected = false;
 
-        self.statistics.record_connection(DMSCConnectionStatus::Disconnected).await;
+        self.statistics.record_connection(RiConnectionStatus::Disconnected).await;
 
         Ok(())
     }
@@ -666,24 +666,24 @@ impl DMSCHSM for DMSCPKCS11HSM {
         self.connected
     }
 
-    fn hsm_type(&self) -> DMSCHSMType {
-        DMSCHSMType::PKCS11
+    fn hsm_type(&self) -> RiHSMType {
+        RiHSMType::PKCS11
     }
 
     async fn generate_key(
         &mut self,
-        key_type: DMSCKeyType,
+        key_type: RiKeyType,
         label: Option<&str>,
-    ) -> DMSCResult<String> {
+    ) -> RiResult<String> {
         let start = Instant::now();
 
         let session = self.session.as_ref()
-            .ok_or_else(|| DMSCError::CryptoError("Session not open".to_string()))?;
+            .ok_or_else(|| RiError::CryptoError("Session not open".to_string()))?;
 
         let key_id = format!("{:x}", rand::random::<u64>());
 
         let template = match key_type {
-            DMSCKeyType::RSA { size } => {
+            RiKeyType::RSA { size } => {
                 vec![
                     pkcs11::Attribute::Class(pkcs11::ObjectClass::PUBLIC_KEY),
                     pkcs11::Attribute::KeyType(pkcs11::KeyType::RSA),
@@ -695,13 +695,13 @@ impl DMSCHSM for DMSCPKCS11HSM {
                     pkcs11::Attribute::Label(label.unwrap_or("RSA Key").as_bytes().to_vec()),
                 ]
             }
-            DMSCKeyType::ECDSA { curve } => {
+            RiKeyType::ECDSA { curve } => {
                 let curve_oid = match curve {
-                    DMSCECCurve::P256 => vec![0x06, 0x08, 0x2A, 0x86, 0x48, 0xCE, 0x3D, 0x03, 0x01, 0x07],
-                    DMSCECCurve::P384 => vec![0x06, 0x05, 0x2B, 0x81, 0x04, 0x00, 0x22],
-                    DMSCECCurve::P521 => vec![0x06, 0x05, 0x2B, 0x81, 0x04, 0x00, 0x23],
-                    DMSCECCurve::Secp256k1 => vec![0x06, 0x05, 0x2B, 0x81, 0x04, 0x00, 0x0A],
-                    DMSCECCurve::SM2 => vec![0x06, 0x08, 0x2A, 0x81, 0x1C, 0xCF, 0x55, 0x01, 0x82, 0x2D],
+                    RiECCurve::P256 => vec![0x06, 0x08, 0x2A, 0x86, 0x48, 0xCE, 0x3D, 0x03, 0x01, 0x07],
+                    RiECCurve::P384 => vec![0x06, 0x05, 0x2B, 0x81, 0x04, 0x00, 0x22],
+                    RiECCurve::P521 => vec![0x06, 0x05, 0x2B, 0x81, 0x04, 0x00, 0x23],
+                    RiECCurve::Secp256k1 => vec![0x06, 0x05, 0x2B, 0x81, 0x04, 0x00, 0x0A],
+                    RiECCurve::SM2 => vec![0x06, 0x08, 0x2A, 0x81, 0x1C, 0xCF, 0x55, 0x01, 0x82, 0x2D],
                     _ => vec![0x06, 0x08, 0x2A, 0x86, 0x48, 0xCE, 0x3D, 0x03, 0x01, 0x07],
                 };
 
@@ -716,12 +716,12 @@ impl DMSCHSM for DMSCPKCS11HSM {
                 ]
             }
             _ => {
-                return Err(DMSCError::CryptoError("Unsupported key type for asymmetric key generation".to_string()));
+                return Err(RiError::CryptoError("Unsupported key type for asymmetric key generation".to_string()));
             }
         };
 
         session.generate_key_pair(&template, &[])
-            .map_err(|e| DMSCError::CryptoError(format!("Failed to generate key pair: {}", e)))?;
+            .map_err(|e| RiError::CryptoError(format!("Failed to generate key pair: {}", e)))?;
 
         self.statistics.record_operation(true, start.elapsed()).await;
 
@@ -730,22 +730,22 @@ impl DMSCHSM for DMSCPKCS11HSM {
 
     async fn generate_symmetric_key(
         &mut self,
-        key_type: DMSCKeyType,
+        key_type: RiKeyType,
         label: Option<&str>,
-    ) -> DMSCResult<String> {
+    ) -> RiResult<String> {
         let start = Instant::now();
 
         let session = self.session.as_ref()
-            .ok_or_else(|| DMSCError::CryptoError("Session not open".to_string()))?;
+            .ok_or_else(|| RiError::CryptoError("Session not open".to_string()))?;
 
         let key_id = format!("{:x}", rand::random::<u64>());
 
         let (key_size, key_type_pkcs11) = match key_type {
-            DMSCKeyType::AES { size } => (size, pkcs11::KeyType::AES),
-            DMSCKeyType::SM4 => (128, pkcs11::KeyType::AES),
-            DMSCKeyType::HMAC { size } => (size, pkcs11::KeyType::GENERIC_SECRET),
+            RiKeyType::AES { size } => (size, pkcs11::KeyType::AES),
+            RiKeyType::SM4 => (128, pkcs11::KeyType::AES),
+            RiKeyType::HMAC { size } => (size, pkcs11::KeyType::GENERIC_SECRET),
             _ => {
-                return Err(DMSCError::CryptoError("Unsupported key type for symmetric key generation".to_string()));
+                return Err(RiError::CryptoError("Unsupported key type for symmetric key generation".to_string()));
             }
         };
 
@@ -760,7 +760,7 @@ impl DMSCHSM for DMSCPKCS11HSM {
         ];
 
         session.generate_key(&template, None, None)
-            .map_err(|e| DMSCError::CryptoError(format!("Failed to generate symmetric key: {}", e)))?;
+            .map_err(|e| RiError::CryptoError(format!("Failed to generate symmetric key: {}", e)))?;
 
         self.statistics.record_operation(true, start.elapsed()).await;
 
@@ -769,20 +769,20 @@ impl DMSCHSM for DMSCPKCS11HSM {
 
     async fn import_key(
         &mut self,
-        key_type: DMSCKeyType,
+        key_type: RiKeyType,
         key_data: &[u8],
         label: Option<&str>,
         extractable: bool,
-    ) -> DMSCResult<String> {
+    ) -> RiResult<String> {
         let start = Instant::now();
 
         let session = self.session.as_ref()
-            .ok_or_else(|| DMSCError::CryptoError("Session not open".to_string()))?;
+            .ok_or_else(|| RiError::CryptoError("Session not open".to_string()))?;
 
         let key_id = format!("{:x}", rand::random::<u64>());
 
         let template = match key_type {
-            DMSCKeyType::RSA { .. } => {
+            RiKeyType::RSA { .. } => {
                 vec![
                     pkcs11::Attribute::Class(pkcs11::ObjectClass::PRIVATE_KEY),
                     pkcs11::Attribute::KeyType(pkcs11::KeyType::RSA),
@@ -793,7 +793,7 @@ impl DMSCHSM for DMSCPKCS11HSM {
                     pkcs11::Attribute::Label(label.unwrap_or("Imported RSA Key").as_bytes().to_vec()),
                 ]
             }
-            DMSCKeyType::ECDSA { .. } => {
+            RiKeyType::ECDSA { .. } => {
                 vec![
                     pkcs11::Attribute::Class(pkcs11::ObjectClass::PRIVATE_KEY),
                     pkcs11::Attribute::KeyType(pkcs11::KeyType::EC),
@@ -804,7 +804,7 @@ impl DMSCHSM for DMSCPKCS11HSM {
                     pkcs11::Attribute::Label(label.unwrap_or("Imported EC Key").as_bytes().to_vec()),
                 ]
             }
-            DMSCKeyType::AES { size } => {
+            RiKeyType::AES { size } => {
                 vec![
                     pkcs11::Attribute::Class(pkcs11::ObjectClass::SECRET_KEY),
                     pkcs11::Attribute::KeyType(pkcs11::KeyType::AES),
@@ -817,19 +817,19 @@ impl DMSCHSM for DMSCPKCS11HSM {
                 ]
             }
             _ => {
-                return Err(DMSCError::CryptoError("Unsupported key type for import".to_string()));
+                return Err(RiError::CryptoError("Unsupported key type for import".to_string()));
             }
         };
 
         session.create_object(&template)
-            .map_err(|e| DMSCError::CryptoError(format!("Failed to import key: {}", e)))?;
+            .map_err(|e| RiError::CryptoError(format!("Failed to import key: {}", e)))?;
 
         self.statistics.record_operation(true, start.elapsed()).await;
 
         Ok(key_id)
     }
 
-    async fn export_public_key(&mut self, key_id: &str) -> DMSCResult<Vec<u8>> {
+    async fn export_public_key(&mut self, key_id: &str) -> RiResult<Vec<u8>> {
         let start = Instant::now();
 
         let template = vec![
@@ -839,7 +839,7 @@ impl DMSCHSM for DMSCPKCS11HSM {
         let objects = self.find_objects(&template)?;
 
         if objects.is_empty() {
-            return Err(DMSCError::CryptoError("Key not found".to_string()));
+            return Err(RiError::CryptoError("Key not found".to_string()));
         }
 
         let public_key = self.get_attribute_value(objects[0], pkcs11::Attribute::PublicExponent)?;
@@ -849,7 +849,7 @@ impl DMSCHSM for DMSCPKCS11HSM {
         Ok(public_key)
     }
 
-    async fn export_key(&mut self, key_id: &str) -> DMSCResult<Vec<u8>> {
+    async fn export_key(&mut self, key_id: &str) -> RiResult<Vec<u8>> {
         let start = Instant::now();
 
         let template = vec![
@@ -859,7 +859,7 @@ impl DMSCHSM for DMSCPKCS11HSM {
         let objects = self.find_objects(&template)?;
 
         if objects.is_empty() {
-            return Err(DMSCError::CryptoError("Key not found".to_string()));
+            return Err(RiError::CryptoError("Key not found".to_string()));
         }
 
         let key_data = self.get_attribute_value(objects[0], pkcs11::Attribute::Value)?;
@@ -869,11 +869,11 @@ impl DMSCHSM for DMSCPKCS11HSM {
         Ok(key_data)
     }
 
-    async fn sign(&mut self, key_id: &str, data: &[u8]) -> DMSCResult<Vec<u8>> {
+    async fn sign(&mut self, key_id: &str, data: &[u8]) -> RiResult<Vec<u8>> {
         let start = Instant::now();
 
         let session = self.session.as_ref()
-            .ok_or_else(|| DMSCError::CryptoError("Session not open".to_string()))?;
+            .ok_or_else(|| RiError::CryptoError("Session not open".to_string()))?;
 
         let template = vec![
             pkcs11::Attribute::Label(key_id.as_bytes().to_vec()),
@@ -882,25 +882,25 @@ impl DMSCHSM for DMSCPKCS11HSM {
         let objects = self.find_objects(&template)?;
 
         if objects.is_empty() {
-            return Err(DMSCError::CryptoError("Key not found".to_string()));
+            return Err(RiError::CryptoError("Key not found".to_string()));
         }
 
         let signature = session.sign(
             pkcs11::Mechanism::Ecdsa1,
             objects[0],
             data,
-        ).map_err(|e| DMSCError::CryptoError(format!("Signing failed: {}", e)))?;
+        ).map_err(|e| RiError::CryptoError(format!("Signing failed: {}", e)))?;
 
         self.statistics.record_operation(true, start.elapsed()).await;
 
         Ok(signature)
     }
 
-    async fn verify(&mut self, key_id: &str, data: &[u8], signature: &[u8]) -> DMSCResult<bool> {
+    async fn verify(&mut self, key_id: &str, data: &[u8], signature: &[u8]) -> RiResult<bool> {
         let start = Instant::now();
 
         let session = self.session.as_ref()
-            .ok_or_else(|| DMSCError::CryptoError("Session not open".to_string()))?;
+            .ok_or_else(|| RiError::CryptoError("Session not open".to_string()))?;
 
         let template = vec![
             pkcs11::Attribute::Label(key_id.as_bytes().to_vec()),
@@ -909,7 +909,7 @@ impl DMSCHSM for DMSCPKCS11HSM {
         let objects = self.find_objects(&template)?;
 
         if objects.is_empty() {
-            return Err(DMSCError::CryptoError("Key not found".to_string()));
+            return Err(RiError::CryptoError("Key not found".to_string()));
         }
 
         let result = session.verify(
@@ -917,18 +917,18 @@ impl DMSCHSM for DMSCPKCS11HSM {
             objects[0],
             data,
             signature,
-        ).map_err(|e| DMSCError::CryptoError(format!("Verification failed: {}", e)))?;
+        ).map_err(|e| RiError::CryptoError(format!("Verification failed: {}", e)))?;
 
         self.statistics.record_operation(true, start.elapsed()).await;
 
         Ok(result)
     }
 
-    async fn encrypt(&mut self, key_id: &str, data: &[u8]) -> DMSCResult<Vec<u8>> {
+    async fn encrypt(&mut self, key_id: &str, data: &[u8]) -> RiResult<Vec<u8>> {
         let start = Instant::now();
 
         let session = self.session.as_ref()
-            .ok_or_else(|| DMSCError::CryptoError("Session not open".to_string()))?;
+            .ok_or_else(|| RiError::CryptoError("Session not open".to_string()))?;
 
         let template = vec![
             pkcs11::Attribute::Label(key_id.as_bytes().to_vec()),
@@ -937,25 +937,25 @@ impl DMSCHSM for DMSCPKCS11HSM {
         let objects = self.find_objects(&template)?;
 
         if objects.is_empty() {
-            return Err(DMSCError::CryptoError("Key not found".to_string()));
+            return Err(RiError::CryptoError("Key not found".to_string()));
         }
 
         let ciphertext = session.encrypt(
             pkcs11::Mechanism::RsaPkcs1,
             objects[0],
             data,
-        ).map_err(|e| DMSCError::CryptoError(format!("Encryption failed: {}", e)))?;
+        ).map_err(|e| RiError::CryptoError(format!("Encryption failed: {}", e)))?;
 
         self.statistics.record_operation(true, start.elapsed()).await;
 
         Ok(ciphertext)
     }
 
-    async fn decrypt(&mut self, key_id: &str, ciphertext: &[u8]) -> DMSCResult<Vec<u8>> {
+    async fn decrypt(&mut self, key_id: &str, ciphertext: &[u8]) -> RiResult<Vec<u8>> {
         let start = Instant::now();
 
         let session = self.session.as_ref()
-            .ok_or_else(|| DMSCError::CryptoError("Session not open".to_string()))?;
+            .ok_or_else(|| RiError::CryptoError("Session not open".to_string()))?;
 
         let template = vec![
             pkcs11::Attribute::Label(key_id.as_bytes().to_vec()),
@@ -964,14 +964,14 @@ impl DMSCHSM for DMSCPKCS11HSM {
         let objects = self.find_objects(&template)?;
 
         if objects.is_empty() {
-            return Err(DMSCError::CryptoError("Key not found".to_string()));
+            return Err(RiError::CryptoError("Key not found".to_string()));
         }
 
         let plaintext = session.decrypt(
             pkcs11::Mechanism::RsaPkcs1,
             objects[0],
             ciphertext,
-        ).map_err(|e| DMSCError::CryptoError(format!("Decryption failed: {}", e)))?;
+        ).map_err(|e| RiError::CryptoError(format!("Decryption failed: {}", e)))?;
 
         self.statistics.record_operation(true, start.elapsed()).await;
 
@@ -983,11 +983,11 @@ impl DMSCHSM for DMSCPKCS11HSM {
         key_id: &str,
         data: &[u8],
         iv: Option<&[u8]>,
-    ) -> DMSCResult<Vec<u8>> {
+    ) -> RiResult<Vec<u8>> {
         let start = Instant::now();
 
         let session = self.session.as_ref()
-            .ok_or_else(|| DMSCError::CryptoError("Session not open".to_string()))?;
+            .ok_or_else(|| RiError::CryptoError("Session not open".to_string()))?;
 
         let template = vec![
             pkcs11::Attribute::Label(key_id.as_bytes().to_vec()),
@@ -996,7 +996,7 @@ impl DMSCHSM for DMSCPKCS11HSM {
         let objects = self.find_objects(&template)?;
 
         if objects.is_empty() {
-            return Err(DMSCError::CryptoError("Key not found".to_string()));
+            return Err(RiError::CryptoError("Key not found".to_string()));
         }
 
         let iv = iv.unwrap_or(&[0u8; 16]);
@@ -1007,7 +1007,7 @@ impl DMSCHSM for DMSCPKCS11HSM {
             mechanism,
             objects[0],
             data,
-        ).map_err(|e| DMSCError::CryptoError(format!("Symmetric encryption failed: {}", e)))?;
+        ).map_err(|e| RiError::CryptoError(format!("Symmetric encryption failed: {}", e)))?;
 
         self.statistics.record_operation(true, start.elapsed()).await;
 
@@ -1019,11 +1019,11 @@ impl DMSCHSM for DMSCPKCS11HSM {
         key_id: &str,
         ciphertext: &[u8],
         iv: Option<&[u8]>,
-    ) -> DMSCResult<Vec<u8>> {
+    ) -> RiResult<Vec<u8>> {
         let start = Instant::now();
 
         let session = self.session.as_ref()
-            .ok_or_else(|| DMSCError::CryptoError("Session not open".to_string()))?;
+            .ok_or_else(|| RiError::CryptoError("Session not open".to_string()))?;
 
         let template = vec![
             pkcs11::Attribute::Label(key_id.as_bytes().to_vec()),
@@ -1032,7 +1032,7 @@ impl DMSCHSM for DMSCPKCS11HSM {
         let objects = self.find_objects(&template)?;
 
         if objects.is_empty() {
-            return Err(DMSCError::CryptoError("Key not found".to_string()));
+            return Err(RiError::CryptoError("Key not found".to_string()));
         }
 
         let iv = iv.unwrap_or(&[0u8; 16]);
@@ -1043,43 +1043,43 @@ impl DMSCHSM for DMSCPKCS11HSM {
             mechanism,
             objects[0],
             ciphertext,
-        ).map_err(|e| DMSCError::CryptoError(format!("Symmetric decryption failed: {}", e)))?;
+        ).map_err(|e| RiError::CryptoError(format!("Symmetric decryption failed: {}", e)))?;
 
         self.statistics.record_operation(true, start.elapsed()).await;
 
         Ok(plaintext)
     }
 
-    async fn random(&mut self, size: usize) -> DMSCResult<Vec<u8>> {
+    async fn random(&mut self, size: usize) -> RiResult<Vec<u8>> {
         let start = Instant::now();
 
         let session = self.session.as_ref()
-            .ok_or_else(|| DMSCError::CryptoError("Session not open".to_string()))?;
+            .ok_or_else(|| RiError::CryptoError("Session not open".to_string()))?;
 
         let random = session.generate_random(size)
-            .map_err(|e| DMSCError::CryptoError(format!("Random generation failed: {}", e)))?;
+            .map_err(|e| RiError::CryptoError(format!("Random generation failed: {}", e)))?;
 
         self.statistics.record_operation(true, start.elapsed()).await;
 
         Ok(random)
     }
 
-    async fn hash(&mut self, algorithm: &str, data: &[u8]) -> DMSCResult<Vec<u8>> {
+    async fn hash(&mut self, algorithm: &str, data: &[u8]) -> RiResult<Vec<u8>> {
         let start = Instant::now();
 
         let session = self.session.as_ref()
-            .ok_or_else(|| DMSCError::CryptoError("Session not open".to_string()))?;
+            .ok_or_else(|| RiError::CryptoError("Session not open".to_string()))?;
 
         let mechanism = match algorithm.to_uppercase().as_str() {
             "SHA-256" | "SHA256" => pkcs11::Mechanism::Sha256,
             "SHA-384" | "SHA384" => pkcs11::Mechanism::Sha384,
             "SHA-512" | "SHA512" => pkcs11::Mechanism::Sha512,
             "SM3" => pkcs11::Mechanism::Sha256,
-            _ => return Err(DMSCError::CryptoError("Unsupported hash algorithm".to_string())),
+            _ => return Err(RiError::CryptoError("Unsupported hash algorithm".to_string())),
         };
 
         let hash_data = session.hash(mechanism, data)
-            .map_err(|e| DMSCError::CryptoError(format!("Hashing failed: {}", e)))?;
+            .map_err(|e| RiError::CryptoError(format!("Hashing failed: {}", e)))?;
 
         self.statistics.record_operation(true, start.elapsed()).await;
 
@@ -1089,17 +1089,17 @@ impl DMSCHSM for DMSCPKCS11HSM {
     async fn derive_key(
         &mut self,
         base_key_id: &str,
-        template: DMSCKeyType,
+        template: RiKeyType,
         label: Option<&str>,
-    ) -> DMSCResult<String> {
-        Err(DMSCError::CryptoError("Key derivation not yet implemented for PKCS#11".to_string()))
+    ) -> RiResult<String> {
+        Err(RiError::CryptoError("Key derivation not yet implemented for PKCS#11".to_string()))
     }
 
-    async fn delete_key(&mut self, key_id: &str) -> DMSCResult<()> {
+    async fn delete_key(&mut self, key_id: &str) -> RiResult<()> {
         let start = Instant::now();
 
         let session = self.session.as_ref()
-            .ok_or_else(|| DMSCError::CryptoError("Session not open".to_string()))?;
+            .ok_or_else(|| RiError::CryptoError("Session not open".to_string()))?;
 
         let template = vec![
             pkcs11::Attribute::Label(key_id.as_bytes().to_vec()),
@@ -1109,7 +1109,7 @@ impl DMSCHSM for DMSCPKCS11HSM {
 
         for object in objects {
             session.destroy_object(object)
-                .map_err(|e| DMSCError::CryptoError(format!("Failed to delete key: {}", e)))?;
+                .map_err(|e| RiError::CryptoError(format!("Failed to delete key: {}", e)))?;
         }
 
         self.statistics.record_operation(true, start.elapsed()).await;
@@ -1117,11 +1117,11 @@ impl DMSCHSM for DMSCPKCS11HSM {
         Ok(())
     }
 
-    async fn list_keys(&mut self) -> DMSCResult<Vec<DMSCKeyInfo>> {
+    async fn list_keys(&mut self) -> RiResult<Vec<RiKeyInfo>> {
         let start = Instant::now();
 
         let session = self.session.as_ref()
-            .ok_or_else(|| DMSCError::CryptoError("Session not open".to_string()))?;
+            .ok_or_else(|| RiError::CryptoError("Session not open".to_string()))?;
 
         let template = vec![
             pkcs11::Attribute::Token(true),
@@ -1142,13 +1142,13 @@ impl DMSCHSM for DMSCPKCS11HSM {
                 0
             };
 
-            let dmsc_key_type = match key_type_val {
-                _ => DMSCKeyType::RSA { size: 2048 },
+            let ri_key_type = match key_type_val {
+                _ => RiKeyType::RSA { size: 2048 },
             };
 
-            let key_info = DMSCKeyInfo {
+            let key_info = RiKeyInfo {
                 id: label_str.clone(),
-                key_type: dmsc_key_type,
+                key_type: ri_key_type,
                 label: label_str,
                 sensitive: true,
                 extractable: false,
@@ -1165,7 +1165,7 @@ impl DMSCHSM for DMSCPKCS11HSM {
         Ok(keys)
     }
 
-    async fn get_key_info(&mut self, key_id: &str) -> DMSCResult<DMSCKeyInfo> {
+    async fn get_key_info(&mut self, key_id: &str) -> RiResult<RiKeyInfo> {
         let template = vec![
             pkcs11::Attribute::Label(key_id.as_bytes().to_vec()),
         ];
@@ -1173,15 +1173,15 @@ impl DMSCHSM for DMSCPKCS11HSM {
         let objects = self.find_objects(&template)?;
 
         if objects.is_empty() {
-            return Err(DMSCError::CryptoError("Key not found".to_string()));
+            return Err(RiError::CryptoError("Key not found".to_string()));
         }
 
         let label = self.get_attribute_value(objects[0], pkcs11::Attribute::Label)?;
         let label_str = String::from_utf8_lossy(&label).to_string();
 
-        Ok(DMSCKeyInfo {
+        Ok(RiKeyInfo {
             id: key_id.to_string(),
-            key_type: DMSCKeyType::RSA { size: 2048 },
+            key_type: RiKeyType::RSA { size: 2048 },
             label: label_str,
             sensitive: true,
             extractable: false,
@@ -1191,28 +1191,28 @@ impl DMSCHSM for DMSCPKCS11HSM {
         })
     }
 
-    fn get_device_info(&self) -> Option<DMSCDeviceInfo> {
+    fn get_device_info(&self) -> Option<RiDeviceInfo> {
         self.device_info.clone()
     }
 }
 
 /// HSM manager for coordinating multiple HSM instances.
-pub struct DMSCHSMManager {
-    active_hsm: Option<Box<dyn DMSCHSM>>,
-    hsm_type: DMSCHSMType,
-    config: Option<DMSCHSMConfig>,
-    statistics: Arc<DMSCHSMStatistics>,
-    event_callback: Option<Arc<dyn Fn(DMSCHSMEvent) + Send + Sync>>,
+pub struct RiHSMManager {
+    active_hsm: Option<Box<dyn RiHSM>>,
+    hsm_type: RiHSMType,
+    config: Option<RiHSMConfig>,
+    statistics: Arc<RiHSMStatistics>,
+    event_callback: Option<Arc<dyn Fn(RiHSMEvent) + Send + Sync>>,
 }
 
-impl DMSCHSMManager {
+impl RiHSMManager {
     /// Create new HSM manager.
     pub fn new() -> Self {
         Self {
             active_hsm: None,
-            hsm_type: DMSCHSMType::PKCS11,
+            hsm_type: RiHSMType::PKCS11,
             config: None,
-            statistics: Arc::new(DMSCHSMStatistics::new()),
+            statistics: Arc::new(RiHSMStatistics::new()),
             event_callback: None,
         }
     }
@@ -1220,22 +1220,22 @@ impl DMSCHSMManager {
     /// Set the event callback.
     pub fn set_event_callback<F>(&mut self, callback: F)
     where
-        F: Fn(DMSCHSMEvent) + Send + Sync + 'static,
+        F: Fn(RiHSMEvent) + Send + Sync + 'static,
     {
         self.event_callback = Some(Arc::new(callback));
     }
 
     /// Emit an event.
-    fn emit_event(&self, event: DMSCHSMEvent) {
+    fn emit_event(&self, event: RiHSMEvent) {
         if let Some(callback) = &self.event_callback {
             callback(event);
         }
     }
 
     /// Connect to a PKCS#11 device.
-    pub async fn connect_pkcs11(&mut self, library_path: &str) -> DMSCResult<DMSCDeviceInfo> {
-        let mut config = DMSCHSMConfig {
-            hsm_type: DMSCHSMType::PKCS11,
+    pub async fn connect_pkcs11(&mut self, library_path: &str) -> RiResult<RiDeviceInfo> {
+        let mut config = RiHSMConfig {
+            hsm_type: RiHSMType::PKCS11,
             pkcs11_library: Some(library_path.to_string()),
             ..Default::default()
         };
@@ -1244,29 +1244,29 @@ impl DMSCHSMManager {
     }
 
     /// Connect with a configuration.
-    pub async fn connect_with_config(&mut self, config: &DMSCHSMConfig) -> DMSCResult<DMSCDeviceInfo> {
+    pub async fn connect_with_config(&mut self, config: &RiHSMConfig) -> RiResult<RiDeviceInfo> {
         self.config = Some(config.clone());
 
         #[cfg(not(windows))]
-        let hsm: Box<dyn DMSCHSM> = match config.hsm_type {
-            DMSCHSMType::PKCS11 => Box::new(DMSCPKCS11HSM::new()),
-            DMSCHSMType::TPM20 => {
-                return Err(DMSCError::CryptoError(
+        let hsm: Box<dyn RiHSM> = match config.hsm_type {
+            RiHSMType::PKCS11 => Box::new(RiPKCS11HSM::new()),
+            RiHSMType::TPM20 => {
+                return Err(RiError::CryptoError(
                     "TPM 2.0 is not yet supported. Please use PKCS#11 devices.".to_string()
                 ));
             }
-            DMSCHSMType::Software => Box::new(DMSCPKCS11HSM::new()),
+            RiHSMType::Software => Box::new(RiPKCS11HSM::new()),
         };
 
         #[cfg(windows)]
-        let hsm: Box<dyn DMSCHSM> = match config.hsm_type {
-            DMSCHSMType::PKCS11 | DMSCHSMType::Software => {
-                return Err(DMSCError::CryptoError(
+        let hsm: Box<dyn RiHSM> = match config.hsm_type {
+            RiHSMType::PKCS11 | RiHSMType::Software => {
+                return Err(RiError::CryptoError(
                     "PKCS#11 is not supported on Windows. HSM features require a Unix-like operating system.".to_string()
                 ));
             }
-            DMSCHSMType::TPM20 => {
-                return Err(DMSCError::CryptoError(
+            RiHSMType::TPM20 => {
+                return Err(RiError::CryptoError(
                     "TPM 2.0 is not yet supported. Please use PKCS#11 devices on Unix systems.".to_string()
                 ));
             }
@@ -1277,7 +1277,7 @@ impl DMSCHSMManager {
         self.active_hsm = Some(hsm);
         self.hsm_type = config.hsm_type;
 
-        self.emit_event(DMSCHSMEvent::Connected {
+        self.emit_event(RiHSMEvent::Connected {
             hsm_type: config.hsm_type,
             device_info: format!("{} - {}", device_info.manufacturer, device_info.model),
         });
@@ -1286,10 +1286,10 @@ impl DMSCHSMManager {
     }
 
     /// Disconnect from the current HSM.
-    pub async fn disconnect(&mut self) -> DMSCResult<()> {
+    pub async fn disconnect(&mut self) -> RiResult<()> {
         if let Some(mut hsm) = self.active_hsm.take() {
             hsm.disconnect().await?;
-            self.emit_event(DMSCHSMEvent::Disconnected {
+            self.emit_event(RiHSMEvent::Disconnected {
                 hsm_type: self.hsm_type,
                 reason: "User requested".to_string(),
             });
@@ -1303,22 +1303,22 @@ impl DMSCHSMManager {
     }
 
     /// Get the current HSM type.
-    pub fn hsm_type(&self) -> DMSCHSMType {
+    pub fn hsm_type(&self) -> RiHSMType {
         self.hsm_type
     }
 
     /// Generate a new key in the HSM.
     pub async fn generate_key(
         &mut self,
-        key_type: DMSCKeyType,
+        key_type: RiKeyType,
         label: Option<&str>,
-    ) -> DMSCResult<String> {
+    ) -> RiResult<String> {
         let hsm = self.active_hsm.as_mut()
-            .ok_or_else(|| DMSCError::CryptoError("No HSM connected".to_string()))?;
+            .ok_or_else(|| RiError::CryptoError("No HSM connected".to_string()))?;
 
         let key_id = hsm.generate_key(key_type, label).await?;
 
-        self.emit_event(DMSCHSMEvent::KeyOperation {
+        self.emit_event(RiHSMEvent::KeyOperation {
             operation: "generate_key".to_string(),
             key_id: key_id.clone(),
             duration: Duration::from_millis(100),
@@ -1330,11 +1330,11 @@ impl DMSCHSMManager {
     /// Generate a symmetric key in the HSM.
     pub async fn generate_symmetric_key(
         &mut self,
-        key_type: DMSCKeyType,
+        key_type: RiKeyType,
         label: Option<&str>,
-    ) -> DMSCResult<String> {
+    ) -> RiResult<String> {
         let hsm = self.active_hsm.as_mut()
-            .ok_or_else(|| DMSCError::CryptoError("No HSM connected".to_string()))?;
+            .ok_or_else(|| RiError::CryptoError("No HSM connected".to_string()))?;
 
         hsm.generate_symmetric_key(key_type, label).await
     }
@@ -1342,26 +1342,26 @@ impl DMSCHSMManager {
     /// Import a key into the HSM.
     pub async fn import_key(
         &mut self,
-        key_type: DMSCKeyType,
+        key_type: RiKeyType,
         key_data: &[u8],
         label: Option<&str>,
         extractable: bool,
-    ) -> DMSCResult<String> {
+    ) -> RiResult<String> {
         let hsm = self.active_hsm.as_mut()
-            .ok_or_else(|| DMSCError::CryptoError("No HSM connected".to_string()))?;
+            .ok_or_else(|| RiError::CryptoError("No HSM connected".to_string()))?;
 
         hsm.import_key(key_type, key_data, label, extractable).await
     }
 
     /// Sign data using the HSM.
-    pub async fn sign(&mut self, key_id: &str, data: &[u8]) -> DMSCResult<Vec<u8>> {
+    pub async fn sign(&mut self, key_id: &str, data: &[u8]) -> RiResult<Vec<u8>> {
         let hsm = self.active_hsm.as_mut()
-            .ok_or_else(|| DMSCError::CryptoError("No HSM connected".to_string()))?;
+            .ok_or_else(|| RiError::CryptoError("No HSM connected".to_string()))?;
 
         let start = Instant::now();
         let signature = hsm.sign(key_id, data).await?;
 
-        self.emit_event(DMSCHSMEvent::KeyOperation {
+        self.emit_event(RiHSMEvent::KeyOperation {
             operation: "sign".to_string(),
             key_id: key_id.to_string(),
             duration: start.elapsed(),
@@ -1371,73 +1371,73 @@ impl DMSCHSMManager {
     }
 
     /// Verify a signature using the HSM.
-    pub async fn verify(&mut self, key_id: &str, data: &[u8], signature: &[u8]) -> DMSCResult<bool> {
+    pub async fn verify(&mut self, key_id: &str, data: &[u8], signature: &[u8]) -> RiResult<bool> {
         let hsm = self.active_hsm.as_mut()
-            .ok_or_else(|| DMSCError::CryptoError("No HSM connected".to_string()))?;
+            .ok_or_else(|| RiError::CryptoError("No HSM connected".to_string()))?;
 
         hsm.verify(key_id, data, signature).await
     }
 
     /// Encrypt data using the HSM.
-    pub async fn encrypt(&mut self, key_id: &str, data: &[u8]) -> DMSCResult<Vec<u8>> {
+    pub async fn encrypt(&mut self, key_id: &str, data: &[u8]) -> RiResult<Vec<u8>> {
         let hsm = self.active_hsm.as_mut()
-            .ok_or_else(|| DMSCError::CryptoError("No HSM connected".to_string()))?;
+            .ok_or_else(|| RiError::CryptoError("No HSM connected".to_string()))?;
 
         hsm.encrypt(key_id, data).await
     }
 
     /// Decrypt data using the HSM.
-    pub async fn decrypt(&mut self, key_id: &str, ciphertext: &[u8]) -> DMSCResult<Vec<u8>> {
+    pub async fn decrypt(&mut self, key_id: &str, ciphertext: &[u8]) -> RiResult<Vec<u8>> {
         let hsm = self.active_hsm.as_mut()
-            .ok_or_else(|| DMSCError::CryptoError("No HSM connected".to_string()))?;
+            .ok_or_else(|| RiError::CryptoError("No HSM connected".to_string()))?;
 
         hsm.decrypt(key_id, ciphertext).await
     }
 
     /// Generate random bytes using the HSM.
-    pub async fn random(&mut self, size: usize) -> DMSCResult<Vec<u8>> {
+    pub async fn random(&mut self, size: usize) -> RiResult<Vec<u8>> {
         let hsm = self.active_hsm.as_mut()
-            .ok_or_else(|| DMSCError::CryptoError("No HSM connected".to_string()))?;
+            .ok_or_else(|| RiError::CryptoError("No HSM connected".to_string()))?;
 
         hsm.random(size).await
     }
 
     /// Hash data using the HSM.
-    pub async fn hash(&mut self, algorithm: &str, data: &[u8]) -> DMSCResult<Vec<u8>> {
+    pub async fn hash(&mut self, algorithm: &str, data: &[u8]) -> RiResult<Vec<u8>> {
         let hsm = self.active_hsm.as_mut()
-            .ok_or_else(|| DMSCError::CryptoError("No HSM connected".to_string()))?;
+            .ok_or_else(|| RiError::CryptoError("No HSM connected".to_string()))?;
 
         hsm.hash(algorithm, data).await
     }
 
     /// Delete a key from the HSM.
-    pub async fn delete_key(&mut self, key_id: &str) -> DMSCResult<()> {
+    pub async fn delete_key(&mut self, key_id: &str) -> RiResult<()> {
         let hsm = self.active_hsm.as_mut()
-            .ok_or_else(|| DMSCError::CryptoError("No HSM connected".to_string()))?;
+            .ok_or_else(|| RiError::CryptoError("No HSM connected".to_string()))?;
 
         hsm.delete_key(key_id).await
     }
 
     /// List all keys in the HSM.
-    pub async fn list_keys(&mut self) -> DMSCResult<Vec<DMSCKeyInfo>> {
+    pub async fn list_keys(&mut self) -> RiResult<Vec<RiKeyInfo>> {
         let hsm = self.active_hsm.as_mut()
-            .ok_or_else(|| DMSCError::CryptoError("No HSM connected".to_string()))?;
+            .ok_or_else(|| RiError::CryptoError("No HSM connected".to_string()))?;
 
         hsm.list_keys().await
     }
 
     /// Get statistics.
-    pub fn statistics(&self) -> &Arc<DMSCHSMStatistics> {
+    pub fn statistics(&self) -> &Arc<RiHSMStatistics> {
         &self.statistics
     }
 
     /// Get device information.
-    pub fn device_info(&self) -> Option<DMSCDeviceInfo> {
+    pub fn device_info(&self) -> Option<RiDeviceInfo> {
         self.active_hsm.as_ref().and_then(|h| h.get_device_info())
     }
 }
 
-impl Default for DMSCHSMManager {
+impl Default for RiHSMManager {
     fn default() -> Self {
         Self::new()
     }

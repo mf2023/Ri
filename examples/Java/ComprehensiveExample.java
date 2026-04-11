@@ -1,7 +1,7 @@
 // Copyright © 2025-2026 Wenze Wei. All Rights Reserved.
 //
-// This file is part of DMSC.
-// The DMSC project belongs to the Dunimd Team.
+// This file is part of Ri.
+// The Ri project belongs to the Dunimd Team.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // You may not use this file except in compliance with the License.
@@ -15,19 +15,19 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import com.dunimd.dmsc.DMSCAppBuilder;
-import com.dunimd.dmsc.DMSCAppRuntime;
-import com.dunimd.dmsc.DMSCError;
-import com.dunimd.dmsc.log.DMSCLogger;
-import com.dunimd.dmsc.auth.DMSCAuthModule;
-import com.dunimd.dmsc.auth.DMSCAuthConfig;
-import com.dunimd.dmsc.cache.DMSCCacheModule;
-import com.dunimd.dmsc.cache.DMSCCacheConfig;
+import com.dunimd.ri.RiAppBuilder;
+import com.dunimd.ri.RiAppRuntime;
+import com.dunimd.ri.RiError;
+import com.dunimd.ri.log.RiLogger;
+import com.dunimd.ri.auth.RiAuthModule;
+import com.dunimd.ri.auth.RiAuthConfig;
+import com.dunimd.ri.cache.RiCacheModule;
+import com.dunimd.ri.cache.RiCacheConfig;
 
 /**
- * DMSC Comprehensive API Example for Java.
+ * Ri Comprehensive API Example for Java.
  *
- * This example demonstrates the complete DMSC API usage across all major modules,
+ * This example demonstrates the complete Ri API usage across all major modules,
  * providing a production-ready pattern for building enterprise applications.
  *
  * Features Demonstrated:
@@ -42,7 +42,7 @@ import com.dunimd.dmsc.cache.DMSCCacheConfig;
 public class ComprehensiveExample {
     public static void main(String[] args) {
         System.out.println("============================================================");
-        System.out.println("DMSC Comprehensive API Example - Java");
+        System.out.println("Ri Comprehensive API Example - Java");
         System.out.println("============================================================\n");
 
         try {
@@ -73,15 +73,15 @@ public class ComprehensiveExample {
         System.out.println("=== Application Initialization ===\n");
 
         System.out.println("1. Creating application builder with method chaining...");
-        DMSCAppBuilder builder = new DMSCAppBuilder();
+        RiAppBuilder builder = new RiAppBuilder();
         System.out.println("   Builder created successfully\n");
 
         System.out.println("2. Building application runtime...");
         try {
-            DMSCAppRuntime runtime = builder.build();
+            RiAppRuntime runtime = builder.build();
             System.out.println("   Runtime built successfully!\n");
             runtime.close();
-        } catch (DMSCError e) {
+        } catch (RiError e) {
             System.out.println("   Note: Runtime build may require additional configuration: " + e.getMessage() + "\n");
         }
 
@@ -99,12 +99,12 @@ public class ComprehensiveExample {
         System.out.println("=== Authentication Module ===\n");
 
         System.out.println("1. Creating authentication configuration...");
-        DMSCAuthConfig authConfig = new DMSCAuthConfig();
+        RiAuthConfig authConfig = new RiAuthConfig();
         System.out.println("   Auth config created with defaults\n");
 
         System.out.println("2. Creating authentication module...");
         try {
-            DMSCAuthModule authModule = new DMSCAuthModule(authConfig);
+            RiAuthModule authModule = new RiAuthModule(authConfig);
             System.out.println("   Auth module created\n");
 
             System.out.println("3. Checking auth module properties...");
@@ -131,7 +131,7 @@ public class ComprehensiveExample {
         System.out.println("=== Cache Module ===\n");
 
         System.out.println("1. Creating cache configuration...");
-        DMSCCacheConfig cacheConfig = new DMSCCacheConfig();
+        RiCacheConfig cacheConfig = new RiCacheConfig();
         cacheConfig.setEnabled(true);
         cacheConfig.setDefaultTtlSecs(300);
         cacheConfig.setMaxMemoryMb(1000);
@@ -139,7 +139,7 @@ public class ComprehensiveExample {
 
         System.out.println("2. Creating cache module...");
         try {
-            DMSCCacheModule cacheModule = new DMSCCacheModule(cacheConfig);
+            RiCacheModule cacheModule = new RiCacheModule(cacheConfig);
             System.out.println("   Cache module created\n");
 
             System.out.println("3. Cache module properties...");

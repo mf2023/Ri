@@ -1,7 +1,7 @@
 // Copyright © 2025-2026 Wenze Wei. All Rights Reserved.
 //
-// This file is part of DMSC.
-// The DMSC project belongs to the Dunimd Team.
+// This file is part of Ri.
+// The Ri project belongs to the Dunimd Team.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // You may not use this file except in compliance with the License.
@@ -15,21 +15,21 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package com.dunimd.dmsc.validation;
+package com.dunimd.ri.validation;
 
-import com.dunimd.dmsc.NativeLoader;
+import com.dunimd.ri.NativeLoader;
 
 /**
- * Validation runner for DMSC.
+ * Validation runner for Ri.
  */
-public class DMSCValidationRunner {
+public class RiValidationRunner {
     private long nativePtr;
     
     static {
         NativeLoader.autoLoad();
     }
     
-    DMSCValidationRunner(long ptr) {
+    RiValidationRunner(long ptr) {
         this.nativePtr = ptr;
     }
     
@@ -39,9 +39,9 @@ public class DMSCValidationRunner {
      * @param value the value to validate
      * @return the validation result
      */
-    public DMSCValidationResult validate(String value) {
+    public RiValidationResult validate(String value) {
         long ptr = validate0(nativePtr, value);
-        return new DMSCValidationResult(ptr);
+        return new RiValidationResult(ptr);
     }
     
     private native long validate0(long ptr, String value);

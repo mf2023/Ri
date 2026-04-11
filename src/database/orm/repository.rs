@@ -1,7 +1,7 @@
 //! Copyright © 2025-2026 Wenze Wei. All Rights Reserved.
 //!
-//! This file is part of DMSC.
-//! The DMSC project belongs to the Dunimd Team.
+//! This file is part of Ri.
+//! The Ri project belongs to the Dunimd Team.
 //!
 //! Licensed under the Apache License, Version 2.0 (the "License");
 //! You may not use this file except in compliance with the License.
@@ -24,47 +24,47 @@ use async_trait::async_trait;
 use std::collections::HashMap;
 
 #[async_trait]
-pub trait DMSCORMRepository<E: for<'de> serde::Deserialize<'de> + serde::Serialize + Clone + Send + Sync>: Send + Sync {
+pub trait RiORMRepository<E: for<'de> serde::Deserialize<'de> + serde::Serialize + Clone + Send + Sync>: Send + Sync {
     fn table_name(&self) -> &'static str;
     
-    async fn find_all(&self, db: &dyn DMSCDatabase) -> DMSCResult<Vec<E>>;
-    async fn find_by_id(&self, db: &dyn DMSCDatabase, id: &str) -> DMSCResult<Option<E>>;
-    async fn find_one(&self, db: &dyn DMSCDatabase, criteria: &Criteria) -> DMSCResult<Option<E>>;
-    async fn find_many(&self, db: &dyn DMSCDatabase, criteria: Vec<Criteria>) -> DMSCResult<Vec<E>>;
-    async fn find_paginated(&self, db: &dyn DMSCDatabase, pagination: Pagination, criteria: Vec<Criteria>) -> DMSCResult<(Vec<E>, u64)>;
-    async fn count(&self, db: &dyn DMSCDatabase, criteria: Vec<Criteria>) -> DMSCResult<u64>;
+    async fn find_all(&self, db: &dyn RiDatabase) -> RiResult<Vec<E>>;
+    async fn find_by_id(&self, db: &dyn RiDatabase, id: &str) -> RiResult<Option<E>>;
+    async fn find_one(&self, db: &dyn RiDatabase, criteria: &Criteria) -> RiResult<Option<E>>;
+    async fn find_many(&self, db: &dyn RiDatabase, criteria: Vec<Criteria>) -> RiResult<Vec<E>>;
+    async fn find_paginated(&self, db: &dyn RiDatabase, pagination: Pagination, criteria: Vec<Criteria>) -> RiResult<(Vec<E>, u64)>;
+    async fn count(&self, db: &dyn RiDatabase, criteria: Vec<Criteria>) -> RiResult<u64>;
     
-    async fn save(&self, db: &dyn DMSCDatabase, entity: &E) -> DMSCResult<E>;
-    async fn save_many(&self, db: &dyn DMSCDatabase, entities: &[E]) -> DMSCResult<Vec<E>>;
-    async fn update(&self, db: &dyn DMSCDatabase, entity: &E) -> DMSCResult<E>;
-    async fn delete(&self, db: &dyn DMSCDatabase, entity: &E) -> DMSCResult<()>;
-    async fn delete_by_id(&self, db: &dyn DMSCDatabase, id: &str) -> DMSCResult<()>;
-    async fn delete_many(&self, db: &dyn DMSCDatabase, criteria: Vec<Criteria>) -> DMSCResult<u64>;
+    async fn save(&self, db: &dyn RiDatabase, entity: &E) -> RiResult<E>;
+    async fn save_many(&self, db: &dyn RiDatabase, entities: &[E]) -> RiResult<Vec<E>>;
+    async fn update(&self, db: &dyn RiDatabase, entity: &E) -> RiResult<E>;
+    async fn delete(&self, db: &dyn RiDatabase, entity: &E) -> RiResult<()>;
+    async fn delete_by_id(&self, db: &dyn RiDatabase, id: &str) -> RiResult<()>;
+    async fn delete_many(&self, db: &dyn RiDatabase, criteria: Vec<Criteria>) -> RiResult<u64>;
     
-    async fn exists(&self, db: &dyn DMSCDatabase, id: &str) -> DMSCResult<bool>;
-    async fn exists_by(&self, db: &dyn DMSCDatabase, criteria: &Criteria) -> DMSCResult<bool>;
+    async fn exists(&self, db: &dyn RiDatabase, id: &str) -> RiResult<bool>;
+    async fn exists_by(&self, db: &dyn RiDatabase, criteria: &Criteria) -> RiResult<bool>;
     
-    async fn batch_insert(&self, db: &dyn DMSCDatabase, entities: &[E], batch_size: usize) -> DMSCResult<Vec<E>>;
-    async fn upsert(&self, db: &dyn DMSCDatabase, entity: &E, conflict_columns: &[&str]) -> DMSCResult<E>;
+    async fn batch_insert(&self, db: &dyn RiDatabase, entities: &[E], batch_size: usize) -> RiResult<Vec<E>>;
+    async fn upsert(&self, db: &dyn RiDatabase, entity: &E, conflict_columns: &[&str]) -> RiResult<E>;
 }
 
 #[async_trait]
-pub trait DMSCORMCrudRepository<E: for<'de> serde::Deserialize<'de> + serde::Serialize + Clone + Send + Sync>: Send + Sync {
+pub trait RiORMCrudRepository<E: for<'de> serde::Deserialize<'de> + serde::Serialize + Clone + Send + Sync>: Send + Sync {
     fn table_name(&self) -> &'static str;
     
-    async fn find_all(&self) -> DMSCResult<Vec<E>>;
-    async fn find_by_id(&self, id: &str) -> DMSCResult<Option<E>>;
-    async fn save(&self, entity: &E) -> DMSCResult<E>;
-    async fn delete(&self, entity: &E) -> DMSCResult<()>;
+    async fn find_all(&self) -> RiResult<Vec<E>>;
+    async fn find_by_id(&self, id: &str) -> RiResult<Option<E>>;
+    async fn save(&self, entity: &E) -> RiResult<E>;
+    async fn delete(&self, entity: &E) -> RiResult<()>;
 }
 
 #[derive(Debug, Clone)]
-pub struct DMSCORMSimpleRepository<E: for<'de> serde::Deserialize<'de> + serde::Serialize + Clone + Send + Sync> {
+pub struct RiORMSimpleRepository<E: for<'de> serde::Deserialize<'de> + serde::Serialize + Clone + Send + Sync> {
     table_name: &'static str,
     _phantom: std::marker::PhantomData<E>,
 }
 
-impl<E: for<'de> serde::Deserialize<'de> + serde::Serialize + Clone + Send + Sync> DMSCORMSimpleRepository<E> {
+impl<E: for<'de> serde::Deserialize<'de> + serde::Serialize + Clone + Send + Sync> RiORMSimpleRepository<E> {
     pub fn new(table_name: &'static str) -> Self {
         Self {
             table_name,
@@ -74,12 +74,12 @@ impl<E: for<'de> serde::Deserialize<'de> + serde::Serialize + Clone + Send + Syn
 }
 
 #[async_trait]
-impl<E: for<'de> serde::Deserialize<'de> + serde::Serialize + Clone + Send + Sync> DMSCORMRepository<E> for DMSCORMSimpleRepository<E> {
+impl<E: for<'de> serde::Deserialize<'de> + serde::Serialize + Clone + Send + Sync> RiORMRepository<E> for RiORMSimpleRepository<E> {
     fn table_name(&self) -> &'static str {
         self.table_name
     }
 
-    async fn find_all(&self, db: &dyn DMSCDatabase) -> DMSCResult<Vec<E>> {
+    async fn find_all(&self, db: &dyn RiDatabase) -> RiResult<Vec<E>> {
         let sql = format!("SELECT * FROM {}", self.table_name);
         let result = db.query(&sql).await?;
         
@@ -93,7 +93,7 @@ impl<E: for<'de> serde::Deserialize<'de> + serde::Serialize + Clone + Send + Syn
         Ok(entities)
     }
 
-    async fn find_by_id(&self, db: &dyn DMSCDatabase, id: &str) -> DMSCResult<Option<E>> {
+    async fn find_by_id(&self, db: &dyn RiDatabase, id: &str) -> RiResult<Option<E>> {
         let sql = format!("SELECT * FROM {} WHERE id = ?", self.table_name);
         
         let result = db.query_with_params(&sql, &[serde_json::json!(id)]).await?;
@@ -107,7 +107,7 @@ impl<E: for<'de> serde::Deserialize<'de> + serde::Serialize + Clone + Send + Syn
         }
     }
 
-    async fn find_one(&self, db: &dyn DMSCDatabase, criteria: &Criteria) -> DMSCResult<Option<E>> {
+    async fn find_one(&self, db: &dyn RiDatabase, criteria: &Criteria) -> RiResult<Option<E>> {
         let mut query = QueryBuilder::new(self.table_name);
         query.where_criteria(criteria.clone());
         
@@ -123,7 +123,7 @@ impl<E: for<'de> serde::Deserialize<'de> + serde::Serialize + Clone + Send + Syn
         }
     }
 
-    async fn find_many(&self, db: &dyn DMSCDatabase, criteria: Vec<Criteria>) -> DMSCResult<Vec<E>> {
+    async fn find_many(&self, db: &dyn RiDatabase, criteria: Vec<Criteria>) -> RiResult<Vec<E>> {
         let mut query = QueryBuilder::new(self.table_name);
         
         for criteria in criteria {
@@ -143,7 +143,7 @@ impl<E: for<'de> serde::Deserialize<'de> + serde::Serialize + Clone + Send + Syn
         Ok(entities)
     }
 
-    async fn find_paginated(&self, db: &dyn DMSCDatabase, pagination: Pagination, criteria: Vec<Criteria>) -> DMSCResult<(Vec<E>, u64)> {
+    async fn find_paginated(&self, db: &dyn RiDatabase, pagination: Pagination, criteria: Vec<Criteria>) -> RiResult<(Vec<E>, u64)> {
         let count_sql = format!("SELECT COUNT(*) as total FROM {}", self.table_name);
         
         let total: u64 = if criteria.is_empty() {
@@ -161,7 +161,7 @@ impl<E: for<'de> serde::Deserialize<'de> + serde::Serialize + Clone + Send + Syn
             let count_sql = format!("SELECT COUNT(*) as total FROM ({}) as subquery", sql);
             
             let result = db.query_with_params(&count_sql, &params).await?;
-            let row = result.first().ok_or_else(|| DMSCError::Other("Query returned no rows".to_string()))?;
+            let row = result.first().ok_or_else(|| RiError::Other("Query returned no rows".to_string()))?;
             row.get_i64("total").map(|v| v as u64).unwrap_or(0)
         };
         
@@ -184,7 +184,7 @@ impl<E: for<'de> serde::Deserialize<'de> + serde::Serialize + Clone + Send + Syn
         Ok((entities, total))
     }
 
-    async fn count(&self, db: &dyn DMSCDatabase, criteria: Vec<Criteria>) -> DMSCResult<u64> {
+    async fn count(&self, db: &dyn RiDatabase, criteria: Vec<Criteria>) -> RiResult<u64> {
         let mut query = QueryBuilder::new(self.table_name);
         for c in criteria {
             query.and_where(c);
@@ -193,13 +193,13 @@ impl<E: for<'de> serde::Deserialize<'de> + serde::Serialize + Clone + Send + Syn
         let count_sql = sql.replace("*", "COUNT(*) as total");
         
         if let Some(row) = db.query_one(&count_sql).await? {
-            row.get::<i64>("total").map(|v| v as u64).ok_or_else(|| DMSCError::Other("Failed to get count".to_string()))
+            row.get::<i64>("total").map(|v| v as u64).ok_or_else(|| RiError::Other("Failed to get count".to_string()))
         } else {
             Ok(0)
         }
     }
 
-    async fn save(&self, db: &dyn DMSCDatabase, entity: &E) -> DMSCResult<E> {
+    async fn save(&self, db: &dyn RiDatabase, entity: &E) -> RiResult<E> {
         let json_value = serde_json::to_value(entity)?;
         let values: HashMap<String, serde_json::Value> = serde_json::from_value(json_value)?;
         
@@ -222,7 +222,7 @@ impl<E: for<'de> serde::Deserialize<'de> + serde::Serialize + Clone + Send + Syn
         Ok(entity.clone())
     }
 
-    async fn save_many(&self, db: &dyn DMSCDatabase, entities: &[E]) -> DMSCResult<Vec<E>> {
+    async fn save_many(&self, db: &dyn RiDatabase, entities: &[E]) -> RiResult<Vec<E>> {
         let mut saved = Vec::with_capacity(entities.len());
         
         for entity in entities {
@@ -232,7 +232,7 @@ impl<E: for<'de> serde::Deserialize<'de> + serde::Serialize + Clone + Send + Syn
         Ok(saved)
     }
 
-    async fn update(&self, db: &dyn DMSCDatabase, entity: &E) -> DMSCResult<E> {
+    async fn update(&self, db: &dyn RiDatabase, entity: &E) -> RiResult<E> {
         let json_value = serde_json::to_value(entity)?;
         let values: HashMap<String, serde_json::Value> = serde_json::from_value(json_value)?;
         
@@ -265,27 +265,27 @@ impl<E: for<'de> serde::Deserialize<'de> + serde::Serialize + Clone + Send + Syn
         Ok(entity.clone())
     }
 
-    async fn delete(&self, db: &dyn DMSCDatabase, entity: &E) -> DMSCResult<()> {
+    async fn delete(&self, db: &dyn RiDatabase, entity: &E) -> RiResult<()> {
         let json_value = serde_json::to_value(entity)?;
         let values: HashMap<String, serde_json::Value> = serde_json::from_value(json_value)?;
         
         if let Some(id) = values.get("id") {
             self.delete_by_id(db, &id.to_string()).await
         } else {
-            Err(DMSCError::Other("Entity has no id field".to_string()))
+            Err(RiError::Other("Entity has no id field".to_string()))
         }
     }
 
-    async fn delete_by_id(&self, db: &dyn DMSCDatabase, id: &str) -> DMSCResult<()> {
+    async fn delete_by_id(&self, db: &dyn RiDatabase, id: &str) -> RiResult<()> {
         let sql = format!("DELETE FROM {} WHERE id = ?", self.table_name);
         
         db.execute_with_params(&sql, &[serde_json::json!(id)]).await?;
         Ok(())
     }
 
-    async fn delete_many(&self, db: &dyn DMSCDatabase, criteria: Vec<Criteria>) -> DMSCResult<u64> {
+    async fn delete_many(&self, db: &dyn RiDatabase, criteria: Vec<Criteria>) -> RiResult<u64> {
         if criteria.is_empty() {
-            return Err(DMSCError::Other("Criteria required for delete_many operation".to_string()));
+            return Err(RiError::Other("Criteria required for delete_many operation".to_string()));
         }
         
         let mut query = QueryBuilder::new(self.table_name);
@@ -299,7 +299,7 @@ impl<E: for<'de> serde::Deserialize<'de> + serde::Serialize + Clone + Send + Syn
         db.execute_with_params(&delete_sql, &params).await.map_err(|e| e.into())
     }
     
-    async fn batch_insert(&self, db: &dyn DMSCDatabase, entities: &[E], batch_size: usize) -> DMSCResult<Vec<E>> {
+    async fn batch_insert(&self, db: &dyn RiDatabase, entities: &[E], batch_size: usize) -> RiResult<Vec<E>> {
         let mut inserted = Vec::with_capacity(entities.len());
         
         for chunk in entities.chunks(batch_size) {
@@ -342,7 +342,7 @@ impl<E: for<'de> serde::Deserialize<'de> + serde::Serialize + Clone + Send + Syn
         Ok(inserted)
     }
     
-    async fn upsert(&self, db: &dyn DMSCDatabase, entity: &E, conflict_columns: &[&str]) -> DMSCResult<E> {
+    async fn upsert(&self, db: &dyn RiDatabase, entity: &E, conflict_columns: &[&str]) -> RiResult<E> {
         let json_value = serde_json::to_value(entity)?;
         let values: HashMap<String, serde_json::Value> = serde_json::from_value(json_value)?;
         
@@ -378,14 +378,14 @@ impl<E: for<'de> serde::Deserialize<'de> + serde::Serialize + Clone + Send + Syn
         Ok(entity.clone())
     }
 
-    async fn exists(&self, db: &dyn DMSCDatabase, id: &str) -> DMSCResult<bool> {
+    async fn exists(&self, db: &dyn RiDatabase, id: &str) -> RiResult<bool> {
         let sql = format!("SELECT 1 FROM {} WHERE id = ? LIMIT 1", self.table_name);
         
         let result = db.query_with_params(&sql, &[serde_json::json!(id)]).await?;
         Ok(!result.is_empty())
     }
 
-    async fn exists_by(&self, db: &dyn DMSCDatabase, criteria: &Criteria) -> DMSCResult<bool> {
+    async fn exists_by(&self, db: &dyn RiDatabase, criteria: &Criteria) -> RiResult<bool> {
         let mut query = QueryBuilder::new(self.table_name);
         query.select(vec!["1"]);
         query.where_criteria(criteria.clone());
@@ -398,7 +398,7 @@ impl<E: for<'de> serde::Deserialize<'de> + serde::Serialize + Clone + Send + Syn
     }
 }
 
-impl<E: for<'de> serde::Deserialize<'de> + serde::Serialize + Clone + Send + Sync> DMSCORMSimpleRepository<E> {
+impl<E: for<'de> serde::Deserialize<'de> + serde::Serialize + Clone + Send + Sync> RiORMSimpleRepository<E> {
     pub fn default() -> Self {
         Self::new("unknown")
     }

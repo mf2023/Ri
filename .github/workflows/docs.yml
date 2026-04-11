@@ -1,7 +1,7 @@
 # Copyright © 2025-2026 Wenze Wei. All Rights Reserved.
 #
-# This file is part of DMSC.
-# The DMSC project belongs to the Dunimd Team.
+# This file is part of Ri.
+# The Ri project belongs to the Dunimd Team.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # You may not use this file except in compliance with the License.
@@ -16,11 +16,11 @@
 # limitations under the License.
 
 ################################################################################
-# DMSC Documentation Deployment Pipeline
+# Ri Documentation Deployment Pipeline
 ################################################################################
 #
 # PURPOSE:
-# This workflow automates the build and deployment of DMSC project documentation
+# This workflow automates the build and deployment of Ri project documentation
 # to GitHub Pages. It generates and publishes comprehensive API documentation
 # for both the Rust library and Python bindings.
 #
@@ -32,7 +32,7 @@
 #
 # 2. Python API Documentation (pdoc)
 #    - Generated from Python docstrings using pdoc tool
-#    - Targets the dmsc Python package
+#    - Targets the ri Python package
 #    - Provides Python-specific API reference
 #
 # 3. Redirect Index
@@ -40,7 +40,7 @@
 #    - Ensures users land on the correct documentation page
 #
 # OUTPUT LOCATION: target/doc/
-# PUBLISHING TARGET: GitHub Pages (https://<username>.github.io/<repo>/dmsc/)
+# PUBLISHING TARGET: GitHub Pages (https://<username>.github.io/<repo>/ri/)
 #
 # TRIGGER CONDITIONS:
 # - push to master or main branches: Automatic deployment
@@ -190,25 +190,25 @@ jobs:
 
       # Step 10: Build Python API Documentation
       # Uses pdoc to generate HTML documentation from Python docstrings.
-      # Targets the 'dmsc' module (the Python package name).
+      # Targets the 'ri' module (the Python package name).
       # Output: target/doc/python/ directory with generated HTML
       - name: Build Python documentation
-        run: pdoc -o target/doc/python dmsc
+        run: pdoc -o target/doc/python ri
 
       # Step 11: Create Redirect Index
       # Creates an index.html that automatically redirects users to the
       # main documentation page. This provides a cleaner URL structure
-      # where accessing the root redirects to /dmsc/ documentation.
+      # where accessing the root redirects to /ri/ documentation.
       - name: Add redirect index
         run: |
           cat > target/doc/index.html << 'EOF'
           <!DOCTYPE html>
           <html>
           <head>
-              <meta http-equiv="refresh" content="0;url=dmsc/">
+              <meta http-equiv="refresh" content="0;url=ri/">
           </head>
           <body>
-              <a href="dmsc/">Go to DMSC Documentation</a>
+              <a href="ri/">Go to Ri Documentation</a>
           </body>
           </html>
           EOF
@@ -248,7 +248,7 @@ jobs:
       # Uses actions/deploy-pages@v4 to deploy the uploaded artifact.
       # The deployment URL is stored in outputs.page_url for reference.
       # GitHub Pages serves the documentation at:
-      # https://<username>.github.io/<repository>/dmsc/
+      # https://<username>.github.io/<repository>/ri/
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4

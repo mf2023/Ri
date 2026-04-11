@@ -1,7 +1,7 @@
 //! Copyright © 2025-2026 Wenze Wei. All Rights Reserved.
 //!
-//! This file is part of DMSC.
-//! The DMSC project belongs to the Dunimd Team.
+//! This file is part of Ri.
+//! The Ri project belongs to the Dunimd Team.
 //!
 //! Licensed under the Apache License, Version 2.0 (the "License");
 //! You may not use this file except in compliance with the License.
@@ -17,15 +17,15 @@
 
 //! # Core Module System
 //!
-//! This module provides the foundation for modular service architecture in DMSC.
+//! This module provides the foundation for modular service architecture in Ri.
 //! It defines traits and structures for both synchronous and asynchronous service modules.
 //!
 //! ## Key Components
 //!
 //! - **ServiceModule**: Trait for synchronous service modules
 //! - **AsyncServiceModule**: Trait for asynchronous service modules
-//! - **DMSCModule**: Public async trait for DMSC modules
-//! - **DMSCPythonModuleAdapter**: Python module adapter
+//! - **RiModule**: Public async trait for Ri modules
+//! - **RiPythonModuleAdapter**: Python module adapter
 //!
 //! ## Design Principles
 //!
@@ -48,17 +48,17 @@
 //! 6. **Shutdown**: `shutdown` - Stop module execution
 //! 7. **After Shutdown**: `after_shutdown` - Cleanup resources
 
-use crate::core::{DMSCResult, DMSCServiceContext};
+use crate::core::{RiResult, RiServiceContext};
 
 /// Synchronous service module trait.
 /// 
-/// This trait defines the interface for synchronous service modules in DMSC. It provides
+/// This trait defines the interface for synchronous service modules in Ri. It provides
 /// a comprehensive lifecycle management system with multiple phases.
 /// 
 /// ## Usage
 /// 
 /// ```rust
-/// use dmsc::core::{ServiceModule, DMSCResult, DMSCServiceContext};
+/// use ri::core::{ServiceModule, RiResult, RiServiceContext};
 /// 
 /// struct MySyncModule;
 /// 
@@ -79,7 +79,7 @@ use crate::core::{DMSCResult, DMSCServiceContext};
 ///         vec!["dependency_module"]
 ///     }
 ///     
-///     fn start(&mut self, ctx: &mut DMSCServiceContext) -> DMSCResult<()> {
+///     fn start(&mut self, ctx: &mut RiServiceContext) -> RiResult<()> {
 ///         // Start module logic
 ///         Ok(())
 ///     }
@@ -125,7 +125,7 @@ pub trait ServiceModule: Send + Sync {
     /// This method is called during the initialization phase to set up module resources.
     /// 
     /// Default: `Ok(())`
-    fn init(&mut self, _ctx: &mut DMSCServiceContext) -> DMSCResult<()> {
+    fn init(&mut self, _ctx: &mut RiServiceContext) -> RiResult<()> {
         Ok(())
     }
 
@@ -134,7 +134,7 @@ pub trait ServiceModule: Send + Sync {
     /// This method is called after initialization but before the main start phase.
     /// 
     /// Default: `Ok(())`
-    fn before_start(&mut self, _ctx: &mut DMSCServiceContext) -> DMSCResult<()> {
+    fn before_start(&mut self, _ctx: &mut RiServiceContext) -> RiResult<()> {
         Ok(())
     }
 
@@ -143,7 +143,7 @@ pub trait ServiceModule: Send + Sync {
     /// This method is called to start the main functionality of the module.
     /// 
     /// Default: `Ok(())`
-    fn start(&mut self, _ctx: &mut DMSCServiceContext) -> DMSCResult<()> {
+    fn start(&mut self, _ctx: &mut RiServiceContext) -> RiResult<()> {
         Ok(())
     }
 
@@ -152,7 +152,7 @@ pub trait ServiceModule: Send + Sync {
     /// This method is called after the main start phase but before the module is considered fully started.
     /// 
     /// Default: `Ok(())`
-    fn after_start(&mut self, _ctx: &mut DMSCServiceContext) -> DMSCResult<()> {
+    fn after_start(&mut self, _ctx: &mut RiServiceContext) -> RiResult<()> {
         Ok(())
     }
 
@@ -161,7 +161,7 @@ pub trait ServiceModule: Send + Sync {
     /// This method is called before the main shutdown phase.
     /// 
     /// Default: `Ok(())`
-    fn before_shutdown(&mut self, _ctx: &mut DMSCServiceContext) -> DMSCResult<()> {
+    fn before_shutdown(&mut self, _ctx: &mut RiServiceContext) -> RiResult<()> {
         Ok(())
     }
 
@@ -170,7 +170,7 @@ pub trait ServiceModule: Send + Sync {
     /// This method is called to stop the main functionality of the module.
     /// 
     /// Default: `Ok(())`
-    fn shutdown(&mut self, _ctx: &mut DMSCServiceContext) -> DMSCResult<()> {
+    fn shutdown(&mut self, _ctx: &mut RiServiceContext) -> RiResult<()> {
         Ok(())
     }
 
@@ -179,38 +179,38 @@ pub trait ServiceModule: Send + Sync {
     /// This method is called after the main shutdown phase to clean up resources.
     /// 
     /// Default: `Ok(())`
-    fn after_shutdown(&mut self, _ctx: &mut DMSCServiceContext) -> DMSCResult<()> {
+    fn after_shutdown(&mut self, _ctx: &mut RiServiceContext) -> RiResult<()> {
         Ok(())
     }
 }
 
 /// Public asynchronous service module trait.
 /// 
-/// This trait defines the public interface for asynchronous service modules in DMSC.
+/// This trait defines the public interface for asynchronous service modules in Ri.
 /// It provides a comprehensive lifecycle management system with multiple phases.
 /// 
 /// ## Usage
 /// 
 /// ```rust
-/// use dmsc::core::{DMSCModule, DMSCResult, DMSCServiceContext};
+/// use ri::core::{RiModule, RiResult, RiServiceContext};
 /// use async_trait::async_trait;
 /// 
 /// struct MyAsyncModule;
 /// 
 /// #[async_trait]
-/// impl DMSCModule for MyAsyncModule {
+/// impl RiModule for MyAsyncModule {
 ///     fn name(&self) -> &str {
 ///         "my_async_module"
 ///     }
 ///     
-///     async fn start(&mut self, ctx: &mut DMSCServiceContext) -> DMSCResult<()> {
+///     async fn start(&mut self, ctx: &mut RiServiceContext) -> RiResult<()> {
 ///         // Start async module logic
 ///         Ok(())
 ///     }
 /// }
 /// ```
 #[async_trait::async_trait]
-pub trait DMSCModule: Send + Sync {
+pub trait RiModule: Send + Sync {
     /// Returns the name of the service module.
     /// 
     /// This name is used for identification, dependency resolution, and logging purposes.
@@ -250,7 +250,7 @@ pub trait DMSCModule: Send + Sync {
     /// This method is called during the initialization phase to set up module resources.
     /// 
     /// Default: `Ok(())`
-    async fn init(&mut self, _ctx: &mut DMSCServiceContext) -> DMSCResult<()> {
+    async fn init(&mut self, _ctx: &mut RiServiceContext) -> RiResult<()> {
         Ok(())
     }
 
@@ -259,7 +259,7 @@ pub trait DMSCModule: Send + Sync {
     /// This method is called after initialization but before the main start phase.
     /// 
     /// Default: `Ok(())`
-    async fn before_start(&mut self, _ctx: &mut DMSCServiceContext) -> DMSCResult<()> {
+    async fn before_start(&mut self, _ctx: &mut RiServiceContext) -> RiResult<()> {
         Ok(())
     }
 
@@ -268,7 +268,7 @@ pub trait DMSCModule: Send + Sync {
     /// This method is called to start the main functionality of the module.
     /// 
     /// Default: `Ok(())`
-    async fn start(&mut self, _ctx: &mut DMSCServiceContext) -> DMSCResult<()> {
+    async fn start(&mut self, _ctx: &mut RiServiceContext) -> RiResult<()> {
         Ok(())
     }
 
@@ -277,7 +277,7 @@ pub trait DMSCModule: Send + Sync {
     /// This method is called after the main start phase but before the module is considered fully started.
     /// 
     /// Default: `Ok(())`
-    async fn after_start(&mut self, _ctx: &mut DMSCServiceContext) -> DMSCResult<()> {
+    async fn after_start(&mut self, _ctx: &mut RiServiceContext) -> RiResult<()> {
         Ok(())
     }
 
@@ -286,7 +286,7 @@ pub trait DMSCModule: Send + Sync {
     /// This method is called before the main shutdown phase.
     /// 
     /// Default: `Ok(())`
-    async fn before_shutdown(&mut self, _ctx: &mut DMSCServiceContext) -> DMSCResult<()> {
+    async fn before_shutdown(&mut self, _ctx: &mut RiServiceContext) -> RiResult<()> {
         Ok(())
     }
 
@@ -295,7 +295,7 @@ pub trait DMSCModule: Send + Sync {
     /// This method is called to stop the main functionality of the module.
     /// 
     /// Default: `Ok(())`
-    async fn shutdown(&mut self, _ctx: &mut DMSCServiceContext) -> DMSCResult<()> {
+    async fn shutdown(&mut self, _ctx: &mut RiServiceContext) -> RiResult<()> {
         Ok(())
     }
 
@@ -304,7 +304,7 @@ pub trait DMSCModule: Send + Sync {
     /// This method is called after the main shutdown phase to clean up resources.
     /// 
     /// Default: `Ok(())`
-    async fn after_shutdown(&mut self, _ctx: &mut DMSCServiceContext) -> DMSCResult<()> {
+    async fn after_shutdown(&mut self, _ctx: &mut RiServiceContext) -> RiResult<()> {
         Ok(())
     }
 }
@@ -313,7 +313,7 @@ pub trait DMSCModule: Send + Sync {
 use pyo3::prelude::*;
 
 #[cfg(feature = "pyo3")]
-/// Python representation of a DMSC module configuration.
+/// Python representation of a Ri module configuration.
 ///
 /// This structure provides a Python-accessible view of module configuration,
 /// allowing Python code to define module properties that can be used in Rust.
@@ -331,15 +331,15 @@ use pyo3::prelude::*;
 /// ```python
 /// 
 ///
-/// module = dms.DMSCPythonModule(name="my_python_module")
+/// module = dms.RiPythonModule(name="my_python_module")
 /// module.is_critical = True
 /// module.priority = 100
 /// module.dependencies = ["logger", "config"]
 /// ```
 #[pyclass]
-#[pyo3(name = "DMSCPythonModule")]
+#[pyo3(name = "RiPythonModule")]
 #[derive(Clone)]
-pub struct DMSCPythonModule {
+pub struct RiPythonModule {
     #[pyo3(get)]
     name: String,
     #[pyo3(get)]
@@ -352,10 +352,10 @@ pub struct DMSCPythonModule {
 
 #[cfg(feature = "pyo3")]
 #[pymethods]
-impl DMSCPythonModule {
+impl RiPythonModule {
     #[new]
     fn new(name: String) -> Self {
-        DMSCPythonModule {
+        RiPythonModule {
             name,
             is_critical: true,
             priority: 0,
@@ -405,9 +405,9 @@ impl DMSCPythonModule {
 }
 
 #[cfg(feature = "pyo3")]
-/// Python module adapter that implements DMSCModule trait.
+/// Python module adapter that implements RiModule trait.
 ///
-/// This structure enables Python modules to integrate with the DMSC module system
+/// This structure enables Python modules to integrate with the Ri module system
 /// by implementing the `AsyncServiceModule` trait. Python code can create instances
 /// of this adapter with custom configuration, and they will participate in the
 /// module lifecycle just like Rust-native modules.
@@ -438,12 +438,12 @@ impl DMSCPythonModule {
 ///         print("Starting Python module")
 ///         return None
 ///
-/// adapter = dms.DMSCPythonModuleAdapter(name="my_module")
+/// adapter = dms.RiPythonModuleAdapter(name="my_module")
 /// adapter.name = "python_module"
 /// ```
 #[pyclass]
 #[derive(Clone)]
-pub struct DMSCPythonModuleAdapter {
+pub struct RiPythonModuleAdapter {
     #[pyo3(get, set)]
     pub name: String,
     #[pyo3(get, set)]
@@ -456,10 +456,10 @@ pub struct DMSCPythonModuleAdapter {
 
 #[cfg(feature = "pyo3")]
 #[pymethods]
-impl DMSCPythonModuleAdapter {
+impl RiPythonModuleAdapter {
     #[new]
     fn new(name: String) -> Self {
-        DMSCPythonModuleAdapter {
+        RiPythonModuleAdapter {
             name,
             is_critical: true,
             priority: 0,
@@ -473,14 +473,14 @@ impl DMSCPythonModuleAdapter {
 ///
 /// This structure provides a Python-accessible representation of synchronous
 /// service modules. It enables Python code to define synchronous modules that
-/// integrate with DMSC's module lifecycle system. Unlike asynchronous modules,
+/// integrate with Ri's module lifecycle system. Unlike asynchronous modules,
 /// synchronous modules execute their operations in a blocking manner.
 ///
 /// ## Synchronous vs Asynchronous
 ///
 /// Synchronous modules use blocking I/O and execute their callbacks on the
 /// same thread as the module lifecycle manager. For non-blocking operations,
-/// use `DMSCPythonAsyncServiceModule` instead.
+/// use `RiPythonAsyncServiceModule` instead.
 ///
 /// ## Threading Model
 ///
@@ -506,13 +506,13 @@ impl DMSCPythonModuleAdapter {
 ///         print("Starting sync module")
 ///         return None
 ///
-/// module = dms.DMSCPythonServiceModule(name="my_sync")
+/// module = dms.RiPythonServiceModule(name="my_sync")
 /// module.priority = 50
 /// module.dependencies = ["config"]
 /// ```
 #[pyclass(subclass)]
 #[derive(Clone)]
-pub struct DMSCPythonServiceModule {
+pub struct RiPythonServiceModule {
     name: String,
     is_critical: bool,
     priority: i32,
@@ -521,10 +521,10 @@ pub struct DMSCPythonServiceModule {
 
 #[cfg(feature = "pyo3")]
 #[pymethods]
-impl DMSCPythonServiceModule {
+impl RiPythonServiceModule {
     #[new]
     fn new(name: String) -> Self {
-        DMSCPythonServiceModule {
+        RiPythonServiceModule {
             name,
             is_critical: true,
             priority: 0,
@@ -578,7 +578,7 @@ impl DMSCPythonServiceModule {
 ///
 /// This structure provides a Python-accessible representation of asynchronous
 /// service modules. It enables Python code to define async modules that integrate
-/// with DMSC's module lifecycle system using non-blocking operations.
+/// with Ri's module lifecycle system using non-blocking operations.
 ///
 /// ## Asynchronous Execution
 ///
@@ -589,7 +589,7 @@ impl DMSCPythonServiceModule {
 /// ## Tokio Runtime
 ///
 /// The async modules execute within the Tokio runtime that is managed by the
-/// DMSC application runtime. This provides efficient task scheduling and
+/// Ri application runtime. This provides efficient task scheduling and
 /// native support for async I/O operations.
 ///
 /// ## Python Integration
@@ -611,13 +611,13 @@ impl DMSCPythonServiceModule {
 ///         print("Starting async module")
 ///         return None
 ///
-/// module = dms.DMSCPythonAsyncServiceModule(name="my_async")
+/// module = dms.RiPythonAsyncServiceModule(name="my_async")
 /// module.priority = 100
 /// module.dependencies = ["config", "logger"]
 /// ```
 #[pyclass(subclass)]
 #[derive(Clone)]
-pub struct DMSCPythonAsyncServiceModule {
+pub struct RiPythonAsyncServiceModule {
     name: String,
     is_critical: bool,
     priority: i32,
@@ -626,10 +626,10 @@ pub struct DMSCPythonAsyncServiceModule {
 
 #[cfg(feature = "pyo3")]
 #[pymethods]
-impl DMSCPythonAsyncServiceModule {
+impl RiPythonAsyncServiceModule {
     #[new]
     fn new(name: String) -> Self {
-        DMSCPythonAsyncServiceModule {
+        RiPythonAsyncServiceModule {
             name,
             is_critical: true,
             priority: 0,
@@ -680,7 +680,7 @@ impl DMSCPythonAsyncServiceModule {
 
 #[cfg(feature = "pyo3")]
 #[async_trait::async_trait]
-impl AsyncServiceModule for DMSCPythonModuleAdapter {
+impl AsyncServiceModule for RiPythonModuleAdapter {
     fn name(&self) -> &str {
         &self.name
     }
@@ -697,37 +697,37 @@ impl AsyncServiceModule for DMSCPythonModuleAdapter {
         self.dependencies.iter().map(|s| s.as_str()).collect()
     }
     
-    async fn init(&mut self, _ctx: &mut DMSCServiceContext) -> DMSCResult<()> {
+    async fn init(&mut self, _ctx: &mut RiServiceContext) -> RiResult<()> {
         Ok(())
     }
     
-    async fn before_start(&mut self, _ctx: &mut DMSCServiceContext) -> DMSCResult<()> {
+    async fn before_start(&mut self, _ctx: &mut RiServiceContext) -> RiResult<()> {
         Ok(())
     }
     
-    async fn start(&mut self, _ctx: &mut DMSCServiceContext) -> DMSCResult<()> {
+    async fn start(&mut self, _ctx: &mut RiServiceContext) -> RiResult<()> {
         Ok(())
     }
     
-    async fn after_start(&mut self, _ctx: &mut DMSCServiceContext) -> DMSCResult<()> {
+    async fn after_start(&mut self, _ctx: &mut RiServiceContext) -> RiResult<()> {
         Ok(())
     }
     
-    async fn before_shutdown(&mut self, _ctx: &mut DMSCServiceContext) -> DMSCResult<()> {
+    async fn before_shutdown(&mut self, _ctx: &mut RiServiceContext) -> RiResult<()> {
         Ok(())
     }
     
-    async fn shutdown(&mut self, _ctx: &mut DMSCServiceContext) -> DMSCResult<()> {
+    async fn shutdown(&mut self, _ctx: &mut RiServiceContext) -> RiResult<()> {
         Ok(())
     }
     
-    async fn after_shutdown(&mut self, _ctx: &mut DMSCServiceContext) -> DMSCResult<()> {
+    async fn after_shutdown(&mut self, _ctx: &mut RiServiceContext) -> RiResult<()> {
         Ok(())
     }
 }
 
 #[cfg(feature = "pyo3")]
-impl ServiceModule for DMSCPythonServiceModule {
+impl ServiceModule for RiPythonServiceModule {
     fn name(&self) -> &str {
         &self.name
     }
@@ -744,38 +744,38 @@ impl ServiceModule for DMSCPythonServiceModule {
         self.dependencies.iter().map(|s| s.as_str()).collect()
     }
     
-    fn init(&mut self, _ctx: &mut DMSCServiceContext) -> DMSCResult<()> {
+    fn init(&mut self, _ctx: &mut RiServiceContext) -> RiResult<()> {
         Ok(())
     }
     
-    fn before_start(&mut self, _ctx: &mut DMSCServiceContext) -> DMSCResult<()> {
+    fn before_start(&mut self, _ctx: &mut RiServiceContext) -> RiResult<()> {
         Ok(())
     }
     
-    fn start(&mut self, _ctx: &mut DMSCServiceContext) -> DMSCResult<()> {
+    fn start(&mut self, _ctx: &mut RiServiceContext) -> RiResult<()> {
         Ok(())
     }
     
-    fn after_start(&mut self, _ctx: &mut DMSCServiceContext) -> DMSCResult<()> {
+    fn after_start(&mut self, _ctx: &mut RiServiceContext) -> RiResult<()> {
         Ok(())
     }
     
-    fn before_shutdown(&mut self, _ctx: &mut DMSCServiceContext) -> DMSCResult<()> {
+    fn before_shutdown(&mut self, _ctx: &mut RiServiceContext) -> RiResult<()> {
         Ok(())
     }
     
-    fn shutdown(&mut self, _ctx: &mut DMSCServiceContext) -> DMSCResult<()> {
+    fn shutdown(&mut self, _ctx: &mut RiServiceContext) -> RiResult<()> {
         Ok(())
     }
     
-    fn after_shutdown(&mut self, _ctx: &mut DMSCServiceContext) -> DMSCResult<()> {
+    fn after_shutdown(&mut self, _ctx: &mut RiServiceContext) -> RiResult<()> {
         Ok(())
     }
 }
 
 #[cfg(feature = "pyo3")]
 #[async_trait::async_trait]
-impl AsyncServiceModule for DMSCPythonAsyncServiceModule {
+impl AsyncServiceModule for RiPythonAsyncServiceModule {
     fn name(&self) -> &str {
         &self.name
     }
@@ -792,31 +792,31 @@ impl AsyncServiceModule for DMSCPythonAsyncServiceModule {
         self.dependencies.iter().map(|s| s.as_str()).collect()
     }
     
-    async fn init(&mut self, _ctx: &mut DMSCServiceContext) -> DMSCResult<()> {
+    async fn init(&mut self, _ctx: &mut RiServiceContext) -> RiResult<()> {
         Ok(())
     }
     
-    async fn before_start(&mut self, _ctx: &mut DMSCServiceContext) -> DMSCResult<()> {
+    async fn before_start(&mut self, _ctx: &mut RiServiceContext) -> RiResult<()> {
         Ok(())
     }
     
-    async fn start(&mut self, _ctx: &mut DMSCServiceContext) -> DMSCResult<()> {
+    async fn start(&mut self, _ctx: &mut RiServiceContext) -> RiResult<()> {
         Ok(())
     }
     
-    async fn after_start(&mut self, _ctx: &mut DMSCServiceContext) -> DMSCResult<()> {
+    async fn after_start(&mut self, _ctx: &mut RiServiceContext) -> RiResult<()> {
         Ok(())
     }
     
-    async fn before_shutdown(&mut self, _ctx: &mut DMSCServiceContext) -> DMSCResult<()> {
+    async fn before_shutdown(&mut self, _ctx: &mut RiServiceContext) -> RiResult<()> {
         Ok(())
     }
     
-    async fn shutdown(&mut self, _ctx: &mut DMSCServiceContext) -> DMSCResult<()> {
+    async fn shutdown(&mut self, _ctx: &mut RiServiceContext) -> RiResult<()> {
         Ok(())
     }
     
-    async fn after_shutdown(&mut self, _ctx: &mut DMSCServiceContext) -> DMSCResult<()> {
+    async fn after_shutdown(&mut self, _ctx: &mut RiServiceContext) -> RiResult<()> {
         Ok(())
     }
 }
@@ -824,13 +824,13 @@ impl AsyncServiceModule for DMSCPythonAsyncServiceModule {
 
 /// Internal asynchronous service module trait.
 /// 
-/// This trait defines the interface for internal asynchronous service modules in DMSC.
+/// This trait defines the interface for internal asynchronous service modules in Ri.
 /// It provides a comprehensive lifecycle management system with multiple phases.
 /// 
 /// ## Usage
 /// 
 /// ```rust
-/// use dmsc::core::{AsyncServiceModule, DMSCResult, DMSCServiceContext};
+/// use ri::core::{AsyncServiceModule, RiResult, RiServiceContext};
 /// use async_trait::async_trait;
 /// 
 /// struct MyInternalAsyncModule;
@@ -841,7 +841,7 @@ impl AsyncServiceModule for DMSCPythonAsyncServiceModule {
 ///         "my_internal_async_module"
 ///     }
 ///     
-///     async fn start(&mut self, ctx: &mut DMSCServiceContext) -> DMSCResult<()> {
+///     async fn start(&mut self, ctx: &mut RiServiceContext) -> RiResult<()> {
 ///         // Start internal async module logic
 ///         Ok(())
 ///     }
@@ -888,7 +888,7 @@ pub trait AsyncServiceModule: Send + Sync {
     /// This method is called during the initialization phase to set up module resources.
     /// 
     /// Default: `Ok(())`
-    async fn init(&mut self, _ctx: &mut DMSCServiceContext) -> DMSCResult<()> {
+    async fn init(&mut self, _ctx: &mut RiServiceContext) -> RiResult<()> {
         Ok(())
     }
 
@@ -897,7 +897,7 @@ pub trait AsyncServiceModule: Send + Sync {
     /// This method is called after initialization but before the main start phase.
     /// 
     /// Default: `Ok(())`
-    async fn before_start(&mut self, _ctx: &mut DMSCServiceContext) -> DMSCResult<()> {
+    async fn before_start(&mut self, _ctx: &mut RiServiceContext) -> RiResult<()> {
         Ok(())
     }
 
@@ -906,7 +906,7 @@ pub trait AsyncServiceModule: Send + Sync {
     /// This method is called to start the main functionality of the module.
     /// 
     /// Default: `Ok(())`
-    async fn start(&mut self, _ctx: &mut DMSCServiceContext) -> DMSCResult<()> {
+    async fn start(&mut self, _ctx: &mut RiServiceContext) -> RiResult<()> {
         Ok(())
     }
 
@@ -915,7 +915,7 @@ pub trait AsyncServiceModule: Send + Sync {
     /// This method is called after the main start phase but before the module is considered fully started.
     /// 
     /// Default: `Ok(())`
-    async fn after_start(&mut self, _ctx: &mut DMSCServiceContext) -> DMSCResult<()> {
+    async fn after_start(&mut self, _ctx: &mut RiServiceContext) -> RiResult<()> {
         Ok(())
     }
 
@@ -924,7 +924,7 @@ pub trait AsyncServiceModule: Send + Sync {
     /// This method is called before the main shutdown phase.
     /// 
     /// Default: `Ok(())`
-    async fn before_shutdown(&mut self, _ctx: &mut DMSCServiceContext) -> DMSCResult<()> {
+    async fn before_shutdown(&mut self, _ctx: &mut RiServiceContext) -> RiResult<()> {
         Ok(())
     }
 
@@ -933,7 +933,7 @@ pub trait AsyncServiceModule: Send + Sync {
     /// This method is called to stop the main functionality of the module.
     /// 
     /// Default: `Ok(())`
-    async fn shutdown(&mut self, _ctx: &mut DMSCServiceContext) -> DMSCResult<()> {
+    async fn shutdown(&mut self, _ctx: &mut RiServiceContext) -> RiResult<()> {
         Ok(())
     }
 
@@ -942,7 +942,7 @@ pub trait AsyncServiceModule: Send + Sync {
     /// This method is called after the main shutdown phase to clean up resources.
     /// 
     /// Default: `Ok(())`
-    async fn after_shutdown(&mut self, _ctx: &mut DMSCServiceContext) -> DMSCResult<()> {
+    async fn after_shutdown(&mut self, _ctx: &mut RiServiceContext) -> RiResult<()> {
         Ok(())
     }
 }

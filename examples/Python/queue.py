@@ -1,7 +1,7 @@
 # Copyright © 2025-2026 Wenze Wei. All Rights Reserved.
 #
-# This file is part of DMSC.
-# The DMSC project belongs to the Dunimd Team.
+# This file is part of Ri.
+# The Ri project belongs to the Dunimd Team.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # You may not use this file except in compliance with the License.
@@ -16,52 +16,52 @@
 # limitations under the License.
 
 """
-DMSC Queue Module Example
+Ri Queue Module Example
 
-This example demonstrates how to use the DMSC queue module for distributed
+This example demonstrates how to use the Ri queue module for distributed
 message queue operations with support for multiple backends.
 """
 
 import asyncio
-from dmsc import (
-    DMSCQueueModule,
-    DMSCQueueConfig,
-    DMSCQueueManager,
-    DMSCQueueMessage,
-    DMSCQueueStats,
-    DMSCQueueBackendType,
-    DMSCRetryPolicy,
-    DMSCDeadLetterConfig,
+from ri import (
+    RiQueueModule,
+    RiQueueConfig,
+    RiQueueManager,
+    RiQueueMessage,
+    RiQueueStats,
+    RiQueueBackendType,
+    RiRetryPolicy,
+    RiDeadLetterConfig,
 )
 
 
 async def main():
     # Create queue configuration
-    config = DMSCQueueConfig()
-    config.backend_type = DMSCQueueBackendType.MEMORY
+    config = RiQueueConfig()
+    config.backend_type = RiQueueBackendType.MEMORY
     config.max_queue_size = 10000
     config.default_ttl_seconds = 3600
     config.enable_dead_letter = True
     config.enable_priority = True
 
     # Create retry policy
-    retry_policy = DMSCRetryPolicy()
+    retry_policy = RiRetryPolicy()
     retry_policy.max_retries = 3
     retry_policy.retry_delay_seconds = 5.0
     retry_policy.exponential_backoff = True
     config.retry_policy = retry_policy
 
     # Create dead letter configuration
-    dlq_config = DMSCDeadLetterConfig()
+    dlq_config = RiDeadLetterConfig()
     dlq_config.max_retries = 5
     dlq_config.ttl_seconds = 86400
     config.dead_letter_config = dlq_config
 
     # Initialize queue module
-    queue_module = DMSCQueueModule(config)
+    queue_module = RiQueueModule(config)
 
     # Create queue manager
-    manager = DMSCQueueManager()
+    manager = RiQueueManager()
 
     # Create queues for different purposes
     orders = manager.create_queue("orders")
@@ -69,16 +69,16 @@ async def main():
     events = manager.create_queue("events")
 
     # Create messages with metadata
-    order_msg = DMSCQueueMessage()
+    order_msg = RiQueueMessage()
     order_msg.payload = b'{"order_id": "12345", "amount": 99.99}'
     order_msg.priority = 10
     order_msg.headers = {"content-type": "application/json"}
 
-    notification_msg = DMSCQueueMessage()
+    notification_msg = RiQueueMessage()
     notification_msg.payload = b'{"type": "email", "to": "user@example.com"}'
     notification_msg.priority = 5
 
-    event_msg = DMSCQueueMessage()
+    event_msg = RiQueueMessage()
     event_msg.payload = b'{"event": "user_login", "user_id": "user123"}'
     event_msg.priority = 1
 

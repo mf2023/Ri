@@ -2,8 +2,8 @@
 
 # Copyright © 2025-2026 Wenze Wei. All Rights Reserved.
 #
-# This file is part of DMSC.
-# The DMSC project belongs to the Dunimd Team.
+# This file is part of Ri.
+# The Ri project belongs to the Dunimd Team.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # You may not use this file except in compliance with the License.
@@ -18,71 +18,71 @@
 # limitations under the License.
 
 """
-DMSC Queue Module Tests
+Ri Queue Module Tests
 
 Tests for the message queue functionality.
 """
 
 import pytest
-from dmsc import (
-    DMSCQueueModule,
-    DMSCQueueConfig,
-    DMSCQueueManager,
-    DMSCQueueMessage,
-    DMSCQueueBackendType,
-    DMSCQueueStats,
+from ri import (
+    RiQueueModule,
+    RiQueueConfig,
+    RiQueueManager,
+    RiQueueMessage,
+    RiQueueBackendType,
+    RiQueueStats,
 )
 
 
-class TestDMSCQueueModule:
-    """Tests for DMSCQueueModule"""
+class TestRiQueueModule:
+    """Tests for RiQueueModule"""
 
     def test_queue_module_creation(self):
         """Test creating queue module - requires Tokio runtime, skip"""
         pass
 
 
-class TestDMSCQueueManager:
-    """Tests for DMSCQueueManager"""
+class TestRiQueueManager:
+    """Tests for RiQueueManager"""
 
     def test_queue_manager_creation(self):
         """Test creating queue manager - skip as it requires internal setup"""
         pass
 
 
-class TestDMSCQueueMessage:
-    """Tests for DMSCQueueMessage"""
+class TestRiQueueMessage:
+    """Tests for RiQueueMessage"""
 
     def test_message_creation(self):
         """Test creating queue message - requires bytes payload"""
-        message = DMSCQueueMessage(b"test payload")
+        message = RiQueueMessage(b"test payload")
         assert message is not None
 
 
-class TestDMSCQueueConfig:
-    """Tests for DMSCQueueConfig"""
+class TestRiQueueConfig:
+    """Tests for RiQueueConfig"""
 
     def test_queue_config_creation(self):
         """Test creating queue configuration"""
-        config = DMSCQueueConfig()
+        config = RiQueueConfig()
         assert config is not None
 
 
-class TestDMSCQueueBackendType:
-    """Tests for DMSCQueueBackendType"""
+class TestRiQueueBackendType:
+    """Tests for RiQueueBackendType"""
 
     def test_backend_types(self):
         """Test queue backend types"""
-        assert DMSCQueueBackendType.Memory is not None
-        assert DMSCQueueBackendType.Redis is not None
+        assert RiQueueBackendType.Memory is not None
+        assert RiQueueBackendType.Redis is not None
 
 
-class TestDMSCQueueStats:
-    """Tests for DMSCQueueStats"""
+class TestRiQueueStats:
+    """Tests for RiQueueStats"""
 
     def test_queue_stats_creation(self):
         """Test creating queue stats"""
-        stats = DMSCQueueStats("test_queue")
+        stats = RiQueueStats("test_queue")
         assert stats is not None
 
 

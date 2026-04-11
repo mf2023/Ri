@@ -1,7 +1,7 @@
 //! Copyright © 2025-2026 Wenze Wei. All Rights Reserved.
 //!
-//! This file is part of DMSC.
-//! The DMSC project belongs to the Dunimd Team.
+//! This file is part of Ri.
+//! The Ri project belongs to the Dunimd Team.
 //!
 //! Licensed under the Apache License, Version 2.0 (the "License");
 //! You may not use this file except in compliance with the License.
@@ -17,7 +17,7 @@
 
 //! # Core Module Benchmarks
 //!
-//! This module provides performance benchmarks for fundamental DMSC operations
+//! This module provides performance benchmarks for fundamental Ri operations
 //! including error handling, concurrency primitives, UUID generation, and
 //! serialization utilities.
 //!
@@ -42,13 +42,13 @@
 //! - Black-boxes results to prevent compiler optimization
 
 use criterion::{black_box, criterion_group, criterion_main, Criterion, Throughput};
-use dmsc::core::error::DMSCError;
+use ri::core::error::RiError;
 use std::sync::Arc;
 use tokio::sync::RwLock;
 
 /// Benchmark: Error type creation across different error variants.
 ///
-/// DMSCError is the central error type for the framework. Different
+/// RiError is the central error type for the framework. Different
 /// error variants may have different creation costs due to:
 /// - String allocation
 /// - Error chain construction
@@ -60,7 +60,7 @@ fn bench_error_creation(c: &mut Criterion) {
     /// IO errors: File, network, system resource errors
     group.bench_function("create_io_error", |b| {
         b.iter(|| {
-            let error = DMSCError::io("Test IO error");
+            let error = RiError::io("Test IO error");
             black_box(error);
         });
     });
@@ -68,7 +68,7 @@ fn bench_error_creation(c: &mut Criterion) {
     /// Configuration errors: Invalid config, missing fields
     group.bench_function("create_config_error", |b| {
         b.iter(|| {
-            let error = DMSCError::config("Test config error");
+            let error = RiError::config("Test config error");
             black_box(error);
         });
     });
@@ -76,7 +76,7 @@ fn bench_error_creation(c: &mut Criterion) {
     /// Generic errors: Catch-all for other error types
     group.bench_function("create_database_error", |b| {
         b.iter(|| {
-            let error = DMSCError::Other("Test database error".to_string());
+            let error = RiError::Other("Test database error".to_string());
             black_box(error);
         });
     });
@@ -84,7 +84,7 @@ fn bench_error_creation(c: &mut Criterion) {
     /// Validation errors: Input validation failures
     group.bench_function("create_validation_error", |b| {
         b.iter(|| {
-            let error = DMSCError::InvalidInput("Test validation error".to_string());
+            let error = RiError::InvalidInput("Test validation error".to_string());
             black_box(error);
         });
     });
@@ -102,7 +102,7 @@ fn bench_error_display(c: &mut Criterion) {
     let mut group = c.benchmark_group("error_display");
     group.throughput(Throughput::Elements(1));
 
-    let error = DMSCError::io("Test IO error with some longer message");
+    let error = RiError::io("Test IO error with some longer message");
 
     group.bench_function("error_to_string", |b| {
         b.iter(|| {
@@ -120,7 +120,7 @@ fn bench_error_display(c: &mut Criterion) {
 /// - Read operations can proceed concurrently
 /// - Write operations require exclusive access
 ///
-/// DMSC uses RwLock for:
+/// Ri uses RwLock for:
 /// - Shared configuration state
 /// - Connection pool management
 /// - Cache access synchronization
@@ -160,7 +160,7 @@ fn bench_rwlock_operations(c: &mut Criterion) {
 
 /// Benchmark: UUID v4 generation and manipulation.
 ///
-/// UUIDs are used in DMSC for:
+/// UUIDs are used in Ri for:
 /// - Request tracing/correlation IDs
 /// - Unique identifier generation
 /// - Distributed ID generation

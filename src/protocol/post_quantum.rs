@@ -1,7 +1,7 @@
 //! Copyright © 2025-2026 Wenze Wei. All Rights Reserved.
 //!
-//! This file is part of DMSC.
-//! The DMSC project belongs to the Dunimd Team.
+//! This file is part of Ri.
+//! The Ri project belongs to the Dunimd Team.
 //!
 //! Licensed under the Apache License, Version 2.0 (the "License");
 //! You may not use this file except in compliance with the License.
@@ -58,7 +58,7 @@
 //! ## API Structure
 //!
 //! ```rust,ignore
-//! use dmsc::protocol::post_quantum::{KyberKEM, DilithiumSigner};
+//! use ri::protocol::post_quantum::{KyberKEM, DilithiumSigner};
 //!
 //! // Kyber key encapsulation (requires liboqs integration)
 //! let kem = KyberKEM::new();
@@ -77,7 +77,7 @@
 use std::sync::Arc;
 use std::time::Instant;
 use tokio::sync::RwLock;
-use crate::core::DMSCResult;
+use crate::core::RiResult;
 
 #[cfg(feature = "pyo3")]
 use pyo3::prelude::*;
@@ -88,7 +88,7 @@ pub use super::falcon::{FalconSigner, FalconPublicKey, FalconSecretKey, FalconSi
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
-pub enum DMSCPostQuantumAlgorithm {
+pub enum RiPostQuantumAlgorithm {
     Kyber512,
     Kyber768,
     Kyber1024,
@@ -105,22 +105,22 @@ pub struct KEMResult {
 }
 
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
-pub struct DMSCPostQuantumManager {
-    algorithm: Arc<RwLock<DMSCPostQuantumAlgorithm>>,
+pub struct RiPostQuantumManager {
+    algorithm: Arc<RwLock<RiPostQuantumAlgorithm>>,
     initialized_at: Arc<RwLock<Instant>>,
     initialized: Arc<RwLock<bool>>,
 }
 
-impl DMSCPostQuantumManager {
+impl RiPostQuantumManager {
     pub fn new() -> Self {
         Self {
-            algorithm: Arc::new(RwLock::new(DMSCPostQuantumAlgorithm::Kyber512)),
+            algorithm: Arc::new(RwLock::new(RiPostQuantumAlgorithm::Kyber512)),
             initialized_at: Arc::new(RwLock::new(Instant::now())),
             initialized: Arc::new(RwLock::new(false)),
         }
     }
 
-    pub async fn initialize(&self, algorithm: DMSCPostQuantumAlgorithm) -> DMSCResult<()> {
+    pub async fn initialize(&self, algorithm: RiPostQuantumAlgorithm) -> RiResult<()> {
         let mut init = self.initialized.write().await;
         if *init {
             return Ok(());
@@ -133,28 +133,28 @@ impl DMSCPostQuantumManager {
         Ok(())
     }
 
-    pub async fn algorithm(&self) -> DMSCPostQuantumAlgorithm {
+    pub async fn algorithm(&self) -> RiPostQuantumAlgorithm {
         *self.algorithm.read().await
     }
 
     pub fn security_level(&self) -> u8 {
         match self.algorithm.try_read() {
             Ok(guard) => match *guard {
-                DMSCPostQuantumAlgorithm::Kyber512 => 1,
-                DMSCPostQuantumAlgorithm::Kyber768 => 3,
-                DMSCPostQuantumAlgorithm::Kyber1024 => 5,
-                DMSCPostQuantumAlgorithm::Dilithium2 => 1,
-                DMSCPostQuantumAlgorithm::Dilithium3 => 3,
-                DMSCPostQuantumAlgorithm::Dilithium5 => 5,
-                DMSCPostQuantumAlgorithm::Falcon512 => 1,
-                DMSCPostQuantumAlgorithm::Falcon1024 => 5,
+                RiPostQuantumAlgorithm::Kyber512 => 1,
+                RiPostQuantumAlgorithm::Kyber768 => 3,
+                RiPostQuantumAlgorithm::Kyber1024 => 5,
+                RiPostQuantumAlgorithm::Dilithium2 => 1,
+                RiPostQuantumAlgorithm::Dilithium3 => 3,
+                RiPostQuantumAlgorithm::Dilithium5 => 5,
+                RiPostQuantumAlgorithm::Falcon512 => 1,
+                RiPostQuantumAlgorithm::Falcon1024 => 5,
             },
             Err(_) => 1,
         }
     }
 }
 
-impl Default for DMSCPostQuantumManager {
+impl Default for RiPostQuantumManager {
     fn default() -> Self {
         Self::new()
     }
@@ -162,13 +162,13 @@ impl Default for DMSCPostQuantumManager {
 
 #[cfg(feature = "pyo3")]
 #[pyo3::prelude::pymethods]
-impl DMSCPostQuantumManager {
+impl RiPostQuantumManager {
     #[new]
     pub fn new_py() -> Self {
         Self::new()
     }
 
-    pub fn initialize_sync(&mut self, algorithm: DMSCPostQuantumAlgorithm) -> bool {
+    pub fn initialize_sync(&mut self, algorithm: RiPostQuantumAlgorithm) -> bool {
         if let Ok(mut guard) = self.initialized.try_write() {
             *guard = true;
             if let Ok(mut algo_guard) = self.algorithm.try_write() {

@@ -1,7 +1,7 @@
 //! Copyright © 2025-2026 Wenze Wei. All Rights Reserved.
 //!
-//! This file is part of DMSC.
-//! The DMSC project belongs to the Dunimd Team.
+//! This file is part of Ri.
+//! The Ri project belongs to the Dunimd Team.
 //!
 //! Licensed under the Apache License, Version 2.0 (the "License");
 //! You may not use this file except in compliance with the License.
@@ -15,26 +15,26 @@
 //! See the License for the specific language governing permissions and
 //! limitations under the License.
 
-use crate::core::DMSCResult;
-use crate::database::{DMSCDBResult, DMSCDBRow};
+use crate::core::RiResult;
+use crate::database::{RiDBResult, RiDBRow};
 use async_trait::async_trait;
 use serde::Serialize;
 use std::sync::Arc;
 
 #[async_trait]
-pub trait DMSCDBStatement: Send + Sync {
+pub trait RiDBStatement: Send + Sync {
     fn sql(&self) -> &str;
     fn param_count(&self) -> usize;
-    async fn execute(&self, params: &[&dyn Serialize]) -> DMSCResult<DMSCDBResult>;
-    async fn execute_row(&self, params: &[&dyn Serialize]) -> DMSCResult<Option<DMSCDBRow>>;
-    async fn query(&self, params: &[&dyn Serialize]) -> DMSCResult<DMSCDBResult>;
-    async fn query_one(&self, params: &[&dyn Serialize]) -> DMSCResult<Option<DMSCDBRow>>;
+    async fn execute(&self, params: &[&dyn Serialize]) -> RiResult<RiDBResult>;
+    async fn execute_row(&self, params: &[&dyn Serialize]) -> RiResult<Option<RiDBRow>>;
+    async fn query(&self, params: &[&dyn Serialize]) -> RiResult<RiDBResult>;
+    async fn query_one(&self, params: &[&dyn Serialize]) -> RiResult<Option<RiDBRow>>;
 }
 
 pub struct PreparedStatement {
     sql: String,
     params: Vec<String>,
-    cached_result: Option<DMSCDBResult>,
+    cached_result: Option<RiDBResult>,
 }
 
 impl PreparedStatement {
@@ -86,7 +86,7 @@ fn extract_params(sql: &str) -> Vec<String> {
 }
 
 pub struct StatementCache {
-    cache: Arc<dashmap::DashMap<String, Arc<dyn DMSCDBStatement>>>,
+    cache: Arc<dashmap::DashMap<String, Arc<dyn RiDBStatement>>>,
     max_size: usize,
     hit_count: std::sync::atomic::AtomicUsize,
     miss_count: std::sync::atomic::AtomicUsize,
@@ -102,7 +102,7 @@ impl StatementCache {
         }
     }
 
-    pub fn get(&self, sql: &str) -> Option<Arc<dyn DMSCDBStatement>> {
+    pub fn get(&self, sql: &str) -> Option<Arc<dyn RiDBStatement>> {
         if let Some(entry) = self.cache.get(sql) {
             self.hit_count.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
             Some(entry.value().clone())
@@ -112,7 +112,7 @@ impl StatementCache {
         }
     }
 
-    pub fn insert(&self, sql: &str, statement: Arc<dyn DMSCDBStatement>) {
+    pub fn insert(&self, sql: &str, statement: Arc<dyn RiDBStatement>) {
         if self.cache.len() >= self.max_size {
             if let Some(entry) = self.cache.iter().next() {
                 self.cache.remove(entry.key());

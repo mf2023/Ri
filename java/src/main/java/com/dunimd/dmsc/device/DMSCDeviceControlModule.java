@@ -1,7 +1,7 @@
 // Copyright 2025-2026 Wenze Wei. All Rights Reserved.
 //
-// This file is part of DMSC.
-// The DMSC project belongs to the Dunimd Team.
+// This file is part of Ri.
+// The Ri project belongs to the Dunimd Team.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // You may not use this file except in compliance with the License.
@@ -15,21 +15,21 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package com.dunimd.dmsc.device;
+package com.dunimd.ri.device;
 
-import com.dunimd.dmsc.NativeLoader;
+import com.dunimd.ri.NativeLoader;
 
 /**
- * Device control module for DMSC.
+ * Device control module for Ri.
  */
-public class DMSCDeviceControlModule {
+public class RiDeviceControlModule {
     private long nativePtr;
     
     static {
         NativeLoader.autoLoad();
     }
     
-    public DMSCDeviceControlModule(DMSCDeviceControlConfig config) {
+    public RiDeviceControlModule(RiDeviceControlConfig config) {
         this.nativePtr = new0(config.getNativePtr());
     }
     

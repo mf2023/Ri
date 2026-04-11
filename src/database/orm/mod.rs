@@ -1,7 +1,7 @@
 //! Copyright © 2025-2026 Wenze Wei. All Rights Reserved.
 //!
-//! This file is part of DMSC.
-//! The DMSC project belongs to the Dunimd Team.
+//! This file is part of Ri.
+//! The Ri project belongs to the Dunimd Team.
 //!
 //! Licensed under the Apache License, Version 2.0 (the "License");
 //! You may not use this file except in compliance with the License.
@@ -17,22 +17,22 @@
 
 //! # ORM Module
 //!
-//! This module provides ORM-like database operations for DMSC.
+//! This module provides ORM-like database operations for Ri.
 
-use crate::core::{DMSCResult, DMSCError};
+use crate::core::{RiResult, RiError};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use crate::database::DMSCDatabase;
+use crate::database::RiDatabase;
 
 pub mod repository;
 
-pub use repository::{DMSCORMSimpleRepository, DMSCORMCrudRepository, DMSCORMRepository};
+pub use repository::{RiORMSimpleRepository, RiORMCrudRepository, RiORMRepository};
 
 #[cfg(feature = "pyo3")]
 pub mod py_repository;
 
 #[cfg(feature = "pyo3")]
-pub use py_repository::DMSCPyORMRepository;
+pub use py_repository::RiPyORMRepository;
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]

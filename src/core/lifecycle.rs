@@ -1,7 +1,7 @@
 //! Copyright © 2025-2026 Wenze Wei. All Rights Reserved.
 //!
-//! This file is part of DMSC.
-//! The DMSC project belongs to the Dunimd Team.
+//! This file is part of Ri.
+//! The Ri project belongs to the Dunimd Team.
 //!
 //! Licensed under the Apache License, Version 2.0 (the "License");
 //! You may not use this file except in compliance with the License.
@@ -19,13 +19,13 @@
 
 //! # Lifecycle Observer
 //! 
-//! This module provides a lifecycle observer that logs all hook events in the DMSC application.
+//! This module provides a lifecycle observer that logs all hook events in the Ri application.
 //! It implements the `ServiceModule` trait and registers handlers for all hook kinds to provide
 //! comprehensive lifecycle logging.
 //! 
 //! ## Key Components
 //! 
-//! - **DMSCLifecycleObserver**: Service module that logs all hook events
+//! - **RiLifecycleObserver**: Service module that logs all hook events
 //! 
 //! ## Design Principles
 //! 
@@ -34,37 +34,37 @@
 //! 3. **Non-Critical**: Can fail without causing the entire system to fail
 //! 4. **Detailed Context**: Provides module, phase, and kind information for each event
 
-use crate::core::{DMSCResult, DMSCServiceContext, ServiceModule};
-use crate::hooks::{DMSCHookBus, DMSCHookEvent, DMSCHookKind};
+use crate::core::{RiResult, RiServiceContext, ServiceModule};
+use crate::hooks::{RiHookBus, RiHookEvent, RiHookKind};
 
-/// Lifecycle observer module for DMSC.
+/// Lifecycle observer module for Ri.
 /// 
-/// This module logs all hook events in the DMSC application, providing comprehensive
+/// This module logs all hook events in the Ri application, providing comprehensive
 /// visibility into the application lifecycle.
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
-pub struct DMSCLifecycleObserver;
+pub struct RiLifecycleObserver;
 
-impl Default for DMSCLifecycleObserver {
+impl Default for RiLifecycleObserver {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl DMSCLifecycleObserver {
+impl RiLifecycleObserver {
     /// Creates a new instance of the lifecycle observer.
     /// 
-    /// Returns a new `DMSCLifecycleObserver` instance.
+    /// Returns a new `RiLifecycleObserver` instance.
     pub fn new() -> Self {
-        DMSCLifecycleObserver
+        RiLifecycleObserver
     }
 }
 
-impl ServiceModule for DMSCLifecycleObserver {
+impl ServiceModule for RiLifecycleObserver {
     /// Returns the name of the lifecycle observer module.
     /// 
     /// This name is used for identification, logging, and dependency resolution.
     fn name(&self) -> &str {
-        "DMSC.LifecycleObserver"
+        "Ri.LifecycleObserver"
     }
 
     /// Indicates if the lifecycle observer is critical to the operation of the system.
@@ -89,41 +89,41 @@ impl ServiceModule for DMSCLifecycleObserver {
     /// 
     /// # Returns
     /// 
-    /// A `DMSCResult` indicating success or failure
-    fn init(&mut self, ctx: &mut DMSCServiceContext) -> DMSCResult<()> {
-        let hooks: &mut DMSCHookBus = ctx.hooks_mut();
+    /// A `RiResult` indicating success or failure
+    fn init(&mut self, ctx: &mut RiServiceContext) -> RiResult<()> {
+        let hooks: &mut RiHookBus = ctx.hooks_mut();
         let all_kinds = [
-            DMSCHookKind::Startup,
-            DMSCHookKind::Shutdown,
-            DMSCHookKind::BeforeModulesInit,
-            DMSCHookKind::AfterModulesInit,
-            DMSCHookKind::BeforeModulesStart,
-            DMSCHookKind::AfterModulesStart,
-            DMSCHookKind::BeforeModulesShutdown,
-            DMSCHookKind::AfterModulesShutdown,
-            DMSCHookKind::ConfigReload,
+            RiHookKind::Startup,
+            RiHookKind::Shutdown,
+            RiHookKind::BeforeModulesInit,
+            RiHookKind::AfterModulesInit,
+            RiHookKind::BeforeModulesStart,
+            RiHookKind::AfterModulesStart,
+            RiHookKind::BeforeModulesShutdown,
+            RiHookKind::AfterModulesShutdown,
+            RiHookKind::ConfigReload,
         ];
 
         for &kind in &all_kinds {
             let kind_str = match kind {
-                DMSCHookKind::Startup => "Startup",
-                DMSCHookKind::Shutdown => "Shutdown",
-                DMSCHookKind::BeforeModulesInit => "BeforeModulesInit",
-                DMSCHookKind::AfterModulesInit => "AfterModulesInit",
-                DMSCHookKind::BeforeModulesStart => "BeforeModulesStart",
-                DMSCHookKind::AfterModulesStart => "AfterModulesStart",
-                DMSCHookKind::BeforeModulesShutdown => "BeforeModulesShutdown",
-                DMSCHookKind::AfterModulesShutdown => "AfterModulesShutdown",
-                DMSCHookKind::ConfigReload => "ConfigReload",
+                RiHookKind::Startup => "Startup",
+                RiHookKind::Shutdown => "Shutdown",
+                RiHookKind::BeforeModulesInit => "BeforeModulesInit",
+                RiHookKind::AfterModulesInit => "AfterModulesInit",
+                RiHookKind::BeforeModulesStart => "BeforeModulesStart",
+                RiHookKind::AfterModulesStart => "AfterModulesStart",
+                RiHookKind::BeforeModulesShutdown => "BeforeModulesShutdown",
+                RiHookKind::AfterModulesShutdown => "AfterModulesShutdown",
+                RiHookKind::ConfigReload => "ConfigReload",
             };
             let handler_name = format!("dms.lifecycle.{}", kind_str.to_lowercase());
             
-            hooks.register(kind, handler_name, move |_ctx, event: &DMSCHookEvent| {
+            hooks.register(kind, handler_name, move |_ctx, event: &RiHookEvent| {
                 let logger = _ctx.logger();
                 let module = event.module.as_deref().unwrap_or("-");
                 let phase = event.phase.map(|p| p.as_str()).unwrap_or("-");
                 let message = format!("kind={} module={} phase={}", kind_str, module, phase);
-                let _ = logger.info("DMSC.Lifecycle", message);
+                let _ = logger.info("Ri.Lifecycle", message);
                 Ok(())
             });
         }
@@ -134,14 +134,14 @@ impl ServiceModule for DMSCLifecycleObserver {
 
 #[cfg(feature = "pyo3")]
 #[pyo3::prelude::pymethods]
-impl DMSCLifecycleObserver {
+impl RiLifecycleObserver {
     #[new]
     fn new_py() -> Self {
         Self::new()
     }
 
     fn name(&self) -> String {
-        "DMSC.LifecycleObserver".to_string()
+        "Ri.LifecycleObserver".to_string()
     }
 
     fn is_critical(&self) -> bool {
@@ -149,6 +149,6 @@ impl DMSCLifecycleObserver {
     }
 
     fn __repr__(&self) -> String {
-        "DMSCLifecycleObserver".to_string()
+        "RiLifecycleObserver".to_string()
     }
 }

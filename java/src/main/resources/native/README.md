@@ -1,4 +1,4 @@
-# DMSC Java Native Libraries
+# Ri Java Native Libraries
 
 This directory contains the native JNI libraries for different platforms.
 
@@ -7,14 +7,14 @@ This directory contains the native JNI libraries for different platforms.
 ```
 native/
 ├── windows/
-│   ├── x64/dmsc.dll
-│   └── x86/dmsc.dll
+│   ├── x64/ri.dll
+│   └── x86/ri.dll
 ├── linux/
-│   ├── x64/libdmsc.so
-│   └── arm64/libdmsc.so
+│   ├── x64/libri.so
+│   └── arm64/libri.so
 └── macos/
-    ├── x64/libdmsc.dylib
-    └── arm64/libdmsc.dylib
+    ├── x64/libri.dylib
+    └── arm64/libri.dylib
 ```
 
 ## Building Native Libraries
@@ -26,9 +26,9 @@ To build the native libraries, run:
 cargo build --features java --release
 
 # The output will be in:
-# Windows: target/release/dmsc.dll
-# Linux: target/release/libdmsc.so
-# macOS: target/release/libdmsc.dylib
+# Windows: target/release/ri.dll
+# Linux: target/release/libri.so
+# macOS: target/release/libri.dylib
 ```
 
 ## Cross-Compilation
@@ -63,11 +63,11 @@ After building, copy the libraries to this directory:
 
 ```bash
 # Windows x64
-cp target/release/dmsc.dll src/main/resources/native/windows/x64/
+cp target/release/ri.dll src/main/resources/native/windows/x64/
 
 # Linux x64
-cp target/release/libdmsc.so src/main/resources/native/linux/x64/
+cp target/release/libri.so src/main/resources/native/linux/x64/
 
 # macOS x64
-cp target/release/libdmsc.dylib src/main/resources/native/macos/x64/
+cp target/release/libri.dylib src/main/resources/native/macos/x64/
 ```

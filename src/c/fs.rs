@@ -1,7 +1,7 @@
 //! Copyright © 2025-2026 Wenze Wei. All Rights Reserved.
 //!
-//! This file is part of DMSC.
-//! The DMSC project belongs to the Dunimd Team.
+//! This file is part of Ri.
+//! The Ri project belongs to the Dunimd Team.
 //!
 //! Licensed under the Apache License, Version 2.0 (the "License");
 //! You may not use this file except in compliance with the License.
@@ -17,9 +17,9 @@
 
 //! # File System Module C API
 //!
-//! This module provides C language bindings for DMSC's file system abstraction layer. The file
+//! This module provides C language bindings for Ri's file system abstraction layer. The file
 //! system module delivers cross-platform file and directory operations with unified interfaces
-//! across different operating systems. This C API enables C/C++ applications to leverage DMSC's
+//! across different operating systems. This C API enables C/C++ applications to leverage Ri's
 //! file handling capabilities including path manipulation, file I/O operations, directory
 //! traversal, symbolic link management, and file metadata operations.
 //!
@@ -27,7 +27,7 @@
 //!
 //! The file system module provides a single primary component:
 //!
-//! - **DMSCFileSystem**: Unified file system abstraction providing portable file and directory
+//! - **RiFileSystem**: Unified file system abstraction providing portable file and directory
 //!   operations. The abstraction layer normalizes platform differences while preserving access
 //!   to platform-specific features when needed. The file system object provides methods for
 //!   reading, writing, creating, deleting, and managing files and directories across Windows,
@@ -148,7 +148,7 @@
 //!
 //! ```c
 //! // Create file system instance with automatic root detection
-//! DMSCFileSystem* fs = dmsc_fs_new_auto();
+//! RiFileSystem* fs = ri_fs_new_auto();
 //! if (fs == NULL) {
 //!     fprintf(stderr, "Failed to create file system\n");
 //!     return ERROR_FILESYSTEM;
@@ -157,41 +157,41 @@
 //! // Read file contents
 //! char* content = NULL;
 //! size_t size = 0;
-//! int result = dmsc_fs_read_file(fs, "/path/to/file.txt", &content, &size);
+//! int result = ri_fs_read_file(fs, "/path/to/file.txt", &content, &size);
 //!
 //! if (result == 0 && content != NULL) {
 //!     printf("Read %zu bytes: %.*s\n", size, (int)size, content);
-//!     dmsc_fs_string_free(content);
+//!     ri_fs_string_free(content);
 //! }
 //!
 //! // Write to file
 //! const char* data = "Hello, World!";
-//! result = dmsc_fs_write_file(fs, "/path/to/output.txt", data, strlen(data));
+//! result = ri_fs_write_file(fs, "/path/to/output.txt", data, strlen(data));
 //!
 //! if (result != 0) {
-//!     fprintf(stderr, "Failed to write file: %s\n", dmsc_fs_last_error(fs));
+//!     fprintf(stderr, "Failed to write file: %s\n", ri_fs_last_error(fs));
 //! }
 //!
 //! // List directory contents
 //! char** entries = NULL;
 //! size_t entry_count = 0;
-//! result = dmsc_fs_list_dir(fs, "/path/to/directory", &entries, &entry_count);
+//! result = ri_fs_list_dir(fs, "/path/to/directory", &entries, &entry_count);
 //!
 //! if (result == 0) {
 //!     for (size_t i = 0; i < entry_count; i++) {
 //!         printf("  %s\n", entries[i]);
-//!         dmsc_fs_string_free(entries[i]);
+//!         ri_fs_string_free(entries[i]);
 //!     }
 //!     free(entries);
 //! }
 //!
 //! // Cleanup
-//! dmsc_fs_free(fs);
+//! ri_fs_free(fs);
 //! ```
 //!
 //! ## Dependencies
 //!
-//! This module depends on the following DMSC components:
+//! This module depends on the following Ri components:
 //!
 //! - `crate::fs`: Rust file system module implementation
 //! - `crate::prelude`: Common types and traits
@@ -199,14 +199,14 @@
 //! ## Feature Flags
 //!
 //! The file system module is always enabled as it provides fundamental infrastructure
-//! for file operations in DMSC applications.
+//! for file operations in Ri applications.
 
-use crate::fs::DMSCFileSystem;
+use crate::fs::RiFileSystem;
 
 
-c_wrapper!(CDMSCFileSystem, DMSCFileSystem);
+c_wrapper!(CRiFileSystem, RiFileSystem);
 
-/// Creates a new DMSCFileSystem instance with automatic root directory detection.
+/// Creates a new RiFileSystem instance with automatic root directory detection.
 ///
 /// Initializes a file system abstraction with automatic detection of the root directory
 /// and appropriate platform configuration. The created instance can perform all
@@ -214,7 +214,7 @@ c_wrapper!(CDMSCFileSystem, DMSCFileSystem);
 ///
 /// # Returns
 ///
-/// Pointer to newly allocated DMSCFileSystem on success, or NULL if:
+/// Pointer to newly allocated RiFileSystem on success, or NULL if:
 /// - Memory allocation fails
 /// - Root directory detection fails
 /// - Platform initialization fails
@@ -242,7 +242,7 @@ c_wrapper!(CDMSCFileSystem, DMSCFileSystem);
 /// # Usage Pattern
 ///
 /// ```c
-/// DMSCFileSystem* fs = dmsc_fs_new_auto();
+/// RiFileSystem* fs = ri_fs_new_auto();
 /// if (fs == NULL) {
 ///     fprintf(stderr, "File system initialization failed\n");
 ///     return ERROR_INIT;
@@ -250,7 +250,7 @@ c_wrapper!(CDMSCFileSystem, DMSCFileSystem);
 ///
 /// // Use file system operations...
 ///
-/// dmsc_fs_free(fs);
+/// ri_fs_free(fs);
 /// ```
 ///
 /// # Platform-Specific Notes
@@ -259,11 +259,11 @@ c_wrapper!(CDMSCFileSystem, DMSCFileSystem);
 /// - **Linux/macOS**: Uses forward slash path separator, case-sensitive
 /// - **All Platforms**: Supports both relative and absolute paths
 #[no_mangle]
-pub extern "C" fn dmsc_fs_new_auto() -> *mut CDMSCFileSystem {
-    match DMSCFileSystem::new_auto_root() {
-        Ok(fs) => Box::into_raw(Box::new(CDMSCFileSystem::new(fs))),
+pub extern "C" fn ri_fs_new_auto() -> *mut CRiFileSystem {
+    match RiFileSystem::new_auto_root() {
+        Ok(fs) => Box::into_raw(Box::new(CRiFileSystem::new(fs))),
         Err(_) => std::ptr::null_mut(),
     }
 }
 
-c_destructor!(dmsc_fs_free, CDMSCFileSystem);
+c_destructor!(ri_fs_free, CRiFileSystem);

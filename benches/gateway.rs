@@ -1,7 +1,7 @@
 //! Copyright © 2025-2026 Wenze Wei. All Rights Reserved.
 //!
-//! This file is part of DMSC.
-//! The DMSC project belongs to the Dunimd Team.
+//! This file is part of Ri.
+//! The Ri project belongs to the Dunimd Team.
 //!
 //! Licensed under the Apache License, Version 2.0 (the "License");
 //! You may not use this file except in compliance with the License.
@@ -17,7 +17,7 @@
 
 //! # Gateway Module Benchmarks
 //!
-//! This module provides performance benchmarks for the DMSC gateway system,
+//! This module provides performance benchmarks for the Ri gateway system,
 //! which provides request routing, load balancing, rate limiting, and circuit
 //! breaker functionality for API gateway implementations.
 //!
@@ -35,7 +35,7 @@
 //!
 //! ## Gateway Architecture
 //!
-//! DMSCGateway provides:
+//! RiGateway provides:
 //! - Path-based routing to backend services
 //! - Middleware chain for cross-cutting concerns
 //! - Rate limiting to prevent abuse
@@ -47,16 +47,16 @@
 //! Benchmarks use Arc<...> for shared ownership across async tasks.
 
 use criterion::{black_box, criterion_group, criterion_main, Criterion, Throughput};
-use dmsc::gateway::{DMSCGateway, DMSCGatewayRequest, DMSCGatewayResponse, DMSCRoute, DMSCRouter};
-use dmsc::gateway::{DMSCRateLimiter, DMSCRateLimitConfig, DMSCCircuitBreaker, DMSCCircuitBreakerConfig};
-use dmsc::gateway::{DMSCLoadBalancer, DMSCLoadBalancerStrategy};
-use dmsc::prelude::DMSCBackendServer;
+use ri::gateway::{RiGateway, RiGatewayRequest, RiGatewayResponse, RiRoute, RiRouter};
+use ri::gateway::{RiRateLimiter, RiRateLimitConfig, RiCircuitBreaker, RiCircuitBreakerConfig};
+use ri::gateway::{RiLoadBalancer, RiLoadBalancerStrategy};
+use ri::prelude::RiBackendServer;
 use std::collections::HashMap;
 use std::sync::Arc;
 
 /// Benchmark: Gateway request object creation.
 ///
-/// DMSCGatewayRequest models incoming HTTP requests:
+/// RiGatewayRequest models incoming HTTP requests:
 /// - Method (GET, POST, etc.)
 /// - Path and query parameters
 /// - Headers
@@ -70,7 +70,7 @@ fn bench_gateway_request_creation(c: &mut Criterion) {
 
     group.bench_function("create_request", |b| {
         b.iter(|| {
-            let request = DMSCGatewayRequest::new(
+            let request = RiGatewayRequest::new(
                 "GET".to_string(),
                 "/api/v1/users".to_string(),
                 HashMap::new(),
@@ -87,7 +87,7 @@ fn bench_gateway_request_creation(c: &mut Criterion) {
 
 /// Benchmark: Gateway response object creation.
 ///
-/// DMSCGatewayResponse models HTTP responses:
+/// RiGatewayResponse models HTTP responses:
 /// - Status code
 /// - Body bytes
 /// - Request correlation ID
@@ -100,7 +100,7 @@ fn bench_gateway_response_creation(c: &mut Criterion) {
     /// Basic response: Status + body
     group.bench_function("create_response", |b| {
         b.iter(|| {
-            let response = DMSCGatewayResponse::new(
+            let response = RiGatewayResponse::new(
                 200,
                 b"Hello, World!".to_vec(),
                 "request-123".to_string(),
@@ -112,7 +112,7 @@ fn bench_gateway_response_creation(c: &mut Criterion) {
     /// JSON response: Serializes data to JSON automatically
     group.bench_function("create_json_response", |b| {
         b.iter(|| {
-            let response = DMSCGatewayResponse::json(
+            let response = RiGatewayResponse::json(
                 200,
                 &serde_json::json!({"status": "ok"}),
                 "request-123".to_string(),
@@ -124,7 +124,7 @@ fn bench_gateway_response_creation(c: &mut Criterion) {
     /// Error response: Standardized error formatting
     group.bench_function("create_error_response", |b| {
         b.iter(|| {
-            let response = DMSCGatewayResponse::error(
+            let response = RiGatewayResponse::error(
                 404,
                 "Not Found".to_string(),
                 "request-123".to_string(),
@@ -137,13 +137,13 @@ fn bench_gateway_response_creation(c: &mut Criterion) {
 }
 
 /// Helper function to create a test route with given path and method.
-fn create_route(path: &str, method: &str) -> DMSCRoute {
-    DMSCRoute::new(
+fn create_route(path: &str, method: &str) -> RiRoute {
+    RiRoute::new(
         method.to_string(),
         path.to_string(),
         Arc::new(|req| {
             Box::pin(async move {
-                Ok(DMSCGatewayResponse::new(200, b"OK".to_vec(), req.id.clone()))
+                Ok(RiGatewayResponse::new(200, b"OK".to_vec(), req.id.clone()))
             })
         }),
     )
@@ -151,7 +151,7 @@ fn create_route(path: &str, method: &str) -> DMSCRoute {
 
 /// Benchmark: Router operations including route registration and matching.
 ///
-/// DMSCRouter handles:
+/// RiRouter handles:
 /// - Route registration via add_route()
 /// - Request matching via route()
 /// - Handler execution
@@ -159,7 +159,7 @@ fn create_route(path: &str, method: &str) -> DMSCRoute {
 /// Route matching is typically O(n) for registered routes.
 fn bench_router_operations(c: &mut Criterion) {
     let rt = tokio::runtime::Runtime::new().unwrap();
-    let router = Arc::new(DMSCRouter::new());
+    let router = Arc::new(RiRouter::new());
 
     /// Pre-register 100 routes to simulate a real gateway
     for i in 0..100 {
@@ -183,7 +183,7 @@ fn bench_router_operations(c: &mut Criterion) {
     group.bench_function("route_request", |b| {
         b.iter(|| {
             rt.block_on(async {
-                let request = DMSCGatewayRequest::new(
+                let request = RiGatewayRequest::new(
                     "GET".to_string(),
                     "/api/v1/route_50".to_string(),
                     HashMap::new(),
@@ -202,7 +202,7 @@ fn bench_router_operations(c: &mut Criterion) {
 
 /// Benchmark: Full gateway request handling through the middleware chain.
 ///
-/// DMSCGateway.handle_request() goes through:
+/// RiGateway.handle_request() goes through:
 /// - Request parsing
 /// - Rate limiting check
 /// - Route matching
@@ -210,16 +210,16 @@ fn bench_router_operations(c: &mut Criterion) {
 /// - Response formatting
 fn bench_gateway_handle_request(c: &mut Criterion) {
     let rt = tokio::runtime::Runtime::new().unwrap();
-    let gateway = Arc::new(DMSCGateway::new());
+    let gateway = Arc::new(RiGateway::new());
 
     /// Register a health check endpoint
     let router = gateway.router();
-    let route = DMSCRoute::new(
+    let route = RiRoute::new(
         "/api/v1/health".to_string(),
         "GET".to_string(),
         Arc::new(|req| {
             Box::pin(async move {
-                Ok(DMSCGatewayResponse::json(
+                Ok(RiGatewayResponse::json(
                     200,
                     &serde_json::json!({"status": "ok"}),
                     req.id.clone(),
@@ -235,7 +235,7 @@ fn bench_gateway_handle_request(c: &mut Criterion) {
     group.bench_function("handle_simple_request", |b| {
         b.iter(|| {
             rt.block_on(async {
-                let request = DMSCGatewayRequest::new(
+                let request = RiGatewayRequest::new(
                     "GET".to_string(),
                     "/api/v1/health".to_string(),
                     HashMap::new(),
@@ -254,7 +254,7 @@ fn bench_gateway_handle_request(c: &mut Criterion) {
 
 /// Benchmark: Rate limiter request checking.
 ///
-/// DMSCRateLimiter implements token bucket algorithm:
+/// RiRateLimiter implements token bucket algorithm:
 /// - Checks if request is allowed under rate limit
 /// - Tracks tokens/bucket state
 /// - Returns whether request should be allowed or rejected
@@ -265,8 +265,8 @@ fn bench_gateway_handle_request(c: &mut Criterion) {
 /// - Fair usage enforcement
 fn bench_rate_limiter(c: &mut Criterion) {
     let rt = tokio::runtime::Runtime::new().unwrap();
-    let config = DMSCRateLimitConfig::default();
-    let limiter = Arc::new(DMSCRateLimiter::new(config));
+    let config = RiRateLimitConfig::default();
+    let limiter = Arc::new(RiRateLimiter::new(config));
 
     let mut group = c.benchmark_group("gateway_rate_limiter");
     group.throughput(Throughput::Elements(1));
@@ -274,7 +274,7 @@ fn bench_rate_limiter(c: &mut Criterion) {
     group.bench_function("check_rate_limit", |b| {
         b.iter(|| {
             rt.block_on(async {
-                let request = DMSCGatewayRequest::new(
+                let request = RiGatewayRequest::new(
                     "GET".to_string(),
                     "/api/v1/test".to_string(),
                     HashMap::new(),
@@ -293,7 +293,7 @@ fn bench_rate_limiter(c: &mut Criterion) {
 
 /// Benchmark: Circuit breaker state checks and transitions.
 ///
-/// DMSCCircuitBreaker implements circuit breaker pattern:
+/// RiCircuitBreaker implements circuit breaker pattern:
 /// - CLOSED: Normal operation, requests pass through
 /// - OPEN: Failures exceeded threshold, requests fail fast
 /// - HALF_OPEN: Testing if service recovered
@@ -304,8 +304,8 @@ fn bench_rate_limiter(c: &mut Criterion) {
 /// - Service health monitoring
 fn bench_circuit_breaker(c: &mut Criterion) {
     let rt = tokio::runtime::Runtime::new().unwrap();
-    let config = DMSCCircuitBreakerConfig::default();
-    let cb = Arc::new(DMSCCircuitBreaker::new(config));
+    let config = RiCircuitBreakerConfig::default();
+    let cb = Arc::new(RiCircuitBreaker::new(config));
 
     let mut group = c.benchmark_group("gateway_circuit_breaker");
     group.throughput(Throughput::Elements(1));
@@ -333,7 +333,7 @@ fn bench_circuit_breaker(c: &mut Criterion) {
 
 /// Benchmark: Load balancer server selection.
 ///
-/// DMSCLoadBalancer distributes requests across backend servers:
+/// RiLoadBalancer distributes requests across backend servers:
 /// - Round Robin: Sequentially cycles through servers
 /// - Random: Randomly selects server
 /// - Weighted: Based on server capacity weights
@@ -344,13 +344,13 @@ fn bench_circuit_breaker(c: &mut Criterion) {
 /// - Optimal resource utilization
 fn bench_load_balancer(c: &mut Criterion) {
     let rt = tokio::runtime::Runtime::new().unwrap();
-    let lb = Arc::new(DMSCLoadBalancer::new(DMSCLoadBalancerStrategy::RoundRobin));
+    let lb = Arc::new(RiLoadBalancer::new(RiLoadBalancerStrategy::RoundRobin));
 
     /// Add backend servers to the load balancer pool
     rt.block_on(async {
-        lb.add_server(DMSCBackendServer::new("server1".to_string(), "http://server1:8080".to_string())).await;
-        lb.add_server(DMSCBackendServer::new("server2".to_string(), "http://server2:8080".to_string())).await;
-        lb.add_server(DMSCBackendServer::new("server3".to_string(), "http://server3:8080".to_string())).await;
+        lb.add_server(RiBackendServer::new("server1".to_string(), "http://server1:8080".to_string())).await;
+        lb.add_server(RiBackendServer::new("server2".to_string(), "http://server2:8080".to_string())).await;
+        lb.add_server(RiBackendServer::new("server3".to_string(), "http://server3:8080".to_string())).await;
     });
 
     let mut group = c.benchmark_group("gateway_load_balancer");

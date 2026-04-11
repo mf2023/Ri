@@ -2,8 +2,8 @@
 
 # Copyright © 2025-2026 Wenze Wei. All Rights Reserved.
 #
-# This file is part of DMSC.
-# The DMSC project belongs to the Dunimd Team.
+# This file is part of Ri.
+# The Ri project belongs to the Dunimd Team.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # You may not use this file except in compliance with the License.
@@ -18,76 +18,76 @@
 # limitations under the License.
 
 """
-DMSC Core Module Tests
+Ri Core Module Tests
 
-Tests for the core DMSC functionality including application runtime,
+Tests for the core Ri functionality including application runtime,
 configuration, logging, and file system operations.
 """
 
 import pytest
-from dmsc import (
-    DMSCAppBuilder,
-    DMSCAppRuntime,
-    DMSCConfig,
-    DMSCConfigManager,
-    DMSCLogger,
-    DMSCLogConfig,
-    DMSCLogLevel,
-    DMSCFileSystem,
-    DMSCError,
-    DMSCServiceContext,
-    DMSCHookBus,
-    DMSCHookEvent,
-    DMSCHookKind,
-    DMSCModulePhase,
-    DMSCHealthStatus,
-    DMSCHealthCheckResult,
-    DMSCHealthCheckConfig,
-    DMSCHealthReport,
-    DMSCHealthChecker,
-    DMSCLifecycleObserver,
+from ri import (
+    RiAppBuilder,
+    RiAppRuntime,
+    RiConfig,
+    RiConfigManager,
+    RiLogger,
+    RiLogConfig,
+    RiLogLevel,
+    RiFileSystem,
+    RiError,
+    RiServiceContext,
+    RiHookBus,
+    RiHookEvent,
+    RiHookKind,
+    RiModulePhase,
+    RiHealthStatus,
+    RiHealthCheckResult,
+    RiHealthCheckConfig,
+    RiHealthReport,
+    RiHealthChecker,
+    RiLifecycleObserver,
 )
 
 
-class TestDMSCAppBuilder:
-    """Tests for DMSCAppBuilder"""
+class TestRiAppBuilder:
+    """Tests for RiAppBuilder"""
 
     def test_app_builder_creation(self):
         """Test creating an application builder"""
-        builder = DMSCAppBuilder()
+        builder = RiAppBuilder()
         assert builder is not None
 
     def test_app_builder_with_config(self):
         """Test application builder with config path"""
-        builder = DMSCAppBuilder()
+        builder = RiAppBuilder()
         builder.with_config("config.yaml")
         assert builder is not None
 
     def test_app_builder_with_logging(self):
         """Test application builder with logging config"""
-        builder = DMSCAppBuilder()
-        log_config = DMSCLogConfig()
+        builder = RiAppBuilder()
+        log_config = RiLogConfig()
         builder.with_logging(log_config)
         assert builder is not None
 
     def test_app_builder_chain(self):
         """Test application builder method chaining"""
-        builder = DMSCAppBuilder()
-        result = builder.with_config("config.yaml").with_logging(DMSCLogConfig())
+        builder = RiAppBuilder()
+        result = builder.with_config("config.yaml").with_logging(RiLogConfig())
         assert result is builder
 
 
-class TestDMSCConfig:
-    """Tests for DMSCConfig"""
+class TestRiConfig:
+    """Tests for RiConfig"""
 
     def test_config_creation(self):
         """Test creating a configuration"""
-        config = DMSCConfig()
+        config = RiConfig()
         assert config is not None
 
     def test_config_with_values(self):
         """Test configuration with custom values - values must be strings"""
-        config = DMSCConfig()
+        config = RiConfig()
         config.set("database.host", "localhost")
         config.set("database.port", "5432")
 
@@ -95,105 +95,105 @@ class TestDMSCConfig:
         assert config.get("database.port") == "5432"
 
 
-class TestDMSCConfigManager:
-    """Tests for DMSCConfigManager"""
+class TestRiConfigManager:
+    """Tests for RiConfigManager"""
 
     def test_config_manager_creation(self):
         """Test creating a config manager"""
-        manager = DMSCConfigManager()
+        manager = RiConfigManager()
         assert manager is not None
 
     def test_config_manager_add_source(self):
         """Test config manager add file source"""
-        manager = DMSCConfigManager()
+        manager = RiConfigManager()
         manager.add_file_source("config.yaml")
         assert manager is not None
 
 
-class TestDMSCLogger:
-    """Tests for DMSCLogger"""
+class TestRiLogger:
+    """Tests for RiLogger"""
 
     def test_logger_creation(self):
         """Test logger requires filesystem"""
-        fs = DMSCFileSystem(".")
-        log_config = DMSCLogConfig()
-        logger = DMSCLogger(log_config, fs)
+        fs = RiFileSystem(".")
+        log_config = RiLogConfig()
+        logger = RiLogger(log_config, fs)
         assert logger is not None
 
     def test_logger_levels(self):
         """Test logger with different levels"""
-        fs = DMSCFileSystem(".")
-        log_config = DMSCLogConfig()
-        logger = DMSCLogger(log_config, fs)
+        fs = RiFileSystem(".")
+        log_config = RiLogConfig()
+        logger = RiLogger(log_config, fs)
         assert logger is not None
 
 
-class TestDMSCFileSystem:
-    """Tests for DMSCFileSystem"""
+class TestRiFileSystem:
+    """Tests for RiFileSystem"""
 
     def test_file_system_creation(self):
         """Test creating a file system handler"""
-        fs = DMSCFileSystem(".")
+        fs = RiFileSystem(".")
         assert fs is not None
 
     def test_file_operations(self):
         """Test basic file operations"""
-        fs = DMSCFileSystem(".")
+        fs = RiFileSystem(".")
         exists = fs.exists("pyproject.toml")
         assert isinstance(exists, bool)
 
 
-class TestDMSCError:
-    """Tests for DMSCError"""
+class TestRiError:
+    """Tests for RiError"""
 
     def test_error_creation(self):
         """Test creating an error using factory method"""
-        error = DMSCError.from_str("Test error message")
+        error = RiError.from_str("Test error message")
         assert str(error) == "Test error message"
 
     def test_io_error(self):
         """Test creating an IO error"""
-        error = DMSCError.io("IO operation failed")
+        error = RiError.io("IO operation failed")
         assert error.is_io()
 
     def test_serde_error(self):
         """Test creating a serde error"""
-        error = DMSCError.serde("Serialization failed")
+        error = RiError.serde("Serialization failed")
         assert error.is_serde()
 
 
-class TestDMSCHookBus:
-    """Tests for DMSCHookBus"""
+class TestRiHookBus:
+    """Tests for RiHookBus"""
 
     def test_hook_bus_creation(self):
         """Test creating a hook bus"""
-        hook_bus = DMSCHookBus()
+        hook_bus = RiHookBus()
         assert hook_bus is not None
 
 
-class TestDMSCHookEvent:
-    """Tests for DMSCHookEvent"""
+class TestRiHookEvent:
+    """Tests for RiHookEvent"""
 
     def test_hook_event_module_phase(self):
-        """Test DMSCHookEvent module phases exist"""
+        """Test RiHookEvent module phases exist"""
         phases = [
-            DMSCModulePhase.Init,
-            DMSCModulePhase.BeforeStart,
-            DMSCModulePhase.Start,
-            DMSCModulePhase.AfterStart,
-            DMSCModulePhase.BeforeShutdown,
-            DMSCModulePhase.Shutdown,
-            DMSCModulePhase.AfterShutdown,
+            RiModulePhase.Init,
+            RiModulePhase.BeforeStart,
+            RiModulePhase.Start,
+            RiModulePhase.AfterStart,
+            RiModulePhase.BeforeShutdown,
+            RiModulePhase.Shutdown,
+            RiModulePhase.AfterShutdown,
         ]
         assert len(phases) == 7
 
 
-class TestDMSCHealthCheck:
+class TestRiHealthCheck:
     """Tests for health check functionality"""
 
     def test_health_check_config(self):
         """Test health check configuration"""
-        config = DMSCHealthCheckConfig(
+        config = RiHealthCheckConfig(
             check_interval=30,
             timeout=5,
             failure_threshold=3,
@@ -206,9 +206,9 @@ class TestDMSCHealthCheck:
 
     def test_health_check_result(self):
         """Test health check result"""
-        result = DMSCHealthCheckResult(
+        result = RiHealthCheckResult(
             name="test_check",
-            status=DMSCHealthStatus.Healthy,
+            status=RiHealthStatus.Healthy,
             message="Service is healthy"
         )
 
@@ -217,35 +217,35 @@ class TestDMSCHealthCheck:
 
     def test_health_report(self):
         """Test health report"""
-        report = DMSCHealthReport()
+        report = RiHealthReport()
         assert hasattr(report, 'overall_status')
 
 
-class TestDMSCLifecycleObserver:
-    """Tests for DMSCLifecycleObserver"""
+class TestRiLifecycleObserver:
+    """Tests for RiLifecycleObserver"""
 
     def test_lifecycle_observer_creation(self):
         """Test creating a lifecycle observer"""
-        observer = DMSCLifecycleObserver()
+        observer = RiLifecycleObserver()
         assert observer is not None
 
 
-class TestDMSCServiceContext:
-    """Tests for DMSCServiceContext"""
+class TestRiServiceContext:
+    """Tests for RiServiceContext"""
 
     def test_service_context_creation(self):
         """Test creating a service context"""
-        context = DMSCServiceContext()
+        context = RiServiceContext()
         assert context is not None
 
     def test_service_context_with_logger(self):
         """Test service context with logger property"""
-        context = DMSCServiceContext()
+        context = RiServiceContext()
         assert hasattr(context, 'logger')
 
 
-class TestDMSCAppBuilderWrapper:
-    """Tests for DMSCAppBuilder Python wrapper behavior
+class TestRiAppBuilderWrapper:
+    """Tests for RiAppBuilder Python wrapper behavior
     
     These tests verify that the Python wrapper class provides a Pythonic
     interface with method chaining, automatically handling the internal
@@ -258,36 +258,36 @@ class TestDMSCAppBuilderWrapper:
         The Python wrapper should return the same instance (self) to enable
         natural method chaining without explicit reassignment.
         """
-        builder = DMSCAppBuilder()
+        builder = RiAppBuilder()
         result = builder.with_config("config.yaml")
         assert result is builder, "with_config should return the same instance"
 
     def test_multiple_chained_calls(self):
         """Test multiple chained method calls"""
-        builder = DMSCAppBuilder()
+        builder = RiAppBuilder()
         result = (builder
             .with_config("config.yaml")
-            .with_logging(DMSCLogConfig()))
+            .with_logging(RiLogConfig()))
         assert result is builder, "Chained calls should return the same instance"
 
     def test_wrapper_has_internal_builder(self):
         """Verify wrapper has internal _builder attribute"""
-        builder = DMSCAppBuilder()
+        builder = RiAppBuilder()
         assert hasattr(builder, '_builder'), "Wrapper should have _builder attribute"
         assert builder._builder is not None, "Internal _builder should not be None"
 
     def test_build_returns_runtime_wrapper(self):
-        """Verify build() returns DMSCAppRuntime instance"""
-        builder = DMSCAppBuilder()
+        """Verify build() returns RiAppRuntime instance"""
+        builder = RiAppBuilder()
         try:
             runtime = builder.build()
-            assert isinstance(runtime, DMSCAppRuntime), "build() should return DMSCAppRuntime"
+            assert isinstance(runtime, RiAppRuntime), "build() should return RiAppRuntime"
         except Exception:
             pass
 
 
-class TestDMSCAppRuntimeWrapper:
-    """Tests for DMSCAppRuntime Python wrapper behavior
+class TestRiAppRuntimeWrapper:
+    """Tests for RiAppRuntime Python wrapper behavior
     
     These tests verify that the Python wrapper correctly delegates to the
     underlying Rust runtime instance.
@@ -295,7 +295,7 @@ class TestDMSCAppRuntimeWrapper:
 
     def test_runtime_wrapper_creation(self):
         """Test runtime wrapper creation"""
-        builder = DMSCAppBuilder()
+        builder = RiAppBuilder()
         try:
             runtime = builder.build()
             assert runtime is not None, "Runtime should be created"
@@ -304,7 +304,7 @@ class TestDMSCAppRuntimeWrapper:
 
     def test_runtime_has_internal_instance(self):
         """Verify runtime wrapper has internal _runtime attribute"""
-        builder = DMSCAppBuilder()
+        builder = RiAppBuilder()
         try:
             runtime = builder.build()
             assert hasattr(runtime, '_runtime'), "Wrapper should have _runtime attribute"
@@ -314,7 +314,7 @@ class TestDMSCAppRuntimeWrapper:
 
     def test_get_context_method_exists(self):
         """Verify get_context() method exists and is callable"""
-        builder = DMSCAppBuilder()
+        builder = RiAppBuilder()
         try:
             runtime = builder.build()
             assert hasattr(runtime, 'get_context'), "Runtime should have get_context method"
@@ -324,7 +324,7 @@ class TestDMSCAppRuntimeWrapper:
 
     def test_run_method_exists(self):
         """Verify run() method exists and is callable"""
-        builder = DMSCAppBuilder()
+        builder = RiAppBuilder()
         try:
             runtime = builder.build()
             assert hasattr(runtime, 'run'), "Runtime should have run method"

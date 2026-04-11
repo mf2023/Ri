@@ -1,7 +1,7 @@
 //! Copyright © 2025-2026 Wenze Wei. All Rights Reserved.
 //!
-//! This file is part of DMSC.
-//! The DMSC project belongs to the Dunimd Team.
+//! This file is part of Ri.
+//! The Ri project belongs to the Dunimd Team.
 //!
 //! Licensed under the Apache License, Version 2.0 (the "License");
 //! You may not use this file except in compliance with the License.
@@ -22,32 +22,32 @@ use std::sync::Arc;
 use std::time::{Duration, Instant};
 use tokio::sync::RwLock;
 
-use crate::core::{DMSCResult};
-use super::super::{DMSCProtocolType};
+use crate::core::{RiResult};
+use super::super::{RiProtocolType};
 
 /// Connection coordinator for managing cross-protocol connections.
-pub struct DMSCConnectionCoordinator {
+pub struct RiConnectionCoordinator {
     /// Active cross-protocol connections
-    pub connections: Arc<RwLock<HashMap<String, DMSCCrossProtocolConnection>>>,
+    pub connections: Arc<RwLock<HashMap<String, RiCrossProtocolConnection>>>,
     /// Connection routing table
-    pub routing_table: Arc<RwLock<DMSCConnectionRoutingTable>>,
+    pub routing_table: Arc<RwLock<RiConnectionRoutingTable>>,
     /// Connection health monitor
-    pub health_monitor: Arc<DMSCConnectionHealthMonitor>,
+    pub health_monitor: Arc<RiConnectionHealthMonitor>,
 }
 
 /// Cross-protocol connection structure.
 #[derive(Debug, Clone)]
-pub struct DMSCCrossProtocolConnection {
+pub struct RiCrossProtocolConnection {
     /// Connection identifier
     pub connection_id: String,
     /// Source protocol
-    pub source_protocol: DMSCProtocolType,
+    pub source_protocol: RiProtocolType,
     /// Target protocol
-    pub target_protocol: DMSCProtocolType,
+    pub target_protocol: RiProtocolType,
     /// Target device
     pub target_device: String,
     /// Connection state
-    pub state: DMSCCrossProtocolConnectionState,
+    pub state: RiCrossProtocolConnectionState,
     /// Connection metadata
     pub metadata: HashMap<String, String>,
     /// Established timestamp
@@ -58,7 +58,7 @@ pub struct DMSCCrossProtocolConnection {
 
 /// Cross-protocol connection state enumeration.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum DMSCCrossProtocolConnectionState {
+pub enum RiCrossProtocolConnectionState {
     /// Connection is initializing
     Initializing,
     /// Connection is established
@@ -77,24 +77,24 @@ pub enum DMSCCrossProtocolConnectionState {
 
 /// Connection routing table structure.
 #[derive(Debug, Clone)]
-pub struct DMSCConnectionRoutingTable {
+pub struct RiConnectionRoutingTable {
     /// Protocol routing entries
-    pub entries: HashMap<String, DMSCRoutingEntry>,
+    pub entries: HashMap<String, RiRoutingEntry>,
     /// Default protocol
-    pub default_protocol: DMSCProtocolType,
+    pub default_protocol: RiProtocolType,
     /// Routing policies
-    pub routing_policies: Vec<DMSCRoutingPolicy>,
+    pub routing_policies: Vec<RiRoutingPolicy>,
 }
 
 /// Routing entry structure.
 #[derive(Debug, Clone)]
-pub struct DMSCRoutingEntry {
+pub struct RiRoutingEntry {
     /// Target device
     pub target_device: String,
     /// Preferred protocol
-    pub preferred_protocol: DMSCProtocolType,
+    pub preferred_protocol: RiProtocolType,
     /// Alternative protocols
-    pub alternative_protocols: Vec<DMSCProtocolType>,
+    pub alternative_protocols: Vec<RiProtocolType>,
     /// Routing priority
     pub priority: u32,
     /// Route cost
@@ -103,41 +103,41 @@ pub struct DMSCRoutingEntry {
 
 /// Routing policy structure.
 #[derive(Debug, Clone)]
-pub struct DMSCRoutingPolicy {
+pub struct RiRoutingPolicy {
     /// Policy name
     pub name: String,
     /// Policy condition
-    pub condition: DMSCRoutingCondition,
+    pub condition: RiRoutingCondition,
     /// Policy action
-    pub action: DMSCRoutingAction,
+    pub action: RiRoutingAction,
     /// Policy priority
     pub priority: u32,
 }
 
 /// Routing condition enumeration.
 #[derive(Debug, Clone)]
-pub enum DMSCRoutingCondition {
+pub enum RiRoutingCondition {
     /// Device type condition
-    DeviceType(DMSCDeviceType),
+    DeviceType(RiDeviceType),
     /// Protocol availability condition
-    ProtocolAvailability(DMSCProtocolType),
+    ProtocolAvailability(RiProtocolType),
     /// Security level condition
-    SecurityLevel(super::super::DMSCSecurityLevel),
+    SecurityLevel(super::super::RiSecurityLevel),
     /// Performance condition
-    Performance(DMSCPerformanceCondition),
+    Performance(RiPerformanceCondition),
     /// Custom condition
     Custom(String),
 }
 
 /// Routing action enumeration.
 #[derive(Debug, Clone)]
-pub enum DMSCRoutingAction {
+pub enum RiRoutingAction {
     /// Use protocol
-    UseProtocol(DMSCProtocolType),
+    UseProtocol(RiProtocolType),
     /// Load balance
-    LoadBalance(Vec<DMSCProtocolType>),
+    LoadBalance(Vec<RiProtocolType>),
     /// Failover
-    Failover(Vec<DMSCProtocolType>),
+    Failover(Vec<RiProtocolType>),
     /// Block connection
     Block,
     /// Custom action
@@ -146,7 +146,7 @@ pub enum DMSCRoutingAction {
 
 /// Performance condition structure.
 #[derive(Debug, Clone)]
-pub struct DMSCPerformanceCondition {
+pub struct RiPerformanceCondition {
     /// Maximum latency
     pub max_latency: Duration,
     /// Minimum throughput
@@ -157,7 +157,7 @@ pub struct DMSCPerformanceCondition {
 
 /// Device type enumeration.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum DMSCDeviceType {
+pub enum RiDeviceType {
     /// Server device
     Server,
     /// Client device
@@ -173,20 +173,20 @@ pub enum DMSCDeviceType {
 }
 
 /// Connection health monitor structure.
-pub struct DMSCConnectionHealthMonitor {
+pub struct RiConnectionHealthMonitor {
     /// Health check results
-    pub health_results: Arc<RwLock<HashMap<String, DMSCConnectionHealthResult>>>,
+    pub health_results: Arc<RwLock<HashMap<String, RiConnectionHealthResult>>>,
     /// Health check configuration
-    pub config: Arc<DMSCHealthCheckConfig>,
+    pub config: Arc<RiHealthCheckConfig>,
 }
 
 /// Connection health result structure.
 #[derive(Debug, Clone)]
-pub struct DMSCConnectionHealthResult {
+pub struct RiConnectionHealthResult {
     /// Connection identifier
     pub connection_id: String,
     /// Health status
-    pub health_status: DMSCHealthStatus,
+    pub health_status: RiHealthStatus,
     /// Response time
     pub response_time: Duration,
     /// Error count
@@ -199,7 +199,7 @@ pub struct DMSCConnectionHealthResult {
 
 /// Health status enumeration.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum DMSCHealthStatus {
+pub enum RiHealthStatus {
     /// Healthy status
     Healthy,
     /// Degraded status
@@ -212,7 +212,7 @@ pub enum DMSCHealthStatus {
 
 /// Health check configuration structure.
 #[derive(Debug, Clone)]
-pub struct DMSCHealthCheckConfig {
+pub struct RiHealthCheckConfig {
     /// Check interval
     pub check_interval: Duration,
     /// Timeout duration

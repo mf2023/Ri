@@ -2,8 +2,8 @@
 
 # Copyright © 2025-2026 Wenze Wei. All Rights Reserved.
 #
-# This file is part of DMSC.
-# The DMSC project belongs to the Dunimd Team.
+# This file is part of Ri.
+# The Ri project belongs to the Dunimd Team.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # You may not use this file except in compliance with the License.
@@ -18,24 +18,24 @@
 # limitations under the License.
 
 """
-DMSC Service Mesh Module Tests
+Ri Service Mesh Module Tests
 
 Tests for the service mesh functionality including service discovery,
 load balancing, and circuit breaking.
 """
 
 import pytest
-from dmsc import (
-    DMSCServiceMesh,
-    DMSCServiceMeshConfig,
-    DMSCServiceEndpoint,
-    DMSCServiceDiscovery,
-    DMSCServiceInstance,
+from ri import (
+    RiServiceMesh,
+    RiServiceMeshConfig,
+    RiServiceEndpoint,
+    RiServiceDiscovery,
+    RiServiceInstance,
 )
 
 
-class TestDMSCServiceMesh:
-    """Tests for DMSCServiceMesh"""
+class TestRiServiceMesh:
+    """Tests for RiServiceMesh"""
 
     def test_service_mesh_creation(self):
         """Test creating service mesh - skip as it requires internal config"""
@@ -70,37 +70,37 @@ class TestDMSCServiceMesh:
         pass
 
 
-class TestDMSCServiceMeshConfig:
-    """Tests for DMSCServiceMeshConfig"""
+class TestRiServiceMeshConfig:
+    """Tests for RiServiceMeshConfig"""
 
     def test_service_mesh_config_creation(self):
         """Test creating service mesh config - skip as it requires internal setup"""
         pass
 
 
-class TestDMSCServiceEndpoint:
-    """Tests for DMSCServiceEndpoint"""
+class TestRiServiceEndpoint:
+    """Tests for RiServiceEndpoint"""
 
     def test_service_endpoint_creation(self):
         """Test creating service endpoint"""
-        endpoint = DMSCServiceEndpoint("test-service", "http://localhost:8080", 100)
+        endpoint = RiServiceEndpoint("test-service", "http://localhost:8080", 100)
         assert endpoint is not None
 
 
-class TestDMSCServiceDiscovery:
-    """Tests for DMSCServiceDiscovery"""
+class TestRiServiceDiscovery:
+    """Tests for RiServiceDiscovery"""
 
     def test_service_discovery_creation(self):
         """Test creating service discovery - skip as it requires internal setup"""
         pass
 
 
-class TestDMSCServiceInstance:
-    """Tests for DMSCServiceInstance"""
+class TestRiServiceInstance:
+    """Tests for RiServiceInstance"""
 
     def test_service_instance_creation(self):
         """Test creating service instance"""
-        instance = DMSCServiceInstance("inst1", "test-service", "localhost", 8080)
+        instance = RiServiceInstance("inst1", "test-service", "localhost", 8080)
         assert instance is not None
 
 

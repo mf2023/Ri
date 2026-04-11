@@ -1,7 +1,7 @@
 //! Copyright © 2025-2026 Wenze Wei. All Rights Reserved.
 //!
-//! This file is part of DMSC.
-//! The DMSC project belongs to the Dunimd Team.
+//! This file is part of Ri.
+//! The Ri project belongs to the Dunimd Team.
 //!
 //! Licensed under the Apache License, Version 2.0 (the "License");
 //! You may not use this file except in compliance with the License.
@@ -15,9 +15,9 @@
 //! See the License for the specific language governing permissions and
 //! limitations under the License.
 
-//! # DMSC Observability Module Example
+//! # Ri Observability Module Example
 //!
-//! This example demonstrates how to use the observability module in DMSC,
+//! This example demonstrates how to use the observability module in Ri,
 //! including metrics collection, distributed tracing, and health monitoring.
 //!
 //! ## Running this Example
@@ -34,8 +34,8 @@
 //! - Trace propagation
 //! - Health checks
 
-use dmsc::observability::{DMSCObservabilityModule, DMSCObservabilityConfig, DMSCMetricsRegistry, DMSCTracer, DMSCMetricType};
-use dmsc::core::DMSCResult;
+use ri::observability::{RiObservabilityModule, RiObservabilityConfig, RiMetricsRegistry, RiTracer, RiMetricType};
+use ri::core::RiResult;
 
 /// Main entry point for the observability module example.
 ///
@@ -48,11 +48,11 @@ use dmsc::core::DMSCResult;
 /// - Health check registration and execution
 /// - System metrics collection
 ///
-/// The example shows how DMSC provides comprehensive observability
+/// The example shows how Ri provides comprehensive observability
 /// capabilities for monitoring, tracing, and health checking
 /// in a Rust async runtime environment.
-fn main() -> DMSCResult<()> {
-    println!("=== DMSC Observability Module Example ===\n");
+fn main() -> RiResult<()> {
+    println!("=== Ri Observability Module Example ===\n");
 
     // Create async runtime for handling asynchronous observability operations
     let rt = tokio::runtime::Runtime::new().unwrap();
@@ -67,9 +67,9 @@ fn main() -> DMSCResult<()> {
         // - metrics_enabled: Enable/disable metrics collection
         // - tracing_enabled: Enable/disable distributed tracing
         // - tracing_sample_rate: Percentage of traces to sample (0.0 to 1.0)
-        // - build(): Finalizes configuration into DMSCObservabilityConfig struct
-        let config = DMSCObservabilityConfig::new()
-            .with_service_name("dmsc-example")
+        // - build(): Finalizes configuration into RiObservabilityConfig struct
+        let config = RiObservabilityConfig::new()
+            .with_service_name("ri-example")
             .with_service_version("1.0.0")
             .with_environment("development")
             .with_metrics_enabled(true)
@@ -80,7 +80,7 @@ fn main() -> DMSCResult<()> {
         // Module Initialization: Create observability module instance
         // The module provides unified observability including metrics, tracing, and health checks
         println!("1. Creating observability module...");
-        let observability = DMSCObservabilityModule::new(config).await?;
+        let observability = RiObservabilityModule::new(config).await?;
         
         // Get sub-modules for observability operations
         // - Metrics: For collecting and reporting measurements
@@ -99,12 +99,12 @@ fn main() -> DMSCResult<()> {
         // create_metric() parameters:
         // - name: &str unique metric identifier
         // - description: &str human-readable explanation
-        // - metric_type: DMSCMetricType enum variant
+        // - metric_type: RiMetricType enum variant
         // - labels: Vec<&str> dimensions for filtering and grouping
         let request_counter = metrics.create_metric(
             "http_requests_total",
             "Total number of HTTP requests",
-            DMSCMetricType::Counter,
+            RiMetricType::Counter,
             vec!["method", "endpoint", "status"],
         )?;
         println!("   Created counter: http_requests_total\n");
@@ -114,7 +114,7 @@ fn main() -> DMSCResult<()> {
         let active_connections = metrics.create_metric(
             "active_connections",
             "Number of active connections",
-            DMSCMetricType::Gauge,
+            RiMetricType::Gauge,
             vec!["protocol"],
         )?;
         println!("   Created gauge: active_connections\n");
@@ -124,7 +124,7 @@ fn main() -> DMSCResult<()> {
         let request_duration = metrics.create_metric(
             "http_request_duration_seconds",
             "HTTP request duration in seconds",
-            DMSCMetricType::Histogram,
+            RiMetricType::Histogram,
             vec!["method", "endpoint"],
         )?;
         println!("   Created histogram: http_request_duration_seconds\n");
@@ -165,7 +165,7 @@ fn main() -> DMSCResult<()> {
         let user_registrations = metrics.create_metric(
             "user_registrations_total",
             "Total number of user registrations",
-            DMSCMetricType::Counter,
+            RiMetricType::Counter,
             vec!["source"],
         )?;
         user_registrations.increment(vec!["web"])?;
@@ -243,7 +243,7 @@ fn main() -> DMSCResult<()> {
         // Health checks verify component availability
         // Each health check has a name and async evaluation function
         observability.register_health_check("database", async {
-            Ok(dmsc::observability::DMSCHealthStatus::Healthy)
+            Ok(ri::observability::RiHealthStatus::Healthy)
         }).await;
         println!("   Registered 'database' health check\n");
 
@@ -267,7 +267,7 @@ fn main() -> DMSCResult<()> {
         let cpu_usage = metrics.create_metric(
             "system_cpu_usage_percent",
             "CPU usage percentage",
-            DMSCMetricType::Gauge,
+            RiMetricType::Gauge,
             vec!["core"],
         )?;
         cpu_usage.set(45.5, vec!["core-0"])?;
@@ -277,7 +277,7 @@ fn main() -> DMSCResult<()> {
         let memory_usage = metrics.create_metric(
             "system_memory_usage_bytes",
             "Memory usage in bytes",
-            DMSCMetricType::Gauge,
+            RiMetricType::Gauge,
             vec!["type"],
         )?;
         memory_usage.set(1024 * 1024 * 512, vec!["heap"])?;
@@ -294,6 +294,6 @@ fn main() -> DMSCResult<()> {
         println!("   - Errors recorded: {}\n", stats.errors_recorded());
 
         println!("=== Observability Example Completed ===");
-        Ok::<(), DMSCError>(())
+        Ok::<(), RiError>(())
     })?
 }

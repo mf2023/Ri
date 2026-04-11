@@ -1,7 +1,7 @@
 //! Copyright © 2025-2026 Wenze Wei. All Rights Reserved.
 //!
-//! This file is part of DMSC.
-//! The DMSC project belongs to the Dunimd Team.
+//! This file is part of Ri.
+//! The Ri project belongs to the Dunimd Team.
 //!
 //! Licensed under the Apache License, Version 2.0 (the "License");
 //! You may not use this file except in compliance with the License.
@@ -17,21 +17,21 @@
 
 //! # Cache Module Tests
 //!
-//! This module contains comprehensive tests for the DMSC caching system, covering
+//! This module contains comprehensive tests for the Ri caching system, covering
 //! all cache-related components including cached values, statistics, configuration,
 //! backend types, memory cache implementation, and the cache manager.
 //!
 //! ## Test Coverage
 //!
-//! - **DMSCCachedValue**: Tests for serialized value storage, TTL-based expiration,
+//! - **RiCachedValue**: Tests for serialized value storage, TTL-based expiration,
 //!   touch functionality, and deserialization with type safety
-//! - **DMSCCacheStats**: Tests for cache statistics tracking including entries,
+//! - **RiCacheStats**: Tests for cache statistics tracking including entries,
 //!   memory usage, hit/miss counts, and eviction tracking
-//! - **DMSCCacheConfig**: Tests for default configuration values and backend type
+//! - **RiCacheConfig**: Tests for default configuration values and backend type
 //!   parsing from strings
-//! - **DMSCMemoryCache**: Tests for in-memory cache operations including get, set,
+//! - **RiMemoryCache**: Tests for in-memory cache operations including get, set,
 //!   delete, exists, clear, statistics, and expired entry cleanup
-//! - **DMSCCacheManager**: Tests for the generic cache manager interface with typed
+//! - **RiCacheManager**: Tests for the generic cache manager interface with typed
 //!   get/set operations, existence checks, and lazy value generation
 //!
 //! ## Design Principles
@@ -41,11 +41,11 @@
 //! mismatches during deserialization. All async operations use tokio for testing
 //! concurrent cache access patterns.
 
-use dmsc::cache::{DMSCCachedValue, DMSCCacheStats, DMSCCacheConfig, DMSCCacheBackendType, DMSCCacheManager, DMSCMemoryCache, DMSCCache};
+use ri::cache::{RiCachedValue, RiCacheStats, RiCacheConfig, RiCacheBackendType, RiCacheManager, RiMemoryCache, RiCache};
 use std::time::Duration;
 
 #[test]
-/// Tests DMSCCachedValue creation with serialized data and TTL.
+/// Tests RiCachedValue creation with serialized data and TTL.
 ///
 /// Verifies that a cached value can be created with serialized JSON data
 /// and an optional TTL (Time-To-Live). The test validates that the value
@@ -55,7 +55,7 @@ use std::time::Duration;
 ///
 /// 1. Create a JSON value to be cached
 /// 2. Serialize the value to a string
-/// 3. Create a DMSCCachedValue with the serialized data and 60 second TTL
+/// 3. Create a RiCachedValue with the serialized data and 60 second TTL
 /// 4. Verify the value can be deserialized back to the original JSON
 /// 5. Verify the value is not expired and has an expiration timestamp
 ///
@@ -69,7 +69,7 @@ fn test_cached_value_new() {
     let ttl_seconds = Some(60_u64);
     let serialized = serde_json::to_string(&data).unwrap();
     
-    let cached_value = DMSCCachedValue::new(serialized, ttl_seconds);
+    let cached_value = RiCachedValue::new(serialized, ttl_seconds);
     
     let deserialized: serde_json::Value = cached_value.deserialize().unwrap();
     assert_eq!(deserialized, data);
@@ -105,13 +105,13 @@ fn test_cached_value_touch() {
     let ttl_seconds = Some(60_u64);
     let serialized = serde_json::to_string(&data).unwrap();
     
-    let mut cached_value = DMSCCachedValue::new(serialized, ttl_seconds);
+    let mut cached_value = RiCachedValue::new(serialized, ttl_seconds);
     
     cached_value.touch();
 }
 
 #[test]
-/// Tests DMSCCachedValue expiration detection.
+/// Tests RiCachedValue expiration detection.
 ///
 /// Verifies that the is_expired() method correctly identifies expired
 /// cached values based on their expiration timestamp. This test uses
@@ -142,7 +142,7 @@ fn test_cached_value_expired() {
     // Create a value with a very short TTL
     let ttl_seconds = Some(1_u64);
     let serialized = serde_json::to_string(&data).unwrap();
-    let mut cached_value = DMSCCachedValue::new(serialized, ttl_seconds);
+    let mut cached_value = RiCachedValue::new(serialized, ttl_seconds);
     
     // Should not be expired immediately
     assert!(!cached_value.is_expired());
@@ -155,7 +155,7 @@ fn test_cached_value_expired() {
 }
 
 #[test]
-/// Tests DMSCCachedValue deserialization to different types.
+/// Tests RiCachedValue deserialization to different types.
 ///
 /// Verifies that the deserialize() method can correctly deserialize
 /// cached JSON data to various target types including String, JSON Value,
@@ -177,7 +177,7 @@ fn test_cached_value_deserialize() {
     let ttl_seconds = Some(60_u64);
     let serialized = serde_json::to_string(&data).unwrap();
     
-    let cached_value = DMSCCachedValue::new(serialized, ttl_seconds);
+    let cached_value = RiCachedValue::new(serialized, ttl_seconds);
     
     // Test deserialization to string
     let result: String = cached_value.deserialize().unwrap();
@@ -189,9 +189,9 @@ fn test_cached_value_deserialize() {
 }
 
 #[test]
-/// Tests DMSCCacheStats default initialization.
+/// Tests RiCacheStats default initialization.
 ///
-/// Verifies that a newly created DMSCCacheStats instance has correct
+/// Verifies that a newly created RiCacheStats instance has correct
 /// default values for all statistics fields including entry count,
 /// memory usage, hit/miss counters, eviction count, and hit rate.
 ///
@@ -209,7 +209,7 @@ fn test_cached_value_deserialize() {
 /// All fields should be initialized to their default (zero) values
 /// representing an empty cache with no performance history.
 fn test_cache_stats_default() {
-    let stats = DMSCCacheStats::default();
+    let stats = RiCacheStats::default();
     
     assert_eq!(stats.entries, 0);
     assert_eq!(stats.memory_usage_bytes, 0);
@@ -220,9 +220,9 @@ fn test_cache_stats_default() {
 }
 
 #[test]
-/// Tests DMSCCacheConfig default configuration values.
+/// Tests RiCacheConfig default configuration values.
 ///
-/// Verifies that the default DMSCCacheConfig has appropriate values
+/// Verifies that the default RiCacheConfig has appropriate values
 /// for cache initialization including enabled status, TTL, memory limits,
 /// cleanup interval, backend type, and Redis connection settings.
 ///
@@ -241,31 +241,31 @@ fn test_cache_stats_default() {
 /// All configuration fields should have sensible defaults suitable for
 /// typical caching scenarios without requiring explicit configuration.
 fn test_cache_config_default() {
-    let config = DMSCCacheConfig::default();
+    let config = RiCacheConfig::default();
     
     assert!(config.enabled);
     assert_eq!(config.default_ttl_secs, 3600);
     assert_eq!(config.max_memory_mb, 512);
     assert_eq!(config.cleanup_interval_secs, 300);
-    assert_eq!(config.backend_type, DMSCCacheBackendType::Memory);
+    assert_eq!(config.backend_type, RiCacheBackendType::Memory);
     assert_eq!(config.redis_url, "redis://127.0.0.1:6379");
     assert_eq!(config.redis_pool_size, 10);
 }
 
 #[test]
-/// Tests DMSCCacheBackendType parsing from strings.
+/// Tests RiCacheBackendType parsing from strings.
 ///
-/// Verifies that DMSCCacheBackendType can be correctly parsed from
+/// Verifies that RiCacheBackendType can be correctly parsed from
 /// string representations using both the custom from_str_custom method
 /// and the standard FromStr trait. Invalid strings should default to
 /// the Memory backend type.
 ///
 /// ## Supported Backend Types
 ///
-/// - "memory" -> DMSCCacheBackendType::Memory
-/// - "redis" -> DMSCCacheBackendType::Redis
-/// - "hybrid" -> DMSCCacheBackendType::Hybrid
-/// - invalid string -> DMSCCacheBackendType::Memory (default)
+/// - "memory" -> RiCacheBackendType::Memory
+/// - "redis" -> RiCacheBackendType::Redis
+/// - "hybrid" -> RiCacheBackendType::Hybrid
+/// - invalid string -> RiCacheBackendType::Memory (default)
 ///
 /// ## Test Scenarios
 ///
@@ -281,20 +281,20 @@ fn test_cache_config_default() {
 /// - The parsing is consistent between methods
 fn test_cache_backend_type_from_str() {
     // Test from_str_custom method
-    assert_eq!(DMSCCacheBackendType::from_str_custom("memory"), DMSCCacheBackendType::Memory);
-    assert_eq!(DMSCCacheBackendType::from_str_custom("redis"), DMSCCacheBackendType::Redis);
-    assert_eq!(DMSCCacheBackendType::from_str_custom("hybrid"), DMSCCacheBackendType::Hybrid);
-    assert_eq!(DMSCCacheBackendType::from_str_custom("invalid"), DMSCCacheBackendType::Memory);
+    assert_eq!(RiCacheBackendType::from_str_custom("memory"), RiCacheBackendType::Memory);
+    assert_eq!(RiCacheBackendType::from_str_custom("redis"), RiCacheBackendType::Redis);
+    assert_eq!(RiCacheBackendType::from_str_custom("hybrid"), RiCacheBackendType::Hybrid);
+    assert_eq!(RiCacheBackendType::from_str_custom("invalid"), RiCacheBackendType::Memory);
     
     // Test standard FromStr trait
-    assert_eq!("memory".parse::<DMSCCacheBackendType>().unwrap(), DMSCCacheBackendType::Memory);
-    assert_eq!("redis".parse::<DMSCCacheBackendType>().unwrap(), DMSCCacheBackendType::Redis);
-    assert_eq!("hybrid".parse::<DMSCCacheBackendType>().unwrap(), DMSCCacheBackendType::Hybrid);
-    assert_eq!("invalid".parse::<DMSCCacheBackendType>().unwrap(), DMSCCacheBackendType::Memory);
+    assert_eq!("memory".parse::<RiCacheBackendType>().unwrap(), RiCacheBackendType::Memory);
+    assert_eq!("redis".parse::<RiCacheBackendType>().unwrap(), RiCacheBackendType::Redis);
+    assert_eq!("hybrid".parse::<RiCacheBackendType>().unwrap(), RiCacheBackendType::Hybrid);
+    assert_eq!("invalid".parse::<RiCacheBackendType>().unwrap(), RiCacheBackendType::Memory);
 }
 
 #[tokio::test]
-/// Tests basic DMSCMemoryCache get and set operations.
+/// Tests basic RiMemoryCache get and set operations.
 ///
 /// Verifies that the in-memory cache can store and retrieve serialized
 /// JSON values correctly with TTL-based expiration. This test covers
@@ -322,7 +322,7 @@ fn test_cache_backend_type_from_str() {
 /// - Deserialized value equals the original JSON
 /// - Non-existent keys return None
 async fn test_memory_cache_get_set() {
-    let cache = DMSCMemoryCache::new();
+    let cache = RiMemoryCache::new();
     
     // Test set and get
     let key = "test_key";
@@ -342,7 +342,7 @@ async fn test_memory_cache_get_set() {
 }
 
 #[tokio::test]
-/// Tests DMSCMemoryCache delete operation.
+/// Tests RiMemoryCache delete operation.
 ///
 /// Verifies that the delete operation successfully removes a cached
 /// entry and that subsequent get operations return None for deleted keys.
@@ -365,7 +365,7 @@ async fn test_memory_cache_get_set() {
 /// - Delete operation completes without errors
 /// - After deletion, get returns None for the deleted key
 async fn test_memory_cache_delete() {
-    let cache = DMSCMemoryCache::new();
+    let cache = RiMemoryCache::new();
     
     // Test set, delete, and get
     let key = "test_key";
@@ -380,7 +380,7 @@ async fn test_memory_cache_delete() {
 }
 
 #[tokio::test]
-/// Tests DMSCMemoryCache exists operation.
+/// Tests RiMemoryCache exists operation.
 ///
 /// Verifies that the exists operation correctly reports whether a key
 /// exists in the cache, returning true for existing keys and false
@@ -407,7 +407,7 @@ async fn test_memory_cache_delete() {
 /// - exists() returns true for stored keys
 /// - exists() returns false for deleted keys
 async fn test_memory_cache_exists() {
-    let cache = DMSCMemoryCache::new();
+    let cache = RiMemoryCache::new();
     
     // Test exists
     let key = "test_key";
@@ -424,7 +424,7 @@ async fn test_memory_cache_exists() {
 }
 
 #[tokio::test]
-/// Tests DMSCMemoryCache clear operation.
+/// Tests RiMemoryCache clear operation.
 ///
 /// Verifies that the clear operation removes all cached entries from
 /// the cache, returning it to an empty state with zero entries.
@@ -450,7 +450,7 @@ async fn test_memory_cache_exists() {
 /// - After clear, exists() returns false for all previous keys
 /// - The cache is ready for new entries
 async fn test_memory_cache_clear() {
-    let cache = DMSCMemoryCache::new();
+    let cache = RiMemoryCache::new();
     
     // Set multiple keys
     let value = serde_json::json!("test_value");
@@ -475,7 +475,7 @@ async fn test_memory_cache_clear() {
 }
 
 #[tokio::test]
-/// Tests DMSCMemoryCache statistics tracking.
+/// Tests RiMemoryCache statistics tracking.
 ///
 /// Verifies that the cache correctly tracks and updates statistics
 /// for cache operations including hits, misses, and entry count.
@@ -511,7 +511,7 @@ async fn test_memory_cache_clear() {
 /// - Get on existing key increases hit count
 /// - Get on non-existent key increases miss count
 async fn test_memory_cache_stats() {
-    let cache = DMSCMemoryCache::new();
+    let cache = RiMemoryCache::new();
     
     // Get initial stats
     let initial_stats = cache.stats().await;
@@ -537,7 +537,7 @@ async fn test_memory_cache_stats() {
     assert_eq!(updated_stats.misses, initial_stats.misses + 1);
 }
 
-/// Tests DMSCMemoryCache cleanup of expired entries.
+/// Tests RiMemoryCache cleanup of expired entries.
 ///
 /// Verifies that the cleanup operation correctly identifies and removes
 /// expired entries from the cache, returning the count of cleaned entries.
@@ -564,7 +564,7 @@ async fn test_memory_cache_stats() {
 /// - After cleanup, expired entries are not accessible
 /// - The cache state reflects the removal of expired entries
 async fn test_memory_cache_cleanup_expired() {
-    let cache = DMSCMemoryCache::new();
+    let cache = RiMemoryCache::new();
     
     // Set a key with a very short TTL
     let key = "expiring_key";
@@ -578,7 +578,7 @@ async fn test_memory_cache_cleanup_expired() {
     assert!(!cache.exists(key).await);
 }
 
-/// Tests DMSCCacheManager typed get/set operations.
+/// Tests RiCacheManager typed get/set operations.
 ///
 /// Verifies that the cache manager correctly stores and retrieves
 /// values of different types using generic type parameters.
@@ -605,10 +605,10 @@ async fn test_memory_cache_cleanup_expired() {
 /// - Type parameter ensures correct deserialization
 async fn test_cache_manager_get_set() {
     // Create a memory cache backend
-    let backend = std::sync::Arc::new(DMSCMemoryCache::new());
+    let backend = std::sync::Arc::new(RiMemoryCache::new());
     
     // Create a cache manager
-    let manager = DMSCCacheManager::new(backend);
+    let manager = RiCacheManager::new(backend);
     
     // Test set and get with string value
     let key = "test_key";
@@ -634,10 +634,10 @@ async fn test_cache_manager_get_set() {
 #[tokio::test]
 async fn test_cache_manager_delete() {
     // Create a memory cache backend
-    let backend = std::sync::Arc::new(DMSCMemoryCache::new());
+    let backend = std::sync::Arc::new(RiMemoryCache::new());
     
     // Create a cache manager
-    let manager = DMSCCacheManager::new(backend);
+    let manager = RiCacheManager::new(backend);
     
     // Test set, delete, and get
     let key = "test_key";
@@ -650,7 +650,7 @@ async fn test_cache_manager_delete() {
     assert!(manager.get::<String>(key).await.unwrap().is_none());
 }
 
-/// Tests DMSCCacheManager exists operation.
+/// Tests RiCacheManager exists operation.
 ///
 /// Verifies that the cache manager correctly checks for the
 /// existence of entries in the underlying cache backend.
@@ -679,10 +679,10 @@ async fn test_cache_manager_delete() {
 /// - The cache manager correctly delegates to the backend
 async fn test_cache_manager_exists() {
     // Create a memory cache backend
-    let backend = std::sync::Arc::new(DMSCMemoryCache::new());
+    let backend = std::sync::Arc::new(RiMemoryCache::new());
     
     // Create a cache manager
-    let manager = DMSCCacheManager::new(backend);
+    let manager = RiCacheManager::new(backend);
     
     // Test exists
     let key = "test_key";
@@ -697,7 +697,7 @@ async fn test_cache_manager_exists() {
     assert!(!manager.exists(key).await);
 }
 
-/// Tests DMSCCacheManager get_or_set lazy value generation.
+/// Tests RiCacheManager get_or_set lazy value generation.
 ///
 /// Verifies that the get_or_set method correctly implements
 /// "get or create" semantics, returning cached values when
@@ -726,10 +726,10 @@ async fn test_cache_manager_exists() {
 /// - Cached value takes precedence over new generator output
 async fn test_cache_manager_get_or_set() {
     // Create a memory cache backend
-    let backend = std::sync::Arc::new(DMSCMemoryCache::new());
+    let backend = std::sync::Arc::new(RiMemoryCache::new());
     
     // Create a cache manager
-    let manager = DMSCCacheManager::new(backend);
+    let manager = RiCacheManager::new(backend);
     
     // Test get_or_set
     let key = "test_key";

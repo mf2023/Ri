@@ -1,7 +1,7 @@
 //! Copyright © 2025-2026 Wenze Wei. All Rights Reserved.
 //!
-//! This file is part of DMSC.
-//! The DMSC project belongs to the Dunimd Team.
+//! This file is part of Ri.
+//! The Ri project belongs to the Dunimd Team.
 //!
 //! Licensed under the Apache License, Version 2.0 (the "License");
 //! You may not use this file except in compliance with the License.
@@ -19,15 +19,15 @@
 
 //! # Validation Module
 //!
-//! This module provides comprehensive validation utilities for DMSC, including
+//! This module provides comprehensive validation utilities for Ri, including
 //! input validation, schema validation, and data verification. It supports
 //! various validation rules and provides detailed error messages.
 //!
 //! ## Key Components
 //!
-//! - **DMSCValidator**: Core validation trait
-//! - **DMSCValidationRule**: Individual validation rule
-//! - **DMSCValidationResult**: Validation result with details
+//! - **RiValidator**: Core validation trait
+//! - **RiValidationRule**: Individual validation rule
+//! - **RiValidationResult**: Validation result with details
 //! - **Built-in Validators**: Email, URL, length, pattern, range, etc.
 //!
 //! ## Design Principles
@@ -42,10 +42,10 @@
 //! ## Usage
 //!
 //! ```rust,ignore
-//! use dmsc::validation::{Validator, ValidationRule, DMSCValidator};
-//! use dmsc::prelude::*;
+//! use ri::validation::{Validator, ValidationRule, RiValidator};
+//! use ri::prelude::*;
 //!
-//! let validator = DMSCValidator::new("user_email")
+//! let validator = RiValidator::new("user_email")
 //!     .not_empty()
 //!     .is_email()
 //!     .max_length(255);
@@ -67,7 +67,7 @@ use pyo3::prelude::*;
 
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-pub enum DMSCValidationSeverity {
+pub enum RiValidationSeverity {
     Error,
     Warning,
     Info,
@@ -76,21 +76,21 @@ pub enum DMSCValidationSeverity {
 
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct DMSCValidationError {
+pub struct RiValidationError {
     pub field: String,
     pub message: String,
     pub code: String,
-    pub severity: DMSCValidationSeverity,
+    pub severity: RiValidationSeverity,
     pub value: Option<serde_json::Value>,
 }
 
-impl DMSCValidationError {
+impl RiValidationError {
     pub fn new(field: &str, message: &str, code: &str) -> Self {
         Self {
             field: field.to_string(),
             message: message.to_string(),
             code: code.to_string(),
-            severity: DMSCValidationSeverity::Error,
+            severity: RiValidationSeverity::Error,
             value: None,
         }
     }
@@ -100,7 +100,7 @@ impl DMSCValidationError {
             field: field.to_string(),
             message: message.to_string(),
             code: code.to_string(),
-            severity: DMSCValidationSeverity::Error,
+            severity: RiValidationSeverity::Error,
             value: Some(value),
         }
     }
@@ -110,7 +110,7 @@ impl DMSCValidationError {
             field: field.to_string(),
             message: message.to_string(),
             code: code.to_string(),
-            severity: DMSCValidationSeverity::Warning,
+            severity: RiValidationSeverity::Warning,
             value: None,
         }
     }
@@ -118,13 +118,13 @@ impl DMSCValidationError {
 
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct DMSCValidationResult {
+pub struct RiValidationResult {
     pub is_valid: bool,
-    pub errors: Vec<DMSCValidationError>,
-    pub warnings: Vec<DMSCValidationError>,
+    pub errors: Vec<RiValidationError>,
+    pub warnings: Vec<RiValidationError>,
 }
 
-impl DMSCValidationResult {
+impl RiValidationResult {
     pub fn valid() -> Self {
         Self {
             is_valid: true,
@@ -133,16 +133,16 @@ impl DMSCValidationResult {
         }
     }
 
-    pub fn invalid(errors: Vec<DMSCValidationError>) -> Self {
-        let warnings: Vec<DMSCValidationError> = errors
+    pub fn invalid(errors: Vec<RiValidationError>) -> Self {
+        let warnings: Vec<RiValidationError> = errors
             .iter()
-            .filter(|e| e.severity == DMSCValidationSeverity::Warning)
+            .filter(|e| e.severity == RiValidationSeverity::Warning)
             .cloned()
             .collect();
 
-        let errors: Vec<DMSCValidationError> = errors
+        let errors: Vec<RiValidationError> = errors
             .into_iter()
-            .filter(|e| e.severity == DMSCValidationSeverity::Error)
+            .filter(|e| e.severity == RiValidationSeverity::Error)
             .collect();
 
         Self {
@@ -152,8 +152,8 @@ impl DMSCValidationResult {
         }
     }
 
-    pub fn add_error(&mut self, error: DMSCValidationError) {
-        if error.severity == DMSCValidationSeverity::Error {
+    pub fn add_error(&mut self, error: RiValidationError) {
+        if error.severity == RiValidationSeverity::Error {
             self.is_valid = false;
             self.errors.push(error);
         } else {
@@ -161,7 +161,7 @@ impl DMSCValidationResult {
         }
     }
 
-    pub fn merge(&mut self, other: DMSCValidationResult) {
+    pub fn merge(&mut self, other: RiValidationResult) {
         self.errors.extend(other.errors);
         self.warnings.extend(other.warnings);
         self.is_valid = self.errors.is_empty();
@@ -194,7 +194,7 @@ impl DMSCValidationResult {
 
 #[cfg(feature = "pyo3")]
 #[pymethods]
-impl DMSCValidationResult {
+impl RiValidationResult {
     #[new]
     fn py_new(is_valid: bool) -> Self {
         if is_valid {
@@ -210,7 +210,7 @@ impl DMSCValidationResult {
     }
 
     #[staticmethod]
-    fn failure(errors: Vec<DMSCValidationError>) -> Self {
+    fn failure(errors: Vec<RiValidationError>) -> Self {
         Self::invalid(errors)
     }
 
@@ -220,14 +220,14 @@ impl DMSCValidationResult {
 }
 
 #[async_trait]
-pub trait DMSCValidator: Send + Sync {
-    async fn validate(&self, value: &str) -> DMSCValidationResult;
+pub trait RiValidator: Send + Sync {
+    async fn validate(&self, value: &str) -> RiValidationResult;
     fn name(&self) -> &'static str;
 }
 
 #[async_trait]
-impl DMSCValidator for Box<dyn DMSCValidator> {
-    async fn validate(&self, value: &str) -> DMSCValidationResult {
+impl RiValidator for Box<dyn RiValidator> {
+    async fn validate(&self, value: &str) -> RiValidationResult {
         self.as_ref().validate(value).await
     }
 
@@ -236,20 +236,20 @@ impl DMSCValidator for Box<dyn DMSCValidator> {
     }
 }
 
-pub trait DMSCValidationRule: Send + Sync {
-    fn validate(&self, value: &str) -> Option<DMSCValidationError>;
+pub trait RiValidationRule: Send + Sync {
+    fn validate(&self, value: &str) -> Option<RiValidationError>;
     fn name(&self) -> &'static str;
 }
 
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
-pub struct DMSCValidatorBuilder {
+pub struct RiValidatorBuilder {
     field_name: String,
-    rules: Vec<Arc<dyn DMSCValidationRule>>,
+    rules: Vec<Arc<dyn RiValidationRule>>,
     nullable: bool,
     optional: bool,
 }
 
-impl DMSCValidatorBuilder {
+impl RiValidatorBuilder {
     pub fn new(field_name: &str) -> Self {
         Self {
             field_name: field_name.to_string(),
@@ -361,13 +361,13 @@ impl DMSCValidatorBuilder {
         self.add_rule(NotInRule(values))
     }
 
-    fn add_rule(mut self, rule: impl DMSCValidationRule + Send + Sync + 'static) -> Self {
+    fn add_rule(mut self, rule: impl RiValidationRule + Send + Sync + 'static) -> Self {
         self.rules.push(Arc::new(rule));
         self
     }
 
-    pub fn build(self) -> DMSCValidationRunner {
-        DMSCValidationRunner {
+    pub fn build(self) -> RiValidationRunner {
+        RiValidationRunner {
             field_name: self.field_name,
             rules: self.rules,
             nullable: self.nullable,
@@ -378,7 +378,7 @@ impl DMSCValidatorBuilder {
 
 #[cfg(feature = "pyo3")]
 #[pymethods]
-impl DMSCValidatorBuilder {
+impl RiValidatorBuilder {
     #[new]
     fn py_new(field_name: String) -> Self {
         Self {
@@ -455,25 +455,25 @@ impl DMSCValidatorBuilder {
 }
 
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
-pub struct DMSCValidationRunner {
+pub struct RiValidationRunner {
     field_name: String,
-    rules: Vec<Arc<dyn DMSCValidationRule>>,
+    rules: Vec<Arc<dyn RiValidationRule>>,
     nullable: bool,
     optional: bool,
 }
 
-impl DMSCValidationRunner {
-    pub fn new(field_name: &str) -> DMSCValidatorBuilder {
-        DMSCValidatorBuilder::new(field_name)
+impl RiValidationRunner {
+    pub fn new(field_name: &str) -> RiValidatorBuilder {
+        RiValidatorBuilder::new(field_name)
     }
 
-    pub fn validate_value(&self, value: Option<&str>) -> DMSCValidationResult {
+    pub fn validate_value(&self, value: Option<&str>) -> RiValidationResult {
         let value = match value {
             Some(v) => v,
-            None if self.optional => return DMSCValidationResult::valid(),
-            None if self.nullable => return DMSCValidationResult::valid(),
+            None if self.optional => return RiValidationResult::valid(),
+            None if self.nullable => return RiValidationResult::valid(),
             None => {
-                return DMSCValidationResult::invalid(vec![DMSCValidationError::new(
+                return RiValidationResult::invalid(vec![RiValidationError::new(
                     &self.field_name,
                     "Value is required",
                     "REQUIRED",
@@ -485,7 +485,7 @@ impl DMSCValidationRunner {
 
         for rule in &self.rules {
             if let Some(error) = rule.validate(value) {
-                errors.push(DMSCValidationError {
+                errors.push(RiValidationError {
                     field: self.field_name.clone(),
                     ..error
                 });
@@ -493,36 +493,36 @@ impl DMSCValidationRunner {
         }
 
         if errors.is_empty() {
-            DMSCValidationResult::valid()
+            RiValidationResult::valid()
         } else {
-            DMSCValidationResult::invalid(errors)
+            RiValidationResult::invalid(errors)
         }
     }
 }
 
 #[cfg(feature = "pyo3")]
 #[pymethods]
-impl DMSCValidationRunner {
+impl RiValidationRunner {
     #[new]
     fn py_new(field_name: String) -> Self {
-        DMSCValidatorBuilder::new(&field_name).build()
+        RiValidatorBuilder::new(&field_name).build()
     }
 
-    fn validate(&self, value: String) -> DMSCValidationResult {
+    fn validate(&self, value: String) -> RiValidationResult {
         self.validate_value(Some(&value))
     }
 
-    fn validate_optional(&self, value: Option<String>) -> DMSCValidationResult {
+    fn validate_optional(&self, value: Option<String>) -> RiValidationResult {
         self.validate_value(value.as_deref())
     }
 }
 
 struct NotEmptyRule;
 
-impl DMSCValidationRule for NotEmptyRule {
-    fn validate(&self, value: &str) -> Option<DMSCValidationError> {
+impl RiValidationRule for NotEmptyRule {
+    fn validate(&self, value: &str) -> Option<RiValidationError> {
         if value.trim().is_empty() {
-            Some(DMSCValidationError::new(
+            Some(RiValidationError::new(
                 "value",
                 "Value cannot be empty",
                 "NOT_EMPTY",
@@ -550,10 +550,10 @@ lazy_static! {
 
 struct EmailRule;
 
-impl DMSCValidationRule for EmailRule {
-    fn validate(&self, value: &str) -> Option<DMSCValidationError> {
+impl RiValidationRule for EmailRule {
+    fn validate(&self, value: &str) -> Option<RiValidationError> {
         if !EMAIL_REGEX.is_match(value) {
-            Some(DMSCValidationError::new(
+            Some(RiValidationError::new(
                 "value",
                 "Invalid email format",
                 "EMAIL",
@@ -570,10 +570,10 @@ impl DMSCValidationRule for EmailRule {
 
 struct UrlRule;
 
-impl DMSCValidationRule for UrlRule {
-    fn validate(&self, value: &str) -> Option<DMSCValidationError> {
+impl RiValidationRule for UrlRule {
+    fn validate(&self, value: &str) -> Option<RiValidationError> {
         if Url::parse(value).is_err() {
-            Some(DMSCValidationError::new(
+            Some(RiValidationError::new(
                 "value",
                 "Invalid URL format",
                 "URL",
@@ -590,10 +590,10 @@ impl DMSCValidationRule for UrlRule {
 
 struct IpAddressRule;
 
-impl DMSCValidationRule for IpAddressRule {
-    fn validate(&self, value: &str) -> Option<DMSCValidationError> {
+impl RiValidationRule for IpAddressRule {
+    fn validate(&self, value: &str) -> Option<RiValidationError> {
         if !IP_REGEX.is_match(value) {
-            return Some(DMSCValidationError::new(
+            return Some(RiValidationError::new(
                 "value",
                 "Invalid IP address format",
                 "IP_ADDRESS",
@@ -604,7 +604,7 @@ impl DMSCValidationRule for IpAddressRule {
         for part in parts {
             if let Ok(num) = part.parse::<u32>() {
                 if num > 255 {
-                    return Some(DMSCValidationError::new(
+                    return Some(RiValidationError::new(
                         "value",
                         "IP address octet out of range",
                         "IP_ADDRESS_RANGE",
@@ -623,10 +623,10 @@ impl DMSCValidationRule for IpAddressRule {
 
 struct UuidRule;
 
-impl DMSCValidationRule for UuidRule {
-    fn validate(&self, value: &str) -> Option<DMSCValidationError> {
+impl RiValidationRule for UuidRule {
+    fn validate(&self, value: &str) -> Option<RiValidationError> {
         if !UUID_REGEX.is_match(value) {
-            Some(DMSCValidationError::new(
+            Some(RiValidationError::new(
                 "value",
                 "Invalid UUID format",
                 "UUID",
@@ -643,10 +643,10 @@ impl DMSCValidationRule for UuidRule {
 
 struct Base64Rule;
 
-impl DMSCValidationRule for Base64Rule {
-    fn validate(&self, value: &str) -> Option<DMSCValidationError> {
+impl RiValidationRule for Base64Rule {
+    fn validate(&self, value: &str) -> Option<RiValidationError> {
         if !BASE64_REGEX.is_match(value) {
-            Some(DMSCValidationError::new(
+            Some(RiValidationError::new(
                 "value",
                 "Invalid Base64 format",
                 "BASE64",
@@ -663,10 +663,10 @@ impl DMSCValidationRule for Base64Rule {
 
 struct MinLengthRule(usize);
 
-impl DMSCValidationRule for MinLengthRule {
-    fn validate(&self, value: &str) -> Option<DMSCValidationError> {
+impl RiValidationRule for MinLengthRule {
+    fn validate(&self, value: &str) -> Option<RiValidationError> {
         if value.len() < self.0 {
-            Some(DMSCValidationError::new(
+            Some(RiValidationError::new(
                 "value",
                 &format!("Value must be at least {} characters", self.0),
                 "MIN_LENGTH",
@@ -683,10 +683,10 @@ impl DMSCValidationRule for MinLengthRule {
 
 struct MaxLengthRule(usize);
 
-impl DMSCValidationRule for MaxLengthRule {
-    fn validate(&self, value: &str) -> Option<DMSCValidationError> {
+impl RiValidationRule for MaxLengthRule {
+    fn validate(&self, value: &str) -> Option<RiValidationError> {
         if value.len() > self.0 {
-            Some(DMSCValidationError::new(
+            Some(RiValidationError::new(
                 "value",
                 &format!("Value must be at most {} characters", self.0),
                 "MAX_LENGTH",
@@ -703,10 +703,10 @@ impl DMSCValidationRule for MaxLengthRule {
 
 struct ExactLengthRule(usize);
 
-impl DMSCValidationRule for ExactLengthRule {
-    fn validate(&self, value: &str) -> Option<DMSCValidationError> {
+impl RiValidationRule for ExactLengthRule {
+    fn validate(&self, value: &str) -> Option<RiValidationError> {
         if value.len() != self.0 {
-            Some(DMSCValidationError::new(
+            Some(RiValidationError::new(
                 "value",
                 &format!("Value must be exactly {} characters", self.0),
                 "EXACT_LENGTH",
@@ -723,11 +723,11 @@ impl DMSCValidationRule for ExactLengthRule {
 
 struct MinValueRule(i64);
 
-impl DMSCValidationRule for MinValueRule {
-    fn validate(&self, value: &str) -> Option<DMSCValidationError> {
+impl RiValidationRule for MinValueRule {
+    fn validate(&self, value: &str) -> Option<RiValidationError> {
         if let Ok(num) = value.parse::<i64>() {
             if num < self.0 {
-                return Some(DMSCValidationError::new(
+                return Some(RiValidationError::new(
                     "value",
                     &format!("Value must be at least {}", self.0),
                     "MIN_VALUE",
@@ -744,11 +744,11 @@ impl DMSCValidationRule for MinValueRule {
 
 struct MaxValueRule(i64);
 
-impl DMSCValidationRule for MaxValueRule {
-    fn validate(&self, value: &str) -> Option<DMSCValidationError> {
+impl RiValidationRule for MaxValueRule {
+    fn validate(&self, value: &str) -> Option<RiValidationError> {
         if let Ok(num) = value.parse::<i64>() {
             if num > self.0 {
-                return Some(DMSCValidationError::new(
+                return Some(RiValidationError::new(
                     "value",
                     &format!("Value must be at most {}", self.0),
                     "MAX_VALUE",
@@ -765,11 +765,11 @@ impl DMSCValidationRule for MaxValueRule {
 
 struct RangeRule(i64, i64);
 
-impl DMSCValidationRule for RangeRule {
-    fn validate(&self, value: &str) -> Option<DMSCValidationError> {
+impl RiValidationRule for RangeRule {
+    fn validate(&self, value: &str) -> Option<RiValidationError> {
         if let Ok(num) = value.parse::<i64>() {
             if num < self.0 || num > self.1 {
-                return Some(DMSCValidationError::new(
+                return Some(RiValidationError::new(
                     "value",
                     &format!("Value must be between {} and {}", self.0, self.1),
                     "RANGE",
@@ -786,11 +786,11 @@ impl DMSCValidationRule for RangeRule {
 
 struct RegexRule(String);
 
-impl DMSCValidationRule for RegexRule {
-    fn validate(&self, value: &str) -> Option<DMSCValidationError> {
+impl RiValidationRule for RegexRule {
+    fn validate(&self, value: &str) -> Option<RiValidationError> {
         if let Ok(regex) = Regex::new(&self.0) {
             if !regex.is_match(value) {
-                return Some(DMSCValidationError::new(
+                return Some(RiValidationError::new(
                     "value",
                     "Value does not match required pattern",
                     "REGEX",
@@ -807,10 +807,10 @@ impl DMSCValidationRule for RegexRule {
 
 struct AlphanumericRule;
 
-impl DMSCValidationRule for AlphanumericRule {
-    fn validate(&self, value: &str) -> Option<DMSCValidationError> {
+impl RiValidationRule for AlphanumericRule {
+    fn validate(&self, value: &str) -> Option<RiValidationError> {
         if !ALPHANUMERIC_REGEX.is_match(value) {
-            Some(DMSCValidationError::new(
+            Some(RiValidationError::new(
                 "value",
                 "Value must contain only alphanumeric characters",
                 "ALPHANUMERIC",
@@ -827,10 +827,10 @@ impl DMSCValidationRule for AlphanumericRule {
 
 struct AlphabeticRule;
 
-impl DMSCValidationRule for AlphabeticRule {
-    fn validate(&self, value: &str) -> Option<DMSCValidationError> {
+impl RiValidationRule for AlphabeticRule {
+    fn validate(&self, value: &str) -> Option<RiValidationError> {
         if !ALPHABETIC_REGEX.is_match(value) {
-            Some(DMSCValidationError::new(
+            Some(RiValidationError::new(
                 "value",
                 "Value must contain only alphabetic characters",
                 "ALPHABETIC",
@@ -847,10 +847,10 @@ impl DMSCValidationRule for AlphabeticRule {
 
 struct NumericRule;
 
-impl DMSCValidationRule for NumericRule {
-    fn validate(&self, value: &str) -> Option<DMSCValidationError> {
+impl RiValidationRule for NumericRule {
+    fn validate(&self, value: &str) -> Option<RiValidationError> {
         if !NUMERIC_REGEX.is_match(value) {
-            Some(DMSCValidationError::new(
+            Some(RiValidationError::new(
                 "value",
                 "Value must be a valid number",
                 "NUMERIC",
@@ -867,10 +867,10 @@ impl DMSCValidationRule for NumericRule {
 
 struct LowercaseRule;
 
-impl DMSCValidationRule for LowercaseRule {
-    fn validate(&self, value: &str) -> Option<DMSCValidationError> {
+impl RiValidationRule for LowercaseRule {
+    fn validate(&self, value: &str) -> Option<RiValidationError> {
         if !value.chars().all(|c| !c.is_uppercase()) {
-            Some(DMSCValidationError::new(
+            Some(RiValidationError::new(
                 "value",
                 "Value must be lowercase",
                 "LOWERCASE",
@@ -887,10 +887,10 @@ impl DMSCValidationRule for LowercaseRule {
 
 struct UppercaseRule;
 
-impl DMSCValidationRule for UppercaseRule {
-    fn validate(&self, value: &str) -> Option<DMSCValidationError> {
+impl RiValidationRule for UppercaseRule {
+    fn validate(&self, value: &str) -> Option<RiValidationError> {
         if !value.chars().all(|c| !c.is_lowercase()) {
-            Some(DMSCValidationError::new(
+            Some(RiValidationError::new(
                 "value",
                 "Value must be uppercase",
                 "UPPERCASE",
@@ -907,10 +907,10 @@ impl DMSCValidationRule for UppercaseRule {
 
 struct ContainsRule(String);
 
-impl DMSCValidationRule for ContainsRule {
-    fn validate(&self, value: &str) -> Option<DMSCValidationError> {
+impl RiValidationRule for ContainsRule {
+    fn validate(&self, value: &str) -> Option<RiValidationError> {
         if !value.contains(&self.0) {
-            Some(DMSCValidationError::new(
+            Some(RiValidationError::new(
                 "value",
                 &format!("Value must contain '{}'", self.0),
                 "CONTAINS",
@@ -927,10 +927,10 @@ impl DMSCValidationRule for ContainsRule {
 
 struct StartsWithRule(String);
 
-impl DMSCValidationRule for StartsWithRule {
-    fn validate(&self, value: &str) -> Option<DMSCValidationError> {
+impl RiValidationRule for StartsWithRule {
+    fn validate(&self, value: &str) -> Option<RiValidationError> {
         if !value.starts_with(&self.0) {
-            Some(DMSCValidationError::new(
+            Some(RiValidationError::new(
                 "value",
                 &format!("Value must start with '{}'", self.0),
                 "STARTS_WITH",
@@ -947,10 +947,10 @@ impl DMSCValidationRule for StartsWithRule {
 
 struct EndsWithRule(String);
 
-impl DMSCValidationRule for EndsWithRule {
-    fn validate(&self, value: &str) -> Option<DMSCValidationError> {
+impl RiValidationRule for EndsWithRule {
+    fn validate(&self, value: &str) -> Option<RiValidationError> {
         if !value.ends_with(&self.0) {
-            Some(DMSCValidationError::new(
+            Some(RiValidationError::new(
                 "value",
                 &format!("Value must end with '{}'", self.0),
                 "ENDS_WITH",
@@ -967,10 +967,10 @@ impl DMSCValidationRule for EndsWithRule {
 
 struct InRule(Vec<String>);
 
-impl DMSCValidationRule for InRule {
-    fn validate(&self, value: &str) -> Option<DMSCValidationError> {
+impl RiValidationRule for InRule {
+    fn validate(&self, value: &str) -> Option<RiValidationError> {
         if !self.0.contains(&value.to_string()) {
-            Some(DMSCValidationError::new(
+            Some(RiValidationError::new(
                 "value",
                 &format!("Value must be one of: {}", self.0.join(", ")),
                 "IN",
@@ -987,10 +987,10 @@ impl DMSCValidationRule for InRule {
 
 struct NotInRule(Vec<String>);
 
-impl DMSCValidationRule for NotInRule {
-    fn validate(&self, value: &str) -> Option<DMSCValidationError> {
+impl RiValidationRule for NotInRule {
+    fn validate(&self, value: &str) -> Option<RiValidationError> {
         if self.0.contains(&value.to_string()) {
-            Some(DMSCValidationError::new(
+            Some(RiValidationError::new(
                 "value",
                 "Value is not allowed",
                 "NOT_IN",
@@ -1007,7 +1007,7 @@ impl DMSCValidationRule for NotInRule {
 
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct DMSCSanitizationConfig {
+pub struct RiSanitizationConfig {
     pub trim_whitespace: bool,
     pub lowercase: bool,
     pub uppercase: bool,
@@ -1016,7 +1016,7 @@ pub struct DMSCSanitizationConfig {
     pub escape_special_chars: bool,
 }
 
-impl Default for DMSCSanitizationConfig {
+impl Default for RiSanitizationConfig {
     fn default() -> Self {
         Self {
             trim_whitespace: true,
@@ -1031,18 +1031,18 @@ impl Default for DMSCSanitizationConfig {
 
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 #[derive(Clone)]
-pub struct DMSCSanitizer {
-    config: DMSCSanitizationConfig,
+pub struct RiSanitizer {
+    config: RiSanitizationConfig,
 }
 
-impl DMSCSanitizer {
+impl RiSanitizer {
     pub fn new() -> Self {
         Self {
-            config: DMSCSanitizationConfig::default(),
+            config: RiSanitizationConfig::default(),
         }
     }
 
-    pub fn with_config(config: DMSCSanitizationConfig) -> Self {
+    pub fn with_config(config: RiSanitizationConfig) -> Self {
         Self { config }
     }
 
@@ -1089,7 +1089,7 @@ impl DMSCSanitizer {
     }
 }
 
-impl Default for DMSCSanitizer {
+impl Default for RiSanitizer {
     fn default() -> Self {
         Self::new()
     }
@@ -1097,17 +1097,17 @@ impl Default for DMSCSanitizer {
 
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct DMSCSchemaValidator {
+pub struct RiSchemaValidator {
     schema: serde_json::Value,
 }
 
-impl DMSCSchemaValidator {
+impl RiSchemaValidator {
     pub fn new(schema: serde_json::Value) -> Self {
         Self { schema }
     }
 
-    pub fn validate(&self, data: &serde_json::Value) -> DMSCValidationResult {
-        let mut result = DMSCValidationResult::valid();
+    pub fn validate(&self, data: &serde_json::Value) -> RiValidationResult {
+        let mut result = RiValidationResult::valid();
 
         if let Some(schema_type) = self.schema.get("type") {
             match schema_type {
@@ -1115,7 +1115,7 @@ impl DMSCSchemaValidator {
                     match type_str.as_str() {
                         "string" => {
                             if !data.is_string() {
-                                result.add_error(DMSCValidationError::new(
+                                result.add_error(RiValidationError::new(
                                     "root",
                                     &format!("Expected string, got {}", data),
                                     "TYPE_MISMATCH",
@@ -1124,7 +1124,7 @@ impl DMSCSchemaValidator {
                         }
                         "number" => {
                             if !data.is_number() {
-                                result.add_error(DMSCValidationError::new(
+                                result.add_error(RiValidationError::new(
                                     "root",
                                     &format!("Expected number, got {}", data),
                                     "TYPE_MISMATCH",
@@ -1133,7 +1133,7 @@ impl DMSCSchemaValidator {
                         }
                         "integer" => {
                             if !data.is_i64() {
-                                result.add_error(DMSCValidationError::new(
+                                result.add_error(RiValidationError::new(
                                     "root",
                                     &format!("Expected integer, got {}", data),
                                     "TYPE_MISMATCH",
@@ -1142,7 +1142,7 @@ impl DMSCSchemaValidator {
                         }
                         "boolean" => {
                             if !data.is_boolean() {
-                                result.add_error(DMSCValidationError::new(
+                                result.add_error(RiValidationError::new(
                                     "root",
                                     &format!("Expected boolean, got {}", data),
                                     "TYPE_MISMATCH",
@@ -1151,7 +1151,7 @@ impl DMSCSchemaValidator {
                         }
                         "array" => {
                             if !data.is_array() {
-                                result.add_error(DMSCValidationError::new(
+                                result.add_error(RiValidationError::new(
                                     "root",
                                     &format!("Expected array, got {}", data),
                                     "TYPE_MISMATCH",
@@ -1160,7 +1160,7 @@ impl DMSCSchemaValidator {
                         }
                         "object" => {
                             if !data.is_object() {
-                                result.add_error(DMSCValidationError::new(
+                                result.add_error(RiValidationError::new(
                                     "root",
                                     &format!("Expected object, got {}", data),
                                     "TYPE_MISMATCH",
@@ -1180,7 +1180,7 @@ impl DMSCSchemaValidator {
                     for field in req_fields {
                         if let serde_json::Value::String(field_name) = field {
                             if !obj.contains_key(field_name) {
-                                result.add_error(DMSCValidationError::new(
+                                result.add_error(RiValidationError::new(
                                     field_name,
                                     "Field is required",
                                     "REQUIRED",
@@ -1196,7 +1196,7 @@ impl DMSCSchemaValidator {
             if let serde_json::Value::Number(min) = min_length {
                 if let Some(str_val) = data.as_str() {
                     if (str_val.len() as u64) < min.as_u64().unwrap_or(0) {
-                        result.add_error(DMSCValidationError::new(
+                        result.add_error(RiValidationError::new(
                             "root",
                             &format!("String must be at least {} characters", min),
                             "MIN_LENGTH",
@@ -1210,7 +1210,7 @@ impl DMSCSchemaValidator {
             if let serde_json::Value::Number(max) = max_length {
                 if let Some(str_val) = data.as_str() {
                     if (str_val.len() as u64) > max.as_u64().unwrap_or(u64::MAX) {
-                        result.add_error(DMSCValidationError::new(
+                        result.add_error(RiValidationError::new(
                             "root",
                             &format!("String must be at most {} characters", max),
                             "MAX_LENGTH",
@@ -1225,7 +1225,7 @@ impl DMSCSchemaValidator {
                 if let Ok(regex) = Regex::new(pattern_str) {
                     if let Some(str_val) = data.as_str() {
                         if !regex.is_match(str_val) {
-                            result.add_error(DMSCValidationError::new(
+                            result.add_error(RiValidationError::new(
                                 "root",
                                 "String does not match required pattern",
                                 "PATTERN",
@@ -1246,7 +1246,7 @@ impl DMSCSchemaValidator {
                     }
                 }
                 if !found {
-                    result.add_error(DMSCValidationError::new(
+                    result.add_error(RiValidationError::new(
                         "root",
                         "Value must be one of the allowed values",
                         "ENUM",
@@ -1261,14 +1261,14 @@ impl DMSCSchemaValidator {
 
 #[cfg(feature = "pyo3")]
 #[pymethods]
-impl DMSCSchemaValidator {
+impl RiSchemaValidator {
     #[new]
     fn py_new(schema: String) -> Self {
         let json_value: serde_json::Value = serde_json::from_str(&schema).unwrap_or_default();
         Self::new(json_value)
     }
 
-    fn validate_json(&self, data: String) -> DMSCValidationResult {
+    fn validate_json(&self, data: String) -> RiValidationResult {
         let json_value: serde_json::Value = serde_json::from_str(&data).unwrap_or(serde_json::Value::Null);
         self.validate(&json_value)
     }
@@ -1276,19 +1276,19 @@ impl DMSCSchemaValidator {
 
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 #[derive(Debug, Clone)]
-pub struct DMSCValidationModule;
+pub struct RiValidationModule;
 
 #[cfg(feature = "pyo3")]
 #[pymethods]
-impl DMSCValidationModule {
+impl RiValidationModule {
     #[staticmethod]
-    fn validate_email(value: String) -> DMSCValidationResult {
-        DMSCValidatorBuilder::new("email").is_email().max_length(255).build().validate_value(Some(&value))
+    fn validate_email(value: String) -> RiValidationResult {
+        RiValidatorBuilder::new("email").is_email().max_length(255).build().validate_value(Some(&value))
     }
 
     #[staticmethod]
-    fn validate_username(value: String) -> DMSCValidationResult {
-        DMSCValidatorBuilder::new("username")
+    fn validate_username(value: String) -> RiValidationResult {
+        RiValidatorBuilder::new("username")
             .not_empty()
             .min_length(3)
             .max_length(32)
@@ -1298,8 +1298,8 @@ impl DMSCValidationModule {
     }
 
     #[staticmethod]
-    fn validate_password(value: String) -> DMSCValidationResult {
-        DMSCValidatorBuilder::new("password")
+    fn validate_password(value: String) -> RiValidationResult {
+        RiValidatorBuilder::new("password")
             .not_empty()
             .min_length(8)
             .build()
@@ -1307,23 +1307,23 @@ impl DMSCValidationModule {
     }
 
     #[staticmethod]
-    fn validate_url(value: String) -> DMSCValidationResult {
-        DMSCValidatorBuilder::new("url").is_url().build().validate_value(Some(&value))
+    fn validate_url(value: String) -> RiValidationResult {
+        RiValidatorBuilder::new("url").is_url().build().validate_value(Some(&value))
     }
 
     #[staticmethod]
-    fn validate_ip(value: String) -> DMSCValidationResult {
-        DMSCValidatorBuilder::new("ip").is_ip().build().validate_value(Some(&value))
+    fn validate_ip(value: String) -> RiValidationResult {
+        RiValidatorBuilder::new("ip").is_ip().build().validate_value(Some(&value))
     }
 
     #[staticmethod]
-    fn validate_not_empty(field_name: String, value: String) -> DMSCValidationResult {
-        DMSCValidatorBuilder::new(&field_name).not_empty().build().validate_value(Some(&value))
+    fn validate_not_empty(field_name: String, value: String) -> RiValidationResult {
+        RiValidatorBuilder::new(&field_name).not_empty().build().validate_value(Some(&value))
     }
 
     #[staticmethod]
-    fn validate_length(field_name: String, value: String, min: usize, max: usize) -> DMSCValidationResult {
-        DMSCValidatorBuilder::new(&field_name)
+    fn validate_length(field_name: String, value: String, min: usize, max: usize) -> RiValidationResult {
+        RiValidatorBuilder::new(&field_name)
             .min_length(min)
             .max_length(max)
             .build()

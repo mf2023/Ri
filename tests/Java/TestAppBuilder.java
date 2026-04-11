@@ -1,7 +1,7 @@
 // Copyright © 2025-2026 Wenze Wei. All Rights Reserved.
 //
-// This file is part of DMSC.
-// The DMSC project belongs to the Dunimd Team.
+// This file is part of Ri.
+// The Ri project belongs to the Dunimd Team.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // You may not use this file except in compliance with the License.
@@ -15,12 +15,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import com.dunimd.dmsc.DMSCAppBuilder;
-import com.dunimd.dmsc.DMSCAppRuntime;
-import com.dunimd.dmsc.DMSCError;
+import com.dunimd.ri.RiAppBuilder;
+import com.dunimd.ri.RiAppRuntime;
+import com.dunimd.ri.RiError;
 
 /**
- * Tests for DMSCAppBuilder Java binding behavior.
+ * Tests for RiAppBuilder Java binding behavior.
  * 
  * These tests verify that the Java binding follows the immutable builder pattern,
  * where each withXxx() method returns a new builder instance.
@@ -30,14 +30,14 @@ import com.dunimd.dmsc.DMSCError;
  */
 public class TestAppBuilder {
     public static void main(String[] args) {
-        System.out.println("=== DMSCAppBuilder Java Binding Tests ===\n");
+        System.out.println("=== RiAppBuilder Java Binding Tests ===\n");
         
         int passed = 0;
         int failed = 0;
         
         // Test 1: Builder creation
         try {
-            DMSCAppBuilder builder = new DMSCAppBuilder();
+            RiAppBuilder builder = new RiAppBuilder();
             System.out.println("[PASS] testBuilderCreation: Builder created successfully");
             builder.close();
             passed++;
@@ -48,8 +48,8 @@ public class TestAppBuilder {
         
         // Test 2: Chain returns new instance
         try {
-            DMSCAppBuilder builder1 = new DMSCAppBuilder();
-            DMSCAppBuilder builder2 = builder1.withConfig("config.yaml");
+            RiAppBuilder builder1 = new RiAppBuilder();
+            RiAppBuilder builder2 = builder1.withConfig("config.yaml");
             
             if (builder1 != builder2) {
                 System.out.println("[PASS] testChainReturnsNewInstance: withConfig returns new instance");
@@ -68,9 +68,9 @@ public class TestAppBuilder {
         
         // Test 3: Multiple chained calls
         try {
-            DMSCAppBuilder builder1 = new DMSCAppBuilder();
-            DMSCAppBuilder builder2 = builder1.withConfig("config1.yaml");
-            DMSCAppBuilder builder3 = builder2.withConfig("config2.yaml");
+            RiAppBuilder builder1 = new RiAppBuilder();
+            RiAppBuilder builder2 = builder1.withConfig("config1.yaml");
+            RiAppBuilder builder3 = builder2.withConfig("config2.yaml");
             
             if (builder1 != builder2 && builder2 != builder3 && builder1 != builder3) {
                 System.out.println("[PASS] testMultipleChainedCalls: Each call returns new instance");
@@ -90,11 +90,11 @@ public class TestAppBuilder {
         
         // Test 4: Build creates runtime
         try {
-            DMSCAppBuilder builder = new DMSCAppBuilder();
-            DMSCAppRuntime runtime = builder.build();
+            RiAppBuilder builder = new RiAppBuilder();
+            RiAppRuntime runtime = builder.build();
             
             if (runtime != null) {
-                System.out.println("[PASS] testBuildCreatesRuntime: build() returns DMSCAppRuntime");
+                System.out.println("[PASS] testBuildCreatesRuntime: build() returns RiAppRuntime");
                 passed++;
                 runtime.close();
             } else {
@@ -103,7 +103,7 @@ public class TestAppBuilder {
             }
             
             builder.close();
-        } catch (DMSCError e) {
+        } catch (RiError e) {
             System.out.println("[INFO] testBuildCreatesRuntime: Build failed (expected without config): " + e.getMessage());
             passed++;
         } catch (Exception e) {
@@ -113,7 +113,7 @@ public class TestAppBuilder {
         
         // Test 5: Resource cleanup
         try {
-            DMSCAppBuilder builder = new DMSCAppBuilder();
+            RiAppBuilder builder = new RiAppBuilder();
             builder.close();
             System.out.println("[PASS] testResourceCleanup: Builder closed successfully");
             passed++;

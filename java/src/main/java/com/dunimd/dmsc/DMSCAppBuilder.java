@@ -1,7 +1,7 @@
 // Copyright © 2025-2026 Wenze Wei. All Rights Reserved.
 //
-// This file is part of DMSC.
-// The DMSC project belongs to the Dunimd Team.
+// This file is part of Ri.
+// The Ri project belongs to the Dunimd Team.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // You may not use this file except in compliance with the License.
@@ -15,21 +15,21 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package com.dunimd.dmsc;
+package com.dunimd.ri;
 
 /**
- * Application builder for creating DMSC applications.
+ * Application builder for creating Ri applications.
  * 
- * This class provides a fluent API for configuring and building DMSC applications.
+ * This class provides a fluent API for configuring and building Ri applications.
  * 
  * <p>Usage example:</p>
  * <pre>{@code
- * DMSCAppRuntime runtime = new DMSCAppBuilder()
+ * RiAppRuntime runtime = new RiAppBuilder()
  *     .withConfig("config.yaml")
  *     .build();
  * }</pre>
  */
-public class DMSCAppBuilder {
+public class RiAppBuilder {
     private long nativePtr;
     
     static {
@@ -37,9 +37,9 @@ public class DMSCAppBuilder {
     }
     
     /**
-     * Create a new DMSCAppBuilder instance.
+     * Create a new RiAppBuilder instance.
      */
-    public DMSCAppBuilder() {
+    public RiAppBuilder() {
         this.nativePtr = new0();
     }
     
@@ -49,11 +49,11 @@ public class DMSCAppBuilder {
      * Configure the application from a YAML file.
      * 
      * @param configPath the path to the configuration file
-     * @return a new DMSCAppBuilder with the configuration applied
+     * @return a new RiAppBuilder with the configuration applied
      */
-    public DMSCAppBuilder withConfig(String configPath) {
+    public RiAppBuilder withConfig(String configPath) {
         long newPtr = withConfig0(nativePtr, configPath);
-        return new DMSCAppBuilder(newPtr);
+        return new RiAppBuilder(newPtr);
     }
     
     private native long withConfig0(long ptr, String configPath);
@@ -61,20 +61,20 @@ public class DMSCAppBuilder {
     /**
      * Build and return the application runtime.
      * 
-     * @return the DMSCAppRuntime instance
-     * @throws DMSCError if the build fails
+     * @return the RiAppRuntime instance
+     * @throws RiError if the build fails
      */
-    public DMSCAppRuntime build() {
+    public RiAppRuntime build() {
         long runtimePtr = build0(nativePtr);
         if (runtimePtr == 0) {
-            throw new DMSCError("Failed to build DMSC application");
+            throw new RiError("Failed to build Ri application");
         }
-        return new DMSCAppRuntime(runtimePtr);
+        return new RiAppRuntime(runtimePtr);
     }
     
     private native long build0(long ptr);
     
-    private DMSCAppBuilder(long ptr) {
+    private RiAppBuilder(long ptr) {
         this.nativePtr = ptr;
     }
     
