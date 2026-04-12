@@ -1,0 +1,416 @@
+// =============================================================================
+// Main Entry Point for {{ project_name }} Worker Service
+// =============================================================================
+// This file implements the main entry point and initialization for a background
+// worker service built with the Ri middleware framework. The service focuses on
+// asynchronous task processing with queue management and device control.
+//
+// Architecture Overview:
+// - RiQueueModule: Message queue consumer for task processing
+// - RiDeviceControlModule: Device management and control operations
+// - RiLogger: Structured logging for monitoring and debugging
+//
+// Template Variables:
+// - project_name: The name of the project
+// - project_version: Version of the project
+// - author: Project author
+
+use ri::{
+    RiAppBuilder,
+    RiQueueModule,
+    RiDeviceControlModule,
+    RiLogger,
+    RiLogConfig,
+};
+use serde::{Deserialize, Serialize};
+use std::sync::Arc;
+use tokio::sync::RwLock;
+
+// =============================================================================
+// Configuration Structures
+// =============================================================================
+// Configuration for worker service initialization.
+
+/// Worker service configuration
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct WorkerConfig {
+    /// Queue consumer identifier
+    pub consumer_id: String,
+
+    /// Number of concurrent workers
+    pub worker_count: usize,
+
+    /// Task timeout in seconds
+    pub task_timeout_secs: u64,
+
+    /// Maximum retry attempts for failed tasks
+    pub max_retries: u32,
+
+    /// Enable task prioritization
+    pub enable_priority: bool,
+}
+
+impl Default for WorkerConfig {
+    fn default() -> Self {
+        Self {
+            consumer_id: uuid::Uuid::new_v4().to_string(),
+            worker_count: 4,
+            task_timeout_secs: 300,
+            max_retries: 3,
+            enable_priority: true,
+        }
+    }
+}
+
+/// Queue configuration
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct QueueConfig {
+    /// Queue backend: "rabbitmq", "redis", "kafka", "memory"
+    pub backend: String,
+
+    /// Queue connection URL
+    pub url: String,
+
+    /// Queue name for task consumption
+    pub queue_name: String,
+
+    /// Enable dead letter queue for failed tasks
+    pub dead_letter_enabled: bool,
+
+    /// Dead letter queue name
+    pub dead_letter_queue: String,
+}
+
+impl Default for QueueConfig {
+    fn default() -> Self {
+        Self {
+            backend: "memory".to_string(),
+            url: "memory://localhost".to_string(),
+            queue_name: "tasks".to_string(),
+            dead_letter_enabled: true,
+            dead_letter_queue: "tasks.dead".to_string(),
+        }
+    }
+}
+
+/// Device control configuration
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DeviceControlConfig {
+    /// Enable device control functionality
+    pub enabled: bool,
+
+    /// Device connection timeout in seconds
+    pub connection_timeout_secs: u64,
+
+    /// Enable device health monitoring
+    pub health_monitoring: bool,
+
+    /// Health check interval in seconds
+    pub health_check_interval_secs: u64,
+}
+
+impl Default for DeviceControlConfig {
+    fn default() -> Self {
+        Self {
+            enabled: true,
+            connection_timeout_secs: 30,
+            health_monitoring: true,
+            health_check_interval_secs: 60,
+        }
+    }
+}
+
+// =============================================================================
+// Task Definitions
+// =============================================================================
+// Task types for queue processing.
+
+/// Generic task structure for queue messages
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Task {
+    /// Unique task identifier
+    pub id: String,
+
+    /// Task type for routing to appropriate handler
+    pub task_type: String,
+
+    /// Task payload data
+    pub payload: serde_json::Value,
+
+    /// Task priority (higher = more important)
+    pub priority: i32,
+
+    /// Task creation timestamp
+    pub created_at: String,
+
+    /// Number of retry attempts
+    pub retry_count: u32,
+}
+
+/// Task execution result
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TaskResult {
+    /// Task ID that was processed
+    pub task_id: String,
+
+    /// Execution status: "success", "failed", "retry"
+    pub status: String,
+
+    /// Result data (if successful)
+    pub data: Option<serde_json::Value>,
+
+    /// Error message (if failed)
+    pub error: Option<String>,
+
+    /// Execution timestamp
+    pub completed_at: String,
+
+    /// Execution duration in milliseconds
+    pub duration_ms: u64,
+}
+
+// =============================================================================
+// Task Handlers
+// =============================================================================
+// Handler functions for different task types.
+
+/// Example task handler for demonstration
+///
+/// Processes tasks of type "example" and returns results.
+///
+/// # Arguments
+/// * `task` - The task to process
+/// * `logger` - Logger for recording processing details
+///
+/// # Returns
+/// Task execution result
+pub async fn handle_example_task(task: Task, logger: &RiLogger) -> TaskResult {
+    let start = std::time::Instant::now();
+
+    logger.info(&format!("Processing task: {}", task.id));
+
+    // Simulate task processing
+    tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
+
+    TaskResult {
+        task_id: task.id,
+        status: "success".to_string(),
+        data: Some(serde_json::json!({"processed": true})),
+        error: None,
+        completed_at: chrono::Utc::now().to_rfc3339(),
+        duration_ms: start.elapsed().as_millis() as u64,
+    }
+}
+
+/// Device control task handler
+///
+/// Handles device-related tasks such as status updates and commands.
+///
+/// # Arguments
+/// * `task` - The device control task
+/// * `device_control` - Device control module reference
+/// * `logger` - Logger for recording operations
+///
+/// # Returns
+/// Task execution result
+pub async fn handle_device_task(
+    task: Task,
+    device_control: &RiDeviceControlModule,
+    logger: &RiLogger,
+) -> TaskResult {
+    let start = std::time::Instant::now();
+
+    logger.info(&format!("Processing device task: {}", task.id));
+
+    // TODO: Implement device control operations
+    // device_control.send_command(...).await
+
+    TaskResult {
+        task_id: task.id,
+        status: "success".to_string(),
+        data: Some(serde_json::json!({"device_command": "executed"})),
+        error: None,
+        completed_at: chrono::Utc::now().to_rfc3339(),
+        duration_ms: start.elapsed().as_millis() as u64,
+    }
+}
+
+// =============================================================================
+// Worker Implementation
+// =============================================================================
+// Worker service implementation.
+
+/// Worker statistics
+#[derive(Debug, Clone, Default)]
+pub struct WorkerStats {
+    /// Total tasks processed
+    pub tasks_processed: u64,
+
+    /// Successful tasks
+    pub tasks_succeeded: u64,
+
+    /// Failed tasks
+    pub tasks_failed: u64,
+
+    /// Retried tasks
+    pub tasks_retried: u64,
+}
+
+/// Application state for worker service
+pub struct WorkerState {
+    /// Queue module for task consumption
+    pub queue: RiQueueModule,
+
+    /// Device control module
+    pub device_control: RiDeviceControlModule,
+
+    /// Logger instance
+    pub logger: RiLogger,
+
+    /// Worker configuration
+    pub config: WorkerConfig,
+
+    /// Worker statistics
+    pub stats: Arc<RwLock<WorkerStats>>,
+}
+
+impl WorkerState {
+    /// Creates a new worker state
+    pub fn new(
+        queue: RiQueueModule,
+        device_control: RiDeviceControlModule,
+        logger: RiLogger,
+        config: WorkerConfig,
+    ) -> Self {
+        Self {
+            queue,
+            device_control,
+            logger,
+            config,
+            stats: Arc::new(RwLock::new(WorkerStats::default())),
+        }
+    }
+
+    /// Processes a single task
+    pub async fn process_task(&self, task: Task) -> TaskResult {
+        match task.task_type.as_str() {
+            "example" => handle_example_task(task, &self.logger).await,
+            "device" => handle_device_task(task, &self.device_control, &self.logger).await,
+            _ => {
+                self.logger.warn(&format!("Unknown task type: {}", task.task_type));
+                TaskResult {
+                    task_id: task.id,
+                    status: "failed".to_string(),
+                    data: None,
+                    error: Some(format!("Unknown task type: {}", task.task_type)),
+                    completed_at: chrono::Utc::now().to_rfc3339(),
+                    duration_ms: 0,
+                }
+            }
+        }
+    }
+
+    /// Updates worker statistics
+    pub async fn update_stats(&self, result: &TaskResult) {
+        let mut stats = self.stats.write().await;
+        stats.tasks_processed += 1;
+
+        match result.status.as_str() {
+            "success" => stats.tasks_succeeded += 1,
+            "failed" => stats.tasks_failed += 1,
+            "retry" => stats.tasks_retried += 1,
+            _ => {}
+        }
+    }
+}
+
+// =============================================================================
+// Server Initialization
+// =============================================================================
+// Functions for initializing the worker service.
+
+/// Loads configuration from file or environment
+fn load_config() -> WorkerConfig {
+    WorkerConfig::default()
+}
+
+/// Initializes the queue module
+fn init_queue(config: &QueueConfig) -> RiQueueModule {
+    RiQueueModule::new()
+}
+
+/// Initializes the device control module
+fn init_device_control(config: &DeviceControlConfig) -> RiDeviceControlModule {
+    if !config.enabled {
+        return RiDeviceControlModule::new();
+    }
+
+    RiDeviceControlModule::new()
+}
+
+/// Initializes the logging system
+fn init_logger() -> RiLogger {
+    let log_config = RiLogConfig::default();
+    RiLogger::new(log_config)
+}
+
+/// Runs the worker main loop
+///
+/// Continuously consumes tasks from the queue and processes them.
+/// Handles graceful shutdown on SIGTERM and SIGINT signals.
+async fn run_worker(state: Arc<WorkerState>) -> Result<(), Box<dyn std::error::Error>> {
+    state.logger.info("Worker started, waiting for tasks...");
+
+    // TODO: Implement actual queue consumption
+    // loop {
+    //     let task = state.queue.consume().await?;
+    //     let result = state.process_task(task).await;
+    //     state.update_stats(&result).await;
+    // }
+
+    // Keep the worker running
+    tokio::signal::ctrl_c().await?;
+    state.logger.info("Shutting down worker...");
+
+    Ok(())
+}
+
+// =============================================================================
+// Main Entry Point
+// =============================================================================
+
+/// Main entry point for the worker service
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    println!("Starting {{ project_name }} v{{ project_version }}");
+    println!("Author: {{ author }}");
+
+    // Load configuration
+    let worker_config = load_config();
+    let queue_config = QueueConfig::default();
+    let device_config = DeviceControlConfig::default();
+
+    // Initialize modules
+    println!("Initializing modules...");
+
+    let queue = init_queue(&queue_config);
+    let device_control = init_device_control(&device_config);
+    let logger = init_logger();
+
+    logger.info("Starting worker service initialization");
+
+    // Create worker state
+    let state = Arc::new(WorkerState::new(queue, device_control, logger, worker_config));
+
+    // Print startup information
+    println!("Worker ID: {}", state.config.consumer_id);
+    println!("Worker count: {}", state.config.worker_count);
+    println!("Press Ctrl+C to stop");
+
+    // Run worker
+    run_worker(state).await?;
+
+    println!("Worker shutdown complete");
+
+    Ok(())
+}

@@ -21,16 +21,16 @@ The DMSC (Dunimd Middleware Service) project will be renamed to **RI** starting 
 
 ### 3. Type Names
 All public types will be renamed:
-- `DMSCConfig` → `RIConfig`
-- `DMSCConfigManager` → `RIConfigManager`
-- `DMSCLogger` → `RILogger`
-- `DMSCError` → `RIError`
-- `DMSCResult` → `RIResult`
-- `DMSCAppBuilder` → `RIAppBuilder`
-- `DMSCServiceContext` → `RIServiceContext`
-- `DMSCFileSystem` → `RIFileSystem`
-- `DMSCHookBus` → `RIHookBus`
-- `DMSCValidator` → `RIValidator`
+- `DMSCConfig` → `RiConfig`
+- `DMSCConfigManager` → `RiConfigManager`
+- `DMSCLogger` → `RiLogger`
+- `DMSCError` → `RiError`
+- `DMSCResult` → `RiResult`
+- `DMSCAppBuilder` → `RiAppBuilder`
+- `DMSCServiceContext` → `RiServiceContext`
+- `DMSCFileSystem` → `RiFileSystem`
+- `DMSCHookBus` → `RiHookBus`
+- `DMSCValidator` → `RiValidator`
 - And all other `DMSC*` types...
 
 ### 4. Import Statements
@@ -73,14 +73,14 @@ async fn main() -> DMSCResult<()> {
 use ri::prelude::*;
 
 #[tokio::main]
-async fn main() -> RIResult<()> {
-    let app = RIAppBuilder::new()
+async fn main() -> RiResult<()> {
+    let app = RiAppBuilder::new()
         .with_config("config.yaml")?
-        .with_logging(RILogConfig::default())
+        .with_logging(RiLogConfig::default())
         .build()?;
-    
-    app.run(|ctx: &RIServiceContext| async move {
-        ctx.logger().info("service", "RI service started")?;
+
+    app.run(|ctx: &RiServiceContext| async move {
+        ctx.logger().info("service", "Ri service started")?;
         Ok(())
     }).await
 }
@@ -99,11 +99,11 @@ app = DMSCAppBuilder()
 
 **After (0.1.9)**:
 ```python
-from ri import RIConfig, RILogger, RIAppBuilder
+from ri import RiConfig, RiLogger, RiAppBuilder
 
-config = RIConfig()
-logger = RILogger()
-app = RIAppBuilder()
+config = RiConfig()
+logger = RiLogger()
+app = RiAppBuilder()
 ```
 
 ## Why This Change?
@@ -152,7 +152,7 @@ If you encounter any issues during migration:
 |-----------|-------|--------|
 | Package Name (Rust) | `dmsc` | `ri` |
 | Package Name (Python) | `dmsc` | `ri` |
-| Type Prefix | `Ri*` | `RI*` |
+| Type Prefix | `Ri*` | `Ri*` |
 | Import Path | `dmsc::*` | `ri::*` |
 
 ## Thank You
@@ -163,5 +163,5 @@ The new name "RI" represents our commitment to providing a **R**eliable and **I*
 
 ---
 
-**The RI Team**  
+**Dunimd Team**  
 **Date**: 2026-04-10

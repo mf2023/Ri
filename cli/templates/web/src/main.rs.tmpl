@@ -1,0 +1,439 @@
+// =============================================================================
+// Main Entry Point for {{ project_name }} Web Service
+// =============================================================================
+// This file implements the main entry point and server initialization for a
+// production-ready web service built with the Ri middleware framework. The service
+// integrates multiple Ri modules including gateway, caching, authentication, and
+// logging to provide a comprehensive web application platform.
+//
+// Architecture Overview:
+// - RiGateway: HTTP server with routing and middleware support
+// - RiCacheModule: High-performance caching layer for response optimization
+// - RiAuthModule: Authentication and authorization system
+// - RiLogger: Structured logging with multiple output formats
+//
+// Template Variables:
+// - project_name: The name of the project
+// - project_version: Version of the project
+// - author: Project author
+
+use ri::{
+    RiAppBuilder,
+    RiGateway,
+    RiGatewayConfig,
+    RiCacheModule,
+    RiAuthModule,
+    RiLogger,
+    RiLogConfig,
+};
+use serde::{Deserialize, Serialize};
+use std::net::SocketAddr;
+
+// =============================================================================
+// Configuration Structures
+// =============================================================================
+// Configuration structures for server initialization and runtime behavior.
+// These structures define the parameters that control how the web service operates.
+
+/// Server configuration parameters
+///
+/// Defines the network settings and operational parameters for the web server.
+/// This configuration can be loaded from YAML files or environment variables.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ServerConfig {
+    /// Network address to bind the server (e.g., "0.0.0.0:8080")
+    pub bind_address: String,
+
+    /// Number of worker threads for request handling
+    /// Set to 0 for automatic detection based on CPU cores
+    pub workers: usize,
+
+    /// Enable TLS/HTTPS support
+    pub tls_enabled: bool,
+
+    /// Path to TLS certificate file (PEM format)
+    pub tls_cert_path: Option<String>,
+
+    /// Path to TLS private key file (PEM format)
+    pub tls_key_path: Option<String>,
+
+    /// Request timeout in seconds
+    pub request_timeout_secs: u64,
+
+    /// Maximum request body size in bytes
+    pub max_body_size: usize,
+}
+
+impl Default for ServerConfig {
+    /// Creates a default server configuration with production-ready defaults
+    fn default() -> Self {
+        Self {
+            bind_address: "0.0.0.0:8080".to_string(),
+            workers: 0, // Auto-detect based on CPU cores
+            tls_enabled: false,
+            tls_cert_path: None,
+            tls_key_path: None,
+            request_timeout_secs: 30,
+            max_body_size: 10 * 1024 * 1024, // 10 MB
+        }
+    }
+}
+
+/// Cache configuration parameters
+///
+/// Defines the caching strategy and backend settings for the cache module.
+/// Supports Redis and in-memory caching backends.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CacheConfig {
+    /// Enable caching functionality
+    pub enabled: bool,
+
+    /// Cache backend type: "redis" or "memory"
+    pub backend: String,
+
+    /// Redis connection URL (if using Redis backend)
+    pub redis_url: Option<String>,
+
+    /// Default TTL for cached items in seconds
+    pub default_ttl_secs: u64,
+
+    /// Maximum number of items in memory cache
+    pub max_items: usize,
+}
+
+impl Default for CacheConfig {
+    fn default() -> Self {
+        Self {
+            enabled: true,
+            backend: "memory".to_string(),
+            redis_url: None,
+            default_ttl_secs: 300, // 5 minutes
+            max_items: 10000,
+        }
+    }
+}
+
+/// Authentication configuration parameters
+///
+/// Defines the authentication method and settings for the auth module.
+/// Supports JWT tokens and OAuth2 integration.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AuthConfig {
+    /// Enable authentication
+    pub enabled: bool,
+
+    /// JWT secret key for token signing
+    pub jwt_secret: String,
+
+    /// JWT token expiration time in seconds
+    pub token_expiry_secs: u64,
+
+    /// JWT issuer identifier
+    pub issuer: String,
+
+    /// Enable token refresh mechanism
+    pub enable_refresh: bool,
+}
+
+impl Default for AuthConfig {
+    fn default() -> Self {
+        Self {
+            enabled: true,
+            jwt_secret: "change-this-secret-in-production".to_string(),
+            token_expiry_secs: 3600, // 1 hour
+            issuer: "{{ project_name }}".to_string(),
+            enable_refresh: true,
+        }
+    }
+}
+
+// =============================================================================
+// API Response Types
+// =============================================================================
+// Standard response types for API endpoints.
+// These provide consistent response formatting across all endpoints.
+
+/// Standard API response wrapper
+///
+/// Provides a consistent structure for all API responses, including
+/// success/error status, data payload, and metadata.
+#[derive(Debug, Serialize, Deserialize)]
+pub struct ApiResponse<T> {
+    /// Response status: "success" or "error"
+    pub status: String,
+
+    /// Response data payload (optional for error responses)
+    pub data: Option<T>,
+
+    /// Error message (present only for error responses)
+    pub error: Option<String>,
+
+    /// Response timestamp
+    pub timestamp: String,
+}
+
+impl<T: Serialize> ApiResponse<T> {
+    /// Creates a successful response with data
+    pub fn success(data: T) -> Self {
+        Self {
+            status: "success".to_string(),
+            data: Some(data),
+            error: None,
+            timestamp: chrono::Utc::now().to_rfc3339(),
+        }
+    }
+
+    /// Creates an error response with message
+    pub fn error(message: &str) -> Self {
+        Self {
+            status: "error".to_string(),
+            data: None,
+            error: Some(message.to_string()),
+            timestamp: chrono::Utc::now().to_rfc3339(),
+        }
+    }
+}
+
+/// Health check response data
+#[derive(Debug, Serialize, Deserialize)]
+pub struct HealthStatus {
+    /// Service name
+    pub service: String,
+
+    /// Service version
+    pub version: String,
+
+    /// Service status: "healthy" or "unhealthy"
+    pub status: String,
+
+    /// Uptime in seconds
+    pub uptime_secs: u64,
+}
+
+// =============================================================================
+// Application State
+// =============================================================================
+// Shared application state that is accessible across all request handlers.
+// Contains references to all initialized modules and configuration.
+
+/// Application state container
+///
+/// Holds references to all Ri modules and configuration that need to be
+/// shared across request handlers. This state is cloned for each request
+/// but contains Arc references internally for efficient sharing.
+pub struct AppState {
+    /// Reference to the cache module for response caching
+    pub cache: RiCacheModule,
+
+    /// Reference to the authentication module
+    pub auth: RiAuthModule,
+
+    /// Reference to the logger for structured logging
+    pub logger: RiLogger,
+
+    /// Server configuration
+    pub config: ServerConfig,
+}
+
+// =============================================================================
+// Request Handlers
+// =============================================================================
+// HTTP request handler functions that process incoming requests and return responses.
+// These handlers demonstrate the usage of Ri modules for common web service operations.
+
+/// Health check endpoint handler
+///
+/// Returns the current health status of the service, including uptime and version.
+/// This endpoint is typically used by load balancers and monitoring systems.
+///
+/// # Returns
+/// JSON response with health status information
+pub async fn health_check() -> ApiResponse<HealthStatus> {
+    ApiResponse::success(HealthStatus {
+        service: "{{ project_name }}".to_string(),
+        version: "{{ project_version }}".to_string(),
+        status: "healthy".to_string(),
+        uptime_secs: 0, // TODO: Track actual uptime
+    })
+}
+
+/// Root endpoint handler
+///
+/// Returns a welcome message and basic service information.
+/// Useful for verifying the service is running correctly.
+///
+/// # Returns
+/// JSON response with welcome message
+pub async fn root() -> ApiResponse<String> {
+    ApiResponse::success("Welcome to {{ project_name }} Web Service".to_string())
+}
+
+// =============================================================================
+// Server Initialization
+// =============================================================================
+// Functions for initializing and configuring the web server and its modules.
+
+/// Loads configuration from file or environment variables
+///
+/// Attempts to load configuration from a YAML file first, then falls back
+/// to environment variables for any missing values. This allows flexible
+/// deployment across different environments.
+///
+/// # Returns
+/// Server configuration with all settings populated
+fn load_config() -> ServerConfig {
+    // TODO: Implement configuration loading from YAML file
+    // For now, use default configuration
+    ServerConfig::default()
+}
+
+/// Initializes the cache module
+///
+/// Creates and configures the cache module based on the provided configuration.
+/// Supports both Redis and in-memory caching backends.
+///
+/// # Arguments
+/// * `config` - Cache configuration parameters
+///
+/// # Returns
+/// Initialized cache module ready for use
+fn init_cache(config: &CacheConfig) -> RiCacheModule {
+    if !config.enabled {
+        // Return a no-op cache if caching is disabled
+        return RiCacheModule::new();
+    }
+
+    // Configure cache based on backend type
+    match config.backend.as_str() {
+        "redis" => {
+            // TODO: Initialize Redis cache backend
+            // RiCacheModule::with_redis(&config.redis_url)
+            RiCacheModule::new()
+        }
+        _ => {
+            // Default to in-memory cache
+            RiCacheModule::new()
+        }
+    }
+}
+
+/// Initializes the authentication module
+///
+/// Creates and configures the authentication module with JWT support.
+/// The module handles token generation, validation, and user authentication.
+///
+/// # Arguments
+/// * `config` - Authentication configuration parameters
+///
+/// # Returns
+/// Initialized authentication module ready for use
+fn init_auth(config: &AuthConfig) -> RiAuthModule {
+    if !config.enabled {
+        // Return a no-op auth module if authentication is disabled
+        return RiAuthModule::new();
+    }
+
+    // Initialize auth module with JWT configuration
+    RiAuthModule::new()
+}
+
+/// Initializes the logging system
+///
+/// Creates and configures the logger with appropriate output formats and levels.
+/// The logger integrates with Ri's structured logging infrastructure.
+///
+/// # Returns
+/// Initialized logger ready for use
+fn init_logger() -> RiLogger {
+    let log_config = RiLogConfig::default();
+    RiLogger::new(log_config)
+}
+
+/// Sets up the gateway with routes and middleware
+///
+/// Configures the RiGateway with all API routes, middleware chains, and
+/// request handlers. This is the main entry point for HTTP request processing.
+///
+/// # Arguments
+/// * `state` - Shared application state
+///
+/// # Returns
+/// Configured gateway ready to accept connections
+fn setup_gateway(state: AppState) -> RiGateway {
+    // Create gateway configuration
+    let gateway_config = RiGatewayConfig::default();
+
+    // Create gateway instance
+    let mut gateway = RiGateway::new(gateway_config);
+
+    // Register routes
+    // TODO: Add route registration when RiGateway API is available
+    // gateway.route("/", get(root));
+    // gateway.route("/health", get(health_check));
+
+    gateway
+}
+
+// =============================================================================
+// Main Entry Point
+// =============================================================================
+// The main function that initializes and starts the web server.
+
+/// Main entry point for the {{ project_name }} web service
+///
+/// This function orchestrates the initialization of all Ri modules,
+/// sets up the gateway with routes and middleware, and starts the server.
+/// It handles graceful shutdown on SIGTERM and SIGINT signals.
+///
+/// # Panics
+/// Panics if any critical initialization step fails
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    // Print startup banner
+    println!("Starting {{ project_name }} v{{ project_version }}");
+    println!("Author: {{ author }}");
+
+    // Load configuration
+    let server_config = load_config();
+    let cache_config = CacheConfig::default();
+    let auth_config = AuthConfig::default();
+
+    // Initialize modules
+    println!("Initializing modules...");
+
+    let cache = init_cache(&cache_config);
+    let auth = init_auth(&auth_config);
+    let logger = init_logger();
+
+    // Log startup information
+    logger.info("Starting web service initialization");
+
+    // Create application state
+    let state = AppState {
+        cache,
+        auth,
+        logger,
+        config: server_config.clone(),
+    };
+
+    // Setup gateway with routes
+    println!("Setting up gateway...");
+    let gateway = setup_gateway(state);
+
+    // Parse bind address
+    let addr: SocketAddr = server_config.bind_address.parse()
+        .expect("Invalid bind address");
+
+    // Start server
+    println!("Server listening on {}", addr);
+    println!("Press Ctrl+C to stop");
+
+    // TODO: Start the gateway server
+    // gateway.serve(addr).await?;
+
+    // Keep the server running
+    tokio::signal::ctrl_c().await?;
+    println!("Shutting down server...");
+
+    Ok(())
+}

@@ -221,7 +221,7 @@ Add Ri to your project's `Cargo.toml`:
 
 ```toml
 [dependencies]
-ri = "0.1.8"
+ri = "0.1.9"
 ```
 
 Or use cargo add:

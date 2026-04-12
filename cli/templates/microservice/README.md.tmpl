@@ -1,0 +1,147 @@
+# {{ project_name }}
+
+A production-ready microservice built with the Ri middleware framework.
+
+## Overview
+
+{{ project_name }} is a distributed microservice that provides:
+
+- **Service Mesh Integration**: Service discovery, load balancing, circuit breaking
+- **Observability**: Metrics, distributed tracing, and structured logging
+- **Health Checks**: Kubernetes-ready health endpoints
+
+## Features
+
+- Service discovery and registration
+- Load balancing with multiple strategies
+- Circuit breaker pattern
+- Distributed tracing (OpenTelemetry)
+- Prometheus metrics
+- Structured logging
+- TLS/HTTPS support
+- Graceful shutdown
+
+## Quick Start
+
+### Prerequisites
+
+- Rust 1.70 or later
+- Service registry (Consul, etcd)
+- Tracing backend (Jaeger, Zipkin)
+
+### Installation
+
+```bash
+cargo build --release
+cargo run --release
+```
+
+## Configuration
+
+### Environment Variables
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `INSTANCE_ID` | Service instance ID | auto-generated |
+| `REGISTRY_URL` | Service registry URL | `http://localhost:8500` |
+| `TRACING_ENDPOINT` | Tracing backend URL | `http://localhost:14268/api/traces` |
+| `LOG_LEVEL` | Logging level | `info` |
+
+## Service Mesh Features
+
+### Service Discovery
+
+Automatic registration with service registry:
+- Consul
+- etcd
+- Kubernetes native
+
+### Load Balancing
+
+Strategies supported:
+- Round Robin
+- Random
+- Least Connections
+
+### Circuit Breaker
+
+Protects against cascading failures:
+- Configurable failure threshold
+- Automatic recovery
+- Timeout handling
+
+## Observability
+
+### Metrics
+
+Prometheus-compatible metrics at `/metrics`:
+- Request latency
+- Error rates
+- Throughput
+- Resource utilization
+
+### Distributed Tracing
+
+OpenTelemetry-compatible tracing:
+- Automatic span creation
+- Context propagation
+- Trace sampling
+
+### Logging
+
+Structured JSON logging:
+- Request/response logging
+- Error tracking
+- Performance metrics
+
+## API Endpoints
+
+### Health Check
+
+```http
+GET /health
+```
+
+Returns service health status with trace ID.
+
+### Metrics
+
+```http
+GET /metrics
+```
+
+Prometheus metrics endpoint.
+
+## Deployment
+
+### Docker
+
+```bash
+docker build -t {{ project_name }}:latest .
+docker run -p 8080:8080 \
+  -e REGISTRY_URL=http://consul:8500 \
+  -e TRACING_ENDPOINT=http://jaeger:14268/api/traces \
+  {{ project_name }}:latest
+```
+
+### Kubernetes
+
+```bash
+kubectl apply -f k8s/
+```
+
+## Architecture
+
+### Ri Modules
+
+1. **RiServiceMesh**: Service mesh integration
+2. **RiObservabilityModule**: Observability stack
+3. **RiTracer**: Distributed tracing
+
+## Author
+
+{{ author }}
+
+## Version
+
+{{ project_version }}

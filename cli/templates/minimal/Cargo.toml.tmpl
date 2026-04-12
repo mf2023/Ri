@@ -1,0 +1,59 @@
+# =============================================================================
+# Cargo Package Configuration for {{ project_name }} Minimal Service
+# =============================================================================
+# This file defines the Rust package metadata and dependencies for a minimal
+# service built with the Ri middleware framework. This template provides the
+# bare minimum starting point for simple applications that only need basic
+# logging functionality.
+#
+# Template Variables:
+# - project_name: The name of the project
+# - project_version: Initial version of the project
+# - author: Project author(s)
+# - ri_version: Version of the Ri framework to use
+
+[package]
+# Project name
+name = "{{ project_name }}"
+
+# Semantic versioning
+version = "{{ project_version }}"
+
+# Rust edition
+edition = "2021"
+
+# Project authors
+authors = ["{{ author }}"]
+
+# Short description
+description = "Minimal service built with Ri middleware framework"
+
+# =============================================================================
+# Binary Configuration
+# =============================================================================
+
+[[bin]]
+name = "{{ project_name }}"
+path = "src/main.rs"
+
+# =============================================================================
+# Dependencies
+# =============================================================================
+# Minimal dependencies for basic Ri functionality.
+
+[dependencies]
+# Ri middleware framework - provides core functionality
+ri = { version = "{{ ri_version }}" }
+
+# Logging facade
+log = "0.4"
+
+# Asynchronous runtime (minimal features)
+tokio = { version = "1", features = ["rt", "rt-multi-thread", "macros", "signal"] }
+
+# =============================================================================
+# Development Dependencies
+# =============================================================================
+
+[dev-dependencies]
+# No additional dev dependencies for minimal template

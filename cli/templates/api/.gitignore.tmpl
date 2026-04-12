@@ -1,0 +1,46 @@
+# Git Ignore File for {{ project_name }} API Service
+
+# Rust build artifacts
+/target/
+Cargo.lock
+
+# IDE files
+.vscode/
+.idea/
+*.iml
+*.swp
+*~
+
+# Environment files
+.env
+.env.local
+*.local.yaml
+
+# Secrets
+secrets/
+*.key
+*.pem
+*.crt
+
+# Logs
+logs/
+*.log
+
+# Temporary files
+tmp/
+*.tmp
+
+# Database files
+*.db
+*.sqlite
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Documentation
+/doc/
+
+# Test results
+/test-results/
+/target/criterion/

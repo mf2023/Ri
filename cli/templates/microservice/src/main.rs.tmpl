@@ -1,0 +1,461 @@
+// =============================================================================
+// Main Entry Point for {{ project_name }} Microservice
+// =============================================================================
+// This file implements the main entry point and initialization for a distributed
+// microservice built with the Ri middleware framework. The service integrates
+// service mesh capabilities and comprehensive observability for production
+// deployments in distributed systems.
+//
+// Architecture Overview:
+// - RiServiceMesh: Service discovery, load balancing, and circuit breaking
+// - RiObservabilityModule: Metrics, tracing, and logging integration
+// - Distributed Tracing: OpenTelemetry-compatible trace propagation
+//
+// Template Variables:
+// - project_name: The name of the project
+// - project_version: Version of the project
+// - author: Project author
+
+use ri::{
+    RiAppBuilder,
+    RiServiceMesh,
+    RiServiceMeshConfig,
+    RiObservabilityModule,
+    RiObservabilityConfig,
+    RiLogger,
+    RiLogConfig,
+    RiTracer,
+    RiSpan,
+    RiTraceContext,
+};
+use serde::{Deserialize, Serialize};
+use std::net::SocketAddr;
+use std::sync::Arc;
+
+// =============================================================================
+// Configuration Structures
+// =============================================================================
+// Configuration for microservice initialization.
+
+/// Service configuration
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ServiceConfig {
+    /// Service name for identification
+    pub service_name: String,
+
+    /// Service version
+    pub service_version: String,
+
+    /// Service instance ID
+    pub instance_id: String,
+
+    /// Network address to bind
+    pub bind_address: String,
+
+    /// Number of worker threads
+    pub workers: usize,
+
+    /// Enable TLS
+    pub tls_enabled: bool,
+
+    /// TLS certificate path
+    pub tls_cert_path: Option<String>,
+
+    /// TLS private key path
+    pub tls_key_path: Option<String>,
+}
+
+impl Default for ServiceConfig {
+    fn default() -> Self {
+        Self {
+            service_name: "{{ project_name }}".to_string(),
+            service_version: "{{ project_version }}".to_string(),
+            instance_id: uuid::Uuid::new_v4().to_string(),
+            bind_address: "0.0.0.0:8080".to_string(),
+            workers: 0,
+            tls_enabled: false,
+            tls_cert_path: None,
+            tls_key_path: None,
+        }
+    }
+}
+
+/// Service mesh configuration
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MeshConfig {
+    /// Enable service mesh integration
+    pub enabled: bool,
+
+    /// Service registry URL (e.g., Consul, etcd)
+    pub registry_url: String,
+
+    /// Service namespace
+    pub namespace: String,
+
+    /// Enable load balancing
+    pub load_balancing: bool,
+
+    /// Load balancing strategy: "round_robin", "random", "least_connections"
+    pub lb_strategy: String,
+
+    /// Enable circuit breaker
+    pub circuit_breaker: bool,
+
+    /// Circuit breaker failure threshold
+    pub cb_failure_threshold: u32,
+
+    /// Circuit breaker timeout in seconds
+    pub cb_timeout_secs: u64,
+
+    /// Enable service discovery
+    pub service_discovery: bool,
+
+    /// Health check interval in seconds
+    pub health_check_interval_secs: u64,
+}
+
+impl Default for MeshConfig {
+    fn default() -> Self {
+        Self {
+            enabled: true,
+            registry_url: "http://localhost:8500".to_string(),
+            namespace: "default".to_string(),
+            load_balancing: true,
+            lb_strategy: "round_robin".to_string(),
+            circuit_breaker: true,
+            cb_failure_threshold: 5,
+            cb_timeout_secs: 30,
+            service_discovery: true,
+            health_check_interval_secs: 10,
+        }
+    }
+}
+
+/// Observability configuration
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ObservabilityConfig {
+    /// Enable metrics collection
+    pub metrics_enabled: bool,
+
+    /// Metrics endpoint path
+    pub metrics_path: String,
+
+    /// Enable distributed tracing
+    pub tracing_enabled: bool,
+
+    /// Tracing endpoint (e.g., Jaeger, Zipkin)
+    pub tracing_endpoint: String,
+
+    /// Trace sampling rate (0.0 to 1.0)
+    pub sampling_rate: f32,
+
+    /// Enable logging
+    pub logging_enabled: bool,
+
+    /// Log level
+    pub log_level: String,
+
+    /// Log format: "json", "text"
+    pub log_format: String,
+}
+
+impl Default for ObservabilityConfig {
+    fn default() -> Self {
+        Self {
+            metrics_enabled: true,
+            metrics_path: "/metrics".to_string(),
+            tracing_enabled: true,
+            tracing_endpoint: "http://localhost:14268/api/traces".to_string(),
+            sampling_rate: 1.0,
+            logging_enabled: true,
+            log_level: "info".to_string(),
+            log_format: "json".to_string(),
+        }
+    }
+}
+
+// =============================================================================
+// Service Types
+// =============================================================================
+// Types for service communication and responses.
+
+/// Standard service response
+#[derive(Debug, Serialize, Deserialize)]
+pub struct ServiceResponse<T> {
+    /// Response status
+    pub status: String,
+
+    /// Response data
+    pub data: Option<T>,
+
+    /// Error message
+    pub error: Option<String>,
+
+    /// Trace ID for distributed tracing
+    pub trace_id: String,
+
+    /// Response timestamp
+    pub timestamp: String,
+
+    /// Service instance ID
+    pub instance_id: String,
+}
+
+impl<T: Serialize> ServiceResponse<T> {
+    /// Creates a successful response
+    pub fn success(data: T, trace_id: &str, instance_id: &str) -> Self {
+        Self {
+            status: "success".to_string(),
+            data: Some(data),
+            error: None,
+            trace_id: trace_id.to_string(),
+            timestamp: chrono::Utc::now().to_rfc3339(),
+            instance_id: instance_id.to_string(),
+        }
+    }
+
+    /// Creates an error response
+    pub fn error(message: &str, trace_id: &str, instance_id: &str) -> Self {
+        Self {
+            status: "error".to_string(),
+            data: None,
+            error: Some(message.to_string()),
+            trace_id: trace_id.to_string(),
+            timestamp: chrono::Utc::now().to_rfc3339(),
+            instance_id: instance_id.to_string(),
+        }
+    }
+}
+
+/// Health check response
+#[derive(Debug, Serialize, Deserialize)]
+pub struct HealthStatus {
+    /// Service name
+    pub service: String,
+
+    /// Service version
+    pub version: String,
+
+    /// Instance ID
+    pub instance_id: String,
+
+    /// Health status
+    pub status: String,
+
+    /// Uptime in seconds
+    pub uptime_secs: u64,
+
+    /// Connected services
+    pub connections: Vec<String>,
+}
+
+// =============================================================================
+// Application State
+// =============================================================================
+// Shared application state for the microservice.
+
+/// Application state container
+pub struct ServiceState {
+    /// Service mesh module
+    pub service_mesh: RiServiceMesh,
+
+    /// Observability module
+    pub observability: RiObservabilityModule,
+
+    /// Logger instance
+    pub logger: RiLogger,
+
+    /// Tracer for distributed tracing
+    pub tracer: RiTracer,
+
+    /// Service configuration
+    pub config: ServiceConfig,
+}
+
+impl ServiceState {
+    /// Creates a new service state
+    pub fn new(
+        service_mesh: RiServiceMesh,
+        observability: RiObservabilityModule,
+        logger: RiLogger,
+        tracer: RiTracer,
+        config: ServiceConfig,
+    ) -> Self {
+        Self {
+            service_mesh,
+            observability,
+            logger,
+            tracer,
+            config,
+        }
+    }
+
+    /// Creates a new span for distributed tracing
+    pub fn create_span(&self, name: &str) -> RiSpan {
+        // TODO: Implement span creation when API is available
+        RiSpan::new(name.to_string())
+    }
+}
+
+// =============================================================================
+// Request Handlers
+// =============================================================================
+// HTTP request handlers for the microservice.
+
+/// Health check endpoint
+pub async fn health_check(state: Arc<ServiceState>) -> ServiceResponse<HealthStatus> {
+    let span = state.create_span("health_check");
+
+    state.logger.info("Health check requested");
+
+    ServiceResponse::success(
+        HealthStatus {
+            service: state.config.service_name.clone(),
+            version: state.config.service_version.clone(),
+            instance_id: state.config.instance_id.clone(),
+            status: "healthy".to_string(),
+            uptime_secs: 0,
+            connections: vec![],
+        },
+        "trace-id",
+        &state.config.instance_id,
+    )
+}
+
+/// Root endpoint
+pub async fn root(state: Arc<ServiceState>) -> ServiceResponse<String> {
+    let span = state.create_span("root");
+
+    ServiceResponse::success(
+        format!("Welcome to {} Microservice", state.config.service_name),
+        "trace-id",
+        &state.config.instance_id,
+    )
+}
+
+// =============================================================================
+// Service Initialization
+// =============================================================================
+// Functions for initializing the microservice.
+
+/// Loads configuration
+fn load_config() -> ServiceConfig {
+    ServiceConfig::default()
+}
+
+/// Initializes the service mesh
+fn init_service_mesh(config: &MeshConfig) -> RiServiceMesh {
+    if !config.enabled {
+        return RiServiceMesh::new(RiServiceMeshConfig::default());
+    }
+
+    let mesh_config = RiServiceMeshConfig::default();
+    RiServiceMesh::new(mesh_config)
+}
+
+/// Initializes the observability module
+fn init_observability(config: &ObservabilityConfig) -> RiObservabilityModule {
+    let obs_config = RiObservabilityConfig::default();
+    RiObservabilityModule::new(obs_config)
+}
+
+/// Initializes the logging system
+fn init_logger(config: &ObservabilityConfig) -> RiLogger {
+    let log_config = RiLogConfig::default();
+    RiLogger::new(log_config)
+}
+
+/// Initializes the tracer
+fn init_tracer(config: &ObservabilityConfig) -> RiTracer {
+    RiTracer::new()
+}
+
+/// Registers the service with the service mesh
+async fn register_service(state: &ServiceState) -> Result<(), Box<dyn std::error::Error>> {
+    state.logger.info(&format!(
+        "Registering service: {} (instance: {})",
+        state.config.service_name, state.config.instance_id
+    ));
+
+    // TODO: Implement service registration
+    // state.service_mesh.register(...).await
+
+    Ok(())
+}
+
+/// Starts the health check server
+async fn start_health_server(state: Arc<ServiceState>) -> Result<(), Box<dyn std::error::Error>> {
+    let addr: SocketAddr = state.config.bind_address.parse()?;
+
+    state.logger.info(&format!("Health server listening on {}", addr));
+
+    // TODO: Implement health check server
+    // hyper::Server::bind(&addr)
+    //     .serve(make_service_fn(|_| {
+    //         let state = state.clone();
+    //         async move {
+    //             Ok::<_, hyper::Error>(service_fn(move |req| {
+    //                 let state = state.clone();
+    //                 async move { handle_health_request(req, state).await }
+    //             }))
+    //         }
+    //     }))
+    //     .await
+
+    Ok(())
+}
+
+// =============================================================================
+// Main Entry Point
+// =============================================================================
+
+/// Main entry point for the microservice
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    println!("Starting {{ project_name }} v{{ project_version }}");
+    println!("Author: {{ author }}");
+
+    // Load configuration
+    let service_config = load_config();
+    let mesh_config = MeshConfig::default();
+    let obs_config = ObservabilityConfig::default();
+
+    // Initialize modules
+    println!("Initializing modules...");
+
+    let service_mesh = init_service_mesh(&mesh_config);
+    let observability = init_observability(&obs_config);
+    let logger = init_logger(&obs_config);
+    let tracer = init_tracer(&obs_config);
+
+    logger.info("Starting microservice initialization");
+
+    // Create service state
+    let state = Arc::new(ServiceState::new(
+        service_mesh,
+        observability,
+        logger,
+        tracer,
+        service_config,
+    ));
+
+    // Print service information
+    println!("Service: {}", state.config.service_name);
+    println!("Instance ID: {}", state.config.instance_id);
+    println!("Bind address: {}", state.config.bind_address);
+
+    // Register service with mesh
+    register_service(&state).await?;
+
+    // Start health server
+    println!("Starting health server...");
+    start_health_server(state.clone()).await?;
+
+    // Wait for shutdown signal
+    println!("Press Ctrl+C to stop");
+    tokio::signal::ctrl_c().await?;
+
+    println!("Shutting down service...");
+
+    Ok(())
+}

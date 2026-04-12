@@ -1,0 +1,263 @@
+# =============================================================================
+# Development Configuration for {{ project_name }}
+# =============================================================================
+# This configuration file defines the development environment settings for the
+# web service. These settings are optimized for local development with debugging
+# enabled and relaxed security constraints.
+#
+# Configuration Hierarchy:
+# 1. Environment variables (highest priority)
+# 2. This configuration file
+# 3. Default values in code (lowest priority)
+#
+# Template Variables:
+# - project_name: The name of the project
+
+# =============================================================================
+# Server Configuration
+# =============================================================================
+# Network and runtime settings for the development server.
+
+[server]
+# Network address to bind the server
+# Use 0.0.0.0 to accept connections from any interface
+# Use 127.0.0.1 to accept only local connections
+bind_address = "127.0.0.1:8080"
+
+# Number of worker threads (0 = auto-detect based on CPU cores)
+workers = 0
+
+# Enable debug mode for verbose logging
+debug = true
+
+# Request timeout in seconds (longer for debugging)
+request_timeout_secs = 60
+
+# Maximum request body size in bytes (10 MB)
+max_body_size = 10485760
+
+# Enable CORS for local development
+cors_enabled = true
+
+# Allowed CORS origins for development
+cors_origins = ["http://localhost:3000", "http://localhost:8080"]
+
+# =============================================================================
+# TLS Configuration (Disabled for Development)
+# =============================================================================
+# TLS settings are typically disabled in development for easier testing.
+# Enable TLS only if testing HTTPS-specific functionality.
+
+[server.tls]
+# Enable TLS/HTTPS (disabled for development)
+enabled = false
+
+# Path to TLS certificate file (PEM format)
+# cert_path = "./certs/dev.crt"
+
+# Path to TLS private key file (PEM format)
+# key_path = "./certs/dev.key"
+
+# =============================================================================
+# Cache Configuration
+# =============================================================================
+# Caching settings for development environment.
+# Uses in-memory cache for simplicity and fast iteration.
+
+[cache]
+# Enable caching functionality
+enabled = true
+
+# Cache backend type: "memory" or "redis"
+# Memory backend is recommended for development
+backend = "memory"
+
+# Default TTL for cached items in seconds
+default_ttl_secs = 300
+
+# Maximum number of items in memory cache
+max_items = 1000
+
+# Enable cache statistics logging
+log_stats = true
+
+# =============================================================================
+# Redis Configuration (Optional)
+# =============================================================================
+# Redis connection settings for cache backend.
+# Only required if cache.backend is set to "redis".
+
+[cache.redis]
+# Redis connection URL
+# url = "redis://127.0.0.1:6379"
+
+# Redis database number
+# database = 0
+
+# Connection pool size
+# pool_size = 10
+
+# =============================================================================
+# Authentication Configuration
+# =============================================================================
+# Authentication and authorization settings for development.
+# Uses relaxed security settings for easier testing.
+
+[auth]
+# Enable authentication (can be disabled for API testing)
+enabled = true
+
+# JWT secret key for token signing
+# WARNING: Change this in production!
+jwt_secret = "dev-secret-key-change-in-production"
+
+# JWT token expiration time in seconds (1 hour for development)
+token_expiry_secs = 3600
+
+# JWT issuer identifier
+issuer = "{{ project_name }}-dev"
+
+# Enable token refresh mechanism
+enable_refresh = true
+
+# Token refresh expiration time in seconds (7 days)
+refresh_expiry_secs = 604800
+
+# =============================================================================
+# OAuth2 Configuration (Optional)
+# =============================================================================
+# OAuth2 provider settings for third-party authentication.
+# Configure if using OAuth2 login in development.
+
+[auth.oauth]
+# Enable OAuth2 authentication
+enabled = false
+
+# OAuth2 provider: "google", "github", "custom"
+# provider = "github"
+
+# OAuth2 client ID
+# client_id = "your-client-id"
+
+# OAuth2 client secret
+# client_secret = "your-client-secret"
+
+# OAuth2 callback URL
+# callback_url = "http://localhost:8080/auth/callback"
+
+# =============================================================================
+# Logging Configuration
+# =============================================================================
+# Logging settings for development environment.
+# Configured for maximum visibility with debug-level logging.
+
+[logging]
+# Log level: "trace", "debug", "info", "warn", "error"
+level = "debug"
+
+# Log output format: "json", "text", "pretty"
+# Pretty format is recommended for development
+format = "pretty"
+
+# Enable console output
+console_enabled = true
+
+# Enable file output
+file_enabled = false
+
+# Log file path (if file output is enabled)
+# file_path = "./logs/{{ project_name }}.log"
+
+# Maximum log file size in MB
+max_file_size_mb = 100
+
+# Number of rotated log files to keep
+max_files = 5
+
+# Include source code location in logs
+include_source = true
+
+# Include thread ID in logs
+include_thread_id = true
+
+# =============================================================================
+# Database Configuration (Optional)
+# =============================================================================
+# Database connection settings for development.
+# Configure if the application requires database access.
+
+[database]
+# Enable database connectivity
+enabled = false
+
+# Database type: "postgres", "mysql", "sqlite"
+# type = "sqlite"
+
+# Database connection URL
+# url = "sqlite:./data/dev.db"
+
+# Connection pool size
+# pool_size = 5
+
+# Enable SQL query logging
+log_queries = true
+
+# =============================================================================
+# Gateway Configuration
+# =============================================================================
+# API gateway settings for request routing and middleware.
+
+[gateway]
+# Enable request rate limiting
+rate_limit_enabled = false
+
+# Rate limit: requests per minute per IP
+rate_limit_per_minute = 1000
+
+# Enable request compression
+compression_enabled = true
+
+# Enable response compression
+response_compression = true
+
+# Maximum request header size in bytes
+max_header_size = 8192
+
+# Enable request ID generation
+generate_request_id = true
+
+# =============================================================================
+# Health Check Configuration
+# =============================================================================
+# Health check endpoint settings for monitoring.
+
+[health]
+# Enable health check endpoint
+enabled = true
+
+# Health check endpoint path
+path = "/health"
+
+# Enable detailed health checks (database, cache, etc.)
+detailed = true
+
+# Health check timeout in seconds
+timeout_secs = 5
+
+# =============================================================================
+# Metrics Configuration
+# =============================================================================
+# Metrics collection and export settings.
+
+[metrics]
+# Enable metrics collection
+enabled = true
+
+# Metrics endpoint path (for Prometheus scraping)
+path = "/metrics"
+
+# Include system metrics (CPU, memory, etc.)
+include_system_metrics = true
+
+# Metrics collection interval in seconds
+collection_interval_secs = 15

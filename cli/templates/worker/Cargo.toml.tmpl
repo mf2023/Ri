@@ -1,0 +1,89 @@
+# =============================================================================
+# Cargo Package Configuration for {{ project_name }} Worker Service
+# =============================================================================
+# This file defines the Rust package metadata and dependencies for a background
+# worker service built with the Ri middleware framework. This template provides
+# a production-ready starting point for building asynchronous task processing
+# systems with queue management and device control capabilities.
+#
+# Template Variables:
+# - project_name: The name of the project
+# - project_version: Initial version of the project
+# - author: Project author(s)
+# - ri_version: Version of the Ri framework to use
+
+[package]
+# Project name used for cargo commands
+name = "{{ project_name }}"
+
+# Semantic versioning
+version = "{{ project_version }}"
+
+# Rust edition
+edition = "2021"
+
+# Project authors
+authors = ["{{ author }}"]
+
+# Short description
+description = "Background worker service built with Ri middleware framework"
+
+# =============================================================================
+# Binary Configuration
+# =============================================================================
+
+[[bin]]
+name = "{{ project_name }}"
+path = "src/main.rs"
+
+# =============================================================================
+# Dependencies
+# =============================================================================
+# Core dependencies for building a worker service with Ri framework.
+
+[dependencies]
+# Ri middleware framework - provides queue and device control modules
+ri = { version = "{{ ri_version }}" }
+
+# Serialization framework
+serde = { version = "1", features = ["derive"] }
+
+# JSON serialization
+serde_json = "1"
+
+# Asynchronous runtime
+tokio = { version = "1", features = ["full"] }
+
+# Logging facade
+log = "0.4"
+
+# Date and time handling
+chrono = { version = "0.4", features = ["serde"] }
+
+# UUID generation
+uuid = { version = "1.0", features = ["v4", "serde"] }
+
+# Async trait support
+async-trait = "0.1"
+
+# =============================================================================
+# Optional Dependencies
+# =============================================================================
+
+# Environment variable management
+dotenvy = "0.15"
+
+# CLI argument parsing
+clap = { version = "4", features = ["derive"] }
+
+# Signal handling for graceful shutdown
+signal-hook = "0.3"
+signal-hook-tokio = { version = "0.3", features = ["futures-v0_3"] }
+
+# =============================================================================
+# Development Dependencies
+# =============================================================================
+
+[dev-dependencies]
+# Temporary file creation for testing
+tempfile = "3"

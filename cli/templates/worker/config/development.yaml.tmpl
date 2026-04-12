@@ -1,0 +1,36 @@
+# =============================================================================
+# Development Configuration for {{ project_name }} Worker Service
+# =============================================================================
+# Development environment settings for background worker service.
+
+[worker]
+consumer_id = "dev-worker-001"
+worker_count = 2
+task_timeout_secs = 300
+max_retries = 3
+enable_priority = true
+
+[queue]
+backend = "memory"
+url = "memory://localhost"
+queue_name = "tasks"
+dead_letter_enabled = true
+dead_letter_queue = "tasks.dead"
+
+[device_control]
+enabled = true
+connection_timeout_secs = 30
+health_monitoring = true
+health_check_interval_secs = 60
+
+[logging]
+level = "debug"
+format = "pretty"
+console_enabled = true
+file_enabled = false
+include_source = true
+include_thread_id = true
+
+[metrics]
+enabled = true
+collection_interval_secs = 15

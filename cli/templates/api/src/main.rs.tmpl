@@ -1,0 +1,331 @@
+// =============================================================================
+// Main Entry Point for {{ project_name }} API Service
+// =============================================================================
+// This file implements the main entry point and server initialization for a
+// production-ready API service built with the Ri middleware framework. The service
+// focuses on providing RESTful API endpoints with comprehensive validation,
+// gateway routing, and structured logging.
+//
+// Architecture Overview:
+// - RiGateway: HTTP server with routing and middleware support
+// - RiValidationModule: Request/response validation and schema enforcement
+// - RiLogger: Structured logging with multiple output formats
+//
+// Template Variables:
+// - project_name: The name of the project
+// - project_version: Version of the project
+// - author: Project author
+
+use ri::{
+    RiAppBuilder,
+    RiGateway,
+    RiGatewayConfig,
+    RiValidationModule,
+    RiValidatorBuilder,
+    RiLogger,
+    RiLogConfig,
+};
+use serde::{Deserialize, Serialize};
+use std::net::SocketAddr;
+
+// =============================================================================
+// Configuration Structures
+// =============================================================================
+// Configuration structures for server initialization and runtime behavior.
+
+/// Server configuration parameters
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ServerConfig {
+    /// Network address to bind the server
+    pub bind_address: String,
+
+    /// Number of worker threads
+    pub workers: usize,
+
+    /// Enable TLS/HTTPS support
+    pub tls_enabled: bool,
+
+    /// Path to TLS certificate file
+    pub tls_cert_path: Option<String>,
+
+    /// Path to TLS private key file
+    pub tls_key_path: Option<String>,
+
+    /// Request timeout in seconds
+    pub request_timeout_secs: u64,
+
+    /// Maximum request body size in bytes
+    pub max_body_size: usize,
+}
+
+impl Default for ServerConfig {
+    fn default() -> Self {
+        Self {
+            bind_address: "0.0.0.0:8080".to_string(),
+            workers: 0,
+            tls_enabled: false,
+            tls_cert_path: None,
+            tls_key_path: None,
+            request_timeout_secs: 30,
+            max_body_size: 10 * 1024 * 1024,
+        }
+    }
+}
+
+/// Validation configuration parameters
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ValidationConfig {
+    /// Enable request validation
+    pub enabled: bool,
+
+    /// Maximum request body size for validation
+    pub max_body_size: usize,
+
+    /// Enable strict validation mode
+    pub strict_mode: bool,
+
+    /// Validate request headers
+    pub validate_headers: bool,
+}
+
+impl Default for ValidationConfig {
+    fn default() -> Self {
+        Self {
+            enabled: true,
+            max_body_size: 10 * 1024 * 1024,
+            strict_mode: true,
+            validate_headers: true,
+        }
+    }
+}
+
+// =============================================================================
+// API Request/Response Types
+// =============================================================================
+// Standard types for API request and response handling.
+
+/// Standard API response wrapper
+#[derive(Debug, Serialize, Deserialize)]
+pub struct ApiResponse<T> {
+    /// Response status
+    pub status: String,
+
+    /// Response data
+    pub data: Option<T>,
+
+    /// Error message
+    pub error: Option<String>,
+
+    /// Response timestamp
+    pub timestamp: String,
+}
+
+impl<T: Serialize> ApiResponse<T> {
+    /// Creates a successful response
+    pub fn success(data: T) -> Self {
+        Self {
+            status: "success".to_string(),
+            data: Some(data),
+            error: None,
+            timestamp: chrono::Utc::now().to_rfc3339(),
+        }
+    }
+
+    /// Creates an error response
+    pub fn error(message: &str) -> Self {
+        Self {
+            status: "error".to_string(),
+            data: None,
+            error: Some(message.to_string()),
+            timestamp: chrono::Utc::now().to_rfc3339(),
+        }
+    }
+}
+
+/// Health check response
+#[derive(Debug, Serialize, Deserialize)]
+pub struct HealthStatus {
+    pub service: String,
+    pub version: String,
+    pub status: String,
+    pub uptime_secs: u64,
+}
+
+/// Example API request for demonstration
+#[derive(Debug, Serialize, Deserialize)]
+pub struct ExampleRequest {
+    /// Request name field
+    pub name: String,
+
+    /// Request value field
+    pub value: i32,
+}
+
+/// Example API response for demonstration
+#[derive(Debug, Serialize, Deserialize)]
+pub struct ExampleResponse {
+    /// Response ID
+    pub id: String,
+
+    /// Response name
+    pub name: String,
+
+    /// Response value
+    pub value: i32,
+
+    /// Processing timestamp
+    pub processed_at: String,
+}
+
+// =============================================================================
+// Application State
+// =============================================================================
+// Shared application state for request handlers.
+
+/// Application state container
+pub struct AppState {
+    /// Validation module reference
+    pub validation: RiValidationModule,
+
+    /// Logger reference
+    pub logger: RiLogger,
+
+    /// Server configuration
+    pub config: ServerConfig,
+}
+
+// =============================================================================
+// Request Handlers
+// =============================================================================
+// HTTP request handler functions.
+
+/// Health check endpoint handler
+pub async fn health_check() -> ApiResponse<HealthStatus> {
+    ApiResponse::success(HealthStatus {
+        service: "{{ project_name }}".to_string(),
+        version: "{{ project_version }}".to_string(),
+        status: "healthy".to_string(),
+        uptime_secs: 0,
+    })
+}
+
+/// Root endpoint handler
+pub async fn root() -> ApiResponse<String> {
+    ApiResponse::success("Welcome to {{ project_name }} API Service".to_string())
+}
+
+/// Example API endpoint handler
+///
+/// Demonstrates request validation and response generation.
+pub async fn example_endpoint(
+    request: ExampleRequest,
+    state: &AppState,
+) -> ApiResponse<ExampleResponse> {
+    // Log the incoming request
+    state.logger.debug(&format!("Processing request: {:?}", request));
+
+    // Generate response
+    let response = ExampleResponse {
+        id: uuid::Uuid::new_v4().to_string(),
+        name: request.name,
+        value: request.value,
+        processed_at: chrono::Utc::now().to_rfc3339(),
+    };
+
+    ApiResponse::success(response)
+}
+
+// =============================================================================
+// Server Initialization
+// =============================================================================
+// Functions for initializing the API server.
+
+/// Loads configuration from file or environment
+fn load_config() -> ServerConfig {
+    ServerConfig::default()
+}
+
+/// Initializes the validation module
+fn init_validation(config: &ValidationConfig) -> RiValidationModule {
+    if !config.enabled {
+        return RiValidationModule::new();
+    }
+
+    // Create validator builder with rules
+    let builder = RiValidatorBuilder::new();
+
+    // TODO: Add validation rules when API is available
+    // builder.add_rule("name", Required::new())
+    // builder.add_rule("value", Range::new(0, 1000))
+
+    RiValidationModule::new()
+}
+
+/// Initializes the logging system
+fn init_logger() -> RiLogger {
+    let log_config = RiLogConfig::default();
+    RiLogger::new(log_config)
+}
+
+/// Sets up the gateway with routes
+fn setup_gateway(state: AppState) -> RiGateway {
+    let gateway_config = RiGatewayConfig::default();
+    let mut gateway = RiGateway::new(gateway_config);
+
+    // TODO: Register routes when RiGateway API is available
+    // gateway.route("/", get(root));
+    // gateway.route("/health", get(health_check));
+    // gateway.route("/api/example", post(example_endpoint));
+
+    gateway
+}
+
+// =============================================================================
+// Main Entry Point
+// =============================================================================
+
+/// Main entry point for the API service
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    println!("Starting {{ project_name }} v{{ project_version }}");
+    println!("Author: {{ author }}");
+
+    // Load configuration
+    let server_config = load_config();
+    let validation_config = ValidationConfig::default();
+
+    // Initialize modules
+    println!("Initializing modules...");
+
+    let validation = init_validation(&validation_config);
+    let logger = init_logger();
+
+    logger.info("Starting API service initialization");
+
+    // Create application state
+    let state = AppState {
+        validation,
+        logger,
+        config: server_config.clone(),
+    };
+
+    // Setup gateway
+    println!("Setting up gateway...");
+    let gateway = setup_gateway(state);
+
+    // Parse bind address
+    let addr: SocketAddr = server_config.bind_address.parse()
+        .expect("Invalid bind address");
+
+    // Start server
+    println!("Server listening on {}", addr);
+    println!("Press Ctrl+C to stop");
+
+    // TODO: Start the gateway server
+    // gateway.serve(addr).await?;
+
+    tokio::signal::ctrl_c().await?;
+    println!("Shutting down server...");
+
+    Ok(())
+}

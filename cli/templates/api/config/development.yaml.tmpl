@@ -1,0 +1,47 @@
+# =============================================================================
+# Development Configuration for {{ project_name }} API Service
+# =============================================================================
+# Development environment settings optimized for API development and testing.
+
+[server]
+bind_address = "127.0.0.1:8080"
+workers = 0
+debug = true
+request_timeout_secs = 60
+max_body_size = 10485760
+cors_enabled = true
+cors_origins = ["http://localhost:3000", "http://localhost:8080"]
+
+[server.tls]
+enabled = false
+
+[validation]
+enabled = true
+max_body_size = 10485760
+strict_mode = false
+validate_headers = true
+
+[logging]
+level = "debug"
+format = "pretty"
+console_enabled = true
+file_enabled = false
+include_source = true
+include_thread_id = true
+
+[gateway]
+rate_limit_enabled = false
+compression_enabled = true
+generate_request_id = true
+
+[health]
+enabled = true
+path = "/health"
+detailed = true
+timeout_secs = 5
+
+[metrics]
+enabled = true
+path = "/metrics"
+include_system_metrics = true
+collection_interval_secs = 15

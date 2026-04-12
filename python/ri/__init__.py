@@ -49,7 +49,7 @@ Example Usage:
     gateway = RiGateway()
 """
 
-__version__ = "0.1.8"
+__version__ = "0.1.9"
 __author__ = "Dunimd Team"
 __license__ = "Apache-2.0"
 

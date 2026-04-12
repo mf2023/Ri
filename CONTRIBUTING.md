@@ -82,7 +82,7 @@ Error: "TLS handshake failed: certificate validation error"
 
 **Environment:**
 - OS: Windows 11
-- Ri Version: 0.1.8
+- Ri Version: 0.1.9
 - Rust Version: 1.75.0
 ```
 

@@ -1,0 +1,355 @@
+# {{ project_name }}
+
+A production-ready web service built with the Ri middleware framework.
+
+## Overview
+
+{{ project_name }} is a high-performance web service that leverages the Ri middleware framework to provide:
+
+- **API Gateway**: HTTP server with routing and middleware support
+- **Caching Layer**: High-performance caching for response optimization
+- **Authentication**: JWT-based authentication and authorization
+- **Structured Logging**: Comprehensive logging with multiple output formats
+
+## Features
+
+- Asynchronous request handling with Tokio runtime
+- Redis and in-memory caching backends
+- JWT token authentication with refresh mechanism
+- Configurable middleware pipeline
+- Health check endpoints for monitoring
+- Metrics collection for observability
+- TLS/HTTPS support
+- Graceful shutdown
+
+## Project Structure
+
+```
+{{ project_name }}/
+├── Cargo.toml              # Project dependencies and configuration
+├── src/
+│   └── main.rs             # Main entry point and server initialization
+├── config/
+│   ├── development.yaml    # Development environment configuration
+│   └── production.yaml     # Production environment configuration
+└── README.md               # This file
+```
+
+## Quick Start
+
+### Prerequisites
+
+- Rust 1.70 or later
+- Cargo package manager
+- Redis server (optional, for distributed caching)
+
+### Installation
+
+1. Clone the repository:
+   ```bash
+   git clone <repository-url>
+   cd {{ project_name }}
+   ```
+
+2. Build the project:
+   ```bash
+   cargo build --release
+   ```
+
+3. Run the server:
+   ```bash
+   cargo run --release
+   ```
+
+### Development Mode
+
+For development with debug logging and hot reload:
+
+```bash
+cargo run
+```
+
+The server will start on `http://localhost:8080` by default.
+
+### Production Mode
+
+For production deployment:
+
+```bash
+cargo run --release
+```
+
+## Configuration
+
+Configuration can be provided through:
+
+1. **Configuration Files**: YAML files in the `config/` directory
+2. **Environment Variables**: Override any configuration value
+3. **Command-line Arguments**: Runtime configuration options
+
+### Environment Variables
+
+Key environment variables:
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `BIND_ADDRESS` | Server bind address | `0.0.0.0:8080` |
+| `JWT_SECRET` | JWT signing secret | (required in production) |
+| `REDIS_URL` | Redis connection URL | `redis://127.0.0.1:6379` |
+| `LOG_LEVEL` | Logging level | `info` |
+| `TLS_CERT_PATH` | TLS certificate path | - |
+| `TLS_KEY_PATH` | TLS private key path | - |
+
+### Configuration Files
+
+Edit the YAML files in the `config/` directory:
+
+- `development.yaml`: Development settings with debug logging
+- `production.yaml`: Production settings with security hardening
+
+## API Endpoints
+
+### Health Check
+
+```http
+GET /health
+```
+
+Returns the service health status.
+
+**Response:**
+```json
+{
+  "status": "success",
+  "data": {
+    "service": "{{ project_name }}",
+    "version": "{{ project_version }}",
+    "status": "healthy",
+    "uptime_secs": 3600
+  },
+  "timestamp": "2024-01-01T00:00:00Z"
+}
+```
+
+### Root Endpoint
+
+```http
+GET /
+```
+
+Returns a welcome message.
+
+**Response:**
+```json
+{
+  "status": "success",
+  "data": "Welcome to {{ project_name }} Web Service",
+  "timestamp": "2024-01-01T00:00:00Z"
+}
+```
+
+## Architecture
+
+### Ri Modules
+
+The service integrates the following Ri modules:
+
+1. **RiGateway**: HTTP server with routing
+   - Request routing and middleware
+   - TLS termination
+   - Rate limiting
+
+2. **RiCacheModule**: Caching layer
+   - Redis backend for distributed caching
+   - In-memory cache for single-instance deployments
+   - Configurable TTL and eviction policies
+
+3. **RiAuthModule**: Authentication system
+   - JWT token generation and validation
+   - Token refresh mechanism
+   - OAuth2 integration support
+
+4. **RiLogger**: Structured logging
+   - JSON and text output formats
+   - Log rotation and archival
+   - Integration with observability tools
+
+### Request Flow
+
+```
+Client Request
+    ↓
+RiGateway (routing, middleware)
+    ↓
+RiAuthModule (authentication)
+    ↓
+RiCacheModule (cache lookup)
+    ↓
+Business Logic
+    ↓
+Response (with caching)
+    ↓
+Client
+```
+
+## Deployment
+
+### Docker
+
+Build a Docker image:
+
+```bash
+docker build -t {{ project_name }}:latest .
+```
+
+Run the container:
+
+```bash
+docker run -p 8080:8080 \
+  -e JWT_SECRET=your-secret \
+  -e REDIS_URL=redis://redis:6379 \
+  {{ project_name }}:latest
+```
+
+### Kubernetes
+
+Deploy to Kubernetes using the provided manifests:
+
+```bash
+kubectl apply -f k8s/
+```
+
+### Systemd
+
+Create a systemd service file:
+
+```ini
+[Unit]
+Description={{ project_name }} Web Service
+After=network.target
+
+[Service]
+Type=simple
+User=www-data
+ExecStart=/usr/local/bin/{{ project_name }}
+Restart=on-failure
+Environment=JWT_SECRET=your-secret
+
+[Install]
+WantedBy=multi-user.target
+```
+
+## Monitoring
+
+### Health Checks
+
+Configure your load balancer to check `/health` endpoint.
+
+### Metrics
+
+Prometheus metrics are available at `/metrics` endpoint.
+
+### Logging
+
+Logs are written to stdout in JSON format. Configure your log aggregator to collect and analyze logs.
+
+## Security Considerations
+
+### Production Checklist
+
+- [ ] Change default JWT secret
+- [ ] Enable TLS/HTTPS
+- [ ] Configure rate limiting
+- [ ] Set up firewall rules
+- [ ] Enable security headers
+- [ ] Review CORS settings
+- [ ] Configure proper file permissions
+- [ ] Set up log rotation
+- [ ] Enable monitoring and alerting
+
+### Secrets Management
+
+Never commit secrets to version control. Use:
+
+- Environment variables
+- Secret management tools (HashiCorp Vault, AWS Secrets Manager)
+- Kubernetes secrets
+
+## Performance Tuning
+
+### Worker Threads
+
+Set the number of worker threads based on your workload:
+
+- **I/O-bound**: 2x CPU cores
+- **CPU-bound**: 1x CPU cores
+
+### Connection Pooling
+
+Adjust database and cache connection pool sizes:
+
+```yaml
+[database]
+pool_size = 20
+min_connections = 5
+
+[cache.redis]
+pool_size = 20
+```
+
+### Cache Configuration
+
+Optimize cache settings for your use case:
+
+```yaml
+[cache]
+default_ttl_secs = 300
+max_items = 10000
+```
+
+## Troubleshooting
+
+### Common Issues
+
+1. **Port already in use**
+   ```
+   Error: Address already in use
+   ```
+   Solution: Change the bind address or stop the conflicting service.
+
+2. **Redis connection failed**
+   ```
+   Error: Cannot connect to Redis
+   ```
+   Solution: Verify Redis is running and the URL is correct.
+
+3. **JWT validation failed**
+   ```
+   Error: Invalid token
+   ```
+   Solution: Ensure the JWT secret is consistent across instances.
+
+### Debug Mode
+
+Enable debug logging:
+
+```yaml
+[logging]
+level = "debug"
+```
+
+## Contributing
+
+Contributions are welcome! Please read the contributing guidelines before submitting a pull request.
+
+## License
+
+This project is licensed under the Apache License 2.0.
+
+## Author
+
+{{ author }}
+
+## Version
+
+{{ project_version }}

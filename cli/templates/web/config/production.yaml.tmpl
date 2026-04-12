@@ -1,0 +1,333 @@
+# =============================================================================
+# Production Configuration for {{ project_name }}
+# =============================================================================
+# This configuration file defines the production environment settings for the
+# web service. These settings are optimized for security, performance, and
+# reliability in a production deployment.
+#
+# IMPORTANT: Before deploying to production:
+# 1. Change all default secrets and keys
+# 2. Review and adjust resource limits
+# 3. Configure proper TLS certificates
+# 4. Set up monitoring and alerting
+#
+# Configuration Hierarchy:
+# 1. Environment variables (highest priority)
+# 2. This configuration file
+# 3. Default values in code (lowest priority)
+#
+# Template Variables:
+# - project_name: The name of the project
+
+# =============================================================================
+# Server Configuration
+# =============================================================================
+# Network and runtime settings for the production server.
+
+[server]
+# Network address to bind the server
+# Use 0.0.0.0 to accept connections from any interface
+bind_address = "0.0.0.0:8080"
+
+# Number of worker threads (0 = auto-detect based on CPU cores)
+# Recommended: Set to 2x CPU cores for I/O-bound workloads
+workers = 0
+
+# Disable debug mode for production
+debug = false
+
+# Request timeout in seconds (shorter for production)
+request_timeout_secs = 30
+
+# Maximum request body size in bytes (10 MB)
+max_body_size = 10485760
+
+# Enable CORS only if required by your application
+cors_enabled = false
+
+# Allowed CORS origins (restrict to your domain)
+cors_origins = []
+
+# =============================================================================
+# TLS Configuration
+# =============================================================================
+# TLS settings for secure HTTPS connections in production.
+# ALWAYS enable TLS in production environments.
+
+[server.tls]
+# Enable TLS/HTTPS (REQUIRED for production)
+enabled = true
+
+# Path to TLS certificate file (PEM format)
+# Use environment variable for security: ${TLS_CERT_PATH}
+cert_path = "/etc/ssl/certs/{{ project_name }}.crt"
+
+# Path to TLS private key file (PEM format)
+# Use environment variable for security: ${TLS_KEY_PATH}
+key_path = "/etc/ssl/private/{{ project_name }}.key"
+
+# Minimum TLS version
+min_version = "TLS1.2"
+
+# =============================================================================
+# Cache Configuration
+# =============================================================================
+# Caching settings for production environment.
+# Uses Redis for distributed caching across multiple instances.
+
+[cache]
+# Enable caching functionality
+enabled = true
+
+# Cache backend type: "redis" for production
+backend = "redis"
+
+# Default TTL for cached items in seconds
+default_ttl_secs = 300
+
+# Maximum number of items in memory cache (fallback)
+max_items = 10000
+
+# Enable cache statistics logging
+log_stats = false
+
+# =============================================================================
+# Redis Configuration
+# =============================================================================
+# Redis connection settings for distributed caching.
+# Required for multi-instance deployments.
+
+[cache.redis]
+# Redis connection URL
+# Use environment variable for security: ${REDIS_URL}
+url = "redis://redis.internal:6379"
+
+# Redis database number
+database = 0
+
+# Connection pool size
+pool_size = 20
+
+# Connection timeout in milliseconds
+connection_timeout_ms = 5000
+
+# Enable TLS for Redis connection
+tls_enabled = true
+
+# =============================================================================
+# Authentication Configuration
+# =============================================================================
+# Authentication and authorization settings for production.
+# Uses strong security settings for production deployments.
+
+[auth]
+# Enable authentication (REQUIRED for production)
+enabled = true
+
+# JWT secret key for token signing
+# IMPORTANT: Use environment variable in production: ${JWT_SECRET}
+# Generate a strong secret: openssl rand -base64 64
+jwt_secret = "CHANGE-THIS-TO-A-STRONG-SECRET-USE-ENVIRONMENT-VARIABLE"
+
+# JWT token expiration time in seconds (1 hour)
+token_expiry_secs = 3600
+
+# JWT issuer identifier
+issuer = "{{ project_name }}"
+
+# Enable token refresh mechanism
+enable_refresh = true
+
+# Token refresh expiration time in seconds (7 days)
+refresh_expiry_secs = 604800
+
+# Minimum password length
+min_password_length = 12
+
+# Require strong passwords
+require_strong_password = true
+
+# =============================================================================
+# OAuth2 Configuration (Optional)
+# =============================================================================
+# OAuth2 provider settings for third-party authentication.
+# Configure if using OAuth2 login in production.
+
+[auth.oauth]
+# Enable OAuth2 authentication
+enabled = false
+
+# OAuth2 provider: "google", "github", "custom"
+# provider = "github"
+
+# OAuth2 client ID (use environment variable)
+# client_id = "${OAUTH_CLIENT_ID}"
+
+# OAuth2 client secret (use environment variable)
+# client_secret = "${OAUTH_CLIENT_SECRET}"
+
+# OAuth2 callback URL
+# callback_url = "https://your-domain.com/auth/callback"
+
+# =============================================================================
+# Logging Configuration
+# =============================================================================
+# Logging settings for production environment.
+# Configured for structured logging with JSON format.
+
+[logging]
+# Log level: "info" for production (reduce noise)
+level = "info"
+
+# Log output format: "json" for production (structured logging)
+format = "json"
+
+# Enable console output
+console_enabled = true
+
+# Enable file output
+file_enabled = true
+
+# Log file path
+file_path = "/var/log/{{ project_name }}/app.log"
+
+# Maximum log file size in MB
+max_file_size_mb = 100
+
+# Number of rotated log files to keep
+max_files = 10
+
+# Include source code location in logs
+include_source = false
+
+# Include thread ID in logs
+include_thread_id = true
+
+# =============================================================================
+# Database Configuration
+# =============================================================================
+# Database connection settings for production.
+# Configure connection pooling for optimal performance.
+
+[database]
+# Enable database connectivity
+enabled = false
+
+# Database type: "postgres", "mysql", "sqlite"
+# type = "postgres"
+
+# Database connection URL (use environment variable)
+# url = "${DATABASE_URL}"
+
+# Connection pool size
+pool_size = 20
+
+# Minimum connections in pool
+min_connections = 5
+
+# Connection timeout in seconds
+connection_timeout_secs = 30
+
+# Enable SQL query logging (disable for performance)
+log_queries = false
+
+# =============================================================================
+# Gateway Configuration
+# =============================================================================
+# API gateway settings for request routing and middleware.
+
+[gateway]
+# Enable request rate limiting (IMPORTANT for production)
+rate_limit_enabled = true
+
+# Rate limit: requests per minute per IP
+rate_limit_per_minute = 100
+
+# Enable request compression
+compression_enabled = true
+
+# Enable response compression
+response_compression = true
+
+# Maximum request header size in bytes
+max_header_size = 8192
+
+# Enable request ID generation (for distributed tracing)
+generate_request_id = true
+
+# Trusted proxy IPs for X-Forwarded-For header
+trusted_proxies = ["10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16"]
+
+# =============================================================================
+# Health Check Configuration
+# =============================================================================
+# Health check endpoint settings for monitoring and load balancer integration.
+
+[health]
+# Enable health check endpoint
+enabled = true
+
+# Health check endpoint path
+path = "/health"
+
+# Enable detailed health checks (database, cache, etc.)
+detailed = false
+
+# Health check timeout in seconds
+timeout_secs = 5
+
+# =============================================================================
+# Metrics Configuration
+# =============================================================================
+# Metrics collection and export settings for monitoring.
+
+[metrics]
+# Enable metrics collection
+enabled = true
+
+# Metrics endpoint path (for Prometheus scraping)
+path = "/metrics"
+
+# Include system metrics (CPU, memory, etc.)
+include_system_metrics = true
+
+# Metrics collection interval in seconds
+collection_interval_secs = 60
+
+# =============================================================================
+# Security Configuration
+# =============================================================================
+# Additional security settings for production.
+
+[security]
+# Enable security headers
+headers_enabled = true
+
+# Content Security Policy header
+# csp = "default-src 'self'"
+
+# X-Frame-Options header
+x_frame_options = "DENY"
+
+# X-Content-Type-Options header
+x_content_type_options = "nosniff"
+
+# X-XSS-Protection header
+x_xss_protection = "1; mode=block"
+
+# Strict-Transport-Security header (HSTS)
+hsts_enabled = true
+hsts_max_age = 31536000
+hsts_include_subdomains = true
+
+# =============================================================================
+# Graceful Shutdown Configuration
+# =============================================================================
+# Settings for graceful server shutdown.
+
+[shutdown]
+# Graceful shutdown timeout in seconds
+timeout_secs = 30
+
+# Wait for in-flight requests to complete
+wait_for_requests = true

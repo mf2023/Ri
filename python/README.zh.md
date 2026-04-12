@@ -201,7 +201,7 @@ pip install ri
 或者添加到您的 `requirements.txt`：
 
 ```
-ri==0.1.8
+ri==0.1.9
 ```
 
 <h2 align="center">⚡ 快速开始</h2>

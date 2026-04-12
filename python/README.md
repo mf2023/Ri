@@ -201,7 +201,7 @@ pip install ri
 Or add to your `requirements.txt`:
 
 ```
-ri==0.1.8
+ri==0.1.9
 ```
 
 <h2 align="center">⚡ Quick Start</h2>

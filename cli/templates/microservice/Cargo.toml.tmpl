@@ -1,0 +1,94 @@
+# =============================================================================
+# Cargo Package Configuration for {{ project_name }} Microservice
+# =============================================================================
+# This file defines the Rust package metadata and dependencies for a microservice
+# built with the Ri middleware framework. This template provides a production-ready
+# starting point for building distributed microservices with service mesh
+# integration and comprehensive observability.
+#
+# Template Variables:
+# - project_name: The name of the project
+# - project_version: Initial version of the project
+# - author: Project author(s)
+# - ri_version: Version of the Ri framework to use
+
+[package]
+# Project name
+name = "{{ project_name }}"
+
+# Semantic versioning
+version = "{{ project_version }}"
+
+# Rust edition
+edition = "2021"
+
+# Project authors
+authors = ["{{ author }}"]
+
+# Short description
+description = "Microservice built with Ri middleware framework"
+
+# =============================================================================
+# Binary Configuration
+# =============================================================================
+
+[[bin]]
+name = "{{ project_name }}"
+path = "src/main.rs"
+
+# =============================================================================
+# Dependencies
+# =============================================================================
+# Core dependencies for building a microservice with Ri framework.
+
+[dependencies]
+# Ri middleware framework - provides service mesh and observability
+ri = { version = "{{ ri_version }}" }
+
+# Serialization framework
+serde = { version = "1", features = ["derive"] }
+
+# JSON serialization
+serde_json = "1"
+
+# Asynchronous runtime
+tokio = { version = "1", features = ["full"] }
+
+# Logging facade
+log = "0.4"
+
+# Tracing for distributed tracing
+tracing = "0.1"
+
+# Date and time handling
+chrono = { version = "0.4", features = ["serde"] }
+
+# UUID generation
+uuid = { version = "1.0", features = ["v4", "serde"] }
+
+# Async trait support
+async-trait = "0.1"
+
+# =============================================================================
+# Optional Dependencies
+# =============================================================================
+
+# Environment variable management
+dotenvy = "0.15"
+
+# CLI argument parsing
+clap = { version = "4", features = ["derive"] }
+
+# Health check endpoint
+hyper = { version = "0.14", features = ["server", "http1", "http2", "tcp"] }
+
+# =============================================================================
+# Development Dependencies
+# =============================================================================
+
+[dev-dependencies]
+# HTTP client for testing
+reqwest = { version = "0.11", features = ["json"] }
+
+# Temporary file creation
+tempfile = "3"

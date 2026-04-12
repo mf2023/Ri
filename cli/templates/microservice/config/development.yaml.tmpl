@@ -1,0 +1,48 @@
+# =============================================================================
+# Development Configuration for {{ project_name }} Microservice
+# =============================================================================
+# Development environment settings for microservice.
+
+[service]
+service_name = "{{ project_name }}"
+service_version = "{{ project_version }}"
+instance_id = "dev-instance-001"
+bind_address = "127.0.0.1:8080"
+workers = 0
+tls_enabled = false
+
+[mesh]
+enabled = true
+registry_url = "http://localhost:8500"
+namespace = "development"
+load_balancing = true
+lb_strategy = "round_robin"
+circuit_breaker = true
+cb_failure_threshold = 5
+cb_timeout_secs = 30
+service_discovery = true
+health_check_interval_secs = 10
+
+[observability]
+metrics_enabled = true
+metrics_path = "/metrics"
+tracing_enabled = true
+tracing_endpoint = "http://localhost:14268/api/traces"
+sampling_rate = 1.0
+logging_enabled = true
+log_level = "debug"
+log_format = "pretty"
+
+[logging]
+level = "debug"
+format = "pretty"
+console_enabled = true
+file_enabled = false
+include_source = true
+include_thread_id = true
+
+[health]
+enabled = true
+path = "/health"
+detailed = true
+timeout_secs = 5

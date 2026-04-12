@@ -1,0 +1,57 @@
+# =============================================================================
+# Production Configuration for {{ project_name }} Microservice
+# =============================================================================
+# Production environment settings for microservice.
+
+[service]
+service_name = "{{ project_name }}"
+service_version = "{{ project_version }}"
+instance_id = "${INSTANCE_ID}"
+bind_address = "0.0.0.0:8080"
+workers = 0
+tls_enabled = true
+tls_cert_path = "/etc/ssl/certs/{{ project_name }}.crt"
+tls_key_path = "/etc/ssl/private/{{ project_name }}.key"
+
+[mesh]
+enabled = true
+registry_url = "${REGISTRY_URL}"
+namespace = "production"
+load_balancing = true
+lb_strategy = "round_robin"
+circuit_breaker = true
+cb_failure_threshold = 5
+cb_timeout_secs = 30
+service_discovery = true
+health_check_interval_secs = 10
+
+[observability]
+metrics_enabled = true
+metrics_path = "/metrics"
+tracing_enabled = true
+tracing_endpoint = "${TRACING_ENDPOINT}"
+sampling_rate = 0.1
+logging_enabled = true
+log_level = "info"
+log_format = "json"
+
+[logging]
+level = "info"
+format = "json"
+console_enabled = true
+file_enabled = true
+file_path = "/var/log/{{ project_name }}/service.log"
+max_file_size_mb = 100
+max_files = 10
+include_source = false
+include_thread_id = true
+
+[health]
+enabled = true
+path = "/health"
+detailed = false
+timeout_secs = 5
+
+[shutdown]
+timeout_secs = 30
+wait_for_requests = true

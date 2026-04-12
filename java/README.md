@@ -87,14 +87,14 @@ Ri adopts a highly modular architecture with 18 core modules, enabling on-demand
 <dependency>
     <groupId>com.dunimd</groupId>
     <artifactId>ri</artifactId>
-    <version>0.1.8</version>
+    <version>0.1.9</version>
 </dependency>
 ```
 
 #### Gradle
 
 ```groovy
-implementation 'com.dunimd:ri:0.1.8'
+implementation 'com.dunimd:ri:0.1.9'
 ```
 
 <h2 align="center">⚡ Quick Start</h2>

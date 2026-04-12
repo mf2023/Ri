@@ -1,0 +1,123 @@
+# {{ project_name }}
+
+A production-ready background worker service built with the Ri middleware framework.
+
+## Overview
+
+{{ project_name }} is a high-performance background worker service that provides:
+
+- **Queue Processing**: Asynchronous task consumption from message queues
+- **Device Control**: Device management and command execution
+- **Structured Logging**: Comprehensive logging for monitoring
+
+## Features
+
+- Multiple queue backend support (RabbitMQ, Redis, Kafka, Memory)
+- Configurable worker concurrency
+- Task prioritization
+- Automatic retry mechanism
+- Dead letter queue for failed tasks
+- Device health monitoring
+- Graceful shutdown
+
+## Quick Start
+
+### Prerequisites
+
+- Rust 1.70 or later
+- RabbitMQ or Redis (optional, for distributed queues)
+
+### Installation
+
+```bash
+cargo build --release
+cargo run --release
+```
+
+## Task Types
+
+### Example Task
+
+```json
+{
+  "id": "task-uuid",
+  "task_type": "example",
+  "payload": {"data": "value"},
+  "priority": 1,
+  "created_at": "2024-01-01T00:00:00Z",
+  "retry_count": 0
+}
+```
+
+### Device Task
+
+```json
+{
+  "id": "task-uuid",
+  "task_type": "device",
+  "payload": {"command": "status"},
+  "priority": 2,
+  "created_at": "2024-01-01T00:00:00Z",
+  "retry_count": 0
+}
+```
+
+## Configuration
+
+Configuration via YAML files or environment variables:
+
+- `development.yaml`: Development settings
+- `production.yaml`: Production settings
+
+### Environment Variables
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `WORKER_ID` | Worker identifier | auto-generated |
+| `RABBITMQ_URL` | RabbitMQ connection URL | - |
+| `LOG_LEVEL` | Logging level | `info` |
+
+## Architecture
+
+### Ri Modules
+
+1. **RiQueueModule**: Task queue consumer
+2. **RiDeviceControlModule**: Device management
+3. **RiLogger**: Structured logging
+
+## Deployment
+
+### Docker
+
+```bash
+docker build -t {{ project_name }}:latest .
+docker run {{ project_name }}:latest
+```
+
+### Kubernetes
+
+```bash
+kubectl apply -f k8s/
+```
+
+## Monitoring
+
+### Metrics
+
+Worker metrics include:
+- Tasks processed
+- Tasks succeeded/failed
+- Processing latency
+- Queue depth
+
+### Health Checks
+
+Workers report health status for monitoring.
+
+## Author
+
+{{ author }}
+
+## Version
+
+{{ project_version }}

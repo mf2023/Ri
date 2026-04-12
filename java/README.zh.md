@@ -87,14 +87,14 @@ Ri 采用高度模块化的架构，拥有 18 个核心模块，支持按需组�
 <dependency>
     <groupId>com.dunimd</groupId>
     <artifactId>ri</artifactId>
-    <version>0.1.8</version>
+    <version>0.1.9</version>
 </dependency>
 ```
 
 #### Gradle
 
 ```groovy
-implementation 'com.dunimd:ri:0.1.8'
+implementation 'com.dunimd:ri:0.1.9'
 ```
 
 <h2 align="center">⚡ 快速开始</h2>

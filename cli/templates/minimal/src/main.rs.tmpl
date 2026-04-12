@@ -1,0 +1,68 @@
+// =============================================================================
+// Main Entry Point for {{ project_name }} Minimal Service
+// =============================================================================
+// This file implements the main entry point for a minimal service built with
+// the Ri middleware framework. This template provides the simplest possible
+// starting point with just the application builder and logger.
+//
+// Architecture Overview:
+// - RiAppBuilder: Application initialization and configuration
+// - RiLogger: Basic structured logging
+//
+// Template Variables:
+// - project_name: The name of the project
+// - project_version: Version of the project
+// - author: Project author
+
+use ri::{
+    RiAppBuilder,
+    RiLogger,
+    RiLogConfig,
+};
+
+// =============================================================================
+// Main Entry Point
+// =============================================================================
+// The main function demonstrates the minimal Ri application setup.
+
+/// Main entry point for the minimal service
+///
+/// This function demonstrates the simplest Ri application setup with
+// just an app builder and logger. Use this template as a starting point
+/// for simple applications that need basic logging but don't require
+/// the full middleware stack.
+///
+/// # Panics
+/// Panics if logger initialization fails
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    // Print startup banner
+    println!("Starting {{ project_name }} v{{ project_version }}");
+    println!("Author: {{ author }}");
+
+    // Create application builder
+    let app = RiAppBuilder::new()
+        .name("{{ project_name }}")
+        .version("{{ project_version }}");
+
+    // Initialize logger with default configuration
+    let log_config = RiLogConfig::default();
+    let logger = RiLogger::new(log_config);
+
+    // Log startup message
+    logger.info("Application started");
+    logger.info(&format!("Service: {{ project_name }} v{{ project_version }}"));
+
+    // Your application logic goes here
+    // This is where you would add your business logic
+
+    logger.info("Application running, press Ctrl+C to stop");
+
+    // Wait for shutdown signal
+    tokio::signal::ctrl_c().await?;
+
+    logger.info("Shutting down application");
+    println!("Goodbye!");
+
+    Ok(())
+}

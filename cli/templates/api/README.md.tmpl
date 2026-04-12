@@ -1,0 +1,93 @@
+# {{ project_name }}
+
+A production-ready API service built with the Ri middleware framework.
+
+## Overview
+
+{{ project_name }} is a high-performance API service that provides:
+
+- **API Gateway**: HTTP server with routing and middleware
+- **Request Validation**: Comprehensive input validation and schema enforcement
+- **Structured Logging**: Detailed logging for debugging and monitoring
+
+## Features
+
+- RESTful API endpoint support
+- Request/response validation
+- Configurable middleware pipeline
+- Health check endpoints
+- Metrics collection
+- TLS/HTTPS support
+- Rate limiting
+
+## Quick Start
+
+### Prerequisites
+
+- Rust 1.70 or later
+- Cargo package manager
+
+### Installation
+
+```bash
+cargo build --release
+cargo run --release
+```
+
+## API Endpoints
+
+### Health Check
+
+```http
+GET /health
+```
+
+### Root
+
+```http
+GET /
+```
+
+### Example Endpoint
+
+```http
+POST /api/example
+Content-Type: application/json
+
+{
+  "name": "example",
+  "value": 42
+}
+```
+
+## Configuration
+
+Configuration via YAML files or environment variables:
+
+- `development.yaml`: Development settings
+- `production.yaml`: Production settings
+
+## Architecture
+
+### Ri Modules
+
+1. **RiGateway**: HTTP routing and middleware
+2. **RiValidationModule**: Request validation
+3. **RiLogger**: Structured logging
+
+## Deployment
+
+### Docker
+
+```bash
+docker build -t {{ project_name }}:latest .
+docker run -p 8080:8080 {{ project_name }}:latest
+```
+
+## Author
+
+{{ author }}
+
+## Version
+
+{{ project_version }}

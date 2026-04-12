@@ -222,7 +222,7 @@ sudo yum install -y cmake gcc-c++ make
 
 ```toml
 [dependencies]
-ri = "0.1.8"
+ri = "0.1.9"
 ```
 
 或者使用 cargo add：

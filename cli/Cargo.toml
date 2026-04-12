@@ -1,0 +1,197 @@
+# Copyright © 2025-2026 Wenze Wei. All Rights Reserved.
+#
+# This file is part of Ri.
+# The Ri project belongs to the Dunimd Team.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# You may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# =============================================================================
+# Cargo Package Configuration for Ri CLI (ric)
+# =============================================================================
+# This file defines the Rust package metadata, dependencies, and build configuration
+# for the Ri CLI tool (ric). Ric is a powerful command-line interface for managing
+# Ri framework projects, providing commands for project creation, building, running,
+# and configuration management.
+#
+# The CLI tool integrates with the parent Ri framework to provide:
+# - Project scaffolding with multiple templates (default, gateway, microservice)
+# - Build management for different targets (Python, Java, C, native)
+# - Configuration file management and validation
+# - Development workflow automation
+#
+# Key Features:
+# - Interactive command-line interface with colored output
+# - Progress indicators for long-running operations
+# - Template-based project generation
+# - Configuration hot-reload support
+#
+# Dependencies Strategy:
+# - Minimal dependencies on the parent Ri crate (no default features)
+# - Rich CLI libraries for user experience (clap, colored, indicatif)
+# - Template engine for code generation (tera)
+# - Async runtime for concurrent operations (tokio)
+
+# =============================================================================
+# Package Definition
+# =============================================================================
+# Core package metadata including name, version, edition, and categorization.
+# This information is used for crate publishing, dependency resolution,
+# and documentation generation.
+
+[package]
+# Package name used for crate publishing and binary executable
+name = "ric"
+
+# Semantic version of the package
+# Follows MAJOR.MINOR.PATCH format
+version = "0.1.0"
+
+# Rust edition determines language features and behavior
+# 2021 edition provides disjoint capture in closures, panic macro consistency, etc.
+edition = "2021"
+
+# Package authors for crates.io and documentation
+authors = ["Dunimd Team"]
+
+# Short description for crates.io and package managers
+description = "Ri CLI - Command-line interface tool for Ri framework"
+
+# Source code repository URL
+repository = "https://github.com/mf2023/Ri"
+
+# Software license for the package
+license = "Apache-2.0"
+
+# Keywords for crates.io search and categorization
+keywords = ["cli", "ri", "middleware", "framework"]
+
+# Categories for crates.io browsing
+categories = ["command-line-utilities", "development-tools"]
+
+# =============================================================================
+# Binary Configuration
+# =============================================================================
+# Defines the main executable binary for the CLI tool.
+# The binary is named "ric" and will be available in PATH after installation.
+
+[[bin]]
+# Binary name (used for the executable file)
+name = "ric"
+
+# Path to the binary source file
+path = "src/main.rs"
+
+# =============================================================================
+# Library Configuration
+# =============================================================================
+# Defines the library output for code sharing and testing.
+# The library exposes CLI functionality for programmatic use.
+
+[lib]
+# Library name (used for the output file)
+name = "ric"
+
+# Path to the library source file
+path = "src/lib.rs"
+
+# =============================================================================
+# Dependencies Configuration
+# =============================================================================
+# External dependencies required for CLI functionality.
+# Dependencies are carefully selected to provide rich features while maintaining
+# fast compilation and minimal binary size.
+
+[dependencies]
+# Parent Ri framework dependency
+# Uses path dependency for local development
+# Disables default features to minimize compilation time and binary size
+# CLI tool doesn't need all Ri features (no protocol, no database drivers, etc.)
+ri = { path = "..", default-features = false, features = [] }
+
+# Command-line argument parsing with derive macros
+# Features enabled:
+# - derive: Allows using #[derive(Parser, Subcommand)] for CLI definition
+# - cargo: Provides automatic version and author information from Cargo.toml
+# - wrap_help: Wraps help text to terminal width for better readability
+# - color: Enables colored output in help messages
+clap = { version = "4", features = ["derive", "cargo", "wrap_help", "color"] }
+
+# Serialization and deserialization framework with derive macro support
+# Used for configuration file parsing and template data serialization
+serde = { version = "1", features = ["derive"] }
+
+# YAML configuration file parsing support
+# Primary format for Ri project configuration files
+serde_yaml = "0.9"
+
+# JSON serialization support
+# Used for structured data output and API responses
+serde_json = "1"
+
+# Template engine for code generation
+# Powers the project scaffolding system with customizable templates
+# Supports template inheritance, filters, and variables
+tera = "1"
+
+# Ergonomic error handling with automatic error conversion
+# Provides the `anyhow::Result` type for simplified error propagation
+anyhow = "1"
+
+# Custom error type derivation
+# Used for defining domain-specific error types with minimal boilerplate
+thiserror = "2"
+
+# Terminal text coloring and styling
+# Provides colored output for better user experience
+# Supports automatic color detection for different terminal types
+colored = "2"
+
+# Progress bars and spinners for long-running operations
+# Used for build progress, project creation, and other time-consuming tasks
+# Features include spinners, progress bars, and multi-progress support
+indicatif = "0.17"
+
+# Interactive command-line prompts
+# Used for user input during project creation and configuration
+# Supports text input, selection, confirmation, and password prompts
+dialoguer = "0.11"
+
+# Asynchronous runtime for concurrent operations
+# Full feature set enabled for maximum flexibility
+# Used for async command execution and concurrent task management
+tokio = { version = "1", features = ["full"] }
+
+# Date and time handling with serde integration
+# Used for timestamp generation and time-based operations
+chrono = { version = "0.4", features = ["serde"] }
+
+# UUID generation for unique identifiers
+# v4 feature enables random UUID generation
+# Used for generating unique project IDs and session tokens
+uuid = { version = "1.0", features = ["v4"] }
+
+# Regular expression support for pattern matching
+# Used for input validation and text processing
+regex = "1"
+
+# Recursive directory walking
+# Used for project structure traversal and file operations
+walkdir = "2"
+
+# TOML configuration file parsing support
+# Alternative configuration format for Rust projects
+toml = "0.8"
+
+# Async trait support
+# Used for async trait definitions in generated code
+async-trait = "0.1"

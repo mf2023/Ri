@@ -1,0 +1,43 @@
+# =============================================================================
+# Production Configuration for {{ project_name }} Worker Service
+# =============================================================================
+# Production environment settings for background worker service.
+
+[worker]
+consumer_id = "${WORKER_ID}"
+worker_count = 8
+task_timeout_secs = 300
+max_retries = 3
+enable_priority = true
+
+[queue]
+backend = "rabbitmq"
+url = "${RABBITMQ_URL}"
+queue_name = "tasks"
+dead_letter_enabled = true
+dead_letter_queue = "tasks.dead"
+
+[device_control]
+enabled = true
+connection_timeout_secs = 30
+health_monitoring = true
+health_check_interval_secs = 60
+
+[logging]
+level = "info"
+format = "json"
+console_enabled = true
+file_enabled = true
+file_path = "/var/log/{{ project_name }}/worker.log"
+max_file_size_mb = 100
+max_files = 10
+include_source = false
+include_thread_id = true
+
+[metrics]
+enabled = true
+collection_interval_secs = 60
+
+[shutdown]
+timeout_secs = 60
+wait_for_tasks = true

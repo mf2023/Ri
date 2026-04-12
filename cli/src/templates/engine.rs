@@ -1,0 +1,654 @@
+// Copyright © 2025-2026 Wenze Wei. All Rights Reserved.
+//
+// This file is part of Ri.
+// The Ri project belongs to the Dunimd Team.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// You may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+//! Template Rendering Engine
+//!
+//! This module provides the core template rendering engine for the Ri CLI.
+//! It uses Tera as the underlying template engine and provides a high-level API
+//! for template management and project generation.
+//!
+//! # Features
+//!
+//! - **Template Management**: Load, cache, and manage multiple templates
+//! - **Variable Substitution**: Dynamic variable replacement with type safety
+//! - **File Generation**: Generate project files from templates
+//! - **Template Discovery**: Automatic discovery and listing of available templates
+//! - **Error Handling**: Comprehensive error messages with context
+//!
+//! # Architecture
+//!
+//! The engine is built around the `TemplateEngine` struct which encapsulates:
+//!
+//! - A Tera instance for template processing
+//! - Template registry for metadata storage
+//! - Variable validation and default value management
+//!
+//! # Usage
+//!
+//! ```rust,ignore
+//! use ric::templates::engine::TemplateEngine;
+//! use std::collections::HashMap;
+//!
+//! // Create a new engine instance
+//! let engine = TemplateEngine::new()?;
+//!
+//! // List all available templates
+//! let templates = engine.list_templates();
+//!
+//! // Get information about a specific template
+//! let info = engine.get_template_info("web")?;
+//!
+//! // Render a template with variables
+//! let mut vars = HashMap::new();
+//! vars.insert("project_name".to_string(), "my-app".to_string());
+//! let rendered = engine.render_template("web", &vars)?;
+//!
+//! // Create a complete project
+//! engine.create_project("my-app", "web", &vars, "./output")?;
+//! ```
+
+use anyhow::{Context, Result};
+use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
+use std::path::{Path, PathBuf};
+use tera::{Context as TeraContext, Tera};
+
+// =============================================================================
+// Template Metadata Structures
+// =============================================================================
+
+/// Template metadata and configuration
+///
+/// Contains all information about a template including its identity,
+/// description, features, and required variables.
+///
+/// # Fields
+///
+/// - `name`: Unique identifier for the template (e.g., "web", "api")
+/// - `display_name`: Human-readable name for display purposes
+/// - `description`: Detailed description of what the template provides
+/// - `author`: Template author or maintainer
+/// - `version`: Template version following semantic versioning
+/// - `features`: List of key features provided by the template
+/// - `variables`: Template variables with their definitions and defaults
+/// - `files`: List of files that will be generated
+///
+/// # Example
+///
+/// ```rust,ignore
+/// let info = TemplateInfo {
+///     name: "web".to_string(),
+///     display_name: "Web Application".to_string(),
+///     description: "Full-featured web application template".to_string(),
+///     author: "Dunimd Team".to_string(),
+///     version: "1.0.0".to_string(),
+///     features: vec!["HTTP Server".to_string(), "Routing".to_string()],
+///     variables: vec![
+///         TemplateVariable {
+///             name: "port".to_string(),
+///             description: "HTTP server port".to_string(),
+///             default_value: "8080".to_string(),
+///             required: false,
+///             var_type: "integer".to_string(),
+///         },
+///     ],
+///     files: vec![
+///         TemplateFile {
+///             source: "Cargo.toml.tera".to_string(),
+///             destination: "Cargo.toml".to_string(),
+///         },
+///     ],
+/// };
+/// ```
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TemplateInfo {
+    /// Unique template identifier (lowercase, no spaces)
+    pub name: String,
+
+    /// Human-readable display name
+    pub display_name: String,
+
+    /// Detailed description of the template
+    pub description: String,
+
+    /// Template author or maintainer
+    pub author: String,
+
+    /// Template version (semantic versioning)
+    pub version: String,
+
+    /// List of key features provided by the template
+    pub features: Vec<String>,
+
+    /// Template variables with definitions
+    pub variables: Vec<TemplateVariable>,
+
+    /// Files to be generated by this template
+    pub files: Vec<TemplateFile>,
+}
+
+/// Template variable definition
+///
+/// Describes a single variable that can be customized in a template.
+/// Variables support type checking and default values.
+///
+/// # Fields
+///
+/// - `name`: Variable name used in templates (e.g., "project_name")
+/// - `description`: Human-readable description of the variable's purpose
+/// - `default_value`: Default value if not provided by user
+/// - `required`: Whether this variable must be provided
+/// - `var_type`: Expected type (string, integer, boolean, etc.)
+///
+/// # Example
+///
+/// ```rust,ignore
+/// let var = TemplateVariable {
+///     name: "port".to_string(),
+///     description: "HTTP server listening port".to_string(),
+///     default_value: "8080".to_string(),
+///     required: false,
+///     var_type: "integer".to_string(),
+/// };
+/// ```
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TemplateVariable {
+    /// Variable name (used in template as {{ name }})
+    pub name: String,
+
+    /// Human-readable description
+    pub description: String,
+
+    /// Default value if not provided
+    pub default_value: String,
+
+    /// Whether this variable is required
+    pub required: bool,
+
+    /// Expected type (string, integer, boolean, etc.)
+    pub var_type: String,
+}
+
+/// Template file definition
+///
+/// Describes a single file to be generated from a template.
+///
+/// # Fields
+///
+/// - `source`: Template file path relative to template directory
+/// - `destination`: Output file path relative to project root
+///
+/// # Example
+///
+/// ```rust,ignore
+/// let file = TemplateFile {
+///     source: "src/main.rs.tera".to_string(),
+///     destination: "src/main.rs".to_string(),
+/// };
+/// ```
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TemplateFile {
+    /// Template source file path
+    pub source: String,
+
+    /// Output destination file path
+    pub destination: String,
+}
+
+// =============================================================================
+// Template Engine
+// =============================================================================
+
+/// Template rendering engine
+///
+/// The main engine for template processing and project generation.
+/// Manages template loading, rendering, and file generation.
+///
+/// # Features
+///
+/// - **Template Registry**: Maintains a registry of all available templates
+/// - **Variable Management**: Handles variable validation and defaults
+/// - **File Generation**: Creates project files from rendered templates
+/// - **Error Context**: Provides detailed error messages with context
+///
+/// # Example
+///
+/// ```rust,ignore
+/// // Create engine
+/// let engine = TemplateEngine::new()?;
+///
+/// // List templates
+/// for template in engine.list_templates() {
+///     println!("{}: {}", template.name, template.description);
+/// }
+///
+/// // Create project
+/// let mut vars = HashMap::new();
+/// vars.insert("project_name".to_string(), "my-app".to_string());
+/// engine.create_project("my-app", "web", &vars, "./output")?;
+/// ```
+pub struct TemplateEngine {
+    /// Tera template engine instance
+    tera: Tera,
+
+    /// Template registry mapping template names to their metadata
+    templates: HashMap<String, TemplateInfo>,
+
+    /// Base directory for template files
+    template_dir: PathBuf,
+}
+
+impl TemplateEngine {
+    /// Create a new template engine instance
+    ///
+    /// Initializes the Tera template engine and loads all available templates
+    /// from the template directory.
+    ///
+    /// # Returns
+    ///
+    /// Returns `Ok(TemplateEngine)` on success.
+    /// Returns an error if template initialization fails.
+    ///
+    /// # Example
+    ///
+    /// ```rust,ignore
+    /// let engine = TemplateEngine::new()?;
+    /// ```
+    pub fn new() -> Result<Self> {
+        let template_dir = Self::find_template_dir()?;
+
+        // Initialize Tera with template directory
+        let tera = Tera::new(&format!("{}/**/*", template_dir.display()))
+            .context("Failed to initialize Tera template engine")?;
+
+        // Load template metadata
+        let templates = Self::load_template_registry()?;
+
+        Ok(Self {
+            tera,
+            templates,
+            template_dir,
+        })
+    }
+
+    /// Find the template directory
+    ///
+    /// Searches for the template directory in multiple locations:
+    /// 1. Current working directory: `./templates`
+    /// 2. Executable directory: `<exe_dir>/templates`
+    ///
+    /// # Returns
+    ///
+    /// Returns the path to the template directory.
+    /// Returns an error if the directory cannot be found.
+    fn find_template_dir() -> Result<PathBuf> {
+        let search_paths = vec![
+            PathBuf::from("templates"),
+            std::env::current_exe()
+                .ok()
+                .and_then(|exe| exe.parent().map(|p| p.join("templates")))
+                .unwrap_or_default(),
+        ];
+
+        for path in search_paths {
+            if path.exists() {
+                return Ok(path);
+            }
+        }
+
+        Err(anyhow::anyhow!(
+            "Template directory not found. Searched in: {:?}",
+            search_paths
+        ))
+    }
+
+    /// Load the template registry
+    ///
+    /// Creates a registry of all available templates with their metadata.
+    /// This is a static registry for the built-in templates.
+    ///
+    /// # Returns
+    ///
+    /// Returns a HashMap mapping template names to their metadata.
+    fn load_template_registry() -> Result<HashMap<String, TemplateInfo>> {
+        let mut registry = HashMap::new();
+
+        // Register built-in templates
+        registry.insert("web".to_string(), super::web::get_template_info());
+        registry.insert("api".to_string(), super::api::get_template_info());
+        registry.insert("worker".to_string(), super::worker::get_template_info());
+        registry.insert("microservice".to_string(), super::microservice::get_template_info());
+        registry.insert("minimal".to_string(), super::minimal::get_template_info());
+
+        Ok(registry)
+    }
+
+    /// List all available templates
+    ///
+    /// Returns a list of all registered templates with their metadata.
+    ///
+    /// # Returns
+    ///
+    /// Returns a vector of `TemplateInfo` for all available templates.
+    ///
+    /// # Example
+    ///
+    /// ```rust,ignore
+    /// let templates = engine.list_templates();
+    /// for template in templates {
+    ///     println!("{}: {}", template.name, template.description);
+    /// }
+    /// ```
+    pub fn list_templates(&self) -> Vec<TemplateInfo> {
+        self.templates.values().cloned().collect()
+    }
+
+    /// Get information about a specific template
+    ///
+    /// Retrieves the metadata for a template by its name.
+    ///
+    /// # Arguments
+    ///
+    /// * `name` - Template name (e.g., "web", "api")
+    ///
+    /// # Returns
+    ///
+    /// Returns `Ok(TemplateInfo)` if the template exists.
+    /// Returns an error if the template is not found.
+    ///
+    /// # Example
+    ///
+    /// ```rust,ignore
+    /// let info = engine.get_template_info("web")?;
+    /// println!("Template: {}", info.display_name);
+    /// println!("Features: {:?}", info.features);
+    /// ```
+    pub fn get_template_info(&self, name: &str) -> Result<TemplateInfo> {
+        self.templates
+            .get(name)
+            .cloned()
+            .ok_or_else(|| anyhow::anyhow!("Template not found: {}", name))
+    }
+
+    /// Render a template with variables
+    ///
+    /// Renders a template file using the provided variables.
+    /// Variables are merged with default values from the template definition.
+    ///
+    /// # Arguments
+    ///
+    /// * `template_name` - Name of the template (e.g., "web")
+    /// * `template_file` - Template file path relative to template directory
+    /// * `variables` - Variables for template rendering
+    ///
+    /// # Returns
+    ///
+    /// Returns `Ok(String)` containing the rendered content.
+    /// Returns an error if rendering fails.
+    ///
+    /// # Example
+    ///
+    /// ```rust,ignore
+    /// let mut vars = HashMap::new();
+    /// vars.insert("project_name".to_string(), "my-app".to_string());
+    /// let content = engine.render_template_file("web", "Cargo.toml.tera", &vars)?;
+    /// ```
+    pub fn render_template_file(
+        &self,
+        template_name: &str,
+        template_file: &str,
+        variables: &HashMap<String, String>,
+    ) -> Result<String> {
+        // Get template info
+        let template_info = self.get_template_info(template_name)?;
+
+        // Build Tera context with variables and defaults
+        let mut context = TeraContext::new();
+
+        // Add default values first
+        for var in &template_info.variables {
+            if let Some(value) = variables.get(&var.name) {
+                context.insert(&var.name, value);
+            } else {
+                context.insert(&var.name, &var.default_value);
+            }
+        }
+
+        // Add any additional variables not in the template definition
+        for (key, value) in variables {
+            if !context.contains_key(key) {
+                context.insert(key, value);
+            }
+        }
+
+        // Render the template
+        let template_path = format!("{}/{}", template_name, template_file);
+        let output = self
+            .tera
+            .render(&template_path, &context)
+            .with_context(|| format!("Failed to render template: {}", template_path))?;
+
+        Ok(output)
+    }
+
+    /// Create a project from a template
+    ///
+    /// Generates a complete project structure from a template.
+    /// Creates all necessary directories and files based on the template definition.
+    ///
+    /// # Arguments
+    ///
+    /// * `project_name` - Name of the project to create
+    /// * `template_name` - Name of the template to use
+    /// * `variables` - Template variables (merged with defaults)
+    /// * `output_path` - Directory where the project will be created
+    ///
+    /// # Returns
+    ///
+    /// Returns `Ok(())` on success.
+    /// Returns an error if project creation fails.
+    ///
+    /// # Example
+    ///
+    /// ```rust,ignore
+    /// let mut vars = HashMap::new();
+    /// vars.insert("project_name".to_string(), "my-web-app".to_string());
+    /// vars.insert("port".to_string(), "3000".to_string());
+    ///
+    /// engine.create_project("my-web-app", "web", &vars, "./projects")?;
+    /// ```
+    pub fn create_project(
+        &self,
+        project_name: &str,
+        template_name: &str,
+        variables: &HashMap<String, String>,
+        output_path: &Path,
+    ) -> Result<()> {
+        // Get template info
+        let template_info = self.get_template_info(template_name)?;
+
+        // Create project directory
+        let project_dir = output_path.join(project_name);
+        std::fs::create_dir_all(&project_dir)
+            .with_context(|| format!("Failed to create project directory: {}", project_dir.display()))?;
+
+        // Generate each file
+        for file in &template_info.files {
+            // Render the template
+            let content = self.render_template_file(template_name, &file.source, variables)?;
+
+            // Determine output path
+            let output_file = project_dir.join(&file.destination);
+
+            // Create parent directories if needed
+            if let Some(parent) = output_file.parent() {
+                std::fs::create_dir_all(parent)
+                    .with_context(|| format!("Failed to create directory: {}", parent.display()))?;
+            }
+
+            // Write the file
+            std::fs::write(&output_file, content)
+                .with_context(|| format!("Failed to write file: {}", output_file.display()))?;
+        }
+
+        Ok(())
+    }
+
+    /// Validate template variables
+    ///
+    /// Validates that all required variables are provided and have correct types.
+    ///
+    /// # Arguments
+    ///
+    /// * `template_name` - Name of the template
+    /// * `variables` - Variables to validate
+    ///
+    /// # Returns
+    ///
+    /// Returns `Ok(())` if validation passes.
+    /// Returns an error if validation fails.
+    ///
+    /// # Example
+    ///
+    /// ```rust,ignore
+    /// let mut vars = HashMap::new();
+    /// vars.insert("project_name".to_string(), "my-app".to_string());
+    ///
+    /// engine.validate_variables("web", &vars)?;
+    /// ```
+    pub fn validate_variables(
+        &self,
+        template_name: &str,
+        variables: &HashMap<String, String>,
+    ) -> Result<()> {
+        let template_info = self.get_template_info(template_name)?;
+
+        // Check required variables
+        for var in &template_info.variables {
+            if var.required && !variables.contains_key(&var.name) {
+                return Err(anyhow::anyhow!(
+                    "Required variable '{}' is missing for template '{}'",
+                    var.name,
+                    template_name
+                ));
+            }
+        }
+
+        // Validate variable types
+        for (name, value) in variables {
+            if let Some(var_def) = template_info.variables.iter().find(|v| &v.name == name) {
+                Self::validate_variable_type(name, value, &var_def.var_type)?;
+            }
+        }
+
+        Ok(())
+    }
+
+    /// Validate a single variable's type
+    ///
+    /// Checks if a value matches the expected type.
+    ///
+    /// # Arguments
+    ///
+    /// * `name` - Variable name
+    /// * `value` - Variable value
+    /// * `expected_type` - Expected type (string, integer, boolean, etc.)
+    ///
+    /// # Returns
+    ///
+    /// Returns `Ok(())` if the type matches.
+    /// Returns an error if the type doesn't match.
+    fn validate_variable_type(name: &str, value: &str, expected_type: &str) -> Result<()> {
+        match expected_type {
+            "string" => Ok(()),
+            "integer" => {
+                value
+                    .parse::<i64>()
+                    .with_context(|| format!("Variable '{}' must be an integer, got: {}", name, value))?;
+                Ok(())
+            }
+            "boolean" => {
+                if !["true", "false", "yes", "no", "1", "0"].contains(&value.to_lowercase().as_str()) {
+                    return Err(anyhow::anyhow!(
+                        "Variable '{}' must be a boolean (true/false), got: {}",
+                        name,
+                        value
+                    ));
+                }
+                Ok(())
+            }
+            _ => Ok(()), // Unknown types are accepted
+        }
+    }
+}
+
+impl Default for TemplateEngine {
+    fn default() -> Self {
+        Self::new().expect("Failed to create default TemplateEngine")
+    }
+}
+
+// =============================================================================
+// Tests
+// =============================================================================
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_template_info_serialization() {
+        let info = TemplateInfo {
+            name: "test".to_string(),
+            display_name: "Test Template".to_string(),
+            description: "A test template".to_string(),
+            author: "Test Author".to_string(),
+            version: "1.0.0".to_string(),
+            features: vec!["Feature 1".to_string()],
+            variables: vec![],
+            files: vec![],
+        };
+
+        let json = serde_json::to_string(&info).unwrap();
+        let deserialized: TemplateInfo = serde_json::from_str(&json).unwrap();
+        assert_eq!(info.name, deserialized.name);
+    }
+
+    #[test]
+    fn test_template_variable_required() {
+        let var = TemplateVariable {
+            name: "test_var".to_string(),
+            description: "Test variable".to_string(),
+            default_value: "default".to_string(),
+            required: true,
+            var_type: "string".to_string(),
+        };
+
+        assert!(var.required);
+    }
+
+    #[test]
+    fn test_template_file_paths() {
+        let file = TemplateFile {
+            source: "src/main.rs.tera".to_string(),
+            destination: "src/main.rs".to_string(),
+        };
+
+        assert!(file.source.ends_with(".tera"));
+        assert!(!file.destination.ends_with(".tera"));
+    }
+}

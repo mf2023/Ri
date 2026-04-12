@@ -1,0 +1,88 @@
+# =============================================================================
+# Cargo Package Configuration for {{ project_name }}
+# =============================================================================
+# This file defines the Rust package metadata and dependencies for an API service
+# built with the Ri middleware framework. This template provides a production-ready
+# starting point for building RESTful APIs with validation, gateway, and logging.
+#
+# Template Variables:
+# - project_name: The name of the project
+# - project_version: Initial version of the project
+# - author: Project author(s)
+# - ri_version: Version of the Ri framework to use
+
+[package]
+# Project name used for cargo commands and crate publishing
+name = "{{ project_name }}"
+
+# Semantic versioning for the project
+version = "{{ project_version }}"
+
+# Rust edition determines available language features
+edition = "2021"
+
+# Project authors
+authors = ["{{ author }}"]
+
+# Short description of the API service
+description = "API service built with Ri middleware framework"
+
+# =============================================================================
+# Binary Configuration
+# =============================================================================
+# Defines the binary output for the API service application.
+
+[[bin]]
+name = "{{ project_name }}"
+path = "src/main.rs"
+
+# =============================================================================
+# Dependencies
+# =============================================================================
+# Core dependencies for building an API service with Ri framework.
+
+[dependencies]
+# Ri middleware framework - provides core API server functionality
+# Includes gateway, validation, and logging modules
+ri = { version = "{{ ri_version }}" }
+
+# Serialization framework for JSON/YAML handling
+serde = { version = "1", features = ["derive"] }
+
+# JSON serialization library
+serde_json = "1"
+
+# Asynchronous runtime for concurrent request handling
+tokio = { version = "1", features = ["full"] }
+
+# Logging facade for structured logging
+log = "0.4"
+
+# Date and time handling for timestamps
+chrono = { version = "0.4", features = ["serde"] }
+
+# UUID generation for unique identifiers
+uuid = { version = "1.0", features = ["v4", "serde"] }
+
+# =============================================================================
+# Optional Dependencies
+# =============================================================================
+# Additional dependencies for extended functionality.
+
+# Environment variable management
+dotenvy = "0.15"
+
+# CLI argument parsing
+clap = { version = "4", features = ["derive"] }
+
+# =============================================================================
+# Development Dependencies
+# =============================================================================
+# Dependencies used only during development and testing.
+
+[dev-dependencies]
+# HTTP client for API testing
+reqwest = { version = "0.11", features = ["json"] }
+
+# Temporary file creation for testing
+tempfile = "3"

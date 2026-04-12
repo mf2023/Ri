@@ -1,0 +1,68 @@
+# =============================================================================
+# Production Configuration for {{ project_name }} API Service
+# =============================================================================
+# Production environment settings optimized for security and performance.
+
+[server]
+bind_address = "0.0.0.0:8080"
+workers = 0
+debug = false
+request_timeout_secs = 30
+max_body_size = 10485760
+cors_enabled = false
+cors_origins = []
+
+[server.tls]
+enabled = true
+cert_path = "/etc/ssl/certs/{{ project_name }}.crt"
+key_path = "/etc/ssl/private/{{ project_name }}.key"
+min_version = "TLS1.2"
+
+[validation]
+enabled = true
+max_body_size = 10485760
+strict_mode = true
+validate_headers = true
+
+[logging]
+level = "info"
+format = "json"
+console_enabled = true
+file_enabled = true
+file_path = "/var/log/{{ project_name }}/api.log"
+max_file_size_mb = 100
+max_files = 10
+include_source = false
+include_thread_id = true
+
+[gateway]
+rate_limit_enabled = true
+rate_limit_per_minute = 100
+compression_enabled = true
+generate_request_id = true
+trusted_proxies = ["10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16"]
+
+[health]
+enabled = true
+path = "/health"
+detailed = false
+timeout_secs = 5
+
+[metrics]
+enabled = true
+path = "/metrics"
+include_system_metrics = true
+collection_interval_secs = 60
+
+[security]
+headers_enabled = true
+x_frame_options = "DENY"
+x_content_type_options = "nosniff"
+x_xss_protection = "1; mode=block"
+hsts_enabled = true
+hsts_max_age = 31536000
+hsts_include_subdomains = true
+
+[shutdown]
+timeout_secs = 30
+wait_for_requests = true

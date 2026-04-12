@@ -1,0 +1,96 @@
+# =============================================================================
+# Cargo Package Configuration for {{ project_name }}
+# =============================================================================
+# This file defines the Rust package metadata and dependencies for a web service
+# built with the Ri middleware framework. This template provides a production-ready
+# starting point for building scalable web applications with caching, authentication,
+# and comprehensive logging capabilities.
+#
+# Template Variables:
+# - project_name: The name of the project
+# - project_version: Initial version of the project
+# - author: Project author(s)
+# - ri_version: Version of the Ri framework to use
+
+[package]
+# Project name used for cargo commands and crate publishing
+name = "{{ project_name }}"
+
+# Semantic versioning for the project
+# Follows MAJOR.MINOR.PATCH format
+version = "{{ project_version }}"
+
+# Rust edition determines available language features
+edition = "2021"
+
+# Project authors
+authors = ["{{ author }}"]
+
+# Short description of the web service
+description = "Web service built with Ri middleware framework"
+
+# =============================================================================
+# Binary Configuration
+# =============================================================================
+# Defines the binary output for the web service application.
+# This creates an executable that runs the web server.
+
+[[bin]]
+name = "{{ project_name }}"
+path = "src/main.rs"
+
+# =============================================================================
+# Dependencies
+# =============================================================================
+# Core dependencies for building a web service with Ri framework.
+# These provide the essential functionality for web applications.
+
+[dependencies]
+# Ri middleware framework - provides core web server functionality
+# Includes gateway, caching, authentication, and logging modules
+ri = { version = "{{ ri_version }}" }
+
+# Serialization framework for JSON/YAML handling
+# Required for API request/response processing
+serde = { version = "1", features = ["derive"] }
+
+# JSON serialization library
+# Used for API responses and configuration
+serde_json = "1"
+
+# Asynchronous runtime for concurrent request handling
+# Provides multi-threaded execution for high-performance web services
+tokio = { version = "1", features = ["full"] }
+
+# Logging facade for structured logging
+# Integrates with Ri's logging infrastructure
+log = "0.4"
+
+# Date and time handling for timestamps and scheduling
+chrono = { version = "0.4", features = ["serde"] }
+
+# UUID generation for unique identifiers
+uuid = { version = "1.0", features = ["v4", "serde"] }
+
+# =============================================================================
+# Optional Dependencies
+# =============================================================================
+# Additional dependencies that can be enabled for extended functionality.
+
+# Environment variable management for configuration
+dotenvy = "0.15"
+
+# CLI argument parsing for server configuration
+clap = { version = "4", features = ["derive"] }
+
+# =============================================================================
+# Development Dependencies
+# =============================================================================
+# Dependencies used only during development and testing.
+
+[dev-dependencies]
+# HTTP client for API testing
+reqwest = { version = "0.11", features = ["json"] }
+
+# Temporary file creation for testing
+tempfile = "3"
