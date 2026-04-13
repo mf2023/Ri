@@ -655,6 +655,7 @@ mod tests {
     use std::sync::Arc;
     use std::pin::Pin;
     use std::future::Future;
+    use crate::core::RiResult;
 
     fn create_test_handler() -> RiRouteHandler {
         Arc::new(|_req| {

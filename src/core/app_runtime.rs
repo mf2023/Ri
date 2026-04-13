@@ -592,14 +592,14 @@ mod tests {
 
     #[test]
     fn test_app_runtime_creation() {
-        let ctx = RiServiceContext::new();
+        let ctx = RiServiceContext::new_default().unwrap();
         let runtime = RiAppRuntime::new(ctx, vec![]);
-        assert!(runtime.modules.read().blocking_ref().is_empty());
+        assert_eq!(runtime.modules.try_read().unwrap().len(), 0);
     }
 
     #[tokio::test]
     async fn test_app_runtime_run_with_empty_modules() {
-        let ctx = RiServiceContext::new();
+        let ctx = RiServiceContext::new_default().unwrap();
         let runtime = RiAppRuntime::new(ctx, vec![]);
         let result = runtime.run(|_ctx| async { Ok(()) }).await;
         assert!(result.is_ok());
@@ -607,7 +607,7 @@ mod tests {
 
     #[test]
     fn test_app_runtime_clone() {
-        let ctx = RiServiceContext::new();
+        let ctx = RiServiceContext::new_default().unwrap();
         let runtime1 = RiAppRuntime::new(ctx, vec![]);
         let runtime2 = runtime1.clone();
         assert!(Arc::ptr_eq(&runtime1.modules, &runtime2.modules));
