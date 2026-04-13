@@ -58,7 +58,7 @@ use std::path::Path;
 use std::collections::HashMap;
 
 use crate::error::Result;
-use crate::config::schema::{ConfigSchema, all_schemas, ValidationSeverity};
+use crate::config_validation::schema::{ConfigSchema, all_schemas, ValidationSeverity, ValidationError};
 
 /// Configuration validator for Ri configuration files.
 ///
@@ -702,29 +702,13 @@ impl ValidationResult {
     }
 }
 
-/// Validation error for configuration fields.
-///
-/// This struct represents a single validation error found during
-/// configuration validation.
-#[derive(Debug, Clone)]
-pub struct ValidationError {
-    /// Path to the field with the error (dot notation)
-    pub field_path: String,
-    /// Error message describing the validation failure
-    pub message: String,
-    /// Suggested fix for the error
-    pub suggestion: Option<String>,
-    /// Severity of the error
-    pub severity: ValidationSeverity,
-}
-
-impl std::fmt::Display for ValidationError {
+impl std::fmt::Display for crate::config_validation::schema::ValidationError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "[{}] {}: {}", 
             match self.severity {
-                ValidationSeverity::Error => "ERROR",
-                ValidationSeverity::Warning => "WARN",
-                ValidationSeverity::Info => "INFO",
+                crate::config_validation::schema::ValidationSeverity::Error => "ERROR",
+                crate::config_validation::schema::ValidationSeverity::Warning => "WARN",
+                crate::config_validation::schema::ValidationSeverity::Info => "INFO",
             },
             self.field_path,
             self.message

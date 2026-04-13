@@ -40,7 +40,7 @@
 //! # Usage
 //!
 //! ```rust,ignore
-//! use ric::config::{ConfigValidator, ConfigParser, ConfigFormat};
+//! use ric::config_validation::{ConfigValidator, ConfigParser, ConfigFormat};
 //!
 //! // Parse a configuration file
 //! let parser = ConfigParser::new();
@@ -83,9 +83,10 @@ pub use schema::{
 };
 
 pub use validator::{
-    ConfigValidator, ValidationResult, ValidationError,
+    ConfigValidator, ValidationResult,
     ValidationWarning, ValidationSuggestion,
 };
+pub use schema::ValidationError;
 
 pub use parser::{
     ConfigParser, ConfigFormat, ParsedConfig,

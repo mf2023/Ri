@@ -288,25 +288,35 @@ impl TemplateEngine {
     /// Find the template directory
     ///
     /// Searches for the template directory in multiple locations:
-    /// 1. Current working directory: `./templates`
-    /// 2. Executable directory: `<exe_dir>/templates`
+    /// 1. Current working directory: `./cli/templates`
+    /// 2. Current working directory: `./templates`
+    /// 3. Executable directory: `<exe_dir>/templates`
+    /// 4. CARGO_MANIFEST_DIR: `<cargo_manifest_dir>/templates`
     ///
     /// # Returns
     ///
     /// Returns the path to the template directory.
     /// Returns an error if the directory cannot be found.
     fn find_template_dir() -> Result<PathBuf> {
-        let search_paths = vec![
-            PathBuf::from("templates"),
-            std::env::current_exe()
-                .ok()
-                .and_then(|exe| exe.parent().map(|p| p.join("templates")))
-                .unwrap_or_default(),
-        ];
+        let mut search_paths = Vec::new();
+        
+        // Add path from CARGO_MANIFEST_DIR if available (for development)
+        if let Ok(manifest_dir) = std::env::var("CARGO_MANIFEST_DIR") {
+            search_paths.push(PathBuf::from(manifest_dir).join("templates"));
+        }
+        
+        // Add current directory paths
+        search_paths.push(PathBuf::from("cli/templates"));
+        search_paths.push(PathBuf::from("templates"));
+        
+        // Add executable directory path
+        if let Some(exe_dir) = std::env::current_exe().ok().and_then(|exe| exe.parent().map(|p| p.to_path_buf())) {
+            search_paths.push(exe_dir.join("templates"));
+        }
 
-        for path in search_paths {
-            if path.exists() {
-                return Ok(path);
+        for path in &search_paths {
+            if path.exists() && path.is_dir() {
+                return Ok(path.clone());
             }
         }
 

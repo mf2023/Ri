@@ -401,7 +401,7 @@ impl DependencyManager {
         if value.starts_with('"') && value.ends_with('"') {
             let version = value.trim_matches('"').to_string();
             return Some((
-                name,
+                name.clone(),
                 DependencyInfo {
                     name: name.clone(),
                     version: Some(version),
@@ -449,7 +449,7 @@ impl DependencyManager {
             }
 
             return Some((
-                name,
+                name.clone(),
                 DependencyInfo {
                     name: name.clone(),
                     version,
@@ -668,7 +668,7 @@ impl DependencyManager {
     /// Returns `Ok(())` on success.
     /// Returns an error if writing fails.
     fn update_file(&self) -> Result<()> {
-        let mut lines: Vec<String> = self.raw_content.lines().map(String::from).collect();
+        let lines: Vec<String> = self.raw_content.lines().map(String::from).collect();
         let mut in_deps_section = false;
         let mut deps_start = None;
         let mut deps_end = None;
@@ -750,7 +750,7 @@ impl DependencyManager {
     /// manager.save_as("Cargo.toml.new")?;
     /// ```
     pub fn save_as<P: AsRef<Path>>(&self, path: P) -> Result<()> {
-        let mut lines: Vec<String> = self.raw_content.lines().map(String::from).collect();
+        let lines: Vec<String> = self.raw_content.lines().map(String::from).collect();
         let mut in_deps_section = false;
         let mut deps_start = None;
         let mut deps_end = None;

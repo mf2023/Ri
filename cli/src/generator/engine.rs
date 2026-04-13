@@ -697,6 +697,7 @@ impl CodeGenerator {
                 }
             }
             serde_yaml::Value::Mapping(_) => "serde_json::Value".to_string(),
+            serde_yaml::Value::Tagged(tagged) => Self::yaml_type_to_rust_type(&tagged.value),
         }
     }
 }

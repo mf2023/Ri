@@ -350,19 +350,19 @@ fn create_project_from_template(
         .map_err(|e| crate::error::RicError::Template(e.to_string()))?;
 
     // Validate template exists
-    spinner.set_message(&format!("Validating template '{}'...", template_name));
+    spinner.set_message(format!("Validating template '{}'...", template_name));
     let template_info = engine.get_template_info(template_name)
         .map_err(|e| crate::error::RicError::Template(e.to_string()))?;
 
     // Create project directory
     spinner.set_message("Creating project directory...");
     utils::fs::create_dir_all(project_dir)
-        .map_err(|e| crate::error::RicError::Io(e))?;
+        .map_err(|e| crate::error::RicError::Anyhow(e))?;
 
     // Generate each file from the template
     let total_files = template_info.files.len();
     for (index, file) in template_info.files.iter().enumerate() {
-        spinner.set_message(&format!(
+        spinner.set_message(format!(
             "Generating file {}/{}: {}",
             index + 1,
             total_files,
@@ -379,12 +379,12 @@ fn create_project_from_template(
         // Create parent directories if needed
         if let Some(parent) = output_file.parent() {
             utils::fs::create_dir_all(parent)
-                .map_err(|e| crate::error::RicError::Io(e))?;
+                .map_err(|e| crate::error::RicError::Anyhow(e))?;
         }
 
         // Write the file
         utils::fs::write_file(&output_file, content)
-            .map_err(|e| crate::error::RicError::Io(e))?;
+            .map_err(|e| crate::error::RicError::Anyhow(e))?;
     }
 
     Ok(())
@@ -4003,7 +4003,7 @@ fn generate_struct_recursive(value: &serde_json::Value, struct_name: &str, outpu
             let field_type = get_rust_type(val, key);
             
             // Add serde rename if field name differs from key
-            if field_name != key {
+            if field_name != *key {
                 output.push_str(&format!(
                     "    #[serde(rename = \"{}\")]\n",
                     key
@@ -4858,13 +4858,13 @@ fn parse_postgres_url(url: &str) -> Result<(String, u16, String, String)> {
     // Parse host, port, and database
     let (host_port, database) = if host_db.contains('/') {
         let parts: Vec<&str> = host_db.split('/').collect();
-        (parts[0], parts.get(1).unwrap_or(&default_database))
+        (parts[0], parts.get(1).copied().unwrap_or(default_database))
     } else {
         (host_db, default_database)
     };
     
     // Remove query parameters from database
-    let database = database.split('?').next().unwrap_or(database);
+    let database: &str = database.split('?').next().unwrap_or(database);
     
     // Parse host and port
     let (host, port) = if host_port.contains(':') {
@@ -4935,13 +4935,13 @@ fn parse_mysql_url(url: &str) -> Result<(String, u16, String, String)> {
     // Parse host, port, and database
     let (host_port, database) = if host_db.contains('/') {
         let parts: Vec<&str> = host_db.split('/').collect();
-        (parts[0], parts.get(1).unwrap_or(&default_database))
+        (parts[0], parts.get(1).copied().unwrap_or(default_database))
     } else {
         (host_db, default_database)
     };
     
     // Remove query parameters from database
-    let database = database.split('?').next().unwrap_or(database);
+    let database: &str = database.split('?').next().unwrap_or(database);
     
     // Parse host and port
     let (host, port) = if host_port.contains(':') {

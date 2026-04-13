@@ -14,11 +14,7 @@
 // - project_version: Version of the project
 // - author: Project author
 
-use ri::{
-    RiAppBuilder,
-    RiLogger,
-    RiLogConfig,
-};
+use ri::prelude::*;
 
 // =============================================================================
 // Main Entry Point
@@ -28,41 +24,40 @@ use ri::{
 /// Main entry point for the minimal service
 ///
 /// This function demonstrates the simplest Ri application setup with
-// just an app builder and logger. Use this template as a starting point
+/// just an app builder and logger. Use this template as a starting point
 /// for simple applications that need basic logging but don't require
 /// the full middleware stack.
-///
-/// # Panics
-/// Panics if logger initialization fails
 #[tokio::main]
-async fn main() -> Result<(), Box<dyn std::error::Error>> {
+async fn main() -> RiResult<()> {
     // Print startup banner
-    println!("Starting {{ project_name }} v{{ project_version }}");
+    println!("Starting {{ project_name }} v{{ version }}");
     println!("Author: {{ author }}");
 
     // Create application builder
     let app = RiAppBuilder::new()
-        .name("{{ project_name }}")
-        .version("{{ project_version }}");
+        .with_config("config/config.yaml")?
+        .build()?;
 
-    // Initialize logger with default configuration
-    let log_config = RiLogConfig::default();
-    let logger = RiLogger::new(log_config);
+    // Run the application
+    app.run(|ctx| {
+        let ctx = ctx.clone();
+        async move {
+            // Log startup message
+            ctx.logger().info("service", "Application started")?;
+            ctx.logger().info("service", &format!("Service: {{ project_name }} v{{ version }}"))?;
 
-    // Log startup message
-    logger.info("Application started");
-    logger.info(&format!("Service: {{ project_name }} v{{ project_version }}"));
+            // Your application logic goes here
+            // This is where you would add your business logic
 
-    // Your application logic goes here
-    // This is where you would add your business logic
+            ctx.logger().info("service", "Application running, press Ctrl+C to stop")?;
 
-    logger.info("Application running, press Ctrl+C to stop");
+            // Wait for shutdown signal
+            tokio::signal::ctrl_c().await?;
 
-    // Wait for shutdown signal
-    tokio::signal::ctrl_c().await?;
+            ctx.logger().info("service", "Shutting down application")?;
+            println!("Goodbye!");
 
-    logger.info("Shutting down application");
-    println!("Goodbye!");
-
-    Ok(())
+            Ok(())
+        }
+    }).await
 }

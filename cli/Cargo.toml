@@ -195,3 +195,6 @@ toml = "0.8"
 # Async trait support
 # Used for async trait definitions in generated code
 async-trait = "0.1"
+
+# Tracing for logging and debugging
+tracing = "0.1"

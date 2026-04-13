@@ -1,0 +1,32 @@
+# =============================================================================
+# Configuration for {{ project_name }}
+# =============================================================================
+# This file contains the configuration settings for the Ri application.
+#
+# Template Variables:
+# - project_name: The name of the project
+# - version: Version of the project
+
+# Logging configuration
+log:
+  # Log level: debug, info, warn, error
+  level: "info"
+  # Enable console logging
+  console_enabled: true
+  # Enable file logging
+  file_enabled: true
+  # Log file name
+  file_name: "{{ project_name }}.log"
+  # Log format: text or json
+  file_format: "text"
+  # Log rotation: size or none
+  rotate_when: "size"
+  # Maximum log file size before rotation (in bytes)
+  max_bytes: 10485760
+  # Use color blocks in log output
+  color_blocks: true
+
+# File system configuration
+fs:
+  # Application data root directory
+  app_data_root: ".{{ project_name }}"

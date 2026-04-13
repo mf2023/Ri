@@ -100,14 +100,21 @@ pub mod cli;
 /// - `show_info` - Display project information
 pub mod commands;
 
-/// Configuration file management and validation
+/// Configuration file management
 ///
 /// This module provides:
 /// - `RicConfig` - Main configuration structure
 /// - Configuration loading and saving
-/// - Configuration validation
 /// - Key-value access to configuration settings
 pub mod config;
+
+/// Configuration schema validation and parsing
+///
+/// This module provides:
+/// - Schema definitions for all Ri modules
+/// - Configuration validation
+/// - YAML/JSON configuration parsing
+pub mod config_validation;
 
 /// Custom error types and error handling
 ///

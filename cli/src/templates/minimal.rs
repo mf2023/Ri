@@ -177,16 +177,24 @@ pub fn get_template_info() -> TemplateInfo {
         ],
         files: vec![
             TemplateFile {
-                source: "Cargo.toml.tera".to_string(),
+                source: "Cargo.toml.tmpl".to_string(),
                 destination: "Cargo.toml".to_string(),
             },
             TemplateFile {
-                source: "src/main.rs.tera".to_string(),
+                source: "src/main.rs.tmpl".to_string(),
                 destination: "src/main.rs".to_string(),
             },
             TemplateFile {
-                source: "config/config.yaml.tera".to_string(),
+                source: "config/config.yaml.tmpl".to_string(),
                 destination: "config/config.yaml".to_string(),
+            },
+            TemplateFile {
+                source: ".gitignore.tmpl".to_string(),
+                destination: ".gitignore".to_string(),
+            },
+            TemplateFile {
+                source: "README.md.tmpl".to_string(),
+                destination: "README.md".to_string(),
             },
         ],
     }
