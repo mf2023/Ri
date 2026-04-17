@@ -103,6 +103,19 @@ crate-type = ["rlib", "cdylib", "staticlib"]
 doctest = false
 
 # =============================================================================
+# Workspace Configuration
+# =============================================================================
+# Defines the workspace members for the Ri project.
+# The workspace includes the main Ri library and the CLI tool (ric).
+
+[workspace]
+members = [
+    ".",
+    "cli",
+]
+resolver = "2"
+
+# =============================================================================
 # Core Dependencies
 # =============================================================================
 # Fundamental dependencies that are always included in all build configurations.

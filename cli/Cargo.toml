@@ -54,7 +54,8 @@ name = "ric"
 
 # Semantic version of the package
 # Follows MAJOR.MINOR.PATCH format
-version = "0.1.0"
+# Keep in sync with the parent Ri library version
+version = "0.1.9"
 
 # Rust edition determines language features and behavior
 # 2021 edition provides disjoint capture in closures, panic macro consistency, etc.
