@@ -473,6 +473,8 @@ Open source packages and their agreement information used by this project:
 | uuid | MIT/Apache-2.0 | regex | MIT/Apache-2.0 |
 | walkdir | MIT/Apache-2.0 | toml | MIT/Apache-2.0 |
 | async-trait | MIT/Apache-2.0 | ri | Apache-2.0 |
+| redis | MIT | tokio-postgres | MIT/Apache-2.0 |
+| mysql_async | MIT | rdkafka | BSD-2-Clause |
 
 </div>
 

@@ -93,10 +93,36 @@ use std::path::PathBuf;
     version,
     long_version = concat!(
         env!("CARGO_PKG_VERSION"), "\n",
-        "ri  0.1.9"
+        "ri 0.1.9\n",
+        "Supported targets: python, java, c, wasm"
     ),
-    about = "Ri CLI - Command-line interface tool for Ri framework",
-    long_about = "Ri CLI (ric) is a powerful command-line tool for managing Ri projects.\n\nIt provides commands for creating, building, running, and managing Ri applications."
+    about = "Ri CLI - High-performance Rust middleware framework CLI tool",
+    long_about = "Ri CLI (ric) - A powerful command-line tool for Ri framework
+
+USAGE:
+    ric <COMMAND>
+
+EXAMPLES:
+    ric new my-project --template minimal
+    ric build --release --target python
+    ric run --config config.yaml
+    ric config init
+    ric generate module cache my-cache
+    ric test redis redis://localhost:6379
+    ric doctor --verbose
+
+COMMANDS:
+    new         Create a new Ri project from template
+    build       Build the current project (all | python | java | c)
+    run         Run the current project
+    config      Manage project configuration (init | show | set | get)
+    generate    Generate code (module | middleware | config)
+    test        Test external service connections
+    doctor      Diagnose development environment
+    info        Show project and environment information
+    version     Show version information
+
+For more information, see: https://github.com/mf2023/Ri"
 )]
 pub struct Cli {
     /// Optional subcommand to execute
@@ -186,20 +212,16 @@ pub enum Commands {
         /// - Directory name
         /// - Cargo.toml package name
         /// - Default application name in config
-        #[arg(help = "Project name")]
+        ///
+        /// Must start with a letter and contain only letters, numbers, hyphens, and underscores.
+        #[arg(help = "Project name (must start with a letter)")]
         name: String,
 
         /// Project template
         ///
         /// Specifies the template to use for project generation.
-        /// Available templates: default, gateway, microservice
-        #[arg(short, long, help = "Project template (default, gateway, microservice)")]
+        #[arg(short, long, help = "Project template [minimal | web | api | worker | microservice] (default: minimal)")]
         template: Option<String>,
-
-        /// Custom project path
-        ///
-        /// Specifies the directory where the project will be created.
-        /// If not specified, the project is created in the current directory.
         #[arg(short, long, help = "Custom path for project creation")]
         path: Option<String>,
     },
@@ -245,8 +267,11 @@ pub enum Commands {
         /// Build target
         ///
         /// Specifies the target platform or binding type.
-        /// Enables cross-compilation and binding generation.
-        #[arg(short, long, help = "Build target (python, java, c, all)")]
+        /// - all: Build all targets (default)
+        /// - python: Build Python bindings (cdylib + wheel)
+        /// - java: Build Java bindings (JAR + JNI)
+        /// - c: Build C/C++ bindings (static library + header)
+        #[arg(short, long, help = "Build target [all | python | java | c] (default: all)")]
         target: Option<String>,
     },
 

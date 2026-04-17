@@ -249,6 +249,7 @@ pub struct TemplateEngine {
     templates: HashMap<String, TemplateInfo>,
 
     /// Base directory for template files
+    #[allow(dead_code)]
     template_dir: PathBuf,
 }
 
@@ -413,34 +414,13 @@ impl TemplateEngine {
         template_file: &str,
         variables: &HashMap<String, String>,
     ) -> Result<String> {
-        // Get template info
-        let template_info = self.get_template_info(template_name)?;
-
-        // Build Tera context with variables and defaults
-        let mut context = TeraContext::new();
-
-        // Add default values first
-        for var in &template_info.variables {
-            if let Some(value) = variables.get(&var.name) {
-                context.insert(&var.name, value);
-            } else {
-                context.insert(&var.name, &var.default_value);
-            }
-        }
-
-        // Add any additional variables not in the template definition
-        for (key, value) in variables {
-            if !context.contains_key(key) {
-                context.insert(key, value);
-            }
-        }
-
-        // Render the template
-        let template_path = format!("{}/{}", template_name, template_file);
-        let output = self
-            .tera
-            .render(&template_path, &context)
-            .with_context(|| format!("Failed to render template: {}", template_path))?;
+        // Use embedded templates for rendering
+        let output = crate::templates::embedded::render_template(
+            template_name,
+            template_file,
+            variables,
+        )
+        .with_context(|| format!("Failed to render template: {}/{}", template_name, template_file))?;
 
         Ok(output)
     }

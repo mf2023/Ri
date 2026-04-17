@@ -167,6 +167,12 @@ pub mod microservice;
 /// - Quick start setup
 pub mod minimal;
 
+/// Embedded templates module
+///
+/// Provides compile-time embedded templates for self-contained binary distribution.
+/// Templates are embedded using include_str! macro.
+pub mod embedded;
+
 // =============================================================================
 // Re-exports
 // =============================================================================

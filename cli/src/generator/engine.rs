@@ -64,7 +64,6 @@
 
 use anyhow::{Context, Result};
 use std::fs;
-use std::io::Write;
 use std::path::Path;
 use std::process::Command;
 
@@ -245,6 +244,7 @@ impl ModuleType {
 /// // Format code
 /// let formatted = generator.format_code(&code)?;
 /// ```
+#[allow(dead_code)]
 pub struct CodeGenerator {
     /// Base directory for generated output
     output_dir: std::path::PathBuf,

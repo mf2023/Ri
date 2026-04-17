@@ -60,7 +60,7 @@
 //! - Info: Message in default terminal color
 //! - Progress: Animated spinner with message
 
-use anyhow::Result;
+use anyhow;
 use colored::Colorize;
 use indicatif::{ProgressBar, ProgressStyle};
 

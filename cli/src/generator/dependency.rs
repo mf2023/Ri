@@ -670,7 +670,7 @@ impl DependencyManager {
     /// Returns `Ok(())` on success.
     /// Returns an error if writing fails.
     fn update_file(&self) -> Result<()> {
-        let mut lines: Vec<String> = self.raw_content.lines().map(String::from).collect();
+        let lines: Vec<String> = self.raw_content.lines().map(String::from).collect();
         let mut in_deps_section = false;
         let mut deps_start = None;
         let mut deps_end = None;

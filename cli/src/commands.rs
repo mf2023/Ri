@@ -566,13 +566,14 @@ fn print_success_message(name: &str, project_dir: &Path, template_name: &str) {
 /// build_project(false, Some("python")).await?;
 /// ```
 pub async fn build_project(release: bool, target: Option<&str>) -> Result<()> {
-    // Determine build mode for display
     let mode = if release { "release" } else { "debug" };
-    
+    let target_name = target.unwrap_or("all");
+
     println!(
-        "{} Building project in {} mode...",
+        "{} Building project in {} mode for target: {}",
         "✓".green().bold(),
-        mode.cyan()
+        mode.cyan(),
+        target_name.cyan()
     );
 
     let pb = ProgressBar::new_spinner();
@@ -581,31 +582,84 @@ pub async fn build_project(release: bool, target: Option<&str>) -> Result<()> {
             .template("{spinner:.green} {msg}")
             .unwrap(),
     );
-    pb.set_message("Compiling...");
-    pb.enable_steady_tick(std::time::Duration::from_millis(80));
 
-    let mut args = vec!["build"];
-    if release {
-        args.push("--release");
-    }
-
-    let status = std::process::Command::new("cargo")
-        .args(&args)
-        .status()
-        .map_err(|e| crate::error::RicError::BuildFailed(e.to_string()))?;
-
-    pb.finish();
-
-    if status.success() {
-        println!("{} Build completed successfully!", "✓".green().bold());
-        
-        if let Some(t) = target {
-            println!("{} Building for target: {}", "→".yellow().bold(), t.cyan());
+    match target_name {
+        "all" => {
+            pb.set_message("Building native binary...");
+            let mut args = vec!["build"];
+            if release {
+                args.push("--release");
+            }
+            let status = std::process::Command::new("cargo")
+                .args(&args)
+                .status()
+                .map_err(|e| crate::error::RicError::BuildFailed(e.to_string()))?;
+            pb.finish();
+            if !status.success() {
+                return Err(crate::error::RicError::BuildFailed("Build failed".to_string()));
+            }
         }
-    } else {
-        return Err(crate::error::RicError::BuildFailed("Build failed".to_string()));
+        "python" => {
+            pb.set_message("Building Python bindings...");
+            let mut args = vec!["build", "--release", "--features", "pyo3"];
+            let status = std::process::Command::new("cargo")
+                .args(&args)
+                .status()
+                .map_err(|e| crate::error::RicError::BuildFailed(e.to_string()))?;
+            pb.finish();
+            if !status.success() {
+                return Err(crate::error::RicError::BuildFailed("Python build failed".to_string()));
+            }
+            println!("{} Python bindings built successfully", "✓".green().bold());
+            println!("  {} Output: target/release/", "→".yellow().bold());
+        }
+        "java" => {
+            pb.set_message("Building Java bindings...");
+            let mut args = vec!["build", "--release", "--features", "jni"];
+            let status = std::process::Command::new("cargo")
+                .args(&args)
+                .status()
+                .map_err(|e| crate::error::RicError::BuildFailed(e.to_string()))?;
+            pb.finish();
+            if !status.success() {
+                return Err(crate::error::RicError::BuildFailed("Java build failed".to_string()));
+            }
+            println!("{} Java bindings built successfully", "✓".green().bold());
+            println!("  {} Output: target/release/", "→".yellow().bold());
+        }
+        "c" => {
+            pb.set_message("Building C/C++ bindings...");
+            let mut args = vec!["build", "--release", "--features", "c-api"];
+            let status = std::process::Command::new("cargo")
+                .args(&args)
+                .status()
+                .map_err(|e| crate::error::RicError::BuildFailed(e.to_string()))?;
+            pb.finish();
+            if !status.success() {
+                return Err(crate::error::RicError::BuildFailed("C/C++ build failed".to_string()));
+            }
+            println!("{} C/C++ bindings built successfully", "✓".green().bold());
+            println!("  {} Output: target/release/", "→".yellow().bold());
+        }
+        "wasm" => {
+            pb.finish();
+            println!("{} WebAssembly build requires wasm-pack", "ℹ".blue().bold());
+            println!("  {} Install wasm-pack: cargo install wasm-pack", "→".yellow().bold());
+            println!("  {} Then run: wasm-pack build --target web", "→".yellow().bold());
+            return Err(crate::error::RicError::BuildFailed(
+                "WASM build not yet integrated. Use wasm-pack directly.".to_string()
+            ));
+        }
+        _ => {
+            pb.finish();
+            return Err(crate::error::RicError::BuildFailed(format!(
+                "Unknown target: {}. Valid targets: all, python, java, c, wasm",
+                target_name
+            )));
+        }
     }
 
+    println!("{} Build completed successfully!", "✓".green().bold());
     Ok(())
 }
 
@@ -1407,6 +1461,7 @@ enum DiagnosticStatus {
 /// Contains all information about a single diagnostic check including
 /// its category, name, status, message, and optional fix suggestion.
 #[derive(Debug, Clone)]
+#[allow(dead_code)]
 struct DiagnosticResult {
     /// Category of the diagnostic check (e.g., "Rust Toolchain", "Environment")
     category: String,
@@ -3069,7 +3124,7 @@ impl {struct_name}Handler {{
 #[async_trait::async_trait]
 impl Handler for {struct_name}Handler {{
     async fn handle(&self, request: Vec<u8>) -> anyhow::Result<Vec<u8>> {{
-        tracing::debug!("Handling request for {name} module ({} bytes)", request.len());
+        tracing::debug!("Handling request for {name} module ({request} bytes)", request = request.len());
         
         // Get read lock on service
         let service = self.service.read().await;
@@ -4263,84 +4318,127 @@ async fn test_redis(url: &str) -> Result<()> {
     println!("{}", "═".repeat(60));
     println!();
 
-    // Display test parameters
     println!("{} Testing Redis connection", "→".yellow().bold());
     println!("  {} URL: {}", "→".yellow().bold(), url.cyan());
     println!();
 
-    // Parse URL to extract host and port
     let (host, port) = parse_redis_url(url)?;
 
     println!("  {} Host: {}", "→".yellow().bold(), host.cyan());
     println!("  {} Port: {}", "→".yellow().bold(), port.to_string().cyan());
     println!();
 
-    // Test TCP connection
-    println!("{} Testing TCP connection...", "→".yellow().bold());
+    let redis_url = if url.starts_with("redis://") {
+        url.to_string()
+    } else {
+        format!("redis://{}", url)
+    };
+
+    println!("{} Connecting to Redis...", "→".yellow().bold());
     let start = Instant::now();
-    
-    let address = format!("{}:{}", host, port);
-    match TcpStream::connect_timeout(
-        &address.to_socket_addrs()
-            .map_err(|e| crate::error::RicError::InvalidConnectionUrl {
+
+    let client = match redis::Client::open(redis_url.as_str()) {
+        Ok(c) => c,
+        Err(e) => {
+            println!("  {} Failed to create Redis client", "✗".red().bold());
+            println!("  {} Error: {}", "→".yellow().bold(), e.to_string().red());
+            return Err(crate::error::InvalidConnectionUrl {
                 url: url.to_string(),
-                reason: format!("Failed to resolve address: {}", e),
-            })?
-            .next()
-            .ok_or_else(|| crate::error::RicError::InvalidConnectionUrl {
-                url: url.to_string(),
-                reason: "Could not resolve address".to_string(),
-            })?,
-        Duration::from_millis(DEFAULT_TIMEOUT_MS),
-    ) {
-        Ok(stream) => {
+                reason: e.to_string(),
+            }.into());
+        }
+    };
+
+    let mut conn = match client.get_connection_manager().await {
+        Ok(c) => c,
+        Err(e) => {
             let connection_time = start.elapsed();
-            println!("  {} TCP connection established", "✓".green().bold());
+            println!();
+            println!("  {} Redis connection failed", "✗".red().bold());
             println!("  {} Connection time: {:.2}ms", "→".yellow().bold(), connection_time.as_secs_f64() * 1000.0);
-            
-            // Try to perform a simple PING command
-            // Note: This is a simplified test. A full implementation would use the Redis protocol
-            drop(stream);
-            
             println!();
-            println!("{} Redis connection test passed!", "✓".green().bold());
-            println!();
-            println!("{}", "Server Information:".yellow().bold());
-            println!("  {} Host: {}", "→".yellow().bold(), host.cyan());
-            println!("  {} Port: {}", "→".yellow().bold(), port.to_string().cyan());
-            println!("  {} Status: {}", "→".yellow().bold(), "Connected".green());
-            println!("  {} Response time: {:.2}ms", "→".yellow().bold(), connection_time.as_secs_f64() * 1000.0);
-            
-            println!();
-            println!("{}", "Troubleshooting Tips:".yellow().bold());
-            println!("  • If you need to test PING/PONG, use redis-cli");
-            println!("  • For authentication issues, check your password");
-            println!("  • For connection refused, ensure Redis is running");
+            println!("{}", "Troubleshooting:".yellow().bold());
+            println!("  • Ensure Redis is running");
+            println!("  • Check if password is correct (if required)");
+            println!("  • Verify host and port");
+            return Err(crate::error::ConnectionTestFailed {
+                service: "Redis".to_string(),
+                message: e.to_string(),
+            }.into());
+        }
+    };
+
+    let connection_time = start.elapsed();
+    println!("  {} Connected successfully", "✓".green().bold());
+    println!("  {} Connection time: {:.2}ms", "→".yellow().bold(), connection_time.as_secs_f64() * 1000.0);
+    println!();
+
+    println!("{} Sending PING command...", "→".yellow().bold());
+    let ping_start = Instant::now();
+
+    let pong: String = match redis::cmd("PING").query_async(&mut conn).await {
+        Ok(p) => p,
+        Err(e) => {
+            println!("  {} PING command failed", "✗".red().bold());
+            println!("  {} Error: {}", "→".yellow().bold(), e.to_string().red());
+            return Err(crate::error::ConnectionTestFailed {
+                service: "Redis".to_string(),
+                message: format!("PING failed: {}", e),
+            }.into());
+        }
+    };
+
+    let ping_time = ping_start.elapsed();
+    println!("  {} PING -> {}", "✓".green().bold(), pong.cyan());
+    println!("  {} Response time: {:.2}ms", "→".yellow().bold(), ping_time.as_secs_f64() * 1000.0);
+    println!();
+
+    println!("{} Testing SET operation...", "→".yellow().bold());
+    let test_key = format!("ri_test_{}", uuid::Uuid::new_v4().to_string().replace("-", "")[..8].to_string());
+    let test_value = "Ri CLI Test Value";
+
+    let _: () = match redis::cmd("SET")
+        .arg(&test_key)
+        .arg(test_value)
+        .query_async(&mut conn)
+        .await
+    {
+        Ok(_) => {
+            println!("  {} SET {} = \"{}\"", "✓".green().bold(), test_key.cyan(), test_value.cyan());
         }
         Err(e) => {
-            println!("  {} TCP connection failed", "✗".red().bold());
-            println!();
-            println!("{} Redis connection test failed!", "✗".red().bold());
-            println!();
-            println!("{}", "Error Details:".red().bold());
-            println!("  {} {}", "→".yellow().bold(), e.to_string().red());
-            println!();
-            println!("{}", "Troubleshooting Suggestions:".yellow().bold());
-            println!("  1. Check if Redis is running:");
-            println!("     {} (Linux/macOS)", "redis-cli ping".cyan());
-            println!("     {} (Windows)", "redis-cli.exe ping".cyan());
-            println!("  2. Verify the host and port are correct");
-            println!("  3. Check firewall settings");
-            println!("  4. Ensure Redis is listening on the specified interface");
-            
-            return Err(crate::error::RicError::ServiceNotAvailable {
-                service: "Redis".to_string(),
-                address: format!("{}:{}", host, port),
-            });
+            println!("  {} SET operation failed: {}", "✗".red().bold(), e.to_string().red());
+        }
+    };
+
+    println!("{} Testing GET operation...", "→".yellow().bold());
+    let retrieved: Option<String> = match redis::cmd("GET").arg(&test_key).query_async(&mut conn).await {
+        Ok(v) => v,
+        Err(e) => {
+            println!("  {} GET operation failed: {}", "✗".red().bold(), e.to_string().red());
+            None
+        }
+    };
+
+    if let Some(value) = retrieved {
+        if value == test_value {
+            println!("  {} GET {} = \"{}\" {}", "✓".green().bold(), test_key.cyan(), value.cyan(), "✓".green());
+        } else {
+            println!("  {} Value mismatch: expected \"{}\", got \"{}\"", "✗".red().bold(), test_value, value);
         }
     }
 
+    let _: () = redis::cmd("DEL").arg(&test_key).query_async(&mut conn).await.unwrap_or(());
+
     println!();
+    println!("{} Redis connection test completed successfully!", "✓".green().bold());
+    println!();
+    println!("{}", "Server Information:".yellow().bold());
+    println!("  {} Host: {}", "→".yellow().bold(), host.cyan());
+    println!("  {} Port: {}", "→".yellow().bold(), port.to_string().cyan());
+    println!("  {} Status: {}", "→".yellow().bold(), "Connected".green());
+    println!("  {} Total time: {:.2}ms", "→".yellow().bold(), connection_time.as_secs_f64() * 1000.0);
+
     Ok(())
 }
 
@@ -4384,13 +4482,11 @@ async fn test_postgres(url: &str) -> Result<()> {
     println!("{}", "═".repeat(60));
     println!();
 
-    // Display test parameters
     println!("{} Testing PostgreSQL connection", "→".yellow().bold());
     println!("  {} URL: {}", "→".yellow().bold(), mask_password_in_url(url).cyan());
     println!();
 
-    // Parse URL to extract connection parameters
-    let (host, port, database, user) = parse_postgres_url(url)?;
+    let (host, port, database, user, password) = parse_postgres_url_full(url)?;
 
     println!("  {} Host: {}", "→".yellow().bold(), host.cyan());
     println!("  {} Port: {}", "→".yellow().bold(), port.to_string().cyan());
@@ -4398,73 +4494,125 @@ async fn test_postgres(url: &str) -> Result<()> {
     println!("  {} User: {}", "→".yellow().bold(), user.cyan());
     println!();
 
-    // Test TCP connection
-    println!("{} Testing TCP connection...", "→".yellow().bold());
+    println!("{} Connecting to PostgreSQL...", "→".yellow().bold());
     let start = Instant::now();
-    
-    let address = format!("{}:{}", host, port);
-    match TcpStream::connect_timeout(
-        &address.to_socket_addrs()
-            .map_err(|e| crate::error::RicError::InvalidConnectionUrl {
-                url: url.to_string(),
-                reason: format!("Failed to resolve address: {}", e),
-            })?
-            .next()
-            .ok_or_else(|| crate::error::RicError::InvalidConnectionUrl {
-                url: url.to_string(),
-                reason: "Could not resolve address".to_string(),
-            })?,
-        Duration::from_millis(DEFAULT_TIMEOUT_MS),
-    ) {
-        Ok(stream) => {
-            let connection_time = start.elapsed();
-            println!("  {} TCP connection established", "✓".green().bold());
-            println!("  {} Connection time: {:.2}ms", "→".yellow().bold(), connection_time.as_secs_f64() * 1000.0);
-            
-            drop(stream);
-            
-            println!();
-            println!("{} PostgreSQL connection test passed!", "✓".green().bold());
-            println!();
-            println!("{}", "Server Information:".yellow().bold());
-            println!("  {} Host: {}", "→".yellow().bold(), host.cyan());
-            println!("  {} Port: {}", "→".yellow().bold(), port.to_string().cyan());
-            println!("  {} Database: {}", "→".yellow().bold(), database.cyan());
-            println!("  {} User: {}", "→".yellow().bold(), user.cyan());
-            println!("  {} Status: {}", "→".yellow().bold(), "Connected".green());
-            println!("  {} Response time: {:.2}ms", "→".yellow().bold(), connection_time.as_secs_f64() * 1000.0);
-            
-            println!();
-            println!("{}", "Troubleshooting Tips:".yellow().bold());
-            println!("  • Use psql to test full database connectivity");
-            println!("  • Check pg_hba.conf for authentication settings");
-            println!("  • Verify SSL settings if required");
+
+    let pg_config = format!(
+        "host={} port={} dbname={} user={} password={}",
+        host, port, database, user, password
+    );
+
+    let client = match tokio_postgres::NoTls.connect(&pg_config).await {
+        Ok((client, conn)) => {
+            tokio::spawn(async move {
+                if let Err(e) = conn.await {
+                    eprintln!("Connection error: {}", e);
+                }
+            });
+            client
         }
         Err(e) => {
-            println!("  {} TCP connection failed", "✗".red().bold());
+            let connection_time = start.elapsed();
             println!();
-            println!("{} PostgreSQL connection test failed!", "✗".red().bold());
+            println!("  {} PostgreSQL connection failed", "✗".red().bold());
+            println!("  {} Connection time: {:.2}ms", "→".yellow().bold(), connection_time.as_secs_f64() * 1000.0);
             println!();
-            println!("{}", "Error Details:".red().bold());
-            println!("  {} {}", "→".yellow().bold(), e.to_string().red());
-            println!();
-            println!("{}", "Troubleshooting Suggestions:".yellow().bold());
-            println!("  1. Check if PostgreSQL is running:");
-            println!("     {} (Linux/macOS)", "pg_isready".cyan());
-            println!("     {} (Windows)", "pg_isready.exe".cyan());
-            println!("  2. Verify the host and port are correct");
-            println!("  3. Check pg_hba.conf for connection permissions");
-            println!("  4. Ensure PostgreSQL is listening on the specified interface");
-            println!("  5. Check firewall settings");
-            
-            return Err(crate::error::RicError::ServiceNotAvailable {
+            println!("{}", "Troubleshooting:".yellow().bold());
+            println!("  • Ensure PostgreSQL is running");
+            println!("  • Check if username/password is correct");
+            println!("  • Verify host, port, and database name");
+            println!("  • Check pg_hba.conf for authentication settings");
+            return Err(crate::error::ConnectionTestFailed {
                 service: "PostgreSQL".to_string(),
-                address: format!("{}:{}", host, port),
-            });
+                message: e.to_string(),
+            }.into());
+        }
+    };
+
+    let connection_time = start.elapsed();
+    println!("  {} Connected successfully", "✓".green().bold());
+    println!("  {} Connection time: {:.2}ms", "→".yellow().bold(), connection_time.as_secs_f64() * 1000.0);
+    println!();
+
+    println!("{} Executing test query...", "→".yellow().bold());
+    let query_start = Instant::now();
+
+    let version: String = match client.query_one("SELECT version()", &[]).await {
+        Ok(row) => row.get(0),
+        Err(e) => {
+            println!("  {} Query failed: {}", "✗".red().bold(), e.to_string().red());
+            return Err(crate::error::ConnectionTestFailed {
+                service: "PostgreSQL".to_string(),
+                message: format!("Query failed: {}", e),
+            }.into());
+        }
+    };
+
+    let query_time = query_start.elapsed();
+    println!("  {} SELECT version() -> \"{}\"", "✓".green().bold(), version.split(' ').next().unwrap_or(&version).cyan());
+    println!("  {} Query time: {:.2}ms", "→".yellow().bold(), query_time.as_secs_f64() * 1000.0);
+    println!();
+
+    println!("{} Testing INSERT/UPDATE/DELETE...", "→".yellow().bold());
+    let test_table = format!("ri_test_{}", uuid::Uuid::new_v4().to_string().replace("-", "")[..8].to_string());
+
+    let create_sql = format!(
+        "CREATE TABLE {} (id SERIAL PRIMARY KEY, value TEXT, created_at TIMESTAMP DEFAULT NOW())",
+        test_table
+    );
+
+    if let Err(e) = client.execute(&create_sql, &[]).await {
+        println!("  {} CREATE TABLE failed: {}", "✗".red().bold(), e.to_string().red());
+    } else {
+        println!("  {} CREATE TABLE {}", "✓".green().bold(), test_table.cyan());
+
+        let insert_sql = format!("INSERT INTO {} (value) VALUES ($1)", test_table);
+        if let Err(e) = client.execute(&insert_sql, &[&"Ri CLI Test Value"]).await {
+            println!("  {} INSERT failed: {}", "✗".red().bold(), e.to_string().red());
+        } else {
+            println!("  {} INSERT INTO {} (value) VALUES (...)", "✓".green().bold(), test_table.cyan());
+
+            let select_sql = format!("SELECT value FROM {} WHERE value = $1", test_table);
+            let retrieved: Option<String> = match client.query_opt(&select_sql, &[&"Ri CLI Test Value"]).await {
+                Ok(Some(row)) => Some(row.get(0)),
+                Ok(None) => None,
+                Err(e) => {
+                    println!("  {} SELECT failed: {}", "✗".red().bold(), e.to_string().red());
+                    None
+                }
+            };
+
+            if let Some(value) = retrieved {
+                println!("  {} SELECT -> \"{}\" {}", "✓".green().bold(), value.cyan(), "✓".green());
+            }
+
+            let delete_sql = format!("DELETE FROM {}", test_table);
+            if let Err(e) = client.execute(&delete_sql, &[]).await {
+                println!("  {} DELETE failed: {}", "✗".red().bold(), e.to_string().red());
+            } else {
+                println!("  {} DELETE FROM {}", "✓".green().bold(), test_table.cyan());
+            }
+        }
+
+        let drop_sql = format!("DROP TABLE {}", test_table);
+        if let Err(e) = client.execute(&drop_sql, &[]).await {
+            println!("  {} DROP TABLE failed: {}", "✗".red().bold(), e.to_string().red());
+        } else {
+            println!("  {} DROP TABLE {}", "✓".green().bold(), test_table.cyan());
         }
     }
 
     println!();
+    println!("{} PostgreSQL connection test completed successfully!", "✓".green().bold());
+    println!();
+    println!("{}", "Server Information:".yellow().bold());
+    println!("  {} Host: {}", "→".yellow().bold(), host.cyan());
+    println!("  {} Port: {}", "→".yellow().bold(), port.to_string().cyan());
+    println!("  {} Database: {}", "→".yellow().bold(), database.cyan());
+    println!("  {} User: {}", "→".yellow().bold(), user.cyan());
+    println!("  {} Status: {}", "→".yellow().bold(), "Connected".green());
+    println!("  {} Total time: {:.2}ms", "→".yellow().bold(), connection_time.as_secs_f64() * 1000.0);
+
     Ok(())
 }
 
@@ -4508,13 +4656,11 @@ async fn test_mysql(url: &str) -> Result<()> {
     println!("{}", "═".repeat(60));
     println!();
 
-    // Display test parameters
     println!("{} Testing MySQL connection", "→".yellow().bold());
     println!("  {} URL: {}", "→".yellow().bold(), mask_password_in_url(url).cyan());
     println!();
 
-    // Parse URL to extract connection parameters
-    let (host, port, database, user) = parse_mysql_url(url)?;
+    let (host, port, database, user, password) = parse_mysql_url_full(url)?;
 
     println!("  {} Host: {}", "→".yellow().bold(), host.cyan());
     println!("  {} Port: {}", "→".yellow().bold(), port.to_string().cyan());
@@ -4522,73 +4668,125 @@ async fn test_mysql(url: &str) -> Result<()> {
     println!("  {} User: {}", "→".yellow().bold(), user.cyan());
     println!();
 
-    // Test TCP connection
-    println!("{} Testing TCP connection...", "→".yellow().bold());
+    println!("{} Connecting to MySQL...", "→".yellow().bold());
     let start = Instant::now();
-    
-    let address = format!("{}:{}", host, port);
-    match TcpStream::connect_timeout(
-        &address.to_socket_addrs()
-            .map_err(|e| crate::error::RicError::InvalidConnectionUrl {
-                url: url.to_string(),
-                reason: format!("Failed to resolve address: {}", e),
-            })?
-            .next()
-            .ok_or_else(|| crate::error::RicError::InvalidConnectionUrl {
-                url: url.to_string(),
-                reason: "Could not resolve address".to_string(),
-            })?,
-        Duration::from_millis(DEFAULT_TIMEOUT_MS),
-    ) {
-        Ok(stream) => {
-            let connection_time = start.elapsed();
-            println!("  {} TCP connection established", "✓".green().bold());
-            println!("  {} Connection time: {:.2}ms", "→".yellow().bold(), connection_time.as_secs_f64() * 1000.0);
-            
-            drop(stream);
-            
-            println!();
-            println!("{} MySQL connection test passed!", "✓".green().bold());
-            println!();
-            println!("{}", "Server Information:".yellow().bold());
-            println!("  {} Host: {}", "→".yellow().bold(), host.cyan());
-            println!("  {} Port: {}", "→".yellow().bold(), port.to_string().cyan());
-            println!("  {} Database: {}", "→".yellow().bold(), database.cyan());
-            println!("  {} User: {}", "→".yellow().bold(), user.cyan());
-            println!("  {} Status: {}", "→".yellow().bold(), "Connected".green());
-            println!("  {} Response time: {:.2}ms", "→".yellow().bold(), connection_time.as_secs_f64() * 1000.0);
-            
-            println!();
-            println!("{}", "Troubleshooting Tips:".yellow().bold());
-            println!("  • Use mysql client to test full database connectivity");
-            println!("  • Check user privileges with SHOW GRANTS");
-            println!("  • Verify character set settings");
-        }
+
+    let opts = mysql_async::OptsBuilder::new()
+        .ip_or_hostname(Some(host.clone()))
+        .tcp_port(port)
+        .user(Some(user.clone()))
+        .pass(Some(password.clone()))
+        .db_name(Some(database.clone()));
+
+    let pool = mysql_async::Pool::new(opts);
+
+    let mut conn = match pool.get_conn().await {
+        Ok(conn) => conn,
         Err(e) => {
-            println!("  {} TCP connection failed", "✗".red().bold());
+            let connection_time = start.elapsed();
             println!();
-            println!("{} MySQL connection test failed!", "✗".red().bold());
+            println!("  {} MySQL connection failed", "✗".red().bold());
+            println!("  {} Connection time: {:.2}ms", "→".yellow().bold(), connection_time.as_secs_f64() * 1000.0);
             println!();
-            println!("{}", "Error Details:".red().bold());
-            println!("  {} {}", "→".yellow().bold(), e.to_string().red());
-            println!();
-            println!("{}", "Troubleshooting Suggestions:".yellow().bold());
-            println!("  1. Check if MySQL is running:");
-            println!("     {} (Linux/macOS)", "mysqladmin ping".cyan());
-            println!("     {} (Windows)", "mysqladmin.exe ping".cyan());
-            println!("  2. Verify the host and port are correct");
-            println!("  3. Check user privileges and authentication method");
-            println!("  4. Ensure MySQL is listening on the specified interface");
-            println!("  5. Check firewall settings");
-            
-            return Err(crate::error::RicError::ServiceNotAvailable {
+            println!("{}", "Troubleshooting:".yellow().bold());
+            println!("  • Ensure MySQL is running");
+            println!("  • Check if username/password is correct");
+            println!("  • Verify host, port, and database name");
+            println!("  • Check user privileges");
+            return Err(crate::error::ConnectionTestFailed {
                 service: "MySQL".to_string(),
-                address: format!("{}:{}", host, port),
-            });
+                message: e.to_string(),
+            }.into());
+        }
+    };
+
+    let connection_time = start.elapsed();
+    println!("  {} Connected successfully", "✓".green().bold());
+    println!("  {} Connection time: {:.2}ms", "→".yellow().bold(), connection_time.as_secs_f64() * 1000.0);
+    println!();
+
+    println!("{} Executing test query...", "→".yellow().bold());
+    let query_start = Instant::now();
+
+    let version: String = match conn.query_first("SELECT VERSION()") {
+        Ok(Some(row)) => row,
+        Ok(None) => "Unknown".to_string(),
+        Err(e) => {
+            println!("  {} Query failed: {}", "✗".red().bold(), e.to_string().red());
+            return Err(crate::error::ConnectionTestFailed {
+                service: "MySQL".to_string(),
+                message: format!("Query failed: {}", e),
+            }.into());
+        }
+    };
+
+    let query_time = query_start.elapsed();
+    println!("  {} SELECT VERSION() -> \"{}\"", "✓".green().bold(), version.split('-').next().unwrap_or(&version).cyan());
+    println!("  {} Query time: {:.2}ms", "→".yellow().bold(), query_time.as_secs_f64() * 1000.0);
+    println!();
+
+    println!("{} Testing INSERT/UPDATE/DELETE...", "→".yellow().bold());
+    let test_table = format!("ri_test_{}", uuid::Uuid::new_v4().to_string().replace("-", "")[..8].to_string());
+
+    let create_sql = format!(
+        "CREATE TABLE {} (id INT AUTO_INCREMENT PRIMARY KEY, value TEXT, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)",
+        test_table
+    );
+
+    if let Err(e) = conn.query_drop(&create_sql) {
+        println!("  {} CREATE TABLE failed: {}", "✗".red().bold(), e.to_string().red());
+    } else {
+        println!("  {} CREATE TABLE {}", "✓".green().bold(), test_table.cyan());
+
+        let insert_sql = format!("INSERT INTO {} (value) VALUES ('Ri CLI Test Value')", test_table);
+        if let Err(e) = conn.query_drop(&insert_sql) {
+            println!("  {} INSERT failed: {}", "✗".red().bold(), e.to_string().red());
+        } else {
+            println!("  {} INSERT INTO {} (value) VALUES (...)", "✓".green().bold(), test_table.cyan());
+
+            let select_sql = format!("SELECT value FROM {} WHERE value = 'Ri CLI Test Value'", test_table);
+            let retrieved: Option<String> = match conn.query_first(&select_sql) {
+                Ok(Some(row)) => Some(row),
+                Ok(None) => None,
+                Err(e) => {
+                    println!("  {} SELECT failed: {}", "✗".red().bold(), e.to_string().red());
+                    None
+                }
+            };
+
+            if let Some(value) = retrieved {
+                println!("  {} SELECT -> \"{}\" {}", "✓".green().bold(), value.cyan(), "✓".green());
+            }
+
+            let delete_sql = format!("DELETE FROM {}", test_table);
+            if let Err(e) = conn.query_drop(&delete_sql) {
+                println!("  {} DELETE failed: {}", "✗".red().bold(), e.to_string().red());
+            } else {
+                println!("  {} DELETE FROM {}", "✓".green().bold(), test_table.cyan());
+            }
+        }
+
+        let drop_sql = format!("DROP TABLE {}", test_table);
+        if let Err(e) = conn.query_drop(&drop_sql) {
+            println!("  {} DROP TABLE failed: {}", "✗".red().bold(), e.to_string().red());
+        } else {
+            println!("  {} DROP TABLE {}", "✓".green().bold(), test_table.cyan());
         }
     }
 
+    drop(conn);
+
     println!();
+    println!("{} MySQL connection test completed successfully!", "✓".green().bold());
+    println!();
+    println!("{}", "Server Information:".yellow().bold());
+    println!("  {} Host: {}", "→".yellow().bold(), host.cyan());
+    println!("  {} Port: {}", "→".yellow().bold(), port.to_string().cyan());
+    println!("  {} Database: {}", "→".yellow().bold(), database.cyan());
+    println!("  {} User: {}", "→".yellow().bold(), user.cyan());
+    println!("  {} Status: {}", "→".yellow().bold(), "Connected".green());
+    println!("  {} Total time: {:.2}ms", "→".yellow().bold(), connection_time.as_secs_f64() * 1000.0);
+
     Ok(())
 }
 
@@ -4633,108 +4831,108 @@ async fn test_kafka(url: &str) -> Result<()> {
     println!("{}", "═".repeat(60));
     println!();
 
-    // Display test parameters
     println!("{} Testing Kafka connection", "→".yellow().bold());
     println!("  {} Broker(s): {}", "→".yellow().bold(), url.cyan());
     println!();
 
-    // Parse broker addresses
     let brokers = parse_kafka_url(url)?;
-    
+
     println!("  {} Found {} broker(s)", "→".yellow().bold(), brokers.len().to_string().cyan());
     println!();
 
-    let mut success_count = 0;
-    let mut total_time = Duration::ZERO;
-    let mut broker_results: Vec<(String, bool, Duration)> = Vec::new();
+    println!("{} Connecting to Kafka brokers...", "→".yellow().bold());
+    let start = Instant::now();
 
-    // Test connection to each broker
-    for broker in &brokers {
-        println!("{} Testing broker: {}", "→".yellow().bold(), broker.cyan());
-        let start = Instant::now();
-        
-        match TcpStream::connect_timeout(
-            &broker.to_socket_addrs()
-                .map_err(|e| crate::error::RicError::InvalidConnectionUrl {
-                    url: url.to_string(),
-                    reason: format!("Failed to resolve address: {}", e),
-                })?
-                .next()
-                .ok_or_else(|| crate::error::RicError::InvalidConnectionUrl {
-                    url: url.to_string(),
-                    reason: "Could not resolve address".to_string(),
-                })?,
-            Duration::from_millis(DEFAULT_TIMEOUT_MS),
-        ) {
-            Ok(stream) => {
-                let connection_time = start.elapsed();
-                println!("  {} Connection established ({:.2}ms)", "✓".green().bold(), connection_time.as_secs_f64() * 1000.0);
-                success_count += 1;
-                total_time += connection_time;
-                broker_results.push((broker.clone(), true, connection_time));
-                drop(stream);
+    let config = rdkafka::config::ClientConfig::new();
+    let producer: rdkafka::producer::Producer<_> = config
+        .set("bootstrap.servers", &brokers.join(","))
+        .set("message.timeout.ms", "5000")
+        .set("socket.timeout.ms", "5000")
+        .set("request.timeout.ms", "5000")
+        .set("metadata.request.timeout.ms", "5000")
+        .create()
+        .map_err(|e| {
+            crate::error::ConnectionTestFailed {
+                service: "Kafka".to_string(),
+                message: e.to_string(),
             }
-            Err(e) => {
-                println!("  {} Connection failed: {}", "✗".red().bold(), e.to_string().red());
-                broker_results.push((broker.clone(), false, Duration::ZERO));
-            }
-        }
-    }
+        })?;
 
+    let metadata = producer.fetch_metadata(None, std::time::Duration::from_secs(5))
+        .map_err(|e| {
+            crate::error::ConnectionTestFailed {
+                service: "Kafka".to_string(),
+                message: format!("Failed to fetch metadata: {}", e),
+            }
+        })?;
+
+    let connection_time = start.elapsed();
+    println!("  {} Connected successfully", "✓".green().bold());
+    println!("  {} Connection time: {:.2}ms", "→".yellow().bold(), connection_time.as_secs_f64() * 1000.0);
     println!();
 
-    // Display results
-    if success_count > 0 {
-        println!("{} Kafka connection test passed!", "✓".green().bold());
-        println!("  {} {}/{} brokers reachable", "→".yellow().bold(), success_count.to_string().green(), brokers.len().to_string().cyan());
-        println!();
-        println!("{}", "Broker Information:".yellow().bold());
-        
-        for (broker, success, time) in broker_results {
-            if success {
-                println!("  {} {} - {} ({:.2}ms)", 
-                    "✓".green().bold(), 
-                    broker.cyan(),
-                    "Connected".green(),
-                    time.as_secs_f64() * 1000.0
-                );
+    println!("{}", "Broker Information:".yellow().bold());
+    for broker in metadata.brokers() {
+        let broker_str = format!("{}:{}", broker.host(), broker.port());
+        println!("  {} Broker: {} (ID: {})", "✓".green().bold(), broker_str.cyan(), broker.id().to_string().cyan());
+    }
+    println!();
+
+    println!("{}", "Topic Information:".yellow().bold());
+    let topics = metadata.topics();
+    let topic_count = topics.len();
+    println!("  {} Total topics: {}", "→".yellow().bold(), topic_count.to_string().cyan());
+
+    if topic_count > 0 {
+        println!("  {} First 5 topics:", "→".yellow().bold());
+        for (i, topic) in topics.iter().take(5).enumerate() {
+            println!("    {} {}. {} (partitions: {})", "→".yellow().bold(), i + 1, topic.name().cyan(), topic.partitions().len().to_string().cyan());
+        }
+        if topic_count > 5 {
+            println!("    ... and {} more", (topic_count - 5).to_string().cyan());
+        }
+    }
+    println!();
+
+    println!("{} Testing message production...", "→".yellow().bold());
+    let test_topic = format!("ri_test_{}", uuid::Uuid::new_v4().to_string().replace("-", "")[..8].to_string());
+    let test_message = format!("Ri CLI Test Message at {}", chrono::Utc::now());
+
+    let produce_future = producer.send(
+        rdkafka::producer::ProducerRecord::new(
+            &test_topic,
+            rdkafka::record::RecordKey::NULL,
+            test_message.as_bytes(),
+        ),
+        std::time::Duration::from_secs(5),
+    );
+
+    match produce_future {
+        Ok((partition, offset)) => {
+            println!("  {} Message sent to {} [{}]@{}", "✓".green().bold(), test_topic.cyan(), partition.to_string().cyan(), offset.to_string().cyan());
+        }
+        Err((e, _)) => {
+            let err_str = e.to_string();
+            if err_str.contains("Unknown topic") || err_str.contains("topic") {
+                println!("  {} Topic '{}' does not exist, creating...", "ℹ".blue().bold(), test_topic.cyan());
+                println!("  {} Message production skipped (topic auto-create may be disabled)", "ℹ".blue().bold());
             } else {
-                println!("  {} {} - {}", 
-                    "✗".red().bold(), 
-                    broker.cyan(),
-                    "Unreachable".red()
-                );
+                println!("  {} Failed to send message: {}", "✗".red().bold(), err_str.red());
             }
         }
-        
-        println!();
-        println!("{}", "Troubleshooting Tips:".yellow().bold());
-        println!("  • Use kafka-topics.sh to list topics");
-        println!("  • Check broker logs for errors");
-        println!("  • Verify Zookeeper is running (if applicable)");
-    } else {
-        println!("{} Kafka connection test failed!", "✗".red().bold());
-        println!();
-        println!("{}", "Error Details:".red().bold());
-        println!("  {} No brokers could be reached", "→".yellow().bold());
-        println!();
-        println!("{}", "Troubleshooting Suggestions:".yellow().bold());
-        println!("  1. Check if Kafka is running:");
-        println!("     {} (Linux)", "systemctl status kafka".cyan());
-        println!("     {} (using Docker)", "docker ps | grep kafka".cyan());
-        println!("  2. Verify the broker addresses are correct");
-        println!("  3. Check if Zookeeper is running (for older Kafka versions)");
-        println!("  4. Ensure Kafka is listening on the specified interface");
-        println!("  5. Check firewall settings");
-        println!("  6. Verify advertised.listeners configuration");
-        
-        return Err(crate::error::RicError::ServiceNotAvailable {
-            service: "Kafka".to_string(),
-            address: url.to_string(),
-        });
     }
 
+    drop(producer);
+
     println!();
+    println!("{} Kafka connection test completed successfully!", "✓".green().bold());
+    println!();
+    println!("{}", "Summary:".yellow().bold());
+    println!("  {} Brokers tested: {}", "→".yellow().bold(), brokers.len().to_string().cyan());
+    println!("  {} Topics discovered: {}", "→".yellow().bold(), topic_count.to_string().cyan());
+    println!("  {} Status: {}", "→".yellow().bold(), "Connected".green());
+    println!("  {} Total time: {:.2}ms", "→".yellow().bold(), connection_time.as_secs_f64() * 1000.0);
+
     Ok(())
 }
 
@@ -4881,6 +5079,65 @@ fn parse_postgres_url(url: &str) -> Result<(String, u16, String, String)> {
     Ok((host, port, database, user.to_string()))
 }
 
+fn parse_postgres_url_full(url: &str) -> Result<(String, u16, String, String, String)> {
+    let default_port = 5432;
+    let default_user = "postgres";
+    let default_database = "postgres";
+    let default_password = "";
+
+    let url = url.strip_prefix("postgresql://").unwrap_or(url);
+    let url = url.strip_prefix("postgres://").unwrap_or(url);
+
+    let (credentials, host_db) = if url.contains('@') {
+        let parts: Vec<&str> = url.split('@').collect();
+        if parts.len() == 2 {
+            (parts[0], parts[1])
+        } else {
+            return Err(crate::error::RicError::InvalidConnectionUrl {
+                url: url.to_string(),
+                reason: "Invalid URL format".to_string(),
+            }.into());
+        }
+    } else {
+        ("", url)
+    };
+
+    let (user, password) = if credentials.contains(':') {
+        let parts: Vec<&str> = credentials.split(':').collect();
+        (parts[0].to_string(), parts.get(1).unwrap_or(&default_password).to_string())
+    } else if !credentials.is_empty() {
+        (credentials.to_string(), default_password.to_string())
+    } else {
+        (default_user.to_string(), default_password.to_string())
+    };
+
+    let mut database = default_database.to_string();
+    let host_port = if host_db.contains('/') {
+        let parts: Vec<&str> = host_db.split('/').collect();
+        if let Some(db_part) = parts.get(1) {
+            database = db_part.split('?').next().unwrap_or(db_part).to_string();
+        }
+        parts[0]
+    } else {
+        host_db
+    };
+
+    let (host, port): (String, u16) = if host_port.contains(':') {
+        let parts: Vec<&str> = host_port.split(':').collect();
+        let port = parts[1].parse::<u16>().map_err(|_| {
+            crate::error::RicError::InvalidConnectionUrl {
+                url: url.to_string(),
+                reason: "Invalid port number".to_string(),
+            }
+        })?;
+        (parts[0].to_string(), port)
+    } else {
+        (host_port.to_string(), default_port)
+    };
+
+    Ok((host, port, database, user, password))
+}
+
 /// Parse MySQL URL to extract connection parameters
 ///
 /// Supports URL format:
@@ -4957,6 +5214,64 @@ fn parse_mysql_url(url: &str) -> Result<(String, u16, String, String)> {
     };
     
     Ok((host, port, database, user.to_string()))
+}
+
+fn parse_mysql_url_full(url: &str) -> Result<(String, u16, String, String, String)> {
+    let default_port = 3306;
+    let default_user = "root";
+    let default_database = "mysql";
+    let default_password = "";
+
+    let url = url.strip_prefix("mysql://").unwrap_or(url);
+
+    let (credentials, host_db) = if url.contains('@') {
+        let parts: Vec<&str> = url.split('@').collect();
+        if parts.len() == 2 {
+            (parts[0], parts[1])
+        } else {
+            return Err(crate::error::RicError::InvalidConnectionUrl {
+                url: url.to_string(),
+                reason: "Invalid URL format".to_string(),
+            }.into());
+        }
+    } else {
+        ("", url)
+    };
+
+    let (user, password) = if credentials.contains(':') {
+        let parts: Vec<&str> = credentials.split(':').collect();
+        (parts[0].to_string(), parts.get(1).unwrap_or(&default_password).to_string())
+    } else if !credentials.is_empty() {
+        (credentials.to_string(), default_password.to_string())
+    } else {
+        (default_user.to_string(), default_password.to_string())
+    };
+
+    let mut database = default_database.to_string();
+    let host_port = if host_db.contains('/') {
+        let parts: Vec<&str> = host_db.split('/').collect();
+        if let Some(db_part) = parts.get(1) {
+            database = db_part.split('?').next().unwrap_or(db_part).to_string();
+        }
+        parts[0]
+    } else {
+        host_db
+    };
+
+    let (host, port): (String, u16) = if host_port.contains(':') {
+        let parts: Vec<&str> = host_port.split(':').collect();
+        let port = parts[1].parse::<u16>().map_err(|_| {
+            crate::error::RicError::InvalidConnectionUrl {
+                url: url.to_string(),
+                reason: "Invalid port number".to_string(),
+            }
+        })?;
+        (parts[0].to_string(), port)
+    } else {
+        (host_port.to_string(), default_port)
+    };
+
+    Ok((host, port, database, user, password))
 }
 
 /// Parse Kafka URL to extract broker addresses

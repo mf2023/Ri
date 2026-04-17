@@ -200,3 +200,19 @@ async-trait = "0.1"
 # Tracing framework for structured logging
 # Used for debug logging and diagnostics
 tracing = "0.1"
+
+# Redis client for connection testing
+# Used for redis test command to perform PING/SET/GET operations
+redis = { version = "0.25", features = ["tokio-comp", "connection-manager"] }
+
+# PostgreSQL client for connection testing
+# Used for postgres test command to execute queries
+tokio-postgres = "0.7"
+
+# MySQL client for connection testing
+# Used for mysql test command
+mysql_async = "0.34"
+
+# Kafka client for connection testing
+# Used for kafka test command
+rdkafka = { version = "0.36", features = ["tokio"] }
