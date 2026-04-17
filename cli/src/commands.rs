@@ -350,24 +350,23 @@ fn create_project_from_template(
         .map_err(|e| crate::error::RicError::Template(e.to_string()))?;
 
     // Validate template exists
-    spinner.set_message(&format!("Validating template '{}'...", template_name));
+    spinner.set_message(format!("Validating template '{}'...", template_name));
     let template_info = engine.get_template_info(template_name)
         .map_err(|e| crate::error::RicError::Template(e.to_string()))?;
 
     // Create project directory
     spinner.set_message("Creating project directory...");
-    utils::fs::create_dir_all(project_dir)
-        .map_err(|e| crate::error::RicError::Io(e))?;
+    utils::fs::create_dir_all(project_dir)?;
 
     // Generate each file from the template
     let total_files = template_info.files.len();
     for (index, file) in template_info.files.iter().enumerate() {
-        spinner.set_message(&format!(
-            "Generating file {}/{}: {}",
-            index + 1,
-            total_files,
-            file.destination
-        ));
+        spinner.set_message(format!(
+                "Generating file {}/{}: {}",
+                index + 1,
+                total_files,
+                file.destination
+            ));
 
         // Render the template file
         let content = engine.render_template_file(template_name, &file.source, context)
@@ -378,13 +377,11 @@ fn create_project_from_template(
 
         // Create parent directories if needed
         if let Some(parent) = output_file.parent() {
-            utils::fs::create_dir_all(parent)
-                .map_err(|e| crate::error::RicError::Io(e))?;
+            utils::fs::create_dir_all(parent)?
         }
 
         // Write the file
-        utils::fs::write_file(&output_file, content)
-            .map_err(|e| crate::error::RicError::Io(e))?;
+        utils::fs::write_file(&output_file, content)?
     }
 
     Ok(())
@@ -798,7 +795,7 @@ async fn config_init() -> Result<()> {
     }
     
     // Create default configuration
-    let config = crate::config::RicConfig::default();
+    let config = crate::cli_config::RicConfig::default();
     
     // Save configuration to file
     config.save()?;
@@ -842,7 +839,7 @@ async fn config_show() -> Result<()> {
     println!();
     
     // Load configuration from file
-    let config = crate::config::RicConfig::load()?;
+    let config = crate::cli_config::RicConfig::load()?;
     
     // Display configuration in YAML format
     let yaml = serde_yaml::to_string(&config)?;
@@ -939,7 +936,7 @@ async fn config_validate(file: Option<PathBuf>) -> Result<()> {
     println!("{} File is readable", "✓".green().bold());
     
     // Step 3: Validate YAML syntax
-    let config: crate::config::RicConfig = match serde_yaml::from_str(&content) {
+    let config: crate::cli_config::RicConfig = match serde_yaml::from_str(&content) {
         Ok(config) => config,
         Err(e) => {
             println!("{} Invalid YAML syntax", "✗".red().bold());
@@ -1196,7 +1193,7 @@ async fn config_set(key: String, value: String) -> Result<()> {
     println!();
     
     // Load current configuration
-    let mut config = crate::config::RicConfig::load()?;
+    let mut config = crate::cli_config::RicConfig::load()?;
     
     // Update the specified key
     config.set(&key, &value)?;
@@ -1239,7 +1236,7 @@ async fn config_set(key: String, value: String) -> Result<()> {
 /// ```
 async fn config_get(key: String) -> Result<()> {
     // Load current configuration
-    let config = crate::config::RicConfig::load()?;
+    let config = crate::cli_config::RicConfig::load()?;
     
     // Retrieve the value for the specified key
     let value = config.get(&key)?;
@@ -3942,7 +3939,7 @@ async fn generate_config(from: PathBuf) -> Result<()> {
     println!("     {} > src/config.rs", format!("ric generate config {}", from.display()).cyan());
     println!();
     println!("  {} Use in your application:", "2.".dimmed());
-    println!("     {} let config = Config::load(\"config.yaml\")?;", "use crate::config::Config;".cyan());
+    println!("     {} let config = Config::load(\"config.yaml\")?;", "use crate::cli_config::Config;".cyan());
 
     Ok(())
 }
@@ -4003,7 +4000,7 @@ fn generate_struct_recursive(value: &serde_json::Value, struct_name: &str, outpu
             let field_type = get_rust_type(val, key);
             
             // Add serde rename if field name differs from key
-            if field_name != key {
+            if field_name != *key {
                 output.push_str(&format!(
                     "    #[serde(rename = \"{}\")]\n",
                     key
@@ -4856,18 +4853,19 @@ fn parse_postgres_url(url: &str) -> Result<(String, u16, String, String)> {
     };
     
     // Parse host, port, and database
-    let (host_port, database) = if host_db.contains('/') {
+    let mut database = default_database.to_string();
+    let host_port = if host_db.contains('/') {
         let parts: Vec<&str> = host_db.split('/').collect();
-        (parts[0], parts.get(1).unwrap_or(&default_database))
+        if let Some(db_part) = parts.get(1) {
+            database = db_part.split('?').next().unwrap_or(db_part).to_string();
+        }
+        parts[0]
     } else {
-        (host_db, default_database)
+        host_db
     };
     
-    // Remove query parameters from database
-    let database = database.split('?').next().unwrap_or(database);
-    
     // Parse host and port
-    let (host, port) = if host_port.contains(':') {
+    let (host, port): (String, u16) = if host_port.contains(':') {
         let parts: Vec<&str> = host_port.split(':').collect();
         let port = parts[1].parse::<u16>().map_err(|_| {
             crate::error::RicError::InvalidConnectionUrl {
@@ -4880,7 +4878,7 @@ fn parse_postgres_url(url: &str) -> Result<(String, u16, String, String)> {
         (host_port.to_string(), default_port)
     };
     
-    Ok((host, port, database.to_string(), user.to_string()))
+    Ok((host, port, database, user.to_string()))
 }
 
 /// Parse MySQL URL to extract connection parameters
@@ -4933,18 +4931,19 @@ fn parse_mysql_url(url: &str) -> Result<(String, u16, String, String)> {
     };
     
     // Parse host, port, and database
-    let (host_port, database) = if host_db.contains('/') {
+    let mut database = default_database.to_string();
+    let host_port = if host_db.contains('/') {
         let parts: Vec<&str> = host_db.split('/').collect();
-        (parts[0], parts.get(1).unwrap_or(&default_database))
+        if let Some(db_part) = parts.get(1) {
+            database = db_part.split('?').next().unwrap_or(db_part).to_string();
+        }
+        parts[0]
     } else {
-        (host_db, default_database)
+        host_db
     };
     
-    // Remove query parameters from database
-    let database = database.split('?').next().unwrap_or(database);
-    
     // Parse host and port
-    let (host, port) = if host_port.contains(':') {
+    let (host, port): (String, u16) = if host_port.contains(':') {
         let parts: Vec<&str> = host_port.split(':').collect();
         let port = parts[1].parse::<u16>().map_err(|_| {
             crate::error::RicError::InvalidConnectionUrl {
@@ -4957,7 +4956,7 @@ fn parse_mysql_url(url: &str) -> Result<(String, u16, String, String)> {
         (host_port.to_string(), default_port)
     };
     
-    Ok((host, port, database.to_string(), user.to_string()))
+    Ok((host, port, database, user.to_string()))
 }
 
 /// Parse Kafka URL to extract broker addresses

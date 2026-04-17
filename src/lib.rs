@@ -391,6 +391,7 @@ pub mod py {
         m.add_class::<crate::auth::RiRole>()?;
         m.add_class::<crate::auth::RiJWTRevocationList>()?;
         m.add_class::<crate::auth::RiRevokedTokenInfo>()?;
+        m.add_class::<crate::auth::RiSecurityManager>()?;
         
         // Add observability types to main module
         m.add_class::<crate::observability::RiObservabilityModule>()?;
@@ -719,6 +720,7 @@ pub mod py {
         m.add_class::<crate::auth::RiOAuthProvider>()?;
         m.add_class::<crate::auth::RiJWTRevocationList>()?;
         m.add_class::<crate::auth::RiRevokedTokenInfo>()?;
+        m.add_class::<crate::auth::RiSecurityManager>()?;
         parent.add_submodule(&m)?;
         Ok(())
     }

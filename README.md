@@ -61,7 +61,7 @@ English | [简体中文](README.zh.md)
 <h2 align="center">🏗️ Core Architecture</h2>
 
 ### 📐 Modular Design
-Ri adopts a highly modular architecture with 18 core modules, enabling on-demand composition and seamless extension:
+Ri adopts a highly modular architecture with 18 core modules plus optional extension modules, enabling on-demand composition and seamless extension:
 
 <div align="center">
 

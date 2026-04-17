@@ -336,4 +336,10 @@ pub enum RicError {
         /// Error message
         message: String,
     },
+
+    /// Anyhow error wrapper
+    ///
+    /// Wrapper for anyhow errors that don't fit other categories.
+    #[error("Error: {0}")]
+    Anyhow(#[from] anyhow::Error),
 }

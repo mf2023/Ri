@@ -46,11 +46,32 @@ from ri import (
 class TestRiAuthModule:
     """Tests for RiAuthModule"""
 
+    def test_auth_config_creation(self):
+        """Test creating auth config"""
+        config = RiAuthConfig(
+            enabled=True,
+            jwt_secret="test-secret-key",
+            jwt_expiry_secs=3600,
+            session_timeout_secs=86400,
+            oauth_providers=[],
+            enable_api_keys=True,
+            enable_session_auth=True
+        )
+        assert config is not None
+        assert config.enabled is True
+        assert config.jwt_expiry_secs == 3600
+
     def test_auth_module_creation(self):
-        """Test creating auth module - RiAuthModule requires config"""
-        # Skip this test as RiAuthConfig cannot be instantiated from Python
-        # The module is tested via integration tests
-        pass
+        """Test creating auth module with config"""
+        config = RiAuthConfig(
+            enabled=True,
+            jwt_secret="test-secret-key",
+            jwt_expiry_secs=3600,
+            session_timeout_secs=86400
+        )
+        auth_module = RiAuthModule(config)
+        assert auth_module is not None
+        assert auth_module.is_enabled is True
 
 
 class TestRiJWTManager:

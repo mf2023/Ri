@@ -108,7 +108,47 @@ fn load_hmac_key() -> Vec<u8> {
 /// // Verify HMAC signature
 /// let is_valid = RiSecurityManager::hmac_verify("data to verify", &signature);
 /// ```
+#[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 pub struct RiSecurityManager;
+
+#[cfg(feature = "pyo3")]
+#[pyo3::prelude::pymethods]
+impl RiSecurityManager {
+    #[new]
+    fn py_new() -> Self {
+        Self
+    }
+
+    #[staticmethod]
+    fn encrypt_py(plaintext: &str) -> String {
+        Self::encrypt(plaintext)
+    }
+
+    #[staticmethod]
+    fn decrypt_py(encrypted: &str) -> Option<String> {
+        Self::decrypt(encrypted)
+    }
+
+    #[staticmethod]
+    fn hmac_sign_py(data: &str) -> String {
+        Self::hmac_sign(data)
+    }
+
+    #[staticmethod]
+    fn hmac_verify_py(data: &str, signature: &str) -> bool {
+        Self::hmac_verify(data, signature)
+    }
+
+    #[staticmethod]
+    fn generate_encryption_key_py() -> String {
+        Self::generate_encryption_key()
+    }
+
+    #[staticmethod]
+    fn generate_hmac_key_py() -> String {
+        Self::generate_hmac_key()
+    }
+}
 
 impl RiSecurityManager {
     /// Encrypts plaintext data using AES-256-GCM.

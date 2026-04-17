@@ -41,9 +41,19 @@
 # 4. C Header Files (.h): C API declarations for direct C/C++ usage
 #
 # ARCHITECTURE OVERVIEW:
-# The build process follows a two-phase approach:
+# The build process follows a multi-phase approach:
 #
-#   Phase 1: Rust Library Compilation
+#   Phase 1: CLI Tool Compilation
+#   ┌─────────────────────────────────────────────────────────────┐
+#   │  build-cli-linux        → ric (x64)                       │
+#   │  build-cli-linux-arm64  → ric (ARM64)                     │
+#   │  build-cli-windows      → ric.exe (x64)                   │
+#   │  build-cli-windows-arm64→ ric.exe (ARM64)                 │
+#   │  build-cli-macos        → ric (x64)                       │
+#   │  build-cli-macos-arm64  → ric (ARM64)                     │
+#   └─────────────────────────────────────────────────────────────┘
+#
+#   Phase 2: Rust Library Compilation
 #   ┌─────────────────────────────────────────────────────────────┐
 #   │  build-rust-linux        → libri.so (x64)                │
 #   │  build-rust-linux-arm64  → libri.so (ARM64)              │
@@ -53,7 +63,7 @@
 #   │  build-rust-windows-arm64→ libri.dll (ARM64)              │
 #   └─────────────────────────────────────────────────────────────┘
 #
-#   Phase 2: C Library Compilation (parallel with Phase 1)
+#   Phase 3: C Library Compilation (parallel with Phase 2)
 #   ┌─────────────────────────────────────────────────────────────┐
 #   │  build-c-libs-linux        → libri.a + ri.h             │
 #   │  build-c-libs-linux-arm64  → libri.a + ri.h             │
@@ -63,7 +73,7 @@
 #   │  build-c-libs-windows-arm64→ ri.lib + ri.h             │
 #   └─────────────────────────────────────────────────────────────┘
 #
-#   Phase 3: Python Wheel Generation
+#   Phase 4: Python Wheel Generation
 #   ┌─────────────────────────────────────────────────────────────┐
 #   │  build-python (matrix job)                                   │
 #   │  - 7 Python versions × 6 platforms = 42 wheel combinations   │
@@ -119,6 +129,231 @@ env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 jobs:
+  ################################################################################
+  # CLI TOOL COMPILATION JOBS
+  ################################################################################
+  # These jobs compile the ric CLI tool for each target platform.
+  # The CLI tool provides project scaffolding, build management, and development utilities.
+  #
+  # Build Output: Binary executables (ric/ric.exe)
+  # Platforms: Linux (x64/ARM64), Windows (x64/ARM64), macOS (x64/ARM64)
+  ################################################################################
+
+  build-cli-linux:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install protoc
+        uses: arduino/setup-protoc@v3
+        with:
+          version: '33.x'
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Install CMake
+        uses: jwlawson/actions-setup-cmake@v2
+        with:
+          cmake-version: '3.28.x'
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libcurl4-openssl-dev libsasl2-dev
+
+      - name: Build CLI
+        run: cargo build --release -p ric
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: cli-linux-x64
+          path: target/release/ric
+
+  build-cli-linux-arm64:
+    runs-on: ubuntu-24.04-arm
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install protoc
+        uses: arduino/setup-protoc@v3
+        with:
+          version: '33.x'
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Install CMake
+        uses: jwlawson/actions-setup-cmake@v2
+        with:
+          cmake-version: '3.28.x'
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libcurl4-openssl-dev libsasl2-dev
+
+      - name: Build CLI
+        run: cargo build --release -p ric
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: cli-linux-arm64
+          path: target/release/ric
+
+  build-cli-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install protoc
+        uses: arduino/setup-protoc@v3
+        with:
+          version: '33.x'
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Install CMake
+        uses: jwlawson/actions-setup-cmake@v2
+        with:
+          cmake-version: '3.28.x'
+
+      - name: Setup MSVC development environment
+        uses: ilammy/msvc-dev-cmd@v1
+
+      - name: Install OpenSSL via vcpkg
+        run: |
+          vcpkg install openssl:x64-windows
+          vcpkg integrate install
+
+      - name: Set OpenSSL environment variables
+        run: |
+          $vcpkgRoot = "C:\vcpkg"
+          $opensslRoot = "$vcpkgRoot\installed\x64-windows"
+          echo "OPENSSL_ROOT_DIR=$opensslRoot" >> $env:GITHUB_ENV
+          echo "OPENSSL_INCLUDE_DIR=$opensslRoot\include" >> $env:GITHUB_ENV
+          echo "OPENSSL_LIB_DIR=$opensslRoot\lib" >> $env:GITHUB_ENV
+          echo "OPENSSL_STATIC=1" >> $env:GITHUB_ENV
+          echo "CMAKE_TOOLCHAIN_FILE=$vcpkgRoot\scripts\buildsystems\vcpkg.cmake" >> $env:GITHUB_ENV
+
+      - name: Build CLI
+        run: cargo build --release -p ric
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: cli-windows-x64
+          path: target/release/ric.exe
+
+  build-cli-windows-arm64:
+    runs-on: windows-11-arm
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install protoc
+        uses: arduino/setup-protoc@v3
+        with:
+          version: '33.x'
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Install CMake
+        uses: jwlawson/actions-setup-cmake@v2
+        with:
+          cmake-version: '3.28.x'
+
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: stable
+          targets: aarch64-pc-windows-msvc
+
+      - name: Setup MSVC development environment
+        uses: ilammy/msvc-dev-cmd@v1
+
+      - name: Install OpenSSL via vcpkg
+        run: |
+          vcpkg install openssl:arm64-windows
+          vcpkg integrate install
+
+      - name: Set OpenSSL environment variables
+        run: |
+          $vcpkgRoot = "C:\vcpkg"
+          $opensslRoot = "$vcpkgRoot\installed\arm64-windows"
+          echo "OPENSSL_ROOT_DIR=$opensslRoot" >> $env:GITHUB_ENV
+          echo "OPENSSL_INCLUDE_DIR=$opensslRoot\include" >> $env:GITHUB_ENV
+          echo "OPENSSL_LIB_DIR=$opensslRoot\lib" >> $env:GITHUB_ENV
+          echo "OPENSSL_STATIC=1" >> $env:GITHUB_ENV
+          echo "CMAKE_TOOLCHAIN_FILE=$vcpkgRoot\scripts\buildsystems\vcpkg.cmake" >> $env:GITHUB_ENV
+
+      - name: Build CLI
+        run: cargo build --release -p ric --target aarch64-pc-windows-msvc --no-default-features
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: cli-windows-arm64
+          path: target/aarch64-pc-windows-msvc/release/ric.exe
+
+  build-cli-macos:
+    runs-on: macos-15-intel
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install protoc
+        uses: arduino/setup-protoc@v3
+        with:
+          version: '33.x'
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Install dependencies
+        run: |
+          brew update --quiet 2>/dev/null || true
+          brew install --quiet cmake pkg-config 2>/dev/null || true
+          brew upgrade --quiet cmake pkg-config 2>/dev/null || true
+
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: stable
+          targets: x86_64-apple-darwin
+
+      - name: Build CLI
+        run: cargo build --release -p ric --target x86_64-apple-darwin
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: cli-macos-x64
+          path: target/x86_64-apple-darwin/release/ric
+
+  build-cli-macos-arm64:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install protoc
+        uses: arduino/setup-protoc@v3
+        with:
+          version: '33.x'
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Install dependencies
+        run: |
+          brew update --quiet 2>/dev/null || true
+          brew install --quiet cmake pkg-config 2>/dev/null || true
+
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: stable
+          targets: aarch64-apple-darwin
+
+      - name: Build CLI
+        run: cargo build --release -p ric --target aarch64-apple-darwin
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: cli-macos-arm64
+          path: target/aarch64-apple-darwin/release/ric
+
   ################################################################################
   # RUST LIBRARY COMPILATION JOBS
   ################################################################################
