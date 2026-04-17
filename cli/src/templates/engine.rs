@@ -304,9 +304,9 @@ impl TemplateEngine {
                 .unwrap_or_default(),
         ];
 
-        for path in search_paths {
+        for path in &search_paths {
             if path.exists() {
-                return Ok(path);
+                return Ok(path.to_path_buf());
             }
         }
 

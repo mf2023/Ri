@@ -400,10 +400,11 @@ impl DependencyManager {
         // Simple format: "version"
         if value.starts_with('"') && value.ends_with('"') {
             let version = value.trim_matches('"').to_string();
+            let name_clone = name.clone();
             return Some((
                 name,
                 DependencyInfo {
-                    name: name.clone(),
+                    name: name_clone,
                     version: Some(version),
                     features: None,
                     optional: false,
@@ -448,10 +449,11 @@ impl DependencyManager {
                 }
             }
 
+            let name_clone = name.clone();
             return Some((
                 name,
                 DependencyInfo {
-                    name: name.clone(),
+                    name: name_clone,
                     version,
                     features,
                     optional,

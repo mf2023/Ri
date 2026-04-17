@@ -107,7 +107,7 @@ pub mod commands;
 /// - Configuration loading and saving
 /// - Configuration validation
 /// - Key-value access to configuration settings
-pub mod config;
+pub mod cli_config;
 
 /// Custom error types and error handling
 ///
@@ -168,3 +168,11 @@ pub mod utils;
 /// use ric::{Result, RicError};
 /// ```
 pub use error::{Result, RicError};
+
+/// Re-export configuration types for convenience
+///
+/// This allows users to import configuration types directly from the crate root:
+/// ```rust,ignore
+/// use ric::{RicConfig};
+/// ```
+pub use cli_config::RicConfig;

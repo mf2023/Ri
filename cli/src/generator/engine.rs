@@ -676,7 +676,7 @@ impl CodeGenerator {
     /// Returns a string representing the Rust type.
     fn yaml_type_to_rust_type(value: &serde_yaml::Value) -> String {
         match value {
-            serde_yaml::Value::Null => "Option<()>".to_string(),
+            serde_yaml::Value::Null => "Option<()> ".to_string(),
             serde_yaml::Value::Bool(_) => "bool".to_string(),
             serde_yaml::Value::Number(n) => {
                 if n.is_i64() {
@@ -697,6 +697,7 @@ impl CodeGenerator {
                 }
             }
             serde_yaml::Value::Mapping(_) => "serde_json::Value".to_string(),
+            serde_yaml::Value::Tagged(_) => "serde_json::Value".to_string(),
         }
     }
 }
