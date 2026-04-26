@@ -85,7 +85,7 @@
 //! ```
 
 use std::sync::{Arc, RwLock};
-use std::collections::HashMap;
+use std::collections::HashMap as FxHashMap;
 use std::time::Duration;
 use serde::{Serialize, Deserialize};
 
@@ -104,7 +104,7 @@ pub struct RiResourcePool {
     /// Type of devices in the pool
     device_type: RiDeviceType,
     /// Map of device IDs to device instances
-    devices: HashMap<String, Arc<RiDevice>>,
+    devices: FxHashMap<String, Arc<RiDevice>>,
     /// Total capacity of the pool (number of devices)
     total_capacity: usize,
     /// Available capacity (number of devices not allocated)
@@ -632,7 +632,7 @@ impl RiResourcePool {
 #[allow(dead_code)]
 pub struct RiConnectionPool {
     /// Active connections with their metadata
-    connections: HashMap<String, RiConnectionInfo>,
+    connections: FxHashMap<String, RiConnectionInfo>,
     /// Maximum number of connections allowed
     max_connections: usize,
     /// Connection timeout duration
@@ -976,7 +976,7 @@ pub struct RiResourcePoolStatistics {
     pub connection_pool_stats: Option<RiConnectionPoolStatistics>,
     
     /// Device status distribution
-    pub status_distribution: HashMap<RiDeviceStatus, usize>,
+    pub status_distribution: FxHashMap<RiDeviceStatus, usize>,
     /// Average response time in milliseconds
     pub average_response_time_ms: f64,
     /// Average network latency in milliseconds (for network devices)
@@ -1035,7 +1035,7 @@ impl Default for RiResourcePoolStatistics {
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 pub struct RiResourcePoolManager {
     /// Map of pool names to resource pools
-    pools: HashMap<String, Arc<RiResourcePool>>,
+    pools: FxHashMap<String, Arc<RiResourcePool>>,
 }
 
 impl Default for RiResourcePoolManager {

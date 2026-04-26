@@ -69,7 +69,7 @@
 //! ```
 
 use serde::{Serialize, Deserialize};
-use std::collections::HashMap;
+use std::collections::HashMap as FxHashMap;
 use uuid::Uuid;
 
 #[cfg(feature = "pyo3")]
@@ -331,7 +331,7 @@ pub struct RiDeviceCapabilities {
     /// Bandwidth in gigabits per second
     pub bandwidth_gbps: Option<f64>,
     /// Custom capabilities as key-value pairs
-    pub custom_capabilities: HashMap<String, String>,
+    pub custom_capabilities: FxHashMap<String, String>,
 }
 
 impl Default for RiDeviceCapabilities {
@@ -353,7 +353,7 @@ impl RiDeviceCapabilities {
             memory_gb: None,
             storage_gb: None,
             bandwidth_gbps: None,
-            custom_capabilities: HashMap::new(),
+            custom_capabilities: FxHashMap::default(),
         }
     }
     
@@ -571,7 +571,7 @@ impl RiDeviceCapabilities {
     }
     
     #[pyo3(name = "get_custom_capabilities")]
-    fn get_custom_capabilities_impl(&self) -> HashMap<String, String> { 
+    fn get_custom_capabilities_impl(&self) -> FxHashMap<String, String> { 
         self.custom_capabilities.clone() 
     }
     
@@ -679,7 +679,7 @@ pub struct RiDevice {
     /// Device tags (for filtering and selection)
     tags: Vec<String>,
     /// Additional metadata as key-value pairs
-    metadata: HashMap<String, String>,
+    metadata: FxHashMap<String, String>,
     /// Last time the device was seen/updated
     last_seen: chrono::DateTime<chrono::Utc>,
     /// ID of the current allocation using this device (if any)
@@ -708,7 +708,7 @@ impl RiDevice {
             location: None,
             group: None,
             tags: Vec::new(),
-            metadata: HashMap::new(),
+            metadata: FxHashMap::default(),
             last_seen: chrono::Utc::now(),
             current_allocation_id: None,
         }
@@ -1111,7 +1111,7 @@ impl RiDevice {
     /// # Returns
     /// 
     /// A reference to the metadata HashMap
-    pub fn metadata(&self) -> &HashMap<String, String> {
+    pub fn metadata(&self) -> &FxHashMap<String, String> {
         &self.metadata
     }
 }
@@ -1275,7 +1275,7 @@ impl RiDevice {
     }
     
     #[pyo3(name = "metadata")]
-    fn metadata_impl(&self) -> HashMap<String, String> {
+    fn metadata_impl(&self) -> FxHashMap<String, String> {
         self.metadata().clone()
     }
 }

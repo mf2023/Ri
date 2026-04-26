@@ -124,7 +124,7 @@ use std::sync::Arc;
 
 use serde::{Serialize, Deserialize};
 use tokio::sync::RwLock;
-use std::collections::HashMap;
+use std::collections::HashMap as FxHashMap;
 
 use crate::observability::{RiMetricsRegistry, RiMetric, RiMetricConfig, RiMetricType};
 
@@ -175,7 +175,7 @@ pub struct RiDeviceControlModule {
     /// Discovery engine for device discovery
     discovery_engine: Arc<RwLock<RiResourceScheduler>>,
     /// Map of resource pool names to resource pool instances
-    resource_pools: HashMap<String, Arc<RiResourcePool>>,
+    resource_pools: FxHashMap<String, Arc<RiResourcePool>>,
     /// Device control configuration
     config: RiDeviceControlConfig,
 }
@@ -532,11 +532,11 @@ impl Default for RiResourceWeights {
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 pub struct RiAffinityRules {
     /// Labels that must be present with matching values
-    pub required_labels: HashMap<String, String>,
+    pub required_labels: FxHashMap<String, String>,
     /// Labels that are preferred (but not strictly required)
-    pub preferred_labels: HashMap<String, String>,
+    pub preferred_labels: FxHashMap<String, String>,
     /// Labels that must not be present with matching values
-    pub forbidden_labels: HashMap<String, String>,
+    pub forbidden_labels: FxHashMap<String, String>,
 }
 
 #[cfg(feature = "pyo3")]
@@ -545,9 +545,9 @@ impl RiAffinityRules {
     #[new]
     fn py_new() -> Self {
         Self {
-            required_labels: HashMap::new(),
-            preferred_labels: HashMap::new(),
-            forbidden_labels: HashMap::new(),
+            required_labels: FxHashMap::default(),
+            preferred_labels: FxHashMap::default(),
+            forbidden_labels: FxHashMap::default(),
         }
     }
     
@@ -557,17 +557,17 @@ impl RiAffinityRules {
     }
     
     #[pyo3(name = "required_labels")]
-    fn required_labels_impl(&self) -> HashMap<String, String> {
+    fn required_labels_impl(&self) -> FxHashMap<String, String> {
         self.required_labels.clone()
     }
     
     #[pyo3(name = "preferred_labels")]
-    fn preferred_labels_impl(&self) -> HashMap<String, String> {
+    fn preferred_labels_impl(&self) -> FxHashMap<String, String> {
         self.preferred_labels.clone()
     }
     
     #[pyo3(name = "forbidden_labels")]
-    fn forbidden_labels_impl(&self) -> HashMap<String, String> {
+    fn forbidden_labels_impl(&self) -> FxHashMap<String, String> {
         self.forbidden_labels.clone()
     }
     
@@ -580,9 +580,9 @@ impl RiAffinityRules {
 impl Default for RiAffinityRules {
     fn default() -> Self {
         Self {
-            required_labels: HashMap::new(),
-            preferred_labels: HashMap::new(),
-            forbidden_labels: HashMap::new(),
+            required_labels: FxHashMap::default(),
+            preferred_labels: FxHashMap::default(),
+            forbidden_labels: FxHashMap::default(),
         }
     }
 }
@@ -694,7 +694,7 @@ impl RiDeviceControlModule {
             controller,
             scheduler,
             discovery_engine,
-            resource_pools: HashMap::new(),
+            resource_pools: FxHashMap::default(),
             config: crate::device::core::RiDeviceControlConfig::default(),
         }
     }
@@ -843,9 +843,9 @@ impl RiDeviceControlModule {
     /// 
     /// # Returns
     /// 
-    /// A `HashMap<String, RiResourcePoolStatus>` containing the status of all resource pools
-    pub fn get_resource_pool_status(&self) -> HashMap<String, RiResourcePoolStatus> {
-        let mut status = HashMap::new();
+    /// A `FxHashMap<String, RiResourcePoolStatus>` containing the status of all resource pools
+    pub fn get_resource_pool_status(&self) -> FxHashMap<String, RiResourcePoolStatus> {
+        let mut status = FxHashMap::default();
         for (pool_name, pool) in &self.resource_pools {
             status.insert(pool_name.clone(), pool.get_status());
         }

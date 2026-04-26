@@ -41,7 +41,7 @@
 //! ```
 
 use crate::core::RiResult;
-use std::collections::HashMap;
+use std::collections::HashMap as FxHashMap;
 use super::module_types::ModuleSlot;
 
 /// Sort modules based on dependencies and priority
@@ -53,7 +53,7 @@ pub(crate) fn sort_modules(modules: Vec<ModuleSlot>) -> RiResult<Vec<ModuleSlot>
     // Loop until all modules are processed
     while !modules.is_empty() {
         // Create a map from module name to current index
-        let name_to_index: HashMap<&str, usize> = modules
+        let name_to_index: FxHashMap<&str, usize> = modules
             .iter()
             .enumerate()
             .map(|(i, slot)| (slot.module.name(), i))

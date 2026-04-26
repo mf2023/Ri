@@ -22,7 +22,7 @@ use async_trait::async_trait;
 use std::sync::Arc;
 use tokio::sync::RwLock;
 #[cfg(feature = "grpc")]
-use std::collections::HashMap;
+use std::collections::HashMap as FxHashMap;
 
 #[cfg(feature = "pyo3")]
 use pyo3::prelude::*;
@@ -145,14 +145,14 @@ pub trait RiGrpcService: Send + Sync {
 #[cfg(feature = "grpc")]
 #[derive(Clone)]
 pub struct RiGrpcServiceRegistry {
-    pub services: Arc<RwLock<HashMap<String, Arc<dyn RiGrpcService>>>>,
+    pub services: Arc<RwLock<FxHashMap<String, Arc<dyn RiGrpcService>>>>,
 }
 
 #[cfg(feature = "grpc")]
 impl RiGrpcServiceRegistry {
     pub fn new() -> Self {
         Self {
-            services: Arc::new(RwLock::new(HashMap::new())),
+            services: Arc::new(RwLock::new(FxHashMap::default())),
         }
     }
 

@@ -24,9 +24,6 @@ use tokio::time::Duration;
 use futures::StreamExt;
 use tungstenite::Message;
 
-#[cfg(feature = "pyo3")]
-use pyo3::prelude::*;
-
 pub struct RiWSServer {
     config: RiWSServerConfig,
     stats: Arc<RwLock<RiWSServerStats>>,

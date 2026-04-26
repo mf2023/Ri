@@ -17,7 +17,7 @@
 
 #![allow(non_snake_case)]
 
-use std::collections::HashMap;
+use std::collections::HashMap as FxHashMap;
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 use tokio::sync::RwLock;
@@ -28,7 +28,7 @@ use super::super::{RiProtocolType};
 /// Connection coordinator for managing cross-protocol connections.
 pub struct RiConnectionCoordinator {
     /// Active cross-protocol connections
-    pub connections: Arc<RwLock<HashMap<String, RiCrossProtocolConnection>>>,
+    pub connections: Arc<RwLock<FxHashMap<String, RiCrossProtocolConnection>>>,
     /// Connection routing table
     pub routing_table: Arc<RwLock<RiConnectionRoutingTable>>,
     /// Connection health monitor
@@ -49,7 +49,7 @@ pub struct RiCrossProtocolConnection {
     /// Connection state
     pub state: RiCrossProtocolConnectionState,
     /// Connection metadata
-    pub metadata: HashMap<String, String>,
+    pub metadata: FxHashMap<String, String>,
     /// Established timestamp
     pub established_at: Instant,
     /// Last activity
@@ -79,7 +79,7 @@ pub enum RiCrossProtocolConnectionState {
 #[derive(Debug, Clone)]
 pub struct RiConnectionRoutingTable {
     /// Protocol routing entries
-    pub entries: HashMap<String, RiRoutingEntry>,
+    pub entries: FxHashMap<String, RiRoutingEntry>,
     /// Default protocol
     pub default_protocol: RiProtocolType,
     /// Routing policies
@@ -175,7 +175,7 @@ pub enum RiDeviceType {
 /// Connection health monitor structure.
 pub struct RiConnectionHealthMonitor {
     /// Health check results
-    pub health_results: Arc<RwLock<HashMap<String, RiConnectionHealthResult>>>,
+    pub health_results: Arc<RwLock<FxHashMap<String, RiConnectionHealthResult>>>,
     /// Health check configuration
     pub config: Arc<RiHealthCheckConfig>,
 }
@@ -194,7 +194,7 @@ pub struct RiConnectionHealthResult {
     /// Last check time
     pub last_check: Instant,
     /// Health metrics
-    pub metrics: HashMap<String, f64>,
+    pub metrics: FxHashMap<String, f64>,
 }
 
 /// Health status enumeration.

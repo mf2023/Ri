@@ -81,7 +81,7 @@ use async_trait::async_trait;
 use lapin::{Connection, ConnectionProperties, Channel, Queue, Consumer};
 use lapin::options::{QueueDeclareOptions, BasicConsumeOptions, BasicPublishOptions, BasicAckOptions};
 use lapin::types::FieldTable;
-use std::collections::HashMap;
+use std::collections::HashMap as FxHashMap;
 use std::sync::atomic::AtomicU64;
 use std::sync::Arc;
 use tokio::sync::Mutex;
@@ -484,7 +484,7 @@ struct RabbitMQConsumer {
     /// Flag indicating if the consumer is paused
     paused: Arc<Mutex<bool>>,
     /// Message tracking: delivery_tag -> message_id
-    delivery_tags: Arc<Mutex<HashMap<u64, String>>>,
+    delivery_tags: Arc<Mutex<FxHashMap<u64, String>>>,
     /// Next delivery tag counter
     next_delivery_tag: Arc<AtomicU64>,
 }
@@ -495,7 +495,7 @@ impl RabbitMQConsumer {
             channel,
             consumer: Arc::new(Mutex::new(consumer)),
             paused: Arc::new(Mutex::new(false)),
-            delivery_tags: Arc::new(Mutex::new(HashMap::new())),
+            delivery_tags: Arc::new(Mutex::new(FxHashMap::default())),
             next_delivery_tag: Arc::new(AtomicU64::new(1)),
         }
     }

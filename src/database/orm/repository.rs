@@ -21,7 +21,7 @@
 
 use super::*;
 use async_trait::async_trait;
-use std::collections::HashMap;
+use std::collections::HashMap as FxHashMap;
 
 #[async_trait]
 pub trait RiORMRepository<E: for<'de> serde::Deserialize<'de> + serde::Serialize + Clone + Send + Sync>: Send + Sync {
@@ -83,7 +83,7 @@ impl<E: for<'de> serde::Deserialize<'de> + serde::Serialize + Clone + Send + Syn
         let sql = format!("SELECT * FROM {}", self.table_name);
         let result = db.query(&sql).await?;
         
-        let mut entities = Vec::new();
+        let mut entities = Vec::with_capacity(result.len());
         for row in result {
             let json_value = serde_json::to_value(row.to_map())?;
             let entity: E = serde_json::from_value(json_value)?;
@@ -133,7 +133,7 @@ impl<E: for<'de> serde::Deserialize<'de> + serde::Serialize + Clone + Send + Syn
         let (sql, params) = query.build();
         let result = db.query_with_params(&sql, &params).await?;
         
-        let mut entities = Vec::new();
+        let mut entities = Vec::with_capacity(result.len());
         for row in result {
             let json_value = serde_json::to_value(row.to_map())?;
             let entity: E = serde_json::from_value(json_value)?;
@@ -174,7 +174,7 @@ impl<E: for<'de> serde::Deserialize<'de> + serde::Serialize + Clone + Send + Syn
         let (sql, params) = data_query.build();
         let result = db.query_with_params(&sql, &params).await?;
         
-        let mut entities = Vec::new();
+        let mut entities = Vec::with_capacity(result.len());
         for row in result {
             let json_value = serde_json::to_value(row.to_map())?;
             let entity: E = serde_json::from_value(json_value)?;
@@ -201,10 +201,10 @@ impl<E: for<'de> serde::Deserialize<'de> + serde::Serialize + Clone + Send + Syn
 
     async fn save(&self, db: &dyn RiDatabase, entity: &E) -> RiResult<E> {
         let json_value = serde_json::to_value(entity)?;
-        let values: HashMap<String, serde_json::Value> = serde_json::from_value(json_value)?;
+        let values: FxHashMap<String, serde_json::Value> = serde_json::from_value(json_value)?;
         
         let columns: Vec<&str> = values.keys().map(|s| s.as_str()).collect();
-        let placeholders: Vec<String> = (0..columns.len()).map(|_| "?".to_string()).collect();
+        let placeholders: Vec<String> = std::iter::repeat("?".to_string()).take(columns.len()).collect();
         
         let sql = format!(
             "INSERT INTO {} ({}) VALUES ({})",
@@ -234,7 +234,7 @@ impl<E: for<'de> serde::Deserialize<'de> + serde::Serialize + Clone + Send + Syn
 
     async fn update(&self, db: &dyn RiDatabase, entity: &E) -> RiResult<E> {
         let json_value = serde_json::to_value(entity)?;
-        let values: HashMap<String, serde_json::Value> = serde_json::from_value(json_value)?;
+        let values: FxHashMap<String, serde_json::Value> = serde_json::from_value(json_value)?;
         
         let updates: Vec<String> = values.keys()
             .filter(|&col| col != "id")
@@ -267,7 +267,7 @@ impl<E: for<'de> serde::Deserialize<'de> + serde::Serialize + Clone + Send + Syn
 
     async fn delete(&self, db: &dyn RiDatabase, entity: &E) -> RiResult<()> {
         let json_value = serde_json::to_value(entity)?;
-        let values: HashMap<String, serde_json::Value> = serde_json::from_value(json_value)?;
+        let values: FxHashMap<String, serde_json::Value> = serde_json::from_value(json_value)?;
         
         if let Some(id) = values.get("id") {
             self.delete_by_id(db, &id.to_string()).await
@@ -328,7 +328,7 @@ impl<E: for<'de> serde::Deserialize<'de> + serde::Serialize + Clone + Send + Syn
             
             for json_value in chunk {
                 let json_val = serde_json::to_value(json_value)?;
-                let values: HashMap<String, serde_json::Value> = serde_json::from_value(json_val)?;
+                let values: FxHashMap<String, serde_json::Value> = serde_json::from_value(json_val)?;
                 
                 let params: Vec<serde_json::Value> = columns.iter()
                     .map(|&col| values.get(col).cloned().unwrap_or(serde_json::Value::Null))
@@ -344,7 +344,7 @@ impl<E: for<'de> serde::Deserialize<'de> + serde::Serialize + Clone + Send + Syn
     
     async fn upsert(&self, db: &dyn RiDatabase, entity: &E, conflict_columns: &[&str]) -> RiResult<E> {
         let json_value = serde_json::to_value(entity)?;
-        let values: HashMap<String, serde_json::Value> = serde_json::from_value(json_value)?;
+        let values: FxHashMap<String, serde_json::Value> = serde_json::from_value(json_value)?;
         
         let columns: Vec<&str> = values.keys().map(|s| s.as_str()).collect();
         let placeholders: Vec<String> = (0..columns.len()).map(|_| "?".to_string()).collect();

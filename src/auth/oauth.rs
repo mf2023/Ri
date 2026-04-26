@@ -67,7 +67,7 @@
 #![allow(non_snake_case)]
 
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
+use std::collections::HashMap as FxHashMap;
 use std::sync::Arc;
 use tokio::sync::RwLock;
 #[cfg(feature = "pyo3")]
@@ -227,7 +227,7 @@ impl RiOAuthUserInfo {
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 pub struct RiOAuthManager {
     /// Hash map of registered OAuth providers indexed by provider ID
-    providers: RwLock<HashMap<String, RiOAuthProvider>>,
+    providers: RwLock<FxHashMap<String, RiOAuthProvider>>,
     /// Cache implementation for storing OAuth tokens
     _token_cache: Arc<dyn crate::cache::RiCache>,
 }
@@ -242,7 +242,7 @@ impl RiOAuthManager {
     /// A new instance of `RiOAuthManager`
     pub fn new(cache: Arc<dyn crate::cache::RiCache>) -> Self {
         Self {
-            providers: RwLock::new(HashMap::new()),
+            providers: RwLock::new(FxHashMap::default()),
             _token_cache: cache,
         }
     }

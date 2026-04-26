@@ -76,7 +76,7 @@
 //! }
 //! ```
 
-use std::collections::HashMap;
+use std::collections::HashMap as FxHashMap;
 use std::sync::Arc;
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 use async_trait::async_trait;
@@ -291,7 +291,7 @@ pub struct RiDeviceAuthProtocol {
     /// Contains all known device certificates indexed by device ID.
     /// Certificates are stored in an Arc<RwLock> for efficient concurrent
     /// access from multiple async tasks while maintaining thread safety.
-    certificates: Arc<RwLock<HashMap<String, DeviceCertificate>>>,
+    certificates: Arc<RwLock<FxHashMap<String, DeviceCertificate>>>,
     /// Trusted device list with set-based storage.
     ///
     /// Contains device IDs that have successfully completed authentication.
@@ -303,7 +303,7 @@ pub struct RiDeviceAuthProtocol {
     /// Maps challenge IDs to active authentication challenges that have
     /// been issued but not yet verified. Challenges automatically expire
     /// after a configurable validity period to prevent replay attacks.
-    challenges: Arc<RwLock<HashMap<String, AuthChallenge>>>,
+    challenges: Arc<RwLock<FxHashMap<String, AuthChallenge>>>,
     /// Initialization status flag.
     ///
     /// Atomic boolean tracking whether the authentication protocol has been
@@ -440,9 +440,9 @@ impl RiDeviceAuthProtocol {
     /// Internal state is protected by RwLock synchronization primitives.
     pub fn new() -> Self {
         Self {
-            certificates: Arc::new(RwLock::new(HashMap::new())),
+            certificates: Arc::new(RwLock::new(FxHashMap::default())),
             trusted_devices: Arc::new(RwLock::new(HashSet::new())),
-            challenges: Arc::new(RwLock::new(HashMap::new())),
+            challenges: Arc::new(RwLock::new(FxHashMap::default())),
             initialized: Arc::new(RwLock::new(false)),
             device_keypair: Arc::new(RwLock::new(None)),
         }
@@ -1097,7 +1097,7 @@ pub struct RiObfuscationLayer {
     /// Obfuscation configuration
     config: Arc<RwLock<ObfuscationConfig>>,
     /// Pattern generators for different obfuscation levels
-    pattern_generators: Arc<RwLock<HashMap<RiObfuscationLevel, Box<dyn PatternGenerator>>>>,
+    pattern_generators: Arc<RwLock<FxHashMap<RiObfuscationLevel, Box<dyn PatternGenerator>>>>,
 }
 
 /// Obfuscation configuration.
@@ -1127,7 +1127,7 @@ trait PatternGenerator: Send + Sync {
 impl RiObfuscationLayer {
     /// Create a new obfuscation layer.
     pub fn new() -> Self {
-        let mut generators: HashMap<RiObfuscationLevel, Box<dyn PatternGenerator>> = HashMap::new();
+        let mut generators: FxHashMap<RiObfuscationLevel, Box<dyn PatternGenerator>> = FxHashMap::default();
         
         // Register pattern generators
         generators.insert(RiObfuscationLevel::Basic, Box::new(BasicPatternGenerator::new()));
@@ -1216,7 +1216,7 @@ impl BasicPatternGenerator {
 #[async_trait]
 impl PatternGenerator for BasicPatternGenerator {
     async fn generate_pattern(&self, data: &[u8]) -> RiResult<Vec<u8>> {
-        let mut result = Vec::new();
+        let mut result = Vec::with_capacity(data.len());
         
         // Simple XOR obfuscation
         for (i, &byte) in data.iter().enumerate() {
@@ -1353,7 +1353,7 @@ struct ComplexPatternGenerator {
 
 impl ComplexPatternGenerator {
     fn new() -> Self {
-        let mut layers: Vec<Box<dyn Fn(&[u8]) -> Vec<u8> + Send + Sync>> = Vec::new();
+        let mut layers: Vec<Box<dyn Fn(&[u8]) -> Vec<u8> + Send + Sync>> = Vec::with_capacity(2);
         
         // Add multiple transformation layers
         layers.push(Box::new(|data| {

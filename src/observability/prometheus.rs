@@ -78,7 +78,7 @@
 //! }
 //! ```
 
-use std::collections::HashMap;
+use std::collections::HashMap as FxHashMap;
 use std::sync::{Arc, RwLock};
 #[cfg(feature = "observability")]
 use prometheus::{Counter, Gauge, Histogram, Registry, Encoder, TextEncoder};
@@ -95,11 +95,11 @@ pub struct RiPrometheusExporter {
     /// Prometheus registry for managing metrics
     registry: Arc<Registry>,
     /// Map of registered counter metrics
-    counters: Arc<RwLock<HashMap<String, Counter>>>,
+    counters: Arc<RwLock<FxHashMap<String, Counter>>>,
     /// Map of registered gauge metrics
-    gauges: Arc<RwLock<HashMap<String, Gauge>>>,
+    gauges: Arc<RwLock<FxHashMap<String, Gauge>>>,
     /// Map of registered histogram metrics
-    histograms: Arc<RwLock<HashMap<String, Histogram>>>,
+    histograms: Arc<RwLock<FxHashMap<String, Histogram>>>,
 }
 
 #[allow(dead_code)]
@@ -114,9 +114,9 @@ impl RiPrometheusExporter {
         
         Ok(RiPrometheusExporter {
             registry: registry.clone(),
-            counters: Arc::new(RwLock::new(HashMap::new())),
-            gauges: Arc::new(RwLock::new(HashMap::new())),
-            histograms: Arc::new(RwLock::new(HashMap::new())),
+            counters: Arc::new(RwLock::new(FxHashMap::default())),
+            gauges: Arc::new(RwLock::new(FxHashMap::default())),
+            histograms: Arc::new(RwLock::new(FxHashMap::default())),
         })
     }
     
@@ -249,7 +249,7 @@ impl RiPrometheusExporter {
     pub fn render(&self) -> RiResult<String> {
         let encoder = TextEncoder::new();
         let metric_families = self.registry.gather();
-        let mut buffer = Vec::new();
+        let mut buffer = Vec::with_capacity(1024);
         encoder.encode(&metric_families, &mut buffer)?;
         
         String::from_utf8(buffer).map_err(|e| crate::core::RiError::Serde(format!("Invalid UTF-8 in Prometheus output: {}", e)))

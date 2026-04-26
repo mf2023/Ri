@@ -101,7 +101,7 @@ impl RiHardwareProvider for CPUProvider {
     }
 
     async fn discover(&self, platform: &PlatformInfo) -> DiscoveryResult<Vec<RiDevice>> {
-        let mut devices = Vec::new();
+        let mut devices = Vec::with_capacity(1);
 
         // Get CPU information based on platform
         match platform.platform_type {
@@ -160,7 +160,7 @@ impl RiHardwareProvider for MemoryProvider {
     }
 
     async fn discover(&self, platform: &PlatformInfo) -> DiscoveryResult<Vec<RiDevice>> {
-        let mut devices = Vec::new();
+        let mut devices = Vec::with_capacity(1);
 
         match platform.platform_type {
             super::platform::PlatformType::Linux => {
@@ -217,7 +217,7 @@ impl RiHardwareProvider for StorageProvider {
     }
 
     async fn discover(&self, platform: &PlatformInfo) -> DiscoveryResult<Vec<RiDevice>> {
-        let mut devices = Vec::new();
+        let mut devices = Vec::with_capacity(1);
 
         match platform.platform_type {
             super::platform::PlatformType::Linux => {
@@ -274,7 +274,7 @@ impl RiHardwareProvider for NetworkProvider {
     }
 
     async fn discover(&self, platform: &PlatformInfo) -> DiscoveryResult<Vec<RiDevice>> {
-        let mut devices = Vec::new();
+        let mut devices = Vec::with_capacity(1);
 
         match platform.platform_type {
             super::platform::PlatformType::Linux => {
@@ -331,7 +331,7 @@ impl RiHardwareProvider for GPUProvider {
     }
 
     async fn discover(&self, platform: &PlatformInfo) -> DiscoveryResult<Vec<RiDevice>> {
-        let mut devices = Vec::new();
+        let mut devices = Vec::with_capacity(1);
 
         match platform.platform_type {
             super::platform::PlatformType::Linux => {
@@ -389,7 +389,7 @@ impl RiHardwareProvider for USBProvider {
     }
 
     async fn discover(&self, platform: &PlatformInfo) -> DiscoveryResult<Vec<RiDevice>> {
-        let mut devices = Vec::new();
+        let mut devices = Vec::with_capacity(1);
 
         match platform.platform_type {
             super::platform::PlatformType::Linux => {
@@ -457,7 +457,7 @@ impl ProviderRegistry {
         platform: &PlatformInfo,
     ) -> DiscoveryResult<Vec<RiDevice>> {
         let providers = self.providers.read().await;
-        let mut all_devices = Vec::new();
+        let mut all_devices = Vec::with_capacity(8);
 
         for provider in providers.iter() {
             if provider.categories().contains(category) && provider.is_available(platform) {
@@ -474,7 +474,7 @@ impl ProviderRegistry {
     /// Discovers all available devices
     pub async fn discover_all(&self, platform: &PlatformInfo) -> DiscoveryResult<Vec<RiDevice>> {
         let providers = self.providers.read().await;
-        let mut all_devices = Vec::new();
+        let mut all_devices = Vec::with_capacity(8);
 
         for provider in providers.iter() {
             if provider.is_available(platform) {
@@ -507,7 +507,7 @@ fn create_device(
 // Platform-specific discovery implementations
 
 async fn discover_linux_cpus(_platform: &PlatformInfo) -> DiscoveryResult<Vec<RiDevice>> {
-    let mut devices = Vec::new();
+    let mut devices = Vec::with_capacity(1);
 
     // Read CPU info from /proc/cpuinfo
     if let Ok(content) = std::fs::read_to_string("/proc/cpuinfo") {
@@ -543,7 +543,7 @@ async fn discover_linux_cpus(_platform: &PlatformInfo) -> DiscoveryResult<Vec<Ri
 }
 
 async fn discover_macos_cpus(_platform: &PlatformInfo) -> DiscoveryResult<Vec<RiDevice>> {
-    let mut devices = Vec::new();
+    let mut devices = Vec::with_capacity(1);
 
     // Use sysctl for CPU info
     let output = std::process::Command::new("sysctl")
@@ -580,7 +580,7 @@ async fn discover_macos_cpus(_platform: &PlatformInfo) -> DiscoveryResult<Vec<Ri
 }
 
 async fn discover_windows_cpus(_platform: &PlatformInfo) -> DiscoveryResult<Vec<RiDevice>> {
-    let mut devices = Vec::new();
+    let mut devices = Vec::with_capacity(1);
 
     let output = std::process::Command::new("wmic")
         .args(&["CPU", "Get", "Name,NumberOfCores", "/VALUE"])
@@ -661,7 +661,7 @@ async fn discover_generic_memory(platform: &PlatformInfo) -> DiscoveryResult<Vec
 }
 
 async fn discover_linux_storage(_platform: &PlatformInfo) -> DiscoveryResult<Vec<RiDevice>> {
-    let mut devices = Vec::new();
+    let mut devices = Vec::with_capacity(1);
 
     // Read /proc/mounts to find mounted filesystems
     if let Ok(content) = std::fs::read_to_string("/proc/mounts") {
@@ -691,7 +691,7 @@ async fn discover_linux_storage(_platform: &PlatformInfo) -> DiscoveryResult<Vec
 }
 
 async fn discover_macos_storage(_platform: &PlatformInfo) -> DiscoveryResult<Vec<RiDevice>> {
-    let mut devices = Vec::new();
+    let mut devices = Vec::with_capacity(1);
 
     let output = std::process::Command::new("df")
         .arg("-l")
@@ -724,7 +724,7 @@ async fn discover_macos_storage(_platform: &PlatformInfo) -> DiscoveryResult<Vec
 }
 
 async fn discover_windows_storage(_platform: &PlatformInfo) -> DiscoveryResult<Vec<RiDevice>> {
-    let mut devices = Vec::new();
+    let mut devices = Vec::with_capacity(1);
 
     let output = std::process::Command::new("wmic")
         .args(&["LogicalDisk", "Get", "Name,Size", "/VALUE"])
@@ -765,7 +765,7 @@ async fn discover_generic_storage(_platform: &PlatformInfo) -> DiscoveryResult<V
 }
 
 async fn discover_linux_network(_platform: &PlatformInfo) -> DiscoveryResult<Vec<RiDevice>> {
-    let mut devices = Vec::new();
+    let mut devices = Vec::with_capacity(1);
 
     if let Ok(content) = std::fs::read_to_string("/proc/net/dev") {
         for line in content.lines().skip(2) {
@@ -790,7 +790,7 @@ async fn discover_linux_network(_platform: &PlatformInfo) -> DiscoveryResult<Vec
 }
 
 async fn discover_macos_network(_platform: &PlatformInfo) -> DiscoveryResult<Vec<RiDevice>> {
-    let mut devices = Vec::new();
+    let mut devices = Vec::with_capacity(1);
 
     let output = std::process::Command::new("ifconfig")
         .output();
@@ -820,7 +820,7 @@ async fn discover_macos_network(_platform: &PlatformInfo) -> DiscoveryResult<Vec
 }
 
 async fn discover_windows_network(_platform: &PlatformInfo) -> DiscoveryResult<Vec<RiDevice>> {
-    let mut devices = Vec::new();
+    let mut devices = Vec::with_capacity(1);
 
     let output = std::process::Command::new("wmic")
         .args(&["NicConfig", "Get", "Description,MACAddress", "/VALUE"])
@@ -861,7 +861,7 @@ async fn discover_generic_network(_platform: &PlatformInfo) -> DiscoveryResult<V
 }
 
 async fn discover_linux_gpus(_platform: &PlatformInfo) -> DiscoveryResult<Vec<RiDevice>> {
-    let mut devices = Vec::new();
+    let mut devices = Vec::with_capacity(1);
 
     // Check for NVIDIA GPUs
     if let Ok(nvidia_output) = std::process::Command::new("nvidia-smi")
@@ -911,7 +911,7 @@ async fn discover_linux_gpus(_platform: &PlatformInfo) -> DiscoveryResult<Vec<Ri
 }
 
 async fn discover_macos_gpus(_platform: &PlatformInfo) -> DiscoveryResult<Vec<RiDevice>> {
-    let mut devices = Vec::new();
+    let mut devices = Vec::with_capacity(1);
 
     let output = std::process::Command::new("system_profiler")
         .args(&["SPDisplaysDataType", "-detailLevel", "mini"])
@@ -936,7 +936,7 @@ async fn discover_macos_gpus(_platform: &PlatformInfo) -> DiscoveryResult<Vec<Ri
 }
 
 async fn discover_windows_gpus(_platform: &PlatformInfo) -> DiscoveryResult<Vec<RiDevice>> {
-    let mut devices = Vec::new();
+    let mut devices = Vec::with_capacity(1);
 
     let output = std::process::Command::new("wmic")
         .args(&["Path", "Win32_VideoController", "Get", "Name,AdapterRAM", "/VALUE"])
@@ -979,7 +979,7 @@ async fn discover_generic_gpus(_platform: &PlatformInfo) -> DiscoveryResult<Vec<
 }
 
 async fn discover_linux_usb(_platform: &PlatformInfo) -> DiscoveryResult<Vec<RiDevice>> {
-    let mut devices = Vec::new();
+    let mut devices = Vec::with_capacity(1);
 
     if let Ok(usb_dirs) = std::fs::read_dir("/sys/bus/usb/devices") {
         for entry in usb_dirs.flatten() {
@@ -1001,7 +1001,7 @@ async fn discover_linux_usb(_platform: &PlatformInfo) -> DiscoveryResult<Vec<RiD
 }
 
 async fn discover_macos_usb(_platform: &PlatformInfo) -> DiscoveryResult<Vec<RiDevice>> {
-    let mut devices = Vec::new();
+    let mut devices = Vec::with_capacity(1);
 
     let output = std::process::Command::new("system_profiler")
         .args(&["SPUSBDataType", "-detailLevel", "mini"])
@@ -1024,7 +1024,7 @@ async fn discover_macos_usb(_platform: &PlatformInfo) -> DiscoveryResult<Vec<RiD
 }
 
 async fn discover_windows_usb(_platform: &PlatformInfo) -> DiscoveryResult<Vec<RiDevice>> {
-    let mut devices = Vec::new();
+    let mut devices = Vec::with_capacity(1);
 
     let output = std::process::Command::new("wmic")
         .args(&["USBController", "Get", "Name", "/VALUE"])

@@ -176,7 +176,7 @@ pub struct RiDeviceDiscovery {
     provider_registry: Arc<ProviderRegistry>,
     plugin_registry: Arc<RwLock<PluginRegistry>>,
     stats: Arc<RwLock<DiscoveryStats>>,
-    discovered_devices: Arc<RwLock<HashMap<String, RiDevice>>>,
+    discovered_devices: Arc<RwLock<FxHashMap<String, RiDevice>>>,
 }
 
 impl RiDeviceDiscovery {
@@ -195,7 +195,7 @@ impl RiDeviceDiscovery {
         }
 
         let stats = Arc::new(RwLock::new(DiscoveryStats::default()));
-        let discovered_devices = Arc::new(RwLock::new(HashMap::new()));
+        let discovered_devices = Arc::new(RwLock::new(FxHashMap::default()));
 
         Ok(Self {
             config: Arc::new(config),
@@ -215,7 +215,7 @@ impl RiDeviceDiscovery {
     /// Discovers all enabled device categories
     pub async fn discover_all(&self) -> RiResult<Vec<RiDevice>> {
         let start_time = std::time::Instant::now();
-        let mut all_devices = Vec::new();
+        let mut all_devices = Vec::with_capacity(8);
         let mut providers_used = 0;
         let mut plugins_used = 0;
 
@@ -439,7 +439,7 @@ impl RiDeviceDiscovery {
 
     /// Creates mock devices for testing/fallback
     async fn create_mock_devices(&self) -> RiResult<Vec<RiDevice>> {
-        let mut devices = Vec::new();
+        let mut devices = Vec::with_capacity(4);
 
         // Create a mock CPU
         if self.config.enable_cpu_discovery {
@@ -537,4 +537,4 @@ pub trait DeviceDiscoveryExtension {
     fn discovery_engine(&self) -> Option<&RiDeviceDiscovery>;
 }
 
-use std::collections::HashMap;
+use std::collections::HashMap as FxHashMap;

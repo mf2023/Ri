@@ -798,7 +798,7 @@ impl RiFrame {
     
     /// Create an error frame
     pub fn error_frame(error_code: u32, error_message: String, sequence_number: u32) -> RiResult<Self> {
-        let mut payload = Vec::new();
+        let mut payload = Vec::with_capacity(4 + error_message.len());
         payload.extend_from_slice(&error_code.to_be_bytes());
         payload.extend_from_slice(error_message.as_bytes());
         Self::new(RiFrameType::Error, payload, sequence_number)
@@ -811,7 +811,7 @@ impl RiFrame {
         // Calculate and set checksum
         header.checksum = header.calculate_checksum(&self.payload);
         
-        let mut result = Vec::new();
+        let mut result = Vec::with_capacity(32 + self.payload.len());
         result.extend_from_slice(&header.to_bytes());
         result.extend_from_slice(&self.payload);
         

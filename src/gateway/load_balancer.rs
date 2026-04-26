@@ -84,7 +84,7 @@
 //! ```
 
 use crate::core::RiResult;
-use std::collections::HashMap;
+use std::collections::HashMap as FxHashMap;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::time::Instant;
@@ -354,7 +354,7 @@ pub struct RiLoadBalancer {
     servers: RwLock<Vec<RiBackendServer>>,
     
     /// Statistics for each backend server
-    server_stats: RwLock<HashMap<String, Arc<ServerStats>>>,
+    server_stats: RwLock<FxHashMap<String, Arc<ServerStats>>>,
     
     /// Counter for round robin scheduling
     round_robin_counter: AtomicUsize,
@@ -369,7 +369,7 @@ impl Clone for RiLoadBalancer {
         Self {
             strategy: self.strategy.clone(),
             servers: RwLock::new(Vec::new()),
-            server_stats: RwLock::new(HashMap::new()),
+            server_stats: RwLock::new(FxHashMap::default()),
             round_robin_counter: AtomicUsize::new(self.round_robin_counter.load(Ordering::Relaxed)),
         }
     }
@@ -389,7 +389,7 @@ impl RiLoadBalancer {
         Self {
             strategy,
             servers: RwLock::new(Vec::new()),
-            server_stats: RwLock::new(HashMap::new()),
+            server_stats: RwLock::new(FxHashMap::default()),
             round_robin_counter: AtomicUsize::new(0),
         }
     }
@@ -797,10 +797,10 @@ impl RiLoadBalancer {
     ///
     /// # Returns
     ///
-    /// A `HashMap<String, RiLoadBalancerServerStats>` with statistics for all servers
-    pub async fn get_all_stats(&self) -> HashMap<String, RiLoadBalancerServerStats> {
+    /// A `FxHashMap<String, RiLoadBalancerServerStats>` with statistics for all servers
+    pub async fn get_all_stats(&self) -> FxHashMap<String, RiLoadBalancerServerStats> {
         let stats = self.server_stats.read().await;
-        let mut result = HashMap::new();
+        let mut result = FxHashMap::default();
         
         for (server_id, server_stats) in stats.iter() {
             result.insert(server_id.clone(), server_stats.get_stats());

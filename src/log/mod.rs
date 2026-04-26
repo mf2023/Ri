@@ -602,8 +602,8 @@ impl LoggerImpl {
         drop(cache);
         
         // Process logs in batch
-        let mut file_logs = Vec::new();
-        let mut console_logs = Vec::new();
+        let mut file_logs = Vec::with_capacity(4);
+        let mut console_logs = Vec::with_capacity(4);
         
         for log_entry in logs_to_flush {
             // Format log entry

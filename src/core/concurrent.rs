@@ -40,7 +40,7 @@
 //!
 //! ```rust,ignore
 //! use ri::core::concurrent::RiShardedLock;
-//! use std::collections::HashMap;
+//! use std::collections::HashMap as FxHashMap;
 //!
 //! let sharded_map = RiShardedLock::<String, String>::new(16);
 //!
@@ -55,7 +55,7 @@
 //! ```
 
 use std::borrow::Borrow;
-use std::collections::HashMap;
+use std::collections::HashMap as FxHashMap;
 use std::hash::{Hash, Hasher};
 use std::collections::hash_map::DefaultHasher;
 use std::sync::Arc;
@@ -79,13 +79,13 @@ fn get_shard_index<K: Hash + ?Sized>(key: &K, shard_count: usize) -> usize {
 }
 
 struct Shard<K, V> {
-    data: RwLock<HashMap<K, V>>,
+    data: RwLock<FxHashMap<K, V>>,
 }
 
 impl<K, V> Shard<K, V> {
     fn new() -> Self {
         Self {
-            data: RwLock::new(HashMap::new()),
+            data: RwLock::new(FxHashMap::default()),
         }
     }
 }
@@ -227,8 +227,8 @@ where
         }
     }
 
-    pub async fn collect_all(&self) -> HashMap<K, V> {
-        let mut result = HashMap::new();
+    pub async fn collect_all(&self) -> FxHashMap<K, V> {
+        let mut result = FxHashMap::default();
         for shard in &self.shards {
             let data = shard.data.read().await;
             for (k, v) in data.iter() {
@@ -242,7 +242,7 @@ where
     where
         F: FnMut(&K, &V) -> bool,
     {
-        let mut result = Vec::new();
+        let mut result = Vec::with_capacity(4);
         for shard in &self.shards {
             let data = shard.data.read().await;
             for (k, v) in data.iter() {
@@ -329,13 +329,13 @@ where
 #[allow(dead_code)]
 pub struct RiShardedLockReadGuard<'a, K, V> {
     shard_index: usize,
-    guard: tokio::sync::RwLockReadGuard<'a, HashMap<K, V>>,
+    guard: tokio::sync::RwLockReadGuard<'a, FxHashMap<K, V>>,
 }
 
 #[allow(dead_code)]
 pub struct RiShardedLockWriteGuard<'a, K, V> {
     shard_index: usize,
-    guard: tokio::sync::RwLockWriteGuard<'a, HashMap<K, V>>,
+    guard: tokio::sync::RwLockWriteGuard<'a, FxHashMap<K, V>>,
 }
 
 #[cfg_attr(feature = "pyo3", pyclass)]

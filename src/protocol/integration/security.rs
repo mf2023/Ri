@@ -17,7 +17,7 @@
 
 #![allow(non_snake_case)]
 
-use std::collections::HashMap;
+use std::collections::HashMap as FxHashMap;
 use std::sync::Arc;
 use std::time::Instant;
 use tokio::sync::{RwLock, mpsc};
@@ -55,7 +55,7 @@ pub struct RiSecurityPolicy {
 /// Security enforcement engine structure.
 pub struct RiSecurityEnforcementEngine {
     /// Enforcement rules
-    pub rules: Arc<RwLock<HashMap<String, RiEnforcementRule>>>,
+    pub rules: Arc<RwLock<FxHashMap<String, RiEnforcementRule>>>,
     /// Enforcement actions
     pub actions: Arc<RwLock<Vec<RiEnforcementAction>>>,
     /// Enforcement statistics
@@ -206,7 +206,7 @@ pub struct RiSecurityEvent {
     /// Event time
     pub event_time: Instant,
     /// Event data
-    pub event_data: HashMap<String, String>,
+    pub event_data: FxHashMap<String, String>,
 }
 
 /// Security event type enumeration.
@@ -245,9 +245,9 @@ pub struct RiSecurityEventStats {
     /// Total events
     pub total_events: u64,
     /// Events by type
-    pub events_by_type: HashMap<RiSecurityEventType, u64>,
+    pub events_by_type: FxHashMap<RiSecurityEventType, u64>,
     /// Events by severity
-    pub events_by_severity: HashMap<RiSecurityEventSeverity, u64>,
+    pub events_by_severity: FxHashMap<RiSecurityEventSeverity, u64>,
     /// Average event processing time
     pub avg_event_processing_time_ms: u64,
 }

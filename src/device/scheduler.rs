@@ -18,7 +18,7 @@
 #![allow(non_snake_case)]
 
 use serde::{Serialize, Deserialize};
-use std::collections::HashMap;
+use std::collections::HashMap as FxHashMap;
 use chrono::{DateTime, Utc};
 use crate::device::RiResourceAllocation;
 use tokio::sync::RwLock;
@@ -32,7 +32,7 @@ use std::sync::Arc;
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 pub struct RiResourceScheduler {
     /// Active allocations
-    allocations: Arc<RwLock<HashMap<String, RiResourceAllocation>>>,
+    allocations: Arc<RwLock<FxHashMap<String, RiResourceAllocation>>>,
     /// Allocation history for analytics
     allocation_history: Arc<RwLock<Vec<RiResourceAllocation>>>,
 }
@@ -43,7 +43,7 @@ impl RiResourceScheduler {
     #[new]
     fn new() -> Self {
         Self {
-            allocations: Arc::new(RwLock::new(HashMap::new())),
+            allocations: Arc::new(RwLock::new(FxHashMap::default())),
             allocation_history: Arc::new(RwLock::new(Vec::new())),
         }
     }
@@ -92,7 +92,7 @@ impl RiResourceScheduler {
 ///             compute_units: Some(512),
 ///             storage_gb: None,
 ///             bandwidth_gbps: None,
-///             custom_capabilities: HashMap::new(),
+///             custom_capabilities: FxHashMap::default(),
 ///         },
 ///         priority: 5,
 ///         timeout_secs: 30,
@@ -119,10 +119,10 @@ impl RiResourceScheduler {
 /// scheduling policies per device type.
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 pub struct RiDeviceScheduler {
-    scheduling_policies: HashMap<RiDeviceType, RiSchedulingPolicy>,
+    scheduling_policies: FxHashMap<RiDeviceType, RiSchedulingPolicy>,
     allocation_history: Arc<RwLock<Vec<RiAllocationRecord>>>,
     resource_pool_manager: Arc<RwLock<RiResourcePoolManager>>,
-    round_robin_counters: Arc<RwLock<HashMap<RiDeviceType, usize>>>,
+    round_robin_counters: Arc<RwLock<FxHashMap<RiDeviceType, usize>>>,
 }
 
 /// Scheduling policy enum - defines different algorithms for device selection
@@ -212,7 +212,7 @@ impl RiDeviceScheduler {
     /// 
     /// A new `RiDeviceScheduler` instance with default policies and settings.
     pub fn new(resource_pool_manager: Arc<RwLock<RiResourcePoolManager>>) -> Self {
-        let mut scheduling_policies = HashMap::new();
+        let mut scheduling_policies = FxHashMap::default();
         
         // Set default policies for different device types
         scheduling_policies.insert(RiDeviceType::CPU, RiSchedulingPolicy::LoadBalanced);
@@ -228,7 +228,7 @@ impl RiDeviceScheduler {
             scheduling_policies,
             allocation_history: Arc::new(RwLock::new(Vec::new())),
             resource_pool_manager,
-            round_robin_counters: Arc::new(RwLock::new(HashMap::new())),
+            round_robin_counters: Arc::new(RwLock::new(FxHashMap::default())),
         }
     }
     
@@ -797,7 +797,7 @@ impl RiDeviceScheduler {
             0.0
         };
         
-        let mut by_device_type = HashMap::new();
+        let mut by_device_type = FxHashMap::default();
         for device_type in [RiDeviceType::CPU, RiDeviceType::GPU, RiDeviceType::Memory, 
             RiDeviceType::Storage, RiDeviceType::Network, RiDeviceType::Sensor, 
             RiDeviceType::Actuator, RiDeviceType::Custom] {
@@ -845,7 +845,7 @@ impl RiDeviceScheduler {
     
     /// Get scheduling recommendations based on historical data.
     pub async fn get_recommendations(&self, device_type: &RiDeviceType) -> Vec<RiSchedulingRecommendation> {
-        let mut recommendations = Vec::new();
+        let mut recommendations = Vec::with_capacity(4);
         
         let history = self.allocation_history.read().await;
         let recent_allocations: Vec<&RiAllocationRecord> = history.iter()
@@ -929,7 +929,7 @@ pub struct RiAllocationStatistics {
     /// Average duration of completed allocations in seconds
     pub average_duration_seconds: f64,
     /// Statistics broken down by device type
-    pub by_device_type: HashMap<RiDeviceType, RiDeviceTypeStatistics>,
+    pub by_device_type: FxHashMap<RiDeviceType, RiDeviceTypeStatistics>,
 }
 
 /// Device type statistics - metrics for a specific device type

@@ -21,7 +21,7 @@
 
 use jni::JNIEnv;
 use jni::objects::{JObject, JString, JValue};
-use std::collections::HashMap;
+use std::collections::HashMap as FxHashMap;
 
 /// Trait for types that can be converted to Java objects
 pub trait ToJava {
@@ -170,8 +170,8 @@ impl FromJava for Vec<String> {
     }
 }
 
-// HashMap<String, String> conversion
-impl ToJava for HashMap<String, String> {
+// FxHashMap<String, String> conversion
+impl ToJava for FxHashMap<String, String> {
     fn to_java<'a>(&self, env: &mut JNIEnv<'a>) -> JObject<'a> {
         let map = env
             .new_object("java/util/HashMap", "()V", &[])
@@ -194,7 +194,7 @@ impl ToJava for HashMap<String, String> {
     }
 }
 
-impl FromJava for HashMap<String, String> {
+impl FromJava for FxHashMap<String, String> {
     fn from_java<'a>(env: &mut JNIEnv<'a>, obj: JObject<'a>) -> Self {
         let entry_set = env
             .call_method(&obj, "entrySet", "()Ljava/util/Set;", &[])
@@ -208,7 +208,7 @@ impl FromJava for HashMap<String, String> {
             .l()
             .expect("Failed to get iterator object");
         
-        let mut result = HashMap::new();
+        let mut result = FxHashMap::default();
         
         loop {
             let has_next = env

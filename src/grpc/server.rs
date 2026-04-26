@@ -22,9 +22,6 @@ use tokio::sync::mpsc;
 use std::net::SocketAddr;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 
-#[cfg(feature = "pyo3")]
-use pyo3::prelude::*;
-
 pub struct RiGrpcServer {
     config: RiGrpcConfig,
     stats: Arc<RwLock<RiGrpcStats>>,
@@ -301,7 +298,10 @@ impl RiGrpcServer {
     }
 
     fn build_grpc_response(data: &[u8]) -> Vec<u8> {
-        let mut response = Vec::new();
+        let header_len = 58;
+        let trailers_len = 24;
+        let total_len = header_len + 4 + data.len() + trailers_len;
+        let mut response = Vec::with_capacity(total_len);
         
         let header = "HTTP/2.0 200 OK\r\ncontent-type: application/grpc\r\n\r\n";
         response.extend_from_slice(header.as_bytes());
@@ -318,12 +318,12 @@ impl RiGrpcServer {
     }
 
     fn build_grpc_error_response(message: &str) -> Vec<u8> {
-        let mut response = Vec::new();
-        
         let header = "HTTP/2.0 200 OK\r\ncontent-type: application/grpc\r\n\r\n";
-        response.extend_from_slice(header.as_bytes());
-        
         let trailers = format!("\r\ngrpc-status: 2\r\ngrpc-message: {}\r\n\r\n", message);
+        let total_len = header.len() + trailers.len();
+        let mut response = Vec::with_capacity(total_len);
+        
+        response.extend_from_slice(header.as_bytes());
         response.extend_from_slice(trailers.as_bytes());
         
         response

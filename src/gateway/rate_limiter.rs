@@ -71,7 +71,7 @@
 //! }
 //! ```
 
-use std::collections::HashMap;
+use std::collections::HashMap as FxHashMap;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use tokio::sync::RwLock;
@@ -282,7 +282,7 @@ pub struct RiRateLimiter {
     config: RiRateLimitConfig,
     
     /// Map of key to token bucket instances
-    buckets: RwLock<HashMap<String, Arc<RateLimitBucket>>>,
+    buckets: RwLock<FxHashMap<String, Arc<RateLimitBucket>>>,
 }
 
 impl RiRateLimiter {
@@ -298,7 +298,7 @@ impl RiRateLimiter {
     pub fn new(config: RiRateLimitConfig) -> Self {
         Self {
             config,
-            buckets: RwLock::new(HashMap::new()),
+            buckets: RwLock::new(FxHashMap::default()),
         }
     }
 
@@ -385,11 +385,11 @@ impl RiRateLimiter {
     /// 
     /// # Returns
     /// 
-    /// A `HashMap<String, RiRateLimitStats>` with statistics for all keys
-    pub fn get_all_stats(&self) -> HashMap<String, RiRateLimitStats> {
+    /// A `FxHashMap<String, RiRateLimitStats>` with statistics for all keys
+    pub fn get_all_stats(&self) -> FxHashMap<String, RiRateLimitStats> {
         futures::executor::block_on(async {
             let buckets = self.buckets.read().await;
-            let mut stats = HashMap::new();
+            let mut stats = FxHashMap::default();
             
             for (key, bucket) in buckets.iter() {
                 stats.insert(key.clone(), bucket.get_stats());

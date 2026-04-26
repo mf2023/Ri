@@ -65,7 +65,7 @@
 //! }
 //! ```
 
-use std::collections::HashMap;
+use std::collections::HashMap as FxHashMap;
 use std::fmt;
 use std::sync::Arc;
 use tokio::sync::RwLock;
@@ -229,7 +229,7 @@ impl RiMethodRegistration {
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 pub struct RiModuleEndpoint {
     module_name: String,
-    methods: Arc<RwLock<HashMap<String, RiMethodRegistration>>>,
+    methods: Arc<RwLock<FxHashMap<String, RiMethodRegistration>>>,
 }
 
 #[cfg(feature = "pyo3")]
@@ -256,7 +256,7 @@ impl RiModuleEndpoint {
     pub fn new(module_name: &str) -> Self {
         Self {
             module_name: module_name.to_string(),
-            methods: Arc::new(RwLock::new(HashMap::new())),
+            methods: Arc::new(RwLock::new(FxHashMap::default())),
         }
     }
 
@@ -300,14 +300,14 @@ impl RiModuleEndpoint {
 #[derive(Clone)]
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 pub struct RiModuleRPC {
-    endpoints: Arc<RwLock<HashMap<String, Arc<RiModuleEndpoint>>>>,
+    endpoints: Arc<RwLock<FxHashMap<String, Arc<RiModuleEndpoint>>>>,
     default_timeout: Duration,
 }
 
 impl RiModuleRPC {
     pub fn new() -> Self {
         Self {
-            endpoints: Arc::new(RwLock::new(HashMap::new())),
+            endpoints: Arc::new(RwLock::new(FxHashMap::default())),
             default_timeout: Duration::from_millis(5000),
         }
     }

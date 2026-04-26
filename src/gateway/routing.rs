@@ -61,7 +61,7 @@
 //!         Box::pin(async move {
 //!             Ok(RiGatewayResponse {
 //!                 status_code: 200,
-//!                 headers: HashMap::new(),
+//!                 headers: FxHashMap::default(),
 //!                 body: "Hello, Ri!".as_bytes().to_vec(),
 //!             })
 //!         })
@@ -92,7 +92,7 @@ use super::radix_tree::RiRadixTree;
 use crate::core::RiResult;
 use crate::core::lock::RwLockExtensions;
 use crate::gateway::middleware::RiMiddleware;
-use std::collections::HashMap;
+use std::collections::HashMap as FxHashMap;
 use std::fmt;
 use std::future::Future;
 use std::pin::Pin;
@@ -194,7 +194,7 @@ impl RiRoute {
             Box::pin(async move {
                 Ok(RiGatewayResponse {
                     status_code: 200,
-                    headers: std::collections::HashMap::new(),
+                    headers: std::collections::FxHashMap::default(),
                     body: b"Hello from Ri Python!".to_vec(),
                     request_id: String::new(),
                 })
@@ -217,11 +217,11 @@ impl RiRoute {
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 pub struct RiRouter {
     /// Radix trees for each HTTP method
-    trees: std::sync::RwLock<HashMap<String, RiRadixTree>>,
+    trees: std::sync::RwLock<FxHashMap<String, RiRadixTree>>,
     /// Vector of registered routes for backward compatibility and introspection
     routes: std::sync::RwLock<Vec<RiRoute>>,
     /// Cache of route matches for improved performance
-    route_cache: std::sync::RwLock<HashMap<String, RiRoute>>,
+    route_cache: std::sync::RwLock<FxHashMap<String, RiRoute>>,
 }
 
 impl Default for RiRouter {
@@ -238,9 +238,9 @@ impl RiRouter {
     /// A new `RiRouter` instance with empty routes and cache
     pub fn new() -> Self {
         Self {
-            trees: std::sync::RwLock::new(HashMap::new()),
+            trees: std::sync::RwLock::new(FxHashMap::default()),
             routes: std::sync::RwLock::new(Vec::new()),
-            route_cache: std::sync::RwLock::new(HashMap::new()),
+            route_cache: std::sync::RwLock::new(FxHashMap::default()),
         }
     }
 

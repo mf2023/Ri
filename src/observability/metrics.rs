@@ -187,7 +187,7 @@ impl RiSlidingWindow {
     
     #[allow(dead_code)]
     fn get_samples(&self) -> Vec<RiMetricSample> {
-        let mut all_samples = Vec::new();
+        let mut all_samples = Vec::with_capacity(8);
         
         for bucket in &self.buckets {
             all_samples.extend(bucket.iter().cloned());

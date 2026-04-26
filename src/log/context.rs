@@ -71,7 +71,7 @@
 // Logging context for Ri, similar to MDC with distributed tracing support.
 
 use std::cell::RefCell;
-use std::collections::HashMap;
+use std::collections::HashMap as FxHashMap;
 use uuid::Uuid;
 
 // Thread-local logging context storage.
@@ -80,7 +80,7 @@ use uuid::Uuid;
 // contextual information to be added to logs without passing it explicitly through
 // all function calls.
 thread_local! {
-    static LOGONTEXT: RefCell<HashMap<String, String>> = RefCell::new(HashMap::new());
+    static LOGONTEXT: RefCell<FxHashMap<String, String>> = RefCell::new(FxHashMap::default());
 }
 
 /// Log context for Ri, similar to MDC with distributed tracing support.
@@ -110,7 +110,7 @@ impl RiLogContext {
     /// # Parameters
     /// 
     /// - `values`: A HashMap of key-value pairs to add to the context
-    pub fn put_all(values: HashMap<String, String>) {
+    pub fn put_all(values: FxHashMap<String, String>) {
         LOGONTEXT.with(|ctx| {
             let mut ctx = ctx.borrow_mut();
             for (k, v) in values {
@@ -148,7 +148,7 @@ impl RiLogContext {
     /// # Returns
     /// 
     /// A HashMap containing all key-value pairs in the context
-    pub fn get_all() -> HashMap<String, String> {
+    pub fn get_all() -> FxHashMap<String, String> {
         LOGONTEXT.with(|ctx| ctx.borrow().clone())
     }
 

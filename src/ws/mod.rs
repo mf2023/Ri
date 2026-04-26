@@ -25,7 +25,7 @@ use std::net::SocketAddr;
 use futures::stream::SplitStream;
 use tokio::net::TcpListener;
 use tokio::sync::broadcast;
-use std::collections::HashMap;
+use std::collections::HashMap as FxHashMap;
 use tungstenite::Message;
 
 #[cfg(feature = "pyo3")]
@@ -315,7 +315,7 @@ impl RiWSSession {
 }
 
 pub struct RiWSSessionManager {
-    sessions: Arc<RwLock<HashMap<String, Arc<RiWSSession>>>>,
+    sessions: Arc<RwLock<FxHashMap<String, Arc<RiWSSession>>>>,
     max_connections: usize,
 }
 

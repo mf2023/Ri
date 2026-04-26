@@ -96,7 +96,7 @@
 
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
+use std::collections::HashMap as FxHashMap;
 use std::sync::Arc;
 use std::time::{Duration, SystemTime};
 use tokio::sync::RwLock;
@@ -182,7 +182,7 @@ pub struct RiServiceEndpoint {
     /// Weight for load balancing
     pub weight: u32,
     /// Metadata associated with the endpoint
-    pub metadata: HashMap<String, String>,
+    pub metadata: FxHashMap<String, String>,
     /// Health status of the endpoint
     pub health_status: RiServiceHealthStatus,
     /// Time of the last health check
@@ -216,7 +216,7 @@ impl RiServiceEndpoint {
             service_name,
             endpoint,
             weight,
-            metadata: HashMap::new(),
+            metadata: FxHashMap::default(),
             health_status: RiServiceHealthStatus::Unknown,
             last_health_check: SystemTime::now(),
         }
@@ -314,8 +314,8 @@ pub struct RiServiceMesh {
     traffic_manager: Arc<RiTrafficManager>,
     circuit_breaker: Arc<RiCircuitBreaker>,
     load_balancer: Arc<RiLoadBalancer>,
-    services: Arc<RwLock<HashMap<String, Vec<RiServiceEndpoint>>>>,
-    discovery_cache: Arc<RwLock<HashMap<String, ServiceDiscoveryCacheEntry>>>,
+    services: Arc<RwLock<FxHashMap<String, Vec<RiServiceEndpoint>>>>,
+    discovery_cache: Arc<RwLock<FxHashMap<String, ServiceDiscoveryCacheEntry>>>,
     cache_expiration: Duration,
     tracer: Option<Arc<RiTracer>>,
 }
@@ -335,8 +335,8 @@ impl RiServiceMesh {
             traffic_manager,
             circuit_breaker,
             load_balancer,
-            services: Arc::new(RwLock::new(HashMap::new())),
-            discovery_cache: Arc::new(RwLock::new(HashMap::new())),
+            services: Arc::new(RwLock::new(FxHashMap::default())),
+            discovery_cache: Arc::new(RwLock::new(FxHashMap::default())),
             cache_expiration: Duration::from_secs(30),
             tracer: None,
         })
@@ -369,7 +369,7 @@ impl RiServiceMesh {
     /// # Returns
     /// 
     /// A `RiResult<()>` indicating success or failure
-    pub async fn register_service(&self, service_name: &str, endpoint: &str, weight: u32, metadata: Option<HashMap<String, String>>) -> RiResult<()> {
+    pub async fn register_service(&self, service_name: &str, endpoint: &str, weight: u32, metadata: Option<FxHashMap<String, String>>) -> RiResult<()> {
         if service_name.is_empty() {
             return Err(RiError::ServiceMesh("Service name cannot be empty".to_string()));
         }
@@ -402,7 +402,7 @@ impl RiServiceMesh {
     }
     
     /// Registers a service with full metadata including version information.
-    pub async fn register_versioned_service(&self, service_name: &str, version: &str, endpoint: &str, weight: u32, metadata: Option<HashMap<String, String>>) -> RiResult<()> {
+    pub async fn register_versioned_service(&self, service_name: &str, version: &str, endpoint: &str, weight: u32, metadata: Option<FxHashMap<String, String>>) -> RiResult<()> {
         let mut enriched_metadata = metadata.unwrap_or_default();
         enriched_metadata.insert("version".to_string(), version.to_string());
         

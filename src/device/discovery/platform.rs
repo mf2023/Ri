@@ -252,8 +252,8 @@ fn detect_os() -> (String, String) {
 }
 
 /// Reads /etc/os-release for Linux distribution info
-fn read_os_release() -> HashMap<String, String> {
-    let mut result = HashMap::new();
+fn read_os_release() -> FxHashMap<String, String> {
+    let mut result = FxHashMap::default();
 
     if let Ok(content) = std::fs::read_to_string("/etc/os-release") {
         for line in content.lines() {
@@ -425,7 +425,7 @@ fn detect_platform_type(os_name: &str) -> PlatformType {
 
 /// Detects available discovery strategies for the platform
 fn detect_available_strategies(platform_type: &PlatformType) -> Vec<DiscoveryStrategy> {
-    let mut strategies = Vec::new();
+    let mut strategies = Vec::with_capacity(4);
 
     match platform_type {
         PlatformType::Linux => {
@@ -525,8 +525,8 @@ impl PlatformCompatibility {
 
     /// Creates platform compatibility from platform info
     pub fn from_platform(platform: &PlatformInfo) -> Self {
-        let mut supported_hardware = Vec::new();
-        let mut limitations = Vec::new();
+        let mut supported_hardware = Vec::with_capacity(4);
+        let mut limitations = Vec::with_capacity(4);
 
         supported_hardware.extend(vec![
             HardwareCategory::CPU,
@@ -614,4 +614,4 @@ impl PlatformCompatibility {
     }
 }
 
-use std::collections::HashMap;
+use std::collections::HashMap as FxHashMap;

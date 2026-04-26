@@ -20,9 +20,6 @@
 use super::*;
 use tokio_tungstenite::tungstenite::protocol::WebSocketConfig;
 
-#[cfg(feature = "pyo3")]
-use pyo3::prelude::*;
-
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "pyo3", pyclass)]
 pub struct RiWSClientConfig {

@@ -86,7 +86,7 @@
 //! }
 //! ```
 
-use std::collections::HashMap;
+use std::collections::HashMap as FxHashMap;
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 use async_trait::async_trait;
@@ -106,9 +106,9 @@ pub struct RiGlobalStateManager {
     /// Global system state
     global_state: Arc<RwLock<RiGlobalState>>,
     /// Protocol-specific state
-    protocol_states: Arc<RwLock<HashMap<RiProtocolType, RiProtocolState>>>,
+    protocol_states: Arc<RwLock<FxHashMap<RiProtocolType, RiProtocolState>>>,
     /// Device-specific state
-    device_states: Arc<RwLock<HashMap<String, RiDeviceState>>>,
+    device_states: Arc<RwLock<FxHashMap<String, RiDeviceState>>>,
     /// Security state
     security_state: Arc<RwLock<RiSecurityState>>,
     /// Performance state
@@ -179,7 +179,7 @@ pub struct RiDeviceState {
     /// Last seen timestamp
     pub last_seen: Instant,
     /// Device metadata
-    pub metadata: HashMap<String, String>,
+    pub metadata: FxHashMap<String, String>,
 }
 
 /// Security state structure.
@@ -194,7 +194,7 @@ pub struct RiSecurityState {
     /// Security incidents
     pub security_incidents: Vec<RiSecurityIncident>,
     /// Compliance status
-    pub compliance_status: HashMap<String, RiComplianceStatus>,
+    pub compliance_status: FxHashMap<String, RiComplianceStatus>,
     /// Last security scan
     pub last_security_scan: Instant,
 }
@@ -918,9 +918,9 @@ struct RiStateSnapshot {
     /// Global state snapshot
     global_state: RiGlobalState,
     /// Protocol states snapshot
-    protocol_states: HashMap<RiProtocolType, RiProtocolState>,
+    protocol_states: FxHashMap<RiProtocolType, RiProtocolState>,
     /// Device states snapshot
-    device_states: HashMap<String, RiDeviceState>,
+    device_states: FxHashMap<String, RiDeviceState>,
     /// Security state snapshot
     security_state: RiSecurityState,
     /// Performance state snapshot
@@ -1005,7 +1005,8 @@ impl RiEncryptedStateBackend {
         let ciphertext = cipher.encrypt(nonce, serialized.as_slice())
             .map_err(|e| RiError::CryptoError(e.to_string()))?;
 
-        let mut encrypted_data = nonce.to_vec();
+        let mut encrypted_data = Vec::with_capacity(12 + ciphertext.len());
+        encrypted_data.extend_from_slice(&nonce_bytes);
         encrypted_data.extend_from_slice(&ciphertext);
 
         self.memory_backend.save_encrypted(encrypted_data).await
@@ -1141,8 +1142,8 @@ impl RiGlobalStateManager {
         
         Self {
             global_state,
-            protocol_states: Arc::new(RwLock::new(HashMap::new())),
-            device_states: Arc::new(RwLock::new(HashMap::new())),
+            protocol_states: Arc::new(RwLock::new(FxHashMap::default())),
+            device_states: Arc::new(RwLock::new(FxHashMap::default())),
             security_state: Arc::new(RwLock::new(RiSecurityState {
                 global_security_level: RiSecurityLevel::Standard,
                 threat_intelligence: RiThreatIntelligence {
@@ -1153,7 +1154,7 @@ impl RiGlobalStateManager {
                 },
                 security_policies: vec![],
                 security_incidents: vec![],
-                compliance_status: HashMap::new(),
+                compliance_status: FxHashMap::default(),
                 last_security_scan: Instant::now(),
             })),
             performance_state: Arc::new(RwLock::new(RiPerformanceState {
@@ -1347,7 +1348,7 @@ impl RiGlobalStateManager {
             capabilities,
             supported_protocols,
             last_seen: Instant::now(),
-            metadata: HashMap::new(),
+            metadata: FxHashMap::default(),
         };
         
         self.device_states.write().await.insert(device_id.clone(), device_state.clone());

@@ -60,7 +60,7 @@
 //! }
 //! ```
 
-use std::collections::HashMap;
+use std::collections::HashMap as FxHashMap;
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, RwLock};
@@ -84,7 +84,7 @@ use crate::core::RiServiceContext;
 #[derive(Clone)]
 pub struct RiConfig {
     /// Internal storage for configuration values
-    values: HashMap<String, String>,
+    values: FxHashMap<String, String>,
 }
 
 impl Default for RiConfig {
@@ -98,7 +98,7 @@ impl RiConfig {
     /// 
     /// Returns a new `RiConfig` instance with an empty key-value store.
     pub fn new() -> Self {
-        RiConfig { values: HashMap::new() }
+        RiConfig { values: FxHashMap::default() }
     }
 
     /// Sets a configuration value.
@@ -947,7 +947,7 @@ impl RiConfigManager {
             notify::Config::default(),
         ).map_err(|e| crate::core::RiError::Config(format!("Failed to create config watcher: {}", e)))?;
         
-        let mut monitored = Vec::new();
+        let mut monitored = Vec::with_capacity(self.sources.len());
         
         for source in &self.sources {
             if let RiConfigSource::File(path) = source {

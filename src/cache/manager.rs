@@ -19,7 +19,7 @@
 
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
-use std::collections::HashMap;
+use std::collections::HashMap as FxHashMap;
 use tokio::sync::{RwLock, broadcast};
 use crate::cache::core::{RiCache, RiCacheStats};
 
@@ -102,7 +102,7 @@ pub struct RiCacheManager {
     event_receiver: Option<broadcast::Receiver<RiCacheEvent>>,
     
     /// Map of subscribers to cache events (for internal use)
-    _subscribers: Arc<RwLock<HashMap<String, broadcast::Receiver<RiCacheEvent>>>>,
+    _subscribers: Arc<RwLock<FxHashMap<String, broadcast::Receiver<RiCacheEvent>>>>,
 }
 
 impl RiCacheManager {
@@ -120,7 +120,7 @@ impl RiCacheManager {
             backend,
             event_sender: sender,
             event_receiver: Some(receiver),
-            _subscribers: Arc::new(RwLock::new(HashMap::new())),
+            _subscribers: Arc::new(RwLock::new(FxHashMap::default())),
         }
     }
     

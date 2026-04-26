@@ -43,14 +43,14 @@
 //! ```text
 //! Root
 //! ├── api
-//! │   └── v1
-//! │       ├── users (handler)
-//! │       └── users/
-//! │           └── :id (handler with param extraction)
+//! �?  └── v1
+//! �?      ├── users (handler)
+//! �?      └── users/
+//! �?          └── :id (handler with param extraction)
 //! └── health (handler)
 //! ```
 
-use std::collections::HashMap;
+use std::collections::HashMap as FxHashMap;
 use std::sync::{Arc, RwLock};
 
 use super::routing::{RiRoute, RiRouteHandler};
@@ -123,7 +123,7 @@ pub struct RouteMatch {
     /// The matched route
     pub route: RiRoute,
     /// Extracted path parameters
-    pub params: HashMap<String, String>,
+    pub params: FxHashMap<String, String>,
 }
 
 /// A node in the radix tree.
@@ -141,7 +141,7 @@ pub struct RadixNode {
     /// Route data if this node is a terminal
     pub route_data: Option<RiRoute>,
     /// Static children (exact match segments)
-    pub children: HashMap<String, Arc<RwLock<RadixNode>>>,
+    pub children: FxHashMap<String, Arc<RwLock<RadixNode>>>,
     /// Parameter child (for `:param` segments)
     pub param_child: Option<Arc<RwLock<RadixNode>>>,
     /// Wildcard child (for `*path` segments)
@@ -163,7 +163,7 @@ impl RadixNode {
             segment,
             handler: None,
             route_data: None,
-            children: HashMap::new(),
+            children: FxHashMap::default(),
             param_child: None,
             wildcard_child: None,
         }
@@ -397,7 +397,7 @@ impl RiRadixTree {
     /// An `Option<RouteMatch>` containing the matched route and extracted parameters
     pub fn find(&self, path: &str) -> Option<RouteMatch> {
         let segments: Vec<&str> = path.split('/').filter(|s| !s.is_empty()).collect();
-        let mut params = HashMap::new();
+        let mut params = FxHashMap::default();
         
         let root = match self.root.read_safe("root for find") {
             Ok(r) => r,
@@ -430,7 +430,7 @@ impl RiRadixTree {
         node: Arc<RwLock<RadixNode>>,
         segments: &[&str],
         index: usize,
-        params: &mut HashMap<String, String>,
+        params: &mut FxHashMap<String, String>,
     ) -> Option<RouteMatch> {
         if index >= segments.len() {
             let node_guard = match node.read_safe("node for terminal check") {

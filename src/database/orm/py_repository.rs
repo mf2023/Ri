@@ -137,7 +137,7 @@ impl RiPyORMRepository {
         let db = self.pool.get().await?;
         let sql = format!("SELECT * FROM {}", self.table_name);
         let result = db.query(&sql).await?;
-        let mut entities = Vec::new();
+        let mut entities = Vec::with_capacity(4);
         for row in result {
             let json_value = serde_json::to_value(row.to_map())?;
             entities.push(json_value);

@@ -21,9 +21,6 @@ use super::*;
 use std::time::Duration;
 use std::sync::atomic::{AtomicU64, Ordering};
 
-#[cfg(feature = "pyo3")]
-use pyo3::prelude::*;
-
 pub struct RiGrpcClient {
     channel: Option<tonic::transport::Channel>,
     endpoint: String,

@@ -16,7 +16,7 @@
 //! limitations under the License.
 
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
+use std::collections::HashMap as FxHashMap;
 use std::sync::Arc;
 use std::time::{Duration, SystemTime};
 use tokio::sync::RwLock;
@@ -36,7 +36,7 @@ pub struct RiServiceInstance {
     pub service_name: String,
     pub host: String,
     pub port: u16,
-    pub metadata: HashMap<String, String>,
+    pub metadata: FxHashMap<String, String>,
     pub registered_at: SystemTime,
     pub last_heartbeat: SystemTime,
     pub status: RiServiceStatus,
@@ -67,7 +67,7 @@ impl RiServiceInstance {
             service_name,
             host,
             port,
-            metadata: HashMap::new(),
+            metadata: FxHashMap::default(),
             registered_at: SystemTime::now(),
             last_heartbeat: SystemTime::now(),
             status: RiServiceStatus::Starting,
@@ -102,8 +102,8 @@ impl RiServiceInstance {
 
 #[derive(Clone)]
 pub struct RiServiceRegistry {
-    services: Arc<RwLock<HashMap<String, Vec<RiServiceInstance>>>>,
-    instance_index: Arc<RwLock<HashMap<String, RiServiceInstance>>>,
+    services: Arc<RwLock<FxHashMap<String, Vec<RiServiceInstance>>>>,
+    instance_index: Arc<RwLock<FxHashMap<String, RiServiceInstance>>>,
     #[cfg(feature = "etcd")]
     etcd_client: Option<Arc<Mutex<Client>>>,
     _etcd_prefix: String,
@@ -133,8 +133,8 @@ impl RiServiceRegistry {
     #[cfg(feature = "etcd")]
     pub fn new(etcd_client: Option<Client>, etcd_prefix: String) -> Self {
         Self {
-            services: Arc::new(RwLock::new(HashMap::new())),
-            instance_index: Arc::new(RwLock::new(HashMap::new())),
+            services: Arc::new(RwLock::new(FxHashMap::default())),
+            instance_index: Arc::new(RwLock::new(FxHashMap::default())),
             etcd_client: etcd_client.map(|c| Arc::new(Mutex::new(c))),
             _etcd_prefix: etcd_prefix,
         }
@@ -143,8 +143,8 @@ impl RiServiceRegistry {
     #[cfg(not(feature = "etcd"))]
     pub fn new(_etcd_client: Option<()>, etcd_prefix: String) -> Self {
         Self {
-            services: Arc::new(RwLock::new(HashMap::new())),
-            instance_index: Arc::new(RwLock::new(HashMap::new())),
+            services: Arc::new(RwLock::new(FxHashMap::default())),
+            instance_index: Arc::new(RwLock::new(FxHashMap::default())),
             _etcd_prefix: etcd_prefix,
         }
     }
@@ -278,7 +278,7 @@ impl RiServiceRegistry {
 
     pub async fn cleanup_expired_instances(&self, expiration_duration: Duration) -> RiResult<()> {
         let now = SystemTime::now();
-        let mut expired_instances = Vec::new();
+        let mut expired_instances = Vec::with_capacity(4);
 
         {
             let instance_index = self.instance_index.read().await;
@@ -445,7 +445,7 @@ impl RiServiceDiscovery {
         service_name: &str,
         host: &str,
         port: u16,
-        metadata: HashMap<String, String>,
+        metadata: FxHashMap<String, String>,
     ) -> RiResult<String> {
         if !self.enabled {
             return Err(RiError::ServiceMesh("Service discovery is disabled".to_string()));

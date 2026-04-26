@@ -76,7 +76,7 @@
 //!     
 //!     // Add an event to the span
 //!     tracer.span_mut(&span_id, |span| {
-//!         let mut attributes = std::collections::HashMap::new();
+//!         let mut attributes = std::collections::FxHashMap::default();
 //!         attributes.insert("event_key".to_string(), "event_value".to_string());
 //!         span.add_event("example_event".to_string(), attributes);
 //!     })?;
@@ -90,7 +90,7 @@
 
 use serde::{Deserialize, Serialize};
 use std::cell::RefCell;
-use std::collections::HashMap;
+use std::collections::HashMap as FxHashMap;
 use std::sync::{Arc, RwLock};
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use uuid::Uuid;
@@ -178,7 +178,7 @@ pub struct RiSpan {
     pub kind: RiSpanKind,
     pub start_time: u64, // microseconds since epoch
     pub end_time: Option<u64>,
-    pub attributes: HashMap<String, String>,
+    pub attributes: FxHashMap<String, String>,
     pub events: Vec<RiSpanEvent>,
     pub status: RiSpanStatus,
 }
@@ -203,7 +203,7 @@ impl RiSpan {
             kind,
             start_time,
             end_time: None,
-            attributes: HashMap::new(),
+            attributes: FxHashMap::default(),
             events: Vec::new(),
             status: RiSpanStatus::Unset,
         }
@@ -213,7 +213,7 @@ impl RiSpan {
         self.attributes.insert(key, value);
     }
 
-    pub fn add_event(&mut self, name: String, attributes: HashMap<String, String>) {
+    pub fn add_event(&mut self, name: String, attributes: FxHashMap<String, String>) {
         let timestamp = SystemTime::now()
             .duration_since(UNIX_EPOCH)
             .unwrap_or(Duration::from_secs(0))
@@ -251,7 +251,7 @@ impl RiSpan {
 pub struct RiSpanEvent {
     pub name: String,
     pub timestamp: u64, // microseconds since epoch
-    pub attributes: HashMap<String, String>,
+    pub attributes: FxHashMap<String, String>,
 }
 
 /// Thread-local tracing context
@@ -259,7 +259,7 @@ pub struct RiSpanEvent {
 pub struct RiTracingContext {
     current_trace_id: Option<RiTraceId>,
     current_span_id: Option<RiSpanId>,
-    baggage: HashMap<String, String>,
+    baggage: FxHashMap<String, String>,
 }
 
 // Thread-local storage for tracing context
@@ -278,7 +278,7 @@ impl RiTracingContext {
         Self {
             current_trace_id: None,
             current_span_id: None,
-            baggage: HashMap::new(),
+            baggage: FxHashMap::default(),
         }
     }
 
@@ -346,8 +346,8 @@ pub enum RiSamplingStrategy {
 /// Distributed tracer
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 pub struct RiTracer {
-    spans: Arc<RwLock<HashMap<RiTraceId, Vec<RiSpan>>>>,
-    active_spans: Arc<RwLock<HashMap<RiSpanId, RiSpan>>>,
+    spans: Arc<RwLock<FxHashMap<RiTraceId, Vec<RiSpan>>>>,
+    active_spans: Arc<RwLock<FxHashMap<RiSpanId, RiSpan>>>,
     sampling_strategy: RiSamplingStrategy,
     adaptive_window: Arc<RwLock<Vec<u64>>>,
     max_adaptive_window: usize,
@@ -356,8 +356,8 @@ pub struct RiTracer {
 impl RiTracer {
     pub fn new(sampling_rate: f64) -> Self {
         Self {
-            spans: Arc::new(RwLock::new(HashMap::new())),
-            active_spans: Arc::new(RwLock::new(HashMap::new())),
+            spans: Arc::new(RwLock::new(FxHashMap::default())),
+            active_spans: Arc::new(RwLock::new(FxHashMap::default())),
             sampling_strategy: RiSamplingStrategy::Rate(sampling_rate.clamp(0.0, 1.0)),
             adaptive_window: Arc::new(RwLock::new(Vec::new())),
             max_adaptive_window: 100,
@@ -367,8 +367,8 @@ impl RiTracer {
     /// Create a new tracer with a custom sampling strategy
     pub fn with_strategy(strategy: RiSamplingStrategy) -> Self {
         Self {
-            spans: Arc::new(RwLock::new(HashMap::new())),
-            active_spans: Arc::new(RwLock::new(HashMap::new())),
+            spans: Arc::new(RwLock::new(FxHashMap::default())),
+            active_spans: Arc::new(RwLock::new(FxHashMap::default())),
             sampling_strategy: strategy,
             adaptive_window: Arc::new(RwLock::new(Vec::new())),
             max_adaptive_window: 100,
@@ -528,10 +528,10 @@ impl RiTracer {
     }
 
     /// Export completed traces
-    pub fn export_traces(&self) -> HashMap<RiTraceId, Vec<RiSpan>> {
+    pub fn export_traces(&self) -> FxHashMap<RiTraceId, Vec<RiSpan>> {
         match self.spans.read_safe("spans for export") {
             Ok(spans) => spans.clone(),
-            Err(_) => HashMap::new(),
+            Err(_) => FxHashMap::default(),
         }
     }
 
@@ -698,7 +698,7 @@ impl RiTracer {
 
     /// Add span event from Python
     #[pyo3(name = "span_add_event")]
-    fn span_add_event_impl(&self, span_id: String, name: String, attributes: HashMap<String, String>) -> PyResult<()> {
+    fn span_add_event_impl(&self, span_id: String, name: String, attributes: FxHashMap<String, String>) -> PyResult<()> {
         let span_id_obj = RiSpanId::from_string(span_id);
         self.span_mut(&span_id_obj, |span| {
             span.add_event(name, attributes);
@@ -708,7 +708,7 @@ impl RiTracer {
 
     /// Export traces from Python
     #[pyo3(name = "export_traces")]
-    fn export_traces_impl(&self, py: pyo3::Python<'_>) -> PyResult<HashMap<String, Vec<pyo3::Py<pyo3::PyAny>>>> {
+    fn export_traces_impl(&self, py: pyo3::Python<'_>) -> PyResult<FxHashMap<String, Vec<pyo3::Py<pyo3::PyAny>>>> {
         let traces = self.export_traces();
         let mut result = HashMap::with_capacity(traces.len());
 
@@ -750,7 +750,7 @@ impl RiTracer {
 
 /// Tracer manager for managing multiple tracer instances
 pub struct RiTracerManager {
-    tracers: HashMap<String, Arc<RiTracer>>,
+    tracers: FxHashMap<String, Arc<RiTracer>>,
     default_tracer: Option<String>,
 }
 
@@ -763,7 +763,7 @@ impl Default for RiTracerManager {
 impl RiTracerManager {
     pub fn new() -> Self {
         Self {
-            tracers: HashMap::new(),
+            tracers: FxHashMap::default(),
             default_tracer: None,
         }
     }

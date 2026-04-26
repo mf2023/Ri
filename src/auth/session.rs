@@ -48,7 +48,7 @@
 //! let session = session_manager.get_session(&session_id).await?;
 //! 
 //! // Update session data
-//! let mut data = HashMap::new();
+//! let mut data = FxHashMap::default();
 //! data.insert("theme".to_string(), "dark".to_string());
 //! session_manager.update_session(&session_id, data).await?;
 //! 
@@ -62,7 +62,7 @@
 #![allow(non_snake_case)]
 
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
+use std::collections::HashMap as FxHashMap;
 use std::time::{SystemTime, UNIX_EPOCH};
 use uuid::Uuid;
 use crate::core::concurrent::RiShardedLock;
@@ -88,7 +88,7 @@ pub struct RiSession {
     /// Session expiration time as Unix timestamp
     pub expires_at: u64,
     /// Custom key-value data associated with the session
-    pub data: HashMap<String, String>,
+    pub data: FxHashMap<String, String>,
     /// Client IP address from which the session was created
     pub ip_address: Option<String>,
     /// Client user agent string from which the session was created
@@ -105,7 +105,7 @@ impl RiSession {
         created_at: Option<u64>,
         last_accessed: Option<u64>,
         expires_at: Option<u64>,
-        data: Option<HashMap<String, String>>,
+        data: Option<FxHashMap<String, String>>,
         ip_address: Option<String>,
         user_agent: Option<String>,
     ) -> Self {
@@ -148,7 +148,7 @@ impl RiSession {
             created_at: now,
             last_accessed: now,
             expires_at: now + timeout_secs,
-            data: HashMap::new(),
+            data: FxHashMap::default(),
             ip_address,
             user_agent,
         }
@@ -327,7 +327,7 @@ impl RiSessionManager {
     /// 
     /// # Notes
     /// - The session's last accessed time is updated when modified
-    pub async fn update_session(&self, session_id: &str, data: HashMap<String, String>) -> crate::core::RiResult<bool> {
+    pub async fn update_session(&self, session_id: &str, data: FxHashMap<String, String>) -> crate::core::RiResult<bool> {
         let session = self.sessions.get(session_id).await;
         
         match session {
@@ -518,7 +518,7 @@ impl RiSessionManager {
     }
     
     #[pyo3(name = "update_session")]
-    fn update_session_impl(&self, session_id: String, data: HashMap<String, String>) -> PyResult<bool> {
+    fn update_session_impl(&self, session_id: String, data: FxHashMap<String, String>) -> PyResult<bool> {
         let rt = tokio::runtime::Runtime::new().map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(e.to_string()))?;
         rt.block_on(async {
             self.update_session(&session_id, data).await

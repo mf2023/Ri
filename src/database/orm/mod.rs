@@ -21,7 +21,7 @@
 
 use crate::core::{RiResult, RiError};
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
+use std::collections::HashMap as FxHashMap;
 use crate::database::RiDatabase;
 
 pub mod repository;
@@ -108,7 +108,7 @@ impl Default for ForeignKeyDefinition {
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 pub struct TableDefinition {
     pub table_name: String,
-    pub columns: HashMap<String, ColumnDefinition>,
+    pub columns: FxHashMap<String, ColumnDefinition>,
     pub primary_key: Vec<String>,
     pub indexes: Vec<IndexDefinition>,
     pub foreign_keys: Vec<ForeignKeyDefinition>,
@@ -120,7 +120,7 @@ impl TableDefinition {
     pub fn new(table_name: &str) -> Self {
         Self {
             table_name: table_name.to_string(),
-            columns: HashMap::new(),
+            columns: FxHashMap::default(),
             primary_key: Vec::new(),
             indexes: Vec::new(),
             foreign_keys: Vec::new(),
@@ -148,7 +148,7 @@ impl TableDefinition {
     pub fn get_create_sql(&self) -> String {
         let mut sql = format!("CREATE TABLE IF NOT EXISTS {} (", self.table_name);
 
-        let mut column_defs = Vec::new();
+        let mut column_defs = Vec::with_capacity(self.columns.len());
 
         for (name, col) in &self.columns {
             let mut def = format!("{} {}", name, col.column_type);
@@ -457,7 +457,7 @@ impl QueryBuilder {
 
     pub fn build(&self) -> (String, Vec<serde_json::Value>) {
         let mut sql = String::new();
-        let mut params = Vec::new();
+        let mut params = Vec::with_capacity(8);
 
         sql.push_str("SELECT ");
 

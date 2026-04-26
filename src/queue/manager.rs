@@ -75,7 +75,7 @@
 //! ```
 
 use std::sync::Arc;
-use std::collections::HashMap;
+use std::collections::HashMap as FxHashMap;
 use tokio::sync::RwLock;
 use async_trait::async_trait;
 use crate::core::{RiResult, AsyncServiceModule, RiServiceContext};
@@ -357,7 +357,7 @@ pub struct RiQueueManager {
     /// Queue configuration
     config: RiQueueConfig,
     /// Map of queue names to queue instances, protected by a RwLock for thread-safe access
-    queues: Arc<RwLock<HashMap<String, Arc<dyn RiQueue>>>>,
+    queues: Arc<RwLock<FxHashMap<String, Arc<dyn RiQueue>>>>,
     /// Connection pool for external backends
     connection_pool: Option<Arc<QueueConnectionPool>>,
 }
@@ -411,7 +411,7 @@ impl RiQueueManager {
                 retry_policy: config.retry_policy.clone(),
                 dead_letter_config: config.dead_letter_config.clone(),
             },
-            queues: Arc::new(RwLock::new(HashMap::new())),
+            queues: Arc::new(RwLock::new(FxHashMap::default())),
             connection_pool,
         })
     }
@@ -431,7 +431,7 @@ impl Default for RiQueueManager {
                 retry_policy: crate::queue::config::RiRetryPolicy::default(),
                 dead_letter_config: None,
             },
-            queues: Arc::new(RwLock::new(HashMap::new())),
+            queues: Arc::new(RwLock::new(FxHashMap::default())),
             connection_pool: None,
         }
     }

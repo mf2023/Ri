@@ -89,7 +89,7 @@
 //! ```
 
 use chrono::Utc;
-use std::collections::HashMap;
+use std::collections::HashMap as FxHashMap;
 use std::sync::Arc;
 use tokio::sync::RwLock;
 
@@ -110,9 +110,9 @@ use crate::prelude::RiError;
 /// Device controller - manages device lifecycle and state
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 pub struct RiDeviceController {
-    devices: HashMap<String, Arc<RwLock<RiDevice>>>,
-    device_type_index: HashMap<RiDeviceType, Vec<String>>,
-    allocation_map: HashMap<String, String>,
+    devices: FxHashMap<String, Arc<RwLock<RiDevice>>>,
+    device_type_index: FxHashMap<RiDeviceType, Vec<String>>,
+    allocation_map: FxHashMap<String, String>,
     discovery: Option<Arc<RiDeviceDiscovery>>,
 }
 
@@ -219,7 +219,7 @@ impl RiDeviceController {
     }
     
     #[pyo3(name = "get_all_device_health")]
-    fn get_all_device_health_impl(&self) -> PyResult<std::collections::HashMap<String, super::core::RiDeviceHealthMetrics>> {
+    fn get_all_device_health_impl(&self) -> PyResult<std::collections::FxHashMap<String, super::core::RiDeviceHealthMetrics>> {
         let rt = tokio::runtime::Runtime::new().map_err(|e| {
             pyo3::exceptions::PyRuntimeError::new_err(format!("Failed to create runtime: {}", e))
         })?;
@@ -241,7 +241,7 @@ impl RiDeviceController {
             None => return Vec::new(),
         };
         
-        let mut devices = Vec::new();
+        let mut devices = Vec::with_capacity(4);
         for device_id in device_ids {
             if let Some(device_lock) = self.devices.get(&device_id) {
                 if let Ok(device) = device_lock.try_read() {
@@ -268,9 +268,9 @@ impl Default for RiDeviceController {
 impl RiDeviceController {
     pub fn new() -> Self {
         Self {
-            devices: HashMap::new(),
-            device_type_index: HashMap::new(),
-            allocation_map: HashMap::new(),
+            devices: FxHashMap::default(),
+            device_type_index: FxHashMap::default(),
+            allocation_map: FxHashMap::default(),
             discovery: None,
         }
     }
@@ -278,9 +278,9 @@ impl RiDeviceController {
     /// Creates a new controller with the discovery engine
     pub async fn with_discovery(discovery: Arc<RiDeviceDiscovery>) -> Self {
         Self {
-            devices: HashMap::new(),
-            device_type_index: HashMap::new(),
-            allocation_map: HashMap::new(),
+            devices: FxHashMap::default(),
+            device_type_index: FxHashMap::default(),
+            allocation_map: FxHashMap::default(),
             discovery: Some(discovery),
         }
     }
@@ -332,9 +332,9 @@ impl RiDeviceController {
     /// 
     /// A `RiResult<super::RiDiscoveryResult>` containing the discovery result if successful.
     async fn perform_device_discovery(&mut self) -> RiResult<super::RiDiscoveryResult> {
-        let mut discovered_devices = Vec::new();
-        let mut updated_devices = Vec::new();
-        let mut removed_devices = Vec::new();
+        let mut discovered_devices = Vec::with_capacity(4);
+        let mut updated_devices = Vec::with_capacity(4);
+        let mut removed_devices = Vec::with_capacity(4);
 
         // Update existing devices with error handling
         for device_lock in self.devices.values() {
@@ -446,7 +446,7 @@ impl RiDeviceController {
         let timeout = chrono::TimeDelta::minutes(5);
         let now = Utc::now();
 
-        let mut to_remove = Vec::new();
+        let mut to_remove = Vec::with_capacity(4);
         for (device_id, device_lock) in &self.devices {
             match device_lock.try_read() {
                 Ok(device) => {
@@ -1188,7 +1188,7 @@ impl RiDeviceController {
 
     /// Get all devices
     pub fn get_all_devices(&self) -> Vec<RiDevice> {
-        let mut devices = Vec::new();
+        let mut devices = Vec::with_capacity(4);
 
         // This is a blocking operation - in a real implementation, we'd use async
         for device_lock in self.devices.values() {
@@ -1217,7 +1217,7 @@ impl RiDeviceController {
 
     /// Perform health check on all devices
     pub async fn perform_health_checks(&mut self) -> RiResult<Vec<(String, u8)>> {
-        let mut results = Vec::new();
+        let mut results = Vec::with_capacity(4);
 
         for (device_id, device_lock) in &self.devices {
             let mut device = device_lock.write().await;
@@ -1371,8 +1371,8 @@ impl RiDeviceController {
     /// Get all device health metrics
     pub async fn get_all_device_health(
         &self,
-    ) -> RiResult<HashMap<String, super::core::RiDeviceHealthMetrics>> {
-        let mut health_map = HashMap::new();
+    ) -> RiResult<FxHashMap<String, super::core::RiDeviceHealthMetrics>> {
+        let mut health_map = FxHashMap::default();
 
         for (device_id, device_lock) in &self.devices {
             let device = device_lock.read().await;

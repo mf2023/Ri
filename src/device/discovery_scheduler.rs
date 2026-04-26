@@ -169,7 +169,7 @@ impl RiDeviceDiscoveryEngine {
     
     #[cfg(not(feature = "pyo3"))]
     pub fn discover_devices(&mut self, scan_results: Vec<DeviceScanResult>) -> Vec<RiDevice> {
-        let mut discovered_devices = Vec::new();
+        let mut discovered_devices = Vec::with_capacity(4);
         
         for scan_result in scan_results {
             if let Some(device) = self.identify_device(scan_result) {
@@ -445,7 +445,7 @@ impl RiDeviceDiscoveryEngine {
     }
 
     pub fn discover_devices(&mut self, scan_results: Vec<DeviceScanResult>) -> Vec<RiDevice> {
-        let mut discovered_devices = Vec::new();
+        let mut discovered_devices = Vec::with_capacity(4);
         for scan_result in scan_results {
             if let Some(device) = self.identify_device(scan_result) {
                 discovered_devices.push(device);

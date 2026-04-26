@@ -78,7 +78,7 @@
 
 use async_trait::async_trait;
 use serde::{Serialize, Deserialize};
-use std::collections::HashMap;
+use std::collections::HashMap as FxHashMap;
 use std::time::SystemTime;
 use crate::core::RiResult;
 
@@ -132,7 +132,7 @@ pub struct RiQueueMessage {
     /// Message payload as bytes
     pub payload: Vec<u8>,
     /// Custom headers for the message
-    pub headers: HashMap<String, String>,
+    pub headers: FxHashMap<String, String>,
     /// Timestamp when the message was created
     pub timestamp: SystemTime,
     /// Number of times this message has been retried
@@ -155,7 +155,7 @@ impl RiQueueMessage {
         Self {
             id: uuid::Uuid::new_v4().to_string(),
             payload,
-            headers: HashMap::new(),
+            headers: FxHashMap::default(),
             timestamp: SystemTime::now(),
             retry_count: 0,
             max_retries: 3,
@@ -171,7 +171,7 @@ impl RiQueueMessage {
     /// # Returns
     /// 
     /// The updated `RiQueueMessage` instance
-    pub fn with_headers(mut self, headers: HashMap<String, String>) -> Self {
+    pub fn with_headers(mut self, headers: FxHashMap<String, String>) -> Self {
         self.headers = headers;
         self
     }

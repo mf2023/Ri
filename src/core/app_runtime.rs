@@ -127,7 +127,7 @@ impl RiAppRuntime {
         drop(modules_guard); // Release lock early
         
         // Collect module states first to avoid repeated lock acquisitions
-        let mut module_states = Vec::new();
+        let mut module_states = Vec::with_capacity(module_len);
         {
             let modules_guard = self.modules.read().await;
             for idx in 0..module_len {

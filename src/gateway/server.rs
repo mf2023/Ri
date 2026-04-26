@@ -22,7 +22,7 @@ use crate::core::{RiResult, RiError};
 use crate::gateway::{RiGateway, RiGatewayConfig, RiGatewayRequest};
 use hyper::{Body, Request as HyperRequest, Response as HyperResponse, Server, StatusCode};
 use hyper::service::{make_service_fn, service_fn};
-use std::collections::HashMap;
+use std::collections::HashMap as FxHashMap;
 use std::convert::Infallible;
 use std::net::SocketAddr;
 use std::sync::Arc;
@@ -104,7 +104,7 @@ impl RiGatewayServer {
                     .unwrap_or_else(|| "unknown".to_string())
             });
 
-        let mut headers = HashMap::new();
+        let mut headers = FxHashMap::default();
         for (key, value) in req.headers() {
             if let Ok(v) = value.to_str() {
                 headers.insert(key.as_str().to_string(), v.to_string());
@@ -114,7 +114,7 @@ impl RiGatewayServer {
         let query_params = {
             let uri = req.uri();
             let query = uri.query().unwrap_or("");
-            let mut params = HashMap::new();
+            let mut params = FxHashMap::default();
             for pair in query.split('&') {
                 if let Some((key, value)) = pair.split_once('=') {
                     params.insert(

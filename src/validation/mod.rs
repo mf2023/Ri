@@ -481,7 +481,7 @@ impl RiValidationRunner {
             }
         };
 
-        let mut errors = Vec::new();
+        let mut errors = Vec::with_capacity(4);
 
         for rule in &self.rules {
             if let Some(error) = rule.validate(value) {

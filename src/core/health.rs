@@ -40,7 +40,7 @@
 
 use crate::core::RiResult;
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
+use std::collections::HashMap as FxHashMap;
 use std::time::{Duration, SystemTime};
 
 /// Health status enumeration representing the state of a component or service.
@@ -356,7 +356,7 @@ pub struct RiHealthReport {
     /// Overall system health status
     pub overall_status: RiHealthStatus,
     /// Individual component health results
-    pub components: HashMap<String, RiHealthCheckResult>,
+    pub components: FxHashMap<String, RiHealthCheckResult>,
     /// Timestamp when the report was generated
     pub timestamp: SystemTime,
     /// Total number of components checked
@@ -376,7 +376,7 @@ impl RiHealthReport {
     pub fn new() -> Self {
         Self {
             overall_status: RiHealthStatus::Unknown,
-            components: HashMap::new(),
+            components: FxHashMap::default(),
             timestamp: SystemTime::now(),
             total_components: 0,
             healthy_count: 0,

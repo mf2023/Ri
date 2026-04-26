@@ -65,9 +65,9 @@
 //!         destination_service: "backend".to_string(),
 //!         match_criteria: RiMatchCriteria {
 //!             path_prefix: Some("/api".to_string()),
-//!             headers: HashMap::new(),
+//!             headers: FxHashMap::default(),
 //!             method: Some("GET".to_string()),
-//!             query_parameters: HashMap::new(),
+//!             query_parameters: FxHashMap::default(),
 //!         },
 //!         route_action: RiRouteAction::Route(vec![RiWeightedDestination {
 //!             service: "backend-v1".to_string(),
@@ -104,7 +104,7 @@
 //! ```
 
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
+use std::collections::HashMap as FxHashMap;
 use std::sync::Arc;
 use std::time::Duration;
 use tokio::sync::RwLock;
@@ -144,9 +144,9 @@ impl RiTrafficRoute {
             destination_service,
             match_criteria: RiMatchCriteria {
                 path_prefix: None,
-                headers: HashMap::new(),
+                headers: FxHashMap::default(),
                 method: None,
-                query_parameters: HashMap::new(),
+                query_parameters: FxHashMap::default(),
             },
             route_action: RiRouteAction::Route(vec![]),
             retry_policy: None,
@@ -172,9 +172,9 @@ impl RiTrafficRoute {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RiMatchCriteria {
     pub path_prefix: Option<String>,
-    pub headers: HashMap<String, String>,
+    pub headers: FxHashMap<String, String>,
     pub method: Option<String>,
-    pub query_parameters: HashMap<String, String>,
+    pub query_parameters: FxHashMap<String, String>,
 }
 
 #[cfg(feature = "pyo3")]
@@ -184,9 +184,9 @@ impl RiMatchCriteria {
     fn py_new() -> Self {
         Self {
             path_prefix: None,
-            headers: HashMap::new(),
+            headers: FxHashMap::default(),
             method: None,
-            query_parameters: HashMap::new(),
+            query_parameters: FxHashMap::default(),
         }
     }
     
@@ -264,24 +264,24 @@ pub struct RiAbortFault {
 #[derive(Debug, Clone)]
 pub struct RiTrafficSplit {
     pub service: String,
-    pub subsets: HashMap<String, RiSubset>,
+    pub subsets: FxHashMap<String, RiSubset>,
     pub default_subset: String,
 }
 
 #[derive(Debug, Clone)]
 pub struct RiSubset {
     pub name: String,
-    pub labels: HashMap<String, String>,
+    pub labels: FxHashMap<String, String>,
     pub weight: u32,
 }
 
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 pub struct RiTrafficManager {
     enabled: bool,
-    routes: Arc<RwLock<HashMap<String, Vec<RiTrafficRoute>>>>,
-    traffic_splits: Arc<RwLock<HashMap<String, RiTrafficSplit>>>,
-    circuit_breakers: Arc<RwLock<HashMap<String, RiCircuitBreakerConfig>>>,
-    rate_limits: Arc<RwLock<HashMap<String, RiRateLimitConfig>>>,
+    routes: Arc<RwLock<FxHashMap<String, Vec<RiTrafficRoute>>>>,
+    traffic_splits: Arc<RwLock<FxHashMap<String, RiTrafficSplit>>>,
+    circuit_breakers: Arc<RwLock<FxHashMap<String, RiCircuitBreakerConfig>>>,
+    rate_limits: Arc<RwLock<FxHashMap<String, RiRateLimitConfig>>>,
     background_tasks: Arc<RwLock<Vec<JoinHandle<()>>>>,
     #[cfg(feature = "http_client")]
     http_client: reqwest::Client,
@@ -331,10 +331,10 @@ impl RiTrafficManager {
     pub fn new(enabled: bool) -> Self {
         Self {
             enabled,
-            routes: Arc::new(RwLock::new(HashMap::new())),
-            traffic_splits: Arc::new(RwLock::new(HashMap::new())),
-            circuit_breakers: Arc::new(RwLock::new(HashMap::new())),
-            rate_limits: Arc::new(RwLock::new(HashMap::new())),
+            routes: Arc::new(RwLock::new(FxHashMap::default())),
+            traffic_splits: Arc::new(RwLock::new(FxHashMap::default())),
+            circuit_breakers: Arc::new(RwLock::new(FxHashMap::default())),
+            rate_limits: Arc::new(RwLock::new(FxHashMap::default())),
             background_tasks: Arc::new(RwLock::new(Vec::new())),
             #[cfg(feature = "http_client")]
             http_client: reqwest::Client::builder()
@@ -610,7 +610,7 @@ impl RiTrafficManager {
             .header("Content-Type", "application/octet-stream");
         
         if let Some(_tracer) = &self.tracer {
-            let mut headers = HashMap::new();
+            let mut headers = FxHashMap::default();
             RiContextCarrier::inject_current_into_headers(&mut headers);
             for (key, value) in headers {
                 request_builder = request_builder.header(key, value);
@@ -731,11 +731,11 @@ impl RiTrafficManager {
         if let Some(config) = rate_limits.get(endpoint) {
             // Use a thread-safe per-endpoint rate limiter with sliding window
             use std::sync::atomic::{AtomicU64, Ordering};
-            use std::collections::HashMap;
+            use std::collections::HashMap as FxHashMap;
             use std::sync::Arc;
             
             // Store rate limiters in a thread-safe map
-            static RATE_LIMITERS: std::sync::Mutex<Option<HashMap<String, Arc<RateLimiter>>>> = 
+            static RATE_LIMITERS: std::sync::Mutex<Option<FxHashMap<String, Arc<RateLimiter>>>> = 
                 std::sync::Mutex::new(None);
             
             // Rate limiter implementation using leaky bucket algorithm
@@ -794,7 +794,7 @@ impl RiTrafficManager {
             let mut limiters = RATE_LIMITERS.lock()
                 .map_err(|e| RiError::ServiceMesh(format!("Failed to acquire rate limiter lock: {}", e)))?;
             if limiters.is_none() {
-                *limiters = Some(HashMap::new());
+                *limiters = Some(FxHashMap::default());
             }
             
             let limiters = limiters.as_mut()

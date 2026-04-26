@@ -336,9 +336,9 @@ impl RiGrafanaDashboardGenerator {
         let mut dashboard = self.create_dashboard(dashboard_title);
         
         // Analyze metrics and group by type
-        let mut counter_metrics = Vec::new();
-        let mut gauge_metrics = Vec::new();
-        let mut histogram_metrics = Vec::new();
+        let mut counter_metrics = Vec::with_capacity(4);
+        let mut gauge_metrics = Vec::with_capacity(4);
+        let mut histogram_metrics = Vec::with_capacity(4);
         
         for metric in metrics {
             if metric.ends_with("_total") || metric.contains("count") {

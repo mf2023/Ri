@@ -37,7 +37,7 @@
 //! 5. **Persistent**: Generates JSON reports that can be analyzed later
 //! 6. **Non-Critical**: Fails gracefully if analytics operations encounter errors
 
-use std::collections::HashMap;
+use std::collections::HashMap as FxHashMap;
 use std::sync::{Arc, Mutex};
 use std::time::{SystemTime, UNIX_EPOCH};
 
@@ -57,11 +57,11 @@ struct AnalyticsState {
     /// Total number of hook events processed
     total_events: u64,
     /// Number of events per hook kind
-    per_kind: HashMap<String, u64>,
+    per_kind: FxHashMap<String, u64>,
     /// Number of events per module phase
-    per_phase: HashMap<String, u64>,
+    per_phase: FxHashMap<String, u64>,
     /// Number of events per module name
-    per_module: HashMap<String, u64>,
+    per_module: FxHashMap<String, u64>,
 }
 
 /// Log analytics module for Ri.

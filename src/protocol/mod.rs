@@ -52,7 +52,7 @@
 //! - ring - Modern, audited crypto library
 //! - openssl - Industry-standard crypto library
 
-use std::collections::HashMap;
+use std::collections::HashMap as FxHashMap;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
 use std::time::{SystemTime, UNIX_EPOCH};
@@ -522,7 +522,7 @@ pub struct RiProtocolManager {
     /// Default protocol type
     pub default_protocol: RiProtocolType,
     /// Active connections
-    connections: Arc<RwLock<HashMap<String, RiConnectionInfo>>>,
+    connections: Arc<RwLock<FxHashMap<String, RiConnectionInfo>>>,
     /// Message sequence counter
     sequence_counter: Arc<AtomicU64>,
     /// Protocol initialized state
@@ -766,7 +766,7 @@ impl RiProtocolManager {
         Self {
             stats: Arc::new(RwLock::new(RiProtocolStats::new())),
             default_protocol: RiProtocolType::Global,
-            connections: Arc::new(RwLock::new(HashMap::new())),
+            connections: Arc::new(RwLock::new(FxHashMap::default())),
             sequence_counter: Arc::new(AtomicU64::new(0)),
             initialized: Arc::new(RwLock::new(false)),
         }
@@ -847,7 +847,7 @@ impl From<ProtocolError> for RiResult<()> {
 pub struct RiBaseProtocol {
     config: RiProtocolConfig,
     stats: Arc<RwLock<RiProtocolStats>>,
-    connections: Arc<RwLock<HashMap<String, RiConnectionInfo>>>,
+    connections: Arc<RwLock<FxHashMap<String, RiConnectionInfo>>>,
     sequence_counter: Arc<AtomicU64>,
     initialized: Arc<RwLock<bool>>,
     _receiver_id: String,
@@ -858,7 +858,7 @@ impl RiBaseProtocol {
         Self {
             config: RiProtocolConfig::default(),
             stats: Arc::new(RwLock::new(RiProtocolStats::new())),
-            connections: Arc::new(RwLock::new(HashMap::new())),
+            connections: Arc::new(RwLock::new(FxHashMap::default())),
             sequence_counter: Arc::new(AtomicU64::new(0)),
             initialized: Arc::new(RwLock::new(false)),
             _receiver_id: receiver_id,

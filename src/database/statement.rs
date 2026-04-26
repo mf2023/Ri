@@ -61,7 +61,7 @@ impl PreparedStatement {
 }
 
 fn extract_params(sql: &str) -> Vec<String> {
-    let mut params = Vec::new();
+    let mut params = Vec::with_capacity(8);
     let mut chars = sql.chars().peekable();
     while let Some(c) = chars.next() {
         if c == '$' {

@@ -63,7 +63,7 @@
 //! }
 //! ```
 
-use std::collections::HashMap;
+use std::collections::HashMap as FxHashMap;
 use std::net::SocketAddr;
 use std::sync::Arc;
 use std::time::{Duration, Instant};
@@ -81,7 +81,7 @@ pub struct RiGlobalProtocol {
     /// Protocol configuration
     config: Option<RiProtocolConfig>,
     /// Connection pool for efficient connection reuse
-    connection_pool: Arc<RwLock<HashMap<String, Arc<RiGlobalConnection>>>>,
+    connection_pool: Arc<RwLock<FxHashMap<String, Arc<RiGlobalConnection>>>>,
     /// Protocol statistics
     stats: Arc<RwLock<RiProtocolStats>>,
     /// Whether the protocol is ready
@@ -93,7 +93,7 @@ impl RiGlobalProtocol {
     pub fn new() -> Self {
         Self {
             config: None,
-            connection_pool: Arc::new(RwLock::new(HashMap::new())),
+            connection_pool: Arc::new(RwLock::new(FxHashMap::default())),
             stats: Arc::new(RwLock::new(RiProtocolStats::default())),
             ready: Arc::new(RwLock::new(false)),
         }

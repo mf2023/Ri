@@ -44,7 +44,7 @@
 //! 
 //! ```rust
 //! use ri::prelude::*;
-//! use std::collections::HashMap;
+//! use std::collections::HashMap as FxHashMap;
 //! 
 //! fn example() {
 //!     // Create trace and span IDs
@@ -66,7 +66,7 @@
 //!         .with_baggage(baggage);
 //!     
 //!     // Inject into HTTP headers
-//!     let mut headers = HashMap::new();
+//!     let mut headers = FxHashMap::default();
 //!     carrier.inject_into_headers(&mut headers);
 //!     println!("Headers: {:?}", headers);
 //!     
@@ -76,7 +76,7 @@
 //! }
 //! ```
 
-use std::collections::HashMap;
+use std::collections::HashMap as FxHashMap;
 use serde::{Serialize, Deserialize};
 use crate::observability::tracing::{RiTraceId, RiSpanId};
 
@@ -241,7 +241,7 @@ impl RiTraceContext {
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 pub struct RiBaggage {
     /// Map of baggage items
-    items: HashMap<String, String>,
+    items: FxHashMap<String, String>,
 }
 
 impl Default for RiBaggage {
@@ -259,7 +259,7 @@ impl RiBaggage {
     #[allow(dead_code)]
     pub fn new() -> Self {
         Self {
-            items: HashMap::new(),
+            items: FxHashMap::default(),
         }
     }
     
@@ -506,7 +506,7 @@ impl RiContextCarrier {
     ///
     /// A new RiContextCarrier instance with extracted trace context and baggage
     #[allow(dead_code)]
-    pub fn from_headers(headers: &HashMap<String, String>) -> Self {
+    pub fn from_headers(headers: &FxHashMap<String, String>) -> Self {
         let mut carrier = Self::new();
         
         // Extract trace context from traceparent header
@@ -530,7 +530,7 @@ impl RiContextCarrier {
     ///
     /// - `headers`: A mutable HashMap of HTTP headers to inject into
     #[allow(dead_code)]
-    pub fn inject_into_headers(&self, headers: &mut HashMap<String, String>) {
+    pub fn inject_into_headers(&self, headers: &mut FxHashMap<String, String>) {
         if let Some(ref trace_context) = self.trace_context {
             headers.insert("traceparent".to_string(), trace_context.to_header());
         }
@@ -554,7 +554,7 @@ impl RiContextCarrier {
     ///
     /// A new RiContextCarrier instance with extracted trace context and baggage
     #[allow(dead_code)]
-    pub fn from_headers_and_set_current(headers: &HashMap<String, String>) -> Self {
+    pub fn from_headers_and_set_current(headers: &FxHashMap<String, String>) -> Self {
         let carrier = Self::from_headers(headers);
         let tracing_context = carrier.clone().into_tracing_context();
         tracing_context.set_as_current();
@@ -570,7 +570,7 @@ impl RiContextCarrier {
     ///
     /// - `headers`: A mutable HashMap of HTTP headers to inject into
     #[allow(dead_code)]
-    pub fn inject_current_into_headers(headers: &mut HashMap<String, String>) {
+    pub fn inject_current_into_headers(headers: &mut FxHashMap<String, String>) {
         if let Some(tracing_context) = crate::observability::tracing::RiTracingContext::current() {
             let carrier = Self::from_tracing_context(&tracing_context);
             carrier.inject_into_headers(headers);
@@ -607,15 +607,15 @@ impl RiContextCarrier {
     }
 
     #[pyo3(name = "inject_into_headers")]
-    fn py_inject_into_headers(&self) -> HashMap<String, String> {
-        let mut headers = HashMap::new();
+    fn py_inject_into_headers(&self) -> FxHashMap<String, String> {
+        let mut headers = FxHashMap::default();
         self.inject_into_headers(&mut headers);
         headers
     }
 
     #[staticmethod]
     #[pyo3(name = "from_headers")]
-    fn py_from_headers(headers: HashMap<String, String>) -> Self {
+    fn py_from_headers(headers: FxHashMap<String, String>) -> Self {
         Self::from_headers(&headers)
     }
 }
@@ -654,7 +654,7 @@ impl W3CTracePropagator {
     ///
     /// A RiContextCarrier containing the extracted trace context and baggage
     #[allow(dead_code)]
-    pub fn extract(&self, headers: &HashMap<String, String>) -> RiContextCarrier {
+    pub fn extract(&self, headers: &FxHashMap<String, String>) -> RiContextCarrier {
         RiContextCarrier::from_headers(headers)
     }
 
@@ -668,7 +668,7 @@ impl W3CTracePropagator {
     /// - `carrier`: The context carrier containing trace information
     /// - `headers`: A mutable reference to a HashMap of HTTP headers
     #[allow(dead_code)]
-    pub fn inject(&self, carrier: &RiContextCarrier, headers: &mut HashMap<String, String>) {
+    pub fn inject(&self, carrier: &RiContextCarrier, headers: &mut FxHashMap<String, String>) {
         carrier.inject_into_headers(headers);
     }
 
@@ -685,7 +685,7 @@ impl W3CTracePropagator {
     ///
     /// A RiContextCarrier containing the extracted trace context and baggage
     #[allow(dead_code)]
-    pub fn extract_and_set_current(&self, headers: &HashMap<String, String>) -> RiContextCarrier {
+    pub fn extract_and_set_current(&self, headers: &FxHashMap<String, String>) -> RiContextCarrier {
         RiContextCarrier::from_headers_and_set_current(headers)
     }
 
@@ -698,7 +698,7 @@ impl W3CTracePropagator {
     ///
     /// - `headers`: A mutable reference to a HashMap of HTTP headers
     #[allow(dead_code)]
-    pub fn inject_current(&self, headers: &mut HashMap<String, String>) {
+    pub fn inject_current(&self, headers: &mut FxHashMap<String, String>) {
         RiContextCarrier::inject_current_into_headers(headers);
     }
 }
@@ -712,25 +712,25 @@ impl W3CTracePropagator {
     }
 
     #[pyo3(name = "extract")]
-    fn py_extract(&self, headers: HashMap<String, String>) -> RiContextCarrier {
+    fn py_extract(&self, headers: FxHashMap<String, String>) -> RiContextCarrier {
         self.extract(&headers)
     }
 
     #[pyo3(name = "inject")]
-    fn py_inject(&self, carrier: &RiContextCarrier) -> HashMap<String, String> {
-        let mut headers = HashMap::new();
+    fn py_inject(&self, carrier: &RiContextCarrier) -> FxHashMap<String, String> {
+        let mut headers = FxHashMap::default();
         self.inject(carrier, &mut headers);
         headers
     }
 
     #[pyo3(name = "extract_and_set_current")]
-    fn py_extract_and_set_current(&self, headers: HashMap<String, String>) -> RiContextCarrier {
+    fn py_extract_and_set_current(&self, headers: FxHashMap<String, String>) -> RiContextCarrier {
         self.extract_and_set_current(&headers)
     }
 
     #[pyo3(name = "inject_current")]
-    fn py_inject_current(&self) -> HashMap<String, String> {
-        let mut headers = HashMap::new();
+    fn py_inject_current(&self) -> FxHashMap<String, String> {
+        let mut headers = FxHashMap::default();
         self.inject_current(&mut headers);
         headers
     }

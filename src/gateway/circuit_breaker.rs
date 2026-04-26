@@ -68,7 +68,7 @@
 //! ```
 
 use crate::core::RiResult;
-use std::collections::HashMap;
+use std::collections::HashMap as FxHashMap;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::time::{Duration, Instant};
@@ -674,7 +674,7 @@ pub struct RiAdvancedCircuitBreaker {
     config: RiCircuitBreakerConfig,
     
     /// Error-type specific statistics and state management
-    stats_by_error: RwLock<HashMap<String, Arc<CircuitBreakerStats>>>,
+    stats_by_error: RwLock<FxHashMap<String, Arc<CircuitBreakerStats>>>,
     
     /// Default statistics for unclassified errors
     default_stats: Arc<CircuitBreakerStats>,
@@ -693,7 +693,7 @@ impl RiAdvancedCircuitBreaker {
     pub fn new(config: RiCircuitBreakerConfig) -> Self {
         Self {
             config,
-            stats_by_error: RwLock::new(HashMap::new()),
+            stats_by_error: RwLock::new(FxHashMap::default()),
             default_stats: Arc::new(CircuitBreakerStats::new()),
         }
     }

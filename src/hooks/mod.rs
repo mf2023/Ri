@@ -63,7 +63,7 @@
 //!     Ok(())
 //! }
 
-use std::collections::HashMap;
+use std::collections::HashMap as FxHashMap;
 
 use crate::core::{RiResult, RiServiceContext};
 
@@ -75,7 +75,7 @@ pub type RiHookHandler = Box<dyn Fn(&RiServiceContext, &RiHookEvent) -> RiResult
 pub type RiHookHandlerEntry = (RiHookId, RiHookHandler);
 
 /// Type alias for a collection of hook handlers grouped by hook kind
-pub type RiHookHandlersMap = HashMap<RiHookKind, Vec<RiHookHandlerEntry>>;
+pub type RiHookHandlersMap = FxHashMap<RiHookKind, Vec<RiHookHandlerEntry>>;
 
 /// Hook kind definition.
 /// 
@@ -223,7 +223,7 @@ impl RiHookBus {
     /// 
     /// Returns a new `RiHookBus` instance with no registered handlers.
     pub fn new() -> Self {
-        RiHookBus { handlers: HashMap::new() }
+        RiHookBus { handlers: FxHashMap::default() }
     }
 
     /// Registers a hook handler for a specific hook kind.

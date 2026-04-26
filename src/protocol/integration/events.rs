@@ -17,7 +17,7 @@
 
 #![allow(non_snake_case)]
 
-use std::collections::HashMap;
+use std::collections::HashMap as FxHashMap;
 use std::sync::Arc;
 use std::time::Instant;
 use tokio::sync::{RwLock, mpsc};
@@ -28,7 +28,7 @@ use crate::core::{RiResult};
 /// Integration event bus for event-driven coordination.
 pub struct RiIntegrationEventBus {
     /// Event subscribers
-    pub subscribers: Arc<RwLock<HashMap<RiIntegrationEventType, Vec<mpsc::Sender<RiIntegrationEvent>>>>>,
+    pub subscribers: Arc<RwLock<FxHashMap<RiIntegrationEventType, Vec<mpsc::Sender<RiIntegrationEvent>>>>>,
     /// Event statistics
     pub stats: Arc<RwLock<RiIntegrationEventStats>>,
 }
@@ -41,7 +41,7 @@ pub struct RiIntegrationEvent {
     /// Event type
     pub event_type: RiIntegrationEventType,
     /// Event data
-    pub event_data: HashMap<String, String>,
+    pub event_data: FxHashMap<String, String>,
     /// Event timestamp
     pub event_timestamp: Instant,
     /// Event source
@@ -79,7 +79,7 @@ pub struct RiIntegrationEventStats {
     /// Total events
     pub total_events: u64,
     /// Events by type
-    pub events_by_type: HashMap<RiIntegrationEventType, u64>,
+    pub events_by_type: FxHashMap<RiIntegrationEventType, u64>,
     /// Average event processing time
     pub avg_event_processing_time_ms: u64,
 }
@@ -109,7 +109,7 @@ pub struct RiIntegrationStats {
 
 impl RiIntegrationEventBus {
     /// Publish an integration event.
-    pub async fn publish_event(&self, event_type: RiIntegrationEventType, event_data: HashMap<String, String>) -> RiResult<()> {
+    pub async fn publish_event(&self, event_type: RiIntegrationEventType, event_data: FxHashMap<String, String>) -> RiResult<()> {
         let event = RiIntegrationEvent {
             event_id: Uuid::new_v4().to_string(),
             event_type,

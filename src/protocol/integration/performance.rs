@@ -17,7 +17,7 @@
 
 #![allow(non_snake_case)]
 
-use std::collections::HashMap;
+use std::collections::HashMap as FxHashMap;
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 use tokio::sync::RwLock;
@@ -38,7 +38,7 @@ pub struct RiPerformanceCoordinator {
 #[derive(Debug, Clone)]
 pub struct RiPerformanceMetrics {
     /// Protocol performance metrics
-    pub protocol_metrics: HashMap<RiProtocolType, RiProtocolPerformanceMetrics>,
+    pub protocol_metrics: FxHashMap<RiProtocolType, RiProtocolPerformanceMetrics>,
     /// Cross-protocol metrics
     pub cross_protocol_metrics: RiCrossProtocolMetrics,
     /// System performance metrics
@@ -104,7 +104,7 @@ pub struct RiPerformanceOptimization {
     /// Implementation status
     pub implementation_status: RiImplementationStatus,
     /// Optimization parameters
-    pub parameters: HashMap<String, String>,
+    pub parameters: FxHashMap<String, String>,
 }
 
 /// Performance optimization type enumeration.
@@ -237,7 +237,7 @@ pub struct RiPerformanceAlert {
     /// Alert time
     pub alert_time: Instant,
     /// Alert data
-    pub alert_data: HashMap<String, String>,
+    pub alert_data: FxHashMap<String, String>,
 }
 
 /// Performance alert type enumeration.
@@ -282,7 +282,7 @@ impl RiPerformanceCoordinator {
     pub async fn check_thresholds(&self) -> Vec<RiPerformanceThresholdViolation> {
         let metrics = self.metrics.read().await;
         let config = self.monitor.config.clone();
-        let mut violations = Vec::new();
+        let mut violations = Vec::with_capacity(4);
 
         for (_, protocol_metrics) in &metrics.protocol_metrics {
             if protocol_metrics.avg_latency > config.thresholds.max_latency {
@@ -352,7 +352,7 @@ impl RiPerformanceCoordinator {
 
     pub async fn generate_recommendations(&self) -> Vec<String> {
         let metrics = self.metrics.read().await;
-        let mut recommendations = Vec::new();
+        let mut recommendations = Vec::with_capacity(4);
 
         for (_, protocol_metrics) in &metrics.protocol_metrics {
             if protocol_metrics.error_rate > 0.05 {
@@ -393,7 +393,7 @@ impl Default for RiPerformanceCoordinator {
 impl RiPerformanceMetrics {
     pub fn new() -> Self {
         Self {
-            protocol_metrics: HashMap::new(),
+            protocol_metrics: FxHashMap::default(),
             cross_protocol_metrics: RiCrossProtocolMetrics::default(),
             system_metrics: RiSystemPerformanceMetrics::default(),
             last_update: Instant::now(),
@@ -467,7 +467,7 @@ impl RiPerformanceOptimization {
             description,
             performance_impact,
             implementation_status: RiImplementationStatus::NotImplemented,
-            parameters: HashMap::new(),
+            parameters: FxHashMap::default(),
         }
     }
 
@@ -518,7 +518,7 @@ impl RiPerformanceMonitor {
             message,
             severity,
             alert_time: Instant::now(),
-            alert_data: HashMap::new(),
+            alert_data: FxHashMap::default(),
         };
 
         let mut alerts = self.alerts.write().await;
@@ -627,7 +627,7 @@ impl RiPerformanceAlert {
             message,
             severity,
             alert_time: Instant::now(),
-            alert_data: HashMap::new(),
+            alert_data: FxHashMap::default(),
         }
     }
 

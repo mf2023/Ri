@@ -721,7 +721,7 @@ impl RiPrivateConnectionWrapper {
 
         let frame_data = frame.to_bytes()?;
 
-        let mut result = Vec::new();
+        let mut result = Vec::with_capacity(4);
 
         let nonce = session_keys.generate_nonce().await;
         result.extend_from_slice(&nonce.to_be_bytes()[..12]);
@@ -779,7 +779,7 @@ impl RiPrivateConnectionWrapper {
         let decrypted_data = if let Some(ref crypto_engine) = *self.inner.crypto_engine.read().await {
             crypto_engine.decrypt(encrypted_data, session_keys.encryption_key.expose_secret(), &nonce.to_be_bytes()[..])?
         } else {
-            let mut result = Vec::new();
+            let mut result = Vec::with_capacity(4);
             for (i, &byte) in encrypted_data.iter().enumerate() {
                 result.push(byte ^ session_keys.encryption_key.expose_secret()[i % session_keys.encryption_key.len()]);
             }

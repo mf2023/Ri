@@ -35,7 +35,7 @@ use tokio::sync::RwLock;
 use ring::{aead, digest, rand, signature, agreement};
 use ring::rand::{SecureRandom, SystemRandom};
 use data_encoding::{BASE64, HEX};
-use std::collections::HashMap;
+use std::collections::HashMap as FxHashMap;
 
 use crate::core::{RiResult, RiError};
 
@@ -704,7 +704,7 @@ impl SM4Cipher {
         let mut iv = [0u8; 16];
         iv.copy_from_slice(iv);
         
-        let mut plaintext = Vec::new();
+        let mut plaintext = Vec::with_capacity(128);
         let mut previous_iv = iv;
         
         for chunk in encrypted_data.chunks(16) {

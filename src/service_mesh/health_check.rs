@@ -63,7 +63,7 @@
 //!         timeout: Duration::from_secs(5),
 //!         expected_status_code: 200,
 //!         expected_response_body: None,
-//!         headers: HashMap::new(),
+//!         headers: FxHashMap::default(),
 //!     };
 //!     
 //!     health_checker.register_health_check(
@@ -87,7 +87,7 @@
 
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
+use std::collections::HashMap as FxHashMap;
 use std::sync::Arc;
 use std::time::{Duration, SystemTime};
 use tokio::sync::RwLock;
@@ -118,7 +118,7 @@ pub struct RiHealthCheckConfig {
     /// Optional expected response body for validation
     pub expected_response_body: Option<String>,
     /// Custom headers to include in health check requests
-    pub headers: HashMap<String, String>,
+    pub headers: FxHashMap<String, String>,
 }
 
 impl Default for RiHealthCheckConfig {
@@ -134,7 +134,7 @@ impl Default for RiHealthCheckConfig {
             timeout: Duration::from_secs(5),
             expected_status_code: 200,
             expected_response_body: None,
-            headers: HashMap::new(),
+            headers: FxHashMap::default(),
         }
     }
 }
@@ -427,15 +427,15 @@ impl RiHealthCheckProvider for RiGrpcHealthCheckProvider {
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 pub struct RiHealthChecker {
     check_interval: Duration,
-    providers: Arc<RwLock<HashMap<RiHealthCheckType, Box<dyn RiHealthCheckProvider>>>>,
-    check_results: Arc<RwLock<HashMap<String, Vec<RiHealthCheckResult>>>>,
+    providers: Arc<RwLock<FxHashMap<RiHealthCheckType, Box<dyn RiHealthCheckProvider>>>>,
+    check_results: Arc<RwLock<FxHashMap<String, Vec<RiHealthCheckResult>>>>,
     background_tasks: Arc<RwLock<Vec<JoinHandle<()>>>>,
     tracer: Option<Arc<RiTracer>>,
 }
 
 impl RiHealthChecker {
     pub fn new(check_interval: Duration) -> Self {
-        let mut providers: HashMap<RiHealthCheckType, Box<dyn RiHealthCheckProvider>> = HashMap::new();
+        let mut providers: FxHashMap<RiHealthCheckType, Box<dyn RiHealthCheckProvider>> = FxHashMap::default();
         providers.insert(RiHealthCheckType::Http, Box::new(RiHttpHealthCheckProvider));
         providers.insert(RiHealthCheckType::Tcp, Box::new(RiTcpHealthCheckProvider));
         providers.insert(RiHealthCheckType::Grpc, Box::new(RiGrpcHealthCheckProvider));
@@ -443,7 +443,7 @@ impl RiHealthChecker {
         Self {
             check_interval,
             providers: Arc::new(RwLock::new(providers)),
-            check_results: Arc::new(RwLock::new(HashMap::new())),
+            check_results: Arc::new(RwLock::new(FxHashMap::default())),
             background_tasks: Arc::new(RwLock::new(Vec::new())),
             tracer: None,
         }

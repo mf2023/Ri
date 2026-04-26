@@ -82,7 +82,7 @@
 //! }
 //! ```
 
-use std::collections::HashMap;
+use std::collections::HashMap as FxHashMap;
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 use async_trait::async_trait;
@@ -280,7 +280,7 @@ pub struct RiProtocolAdapter {
     /// Protocol strategy
     strategy: Arc<RwLock<Option<RiProtocolStrategy>>>,
     /// Available protocols
-    protocols: Arc<RwLock<HashMap<RiProtocolType, Box<dyn RiProtocol>>>>,
+    protocols: Arc<RwLock<FxHashMap<RiProtocolType, Box<dyn RiProtocol>>>>,
     /// Active protocol
     active_protocol: Arc<RwLock<Option<RiProtocolType>>>,
     /// Connection state manager
@@ -294,9 +294,9 @@ pub struct RiProtocolAdapter {
 /// Connection manager for state preservation during protocol switches.
 struct RiConnectionManager {
     /// Active connections
-    connections: Arc<RwLock<HashMap<String, Arc<dyn RiProtocolConnection>>>>,
+    connections: Arc<RwLock<FxHashMap<String, Arc<dyn RiProtocolConnection>>>>,
     /// Connection metadata
-    metadata: Arc<RwLock<HashMap<String, RiConnectionMetadata>>>,
+    metadata: Arc<RwLock<FxHashMap<String, RiConnectionMetadata>>>,
 }
 
 /// Connection metadata for state preservation.
@@ -313,7 +313,7 @@ struct RiConnectionMetadata {
     /// Protocol switch count
     switch_count: u64,
     /// Connection state data
-    state_data: HashMap<String, Vec<u8>>,
+    state_data: FxHashMap<String, Vec<u8>>,
 }
 
 /// Protocol adapter statistics.
@@ -332,20 +332,20 @@ struct RiProtocolAdapterStats {
     /// Average switch time (milliseconds)
     pub avg_switch_time_ms: u64,
     /// Protocol-specific switch statistics
-    pub protocol_switch_stats: HashMap<RiProtocolType, u64>,
+    pub protocol_switch_stats: FxHashMap<RiProtocolType, u64>,
 }
 
 impl RiProtocolAdapter {
     /// Create a new protocol adapter.
     pub fn new() -> Self {
         let connection_manager = Arc::new(RiConnectionManager {
-            connections: Arc::new(RwLock::new(HashMap::new())),
-            metadata: Arc::new(RwLock::new(HashMap::new())),
+            connections: Arc::new(RwLock::new(FxHashMap::default())),
+            metadata: Arc::new(RwLock::new(FxHashMap::default())),
         });
         
         Self {
             strategy: Arc::new(RwLock::new(None)),
-            protocols: Arc::new(RwLock::new(HashMap::new())),
+            protocols: Arc::new(RwLock::new(FxHashMap::default())),
             active_protocol: Arc::new(RwLock::new(None)),
             connection_manager,
             stats: Arc::new(RwLock::new(RiProtocolAdapterStats::default())),
@@ -908,7 +908,7 @@ impl RiConnectionManager {
             established_at: Instant::now(),
             last_switch: None,
             switch_count: 0,
-            state_data: HashMap::new(),
+            state_data: FxHashMap::default(),
         };
         
         self.connections.write().await.insert(connection_id.clone(), connection.into());

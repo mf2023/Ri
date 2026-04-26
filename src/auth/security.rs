@@ -123,13 +123,13 @@ impl RiSecurityManager {
     }
 
     #[staticmethod]
-    fn encrypt_py(plaintext: &str) -> String {
-        Self::encrypt(plaintext)
+    fn encrypt_py(plaintext: &str) -> pyo3::prelude::PyResult<String> {
+        Self::encrypt(plaintext).map_err(|e| pyo3::exceptions::PyValueError::new_err(e.to_string()))
     }
 
     #[staticmethod]
-    fn decrypt_py(encrypted: &str) -> Option<String> {
-        Self::decrypt(encrypted)
+    fn decrypt_py(encrypted: &str) -> pyo3::prelude::PyResult<String> {
+        Self::decrypt(encrypted).map_err(|e| pyo3::exceptions::PyValueError::new_err(e.to_string()))
     }
 
     #[staticmethod]
@@ -210,10 +210,11 @@ impl RiSecurityManager {
     ///
     /// ## Failure Conditions
     ///
-    /// Returns `None` if:
+    /// Returns `Err(RiError::SecurityViolation(...))` if:
     /// - The input is not valid Base64
     /// - The input is shorter than the nonce length
     /// - The authentication tag verification fails (wrong key or tampered data)
+    /// - UTF-8 decoding of the decrypted data fails
     ///
     /// # Parameters
     ///
@@ -221,36 +222,38 @@ impl RiSecurityManager {
     ///
     /// # Returns
     ///
-    /// `Some(String)` containing the decrypted plaintext, or `None` if decryption fails
+    /// `RiResult<String>` containing the decrypted plaintext on success
     ///
     /// # Examples
     ///
     /// ```rust,ignore
     /// use ri::auth::security::RiSecurityManager;
     ///
-    /// let encrypted = RiSecurityManager::encrypt("secret");
-    /// let decrypted = RiSecurityManager::decrypt(&encrypted);
-    ///
-    /// match decrypted {
-    ///     Some(text) => println!("Decrypted: {}", text),
-    ///     None => println!("Decryption failed!"),
-    /// }
+    /// let encrypted = RiSecurityManager::encrypt("secret")?;
+    /// let decrypted = RiSecurityManager::decrypt(&encrypted)?;
+    /// println!("Decrypted: {}", decrypted);
     /// ```
-    pub fn decrypt(encrypted: &str) -> Option<String> {
+    pub fn decrypt(encrypted: &str) -> RiResult<String> {
         let key = load_encryption_key();
-        let data = STANDARD.decode(encrypted).ok()?;
+        let data = STANDARD.decode(encrypted)
+            .map_err(|e| RiError::SecurityViolation(format!("Base64 decode failed: {}", e)))?;
 
         if data.len() < NONCE_LENGTH {
-            return None;
+            return Err(RiError::SecurityViolation(
+                format!("Encrypted data too short: expected at least {} bytes, got {}",
+                    NONCE_LENGTH, data.len())
+            ));
         }
 
         let (nonce, ciphertext) = data.split_at(NONCE_LENGTH);
         let cipher = Aes256Gcm::new(GenericArray::from_slice(&key));
 
-        cipher
+        let plaintext = cipher
             .decrypt(Nonce::from_slice(nonce), ciphertext)
-            .ok()
-            .map(|v| String::from_utf8(v).ok())?
+            .map_err(|e| RiError::SecurityViolation(format!("Decryption failed: {}", e)))?;
+
+        String::from_utf8(plaintext)
+            .map_err(|e| RiError::SecurityViolation(format!("UTF-8 decode failed: {}", e)))
     }
 
     /// Signs data using HMAC-SHA256.

@@ -17,7 +17,7 @@
 
 use serde::Serialize;
 use serde::Deserialize;
-use std::collections::HashMap;
+use std::collections::HashMap as FxHashMap;
 
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 #[derive(Debug, Clone)]
@@ -130,8 +130,8 @@ impl RiDBRow {
         })
     }
 
-    pub fn to_map(&self) -> HashMap<String, Option<serde_json::Value>> {
-        let mut map = HashMap::new();
+    pub fn to_map(&self) -> FxHashMap<String, Option<serde_json::Value>> {
+        let mut map = FxHashMap::default();
         for (i, col) in self.columns.iter().enumerate() {
             map.insert(col.clone(), self.values[i].clone());
         }
@@ -167,8 +167,8 @@ impl RiDBRow {
         self.columns.clone()
     }
 
-    fn to_dict(&self) -> HashMap<String, Option<String>> {
-        let mut map = HashMap::new();
+    fn to_dict(&self) -> FxHashMap<String, Option<String>> {
+        let mut map = FxHashMap::default();
         for (i, col) in self.columns.iter().enumerate() {
             let value = self.values[i].as_ref().map(|v| v.to_string());
             map.insert(col.clone(), value);

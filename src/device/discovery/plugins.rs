@@ -400,7 +400,7 @@ impl PluginRegistry {
         let enabled = self.enabled.read().await;
         let plugins = self.plugins.read().await;
 
-        let mut all_devices = Vec::new();
+        let mut all_devices = Vec::with_capacity(8);
         for name in enabled.iter() {
             if let Some(wrapper) = plugins.get(name) {
                 match wrapper.discover(platform).await {
@@ -475,7 +475,7 @@ pub struct PluginLoader {
 impl PluginLoader {
     /// Creates a new plugin loader
     pub fn new() -> Self {
-        let mut search_paths = Vec::new();
+        let mut search_paths = Vec::with_capacity(8);
         search_paths.push(PathBuf::from("./plugins"));
         search_paths.push(PathBuf::from("/usr/local/lib/ri/plugins"));
         #[cfg(target_os = "macos")]
@@ -510,7 +510,7 @@ impl PluginLoader {
 
     /// Loads plugins from all search paths
     pub async fn load_all(&self, registry: &mut PluginRegistry) -> PluginResult<Vec<String>> {
-        let mut loaded = Vec::new();
+        let mut loaded = Vec::with_capacity(4);
         let paths = self.search_paths.read().await;
 
         for path in paths.iter() {
@@ -525,7 +525,7 @@ impl PluginLoader {
 
     /// Loads plugins from a specific directory path
     async fn load_plugins_from_path(&self, path: &PathBuf, registry: &mut PluginRegistry) -> PluginResult<Vec<String>> {
-        let mut loaded = Vec::new();
+        let mut loaded = Vec::with_capacity(4);
 
         if !path.exists() {
             tracing::debug!("Plugin path does not exist: {}", path.display());

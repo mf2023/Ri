@@ -1129,7 +1129,7 @@ impl RiHSM for RiPKCS11HSM {
 
         let objects = self.find_objects(&template)?;
 
-        let mut keys = Vec::new();
+        let mut keys = Vec::with_capacity(4);
 
         for object in objects {
             let label = self.get_attribute_value(object, pkcs11::Attribute::Label)?;

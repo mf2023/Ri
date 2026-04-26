@@ -25,7 +25,7 @@ use rdkafka::consumer::{Consumer, DefaultConsumerContext, StreamConsumer};
 use rdkafka::message::{BorrowedHeaders, Headers, Message};
 use rdkafka::producer::{FutureProducer, FutureRecord};
 use rdkafka::topic_partition_list::TopicPartitionList;
-use std::collections::HashMap;
+use std::collections::HashMap as FxHashMap;
 use std::sync::Arc;
 use std::time::Duration;
 use tokio::sync::Mutex;
@@ -234,7 +234,7 @@ impl RiQueueConsumer for KafkaQueueConsumer {
                 let key = msg.key().map(|k| String::from_utf8_lossy(k).to_string()).unwrap_or_default();
                 let timestamp = msg.timestamp().to_millis().unwrap_or(0) as u64;
 
-                let headers: HashMap<String, String> = msg.headers()
+                let headers: FxHashMap<String, String> = msg.headers()
                     .map(|h: &BorrowedHeaders| {
                         h.iter().filter_map(|header| {
                             header.value.map(|v| (header.key.to_string(), String::from_utf8_lossy(v).to_string()))

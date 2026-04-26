@@ -57,7 +57,7 @@
 //! ```rust
 //! use ri::prelude::*;
 //! use ri::gateway::{RiGateway, RiGatewayConfig, RiRoute};
-//! use std::collections::HashMap;
+//! use std::collections::HashMap as FxHashMap;
 //! 
 //! async fn example() -> RiResult<()> {
 //!     // Create gateway configuration
@@ -105,8 +105,8 @@
 //!     let sample_request = RiGatewayRequest::new(
 //!         "GET".to_string(),
 //!         "/api/v1/health".to_string(),
-//!         HashMap::new(),
-//!         HashMap::new(),
+//!         FxHashMap::default(),
+//!         FxHashMap::default(),
 //!         None,
 //!         "127.0.0.1:12345".to_string(),
 //!     );
@@ -121,7 +121,7 @@
 use crate::core::{RiModule, RiServiceContext};
 use log;
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
+use std::collections::HashMap as FxHashMap;
 use std::sync::Arc;
 use tokio::sync::RwLock;
 
@@ -254,9 +254,9 @@ pub struct RiGatewayRequest {
     /// Request path
     pub path: String,
     /// HTTP headers
-    pub headers: HashMap<String, String>,
+    pub headers: FxHashMap<String, String>,
     /// Query parameters
-    pub query_params: HashMap<String, String>,
+    pub query_params: FxHashMap<String, String>,
     /// Request body (if any)
     pub body: Option<Vec<u8>>,
     /// Remote address of the client
@@ -283,8 +283,8 @@ impl RiGatewayRequest {
     pub fn new(
         method: String,
         path: String,
-        headers: HashMap<String, String>,
-        query_params: HashMap<String, String>,
+        headers: FxHashMap<String, String>,
+        query_params: FxHashMap<String, String>,
         body: Option<Vec<u8>>,
         remote_addr: String,
     ) -> Self {
@@ -311,7 +311,7 @@ pub struct RiGatewayResponse {
     /// HTTP status code
     pub status_code: u16,
     /// HTTP headers
-    pub headers: HashMap<String, String>,
+    pub headers: FxHashMap<String, String>,
     /// Response body
     pub body: Vec<u8>,
     /// Request ID associated with this response
@@ -331,7 +331,7 @@ impl RiGatewayResponse {
     /// 
     /// A new `RiGatewayResponse` instance
     pub fn new(status_code: u16, body: Vec<u8>, request_id: String) -> Self {
-        let mut headers = HashMap::new();
+        let mut headers = FxHashMap::default();
         headers.insert("Content-Type".to_string(), "application/json".to_string());
         headers.insert("X-Request-ID".to_string(), request_id.clone());
         
