@@ -60,6 +60,24 @@ use std::env;
 use crate::core::error::RiError;
 use crate::core::error::RiResult;
 
+#[cfg(feature = "pyo3")]
+fn ri_error_to_py_err(e: RiError) -> pyo3::prelude::PyErr {
+    use pyo3::prelude::*;
+    use pyo3::exceptions::*;
+    
+    match e {
+        RiError::SecurityViolation(_) | RiError::InvalidInput(_) | RiError::InvalidState(_) => {
+            PyValueError::new_err(e.to_string())
+        }
+        RiError::Io(_) | RiError::Config(_) | RiError::Serde(_) => {
+            PyRuntimeError::new_err(e.to_string())
+        }
+        _ => {
+            PyRuntimeError::new_err(e.to_string())
+        }
+    }
+}
+
 const ENCRYPTION_KEY_ENV: &str = "Ri_ENCRYPTION_KEY";
 const HMAC_KEY_ENV: &str = "Ri_HMAC_KEY";
 const DEFAULT_KEY_LENGTH: usize = 32;
@@ -124,12 +142,12 @@ impl RiSecurityManager {
 
     #[staticmethod]
     fn encrypt_py(plaintext: &str) -> pyo3::prelude::PyResult<String> {
-        Self::encrypt(plaintext).map_err(|e| pyo3::exceptions::PyValueError::new_err(e.to_string()))
+        Self::encrypt(plaintext).map_err(ri_error_to_py_err)
     }
 
     #[staticmethod]
     fn decrypt_py(encrypted: &str) -> pyo3::prelude::PyResult<String> {
-        Self::decrypt(encrypted).map_err(|e| pyo3::exceptions::PyValueError::new_err(e.to_string()))
+        Self::decrypt(encrypted).map_err(ri_error_to_py_err)
     }
 
     #[staticmethod]
