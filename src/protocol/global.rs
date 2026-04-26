@@ -93,7 +93,7 @@ impl RiGlobalProtocol {
     pub fn new() -> Self {
         Self {
             config: None,
-            connection_pool: Arc::new(RwLock::new(FxFxHashMap::default())),
+            connection_pool: Arc::new(RwLock::new(FxHashMap::default())),
             stats: Arc::new(RwLock::new(RiProtocolStats::default())),
             ready: Arc::new(RwLock::new(false)),
         }

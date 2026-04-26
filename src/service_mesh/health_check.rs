@@ -63,7 +63,7 @@
 //!         timeout: Duration::from_secs(5),
 //!         expected_status_code: 200,
 //!         expected_response_body: None,
-//!         headers: FxFxHashMap::default(),
+//!         headers: FxHashMap::default(),
 //!     };
 //!     
 //!     health_checker.register_health_check(
@@ -134,7 +134,7 @@ impl Default for RiHealthCheckConfig {
             timeout: Duration::from_secs(5),
             expected_status_code: 200,
             expected_response_body: None,
-            headers: FxFxHashMap::default(),
+            headers: FxHashMap::default(),
         }
     }
 }
@@ -435,7 +435,7 @@ pub struct RiHealthChecker {
 
 impl RiHealthChecker {
     pub fn new(check_interval: Duration) -> Self {
-        let mut providers: FxHashMap<RiHealthCheckType, Box<dyn RiHealthCheckProvider>> = FxFxHashMap::default();
+        let mut providers: FxHashMap<RiHealthCheckType, Box<dyn RiHealthCheckProvider>> = FxHashMap::default();
         providers.insert(RiHealthCheckType::Http, Box::new(RiHttpHealthCheckProvider));
         providers.insert(RiHealthCheckType::Tcp, Box::new(RiTcpHealthCheckProvider));
         providers.insert(RiHealthCheckType::Grpc, Box::new(RiGrpcHealthCheckProvider));
@@ -443,7 +443,7 @@ impl RiHealthChecker {
         Self {
             check_interval,
             providers: Arc::new(RwLock::new(providers)),
-            check_results: Arc::new(RwLock::new(FxFxHashMap::default())),
+            check_results: Arc::new(RwLock::new(FxHashMap::default())),
             background_tasks: Arc::new(RwLock::new(Vec::new())),
             tracer: None,
         }

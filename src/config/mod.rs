@@ -98,7 +98,7 @@ impl RiConfig {
     /// 
     /// Returns a new `RiConfig` instance with an empty key-value store.
     pub fn new() -> Self {
-        RiConfig { values: FxFxHashMap::default() }
+        RiConfig { values: FxHashMap::default() }
     }
 
     /// Sets a configuration value.

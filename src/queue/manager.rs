@@ -411,7 +411,7 @@ impl RiQueueManager {
                 retry_policy: config.retry_policy.clone(),
                 dead_letter_config: config.dead_letter_config.clone(),
             },
-            queues: Arc::new(RwLock::new(FxFxHashMap::default())),
+            queues: Arc::new(RwLock::new(FxHashMap::default())),
             connection_pool,
         })
     }
@@ -431,7 +431,7 @@ impl Default for RiQueueManager {
                 retry_policy: crate::queue::config::RiRetryPolicy::default(),
                 dead_letter_config: None,
             },
-            queues: Arc::new(RwLock::new(FxFxHashMap::default())),
+            queues: Arc::new(RwLock::new(FxHashMap::default())),
             connection_pool: None,
         }
     }

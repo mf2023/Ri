@@ -766,7 +766,7 @@ impl RiProtocolManager {
         Self {
             stats: Arc::new(RwLock::new(RiProtocolStats::new())),
             default_protocol: RiProtocolType::Global,
-            connections: Arc::new(RwLock::new(FxFxHashMap::default())),
+            connections: Arc::new(RwLock::new(FxHashMap::default())),
             sequence_counter: Arc::new(AtomicU64::new(0)),
             initialized: Arc::new(RwLock::new(false)),
         }
@@ -858,7 +858,7 @@ impl RiBaseProtocol {
         Self {
             config: RiProtocolConfig::default(),
             stats: Arc::new(RwLock::new(RiProtocolStats::new())),
-            connections: Arc::new(RwLock::new(FxFxHashMap::default())),
+            connections: Arc::new(RwLock::new(FxHashMap::default())),
             sequence_counter: Arc::new(AtomicU64::new(0)),
             initialized: Arc::new(RwLock::new(false)),
             _receiver_id: receiver_id,

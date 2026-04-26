@@ -114,9 +114,9 @@ impl RiPrometheusExporter {
         
         Ok(RiPrometheusExporter {
             registry: registry.clone(),
-            counters: Arc::new(RwLock::new(FxFxHashMap::default())),
-            gauges: Arc::new(RwLock::new(FxFxHashMap::default())),
-            histograms: Arc::new(RwLock::new(FxFxHashMap::default())),
+            counters: Arc::new(RwLock::new(FxHashMap::default())),
+            gauges: Arc::new(RwLock::new(FxHashMap::default())),
+            histograms: Arc::new(RwLock::new(FxHashMap::default())),
         })
     }
     

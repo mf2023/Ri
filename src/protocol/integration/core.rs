@@ -126,14 +126,14 @@ impl RiGlobalSystemIntegration {
         let state_manager = Arc::new(RiGlobalStateManager::new());
         
         let connection_coordinator = Arc::new(RiConnectionCoordinator {
-            connections: Arc::new(tokio::sync::RwLock::new(FxFxHashMap::default())),
+            connections: Arc::new(tokio::sync::RwLock::new(FxHashMap::default())),
             routing_table: Arc::new(tokio::sync::RwLock::new(RiConnectionRoutingTable {
-                entries: FxFxHashMap::default(),
+                entries: FxHashMap::default(),
                 default_protocol: RiProtocolType::Global,
                 routing_policies: vec![],
             })),
             health_monitor: Arc::new(crate::protocol::integration::connection::RiConnectionHealthMonitor {
-                health_results: Arc::new(tokio::sync::RwLock::new(FxFxHashMap::default())),
+                health_results: Arc::new(tokio::sync::RwLock::new(FxHashMap::default())),
                 config: Arc::new(crate::protocol::integration::connection::RiHealthCheckConfig {
                     check_interval: Duration::from_secs(30),
                     timeout: Duration::from_secs(5),
@@ -147,7 +147,7 @@ impl RiGlobalSystemIntegration {
         let security_coordinator = Arc::new(RiSecurityCoordinator {
             policies: Arc::new(tokio::sync::RwLock::new(vec![])),
             enforcement_engine: Arc::new(crate::protocol::integration::security::RiSecurityEnforcementEngine {
-                rules: Arc::new(tokio::sync::RwLock::new(FxFxHashMap::default())),
+                rules: Arc::new(tokio::sync::RwLock::new(FxHashMap::default())),
                 actions: Arc::new(tokio::sync::RwLock::new(vec![])),
                 stats: Arc::new(tokio::sync::RwLock::new(crate::protocol::integration::security::RiEnforcementStats::default())),
             }),
@@ -160,7 +160,7 @@ impl RiGlobalSystemIntegration {
         
         let performance_coordinator = Arc::new(RiPerformanceCoordinator {
             metrics: Arc::new(tokio::sync::RwLock::new(RiPerformanceMetrics {
-                protocol_metrics: FxFxHashMap::default(),
+                protocol_metrics: FxHashMap::default(),
                 cross_protocol_metrics: RiCrossProtocolMetrics {
                     cross_protocol_latency: Duration::from_millis(0),
                     protocol_switching_time: Duration::from_millis(0),
@@ -200,7 +200,7 @@ impl RiGlobalSystemIntegration {
         });
         
         let event_bus = Arc::new(RiIntegrationEventBus {
-            subscribers: Arc::new(tokio::sync::RwLock::new(FxFxHashMap::default())),
+            subscribers: Arc::new(tokio::sync::RwLock::new(FxHashMap::default())),
             stats: Arc::new(tokio::sync::RwLock::new(crate::protocol::integration::events::RiIntegrationEventStats::default())),
         });
         
@@ -208,7 +208,7 @@ impl RiGlobalSystemIntegration {
             config: Arc::new(tokio::sync::RwLock::new(config)),
             protocol_adapter,
             state_manager,
-            protocol_registry: Arc::new(tokio::sync::RwLock::new(FxFxHashMap::default())),
+            protocol_registry: Arc::new(tokio::sync::RwLock::new(FxHashMap::default())),
             connection_coordinator,
             security_coordinator,
             performance_coordinator,
@@ -267,7 +267,7 @@ impl RiGlobalSystemIntegration {
         self.protocol_registry.write().await.insert(protocol_type, Arc::new(protocol));
         
         // Publish event
-        self.publish_event(RiIntegrationEventType::ProtocolRegistered, FxFxHashMap::default()).await?;
+        self.publish_event(RiIntegrationEventType::ProtocolRegistered, FxHashMap::default()).await?;
         
         Ok(())
     }
@@ -383,7 +383,7 @@ impl RiGlobalSystemIntegration {
                 target_protocol,
                 target_device: target_device.to_string(),
                 state: RiCrossProtocolConnectionState::Initializing,
-                metadata: FxFxHashMap::default(),
+                metadata: FxHashMap::default(),
                 established_at: Instant::now(),
                 last_activity: Instant::now(),
             };

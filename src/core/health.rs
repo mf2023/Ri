@@ -376,7 +376,7 @@ impl RiHealthReport {
     pub fn new() -> Self {
         Self {
             overall_status: RiHealthStatus::Unknown,
-            components: FxFxHashMap::default(),
+            components: FxHashMap::default(),
             timestamp: SystemTime::now(),
             total_components: 0,
             healthy_count: 0,

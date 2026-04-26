@@ -80,7 +80,7 @@ use uuid::Uuid;
 // contextual information to be added to logs without passing it explicitly through
 // all function calls.
 thread_local! {
-    static LOGONTEXT: RefCell<FxHashMap<String, String>> = RefCell::new(FxFxHashMap::default());
+    static LOGONTEXT: RefCell<FxHashMap<String, String>> = RefCell::new(FxHashMap::default());
 }
 
 /// Log context for Ri, similar to MDC with distributed tracing support.

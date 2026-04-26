@@ -339,13 +339,13 @@ impl RiProtocolAdapter {
     /// Create a new protocol adapter.
     pub fn new() -> Self {
         let connection_manager = Arc::new(RiConnectionManager {
-            connections: Arc::new(RwLock::new(FxFxHashMap::default())),
-            metadata: Arc::new(RwLock::new(FxFxHashMap::default())),
+            connections: Arc::new(RwLock::new(FxHashMap::default())),
+            metadata: Arc::new(RwLock::new(FxHashMap::default())),
         });
         
         Self {
             strategy: Arc::new(RwLock::new(None)),
-            protocols: Arc::new(RwLock::new(FxFxHashMap::default())),
+            protocols: Arc::new(RwLock::new(FxHashMap::default())),
             active_protocol: Arc::new(RwLock::new(None)),
             connection_manager,
             stats: Arc::new(RwLock::new(RiProtocolAdapterStats::default())),
@@ -908,7 +908,7 @@ impl RiConnectionManager {
             established_at: Instant::now(),
             last_switch: None,
             switch_count: 0,
-            state_data: FxFxHashMap::default(),
+            state_data: FxHashMap::default(),
         };
         
         self.connections.write().await.insert(connection_id.clone(), connection.into());

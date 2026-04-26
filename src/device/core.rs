@@ -353,7 +353,7 @@ impl RiDeviceCapabilities {
             memory_gb: None,
             storage_gb: None,
             bandwidth_gbps: None,
-            custom_capabilities: FxFxHashMap::default(),
+            custom_capabilities: FxHashMap::default(),
         }
     }
     
@@ -708,7 +708,7 @@ impl RiDevice {
             location: None,
             group: None,
             tags: Vec::new(),
-            metadata: FxFxHashMap::default(),
+            metadata: FxHashMap::default(),
             last_seen: chrono::Utc::now(),
             current_allocation_id: None,
         }

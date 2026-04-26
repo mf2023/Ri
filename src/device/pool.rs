@@ -184,7 +184,7 @@ impl RiResourcePool {
         Self {
             name: config.name,
             device_type: config.device_type,
-            devices: FxFxHashMap::with_capacity(16),
+            devices: FxHashMap::with_capacity(16),
             total_capacity: 0,
             available_capacity: 0,
             allocated_capacity: 0,
@@ -566,7 +566,7 @@ impl RiResourcePool {
         };
         
         // Calculate device status distribution
-        let mut status_distribution = FxFxHashMap::with_capacity(4);
+        let mut status_distribution = FxHashMap::with_capacity(4);
         for device in &devices {
             *status_distribution.entry(device.status()).or_insert(0) += 1;
         }
@@ -705,7 +705,7 @@ impl RiConnectionPool {
     /// Creates a new connection pool
     pub fn new(max_connections: usize, connection_timeout: Duration, health_check_interval: Duration) -> Self {
         Self {
-            connections: FxFxHashMap::with_capacity(max_connections),
+            connections: FxHashMap::with_capacity(max_connections),
             max_connections,
             connection_timeout,
             health_check_interval,
@@ -1013,7 +1013,7 @@ impl Default for RiResourcePoolStatistics {
             average_health_score: 0.0,
             device_type: RiDeviceType::CPU,
             connection_pool_stats: None,
-            status_distribution: FxFxHashMap::with_capacity(4),
+            status_distribution: FxHashMap::with_capacity(4),
             average_response_time_ms: 0.0,
             average_network_latency_ms: 0.0,
             average_disk_iops: 0.0,
@@ -1052,7 +1052,7 @@ impl RiResourcePoolManager {
     /// A new `RiResourcePoolManager` instance
     pub fn new() -> Self {
         Self {
-            pools: FxFxHashMap::with_capacity(8),
+            pools: FxHashMap::with_capacity(8),
         }
     }
     
@@ -1193,7 +1193,7 @@ impl RiResourcePoolManager {
             device_type: RiDeviceType::Custom, // Multiple device types across pools
             connection_pool_stats: None, // No aggregated connection stats at manager level
             
-            status_distribution: FxFxHashMap::with_capacity(4),
+            status_distribution: FxHashMap::with_capacity(4),
             average_response_time_ms: 0.0,
             average_network_latency_ms: 0.0,
             average_disk_iops: 0.0,

@@ -76,7 +76,7 @@
 //!     
 //!     // Add an event to the span
 //!     tracer.span_mut(&span_id, |span| {
-//!         let mut attributes = std::collections::FxFxHashMap::default();
+//!         let mut attributes = std::collections::FxHashMap::default();
 //!         attributes.insert("event_key".to_string(), "event_value".to_string());
 //!         span.add_event("example_event".to_string(), attributes);
 //!     })?;
@@ -203,7 +203,7 @@ impl RiSpan {
             kind,
             start_time,
             end_time: None,
-            attributes: FxFxHashMap::default(),
+            attributes: FxHashMap::default(),
             events: Vec::new(),
             status: RiSpanStatus::Unset,
         }
@@ -278,7 +278,7 @@ impl RiTracingContext {
         Self {
             current_trace_id: None,
             current_span_id: None,
-            baggage: FxFxHashMap::default(),
+            baggage: FxHashMap::default(),
         }
     }
 
@@ -356,8 +356,8 @@ pub struct RiTracer {
 impl RiTracer {
     pub fn new(sampling_rate: f64) -> Self {
         Self {
-            spans: Arc::new(RwLock::new(FxFxHashMap::default())),
-            active_spans: Arc::new(RwLock::new(FxFxHashMap::default())),
+            spans: Arc::new(RwLock::new(FxHashMap::default())),
+            active_spans: Arc::new(RwLock::new(FxHashMap::default())),
             sampling_strategy: RiSamplingStrategy::Rate(sampling_rate.clamp(0.0, 1.0)),
             adaptive_window: Arc::new(RwLock::new(Vec::new())),
             max_adaptive_window: 100,
@@ -367,8 +367,8 @@ impl RiTracer {
     /// Create a new tracer with a custom sampling strategy
     pub fn with_strategy(strategy: RiSamplingStrategy) -> Self {
         Self {
-            spans: Arc::new(RwLock::new(FxFxHashMap::default())),
-            active_spans: Arc::new(RwLock::new(FxFxHashMap::default())),
+            spans: Arc::new(RwLock::new(FxHashMap::default())),
+            active_spans: Arc::new(RwLock::new(FxHashMap::default())),
             sampling_strategy: strategy,
             adaptive_window: Arc::new(RwLock::new(Vec::new())),
             max_adaptive_window: 100,
@@ -531,7 +531,7 @@ impl RiTracer {
     pub fn export_traces(&self) -> FxHashMap<RiTraceId, Vec<RiSpan>> {
         match self.spans.read_safe("spans for export") {
             Ok(spans) => spans.clone(),
-            Err(_) => FxFxHashMap::default(),
+            Err(_) => FxHashMap::default(),
         }
     }
 
@@ -763,7 +763,7 @@ impl Default for RiTracerManager {
 impl RiTracerManager {
     pub fn new() -> Self {
         Self {
-            tracers: FxFxHashMap::default(),
+            tracers: FxHashMap::default(),
             default_tracer: None,
         }
     }

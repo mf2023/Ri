@@ -253,7 +253,7 @@ fn detect_os() -> (String, String) {
 
 /// Reads /etc/os-release for Linux distribution info
 fn read_os_release() -> FxHashMap<String, String> {
-    let mut result = FxFxHashMap::default();
+    let mut result = FxHashMap::default();
 
     if let Ok(content) = std::fs::read_to_string("/etc/os-release") {
         for line in content.lines() {

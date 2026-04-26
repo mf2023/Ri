@@ -693,7 +693,7 @@ impl RiAdvancedCircuitBreaker {
     pub fn new(config: RiCircuitBreakerConfig) -> Self {
         Self {
             config,
-            stats_by_error: RwLock::new(FxFxHashMap::default()),
+            stats_by_error: RwLock::new(FxHashMap::default()),
             default_stats: Arc::new(CircuitBreakerStats::new()),
         }
     }

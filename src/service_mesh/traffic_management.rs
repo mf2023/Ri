@@ -65,9 +65,9 @@
 //!         destination_service: "backend".to_string(),
 //!         match_criteria: RiMatchCriteria {
 //!             path_prefix: Some("/api".to_string()),
-//!             headers: FxFxHashMap::default(),
+//!             headers: FxHashMap::default(),
 //!             method: Some("GET".to_string()),
-//!             query_parameters: FxFxHashMap::default(),
+//!             query_parameters: FxHashMap::default(),
 //!         },
 //!         route_action: RiRouteAction::Route(vec![RiWeightedDestination {
 //!             service: "backend-v1".to_string(),
@@ -144,9 +144,9 @@ impl RiTrafficRoute {
             destination_service,
             match_criteria: RiMatchCriteria {
                 path_prefix: None,
-                headers: FxFxHashMap::default(),
+                headers: FxHashMap::default(),
                 method: None,
-                query_parameters: FxFxHashMap::default(),
+                query_parameters: FxHashMap::default(),
             },
             route_action: RiRouteAction::Route(vec![]),
             retry_policy: None,
@@ -184,9 +184,9 @@ impl RiMatchCriteria {
     fn py_new() -> Self {
         Self {
             path_prefix: None,
-            headers: FxFxHashMap::default(),
+            headers: FxHashMap::default(),
             method: None,
-            query_parameters: FxFxHashMap::default(),
+            query_parameters: FxHashMap::default(),
         }
     }
     
@@ -331,10 +331,10 @@ impl RiTrafficManager {
     pub fn new(enabled: bool) -> Self {
         Self {
             enabled,
-            routes: Arc::new(RwLock::new(FxFxHashMap::default())),
-            traffic_splits: Arc::new(RwLock::new(FxFxHashMap::default())),
-            circuit_breakers: Arc::new(RwLock::new(FxFxHashMap::default())),
-            rate_limits: Arc::new(RwLock::new(FxFxHashMap::default())),
+            routes: Arc::new(RwLock::new(FxHashMap::default())),
+            traffic_splits: Arc::new(RwLock::new(FxHashMap::default())),
+            circuit_breakers: Arc::new(RwLock::new(FxHashMap::default())),
+            rate_limits: Arc::new(RwLock::new(FxHashMap::default())),
             background_tasks: Arc::new(RwLock::new(Vec::new())),
             #[cfg(feature = "http_client")]
             http_client: reqwest::Client::builder()
@@ -610,7 +610,7 @@ impl RiTrafficManager {
             .header("Content-Type", "application/octet-stream");
         
         if let Some(_tracer) = &self.tracer {
-            let mut headers = FxFxHashMap::default();
+            let mut headers = FxHashMap::default();
             RiContextCarrier::inject_current_into_headers(&mut headers);
             for (key, value) in headers {
                 request_builder = request_builder.header(key, value);
@@ -794,7 +794,7 @@ impl RiTrafficManager {
             let mut limiters = RATE_LIMITERS.lock()
                 .map_err(|e| RiError::ServiceMesh(format!("Failed to acquire rate limiter lock: {}", e)))?;
             if limiters.is_none() {
-                *limiters = Some(FxFxHashMap::default());
+                *limiters = Some(FxHashMap::default());
             }
             
             let limiters = limiters.as_mut()
