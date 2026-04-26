@@ -219,7 +219,7 @@ impl RiDeviceController {
     }
     
     #[pyo3(name = "get_all_device_health")]
-    fn get_all_device_health_impl(&self) -> PyResult<std::collections::FxHashMap<String, super::core::RiDeviceHealthMetrics>> {
+    fn get_all_device_health_impl(&self) -> PyResult<FxHashMap<String, super::core::RiDeviceHealthMetrics>> {
         let rt = tokio::runtime::Runtime::new().map_err(|e| {
             pyo3::exceptions::PyRuntimeError::new_err(format!("Failed to create runtime: {}", e))
         })?;

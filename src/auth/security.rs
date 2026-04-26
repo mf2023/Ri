@@ -61,23 +61,24 @@ use crate::core::error::RiError;
 use crate::core::error::RiResult;
 
 #[cfg(feature = "pyo3")]
-fn ri_error_to_py_err(e: RiError) -> pyo3::prelude::PyErr {
-    use pyo3::prelude::*;
+pub(crate) fn ri_error_to_py_err(e: RiError) -> pyo3::prelude::PyErr {
     use pyo3::exceptions::*;
     
     match e {
         RiError::InvalidInput(_) | RiError::InvalidState(_) | RiError::SecurityViolation(_)
-        | RiError::CircularDependency(_) | RiError::TomlError(_) | RiError::YamlError(_)
-        | RiError::FrameError(_) => {
+        | RiError::TomlError(_) | RiError::YamlError(_) | RiError::FrameError(_) => {
             PyValueError::new_err(e.to_string())
         }
-        RiError::DeviceNotFound(_) | RiError::AllocationNotFound(_)
-        | RiError::ModuleNotFound(_) | RiError::MissingDependency(_) => {
+        RiError::DeviceNotFound { .. } | RiError::AllocationNotFound { .. }
+        | RiError::ModuleNotFound { .. } | RiError::MissingDependency { .. } => {
             PyKeyError::new_err(e.to_string())
         }
+        RiError::CircularDependency { .. } => {
+            PyValueError::new_err(e.to_string())
+        }
         RiError::Io(_) | RiError::Config(_) | RiError::Serde(_) | RiError::Hook(_)
-        | RiError::Prometheus(_) | RiError::ServiceMesh(_) | RiError::DeviceAllocationFailed(_)
-        | RiError::ModuleInitFailed(_) | RiError::ModuleStartFailed(_) | RiError::ModuleShutdownFailed(_)
+        | RiError::Prometheus(_) | RiError::ServiceMesh(_) | RiError::DeviceAllocationFailed { .. }
+        | RiError::ModuleInitFailed { .. } | RiError::ModuleStartFailed { .. } | RiError::ModuleShutdownFailed { .. }
         | RiError::Other(_) | RiError::ExternalError(_) | RiError::PoolError(_) | RiError::DeviceError(_)
         | RiError::RedisError(_) | RiError::HttpClientError(_) | RiError::Queue(_)
         | RiError::Database(_) => {

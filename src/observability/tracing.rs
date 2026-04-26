@@ -76,7 +76,7 @@
 //!     
 //!     // Add an event to the span
 //!     tracer.span_mut(&span_id, |span| {
-//!         let mut attributes = std::collections::FxHashMap::default();
+//!         let mut attributes = FxHashMap::default();
 //!         attributes.insert("event_key".to_string(), "event_value".to_string());
 //!         span.add_event("example_event".to_string(), attributes);
 //!     })?;

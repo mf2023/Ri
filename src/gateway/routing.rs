@@ -194,7 +194,7 @@ impl RiRoute {
             Box::pin(async move {
                 Ok(RiGatewayResponse {
                     status_code: 200,
-                    headers: std::collections::FxHashMap::default(),
+                    headers: FxHashMap::default(),
                     body: b"Hello from Ri Python!".to_vec(),
                     request_id: String::new(),
                 })

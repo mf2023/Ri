@@ -296,12 +296,16 @@ impl RiJWTManager {
     /// # Returns
     ///
     /// The decoded RiJWTClaims if validation succeeds
-    pub fn py_validate_token(&self, token: &str) -> pyo3::prelude::PyResult<pyo3::prelude::Py<RiJWTClaims>> {
+    pub fn py_validate_token(&self, token: &str) -> pyo3::prelude::PyResult<pyo3::PyObject> {
+        use pyo3::prelude::*;
+        
+        let gil = Python::acquire_gil();
+        let py = gil.python();
+        
         self.validate_token(token)
-            .and_then(|claims| serde_json::to_string(&claims).map_err(|e| crate::core::error::RiError::Serde(e.to_string())))
             .map_err(crate::auth::security::ri_error_to_py_err)
-            .and_then(|json| {
-                pyo3::pyclass::PyClassInitializer::from(serde_json::from_str(&json).map_err(|e| crate::core::error::RiError::Serde(e.to_string()))?)
+            .map(|claims| {
+                PyCell::new(py, claims).unwrap().into_py(py)
             })
     }
 
@@ -340,7 +344,7 @@ impl RiJWTManager {
     ///
     /// The decoded RiJWTClaims if validation succeeds
     #[pyo3(name = "validate_token")]
-    pub fn validate_token_py(&self, token: &str) -> pyo3::prelude::PyResult<pyo3::prelude::Py<RiJWTClaims>> {
+    pub fn validate_token_py(&self, token: &str) -> pyo3::prelude::PyResult<pyo3::PyObject> {
         self.py_validate_token(token)
     }
 

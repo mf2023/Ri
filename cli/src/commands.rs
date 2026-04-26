@@ -603,7 +603,7 @@ pub async fn build_project(release: bool, target: Option<&str>) -> Result<()> {
         }
         "python" => {
             pb.set_message("Building Python bindings...");
-            let mut args = vec!["build", "--release", "--features", "pyo3"];
+            let args = vec!["build", "--release", "--features", "pyo3"];
             let status = std::process::Command::new("cargo")
                 .args(&args)
                 .status()
@@ -617,7 +617,7 @@ pub async fn build_project(release: bool, target: Option<&str>) -> Result<()> {
         }
         "java" => {
             pb.set_message("Building Java bindings...");
-            let mut args = vec!["build", "--release", "--features", "jni"];
+            let args = vec!["build", "--release", "--features", "jni"];
             let status = std::process::Command::new("cargo")
                 .args(&args)
                 .status()
@@ -973,18 +973,19 @@ async fn config_validate(file: Option<PathBuf>) -> Result<()> {
     let content = match std::fs::read_to_string(&config_path) {
         Ok(content) => content,
         Err(e) => {
+            let err_msg = e.to_string();
             println!("{} Cannot read file", "✗".red().bold());
             println!();
             println!("{}", "Error Details:".red().bold());
             println!("  {} Permission denied or file is corrupted", "→".yellow().bold());
-            println!("  {} Error: {}", "→".yellow().bold(), e.to_string().red());
+            println!("  {} Error: {}", "→".yellow().bold(), err_msg.red());
             println!();
             println!("{}", "Fix Suggestions:".yellow().bold());
             println!("  1. Check file permissions:");
             println!("     {} (Unix/Linux/macOS)", "chmod 644 ric.yaml".cyan());
             println!("  2. Ensure you have read access to the file");
             println!("  3. Verify the file is not locked by another process");
-            
+
             return Err(RicError::Io(e));
         }
     };
@@ -995,11 +996,12 @@ async fn config_validate(file: Option<PathBuf>) -> Result<()> {
     let config: crate::cli_config::RicConfig = match serde_yaml::from_str(&content) {
         Ok(config) => config,
         Err(e) => {
+            let err_msg = e.to_string();
             println!("{} Invalid YAML syntax", "✗".red().bold());
             println!();
             println!("{}", "Error Details:".red().bold());
             println!("  {} YAML parsing error", "→".yellow().bold());
-            println!("  {} Error: {}", "→".yellow().bold(), e.to_string().red());
+            println!("  {} Error: {}", "→".yellow().bold(), err_msg.red());
             println!();
             println!("{}", "Fix Suggestions:".yellow().bold());
             println!("  1. Check YAML syntax at: {}", "https://yaml.org/".cyan());
@@ -1817,9 +1819,9 @@ pub async fn doctor(verbose: bool, fix: bool) -> Result<()> {
     println!("{}", "  Diagnostic Summary".green().bold());
     println!("{}", "═".repeat(60));
     println!();
-    println!("  {} Passed:   {}", "✓".green().bold(), passed.to_string().green());
-    println!("  {} Warnings: {}", "→".yellow().bold(), warnings.to_string().yellow());
-    println!("  {} Errors:   {}", "✗".red().bold(), errors.to_string().red());
+    println!("  {} Passed:   {}", "✓".green().bold(), passed.green());
+    println!("  {} Warnings: {}", "→".yellow().bold(), warnings.yellow());
+    println!("  {} Errors:   {}", "✗".red().bold(), errors.red());
     println!();
 
     // Auto-fix issues if requested
@@ -3126,7 +3128,7 @@ impl {struct_name}Handler {{
 #[async_trait::async_trait]
 impl Handler for {struct_name}Handler {{
     async fn handle(&self, request: Vec<u8>) -> anyhow::Result<Vec<u8>> {{
-        tracing::debug!("Handling request for {} module ({} bytes)", "{name}", request.len());
+        tracing::debug!("Handling request for {} module ({} bytes)", name, request.len());
         
         // Get read lock on service
         let service = self.service.read().await;
@@ -3244,7 +3246,7 @@ impl {struct_name}Service {{
 #[async_trait::async_trait]
 impl Service for {struct_name}Service {{
     async fn process(&self, data: Vec<u8>) -> anyhow::Result<Vec<u8>> {{
-        tracing::debug!("Processing data in {name} service ({} bytes)", data.len());
+        tracing::debug!("Processing data in {} service ({} bytes)", name, data.len());
         
         // Implement module-specific processing logic here
         // This is a placeholder that echoes the input
@@ -4341,8 +4343,9 @@ async fn test_redis(url: &str) -> Result<()> {
     let client = match redis::Client::open(redis_url.as_str()) {
         Ok(c) => c,
         Err(e) => {
+            let err_msg = e.to_string();
             println!("  {} Failed to create Redis client", "✗".red().bold());
-            println!("  {} Error: {}", "→".yellow().bold(), e.to_string().red());
+            println!("  {} Error: {}", "→".yellow().bold(), err_msg.red());
             return Err(RicError::InvalidConnectionUrl {
                 url: url.to_string(),
                 reason: e.to_string(),
@@ -4377,11 +4380,12 @@ async fn test_redis(url: &str) -> Result<()> {
     println!("{} Sending PING command...", "→".yellow().bold());
     let ping_start = Instant::now();
 
-    let pong: String = match redis::cmd("PING").query_async(&mut conn).await {
+    let pong: String = match redis::cmd("PING").query_async::<_, String>(&mut conn).await {
         Ok(p) => p,
         Err(e) => {
+            let err_msg = e.to_string();
             println!("  {} PING command failed", "✗".red().bold());
-            println!("  {} Error: {}", "→".yellow().bold(), e.to_string().red());
+            println!("  {} Error: {}", "→".yellow().bold(), err_msg.red());
             return Err(RicError::ConnectionTestFailed {
                 service: "Redis".to_string(),
                 message: format!("PING failed: {}", e),
@@ -4401,22 +4405,24 @@ async fn test_redis(url: &str) -> Result<()> {
     let _: () = match redis::cmd("SET")
         .arg(&test_key)
         .arg(test_value)
-        .query_async(&mut conn)
+        .query_async::<_, ()>(&mut conn)
         .await
     {
         Ok(_) => {
             println!("  {} SET {} = \"{}\"", "✓".green().bold(), test_key.cyan(), test_value.cyan());
         }
         Err(e) => {
-            println!("  {} SET operation failed: {}", "✗".red().bold(), e.to_string().red());
+            let err_msg = e.to_string();
+            println!("  {} SET operation failed: {}", "✗".red().bold(), err_msg.red());
         }
     };
 
     println!("{} Testing GET operation...", "→".yellow().bold());
-    let retrieved: Option<String> = match redis::cmd("GET").arg(&test_key).query_async(&mut conn).await {
+    let retrieved: Option<String> = match redis::cmd("GET").arg(&test_key).query_async::<_, Option<String>>(&mut conn).await {
         Ok(v) => v,
         Err(e) => {
-            println!("  {} GET operation failed: {}", "✗".red().bold(), e.to_string().red());
+            let err_msg = e.to_string();
+            println!("  {} GET operation failed: {}", "✗".red().bold(), err_msg.red());
             None
         }
     };
@@ -4429,7 +4435,7 @@ async fn test_redis(url: &str) -> Result<()> {
         }
     }
 
-    let _: () = redis::cmd("DEL").arg(&test_key).query_async(&mut conn).await.unwrap_or(());
+    let _: () = redis::cmd("DEL").arg(&test_key).query_async::<_, ()>(&mut conn).await.unwrap_or(());
 
     println!();
     println!("{} Redis connection test completed successfully!", "✓".green().bold());
@@ -4503,10 +4509,10 @@ async fn test_postgres(url: &str) -> Result<()> {
         host, port, database, user, password
     );
 
-    let client = match tokio_postgres::NoTls.connect(&pg_config).await {
-        Ok((client, conn)) => {
+    let (client, conn) = match tokio_postgres::connect(&pg_config, tokio_postgres::NoTls).await {
+        Ok((client, connection)) => {
             tokio::spawn(async move {
-                if let Err(e) = conn.await {
+                if let Err(e) = connection.await {
                     eprintln!("Connection error: {}", e);
                 }
             });
@@ -4541,7 +4547,8 @@ async fn test_postgres(url: &str) -> Result<()> {
     let version: String = match client.query_one("SELECT version()", &[]).await {
         Ok(row) => row.get(0),
         Err(e) => {
-            println!("  {} Query failed: {}", "✗".red().bold(), e.to_string().red());
+            let err_msg = e.to_string();
+            println!("  {} Query failed: {}", "✗".red().bold(), err_msg.red());
             return Err(RicError::ConnectionTestFailed {
                 service: "PostgreSQL".to_string(),
                 message: format!("Query failed: {}", e),
@@ -4563,13 +4570,15 @@ async fn test_postgres(url: &str) -> Result<()> {
     );
 
     if let Err(e) = client.execute(&create_sql, &[]).await {
-        println!("  {} CREATE TABLE failed: {}", "✗".red().bold(), e.to_string().red());
+            let err_msg = e.to_string();
+        println!("  {} CREATE TABLE failed: {}", "✗".red().bold(), err_msg.red());
     } else {
-        println!("  {} CREATE TABLE ✓", "✓".green().bold(), test_table.cyan());
+        println!("  {} CREATE TABLE {}", "✓".green().bold(), test_table.cyan());
 
         let insert_sql = format!("INSERT INTO {} (value) VALUES ($1)", test_table);
         if let Err(e) = client.execute(&insert_sql, &[&"Ri CLI Test Value"]).await {
-            println!("  {} INSERT failed: {}", "✗".red().bold(), e.to_string().red());
+            let err_msg = e.to_string();
+            println!("  {} INSERT failed: {}", "✗".red().bold(), err_msg.red());
         } else {
             println!("  {} INSERT INTO {} (value) VALUES (...)", "✓".green().bold(), test_table.cyan());
 
@@ -4578,7 +4587,8 @@ async fn test_postgres(url: &str) -> Result<()> {
                 Ok(Some(row)) => Some(row.get(0)),
                 Ok(None) => None,
                 Err(e) => {
-                    println!("  {} SELECT failed: {}", "✗".red().bold(), e.to_string().red());
+            let err_msg = e.to_string();
+                    println!("  {} SELECT failed: {}", "✗".red().bold(), err_msg.red());
                     None
                 }
             };
@@ -4589,17 +4599,19 @@ async fn test_postgres(url: &str) -> Result<()> {
 
             let delete_sql = format!("DELETE FROM {}", test_table);
             if let Err(e) = client.execute(&delete_sql, &[]).await {
-                println!("  {} DELETE failed: {}", "✗".red().bold(), e.to_string().red());
+            let err_msg = e.to_string();
+                println!("  {} DELETE failed: {}", "✗".red().bold(), err_msg.red());
             } else {
-                println!("  {} DELETE FROM ✓", "✓".green().bold(), test_table.cyan());
+                println!("  {} DELETE FROM {}", "✓".green().bold(), test_table.cyan());
             }
         }
 
         let drop_sql = format!("DROP TABLE {}", test_table);
         if let Err(e) = client.execute(&drop_sql, &[]).await {
-            println!("  {} DROP TABLE failed: {}", "✗".red().bold(), e.to_string().red());
+            let err_msg = e.to_string();
+            println!("  {} DROP TABLE failed: {}", "✗".red().bold(), err_msg.red());
         } else {
-            println!("  {} DROP TABLE ✓", "✓".green().bold(), test_table.cyan());
+            println!("  {} DROP TABLE {}", "✓".green().bold(), test_table.cyan());
         }
     }
 
@@ -4707,7 +4719,8 @@ async fn test_mysql(url: &str) -> Result<()> {
         Ok(Some(row)) => row,
         Ok(None) => "Unknown".to_string(),
         Err(e) => {
-            println!("  {} Query failed: {}", "✗".red().bold(), e.to_string().red());
+            let err_msg = e.to_string();
+            println!("  {} Query failed: {}", "✗".red().bold(), err_msg.red());
             return Err(RicError::ConnectionTestFailed {
                 service: "MySQL".to_string(),
                 message: format!("Query failed: {}", e),
@@ -4729,13 +4742,15 @@ async fn test_mysql(url: &str) -> Result<()> {
     );
 
     if let Err(e) = conn.query_drop(&create_sql) {
-        println!("  {} CREATE TABLE failed: {}", "✗".red().bold(), e.to_string().red());
+            let err_msg = e.to_string();
+        println!("  {} CREATE TABLE failed: {}", "✗".red().bold(), err_msg.red());
     } else {
         println!("  {} CREATE TABLE {}", "✓".green().bold(), test_table.cyan());
 
         let insert_sql = format!("INSERT INTO {} (value) VALUES ('Ri CLI Test Value')", test_table);
         if let Err(e) = conn.query_drop(&insert_sql) {
-            println!("  {} INSERT failed: {}", "✗".red().bold(), e.to_string().red());
+            let err_msg = e.to_string();
+            println!("  {} INSERT failed: {}", "✗".red().bold(), err_msg.red());
         } else {
             println!("  {} INSERT INTO {} (value) VALUES (...)", "✓".green().bold(), test_table.cyan());
 
@@ -4744,7 +4759,8 @@ async fn test_mysql(url: &str) -> Result<()> {
                 Ok(Some(row)) => Some(row),
                 Ok(None) => None,
                 Err(e) => {
-                    println!("  {} SELECT failed: {}", "✗".red().bold(), e.to_string().red());
+            let err_msg = e.to_string();
+                    println!("  {} SELECT failed: {}", "✗".red().bold(), err_msg.red());
                     None
                 }
             };
@@ -4755,7 +4771,8 @@ async fn test_mysql(url: &str) -> Result<()> {
 
             let delete_sql = format!("DELETE FROM {}", test_table);
             if let Err(e) = conn.query_drop(&delete_sql) {
-                println!("  {} DELETE failed: {}", "✗".red().bold(), e.to_string().red());
+            let err_msg = e.to_string();
+                println!("  {} DELETE failed: {}", "✗".red().bold(), err_msg.red());
             } else {
                 println!("  {} DELETE FROM {}", "✓".green().bold(), test_table.cyan());
             }
@@ -4763,7 +4780,8 @@ async fn test_mysql(url: &str) -> Result<()> {
 
         let drop_sql = format!("DROP TABLE {}", test_table);
         if let Err(e) = conn.query_drop(&drop_sql) {
-            println!("  {} DROP TABLE failed: {}", "✗".red().bold(), e.to_string().red());
+            let err_msg = e.to_string();
+            println!("  {} DROP TABLE failed: {}", "✗".red().bold(), err_msg.red());
         } else {
             println!("  {} DROP TABLE {}", "✓".green().bold(), test_table.cyan());
         }
@@ -4894,7 +4912,7 @@ async fn test_kafka(url: &str) -> Result<()> {
     let test_message = format!("Ri CLI Test Message at {}", chrono::Utc::now());
 
     let produce_future = producer.send(
-        rdkafka::producer::Record::new(
+        rdkafka::producer::ProducerRecord::new(
             &test_topic,
             Some(test_message.as_bytes()),
             None::<&str>,
