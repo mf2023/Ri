@@ -22,7 +22,6 @@ use std::time::Duration;
 use std::sync::atomic::{AtomicU64, Ordering};
 
 #[cfg(feature = "pyo3")]
-#[allow(unused_imports)]
 use pyo3::prelude::*;
 
 pub struct RiGrpcClient {

@@ -22,9 +22,8 @@
 //! 
 //! ## Core Modules
 //! 
-//! Ri is organized into 12 core modules, each responsible for a specific set of functionalities:
-//! 
-//! - **core**: Core runtime, application builder, and service context
+//! Ri is organized into the following modules, providing a comprehensive middleware
+//! service framework for building enterprise-grade backend applications:
 //! - **fs**: Secure file system operations and management
 //! - **log**: Structured logging with tracing integration
 //! - **config**: Multi-source configuration management

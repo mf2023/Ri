@@ -47,16 +47,18 @@
 //! appropriate error type.
 
 use crate::cli::ConfigAction;
-use crate::error::Result;
+use crate::error::{Result, RicError};
 use crate::templates::TemplateEngine;
 use crate::utils;
 use crate::utils::output;
 use colored::Colorize;
 use indicatif::{ProgressBar, ProgressStyle};
+use mysql_async::prelude::Queryable;
 use std::collections::HashMap;
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::Command;
+use tokio_postgres::tls::TlsConnect;
 
 /// Create a new Ri project with specified template
 ///
@@ -144,7 +146,7 @@ pub fn new_project(name: String, template: String, path: Option<PathBuf>) -> Res
     // This ensures the name follows Rust naming conventions and Cargo package naming rules
     // Validation rules: alphanumeric, dashes, underscores allowed; no leading numbers; max 64 chars
     utils::validation::validate_project_name(&name)
-        .map_err(|e| crate::error::RicError::Template(e.to_string()))?;
+        .map_err(|e| RicError::Template(e.to_string()))?;
 
     // Step 2: Use the provided template name
     // The template parameter is now required (not Optional), so we use it directly
@@ -176,7 +178,7 @@ pub fn new_project(name: String, template: String, path: Option<PathBuf>) -> Res
     // Prevent accidental overwriting of existing projects and data loss
     // This is a safety check before any file system modifications
     if project_dir.exists() {
-        return Err(crate::error::RicError::ProjectExists(name));
+        return Err(RicError::ProjectExists(name));
     }
 
     // Step 5: Initialize progress spinner for visual feedback
@@ -236,7 +238,7 @@ pub fn new_project(name: String, template: String, path: Option<PathBuf>) -> Res
 fn gather_template_context(
     project_name: &str,
     template_name: &str,
-) -> std::result::Result<HashMap<String, String>, crate::error::RicError> {
+) -> std::result::Result<HashMap<String, String>, RicError> {
     let mut context = HashMap::new();
 
     // Project metadata
@@ -343,16 +345,16 @@ fn create_project_from_template(
     template_name: &str,
     context: &HashMap<String, String>,
     spinner: &ProgressBar,
-) -> std::result::Result<(), crate::error::RicError> {
+) -> std::result::Result<(), RicError> {
     // Create template engine instance
     spinner.set_message("Loading template engine...");
     let engine = TemplateEngine::new()
-        .map_err(|e| crate::error::RicError::Template(e.to_string()))?;
+        .map_err(|e| RicError::Template(e.to_string()))?;
 
     // Validate template exists
     spinner.set_message(format!("Validating template '{}'...", template_name));
     let template_info = engine.get_template_info(template_name)
-        .map_err(|e| crate::error::RicError::Template(e.to_string()))?;
+        .map_err(|e| RicError::Template(e.to_string()))?;
 
     // Create project directory
     spinner.set_message("Creating project directory...");
@@ -370,7 +372,7 @@ fn create_project_from_template(
 
         // Render the template file
         let content = engine.render_template_file(template_name, &file.source, context)
-            .map_err(|e| crate::error::RicError::Template(e.to_string()))?;
+            .map_err(|e| RicError::Template(e.to_string()))?;
 
         // Determine output file path
         let output_file = project_dir.join(&file.destination);
@@ -411,7 +413,7 @@ fn create_project_from_template(
 ///
 /// Git initialization is optional - if git is not installed or fails,
 /// the project is still created successfully.
-fn initialize_git_repository(project_dir: &Path) -> std::result::Result<(), crate::error::RicError> {
+fn initialize_git_repository(project_dir: &Path) -> std::result::Result<(), RicError> {
     // Check if git is available
     let git_available = Command::new("git")
         .arg("--version")
@@ -429,7 +431,7 @@ fn initialize_git_repository(project_dir: &Path) -> std::result::Result<(), crat
         .args(&["init"])
         .current_dir(project_dir)
         .status()
-        .map_err(|e| crate::error::RicError::Io(e))?;
+        .map_err(|e| RicError::Io(e))?;
 
     if !init_status.success() {
         // Git init failed, but this is not critical
@@ -441,7 +443,7 @@ fn initialize_git_repository(project_dir: &Path) -> std::result::Result<(), crat
         .args(&["add", "."])
         .current_dir(project_dir)
         .status()
-        .map_err(|e| crate::error::RicError::Io(e))?;
+        .map_err(|e| RicError::Io(e))?;
 
     if !add_status.success() {
         return Ok(());
@@ -452,7 +454,7 @@ fn initialize_git_repository(project_dir: &Path) -> std::result::Result<(), crat
         .args(&["commit", "-m", "Initial commit: Ri project created with ric"])
         .current_dir(project_dir)
         .status()
-        .map_err(|e| crate::error::RicError::Io(e))?;
+        .map_err(|e| RicError::Io(e))?;
 
     if !commit_status.success() {
         // Commit failed, but repository is initialized
@@ -593,10 +595,10 @@ pub async fn build_project(release: bool, target: Option<&str>) -> Result<()> {
             let status = std::process::Command::new("cargo")
                 .args(&args)
                 .status()
-                .map_err(|e| crate::error::RicError::BuildFailed(e.to_string()))?;
+                .map_err(|e| RicError::BuildFailed(e.to_string()))?;
             pb.finish();
             if !status.success() {
-                return Err(crate::error::RicError::BuildFailed("Build failed".to_string()));
+                return Err(RicError::BuildFailed("Build failed".to_string()));
             }
         }
         "python" => {
@@ -605,10 +607,10 @@ pub async fn build_project(release: bool, target: Option<&str>) -> Result<()> {
             let status = std::process::Command::new("cargo")
                 .args(&args)
                 .status()
-                .map_err(|e| crate::error::RicError::BuildFailed(e.to_string()))?;
+                .map_err(|e| RicError::BuildFailed(e.to_string()))?;
             pb.finish();
             if !status.success() {
-                return Err(crate::error::RicError::BuildFailed("Python build failed".to_string()));
+                return Err(RicError::BuildFailed("Python build failed".to_string()));
             }
             println!("{} Python bindings built successfully", "✓".green().bold());
             println!("  {} Output: target/release/", "→".yellow().bold());
@@ -619,24 +621,24 @@ pub async fn build_project(release: bool, target: Option<&str>) -> Result<()> {
             let status = std::process::Command::new("cargo")
                 .args(&args)
                 .status()
-                .map_err(|e| crate::error::RicError::BuildFailed(e.to_string()))?;
+                .map_err(|e| RicError::BuildFailed(e.to_string()))?;
             pb.finish();
             if !status.success() {
-                return Err(crate::error::RicError::BuildFailed("Java build failed".to_string()));
+                return Err(RicError::BuildFailed("Java build failed".to_string()));
             }
             println!("{} Java bindings built successfully", "✓".green().bold());
             println!("  {} Output: target/release/", "→".yellow().bold());
         }
         "c" => {
             pb.set_message("Building C/C++ bindings...");
-            let mut args = vec!["build", "--release", "--features", "c-api"];
+            let args = vec!["build", "--release", "--features", "c-api"];
             let status = std::process::Command::new("cargo")
                 .args(&args)
                 .status()
-                .map_err(|e| crate::error::RicError::BuildFailed(e.to_string()))?;
+                .map_err(|e| RicError::BuildFailed(e.to_string()))?;
             pb.finish();
             if !status.success() {
-                return Err(crate::error::RicError::BuildFailed("C/C++ build failed".to_string()));
+                return Err(RicError::BuildFailed("C/C++ build failed".to_string()));
             }
             println!("{} C/C++ bindings built successfully", "✓".green().bold());
             println!("  {} Output: target/release/", "→".yellow().bold());
@@ -652,7 +654,7 @@ pub async fn build_project(release: bool, target: Option<&str>) -> Result<()> {
         }
         _ => {
             pb.finish();
-            return Err(crate::error::RicError::BuildFailed(format!(
+            return Err(RicError::BuildFailed(format!(
                 "Unknown target: {}. Valid targets: all, python, java, c, wasm",
                 target_name
             )));
@@ -729,10 +731,10 @@ pub async fn run_project(release: bool, config: Option<&str>) -> Result<()> {
 
     let status = command
         .status()
-        .map_err(|e| crate::error::RicError::RunFailed(e.to_string()))?;
+        .map_err(|e| RicError::RunFailed(e.to_string()))?;
 
     if !status.success() {
-        return Err(crate::error::RicError::RunFailed("Run failed".to_string()));
+        return Err(RicError::RunFailed("Run failed".to_string()));
     }
 
     Ok(())
@@ -960,7 +962,7 @@ async fn config_validate(file: Option<PathBuf>) -> Result<()> {
         println!("  2. Or specify an existing configuration file:");
         println!("     {} <path-to-config>", "ric config validate".cyan());
         
-        return Err(crate::error::RicError::ConfigFileNotFound(
+        return Err(RicError::ConfigFileNotFound(
             config_path.display().to_string()
         ));
     }
@@ -983,7 +985,7 @@ async fn config_validate(file: Option<PathBuf>) -> Result<()> {
             println!("  2. Ensure you have read access to the file");
             println!("  3. Verify the file is not locked by another process");
             
-            return Err(crate::error::RicError::Io(e));
+            return Err(RicError::Io(e));
         }
     };
     
@@ -1008,7 +1010,7 @@ async fn config_validate(file: Option<PathBuf>) -> Result<()> {
             println!("     • Unmatched brackets or braces");
             println!("  3. Use a YAML validator to check syntax");
             
-            return Err(crate::error::RicError::Yaml(e));
+            return Err(RicError::Yaml(e));
         }
     };
     
@@ -1033,7 +1035,7 @@ async fn config_validate(file: Option<PathBuf>) -> Result<()> {
     }
     
     if config.project.version.is_empty() {
-        println!("    {} Project version is empty", "⚠".yellow().bold());
+        println!("    {} Project version is empty", "→".yellow().bold());
         println!("      {} Using default: 0.1.0", "→".yellow().bold());
         has_warnings = true;
     } else {
@@ -1041,7 +1043,7 @@ async fn config_validate(file: Option<PathBuf>) -> Result<()> {
     }
     
     if config.project.template.is_empty() {
-        println!("    {} Project template is empty", "⚠".yellow().bold());
+        println!("    {} Project template is empty", "→".yellow().bold());
         println!("      {} Using default: default", "→".yellow().bold());
         has_warnings = true;
     } else {
@@ -1056,7 +1058,7 @@ async fn config_validate(file: Option<PathBuf>) -> Result<()> {
     println!("    {} Build target: {}", "✓".green().bold(), config.build.target.cyan());
     
     if config.build.features.is_empty() {
-        println!("    {} No features enabled", "⚠".yellow().bold());
+        println!("    {} No features enabled", "→".yellow().bold());
         has_warnings = true;
     } else {
         println!("    {} Features: {}", "✓".green().bold(), config.build.features.join(", ").cyan());
@@ -1071,7 +1073,7 @@ async fn config_validate(file: Option<PathBuf>) -> Result<()> {
         println!("      {} Fix: Set workers to a positive number (recommended: CPU cores)", "→".yellow().bold());
         has_errors = true;
     } else if config.runtime.workers > 256 {
-        println!("    {} Workers count is very high: {}", "⚠".yellow().bold(), config.runtime.workers);
+        println!("    {} Workers count is very high: {}", "→".yellow().bold(), config.runtime.workers);
         println!("      {} Consider reducing to match CPU cores", "→".yellow().bold());
         has_warnings = true;
     } else {
@@ -1080,7 +1082,7 @@ async fn config_validate(file: Option<PathBuf>) -> Result<()> {
     
     let valid_log_levels = ["trace", "debug", "info", "warn", "error", "off"];
     if !valid_log_levels.contains(&config.runtime.log_level.to_lowercase().as_str()) {
-        println!("    {} Invalid log level: {}", "⚠".yellow().bold(), config.runtime.log_level);
+        println!("    {} Invalid log level: {}", "→".yellow().bold(), config.runtime.log_level);
         println!("      {} Valid levels: {}", "→".yellow().bold(), valid_log_levels.join(", ").cyan());
         has_warnings = true;
     } else {
@@ -1092,11 +1094,11 @@ async fn config_validate(file: Option<PathBuf>) -> Result<()> {
     if has_errors {
         println!("{} Configuration validation failed!", "✗".red().bold());
         println!("  {} Please fix the errors above and validate again", "→".yellow().bold());
-        return Err(crate::error::RicError::ConfigInvalid(
+        return Err(RicError::ConfigInvalid(
             "Configuration contains errors".to_string()
         ));
     } else if has_warnings {
-        println!("{} Configuration is valid with warnings", "⚠".yellow().bold());
+        println!("{} Configuration is valid with warnings", "→".yellow().bold());
         println!("  {} Consider addressing the warnings above", "→".yellow().bold());
     } else {
         println!("{} Configuration is valid!", "✓".green().bold());
@@ -1128,9 +1130,9 @@ async fn config_validate(file: Option<PathBuf>) -> Result<()> {
 ///
 /// # Output Format
 ///
-/// - ✅ Variable is set
-/// - ⚠️ Optional variable is not set
-/// - ❌ Required variable is missing (if any)
+/// - ✓ Variable is set
+/// - ⚠ Optional variable is not set
+/// - → Required variable is missing (if any)
 ///
 /// # Examples
 ///
@@ -1169,7 +1171,7 @@ async fn config_check() -> Result<()> {
                     println!("  {} {} is not set (required)", "✗".red().bold(), var.cyan());
                     println!("    {} {}", "→".yellow().bold(), description.dimmed());
                 } else {
-                    println!("  {} {} is not set (optional)", "⚠".yellow().bold(), var.cyan());
+                    println!("  {} {} is not set (optional)", "→".yellow().bold(), var.cyan());
                     println!("    {} {}", "→".yellow().bold(), description.dimmed());
                 }
             }
@@ -1191,7 +1193,7 @@ async fn config_check() -> Result<()> {
                     println!("  {} {} is not set (required)", "✗".red().bold(), var.cyan());
                     println!("    {} {}", "→".yellow().bold(), description.dimmed());
                 } else {
-                    println!("  {} {} is not set (optional)", "⚠".yellow().bold(), var.cyan());
+                    println!("  {} {} is not set (optional)", "→".yellow().bold(), var.cyan());
                     println!("    {} {}", "→".yellow().bold(), description.dimmed());
                 }
             }
@@ -1326,13 +1328,13 @@ pub async fn check_project() -> Result<()> {
     let status = std::process::Command::new("cargo")
         .args(&["check"])
         .status()
-        .map_err(|e| crate::error::RicError::CheckFailed(e.to_string()))?;
+        .map_err(|e| RicError::CheckFailed(e.to_string()))?;
 
     // Display result
     if status.success() {
         println!("{} No errors found!", "✓".green().bold());
     } else {
-        return Err(crate::error::RicError::CheckFailed("Check failed".to_string()));
+        return Err(RicError::CheckFailed("Check failed".to_string()));
     }
 
     Ok(())
@@ -1363,13 +1365,13 @@ pub async fn clean_project() -> Result<()> {
     let status = std::process::Command::new("cargo")
         .args(&["clean"])
         .status()
-        .map_err(|e| crate::error::RicError::CleanFailed(e.to_string()))?;
+        .map_err(|e| RicError::CleanFailed(e.to_string()))?;
 
     // Display result
     if status.success() {
         println!("{} Project cleaned!", "✓".green().bold());
     } else {
-        return Err(crate::error::RicError::CleanFailed("Clean failed".to_string()));
+        return Err(RicError::CleanFailed("Clean failed".to_string()));
     }
 
     Ok(())
@@ -1429,12 +1431,12 @@ pub async fn show_info() -> Result<()> {
 
     // Display available features
     println!("\n{} Features:", "→".yellow().bold());
-    println!("  • {}", "Python bindings (PyO3)".dimmed());
-    println!("  • {}", "Java bindings (JNI)".dimmed());
-    println!("  • {}", "C/C++ bindings (FFI)".dimmed());
-    println!("  • {}", "gRPC support".dimmed());
-    println!("  • {}", "WebSocket support".dimmed());
-    println!("  • {}", "Message queues (RabbitMQ, Kafka)".dimmed());
+    println!("  ✓  {}", "Python bindings (PyO3)".dimmed());
+    println!("  ✓  {}", "Java bindings (JNI)".dimmed());
+    println!("  ✓  {}", "C/C++ bindings (FFI)".dimmed());
+    println!("  ✓  {}", "gRPC support".dimmed());
+    println!("  ✓  {}", "WebSocket support".dimmed());
+    println!("  ✓  {}", "Message queues (RabbitMQ, Kafka)".dimmed());
 
     // Display footer
     println!("\n{}", "═".repeat(50));
@@ -1506,7 +1508,7 @@ impl DiagnosticResult {
     fn print(&self, verbose: bool) {
         let status_icon = match self.status {
             DiagnosticStatus::Pass => "✓".green().bold(),
-            DiagnosticStatus::Warning => "⚠".yellow().bold(),
+            DiagnosticStatus::Warning => "→".yellow().bold(),
             DiagnosticStatus::Error => "✗".red().bold(),
         };
 
@@ -1578,9 +1580,9 @@ impl DiagnosticResult {
 ///
 /// # Output Format
 ///
-/// - ✅ Passed checks (green)
+/// - �?Passed checks (green)
 /// - ⚠️ Warnings (yellow)
-/// - ❌ Errors (red)
+/// - �?Errors (red)
 /// - 💡 Suggestions (blue)
 ///
 /// # Errors
@@ -1816,7 +1818,7 @@ pub async fn doctor(verbose: bool, fix: bool) -> Result<()> {
     println!("{}", "═".repeat(60));
     println!();
     println!("  {} Passed:   {}", "✓".green().bold(), passed.to_string().green());
-    println!("  {} Warnings: {}", "⚠".yellow().bold(), warnings.to_string().yellow());
+    println!("  {} Warnings: {}", "→".yellow().bold(), warnings.to_string().yellow());
     println!("  {} Errors:   {}", "✗".red().bold(), errors.to_string().red());
     println!();
 
@@ -1841,7 +1843,7 @@ pub async fn doctor(verbose: bool, fix: bool) -> Result<()> {
             println!("  {} Run with {} to attempt automatic fixes", "→".yellow().bold(), "ric doctor --fix".cyan());
         }
     } else if warnings > 0 {
-        println!("{} All critical checks passed, but some warnings were found.", "⚠".yellow().bold());
+        println!("{} All critical checks passed, but some warnings were found.", "→".yellow().bold());
     } else {
         println!("{} All checks passed! Your development environment is healthy.", "✓".green().bold());
     }
@@ -2582,7 +2584,7 @@ async fn generate_module(module_type: String, name: String) -> Result<()> {
     
     // Validate module type
     if !valid_types.contains(&module_type.as_str()) {
-        return Err(crate::error::RicError::InvalidModuleType {
+        return Err(RicError::InvalidModuleType {
             module_type,
             valid_types: valid_types.join(", "),
         });
@@ -2590,14 +2592,14 @@ async fn generate_module(module_type: String, name: String) -> Result<()> {
 
     // Validate module name
     utils::validation::validate_project_name(&name)
-        .map_err(|e| crate::error::RicError::GenerationFailed(e.to_string()))?;
+        .map_err(|e| RicError::GenerationFailed(e.to_string()))?;
 
     // Determine module directory path
     let module_dir = PathBuf::from("src/modules").join(&name);
 
     // Check if module already exists
     if module_dir.exists() {
-        return Err(crate::error::RicError::ModuleExists {
+        return Err(RicError::ModuleExists {
             name,
             path: module_dir.display().to_string(),
         });
@@ -3124,7 +3126,7 @@ impl {struct_name}Handler {{
 #[async_trait::async_trait]
 impl Handler for {struct_name}Handler {{
     async fn handle(&self, request: Vec<u8>) -> anyhow::Result<Vec<u8>> {{
-        tracing::debug!("Handling request for {name} module ({request} bytes)", request = request.len());
+        tracing::debug!("Handling request for {} module ({} bytes)", "{name}", request.len());
         
         // Get read lock on service
         let service = self.service.read().await;
@@ -3480,11 +3482,11 @@ fn print_module_success_message(name: &str, module_type: &str, module_dir: &Path
     
     println!();
     println!("{}", "Generated files:".yellow().bold());
-    println!("  {} {}", "•".green(), format!("{}/mod.rs", module_dir.display()).dimmed());
-    println!("  {} {}", "•".green(), format!("{}/config.rs", module_dir.display()).dimmed());
-    println!("  {} {}", "•".green(), format!("{}/handler.rs", module_dir.display()).dimmed());
-    println!("  {} {}", "•".green(), format!("{}/service.rs", module_dir.display()).dimmed());
-    println!("  {} {}", "•".green(), format!("{}/tests/mod.rs", module_dir.display()).dimmed());
+    println!("  ✓  {}", format!("{}/mod.rs", module_dir.display()).dimmed());
+    println!("  ✓  {}", format!("{}/config.rs", module_dir.display()).dimmed());
+    println!("  ✓  {}", format!("{}/handler.rs", module_dir.display()).dimmed());
+    println!("  ✓  {}", format!("{}/service.rs", module_dir.display()).dimmed());
+    println!("  ✓  {}", format!("{}/tests/mod.rs", module_dir.display()).dimmed());
     
     println!();
     println!("{}", "Next steps:".yellow().bold());
@@ -3503,34 +3505,34 @@ fn print_module_success_message(name: &str, module_type: &str, module_dir: &Path
     println!("{}", "Module type hints:".yellow().bold());
     match module_type {
         "cache" => {
-            println!("  • Configure backend: redis, memcached, or memory");
-            println!("  • Set appropriate TTL values for your use case");
-            println!("  • Consider cache invalidation strategies");
+            println!("  → Configure backend: redis, memcached, or memory");
+            println!("  → Set appropriate TTL values for your use case");
+            println!("  → Consider cache invalidation strategies");
         },
         "queue" => {
-            println!("  • Configure backend: rabbitmq, kafka, or memory");
-            println!("  • Set up dead letter queues for failed messages");
-            println!("  • Configure retry policies appropriately");
+            println!("  → Configure backend: rabbitmq, kafka, or memory");
+            println!("  → Set up dead letter queues for failed messages");
+            println!("  → Configure retry policies appropriately");
         },
         "gateway" => {
-            println!("  • Configure routes and upstream services");
-            println!("  • Set up rate limiting and authentication");
-            println!("  • Configure TLS for production");
+            println!("  → Configure routes and upstream services");
+            println!("  → Set up rate limiting and authentication");
+            println!("  → Configure TLS for production");
         },
         "auth" => {
-            println!("  • Change jwt_secret in production!");
-            println!("  • Configure OAuth2 providers if needed");
-            println!("  • Set up refresh token rotation");
+            println!("  → Change jwt_secret in production!");
+            println!("  → Configure OAuth2 providers if needed");
+            println!("  → Set up refresh token rotation");
         },
         "device" => {
-            println!("  • Configure MQTT broker connection");
-            println!("  • Set up device authentication");
-            println!("  • Configure heartbeat intervals");
+            println!("  → Configure MQTT broker connection");
+            println!("  → Set up device authentication");
+            println!("  → Configure heartbeat intervals");
         },
         "observability" => {
-            println!("  • Configure trace sampling rate");
-            println!("  • Set up export endpoint (Jaeger, etc.)");
-            println!("  • Configure metrics port");
+            println!("  → Configure trace sampling rate");
+            println!("  → Set up export endpoint (Jaeger, etc.)");
+            println!("  → Configure metrics port");
         },
         _ => {}
     }
@@ -3572,7 +3574,7 @@ fn print_module_success_message(name: &str, module_type: &str, module_dir: &Path
 async fn generate_middleware(name: String) -> Result<()> {
     // Validate middleware name
     utils::validation::validate_project_name(&name)
-        .map_err(|e| crate::error::RicError::GenerationFailed(e.to_string()))?;
+        .map_err(|e| RicError::GenerationFailed(e.to_string()))?;
 
     // Determine middleware file path
     let middleware_dir = PathBuf::from("src/middleware");
@@ -3580,7 +3582,7 @@ async fn generate_middleware(name: String) -> Result<()> {
 
     // Check if middleware already exists
     if middleware_file.exists() {
-        return Err(crate::error::RicError::MiddlewareExists {
+        return Err(RicError::MiddlewareExists {
             name,
             path: middleware_file.display().to_string(),
         });
@@ -3878,7 +3880,7 @@ fn print_middleware_success_message(name: &str, struct_name: &str, middleware_fi
     
     println!();
     println!("{}", "Generated file:".yellow().bold());
-    println!("  {} {}", "•".green(), middleware_file.display().to_string().dimmed());
+    println!("  ✓  {}", middleware_file.display().to_string().dimmed());
     
     println!();
     println!("{}", "Next steps:".yellow().bold());
@@ -3889,8 +3891,8 @@ fn print_middleware_success_message(name: &str, struct_name: &str, middleware_fi
     println!("     {} let middleware = middleware::{name}::{struct_name}::new();", "use crate::middleware::{name}::{struct_name};".cyan());
     println!();
     println!("  3. Customize the middleware:");
-    println!("     {} Implement preprocess() for request handling", "•".green());
-    println!("     {} Implement postprocess() for response handling", "•".green());
+    println!("     → Implement preprocess() for request handling");
+    println!("     → Implement postprocess() for response handling");
     
     println!();
     println!("{} Happy coding with Ri!", "🚀".green());
@@ -3933,7 +3935,7 @@ fn print_middleware_success_message(name: &str, struct_name: &str, middleware_fi
 async fn generate_config(from: PathBuf) -> Result<()> {
     // Check if file exists
     if !from.exists() {
-        return Err(crate::error::RicError::GenerateConfigFileNotFound(
+        return Err(RicError::GenerateConfigFileNotFound(
             from.display().to_string()
         ));
     }
@@ -3948,7 +3950,7 @@ async fn generate_config(from: PathBuf) -> Result<()> {
     let is_json = extension == "json";
 
     if !is_yaml && !is_json {
-        return Err(crate::error::RicError::UnsupportedConfigFormat {
+        return Err(RicError::UnsupportedConfigFormat {
             format: extension,
             supported: "yaml, yml, json".to_string(),
         });
@@ -4231,8 +4233,7 @@ fn to_snake_case(s: &str) -> String {
 // =============================================================================
 
 use crate::cli::TestAction;
-use std::net::{TcpStream, ToSocketAddrs};
-use std::time::{Duration, Instant};
+use std::time::Instant;
 
 /// Default connection timeout in milliseconds
 const DEFAULT_TIMEOUT_MS: u64 = 5000;
@@ -4342,7 +4343,7 @@ async fn test_redis(url: &str) -> Result<()> {
         Err(e) => {
             println!("  {} Failed to create Redis client", "✗".red().bold());
             println!("  {} Error: {}", "→".yellow().bold(), e.to_string().red());
-            return Err(crate::error::InvalidConnectionUrl {
+            return Err(RicError::InvalidConnectionUrl {
                 url: url.to_string(),
                 reason: e.to_string(),
             }.into());
@@ -4358,10 +4359,10 @@ async fn test_redis(url: &str) -> Result<()> {
             println!("  {} Connection time: {:.2}ms", "→".yellow().bold(), connection_time.as_secs_f64() * 1000.0);
             println!();
             println!("{}", "Troubleshooting:".yellow().bold());
-            println!("  • Ensure Redis is running");
-            println!("  • Check if password is correct (if required)");
-            println!("  • Verify host and port");
-            return Err(crate::error::ConnectionTestFailed {
+            println!("  → Ensure Redis is running");
+            println!("  → Check if password is correct (if required)");
+            println!("  → Verify host and port");
+            return Err(RicError::ConnectionTestFailed {
                 service: "Redis".to_string(),
                 message: e.to_string(),
             }.into());
@@ -4381,7 +4382,7 @@ async fn test_redis(url: &str) -> Result<()> {
         Err(e) => {
             println!("  {} PING command failed", "✗".red().bold());
             println!("  {} Error: {}", "→".yellow().bold(), e.to_string().red());
-            return Err(crate::error::ConnectionTestFailed {
+            return Err(RicError::ConnectionTestFailed {
                 service: "Redis".to_string(),
                 message: format!("PING failed: {}", e),
             }.into());
@@ -4422,7 +4423,7 @@ async fn test_redis(url: &str) -> Result<()> {
 
     if let Some(value) = retrieved {
         if value == test_value {
-            println!("  {} GET {} = \"{}\" {}", "✓".green().bold(), test_key.cyan(), value.cyan(), "✓".green());
+            println!("  {} GET {} = \"{}\" ✓", "✓".green().bold(), test_key.cyan(), value.cyan());
         } else {
             println!("  {} Value mismatch: expected \"{}\", got \"{}\"", "✗".red().bold(), test_value, value);
         }
@@ -4518,11 +4519,11 @@ async fn test_postgres(url: &str) -> Result<()> {
             println!("  {} Connection time: {:.2}ms", "→".yellow().bold(), connection_time.as_secs_f64() * 1000.0);
             println!();
             println!("{}", "Troubleshooting:".yellow().bold());
-            println!("  • Ensure PostgreSQL is running");
-            println!("  • Check if username/password is correct");
-            println!("  • Verify host, port, and database name");
-            println!("  • Check pg_hba.conf for authentication settings");
-            return Err(crate::error::ConnectionTestFailed {
+            println!("  → Ensure PostgreSQL is running");
+            println!("  → Check if username/password is correct");
+            println!("  → Verify host, port, and database name");
+            println!("  → Check pg_hba.conf for authentication settings");
+            return Err(RicError::ConnectionTestFailed {
                 service: "PostgreSQL".to_string(),
                 message: e.to_string(),
             }.into());
@@ -4541,7 +4542,7 @@ async fn test_postgres(url: &str) -> Result<()> {
         Ok(row) => row.get(0),
         Err(e) => {
             println!("  {} Query failed: {}", "✗".red().bold(), e.to_string().red());
-            return Err(crate::error::ConnectionTestFailed {
+            return Err(RicError::ConnectionTestFailed {
                 service: "PostgreSQL".to_string(),
                 message: format!("Query failed: {}", e),
             }.into());
@@ -4564,7 +4565,7 @@ async fn test_postgres(url: &str) -> Result<()> {
     if let Err(e) = client.execute(&create_sql, &[]).await {
         println!("  {} CREATE TABLE failed: {}", "✗".red().bold(), e.to_string().red());
     } else {
-        println!("  {} CREATE TABLE {}", "✓".green().bold(), test_table.cyan());
+        println!("  {} CREATE TABLE ✓", "✓".green().bold(), test_table.cyan());
 
         let insert_sql = format!("INSERT INTO {} (value) VALUES ($1)", test_table);
         if let Err(e) = client.execute(&insert_sql, &[&"Ri CLI Test Value"]).await {
@@ -4583,14 +4584,14 @@ async fn test_postgres(url: &str) -> Result<()> {
             };
 
             if let Some(value) = retrieved {
-                println!("  {} SELECT -> \"{}\" {}", "✓".green().bold(), value.cyan(), "✓".green());
+                println!("  {} SELECT -> \"{}\" ✓", "✓".green().bold(), value.cyan());
             }
 
             let delete_sql = format!("DELETE FROM {}", test_table);
             if let Err(e) = client.execute(&delete_sql, &[]).await {
                 println!("  {} DELETE failed: {}", "✗".red().bold(), e.to_string().red());
             } else {
-                println!("  {} DELETE FROM {}", "✓".green().bold(), test_table.cyan());
+                println!("  {} DELETE FROM ✓", "✓".green().bold(), test_table.cyan());
             }
         }
 
@@ -4598,7 +4599,7 @@ async fn test_postgres(url: &str) -> Result<()> {
         if let Err(e) = client.execute(&drop_sql, &[]).await {
             println!("  {} DROP TABLE failed: {}", "✗".red().bold(), e.to_string().red());
         } else {
-            println!("  {} DROP TABLE {}", "✓".green().bold(), test_table.cyan());
+            println!("  {} DROP TABLE ✓", "✓".green().bold(), test_table.cyan());
         }
     }
 
@@ -4671,13 +4672,7 @@ async fn test_mysql(url: &str) -> Result<()> {
     println!("{} Connecting to MySQL...", "→".yellow().bold());
     let start = Instant::now();
 
-    let opts = mysql_async::OptsBuilder::new()
-        .ip_or_hostname(Some(host.clone()))
-        .tcp_port(port)
-        .user(Some(user.clone()))
-        .pass(Some(password.clone()))
-        .db_name(Some(database.clone()));
-
+    let opts = mysql_async::Opts::from_url(url)?;
     let pool = mysql_async::Pool::new(opts);
 
     let mut conn = match pool.get_conn().await {
@@ -4689,11 +4684,11 @@ async fn test_mysql(url: &str) -> Result<()> {
             println!("  {} Connection time: {:.2}ms", "→".yellow().bold(), connection_time.as_secs_f64() * 1000.0);
             println!();
             println!("{}", "Troubleshooting:".yellow().bold());
-            println!("  • Ensure MySQL is running");
-            println!("  • Check if username/password is correct");
-            println!("  • Verify host, port, and database name");
-            println!("  • Check user privileges");
-            return Err(crate::error::ConnectionTestFailed {
+            println!("  → Ensure MySQL is running");
+            println!("  → Check if username/password is correct");
+            println!("  → Verify host, port, and database name");
+            println!("  → Check user privileges");
+            return Err(RicError::ConnectionTestFailed {
                 service: "MySQL".to_string(),
                 message: e.to_string(),
             }.into());
@@ -4713,7 +4708,7 @@ async fn test_mysql(url: &str) -> Result<()> {
         Ok(None) => "Unknown".to_string(),
         Err(e) => {
             println!("  {} Query failed: {}", "✗".red().bold(), e.to_string().red());
-            return Err(crate::error::ConnectionTestFailed {
+            return Err(RicError::ConnectionTestFailed {
                 service: "MySQL".to_string(),
                 message: format!("Query failed: {}", e),
             }.into());
@@ -4755,7 +4750,7 @@ async fn test_mysql(url: &str) -> Result<()> {
             };
 
             if let Some(value) = retrieved {
-                println!("  {} SELECT -> \"{}\" {}", "✓".green().bold(), value.cyan(), "✓".green());
+                println!("  {} SELECT -> \"{}\" ✓", "✓".green().bold(), value.cyan());
             }
 
             let delete_sql = format!("DELETE FROM {}", test_table);
@@ -4852,7 +4847,7 @@ async fn test_kafka(url: &str) -> Result<()> {
         .set("metadata.request.timeout.ms", "5000")
         .create()
         .map_err(|e| {
-            crate::error::ConnectionTestFailed {
+            RicError::ConnectionTestFailed {
                 service: "Kafka".to_string(),
                 message: e.to_string(),
             }
@@ -4860,7 +4855,7 @@ async fn test_kafka(url: &str) -> Result<()> {
 
     let metadata = producer.fetch_metadata(None, std::time::Duration::from_secs(5))
         .map_err(|e| {
-            crate::error::ConnectionTestFailed {
+            RicError::ConnectionTestFailed {
                 service: "Kafka".to_string(),
                 message: format!("Failed to fetch metadata: {}", e),
             }
@@ -4899,10 +4894,10 @@ async fn test_kafka(url: &str) -> Result<()> {
     let test_message = format!("Ri CLI Test Message at {}", chrono::Utc::now());
 
     let produce_future = producer.send(
-        rdkafka::producer::ProducerRecord::new(
+        rdkafka::producer::Record::new(
             &test_topic,
-            rdkafka::record::RecordKey::NULL,
-            test_message.as_bytes(),
+            Some(test_message.as_bytes()),
+            None::<&str>,
         ),
         std::time::Duration::from_secs(5),
     );
@@ -4914,8 +4909,8 @@ async fn test_kafka(url: &str) -> Result<()> {
         Err((e, _)) => {
             let err_str = e.to_string();
             if err_str.contains("Unknown topic") || err_str.contains("topic") {
-                println!("  {} Topic '{}' does not exist, creating...", "ℹ".blue().bold(), test_topic.cyan());
-                println!("  {} Message production skipped (topic auto-create may be disabled)", "ℹ".blue().bold());
+                println!("  {} Topic '{}' does not exist, creating...", "→".blue().bold(), test_topic.cyan());
+                println!("  {} Message production skipped (topic auto-create may be disabled)", "→".blue().bold());
             } else {
                 println!("  {} Failed to send message: {}", "✗".red().bold(), err_str.red());
             }
@@ -4982,14 +4977,14 @@ fn parse_redis_url(url: &str) -> Result<(String, u16)> {
         if parts.len() == 2 {
             let host = parts[0].to_string();
             let port = parts[1].parse::<u16>().map_err(|_| {
-                crate::error::RicError::InvalidConnectionUrl {
+                RicError::InvalidConnectionUrl {
                     url: url.to_string(),
                     reason: "Invalid port number".to_string(),
                 }
             })?;
             Ok((host, port))
         } else {
-            Err(crate::error::RicError::InvalidConnectionUrl {
+            Err(RicError::InvalidConnectionUrl {
                 url: url.to_string(),
                 reason: "Invalid URL format. Expected host:port".to_string(),
             })
@@ -5032,7 +5027,7 @@ fn parse_postgres_url(url: &str) -> Result<(String, u16, String, String)> {
         if parts.len() == 2 {
             (parts[0], parts[1])
         } else {
-            return Err(crate::error::RicError::InvalidConnectionUrl {
+            return Err(RicError::InvalidConnectionUrl {
                 url: url.to_string(),
                 reason: "Invalid URL format".to_string(),
             });
@@ -5066,7 +5061,7 @@ fn parse_postgres_url(url: &str) -> Result<(String, u16, String, String)> {
     let (host, port): (String, u16) = if host_port.contains(':') {
         let parts: Vec<&str> = host_port.split(':').collect();
         let port = parts[1].parse::<u16>().map_err(|_| {
-            crate::error::RicError::InvalidConnectionUrl {
+            RicError::InvalidConnectionUrl {
                 url: url.to_string(),
                 reason: "Invalid port number".to_string(),
             }
@@ -5093,7 +5088,7 @@ fn parse_postgres_url_full(url: &str) -> Result<(String, u16, String, String, St
         if parts.len() == 2 {
             (parts[0], parts[1])
         } else {
-            return Err(crate::error::RicError::InvalidConnectionUrl {
+            return Err(RicError::InvalidConnectionUrl {
                 url: url.to_string(),
                 reason: "Invalid URL format".to_string(),
             }.into());
@@ -5125,7 +5120,7 @@ fn parse_postgres_url_full(url: &str) -> Result<(String, u16, String, String, St
     let (host, port): (String, u16) = if host_port.contains(':') {
         let parts: Vec<&str> = host_port.split(':').collect();
         let port = parts[1].parse::<u16>().map_err(|_| {
-            crate::error::RicError::InvalidConnectionUrl {
+            RicError::InvalidConnectionUrl {
                 url: url.to_string(),
                 reason: "Invalid port number".to_string(),
             }
@@ -5169,7 +5164,7 @@ fn parse_mysql_url(url: &str) -> Result<(String, u16, String, String)> {
         if parts.len() == 2 {
             (parts[0], parts[1])
         } else {
-            return Err(crate::error::RicError::InvalidConnectionUrl {
+            return Err(RicError::InvalidConnectionUrl {
                 url: url.to_string(),
                 reason: "Invalid URL format".to_string(),
             });
@@ -5203,7 +5198,7 @@ fn parse_mysql_url(url: &str) -> Result<(String, u16, String, String)> {
     let (host, port): (String, u16) = if host_port.contains(':') {
         let parts: Vec<&str> = host_port.split(':').collect();
         let port = parts[1].parse::<u16>().map_err(|_| {
-            crate::error::RicError::InvalidConnectionUrl {
+            RicError::InvalidConnectionUrl {
                 url: url.to_string(),
                 reason: "Invalid port number".to_string(),
             }
@@ -5229,7 +5224,7 @@ fn parse_mysql_url_full(url: &str) -> Result<(String, u16, String, String, Strin
         if parts.len() == 2 {
             (parts[0], parts[1])
         } else {
-            return Err(crate::error::RicError::InvalidConnectionUrl {
+            return Err(RicError::InvalidConnectionUrl {
                 url: url.to_string(),
                 reason: "Invalid URL format".to_string(),
             }.into());
@@ -5261,7 +5256,7 @@ fn parse_mysql_url_full(url: &str) -> Result<(String, u16, String, String, Strin
     let (host, port): (String, u16) = if host_port.contains(':') {
         let parts: Vec<&str> = host_port.split(':').collect();
         let port = parts[1].parse::<u16>().map_err(|_| {
-            crate::error::RicError::InvalidConnectionUrl {
+            RicError::InvalidConnectionUrl {
                 url: url.to_string(),
                 reason: "Invalid port number".to_string(),
             }
@@ -5310,7 +5305,7 @@ fn parse_kafka_url(url: &str) -> Result<Vec<String>> {
         .collect();
     
     if brokers.is_empty() {
-        return Err(crate::error::RicError::InvalidConnectionUrl {
+        return Err(RicError::InvalidConnectionUrl {
             url: url.to_string(),
             reason: "No valid broker addresses found".to_string(),
         });

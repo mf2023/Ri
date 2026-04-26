@@ -752,7 +752,7 @@ impl DependencyManager {
     /// manager.save_as("Cargo.toml.new")?;
     /// ```
     pub fn save_as<P: AsRef<Path>>(&self, path: P) -> Result<()> {
-        let mut lines: Vec<String> = self.raw_content.lines().map(String::from).collect();
+        let lines: Vec<String> = self.raw_content.lines().map(String::from).collect();
         let mut in_deps_section = false;
         let mut deps_start = None;
         let mut deps_end = None;

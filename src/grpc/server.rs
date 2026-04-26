@@ -23,7 +23,6 @@ use std::net::SocketAddr;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 
 #[cfg(feature = "pyo3")]
-#[allow(unused_imports)]
 use pyo3::prelude::*;
 
 pub struct RiGrpcServer {

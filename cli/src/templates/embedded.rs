@@ -94,7 +94,7 @@ pub fn create_tera_for_template(template_name: &str) -> Result<Tera, anyhow::Err
     let mut tera = Tera::default();
     for (name, content) in templates {
         let full_name = format!("{}/{}", template_name, name);
-        tera.add_template(&full_name, content)
+        tera.add_raw_template(&full_name, content)
             .map_err(|e| anyhow::anyhow!("Failed to add template {}: {}", full_name, e))?;
     }
 

@@ -57,6 +57,9 @@ use rand::RngCore;
 use ring::hmac;
 use std::env;
 
+use crate::core::error::RiError;
+use crate::core::error::RiResult;
+
 const ENCRYPTION_KEY_ENV: &str = "Ri_ENCRYPTION_KEY";
 const HMAC_KEY_ENV: &str = "Ri_HMAC_KEY";
 const DEFAULT_KEY_LENGTH: usize = 32;
@@ -170,7 +173,7 @@ impl RiSecurityManager {
     ///
     /// # Returns
     ///
-    /// Base64-encoded encrypted data
+    /// `RiResult<String>` containing Base64-encoded encrypted data on success
     ///
     /// # Examples
     ///
@@ -180,7 +183,7 @@ impl RiSecurityManager {
     /// let encrypted = RiSecurityManager::encrypt("sensitive data");
     /// println!("Encrypted: {}", encrypted);
     /// ```
-    pub fn encrypt(plaintext: &str) -> String {
+    pub fn encrypt(plaintext: &str) -> RiResult<String> {
         let key = load_encryption_key();
         let nonce = {
             let mut n = [0u8; NONCE_LENGTH];
@@ -191,13 +194,13 @@ impl RiSecurityManager {
         let cipher = Aes256Gcm::new(GenericArray::from_slice(&key));
         let ciphertext = cipher
             .encrypt(Nonce::from_slice(&nonce), plaintext.as_bytes())
-            .expect("encryption failure");
+            .map_err(|e| RiError::SecurityViolation(format!("encryption failed: {}", e)))?;
 
         let mut result = Vec::with_capacity(nonce.len() + ciphertext.len());
         result.extend_from_slice(&nonce);
         result.extend_from_slice(&ciphertext);
 
-        STANDARD.encode(result)
+        Ok(STANDARD.encode(result))
     }
 
     /// Decrypts encrypted data using AES-256-GCM.

@@ -25,7 +25,6 @@ use futures::StreamExt;
 use tungstenite::Message;
 
 #[cfg(feature = "pyo3")]
-#[allow(unused_imports)]
 use pyo3::prelude::*;
 
 pub struct RiWSServer {

@@ -21,7 +21,6 @@ use super::*;
 use tokio_tungstenite::tungstenite::protocol::WebSocketConfig;
 
 #[cfg(feature = "pyo3")]
-#[allow(unused_imports)]
 use pyo3::prelude::*;
 
 #[derive(Debug, Clone)]

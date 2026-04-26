@@ -65,7 +65,7 @@ use anyhow::{Context, Result};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
-use tera::{Context as TeraContext, Tera};
+use tera::Tera;
 
 // =============================================================================
 // Template Metadata Structures
