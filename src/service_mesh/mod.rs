@@ -216,7 +216,7 @@ impl RiServiceEndpoint {
             service_name,
             endpoint,
             weight,
-            metadata: FxHashMap::default(),
+            metadata: FxFxHashMap::default(),
             health_status: RiServiceHealthStatus::Unknown,
             last_health_check: SystemTime::now(),
         }
@@ -335,8 +335,8 @@ impl RiServiceMesh {
             traffic_manager,
             circuit_breaker,
             load_balancer,
-            services: Arc::new(RwLock::new(FxHashMap::default())),
-            discovery_cache: Arc::new(RwLock::new(FxHashMap::default())),
+            services: Arc::new(RwLock::new(FxFxHashMap::default())),
+            discovery_cache: Arc::new(RwLock::new(FxFxHashMap::default())),
             cache_expiration: Duration::from_secs(30),
             tracer: None,
         })

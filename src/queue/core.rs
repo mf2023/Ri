@@ -155,7 +155,7 @@ impl RiQueueMessage {
         Self {
             id: uuid::Uuid::new_v4().to_string(),
             payload,
-            headers: FxHashMap::default(),
+            headers: FxFxHashMap::default(),
             timestamp: SystemTime::now(),
             retry_count: 0,
             max_retries: 3,

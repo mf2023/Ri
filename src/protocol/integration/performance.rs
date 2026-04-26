@@ -393,7 +393,7 @@ impl Default for RiPerformanceCoordinator {
 impl RiPerformanceMetrics {
     pub fn new() -> Self {
         Self {
-            protocol_metrics: FxHashMap::default(),
+            protocol_metrics: FxFxHashMap::default(),
             cross_protocol_metrics: RiCrossProtocolMetrics::default(),
             system_metrics: RiSystemPerformanceMetrics::default(),
             last_update: Instant::now(),
@@ -467,7 +467,7 @@ impl RiPerformanceOptimization {
             description,
             performance_impact,
             implementation_status: RiImplementationStatus::NotImplemented,
-            parameters: FxHashMap::default(),
+            parameters: FxFxHashMap::default(),
         }
     }
 
@@ -518,7 +518,7 @@ impl RiPerformanceMonitor {
             message,
             severity,
             alert_time: Instant::now(),
-            alert_data: FxHashMap::default(),
+            alert_data: FxFxHashMap::default(),
         };
 
         let mut alerts = self.alerts.write().await;
@@ -627,7 +627,7 @@ impl RiPerformanceAlert {
             message,
             severity,
             alert_time: Instant::now(),
-            alert_data: FxHashMap::default(),
+            alert_data: FxFxHashMap::default(),
         }
     }
 

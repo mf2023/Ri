@@ -223,7 +223,7 @@ impl RiHookBus {
     /// 
     /// Returns a new `RiHookBus` instance with no registered handlers.
     pub fn new() -> Self {
-        RiHookBus { handlers: FxHashMap::default() }
+        RiHookBus { handlers: FxFxHashMap::default() }
     }
 
     /// Registers a hook handler for a specific hook kind.

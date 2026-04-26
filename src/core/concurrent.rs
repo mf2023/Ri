@@ -85,7 +85,7 @@ struct Shard<K, V> {
 impl<K, V> Shard<K, V> {
     fn new() -> Self {
         Self {
-            data: RwLock::new(FxHashMap::default()),
+            data: RwLock::new(FxFxHashMap::default()),
         }
     }
 }
@@ -228,7 +228,7 @@ where
     }
 
     pub async fn collect_all(&self) -> FxHashMap<K, V> {
-        let mut result = FxHashMap::default();
+        let mut result = FxFxHashMap::default();
         for shard in &self.shards {
             let data = shard.data.read().await;
             for (k, v) in data.iter() {

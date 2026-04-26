@@ -719,7 +719,7 @@ impl RiProtocolManager {
     }
     
     fn build_response_data(&self, target: &str, frame: &RiFrame, sequence: u64, timestamp: u64) -> Vec<u8> {
-        let mut response = HashMap::<String, serde_json::Value>::new();
+        let mut response = FxHashMap::<String, serde_json::Value>::new();
         
         response.insert("status".to_string(), serde_json::Value::String("delivered".to_string()));
         response.insert("target".to_string(), serde_json::Value::String(target.to_string()));
@@ -766,7 +766,7 @@ impl RiProtocolManager {
         Self {
             stats: Arc::new(RwLock::new(RiProtocolStats::new())),
             default_protocol: RiProtocolType::Global,
-            connections: Arc::new(RwLock::new(FxHashMap::default())),
+            connections: Arc::new(RwLock::new(FxFxHashMap::default())),
             sequence_counter: Arc::new(AtomicU64::new(0)),
             initialized: Arc::new(RwLock::new(false)),
         }
@@ -858,7 +858,7 @@ impl RiBaseProtocol {
         Self {
             config: RiProtocolConfig::default(),
             stats: Arc::new(RwLock::new(RiProtocolStats::new())),
-            connections: Arc::new(RwLock::new(FxHashMap::default())),
+            connections: Arc::new(RwLock::new(FxFxHashMap::default())),
             sequence_counter: Arc::new(AtomicU64::new(0)),
             initialized: Arc::new(RwLock::new(false)),
             _receiver_id: receiver_id,

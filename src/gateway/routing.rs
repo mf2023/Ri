@@ -61,7 +61,7 @@
 //!         Box::pin(async move {
 //!             Ok(RiGatewayResponse {
 //!                 status_code: 200,
-//!                 headers: FxHashMap::default(),
+//!                 headers: FxFxHashMap::default(),
 //!                 body: "Hello, Ri!".as_bytes().to_vec(),
 //!             })
 //!         })
@@ -194,7 +194,7 @@ impl RiRoute {
             Box::pin(async move {
                 Ok(RiGatewayResponse {
                     status_code: 200,
-                    headers: std::collections::FxHashMap::default(),
+                    headers: std::collections::FxFxHashMap::default(),
                     body: b"Hello from Ri Python!".to_vec(),
                     request_id: String::new(),
                 })
@@ -238,9 +238,9 @@ impl RiRouter {
     /// A new `RiRouter` instance with empty routes and cache
     pub fn new() -> Self {
         Self {
-            trees: std::sync::RwLock::new(FxHashMap::default()),
+            trees: std::sync::RwLock::new(FxFxHashMap::default()),
             routes: std::sync::RwLock::new(Vec::new()),
-            route_cache: std::sync::RwLock::new(FxHashMap::default()),
+            route_cache: std::sync::RwLock::new(FxFxHashMap::default()),
         }
     }
 

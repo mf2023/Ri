@@ -48,7 +48,7 @@
 //! let session = session_manager.get_session(&session_id).await?;
 //! 
 //! // Update session data
-//! let mut data = FxHashMap::default();
+//! let mut data = FxFxHashMap::default();
 //! data.insert("theme".to_string(), "dark".to_string());
 //! session_manager.update_session(&session_id, data).await?;
 //! 
@@ -148,7 +148,7 @@ impl RiSession {
             created_at: now,
             last_accessed: now,
             expires_at: now + timeout_secs,
-            data: FxHashMap::default(),
+            data: FxFxHashMap::default(),
             ip_address,
             user_agent,
         }

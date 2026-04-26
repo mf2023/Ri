@@ -208,7 +208,7 @@ impl FromJava for FxHashMap<String, String> {
             .l()
             .expect("Failed to get iterator object");
         
-        let mut result = FxHashMap::default();
+        let mut result = FxFxHashMap::default();
         
         loop {
             let has_next = env

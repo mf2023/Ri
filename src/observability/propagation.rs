@@ -66,7 +66,7 @@
 //!         .with_baggage(baggage);
 //!     
 //!     // Inject into HTTP headers
-//!     let mut headers = FxHashMap::default();
+//!     let mut headers = FxFxHashMap::default();
 //!     carrier.inject_into_headers(&mut headers);
 //!     println!("Headers: {:?}", headers);
 //!     
@@ -259,7 +259,7 @@ impl RiBaggage {
     #[allow(dead_code)]
     pub fn new() -> Self {
         Self {
-            items: FxHashMap::default(),
+            items: FxFxHashMap::default(),
         }
     }
     
@@ -608,7 +608,7 @@ impl RiContextCarrier {
 
     #[pyo3(name = "inject_into_headers")]
     fn py_inject_into_headers(&self) -> FxHashMap<String, String> {
-        let mut headers = FxHashMap::default();
+        let mut headers = FxFxHashMap::default();
         self.inject_into_headers(&mut headers);
         headers
     }
@@ -718,7 +718,7 @@ impl W3CTracePropagator {
 
     #[pyo3(name = "inject")]
     fn py_inject(&self, carrier: &RiContextCarrier) -> FxHashMap<String, String> {
-        let mut headers = FxHashMap::default();
+        let mut headers = FxFxHashMap::default();
         self.inject(carrier, &mut headers);
         headers
     }
@@ -730,7 +730,7 @@ impl W3CTracePropagator {
 
     #[pyo3(name = "inject_current")]
     fn py_inject_current(&self) -> FxHashMap<String, String> {
-        let mut headers = FxHashMap::default();
+        let mut headers = FxFxHashMap::default();
         self.inject_current(&mut headers);
         headers
     }

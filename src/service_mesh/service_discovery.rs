@@ -67,7 +67,7 @@ impl RiServiceInstance {
             service_name,
             host,
             port,
-            metadata: FxHashMap::default(),
+            metadata: FxFxHashMap::default(),
             registered_at: SystemTime::now(),
             last_heartbeat: SystemTime::now(),
             status: RiServiceStatus::Starting,
@@ -133,8 +133,8 @@ impl RiServiceRegistry {
     #[cfg(feature = "etcd")]
     pub fn new(etcd_client: Option<Client>, etcd_prefix: String) -> Self {
         Self {
-            services: Arc::new(RwLock::new(FxHashMap::default())),
-            instance_index: Arc::new(RwLock::new(FxHashMap::default())),
+            services: Arc::new(RwLock::new(FxFxHashMap::default())),
+            instance_index: Arc::new(RwLock::new(FxFxHashMap::default())),
             etcd_client: etcd_client.map(|c| Arc::new(Mutex::new(c))),
             _etcd_prefix: etcd_prefix,
         }
@@ -143,8 +143,8 @@ impl RiServiceRegistry {
     #[cfg(not(feature = "etcd"))]
     pub fn new(_etcd_client: Option<()>, etcd_prefix: String) -> Self {
         Self {
-            services: Arc::new(RwLock::new(FxHashMap::default())),
-            instance_index: Arc::new(RwLock::new(FxHashMap::default())),
+            services: Arc::new(RwLock::new(FxFxHashMap::default())),
+            instance_index: Arc::new(RwLock::new(FxFxHashMap::default())),
             _etcd_prefix: etcd_prefix,
         }
     }

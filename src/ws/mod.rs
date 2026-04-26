@@ -331,7 +331,7 @@ impl Clone for RiWSSessionManager {
 impl RiWSSessionManager {
     pub fn new(max_connections: usize) -> Self {
         Self {
-            sessions: Arc::new(RwLock::new(HashMap::new())),
+            sessions: Arc::new(RwLock::new(FxHashMap::new())),
             max_connections,
         }
     }

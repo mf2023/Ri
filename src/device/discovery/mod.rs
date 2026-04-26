@@ -195,7 +195,7 @@ impl RiDeviceDiscovery {
         }
 
         let stats = Arc::new(RwLock::new(DiscoveryStats::default()));
-        let discovered_devices = Arc::new(RwLock::new(FxHashMap::default()));
+        let discovered_devices = Arc::new(RwLock::new(FxFxHashMap::default()));
 
         Ok(Self {
             config: Arc::new(config),

@@ -256,7 +256,7 @@ impl RiModuleEndpoint {
     pub fn new(module_name: &str) -> Self {
         Self {
             module_name: module_name.to_string(),
-            methods: Arc::new(RwLock::new(FxHashMap::default())),
+            methods: Arc::new(RwLock::new(FxFxHashMap::default())),
         }
     }
 
@@ -307,7 +307,7 @@ pub struct RiModuleRPC {
 impl RiModuleRPC {
     pub fn new() -> Self {
         Self {
-            endpoints: Arc::new(RwLock::new(FxHashMap::default())),
+            endpoints: Arc::new(RwLock::new(FxFxHashMap::default())),
             default_timeout: Duration::from_millis(5000),
         }
     }

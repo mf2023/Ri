@@ -43,7 +43,7 @@ impl RiResourceScheduler {
     #[new]
     fn new() -> Self {
         Self {
-            allocations: Arc::new(RwLock::new(FxHashMap::default())),
+            allocations: Arc::new(RwLock::new(FxFxHashMap::default())),
             allocation_history: Arc::new(RwLock::new(Vec::new())),
         }
     }
@@ -92,7 +92,7 @@ impl RiResourceScheduler {
 ///             compute_units: Some(512),
 ///             storage_gb: None,
 ///             bandwidth_gbps: None,
-///             custom_capabilities: FxHashMap::default(),
+///             custom_capabilities: FxFxHashMap::default(),
 ///         },
 ///         priority: 5,
 ///         timeout_secs: 30,
@@ -212,7 +212,7 @@ impl RiDeviceScheduler {
     /// 
     /// A new `RiDeviceScheduler` instance with default policies and settings.
     pub fn new(resource_pool_manager: Arc<RwLock<RiResourcePoolManager>>) -> Self {
-        let mut scheduling_policies = FxHashMap::default();
+        let mut scheduling_policies = FxFxHashMap::default();
         
         // Set default policies for different device types
         scheduling_policies.insert(RiDeviceType::CPU, RiSchedulingPolicy::LoadBalanced);
@@ -228,7 +228,7 @@ impl RiDeviceScheduler {
             scheduling_policies,
             allocation_history: Arc::new(RwLock::new(Vec::new())),
             resource_pool_manager,
-            round_robin_counters: Arc::new(RwLock::new(FxHashMap::default())),
+            round_robin_counters: Arc::new(RwLock::new(FxFxHashMap::default())),
         }
     }
     
@@ -797,7 +797,7 @@ impl RiDeviceScheduler {
             0.0
         };
         
-        let mut by_device_type = FxHashMap::default();
+        let mut by_device_type = FxFxHashMap::default();
         for device_type in [RiDeviceType::CPU, RiDeviceType::GPU, RiDeviceType::Memory, 
             RiDeviceType::Storage, RiDeviceType::Network, RiDeviceType::Sensor, 
             RiDeviceType::Actuator, RiDeviceType::Custom] {

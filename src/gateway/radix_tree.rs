@@ -163,7 +163,7 @@ impl RadixNode {
             segment,
             handler: None,
             route_data: None,
-            children: FxHashMap::default(),
+            children: FxFxHashMap::default(),
             param_child: None,
             wildcard_child: None,
         }
@@ -397,7 +397,7 @@ impl RiRadixTree {
     /// An `Option<RouteMatch>` containing the matched route and extracted parameters
     pub fn find(&self, path: &str) -> Option<RouteMatch> {
         let segments: Vec<&str> = path.split('/').filter(|s| !s.is_empty()).collect();
-        let mut params = FxHashMap::default();
+        let mut params = FxFxHashMap::default();
         
         let root = match self.root.read_safe("root for find") {
             Ok(r) => r,

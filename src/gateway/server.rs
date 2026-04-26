@@ -104,7 +104,7 @@ impl RiGatewayServer {
                     .unwrap_or_else(|| "unknown".to_string())
             });
 
-        let mut headers = FxHashMap::default();
+        let mut headers = FxFxHashMap::default();
         for (key, value) in req.headers() {
             if let Ok(v) = value.to_str() {
                 headers.insert(key.as_str().to_string(), v.to_string());
@@ -114,7 +114,7 @@ impl RiGatewayServer {
         let query_params = {
             let uri = req.uri();
             let query = uri.query().unwrap_or("");
-            let mut params = FxHashMap::default();
+            let mut params = FxFxHashMap::default();
             for pair in query.split('&') {
                 if let Some((key, value)) = pair.split_once('=') {
                     params.insert(

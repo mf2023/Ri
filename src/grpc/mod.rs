@@ -152,7 +152,7 @@ pub struct RiGrpcServiceRegistry {
 impl RiGrpcServiceRegistry {
     pub fn new() -> Self {
         Self {
-            services: Arc::new(RwLock::new(FxHashMap::default())),
+            services: Arc::new(RwLock::new(FxFxHashMap::default())),
         }
     }
 

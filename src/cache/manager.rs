@@ -120,7 +120,7 @@ impl RiCacheManager {
             backend,
             event_sender: sender,
             event_receiver: Some(receiver),
-            _subscribers: Arc::new(RwLock::new(FxHashMap::default())),
+            _subscribers: Arc::new(RwLock::new(FxFxHashMap::default())),
         }
     }
     

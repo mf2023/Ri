@@ -495,7 +495,7 @@ impl RabbitMQConsumer {
             channel,
             consumer: Arc::new(Mutex::new(consumer)),
             paused: Arc::new(Mutex::new(false)),
-            delivery_tags: Arc::new(Mutex::new(FxHashMap::default())),
+            delivery_tags: Arc::new(Mutex::new(FxFxHashMap::default())),
             next_delivery_tag: Arc::new(AtomicU64::new(1)),
         }
     }

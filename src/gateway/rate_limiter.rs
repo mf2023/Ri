@@ -298,7 +298,7 @@ impl RiRateLimiter {
     pub fn new(config: RiRateLimitConfig) -> Self {
         Self {
             config,
-            buckets: RwLock::new(FxHashMap::default()),
+            buckets: RwLock::new(FxFxHashMap::default()),
         }
     }
 
@@ -389,7 +389,7 @@ impl RiRateLimiter {
     pub fn get_all_stats(&self) -> FxHashMap<String, RiRateLimitStats> {
         futures::executor::block_on(async {
             let buckets = self.buckets.read().await;
-            let mut stats = FxHashMap::default();
+            let mut stats = FxFxHashMap::default();
             
             for (key, bucket) in buckets.iter() {
                 stats.insert(key.clone(), bucket.get_stats());

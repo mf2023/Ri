@@ -440,9 +440,9 @@ impl RiDeviceAuthProtocol {
     /// Internal state is protected by RwLock synchronization primitives.
     pub fn new() -> Self {
         Self {
-            certificates: Arc::new(RwLock::new(FxHashMap::default())),
+            certificates: Arc::new(RwLock::new(FxFxHashMap::default())),
             trusted_devices: Arc::new(RwLock::new(HashSet::new())),
-            challenges: Arc::new(RwLock::new(FxHashMap::default())),
+            challenges: Arc::new(RwLock::new(FxFxHashMap::default())),
             initialized: Arc::new(RwLock::new(false)),
             device_keypair: Arc::new(RwLock::new(None)),
         }
@@ -1127,7 +1127,7 @@ trait PatternGenerator: Send + Sync {
 impl RiObfuscationLayer {
     /// Create a new obfuscation layer.
     pub fn new() -> Self {
-        let mut generators: FxHashMap<RiObfuscationLevel, Box<dyn PatternGenerator>> = FxHashMap::default();
+        let mut generators: FxHashMap<RiObfuscationLevel, Box<dyn PatternGenerator>> = FxFxHashMap::default();
         
         // Register pattern generators
         generators.insert(RiObfuscationLevel::Basic, Box::new(BasicPatternGenerator::new()));

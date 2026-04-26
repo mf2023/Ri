@@ -131,7 +131,7 @@ impl RiDBRow {
     }
 
     pub fn to_map(&self) -> FxHashMap<String, Option<serde_json::Value>> {
-        let mut map = FxHashMap::default();
+        let mut map = FxFxHashMap::default();
         for (i, col) in self.columns.iter().enumerate() {
             map.insert(col.clone(), self.values[i].clone());
         }
@@ -168,7 +168,7 @@ impl RiDBRow {
     }
 
     fn to_dict(&self) -> FxHashMap<String, Option<String>> {
-        let mut map = FxHashMap::default();
+        let mut map = FxFxHashMap::default();
         for (i, col) in self.columns.iter().enumerate() {
             let value = self.values[i].as_ref().map(|v| v.to_string());
             map.insert(col.clone(), value);

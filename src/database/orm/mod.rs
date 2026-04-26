@@ -120,7 +120,7 @@ impl TableDefinition {
     pub fn new(table_name: &str) -> Self {
         Self {
             table_name: table_name.to_string(),
-            columns: FxHashMap::default(),
+            columns: FxFxHashMap::default(),
             primary_key: Vec::new(),
             indexes: Vec::new(),
             foreign_keys: Vec::new(),

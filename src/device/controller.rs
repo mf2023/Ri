@@ -268,9 +268,9 @@ impl Default for RiDeviceController {
 impl RiDeviceController {
     pub fn new() -> Self {
         Self {
-            devices: FxHashMap::default(),
-            device_type_index: FxHashMap::default(),
-            allocation_map: FxHashMap::default(),
+            devices: FxFxHashMap::default(),
+            device_type_index: FxFxHashMap::default(),
+            allocation_map: FxFxHashMap::default(),
             discovery: None,
         }
     }
@@ -278,9 +278,9 @@ impl RiDeviceController {
     /// Creates a new controller with the discovery engine
     pub async fn with_discovery(discovery: Arc<RiDeviceDiscovery>) -> Self {
         Self {
-            devices: FxHashMap::default(),
-            device_type_index: FxHashMap::default(),
-            allocation_map: FxHashMap::default(),
+            devices: FxFxHashMap::default(),
+            device_type_index: FxFxHashMap::default(),
+            allocation_map: FxFxHashMap::default(),
             discovery: Some(discovery),
         }
     }
@@ -1372,7 +1372,7 @@ impl RiDeviceController {
     pub async fn get_all_device_health(
         &self,
     ) -> RiResult<FxHashMap<String, super::core::RiDeviceHealthMetrics>> {
-        let mut health_map = FxHashMap::default();
+        let mut health_map = FxFxHashMap::default();
 
         for (device_id, device_lock) in &self.devices {
             let device = device_lock.read().await;

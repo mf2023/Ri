@@ -369,7 +369,7 @@ impl Clone for RiLoadBalancer {
         Self {
             strategy: self.strategy.clone(),
             servers: RwLock::new(Vec::new()),
-            server_stats: RwLock::new(FxHashMap::default()),
+            server_stats: RwLock::new(FxFxHashMap::default()),
             round_robin_counter: AtomicUsize::new(self.round_robin_counter.load(Ordering::Relaxed)),
         }
     }
@@ -389,7 +389,7 @@ impl RiLoadBalancer {
         Self {
             strategy,
             servers: RwLock::new(Vec::new()),
-            server_stats: RwLock::new(FxHashMap::default()),
+            server_stats: RwLock::new(FxFxHashMap::default()),
             round_robin_counter: AtomicUsize::new(0),
         }
     }
@@ -800,7 +800,7 @@ impl RiLoadBalancer {
     /// A `FxHashMap<String, RiLoadBalancerServerStats>` with statistics for all servers
     pub async fn get_all_stats(&self) -> FxHashMap<String, RiLoadBalancerServerStats> {
         let stats = self.server_stats.read().await;
-        let mut result = FxHashMap::default();
+        let mut result = FxFxHashMap::default();
         
         for (server_id, server_stats) in stats.iter() {
             result.insert(server_id.clone(), server_stats.get_stats());

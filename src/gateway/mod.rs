@@ -105,8 +105,8 @@
 //!     let sample_request = RiGatewayRequest::new(
 //!         "GET".to_string(),
 //!         "/api/v1/health".to_string(),
-//!         FxHashMap::default(),
-//!         FxHashMap::default(),
+//!         FxFxHashMap::default(),
+//!         FxFxHashMap::default(),
 //!         None,
 //!         "127.0.0.1:12345".to_string(),
 //!     );
@@ -331,7 +331,7 @@ impl RiGatewayResponse {
     /// 
     /// A new `RiGatewayResponse` instance
     pub fn new(status_code: u16, body: Vec<u8>, request_id: String) -> Self {
-        let mut headers = FxHashMap::default();
+        let mut headers = FxFxHashMap::default();
         headers.insert("Content-Type".to_string(), "application/json".to_string());
         headers.insert("X-Request-ID".to_string(), request_id.clone());
         

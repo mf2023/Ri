@@ -1142,8 +1142,8 @@ impl RiGlobalStateManager {
         
         Self {
             global_state,
-            protocol_states: Arc::new(RwLock::new(FxHashMap::default())),
-            device_states: Arc::new(RwLock::new(FxHashMap::default())),
+            protocol_states: Arc::new(RwLock::new(FxFxHashMap::default())),
+            device_states: Arc::new(RwLock::new(FxFxHashMap::default())),
             security_state: Arc::new(RwLock::new(RiSecurityState {
                 global_security_level: RiSecurityLevel::Standard,
                 threat_intelligence: RiThreatIntelligence {
@@ -1154,7 +1154,7 @@ impl RiGlobalStateManager {
                 },
                 security_policies: vec![],
                 security_incidents: vec![],
-                compliance_status: FxHashMap::default(),
+                compliance_status: FxFxHashMap::default(),
                 last_security_scan: Instant::now(),
             })),
             performance_state: Arc::new(RwLock::new(RiPerformanceState {
@@ -1348,7 +1348,7 @@ impl RiGlobalStateManager {
             capabilities,
             supported_protocols,
             last_seen: Instant::now(),
-            metadata: FxHashMap::default(),
+            metadata: FxFxHashMap::default(),
         };
         
         self.device_states.write().await.insert(device_id.clone(), device_state.clone());

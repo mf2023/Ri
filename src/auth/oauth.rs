@@ -242,7 +242,7 @@ impl RiOAuthManager {
     /// A new instance of `RiOAuthManager`
     pub fn new(cache: Arc<dyn crate::cache::RiCache>) -> Self {
         Self {
-            providers: RwLock::new(FxHashMap::default()),
+            providers: RwLock::new(FxFxHashMap::default()),
             _token_cache: cache,
         }
     }

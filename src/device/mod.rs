@@ -545,9 +545,9 @@ impl RiAffinityRules {
     #[new]
     fn py_new() -> Self {
         Self {
-            required_labels: FxHashMap::default(),
-            preferred_labels: FxHashMap::default(),
-            forbidden_labels: FxHashMap::default(),
+            required_labels: FxFxHashMap::default(),
+            preferred_labels: FxFxHashMap::default(),
+            forbidden_labels: FxFxHashMap::default(),
         }
     }
     
@@ -580,9 +580,9 @@ impl RiAffinityRules {
 impl Default for RiAffinityRules {
     fn default() -> Self {
         Self {
-            required_labels: FxHashMap::default(),
-            preferred_labels: FxHashMap::default(),
-            forbidden_labels: FxHashMap::default(),
+            required_labels: FxFxHashMap::default(),
+            preferred_labels: FxFxHashMap::default(),
+            forbidden_labels: FxFxHashMap::default(),
         }
     }
 }
@@ -694,7 +694,7 @@ impl RiDeviceControlModule {
             controller,
             scheduler,
             discovery_engine,
-            resource_pools: FxHashMap::default(),
+            resource_pools: FxFxHashMap::default(),
             config: crate::device::core::RiDeviceControlConfig::default(),
         }
     }
@@ -845,7 +845,7 @@ impl RiDeviceControlModule {
     /// 
     /// A `FxHashMap<String, RiResourcePoolStatus>` containing the status of all resource pools
     pub fn get_resource_pool_status(&self) -> FxHashMap<String, RiResourcePoolStatus> {
-        let mut status = FxHashMap::default();
+        let mut status = FxFxHashMap::default();
         for (pool_name, pool) in &self.resource_pools {
             status.insert(pool_name.clone(), pool.get_status());
         }
