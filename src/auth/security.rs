@@ -66,13 +66,21 @@ fn ri_error_to_py_err(e: RiError) -> pyo3::prelude::PyErr {
     use pyo3::exceptions::*;
     
     match e {
-        RiError::SecurityViolation(_) | RiError::InvalidInput(_) | RiError::InvalidState(_) => {
+        RiError::InvalidInput(_) | RiError::InvalidState(_) | RiError::SecurityViolation(_)
+        | RiError::CircularDependency(_) | RiError::TomlError(_) | RiError::YamlError(_)
+        | RiError::FrameError(_) => {
             PyValueError::new_err(e.to_string())
         }
-        RiError::Io(_) | RiError::Config(_) | RiError::Serde(_) => {
-            PyRuntimeError::new_err(e.to_string())
+        RiError::DeviceNotFound(_) | RiError::AllocationNotFound(_)
+        | RiError::ModuleNotFound(_) | RiError::MissingDependency(_) => {
+            PyKeyError::new_err(e.to_string())
         }
-        _ => {
+        RiError::Io(_) | RiError::Config(_) | RiError::Serde(_) | RiError::Hook(_)
+        | RiError::Prometheus(_) | RiError::ServiceMesh(_) | RiError::DeviceAllocationFailed(_)
+        | RiError::ModuleInitFailed(_) | RiError::ModuleStartFailed(_) | RiError::ModuleShutdownFailed(_)
+        | RiError::Other(_) | RiError::ExternalError(_) | RiError::PoolError(_) | RiError::DeviceError(_)
+        | RiError::RedisError(_) | RiError::HttpClientError(_) | RiError::Queue(_)
+        | RiError::Database(_) => {
             PyRuntimeError::new_err(e.to_string())
         }
     }

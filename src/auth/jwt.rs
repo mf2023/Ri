@@ -283,8 +283,8 @@ impl RiJWTManager {
     /// # Returns
     ///
     /// The encoded JWT token string
-    pub fn py_generate_token(&self, user_id: &str, roles: Vec<String>, permissions: Vec<String>) -> Result<String, RiError> {
-        self.generate_token(user_id, roles, permissions)
+    pub fn py_generate_token(&self, user_id: &str, roles: Vec<String>, permissions: Vec<String>) -> pyo3::prelude::PyResult<String> {
+        self.generate_token(user_id, roles, permissions).map_err(crate::auth::security::ri_error_to_py_err)
     }
 
     /// Validates a JWT token and returns the decoded claims.
@@ -296,8 +296,13 @@ impl RiJWTManager {
     /// # Returns
     ///
     /// The decoded RiJWTClaims if validation succeeds
-    pub fn py_validate_token(&self, token: &str) -> Result<RiJWTClaims, RiError> {
+    pub fn py_validate_token(&self, token: &str) -> pyo3::prelude::PyResult<pyo3::prelude::Py<RiJWTClaims>> {
         self.validate_token(token)
+            .and_then(|claims| serde_json::to_string(&claims).map_err(|e| crate::core::error::RiError::Serde(e.to_string())))
+            .map_err(crate::auth::security::ri_error_to_py_err)
+            .and_then(|json| {
+                pyo3::pyclass::PyClassInitializer::from(serde_json::from_str(&json).map_err(|e| crate::core::error::RiError::Serde(e.to_string()))?)
+            })
     }
 
     /// Returns the default token expiry time in seconds.
@@ -319,7 +324,7 @@ impl RiJWTManager {
     ///
     /// The encoded JWT token string
     #[pyo3(name = "generate_token")]
-    pub fn generate_token_py(&self, user_id: &str, roles: Vec<String>, permissions: Vec<String>) -> Result<String, RiError> {
+    pub fn generate_token_py(&self, user_id: &str, roles: Vec<String>, permissions: Vec<String>) -> pyo3::prelude::PyResult<String> {
         self.py_generate_token(user_id, roles, permissions)
     }
 
@@ -335,7 +340,7 @@ impl RiJWTManager {
     ///
     /// The decoded RiJWTClaims if validation succeeds
     #[pyo3(name = "validate_token")]
-    pub fn validate_token_py(&self, token: &str) -> Result<RiJWTClaims, RiError> {
+    pub fn validate_token_py(&self, token: &str) -> pyo3::prelude::PyResult<pyo3::prelude::Py<RiJWTClaims>> {
         self.py_validate_token(token)
     }
 

@@ -765,46 +765,50 @@ impl RiResourceScheduler {
             if !performance_records.is_empty() {
                 // Only consider recent performance records (last 10)
                 let recent_records = &performance_records[performance_records.len().saturating_sub(10)..];
-                let record_count = recent_records.len() as f64;
+                let record_count = recent_records.len();
                 
-                let avg_latency = recent_records
-                    .iter()
-                    .map(|record| record.latency_ms)
-                    .sum::<f64>() / record_count;
+                if record_count > 0 {
+                    let record_count_f64 = record_count as f64;
+                    
+                    let avg_latency = recent_records
+                        .iter()
+                        .map(|record| record.latency_ms)
+                        .sum::<f64>() / record_count_f64;
+                    
+                    let avg_throughput = recent_records
+                        .iter()
+                        .map(|record| record.throughput)
+                        .sum::<f64>() / record_count_f64;
+                    
+                    let avg_error_rate = recent_records
+                        .iter()
+                        .map(|record| record.error_rate)
+                        .sum::<f64>() / record_count_f64;
+                    
+                    let avg_utilization = recent_records
+                        .iter()
+                        .map(|record| record.utilization)
+                        .sum::<f64>() / record_count_f64;
                 
-                let avg_throughput = recent_records
-                    .iter()
-                    .map(|record| record.throughput)
-                    .sum::<f64>() / record_count;
-                
-                let avg_error_rate = recent_records
-                    .iter()
-                    .map(|record| record.error_rate)
-                    .sum::<f64>() / record_count;
-                
-                let avg_utilization = recent_records
-                    .iter()
-                    .map(|record| record.utilization)
-                    .sum::<f64>() / record_count;
-                
-                // Bonus for low latency (up to 20 points)
-                score += (100.0 - avg_latency.min(100.0)) * 0.2;
-                
-                // Bonus for high throughput (up to 20 points)
-                score += (avg_throughput.min(100.0)) * 0.2;
-                
-                // Penalty for high error rate (up to 20 points)
-                score -= (avg_error_rate.min(1.0)) * 20.0;
-                
-                // Bonus for optimal utilization (60-80% is ideal, up to 10 points)
-                let utilization_bonus = if (0.6..=0.8).contains(&avg_utilization) {
-                    10.0
-                } else if (0.4..=0.9).contains(&avg_utilization) {
-                    5.0
-                } else {
-                    0.0
-                };
-                score += utilization_bonus;
+                    // Bonus for low latency (up to 20 points)
+                    score += (100.0 - avg_latency.min(100.0)) * 0.2;
+                    
+                    // Bonus for high throughput (up to 20 points)
+                    score += (avg_throughput.min(100.0)) * 0.2;
+                    
+                    // Penalty for high error rate (up to 20 points)
+                    score -= (avg_error_rate.min(1.0)) * 20.0;
+                    
+                    // Bonus for optimal utilization (60-80% is ideal, up to 10 points)
+                    let utilization_bonus = if (0.6..=0.8).contains(&avg_utilization) {
+                        10.0
+                    } else if (0.4..=0.9).contains(&avg_utilization) {
+                        5.0
+                    } else {
+                        0.0
+                    };
+                    score += utilization_bonus;
+                }
             }
         }
         
