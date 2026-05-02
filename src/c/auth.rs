@@ -107,7 +107,7 @@
 
 use crate::auth::{
     RiAuthConfig, RiJWTManager, RiSessionManager, RiPermissionManager, RiOAuthManager,
-    RiJWTClaims, RiSession, RiPermission, RiRole,
+    RiRole,
 };
 use std::ffi::{c_char, c_int};
 use std::collections::HashSet;

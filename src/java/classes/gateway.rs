@@ -26,7 +26,7 @@ use crate::gateway::{
     RiSlidingWindowRateLimiter,
 };
 use jni::objects::{JClass, JString};
-use jni::sys::{jboolean, jdouble, jint, jlong};
+use jni::sys::{jboolean, jdouble, jint, jlong, jstring};
 use jni::JNIEnv;
 
 // ============================================================================

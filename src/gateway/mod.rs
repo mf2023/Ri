@@ -231,7 +231,7 @@ impl Default for RiGatewayConfig {
             enable_circuit_breaker: true,
             enable_load_balancing: true,
             cors_enabled: true,
-            cors_origins: vec!["*".to_string()],
+            cors_origins: vec![],
             cors_methods: vec!["GET".to_string(), "POST".to_string(), "PUT".to_string(), "DELETE".to_string(), "OPTIONS".to_string()],
             cors_headers: vec!["Content-Type".to_string(), "Authorization".to_string(), "X-Requested-With".to_string()],
             enable_logging: true,
@@ -514,17 +514,20 @@ impl RiGateway {
                         match route_handler(request).await {
                             Ok(response) => response,
                             Err(e) => {
-                                RiGatewayResponse::new(500, format!("Internal server error: {e}").into_bytes(), request_id)
+                                log::error!("[Ri.Gateway] Internal server error for request {}: {}", request_id, e);
+                                RiGatewayResponse::new(500, "Internal Server Error".to_string().into_bytes(), request_id)
                             }
                         }
                     },
                     Err(e) => {
-                        RiGatewayResponse::new(404, format!("Route not found: {e}").into_bytes(), request_id)
+                        log::warn!("[Ri.Gateway] Route not found for request {}: {}", request_id, e);
+                        RiGatewayResponse::new(404, "Not Found".to_string().into_bytes(), request_id)
                     }
                 }
             },
             Err(e) => {
-                RiGatewayResponse::new(403, format!("Middleware error: {e}").into_bytes(), request_id)
+                log::warn!("[Ri.Gateway] Middleware error for request {}: {}", request_id, e);
+                RiGatewayResponse::new(403, "Forbidden".to_string().into_bytes(), request_id)
             }
         }
     }

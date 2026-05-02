@@ -48,13 +48,19 @@ from ri.database import (
 
 async def main():
     # Create database configuration
+    # SECURITY WARNING: Never hardcode database credentials in production!
+    # Use environment variables or secure secret management systems.
+    import os
+    
     config = RiDatabaseConfig()
     config.database_type = "sqlite"
-    config.host = "localhost"
-    config.port = 5432
-    config.database = "ri_example"
-    config.username = "user"
-    config.password = "password"
+    config.host = os.getenv("DB_HOST", "localhost")
+    config.port = int(os.getenv("DB_PORT", "5432"))
+    config.database = os.getenv("DB_NAME", "ri_example")
+    config.username = os.getenv("DB_USER", "user")
+    config.password = os.getenv("DB_PASSWORD", "CHANGE-ME-IN-PRODUCTION")
+    if config.password == "CHANGE-ME-IN-PRODUCTION":
+        print("WARNING: Using default database password. Set DB_PASSWORD environment variable in production!")
     config.max_connections = 10
     config.min_connections = 2
     config.connection_timeout_seconds = 30

@@ -322,6 +322,9 @@ num-bigint = "0.4"
 # Provides crypto algorithms and secure random generation
 ring = "0.17"
 
+# SHA-2 hash functions for key fingerprinting
+sha2 = "0.10"
+
 # Error handling with derive macro support
 # Provides the #[error] attribute for custom error types
 thiserror = "2"
@@ -485,9 +488,6 @@ sm-crypto = { version = "0.1", optional = true }
 # Default features enabled on fresh installation
 # ALL FEATURES ENABLED - Complete functionality
 default = [
-    "pyo3",
-    "c",
-    "java",
     "grpc",
     "websocket",
     "rabbitmq",
@@ -514,9 +514,7 @@ minimal = []
 # Full feature set
 # Enables all major features for complete middleware functionality
 full = [
-    "pyo3",
-    "c",
-    "java",
+    "bindings",
     "grpc",
     "websocket",
     "rabbitmq",
@@ -536,6 +534,10 @@ full = [
     "etcd",
     "kafka",
 ]
+
+# Language bindings (Python, C/C++, Java)
+# Enable this when building for foreign language integration
+bindings = ["pyo3", "c", "java"]
 
 # =============================================================================
 # Individual Feature Definitions

@@ -58,7 +58,6 @@ use std::collections::HashMap;
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::Command;
-use tokio_postgres::tls::TlsConnect;
 
 /// Create a new Ri project with specified template
 ///
@@ -1819,9 +1818,9 @@ pub async fn doctor(verbose: bool, fix: bool) -> Result<()> {
     println!("{}", "  Diagnostic Summary".green().bold());
     println!("{}", "═".repeat(60));
     println!();
-    println!("  {} Passed:   {}", "✓".green().bold(), passed.green());
-    println!("  {} Warnings: {}", "→".yellow().bold(), warnings.yellow());
-    println!("  {} Errors:   {}", "✗".red().bold(), errors.red());
+    println!("  {} Passed:   {}", "✓".green().bold(), passed.to_string().green());
+    println!("  {} Warnings: {}", "→".yellow().bold(), warnings.to_string().yellow());
+    println!("  {} Errors:   {}", "✗".red().bold(), errors.to_string().red());
     println!();
 
     // Auto-fix issues if requested
@@ -3128,7 +3127,7 @@ impl {struct_name}Handler {{
 #[async_trait::async_trait]
 impl Handler for {struct_name}Handler {{
     async fn handle(&self, request: Vec<u8>) -> anyhow::Result<Vec<u8>> {{
-        tracing::debug!("Handling request for {} module ({} bytes)", name, request.len());
+        tracing::debug!("Handling request for {name} module ({module_type} bytes)");
         
         // Get read lock on service
         let service = self.service.read().await;
@@ -3246,7 +3245,7 @@ impl {struct_name}Service {{
 #[async_trait::async_trait]
 impl Service for {struct_name}Service {{
     async fn process(&self, data: Vec<u8>) -> anyhow::Result<Vec<u8>> {{
-        tracing::debug!("Processing data in {} service ({} bytes)", name, data.len());
+        tracing::debug!("Processing data in {name} service ({module_type} bytes)");
         
         // Implement module-specific processing logic here
         // This is a placeholder that echoes the input
@@ -4509,7 +4508,7 @@ async fn test_postgres(url: &str) -> Result<()> {
         host, port, database, user, password
     );
 
-    let (client, conn) = match tokio_postgres::connect(&pg_config, tokio_postgres::NoTls).await {
+    let client = match tokio_postgres::connect(&pg_config, tokio_postgres::NoTls).await {
         Ok((client, connection)) => {
             tokio::spawn(async move {
                 if let Err(e) = connection.await {
@@ -4715,7 +4714,7 @@ async fn test_mysql(url: &str) -> Result<()> {
     println!("{} Executing test query...", "→".yellow().bold());
     let query_start = Instant::now();
 
-    let version: String = match conn.query_first("SELECT VERSION()") {
+    let version: String = match conn.query_first("SELECT VERSION()").await {
         Ok(Some(row)) => row,
         Ok(None) => "Unknown".to_string(),
         Err(e) => {
@@ -4741,21 +4740,21 @@ async fn test_mysql(url: &str) -> Result<()> {
         test_table
     );
 
-    if let Err(e) = conn.query_drop(&create_sql) {
+    if let Err(e) = conn.query_drop(&create_sql).await {
             let err_msg = e.to_string();
         println!("  {} CREATE TABLE failed: {}", "✗".red().bold(), err_msg.red());
     } else {
         println!("  {} CREATE TABLE {}", "✓".green().bold(), test_table.cyan());
 
         let insert_sql = format!("INSERT INTO {} (value) VALUES ('Ri CLI Test Value')", test_table);
-        if let Err(e) = conn.query_drop(&insert_sql) {
+        if let Err(e) = conn.query_drop(&insert_sql).await {
             let err_msg = e.to_string();
             println!("  {} INSERT failed: {}", "✗".red().bold(), err_msg.red());
         } else {
             println!("  {} INSERT INTO {} (value) VALUES (...)", "✓".green().bold(), test_table.cyan());
 
             let select_sql = format!("SELECT value FROM {} WHERE value = 'Ri CLI Test Value'", test_table);
-            let retrieved: Option<String> = match conn.query_first(&select_sql) {
+            let retrieved: Option<String> = match conn.query_first(&select_sql).await {
                 Ok(Some(row)) => Some(row),
                 Ok(None) => None,
                 Err(e) => {
@@ -4770,7 +4769,7 @@ async fn test_mysql(url: &str) -> Result<()> {
             }
 
             let delete_sql = format!("DELETE FROM {}", test_table);
-            if let Err(e) = conn.query_drop(&delete_sql) {
+            if let Err(e) = conn.query_drop(&delete_sql).await {
             let err_msg = e.to_string();
                 println!("  {} DELETE failed: {}", "✗".red().bold(), err_msg.red());
             } else {
@@ -4779,7 +4778,7 @@ async fn test_mysql(url: &str) -> Result<()> {
         }
 
         let drop_sql = format!("DROP TABLE {}", test_table);
-        if let Err(e) = conn.query_drop(&drop_sql) {
+        if let Err(e) = conn.query_drop(&drop_sql).await {
             let err_msg = e.to_string();
             println!("  {} DROP TABLE failed: {}", "✗".red().bold(), err_msg.red());
         } else {
@@ -4856,8 +4855,7 @@ async fn test_kafka(url: &str) -> Result<()> {
     println!("{} Connecting to Kafka brokers...", "→".yellow().bold());
     let start = Instant::now();
 
-    let config = rdkafka::config::ClientConfig::new();
-    let producer: rdkafka::producer::Producer<_> = config
+    let producer: rdkafka::producer::FutureProducer = rdkafka::config::ClientConfig::new()
         .set("bootstrap.servers", &brokers.join(","))
         .set("message.timeout.ms", "5000")
         .set("socket.timeout.ms", "5000")
@@ -4911,16 +4909,13 @@ async fn test_kafka(url: &str) -> Result<()> {
     let test_topic = format!("ri_test_{}", uuid::Uuid::new_v4().to_string().replace("-", "")[..8].to_string());
     let test_message = format!("Ri CLI Test Message at {}", chrono::Utc::now());
 
-    let produce_future = producer.send(
-        rdkafka::producer::ProducerRecord::new(
-            &test_topic,
-            Some(test_message.as_bytes()),
-            None::<&str>,
-        ),
-        std::time::Duration::from_secs(5),
-    );
+    let produce_result = producer.send(
+        rdkafka::producer::BaseRecord::to(&test_topic)
+            .payload(&test_message)
+            .key(None::<&str>),
+    ).await;
 
-    match produce_future {
+    match produce_result {
         Ok((partition, offset)) => {
             println!("  {} Message sent to {} [{}]@{}", "✓".green().bold(), test_topic.cyan(), partition.to_string().cyan(), offset.to_string().cyan());
         }

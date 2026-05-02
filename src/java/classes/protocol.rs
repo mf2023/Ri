@@ -23,8 +23,8 @@ use jni::JNIEnv;
 use jni::objects::{JClass, JString};
 use jni::sys::{jlong, jboolean, jint, jdouble, jbyteArray, jstring};
 use crate::protocol::{
-    RiProtocolManager, RiProtocolConfig, RiProtocolType, RiProtocolStatus,
-    RiProtocolStats, RiConnectionState, RiConnectionStats, RiProtocolHealth,
+    RiProtocolManager, RiProtocolConfig, RiProtocolType,
+    RiProtocolStats, RiConnectionStats,
     RiFrame, RiFrameHeader, RiFrameType, RiConnectionInfo, RiMessageFlags,
     RiSecurityLevel, RiFrameParser, RiFrameBuilder,
 };

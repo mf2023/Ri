@@ -342,4 +342,10 @@ pub enum RicError {
     /// Wrapper for anyhow errors that don't fit other categories.
     #[error("Error: {0}")]
     Anyhow(#[from] anyhow::Error),
+
+    /// MySQL URL error
+    ///
+    /// Wrapper for MySQL URL parsing errors.
+    #[error("MySQL URL error: {0}")]
+    MySqlUrl(#[from] mysql_async::UrlError),
 }

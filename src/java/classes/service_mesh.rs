@@ -21,10 +21,8 @@
 
 use jni::JNIEnv;
 use jni::objects::{JClass, JString, JObjectArray};
-use jni::sys::{jlong, jboolean, jint, jstring, jobjectArray, jdouble};
+use jni::sys::{jlong, jboolean, jint, jstring, jobjectArray, jdouble, jlongArray};
 use std::collections::HashMap as FxHashMap;
-use std::time::Duration;
-use std::sync::Arc;
 
 use crate::service_mesh::{
     RiServiceMesh, RiServiceMeshConfig, RiServiceMeshStats,
@@ -32,8 +30,9 @@ use crate::service_mesh::{
     RiServiceDiscovery, RiServiceInstance, RiServiceStatus,
     RiHealthChecker, RiHealthSummary, RiHealthStatus, RiHealthCheckType,
     RiTrafficRoute, RiMatchCriteria, RiRouteAction, RiWeightedDestination, RiTrafficManager,
-    RiCircuitBreakerConfig, RiRateLimitConfig,
 };
+use crate::gateway::RiCircuitBreakerConfig;
+use crate::service_mesh::traffic_management::RiRateLimitConfig;
 use crate::java::exception::check_not_null;
 
 // =============================================================================

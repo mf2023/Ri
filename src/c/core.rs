@@ -133,10 +133,10 @@
 //! required by all other Ri components.
 
 use crate::prelude::{RiAppBuilder, RiConfig};
-use crate::core::{RiServiceContext, RiHealthStatus, RiHealthCheckResult, RiHealthCheckConfig, RiHealthReport, RiHealthChecker};
+use crate::core::{RiServiceContext, RiHealthStatus, RiHealthCheckResult, RiHealthCheckConfig};
 use crate::core::error_chain::RiErrorChain;
 use crate::core::lock::RiLockError;
-use std::ffi::{c_char, CString, c_int, c_uint};
+use std::ffi::{c_char, CString, c_int};
 use std::time::SystemTime;
 
 /// Opaque C wrapper structure for RiAppBuilder.

@@ -65,6 +65,7 @@ pub struct RiWSServerConfig {
     pub heartbeat_timeout: u64,
     pub max_message_size: usize,
     pub ping_interval: u64,
+    pub allowed_origins: Vec<String>,
 }
 
 #[cfg(feature = "pyo3")]
@@ -106,6 +107,7 @@ impl Default for RiWSServerConfig {
             heartbeat_timeout: 60,
             max_message_size: 65536,
             ping_interval: 25,
+            allowed_origins: vec![],
         }
     }
 }

@@ -215,13 +215,13 @@
 
 use crate::gateway::{
     RiGateway, RiGatewayConfig, RiRouter, RiRoute, RiRouteHandler,
-    RiRateLimiter, RiRateLimitConfig, RiRateLimitStats,
-    RiCircuitBreaker, RiCircuitBreakerConfig, RiCircuitBreakerState, RiCircuitBreakerMetrics,
-    RiLoadBalancer, RiLoadBalancerStrategy, RiBackendServer, RiLoadBalancerServerStats,
+    RiRateLimiter, RiRateLimitConfig,
+    RiCircuitBreaker, RiCircuitBreakerConfig, RiCircuitBreakerState,
+    RiLoadBalancer, RiLoadBalancerStrategy, RiBackendServer,
     RiGatewayRequest, RiGatewayResponse,
 };
 use crate::core::RiResult;
-use std::ffi::{c_char, c_int, c_void};
+use std::ffi::{c_char, c_int};
 use std::future::Future;
 use std::pin::Pin;
 use std::sync::Arc;

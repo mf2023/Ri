@@ -117,9 +117,10 @@ impl RiGrpcServer {
         let registry = self.registry.clone();
         let running = self.running.clone();
         let max_concurrent = self.config.max_concurrent_requests as usize;
+        let config = self.config.clone();
 
         tokio::spawn(async move {
-            let _ = Self::run_server(addr, stats, registry, shutdown_rx, running, max_concurrent).await;
+            let _ = Self::run_server(addr, stats, registry, shutdown_rx, running, max_concurrent, config).await;
         });
 
         tracing::info!("gRPC server started on {}", addr);
@@ -133,6 +134,7 @@ impl RiGrpcServer {
         mut shutdown_rx: mpsc::Receiver<()>,
         running: Arc<RwLock<bool>>,
         max_concurrent: usize,
+        config: RiGrpcConfig,
     ) {
         let listener = match tokio::net::TcpListener::bind(&addr).await {
             Ok(l) => l,
@@ -161,9 +163,10 @@ impl RiGrpcServer {
                                 
                                 let stats_clone = stats.clone();
                                 let registry_clone = registry.clone();
+                                let config_clone = config.clone();
                                 
                                 tokio::spawn(async move {
-                                    Self::handle_connection(stream, peer_addr, stats_clone, registry_clone).await;
+                                    Self::handle_connection(stream, peer_addr, stats_clone, registry_clone, config_clone).await;
                                     drop(permit);
                                 });
                             }
@@ -184,6 +187,7 @@ impl RiGrpcServer {
         peer_addr: SocketAddr,
         stats: Arc<RwLock<RiGrpcStats>>,
         registry: RiGrpcServiceRegistry,
+        config: RiGrpcConfig,
     ) {
         tracing::debug!("gRPC client connected from {}", peer_addr);
 
@@ -201,7 +205,7 @@ impl RiGrpcServer {
 
             let request_data = &buffer[..n];
             
-            if let Err(e) = Self::process_request(&mut stream, request_data, &stats, &registry).await {
+            if let Err(e) = Self::process_request(&mut stream, request_data, &stats, &registry, &config).await {
                 tracing::error!("Error processing request from {}: {}", peer_addr, e);
                 break;
             }
@@ -218,8 +222,22 @@ impl RiGrpcServer {
         request_data: &[u8],
         stats: &Arc<RwLock<RiGrpcStats>>,
         registry: &RiGrpcServiceRegistry,
+        config: &RiGrpcConfig,
     ) -> RiResult<()> {
         let request_str = String::from_utf8_lossy(request_data);
+        
+        if config.enable_auth {
+            if let Some(ref expected_token) = config.auth_token {
+                let auth_valid = Self::validate_auth(&request_str, expected_token);
+                if !auth_valid {
+                    stats.write().await.record_error();
+                    let error_response = Self::build_grpc_error_response("Unauthorized: Invalid or missing authentication token");
+                    stream.write_all(&error_response).await
+                        .map_err(|e| GrpcError::Server { message: format!("Write error: {}", e) })?;
+                    return Err(GrpcError::Server { message: "Unauthorized".to_string() }.into());
+                }
+            }
+        }
         
         let (service_name, method_name) = Self::parse_request_path(&request_str)?;
         
@@ -267,6 +285,21 @@ impl RiGrpcServer {
         }
 
         Ok(())
+    }
+
+    fn validate_auth(request_str: &str, expected_token: &str) -> bool {
+        for line in request_str.lines() {
+            let line_lower = line.to_lowercase();
+            if line_lower.contains("authorization") {
+                if let Some(token) = line.split(':').nth(1) {
+                    let token = token.trim();
+                    if token == format!("Bearer {}", expected_token) || token == expected_token {
+                        return true;
+                    }
+                }
+            }
+        }
+        false
     }
 
     fn parse_request_path(request_str: &str) -> RiResult<(String, String)> {

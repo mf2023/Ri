@@ -20,8 +20,8 @@
 //! JNI bindings for Ri observability classes.
 
 use jni::JNIEnv;
-use jni::objects::{JClass, JObject, JString, JDoubleArray, JLongArray};
-use jni::sys::{jdouble, jint, jlong, jstring};
+use jni::objects::{JClass, JObject, JString, JDoubleArray};
+use jni::sys::{jdouble, jint, jlong, jstring, jobjectArray, jobject};
 use crate::observability::{
     RiObservabilityModule, RiTracer, RiSpanKind, RiSpanStatus,
     RiMetric, RiMetricConfig, RiMetricType, RiMetricsRegistry,

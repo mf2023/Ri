@@ -92,23 +92,79 @@ const HMAC_KEY_ENV: &str = "Ri_HMAC_KEY";
 const DEFAULT_KEY_LENGTH: usize = 32;
 const NONCE_LENGTH: usize = 12;
 
-fn load_or_generate_key(env_var: &str, length: usize) -> Vec<u8> {
-    env::var(env_var)
-        .ok()
-        .and_then(|s| hex::decode(s).ok())
-        .unwrap_or_else(|| {
-            let mut key = vec![0u8; length];
-            rand::thread_rng().fill_bytes(&mut key);
-            key
-        })
+static ENCRYPTION_KEY_WARNED: std::sync::Once = std::sync::Once::new();
+static HMAC_KEY_WARNED: std::sync::Once = std::sync::Once::new();
+
+fn load_or_generate_key(env_var: &str, length: usize, key_name: &str, warned: &std::sync::Once) -> Vec<u8> {
+    if let Ok(s) = env::var(env_var) {
+        if let Ok(key) = hex::decode(&s) {
+            if key.len() >= 16 {
+                return key;
+            }
+            tracing::warn!(
+                "{} from {} is too short ({} bytes), minimum 16 bytes required",
+                key_name, env_var, key.len()
+            );
+        }
+    }
+    
+    warned.call_once(|| {
+        tracing::warn!(
+            "SECURITY WARNING: {} not set or invalid. Using ephemeral random key. \
+            Encrypted data will be lost on restart! Set {} environment variable.",
+            key_name, env_var
+        );
+    });
+    
+    let mut key = vec![0u8; length];
+    rand::thread_rng().fill_bytes(&mut key);
+    key
 }
 
 fn load_encryption_key() -> Vec<u8> {
-    load_or_generate_key(ENCRYPTION_KEY_ENV, DEFAULT_KEY_LENGTH)
+    load_or_generate_key(ENCRYPTION_KEY_ENV, DEFAULT_KEY_LENGTH, "Encryption key", &ENCRYPTION_KEY_WARNED)
 }
 
 fn load_hmac_key() -> Vec<u8> {
-    load_or_generate_key(HMAC_KEY_ENV, DEFAULT_KEY_LENGTH)
+    load_or_generate_key(HMAC_KEY_ENV, DEFAULT_KEY_LENGTH, "HMAC key", &HMAC_KEY_WARNED)
+}
+
+/// Checks if encryption keys are properly configured.
+///
+/// Returns `Ok(())` if both encryption and HMAC keys are set via environment variables.
+/// Returns an error if any key is missing, with instructions on how to set them.
+pub fn check_encryption_keys() -> RiResult<()> {
+    let encryption_key_set = env::var(ENCRYPTION_KEY_ENV)
+        .ok()
+        .and_then(|s| hex::decode(&s).ok())
+        .map(|k| k.len() >= 16)
+        .unwrap_or(false);
+    
+    let hmac_key_set = env::var(HMAC_KEY_ENV)
+        .ok()
+        .and_then(|s| hex::decode(&s).ok())
+        .map(|k| k.len() >= 16)
+        .unwrap_or(false);
+    
+    if !encryption_key_set || !hmac_key_set {
+        let mut missing = Vec::new();
+        if !encryption_key_set {
+            missing.push(ENCRYPTION_KEY_ENV);
+        }
+        if !hmac_key_set {
+            missing.push(HMAC_KEY_ENV);
+        }
+        
+        return Err(RiError::SecurityViolation(format!(
+            "Encryption keys not configured: {}. \
+            Generate keys using RiSecurityManager::generate_encryption_key() and \
+            RiSecurityManager::generate_hmac_key(), then set them as environment variables. \
+            WARNING: Without proper keys, encrypted data will be lost on restart!",
+            missing.join(", ")
+        )));
+    }
+    
+    Ok(())
 }
 
 /// Security utilities manager for Ri.

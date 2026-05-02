@@ -144,7 +144,7 @@
 //! Disable this feature to reduce binary size when caching is not required.
 
 use crate::cache::{RiCacheConfig, RiCacheManager, RiMemoryCache, RiCachePolicy, RiCacheStats};
-use std::ffi::{c_char, c_int, c_void};
+use std::ffi::{c_char, c_int};
 use std::sync::Arc;
 
 c_wrapper!(CRiCacheConfig, RiCacheConfig);

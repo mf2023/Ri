@@ -51,6 +51,8 @@ pub struct RiGrpcConfig {
     pub enable_tls: bool,
     pub cert_path: Option<String>,
     pub key_path: Option<String>,
+    pub enable_auth: bool,
+    pub auth_token: Option<String>,
 }
 
 #[cfg(feature = "pyo3")]
@@ -131,6 +133,8 @@ impl Default for RiGrpcConfig {
             enable_tls: false,
             cert_path: None,
             key_path: None,
+            enable_auth: false,
+            auth_token: None,
         }
     }
 }

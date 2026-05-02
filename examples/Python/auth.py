@@ -45,8 +45,14 @@ from ri import (
 
 async def main():
     # Create authentication configuration
+    # SECURITY WARNING: Never hardcode secrets in production!
+    # Use environment variables or secure secret management systems.
+    import os
+    
     auth_config = RiAuthConfig()
-    auth_config.jwt_secret = "your-secret-key-here"
+    auth_config.jwt_secret = os.getenv("RI_JWT_SECRET", "CHANGE-ME-IN-PRODUCTION")
+    if auth_config.jwt_secret == "CHANGE-ME-IN-PRODUCTION":
+        print("WARNING: Using default JWT secret. Set RI_JWT_SECRET environment variable in production!")
     auth_config.jwt_algorithm = "HS256"
     auth_config.token_expiry_seconds = 3600
     auth_config.refresh_token_expiry_seconds = 86400
@@ -140,26 +146,28 @@ async def main():
     oauth_manager = RiOAuthManager()
 
     # Configure OAuth providers
+    # SECURITY WARNING: Never hardcode OAuth secrets in production!
+    # Use environment variables or secure secret management systems.
     google_provider = RiOAuthProvider()
     google_provider.name = "google"
-    google_provider.client_id = "google-client-id"
-    google_provider.client_secret = "google-client-secret"
+    google_provider.client_id = os.getenv("GOOGLE_CLIENT_ID", "your-google-client-id")
+    google_provider.client_secret = os.getenv("GOOGLE_CLIENT_SECRET", "your-google-client-secret")
     google_provider.auth_url = "https://accounts.google.com/o/oauth2/auth"
     google_provider.token_url = "https://oauth2.googleapis.com/token"
     google_provider.scopes = ["openid", "email", "profile"]
 
     github_provider = RiOAuthProvider()
     github_provider.name = "github"
-    github_provider.client_id = "github-client-id"
-    github_provider.client_secret = "github-client-secret"
+    github_provider.client_id = os.getenv("GITHUB_CLIENT_ID", "your-github-client-id")
+    github_provider.client_secret = os.getenv("GITHUB_CLIENT_SECRET", "your-github-client-secret")
     github_provider.auth_url = "https://github.com/login/oauth/authorize"
     github_provider.token_url = "https://github.com/login/oauth/access_token"
     github_provider.scopes = ["user:email", "read:user"]
 
     # Create OAuth token
     oauth_token = RiOAuthToken()
-    oauth_token.access_token = "oauth_access_token_123"
-    oauth_token.refresh_token = "oauth_refresh_token_456"
+    oauth_token.access_token = "example_oauth_access_token"
+    oauth_token.refresh_token = "example_oauth_refresh_token"
     oauth_token.token_type = "Bearer"
     oauth_token.expires_in = 3600
     oauth_token.scope = "openid email profile"

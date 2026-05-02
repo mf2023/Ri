@@ -24,6 +24,16 @@ use tokio::sync::Semaphore;
 use tokio::time::{Duration, Instant};
 use std::sync::RwLock;
 
+fn handle_poisoned_lock<T>(lock_result: Result<T, std::sync::PoisonError<T>>) -> T {
+    match lock_result {
+        Ok(guard) => guard,
+        Err(e) => {
+            log::warn!("[Ri.Database] Lock was poisoned, recovering...");
+            e.into_inner()
+        }
+    }
+}
+
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 #[derive(Debug, Clone, Default)]
 pub struct RiDatabaseMetrics {
@@ -380,7 +390,7 @@ impl RiDatabasePool {
     }
 
     pub async fn check_and_scale(&self) -> RiResult<()> {
-        let dynamic_config = self.dynamic_config.read().unwrap().clone();
+        let dynamic_config = handle_poisoned_lock(self.dynamic_config.read()).clone();
         
         if !dynamic_config.enable_dynamic_scaling {
             return Ok(());
@@ -409,7 +419,7 @@ impl RiDatabasePool {
         
         if utilization > dynamic_config.scale_up_threshold {
             {
-                let mut tracker = self.low_utilization_tracker.write().unwrap();
+                let mut tracker = handle_poisoned_lock(self.low_utilization_tracker.write());
                 tracker.update(false);
             }
             
@@ -444,7 +454,7 @@ impl RiDatabasePool {
             }
         } else if utilization < dynamic_config.scale_down_threshold {
             let should_scale_down = {
-                let mut tracker = self.low_utilization_tracker.write().unwrap();
+                let mut tracker = handle_poisoned_lock(self.low_utilization_tracker.write());
                 tracker.update(true);
                 
                 if let Some(duration) = tracker.duration_below_threshold() {
@@ -466,7 +476,7 @@ impl RiDatabasePool {
                 }
             }
         } else {
-            let mut tracker = self.low_utilization_tracker.write().unwrap();
+            let mut tracker = handle_poisoned_lock(self.low_utilization_tracker.write());
             tracker.update(false);
         }
         
@@ -612,11 +622,11 @@ impl RiDatabasePool {
     }
 
     pub fn get_dynamic_config(&self) -> RiDynamicPoolConfig {
-        self.dynamic_config.read().unwrap().clone()
+        handle_poisoned_lock(self.dynamic_config.read()).clone()
     }
 
     pub fn set_dynamic_config(&self, config: RiDynamicPoolConfig) {
-        let mut current = self.dynamic_config.write().unwrap();
+        let mut current = handle_poisoned_lock(self.dynamic_config.write());
         *current = config;
     }
 
@@ -624,7 +634,7 @@ impl RiDatabasePool {
     where
         F: FnOnce(&mut RiDynamicPoolConfig),
     {
-        let mut config = self.dynamic_config.write().unwrap();
+        let mut config = handle_poisoned_lock(self.dynamic_config.write());
         f(&mut config);
     }
 
@@ -637,7 +647,7 @@ impl RiDatabasePool {
     }
 
     pub async fn force_scale_up(&self, count: u32) -> RiResult<()> {
-        let dynamic_config = self.dynamic_config.read().unwrap().clone();
+        let dynamic_config = handle_poisoned_lock(self.dynamic_config.read()).clone();
         let total = self.total_connections.load(Ordering::SeqCst) as u32;
         
         let to_add = std::cmp::min(count, dynamic_config.max_connections.saturating_sub(total));
@@ -669,7 +679,7 @@ impl RiDatabasePool {
     }
 
     pub async fn force_scale_down(&self, count: u32) -> RiResult<()> {
-        let dynamic_config = self.dynamic_config.read().unwrap().clone();
+        let dynamic_config = handle_poisoned_lock(self.dynamic_config.read()).clone();
         let total = self.total_connections.load(Ordering::SeqCst) as u32;
         
         let to_remove = std::cmp::min(

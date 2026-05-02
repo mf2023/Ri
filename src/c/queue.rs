@@ -323,7 +323,7 @@
 //! - `queue-sqs`: Enable AWS SQS backend support
 
 use crate::queue::{RiQueueConfig, RiQueueManager, RiQueueMessage, RiQueueStats};
-use std::ffi::{c_char, c_int, c_void};
+use std::ffi::{c_char, c_int};
 use std::sync::Arc;
 
 c_wrapper!(CRiQueueConfig, RiQueueConfig);

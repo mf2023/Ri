@@ -21,7 +21,7 @@
 
 use jni::JNIEnv;
 use jni::objects::{JClass, JString, JObject};
-use jni::sys::{jlong, jboolean, jint, jdouble, jbyteArray, jstring, jlongArray, jobjectArray};
+use jni::sys::{jlong, jboolean, jint, jdouble, jstring, jlongArray, jobjectArray};
 use crate::device::{
     RiDeviceControlModule, RiDeviceControlConfig, RiDevice, RiDeviceType, RiDeviceStatus,
     RiDeviceCapabilities, RiDeviceHealthMetrics, RiDeviceConfig, RiNetworkDeviceInfo,

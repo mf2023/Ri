@@ -23,6 +23,7 @@ use tokio::sync::mpsc;
 use tokio::time::Duration;
 use futures::StreamExt;
 use tungstenite::Message;
+use tokio_tungstenite::WebSocketStream;
 
 pub struct RiWSServer {
     config: RiWSServerConfig,
@@ -174,9 +175,11 @@ impl RiWSServer {
                     let session_id = Uuid::new_v4().to_string();
                     let remote_addr_str = remote_addr.to_string();
                     
-                    tracing::info!("New WebSocket connection: {} (session: {})", remote_addr_str, session_id);
+                    tracing::info!("New WebSocket connection attempt: {} (session: {})", remote_addr_str, session_id);
 
-                    match tokio_tungstenite::accept_async(stream).await {
+                    let allowed_origins = config.allowed_origins.clone();
+                    
+                    match Self::accept_with_origin_check(stream, &allowed_origins).await {
                         Ok(ws_stream) => {
                             let (_sender, receiver) = ws_stream.split();
                             let (tx, rx) = mpsc::channel(100);
@@ -365,6 +368,48 @@ impl RiWSServer {
 
     pub async fn get_active_session_count(&self) -> usize {
         self.session_manager.get_session_count().await
+    }
+
+    async fn accept_with_origin_check(
+        stream: tokio::net::TcpStream,
+        allowed_origins: &[String],
+    ) -> std::result::Result<WebSocketStream<tokio_tungstenite::MaybeTlsStream<tokio::net::TcpStream>>, tungstenite::Error> {
+        use tokio_tungstenite::tungstenite::handshake::server::{Request, Response};
+        use tokio_tungstenite::tungstenite::protocol::WebSocketConfig;
+        
+        let mut origin_valid = true;
+        let origins_empty = allowed_origins.is_empty();
+        let origins = allowed_origins.to_vec();
+        
+        let callback = |request: &Request, mut response: Response| {
+            if !origins_empty {
+                if let Some(origin_header) = request.headers().get("origin") {
+                    if let Ok(origin_str) = origin_header.to_str() {
+                        if !origins.contains(&origin_str.to_string()) {
+                            tracing::warn!("WebSocket connection rejected: Origin '{}' not in whitelist", origin_str);
+                            origin_valid = false;
+                            let bad_response = Response::builder()
+                                .status(403)
+                                .body(Some("Origin not allowed".to_string()))
+                                .unwrap();
+                            return Err(bad_response);
+                        }
+                    }
+                } else {
+                    tracing::warn!("WebSocket connection rejected: No Origin header present");
+                    origin_valid = false;
+                    let bad_response = Response::builder()
+                        .status(403)
+                        .body(Some("Origin header required".to_string()))
+                        .unwrap();
+                    return Err(bad_response);
+                }
+            }
+            Ok(response)
+        };
+        
+        let ws_stream = tokio_tungstenite::accept_hdr_async(stream, callback).await?;
+        Ok(ws_stream)
     }
 }
 

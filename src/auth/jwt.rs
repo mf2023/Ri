@@ -88,6 +88,7 @@
 use jsonwebtoken::{decode, encode, DecodingKey, EncodingKey, Header, Validation};
 use serde::{Deserialize, Serialize};
 use std::time::{SystemTime, UNIX_EPOCH};
+use zeroize::{Zeroize, ZeroizeOnDrop};
 
 use crate::core::error::RiError;
 
@@ -225,23 +226,33 @@ impl Default for RiJWTValidationOptions {
 /// Uses HMAC-SHA256 (HS256) for token signing. This symmetric algorithm
 /// uses the same secret key for both signing and verification.
 ///
+/// ## Security
+///
+/// The secret key is protected with zeroize to ensure it is securely cleared
+/// from memory when the manager is dropped, preventing memory dump attacks.
+///
 /// ## Performance
 ///
 /// Token generation and validation are designed to be fast operations.
 /// The encoding/decoding operations are primarily CPU-bound due to the
 /// HMAC computation.
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
+#[derive(ZeroizeOnDrop)]
 pub struct RiJWTManager {
     /// The secret key used for signing and verifying tokens
+    /// This field is automatically zeroized on drop for security
+    #[zeroize]
     secret: String,
 
     /// Default expiry time in seconds for generated tokens
     expiry_secs: u64,
 
     /// Pre-computed encoding key for faster token generation
+    #[zeroize(skip)]
     encoding_key: EncodingKey,
 
     /// Pre-computed decoding key for faster token validation
+    #[zeroize(skip)]
     decoding_key: DecodingKey,
 }
 
@@ -296,17 +307,16 @@ impl RiJWTManager {
     /// # Returns
     ///
     /// The decoded RiJWTClaims if validation succeeds
-    pub fn py_validate_token(&self, token: &str) -> pyo3::prelude::PyResult<pyo3::PyObject> {
+    pub fn py_validate_token(&self, token: &str) -> pyo3::prelude::PyResult<pyo3::Py<pyo3::PyAny>> {
         use pyo3::prelude::*;
         
-        let gil = Python::acquire_gil();
-        let py = gil.python();
-        
-        self.validate_token(token)
-            .map_err(crate::auth::security::ri_error_to_py_err)
-            .map(|claims| {
-                PyCell::new(py, claims).unwrap().into_py(py)
-            })
+        Python::with_gil(|py| {
+            self.validate_token(token)
+                .map_err(crate::auth::security::ri_error_to_py_err)
+                .map(|claims| {
+                    Py::new(py, claims).unwrap().into_py(py)
+                })
+        })
     }
 
     /// Returns the default token expiry time in seconds.
@@ -344,7 +354,7 @@ impl RiJWTManager {
     ///
     /// The decoded RiJWTClaims if validation succeeds
     #[pyo3(name = "validate_token")]
-    pub fn validate_token_py(&self, token: &str) -> pyo3::prelude::PyResult<pyo3::PyObject> {
+    pub fn validate_token_py(&self, token: &str) -> pyo3::prelude::PyResult<pyo3::Py<pyo3::PyAny>> {
         self.py_validate_token(token)
     }
 
@@ -515,20 +525,24 @@ impl RiJWTManager {
         self.expiry_secs
     }
 
-    /// Returns a reference to the secret key.
+    /// Returns a fingerprint of the secret key for audit purposes.
     ///
-    /// This method provides read-only access to the configured secret key.
-    /// The secret key is used for both signing and verifying tokens.
+    /// This method returns a SHA-256 hash of the secret key prefix,
+    /// useful for identifying which key was used for signing without
+    /// exposing the actual secret.
     ///
     /// # Returns
     ///
-    /// A string slice reference to the secret key
-    ///
-    /// # Security Note
-    ///
-    /// Be cautious when exposing the secret key. In production, the secret
-    /// should be stored securely and never logged or exposed to unauthorized parties.
-    pub fn get_secret(&self) -> &str {
-        &self.secret
+    /// A hexadecimal string representing the key fingerprint
+    pub fn get_key_fingerprint(&self) -> String {
+        use sha2::{Sha256, Digest};
+        let prefix = if self.secret.len() > 8 {
+            &self.secret[..8]
+        } else {
+            &self.secret
+        };
+        let mut hasher = Sha256::new();
+        hasher.update(prefix.as_bytes());
+        format!("{:x}", hasher.finalize())
     }
 }

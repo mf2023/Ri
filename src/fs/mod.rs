@@ -125,6 +125,56 @@ impl FileSystemImpl {
         FileSystemImpl::new_with_roots(project_root, app_data_root)
     }
 
+    /// Validates that a path is safe and within the allowed directories.
+    ///
+    /// This method prevents path traversal attacks by ensuring that the resolved
+    /// path is within the project root or app data root.
+    ///
+    /// # Parameters
+    ///
+    /// - `path`: The path to validate
+    ///
+    /// # Returns
+    ///
+    /// A `RiResult<PathBuf>` containing the canonicalized path if valid
+    fn validate_path(&self, path: &Path) -> RiResult<PathBuf> {
+        let canonical_path = path.canonicalize()
+            .map_err(|e| crate::core::RiError::Other(format!("Path validation failed: {e}")))?;
+        
+        let canonical_project = self.project_root.canonicalize()
+            .unwrap_or_else(|_| self.project_root.clone());
+        let canonical_app_data = self.app_data_root.canonicalize()
+            .unwrap_or_else(|_| self.app_data_root.clone());
+        
+        if !canonical_path.starts_with(&canonical_project) && 
+           !canonical_path.starts_with(&canonical_app_data) {
+            return Err(crate::core::RiError::Other(
+                "Path traversal detected: path is outside allowed directories".to_string()
+            ));
+        }
+        
+        Ok(canonical_path)
+    }
+
+    /// Safely resolves and validates a path relative to the project root.
+    ///
+    /// # Parameters
+    ///
+    /// - `path`: The relative or absolute path to resolve
+    ///
+    /// # Returns
+    ///
+    /// A `RiResult<PathBuf>` containing the resolved and validated path
+    fn resolve_and_validate_path(&self, path: &Path) -> RiResult<PathBuf> {
+        let resolved = if path.is_absolute() {
+            path.to_path_buf()
+        } else {
+            self.project_root.join(path)
+        };
+        
+        self.validate_path(&resolved)
+    }
+
     /// Returns the project root directory.
     /// 
     /// # Returns
@@ -179,12 +229,13 @@ impl FileSystemImpl {
     /// 
     /// A `RiResult<()>` indicating success or failure
     fn atomic_write_text(&self, path: &Path, text: &str) -> RiResult<()> {
-        self.ensure_parent_dir(path)?;
-        let dir = path.parent().unwrap_or_else(|| Path::new("."));
+        let validated_path = self.resolve_and_validate_path(path)?;
+        self.ensure_parent_dir(&validated_path)?;
+        let dir = validated_path.parent().unwrap_or_else(|| Path::new("."));
         let ts = SystemTime::now()
             .duration_since(SystemTime::UNIX_EPOCH)
             .map_err(|e| crate::core::RiError::Other(format!("timestamp error: {e}")))?;
-        let tmp_name = format!(".tmp_{}_{}", ts.as_millis(), path.file_name().and_then(|s| s.to_str()).unwrap_or("tmp"));
+        let tmp_name = format!(".tmp_{}_{}", ts.as_millis(), validated_path.file_name().and_then(|s| s.to_str()).unwrap_or("tmp"));
         let tmp_path = dir.join(tmp_name);
 
         {
@@ -200,7 +251,7 @@ impl FileSystemImpl {
                 .map_err(|e| crate::core::RiError::Other(format!("atomic_write_text sync failed: {e}")))?;
         }
 
-        fs::rename(&tmp_path, path)
+        fs::rename(&tmp_path, &validated_path)
             .map_err(|e| crate::core::RiError::Other(format!("atomic_write_text rename failed: {e}")))?;
 
         Ok(())
@@ -220,12 +271,13 @@ impl FileSystemImpl {
     /// 
     /// A `RiResult<()>` indicating success or failure
     fn atomic_write_bytes(&self, path: &Path, data: &[u8]) -> RiResult<()> {
-        self.ensure_parent_dir(path)?;
-        let dir = path.parent().unwrap_or_else(|| Path::new("."));
+        let validated_path = self.resolve_and_validate_path(path)?;
+        self.ensure_parent_dir(&validated_path)?;
+        let dir = validated_path.parent().unwrap_or_else(|| Path::new("."));
         let ts = SystemTime::now()
             .duration_since(SystemTime::UNIX_EPOCH)
             .map_err(|e| crate::core::RiError::Other(format!("timestamp error: {e}")))?;
-        let tmp_name = format!(".tmp_{}_{}", ts.as_millis(), path.file_name().and_then(|s| s.to_str()).unwrap_or("tmp"));
+        let tmp_name = format!(".tmp_{}_{}", ts.as_millis(), validated_path.file_name().and_then(|s| s.to_str()).unwrap_or("tmp"));
         let tmp_path = dir.join(tmp_name);
 
         {
@@ -241,7 +293,7 @@ impl FileSystemImpl {
                 .map_err(|e| crate::core::RiError::Other(format!("atomic_write_bytes sync failed: {e}")))?;
         }
 
-        fs::rename(&tmp_path, path)
+        fs::rename(&tmp_path, &validated_path)
             .map_err(|e| crate::core::RiError::Other(format!("atomic_write_bytes rename failed: {e}")))?;
 
         Ok(())
@@ -257,9 +309,10 @@ impl FileSystemImpl {
     /// 
     /// A `RiResult<String>` containing the file content
     fn read_text(&self, path: &Path) -> RiResult<String> {
+        let validated_path = self.resolve_and_validate_path(path)?;
         let mut file = OpenOptions::new()
             .read(true)
-            .open(path)
+            .open(&validated_path)
             .map_err(|e| crate::core::RiError::Other(format!("read_text open failed: {e}")))?;
         let mut buf = String::new();
         file.read_to_string(&mut buf)

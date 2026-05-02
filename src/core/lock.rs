@@ -177,7 +177,7 @@ impl RiLockError {
     }
 
     #[getter]
-    fn is_poisoned(&self) -> bool {
+    fn is_poisoned_py(&self) -> bool {
         self.is_poisoned
     }
 

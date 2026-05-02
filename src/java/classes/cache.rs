@@ -20,8 +20,8 @@
 //! JNI bindings for Ri cache classes.
 
 use jni::JNIEnv;
-use jni::objects::{JClass, JString, JByteArray, JObjectArray};
-use jni::sys::{jlong, jboolean, jint, jstring, jdouble, jbyteArray, jobjectArray};
+use jni::objects::{JClass, JString};
+use jni::sys::{jlong, jboolean, jint, jstring};
 use crate::cache::{RiCacheModule, RiCacheConfig, RiCacheBackendType, RiCacheStats, RiCachePolicy, RiCachedValue, RiCacheManager};
 use crate::java::exception::check_not_null;
 
@@ -538,7 +538,7 @@ pub extern "system" fn Java_com_dunimd_ri_cache_RiCacheManager_new0(
     _env: JNIEnv,
     _class: JClass,
 ) -> jlong {
-    use crate::cache::backends::RiMemoryCache;
+    use crate::cache::RiMemoryCache;
     use std::sync::Arc;
     
     let backend = Arc::new(RiMemoryCache::new());

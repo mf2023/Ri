@@ -20,7 +20,7 @@
 //! JNI bindings for Ri queue classes.
 
 use jni::JNIEnv;
-use jni::objects::{JClass, JString, JByteArray, JObjectArray};
+use jni::objects::{JClass, JString, JByteArray};
 use jni::sys::{jlong, jboolean, jint, jstring, jdouble, jbyteArray, jobjectArray};
 use crate::queue::{RiQueueModule, RiQueueConfig, RiQueueManager, RiQueueMessage, RiQueueStats, RiRetryPolicy, RiDeadLetterConfig};
 use crate::java::exception::check_not_null;

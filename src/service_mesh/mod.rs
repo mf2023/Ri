@@ -105,7 +105,7 @@ use tokio::sync::RwLock;
 use pyo3::PyResult;
 
 use crate::core::{RiModule, RiResult, RiError};
-use crate::gateway::{RiCircuitBreaker, RiCircuitBreakerConfig, RiLoadBalancer, RiLoadBalancerStrategy};
+pub use crate::gateway::{RiCircuitBreaker, RiCircuitBreakerConfig, RiLoadBalancer, RiLoadBalancerStrategy};
 use crate::gateway::load_balancer::RiBackendServer;
 use crate::observability::{RiTracer, RiSpanKind, RiSpanStatus};
 
