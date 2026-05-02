@@ -299,7 +299,7 @@ libloading = "0.8"
 # Zeroize for secure memory clearing of sensitive data
 # Automatically clears memory when sensitive types are dropped
 # Prevents cold-boot attacks and memory forensics
-zeroize = "1.8"
+zeroize = { version = "1.8", features = ["derive"] }
 
 # Zeroize derive macro for automatic Zeroize trait implementation
 # Provides derive macro support for zeroizing struct fields
