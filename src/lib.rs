@@ -140,11 +140,11 @@ pub mod prelude {
     
     /// Health check types
     #[cfg(feature = "pyo3")]
-    pub use crate::core::{RiHealthStatus, RiHealthCheckResult, RiHealthCheckConfig, RiHealthReport, RiHealthChecker};
+    pub use crate::core::{RiHealthStatus, RiHealthCheckResult, RiHealthCheckConfig, RiHealthReport};
     
     /// Service mesh health check types
     #[cfg(feature = "pyo3")]
-    pub use crate::service_mesh::health_check::{RiHealthCheckType, RiHealthSummary};
+    pub use crate::service_mesh::health_check::{RiHealthCheckType, RiHealthSummary, RiHealthChecker};
     
     /// Lifecycle management
     #[cfg(feature = "pyo3")]
@@ -366,8 +366,6 @@ pub mod py {
         m.add_class::<crate::service_mesh::RiServiceEndpoint>()?;
         m.add_class::<crate::service_mesh::RiServiceHealthStatus>()?;
         m.add_class::<crate::service_mesh::health_check::RiHealthChecker>()?;
-        m.add_class::<crate::service_mesh::health_check::RiHealthSummary>()?;
-        m.add_class::<crate::service_mesh::traffic_management::RiTrafficManager>()?;
         m.add_class::<crate::service_mesh::RiTrafficRoute>()?;
         m.add_class::<crate::service_mesh::RiMatchCriteria>()?;
         m.add_class::<crate::service_mesh::RiRouteAction>()?;
@@ -452,8 +450,8 @@ pub mod py {
         m.add_class::<crate::database::RiDBRow>()?;
         m.add_class::<crate::database::RiDBResult>()?;
         m.add_class::<crate::database::orm::RiPyORMRepository>()?;
-        m.add_class::<crate::database::DynamicPoolConfig>()?;
-        m.add_class::<crate::database::DatabaseMetrics>()?;
+        m.add_class::<crate::database::RiDynamicPoolConfig>()?;
+        m.add_class::<crate::database::RiDatabaseMetrics>()?;
 
         // Add grpc types to main module
         #[cfg(all(feature = "grpc", feature = "pyo3"))]
@@ -730,8 +728,8 @@ pub mod py {
         m.add_class::<crate::database::RiDatabasePool>()?;
         m.add_class::<crate::database::RiDBRow>()?;
         m.add_class::<crate::database::RiDBResult>()?;
-        m.add_class::<crate::database::DynamicPoolConfig>()?;
-        m.add_class::<crate::database::DatabaseMetrics>()?;
+        m.add_class::<crate::database::RiDynamicPoolConfig>()?;
+        m.add_class::<crate::database::RiDatabaseMetrics>()?;
         m.add_class::<crate::database::orm::ColumnDefinition>()?;
         m.add_class::<crate::database::orm::IndexDefinition>()?;
         m.add_class::<crate::database::orm::ForeignKeyDefinition>()?;

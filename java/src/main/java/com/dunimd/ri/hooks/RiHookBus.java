@@ -46,6 +46,32 @@ public class RiHookBus {
     
     private native void free0(long ptr);
     
+    /**
+     * Emit a hook event.
+     * 
+     * @param kind the hook kind to emit
+     * @param module the module name (can be null)
+     * @param phase the module phase (can be null)
+     */
+    public void emit(RiHookKind kind, String module, RiModulePhase phase) {
+        int phaseOrdinal = phase != null ? phase.ordinal() : -1;
+        emit0(nativePtr, kind.ordinal(), module, phaseOrdinal);
+    }
+    
+    private native void emit0(long ptr, int kindOrdinal, String module, int phaseOrdinal);
+    
+    /**
+     * Check if there are any handlers registered for a hook kind.
+     * 
+     * @param kind the hook kind to check
+     * @return true if there are handlers registered
+     */
+    public boolean hasHandlers(RiHookKind kind) {
+        return hasHandlers0(nativePtr, kind.ordinal());
+    }
+    
+    private native boolean hasHandlers0(long ptr, int kindOrdinal);
+    
     @Override
     protected void finalize() {
         close();

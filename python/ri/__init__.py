@@ -89,6 +89,11 @@ from .ri import (
     RiLifecycleObserver,
     
     # =============================================================================
+    # Analytics module - Log analytics and usage statistics
+    # =============================================================================
+    RiLogAnalyticsModule,
+    
+    # =============================================================================
     # Cache classes - In-memory caching with configurable backends, eviction policies,
     # statistics tracking, and event notification capabilities
     # =============================================================================
@@ -124,14 +129,6 @@ from .ri import (
     RiTrafficManager, RiHealthChecker, RiHealthSummary, RiHealthCheckType,
     
     # =============================================================================
-    # Service Mesh classes - Advanced service management including circuit breakers,
-    # health checks, and rate limiting
-    # Note: RiCircuitBreaker, RiCircuitBreakerConfig, RiCircuitBreakerState, RiCircuitBreakerMetrics
-    # are already imported above in the Gateway classes section
-    RiHealthCheckConfig, RiHealthCheckType, RiHealthCheckResult,
-    RiHealthChecker, RiHealthSummary,
-    
-    # =============================================================================
     # Auth classes - Authentication and authorization including JWT management,
     # session handling, OAuth integration, role-based and permission-based access control
     # =============================================================================
@@ -139,6 +136,7 @@ from .ri import (
     RiSessionManager, RiSession, RiPermissionManager, RiPermission, RiRole,
     RiOAuthManager, RiOAuthToken, RiOAuthUserInfo, RiOAuthProvider,
     RiJWTRevocationList, RiRevokedTokenInfo,
+    RiSecurityManager,
     
     # =============================================================================
     # Device classes - IoT device management including device control, health monitoring,
@@ -192,6 +190,8 @@ from .ri import (
     # access, and result set management across different database backends
     # =============================================================================
     RiDatabaseConfig, RiDatabasePool, RiDBRow, RiDBResult,
+    RiDynamicPoolConfig, RiDatabaseMetrics,
+    RiDatabaseMigration,
     RiPyORMRepository,
 
     # =============================================================================
@@ -207,6 +207,11 @@ from .ri import (
     RiWSServerConfig, RiWSEvent, RiWSSessionInfo, RiWSServerStats,
     RiWSPythonHandler, RiWSSessionManagerPy,
     RiWSServerPy, RiWSClientConfig, RiWSClientStats, RiWSClientPy,
+
+    # =============================================================================
+    # Module RPC classes - Inter-module RPC communication for distributed method calls
+    # =============================================================================
+    RiModuleRPC, RiModuleClient, RiModuleEndpoint, RiMethodCall, RiMethodResponse,
 )
 
 # =============================================================================
@@ -241,6 +246,9 @@ __all__ = [
     
     # Lifecycle management - Module lifecycle observation
     'RiLifecycleObserver',
+
+    # Analytics module - Log analytics and usage statistics
+    'RiLogAnalyticsModule',
     
     # Cache classes - Caching infrastructure and management
     'RiCacheModule', 'RiCacheManager', 'RiCacheConfig', 'RiCacheBackendType',
@@ -264,13 +272,13 @@ __all__ = [
     'RiServiceEndpoint', 'RiServiceHealthStatus',
     'RiTrafficRoute', 'RiMatchCriteria', 'RiRouteAction', 'RiWeightedDestination',
     'RiTrafficManager', 'RiHealthChecker', 'RiHealthSummary', 'RiHealthCheckType',
-    'RiHealthCheckConfig', 'RiHealthCheckResult',
     
     # Auth classes - Authentication, authorization, and session management
     'RiAuthModule', 'RiAuthConfig', 'RiJWTManager', 'RiJWTClaims', 'RiJWTValidationOptions',
     'RiSessionManager', 'RiSession', 'RiPermissionManager', 'RiPermission', 'RiRole',
     'RiOAuthManager', 'RiOAuthToken', 'RiOAuthUserInfo', 'RiOAuthProvider',
     'RiJWTRevocationList', 'RiRevokedTokenInfo',
+    'RiSecurityManager',
     
     # Device classes - IoT device control and resource management
     'RiDeviceControlModule', 'RiDevice', 'RiDeviceType', 'RiDeviceStatus',
@@ -309,6 +317,8 @@ __all__ = [
 
     # Database classes - Database configuration and connection pooling
     'RiDatabaseConfig', 'RiDatabasePool', 'RiDBRow', 'RiDBResult',
+    'RiDynamicPoolConfig', 'RiDatabaseMetrics',
+    'RiDatabaseMigration',
     'RiPyORMRepository',
 
     # gRPC classes - gRPC server and client support
@@ -320,6 +330,9 @@ __all__ = [
     'RiWSServerConfig', 'RiWSEvent', 'RiWSSessionInfo', 'RiWSServerStats',
     'RiWSPythonHandler', 'RiWSSessionManagerPy',
     'RiWSServerPy', 'RiWSClientConfig', 'RiWSClientStats', 'RiWSClientPy',
+
+    # Module RPC classes - Inter-module RPC for distributed method calls
+    'RiModuleRPC', 'RiModuleClient', 'RiModuleEndpoint', 'RiMethodCall', 'RiMethodResponse',
 
     # Submodules - Functional submodule references
     'device', 'cache', 'fs', 'hooks', 'observability',

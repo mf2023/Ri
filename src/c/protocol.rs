@@ -300,12 +300,14 @@
 //! - `protocol-bson`: Enable BSON support
 //! - `protocol-compression`: Enable compression codecs
 
-use crate::protocol::{RiFrame, RiProtocolConfig, RiProtocolManager};
+use crate::protocol::{RiFrame, RiProtocolConfig, RiProtocolManager, RiProtocolStats, RiConnectionInfo, RiProtocolType, RiSecurityLevel, RiConnectionState};
 
 
 c_wrapper!(CRiProtocolConfig, RiProtocolConfig);
 c_wrapper!(CRiProtocolManager, RiProtocolManager);
 c_wrapper!(CRiFrame, RiFrame);
+c_wrapper!(CRiProtocolStats, RiProtocolStats);
+c_wrapper!(CRiConnectionInfo, RiConnectionInfo);
 
 // RiProtocolConfig constructors and destructors
 c_constructor!(
@@ -315,3 +317,325 @@ c_constructor!(
     RiProtocolConfig::default()
 );
 c_destructor!(ri_protocol_config_free, CRiProtocolConfig);
+
+// RiProtocolConfig setters
+#[no_mangle]
+pub extern "C" fn ri_protocol_config_set_protocol_type(config: *mut CRiProtocolConfig, protocol_type: std::ffi::c_int) -> std::ffi::c_int {
+    if config.is_null() {
+        return -1;
+    }
+    unsafe {
+        let pt = match protocol_type {
+            0 => RiProtocolType::Global,
+            1 => RiProtocolType::Private,
+            _ => RiProtocolType::Global,
+        };
+        (*config).inner.default_protocol = pt;
+    }
+    0
+}
+
+#[no_mangle]
+pub extern "C" fn ri_protocol_config_set_security_enabled(config: *mut CRiProtocolConfig, enabled: bool) -> std::ffi::c_int {
+    if config.is_null() {
+        return -1;
+    }
+    unsafe {
+        (*config).inner.enable_security = enabled;
+    }
+    0
+}
+
+#[no_mangle]
+pub extern "C" fn ri_protocol_config_set_security_level(config: *mut CRiProtocolConfig, level: std::ffi::c_int) -> std::ffi::c_int {
+    if config.is_null() {
+        return -1;
+    }
+    unsafe {
+        let sl = match level {
+            0 => RiSecurityLevel::None,
+            1 => RiSecurityLevel::Standard,
+            2 => RiSecurityLevel::High,
+            3 => RiSecurityLevel::Military,
+            _ => RiSecurityLevel::Standard,
+        };
+        (*config).inner.security_level = sl;
+    }
+    0
+}
+
+// RiProtocolManager C bindings
+#[no_mangle]
+pub extern "C" fn ri_protocol_manager_new() -> *mut CRiProtocolManager {
+    Box::into_raw(Box::new(CRiProtocolManager::new(RiProtocolManager::new())))
+}
+c_destructor!(ri_protocol_manager_free, CRiProtocolManager);
+
+#[no_mangle]
+pub extern "C" fn ri_protocol_manager_send(
+    manager: *mut CRiProtocolManager,
+    target: *const std::ffi::c_char,
+    data: *const std::ffi::c_char,
+    data_len: usize,
+    out_response: *mut *mut std::ffi::c_char,
+    out_len: *mut usize,
+) -> std::ffi::c_int {
+    if manager.is_null() || target.is_null() || data.is_null() || out_response.is_null() || out_len.is_null() {
+        return -1;
+    }
+    unsafe {
+        let target_str = match std::ffi::CStr::from_ptr(target).to_str() {
+            Ok(s) => s,
+            Err(_) => return -2,
+        };
+        let data_slice = std::slice::from_raw_parts(data as *const u8, data_len);
+        let response = (*manager).inner.send_message(target_str, data_slice);
+        *out_len = response.len();
+        match std::ffi::CString::new(response) {
+            Ok(c_str) => {
+                *out_response = c_str.into_raw();
+                0
+            }
+            Err(_) => -3,
+        }
+    }
+}
+
+#[no_mangle]
+pub extern "C" fn ri_protocol_manager_get_stats(
+    manager: *mut CRiProtocolManager,
+    out_messages_sent: *mut u64,
+    out_messages_received: *mut u64,
+    out_bytes_sent: *mut u64,
+    out_bytes_received: *mut u64,
+    out_errors: *mut u64,
+) -> std::ffi::c_int {
+    if manager.is_null() {
+        return -1;
+    }
+    let rt = match tokio::runtime::Runtime::new() {
+        Ok(rt) => rt,
+        Err(_) => return -2,
+    };
+    unsafe {
+        let stats = rt.block_on(async { (*manager).inner.stats.read().await.clone() });
+        if !out_messages_sent.is_null() {
+            *out_messages_sent = stats.messages_sent;
+        }
+        if !out_messages_received.is_null() {
+            *out_messages_received = stats.messages_received;
+        }
+        if !out_bytes_sent.is_null() {
+            *out_bytes_sent = stats.bytes_sent;
+        }
+        if !out_bytes_received.is_null() {
+            *out_bytes_received = stats.bytes_received;
+        }
+        if !out_errors.is_null() {
+            *out_errors = stats.errors;
+        }
+        0
+    }
+}
+
+#[no_mangle]
+pub extern "C" fn ri_protocol_manager_get_connection_count(manager: *mut CRiProtocolManager) -> usize {
+    if manager.is_null() {
+        return 0;
+    }
+    let rt = match tokio::runtime::Runtime::new() {
+        Ok(rt) => rt,
+        Err(_) => return 0,
+    };
+    unsafe {
+        rt.block_on(async { (*manager).inner.connections.read().await.len() })
+    }
+}
+
+// RiFrame C bindings
+#[no_mangle]
+pub extern "C" fn ri_frame_new() -> *mut CRiFrame {
+    Box::into_raw(Box::new(CRiFrame::new(RiFrame::default())))
+}
+c_destructor!(ri_frame_free, CRiFrame);
+
+#[no_mangle]
+pub extern "C" fn ri_frame_get_payload_size(frame: *mut CRiFrame) -> usize {
+    if frame.is_null() {
+        return 0;
+    }
+    unsafe { (*frame).inner.payload.len() }
+}
+
+#[no_mangle]
+pub extern "C" fn ri_frame_get_payload(frame: *mut CRiFrame, out_data: *mut *mut std::ffi::c_char, out_len: *mut usize) -> std::ffi::c_int {
+    if frame.is_null() || out_data.is_null() || out_len.is_null() {
+        return -1;
+    }
+    unsafe {
+        let payload = (*frame).inner.payload.clone();
+        *out_len = payload.len();
+        let ptr = Box::into_raw(payload.into_boxed_slice()) as *mut std::ffi::c_char;
+        *out_data = ptr;
+        0
+    }
+}
+
+#[no_mangle]
+pub extern "C" fn ri_frame_get_sequence(frame: *mut CRiFrame) -> u64 {
+    if frame.is_null() {
+        return 0;
+    }
+    unsafe { (*frame).inner.header.sequence_number }
+}
+
+#[no_mangle]
+pub extern "C" fn ri_frame_get_timestamp(frame: *mut CRiFrame) -> u64 {
+    if frame.is_null() {
+        return 0;
+    }
+    unsafe { (*frame).inner.header.timestamp }
+}
+
+#[no_mangle]
+pub extern "C" fn ri_frame_get_type(frame: *mut CRiFrame) -> std::ffi::c_int {
+    if frame.is_null() {
+        return -1;
+    }
+    unsafe {
+        match (*frame).inner.header.frame_type {
+            crate::protocol::RiFrameType::Data => 0,
+            crate::protocol::RiFrameType::Control => 1,
+            crate::protocol::RiFrameType::Heartbeat => 2,
+            crate::protocol::RiFrameType::Ack => 3,
+            crate::protocol::RiFrameType::Error => 4,
+        }
+    }
+}
+
+c_string_getter!(
+    ri_frame_get_source_id,
+    CRiFrame,
+    |inner: &RiFrame| inner.source_id.clone()
+);
+
+c_string_getter!(
+    ri_frame_get_target_id,
+    CRiFrame,
+    |inner: &RiFrame| inner.target_id.clone()
+);
+
+// RiConnectionInfo C bindings
+c_destructor!(ri_connection_info_free, CRiConnectionInfo);
+
+c_string_getter!(
+    ri_connection_info_get_id,
+    CRiConnectionInfo,
+    |inner: &RiConnectionInfo| inner.connection_id.clone()
+);
+
+c_string_getter!(
+    ri_connection_info_get_device_id,
+    CRiConnectionInfo,
+    |inner: &RiConnectionInfo| inner.device_id.clone()
+);
+
+c_string_getter!(
+    ri_connection_info_get_address,
+    CRiConnectionInfo,
+    |inner: &RiConnectionInfo| inner.address.clone()
+);
+
+#[no_mangle]
+pub extern "C" fn ri_connection_info_get_state(info: *mut CRiConnectionInfo) -> std::ffi::c_int {
+    if info.is_null() {
+        return -1;
+    }
+    unsafe {
+        match (*info).inner.state {
+            RiConnectionState::Disconnected => 0,
+            RiConnectionState::Connecting => 1,
+            RiConnectionState::Connected => 2,
+            RiConnectionState::Disconnecting => 3,
+        }
+    }
+}
+
+#[no_mangle]
+pub extern "C" fn ri_connection_info_get_security_level(info: *mut CRiConnectionInfo) -> std::ffi::c_int {
+    if info.is_null() {
+        return -1;
+    }
+    unsafe {
+        match (*info).inner.security_level {
+            RiSecurityLevel::None => 0,
+            RiSecurityLevel::Standard => 1,
+            RiSecurityLevel::High => 2,
+            RiSecurityLevel::Military => 3,
+        }
+    }
+}
+
+#[no_mangle]
+pub extern "C" fn ri_connection_info_get_protocol_type(info: *mut CRiConnectionInfo) -> std::ffi::c_int {
+    if info.is_null() {
+        return -1;
+    }
+    unsafe {
+        match (*info).inner.protocol_type {
+            RiProtocolType::Global => 0,
+            RiProtocolType::Private => 1,
+        }
+    }
+}
+
+// RiProtocolStats C bindings
+c_destructor!(ri_protocol_stats_free, CRiProtocolStats);
+
+#[no_mangle]
+pub extern "C" fn ri_protocol_stats_get_messages_sent(stats: *mut CRiProtocolStats) -> u64 {
+    if stats.is_null() {
+        return 0;
+    }
+    unsafe { (*stats).inner.messages_sent }
+}
+
+#[no_mangle]
+pub extern "C" fn ri_protocol_stats_get_messages_received(stats: *mut CRiProtocolStats) -> u64 {
+    if stats.is_null() {
+        return 0;
+    }
+    unsafe { (*stats).inner.messages_received }
+}
+
+#[no_mangle]
+pub extern "C" fn ri_protocol_stats_get_bytes_sent(stats: *mut CRiProtocolStats) -> u64 {
+    if stats.is_null() {
+        return 0;
+    }
+    unsafe { (*stats).inner.bytes_sent }
+}
+
+#[no_mangle]
+pub extern "C" fn ri_protocol_stats_get_bytes_received(stats: *mut CRiProtocolStats) -> u64 {
+    if stats.is_null() {
+        return 0;
+    }
+    unsafe { (*stats).inner.bytes_received }
+}
+
+#[no_mangle]
+pub extern "C" fn ri_protocol_stats_get_errors(stats: *mut CRiProtocolStats) -> u64 {
+    if stats.is_null() {
+        return 0;
+    }
+    unsafe { (*stats).inner.errors }
+}
+
+#[no_mangle]
+pub extern "C" fn ri_protocol_stats_get_avg_latency_ms(stats: *mut CRiProtocolStats) -> f64 {
+    if stats.is_null() {
+        return 0.0;
+    }
+    unsafe { (*stats).inner.avg_latency_ms }
+}

@@ -552,6 +552,11 @@ parking_lot = []
 # Python binding support via PyO3
 pyo3 = ["dep:pyo3"]
 
+# Advanced protocol features (future/experimental)
+# Includes: adapter, crypto, guomi, hsm, private, security, global_state, integration
+# These modules are not yet fully stabilized and may change in future versions
+protocol-advanced = []
+
 # C/C++ API support via safer-ffi
 c = ["dep:safer-ffi"]
 

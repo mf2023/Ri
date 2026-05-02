@@ -86,6 +86,26 @@ pub use post_quantum::{
     RiPostQuantumAlgorithm, KEMResult,
 };
 
+/// Advanced protocol features (future/experimental)
+/// These modules are not yet fully stabilized and may change in future versions.
+/// Enable with `protocol-advanced` feature.
+#[cfg(feature = "protocol-advanced")]
+pub mod adapter;
+#[cfg(feature = "protocol-advanced")]
+pub mod crypto;
+#[cfg(feature = "protocol-advanced")]
+pub mod global_state;
+#[cfg(feature = "protocol-advanced")]
+pub mod guomi;
+#[cfg(feature = "protocol-advanced")]
+pub mod hsm;
+#[cfg(feature = "protocol-advanced")]
+pub mod private;
+#[cfg(feature = "protocol-advanced")]
+pub mod security;
+#[cfg(feature = "protocol-advanced")]
+pub mod integration;
+
 /// Protocol type enumeration
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, std::hash::Hash)]
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
@@ -964,7 +984,6 @@ impl RiBaseProtocol {
 }
 
 #[derive(Debug, Clone)]
-#[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 pub struct RiGlobalProtocol {
     base: RiBaseProtocol,
 }
@@ -1037,7 +1056,6 @@ impl RiProtocol for RiGlobalProtocol {
 }
 
 #[derive(Debug, Clone)]
-#[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 pub struct RiPrivateProtocol {
     base: RiBaseProtocol,
 }

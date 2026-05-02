@@ -20,9 +20,14 @@
 //! JNI bindings for Ri hooks classes.
 
 use jni::JNIEnv;
-use jni::objects::JClass;
-use jni::sys::jlong;
-use crate::hooks::RiHookBus;
+use jni::objects::{JClass, JString};
+use jni::sys::{jlong, jint, jstring};
+use crate::hooks::{RiHookBus, RiHookEvent, RiHookKind, RiModulePhase};
+use crate::java::exception::check_not_null;
+
+// =============================================================================
+// RiHookBus JNI Bindings
+// =============================================================================
 
 #[no_mangle]
 pub extern "system" fn Java_com_dunimd_ri_hooks_RiHookBus_new0(
@@ -42,6 +47,244 @@ pub extern "system" fn Java_com_dunimd_ri_hooks_RiHookBus_free0(
     if ptr != 0 {
         unsafe {
             let _ = Box::from_raw(ptr as *mut RiHookBus);
+        }
+    }
+}
+
+#[no_mangle]
+pub extern "system" fn Java_com_dunimd_ri_hooks_RiHookBus_emit0(
+    mut env: JNIEnv,
+    _class: JClass,
+    ptr: jlong,
+    kind_ordinal: jint,
+    module: JString,
+    phase_ordinal: jint,
+) {
+    if !check_not_null(&mut env, ptr, "RiHookBus") {
+        return;
+    }
+    
+    let bus = unsafe { &*(ptr as *const RiHookBus) };
+    
+    let kind = match kind_ordinal {
+        0 => RiHookKind::Startup,
+        1 => RiHookKind::Shutdown,
+        2 => RiHookKind::BeforeModulesInit,
+        3 => RiHookKind::AfterModulesInit,
+        4 => RiHookKind::BeforeModulesStart,
+        5 => RiHookKind::AfterModulesStart,
+        6 => RiHookKind::BeforeModulesShutdown,
+        7 => RiHookKind::AfterModulesShutdown,
+        8 => RiHookKind::ConfigReload,
+        _ => RiHookKind::Startup,
+    };
+    
+    let module_str: Option<&str> = if module.is_null() {
+        None
+    } else {
+        match env.get_string(&module) {
+            Ok(s) => Some(&s.into()),
+            Err(_) => None,
+        }
+    };
+    
+    let phase = if phase_ordinal < 0 {
+        None
+    } else {
+        Some(match phase_ordinal {
+            0 => RiModulePhase::Init,
+            1 => RiModulePhase::BeforeStart,
+            2 => RiModulePhase::Start,
+            3 => RiModulePhase::AfterStart,
+            4 => RiModulePhase::BeforeShutdown,
+            5 => RiModulePhase::Shutdown,
+            6 => RiModulePhase::AfterShutdown,
+            7 => RiModulePhase::AsyncInit,
+            8 => RiModulePhase::AsyncBeforeStart,
+            9 => RiModulePhase::AsyncStart,
+            10 => RiModulePhase::AsyncAfterStart,
+            11 => RiModulePhase::AsyncBeforeShutdown,
+            12 => RiModulePhase::AsyncShutdown,
+            13 => RiModulePhase::AsyncAfterShutdown,
+            _ => RiModulePhase::Init,
+        })
+    };
+    
+    let _ = bus.emit_simple(&kind, module_str, phase);
+}
+
+#[no_mangle]
+pub extern "system" fn Java_com_dunimd_ri_hooks_RiHookBus_hasHandlers0(
+    mut env: JNIEnv,
+    _class: JClass,
+    ptr: jlong,
+    kind_ordinal: jint,
+) -> jni::sys::jboolean {
+    if !check_not_null(&mut env, ptr, "RiHookBus") {
+        return 0;
+    }
+    
+    let bus = unsafe { &*(ptr as *const RiHookBus) };
+    
+    let kind = match kind_ordinal {
+        0 => RiHookKind::Startup,
+        1 => RiHookKind::Shutdown,
+        2 => RiHookKind::BeforeModulesInit,
+        3 => RiHookKind::AfterModulesInit,
+        4 => RiHookKind::BeforeModulesStart,
+        5 => RiHookKind::AfterModulesStart,
+        6 => RiHookKind::BeforeModulesShutdown,
+        7 => RiHookKind::AfterModulesShutdown,
+        8 => RiHookKind::ConfigReload,
+        _ => RiHookKind::Startup,
+    };
+    
+    if bus.has_handlers(&kind) { 1 } else { 0 }
+}
+
+// =============================================================================
+// RiHookEvent JNI Bindings
+// =============================================================================
+
+#[no_mangle]
+pub extern "system" fn Java_com_dunimd_ri_hooks_RiHookEvent_new0(
+    mut env: JNIEnv,
+    _class: JClass,
+    kind_ordinal: jint,
+    module: JString,
+    phase_ordinal: jint,
+) -> jlong {
+    let kind = match kind_ordinal {
+        0 => RiHookKind::Startup,
+        1 => RiHookKind::Shutdown,
+        2 => RiHookKind::BeforeModulesInit,
+        3 => RiHookKind::AfterModulesInit,
+        4 => RiHookKind::BeforeModulesStart,
+        5 => RiHookKind::AfterModulesStart,
+        6 => RiHookKind::BeforeModulesShutdown,
+        7 => RiHookKind::AfterModulesShutdown,
+        8 => RiHookKind::ConfigReload,
+        _ => RiHookKind::Startup,
+    };
+    
+    let module_str: Option<String> = if module.is_null() {
+        None
+    } else {
+        Some(env.get_string(&module)
+            .expect("Failed to get module")
+            .into())
+    };
+    
+    let phase = if phase_ordinal < 0 {
+        None
+    } else {
+        Some(match phase_ordinal {
+            0 => RiModulePhase::Init,
+            1 => RiModulePhase::BeforeStart,
+            2 => RiModulePhase::Start,
+            3 => RiModulePhase::AfterStart,
+            4 => RiModulePhase::BeforeShutdown,
+            5 => RiModulePhase::Shutdown,
+            6 => RiModulePhase::AfterShutdown,
+            7 => RiModulePhase::AsyncInit,
+            8 => RiModulePhase::AsyncBeforeStart,
+            9 => RiModulePhase::AsyncStart,
+            10 => RiModulePhase::AsyncAfterStart,
+            11 => RiModulePhase::AsyncBeforeShutdown,
+            12 => RiModulePhase::AsyncShutdown,
+            13 => RiModulePhase::AsyncAfterShutdown,
+            _ => RiModulePhase::Init,
+        })
+    };
+    
+    let event = Box::new(RiHookEvent::new(kind, module_str, phase));
+    Box::into_raw(event) as jlong
+}
+
+#[no_mangle]
+pub extern "system" fn Java_com_dunimd_ri_hooks_RiHookEvent_getKind0(
+    mut env: JNIEnv,
+    _class: JClass,
+    ptr: jlong,
+) -> jint {
+    if !check_not_null(&mut env, ptr, "RiHookEvent") {
+        return 0;
+    }
+    
+    let event = unsafe { &*(ptr as *const RiHookEvent) };
+    match event.kind {
+        RiHookKind::Startup => 0,
+        RiHookKind::Shutdown => 1,
+        RiHookKind::BeforeModulesInit => 2,
+        RiHookKind::AfterModulesInit => 3,
+        RiHookKind::BeforeModulesStart => 4,
+        RiHookKind::AfterModulesStart => 5,
+        RiHookKind::BeforeModulesShutdown => 6,
+        RiHookKind::AfterModulesShutdown => 7,
+        RiHookKind::ConfigReload => 8,
+    }
+}
+
+#[no_mangle]
+pub extern "system" fn Java_com_dunimd_ri_hooks_RiHookEvent_getModule0(
+    mut env: JNIEnv,
+    _class: JClass,
+    ptr: jlong,
+) -> jstring {
+    if !check_not_null(&mut env, ptr, "RiHookEvent") {
+        return std::ptr::null_mut();
+    }
+    
+    let event = unsafe { &*(ptr as *const RiHookEvent) };
+    match &event.module {
+        Some(module) => env.new_string(module)
+            .expect("Failed to create module string")
+            .into_raw(),
+        None => std::ptr::null_mut(),
+    }
+}
+
+#[no_mangle]
+pub extern "system" fn Java_com_dunimd_ri_hooks_RiHookEvent_getPhase0(
+    mut env: JNIEnv,
+    _class: JClass,
+    ptr: jlong,
+) -> jint {
+    if !check_not_null(&mut env, ptr, "RiHookEvent") {
+        return -1;
+    }
+    
+    let event = unsafe { &*(ptr as *const RiHookEvent) };
+    match &event.phase {
+        Some(phase) => match phase {
+            RiModulePhase::Init => 0,
+            RiModulePhase::BeforeStart => 1,
+            RiModulePhase::Start => 2,
+            RiModulePhase::AfterStart => 3,
+            RiModulePhase::BeforeShutdown => 4,
+            RiModulePhase::Shutdown => 5,
+            RiModulePhase::AfterShutdown => 6,
+            RiModulePhase::AsyncInit => 7,
+            RiModulePhase::AsyncBeforeStart => 8,
+            RiModulePhase::AsyncStart => 9,
+            RiModulePhase::AsyncAfterStart => 10,
+            RiModulePhase::AsyncBeforeShutdown => 11,
+            RiModulePhase::AsyncShutdown => 12,
+            RiModulePhase::AsyncAfterShutdown => 13,
+        },
+        None => -1,
+    }
+}
+
+#[no_mangle]
+pub extern "system" fn Java_com_dunimd_ri_hooks_RiHookEvent_free0(
+    _env: JNIEnv,
+    _class: JClass,
+    ptr: jlong,
+) {
+    if ptr != 0 {
+        unsafe {
+            let _ = Box::from_raw(ptr as *mut RiHookEvent);
         }
     }
 }

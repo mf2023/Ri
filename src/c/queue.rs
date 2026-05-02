@@ -322,14 +322,14 @@
 //! - `queue-kafka`: Enable Apache Kafka backend support
 //! - `queue-sqs`: Enable AWS SQS backend support
 
-use crate::queue::{RiQueueConfig, RiQueueManager, RiQueueMessage};
-
+use crate::queue::{RiQueueConfig, RiQueueManager, RiQueueMessage, RiQueueStats};
+use std::ffi::{c_char, c_int, c_void};
+use std::sync::Arc;
 
 c_wrapper!(CRiQueueConfig, RiQueueConfig);
 c_wrapper!(CRiQueueManager, RiQueueManager);
 c_wrapper!(CRiQueueMessage, RiQueueMessage);
 
-// RiQueueConfig constructors and destructors
 c_constructor!(
     ri_queue_config_new,
     CRiQueueConfig,
@@ -337,3 +337,414 @@ c_constructor!(
     RiQueueConfig::default()
 );
 c_destructor!(ri_queue_config_free, CRiQueueConfig);
+
+#[repr(C)]
+pub struct CRiQueueMessage {
+    pub id: *mut c_char,
+    pub payload: *mut u8,
+    pub payload_len: usize,
+    pub timestamp: u64,
+    pub retry_count: u32,
+    pub max_retries: u32,
+}
+
+#[no_mangle]
+pub extern "C" fn ri_queue_message_new(payload: *const c_char, payload_len: usize) -> *mut CRiQueueMessage {
+    if payload.is_null() || payload_len == 0 {
+        return std::ptr::null_mut();
+    }
+
+    unsafe {
+        let payload_slice = std::slice::from_raw_parts(payload as *const u8, payload_len);
+        let message = RiQueueMessage::new(payload_slice.to_vec());
+        
+        let id = match std::ffi::CString::new(message.id.clone()) {
+            Ok(s) => s.into_raw(),
+            Err(_) => return std::ptr::null_mut(),
+        };
+
+        let mut payload_vec = message.payload.clone();
+        let payload_ptr = payload_vec.as_mut_ptr();
+        std::mem::forget(payload_vec);
+
+        Box::into_raw(Box::new(CRiQueueMessage {
+            id,
+            payload: payload_ptr,
+            payload_len: message.payload.len(),
+            timestamp: 0,
+            retry_count: message.retry_count,
+            max_retries: message.max_retries,
+        }))
+    }
+}
+
+#[no_mangle]
+pub extern "C" fn ri_queue_message_free(msg: *mut CRiQueueMessage) {
+    if msg.is_null() {
+        return;
+    }
+
+    unsafe {
+        let msg = Box::from_raw(msg);
+        if !msg.id.is_null() {
+            let _ = std::ffi::CString::from_raw(msg.id);
+        }
+        if !msg.payload.is_null() && msg.payload_len > 0 {
+            let _ = Vec::from_raw_parts(msg.payload, msg.payload_len, msg.payload_len);
+        }
+    }
+}
+
+#[no_mangle]
+pub extern "C" fn ri_queue_message_get_id(msg: *const CRiQueueMessage) -> *const c_char {
+    if msg.is_null() {
+        return std::ptr::null();
+    }
+    unsafe { (*msg).id }
+}
+
+#[no_mangle]
+pub extern "C" fn ri_queue_message_get_payload(msg: *const CRiQueueMessage, out_len: *mut usize) -> *const u8 {
+    if msg.is_null() || out_len.is_null() {
+        return std::ptr::null();
+    }
+    unsafe {
+        *out_len = (*msg).payload_len;
+        (*msg).payload
+    }
+}
+
+#[no_mangle]
+pub extern "C" fn ri_queue_manager_new() -> *mut CRiQueueManager {
+    let manager = RiQueueManager::default();
+    Box::into_raw(Box::new(CRiQueueManager::new(manager)))
+}
+
+#[no_mangle]
+pub extern "C" fn ri_queue_manager_free(manager: *mut CRiQueueManager) {
+    if !manager.is_null() {
+        unsafe {
+            let _ = Box::from_raw(manager);
+        }
+    }
+}
+
+#[no_mangle]
+pub extern "C" fn ri_queue_manager_publish(
+    manager: *mut CRiQueueManager,
+    queue_name: *const c_char,
+    payload: *const c_char,
+    payload_len: usize,
+) -> c_int {
+    if manager.is_null() || queue_name.is_null() || payload.is_null() {
+        return -1;
+    }
+
+    unsafe {
+        let queue_str = match std::ffi::CStr::from_ptr(queue_name).to_str() {
+            Ok(s) => s,
+            Err(_) => return -2,
+        };
+
+        let payload_slice = std::slice::from_raw_parts(payload as *const u8, payload_len);
+        let message = RiQueueMessage::new(payload_slice.to_vec());
+
+        let rt = match tokio::runtime::Runtime::new() {
+            Ok(r) => r,
+            Err(_) => return -3,
+        };
+
+        let result: crate::core::RiResult<Arc<dyn crate::queue::RiQueue>> = rt.block_on(async {
+            (*manager).inner.create_queue(queue_str).await
+        });
+
+        match result {
+            Ok(queue) => {
+                let producer_result: crate::core::RiResult<Box<dyn crate::queue::RiQueueProducer>> = rt.block_on(async {
+                    queue.create_producer().await
+                });
+
+                match producer_result {
+                    Ok(producer) => {
+                        let send_result: crate::core::RiResult<()> = rt.block_on(async {
+                            producer.send(message).await
+                        });
+                        match send_result {
+                            Ok(()) => 0,
+                            Err(_) => -6,
+                        }
+                    }
+                    Err(_) => -5,
+                }
+            }
+            Err(_) => -4,
+        }
+    }
+}
+
+#[no_mangle]
+pub extern "C" fn ri_queue_manager_consume(
+    manager: *mut CRiQueueManager,
+    queue_name: *const c_char,
+    out_msg: *mut *mut CRiQueueMessage,
+    timeout_ms: u64,
+) -> c_int {
+    if manager.is_null() || queue_name.is_null() || out_msg.is_null() {
+        return -1;
+    }
+
+    unsafe {
+        let queue_str = match std::ffi::CStr::from_ptr(queue_name).to_str() {
+            Ok(s) => s,
+            Err(_) => return -2,
+        };
+
+        let rt = match tokio::runtime::Runtime::new() {
+            Ok(r) => r,
+            Err(_) => return -3,
+        };
+
+        let queue_result: Option<Arc<dyn crate::queue::RiQueue>> = rt.block_on(async {
+            (*manager).inner.get_queue(queue_str).await
+        });
+
+        match queue_result {
+            Some(queue) => {
+                let consumer_result: crate::core::RiResult<Box<dyn crate::queue::RiQueueConsumer>> = rt.block_on(async {
+                    queue.create_consumer("default_consumer").await
+                });
+
+                match consumer_result {
+                    Ok(consumer) => {
+                        let receive_result: crate::core::RiResult<Option<RiQueueMessage>> = rt.block_on(async {
+                            consumer.receive().await
+                        });
+
+                        match receive_result {
+                            Ok(Some(msg)) => {
+                                let id = match std::ffi::CString::new(msg.id.clone()) {
+                                    Ok(s) => s.into_raw(),
+                                    Err(_) => return -7,
+                                };
+
+                                let mut payload_vec = msg.payload.clone();
+                                let payload_ptr = payload_vec.as_mut_ptr();
+                                std::mem::forget(payload_vec);
+
+                                *out_msg = Box::into_raw(Box::new(CRiQueueMessage {
+                                    id,
+                                    payload: payload_ptr,
+                                    payload_len: msg.payload.len(),
+                                    timestamp: 0,
+                                    retry_count: msg.retry_count,
+                                    max_retries: msg.max_retries,
+                                }));
+                                0
+                            }
+                            Ok(None) => 1,
+                            Err(_) => -6,
+                        }
+                    }
+                    Err(_) => -5,
+                }
+            }
+            None => -4,
+        }
+    }
+}
+
+#[repr(C)]
+pub struct CRiQueueStats {
+    pub queue_name: *mut c_char,
+    pub message_count: u64,
+    pub consumer_count: u32,
+    pub producer_count: u32,
+    pub processed_messages: u64,
+    pub failed_messages: u64,
+    pub avg_processing_time_ms: f64,
+    pub total_bytes_sent: u64,
+    pub total_bytes_received: u64,
+    pub last_message_time: u64,
+}
+
+#[no_mangle]
+pub extern "C" fn ri_queue_manager_stats(
+    manager: *mut CRiQueueManager,
+    queue_name: *const c_char,
+    out_stats: *mut CRiQueueStats,
+) -> c_int {
+    if manager.is_null() || queue_name.is_null() || out_stats.is_null() {
+        return -1;
+    }
+
+    unsafe {
+        let queue_str = match std::ffi::CStr::from_ptr(queue_name).to_str() {
+            Ok(s) => s,
+            Err(_) => return -2,
+        };
+
+        let rt = match tokio::runtime::Runtime::new() {
+            Ok(r) => r,
+            Err(_) => return -3,
+        };
+
+        let queue_result: Option<Arc<dyn crate::queue::RiQueue>> = rt.block_on(async {
+            (*manager).inner.get_queue(queue_str).await
+        });
+
+        match queue_result {
+            Some(queue) => {
+                let stats_result: crate::core::RiResult<RiQueueStats> = rt.block_on(async {
+                    queue.get_stats().await
+                });
+
+                match stats_result {
+                    Ok(stats) => {
+                        let queue_name = match std::ffi::CString::new(stats.queue_name.clone()) {
+                            Ok(s) => s.into_raw(),
+                            Err(_) => return -5,
+                        };
+
+                        *out_stats = CRiQueueStats {
+                            queue_name,
+                            message_count: stats.message_count,
+                            consumer_count: stats.consumer_count,
+                            producer_count: stats.producer_count,
+                            processed_messages: stats.processed_messages,
+                            failed_messages: stats.failed_messages,
+                            avg_processing_time_ms: stats.avg_processing_time_ms,
+                            total_bytes_sent: stats.total_bytes_sent,
+                            total_bytes_received: stats.total_bytes_received,
+                            last_message_time: stats.last_message_time,
+                        };
+                        0
+                    }
+                    Err(_) => -4,
+                }
+            }
+            None => -4,
+        }
+    }
+}
+
+#[no_mangle]
+pub extern "C" fn ri_queue_stats_free(stats: *mut CRiQueueStats) {
+    if stats.is_null() {
+        return;
+    }
+
+    unsafe {
+        let stats = Box::from_raw(stats);
+        if !stats.queue_name.is_null() {
+            let _ = std::ffi::CString::from_raw(stats.queue_name);
+        }
+    }
+}
+
+#[no_mangle]
+pub extern "C" fn ri_queue_manager_ack(
+    manager: *mut CRiQueueManager,
+    queue_name: *const c_char,
+    message_id: *const c_char,
+) -> c_int {
+    if manager.is_null() || queue_name.is_null() || message_id.is_null() {
+        return -1;
+    }
+
+    unsafe {
+        let queue_str = match std::ffi::CStr::from_ptr(queue_name).to_str() {
+            Ok(s) => s,
+            Err(_) => return -2,
+        };
+
+        let msg_id = match std::ffi::CStr::from_ptr(message_id).to_str() {
+            Ok(s) => s,
+            Err(_) => return -3,
+        };
+
+        let rt = match tokio::runtime::Runtime::new() {
+            Ok(r) => r,
+            Err(_) => return -4,
+        };
+
+        let queue_result: Option<Arc<dyn crate::queue::RiQueue>> = rt.block_on(async {
+            (*manager).inner.get_queue(queue_str).await
+        });
+
+        match queue_result {
+            Some(queue) => {
+                let consumer_result: crate::core::RiResult<Box<dyn crate::queue::RiQueueConsumer>> = rt.block_on(async {
+                    queue.create_consumer("default_consumer").await
+                });
+
+                match consumer_result {
+                    Ok(consumer) => {
+                        let ack_result: crate::core::RiResult<()> = rt.block_on(async {
+                            consumer.ack(msg_id).await
+                        });
+                        match ack_result {
+                            Ok(()) => 0,
+                            Err(_) => -7,
+                        }
+                    }
+                    Err(_) => -6,
+                }
+            }
+            None => -5,
+        }
+    }
+}
+
+#[no_mangle]
+pub extern "C" fn ri_queue_manager_nack(
+    manager: *mut CRiQueueManager,
+    queue_name: *const c_char,
+    message_id: *const c_char,
+) -> c_int {
+    if manager.is_null() || queue_name.is_null() || message_id.is_null() {
+        return -1;
+    }
+
+    unsafe {
+        let queue_str = match std::ffi::CStr::from_ptr(queue_name).to_str() {
+            Ok(s) => s,
+            Err(_) => return -2,
+        };
+
+        let msg_id = match std::ffi::CStr::from_ptr(message_id).to_str() {
+            Ok(s) => s,
+            Err(_) => return -3,
+        };
+
+        let rt = match tokio::runtime::Runtime::new() {
+            Ok(r) => r,
+            Err(_) => return -4,
+        };
+
+        let queue_result: Option<Arc<dyn crate::queue::RiQueue>> = rt.block_on(async {
+            (*manager).inner.get_queue(queue_str).await
+        });
+
+        match queue_result {
+            Some(queue) => {
+                let consumer_result: crate::core::RiResult<Box<dyn crate::queue::RiQueueConsumer>> = rt.block_on(async {
+                    queue.create_consumer("default_consumer").await
+                });
+
+                match consumer_result {
+                    Ok(consumer) => {
+                        let nack_result: crate::core::RiResult<()> = rt.block_on(async {
+                            consumer.nack(msg_id).await
+                        });
+                        match nack_result {
+                            Ok(()) => 0,
+                            Err(_) => -7,
+                        }
+                    }
+                    Err(_) => -6,
+                }
+            }
+            None => -5,
+        }
+    }
+}

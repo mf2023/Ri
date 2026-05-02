@@ -392,7 +392,7 @@ impl RiSecurityManager {
     /// ## Usage
     ///
     /// This method can be used to generate keys for initial configuration or key rotation.
-    /// Store the generated key securely and set it via theRi_HMAC_KEY` environment variable.
+    /// Store the generated key securely and set it via the `Ri_HMAC_KEY` environment variable.
     ///
     /// # Returns
     ///

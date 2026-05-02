@@ -1,10 +1,5 @@
 <div align="center">
-
-<h1 style="display: flex; flex-direction: column; align-items: center; gap: 12px; margin-bottom: 8px;">
-  <span style="display: flex; align-items: center; gap: 12px;"><img src="assets/svg/ri.svg" width="48" height="48" alt="Ri">Ri</span>
-  <span style="font-size: 0.6em; color: #666; font-weight: normal;">Security Policy</span>
-</h1>
-
+<img src="assets/svg/ri.svg" width="36" height="36">
 </div>
 
 The Ri (Ri) project takes security seriously. This document outlines our security policy, including supported versions, how to report vulnerabilities, and our disclosure process.

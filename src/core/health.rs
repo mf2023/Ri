@@ -476,7 +476,6 @@ impl RiHealthReport {
 }
 
 /// Health checker service that manages and executes health checks.
-#[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 pub struct RiHealthChecker {
     /// Registered health checks
     checks: Vec<Box<dyn HealthCheck>>,

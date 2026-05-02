@@ -143,7 +143,9 @@
 //! The cache module is enabled by default with the "cache" feature flag.
 //! Disable this feature to reduce binary size when caching is not required.
 
-use crate::cache::{RiCacheConfig, RiCacheManager, RiMemoryCache};
+use crate::cache::{RiCacheConfig, RiCacheManager, RiMemoryCache, RiCachePolicy, RiCacheStats};
+use std::ffi::{c_char, c_int, c_void};
+use std::sync::Arc;
 
 c_wrapper!(CRiCacheConfig, RiCacheConfig);
 
@@ -155,54 +157,39 @@ c_constructor!(ri_cache_config_new, CRiCacheConfig, RiCacheConfig, RiCacheConfig
 
 c_destructor!(ri_cache_config_free, CRiCacheConfig);
 
-/// Creates a new RiMemoryCache instance.
-///
-/// Initializes an empty in-memory cache with default configuration. The cache
-/// starts empty and grows as entries are added. Memory usage is managed automatically
-/// through eviction policies.
-///
-/// # Returns
-///
-/// Pointer to newly allocated RiMemoryCache on success, or NULL if memory
-/// allocation fails. The returned pointer must be freed using ri_memory_cache_free().
-///
-/// # Initial State
-///
-/// A newly created memory cache:
-///
-/// - Contains zero entries
-/// - Has no memory usage
-/// - Uses default LRU eviction
-/// - No maximum capacity enforcement until configured
-///
-/// # Usage Pattern
-///
-/// ```c
-/// RiMemoryCache* cache = ri_memory_cache_new();
-/// if (cache == NULL) {
-///     // Handle allocation failure
-///     return ERROR_MEMORY_ALLOCATION;
-/// }
-///
-/// // Configure capacity if needed
-/// ri_memory_cache_set_max_size(cache, 100000);
-///
-/// // Use cache operations
-/// ri_memory_cache_set(cache, "key", "value", 5);
-/// char* value = ri_memory_cache_get(cache, "key", NULL);
-///
-/// // Cleanup
-/// ri_memory_cache_free(cache);
-/// ```
-///
-/// # Performance Considerations
-///
-/// For optimal performance:
-///
-/// - Configure capacity before heavy usage
-/// - Batch similar operations together
-/// - Use appropriate serialization format
-/// - Monitor cache hit rate for tuning
+#[repr(C)]
+pub struct CRiCachePolicy {
+    pub ttl_secs: u64,
+    pub ttl_set: bool,
+    pub refresh_on_access: bool,
+    pub max_size: usize,
+    pub max_size_set: bool,
+}
+
+pub const RI_CACHE_POLICY_LRU: c_int = 0;
+pub const RI_CACHE_POLICY_LFU: c_int = 1;
+pub const RI_CACHE_POLICY_TTL: c_int = 2;
+
+#[no_mangle]
+pub extern "C" fn ri_cache_policy_new() -> CRiCachePolicy {
+    let default = RiCachePolicy::default();
+    CRiCachePolicy {
+        ttl_secs: default.ttl.map(|d| d.as_secs()).unwrap_or(0),
+        ttl_set: default.ttl.is_some(),
+        refresh_on_access: default.refresh_on_access,
+        max_size: default.max_size.unwrap_or(0),
+        max_size_set: default.max_size.is_some(),
+    }
+}
+
+#[no_mangle]
+pub extern "C" fn ri_cache_policy_with_ttl(ttl_secs: u64) -> CRiCachePolicy {
+    let mut policy = CRiCachePolicy::new();
+    policy.ttl_secs = ttl_secs;
+    policy.ttl_set = true;
+    policy
+}
+
 #[no_mangle]
 pub extern "C" fn ri_memory_cache_new() -> *mut CRiMemoryCache {
     let cache = RiMemoryCache::new();
@@ -210,3 +197,228 @@ pub extern "C" fn ri_memory_cache_new() -> *mut CRiMemoryCache {
 }
 
 c_destructor!(ri_memory_cache_free, CRiMemoryCache);
+
+#[no_mangle]
+pub extern "C" fn ri_cache_manager_new() -> *mut CRiCacheManager {
+    let backend: Arc<dyn crate::cache::RiCache + Send + Sync> = Arc::new(RiMemoryCache::new());
+    let manager = RiCacheManager::new(backend);
+    Box::into_raw(Box::new(CRiCacheManager::new(manager)))
+}
+
+#[no_mangle]
+pub extern "C" fn ri_cache_manager_free(manager: *mut CRiCacheManager) {
+    if !manager.is_null() {
+        unsafe {
+            let _ = Box::from_raw(manager);
+        }
+    }
+}
+
+#[no_mangle]
+pub extern "C" fn ri_cache_manager_get(
+    manager: *mut CRiCacheManager,
+    key: *const c_char,
+    out_value: *mut *mut c_char,
+) -> c_int {
+    if manager.is_null() || key.is_null() || out_value.is_null() {
+        return -1;
+    }
+
+    unsafe {
+        let key_str = match std::ffi::CStr::from_ptr(key).to_str() {
+            Ok(s) => s,
+            Err(_) => return -2,
+        };
+
+        let rt = match tokio::runtime::Runtime::new() {
+            Ok(r) => r,
+            Err(_) => return -3,
+        };
+
+        let result: crate::core::RiResult<Option<String>> = rt.block_on(async {
+            (*manager).inner.get(key_str).await
+        });
+
+        match result {
+            Ok(Some(value)) => {
+                match std::ffi::CString::new(value) {
+                    Ok(c_str) => {
+                        *out_value = c_str.into_raw();
+                        0
+                    }
+                    Err(_) => -4,
+                }
+            }
+            Ok(None) => 1,
+            Err(_) => -5,
+        }
+    }
+}
+
+#[no_mangle]
+pub extern "C" fn ri_cache_manager_set(
+    manager: *mut CRiCacheManager,
+    key: *const c_char,
+    value: *const c_char,
+    ttl_secs: u64,
+) -> c_int {
+    if manager.is_null() || key.is_null() || value.is_null() {
+        return -1;
+    }
+
+    unsafe {
+        let key_str = match std::ffi::CStr::from_ptr(key).to_str() {
+            Ok(s) => s,
+            Err(_) => return -2,
+        };
+
+        let value_str = match std::ffi::CStr::from_ptr(value).to_str() {
+            Ok(s) => s,
+            Err(_) => return -3,
+        };
+
+        let ttl = if ttl_secs > 0 { Some(ttl_secs) } else { None };
+
+        let rt = match tokio::runtime::Runtime::new() {
+            Ok(r) => r,
+            Err(_) => return -4,
+        };
+
+        let result: crate::core::RiResult<()> = rt.block_on(async {
+            (*manager).inner.set(key_str, &value_str, ttl).await
+        });
+
+        match result {
+            Ok(()) => 0,
+            Err(_) => -5,
+        }
+    }
+}
+
+#[no_mangle]
+pub extern "C" fn ri_cache_manager_delete(
+    manager: *mut CRiCacheManager,
+    key: *const c_char,
+) -> c_int {
+    if manager.is_null() || key.is_null() {
+        return -1;
+    }
+
+    unsafe {
+        let key_str = match std::ffi::CStr::from_ptr(key).to_str() {
+            Ok(s) => s,
+            Err(_) => return -2,
+        };
+
+        let rt = match tokio::runtime::Runtime::new() {
+            Ok(r) => r,
+            Err(_) => return -3,
+        };
+
+        let result: crate::core::RiResult<bool> = rt.block_on(async {
+            (*manager).inner.delete(key_str).await
+        });
+
+        match result {
+            Ok(deleted) => if deleted { 0 } else { 1 },
+            Err(_) => -4,
+        }
+    }
+}
+
+#[repr(C)]
+pub struct CRiCacheStats {
+    pub hits: u64,
+    pub misses: u64,
+    pub entries: usize,
+    pub memory_usage_bytes: usize,
+    pub avg_hit_rate: f64,
+    pub hit_count: u64,
+    pub miss_count: u64,
+    pub eviction_count: u64,
+}
+
+#[no_mangle]
+pub extern "C" fn ri_cache_manager_stats(
+    manager: *mut CRiCacheManager,
+    out_stats: *mut CRiCacheStats,
+) -> c_int {
+    if manager.is_null() || out_stats.is_null() {
+        return -1;
+    }
+
+    unsafe {
+        let rt = match tokio::runtime::Runtime::new() {
+            Ok(r) => r,
+            Err(_) => return -2,
+        };
+
+        let stats: RiCacheStats = rt.block_on(async {
+            (*manager).inner.stats().await
+        });
+
+        *out_stats = CRiCacheStats {
+            hits: stats.hits,
+            misses: stats.misses,
+            entries: stats.entries,
+            memory_usage_bytes: stats.memory_usage_bytes,
+            avg_hit_rate: stats.avg_hit_rate,
+            hit_count: stats.hit_count,
+            miss_count: stats.miss_count,
+            eviction_count: stats.eviction_count,
+        };
+
+        0
+    }
+}
+
+#[no_mangle]
+pub extern "C" fn ri_cache_manager_exists(
+    manager: *mut CRiCacheManager,
+    key: *const c_char,
+) -> c_int {
+    if manager.is_null() || key.is_null() {
+        return -1;
+    }
+
+    unsafe {
+        let key_str = match std::ffi::CStr::from_ptr(key).to_str() {
+            Ok(s) => s,
+            Err(_) => return -2,
+        };
+
+        let rt = match tokio::runtime::Runtime::new() {
+            Ok(r) => r,
+            Err(_) => return -3,
+        };
+
+        let exists: bool = rt.block_on(async {
+            (*manager).inner.exists(key_str).await
+        });
+
+        if exists { 0 } else { 1 }
+    }
+}
+
+#[no_mangle]
+pub extern "C" fn ri_cache_manager_clear(manager: *mut CRiCacheManager) -> c_int {
+    if manager.is_null() {
+        return -1;
+    }
+
+    unsafe {
+        let rt = match tokio::runtime::Runtime::new() {
+            Ok(r) => r,
+            Err(_) => return -2,
+        };
+
+        let result: crate::core::RiResult<()> = rt.block_on(async {
+            (*manager).inner.clear().await
+        });
+
+        match result {
+            Ok(()) => 0,
+            Err(_) => -3,
+        }
+    }
+}

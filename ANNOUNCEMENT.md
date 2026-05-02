@@ -1,19 +1,28 @@
-# Important Announcement: DMSC Project Renaming to RI
+<div align="center">
 
-**Date**: 2026-04-10  
-**Version**: 0.1.9
+<img src="assets/svg/ri.svg" width="36" height="36">
 
----
 
-## Summary
+English | [简体中文](ANNOUNCEMENT.zh.md)
 
-The DMSC (Dunimd Middleware Service) project will be renamed to **RI** starting from version 0.1.9. This change reflects our vision for a more concise and memorable project identity.
+
+# DMSC Project Renaming to Ri
+
+## Overview
+
+</div>
+
+The DMSC (Dunimd Middleware Service) project will be renamed to **Ri** starting from version 0.1.9. This change reflects our vision for a more concise and memorable project identity.
+
+<div align="center">
 
 ## What's Changing
 
+</div>
+
 ### 1. Project Name
 - **Old Name**: DMSC (Dunimd Middleware Service)
-- **New Name**: RI
+- **New Name**: Ri
 
 ### 2. Package Names
 - **Rust**: `dmsc` → `ri`
@@ -40,15 +49,23 @@ All public types will be renamed:
 - **Old**: `import dmsc`
 - **New**: `import ri`
 
+<div align="center">
+
 ## Timeline
 
-- **0.1.8 (Current)**: Final version with DMSC naming
-- **0.1.9 (Upcoming)**: First version with RI naming, includes CLI tools
+</div>
+
+- **0.1.8 (Current)**: Last version using DMSC naming
+- **0.1.9 (Upcoming)**: First version using Ri naming, includes CLI tools
 - **Future**: Enhanced features and ecosystem
+
+<div align="center">
 
 ## Migration Guide
 
-### For Rust Users
+</div>
+
+### Rust Users
 
 **Before (0.1.8)**:
 ```rust
@@ -60,7 +77,7 @@ async fn main() -> DMSCResult<()> {
         .with_config("config.yaml")?
         .with_logging(DMSCLogConfig::default())
         .build()?;
-    
+
     app.run(|ctx: &DMSCServiceContext| async move {
         ctx.logger().info("service", "DMSC service started")?;
         Ok(())
@@ -86,7 +103,7 @@ async fn main() -> RiResult<()> {
 }
 ```
 
-### For Python Users
+### Python Users
 
 **Before (0.1.8)**:
 ```python
@@ -106,14 +123,22 @@ logger = RiLogger()
 app = RiAppBuilder()
 ```
 
+<div align="center">
+
 ## Why This Change?
 
-1. **Simplicity**: "RI" is shorter and easier to remember
+</div>
+
+1. **Simplicity**: "Ri" is shorter and easier to remember
 2. **Brand Identity**: A unique and distinctive name
 3. **Future Growth**: Better positioning for future development
 4. **Community**: Easier for community adoption and recognition
 
+<div align="center">
+
 ## What's New in 0.1.9
+
+</div>
 
 In addition to the renaming, version 0.1.9 will introduce:
 
@@ -127,29 +152,43 @@ In addition to the renaming, version 0.1.9 will introduce:
 
 3. **Better Developer Experience**: Streamlined workflows and tooling
 
+<div align="center">
+
 ## What You Need to Do
+
+</div>
 
 1. **Update Dependencies**: Change `dmsc` to `ri` in your `Cargo.toml` or `requirements.txt`
 2. **Update Imports**: Replace all `dmsc` imports with `ri`
-3. **Update Type Names**: Replace all `Ri*` types with `RI*`
+3. **Update Type Names**: Keep all `Ri*` types unchanged (no renaming needed)
 4. **Test Your Code**: Ensure everything works with the new names
-5. **Review Documentation**: Check the updated documentation for any API changes
+5. **Review Documentation**: Check the updated documentation for API changes
+
+<div align="center">
 
 ## Backward Compatibility
 
+</div>
+
 Version 0.1.8 will remain available but will not receive future updates. We recommend migrating to 0.1.9+ for the latest features, bug fixes, and security updates.
 
+<div align="center">
+
 ## Support
+
+</div>
 
 If you encounter any issues during migration:
 - Open an issue on [GitHub](https://github.com/mf2023/Ri)
 - Check the migration guide in the documentation
 - Review the updated examples in the repository
 
+<div align="center">
+
 ## Breaking Changes Summary
 
 | Component | 0.1.8 | 0.1.9+ |
-|-----------|-------|--------|
+|----------|--------|--------|
 | Package Name (Rust) | `dmsc` | `ri` |
 | Package Name (Python) | `dmsc` | `ri` |
 | Type Prefix | `Ri*` | `Ri*` |
@@ -157,11 +196,8 @@ If you encounter any issues during migration:
 
 ## Thank You
 
+</div>
+
 Thank you for your continued support of this project. We believe this change will benefit the project's long-term growth and make it more accessible to developers worldwide.
 
-The new name "RI" represents our commitment to providing a **R**eliable and **I**nnovative middleware framework for the community.
-
----
-
-**Dunimd Team**  
-**Date**: 2026-04-10
+The new name "Ri" represents our commitment to providing a **R**eliable and **I**nnovative middleware framework for the community.

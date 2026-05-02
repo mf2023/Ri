@@ -1,49 +1,8 @@
-<!--
-  Copyright © 2025-2026 Wenze Wei. All Rights Reserved.
-
-  This file is part of Ri.
-  The Ri project belongs to the Dunimd Team.
-
-  Licensed under the Apache License, Version 2.0 (the "License");
-  You may not use this file except in compliance with the License.
-  You may obtain a copy of the License at
-
-      http://www.apache.org/licenses/LICENSE-2.0
-
-  Unless required by applicable law or agreed to in writing, software
-  distributed under the License is distributed on an "AS IS" BASIS,
-  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-  See the License for the specific language governing permissions and
-  limitations under the License.
-
-  ============================================================================
-  Ri Logo SVG
-  ============================================================================
-  This is the official logo for Ri (Ri).
-
-  Design Specifications:
-  - Canvas Size: 512x512 pixels
-  - Corner Radius: 115 pixels (22.5% of width)
-  - Primary Color: #1E6CFF (Blue)
-  - Font: Inter, sans-serif
-  - Font Size: 130 pixels
-  - Font Weight: 900 (Black)
-  - Letter Spacing: -2 pixels
-
-  Usage:
-  - This SVG serves as the source file for all Ri branding materials
-  - Export to PNG at various sizes (16x16, 32x32, 48x48, 128x128, etc.)
-  - Do not modify without authorization
-
-  ============================================================================
--->
-<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
-  <rect x="0" y="0" width="512" height="512" rx="115" fill="#1E6CFF"/>
-  <text x="256" y="301"
-        font-family="Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif"
-        font-size="130"
-        font-weight="900"
-        fill="white"
-        text-anchor="middle"
-        letter-spacing="-2">Ri</text>
+<svg width="354" height="355" viewBox="0 0 354 355" fill="none" xmlns="http://www.w3.org/2000/svg">
+<path d="M17.5 35C7.83501 35 0 27.165 0 17.5C0 7.83502 7.83502 0 17.5 0H182.5C192.165 0 200 7.83502 200 17.5C200 27.165 192.165 35 182.5 35H17.5Z" fill="black"/>
+<path d="M17.5 206C7.83501 206 0 198.165 0 188.5C0 178.835 7.83502 171 17.5 171H182.5C192.165 171 200 178.835 200 188.5C200 198.165 192.165 206 182.5 206H17.5Z" fill="black"/>
+<path d="M165 17.5C165 7.83502 172.835 0 182.5 0C192.165 0 200 7.83502 200 17.5V188.5C200 198.165 192.165 206 182.5 206C172.835 206 165 198.165 165 188.5V17.5Z" fill="black"/>
+<path d="M0 189.5C0 179.835 7.83502 172 17.5 172C27.165 172 35 179.835 35 189.5V337.5C35 347.165 27.165 355 17.5 355C7.83502 355 0 347.165 0 337.5V189.5Z" fill="black"/>
+<path d="M223 17.5C223 7.83501 230.835 0 240.5 0C250.165 0 258 7.83502 258 17.5V187.5C258 197.165 250.165 205 240.5 205C230.835 205 223 197.165 223 187.5V17.5Z" fill="black"/>
+<path d="M226.531 200.739C221.267 192.633 223.571 181.795 231.677 176.531C239.782 171.267 250.621 173.571 255.885 181.677L350.652 327.606C355.916 335.712 353.612 346.55 345.506 351.814C337.401 357.078 326.562 354.774 321.299 346.668L226.531 200.739Z" fill="black"/>
 </svg>

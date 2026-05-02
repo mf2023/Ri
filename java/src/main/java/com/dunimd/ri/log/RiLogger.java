@@ -46,6 +46,54 @@ public class RiLogger {
     
     private native void free0(long ptr);
     
+    /**
+     * Log a debug message.
+     * 
+     * @param target the target/module name
+     * @param message the message to log
+     */
+    public void debug(String target, String message) {
+        debug0(nativePtr, target, message);
+    }
+    
+    private native void debug0(long ptr, String target, String message);
+    
+    /**
+     * Log an info message.
+     * 
+     * @param target the target/module name
+     * @param message the message to log
+     */
+    public void info(String target, String message) {
+        info0(nativePtr, target, message);
+    }
+    
+    private native void info0(long ptr, String target, String message);
+    
+    /**
+     * Log a warning message.
+     * 
+     * @param target the target/module name
+     * @param message the message to log
+     */
+    public void warn(String target, String message) {
+        warn0(nativePtr, target, message);
+    }
+    
+    private native void warn0(long ptr, String target, String message);
+    
+    /**
+     * Log an error message.
+     * 
+     * @param target the target/module name
+     * @param message the message to log
+     */
+    public void error(String target, String message) {
+        error0(nativePtr, target, message);
+    }
+    
+    private native void error0(long ptr, String target, String message);
+    
     @Override
     protected void finalize() {
         close();

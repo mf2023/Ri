@@ -105,63 +105,22 @@
 //! Disable this feature to reduce binary size in deployments that do not require
 //! authentication capabilities.
 
-use crate::auth::{RiAuthConfig, RiJWTManager, RiSessionManager, RiPermissionManager, RiOAuthManager};
-use std::ffi::c_char;
+use crate::auth::{
+    RiAuthConfig, RiJWTManager, RiSessionManager, RiPermissionManager, RiOAuthManager,
+    RiJWTClaims, RiSession, RiPermission, RiRole,
+};
+use std::ffi::{c_char, c_int};
+use std::collections::HashSet;
 
 c_wrapper!(CRiAuthConfig, RiAuthConfig);
-
 c_wrapper!(CRiJWTManager, RiJWTManager);
-
 c_wrapper!(CRiSessionManager, RiSessionManager);
-
 c_wrapper!(CRiPermissionManager, RiPermissionManager);
-
 c_wrapper!(CRiOAuthManager, RiOAuthManager);
 
 c_constructor!(ri_auth_config_new, CRiAuthConfig, RiAuthConfig, RiAuthConfig::default());
-
 c_destructor!(ri_auth_config_free, CRiAuthConfig);
 
-/// Creates a new CRiJWTManager instance with specified secret and expiration.
-///
-/// Initializes a JWT manager for token generation and validation. The manager uses
-/// HMAC-SHA256 (HS256) algorithm for signing tokens. The secret key must be kept
-/// confidential and should be at least 256 bits (32 bytes) for adequate security.
-///
-/// # Parameters
-///
-/// - `secret`: Pointer to null-terminated C string containing the JWT signing secret.
-///   Must not be NULL. Empty strings are accepted but provide minimal security.
-/// - `expiry_secs`: Token expiration time in seconds from issuance. Tokens will be
-///   rejected as expired after this duration. Typical values range from 300 (5 minutes)
-///   for sensitive operations to 86400 (24 hours) for long-lived sessions.
-///
-/// # Returns
-///
-/// Pointer to newly allocated CRiJWTManager on success, or NULL if:
-/// - `secret` parameter is NULL
-/// - Memory allocation fails
-/// - Secret contains invalid UTF-8 sequences
-///
-/// # Security Considerations
-///
-/// The secret key should be:
-/// - Generated using cryptographically secure random number generator
-/// - Stored securely (environment variables, secrets manager)
-/// - Rotated periodically in production environments
-/// - Unique per environment (development, staging, production)
-///
-/// # Example
-///
-/// ```c
-/// CRiJWTManager* jwt = ri_jwt_manager_new(
-///     "your-256-bit-secret-key-here",
-///     3600  // 1 hour expiration
-/// );
-/// if (jwt == NULL) {
-///     // Handle initialization failure
-/// }
-/// ```
 #[no_mangle]
 pub extern "C" fn ri_jwt_manager_new(secret: *const c_char, expiry_secs: u64) -> *mut CRiJWTManager {
     if secret.is_null() {
@@ -179,33 +138,129 @@ pub extern "C" fn ri_jwt_manager_new(secret: *const c_char, expiry_secs: u64) ->
 
 c_destructor!(ri_jwt_manager_free, CRiJWTManager);
 
-/// Creates a new CRiSessionManager instance with specified session timeout.
-///
-/// Initializes a session manager for stateful authentication sessions. Sessions track
-/// authenticated user state and provide automatic timeout management for security.
-///
-/// # Parameters
-///
-/// - `timeout_secs`: Session idle timeout in seconds. Sessions are considered expired
-///   if no activity occurs within this duration. The timeout is reset on each
-///   authenticated request. Typical values range from 300 to 1800 seconds.
-///
-/// # Returns
-///
-/// Pointer to newly allocated CRiSessionManager. Never returns NULL as the
-/// implementation uses unwrap for default configuration.
-///
-/// # Session Behavior
-///
-/// Active sessions will be invalidated after:
-/// - `timeout_secs` seconds of inactivity
-/// - Explicit call to session invalidation function
-/// - Server shutdown or process termination
-///
-/// Expired sessions remain in memory until:
-/// - Automatic cleanup interval runs
-/// - Session count exceeds maximum capacity
-/// - Manual cleanup function is called
+#[no_mangle]
+pub extern "C" fn ri_jwt_manager_generate(
+    manager: *mut CRiJWTManager,
+    user_id: *const c_char,
+    roles: *const *const c_char,
+    roles_count: usize,
+    permissions: *const *const c_char,
+    permissions_count: usize,
+    out_token: *mut *mut c_char,
+) -> c_int {
+    if manager.is_null() || user_id.is_null() || out_token.is_null() {
+        return -1;
+    }
+
+    unsafe {
+        let user_id_str = match std::ffi::CStr::from_ptr(user_id).to_str() {
+            Ok(s) => s,
+            Err(_) => return -2,
+        };
+
+        let roles_vec: Vec<String> = if roles.is_null() || roles_count == 0 {
+            Vec::new()
+        } else {
+            let roles_slice = std::slice::from_raw_parts(roles, roles_count);
+            roles_slice
+                .iter()
+                .filter_map(|&r| {
+                    if r.is_null() {
+                        None
+                    } else {
+                        std::ffi::CStr::from_ptr(r).to_str().ok().map(|s| s.to_string())
+                    }
+                })
+                .collect()
+        };
+
+        let permissions_vec: Vec<String> = if permissions.is_null() || permissions_count == 0 {
+            Vec::new()
+        } else {
+            let perms_slice = std::slice::from_raw_parts(permissions, permissions_count);
+            perms_slice
+                .iter()
+                .filter_map(|&p| {
+                    if p.is_null() {
+                        None
+                    } else {
+                        std::ffi::CStr::from_ptr(p).to_str().ok().map(|s| s.to_string())
+                    }
+                })
+                .collect()
+        };
+
+        match (*manager).inner.generate_token(user_id_str, roles_vec, permissions_vec) {
+            Ok(token) => {
+                match std::ffi::CString::new(token) {
+                    Ok(c_token) => {
+                        *out_token = c_token.into_raw();
+                        0
+                    }
+                    Err(_) => -4,
+                }
+            }
+            Err(_) => -3,
+        }
+    }
+}
+
+#[repr(C)]
+pub struct CRiJWTClaims {
+    pub sub: *mut c_char,
+    pub exp: u64,
+    pub iat: u64,
+}
+
+#[no_mangle]
+pub extern "C" fn ri_jwt_manager_validate(
+    manager: *mut CRiJWTManager,
+    token: *const c_char,
+    out_claims: *mut CRiJWTClaims,
+) -> c_int {
+    if manager.is_null() || token.is_null() || out_claims.is_null() {
+        return -1;
+    }
+
+    unsafe {
+        let token_str = match std::ffi::CStr::from_ptr(token).to_str() {
+            Ok(s) => s,
+            Err(_) => return -2,
+        };
+
+        match (*manager).inner.validate_token(token_str) {
+            Ok(claims) => {
+                let sub = match std::ffi::CString::new(claims.sub) {
+                    Ok(s) => s.into_raw(),
+                    Err(_) => return -4,
+                };
+
+                *out_claims = CRiJWTClaims {
+                    sub,
+                    exp: claims.exp,
+                    iat: claims.iat,
+                };
+                0
+            }
+            Err(_) => -3,
+        }
+    }
+}
+
+#[no_mangle]
+pub extern "C" fn ri_jwt_claims_free(claims: *mut CRiJWTClaims) {
+    if claims.is_null() {
+        return;
+    }
+
+    unsafe {
+        let claims = Box::from_raw(claims);
+        if !claims.sub.is_null() {
+            let _ = std::ffi::CString::from_raw(claims.sub);
+        }
+    }
+}
+
 #[no_mangle]
 pub extern "C" fn ri_session_manager_new(timeout_secs: u64) -> *mut CRiSessionManager {
     let manager = RiSessionManager::new(timeout_secs);
@@ -214,28 +269,170 @@ pub extern "C" fn ri_session_manager_new(timeout_secs: u64) -> *mut CRiSessionMa
 
 c_destructor!(ri_session_manager_free, CRiSessionManager);
 
-/// Creates a new CRiPermissionManager instance.
-///
-/// Initializes an empty permission manager with default configuration. Roles and
-/// permissions must be added through configuration or management APIs before use.
-///
-/// # Returns
-///
-/// Pointer to newly allocated CRiPermissionManager. Never returns NULL.
-///
-/// # Initial State
-///
-/// A newly created permission manager:
-/// - Contains no roles
-/// - Has no role assignments
-/// - Has no resource permissions defined
-///
-/// # Configuration
-///
-/// Before the permission manager can evaluate access, it must be configured with:
-/// - Role definitions (hierarchy, permissions per role)
-/// - User role assignments
-/// - Resource permission mappings
+#[no_mangle]
+pub extern "C" fn ri_session_manager_create(
+    manager: *mut CRiSessionManager,
+    user_id: *const c_char,
+    ip_address: *const c_char,
+    user_agent: *const c_char,
+    out_session_id: *mut *mut c_char,
+) -> c_int {
+    if manager.is_null() || user_id.is_null() || out_session_id.is_null() {
+        return -1;
+    }
+
+    unsafe {
+        let user_id_str = match std::ffi::CStr::from_ptr(user_id).to_str() {
+            Ok(s) => s,
+            Err(_) => return -2,
+        };
+
+        let ip_str = if ip_address.is_null() {
+            None
+        } else {
+            std::ffi::CStr::from_ptr(ip_address).to_str().ok().map(|s| s.to_string())
+        };
+
+        let ua_str = if user_agent.is_null() {
+            None
+        } else {
+            std::ffi::CStr::from_ptr(user_agent).to_str().ok().map(|s| s.to_string())
+        };
+
+        let rt = match tokio::runtime::Runtime::new() {
+            Ok(r) => r,
+            Err(_) => return -3,
+        };
+
+        let result = rt.block_on(async {
+            (*manager).inner.create_session(user_id_str.to_string(), ip_str, ua_str).await
+        });
+
+        match result {
+            Ok(session_id) => {
+                match std::ffi::CString::new(session_id) {
+                    Ok(c_id) => {
+                        *out_session_id = c_id.into_raw();
+                        0
+                    }
+                    Err(_) => -5,
+                }
+            }
+            Err(_) => -4,
+        }
+    }
+}
+
+#[repr(C)]
+pub struct CRiSession {
+    pub id: *mut c_char,
+    pub user_id: *mut c_char,
+    pub created_at: u64,
+    pub expires_at: u64,
+}
+
+#[no_mangle]
+pub extern "C" fn ri_session_manager_get(
+    manager: *mut CRiSessionManager,
+    session_id: *const c_char,
+    out_session: *mut CRiSession,
+) -> c_int {
+    if manager.is_null() || session_id.is_null() || out_session.is_null() {
+        return -1;
+    }
+
+    unsafe {
+        let session_id_str = match std::ffi::CStr::from_ptr(session_id).to_str() {
+            Ok(s) => s,
+            Err(_) => return -2,
+        };
+
+        let rt = match tokio::runtime::Runtime::new() {
+            Ok(r) => r,
+            Err(_) => return -3,
+        };
+
+        let result = rt.block_on(async {
+            (*manager).inner.get_session(session_id_str).await
+        });
+
+        match result {
+            Ok(Some(session)) => {
+                let id = match std::ffi::CString::new(session.id) {
+                    Ok(s) => s.into_raw(),
+                    Err(_) => return -5,
+                };
+
+                let user_id = match std::ffi::CString::new(session.user_id) {
+                    Ok(s) => s.into_raw(),
+                    Err(_) => {
+                        let _ = std::ffi::CString::from_raw(id);
+                        return -6;
+                    }
+                };
+
+                *out_session = CRiSession {
+                    id,
+                    user_id,
+                    created_at: session.created_at,
+                    expires_at: session.expires_at,
+                };
+                0
+            }
+            Ok(None) => 1,
+            Err(_) => -4,
+        }
+    }
+}
+
+#[no_mangle]
+pub extern "C" fn ri_session_free(session: *mut CRiSession) {
+    if session.is_null() {
+        return;
+    }
+
+    unsafe {
+        let session = Box::from_raw(session);
+        if !session.id.is_null() {
+            let _ = std::ffi::CString::from_raw(session.id);
+        }
+        if !session.user_id.is_null() {
+            let _ = std::ffi::CString::from_raw(session.user_id);
+        }
+    }
+}
+
+#[no_mangle]
+pub extern "C" fn ri_session_manager_destroy(
+    manager: *mut CRiSessionManager,
+    session_id: *const c_char,
+) -> c_int {
+    if manager.is_null() || session_id.is_null() {
+        return -1;
+    }
+
+    unsafe {
+        let session_id_str = match std::ffi::CStr::from_ptr(session_id).to_str() {
+            Ok(s) => s,
+            Err(_) => return -2,
+        };
+
+        let rt = match tokio::runtime::Runtime::new() {
+            Ok(r) => r,
+            Err(_) => return -3,
+        };
+
+        let result = rt.block_on(async {
+            (*manager).inner.destroy_session(session_id_str).await
+        });
+
+        match result {
+            Ok(destroyed) => if destroyed { 0 } else { 1 },
+            Err(_) => -4,
+        }
+    }
+}
+
 #[no_mangle]
 pub extern "C" fn ri_permission_manager_new() -> *mut CRiPermissionManager {
     let manager = RiPermissionManager::new();
@@ -243,3 +440,217 @@ pub extern "C" fn ri_permission_manager_new() -> *mut CRiPermissionManager {
 }
 
 c_destructor!(ri_permission_manager_free, CRiPermissionManager);
+
+#[no_mangle]
+pub extern "C" fn ri_permission_manager_create_role(
+    manager: *mut CRiPermissionManager,
+    role_id: *const c_char,
+    role_name: *const c_char,
+    description: *const c_char,
+    permissions: *const *const c_char,
+    permissions_count: usize,
+) -> c_int {
+    if manager.is_null() || role_id.is_null() || role_name.is_null() {
+        return -1;
+    }
+
+    unsafe {
+        let role_id_str = match std::ffi::CStr::from_ptr(role_id).to_str() {
+            Ok(s) => s,
+            Err(_) => return -2,
+        };
+
+        let role_name_str = match std::ffi::CStr::from_ptr(role_name).to_str() {
+            Ok(s) => s,
+            Err(_) => return -3,
+        };
+
+        let desc_str = if description.is_null() {
+            ""
+        } else {
+            match std::ffi::CStr::from_ptr(description).to_str() {
+                Ok(s) => s,
+                Err(_) => "",
+            }
+        };
+
+        let perms_set: HashSet<String> = if permissions.is_null() || permissions_count == 0 {
+            HashSet::new()
+        } else {
+            let perms_slice = std::slice::from_raw_parts(permissions, permissions_count);
+            perms_slice
+                .iter()
+                .filter_map(|&p| {
+                    if p.is_null() {
+                        None
+                    } else {
+                        std::ffi::CStr::from_ptr(p).to_str().ok().map(|s| s.to_string())
+                    }
+                })
+                .collect()
+        };
+
+        let role = RiRole::new(
+            role_id_str.to_string(),
+            role_name_str.to_string(),
+            desc_str.to_string(),
+            perms_set,
+        );
+
+        let rt = match tokio::runtime::Runtime::new() {
+            Ok(r) => r,
+            Err(_) => return -4,
+        };
+
+        let result = rt.block_on(async {
+            (*manager).inner.create_role(role).await
+        });
+
+        match result {
+            Ok(()) => 0,
+            Err(_) => -5,
+        }
+    }
+}
+
+#[no_mangle]
+pub extern "C" fn ri_permission_manager_assign_role(
+    manager: *mut CRiPermissionManager,
+    user_id: *const c_char,
+    role_id: *const c_char,
+) -> c_int {
+    if manager.is_null() || user_id.is_null() || role_id.is_null() {
+        return -1;
+    }
+
+    unsafe {
+        let user_id_str = match std::ffi::CStr::from_ptr(user_id).to_str() {
+            Ok(s) => s,
+            Err(_) => return -2,
+        };
+
+        let role_id_str = match std::ffi::CStr::from_ptr(role_id).to_str() {
+            Ok(s) => s,
+            Err(_) => return -3,
+        };
+
+        let rt = match tokio::runtime::Runtime::new() {
+            Ok(r) => r,
+            Err(_) => return -4,
+        };
+
+        let result = rt.block_on(async {
+            (*manager).inner.assign_role_to_user(user_id_str.to_string(), role_id_str.to_string()).await
+        });
+
+        match result {
+            Ok(assigned) => if assigned { 0 } else { 1 },
+            Err(_) => -5,
+        }
+    }
+}
+
+#[no_mangle]
+pub extern "C" fn ri_permission_manager_has_permission(
+    manager: *mut CRiPermissionManager,
+    user_id: *const c_char,
+    permission_id: *const c_char,
+) -> c_int {
+    if manager.is_null() || user_id.is_null() || permission_id.is_null() {
+        return -1;
+    }
+
+    unsafe {
+        let user_id_str = match std::ffi::CStr::from_ptr(user_id).to_str() {
+            Ok(s) => s,
+            Err(_) => return -2,
+        };
+
+        let perm_id_str = match std::ffi::CStr::from_ptr(permission_id).to_str() {
+            Ok(s) => s,
+            Err(_) => return -3,
+        };
+
+        let rt = match tokio::runtime::Runtime::new() {
+            Ok(r) => r,
+            Err(_) => return -4,
+        };
+
+        let result = rt.block_on(async {
+            (*manager).inner.has_permission(user_id_str, perm_id_str).await
+        });
+
+        match result {
+            Ok(has_perm) => if has_perm { 1 } else { 0 },
+            Err(_) => -5,
+        }
+    }
+}
+
+#[no_mangle]
+pub extern "C" fn ri_permission_manager_remove_role(
+    manager: *mut CRiPermissionManager,
+    user_id: *const c_char,
+    role_id: *const c_char,
+) -> c_int {
+    if manager.is_null() || user_id.is_null() || role_id.is_null() {
+        return -1;
+    }
+
+    unsafe {
+        let user_id_str = match std::ffi::CStr::from_ptr(user_id).to_str() {
+            Ok(s) => s,
+            Err(_) => return -2,
+        };
+
+        let role_id_str = match std::ffi::CStr::from_ptr(role_id).to_str() {
+            Ok(s) => s,
+            Err(_) => return -3,
+        };
+
+        let rt = match tokio::runtime::Runtime::new() {
+            Ok(r) => r,
+            Err(_) => return -4,
+        };
+
+        let result = rt.block_on(async {
+            (*manager).inner.remove_role_from_user(user_id_str, role_id_str).await
+        });
+
+        match result {
+            Ok(removed) => if removed { 0 } else { 1 },
+            Err(_) => -5,
+        }
+    }
+}
+
+#[no_mangle]
+pub extern "C" fn ri_permission_manager_delete_role(
+    manager: *mut CRiPermissionManager,
+    role_id: *const c_char,
+) -> c_int {
+    if manager.is_null() || role_id.is_null() {
+        return -1;
+    }
+
+    unsafe {
+        let role_id_str = match std::ffi::CStr::from_ptr(role_id).to_str() {
+            Ok(s) => s,
+            Err(_) => return -2,
+        };
+
+        let rt = match tokio::runtime::Runtime::new() {
+            Ok(r) => r,
+            Err(_) => return -3,
+        };
+
+        let result = rt.block_on(async {
+            (*manager).inner.delete_role(role_id_str).await
+        });
+
+        match result {
+            Ok(deleted) => if deleted { 0 } else { 1 },
+            Err(_) => -4,
+        }
+    }
+}

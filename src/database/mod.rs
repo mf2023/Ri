@@ -156,7 +156,7 @@ pub mod mysql;
 pub mod sqlite;
 
 pub use config::{RiDatabaseConfig, DatabaseType};
-pub use pool::{RiDatabasePool, PooledDatabase, DatabaseMetrics, DynamicPoolConfig};
+pub use pool::{RiDatabasePool, PooledDatabase, RiDatabaseMetrics, RiDynamicPoolConfig};
 pub use row::RiDBRow;
 pub use result::RiDBResult;
 pub use migration::{RiDatabaseMigration, RiMigrationHistory, RiDatabaseMigrator};

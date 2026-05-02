@@ -188,15 +188,325 @@
 //! - "sqlite": SQLite database support
 //! - Disable features to reduce binary size
 
-use crate::database::{RiDatabaseConfig, RiDatabasePool, RiDBRow};
+use crate::database::{RiDatabaseConfig, RiDatabasePool, RiDBRow, RiDBResult, DatabaseType};
 
 
 c_wrapper!(CRiDatabaseConfig, RiDatabaseConfig);
-
 c_wrapper!(CRiDatabasePool, RiDatabasePool);
-
 c_wrapper!(CRiDBRow, RiDBRow);
+c_wrapper!(CRiDBResult, RiDBResult);
 
 c_constructor!(ri_database_config_new, CRiDatabaseConfig, RiDatabaseConfig, RiDatabaseConfig::default());
-
 c_destructor!(ri_database_config_free, CRiDatabaseConfig);
+
+// RiDatabaseConfig setters
+c_string_setter!(
+    ri_database_config_set_connection_string,
+    CRiDatabaseConfig,
+    |inner: &mut RiDatabaseConfig, val: &str| { inner.connection_string = val.to_string(); }
+);
+
+#[no_mangle]
+pub extern "C" fn ri_database_config_set_pool_size(config: *mut CRiDatabaseConfig, size: u32) -> std::ffi::c_int {
+    if config.is_null() {
+        return -1;
+    }
+    unsafe {
+        (*config).inner.max_connections = size as usize;
+    }
+    0
+}
+
+#[no_mangle]
+pub extern "C" fn ri_database_config_set_min_idle(config: *mut CRiDatabaseConfig, size: u32) -> std::ffi::c_int {
+    if config.is_null() {
+        return -1;
+    }
+    unsafe {
+        (*config).inner.min_connections = size as usize;
+    }
+    0
+}
+
+#[no_mangle]
+pub extern "C" fn ri_database_config_set_connection_timeout_secs(config: *mut CRiDatabaseConfig, secs: u64) -> std::ffi::c_int {
+    if config.is_null() {
+        return -1;
+    }
+    unsafe {
+        (*config).inner.connection_timeout = std::time::Duration::from_secs(secs);
+    }
+    0
+}
+
+#[no_mangle]
+pub extern "C" fn ri_database_config_set_database_type(config: *mut CRiDatabaseConfig, db_type: std::ffi::c_int) -> std::ffi::c_int {
+    if config.is_null() {
+        return -1;
+    }
+    unsafe {
+        let database_type = match db_type {
+            0 => DatabaseType::Postgres,
+            1 => DatabaseType::MySQL,
+            2 => DatabaseType::SQLite,
+            _ => DatabaseType::Postgres,
+        };
+        (*config).inner.database_type = database_type;
+    }
+    0
+}
+
+// RiDatabasePool C bindings
+#[no_mangle]
+pub extern "C" fn ri_database_pool_new(config: *mut CRiDatabaseConfig) -> *mut CRiDatabasePool {
+    if config.is_null() {
+        return std::ptr::null_mut();
+    }
+    let rt = match tokio::runtime::Runtime::new() {
+        Ok(rt) => rt,
+        Err(_) => return std::ptr::null_mut(),
+    };
+    unsafe {
+        let config = (*config).inner.clone();
+        match rt.block_on(async { RiDatabasePool::new(config).await }) {
+            Ok(pool) => Box::into_raw(Box::new(CRiDatabasePool::new(pool))),
+            Err(_) => std::ptr::null_mut(),
+        }
+    }
+}
+c_destructor!(ri_database_pool_free, CRiDatabasePool);
+
+#[no_mangle]
+pub extern "C" fn ri_database_pool_get_connection_count(pool: *mut CRiDatabasePool) -> usize {
+    if pool.is_null() {
+        return 0;
+    }
+    unsafe { (*pool).inner.get_metrics().total_connections }
+}
+
+#[no_mangle]
+pub extern "C" fn ri_database_pool_get_idle_count(pool: *mut CRiDatabasePool) -> usize {
+    if pool.is_null() {
+        return 0;
+    }
+    unsafe { (*pool).inner.get_metrics().idle_connections }
+}
+
+#[no_mangle]
+pub extern "C" fn ri_database_pool_get_active_count(pool: *mut CRiDatabasePool) -> usize {
+    if pool.is_null() {
+        return 0;
+    }
+    unsafe { (*pool).inner.get_metrics().active_connections }
+}
+
+#[no_mangle]
+pub extern "C" fn ri_database_pool_execute(
+    pool: *mut CRiDatabasePool,
+    sql: *const std::ffi::c_char,
+    out_rows_affected: *mut u64,
+) -> std::ffi::c_int {
+    if pool.is_null() || sql.is_null() {
+        return -1;
+    }
+    let rt = match tokio::runtime::Runtime::new() {
+        Ok(rt) => rt,
+        Err(_) => return -2,
+    };
+    unsafe {
+        let sql_str = match std::ffi::CStr::from_ptr(sql).to_str() {
+            Ok(s) => s,
+            Err(_) => return -3,
+        };
+        match rt.block_on(async { (*pool).inner.get().await }) {
+            Ok(db) => match rt.block_on(async { db.execute(sql_str).await }) {
+                Ok(rows) => {
+                    if !out_rows_affected.is_null() {
+                        *out_rows_affected = rows;
+                    }
+                    0
+                }
+                Err(_) => -4,
+            },
+            Err(_) => -5,
+        }
+    }
+}
+
+#[no_mangle]
+pub extern "C" fn ri_database_pool_query(
+    pool: *mut CRiDatabasePool,
+    sql: *const std::ffi::c_char,
+    out_result: *mut *mut CRiDBResult,
+) -> std::ffi::c_int {
+    if pool.is_null() || sql.is_null() || out_result.is_null() {
+        return -1;
+    }
+    let rt = match tokio::runtime::Runtime::new() {
+        Ok(rt) => rt,
+        Err(_) => return -2,
+    };
+    unsafe {
+        let sql_str = match std::ffi::CStr::from_ptr(sql).to_str() {
+            Ok(s) => s,
+            Err(_) => return -3,
+        };
+        match rt.block_on(async { (*pool).inner.get().await }) {
+            Ok(db) => match rt.block_on(async { db.query(sql_str).await }) {
+                Ok(result) => {
+                    *out_result = Box::into_raw(Box::new(CRiDBResult::new(result)));
+                    0
+                }
+                Err(_) => -4,
+            },
+            Err(_) => -5,
+        }
+    }
+}
+
+#[no_mangle]
+pub extern "C" fn ri_database_pool_ping(pool: *mut CRiDatabasePool) -> std::ffi::c_int {
+    if pool.is_null() {
+        return -1;
+    }
+    let rt = match tokio::runtime::Runtime::new() {
+        Ok(rt) => rt,
+        Err(_) => return -2,
+    };
+    unsafe {
+        match rt.block_on(async { (*pool).inner.get().await }) {
+            Ok(db) => match rt.block_on(async { db.ping().await }) {
+                Ok(true) => 0,
+                Ok(false) => 1,
+                Err(_) => -3,
+            },
+            Err(_) => -4,
+        }
+    }
+}
+
+// RiDBRow C bindings
+c_destructor!(ri_db_row_free, CRiDBRow);
+
+#[no_mangle]
+pub extern "C" fn ri_db_row_get_string(
+    row: *mut CRiDBRow,
+    column: *const std::ffi::c_char,
+) -> *mut std::ffi::c_char {
+    if row.is_null() || column.is_null() {
+        return std::ptr::null_mut();
+    }
+    unsafe {
+        let column_str = match std::ffi::CStr::from_ptr(column).to_str() {
+            Ok(s) => s,
+            Err(_) => return std::ptr::null_mut(),
+        };
+        match (*row).inner.get::<String>(column_str) {
+            Some(val) => match std::ffi::CString::new(val) {
+                Ok(c_str) => c_str.into_raw(),
+                Err(_) => std::ptr::null_mut(),
+            },
+            None => std::ptr::null_mut(),
+        }
+    }
+}
+
+#[no_mangle]
+pub extern "C" fn ri_db_row_get_int(row: *mut CRiDBRow, column: *const std::ffi::c_char) -> std::ffi::c_int {
+    if row.is_null() || column.is_null() {
+        return 0;
+    }
+    unsafe {
+        let column_str = match std::ffi::CStr::from_ptr(column).to_str() {
+            Ok(s) => s,
+            Err(_) => return 0,
+        };
+        match (*row).inner.get::<i32>(column_str) {
+            Some(val) => val,
+            None => 0,
+        }
+    }
+}
+
+#[no_mangle]
+pub extern "C" fn ri_db_row_get_long(row: *mut CRiDBRow, column: *const std::ffi::c_char) -> i64 {
+    if row.is_null() || column.is_null() {
+        return 0;
+    }
+    unsafe {
+        let column_str = match std::ffi::CStr::from_ptr(column).to_str() {
+            Ok(s) => s,
+            Err(_) => return 0,
+        };
+        match (*row).inner.get::<i64>(column_str) {
+            Some(val) => val,
+            None => 0,
+        }
+    }
+}
+
+#[no_mangle]
+pub extern "C" fn ri_db_row_get_double(row: *mut CRiDBRow, column: *const std::ffi::c_char) -> f64 {
+    if row.is_null() || column.is_null() {
+        return 0.0;
+    }
+    unsafe {
+        let column_str = match std::ffi::CStr::from_ptr(column).to_str() {
+            Ok(s) => s,
+            Err(_) => return 0.0,
+        };
+        match (*row).inner.get::<f64>(column_str) {
+            Some(val) => val,
+            None => 0.0,
+        }
+    }
+}
+
+#[no_mangle]
+pub extern "C" fn ri_db_row_get_bool(row: *mut CRiDBRow, column: *const std::ffi::c_char) -> bool {
+    if row.is_null() || column.is_null() {
+        return false;
+    }
+    unsafe {
+        let column_str = match std::ffi::CStr::from_ptr(column).to_str() {
+            Ok(s) => s,
+            Err(_) => return false,
+        };
+        match (*row).inner.get::<bool>(column_str) {
+            Some(val) => val,
+            None => false,
+        }
+    }
+}
+
+// RiDBResult C bindings
+c_destructor!(ri_db_result_free, CRiDBResult);
+
+#[no_mangle]
+pub extern "C" fn ri_db_result_get_row_count(result: *mut CRiDBResult) -> usize {
+    if result.is_null() {
+        return 0;
+    }
+    unsafe { (*result).inner.len() }
+}
+
+#[no_mangle]
+pub extern "C" fn ri_db_result_get_row(result: *mut CRiDBResult, index: usize) -> *mut CRiDBRow {
+    if result.is_null() {
+        return std::ptr::null_mut();
+    }
+    unsafe {
+        match (*result).inner.get(index) {
+            Some(row) => Box::into_raw(Box::new(CRiDBRow::new(row.clone()))),
+            None => std::ptr::null_mut(),
+        }
+    }
+}
+
+#[no_mangle]
+pub extern "C" fn ri_db_result_is_empty(result: *mut CRiDBResult) -> bool {
+    if result.is_null() {
+        return true;
+    }
+    unsafe { (*result).inner.is_empty() }
+}

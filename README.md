@@ -1,37 +1,32 @@
-> **⚠️ IMPORTANT NOTICE**
->
-> **DMSC → RI** starting from version **0.1.9** | CLI tools included | [📖 Read Migration Guide](./ANNOUNCEMENT.md)
->
-> All `DMSC*` types → `RI*` | Package: `dmsc` → `ri`
-
----
 
 <div align="center">
 
-<h1 style="display: flex; flex-direction: column; align-items: center; gap: 8px; margin-bottom: 8px;">
-  <span style="display: flex; align-items: center; gap: 12px;"><img src="assets/svg/ri.svg" width="36" height="36" alt="Ri">Ri</span>
-</h1>
+> ⚠️ **DMSC has been renamed to Ri**, effective from v0.1.9.
+> [📖 Read Migration Guide](./ANNOUNCEMENT.md)
+
+---
+
+<img src="assets/svg/ri.svg" width="36" height="36">
 
 English | [简体中文](README.zh.md)
 
 [Help Documentation](https://mf2023.github.io/Ri/ri/) | [Changelog](CHANGELOG.md) | [Security](SECURITY.md) | [Contributing](CONTRIBUTING.md) | [Code of Conduct](CODE_OF_CONDUCT.md)
+
+<a href="https://github.com/mf2023/Ri" target="_blank">
+    <img alt="GitHub" src="https://img.shields.io/badge/GitHub-Ri-181717?style=flat-square&logo=github"/>
+</a>
+<a href="https://gitee.com/dunimd/ri" target="_blank">
+    <img alt="Gitee" src="https://img.shields.io/badge/Gitee-Ri-C71D23?style=flat-square&logo=gitee"/>
+</a>
+<a href="https://gitcode.com/dunimd/ri.git" target="_blank">
+    <img alt="GitCode" src="https://img.shields.io/badge/GitCode-Ri-FF6B35?style=flat-square&logo=git"/>
+</a>
 
 <a href="https://x.com/Dunimd2025" target="_blank">
     <img alt="X" src="https://img.shields.io/badge/X-Dunimd-000000?style=flat-square&logo=x"/>
 </a>
 <a href="https://space.bilibili.com/3493284091529457" target="_blank">
     <img alt="BiliBili" src="https://img.shields.io/badge/BiliBili-Dunimd-00A1D6?style=flat-square&logo=bilibili"/>
-</a>
-
-
-<a href="https://github.com/mf2023/Ri" target="_blank">
-    <img alt="GitHub" src="https://img.shields.io/badge/GitHub-Ri-181717?style=flat-square&logo=github"/>
-</a>
-<a href="https://gitee.com/dunimd" target="_blank">
-    <img alt="Gitee" src="https://img.shields.io/badge/Gitee-Dunimd-C71D23?style=flat-square&logo=gitee"/>
-</a>
-<a href="https://gitcode.com/dunimd/ri.git" target="_blank">
-    <img alt="GitCode" src="https://img.shields.io/badge/GitCode-Ri-FF6B35?style=flat-square&logo=git"/>
 </a>
 <a href="https://huggingface.co/dunimd" target="_blank">
     <img alt="Hugging Face" src="https://img.shields.io/badge/Hugging%20Face-Dunimd-FFD21E?style=flat-square&logo=huggingface"/>

@@ -20,10 +20,15 @@
 //! JNI bindings for Ri log classes.
 
 use jni::JNIEnv;
-use jni::objects::JClass;
-use jni::sys::jlong;
-use crate::log::{RiLogger, RiLogConfig};
+use jni::objects::{JClass, JString};
+use jni::sys::{jlong, jboolean, jint, jfloat};
+use crate::log::{RiLogger, RiLogConfig, RiLogLevel};
 use crate::fs::RiFileSystem;
+use crate::java::exception::check_not_null;
+
+// =============================================================================
+// RiLogger JNI Bindings
+// =============================================================================
 
 #[no_mangle]
 pub extern "system" fn Java_com_dunimd_ri_log_RiLogger_new0(
@@ -45,6 +50,269 @@ pub extern "system" fn Java_com_dunimd_ri_log_RiLogger_free0(
     if ptr != 0 {
         unsafe {
             let _ = Box::from_raw(ptr as *mut RiLogger);
+        }
+    }
+}
+
+#[no_mangle]
+pub extern "system" fn Java_com_dunimd_ri_log_RiLogger_debug0(
+    mut env: JNIEnv,
+    _class: JClass,
+    ptr: jlong,
+    target: JString,
+    message: JString,
+) {
+    if !check_not_null(&mut env, ptr, "RiLogger") {
+        return;
+    }
+    
+    let logger = unsafe { &*(ptr as *const RiLogger) };
+    let target_str: String = env.get_string(&target)
+        .expect("Failed to get target")
+        .into();
+    let message_str: String = env.get_string(&message)
+        .expect("Failed to get message")
+        .into();
+    
+    let _ = logger.debug(&target_str, &message_str);
+}
+
+#[no_mangle]
+pub extern "system" fn Java_com_dunimd_ri_log_RiLogger_info0(
+    mut env: JNIEnv,
+    _class: JClass,
+    ptr: jlong,
+    target: JString,
+    message: JString,
+) {
+    if !check_not_null(&mut env, ptr, "RiLogger") {
+        return;
+    }
+    
+    let logger = unsafe { &*(ptr as *const RiLogger) };
+    let target_str: String = env.get_string(&target)
+        .expect("Failed to get target")
+        .into();
+    let message_str: String = env.get_string(&message)
+        .expect("Failed to get message")
+        .into();
+    
+    let _ = logger.info(&target_str, &message_str);
+}
+
+#[no_mangle]
+pub extern "system" fn Java_com_dunimd_ri_log_RiLogger_warn0(
+    mut env: JNIEnv,
+    _class: JClass,
+    ptr: jlong,
+    target: JString,
+    message: JString,
+) {
+    if !check_not_null(&mut env, ptr, "RiLogger") {
+        return;
+    }
+    
+    let logger = unsafe { &*(ptr as *const RiLogger) };
+    let target_str: String = env.get_string(&target)
+        .expect("Failed to get target")
+        .into();
+    let message_str: String = env.get_string(&message)
+        .expect("Failed to get message")
+        .into();
+    
+    let _ = logger.warn(&target_str, &message_str);
+}
+
+#[no_mangle]
+pub extern "system" fn Java_com_dunimd_ri_log_RiLogger_error0(
+    mut env: JNIEnv,
+    _class: JClass,
+    ptr: jlong,
+    target: JString,
+    message: JString,
+) {
+    if !check_not_null(&mut env, ptr, "RiLogger") {
+        return;
+    }
+    
+    let logger = unsafe { &*(ptr as *const RiLogger) };
+    let target_str: String = env.get_string(&target)
+        .expect("Failed to get target")
+        .into();
+    let message_str: String = env.get_string(&message)
+        .expect("Failed to get message")
+        .into();
+    
+    let _ = logger.error(&target_str, &message_str);
+}
+
+// =============================================================================
+// RiLogConfig JNI Bindings
+// =============================================================================
+
+#[no_mangle]
+pub extern "system" fn Java_com_dunimd_ri_log_RiLogConfig_new0(
+    _env: JNIEnv,
+    _class: JClass,
+) -> jlong {
+    let config = Box::new(RiLogConfig::default());
+    Box::into_raw(config) as jlong
+}
+
+#[no_mangle]
+pub extern "system" fn Java_com_dunimd_ri_log_RiLogConfig_setLevel0(
+    mut env: JNIEnv,
+    _class: JClass,
+    ptr: jlong,
+    level: jint,
+) {
+    if !check_not_null(&mut env, ptr, "RiLogConfig") {
+        return;
+    }
+    
+    let config = unsafe { &mut *(ptr as *mut RiLogConfig) };
+    config.level = match level {
+        0 => RiLogLevel::Debug,
+        1 => RiLogLevel::Info,
+        2 => RiLogLevel::Warn,
+        3 => RiLogLevel::Error,
+        _ => RiLogLevel::Info,
+    };
+}
+
+#[no_mangle]
+pub extern "system" fn Java_com_dunimd_ri_log_RiLogConfig_setConsoleEnabled0(
+    mut env: JNIEnv,
+    _class: JClass,
+    ptr: jlong,
+    enabled: jboolean,
+) {
+    if !check_not_null(&mut env, ptr, "RiLogConfig") {
+        return;
+    }
+    
+    let config = unsafe { &mut *(ptr as *mut RiLogConfig) };
+    config.console_enabled = enabled != 0;
+}
+
+#[no_mangle]
+pub extern "system" fn Java_com_dunimd_ri_log_RiLogConfig_setFileEnabled0(
+    mut env: JNIEnv,
+    _class: JClass,
+    ptr: jlong,
+    enabled: jboolean,
+) {
+    if !check_not_null(&mut env, ptr, "RiLogConfig") {
+        return;
+    }
+    
+    let config = unsafe { &mut *(ptr as *mut RiLogConfig) };
+    config.file_enabled = enabled != 0;
+}
+
+#[no_mangle]
+pub extern "system" fn Java_com_dunimd_ri_log_RiLogConfig_setSamplingDefault0(
+    mut env: JNIEnv,
+    _class: JClass,
+    ptr: jlong,
+    rate: jfloat,
+) {
+    if !check_not_null(&mut env, ptr, "RiLogConfig") {
+        return;
+    }
+    
+    let config = unsafe { &mut *(ptr as *mut RiLogConfig) };
+    config.sampling_default = rate.clamp(0.0, 1.0);
+}
+
+#[no_mangle]
+pub extern "system" fn Java_com_dunimd_ri_log_RiLogConfig_setFileName0(
+    mut env: JNIEnv,
+    _class: JClass,
+    ptr: jlong,
+    file_name: JString,
+) {
+    if !check_not_null(&mut env, ptr, "RiLogConfig") {
+        return;
+    }
+    
+    let config = unsafe { &mut *(ptr as *mut RiLogConfig) };
+    config.file_name = env.get_string(&file_name)
+        .expect("Failed to get file name")
+        .into();
+}
+
+#[no_mangle]
+pub extern "system" fn Java_com_dunimd_ri_log_RiLogConfig_setJsonFormat0(
+    mut env: JNIEnv,
+    _class: JClass,
+    ptr: jlong,
+    json_format: jboolean,
+) {
+    if !check_not_null(&mut env, ptr, "RiLogConfig") {
+        return;
+    }
+    
+    let config = unsafe { &mut *(ptr as *mut RiLogConfig) };
+    config.json_format = json_format != 0;
+}
+
+#[no_mangle]
+pub extern "system" fn Java_com_dunimd_ri_log_RiLogConfig_setRotateWhen0(
+    mut env: JNIEnv,
+    _class: JClass,
+    ptr: jlong,
+    rotate_when: JString,
+) {
+    if !check_not_null(&mut env, ptr, "RiLogConfig") {
+        return;
+    }
+    
+    let config = unsafe { &mut *(ptr as *mut RiLogConfig) };
+    config.rotate_when = env.get_string(&rotate_when)
+        .expect("Failed to get rotate_when")
+        .into();
+}
+
+#[no_mangle]
+pub extern "system" fn Java_com_dunimd_ri_log_RiLogConfig_setMaxBytes0(
+    mut env: JNIEnv,
+    _class: JClass,
+    ptr: jlong,
+    max_bytes: jlong,
+) {
+    if !check_not_null(&mut env, ptr, "RiLogConfig") {
+        return;
+    }
+    
+    let config = unsafe { &mut *(ptr as *mut RiLogConfig) };
+    config.max_bytes = max_bytes as u64;
+}
+
+#[no_mangle]
+pub extern "system" fn Java_com_dunimd_ri_log_RiLogConfig_setColorBlocks0(
+    mut env: JNIEnv,
+    _class: JClass,
+    ptr: jlong,
+    color_blocks: jboolean,
+) {
+    if !check_not_null(&mut env, ptr, "RiLogConfig") {
+        return;
+    }
+    
+    let config = unsafe { &mut *(ptr as *mut RiLogConfig) };
+    config.color_blocks = color_blocks != 0;
+}
+
+#[no_mangle]
+pub extern "system" fn Java_com_dunimd_ri_log_RiLogConfig_free0(
+    _env: JNIEnv,
+    _class: JClass,
+    ptr: jlong,
+) {
+    if ptr != 0 {
+        unsafe {
+            let _ = Box::from_raw(ptr as *mut RiLogConfig);
         }
     }
 }

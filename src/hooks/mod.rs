@@ -287,6 +287,53 @@ impl RiHookBus {
         }
         Ok(())
     }
+
+    /// Emits a hook event without a service context.
+    /// 
+    /// This is a simplified version of emit that creates a default context.
+    /// 
+    /// # Parameters
+    /// 
+    /// - `kind`: The hook kind to emit
+    /// - `module`: The name of the module associated with the event (if any)
+    /// - `phase`: The module phase associated with the event (if any)
+    /// 
+    /// # Returns
+    /// 
+    /// A `RiResult<()>` indicating success or failure
+    pub fn emit_simple(
+        &self,
+        kind: &RiHookKind,
+        module: Option<&str>,
+        phase: Option<RiModulePhase>,
+    ) -> RiResult<()> {
+        let event = RiHookEvent {
+            kind: *kind,
+            module: module.map(|s| s.to_string()),
+            phase,
+        };
+        if let Some(list) = self.handlers.get(kind) {
+            for (_id, handler) in list {
+                if let Ok(ctx) = RiServiceContext::new_default() {
+                    handler(&ctx, &event)?;
+                }
+            }
+        }
+        Ok(())
+    }
+
+    /// Checks if there are any handlers registered for a hook kind.
+    /// 
+    /// # Parameters
+    /// 
+    /// - `kind`: The hook kind to check
+    /// 
+    /// # Returns
+    /// 
+    /// `true` if there are handlers registered, `false` otherwise
+    pub fn has_handlers(&self, kind: &RiHookKind) -> bool {
+        self.handlers.get(kind).map_or(false, |list| !list.is_empty())
+    }
 }
 
 #[cfg(feature = "pyo3")]

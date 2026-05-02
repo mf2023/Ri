@@ -327,7 +327,12 @@
 //! - `service-mesh-metrics`: Enable metrics collection
 //! - `service-mesh-dns`: Enable DNS-based service discovery
 
-use crate::service_mesh::{RiServiceEndpoint, RiServiceMesh, RiServiceMeshConfig};
+use crate::service_mesh::{
+    RiServiceEndpoint, RiServiceMesh, RiServiceMeshConfig,
+    RiServiceDiscovery, RiServiceInstance,
+    RiHealthChecker, RiHealthStatus,
+    RiTrafficManager, RiTrafficRoute,
+};
 
 
 c_wrapper!(CRiServiceMesh, RiServiceMesh);
@@ -342,3 +347,671 @@ c_constructor!(
     RiServiceMeshConfig::default()
 );
 c_destructor!(ri_service_mesh_config_free, CRiServiceMeshConfig);
+
+// RiServiceMesh constructors and destructors
+#[no_mangle]
+pub extern "C" fn ri_service_mesh_new(config: *mut CRiServiceMeshConfig) -> *mut CRiServiceMesh {
+    if config.is_null() {
+        return std::ptr::null_mut();
+    }
+    unsafe {
+        let config = (*config).inner.clone();
+        match RiServiceMesh::new(config) {
+            Ok(mesh) => Box::into_raw(Box::new(CRiServiceMesh::new(mesh))),
+            Err(_) => std::ptr::null_mut(),
+        }
+    }
+}
+c_destructor!(ri_service_mesh_free, CRiServiceMesh);
+
+// RiServiceEndpoint constructors and destructors
+#[no_mangle]
+pub extern "C" fn ri_service_endpoint_new(
+    service_name: *const std::ffi::c_char,
+    endpoint: *const std::ffi::c_char,
+    weight: u32,
+) -> *mut CRiServiceEndpoint {
+    if service_name.is_null() || endpoint.is_null() {
+        return std::ptr::null_mut();
+    }
+    unsafe {
+        let service_name_str = match std::ffi::CStr::from_ptr(service_name).to_str() {
+            Ok(s) => s.to_string(),
+            Err(_) => return std::ptr::null_mut(),
+        };
+        let endpoint_str = match std::ffi::CStr::from_ptr(endpoint).to_str() {
+            Ok(s) => s.to_string(),
+            Err(_) => return std::ptr::null_mut(),
+        };
+        let ep = RiServiceEndpoint {
+            service_name: service_name_str,
+            endpoint: endpoint_str,
+            weight,
+            metadata: std::collections::HashMap::default(),
+            health_status: crate::service_mesh::RiServiceHealthStatus::Unknown,
+            last_health_check: std::time::SystemTime::now(),
+        };
+        Box::into_raw(Box::new(CRiServiceEndpoint::new(ep)))
+    }
+}
+c_destructor!(ri_service_endpoint_free, CRiServiceEndpoint);
+
+// RiServiceEndpoint getters
+c_string_getter!(
+    ri_service_endpoint_get_service_name,
+    CRiServiceEndpoint,
+    |inner: &RiServiceEndpoint| inner.service_name.clone()
+);
+c_string_getter!(
+    ri_service_endpoint_get_endpoint,
+    CRiServiceEndpoint,
+    |inner: &RiServiceEndpoint| inner.endpoint.clone()
+);
+
+#[no_mangle]
+pub extern "C" fn ri_service_endpoint_get_weight(obj: *mut CRiServiceEndpoint) -> u32 {
+    if obj.is_null() {
+        return 0;
+    }
+    unsafe { (*obj).inner.weight }
+}
+
+#[no_mangle]
+pub extern "C" fn ri_service_endpoint_get_health_status(obj: *mut CRiServiceEndpoint) -> std::ffi::c_int {
+    if obj.is_null() {
+        return -1;
+    }
+    unsafe {
+        match (*obj).inner.health_status {
+            crate::service_mesh::RiServiceHealthStatus::Healthy => 0,
+            crate::service_mesh::RiServiceHealthStatus::Unhealthy => 1,
+            crate::service_mesh::RiServiceHealthStatus::Unknown => 2,
+        }
+    }
+}
+
+// RiServiceMesh functions
+#[no_mangle]
+pub extern "C" fn ri_service_mesh_register(
+    mesh: *mut CRiServiceMesh,
+    endpoint: *mut CRiServiceEndpoint,
+) -> std::ffi::c_int {
+    if mesh.is_null() || endpoint.is_null() {
+        return -1;
+    }
+    let rt = match tokio::runtime::Runtime::new() {
+        Ok(rt) => rt,
+        Err(_) => return -2,
+    };
+    unsafe {
+        let ep = (*endpoint).inner.clone();
+        rt.block_on(async {
+            match (*mesh).inner.register_service(&ep.service_name, &ep.endpoint, ep.weight, None).await {
+                Ok(_) => 0,
+                Err(_) => -3,
+            }
+        })
+    }
+}
+
+#[no_mangle]
+pub extern "C" fn ri_service_mesh_deregister(
+    mesh: *mut CRiServiceMesh,
+    service_name: *const std::ffi::c_char,
+    endpoint: *const std::ffi::c_char,
+) -> std::ffi::c_int {
+    if mesh.is_null() || service_name.is_null() || endpoint.is_null() {
+        return -1;
+    }
+    let rt = match tokio::runtime::Runtime::new() {
+        Ok(rt) => rt,
+        Err(_) => return -2,
+    };
+    unsafe {
+        let service_name_str = match std::ffi::CStr::from_ptr(service_name).to_str() {
+            Ok(s) => s,
+            Err(_) => return -3,
+        };
+        let endpoint_str = match std::ffi::CStr::from_ptr(endpoint).to_str() {
+            Ok(s) => s,
+            Err(_) => return -3,
+        };
+        rt.block_on(async {
+            match (*mesh).inner.unregister_service(service_name_str, endpoint_str).await {
+                Ok(_) => 0,
+                Err(_) => -4,
+            }
+        })
+    }
+}
+
+#[no_mangle]
+pub extern "C" fn ri_service_mesh_discover(
+    mesh: *mut CRiServiceMesh,
+    service_name: *const std::ffi::c_char,
+    out_endpoints: *mut *mut CRiServiceEndpoint,
+    out_count: *mut usize,
+) -> std::ffi::c_int {
+    if mesh.is_null() || service_name.is_null() || out_endpoints.is_null() || out_count.is_null() {
+        return -1;
+    }
+    let rt = match tokio::runtime::Runtime::new() {
+        Ok(rt) => rt,
+        Err(_) => return -2,
+    };
+    unsafe {
+        let service_name_str = match std::ffi::CStr::from_ptr(service_name).to_str() {
+            Ok(s) => s,
+            Err(_) => return -3,
+        };
+        match rt.block_on(async { (*mesh).inner.discover_service(service_name_str).await }) {
+            Ok(endpoints) => {
+                let count = endpoints.len();
+                *out_count = count;
+                if count == 0 {
+                    *out_endpoints = std::ptr::null_mut();
+                    return 0;
+                }
+                let ptr = Box::into_raw(Box::new(Vec::with_capacity(count)));
+                (*ptr).extend(endpoints.into_iter().map(CRiServiceEndpoint::new));
+                *out_endpoints = ptr as *mut CRiServiceEndpoint;
+                0
+            }
+            Err(_) => -4,
+        }
+    }
+}
+
+#[no_mangle]
+pub extern "C" fn ri_service_mesh_get_healthy_count(
+    mesh: *mut CRiServiceMesh,
+    service_name: *const std::ffi::c_char,
+) -> u32 {
+    if mesh.is_null() || service_name.is_null() {
+        return 0;
+    }
+    let rt = match tokio::runtime::Runtime::new() {
+        Ok(rt) => rt,
+        Err(_) => return 0,
+    };
+    unsafe {
+        let service_name_str = match std::ffi::CStr::from_ptr(service_name).to_str() {
+            Ok(s) => s,
+            Err(_) => return 0,
+        };
+        match rt.block_on(async { (*mesh).inner.discover_service(service_name_str).await }) {
+            Ok(endpoints) => endpoints.len() as u32,
+            Err(_) => 0,
+        }
+    }
+}
+
+#[no_mangle]
+pub extern "C" fn ri_service_mesh_get_stats(
+    mesh: *mut CRiServiceMesh,
+    out_total_services: *mut usize,
+    out_total_endpoints: *mut usize,
+    out_healthy_endpoints: *mut usize,
+    out_unhealthy_endpoints: *mut usize,
+) -> std::ffi::c_int {
+    if mesh.is_null() {
+        return -1;
+    }
+    let rt = match tokio::runtime::Runtime::new() {
+        Ok(rt) => rt,
+        Err(_) => return -2,
+    };
+    unsafe {
+        let stats = rt.block_on(async { (*mesh).inner.get_stats().await });
+        if !out_total_services.is_null() {
+            *out_total_services = stats.total_services;
+        }
+        if !out_total_endpoints.is_null() {
+            *out_total_endpoints = stats.total_endpoints;
+        }
+        if !out_healthy_endpoints.is_null() {
+            *out_healthy_endpoints = stats.healthy_endpoints;
+        }
+        if !out_unhealthy_endpoints.is_null() {
+            *out_unhealthy_endpoints = stats.unhealthy_endpoints;
+        }
+        0
+    }
+}
+
+// RiServiceDiscovery C bindings
+c_wrapper!(CRiServiceDiscovery, RiServiceDiscovery);
+
+#[no_mangle]
+pub extern "C" fn ri_service_discovery_new(enabled: bool) -> *mut CRiServiceDiscovery {
+    Box::into_raw(Box::new(CRiServiceDiscovery::new(RiServiceDiscovery::new(enabled))))
+}
+c_destructor!(ri_service_discovery_free, CRiServiceDiscovery);
+
+#[no_mangle]
+pub extern "C" fn ri_service_discovery_register(
+    discovery: *mut CRiServiceDiscovery,
+    service_name: *const std::ffi::c_char,
+    host: *const std::ffi::c_char,
+    port: u16,
+) -> *mut std::ffi::c_char {
+    if discovery.is_null() || service_name.is_null() || host.is_null() {
+        return std::ptr::null_mut();
+    }
+    let rt = match tokio::runtime::Runtime::new() {
+        Ok(rt) => rt,
+        Err(_) => return std::ptr::null_mut(),
+    };
+    unsafe {
+        let service_name_str = match std::ffi::CStr::from_ptr(service_name).to_str() {
+            Ok(s) => s,
+            Err(_) => return std::ptr::null_mut(),
+        };
+        let host_str = match std::ffi::CStr::from_ptr(host).to_str() {
+            Ok(s) => s,
+            Err(_) => return std::ptr::null_mut(),
+        };
+        match rt.block_on(async {
+            (*discovery).inner.register_service(service_name_str, host_str, port, std::collections::HashMap::default()).await
+        }) {
+            Ok(instance_id) => match std::ffi::CString::new(instance_id) {
+                Ok(c_str) => c_str.into_raw(),
+                Err(_) => std::ptr::null_mut(),
+            },
+            Err(_) => std::ptr::null_mut(),
+        }
+    }
+}
+
+#[no_mangle]
+pub extern "C" fn ri_service_discovery_deregister(
+    discovery: *mut CRiServiceDiscovery,
+    instance_id: *const std::ffi::c_char,
+) -> std::ffi::c_int {
+    if discovery.is_null() || instance_id.is_null() {
+        return -1;
+    }
+    let rt = match tokio::runtime::Runtime::new() {
+        Ok(rt) => rt,
+        Err(_) => return -2,
+    };
+    unsafe {
+        let instance_id_str = match std::ffi::CStr::from_ptr(instance_id).to_str() {
+            Ok(s) => s,
+            Err(_) => return -3,
+        };
+        match rt.block_on(async { (*discovery).inner.deregister_service(instance_id_str).await }) {
+            Ok(_) => 0,
+            Err(_) => -4,
+        }
+    }
+}
+
+#[no_mangle]
+pub extern "C" fn ri_service_discovery_discover(
+    discovery: *mut CRiServiceDiscovery,
+    service_name: *const std::ffi::c_char,
+    out_instances: *mut *mut CRiServiceInstance,
+    out_count: *mut usize,
+) -> std::ffi::c_int {
+    if discovery.is_null() || service_name.is_null() || out_instances.is_null() || out_count.is_null() {
+        return -1;
+    }
+    let rt = match tokio::runtime::Runtime::new() {
+        Ok(rt) => rt,
+        Err(_) => return -2,
+    };
+    unsafe {
+        let service_name_str = match std::ffi::CStr::from_ptr(service_name).to_str() {
+            Ok(s) => s,
+            Err(_) => return -3,
+        };
+        match rt.block_on(async { (*discovery).inner.discover_service(service_name_str).await }) {
+            Ok(instances) => {
+                let count = instances.len();
+                *out_count = count;
+                if count == 0 {
+                    *out_instances = std::ptr::null_mut();
+                    return 0;
+                }
+                let ptr = Box::into_raw(Box::new(Vec::with_capacity(count)));
+                (*ptr).extend(instances.into_iter().map(CRiServiceInstance::new));
+                *out_instances = ptr as *mut CRiServiceInstance;
+                0
+            }
+            Err(_) => -4,
+        }
+    }
+}
+
+// RiServiceInstance C bindings
+c_wrapper!(CRiServiceInstance, RiServiceInstance);
+
+c_string_getter!(
+    ri_service_instance_get_id,
+    CRiServiceInstance,
+    |inner: &RiServiceInstance| inner.id.clone()
+);
+c_string_getter!(
+    ri_service_instance_get_service_name,
+    CRiServiceInstance,
+    |inner: &RiServiceInstance| inner.service_name.clone()
+);
+c_string_getter!(
+    ri_service_instance_get_host,
+    CRiServiceInstance,
+    |inner: &RiServiceInstance| inner.host.clone()
+);
+
+#[no_mangle]
+pub extern "C" fn ri_service_instance_get_port(obj: *mut CRiServiceInstance) -> u16 {
+    if obj.is_null() {
+        return 0;
+    }
+    unsafe { (*obj).inner.port }
+}
+
+#[no_mangle]
+pub extern "C" fn ri_service_instance_get_status(obj: *mut CRiServiceInstance) -> std::ffi::c_int {
+    if obj.is_null() {
+        return -1;
+    }
+    unsafe {
+        match (*obj).inner.status {
+            crate::service_mesh::RiServiceStatus::Starting => 0,
+            crate::service_mesh::RiServiceStatus::Running => 1,
+            crate::service_mesh::RiServiceStatus::Stopping => 2,
+            crate::service_mesh::RiServiceStatus::Stopped => 3,
+            crate::service_mesh::RiServiceStatus::Unhealthy => 4,
+        }
+    }
+}
+
+c_destructor!(ri_service_instance_free, CRiServiceInstance);
+
+// RiHealthChecker C bindings
+c_wrapper!(CRiHealthChecker, RiHealthChecker);
+
+#[no_mangle]
+pub extern "C" fn ri_health_checker_new(check_interval_secs: u64) -> *mut CRiHealthChecker {
+    Box::into_raw(Box::new(CRiHealthChecker::new(RiHealthChecker::new(std::time::Duration::from_secs(check_interval_secs)))))
+}
+c_destructor!(ri_health_checker_free, CRiHealthChecker);
+
+#[no_mangle]
+pub extern "C" fn ri_health_checker_start(
+    checker: *mut CRiHealthChecker,
+    service_name: *const std::ffi::c_char,
+    endpoint: *const std::ffi::c_char,
+) -> std::ffi::c_int {
+    if checker.is_null() || service_name.is_null() || endpoint.is_null() {
+        return -1;
+    }
+    let rt = match tokio::runtime::Runtime::new() {
+        Ok(rt) => rt,
+        Err(_) => return -2,
+    };
+    unsafe {
+        let service_name_str = match std::ffi::CStr::from_ptr(service_name).to_str() {
+            Ok(s) => s,
+            Err(_) => return -3,
+        };
+        let endpoint_str = match std::ffi::CStr::from_ptr(endpoint).to_str() {
+            Ok(s) => s,
+            Err(_) => return -3,
+        };
+        match rt.block_on(async { (*checker).inner.start_health_check(service_name_str, endpoint_str).await }) {
+            Ok(_) => 0,
+            Err(_) => -4,
+        }
+    }
+}
+
+#[no_mangle]
+pub extern "C" fn ri_health_checker_stop(
+    checker: *mut CRiHealthChecker,
+    service_name: *const std::ffi::c_char,
+    endpoint: *const std::ffi::c_char,
+) -> std::ffi::c_int {
+    if checker.is_null() || service_name.is_null() || endpoint.is_null() {
+        return -1;
+    }
+    let rt = match tokio::runtime::Runtime::new() {
+        Ok(rt) => rt,
+        Err(_) => return -2,
+    };
+    unsafe {
+        let service_name_str = match std::ffi::CStr::from_ptr(service_name).to_str() {
+            Ok(s) => s,
+            Err(_) => return -3,
+        };
+        let endpoint_str = match std::ffi::CStr::from_ptr(endpoint).to_str() {
+            Ok(s) => s,
+            Err(_) => return -3,
+        };
+        match rt.block_on(async { (*checker).inner.stop_health_check(service_name_str, endpoint_str).await }) {
+            Ok(_) => 0,
+            Err(_) => -4,
+        }
+    }
+}
+
+#[no_mangle]
+pub extern "C" fn ri_health_checker_get_summary(
+    checker: *mut CRiHealthChecker,
+    service_name: *const std::ffi::c_char,
+    out_healthy: *mut bool,
+    out_success_rate: *mut f64,
+    out_avg_response_ms: *mut u64,
+) -> std::ffi::c_int {
+    if checker.is_null() || service_name.is_null() {
+        return -1;
+    }
+    let rt = match tokio::runtime::Runtime::new() {
+        Ok(rt) => rt,
+        Err(_) => return -2,
+    };
+    unsafe {
+        let service_name_str = match std::ffi::CStr::from_ptr(service_name).to_str() {
+            Ok(s) => s,
+            Err(_) => return -3,
+        };
+        match rt.block_on(async { (*checker).inner.get_service_health_summary(service_name_str).await }) {
+            Ok(summary) => {
+                if !out_healthy.is_null() {
+                    *out_healthy = matches!(summary.overall_status, RiHealthStatus::Healthy);
+                }
+                if !out_success_rate.is_null() {
+                    *out_success_rate = summary.success_rate;
+                }
+                if !out_avg_response_ms.is_null() {
+                    *out_avg_response_ms = summary.average_response_time.as_millis() as u64;
+                }
+                0
+            }
+            Err(_) => -4,
+        }
+    }
+}
+
+// RiTrafficManager C bindings
+c_wrapper!(CRiTrafficManager, RiTrafficManager);
+
+#[no_mangle]
+pub extern "C" fn ri_traffic_manager_new(enabled: bool) -> *mut CRiTrafficManager {
+    Box::into_raw(Box::new(CRiTrafficManager::new(RiTrafficManager::new(enabled))))
+}
+c_destructor!(ri_traffic_manager_free, CRiTrafficManager);
+
+#[no_mangle]
+pub extern "C" fn ri_traffic_manager_add_route(
+    manager: *mut CRiTrafficManager,
+    route: *mut CRiTrafficRoute,
+) -> std::ffi::c_int {
+    if manager.is_null() || route.is_null() {
+        return -1;
+    }
+    let rt = match tokio::runtime::Runtime::new() {
+        Ok(rt) => rt,
+        Err(_) => return -2,
+    };
+    unsafe {
+        match rt.block_on(async { (*manager).inner.add_traffic_route((*route).inner.clone()).await }) {
+            Ok(_) => 0,
+            Err(_) => -3,
+        }
+    }
+}
+
+#[no_mangle]
+pub extern "C" fn ri_traffic_manager_remove_route(
+    manager: *mut CRiTrafficManager,
+    source_service: *const std::ffi::c_char,
+    route_name: *const std::ffi::c_char,
+) -> std::ffi::c_int {
+    if manager.is_null() || source_service.is_null() || route_name.is_null() {
+        return -1;
+    }
+    let rt = match tokio::runtime::Runtime::new() {
+        Ok(rt) => rt,
+        Err(_) => return -2,
+    };
+    unsafe {
+        let source_service_str = match std::ffi::CStr::from_ptr(source_service).to_str() {
+            Ok(s) => s,
+            Err(_) => return -3,
+        };
+        let route_name_str = match std::ffi::CStr::from_ptr(route_name).to_str() {
+            Ok(s) => s,
+            Err(_) => return -3,
+        };
+        match rt.block_on(async { (*manager).inner.remove_traffic_route(source_service_str, route_name_str).await }) {
+            Ok(_) => 0,
+            Err(_) => -4,
+        }
+    }
+}
+
+#[no_mangle]
+pub extern "C" fn ri_traffic_manager_set_circuit_breaker(
+    manager: *mut CRiTrafficManager,
+    service: *const std::ffi::c_char,
+    consecutive_errors: u32,
+    max_ejection_percent: f64,
+) -> std::ffi::c_int {
+    if manager.is_null() || service.is_null() {
+        return -1;
+    }
+    let rt = match tokio::runtime::Runtime::new() {
+        Ok(rt) => rt,
+        Err(_) => return -2,
+    };
+    unsafe {
+        let service_str = match std::ffi::CStr::from_ptr(service).to_str() {
+            Ok(s) => s,
+            Err(_) => return -3,
+        };
+        let config = crate::service_mesh::RiCircuitBreakerConfig {
+            consecutive_errors,
+            interval: std::time::Duration::from_secs(10),
+            base_ejection_time: std::time::Duration::from_secs(30),
+            max_ejection_percent,
+        };
+        match rt.block_on(async { (*manager).inner.set_circuit_breaker_config(service_str, config).await }) {
+            Ok(_) => 0,
+            Err(_) => -4,
+        }
+    }
+}
+
+#[no_mangle]
+pub extern "C" fn ri_traffic_manager_set_rate_limit(
+    manager: *mut CRiTrafficManager,
+    service: *const std::ffi::c_char,
+    requests_per_second: u32,
+    burst_size: u32,
+) -> std::ffi::c_int {
+    if manager.is_null() || service.is_null() {
+        return -1;
+    }
+    let rt = match tokio::runtime::Runtime::new() {
+        Ok(rt) => rt,
+        Err(_) => return -2,
+    };
+    unsafe {
+        let service_str = match std::ffi::CStr::from_ptr(service).to_str() {
+            Ok(s) => s,
+            Err(_) => return -3,
+        };
+        let config = crate::service_mesh::RiRateLimitConfig {
+            requests_per_second,
+            burst_size,
+            window: std::time::Duration::from_secs(1),
+        };
+        match rt.block_on(async { (*manager).inner.set_rate_limit_config(service_str, config).await }) {
+            Ok(_) => 0,
+            Err(_) => -4,
+        }
+    }
+}
+
+// RiTrafficRoute C bindings
+c_wrapper!(CRiTrafficRoute, RiTrafficRoute);
+
+#[no_mangle]
+pub extern "C" fn ri_traffic_route_new(
+    name: *const std::ffi::c_char,
+    source_service: *const std::ffi::c_char,
+    destination_service: *const std::ffi::c_char,
+) -> *mut CRiTrafficRoute {
+    if name.is_null() || source_service.is_null() || destination_service.is_null() {
+        return std::ptr::null_mut();
+    }
+    unsafe {
+        let name_str = match std::ffi::CStr::from_ptr(name).to_str() {
+            Ok(s) => s.to_string(),
+            Err(_) => return std::ptr::null_mut(),
+        };
+        let source_str = match std::ffi::CStr::from_ptr(source_service).to_str() {
+            Ok(s) => s.to_string(),
+            Err(_) => return std::ptr::null_mut(),
+        };
+        let dest_str = match std::ffi::CStr::from_ptr(destination_service).to_str() {
+            Ok(s) => s.to_string(),
+            Err(_) => return std::ptr::null_mut(),
+        };
+        let route = RiTrafficRoute {
+            name: name_str,
+            source_service: source_str,
+            destination_service: dest_str,
+            match_criteria: crate::service_mesh::RiMatchCriteria {
+                path_prefix: None,
+                headers: std::collections::HashMap::default(),
+                method: None,
+                query_parameters: std::collections::HashMap::default(),
+            },
+            route_action: crate::service_mesh::RiRouteAction::Route(vec![]),
+            retry_policy: None,
+            timeout: None,
+            fault_injection: None,
+        };
+        Box::into_raw(Box::new(CRiTrafficRoute::new(route)))
+    }
+}
+c_destructor!(ri_traffic_route_free, CRiTrafficRoute);
+
+c_string_getter!(
+    ri_traffic_route_get_name,
+    CRiTrafficRoute,
+    |inner: &RiTrafficRoute| inner.name.clone()
+);
+c_string_getter!(
+    ri_traffic_route_get_source_service,
+    CRiTrafficRoute,
+    |inner: &RiTrafficRoute| inner.source_service.clone()
+);
+c_string_getter!(
+    ri_traffic_route_get_destination_service,
+    CRiTrafficRoute,
+    |inner: &RiTrafficRoute| inner.destination_service.clone()
+);

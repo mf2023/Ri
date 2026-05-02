@@ -26,7 +26,7 @@ use std::sync::RwLock;
 
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 #[derive(Debug, Clone, Default)]
-pub struct DatabaseMetrics {
+pub struct RiDatabaseMetrics {
     pub active_connections: u64,
     pub idle_connections: u64,
     pub total_connections: u64,
@@ -38,7 +38,7 @@ pub struct DatabaseMetrics {
 
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 #[derive(Debug, Clone)]
-pub struct DynamicPoolConfig {
+pub struct RiDynamicPoolConfig {
     pub enable_dynamic_scaling: bool,
     pub scale_up_threshold: f64,
     pub scale_down_threshold: f64,
@@ -49,7 +49,7 @@ pub struct DynamicPoolConfig {
     pub scale_down_step: u32,
 }
 
-impl Default for DynamicPoolConfig {
+impl Default for RiDynamicPoolConfig {
     fn default() -> Self {
         Self {
             enable_dynamic_scaling: true,
@@ -66,7 +66,7 @@ impl Default for DynamicPoolConfig {
 
 #[cfg(feature = "pyo3")]
 #[pyo3::prelude::pymethods]
-impl DynamicPoolConfig {
+impl RiDynamicPoolConfig {
     #[new]
     fn py_new() -> Self {
         Self::default()
@@ -178,7 +178,7 @@ impl PooledDatabase {
         self.inner.is_connected()
     }
 
-    pub fn pool_metrics(&self) -> DatabaseMetrics {
+    pub fn pool_metrics(&self) -> RiDatabaseMetrics {
         self.pool.metrics()
     }
 }
@@ -290,7 +290,7 @@ pub struct RiDatabasePool {
 
 impl RiDatabasePool {
     pub async fn new(config: RiDatabaseConfig) -> RiResult<Self> {
-        let dynamic_config = DynamicPoolConfig {
+        let dynamic_config = RiDynamicPoolConfig {
             enable_dynamic_scaling: true,
             scale_up_threshold: 0.8,
             scale_down_threshold: 0.3,
@@ -402,7 +402,7 @@ impl RiDatabasePool {
         result
     }
 
-    async fn do_scaling(&self, dynamic_config: &DynamicPoolConfig) -> RiResult<()> {
+    async fn do_scaling(&self, dynamic_config: &RiDynamicPoolConfig) -> RiResult<()> {
         let utilization = self.utilization_rate();
         let total = self.total_connections.load(Ordering::SeqCst) as u32;
         let _active = self.active_connections.load(Ordering::SeqCst) as u32;
@@ -596,11 +596,11 @@ impl RiDatabasePool {
         Ok(())
     }
 
-    pub fn metrics(&self) -> DatabaseMetrics {
+    pub fn metrics(&self) -> RiDatabaseMetrics {
         let active = self.active_connections.load(Ordering::SeqCst);
         let total = self.total_connections.load(Ordering::SeqCst);
         
-        DatabaseMetrics {
+        RiDatabaseMetrics {
             active_connections: active,
             idle_connections: self.idle_connections.load(Ordering::SeqCst),
             total_connections: total,
@@ -611,18 +611,18 @@ impl RiDatabasePool {
         }
     }
 
-    pub fn get_dynamic_config(&self) -> DynamicPoolConfig {
+    pub fn get_dynamic_config(&self) -> RiDynamicPoolConfig {
         self.dynamic_config.read().unwrap().clone()
     }
 
-    pub fn set_dynamic_config(&self, config: DynamicPoolConfig) {
+    pub fn set_dynamic_config(&self, config: RiDynamicPoolConfig) {
         let mut current = self.dynamic_config.write().unwrap();
         *current = config;
     }
 
     pub fn update_dynamic_config<F>(&self, f: F) 
     where
-        F: FnOnce(&mut DynamicPoolConfig),
+        F: FnOnce(&mut RiDynamicPoolConfig),
     {
         let mut config = self.dynamic_config.write().unwrap();
         f(&mut config);
@@ -690,7 +690,7 @@ impl RiDatabasePool {
 impl RiDatabasePool {
     #[new]
     fn py_new(config: RiDatabaseConfig) -> Self {
-        let dynamic_config = DynamicPoolConfig {
+        let dynamic_config = RiDynamicPoolConfig {
             enable_dynamic_scaling: true,
             scale_up_threshold: 0.8,
             scale_down_threshold: 0.3,
@@ -741,15 +741,15 @@ impl RiDatabasePool {
         self.utilization_rate()
     }
 
-    fn get_metrics(&self) -> DatabaseMetrics {
+    fn get_metrics(&self) -> RiDatabaseMetrics {
         self.metrics()
     }
 
-    fn get_dynamic_pool_config(&self) -> DynamicPoolConfig {
+    fn get_dynamic_pool_config(&self) -> RiDynamicPoolConfig {
         self.get_dynamic_config()
     }
 
-    fn set_dynamic_pool_config(&self, config: DynamicPoolConfig) {
+    fn set_dynamic_pool_config(&self, config: RiDynamicPoolConfig) {
         self.set_dynamic_config(config);
     }
 

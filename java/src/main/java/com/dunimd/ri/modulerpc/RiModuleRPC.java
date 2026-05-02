@@ -46,6 +46,15 @@ public class RiModuleRPC {
     
     private native void free0(long ptr);
     
+    /**
+     * Get the native pointer.
+     * 
+     * @return the native pointer
+     */
+    public long getNativePtr() {
+        return nativePtr;
+    }
+    
     @Override
     protected void finalize() {
         close();

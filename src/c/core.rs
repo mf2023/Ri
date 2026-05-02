@@ -133,7 +133,11 @@
 //! required by all other Ri components.
 
 use crate::prelude::{RiAppBuilder, RiConfig};
-use std::ffi::{c_char, CString};
+use crate::core::{RiServiceContext, RiHealthStatus, RiHealthCheckResult, RiHealthCheckConfig, RiHealthReport, RiHealthChecker};
+use crate::core::error_chain::RiErrorChain;
+use crate::core::lock::RiLockError;
+use std::ffi::{c_char, CString, c_int, c_uint};
+use std::time::SystemTime;
 
 /// Opaque C wrapper structure for RiAppBuilder.
 ///
@@ -452,6 +456,387 @@ pub extern "C" fn ri_config_get_string(
                 Err(_) => std::ptr::null_mut(),
             },
             None => std::ptr::null_mut(),
+        }
+    }
+}
+
+#[repr(C)]
+pub struct CRiServiceContext {
+    inner: RiServiceContext,
+}
+
+#[no_mangle]
+pub extern "C" fn ri_service_context_new() -> *mut CRiServiceContext {
+    match RiServiceContext::new_default() {
+        Ok(ctx) => {
+            let context = CRiServiceContext { inner: ctx };
+            Box::into_raw(Box::new(context))
+        }
+        Err(_) => std::ptr::null_mut(),
+    }
+}
+
+#[no_mangle]
+pub extern "C" fn ri_service_context_free(ctx: *mut CRiServiceContext) {
+    if !ctx.is_null() {
+        unsafe {
+            let _ = Box::from_raw(ctx);
+        }
+    }
+}
+
+#[repr(C)]
+pub struct CRiHealthStatus {
+    pub status: c_int,
+}
+
+pub const RI_HEALTH_STATUS_HEALTHY: c_int = 0;
+pub const RI_HEALTH_STATUS_DEGRADED: c_int = 1;
+pub const RI_HEALTH_STATUS_UNHEALTHY: c_int = 2;
+pub const RI_HEALTH_STATUS_UNKNOWN: c_int = 3;
+
+#[no_mangle]
+pub extern "C" fn ri_health_status_new(status: c_int) -> CRiHealthStatus {
+    CRiHealthStatus { status }
+}
+
+#[no_mangle]
+pub extern "C" fn ri_health_status_is_healthy(status: *const CRiHealthStatus) -> bool {
+    if status.is_null() {
+        return false;
+    }
+    unsafe {
+        matches!((*status).status, RI_HEALTH_STATUS_HEALTHY | RI_HEALTH_STATUS_DEGRADED)
+    }
+}
+
+#[no_mangle]
+pub extern "C" fn ri_health_status_requires_attention(status: *const CRiHealthStatus) -> bool {
+    if status.is_null() {
+        return false;
+    }
+    unsafe { (*status).status == RI_HEALTH_STATUS_UNHEALTHY }
+}
+
+#[repr(C)]
+pub struct CRiHealthCheckResult {
+    pub name: *mut c_char,
+    pub status: CRiHealthStatus,
+    pub message: *mut c_char,
+    pub timestamp_secs: u64,
+    pub timestamp_nanos: u64,
+    pub duration_secs: u64,
+    pub duration_nanos: u64,
+}
+
+#[no_mangle]
+pub extern "C" fn ri_health_check_result_new(
+    name: *const c_char,
+    status: c_int,
+    message: *const c_char,
+) -> *mut CRiHealthCheckResult {
+    if name.is_null() {
+        return std::ptr::null_mut();
+    }
+
+    unsafe {
+        let name_str = match std::ffi::CStr::from_ptr(name).to_str() {
+            Ok(s) => s.to_string(),
+            Err(_) => return std::ptr::null_mut(),
+        };
+
+        let msg_str = if message.is_null() {
+            None
+        } else {
+            match std::ffi::CStr::from_ptr(message).to_str() {
+                Ok(s) => Some(s.to_string()),
+                Err(_) => None,
+            }
+        };
+
+        let rust_status = match status {
+            RI_HEALTH_STATUS_HEALTHY => RiHealthStatus::Healthy,
+            RI_HEALTH_STATUS_DEGRADED => RiHealthStatus::Degraded,
+            RI_HEALTH_STATUS_UNHEALTHY => RiHealthStatus::Unhealthy,
+            _ => RiHealthStatus::Unknown,
+        };
+
+        let result = RiHealthCheckResult {
+            name: name_str,
+            status: rust_status,
+            message: msg_str,
+            timestamp: SystemTime::now(),
+            duration: std::time::Duration::ZERO,
+        };
+
+        let c_result = convert_health_check_result_to_c(result);
+        Box::into_raw(Box::new(c_result))
+    }
+}
+
+fn convert_health_check_result_to_c(result: RiHealthCheckResult) -> CRiHealthCheckResult {
+    let name = match CString::new(result.name) {
+        Ok(s) => s.into_raw(),
+        Err(_) => std::ptr::null_mut(),
+    };
+
+    let message = match result.message {
+        Some(msg) => match CString::new(msg) {
+            Ok(s) => s.into_raw(),
+            Err(_) => std::ptr::null_mut(),
+        },
+        None => std::ptr::null_mut(),
+    };
+
+    let status = CRiHealthStatus {
+        status: match result.status {
+            RiHealthStatus::Healthy => RI_HEALTH_STATUS_HEALTHY,
+            RiHealthStatus::Degraded => RI_HEALTH_STATUS_DEGRADED,
+            RiHealthStatus::Unhealthy => RI_HEALTH_STATUS_UNHEALTHY,
+            RiHealthStatus::Unknown => RI_HEALTH_STATUS_UNKNOWN,
+        },
+    };
+
+    let duration = result.duration;
+    let timestamp = result.timestamp
+        .duration_since(SystemTime::UNIX_EPOCH)
+        .unwrap_or_default();
+
+    CRiHealthCheckResult {
+        name,
+        status,
+        message,
+        timestamp_secs: timestamp.as_secs(),
+        timestamp_nanos: timestamp.subsec_nanos() as u64,
+        duration_secs: duration.as_secs(),
+        duration_nanos: duration.subsec_nanos() as u64,
+    }
+}
+
+#[no_mangle]
+pub extern "C" fn ri_health_check_result_free(result: *mut CRiHealthCheckResult) {
+    if !result.is_null() {
+        unsafe {
+            if !(*result).name.is_null() {
+                let _ = CString::from_raw((*result).name);
+            }
+            if !(*result).message.is_null() {
+                let _ = CString::from_raw((*result).message);
+            }
+            let _ = Box::from_raw(result);
+        }
+    }
+}
+
+#[repr(C)]
+pub struct CRiHealthCheckConfig {
+    pub check_interval_secs: u64,
+    pub timeout_secs: u64,
+    pub failure_threshold: u32,
+    pub success_threshold: u32,
+    pub enabled: bool,
+}
+
+#[no_mangle]
+pub extern "C" fn ri_health_check_config_new(
+    check_interval_secs: u64,
+    timeout_secs: u64,
+    failure_threshold: u32,
+    success_threshold: u32,
+    enabled: bool,
+) -> CRiHealthCheckConfig {
+    CRiHealthCheckConfig {
+        check_interval_secs,
+        timeout_secs,
+        failure_threshold,
+        success_threshold,
+        enabled,
+    }
+}
+
+#[no_mangle]
+pub extern "C" fn ri_health_check_config_default() -> CRiHealthCheckConfig {
+    let default_config = RiHealthCheckConfig::default();
+    CRiHealthCheckConfig {
+        check_interval_secs: default_config.check_interval.as_secs(),
+        timeout_secs: default_config.timeout.as_secs(),
+        failure_threshold: default_config.failure_threshold,
+        success_threshold: default_config.success_threshold,
+        enabled: default_config.enabled,
+    }
+}
+
+#[repr(C)]
+pub struct CRiHealthReport {
+    pub overall_status: CRiHealthStatus,
+    pub total_components: usize,
+    pub healthy_count: usize,
+    pub degraded_count: usize,
+    pub unhealthy_count: usize,
+    pub unknown_count: usize,
+}
+
+#[no_mangle]
+pub extern "C" fn ri_health_report_new() -> *mut CRiHealthReport {
+    let report = CRiHealthReport {
+        overall_status: CRiHealthStatus { status: RI_HEALTH_STATUS_UNKNOWN },
+        total_components: 0,
+        healthy_count: 0,
+        degraded_count: 0,
+        unhealthy_count: 0,
+        unknown_count: 0,
+    };
+    Box::into_raw(Box::new(report))
+}
+
+#[no_mangle]
+pub extern "C" fn ri_health_report_free(report: *mut CRiHealthReport) {
+    if !report.is_null() {
+        unsafe {
+            let _ = Box::from_raw(report);
+        }
+    }
+}
+
+#[repr(C)]
+pub struct CRiErrorChain {
+    inner: RiErrorChain,
+}
+
+#[no_mangle]
+pub extern "C" fn ri_error_chain_new(message: *const c_char) -> *mut CRiErrorChain {
+    if message.is_null() {
+        return std::ptr::null_mut();
+    }
+
+    unsafe {
+        let msg = match std::ffi::CStr::from_ptr(message).to_str() {
+            Ok(s) => s.to_string(),
+            Err(_) => return std::ptr::null_mut(),
+        };
+
+        let chain = crate::core::error_chain::utils::chain_from_msg(msg);
+        Box::into_raw(Box::new(CRiErrorChain { inner: chain }))
+    }
+}
+
+#[no_mangle]
+pub extern "C" fn ri_error_chain_free(chain: *mut CRiErrorChain) {
+    if !chain.is_null() {
+        unsafe {
+            let _ = Box::from_raw(chain);
+        }
+    }
+}
+
+#[no_mangle]
+pub extern "C" fn ri_error_chain_get_context(chain: *const CRiErrorChain) -> *mut c_char {
+    if chain.is_null() {
+        return std::ptr::null_mut();
+    }
+
+    unsafe {
+        let context = (*chain).inner.get_context();
+        match CString::new(context) {
+            Ok(s) => s.into_raw(),
+            Err(_) => std::ptr::null_mut(),
+        }
+    }
+}
+
+#[no_mangle]
+pub extern "C" fn ri_error_chain_pretty_format(chain: *const CRiErrorChain) -> *mut c_char {
+    if chain.is_null() {
+        return std::ptr::null_mut();
+    }
+
+    unsafe {
+        let formatted = (*chain).inner.pretty_format();
+        match CString::new(formatted) {
+            Ok(s) => s.into_raw(),
+            Err(_) => std::ptr::null_mut(),
+        }
+    }
+}
+
+#[repr(C)]
+pub struct CRiLockError {
+    pub context: *mut c_char,
+    pub is_poisoned: bool,
+}
+
+#[no_mangle]
+pub extern "C" fn ri_lock_error_new(context: *const c_char, is_poisoned: bool) -> *mut CRiLockError {
+    if context.is_null() {
+        return std::ptr::null_mut();
+    }
+
+    unsafe {
+        let ctx = match std::ffi::CStr::from_ptr(context).to_str() {
+            Ok(s) => s.to_string(),
+            Err(_) => return std::ptr::null_mut(),
+        };
+
+        let error = if is_poisoned {
+            RiLockError::poisoned(&ctx)
+        } else {
+            RiLockError::new(&ctx)
+        };
+
+        let c_context = match CString::new(error.get_context()) {
+            Ok(s) => s.into_raw(),
+            Err(_) => return std::ptr::null_mut(),
+        };
+
+        Box::into_raw(Box::new(CRiLockError {
+            context: c_context,
+            is_poisoned: error.is_poisoned(),
+        }))
+    }
+}
+
+#[no_mangle]
+pub extern "C" fn ri_lock_error_free(error: *mut CRiLockError) {
+    if !error.is_null() {
+        unsafe {
+            if !(*error).context.is_null() {
+                let _ = CString::from_raw((*error).context);
+            }
+            let _ = Box::from_raw(error);
+        }
+    }
+}
+
+#[no_mangle]
+pub extern "C" fn ri_lock_error_get_context(error: *const CRiLockError) -> *mut c_char {
+    if error.is_null() {
+        return std::ptr::null_mut();
+    }
+
+    unsafe {
+        if (*error).context.is_null() {
+            return std::ptr::null_mut();
+        }
+        match CString::new(std::ffi::CStr::from_ptr((*error).context).to_bytes()) {
+            Ok(s) => s.into_raw(),
+            Err(_) => std::ptr::null_mut(),
+        }
+    }
+}
+
+#[no_mangle]
+pub extern "C" fn ri_lock_error_is_poisoned(error: *const CRiLockError) -> bool {
+    if error.is_null() {
+        return false;
+    }
+    unsafe { (*error).is_poisoned }
+}
+
+#[no_mangle]
+pub extern "C" fn ri_string_free(s: *mut c_char) {
+    if !s.is_null() {
+        unsafe {
+            let _ = CString::from_raw(s);
         }
     }
 }

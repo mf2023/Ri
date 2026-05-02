@@ -1,38 +1,32 @@
-> **⚠️ 重要通知**
->
-> **DMSC → RI** 从版本 **0.1.9** 开始 | 包含CLI工具 | [📖 阅读迁移指南](./ANNOUNCEMENT.zh.md)
->
-> 所有 `DMSC*` 类型 → `RI*` | 包名：`dmsc` → `ri`
-
----
 
 <div align="center">
 
-<h1 style="display: flex; flex-direction: column; align-items: center; gap: 8px; margin-bottom: 8px;">
-  <span style="display: flex; align-items: center; gap: 12px;"><img src="assets/svg/ri.svg" width="36" height="36" alt="Ri">Ri</span>
-</h1>
+> ⚠️ **DMSC 已更名为 Ri**，从 v0.1.9 起生效。
+> [📖 阅读迁移指南](./ANNOUNCEMENT.zh.md)
+
+---
+
+<img src="assets/svg/ri.svg" width="36" height="36">
 
 [English](README.md) | 简体中文
 
 [帮助文档](https://mf2023.github.io/Ri/ri/) | [更新日志](CHANGELOG.md) | [安全](SECURITY.md) | [贡献](CONTRIBUTING.md) | [行为准则](CODE_OF_CONDUCT.md)
 
+<a href="https://github.com/mf2023/Ri" target="_blank">
+    <img alt="GitHub" src="https://img.shields.io/badge/GitHub-Ri-181717?style=flat-square&logo=github"/>
+</a>
+<a href="https://gitee.com/dunimd/ri" target="_blank">
+    <img alt="Gitee" src="https://img.shields.io/badge/Gitee-Ri-C71D23?style=flat-square&logo=gitee"/>
+</a>
+<a href="https://gitcode.com/dunimd/ri.git" target="_blank">
+    <img alt="GitCode" src="https://img.shields.io/badge/GitCode-Ri-FF6B35?style=flat-square&logo=git"/>
+</a>
 
 <a href="https://x.com/Dunimd2025" target="_blank">
     <img alt="X" src="https://img.shields.io/badge/X-Dunimd-000000?style=flat-square&logo=x"/>
 </a>
 <a href="https://space.bilibili.com/3493284091529457" target="_blank">
     <img alt="BiliBili" src="https://img.shields.io/badge/BiliBili-Dunimd-00A1D6?style=flat-square&logo=bilibili"/>
-</a>
-
-
-<a href="https://github.com/mf2023/Ri" target="_blank">
-    <img alt="GitHub" src="https://img.shields.io/badge/GitHub-Ri-181717?style=flat-square&logo=github"/>
-</a>
-<a href="https://gitee.com/dunimd" target="_blank">
-    <img alt="Gitee" src="https://img.shields.io/badge/Gitee-Dunimd-C71D23?style=flat-square&logo=gitee"/>
-</a>
-<a href="https://gitcode.com/dunimd/ri.git" target="_blank">
-    <img alt="GitCode" src="https://img.shields.io/badge/GitCode-Ri-FF6B35?style=flat-square&logo=git"/>
 </a>
 <a href="https://huggingface.co/dunimd" target="_blank">
     <img alt="Hugging Face" src="https://img.shields.io/badge/Hugging%20Face-Dunimd-FFD21E?style=flat-square&logo=huggingface"/>

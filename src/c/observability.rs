@@ -248,12 +248,14 @@
 //! - observability-opentelemetry: Enable OpenTelemetry export
 //! - observability-prometheus: Enable Prometheus export
 
-use crate::observability::{RiMetricsRegistry, RiObservabilityConfig, RiTracer};
+use crate::observability::{RiMetricsRegistry, RiObservabilityConfig, RiTracer, RiSpanKind, RiSpanStatus, RiSpanId, RiTraceId};
 
 
 c_wrapper!(CRiObservabilityConfig, RiObservabilityConfig);
 c_wrapper!(CRiTracer, RiTracer);
 c_wrapper!(CRiMetricsRegistry, RiMetricsRegistry);
+c_wrapper!(CRiSpanId, RiSpanId);
+c_wrapper!(CRiTraceId, RiTraceId);
 
 // RiObservabilityConfig constructors and destructors
 c_constructor!(
@@ -263,3 +265,290 @@ c_constructor!(
     RiObservabilityConfig::default()
 );
 c_destructor!(ri_observability_config_free, CRiObservabilityConfig);
+
+// RiTracer C bindings
+#[no_mangle]
+pub extern "C" fn ri_tracer_new(sampling_rate: f64) -> *mut CRiTracer {
+    Box::into_raw(Box::new(CRiTracer::new(RiTracer::new(sampling_rate))))
+}
+c_destructor!(ri_tracer_free, CRiTracer);
+
+#[no_mangle]
+pub extern "C" fn ri_tracer_start_trace(
+    tracer: *mut CRiTracer,
+    name: *const std::ffi::c_char,
+) -> *mut std::ffi::c_char {
+    if tracer.is_null() || name.is_null() {
+        return std::ptr::null_mut();
+    }
+    unsafe {
+        let name_str = match std::ffi::CStr::from_ptr(name).to_str() {
+            Ok(s) => s.to_string(),
+            Err(_) => return std::ptr::null_mut(),
+        };
+        match (*tracer).inner.start_trace(name_str) {
+            Some(trace_id) => match std::ffi::CString::new(trace_id.as_str()) {
+                Ok(c_str) => c_str.into_raw(),
+                Err(_) => std::ptr::null_mut(),
+            },
+            None => std::ptr::null_mut(),
+        }
+    }
+}
+
+#[no_mangle]
+pub extern "C" fn ri_tracer_start_span(
+    tracer: *mut CRiTracer,
+    name: *const std::ffi::c_char,
+    kind: std::ffi::c_int,
+) -> *mut std::ffi::c_char {
+    if tracer.is_null() || name.is_null() {
+        return std::ptr::null_mut();
+    }
+    unsafe {
+        let name_str = match std::ffi::CStr::from_ptr(name).to_str() {
+            Ok(s) => s.to_string(),
+            Err(_) => return std::ptr::null_mut(),
+        };
+        let span_kind = match kind {
+            0 => RiSpanKind::Server,
+            1 => RiSpanKind::Client,
+            2 => RiSpanKind::Producer,
+            3 => RiSpanKind::Consumer,
+            _ => RiSpanKind::Internal,
+        };
+        match (*tracer).inner.start_span_from_context(name_str, span_kind) {
+            Some(span_id) => match std::ffi::CString::new(span_id.as_str()) {
+                Ok(c_str) => c_str.into_raw(),
+                Err(_) => std::ptr::null_mut(),
+            },
+            None => std::ptr::null_mut(),
+        }
+    }
+}
+
+#[no_mangle]
+pub extern "C" fn ri_tracer_end_span(
+    tracer: *mut CRiTracer,
+    span_id: *const std::ffi::c_char,
+    status: std::ffi::c_int,
+) -> std::ffi::c_int {
+    if tracer.is_null() || span_id.is_null() {
+        return -1;
+    }
+    unsafe {
+        let span_id_str = match std::ffi::CStr::from_ptr(span_id).to_str() {
+            Ok(s) => s,
+            Err(_) => return -2,
+        };
+        let span_status = match status {
+            0 => RiSpanStatus::Ok,
+            1 => RiSpanStatus::Error("C API error".to_string()),
+            _ => RiSpanStatus::Unset,
+        };
+        let span_id_obj = RiSpanId::from_string(span_id_str.to_string());
+        match (*tracer).inner.end_span(&span_id_obj, span_status) {
+            Ok(_) => 0,
+            Err(_) => -3,
+        }
+    }
+}
+
+#[no_mangle]
+pub extern "C" fn ri_tracer_set_attribute(
+    tracer: *mut CRiTracer,
+    span_id: *const std::ffi::c_char,
+    key: *const std::ffi::c_char,
+    value: *const std::ffi::c_char,
+) -> std::ffi::c_int {
+    if tracer.is_null() || span_id.is_null() || key.is_null() || value.is_null() {
+        return -1;
+    }
+    unsafe {
+        let span_id_str = match std::ffi::CStr::from_ptr(span_id).to_str() {
+            Ok(s) => s,
+            Err(_) => return -2,
+        };
+        let key_str = match std::ffi::CStr::from_ptr(key).to_str() {
+            Ok(s) => s.to_string(),
+            Err(_) => return -2,
+        };
+        let value_str = match std::ffi::CStr::from_ptr(value).to_str() {
+            Ok(s) => s.to_string(),
+            Err(_) => return -2,
+        };
+        let span_id_obj = RiSpanId::from_string(span_id_str.to_string());
+        match (*tracer).inner.span_mut(&span_id_obj, |span| {
+            span.set_attribute(key_str, value_str);
+        }) {
+            Ok(_) => 0,
+            Err(_) => -3,
+        }
+    }
+}
+
+#[no_mangle]
+pub extern "C" fn ri_tracer_get_active_trace_count(tracer: *mut CRiTracer) -> usize {
+    if tracer.is_null() {
+        return 0;
+    }
+    unsafe { (*tracer).inner.active_trace_count() }
+}
+
+#[no_mangle]
+pub extern "C" fn ri_tracer_get_active_span_count(tracer: *mut CRiTracer) -> usize {
+    if tracer.is_null() {
+        return 0;
+    }
+    unsafe { (*tracer).inner.active_span_count() }
+}
+
+// RiMetricsRegistry C bindings
+#[no_mangle]
+pub extern "C" fn ri_metrics_registry_new() -> *mut CRiMetricsRegistry {
+    Box::into_raw(Box::new(CRiMetricsRegistry::new(RiMetricsRegistry::new())))
+}
+c_destructor!(ri_metrics_registry_free, CRiMetricsRegistry);
+
+#[no_mangle]
+pub extern "C" fn ri_metrics_registry_get_metric_count(registry: *mut CRiMetricsRegistry) -> usize {
+    if registry.is_null() {
+        return 0;
+    }
+    unsafe { (*registry).inner.get_all_metrics().len() }
+}
+
+#[no_mangle]
+pub extern "C" fn ri_metrics_registry_get_metric_value(
+    registry: *mut CRiMetricsRegistry,
+    name: *const std::ffi::c_char,
+) -> f64 {
+    if registry.is_null() || name.is_null() {
+        return 0.0;
+    }
+    unsafe {
+        let name_str = match std::ffi::CStr::from_ptr(name).to_str() {
+            Ok(s) => s,
+            Err(_) => return 0.0,
+        };
+        match (*registry).inner.get_metric(name_str) {
+            Some(metric) => metric.get_value(),
+            None => 0.0,
+        }
+    }
+}
+
+#[no_mangle]
+pub extern "C" fn ri_metrics_registry_export_prometheus(
+    registry: *mut CRiMetricsRegistry,
+) -> *mut std::ffi::c_char {
+    if registry.is_null() {
+        return std::ptr::null_mut();
+    }
+    unsafe {
+        #[cfg(feature = "observability")]
+        {
+            let output = (*registry).inner.export_prometheus();
+            match std::ffi::CString::new(output) {
+                Ok(c_str) => c_str.into_raw(),
+                Err(_) => std::ptr::null_mut(),
+            }
+        }
+        #[cfg(not(feature = "observability"))]
+        {
+            match std::ffi::CString::new("# Observability feature not enabled") {
+                Ok(c_str) => c_str.into_raw(),
+                Err(_) => std::ptr::null_mut(),
+            }
+        }
+    }
+}
+
+// RiSystemMetrics C bindings (if system_info feature is enabled)
+#[cfg(feature = "system_info")]
+use crate::observability::{RiSystemMetrics, RiSystemMetricsCollector};
+
+#[cfg(feature = "system_info")]
+c_wrapper!(CRiSystemMetrics, RiSystemMetrics);
+
+#[cfg(feature = "system_info")]
+#[no_mangle]
+pub extern "C" fn ri_system_metrics_new() -> *mut CRiSystemMetrics {
+    Box::into_raw(Box::new(CRiSystemMetrics::new(RiSystemMetrics::default())))
+}
+
+#[cfg(feature = "system_info")]
+c_destructor!(ri_system_metrics_free, CRiSystemMetrics);
+
+#[cfg(feature = "system_info")]
+#[no_mangle]
+pub extern "C" fn ri_system_metrics_get_cpu_usage(metrics: *mut CRiSystemMetrics) -> f64 {
+    if metrics.is_null() {
+        return 0.0;
+    }
+    unsafe { (*metrics).inner.cpu.usage }
+}
+
+#[cfg(feature = "system_info")]
+#[no_mangle]
+pub extern "C" fn ri_system_metrics_get_memory_used(metrics: *mut CRiSystemMetrics) -> u64 {
+    if metrics.is_null() {
+        return 0;
+    }
+    unsafe { (*metrics).inner.memory.used }
+}
+
+#[cfg(feature = "system_info")]
+#[no_mangle]
+pub extern "C" fn ri_system_metrics_get_memory_total(metrics: *mut CRiSystemMetrics) -> u64 {
+    if metrics.is_null() {
+        return 0;
+    }
+    unsafe { (*metrics).inner.memory.total }
+}
+
+#[cfg(feature = "system_info")]
+#[no_mangle]
+pub extern "C" fn ri_system_metrics_get_disk_used(metrics: *mut CRiSystemMetrics) -> u64 {
+    if metrics.is_null() {
+        return 0;
+    }
+    unsafe { (*metrics).inner.disk.used }
+}
+
+#[cfg(feature = "system_info")]
+#[no_mangle]
+pub extern "C" fn ri_system_metrics_get_disk_total(metrics: *mut CRiSystemMetrics) -> u64 {
+    if metrics.is_null() {
+        return 0;
+    }
+    unsafe { (*metrics).inner.disk.total }
+}
+
+#[cfg(feature = "system_info")]
+c_wrapper!(CRiSystemMetricsCollector, RiSystemMetricsCollector);
+
+#[cfg(feature = "system_info")]
+#[no_mangle]
+pub extern "C" fn ri_system_metrics_collector_new() -> *mut CRiSystemMetricsCollector {
+    Box::into_raw(Box::new(CRiSystemMetricsCollector::new(RiSystemMetricsCollector::new())))
+}
+
+#[cfg(feature = "system_info")]
+c_destructor!(ri_system_metrics_collector_free, CRiSystemMetricsCollector);
+
+#[cfg(feature = "system_info")]
+#[no_mangle]
+pub extern "C" fn ri_system_metrics_collector_collect(
+    collector: *mut CRiSystemMetricsCollector,
+    out_metrics: *mut *mut CRiSystemMetrics,
+) -> std::ffi::c_int {
+    if collector.is_null() || out_metrics.is_null() {
+        return -1;
+    }
+    unsafe {
+        let metrics = (*collector).inner.collect();
+        *out_metrics = Box::into_raw(Box::new(CRiSystemMetrics::new(metrics)));
+        0
+    }
+}

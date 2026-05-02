@@ -18,9 +18,12 @@
 package com.dunimd.ri.auth;
 
 import com.dunimd.ri.NativeLoader;
+import java.util.List;
 
 /**
  * JWT claims for Ri.
+ * 
+ * Represents the claims payload in a JWT token.
  */
 public class RiJWTClaims {
     private long nativePtr;
@@ -33,7 +36,61 @@ public class RiJWTClaims {
         this.nativePtr = nativePtr;
     }
     
+    public RiJWTClaims(String sub, List<String> roles, List<String> permissions) {
+        String[] rolesArr = roles.toArray(new String[0]);
+        String[] permsArr = permissions.toArray(new String[0]);
+        this.nativePtr = new0(sub, rolesArr, permsArr);
+    }
+    
+    private native long new0(String sub, String[] roles, String[] permissions);
+    
     public long getNativePtr() {
         return nativePtr;
+    }
+    
+    public String getSub() {
+        return getSub0(nativePtr);
+    }
+    
+    private native String getSub0(long ptr);
+    
+    public long getExp() {
+        return getExp0(nativePtr);
+    }
+    
+    private native long getExp0(long ptr);
+    
+    public long getIat() {
+        return getIat0(nativePtr);
+    }
+    
+    private native long getIat0(long ptr);
+    
+    public List<String> getRoles() {
+        String[] roles = getRoles0(nativePtr);
+        return java.util.Arrays.asList(roles);
+    }
+    
+    private native String[] getRoles0(long ptr);
+    
+    public List<String> getPermissions() {
+        String[] perms = getPermissions0(nativePtr);
+        return java.util.Arrays.asList(perms);
+    }
+    
+    private native String[] getPermissions0(long ptr);
+    
+    public void close() {
+        if (nativePtr != 0) {
+            free0(nativePtr);
+            nativePtr = 0;
+        }
+    }
+    
+    private native void free0(long ptr);
+    
+    @Override
+    protected void finalize() {
+        close();
     }
 }

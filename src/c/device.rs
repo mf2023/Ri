@@ -334,3 +334,301 @@ pub extern "C" fn ri_device_new(name: *const c_char, device_type: i32) -> *mut C
 }
 
 c_destructor!(ri_device_free, CRiDevice);
+
+// RiDevice getters
+c_string_getter!(
+    ri_device_get_name,
+    CRiDevice,
+    |inner: &RiDevice| inner.name().to_string()
+);
+
+#[no_mangle]
+pub extern "C" fn ri_device_get_id(device: *mut CRiDevice) -> *mut std::ffi::c_char {
+    if device.is_null() {
+        return std::ptr::null_mut();
+    }
+    unsafe {
+        match std::ffi::CString::new((*device).inner.id().to_string()) {
+            Ok(c_str) => c_str.into_raw(),
+            Err(_) => std::ptr::null_mut(),
+        }
+    }
+}
+
+#[no_mangle]
+pub extern "C" fn ri_device_get_type(device: *mut CRiDevice) -> std::ffi::c_int {
+    if device.is_null() {
+        return -1;
+    }
+    unsafe {
+        match (*device).inner.device_type() {
+            RiDeviceType::CPU => 0,
+            RiDeviceType::GPU => 1,
+            RiDeviceType::Memory => 2,
+            RiDeviceType::Storage => 3,
+            RiDeviceType::Network => 4,
+            RiDeviceType::Sensor => 5,
+            RiDeviceType::Actuator => 6,
+            RiDeviceType::Compute => 7,
+            RiDeviceType::Custom => 8,
+        }
+    }
+}
+
+#[no_mangle]
+pub extern "C" fn ri_device_get_status(device: *mut CRiDevice) -> std::ffi::c_int {
+    if device.is_null() {
+        return -1;
+    }
+    unsafe {
+        match (*device).inner.status() {
+            crate::device::RiDeviceStatus::Discovered => 0,
+            crate::device::RiDeviceStatus::Configured => 1,
+            crate::device::RiDeviceStatus::Available => 2,
+            crate::device::RiDeviceStatus::Allocated => 3,
+            crate::device::RiDeviceStatus::Busy => 4,
+            crate::device::RiDeviceStatus::Error => 5,
+            crate::device::RiDeviceStatus::Unavailable => 6,
+            crate::device::RiDeviceStatus::Released => 7,
+        }
+    }
+}
+
+// RiDeviceController C bindings
+#[no_mangle]
+pub extern "C" fn ri_device_controller_new() -> *mut CRiDeviceController {
+    Box::into_raw(Box::new(CRiDeviceController::new(RiDeviceController::new())))
+}
+c_destructor!(ri_device_controller_free, CRiDeviceController);
+
+#[no_mangle]
+pub extern "C" fn ri_device_controller_add_device(
+    controller: *mut CRiDeviceController,
+    device: *mut CRiDevice,
+) -> std::ffi::c_int {
+    if controller.is_null() || device.is_null() {
+        return -1;
+    }
+    let rt = match tokio::runtime::Runtime::new() {
+        Ok(rt) => rt,
+        Err(_) => return -2,
+    };
+    unsafe {
+        let device = (*device).inner.clone();
+        rt.block_on(async {
+            (*controller).inner.add_device(device).await;
+        });
+    }
+    0
+}
+
+#[no_mangle]
+pub extern "C" fn ri_device_controller_remove_device(
+    controller: *mut CRiDeviceController,
+    device_id: *const std::ffi::c_char,
+) -> std::ffi::c_int {
+    if controller.is_null() || device_id.is_null() {
+        return -1;
+    }
+    let rt = match tokio::runtime::Runtime::new() {
+        Ok(rt) => rt,
+        Err(_) => return -2,
+    };
+    unsafe {
+        let device_id_str = match std::ffi::CStr::from_ptr(device_id).to_str() {
+            Ok(s) => s,
+            Err(_) => return -3,
+        };
+        rt.block_on(async {
+            (*controller).inner.remove_device(device_id_str).await;
+        });
+    }
+    0
+}
+
+#[no_mangle]
+pub extern "C" fn ri_device_controller_get_device(
+    controller: *mut CRiDeviceController,
+    device_id: *const std::ffi::c_char,
+) -> *mut CRiDevice {
+    if controller.is_null() || device_id.is_null() {
+        return std::ptr::null_mut();
+    }
+    let rt = match tokio::runtime::Runtime::new() {
+        Ok(rt) => rt,
+        Err(_) => return std::ptr::null_mut(),
+    };
+    unsafe {
+        let device_id_str = match std::ffi::CStr::from_ptr(device_id).to_str() {
+            Ok(s) => s,
+            Err(_) => return std::ptr::null_mut(),
+        };
+        match rt.block_on(async { (*controller).inner.get_device(device_id_str).await }) {
+            Some(device) => Box::into_raw(Box::new(CRiDevice::new(device))),
+            None => std::ptr::null_mut(),
+        }
+    }
+}
+
+#[no_mangle]
+pub extern "C" fn ri_device_controller_get_device_count(controller: *mut CRiDeviceController) -> usize {
+    if controller.is_null() {
+        return 0;
+    }
+    let rt = match tokio::runtime::Runtime::new() {
+        Ok(rt) => rt,
+        Err(_) => return 0,
+    };
+    unsafe {
+        rt.block_on(async { (*controller).inner.get_all_devices().len() })
+    }
+}
+
+#[no_mangle]
+pub extern "C" fn ri_device_controller_discover(
+    controller: *mut CRiDeviceController,
+    out_devices: *mut *mut CRiDevice,
+    out_count: *mut usize,
+) -> std::ffi::c_int {
+    if controller.is_null() || out_devices.is_null() || out_count.is_null() {
+        return -1;
+    }
+    let rt = match tokio::runtime::Runtime::new() {
+        Ok(rt) => rt,
+        Err(_) => return -2,
+    };
+    unsafe {
+        match rt.block_on(async { (*controller).inner.discover_devices().await }) {
+            Ok(result) => {
+                let count = result.discovered_devices.len();
+                *out_count = count;
+                if count == 0 {
+                    *out_devices = std::ptr::null_mut();
+                    return 0;
+                }
+                let devices: Vec<CRiDevice> = result.discovered_devices.into_iter().map(CRiDevice::new).collect();
+                let ptr = Box::into_raw(Box::new(devices));
+                *out_devices = ptr as *mut CRiDevice;
+                0
+            }
+            Err(_) => -3,
+        }
+    }
+}
+
+// RiDeviceScheduler C bindings
+#[no_mangle]
+pub extern "C" fn ri_device_scheduler_new() -> *mut CRiDeviceScheduler {
+    let pool_manager = Arc::new(tokio::sync::RwLock::new(crate::device::RiResourcePoolManager::new()));
+    Box::into_raw(Box::new(CRiDeviceScheduler::new(RiDeviceScheduler::new(pool_manager))))
+}
+c_destructor!(ri_device_scheduler_free, CRiDeviceScheduler);
+
+#[no_mangle]
+pub extern "C" fn ri_device_scheduler_allocate(
+    scheduler: *mut CRiDeviceScheduler,
+    device_type: std::ffi::c_int,
+    priority: u32,
+    timeout_secs: u64,
+) -> *mut CRiDevice {
+    if scheduler.is_null() {
+        return std::ptr::null_mut();
+    }
+    let rt = match tokio::runtime::Runtime::new() {
+        Ok(rt) => rt,
+        Err(_) => return std::ptr::null_mut(),
+    };
+    unsafe {
+        let dtype = match device_type {
+            0 => RiDeviceType::CPU,
+            1 => RiDeviceType::GPU,
+            2 => RiDeviceType::Memory,
+            3 => RiDeviceType::Storage,
+            4 => RiDeviceType::Network,
+            5 => RiDeviceType::Sensor,
+            6 => RiDeviceType::Actuator,
+            7 => RiDeviceType::Compute,
+            _ => RiDeviceType::Custom,
+        };
+        let request = crate::device::scheduler::RiAllocationRequest {
+            device_type: dtype,
+            capabilities: crate::device::RiDeviceCapabilities::default(),
+            priority,
+            timeout_secs,
+            sla_class: None,
+            resource_weights: None,
+            affinity: None,
+            anti_affinity: None,
+        };
+        match rt.block_on(async { (*scheduler).inner.select_device(&request).await }) {
+            Some(device) => Box::into_raw(Box::new(CRiDevice::new(device))),
+            None => std::ptr::null_mut(),
+        }
+    }
+}
+
+#[no_mangle]
+pub extern "C" fn ri_device_scheduler_release(
+    scheduler: *mut CRiDeviceScheduler,
+    device_id: *const std::ffi::c_char,
+) -> std::ffi::c_int {
+    if scheduler.is_null() || device_id.is_null() {
+        return -1;
+    }
+    let rt = match tokio::runtime::Runtime::new() {
+        Ok(rt) => rt,
+        Err(_) => return -2,
+    };
+    unsafe {
+        let device_id_str = match std::ffi::CStr::from_ptr(device_id).to_str() {
+            Ok(s) => s,
+            Err(_) => return -3,
+        };
+        match rt.block_on(async { (*scheduler).inner.release_device(device_id_str).await }) {
+            Ok(_) => 0,
+            Err(_) => -4,
+        }
+    }
+}
+
+// RiResourcePool C bindings
+c_wrapper!(CRiResourcePool, crate::device::RiResourcePool);
+
+#[no_mangle]
+pub extern "C" fn ri_resource_pool_new(name: *const std::ffi::c_char, capacity: usize) -> *mut CRiResourcePool {
+    if name.is_null() {
+        return std::ptr::null_mut();
+    }
+    unsafe {
+        let name_str = match std::ffi::CStr::from_ptr(name).to_str() {
+            Ok(s) => s.to_string(),
+            Err(_) => return std::ptr::null_mut(),
+        };
+        Box::into_raw(Box::new(CRiResourcePool::new(crate::device::RiResourcePool::new(name_str, capacity))))
+    }
+}
+c_destructor!(ri_resource_pool_free, CRiResourcePool);
+
+#[no_mangle]
+pub extern "C" fn ri_resource_pool_get_capacity(pool: *mut CRiResourcePool) -> usize {
+    if pool.is_null() {
+        return 0;
+    }
+    unsafe { (*pool).inner.get_status().total_capacity }
+}
+
+#[no_mangle]
+pub extern "C" fn ri_resource_pool_get_available(pool: *mut CRiResourcePool) -> usize {
+    if pool.is_null() {
+        return 0;
+    }
+    unsafe { (*pool).inner.get_status().available_capacity }
+}
+
+#[no_mangle]
+pub extern "C" fn ri_resource_pool_get_utilization(pool: *mut CRiResourcePool) -> f64 {
+    if pool.is_null() {
+        return 0.0;
+    }
+    unsafe { (*pool).inner.get_status().utilization_rate }
+}
