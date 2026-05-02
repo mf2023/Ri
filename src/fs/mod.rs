@@ -128,7 +128,8 @@ impl FileSystemImpl {
     /// Validates that a path is safe and within the allowed directories.
     ///
     /// This method prevents path traversal attacks by ensuring that the resolved
-    /// path is within the project root or app data root.
+    /// path is within the project root or app data root. It handles both existing
+    /// and non-existing paths safely.
     ///
     /// # Parameters
     ///
@@ -136,24 +137,71 @@ impl FileSystemImpl {
     ///
     /// # Returns
     ///
-    /// A `RiResult<PathBuf>` containing the canonicalized path if valid
+    /// A `RiResult<PathBuf>` containing the validated path
     fn validate_path(&self, path: &Path) -> RiResult<PathBuf> {
-        let canonical_path = path.canonicalize()
-            .map_err(|e| crate::core::RiError::Other(format!("Path validation failed: {e}")))?;
+        // Helper to manually resolve path components without recursion
+        let resolve_manually = |p: &Path, base: &Path| -> PathBuf {
+            let mut resolved = if p.is_absolute() {
+                PathBuf::new()
+            } else {
+                base.to_path_buf()
+            };
+            
+            for component in p.components() {
+                use std::path::Component;
+                match component {
+                    Component::Prefix(p) => resolved.push(p.as_os_str()),
+                    Component::RootDir => resolved.push(component.as_os_str()),
+                    Component::CurDir => {},
+                    Component::ParentDir => {
+                        resolved.pop();
+                    },
+                    Component::Normal(c) => resolved.push(c),
+                }
+            }
+            
+            resolved
+        };
         
-        let canonical_project = self.project_root.canonicalize()
-            .unwrap_or_else(|_| self.project_root.clone());
-        let canonical_app_data = self.app_data_root.canonicalize()
-            .unwrap_or_else(|_| self.app_data_root.clone());
+        // First try to canonicalize the path if it exists
+        let validated_path = if let Ok(canon) = path.canonicalize() {
+            canon
+        } else {
+            // For non-existing paths, resolve manually
+            let resolved = if path.is_absolute() {
+                resolve_manually(path, Path::new(""))
+            } else {
+                resolve_manually(path, &self.project_root)
+            };
+            
+            // Try to canonicalize parent if possible to get accurate base
+            if let Some(parent) = resolved.parent() {
+                if let Ok(parent_canon) = parent.canonicalize() {
+                    if let Some(file_name) = resolved.file_name() {
+                        parent_canon.join(file_name)
+                    } else {
+                        parent_canon
+                    }
+                } else {
+                    resolved
+                }
+            } else {
+                resolved
+            }
+        };
         
-        if !canonical_path.starts_with(&canonical_project) && 
-           !canonical_path.starts_with(&canonical_app_data) {
+        // Canonicalize allowed roots for accurate comparison
+        let canonical_project = self.project_root.canonicalize().unwrap_or_else(|_| self.project_root.clone());
+        let canonical_app_data = self.app_data_root.canonicalize().unwrap_or_else(|_| self.app_data_root.clone());
+        
+        if !validated_path.starts_with(&canonical_project) && 
+           !validated_path.starts_with(&canonical_app_data) {
             return Err(crate::core::RiError::Other(
                 "Path traversal detected: path is outside allowed directories".to_string()
             ));
         }
         
-        Ok(canonical_path)
+        Ok(validated_path)
     }
 
     /// Safely resolves and validates a path relative to the project root.
@@ -512,8 +560,9 @@ impl RiFileSystem {
     /// # Returns
     /// 
     /// `true` if the path exists, `false` otherwise
-    pub fn exists<P: AsRef<Path>>(&self, path: P) -> bool {
-        path.as_ref().exists()
+    pub fn exists<P: AsRef<Path>>(&self, path: P) -> RiResult<bool> {
+        let validated_path = self.inner.resolve_and_validate_path(path.as_ref())?;
+        Ok(validated_path.exists())
     }
 
     /// Removes a file.
@@ -526,8 +575,8 @@ impl RiFileSystem {
     /// 
     /// A `RiResult<()>` indicating success or failure
     pub fn remove_file<P: AsRef<Path>>(&self, path: P) -> RiResult<()> {
-        let p = path.as_ref();
-        match fs::remove_file(p) {
+        let validated_path = self.inner.resolve_and_validate_path(path.as_ref())?;
+        match fs::remove_file(&validated_path) {
             Ok(()) => Ok(()),
             Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(()),
             Err(e) => Err(crate::core::RiError::Other(format!("remove_file failed: {e}"))),
@@ -544,8 +593,8 @@ impl RiFileSystem {
     /// 
     /// A `RiResult<()>` indicating success or failure
     pub fn remove_dir_all<P: AsRef<Path>>(&self, path: P) -> RiResult<()> {
-        let p = path.as_ref();
-        match fs::remove_dir_all(p) {
+        let validated_path = self.inner.resolve_and_validate_path(path.as_ref())?;
+        match fs::remove_dir_all(&validated_path) {
             Ok(()) => Ok(()),
             Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(()),
             Err(e) => Err(crate::core::RiError::Other(format!("remove_dir_all failed: {e}"))),
@@ -563,12 +612,12 @@ impl RiFileSystem {
     /// 
     /// A `RiResult<()>` indicating success or failure
     pub fn copy_file<P: AsRef<Path>, Q: AsRef<Path>>(&self, from: P, to: Q) -> RiResult<()> {
-        let src = from.as_ref();
-        let dst = to.as_ref();
+        let src = self.inner.resolve_and_validate_path(from.as_ref())?;
+        let dst = self.inner.resolve_and_validate_path(to.as_ref())?;
         if let Some(parent) = dst.parent() {
             self.safe_mkdir(parent)?;
         }
-        fs::copy(src, dst)
+        fs::copy(&src, &dst)
             .map_err(|e| crate::core::RiError::Other(format!("copy_file failed: {e}")))?;
         Ok(())
     }
@@ -586,12 +635,12 @@ impl RiFileSystem {
     pub fn append_text<P: AsRef<Path>>(&self, path: P, text: &str) -> RiResult<()> {
         use std::io::Write as _;
 
-        let path_ref = path.as_ref();
-        self.ensure_parent_dir(path_ref)?;
+        let validated_path = self.inner.resolve_and_validate_path(path.as_ref())?;
+        self.ensure_parent_dir(&validated_path)?;
         let mut file = OpenOptions::new()
             .create(true)
             .append(true)
-            .open(path_ref)
+            .open(&validated_path)
             .map_err(|e| crate::core::RiError::Other(format!("append_text open failed: {e}")))?;
         file.write_all(text.as_bytes())
             .map_err(|e| crate::core::RiError::Other(format!("append_text write failed: {e}")))?;
@@ -768,8 +817,9 @@ impl RiFileSystem {
     }
     
     #[pyo3(name = "exists")]
-    fn exists_impl(&self, path: String) -> bool {
+    fn exists_impl(&self, path: String) -> Result<bool, pyo3::PyErr> {
         self.exists(&path)
+            .map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(format!("Failed to check existence: {e}")))
     }
     
     #[pyo3(name = "remove_file")]
