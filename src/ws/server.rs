@@ -375,13 +375,12 @@ impl RiWSServer {
         allowed_origins: &[String],
     ) -> std::result::Result<WebSocketStream<tokio_tungstenite::MaybeTlsStream<tokio::net::TcpStream>>, tungstenite::Error> {
         use tokio_tungstenite::tungstenite::handshake::server::{Request, Response};
-        use tokio_tungstenite::tungstenite::protocol::WebSocketConfig;
         
         let mut origin_valid = true;
         let origins_empty = allowed_origins.is_empty();
         let origins = allowed_origins.to_vec();
         
-        let callback = |request: &Request, mut response: Response| {
+        let callback = |request: &Request, response: Response| {
             if !origins_empty {
                 if let Some(origin_header) = request.headers().get("origin") {
                     if let Ok(origin_str) = origin_header.to_str() {
@@ -408,7 +407,9 @@ impl RiWSServer {
             Ok(response)
         };
         
-        let ws_stream = tokio_tungstenite::accept_hdr_async(stream, callback).await?;
+        // Create MaybeTlsStream first, then accept WebSocket on it!
+        let maybe_tls_stream = tokio_tungstenite::MaybeTlsStream::Plain(stream);
+        let ws_stream = tokio_tungstenite::accept_hdr_async(maybe_tls_stream, callback).await?;
         Ok(ws_stream)
     }
 }

@@ -55,6 +55,7 @@
 use std::collections::HashMap as FxHashMap;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
+#[cfg(feature = "pyo3")]
 use std::time::{SystemTime, UNIX_EPOCH};
 use async_trait::async_trait;
 use tokio::sync::RwLock;
@@ -536,6 +537,7 @@ pub trait RiProtocolConnection {
 /// Protocol manager
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
+#[allow(dead_code)]
 pub struct RiProtocolManager {
     /// Protocol statistics
     pub stats: Arc<RwLock<RiProtocolStats>>,

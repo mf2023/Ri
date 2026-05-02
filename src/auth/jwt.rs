@@ -88,7 +88,7 @@
 use jsonwebtoken::{decode, encode, DecodingKey, EncodingKey, Header, Validation};
 use serde::{Deserialize, Serialize};
 use std::time::{SystemTime, UNIX_EPOCH};
-use zeroize::{Zeroize, ZeroizeOnDrop};
+use zeroize_derive::{Zeroize, ZeroizeOnDrop};
 
 use crate::core::error::RiError;
 
@@ -237,11 +237,10 @@ impl Default for RiJWTValidationOptions {
 /// The encoding/decoding operations are primarily CPU-bound due to the
 /// HMAC computation.
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
-#[derive(ZeroizeOnDrop)]
+#[derive(Zeroize, ZeroizeOnDrop)]
 pub struct RiJWTManager {
     /// The secret key used for signing and verifying tokens
     /// This field is automatically zeroized on drop for security
-    #[zeroize]
     secret: String,
 
     /// Default expiry time in seconds for generated tokens
