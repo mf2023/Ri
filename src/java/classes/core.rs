@@ -63,6 +63,7 @@ pub extern "system" fn Java_com_dunimd_ri_RiAppBuilder_withConfig(
         }
         Err(e) => {
             throw_ri_error(&mut env, &e.to_string());
+            // 这里存在内存泄漏或者潜在的 use-after-free 问题
             0
         }
     }
