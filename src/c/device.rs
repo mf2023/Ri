@@ -213,6 +213,7 @@
 
 use crate::device::{RiDevice, RiDeviceController, RiDeviceScheduler, RiDeviceType};
 use std::ffi::c_char;
+use std::sync::Arc;
 
 c_wrapper!(CRiDevice, RiDevice);
 
@@ -369,8 +370,7 @@ pub extern "C" fn ri_device_get_type(device: *mut CRiDevice) -> std::ffi::c_int 
             RiDeviceType::Network => 4,
             RiDeviceType::Sensor => 5,
             RiDeviceType::Actuator => 6,
-            RiDeviceType::Compute => 7,
-            RiDeviceType::Custom => 8,
+            RiDeviceType::Custom => 7,
         }
     }
 }
@@ -382,14 +382,14 @@ pub extern "C" fn ri_device_get_status(device: *mut CRiDevice) -> std::ffi::c_in
     }
     unsafe {
         match (*device).inner.status() {
-            crate::device::RiDeviceStatus::Discovered => 0,
-            crate::device::RiDeviceStatus::Configured => 1,
-            crate::device::RiDeviceStatus::Available => 2,
-            crate::device::RiDeviceStatus::Allocated => 3,
-            crate::device::RiDeviceStatus::Busy => 4,
-            crate::device::RiDeviceStatus::Error => 5,
-            crate::device::RiDeviceStatus::Unavailable => 6,
-            crate::device::RiDeviceStatus::Released => 7,
+            crate::device::RiDeviceStatus::Unknown => 0,
+            crate::device::RiDeviceStatus::Available => 1,
+            crate::device::RiDeviceStatus::Busy => 2,
+            crate::device::RiDeviceStatus::Error => 3,
+            crate::device::RiDeviceStatus::Offline => 4,
+            crate::device::RiDeviceStatus::Maintenance => 5,
+            crate::device::RiDeviceStatus::Degraded => 6,
+            crate::device::RiDeviceStatus::Allocated => 7,
         }
     }
 }
@@ -547,7 +547,7 @@ pub extern "C" fn ri_device_scheduler_allocate(
             4 => RiDeviceType::Network,
             5 => RiDeviceType::Sensor,
             6 => RiDeviceType::Actuator,
-            7 => RiDeviceType::Compute,
+            7 => RiDeviceType::Custom,
             _ => RiDeviceType::Custom,
         };
         let request = crate::device::scheduler::RiAllocationRequest {
@@ -561,7 +561,7 @@ pub extern "C" fn ri_device_scheduler_allocate(
             anti_affinity: None,
         };
         match rt.block_on(async { (*scheduler).inner.select_device(&request).await }) {
-            Some(device) => Box::into_raw(Box::new(CRiDevice::new(device))),
+            Some(device) => Box::into_raw(Box::new(CRiDevice::new((*device).clone()))),
             None => std::ptr::null_mut(),
         }
     }
@@ -604,7 +604,14 @@ pub extern "C" fn ri_resource_pool_new(name: *const std::ffi::c_char, capacity: 
             Ok(s) => s.to_string(),
             Err(_) => return std::ptr::null_mut(),
         };
-        Box::into_raw(Box::new(CRiResourcePool::new(crate::device::RiResourcePool::new(name_str, capacity))))
+        let config = crate::device::RiResourcePoolConfig {
+            name: name_str,
+            device_type: RiDeviceType::Custom,
+            max_concurrent_allocations: capacity,
+            allocation_timeout_secs: 30,
+            health_check_interval_secs: 60,
+        };
+        Box::into_raw(Box::new(CRiResourcePool::new(crate::device::RiResourcePool::new(config))))
     }
 }
 c_destructor!(ri_resource_pool_free, CRiResourcePool);

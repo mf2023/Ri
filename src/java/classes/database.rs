@@ -748,7 +748,7 @@ pub extern "system" fn Java_com_dunimd_ri_database_RiDatabaseMigration_getName0<
     mut env: JNIEnv<'local>,
     _class: JClass<'local>,
     ptr: jlong,
-) -> jstring<'local> {
+) -> jstring {
     if !check_not_null(&mut env, ptr, "RiDatabaseMigration") {
         return std::ptr::null_mut();
     }
@@ -762,7 +762,7 @@ pub extern "system" fn Java_com_dunimd_ri_database_RiDatabaseMigration_getSqlUp0
     mut env: JNIEnv<'local>,
     _class: JClass<'local>,
     ptr: jlong,
-) -> jstring<'local> {
+) -> jstring {
     if !check_not_null(&mut env, ptr, "RiDatabaseMigration") {
         return std::ptr::null_mut();
     }
@@ -776,7 +776,7 @@ pub extern "system" fn Java_com_dunimd_ri_database_RiDatabaseMigration_getSqlDow
     mut env: JNIEnv<'local>,
     _class: JClass<'local>,
     ptr: jlong,
-) -> jstring<'local> {
+) -> jstring {
     if !check_not_null(&mut env, ptr, "RiDatabaseMigration") {
         return std::ptr::null_mut();
     }

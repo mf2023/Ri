@@ -119,7 +119,7 @@ pub extern "system" fn Java_com_dunimd_ri_device_RiDevice_getId0<'local>(
     mut env: JNIEnv<'local>,
     _class: JClass<'local>,
     ptr: jlong,
-) -> jstring<'local> {
+) -> jstring {
     if !check_not_null(&mut env, ptr, "RiDevice") {
         return std::ptr::null_mut();
     }
@@ -133,7 +133,7 @@ pub extern "system" fn Java_com_dunimd_ri_device_RiDevice_getName0<'local>(
     mut env: JNIEnv<'local>,
     _class: JClass<'local>,
     ptr: jlong,
-) -> jstring<'local> {
+) -> jstring {
     if !check_not_null(&mut env, ptr, "RiDevice") {
         return std::ptr::null_mut();
     }
@@ -1064,7 +1064,7 @@ pub extern "system" fn Java_com_dunimd_ri_device_RiNetworkDeviceInfo_getId0<'loc
     mut env: JNIEnv<'local>,
     _class: JClass<'local>,
     ptr: jlong,
-) -> jstring<'local> {
+) -> jstring {
     if !check_not_null(&mut env, ptr, "RiNetworkDeviceInfo") {
         return std::ptr::null_mut();
     }
@@ -1078,7 +1078,7 @@ pub extern "system" fn Java_com_dunimd_ri_device_RiNetworkDeviceInfo_getDeviceTy
     mut env: JNIEnv<'local>,
     _class: JClass<'local>,
     ptr: jlong,
-) -> jstring<'local> {
+) -> jstring {
     if !check_not_null(&mut env, ptr, "RiNetworkDeviceInfo") {
         return std::ptr::null_mut();
     }
@@ -1092,7 +1092,7 @@ pub extern "system" fn Java_com_dunimd_ri_device_RiNetworkDeviceInfo_getSource0<
     mut env: JNIEnv<'local>,
     _class: JClass<'local>,
     ptr: jlong,
-) -> jstring<'local> {
+) -> jstring {
     if !check_not_null(&mut env, ptr, "RiNetworkDeviceInfo") {
         return std::ptr::null_mut();
     }
@@ -1371,7 +1371,7 @@ pub extern "system" fn Java_com_dunimd_ri_device_RiResourceRequest_getRequestId0
     mut env: JNIEnv<'local>,
     _class: JClass<'local>,
     ptr: jlong,
-) -> jstring<'local> {
+) -> jstring {
     if !check_not_null(&mut env, ptr, "RiResourceRequest") {
         return std::ptr::null_mut();
     }
@@ -1489,7 +1489,7 @@ pub extern "system" fn Java_com_dunimd_ri_device_RiResourceAllocation_getAllocat
     mut env: JNIEnv<'local>,
     _class: JClass<'local>,
     ptr: jlong,
-) -> jstring<'local> {
+) -> jstring {
     if !check_not_null(&mut env, ptr, "RiResourceAllocation") {
         return std::ptr::null_mut();
     }
@@ -1503,7 +1503,7 @@ pub extern "system" fn Java_com_dunimd_ri_device_RiResourceAllocation_getDeviceI
     mut env: JNIEnv<'local>,
     _class: JClass<'local>,
     ptr: jlong,
-) -> jstring<'local> {
+) -> jstring {
     if !check_not_null(&mut env, ptr, "RiResourceAllocation") {
         return std::ptr::null_mut();
     }
@@ -1517,7 +1517,7 @@ pub extern "system" fn Java_com_dunimd_ri_device_RiResourceAllocation_getDeviceN
     mut env: JNIEnv<'local>,
     _class: JClass<'local>,
     ptr: jlong,
-) -> jstring<'local> {
+) -> jstring {
     if !check_not_null(&mut env, ptr, "RiResourceAllocation") {
         return std::ptr::null_mut();
     }
@@ -1531,7 +1531,7 @@ pub extern "system" fn Java_com_dunimd_ri_device_RiResourceAllocation_getAllocat
     mut env: JNIEnv<'local>,
     _class: JClass<'local>,
     ptr: jlong,
-) -> jstring<'local> {
+) -> jstring {
     if !check_not_null(&mut env, ptr, "RiResourceAllocation") {
         return std::ptr::null_mut();
     }
@@ -1545,7 +1545,7 @@ pub extern "system" fn Java_com_dunimd_ri_device_RiResourceAllocation_getExpires
     mut env: JNIEnv<'local>,
     _class: JClass<'local>,
     ptr: jlong,
-) -> jstring<'local> {
+) -> jstring {
     if !check_not_null(&mut env, ptr, "RiResourceAllocation") {
         return std::ptr::null_mut();
     }

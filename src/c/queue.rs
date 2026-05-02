@@ -328,7 +328,6 @@ use std::sync::Arc;
 
 c_wrapper!(CRiQueueConfig, RiQueueConfig);
 c_wrapper!(CRiQueueManager, RiQueueManager);
-c_wrapper!(CRiQueueMessage, RiQueueMessage);
 
 c_constructor!(
     ri_queue_config_new,

@@ -214,12 +214,16 @@
 //! Disable this feature to reduce binary size when gateway functionality is not required.
 
 use crate::gateway::{
-    RiGateway, RiGatewayConfig, RiRouter, RiRoute,
+    RiGateway, RiGatewayConfig, RiRouter, RiRoute, RiRouteHandler,
     RiRateLimiter, RiRateLimitConfig, RiRateLimitStats,
     RiCircuitBreaker, RiCircuitBreakerConfig, RiCircuitBreakerState, RiCircuitBreakerMetrics,
     RiLoadBalancer, RiLoadBalancerStrategy, RiBackendServer, RiLoadBalancerServerStats,
+    RiGatewayRequest, RiGatewayResponse,
 };
+use crate::core::RiResult;
 use std::ffi::{c_char, c_int, c_void};
+use std::future::Future;
+use std::pin::Pin;
 use std::sync::Arc;
 
 c_wrapper!(CRiGateway, RiGateway);
@@ -270,14 +274,14 @@ pub extern "C" fn ri_router_add_route(
             Err(_) => return -3,
         };
 
-        let handler = Arc::new(|_req| {
+        let handler: RiRouteHandler = Arc::new(|_req: RiGatewayRequest| {
             Box::pin(async move {
                 Ok(crate::gateway::RiGatewayResponse::new(
                     200,
                     b"OK".to_vec(),
                     String::new(),
                 ))
-            })
+            }) as Pin<Box<dyn Future<Output = RiResult<RiGatewayResponse>> + Send>>
         });
 
         let route = RiRoute::new(method_str.to_string(), path_str.to_string(), handler);

@@ -130,6 +130,11 @@ impl RiLockError {
     pub fn get_context(&self) -> &str {
         &self.context
     }
+
+    /// Returns whether the lock was poisoned.
+    pub fn is_poisoned(&self) -> bool {
+        self.is_poisoned
+    }
 }
 
 impl fmt::Display for RiLockError {

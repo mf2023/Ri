@@ -574,7 +574,7 @@ pub extern "system" fn Java_com_dunimd_ri_protocol_RiConnectionInfo_getConnectio
     mut env: JNIEnv<'local>,
     _class: JClass<'local>,
     ptr: jlong,
-) -> jstring<'local> {
+) -> jstring {
     if !check_not_null(&mut env, ptr, "RiConnectionInfo") {
         return std::ptr::null_mut();
     }
@@ -588,7 +588,7 @@ pub extern "system" fn Java_com_dunimd_ri_protocol_RiConnectionInfo_getDeviceId0
     mut env: JNIEnv<'local>,
     _class: JClass<'local>,
     ptr: jlong,
-) -> jstring<'local> {
+) -> jstring {
     if !check_not_null(&mut env, ptr, "RiConnectionInfo") {
         return std::ptr::null_mut();
     }
@@ -602,7 +602,7 @@ pub extern "system" fn Java_com_dunimd_ri_protocol_RiConnectionInfo_getAddress0<
     mut env: JNIEnv<'local>,
     _class: JClass<'local>,
     ptr: jlong,
-) -> jstring<'local> {
+) -> jstring {
     if !check_not_null(&mut env, ptr, "RiConnectionInfo") {
         return std::ptr::null_mut();
     }
@@ -929,7 +929,7 @@ pub extern "system" fn Java_com_dunimd_ri_protocol_RiFrame_getSourceId0<'local>(
     mut env: JNIEnv<'local>,
     _class: JClass<'local>,
     ptr: jlong,
-) -> jstring<'local> {
+) -> jstring {
     if !check_not_null(&mut env, ptr, "RiFrame") {
         return std::ptr::null_mut();
     }
@@ -962,7 +962,7 @@ pub extern "system" fn Java_com_dunimd_ri_protocol_RiFrame_getTargetId0<'local>(
     mut env: JNIEnv<'local>,
     _class: JClass<'local>,
     ptr: jlong,
-) -> jstring<'local> {
+) -> jstring {
     if !check_not_null(&mut env, ptr, "RiFrame") {
         return std::ptr::null_mut();
     }

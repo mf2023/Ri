@@ -184,7 +184,7 @@ pub extern "C" fn ri_cache_policy_new() -> CRiCachePolicy {
 
 #[no_mangle]
 pub extern "C" fn ri_cache_policy_with_ttl(ttl_secs: u64) -> CRiCachePolicy {
-    let mut policy = CRiCachePolicy::new();
+    let mut policy = ri_cache_policy_new();
     policy.ttl_secs = ttl_secs;
     policy.ttl_set = true;
     policy

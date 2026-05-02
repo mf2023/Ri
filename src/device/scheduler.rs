@@ -765,6 +765,29 @@ impl RiDeviceScheduler {
             }
         }
     }
+
+    /// Release a device by its device ID.
+    /// 
+    /// This method finds the allocation record for the given device ID and releases it.
+    /// 
+    /// # Parameters
+    /// 
+    /// - `device_id`: ID of the device to release
+    /// 
+    /// # Returns
+    /// 
+    /// `Ok(())` if the device was found and released, `Err(())` otherwise.
+    pub async fn release_device(&self, device_id: &str) -> Result<(), ()> {
+        let history = self.allocation_history.read().await;
+        if let Some(record) = history.iter().find(|r| r.device_id == device_id && r.released_at.is_none()) {
+            let allocation_id = record.allocation_id.clone();
+            drop(history);
+            self.record_release(&allocation_id).await;
+            Ok(())
+        } else {
+            Err(())
+        }
+    }
     
     /// Get allocation statistics and metrics.
     /// 

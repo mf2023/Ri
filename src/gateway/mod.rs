@@ -133,12 +133,12 @@ pub mod load_balancer;
 pub mod rate_limiter;
 pub mod server;
 
-pub use routing::{RiRoute, RiRouter};
+pub use routing::{RiRoute, RiRouter, RiRouteHandler};
 pub use radix_tree::{RiRadixTree, RadixNode, PathSegment, SegmentType, RouteMatch};
 pub use middleware::{RiMiddleware, RiMiddlewareChain};
-pub use load_balancer::{RiLoadBalancer, RiLoadBalancerStrategy};
-pub use rate_limiter::{RiRateLimiter, RiRateLimitConfig};
-pub use circuit_breaker::{RiCircuitBreaker, RiCircuitBreakerConfig};
+pub use load_balancer::{RiLoadBalancer, RiLoadBalancerStrategy, RiBackendServer, RiLoadBalancerServerStats};
+pub use rate_limiter::{RiRateLimiter, RiRateLimitConfig, RiRateLimitStats, RiSlidingWindowRateLimiter};
+pub use circuit_breaker::{RiCircuitBreaker, RiCircuitBreakerConfig, RiCircuitBreakerState, RiCircuitBreakerMetrics};
 
 #[cfg(feature = "gateway")]
 pub use server::{RiGatewayServer, load_tls_config};

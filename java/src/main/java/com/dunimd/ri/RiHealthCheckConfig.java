@@ -46,6 +46,18 @@ public class RiHealthCheckConfig {
      * @param enabled whether the health check is enabled
      */
     public RiHealthCheckConfig(long checkInterval, long timeout, int failureThreshold, int successThreshold, boolean enabled) {
+        if (checkInterval <= 0) {
+            throw new IllegalArgumentException("checkInterval must be positive");
+        }
+        if (timeout <= 0) {
+            throw new IllegalArgumentException("timeout must be positive");
+        }
+        if (failureThreshold <= 0) {
+            throw new IllegalArgumentException("failureThreshold must be positive");
+        }
+        if (successThreshold <= 0) {
+            throw new IllegalArgumentException("successThreshold must be positive");
+        }
         this.nativePtr = newWithValues0(checkInterval, timeout, failureThreshold, successThreshold, enabled);
     }
     

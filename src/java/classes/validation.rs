@@ -83,7 +83,7 @@ pub extern "system" fn Java_com_dunimd_ri_validation_RiValidationError_getField0
     mut env: JNIEnv<'local>,
     _class: JClass<'local>,
     ptr: jlong,
-) -> jstring<'local> {
+) -> jstring {
     if !check_not_null(&mut env, ptr, "RiValidationError") {
         return std::ptr::null_mut();
     }
@@ -97,7 +97,7 @@ pub extern "system" fn Java_com_dunimd_ri_validation_RiValidationError_getMessag
     mut env: JNIEnv<'local>,
     _class: JClass<'local>,
     ptr: jlong,
-) -> jstring<'local> {
+) -> jstring {
     if !check_not_null(&mut env, ptr, "RiValidationError") {
         return std::ptr::null_mut();
     }
@@ -111,7 +111,7 @@ pub extern "system" fn Java_com_dunimd_ri_validation_RiValidationError_getCode0<
     mut env: JNIEnv<'local>,
     _class: JClass<'local>,
     ptr: jlong,
-) -> jstring<'local> {
+) -> jstring {
     if !check_not_null(&mut env, ptr, "RiValidationError") {
         return std::ptr::null_mut();
     }
@@ -398,7 +398,7 @@ pub extern "system" fn Java_com_dunimd_ri_validation_RiSanitizer_sanitize0<'loca
     _class: JClass<'local>,
     ptr: jlong,
     input: JString,
-) -> jstring<'local> {
+) -> jstring {
     if !check_not_null(&mut env, ptr, "RiSanitizer") {
         return std::ptr::null_mut();
     }
@@ -418,7 +418,7 @@ pub extern "system" fn Java_com_dunimd_ri_validation_RiSanitizer_sanitizeEmail0<
     _class: JClass<'local>,
     ptr: jlong,
     input: JString,
-) -> jstring<'local> {
+) -> jstring {
     if !check_not_null(&mut env, ptr, "RiSanitizer") {
         return std::ptr::null_mut();
     }
@@ -438,7 +438,7 @@ pub extern "system" fn Java_com_dunimd_ri_validation_RiSanitizer_sanitizeFilenam
     _class: JClass<'local>,
     ptr: jlong,
     input: JString,
-) -> jstring<'local> {
+) -> jstring {
     if !check_not_null(&mut env, ptr, "RiSanitizer") {
         return std::ptr::null_mut();
     }

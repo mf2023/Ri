@@ -282,7 +282,7 @@ pub struct RiDatabasePool {
     total_connections: Arc<AtomicU64>,
     queries_executed: Arc<AtomicU64>,
     errors: Arc<AtomicU64>,
-    dynamic_config: Arc<RwLock<DynamicPoolConfig>>,
+    dynamic_config: Arc<RwLock<RiDynamicPoolConfig>>,
     low_utilization_tracker: Arc<RwLock<LowUtilizationTracker>>,
     scaling_in_progress: Arc<AtomicBool>,
     current_max_connections: Arc<AtomicU64>,

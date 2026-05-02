@@ -108,19 +108,19 @@ pub use lock::{RiLockError, RiLockResult, RwLockExtensions, MutexExtensions, fro
 pub use module::{RiPythonModule, RiPythonModuleAdapter, RiPythonServiceModule, RiPythonAsyncServiceModule};
 
 /// Error chain utilities
-#[cfg(any(feature = "pyo3", feature = "java"))]
+#[cfg(any(feature = "pyo3", feature = "java", feature = "c"))]
 pub use error_chain::{RiErrorChain, RiErrorChainIter, RiErrorContext, RiOptionErrorContext};
 
 /// Health check types
-#[cfg(any(feature = "pyo3", feature = "java"))]
+#[cfg(any(feature = "pyo3", feature = "java", feature = "c"))]
 pub use health::{RiHealthStatus, RiHealthCheckResult, RiHealthCheckConfig, RiHealthReport, RiHealthChecker};
 
 /// Lifecycle management
-#[cfg(any(feature = "pyo3", feature = "java"))]
+#[cfg(any(feature = "pyo3", feature = "java", feature = "c"))]
 pub use lifecycle::RiLifecycleObserver;
 
 /// Analytics module
-#[cfg(any(feature = "pyo3", feature = "java"))]
+#[cfg(any(feature = "pyo3", feature = "java", feature = "c"))]
 pub use analytics::RiLogAnalyticsModule;
 
 /// Sharded lock types

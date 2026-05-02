@@ -204,7 +204,7 @@ pub extern "system" fn Java_com_dunimd_ri_modulerpc_RiModuleEndpoint_getModuleNa
     mut env: JNIEnv<'local>,
     _class: JClass<'local>,
     ptr: jlong,
-) -> jstring<'local> {
+) -> jstring {
     if !check_not_null(&mut env, ptr, "RiModuleEndpoint") {
         return std::ptr::null_mut();
     }
@@ -272,7 +272,7 @@ pub extern "system" fn Java_com_dunimd_ri_modulerpc_RiMethodCall_getMethodName0<
     mut env: JNIEnv<'local>,
     _class: JClass<'local>,
     ptr: jlong,
-) -> jstring<'local> {
+) -> jstring {
     if !check_not_null(&mut env, ptr, "RiMethodCall") {
         return std::ptr::null_mut();
     }
@@ -386,7 +386,7 @@ pub extern "system" fn Java_com_dunimd_ri_modulerpc_RiMethodResponse_getError0<'
     mut env: JNIEnv<'local>,
     _class: JClass<'local>,
     ptr: jlong,
-) -> jstring<'local> {
+) -> jstring {
     if !check_not_null(&mut env, ptr, "RiMethodResponse") {
         return std::ptr::null_mut();
     }

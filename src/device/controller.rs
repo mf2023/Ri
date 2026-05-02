@@ -959,7 +959,7 @@ impl RiDeviceController {
     
     /// Helper method to add a discovered device
     #[allow(dead_code)]
-    async fn add_device(&mut self, mut device: RiDevice, location: String) -> RiResult<()> {
+    pub async fn add_device(&mut self, mut device: RiDevice, location: String) -> RiResult<()> {
         device.set_status(RiDeviceStatus::Available);
         device.set_location(location);
         
@@ -1167,7 +1167,7 @@ impl RiDeviceController {
     }
 
     /// Remove a device
-    async fn remove_device(&mut self, device_id: &str) -> RiResult<()> {
+    pub async fn remove_device(&mut self, device_id: &str) -> RiResult<()> {
         if let Some(device_lock) = self.devices.remove(device_id) {
             let device = device_lock.read().await;
             let device_type = device.device_type();
@@ -1184,6 +1184,16 @@ impl RiDeviceController {
         }
 
         Ok(())
+    }
+
+    /// Get a device by ID
+    pub async fn get_device(&self, device_id: &str) -> Option<RiDevice> {
+        if let Some(device_lock) = self.devices.get(device_id) {
+            let device = device_lock.read().await;
+            Some(device.clone())
+        } else {
+            None
+        }
     }
 
     /// Get all devices

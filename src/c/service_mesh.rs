@@ -911,7 +911,7 @@ pub extern "C" fn ri_traffic_manager_set_circuit_breaker(
             Ok(s) => s,
             Err(_) => return -3,
         };
-        let config = crate::service_mesh::RiCircuitBreakerConfig {
+        let config = crate::service_mesh::traffic_management::RiCircuitBreakerConfig {
             consecutive_errors,
             interval: std::time::Duration::from_secs(10),
             base_ejection_time: std::time::Duration::from_secs(30),
@@ -943,7 +943,7 @@ pub extern "C" fn ri_traffic_manager_set_rate_limit(
             Ok(s) => s,
             Err(_) => return -3,
         };
-        let config = crate::service_mesh::RiRateLimitConfig {
+        let config = crate::service_mesh::traffic_management::RiRateLimitConfig {
             requests_per_second,
             burst_size,
             window: std::time::Duration::from_secs(1),

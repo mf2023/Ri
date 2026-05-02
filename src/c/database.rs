@@ -203,7 +203,7 @@ c_destructor!(ri_database_config_free, CRiDatabaseConfig);
 c_string_setter!(
     ri_database_config_set_connection_string,
     CRiDatabaseConfig,
-    |inner: &mut RiDatabaseConfig, val: &str| { inner.connection_string = val.to_string(); }
+    |inner: &mut RiDatabaseConfig, val: &str| { inner.host = val.to_string(); }
 );
 
 #[no_mangle]
@@ -212,7 +212,7 @@ pub extern "C" fn ri_database_config_set_pool_size(config: *mut CRiDatabaseConfi
         return -1;
     }
     unsafe {
-        (*config).inner.max_connections = size as usize;
+        (*config).inner.max_connections = size;
     }
     0
 }
@@ -223,7 +223,7 @@ pub extern "C" fn ri_database_config_set_min_idle(config: *mut CRiDatabaseConfig
         return -1;
     }
     unsafe {
-        (*config).inner.min_connections = size as usize;
+        (*config).inner.min_idle_connections = size;
     }
     0
 }
@@ -234,7 +234,7 @@ pub extern "C" fn ri_database_config_set_connection_timeout_secs(config: *mut CR
         return -1;
     }
     unsafe {
-        (*config).inner.connection_timeout = std::time::Duration::from_secs(secs);
+        (*config).inner.connection_timeout_secs = secs;
     }
     0
 }
@@ -281,7 +281,7 @@ pub extern "C" fn ri_database_pool_get_connection_count(pool: *mut CRiDatabasePo
     if pool.is_null() {
         return 0;
     }
-    unsafe { (*pool).inner.get_metrics().total_connections }
+    unsafe { (*pool).inner.metrics().total_connections }
 }
 
 #[no_mangle]
@@ -289,7 +289,7 @@ pub extern "C" fn ri_database_pool_get_idle_count(pool: *mut CRiDatabasePool) ->
     if pool.is_null() {
         return 0;
     }
-    unsafe { (*pool).inner.get_metrics().idle_connections }
+    unsafe { (*pool).inner.metrics().idle_connections }
 }
 
 #[no_mangle]
@@ -297,7 +297,7 @@ pub extern "C" fn ri_database_pool_get_active_count(pool: *mut CRiDatabasePool) 
     if pool.is_null() {
         return 0;
     }
-    unsafe { (*pool).inner.get_metrics().active_connections }
+    unsafe { (*pool).inner.metrics().active_connections }
 }
 
 #[no_mangle]
