@@ -70,6 +70,18 @@ use crate::core::concurrent::RiShardedLock;
 #[cfg(feature = "pyo3")]
 use pyo3::PyResult;
 
+/// Maximum number of data entries in a session
+const MAX_SESSION_DATA_ENTRIES: usize = 100;
+
+/// Maximum length of a session data key
+const MAX_SESSION_DATA_KEY_LENGTH: usize = 256;
+
+/// Maximum length of a session data value
+const MAX_SESSION_DATA_VALUE_LENGTH: usize = 4096;
+
+/// Maximum length of user agent string
+const MAX_USER_AGENT_LENGTH: usize = 1024;
+
 /// Session structure for tracking user sessions.
 ///
 /// This struct represents a user session with metadata, expiration tracking,
@@ -201,11 +213,51 @@ impl RiSession {
 
     /// Sets a value in the session data.
     /// 
+    /// # Security
+    /// 
+    /// This method validates:
+    /// - Maximum number of data entries (100)
+    /// - Maximum key length (256 characters)
+    /// - Maximum value length (4096 characters)
+    /// 
     /// # Parameters
     /// - `key`: Key to set in the session data
     /// - `value`: Value to associate with the key
-    pub fn set_data(&mut self, key: String, value: String) {
-        self.data.insert(key, value);
+    /// 
+    /// # Returns
+    /// `true` if the value was set, `false` if limits exceeded
+    pub fn set_data(&mut self, key: String, value: String) -> bool {
+        // Security: Check key length
+        if key.len() > MAX_SESSION_DATA_KEY_LENGTH {
+            log::warn!(
+                "[Ri.Session] Data key too long: {} chars (max {})",
+                key.len(), MAX_SESSION_DATA_KEY_LENGTH
+            );
+            return false;
+        }
+        
+        // Security: Check value length
+        let safe_value = if value.len() > MAX_SESSION_DATA_VALUE_LENGTH {
+            log::warn!(
+                "[Ri.Session] Data value truncated: {} chars (max {})",
+                value.len(), MAX_SESSION_DATA_VALUE_LENGTH
+            );
+            value[..MAX_SESSION_DATA_VALUE_LENGTH].to_string()
+        } else {
+            value
+        };
+        
+        // Security: Check maximum entries (only for new keys)
+        if !self.data.contains_key(&key) && self.data.len() >= MAX_SESSION_DATA_ENTRIES {
+            log::warn!(
+                "[Ri.Session] Maximum data entries reached: {} (max {})",
+                self.data.len(), MAX_SESSION_DATA_ENTRIES
+            );
+            return false;
+        }
+        
+        self.data.insert(key, safe_value);
+        true
     }
 
     /// Removes a value from the session data.

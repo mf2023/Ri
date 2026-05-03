@@ -4672,7 +4672,7 @@ async fn test_mysql(url: &str) -> Result<()> {
     println!("  {} URL: {}", "→".yellow().bold(), mask_password_in_url(url).cyan());
     println!();
 
-    let (host, port, database, user, password) = parse_mysql_url_full(url)?;
+    let (host, port, database, user, _password) = parse_mysql_url_full(url)?;
 
     println!("  {} Host: {}", "→".yellow().bold(), host.cyan());
     println!("  {} Port: {}", "→".yellow().bold(), port.to_string().cyan());
@@ -4869,7 +4869,8 @@ async fn test_kafka(url: &str) -> Result<()> {
             }
         })?;
 
-    let metadata = producer.fetch_metadata(None, std::time::Duration::from_secs(5))
+    // Use the internal client to fetch metadata
+    let metadata = producer.client().fetch_metadata(None, std::time::Duration::from_secs(5))
         .map_err(|e| {
             RicError::ConnectionTestFailed {
                 service: "Kafka".to_string(),
@@ -4909,11 +4910,11 @@ async fn test_kafka(url: &str) -> Result<()> {
     let test_topic = format!("ri_test_{}", uuid::Uuid::new_v4().to_string().replace("-", "")[..8].to_string());
     let test_message = format!("Ri CLI Test Message at {}", chrono::Utc::now());
 
-    let produce_result = producer.send(
-        rdkafka::producer::BaseRecord::to(&test_topic)
-            .payload(&test_message)
-            .key(None::<&str>),
-    ).await;
+    // Use FutureRecord for FutureProducer
+    let record = rdkafka::producer::FutureRecord::to(&test_topic)
+        .payload(&test_message);
+    
+    let produce_result = producer.send(record, std::time::Duration::from_secs(5)).await;
 
     match produce_result {
         Ok((partition, offset)) => {
@@ -4942,6 +4943,32 @@ async fn test_kafka(url: &str) -> Result<()> {
     println!("  {} Total time: {:.2}ms", "→".yellow().bold(), connection_time.as_secs_f64() * 1000.0);
 
     Ok(())
+}
+
+/// Test Kafka connection (stub for non-kafka builds)
+///
+/// This is a stub function that displays an error message when Kafka support
+/// is not compiled in. Kafka support requires the "kafka" feature to be enabled.
+#[cfg(not(feature = "kafka"))]
+async fn test_kafka(_url: &str) -> Result<()> {
+    println!("{}", "═".repeat(60));
+    println!("{}", "  Kafka Connection Test".red().bold());
+    println!("{}", "═".repeat(60));
+    println!();
+    
+    println!("  {} Kafka support is not enabled in this build", "✗".red().bold());
+    println!();
+    println!("  To enable Kafka support, rebuild with:");
+    println!("    {} cargo build --features kafka", "→".yellow().bold());
+    println!();
+    println!("  Note: Kafka support is not available on Windows due to");
+    println!("        build requirements for librdkafka native library.");
+    println!();
+    
+    Err(RicError::ConnectionTestFailed {
+        service: "Kafka".to_string(),
+        message: "Kafka support not compiled in. Rebuild with --features kafka".to_string(),
+    })
 }
 
 // =============================================================================

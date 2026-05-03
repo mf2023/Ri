@@ -788,12 +788,38 @@ struct RegexRule(String);
 
 impl RiValidationRule for RegexRule {
     fn validate(&self, value: &str) -> Option<RiValidationError> {
-        if let Ok(regex) = Regex::new(&self.0) {
-            if !regex.is_match(value) {
+        // Security: Limit input length to prevent ReDoS attacks
+        // Most legitimate values should be under 10KB
+        const MAX_REGEX_INPUT_LENGTH: usize = 10 * 1024;
+        
+        if value.len() > MAX_REGEX_INPUT_LENGTH {
+            return Some(RiValidationError::new(
+                "value",
+                &format!("Value too long for regex validation (max {} bytes)", MAX_REGEX_INPUT_LENGTH),
+                "REGEX_INPUT_TOO_LONG",
+            ));
+        }
+        
+        // Security: Use regex with timeout to prevent catastrophic backtracking
+        // For simplicity, we just compile and match with a length-limited input
+        // In production, consider using regex with explicit timeout
+        match Regex::new(&self.0) {
+            Ok(regex) => {
+                if !regex.is_match(value) {
+                    return Some(RiValidationError::new(
+                        "value",
+                        "Value does not match required pattern",
+                        "REGEX",
+                    ));
+                }
+            }
+            Err(e) => {
+                // Log invalid regex pattern but don't reveal details to user
+                log::warn!("[Ri.Validation] Invalid regex pattern: {}", e);
                 return Some(RiValidationError::new(
                     "value",
-                    "Value does not match required pattern",
-                    "REGEX",
+                    "Invalid validation pattern",
+                    "REGEX_INVALID",
                 ));
             }
         }

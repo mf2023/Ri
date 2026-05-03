@@ -399,12 +399,90 @@ impl RiLoadBalancer {
     /// # Parameters
     /// 
     /// - `server`: The backend server to add
-    pub async fn add_server(&self, server: RiBackendServer) {
+    /// 
+    /// # Security
+    /// 
+    /// This method validates the server URL to prevent SSRF (Server-Side Request Forgery) attacks.
+    /// Only HTTP and HTTPS URLs are allowed. File://, gopher://, and other schemes are blocked.
+    /// Private IP addresses (127.0.0.0/8, 10.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16, 169.254.0.0/16)
+    /// are logged as warnings but still allowed for internal deployments.
+    pub async fn add_server(&self, server: RiBackendServer) -> RiResult<()> {
+        // Security: Validate the server URL
+        self.validate_server_url(&server.url)?;
+        
         let mut servers = self.servers.write().await;
         let mut stats = self.server_stats.write().await;
         
         servers.push(server.clone());
         stats.insert(server.id.clone(), Arc::new(ServerStats::new()));
+        
+        Ok(())
+    }
+
+    /// Validates a server URL to prevent SSRF attacks.
+    ///
+    /// # Security
+    ///
+    /// This method validates:
+    /// 1. URL scheme must be HTTP or HTTPS
+    /// 2. URL must be well-formed
+    /// 3. Warns if URL points to private IP address
+    fn validate_server_url(&self, url: &str) -> RiResult<()> {
+        // Security: Check URL length
+        if url.is_empty() || url.len() > 2048 {
+            return Err(crate::core::RiError::Other(
+                "Server URL must be 1-2048 characters".to_string()
+            ));
+        }
+
+        // Security: Parse and validate URL
+        let parsed_url = url::Url::parse(url)
+            .map_err(|e| crate::core::RiError::Other(
+                format!("Invalid server URL: {}", e)
+            ))?;
+
+        // Security: Only allow HTTP and HTTPS schemes
+        let scheme = parsed_url.scheme();
+        if scheme != "http" && scheme != "https" {
+            log::warn!(
+                "[Ri.LoadBalancer] Blocked non-HTTP(S) URL scheme: {} for URL: {}",
+                scheme, url
+            );
+            return Err(crate::core::RiError::Other(
+                format!("Invalid URL scheme '{}'. Only HTTP and HTTPS are allowed.", scheme)
+            ));
+        }
+
+        // Security: Check for private IP addresses (informational warning)
+        if let Some(host) = parsed_url.host_str() {
+            // Check for localhost
+            if host == "localhost" || host == "127.0.0.1" || host == "::1" {
+                log::warn!(
+                    "[Ri.LoadBalancer] Server URL points to localhost: {}",
+                    url
+                );
+            }
+            
+            // Check for private IP ranges
+            if let Ok(ip) = host.parse::<std::net::IpAddr>() {
+                if ip.is_loopback() || ip.is_private() || ip.is_link_local() {
+                    log::warn!(
+                        "[Ri.LoadBalancer] Server URL points to private IP {}: {}",
+                        ip, url
+                    );
+                }
+            }
+        }
+
+        // Security: Check for credentials in URL
+        if parsed_url.username() != "" || parsed_url.password().is_some() {
+            log::warn!(
+                "[Ri.LoadBalancer] Server URL contains credentials (not recommended): {}",
+                url.split('@').last().unwrap_or(url)
+            );
+        }
+
+        Ok(())
     }
 
     /// Removes a backend server from the load balancer.

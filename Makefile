@@ -176,7 +176,7 @@ all: build
 ################################################################################
 
 # Setup all build dependencies
-setup-env: setup-protoc setup-cmake setup-rust setup-deps
+setup-env: setup-protoc setup-cmake setup-rust setup-openssl setup-deps
 	@echo "$(GREEN)✓ Build environment setup complete$(NC)"
 
 # Install Protocol Buffers compiler
@@ -234,7 +234,9 @@ else ifeq ($(PLATFORM),macos)
 	@mkdir -p .cargo
 	@echo '[target.x86_64-apple-darwin]\nrustflags = ["-C", "link-arg=-undefined", "-C", "link-arg=dynamic_lookup"]\n\n[target.aarch64-apple-darwin]\nrustflags = ["-C", "link-arg=-undefined", "-C", "link-arg=dynamic_lookup"]' > .cargo/config.toml
 else ifeq ($(PLATFORM),windows)
-	@echo "$(YELLOW)Windows dependencies should be installed via GitHub Actions or manually$(NC)"
+	@echo "$(GREEN)Installing Windows dependencies via vcpkg...$(NC)"
+	vcpkg install openssl:x64-windows librdkafka:x64-windows --classic 2>/dev/null || echo "Dependencies may already be installed"
+	vcpkg integrate install 2>/dev/null || true
 endif
 
 ################################################################################
@@ -312,7 +314,9 @@ help:
 build:
 	@echo "$(GREEN)Building Ri library for $(PLATFORM) $(ARCH)...$(NC)"
 ifeq ($(PLATFORM)-$(ARCH),windows-arm64)
-	cargo build $(BUILD_MODE) --target $(TARGET) --no-default-features $(if $(FEATURES),--features $(FEATURES),)
+	OPENSSL_NO_VENDOR=1 cargo build $(BUILD_MODE) --target $(TARGET) --no-default-features $(if $(FEATURES),--features $(FEATURES),)
+else ifeq ($(PLATFORM),windows)
+	OPENSSL_NO_VENDOR=1 cargo build $(BUILD_MODE) --target $(TARGET) $(if $(FEATURES),--features $(FEATURES),)
 else
 	cargo build $(BUILD_MODE) --target $(TARGET) $(if $(FEATURES),--features $(FEATURES),)
 endif
@@ -322,7 +326,9 @@ endif
 build-cli:
 	@echo "$(GREEN)Building CLI tool for $(PLATFORM) $(ARCH)...$(NC)"
 ifeq ($(PLATFORM)-$(ARCH),windows-arm64)
-	cargo build $(BUILD_MODE) -p ric --target $(TARGET) --no-default-features
+	OPENSSL_NO_VENDOR=1 cargo build $(BUILD_MODE) -p ric --target $(TARGET) --no-default-features
+else ifeq ($(PLATFORM),windows)
+	OPENSSL_NO_VENDOR=1 cargo build $(BUILD_MODE) -p ric --target $(TARGET)
 else
 	cargo build $(BUILD_MODE) -p ric --target $(TARGET)
 endif
@@ -348,14 +354,13 @@ ifeq ($(PLATFORM),linux)
 			\$$PYTHON_BIN -m maturin build --release --target $(TARGET) -o /io/$(DIST_DIR)"
 else ifeq ($(PLATFORM),windows)
 	@echo "$(YELLOW)Building Windows wheel...$(NC)"
-ifeq ($(ARCH),arm64)
 	pip install maturin
-	maturin build --release --target $(TARGET) -o $(DIST_DIR) \
+ifeq ($(ARCH),arm64)
+	OPENSSL_NO_VENDOR=1 maturin build --release --target $(TARGET) -o $(DIST_DIR) \
 		--no-default-features \
 		--features pyo3,c,grpc,websocket,rabbitmq,cache,queue,gateway,service_mesh,auth,observability,postgres,mysql,sqlite,http_client,system_info,config_hot_reload
 else
-	pip install maturin
-	maturin build --release --target $(TARGET) -o $(DIST_DIR)
+	OPENSSL_NO_VENDOR=1 maturin build --release --target $(TARGET) -o $(DIST_DIR)
 endif
 else
 	@echo "$(YELLOW)Building native wheel...$(NC)"
@@ -368,7 +373,11 @@ endif
 # Build C static library and headers
 build-c:
 	@echo "$(GREEN)Building C static library for $(PLATFORM) $(ARCH)...$(NC)"
+ifeq ($(PLATFORM),windows)
+	OPENSSL_NO_VENDOR=1 cargo build $(BUILD_MODE) --target $(TARGET) --no-default-features --features c
+else
 	cargo build $(BUILD_MODE) --target $(TARGET) --no-default-features --features c
+endif
 	@echo "$(GREEN)Generating C headers...$(NC)"
 	@mkdir -p $(INCLUDE_DIR)
 	cargo install cbindgen 2>/dev/null || true

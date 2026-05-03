@@ -497,6 +497,11 @@ impl RiFrameHeader {
     ///
     /// When receiving frame data, the magic number should be validated first
     /// before attempting to parse other header fields. A mismatch indicates:
+    
+    /// Maximum payload length (10 MB) to prevent memory exhaustion attacks.
+    /// This limit prevents attackers from sending frames with extremely large
+    /// payload_length values that could exhaust server memory.
+    pub const MAX_PAYLOAD_LENGTH: u32 = 10 * 1024 * 1024;
     ///
     /// 1. The received data is not a Ri frame
     /// 2. Data corruption may have occurred
@@ -836,6 +841,14 @@ impl RiFrame {
             return Err(RiError::FrameError(format!("Unsupported version: {}", header.version)));
         }
         
+        // Security: Check payload length limit to prevent memory exhaustion
+        if header.payload_length > RiFrameHeader::MAX_PAYLOAD_LENGTH {
+            return Err(RiError::FrameError(format!(
+                "Payload length {} exceeds maximum allowed {}",
+                header.payload_length, RiFrameHeader::MAX_PAYLOAD_LENGTH
+            )));
+        }
+        
         // Check payload length
         if bytes.len() < 32 + header.payload_length as usize {
             return Err(RiError::FrameError("Incomplete frame".to_string()));
@@ -1020,6 +1033,11 @@ pub struct RiFrameParser {
 }
 
 impl RiFrameParser {
+    /// Maximum buffer size (20 MB) to prevent memory exhaustion attacks.
+    /// This limit prevents attackers from sending endless streams of data
+    /// that would cause unbounded buffer growth.
+    const MAX_BUFFER_SIZE: usize = 20 * 1024 * 1024;
+    
     pub fn new() -> Self {
         Self {
             buffer: Vec::new(),
@@ -1027,8 +1045,29 @@ impl RiFrameParser {
         }
     }
     
-    pub fn add_data(&mut self, data: &[u8]) {
+    /// Add data to the internal buffer for parsing.
+    ///
+    /// # Security
+    ///
+    /// This method enforces a maximum buffer size to prevent memory exhaustion
+    /// attacks. If the buffer would exceed MAX_BUFFER_SIZE (20 MB), the data
+    /// is rejected and an error is returned.
+    pub fn add_data(&mut self, data: &[u8]) -> RiResult<()> {
+        // Security: Check buffer size limit to prevent memory exhaustion
+        let new_size = self.buffer.len().saturating_add(data.len());
+        if new_size > Self::MAX_BUFFER_SIZE {
+            log::warn!(
+                "[Ri.FrameParser] Buffer size limit exceeded: {} bytes (max {} bytes)",
+                new_size, Self::MAX_BUFFER_SIZE
+            );
+            return Err(RiError::FrameError(format!(
+                "Buffer size limit exceeded: {} bytes (max {} bytes)",
+                new_size, Self::MAX_BUFFER_SIZE
+            )));
+        }
+        
         self.buffer.extend_from_slice(data);
+        Ok(())
     }
     
     pub fn parse_frame(&mut self) -> RiResult<Option<RiFrame>> {
@@ -1037,7 +1076,18 @@ impl RiFrameParser {
         }
         
         let header = RiFrameHeader::from_bytes(&self.buffer[0..32])?;
-        let total_length = 32 + header.payload_length as usize;
+        
+        // Security: Check payload length limit
+        if header.payload_length > RiFrameHeader::MAX_PAYLOAD_LENGTH {
+            // Clear buffer to recover from attack
+            self.buffer.clear();
+            return Err(RiError::FrameError(format!(
+                "Payload length {} exceeds maximum allowed {}",
+                header.payload_length, RiFrameHeader::MAX_PAYLOAD_LENGTH
+            )));
+        }
+        
+        let total_length = 32usize.saturating_add(header.payload_length as usize);
         
         if self.buffer.len() < total_length {
             return Ok(None);

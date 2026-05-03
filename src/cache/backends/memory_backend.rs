@@ -154,6 +154,13 @@ pub struct RiMemoryCache {
     stats: Arc<AtomicCacheStats>,
 }
 
+/// Maximum key length in bytes (1 KB)
+const MAX_KEY_LENGTH: usize = 1024;
+/// Maximum value length in bytes (10 MB)
+const MAX_VALUE_LENGTH: usize = 10 * 1024 * 1024;
+/// Maximum number of entries in cache (100,000)
+const MAX_ENTRIES: usize = 100_000;
+
 impl Default for RiMemoryCache {
     fn default() -> Self {
         Self::new()
@@ -171,6 +178,70 @@ impl RiMemoryCache {
             store: Arc::new(DashMap::new()),
             stats: Arc::new(AtomicCacheStats::new()),
         }
+    }
+
+    /// Validates a cache key to prevent injection and memory exhaustion attacks.
+    ///
+    /// # Security
+    ///
+    /// Keys must:
+    /// - Not be empty
+    /// - Not exceed MAX_KEY_LENGTH (1 KB)
+    /// - Not contain control characters
+    /// - Not contain null bytes
+    fn validate_key(key: &str) -> crate::core::RiResult<()> {
+        if key.is_empty() {
+            return Err(crate::core::RiError::Other(
+                "Cache key cannot be empty".to_string()
+            ));
+        }
+
+        if key.len() > MAX_KEY_LENGTH {
+            return Err(crate::core::RiError::Other(format!(
+                "Cache key too long: {} bytes (max {} bytes)",
+                key.len(), MAX_KEY_LENGTH
+            )));
+        }
+
+        // Check for control characters and null bytes
+        for c in key.chars() {
+            if c.is_control() || c == '\0' {
+                return Err(crate::core::RiError::Other(
+                    "Cache key contains invalid characters (control characters or null bytes)".to_string()
+                ));
+            }
+        }
+
+        Ok(())
+    }
+
+    /// Validates a cache value to prevent memory exhaustion attacks.
+    ///
+    /// # Security
+    ///
+    /// Values must not exceed MAX_VALUE_LENGTH (10 MB)
+    fn validate_value(value: &str) -> crate::core::RiResult<()> {
+        if value.len() > MAX_VALUE_LENGTH {
+            return Err(crate::core::RiError::Other(format!(
+                "Cache value too large: {} bytes (max {} bytes)",
+                value.len(), MAX_VALUE_LENGTH
+            )));
+        }
+
+        Ok(())
+    }
+
+    /// Checks if adding a new entry would exceed the maximum entry count.
+    fn check_entry_limit(&self) -> crate::core::RiResult<()> {
+        let current_entries = self.store.len();
+        if current_entries >= MAX_ENTRIES {
+            return Err(crate::core::RiError::Other(format!(
+                "Cache entry limit reached: {} entries (max {} entries)",
+                current_entries, MAX_ENTRIES
+            )));
+        }
+
+        Ok(())
     }
 }
 
@@ -212,6 +283,14 @@ impl RiCache for RiMemoryCache {
     
     /// Sets a value in the cache with the given key.
     ///
+    /// # Security
+    ///
+    /// This method validates:
+    /// - Key length (max 1 KB)
+    /// - Value length (max 10 MB)
+    /// - Entry count (max 100,000 entries)
+    /// - Key format (no control characters or null bytes)
+    ///
     /// # Parameters
     ///
     /// - `key`: The key to set
@@ -221,6 +300,11 @@ impl RiCache for RiMemoryCache {
     ///
     /// A `RiResult<()>` indicating success or failure
     async fn set(&self, key: &str, value: &str, ttl_seconds: Option<u64>) -> crate::core::RiResult<()> {
+        // Security: Validate key and value
+        Self::validate_key(key)?;
+        Self::validate_value(value)?;
+        self.check_entry_limit()?;
+        
         let cached_value = RiCachedValue::new(value.to_string(), ttl_seconds);
         self.store.insert(key.to_string(), cached_value);
         Ok(())

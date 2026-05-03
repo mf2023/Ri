@@ -188,11 +188,36 @@ impl RiMemoryQueue {
         if let Some(path) = &self.persistence_path {
             if Path::new(path).exists() {
                 let mut file = File::open(path)?;
+                
+                // Security: Check file size before reading to prevent memory exhaustion
+                const MAX_PERSISTENCE_FILE_SIZE: u64 = 100 * 1024 * 1024; // 100 MB
+                let metadata = file.metadata()?;
+                if metadata.len() > MAX_PERSISTENCE_FILE_SIZE {
+                    log::warn!(
+                        "[Ri.MemoryQueue] Persistence file too large: {} bytes (max {} bytes)",
+                        metadata.len(), MAX_PERSISTENCE_FILE_SIZE
+                    );
+                    return Err(crate::core::RiError::Other(format!(
+                        "Persistence file too large: {} bytes (max {} bytes)",
+                        metadata.len(), MAX_PERSISTENCE_FILE_SIZE
+                    )));
+                }
+                
                 let mut content = String::new();
                 file.read_to_string(&mut content)?;
 
                 if !content.is_empty() {
-                    let messages: VecDeque<RiQueueMessage> = serde_json::from_str(&content)?;
+                    // Security: Use bounded deserialization
+                    let messages: VecDeque<RiQueueMessage> = serde_json::from_str(&content)
+                        .map_err(|e| {
+                            log::warn!("[Ri.MemoryQueue] Failed to deserialize messages: {}", e);
+                            crate::core::RiError::Other(format!("Failed to deserialize messages: {}", e))
+                        })?;
+                    
+                    // Security: Limit number of messages loaded
+                    const MAX_MESSAGES: usize = 100000;
+                    let messages: VecDeque<RiQueueMessage> = messages.into_iter().take(MAX_MESSAGES).collect();
+                    
                     let mut state = self.state.blocking_write();
                     state.messages = messages;
                 }

@@ -520,6 +520,19 @@ impl RiQueueConsumer for RabbitMQConsumer {
             Some(delivery_result) => {
                 let delivery = delivery_result.map_err(|e| crate::core::RiError::Other(format!("Consumer error: {e}")))?;
                 
+                // Security: Check message size before deserialization to prevent DoS
+                const MAX_MESSAGE_SIZE: usize = 10 * 1024 * 1024; // 10 MB
+                if delivery.data.len() > MAX_MESSAGE_SIZE {
+                    log::warn!(
+                        "[Ri.RabbitMQ] Message too large: {} bytes (max {} bytes), rejecting",
+                        delivery.data.len(), MAX_MESSAGE_SIZE
+                    );
+                    return Err(crate::core::RiError::Other(format!(
+                        "Message too large: {} bytes (max {} bytes)",
+                        delivery.data.len(), MAX_MESSAGE_SIZE
+                    )));
+                }
+                
                 let _message_id = {
                     let delivery_tag = delivery.delivery_tag;
                     let message_id = format!("msg_{}", uuid::Uuid::new_v4());
@@ -530,7 +543,12 @@ impl RiQueueConsumer for RabbitMQConsumer {
                     message_id
                 };
                 
-                let message: RiQueueMessage = serde_json::from_slice(&delivery.data)?;
+                // Security: Use bounded deserialization to prevent stack overflow
+                let message: RiQueueMessage = serde_json::from_slice(&delivery.data)
+                    .map_err(|e| {
+                        log::warn!("[Ri.RabbitMQ] Failed to deserialize message: {}", e);
+                        crate::core::RiError::Other(format!("Failed to deserialize message: {}", e))
+                    })?;
                 
                 Ok(Some(message))
             },

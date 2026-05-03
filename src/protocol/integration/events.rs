@@ -33,6 +33,18 @@ pub struct RiIntegrationEventBus {
     pub stats: Arc<RwLock<RiIntegrationEventStats>>,
 }
 
+/// Maximum event data entries
+const MAX_EVENT_DATA_ENTRIES: usize = 100;
+
+/// Maximum event data key length
+const MAX_EVENT_DATA_KEY_LENGTH: usize = 256;
+
+/// Maximum event data value length
+const MAX_EVENT_DATA_VALUE_LENGTH: usize = 4096;
+
+/// Maximum event source length
+const MAX_EVENT_SOURCE_LENGTH: usize = 256;
+
 /// Integration event structure.
 #[derive(Debug, Clone)]
 pub struct RiIntegrationEvent {
@@ -109,11 +121,56 @@ pub struct RiIntegrationStats {
 
 impl RiIntegrationEventBus {
     /// Publish an integration event.
+    ///
+    /// # Security
+    ///
+    /// This method validates:
+    /// - Number of event data entries (max 100)
+    /// - Event data key length (max 256 chars)
+    /// - Event data value length (max 4096 chars)
+    /// - Event source length (max 256 chars)
+    /// - No control characters in keys or values
     pub async fn publish_event(&self, event_type: RiIntegrationEventType, event_data: FxHashMap<String, String>) -> RiResult<()> {
+        // Security: Validate event data size
+        if event_data.len() > MAX_EVENT_DATA_ENTRIES {
+            return Err(crate::core::RiError::Other(format!(
+                "Event data exceeds maximum entries: {} (max {})",
+                event_data.len(), MAX_EVENT_DATA_ENTRIES
+            )));
+        }
+        
+        // Security: Validate event data keys and values
+        let mut safe_data = FxHashMap::with_capacity(event_data.len());
+        for (key, value) in event_data {
+            // Validate key length
+            if key.len() > MAX_EVENT_DATA_KEY_LENGTH {
+                return Err(crate::core::RiError::Other(format!(
+                    "Event data key too long: {} chars (max {})",
+                    key.len(), MAX_EVENT_DATA_KEY_LENGTH
+                )));
+            }
+            
+            // Validate value length
+            let safe_value = if value.len() > MAX_EVENT_DATA_VALUE_LENGTH {
+                &value[..MAX_EVENT_DATA_VALUE_LENGTH]
+            } else {
+                &value
+            };
+            
+            // Check for control characters
+            if key.chars().any(|c| c.is_control()) {
+                return Err(crate::core::RiError::Other(
+                    "Event data key contains control characters".to_string()
+                ));
+            }
+            
+            safe_data.insert(key, safe_value.to_string());
+        }
+        
         let event = RiIntegrationEvent {
             event_id: Uuid::new_v4().to_string(),
             event_type,
-            event_data,
+            event_data: safe_data,
             event_timestamp: Instant::now(),
             event_source: "global-system-integration".to_string(),
         };

@@ -210,7 +210,63 @@ impl RiSpan {
     }
 
     pub fn set_attribute(&mut self, key: String, value: String) {
-        self.attributes.insert(key, value);
+        // Security: Mask sensitive attribute values
+        let safe_value = if Self::is_sensitive_attribute(&key) {
+            Self::mask_sensitive_value(&value)
+        } else {
+            value
+        };
+        self.attributes.insert(key, safe_value);
+    }
+
+    /// Checks if an attribute key is sensitive.
+    ///
+    /// # Security
+    ///
+    /// This method identifies sensitive attributes that should be masked
+    /// to prevent sensitive information leakage in traces.
+    fn is_sensitive_attribute(key: &str) -> bool {
+        let key_lower = key.to_lowercase();
+        let sensitive_patterns = [
+            "password",
+            "passwd",
+            "secret",
+            "key",
+            "token",
+            "auth",
+            "credential",
+            "api_key",
+            "apikey",
+            "private",
+            "session",
+            "cookie",
+            "authorization",
+            "bearer",
+        ];
+
+        for pattern in &sensitive_patterns {
+            if key_lower.contains(pattern) {
+                return true;
+            }
+        }
+        false
+    }
+
+    /// Masks a sensitive value for safe display.
+    ///
+    /// # Security
+    ///
+    /// Shows only first 2 and last 2 characters, with asterisks in between.
+    fn mask_sensitive_value(value: &str) -> String {
+        if value.len() <= 4 {
+            return "*".repeat(value.len().max(4));
+        }
+        
+        let first_chars = &value[..2];
+        let last_chars = &value[value.len()-2..];
+        let middle_len = value.len() - 4;
+        
+        format!("{}{}{}", first_chars, "*".repeat(middle_len), last_chars)
     }
 
     pub fn add_event(&mut self, name: String, attributes: FxHashMap<String, String>) {

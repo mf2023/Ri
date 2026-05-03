@@ -231,15 +231,61 @@ impl RiHookBus {
     /// # Parameters
     /// 
     /// - `kind`: The hook kind to register the handler for
-    /// - `id`: A unique ID for the hook handler
+    /// - `id`: A unique ID for the hook handler (1-128 alphanumeric chars, dash, underscore)
     /// - `handler`: The handler function to execute when the hook is emitted
+    /// 
+    /// # Security
+    /// 
+    /// Hook IDs are validated to prevent injection attacks. Only alphanumeric characters,
+    /// dashes, and underscores are allowed.
     /// 
     /// The handler function takes a `RiServiceContext` and a `RiHookEvent` and returns a `RiResult<()>`. 
     pub fn register<F>(&mut self, kind: RiHookKind, id: RiHookId, handler: F)
     where
         F: Fn(&RiServiceContext, &RiHookEvent) -> RiResult<()> + Send + Sync + 'static,
     {
+        // Security: Validate hook ID
+        if let Err(e) = Self::validate_hook_id(&id) {
+            log::warn!("[Ri.Hooks] Invalid hook ID '{}': {}", id, e);
+            return;
+        }
+        
         self.handlers.entry(kind).or_default().push((id, Box::new(handler)));
+    }
+
+    /// Validates a hook ID to prevent injection attacks.
+    ///
+    /// # Security
+    ///
+    /// Hook IDs must:
+    /// - Be 1-128 characters long
+    /// - Contain only alphanumeric characters, dashes, and underscores
+    /// - Not start with a digit or dash
+    fn validate_hook_id(id: &str) -> RiResult<()> {
+        if id.is_empty() || id.len() > 128 {
+            return Err(crate::core::RiError::Other(
+                "Hook ID must be 1-128 characters".to_string()
+            ));
+        }
+
+        let chars: Vec<char> = id.chars().collect();
+        
+        // First character must be a letter or underscore
+        if !chars[0].is_ascii_alphabetic() && chars[0] != '_' {
+            return Err(crate::core::RiError::Other(
+                "Hook ID must start with a letter or underscore".to_string()
+            ));
+        }
+
+        for c in &chars {
+            if !c.is_ascii_alphanumeric() && *c != '-' && *c != '_' {
+                return Err(crate::core::RiError::Other(
+                    "Hook ID can only contain alphanumeric characters, dashes, and underscores".to_string()
+                ));
+            }
+        }
+
+        Ok(())
     }
 
     /// Emits a hook event of the specified kind.

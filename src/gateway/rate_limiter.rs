@@ -92,7 +92,14 @@ pub struct RiRateLimitConfig {
     
     /// Duration of the rate limiting window in seconds
     pub window_seconds: u64,
+    
+    /// Maximum number of unique keys (clients) to track
+    /// This prevents memory exhaustion from too many unique clients
+    pub max_keys: usize,
 }
+
+/// Maximum length of a rate limit key
+const MAX_KEY_LENGTH: usize = 256;
 
 #[cfg(feature = "pyo3")]
 #[pyo3::prelude::pymethods]
@@ -143,11 +150,13 @@ impl Default for RiRateLimitConfig {
     /// - requests_per_second: 10 requests per second
     /// - burst_size: 20 requests (temporary burst capacity)
     /// - window_seconds: 60 seconds window duration
+    /// - max_keys: 10000 unique clients
     fn default() -> Self {
         Self {
             requests_per_second: 10,
             burst_size: 20,
             window_seconds: 60,
+            max_keys: 10000,
         }
     }
 }
@@ -324,6 +333,12 @@ impl RiRateLimiter {
     /// This method attempts to consume tokens from the bucket associated with the given key.
     /// If no bucket exists for the key, a new one is created.
     /// 
+    /// # Security
+    /// 
+    /// This method validates:
+    /// - Key length (max 256 characters)
+    /// - Maximum number of unique keys (prevents memory exhaustion)
+    /// 
     /// # Parameters
     /// 
     /// - `key`: The key to use for rate limiting (e.g., client IP, API key)
@@ -333,6 +348,15 @@ impl RiRateLimiter {
     /// 
     /// `true` if the request should be allowed, `false` otherwise
     pub fn check_rate_limit(&self, key: &str, tokens: usize) -> bool {
+        // Security: Validate key length
+        if key.is_empty() || key.len() > MAX_KEY_LENGTH {
+            log::warn!(
+                "[Ri.RateLimiter] Invalid key length: {} chars (max {})",
+                key.len(), MAX_KEY_LENGTH
+            );
+            return false;
+        }
+        
         futures::executor::block_on(async {
             let buckets = self.buckets.read().await;
             
@@ -341,6 +365,16 @@ impl RiRateLimiter {
             } else {
                 drop(buckets);
                 let mut buckets = self.buckets.write().await;
+                
+                // Security: Check maximum keys limit to prevent memory exhaustion
+                if buckets.len() >= self.config.max_keys {
+                    log::warn!(
+                        "[Ri.RateLimiter] Maximum keys limit reached: {} (max {})",
+                        buckets.len(), self.config.max_keys
+                    );
+                    // Reject new clients when limit is reached
+                    return false;
+                }
                 
                 if let Some(bucket) = buckets.get(key) {
                     bucket.try_consume(tokens, &self.config).await

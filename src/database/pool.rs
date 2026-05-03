@@ -323,15 +323,32 @@ pub struct RiDatabasePool {
     current_max_connections: Arc<AtomicU64>,
 }
 
+/// Maximum allowed connections in a pool to prevent resource exhaustion
+const MAX_POOL_SIZE: u32 = 1000;
+
+/// Minimum allowed connections in a pool
+const MIN_POOL_SIZE: u32 = 1;
+
 impl RiDatabasePool {
     pub async fn new(config: RiDatabaseConfig) -> RiResult<Self> {
+        // Security: Validate connection pool limits
+        let max_connections = config.max_connections.clamp(MIN_POOL_SIZE, MAX_POOL_SIZE);
+        let min_connections = config.min_idle_connections.clamp(0, max_connections);
+        
+        if config.max_connections > MAX_POOL_SIZE {
+            log::warn!(
+                "[Ri.Database] max_connections {} exceeds limit {}, clamping to {}",
+                config.max_connections, MAX_POOL_SIZE, max_connections
+            );
+        }
+
         let dynamic_config = RiDynamicPoolConfig {
             enable_dynamic_scaling: true,
             scale_up_threshold: 0.8,
             scale_down_threshold: 0.3,
             scale_down_cooldown_secs: 300,
-            min_connections: config.min_idle_connections,
-            max_connections: config.max_connections,
+            min_connections,
+            max_connections,
             scale_up_step: 2,
             scale_down_step: 1,
         };
@@ -341,7 +358,7 @@ impl RiDatabasePool {
             connections: Arc::new(DashMap::new()),
             available: Arc::new(DashMap::new()),
             connection_ids: Arc::new(AtomicU64::new(0)),
-            semaphore: Arc::new(Semaphore::new(config.max_connections as usize)),
+            semaphore: Arc::new(Semaphore::new(max_connections as usize)),
             max_idle_time: Duration::from_secs(config.idle_timeout_secs),
             max_lifetime: Duration::from_secs(config.max_lifetime_secs),
             idle_connections: Arc::new(AtomicU64::new(0)),
@@ -352,10 +369,10 @@ impl RiDatabasePool {
             dynamic_config: Arc::new(RwLock::new(dynamic_config)),
             low_utilization_tracker: Arc::new(RwLock::new(LowUtilizationTracker::new())),
             scaling_in_progress: Arc::new(AtomicBool::new(false)),
-            current_max_connections: Arc::new(AtomicU64::new(config.max_connections as u64)),
+            current_max_connections: Arc::new(AtomicU64::new(max_connections as u64)),
         };
 
-        for _ in 0..config.min_idle_connections {
+        for _ in 0..min_connections {
             if let Ok(conn) = pool.create_connection().await {
                 let id = pool.connection_ids.fetch_add(1, Ordering::SeqCst) as u32;
                 let now = Instant::now();

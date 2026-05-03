@@ -29,6 +29,15 @@ use std::sync::Arc;
 use tokio::sync::RwLock;
 use tokio_rustls::rustls::ServerConfig;
 
+/// Default maximum request body size (10 MB)
+const DEFAULT_MAX_BODY_SIZE: usize = 10 * 1024 * 1024;
+
+/// Maximum URL path length
+const MAX_PATH_LENGTH: usize = 2048;
+
+/// Maximum number of headers
+const MAX_HEADERS: usize = 100;
+
 pub struct RiGatewayServer {
     gateway: Arc<RiGateway>,
     config: Arc<RwLock<RiGatewayConfig>>,
@@ -93,6 +102,18 @@ impl RiGatewayServer {
         let method = req.method().to_string();
         let path = req.uri().path().to_string();
         
+        // Security: Validate path length to prevent buffer overflow attacks
+        if path.len() > MAX_PATH_LENGTH {
+            log::warn!(
+                "[Ri.Gateway] Path too long: {} chars (max {})",
+                path.len(), MAX_PATH_LENGTH
+            );
+            return Ok(HyperResponse::builder()
+                .status(StatusCode::URI_TOO_LONG)
+                .body(Body::from("URI Too Long"))
+                .unwrap_or_else(|_| HyperResponse::default()));
+        }
+        
         // Security: Validate X-Forwarded-For header to prevent IP spoofing
         // Only trust X-Forwarded-For if the request comes from a trusted proxy
         // For now, we use the direct connection address as the source of truth
@@ -144,6 +165,11 @@ impl RiGatewayServer {
 
         let mut headers = FxHashMap::default();
         for (key, value) in req.headers() {
+            // Security: Limit number of headers to prevent memory exhaustion
+            if headers.len() >= MAX_HEADERS {
+                log::warn!("[Ri.Gateway] Too many headers, ignoring remaining");
+                break;
+            }
             if let Ok(v) = value.to_str() {
                 headers.insert(key.as_str().to_string(), v.to_string());
             }
@@ -165,15 +191,29 @@ impl RiGatewayServer {
             params
         };
 
+        // Security: Limit request body size to prevent memory exhaustion attacks
         let body = match hyper::body::to_bytes(req.into_body()).await {
             Ok(bytes) => {
+                if bytes.len() > DEFAULT_MAX_BODY_SIZE {
+                    log::warn!(
+                        "[Ri.Gateway] Request body too large: {} bytes (max {} bytes)",
+                        bytes.len(), DEFAULT_MAX_BODY_SIZE
+                    );
+                    return Ok(HyperResponse::builder()
+                        .status(StatusCode::PAYLOAD_TOO_LARGE)
+                        .body(Body::from("Payload Too Large"))
+                        .unwrap_or_else(|_| HyperResponse::default()));
+                }
                 if bytes.is_empty() {
                     None
                 } else {
                     Some(bytes.to_vec())
                 }
             }
-            Err(_) => None,
+            Err(e) => {
+                log::warn!("[Ri.Gateway] Failed to read request body: {}", e);
+                None
+            }
         };
 
         let ri_request = RiGatewayRequest::new(

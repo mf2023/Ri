@@ -314,7 +314,25 @@ impl RiQueueConsumer for RedisQueueConsumer {
         let result: Option<(String, Vec<u8>)> = conn.blpop(&self.queue_name, 5.0).await?;
         
         if let Some((_, payload)) = result {
-            let message: RiQueueMessage = serde_json::from_slice(&payload)?;
+            // Security: Check message size before deserialization to prevent DoS
+            const MAX_MESSAGE_SIZE: usize = 10 * 1024 * 1024; // 10 MB
+            if payload.len() > MAX_MESSAGE_SIZE {
+                log::warn!(
+                    "[Ri.Redis.Queue] Message too large: {} bytes (max {} bytes), rejecting",
+                    payload.len(), MAX_MESSAGE_SIZE
+                );
+                return Err(crate::core::RiError::Other(format!(
+                    "Message too large: {} bytes (max {} bytes)",
+                    payload.len(), MAX_MESSAGE_SIZE
+                )));
+            }
+            
+            // Security: Use bounded deserialization to prevent stack overflow
+            let message: RiQueueMessage = serde_json::from_slice(&payload)
+                .map_err(|e| {
+                    log::warn!("[Ri.Redis.Queue] Failed to deserialize message: {}", e);
+                    crate::core::RiError::Other(format!("Failed to deserialize message: {}", e))
+                })?;
             Ok(Some(message))
         } else {
             Ok(None)

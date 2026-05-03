@@ -394,22 +394,71 @@ pub struct RiMetricsRegistry {
     metrics: Arc<RwLock<HashMap<String, Arc<RiMetric>>>>,
 }
 
-impl Default for RiMetricsRegistry {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
 impl RiMetricsRegistry {
+    /// Maximum number of metrics that can be registered
+    const MAX_METRICS: usize = 10000;
+    
+    /// Maximum metric name length
+    const MAX_NAME_LENGTH: usize = 256;
+    
     pub fn new() -> Self {
         Self {
             metrics: Arc::new(RwLock::new(HashMap::new())),
         }
     }
     
+    /// Validates a metric name to prevent injection attacks.
+    ///
+    /// # Security
+    ///
+    /// Metric names must:
+    /// - Be 1-256 characters long
+    /// - Contain only alphanumeric characters, underscores, and colons
+    /// - Start with a letter
+    fn validate_metric_name(name: &str) -> RiResult<()> {
+        if name.is_empty() || name.len() > Self::MAX_NAME_LENGTH {
+            return Err(crate::core::RiError::Other(format!(
+                "Metric name must be 1-{} characters",
+                Self::MAX_NAME_LENGTH
+            )));
+        }
+        
+        let chars: Vec<char> = name.chars().collect();
+        
+        // First character must be a letter
+        if !chars[0].is_ascii_alphabetic() {
+            return Err(crate::core::RiError::Other(
+                "Metric name must start with a letter".to_string()
+            ));
+        }
+        
+        for c in &chars {
+            if !c.is_ascii_alphanumeric() && *c != '_' && *c != ':' {
+                return Err(crate::core::RiError::Other(
+                    "Metric name can only contain alphanumeric characters, underscores, and colons".to_string()
+                ));
+            }
+        }
+        
+        Ok(())
+    }
+    
     pub fn register(&self, metric: Arc<RiMetric>) -> RiResult<()> {
         let name = metric.get_config().name.clone();
+        
+        // Security: Validate metric name
+        Self::validate_metric_name(&name)?;
+        
         let mut metrics = self.metrics.write_safe("metrics registry")?;
+        
+        // Security: Check maximum metrics limit
+        if metrics.len() >= Self::MAX_METRICS && !metrics.contains_key(&name) {
+            return Err(crate::core::RiError::Other(format!(
+                "Maximum metrics limit reached: {} metrics",
+                Self::MAX_METRICS
+            )));
+        }
+        
         metrics.insert(name, metric);
         Ok(())
     }

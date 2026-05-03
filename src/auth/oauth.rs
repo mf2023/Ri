@@ -106,6 +106,8 @@ pub struct RiOAuthProvider {
     pub enabled: bool,
     /// Redirect URI for OAuth callback (defaults to "http://localhost:8080/auth/callback" if not set)
     pub redirect_uri: Option<String>,
+    /// Whitelist of allowed redirect URI patterns (for security validation)
+    pub allowed_redirect_uris: Vec<String>,
 }
 
 #[cfg(feature = "pyo3")]
@@ -123,6 +125,7 @@ impl RiOAuthProvider {
         scopes: Vec<String>,
         enabled: bool,
         redirect_uri: Option<String>,
+        allowed_redirect_uris: Option<Vec<String>>,
     ) -> Self {
         Self {
             id,
@@ -135,6 +138,7 @@ impl RiOAuthProvider {
             scopes,
             enabled,
             redirect_uri,
+            allowed_redirect_uris: allowed_redirect_uris.unwrap_or_default(),
         }
     }
 }
@@ -247,6 +251,46 @@ impl RiOAuthManager {
         }
     }
 
+    /// Validates a redirect URI against the allowed list.
+    ///
+    /// # Security
+    ///
+    /// This method prevents open redirect attacks by validating that
+    /// the redirect URI matches one of the allowed patterns.
+    ///
+    /// # Parameters
+    /// - `provider`: The OAuth provider configuration
+    /// - `redirect_uri`: The redirect URI to validate
+    ///
+    /// # Returns
+    /// `true` if the redirect URI is allowed, `false` otherwise
+    fn is_redirect_uri_allowed(provider: &RiOAuthProvider, redirect_uri: &str) -> bool {
+        // If no whitelist is configured, only allow the default redirect URI
+        if provider.allowed_redirect_uris.is_empty() {
+            let default_uri = provider.redirect_uri.as_deref()
+                .unwrap_or("http://localhost:8080/auth/callback");
+            return redirect_uri == default_uri;
+        }
+
+        // Check against whitelist
+        for allowed in &provider.allowed_redirect_uris {
+            // Exact match
+            if redirect_uri == allowed {
+                return true;
+            }
+            
+            // Prefix match for paths (e.g., "https://example.com/auth/*")
+            if allowed.ends_with('*') {
+                let prefix = &allowed[..allowed.len()-1];
+                if redirect_uri.starts_with(prefix) {
+                    return true;
+                }
+            }
+        }
+        
+        false
+    }
+
     /// Registers a new OAuth provider.
     /// 
     /// # Parameters
@@ -350,6 +394,24 @@ impl RiOAuthManager {
         if let Some(provider) = providers.get(provider_id) {
             if !provider.enabled {
                 return Ok(None);
+            }
+
+            // Security: Validate redirect URI to prevent open redirect attacks
+            if !Self::is_redirect_uri_allowed(provider, redirect_uri) {
+                log::warn!(
+                    "[Ri.OAuth] Redirect URI not allowed: {} for provider {}",
+                    redirect_uri, provider_id
+                );
+                return Err(crate::core::RiError::Other(
+                    "Invalid redirect URI: not in allowed list".to_string()
+                ));
+            }
+
+            // Security: Validate authorization code format
+            if code.is_empty() || code.len() > 1024 {
+                return Err(crate::core::RiError::Other(
+                    "Invalid authorization code: must be 1-1024 characters".to_string()
+                ));
             }
 
             let client = reqwest::Client::new();

@@ -197,6 +197,7 @@ impl RiWSServer {
                                 let handler_clone = handler.clone();
                                 let session_manager_clone = session_manager.clone();
                                 let stats_clone = stats.clone();
+                                let max_msg_size = config.max_message_size;
 
                                 tokio::spawn(async move {
                                     Self::handle_session(
@@ -205,6 +206,7 @@ impl RiWSServer {
                                         handler_clone,
                                         session_manager_clone,
                                         stats_clone,
+                                        max_msg_size,
                                     ).await;
                                 });
                             } else {
@@ -258,6 +260,7 @@ impl RiWSServer {
         handler: Arc<RwLock<Option<Arc<dyn RiWSSessionHandler>>>>,
         session_manager: Arc<RiWSSessionManager>,
         stats: Arc<RwLock<RiWSServerStats>>,
+        max_message_size: usize,
     ) {
         let session_id = session.id.clone();
 
@@ -266,12 +269,29 @@ impl RiWSServer {
                 Ok(message) => {
                     match message {
                         Message::Binary(data) => {
+                            // Security: Check message size to prevent memory exhaustion
+                            if data.len() > max_message_size {
+                                tracing::warn!(
+                                    "WebSocket message too large for session {}: {} bytes (max {} bytes)",
+                                    session_id, data.len(), max_message_size
+                                );
+                                stats.write().await.record_message_error();
+                                break;
+                            }
+                            
                             stats.write().await.record_message_received(data.len());
 
                             let handler_read = handler.read().await;
                             if let Some(handler) = &*handler_read {
                                 if let Ok(response) = handler.on_message(&session_id, &data).await {
-                                    if session.send(&response).await.is_err() {
+                                    // Security: Check response size too
+                                    if response.len() > max_message_size {
+                                        tracing::warn!(
+                                            "WebSocket response too large for session {}: {} bytes",
+                                            session_id, response.len()
+                                        );
+                                        stats.write().await.record_message_error();
+                                    } else if session.send(&response).await.is_err() {
                                         break;
                                     }
                                     stats.write().await.record_message_sent(response.len());
@@ -285,18 +305,41 @@ impl RiWSServer {
                         }
                         Message::Text(text) => {
                             let data = text.into_bytes();
+                            
+                            // Security: Check message size to prevent memory exhaustion
+                            if data.len() > max_message_size {
+                                tracing::warn!(
+                                    "WebSocket message too large for session {}: {} bytes (max {} bytes)",
+                                    session_id, data.len(), max_message_size
+                                );
+                                stats.write().await.record_message_error();
+                                break;
+                            }
+                            
                             stats.write().await.record_message_received(data.len());
                             
                             let handler_read = handler.read().await;
                             if let Some(handler) = &*handler_read {
                                 if let Ok(response) = handler.on_message(&session_id, &data).await {
-                                    if session.send(&response).await.is_err() {
+                                    // Security: Check response size too
+                                    if response.len() > max_message_size {
+                                        tracing::warn!(
+                                            "WebSocket response too large for session {}: {} bytes",
+                                            session_id, response.len()
+                                        );
+                                        stats.write().await.record_message_error();
+                                    } else if session.send(&response).await.is_err() {
                                         break;
                                     }
                                 }
                             }
                         }
                         Message::Ping(ping_data) => {
+                            // Security: Check ping data size
+                            if ping_data.len() > 125 {  // WebSocket ping limit
+                                tracing::warn!("WebSocket ping data too large for session {}", session_id);
+                                break;
+                            }
                             if session.send(&ping_data).await.is_err() {
                                 break;
                             }

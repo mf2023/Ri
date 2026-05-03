@@ -576,6 +576,10 @@ impl RiFileSystem {
 
     /// Removes a file.
     /// 
+    /// # Security
+    /// 
+    /// This method validates the path to prevent path traversal attacks.
+    /// 
     /// # Parameters
     /// 
     /// - `path`: The path to the file to remove
@@ -584,8 +588,8 @@ impl RiFileSystem {
     /// 
     /// A `RiResult<()>` indicating success or failure
     pub fn remove_file<P: AsRef<Path>>(&self, path: P) -> RiResult<()> {
-        let p = path.as_ref();
-        match fs::remove_file(p) {
+        let validated_path = self.inner.resolve_and_validate_path(path.as_ref())?;
+        match fs::remove_file(&validated_path) {
             Ok(()) => Ok(()),
             Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(()),
             Err(e) => Err(crate::core::RiError::Other(format!("remove_file failed: {e}"))),
@@ -593,6 +597,10 @@ impl RiFileSystem {
     }
 
     /// Removes a directory and all its contents.
+    /// 
+    /// # Security
+    /// 
+    /// This method validates the path to prevent path traversal attacks.
     /// 
     /// # Parameters
     /// 
@@ -602,8 +610,8 @@ impl RiFileSystem {
     /// 
     /// A `RiResult<()>` indicating success or failure
     pub fn remove_dir_all<P: AsRef<Path>>(&self, path: P) -> RiResult<()> {
-        let p = path.as_ref();
-        match fs::remove_dir_all(p) {
+        let validated_path = self.inner.resolve_and_validate_path(path.as_ref())?;
+        match fs::remove_dir_all(&validated_path) {
             Ok(()) => Ok(()),
             Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(()),
             Err(e) => Err(crate::core::RiError::Other(format!("remove_dir_all failed: {e}"))),
@@ -611,6 +619,11 @@ impl RiFileSystem {
     }
 
     /// Copies a file from one path to another.
+    /// 
+    /// # Security
+    /// 
+    /// This method validates both source and destination paths to prevent
+    /// path traversal attacks.
     /// 
     /// # Parameters
     /// 
@@ -621,17 +634,22 @@ impl RiFileSystem {
     /// 
     /// A `RiResult<()>` indicating success or failure
     pub fn copy_file<P: AsRef<Path>, Q: AsRef<Path>>(&self, from: P, to: Q) -> RiResult<()> {
-        let src = from.as_ref();
-        let dst = to.as_ref();
+        let src = self.inner.resolve_and_validate_path(from.as_ref())?;
+        let dst = self.inner.resolve_and_validate_path(to.as_ref())?;
+        
         if let Some(parent) = dst.parent() {
             self.safe_mkdir(parent)?;
         }
-        fs::copy(src, dst)
+        fs::copy(&src, &dst)
             .map_err(|e| crate::core::RiError::Other(format!("copy_file failed: {e}")))?;
         Ok(())
     }
 
     /// Appends text to a file.
+    /// 
+    /// # Security
+    /// 
+    /// This method validates the path to prevent path traversal attacks.
     /// 
     /// # Parameters
     /// 
@@ -644,12 +662,12 @@ impl RiFileSystem {
     pub fn append_text<P: AsRef<Path>>(&self, path: P, text: &str) -> RiResult<()> {
         use std::io::Write as _;
 
-        let path_ref = path.as_ref();
-        self.ensure_parent_dir(path_ref)?;
+        let validated_path = self.inner.resolve_and_validate_path(path.as_ref())?;
+        self.ensure_parent_dir(&validated_path)?;
         let mut file = OpenOptions::new()
             .create(true)
             .append(true)
-            .open(path_ref)
+            .open(&validated_path)
             .map_err(|e| crate::core::RiError::Other(format!("append_text open failed: {e}")))?;
         file.write_all(text.as_bytes())
             .map_err(|e| crate::core::RiError::Other(format!("append_text write failed: {e}")))?;

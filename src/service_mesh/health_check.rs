@@ -458,6 +458,70 @@ impl RiHealthChecker {
         self.tracer = Some(tracer);
     }
     
+    /// Validates an endpoint URL to prevent SSRF attacks.
+    ///
+    /// # Security
+    ///
+    /// This method validates:
+    /// 1. URL scheme must be HTTP or HTTPS
+    /// 2. URL must be well-formed
+    /// 3. Warns if URL points to private IP address
+    /// 4. Blocks file://, gopher://, and other dangerous schemes
+    fn validate_endpoint_url(endpoint: &str) -> RiResult<()> {
+        // Check URL length
+        if endpoint.is_empty() || endpoint.len() > 2048 {
+            return Err(RiError::ServiceMesh(
+                "Endpoint URL must be 1-2048 characters".to_string()
+            ));
+        }
+
+        // Parse and validate URL
+        let parsed_url = url::Url::parse(endpoint)
+            .map_err(|e| RiError::ServiceMesh(format!("Invalid endpoint URL: {}", e)))?;
+
+        // Only allow HTTP and HTTPS schemes
+        let scheme = parsed_url.scheme();
+        if scheme != "http" && scheme != "https" {
+            log::warn!(
+                "[Ri.HealthCheck] Blocked non-HTTP(S) endpoint: scheme={} url={}",
+                scheme, endpoint
+            );
+            return Err(RiError::ServiceMesh(
+                format!("Invalid URL scheme '{}'. Only HTTP and HTTPS are allowed for health checks.", scheme)
+            ));
+        }
+
+        // Check for private IP addresses (informational warning)
+        if let Some(host) = parsed_url.host_str() {
+            // Check for localhost
+            if host == "localhost" || host == "127.0.0.1" || host == "::1" {
+                log::warn!(
+                    "[Ri.HealthCheck] Health check endpoint points to localhost: {}",
+                    endpoint
+                );
+            }
+            
+            // Check for private IP ranges
+            if let Ok(ip) = host.parse::<std::net::IpAddr>() {
+                if ip.is_loopback() || ip.is_private() || ip.is_link_local() {
+                    log::warn!(
+                        "[Ri.HealthCheck] Health check endpoint points to private IP {}: {}",
+                        ip, endpoint
+                    );
+                }
+            }
+        }
+
+        // Check for credentials in URL
+        if parsed_url.username() != "" || parsed_url.password().is_some() {
+            log::warn!(
+                "[Ri.HealthCheck] Health check endpoint URL contains credentials: {}",
+                endpoint.split('@').last().unwrap_or(endpoint)
+            );
+        }
+
+        Ok(())
+    }
 
 
     /// Registers a health check for a service.
@@ -474,6 +538,13 @@ impl RiHealthChecker {
     /// # Returns
     ///
     /// A `RiResult<()>` indicating success or failure
+    ///
+    /// # Security
+    ///
+    /// This method validates the endpoint URL to prevent SSRF attacks:
+    /// - Only HTTP and HTTPS schemes are allowed
+    /// - Private IP addresses are logged as warnings
+    /// - File://, gopher://, and other schemes are blocked
     pub async fn register_health_check(
         &self,
         service_name: &str,
@@ -481,6 +552,9 @@ impl RiHealthChecker {
         check_type: RiHealthCheckType,
         config: RiHealthCheckConfig,
     ) -> RiResult<()> {
+        // Security: Validate endpoint URL to prevent SSRF
+        Self::validate_endpoint_url(endpoint)?;
+        
         let span_id = if let Some(tracer) = &self.tracer {
             let span_id = tracer.start_span_from_context(
                 format!("health_check:{}", service_name),
