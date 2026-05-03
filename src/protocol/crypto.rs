@@ -223,9 +223,10 @@ impl AES256GCM {
             return Err(RiError::CryptoError("Invalid ciphertext length".to_string()));
         }
         
-        let (data, nonce_tag) = ciphertext.split_at(ciphertext.len() - 28);
-        let nonce = &nonce_tag[..12];
-        let tag = &nonce_tag[12..];
+        // Ciphertext format: plaintext + tag(16) + nonce(12)
+        let nonce = &ciphertext[ciphertext.len() - 12..];
+        let tag = &ciphertext[ciphertext.len() - 28..ciphertext.len() - 12];
+        let data = &ciphertext[..ciphertext.len() - 28];
         
         let key = aead::UnboundKey::new(&aead::AES_256_GCM, &self.key)
             .map_err(|e| RiError::CryptoError(format!("Failed to create AES key: {}", e)))?;
@@ -875,10 +876,11 @@ impl SM4Cipher {
             return Err(RiError::CryptoError("Invalid padding".to_string()));
         }
         
-        let data_len = data.len() - pad_len;
-        if data_len < 0 {
-            return Err(RiError::CryptoError("Invalid padding length".to_string()));
+        if pad_len > data.len() {
+            return Err(RiError::CryptoError("Invalid padding length: padding exceeds data length".to_string()));
         }
+        
+        let data_len = data.len() - pad_len;
         
         // Verify padding
         for i in 0..pad_len {

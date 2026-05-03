@@ -159,6 +159,31 @@ pub struct PooledDatabase {
     pool: Arc<RiDatabasePool>,
 }
 
+impl Drop for PooledDatabase {
+    fn drop(&mut self) {
+        // Automatically release the connection back to the pool when dropped
+        // This prevents resource leaks if the user forgets to call release()
+        let pool = self.pool.clone();
+        let id = self.id;
+        let inner = self.inner.clone();
+        
+        // Use tokio::spawn to handle the async release operation
+        // since Drop cannot be async
+        tokio::spawn(async move {
+            pool.active_connections.fetch_sub(1, Ordering::SeqCst);
+            pool.idle_connections.fetch_add(1, Ordering::SeqCst);
+            
+            pool.available.insert(id, PoolConnection { 
+                db: inner,
+                acquired_at: Instant::now(),
+                created_at: Instant::now(),
+            });
+
+            let _ = pool.check_and_scale().await;
+        });
+    }
+}
+
 impl PooledDatabase {
     pub fn new(id: u32, inner: Arc<dyn RiDatabase>, pool: Arc<RiDatabasePool>) -> Self {
         Self { id, inner, pool }

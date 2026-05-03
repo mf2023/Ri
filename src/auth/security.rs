@@ -406,7 +406,13 @@ impl RiSecurityManager {
     /// }
     /// ```
     pub fn hmac_verify(data: &str, signature: &str) -> bool {
-        let expected = hex::decode(signature).ok().unwrap_or_default();
+        let expected = match hex::decode(signature) {
+            Ok(sig) => sig,
+            Err(_) => {
+                log::warn!("[Ri.Security] Invalid hex signature format");
+                return false;
+            }
+        };
         let key = load_hmac_key();
         let signing_key = hmac::Key::new(hmac::HMAC_SHA256, &key);
         hmac::verify(&signing_key, data.as_bytes(), &expected).is_ok()

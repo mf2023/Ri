@@ -274,8 +274,9 @@ impl RiCacheManager {
             Err(e) => log::error!("[Ri.Cache] Failed to set cache key {key}: {e}"),
         }
         
-        // Publish invalidate event to ensure consistency across instances
-        self.publish_event(RiCacheEvent::Invalidate { key: key.to_string() });
+        // Note: Do NOT publish invalidate event after set
+        // The set operation should update the cache, not invalidate it
+        // Invalidate events should only be published for delete operations
         
         result
     }

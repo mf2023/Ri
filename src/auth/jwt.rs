@@ -88,7 +88,7 @@
 use jsonwebtoken::{decode, encode, DecodingKey, EncodingKey, Header, Validation};
 use serde::{Deserialize, Serialize};
 use std::time::{SystemTime, UNIX_EPOCH};
-use zeroize::{Zeroize, ZeroizeOnDrop};
+use zeroize::Zeroize;
 
 use crate::core::error::RiError;
 
@@ -237,23 +237,26 @@ impl Default for RiJWTValidationOptions {
 /// The encoding/decoding operations are primarily CPU-bound due to the
 /// HMAC computation.
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
-#[derive(ZeroizeOnDrop)]
 pub struct RiJWTManager {
     /// The secret key used for signing and verifying tokens
-    /// This field is automatically zeroized on drop for security
-    #[zeroize]
+    /// This field is securely zeroized on drop
     secret: String,
 
     /// Default expiry time in seconds for generated tokens
     expiry_secs: u64,
 
     /// Pre-computed encoding key for faster token generation
-    #[zeroize(skip)]
     encoding_key: EncodingKey,
 
     /// Pre-computed decoding key for faster token validation
-    #[zeroize(skip)]
     decoding_key: DecodingKey,
+}
+
+impl Drop for RiJWTManager {
+    fn drop(&mut self) {
+        // Securely zeroize the secret key to prevent memory dump attacks
+        self.secret.zeroize();
+    }
 }
 
 #[cfg(feature = "pyo3")]
@@ -507,7 +510,10 @@ impl RiJWTManager {
     /// }
     /// ```
     pub fn validate_token(&self, token: &str) -> Result<RiJWTClaims, RiError> {
-        let validation = Validation::default();
+        let mut validation = Validation::default();
+        validation.validate_alg = true;
+        validation.algorithms = vec![jsonwebtoken::Algorithm::HS256];
+        
         decode::<RiJWTClaims>(token, &self.decoding_key, &validation)
             .map_err(|e| RiError::Other(format!("JWT decoding failed: {}", e)))
             .map(|token_data| token_data.claims)
