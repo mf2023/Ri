@@ -480,6 +480,9 @@ pub trait RiProtocol {
     /// Initialize protocol
     async fn initialize(&mut self, config: RiProtocolConfig) -> RiResult<()>;
     
+    /// Connect to a target
+    async fn connect(&self, target_id: &str) -> RiResult<Box<dyn RiProtocolConnection>>;
+    
     /// Send message
     async fn send_message(&mut self, target: &str, data: &[u8]) -> RiResult<Vec<u8>>;
     
@@ -523,8 +526,20 @@ pub trait RiProtocolConnection {
     /// Send data
     async fn send(&mut self, data: &[u8]) -> RiResult<usize>;
     
+    /// Send message
+    async fn send_message(&self, data: &[u8]) -> RiResult<Vec<u8>>;
+    
+    /// Send message with flags
+    async fn send_message_with_flags(&self, data: &[u8], flags: RiMessageFlags) -> RiResult<Vec<u8>>;
+    
     /// Receive data
     async fn receive(&mut self, buffer: &mut [u8]) -> RiResult<usize>;
+    
+    /// Receive message
+    async fn receive_message(&self) -> RiResult<Vec<u8>>;
+    
+    /// Get connection info
+    fn get_connection_info(&self) -> RiConnectionInfo;
     
     /// Get statistics
     fn get_stats(&self) -> RiConnectionStats;
@@ -894,6 +909,10 @@ impl RiBaseProtocol {
         *self.initialized.write().await = true;
     }
 
+    pub async fn connect(&self, target_id: &str) -> RiResult<Box<dyn RiProtocolConnection>> {
+        Ok(Box::new(RiBaseProtocolConnection::new(target_id.to_string())))
+    }
+
     pub async fn send_message(&mut self, _target: &str, data: &[u8]) -> RiResult<Vec<u8>> {
         if !*self.initialized.read().await {
             return Err(ProtocolError::NotInitialized.into());
@@ -983,6 +1002,72 @@ impl RiBaseProtocol {
     }
 }
 
+/// Base protocol connection implementation
+pub struct RiBaseProtocolConnection {
+    connection_id: String,
+    remote_device_id: String,
+}
+
+impl RiBaseProtocolConnection {
+    pub fn new(remote_device_id: String) -> Self {
+        Self {
+            connection_id: uuid::Uuid::new_v4().to_string(),
+            remote_device_id,
+        }
+    }
+}
+
+#[async_trait]
+impl RiProtocolConnection for RiBaseProtocolConnection {
+    fn connection_id(&self) -> &str {
+        &self.connection_id
+    }
+
+    fn remote_device_id(&self) -> &str {
+        &self.remote_device_id
+    }
+
+    fn protocol_type(&self) -> RiProtocolType {
+        RiProtocolType::Global
+    }
+
+    fn is_active(&self) -> bool {
+        true
+    }
+
+    async fn send(&mut self, data: &[u8]) -> RiResult<usize> {
+        Ok(data.len())
+    }
+
+    async fn send_message(&self, data: &[u8]) -> RiResult<Vec<u8>> {
+        Ok(data.to_vec())
+    }
+
+    async fn send_message_with_flags(&self, data: &[u8], _flags: RiMessageFlags) -> RiResult<Vec<u8>> {
+        Ok(data.to_vec())
+    }
+
+    async fn receive(&mut self, buffer: &mut [u8]) -> RiResult<usize> {
+        Ok(0)
+    }
+
+    async fn receive_message(&self) -> RiResult<Vec<u8>> {
+        Ok(vec![])
+    }
+
+    fn get_connection_info(&self) -> RiConnectionInfo {
+        RiConnectionInfo::default()
+    }
+
+    fn get_stats(&self) -> RiConnectionStats {
+        RiConnectionStats::default()
+    }
+
+    async fn close(&mut self) -> RiResult<()> {
+        Ok(())
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct RiGlobalProtocol {
     base: RiBaseProtocol,
@@ -1015,6 +1100,10 @@ impl RiProtocol for RiGlobalProtocol {
     async fn initialize(&mut self, config: RiProtocolConfig) -> RiResult<()> {
         self.base.initialize(config).await;
         Ok(())
+    }
+
+    async fn connect(&self, target_id: &str) -> RiResult<Box<dyn RiProtocolConnection>> {
+        self.base.connect(target_id).await
     }
 
     async fn send_message(&mut self, target: &str, data: &[u8]) -> RiResult<Vec<u8>> {
@@ -1087,6 +1176,10 @@ impl RiProtocol for RiPrivateProtocol {
     async fn initialize(&mut self, config: RiProtocolConfig) -> RiResult<()> {
         self.base.initialize(config).await;
         Ok(())
+    }
+
+    async fn connect(&self, target_id: &str) -> RiResult<Box<dyn RiProtocolConnection>> {
+        self.base.connect(target_id).await
     }
 
     async fn send_message(&mut self, target: &str, data: &[u8]) -> RiResult<Vec<u8>> {

@@ -299,7 +299,7 @@ libloading = "0.8"
 # Zeroize for secure memory clearing of sensitive data
 # Automatically clears memory when sensitive types are dropped
 # Prevents cold-boot attacks and memory forensics
-zeroize = "1.8"
+zeroize = { version = "1.8", features = ["derive"] }
 
 # Zeroize derive macro for automatic Zeroize trait implementation
 # Provides derive macro support for zeroizing struct fields
@@ -475,7 +475,13 @@ oqs = { version = "0.11", optional = true }
 
 # Chinese National Cryptography Standards
 # sm-crypto provides SM2/SM3/SM4 implementations
-sm-crypto = { version = "0.1", optional = true }
+sm-crypto = "0.1"
+
+# Subtle cryptography for constant-time comparisons
+subtle = "2"
+
+# PKCS11 for Hardware Security Module (HSM) support
+pkcs11 = "0.5"
 
 # =============================================================================
 # Feature Flags Configuration
@@ -504,6 +510,7 @@ default = [
     "system_info",
     "config_hot_reload",
     "protocol",
+    "protocol-advanced",
     "kafka",
 ]
 
@@ -531,6 +538,7 @@ full = [
     "system_info",
     "config_hot_reload",
     "protocol",
+    "protocol-advanced",
     "etcd",
     "kafka",
 ]
@@ -553,11 +561,6 @@ parking_lot = []
 
 # Python binding support via PyO3
 pyo3 = ["dep:pyo3"]
-
-# Advanced protocol features (future/experimental)
-# Includes: adapter, crypto, guomi, hsm, private, security, global_state, integration
-# These modules are not yet fully stabilized and may change in future versions
-protocol-advanced = []
 
 # C/C++ API support via safer-ffi
 c = ["dep:safer-ffi"]
@@ -618,7 +621,8 @@ kafka = ["rdkafka"]
 # Post-quantum cryptography integration via oqs
 # Requires: liboqs C library installed + oqs Rust crate
 oqs = ["dep:oqs"]
-protocol = ["dep:oqs", "dep:sm-crypto"]
+protocol = ["dep:oqs"]
+protocol-advanced = ["dep:oqs"]
 
 # =============================================================================
 # Development Dependencies

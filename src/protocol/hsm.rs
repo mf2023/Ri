@@ -75,9 +75,11 @@ use std::time::{Duration, Instant};
 use async_trait::async_trait;
 use tokio::sync::RwLock;
 use serde::{Deserialize, Serialize};
+
+#[cfg(feature = "protocol-advanced")]
 use subtle::ConstantTimeEq;
 
-#[cfg(not(windows))]
+#[cfg(all(not(windows), feature = "protocol-advanced"))]
 use pkcs11;
 
 use crate::core::{RiResult, RiError};

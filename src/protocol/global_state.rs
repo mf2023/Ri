@@ -99,7 +99,20 @@ use rand::RngCore;
 
 use crate::core::{RiResult, RiError};
 use super::{RiProtocolType, RiProtocolConfig, RiProtocolStats, RiConnectionInfo, 
-            RiSecurityLevel, RiDeviceAuthStatus};
+            RiSecurityLevel};
+
+/// Device authentication status
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum RiDeviceAuthStatus {
+    /// Device is not authenticated
+    Unauthenticated,
+    /// Device is authenticated
+    Authenticated,
+    /// Device authentication failed
+    Failed,
+    /// Authentication is pending
+    Pending,
+}
 
 /// Global state manager for coordinating system-wide state.
 pub struct RiGlobalStateManager {
