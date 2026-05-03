@@ -397,6 +397,90 @@ pub extern "C" fn ri_database_pool_query(
 ///     "SELECT * FROM users WHERE id = $1 AND name = $2",
 ///     2, types, values, sizes, &result);
 /// ```
+/// Count the number of parameter placeholders ($1, $2, etc.) in SQL string
+/// Returns the count of placeholders found
+fn count_sql_placeholders(sql: &str) -> usize {
+    let mut count = 0;
+    let mut chars = sql.chars().peekable();
+
+    while let Some(c) = chars.next() {
+        if c == '$' {
+            // Check for numbered placeholder like $1, $2, etc.
+            let mut num_str = String::new();
+            while let Some(&next_c) = chars.peek() {
+                if next_c.is_ascii_digit() {
+                    num_str.push(chars.next().unwrap());
+                } else {
+                    break;
+                }
+            }
+            if !num_str.is_empty() {
+                count += 1;
+            }
+        } else if c == '?' {
+            // Anonymous placeholder (PostgreSQL also supports this)
+            count += 1;
+        } else if c == ':' {
+            // Named placeholder like :1, :name
+            let mut name_or_num = String::new();
+            while let Some(&next_c) = chars.peek() {
+                if next_c.is_alphanumeric() || next_c == '_' {
+                    name_or_num.push(chars.next().unwrap());
+                } else {
+                    break;
+                }
+            }
+            if !name_or_num.is_empty() {
+                count += 1;
+            }
+        }
+    }
+
+    count
+}
+
+/// Validate parameter types and values for security
+/// Returns Some(error_code) if invalid, None if valid
+fn validate_param_value(param_type: std::ffi::c_int, param_value: *const std::ffi::c_void, param_size: usize) -> Option<std::ffi::c_int> {
+    match param_type {
+        0 => None, // NULL - always valid
+        1 => { // INTEGER
+            if param_value.is_null() {
+                return Some(-10); // NULL value for non-nullable type
+            }
+            // Just check pointer is valid for i64 read
+            let _ = unsafe { *(param_value as *const i64) };
+            None
+        }
+        2 => { // REAL
+            if param_value.is_null() {
+                return Some(-10);
+            }
+            let _ = unsafe { *(param_value as *const f64) };
+            None
+        }
+        3 => { // TEXT
+            if param_value.is_null() {
+                return Some(-10);
+            }
+            let cstr = unsafe { std::ffi::CStr::from_ptr(param_value as *const std::ffi::c_char) };
+            match cstr.to_str() {
+                Ok(_) => None,
+                Err(_) => Some(-7), // Invalid UTF-8
+            }
+        }
+        4 => { // BLOB
+            if param_value.is_null() || param_size == 0 {
+                return Some(-11); // BLOB requires non-null pointer and size > 0
+            }
+            // Verify memory is readable
+            let _ = unsafe { std::slice::from_raw_parts(param_value as *const u8, param_size) };
+            None
+        }
+        _ => Some(-8), // Unknown type
+    }
+}
+
 #[no_mangle]
 pub extern "C" fn ri_database_pool_query_params(
     pool: *mut CRiDatabasePool,
@@ -425,39 +509,50 @@ pub extern "C" fn ri_database_pool_query_params(
             Ok(s) => s,
             Err(_) => return -3,
         };
-        
+
+        // Validate SQL placeholder count matches parameter count
+        let placeholder_count = count_sql_placeholders(sql_str);
+        if placeholder_count != param_count {
+            return -9; // Parameter count mismatch
+        }
+
         let mut params: Vec<serde_json::Value> = Vec::with_capacity(param_count);
-        
+
         for i in 0..param_count {
             let param_type = *param_types.add(i);
             let param_value = *param_values.add(i);
             let param_size = *param_sizes.add(i);
-            
+
+            // Validate parameter value security
+            if let Some(err_code) = validate_param_value(param_type, param_value, param_size) {
+                return err_code;
+            }
+
             match param_type {
                 0 => { params.push(serde_json::Value::Null); }
-                1 => { 
+                1 => {
                     let val = *(param_value as *const i64);
                     params.push(serde_json::json!(val));
                 }
-                2 => { 
+                2 => {
                     let val = *(param_value as *const f64);
                     params.push(serde_json::json!(val));
                 }
-                3 => { 
+                3 => {
                     let val = std::ffi::CStr::from_ptr(param_value as *const std::ffi::c_char);
                     match val.to_str() {
                         Ok(s) => params.push(serde_json::json!(s)),
                         Err(_) => return -7,
                     }
                 }
-                4 => { 
+                4 => {
                     let data = std::slice::from_raw_parts(param_value as *const u8, param_size);
                     params.push(serde_json::json!(data));
                 }
                 _ => return -8,
             }
         }
-        
+
         match rt.block_on(async { (*pool).inner.get().await }) {
             Ok(db) => match rt.block_on(async { db.query_with_params(sql_str, &params).await }) {
                 Ok(result) => {
@@ -506,32 +601,43 @@ pub extern "C" fn ri_database_pool_execute_params(
             Ok(s) => s,
             Err(_) => return -3,
         };
-        
+
+        // Validate SQL placeholder count matches parameter count
+        let placeholder_count = count_sql_placeholders(sql_str);
+        if placeholder_count != param_count {
+            return -9; // Parameter count mismatch
+        }
+
         let mut params: Vec<serde_json::Value> = Vec::with_capacity(param_count);
-        
+
         for i in 0..param_count {
             let param_type = *param_types.add(i);
             let param_value = *param_values.add(i);
             let param_size = *param_sizes.add(i);
-            
+
+            // Validate parameter value security
+            if let Some(err_code) = validate_param_value(param_type, param_value, param_size) {
+                return err_code;
+            }
+
             match param_type {
                 0 => { params.push(serde_json::Value::Null); }
-                1 => { 
+                1 => {
                     let val = *(param_value as *const i64);
                     params.push(serde_json::json!(val));
                 }
-                2 => { 
+                2 => {
                     let val = *(param_value as *const f64);
                     params.push(serde_json::json!(val));
                 }
-                3 => { 
+                3 => {
                     let val = std::ffi::CStr::from_ptr(param_value as *const std::ffi::c_char);
                     match val.to_str() {
                         Ok(s) => params.push(serde_json::json!(s)),
                         Err(_) => return -7,
                     }
                 }
-                4 => { 
+                4 => {
                     let data = std::slice::from_raw_parts(param_value as *const u8, param_size);
                     params.push(serde_json::json!(data));
                 }

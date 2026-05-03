@@ -142,8 +142,9 @@ jobs:
       # - libsasl2-dev: SASL authentication library (for Kafka authentication)
       # - libssl-dev: SSL/TLS library (for secure communications)
       # - protobuf-compiler: Protocol Buffers compiler (for etcd-client)
+      # - liboqs-dev: Post-quantum cryptography library (for protocol feature)
       - name: Install system dependencies
-        run: sudo apt-get update && sudo apt-get install -y libcurl4-openssl-dev libsasl2-dev libssl-dev protobuf-compiler
+        run: sudo apt-get update && sudo apt-get install -y libcurl4-openssl-dev libsasl2-dev libssl-dev protobuf-compiler liboqs-dev
 
       # Step 5: Cache Cargo Dependencies
       # Caches Cargo registry index, git checkouts, and target directory

@@ -356,20 +356,21 @@ pub extern "C" fn ri_queue_message_new(payload: *const c_char, payload_len: usiz
     unsafe {
         let payload_slice = std::slice::from_raw_parts(payload as *const u8, payload_len);
         let message = RiQueueMessage::new(payload_slice.to_vec());
-        
+
         let id = match std::ffi::CString::new(message.id.clone()) {
             Ok(s) => s.into_raw(),
             Err(_) => return std::ptr::null_mut(),
         };
 
+        // Use into_raw_parts for proper memory ownership transfer
         let mut payload_vec = message.payload.clone();
-        let payload_ptr = payload_vec.as_mut_ptr();
-        std::mem::forget(payload_vec);
+        let (payload_ptr, payload_cap, payload_len_val) = payload_vec.into_raw_parts();
+        std::mem::forget(payload_vec); // Prevent drop of vec that now belongs to C
 
         Box::into_raw(Box::new(CRiQueueMessage {
             id,
             payload: payload_ptr,
-            payload_len: message.payload.len(),
+            payload_len: payload_len_val,
             timestamp: 0,
             retry_count: message.retry_count,
             max_retries: message.max_retries,
@@ -526,14 +527,15 @@ pub extern "C" fn ri_queue_manager_consume(
                                     Err(_) => return -7,
                                 };
 
+                                // Use into_raw_parts for proper memory ownership transfer
                                 let mut payload_vec = msg.payload.clone();
-                                let payload_ptr = payload_vec.as_mut_ptr();
+                                let (payload_ptr, _payload_cap, payload_len_val) = payload_vec.into_raw_parts();
                                 std::mem::forget(payload_vec);
 
                                 *out_msg = Box::into_raw(Box::new(CRiQueueMessage {
                                     id,
                                     payload: payload_ptr,
-                                    payload_len: msg.payload.len(),
+                                    payload_len: payload_len_val,
                                     timestamp: 0,
                                     retry_count: msg.retry_count,
                                     max_retries: msg.max_retries,

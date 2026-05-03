@@ -225,15 +225,31 @@ endif
 # Install system dependencies
 setup-deps:
 	@echo "$(GREEN)Installing system dependencies...$(NC)"
-ifeq ($(PLATFORM),linux)
-	sudo apt-get update
-	sudo apt-get install -y libcurl4-openssl-dev libsasl2-dev build-essential pkg-config
-else ifeq ($(PLATFORM),macos)
-	brew update --quiet 2>/dev/null || true
-	brew install --quiet cmake pkg-config openssl 2>/dev/null || true
-	@mkdir -p .cargo
-	@echo '[target.x86_64-apple-darwin]\nrustflags = ["-C", "link-arg=-undefined", "-C", "link-arg=dynamic_lookup"]\n\n[target.aarch64-apple-darwin]\nrustflags = ["-C", "link-arg=-undefined", "-C", "link-arg=dynamic_lookup"]' > .cargo/config.toml
-else ifeq ($(PLATFORM),windows)
+	@if command -v apt-get >/dev/null 2>&1; then \
+		echo "Using apt-get (Debian/Ubuntu)"; \
+		sudo apt-get update; \
+		sudo apt-get install -y libcurl4-openssl-dev libsasl2-dev build-essential pkg-config liboqs-dev cmake; \
+	elif command -v yum >/dev/null 2>&1 || command -v dnf >/dev/null 2>&1; then \
+		echo "Using yum/dnf (CentOS/RHEL/Fedora)"; \
+		if command -v dnf >/dev/null 2>&1; then PKGMGR=dnf; else PKGMGR=yum; fi; \
+		sudo $$PKGMGR install -y libcurl-devel openssl-devel libsasl2-devel gcc gcc-c++ make cmake git; \
+		if [ ! -f /usr/lib64/liboqs.so ] && [ ! -f /usr/local/lib64/liboqs.so ]; then \
+			echo "Building liboqs from source..."; \
+			cd /tmp && git clone --depth 1 https://github.com/open-quantum-safe/liboqs.git && \
+			cd liboqs && mkdir build && cd build && \
+			cmake -DCMAKE_INSTALL_PREFIX=/usr .. && \
+			make -j$$(nproc) && sudo make install && sudo ldconfig; \
+		fi; \
+	elif command -v brew >/dev/null 2>&1; then \
+		echo "Using brew (macOS)"; \
+		brew update --quiet 2>/dev/null || true; \
+		brew install --quiet cmake pkg-config openssl liboqs 2>/dev/null || true; \
+		@mkdir -p .cargo; \
+		echo '[target.x86_64-apple-darwin]\nrustflags = ["-C", "link-arg=-undefined", "-C", "link-arg=dynamic_lookup"]\n\n[target.aarch64-apple-darwin]\nrustflags = ["-C", "link-arg=-undefined", "-C", "link-arg=dynamic_lookup"]' > .cargo/config.toml; \
+	else \
+		echo "$(YELLOW)No supported package manager found, skipping system dependencies$(NC)"; \
+	fi
+ifeq ($(PLATFORM),windows)
 	@echo "$(GREEN)Installing Windows dependencies via vcpkg...$(NC)"
 	vcpkg install openssl:x64-windows librdkafka:x64-windows --classic 2>/dev/null || echo "Dependencies may already be installed"
 	vcpkg integrate install 2>/dev/null || true
@@ -314,8 +330,10 @@ help:
 build:
 	@echo "$(GREEN)Building Ri library for $(PLATFORM) $(ARCH)...$(NC)"
 ifeq ($(PLATFORM)-$(ARCH),windows-arm64)
+	@powershell -Command "$$path = $$env:PATH -split ';' | Where-Object { $$_ -notmatch '/usr/bin' -and $$_ -notmatch 'git' -and $$_ -notmatch 'mingw' }; $$env:PATH = $$path -join ';'"
 	OPENSSL_NO_VENDOR=1 cargo build $(BUILD_MODE) --target $(TARGET) --no-default-features $(if $(FEATURES),--features $(FEATURES),)
 else ifeq ($(PLATFORM),windows)
+	@powershell -Command "$$path = $$env:PATH -split ';' | Where-Object { $$_ -notmatch '/usr/bin' -and $$_ -notmatch 'git' -and $$_ -notmatch 'mingw' }; $$env:PATH = $$path -join ';'"
 	OPENSSL_NO_VENDOR=1 cargo build $(BUILD_MODE) --target $(TARGET) $(if $(FEATURES),--features $(FEATURES),)
 else
 	cargo build $(BUILD_MODE) --target $(TARGET) $(if $(FEATURES),--features $(FEATURES),)
@@ -326,8 +344,10 @@ endif
 build-cli:
 	@echo "$(GREEN)Building CLI tool for $(PLATFORM) $(ARCH)...$(NC)"
 ifeq ($(PLATFORM)-$(ARCH),windows-arm64)
+	@powershell -Command "$$path = $$env:PATH -split ';' | Where-Object { $$_ -notmatch '/usr/bin' -and $$_ -notmatch 'git' -and $$_ -notmatch 'mingw' }; $$env:PATH = $$path -join ';'"
 	OPENSSL_NO_VENDOR=1 cargo build $(BUILD_MODE) -p ric --target $(TARGET) --no-default-features
 else ifeq ($(PLATFORM),windows)
+	@powershell -Command "$$path = $$env:PATH -split ';' | Where-Object { $$_ -notmatch '/usr/bin' -and $$_ -notmatch 'git' -and $$_ -notmatch 'mingw' }; $$env:PATH = $$path -join ';'"
 	OPENSSL_NO_VENDOR=1 cargo build $(BUILD_MODE) -p ric --target $(TARGET)
 else
 	cargo build $(BUILD_MODE) -p ric --target $(TARGET)
@@ -358,11 +378,15 @@ else ifeq ($(PLATFORM),windows)
 	@echo "$(YELLOW)Building Windows wheel...$(NC)"
 	pip install maturin
 ifeq ($(ARCH),arm64)
+	@powershell -Command "$$path = $$env:PATH -split ';' | Where-Object { $$_ -notmatch '/usr/bin' -and $$_ -notmatch 'git' -and $$_ -notmatch 'mingw' }; $$env:PATH = $$path -join ';'"
+	OPENSSL_NO_VENDOR=1 maturin build --release --target $(TARGET) -o $(DIST_DIR) \
+		--no-default-features \
+		--features pyo3,grpc,websocket,rabbitmq,cache,queue,gateway,service_mesh,auth,observability,postgres,mysql,sqlite,http_client,system_info,config_hot_reload,etcd
+else
+	@powershell -Command "$$path = $$env:PATH -split ';' | Where-Object { $$_ -notmatch '/usr/bin' -and $$_ -notmatch 'git' -and $$_ -notmatch 'mingw' }; $$env:PATH = $$path -join ';'"
 	OPENSSL_NO_VENDOR=1 maturin build --release --target $(TARGET) -o $(DIST_DIR) \
 		--no-default-features \
 		--features pyo3,grpc,websocket,rabbitmq,cache,queue,gateway,service_mesh,auth,observability,postgres,mysql,sqlite,http_client,system_info,config_hot_reload,protocol,kafka,etcd
-else
-	OPENSSL_NO_VENDOR=1 maturin build --release --target $(TARGET) -o $(DIST_DIR)
 endif
 else
 	@echo "$(YELLOW)Building native wheel...$(NC)"
@@ -378,6 +402,7 @@ endif
 build-c:
 	@echo "$(GREEN)Building C static library for $(PLATFORM) $(ARCH)...$(NC)"
 ifeq ($(PLATFORM),windows)
+	@powershell -Command "$$path = $$env:PATH -split ';' | Where-Object { $$_ -notmatch '/usr/bin' -and $$_ -notmatch 'git' -and $$_ -notmatch 'mingw' }; $$env:PATH = $$path -join ';'"
 	OPENSSL_NO_VENDOR=1 cargo build $(BUILD_MODE) --target $(TARGET) --no-default-features --features c
 else
 	cargo build $(BUILD_MODE) --target $(TARGET) --no-default-features --features c
@@ -429,7 +454,7 @@ build-windows-x64:
 
 build-windows-arm64:
 	@$(MAKE) build PLATFORM=windows ARCH=arm64 TARGET=aarch64-pc-windows-msvc \
-		FEATURES="grpc,websocket,rabbitmq,cache,queue,gateway,service_mesh,auth,observability,postgres,mysql,sqlite,http_client,system_info,config_hot_reload,protocol,kafka,etcd"
+		FEATURES="grpc,websocket,rabbitmq,cache,queue,gateway,service_mesh,auth,observability,postgres,mysql,sqlite,http_client,system_info,config_hot_reload,etcd"
 
 # macOS builds
 build-macos-x64:
@@ -449,7 +474,11 @@ build-cli-windows-x64:
 	@$(MAKE) build-cli PLATFORM=windows ARCH=x64 TARGET=x86_64-pc-windows-msvc
 
 build-cli-windows-arm64:
-	@$(MAKE) build-cli PLATFORM=windows ARCH=arm64 TARGET=aarch64-pc-windows-msvc
+	@echo "$(GREEN)Building CLI for Windows ARM64...$(NC)"
+	@powershell -Command "$$path = $$env:PATH -split ';' | Where-Object { $$_ -notmatch '/usr/bin' -and $$_ -notmatch 'git' -and $$_ -notmatch 'mingw' }; $$env:PATH = $$path -join ';'"
+	OPENSSL_NO_VENDOR=1 cargo build $(BUILD_MODE) -p ric --target $(TARGET) \
+		--no-default-features \
+		--features grpc,websocket,rabbitmq,cache,queue,gateway,service_mesh,auth,observability,postgres,mysql,sqlite,http_client,system_info,config_hot_reload,etcd
 
 build-cli-macos-x64:
 	@$(MAKE) build-cli PLATFORM=macos ARCH=x64 TARGET=x86_64-apple-darwin

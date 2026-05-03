@@ -64,9 +64,19 @@ pub extern "system" fn Java_com_dunimd_ri_database_RiDatabasePool_new0(
     if !check_not_null(&mut env, config_ptr, "RiDatabaseConfig") {
         return 0;
     }
-    
-    let _config = unsafe { &*(config_ptr as *const RiDatabaseConfig) };
-    0
+
+    let config = unsafe { &*(config_ptr as *const crate::database::RiDatabaseConfig) };
+
+    match crate::database::RiDatabasePool::new(config.clone()) {
+        Ok(pool) => {
+            let boxed = Box::new(pool);
+            Box::into_raw(boxed) as jlong
+        }
+        Err(e) => {
+            throw_ri_error(&mut env, &e.to_string());
+            0
+        }
+    }
 }
 
 #[no_mangle]

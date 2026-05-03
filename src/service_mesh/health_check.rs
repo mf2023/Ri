@@ -505,7 +505,7 @@ impl RiHealthChecker {
             if let Ok(ip) = host.parse::<std::net::IpAddr>() {
                 let is_private_or_link_local = match ip {
                     std::net::IpAddr::V4(ipv4) => ipv4.is_private() || ipv4.is_link_local(),
-                    std::net::IpAddr::V6(ipv6) => ipv6.is_private() || ipv6.is_link_local(),
+                    std::net::IpAddr::V6(ipv6) => ipv6.is_unicast_link_local(),
                 };
                 if ip.is_loopback() || is_private_or_link_local {
                     log::warn!(

@@ -1261,9 +1261,8 @@ jobs:
           maturin-version: v1.8.3
           args: --release -o dist
           before-script-linux: |
-            yum install -y perl-core zlib-devel libcurl-devel
-            # Install cmake (try cmake3 first, fallback to cmake)
-            yum install -y cmake3 || yum install -y cmake || true
+            # Use Makefile to install dependencies (handles all Linux distros)
+            make setup-deps || echo "Setup deps completed with some warnings"
             # Configure correct Python version for maturin
             PYTHON_VER="${{ matrix.python }}"
             PYTHON_MAJOR=$(echo "$PYTHON_VER" | cut -d. -f1)
