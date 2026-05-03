@@ -263,7 +263,9 @@ pub extern "C" fn ri_app_builder_new() -> *mut CRiAppBuilder {
     let builder = CRiAppBuilder {
         inner: RiAppBuilder::new(),
     };
-    Box::into_raw(Box::new(builder))
+    let ptr = Box::into_raw(Box::new(builder));
+    crate::c::register_ptr(ptr as usize);
+    ptr
 }
 
 /// Frees a previously allocated CRiAppBuilder instance.
@@ -289,12 +291,14 @@ pub extern "C" fn ri_app_builder_new() -> *mut CRiAppBuilder {
 /// # Safety
 ///
 /// This function is safe to call with NULL. Calling with a pointer that has
-/// already been freed results in undefined behavior.
+/// already been freed will be caught and ignored.
 #[no_mangle]
 pub extern "C" fn ri_app_builder_free(builder: *mut CRiAppBuilder) {
     if !builder.is_null() {
-        unsafe {
-            let _ = Box::from_raw(builder);
+        if crate::c::unregister_ptr(builder as usize) {
+            unsafe {
+                let _ = Box::from_raw(builder);
+            }
         }
     }
 }
@@ -348,7 +352,9 @@ pub extern "C" fn ri_config_new() -> *mut CRiConfig {
     let config = CRiConfig {
         inner: RiConfig::new(),
     };
-    Box::into_raw(Box::new(config))
+    let ptr = Box::into_raw(Box::new(config));
+    crate::c::register_ptr(ptr as usize);
+    ptr
 }
 
 /// Frees a previously allocated CRiConfig instance.
@@ -374,12 +380,14 @@ pub extern "C" fn ri_config_new() -> *mut CRiConfig {
 /// # Safety
 ///
 /// This function is safe to call with NULL. Calling with a pointer that has
-/// already been freed results in undefined behavior.
+/// already been freed will be caught and ignored.
 #[no_mangle]
 pub extern "C" fn ri_config_free(config: *mut CRiConfig) {
     if !config.is_null() {
-        unsafe {
-            let _ = Box::from_raw(config);
+        if crate::c::unregister_ptr(config as usize) {
+            unsafe {
+                let _ = Box::from_raw(config);
+            }
         }
     }
 }
@@ -470,7 +478,9 @@ pub extern "C" fn ri_service_context_new() -> *mut CRiServiceContext {
     match RiServiceContext::new_default() {
         Ok(ctx) => {
             let context = CRiServiceContext { inner: ctx };
-            Box::into_raw(Box::new(context))
+            let ptr = Box::into_raw(Box::new(context));
+            crate::c::register_ptr(ptr as usize);
+            ptr
         }
         Err(_) => std::ptr::null_mut(),
     }
@@ -479,8 +489,10 @@ pub extern "C" fn ri_service_context_new() -> *mut CRiServiceContext {
 #[no_mangle]
 pub extern "C" fn ri_service_context_free(ctx: *mut CRiServiceContext) {
     if !ctx.is_null() {
-        unsafe {
-            let _ = Box::from_raw(ctx);
+        if crate::c::unregister_ptr(ctx as usize) {
+            unsafe {
+                let _ = Box::from_raw(ctx);
+            }
         }
     }
 }
@@ -570,7 +582,9 @@ pub extern "C" fn ri_health_check_result_new(
         };
 
         let c_result = convert_health_check_result_to_c(result);
-        Box::into_raw(Box::new(c_result))
+        let ptr = Box::into_raw(Box::new(c_result));
+        crate::c::register_ptr(ptr as usize);
+        ptr
     }
 }
 
@@ -616,14 +630,16 @@ fn convert_health_check_result_to_c(result: RiHealthCheckResult) -> CRiHealthChe
 #[no_mangle]
 pub extern "C" fn ri_health_check_result_free(result: *mut CRiHealthCheckResult) {
     if !result.is_null() {
-        unsafe {
-            if !(*result).name.is_null() {
-                let _ = CString::from_raw((*result).name);
+        if crate::c::unregister_ptr(result as usize) {
+            unsafe {
+                if !(*result).name.is_null() {
+                    let _ = CString::from_raw((*result).name);
+                }
+                if !(*result).message.is_null() {
+                    let _ = CString::from_raw((*result).message);
+                }
+                let _ = Box::from_raw(result);
             }
-            if !(*result).message.is_null() {
-                let _ = CString::from_raw((*result).message);
-            }
-            let _ = Box::from_raw(result);
         }
     }
 }
@@ -686,14 +702,18 @@ pub extern "C" fn ri_health_report_new() -> *mut CRiHealthReport {
         unhealthy_count: 0,
         unknown_count: 0,
     };
-    Box::into_raw(Box::new(report))
+    let ptr = Box::into_raw(Box::new(report));
+    crate::c::register_ptr(ptr as usize);
+    ptr
 }
 
 #[no_mangle]
 pub extern "C" fn ri_health_report_free(report: *mut CRiHealthReport) {
     if !report.is_null() {
-        unsafe {
-            let _ = Box::from_raw(report);
+        if crate::c::unregister_ptr(report as usize) {
+            unsafe {
+                let _ = Box::from_raw(report);
+            }
         }
     }
 }
@@ -716,15 +736,19 @@ pub extern "C" fn ri_error_chain_new(message: *const c_char) -> *mut CRiErrorCha
         };
 
         let chain = crate::core::error_chain::utils::chain_from_msg(msg);
-        Box::into_raw(Box::new(CRiErrorChain { inner: chain }))
+        let ptr = Box::into_raw(Box::new(CRiErrorChain { inner: chain }));
+        crate::c::register_ptr(ptr as usize);
+        ptr
     }
 }
 
 #[no_mangle]
 pub extern "C" fn ri_error_chain_free(chain: *mut CRiErrorChain) {
     if !chain.is_null() {
-        unsafe {
-            let _ = Box::from_raw(chain);
+        if crate::c::unregister_ptr(chain as usize) {
+            unsafe {
+                let _ = Box::from_raw(chain);
+            }
         }
     }
 }
@@ -788,21 +812,25 @@ pub extern "C" fn ri_lock_error_new(context: *const c_char, is_poisoned: bool) -
             Err(_) => return std::ptr::null_mut(),
         };
 
-        Box::into_raw(Box::new(CRiLockError {
+        let ptr = Box::into_raw(Box::new(CRiLockError {
             context: c_context,
             is_poisoned: error.is_poisoned(),
-        }))
+        }));
+        crate::c::register_ptr(ptr as usize);
+        ptr
     }
 }
 
 #[no_mangle]
 pub extern "C" fn ri_lock_error_free(error: *mut CRiLockError) {
     if !error.is_null() {
-        unsafe {
-            if !(*error).context.is_null() {
-                let _ = CString::from_raw((*error).context);
+        if crate::c::unregister_ptr(error as usize) {
+            unsafe {
+                if !(*error).context.is_null() {
+                    let _ = CString::from_raw((*error).context);
+                }
+                let _ = Box::from_raw(error);
             }
-            let _ = Box::from_raw(error);
         }
     }
 }

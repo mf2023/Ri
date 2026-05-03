@@ -290,10 +290,11 @@
 //! Feature flags control which submodule bindings are compiled into the library.
 //! Disable unused features to reduce binary size.
 
-use std::ffi::{c_char, c_int, CString};
+use std::ffi::{c_char, c_int};
 use std::sync::OnceLock;
 use std::collections::HashSet;
 use std::sync::{Arc, Mutex};
+use std::panic::{catch_unwind, AssertUnwindSafe};
 
 /// Global pointer registry for C bindings to prevent Use-After-Free and Double-Free attacks.
 /// This registry tracks all valid pointers returned to C code.
@@ -376,5 +377,21 @@ pub extern "C" fn ri_string_free(s: *mut c_char) {
         unsafe {
             let _ = CString::from_raw(s);
         }
+    }
+}
+
+/// Helper function to catch panics in FFI functions and return an error code
+pub(crate) fn catch_panic<F: FnOnce() -> c_int>(f: F) -> c_int {
+    match catch_unwind(AssertUnwindSafe(f)) {
+        Ok(result) => result,
+        Err(_) => -100, // Panic occurred, return error code
+    }
+}
+
+/// Helper function to catch panics in FFI functions that return a pointer
+pub(crate) fn catch_panic_ptr<T, F: FnOnce() -> *mut T>(f: F) -> *mut T {
+    match catch_unwind(AssertUnwindSafe(f)) {
+        Ok(result) => result,
+        Err(_) => std::ptr::null_mut(),
     }
 }

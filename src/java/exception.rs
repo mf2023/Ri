@@ -21,6 +21,7 @@
 
 use jni::JNIEnv;
 use jni::sys::jlong;
+use std::panic::{catch_unwind, AssertUnwindSafe};
 
 /// Ri Java exception types
 pub enum RiJavaException {
@@ -113,4 +114,15 @@ macro_rules! check_java_ptr_or_default {
             return $default;
         }
     };
+}
+
+/// Helper function to catch panics in JNI functions and throw Java exceptions
+pub fn catch_java_panic<F: FnOnce(&mut JNIEnv) -> T, T>(env: &mut JNIEnv, f: F) -> Option<T> {
+    match catch_unwind(AssertUnwindSafe(|| f(env))) {
+        Ok(result) => Some(result),
+        Err(_) => {
+            throw_ri_error(env, "Panic occurred in native code");
+            None
+        }
+    }
 }
