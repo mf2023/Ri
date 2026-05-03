@@ -25,9 +25,9 @@ use log::{info, warn, debug, error};
 use crate::core::{RiResult, RiError, RiServiceContext};
 use crate::hooks::{RiHookKind, RiModulePhase};
 use crate::protocol::global_state::RiSystemStatus;
-use super::super::{RiProtocolType, RiProtocol, RiProtocolConnection, RiProtocolAdapter, 
-                   RiGlobalStateManager, RiStateUpdate, RiStateCategory, RiSecurityLevel,
-                   RiProtocolStrategy, RiSecurityContext, RiPerformanceContext};
+use crate::protocol::adapter::{RiProtocolAdapter, RiProtocolStrategy, RiSecurityContext, RiPerformanceContext};
+use crate::protocol::global_state::{RiGlobalStateManager, RiStateUpdate, RiStateCategory};
+use super::super::{RiProtocolType, RiProtocol, RiProtocolConnection, RiSecurityLevel};
 use super::config::{RiIntegrationConfig};
 use super::connection::{RiConnectionCoordinator, RiCrossProtocolConnection, RiCrossProtocolConnectionState, 
                       RiConnectionRoutingTable};
@@ -253,10 +253,10 @@ impl RiGlobalSystemIntegration {
         // Create protocol instance based on type
         let protocol: Box<dyn RiProtocol> = match protocol_type {
             RiProtocolType::Global => {
-                Box::new(super::super::global::RiGlobalProtocol::new())
+                Box::new(super::super::RiGlobalProtocol::new())
             }
             RiProtocolType::Private => {
-                Box::new(super::super::private::RiPrivateProtocol::new(super::super::private::RiPrivateProtocolConfig::default()))
+                Box::new(super::super::RiPrivateProtocol::new())
             }
         };
         

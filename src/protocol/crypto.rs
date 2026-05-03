@@ -34,7 +34,7 @@ use async_trait::async_trait;
 use tokio::sync::RwLock;
 use ring::{aead, digest, rand, signature, agreement};
 use ring::rand::{SecureRandom, SystemRandom};
-use data_encoding::{BASE64, HEX};
+use data_encoding::BASE64;
 use std::collections::HashMap as FxHashMap;
 
 use crate::core::{RiResult, RiError};
@@ -486,8 +486,9 @@ impl ChaCha20Poly1305 {
 
     /// Generate a digital signature using Ed25519
     pub fn sign_ed25519(&self, data: &[u8], private_key: &[u8]) -> RiResult<Vec<u8>> {
-        let key_pair = Ed25519KeyPair::from_pkcs8(private_key)
-            .map_err(|_| CryptoError::InvalidKey)?;
+        let rng = SystemRandom::new();
+        let key_pair = signature::Ed25519KeyPair::from_pkcs8(private_key)
+            .map_err(|_| RiError::CryptoError("Invalid private key".to_string()))?;
         
         let signature = key_pair.sign(data);
         Ok(signature.as_ref().to_vec())
@@ -1436,7 +1437,30 @@ mod crypto_tests {
     }
 }
 
-pub use self::crypto::RiCryptoEngine;
-pub use self::crypto::CryptoError;
+/// Crypto engine trait for encryption/decryption
+pub trait RiCryptoEngine: Send + Sync {
+    fn encrypt(&self, data: &[u8]) -> crate::core::RiResult<Vec<u8>>;
+    fn decrypt(&self, data: &[u8]) -> crate::core::RiResult<Vec<u8>>;
+}
+
+impl RiCryptoEngine for AES256GCM {
+    fn encrypt(&self, data: &[u8]) -> crate::core::RiResult<Vec<u8>> {
+        self.encrypt(data, None)
+    }
+    fn decrypt(&self, data: &[u8]) -> crate::core::RiResult<Vec<u8>> {
+        self.decrypt(data, None)
+    }
+}
+
+impl RiCryptoEngine for ChaCha20Poly1305 {
+    fn encrypt(&self, data: &[u8]) -> crate::core::RiResult<Vec<u8>> {
+        self.encrypt(data, None)
+    }
+    fn decrypt(&self, data: &[u8]) -> crate::core::RiResult<Vec<u8>> {
+        self.decrypt(data, None)
+    }
+}
+
+
 
 

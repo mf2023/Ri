@@ -134,7 +134,7 @@ use pyo3::prelude::*;
 
 pub use core::{RiDevice, RiDeviceType, RiDeviceStatus, RiDeviceCapabilities, RiDeviceControlConfig, RiDeviceConfig, RiNetworkDeviceInfo, RiDeviceHealthMetrics};
 pub use controller::RiDeviceController;
-pub use pool::{RiResourcePool, RiResourcePoolManager, RiConnectionPoolStatistics};
+pub use pool::{RiResourcePool, RiResourcePoolManager, RiConnectionPoolStatistics, RiResourcePoolConfig, RiResourcePoolStatistics, RiConnectionPool, RiConnectionInfo, RiConnectionState, RiConnectionHealthMetrics};
 pub use scheduler::RiDeviceScheduler;
 pub use discovery_scheduler::{RiDeviceDiscoveryEngine, RiResourceScheduler};
 

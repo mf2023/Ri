@@ -91,7 +91,7 @@ impl KyberKEM {
         }
     }
 
-    #[cfg(feature = "protocol")]
+    #[cfg(feature = "oqs")]
     pub fn keygen(&self) -> RiResult<(Vec<u8>, Vec<u8>)> {
         use oqs::kem::Kem;
 
@@ -108,15 +108,15 @@ impl KyberKEM {
         Ok((pk.into_vec(), sk.into_vec()))
     }
 
-    #[cfg(not(feature = "protocol"))]
+    #[cfg(not(feature = "oqs"))]
     pub fn keygen(&self) -> RiResult<(Vec<u8>, Vec<u8>)> {
         Err(RiError::Other(
-            "Post-quantum cryptography requires the 'protocol' feature. \
-             Enable with: cargo build --features protocol".to_string()
+            "Post-quantum cryptography requires the 'oqs' feature. \
+             Enable with: cargo build --features oqs".to_string()
         ))
     }
 
-    #[cfg(feature = "protocol")]
+    #[cfg(feature = "oqs")]
     pub fn encapsulate(&self, public_key: &[u8]) -> RiResult<super::KEMResult> {
         use oqs::kem::Kem;
 
@@ -138,15 +138,15 @@ impl KyberKEM {
         })
     }
 
-    #[cfg(not(feature = "protocol"))]
+    #[cfg(not(feature = "oqs"))]
     pub fn encapsulate(&self, _public_key: &[u8]) -> RiResult<super::KEMResult> {
         Err(RiError::Other(
-            "Post-quantum cryptography requires the 'protocol' feature. \
-             Enable with: cargo build --features protocol".to_string()
+            "Post-quantum cryptography requires the 'oqs' feature. \
+             Enable with: cargo build --features oqs".to_string()
         ))
     }
 
-    #[cfg(feature = "protocol")]
+    #[cfg(feature = "oqs")]
     pub fn decapsulate(&self, ciphertext: &[u8], secret_key: &[u8]) -> RiResult<Vec<u8>> {
         use oqs::kem::Kem;
 
@@ -167,11 +167,11 @@ impl KyberKEM {
         Ok(ss.into_vec())
     }
 
-    #[cfg(not(feature = "protocol"))]
+    #[cfg(not(feature = "oqs"))]
     pub fn decapsulate(&self, _ciphertext: &[u8], _secret_key: &[u8]) -> RiResult<Vec<u8>> {
         Err(RiError::Other(
-            "Post-quantum cryptography requires the 'protocol' feature. \
-             Enable with: cargo build --features protocol".to_string()
+            "Post-quantum cryptography requires the 'oqs' feature. \
+             Enable with: cargo build --features oqs".to_string()
         ))
     }
 }

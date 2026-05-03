@@ -195,7 +195,7 @@ impl RiCryptoSuite {
 /// - **Medium**: Environments with active DPI and traffic shaping
 /// - **High**: High-security environments with sophisticated adversaries
 /// - **Maximum**: Maximum privacy requirements with tolerance for overhead
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 pub enum RiObfuscationLevel {
     /// No obfuscation

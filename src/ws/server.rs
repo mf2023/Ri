@@ -408,6 +408,7 @@ impl RiWSServer {
             Ok(response)
         };
         
+        let stream = tokio_tungstenite::MaybeTlsStream::Plain(stream);
         let ws_stream = tokio_tungstenite::accept_hdr_async(stream, callback).await?;
         Ok(ws_stream)
     }

@@ -82,6 +82,7 @@ use tokio::net::TcpStream;
 use tokio::sync::RwLock;
 use rand::Rng;
 use zeroize::{Zeroize, ZeroizeOnDrop};
+use zeroize_derive::ZeroizeOnDrop;
 use secrecy::{ExposeSecret, SecretVec};
 use std::sync::atomic::{AtomicUsize, Ordering};
 

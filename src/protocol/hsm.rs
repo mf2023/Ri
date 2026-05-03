@@ -22,6 +22,8 @@
 
 #![allow(non_snake_case)]
 
+#[cfg(feature = "hsm")]
+mod inner {
 //! # Hardware Security Module Integration Module
 //!
 //! This module provides hardware security module (HSM) integration capabilities
@@ -1442,3 +1444,7 @@ impl Default for RiHSMManager {
         Self::new()
     }
 }
+}
+
+#[cfg(feature = "hsm")]
+pub use inner::*;

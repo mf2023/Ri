@@ -93,13 +93,14 @@ use async_trait::async_trait;
 use tokio::sync::{RwLock, broadcast, mpsc};
 use uuid::Uuid;
 use zeroize::{Zeroize, ZeroizeOnDrop};
+use zeroize_derive::ZeroizeOnDrop;
 use secrecy::{ExposeSecret, SecretVec};
 use aes_gcm::{Aes256Gcm, Key, Nonce, KeyInit};
 use rand::RngCore;
 
 use crate::core::{RiResult, RiError};
 use super::{RiProtocolType, RiProtocolConfig, RiProtocolStats, RiConnectionInfo, 
-            RiSecurityLevel, RiDeviceAuthStatus};
+            RiSecurityLevel};
 
 /// Global state manager for coordinating system-wide state.
 pub struct RiGlobalStateManager {
@@ -278,6 +279,19 @@ pub enum RiDeviceStatus {
     Error,
     /// Device is suspended
     Suspended,
+}
+
+/// Device authentication status enumeration.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum RiDeviceAuthStatus {
+    /// Not authenticated
+    NotAuthenticated,
+    /// Authentication in progress
+    Authenticating,
+    /// Successfully authenticated
+    Authenticated,
+    /// Authentication failed
+    Failed,
 }
 
 /// System capability structure.
