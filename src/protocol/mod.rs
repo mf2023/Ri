@@ -55,6 +55,7 @@
 use std::collections::HashMap as FxHashMap;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
+#[cfg(feature = "pyo3")]
 use std::time::{SystemTime, UNIX_EPOCH};
 use async_trait::async_trait;
 use tokio::sync::RwLock;
@@ -69,16 +70,16 @@ use pyo3::prelude::*;
 pub mod frames;
 pub use frames::{RiFrameBuilder, RiFrameParser};
 
-/// Post-quantum cryptography modules (requires oqs feature)
-#[cfg(feature = "oqs")]
+/// Post-quantum cryptography modules (requires protocol feature)
+#[cfg(feature = "protocol")]
 pub mod kyber;
-#[cfg(feature = "oqs")]
+#[cfg(feature = "protocol")]
 pub mod dilithium;
-#[cfg(feature = "oqs")]
+#[cfg(feature = "protocol")]
 pub mod falcon;
-#[cfg(feature = "oqs")]
+#[cfg(feature = "protocol")]
 pub mod post_quantum;
-#[cfg(feature = "oqs")]
+#[cfg(feature = "protocol")]
 pub use post_quantum::{
     KyberKEM, KyberPublicKey, KyberSecretKey, KyberCiphertext,
     DilithiumSigner, DilithiumPublicKey, DilithiumSecretKey, DilithiumSignature,

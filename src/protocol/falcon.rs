@@ -15,6 +15,7 @@
 //! See the License for the specific language governing permissions and
 //! limitations under the License.
 
+#![cfg(feature = "protocol")]
 #![allow(non_snake_case)]
 
 //! # Falcon Signature
@@ -45,156 +46,138 @@
 //! assert!(signer.verify(&public_key, message, &signature)?);
 //! ```
 
-use std::sync::Arc;
-use crate::core::{RiResult, RiError};
+#[cfg(feature = "protocol")]
+mod inner {
+    use std::sync::Arc;
+    use crate::core::{RiResult, RiError};
 
-#[cfg(feature = "pyo3")]
-use pyo3::prelude::*;
+    #[cfg(feature = "pyo3")]
+    use pyo3::prelude::*;
 
-#[derive(Debug, Clone)]
-#[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
-pub struct FalconPublicKey(pub Vec<u8>);
+    #[derive(Debug, Clone)]
+    #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
+    pub struct FalconPublicKey(pub Vec<u8>);
 
-#[derive(Debug, Clone)]
-#[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
-pub struct FalconSecretKey(pub Vec<u8>);
+    #[derive(Debug, Clone)]
+    #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
+    pub struct FalconSecretKey(pub Vec<u8>);
 
-#[derive(Debug, Clone)]
-#[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
-pub struct FalconSignature(pub Vec<u8>);
+    #[derive(Debug, Clone)]
+    #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
+    pub struct FalconSignature(pub Vec<u8>);
 
-#[derive(Debug, Clone)]
-#[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
-pub struct FalconSigner {
-    algorithm: Arc<std::sync::RwLock<FalconAlgorithm>>,
-}
+    #[derive(Debug, Clone)]
+    #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
+    pub struct FalconSigner {
+        algorithm: Arc<std::sync::RwLock<FalconAlgorithm>>,
+    }
 
-#[derive(Debug, Clone, Copy)]
-enum FalconAlgorithm {
-    Falcon512,
-    Falcon1024,
-}
+    #[derive(Debug, Clone, Copy)]
+    enum FalconAlgorithm {
+        Falcon512,
+        Falcon1024,
+    }
 
-impl FalconSigner {
-    pub fn new() -> Self {
-        Self {
-            algorithm: Arc::new(std::sync::RwLock::new(FalconAlgorithm::Falcon512)),
+    impl FalconSigner {
+        pub fn new() -> Self {
+            Self {
+                algorithm: Arc::new(std::sync::RwLock::new(FalconAlgorithm::Falcon512)),
+            }
+        }
+
+        pub fn with_algorithm(algorithm: super::super::RiPostQuantumAlgorithm) -> Self {
+            let algo = match algorithm {
+                super::super::RiPostQuantumAlgorithm::Falcon512 => FalconAlgorithm::Falcon512,
+                super::super::RiPostQuantumAlgorithm::Falcon1024 => FalconAlgorithm::Falcon1024,
+                _ => FalconAlgorithm::Falcon512,
+            };
+            Self {
+                algorithm: Arc::new(std::sync::RwLock::new(algo)),
+            }
+        }
+
+        pub fn keygen(&self) -> RiResult<(Vec<u8>, Vec<u8>)> {
+            use oqs::sig::Sig;
+
+            let algo = *self.algorithm.read().map_err(|e|
+                RiError::InvalidState(format!("Lock error: {}", e))
+            )?;
+            let sig = match algo {
+                FalconAlgorithm::Falcon512 => Sig::new(oqs::sig::Algorithm::Falcon512),
+                FalconAlgorithm::Falcon1024 => Sig::new(oqs::sig::Algorithm::Falcon1024),
+            }.map_err(|e| RiError::Other(format!("Failed to initialize Falcon: {:?}", e)))?;
+
+            let (pk, sk) = sig.keypair();
+            Ok((pk.as_bytes().to_vec(), sk.as_bytes().to_vec()))
+        }
+
+        pub fn sign(&self, secret_key: &[u8], message: &[u8]) -> RiResult<Vec<u8>> {
+            use oqs::sig::Sig;
+
+            let algo = *self.algorithm.read().map_err(|e|
+                RiError::InvalidState(format!("Lock error: {}", e))
+            )?;
+            let sig = match algo {
+                FalconAlgorithm::Falcon512 => Sig::new(oqs::sig::Algorithm::Falcon512),
+                FalconAlgorithm::Falcon1024 => Sig::new(oqs::sig::Algorithm::Falcon1024),
+            }.map_err(|e| RiError::Other(format!("Failed to initialize Falcon: {:?}", e)))?;
+
+            let sk = sig.secret_key_from_bytes(secret_key)
+                .ok_or_else(|| RiError::Other("Invalid secret key".to_string()))?;
+            let signature = sig.sign(message, &sk);
+            Ok(signature.as_bytes().to_vec())
+        }
+
+        pub fn verify(&self, public_key: &[u8], message: &[u8], signature: &[u8]) -> RiResult<bool> {
+            use oqs::sig::Sig;
+
+            let algo = *self.algorithm.read().map_err(|e|
+                RiError::InvalidState(format!("Lock error: {}", e))
+            )?;
+            let sig = match algo {
+                FalconAlgorithm::Falcon512 => Sig::new(oqs::sig::Algorithm::Falcon512),
+                FalconAlgorithm::Falcon1024 => Sig::new(oqs::sig::Algorithm::Falcon1024),
+            }.map_err(|e| RiError::Other(format!("Failed to initialize Falcon: {:?}", e)))?;
+
+            let pk = sig.public_key_from_bytes(public_key)
+                .ok_or_else(|| RiError::Other("Invalid public key".to_string()))?;
+            let sig_bytes = sig.signature_from_bytes(signature)
+                .ok_or_else(|| RiError::Other("Invalid signature".to_string()))?;
+            let result = sig.verify(message, &sig_bytes, &pk);
+            Ok(result.is_ok())
         }
     }
 
-    pub fn with_algorithm(algorithm: super::RiPostQuantumAlgorithm) -> Self {
-        let algo = match algorithm {
-            super::RiPostQuantumAlgorithm::Falcon512 => FalconAlgorithm::Falcon512,
-            super::RiPostQuantumAlgorithm::Falcon1024 => FalconAlgorithm::Falcon1024,
-            _ => FalconAlgorithm::Falcon512,
-        };
-        Self {
-            algorithm: Arc::new(std::sync::RwLock::new(algo)),
+    impl Default for FalconSigner {
+        fn default() -> Self {
+            Self::new()
         }
     }
 
-    #[cfg(feature = "protocol")]
-    pub fn keygen(&self) -> RiResult<(Vec<u8>, Vec<u8>)> {
-        use oqs::sig::Sig;
+    #[cfg(feature = "pyo3")]
+    #[pyo3::prelude::pymethods]
+    impl FalconSigner {
+        #[new]
+        pub fn new_py() -> Self {
+            Self::new()
+        }
 
-        let algo = *self.algorithm.read().map_err(|e| 
-            RiError::InvalidState(format!("Lock error: {}", e))
-        )?;
-        let sig = match algo {
-            FalconAlgorithm::Falcon512 => Sig::new(oqs::sig::Algorithm::Falcon512),
-            FalconAlgorithm::Falcon1024 => Sig::new(oqs::sig::Algorithm::Falcon1024),
-        }.map_err(|e| RiError::Other(format!("Failed to initialize Falcon: {:?}", e)))?;
+        pub fn keygen_py(&self) -> Option<(Vec<u8>, Vec<u8>)> {
+            self.keygen().ok()
+        }
 
-        let (pk, sk) = sig.keypair();
-        Ok((pk.into_vec(), sk.into_vec()))
-    }
+        pub fn sign_py(&self, secret_key: &[u8], message: &[u8]) -> Option<Vec<u8>> {
+            self.sign(secret_key, message).ok()
+        }
 
-    #[cfg(not(feature = "protocol"))]
-    pub fn keygen(&self) -> RiResult<(Vec<u8>, Vec<u8>)> {
-        Err(RiError::Other(
-            "Post-quantum cryptography requires the 'protocol' feature. \
-             Enable with: cargo build --features protocol".to_string()
-        ))
-    }
-
-    #[cfg(feature = "protocol")]
-    pub fn sign(&self, secret_key: &[u8], message: &[u8]) -> RiResult<Vec<u8>> {
-        use oqs::sig::Sig;
-
-        let algo = *self.algorithm.read().map_err(|e| 
-            RiError::InvalidState(format!("Lock error: {}", e))
-        )?;
-        let sig = match algo {
-            FalconAlgorithm::Falcon512 => Sig::new(oqs::sig::Algorithm::Falcon512),
-            FalconAlgorithm::Falcon1024 => Sig::new(oqs::sig::Algorithm::Falcon1024),
-        }.map_err(|e| RiError::Other(format!("Failed to initialize Falcon: {:?}", e)))?;
-
-        let sk = sig.secret_key_from_bytes(secret_key)
-            .ok_or_else(|| RiError::Other("Invalid secret key".to_string()))?;
-        let signature = sig.sign(message, &sk);
-        Ok(signature.into_vec())
-    }
-
-    #[cfg(not(feature = "protocol"))]
-    pub fn sign(&self, _secret_key: &[u8], _message: &[u8]) -> RiResult<Vec<u8>> {
-        Err(RiError::Other(
-            "Post-quantum cryptography requires the 'protocol' feature. \
-             Enable with: cargo build --features protocol".to_string()
-        ))
-    }
-
-    #[cfg(feature = "protocol")]
-    pub fn verify(&self, public_key: &[u8], message: &[u8], signature: &[u8]) -> RiResult<bool> {
-        use oqs::sig::Sig;
-
-        let algo = *self.algorithm.read().map_err(|e| 
-            RiError::InvalidState(format!("Lock error: {}", e))
-        )?;
-        let sig = match algo {
-            FalconAlgorithm::Falcon512 => Sig::new(oqs::sig::Algorithm::Falcon512),
-            FalconAlgorithm::Falcon1024 => Sig::new(oqs::sig::Algorithm::Falcon1024),
-        }.map_err(|e| RiError::Other(format!("Failed to initialize Falcon: {:?}", e)))?;
-
-        let pk = sig.public_key_from_bytes(public_key)
-            .ok_or_else(|| RiError::Other("Invalid public key".to_string()))?;
-        let sig_bytes = sig.signature_from_bytes(signature)
-            .ok_or_else(|| RiError::Other("Invalid signature".to_string()))?;
-        let result = sig.verify(message, &sig_bytes, &pk);
-        Ok(result.is_ok())
-    }
-
-    #[cfg(not(feature = "protocol"))]
-    pub fn verify(&self, _public_key: &[u8], _message: &[u8], _signature: &[u8]) -> RiResult<bool> {
-        Err(RiError::Other(
-            "Post-quantum cryptography requires the 'protocol' feature. \
-             Enable with: cargo build --features protocol".to_string()
-        ))
+        pub fn verify_py(&self, public_key: &[u8], message: &[u8], signature: &[u8]) -> bool {
+            self.verify(public_key, message, signature).unwrap_or(false)
+        }
     }
 }
 
-impl Default for FalconSigner {
-    fn default() -> Self {
-        Self::new()
-    }
-}
+#[cfg(feature = "protocol")]
+pub use inner::*;
 
-#[cfg(feature = "pyo3")]
-#[pyo3::prelude::pymethods]
-impl FalconSigner {
-    #[new]
-    pub fn new_py() -> Self {
-        Self::new()
-    }
-
-    pub fn keygen_py(&self) -> Option<(Vec<u8>, Vec<u8>)> {
-        self.keygen().ok()
-    }
-
-    pub fn sign_py(&self, secret_key: &[u8], message: &[u8]) -> Option<Vec<u8>> {
-        self.sign(secret_key, message).ok()
-    }
-
-    pub fn verify_py(&self, public_key: &[u8], message: &[u8], signature: &[u8]) -> bool {
-        self.verify(public_key, message, signature).unwrap_or(false)
-    }
-}
+#[cfg(not(feature = "protocol"))]
+compile_error!("Falcon module requires the 'protocol' feature");

@@ -15,6 +15,7 @@
 //! See the License for the specific language governing permissions and
 //! limitations under the License.
 
+#![cfg(feature = "protocol")]
 #![allow(non_snake_case)]
 
 //! # Post-Quantum Cryptography Module
@@ -74,112 +75,121 @@
 //! assert!(signer.verify(&pk, message, &signature));
 //! ```
 
-use std::sync::Arc;
-use std::time::Instant;
-use tokio::sync::RwLock;
-use crate::core::RiResult;
+#[cfg(feature = "protocol")]
+mod inner {
+    use std::sync::Arc;
+    use std::time::Instant;
+    use tokio::sync::RwLock;
+    use crate::core::RiResult;
 
-#[cfg(feature = "pyo3")]
-use pyo3::prelude::*;
+    #[cfg(feature = "pyo3")]
+    use pyo3::prelude::*;
 
-pub use super::kyber::{KyberKEM, KyberPublicKey, KyberSecretKey, KyberCiphertext};
-pub use super::dilithium::{DilithiumSigner, DilithiumPublicKey, DilithiumSecretKey, DilithiumSignature};
-pub use super::falcon::{FalconSigner, FalconPublicKey, FalconSecretKey, FalconSignature};
+    pub use super::super::kyber::{KyberKEM, KyberPublicKey, KyberSecretKey, KyberCiphertext};
+    pub use super::super::dilithium::{DilithiumSigner, DilithiumPublicKey, DilithiumSecretKey, DilithiumSignature};
+    pub use super::super::falcon::{FalconSigner, FalconPublicKey, FalconSecretKey, FalconSignature};
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-#[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
-pub enum RiPostQuantumAlgorithm {
-    Kyber512,
-    Kyber768,
-    Kyber1024,
-    Dilithium2,
-    Dilithium3,
-    Dilithium5,
-    Falcon512,
-    Falcon1024,
-}
-
-pub struct KEMResult {
-    pub ciphertext: Vec<u8>,
-    pub shared_secret: Vec<u8>,
-}
-
-#[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
-pub struct RiPostQuantumManager {
-    algorithm: Arc<RwLock<RiPostQuantumAlgorithm>>,
-    initialized_at: Arc<RwLock<Instant>>,
-    initialized: Arc<RwLock<bool>>,
-}
-
-impl RiPostQuantumManager {
-    pub fn new() -> Self {
-        Self {
-            algorithm: Arc::new(RwLock::new(RiPostQuantumAlgorithm::Kyber512)),
-            initialized_at: Arc::new(RwLock::new(Instant::now())),
-            initialized: Arc::new(RwLock::new(false)),
-        }
+    #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+    #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
+    pub enum RiPostQuantumAlgorithm {
+        Kyber512,
+        Kyber768,
+        Kyber1024,
+        Dilithium2,
+        Dilithium3,
+        Dilithium5,
+        Falcon512,
+        Falcon1024,
     }
 
-    pub async fn initialize(&self, algorithm: RiPostQuantumAlgorithm) -> RiResult<()> {
-        let mut init = self.initialized.write().await;
-        if *init {
-            return Ok(());
-        }
-
-        *self.algorithm.write().await = algorithm;
-        *self.initialized_at.write().await = Instant::now();
-        *init = true;
-
-        Ok(())
+    pub struct KEMResult {
+        pub ciphertext: Vec<u8>,
+        pub shared_secret: Vec<u8>,
     }
 
-    pub async fn algorithm(&self) -> RiPostQuantumAlgorithm {
-        *self.algorithm.read().await
+    #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
+    pub struct RiPostQuantumManager {
+        algorithm: Arc<RwLock<RiPostQuantumAlgorithm>>,
+        initialized_at: Arc<RwLock<Instant>>,
+        initialized: Arc<RwLock<bool>>,
     }
 
-    pub fn security_level(&self) -> u8 {
-        match self.algorithm.try_read() {
-            Ok(guard) => match *guard {
-                RiPostQuantumAlgorithm::Kyber512 => 1,
-                RiPostQuantumAlgorithm::Kyber768 => 3,
-                RiPostQuantumAlgorithm::Kyber1024 => 5,
-                RiPostQuantumAlgorithm::Dilithium2 => 1,
-                RiPostQuantumAlgorithm::Dilithium3 => 3,
-                RiPostQuantumAlgorithm::Dilithium5 => 5,
-                RiPostQuantumAlgorithm::Falcon512 => 1,
-                RiPostQuantumAlgorithm::Falcon1024 => 5,
-            },
-            Err(_) => 1,
-        }
-    }
-}
-
-impl Default for RiPostQuantumManager {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
-#[cfg(feature = "pyo3")]
-#[pyo3::prelude::pymethods]
-impl RiPostQuantumManager {
-    #[new]
-    pub fn new_py() -> Self {
-        Self::new()
-    }
-
-    pub fn initialize_sync(&mut self, algorithm: RiPostQuantumAlgorithm) -> bool {
-        if let Ok(mut guard) = self.initialized.try_write() {
-            *guard = true;
-            if let Ok(mut algo_guard) = self.algorithm.try_write() {
-                *algo_guard = algorithm;
-                return true;
+    impl RiPostQuantumManager {
+        pub fn new() -> Self {
+            Self {
+                algorithm: Arc::new(RwLock::new(RiPostQuantumAlgorithm::Kyber512)),
+                initialized_at: Arc::new(RwLock::new(Instant::now())),
+                initialized: Arc::new(RwLock::new(false)),
             }
         }
-        false
+
+        pub async fn initialize(&self, algorithm: RiPostQuantumAlgorithm) -> RiResult<()> {
+            let mut init = self.initialized.write().await;
+            if *init {
+                return Ok(());
+            }
+
+            *self.algorithm.write().await = algorithm;
+            *self.initialized_at.write().await = Instant::now();
+            *init = true;
+
+            Ok(())
+        }
+
+        pub async fn algorithm(&self) -> RiPostQuantumAlgorithm {
+            *self.algorithm.read().await
+        }
+
+        pub fn security_level(&self) -> u8 {
+            match self.algorithm.try_read() {
+                Ok(guard) => match *guard {
+                    RiPostQuantumAlgorithm::Kyber512 => 1,
+                    RiPostQuantumAlgorithm::Kyber768 => 3,
+                    RiPostQuantumAlgorithm::Kyber1024 => 5,
+                    RiPostQuantumAlgorithm::Dilithium2 => 1,
+                    RiPostQuantumAlgorithm::Dilithium3 => 3,
+                    RiPostQuantumAlgorithm::Dilithium5 => 5,
+                    RiPostQuantumAlgorithm::Falcon512 => 1,
+                    RiPostQuantumAlgorithm::Falcon1024 => 5,
+                },
+                Err(_) => 1,
+            }
+        }
     }
 
-    pub fn get_stats(&self) -> String {
-        format!("Post-Quantum Manager: API structure ready. Integrate liboqs for production use.")
+    impl Default for RiPostQuantumManager {
+        fn default() -> Self {
+            Self::new()
+        }
+    }
+
+    #[cfg(feature = "pyo3")]
+    #[pyo3::prelude::pymethods]
+    impl RiPostQuantumManager {
+        #[new]
+        pub fn new_py() -> Self {
+            Self::new()
+        }
+
+        pub fn initialize_sync(&mut self, algorithm: RiPostQuantumAlgorithm) -> bool {
+            if let Ok(mut guard) = self.initialized.try_write() {
+                *guard = true;
+                if let Ok(mut algo_guard) = self.algorithm.try_write() {
+                    *algo_guard = algorithm;
+                    return true;
+                }
+            }
+            false
+        }
+
+        pub fn get_stats(&self) -> String {
+            format!("Post-Quantum Manager: API structure ready. Integrate liboqs for production use.")
+        }
     }
 }
+
+#[cfg(feature = "protocol")]
+pub use inner::*;
+
+#[cfg(not(feature = "protocol"))]
+compile_error!("Post-quantum module requires the 'protocol' feature");

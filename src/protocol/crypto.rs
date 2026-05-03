@@ -486,8 +486,8 @@ impl ChaCha20Poly1305 {
 
     /// Generate a digital signature using Ed25519
     pub fn sign_ed25519(&self, data: &[u8], private_key: &[u8]) -> RiResult<Vec<u8>> {
-        let key_pair = Ed25519KeyPair::from_pkcs8(private_key)
-            .map_err(|_| CryptoError::InvalidKey)?;
+        let key_pair = signature::Ed25519KeyPair::from_pkcs8(private_key)
+            .map_err(|_| RiError::CryptoError("Invalid key".to_string()))?;
         
         let signature = key_pair.sign(data);
         Ok(signature.as_ref().to_vec())

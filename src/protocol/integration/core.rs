@@ -253,10 +253,10 @@ impl RiGlobalSystemIntegration {
         // Create protocol instance based on type
         let protocol: Box<dyn RiProtocol> = match protocol_type {
             RiProtocolType::Global => {
-                Box::new(super::super::global::RiGlobalProtocol::new())
+                Box::new(super::super::RiGlobalProtocol::new())
             }
             RiProtocolType::Private => {
-                Box::new(super::super::private::RiPrivateProtocol::new(super::super::private::RiPrivateProtocolConfig::default()))
+                Box::new(super::super::RiPrivateProtocol::new())
             }
         };
         
