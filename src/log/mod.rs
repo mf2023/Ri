@@ -822,6 +822,60 @@ impl LoggerImpl {
         }
     }
 
+    /// Sanitizes a log message to prevent log injection attacks.
+    ///
+    /// # Security
+    ///
+    /// This function prevents:
+    /// 1. CRLF injection (carriage return / line feed)
+    /// 2. ANSI escape sequences
+    /// 3. Null byte injection
+    /// 4. Control characters
+    /// 5. Excessive length
+    ///
+    /// # Parameters
+    /// 
+    /// - `message`: The message to sanitize
+    /// 
+    /// # Returns
+    /// 
+    /// A sanitized string safe for logging
+    fn sanitize_log_message(message: &str) -> String {
+        let mut result = String::with_capacity(message.len().min(4096));
+        
+        for c in message.chars() {
+            match c {
+                // Allow printable ASCII characters
+                ' '..='~' => {
+                    // Escape backslash to prevent escape sequence injection
+                    if c == '\\' {
+                        result.push_str("\\\\");
+                    } else {
+                        result.push(c);
+                    }
+                }
+                // Allow Unicode letters and numbers
+                c if c.is_alphanumeric() => {
+                    result.push(c);
+                }
+                // Handle newlines - convert to safe representation
+                '\n' => result.push_str("\\n"),
+                '\r' => result.push_str("\\r"),
+                '\t' => result.push_str("\\t"),
+                // Skip control characters, ANSI sequences, null bytes, etc.
+                _ => continue,
+            }
+        }
+        
+        // Limit length to prevent log flooding
+        if result.len() > 4096 {
+            result.truncate(4096);
+            result.push_str("...[truncated]");
+        }
+        
+        result
+    }
+
     /// Logs a message with the given level, target, and message.
     /// 
     /// This method handles the complete logging process, including:
@@ -852,39 +906,47 @@ impl LoggerImpl {
 
         let ts = Self::now_timestamp();
         let message_str = format!("{message:?}");
+        
+        // Security: Sanitize message to prevent log injection
+        let sanitized_message = Self::sanitize_log_message(&message_str);
+        let sanitized_target = Self::sanitize_log_message(target);
+
         let ctx_kv = RiLogContext::get_all();
 
         // Create log entry with structured data
         let mut log_entry_context = serde_json::Map::new();
         log_entry_context.insert("timestamp".to_string(), json!(ts));
         log_entry_context.insert("level".to_string(), json!(level.as_str()));
-        log_entry_context.insert("target".to_string(), json!(target));
-        log_entry_context.insert("event".to_string(), json!(event));
-        log_entry_context.insert("message".to_string(), json!(message_str));
+        log_entry_context.insert("target".to_string(), json!(sanitized_target));
+        log_entry_context.insert("event".to_string(), json!(sanitized_target));
+        log_entry_context.insert("message".to_string(), json!(sanitized_message));
         
         // Add distributed tracing fields if present
         if let Some(trace_id) = RiLogContext::get_trace_id() {
-            log_entry_context.insert("trace_id".to_string(), json!(trace_id));
+            log_entry_context.insert("trace_id".to_string(), json!(Self::sanitize_log_message(&trace_id)));
         }
         if let Some(span_id) = RiLogContext::get_span_id() {
-            log_entry_context.insert("span_id".to_string(), json!(span_id));
+            log_entry_context.insert("span_id".to_string(), json!(Self::sanitize_log_message(&span_id)));
         }
         if let Some(parent_span_id) = RiLogContext::get_parent_span_id() {
-            log_entry_context.insert("parent_span_id".to_string(), json!(parent_span_id));
+            log_entry_context.insert("parent_span_id".to_string(), json!(Self::sanitize_log_message(&parent_span_id)));
         }
         
         // Add context fields
         if !ctx_kv.is_empty() {
             for (k, v) in ctx_kv.iter() {
-                log_entry_context.insert(k.clone(), json!(v));
+                log_entry_context.insert(
+                    Self::sanitize_log_message(k),
+                    json!(Self::sanitize_log_message(v))
+                );
             }
         }
 
         // Create log entry for caching
         let log_entry = LogEntry {
             level,
-            target: target.to_string(),
-            message: message_str,
+            target: sanitized_target,
+            message: sanitized_message,
             timestamp: ts,
             context: log_entry_context,
         };

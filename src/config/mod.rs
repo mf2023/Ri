@@ -101,6 +101,95 @@ impl RiConfig {
         RiConfig { values: FxHashMap::default() }
     }
 
+    /// Returns a list of sensitive configuration key patterns.
+    ///
+    /// # Security
+    ///
+    /// These patterns are used to identify sensitive configuration values
+    /// that should be masked when logging or displaying configuration.
+    fn sensitive_key_patterns() -> Vec<&'static str> {
+        vec![
+            "password",
+            "secret",
+            "key",
+            "token",
+            "api_key",
+            "apikey",
+            "auth",
+            "credential",
+            "private",
+            "pass",
+        ]
+    }
+
+    /// Checks if a configuration key is sensitive.
+    ///
+    /// # Security
+    ///
+    /// This method checks if the key matches any sensitive patterns.
+    /// Sensitive values should be masked when logging or displaying.
+    pub fn is_sensitive_key(key: &str) -> bool {
+        let key_lower = key.to_lowercase();
+        for pattern in Self::sensitive_key_patterns() {
+            if key_lower.contains(pattern) {
+                return true;
+            }
+        }
+        false
+    }
+
+    /// Masks a sensitive value for safe display.
+    ///
+    /// # Security
+    ///
+    /// This method masks the middle portion of a sensitive value,
+    /// showing only the first 2 and last 2 characters.
+    pub fn mask_sensitive_value(value: &str) -> String {
+        if value.len() <= 4 {
+            return "*".repeat(value.len().max(4));
+        }
+        
+        let first_chars = &value[..2];
+        let last_chars = &value[value.len()-2..];
+        let middle_len = value.len() - 4;
+        
+        format!("{}{}{}", first_chars, "*".repeat(middle_len), last_chars)
+    }
+
+    /// Gets a configuration value, masking sensitive values.
+    ///
+    /// # Security
+    ///
+    /// This method returns the value, but masks it if the key is sensitive.
+    /// Use this for logging or displaying configuration values.
+    pub fn get_masked(&self, key: &str) -> Option<String> {
+        self.values.get(key).map(|v| {
+            if Self::is_sensitive_key(key) {
+                Self::mask_sensitive_value(v)
+            } else {
+                v.clone()
+            }
+        })
+    }
+
+    /// Gets all configuration values with sensitive values masked.
+    ///
+    /// # Security
+    ///
+    /// This method returns all key-value pairs with sensitive values masked.
+    /// Use this for logging or displaying configuration.
+    pub fn all_values_masked(&self) -> FxHashMap<String, String> {
+        self.values.iter()
+            .map(|(k, v)| {
+                if Self::is_sensitive_key(k) {
+                    (k.clone(), Self::mask_sensitive_value(v))
+                } else {
+                    (k.clone(), v.clone())
+                }
+            })
+            .collect()
+    }
+
     /// Sets a configuration value.
     /// 
     /// # Parameters

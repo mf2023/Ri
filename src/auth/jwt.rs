@@ -515,7 +515,11 @@ impl RiJWTManager {
         validation.algorithms = vec![jsonwebtoken::Algorithm::HS256];
         
         decode::<RiJWTClaims>(token, &self.decoding_key, &validation)
-            .map_err(|e| RiError::Other(format!("JWT decoding failed: {}", e)))
+            .map_err(|e| {
+                // Security: Log detailed error internally, return generic message
+                log::warn!("[Ri.JWT] Token validation failed: {}", e);
+                RiError::Other("Invalid token".to_string())
+            })
             .map(|token_data| token_data.claims)
     }
 

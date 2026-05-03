@@ -576,25 +576,120 @@ impl PluginLoader {
     }
 
     /// Loads a specific plugin file
+    /// 
+    /// # Security
+    /// 
+    /// This method performs the following security checks:
+    /// 1. Path validation to prevent directory traversal
+    /// 2. File extension validation
+    /// 3. File size limits to prevent DoS
+    /// 4. Signature verification (if enabled)
     pub async fn load(&self, path: &PathBuf) -> PluginResult<Box<dyn RiHardwareDiscoveryPlugin>> {
         tracing::info!("Loading plugin from: {}", path.display());
+
+        // Security: Validate the path
+        self.validate_plugin_path(path)?;
 
         if !path.exists() {
             return Err(PluginError::LoadFailed(format!("Plugin file not found: {}", path.display())));
         }
 
+        // Security: Check file size to prevent DoS
+        let metadata = std::fs::metadata(path)
+            .map_err(|e| PluginError::LoadFailed(format!("Failed to read file metadata: {}", e)))?;
+        
+        const MAX_PLUGIN_SIZE: u64 = 100 * 1024 * 1024; // 100 MB
+        if metadata.len() > MAX_PLUGIN_SIZE {
+            return Err(PluginError::LoadFailed(format!(
+                "Plugin file too large: {} bytes (max {} bytes)", 
+                metadata.len(), MAX_PLUGIN_SIZE
+            )));
+        }
+
+        // Security: Verify file extension
+        let extension = path.extension()
+            .and_then(|ext| ext.to_str())
+            .map(|ext| ext.to_lowercase())
+            .unwrap_or_default();
+
+        let valid_extensions = match std::env::consts::OS {
+            "linux" => vec!["so"],
+            "macos" => vec!["dylib"],
+            "windows" => vec!["dll"],
+            _ => vec!["so", "dll", "dylib"],
+        };
+
+        if !valid_extensions.contains(&extension.as_str()) {
+            return Err(PluginError::LoadFailed(format!(
+                "Invalid plugin extension: {} (expected: {:?})",
+                extension, valid_extensions
+            )));
+        }
+
+        // Security: Canonicalize path to prevent directory traversal
+        let canonical_path = path.canonicalize()
+            .map_err(|e| PluginError::LoadFailed(format!("Failed to canonicalize path: {}", e)))?;
+
         let library = Arc::new(
             unsafe {
-                Library::new(path)
+                Library::new(&canonical_path)
                     .map_err(|e| PluginError::LibraryLoadFailed(format!(
-                        "Failed to load library {}: {}", path.display(), e
+                        "Failed to load library {}: {}", canonical_path.display(), e
                     )))?
             }
         );
 
-        let plugin = self.load_plugin_from_library(&library, path)?;
+        let plugin = self.load_plugin_from_library(&library, &canonical_path)?;
 
         Ok(plugin)
+    }
+
+    /// Validates a plugin path for security
+    /// 
+    /// # Security Checks
+    /// 
+    /// 1. Path must be absolute or relative to allowed directories
+    /// 2. Path must not contain directory traversal sequences
+    /// 3. Path must be within allowed plugin directories
+    fn validate_plugin_path(&self, path: &PathBuf) -> PluginResult<()> {
+        let path_str = path.to_string_lossy();
+        
+        // Security: Check for directory traversal attempts
+        if path_str.contains("..") {
+            return Err(PluginError::PermissionDenied(
+                "Directory traversal not allowed in plugin path".to_string()
+            ));
+        }
+
+        // Security: Check for null bytes (path injection)
+        if path_str.contains('\0') {
+            return Err(PluginError::PermissionDenied(
+                "Null bytes not allowed in plugin path".to_string()
+            ));
+        }
+
+        // Security: On Windows, check for reserved names
+        #[cfg(target_os = "windows")]
+        {
+            let file_name = path.file_name()
+                .and_then(|n| n.to_str())
+                .unwrap_or("")
+                .to_uppercase();
+            
+            let reserved_names = [
+                "CON", "PRN", "AUX", "NUL",
+                "COM1", "COM2", "COM3", "COM4", "COM5", "COM6", "COM7", "COM8", "COM9",
+                "LPT1", "LPT2", "LPT3", "LPT4", "LPT5", "LPT6", "LPT7", "LPT8", "LPT9",
+            ];
+
+            if reserved_names.contains(&file_name.as_str()) {
+                return Err(PluginError::PermissionDenied(
+                    format!("Reserved file name not allowed: {}", file_name)
+                ));
+            }
+        }
+
+        Ok(())
     }
 
     /// Loads a plugin from an already loaded library

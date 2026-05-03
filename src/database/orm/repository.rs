@@ -65,11 +65,12 @@ pub struct RiORMSimpleRepository<E: for<'de> serde::Deserialize<'de> + serde::Se
 }
 
 impl<E: for<'de> serde::Deserialize<'de> + serde::Serialize + Clone + Send + Sync> RiORMSimpleRepository<E> {
-    pub fn new(table_name: &'static str) -> Self {
-        Self {
+    pub fn new(table_name: &'static str) -> RiResult<Self> {
+        validate_identifier(table_name)?;
+        Ok(Self {
             table_name,
             _phantom: std::marker::PhantomData,
-        }
+        })
     }
 }
 
@@ -80,6 +81,7 @@ impl<E: for<'de> serde::Deserialize<'de> + serde::Serialize + Clone + Send + Syn
     }
 
     async fn find_all(&self, db: &dyn RiDatabase) -> RiResult<Vec<E>> {
+        validate_identifier(self.table_name)?;
         let sql = format!("SELECT * FROM {}", self.table_name);
         let result = db.query(&sql).await?;
         
@@ -94,6 +96,7 @@ impl<E: for<'de> serde::Deserialize<'de> + serde::Serialize + Clone + Send + Syn
     }
 
     async fn find_by_id(&self, db: &dyn RiDatabase, id: &str) -> RiResult<Option<E>> {
+        validate_identifier(self.table_name)?;
         let sql = format!("SELECT * FROM {} WHERE id = ?", self.table_name);
         
         let result = db.query_with_params(&sql, &[serde_json::json!(id)]).await?;
@@ -108,10 +111,10 @@ impl<E: for<'de> serde::Deserialize<'de> + serde::Serialize + Clone + Send + Syn
     }
 
     async fn find_one(&self, db: &dyn RiDatabase, criteria: &Criteria) -> RiResult<Option<E>> {
-        let mut query = QueryBuilder::new(self.table_name);
+        let mut query = QueryBuilder::new(self.table_name)?;
         query.where_criteria(criteria.clone());
         
-        let (sql, params) = query.build();
+        let (sql, params) = query.build()?;
         let result = db.query_with_params(&sql, &params).await?;
         
         if let Some(row) = result.first() {
@@ -124,13 +127,13 @@ impl<E: for<'de> serde::Deserialize<'de> + serde::Serialize + Clone + Send + Syn
     }
 
     async fn find_many(&self, db: &dyn RiDatabase, criteria: Vec<Criteria>) -> RiResult<Vec<E>> {
-        let mut query = QueryBuilder::new(self.table_name);
+        let mut query = QueryBuilder::new(self.table_name)?;
         
         for criteria in criteria {
             query.and_where(criteria);
         }
         
-        let (sql, params) = query.build();
+        let (sql, params) = query.build()?;
         let result = db.query_with_params(&sql, &params).await?;
         
         let mut entities = Vec::with_capacity(result.len());
@@ -144,6 +147,7 @@ impl<E: for<'de> serde::Deserialize<'de> + serde::Serialize + Clone + Send + Syn
     }
 
     async fn find_paginated(&self, db: &dyn RiDatabase, pagination: Pagination, criteria: Vec<Criteria>) -> RiResult<(Vec<E>, u64)> {
+        validate_identifier(self.table_name)?;
         let count_sql = format!("SELECT COUNT(*) as total FROM {}", self.table_name);
         
         let total: u64 = if criteria.is_empty() {
@@ -153,11 +157,11 @@ impl<E: for<'de> serde::Deserialize<'de> + serde::Serialize + Clone + Send + Syn
                 0
             }
         } else {
-            let mut count_query = QueryBuilder::new(self.table_name);
+            let mut count_query = QueryBuilder::new(self.table_name)?;
             for c in &criteria {
                 count_query.and_where(c.clone());
             }
-            let (sql, params) = count_query.build();
+            let (sql, params) = count_query.build()?;
             let count_sql = format!("SELECT COUNT(*) as total FROM ({}) as subquery", sql);
             
             let result = db.query_with_params(&count_sql, &params).await?;
@@ -165,13 +169,13 @@ impl<E: for<'de> serde::Deserialize<'de> + serde::Serialize + Clone + Send + Syn
             row.get_i64("total").map(|v| v as u64).unwrap_or(0)
         };
         
-        let mut data_query = QueryBuilder::new(self.table_name);
+        let mut data_query = QueryBuilder::new(self.table_name)?;
         for c in criteria {
             data_query.and_where(c);
         }
         data_query.paginate(pagination.page, pagination.page_size);
         
-        let (sql, params) = data_query.build();
+        let (sql, params) = data_query.build()?;
         let result = db.query_with_params(&sql, &params).await?;
         
         let mut entities = Vec::with_capacity(result.len());
@@ -185,11 +189,11 @@ impl<E: for<'de> serde::Deserialize<'de> + serde::Serialize + Clone + Send + Syn
     }
 
     async fn count(&self, db: &dyn RiDatabase, criteria: Vec<Criteria>) -> RiResult<u64> {
-        let mut query = QueryBuilder::new(self.table_name);
+        let mut query = QueryBuilder::new(self.table_name)?;
         for c in criteria {
             query.and_where(c);
         }
-        let (sql, _) = query.build();
+        let (sql, _) = query.build()?;
         let count_sql = sql.replace("*", "COUNT(*) as total");
         
         if let Some(row) = db.query_one(&count_sql).await? {
@@ -200,10 +204,13 @@ impl<E: for<'de> serde::Deserialize<'de> + serde::Serialize + Clone + Send + Syn
     }
 
     async fn save(&self, db: &dyn RiDatabase, entity: &E) -> RiResult<E> {
+        validate_identifier(self.table_name)?;
         let json_value = serde_json::to_value(entity)?;
         let values: FxHashMap<String, serde_json::Value> = serde_json::from_value(json_value)?;
         
         let columns: Vec<&str> = values.keys().map(|s| s.as_str()).collect();
+        validate_identifiers(&columns)?;
+        
         let placeholders: Vec<String> = std::iter::repeat("?".to_string()).take(columns.len()).collect();
         
         let sql = format!(
@@ -233,12 +240,18 @@ impl<E: for<'de> serde::Deserialize<'de> + serde::Serialize + Clone + Send + Syn
     }
 
     async fn update(&self, db: &dyn RiDatabase, entity: &E) -> RiResult<E> {
+        validate_identifier(self.table_name)?;
         let json_value = serde_json::to_value(entity)?;
         let values: FxHashMap<String, serde_json::Value> = serde_json::from_value(json_value)?;
         
-        let updates: Vec<String> = values.keys()
+        let update_columns: Vec<&str> = values.keys()
             .filter(|&col| col != "id")
-            .map(|col| format!("{} = ?", col))
+            .map(|s| s.as_str())
+            .collect();
+        validate_identifiers(&update_columns)?;
+        
+        let updates: Vec<String> = update_columns.iter()
+            .map(|&col| format!("{} = ?", col))
             .collect();
         
         if updates.is_empty() {
@@ -277,6 +290,7 @@ impl<E: for<'de> serde::Deserialize<'de> + serde::Serialize + Clone + Send + Syn
     }
 
     async fn delete_by_id(&self, db: &dyn RiDatabase, id: &str) -> RiResult<()> {
+        validate_identifier(self.table_name)?;
         let sql = format!("DELETE FROM {} WHERE id = ?", self.table_name);
         
         db.execute_with_params(&sql, &[serde_json::json!(id)]).await?;
@@ -288,18 +302,20 @@ impl<E: for<'de> serde::Deserialize<'de> + serde::Serialize + Clone + Send + Syn
             return Err(RiError::Other("Criteria required for delete_many operation".to_string()));
         }
         
-        let mut query = QueryBuilder::new(self.table_name);
+        let mut query = QueryBuilder::new(self.table_name)?;
         for c in criteria {
             query.and_where(c);
         }
         
-        let (sql, params) = query.build();
-        let delete_sql = format!("DELETE FROM {}", sql.split("FROM").nth(1).unwrap_or(&sql));
+        let (sql, params) = query.build()?;
+        let from_part = sql.split("FROM").nth(1).unwrap_or(&sql);
+        let delete_sql = format!("DELETE FROM {}", from_part);
         
         db.execute_with_params(&delete_sql, &params).await.map_err(|e| e.into())
     }
     
     async fn batch_insert(&self, db: &dyn RiDatabase, entities: &[E], batch_size: usize) -> RiResult<Vec<E>> {
+        validate_identifier(self.table_name)?;
         let mut inserted = Vec::with_capacity(entities.len());
         
         for chunk in entities.chunks(batch_size) {
@@ -317,6 +333,8 @@ impl<E: for<'de> serde::Deserialize<'de> + serde::Serialize + Clone + Send + Syn
             }
             
             let columns: Vec<&str> = all_columns.iter().copied().collect();
+            validate_identifiers(&columns)?;
+            
             let placeholders: Vec<String> = (0..columns.len()).map(|_| "?".to_string()).collect();
             
             let sql = format!(
@@ -343,10 +361,15 @@ impl<E: for<'de> serde::Deserialize<'de> + serde::Serialize + Clone + Send + Syn
     }
     
     async fn upsert(&self, db: &dyn RiDatabase, entity: &E, conflict_columns: &[&str]) -> RiResult<E> {
+        validate_identifier(self.table_name)?;
+        validate_identifiers(conflict_columns)?;
+        
         let json_value = serde_json::to_value(entity)?;
         let values: FxHashMap<String, serde_json::Value> = serde_json::from_value(json_value)?;
         
         let columns: Vec<&str> = values.keys().map(|s| s.as_str()).collect();
+        validate_identifiers(&columns)?;
+        
         let placeholders: Vec<String> = (0..columns.len()).map(|_| "?".to_string()).collect();
         
         let update_parts: Vec<String> = columns.iter()
@@ -379,6 +402,7 @@ impl<E: for<'de> serde::Deserialize<'de> + serde::Serialize + Clone + Send + Syn
     }
 
     async fn exists(&self, db: &dyn RiDatabase, id: &str) -> RiResult<bool> {
+        validate_identifier(self.table_name)?;
         let sql = format!("SELECT 1 FROM {} WHERE id = ? LIMIT 1", self.table_name);
         
         let result = db.query_with_params(&sql, &[serde_json::json!(id)]).await?;
@@ -386,11 +410,11 @@ impl<E: for<'de> serde::Deserialize<'de> + serde::Serialize + Clone + Send + Syn
     }
 
     async fn exists_by(&self, db: &dyn RiDatabase, criteria: &Criteria) -> RiResult<bool> {
-        let mut query = QueryBuilder::new(self.table_name);
-        query.select(vec!["1"]);
+        let mut query = QueryBuilder::new(self.table_name)?;
+        query.select(vec!["1"])?;
         query.where_criteria(criteria.clone());
         
-        let (sql, params) = query.build();
+        let (sql, params) = query.build()?;
         let sql = format!("{} LIMIT 1", sql);
         
         let result = db.query_with_params(&sql, &params).await?;
@@ -400,6 +424,9 @@ impl<E: for<'de> serde::Deserialize<'de> + serde::Serialize + Clone + Send + Syn
 
 impl<E: for<'de> serde::Deserialize<'de> + serde::Serialize + Clone + Send + Sync> RiORMSimpleRepository<E> {
     pub fn default() -> Self {
-        Self::new("unknown")
+        Self::new("unknown").unwrap_or(Self {
+            table_name: "unknown",
+            _phantom: std::marker::PhantomData,
+        })
     }
 }

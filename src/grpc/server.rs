@@ -287,19 +287,67 @@ impl RiGrpcServer {
         Ok(())
     }
 
+    /// Validates authentication token in the request.
+    ///
+    /// # Security
+    ///
+    /// This method uses constant-time comparison to prevent timing attacks.
+    /// Timing attacks allow attackers to guess secrets by measuring response times.
     fn validate_auth(request_str: &str, expected_token: &str) -> bool {
+        let expected_bearer = format!("Bearer {}", expected_token);
+        
         for line in request_str.lines() {
             let line_lower = line.to_lowercase();
             if line_lower.contains("authorization") {
                 if let Some(token) = line.split(':').nth(1) {
                     let token = token.trim();
-                    if token == format!("Bearer {}", expected_token) || token == expected_token {
-                        return true;
-                    }
+                    
+                    // Security: Use constant-time comparison to prevent timing attacks
+                    // This ensures that comparison time doesn't depend on the number of matching characters
+                    let token_matches = Self::constant_time_compare(token.as_bytes(), expected_bearer.as_bytes())
+                        || Self::constant_time_compare(token.as_bytes(), expected_token.as_bytes());
+                    
+                    return token_matches;
                 }
             }
         }
         false
+    }
+
+    /// Constant-time string comparison to prevent timing attacks.
+    ///
+    /// # Security
+    ///
+    /// This function compares two byte slices in constant time, meaning the comparison
+    /// time does not depend on the content of the slices. This prevents attackers from
+    /// using timing information to guess secrets character by character.
+    ///
+    /// # Algorithm
+    ///
+    /// 1. Always compare all bytes, even if lengths differ
+    /// 2. Accumulate differences using XOR (any difference results in non-zero)
+    /// 3. Return true only if no differences and lengths match
+    fn constant_time_compare(a: &[u8], b: &[u8]) -> bool {
+        if a.len() != b.len() {
+            // Still do a comparison to maintain constant time
+            // but use the length of 'a' to avoid index out of bounds
+            let mut result: u8 = 0;
+            for i in 0..a.len() {
+                // XOR with a dummy value to maintain constant time
+                result |= a[i] ^ if i < b.len() { b[i] } else { a[i] };
+            }
+            // Length mismatch means false, but we did the work
+            return false;
+        }
+
+        let mut result: u8 = 0;
+        for i in 0..a.len() {
+            // XOR accumulates differences - any difference makes result non-zero
+            result |= a[i] ^ b[i];
+        }
+        
+        // result is 0 only if all bytes matched
+        result == 0
     }
 
     fn parse_request_path(request_str: &str) -> RiResult<(String, String)> {

@@ -114,7 +114,7 @@ pub mod health_check;
 pub mod traffic_management;
 
 pub use service_discovery::{RiServiceDiscovery, RiServiceInstance, RiServiceStatus};
-pub use health_check::{RiHealthChecker, RiHealthCheckResult, RiHealthSummary, RiHealthStatus};    
+pub use health_check::{RiHealthChecker, RiHealthCheckResult, RiHealthSummary, RiHealthStatus, RiHealthCheckType};    
 pub use traffic_management::{RiTrafficRoute, RiMatchCriteria, RiRouteAction, RiWeightedDestination, RiTrafficManager};
 
 /// Configuration for the service mesh.

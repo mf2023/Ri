@@ -150,6 +150,9 @@ impl RiServiceRegistry {
     }
 
     pub async fn register_service(&self, instance: RiServiceInstance) -> RiResult<()> {
+        // Security: Validate service instance to prevent spoofing attacks
+        self.validate_service_instance(&instance)?;
+        
         // Update in-memory registry
         let mut services = self.services.write().await;
         let mut instance_index = self.instance_index.write().await;
@@ -172,6 +175,101 @@ impl RiServiceRegistry {
                 .await
                 .map_err(|e| RiError::ServiceMesh(format!("Failed to register service in etcd: {}", e)))?;
             drop(client_guard);
+        }
+
+        Ok(())
+    }
+
+    /// Validates a service instance to prevent spoofing and injection attacks.
+    ///
+    /// # Security
+    ///
+    /// This method validates:
+    /// 1. Service name format (alphanumeric, dash, underscore only)
+    /// 2. Instance ID format (alphanumeric, dash, underscore only)
+    /// 3. Host format (valid IP address or hostname)
+    /// 4. Port range (1-65535)
+    /// 5. Metadata key/value format
+    fn validate_service_instance(&self, instance: &RiServiceInstance) -> RiResult<()> {
+        // Validate service name
+        if instance.service_name.is_empty() || instance.service_name.len() > 128 {
+            return Err(RiError::ServiceMesh(
+                "Service name must be 1-128 characters".to_string()
+            ));
+        }
+        
+        for c in instance.service_name.chars() {
+            if !c.is_ascii_alphanumeric() && c != '-' && c != '_' {
+                return Err(RiError::ServiceMesh(
+                    "Service name can only contain alphanumeric characters, dash, and underscore".to_string()
+                ));
+            }
+        }
+
+        // Validate instance ID
+        if instance.id.is_empty() || instance.id.len() > 128 {
+            return Err(RiError::ServiceMesh(
+                "Instance ID must be 1-128 characters".to_string()
+            ));
+        }
+        
+        for c in instance.id.chars() {
+            if !c.is_ascii_alphanumeric() && c != '-' && c != '_' {
+                return Err(RiError::ServiceMesh(
+                    "Instance ID can only contain alphanumeric characters, dash, and underscore".to_string()
+                ));
+            }
+        }
+
+        // Validate host
+        if instance.host.is_empty() || instance.host.len() > 256 {
+            return Err(RiError::ServiceMesh(
+                "Host must be 1-256 characters".to_string()
+            ));
+        }
+        
+        // Check for invalid characters in host
+        for c in instance.host.chars() {
+            if !c.is_ascii_alphanumeric() && c != '.' && c != '-' && c != ':' && c != '_' {
+                return Err(RiError::ServiceMesh(
+                    format!("Invalid character in host: '{}'", c)
+                ));
+            }
+        }
+
+        // Validate port
+        if instance.port == 0 {
+            return Err(RiError::ServiceMesh(
+                "Port cannot be 0".to_string()
+            ));
+        }
+
+        // Validate metadata
+        for (key, value) in &instance.metadata {
+            if key.len() > 128 {
+                return Err(RiError::ServiceMesh(
+                    format!("Metadata key too long: {}", key)
+                ));
+            }
+            
+            if value.len() > 1024 {
+                return Err(RiError::ServiceMesh(
+                    format!("Metadata value too long for key: {}", key)
+                ));
+            }
+            
+            // Check for control characters in metadata
+            if key.chars().any(|c| c.is_control()) {
+                return Err(RiError::ServiceMesh(
+                    "Metadata key contains control characters".to_string()
+                ));
+            }
+            
+            if value.chars().any(|c| c.is_control()) {
+                return Err(RiError::ServiceMesh(
+                    format!("Metadata value for key '{}' contains control characters", key)
+                ));
+            }
         }
 
         Ok(())

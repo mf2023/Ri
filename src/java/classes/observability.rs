@@ -665,7 +665,7 @@ fn create_system_metrics_object(env: &mut JNIEnv, metrics: &RiSystemMetrics) -> 
 }
 
 #[cfg(feature = "system_info")]
-fn create_cpu_metrics_object(env: &mut JNIEnv, cpu: &RiCPUMetrics) -> jni::errors::Result<JObject> {
+fn create_cpu_metrics_object<'a>(env: &'a mut JNIEnv<'a>, cpu: &RiCPUMetrics) -> jni::errors::Result<JObject<'a>> {
     let per_core_array = env.new_double_array(cpu.per_core_usage.len() as jint)?;
     env.set_double_array_region(&per_core_array, 0, &cpu.per_core_usage)?;
     
@@ -677,7 +677,7 @@ fn create_cpu_metrics_object(env: &mut JNIEnv, cpu: &RiCPUMetrics) -> jni::error
 }
 
 #[cfg(feature = "system_info")]
-fn create_memory_metrics_object(env: &mut JNIEnv, memory: &RiMemoryMetrics) -> jni::errors::Result<JObject> {
+fn create_memory_metrics_object<'a>(env: &'a mut JNIEnv<'a>, memory: &RiMemoryMetrics) -> jni::errors::Result<JObject<'a>> {
     env.new_object(
         "com/dunimd/ri/observability/RiMemoryMetrics",
         "(JJJDJJDD)V",
@@ -695,7 +695,7 @@ fn create_memory_metrics_object(env: &mut JNIEnv, memory: &RiMemoryMetrics) -> j
 }
 
 #[cfg(feature = "system_info")]
-fn create_disk_metrics_object(env: &mut JNIEnv, disk: &RiDiskMetrics) -> jni::errors::Result<JObject> {
+fn create_disk_metrics_object<'a>(env: &'a mut JNIEnv<'a>, disk: &RiDiskMetrics) -> jni::errors::Result<JObject<'a>> {
     env.new_object(
         "com/dunimd/ri/observability/RiDiskMetrics",
         "(JJJDJJJJ)V",
@@ -713,7 +713,7 @@ fn create_disk_metrics_object(env: &mut JNIEnv, disk: &RiDiskMetrics) -> jni::er
 }
 
 #[cfg(feature = "system_info")]
-fn create_network_metrics_object(env: &mut JNIEnv, network: &RiNetworkMetrics) -> jni::errors::Result<JObject> {
+fn create_network_metrics_object<'a>(env: &'a mut JNIEnv<'a>, network: &RiNetworkMetrics) -> jni::errors::Result<JObject<'a>> {
     env.new_object(
         "com/dunimd/ri/observability/RiNetworkMetrics",
         "(JJJJJJJJ)V",

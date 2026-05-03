@@ -245,14 +245,44 @@ impl RiCache for RiRedisCache {
     /// # Returns
     ///
     /// A `RiResult<Vec<String>>` containing all cache keys matching the Ri pattern
+    ///
+    /// # Performance Note
+    ///
+    /// Uses SCAN instead of KEYS to avoid blocking Redis in production environments.
+    /// SCAN is an iterator-based command that doesn't block the Redis server.
     async fn keys(&self) -> crate::core::RiResult<Vec<String>> {
         let mut conn = (*self.connection).clone();
 
         let pattern = "ri:cache:*";
-        let keys: Vec<String> = conn.keys(pattern).await
-            .map_err(|e| crate::core::RiError::Other(format!("Redis keys error: {e}")))?;
+        let mut all_keys = Vec::new();
+        let mut cursor: u64 = 0;
 
-        Ok(keys)
+        // Use SCAN instead of KEYS to avoid blocking Redis
+        loop {
+            let result: redis::RedisResult<(u64, Vec<String>)> = redis::cmd("SCAN")
+                .arg(cursor)
+                .arg("MATCH")
+                .arg(pattern)
+                .arg("COUNT")
+                .arg(100)
+                .query_async(&mut conn)
+                .await;
+
+            match result {
+                Ok((new_cursor, keys)) => {
+                    all_keys.extend(keys);
+                    cursor = new_cursor;
+                    if cursor == 0 {
+                        break;
+                    }
+                }
+                Err(e) => {
+                    return Err(crate::core::RiError::Other(format!("Redis scan error: {e}")));
+                }
+            }
+        }
+
+        Ok(all_keys)
     }
 
     /// Clears all Ri-related cache entries from Redis.
@@ -265,19 +295,45 @@ impl RiCache for RiRedisCache {
     ///
     /// - Uses the pattern "ri:cache:*" to avoid clearing all Redis data
     /// - Only clears keys matching the Ri cache pattern
+    /// - Uses SCAN instead of KEYS to avoid blocking Redis in production
     async fn clear(&self) -> crate::core::RiResult<()> {
         let mut conn = (*self.connection).clone();
 
         // Use a specific pattern to avoid clearing all Redis data
         let pattern = "ri:cache:*";
-        let keys: Vec<String> = conn.keys(pattern).await
-            .map_err(|e| crate::core::RiError::Other(format!("Redis keys error: {e}")))?;
+        let mut cursor: u64 = 0;
+        let mut total_deleted = 0;
 
-        if !keys.is_empty() {
-            conn.del::<_, ()>(keys).await
-                .map_err(|e| crate::core::RiError::Other(format!("Redis clear error: {e}")))?;
+        // Use SCAN instead of KEYS to avoid blocking Redis
+        loop {
+            let result: redis::RedisResult<(u64, Vec<String>)> = redis::cmd("SCAN")
+                .arg(cursor)
+                .arg("MATCH")
+                .arg(pattern)
+                .arg("COUNT")
+                .arg(100)
+                .query_async(&mut conn)
+                .await;
+
+            match result {
+                Ok((new_cursor, keys)) => {
+                    if !keys.is_empty() {
+                        conn.del::<_, ()>(&keys).await
+                            .map_err(|e| crate::core::RiError::Other(format!("Redis clear error: {e}")))?;
+                        total_deleted += keys.len();
+                    }
+                    cursor = new_cursor;
+                    if cursor == 0 {
+                        break;
+                    }
+                }
+                Err(e) => {
+                    return Err(crate::core::RiError::Other(format!("Redis scan error: {e}")));
+                }
+            }
         }
 
+        log::debug!("[Ri.Redis] Cleared {} cache entries", total_deleted);
         Ok(())
     }
 

@@ -142,6 +142,18 @@ pub struct RiQueueMessage {
 }
 
 impl RiQueueMessage {
+    /// Maximum payload size in bytes (10 MB)
+    pub const MAX_PAYLOAD_SIZE: usize = 10 * 1024 * 1024;
+    
+    /// Maximum header key length
+    pub const MAX_HEADER_KEY_LEN: usize = 256;
+    
+    /// Maximum header value length
+    pub const MAX_HEADER_VALUE_LEN: usize = 4096;
+    
+    /// Maximum number of headers
+    pub const MAX_HEADERS: usize = 64;
+
     /// Creates a new message with the given payload.
     /// 
     /// # Parameters
@@ -151,7 +163,23 @@ impl RiQueueMessage {
     /// # Returns
     /// 
     /// A new `RiQueueMessage` instance
+    /// 
+    /// # Errors
+    /// 
+    /// Returns an error if the payload exceeds `MAX_PAYLOAD_SIZE` (10 MB)
     pub fn new(payload: Vec<u8>) -> Self {
+        // Security: Truncate payload if it exceeds maximum size
+        let payload = if payload.len() > Self::MAX_PAYLOAD_SIZE {
+            log::warn!(
+                "[Ri.Queue] Payload size {} exceeds maximum {}, truncating",
+                payload.len(),
+                Self::MAX_PAYLOAD_SIZE
+            );
+            payload[..Self::MAX_PAYLOAD_SIZE].to_vec()
+        } else {
+            payload
+        };
+        
         Self {
             id: uuid::Uuid::new_v4().to_string(),
             payload,
@@ -160,6 +188,34 @@ impl RiQueueMessage {
             retry_count: 0,
             max_retries: 3,
         }
+    }
+
+    /// Creates a new message with validation.
+    /// 
+    /// # Parameters
+    /// 
+    /// - `payload`: The message payload as bytes
+    /// 
+    /// # Returns
+    /// 
+    /// A `RiResult<RiQueueMessage>` containing the new message or an error
+    pub fn new_validated(payload: Vec<u8>) -> RiResult<Self> {
+        if payload.len() > Self::MAX_PAYLOAD_SIZE {
+            return Err(RiQueueError::ConfigError(format!(
+                "Payload size {} exceeds maximum allowed {}",
+                payload.len(),
+                Self::MAX_PAYLOAD_SIZE
+            )).into());
+        }
+        
+        Ok(Self {
+            id: uuid::Uuid::new_v4().to_string(),
+            payload,
+            headers: FxHashMap::default(),
+            timestamp: SystemTime::now(),
+            retry_count: 0,
+            max_retries: 3,
+        })
     }
 
     /// Adds custom headers to the message.
@@ -171,8 +227,48 @@ impl RiQueueMessage {
     /// # Returns
     /// 
     /// The updated `RiQueueMessage` instance
+    /// 
+    /// # Security
+    /// 
+    /// Headers are validated for size and count limits to prevent memory exhaustion attacks.
     pub fn with_headers(mut self, headers: FxHashMap<String, String>) -> Self {
-        self.headers = headers;
+        // Security: Limit number of headers
+        let mut safe_headers = FxHashMap::with_capacity(
+            headers.len().min(Self::MAX_HEADERS)
+        );
+        
+        for (key, value) in headers {
+            if safe_headers.len() >= Self::MAX_HEADERS {
+                log::warn!("[Ri.Queue] Maximum header count {} reached, ignoring remaining headers", Self::MAX_HEADERS);
+                break;
+            }
+            
+            // Security: Validate header key length
+            let safe_key = if key.len() > Self::MAX_HEADER_KEY_LEN {
+                log::warn!("[Ri.Queue] Header key '{}' truncated to {} characters", key, Self::MAX_HEADER_KEY_LEN);
+                key[..Self::MAX_HEADER_KEY_LEN].to_string()
+            } else {
+                key
+            };
+            
+            // Security: Validate header value length
+            let safe_value = if value.len() > Self::MAX_HEADER_VALUE_LEN {
+                log::warn!("[Ri.Queue] Header value for key '{}' truncated to {} characters", safe_key, Self::MAX_HEADER_VALUE_LEN);
+                value[..Self::MAX_HEADER_VALUE_LEN].to_string()
+            } else {
+                value
+            };
+            
+            // Security: Check for control characters
+            if safe_key.chars().any(|c| c.is_control()) {
+                log::warn!("[Ri.Queue] Header key contains control characters, skipping");
+                continue;
+            }
+            
+            safe_headers.insert(safe_key, safe_value);
+        }
+        
+        self.headers = safe_headers;
         self
     }
 

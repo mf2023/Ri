@@ -264,10 +264,106 @@ impl RiModuleEndpoint {
         &self.module_name
     }
 
+    /// Validates a method name to prevent injection attacks.
+    ///
+    /// # Security
+    ///
+    /// Method names must:
+    /// - Be 1-128 characters long
+    /// - Contain only alphanumeric characters, underscores, and dots
+    /// - Not start with a digit or dot
+    /// - Not contain consecutive dots or underscores
+    fn validate_method_name(name: &str) -> RiResult<()> {
+        if name.is_empty() || name.len() > 128 {
+            return Err(crate::core::RiError::Other(
+                "Method name must be 1-128 characters".to_string()
+            ));
+        }
+
+        let chars: Vec<char> = name.chars().collect();
+        
+        // First character must be a letter or underscore
+        if !chars[0].is_ascii_alphabetic() && chars[0] != '_' {
+            return Err(crate::core::RiError::Other(
+                "Method name must start with a letter or underscore".to_string()
+            ));
+        }
+
+        let mut prev_char = ' ';
+        for c in &chars {
+            // Only allow alphanumeric, underscore, and dot
+            if !c.is_ascii_alphanumeric() && *c != '_' && *c != '.' {
+                return Err(crate::core::RiError::Other(
+                    "Method name can only contain alphanumeric characters, underscores, and dots".to_string()
+                ));
+            }
+
+            // Check for consecutive dots or underscores
+            if (*c == '.' || *c == '_') && (prev_char == '.' || prev_char == '_') {
+                return Err(crate::core::RiError::Other(
+                    "Method name cannot contain consecutive dots or underscores".to_string()
+                ));
+            }
+
+            prev_char = *c;
+        }
+
+        // Cannot end with a dot
+        if chars.last() == Some(&'.') {
+            return Err(crate::core::RiError::Other(
+                "Method name cannot end with a dot".to_string()
+            ));
+        }
+
+        Ok(())
+    }
+
+    /// Validates a module name to prevent injection attacks.
+    ///
+    /// # Security
+    ///
+    /// Module names must:
+    /// - Be 1-128 characters long
+    /// - Contain only alphanumeric characters, underscores, and dashes
+    /// - Not start with a digit or dash
+    fn validate_module_name(name: &str) -> RiResult<()> {
+        if name.is_empty() || name.len() > 128 {
+            return Err(crate::core::RiError::Other(
+                "Module name must be 1-128 characters".to_string()
+            ));
+        }
+
+        let chars: Vec<char> = name.chars().collect();
+        
+        // First character must be a letter or underscore
+        if !chars[0].is_ascii_alphabetic() && chars[0] != '_' {
+            return Err(crate::core::RiError::Other(
+                "Module name must start with a letter or underscore".to_string()
+            ));
+        }
+
+        for c in &chars {
+            // Only allow alphanumeric, underscore, and dash
+            if !c.is_ascii_alphanumeric() && *c != '_' && *c != '-' {
+                return Err(crate::core::RiError::Other(
+                    "Module name can only contain alphanumeric characters, underscores, and dashes".to_string()
+                ));
+            }
+        }
+
+        Ok(())
+    }
+
     pub fn register_method<H>(&self, name: &str, handler: H) -> &Self
     where
         H: Fn(Vec<u8>) -> RiResult<Vec<u8>> + Send + Sync + 'static,
     {
+        // Security: Validate method name
+        if let Err(e) = Self::validate_method_name(name) {
+            log::error!("[Ri.RPC] Invalid method name '{}': {}", name, e);
+            return self;
+        }
+
         let registration = RiMethodRegistration::new(
             name,
             Arc::new(SyncMethodHandler {

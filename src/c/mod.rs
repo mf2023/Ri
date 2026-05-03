@@ -291,6 +291,35 @@
 //! Disable unused features to reduce binary size.
 
 use std::ffi::{c_char, c_int, CString};
+use std::sync::OnceLock;
+use dashmap::DashSet;
+
+/// Global pointer registry for C bindings to prevent Use-After-Free and Double-Free attacks.
+/// This registry tracks all valid pointers returned to C code.
+static C_POINTER_REGISTRY: OnceLock<DashSet<usize>> = OnceLock::new();
+
+/// Get or initialize the global pointer registry
+fn get_pointer_registry() -> &'static DashSet<usize> {
+    C_POINTER_REGISTRY.get_or_init(DashSet::new)
+}
+
+/// Register a pointer as valid
+/// Returns the pointer for convenience
+pub(crate) fn register_ptr(ptr: usize) -> usize {
+    get_pointer_registry().insert(ptr);
+    ptr
+}
+
+/// Unregister a pointer (mark as freed)
+/// Returns true if the pointer was registered, false if it wasn't (double-free attempt)
+pub(crate) fn unregister_ptr(ptr: usize) -> bool {
+    get_pointer_registry().remove(&ptr).is_some()
+}
+
+/// Check if a pointer is valid (registered and not freed)
+pub(crate) fn is_valid_ptr(ptr: usize) -> bool {
+    get_pointer_registry().contains(&ptr)
+}
 
 #[macro_use]
 pub mod macros;

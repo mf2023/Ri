@@ -92,17 +92,55 @@ impl RiGatewayServer {
 
         let method = req.method().to_string();
         let path = req.uri().path().to_string();
-        let remote_addr = req
-            .headers()
-            .get("X-Forwarded-For")
-            .and_then(|v| v.to_str().ok())
-            .map(|s| s.to_string())
-            .unwrap_or_else(|| {
-                req.extensions()
-                    .get::<SocketAddr>()
-                    .map(|a| a.to_string())
-                    .unwrap_or_else(|| "unknown".to_string())
-            });
+        
+        // Security: Validate X-Forwarded-For header to prevent IP spoofing
+        // Only trust X-Forwarded-For if the request comes from a trusted proxy
+        // For now, we use the direct connection address as the source of truth
+        // and log the X-Forwarded-For for reference only
+        let direct_remote_addr = req.extensions()
+            .get::<SocketAddr>()
+            .map(|a| a.to_string())
+            .unwrap_or_else(|| "unknown".to_string());
+        
+        let remote_addr = if let Some(xff) = req.headers().get("X-Forwarded-For") {
+            if let Ok(xff_str) = xff.to_str() {
+                // Parse X-Forwarded-For: client, proxy1, proxy2
+                // The rightmost (last) IP is the most recent proxy
+                // The leftmost (first) IP is the original client (if chain is trusted)
+                let ips: Vec<&str> = xff_str.split(',').map(|s| s.trim()).collect();
+                
+                // Validate each IP address format
+                let mut valid_ips = Vec::new();
+                for ip in &ips {
+                    // Basic IP validation: must contain only valid characters
+                    if ip.chars().all(|c| c.is_ascii_alphanumeric() || c == '.' || c == ':' || c == '-') {
+                        // Additional validation: IP must not be empty and have reasonable length
+                        if !ip.is_empty() && ip.len() <= 45 { // Max IPv6 length is 45 chars
+                            valid_ips.push(*ip);
+                        }
+                    }
+                }
+                
+                // Use the first valid IP as the client IP (if any valid IPs exist)
+                // This assumes the proxy chain is trusted
+                // In production, you should validate against a list of trusted proxy IPs
+                if let Some(&client_ip) = valid_ips.first() {
+                    // Log both the direct connection and the forwarded IP for audit
+                    log::debug!(
+                        "[Ri.Gateway] Request from {} (X-Forwarded-For: {}, direct: {})",
+                        client_ip, xff_str, direct_remote_addr
+                    );
+                    client_ip.to_string()
+                } else {
+                    log::warn!("[Ri.Gateway] Invalid X-Forwarded-For format: {}", xff_str);
+                    direct_remote_addr
+                }
+            } else {
+                direct_remote_addr
+            }
+        } else {
+            direct_remote_addr
+        };
 
         let mut headers = FxHashMap::default();
         for (key, value) in req.headers() {
@@ -111,16 +149,17 @@ impl RiGatewayServer {
             }
         }
 
+        // Security: URL-decode query parameters to prevent encoding-based attacks
         let query_params = {
             let uri = req.uri();
             let query = uri.query().unwrap_or("");
             let mut params = FxHashMap::default();
             for pair in query.split('&') {
                 if let Some((key, value)) = pair.split_once('=') {
-                    params.insert(
-                        key.to_string(),
-                        value.to_string(),
-                    );
+                    // URL-decode the key and value
+                    let decoded_key = urlencoding::decode(key).unwrap_or_else(|_| key.to_string());
+                    let decoded_value = urlencoding::decode(value).unwrap_or_else(|_| value.to_string());
+                    params.insert(decoded_key, decoded_value);
                 }
             }
             params

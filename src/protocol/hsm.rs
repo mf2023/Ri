@@ -986,6 +986,19 @@ impl RiHSM for RiPKCS11HSM {
     ) -> RiResult<Vec<u8>> {
         let start = Instant::now();
 
+        // Security: IV is required for CBC mode to prevent deterministic encryption attacks
+        // Using a zero IV or static IV allows attackers to detect patterns in encrypted data
+        let iv = iv.ok_or_else(|| {
+            RiError::CryptoError("IV (Initialization Vector) is required for symmetric encryption. Provide a unique random IV for each encryption operation.".to_string())
+        })?;
+        
+        // Validate IV length (must be 16 bytes for AES-CBC)
+        if iv.len() != 16 {
+            return Err(RiError::CryptoError(
+                format!("Invalid IV length: expected 16 bytes, got {}. IV must be exactly 16 bytes for AES-CBC mode.", iv.len())
+            ));
+        }
+
         let session = self.session.as_ref()
             .ok_or_else(|| RiError::CryptoError("Session not open".to_string()))?;
 
@@ -998,8 +1011,6 @@ impl RiHSM for RiPKCS11HSM {
         if objects.is_empty() {
             return Err(RiError::CryptoError("Key not found".to_string()));
         }
-
-        let iv = iv.unwrap_or(&[0u8; 16]);
 
         let mechanism = pkcs11::Mechanism::CbcPkcs5(iv.to_vec());
 
@@ -1022,6 +1033,18 @@ impl RiHSM for RiPKCS11HSM {
     ) -> RiResult<Vec<u8>> {
         let start = Instant::now();
 
+        // Security: IV is required for CBC mode
+        let iv = iv.ok_or_else(|| {
+            RiError::CryptoError("IV (Initialization Vector) is required for symmetric decryption. Provide the same IV that was used for encryption.".to_string())
+        })?;
+        
+        // Validate IV length (must be 16 bytes for AES-CBC)
+        if iv.len() != 16 {
+            return Err(RiError::CryptoError(
+                format!("Invalid IV length: expected 16 bytes, got {}. IV must be exactly 16 bytes for AES-CBC mode.", iv.len())
+            ));
+        }
+
         let session = self.session.as_ref()
             .ok_or_else(|| RiError::CryptoError("Session not open".to_string()))?;
 
@@ -1034,8 +1057,6 @@ impl RiHSM for RiPKCS11HSM {
         if objects.is_empty() {
             return Err(RiError::CryptoError("Key not found".to_string()));
         }
-
-        let iv = iv.unwrap_or(&[0u8; 16]);
 
         let mechanism = pkcs11::Mechanism::CbcPkcs5(iv.to_vec());
 

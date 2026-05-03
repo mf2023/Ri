@@ -26,6 +26,62 @@ use crate::database::RiDatabase;
 
 pub mod repository;
 
+/// Validates a SQL identifier (table name, column name) to prevent SQL injection.
+///
+/// Only allows alphanumeric characters and underscores. Must start with a letter or underscore.
+/// Maximum length is 128 characters to prevent buffer overflow attacks.
+fn validate_identifier(identifier: &str) -> RiResult<()> {
+    if identifier.is_empty() {
+        return Err(RiError::Other("Identifier cannot be empty".to_string()));
+    }
+    
+    if identifier.len() > 128 {
+        return Err(RiError::Other("Identifier too long (max 128 characters)".to_string()));
+    }
+    
+    let chars: Vec<char> = identifier.chars().collect();
+    
+    if !chars[0].is_ascii_alphabetic() && chars[0] != '_' {
+        return Err(RiError::Other(
+            "Identifier must start with a letter or underscore".to_string()
+        ));
+    }
+    
+    for c in &chars {
+        if !c.is_ascii_alphanumeric() && *c != '_' {
+            return Err(RiError::Other(
+                "Identifier can only contain alphanumeric characters and underscores".to_string()
+            ));
+        }
+    }
+    
+    let lower = identifier.to_lowercase();
+    let dangerous_keywords = [
+        "drop", "delete", "truncate", "update", "insert", "alter", "create",
+        "exec", "execute", "xp_", "sp_", "union", "select", "from", "where",
+        "having", "group", "order", "limit", "offset", "join", "inner", "outer",
+        "left", "right", "full", "cross", "natural", "using", "on", "as",
+    ];
+    
+    for keyword in &dangerous_keywords {
+        if lower == *keyword {
+            return Err(RiError::Other(
+                format!("Identifier cannot be a reserved SQL keyword: {}", identifier)
+            ));
+        }
+    }
+    
+    Ok(())
+}
+
+/// Validates multiple identifiers at once.
+fn validate_identifiers(identifiers: &[&str]) -> RiResult<()> {
+    for id in identifiers {
+        validate_identifier(id)?;
+    }
+    Ok(())
+}
+
 pub use repository::{RiORMSimpleRepository, RiORMCrudRepository, RiORMRepository};
 
 #[cfg(feature = "pyo3")]
@@ -129,28 +185,45 @@ impl TableDefinition {
         }
     }
 
-    pub fn add_column(&mut self, column: ColumnDefinition) {
+    pub fn add_column(&mut self, column: ColumnDefinition) -> RiResult<()> {
+        validate_identifier(&column.name)?;
         self.columns.insert(column.name.clone(), column);
+        Ok(())
     }
 
-    pub fn set_primary_key(&mut self, columns: Vec<String>) {
+    pub fn set_primary_key(&mut self, columns: Vec<String>) -> RiResult<()> {
+        validate_identifiers(&columns.iter().map(|s| s.as_str()).collect::<Vec<_>>())?;
         self.primary_key = columns;
+        Ok(())
     }
 
-    pub fn add_index(&mut self, index: IndexDefinition) {
+    pub fn add_index(&mut self, index: IndexDefinition) -> RiResult<()> {
+        validate_identifier(&index.name)?;
+        validate_identifiers(&index.columns.iter().map(|s| s.as_str()).collect::<Vec<_>>())?;
         self.indexes.push(index);
+        Ok(())
     }
 
-    pub fn add_foreign_key(&mut self, fk: ForeignKeyDefinition) {
+    pub fn add_foreign_key(&mut self, fk: ForeignKeyDefinition) -> RiResult<()> {
+        validate_identifier(&fk.name)?;
+        validate_identifier(&fk.column)?;
+        validate_identifier(&fk.referenced_table)?;
+        validate_identifier(&fk.referenced_column)?;
         self.foreign_keys.push(fk);
+        Ok(())
     }
 
-    pub fn get_create_sql(&self) -> String {
+    pub fn get_create_sql(&self) -> RiResult<String> {
+        validate_identifier(&self.table_name)?;
+        
         let mut sql = format!("CREATE TABLE IF NOT EXISTS {} (", self.table_name);
 
         let mut column_defs = Vec::with_capacity(self.columns.len());
 
         for (name, col) in &self.columns {
+            validate_identifier(name)?;
+            validate_identifier(&col.column_type)?;
+            
             let mut def = format!("{} {}", name, col.column_type);
 
             if !col.is_nullable {
@@ -162,6 +235,9 @@ impl TableDefinition {
             }
 
             if let Some(default) = &col.default_value {
+                if !default.starts_with('\'') && !default.chars().all(|c| c.is_numeric() || c == '.' || c == '-') {
+                    return Err(RiError::Other("Invalid default value format".to_string()));
+                }
                 def.push_str(&format!(" DEFAULT {}", default));
             }
 
@@ -173,12 +249,17 @@ impl TableDefinition {
         }
 
         if !self.primary_key.is_empty() {
+            validate_identifiers(&self.primary_key.iter().map(|s| s.as_str()).collect::<Vec<_>>())?;
             column_defs.push(format!("PRIMARY KEY ({})", self.primary_key.join(", ")));
         }
 
         sql.push_str(&column_defs.join(", "));
 
         for fk in &self.foreign_keys {
+            validate_identifier(&fk.column)?;
+            validate_identifier(&fk.referenced_table)?;
+            validate_identifier(&fk.referenced_column)?;
+            
             sql.push_str(&format!(
                 ", FOREIGN KEY ({}) REFERENCES {}({}) ON DELETE {} ON UPDATE {}",
                 fk.column, fk.referenced_table, fk.referenced_column, fk.on_delete, fk.on_update
@@ -188,16 +269,18 @@ impl TableDefinition {
         sql.push_str(")");
 
         if let Some(engine) = &self.engine {
+            validate_identifier(engine)?;
             sql.push_str(&format!(" ENGINE={}", engine));
         }
 
         if let Some(charset) = &self.charset {
+            validate_identifier(charset)?;
             sql.push_str(&format!(" DEFAULT CHARSET={}", charset));
         }
 
         sql.push_str(";");
 
-        sql
+        Ok(sql)
     }
 }
 
@@ -236,15 +319,18 @@ pub struct Criteria {
 }
 
 impl Criteria {
-    pub fn new(column: &str, operator: ComparisonOperator, value: serde_json::Value) -> Self {
-        Self {
+    pub fn new(column: &str, operator: ComparisonOperator, value: serde_json::Value) -> RiResult<Self> {
+        validate_identifier(column)?;
+        Ok(Self {
             column: column.to_string(),
             operator,
             value,
-        }
+        })
     }
 
-    pub fn to_sql(&self) -> (String, Vec<serde_json::Value>) {
+    pub fn to_sql(&self) -> RiResult<(String, Vec<serde_json::Value>)> {
+        validate_identifier(&self.column)?;
+        
         let (op_str, value) = match self.operator {
             ComparisonOperator::Equal => ("=".to_string(), vec![self.value.clone()]),
             ComparisonOperator::NotEqual => ("!=".to_string(), vec![self.value.clone()]),
@@ -291,7 +377,7 @@ impl Criteria {
             "?".to_string()
         };
 
-        (format!("{} {} {}", self.column, op_str, placeholder), value)
+        Ok((format!("{} {} {}", self.column, op_str, placeholder), value))
     }
 }
 
@@ -303,18 +389,19 @@ pub struct SortOrder {
 }
 
 impl SortOrder {
-    pub fn new(column: &str, ascending: bool) -> Self {
-        Self {
+    pub fn new(column: &str, ascending: bool) -> RiResult<Self> {
+        validate_identifier(column)?;
+        Ok(Self {
             column: column.to_string(),
             ascending,
-        }
+        })
     }
 
-    pub fn asc(column: &str) -> Self {
+    pub fn asc(column: &str) -> RiResult<Self> {
         Self::new(column, true)
     }
 
-    pub fn desc(column: &str) -> Self {
+    pub fn desc(column: &str) -> RiResult<Self> {
         Self::new(column, false)
     }
 }
@@ -382,8 +469,9 @@ pub enum JoinType {
 }
 
 impl QueryBuilder {
-    pub fn new(table_name: &str) -> Self {
-        Self {
+    pub fn new(table_name: &str) -> RiResult<Self> {
+        validate_identifier(table_name)?;
+        Ok(Self {
             table_name: table_name.to_string(),
             criteria: Vec::new(),
             sort_orders: Vec::new(),
@@ -393,12 +481,13 @@ impl QueryBuilder {
             having_criteria: Vec::new(),
             distinct: false,
             joins: Vec::new(),
-        }
+        })
     }
 
-    pub fn select(&mut self, columns: Vec<&str>) -> &mut Self {
+    pub fn select(&mut self, columns: Vec<&str>) -> RiResult<&mut Self> {
+        validate_identifiers(&columns)?;
         self.select_columns = Some(columns.iter().map(|s| s.to_string()).collect());
-        self
+        Ok(self)
     }
 
     pub fn where_criteria(&mut self, criteria: Criteria) -> &mut Self {
@@ -430,32 +519,41 @@ impl QueryBuilder {
         self
     }
 
-    pub fn group_by(&mut self, columns: Vec<&str>) -> &mut Self {
+    pub fn group_by(&mut self, columns: Vec<&str>) -> RiResult<&mut Self> {
+        validate_identifiers(&columns)?;
         self.group_by_columns = Some(columns.iter().map(|s| s.to_string()).collect());
-        self
+        Ok(self)
     }
 
-    pub fn inner_join(&mut self, table_name: &str, on_column: &str, referenced_column: &str) -> &mut Self {
+    pub fn inner_join(&mut self, table_name: &str, on_column: &str, referenced_column: &str) -> RiResult<&mut Self> {
+        validate_identifier(table_name)?;
+        validate_identifier(on_column)?;
+        validate_identifier(referenced_column)?;
         self.joins.push(JoinClause {
             join_type: JoinType::Inner,
             table_name: table_name.to_string(),
             on_column: on_column.to_string(),
             referenced_column: referenced_column.to_string(),
         });
-        self
+        Ok(self)
     }
 
-    pub fn left_join(&mut self, table_name: &str, on_column: &str, referenced_column: &str) -> &mut Self {
+    pub fn left_join(&mut self, table_name: &str, on_column: &str, referenced_column: &str) -> RiResult<&mut Self> {
+        validate_identifier(table_name)?;
+        validate_identifier(on_column)?;
+        validate_identifier(referenced_column)?;
         self.joins.push(JoinClause {
             join_type: JoinType::Left,
             table_name: table_name.to_string(),
             on_column: on_column.to_string(),
             referenced_column: referenced_column.to_string(),
         });
-        self
+        Ok(self)
     }
 
-    pub fn build(&self) -> (String, Vec<serde_json::Value>) {
+    pub fn build(&self) -> RiResult<(String, Vec<serde_json::Value>)> {
+        validate_identifier(&self.table_name)?;
+        
         let mut sql = String::new();
         let mut params = Vec::with_capacity(8);
 
@@ -466,6 +564,7 @@ impl QueryBuilder {
         }
 
         if let Some(columns) = &self.select_columns {
+            validate_identifiers(&columns.iter().map(|s| s.as_str()).collect::<Vec<_>>())?;
             sql.push_str(&columns.join(", "));
         } else {
             sql.push_str("*");
@@ -474,6 +573,10 @@ impl QueryBuilder {
         sql.push_str(&format!(" FROM {}", self.table_name));
 
         for join in &self.joins {
+            validate_identifier(&join.table_name)?;
+            validate_identifier(&join.on_column)?;
+            validate_identifier(&join.referenced_column)?;
+            
             let join_type = match join.join_type {
                 JoinType::Inner => "INNER JOIN",
                 JoinType::Left => "LEFT JOIN",
@@ -490,13 +593,14 @@ impl QueryBuilder {
             sql.push_str(" WHERE 1=1");
             for criteria in &self.criteria {
                 sql.push_str(" AND ");
-                let (clause, values) = criteria.to_sql();
+                let (clause, values) = criteria.to_sql()?;
                 sql.push_str(&clause);
                 params.extend(values);
             }
         }
 
         if let Some(group_by) = &self.group_by_columns {
+            validate_identifiers(&group_by.iter().map(|s| s.as_str()).collect::<Vec<_>>())?;
             sql.push_str(&format!(" GROUP BY {}", group_by.join(", ")));
         }
 
@@ -504,13 +608,16 @@ impl QueryBuilder {
             sql.push_str(" HAVING 1=1");
             for criteria in &self.having_criteria {
                 sql.push_str(" AND ");
-                let (clause, values) = criteria.to_sql();
+                let (clause, values) = criteria.to_sql()?;
                 sql.push_str(&clause);
                 params.extend(values);
             }
         }
 
         if !self.sort_orders.is_empty() {
+            for o in &self.sort_orders {
+                validate_identifier(&o.column)?;
+            }
             let orders: Vec<String> = self.sort_orders.iter()
                 .map(|o| format!("{} {}", o.column, if o.ascending { "ASC" } else { "DESC" }))
                 .collect();
@@ -518,9 +625,12 @@ impl QueryBuilder {
         }
 
         if let Some(pagination) = &self.pagination {
+            if pagination.page_size > 10000 {
+                return Err(RiError::Other("Page size too large (max 10000)".to_string()));
+            }
             sql.push_str(&format!(" LIMIT {} OFFSET {}", pagination.limit(), pagination.offset()));
         }
 
-        (sql, params)
+        Ok((sql, params))
     }
 }

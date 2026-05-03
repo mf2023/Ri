@@ -265,6 +265,7 @@ impl RiSessionManager {
     /// 
     /// # Notes
     /// - If the user has reached the maximum number of sessions, the oldest session is removed
+    /// - Session ID is generated using UUID v4 for security
     pub async fn create_session(&self, user_id: String, ip_address: Option<String>, user_agent: Option<String>) -> crate::core::RiResult<String> {
         let user_sessions: Vec<(String, u64)> = self.sessions.collect_where(|_, s| s.user_id == user_id && !s.is_expired()).await
             .into_iter()
@@ -285,6 +286,110 @@ impl RiSessionManager {
         self.sessions.insert(session_id.clone(), session).await;
         
         Ok(session_id)
+    }
+
+    /// Validates session security by checking IP and User-Agent.
+    ///
+    /// # Security
+    ///
+    /// This method helps prevent session hijacking by verifying that
+    /// the client's IP address and User-Agent match the original values.
+    ///
+    /// # Parameters
+    /// - `session_id`: ID of the session to validate
+    /// - `current_ip`: Current client IP address
+    /// - `current_user_agent`: Current client User-Agent
+    ///
+    /// # Returns
+    /// `true` if the session is valid, `false` if there's a mismatch
+    pub async fn validate_session_security(
+        &self,
+        session_id: &str,
+        current_ip: Option<&str>,
+        current_user_agent: Option<&str>,
+    ) -> crate::core::RiResult<bool> {
+        let session = self.sessions.get(session_id).await;
+        
+        match session {
+            Some(s) => {
+                if s.is_expired() {
+                    self.sessions.remove(session_id).await;
+                    return Ok(false);
+                }
+
+                // Check IP address match (if both are set)
+                if let (Some(stored_ip), Some(current)) = (&s.ip_address, current_ip) {
+                    if stored_ip != current {
+                        log::warn!(
+                            "[Ri.Session] IP address mismatch for session {}: expected {}, got {}",
+                            session_id, stored_ip, current
+                        );
+                        return Ok(false);
+                    }
+                }
+
+                // Check User-Agent match (if both are set)
+                if let (Some(stored_ua), Some(current)) = (&s.user_agent, current_user_agent) {
+                    if stored_ua != current {
+                        log::warn!(
+                            "[Ri.Session] User-Agent mismatch for session {}: expected {}, got {}",
+                            session_id, stored_ua, current
+                        );
+                        return Ok(false);
+                    }
+                }
+
+                Ok(true)
+            }
+            None => Ok(false),
+        }
+    }
+
+    /// Regenerates a session ID to prevent session fixation attacks.
+    ///
+    /// # Security
+    ///
+    /// This method should be called after successful authentication to
+    /// prevent session fixation attacks. It creates a new session ID
+    /// while preserving the session data.
+    ///
+    /// # Parameters
+    /// - `old_session_id`: The current session ID
+    ///
+    /// # Returns
+    /// The new session ID, or None if the old session doesn't exist
+    pub async fn regenerate_session_id(&self, old_session_id: &str) -> crate::core::RiResult<Option<String>> {
+        let old_session = self.sessions.get(old_session_id).await;
+        
+        match old_session {
+            Some(mut s) => {
+                if s.is_expired() {
+                    self.sessions.remove(old_session_id).await;
+                    return Ok(None);
+                }
+
+                // Remove old session
+                self.sessions.remove(old_session_id).await;
+
+                // Generate new session ID
+                let new_session_id = Uuid::new_v4().to_string();
+                
+                // Update session with new ID
+                s.id = new_session_id.clone();
+                s.touch();
+                
+                // Insert with new ID
+                self.sessions.insert(new_session_id.clone(), s).await;
+
+                log::info!(
+                    "[Ri.Session] Regenerated session ID: {} -> {}",
+                    old_session_id, new_session_id
+                );
+
+                Ok(Some(new_session_id))
+            }
+            None => Ok(None),
+        }
     }
 
     /// Gets a session by ID.

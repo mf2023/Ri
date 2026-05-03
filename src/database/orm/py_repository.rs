@@ -17,6 +17,7 @@
 
 use crate::core::RiResult;
 use crate::database::{RiDatabase, RiDatabasePool};
+use crate::database::orm::validate_identifier;
 use pyo3::prelude::*;
 use pyo3::types::{PyDict, PyList};
 use tokio::runtime::Runtime;
@@ -33,6 +34,12 @@ impl RiPyORMRepository {
     #[new]
     #[pyo3(signature = (pool, table_name))]
     pub fn new(pool: RiDatabasePool, table_name: &str) -> PyResult<Self> {
+        // Security: Validate table name to prevent SQL injection
+        validate_identifier(table_name)
+            .map_err(|e| pyo3::exceptions::PyValueError::new_err(
+                format!("Invalid table name '{}': {}. Table names must contain only alphanumeric characters and underscores, start with a letter or underscore, and be 1-128 characters long.", table_name, e)
+            ))?;
+        
         let rt = Runtime::new().map_err(|e| pyo3::PyErr::from(crate::core::RiError::Other(e.to_string())))?;
         Ok(Self {
             pool,

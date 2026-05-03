@@ -282,6 +282,18 @@ impl RiOAuthManager {
     /// `Some(String)` containing the authentication URL if the provider is enabled, otherwise `None`
     #[cfg(feature = "auth")]
     pub async fn get_auth_url(&self, provider_id: &str, state: &str) -> crate::core::RiResult<Option<String>> {
+        // Security: Validate state parameter to prevent open redirect attacks
+        // State must be alphanumeric with optional dashes and underscores, max 128 chars
+        if state.is_empty() || state.len() > 128 {
+            return Err(crate::core::RiError::Other("Invalid state parameter: must be 1-128 characters".to_string()));
+        }
+        
+        for c in state.chars() {
+            if !c.is_ascii_alphanumeric() && c != '-' && c != '_' {
+                return Err(crate::core::RiError::Other("Invalid state parameter: only alphanumeric, dash, and underscore allowed".to_string()));
+            }
+        }
+        
         let providers = self.providers.read().await;
         
         if let Some(provider) = providers.get(provider_id) {
@@ -290,16 +302,16 @@ impl RiOAuthManager {
             }
 
             let scope = provider.scopes.join(" ");
-            let encoded_scope = scope.clone();
+            let encoded_scope = urlencoding::encode(&scope);
             let redirect_uri = provider.redirect_uri.as_deref()
                 .unwrap_or("http://localhost:8080/auth/callback");
             let auth_url = format!(
                 "{}?client_id={}&redirect_uri={}&response_type=code&scope={}&state={}",
                 provider.auth_url,
-                provider.client_id,
+                urlencoding::encode(&provider.client_id),
                 urlencoding::encode(redirect_uri),
                 encoded_scope,
-                state
+                urlencoding::encode(state)
             );
             
             Ok(Some(auth_url))

@@ -364,6 +364,197 @@ pub extern "C" fn ri_database_pool_query(
     }
 }
 
+/// Execute parameterized SQL query (SAFE - prevents SQL injection)
+/// 
+/// # Safety
+/// - `pool` must be a valid pointer returned by `ri_database_pool_new`
+/// - `sql` must be a valid null-terminated C string
+/// - `param_count` must match the number of parameters in the SQL
+/// - `param_types` must be an array of `param_count` integers representing parameter types:
+///   - 0: NULL
+///   - 1: INTEGER (i64)
+///   - 2: REAL (f64)
+///   - 3: TEXT (const char*)
+///   - 4: BLOB (const uint8_t*, size_t)
+/// - `param_values` must be an array of `param_count` pointers to parameter values
+/// - `param_sizes` must be an array of `param_count` sizes (for BLOBs, 0 for others)
+/// 
+/// # SQL Injection Prevention
+/// This function uses parameterized queries, which are the recommended way to prevent SQL injection.
+/// Parameters are properly escaped and quoted by the database driver.
+/// 
+/// # Example
+/// ```c
+/// // SAFE: Parameterized query
+/// int types[] = {1, 3};  // INTEGER, TEXT
+/// int64_t user_id = 123;
+/// const char* username = "john";
+/// void* values[] = {&user_id, username};
+/// size_t sizes[] = {0, 0};
+/// 
+/// CRiDBResult* result;
+/// int ret = ri_database_pool_query_params(pool, 
+///     "SELECT * FROM users WHERE id = $1 AND name = $2",
+///     2, types, values, sizes, &result);
+/// ```
+#[no_mangle]
+pub extern "C" fn ri_database_pool_query_params(
+    pool: *mut CRiDatabasePool,
+    sql: *const std::ffi::c_char,
+    param_count: usize,
+    param_types: *const std::ffi::c_int,
+    param_values: *const *const std::ffi::c_void,
+    param_sizes: *const usize,
+    out_result: *mut *mut CRiDBResult,
+) -> std::ffi::c_int {
+    if pool.is_null() || sql.is_null() || out_result.is_null() {
+        return -1;
+    }
+    
+    if param_count > 0 && (param_types.is_null() || param_values.is_null()) {
+        return -6;  // Invalid parameters
+    }
+    
+    let rt = match tokio::runtime::Runtime::new() {
+        Ok(rt) => rt,
+        Err(_) => return -2,
+    };
+    
+    unsafe {
+        let sql_str = match std::ffi::CStr::from_ptr(sql).to_str() {
+            Ok(s) => s,
+            Err(_) => return -3,
+        };
+        
+        // Build parameterized query
+        let mut query = crate::database::RiQueryParam::new(sql_str);
+        
+        for i in 0..param_count {
+            let param_type = *param_types.add(i);
+            let param_value = *param_values.add(i);
+            let param_size = *param_sizes.add(i);
+            
+            match param_type {
+                0 => { query = query.bind_null(); }
+                1 => { 
+                    let val = *(param_value as *const i64);
+                    query = query.bind(val);
+                }
+                2 => { 
+                    let val = *(param_value as *const f64);
+                    query = query.bind(val);
+                }
+                3 => { 
+                    let val = std::ffi::CStr::from_ptr(param_value as *const std::ffi::c_char);
+                    match val.to_str() {
+                        Ok(s) => query = query.bind(s),
+                        Err(_) => return -7,  // Invalid UTF-8
+                    }
+                }
+                4 => { 
+                    let data = std::slice::from_raw_parts(param_value as *const u8, param_size);
+                    query = query.bind(data);
+                }
+                _ => return -8,  // Unknown parameter type
+            }
+        }
+        
+        match rt.block_on(async { (*pool).inner.get().await }) {
+            Ok(db) => match rt.block_on(async { db.query_with_params(query).await }) {
+                Ok(result) => {
+                    *out_result = Box::into_raw(Box::new(CRiDBResult::new(result)));
+                    0
+                }
+                Err(_) => -4,
+            },
+            Err(_) => -5,
+        }
+    }
+}
+
+/// Execute parameterized SQL statement (SAFE - prevents SQL injection)
+/// 
+/// # Safety
+/// Same as `ri_database_pool_query_params`
+/// 
+/// # SQL Injection Prevention
+/// This function uses parameterized statements, which are the recommended way to prevent SQL injection.
+#[no_mangle]
+pub extern "C" fn ri_database_pool_execute_params(
+    pool: *mut CRiDatabasePool,
+    sql: *const std::ffi::c_char,
+    param_count: usize,
+    param_types: *const std::ffi::c_int,
+    param_values: *const *const std::ffi::c_void,
+    param_sizes: *const usize,
+    out_rows_affected: *mut u64,
+) -> std::ffi::c_int {
+    if pool.is_null() || sql.is_null() {
+        return -1;
+    }
+    
+    if param_count > 0 && (param_types.is_null() || param_values.is_null()) {
+        return -6;
+    }
+    
+    let rt = match tokio::runtime::Runtime::new() {
+        Ok(rt) => rt,
+        Err(_) => return -2,
+    };
+    
+    unsafe {
+        let sql_str = match std::ffi::CStr::from_ptr(sql).to_str() {
+            Ok(s) => s,
+            Err(_) => return -3,
+        };
+        
+        let mut query = crate::database::RiQueryParam::new(sql_str);
+        
+        for i in 0..param_count {
+            let param_type = *param_types.add(i);
+            let param_value = *param_values.add(i);
+            let param_size = *param_sizes.add(i);
+            
+            match param_type {
+                0 => { query = query.bind_null(); }
+                1 => { 
+                    let val = *(param_value as *const i64);
+                    query = query.bind(val);
+                }
+                2 => { 
+                    let val = *(param_value as *const f64);
+                    query = query.bind(val);
+                }
+                3 => { 
+                    let val = std::ffi::CStr::from_ptr(param_value as *const std::ffi::c_char);
+                    match val.to_str() {
+                        Ok(s) => query = query.bind(s),
+                        Err(_) => return -7,
+                    }
+                }
+                4 => { 
+                    let data = std::slice::from_raw_parts(param_value as *const u8, param_size);
+                    query = query.bind(data);
+                }
+                _ => return -8,
+            }
+        }
+        
+        match rt.block_on(async { (*pool).inner.get().await }) {
+            Ok(db) => match rt.block_on(async { db.execute_with_params(query).await }) {
+                Ok(rows) => {
+                    if !out_rows_affected.is_null() {
+                        *out_rows_affected = rows;
+                    }
+                    0
+                }
+                Err(_) => -4,
+            },
+            Err(_) => -5,
+        }
+    }
+}
+
 #[no_mangle]
 pub extern "C" fn ri_database_pool_ping(pool: *mut CRiDatabasePool) -> std::ffi::c_int {
     if pool.is_null() {

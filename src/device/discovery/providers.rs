@@ -48,6 +48,87 @@ use async_trait::async_trait;
 use std::sync::Arc;
 use tokio::sync::RwLock;
 use super::super::core::{RiDevice, RiDeviceType, RiDeviceCapabilities};
+
+/// Sanitizes command output for safe use in device names and logs.
+///
+/// # Security
+///
+/// This function prevents:
+/// 1. Log injection attacks (removes control characters)
+/// 2. ANSI escape sequences (prevents terminal escape attacks)
+/// 3. Excessive whitespace (prevents log flooding)
+/// 4. Non-printable characters
+fn sanitize_command_output(output: &str) -> String {
+    let mut result = String::with_capacity(output.len());
+    let mut last_was_space = false;
+    
+    for c in output.chars() {
+        match c {
+            // Allow printable ASCII characters
+            ' '..='~' => {
+                // Collapse multiple spaces into one
+                if c == ' ' {
+                    if !last_was_space {
+                        result.push(c);
+                    }
+                    last_was_space = true;
+                } else {
+                    result.push(c);
+                    last_was_space = false;
+                }
+            }
+            // Allow Unicode letters and numbers
+            c if c.is_alphanumeric() => {
+                result.push(c);
+                last_was_space = false;
+            }
+            // Skip control characters, ANSI sequences, etc.
+            _ => continue,
+        }
+    }
+    
+    // Trim and limit length
+    let trimmed = result.trim();
+    if trimmed.len() > 256 {
+        trimmed[..256].to_string()
+    } else {
+        trimmed.to_string()
+    }
+}
+
+/// Safely executes a system command and returns sanitized output.
+///
+/// # Security
+///
+/// This function:
+/// 1. Uses hardcoded command paths (no user input)
+/// 2. Sanitizes output to prevent injection
+/// 3. Handles errors gracefully
+/// 4. Logs command execution for audit
+fn safe_command_output(command: &str, args: &[&str]) -> Option<String> {
+    log::debug!("[Ri.Device] Executing command: {} {:?}", command, args);
+    
+    let output = std::process::Command::new(command)
+        .args(args)
+        .output()
+        .ok()?;
+    
+    if !output.status.success() {
+        log::warn!(
+            "[Ri.Device] Command failed: {} (exit code: {:?})",
+            command,
+            output.status.code()
+        );
+        return None;
+    }
+    
+    let raw_output = String::from_utf8_lossy(&output.stdout);
+    let sanitized = sanitize_command_output(&raw_output);
+    
+    log::debug!("[Ri.Device] Command output: {}", sanitized);
+    
+    Some(sanitized)
+}
 use super::platform::{PlatformInfo, HardwareCategory};
 
 /// Result type for hardware discovery
@@ -545,21 +626,9 @@ async fn discover_linux_cpus(_platform: &PlatformInfo) -> DiscoveryResult<Vec<Ri
 async fn discover_macos_cpus(_platform: &PlatformInfo) -> DiscoveryResult<Vec<RiDevice>> {
     let mut devices = Vec::with_capacity(1);
 
-    // Use sysctl for CPU info
-    let output = std::process::Command::new("sysctl")
-        .args(&["-n", "machdep.cpu.brand_string"])
-        .output();
-
-    let model_name = match output {
-        Ok(output) => {
-            if output.status.success() {
-                String::from_utf8_lossy(&output.stdout).trim().to_string()
-            } else {
-                "Unknown CPU".to_string()
-            }
-        }
-        Err(_) => "Unknown CPU".to_string(),
-    };
+    // Security: Use safe_command_output to sanitize command output
+    let model_name = safe_command_output("sysctl", &["-n", "machdep.cpu.brand_string"])
+        .unwrap_or_else(|| "Unknown CPU".to_string());
 
     let core_count = std::thread::available_parallelism()
         .map(|p| p.get())
@@ -582,25 +651,17 @@ async fn discover_macos_cpus(_platform: &PlatformInfo) -> DiscoveryResult<Vec<Ri
 async fn discover_windows_cpus(_platform: &PlatformInfo) -> DiscoveryResult<Vec<RiDevice>> {
     let mut devices = Vec::with_capacity(1);
 
-    let output = std::process::Command::new("wmic")
-        .args(&["CPU", "Get", "Name,NumberOfCores", "/VALUE"])
-        .output();
-
-    let model_name = match output {
-        Ok(output) => {
-            if output.status.success() {
-                let output_str = String::from_utf8_lossy(&output.stdout);
-                if let Some(name_line) = output_str.lines().find(|l| l.starts_with("Name=")) {
-                    name_line[5..].to_string()
-                } else {
-                    "Unknown CPU".to_string()
-                }
+    // Security: Use safe_command_output to sanitize command output
+    let model_name = safe_command_output("wmic", &["CPU", "Get", "Name", "/VALUE"])
+        .and_then(|output| {
+            // Parse the output safely
+            if let Some(name_line) = output.lines().find(|l| l.starts_with("Name=")) {
+                Some(sanitize_command_output(&name_line[5..]))
             } else {
-                "Unknown CPU".to_string()
+                None
             }
-        }
-        Err(_) => "Unknown CPU".to_string(),
-    };
+        })
+        .unwrap_or_else(|| "Unknown CPU".to_string());
 
     let core_count = std::thread::available_parallelism()
         .map(|p| p.get())

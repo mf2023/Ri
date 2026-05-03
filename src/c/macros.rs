@@ -198,40 +198,59 @@ macro_rules! c_wrapper {
     };
 }
 
-/// Macro to generate C constructor function
+/// Macro to generate C constructor function with pointer registry support
 #[macro_export]
 macro_rules! c_constructor {
     ($fn_name:ident, $c_type:ty, $rust_type:ty, $new_expr:expr) => {
         #[no_mangle]
         pub extern "C" fn $fn_name() -> *mut $c_type {
             let obj = $new_expr;
-            Box::into_raw(Box::new(<$c_type>::new(obj)))
+            let ptr = Box::into_raw(Box::new(<$c_type>::new(obj)));
+            $crate::c::register_ptr(ptr as usize);
+            ptr
         }
     };
 }
 
-/// Macro to generate C destructor function
+/// Macro to generate C destructor function with pointer registry support
+/// 
+/// # Security
+/// 
+/// This macro generates a destructor that:
+/// 1. Checks if the pointer is null
+/// 2. Validates the pointer is registered (prevents double-free)
+/// 3. Unregisters the pointer before freeing (prevents use-after-free)
 #[macro_export]
 macro_rules! c_destructor {
     ($fn_name:ident, $c_type:ty) => {
         #[no_mangle]
         pub extern "C" fn $fn_name(obj: *mut $c_type) {
-            if !obj.is_null() {
-                unsafe {
-                    let _ = Box::from_raw(obj);
-                }
+            if obj.is_null() {
+                return;
+            }
+            
+            if !$crate::c::unregister_ptr(obj as usize) {
+                log::warn!(
+                    "[Ri.C] Attempted to free unregistered or already freed pointer: {:?}",
+                    obj
+                );
+                return;
+            }
+            
+            unsafe {
+                let _ = Box::from_raw(obj);
             }
         }
     };
 }
 
-/// Macro to generate C getter for string
+/// Macro to generate C getter for string with pointer validation
 #[macro_export]
 macro_rules! c_string_getter {
     ($fn_name:ident, $c_type:ty, $getter:expr) => {
         #[no_mangle]
         pub extern "C" fn $fn_name(obj: *mut $c_type) -> *mut std::ffi::c_char {
-            if obj.is_null() {
+            if obj.is_null() || !$crate::c::is_valid_ptr(obj as usize) {
                 return std::ptr::null_mut();
             }
             unsafe {
@@ -245,7 +264,7 @@ macro_rules! c_string_getter {
     };
 }
 
-/// Macro to generate C setter for string
+/// Macro to generate C setter for string with pointer validation
 #[macro_export]
 macro_rules! c_string_setter {
     ($fn_name:ident, $c_type:ty, $setter:expr) => {
@@ -254,7 +273,7 @@ macro_rules! c_string_setter {
             obj: *mut $c_type,
             value: *const std::ffi::c_char,
         ) -> std::ffi::c_int {
-            if obj.is_null() || value.is_null() {
+            if obj.is_null() || !$crate::c::is_valid_ptr(obj as usize) || value.is_null() {
                 return -1;
             }
             unsafe {

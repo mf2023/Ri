@@ -216,11 +216,16 @@ impl Default for RiGatewayConfig {
     /// - enable_circuit_breaker: true
     /// - enable_load_balancing: true
     /// - cors_enabled: true
-    /// - cors_origins: ["*"]
+    /// - cors_origins: [] (must be explicitly configured for security)
     /// - cors_methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"]
     /// - cors_headers: ["Content-Type", "Authorization", "X-Requested-With"]
     /// - enable_logging: true
     /// - log_level: "info"
+    /// 
+    /// # Security
+    /// 
+    /// CORS origins must be explicitly configured. Empty cors_origins means
+    /// no CORS headers will be sent, which is the secure default.
     fn default() -> Self {
         Self {
             listen_address: "0.0.0.0".to_string(),
@@ -231,6 +236,8 @@ impl Default for RiGatewayConfig {
             enable_circuit_breaker: true,
             enable_load_balancing: true,
             cors_enabled: true,
+            // Security: Empty by default - must be explicitly configured
+            // Never use ["*"] in production as it allows any origin
             cors_origins: vec![],
             cors_methods: vec!["GET".to_string(), "POST".to_string(), "PUT".to_string(), "DELETE".to_string(), "OPTIONS".to_string()],
             cors_headers: vec!["Content-Type".to_string(), "Authorization".to_string(), "X-Requested-With".to_string()],

@@ -138,19 +138,77 @@ impl FileSystemImpl {
     ///
     /// A `RiResult<PathBuf>` containing the canonicalized path if valid
     fn validate_path(&self, path: &Path) -> RiResult<PathBuf> {
-        let canonical_path = path.canonicalize()
-            .map_err(|e| crate::core::RiError::Other(format!("Path validation failed: {e}")))?;
-        
+        // Security: Check for symlink attacks
+        // 1. First canonicalize the allowed directories
         let canonical_project = self.project_root.canonicalize()
-            .unwrap_or_else(|_| self.project_root.clone());
-        let canonical_app_data = self.app_data_root.canonicalize()
-            .unwrap_or_else(|_| self.app_data_root.clone());
+            .map_err(|e| crate::core::RiError::Other(format!("Project root canonicalization failed: {e}")))?;
         
+        let canonical_app_data = self.app_data_root.canonicalize()
+            .map_err(|e| crate::core::RiError::Other(format!("App data root canonicalization failed: {e}")))?;
+        
+        // 2. For the target path, handle non-existent paths safely
+        let canonical_path = if path.exists() {
+            // Path exists - canonicalize it (this resolves symlinks)
+            path.canonicalize()
+                .map_err(|e| crate::core::RiError::Other(format!("Path canonicalization failed: {e}")))?
+        } else {
+            // Path doesn't exist - check parent directory for symlinks
+            let parent = path.parent().ok_or_else(|| {
+                crate::core::RiError::Other("Invalid path: no parent directory".to_string())
+            })?;
+            
+            if parent.exists() {
+                // Canonicalize parent to resolve any symlinks
+                let canonical_parent = parent.canonicalize()
+                    .map_err(|e| crate::core::RiError::Other(format!("Parent canonicalization failed: {e}")))?;
+                
+                // Reconstruct the path with canonicalized parent
+                let file_name = path.file_name().ok_or_else(|| {
+                    crate::core::RiError::Other("Invalid path: no file name".to_string())
+                })?;
+                
+                canonical_parent.join(file_name)
+            } else {
+                // Parent doesn't exist - this is an error for security
+                return Err(crate::core::RiError::Other(
+                    "Path validation failed: parent directory does not exist".to_string()
+                ));
+            }
+        };
+        
+        // 3. Check if the canonical path is within allowed directories
         if !canonical_path.starts_with(&canonical_project) && 
            !canonical_path.starts_with(&canonical_app_data) {
             return Err(crate::core::RiError::Other(
                 "Path traversal detected: path is outside allowed directories".to_string()
             ));
+        }
+        
+        // 4. Additional symlink check: ensure no symlink components in the path
+        // This prevents TOCTOU attacks where a symlink is created after validation
+        let mut current = canonical_path.clone();
+        while let Some(parent) = current.parent() {
+            if parent.join(current.file_name().unwrap_or_default()).exists() {
+                let metadata = std::fs::symlink_metadata(&current)
+                    .map_err(|e| crate::core::RiError::Other(format!("Symlink metadata check failed: {e}")))?;
+                
+                if metadata.file_type().is_symlink() {
+                    // Symlink found - verify it points to allowed directory
+                    let symlink_target = std::fs::read_link(&current)
+                        .map_err(|e| crate::core::RiError::Other(format!("Failed to read symlink: {e}")))?;
+                    
+                    let canonical_target = symlink_target.canonicalize()
+                        .map_err(|e| crate::core::RiError::Other(format!("Symlink target canonicalization failed: {e}")))?;
+                    
+                    if !canonical_target.starts_with(&canonical_project) && 
+                       !canonical_target.starts_with(&canonical_app_data) {
+                        return Err(crate::core::RiError::Other(
+                            "Symlink points outside allowed directories".to_string()
+                        ));
+                    }
+                }
+            }
+            current = parent.to_path_buf();
         }
         
         Ok(canonical_path)

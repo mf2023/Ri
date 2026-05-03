@@ -712,6 +712,7 @@ impl RiDeviceAuthProtocol {
     async fn verify_challenge_response(&self, challenge: &AuthChallenge, response: &[u8]) -> RiResult<bool> {
         // Check if challenge is still valid
         if Instant::now().duration_since(challenge.created_at) > challenge.valid_for {
+            log::warn!("[Ri.Security] Challenge expired");
             return Ok(false);
         }
         
@@ -719,26 +720,46 @@ impl RiDeviceAuthProtocol {
         let certificates = self.certificates.read().await;
         let device_cert = certificates.values()
             .find(|cert| cert.device_id == challenge.challenge_id.split('_').nth(1).unwrap_or(""))
-            .ok_or_else(|| RiError::CryptoError("Device certificate not found".to_string()))?;
+            .ok_or_else(|| {
+                log::warn!("[Ri.Security] Device certificate not found");
+                RiError::CryptoError("Device certificate not found".to_string())
+            })?;
         
         if device_cert.public_key.is_empty() {
+            log::warn!("[Ri.Security] Device has no public key");
             return Err(RiError::CryptoError("Device has no public key".to_string()));
         }
         
         // Verify the signature using the device's public key
-        // Response format: [signature]
-        if response.len() < 64 {
+        // Response must be exactly 64 bytes for Ed25519 signature
+        if response.len() != 64 {
+            log::warn!("[Ri.Security] Invalid signature length: expected 64, got {}", response.len());
             return Ok(false);
         }
         
-        // In a real implementation, we would use proper cryptographic verification
-        // For now, simulate verification by checking signature length and format
-        let is_valid = response.len() >= 64 && response.len() <= 128;
+        // Perform actual Ed25519 signature verification
+        use ring::signature::{UnparsedPublicKey, ED25519};
         
-        // Remove the challenge after verification attempt
-        self.challenges.write().await.remove(&challenge.challenge_id);
+        let peer_public_key = UnparsedPublicKey::new(&ED25519, &device_cert.public_key);
         
-        Ok(is_valid)
+        match peer_public_key.verify(&challenge.challenge_data, response) {
+            Ok(()) => {
+                log::info!("[Ri.Security] Signature verification successful");
+                
+                // Remove the challenge after successful verification
+                self.challenges.write().await.remove(&challenge.challenge_id);
+                
+                Ok(true)
+            }
+            Err(_) => {
+                log::warn!("[Ri.Security] Signature verification failed");
+                
+                // Remove the challenge after failed verification attempt
+                self.challenges.write().await.remove(&challenge.challenge_id);
+                
+                Ok(false)
+            }
+        }
     }
     
     /// Performs complete device authentication workflow.

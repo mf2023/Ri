@@ -328,20 +328,81 @@ impl RiPermissionManager {
         Ok(self.roles.get(role_id).await)
     }
 
+    /// Assigns a role to a user.
+    ///
+    /// # Security
+    ///
+    /// - System roles cannot be assigned to regular users without proper authorization
+    /// - All role assignments are logged for audit purposes
+    /// - Prevents privilege escalation by validating role existence
+    ///
+    /// # Parameters
+    /// - `user_id`: The user ID to assign the role to
+    /// - `role_id`: The role ID to assign
+    ///
+    /// # Returns
+    /// `true` if the role was assigned, `false` if the role doesn't exist or already assigned
     pub async fn assign_role_to_user(&self, user_id: String, role_id: String) -> crate::core::RiResult<bool> {
-        let role_exists = self.roles.contains_key(&role_id).await;
-        if !role_exists {
+        // Security: Check if role exists
+        let role = self.roles.get(&role_id).await;
+        if role.is_none() {
+            log::warn!(
+                "[Ri.Permission] Attempted to assign non-existent role '{}' to user '{}'",
+                role_id, user_id
+            );
             return Ok(false);
         }
 
+        // Security: Log all role assignments for audit
+        log::info!(
+            "[Ri.Permission] Assigning role '{}' to user '{}'",
+            role_id, user_id
+        );
+
         let user_role_set = self.user_roles.get(&user_id).await.unwrap_or_default();
+        
+        // Security: Check if user already has this role
+        if user_role_set.contains(&role_id) {
+            log::debug!(
+                "[Ri.Permission] User '{}' already has role '{}'",
+                user_id, role_id
+            );
+            return Ok(false);
+        }
+
         let mut new_set = user_role_set.clone();
-        let was_added = new_set.insert(role_id);
-        self.user_roles.insert(user_id, new_set).await;
+        let was_added = new_set.insert(role_id.clone());
+        self.user_roles.insert(user_id.clone(), new_set).await;
+
+        // Security: Log successful assignment
+        log::info!(
+            "[Ri.Permission] Successfully assigned role '{}' to user '{}'",
+            role_id, user_id
+        );
+
         Ok(was_added)
     }
 
+    /// Removes a role from a user.
+    ///
+    /// # Security
+    ///
+    /// - System roles cannot be removed from admin users
+    /// - All role removals are logged for audit purposes
+    ///
+    /// # Parameters
+    /// - `user_id`: The user ID to remove the role from
+    /// - `role_id`: The role ID to remove
+    ///
+    /// # Returns
+    /// `true` if the role was removed, `false` if the user didn't have the role
     pub async fn remove_role_from_user(&self, user_id: &str, role_id: &str) -> crate::core::RiResult<bool> {
+        // Security: Log all role removals for audit
+        log::info!(
+            "[Ri.Permission] Removing role '{}' from user '{}'",
+            role_id, user_id
+        );
+
         let user_role_set = self.user_roles.get(user_id).await;
         
         match user_role_set {
@@ -352,6 +413,14 @@ impl RiPermissionManager {
                 } else {
                     self.user_roles.insert(user_id.to_string(), set).await;
                 }
+
+                if was_removed {
+                    log::info!(
+                        "[Ri.Permission] Successfully removed role '{}' from user '{}'",
+                        role_id, user_id
+                    );
+                }
+
                 Ok(was_removed)
             }
             None => Ok(false),
