@@ -405,8 +405,9 @@ c_destructor!(ri_device_controller_free, CRiDeviceController);
 pub extern "C" fn ri_device_controller_add_device(
     controller: *mut CRiDeviceController,
     device: *mut CRiDevice,
+    location: *const std::ffi::c_char,
 ) -> std::ffi::c_int {
-    if controller.is_null() || device.is_null() {
+    if controller.is_null() || device.is_null() || location.is_null() {
         return -1;
     }
     let rt = match tokio::runtime::Runtime::new() {
@@ -415,11 +416,14 @@ pub extern "C" fn ri_device_controller_add_device(
     };
     unsafe {
         let device = (*device).inner.clone();
+        let location_str = match std::ffi::CStr::from_ptr(location).to_str() {
+            Ok(s) => s.to_string(),
+            Err(_) => return -3,
+        };
         rt.block_on(async {
-            (*controller).inner.add_device(device).await;
-        });
+            (*controller).inner.add_device(device, location_str).await
+        }).map(|_| 0).unwrap_or(-4)
     }
-    0
 }
 
 #[no_mangle]

@@ -511,7 +511,7 @@ impl RiJWTManager {
     /// ```
     pub fn validate_token(&self, token: &str) -> Result<RiJWTClaims, RiError> {
         let mut validation = Validation::default();
-        validation.validate_alg = true;
+        validation.set_required_spec_claims(&["exp"]);
         validation.algorithms = vec![jsonwebtoken::Algorithm::HS256];
         
         decode::<RiJWTClaims>(token, &self.decoding_key, &validation)

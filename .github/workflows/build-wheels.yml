@@ -144,81 +144,143 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Setup Build Environment
-        uses: ./.github/actions/setup-build-env
+      - name: Install protoc
+        uses: arduino/setup-protoc@v3
         with:
-          platform: linux
-          arch: x64
+          version: '33.x'
+          repo-token: ${{ github.token }}
+
+      - name: Install CMake
+        uses: jwlawson/actions-setup-cmake@v2
+        with:
+          cmake-version: '3.28.x'
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: stable
+
+      - name: Install system dependencies
+        run: sudo apt-get update && sudo apt-get install -y libcurl4-openssl-dev libsasl2-dev
 
       - name: Build CLI
-        run: cargo build --release -p ric
+        run: make build-cli-linux-x64
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: cli-linux-x64
-          path: target/release/ric
+          path: target/x86_64-unknown-linux-gnu/release/ric
 
   build-cli-linux-arm64:
     runs-on: ubuntu-24.04-arm
     steps:
       - uses: actions/checkout@v4
 
-      - name: Setup Build Environment
-        uses: ./.github/actions/setup-build-env
+      - name: Install protoc
+        uses: arduino/setup-protoc@v3
         with:
-          platform: linux
-          arch: arm64
+          version: '33.x'
+          repo-token: ${{ github.token }}
 
-      - name: Setup Build Environment
-        uses: ./.github/actions/setup-build-env
+      - name: Install CMake
+        uses: jwlawson/actions-setup-cmake@v2
         with:
-          platform: linux
-          arch: arm64
+          cmake-version: '3.28.x'
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: stable
+
+      - name: Install system dependencies
+        run: sudo apt-get update && sudo apt-get install -y libcurl4-openssl-dev libsasl2-dev
 
       - name: Build CLI
-        run: cargo build --release -p ric
+        run: make build-cli-linux-arm64
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: cli-linux-arm64
-          path: target/release/ric
+          path: target/aarch64-unknown-linux-gnu/release/ric
 
   build-cli-windows:
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
 
-      - name: Setup Build Environment
-        uses: ./.github/actions/setup-build-env
+      - name: Install protoc
+        uses: arduino/setup-protoc@v3
         with:
-          platform: windows
-          arch: x64
+          version: '33.x'
+          repo-token: ${{ github.token }}
+
+      - name: Install CMake
+        uses: jwlawson/actions-setup-cmake@v2
+        with:
+          cmake-version: '3.28.x'
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: stable
+
+      - name: Setup MSVC
+        uses: ilammy/msvc-dev-cmd@v1
+
+      - name: Install OpenSSL
+        run: |
+          vcpkg install openssl:x64-windows
+          vcpkg integrate install
+          echo "OPENSSL_ROOT_DIR=C:\vcpkg\installed\x64-windows" >> $env:GITHUB_ENV
+          echo "OPENSSL_INCLUDE_DIR=C:\vcpkg\installed\x64-windows\include" >> $env:GITHUB_ENV
+          echo "OPENSSL_LIB_DIR=C:\vcpkg\installed\x64-windows\lib" >> $env:GITHUB_ENV
 
       - name: Build CLI
-        run: cargo build --release -p ric
+        run: make build-cli-windows-x64
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: cli-windows-x64
-          path: target/release/ric.exe
+          path: target/x86_64-pc-windows-msvc/release/ric.exe
 
   build-cli-windows-arm64:
     runs-on: windows-11-arm
     steps:
       - uses: actions/checkout@v4
 
-      - name: Setup Build Environment
-        uses: ./.github/actions/setup-build-env
+      - name: Install protoc
+        uses: arduino/setup-protoc@v3
         with:
-          platform: windows
-          arch: arm64
-          rust-target: aarch64-pc-windows-msvc
+          version: '33.x'
+          repo-token: ${{ github.token }}
+
+      - name: Install CMake
+        uses: jwlawson/actions-setup-cmake@v2
+        with:
+          cmake-version: '3.28.x'
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: stable
+          targets: aarch64-pc-windows-msvc
+
+      - name: Setup MSVC
+        uses: ilammy/msvc-dev-cmd@v1
+
+      - name: Install OpenSSL
+        run: |
+          vcpkg install openssl:arm64-windows
+          vcpkg integrate install
+          echo "OPENSSL_ROOT_DIR=C:\vcpkg\installed\arm64-windows" >> $env:GITHUB_ENV
+          echo "OPENSSL_INCLUDE_DIR=C:\vcpkg\installed\arm64-windows\include" >> $env:GITHUB_ENV
+          echo "OPENSSL_LIB_DIR=C:\vcpkg\installed\arm64-windows\lib" >> $env:GITHUB_ENV
 
       - name: Build CLI
-        run: cargo build --release -p ric --target aarch64-pc-windows-msvc --no-default-features
+        run: make build-cli-windows-arm64
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
@@ -231,15 +293,28 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Setup Build Environment
-        uses: ./.github/actions/setup-build-env
+      - name: Install protoc
+        uses: arduino/setup-protoc@v3
         with:
-          platform: macos
-          arch: x64
-          rust-target: x86_64-apple-darwin
+          version: '33.x'
+          repo-token: ${{ github.token }}
+
+      - name: Install CMake
+        uses: jwlawson/actions-setup-cmake@v2
+        with:
+          cmake-version: '3.28.x'
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: stable
+          targets: x86_64-apple-darwin
+
+      - name: Install dependencies
+        run: brew install --quiet cmake pkg-config openssl
 
       - name: Build CLI
-        run: cargo build --release -p ric --target x86_64-apple-darwin
+        run: make build-cli-macos-x64
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
@@ -252,15 +327,28 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Setup Build Environment
-        uses: ./.github/actions/setup-build-env
+      - name: Install protoc
+        uses: arduino/setup-protoc@v3
         with:
-          platform: macos
-          arch: arm64
-          rust-target: aarch64-apple-darwin
+          version: '33.x'
+          repo-token: ${{ github.token }}
+
+      - name: Install CMake
+        uses: jwlawson/actions-setup-cmake@v2
+        with:
+          cmake-version: '3.28.x'
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: stable
+          targets: aarch64-apple-darwin
+
+      - name: Install dependencies
+        run: brew install --quiet cmake pkg-config openssl
 
       - name: Build CLI
-        run: cargo build --release -p ric --target aarch64-apple-darwin
+        run: make build-cli-macos-arm64
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
@@ -284,34 +372,60 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Setup Build Environment
-        uses: ./.github/actions/setup-build-env
+      - name: Install protoc
+        uses: arduino/setup-protoc@v3
         with:
-          platform: linux
-          arch: x64
+          version: '33.x'
+          repo-token: ${{ github.token }}
+
+      - name: Install CMake
+        uses: jwlawson/actions-setup-cmake@v2
+        with:
+          cmake-version: '3.28.x'
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: stable
+
+      - name: Install system dependencies
+        run: sudo apt-get update && sudo apt-get install -y libcurl4-openssl-dev libsasl2-dev
 
       - name: Build
-        run: cargo build --release
+        run: make build-linux-x64
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: rust-linux-x64
-          path: target/release/libri.*
+          path: target/x86_64-unknown-linux-gnu/release/libri.*
 
   build-rust-linux-arm64:
     runs-on: ubuntu-24.04-arm
     steps:
       - uses: actions/checkout@v4
 
-      - name: Setup Build Environment
-        uses: ./.github/actions/setup-build-env
+      - name: Install protoc
+        uses: arduino/setup-protoc@v3
         with:
-          platform: linux
-          arch: arm64
+          version: '33.x'
+          repo-token: ${{ github.token }}
+
+      - name: Install CMake
+        uses: jwlawson/actions-setup-cmake@v2
+        with:
+          cmake-version: '3.28.x'
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: stable
+
+      - name: Install system dependencies
+        run: sudo apt-get update && sudo apt-get install -y libcurl4-openssl-dev libsasl2-dev
 
       - name: Build
-        run: cargo build --release
+        run: make build-linux-arm64
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
@@ -324,43 +438,67 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Setup Build Environment
-        uses: ./.github/actions/setup-build-env
+      - name: Install protoc
+        uses: arduino/setup-protoc@v3
         with:
-          platform: windows
-          arch: x64
+          version: '33.x'
+          repo-token: ${{ github.token }}
+
+      - name: Install CMake
+        uses: jwlawson/actions-setup-cmake@v2
+        with:
+          cmake-version: '3.28.x'
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: stable
+
+      - name: Setup MSVC
+        uses: ilammy/msvc-dev-cmd@v1
+
+      - name: Install OpenSSL
+        run: |
+          vcpkg install openssl:x64-windows
+          vcpkg integrate install
+          echo "OPENSSL_ROOT_DIR=C:\vcpkg\installed\x64-windows" >> $env:GITHUB_ENV
 
       - name: Build
-        run: cargo build --release
+        run: make build-windows-x64
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: rust-windows-x64
-          path: target/release/libri.*
+          path: target/x86_64-pc-windows-msvc/release/ri.*
 
   build-rust-macos:
     runs-on: macos-15-intel
     steps:
       - uses: actions/checkout@v4
 
-      - name: Setup Build Environment
-        uses: ./.github/actions/setup-build-env
+      - name: Install protoc
+        uses: arduino/setup-protoc@v3
         with:
-          platform: macos
-          arch: x64
-          rust-target: x86_64-apple-darwin
+          version: '33.x'
+          repo-token: ${{ github.token }}
+
+      - name: Install CMake
+        uses: jwlawson/actions-setup-cmake@v2
+        with:
+          cmake-version: '3.28.x'
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: stable
+          targets: x86_64-apple-darwin
+
+      - name: Install dependencies
+        run: brew install --quiet cmake pkg-config openssl
 
       - name: Build Rust library
-        run: cargo build --release --target x86_64-apple-darwin
-
-      - name: List artifacts
-        run: |
-          echo "=== Contents of target/x86_64-apple-darwin/release/ ==="
-          ls -la target/x86_64-apple-darwin/release/ 2>/dev/null || echo "Build directory not found"
-          echo ""
-          echo "=== Looking for libri files ==="
-          find target -name "libri*" -type f 2>/dev/null || echo "No libri files found"
+        run: make build-macos-x64
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
@@ -373,15 +511,32 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Setup Build Environment
-        uses: ./.github/actions/setup-build-env
+      - name: Install protoc
+        uses: arduino/setup-protoc@v3
         with:
-          platform: macos
-          arch: arm64
+          version: '33.x'
+          repo-token: ${{ github.token }}
+
+      - name: Install CMake
+        uses: jwlawson/actions-setup-cmake@v2
+        with:
+          cmake-version: '3.28.x'
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: stable
+          targets: aarch64-apple-darwin
+
+      - name: Install dependencies
+        run: brew install --quiet cmake pkg-config openssl
+
+      - name: Build Rust library
+        run: make build-macos-arm64
           rust-target: aarch64-apple-darwin
 
       - name: Build Rust library
-        run: cargo build --release --target aarch64-apple-darwin
+        run: make build-macos-arm64
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
@@ -394,15 +549,34 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Setup Build Environment
-        uses: ./.github/actions/setup-build-env
+      - name: Install protoc
+        uses: arduino/setup-protoc@v3
         with:
-          platform: windows
-          arch: arm64
-          rust-target: aarch64-pc-windows-msvc
+          version: '33.x'
+          repo-token: ${{ github.token }}
+
+      - name: Install CMake
+        uses: jwlawson/actions-setup-cmake@v2
+        with:
+          cmake-version: '3.28.x'
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: stable
+          targets: aarch64-pc-windows-msvc
+
+      - name: Setup MSVC
+        uses: ilammy/msvc-dev-cmd@v1
+
+      - name: Install OpenSSL
+        run: |
+          vcpkg install openssl:arm64-windows
+          vcpkg integrate install
+          echo "OPENSSL_ROOT_DIR=C:\vcpkg\installed\arm64-windows" >> $env:GITHUB_ENV
 
       - name: Build Rust library
-        run: cargo build --release --target aarch64-pc-windows-msvc --no-default-features --features pyo3,c,grpc,websocket,rabbitmq,cache,queue,gateway,service_mesh,auth,observability,postgres,mysql,sqlite,http_client,system_info,config_hot_reload,kafka
+        run: make build-windows-arm64
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
@@ -426,29 +600,34 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Setup Build Environment
-        uses: ./.github/actions/setup-build-env
+      - name: Install protoc
+        uses: arduino/setup-protoc@v3
         with:
-          platform: linux
-          arch: x64
+          version: '33.x'
+          repo-token: ${{ github.token }}
+
+      - name: Install CMake
+        uses: jwlawson/actions-setup-cmake@v2
+        with:
+          cmake-version: '3.28.x'
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: stable
+
+      - name: Install system dependencies
+        run: sudo apt-get update && sudo apt-get install -y libcurl4-openssl-dev libsasl2-dev
 
       - name: Build C static library
-        run: cargo build --release --no-default-features --features c
-
-      - name: Install cbindgen
-        run: cargo install cbindgen
-
-      - name: Generate C headers
-        run: |
-          mkdir -p include
-          cbindgen --crate ri -o include/ri.h
+        run: make build-c-linux-x64
 
       - name: Upload C library artifact
         uses: actions/upload-artifact@v4
         with:
           name: c-libs-linux-x64
           path: |
-            target/release/libri.a
+            target/x86_64-unknown-linux-gnu/release/libri.a
             include/ri.h
 
   build-c-libs-linux-arm64:
@@ -456,29 +635,34 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Setup Build Environment
-        uses: ./.github/actions/setup-build-env
+      - name: Install protoc
+        uses: arduino/setup-protoc@v3
         with:
-          platform: linux
-          arch: arm64
+          version: '33.x'
+          repo-token: ${{ github.token }}
+
+      - name: Install CMake
+        uses: jwlawson/actions-setup-cmake@v2
+        with:
+          cmake-version: '3.28.x'
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: stable
+
+      - name: Install system dependencies
+        run: sudo apt-get update && sudo apt-get install -y libcurl4-openssl-dev libsasl2-dev
 
       - name: Build C static library
-        run: cargo build --release --no-default-features --features c
-
-      - name: Install cbindgen
-        run: cargo install cbindgen
-
-      - name: Generate C headers
-        run: |
-          mkdir -p include
-          cbindgen --crate ri -o include/ri.h
+        run: make build-c-linux-arm64
 
       - name: Upload C library artifact
         uses: actions/upload-artifact@v4
         with:
           name: c-libs-linux-arm64
           path: |
-            target/release/libri.a
+            target/aarch64-unknown-linux-gnu/release/libri.a
             include/ri.h
 
   build-c-libs-windows:
@@ -486,29 +670,40 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Setup Build Environment
-        uses: ./.github/actions/setup-build-env
+      - name: Install protoc
+        uses: arduino/setup-protoc@v3
         with:
-          platform: windows
-          arch: x64
+          version: '33.x'
+          repo-token: ${{ github.token }}
+
+      - name: Install CMake
+        uses: jwlawson/actions-setup-cmake@v2
+        with:
+          cmake-version: '3.28.x'
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: stable
+
+      - name: Setup MSVC
+        uses: ilammy/msvc-dev-cmd@v1
+
+      - name: Install OpenSSL
+        run: |
+          vcpkg install openssl:x64-windows
+          vcpkg integrate install
+          echo "OPENSSL_ROOT_DIR=C:\vcpkg\installed\x64-windows" >> $env:GITHUB_ENV
 
       - name: Build C static library
-        run: cargo build --release --no-default-features --features c
-
-      - name: Install cbindgen
-        run: cargo install cbindgen
-
-      - name: Generate C headers
-        run: |
-          mkdir include 2>nul || true
-          cbindgen --crate ri -o include/ri.h
+        run: make build-c-windows-x64
 
       - name: Upload C library artifact
         uses: actions/upload-artifact@v4
         with:
           name: c-libs-windows-x64
           path: |
-            target/release/ri.lib
+            target/x86_64-pc-windows-msvc/release/ri.lib
             include/ri.h
 
   build-c-libs-macos:
@@ -516,23 +711,28 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Setup Build Environment
-        uses: ./.github/actions/setup-build-env
+      - name: Install protoc
+        uses: arduino/setup-protoc@v3
         with:
-          platform: macos
-          arch: x64
-          rust-target: x86_64-apple-darwin
+          version: '33.x'
+          repo-token: ${{ github.token }}
+
+      - name: Install CMake
+        uses: jwlawson/actions-setup-cmake@v2
+        with:
+          cmake-version: '3.28.x'
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: stable
+          targets: x86_64-apple-darwin
+
+      - name: Install dependencies
+        run: brew install --quiet cmake pkg-config openssl
 
       - name: Build C static library
-        run: cargo build --release --target x86_64-apple-darwin --no-default-features --features c
-
-      - name: Install cbindgen
-        run: cargo install cbindgen
-
-      - name: Generate C headers
-        run: |
-          mkdir -p include
-          cbindgen --crate ri -o include/ri.h
+        run: make build-c-macos-x64
 
       - name: Upload C library artifact
         uses: actions/upload-artifact@v4
@@ -547,23 +747,28 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Setup Build Environment
-        uses: ./.github/actions/setup-build-env
+      - name: Install protoc
+        uses: arduino/setup-protoc@v3
         with:
-          platform: macos
-          arch: arm64
-          rust-target: aarch64-apple-darwin
+          version: '33.x'
+          repo-token: ${{ github.token }}
+
+      - name: Install CMake
+        uses: jwlawson/actions-setup-cmake@v2
+        with:
+          cmake-version: '3.28.x'
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: stable
+          targets: aarch64-apple-darwin
+
+      - name: Install dependencies
+        run: brew install --quiet cmake pkg-config openssl
 
       - name: Build C static library
-        run: cargo build --release --target aarch64-apple-darwin --no-default-features --features c
-
-      - name: Install cbindgen
-        run: cargo install cbindgen
-
-      - name: Generate C headers
-        run: |
-          mkdir -p include
-          cbindgen --crate ri -o include/ri.h
+        run: make build-c-macos-arm64
 
       - name: Upload C library artifact
         uses: actions/upload-artifact@v4
@@ -578,23 +783,34 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Setup Build Environment
-        uses: ./.github/actions/setup-build-env
+      - name: Install protoc
+        uses: arduino/setup-protoc@v3
         with:
-          platform: windows
-          arch: arm64
-          rust-target: aarch64-pc-windows-msvc
+          version: '33.x'
+          repo-token: ${{ github.token }}
+
+      - name: Install CMake
+        uses: jwlawson/actions-setup-cmake@v2
+        with:
+          cmake-version: '3.28.x'
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: stable
+          targets: aarch64-pc-windows-msvc
+
+      - name: Setup MSVC
+        uses: ilammy/msvc-dev-cmd@v1
+
+      - name: Install OpenSSL
+        run: |
+          vcpkg install openssl:arm64-windows
+          vcpkg integrate install
+          echo "OPENSSL_ROOT_DIR=C:\vcpkg\installed\arm64-windows" >> $env:GITHUB_ENV
 
       - name: Build C static library
-        run: cargo build --release --target aarch64-pc-windows-msvc --no-default-features --features c
-
-      - name: Install cbindgen
-        run: cargo install cbindgen
-
-      - name: Generate C headers
-        run: |
-          mkdir -p include
-          cbindgen --crate ri -o include/ri.h
+        run: make build-c-windows-arm64
 
       - name: Upload C library artifact
         uses: actions/upload-artifact@v4
@@ -920,12 +1136,48 @@ jobs:
         with:
           python-version: ${{ matrix.python }}
 
-      - name: Setup Build Environment
-        uses: ./.github/actions/setup-build-env
+      - name: Install protoc
+        uses: arduino/setup-protoc@v3
         with:
-          platform: ${{ runner.os == 'Linux' && 'linux' || runner.os == 'macOS' && 'macos' || 'windows' }}
-          arch: ${{ contains(matrix.target, 'aarch64') && 'arm64' || 'x64' }}
-          rust-target: ${{ matrix.target }}
+          version: '33.x'
+          repo-token: ${{ github.token }}
+
+      - name: Install CMake
+        uses: jwlawson/actions-setup-cmake@v2
+        with:
+          cmake-version: '3.28.x'
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: stable
+          targets: ${{ matrix.target }}
+
+      - name: Install system dependencies (Linux)
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y libcurl4-openssl-dev libsasl2-dev
+
+      - name: Install dependencies (macOS)
+        if: runner.os == 'macOS'
+        run: brew install --quiet cmake pkg-config openssl
+
+      - name: Setup MSVC (Windows)
+        if: runner.os == 'Windows'
+        uses: ilammy/msvc-dev-cmd@v1
+
+      - name: Install OpenSSL (Windows x64)
+        if: runner.os == 'Windows' && !contains(matrix.target, 'aarch64')
+        run: |
+          vcpkg install openssl:x64-windows
+          vcpkg integrate install
+          echo "OPENSSL_ROOT_DIR=C:\vcpkg\installed\x64-windows" >> $env:GITHUB_ENV
+
+      - name: Install OpenSSL (Windows ARM64)
+        if: runner.os == 'Windows' && contains(matrix.target, 'aarch64')
+        run: |
+          vcpkg install openssl:arm64-windows
+          vcpkg integrate install
+          echo "OPENSSL_ROOT_DIR=C:\vcpkg\installed\arm64-windows" >> $env:GITHUB_ENV
 
       - name: Configure macOS linker
         if: matrix.target == 'x86_64-apple-darwin' || matrix.target == 'aarch64-apple-darwin'
@@ -997,13 +1249,11 @@ jobs:
 
       - name: Build wheel (non-Docker, non-Windows-ARM64)
         if: matrix.docker != true && matrix.target != 'aarch64-pc-windows-msvc'
-        run: |
-          maturin build --release --target ${{ matrix.target }} -o dist
+        run: make build-python TARGET=${{ matrix.target }}
 
       - name: Build wheel (Windows ARM64 - no protocol/oqs)
         if: matrix.target == 'aarch64-pc-windows-msvc'
-        run: |
-          maturin build --release --target ${{ matrix.target }} -o dist --no-default-features --features pyo3,c,grpc,websocket,rabbitmq,cache,queue,gateway,service_mesh,auth,observability,postgres,mysql,sqlite,http_client,system_info,config_hot_reload,kafka
+        run: make build-python TARGET=${{ matrix.target }} PLATFORM=windows ARCH=arm64
 
       - name: Build Linux wheel with manylinux
         if: matrix.docker == true
@@ -1101,11 +1351,24 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Setup Build Environment
-        uses: ./.github/actions/setup-build-env
+      - name: Install protoc
+        uses: arduino/setup-protoc@v3
         with:
-          platform: linux
-          arch: x64
+          version: '33.x'
+          repo-token: ${{ github.token }}
+
+      - name: Install CMake
+        uses: jwlawson/actions-setup-cmake@v2
+        with:
+          cmake-version: '3.28.x'
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: stable
+
+      - name: Install system dependencies
+        run: sudo apt-get update && sudo apt-get install -y libcurl4-openssl-dev libsasl2-dev
 
       - name: Publish to crates.io
         run: cargo publish --token ${{ secrets.CARGO_REGISTRY_TOKEN }}

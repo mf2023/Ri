@@ -281,7 +281,7 @@ pub extern "C" fn ri_database_pool_get_connection_count(pool: *mut CRiDatabasePo
     if pool.is_null() {
         return 0;
     }
-    unsafe { (*pool).inner.metrics().total_connections }
+    unsafe { (*pool).inner.metrics().total_connections as usize }
 }
 
 #[no_mangle]
@@ -289,7 +289,7 @@ pub extern "C" fn ri_database_pool_get_idle_count(pool: *mut CRiDatabasePool) ->
     if pool.is_null() {
         return 0;
     }
-    unsafe { (*pool).inner.metrics().idle_connections }
+    unsafe { (*pool).inner.metrics().idle_connections as usize }
 }
 
 #[no_mangle]
@@ -297,7 +297,7 @@ pub extern "C" fn ri_database_pool_get_active_count(pool: *mut CRiDatabasePool) 
     if pool.is_null() {
         return 0;
     }
-    unsafe { (*pool).inner.metrics().active_connections }
+    unsafe { (*pool).inner.metrics().active_connections as usize }
 }
 
 #[no_mangle]
