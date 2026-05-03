@@ -132,7 +132,9 @@ pub extern "C" fn ri_jwt_manager_new(secret: *const c_char, expiry_secs: u64) ->
             Err(_) => return std::ptr::null_mut(),
         };
         let manager = RiJWTManager::create(secret_str.to_string(), expiry_secs);
-        Box::into_raw(Box::new(CRiJWTManager::new(manager)))
+        let ptr = Box::into_raw(Box::new(CRiJWTManager::new(manager)));
+        $crate::c::register_ptr(ptr as usize);
+        ptr
     }
 }
 
@@ -264,7 +266,9 @@ pub extern "C" fn ri_jwt_claims_free(claims: *mut CRiJWTClaims) {
 #[no_mangle]
 pub extern "C" fn ri_session_manager_new(timeout_secs: u64) -> *mut CRiSessionManager {
     let manager = RiSessionManager::new(timeout_secs);
-    Box::into_raw(Box::new(CRiSessionManager::new(manager)))
+    let ptr = Box::into_raw(Box::new(CRiSessionManager::new(manager)));
+    $crate::c::register_ptr(ptr as usize);
+    ptr
 }
 
 c_destructor!(ri_session_manager_free, CRiSessionManager);
@@ -436,7 +440,9 @@ pub extern "C" fn ri_session_manager_destroy(
 #[no_mangle]
 pub extern "C" fn ri_permission_manager_new() -> *mut CRiPermissionManager {
     let manager = RiPermissionManager::new();
-    Box::into_raw(Box::new(CRiPermissionManager::new(manager)))
+    let ptr = Box::into_raw(Box::new(CRiPermissionManager::new(manager)));
+    $crate::c::register_ptr(ptr as usize);
+    ptr
 }
 
 c_destructor!(ri_permission_manager_free, CRiPermissionManager);

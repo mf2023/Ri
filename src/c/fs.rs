@@ -261,7 +261,11 @@ c_wrapper!(CRiFileSystem, RiFileSystem);
 #[no_mangle]
 pub extern "C" fn ri_fs_new_auto() -> *mut CRiFileSystem {
     match RiFileSystem::new_auto_root() {
-        Ok(fs) => Box::into_raw(Box::new(CRiFileSystem::new(fs))),
+        Ok(fs) => {
+            let ptr = Box::into_raw(Box::new(CRiFileSystem::new(fs)));
+            crate::c::register_ptr(ptr as usize);
+            ptr
+        },
         Err(_) => std::ptr::null_mut(),
     }
 }

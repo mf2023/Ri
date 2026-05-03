@@ -51,17 +51,22 @@ pub extern "system" fn Java_com_dunimd_ri_RiAppBuilder_withConfig(
         return 0;
     }
     
-    let builder = unsafe { Box::from_raw(ptr as *mut RiAppBuilder) };
+    let builder_ref = unsafe { &mut *(ptr as *mut RiAppBuilder) };
     let path: String = env.get_string(&config_path)
         .expect("Failed to get config path")
         .into();
     
+    // Take ownership of the builder using std::mem::take, then call with_config
+    let builder = std::mem::take(builder_ref);
     match builder.with_config(&path) {
         Ok(new_builder) => {
-            let boxed = Box::new(new_builder);
-            Box::into_raw(boxed) as jlong
+            // Put the new builder back into the original pointer
+            *builder_ref = new_builder;
+            ptr // Return the same pointer!
         }
         Err(e) => {
+            // Since with_config never returns an error, this case should never happen!
+            // But if it does happen, we will throw an error!
             throw_ri_error(&mut env, &e.to_string());
             0
         }
@@ -78,7 +83,8 @@ pub extern "system" fn Java_com_dunimd_ri_RiAppBuilder_build(
         return 0;
     }
     
-    let builder = unsafe { Box::from_raw(ptr as *mut RiAppBuilder) };
+    let builder_ref = unsafe { &mut *(ptr as *mut RiAppBuilder) };
+    let builder = std::mem::take(builder_ref); // Take ownership, leaves builder_ref as RiAppBuilder::new()
     
     match builder.build() {
         Ok(runtime) => {

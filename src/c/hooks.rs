@@ -226,6 +226,8 @@ c_wrapper!(CRiHookBus, RiHookBus);
 #[no_mangle]
 pub extern "C" fn ri_hook_bus_new() -> *mut CRiHookBus {
     let bus = RiHookBus::new();
-    Box::into_raw(Box::new(CRiHookBus::new(bus)))
+    let ptr = Box::into_raw(Box::new(CRiHookBus::new(bus)));
+    crate::c::register_ptr(ptr as usize);
+    ptr
 }
 c_destructor!(ri_hook_bus_free, CRiHookBus);

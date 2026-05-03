@@ -367,7 +367,9 @@ pub extern "C" fn ri_protocol_config_set_security_level(config: *mut CRiProtocol
 // RiProtocolManager C bindings
 #[no_mangle]
 pub extern "C" fn ri_protocol_manager_new() -> *mut CRiProtocolManager {
-    Box::into_raw(Box::new(CRiProtocolManager::new(RiProtocolManager::new())))
+    let ptr = Box::into_raw(Box::new(CRiProtocolManager::new(RiProtocolManager::new())));
+    crate::c::register_ptr(ptr as usize);
+    ptr
 }
 c_destructor!(ri_protocol_manager_free, CRiProtocolManager);
 
@@ -455,7 +457,9 @@ pub extern "C" fn ri_protocol_manager_get_connection_count(manager: *mut CRiProt
 // RiFrame C bindings
 #[no_mangle]
 pub extern "C" fn ri_frame_new() -> *mut CRiFrame {
-    Box::into_raw(Box::new(CRiFrame::new(RiFrame::default())))
+    let ptr = Box::into_raw(Box::new(CRiFrame::new(RiFrame::default())));
+    crate::c::register_ptr(ptr as usize);
+    ptr
 }
 c_destructor!(ri_frame_free, CRiFrame);
 

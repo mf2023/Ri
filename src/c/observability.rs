@@ -269,7 +269,9 @@ c_destructor!(ri_observability_config_free, CRiObservabilityConfig);
 // RiTracer C bindings
 #[no_mangle]
 pub extern "C" fn ri_tracer_new(sampling_rate: f64) -> *mut CRiTracer {
-    Box::into_raw(Box::new(CRiTracer::new(RiTracer::new(sampling_rate))))
+    let ptr = Box::into_raw(Box::new(CRiTracer::new(RiTracer::new(sampling_rate))));
+    crate::c::register_ptr(ptr as usize);
+    ptr
 }
 c_destructor!(ri_tracer_free, CRiTracer);
 
@@ -406,7 +408,9 @@ pub extern "C" fn ri_tracer_get_active_span_count(tracer: *mut CRiTracer) -> usi
 // RiMetricsRegistry C bindings
 #[no_mangle]
 pub extern "C" fn ri_metrics_registry_new() -> *mut CRiMetricsRegistry {
-    Box::into_raw(Box::new(CRiMetricsRegistry::new(RiMetricsRegistry::new())))
+    let ptr = Box::into_raw(Box::new(CRiMetricsRegistry::new(RiMetricsRegistry::new())));
+    crate::c::register_ptr(ptr as usize);
+    ptr
 }
 c_destructor!(ri_metrics_registry_free, CRiMetricsRegistry);
 
@@ -475,7 +479,9 @@ c_wrapper!(CRiSystemMetrics, RiSystemMetrics);
 #[cfg(feature = "system_info")]
 #[no_mangle]
 pub extern "C" fn ri_system_metrics_new() -> *mut CRiSystemMetrics {
-    Box::into_raw(Box::new(CRiSystemMetrics::new(RiSystemMetrics::default())))
+    let ptr = Box::into_raw(Box::new(CRiSystemMetrics::new(RiSystemMetrics::default())));
+    crate::c::register_ptr(ptr as usize);
+    ptr
 }
 
 #[cfg(feature = "system_info")]
@@ -532,7 +538,9 @@ c_wrapper!(CRiSystemMetricsCollector, RiSystemMetricsCollector);
 #[cfg(feature = "system_info")]
 #[no_mangle]
 pub extern "C" fn ri_system_metrics_collector_new() -> *mut CRiSystemMetricsCollector {
-    Box::into_raw(Box::new(CRiSystemMetricsCollector::new(RiSystemMetricsCollector::new())))
+    let ptr = Box::into_raw(Box::new(CRiSystemMetricsCollector::new(RiSystemMetricsCollector::new())));
+    crate::c::register_ptr(ptr as usize);
+    ptr
 }
 
 #[cfg(feature = "system_info")]
@@ -549,7 +557,9 @@ pub extern "C" fn ri_system_metrics_collector_collect(
     }
     unsafe {
         let metrics = (*collector).inner.collect();
-        *out_metrics = Box::into_raw(Box::new(CRiSystemMetrics::new(metrics)));
+        let ptr = Box::into_raw(Box::new(CRiSystemMetrics::new(metrics)));
+        crate::c::register_ptr(ptr as usize);
+        *out_metrics = ptr;
         0
     }
 }

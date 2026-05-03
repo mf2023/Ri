@@ -243,6 +243,8 @@ c_wrapper!(CRiModuleEndpoint, RiModuleEndpoint);
 #[no_mangle]
 pub extern "C" fn ri_module_rpc_new() -> *mut CRiModuleRPC {
     let rpc = RiModuleRPC::new();
-    Box::into_raw(Box::new(CRiModuleRPC::new(rpc)))
+    let ptr = Box::into_raw(Box::new(CRiModuleRPC::new(rpc)));
+    crate::c::register_ptr(ptr as usize);
+    ptr
 }
 c_destructor!(ri_module_rpc_free, CRiModuleRPC);

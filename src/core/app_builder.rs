@@ -119,6 +119,7 @@ use crate::core::app_runtime::RiAppRuntime;
 /// ```
 
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
+#[derive(Clone)]
 pub struct RiAppBuilder {
     /// Vector of modules with their state, including both sync and async modules
     modules: Vec<ModuleSlot>, 
