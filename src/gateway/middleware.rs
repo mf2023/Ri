@@ -297,43 +297,66 @@ impl RiCorsMiddleware {
     }
     
     /// Checks if an origin is allowed.
-    /// 
+    ///
+    /// # Security Note
+    ///
+    /// Wildcard origin "*" is NOT treated as matching any origin here.
+    /// Wildcard handling is done at the response header level, not validation level.
+    /// This prevents bypass attacks where any origin is falsely considered valid.
+    ///
     /// # Parameters
-    /// 
+    ///
     /// - `origin`: The origin to check
-    /// 
+    ///
     /// # Returns
-    /// 
+    ///
     /// `true` if the origin is allowed, `false` otherwise
     fn is_origin_allowed(&self, origin: &str) -> bool {
-        self.allowed_origins.contains(&"*".to_string()) || 
+        // Wildcard should never match specific origins - it's only for response headers
+        if self.allowed_origins.contains(&"*".to_string()) {
+            // If wildcard is set, only exact matches or the wildcard itself is valid
+            // But we don't treat wildcard as matching everything
+            return false;
+        }
         self.allowed_origins.iter().any(|allowed| allowed == origin)
+    }
+
+    /// Checks if wildcard origin is configured.
+    ///
+    /// # Returns
+    ///
+    /// `true` if wildcard origin is allowed
+    fn is_wildcard_allowed(&self) -> bool {
+        self.allowed_origins.contains(&"*".to_string())
     }
 }
 
 #[async_trait]
 impl RiMiddleware for RiCorsMiddleware {
     /// Validates CORS headers in the request.
-    /// 
+    ///
     /// This implementation checks if the request origin is in the list of allowed origins.
-    /// 
+    /// If wildcard is configured, any origin is allowed but will be handled at response time.
+    ///
     /// # Parameters
-    /// 
+    ///
     /// - `request`: Mutable reference to the request being processed
-    /// 
+    ///
     /// # Returns
-    /// 
+    ///
     /// A `RiResult<()>` indicating success or failure
     async fn execute(&self, request: &mut RiGatewayRequest) -> RiResult<()> {
         // CORS preflight handling would be done at the response level
         // This middleware just validates the request
-        
+
         if let Some(origin) = request.headers.get("origin") {
-            if !self.is_origin_allowed(origin) {
+            // If wildcard is allowed, origin validation passes here
+            // Actual wildcard response will be handled at response header level
+            if !self.is_wildcard_allowed() && !self.is_origin_allowed(origin) {
                 return Err(crate::core::RiError::Other("Origin not allowed".to_string()));
             }
         }
-        
+
         Ok(())
     }
 

@@ -232,13 +232,15 @@ setup-deps:
 	elif command -v yum >/dev/null 2>&1 || command -v dnf >/dev/null 2>&1; then \
 		echo "Using yum/dnf (CentOS/RHEL/Fedora)"; \
 		if command -v dnf >/dev/null 2>&1; then PKGMGR=dnf; else PKGMGR=yum; fi; \
-		sudo $$PKGMGR install -y libcurl-devel openssl-devel libsasl2-devel gcc gcc-c++ make cmake git; \
-		if [ ! -f /usr/lib64/liboqs.so ] && [ ! -f /usr/local/lib64/liboqs.so ]; then \
+		sudo $$PKGMGR install -y libcurl-devel openssl-devel libsasl2-devel gcc gcc-c++ make cmake git ninja-build; \
+		if [ ! -f /usr/lib64/liboqs.so ] && [ ! -f /usr/local/lib64/liboqs.so ] && [ ! -f /usr/lib/x86_64-linux-gnu/liboqs.so ]; then \
 			echo "Building liboqs from source..."; \
-			cd /tmp && git clone --depth 1 https://github.com/open-quantum-safe/liboqs.git && \
-			cd liboqs && mkdir build && cd build && \
-			cmake -DCMAKE_INSTALL_PREFIX=/usr .. && \
-			make -j$$(nproc) && sudo make install && sudo ldconfig; \
+			cd /tmp && rm -rf liboqs && git clone --depth 1 https://github.com/open-quantum-safe/liboqs.git && \
+			cd liboqs && mkdir -p build && cd build && \
+			cmake -GNinja -DCMAKE_INSTALL_PREFIX=/usr .. && \
+			ninja && sudo ninja install && sudo ldconfig; \
+		else \
+			echo "liboqs already installed, skipping build"; \
 		fi; \
 	elif command -v brew >/dev/null 2>&1; then \
 		echo "Using brew (macOS)"; \

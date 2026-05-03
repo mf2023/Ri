@@ -367,20 +367,36 @@ pub extern "C" fn ri_queue_message_new(payload: *const c_char, payload_len: usiz
         let (payload_ptr, payload_cap, payload_len_val) = payload_vec.into_raw_parts();
         std::mem::forget(payload_vec); // Prevent drop of vec that now belongs to C
 
-        Box::into_raw(Box::new(CRiQueueMessage {
+        // Use into_raw_parts for proper memory ownership transfer
+        let mut payload_vec = message.payload.clone();
+        let (payload_ptr, _payload_cap, payload_len_val) = payload_vec.into_raw_parts();
+        std::mem::forget(payload_vec); // Prevent drop of vec that now belongs to C
+
+        let boxed_msg = Box::new(CRiQueueMessage {
             id,
             payload: payload_ptr,
             payload_len: payload_len_val,
             timestamp: 0,
             retry_count: message.retry_count,
             max_retries: message.max_retries,
-        }))
+        });
+        let ptr = Box::into_raw(boxed_msg);
+        crate::c::register_ptr(ptr as usize);
+        ptr
     }
 }
 
 #[no_mangle]
 pub extern "C" fn ri_queue_message_free(msg: *mut CRiQueueMessage) {
     if msg.is_null() {
+        return;
+    }
+
+    if !crate::c::unregister_ptr(msg as usize) {
+        log::warn!(
+            "[Ri.C] Attempted to free unregistered or already freed queue message: {:?}",
+            msg
+        );
         return;
     }
 
@@ -417,15 +433,27 @@ pub extern "C" fn ri_queue_message_get_payload(msg: *const CRiQueueMessage, out_
 #[no_mangle]
 pub extern "C" fn ri_queue_manager_new() -> *mut CRiQueueManager {
     let manager = RiQueueManager::default();
-    Box::into_raw(Box::new(CRiQueueManager::new(manager)))
+    let ptr = Box::into_raw(Box::new(CRiQueueManager::new(manager)));
+    crate::c::register_ptr(ptr as usize);
+    ptr
 }
 
 #[no_mangle]
 pub extern "C" fn ri_queue_manager_free(manager: *mut CRiQueueManager) {
-    if !manager.is_null() {
-        unsafe {
-            let _ = Box::from_raw(manager);
-        }
+    if manager.is_null() {
+        return;
+    }
+
+    if !crate::c::unregister_ptr(manager as usize) {
+        log::warn!(
+            "[Ri.C] Attempted to free unregistered or already freed queue manager: {:?}",
+            manager
+        );
+        return;
+    }
+
+    unsafe {
+        let _ = Box::from_raw(manager);
     }
 }
 

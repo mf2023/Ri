@@ -184,8 +184,7 @@ impl RiSession {
     pub fn touch(&mut self) {
         let now = SystemTime::now()
             .duration_since(UNIX_EPOCH)
-            .unwrap()
-            .as_secs();
+            .map_or(0, |d| d.as_secs());
         self.last_accessed = now;
     }
 

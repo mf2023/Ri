@@ -120,14 +120,164 @@ pub use revocation::{RiJWTRevocationList, RiRevokedTokenInfo};
 use crate::core::{RiResult, RiError, RiServiceContext};
 use rand::RngCore;
 use serde::Deserialize;
+use serde::Serialize;
+use std::collections::HashMap;
 use std::env;
 use std::sync::Arc;
+use std::time::{SystemTime, UNIX_EPOCH};
 use tokio::sync::RwLock;
 #[cfg(feature = "pyo3")]
 use tokio::runtime::Handle;
 
 const DEFAULT_JWT_SECRET_ENV: &str = "Ri_JWT_SECRET";
 const FALLBACK_SECRET_LENGTH: usize = 64;
+
+#[derive(Debug, Clone)]
+struct LoginAttempt {
+    count: u32,
+    first_attempt: u64,
+    locked_until: Option<u64>,
+}
+
+#[derive(Debug, Clone)]
+pub struct RiRateLimiter {
+    attempts: Arc<RwLock<HashMap<String, LoginAttempt>>>,
+    max_attempts: u32,
+    lockout_secs: u64,
+    window_secs: u64,
+}
+
+impl RiRateLimiter {
+    pub fn new(max_attempts: u32, lockout_secs: u64, window_secs: u64) -> Self {
+        Self {
+            attempts: Arc::new(RwLock::new(HashMap::new())),
+            max_attempts,
+            lockout_secs,
+            window_secs,
+        }
+    }
+
+    pub async fn check_and_record(&self, identifier: &str) -> Result<(), u64> {
+        let now = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap()
+            .as_secs();
+
+        let mut attempts = self.attempts.write().await;
+
+        if let Some(attempt) = attempts.get_mut(identifier) {
+            if let Some(locked_until) = attempt.locked_until {
+                if now < locked_until {
+                    return Err(locked_until - now);
+                }
+                attempts.remove(identifier);
+                return Ok(());
+            }
+
+            if now - attempt.first_attempt > self.window_secs {
+                attempts.remove(identifier);
+                return Ok(());
+            }
+
+            attempt.count += 1;
+            if attempt.count >= self.max_attempts {
+                attempt.locked_until = Some(now + self.lockout_secs);
+                return Err(self.lockout_secs);
+            }
+        } else {
+            attempts.insert(identifier.to_string(), LoginAttempt {
+                count: 1,
+                first_attempt: now,
+                locked_until: None,
+            });
+        }
+
+        Ok(())
+    }
+
+    pub async fn reset(&self, identifier: &str) {
+        self.attempts.write().await.remove(identifier);
+    }
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct RiAuditEvent {
+    pub timestamp: String,
+    pub event_type: String,
+    pub user_identifier: Option<String>,
+    pub ip_address: Option<String>,
+    pub action: String,
+    pub resource: Option<String>,
+    pub success: bool,
+    pub details: Option<String>,
+}
+
+impl RiAuditEvent {
+    pub fn new(event_type: &str, action: &str) -> Self {
+        Self {
+            timestamp: chrono::Utc::now().to_rfc3339(),
+            event_type: event_type.to_string(),
+            user_identifier: None,
+            ip_address: None,
+            action: action.to_string(),
+            resource: None,
+            success: true,
+            details: None,
+        }
+    }
+
+    pub fn with_user(mut self, user: &str) -> Self {
+        self.user_identifier = Some(user.to_string());
+        self
+    }
+
+    pub fn with_ip(mut self, ip: &str) -> Self {
+        self.ip_address = Some(ip.to_string());
+        self
+    }
+
+    pub fn with_resource(mut self, resource: &str) -> Self {
+        self.resource = Some(resource.to_string());
+        self
+    }
+
+    pub fn with_details(mut self, details: &str) -> Self {
+        self.details = Some(details.to_string());
+        self
+    }
+
+    pub fn with_success(mut self, success: bool) -> Self {
+        self.success = success;
+        self
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct RiAuditLogger {
+    events: Arc<RwLock<Vec<RiAuditEvent>>>,
+    max_events: usize,
+}
+
+impl RiAuditLogger {
+    pub fn new(max_events: usize) -> Self {
+        Self {
+            events: Arc::new(RwLock::new(Vec::with_capacity(max_events))),
+            max_events,
+        }
+    }
+
+    pub async fn log(&self, event: RiAuditEvent) {
+        let mut events = self.events.write().await;
+        if events.len() >= self.max_events {
+            events.remove(0);
+        }
+        events.push(event);
+    }
+
+    pub async fn get_events(&self) -> Vec<RiAuditEvent> {
+        self.events.read().await.clone()
+    }
+}
 
 fn load_jwt_secret_from_env() -> String {
     env::var(DEFAULT_JWT_SECRET_ENV).unwrap_or_else(|_| {
@@ -195,6 +345,12 @@ pub struct RiAuthConfig {
     /// Redis URL for OAuth token cache (used when backend is Redis)
     #[cfg(feature = "cache")]
     pub oauth_cache_redis_url: String,
+    /// Rate limiting: max login attempts per IP before lockout
+    pub rate_limit_max_login_attempts: u32,
+    /// Rate limiting: lockout duration in seconds after max attempts exceeded
+    pub rate_limit_lockout_secs: u64,
+    /// Rate limiting: window size in seconds for tracking attempts
+    pub rate_limit_window_secs: u64,
 }
 
 impl Default for RiAuthConfig {
@@ -211,12 +367,15 @@ impl Default for RiAuthConfig {
             oauth_cache_backend_type: crate::cache::RiCacheBackendType::Memory,
             #[cfg(feature = "cache")]
             oauth_cache_redis_url: "redis://127.0.0.1:6379".to_string(),
+            rate_limit_max_login_attempts: 5,
+            rate_limit_lockout_secs: 300,
+            rate_limit_window_secs: 900,
         }
     }
 }
 
 /// Main authentication module for Ri.
-/// 
+///
 /// This module provides comprehensive authentication and authorization functionality,
 /// including JWT management, session management, permission management, and OAuth integration.
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
@@ -233,6 +392,10 @@ pub struct RiAuthModule {
     oauth_manager: Arc<RwLock<RiOAuthManager>>,
     /// JWT token revocation list for token invalidation
     revocation_list: Arc<RiJWTRevocationList>,
+    /// Rate limiter for login attempts
+    rate_limiter: RiRateLimiter,
+    /// Audit logger for security events
+    audit_logger: RiAuditLogger,
 }
 
 impl RiAuthModule {
@@ -276,6 +439,12 @@ impl RiAuthModule {
         
         let oauth_manager = Arc::new(RwLock::new(RiOAuthManager::new(cache)));
         let revocation_list = Arc::new(RiJWTRevocationList::new());
+        let rate_limiter = RiRateLimiter::new(
+            config.rate_limit_max_login_attempts,
+            config.rate_limit_lockout_secs,
+            config.rate_limit_window_secs,
+        );
+        let audit_logger = RiAuditLogger::new(10000);
 
         Ok(Self {
             config,
@@ -284,6 +453,8 @@ impl RiAuthModule {
             permission_manager,
             oauth_manager,
             revocation_list,
+            rate_limiter,
+            audit_logger,
         })
     }
 
@@ -305,6 +476,12 @@ impl RiAuthModule {
         let cache = Arc::new(crate::cache::RiMemoryCache::new());
         let oauth_manager = Arc::new(RwLock::new(RiOAuthManager::new(cache)));
         let revocation_list = Arc::new(RiJWTRevocationList::new());
+        let rate_limiter = RiRateLimiter::new(
+            config.rate_limit_max_login_attempts,
+            config.rate_limit_lockout_secs,
+            config.rate_limit_window_secs,
+        );
+        let audit_logger = RiAuditLogger::new(10000);
 
         Self {
             config,
@@ -313,6 +490,8 @@ impl RiAuthModule {
             permission_manager,
             oauth_manager,
             revocation_list,
+            rate_limiter,
+            audit_logger,
         }
     }
 
@@ -355,6 +534,12 @@ impl RiAuthModule {
         
         let oauth_manager = Arc::new(RwLock::new(RiOAuthManager::new(cache)));
         let revocation_list = Arc::new(RiJWTRevocationList::new());
+        let rate_limiter = RiRateLimiter::new(
+            config.rate_limit_max_login_attempts,
+            config.rate_limit_lockout_secs,
+            config.rate_limit_window_secs,
+        );
+        let audit_logger = RiAuditLogger::new(10000);
 
         Ok(Self {
             config,
@@ -363,6 +548,8 @@ impl RiAuthModule {
             permission_manager,
             oauth_manager,
             revocation_list,
+            rate_limiter,
+            audit_logger,
         })
     }
 
@@ -373,6 +560,71 @@ impl RiAuthModule {
     /// An Arc<RiJWTRevocationList> providing thread-safe access to the token revocation list
     pub fn revocation_list(&self) -> Arc<RiJWTRevocationList> {
         self.revocation_list.clone()
+    }
+
+    /// Check if a login attempt from the given identifier (IP address or username) should be allowed.
+    ///
+    /// This method implements rate limiting for login attempts. If the rate limit is exceeded,
+    /// the method returns an error with the remaining lockout time in seconds.
+    ///
+    /// # Parameters
+    ///
+    /// - `identifier`: The identifier to check (typically IP address or username)
+    ///
+    /// # Returns
+    ///
+    /// - `Ok(())` if the attempt is allowed
+    /// - `Err(lockout_remaining_secs)` if the identifier is locked out
+    pub async fn check_rate_limit(&self, identifier: &str) -> Result<(), u64> {
+        self.rate_limiter.check_and_record(identifier).await
+    }
+
+    /// Reset the rate limit for a given identifier (e.g., after successful login).
+    ///
+    /// # Parameters
+    ///
+    /// - `identifier`: The identifier to reset
+    pub async fn reset_rate_limit(&self, identifier: &str) {
+        self.rate_limiter.reset(identifier).await;
+    }
+
+    /// Log an audit event for security tracking.
+    ///
+    /// # Parameters
+    ///
+    /// - `event`: The audit event to log
+    pub async fn log_audit_event(&self, event: RiAuditEvent) {
+        self.audit_logger.log(event).await;
+    }
+
+    /// Log a login attempt event.
+    ///
+    /// # Parameters
+    ///
+    /// - `username`: The username that attempted to log in
+    /// - `ip_address`: The IP address of the login attempt
+    /// - `success`: Whether the login was successful
+    /// - `reason`: Optional reason for failure or success
+    pub async fn log_login_attempt(&self, username: &str, ip_address: Option<&str>, success: bool, reason: Option<&str>) {
+        let mut event = RiAuditEvent::new("LOGIN_ATTEMPT", if success { "login_success" } else { "login_failure" });
+        event = event.with_user(username);
+        if let Some(ip) = ip_address {
+            event = event.with_ip(ip);
+        }
+        if let Some(r) = reason {
+            event = event.with_details(r);
+        }
+        event = event.with_success(success);
+        self.audit_logger.log(event).await;
+    }
+
+    /// Get recent audit events.
+    ///
+    /// # Returns
+    ///
+    /// A vector of recent audit events
+    pub async fn get_audit_events(&self) -> Vec<RiAuditEvent> {
+        self.audit_logger.get_events().await
     }
 
     /// Returns a reference to the JWT manager.

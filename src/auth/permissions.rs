@@ -353,6 +353,17 @@ impl RiPermissionManager {
             return Ok(false);
         }
 
+        // Security: Prevent assigning system roles without proper authorization
+        // System roles like "admin" have special privileges and should not be assignable
+        // by regular users to prevent privilege escalation attacks
+        if role.as_ref().map_or(false, |r| r.is_system) {
+            log::warn!(
+                "[Ri.Permission] Attempted to assign system role '{}' to user '{}' - blocked for security",
+                role_id, user_id
+            );
+            return Ok(false);
+        }
+
         // Security: Log all role assignments for audit
         log::info!(
             "[Ri.Permission] Assigning role '{}' to user '{}'",

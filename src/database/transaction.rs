@@ -185,10 +185,15 @@ impl<T: RiDatabase> Drop for DatabaseTransaction<T> {
     fn drop(&mut self) {
         if self.active {
             let _ = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-                let rt = tokio::runtime::Handle::current();
-                rt.block_on(async {
-                    let _ = self.rollback();
-                });
+                if let Ok(rt) = tokio::runtime::Handle::try_current() {
+                    rt.block_on(async {
+                        let _ = self.rollback();
+                    });
+                } else {
+                    log::warn!(
+                        "[Ri.Database] Transaction dropped without active runtime, rollback skipped"
+                    );
+                }
             }));
         }
     }

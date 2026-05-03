@@ -269,7 +269,11 @@ pub extern "C" fn ri_database_pool_new(config: *mut CRiDatabaseConfig) -> *mut C
     unsafe {
         let config = (*config).inner.clone();
         match rt.block_on(async { RiDatabasePool::new(config).await }) {
-            Ok(pool) => Box::into_raw(Box::new(CRiDatabasePool::new(pool))),
+            Ok(pool) => {
+                let ptr = Box::into_raw(Box::new(CRiDatabasePool::new(pool)));
+                crate::c::register_ptr(ptr as usize);
+                ptr
+            }
             Err(_) => std::ptr::null_mut(),
         }
     }
@@ -354,7 +358,9 @@ pub extern "C" fn ri_database_pool_query(
         match rt.block_on(async { (*pool).inner.get().await }) {
             Ok(db) => match rt.block_on(async { db.query(sql_str).await }) {
                 Ok(result) => {
-                    *out_result = Box::into_raw(Box::new(CRiDBResult::new(result)));
+                    let result_ptr = Box::into_raw(Box::new(CRiDBResult::new(result)));
+                    crate::c::register_ptr(result_ptr as usize);
+                    *out_result = result_ptr;
                     0
                 }
                 Err(_) => -4,
@@ -556,7 +562,9 @@ pub extern "C" fn ri_database_pool_query_params(
         match rt.block_on(async { (*pool).inner.get().await }) {
             Ok(db) => match rt.block_on(async { db.query_with_params(sql_str, &params).await }) {
                 Ok(result) => {
-                    *out_result = Box::into_raw(Box::new(CRiDBResult::new(result)));
+                    let result_ptr = Box::into_raw(Box::new(CRiDBResult::new(result)));
+                    crate::c::register_ptr(result_ptr as usize);
+                    *out_result = result_ptr;
                     0
                 }
                 Err(_) => -4,

@@ -236,9 +236,9 @@ impl RiWSServer {
             for session_info in sessions {
                 let last_heartbeat_time = chrono::DateTime::from_timestamp(session_info.last_heartbeat as i64, 0)
                     .unwrap_or_else(|| chrono::Utc::now());
-                let elapsed = last_heartbeat_time.signed_duration_since(chrono::Utc::now());
+                let elapsed = chrono::Utc::now().signed_duration_since(last_heartbeat_time);
                 let elapsed_secs = elapsed.num_seconds() as u64;
-                
+
                 if elapsed_secs > config.heartbeat_timeout {
                     if let Some(session) = session_manager.get_session(&session_info.session_id).await {
                         let _ = session.close().await;

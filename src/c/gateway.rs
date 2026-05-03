@@ -241,15 +241,27 @@ c_destructor!(ri_gateway_config_free, CRiGatewayConfig);
 #[no_mangle]
 pub extern "C" fn ri_router_new() -> *mut CRiRouter {
     let router = RiRouter::new();
-    Box::into_raw(Box::new(CRiRouter::new(router)))
+    let ptr = Box::into_raw(Box::new(CRiRouter::new(router)));
+    crate::c::register_ptr(ptr as usize);
+    ptr
 }
 
 #[no_mangle]
 pub extern "C" fn ri_router_free(router: *mut CRiRouter) {
-    if !router.is_null() {
-        unsafe {
-            let _ = Box::from_raw(router);
-        }
+    if router.is_null() {
+        return;
+    }
+
+    if !crate::c::unregister_ptr(router as usize) {
+        log::warn!(
+            "[Ri.C] Attempted to free unregistered or already freed router: {:?}",
+            router
+        );
+        return;
+    }
+
+    unsafe {
+        let _ = Box::from_raw(router);
     }
 }
 
