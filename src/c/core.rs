@@ -136,6 +136,7 @@ use crate::prelude::{RiAppBuilder, RiConfig};
 use crate::core::{RiServiceContext, RiHealthStatus, RiHealthCheckResult, RiHealthCheckConfig};
 use crate::core::error_chain::RiErrorChain;
 use crate::core::lock::RiLockError;
+use crate::c::{register_ptr, unregister_ptr, is_valid_ptr};
 use std::ffi::{c_char, CString, c_int};
 use std::time::SystemTime;
 
@@ -263,7 +264,9 @@ pub extern "C" fn ri_app_builder_new() -> *mut CRiAppBuilder {
     let builder = CRiAppBuilder {
         inner: RiAppBuilder::new(),
     };
-    Box::into_raw(Box::new(builder))
+    let ptr = Box::into_raw(Box::new(builder));
+    register_ptr(ptr as usize);
+    ptr
 }
 
 /// Frees a previously allocated CRiAppBuilder instance.
@@ -272,7 +275,7 @@ pub extern "C" fn ri_app_builder_new() -> *mut CRiAppBuilder {
 /// configurations, module references, or internal state. After this function
 /// returns, the pointer becomes invalid.
 ///
-/// # Parameters
+/// # Arguments
 ///
 /// - `builder`: Pointer to CRiAppBuilder to free. If NULL, the function
 ///   returns immediately without error.
@@ -292,10 +295,15 @@ pub extern "C" fn ri_app_builder_new() -> *mut CRiAppBuilder {
 /// already been freed results in undefined behavior.
 #[no_mangle]
 pub extern "C" fn ri_app_builder_free(builder: *mut CRiAppBuilder) {
-    if !builder.is_null() {
-        unsafe {
-            let _ = Box::from_raw(builder);
-        }
+    if builder.is_null() {
+        return;
+    }
+    if !unregister_ptr(builder as usize) {
+        log::warn!("ri_app_builder_free: Attempt to free invalid or already freed pointer: {:?}", builder);
+        return;
+    }
+    unsafe {
+        let _ = Box::from_raw(builder);
     }
 }
 
@@ -348,7 +356,9 @@ pub extern "C" fn ri_config_new() -> *mut CRiConfig {
     let config = CRiConfig {
         inner: RiConfig::new(),
     };
-    Box::into_raw(Box::new(config))
+    let ptr = Box::into_raw(Box::new(config));
+    register_ptr(ptr as usize);
+    ptr
 }
 
 /// Frees a previously allocated CRiConfig instance.
@@ -357,7 +367,7 @@ pub extern "C" fn ri_config_new() -> *mut CRiConfig {
 /// loaded values, watched files, or internal caches. After this function
 /// returns, the pointer becomes invalid.
 ///
-/// # Parameters
+/// # Arguments
 ///
 /// - `config`: Pointer to CRiConfig to free. If NULL, the function returns
 ///   immediately without error.
@@ -377,10 +387,15 @@ pub extern "C" fn ri_config_new() -> *mut CRiConfig {
 /// already been freed results in undefined behavior.
 #[no_mangle]
 pub extern "C" fn ri_config_free(config: *mut CRiConfig) {
-    if !config.is_null() {
-        unsafe {
-            let _ = Box::from_raw(config);
-        }
+    if config.is_null() {
+        return;
+    }
+    if !unregister_ptr(config as usize) {
+        log::warn!("ri_config_free: Attempt to free invalid or already freed pointer: {:?}", config);
+        return;
+    }
+    unsafe {
+        let _ = Box::from_raw(config);
     }
 }
 
@@ -442,6 +457,10 @@ pub extern "C" fn ri_config_get_string(
     if config.is_null() || key.is_null() {
         return std::ptr::null_mut();
     }
+    if !is_valid_ptr(config as usize) {
+        log::warn!("ri_config_get_string: Attempt to use invalid pointer: {:?}", config);
+        return std::ptr::null_mut();
+    }
 
     unsafe {
         let c = &(*config).inner;
@@ -470,7 +489,9 @@ pub extern "C" fn ri_service_context_new() -> *mut CRiServiceContext {
     match RiServiceContext::new_default() {
         Ok(ctx) => {
             let context = CRiServiceContext { inner: ctx };
-            Box::into_raw(Box::new(context))
+            let ptr = Box::into_raw(Box::new(context));
+            register_ptr(ptr as usize);
+            ptr
         }
         Err(_) => std::ptr::null_mut(),
     }
@@ -478,10 +499,15 @@ pub extern "C" fn ri_service_context_new() -> *mut CRiServiceContext {
 
 #[no_mangle]
 pub extern "C" fn ri_service_context_free(ctx: *mut CRiServiceContext) {
-    if !ctx.is_null() {
-        unsafe {
-            let _ = Box::from_raw(ctx);
-        }
+    if ctx.is_null() {
+        return;
+    }
+    if !unregister_ptr(ctx as usize) {
+        log::warn!("ri_service_context_free: Attempt to free invalid or already freed pointer: {:?}", ctx);
+        return;
+    }
+    unsafe {
+        let _ = Box::from_raw(ctx);
     }
 }
 
@@ -570,7 +596,9 @@ pub extern "C" fn ri_health_check_result_new(
         };
 
         let c_result = convert_health_check_result_to_c(result);
-        Box::into_raw(Box::new(c_result))
+        let ptr = Box::into_raw(Box::new(c_result));
+        register_ptr(ptr as usize);
+        ptr
     }
 }
 
@@ -615,16 +643,21 @@ fn convert_health_check_result_to_c(result: RiHealthCheckResult) -> CRiHealthChe
 
 #[no_mangle]
 pub extern "C" fn ri_health_check_result_free(result: *mut CRiHealthCheckResult) {
-    if !result.is_null() {
-        unsafe {
-            if !(*result).name.is_null() {
-                let _ = CString::from_raw((*result).name);
-            }
-            if !(*result).message.is_null() {
-                let _ = CString::from_raw((*result).message);
-            }
-            let _ = Box::from_raw(result);
+    if result.is_null() {
+        return;
+    }
+    if !unregister_ptr(result as usize) {
+        log::warn!("ri_health_check_result_free: Attempt to free invalid or already freed pointer: {:?}", result);
+        return;
+    }
+    unsafe {
+        if !(*result).name.is_null() {
+            let _ = CString::from_raw((*result).name);
         }
+        if !(*result).message.is_null() {
+            let _ = CString::from_raw((*result).message);
+        }
+        let _ = Box::from_raw(result);
     }
 }
 
@@ -686,15 +719,22 @@ pub extern "C" fn ri_health_report_new() -> *mut CRiHealthReport {
         unhealthy_count: 0,
         unknown_count: 0,
     };
-    Box::into_raw(Box::new(report))
+    let ptr = Box::into_raw(Box::new(report));
+    register_ptr(ptr as usize);
+    ptr
 }
 
 #[no_mangle]
 pub extern "C" fn ri_health_report_free(report: *mut CRiHealthReport) {
-    if !report.is_null() {
-        unsafe {
-            let _ = Box::from_raw(report);
-        }
+    if report.is_null() {
+        return;
+    }
+    if !unregister_ptr(report as usize) {
+        log::warn!("ri_health_report_free: Attempt to free invalid or already freed pointer: {:?}", report);
+        return;
+    }
+    unsafe {
+        let _ = Box::from_raw(report);
     }
 }
 
@@ -716,22 +756,33 @@ pub extern "C" fn ri_error_chain_new(message: *const c_char) -> *mut CRiErrorCha
         };
 
         let chain = crate::core::error_chain::utils::chain_from_msg(msg);
-        Box::into_raw(Box::new(CRiErrorChain { inner: chain }))
+        let ptr = Box::into_raw(Box::new(CRiErrorChain { inner: chain }));
+        register_ptr(ptr as usize);
+        ptr
     }
 }
 
 #[no_mangle]
 pub extern "C" fn ri_error_chain_free(chain: *mut CRiErrorChain) {
-    if !chain.is_null() {
-        unsafe {
-            let _ = Box::from_raw(chain);
-        }
+    if chain.is_null() {
+        return;
+    }
+    if !unregister_ptr(chain as usize) {
+        log::warn!("ri_error_chain_free: Attempt to free invalid or already freed pointer: {:?}", chain);
+        return;
+    }
+    unsafe {
+        let _ = Box::from_raw(chain);
     }
 }
 
 #[no_mangle]
 pub extern "C" fn ri_error_chain_get_context(chain: *const CRiErrorChain) -> *mut c_char {
     if chain.is_null() {
+        return std::ptr::null_mut();
+    }
+    if !is_valid_ptr(chain as usize) {
+        log::warn!("ri_error_chain_get_context: Attempt to use invalid pointer: {:?}", chain);
         return std::ptr::null_mut();
     }
 
@@ -747,6 +798,10 @@ pub extern "C" fn ri_error_chain_get_context(chain: *const CRiErrorChain) -> *mu
 #[no_mangle]
 pub extern "C" fn ri_error_chain_pretty_format(chain: *const CRiErrorChain) -> *mut c_char {
     if chain.is_null() {
+        return std::ptr::null_mut();
+    }
+    if !is_valid_ptr(chain as usize) {
+        log::warn!("ri_error_chain_pretty_format: Attempt to use invalid pointer: {:?}", chain);
         return std::ptr::null_mut();
     }
 
@@ -788,28 +843,39 @@ pub extern "C" fn ri_lock_error_new(context: *const c_char, is_poisoned: bool) -
             Err(_) => return std::ptr::null_mut(),
         };
 
-        Box::into_raw(Box::new(CRiLockError {
+        let ptr = Box::into_raw(Box::new(CRiLockError {
             context: c_context,
             is_poisoned: error.is_poisoned(),
-        }))
+        }));
+        register_ptr(ptr as usize);
+        ptr
     }
 }
 
 #[no_mangle]
 pub extern "C" fn ri_lock_error_free(error: *mut CRiLockError) {
-    if !error.is_null() {
-        unsafe {
-            if !(*error).context.is_null() {
-                let _ = CString::from_raw((*error).context);
-            }
-            let _ = Box::from_raw(error);
+    if error.is_null() {
+        return;
+    }
+    if !unregister_ptr(error as usize) {
+        log::warn!("ri_lock_error_free: Attempt to free invalid or already freed pointer: {:?}", error);
+        return;
+    }
+    unsafe {
+        if !(*error).context.is_null() {
+            let _ = CString::from_raw((*error).context);
         }
+        let _ = Box::from_raw(error);
     }
 }
 
 #[no_mangle]
 pub extern "C" fn ri_lock_error_get_context(error: *const CRiLockError) -> *mut c_char {
     if error.is_null() {
+        return std::ptr::null_mut();
+    }
+    if !is_valid_ptr(error as usize) {
+        log::warn!("ri_lock_error_get_context: Attempt to use invalid pointer: {:?}", error);
         return std::ptr::null_mut();
     }
 
@@ -827,6 +893,10 @@ pub extern "C" fn ri_lock_error_get_context(error: *const CRiLockError) -> *mut 
 #[no_mangle]
 pub extern "C" fn ri_lock_error_is_poisoned(error: *const CRiLockError) -> bool {
     if error.is_null() {
+        return false;
+    }
+    if !is_valid_ptr(error as usize) {
+        log::warn!("ri_lock_error_is_poisoned: Attempt to use invalid pointer: {:?}", error);
         return false;
     }
     unsafe { (*error).is_poisoned }

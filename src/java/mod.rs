@@ -34,6 +34,10 @@
 //! 3. **Error Handling**: Rust errors converted to Java exceptions
 //! 4. **Thread Safety**: Safe for concurrent access from Java
 
+use std::collections::HashSet;
+use std::sync::OnceLock;
+use std::sync::Mutex;
+
 pub mod jvm;
 pub mod converter;
 pub mod exception;
@@ -42,3 +46,37 @@ pub mod classes;
 pub use jvm::RiJavaContext;
 pub use converter::{JavaConvertible, ToJava, FromJava};
 pub use exception::{RiJavaException, throw_exception};
+
+/// Global pointer registry for JNI bindings
+static JNI_POINTER_REGISTRY: OnceLock<Arc<Mutex<HashSet<usize>>>> = OnceLock::new();
+
+/// Get the pointer registry
+fn get_jni_pointer_registry() -> &'static Arc<Mutex<HashSet<usize>>> {
+    JNI_POINTER_REGISTRY.get_or_init(|| Arc::new(Mutex::new(HashSet::new())))
+}
+
+/// Register a pointer in the registry
+pub fn register_jni_ptr(ptr: usize) {
+    let registry = get_jni_pointer_registry();
+    let mut set = registry.lock().unwrap();
+    set.insert(ptr);
+}
+
+/// Unregister a pointer from the registry
+pub fn unregister_jni_ptr(ptr: usize) {
+    let registry = get_jni_pointer_registry();
+    let mut set = registry.lock().unwrap();
+    set.remove(&ptr);
+}
+
+/// Check if a pointer is valid (registered and not null)
+pub fn is_jni_ptr_valid(ptr: usize) -> bool {
+    if ptr == 0 {
+        return false;
+    }
+    let registry = get_jni_pointer_registry();
+    let set = registry.lock().unwrap();
+    set.contains(&ptr)
+}
+
+use std::sync::Arc;

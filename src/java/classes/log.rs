@@ -24,7 +24,8 @@ use jni::objects::{JClass, JString};
 use jni::sys::{jlong, jboolean, jint, jfloat};
 use crate::log::{RiLogger, RiLogConfig, RiLogLevel};
 use crate::fs::RiFileSystem;
-use crate::java::exception::check_not_null;
+use crate::java::exception::{check_not_null, throw_illegal_argument};
+use crate::java::{register_jni_ptr, unregister_jni_ptr, is_jni_ptr_valid};
 
 // =============================================================================
 // RiLogger JNI Bindings
@@ -38,7 +39,9 @@ pub extern "system" fn Java_com_dunimd_ri_log_RiLogger_new0(
     let config = RiLogConfig::default();
     let fs = RiFileSystem::new_auto_root().unwrap_or_else(|_| RiFileSystem::new_with_root(std::env::current_dir().unwrap_or_default()));
     let logger = Box::new(RiLogger::new(&config, fs));
-    Box::into_raw(logger) as jlong
+    let ptr = Box::into_raw(logger);
+    register_jni_ptr(ptr as usize);
+    ptr as jlong
 }
 
 #[no_mangle]
@@ -47,7 +50,8 @@ pub extern "system" fn Java_com_dunimd_ri_log_RiLogger_free0(
     _class: JClass,
     ptr: jlong,
 ) {
-    if ptr != 0 {
+    if ptr != 0 && is_jni_ptr_valid(ptr as usize) {
+        unregister_jni_ptr(ptr as usize);
         unsafe {
             let _ = Box::from_raw(ptr as *mut RiLogger);
         }
@@ -63,6 +67,11 @@ pub extern "system" fn Java_com_dunimd_ri_log_RiLogger_debug0(
     message: JString,
 ) {
     if !check_not_null(&mut env, ptr, "RiLogger") {
+        return;
+    }
+    
+    if !is_jni_ptr_valid(ptr as usize) {
+        throw_illegal_argument(&mut env, "Invalid RiLogger pointer");
         return;
     }
     
@@ -89,6 +98,11 @@ pub extern "system" fn Java_com_dunimd_ri_log_RiLogger_info0(
         return;
     }
     
+    if !is_jni_ptr_valid(ptr as usize) {
+        throw_illegal_argument(&mut env, "Invalid RiLogger pointer");
+        return;
+    }
+    
     let logger = unsafe { &*(ptr as *const RiLogger) };
     let target_str: String = env.get_string(&target)
         .expect("Failed to get target")
@@ -109,6 +123,11 @@ pub extern "system" fn Java_com_dunimd_ri_log_RiLogger_warn0(
     message: JString,
 ) {
     if !check_not_null(&mut env, ptr, "RiLogger") {
+        return;
+    }
+    
+    if !is_jni_ptr_valid(ptr as usize) {
+        throw_illegal_argument(&mut env, "Invalid RiLogger pointer");
         return;
     }
     
@@ -135,6 +154,11 @@ pub extern "system" fn Java_com_dunimd_ri_log_RiLogger_error0(
         return;
     }
     
+    if !is_jni_ptr_valid(ptr as usize) {
+        throw_illegal_argument(&mut env, "Invalid RiLogger pointer");
+        return;
+    }
+    
     let logger = unsafe { &*(ptr as *const RiLogger) };
     let target_str: String = env.get_string(&target)
         .expect("Failed to get target")
@@ -156,7 +180,9 @@ pub extern "system" fn Java_com_dunimd_ri_log_RiLogConfig_new0(
     _class: JClass,
 ) -> jlong {
     let config = Box::new(RiLogConfig::default());
-    Box::into_raw(config) as jlong
+    let ptr = Box::into_raw(config);
+    register_jni_ptr(ptr as usize);
+    ptr as jlong
 }
 
 #[no_mangle]
@@ -167,6 +193,11 @@ pub extern "system" fn Java_com_dunimd_ri_log_RiLogConfig_setLevel0(
     level: jint,
 ) {
     if !check_not_null(&mut env, ptr, "RiLogConfig") {
+        return;
+    }
+    
+    if !is_jni_ptr_valid(ptr as usize) {
+        throw_illegal_argument(&mut env, "Invalid RiLogConfig pointer");
         return;
     }
     
@@ -191,6 +222,11 @@ pub extern "system" fn Java_com_dunimd_ri_log_RiLogConfig_setConsoleEnabled0(
         return;
     }
     
+    if !is_jni_ptr_valid(ptr as usize) {
+        throw_illegal_argument(&mut env, "Invalid RiLogConfig pointer");
+        return;
+    }
+    
     let config = unsafe { &mut *(ptr as *mut RiLogConfig) };
     config.console_enabled = enabled != 0;
 }
@@ -203,6 +239,11 @@ pub extern "system" fn Java_com_dunimd_ri_log_RiLogConfig_setFileEnabled0(
     enabled: jboolean,
 ) {
     if !check_not_null(&mut env, ptr, "RiLogConfig") {
+        return;
+    }
+    
+    if !is_jni_ptr_valid(ptr as usize) {
+        throw_illegal_argument(&mut env, "Invalid RiLogConfig pointer");
         return;
     }
     
@@ -221,6 +262,11 @@ pub extern "system" fn Java_com_dunimd_ri_log_RiLogConfig_setSamplingDefault0(
         return;
     }
     
+    if !is_jni_ptr_valid(ptr as usize) {
+        throw_illegal_argument(&mut env, "Invalid RiLogConfig pointer");
+        return;
+    }
+    
     let config = unsafe { &mut *(ptr as *mut RiLogConfig) };
     config.sampling_default = rate.clamp(0.0, 1.0);
 }
@@ -233,6 +279,11 @@ pub extern "system" fn Java_com_dunimd_ri_log_RiLogConfig_setFileName0(
     file_name: JString,
 ) {
     if !check_not_null(&mut env, ptr, "RiLogConfig") {
+        return;
+    }
+    
+    if !is_jni_ptr_valid(ptr as usize) {
+        throw_illegal_argument(&mut env, "Invalid RiLogConfig pointer");
         return;
     }
     
@@ -253,6 +304,11 @@ pub extern "system" fn Java_com_dunimd_ri_log_RiLogConfig_setJsonFormat0(
         return;
     }
     
+    if !is_jni_ptr_valid(ptr as usize) {
+        throw_illegal_argument(&mut env, "Invalid RiLogConfig pointer");
+        return;
+    }
+    
     let config = unsafe { &mut *(ptr as *mut RiLogConfig) };
     config.json_format = json_format != 0;
 }
@@ -265,6 +321,11 @@ pub extern "system" fn Java_com_dunimd_ri_log_RiLogConfig_setRotateWhen0(
     rotate_when: JString,
 ) {
     if !check_not_null(&mut env, ptr, "RiLogConfig") {
+        return;
+    }
+    
+    if !is_jni_ptr_valid(ptr as usize) {
+        throw_illegal_argument(&mut env, "Invalid RiLogConfig pointer");
         return;
     }
     
@@ -285,6 +346,11 @@ pub extern "system" fn Java_com_dunimd_ri_log_RiLogConfig_setMaxBytes0(
         return;
     }
     
+    if !is_jni_ptr_valid(ptr as usize) {
+        throw_illegal_argument(&mut env, "Invalid RiLogConfig pointer");
+        return;
+    }
+    
     let config = unsafe { &mut *(ptr as *mut RiLogConfig) };
     config.max_bytes = max_bytes as u64;
 }
@@ -300,6 +366,11 @@ pub extern "system" fn Java_com_dunimd_ri_log_RiLogConfig_setColorBlocks0(
         return;
     }
     
+    if !is_jni_ptr_valid(ptr as usize) {
+        throw_illegal_argument(&mut env, "Invalid RiLogConfig pointer");
+        return;
+    }
+    
     let config = unsafe { &mut *(ptr as *mut RiLogConfig) };
     config.color_blocks = color_blocks != 0;
 }
@@ -310,7 +381,8 @@ pub extern "system" fn Java_com_dunimd_ri_log_RiLogConfig_free0(
     _class: JClass,
     ptr: jlong,
 ) {
-    if ptr != 0 {
+    if ptr != 0 && is_jni_ptr_valid(ptr as usize) {
+        unregister_jni_ptr(ptr as usize);
         unsafe {
             let _ = Box::from_raw(ptr as *mut RiLogConfig);
         }

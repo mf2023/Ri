@@ -40,8 +40,10 @@ pub extern "system" fn Java_com_dunimd_ri_auth_RiAuthConfig_new0(
     _env: JNIEnv,
     _class: JClass,
 ) -> jlong {
-    let config = Box::new(RiAuthConfig::default());
-    Box::into_raw(config) as jlong
+    let config_boxed = Box::new(RiAuthConfig::default());
+    let config = Box::into_raw(config_boxed);
+    register_jni_ptr(config as usize);
+    config as jlong
 }
 
 #[no_mangle]
@@ -50,7 +52,8 @@ pub extern "system" fn Java_com_dunimd_ri_auth_RiAuthConfig_free0(
     _class: JClass,
     ptr: jlong,
 ) {
-    if ptr != 0 {
+    if ptr != 0 && is_jni_ptr_valid(ptr as usize) {
+        unregister_jni_ptr(ptr as usize);
         unsafe {
             let _ = Box::from_raw(ptr as *mut RiAuthConfig);
         }
@@ -85,7 +88,8 @@ pub extern "system" fn Java_com_dunimd_ri_auth_RiAuthModule_free0(
     _class: JClass,
     ptr: jlong,
 ) {
-    if ptr != 0 {
+    if ptr != 0 && is_jni_ptr_valid(ptr as usize) {
+        unregister_jni_ptr(ptr as usize);
         unsafe {
             let _ = Box::from_raw(ptr as *mut RiAuthModule);
         }
@@ -257,7 +261,8 @@ pub extern "system" fn Java_com_dunimd_ri_auth_RiJWTClaims_free0(
     _class: JClass,
     ptr: jlong,
 ) {
-    if ptr != 0 {
+    if ptr != 0 && is_jni_ptr_valid(ptr as usize) {
+        unregister_jni_ptr(ptr as usize);
         unsafe {
             let _ = Box::from_raw(ptr as *mut RiJWTClaims);
         }
@@ -273,8 +278,10 @@ pub extern "system" fn Java_com_dunimd_ri_auth_RiJWTValidationOptions_new0(
     _env: JNIEnv,
     _class: JClass,
 ) -> jlong {
-    let options = Box::new(RiJWTValidationOptions::default());
-    Box::into_raw(options) as jlong
+    let options_boxed = Box::new(RiJWTValidationOptions::default());
+    let options = Box::into_raw(options_boxed);
+    register_jni_ptr(options as usize);
+    options as jlong
 }
 
 #[no_mangle]
@@ -463,7 +470,8 @@ pub extern "system" fn Java_com_dunimd_ri_auth_RiJWTValidationOptions_free0(
     _class: JClass,
     ptr: jlong,
 ) {
-    if ptr != 0 {
+    if ptr != 0 && is_jni_ptr_valid(ptr as usize) {
+        unregister_jni_ptr(ptr as usize);
         unsafe {
             let _ = Box::from_raw(ptr as *mut RiJWTValidationOptions);
         }
@@ -520,8 +528,10 @@ pub extern "system" fn Java_com_dunimd_ri_auth_RiJWTManager_validateToken0(
 
     match manager.validate_token(&token_str) {
         Ok(claims) => {
-            let claims_box = Box::new(claims);
-            Box::into_raw(claims_box) as jlong
+    let claims_box_boxed = Box::new(claims);
+    let claims_box = Box::into_raw(claims_box_boxed);
+    register_jni_ptr(claims_box as usize);
+            claims_box as jlong
         }
         Err(_) => 0,
     }
@@ -711,7 +721,8 @@ pub extern "system" fn Java_com_dunimd_ri_auth_RiSession_free0(
     _class: JClass,
     ptr: jlong,
 ) {
-    if ptr != 0 {
+    if ptr != 0 && is_jni_ptr_valid(ptr as usize) {
+        unregister_jni_ptr(ptr as usize);
         unsafe {
             let _ = Box::from_raw(ptr as *mut RiSession);
         }
@@ -728,8 +739,10 @@ pub extern "system" fn Java_com_dunimd_ri_auth_RiSessionManager_new0(
     _class: JClass,
     timeout_secs: jlong,
 ) -> jlong {
-    let manager = Box::new(RiSessionManager::new(timeout_secs as u64));
-    Box::into_raw(manager) as jlong
+    let manager_boxed = Box::new(RiSessionManager::new(timeout_secs as u64));
+    let manager = Box::into_raw(manager_boxed);
+    register_jni_ptr(manager as usize);
+    manager as jlong
 }
 
 #[no_mangle]
@@ -801,8 +814,10 @@ pub extern "system" fn Java_com_dunimd_ri_auth_RiSessionManager_getSession0(
     let rt = tokio::runtime::Runtime::new().expect("Failed to create runtime");
     match rt.block_on(async { manager.get_session(&session_id_str).await }) {
         Ok(Some(session)) => {
-            let session_box = Box::new(session);
-            Box::into_raw(session_box) as jlong
+    let session_box_boxed = Box::new(session);
+    let session_box = Box::into_raw(session_box_boxed);
+    register_jni_ptr(session_box as usize);
+            session_box as jlong
         }
         _ => 0,
     }
@@ -907,7 +922,8 @@ pub extern "system" fn Java_com_dunimd_ri_auth_RiSessionManager_free0(
     _class: JClass,
     ptr: jlong,
 ) {
-    if ptr != 0 {
+    if ptr != 0 && is_jni_ptr_valid(ptr as usize) {
+        unregister_jni_ptr(ptr as usize);
         unsafe {
             let _ = Box::from_raw(ptr as *mut RiSessionManager);
         }
@@ -1039,7 +1055,8 @@ pub extern "system" fn Java_com_dunimd_ri_auth_RiPermission_free0(
     _class: JClass,
     ptr: jlong,
 ) {
-    if ptr != 0 {
+    if ptr != 0 && is_jni_ptr_valid(ptr as usize) {
+        unregister_jni_ptr(ptr as usize);
         unsafe {
             let _ = Box::from_raw(ptr as *mut RiPermission);
         }
@@ -1236,7 +1253,8 @@ pub extern "system" fn Java_com_dunimd_ri_auth_RiRole_free0(
     _class: JClass,
     ptr: jlong,
 ) {
-    if ptr != 0 {
+    if ptr != 0 && is_jni_ptr_valid(ptr as usize) {
+        unregister_jni_ptr(ptr as usize);
         unsafe {
             let _ = Box::from_raw(ptr as *mut RiRole);
         }
@@ -1252,8 +1270,10 @@ pub extern "system" fn Java_com_dunimd_ri_auth_RiPermissionManager_new0(
     _env: JNIEnv,
     _class: JClass,
 ) -> jlong {
-    let manager = Box::new(RiPermissionManager::new());
-    Box::into_raw(manager) as jlong
+    let manager_boxed = Box::new(RiPermissionManager::new());
+    let manager = Box::into_raw(manager_boxed);
+    register_jni_ptr(manager as usize);
+    manager as jlong
 }
 
 #[no_mangle]
@@ -1297,8 +1317,10 @@ pub extern "system" fn Java_com_dunimd_ri_auth_RiPermissionManager_getPermission
     let rt = tokio::runtime::Runtime::new().expect("Failed to create runtime");
     match rt.block_on(async { manager.get_permission(&perm_id_str).await }) {
         Ok(Some(perm)) => {
-            let perm_box = Box::new(perm);
-            Box::into_raw(perm_box) as jlong
+    let perm_box_boxed = Box::new(perm);
+    let perm_box = Box::into_raw(perm_box_boxed);
+    register_jni_ptr(perm_box as usize);
+            perm_box as jlong
         }
         _ => 0,
     }
@@ -1345,8 +1367,10 @@ pub extern "system" fn Java_com_dunimd_ri_auth_RiPermissionManager_getRole0(
     let rt = tokio::runtime::Runtime::new().expect("Failed to create runtime");
     match rt.block_on(async { manager.get_role(&role_id_str).await }) {
         Ok(Some(role)) => {
-            let role_box = Box::new(role);
-            Box::into_raw(role_box) as jlong
+    let role_box_boxed = Box::new(role);
+    let role_box = Box::into_raw(role_box_boxed);
+    register_jni_ptr(role_box as usize);
+            role_box as jlong
         }
         _ => 0,
     }
@@ -1670,7 +1694,8 @@ pub extern "system" fn Java_com_dunimd_ri_auth_RiPermissionManager_free0(
     _class: JClass,
     ptr: jlong,
 ) {
-    if ptr != 0 {
+    if ptr != 0 && is_jni_ptr_valid(ptr as usize) {
+        unregister_jni_ptr(ptr as usize);
         unsafe {
             let _ = Box::from_raw(ptr as *mut RiPermissionManager);
         }
@@ -1930,7 +1955,8 @@ pub extern "system" fn Java_com_dunimd_ri_auth_RiOAuthProvider_free0(
     _class: JClass,
     ptr: jlong,
 ) {
-    if ptr != 0 {
+    if ptr != 0 && is_jni_ptr_valid(ptr as usize) {
+        unregister_jni_ptr(ptr as usize);
         unsafe {
             let _ = Box::from_raw(ptr as *mut RiOAuthProvider);
         }
@@ -2076,7 +2102,8 @@ pub extern "system" fn Java_com_dunimd_ri_auth_RiOAuthToken_free0(
     _class: JClass,
     ptr: jlong,
 ) {
-    if ptr != 0 {
+    if ptr != 0 && is_jni_ptr_valid(ptr as usize) {
+        unregister_jni_ptr(ptr as usize);
         unsafe {
             let _ = Box::from_raw(ptr as *mut RiOAuthToken);
         }
@@ -2222,7 +2249,8 @@ pub extern "system" fn Java_com_dunimd_ri_auth_RiOAuthUserInfo_free0(
     _class: JClass,
     ptr: jlong,
 ) {
-    if ptr != 0 {
+    if ptr != 0 && is_jni_ptr_valid(ptr as usize) {
+        unregister_jni_ptr(ptr as usize);
         unsafe {
             let _ = Box::from_raw(ptr as *mut RiOAuthUserInfo);
         }
@@ -2240,10 +2268,14 @@ pub extern "system" fn Java_com_dunimd_ri_auth_RiOAuthManager_new0(
 ) -> jlong {
     use crate::cache::RiMemoryCache;
     use std::sync::Arc;
+use crate::java::exception::throw_illegal_argument;
+use crate::java::{register_jni_ptr, unregister_jni_ptr, is_jni_ptr_valid};
 
     let cache = Arc::new(RiMemoryCache::new());
-    let manager = Box::new(RiOAuthManager::new(cache));
-    Box::into_raw(manager) as jlong
+    let manager_boxed = Box::new(RiOAuthManager::new(cache));
+    let manager = Box::into_raw(manager_boxed);
+    register_jni_ptr(manager as usize);
+    manager as jlong
 }
 
 #[no_mangle]
@@ -2287,8 +2319,10 @@ pub extern "system" fn Java_com_dunimd_ri_auth_RiOAuthManager_getProvider0(
     let rt = tokio::runtime::Runtime::new().expect("Failed to create runtime");
     match rt.block_on(async { manager.get_provider(&provider_id_str).await }) {
         Ok(Some(provider)) => {
-            let provider_box = Box::new(provider);
-            Box::into_raw(provider_box) as jlong
+    let provider_box_boxed = Box::new(provider);
+    let provider_box = Box::into_raw(provider_box_boxed);
+    register_jni_ptr(provider_box as usize);
+            provider_box as jlong
         }
         _ => 0,
     }
@@ -2354,8 +2388,10 @@ pub extern "system" fn Java_com_dunimd_ri_auth_RiOAuthManager_exchangeCodeForTok
             .await
     }) {
         Ok(Some(token)) => {
-            let token_box = Box::new(token);
-            Box::into_raw(token_box) as jlong
+    let token_box_boxed = Box::new(token);
+    let token_box = Box::into_raw(token_box_boxed);
+    register_jni_ptr(token_box as usize);
+            token_box as jlong
         }
         _ => 0,
     }
@@ -2390,8 +2426,10 @@ pub extern "system" fn Java_com_dunimd_ri_auth_RiOAuthManager_getUserInfo0(
             .await
     }) {
         Ok(Some(user_info)) => {
-            let user_info_box = Box::new(user_info);
-            Box::into_raw(user_info_box) as jlong
+    let user_info_box_boxed = Box::new(user_info);
+    let user_info_box = Box::into_raw(user_info_box_boxed);
+    register_jni_ptr(user_info_box as usize);
+            user_info_box as jlong
         }
         _ => 0,
     }
@@ -2426,8 +2464,10 @@ pub extern "system" fn Java_com_dunimd_ri_auth_RiOAuthManager_refreshToken0(
             .await
     }) {
         Ok(Some(token)) => {
-            let token_box = Box::new(token);
-            Box::into_raw(token_box) as jlong
+    let token_box_boxed = Box::new(token);
+    let token_box = Box::into_raw(token_box_boxed);
+    register_jni_ptr(token_box as usize);
+            token_box as jlong
         }
         _ => 0,
     }
@@ -2569,7 +2609,8 @@ pub extern "system" fn Java_com_dunimd_ri_auth_RiOAuthManager_free0(
     _class: JClass,
     ptr: jlong,
 ) {
-    if ptr != 0 {
+    if ptr != 0 && is_jni_ptr_valid(ptr as usize) {
+        unregister_jni_ptr(ptr as usize);
         unsafe {
             let _ = Box::from_raw(ptr as *mut RiOAuthManager);
         }
@@ -2704,7 +2745,8 @@ pub extern "system" fn Java_com_dunimd_ri_auth_RiRevokedTokenInfo_free0(
     _class: JClass,
     ptr: jlong,
 ) {
-    if ptr != 0 {
+    if ptr != 0 && is_jni_ptr_valid(ptr as usize) {
+        unregister_jni_ptr(ptr as usize);
         unsafe {
             let _ = Box::from_raw(ptr as *mut RiRevokedTokenInfo);
         }
@@ -2720,8 +2762,10 @@ pub extern "system" fn Java_com_dunimd_ri_auth_RiJWTRevocationList_new0(
     _env: JNIEnv,
     _class: JClass,
 ) -> jlong {
-    let list = Box::new(RiJWTRevocationList::new());
-    Box::into_raw(list) as jlong
+    let list_boxed = Box::new(RiJWTRevocationList::new());
+    let list = Box::into_raw(list_boxed);
+    register_jni_ptr(list as usize);
+    list as jlong
 }
 
 #[no_mangle]
@@ -2819,8 +2863,10 @@ pub extern "system" fn Java_com_dunimd_ri_auth_RiJWTRevocationList_getRevocation
 
     match list.get_revocation_info(&token_str) {
         Some(info) => {
-            let info_box = Box::new(info);
-            Box::into_raw(info_box) as jlong
+    let info_box_boxed = Box::new(info);
+    let info_box = Box::into_raw(info_box_boxed);
+    register_jni_ptr(info_box as usize);
+            info_box as jlong
         }
         None => 0,
     }
@@ -2878,7 +2924,8 @@ pub extern "system" fn Java_com_dunimd_ri_auth_RiJWTRevocationList_free0(
     _class: JClass,
     ptr: jlong,
 ) {
-    if ptr != 0 {
+    if ptr != 0 && is_jni_ptr_valid(ptr as usize) {
+        unregister_jni_ptr(ptr as usize);
         unsafe {
             let _ = Box::from_raw(ptr as *mut RiJWTRevocationList);
         }

@@ -23,14 +23,18 @@ use jni::JNIEnv;
 use jni::objects::JClass;
 use jni::sys::jlong;
 use crate::fs::RiFileSystem;
+use crate::java::exception::throw_illegal_argument;
+use crate::java::{register_jni_ptr, unregister_jni_ptr, is_jni_ptr_valid};
 
 #[no_mangle]
 pub extern "system" fn Java_com_dunimd_ri_fs_RiFileSystem_new0(
     _env: JNIEnv,
     _class: JClass,
 ) -> jlong {
-    let fs = Box::new(RiFileSystem::new_auto_root().unwrap_or_else(|_| RiFileSystem::new_with_root(std::env::current_dir().unwrap_or_default())));
-    Box::into_raw(fs) as jlong
+    let fs_boxed = Box::new(RiFileSystem::new_auto_root().unwrap_or_else(|_| RiFileSystem::new_with_root(std::env::current_dir().unwrap_or_default())));
+    let ptr = Box::into_raw(fs_boxed);
+    register_jni_ptr(ptr as usize);
+    ptr as jlong
 }
 
 #[no_mangle]
@@ -39,7 +43,8 @@ pub extern "system" fn Java_com_dunimd_ri_fs_RiFileSystem_free0(
     _class: JClass,
     ptr: jlong,
 ) {
-    if ptr != 0 {
+    if ptr != 0 && is_jni_ptr_valid(ptr as usize) {
+        unregister_jni_ptr(ptr as usize);
         unsafe {
             let _ = Box::from_raw(ptr as *mut RiFileSystem);
         }

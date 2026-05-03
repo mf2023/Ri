@@ -23,7 +23,8 @@ use jni::JNIEnv;
 use jni::objects::{JClass, JString};
 use jni::sys::{jlong, jboolean, jstring, jint};
 use crate::core::{RiAppBuilder, RiAppRuntime, RiError, RiServiceContext, RiHealthStatus, RiHealthCheckResult, RiHealthCheckConfig, RiHealthReport, RiHealthChecker, RiErrorChain, RiLockError, RiLifecycleObserver, RiLogAnalyticsModule};
-use crate::java::exception::{throw_ri_error, check_not_null};
+use crate::java::exception::{throw_ri_error, check_not_null, throw_illegal_argument};
+use crate::java::{register_jni_ptr, unregister_jni_ptr, is_jni_ptr_valid};
 use crate::config::RiConfig;
 use std::time::Duration;
 
@@ -37,7 +38,9 @@ pub extern "system" fn Java_com_dunimd_ri_RiAppBuilder_new0(
     _class: JClass,
 ) -> jlong {
     let builder = Box::new(RiAppBuilder::new());
-    Box::into_raw(builder) as jlong
+    let ptr = Box::into_raw(builder);
+    register_jni_ptr(ptr as usize);
+    ptr as jlong
 }
 
 #[no_mangle]
@@ -51,7 +54,12 @@ pub extern "system" fn Java_com_dunimd_ri_RiAppBuilder_withConfig(
         return 0;
     }
     
-    let builder = unsafe { Box::from_raw(ptr as *mut RiAppBuilder) };
+    if !is_jni_ptr_valid(ptr as usize) {
+        throw_illegal_argument(&mut env, "Invalid RiAppBuilder pointer");
+        return 0;
+    }
+    
+    let builder = unsafe { &*(ptr as *const RiAppBuilder) };
     let path: String = env.get_string(&config_path)
         .expect("Failed to get config path")
         .into();
@@ -59,7 +67,9 @@ pub extern "system" fn Java_com_dunimd_ri_RiAppBuilder_withConfig(
     match builder.with_config(&path) {
         Ok(new_builder) => {
             let boxed = Box::new(new_builder);
-            Box::into_raw(boxed) as jlong
+            let new_ptr = Box::into_raw(boxed);
+            register_jni_ptr(new_ptr as usize);
+            new_ptr as jlong
         }
         Err(e) => {
             throw_ri_error(&mut env, &e.to_string());
@@ -78,12 +88,19 @@ pub extern "system" fn Java_com_dunimd_ri_RiAppBuilder_build(
         return 0;
     }
     
-    let builder = unsafe { Box::from_raw(ptr as *mut RiAppBuilder) };
+    if !is_jni_ptr_valid(ptr as usize) {
+        throw_illegal_argument(&mut env, "Invalid RiAppBuilder pointer");
+        return 0;
+    }
+    
+    let builder = unsafe { &*(ptr as *const RiAppBuilder) };
     
     match builder.build() {
         Ok(runtime) => {
             let boxed = Box::new(runtime);
-            Box::into_raw(boxed) as jlong
+            let new_ptr = Box::into_raw(boxed);
+            register_jni_ptr(new_ptr as usize);
+            new_ptr as jlong
         }
         Err(e) => {
             throw_ri_error(&mut env, &e.to_string());
@@ -98,7 +115,8 @@ pub extern "system" fn Java_com_dunimd_ri_RiAppBuilder_free0(
     _class: JClass,
     ptr: jlong,
 ) {
-    if ptr != 0 {
+    if ptr != 0 && is_jni_ptr_valid(ptr as usize) {
+        unregister_jni_ptr(ptr as usize);
         unsafe {
             let _ = Box::from_raw(ptr as *mut RiAppBuilder);
         }
@@ -115,7 +133,8 @@ pub extern "system" fn Java_com_dunimd_ri_RiAppRuntime_free0(
     _class: JClass,
     ptr: jlong,
 ) {
-    if ptr != 0 {
+    if ptr != 0 && is_jni_ptr_valid(ptr as usize) {
+        unregister_jni_ptr(ptr as usize);
         unsafe {
             let _ = Box::from_raw(ptr as *mut RiAppRuntime);
         }
@@ -129,6 +148,11 @@ pub extern "system" fn Java_com_dunimd_ri_RiAppRuntime_isRunning(
     ptr: jlong,
 ) -> jboolean {
     if !check_not_null(&mut env, ptr, "RiAppRuntime") {
+        return 0;
+    }
+    
+    if !is_jni_ptr_valid(ptr as usize) {
+        throw_illegal_argument(&mut env, "Invalid RiAppRuntime pointer");
         return 0;
     }
     
@@ -146,6 +170,11 @@ pub extern "system" fn Java_com_dunimd_ri_RiAppRuntime_shutdown(
         return;
     }
     
+    if !is_jni_ptr_valid(ptr as usize) {
+        throw_illegal_argument(&mut env, "Invalid RiAppRuntime pointer");
+        return;
+    }
+    
     let _runtime = unsafe { &*(ptr as *const RiAppRuntime) };
 }
 
@@ -159,7 +188,9 @@ pub extern "system" fn Java_com_dunimd_ri_RiConfig_new0(
     _class: JClass,
 ) -> jlong {
     let config = Box::new(RiConfig::default());
-    Box::into_raw(config) as jlong
+    let ptr = Box::into_raw(config);
+    register_jni_ptr(ptr as usize);
+    ptr as jlong
 }
 
 #[no_mangle]
@@ -168,7 +199,8 @@ pub extern "system" fn Java_com_dunimd_ri_RiConfig_free0(
     _class: JClass,
     ptr: jlong,
 ) {
-    if ptr != 0 {
+    if ptr != 0 && is_jni_ptr_valid(ptr as usize) {
+        unregister_jni_ptr(ptr as usize);
         unsafe {
             let _ = Box::from_raw(ptr as *mut RiConfig);
         }
@@ -183,6 +215,11 @@ pub extern "system" fn Java_com_dunimd_ri_RiConfig_get(
     key: JString,
 ) -> jstring {
     if !check_not_null(&mut env, ptr, "RiConfig") {
+        return std::ptr::null_mut();
+    }
+    
+    if !is_jni_ptr_valid(ptr as usize) {
+        throw_illegal_argument(&mut env, "Invalid RiConfig pointer");
         return std::ptr::null_mut();
     }
     
@@ -215,6 +252,11 @@ pub extern "system" fn Java_com_dunimd_ri_RiError_getMessage(
         return std::ptr::null_mut();
     }
     
+    if !is_jni_ptr_valid(ptr as usize) {
+        throw_illegal_argument(&mut env, "Invalid RiError pointer");
+        return std::ptr::null_mut();
+    }
+    
     let error = unsafe { &*(ptr as *const RiError) };
     env.new_string(error.to_string())
         .expect("Failed to create Java string")
@@ -227,7 +269,8 @@ pub extern "system" fn Java_com_dunimd_ri_RiError_free0(
     _class: JClass,
     ptr: jlong,
 ) {
-    if ptr != 0 {
+    if ptr != 0 && is_jni_ptr_valid(ptr as usize) {
+        unregister_jni_ptr(ptr as usize);
         unsafe {
             let _ = Box::from_raw(ptr as *mut RiError);
         }
@@ -246,7 +289,9 @@ pub extern "system" fn Java_com_dunimd_ri_RiServiceContext_new0(
     match RiServiceContext::new_default() {
         Ok(ctx) => {
             let boxed = Box::new(ctx);
-            Box::into_raw(boxed) as jlong
+            let ptr = Box::into_raw(boxed);
+            register_jni_ptr(ptr as usize);
+            ptr as jlong
         }
         Err(e) => {
             throw_ri_error(&mut env, &e.to_string());
@@ -265,10 +310,17 @@ pub extern "system" fn Java_com_dunimd_ri_RiServiceContext_logger0(
         return 0;
     }
     
+    if !is_jni_ptr_valid(ptr as usize) {
+        throw_illegal_argument(&mut env, "Invalid RiServiceContext pointer");
+        return 0;
+    }
+    
     let ctx = unsafe { &*(ptr as *const RiServiceContext) };
     let logger = ctx.logger().clone();
     let boxed = Box::new(logger);
-    Box::into_raw(boxed) as jlong
+    let new_ptr = Box::into_raw(boxed);
+    register_jni_ptr(new_ptr as usize);
+    new_ptr as jlong
 }
 
 #[no_mangle]
@@ -281,11 +333,18 @@ pub extern "system" fn Java_com_dunimd_ri_RiServiceContext_config0(
         return 0;
     }
     
+    if !is_jni_ptr_valid(ptr as usize) {
+        throw_illegal_argument(&mut env, "Invalid RiServiceContext pointer");
+        return 0;
+    }
+    
     let ctx = unsafe { &*(ptr as *const RiServiceContext) };
     let config_manager = ctx.config();
     let config = (*config_manager).config().clone();
     let boxed = Box::new(config);
-    Box::into_raw(boxed) as jlong
+    let new_ptr = Box::into_raw(boxed);
+    register_jni_ptr(new_ptr as usize);
+    new_ptr as jlong
 }
 
 #[no_mangle]
@@ -298,10 +357,17 @@ pub extern "system" fn Java_com_dunimd_ri_RiServiceContext_fs0(
         return 0;
     }
     
+    if !is_jni_ptr_valid(ptr as usize) {
+        throw_illegal_argument(&mut env, "Invalid RiServiceContext pointer");
+        return 0;
+    }
+    
     let ctx = unsafe { &*(ptr as *const RiServiceContext) };
     let fs = ctx.fs().clone();
     let boxed = Box::new(fs);
-    Box::into_raw(boxed) as jlong
+    let new_ptr = Box::into_raw(boxed);
+    register_jni_ptr(new_ptr as usize);
+    new_ptr as jlong
 }
 
 #[no_mangle]
@@ -314,11 +380,18 @@ pub extern "system" fn Java_com_dunimd_ri_RiServiceContext_hooks0(
         return 0;
     }
     
+    if !is_jni_ptr_valid(ptr as usize) {
+        throw_illegal_argument(&mut env, "Invalid RiServiceContext pointer");
+        return 0;
+    }
+    
     let ctx = unsafe { &*(ptr as *const RiServiceContext) };
     let hooks = ctx.hooks();
     let hooks_inner = (*hooks).clone();
     let boxed = Box::new(hooks_inner);
-    Box::into_raw(boxed) as jlong
+    let new_ptr = Box::into_raw(boxed);
+    register_jni_ptr(new_ptr as usize);
+    new_ptr as jlong
 }
 
 #[no_mangle]
@@ -327,7 +400,8 @@ pub extern "system" fn Java_com_dunimd_ri_RiServiceContext_free0(
     _class: JClass,
     ptr: jlong,
 ) {
-    if ptr != 0 {
+    if ptr != 0 && is_jni_ptr_valid(ptr as usize) {
+        unregister_jni_ptr(ptr as usize);
         unsafe {
             let _ = Box::from_raw(ptr as *mut RiServiceContext);
         }
@@ -372,7 +446,9 @@ pub extern "system" fn Java_com_dunimd_ri_RiHealthCheckResult_new0(
     };
     
     let boxed = Box::new(result);
-    Box::into_raw(boxed) as jlong
+    let ptr = Box::into_raw(boxed);
+    register_jni_ptr(ptr as usize);
+    ptr as jlong
 }
 
 #[no_mangle]
@@ -382,6 +458,11 @@ pub extern "system" fn Java_com_dunimd_ri_RiHealthCheckResult_getName0(
     ptr: jlong,
 ) -> jstring {
     if !check_not_null(&mut env, ptr, "RiHealthCheckResult") {
+        return std::ptr::null_mut();
+    }
+    
+    if !is_jni_ptr_valid(ptr as usize) {
+        throw_illegal_argument(&mut env, "Invalid RiHealthCheckResult pointer");
         return std::ptr::null_mut();
     }
     
@@ -398,6 +479,11 @@ pub extern "system" fn Java_com_dunimd_ri_RiHealthCheckResult_getStatus0(
     ptr: jlong,
 ) -> jint {
     if !check_not_null(&mut env, ptr, "RiHealthCheckResult") {
+        return 3;
+    }
+    
+    if !is_jni_ptr_valid(ptr as usize) {
+        throw_illegal_argument(&mut env, "Invalid RiHealthCheckResult pointer");
         return 3;
     }
     
@@ -420,6 +506,11 @@ pub extern "system" fn Java_com_dunimd_ri_RiHealthCheckResult_getMessage0(
         return std::ptr::null_mut();
     }
     
+    if !is_jni_ptr_valid(ptr as usize) {
+        throw_illegal_argument(&mut env, "Invalid RiHealthCheckResult pointer");
+        return std::ptr::null_mut();
+    }
+    
     let result = unsafe { &*(ptr as *const RiHealthCheckResult) };
     match &result.message {
         Some(msg) => env.new_string(msg)
@@ -435,7 +526,8 @@ pub extern "system" fn Java_com_dunimd_ri_RiHealthCheckResult_free0(
     _class: JClass,
     ptr: jlong,
 ) {
-    if ptr != 0 {
+    if ptr != 0 && is_jni_ptr_valid(ptr as usize) {
+        unregister_jni_ptr(ptr as usize);
         unsafe {
             let _ = Box::from_raw(ptr as *mut RiHealthCheckResult);
         }
@@ -452,7 +544,9 @@ pub extern "system" fn Java_com_dunimd_ri_RiHealthCheckConfig_new0(
     _class: JClass,
 ) -> jlong {
     let config = Box::new(RiHealthCheckConfig::default());
-    Box::into_raw(config) as jlong
+    let ptr = Box::into_raw(config);
+    register_jni_ptr(ptr as usize);
+    ptr as jlong
 }
 
 #[no_mangle]
@@ -472,7 +566,9 @@ pub extern "system" fn Java_com_dunimd_ri_RiHealthCheckConfig_newWithValues0(
         success_threshold: success_threshold as u32,
         enabled: enabled != 0,
     });
-    Box::into_raw(config) as jlong
+    let ptr = Box::into_raw(config);
+    register_jni_ptr(ptr as usize);
+    ptr as jlong
 }
 
 #[no_mangle]
@@ -482,6 +578,11 @@ pub extern "system" fn Java_com_dunimd_ri_RiHealthCheckConfig_getCheckInterval0(
     ptr: jlong,
 ) -> jlong {
     if !check_not_null(&mut env, ptr, "RiHealthCheckConfig") {
+        return 0;
+    }
+    
+    if !is_jni_ptr_valid(ptr as usize) {
+        throw_illegal_argument(&mut env, "Invalid RiHealthCheckConfig pointer");
         return 0;
     }
     
@@ -500,6 +601,11 @@ pub extern "system" fn Java_com_dunimd_ri_RiHealthCheckConfig_setCheckInterval0(
         return;
     }
     
+    if !is_jni_ptr_valid(ptr as usize) {
+        throw_illegal_argument(&mut env, "Invalid RiHealthCheckConfig pointer");
+        return;
+    }
+    
     let config = unsafe { &mut *(ptr as *mut RiHealthCheckConfig) };
     config.check_interval = Duration::from_secs(value as u64);
 }
@@ -511,6 +617,11 @@ pub extern "system" fn Java_com_dunimd_ri_RiHealthCheckConfig_getTimeout0(
     ptr: jlong,
 ) -> jlong {
     if !check_not_null(&mut env, ptr, "RiHealthCheckConfig") {
+        return 0;
+    }
+    
+    if !is_jni_ptr_valid(ptr as usize) {
+        throw_illegal_argument(&mut env, "Invalid RiHealthCheckConfig pointer");
         return 0;
     }
     
@@ -529,6 +640,11 @@ pub extern "system" fn Java_com_dunimd_ri_RiHealthCheckConfig_setTimeout0(
         return;
     }
     
+    if !is_jni_ptr_valid(ptr as usize) {
+        throw_illegal_argument(&mut env, "Invalid RiHealthCheckConfig pointer");
+        return;
+    }
+    
     let config = unsafe { &mut *(ptr as *mut RiHealthCheckConfig) };
     config.timeout = Duration::from_secs(value as u64);
 }
@@ -540,6 +656,11 @@ pub extern "system" fn Java_com_dunimd_ri_RiHealthCheckConfig_getFailureThreshol
     ptr: jlong,
 ) -> jint {
     if !check_not_null(&mut env, ptr, "RiHealthCheckConfig") {
+        return 0;
+    }
+    
+    if !is_jni_ptr_valid(ptr as usize) {
+        throw_illegal_argument(&mut env, "Invalid RiHealthCheckConfig pointer");
         return 0;
     }
     
@@ -557,6 +678,11 @@ pub extern "system" fn Java_com_dunimd_ri_RiHealthCheckConfig_getSuccessThreshol
         return 0;
     }
     
+    if !is_jni_ptr_valid(ptr as usize) {
+        throw_illegal_argument(&mut env, "Invalid RiHealthCheckConfig pointer");
+        return 0;
+    }
+    
     let config = unsafe { &*(ptr as *const RiHealthCheckConfig) };
     config.success_threshold as jint
 }
@@ -571,6 +697,11 @@ pub extern "system" fn Java_com_dunimd_ri_RiHealthCheckConfig_isEnabled0(
         return 0;
     }
     
+    if !is_jni_ptr_valid(ptr as usize) {
+        throw_illegal_argument(&mut env, "Invalid RiHealthCheckConfig pointer");
+        return 0;
+    }
+    
     let config = unsafe { &*(ptr as *const RiHealthCheckConfig) };
     if config.enabled { 1 } else { 0 }
 }
@@ -581,7 +712,8 @@ pub extern "system" fn Java_com_dunimd_ri_RiHealthCheckConfig_free0(
     _class: JClass,
     ptr: jlong,
 ) {
-    if ptr != 0 {
+    if ptr != 0 && is_jni_ptr_valid(ptr as usize) {
+        unregister_jni_ptr(ptr as usize);
         unsafe {
             let _ = Box::from_raw(ptr as *mut RiHealthCheckConfig);
         }
@@ -598,7 +730,9 @@ pub extern "system" fn Java_com_dunimd_ri_RiHealthReport_new0(
     _class: JClass,
 ) -> jlong {
     let report = Box::new(RiHealthReport::new());
-    Box::into_raw(report) as jlong
+    let ptr = Box::into_raw(report);
+    register_jni_ptr(ptr as usize);
+    ptr as jlong
 }
 
 #[no_mangle]
@@ -608,6 +742,11 @@ pub extern "system" fn Java_com_dunimd_ri_RiHealthReport_getOverallStatus0(
     ptr: jlong,
 ) -> jint {
     if !check_not_null(&mut env, ptr, "RiHealthReport") {
+        return 3;
+    }
+    
+    if !is_jni_ptr_valid(ptr as usize) {
+        throw_illegal_argument(&mut env, "Invalid RiHealthReport pointer");
         return 3;
     }
     
@@ -630,6 +769,11 @@ pub extern "system" fn Java_com_dunimd_ri_RiHealthReport_getTotalComponents0(
         return 0;
     }
     
+    if !is_jni_ptr_valid(ptr as usize) {
+        throw_illegal_argument(&mut env, "Invalid RiHealthReport pointer");
+        return 0;
+    }
+    
     let report = unsafe { &*(ptr as *const RiHealthReport) };
     report.total_components as jint
 }
@@ -641,6 +785,11 @@ pub extern "system" fn Java_com_dunimd_ri_RiHealthReport_getHealthyCount0(
     ptr: jlong,
 ) -> jint {
     if !check_not_null(&mut env, ptr, "RiHealthReport") {
+        return 0;
+    }
+    
+    if !is_jni_ptr_valid(ptr as usize) {
+        throw_illegal_argument(&mut env, "Invalid RiHealthReport pointer");
         return 0;
     }
     
@@ -658,6 +807,11 @@ pub extern "system" fn Java_com_dunimd_ri_RiHealthReport_getDegradedCount0(
         return 0;
     }
     
+    if !is_jni_ptr_valid(ptr as usize) {
+        throw_illegal_argument(&mut env, "Invalid RiHealthReport pointer");
+        return 0;
+    }
+    
     let report = unsafe { &*(ptr as *const RiHealthReport) };
     report.degraded_count as jint
 }
@@ -669,6 +823,11 @@ pub extern "system" fn Java_com_dunimd_ri_RiHealthReport_getUnhealthyCount0(
     ptr: jlong,
 ) -> jint {
     if !check_not_null(&mut env, ptr, "RiHealthReport") {
+        return 0;
+    }
+    
+    if !is_jni_ptr_valid(ptr as usize) {
+        throw_illegal_argument(&mut env, "Invalid RiHealthReport pointer");
         return 0;
     }
     
@@ -686,6 +845,11 @@ pub extern "system" fn Java_com_dunimd_ri_RiHealthReport_getUnknownCount0(
         return 0;
     }
     
+    if !is_jni_ptr_valid(ptr as usize) {
+        throw_illegal_argument(&mut env, "Invalid RiHealthReport pointer");
+        return 0;
+    }
+    
     let report = unsafe { &*(ptr as *const RiHealthReport) };
     report.unknown_count as jint
 }
@@ -696,7 +860,8 @@ pub extern "system" fn Java_com_dunimd_ri_RiHealthReport_free0(
     _class: JClass,
     ptr: jlong,
 ) {
-    if ptr != 0 {
+    if ptr != 0 && is_jni_ptr_valid(ptr as usize) {
+        unregister_jni_ptr(ptr as usize);
         unsafe {
             let _ = Box::from_raw(ptr as *mut RiHealthReport);
         }
@@ -713,7 +878,9 @@ pub extern "system" fn Java_com_dunimd_ri_RiHealthChecker_new0(
     _class: JClass,
 ) -> jlong {
     let checker = Box::new(RiHealthChecker::new());
-    Box::into_raw(checker) as jlong
+    let ptr = Box::into_raw(checker);
+    register_jni_ptr(ptr as usize);
+    ptr as jlong
 }
 
 #[no_mangle]
@@ -726,9 +893,16 @@ pub extern "system" fn Java_com_dunimd_ri_RiHealthChecker_withConfig0(
         return 0;
     }
     
+    if !is_jni_ptr_valid(config_ptr as usize) {
+        throw_illegal_argument(&mut env, "Invalid RiHealthCheckConfig pointer");
+        return 0;
+    }
+    
     let config = unsafe { &*(config_ptr as *const RiHealthCheckConfig) };
     let checker = Box::new(RiHealthChecker::with_config(config.clone()));
-    Box::into_raw(checker) as jlong
+    let ptr = Box::into_raw(checker);
+    register_jni_ptr(ptr as usize);
+    ptr as jlong
 }
 
 #[no_mangle]
@@ -738,6 +912,11 @@ pub extern "system" fn Java_com_dunimd_ri_RiHealthChecker_getCheckCount0(
     ptr: jlong,
 ) -> jint {
     if !check_not_null(&mut env, ptr, "RiHealthChecker") {
+        return 0;
+    }
+    
+    if !is_jni_ptr_valid(ptr as usize) {
+        throw_illegal_argument(&mut env, "Invalid RiHealthChecker pointer");
         return 0;
     }
     
@@ -751,7 +930,8 @@ pub extern "system" fn Java_com_dunimd_ri_RiHealthChecker_free0(
     _class: JClass,
     ptr: jlong,
 ) {
-    if ptr != 0 {
+    if ptr != 0 && is_jni_ptr_valid(ptr as usize) {
+        unregister_jni_ptr(ptr as usize);
         unsafe {
             let _ = Box::from_raw(ptr as *mut RiHealthChecker);
         }
@@ -774,7 +954,9 @@ pub extern "system" fn Java_com_dunimd_ri_RiErrorChain_new0(
     
     let error = std::io::Error::other(msg);
     let chain = Box::new(RiErrorChain::new(error));
-    Box::into_raw(chain) as jlong
+    let ptr = Box::into_raw(chain);
+    register_jni_ptr(ptr as usize);
+    ptr as jlong
 }
 
 #[no_mangle]
@@ -793,7 +975,9 @@ pub extern "system" fn Java_com_dunimd_ri_RiErrorChain_withContext0(
     
     let error = std::io::Error::other(msg);
     let chain = Box::new(RiErrorChain::with_context(error, ctx));
-    Box::into_raw(chain) as jlong
+    let ptr = Box::into_raw(chain);
+    register_jni_ptr(ptr as usize);
+    ptr as jlong
 }
 
 #[no_mangle]
@@ -803,6 +987,11 @@ pub extern "system" fn Java_com_dunimd_ri_RiErrorChain_getContext0(
     ptr: jlong,
 ) -> jstring {
     if !check_not_null(&mut env, ptr, "RiErrorChain") {
+        return std::ptr::null_mut();
+    }
+    
+    if !is_jni_ptr_valid(ptr as usize) {
+        throw_illegal_argument(&mut env, "Invalid RiErrorChain pointer");
         return std::ptr::null_mut();
     }
     
@@ -822,6 +1011,11 @@ pub extern "system" fn Java_com_dunimd_ri_RiErrorChain_getSourceError0(
         return std::ptr::null_mut();
     }
     
+    if !is_jni_ptr_valid(ptr as usize) {
+        throw_illegal_argument(&mut env, "Invalid RiErrorChain pointer");
+        return std::ptr::null_mut();
+    }
+    
     let chain = unsafe { &*(ptr as *const RiErrorChain) };
     env.new_string(chain.source_error().to_string())
         .expect("Failed to create Java string")
@@ -838,6 +1032,11 @@ pub extern "system" fn Java_com_dunimd_ri_RiErrorChain_prettyFormat0(
         return std::ptr::null_mut();
     }
     
+    if !is_jni_ptr_valid(ptr as usize) {
+        throw_illegal_argument(&mut env, "Invalid RiErrorChain pointer");
+        return std::ptr::null_mut();
+    }
+    
     let chain = unsafe { &*(ptr as *const RiErrorChain) };
     env.new_string(chain.pretty_format())
         .expect("Failed to create Java string")
@@ -850,7 +1049,8 @@ pub extern "system" fn Java_com_dunimd_ri_RiErrorChain_free0(
     _class: JClass,
     ptr: jlong,
 ) {
-    if ptr != 0 {
+    if ptr != 0 && is_jni_ptr_valid(ptr as usize) {
+        unregister_jni_ptr(ptr as usize);
         unsafe {
             let _ = Box::from_raw(ptr as *mut RiErrorChain);
         }
@@ -881,7 +1081,9 @@ pub extern "system" fn Java_com_dunimd_ri_RiErrorContext_chainFromMsg0(
     
     let error = std::io::Error::other(msg);
     let chain = Box::new(RiErrorChain::new(error));
-    Box::into_raw(chain) as jlong
+    let ptr = Box::into_raw(chain);
+    register_jni_ptr(ptr as usize);
+    ptr as jlong
 }
 
 #[no_mangle]
@@ -907,7 +1109,9 @@ pub extern "system" fn Java_com_dunimd_ri_RiLockError_new0(
         .into();
     
     let error = Box::new(RiLockError::new(&ctx));
-    Box::into_raw(error) as jlong
+    let ptr = Box::into_raw(error);
+    register_jni_ptr(ptr as usize);
+    ptr as jlong
 }
 
 #[no_mangle]
@@ -926,7 +1130,9 @@ pub extern "system" fn Java_com_dunimd_ri_RiLockError_newWithPoisoned0(
     } else {
         Box::new(RiLockError::new(&ctx))
     };
-    Box::into_raw(error) as jlong
+    let ptr = Box::into_raw(error);
+    register_jni_ptr(ptr as usize);
+    ptr as jlong
 }
 
 #[no_mangle]
@@ -940,7 +1146,9 @@ pub extern "system" fn Java_com_dunimd_ri_RiLockError_poisoned0(
         .into();
     
     let error = Box::new(RiLockError::poisoned(&ctx));
-    Box::into_raw(error) as jlong
+    let ptr = Box::into_raw(error);
+    register_jni_ptr(ptr as usize);
+    ptr as jlong
 }
 
 #[no_mangle]
@@ -950,6 +1158,11 @@ pub extern "system" fn Java_com_dunimd_ri_RiLockError_getContext0(
     ptr: jlong,
 ) -> jstring {
     if !check_not_null(&mut env, ptr, "RiLockError") {
+        return std::ptr::null_mut();
+    }
+    
+    if !is_jni_ptr_valid(ptr as usize) {
+        throw_illegal_argument(&mut env, "Invalid RiLockError pointer");
         return std::ptr::null_mut();
     }
     
@@ -969,6 +1182,11 @@ pub extern "system" fn Java_com_dunimd_ri_RiLockError_isPoisoned0(
         return 0;
     }
     
+    if !is_jni_ptr_valid(ptr as usize) {
+        throw_illegal_argument(&mut env, "Invalid RiLockError pointer");
+        return 0;
+    }
+    
     let error = unsafe { &*(ptr as *const RiLockError) };
     if error.is_poisoned() { 1 } else { 0 }
 }
@@ -980,6 +1198,11 @@ pub extern "system" fn Java_com_dunimd_ri_RiLockError_getMessage0(
     ptr: jlong,
 ) -> jstring {
     if !check_not_null(&mut env, ptr, "RiLockError") {
+        return std::ptr::null_mut();
+    }
+    
+    if !is_jni_ptr_valid(ptr as usize) {
+        throw_illegal_argument(&mut env, "Invalid RiLockError pointer");
         return std::ptr::null_mut();
     }
     
@@ -995,7 +1218,8 @@ pub extern "system" fn Java_com_dunimd_ri_RiLockError_free0(
     _class: JClass,
     ptr: jlong,
 ) {
-    if ptr != 0 {
+    if ptr != 0 && is_jni_ptr_valid(ptr as usize) {
+        unregister_jni_ptr(ptr as usize);
         unsafe {
             let _ = Box::from_raw(ptr as *mut RiLockError);
         }
@@ -1012,7 +1236,9 @@ pub extern "system" fn Java_com_dunimd_ri_RiLifecycleObserver_new0(
     _class: JClass,
 ) -> jlong {
     let observer = Box::new(RiLifecycleObserver::new());
-    Box::into_raw(observer) as jlong
+    let ptr = Box::into_raw(observer);
+    register_jni_ptr(ptr as usize);
+    ptr as jlong
 }
 
 #[no_mangle]
@@ -1022,6 +1248,11 @@ pub extern "system" fn Java_com_dunimd_ri_RiLifecycleObserver_getName0(
     ptr: jlong,
 ) -> jstring {
     if !check_not_null(&mut env, ptr, "RiLifecycleObserver") {
+        return std::ptr::null_mut();
+    }
+    
+    if !is_jni_ptr_valid(ptr as usize) {
+        throw_illegal_argument(&mut env, "Invalid RiLifecycleObserver pointer");
         return std::ptr::null_mut();
     }
     
@@ -1041,6 +1272,11 @@ pub extern "system" fn Java_com_dunimd_ri_RiLifecycleObserver_isCritical0(
         return 0;
     }
     
+    if !is_jni_ptr_valid(ptr as usize) {
+        throw_illegal_argument(&mut env, "Invalid RiLifecycleObserver pointer");
+        return 0;
+    }
+    
     let observer = unsafe { &*(ptr as *const RiLifecycleObserver) };
     if observer.is_critical() { 1 } else { 0 }
 }
@@ -1051,7 +1287,8 @@ pub extern "system" fn Java_com_dunimd_ri_RiLifecycleObserver_free0(
     _class: JClass,
     ptr: jlong,
 ) {
-    if ptr != 0 {
+    if ptr != 0 && is_jni_ptr_valid(ptr as usize) {
+        unregister_jni_ptr(ptr as usize);
         unsafe {
             let _ = Box::from_raw(ptr as *mut RiLifecycleObserver);
         }
@@ -1068,7 +1305,9 @@ pub extern "system" fn Java_com_dunimd_ri_RiLogAnalyticsModule_new0(
     _class: JClass,
 ) -> jlong {
     let module = Box::new(RiLogAnalyticsModule::new());
-    Box::into_raw(module) as jlong
+    let ptr = Box::into_raw(module);
+    register_jni_ptr(ptr as usize);
+    ptr as jlong
 }
 
 #[no_mangle]
@@ -1078,6 +1317,11 @@ pub extern "system" fn Java_com_dunimd_ri_RiLogAnalyticsModule_getName0(
     ptr: jlong,
 ) -> jstring {
     if !check_not_null(&mut env, ptr, "RiLogAnalyticsModule") {
+        return std::ptr::null_mut();
+    }
+    
+    if !is_jni_ptr_valid(ptr as usize) {
+        throw_illegal_argument(&mut env, "Invalid RiLogAnalyticsModule pointer");
         return std::ptr::null_mut();
     }
     
@@ -1097,6 +1341,11 @@ pub extern "system" fn Java_com_dunimd_ri_RiLogAnalyticsModule_isCritical0(
         return 0;
     }
     
+    if !is_jni_ptr_valid(ptr as usize) {
+        throw_illegal_argument(&mut env, "Invalid RiLogAnalyticsModule pointer");
+        return 0;
+    }
+    
     let module = unsafe { &*(ptr as *const RiLogAnalyticsModule) };
     if module.is_critical() { 1 } else { 0 }
 }
@@ -1111,6 +1360,11 @@ pub extern "system" fn Java_com_dunimd_ri_RiLogAnalyticsModule_isEnabled0(
         return 0;
     }
     
+    if !is_jni_ptr_valid(ptr as usize) {
+        throw_illegal_argument(&mut env, "Invalid RiLogAnalyticsModule pointer");
+        return 0;
+    }
+    
     let module = unsafe { &*(ptr as *const RiLogAnalyticsModule) };
     if module.enabled { 1 } else { 0 }
 }
@@ -1121,7 +1375,8 @@ pub extern "system" fn Java_com_dunimd_ri_RiLogAnalyticsModule_free0(
     _class: JClass,
     ptr: jlong,
 ) {
-    if ptr != 0 {
+    if ptr != 0 && is_jni_ptr_valid(ptr as usize) {
+        unregister_jni_ptr(ptr as usize);
         unsafe {
             let _ = Box::from_raw(ptr as *mut RiLogAnalyticsModule);
         }

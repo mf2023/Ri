@@ -28,6 +28,8 @@ use crate::gateway::{
 use jni::objects::{JClass, JString};
 use jni::sys::{jboolean, jdouble, jint, jlong, jstring};
 use jni::JNIEnv;
+use crate::java::exception::throw_illegal_argument;
+use crate::java::{register_jni_ptr, unregister_jni_ptr, is_jni_ptr_valid};
 
 // ============================================================================
 // RiGateway
@@ -38,8 +40,10 @@ pub extern "system" fn Java_com_dunimd_ri_gateway_RiGateway_new0(
     _env: JNIEnv,
     _class: JClass,
 ) -> jlong {
-    let gateway = Box::new(RiGateway::new());
-    Box::into_raw(gateway) as jlong
+    let gateway_boxed = Box::new(RiGateway::new());
+    let gateway = Box::into_raw(gateway_boxed);
+    register_jni_ptr(gateway as usize);
+    gateway as jlong
 }
 
 #[no_mangle]
@@ -48,7 +52,8 @@ pub extern "system" fn Java_com_dunimd_ri_gateway_RiGateway_free0(
     _class: JClass,
     ptr: jlong,
 ) {
-    if ptr != 0 {
+    if ptr != 0 && is_jni_ptr_valid(ptr as usize) {
+        unregister_jni_ptr(ptr as usize);
         unsafe {
             let _ = Box::from_raw(ptr as *mut RiGateway);
         }
@@ -64,8 +69,10 @@ pub extern "system" fn Java_com_dunimd_ri_gateway_RiGatewayConfig_new0(
     _env: JNIEnv,
     _class: JClass,
 ) -> jlong {
-    let config = Box::new(RiGatewayConfig::default());
-    Box::into_raw(config) as jlong
+    let config_boxed = Box::new(RiGatewayConfig::default());
+    let config = Box::into_raw(config_boxed);
+    register_jni_ptr(config as usize);
+    config as jlong
 }
 
 #[no_mangle]
@@ -74,7 +81,8 @@ pub extern "system" fn Java_com_dunimd_ri_gateway_RiGatewayConfig_free0(
     _class: JClass,
     ptr: jlong,
 ) {
-    if ptr != 0 {
+    if ptr != 0 && is_jni_ptr_valid(ptr as usize) {
+        unregister_jni_ptr(ptr as usize);
         unsafe {
             let _ = Box::from_raw(ptr as *mut RiGatewayConfig);
         }
@@ -90,8 +98,10 @@ pub extern "system" fn Java_com_dunimd_ri_gateway_RiRouter_new0(
     _env: JNIEnv,
     _class: JClass,
 ) -> jlong {
-    let router = Box::new(RiRouter::new());
-    Box::into_raw(router) as jlong
+    let router_boxed = Box::new(RiRouter::new());
+    let router = Box::into_raw(router_boxed);
+    register_jni_ptr(router as usize);
+    router as jlong
 }
 
 #[no_mangle]
@@ -100,7 +110,8 @@ pub extern "system" fn Java_com_dunimd_ri_gateway_RiRouter_free0(
     _class: JClass,
     ptr: jlong,
 ) {
-    if ptr != 0 {
+    if ptr != 0 && is_jni_ptr_valid(ptr as usize) {
+        unregister_jni_ptr(ptr as usize);
         unsafe {
             let _ = Box::from_raw(ptr as *mut RiRouter);
         }
@@ -130,7 +141,8 @@ pub extern "system" fn Java_com_dunimd_ri_gateway_RiRouter_addGetRoute0(
     ptr: jlong,
     path: JString,
 ) {
-    if ptr != 0 {
+    if ptr != 0 && is_jni_ptr_valid(ptr as usize) {
+        unregister_jni_ptr(ptr as usize);
         let path_str: String = env.get_string(&path).expect("Invalid path string").into();
         unsafe {
             let router = &*(ptr as *const RiRouter);
@@ -155,7 +167,8 @@ pub extern "system" fn Java_com_dunimd_ri_gateway_RiRouter_addPostRoute0(
     ptr: jlong,
     path: JString,
 ) {
-    if ptr != 0 {
+    if ptr != 0 && is_jni_ptr_valid(ptr as usize) {
+        unregister_jni_ptr(ptr as usize);
         let path_str: String = env.get_string(&path).expect("Invalid path string").into();
         unsafe {
             let router = &*(ptr as *const RiRouter);
@@ -180,7 +193,8 @@ pub extern "system" fn Java_com_dunimd_ri_gateway_RiRouter_addPutRoute0(
     ptr: jlong,
     path: JString,
 ) {
-    if ptr != 0 {
+    if ptr != 0 && is_jni_ptr_valid(ptr as usize) {
+        unregister_jni_ptr(ptr as usize);
         let path_str: String = env.get_string(&path).expect("Invalid path string").into();
         unsafe {
             let router = &*(ptr as *const RiRouter);
@@ -205,7 +219,8 @@ pub extern "system" fn Java_com_dunimd_ri_gateway_RiRouter_addDeleteRoute0(
     ptr: jlong,
     path: JString,
 ) {
-    if ptr != 0 {
+    if ptr != 0 && is_jni_ptr_valid(ptr as usize) {
+        unregister_jni_ptr(ptr as usize);
         let path_str: String = env.get_string(&path).expect("Invalid path string").into();
         unsafe {
             let router = &*(ptr as *const RiRouter);
@@ -230,7 +245,8 @@ pub extern "system" fn Java_com_dunimd_ri_gateway_RiRouter_addPatchRoute0(
     ptr: jlong,
     path: JString,
 ) {
-    if ptr != 0 {
+    if ptr != 0 && is_jni_ptr_valid(ptr as usize) {
+        unregister_jni_ptr(ptr as usize);
         let path_str: String = env.get_string(&path).expect("Invalid path string").into();
         unsafe {
             let router = &*(ptr as *const RiRouter);
@@ -255,7 +271,8 @@ pub extern "system" fn Java_com_dunimd_ri_gateway_RiRouter_addOptionsRoute0(
     ptr: jlong,
     path: JString,
 ) {
-    if ptr != 0 {
+    if ptr != 0 && is_jni_ptr_valid(ptr as usize) {
+        unregister_jni_ptr(ptr as usize);
         let path_str: String = env.get_string(&path).expect("Invalid path string").into();
         unsafe {
             let router = &*(ptr as *const RiRouter);
@@ -281,7 +298,8 @@ pub extern "system" fn Java_com_dunimd_ri_gateway_RiRouter_addCustomRoute0(
     method: JString,
     path: JString,
 ) {
-    if ptr != 0 {
+    if ptr != 0 && is_jni_ptr_valid(ptr as usize) {
+        unregister_jni_ptr(ptr as usize);
         let method_str: String = env
             .get_string(&method)
             .expect("Invalid method string")
@@ -310,7 +328,8 @@ pub extern "system" fn Java_com_dunimd_ri_gateway_RiRouter_getRouteCount0(
     _class: JClass,
     ptr: jlong,
 ) -> jint {
-    if ptr != 0 {
+    if ptr != 0 && is_jni_ptr_valid(ptr as usize) {
+        unregister_jni_ptr(ptr as usize);
         unsafe {
             let router = &*(ptr as *const RiRouter);
             router.route_count() as jint
@@ -326,7 +345,8 @@ pub extern "system" fn Java_com_dunimd_ri_gateway_RiRouter_clearRoutes0(
     _class: JClass,
     ptr: jlong,
 ) {
-    if ptr != 0 {
+    if ptr != 0 && is_jni_ptr_valid(ptr as usize) {
+        unregister_jni_ptr(ptr as usize);
         unsafe {
             let router = &*(ptr as *const RiRouter);
             router.clear_routes();
@@ -361,8 +381,10 @@ pub extern "system" fn Java_com_dunimd_ri_gateway_RiRoute_new0(
         })
     });
 
-    let route = Box::new(RiRoute::new(method_str, path_str, handler));
-    Box::into_raw(route) as jlong
+    let route_boxed = Box::new(RiRoute::new(method_str, path_str, handler));
+    let route = Box::into_raw(route_boxed);
+    register_jni_ptr(route as usize);
+    route as jlong
 }
 
 #[no_mangle]
@@ -371,7 +393,8 @@ pub extern "system" fn Java_com_dunimd_ri_gateway_RiRoute_free0(
     _class: JClass,
     ptr: jlong,
 ) {
-    if ptr != 0 {
+    if ptr != 0 && is_jni_ptr_valid(ptr as usize) {
+        unregister_jni_ptr(ptr as usize);
         unsafe {
             let _ = Box::from_raw(ptr as *mut RiRoute);
         }
@@ -384,7 +407,8 @@ pub extern "system" fn Java_com_dunimd_ri_gateway_RiRoute_getMethod0(
     _class: JClass,
     ptr: jlong,
 ) -> jstring {
-    if ptr != 0 {
+    if ptr != 0 && is_jni_ptr_valid(ptr as usize) {
+        unregister_jni_ptr(ptr as usize);
         unsafe {
             let route = &*(ptr as *const RiRoute);
             env.new_string(&route.method)
@@ -402,7 +426,8 @@ pub extern "system" fn Java_com_dunimd_ri_gateway_RiRoute_getPath0(
     _class: JClass,
     ptr: jlong,
 ) -> jstring {
-    if ptr != 0 {
+    if ptr != 0 && is_jni_ptr_valid(ptr as usize) {
+        unregister_jni_ptr(ptr as usize);
         unsafe {
             let route = &*(ptr as *const RiRoute);
             env.new_string(&route.path)
@@ -423,8 +448,10 @@ pub extern "system" fn Java_com_dunimd_ri_gateway_RiRateLimitConfig_new0(
     _env: JNIEnv,
     _class: JClass,
 ) -> jlong {
-    let config = Box::new(RiRateLimitConfig::default());
-    Box::into_raw(config) as jlong
+    let config_boxed = Box::new(RiRateLimitConfig::default());
+    let config = Box::into_raw(config_boxed);
+    register_jni_ptr(config as usize);
+    config as jlong
 }
 
 #[no_mangle]
@@ -449,7 +476,8 @@ pub extern "system" fn Java_com_dunimd_ri_gateway_RiRateLimitConfig_free0(
     _class: JClass,
     ptr: jlong,
 ) {
-    if ptr != 0 {
+    if ptr != 0 && is_jni_ptr_valid(ptr as usize) {
+        unregister_jni_ptr(ptr as usize);
         unsafe {
             let _ = Box::from_raw(ptr as *mut RiRateLimitConfig);
         }
@@ -462,7 +490,8 @@ pub extern "system" fn Java_com_dunimd_ri_gateway_RiRateLimitConfig_getRequestsP
     _class: JClass,
     ptr: jlong,
 ) -> jint {
-    if ptr != 0 {
+    if ptr != 0 && is_jni_ptr_valid(ptr as usize) {
+        unregister_jni_ptr(ptr as usize);
         unsafe {
             let config = &*(ptr as *const RiRateLimitConfig);
             config.requests_per_second as jint
@@ -479,7 +508,8 @@ pub extern "system" fn Java_com_dunimd_ri_gateway_RiRateLimitConfig_setRequestsP
     ptr: jlong,
     value: jint,
 ) {
-    if ptr != 0 {
+    if ptr != 0 && is_jni_ptr_valid(ptr as usize) {
+        unregister_jni_ptr(ptr as usize);
         unsafe {
             let config = &mut *(ptr as *mut RiRateLimitConfig);
             config.requests_per_second = value as u32;
@@ -493,7 +523,8 @@ pub extern "system" fn Java_com_dunimd_ri_gateway_RiRateLimitConfig_getBurstSize
     _class: JClass,
     ptr: jlong,
 ) -> jint {
-    if ptr != 0 {
+    if ptr != 0 && is_jni_ptr_valid(ptr as usize) {
+        unregister_jni_ptr(ptr as usize);
         unsafe {
             let config = &*(ptr as *const RiRateLimitConfig);
             config.burst_size as jint
@@ -510,7 +541,8 @@ pub extern "system" fn Java_com_dunimd_ri_gateway_RiRateLimitConfig_setBurstSize
     ptr: jlong,
     value: jint,
 ) {
-    if ptr != 0 {
+    if ptr != 0 && is_jni_ptr_valid(ptr as usize) {
+        unregister_jni_ptr(ptr as usize);
         unsafe {
             let config = &mut *(ptr as *mut RiRateLimitConfig);
             config.burst_size = value as u32;
@@ -524,7 +556,8 @@ pub extern "system" fn Java_com_dunimd_ri_gateway_RiRateLimitConfig_getWindowSec
     _class: JClass,
     ptr: jlong,
 ) -> jlong {
-    if ptr != 0 {
+    if ptr != 0 && is_jni_ptr_valid(ptr as usize) {
+        unregister_jni_ptr(ptr as usize);
         unsafe {
             let config = &*(ptr as *const RiRateLimitConfig);
             config.window_seconds as jlong
@@ -541,7 +574,8 @@ pub extern "system" fn Java_com_dunimd_ri_gateway_RiRateLimitConfig_setWindowSec
     ptr: jlong,
     value: jlong,
 ) {
-    if ptr != 0 {
+    if ptr != 0 && is_jni_ptr_valid(ptr as usize) {
+        unregister_jni_ptr(ptr as usize);
         unsafe {
             let config = &mut *(ptr as *mut RiRateLimitConfig);
             config.window_seconds = value as u64;
@@ -573,7 +607,8 @@ pub extern "system" fn Java_com_dunimd_ri_gateway_RiRateLimitStats_free0(
     _class: JClass,
     ptr: jlong,
 ) {
-    if ptr != 0 {
+    if ptr != 0 && is_jni_ptr_valid(ptr as usize) {
+        unregister_jni_ptr(ptr as usize);
         unsafe {
             let _ = Box::from_raw(ptr as *mut RiRateLimitStats);
         }
@@ -586,7 +621,8 @@ pub extern "system" fn Java_com_dunimd_ri_gateway_RiRateLimitStats_getCurrentTok
     _class: JClass,
     ptr: jlong,
 ) -> jlong {
-    if ptr != 0 {
+    if ptr != 0 && is_jni_ptr_valid(ptr as usize) {
+        unregister_jni_ptr(ptr as usize);
         unsafe {
             let stats = &*(ptr as *const RiRateLimitStats);
             stats.current_tokens as jlong
@@ -602,7 +638,8 @@ pub extern "system" fn Java_com_dunimd_ri_gateway_RiRateLimitStats_getTotalReque
     _class: JClass,
     ptr: jlong,
 ) -> jlong {
-    if ptr != 0 {
+    if ptr != 0 && is_jni_ptr_valid(ptr as usize) {
+        unregister_jni_ptr(ptr as usize);
         unsafe {
             let stats = &*(ptr as *const RiRateLimitStats);
             stats.total_requests as jlong
@@ -627,8 +664,10 @@ pub extern "system" fn Java_com_dunimd_ri_gateway_RiRateLimiter_new0(
     } else {
         RiRateLimitConfig::default()
     };
-    let limiter = Box::new(RiRateLimiter::new(config));
-    Box::into_raw(limiter) as jlong
+    let limiter_boxed = Box::new(RiRateLimiter::new(config));
+    let limiter = Box::into_raw(limiter_boxed);
+    register_jni_ptr(limiter as usize);
+    limiter as jlong
 }
 
 #[no_mangle]
@@ -637,7 +676,8 @@ pub extern "system" fn Java_com_dunimd_ri_gateway_RiRateLimiter_free0(
     _class: JClass,
     ptr: jlong,
 ) {
-    if ptr != 0 {
+    if ptr != 0 && is_jni_ptr_valid(ptr as usize) {
+        unregister_jni_ptr(ptr as usize);
         unsafe {
             let _ = Box::from_raw(ptr as *mut RiRateLimiter);
         }
@@ -652,7 +692,8 @@ pub extern "system" fn Java_com_dunimd_ri_gateway_RiRateLimiter_checkRateLimit0(
     key: JString,
     tokens: jint,
 ) -> jboolean {
-    if ptr != 0 {
+    if ptr != 0 && is_jni_ptr_valid(ptr as usize) {
+        unregister_jni_ptr(ptr as usize);
         let key_str: String = env.get_string(&key).expect("Invalid key string").into();
         unsafe {
             let limiter = &*(ptr as *const RiRateLimiter);
@@ -670,7 +711,8 @@ pub extern "system" fn Java_com_dunimd_ri_gateway_RiRateLimiter_getStats0(
     ptr: jlong,
     key: JString,
 ) -> jlong {
-    if ptr != 0 {
+    if ptr != 0 && is_jni_ptr_valid(ptr as usize) {
+        unregister_jni_ptr(ptr as usize);
         let key_str: String = env.get_string(&key).expect("Invalid key string").into();
         unsafe {
             let limiter = &*(ptr as *const RiRateLimiter);
@@ -692,7 +734,8 @@ pub extern "system" fn Java_com_dunimd_ri_gateway_RiRateLimiter_getRemaining0(
     ptr: jlong,
     key: JString,
 ) -> jdouble {
-    if ptr != 0 {
+    if ptr != 0 && is_jni_ptr_valid(ptr as usize) {
+        unregister_jni_ptr(ptr as usize);
         let key_str: String = env.get_string(&key).expect("Invalid key string").into();
         unsafe {
             let limiter = &*(ptr as *const RiRateLimiter);
@@ -710,7 +753,8 @@ pub extern "system" fn Java_com_dunimd_ri_gateway_RiRateLimiter_resetBucket0(
     ptr: jlong,
     key: JString,
 ) {
-    if ptr != 0 {
+    if ptr != 0 && is_jni_ptr_valid(ptr as usize) {
+        unregister_jni_ptr(ptr as usize);
         let key_str: String = env.get_string(&key).expect("Invalid key string").into();
         unsafe {
             let limiter = &*(ptr as *const RiRateLimiter);
@@ -725,7 +769,8 @@ pub extern "system" fn Java_com_dunimd_ri_gateway_RiRateLimiter_clearAllBuckets0
     _class: JClass,
     ptr: jlong,
 ) {
-    if ptr != 0 {
+    if ptr != 0 && is_jni_ptr_valid(ptr as usize) {
+        unregister_jni_ptr(ptr as usize);
         unsafe {
             let limiter = &*(ptr as *const RiRateLimiter);
             limiter.clear_all_buckets();
@@ -739,7 +784,8 @@ pub extern "system" fn Java_com_dunimd_ri_gateway_RiRateLimiter_getConfig0(
     _class: JClass,
     ptr: jlong,
 ) -> jlong {
-    if ptr != 0 {
+    if ptr != 0 && is_jni_ptr_valid(ptr as usize) {
+        unregister_jni_ptr(ptr as usize);
         unsafe {
             let limiter = &*(ptr as *const RiRateLimiter);
             let config = limiter.get_config();
@@ -756,7 +802,8 @@ pub extern "system" fn Java_com_dunimd_ri_gateway_RiRateLimiter_bucketCount0(
     _class: JClass,
     ptr: jlong,
 ) -> jint {
-    if ptr != 0 {
+    if ptr != 0 && is_jni_ptr_valid(ptr as usize) {
+        unregister_jni_ptr(ptr as usize);
         unsafe {
             let limiter = &*(ptr as *const RiRateLimiter);
             limiter.bucket_count() as jint
@@ -790,7 +837,8 @@ pub extern "system" fn Java_com_dunimd_ri_gateway_RiSlidingWindowRateLimiter_fre
     _class: JClass,
     ptr: jlong,
 ) {
-    if ptr != 0 {
+    if ptr != 0 && is_jni_ptr_valid(ptr as usize) {
+        unregister_jni_ptr(ptr as usize);
         unsafe {
             let _ = Box::from_raw(ptr as *mut RiSlidingWindowRateLimiter);
         }
@@ -803,7 +851,8 @@ pub extern "system" fn Java_com_dunimd_ri_gateway_RiSlidingWindowRateLimiter_all
     _class: JClass,
     ptr: jlong,
 ) -> jboolean {
-    if ptr != 0 {
+    if ptr != 0 && is_jni_ptr_valid(ptr as usize) {
+        unregister_jni_ptr(ptr as usize);
         unsafe {
             let limiter = &*(ptr as *const RiSlidingWindowRateLimiter);
             limiter.allow_request() as jboolean
@@ -819,7 +868,8 @@ pub extern "system" fn Java_com_dunimd_ri_gateway_RiSlidingWindowRateLimiter_get
     _class: JClass,
     ptr: jlong,
 ) -> jint {
-    if ptr != 0 {
+    if ptr != 0 && is_jni_ptr_valid(ptr as usize) {
+        unregister_jni_ptr(ptr as usize);
         unsafe {
             let limiter = &*(ptr as *const RiSlidingWindowRateLimiter);
             limiter.get_current_count() as jint
@@ -835,7 +885,8 @@ pub extern "system" fn Java_com_dunimd_ri_gateway_RiSlidingWindowRateLimiter_res
     _class: JClass,
     ptr: jlong,
 ) {
-    if ptr != 0 {
+    if ptr != 0 && is_jni_ptr_valid(ptr as usize) {
+        unregister_jni_ptr(ptr as usize);
         unsafe {
             let limiter = &*(ptr as *const RiSlidingWindowRateLimiter);
             limiter.reset();
@@ -849,7 +900,8 @@ pub extern "system" fn Java_com_dunimd_ri_gateway_RiSlidingWindowRateLimiter_get
     _class: JClass,
     ptr: jlong,
 ) -> jint {
-    if ptr != 0 {
+    if ptr != 0 && is_jni_ptr_valid(ptr as usize) {
+        unregister_jni_ptr(ptr as usize);
         unsafe {
             let limiter = &*(ptr as *const RiSlidingWindowRateLimiter);
             limiter.get_max_requests() as jint
@@ -865,7 +917,8 @@ pub extern "system" fn Java_com_dunimd_ri_gateway_RiSlidingWindowRateLimiter_get
     _class: JClass,
     ptr: jlong,
 ) -> jlong {
-    if ptr != 0 {
+    if ptr != 0 && is_jni_ptr_valid(ptr as usize) {
+        unregister_jni_ptr(ptr as usize);
         unsafe {
             let limiter = &*(ptr as *const RiSlidingWindowRateLimiter);
             limiter.get_window_seconds() as jlong
@@ -884,8 +937,10 @@ pub extern "system" fn Java_com_dunimd_ri_gateway_RiCircuitBreakerConfig_new0(
     _env: JNIEnv,
     _class: JClass,
 ) -> jlong {
-    let config = Box::new(RiCircuitBreakerConfig::default());
-    Box::into_raw(config) as jlong
+    let config_boxed = Box::new(RiCircuitBreakerConfig::default());
+    let config = Box::into_raw(config_boxed);
+    register_jni_ptr(config as usize);
+    config as jlong
 }
 
 #[no_mangle]
@@ -912,7 +967,8 @@ pub extern "system" fn Java_com_dunimd_ri_gateway_RiCircuitBreakerConfig_free0(
     _class: JClass,
     ptr: jlong,
 ) {
-    if ptr != 0 {
+    if ptr != 0 && is_jni_ptr_valid(ptr as usize) {
+        unregister_jni_ptr(ptr as usize);
         unsafe {
             let _ = Box::from_raw(ptr as *mut RiCircuitBreakerConfig);
         }
@@ -925,7 +981,8 @@ pub extern "system" fn Java_com_dunimd_ri_gateway_RiCircuitBreakerConfig_getFail
     _class: JClass,
     ptr: jlong,
 ) -> jint {
-    if ptr != 0 {
+    if ptr != 0 && is_jni_ptr_valid(ptr as usize) {
+        unregister_jni_ptr(ptr as usize);
         unsafe {
             let config = &*(ptr as *const RiCircuitBreakerConfig);
             config.failure_threshold as jint
@@ -942,7 +999,8 @@ pub extern "system" fn Java_com_dunimd_ri_gateway_RiCircuitBreakerConfig_setFail
     ptr: jlong,
     value: jint,
 ) {
-    if ptr != 0 {
+    if ptr != 0 && is_jni_ptr_valid(ptr as usize) {
+        unregister_jni_ptr(ptr as usize);
         unsafe {
             let config = &mut *(ptr as *mut RiCircuitBreakerConfig);
             config.failure_threshold = value as u32;
@@ -956,7 +1014,8 @@ pub extern "system" fn Java_com_dunimd_ri_gateway_RiCircuitBreakerConfig_getSucc
     _class: JClass,
     ptr: jlong,
 ) -> jint {
-    if ptr != 0 {
+    if ptr != 0 && is_jni_ptr_valid(ptr as usize) {
+        unregister_jni_ptr(ptr as usize);
         unsafe {
             let config = &*(ptr as *const RiCircuitBreakerConfig);
             config.success_threshold as jint
@@ -973,7 +1032,8 @@ pub extern "system" fn Java_com_dunimd_ri_gateway_RiCircuitBreakerConfig_setSucc
     ptr: jlong,
     value: jint,
 ) {
-    if ptr != 0 {
+    if ptr != 0 && is_jni_ptr_valid(ptr as usize) {
+        unregister_jni_ptr(ptr as usize);
         unsafe {
             let config = &mut *(ptr as *mut RiCircuitBreakerConfig);
             config.success_threshold = value as u32;
@@ -987,7 +1047,8 @@ pub extern "system" fn Java_com_dunimd_ri_gateway_RiCircuitBreakerConfig_getTime
     _class: JClass,
     ptr: jlong,
 ) -> jlong {
-    if ptr != 0 {
+    if ptr != 0 && is_jni_ptr_valid(ptr as usize) {
+        unregister_jni_ptr(ptr as usize);
         unsafe {
             let config = &*(ptr as *const RiCircuitBreakerConfig);
             config.timeout_seconds as jlong
@@ -1004,7 +1065,8 @@ pub extern "system" fn Java_com_dunimd_ri_gateway_RiCircuitBreakerConfig_setTime
     ptr: jlong,
     value: jlong,
 ) {
-    if ptr != 0 {
+    if ptr != 0 && is_jni_ptr_valid(ptr as usize) {
+        unregister_jni_ptr(ptr as usize);
         unsafe {
             let config = &mut *(ptr as *mut RiCircuitBreakerConfig);
             config.timeout_seconds = value as u64;
@@ -1018,7 +1080,8 @@ pub extern "system" fn Java_com_dunimd_ri_gateway_RiCircuitBreakerConfig_getMoni
     _class: JClass,
     ptr: jlong,
 ) -> jlong {
-    if ptr != 0 {
+    if ptr != 0 && is_jni_ptr_valid(ptr as usize) {
+        unregister_jni_ptr(ptr as usize);
         unsafe {
             let config = &*(ptr as *const RiCircuitBreakerConfig);
             config.monitoring_period_seconds as jlong
@@ -1035,7 +1098,8 @@ pub extern "system" fn Java_com_dunimd_ri_gateway_RiCircuitBreakerConfig_setMoni
     ptr: jlong,
     value: jlong,
 ) {
-    if ptr != 0 {
+    if ptr != 0 && is_jni_ptr_valid(ptr as usize) {
+        unregister_jni_ptr(ptr as usize);
         unsafe {
             let config = &mut *(ptr as *mut RiCircuitBreakerConfig);
             config.monitoring_period_seconds = value as u64;
@@ -1074,7 +1138,8 @@ pub extern "system" fn Java_com_dunimd_ri_gateway_RiCircuitBreakerMetrics_free0(
     _class: JClass,
     ptr: jlong,
 ) {
-    if ptr != 0 {
+    if ptr != 0 && is_jni_ptr_valid(ptr as usize) {
+        unregister_jni_ptr(ptr as usize);
         unsafe {
             let _ = Box::from_raw(ptr as *mut RiCircuitBreakerMetrics);
         }
@@ -1087,7 +1152,8 @@ pub extern "system" fn Java_com_dunimd_ri_gateway_RiCircuitBreakerMetrics_getSta
     _class: JClass,
     ptr: jlong,
 ) -> jstring {
-    if ptr != 0 {
+    if ptr != 0 && is_jni_ptr_valid(ptr as usize) {
+        unregister_jni_ptr(ptr as usize);
         unsafe {
             let metrics = &*(ptr as *const RiCircuitBreakerMetrics);
             env.new_string(&metrics.state)
@@ -1105,7 +1171,8 @@ pub extern "system" fn Java_com_dunimd_ri_gateway_RiCircuitBreakerMetrics_getFai
     _class: JClass,
     ptr: jlong,
 ) -> jlong {
-    if ptr != 0 {
+    if ptr != 0 && is_jni_ptr_valid(ptr as usize) {
+        unregister_jni_ptr(ptr as usize);
         unsafe {
             let metrics = &*(ptr as *const RiCircuitBreakerMetrics);
             metrics.failure_count as jlong
@@ -1121,7 +1188,8 @@ pub extern "system" fn Java_com_dunimd_ri_gateway_RiCircuitBreakerMetrics_getSuc
     _class: JClass,
     ptr: jlong,
 ) -> jlong {
-    if ptr != 0 {
+    if ptr != 0 && is_jni_ptr_valid(ptr as usize) {
+        unregister_jni_ptr(ptr as usize);
         unsafe {
             let metrics = &*(ptr as *const RiCircuitBreakerMetrics);
             metrics.success_count as jlong
@@ -1137,7 +1205,8 @@ pub extern "system" fn Java_com_dunimd_ri_gateway_RiCircuitBreakerMetrics_getCon
     _class: JClass,
     ptr: jlong,
 ) -> jlong {
-    if ptr != 0 {
+    if ptr != 0 && is_jni_ptr_valid(ptr as usize) {
+        unregister_jni_ptr(ptr as usize);
         unsafe {
             let metrics = &*(ptr as *const RiCircuitBreakerMetrics);
             metrics.consecutive_failures as jlong
@@ -1153,7 +1222,8 @@ pub extern "system" fn Java_com_dunimd_ri_gateway_RiCircuitBreakerMetrics_getCon
     _class: JClass,
     ptr: jlong,
 ) -> jlong {
-    if ptr != 0 {
+    if ptr != 0 && is_jni_ptr_valid(ptr as usize) {
+        unregister_jni_ptr(ptr as usize);
         unsafe {
             let metrics = &*(ptr as *const RiCircuitBreakerMetrics);
             metrics.consecutive_successes as jlong
@@ -1178,8 +1248,10 @@ pub extern "system" fn Java_com_dunimd_ri_gateway_RiCircuitBreaker_new0(
     } else {
         RiCircuitBreakerConfig::default()
     };
-    let cb = Box::new(RiCircuitBreaker::new(config));
-    Box::into_raw(cb) as jlong
+    let cb_boxed = Box::new(RiCircuitBreaker::new(config));
+    let cb = Box::into_raw(cb_boxed);
+    register_jni_ptr(cb as usize);
+    cb as jlong
 }
 
 #[no_mangle]
@@ -1188,7 +1260,8 @@ pub extern "system" fn Java_com_dunimd_ri_gateway_RiCircuitBreaker_free0(
     _class: JClass,
     ptr: jlong,
 ) {
-    if ptr != 0 {
+    if ptr != 0 && is_jni_ptr_valid(ptr as usize) {
+        unregister_jni_ptr(ptr as usize);
         unsafe {
             let _ = Box::from_raw(ptr as *mut RiCircuitBreaker);
         }
@@ -1201,7 +1274,8 @@ pub extern "system" fn Java_com_dunimd_ri_gateway_RiCircuitBreaker_allowRequest0
     _class: JClass,
     ptr: jlong,
 ) -> jboolean {
-    if ptr != 0 {
+    if ptr != 0 && is_jni_ptr_valid(ptr as usize) {
+        unregister_jni_ptr(ptr as usize);
         unsafe {
             let cb = &*(ptr as *const RiCircuitBreaker);
             cb.allow_request() as jboolean
@@ -1217,7 +1291,8 @@ pub extern "system" fn Java_com_dunimd_ri_gateway_RiCircuitBreaker_recordSuccess
     _class: JClass,
     ptr: jlong,
 ) {
-    if ptr != 0 {
+    if ptr != 0 && is_jni_ptr_valid(ptr as usize) {
+        unregister_jni_ptr(ptr as usize);
         unsafe {
             let cb = &*(ptr as *const RiCircuitBreaker);
             cb.record_success();
@@ -1231,7 +1306,8 @@ pub extern "system" fn Java_com_dunimd_ri_gateway_RiCircuitBreaker_recordFailure
     _class: JClass,
     ptr: jlong,
 ) {
-    if ptr != 0 {
+    if ptr != 0 && is_jni_ptr_valid(ptr as usize) {
+        unregister_jni_ptr(ptr as usize);
         unsafe {
             let cb = &*(ptr as *const RiCircuitBreaker);
             cb.record_failure();
@@ -1245,7 +1321,8 @@ pub extern "system" fn Java_com_dunimd_ri_gateway_RiCircuitBreaker_getState0(
     _class: JClass,
     ptr: jlong,
 ) -> jint {
-    if ptr != 0 {
+    if ptr != 0 && is_jni_ptr_valid(ptr as usize) {
+        unregister_jni_ptr(ptr as usize);
         unsafe {
             let cb = &*(ptr as *const RiCircuitBreaker);
             match cb.get_state() {
@@ -1265,7 +1342,8 @@ pub extern "system" fn Java_com_dunimd_ri_gateway_RiCircuitBreaker_getStats0(
     _class: JClass,
     ptr: jlong,
 ) -> jlong {
-    if ptr != 0 {
+    if ptr != 0 && is_jni_ptr_valid(ptr as usize) {
+        unregister_jni_ptr(ptr as usize);
         unsafe {
             let cb = &*(ptr as *const RiCircuitBreaker);
             let stats = cb.get_stats();
@@ -1282,7 +1360,8 @@ pub extern "system" fn Java_com_dunimd_ri_gateway_RiCircuitBreaker_getConfig0(
     _class: JClass,
     ptr: jlong,
 ) -> jlong {
-    if ptr != 0 {
+    if ptr != 0 && is_jni_ptr_valid(ptr as usize) {
+        unregister_jni_ptr(ptr as usize);
         unsafe {
             let cb = &*(ptr as *const RiCircuitBreaker);
             let config = cb.get_config();
@@ -1299,7 +1378,8 @@ pub extern "system" fn Java_com_dunimd_ri_gateway_RiCircuitBreaker_reset0(
     _class: JClass,
     ptr: jlong,
 ) {
-    if ptr != 0 {
+    if ptr != 0 && is_jni_ptr_valid(ptr as usize) {
+        unregister_jni_ptr(ptr as usize);
         unsafe {
             let cb = &*(ptr as *const RiCircuitBreaker);
             cb.reset();
@@ -1313,7 +1393,8 @@ pub extern "system" fn Java_com_dunimd_ri_gateway_RiCircuitBreaker_forceOpen0(
     _class: JClass,
     ptr: jlong,
 ) {
-    if ptr != 0 {
+    if ptr != 0 && is_jni_ptr_valid(ptr as usize) {
+        unregister_jni_ptr(ptr as usize);
         unsafe {
             let cb = &*(ptr as *const RiCircuitBreaker);
             cb.force_open();
@@ -1327,7 +1408,8 @@ pub extern "system" fn Java_com_dunimd_ri_gateway_RiCircuitBreaker_forceClose0(
     _class: JClass,
     ptr: jlong,
 ) {
-    if ptr != 0 {
+    if ptr != 0 && is_jni_ptr_valid(ptr as usize) {
+        unregister_jni_ptr(ptr as usize);
         unsafe {
             let cb = &*(ptr as *const RiCircuitBreaker);
             cb.force_close();
@@ -1341,7 +1423,8 @@ pub extern "system" fn Java_com_dunimd_ri_gateway_RiCircuitBreaker_getFailureRat
     _class: JClass,
     ptr: jlong,
 ) -> jdouble {
-    if ptr != 0 {
+    if ptr != 0 && is_jni_ptr_valid(ptr as usize) {
+        unregister_jni_ptr(ptr as usize);
         unsafe {
             let cb = &*(ptr as *const RiCircuitBreaker);
             cb.failure_rate()
@@ -1357,7 +1440,8 @@ pub extern "system" fn Java_com_dunimd_ri_gateway_RiCircuitBreaker_getSuccessRat
     _class: JClass,
     ptr: jlong,
 ) -> jdouble {
-    if ptr != 0 {
+    if ptr != 0 && is_jni_ptr_valid(ptr as usize) {
+        unregister_jni_ptr(ptr as usize);
         unsafe {
             let cb = &*(ptr as *const RiCircuitBreaker);
             cb.success_rate()
@@ -1373,7 +1457,8 @@ pub extern "system" fn Java_com_dunimd_ri_gateway_RiCircuitBreaker_getTotalReque
     _class: JClass,
     ptr: jlong,
 ) -> jlong {
-    if ptr != 0 {
+    if ptr != 0 && is_jni_ptr_valid(ptr as usize) {
+        unregister_jni_ptr(ptr as usize);
         unsafe {
             let cb = &*(ptr as *const RiCircuitBreaker);
             cb.total_requests() as jlong
@@ -1389,7 +1474,8 @@ pub extern "system" fn Java_com_dunimd_ri_gateway_RiCircuitBreaker_isOpen0(
     _class: JClass,
     ptr: jlong,
 ) -> jboolean {
-    if ptr != 0 {
+    if ptr != 0 && is_jni_ptr_valid(ptr as usize) {
+        unregister_jni_ptr(ptr as usize);
         unsafe {
             let cb = &*(ptr as *const RiCircuitBreaker);
             cb.is_open() as jboolean
@@ -1405,7 +1491,8 @@ pub extern "system" fn Java_com_dunimd_ri_gateway_RiCircuitBreaker_isClosed0(
     _class: JClass,
     ptr: jlong,
 ) -> jboolean {
-    if ptr != 0 {
+    if ptr != 0 && is_jni_ptr_valid(ptr as usize) {
+        unregister_jni_ptr(ptr as usize);
         unsafe {
             let cb = &*(ptr as *const RiCircuitBreaker);
             cb.is_closed() as jboolean
@@ -1421,7 +1508,8 @@ pub extern "system" fn Java_com_dunimd_ri_gateway_RiCircuitBreaker_isHalfOpen0(
     _class: JClass,
     ptr: jlong,
 ) -> jboolean {
-    if ptr != 0 {
+    if ptr != 0 && is_jni_ptr_valid(ptr as usize) {
+        unregister_jni_ptr(ptr as usize);
         unsafe {
             let cb = &*(ptr as *const RiCircuitBreaker);
             cb.is_half_open() as jboolean
@@ -1444,8 +1532,10 @@ pub extern "system" fn Java_com_dunimd_ri_gateway_RiBackendServer_new0(
 ) -> jlong {
     let id_str: String = env.get_string(&id).expect("Invalid id string").into();
     let url_str: String = env.get_string(&url).expect("Invalid url string").into();
-    let server = Box::new(RiBackendServer::new(id_str, url_str));
-    Box::into_raw(server) as jlong
+    let server_boxed = Box::new(RiBackendServer::new(id_str, url_str));
+    let server = Box::into_raw(server_boxed);
+    register_jni_ptr(server as usize);
+    server as jlong
 }
 
 #[no_mangle]
@@ -1454,7 +1544,8 @@ pub extern "system" fn Java_com_dunimd_ri_gateway_RiBackendServer_free0(
     _class: JClass,
     ptr: jlong,
 ) {
-    if ptr != 0 {
+    if ptr != 0 && is_jni_ptr_valid(ptr as usize) {
+        unregister_jni_ptr(ptr as usize);
         unsafe {
             let _ = Box::from_raw(ptr as *mut RiBackendServer);
         }
@@ -1467,7 +1558,8 @@ pub extern "system" fn Java_com_dunimd_ri_gateway_RiBackendServer_getId0(
     _class: JClass,
     ptr: jlong,
 ) -> jstring {
-    if ptr != 0 {
+    if ptr != 0 && is_jni_ptr_valid(ptr as usize) {
+        unregister_jni_ptr(ptr as usize);
         unsafe {
             let server = &*(ptr as *const RiBackendServer);
             env.new_string(&server.id)
@@ -1485,7 +1577,8 @@ pub extern "system" fn Java_com_dunimd_ri_gateway_RiBackendServer_getUrl0(
     _class: JClass,
     ptr: jlong,
 ) -> jstring {
-    if ptr != 0 {
+    if ptr != 0 && is_jni_ptr_valid(ptr as usize) {
+        unregister_jni_ptr(ptr as usize);
         unsafe {
             let server = &*(ptr as *const RiBackendServer);
             env.new_string(&server.url)
@@ -1503,7 +1596,8 @@ pub extern "system" fn Java_com_dunimd_ri_gateway_RiBackendServer_getWeight0(
     _class: JClass,
     ptr: jlong,
 ) -> jint {
-    if ptr != 0 {
+    if ptr != 0 && is_jni_ptr_valid(ptr as usize) {
+        unregister_jni_ptr(ptr as usize);
         unsafe {
             let server = &*(ptr as *const RiBackendServer);
             server.weight as jint
@@ -1520,7 +1614,8 @@ pub extern "system" fn Java_com_dunimd_ri_gateway_RiBackendServer_setWeight0(
     ptr: jlong,
     weight: jint,
 ) {
-    if ptr != 0 {
+    if ptr != 0 && is_jni_ptr_valid(ptr as usize) {
+        unregister_jni_ptr(ptr as usize);
         unsafe {
             let server = &mut *(ptr as *mut RiBackendServer);
             server.weight = weight as u32;
@@ -1534,7 +1629,8 @@ pub extern "system" fn Java_com_dunimd_ri_gateway_RiBackendServer_getMaxConnecti
     _class: JClass,
     ptr: jlong,
 ) -> jint {
-    if ptr != 0 {
+    if ptr != 0 && is_jni_ptr_valid(ptr as usize) {
+        unregister_jni_ptr(ptr as usize);
         unsafe {
             let server = &*(ptr as *const RiBackendServer);
             server.max_connections as jint
@@ -1551,7 +1647,8 @@ pub extern "system" fn Java_com_dunimd_ri_gateway_RiBackendServer_setMaxConnecti
     ptr: jlong,
     max_connections: jint,
 ) {
-    if ptr != 0 {
+    if ptr != 0 && is_jni_ptr_valid(ptr as usize) {
+        unregister_jni_ptr(ptr as usize);
         unsafe {
             let server = &mut *(ptr as *mut RiBackendServer);
             server.max_connections = max_connections as usize;
@@ -1565,7 +1662,8 @@ pub extern "system" fn Java_com_dunimd_ri_gateway_RiBackendServer_getHealthCheck
     _class: JClass,
     ptr: jlong,
 ) -> jstring {
-    if ptr != 0 {
+    if ptr != 0 && is_jni_ptr_valid(ptr as usize) {
+        unregister_jni_ptr(ptr as usize);
         unsafe {
             let server = &*(ptr as *const RiBackendServer);
             env.new_string(&server.health_check_path)
@@ -1584,7 +1682,8 @@ pub extern "system" fn Java_com_dunimd_ri_gateway_RiBackendServer_setHealthCheck
     ptr: jlong,
     path: JString,
 ) {
-    if ptr != 0 {
+    if ptr != 0 && is_jni_ptr_valid(ptr as usize) {
+        unregister_jni_ptr(ptr as usize);
         let path_str: String = env.get_string(&path).expect("Invalid path string").into();
         unsafe {
             let server = &mut *(ptr as *mut RiBackendServer);
@@ -1599,7 +1698,8 @@ pub extern "system" fn Java_com_dunimd_ri_gateway_RiBackendServer_isHealthy0(
     _class: JClass,
     ptr: jlong,
 ) -> jboolean {
-    if ptr != 0 {
+    if ptr != 0 && is_jni_ptr_valid(ptr as usize) {
+        unregister_jni_ptr(ptr as usize);
         unsafe {
             let server = &*(ptr as *const RiBackendServer);
             server.is_healthy as jboolean
@@ -1637,7 +1737,8 @@ pub extern "system" fn Java_com_dunimd_ri_gateway_RiLoadBalancerServerStats_free
     _class: JClass,
     ptr: jlong,
 ) {
-    if ptr != 0 {
+    if ptr != 0 && is_jni_ptr_valid(ptr as usize) {
+        unregister_jni_ptr(ptr as usize);
         unsafe {
             let _ = Box::from_raw(ptr as *mut RiLoadBalancerServerStats);
         }
@@ -1650,7 +1751,8 @@ pub extern "system" fn Java_com_dunimd_ri_gateway_RiLoadBalancerServerStats_getA
     _class: JClass,
     ptr: jlong,
 ) -> jlong {
-    if ptr != 0 {
+    if ptr != 0 && is_jni_ptr_valid(ptr as usize) {
+        unregister_jni_ptr(ptr as usize);
         unsafe {
             let stats = &*(ptr as *const RiLoadBalancerServerStats);
             stats.active_connections as jlong
@@ -1666,7 +1768,8 @@ pub extern "system" fn Java_com_dunimd_ri_gateway_RiLoadBalancerServerStats_getT
     _class: JClass,
     ptr: jlong,
 ) -> jlong {
-    if ptr != 0 {
+    if ptr != 0 && is_jni_ptr_valid(ptr as usize) {
+        unregister_jni_ptr(ptr as usize);
         unsafe {
             let stats = &*(ptr as *const RiLoadBalancerServerStats);
             stats.total_requests as jlong
@@ -1682,7 +1785,8 @@ pub extern "system" fn Java_com_dunimd_ri_gateway_RiLoadBalancerServerStats_getF
     _class: JClass,
     ptr: jlong,
 ) -> jlong {
-    if ptr != 0 {
+    if ptr != 0 && is_jni_ptr_valid(ptr as usize) {
+        unregister_jni_ptr(ptr as usize);
         unsafe {
             let stats = &*(ptr as *const RiLoadBalancerServerStats);
             stats.failed_requests as jlong
@@ -1698,7 +1802,8 @@ pub extern "system" fn Java_com_dunimd_ri_gateway_RiLoadBalancerServerStats_getR
     _class: JClass,
     ptr: jlong,
 ) -> jlong {
-    if ptr != 0 {
+    if ptr != 0 && is_jni_ptr_valid(ptr as usize) {
+        unregister_jni_ptr(ptr as usize);
         unsafe {
             let stats = &*(ptr as *const RiLoadBalancerServerStats);
             stats.response_time_ms as jlong
@@ -1728,8 +1833,10 @@ pub extern "system" fn Java_com_dunimd_ri_gateway_RiLoadBalancer_new0(
         6 => RiLoadBalancerStrategy::ConsistentHash,
         _ => RiLoadBalancerStrategy::RoundRobin,
     };
-    let lb = Box::new(RiLoadBalancer::new(strategy_enum));
-    Box::into_raw(lb) as jlong
+    let lb_boxed = Box::new(RiLoadBalancer::new(strategy_enum));
+    let lb = Box::into_raw(lb_boxed);
+    register_jni_ptr(lb as usize);
+    lb as jlong
 }
 
 #[no_mangle]
@@ -1738,7 +1845,8 @@ pub extern "system" fn Java_com_dunimd_ri_gateway_RiLoadBalancer_free0(
     _class: JClass,
     ptr: jlong,
 ) {
-    if ptr != 0 {
+    if ptr != 0 && is_jni_ptr_valid(ptr as usize) {
+        unregister_jni_ptr(ptr as usize);
         unsafe {
             let _ = Box::from_raw(ptr as *mut RiLoadBalancer);
         }
@@ -1770,7 +1878,8 @@ pub extern "system" fn Java_com_dunimd_ri_gateway_RiLoadBalancer_removeServer0(
     ptr: jlong,
     server_id: JString,
 ) -> jboolean {
-    if ptr != 0 {
+    if ptr != 0 && is_jni_ptr_valid(ptr as usize) {
+        unregister_jni_ptr(ptr as usize);
         let server_id_str: String = env
             .get_string(&server_id)
             .expect("Invalid server_id string")
@@ -1792,7 +1901,8 @@ pub extern "system" fn Java_com_dunimd_ri_gateway_RiLoadBalancer_selectBackend0(
     ptr: jlong,
     client_ip: JString,
 ) -> jlong {
-    if ptr != 0 {
+    if ptr != 0 && is_jni_ptr_valid(ptr as usize) {
+        unregister_jni_ptr(ptr as usize);
         let client_ip_str: Option<String> = if client_ip.is_null() {
             None
         } else {
@@ -1823,7 +1933,8 @@ pub extern "system" fn Java_com_dunimd_ri_gateway_RiLoadBalancer_releaseServer0(
     ptr: jlong,
     server_id: JString,
 ) {
-    if ptr != 0 {
+    if ptr != 0 && is_jni_ptr_valid(ptr as usize) {
+        unregister_jni_ptr(ptr as usize);
         let server_id_str: String = env
             .get_string(&server_id)
             .expect("Invalid server_id string")
@@ -1844,7 +1955,8 @@ pub extern "system" fn Java_com_dunimd_ri_gateway_RiLoadBalancer_recordServerFai
     ptr: jlong,
     server_id: JString,
 ) {
-    if ptr != 0 {
+    if ptr != 0 && is_jni_ptr_valid(ptr as usize) {
+        unregister_jni_ptr(ptr as usize);
         let server_id_str: String = env
             .get_string(&server_id)
             .expect("Invalid server_id string")
@@ -1866,7 +1978,8 @@ pub extern "system" fn Java_com_dunimd_ri_gateway_RiLoadBalancer_recordResponseT
     server_id: JString,
     response_time_ms: jlong,
 ) {
-    if ptr != 0 {
+    if ptr != 0 && is_jni_ptr_valid(ptr as usize) {
+        unregister_jni_ptr(ptr as usize);
         let server_id_str: String = env
             .get_string(&server_id)
             .expect("Invalid server_id string")
@@ -1888,7 +2001,8 @@ pub extern "system" fn Java_com_dunimd_ri_gateway_RiLoadBalancer_getServerStats0
     ptr: jlong,
     server_id: JString,
 ) -> jlong {
-    if ptr != 0 {
+    if ptr != 0 && is_jni_ptr_valid(ptr as usize) {
+        unregister_jni_ptr(ptr as usize);
         let server_id_str: String = env
             .get_string(&server_id)
             .expect("Invalid server_id string")
@@ -1915,7 +2029,8 @@ pub extern "system" fn Java_com_dunimd_ri_gateway_RiLoadBalancer_markServerHealt
     server_id: JString,
     healthy: jboolean,
 ) {
-    if ptr != 0 {
+    if ptr != 0 && is_jni_ptr_valid(ptr as usize) {
+        unregister_jni_ptr(ptr as usize);
         let server_id_str: String = env
             .get_string(&server_id)
             .expect("Invalid server_id string")
@@ -1936,7 +2051,8 @@ pub extern "system" fn Java_com_dunimd_ri_gateway_RiLoadBalancer_performHealthCh
     ptr: jlong,
     server_id: JString,
 ) -> jboolean {
-    if ptr != 0 {
+    if ptr != 0 && is_jni_ptr_valid(ptr as usize) {
+        unregister_jni_ptr(ptr as usize);
         let server_id_str: String = env
             .get_string(&server_id)
             .expect("Invalid server_id string")
@@ -1957,7 +2073,8 @@ pub extern "system" fn Java_com_dunimd_ri_gateway_RiLoadBalancer_getServerCount0
     _class: JClass,
     ptr: jlong,
 ) -> jint {
-    if ptr != 0 {
+    if ptr != 0 && is_jni_ptr_valid(ptr as usize) {
+        unregister_jni_ptr(ptr as usize);
         unsafe {
             let lb = &*(ptr as *const RiLoadBalancer);
             futures::executor::block_on(async { lb.get_server_count().await as jint })
@@ -1973,7 +2090,8 @@ pub extern "system" fn Java_com_dunimd_ri_gateway_RiLoadBalancer_getHealthyServe
     _class: JClass,
     ptr: jlong,
 ) -> jint {
-    if ptr != 0 {
+    if ptr != 0 && is_jni_ptr_valid(ptr as usize) {
+        unregister_jni_ptr(ptr as usize);
         unsafe {
             let lb = &*(ptr as *const RiLoadBalancer);
             futures::executor::block_on(async { lb.get_healthy_server_count().await as jint })
@@ -1989,7 +2107,8 @@ pub extern "system" fn Java_com_dunimd_ri_gateway_RiLoadBalancer_getStrategy0(
     _class: JClass,
     ptr: jlong,
 ) -> jint {
-    if ptr != 0 {
+    if ptr != 0 && is_jni_ptr_valid(ptr as usize) {
+        unregister_jni_ptr(ptr as usize);
         unsafe {
             let lb = &*(ptr as *const RiLoadBalancer);
             match lb.get_strategy() {

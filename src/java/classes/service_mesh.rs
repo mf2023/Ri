@@ -44,8 +44,10 @@ pub extern "system" fn Java_com_dunimd_ri_servicemesh_RiServiceMeshConfig_new0(
     _env: JNIEnv,
     _class: JClass,
 ) -> jlong {
-    let config = Box::new(RiServiceMeshConfig::default());
-    Box::into_raw(config) as jlong
+    let config_boxed = Box::new(RiServiceMeshConfig::default());
+    let config = Box::into_raw(config_boxed);
+    register_jni_ptr(config as usize);
+    config as jlong
 }
 
 #[no_mangle]
@@ -54,7 +56,8 @@ pub extern "system" fn Java_com_dunimd_ri_servicemesh_RiServiceMeshConfig_free0(
     _class: JClass,
     ptr: jlong,
 ) {
-    if ptr != 0 {
+    if ptr != 0 && is_jni_ptr_valid(ptr as usize) {
+        unregister_jni_ptr(ptr as usize);
         unsafe {
             let _ = Box::from_raw(ptr as *mut RiServiceMeshConfig);
         }
@@ -78,8 +81,10 @@ pub extern "system" fn Java_com_dunimd_ri_servicemesh_RiServiceMesh_new0(
     let config = unsafe { &*(config_ptr as *const RiServiceMeshConfig) };
     match RiServiceMesh::new(config.clone()) {
         Ok(mesh) => {
-            let boxed = Box::new(mesh);
-            Box::into_raw(boxed) as jlong
+    let boxed_boxed = Box::new(mesh);
+    let boxed = Box::into_raw(boxed_boxed);
+    register_jni_ptr(boxed as usize);
+            boxed as jlong
         }
         Err(_) => 0,
     }
@@ -91,7 +96,8 @@ pub extern "system" fn Java_com_dunimd_ri_servicemesh_RiServiceMesh_free0(
     _class: JClass,
     ptr: jlong,
 ) {
-    if ptr != 0 {
+    if ptr != 0 && is_jni_ptr_valid(ptr as usize) {
+        unregister_jni_ptr(ptr as usize);
         unsafe {
             let _ = Box::from_raw(ptr as *mut RiServiceMesh);
         }
@@ -108,8 +114,10 @@ pub extern "system" fn Java_com_dunimd_ri_servicemesh_RiServiceDiscovery_new0(
     _class: JClass,
     enabled: jboolean,
 ) -> jlong {
-    let discovery = Box::new(RiServiceDiscovery::new(enabled != 0));
-    Box::into_raw(discovery) as jlong
+    let discovery_boxed = Box::new(RiServiceDiscovery::new(enabled != 0));
+    let discovery = Box::into_raw(discovery_boxed);
+    register_jni_ptr(discovery as usize);
+    discovery as jlong
 }
 
 #[no_mangle]
@@ -212,8 +220,10 @@ pub extern "system" fn Java_com_dunimd_ri_servicemesh_RiServiceDiscovery_discove
     match result {
         Ok(instances) => {
             let ptrs: Vec<jlong> = instances.iter().map(|i| {
-                let boxed = Box::new(i.clone());
-                Box::into_raw(boxed) as jlong
+    let boxed_boxed = Box::new(i.clone());
+    let boxed = Box::into_raw(boxed_boxed);
+    register_jni_ptr(boxed as usize);
+                boxed as jlong
             }).collect();
             
             let array = env.new_long_array(ptrs.len() as i32)
@@ -324,7 +334,8 @@ pub extern "system" fn Java_com_dunimd_ri_servicemesh_RiServiceDiscovery_free0(
     _class: JClass,
     ptr: jlong,
 ) {
-    if ptr != 0 {
+    if ptr != 0 && is_jni_ptr_valid(ptr as usize) {
+        unregister_jni_ptr(ptr as usize);
         unsafe {
             let _ = Box::from_raw(ptr as *mut RiServiceDiscovery);
         }
@@ -508,7 +519,8 @@ pub extern "system" fn Java_com_dunimd_ri_servicemesh_RiServiceInstance_free0(
     _class: JClass,
     ptr: jlong,
 ) {
-    if ptr != 0 {
+    if ptr != 0 && is_jni_ptr_valid(ptr as usize) {
+        unregister_jni_ptr(ptr as usize);
         unsafe {
             let _ = Box::from_raw(ptr as *mut RiServiceInstance);
         }
@@ -595,7 +607,8 @@ pub extern "system" fn Java_com_dunimd_ri_servicemesh_RiServiceMeshStats_free0(
     _class: JClass,
     ptr: jlong,
 ) {
-    if ptr != 0 {
+    if ptr != 0 && is_jni_ptr_valid(ptr as usize) {
+        unregister_jni_ptr(ptr as usize);
         unsafe {
             let _ = Box::from_raw(ptr as *mut RiServiceMeshStats);
         }
@@ -755,7 +768,8 @@ pub extern "system" fn Java_com_dunimd_ri_servicemesh_RiServiceEndpoint_free0(
     _class: JClass,
     ptr: jlong,
 ) {
-    if ptr != 0 {
+    if ptr != 0 && is_jni_ptr_valid(ptr as usize) {
+        unregister_jni_ptr(ptr as usize);
         unsafe {
             let _ = Box::from_raw(ptr as *mut RiServiceEndpoint);
         }
@@ -772,8 +786,10 @@ pub extern "system" fn Java_com_dunimd_ri_servicemesh_RiHealthChecker_new0(
     _class: JClass,
     check_interval_seconds: jlong,
 ) -> jlong {
-    let checker = Box::new(RiHealthChecker::new(Duration::from_secs(check_interval_seconds as u64)));
-    Box::into_raw(checker) as jlong
+    let checker_boxed = Box::new(RiHealthChecker::new(Duration::from_secs(check_interval_seconds as u64)));
+    let checker = Box::into_raw(checker_boxed);
+    register_jni_ptr(checker as usize);
+    checker as jlong
 }
 
 #[no_mangle]
@@ -886,8 +902,10 @@ pub extern "system" fn Java_com_dunimd_ri_servicemesh_RiHealthChecker_getService
     
     match result {
         Ok(summary) => {
-            let boxed = Box::new(summary);
-            Box::into_raw(boxed) as jlong
+    let boxed_boxed = Box::new(summary);
+    let boxed = Box::into_raw(boxed_boxed);
+    register_jni_ptr(boxed as usize);
+            boxed as jlong
         }
         Err(_) => 0,
     }
@@ -899,7 +917,8 @@ pub extern "system" fn Java_com_dunimd_ri_servicemesh_RiHealthChecker_free0(
     _class: JClass,
     ptr: jlong,
 ) {
-    if ptr != 0 {
+    if ptr != 0 && is_jni_ptr_valid(ptr as usize) {
+        unregister_jni_ptr(ptr as usize);
         unsafe {
             let _ = Box::from_raw(ptr as *mut RiHealthChecker);
         }
@@ -1021,7 +1040,8 @@ pub extern "system" fn Java_com_dunimd_ri_servicemesh_RiHealthSummary_free0(
     _class: JClass,
     ptr: jlong,
 ) {
-    if ptr != 0 {
+    if ptr != 0 && is_jni_ptr_valid(ptr as usize) {
+        unregister_jni_ptr(ptr as usize);
         unsafe {
             let _ = Box::from_raw(ptr as *mut RiHealthSummary);
         }
@@ -1127,8 +1147,10 @@ pub extern "system" fn Java_com_dunimd_ri_servicemesh_RiTrafficRoute_getMatchCri
     }
     
     let route = unsafe { &*(ptr as *const RiTrafficRoute) };
-    let criteria = Box::new(route.match_criteria.clone());
-    Box::into_raw(criteria) as jlong
+    let criteria_boxed = Box::new(route.match_criteria.clone());
+    let criteria = Box::into_raw(criteria_boxed);
+    register_jni_ptr(criteria as usize);
+    criteria as jlong
 }
 
 #[no_mangle]
@@ -1161,8 +1183,10 @@ pub extern "system" fn Java_com_dunimd_ri_servicemesh_RiTrafficRoute_getRouteAct
     }
     
     let route = unsafe { &*(ptr as *const RiTrafficRoute) };
-    let action = Box::new(route.route_action.clone());
-    Box::into_raw(action) as jlong
+    let action_boxed = Box::new(route.route_action.clone());
+    let action = Box::into_raw(action_boxed);
+    register_jni_ptr(action as usize);
+    action as jlong
 }
 
 #[no_mangle]
@@ -1243,6 +1267,8 @@ pub extern "system" fn Java_com_dunimd_ri_servicemesh_RiTrafficRoute_setRetryAtt
         policy.attempts = attempts as u32;
     } else {
         use crate::service_mesh::traffic_management::RiRetryPolicy;
+use crate::java::exception::throw_illegal_argument;
+use crate::java::{register_jni_ptr, unregister_jni_ptr, is_jni_ptr_valid};
         route.retry_policy = Some(RiRetryPolicy {
             attempts: attempts as u32,
             per_try_timeout: Duration::from_secs(1),
@@ -1257,7 +1283,8 @@ pub extern "system" fn Java_com_dunimd_ri_servicemesh_RiTrafficRoute_free0(
     _class: JClass,
     ptr: jlong,
 ) {
-    if ptr != 0 {
+    if ptr != 0 && is_jni_ptr_valid(ptr as usize) {
+        unregister_jni_ptr(ptr as usize);
         unsafe {
             let _ = Box::from_raw(ptr as *mut RiTrafficRoute);
         }
@@ -1512,7 +1539,8 @@ pub extern "system" fn Java_com_dunimd_ri_servicemesh_RiMatchCriteria_free0(
     _class: JClass,
     ptr: jlong,
 ) {
-    if ptr != 0 {
+    if ptr != 0 && is_jni_ptr_valid(ptr as usize) {
+        unregister_jni_ptr(ptr as usize);
         unsafe {
             let _ = Box::from_raw(ptr as *mut RiMatchCriteria);
         }
@@ -1542,8 +1570,10 @@ pub extern "system" fn Java_com_dunimd_ri_servicemesh_RiRouteAction_route0(
         })
         .collect();
     
-    let action = Box::new(RiRouteAction::Route(destinations));
-    Box::into_raw(action) as jlong
+    let action_boxed = Box::new(RiRouteAction::Route(destinations));
+    let action = Box::into_raw(action_boxed);
+    register_jni_ptr(action as usize);
+    action as jlong
 }
 
 #[no_mangle]
@@ -1556,8 +1586,10 @@ pub extern "system" fn Java_com_dunimd_ri_servicemesh_RiRouteAction_redirect0(
         .expect("Failed to get uri")
         .into();
     
-    let action = Box::new(RiRouteAction::Redirect(uri_str));
-    Box::into_raw(action) as jlong
+    let action_boxed = Box::new(RiRouteAction::Redirect(uri_str));
+    let action = Box::into_raw(action_boxed);
+    register_jni_ptr(action as usize);
+    action as jlong
 }
 
 #[no_mangle]
@@ -1571,8 +1603,10 @@ pub extern "system" fn Java_com_dunimd_ri_servicemesh_RiRouteAction_directRespon
         .expect("Failed to get body")
         .into();
     
-    let action = Box::new(RiRouteAction::DirectResponse(status_code as u16, body_str));
-    Box::into_raw(action) as jlong
+    let action_boxed = Box::new(RiRouteAction::DirectResponse(status_code as u16, body_str));
+    let action = Box::into_raw(action_boxed);
+    register_jni_ptr(action as usize);
+    action as jlong
 }
 
 #[no_mangle]
@@ -1608,8 +1642,10 @@ pub extern "system" fn Java_com_dunimd_ri_servicemesh_RiRouteAction_getDestinati
     match action {
         RiRouteAction::Route(destinations) => {
             let ptrs: Vec<jlong> = destinations.iter().map(|d| {
-                let boxed = Box::new(d.clone());
-                Box::into_raw(boxed) as jlong
+    let boxed_boxed = Box::new(d.clone());
+    let boxed = Box::into_raw(boxed_boxed);
+    register_jni_ptr(boxed as usize);
+                boxed as jlong
             }).collect();
             
             let array = env.new_long_array(ptrs.len() as i32)
@@ -1686,7 +1722,8 @@ pub extern "system" fn Java_com_dunimd_ri_servicemesh_RiRouteAction_free0(
     _class: JClass,
     ptr: jlong,
 ) {
-    if ptr != 0 {
+    if ptr != 0 && is_jni_ptr_valid(ptr as usize) {
+        unregister_jni_ptr(ptr as usize);
         unsafe {
             let _ = Box::from_raw(ptr as *mut RiRouteAction);
         }
@@ -1789,7 +1826,8 @@ pub extern "system" fn Java_com_dunimd_ri_servicemesh_RiWeightedDestination_free
     _class: JClass,
     ptr: jlong,
 ) {
-    if ptr != 0 {
+    if ptr != 0 && is_jni_ptr_valid(ptr as usize) {
+        unregister_jni_ptr(ptr as usize);
         unsafe {
             let _ = Box::from_raw(ptr as *mut RiWeightedDestination);
         }
@@ -1806,8 +1844,10 @@ pub extern "system" fn Java_com_dunimd_ri_servicemesh_RiTrafficManager_new0(
     _class: JClass,
     enabled: jboolean,
 ) -> jlong {
-    let manager = Box::new(RiTrafficManager::new(enabled != 0));
-    Box::into_raw(manager) as jlong
+    let manager_boxed = Box::new(RiTrafficManager::new(enabled != 0));
+    let manager = Box::into_raw(manager_boxed);
+    register_jni_ptr(manager as usize);
+    manager as jlong
 }
 
 #[no_mangle]
@@ -1883,8 +1923,10 @@ pub extern "system" fn Java_com_dunimd_ri_servicemesh_RiTrafficManager_getRoutes
     match result {
         Ok(routes) => {
             let ptrs: Vec<jlong> = routes.iter().map(|r| {
-                let boxed = Box::new(r.clone());
-                Box::into_raw(boxed) as jlong
+    let boxed_boxed = Box::new(r.clone());
+    let boxed = Box::into_raw(boxed_boxed);
+    register_jni_ptr(boxed as usize);
+                boxed as jlong
             }).collect();
             
             let array = env.new_long_array(ptrs.len() as i32)
@@ -1964,7 +2006,8 @@ pub extern "system" fn Java_com_dunimd_ri_servicemesh_RiTrafficManager_free0(
     _class: JClass,
     ptr: jlong,
 ) {
-    if ptr != 0 {
+    if ptr != 0 && is_jni_ptr_valid(ptr as usize) {
+        unregister_jni_ptr(ptr as usize);
         unsafe {
             let _ = Box::from_raw(ptr as *mut RiTrafficManager);
         }

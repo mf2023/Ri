@@ -40,8 +40,10 @@ pub extern "system" fn Java_com_dunimd_ri_cache_RiCacheModule_new0(
     }
     
     let config = unsafe { &*(config_ptr as *const RiCacheConfig) };
-    let module = Box::new(RiCacheModule::new(config.clone()));
-    Box::into_raw(module) as jlong
+    let module_boxed = Box::new(RiCacheModule::new(config.clone()));
+    let module = Box::into_raw(module_boxed);
+    register_jni_ptr(module as usize);
+    module as jlong
 }
 
 #[no_mangle]
@@ -133,8 +135,10 @@ pub extern "system" fn Java_com_dunimd_ri_cache_RiCacheModule_getStats(
     
     let _module = unsafe { &*(ptr as *const RiCacheModule) };
     
-    let stats = Box::new(RiCacheStats::default());
-    Box::into_raw(stats) as jlong
+    let stats_boxed = Box::new(RiCacheStats::default());
+    let stats = Box::into_raw(stats_boxed);
+    register_jni_ptr(stats as usize);
+    stats as jlong
 }
 
 #[no_mangle]
@@ -143,7 +147,8 @@ pub extern "system" fn Java_com_dunimd_ri_cache_RiCacheModule_free0(
     _class: JClass,
     ptr: jlong,
 ) {
-    if ptr != 0 {
+    if ptr != 0 && is_jni_ptr_valid(ptr as usize) {
+        unregister_jni_ptr(ptr as usize);
         unsafe {
             let _ = Box::from_raw(ptr as *mut RiCacheModule);
         }
@@ -159,8 +164,10 @@ pub extern "system" fn Java_com_dunimd_ri_cache_RiCacheConfig_new0(
     _env: JNIEnv,
     _class: JClass,
 ) -> jlong {
-    let config = Box::new(RiCacheConfig::default());
-    Box::into_raw(config) as jlong
+    let config_boxed = Box::new(RiCacheConfig::default());
+    let config = Box::into_raw(config_boxed);
+    register_jni_ptr(config as usize);
+    config as jlong
 }
 
 #[no_mangle]
@@ -236,7 +243,8 @@ pub extern "system" fn Java_com_dunimd_ri_cache_RiCacheConfig_free0(
     _class: JClass,
     ptr: jlong,
 ) {
-    if ptr != 0 {
+    if ptr != 0 && is_jni_ptr_valid(ptr as usize) {
+        unregister_jni_ptr(ptr as usize);
         unsafe {
             let _ = Box::from_raw(ptr as *mut RiCacheConfig);
         }
@@ -281,7 +289,8 @@ pub extern "system" fn Java_com_dunimd_ri_cache_RiCacheStats_free0(
     _class: JClass,
     ptr: jlong,
 ) {
-    if ptr != 0 {
+    if ptr != 0 && is_jni_ptr_valid(ptr as usize) {
+        unregister_jni_ptr(ptr as usize);
         unsafe {
             let _ = Box::from_raw(ptr as *mut RiCacheStats);
         }
@@ -297,8 +306,10 @@ pub extern "system" fn Java_com_dunimd_ri_cache_RiCachePolicy_new0(
     _env: JNIEnv,
     _class: JClass,
 ) -> jlong {
-    let policy = Box::new(RiCachePolicy::default());
-    Box::into_raw(policy) as jlong
+    let policy_boxed = Box::new(RiCachePolicy::default());
+    let policy = Box::into_raw(policy_boxed);
+    register_jni_ptr(policy as usize);
+    policy as jlong
 }
 
 #[no_mangle]
@@ -402,7 +413,8 @@ pub extern "system" fn Java_com_dunimd_ri_cache_RiCachePolicy_free0(
     _class: JClass,
     ptr: jlong,
 ) {
-    if ptr != 0 {
+    if ptr != 0 && is_jni_ptr_valid(ptr as usize) {
+        unregister_jni_ptr(ptr as usize);
         unsafe {
             let _ = Box::from_raw(ptr as *mut RiCachePolicy);
         }
@@ -425,8 +437,10 @@ pub extern "system" fn Java_com_dunimd_ri_cache_RiCachedValue_new0(
         .into();
     
     let ttl = if ttl_secs >= 0 { Some(ttl_secs as u64) } else { None };
-    let cached_value = Box::new(RiCachedValue::new(value_str, ttl));
-    Box::into_raw(cached_value) as jlong
+    let cached_value_boxed = Box::new(RiCachedValue::new(value_str, ttl));
+    let cached_value = Box::into_raw(cached_value_boxed);
+    register_jni_ptr(cached_value as usize);
+    cached_value as jlong
 }
 
 #[no_mangle]
@@ -522,7 +536,8 @@ pub extern "system" fn Java_com_dunimd_ri_cache_RiCachedValue_free0(
     _class: JClass,
     ptr: jlong,
 ) {
-    if ptr != 0 {
+    if ptr != 0 && is_jni_ptr_valid(ptr as usize) {
+        unregister_jni_ptr(ptr as usize);
         unsafe {
             let _ = Box::from_raw(ptr as *mut RiCachedValue);
         }
@@ -540,10 +555,14 @@ pub extern "system" fn Java_com_dunimd_ri_cache_RiCacheManager_new0(
 ) -> jlong {
     use crate::cache::RiMemoryCache;
     use std::sync::Arc;
+use crate::java::exception::throw_illegal_argument;
+use crate::java::{register_jni_ptr, unregister_jni_ptr, is_jni_ptr_valid};
     
     let backend = Arc::new(RiMemoryCache::new());
-    let manager = Box::new(RiCacheManager::new(backend));
-    Box::into_raw(manager) as jlong
+    let manager_boxed = Box::new(RiCacheManager::new(backend));
+    let manager = Box::into_raw(manager_boxed);
+    register_jni_ptr(manager as usize);
+    manager as jlong
 }
 
 #[no_mangle]
@@ -689,8 +708,10 @@ pub extern "system" fn Java_com_dunimd_ri_cache_RiCacheManager_stats0(
         manager.stats().await
     });
     
-    let stats_box = Box::new(stats);
-    Box::into_raw(stats_box) as jlong
+    let stats_box_boxed = Box::new(stats);
+    let stats_box = Box::into_raw(stats_box_boxed);
+    register_jni_ptr(stats_box as usize);
+    stats_box as jlong
 }
 
 #[no_mangle]
@@ -744,7 +765,8 @@ pub extern "system" fn Java_com_dunimd_ri_cache_RiCacheManager_free0(
     _class: JClass,
     ptr: jlong,
 ) {
-    if ptr != 0 {
+    if ptr != 0 && is_jni_ptr_valid(ptr as usize) {
+        unregister_jni_ptr(ptr as usize);
         unsafe {
             let _ = Box::from_raw(ptr as *mut RiCacheManager);
         }

@@ -28,6 +28,8 @@ use crate::device::{
     RiDiscoveryResult, RiResourceRequest, RiResourceAllocation, RiDeviceSchedulingConfig,
 };
 use crate::java::exception::check_not_null;
+use crate::java::exception::throw_illegal_argument;
+use crate::java::{register_jni_ptr, unregister_jni_ptr, is_jni_ptr_valid};
 
 // =============================================================================
 // RiDeviceControlModule JNI Bindings
@@ -51,7 +53,8 @@ pub extern "system" fn Java_com_dunimd_ri_device_RiDeviceControlModule_free0(
     _class: JClass,
     ptr: jlong,
 ) {
-    if ptr != 0 {
+    if ptr != 0 && is_jni_ptr_valid(ptr as usize) {
+        unregister_jni_ptr(ptr as usize);
         unsafe {
             let _ = Box::from_raw(ptr as *mut RiDeviceControlModule);
         }
@@ -67,8 +70,10 @@ pub extern "system" fn Java_com_dunimd_ri_device_RiDeviceControlConfig_new0(
     _env: JNIEnv,
     _class: JClass,
 ) -> jlong {
-    let config = Box::new(RiDeviceControlConfig::default());
-    Box::into_raw(config) as jlong
+    let config_boxed = Box::new(RiDeviceControlConfig::default());
+    let config = Box::into_raw(config_boxed);
+    register_jni_ptr(config as usize);
+    config as jlong
 }
 
 #[no_mangle]
@@ -77,7 +82,8 @@ pub extern "system" fn Java_com_dunimd_ri_device_RiDeviceControlConfig_free0(
     _class: JClass,
     ptr: jlong,
 ) {
-    if ptr != 0 {
+    if ptr != 0 && is_jni_ptr_valid(ptr as usize) {
+        unregister_jni_ptr(ptr as usize);
         unsafe {
             let _ = Box::from_raw(ptr as *mut RiDeviceControlConfig);
         }
@@ -110,8 +116,10 @@ pub extern "system" fn Java_com_dunimd_ri_device_RiDevice_new0(
         _ => RiDeviceType::Custom,
     };
     
-    let device = Box::new(RiDevice::new(name_str, dtype));
-    Box::into_raw(device) as jlong
+    let device_boxed = Box::new(RiDevice::new(name_str, dtype));
+    let device = Box::into_raw(device_boxed);
+    register_jni_ptr(device as usize);
+    device as jlong
 }
 
 #[no_mangle]
@@ -206,8 +214,10 @@ pub extern "system" fn Java_com_dunimd_ri_device_RiDevice_getCapabilities0(
     }
     
     let device = unsafe { &*(ptr as *const RiDevice) };
-    let capabilities = Box::new(device.capabilities().clone());
-    Box::into_raw(capabilities) as jlong
+    let capabilities_boxed = Box::new(device.capabilities().clone());
+    let capabilities = Box::into_raw(capabilities_boxed);
+    register_jni_ptr(capabilities as usize);
+    capabilities as jlong
 }
 
 #[no_mangle]
@@ -237,8 +247,10 @@ pub extern "system" fn Java_com_dunimd_ri_device_RiDevice_getHealthMetrics0(
     }
     
     let device = unsafe { &*(ptr as *const RiDevice) };
-    let metrics = Box::new(device.health_metrics().clone());
-    Box::into_raw(metrics) as jlong
+    let metrics_boxed = Box::new(device.health_metrics().clone());
+    let metrics = Box::into_raw(metrics_boxed);
+    register_jni_ptr(metrics as usize);
+    metrics as jlong
 }
 
 #[no_mangle]
@@ -289,7 +301,8 @@ pub extern "system" fn Java_com_dunimd_ri_device_RiDevice_free0(
     _class: JClass,
     ptr: jlong,
 ) {
-    if ptr != 0 {
+    if ptr != 0 && is_jni_ptr_valid(ptr as usize) {
+        unregister_jni_ptr(ptr as usize);
         unsafe {
             let _ = Box::from_raw(ptr as *mut RiDevice);
         }
@@ -305,8 +318,10 @@ pub extern "system" fn Java_com_dunimd_ri_device_RiDeviceCapabilities_new0(
     _env: JNIEnv,
     _class: JClass,
 ) -> jlong {
-    let capabilities = Box::new(RiDeviceCapabilities::new());
-    Box::into_raw(capabilities) as jlong
+    let capabilities_boxed = Box::new(RiDeviceCapabilities::new());
+    let capabilities = Box::into_raw(capabilities_boxed);
+    register_jni_ptr(capabilities as usize);
+    capabilities as jlong
 }
 
 #[no_mangle]
@@ -447,7 +462,8 @@ pub extern "system" fn Java_com_dunimd_ri_device_RiDeviceCapabilities_free0(
     _class: JClass,
     ptr: jlong,
 ) {
-    if ptr != 0 {
+    if ptr != 0 && is_jni_ptr_valid(ptr as usize) {
+        unregister_jni_ptr(ptr as usize);
         unsafe {
             let _ = Box::from_raw(ptr as *mut RiDeviceCapabilities);
         }
@@ -463,8 +479,10 @@ pub extern "system" fn Java_com_dunimd_ri_device_RiDeviceHealthMetrics_new0(
     _env: JNIEnv,
     _class: JClass,
 ) -> jlong {
-    let metrics = Box::new(RiDeviceHealthMetrics::default());
-    Box::into_raw(metrics) as jlong
+    let metrics_boxed = Box::new(RiDeviceHealthMetrics::default());
+    let metrics = Box::into_raw(metrics_boxed);
+    register_jni_ptr(metrics as usize);
+    metrics as jlong
 }
 
 #[no_mangle]
@@ -705,7 +723,8 @@ pub extern "system" fn Java_com_dunimd_ri_device_RiDeviceHealthMetrics_free0(
     _class: JClass,
     ptr: jlong,
 ) {
-    if ptr != 0 {
+    if ptr != 0 && is_jni_ptr_valid(ptr as usize) {
+        unregister_jni_ptr(ptr as usize);
         unsafe {
             let _ = Box::from_raw(ptr as *mut RiDeviceHealthMetrics);
         }
@@ -721,8 +740,10 @@ pub extern "system" fn Java_com_dunimd_ri_device_RiDeviceConfig_new0(
     _env: JNIEnv,
     _class: JClass,
 ) -> jlong {
-    let config = Box::new(RiDeviceConfig::default());
-    Box::into_raw(config) as jlong
+    let config_boxed = Box::new(RiDeviceConfig::default());
+    let config = Box::into_raw(config_boxed);
+    register_jni_ptr(config as usize);
+    config as jlong
 }
 
 #[no_mangle]
@@ -847,7 +868,8 @@ pub extern "system" fn Java_com_dunimd_ri_device_RiDeviceConfig_free0(
     _class: JClass,
     ptr: jlong,
 ) {
-    if ptr != 0 {
+    if ptr != 0 && is_jni_ptr_valid(ptr as usize) {
+        unregister_jni_ptr(ptr as usize);
         unsafe {
             let _ = Box::from_raw(ptr as *mut RiDeviceConfig);
         }
@@ -863,8 +885,10 @@ pub extern "system" fn Java_com_dunimd_ri_device_RiDeviceSchedulingConfig_new0(
     _env: JNIEnv,
     _class: JClass,
 ) -> jlong {
-    let config = Box::new(RiDeviceSchedulingConfig::default());
-    Box::into_raw(config) as jlong
+    let config_boxed = Box::new(RiDeviceSchedulingConfig::default());
+    let config = Box::into_raw(config_boxed);
+    register_jni_ptr(config as usize);
+    config as jlong
 }
 
 #[no_mangle]
@@ -1018,7 +1042,8 @@ pub extern "system" fn Java_com_dunimd_ri_device_RiDeviceSchedulingConfig_free0(
     _class: JClass,
     ptr: jlong,
 ) {
-    if ptr != 0 {
+    if ptr != 0 && is_jni_ptr_valid(ptr as usize) {
+        unregister_jni_ptr(ptr as usize);
         unsafe {
             let _ = Box::from_raw(ptr as *mut RiDeviceSchedulingConfig);
         }
@@ -1223,7 +1248,8 @@ pub extern "system" fn Java_com_dunimd_ri_device_RiNetworkDeviceInfo_free0(
     _class: JClass,
     ptr: jlong,
 ) {
-    if ptr != 0 {
+    if ptr != 0 && is_jni_ptr_valid(ptr as usize) {
+        unregister_jni_ptr(ptr as usize);
         unsafe {
             let _ = Box::from_raw(ptr as *mut RiNetworkDeviceInfo);
         }
@@ -1312,7 +1338,8 @@ pub extern "system" fn Java_com_dunimd_ri_device_RiDiscoveryResult_free0(
     _class: JClass,
     ptr: jlong,
 ) {
-    if ptr != 0 {
+    if ptr != 0 && is_jni_ptr_valid(ptr as usize) {
+        unregister_jni_ptr(ptr as usize);
         unsafe {
             let _ = Box::from_raw(ptr as *mut RiDiscoveryResult);
         }
@@ -1405,8 +1432,10 @@ pub extern "system" fn Java_com_dunimd_ri_device_RiResourceRequest_getRequiredCa
     }
     
     let request = unsafe { &*(ptr as *const RiResourceRequest) };
-    let capabilities = Box::new(request.required_capabilities.clone());
-    Box::into_raw(capabilities) as jlong
+    let capabilities_boxed = Box::new(request.required_capabilities.clone());
+    let capabilities = Box::into_raw(capabilities_boxed);
+    register_jni_ptr(capabilities as usize);
+    capabilities as jlong
 }
 
 #[no_mangle]
@@ -1473,7 +1502,8 @@ pub extern "system" fn Java_com_dunimd_ri_device_RiResourceRequest_free0(
     _class: JClass,
     ptr: jlong,
 ) {
-    if ptr != 0 {
+    if ptr != 0 && is_jni_ptr_valid(ptr as usize) {
+        unregister_jni_ptr(ptr as usize);
         unsafe {
             let _ = Box::from_raw(ptr as *mut RiResourceRequest);
         }
@@ -1593,8 +1623,10 @@ pub extern "system" fn Java_com_dunimd_ri_device_RiResourceAllocation_getRequest
     }
     
     let allocation = unsafe { &*(ptr as *const RiResourceAllocation) };
-    let request = Box::new(allocation.request.clone());
-    Box::into_raw(request) as jlong
+    let request_boxed = Box::new(allocation.request.clone());
+    let request = Box::into_raw(request_boxed);
+    register_jni_ptr(request as usize);
+    request as jlong
 }
 
 #[no_mangle]
@@ -1603,7 +1635,8 @@ pub extern "system" fn Java_com_dunimd_ri_device_RiResourceAllocation_free0(
     _class: JClass,
     ptr: jlong,
 ) {
-    if ptr != 0 {
+    if ptr != 0 && is_jni_ptr_valid(ptr as usize) {
+        unregister_jni_ptr(ptr as usize);
         unsafe {
             let _ = Box::from_raw(ptr as *mut RiResourceAllocation);
         }

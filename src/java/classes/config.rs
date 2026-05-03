@@ -23,6 +23,8 @@ use jni::JNIEnv;
 use jni::objects::JClass;
 use jni::sys::jlong;
 use crate::config::RiConfigManager;
+use crate::java::exception::throw_illegal_argument;
+use crate::java::{register_jni_ptr, unregister_jni_ptr, is_jni_ptr_valid};
 
 #[no_mangle]
 pub extern "system" fn Java_com_dunimd_ri_config_RiConfigManager_new0(
@@ -38,7 +40,8 @@ pub extern "system" fn Java_com_dunimd_ri_config_RiConfigManager_free0(
     _class: JClass,
     ptr: jlong,
 ) {
-    if ptr != 0 {
+    if ptr != 0 && is_jni_ptr_valid(ptr as usize) {
+        unregister_jni_ptr(ptr as usize);
         unsafe {
             let _ = Box::from_raw(ptr as *mut RiConfigManager);
         }

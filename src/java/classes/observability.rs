@@ -41,8 +41,10 @@ pub extern "system" fn Java_com_dunimd_ri_observability_RiObservabilityModule_ne
     if !check_not_null(&mut env, config_ptr, "RiObservabilityConfig") {
         return 0;
     }
-    let module = Box::new(RiObservabilityModule::new());
-    Box::into_raw(module) as jlong
+    let module_boxed = Box::new(RiObservabilityModule::new());
+    let module = Box::into_raw(module_boxed);
+    register_jni_ptr(module as usize);
+    module as jlong
 }
 
 #[no_mangle]
@@ -51,7 +53,8 @@ pub extern "system" fn Java_com_dunimd_ri_observability_RiObservabilityModule_fr
     _class: JClass,
     ptr: jlong,
 ) {
-    if ptr != 0 {
+    if ptr != 0 && is_jni_ptr_valid(ptr as usize) {
+        unregister_jni_ptr(ptr as usize);
         unsafe {
             let _ = Box::from_raw(ptr as *mut RiObservabilityModule);
         }
@@ -65,8 +68,10 @@ pub extern "system" fn Java_com_dunimd_ri_observability_RiTracer_new0(
     _class: JClass,
     sampling_rate: jdouble,
 ) -> jlong {
-    let tracer = Box::new(RiTracer::new(sampling_rate));
-    Box::into_raw(tracer) as jlong
+    let tracer_boxed = Box::new(RiTracer::new(sampling_rate));
+    let tracer = Box::into_raw(tracer_boxed);
+    register_jni_ptr(tracer as usize);
+    tracer as jlong
 }
 
 #[no_mangle]
@@ -228,6 +233,8 @@ pub extern "system" fn Java_com_dunimd_ri_observability_RiTracer_addEvent0(
     };
     
     use crate::observability::tracing::RiSpanId;
+use crate::java::exception::throw_illegal_argument;
+use crate::java::{register_jni_ptr, unregister_jni_ptr, is_jni_ptr_valid};
     let span_id_obj = RiSpanId::from_string(span_id_str);
     let _ = tracer.span_mut(&span_id_obj, |span| {
         span.add_event(name_str, std::collections::HashMap::default());
@@ -268,7 +275,8 @@ pub extern "system" fn Java_com_dunimd_ri_observability_RiTracer_free0(
     _class: JClass,
     ptr: jlong,
 ) {
-    if ptr != 0 {
+    if ptr != 0 && is_jni_ptr_valid(ptr as usize) {
+        unregister_jni_ptr(ptr as usize);
         unsafe {
             let _ = Box::from_raw(ptr as *mut RiTracer);
         }
@@ -375,7 +383,8 @@ pub extern "system" fn Java_com_dunimd_ri_observability_RiMetricConfig_free0(
     _class: JClass,
     ptr: jlong,
 ) {
-    if ptr != 0 {
+    if ptr != 0 && is_jni_ptr_valid(ptr as usize) {
+        unregister_jni_ptr(ptr as usize);
         unsafe {
             let _ = Box::from_raw(ptr as *mut RiMetricConfig);
         }
@@ -394,8 +403,10 @@ pub extern "system" fn Java_com_dunimd_ri_observability_RiMetric_new0(
     }
     
     let config = unsafe { &*(config_ptr as *const RiMetricConfig) };
-    let metric = Box::new(RiMetric::new(config.clone()));
-    Box::into_raw(metric) as jlong
+    let metric_boxed = Box::new(RiMetric::new(config.clone()));
+    let metric = Box::into_raw(metric_boxed);
+    register_jni_ptr(metric as usize);
+    metric as jlong
 }
 
 #[no_mangle]
@@ -447,7 +458,8 @@ pub extern "system" fn Java_com_dunimd_ri_observability_RiMetric_free0(
     _class: JClass,
     ptr: jlong,
 ) {
-    if ptr != 0 {
+    if ptr != 0 && is_jni_ptr_valid(ptr as usize) {
+        unregister_jni_ptr(ptr as usize);
         unsafe {
             let _ = Box::from_raw(ptr as *mut RiMetric);
         }
@@ -460,8 +472,10 @@ pub extern "system" fn Java_com_dunimd_ri_observability_RiMetricsRegistry_new0(
     _env: JNIEnv,
     _class: JClass,
 ) -> jlong {
-    let registry = Box::new(RiMetricsRegistry::new());
-    Box::into_raw(registry) as jlong
+    let registry_boxed = Box::new(RiMetricsRegistry::new());
+    let registry = Box::into_raw(registry_boxed);
+    register_jni_ptr(registry as usize);
+    registry as jlong
 }
 
 #[no_mangle]
@@ -499,8 +513,10 @@ pub extern "system" fn Java_com_dunimd_ri_observability_RiMetricsRegistry_get0(
     
     match registry.get_metric(&name_str) {
         Some(metric) => {
-            let metric_box = Box::new(RiMetric::new(metric.get_config().clone()));
-            Box::into_raw(metric_box) as jlong
+    let metric_box_boxed = Box::new(RiMetric::new(metric.get_config().clone()));
+    let metric_box = Box::into_raw(metric_box_boxed);
+    register_jni_ptr(metric_box as usize);
+            metric_box as jlong
         }
         None => 0,
     }
@@ -595,7 +611,8 @@ pub extern "system" fn Java_com_dunimd_ri_observability_RiMetricsRegistry_free0(
     _class: JClass,
     ptr: jlong,
 ) {
-    if ptr != 0 {
+    if ptr != 0 && is_jni_ptr_valid(ptr as usize) {
+        unregister_jni_ptr(ptr as usize);
         unsafe {
             let _ = Box::from_raw(ptr as *mut RiMetricsRegistry);
         }
@@ -609,8 +626,10 @@ pub extern "system" fn Java_com_dunimd_ri_observability_RiSystemMetricsCollector
     _env: JNIEnv,
     _class: JClass,
 ) -> jlong {
-    let collector = Box::new(RiSystemMetricsCollector::new());
-    Box::into_raw(collector) as jlong
+    let collector_boxed = Box::new(RiSystemMetricsCollector::new());
+    let collector = Box::into_raw(collector_boxed);
+    register_jni_ptr(collector as usize);
+    collector as jlong
 }
 
 #[cfg(feature = "system_info")]
@@ -752,7 +771,8 @@ pub extern "system" fn Java_com_dunimd_ri_observability_RiSystemMetricsCollector
     _class: JClass,
     ptr: jlong,
 ) {
-    if ptr != 0 {
+    if ptr != 0 && is_jni_ptr_valid(ptr as usize) {
+        unregister_jni_ptr(ptr as usize);
         unsafe {
             let _ = Box::from_raw(ptr as *mut RiSystemMetricsCollector);
         }

@@ -24,6 +24,8 @@ use jni::objects::{JClass, JString};
 use jni::sys::{jlong, jint, jstring};
 use crate::hooks::{RiHookBus, RiHookEvent, RiHookKind, RiModulePhase};
 use crate::java::exception::check_not_null;
+use crate::java::exception::throw_illegal_argument;
+use crate::java::{register_jni_ptr, unregister_jni_ptr, is_jni_ptr_valid};
 
 // =============================================================================
 // RiHookBus JNI Bindings
@@ -34,8 +36,10 @@ pub extern "system" fn Java_com_dunimd_ri_hooks_RiHookBus_new0(
     _env: JNIEnv,
     _class: JClass,
 ) -> jlong {
-    let bus = Box::new(RiHookBus::new());
-    Box::into_raw(bus) as jlong
+    let bus_boxed = Box::new(RiHookBus::new());
+    let bus = Box::into_raw(bus_boxed);
+    register_jni_ptr(bus as usize);
+    bus as jlong
 }
 
 #[no_mangle]
@@ -44,7 +48,8 @@ pub extern "system" fn Java_com_dunimd_ri_hooks_RiHookBus_free0(
     _class: JClass,
     ptr: jlong,
 ) {
-    if ptr != 0 {
+    if ptr != 0 && is_jni_ptr_valid(ptr as usize) {
+        unregister_jni_ptr(ptr as usize);
         unsafe {
             let _ = Box::from_raw(ptr as *mut RiHookBus);
         }
@@ -197,8 +202,10 @@ pub extern "system" fn Java_com_dunimd_ri_hooks_RiHookEvent_new0(
         })
     };
     
-    let event = Box::new(RiHookEvent::new(kind, module_str, phase));
-    Box::into_raw(event) as jlong
+    let event_boxed = Box::new(RiHookEvent::new(kind, module_str, phase));
+    let event = Box::into_raw(event_boxed);
+    register_jni_ptr(event as usize);
+    event as jlong
 }
 
 #[no_mangle]
@@ -282,7 +289,8 @@ pub extern "system" fn Java_com_dunimd_ri_hooks_RiHookEvent_free0(
     _class: JClass,
     ptr: jlong,
 ) {
-    if ptr != 0 {
+    if ptr != 0 && is_jni_ptr_valid(ptr as usize) {
+        unregister_jni_ptr(ptr as usize);
         unsafe {
             let _ = Box::from_raw(ptr as *mut RiHookEvent);
         }

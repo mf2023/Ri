@@ -24,6 +24,8 @@ use jni::objects::{JClass, JString};
 use jni::sys::{jlong, jboolean, jint, jdouble, jstring};
 use crate::database::{RiDatabaseConfig, RiDatabasePool, RiDatabaseMetrics, RiDynamicPoolConfig, RiDBRow, RiDBResult, RiDatabaseMigration};
 use crate::java::exception::check_not_null;
+use crate::java::exception::throw_illegal_argument;
+use crate::java::{register_jni_ptr, unregister_jni_ptr, is_jni_ptr_valid};
 
 // =============================================================================
 // RiDatabaseConfig JNI Bindings
@@ -34,8 +36,10 @@ pub extern "system" fn Java_com_dunimd_ri_database_RiDatabaseConfig_new0(
     _env: JNIEnv,
     _class: JClass,
 ) -> jlong {
-    let config = Box::new(RiDatabaseConfig::default());
-    Box::into_raw(config) as jlong
+    let config_boxed = Box::new(RiDatabaseConfig::default());
+    let config = Box::into_raw(config_boxed);
+    register_jni_ptr(config as usize);
+    config as jlong
 }
 
 #[no_mangle]
@@ -44,7 +48,8 @@ pub extern "system" fn Java_com_dunimd_ri_database_RiDatabaseConfig_free0(
     _class: JClass,
     ptr: jlong,
 ) {
-    if ptr != 0 {
+    if ptr != 0 && is_jni_ptr_valid(ptr as usize) {
+        unregister_jni_ptr(ptr as usize);
         unsafe {
             let _ = Box::from_raw(ptr as *mut RiDatabaseConfig);
         }
@@ -69,8 +74,10 @@ pub extern "system" fn Java_com_dunimd_ri_database_RiDatabasePool_new0(
 
     match crate::database::RiDatabasePool::new(config.clone()) {
         Ok(pool) => {
-            let boxed = Box::new(pool);
-            Box::into_raw(boxed) as jlong
+    let boxed_boxed = Box::new(pool);
+    let boxed = Box::into_raw(boxed_boxed);
+    register_jni_ptr(boxed as usize);
+            boxed as jlong
         }
         Err(e) => {
             throw_ri_error(&mut env, &e.to_string());
@@ -112,8 +119,10 @@ pub extern "system" fn Java_com_dunimd_ri_database_RiDatabasePool_query0(
         .expect("Failed to get SQL")
         .into();
     
-    let result = Box::new(RiDBResult::new());
-    Box::into_raw(result) as jlong
+    let result_boxed = Box::new(RiDBResult::new());
+    let result = Box::into_raw(result_boxed);
+    register_jni_ptr(result as usize);
+    result as jlong
 }
 
 #[no_mangle]
@@ -126,8 +135,10 @@ pub extern "system" fn Java_com_dunimd_ri_database_RiDatabasePool_getMetrics0(
         return 0;
     }
     
-    let metrics = Box::new(RiDatabaseMetrics::default());
-    Box::into_raw(metrics) as jlong
+    let metrics_boxed = Box::new(RiDatabaseMetrics::default());
+    let metrics = Box::into_raw(metrics_boxed);
+    register_jni_ptr(metrics as usize);
+    metrics as jlong
 }
 
 #[no_mangle]
@@ -153,8 +164,10 @@ pub extern "system" fn Java_com_dunimd_ri_database_RiDatabasePool_getDynamicConf
         return 0;
     }
     
-    let config = Box::new(RiDynamicPoolConfig::default());
-    Box::into_raw(config) as jlong
+    let config_boxed = Box::new(RiDynamicPoolConfig::default());
+    let config = Box::into_raw(config_boxed);
+    register_jni_ptr(config as usize);
+    config as jlong
 }
 
 #[no_mangle]
@@ -163,7 +176,8 @@ pub extern "system" fn Java_com_dunimd_ri_database_RiDatabasePool_free0(
     _class: JClass,
     ptr: jlong,
 ) {
-    if ptr != 0 {
+    if ptr != 0 && is_jni_ptr_valid(ptr as usize) {
+        unregister_jni_ptr(ptr as usize);
         unsafe {
             let _ = Box::from_raw(ptr as *mut RiDatabasePool);
         }
@@ -319,7 +333,8 @@ pub extern "system" fn Java_com_dunimd_ri_database_RiDBRow_free0(
     _class: JClass,
     ptr: jlong,
 ) {
-    if ptr != 0 {
+    if ptr != 0 && is_jni_ptr_valid(ptr as usize) {
+        unregister_jni_ptr(ptr as usize);
         unsafe {
             let _ = Box::from_raw(ptr as *mut RiDBRow);
         }
@@ -399,8 +414,10 @@ pub extern "system" fn Java_com_dunimd_ri_database_RiDBResult_getRow0(
     
     let result = unsafe { &*(ptr as *const RiDBResult) };
     if let Some(_row) = result.get(index as usize) {
-        let row = Box::new(RiDBRow::new());
-        return Box::into_raw(row) as jlong;
+    let row_boxed = Box::new(RiDBRow::new());
+    let row = Box::into_raw(row_boxed);
+    register_jni_ptr(row as usize);
+        row as jlong
     }
     
     0
@@ -412,7 +429,8 @@ pub extern "system" fn Java_com_dunimd_ri_database_RiDBResult_free0(
     _class: JClass,
     ptr: jlong,
 ) {
-    if ptr != 0 {
+    if ptr != 0 && is_jni_ptr_valid(ptr as usize) {
+        unregister_jni_ptr(ptr as usize);
         unsafe {
             let _ = Box::from_raw(ptr as *mut RiDBResult);
         }
@@ -527,7 +545,8 @@ pub extern "system" fn Java_com_dunimd_ri_database_RiDatabaseMetrics_free0(
     _class: JClass,
     ptr: jlong,
 ) {
-    if ptr != 0 {
+    if ptr != 0 && is_jni_ptr_valid(ptr as usize) {
+        unregister_jni_ptr(ptr as usize);
         unsafe {
             let _ = Box::from_raw(ptr as *mut RiDatabaseMetrics);
         }
@@ -543,8 +562,10 @@ pub extern "system" fn Java_com_dunimd_ri_database_RiDynamicPoolConfig_new0(
     _env: JNIEnv,
     _class: JClass,
 ) -> jlong {
-    let config = Box::new(RiDynamicPoolConfig::default());
-    Box::into_raw(config) as jlong
+    let config_boxed = Box::new(RiDynamicPoolConfig::default());
+    let config = Box::into_raw(config_boxed);
+    register_jni_ptr(config as usize);
+    config as jlong
 }
 
 #[no_mangle]
@@ -698,7 +719,8 @@ pub extern "system" fn Java_com_dunimd_ri_database_RiDynamicPoolConfig_free0(
     _class: JClass,
     ptr: jlong,
 ) {
-    if ptr != 0 {
+    if ptr != 0 && is_jni_ptr_valid(ptr as usize) {
+        unregister_jni_ptr(ptr as usize);
         unsafe {
             let _ = Box::from_raw(ptr as *mut RiDynamicPoolConfig);
         }
@@ -804,7 +826,8 @@ pub extern "system" fn Java_com_dunimd_ri_database_RiDatabaseMigration_free0(
     _class: JClass,
     ptr: jlong,
 ) {
-    if ptr != 0 {
+    if ptr != 0 && is_jni_ptr_valid(ptr as usize) {
+        unregister_jni_ptr(ptr as usize);
         unsafe {
             let _ = Box::from_raw(ptr as *mut RiDatabaseMigration);
         }

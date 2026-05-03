@@ -29,6 +29,8 @@ use crate::protocol::{
     RiSecurityLevel, RiFrameParser, RiFrameBuilder,
 };
 use crate::java::exception::check_not_null;
+use crate::java::exception::throw_illegal_argument;
+use crate::java::{register_jni_ptr, unregister_jni_ptr, is_jni_ptr_valid};
 
 // =============================================================================
 // RiProtocolManager JNI Bindings
@@ -39,8 +41,10 @@ pub extern "system" fn Java_com_dunimd_ri_protocol_RiProtocolManager_new0(
     _env: JNIEnv,
     _class: JClass,
 ) -> jlong {
-    let manager = Box::new(RiProtocolManager::new());
-    Box::into_raw(manager) as jlong
+    let manager_boxed = Box::new(RiProtocolManager::new());
+    let manager = Box::into_raw(manager_boxed);
+    register_jni_ptr(manager as usize);
+    manager as jlong
 }
 
 #[no_mangle]
@@ -49,7 +53,8 @@ pub extern "system" fn Java_com_dunimd_ri_protocol_RiProtocolManager_free0(
     _class: JClass,
     ptr: jlong,
 ) {
-    if ptr != 0 {
+    if ptr != 0 && is_jni_ptr_valid(ptr as usize) {
+        unregister_jni_ptr(ptr as usize);
         unsafe {
             let _ = Box::from_raw(ptr as *mut RiProtocolManager);
         }
@@ -65,8 +70,10 @@ pub extern "system" fn Java_com_dunimd_ri_protocol_RiProtocolConfig_new0(
     _env: JNIEnv,
     _class: JClass,
 ) -> jlong {
-    let config = Box::new(RiProtocolConfig::default());
-    Box::into_raw(config) as jlong
+    let config_boxed = Box::new(RiProtocolConfig::default());
+    let config = Box::into_raw(config_boxed);
+    register_jni_ptr(config as usize);
+    config as jlong
 }
 
 #[no_mangle]
@@ -228,7 +235,8 @@ pub extern "system" fn Java_com_dunimd_ri_protocol_RiProtocolConfig_free0(
     _class: JClass,
     ptr: jlong,
 ) {
-    if ptr != 0 {
+    if ptr != 0 && is_jni_ptr_valid(ptr as usize) {
+        unregister_jni_ptr(ptr as usize);
         unsafe {
             let _ = Box::from_raw(ptr as *mut RiProtocolConfig);
         }
@@ -329,7 +337,8 @@ pub extern "system" fn Java_com_dunimd_ri_protocol_RiProtocolStats_free0(
     _class: JClass,
     ptr: jlong,
 ) {
-    if ptr != 0 {
+    if ptr != 0 && is_jni_ptr_valid(ptr as usize) {
+        unregister_jni_ptr(ptr as usize);
         unsafe {
             let _ = Box::from_raw(ptr as *mut RiProtocolStats);
         }
@@ -416,7 +425,8 @@ pub extern "system" fn Java_com_dunimd_ri_protocol_RiConnectionStats_free0(
     _class: JClass,
     ptr: jlong,
 ) {
-    if ptr != 0 {
+    if ptr != 0 && is_jni_ptr_valid(ptr as usize) {
+        unregister_jni_ptr(ptr as usize);
         unsafe {
             let _ = Box::from_raw(ptr as *mut RiConnectionStats);
         }
@@ -432,8 +442,10 @@ pub extern "system" fn Java_com_dunimd_ri_protocol_RiMessageFlags_new0(
     _env: JNIEnv,
     _class: JClass,
 ) -> jlong {
-    let flags = Box::new(RiMessageFlags::default());
-    Box::into_raw(flags) as jlong
+    let flags_boxed = Box::new(RiMessageFlags::default());
+    let flags = Box::into_raw(flags_boxed);
+    register_jni_ptr(flags as usize);
+    flags as jlong
 }
 
 #[no_mangle]
@@ -558,7 +570,8 @@ pub extern "system" fn Java_com_dunimd_ri_protocol_RiMessageFlags_free0(
     _class: JClass,
     ptr: jlong,
 ) {
-    if ptr != 0 {
+    if ptr != 0 && is_jni_ptr_valid(ptr as usize) {
+        unregister_jni_ptr(ptr as usize);
         unsafe {
             let _ = Box::from_raw(ptr as *mut RiMessageFlags);
         }
@@ -687,7 +700,8 @@ pub extern "system" fn Java_com_dunimd_ri_protocol_RiConnectionInfo_free0(
     _class: JClass,
     ptr: jlong,
 ) {
-    if ptr != 0 {
+    if ptr != 0 && is_jni_ptr_valid(ptr as usize) {
+        unregister_jni_ptr(ptr as usize);
         unsafe {
             let _ = Box::from_raw(ptr as *mut RiConnectionInfo);
         }
@@ -703,8 +717,10 @@ pub extern "system" fn Java_com_dunimd_ri_protocol_RiFrameHeader_new0(
     _env: JNIEnv,
     _class: JClass,
 ) -> jlong {
-    let header = Box::new(RiFrameHeader::default());
-    Box::into_raw(header) as jlong
+    let header_boxed = Box::new(RiFrameHeader::default());
+    let header = Box::into_raw(header_boxed);
+    register_jni_ptr(header as usize);
+    header as jlong
 }
 
 #[no_mangle]
@@ -848,7 +864,8 @@ pub extern "system" fn Java_com_dunimd_ri_protocol_RiFrameHeader_free0(
     _class: JClass,
     ptr: jlong,
 ) {
-    if ptr != 0 {
+    if ptr != 0 && is_jni_ptr_valid(ptr as usize) {
+        unregister_jni_ptr(ptr as usize);
         unsafe {
             let _ = Box::from_raw(ptr as *mut RiFrameHeader);
         }
@@ -864,8 +881,10 @@ pub extern "system" fn Java_com_dunimd_ri_protocol_RiFrame_new0(
     _env: JNIEnv,
     _class: JClass,
 ) -> jlong {
-    let frame = Box::new(RiFrame::default());
-    Box::into_raw(frame) as jlong
+    let frame_boxed = Box::new(RiFrame::default());
+    let frame = Box::into_raw(frame_boxed);
+    register_jni_ptr(frame as usize);
+    frame as jlong
 }
 
 #[no_mangle]
@@ -879,8 +898,10 @@ pub extern "system" fn Java_com_dunimd_ri_protocol_RiFrame_getHeader0(
     }
     
     let frame = unsafe { &*(ptr as *const RiFrame) };
-    let header = Box::new(frame.header.clone());
-    Box::into_raw(header) as jlong
+    let header_boxed = Box::new(frame.header.clone());
+    let header = Box::into_raw(header_boxed);
+    register_jni_ptr(header as usize);
+    header as jlong
 }
 
 #[no_mangle]
@@ -1016,7 +1037,8 @@ pub extern "system" fn Java_com_dunimd_ri_protocol_RiFrame_free0(
     _class: JClass,
     ptr: jlong,
 ) {
-    if ptr != 0 {
+    if ptr != 0 && is_jni_ptr_valid(ptr as usize) {
+        unregister_jni_ptr(ptr as usize);
         unsafe {
             let _ = Box::from_raw(ptr as *mut RiFrame);
         }
@@ -1032,8 +1054,10 @@ pub extern "system" fn Java_com_dunimd_ri_protocol_RiFrameParser_new0(
     _env: JNIEnv,
     _class: JClass,
 ) -> jlong {
-    let parser = Box::new(RiFrameParser::new());
-    Box::into_raw(parser) as jlong
+    let parser_boxed = Box::new(RiFrameParser::new());
+    let parser = Box::into_raw(parser_boxed);
+    register_jni_ptr(parser as usize);
+    parser as jlong
 }
 
 #[no_mangle]
@@ -1056,8 +1080,10 @@ pub extern "system" fn Java_com_dunimd_ri_protocol_RiFrameParser_parse0(
     let parser = unsafe { &*(ptr as *const RiFrameParser) };
     match parser.parse(&data_vec) {
         Some(frame) => {
-            let frame = Box::new(frame);
-            Box::into_raw(frame) as jlong
+    let frame_boxed = Box::new(frame);
+    let frame = Box::into_raw(frame_boxed);
+    register_jni_ptr(frame as usize);
+            frame as jlong
         }
         None => 0,
     }
@@ -1069,7 +1095,8 @@ pub extern "system" fn Java_com_dunimd_ri_protocol_RiFrameParser_free0(
     _class: JClass,
     ptr: jlong,
 ) {
-    if ptr != 0 {
+    if ptr != 0 && is_jni_ptr_valid(ptr as usize) {
+        unregister_jni_ptr(ptr as usize);
         unsafe {
             let _ = Box::from_raw(ptr as *mut RiFrameParser);
         }
@@ -1085,8 +1112,10 @@ pub extern "system" fn Java_com_dunimd_ri_protocol_RiFrameBuilder_new0(
     _env: JNIEnv,
     _class: JClass,
 ) -> jlong {
-    let builder = Box::new(RiFrameBuilder::new());
-    Box::into_raw(builder) as jlong
+    let builder_boxed = Box::new(RiFrameBuilder::new());
+    let builder = Box::into_raw(builder_boxed);
+    register_jni_ptr(builder as usize);
+    builder as jlong
 }
 
 #[no_mangle]
@@ -1181,8 +1210,10 @@ pub extern "system" fn Java_com_dunimd_ri_protocol_RiFrameBuilder_buildDataFrame
     };
     
     let builder = unsafe { &*(ptr as *const RiFrameBuilder) };
-    let frame = Box::new(builder.build_data_frame(payload_vec));
-    Box::into_raw(frame) as jlong
+    let frame_boxed = Box::new(builder.build_data_frame(payload_vec));
+    let frame = Box::into_raw(frame_boxed);
+    register_jni_ptr(frame as usize);
+    frame as jlong
 }
 
 #[no_mangle]
@@ -1196,8 +1227,10 @@ pub extern "system" fn Java_com_dunimd_ri_protocol_RiFrameBuilder_buildHeartbeat
     }
     
     let builder = unsafe { &*(ptr as *const RiFrameBuilder) };
-    let frame = Box::new(builder.build_heartbeat_frame());
-    Box::into_raw(frame) as jlong
+    let frame_boxed = Box::new(builder.build_heartbeat_frame());
+    let frame = Box::into_raw(frame_boxed);
+    register_jni_ptr(frame as usize);
+    frame as jlong
 }
 
 #[no_mangle]
@@ -1212,8 +1245,10 @@ pub extern "system" fn Java_com_dunimd_ri_protocol_RiFrameBuilder_buildAckFrame0
     }
     
     let builder = unsafe { &*(ptr as *const RiFrameBuilder) };
-    let frame = Box::new(builder.build_ack_frame(sequence_number as u64));
-    Box::into_raw(frame) as jlong
+    let frame_boxed = Box::new(builder.build_ack_frame(sequence_number as u64));
+    let frame = Box::into_raw(frame_boxed);
+    register_jni_ptr(frame as usize);
+    frame as jlong
 }
 
 #[no_mangle]
@@ -1222,7 +1257,8 @@ pub extern "system" fn Java_com_dunimd_ri_protocol_RiFrameBuilder_free0(
     _class: JClass,
     ptr: jlong,
 ) {
-    if ptr != 0 {
+    if ptr != 0 && is_jni_ptr_valid(ptr as usize) {
+        unregister_jni_ptr(ptr as usize);
         unsafe {
             let _ = Box::from_raw(ptr as *mut RiFrameBuilder);
         }

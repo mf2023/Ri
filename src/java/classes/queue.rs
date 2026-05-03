@@ -51,8 +51,10 @@ pub extern "system" fn Java_com_dunimd_ri_queue_RiQueueModule_new0(
     
     match result {
         Ok(module) => {
-            let boxed = Box::new(module);
-            Box::into_raw(boxed) as jlong
+    let boxed_boxed = Box::new(module);
+    let boxed = Box::into_raw(boxed_boxed);
+    register_jni_ptr(boxed as usize);
+            boxed as jlong
         }
         Err(_) => 0,
     }
@@ -64,7 +66,8 @@ pub extern "system" fn Java_com_dunimd_ri_queue_RiQueueModule_free0(
     _class: JClass,
     ptr: jlong,
 ) {
-    if ptr != 0 {
+    if ptr != 0 && is_jni_ptr_valid(ptr as usize) {
+        unregister_jni_ptr(ptr as usize);
         unsafe {
             let _ = Box::from_raw(ptr as *mut RiQueueModule);
         }
@@ -80,8 +83,10 @@ pub extern "system" fn Java_com_dunimd_ri_queue_RiQueueConfig_new0(
     _env: JNIEnv,
     _class: JClass,
 ) -> jlong {
-    let config = Box::new(RiQueueConfig::default());
-    Box::into_raw(config) as jlong
+    let config_boxed = Box::new(RiQueueConfig::default());
+    let config = Box::into_raw(config_boxed);
+    register_jni_ptr(config as usize);
+    config as jlong
 }
 
 #[no_mangle]
@@ -111,6 +116,8 @@ pub extern "system" fn Java_com_dunimd_ri_queue_RiQueueConfig_setBackendType0(
     }
     
     use crate::queue::RiQueueBackendType;
+use crate::java::exception::throw_illegal_argument;
+use crate::java::{register_jni_ptr, unregister_jni_ptr, is_jni_ptr_valid};
     let config = unsafe { &mut *(ptr as *mut RiQueueConfig) };
     config.backend_type = match backend_type {
         0 => RiQueueBackendType::Memory,
@@ -144,7 +151,8 @@ pub extern "system" fn Java_com_dunimd_ri_queue_RiQueueConfig_free0(
     _class: JClass,
     ptr: jlong,
 ) {
-    if ptr != 0 {
+    if ptr != 0 && is_jni_ptr_valid(ptr as usize) {
+        unregister_jni_ptr(ptr as usize);
         unsafe {
             let _ = Box::from_raw(ptr as *mut RiQueueConfig);
         }
@@ -160,8 +168,10 @@ pub extern "system" fn Java_com_dunimd_ri_queue_RiQueueManager_new0(
     _env: JNIEnv,
     _class: JClass,
 ) -> jlong {
-    let manager = Box::new(RiQueueManager::default());
-    Box::into_raw(manager) as jlong
+    let manager_boxed = Box::new(RiQueueManager::default());
+    let manager = Box::into_raw(manager_boxed);
+    register_jni_ptr(manager as usize);
+    manager as jlong
 }
 
 #[no_mangle]
@@ -388,8 +398,10 @@ pub extern "system" fn Java_com_dunimd_ri_queue_RiQueueManager_consume0(
     
     match result {
         Ok(Some(msg)) => {
-            let boxed = Box::new(msg);
-            Box::into_raw(boxed) as jlong
+    let boxed_boxed = Box::new(msg);
+    let boxed = Box::into_raw(boxed_boxed);
+    register_jni_ptr(boxed as usize);
+            boxed as jlong
         }
         _ => 0,
     }
@@ -426,8 +438,10 @@ pub extern "system" fn Java_com_dunimd_ri_queue_RiQueueManager_stats0(
     
     match result {
         Some(stats) => {
-            let boxed = Box::new(stats);
-            Box::into_raw(boxed) as jlong
+    let boxed_boxed = Box::new(stats);
+    let boxed = Box::into_raw(boxed_boxed);
+    register_jni_ptr(boxed as usize);
+            boxed as jlong
         }
         None => 0,
     }
@@ -461,7 +475,8 @@ pub extern "system" fn Java_com_dunimd_ri_queue_RiQueueManager_free0(
     _class: JClass,
     ptr: jlong,
 ) {
-    if ptr != 0 {
+    if ptr != 0 && is_jni_ptr_valid(ptr as usize) {
+        unregister_jni_ptr(ptr as usize);
         unsafe {
             let _ = Box::from_raw(ptr as *mut RiQueueManager);
         }
@@ -481,8 +496,10 @@ pub extern "system" fn Java_com_dunimd_ri_queue_RiQueueMessage_new0(
     let payload_vec: Vec<u8> = env.convert_byte_array(payload)
         .unwrap_or_default();
     
-    let message = Box::new(RiQueueMessage::new(payload_vec));
-    Box::into_raw(message) as jlong
+    let message_boxed = Box::new(RiQueueMessage::new(payload_vec));
+    let message = Box::into_raw(message_boxed);
+    register_jni_ptr(message as usize);
+    message as jlong
 }
 
 #[no_mangle]
@@ -602,7 +619,8 @@ pub extern "system" fn Java_com_dunimd_ri_queue_RiQueueMessage_free0(
     _class: JClass,
     ptr: jlong,
 ) {
-    if ptr != 0 {
+    if ptr != 0 && is_jni_ptr_valid(ptr as usize) {
+        unregister_jni_ptr(ptr as usize);
         unsafe {
             let _ = Box::from_raw(ptr as *mut RiQueueMessage);
         }
@@ -747,7 +765,8 @@ pub extern "system" fn Java_com_dunimd_ri_queue_RiQueueStats_free0(
     _class: JClass,
     ptr: jlong,
 ) {
-    if ptr != 0 {
+    if ptr != 0 && is_jni_ptr_valid(ptr as usize) {
+        unregister_jni_ptr(ptr as usize);
         unsafe {
             let _ = Box::from_raw(ptr as *mut RiQueueStats);
         }
@@ -763,8 +782,10 @@ pub extern "system" fn Java_com_dunimd_ri_queue_RiRetryPolicy_new0(
     _env: JNIEnv,
     _class: JClass,
 ) -> jlong {
-    let policy = Box::new(RiRetryPolicy::default());
-    Box::into_raw(policy) as jlong
+    let policy_boxed = Box::new(RiRetryPolicy::default());
+    let policy = Box::into_raw(policy_boxed);
+    register_jni_ptr(policy as usize);
+    policy as jlong
 }
 
 #[no_mangle]
@@ -889,7 +910,8 @@ pub extern "system" fn Java_com_dunimd_ri_queue_RiRetryPolicy_free0(
     _class: JClass,
     ptr: jlong,
 ) {
-    if ptr != 0 {
+    if ptr != 0 && is_jni_ptr_valid(ptr as usize) {
+        unregister_jni_ptr(ptr as usize);
         unsafe {
             let _ = Box::from_raw(ptr as *mut RiRetryPolicy);
         }
@@ -905,8 +927,10 @@ pub extern "system" fn Java_com_dunimd_ri_queue_RiDeadLetterConfig_new0(
     _env: JNIEnv,
     _class: JClass,
 ) -> jlong {
-    let config = Box::new(RiDeadLetterConfig::default());
-    Box::into_raw(config) as jlong
+    let config_boxed = Box::new(RiDeadLetterConfig::default());
+    let config = Box::into_raw(config_boxed);
+    register_jni_ptr(config as usize);
+    config as jlong
 }
 
 #[no_mangle]
@@ -1035,7 +1059,8 @@ pub extern "system" fn Java_com_dunimd_ri_queue_RiDeadLetterConfig_free0(
     _class: JClass,
     ptr: jlong,
 ) {
-    if ptr != 0 {
+    if ptr != 0 && is_jni_ptr_valid(ptr as usize) {
+        unregister_jni_ptr(ptr as usize);
         unsafe {
             let _ = Box::from_raw(ptr as *mut RiDeadLetterConfig);
         }

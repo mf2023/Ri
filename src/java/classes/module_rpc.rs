@@ -24,6 +24,8 @@ use jni::objects::{JClass, JString};
 use jni::sys::{jlong, jboolean, jbyteArray, jstring};
 use crate::module_rpc::{RiModuleRPC, RiModuleEndpoint, RiMethodCall, RiMethodResponse};
 use crate::java::exception::check_not_null;
+use crate::java::exception::throw_illegal_argument;
+use crate::java::{register_jni_ptr, unregister_jni_ptr, is_jni_ptr_valid};
 
 // =============================================================================
 // RiModuleRPC JNI Bindings
@@ -34,8 +36,10 @@ pub extern "system" fn Java_com_dunimd_ri_modulerpc_RiModuleRPC_new0(
     _env: JNIEnv,
     _class: JClass,
 ) -> jlong {
-    let rpc = Box::new(RiModuleRPC::new());
-    Box::into_raw(rpc) as jlong
+    let rpc_boxed = Box::new(RiModuleRPC::new());
+    let rpc = Box::into_raw(rpc_boxed);
+    register_jni_ptr(rpc as usize);
+    rpc as jlong
 }
 
 #[no_mangle]
@@ -101,7 +105,8 @@ pub extern "system" fn Java_com_dunimd_ri_modulerpc_RiModuleRPC_free0(
     _class: JClass,
     ptr: jlong,
 ) {
-    if ptr != 0 {
+    if ptr != 0 && is_jni_ptr_valid(ptr as usize) {
+        unregister_jni_ptr(ptr as usize);
         unsafe {
             let _ = Box::from_raw(ptr as *mut RiModuleRPC);
         }
@@ -144,8 +149,10 @@ pub extern "system" fn Java_com_dunimd_ri_modulerpc_RiModuleClient_call0(
         .expect("Failed to get method name")
         .into();
     
-    let response = Box::new(RiMethodResponse::success(vec![]));
-    Box::into_raw(response) as jlong
+    let response_boxed = Box::new(RiMethodResponse::success(vec![]));
+    let response = Box::into_raw(response_boxed);
+    register_jni_ptr(response as usize);
+    response as jlong
 }
 
 #[no_mangle]
@@ -169,8 +176,10 @@ pub extern "system" fn Java_com_dunimd_ri_modulerpc_RiModuleClient_callWithTimeo
         .expect("Failed to get method name")
         .into();
     
-    let response = Box::new(RiMethodResponse::success(vec![]));
-    Box::into_raw(response) as jlong
+    let response_boxed = Box::new(RiMethodResponse::success(vec![]));
+    let response = Box::into_raw(response_boxed);
+    register_jni_ptr(response as usize);
+    response as jlong
 }
 
 #[no_mangle]
@@ -195,8 +204,10 @@ pub extern "system" fn Java_com_dunimd_ri_modulerpc_RiModuleEndpoint_new0(
         .expect("Failed to get module name")
         .into();
     
-    let endpoint = Box::new(RiModuleEndpoint::new(module_name_str));
-    Box::into_raw(endpoint) as jlong
+    let endpoint_boxed = Box::new(RiModuleEndpoint::new(module_name_str));
+    let endpoint = Box::into_raw(endpoint_boxed);
+    register_jni_ptr(endpoint as usize);
+    endpoint as jlong
 }
 
 #[no_mangle]
@@ -235,7 +246,8 @@ pub extern "system" fn Java_com_dunimd_ri_modulerpc_RiModuleEndpoint_free0(
     _class: JClass,
     ptr: jlong,
 ) {
-    if ptr != 0 {
+    if ptr != 0 && is_jni_ptr_valid(ptr as usize) {
+        unregister_jni_ptr(ptr as usize);
         unsafe {
             let _ = Box::from_raw(ptr as *mut RiModuleEndpoint);
         }
@@ -263,8 +275,10 @@ pub extern "system" fn Java_com_dunimd_ri_modulerpc_RiMethodCall_new0(
         Vec::new()
     };
     
-    let call = Box::new(RiMethodCall::new(method_name_str, params_vec));
-    Box::into_raw(call) as jlong
+    let call_boxed = Box::new(RiMethodCall::new(method_name_str, params_vec));
+    let call = Box::into_raw(call_boxed);
+    register_jni_ptr(call as usize);
+    call as jlong
 }
 
 #[no_mangle]
@@ -336,7 +350,8 @@ pub extern "system" fn Java_com_dunimd_ri_modulerpc_RiMethodCall_free0(
     _class: JClass,
     ptr: jlong,
 ) {
-    if ptr != 0 {
+    if ptr != 0 && is_jni_ptr_valid(ptr as usize) {
+        unregister_jni_ptr(ptr as usize);
         unsafe {
             let _ = Box::from_raw(ptr as *mut RiMethodCall);
         }
@@ -418,7 +433,8 @@ pub extern "system" fn Java_com_dunimd_ri_modulerpc_RiMethodResponse_free0(
     _class: JClass,
     ptr: jlong,
 ) {
-    if ptr != 0 {
+    if ptr != 0 && is_jni_ptr_valid(ptr as usize) {
+        unregister_jni_ptr(ptr as usize);
         unsafe {
             let _ = Box::from_raw(ptr as *mut RiMethodResponse);
         }
