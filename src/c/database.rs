@@ -188,7 +188,7 @@
 //! - "sqlite": SQLite database support
 //! - Disable features to reduce binary size
 
-use crate::database::{RiDatabaseConfig, RiDatabasePool, RiDBRow, RiDBResult, DatabaseType};
+use crate::database::{RiDatabase, RiDatabaseConfig, RiDatabasePool, RiDBRow, RiDBResult, DatabaseType};
 
 
 c_wrapper!(CRiDatabaseConfig, RiDatabaseConfig);
@@ -426,8 +426,7 @@ pub extern "C" fn ri_database_pool_query_params(
             Err(_) => return -3,
         };
         
-        // Build parameterized query
-        let mut query = crate::database::RiQueryParam::new(sql_str);
+        let mut params: Vec<serde_json::Value> = Vec::with_capacity(param_count);
         
         for i in 0..param_count {
             let param_type = *param_types.add(i);
@@ -435,32 +434,32 @@ pub extern "C" fn ri_database_pool_query_params(
             let param_size = *param_sizes.add(i);
             
             match param_type {
-                0 => { query = query.bind_null(); }
+                0 => { params.push(serde_json::Value::Null); }
                 1 => { 
                     let val = *(param_value as *const i64);
-                    query = query.bind(val);
+                    params.push(serde_json::json!(val));
                 }
                 2 => { 
                     let val = *(param_value as *const f64);
-                    query = query.bind(val);
+                    params.push(serde_json::json!(val));
                 }
                 3 => { 
                     let val = std::ffi::CStr::from_ptr(param_value as *const std::ffi::c_char);
                     match val.to_str() {
-                        Ok(s) => query = query.bind(s),
-                        Err(_) => return -7,  // Invalid UTF-8
+                        Ok(s) => params.push(serde_json::json!(s)),
+                        Err(_) => return -7,
                     }
                 }
                 4 => { 
                     let data = std::slice::from_raw_parts(param_value as *const u8, param_size);
-                    query = query.bind(data);
+                    params.push(serde_json::json!(data));
                 }
-                _ => return -8,  // Unknown parameter type
+                _ => return -8,
             }
         }
         
         match rt.block_on(async { (*pool).inner.get().await }) {
-            Ok(db) => match rt.block_on(async { db.query_with_params(query).await }) {
+            Ok(db) => match rt.block_on(async { db.query_with_params(sql_str, &params).await }) {
                 Ok(result) => {
                     *out_result = Box::into_raw(Box::new(CRiDBResult::new(result)));
                     0
@@ -508,7 +507,7 @@ pub extern "C" fn ri_database_pool_execute_params(
             Err(_) => return -3,
         };
         
-        let mut query = crate::database::RiQueryParam::new(sql_str);
+        let mut params: Vec<serde_json::Value> = Vec::with_capacity(param_count);
         
         for i in 0..param_count {
             let param_type = *param_types.add(i);
@@ -516,32 +515,32 @@ pub extern "C" fn ri_database_pool_execute_params(
             let param_size = *param_sizes.add(i);
             
             match param_type {
-                0 => { query = query.bind_null(); }
+                0 => { params.push(serde_json::Value::Null); }
                 1 => { 
                     let val = *(param_value as *const i64);
-                    query = query.bind(val);
+                    params.push(serde_json::json!(val));
                 }
                 2 => { 
                     let val = *(param_value as *const f64);
-                    query = query.bind(val);
+                    params.push(serde_json::json!(val));
                 }
                 3 => { 
                     let val = std::ffi::CStr::from_ptr(param_value as *const std::ffi::c_char);
                     match val.to_str() {
-                        Ok(s) => query = query.bind(s),
+                        Ok(s) => params.push(serde_json::json!(s)),
                         Err(_) => return -7,
                     }
                 }
                 4 => { 
                     let data = std::slice::from_raw_parts(param_value as *const u8, param_size);
-                    query = query.bind(data);
+                    params.push(serde_json::json!(data));
                 }
                 _ => return -8,
             }
         }
         
         match rt.block_on(async { (*pool).inner.get().await }) {
-            Ok(db) => match rt.block_on(async { db.execute_with_params(query).await }) {
+            Ok(db) => match rt.block_on(async { db.execute_with_params(sql_str, &params).await }) {
                 Ok(rows) => {
                     if !out_rows_affected.is_null() {
                         *out_rows_affected = rows;

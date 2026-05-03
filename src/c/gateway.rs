@@ -320,6 +320,7 @@ pub extern "C" fn ri_rate_limiter_new(
         requests_per_second,
         burst_size,
         window_seconds,
+        max_keys: 10000,
     };
     let limiter = RiRateLimiter::new(config);
     Box::into_raw(Box::new(CRiRateLimiter::new(limiter)))

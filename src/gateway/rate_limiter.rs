@@ -115,6 +115,7 @@ impl RiRateLimitConfig {
             requests_per_second,
             burst_size,
             window_seconds,
+            max_keys: 10000,
         }
     }
     

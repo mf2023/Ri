@@ -351,21 +351,25 @@ ifeq ($(PLATFORM),linux)
 			PYTHON_MINOR=\$${PYTHON_VER#*.} && \
 			PYTHON_BIN=/opt/python/cp\$${PYTHON_MAJOR}\$${PYTHON_MINOR}-cp\$${PYTHON_MAJOR}\$${PYTHON_MINOR}/bin/python && \
 			\$$PYTHON_BIN -m pip install maturin && \
-			\$$PYTHON_BIN -m maturin build --release --target $(TARGET) -o /io/$(DIST_DIR)"
+			\$$PYTHON_BIN -m maturin build --release --target $(TARGET) -o /io/$(DIST_DIR) \
+				--no-default-features \
+			--features pyo3,grpc,websocket,rabbitmq,cache,queue,gateway,service_mesh,auth,observability,postgres,mysql,sqlite,http_client,system_info,config_hot_reload,protocol,kafka,etcd"
 else ifeq ($(PLATFORM),windows)
 	@echo "$(YELLOW)Building Windows wheel...$(NC)"
 	pip install maturin
 ifeq ($(ARCH),arm64)
 	OPENSSL_NO_VENDOR=1 maturin build --release --target $(TARGET) -o $(DIST_DIR) \
 		--no-default-features \
-		--features pyo3,c,grpc,websocket,rabbitmq,cache,queue,gateway,service_mesh,auth,observability,postgres,mysql,sqlite,http_client,system_info,config_hot_reload
+		--features pyo3,grpc,websocket,rabbitmq,cache,queue,gateway,service_mesh,auth,observability,postgres,mysql,sqlite,http_client,system_info,config_hot_reload,protocol,kafka,etcd
 else
 	OPENSSL_NO_VENDOR=1 maturin build --release --target $(TARGET) -o $(DIST_DIR)
 endif
 else
 	@echo "$(YELLOW)Building native wheel...$(NC)"
 	pip install maturin
-	maturin build --release --target $(TARGET) -o $(DIST_DIR)
+	maturin build --release --target $(TARGET) -o $(DIST_DIR) \
+		--no-default-features \
+		--features pyo3,grpc,websocket,rabbitmq,cache,queue,gateway,service_mesh,auth,observability,postgres,mysql,sqlite,http_client,system_info,config_hot_reload,protocol,kafka,etcd
 endif
 	@echo "$(GREEN)✓ Python wheel built: $(DIST_DIR)/$(NC)"
 	@ls -lh $(DIST_DIR)/*.whl 2>/dev/null || echo "No wheels found"
@@ -425,7 +429,7 @@ build-windows-x64:
 
 build-windows-arm64:
 	@$(MAKE) build PLATFORM=windows ARCH=arm64 TARGET=aarch64-pc-windows-msvc \
-		FEATURES="pyo3,c,grpc,websocket,rabbitmq,cache,queue,gateway,service_mesh,auth,observability,postgres,mysql,sqlite,http_client,system_info,config_hot_reload"
+		FEATURES="grpc,websocket,rabbitmq,cache,queue,gateway,service_mesh,auth,observability,postgres,mysql,sqlite,http_client,system_info,config_hot_reload,protocol,kafka,etcd"
 
 # macOS builds
 build-macos-x64:

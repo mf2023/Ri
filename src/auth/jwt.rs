@@ -317,7 +317,7 @@ impl RiJWTManager {
             self.validate_token(token)
                 .map_err(crate::auth::security::ri_error_to_py_err)
                 .map(|claims| {
-                    Py::new(py, claims).unwrap().into_py(py)
+                    Py::new(py, claims).unwrap()
                 })
         })
     }

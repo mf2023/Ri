@@ -182,9 +182,8 @@ impl RiGatewayServer {
             let mut params = FxHashMap::default();
             for pair in query.split('&') {
                 if let Some((key, value)) = pair.split_once('=') {
-                    // URL-decode the key and value
-                    let decoded_key = urlencoding::decode(key).unwrap_or_else(|_| key.to_string());
-                    let decoded_value = urlencoding::decode(value).unwrap_or_else(|_| value.to_string());
+                    let decoded_key = urlencoding::decode(key).unwrap_or_else(|_| key.to_string()).into_owned();
+                    let decoded_value = urlencoding::decode(value).unwrap_or_else(|_| value.to_string()).into_owned();
                     params.insert(decoded_key, decoded_value);
                 }
             }

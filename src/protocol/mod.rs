@@ -984,6 +984,7 @@ impl RiBaseProtocol {
 }
 
 #[derive(Debug, Clone)]
+#[pyo3::prelude::pyclass]
 pub struct RiGlobalProtocol {
     base: RiBaseProtocol,
 }
@@ -1056,6 +1057,7 @@ impl RiProtocol for RiGlobalProtocol {
 }
 
 #[derive(Debug, Clone)]
+#[pyo3::prelude::pyclass]
 pub struct RiPrivateProtocol {
     base: RiBaseProtocol,
 }

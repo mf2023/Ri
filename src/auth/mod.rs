@@ -803,6 +803,7 @@ impl crate::core::RiModule for RiAuthModule {
                     scopes: vec!["openid".to_string(), "profile".to_string(), "email".to_string()],
                     enabled: true,
                     redirect_uri: None,
+                    allowed_redirect_uris: vec![],
                 };
                 
                 let oauth_mgr = self.oauth_manager.write().await;
