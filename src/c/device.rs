@@ -330,7 +330,9 @@ pub extern "C" fn ri_device_new(name: *const c_char, device_type: i32) -> *mut C
             _ => RiDeviceType::Custom,
         };
         let device = RiDevice::new(name_str.to_string(), dtype);
-        Box::into_raw(Box::new(CRiDevice::new(device)))
+        let ptr = Box::into_raw(Box::new(CRiDevice::new(device)));
+        crate::c::register_ptr(ptr as usize);
+        ptr
     }
 }
 
@@ -397,7 +399,9 @@ pub extern "C" fn ri_device_get_status(device: *mut CRiDevice) -> std::ffi::c_in
 // RiDeviceController C bindings
 #[no_mangle]
 pub extern "C" fn ri_device_controller_new() -> *mut CRiDeviceController {
-    Box::into_raw(Box::new(CRiDeviceController::new(RiDeviceController::new())))
+    let ptr = Box::into_raw(Box::new(CRiDeviceController::new(RiDeviceController::new())));
+    crate::c::register_ptr(ptr as usize);
+    ptr
 }
 c_destructor!(ri_device_controller_free, CRiDeviceController);
 
@@ -524,7 +528,9 @@ pub extern "C" fn ri_device_controller_discover(
 #[no_mangle]
 pub extern "C" fn ri_device_scheduler_new() -> *mut CRiDeviceScheduler {
     let pool_manager = Arc::new(tokio::sync::RwLock::new(crate::device::RiResourcePoolManager::new()));
-    Box::into_raw(Box::new(CRiDeviceScheduler::new(RiDeviceScheduler::new(pool_manager))))
+    let ptr = Box::into_raw(Box::new(CRiDeviceScheduler::new(RiDeviceScheduler::new(pool_manager))));
+    crate::c::register_ptr(ptr as usize);
+    ptr
 }
 c_destructor!(ri_device_scheduler_free, CRiDeviceScheduler);
 
@@ -615,7 +621,9 @@ pub extern "C" fn ri_resource_pool_new(name: *const std::ffi::c_char, capacity: 
             allocation_timeout_secs: 30,
             health_check_interval_secs: 60,
         };
-        Box::into_raw(Box::new(CRiResourcePool::new(crate::device::RiResourcePool::new(config))))
+        let ptr = Box::into_raw(Box::new(CRiResourcePool::new(crate::device::RiResourcePool::new(config))));
+        crate::c::register_ptr(ptr as usize);
+        ptr
     }
 }
 c_destructor!(ri_resource_pool_free, CRiResourcePool);

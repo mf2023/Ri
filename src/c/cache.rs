@@ -193,7 +193,9 @@ pub extern "C" fn ri_cache_policy_with_ttl(ttl_secs: u64) -> CRiCachePolicy {
 #[no_mangle]
 pub extern "C" fn ri_memory_cache_new() -> *mut CRiMemoryCache {
     let cache = RiMemoryCache::new();
-    Box::into_raw(Box::new(CRiMemoryCache::new(cache)))
+    let ptr = Box::into_raw(Box::new(CRiMemoryCache::new(cache)));
+    crate::c::register_ptr(ptr as usize);
+    ptr
 }
 
 c_destructor!(ri_memory_cache_free, CRiMemoryCache);
@@ -202,17 +204,12 @@ c_destructor!(ri_memory_cache_free, CRiMemoryCache);
 pub extern "C" fn ri_cache_manager_new() -> *mut CRiCacheManager {
     let backend: Arc<dyn crate::cache::RiCache + Send + Sync> = Arc::new(RiMemoryCache::new());
     let manager = RiCacheManager::new(backend);
-    Box::into_raw(Box::new(CRiCacheManager::new(manager)))
+    let ptr = Box::into_raw(Box::new(CRiCacheManager::new(manager)));
+    crate::c::register_ptr(ptr as usize);
+    ptr
 }
 
-#[no_mangle]
-pub extern "C" fn ri_cache_manager_free(manager: *mut CRiCacheManager) {
-    if !manager.is_null() {
-        unsafe {
-            let _ = Box::from_raw(manager);
-        }
-    }
-}
+c_destructor!(ri_cache_manager_free, CRiCacheManager);
 
 #[no_mangle]
 pub extern "C" fn ri_cache_manager_get(
