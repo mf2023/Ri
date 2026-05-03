@@ -228,7 +228,23 @@ setup-deps:
 	@if command -v apt-get >/dev/null 2>&1; then \
 		echo "Using apt-get (Debian/Ubuntu)"; \
 		sudo apt-get update; \
-		sudo apt-get install -y libcurl4-openssl-dev libsasl2-dev build-essential pkg-config liboqs-dev cmake; \
+		if apt-cache show liboqs-dev >/dev/null 2>&1; then \
+			sudo apt-get install -y libcurl4-openssl-dev libsasl2-dev build-essential pkg-config liboqs-dev cmake; \
+		else \
+			echo "liboqs-dev not in standard repos, installing from Open Quantum Safe repository..."; \
+			echo 'deb [trusted=yes] https://pkgs.kquirk.com/apt all main' | sudo tee /etc/apt/sources.list.d/oqs.list > /dev/null; \
+			sudo apt-get update 2>/dev/null; \
+			if apt-cache show liboqs-dev >/dev/null 2>&1; then \
+				sudo apt-get install -y libcurl4-openssl-dev libsasl2-dev build-essential pkg-config liboqs-dev cmake; \
+			else \
+				echo "Building liboqs from source..."; \
+				sudo apt-get install -y libcurl4-openssl-dev libsasl2-dev build-essential pkg-config cmake git ninja-build; \
+				cd /tmp && rm -rf liboqs && git clone --depth 1 https://github.com/open-quantum-safe/liboqs.git && \
+				cd liboqs && mkdir -p build && cd build && \
+				cmake -GNinja -DCMAKE_INSTALL_PREFIX=/usr .. && \
+				ninja && sudo ninja install && sudo ldconfig; \
+			fi; \
+		fi; \
 	elif command -v yum >/dev/null 2>&1 || command -v dnf >/dev/null 2>&1; then \
 		echo "Using yum/dnf (CentOS/RHEL/Fedora)"; \
 		if command -v dnf >/dev/null 2>&1; then PKGMGR=dnf; else PKGMGR=yum; fi; \
@@ -331,11 +347,12 @@ help:
 # Build Rust library (default)
 build:
 	@echo "$(GREEN)Building Ri library for $(PLATFORM) $(ARCH)...$(NC)"
+ifeq ($(PLATFORM),linux)
+	@$(MAKE) setup-deps
+endif
 ifeq ($(PLATFORM)-$(ARCH),windows-arm64)
-	@powershell -Command "$$path = $$env:PATH -split ';' | Where-Object { $$_ -notmatch '/usr/bin' -and $$_ -notmatch 'git' -and $$_ -notmatch 'mingw' }; $$env:PATH = $$path -join ';'"
 	OPENSSL_NO_VENDOR=1 cargo build $(BUILD_MODE) --target $(TARGET) --no-default-features $(if $(FEATURES),--features $(FEATURES),)
 else ifeq ($(PLATFORM),windows)
-	@powershell -Command "$$path = $$env:PATH -split ';' | Where-Object { $$_ -notmatch '/usr/bin' -and $$_ -notmatch 'git' -and $$_ -notmatch 'mingw' }; $$env:PATH = $$path -join ';'"
 	OPENSSL_NO_VENDOR=1 cargo build $(BUILD_MODE) --target $(TARGET) $(if $(FEATURES),--features $(FEATURES),)
 else
 	cargo build $(BUILD_MODE) --target $(TARGET) $(if $(FEATURES),--features $(FEATURES),)
@@ -345,11 +362,12 @@ endif
 # Build CLI tool
 build-cli:
 	@echo "$(GREEN)Building CLI tool for $(PLATFORM) $(ARCH)...$(NC)"
+ifeq ($(PLATFORM),linux)
+	@$(MAKE) setup-deps
+endif
 ifeq ($(PLATFORM)-$(ARCH),windows-arm64)
-	@powershell -Command "$$path = $$env:PATH -split ';' | Where-Object { $$_ -notmatch '/usr/bin' -and $$_ -notmatch 'git' -and $$_ -notmatch 'mingw' }; $$env:PATH = $$path -join ';'"
 	OPENSSL_NO_VENDOR=1 cargo build $(BUILD_MODE) -p ric --target $(TARGET) --no-default-features
 else ifeq ($(PLATFORM),windows)
-	@powershell -Command "$$path = $$env:PATH -split ';' | Where-Object { $$_ -notmatch '/usr/bin' -and $$_ -notmatch 'git' -and $$_ -notmatch 'mingw' }; $$env:PATH = $$path -join ';'"
 	OPENSSL_NO_VENDOR=1 cargo build $(BUILD_MODE) -p ric --target $(TARGET)
 else
 	cargo build $(BUILD_MODE) -p ric --target $(TARGET)
@@ -367,7 +385,8 @@ build-python:
 ifeq ($(PLATFORM),linux)
 	@echo "$(YELLOW)Using manylinux container for Linux wheel...$(NC)"
 	docker run --rm -v "$(PWD)":/io quay.io/pypa/manylinux_2_17_$(if $(filter arm64,$(ARCH)),aarch64,x86_64) \
-		/bin/bash -c "cd /io && \
+		/bin/bash -c "cd /io && make setup-deps && \
+			export OPENSSL_NO_VENDOR=1 && \
 			PYTHON_VER=$(PYTHON_VER) && \
 			PYTHON_MAJOR=\$${PYTHON_VER%%.*} && \
 			PYTHON_MINOR=\$${PYTHON_VER#*.} && \
@@ -380,12 +399,10 @@ else ifeq ($(PLATFORM),windows)
 	@echo "$(YELLOW)Building Windows wheel...$(NC)"
 	pip install maturin
 ifeq ($(ARCH),arm64)
-	@powershell -Command "$$path = $$env:PATH -split ';' | Where-Object { $$_ -notmatch '/usr/bin' -and $$_ -notmatch 'git' -and $$_ -notmatch 'mingw' }; $$env:PATH = $$path -join ';'"
 	OPENSSL_NO_VENDOR=1 maturin build --release --target $(TARGET) -o $(DIST_DIR) \
 		--no-default-features \
 		--features pyo3,grpc,websocket,rabbitmq,cache,queue,gateway,service_mesh,auth,observability,postgres,mysql,sqlite,http_client,system_info,config_hot_reload,etcd
 else
-	@powershell -Command "$$path = $$env:PATH -split ';' | Where-Object { $$_ -notmatch '/usr/bin' -and $$_ -notmatch 'git' -and $$_ -notmatch 'mingw' }; $$env:PATH = $$path -join ';'"
 	OPENSSL_NO_VENDOR=1 maturin build --release --target $(TARGET) -o $(DIST_DIR) \
 		--no-default-features \
 		--features pyo3,grpc,websocket,rabbitmq,cache,queue,gateway,service_mesh,auth,observability,postgres,mysql,sqlite,http_client,system_info,config_hot_reload,protocol,kafka,etcd
@@ -403,8 +420,10 @@ endif
 # Build C static library and headers
 build-c:
 	@echo "$(GREEN)Building C static library for $(PLATFORM) $(ARCH)...$(NC)"
+ifeq ($(PLATFORM),linux)
+	@$(MAKE) setup-deps
+endif
 ifeq ($(PLATFORM),windows)
-	@powershell -Command "$$path = $$env:PATH -split ';' | Where-Object { $$_ -notmatch '/usr/bin' -and $$_ -notmatch 'git' -and $$_ -notmatch 'mingw' }; $$env:PATH = $$path -join ';'"
 	OPENSSL_NO_VENDOR=1 cargo build $(BUILD_MODE) --target $(TARGET) --no-default-features --features c
 else
 	cargo build $(BUILD_MODE) --target $(TARGET) --no-default-features --features c
@@ -477,7 +496,6 @@ build-cli-windows-x64:
 
 build-cli-windows-arm64:
 	@echo "$(GREEN)Building CLI for Windows ARM64...$(NC)"
-	@powershell -Command "$$path = $$env:PATH -split ';' | Where-Object { $$_ -notmatch '/usr/bin' -and $$_ -notmatch 'git' -and $$_ -notmatch 'mingw' }; $$env:PATH = $$path -join ';'"
 	OPENSSL_NO_VENDOR=1 cargo build $(BUILD_MODE) -p ric --target $(TARGET) \
 		--no-default-features \
 		--features grpc,websocket,rabbitmq,cache,queue,gateway,service_mesh,auth,observability,postgres,mysql,sqlite,http_client,system_info,config_hot_reload,etcd

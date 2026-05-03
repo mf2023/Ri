@@ -200,20 +200,20 @@ impl AES256GCM {
     pub fn encrypt(&self, plaintext: &[u8], additional_data: Option<&[u8]>) -> RiResult<Vec<u8>> {
         let key = aead::UnboundKey::new(&aead::AES_256_GCM, &self.key)
             .map_err(|e| RiError::CryptoError(format!("Failed to create AES key: {}", e)))?;
-        
+
         let key = aead::LessSafeKey::new(key);
         let nonce = self.generate_nonce()?;
-        
+
         let mut ciphertext = plaintext.to_vec();
         ciphertext.extend_from_slice(&nonce);
-        
+
         key.seal_in_place_append_tag(
             aead::Nonce::try_assume_unique_for_key(&nonce)
                 .map_err(|e| RiError::CryptoError(format!("Invalid nonce: {}", e)))?,
             aead::Aad::from(additional_data.unwrap_or(&[])),
-            &mut ciphertext[..plaintext.len()],
+            &mut ciphertext,
         ).map_err(|e| RiError::CryptoError(format!("Encryption failed: {}", e)))?;
-        
+
         Ok(ciphertext)
     }
     

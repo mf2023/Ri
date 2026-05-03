@@ -416,7 +416,7 @@ impl RiWSServer {
     async fn accept_with_origin_check(
         stream: tokio::net::TcpStream,
         allowed_origins: &[String],
-    ) -> std::result::Result<tokio_tungstenite::WebSocketStream<tokio_tungstenite::MaybeTlsStream<tokio::net::TcpStream>>, tungstenite::Error> {
+    ) -> std::result::Result<tokio_tungstenite::WebSocketStream<tokio::net::TcpStream>, tungstenite::Error> {
         use tokio_tungstenite::tungstenite::handshake::server::{Request, Response};
         use tokio_tungstenite::tungstenite::protocol::WebSocketConfig;
         

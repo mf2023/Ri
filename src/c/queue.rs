@@ -363,14 +363,9 @@ pub extern "C" fn ri_queue_message_new(payload: *const c_char, payload_len: usiz
         };
 
         // Use into_raw_parts for proper memory ownership transfer
-        let mut payload_vec = message.payload.clone();
-        let (payload_ptr, payload_cap, payload_len_val) = payload_vec.into_raw_parts();
-        std::mem::forget(payload_vec); // Prevent drop of vec that now belongs to C
-
-        // Use into_raw_parts for proper memory ownership transfer
-        let mut payload_vec = message.payload.clone();
+        // into_raw_parts takes ownership, so no mem::forget needed
+        let payload_vec = message.payload.clone();
         let (payload_ptr, _payload_cap, payload_len_val) = payload_vec.into_raw_parts();
-        std::mem::forget(payload_vec); // Prevent drop of vec that now belongs to C
 
         let boxed_msg = Box::new(CRiQueueMessage {
             id,
@@ -556,9 +551,9 @@ pub extern "C" fn ri_queue_manager_consume(
                                 };
 
                                 // Use into_raw_parts for proper memory ownership transfer
-                                let mut payload_vec = msg.payload.clone();
+                                // into_raw_parts takes ownership, so no mem::forget needed
+                                let payload_vec = msg.payload.clone();
                                 let (payload_ptr, _payload_cap, payload_len_val) = payload_vec.into_raw_parts();
-                                std::mem::forget(payload_vec);
 
                                 *out_msg = Box::into_raw(Box::new(CRiQueueMessage {
                                     id,

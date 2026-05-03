@@ -54,6 +54,7 @@ use crate::utils::output;
 use colored::Colorize;
 use indicatif::{ProgressBar, ProgressStyle};
 use mysql_async::prelude::Queryable;
+use rdkafka::producer::Producer;
 use std::collections::HashMap;
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -4837,6 +4838,7 @@ async fn test_mysql(url: &str) -> Result<()> {
 /// ```rust,ignore
 /// test_kafka("localhost:9092").await?;
 /// ```
+#[cfg(feature = "kafka")]
 async fn test_kafka(url: &str) -> Result<()> {
     println!("{}", "═".repeat(60));
     println!("{}", "  Kafka Connection Test".green().bold());

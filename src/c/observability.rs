@@ -445,6 +445,7 @@ pub extern "C" fn ri_metrics_registry_export_prometheus(
     if registry.is_null() {
         return std::ptr::null_mut();
     }
+    #[allow(unused_unsafe)]
     unsafe {
         #[cfg(feature = "observability")]
         {
