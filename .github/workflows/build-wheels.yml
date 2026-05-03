@@ -161,7 +161,7 @@ jobs:
           toolchain: stable
 
       - name: Install system dependencies
-        run: sudo apt-get update && sudo apt-get install -y libcurl4-openssl-dev libsasl2-dev
+        run: make setup-deps
 
       - name: Build CLI
         run: make build-cli-linux-x64
@@ -194,7 +194,7 @@ jobs:
           toolchain: stable
 
       - name: Install system dependencies
-        run: sudo apt-get update && sudo apt-get install -y libcurl4-openssl-dev libsasl2-dev
+        run: make setup-deps
 
       - name: Build CLI
         run: make build-cli-linux-arm64
@@ -389,7 +389,7 @@ jobs:
           toolchain: stable
 
       - name: Install system dependencies
-        run: sudo apt-get update && sudo apt-get install -y libcurl4-openssl-dev libsasl2-dev
+        run: make setup-deps
 
       - name: Build
         run: make build-linux-x64
@@ -422,7 +422,7 @@ jobs:
           toolchain: stable
 
       - name: Install system dependencies
-        run: sudo apt-get update && sudo apt-get install -y libcurl4-openssl-dev libsasl2-dev
+        run: make setup-deps
 
       - name: Build
         run: make build-linux-arm64
@@ -613,7 +613,7 @@ jobs:
           toolchain: stable
 
       - name: Install system dependencies
-        run: sudo apt-get update && sudo apt-get install -y libcurl4-openssl-dev libsasl2-dev
+        run: make setup-deps
 
       - name: Build C static library
         run: make build-c-linux-x64
@@ -648,7 +648,7 @@ jobs:
           toolchain: stable
 
       - name: Install system dependencies
-        run: sudo apt-get update && sudo apt-get install -y libcurl4-openssl-dev libsasl2-dev
+        run: make setup-deps
 
       - name: Build C static library
         run: make build-c-linux-arm64
@@ -1151,7 +1151,7 @@ jobs:
 
       - name: Install system dependencies (Linux)
         if: runner.os == 'Linux'
-        run: sudo apt-get update && sudo apt-get install -y libcurl4-openssl-dev libsasl2-dev
+        run: make setup-deps
 
       - name: Install dependencies (macOS)
         if: runner.os == 'macOS'
@@ -1261,6 +1261,8 @@ jobs:
           maturin-version: v1.8.3
           args: --release -o dist
           before-script-linux: |
+            # Install Perl IPC::Cmd for OpenSSL build
+            yum install -y perl perl-IPC-Cmd || apt-get install -y perl libipc-cmd-perl || true
             # Use Makefile to install dependencies (handles all Linux distros)
             make setup-deps || echo "Setup deps completed with some warnings"
             # Configure correct Python version for maturin
@@ -1363,7 +1365,7 @@ jobs:
           toolchain: stable
 
       - name: Install system dependencies
-        run: sudo apt-get update && sudo apt-get install -y libcurl4-openssl-dev libsasl2-dev
+        run: make setup-deps
 
       - name: Publish to crates.io
         run: cargo publish --token ${{ secrets.CARGO_REGISTRY_TOKEN }}

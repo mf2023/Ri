@@ -246,9 +246,9 @@ setup-deps:
 			fi; \
 		fi; \
 	elif command -v yum >/dev/null 2>&1 || command -v dnf >/dev/null 2>&1; then \
-		echo "Using yum/dnf (CentOS/RHEL/Fedora)"; \
+		echo "Using yum/dnf (CentOS/RHEL/Fedora/manylinux)"; \
 		if command -v dnf >/dev/null 2>&1; then PKGMGR=dnf; else PKGMGR=yum; fi; \
-		sudo $$PKGMGR install -y libcurl-devel openssl-devel libsasl2-devel gcc gcc-c++ make cmake git ninja-build; \
+		sudo $$PKGMGR install -y libcurl-devel openssl-devel libsasl2-devel gcc gcc-c++ make cmake git ninja-build perl-IPC-Cmd; \
 		if [ ! -f /usr/lib64/liboqs.so ] && [ ! -f /usr/local/lib64/liboqs.so ] && [ ! -f /usr/lib/x86_64-linux-gnu/liboqs.so ]; then \
 			echo "Building liboqs from source..."; \
 			cd /tmp && rm -rf liboqs && git clone --depth 1 https://github.com/open-quantum-safe/liboqs.git && \
@@ -351,9 +351,9 @@ ifeq ($(PLATFORM),linux)
 	@$(MAKE) setup-deps
 endif
 ifeq ($(PLATFORM)-$(ARCH),windows-arm64)
-	OPENSSL_NO_VENDOR=1 cargo build $(BUILD_MODE) --target $(TARGET) --no-default-features $(if $(FEATURES),--features $(FEATURES),)
+	@cmd /c "set OPENSSL_NO_VENDOR=1 && cargo build $(BUILD_MODE) --target $(TARGET) --no-default-features $(if $(FEATURES),--features $(FEATURES),)"
 else ifeq ($(PLATFORM),windows)
-	OPENSSL_NO_VENDOR=1 cargo build $(BUILD_MODE) --target $(TARGET) $(if $(FEATURES),--features $(FEATURES),)
+	@cmd /c "set OPENSSL_NO_VENDOR=1 && cargo build $(BUILD_MODE) --target $(TARGET) $(if $(FEATURES),--features $(FEATURES),)"
 else
 	cargo build $(BUILD_MODE) --target $(TARGET) $(if $(FEATURES),--features $(FEATURES),)
 endif
@@ -366,9 +366,9 @@ ifeq ($(PLATFORM),linux)
 	@$(MAKE) setup-deps
 endif
 ifeq ($(PLATFORM)-$(ARCH),windows-arm64)
-	OPENSSL_NO_VENDOR=1 cargo build $(BUILD_MODE) -p ric --target $(TARGET) --no-default-features
+	@cmd /c "set OPENSSL_NO_VENDOR=1 && cargo build $(BUILD_MODE) -p ric --target $(TARGET) --no-default-features"
 else ifeq ($(PLATFORM),windows)
-	OPENSSL_NO_VENDOR=1 cargo build $(BUILD_MODE) -p ric --target $(TARGET)
+	@cmd /c "set OPENSSL_NO_VENDOR=1 && cargo build $(BUILD_MODE) -p ric --target $(TARGET)"
 else
 	cargo build $(BUILD_MODE) -p ric --target $(TARGET)
 endif
@@ -399,13 +399,9 @@ else ifeq ($(PLATFORM),windows)
 	@echo "$(YELLOW)Building Windows wheel...$(NC)"
 	pip install maturin
 ifeq ($(ARCH),arm64)
-	OPENSSL_NO_VENDOR=1 maturin build --release --target $(TARGET) -o $(DIST_DIR) \
-		--no-default-features \
-		--features pyo3,grpc,websocket,rabbitmq,cache,queue,gateway,service_mesh,auth,observability,postgres,mysql,sqlite,http_client,system_info,config_hot_reload,etcd
+	@cmd /c "set OPENSSL_NO_VENDOR=1 && maturin build --release --target $(TARGET) -o $(DIST_DIR) --no-default-features --features pyo3,grpc,websocket,rabbitmq,cache,queue,gateway,service_mesh,auth,observability,postgres,mysql,sqlite,http_client,system_info,config_hot_reload,etcd"
 else
-	OPENSSL_NO_VENDOR=1 maturin build --release --target $(TARGET) -o $(DIST_DIR) \
-		--no-default-features \
-		--features pyo3,grpc,websocket,rabbitmq,cache,queue,gateway,service_mesh,auth,observability,postgres,mysql,sqlite,http_client,system_info,config_hot_reload,protocol,kafka,etcd
+	@cmd /c "set OPENSSL_NO_VENDOR=1 && maturin build --release --target $(TARGET) -o $(DIST_DIR) --no-default-features --features pyo3,grpc,websocket,rabbitmq,cache,queue,gateway,service_mesh,auth,observability,postgres,mysql,sqlite,http_client,system_info,config_hot_reload,protocol,kafka,etcd"
 endif
 else
 	@echo "$(YELLOW)Building native wheel...$(NC)"
@@ -424,7 +420,7 @@ ifeq ($(PLATFORM),linux)
 	@$(MAKE) setup-deps
 endif
 ifeq ($(PLATFORM),windows)
-	OPENSSL_NO_VENDOR=1 cargo build $(BUILD_MODE) --target $(TARGET) --no-default-features --features c
+	@cmd /c "set OPENSSL_NO_VENDOR=1 && cargo build $(BUILD_MODE) --target $(TARGET) --no-default-features --features c"
 else
 	cargo build $(BUILD_MODE) --target $(TARGET) --no-default-features --features c
 endif
@@ -496,9 +492,7 @@ build-cli-windows-x64:
 
 build-cli-windows-arm64:
 	@echo "$(GREEN)Building CLI for Windows ARM64...$(NC)"
-	OPENSSL_NO_VENDOR=1 cargo build $(BUILD_MODE) -p ric --target $(TARGET) \
-		--no-default-features \
-		--features grpc,websocket,rabbitmq,cache,queue,gateway,service_mesh,auth,observability,postgres,mysql,sqlite,http_client,system_info,config_hot_reload,etcd
+	@cmd /c "set OPENSSL_NO_VENDOR=1 && cargo build $(BUILD_MODE) -p ric --target $(TARGET) --no-default-features --features grpc,websocket,rabbitmq,cache,queue,gateway,service_mesh,auth,observability,postgres,mysql,sqlite,http_client,system_info,config_hot_reload,etcd"
 
 build-cli-macos-x64:
 	@$(MAKE) build-cli PLATFORM=macos ARCH=x64 TARGET=x86_64-apple-darwin
