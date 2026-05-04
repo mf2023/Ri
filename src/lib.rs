@@ -4,7 +4,7 @@
 //! The Ri project belongs to the Dunimd Team.
 //!
 //! Licensed under the Apache License, Version 2.0 (the "License");
-//! You may not use this file except in compliance with the License.
+//! you may not use this file except in compliance with the License.
 //! You may obtain a copy of the License at
 //!
 //!     http://www.apache.org/licenses/LICENSE-2.0
@@ -440,6 +440,7 @@ pub mod py {
             m.add_class::<crate::protocol::RiConnectionInfo>()?;
             m.add_class::<crate::protocol::RiMessageFlags>()?;
             m.add_class::<crate::protocol::RiSecurityLevel>()?;
+            m.add_class::<crate::protocol::RiDeviceAuthStatus>()?;
             m.add_class::<crate::protocol::frames::RiFrameParser>()?;
             m.add_class::<crate::protocol::frames::RiFrameBuilder>()?;
         }
@@ -779,6 +780,7 @@ pub mod py {
         m.add_class::<crate::protocol::RiConnectionInfo>()?;
         m.add_class::<crate::protocol::RiMessageFlags>()?;
         m.add_class::<crate::protocol::RiSecurityLevel>()?;
+        m.add_class::<crate::protocol::RiDeviceAuthStatus>()?;
         m.add_class::<crate::protocol::frames::RiFrameParser>()?;
         m.add_class::<crate::protocol::frames::RiFrameBuilder>()?;
         _parent.add_submodule(&m)?;

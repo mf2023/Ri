@@ -23,7 +23,7 @@ use jni::JNIEnv;
 use jni::objects::{JClass, JString};
 use jni::sys::{jlong, jboolean, jint, jdouble, jstring};
 use crate::database::{RiDatabaseConfig, RiDatabasePool, RiDatabaseMetrics, RiDynamicPoolConfig, RiDBRow, RiDBResult, RiDatabaseMigration};
-use crate::java::exception::check_not_null;
+use crate::java::exception::{check_not_null, throw_ri_error};
 
 // =============================================================================
 // RiDatabaseConfig JNI Bindings

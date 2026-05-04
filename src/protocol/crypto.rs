@@ -34,7 +34,8 @@ use async_trait::async_trait;
 use tokio::sync::RwLock;
 use ring::{aead, digest, rand, signature, agreement};
 use ring::rand::{SecureRandom, SystemRandom};
-use data_encoding::{BASE64, HEX};
+use data_encoding::BASE64;
+use hex;
 use std::collections::HashMap as FxHashMap;
 
 use crate::core::{RiResult, RiError};
@@ -486,8 +487,8 @@ impl ChaCha20Poly1305 {
 
     /// Generate a digital signature using Ed25519
     pub fn sign_ed25519(&self, data: &[u8], private_key: &[u8]) -> RiResult<Vec<u8>> {
-        let key_pair = Ed25519KeyPair::from_pkcs8(private_key)
-            .map_err(|_| CryptoError::InvalidKey)?;
+        let key_pair = signature::Ed25519KeyPair::from_pkcs8(private_key)
+            .map_err(|_| RiError::CryptoError("Invalid Ed25519 key".to_string()))?;
         
         let signature = key_pair.sign(data);
         Ok(signature.as_ref().to_vec())
@@ -1436,7 +1437,6 @@ mod crypto_tests {
     }
 }
 
-pub use self::crypto::RiCryptoEngine;
-pub use self::crypto::CryptoError;
+
 
 

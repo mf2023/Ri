@@ -93,6 +93,7 @@ use async_trait::async_trait;
 use tokio::sync::{RwLock, broadcast, mpsc};
 use uuid::Uuid;
 use zeroize::{Zeroize, ZeroizeOnDrop};
+use zeroize_derive::ZeroizeOnDrop;
 use secrecy::{ExposeSecret, SecretVec};
 use aes_gcm::{Aes256Gcm, Key, Nonce, KeyInit};
 use rand::RngCore;

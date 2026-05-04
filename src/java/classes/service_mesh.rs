@@ -23,6 +23,7 @@ use jni::JNIEnv;
 use jni::objects::{JClass, JString, JObjectArray};
 use jni::sys::{jlong, jboolean, jint, jstring, jobjectArray, jdouble, jlongArray};
 use std::collections::HashMap as FxHashMap;
+use std::time::Duration;
 
 use crate::service_mesh::{
     RiServiceMesh, RiServiceMeshConfig, RiServiceMeshStats,

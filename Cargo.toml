@@ -111,7 +111,7 @@ doctest = false
 [workspace]
 members = [
     ".",
-    "cli",
+    "cli", "test_crate",
 ]
 resolver = "2"
 
@@ -477,6 +477,12 @@ oqs = { version = "0.11", optional = true }
 # sm-crypto provides SM2/SM3/SM4 implementations
 sm-crypto = { version = "0.1", optional = true }
 
+# HSM Module Dependencies
+# subtle - Constant-time comparison for secure comparison operations
+subtle = { version = "2", optional = true }
+# pkcs11 - Rust bindings to PKCS#11 API for HSM access
+pkcs11 = { version = "0.5", optional = true }
+
 # =============================================================================
 # Feature Flags Configuration
 # =============================================================================
@@ -618,7 +624,9 @@ kafka = ["rdkafka"]
 # Post-quantum cryptography integration via oqs
 # Requires: liboqs C library installed + oqs Rust crate
 oqs = ["dep:oqs"]
-protocol = ["oqs", "dep:sm-crypto"]
+sm-crypto = ["dep:sm-crypto"]
+hsm = ["dep:subtle", "dep:pkcs11"]
+protocol = ["oqs", "sm-crypto", "hsm"]
 
 # =============================================================================
 # Development Dependencies

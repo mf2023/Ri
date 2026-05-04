@@ -69,16 +69,18 @@ use pyo3::prelude::*;
 pub mod frames;
 pub use frames::{RiFrameBuilder, RiFrameParser};
 
-/// Post-quantum cryptography modules (requires oqs feature)
-#[cfg(feature = "oqs")]
+/// Post-quantum cryptography modules (requires protocol feature)
+#[cfg(feature = "protocol")]
+pub mod test;
+#[cfg(feature = "protocol")]
 pub mod kyber;
-#[cfg(feature = "oqs")]
+#[cfg(feature = "protocol")]
 pub mod dilithium;
-#[cfg(feature = "oqs")]
+#[cfg(feature = "protocol")]
 pub mod falcon;
-#[cfg(feature = "oqs")]
+#[cfg(feature = "protocol")]
 pub mod post_quantum;
-#[cfg(feature = "oqs")]
+#[cfg(feature = "protocol")]
 pub use post_quantum::{
     KyberKEM, KyberPublicKey, KyberSecretKey, KyberCiphertext,
     DilithiumSigner, DilithiumPublicKey, DilithiumSecretKey, DilithiumSignature,
@@ -86,24 +88,14 @@ pub use post_quantum::{
     RiPostQuantumAlgorithm, KEMResult,
 };
 
-/// Advanced protocol features (future/experimental)
-/// These modules are not yet fully stabilized and may change in future versions.
-/// Enable with `protocol-advanced` feature.
-#[cfg(feature = "protocol-advanced")]
+/// Advanced protocol features
 pub mod adapter;
-#[cfg(feature = "protocol-advanced")]
 pub mod crypto;
-#[cfg(feature = "protocol-advanced")]
 pub mod global_state;
-#[cfg(feature = "protocol-advanced")]
 pub mod guomi;
-#[cfg(feature = "protocol-advanced")]
 pub mod hsm;
-#[cfg(feature = "protocol-advanced")]
 pub mod private;
-#[cfg(feature = "protocol-advanced")]
 pub mod security;
-#[cfg(feature = "protocol-advanced")]
 pub mod integration;
 
 /// Protocol type enumeration
@@ -142,6 +134,20 @@ pub enum RiConnectionState {
     Connected,
     /// Connection is disconnecting
     Disconnecting,
+}
+
+/// Device authentication status
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
+pub enum RiDeviceAuthStatus {
+    /// Not authenticated
+    NotAuthenticated,
+    /// Authentication in progress
+    Authenticating,
+    /// Authenticated
+    Authenticated,
+    /// Authentication failed
+    AuthenticationFailed,
 }
 
 /// Security level
@@ -480,6 +486,9 @@ pub trait RiProtocol {
     /// Initialize protocol
     async fn initialize(&mut self, config: RiProtocolConfig) -> RiResult<()>;
     
+    /// Connect to a device
+    async fn connect(&self, target_id: &str) -> RiResult<Box<dyn RiProtocolConnection>>;
+    
     /// Send message
     async fn send_message(&mut self, target: &str, data: &[u8]) -> RiResult<Vec<u8>>;
     
@@ -523,8 +532,20 @@ pub trait RiProtocolConnection {
     /// Send data
     async fn send(&mut self, data: &[u8]) -> RiResult<usize>;
     
+    /// Send message
+    async fn send_message(&self, data: &[u8]) -> RiResult<Vec<u8>>;
+    
+    /// Send message with flags
+    async fn send_message_with_flags(&self, data: &[u8], flags: RiMessageFlags) -> RiResult<Vec<u8>>;
+    
     /// Receive data
     async fn receive(&mut self, buffer: &mut [u8]) -> RiResult<usize>;
+    
+    /// Receive message
+    async fn receive_message(&self) -> RiResult<Vec<u8>>;
+    
+    /// Get connection info
+    fn get_connection_info(&self) -> RiConnectionInfo;
     
     /// Get statistics
     fn get_stats(&self) -> RiConnectionStats;
@@ -984,7 +1005,7 @@ impl RiBaseProtocol {
 }
 
 #[derive(Debug, Clone)]
-#[pyo3::prelude::pyclass]
+#[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 pub struct RiGlobalProtocol {
     base: RiBaseProtocol,
 }
@@ -1016,6 +1037,10 @@ impl RiProtocol for RiGlobalProtocol {
     async fn initialize(&mut self, config: RiProtocolConfig) -> RiResult<()> {
         self.base.initialize(config).await;
         Ok(())
+    }
+
+    async fn connect(&self, _target_id: &str) -> RiResult<Box<dyn RiProtocolConnection>> {
+        Err(RiError::Other("Global protocol doesn't support direct connections".to_string()))
     }
 
     async fn send_message(&mut self, target: &str, data: &[u8]) -> RiResult<Vec<u8>> {
@@ -1057,7 +1082,7 @@ impl RiProtocol for RiGlobalProtocol {
 }
 
 #[derive(Debug, Clone)]
-#[pyo3::prelude::pyclass]
+#[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 pub struct RiPrivateProtocol {
     base: RiBaseProtocol,
 }

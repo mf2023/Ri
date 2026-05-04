@@ -1,0 +1,10 @@
+
+[package]
+name = "test_oqs"
+version = "0.1.0"
+edition = "2021"
+
+[workspace]
+
+[dependencies]
+oqs = "0.11"

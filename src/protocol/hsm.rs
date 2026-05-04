@@ -75,9 +75,10 @@ use std::time::{Duration, Instant};
 use async_trait::async_trait;
 use tokio::sync::RwLock;
 use serde::{Deserialize, Serialize};
+#[cfg(feature = "hsm")]
 use subtle::ConstantTimeEq;
 
-#[cfg(not(windows))]
+#[cfg(all(feature = "hsm", not(windows)))]
 use pkcs11;
 
 use crate::core::{RiResult, RiError};
