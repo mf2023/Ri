@@ -41,105 +41,142 @@ impl<T: ToJava + FromJava> JavaConvertible for T {}
 // String conversion
 impl ToJava for String {
     fn to_java<'a>(&self, env: &mut JNIEnv<'a>) -> JObject<'a> {
-        env.new_string(self)
-            .expect("Failed to create Java string")
-            .into()
+        match env.new_string(self) {
+            Ok(jstr) => jstr.into(),
+            Err(_) => JObject::null(),
+        }
     }
 }
 
 impl FromJava for String {
     fn from_java<'a>(env: &mut JNIEnv<'a>, obj: JObject<'a>) -> Self {
+        if obj.is_null() {
+            return String::new();
+        }
         let jstr: JString = obj.into();
-        env.get_string(&jstr)
-            .expect("Failed to get Rust string")
-            .into()
+        match env.get_string(&jstr) {
+            Ok(rstr) => rstr.into(),
+            Err(_) => String::new(),
+        }
     }
 }
 
 // bool conversion
 impl ToJava for bool {
     fn to_java<'a>(&self, env: &mut JNIEnv<'a>) -> JObject<'a> {
-        env.new_object("java/lang/Boolean", "(Z)V", &[JValue::Bool(*self as u8)])
-            .expect("Failed to create Java Boolean")
+        match env.new_object("java/lang/Boolean", "(Z)V", &[JValue::Bool(*self as u8)]) {
+            Ok(obj) => obj,
+            Err(_) => JObject::null(),
+        }
     }
 }
 
 impl FromJava for bool {
     fn from_java<'a>(env: &mut JNIEnv<'a>, obj: JObject<'a>) -> Self {
-        env.call_method(&obj, "booleanValue", "()Z", &[])
-            .expect("Failed to call booleanValue")
-            .z()
-            .expect("Failed to get boolean value")
+        if obj.is_null() {
+            return false;
+        }
+        match env.call_method(&obj, "booleanValue", "()Z", &[]) {
+            Ok(val) => match val.z() {
+                Ok(b) => b,
+                Err(_) => false,
+            },
+            Err(_) => false,
+        }
     }
 }
 
 // i32 conversion
 impl ToJava for i32 {
     fn to_java<'a>(&self, env: &mut JNIEnv<'a>) -> JObject<'a> {
-        env.new_object("java/lang/Integer", "(I)V", &[JValue::Int(*self)])
-            .expect("Failed to create Java Integer")
+        match env.new_object("java/lang/Integer", "(I)V", &[JValue::Int(*self)]) {
+            Ok(obj) => obj,
+            Err(_) => JObject::null(),
+        }
     }
 }
 
 impl FromJava for i32 {
     fn from_java<'a>(env: &mut JNIEnv<'a>, obj: JObject<'a>) -> Self {
-        env.call_method(&obj, "intValue", "()I", &[])
-            .expect("Failed to call intValue")
-            .i()
-            .expect("Failed to get int value")
+        if obj.is_null() {
+            return 0;
+        }
+        match env.call_method(&obj, "intValue", "()I", &[]) {
+            Ok(val) => match val.i() {
+                Ok(i) => i,
+                Err(_) => 0,
+            },
+            Err(_) => 0,
+        }
     }
 }
 
 // i64 conversion
 impl ToJava for i64 {
     fn to_java<'a>(&self, env: &mut JNIEnv<'a>) -> JObject<'a> {
-        env.new_object("java/lang/Long", "(J)V", &[JValue::Long(*self)])
-            .expect("Failed to create Java Long")
+        match env.new_object("java/lang/Long", "(J)V", &[JValue::Long(*self)]) {
+            Ok(obj) => obj,
+            Err(_) => JObject::null(),
+        }
     }
 }
 
 impl FromJava for i64 {
     fn from_java<'a>(env: &mut JNIEnv<'a>, obj: JObject<'a>) -> Self {
-        env.call_method(&obj, "longValue", "()J", &[])
-            .expect("Failed to call longValue")
-            .j()
-            .expect("Failed to get long value")
+        if obj.is_null() {
+            return 0;
+        }
+        match env.call_method(&obj, "longValue", "()J", &[]) {
+            Ok(val) => match val.j() {
+                Ok(j) => j,
+                Err(_) => 0,
+            },
+            Err(_) => 0,
+        }
     }
 }
 
 // f64 conversion
 impl ToJava for f64 {
     fn to_java<'a>(&self, env: &mut JNIEnv<'a>) -> JObject<'a> {
-        env.new_object("java/lang/Double", "(D)V", &[JValue::Double(*self)])
-            .expect("Failed to create Java Double")
+        match env.new_object("java/lang/Double", "(D)V", &[JValue::Double(*self)]) {
+            Ok(obj) => obj,
+            Err(_) => JObject::null(),
+        }
     }
 }
 
 impl FromJava for f64 {
     fn from_java<'a>(env: &mut JNIEnv<'a>, obj: JObject<'a>) -> Self {
-        env.call_method(&obj, "doubleValue", "()D", &[])
-            .expect("Failed to call doubleValue")
-            .d()
-            .expect("Failed to get double value")
+        if obj.is_null() {
+            return 0.0;
+        }
+        match env.call_method(&obj, "doubleValue", "()D", &[]) {
+            Ok(val) => match val.d() {
+                Ok(d) => d,
+                Err(_) => 0.0,
+            },
+            Err(_) => 0.0,
+        }
     }
 }
 
 // Vec<String> conversion
 impl ToJava for Vec<String> {
     fn to_java<'a>(&self, env: &mut JNIEnv<'a>) -> JObject<'a> {
-        let list = env
-            .new_object("java/util/ArrayList", "()V", &[])
-            .expect("Failed to create ArrayList");
+        let list = match env.new_object("java/util/ArrayList", "()V", &[]) {
+            Ok(l) => l,
+            Err(_) => return JObject::null(),
+        };
         
         for item in self {
             let jitem = item.to_java(env);
-            env.call_method(
+            let _ = env.call_method(
                 &list,
                 "add",
                 "(Ljava/lang/Object;)Z",
                 &[JValue::Object(&jitem)],
-            )
-            .expect("Failed to add item to list");
+            );
         }
         
         list
@@ -148,22 +185,26 @@ impl ToJava for Vec<String> {
 
 impl FromJava for Vec<String> {
     fn from_java<'a>(env: &mut JNIEnv<'a>, obj: JObject<'a>) -> Self {
-        let size = env
-            .call_method(&obj, "size", "()I", &[])
-            .expect("Failed to get list size")
-            .i()
-            .expect("Failed to get size value") as usize;
+        if obj.is_null() {
+            return Vec::new();
+        }
+        
+        let size = match env.call_method(&obj, "size", "()I", &[]) {
+            Ok(val) => match val.i() {
+                Ok(i) => i as usize,
+                Err(_) => return Vec::new(),
+            },
+            Err(_) => return Vec::new(),
+        };
         
         let mut result = Vec::with_capacity(size);
         
         for i in 0..size {
-            let item = env
-                .call_method(&obj, "get", "(I)Ljava/lang/Object;", &[JValue::Int(i as i32)])
-                .expect("Failed to get list item")
-                .l()
-                .expect("Failed to get object");
-            
-            result.push(String::from_java(env, item));
+            if let Ok(item_val) = env.call_method(&obj, "get", "(I)Ljava/lang/Object;", &[JValue::Int(i as i32)]) {
+                if let Ok(item_obj) = item_val.l() {
+                    result.push(String::from_java(env, item_obj));
+                }
+            }
         }
         
         result
@@ -173,21 +214,21 @@ impl FromJava for Vec<String> {
 // FxHashMap<String, String> conversion
 impl ToJava for FxHashMap<String, String> {
     fn to_java<'a>(&self, env: &mut JNIEnv<'a>) -> JObject<'a> {
-        let map = env
-            .new_object("java/util/HashMap", "()V", &[])
-            .expect("Failed to create HashMap");
+        let map = match env.new_object("java/util/HashMap", "()V", &[]) {
+            Ok(m) => m,
+            Err(_) => return JObject::null(),
+        };
         
         for (key, value) in self {
             let jkey = key.to_java(env);
             let jvalue = value.to_java(env);
             
-            env.call_method(
+            let _ = env.call_method(
                 &map,
                 "put",
                 "(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;",
                 &[JValue::Object(&jkey), JValue::Object(&jvalue)],
-            )
-            .expect("Failed to put entry in map");
+            );
         }
         
         map
@@ -196,53 +237,56 @@ impl ToJava for FxHashMap<String, String> {
 
 impl FromJava for FxHashMap<String, String> {
     fn from_java<'a>(env: &mut JNIEnv<'a>, obj: JObject<'a>) -> Self {
-        let entry_set = env
-            .call_method(&obj, "entrySet", "()Ljava/util/Set;", &[])
-            .expect("Failed to get entry set")
-            .l()
-            .expect("Failed to get set object");
+        if obj.is_null() {
+            return FxHashMap::default();
+        }
         
-        let iterator = env
-            .call_method(&entry_set, "iterator", "()Ljava/util/Iterator;", &[])
-            .expect("Failed to get iterator")
-            .l()
-            .expect("Failed to get iterator object");
+        let entry_set = match env.call_method(&obj, "entrySet", "()Ljava/util/Set;", &[]) {
+            Ok(val) => match val.l() {
+                Ok(s) => s,
+                Err(_) => return FxHashMap::default(),
+            },
+            Err(_) => return FxHashMap::default(),
+        };
+        
+        let iterator = match env.call_method(&entry_set, "iterator", "()Ljava/util/Iterator;", &[]) {
+            Ok(val) => match val.l() {
+                Ok(i) => i,
+                Err(_) => return FxHashMap::default(),
+            },
+            Err(_) => return FxHashMap::default(),
+        };
         
         let mut result = FxHashMap::default();
         
         loop {
-            let has_next = env
-                .call_method(&iterator, "hasNext", "()Z", &[])
-                .expect("Failed to call hasNext")
-                .z()
-                .expect("Failed to get boolean");
+            let has_next = match env.call_method(&iterator, "hasNext", "()Z", &[]) {
+                Ok(val) => match val.z() {
+                    Ok(b) => b,
+                    Err(_) => break,
+                },
+                Err(_) => break,
+            };
             
             if !has_next {
                 break;
             }
             
-            let entry = env
-                .call_method(&iterator, "next", "()Ljava/lang/Object;", &[])
-                .expect("Failed to get next entry")
-                .l()
-                .expect("Failed to get entry object");
-            
-            let jkey = env
-                .call_method(&entry, "getKey", "()Ljava/lang/Object;", &[])
-                .expect("Failed to get key")
-                .l()
-                .expect("Failed to get key object");
-            
-            let jvalue = env
-                .call_method(&entry, "getValue", "()Ljava/lang/Object;", &[])
-                .expect("Failed to get value")
-                .l()
-                .expect("Failed to get value object");
-            
-            let key = String::from_java(env, jkey);
-            let value = String::from_java(env, jvalue);
-            
-            result.insert(key, value);
+            if let Ok(entry_val) = env.call_method(&iterator, "next", "()Ljava/lang/Object;", &[]) {
+                if let Ok(entry_obj) = entry_val.l() {
+                    if let Ok(key_val) = env.call_method(&entry_obj, "getKey", "()Ljava/lang/Object;", &[]) {
+                        if let Ok(key_obj) = key_val.l() {
+                            if let Ok(val_val) = env.call_method(&entry_obj, "getValue", "()Ljava/lang/Object;", &[]) {
+                                if let Ok(val_obj) = val_val.l() {
+                                    let key = String::from_java(env, key_obj);
+                                    let value = String::from_java(env, val_obj);
+                                    result.insert(key, value);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
         }
         
         result

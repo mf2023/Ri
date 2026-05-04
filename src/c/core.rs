@@ -263,7 +263,9 @@ pub extern "C" fn ri_app_builder_new() -> *mut CRiAppBuilder {
     let builder = CRiAppBuilder {
         inner: RiAppBuilder::new(),
     };
-    Box::into_raw(Box::new(builder))
+    let ptr = Box::into_raw(Box::new(builder));
+    crate::c::register_ptr(ptr as usize);
+    ptr
 }
 
 /// Frees a previously allocated CRiAppBuilder instance.
@@ -292,10 +294,20 @@ pub extern "C" fn ri_app_builder_new() -> *mut CRiAppBuilder {
 /// already been freed results in undefined behavior.
 #[no_mangle]
 pub extern "C" fn ri_app_builder_free(builder: *mut CRiAppBuilder) {
-    if !builder.is_null() {
-        unsafe {
-            let _ = Box::from_raw(builder);
-        }
+    if builder.is_null() {
+        return;
+    }
+
+    if !crate::c::unregister_ptr(builder as usize) {
+        log::warn!(
+            "[Ri.C] Attempted to free unregistered or already freed pointer: {:?}",
+            builder
+        );
+        return;
+    }
+
+    unsafe {
+        let _ = Box::from_raw(builder);
     }
 }
 
@@ -348,7 +360,9 @@ pub extern "C" fn ri_config_new() -> *mut CRiConfig {
     let config = CRiConfig {
         inner: RiConfig::new(),
     };
-    Box::into_raw(Box::new(config))
+    let ptr = Box::into_raw(Box::new(config));
+    crate::c::register_ptr(ptr as usize);
+    ptr
 }
 
 /// Frees a previously allocated CRiConfig instance.
@@ -377,10 +391,20 @@ pub extern "C" fn ri_config_new() -> *mut CRiConfig {
 /// already been freed results in undefined behavior.
 #[no_mangle]
 pub extern "C" fn ri_config_free(config: *mut CRiConfig) {
-    if !config.is_null() {
-        unsafe {
-            let _ = Box::from_raw(config);
-        }
+    if config.is_null() {
+        return;
+    }
+
+    if !crate::c::unregister_ptr(config as usize) {
+        log::warn!(
+            "[Ri.C] Attempted to free unregistered or already freed pointer: {:?}",
+            config
+        );
+        return;
+    }
+
+    unsafe {
+        let _ = Box::from_raw(config);
     }
 }
 
@@ -470,7 +494,9 @@ pub extern "C" fn ri_service_context_new() -> *mut CRiServiceContext {
     match RiServiceContext::new_default() {
         Ok(ctx) => {
             let context = CRiServiceContext { inner: ctx };
-            Box::into_raw(Box::new(context))
+            let ptr = Box::into_raw(Box::new(context));
+            crate::c::register_ptr(ptr as usize);
+            ptr
         }
         Err(_) => std::ptr::null_mut(),
     }
@@ -478,10 +504,20 @@ pub extern "C" fn ri_service_context_new() -> *mut CRiServiceContext {
 
 #[no_mangle]
 pub extern "C" fn ri_service_context_free(ctx: *mut CRiServiceContext) {
-    if !ctx.is_null() {
-        unsafe {
-            let _ = Box::from_raw(ctx);
-        }
+    if ctx.is_null() {
+        return;
+    }
+
+    if !crate::c::unregister_ptr(ctx as usize) {
+        log::warn!(
+            "[Ri.C] Attempted to free unregistered or already freed pointer: {:?}",
+            ctx
+        );
+        return;
+    }
+
+    unsafe {
+        let _ = Box::from_raw(ctx);
     }
 }
 
