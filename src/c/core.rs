@@ -831,12 +831,3 @@ pub extern "C" fn ri_lock_error_is_poisoned(error: *const CRiLockError) -> bool 
     }
     unsafe { (*error).is_poisoned }
 }
-
-#[no_mangle]
-pub extern "C" fn ri_string_free(s: *mut c_char) {
-    if !s.is_null() {
-        unsafe {
-            let _ = CString::from_raw(s);
-        }
-    }
-}

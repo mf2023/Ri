@@ -377,8 +377,9 @@ build-python:
 	@echo "$(GREEN)Building Python wheel for $(PLATFORM) $(ARCH) (Python $(PYTHON_VER))...$(NC)"
 	@mkdir -p $(DIST_DIR)
 ifeq ($(PLATFORM),linux)
+ifneq ($(ARCH),arm64)
 	@echo "$(YELLOW)Using manylinux container for Linux wheel...$(NC)"
-	docker run --rm -v "$(PWD)":/io quay.io/pypa/manylinux_2_17_$(if $(filter arm64,$(ARCH)),aarch64,x86_64) \
+	docker run --rm -v "$(PWD)":/io quay.io/pypa/manylinux_2_17_x86_64 \
 		/bin/bash -c "cd /io && make setup-deps && \
 			export OPENSSL_NO_VENDOR=1 && \
 			PYTHON_VER=$(PYTHON_VER) && \
@@ -389,6 +390,16 @@ ifeq ($(PLATFORM),linux)
 			\$$PYTHON_BIN -m maturin build --release --target $(TARGET) -o /io/$(DIST_DIR) \
 				--no-default-features \
 			--features pyo3,grpc,websocket,rabbitmq,cache,queue,gateway,service_mesh,auth,observability,postgres,mysql,sqlite,http_client,system_info,config_hot_reload,protocol,kafka,etcd"
+else
+	@echo "$(YELLOW)Building native Linux ARM64 wheel...$(NC)"
+	$(MAKE) setup-deps
+	PYTHON_VER=$(PYTHON_VER) && \
+	PYTHON_BIN=python$${PYTHON_VER%.*} && \
+	$$PYTHON_BIN -m pip install maturin && \
+	OPENSSL_NO_VENDOR=1 $$PYTHON_BIN -m maturin build --release --target $(TARGET) -o $(DIST_DIR) \
+		--no-default-features \
+		--features pyo3,grpc,websocket,rabbitmq,cache,queue,gateway,service_mesh,auth,observability,postgres,mysql,sqlite,http_client,system_info,config_hot_reload,protocol,kafka,etcd
+endif
 else ifeq ($(PLATFORM),windows)
 	@echo "$(YELLOW)Building Windows wheel...$(NC)"
 	pip install maturin

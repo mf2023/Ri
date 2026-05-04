@@ -231,9 +231,12 @@ jobs:
 
       - name: Fix PATH for MSVC linker
         run: |
-          $msvcPath = Split-Path (Split-Path $env:LIB -Parent)
-          $msvcBin = Join-Path $msvcPath "VC\Tools\MSVC\*\bin\Hostx64\x64"
-          $msvcBin = (Get-ChildItem $msvcBin -Directory | Select-Object -First 1).FullName
+          $msvcBin = "C:\Program Files\Microsoft Visual Studio\2022\*\VC\Tools\MSVC\*\bin\Hostx64\x64"
+          $msvcBin = (Get-ChildItem $msvcBin -ErrorAction SilentlyContinue | Select-Object -First 1).FullName
+          if (-not $msvcBin) {
+            $msvcBin = "C:\Program Files (x86)\Microsoft Visual Studio\*\VC\Tools\MSVC\*\bin\Hostx64\x64"
+            $msvcBin = (Get-ChildItem $msvcBin -ErrorAction SilentlyContinue | Select-Object -First 1).FullName
+          }
           if ($msvcBin) {
             $env:PATH = "$msvcBin;$env:PATH"
             echo "Added MSVC bin to PATH: $msvcBin"
@@ -283,9 +286,12 @@ jobs:
 
       - name: Fix PATH for MSVC linker
         run: |
-          $msvcPath = Split-Path (Split-Path $env:LIB -Parent)
-          $msvcBin = Join-Path $msvcPath "VC\Tools\MSVC\*\bin\Hostx64\arm64"
-          $msvcBin = (Get-ChildItem $msvcBin -Directory | Select-Object -First 1).FullName
+          $msvcBin = "C:\Program Files\Microsoft Visual Studio\2022\*\VC\Tools\MSVC\*\bin\Hostx64\arm64"
+          $msvcBin = (Get-ChildItem $msvcBin -ErrorAction SilentlyContinue | Select-Object -First 1).FullName
+          if (-not $msvcBin) {
+            $msvcBin = "C:\Program Files (x86)\Microsoft Visual Studio\*\VC\Tools\MSVC\*\bin\Hostx64\arm64"
+            $msvcBin = (Get-ChildItem $msvcBin -ErrorAction SilentlyContinue | Select-Object -First 1).FullName
+          }
           if ($msvcBin) {
             $env:PATH = "$msvcBin;$env:PATH"
             echo "Added MSVC bin to PATH: $msvcBin"
@@ -479,9 +485,12 @@ jobs:
 
       - name: Fix PATH for MSVC linker
         run: |
-          $msvcPath = Split-Path (Split-Path $env:LIB -Parent)
-          $msvcBin = Join-Path $msvcPath "VC\Tools\MSVC\*\bin\Hostx64\x64"
-          $msvcBin = (Get-ChildItem $msvcBin -Directory | Select-Object -First 1).FullName
+          $msvcBin = "C:\Program Files\Microsoft Visual Studio\2022\*\VC\Tools\MSVC\*\bin\Hostx64\x64"
+          $msvcBin = (Get-ChildItem $msvcBin -ErrorAction SilentlyContinue | Select-Object -First 1).FullName
+          if (-not $msvcBin) {
+            $msvcBin = "C:\Program Files (x86)\Microsoft Visual Studio\*\VC\Tools\MSVC\*\bin\Hostx64\x64"
+            $msvcBin = (Get-ChildItem $msvcBin -ErrorAction SilentlyContinue | Select-Object -First 1).FullName
+          }
           if ($msvcBin) {
             $env:PATH = "$msvcBin;$env:PATH"
             echo "Added MSVC bin to PATH: $msvcBin"
@@ -597,9 +606,12 @@ jobs:
 
       - name: Fix PATH for MSVC linker
         run: |
-          $msvcPath = Split-Path (Split-Path $env:LIB -Parent)
-          $msvcBin = Join-Path $msvcPath "VC\Tools\MSVC\*\bin\Hostx64\arm64"
-          $msvcBin = (Get-ChildItem $msvcBin -Directory | Select-Object -First 1).FullName
+          $msvcBin = "C:\Program Files\Microsoft Visual Studio\2022\*\VC\Tools\MSVC\*\bin\Hostx64\arm64"
+          $msvcBin = (Get-ChildItem $msvcBin -ErrorAction SilentlyContinue | Select-Object -First 1).FullName
+          if (-not $msvcBin) {
+            $msvcBin = "C:\Program Files (x86)\Microsoft Visual Studio\*\VC\Tools\MSVC\*\bin\Hostx64\arm64"
+            $msvcBin = (Get-ChildItem $msvcBin -ErrorAction SilentlyContinue | Select-Object -First 1).FullName
+          }
           if ($msvcBin) {
             $env:PATH = "$msvcBin;$env:PATH"
             echo "Added MSVC bin to PATH: $msvcBin"
@@ -727,9 +739,12 @@ jobs:
 
       - name: Fix PATH for MSVC linker
         run: |
-          $msvcPath = Split-Path (Split-Path $env:LIB -Parent)
-          $msvcBin = Join-Path $msvcPath "VC\Tools\MSVC\*\bin\Hostx64\x64"
-          $msvcBin = (Get-ChildItem $msvcBin -Directory | Select-Object -First 1).FullName
+          $msvcBin = "C:\Program Files\Microsoft Visual Studio\2022\*\VC\Tools\MSVC\*\bin\Hostx64\x64"
+          $msvcBin = (Get-ChildItem $msvcBin -ErrorAction SilentlyContinue | Select-Object -First 1).FullName
+          if (-not $msvcBin) {
+            $msvcBin = "C:\Program Files (x86)\Microsoft Visual Studio\*\VC\Tools\MSVC\*\bin\Hostx64\x64"
+            $msvcBin = (Get-ChildItem $msvcBin -ErrorAction SilentlyContinue | Select-Object -First 1).FullName
+          }
           if ($msvcBin) {
             $env:PATH = "$msvcBin;$env:PATH"
             echo "Added MSVC bin to PATH: $msvcBin"
@@ -851,9 +866,12 @@ jobs:
 
       - name: Fix PATH for MSVC linker
         run: |
-          $msvcPath = Split-Path (Split-Path $env:LIB -Parent)
-          $msvcBin = Join-Path $msvcPath "VC\Tools\MSVC\*\bin\Hostx64\arm64"
-          $msvcBin = (Get-ChildItem $msvcBin -Directory | Select-Object -First 1).FullName
+          $msvcBin = "C:\Program Files\Microsoft Visual Studio\2022\*\VC\Tools\MSVC\*\bin\Hostx64\arm64"
+          $msvcBin = (Get-ChildItem $msvcBin -ErrorAction SilentlyContinue | Select-Object -First 1).FullName
+          if (-not $msvcBin) {
+            $msvcBin = "C:\Program Files (x86)\Microsoft Visual Studio\*\VC\Tools\MSVC\*\bin\Hostx64\arm64"
+            $msvcBin = (Get-ChildItem $msvcBin -ErrorAction SilentlyContinue | Select-Object -First 1).FullName
+          }
           if ($msvcBin) {
             $env:PATH = "$msvcBin;$env:PATH"
             echo "Added MSVC bin to PATH: $msvcBin"
