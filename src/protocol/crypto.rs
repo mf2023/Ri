@@ -29,13 +29,9 @@
 //! - ECDH/X25519 key exchange
 //! - Real random number generation
 
-use std::sync::Arc;
-use async_trait::async_trait;
-use tokio::sync::RwLock;
-use ring::{aead, digest, rand, signature, agreement};
+use ring::{aead, digest, signature, agreement};
 use ring::rand::{SecureRandom, SystemRandom};
-use data_encoding::{BASE64, HEX};
-use std::collections::HashMap as FxHashMap;
+use data_encoding::HEX;
 
 use crate::core::{RiResult, RiError};
 
@@ -205,8 +201,7 @@ impl AES256GCM {
         let nonce = self.generate_nonce()?;
 
         let mut ciphertext = plaintext.to_vec();
-        ciphertext.extend_from_slice(&nonce);
-
+        
         key.seal_in_place_append_tag(
             aead::Nonce::try_assume_unique_for_key(&nonce)
                 .map_err(|e| RiError::CryptoError(format!("Invalid nonce: {}", e)))?,
@@ -214,7 +209,10 @@ impl AES256GCM {
             &mut ciphertext,
         ).map_err(|e| RiError::CryptoError(format!("Encryption failed: {}", e)))?;
 
-        Ok(ciphertext)
+        // Ciphertext format: nonce(12) + ciphertext + tag(16)
+        let mut result = nonce.to_vec();
+        result.extend_from_slice(&ciphertext);
+        Ok(result)
     }
     
     /// Decrypt data with AES-256-GCM
@@ -223,27 +221,24 @@ impl AES256GCM {
             return Err(RiError::CryptoError("Invalid ciphertext length".to_string()));
         }
         
-        // Ciphertext format: plaintext + tag(16) + nonce(12)
-        let nonce = &ciphertext[ciphertext.len() - 12..];
-        let tag = &ciphertext[ciphertext.len() - 28..ciphertext.len() - 12];
-        let data = &ciphertext[..ciphertext.len() - 28];
+        // Ciphertext format: nonce(12) + ciphertext + tag(16)
+        let nonce = &ciphertext[..12];
+        let mut data = ciphertext[12..].to_vec();
         
         let key = aead::UnboundKey::new(&aead::AES_256_GCM, &self.key)
             .map_err(|e| RiError::CryptoError(format!("Failed to create AES key: {}", e)))?;
         
         let key = aead::LessSafeKey::new(key);
-        let mut plaintext = data.to_vec();
-        plaintext.extend_from_slice(tag);
         
         let decrypted_len = key.open_in_place(
             aead::Nonce::try_assume_unique_for_key(nonce)
                 .map_err(|e| RiError::CryptoError(format!("Invalid nonce: {}", e)))?,
             aead::Aad::from(additional_data.unwrap_or(&[])),
-            &mut plaintext,
+            &mut data,
         ).map_err(|e| RiError::CryptoError(format!("Decryption failed: {}", e)))?;
         
-        plaintext.truncate(decrypted_len.len());
-        Ok(plaintext)
+        data.truncate(decrypted_len.len());
+        Ok(data)
     }
     
     fn generate_nonce(&self) -> RiResult<[u8; 12]> {
@@ -486,8 +481,8 @@ impl ChaCha20Poly1305 {
 
     /// Generate a digital signature using Ed25519
     pub fn sign_ed25519(&self, data: &[u8], private_key: &[u8]) -> RiResult<Vec<u8>> {
-        let key_pair = Ed25519KeyPair::from_pkcs8(private_key)
-            .map_err(|_| CryptoError::InvalidKey)?;
+        let key_pair = signature::Ed25519KeyPair::from_pkcs8(private_key)
+            .map_err(|_| RiError::CryptoError("Invalid key".to_string()))?;
         
         let signature = key_pair.sign(data);
         Ok(signature.as_ref().to_vec())
@@ -713,7 +708,7 @@ impl SM4Cipher {
             block.copy_from_slice(chunk);
             
             // SM4 decryption (simplified implementation)
-            let decrypted_block = self.sm4_decrypt_block(&block)?;
+            let mut decrypted_block = self.sm4_decrypt_block(&block)?;
             
             // XOR with IV/previous ciphertext
             for i in 0..16 {

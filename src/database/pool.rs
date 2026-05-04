@@ -157,6 +157,7 @@ pub struct PooledDatabase {
     id: u32,
     inner: Arc<dyn RiDatabase>,
     pool: Arc<RiDatabasePool>,
+    created_at: Instant,
 }
 
 impl Drop for PooledDatabase {
@@ -166,6 +167,7 @@ impl Drop for PooledDatabase {
         let pool = self.pool.clone();
         let id = self.id;
         let inner = self.inner.clone();
+        let created_at = self.created_at;
         
         // Use tokio::spawn to handle the async release operation
         // since Drop cannot be async
@@ -176,7 +178,7 @@ impl Drop for PooledDatabase {
             pool.available.insert(id, PoolConnection { 
                 db: inner,
                 acquired_at: Instant::now(),
-                created_at: Instant::now(),
+                created_at,
             });
 
             let _ = pool.check_and_scale().await;
@@ -185,8 +187,8 @@ impl Drop for PooledDatabase {
 }
 
 impl PooledDatabase {
-    pub fn new(id: u32, inner: Arc<dyn RiDatabase>, pool: Arc<RiDatabasePool>) -> Self {
-        Self { id, inner, pool }
+    pub fn new(id: u32, inner: Arc<dyn RiDatabase>, pool: Arc<RiDatabasePool>, created_at: Instant) -> Self {
+        Self { id, inner, pool, created_at }
     }
 
     pub fn id(&self) -> u32 {
@@ -306,7 +308,6 @@ impl LowUtilizationTracker {
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 pub struct RiDatabasePool {
     config: RiDatabaseConfig,
-    connections: Arc<DashMap<u32, PoolConnection>>,
     available: Arc<DashMap<u32, PoolConnection>>,
     connection_ids: Arc<AtomicU64>,
     semaphore: Arc<Semaphore>,
@@ -355,7 +356,6 @@ impl RiDatabasePool {
 
         let pool = Self {
             config: config.clone(),
-            connections: Arc::new(DashMap::new()),
             available: Arc::new(DashMap::new()),
             connection_ids: Arc::new(AtomicU64::new(0)),
             semaphore: Arc::new(Semaphore::new(max_connections as usize)),
@@ -582,6 +582,7 @@ impl RiDatabasePool {
 
         let mut reused_db = None;
         let mut reused_id = None;
+        let mut reused_created_at = None;
 
         let now = Instant::now();
         
@@ -596,6 +597,7 @@ impl RiDatabasePool {
             } else {
                 reused_db = Some(conn.db.clone());
                 reused_id = Some(id);
+                reused_created_at = Some(conn.created_at);
                 self.available.remove(&id);
                 self.idle_connections.fetch_sub(1, Ordering::SeqCst);
                 self.active_connections.fetch_add(1, Ordering::SeqCst);
@@ -603,15 +605,15 @@ impl RiDatabasePool {
             }
         }
 
-        let (db, id) = if let Some((existing_db, existing_id)) = reused_db.zip(reused_id) {
-            (existing_db, existing_id)
+        let (db, id, created_at) = if let (Some(existing_db), Some(existing_id), Some(ca)) = (reused_db, reused_id, reused_created_at) {
+            (existing_db, existing_id, ca)
         } else {
             match self.create_connection().await {
                 Ok(new_conn) => {
                     let id = self.connection_ids.fetch_add(1, Ordering::SeqCst) as u32;
                     self.total_connections.fetch_add(1, Ordering::SeqCst);
                     self.active_connections.fetch_add(1, Ordering::SeqCst);
-                    (new_conn, id)
+                    (new_conn, id, Instant::now())
                 }
                 Err(e) => {
                     self.errors.fetch_add(1, Ordering::SeqCst);
@@ -622,7 +624,7 @@ impl RiDatabasePool {
 
         let _ = self.check_and_scale().await;
 
-        Ok(PooledDatabase::new(id, db, Arc::new(self.clone())))
+        Ok(PooledDatabase::new(id, db, Arc::new(self.clone()), created_at))
     }
 
     pub async fn release(&self, db: PooledDatabase) {
@@ -632,7 +634,7 @@ impl RiDatabasePool {
         self.available.insert(db.id(), PoolConnection { 
             db: db.inner.clone(),
             acquired_at: Instant::now(),
-            created_at: Instant::now(),
+            created_at: db.created_at,
         });
 
         let _ = self.check_and_scale().await;
@@ -640,10 +642,9 @@ impl RiDatabasePool {
 
     pub async fn close(&self) -> RiResult<()> {
         self.semaphore.close();
-        for entry in self.connections.iter() {
+        for entry in self.available.iter() {
             let _ = entry.value().db.close().await;
         }
-        self.connections.clear();
         self.available.clear();
         Ok(())
     }
@@ -755,7 +756,6 @@ impl RiDatabasePool {
 
         Self {
             config: config.clone(),
-            connections: Arc::new(DashMap::new()),
             available: Arc::new(DashMap::new()),
             connection_ids: Arc::new(AtomicU64::new(0)),
             semaphore: Arc::new(Semaphore::new(config.max_connections as usize)),
@@ -850,7 +850,6 @@ impl Clone for RiDatabasePool {
     fn clone(&self) -> Self {
         Self {
             config: self.config.clone(),
-            connections: self.connections.clone(),
             available: self.available.clone(),
             connection_ids: self.connection_ids.clone(),
             semaphore: self.semaphore.clone(),
