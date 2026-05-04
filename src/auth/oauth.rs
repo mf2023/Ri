@@ -264,6 +264,7 @@ impl RiOAuthManager {
     ///
     /// # Returns
     /// `true` if the redirect URI is allowed, `false` otherwise
+    #[allow(dead_code)]
     fn is_redirect_uri_allowed(provider: &RiOAuthProvider, redirect_uri: &str) -> bool {
         // If no whitelist is configured, only allow the default redirect URI
         if provider.allowed_redirect_uris.is_empty() {

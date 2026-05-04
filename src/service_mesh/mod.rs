@@ -572,7 +572,7 @@ impl RiServiceMesh {
                     health_check_path: "/health".to_string(),
                     is_healthy: true,
                 };
-                self.load_balancer.add_server(server).await;
+                let _ = self.load_balancer.add_server(server).await;
             }
         }
 

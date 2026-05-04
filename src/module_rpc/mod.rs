@@ -326,6 +326,7 @@ impl RiModuleEndpoint {
     /// - Be 1-128 characters long
     /// - Contain only alphanumeric characters, underscores, and dashes
     /// - Not start with a digit or dash
+    #[allow(dead_code)]
     fn validate_module_name(name: &str) -> RiResult<()> {
         if name.is_empty() || name.len() > 128 {
             return Err(crate::core::RiError::Other(

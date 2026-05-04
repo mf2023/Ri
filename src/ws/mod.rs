@@ -233,7 +233,7 @@ impl From<WSError> for RiError {
 pub struct RiWSSession {
     pub id: String,
     pub sender: tokio::sync::mpsc::Sender<std::result::Result<Message, tokio_tungstenite::tungstenite::Error>>,
-    pub receiver: SplitStream<tokio_tungstenite::WebSocketStream<tokio_tungstenite::MaybeTlsStream<tokio::net::TcpStream>>>,
+    pub receiver: SplitStream<tokio_tungstenite::WebSocketStream<tokio::net::TcpStream>>,
     pub info: Arc<RwLock<RiWSSessionInfo>>,
 }
 
@@ -241,7 +241,7 @@ impl RiWSSession {
     pub fn new(
         id: String,
         sender: tokio::sync::mpsc::Sender<std::result::Result<Message, tokio_tungstenite::tungstenite::Error>>,
-        receiver: SplitStream<tokio_tungstenite::WebSocketStream<tokio_tungstenite::MaybeTlsStream<tokio::net::TcpStream>>>,
+        receiver: SplitStream<tokio_tungstenite::WebSocketStream<tokio::net::TcpStream>>,
         remote_addr: String,
     ) -> Self {
             let now = chrono::Utc::now().timestamp() as u64;

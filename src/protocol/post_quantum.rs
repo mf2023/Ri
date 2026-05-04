@@ -82,8 +82,11 @@ use crate::core::RiResult;
 #[cfg(feature = "pyo3")]
 use pyo3::prelude::*;
 
+#[cfg(feature = "oqs")]
 pub use super::kyber::{KyberKEM, KyberPublicKey, KyberSecretKey, KyberCiphertext};
+#[cfg(feature = "oqs")]
 pub use super::dilithium::{DilithiumSigner, DilithiumPublicKey, DilithiumSecretKey, DilithiumSignature};
+#[cfg(feature = "oqs")]
 pub use super::falcon::{FalconSigner, FalconPublicKey, FalconSecretKey, FalconSignature};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

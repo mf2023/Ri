@@ -4,7 +4,7 @@
 //! The Ri project belongs to the Dunimd Team.
 //!
 //! Licensed under the Apache License, Version 2.0 (the "License");
-//! You may not use this file except in compliance with the License.
+//! you may not use this file except in compliance with the License.
 //! You may obtain a copy of the License at
 //!
 //!     http://www.apache.org/licenses/LICENSE-2.0
@@ -91,7 +91,7 @@ impl KyberKEM {
         }
     }
 
-    #[cfg(feature = "protocol")]
+    #[cfg(feature = "oqs")]
     pub fn keygen(&self) -> RiResult<(Vec<u8>, Vec<u8>)> {
         use oqs::kem::Kem;
 
@@ -105,18 +105,18 @@ impl KyberKEM {
         }.map_err(|e| RiError::Other(format!("Failed to initialize Kyber: {:?}", e)))?;
 
         let (pk, sk) = kem.keypair();
-        Ok((pk.into_vec(), sk.into_vec()))
+        Ok((pk.as_ref().to_vec(), sk.as_ref().to_vec()))
     }
 
-    #[cfg(not(feature = "protocol"))]
+    #[cfg(not(feature = "oqs"))]
     pub fn keygen(&self) -> RiResult<(Vec<u8>, Vec<u8>)> {
         Err(RiError::Other(
-            "Post-quantum cryptography requires the 'protocol' feature. \
-             Enable with: cargo build --features protocol".to_string()
+            "Post-quantum cryptography requires the 'oqs' feature. \
+             Enable with: cargo build --features oqs".to_string()
         ))
     }
 
-    #[cfg(feature = "protocol")]
+    #[cfg(feature = "oqs")]
     pub fn encapsulate(&self, public_key: &[u8]) -> RiResult<super::KEMResult> {
         use oqs::kem::Kem;
 
@@ -133,20 +133,20 @@ impl KyberKEM {
             .ok_or_else(|| RiError::Other("Invalid public key".to_string()))?;
         let (ct, ss) = kem.encapsulate(&pk);
         Ok(super::KEMResult {
-            ciphertext: ct.into_vec(),
-            shared_secret: ss.into_vec(),
+            ciphertext: ct.as_ref().to_vec(),
+            shared_secret: ss.as_ref().to_vec(),
         })
     }
 
-    #[cfg(not(feature = "protocol"))]
+    #[cfg(not(feature = "oqs"))]
     pub fn encapsulate(&self, _public_key: &[u8]) -> RiResult<super::KEMResult> {
         Err(RiError::Other(
-            "Post-quantum cryptography requires the 'protocol' feature. \
-             Enable with: cargo build --features protocol".to_string()
+            "Post-quantum cryptography requires the 'oqs' feature. \
+             Enable with: cargo build --features oqs".to_string()
         ))
     }
 
-    #[cfg(feature = "protocol")]
+    #[cfg(feature = "oqs")]
     pub fn decapsulate(&self, ciphertext: &[u8], secret_key: &[u8]) -> RiResult<Vec<u8>> {
         use oqs::kem::Kem;
 
@@ -164,14 +164,14 @@ impl KyberKEM {
         let sk = kem.secret_key_from_bytes(secret_key)
             .ok_or_else(|| RiError::Other("Invalid secret key".to_string()))?;
         let ss = kem.decapsulate(&ct, &sk);
-        Ok(ss.into_vec())
+        Ok(ss.as_ref().to_vec())
     }
 
-    #[cfg(not(feature = "protocol"))]
+    #[cfg(not(feature = "oqs"))]
     pub fn decapsulate(&self, _ciphertext: &[u8], _secret_key: &[u8]) -> RiResult<Vec<u8>> {
         Err(RiError::Other(
-            "Post-quantum cryptography requires the 'protocol' feature. \
-             Enable with: cargo build --features protocol".to_string()
+            "Post-quantum cryptography requires the 'oqs' feature. \
+             Enable with: cargo build --features oqs".to_string()
         ))
     }
 }

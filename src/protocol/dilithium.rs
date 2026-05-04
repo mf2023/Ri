@@ -4,7 +4,7 @@
 //! The Ri project belongs to the Dunimd Team.
 //!
 //! Licensed under the Apache License, Version 2.0 (the "License");
-//! You may not use this file except in compliance with the License.
+//! you may not use this file except in compliance with the License.
 //! You may obtain a copy of the License at
 //!
 //!     http://www.apache.org/licenses/LICENSE-2.0
@@ -25,7 +25,7 @@
 //!
 //! ## Security Level
 //!
-//! - **Dilithium2**: NIST Level 2 ≈ AES-128
+//! - **Dilithium2**: NIST Level 1 ≈ AES-128
 //! - **Dilithium3**: NIST Level 3 ≈ AES-192
 //! - **Dilithium5**: NIST Level 5 ≈ AES-256
 //!
@@ -91,7 +91,7 @@ impl DilithiumSigner {
         }
     }
 
-    #[cfg(feature = "protocol")]
+    #[cfg(feature = "oqs")]
     pub fn keygen(&self) -> RiResult<(Vec<u8>, Vec<u8>)> {
         use oqs::sig::Sig;
 
@@ -105,18 +105,18 @@ impl DilithiumSigner {
         }.map_err(|e| RiError::Other(format!("Failed to initialize Dilithium: {:?}", e)))?;
 
         let (pk, sk) = sig.keypair();
-        Ok((pk.into_vec(), sk.into_vec()))
+        Ok((pk.as_ref().to_vec(), sk.as_ref().to_vec()))
     }
 
-    #[cfg(not(feature = "protocol"))]
+    #[cfg(not(feature = "oqs"))]
     pub fn keygen(&self) -> RiResult<(Vec<u8>, Vec<u8>)> {
         Err(RiError::Other(
-            "Post-quantum cryptography requires the 'protocol' feature. \
-             Enable with: cargo build --features protocol".to_string()
+            "Post-quantum cryptography requires the 'oqs' feature. \
+             Enable with: cargo build --features oqs".to_string()
         ))
     }
 
-    #[cfg(feature = "protocol")]
+    #[cfg(feature = "oqs")]
     pub fn sign(&self, secret_key: &[u8], message: &[u8]) -> RiResult<Vec<u8>> {
         use oqs::sig::Sig;
 
@@ -132,18 +132,18 @@ impl DilithiumSigner {
         let sk = sig.secret_key_from_bytes(secret_key)
             .ok_or_else(|| RiError::Other("Invalid secret key".to_string()))?;
         let signature = sig.sign(message, &sk);
-        Ok(signature.into_vec())
+        Ok(signature.as_ref().to_vec())
     }
 
-    #[cfg(not(feature = "protocol"))]
+    #[cfg(not(feature = "oqs"))]
     pub fn sign(&self, _secret_key: &[u8], _message: &[u8]) -> RiResult<Vec<u8>> {
         Err(RiError::Other(
-            "Post-quantum cryptography requires the 'protocol' feature. \
-             Enable with: cargo build --features protocol".to_string()
+            "Post-quantum cryptography requires the 'oqs' feature. \
+             Enable with: cargo build --features oqs".to_string()
         ))
     }
 
-    #[cfg(feature = "protocol")]
+    #[cfg(feature = "oqs")]
     pub fn verify(&self, public_key: &[u8], message: &[u8], signature: &[u8]) -> RiResult<bool> {
         use oqs::sig::Sig;
 
@@ -164,11 +164,11 @@ impl DilithiumSigner {
         Ok(result.is_ok())
     }
 
-    #[cfg(not(feature = "protocol"))]
+    #[cfg(not(feature = "oqs"))]
     pub fn verify(&self, _public_key: &[u8], _message: &[u8], _signature: &[u8]) -> RiResult<bool> {
         Err(RiError::Other(
-            "Post-quantum cryptography requires the 'protocol' feature. \
-             Enable with: cargo build --features protocol".to_string()
+            "Post-quantum cryptography requires the 'oqs' feature. \
+             Enable with: cargo build --features oqs".to_string()
         ))
     }
 }

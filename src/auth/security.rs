@@ -133,6 +133,7 @@ fn load_hmac_key() -> Vec<u8> {
 ///
 /// Returns `Ok(())` if both encryption and HMAC keys are set via environment variables.
 /// Returns an error if any key is missing, with instructions on how to set them.
+#[allow(dead_code)]
 pub fn check_encryption_keys() -> RiResult<()> {
     let encryption_key_set = env::var(ENCRYPTION_KEY_ENV)
         .ok()
