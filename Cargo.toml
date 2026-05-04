@@ -379,6 +379,9 @@ lazy_static = "1.4"
 # Used for safe HTML content handling
 html-escape = "0.2"
 
+# Post-quantum cryptography library (optional)
+oqs = { version = "0.11", optional = true }
+
 # =============================================================================
 # Network Module Dependencies
 # =============================================================================
@@ -618,7 +621,7 @@ kafka = ["rdkafka"]
 # Post-quantum cryptography integration via oqs
 # Requires: liboqs C library installed + oqs Rust crate
 oqs = ["dep:oqs"]
-protocol = ["oqs", "dep:sm-crypto"]
+protocol = ["dep:sm-crypto"]
 
 # =============================================================================
 # Development Dependencies
