@@ -330,7 +330,9 @@ pub extern "C" fn ri_device_new(name: *const c_char, device_type: i32) -> *mut C
             _ => RiDeviceType::Custom,
         };
         let device = RiDevice::new(name_str.to_string(), dtype);
-        Box::into_raw(Box::new(CRiDevice::new(device)))
+        let ptr = Box::into_raw(Box::new(CRiDevice::new(device)));
+        crate::c::register_ptr(ptr as usize);
+        ptr
     }
 }
 
@@ -397,7 +399,9 @@ pub extern "C" fn ri_device_get_status(device: *mut CRiDevice) -> std::ffi::c_in
 // RiDeviceController C bindings
 #[no_mangle]
 pub extern "C" fn ri_device_controller_new() -> *mut CRiDeviceController {
-    Box::into_raw(Box::new(CRiDeviceController::new(RiDeviceController::new())))
+    let ptr = Box::into_raw(Box::new(CRiDeviceController::new(RiDeviceController::new())));
+    crate::c::register_ptr(ptr as usize);
+    ptr
 }
 c_destructor!(ri_device_controller_free, CRiDeviceController);
 
@@ -468,7 +472,11 @@ pub extern "C" fn ri_device_controller_get_device(
             Err(_) => return std::ptr::null_mut(),
         };
         match rt.block_on(async { (*controller).inner.get_device(device_id_str).await }) {
-            Some(device) => Box::into_raw(Box::new(CRiDevice::new(device))),
+            Some(device) => {
+                let ptr = Box::into_raw(Box::new(CRiDevice::new(device)));
+                crate::c::register_ptr(ptr as usize);
+                ptr
+            }
             None => std::ptr::null_mut(),
         }
     }
@@ -491,7 +499,7 @@ pub extern "C" fn ri_device_controller_get_device_count(controller: *mut CRiDevi
 #[no_mangle]
 pub extern "C" fn ri_device_controller_discover(
     controller: *mut CRiDeviceController,
-    out_devices: *mut *mut CRiDevice,
+    out_devices: *mut *mut *mut CRiDevice,
     out_count: *mut usize,
 ) -> std::ffi::c_int {
     if controller.is_null() || out_devices.is_null() || out_count.is_null() {
@@ -510,9 +518,16 @@ pub extern "C" fn ri_device_controller_discover(
                     *out_devices = std::ptr::null_mut();
                     return 0;
                 }
-                let devices: Vec<CRiDevice> = result.discovered_devices.into_iter().map(CRiDevice::new).collect();
-                let ptr = Box::into_raw(Box::new(devices));
-                *out_devices = ptr as *mut CRiDevice;
+                // Allocate an array of pointers
+                let mut ptr_array = Vec::with_capacity(count);
+                for device in result.discovered_devices {
+                    let device_ptr = Box::into_raw(Box::new(CRiDevice::new(device)));
+                    crate::c::register_ptr(device_ptr as usize);
+                    ptr_array.push(device_ptr);
+                }
+                // Convert the Vec into a raw pointer array
+                let ptr = ptr_array.leak().as_mut_ptr();
+                *out_devices = ptr;
                 0
             }
             Err(_) => -3,
@@ -520,11 +535,33 @@ pub extern "C" fn ri_device_controller_discover(
     }
 }
 
+/// Frees an array of device pointers returned by ri_device_controller_discover
+#[no_mangle]
+pub extern "C" fn ri_device_array_free(devices: *mut *mut CRiDevice, count: usize) {
+    if devices.is_null() || count == 0 {
+        return;
+    }
+    unsafe {
+        // Convert back to a Vec and drop it (this will deallocate the array)
+        let ptr_slice = std::slice::from_raw_parts_mut(devices, count);
+        for &mut device_ptr in ptr_slice.iter_mut() {
+            if !device_ptr.is_null() {
+                // Call the regular destructor to unregister and free
+                ri_device_free(device_ptr);
+            }
+        }
+        // Now deallocate the array itself
+        let _ = Vec::from_raw_parts(devices, count, count);
+    }
+}
+
 // RiDeviceScheduler C bindings
 #[no_mangle]
 pub extern "C" fn ri_device_scheduler_new() -> *mut CRiDeviceScheduler {
     let pool_manager = Arc::new(tokio::sync::RwLock::new(crate::device::RiResourcePoolManager::new()));
-    Box::into_raw(Box::new(CRiDeviceScheduler::new(RiDeviceScheduler::new(pool_manager))))
+    let ptr = Box::into_raw(Box::new(CRiDeviceScheduler::new(RiDeviceScheduler::new(pool_manager))));
+    crate::c::register_ptr(ptr as usize);
+    ptr
 }
 c_destructor!(ri_device_scheduler_free, CRiDeviceScheduler);
 
@@ -565,7 +602,11 @@ pub extern "C" fn ri_device_scheduler_allocate(
             anti_affinity: None,
         };
         match rt.block_on(async { (*scheduler).inner.select_device(&request).await }) {
-            Some(device) => Box::into_raw(Box::new(CRiDevice::new((*device).clone()))),
+            Some(device) => {
+                let ptr = Box::into_raw(Box::new(CRiDevice::new((*device).clone())));
+                crate::c::register_ptr(ptr as usize);
+                ptr
+            }
             None => std::ptr::null_mut(),
         }
     }
@@ -615,7 +656,9 @@ pub extern "C" fn ri_resource_pool_new(name: *const std::ffi::c_char, capacity: 
             allocation_timeout_secs: 30,
             health_check_interval_secs: 60,
         };
-        Box::into_raw(Box::new(CRiResourcePool::new(crate::device::RiResourcePool::new(config))))
+        let ptr = Box::into_raw(Box::new(CRiResourcePool::new(crate::device::RiResourcePool::new(config))));
+        crate::c::register_ptr(ptr as usize);
+        ptr
     }
 }
 c_destructor!(ri_resource_pool_free, CRiResourcePool);
