@@ -1314,14 +1314,14 @@ jobs:
       - name: Build Linux wheel with manylinux
         if: matrix.docker == true
         uses: PyO3/maturin-action@v1
+        env:
+          OPENSSL_NO_VENDOR: '1'
         with:
           command: build
           target: ${{ matrix.target }}
           manylinux: ${{ matrix.manylinux }}
           maturin-version: v1.8.3
           args: --release -o dist
-          env:
-            OPENSSL_NO_VENDOR: '1'
           before-script-linux: |
             export OPENSSL_NO_VENDOR=1
             # Install Perl IPC::Cmd for OpenSSL build

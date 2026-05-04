@@ -146,9 +146,16 @@ jobs:
       - name: Install system dependencies
         run: |
           sudo apt-get update
-          echo 'deb [trusted=yes] https://pkgs.kquirk.com/apt all main' | sudo tee /etc/apt/sources.list.d/oqs.list > /dev/null
-          sudo apt-get update
-          sudo apt-get install -y libcurl4-openssl-dev libsasl2-dev libssl-dev protobuf-compiler liboqs-dev
+          echo 'deb [trusted=yes] https://pkgs.kquirk.com/apt all main' | sudo tee /etc/apt/sources.list.d/oqs.list > /dev/null || true
+          sudo apt-get update || true
+          if ! sudo apt-get install -y libcurl4-openssl-dev libsasl2-dev libssl-dev protobuf-compiler liboqs-dev 2>/dev/null; then
+            echo "Building liboqs from source..."
+            sudo apt-get install -y libcurl4-openssl-dev libsasl2-dev libssl-dev protobuf-compiler build-essential pkg-config cmake git ninja-build
+            cd /tmp && rm -rf liboqs && git clone --depth 1 https://github.com/open-quantum-safe/liboqs.git && \
+            cd liboqs && mkdir -p build && cd build && \
+            cmake -GNinja -DCMAKE_INSTALL_PREFIX=/usr .. && \
+            ninja && sudo ninja install && sudo ldconfig
+          fi
 
       # Step 5: Cache Cargo Dependencies
       # Caches Cargo registry index, git checkouts, and target directory
@@ -176,7 +183,7 @@ jobs:
       # --features full: Enables all features to document complete API
       # Output: target/doc/ directory with generated HTML
       - name: Build Rust documentation
-        run: cargo doc --no-deps --features full
+        run: OPENSSL_NO_VENDOR=1 cargo doc --no-deps --features full
 
       # Step 8: Build Python Wheel Package
       # Uses maturin to build a Python wheel (.whl) containing the Rust library
@@ -185,7 +192,7 @@ jobs:
       # --features pyo3: Enables PyO3 Python bindings
       # -o dist: Outputs wheel to dist/ directory
       - name: Build Python wheel
-        run: maturin build --release --features pyo3 -o dist
+        run: OPENSSL_NO_VENDOR=1 maturin build --release --features pyo3 -o dist
 
       # Step 9: Install Python Package Locally
       # Installs the built wheel into the Python environment so that pdoc
