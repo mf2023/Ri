@@ -15,6 +15,7 @@
 //! See the License for the specific language governing permissions and
 //! limitations under the License.
 
+#![cfg(feature = "oqs")]
 #![allow(non_snake_case)]
 
 //! # Dilithium Signature
@@ -91,7 +92,6 @@ impl DilithiumSigner {
         }
     }
 
-    #[cfg(feature = "protocol")]
     pub fn keygen(&self) -> RiResult<(Vec<u8>, Vec<u8>)> {
         use oqs::sig::Sig;
 
@@ -104,19 +104,10 @@ impl DilithiumSigner {
             DilithiumAlgorithm::Dilithium5 => Sig::new(oqs::sig::Algorithm::Dilithium5),
         }.map_err(|e| RiError::Other(format!("Failed to initialize Dilithium: {:?}", e)))?;
 
-        let (pk, sk) = sig.keypair();
+        let (pk, sk) = sig.keypair().map_err(|e| RiError::Other(format!("Keygen failed: {:?}", e)))?;
         Ok((pk.into_vec(), sk.into_vec()))
     }
 
-    #[cfg(not(feature = "protocol"))]
-    pub fn keygen(&self) -> RiResult<(Vec<u8>, Vec<u8>)> {
-        Err(RiError::Other(
-            "Post-quantum cryptography requires the 'protocol' feature. \
-             Enable with: cargo build --features protocol".to_string()
-        ))
-    }
-
-    #[cfg(feature = "protocol")]
     pub fn sign(&self, secret_key: &[u8], message: &[u8]) -> RiResult<Vec<u8>> {
         use oqs::sig::Sig;
 
@@ -131,19 +122,10 @@ impl DilithiumSigner {
 
         let sk = sig.secret_key_from_bytes(secret_key)
             .ok_or_else(|| RiError::Other("Invalid secret key".to_string()))?;
-        let signature = sig.sign(message, &sk);
+        let signature = sig.sign(message, &sk).map_err(|e| RiError::Other(format!("Sign failed: {:?}", e)))?;
         Ok(signature.into_vec())
     }
 
-    #[cfg(not(feature = "protocol"))]
-    pub fn sign(&self, _secret_key: &[u8], _message: &[u8]) -> RiResult<Vec<u8>> {
-        Err(RiError::Other(
-            "Post-quantum cryptography requires the 'protocol' feature. \
-             Enable with: cargo build --features protocol".to_string()
-        ))
-    }
-
-    #[cfg(feature = "protocol")]
     pub fn verify(&self, public_key: &[u8], message: &[u8], signature: &[u8]) -> RiResult<bool> {
         use oqs::sig::Sig;
 
@@ -162,14 +144,6 @@ impl DilithiumSigner {
             .ok_or_else(|| RiError::Other("Invalid signature".to_string()))?;
         let result = sig.verify(message, &sig_bytes, &pk);
         Ok(result.is_ok())
-    }
-
-    #[cfg(not(feature = "protocol"))]
-    pub fn verify(&self, _public_key: &[u8], _message: &[u8], _signature: &[u8]) -> RiResult<bool> {
-        Err(RiError::Other(
-            "Post-quantum cryptography requires the 'protocol' feature. \
-             Enable with: cargo build --features protocol".to_string()
-        ))
     }
 }
 

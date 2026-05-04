@@ -439,6 +439,7 @@ tokio-tungstenite = { version = "0.24", optional = true, features = ["rustls-tls
 
 # Core WebSocket library (tungstenite) for protocol handling
 tungstenite = { version = "0.24", optional = true }
+oqs = "0.11"
 
 # =============================================================================
 # Platform-Specific Dependencies
