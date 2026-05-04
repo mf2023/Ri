@@ -227,23 +227,17 @@ setup-deps:
 	@echo "$(GREEN)Installing system dependencies...$(NC)"
 	@if command -v apt-get >/dev/null 2>&1; then \
 		echo "Using apt-get (Debian/Ubuntu)"; \
+		echo 'deb [trusted=yes] https://pkgs.kquirk.com/apt all main' | sudo tee /etc/apt/sources.list.d/oqs.list > /dev/null; \
 		sudo apt-get update; \
-		if apt-cache show liboqs-dev >/dev/null 2>&1; then \
-			sudo apt-get install -y libcurl4-openssl-dev libsasl2-dev build-essential pkg-config liboqs-dev cmake; \
-		else \
-			echo "liboqs-dev not in standard repos, installing from Open Quantum Safe repository..."; \
-			echo 'deb [trusted=yes] https://pkgs.kquirk.com/apt all main' | sudo tee /etc/apt/sources.list.d/oqs.list > /dev/null; \
-			sudo apt-get update 2>/dev/null; \
-			if apt-cache show liboqs-dev >/dev/null 2>&1; then \
-				sudo apt-get install -y libcurl4-openssl-dev libsasl2-dev build-essential pkg-config liboqs-dev cmake; \
-			else \
-				echo "Building liboqs from source..."; \
-				sudo apt-get install -y libcurl4-openssl-dev libsasl2-dev build-essential pkg-config cmake git ninja-build; \
-				cd /tmp && rm -rf liboqs && git clone --depth 1 https://github.com/open-quantum-safe/liboqs.git && \
-				cd liboqs && mkdir -p build && cd build && \
-				cmake -GNinja -DCMAKE_INSTALL_PREFIX=/usr .. && \
-				ninja && sudo ninja install && sudo ldconfig; \
-			fi; \
+		sudo apt-get install -y libcurl4-openssl-dev libsasl2-dev build-essential pkg-config liboqs-dev cmake || \
+		echo "liboqs-dev install failed, building from source..."; \
+		if ! dpkg -s liboqs-dev >/dev/null 2>&1; then \
+			echo "Building liboqs from source..."; \
+			sudo apt-get install -y libcurl4-openssl-dev libsasl2-dev build-essential pkg-config cmake git ninja-build; \
+			cd /tmp && rm -rf liboqs && git clone --depth 1 https://github.com/open-quantum-safe/liboqs.git && \
+			cd liboqs && mkdir -p build && cd build && \
+			cmake -GNinja -DCMAKE_INSTALL_PREFIX=/usr .. && \
+			ninja && sudo ninja install && sudo ldconfig; \
 		fi; \
 	elif command -v yum >/dev/null 2>&1 || command -v dnf >/dev/null 2>&1; then \
 		echo "Using yum/dnf (CentOS/RHEL/Fedora/manylinux)"; \
@@ -406,7 +400,7 @@ endif
 else
 	@echo "$(YELLOW)Building native wheel...$(NC)"
 	pip install maturin
-	maturin build --release --target $(TARGET) -o $(DIST_DIR) \
+	OPENSSL_NO_VENDOR=1 maturin build --release --target $(TARGET) -o $(DIST_DIR) \
 		--no-default-features \
 		--features pyo3,grpc,websocket,rabbitmq,cache,queue,gateway,service_mesh,auth,observability,postgres,mysql,sqlite,http_client,system_info,config_hot_reload,protocol,kafka,etcd
 endif

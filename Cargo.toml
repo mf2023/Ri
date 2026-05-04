@@ -273,14 +273,10 @@ etcd-client = { version = "0.11", features = ["tls"], optional = true }
 # Supports connection pooling and transaction management
 tokio-postgres = { version = "0.7", optional = true }
 
-# SQLite embedded database with bundled C library
-# Zero-configuration database for local storage
-rusqlite = { version = "0.29", optional = true, features = ["bundled"] }
-
 # SQL query builder and database driver framework
 # Supports PostgreSQL, MySQL, SQLite with async/await
 # Provides type-safe SQL execution with compile-time checks
-sqlx = { version = "0.7", optional = true, default-features = false, features = ["runtime-tokio", "postgres", "mysql", "sqlite"] }
+sqlx = { version = "0.8", optional = true, default-features = false, features = ["runtime-tokio", "postgres", "mysql", "sqlite"] }
 
 # Type-erased serialization for dynamic data handling
 # Enables serializing arbitrary types at runtime

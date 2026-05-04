@@ -229,6 +229,16 @@ jobs:
       - name: Setup MSVC
         uses: ilammy/msvc-dev-cmd@v1
 
+      - name: Fix PATH for MSVC linker
+        run: |
+          $msvcPath = Split-Path (Split-Path $env:LIB -Parent)
+          $msvcBin = Join-Path $msvcPath "VC\Tools\MSVC\*\bin\Hostx64\x64"
+          $msvcBin = (Get-ChildItem $msvcBin -Directory | Select-Object -First 1).FullName
+          if ($msvcBin) {
+            $env:PATH = "$msvcBin;$env:PATH"
+            echo "Added MSVC bin to PATH: $msvcBin"
+          }
+
       - name: Install OpenSSL
         run: |
           vcpkg install openssl:x64-windows
@@ -270,6 +280,16 @@ jobs:
 
       - name: Setup MSVC
         uses: ilammy/msvc-dev-cmd@v1
+
+      - name: Fix PATH for MSVC linker
+        run: |
+          $msvcPath = Split-Path (Split-Path $env:LIB -Parent)
+          $msvcBin = Join-Path $msvcPath "VC\Tools\MSVC\*\bin\Hostx64\arm64"
+          $msvcBin = (Get-ChildItem $msvcBin -Directory | Select-Object -First 1).FullName
+          if ($msvcBin) {
+            $env:PATH = "$msvcBin;$env:PATH"
+            echo "Added MSVC bin to PATH: $msvcBin"
+          }
 
       - name: Install OpenSSL
         run: |
@@ -457,6 +477,16 @@ jobs:
       - name: Setup MSVC
         uses: ilammy/msvc-dev-cmd@v1
 
+      - name: Fix PATH for MSVC linker
+        run: |
+          $msvcPath = Split-Path (Split-Path $env:LIB -Parent)
+          $msvcBin = Join-Path $msvcPath "VC\Tools\MSVC\*\bin\Hostx64\x64"
+          $msvcBin = (Get-ChildItem $msvcBin -Directory | Select-Object -First 1).FullName
+          if ($msvcBin) {
+            $env:PATH = "$msvcBin;$env:PATH"
+            echo "Added MSVC bin to PATH: $msvcBin"
+          }
+
       - name: Install OpenSSL
         run: |
           vcpkg install openssl:x64-windows
@@ -564,6 +594,16 @@ jobs:
 
       - name: Setup MSVC
         uses: ilammy/msvc-dev-cmd@v1
+
+      - name: Fix PATH for MSVC linker
+        run: |
+          $msvcPath = Split-Path (Split-Path $env:LIB -Parent)
+          $msvcBin = Join-Path $msvcPath "VC\Tools\MSVC\*\bin\Hostx64\arm64"
+          $msvcBin = (Get-ChildItem $msvcBin -Directory | Select-Object -First 1).FullName
+          if ($msvcBin) {
+            $env:PATH = "$msvcBin;$env:PATH"
+            echo "Added MSVC bin to PATH: $msvcBin"
+          }
 
       - name: Install OpenSSL
         run: |
@@ -685,6 +725,16 @@ jobs:
       - name: Setup MSVC
         uses: ilammy/msvc-dev-cmd@v1
 
+      - name: Fix PATH for MSVC linker
+        run: |
+          $msvcPath = Split-Path (Split-Path $env:LIB -Parent)
+          $msvcBin = Join-Path $msvcPath "VC\Tools\MSVC\*\bin\Hostx64\x64"
+          $msvcBin = (Get-ChildItem $msvcBin -Directory | Select-Object -First 1).FullName
+          if ($msvcBin) {
+            $env:PATH = "$msvcBin;$env:PATH"
+            echo "Added MSVC bin to PATH: $msvcBin"
+          }
+
       - name: Install OpenSSL
         run: |
           vcpkg install openssl:x64-windows
@@ -798,6 +848,16 @@ jobs:
 
       - name: Setup MSVC
         uses: ilammy/msvc-dev-cmd@v1
+
+      - name: Fix PATH for MSVC linker
+        run: |
+          $msvcPath = Split-Path (Split-Path $env:LIB -Parent)
+          $msvcBin = Join-Path $msvcPath "VC\Tools\MSVC\*\bin\Hostx64\arm64"
+          $msvcBin = (Get-ChildItem $msvcBin -Directory | Select-Object -First 1).FullName
+          if ($msvcBin) {
+            $env:PATH = "$msvcBin;$env:PATH"
+            echo "Added MSVC bin to PATH: $msvcBin"
+          }
 
       - name: Install OpenSSL
         run: |
@@ -978,38 +1038,38 @@ jobs:
           - python: '3.8'
             runs-on: ubuntu-24.04-arm
             target: aarch64-unknown-linux-gnu
-            manylinux: manylinux_2_17
-            docker: true
+            manylinux: null
+            docker: false
           - python: '3.9'
             runs-on: ubuntu-24.04-arm
             target: aarch64-unknown-linux-gnu
-            manylinux: manylinux_2_17
-            docker: true
+            manylinux: null
+            docker: false
           - python: '3.10'
             runs-on: ubuntu-24.04-arm
             target: aarch64-unknown-linux-gnu
-            manylinux: manylinux_2_17
-            docker: true
+            manylinux: null
+            docker: false
           - python: '3.11'
             runs-on: ubuntu-24.04-arm
             target: aarch64-unknown-linux-gnu
-            manylinux: manylinux_2_17
-            docker: true
+            manylinux: null
+            docker: false
           - python: '3.12'
             runs-on: ubuntu-24.04-arm
             target: aarch64-unknown-linux-gnu
-            manylinux: manylinux_2_17
-            docker: true
+            manylinux: null
+            docker: false
           - python: '3.13'
             runs-on: ubuntu-24.04-arm
             target: aarch64-unknown-linux-gnu
-            manylinux: manylinux_2_17
-            docker: true
+            manylinux: null
+            docker: false
           - python: '3.14'
             runs-on: ubuntu-24.04-arm
             target: aarch64-unknown-linux-gnu
-            manylinux: manylinux_2_17
-            docker: true
+            manylinux: null
+            docker: false
 
           # Windows x64: 7 Python versions (3.8-3.14)
           # Native Windows build using MSVC toolchain
@@ -1260,7 +1320,10 @@ jobs:
           manylinux: ${{ matrix.manylinux }}
           maturin-version: v1.8.3
           args: --release -o dist
+          env:
+            OPENSSL_NO_VENDOR: '1'
           before-script-linux: |
+            export OPENSSL_NO_VENDOR=1
             # Install Perl IPC::Cmd for OpenSSL build
             yum install -y perl perl-IPC-Cmd || apt-get install -y perl libipc-cmd-perl || true
             # Use Makefile to install dependencies (handles all Linux distros)
