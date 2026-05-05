@@ -467,7 +467,7 @@ rdkafka = { version = "0.38", default-features = false, features = ["tokio", "cm
 # Requires liboqs C library to be installed on the system
 # https://github.com/open-quantum-safe/liboqs
 # https://crates.io/crates/oqs
-oqs = { version = "0.11", optional = true }
+oqs = { version = "0.11", optional = true, default-features = false, features = ["vendored", "kems", "sigs", "std"] }
 
 # Chinese National Cryptography Standards
 # sm-crypto provides SM2/SM3/SM4 implementations

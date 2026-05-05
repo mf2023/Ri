@@ -23,7 +23,6 @@ use tokio::sync::mpsc;
 use tokio::time::Duration;
 use futures::StreamExt;
 use tungstenite::Message;
-use tokio_tungstenite::WebSocketStream;
 
 pub struct RiWSServer {
     config: RiWSServerConfig,
@@ -418,7 +417,6 @@ impl RiWSServer {
         allowed_origins: &[String],
     ) -> std::result::Result<tokio_tungstenite::WebSocketStream<tokio::net::TcpStream>, tungstenite::Error> {
         use tokio_tungstenite::tungstenite::handshake::server::{Request, Response};
-        use tokio_tungstenite::tungstenite::protocol::WebSocketConfig;
         
         let mut origin_valid = true;
         let origins_empty = allowed_origins.is_empty();

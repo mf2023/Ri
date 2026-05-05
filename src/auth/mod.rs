@@ -715,7 +715,10 @@ impl RiAuthConfig {
         enable_api_keys = true,
         enable_session_auth = true,
         oauth_cache_backend_type = None,
-        oauth_cache_redis_url = "redis://127.0.0.1:6379"
+        oauth_cache_redis_url = "redis://127.0.0.1:6379",
+        rate_limit_max_login_attempts = 5,
+        rate_limit_lockout_secs = 300,
+        rate_limit_window_secs = 900
     ))]
     fn py_new(
         enabled: bool,
@@ -727,6 +730,9 @@ impl RiAuthConfig {
         enable_session_auth: bool,
         oauth_cache_backend_type: Option<String>,
         oauth_cache_redis_url: &str,
+        rate_limit_max_login_attempts: u32,
+        rate_limit_lockout_secs: u64,
+        rate_limit_window_secs: u64,
     ) -> Self {
         let secret = if jwt_secret.is_empty() {
             load_jwt_secret_from_env()
@@ -751,6 +757,9 @@ impl RiAuthConfig {
                 enable_session_auth,
                 oauth_cache_backend_type: backend_type,
                 oauth_cache_redis_url: oauth_cache_redis_url.to_string(),
+                rate_limit_max_login_attempts,
+                rate_limit_lockout_secs,
+                rate_limit_window_secs,
             }
         }
         
@@ -767,6 +776,9 @@ impl RiAuthConfig {
                 oauth_providers,
                 enable_api_keys,
                 enable_session_auth,
+                rate_limit_max_login_attempts,
+                rate_limit_lockout_secs,
+                rate_limit_window_secs,
             }
         }
     }

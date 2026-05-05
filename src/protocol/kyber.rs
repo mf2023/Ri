@@ -44,9 +44,6 @@
 use std::sync::Arc;
 use crate::core::{RiResult, RiError};
 
-#[cfg(feature = "pyo3")]
-use pyo3::prelude::*;
-
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "pyo3", pyo3::prelude::pyclass)]
 pub struct KyberPublicKey(pub Vec<u8>);

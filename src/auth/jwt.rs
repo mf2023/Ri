@@ -313,11 +313,11 @@ impl RiJWTManager {
     pub fn py_validate_token(&self, token: &str) -> pyo3::prelude::PyResult<pyo3::Py<pyo3::PyAny>> {
         use pyo3::prelude::*;
         
-        Python::with_gil(|py| {
+        Python::attach(|py| {
             self.validate_token(token)
                 .map_err(crate::auth::security::ri_error_to_py_err)
                 .map(|claims| {
-                    Py::new(py, claims).unwrap()
+                    Py::new(py, claims).unwrap().into_any()
                 })
         })
     }

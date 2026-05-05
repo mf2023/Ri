@@ -79,9 +79,6 @@ use std::time::Instant;
 use tokio::sync::RwLock;
 use crate::core::RiResult;
 
-#[cfg(feature = "pyo3")]
-use pyo3::prelude::*;
-
 pub use super::kyber::{KyberKEM, KyberPublicKey, KyberSecretKey, KyberCiphertext};
 pub use super::dilithium::{DilithiumSigner, DilithiumPublicKey, DilithiumSecretKey, DilithiumSignature};
 pub use super::falcon::{FalconSigner, FalconPublicKey, FalconSecretKey, FalconSignature};
