@@ -329,24 +329,18 @@ impl RiGrpcServer {
     /// 3. Return true only if no differences and lengths match
     fn constant_time_compare(a: &[u8], b: &[u8]) -> bool {
         if a.len() != b.len() {
-            // Still do a comparison to maintain constant time
-            // but use the length of 'a' to avoid index out of bounds
-            let mut result: u8 = 0;
+            let mut _result: u8 = 0;
             for i in 0..a.len() {
-                // XOR with a dummy value to maintain constant time
-                result |= a[i] ^ if i < b.len() { b[i] } else { a[i] };
+                _result |= a[i] ^ if i < b.len() { b[i] } else { a[i] };
             }
-            // Length mismatch means false, but we did the work
             return false;
         }
 
         let mut result: u8 = 0;
         for i in 0..a.len() {
-            // XOR accumulates differences - any difference makes result non-zero
             result |= a[i] ^ b[i];
         }
         
-        // result is 0 only if all bytes matched
         result == 0
     }
 

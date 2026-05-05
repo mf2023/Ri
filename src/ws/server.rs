@@ -424,7 +424,7 @@ impl RiWSServer {
         let origins_empty = allowed_origins.is_empty();
         let origins = allowed_origins.to_vec();
         
-        let callback = |request: &Request, mut response: Response| {
+        let callback = |request: &Request, response: Response| {
             if !origins_empty {
                 if let Some(origin_header) = request.headers().get("origin") {
                     if let Ok(origin_str) = origin_header.to_str() {

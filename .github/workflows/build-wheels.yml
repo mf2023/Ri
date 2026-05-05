@@ -249,6 +249,7 @@ jobs:
           echo "OPENSSL_ROOT_DIR=C:\vcpkg\installed\x64-windows" >> $env:GITHUB_ENV
           echo "OPENSSL_INCLUDE_DIR=C:\vcpkg\installed\x64-windows\include" >> $env:GITHUB_ENV
           echo "OPENSSL_LIB_DIR=C:\vcpkg\installed\x64-windows\lib" >> $env:GITHUB_ENV
+          echo "OPENSSL_NO_VENDOR=1" >> $env:GITHUB_ENV
 
       - name: Build CLI
         run: make build-cli-windows-x64
@@ -304,6 +305,7 @@ jobs:
           echo "OPENSSL_ROOT_DIR=C:\vcpkg\installed\arm64-windows" >> $env:GITHUB_ENV
           echo "OPENSSL_INCLUDE_DIR=C:\vcpkg\installed\arm64-windows\include" >> $env:GITHUB_ENV
           echo "OPENSSL_LIB_DIR=C:\vcpkg\installed\arm64-windows\lib" >> $env:GITHUB_ENV
+          echo "OPENSSL_NO_VENDOR=1" >> $env:GITHUB_ENV
 
       - name: Build CLI
         run: make build-cli-windows-arm64
@@ -501,6 +503,7 @@ jobs:
           vcpkg install openssl:x64-windows
           vcpkg integrate install
           echo "OPENSSL_ROOT_DIR=C:\vcpkg\installed\x64-windows" >> $env:GITHUB_ENV
+          echo "OPENSSL_NO_VENDOR=1" >> $env:GITHUB_ENV
 
       - name: Build
         run: make build-windows-x64
@@ -622,6 +625,7 @@ jobs:
           vcpkg install openssl:arm64-windows
           vcpkg integrate install
           echo "OPENSSL_ROOT_DIR=C:\vcpkg\installed\arm64-windows" >> $env:GITHUB_ENV
+          echo "OPENSSL_NO_VENDOR=1" >> $env:GITHUB_ENV
 
       - name: Build Rust library
         run: make build-windows-arm64
@@ -755,6 +759,7 @@ jobs:
           vcpkg install openssl:x64-windows
           vcpkg integrate install
           echo "OPENSSL_ROOT_DIR=C:\vcpkg\installed\x64-windows" >> $env:GITHUB_ENV
+          echo "OPENSSL_NO_VENDOR=1" >> $env:GITHUB_ENV
 
       - name: Build C static library
         run: make build-c-windows-x64
@@ -882,6 +887,7 @@ jobs:
           vcpkg install openssl:arm64-windows
           vcpkg integrate install
           echo "OPENSSL_ROOT_DIR=C:\vcpkg\installed\arm64-windows" >> $env:GITHUB_ENV
+          echo "OPENSSL_NO_VENDOR=1" >> $env:GITHUB_ENV
 
       - name: Build C static library
         run: make build-c-windows-arm64
