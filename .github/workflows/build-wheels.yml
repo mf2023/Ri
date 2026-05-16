@@ -1345,8 +1345,8 @@ jobs:
           maturin-version: v1.8.3
           args: --release -o dist
           before-script-linux: |
-            # Install Perl IPC::Cmd for OpenSSL build
-            yum install -y perl perl-IPC-Cmd || apt-get install -y perl libipc-cmd-perl || true
+            # Install Perl modules for OpenSSL vendored build
+            yum install -y perl perl-IPC-Cmd perl-Time-Piece || apt-get install -y perl libipc-cmd-perl libtime-piece-perl || true
             # Use Makefile to install dependencies (handles all Linux distros)
             make setup-deps || echo "Setup deps completed with some warnings"
             # Configure correct Python version for maturin

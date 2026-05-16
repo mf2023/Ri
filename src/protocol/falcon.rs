@@ -102,7 +102,8 @@ impl FalconSigner {
             FalconAlgorithm::Falcon1024 => Sig::new(oqs::sig::Algorithm::Falcon1024),
         }.map_err(|e| RiError::Other(format!("Failed to initialize Falcon: {:?}", e)))?;
 
-        let (pk, sk) = sig.keypair();
+        let (pk, sk) = sig.keypair()
+            .map_err(|e| RiError::Other(format!("Falcon keygen failed: {:?}", e)))?;
         Ok((pk.into_vec(), sk.into_vec()))
     }
 
@@ -128,7 +129,8 @@ impl FalconSigner {
 
         let sk = sig.secret_key_from_bytes(secret_key)
             .ok_or_else(|| RiError::Other("Invalid secret key".to_string()))?;
-        let signature = sig.sign(message, &sk);
+        let signature = sig.sign(message, &sk)
+            .map_err(|e| RiError::Other(format!("Falcon sign failed: {:?}", e)))?;
         Ok(signature.into_vec())
     }
 

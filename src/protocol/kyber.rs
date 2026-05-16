@@ -101,7 +101,8 @@ impl KyberKEM {
             KyberAlgorithm::Kyber1024 => Kem::new(oqs::kem::Algorithm::Kyber1024),
         }.map_err(|e| RiError::Other(format!("Failed to initialize Kyber: {:?}", e)))?;
 
-        let (pk, sk) = kem.keypair();
+        let (pk, sk) = kem.keypair()
+            .map_err(|e| RiError::Other(format!("Kyber keygen failed: {:?}", e)))?;
         Ok((pk.into_vec(), sk.into_vec()))
     }
 
@@ -128,7 +129,8 @@ impl KyberKEM {
 
         let pk = kem.public_key_from_bytes(public_key)
             .ok_or_else(|| RiError::Other("Invalid public key".to_string()))?;
-        let (ct, ss) = kem.encapsulate(&pk);
+        let (ct, ss) = kem.encapsulate(&pk)
+            .map_err(|e| RiError::Other(format!("Kyber encapsulate failed: {:?}", e)))?;
         Ok(super::KEMResult {
             ciphertext: ct.into_vec(),
             shared_secret: ss.into_vec(),
@@ -160,7 +162,8 @@ impl KyberKEM {
             .ok_or_else(|| RiError::Other("Invalid ciphertext".to_string()))?;
         let sk = kem.secret_key_from_bytes(secret_key)
             .ok_or_else(|| RiError::Other("Invalid secret key".to_string()))?;
-        let ss = kem.decapsulate(&ct, &sk);
+        let ss = kem.decapsulate(&ct, &sk)
+            .map_err(|e| RiError::Other(format!("Kyber decapsulate failed: {:?}", e)))?;
         Ok(ss.into_vec())
     }
 
