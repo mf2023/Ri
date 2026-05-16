@@ -381,7 +381,6 @@ ifneq ($(ARCH),arm64)
 	@echo "$(YELLOW)Using manylinux container for Linux wheel...$(NC)"
 	docker run --rm -v "$(PWD)":/io quay.io/pypa/manylinux_2_17_x86_64 \
 		/bin/bash -c "cd /io && make setup-deps && \
-			export OPENSSL_NO_VENDOR=1 && \
 			PYTHON_VER=$(PYTHON_VER) && \
 			PYTHON_MAJOR=\$${PYTHON_VER%%.*} && \
 			PYTHON_MINOR=\$${PYTHON_VER#*.} && \
@@ -396,7 +395,7 @@ else
 	PYTHON_VER=$(PYTHON_VER) && \
 	PYTHON_BIN=python$${PYTHON_VER%.*} && \
 	$$PYTHON_BIN -m pip install maturin && \
-	OPENSSL_NO_VENDOR=1 $$PYTHON_BIN -m maturin build --release --target $(TARGET) -o $(DIST_DIR) \
+	$$PYTHON_BIN -m maturin build --release --target $(TARGET) -o $(DIST_DIR) \
 		--no-default-features \
 		--features pyo3,grpc,websocket,rabbitmq,cache,queue,gateway,service_mesh,auth,observability,postgres,mysql,sqlite,http_client,system_info,config_hot_reload,protocol,kafka,etcd
 endif

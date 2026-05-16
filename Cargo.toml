@@ -437,6 +437,23 @@ tokio-tungstenite = { version = "0.24", optional = true, features = ["rustls-tls
 tungstenite = { version = "0.24", optional = true }
 
 # =============================================================================
+# Post-Quantum Cryptography Dependencies
+# =============================================================================
+# oqs - Rust bindings to liboqs (Open Quantum Safe)
+# Provides audited post-quantum KEM and signature algorithms:
+# - Kyber: IND-CCA2 secure key encapsulation
+# - Dilithium: EUF-CMA secure digital signatures
+# - Falcon: Compact digital signatures
+# Requires liboqs C library to be installed on the system
+# https://github.com/open-quantum-safe/liboqs
+# https://crates.io/crates/oqs
+oqs = { version = "0.11", optional = true, default-features = false, features = ["vendored", "kems", "sigs", "std"] }
+
+# Chinese National Cryptography Standards
+# sm-crypto provides SM2/SM3/SM4 implementations
+sm-crypto = { version = "0.1", optional = true }
+
+# =============================================================================
 # Platform-Specific Dependencies
 # =============================================================================
 # Dependencies that are only available or needed on specific operating systems.
@@ -455,23 +472,6 @@ rdkafka = { version = "0.38", default-features = false, features = ["tokio", "cm
 # Kafka client library for Windows
 # Uses Windows SSPI for Kerberos authentication (no gssapi-vendored needed)
 rdkafka = { version = "0.38", default-features = false, features = ["tokio", "cmake-build", "ssl-vendored"], optional = true }
-
-# =============================================================================
-# Post-Quantum Cryptography Dependencies
-# =============================================================================
-# oqs - Rust bindings to liboqs (Open Quantum Safe)
-# Provides audited post-quantum KEM and signature algorithms:
-# - Kyber: IND-CCA2 secure key encapsulation
-# - Dilithium: EUF-CMA secure digital signatures
-# - Falcon: Compact digital signatures
-# Requires liboqs C library to be installed on the system
-# https://github.com/open-quantum-safe/liboqs
-# https://crates.io/crates/oqs
-oqs = { version = "0.11", optional = true, default-features = false, features = ["vendored", "kems", "sigs", "std"] }
-
-# Chinese National Cryptography Standards
-# sm-crypto provides SM2/SM3/SM4 implementations
-sm-crypto = { version = "0.1", optional = true }
 
 # =============================================================================
 # Feature Flags Configuration
