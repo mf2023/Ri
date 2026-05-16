@@ -125,6 +125,9 @@ ifeq ($(PLATFORM),windows)
     TARGET ?= x86_64-pc-windows-msvc
     ifeq ($(ARCH),arm64)
         TARGET := aarch64-pc-windows-msvc
+        export CARGO_TARGET_AARCH64_PC_WINDOWS_MSVC_LINKER := rust-lld
+    else
+        export CARGO_TARGET_X86_64_PC_WINDOWS_MSVC_LINKER := rust-lld
     endif
 endif
 
@@ -345,9 +348,9 @@ ifeq ($(PLATFORM),linux)
 	@$(MAKE) setup-deps
 endif
 ifeq ($(PLATFORM)-$(ARCH),windows-arm64)
-	cmd /c "cargo build $(BUILD_MODE) --target $(TARGET) --no-default-features $(if $(FEATURES),--features $(FEATURES),)"
+	cargo build $(BUILD_MODE) --target $(TARGET) --no-default-features $(if $(FEATURES),--features $(FEATURES),)
 else ifeq ($(PLATFORM),windows)
-	cmd /c "cargo build $(BUILD_MODE) --target $(TARGET) $(if $(FEATURES),--features $(FEATURES),)"
+	cargo build $(BUILD_MODE) --target $(TARGET) $(if $(FEATURES),--features $(FEATURES),)
 else
 	cargo build $(BUILD_MODE) --target $(TARGET) $(if $(FEATURES),--features $(FEATURES),)
 endif
@@ -360,9 +363,9 @@ ifeq ($(PLATFORM),linux)
 	@$(MAKE) setup-deps
 endif
 ifeq ($(PLATFORM)-$(ARCH),windows-arm64)
-	cmd /c "cargo build $(BUILD_MODE) -p ric --target $(TARGET) --no-default-features"
+	cargo build $(BUILD_MODE) -p ric --target $(TARGET) --no-default-features
 else ifeq ($(PLATFORM),windows)
-	cmd /c "cargo build $(BUILD_MODE) -p ric --target $(TARGET)"
+	cargo build $(BUILD_MODE) -p ric --target $(TARGET)
 else
 	cargo build $(BUILD_MODE) -p ric --target $(TARGET)
 endif
@@ -388,7 +391,7 @@ ifneq ($(ARCH),arm64)
 			\$$PYTHON_BIN -m pip install maturin && \
 			\$$PYTHON_BIN -m maturin build --release --target $(TARGET) -o /io/$(DIST_DIR) \
 				--no-default-features \
-			--features pyo3,grpc,websocket,rabbitmq,cache,queue,gateway,service_mesh,auth,observability,postgres,mysql,sqlite,http_client,system_info,config_hot_reload,protocol,kafka,etcd"
+			--features pyo3,grpc,websocket,rabbitmq,cache,queue,gateway,service_mesh,auth,observability,postgres,mysql,sqlite,http_client,system_info,config_hot_reload,protocol,kafka,etcd
 else
 	@echo "$(YELLOW)Building native Linux ARM64 wheel...$(NC)"
 	$(MAKE) setup-deps
@@ -403,9 +406,9 @@ else ifeq ($(PLATFORM),windows)
 	@echo "$(YELLOW)Building Windows wheel...$(NC)"
 	pip install maturin
 ifeq ($(ARCH),arm64)
-	cmd /c "maturin build --release --target $(TARGET) -o $(DIST_DIR) --no-default-features --features pyo3,grpc,websocket,rabbitmq,cache,queue,gateway,service_mesh,auth,observability,postgres,mysql,sqlite,http_client,system_info,config_hot_reload,etcd"
+	maturin build --release --target $(TARGET) -o $(DIST_DIR) --no-default-features --features pyo3,grpc,websocket,rabbitmq,cache,queue,gateway,service_mesh,auth,observability,postgres,mysql,sqlite,http_client,system_info,config_hot_reload,etcd
 else
-	cmd /c "maturin build --release --target $(TARGET) -o $(DIST_DIR) --no-default-features --features pyo3,grpc,websocket,rabbitmq,cache,queue,gateway,service_mesh,auth,observability,postgres,mysql,sqlite,http_client,system_info,config_hot_reload,protocol,kafka,etcd"
+	maturin build --release --target $(TARGET) -o $(DIST_DIR) --no-default-features --features pyo3,grpc,websocket,rabbitmq,cache,queue,gateway,service_mesh,auth,observability,postgres,mysql,sqlite,http_client,system_info,config_hot_reload,protocol,kafka,etcd
 endif
 else
 	@echo "$(YELLOW)Building native wheel...$(NC)"
@@ -424,7 +427,7 @@ ifeq ($(PLATFORM),linux)
 	@$(MAKE) setup-deps
 endif
 ifeq ($(PLATFORM),windows)
-	cmd /c "cargo build $(BUILD_MODE) --target $(TARGET) --no-default-features --features c"
+	cargo build $(BUILD_MODE) --target $(TARGET) --no-default-features --features c
 else
 	cargo build $(BUILD_MODE) --target $(TARGET) --no-default-features --features c
 endif
@@ -475,7 +478,7 @@ build-windows-x64:
 
 build-windows-arm64:
 	@$(MAKE) build PLATFORM=windows ARCH=arm64 TARGET=aarch64-pc-windows-msvc \
-		FEATURES="grpc,websocket,rabbitmq,cache,queue,gateway,service_mesh,auth,observability,postgres,mysql,sqlite,http_client,system_info,config_hot_reload,etcd"
+		FEATURES="grpc,websocket,rabbitmq,cache,queue,gateway,service_mesh,auth,observability,postgres,mysql,sqlite,http_client,system_info,config_hot_reload,etcd
 
 # macOS builds
 build-macos-x64:
@@ -496,7 +499,7 @@ build-cli-windows-x64:
 
 build-cli-windows-arm64:
 	@echo "$(GREEN)Building CLI for Windows ARM64...$(NC)"
-	cmd /c "cargo build $(BUILD_MODE) -p ric --target $(TARGET) --no-default-features --features grpc,websocket,rabbitmq,cache,queue,gateway,service_mesh,auth,observability,postgres,mysql,sqlite,http_client,system_info,config_hot_reload,etcd"
+	cargo build $(BUILD_MODE) -p ric --target $(TARGET) --no-default-features --features grpc,websocket,rabbitmq,cache,queue,gateway,service_mesh,auth,observability,postgres,mysql,sqlite,http_client,system_info,config_hot_reload,etcd
 
 build-cli-macos-x64:
 	@$(MAKE) build-cli PLATFORM=macos ARCH=x64 TARGET=x86_64-apple-darwin

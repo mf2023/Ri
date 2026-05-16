@@ -1345,6 +1345,12 @@ jobs:
           maturin-version: v1.8.3
           args: --release -o dist
           before-script-linux: |
+            # Install clang 7 via SCL for oqs-sys bindgen (needs libclang >= 6.0)
+            yum install -y centos-release-scl 2>/dev/null || true
+            yum install -y llvm-toolset-7-clang 2>/dev/null || true
+            if [ -f /opt/rh/llvm-toolset-7/root/usr/lib64/libclang.so ]; then
+              export LIBCLANG_PATH=/opt/rh/llvm-toolset-7/root/usr/lib64
+            fi
             # Install Perl modules for OpenSSL vendored build
             yum install -y perl perl-IPC-Cmd perl-Time-Piece || apt-get install -y perl libipc-cmd-perl libtime-piece-perl || true
             # Use Makefile to install dependencies (handles all Linux distros)
