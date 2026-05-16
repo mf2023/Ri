@@ -245,13 +245,13 @@ setup-deps:
 	elif command -v yum >/dev/null 2>&1 || command -v dnf >/dev/null 2>&1; then \
 		echo "Using yum/dnf (CentOS/RHEL/Fedora/manylinux)"; \
 		if command -v dnf >/dev/null 2>&1; then PKGMGR=dnf; else PKGMGR=yum; fi; \
-		sudo $$PKGMGR install -y libcurl-devel openssl-devel libsasl2-devel gcc gcc-c++ make cmake git ninja-build perl-IPC-Cmd; \
+		$$PKGMGR install -y libcurl-devel openssl-devel libsasl2-devel gcc gcc-c++ make cmake git ninja-build perl-IPC-Cmd; \
 		if [ ! -f /usr/lib64/liboqs.so ] && [ ! -f /usr/local/lib64/liboqs.so ] && [ ! -f /usr/lib/x86_64-linux-gnu/liboqs.so ]; then \
 			echo "Building liboqs from source..."; \
 			cd /tmp && rm -rf liboqs && git clone --depth 1 https://github.com/open-quantum-safe/liboqs.git && \
 			cd liboqs && mkdir -p build && cd build && \
 			cmake -GNinja -DCMAKE_INSTALL_PREFIX=/usr .. && \
-			ninja && sudo ninja install && sudo ldconfig; \
+			ninja && ninja install && ldconfig; \
 		else \
 			echo "liboqs already installed, skipping build"; \
 		fi; \
@@ -477,8 +477,8 @@ build-windows-x64:
 	@$(MAKE) build PLATFORM=windows ARCH=x64 TARGET=x86_64-pc-windows-msvc
 
 build-windows-arm64:
-	@$(MAKE) build PLATFORM=windows ARCH=arm64 TARGET=aarch64-pc-windows-msvc \
-		FEATURES="grpc,websocket,rabbitmq,cache,queue,gateway,service_mesh,auth,observability,postgres,mysql,sqlite,http_client,system_info,config_hot_reload,etcd
+	cargo build $(BUILD_MODE) --target aarch64-pc-windows-msvc --no-default-features --features grpc,websocket,rabbitmq,cache,queue,gateway,service_mesh,auth,observability,postgres,mysql,sqlite,http_client,system_info,config_hot_reload,etcd
+	@echo "$(GREEN)✓ Build complete: target/aarch64-pc-windows-msvc/release/ri.dll$(NC)"
 
 # macOS builds
 build-macos-x64:
@@ -499,7 +499,8 @@ build-cli-windows-x64:
 
 build-cli-windows-arm64:
 	@echo "$(GREEN)Building CLI for Windows ARM64...$(NC)"
-	cargo build $(BUILD_MODE) -p ric --target $(TARGET) --no-default-features --features grpc,websocket,rabbitmq,cache,queue,gateway,service_mesh,auth,observability,postgres,mysql,sqlite,http_client,system_info,config_hot_reload,etcd
+	cargo build $(BUILD_MODE) -p ric --target aarch64-pc-windows-msvc --no-default-features --features grpc,websocket,rabbitmq,cache,queue,gateway,service_mesh,auth,observability,postgres,mysql,sqlite,http_client,system_info,config_hot_reload,etcd
+	@echo "$(GREEN)✓ Build complete: target/aarch64-pc-windows-msvc/release/ric.exe$(NC)"
 
 build-cli-macos-x64:
 	@$(MAKE) build-cli PLATFORM=macos ARCH=x64 TARGET=x86_64-apple-darwin

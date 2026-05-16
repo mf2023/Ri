@@ -246,7 +246,7 @@ jobs:
         run: |
           vcpkg install openssl:x64-windows
           vcpkg integrate install
-          echo "OPENSSL_ROOT_DIR=C:\vcpkg\installed\x64-windows" >> $env:GITHUB_ENV
+          echo "OPENSSL_DIR=C:\vcpkg\installed\x64-windows" >> $env:GITHUB_ENV
           echo "OPENSSL_INCLUDE_DIR=C:\vcpkg\installed\x64-windows\include" >> $env:GITHUB_ENV
           echo "OPENSSL_LIB_DIR=C:\vcpkg\installed\x64-windows\lib" >> $env:GITHUB_ENV
           echo "OPENSSL_NO_VENDOR=1" >> $env:GITHUB_ENV
@@ -302,7 +302,7 @@ jobs:
         run: |
           vcpkg install openssl:arm64-windows
           vcpkg integrate install
-          echo "OPENSSL_ROOT_DIR=C:\vcpkg\installed\arm64-windows" >> $env:GITHUB_ENV
+          echo "OPENSSL_DIR=C:\vcpkg\installed\arm64-windows" >> $env:GITHUB_ENV
           echo "OPENSSL_INCLUDE_DIR=C:\vcpkg\installed\arm64-windows\include" >> $env:GITHUB_ENV
           echo "OPENSSL_LIB_DIR=C:\vcpkg\installed\arm64-windows\lib" >> $env:GITHUB_ENV
           echo "OPENSSL_NO_VENDOR=1" >> $env:GITHUB_ENV
@@ -502,7 +502,7 @@ jobs:
         run: |
           vcpkg install openssl:x64-windows
           vcpkg integrate install
-          echo "OPENSSL_ROOT_DIR=C:\vcpkg\installed\x64-windows" >> $env:GITHUB_ENV
+          echo "OPENSSL_DIR=C:\vcpkg\installed\x64-windows" >> $env:GITHUB_ENV
           echo "OPENSSL_NO_VENDOR=1" >> $env:GITHUB_ENV
 
       - name: Build
@@ -624,7 +624,7 @@ jobs:
         run: |
           vcpkg install openssl:arm64-windows
           vcpkg integrate install
-          echo "OPENSSL_ROOT_DIR=C:\vcpkg\installed\arm64-windows" >> $env:GITHUB_ENV
+          echo "OPENSSL_DIR=C:\vcpkg\installed\arm64-windows" >> $env:GITHUB_ENV
           echo "OPENSSL_NO_VENDOR=1" >> $env:GITHUB_ENV
 
       - name: Build Rust library
@@ -758,7 +758,7 @@ jobs:
         run: |
           vcpkg install openssl:x64-windows
           vcpkg integrate install
-          echo "OPENSSL_ROOT_DIR=C:\vcpkg\installed\x64-windows" >> $env:GITHUB_ENV
+          echo "OPENSSL_DIR=C:\vcpkg\installed\x64-windows" >> $env:GITHUB_ENV
           echo "OPENSSL_NO_VENDOR=1" >> $env:GITHUB_ENV
 
       - name: Build C static library
@@ -886,7 +886,7 @@ jobs:
         run: |
           vcpkg install openssl:arm64-windows
           vcpkg integrate install
-          echo "OPENSSL_ROOT_DIR=C:\vcpkg\installed\arm64-windows" >> $env:GITHUB_ENV
+          echo "OPENSSL_DIR=C:\vcpkg\installed\arm64-windows" >> $env:GITHUB_ENV
           echo "OPENSSL_NO_VENDOR=1" >> $env:GITHUB_ENV
 
       - name: Build C static library
@@ -1250,14 +1250,14 @@ jobs:
         run: |
           vcpkg install openssl:x64-windows
           vcpkg integrate install
-          echo "OPENSSL_ROOT_DIR=C:\vcpkg\installed\x64-windows" >> $env:GITHUB_ENV
+          echo "OPENSSL_DIR=C:\vcpkg\installed\x64-windows" >> $env:GITHUB_ENV
 
       - name: Install OpenSSL (Windows ARM64)
         if: runner.os == 'Windows' && contains(matrix.target, 'aarch64')
         run: |
           vcpkg install openssl:arm64-windows
           vcpkg integrate install
-          echo "OPENSSL_ROOT_DIR=C:\vcpkg\installed\arm64-windows" >> $env:GITHUB_ENV
+          echo "OPENSSL_DIR=C:\vcpkg\installed\arm64-windows" >> $env:GITHUB_ENV
 
       - name: Configure macOS linker
         if: matrix.target == 'x86_64-apple-darwin' || matrix.target == 'aarch64-apple-darwin'
@@ -1352,7 +1352,13 @@ jobs:
               export LIBCLANG_PATH=/opt/rh/llvm-toolset-7/root/usr/lib64
             fi
             # Install Perl modules for OpenSSL vendored build
-            yum install -y perl perl-IPC-Cmd perl-Time-Piece || apt-get install -y perl libipc-cmd-perl libtime-piece-perl || true
+            if ! yum install -y perl perl-IPC-Cmd perl-Time-Piece 2>&1; then
+              echo "WARNING: yum install perl modules failed"
+              # Try cpan as fallback
+              if command -v cpan >/dev/null 2>&1; then
+                PERL_MM_USE_DEFAULT=1 cpan -i IPC::Cmd Time::Piece 2>&1 || true
+              fi
+            fi
             # Use Makefile to install dependencies (handles all Linux distros)
             make setup-deps || echo "Setup deps completed with some warnings"
             # Configure correct Python version for maturin
