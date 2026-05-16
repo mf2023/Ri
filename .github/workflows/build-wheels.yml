@@ -459,7 +459,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: rust-linux-arm64
-          path: target/release/libri.*
+          path: target/aarch64-unknown-linux-gnu/release/libri.*
 
   build-rust-windows:
     runs-on: windows-latest
@@ -512,7 +512,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: rust-windows-x64
-          path: target/x86_64-pc-windows-msvc/release/ri.*
+          path: target/x86_64-pc-windows-msvc/release/ri.dll
 
   build-rust-macos:
     runs-on: macos-15-intel

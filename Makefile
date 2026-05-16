@@ -431,7 +431,7 @@ endif
 	@echo "$(GREEN)Generating C headers...$(NC)"
 	@mkdir -p $(INCLUDE_DIR)
 	@if ! command -v cbindgen >/dev/null 2>&1; then cargo install cbindgen; fi
-	cbindgen --crate ri -F c -o $(INCLUDE_DIR)/ri.h
+	cbindgen --crate ri -o $(INCLUDE_DIR)/ri.h
 ifeq ($(PLATFORM),windows)
 	@echo "$(GREEN)✓ C library built: $(TARGET_DIR)/ri.$(STATIC_EXT)$(NC)"
 else

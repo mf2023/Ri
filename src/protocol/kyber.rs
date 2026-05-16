@@ -162,7 +162,7 @@ impl KyberKEM {
             .ok_or_else(|| RiError::Other("Invalid ciphertext".to_string()))?;
         let sk = kem.secret_key_from_bytes(secret_key)
             .ok_or_else(|| RiError::Other("Invalid secret key".to_string()))?;
-        let ss = kem.decapsulate(&ct, &sk)
+        let ss = kem.decapsulate(ct, sk)
             .map_err(|e| RiError::Other(format!("Kyber decapsulate failed: {:?}", e)))?;
         Ok(ss.into_vec())
     }

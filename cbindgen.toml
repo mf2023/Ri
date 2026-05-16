@@ -63,6 +63,7 @@ cpp_compat = true
 [parse]
 parse_deps = false
 include = ["src/c/mod.rs"]
+features = ["c"]
 
 [export]
 prefix = "CRi"
