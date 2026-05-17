@@ -132,6 +132,7 @@ ifeq ($(PLATFORM),windows)
     ifeq ($(ARCH),arm64)
         TARGET := aarch64-pc-windows-msvc
 endif
+endif
 export CARGO_TARGET_X86_64_PC_WINDOWS_MSVC_LINKER := rust-lld
 export CARGO_TARGET_AARCH64_PC_WINDOWS_MSVC_LINKER := rust-lld
 
