@@ -501,6 +501,7 @@ default = [
     "config_hot_reload",
     "protocol",
     "kafka",
+    "c",
 ]
 
 # Minimal feature set (core functionality only)

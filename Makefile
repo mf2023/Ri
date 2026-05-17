@@ -103,6 +103,8 @@ VERBOSE ?= false
 
 # Windows features (excludes kafka — rdkafka configure script can't run on Windows)
 WINDOWS_FEATURES := grpc,websocket,rabbitmq,cache,queue,gateway,service_mesh,auth,observability,postgres,mysql,sqlite,http_client,system_info,config_hot_reload,etcd
+# Same features with ri/ prefix for passing to ric crate (which depends on ri)
+RI_WINDOWS_FEATURES := ri/grpc,ri/websocket,ri/rabbitmq,ri/cache,ri/queue,ri/gateway,ri/service_mesh,ri/auth,ri/observability,ri/postgres,ri/mysql,ri/sqlite,ri/http_client,ri/system_info,ri/config_hot_reload,ri/etcd
 
 # Build mode
 ifeq ($(RELEASE),true)
@@ -368,9 +370,9 @@ ifeq ($(PLATFORM),linux)
 	@$(MAKE) setup-deps
 endif
 ifeq ($(PLATFORM)-$(ARCH),windows-arm64)
-	cargo build $(BUILD_MODE) -p ric --target $(TARGET) --no-default-features --features $(WINDOWS_FEATURES)
+	cargo build $(BUILD_MODE) -p ric --target $(TARGET) --no-default-features --features $(RI_WINDOWS_FEATURES)
 else ifeq ($(PLATFORM),windows)
-	cargo build $(BUILD_MODE) -p ric --target $(TARGET) --no-default-features --features $(WINDOWS_FEATURES)
+	cargo build $(BUILD_MODE) -p ric --target $(TARGET) --no-default-features --features $(RI_WINDOWS_FEATURES)
 else
 	cargo build $(BUILD_MODE) -p ric --target $(TARGET)
 endif
@@ -439,7 +441,7 @@ endif
 	@echo "$(GREEN)Generating C headers...$(NC)"
 	@mkdir -p $(INCLUDE_DIR)
 	@if ! command -v cbindgen >/dev/null 2>&1; then cargo install cbindgen; fi
-	cbindgen --crate ri --features c -o $(INCLUDE_DIR)/ri.h
+	cbindgen --crate ri -o $(INCLUDE_DIR)/ri.h
 ifeq ($(PLATFORM),windows)
 	@echo "$(GREEN)✓ C library built: $(TARGET_DIR)/ri.$(STATIC_EXT)$(NC)"
 else
@@ -504,7 +506,7 @@ build-cli-windows-x64:
 
 build-cli-windows-arm64:
 	@echo "$(GREEN)Building CLI for Windows ARM64...$(NC)"
-	cargo build $(BUILD_MODE) -p ric --target aarch64-pc-windows-msvc --no-default-features --features $(WINDOWS_FEATURES)
+	cargo build $(BUILD_MODE) -p ric --target aarch64-pc-windows-msvc --no-default-features --features $(RI_WINDOWS_FEATURES)
 	@echo "$(GREEN)✓ Build complete: target/aarch64-pc-windows-msvc/release/ric.exe$(NC)"
 
 build-cli-macos-x64:
