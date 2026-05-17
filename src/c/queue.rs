@@ -510,7 +510,7 @@ pub extern "C" fn ri_queue_manager_consume(
     manager: *mut CRiQueueManager,
     queue_name: *const c_char,
     out_msg: *mut *mut CRiQueueMessage,
-    timeout_ms: u64,
+    _timeout_ms: u64,
 ) -> c_int {
     if manager.is_null() || queue_name.is_null() || out_msg.is_null() {
         return -1;

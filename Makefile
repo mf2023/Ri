@@ -76,6 +76,9 @@ endif
 ifeq ($(UNAME_S),Darwin)
     PLATFORM ?= macos
 endif
+ifneq ($(or $(findstring MINGW,$(UNAME_S)),$(findstring MSYS,$(UNAME_S)),$(findstring CYGWIN,$(UNAME_S))),)
+    PLATFORM ?= windows
+endif
 ifeq ($(UNAME_S),Windows)
     PLATFORM ?= windows
 endif
@@ -95,8 +98,11 @@ endif
 # Default values
 RELEASE ?= true
 PYTHON_VER ?= 3.11
-FEATURES ?= 
+FEATURES ?=
 VERBOSE ?= false
+
+# Windows features (excludes kafka — rdkafka configure script can't run on Windows)
+WINDOWS_FEATURES := grpc,websocket,rabbitmq,cache,queue,gateway,service_mesh,auth,observability,postgres,mysql,sqlite,http_client,system_info,config_hot_reload,etcd
 
 # Build mode
 ifeq ($(RELEASE),true)
@@ -125,11 +131,9 @@ ifeq ($(PLATFORM),windows)
     TARGET ?= x86_64-pc-windows-msvc
     ifeq ($(ARCH),arm64)
         TARGET := aarch64-pc-windows-msvc
-        export CARGO_TARGET_AARCH64_PC_WINDOWS_MSVC_LINKER := rust-lld
-    else
-        export CARGO_TARGET_X86_64_PC_WINDOWS_MSVC_LINKER := rust-lld
-    endif
 endif
+export CARGO_TARGET_X86_64_PC_WINDOWS_MSVC_LINKER := rust-lld
+export CARGO_TARGET_AARCH64_PC_WINDOWS_MSVC_LINKER := rust-lld
 
 ifeq ($(PLATFORM),macos)
     LIB_EXT := dylib
@@ -350,7 +354,7 @@ endif
 ifeq ($(PLATFORM)-$(ARCH),windows-arm64)
 	cargo build $(BUILD_MODE) --target $(TARGET) --no-default-features $(if $(FEATURES),--features $(FEATURES),)
 else ifeq ($(PLATFORM),windows)
-	cargo build $(BUILD_MODE) --target $(TARGET) $(if $(FEATURES),--features $(FEATURES),)
+	cargo build $(BUILD_MODE) --target $(TARGET) --no-default-features --features $(WINDOWS_FEATURES)
 else
 	cargo build $(BUILD_MODE) --target $(TARGET) $(if $(FEATURES),--features $(FEATURES),)
 endif
@@ -363,9 +367,9 @@ ifeq ($(PLATFORM),linux)
 	@$(MAKE) setup-deps
 endif
 ifeq ($(PLATFORM)-$(ARCH),windows-arm64)
-	cargo build $(BUILD_MODE) -p ric --target $(TARGET) --no-default-features
+	cargo build $(BUILD_MODE) -p ric --target $(TARGET) --no-default-features --features $(WINDOWS_FEATURES)
 else ifeq ($(PLATFORM),windows)
-	cargo build $(BUILD_MODE) -p ric --target $(TARGET)
+	cargo build $(BUILD_MODE) -p ric --target $(TARGET) --no-default-features --features $(WINDOWS_FEATURES)
 else
 	cargo build $(BUILD_MODE) -p ric --target $(TARGET)
 endif
@@ -408,7 +412,7 @@ else ifeq ($(PLATFORM),windows)
 ifeq ($(ARCH),arm64)
 	maturin build --release --target $(TARGET) -o $(DIST_DIR) --no-default-features --features pyo3,grpc,websocket,rabbitmq,cache,queue,gateway,service_mesh,auth,observability,postgres,mysql,sqlite,http_client,system_info,config_hot_reload,etcd
 else
-	maturin build --release --target $(TARGET) -o $(DIST_DIR) --no-default-features --features pyo3,grpc,websocket,rabbitmq,cache,queue,gateway,service_mesh,auth,observability,postgres,mysql,sqlite,http_client,system_info,config_hot_reload,protocol,kafka,etcd
+	maturin build --release --target $(TARGET) -o $(DIST_DIR) --no-default-features --features pyo3,grpc,websocket,rabbitmq,cache,queue,gateway,service_mesh,auth,observability,postgres,mysql,sqlite,http_client,system_info,config_hot_reload,protocol,etcd
 endif
 else
 	@echo "$(YELLOW)Building native wheel...$(NC)"
@@ -434,7 +438,7 @@ endif
 	@echo "$(GREEN)Generating C headers...$(NC)"
 	@mkdir -p $(INCLUDE_DIR)
 	@if ! command -v cbindgen >/dev/null 2>&1; then cargo install cbindgen; fi
-	cbindgen --crate ri -o $(INCLUDE_DIR)/ri.h
+	cbindgen --crate ri --features c -o $(INCLUDE_DIR)/ri.h
 ifeq ($(PLATFORM),windows)
 	@echo "$(GREEN)✓ C library built: $(TARGET_DIR)/ri.$(STATIC_EXT)$(NC)"
 else
@@ -477,7 +481,7 @@ build-windows-x64:
 	@$(MAKE) build PLATFORM=windows ARCH=x64 TARGET=x86_64-pc-windows-msvc
 
 build-windows-arm64:
-	cargo build $(BUILD_MODE) --target aarch64-pc-windows-msvc --no-default-features --features grpc,websocket,rabbitmq,cache,queue,gateway,service_mesh,auth,observability,postgres,mysql,sqlite,http_client,system_info,config_hot_reload,etcd
+	cargo build $(BUILD_MODE) --target aarch64-pc-windows-msvc --no-default-features --features $(WINDOWS_FEATURES)
 	@echo "$(GREEN)✓ Build complete: target/aarch64-pc-windows-msvc/release/ri.dll$(NC)"
 
 # macOS builds
@@ -499,7 +503,7 @@ build-cli-windows-x64:
 
 build-cli-windows-arm64:
 	@echo "$(GREEN)Building CLI for Windows ARM64...$(NC)"
-	cargo build $(BUILD_MODE) -p ric --target aarch64-pc-windows-msvc --no-default-features --features grpc,websocket,rabbitmq,cache,queue,gateway,service_mesh,auth,observability,postgres,mysql,sqlite,http_client,system_info,config_hot_reload,etcd
+	cargo build $(BUILD_MODE) -p ric --target aarch64-pc-windows-msvc --no-default-features --features $(WINDOWS_FEATURES)
 	@echo "$(GREEN)✓ Build complete: target/aarch64-pc-windows-msvc/release/ric.exe$(NC)"
 
 build-cli-macos-x64:

@@ -1351,16 +1351,11 @@ jobs:
             if [ -f /opt/rh/llvm-toolset-7/root/usr/lib64/libclang.so ]; then
               export LIBCLANG_PATH=/opt/rh/llvm-toolset-7/root/usr/lib64
             fi
-            # Install Perl modules for OpenSSL vendored build
-            if ! yum install -y perl perl-IPC-Cmd perl-Time-Piece 2>&1; then
-              echo "WARNING: yum install perl modules failed"
-              # Try cpan as fallback
-              if command -v cpan >/dev/null 2>&1; then
-                PERL_MM_USE_DEFAULT=1 cpan -i IPC::Cmd Time::Piece 2>&1 || true
-              fi
-            fi
-            # Use Makefile to install dependencies (handles all Linux distros)
+            # Use Makefile to install system deps including openssl-devel
             make setup-deps || echo "Setup deps completed with some warnings"
+            # Use system OpenSSL instead of vendored build (avoids perl-IPC-Cmd dependency)
+            export OPENSSL_NO_VENDOR=1
+            export OPENSSL_DIR=/usr
             # Configure correct Python version for maturin
             PYTHON_VER="${{ matrix.python }}"
             PYTHON_MAJOR=$(echo "$PYTHON_VER" | cut -d. -f1)

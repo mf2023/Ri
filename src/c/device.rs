@@ -444,7 +444,7 @@ pub extern "C" fn ri_device_controller_remove_device(
             Err(_) => return -3,
         };
         rt.block_on(async {
-            (*controller).inner.remove_device(device_id_str).await;
+            let _ = (*controller).inner.remove_device(device_id_str).await;
         });
     }
     0

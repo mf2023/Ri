@@ -667,7 +667,7 @@ pub extern "C" fn ri_load_balancer_add_server(
         };
 
         rt.block_on(async {
-            (*lb).inner.add_server(server).await;
+            let _ = (*lb).inner.add_server(server).await;
         });
 
         0

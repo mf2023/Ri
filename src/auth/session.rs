@@ -80,6 +80,7 @@ const MAX_SESSION_DATA_KEY_LENGTH: usize = 256;
 const MAX_SESSION_DATA_VALUE_LENGTH: usize = 4096;
 
 /// Maximum length of user agent string
+#[allow(dead_code)]
 const MAX_USER_AGENT_LENGTH: usize = 1024;
 
 /// Session structure for tracking user sessions.
