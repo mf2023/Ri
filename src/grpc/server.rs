@@ -59,8 +59,7 @@ impl RiGrpcServerPy {
     }
 
     fn start(&mut self) -> PyResult<()> {
-        let rt = tokio::runtime::Runtime::new()
-            .map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(e.to_string()))?;
+        let rt = crate::py_runtime::py_runtime();
         
         rt.block_on(async {
             self.inner.start().await
@@ -68,8 +67,7 @@ impl RiGrpcServerPy {
     }
 
     fn stop(&mut self) -> PyResult<()> {
-        let rt = tokio::runtime::Runtime::new()
-            .map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(e.to_string()))?;
+        let rt = crate::py_runtime::py_runtime();
         
         rt.block_on(async {
             self.inner.stop().await

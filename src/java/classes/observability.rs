@@ -20,10 +20,10 @@
 //! JNI bindings for Ri observability classes.
 
 use jni::JNIEnv;
-use jni::objects::{JClass, JObject, JString, JDoubleArray};
+use jni::objects::{JClass, JObject, JString, JDoubleArray, JValue};
 use jni::sys::{jdouble, jint, jlong, jstring, jobjectArray, jobject};
 use crate::observability::{
-    RiObservabilityModule, RiTracer, RiSpanKind, RiSpanStatus,
+    RiObservabilityModule, RiObservabilityConfig, RiTracer, RiSpanKind, RiSpanStatus,
     RiMetric, RiMetricConfig, RiMetricType, RiMetricsRegistry,
 };
 #[cfg(feature = "system_info")]
@@ -31,6 +31,28 @@ use crate::observability::{
     RiSystemMetricsCollector, RiSystemMetrics, RiCPUMetrics, RiMemoryMetrics, RiDiskMetrics, RiNetworkMetrics,
 };
 use crate::java::exception::check_not_null;
+
+#[no_mangle]
+pub extern "system" fn Java_com_dunimd_ri_observability_RiObservabilityConfig_new0(
+    _env: JNIEnv,
+    _class: JClass,
+) -> jlong {
+    let config = Box::new(RiObservabilityConfig::default());
+    Box::into_raw(config) as jlong
+}
+
+#[no_mangle]
+pub extern "system" fn Java_com_dunimd_ri_observability_RiObservabilityConfig_free0(
+    _env: JNIEnv,
+    _class: JClass,
+    ptr: jlong,
+) {
+    if ptr != 0 {
+        unsafe {
+            let _ = Box::from_raw(ptr as *mut RiObservabilityConfig);
+        }
+    }
+}
 
 #[no_mangle]
 pub extern "system" fn Java_com_dunimd_ri_observability_RiObservabilityModule_new0(
@@ -340,13 +362,17 @@ pub extern "system" fn Java_com_dunimd_ri_observability_RiMetricConfig_setBucket
         return;
     }
     
-    let buckets_vec: Vec<f64> = match _env.get_double_array_elements(&buckets, jni::objects::ReleaseMode::CopyBack) {
-        Ok(elems) => elems.iter().map(|&x| x).collect(),
+    let len = match _env.get_array_length(&buckets) {
+        Ok(len) => len,
         Err(_) => return,
     };
-    
+    let mut buf = vec![0f64; len.max(0) as usize];
+    if _env.get_double_array_region(&buckets, 0, &mut buf).is_err() {
+        return;
+    }
+
     let config = unsafe { &mut *(ptr as *mut RiMetricConfig) };
-    config.buckets = buckets_vec;
+    config.buckets = buf;
 }
 
 #[no_mangle]
@@ -360,13 +386,17 @@ pub extern "system" fn Java_com_dunimd_ri_observability_RiMetricConfig_setQuanti
         return;
     }
     
-    let quantiles_vec: Vec<f64> = match _env.get_double_array_elements(&quantiles, jni::objects::ReleaseMode::CopyBack) {
-        Ok(elems) => elems.iter().map(|&x| x).collect(),
+    let len = match _env.get_array_length(&quantiles) {
+        Ok(len) => len,
         Err(_) => return,
     };
-    
+    let mut buf = vec![0f64; len.max(0) as usize];
+    if _env.get_double_array_region(&quantiles, 0, &mut buf).is_err() {
+        return;
+    }
+
     let config = unsafe { &mut *(ptr as *mut RiMetricConfig) };
-    config.quantiles = quantiles_vec;
+    config.quantiles = buf;
 }
 
 #[no_mangle]
@@ -394,7 +424,7 @@ pub extern "system" fn Java_com_dunimd_ri_observability_RiMetric_new0(
     }
     
     let config = unsafe { &*(config_ptr as *const RiMetricConfig) };
-    let metric = Box::new(RiMetric::new(config.clone()));
+    let metric = Box::new(std::sync::Arc::new(RiMetric::new(config.clone())));
     Box::into_raw(metric) as jlong
 }
 
@@ -409,7 +439,7 @@ pub extern "system" fn Java_com_dunimd_ri_observability_RiMetric_record0(
         return;
     }
     
-    let metric = unsafe { &*(ptr as *const RiMetric) };
+    let metric = unsafe { &*(ptr as *const std::sync::Arc<RiMetric>) };
     let _ = metric.record(value, vec![]);
 }
 
@@ -423,7 +453,7 @@ pub extern "system" fn Java_com_dunimd_ri_observability_RiMetric_getValue0(
         return 0.0;
     }
     
-    let metric = unsafe { &*(ptr as *const RiMetric) };
+    let metric = unsafe { &*(ptr as *const std::sync::Arc<RiMetric>) };
     metric.get_value()
 }
 
@@ -437,7 +467,7 @@ pub extern "system" fn Java_com_dunimd_ri_observability_RiMetric_getTotalCount0(
         return 0;
     }
     
-    let metric = unsafe { &*(ptr as *const RiMetric) };
+    let metric = unsafe { &*(ptr as *const std::sync::Arc<RiMetric>) };
     metric.get_total_count() as jlong
 }
 
@@ -449,7 +479,7 @@ pub extern "system" fn Java_com_dunimd_ri_observability_RiMetric_free0(
 ) {
     if ptr != 0 {
         unsafe {
-            let _ = Box::from_raw(ptr as *mut RiMetric);
+            let _ = Box::from_raw(ptr as *mut std::sync::Arc<RiMetric>);
         }
     }
 }
@@ -476,8 +506,15 @@ pub extern "system" fn Java_com_dunimd_ri_observability_RiMetricsRegistry_regist
     }
     
     let registry = unsafe { &*(ptr as *const RiMetricsRegistry) };
-    let metric = unsafe { &*(metric_ptr as *const RiMetric) };
-    let _ = registry.register(std::sync::Arc::new(RiMetric::new(metric.get_config().clone())));
+    // metric_ptr 指向 Box<Arc<RiMetric>>：解出 Arc 后 clone 注册，
+    // 原指针回放（Box 重新装箱），Java 侧所有权保持不变。
+    let metric_arc = unsafe {
+        let boxed = Box::from_raw(metric_ptr as *mut std::sync::Arc<RiMetric>);
+        let arc = std::sync::Arc::clone(&boxed);
+        std::mem::forget(boxed);
+        arc
+    };
+    let _ = registry.register(metric_arc);
 }
 
 #[no_mangle]
@@ -498,10 +535,9 @@ pub extern "system" fn Java_com_dunimd_ri_observability_RiMetricsRegistry_get0(
     };
     
     match registry.get_metric(&name_str) {
-        Some(metric) => {
-            let metric_box = Box::new(RiMetric::new(metric.get_config().clone()));
-            Box::into_raw(metric_box) as jlong
-        }
+        // 返回 registry 内真实实例的共享 Arc（新 Box 包装），
+        // Java record 的数据与 registry 中同一实例。
+        Some(metric) => Box::into_raw(Box::new(std::sync::Arc::clone(&metric))) as jlong,
         None => 0,
     }
 }
@@ -657,7 +693,13 @@ fn create_system_metrics_object(env: &mut JNIEnv, metrics: &RiSystemMetrics) -> 
     match env.new_object(
         "com/dunimd/ri/observability/RiSystemMetrics",
         "(Lcom/dunimd/ri/observability/RiCPUMetrics;Lcom/dunimd/ri/observability/RiMemoryMetrics;Lcom/dunimd/ri/observability/RiDiskMetrics;Lcom/dunimd/ri/observability/RiNetworkMetrics;J)V",
-        &[cpu_jobj.into(), memory_jobj.into(), disk_jobj.into(), network_jobj.into(), metrics.timestamp.into()],
+        &[
+            JValue::Object(&cpu_jobj),
+            JValue::Object(&memory_jobj),
+            JValue::Object(&disk_jobj),
+            JValue::Object(&network_jobj),
+            (metrics.timestamp as jlong).into(),
+        ],
     ) {
         Ok(obj) => obj.into_raw(),
         Err(_) => JObject::null().into_raw(),
@@ -665,67 +707,72 @@ fn create_system_metrics_object(env: &mut JNIEnv, metrics: &RiSystemMetrics) -> 
 }
 
 #[cfg(feature = "system_info")]
-fn create_cpu_metrics_object<'a>(env: &'a mut JNIEnv<'a>, cpu: &RiCPUMetrics) -> jni::errors::Result<JObject<'a>> {
+fn create_cpu_metrics_object<'local>(env: &mut JNIEnv<'local>, cpu: &RiCPUMetrics) -> jni::errors::Result<JObject<'local>> {
     let per_core_array = env.new_double_array(cpu.per_core_usage.len() as jint)?;
     env.set_double_array_region(&per_core_array, 0, &cpu.per_core_usage)?;
     
     env.new_object(
         "com/dunimd/ri/observability/RiCPUMetrics",
         "(D[DJJ)V",
-        &[cpu.total_usage_percent.into(), per_core_array.into(), cpu.context_switches.into(), cpu.interrupts.into()],
+        &[
+            cpu.total_usage_percent.into(),
+            JValue::Object(&per_core_array),
+            (cpu.context_switches as jlong).into(),
+            (cpu.interrupts as jlong).into(),
+        ],
     )
 }
 
 #[cfg(feature = "system_info")]
-fn create_memory_metrics_object<'a>(env: &'a mut JNIEnv<'a>, memory: &RiMemoryMetrics) -> jni::errors::Result<JObject<'a>> {
+fn create_memory_metrics_object<'local>(env: &mut JNIEnv<'local>, memory: &RiMemoryMetrics) -> jni::errors::Result<JObject<'local>> {
     env.new_object(
         "com/dunimd/ri/observability/RiMemoryMetrics",
         "(JJJDJJDD)V",
         &[
-            memory.total_bytes.into(),
-            memory.used_bytes.into(),
-            memory.free_bytes.into(),
+            (memory.total_bytes as jlong).into(),
+            (memory.used_bytes as jlong).into(),
+            (memory.free_bytes as jlong).into(),
             memory.usage_percent.into(),
-            memory.swap_total_bytes.into(),
-            memory.swap_used_bytes.into(),
-            memory.swap_free_bytes.into(),
+            (memory.swap_total_bytes as jlong).into(),
+            (memory.swap_used_bytes as jlong).into(),
+            (memory.swap_free_bytes as jlong).into(),
             memory.swap_usage_percent.into(),
         ],
     )
 }
 
 #[cfg(feature = "system_info")]
-fn create_disk_metrics_object<'a>(env: &'a mut JNIEnv<'a>, disk: &RiDiskMetrics) -> jni::errors::Result<JObject<'a>> {
+fn create_disk_metrics_object<'local>(env: &mut JNIEnv<'local>, disk: &RiDiskMetrics) -> jni::errors::Result<JObject<'local>> {
     env.new_object(
         "com/dunimd/ri/observability/RiDiskMetrics",
         "(JJJDJJJJ)V",
         &[
-            disk.total_bytes.into(),
-            disk.used_bytes.into(),
-            disk.free_bytes.into(),
+            (disk.total_bytes as jlong).into(),
+            (disk.used_bytes as jlong).into(),
+            (disk.free_bytes as jlong).into(),
             disk.usage_percent.into(),
-            disk.read_bytes.into(),
-            disk.write_bytes.into(),
-            disk.read_count.into(),
-            disk.write_count.into(),
+            (disk.read_bytes as jlong).into(),
+            (disk.write_bytes as jlong).into(),
+            (disk.read_count as jlong).into(),
+            (disk.write_count as jlong).into(),
         ],
     )
 }
 
 #[cfg(feature = "system_info")]
-fn create_network_metrics_object<'a>(env: &'a mut JNIEnv<'a>, network: &RiNetworkMetrics) -> jni::errors::Result<JObject<'a>> {
+fn create_network_metrics_object<'local>(env: &mut JNIEnv<'local>, network: &RiNetworkMetrics) -> jni::errors::Result<JObject<'local>> {
     env.new_object(
         "com/dunimd/ri/observability/RiNetworkMetrics",
         "(JJJJJJJJ)V",
         &[
-            network.total_received_bytes.into(),
-            network.total_transmitted_bytes.into(),
-            network.received_bytes_per_sec.into(),
-            network.transmitted_bytes_per_sec.into(),
-            network.total_received_packets.into(),
-            network.total_transmitted_packets.into(),
-            network.received_packets_per_sec.into(),
-            network.transmitted_packets_per_sec.into(),
+            (network.total_received_bytes as jlong).into(),
+            (network.total_transmitted_bytes as jlong).into(),
+            (network.received_bytes_per_sec as jlong).into(),
+            (network.transmitted_bytes_per_sec as jlong).into(),
+            (network.total_received_packets as jlong).into(),
+            (network.total_transmitted_packets as jlong).into(),
+            (network.received_packets_per_sec as jlong).into(),
+            (network.transmitted_packets_per_sec as jlong).into(),
         ],
     )
 }
@@ -742,7 +789,7 @@ pub extern "system" fn Java_com_dunimd_ri_observability_RiSystemMetricsCollector
     }
     
     let collector = unsafe { &mut *(ptr as *mut RiSystemMetricsCollector) };
-    collector.system.refresh_all();
+    collector.refresh();
 }
 
 #[cfg(feature = "system_info")]

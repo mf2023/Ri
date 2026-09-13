@@ -658,7 +658,7 @@ impl RiSessionManager {
     
     #[pyo3(name = "create_session")]
     fn create_session_impl(&self, user_id: String, ip_address: Option<String>, user_agent: Option<String>) -> PyResult<String> {
-        let rt = tokio::runtime::Runtime::new().map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(e.to_string()))?;
+        let rt = crate::py_runtime::py_runtime();
         rt.block_on(async {
             self.create_session(user_id, ip_address, user_agent).await
                 .map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(e.to_string()))
@@ -667,7 +667,7 @@ impl RiSessionManager {
     
     #[pyo3(name = "get_session")]
     fn get_session_impl(&self, session_id: String) -> PyResult<Option<RiSession>> {
-        let rt = tokio::runtime::Runtime::new().map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(e.to_string()))?;
+        let rt = crate::py_runtime::py_runtime();
         rt.block_on(async {
             self.get_session(&session_id).await
                 .map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(e.to_string()))
@@ -676,7 +676,7 @@ impl RiSessionManager {
     
     #[pyo3(name = "update_session")]
     fn update_session_impl(&self, session_id: String, data: FxHashMap<String, String>) -> PyResult<bool> {
-        let rt = tokio::runtime::Runtime::new().map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(e.to_string()))?;
+        let rt = crate::py_runtime::py_runtime();
         rt.block_on(async {
             self.update_session(&session_id, data).await
                 .map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(e.to_string()))
@@ -685,7 +685,7 @@ impl RiSessionManager {
     
     #[pyo3(name = "destroy_session")]
     fn destroy_session_impl(&self, session_id: String) -> PyResult<bool> {
-        let rt = tokio::runtime::Runtime::new().map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(e.to_string()))?;
+        let rt = crate::py_runtime::py_runtime();
         rt.block_on(async {
             self.destroy_session(&session_id).await
                 .map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(e.to_string()))
@@ -694,7 +694,7 @@ impl RiSessionManager {
     
     #[pyo3(name = "extend_session")]
     fn extend_session_impl(&self, session_id: String) -> PyResult<bool> {
-        let rt = tokio::runtime::Runtime::new().map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(e.to_string()))?;
+        let rt = crate::py_runtime::py_runtime();
         rt.block_on(async {
             self.extend_session(&session_id).await
                 .map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(e.to_string()))
@@ -703,7 +703,7 @@ impl RiSessionManager {
     
     #[pyo3(name = "cleanup_expired")]
     fn cleanup_expired_impl(&self) -> PyResult<usize> {
-        let rt = tokio::runtime::Runtime::new().map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(e.to_string()))?;
+        let rt = crate::py_runtime::py_runtime();
         rt.block_on(async {
             self.cleanup_expired().await
                 .map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(e.to_string()))
@@ -715,3 +715,4 @@ impl RiSessionManager {
         self.get_timeout()
     }
 }
+

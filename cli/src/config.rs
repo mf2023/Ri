@@ -126,7 +126,6 @@ pub struct BuildConfig {
     /// - "all": Build all targets (default)
     /// - "python": Build Python bindings
     /// - "java": Build Java bindings
-    /// - "c": Build C/C++ bindings
     pub target: String,
     
     /// Enabled features

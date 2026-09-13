@@ -28,6 +28,7 @@ use crate::hooks::{RiHookKind, RiModulePhase};
 use super::module_types::{ModuleSlot, ModuleType};
 use tokio::sync::RwLock as AsyncRwLock;
 use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, Ordering};
 #[cfg(feature = "pyo3")]
 use pyo3::prelude::*;
 
@@ -61,6 +62,8 @@ pub struct RiAppRuntime {
     ctx: RiServiceContext,
     /// Vector of modules with their state, protected by an async RwLock
     modules: Arc<AsyncRwLock<Vec<ModuleSlot>>>,
+    /// Whether the application lifecycle is currently running
+    running: Arc<AtomicBool>,
 }
 
 impl RiAppRuntime {
@@ -80,7 +83,34 @@ impl RiAppRuntime {
         Self {
             ctx,
             modules: Arc::new(AsyncRwLock::new(modules)),
+            running: Arc::new(AtomicBool::new(false)),
         }
+    }
+
+    /// Check whether the application lifecycle is currently running.
+    ///
+    /// This returns `true` between the start of `run` and the completion of the
+    /// shutdown sequence (including when `run` returns early with an error).
+    pub fn is_running(&self) -> bool {
+        self.running.load(Ordering::SeqCst)
+    }
+
+    /// Request a cooperative shutdown of the application.
+    ///
+    /// This method is idempotent: if the lifecycle is not running (either it has
+    /// not started yet or it already finished), it returns `Ok(())` immediately.
+    /// Otherwise it executes the module shutdown sequence (sync modules first in
+    /// reverse order, then async modules in reverse order, then shutdown hooks)
+    /// and marks the lifecycle as no longer running.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if a critical module fails during shutdown.
+    pub async fn shutdown(&mut self) -> RiResult<()> {
+        if !self.running.swap(false, Ordering::SeqCst) {
+            return Ok(());
+        }
+        self.shutdown_all_modules().await
     }
     
     /// Run the application lifecycle.
@@ -111,6 +141,18 @@ impl RiAppRuntime {
     /// - A critical module fails during execution
     /// - The provided closure returns an error
     pub async fn run<F, Fut>(mut self, f: F) -> RiResult<()>
+    where
+        F: FnOnce(&RiServiceContext) -> Fut,
+        Fut: std::future::Future<Output = RiResult<()>>,
+    {
+        self.running.store(true, Ordering::SeqCst);
+        let result = self.run_inner(f).await;
+        self.running.store(false, Ordering::SeqCst);
+        result
+    }
+
+    /// Internal implementation of the application lifecycle.
+    async fn run_inner<F, Fut>(&mut self, f: F) -> RiResult<()>
     where
         F: FnOnce(&RiServiceContext) -> Fut,
         Fut: std::future::Future<Output = RiResult<()>>,
@@ -361,7 +403,29 @@ impl RiAppRuntime {
         
         // Run the application business logic (provided closure)
         let result = f(&self.ctx).await;
-        
+
+        self.shutdown_all_modules().await?;
+
+        // Return the result of the closure execution
+        result
+    }
+
+    /// Execute the module shutdown sequence.
+    ///
+    /// This shuts down synchronous modules in reverse order, then asynchronous
+    /// modules in reverse order, emitting the corresponding lifecycle hooks.
+    /// The `running` flag is not touched here; callers manage it.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if hook emission fails or a critical module fails during
+    /// shutdown. Non-critical failures mark the module slot as failed and are
+    /// logged instead of aborting the sequence.
+    async fn shutdown_all_modules(&mut self) -> RiResult<()> {
+        let modules_guard = self.modules.read().await;
+        let module_len = modules_guard.len();
+        drop(modules_guard);
+
         // Emit before modules shutdown hook
         // Note: We're using a new context here since we've moved the original to the closure
         let _ = self.ctx.hooks().emit_with(&RiHookKind::BeforeModulesShutdown, &self.ctx, None, None);
@@ -537,8 +601,7 @@ impl RiAppRuntime {
         // Emit shutdown hook
         self.ctx.hooks().emit_with(&RiHookKind::Shutdown, &self.ctx, None, None)?;
 
-        // Return the result of the closure execution
-        result
+        Ok(())
     }
 
     /// Log a module error.
@@ -592,14 +655,14 @@ mod tests {
 
     #[test]
     fn test_app_runtime_creation() {
-        let ctx = RiServiceContext::new();
+        let ctx = RiServiceContext::new_default().expect("default context");
         let runtime = RiAppRuntime::new(ctx, vec![]);
-        assert!(runtime.modules.read().blocking_ref().is_empty());
+        assert!(runtime.modules.try_read().map(|g| g.is_empty()).unwrap_or(false));
     }
 
     #[tokio::test]
     async fn test_app_runtime_run_with_empty_modules() {
-        let ctx = RiServiceContext::new();
+        let ctx = RiServiceContext::new_default().expect("default context");
         let runtime = RiAppRuntime::new(ctx, vec![]);
         let result = runtime.run(|_ctx| async { Ok(()) }).await;
         assert!(result.is_ok());
@@ -607,7 +670,7 @@ mod tests {
 
     #[test]
     fn test_app_runtime_clone() {
-        let ctx = RiServiceContext::new();
+        let ctx = RiServiceContext::new_default().expect("default context");
         let runtime1 = RiAppRuntime::new(ctx, vec![]);
         let runtime2 = runtime1.clone();
         assert!(Arc::ptr_eq(&runtime1.modules, &runtime2.modules));

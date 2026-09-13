@@ -15,7 +15,7 @@
 //! See the License for the specific language governing permissions and
 //! limitations under the License.
 
-use ri::observability::grafana::{RiGrafanaDashboard, RiGrafanaPanel, RiGridPos};
+use ri::observability::grafana::{RiGrafanaDashboard, RiGrafanaPanel, RiGrafanaTarget, RiGridPos};
 
 /// Observability Grafana dashboard test module for visualization configuration.
 ///
@@ -46,7 +46,7 @@ use ri::observability::grafana::{RiGrafanaDashboard, RiGrafanaPanel, RiGridPos};
 ///
 /// The dashboard generation creates Grafana-compatible JSON configurations
 /// that can be imported directly into Grafana instances for visualization.
-Tests verify that the generated JSON matches the expected structure including
+/// Tests verify that the generated JSON matches the expected structure including
 /// dashboard metadata, panel arrays, and grid layout specifications.
 ///
 /// Panel configurations are designed to be opinionated but customizable,
@@ -106,10 +106,20 @@ fn test_grafana_dashboard() {
     
     // Define a visualization panel with configuration
     let panel = RiGrafanaPanel {
+        id: 1,
         title: "CPU Usage".to_string(),
-        query: "cpu_usage_percent".to_string(),
-        panel_type: "graph".to_string(),
+        type_: "graph".to_string(),
+        targets: vec![RiGrafanaTarget {
+            expr: "cpu_usage_percent".to_string(),
+            ref_id: "A".to_string(),
+            legend_format: None,
+            interval: None,
+        }],
         grid_pos: RiGridPos { h: 8, w: 12, x: 0, y: 0 },
+        field_config: serde_json::json!({}),
+        options: serde_json::json!({}),
+        description: None,
+        datasource: None,
     };
     
     // Add panel to dashboard

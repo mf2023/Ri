@@ -532,7 +532,7 @@ async fn test_memory_cache_stats() {
     let updated_stats = cache.stats().await;
     
     // Verify stats changed
-    assert_eq!(updated_stats.entries, initial_stats.entries);
+    assert_eq!(updated_stats.entries, initial_stats.entries + 1);
     assert_eq!(updated_stats.hits, initial_stats.hits + 1);
     assert_eq!(updated_stats.misses, initial_stats.misses + 1);
 }

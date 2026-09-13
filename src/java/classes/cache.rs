@@ -24,6 +24,7 @@ use jni::objects::{JClass, JString};
 use jni::sys::{jlong, jboolean, jint, jstring};
 use crate::cache::{RiCacheModule, RiCacheConfig, RiCacheBackendType, RiCacheStats, RiCachePolicy, RiCachedValue, RiCacheManager};
 use crate::java::exception::check_not_null;
+use crate::java::runtime::{block_on_jni, ttl_from_jlong};
 
 // =============================================================================
 // RiCacheModule JNI Bindings
@@ -31,43 +32,52 @@ use crate::java::exception::check_not_null;
 
 #[no_mangle]
 pub extern "system" fn Java_com_dunimd_ri_cache_RiCacheModule_new0(
-    mut env: JNIEnv,
+    _env: JNIEnv,
     _class: JClass,
     config_ptr: jlong,
 ) -> jlong {
-    if !check_not_null(&mut env, config_ptr, "RiCacheConfig") {
+    if config_ptr == 0 {
         return 0;
     }
-    
     let config = unsafe { &*(config_ptr as *const RiCacheConfig) };
-    let module = Box::new(RiCacheModule::new(config.clone()));
+    let module = Box::new(RiCacheModule::with_config(config.clone()));
     Box::into_raw(module) as jlong
 }
 
 #[no_mangle]
-pub extern "system" fn Java_com_dunimd_ri_cache_RiCacheModule_set(
+pub extern "system" fn Java_com_dunimd_ri_cache_RiCacheModule_set0(
     mut env: JNIEnv,
     _class: JClass,
     ptr: jlong,
     key: JString,
     value: JString,
-    _ttl_secs: jlong,
+    ttl_secs: jlong,
 ) {
     if !check_not_null(&mut env, ptr, "RiCacheModule") {
         return;
     }
-    
-    let _module = unsafe { &*(ptr as *const RiCacheModule) };
-    let _key_str: String = env.get_string(&key)
-        .expect("Failed to get key")
-        .into();
-    let _value_str: String = env.get_string(&value)
-        .expect("Failed to get value")
-        .into();
+    let key_str: String = match env.get_string(&key) {
+        Ok(s) => s.into(),
+        Err(_) => return,
+    };
+    let value_str: String = match env.get_string(&value) {
+        Ok(s) => s.into(),
+        Err(_) => return,
+    };
+
+    let module = unsafe { &*(ptr as *const RiCacheModule) };
+    let manager = module.cache_manager();
+    let ttl = ttl_from_jlong(ttl_secs);
+    if let Some(_) = block_on_jni(&mut env, "RiCacheModule::set", async move {
+        let mgr = manager.read().await;
+        mgr.set::<String>(&key_str, &value_str, ttl).await
+    }) {
+        // Ok(()) -> success; Err was already converted to a Java exception.
+    }
 }
 
 #[no_mangle]
-pub extern "system" fn Java_com_dunimd_ri_cache_RiCacheModule_get(
+pub extern "system" fn Java_com_dunimd_ri_cache_RiCacheModule_get0(
     mut env: JNIEnv,
     _class: JClass,
     ptr: jlong,
@@ -76,17 +86,34 @@ pub extern "system" fn Java_com_dunimd_ri_cache_RiCacheModule_get(
     if !check_not_null(&mut env, ptr, "RiCacheModule") {
         return std::ptr::null_mut();
     }
-    
-    let _module = unsafe { &*(ptr as *const RiCacheModule) };
-    let _key_str: String = env.get_string(&key)
-        .expect("Failed to get key")
-        .into();
-    
-    std::ptr::null_mut()
+    let key_str: String = match env.get_string(&key) {
+        Ok(s) => s.into(),
+        Err(_) => return std::ptr::null_mut(),
+    };
+
+    let module = unsafe { &*(ptr as *const RiCacheModule) };
+    let manager = module.cache_manager();
+    let result = block_on_jni(&mut env, "RiCacheModule::get", async move {
+        let mgr = manager.read().await;
+        mgr.get::<String>(&key_str).await
+    });
+
+    match result {
+        Some(Ok(Some(value))) => match env.new_string(value) {
+            Ok(s) => s.into_raw(),
+            Err(_) => std::ptr::null_mut(),
+        },
+        Some(Ok(None)) => std::ptr::null_mut(),
+        Some(Err(_)) => {
+            // Error already surfaced as a Java exception.
+            std::ptr::null_mut()
+        }
+        None => std::ptr::null_mut(),
+    }
 }
 
 #[no_mangle]
-pub extern "system" fn Java_com_dunimd_ri_cache_RiCacheModule_delete(
+pub extern "system" fn Java_com_dunimd_ri_cache_RiCacheModule_delete0(
     mut env: JNIEnv,
     _class: JClass,
     ptr: jlong,
@@ -95,15 +122,23 @@ pub extern "system" fn Java_com_dunimd_ri_cache_RiCacheModule_delete(
     if !check_not_null(&mut env, ptr, "RiCacheModule") {
         return;
     }
-    
-    let _module = unsafe { &*(ptr as *const RiCacheModule) };
-    let _key_str: String = env.get_string(&key)
-        .expect("Failed to get key")
-        .into();
+    let key_str: String = match env.get_string(&key) {
+        Ok(s) => s.into(),
+        Err(_) => return,
+    };
+
+    let module = unsafe { &*(ptr as *const RiCacheModule) };
+    let manager = module.cache_manager();
+    if let Some(result) = block_on_jni(&mut env, "RiCacheModule::delete", async move {
+        let mgr = manager.read().await;
+        mgr.delete(&key_str).await
+    }) {
+        let _ = result;
+    }
 }
 
 #[no_mangle]
-pub extern "system" fn Java_com_dunimd_ri_cache_RiCacheModule_exists(
+pub extern "system" fn Java_com_dunimd_ri_cache_RiCacheModule_exists0(
     mut env: JNIEnv,
     _class: JClass,
     ptr: jlong,
@@ -112,17 +147,24 @@ pub extern "system" fn Java_com_dunimd_ri_cache_RiCacheModule_exists(
     if !check_not_null(&mut env, ptr, "RiCacheModule") {
         return 0;
     }
-    
-    let _module = unsafe { &*(ptr as *const RiCacheModule) };
-    let _key_str: String = env.get_string(&key)
-        .expect("Failed to get key")
-        .into();
-    
-    0
+    let key_str: String = match env.get_string(&key) {
+        Ok(s) => s.into(),
+        Err(_) => return 0,
+    };
+
+    let module = unsafe { &*(ptr as *const RiCacheModule) };
+    let manager = module.cache_manager();
+    match block_on_jni(&mut env, "RiCacheModule::exists", async move {
+        let mgr = manager.read().await;
+        mgr.exists(&key_str).await
+    }) {
+        Some(exists) => if exists { 1 } else { 0 },
+        None => 0,
+    }
 }
 
 #[no_mangle]
-pub extern "system" fn Java_com_dunimd_ri_cache_RiCacheModule_getStats(
+pub extern "system" fn Java_com_dunimd_ri_cache_RiCacheModule_getStats0(
     mut env: JNIEnv,
     _class: JClass,
     ptr: jlong,
@@ -130,11 +172,16 @@ pub extern "system" fn Java_com_dunimd_ri_cache_RiCacheModule_getStats(
     if !check_not_null(&mut env, ptr, "RiCacheModule") {
         return 0;
     }
-    
-    let _module = unsafe { &*(ptr as *const RiCacheModule) };
-    
-    let stats = Box::new(RiCacheStats::default());
-    Box::into_raw(stats) as jlong
+
+    let module = unsafe { &*(ptr as *const RiCacheModule) };
+    let manager = module.cache_manager();
+    match block_on_jni(&mut env, "RiCacheModule::getStats", async move {
+        let mgr = manager.read().await;
+        mgr.stats().await
+    }) {
+        Some(stats) => Box::into_raw(Box::new(stats)) as jlong,
+        None => 0,
+    }
 }
 
 #[no_mangle]
@@ -164,7 +211,7 @@ pub extern "system" fn Java_com_dunimd_ri_cache_RiCacheConfig_new0(
 }
 
 #[no_mangle]
-pub extern "system" fn Java_com_dunimd_ri_cache_RiCacheConfig_setEnabled(
+pub extern "system" fn Java_com_dunimd_ri_cache_RiCacheConfig_setEnabled0(
     mut env: JNIEnv,
     _class: JClass,
     ptr: jlong,
@@ -179,7 +226,7 @@ pub extern "system" fn Java_com_dunimd_ri_cache_RiCacheConfig_setEnabled(
 }
 
 #[no_mangle]
-pub extern "system" fn Java_com_dunimd_ri_cache_RiCacheConfig_setDefaultTtlSecs(
+pub extern "system" fn Java_com_dunimd_ri_cache_RiCacheConfig_setDefaultTtlSecs0(
     mut env: JNIEnv,
     _class: JClass,
     ptr: jlong,
@@ -188,13 +235,13 @@ pub extern "system" fn Java_com_dunimd_ri_cache_RiCacheConfig_setDefaultTtlSecs(
     if !check_not_null(&mut env, ptr, "RiCacheConfig") {
         return;
     }
-    
+
     let config = unsafe { &mut *(ptr as *mut RiCacheConfig) };
-    config.default_ttl_secs = ttl as u64;
+    config.default_ttl_secs = if ttl >= 0 { ttl as u64 } else { 0 };
 }
 
 #[no_mangle]
-pub extern "system" fn Java_com_dunimd_ri_cache_RiCacheConfig_setBackendType(
+pub extern "system" fn Java_com_dunimd_ri_cache_RiCacheConfig_setBackendType0(
     mut env: JNIEnv,
     _class: JClass,
     ptr: jlong,
@@ -214,7 +261,7 @@ pub extern "system" fn Java_com_dunimd_ri_cache_RiCacheConfig_setBackendType(
 }
 
 #[no_mangle]
-pub extern "system" fn Java_com_dunimd_ri_cache_RiCacheConfig_setRedisUrl(
+pub extern "system" fn Java_com_dunimd_ri_cache_RiCacheConfig_setRedisUrl0(
     mut env: JNIEnv,
     _class: JClass,
     ptr: jlong,
@@ -223,11 +270,14 @@ pub extern "system" fn Java_com_dunimd_ri_cache_RiCacheConfig_setRedisUrl(
     if !check_not_null(&mut env, ptr, "RiCacheConfig") {
         return;
     }
-    
+
+    let url_str: String = match env.get_string(&url) {
+        Ok(s) => s.into(),
+        Err(_) => return,
+    };
+
     let config = unsafe { &mut *(ptr as *mut RiCacheConfig) };
-    config.redis_url = env.get_string(&url)
-        .expect("Failed to get redis url")
-        .into();
+    config.redis_url = url_str;
 }
 
 #[no_mangle]
@@ -248,7 +298,7 @@ pub extern "system" fn Java_com_dunimd_ri_cache_RiCacheConfig_free0(
 // =============================================================================
 
 #[no_mangle]
-pub extern "system" fn Java_com_dunimd_ri_cache_RiCacheStats_getHits(
+pub extern "system" fn Java_com_dunimd_ri_cache_RiCacheStats_getHits0(
     mut env: JNIEnv,
     _class: JClass,
     ptr: jlong,
@@ -262,7 +312,7 @@ pub extern "system" fn Java_com_dunimd_ri_cache_RiCacheStats_getHits(
 }
 
 #[no_mangle]
-pub extern "system" fn Java_com_dunimd_ri_cache_RiCacheStats_getMisses(
+pub extern "system" fn Java_com_dunimd_ri_cache_RiCacheStats_getMisses0(
     mut env: JNIEnv,
     _class: JClass,
     ptr: jlong,
@@ -420,9 +470,13 @@ pub extern "system" fn Java_com_dunimd_ri_cache_RiCachedValue_new0(
     value: JString,
     ttl_secs: jlong,
 ) -> jlong {
-    let value_str: String = env.get_string(&value)
-        .expect("Failed to get value")
-        .into();
+    let value_str: String = match env.get_string(&value) {
+        Ok(s) => s.into(),
+        Err(_) => {
+            crate::java::exception::throw_ri_error(&mut env, "Failed to get value");
+            return 0;
+        }
+    };
     
     let ttl = if ttl_secs >= 0 { Some(ttl_secs as u64) } else { None };
     let cached_value = Box::new(RiCachedValue::new(value_str, ttl));
@@ -440,9 +494,10 @@ pub extern "system" fn Java_com_dunimd_ri_cache_RiCachedValue_getValue0(
     }
     
     let cached_value = unsafe { &*(ptr as *const RiCachedValue) };
-    env.new_string(&cached_value.value)
-        .expect("Failed to create string")
-        .into_raw()
+    match env.new_string(&cached_value.value) {
+            Ok(s) => s.into_raw(),
+            Err(_) => std::ptr::null_mut(),
+        }
 }
 
 #[no_mangle]
@@ -558,19 +613,20 @@ pub extern "system" fn Java_com_dunimd_ri_cache_RiCacheManager_get0(
     }
     
     let manager = unsafe { &*(ptr as *const RiCacheManager) };
-    let key_str: String = env.get_string(&key)
-        .expect("Failed to get key")
-        .into();
-    
-    let rt = tokio::runtime::Runtime::new().expect("Failed to create runtime");
-    let result = rt.block_on(async {
+    let key_str: String = match env.get_string(&key) {
+        Ok(s) => s.into(),
+        Err(_) => return std::ptr::null_mut(),
+    };
+
+    let result = block_on_jni(&mut env, "RiCacheManager::get", async move {
         manager.get::<String>(&key_str).await
     });
-    
+
     match result {
-        Ok(Some(value)) => env.new_string(value)
-            .expect("Failed to create string")
-            .into_raw(),
+        Some(Ok(Some(value))) => match env.new_string(value) {
+            Ok(s) => s.into_raw(),
+            Err(_) => std::ptr::null_mut(),
+        },
         _ => std::ptr::null_mut(),
     }
 }
@@ -589,18 +645,20 @@ pub extern "system" fn Java_com_dunimd_ri_cache_RiCacheManager_set0(
     }
     
     let manager = unsafe { &*(ptr as *const RiCacheManager) };
-    let key_str: String = env.get_string(&key)
-        .expect("Failed to get key")
-        .into();
-    let value_str: String = env.get_string(&value)
-        .expect("Failed to get value")
-        .into();
-    let ttl = if ttl_secs >= 0 { Some(ttl_secs as u64) } else { None };
-    
-    let rt = tokio::runtime::Runtime::new().expect("Failed to create runtime");
-    let _ = rt.block_on(async {
+    let key_str: String = match env.get_string(&key) {
+        Ok(s) => s.into(),
+        Err(_) => return,
+    };
+    let value_str: String = match env.get_string(&value) {
+        Ok(s) => s.into(),
+        Err(_) => return,
+    };
+    let ttl = ttl_from_jlong(ttl_secs);
+
+    let result = block_on_jni(&mut env, "RiCacheManager::set", async move {
         manager.set(&key_str, &value_str, ttl).await
     });
+    let _ = result;
 }
 
 #[no_mangle]
@@ -615,18 +673,17 @@ pub extern "system" fn Java_com_dunimd_ri_cache_RiCacheManager_delete0(
     }
     
     let manager = unsafe { &*(ptr as *const RiCacheManager) };
-    let key_str: String = env.get_string(&key)
-        .expect("Failed to get key")
-        .into();
-    
-    let rt = tokio::runtime::Runtime::new().expect("Failed to create runtime");
-    let result = rt.block_on(async {
+    let key_str: String = match env.get_string(&key) {
+        Ok(s) => s.into(),
+        Err(_) => return 0,
+    };
+
+    match block_on_jni(&mut env, "RiCacheManager::delete", async move {
         manager.delete(&key_str).await
-    });
-    
-    match result {
-        Ok(deleted) => if deleted { 1 } else { 0 },
-        _ => 0,
+    }) {
+        Some(Ok(deleted)) => if deleted { 1 } else { 0 },
+        Some(Err(_)) => 0,
+        None => 0,
     }
 }
 
@@ -642,16 +699,17 @@ pub extern "system" fn Java_com_dunimd_ri_cache_RiCacheManager_exists0(
     }
     
     let manager = unsafe { &*(ptr as *const RiCacheManager) };
-    let key_str: String = env.get_string(&key)
-        .expect("Failed to get key")
-        .into();
-    
-    let rt = tokio::runtime::Runtime::new().expect("Failed to create runtime");
-    let exists = rt.block_on(async {
+    let key_str: String = match env.get_string(&key) {
+        Ok(s) => s.into(),
+        Err(_) => return 0,
+    };
+
+    match block_on_jni(&mut env, "RiCacheManager::exists", async move {
         manager.exists(&key_str).await
-    });
-    
-    if exists { 1 } else { 0 }
+    }) {
+        Some(exists) => if exists { 1 } else { 0 },
+        None => 0,
+    }
 }
 
 #[no_mangle]
@@ -665,11 +723,11 @@ pub extern "system" fn Java_com_dunimd_ri_cache_RiCacheManager_clear0(
     }
     
     let manager = unsafe { &*(ptr as *const RiCacheManager) };
-    
-    let rt = tokio::runtime::Runtime::new().expect("Failed to create runtime");
-    let _ = rt.block_on(async {
+
+    let result = block_on_jni(&mut env, "RiCacheManager::clear", async move {
         manager.clear().await
     });
+    let _ = result;
 }
 
 #[no_mangle]
@@ -683,14 +741,13 @@ pub extern "system" fn Java_com_dunimd_ri_cache_RiCacheManager_stats0(
     }
     
     let manager = unsafe { &*(ptr as *const RiCacheManager) };
-    
-    let rt = tokio::runtime::Runtime::new().expect("Failed to create runtime");
-    let stats = rt.block_on(async {
+
+    match block_on_jni(&mut env, "RiCacheManager::stats", async move {
         manager.stats().await
-    });
-    
-    let stats_box = Box::new(stats);
-    Box::into_raw(stats_box) as jlong
+    }) {
+        Some(stats) => Box::into_raw(Box::new(stats)) as jlong,
+        None => 0,
+    }
 }
 
 #[no_mangle]
@@ -704,15 +761,13 @@ pub extern "system" fn Java_com_dunimd_ri_cache_RiCacheManager_cleanupExpired0(
     }
     
     let manager = unsafe { &*(ptr as *const RiCacheManager) };
-    
-    let rt = tokio::runtime::Runtime::new().expect("Failed to create runtime");
-    let result = rt.block_on(async {
+
+    match block_on_jni(&mut env, "RiCacheManager::cleanupExpired", async move {
         manager.cleanup_expired().await
-    });
-    
-    match result {
-        Ok(count) => count as jlong,
-        _ => 0,
+    }) {
+        Some(Ok(count)) => count as jlong,
+        Some(Err(_)) => 0,
+        None => 0,
     }
 }
 
@@ -728,14 +783,15 @@ pub extern "system" fn Java_com_dunimd_ri_cache_RiCacheManager_invalidatePattern
     }
     
     let manager = unsafe { &*(ptr as *const RiCacheManager) };
-    let pattern_str: String = env.get_string(&pattern)
-        .expect("Failed to get pattern")
-        .into();
-    
-    let rt = tokio::runtime::Runtime::new().expect("Failed to create runtime");
-    let _ = rt.block_on(async {
+    let pattern_str: String = match env.get_string(&pattern) {
+        Ok(s) => s.into(),
+        Err(_) => return,
+    };
+
+    let result = block_on_jni(&mut env, "RiCacheManager::invalidatePattern", async move {
         manager.invalidate_pattern(&pattern_str).await
     });
+    let _ = result;
 }
 
 #[no_mangle]

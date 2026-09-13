@@ -20,9 +20,11 @@
 //! JNI bindings for Ri service mesh classes.
 
 use jni::JNIEnv;
-use jni::objects::{JClass, JString, JObjectArray};
+use jni::objects::{JClass, JString, JObject, JObjectArray};
 use jni::sys::{jlong, jboolean, jint, jstring, jobjectArray, jdouble, jlongArray};
+use jni::objects::JPrimitiveArray;
 use std::collections::HashMap as FxHashMap;
+use std::time::Duration;
 
 use crate::service_mesh::{
     RiServiceMesh, RiServiceMeshConfig, RiServiceMeshStats,
@@ -31,8 +33,7 @@ use crate::service_mesh::{
     RiHealthChecker, RiHealthSummary, RiHealthStatus, RiHealthCheckType,
     RiTrafficRoute, RiMatchCriteria, RiRouteAction, RiWeightedDestination, RiTrafficManager,
 };
-use crate::gateway::RiCircuitBreakerConfig;
-use crate::service_mesh::traffic_management::RiRateLimitConfig;
+use crate::service_mesh::traffic_management::{RiRateLimitConfig, RiCircuitBreakerConfig};
 use crate::java::exception::check_not_null;
 
 // =============================================================================
@@ -128,41 +129,61 @@ pub extern "system" fn Java_com_dunimd_ri_servicemesh_RiServiceDiscovery_registe
     }
     
     let discovery = unsafe { &*(ptr as *const RiServiceDiscovery) };
-    let service_name_str: String = env.get_string(&service_name)
-        .expect("Failed to get service name")
-        .into();
-    let host_str: String = env.get_string(&host)
-        .expect("Failed to get host")
-        .into();
+    let service_name_str: String = match env.get_string(&service_name) {
+        Ok(s) => s.into(),
+        Err(_) => {
+            crate::java::exception::throw_ri_error(&mut env, "Failed to get service name");
+            return std::ptr::null_mut();
+        }
+    };
+    let host_str: String = match env.get_string(&host) {
+        Ok(s) => s.into(),
+        Err(_) => {
+            crate::java::exception::throw_ri_error(&mut env, "Failed to get host");
+            return std::ptr::null_mut();
+        }
+    };
     
     let mut metadata = FxHashMap::new();
     let len = env.get_array_length(&keys).unwrap_or(0);
     for i in 0..len {
-        let key: JString = env.get_object_array_element(&keys, i)
-            .expect("Failed to get key")
-            .into();
-        let value: JString = env.get_object_array_element(&values, i)
-            .expect("Failed to get value")
-            .into();
-        let key_str: String = env.get_string(&key)
-            .expect("Failed to get key string")
-            .into();
-        let value_str: String = env.get_string(&value)
-            .expect("Failed to get value string")
-            .into();
+        let key: JString = match env.get_object_array_element(&keys, i) {
+            Ok(e) => e,
+            Err(_) => continue,
+        }
+        .into();
+        let value: JString = match env.get_object_array_element(&values, i) {
+            Ok(e) => e,
+            Err(_) => continue,
+        }
+        .into();
+        let key_str: String = match env.get_string(&key) {
+            Ok(s) => s.into(),
+            Err(_) => {
+                crate::java::exception::throw_ri_error(&mut env, "Failed to get key string");
+                return std::ptr::null_mut();
+            }
+        };
+        let value_str: String = match env.get_string(&value) {
+            Ok(s) => s.into(),
+            Err(_) => {
+                crate::java::exception::throw_ri_error(&mut env, "Failed to get value string");
+                return std::ptr::null_mut();
+            }
+        };
         metadata.insert(key_str, value_str);
     }
     
-    let rt = tokio::runtime::Runtime::new().expect("Failed to create runtime");
-    let result = rt.block_on(async {
+    let result = crate::java::runtime::block_on_local(&mut env, "RiServiceMesh", async {
         discovery.register_service(&service_name_str, &host_str, port as u16, metadata).await
     });
     
     match result {
-        Ok(instance_id) => env.new_string(&instance_id)
-            .expect("Failed to create string")
-            .into_raw(),
+        Some(Ok(instance_id)) => match env.new_string(&instance_id) {
+        Ok(s) => s.into_raw(),
         Err(_) => std::ptr::null_mut(),
+    },
+        _ => std::ptr::null_mut(),
     }
 }
 
@@ -178,12 +199,15 @@ pub extern "system" fn Java_com_dunimd_ri_servicemesh_RiServiceDiscovery_deregis
     }
     
     let discovery = unsafe { &*(ptr as *const RiServiceDiscovery) };
-    let instance_id_str: String = env.get_string(&instance_id)
-        .expect("Failed to get instance id")
-        .into();
+    let instance_id_str: String = match env.get_string(&instance_id) {
+        Ok(s) => s.into(),
+        Err(_) => {
+            crate::java::exception::throw_ri_error(&mut env, "Failed to get instance id");
+            return;
+        }
+    };
     
-    let rt = tokio::runtime::Runtime::new().expect("Failed to create runtime");
-    let _ = rt.block_on(async {
+    let _ = crate::java::runtime::block_on_local(&mut env, "RiServiceMesh", async {
         discovery.deregister_service(&instance_id_str).await
     });
 }
@@ -200,29 +224,33 @@ pub extern "system" fn Java_com_dunimd_ri_servicemesh_RiServiceDiscovery_discove
     }
     
     let discovery = unsafe { &*(ptr as *const RiServiceDiscovery) };
-    let service_name_str: String = env.get_string(&service_name)
-        .expect("Failed to get service name")
-        .into();
+    let service_name_str: String = match env.get_string(&service_name) {
+        Ok(s) => s.into(),
+        Err(_) => {
+            crate::java::exception::throw_ri_error(&mut env, "Failed to get service name");
+            return std::ptr::null_mut();
+        }
+    };
     
-    let rt = tokio::runtime::Runtime::new().expect("Failed to create runtime");
-    let result = rt.block_on(async {
+    let result = crate::java::runtime::block_on_local(&mut env, "RiServiceMesh", async {
         discovery.discover_service(&service_name_str).await
     });
     
     match result {
-        Ok(instances) => {
+        Some(Ok(instances)) => {
             let ptrs: Vec<jlong> = instances.iter().map(|i| {
                 let boxed = Box::new(i.clone());
                 Box::into_raw(boxed) as jlong
             }).collect();
             
-            let array = env.new_long_array(ptrs.len() as i32)
-                .expect("Failed to create long array");
-            env.set_long_array_region(array, 0, &ptrs)
-                .expect("Failed to set long array");
-            array
+            let array = match env.new_long_array(ptrs.len() as i32) {
+                Ok(a) => a,
+                Err(_) => { return std::ptr::null_mut(); }
+            };
+            let _ = env.set_long_array_region(&array, 0, &ptrs);
+            array.into_raw()
         }
-        Err(_) => std::ptr::null_mut(),
+        _ => std::ptr::null_mut(),
     }
 }
 
@@ -238,12 +266,15 @@ pub extern "system" fn Java_com_dunimd_ri_servicemesh_RiServiceDiscovery_updateH
     }
     
     let discovery = unsafe { &*(ptr as *const RiServiceDiscovery) };
-    let instance_id_str: String = env.get_string(&instance_id)
-        .expect("Failed to get instance id")
-        .into();
+    let instance_id_str: String = match env.get_string(&instance_id) {
+        Ok(s) => s.into(),
+        Err(_) => {
+            crate::java::exception::throw_ri_error(&mut env, "Failed to get instance id");
+            return;
+        }
+    };
     
-    let rt = tokio::runtime::Runtime::new().expect("Failed to create runtime");
-    let _ = rt.block_on(async {
+    let _ = crate::java::runtime::block_on_local(&mut env, "RiServiceMesh", async {
         discovery.update_heartbeat(&instance_id_str).await
     });
 }
@@ -261,9 +292,13 @@ pub extern "system" fn Java_com_dunimd_ri_servicemesh_RiServiceDiscovery_setServ
     }
     
     let discovery = unsafe { &*(ptr as *const RiServiceDiscovery) };
-    let instance_id_str: String = env.get_string(&instance_id)
-        .expect("Failed to get instance id")
-        .into();
+    let instance_id_str: String = match env.get_string(&instance_id) {
+        Ok(s) => s.into(),
+        Err(_) => {
+            crate::java::exception::throw_ri_error(&mut env, "Failed to get instance id");
+            return;
+        }
+    };
     
     let status = match status_ordinal {
         0 => RiServiceStatus::Starting,
@@ -274,8 +309,7 @@ pub extern "system" fn Java_com_dunimd_ri_servicemesh_RiServiceDiscovery_setServ
         _ => RiServiceStatus::Starting,
     };
     
-    let rt = tokio::runtime::Runtime::new().expect("Failed to create runtime");
-    let _ = rt.block_on(async {
+    let _ = crate::java::runtime::block_on_local(&mut env, "RiServiceMesh", async {
         discovery.set_service_status(&instance_id_str, status).await
     });
 }
@@ -292,29 +326,32 @@ pub extern "system" fn Java_com_dunimd_ri_servicemesh_RiServiceDiscovery_getAllS
     
     let discovery = unsafe { &*(ptr as *const RiServiceDiscovery) };
     
-    let rt = tokio::runtime::Runtime::new().expect("Failed to create runtime");
-    let result = rt.block_on(async {
+    let result = crate::java::runtime::block_on_local(&mut env, "RiServiceMesh", async {
         discovery.get_all_services().await
     });
     
     match result {
-        Ok(services) => {
-            let string_class = env.find_class("java/lang/String")
-                .expect("Failed to find String class");
-            let array = env.new_object_array(services.len() as i32, string_class, std::ptr::null_mut())
-                .expect("Failed to create string array");
+        Some(Ok(services)) => {
+            let string_class = match env.find_class("java/lang/String") {
+                Ok(c) => c,
+                Err(_) => { return std::ptr::null_mut(); }
+            };
+            let array = match env.new_object_array(services.len() as i32, &string_class, JObject::null()) {
+                Ok(a) => a,
+                Err(_) => { return std::ptr::null_mut(); }
+            };
             
             for (i, service) in services.iter().enumerate() {
-                let jstr = env.new_string(service)
-                    .expect("Failed to create string")
-                    .into_raw();
-                env.set_object_array_element(&array, i as i32, jstr)
-                    .expect("Failed to set array element");
+                let jstr = match env.new_string(service) {
+                    Ok(s) => s,
+                    Err(_) => continue,
+                };
+                let _ = env.set_object_array_element(&array, i as i32, &jstr);
             }
             
-            array
+            array.into_raw()
         }
-        Err(_) => std::ptr::null_mut(),
+        _ => std::ptr::null_mut(),
     }
 }
 
@@ -344,15 +381,27 @@ pub extern "system" fn Java_com_dunimd_ri_servicemesh_RiServiceInstance_new0(
     host: JString,
     port: jint,
 ) -> jlong {
-    let id_str: String = env.get_string(&id)
-        .expect("Failed to get id")
-        .into();
-    let service_name_str: String = env.get_string(&service_name)
-        .expect("Failed to get service name")
-        .into();
-    let host_str: String = env.get_string(&host)
-        .expect("Failed to get host")
-        .into();
+    let id_str: String = match env.get_string(&id) {
+        Ok(s) => s.into(),
+        Err(_) => {
+            crate::java::exception::throw_ri_error(&mut env, "Failed to get id");
+            return 0;
+        }
+    };
+    let service_name_str: String = match env.get_string(&service_name) {
+        Ok(s) => s.into(),
+        Err(_) => {
+            crate::java::exception::throw_ri_error(&mut env, "Failed to get service name");
+            return 0;
+        }
+    };
+    let host_str: String = match env.get_string(&host) {
+        Ok(s) => s.into(),
+        Err(_) => {
+            crate::java::exception::throw_ri_error(&mut env, "Failed to get host");
+            return 0;
+        }
+    };
     
     let instance = Box::new(RiServiceInstance {
         id: id_str,
@@ -378,9 +427,10 @@ pub extern "system" fn Java_com_dunimd_ri_servicemesh_RiServiceInstance_getId0(
     }
     
     let instance = unsafe { &*(ptr as *const RiServiceInstance) };
-    env.new_string(&instance.id)
-        .expect("Failed to create string")
-        .into_raw()
+    match env.new_string(&instance.id) {
+        Ok(s) => s.into_raw(),
+        Err(_) => std::ptr::null_mut(),
+    }
 }
 
 #[no_mangle]
@@ -394,9 +444,10 @@ pub extern "system" fn Java_com_dunimd_ri_servicemesh_RiServiceInstance_getServi
     }
     
     let instance = unsafe { &*(ptr as *const RiServiceInstance) };
-    env.new_string(&instance.service_name)
-        .expect("Failed to create string")
-        .into_raw()
+    match env.new_string(&instance.service_name) {
+        Ok(s) => s.into_raw(),
+        Err(_) => std::ptr::null_mut(),
+    }
 }
 
 #[no_mangle]
@@ -410,9 +461,10 @@ pub extern "system" fn Java_com_dunimd_ri_servicemesh_RiServiceInstance_getHost0
     }
     
     let instance = unsafe { &*(ptr as *const RiServiceInstance) };
-    env.new_string(&instance.host)
-        .expect("Failed to create string")
-        .into_raw()
+    match env.new_string(&instance.host) {
+        Ok(s) => s.into_raw(),
+        Err(_) => std::ptr::null_mut(),
+    }
 }
 
 #[no_mangle]
@@ -462,20 +514,24 @@ pub extern "system" fn Java_com_dunimd_ri_servicemesh_RiServiceInstance_getMetad
     let instance = unsafe { &*(ptr as *const RiServiceInstance) };
     let keys: Vec<&String> = instance.metadata.keys().collect();
     
-    let string_class = env.find_class("java/lang/String")
-        .expect("Failed to find String class");
-    let array = env.new_object_array(keys.len() as i32, string_class, std::ptr::null_mut())
-        .expect("Failed to create string array");
+    let string_class = match env.find_class("java/lang/String") {
+        Ok(c) => c,
+        Err(_) => { return std::ptr::null_mut(); }
+    };
+    let array = match env.new_object_array(keys.len() as i32, &string_class, JObject::null()) {
+        Ok(a) => a,
+        Err(_) => { return std::ptr::null_mut(); }
+    };
     
     for (i, key) in keys.iter().enumerate() {
-        let jstr = env.new_string(key)
-            .expect("Failed to create string")
-            .into_raw();
-        env.set_object_array_element(&array, i as i32, jstr)
-            .expect("Failed to set array element");
+        let jstr = match env.new_string(key) {
+            Ok(s) => s,
+            Err(_) => continue,
+        };
+                let _ = env.set_object_array_element(&array, i as i32, &jstr);
     }
     
-    array
+    array.into_raw()
 }
 
 #[no_mangle]
@@ -490,14 +546,19 @@ pub extern "system" fn Java_com_dunimd_ri_servicemesh_RiServiceInstance_getMetad
     }
     
     let instance = unsafe { &*(ptr as *const RiServiceInstance) };
-    let key_str: String = env.get_string(&key)
-        .expect("Failed to get key")
-        .into();
+    let key_str: String = match env.get_string(&key) {
+        Ok(s) => s.into(),
+        Err(_) => {
+            crate::java::exception::throw_ri_error(&mut env, "Failed to get key");
+            return std::ptr::null_mut();
+        }
+    };
     
     match instance.metadata.get(&key_str) {
-        Some(value) => env.new_string(value)
-            .expect("Failed to create string")
-            .into_raw(),
+        Some(value) => match env.new_string(value) {
+            Ok(s) => s.into_raw(),
+            Err(_) => std::ptr::null_mut(),
+        },
         None => std::ptr::null_mut(),
     }
 }
@@ -614,12 +675,20 @@ pub extern "system" fn Java_com_dunimd_ri_servicemesh_RiServiceEndpoint_new0(
     endpoint: JString,
     weight: jint,
 ) -> jlong {
-    let service_name_str: String = env.get_string(&service_name)
-        .expect("Failed to get service name")
-        .into();
-    let endpoint_str: String = env.get_string(&endpoint)
-        .expect("Failed to get endpoint")
-        .into();
+    let service_name_str: String = match env.get_string(&service_name) {
+        Ok(s) => s.into(),
+        Err(_) => {
+            crate::java::exception::throw_ri_error(&mut env, "Failed to get service name");
+            return 0;
+        }
+    };
+    let endpoint_str: String = match env.get_string(&endpoint) {
+        Ok(s) => s.into(),
+        Err(_) => {
+            crate::java::exception::throw_ri_error(&mut env, "Failed to get endpoint");
+            return 0;
+        }
+    };
     
     let endpoint = Box::new(RiServiceEndpoint {
         service_name: service_name_str,
@@ -643,9 +712,10 @@ pub extern "system" fn Java_com_dunimd_ri_servicemesh_RiServiceEndpoint_getServi
     }
     
     let endpoint = unsafe { &*(ptr as *const RiServiceEndpoint) };
-    env.new_string(&endpoint.service_name)
-        .expect("Failed to create string")
-        .into_raw()
+    match env.new_string(&endpoint.service_name) {
+        Ok(s) => s.into_raw(),
+        Err(_) => std::ptr::null_mut(),
+    }
 }
 
 #[no_mangle]
@@ -659,9 +729,10 @@ pub extern "system" fn Java_com_dunimd_ri_servicemesh_RiServiceEndpoint_getEndpo
     }
     
     let endpoint = unsafe { &*(ptr as *const RiServiceEndpoint) };
-    env.new_string(&endpoint.endpoint)
-        .expect("Failed to create string")
-        .into_raw()
+    match env.new_string(&endpoint.endpoint) {
+        Ok(s) => s.into_raw(),
+        Err(_) => std::ptr::null_mut(),
+    }
 }
 
 #[no_mangle]
@@ -709,20 +780,24 @@ pub extern "system" fn Java_com_dunimd_ri_servicemesh_RiServiceEndpoint_getMetad
     let endpoint = unsafe { &*(ptr as *const RiServiceEndpoint) };
     let keys: Vec<&String> = endpoint.metadata.keys().collect();
     
-    let string_class = env.find_class("java/lang/String")
-        .expect("Failed to find String class");
-    let array = env.new_object_array(keys.len() as i32, string_class, std::ptr::null_mut())
-        .expect("Failed to create string array");
+    let string_class = match env.find_class("java/lang/String") {
+        Ok(c) => c,
+        Err(_) => { return std::ptr::null_mut(); }
+    };
+    let array = match env.new_object_array(keys.len() as i32, &string_class, JObject::null()) {
+        Ok(a) => a,
+        Err(_) => { return std::ptr::null_mut(); }
+    };
     
     for (i, key) in keys.iter().enumerate() {
-        let jstr = env.new_string(key)
-            .expect("Failed to create string")
-            .into_raw();
-        env.set_object_array_element(&array, i as i32, jstr)
-            .expect("Failed to set array element");
+        let jstr = match env.new_string(key) {
+            Ok(s) => s,
+            Err(_) => continue,
+        };
+                let _ = env.set_object_array_element(&array, i as i32, &jstr);
     }
     
-    array
+    array.into_raw()
 }
 
 #[no_mangle]
@@ -737,14 +812,19 @@ pub extern "system" fn Java_com_dunimd_ri_servicemesh_RiServiceEndpoint_getMetad
     }
     
     let endpoint = unsafe { &*(ptr as *const RiServiceEndpoint) };
-    let key_str: String = env.get_string(&key)
-        .expect("Failed to get key")
-        .into();
+    let key_str: String = match env.get_string(&key) {
+        Ok(s) => s.into(),
+        Err(_) => {
+            crate::java::exception::throw_ri_error(&mut env, "Failed to get key");
+            return std::ptr::null_mut();
+        }
+    };
     
     match endpoint.metadata.get(&key_str) {
-        Some(value) => env.new_string(value)
-            .expect("Failed to create string")
-            .into_raw(),
+        Some(value) => match env.new_string(value) {
+            Ok(s) => s.into_raw(),
+            Err(_) => std::ptr::null_mut(),
+        },
         None => std::ptr::null_mut(),
     }
 }
@@ -789,15 +869,22 @@ pub extern "system" fn Java_com_dunimd_ri_servicemesh_RiHealthChecker_startHealt
     }
     
     let checker = unsafe { &*(ptr as *const RiHealthChecker) };
-    let service_name_str: String = env.get_string(&service_name)
-        .expect("Failed to get service name")
-        .into();
-    let endpoint_str: String = env.get_string(&endpoint)
-        .expect("Failed to get endpoint")
-        .into();
+    let service_name_str: String = match env.get_string(&service_name) {
+        Ok(s) => s.into(),
+        Err(_) => {
+            crate::java::exception::throw_ri_error(&mut env, "Failed to get service name");
+            return;
+        }
+    };
+    let endpoint_str: String = match env.get_string(&endpoint) {
+        Ok(s) => s.into(),
+        Err(_) => {
+            crate::java::exception::throw_ri_error(&mut env, "Failed to get endpoint");
+            return;
+        }
+    };
     
-    let rt = tokio::runtime::Runtime::new().expect("Failed to create runtime");
-    let _ = rt.block_on(async {
+    let _ = crate::java::runtime::block_on_local(&mut env, "RiServiceMesh", async {
         checker.start_health_check(&service_name_str, &endpoint_str).await
     });
 }
@@ -816,12 +903,20 @@ pub extern "system" fn Java_com_dunimd_ri_servicemesh_RiHealthChecker_startHealt
     }
     
     let checker = unsafe { &*(ptr as *const RiHealthChecker) };
-    let service_name_str: String = env.get_string(&service_name)
-        .expect("Failed to get service name")
-        .into();
-    let endpoint_str: String = env.get_string(&endpoint)
-        .expect("Failed to get endpoint")
-        .into();
+    let service_name_str: String = match env.get_string(&service_name) {
+        Ok(s) => s.into(),
+        Err(_) => {
+            crate::java::exception::throw_ri_error(&mut env, "Failed to get service name");
+            return;
+        }
+    };
+    let endpoint_str: String = match env.get_string(&endpoint) {
+        Ok(s) => s.into(),
+        Err(_) => {
+            crate::java::exception::throw_ri_error(&mut env, "Failed to get endpoint");
+            return;
+        }
+    };
     
     let check_type = match check_type_ordinal {
         0 => RiHealthCheckType::Http,
@@ -831,8 +926,7 @@ pub extern "system" fn Java_com_dunimd_ri_servicemesh_RiHealthChecker_startHealt
         _ => RiHealthCheckType::Http,
     };
     
-    let rt = tokio::runtime::Runtime::new().expect("Failed to create runtime");
-    let _ = rt.block_on(async {
+    let _ = crate::java::runtime::block_on_local(&mut env, "RiServiceMesh", async {
         checker.start_health_check_with_type(&service_name_str, &endpoint_str, check_type).await
     });
 }
@@ -850,15 +944,22 @@ pub extern "system" fn Java_com_dunimd_ri_servicemesh_RiHealthChecker_stopHealth
     }
     
     let checker = unsafe { &*(ptr as *const RiHealthChecker) };
-    let service_name_str: String = env.get_string(&service_name)
-        .expect("Failed to get service name")
-        .into();
-    let endpoint_str: String = env.get_string(&endpoint)
-        .expect("Failed to get endpoint")
-        .into();
+    let service_name_str: String = match env.get_string(&service_name) {
+        Ok(s) => s.into(),
+        Err(_) => {
+            crate::java::exception::throw_ri_error(&mut env, "Failed to get service name");
+            return;
+        }
+    };
+    let endpoint_str: String = match env.get_string(&endpoint) {
+        Ok(s) => s.into(),
+        Err(_) => {
+            crate::java::exception::throw_ri_error(&mut env, "Failed to get endpoint");
+            return;
+        }
+    };
     
-    let rt = tokio::runtime::Runtime::new().expect("Failed to create runtime");
-    let _ = rt.block_on(async {
+    let _ = crate::java::runtime::block_on_local(&mut env, "RiServiceMesh", async {
         checker.stop_health_check(&service_name_str, &endpoint_str).await
     });
 }
@@ -875,21 +976,24 @@ pub extern "system" fn Java_com_dunimd_ri_servicemesh_RiHealthChecker_getService
     }
     
     let checker = unsafe { &*(ptr as *const RiHealthChecker) };
-    let service_name_str: String = env.get_string(&service_name)
-        .expect("Failed to get service name")
-        .into();
+    let service_name_str: String = match env.get_string(&service_name) {
+        Ok(s) => s.into(),
+        Err(_) => {
+            crate::java::exception::throw_ri_error(&mut env, "Failed to get service name");
+            return 0;
+        }
+    };
     
-    let rt = tokio::runtime::Runtime::new().expect("Failed to create runtime");
-    let result = rt.block_on(async {
+    let result = crate::java::runtime::block_on_local(&mut env, "RiServiceMesh", async {
         checker.get_service_health_summary(&service_name_str).await
     });
     
     match result {
-        Ok(summary) => {
+        Some(Ok(summary)) => {
             let boxed = Box::new(summary);
             Box::into_raw(boxed) as jlong
         }
-        Err(_) => 0,
+        _ => 0,
     }
 }
 
@@ -921,9 +1025,10 @@ pub extern "system" fn Java_com_dunimd_ri_servicemesh_RiHealthSummary_getService
     }
     
     let summary = unsafe { &*(ptr as *const RiHealthSummary) };
-    env.new_string(&summary.service_name)
-        .expect("Failed to create string")
-        .into_raw()
+    match env.new_string(&summary.service_name) {
+        Ok(s) => s.into_raw(),
+        Err(_) => std::ptr::null_mut(),
+    }
 }
 
 #[no_mangle]
@@ -1040,15 +1145,27 @@ pub extern "system" fn Java_com_dunimd_ri_servicemesh_RiTrafficRoute_new0(
     source_service: JString,
     destination_service: JString,
 ) -> jlong {
-    let name_str: String = env.get_string(&name)
-        .expect("Failed to get name")
-        .into();
-    let source_service_str: String = env.get_string(&source_service)
-        .expect("Failed to get source service")
-        .into();
-    let destination_service_str: String = env.get_string(&destination_service)
-        .expect("Failed to get destination service")
-        .into();
+    let name_str: String = match env.get_string(&name) {
+        Ok(s) => s.into(),
+        Err(_) => {
+            crate::java::exception::throw_ri_error(&mut env, "Failed to get name");
+            return 0;
+        }
+    };
+    let source_service_str: String = match env.get_string(&source_service) {
+        Ok(s) => s.into(),
+        Err(_) => {
+            crate::java::exception::throw_ri_error(&mut env, "Failed to get source service");
+            return 0;
+        }
+    };
+    let destination_service_str: String = match env.get_string(&destination_service) {
+        Ok(s) => s.into(),
+        Err(_) => {
+            crate::java::exception::throw_ri_error(&mut env, "Failed to get destination service");
+            return 0;
+        }
+    };
     
     let route = Box::new(RiTrafficRoute {
         name: name_str,
@@ -1079,9 +1196,10 @@ pub extern "system" fn Java_com_dunimd_ri_servicemesh_RiTrafficRoute_getName0(
     }
     
     let route = unsafe { &*(ptr as *const RiTrafficRoute) };
-    env.new_string(&route.name)
-        .expect("Failed to create string")
-        .into_raw()
+    match env.new_string(&route.name) {
+        Ok(s) => s.into_raw(),
+        Err(_) => std::ptr::null_mut(),
+    }
 }
 
 #[no_mangle]
@@ -1095,9 +1213,10 @@ pub extern "system" fn Java_com_dunimd_ri_servicemesh_RiTrafficRoute_getSourceSe
     }
     
     let route = unsafe { &*(ptr as *const RiTrafficRoute) };
-    env.new_string(&route.source_service)
-        .expect("Failed to create string")
-        .into_raw()
+    match env.new_string(&route.source_service) {
+        Ok(s) => s.into_raw(),
+        Err(_) => std::ptr::null_mut(),
+    }
 }
 
 #[no_mangle]
@@ -1111,9 +1230,10 @@ pub extern "system" fn Java_com_dunimd_ri_servicemesh_RiTrafficRoute_getDestinat
     }
     
     let route = unsafe { &*(ptr as *const RiTrafficRoute) };
-    env.new_string(&route.destination_service)
-        .expect("Failed to create string")
-        .into_raw()
+    match env.new_string(&route.destination_service) {
+        Ok(s) => s.into_raw(),
+        Err(_) => std::ptr::null_mut(),
+    }
 }
 
 #[no_mangle]
@@ -1294,9 +1414,10 @@ pub extern "system" fn Java_com_dunimd_ri_servicemesh_RiMatchCriteria_getPathPre
     
     let criteria = unsafe { &*(ptr as *const RiMatchCriteria) };
     match &criteria.path_prefix {
-        Some(prefix) => env.new_string(prefix)
-            .expect("Failed to create string")
-            .into_raw(),
+        Some(prefix) => match env.new_string(prefix) {
+            Ok(s) => s.into_raw(),
+            Err(_) => std::ptr::null_mut(),
+        },
         None => std::ptr::null_mut(),
     }
 }
@@ -1313,9 +1434,13 @@ pub extern "system" fn Java_com_dunimd_ri_servicemesh_RiMatchCriteria_setPathPre
     }
     
     let criteria = unsafe { &mut *(ptr as *mut RiMatchCriteria) };
-    let prefix_str: String = env.get_string(&path_prefix)
-        .expect("Failed to get path prefix")
-        .into();
+    let prefix_str: String = match env.get_string(&path_prefix) {
+        Ok(s) => s.into(),
+        Err(_) => {
+            crate::java::exception::throw_ri_error(&mut env, "Failed to get path prefix");
+            return;
+        }
+    };
     criteria.path_prefix = Some(prefix_str);
 }
 
@@ -1331,9 +1456,10 @@ pub extern "system" fn Java_com_dunimd_ri_servicemesh_RiMatchCriteria_getMethod0
     
     let criteria = unsafe { &*(ptr as *const RiMatchCriteria) };
     match &criteria.method {
-        Some(method) => env.new_string(method)
-            .expect("Failed to create string")
-            .into_raw(),
+        Some(method) => match env.new_string(method) {
+            Ok(s) => s.into_raw(),
+            Err(_) => std::ptr::null_mut(),
+        },
         None => std::ptr::null_mut(),
     }
 }
@@ -1350,9 +1476,13 @@ pub extern "system" fn Java_com_dunimd_ri_servicemesh_RiMatchCriteria_setMethod0
     }
     
     let criteria = unsafe { &mut *(ptr as *mut RiMatchCriteria) };
-    let method_str: String = env.get_string(&method)
-        .expect("Failed to get method")
-        .into();
+    let method_str: String = match env.get_string(&method) {
+        Ok(s) => s.into(),
+        Err(_) => {
+            crate::java::exception::throw_ri_error(&mut env, "Failed to get method");
+            return;
+        }
+    };
     criteria.method = Some(method_str);
 }
 
@@ -1369,20 +1499,24 @@ pub extern "system" fn Java_com_dunimd_ri_servicemesh_RiMatchCriteria_getHeaderK
     let criteria = unsafe { &*(ptr as *const RiMatchCriteria) };
     let keys: Vec<&String> = criteria.headers.keys().collect();
     
-    let string_class = env.find_class("java/lang/String")
-        .expect("Failed to find String class");
-    let array = env.new_object_array(keys.len() as i32, string_class, std::ptr::null_mut())
-        .expect("Failed to create string array");
+    let string_class = match env.find_class("java/lang/String") {
+        Ok(c) => c,
+        Err(_) => { return std::ptr::null_mut(); }
+    };
+    let array = match env.new_object_array(keys.len() as i32, &string_class, JObject::null()) {
+        Ok(a) => a,
+        Err(_) => { return std::ptr::null_mut(); }
+    };
     
     for (i, key) in keys.iter().enumerate() {
-        let jstr = env.new_string(key)
-            .expect("Failed to create string")
-            .into_raw();
-        env.set_object_array_element(&array, i as i32, jstr)
-            .expect("Failed to set array element");
+        let jstr = match env.new_string(key) {
+            Ok(s) => s,
+            Err(_) => continue,
+        };
+                let _ = env.set_object_array_element(&array, i as i32, &jstr);
     }
     
-    array
+    array.into_raw()
 }
 
 #[no_mangle]
@@ -1397,14 +1531,19 @@ pub extern "system" fn Java_com_dunimd_ri_servicemesh_RiMatchCriteria_getHeaderV
     }
     
     let criteria = unsafe { &*(ptr as *const RiMatchCriteria) };
-    let key_str: String = env.get_string(&key)
-        .expect("Failed to get key")
-        .into();
+    let key_str: String = match env.get_string(&key) {
+        Ok(s) => s.into(),
+        Err(_) => {
+            crate::java::exception::throw_ri_error(&mut env, "Failed to get key");
+            return std::ptr::null_mut();
+        }
+    };
     
     match criteria.headers.get(&key_str) {
-        Some(value) => env.new_string(value)
-            .expect("Failed to create string")
-            .into_raw(),
+        Some(value) => match env.new_string(value) {
+            Ok(s) => s.into_raw(),
+            Err(_) => std::ptr::null_mut(),
+        },
         None => std::ptr::null_mut(),
     }
 }
@@ -1422,12 +1561,20 @@ pub extern "system" fn Java_com_dunimd_ri_servicemesh_RiMatchCriteria_addHeader0
     }
     
     let criteria = unsafe { &mut *(ptr as *mut RiMatchCriteria) };
-    let key_str: String = env.get_string(&key)
-        .expect("Failed to get key")
-        .into();
-    let value_str: String = env.get_string(&value)
-        .expect("Failed to get value")
-        .into();
+    let key_str: String = match env.get_string(&key) {
+        Ok(s) => s.into(),
+        Err(_) => {
+            crate::java::exception::throw_ri_error(&mut env, "Failed to get key");
+            return;
+        }
+    };
+    let value_str: String = match env.get_string(&value) {
+        Ok(s) => s.into(),
+        Err(_) => {
+            crate::java::exception::throw_ri_error(&mut env, "Failed to get value");
+            return;
+        }
+    };
     criteria.headers.insert(key_str, value_str);
 }
 
@@ -1444,20 +1591,24 @@ pub extern "system" fn Java_com_dunimd_ri_servicemesh_RiMatchCriteria_getQueryPa
     let criteria = unsafe { &*(ptr as *const RiMatchCriteria) };
     let keys: Vec<&String> = criteria.query_parameters.keys().collect();
     
-    let string_class = env.find_class("java/lang/String")
-        .expect("Failed to find String class");
-    let array = env.new_object_array(keys.len() as i32, string_class, std::ptr::null_mut())
-        .expect("Failed to create string array");
+    let string_class = match env.find_class("java/lang/String") {
+        Ok(c) => c,
+        Err(_) => { return std::ptr::null_mut(); }
+    };
+    let array = match env.new_object_array(keys.len() as i32, &string_class, JObject::null()) {
+        Ok(a) => a,
+        Err(_) => { return std::ptr::null_mut(); }
+    };
     
     for (i, key) in keys.iter().enumerate() {
-        let jstr = env.new_string(key)
-            .expect("Failed to create string")
-            .into_raw();
-        env.set_object_array_element(&array, i as i32, jstr)
-            .expect("Failed to set array element");
+        let jstr = match env.new_string(key) {
+            Ok(s) => s,
+            Err(_) => continue,
+        };
+                let _ = env.set_object_array_element(&array, i as i32, &jstr);
     }
     
-    array
+    array.into_raw()
 }
 
 #[no_mangle]
@@ -1472,14 +1623,19 @@ pub extern "system" fn Java_com_dunimd_ri_servicemesh_RiMatchCriteria_getQueryPa
     }
     
     let criteria = unsafe { &*(ptr as *const RiMatchCriteria) };
-    let key_str: String = env.get_string(&key)
-        .expect("Failed to get key")
-        .into();
+    let key_str: String = match env.get_string(&key) {
+        Ok(s) => s.into(),
+        Err(_) => {
+            crate::java::exception::throw_ri_error(&mut env, "Failed to get key");
+            return std::ptr::null_mut();
+        }
+    };
     
     match criteria.query_parameters.get(&key_str) {
-        Some(value) => env.new_string(value)
-            .expect("Failed to create string")
-            .into_raw(),
+        Some(value) => match env.new_string(value) {
+            Ok(s) => s.into_raw(),
+            Err(_) => std::ptr::null_mut(),
+        },
         None => std::ptr::null_mut(),
     }
 }
@@ -1497,12 +1653,20 @@ pub extern "system" fn Java_com_dunimd_ri_servicemesh_RiMatchCriteria_addQueryPa
     }
     
     let criteria = unsafe { &mut *(ptr as *mut RiMatchCriteria) };
-    let key_str: String = env.get_string(&key)
-        .expect("Failed to get key")
-        .into();
-    let value_str: String = env.get_string(&value)
-        .expect("Failed to get value")
-        .into();
+    let key_str: String = match env.get_string(&key) {
+        Ok(s) => s.into(),
+        Err(_) => {
+            crate::java::exception::throw_ri_error(&mut env, "Failed to get key");
+            return;
+        }
+    };
+    let value_str: String = match env.get_string(&value) {
+        Ok(s) => s.into(),
+        Err(_) => {
+            crate::java::exception::throw_ri_error(&mut env, "Failed to get value");
+            return;
+        }
+    };
     criteria.query_parameters.insert(key_str, value_str);
 }
 
@@ -1525,14 +1689,13 @@ pub extern "system" fn Java_com_dunimd_ri_servicemesh_RiMatchCriteria_free0(
 
 #[no_mangle]
 pub extern "system" fn Java_com_dunimd_ri_servicemesh_RiRouteAction_route0(
-    mut env: JNIEnv,
+    env: JNIEnv,
     _class: JClass,
-    destination_ptrs: jlongArray,
+    destination_ptrs: JPrimitiveArray<jlong>,
 ) -> jlong {
     let len = env.get_array_length(&destination_ptrs).unwrap_or(0);
     let mut ptrs = vec![0i64; len as usize];
-    env.get_long_array_region(destination_ptrs, 0, &mut ptrs)
-        .expect("Failed to get long array");
+    env.get_long_array_region(&destination_ptrs, 0, &mut ptrs).unwrap_or(());
     
     let destinations: Vec<RiWeightedDestination> = ptrs.iter()
         .filter(|&&p| p != 0)
@@ -1552,9 +1715,13 @@ pub extern "system" fn Java_com_dunimd_ri_servicemesh_RiRouteAction_redirect0(
     _class: JClass,
     uri: JString,
 ) -> jlong {
-    let uri_str: String = env.get_string(&uri)
-        .expect("Failed to get uri")
-        .into();
+    let uri_str: String = match env.get_string(&uri) {
+        Ok(s) => s.into(),
+        Err(_) => {
+            crate::java::exception::throw_ri_error(&mut env, "Failed to get uri");
+            return 0;
+        }
+    };
     
     let action = Box::new(RiRouteAction::Redirect(uri_str));
     Box::into_raw(action) as jlong
@@ -1567,9 +1734,13 @@ pub extern "system" fn Java_com_dunimd_ri_servicemesh_RiRouteAction_directRespon
     status_code: jint,
     body: JString,
 ) -> jlong {
-    let body_str: String = env.get_string(&body)
-        .expect("Failed to get body")
-        .into();
+    let body_str: String = match env.get_string(&body) {
+        Ok(s) => s.into(),
+        Err(_) => {
+            crate::java::exception::throw_ri_error(&mut env, "Failed to get body");
+            return 0;
+        }
+    };
     
     let action = Box::new(RiRouteAction::DirectResponse(status_code as u16, body_str));
     Box::into_raw(action) as jlong
@@ -1612,11 +1783,12 @@ pub extern "system" fn Java_com_dunimd_ri_servicemesh_RiRouteAction_getDestinati
                 Box::into_raw(boxed) as jlong
             }).collect();
             
-            let array = env.new_long_array(ptrs.len() as i32)
-                .expect("Failed to create long array");
-            env.set_long_array_region(array, 0, &ptrs)
-                .expect("Failed to set long array");
-            array
+            let array = match env.new_long_array(ptrs.len() as i32) {
+                Ok(a) => a,
+                Err(_) => { return std::ptr::null_mut(); }
+            };
+            let _ = env.set_long_array_region(&array, 0, &ptrs);
+            array.into_raw()
         }
         _ => std::ptr::null_mut(),
     }
@@ -1635,9 +1807,10 @@ pub extern "system" fn Java_com_dunimd_ri_servicemesh_RiRouteAction_getRedirectU
     let action = unsafe { &*(ptr as *const RiRouteAction) };
     
     match action {
-        RiRouteAction::Redirect(uri) => env.new_string(uri)
-            .expect("Failed to create string")
-            .into_raw(),
+        RiRouteAction::Redirect(uri) => match env.new_string(uri) {
+            Ok(s) => s.into_raw(),
+            Err(_) => std::ptr::null_mut(),
+        },
         _ => std::ptr::null_mut(),
     }
 }
@@ -1673,9 +1846,10 @@ pub extern "system" fn Java_com_dunimd_ri_servicemesh_RiRouteAction_getDirectRes
     let action = unsafe { &*(ptr as *const RiRouteAction) };
     
     match action {
-        RiRouteAction::DirectResponse(_, body) => env.new_string(body)
-            .expect("Failed to create string")
-            .into_raw(),
+        RiRouteAction::DirectResponse(_, body) => match env.new_string(body) {
+            Ok(s) => s.into_raw(),
+            Err(_) => std::ptr::null_mut(),
+        },
         _ => std::ptr::null_mut(),
     }
 }
@@ -1704,9 +1878,13 @@ pub extern "system" fn Java_com_dunimd_ri_servicemesh_RiWeightedDestination_new0
     service: JString,
     weight: jint,
 ) -> jlong {
-    let service_str: String = env.get_string(&service)
-        .expect("Failed to get service")
-        .into();
+    let service_str: String = match env.get_string(&service) {
+        Ok(s) => s.into(),
+        Err(_) => {
+            crate::java::exception::throw_ri_error(&mut env, "Failed to get service");
+            return 0;
+        }
+    };
     
     let dest = Box::new(RiWeightedDestination {
         service: service_str,
@@ -1727,9 +1905,10 @@ pub extern "system" fn Java_com_dunimd_ri_servicemesh_RiWeightedDestination_getS
     }
     
     let dest = unsafe { &*(ptr as *const RiWeightedDestination) };
-    env.new_string(&dest.service)
-        .expect("Failed to create string")
-        .into_raw()
+    match env.new_string(&dest.service) {
+        Ok(s) => s.into_raw(),
+        Err(_) => std::ptr::null_mut(),
+    }
 }
 
 #[no_mangle]
@@ -1758,9 +1937,10 @@ pub extern "system" fn Java_com_dunimd_ri_servicemesh_RiWeightedDestination_getS
     
     let dest = unsafe { &*(ptr as *const RiWeightedDestination) };
     match &dest.subset {
-        Some(subset) => env.new_string(subset)
-            .expect("Failed to create string")
-            .into_raw(),
+        Some(subset) => match env.new_string(subset) {
+            Ok(s) => s.into_raw(),
+            Err(_) => std::ptr::null_mut(),
+        },
         None => std::ptr::null_mut(),
     }
 }
@@ -1777,9 +1957,13 @@ pub extern "system" fn Java_com_dunimd_ri_servicemesh_RiWeightedDestination_setS
     }
     
     let dest = unsafe { &mut *(ptr as *mut RiWeightedDestination) };
-    let subset_str: String = env.get_string(&subset)
-        .expect("Failed to get subset")
-        .into();
+    let subset_str: String = match env.get_string(&subset) {
+        Ok(s) => s.into(),
+        Err(_) => {
+            crate::java::exception::throw_ri_error(&mut env, "Failed to get subset");
+            return;
+        }
+    };
     dest.subset = Some(subset_str);
 }
 
@@ -1827,8 +2011,7 @@ pub extern "system" fn Java_com_dunimd_ri_servicemesh_RiTrafficManager_addRoute0
     let manager = unsafe { &*(ptr as *const RiTrafficManager) };
     let route = unsafe { &*(route_ptr as *const RiTrafficRoute) };
     
-    let rt = tokio::runtime::Runtime::new().expect("Failed to create runtime");
-    let _ = rt.block_on(async {
+    let _ = crate::java::runtime::block_on_local(&mut env, "RiServiceMesh", async {
         manager.add_traffic_route(route.clone()).await
     });
 }
@@ -1846,15 +2029,22 @@ pub extern "system" fn Java_com_dunimd_ri_servicemesh_RiTrafficManager_removeRou
     }
     
     let manager = unsafe { &*(ptr as *const RiTrafficManager) };
-    let source_service_str: String = env.get_string(&source_service)
-        .expect("Failed to get source service")
-        .into();
-    let route_name_str: String = env.get_string(&route_name)
-        .expect("Failed to get route name")
-        .into();
+    let source_service_str: String = match env.get_string(&source_service) {
+        Ok(s) => s.into(),
+        Err(_) => {
+            crate::java::exception::throw_ri_error(&mut env, "Failed to get source service");
+            return;
+        }
+    };
+    let route_name_str: String = match env.get_string(&route_name) {
+        Ok(s) => s.into(),
+        Err(_) => {
+            crate::java::exception::throw_ri_error(&mut env, "Failed to get route name");
+            return;
+        }
+    };
     
-    let rt = tokio::runtime::Runtime::new().expect("Failed to create runtime");
-    let _ = rt.block_on(async {
+    let _ = crate::java::runtime::block_on_local(&mut env, "RiServiceMesh", async {
         manager.remove_traffic_route(&source_service_str, &route_name_str).await
     });
 }
@@ -1871,29 +2061,33 @@ pub extern "system" fn Java_com_dunimd_ri_servicemesh_RiTrafficManager_getRoutes
     }
     
     let manager = unsafe { &*(ptr as *const RiTrafficManager) };
-    let source_service_str: String = env.get_string(&source_service)
-        .expect("Failed to get source service")
-        .into();
+    let source_service_str: String = match env.get_string(&source_service) {
+        Ok(s) => s.into(),
+        Err(_) => {
+            crate::java::exception::throw_ri_error(&mut env, "Failed to get source service");
+            return std::ptr::null_mut();
+        }
+    };
     
-    let rt = tokio::runtime::Runtime::new().expect("Failed to create runtime");
-    let result = rt.block_on(async {
+    let result = crate::java::runtime::block_on_local(&mut env, "RiServiceMesh", async {
         manager.get_traffic_routes(&source_service_str).await
     });
     
     match result {
-        Ok(routes) => {
+        Some(Ok(routes)) => {
             let ptrs: Vec<jlong> = routes.iter().map(|r| {
                 let boxed = Box::new(r.clone());
                 Box::into_raw(boxed) as jlong
             }).collect();
             
-            let array = env.new_long_array(ptrs.len() as i32)
-                .expect("Failed to create long array");
-            env.set_long_array_region(array, 0, &ptrs)
-                .expect("Failed to set long array");
-            array
+            let array = match env.new_long_array(ptrs.len() as i32) {
+                Ok(a) => a,
+                Err(_) => { return std::ptr::null_mut(); }
+            };
+            let _ = env.set_long_array_region(&array, 0, &ptrs);
+            array.into_raw()
         }
-        Err(_) => std::ptr::null_mut(),
+        _ => std::ptr::null_mut(),
     }
 }
 
@@ -1911,9 +2105,13 @@ pub extern "system" fn Java_com_dunimd_ri_servicemesh_RiTrafficManager_setCircui
     }
     
     let manager = unsafe { &*(ptr as *const RiTrafficManager) };
-    let service_str: String = env.get_string(&service)
-        .expect("Failed to get service")
-        .into();
+    let service_str: String = match env.get_string(&service) {
+        Ok(s) => s.into(),
+        Err(_) => {
+            crate::java::exception::throw_ri_error(&mut env, "Failed to get service");
+            return;
+        }
+    };
     
     let config = RiCircuitBreakerConfig {
         consecutive_errors: consecutive_errors as u32,
@@ -1922,8 +2120,7 @@ pub extern "system" fn Java_com_dunimd_ri_servicemesh_RiTrafficManager_setCircui
         max_ejection_percent,
     };
     
-    let rt = tokio::runtime::Runtime::new().expect("Failed to create runtime");
-    let _ = rt.block_on(async {
+    let _ = crate::java::runtime::block_on_local(&mut env, "RiServiceMesh", async {
         manager.set_circuit_breaker_config(&service_str, config).await
     });
 }
@@ -1942,9 +2139,13 @@ pub extern "system" fn Java_com_dunimd_ri_servicemesh_RiTrafficManager_setRateLi
     }
     
     let manager = unsafe { &*(ptr as *const RiTrafficManager) };
-    let service_str: String = env.get_string(&service)
-        .expect("Failed to get service")
-        .into();
+    let service_str: String = match env.get_string(&service) {
+        Ok(s) => s.into(),
+        Err(_) => {
+            crate::java::exception::throw_ri_error(&mut env, "Failed to get service");
+            return;
+        }
+    };
     
     let config = RiRateLimitConfig {
         requests_per_second: requests_per_second as u32,
@@ -1952,8 +2153,7 @@ pub extern "system" fn Java_com_dunimd_ri_servicemesh_RiTrafficManager_setRateLi
         window: Duration::from_secs(1),
     };
     
-    let rt = tokio::runtime::Runtime::new().expect("Failed to create runtime");
-    let _ = rt.block_on(async {
+    let _ = crate::java::runtime::block_on_local(&mut env, "RiServiceMesh", async {
         manager.set_rate_limit_config(&service_str, config).await
     });
 }

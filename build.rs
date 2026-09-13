@@ -15,35 +15,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Build script: generate the C API header (include/ri.h) on every
-// `cargo build`, so the header is produced during normal compilation and
-// not only when the release-time `make build-c` step runs.
-
-use std::path::PathBuf;
-
 fn main() {
-    let manifest_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-    let config_path = manifest_dir.join("cbindgen.toml");
-    let include_dir = manifest_dir.join("include");
-    let header_path = include_dir.join("ri.h");
-
-    std::fs::create_dir_all(&include_dir)
-        .expect("Failed to create include/ directory for generated C header");
-
-    let config = cbindgen::Config::from_file(&config_path)
-        .expect("Failed to load cbindgen.toml");
-
-    let bindings = cbindgen::Builder::new()
-        .with_crate(&manifest_dir)
-        .with_config(config)
-        .generate()
-        .expect("Failed to generate C bindings (include/ri.h) via cbindgen");
-
-    if !bindings.write_to_file(&header_path) {
-        panic!("Failed to write include/ri.h");
-    }
-
-    // Re-run this build script when the C API sources or cbindgen config change.
-    println!("cargo:rerun-if-changed=src/c/mod.rs");
-    println!("cargo:rerun-if-changed=cbindgen.toml");
+    // The C/C++ API was removed in Ri 0.2.0. This build script previously
+    // generated include/ri.h via cbindgen for the `c` feature.
 }

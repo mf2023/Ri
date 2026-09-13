@@ -968,9 +968,7 @@ impl RiHealthChecker {
     /// Get service health summary from Python
     #[pyo3(name = "get_service_health_summary")]
     fn get_service_health_summary_impl(&self, service_name: String) -> PyResult<RiHealthSummary> {
-        let rt = tokio::runtime::Runtime::new().map_err(|e| {
-            pyo3::exceptions::PyRuntimeError::new_err(format!("Failed to create runtime: {}", e))
-        })?;
+        let rt = crate::py_runtime::py_runtime();
         
         rt.block_on(async {
             self.get_service_health_summary(&service_name)
@@ -982,9 +980,7 @@ impl RiHealthChecker {
     /// Start health check from Python
     #[pyo3(name = "start_health_check")]
     fn start_health_check_impl(&self, service_name: String, endpoint: String) -> PyResult<()> {
-        let rt = tokio::runtime::Runtime::new().map_err(|e| {
-            pyo3::exceptions::PyRuntimeError::new_err(format!("Failed to create runtime: {}", e))
-        })?;
+        let rt = crate::py_runtime::py_runtime();
         
         rt.block_on(async {
             self.start_health_check(&service_name, &endpoint)
@@ -996,9 +992,7 @@ impl RiHealthChecker {
     /// Stop health check from Python
     #[pyo3(name = "stop_health_check")]
     fn stop_health_check_impl(&self, service_name: String, endpoint: String) -> PyResult<()> {
-        let rt = tokio::runtime::Runtime::new().map_err(|e| {
-            pyo3::exceptions::PyRuntimeError::new_err(format!("Failed to create runtime: {}", e))
-        })?;
+        let rt = crate::py_runtime::py_runtime();
         
         rt.block_on(async {
             self.stop_health_check(&service_name, &endpoint)
@@ -1010,9 +1004,7 @@ impl RiHealthChecker {
     /// Get health status from Python
     #[pyo3(name = "get_health_status")]
     fn get_health_status_impl(&self, service_name: String) -> PyResult<Vec<RiHealthCheckResult>> {
-        let rt = tokio::runtime::Runtime::new().map_err(|e| {
-            pyo3::exceptions::PyRuntimeError::new_err(format!("Failed to create runtime: {}", e))
-        })?;
+        let rt = crate::py_runtime::py_runtime();
         
         rt.block_on(async {
             self.get_health_status(&service_name)

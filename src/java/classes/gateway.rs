@@ -19,15 +19,18 @@
 //!
 //! JNI bindings for Ri gateway classes.
 
+use crate::core::RiResult;
 use crate::gateway::{
     RiBackendServer, RiCircuitBreaker, RiCircuitBreakerConfig, RiCircuitBreakerMetrics,
-    RiCircuitBreakerState, RiGateway, RiGatewayConfig, RiLoadBalancer, RiLoadBalancerServerStats,
-    RiLoadBalancerStrategy, RiRateLimitConfig, RiRateLimitStats, RiRateLimiter, RiRoute, RiRouter,
-    RiSlidingWindowRateLimiter,
+    RiCircuitBreakerState, RiGateway, RiGatewayConfig, RiGatewayResponse, RiLoadBalancer,
+    RiLoadBalancerServerStats, RiLoadBalancerStrategy, RiRateLimitConfig, RiRateLimitStats,
+    RiRateLimiter, RiRoute, RiRouter, RiSlidingWindowRateLimiter,
 };
 use jni::objects::{JClass, JString};
 use jni::sys::{jboolean, jdouble, jint, jlong, jstring};
 use jni::JNIEnv;
+use std::future::Future;
+use std::pin::Pin;
 
 // ============================================================================
 // RiGateway
@@ -117,32 +120,42 @@ pub extern "system" fn Java_com_dunimd_ri_gateway_RiRouter_addRoute0(
     if ptr != 0 && route_ptr != 0 {
         unsafe {
             let router = &*(ptr as *const RiRouter);
-            let route = Box::from_raw(route_ptr as *mut RiRoute);
-            router.add_route(*route);
+            // Clone the route: the Java-side RiRoute wrapper keeps ownership of its
+            // own native pointer and may free it via close(), so we must not consume it.
+            let route = &*(route_ptr as *const RiRoute);
+            router.add_route(route.clone());
         }
     }
 }
 
 #[no_mangle]
 pub extern "system" fn Java_com_dunimd_ri_gateway_RiRouter_addGetRoute0(
-    env: JNIEnv,
+    mut env: JNIEnv,
     _class: JClass,
     ptr: jlong,
     path: JString,
 ) {
     if ptr != 0 {
-        let path_str: String = env.get_string(&path).expect("Invalid path string").into();
+        let path_str: String = match env.get_string(&path) {
+            Ok(s) => s.into(),
+            Err(_) => {
+                crate::java::exception::throw_ri_error(&mut env, "Invalid path string");
+                return;
+            }
+        };
         unsafe {
             let router = &*(ptr as *const RiRouter);
-            let handler = std::sync::Arc::new(|_req| {
-                Box::pin(async move {
-                    Ok(crate::gateway::RiGatewayResponse::new(
-                        200,
-                        b"OK".to_vec(),
-                        String::new(),
-                    ))
-                })
-            });
+            let handler: crate::gateway::RiRouteHandler = std::sync::Arc::new(
+                |_req| {
+                    Box::pin(async move {
+                        Ok(crate::gateway::RiGatewayResponse::new(
+                            200,
+                            b"OK".to_vec(),
+                            String::new(),
+                        ))
+                    }) as Pin<Box<dyn Future<Output = RiResult<RiGatewayResponse>> + Send>>
+                },
+            );
             router.get(&path_str, handler);
         }
     }
@@ -150,24 +163,32 @@ pub extern "system" fn Java_com_dunimd_ri_gateway_RiRouter_addGetRoute0(
 
 #[no_mangle]
 pub extern "system" fn Java_com_dunimd_ri_gateway_RiRouter_addPostRoute0(
-    env: JNIEnv,
+    mut env: JNIEnv,
     _class: JClass,
     ptr: jlong,
     path: JString,
 ) {
     if ptr != 0 {
-        let path_str: String = env.get_string(&path).expect("Invalid path string").into();
+        let path_str: String = match env.get_string(&path) {
+            Ok(s) => s.into(),
+            Err(_) => {
+                crate::java::exception::throw_ri_error(&mut env, "Invalid path string");
+                return;
+            }
+        };
         unsafe {
             let router = &*(ptr as *const RiRouter);
-            let handler = std::sync::Arc::new(|_req| {
-                Box::pin(async move {
-                    Ok(crate::gateway::RiGatewayResponse::new(
-                        200,
-                        b"OK".to_vec(),
-                        String::new(),
-                    ))
-                })
-            });
+            let handler: crate::gateway::RiRouteHandler = std::sync::Arc::new(
+                |_req| {
+                    Box::pin(async move {
+                        Ok(crate::gateway::RiGatewayResponse::new(
+                            200,
+                            b"OK".to_vec(),
+                            String::new(),
+                        ))
+                    }) as Pin<Box<dyn Future<Output = RiResult<RiGatewayResponse>> + Send>>
+                },
+            );
             router.post(&path_str, handler);
         }
     }
@@ -175,24 +196,32 @@ pub extern "system" fn Java_com_dunimd_ri_gateway_RiRouter_addPostRoute0(
 
 #[no_mangle]
 pub extern "system" fn Java_com_dunimd_ri_gateway_RiRouter_addPutRoute0(
-    env: JNIEnv,
+    mut env: JNIEnv,
     _class: JClass,
     ptr: jlong,
     path: JString,
 ) {
     if ptr != 0 {
-        let path_str: String = env.get_string(&path).expect("Invalid path string").into();
+        let path_str: String = match env.get_string(&path) {
+            Ok(s) => s.into(),
+            Err(_) => {
+                crate::java::exception::throw_ri_error(&mut env, "Invalid path string");
+                return;
+            }
+        };
         unsafe {
             let router = &*(ptr as *const RiRouter);
-            let handler = std::sync::Arc::new(|_req| {
-                Box::pin(async move {
-                    Ok(crate::gateway::RiGatewayResponse::new(
-                        200,
-                        b"OK".to_vec(),
-                        String::new(),
-                    ))
-                })
-            });
+            let handler: crate::gateway::RiRouteHandler = std::sync::Arc::new(
+                |_req| {
+                    Box::pin(async move {
+                        Ok(crate::gateway::RiGatewayResponse::new(
+                            200,
+                            b"OK".to_vec(),
+                            String::new(),
+                        ))
+                    }) as Pin<Box<dyn Future<Output = RiResult<RiGatewayResponse>> + Send>>
+                },
+            );
             router.put(&path_str, handler);
         }
     }
@@ -200,24 +229,32 @@ pub extern "system" fn Java_com_dunimd_ri_gateway_RiRouter_addPutRoute0(
 
 #[no_mangle]
 pub extern "system" fn Java_com_dunimd_ri_gateway_RiRouter_addDeleteRoute0(
-    env: JNIEnv,
+    mut env: JNIEnv,
     _class: JClass,
     ptr: jlong,
     path: JString,
 ) {
     if ptr != 0 {
-        let path_str: String = env.get_string(&path).expect("Invalid path string").into();
+        let path_str: String = match env.get_string(&path) {
+            Ok(s) => s.into(),
+            Err(_) => {
+                crate::java::exception::throw_ri_error(&mut env, "Invalid path string");
+                return;
+            }
+        };
         unsafe {
             let router = &*(ptr as *const RiRouter);
-            let handler = std::sync::Arc::new(|_req| {
-                Box::pin(async move {
-                    Ok(crate::gateway::RiGatewayResponse::new(
-                        200,
-                        b"OK".to_vec(),
-                        String::new(),
-                    ))
-                })
-            });
+            let handler: crate::gateway::RiRouteHandler = std::sync::Arc::new(
+                |_req| {
+                    Box::pin(async move {
+                        Ok(crate::gateway::RiGatewayResponse::new(
+                            200,
+                            b"OK".to_vec(),
+                            String::new(),
+                        ))
+                    }) as Pin<Box<dyn Future<Output = RiResult<RiGatewayResponse>> + Send>>
+                },
+            );
             router.delete(&path_str, handler);
         }
     }
@@ -225,24 +262,32 @@ pub extern "system" fn Java_com_dunimd_ri_gateway_RiRouter_addDeleteRoute0(
 
 #[no_mangle]
 pub extern "system" fn Java_com_dunimd_ri_gateway_RiRouter_addPatchRoute0(
-    env: JNIEnv,
+    mut env: JNIEnv,
     _class: JClass,
     ptr: jlong,
     path: JString,
 ) {
     if ptr != 0 {
-        let path_str: String = env.get_string(&path).expect("Invalid path string").into();
+        let path_str: String = match env.get_string(&path) {
+            Ok(s) => s.into(),
+            Err(_) => {
+                crate::java::exception::throw_ri_error(&mut env, "Invalid path string");
+                return;
+            }
+        };
         unsafe {
             let router = &*(ptr as *const RiRouter);
-            let handler = std::sync::Arc::new(|_req| {
-                Box::pin(async move {
-                    Ok(crate::gateway::RiGatewayResponse::new(
-                        200,
-                        b"OK".to_vec(),
-                        String::new(),
-                    ))
-                })
-            });
+            let handler: crate::gateway::RiRouteHandler = std::sync::Arc::new(
+                |_req| {
+                    Box::pin(async move {
+                        Ok(crate::gateway::RiGatewayResponse::new(
+                            200,
+                            b"OK".to_vec(),
+                            String::new(),
+                        ))
+                    }) as Pin<Box<dyn Future<Output = RiResult<RiGatewayResponse>> + Send>>
+                },
+            );
             router.patch(&path_str, handler);
         }
     }
@@ -250,24 +295,32 @@ pub extern "system" fn Java_com_dunimd_ri_gateway_RiRouter_addPatchRoute0(
 
 #[no_mangle]
 pub extern "system" fn Java_com_dunimd_ri_gateway_RiRouter_addOptionsRoute0(
-    env: JNIEnv,
+    mut env: JNIEnv,
     _class: JClass,
     ptr: jlong,
     path: JString,
 ) {
     if ptr != 0 {
-        let path_str: String = env.get_string(&path).expect("Invalid path string").into();
+        let path_str: String = match env.get_string(&path) {
+            Ok(s) => s.into(),
+            Err(_) => {
+                crate::java::exception::throw_ri_error(&mut env, "Invalid path string");
+                return;
+            }
+        };
         unsafe {
             let router = &*(ptr as *const RiRouter);
-            let handler = std::sync::Arc::new(|_req| {
-                Box::pin(async move {
-                    Ok(crate::gateway::RiGatewayResponse::new(
-                        200,
-                        b"OK".to_vec(),
-                        String::new(),
-                    ))
-                })
-            });
+            let handler: crate::gateway::RiRouteHandler = std::sync::Arc::new(
+                |_req| {
+                    Box::pin(async move {
+                        Ok(crate::gateway::RiGatewayResponse::new(
+                            200,
+                            b"OK".to_vec(),
+                            String::new(),
+                        ))
+                    }) as Pin<Box<dyn Future<Output = RiResult<RiGatewayResponse>> + Send>>
+                },
+            );
             router.options(&path_str, handler);
         }
     }
@@ -275,29 +328,40 @@ pub extern "system" fn Java_com_dunimd_ri_gateway_RiRouter_addOptionsRoute0(
 
 #[no_mangle]
 pub extern "system" fn Java_com_dunimd_ri_gateway_RiRouter_addCustomRoute0(
-    env: JNIEnv,
+    mut env: JNIEnv,
     _class: JClass,
     ptr: jlong,
     method: JString,
     path: JString,
 ) {
     if ptr != 0 {
-        let method_str: String = env
-            .get_string(&method)
-            .expect("Invalid method string")
-            .into();
-        let path_str: String = env.get_string(&path).expect("Invalid path string").into();
+        let method_str: String = match env.get_string(&method) {
+            Ok(s) => s.into(),
+            Err(_) => {
+                crate::java::exception::throw_ri_error(&mut env, "Invalid method string");
+                return;
+            }
+        };
+        let path_str: String = match env.get_string(&path) {
+            Ok(s) => s.into(),
+            Err(_) => {
+                crate::java::exception::throw_ri_error(&mut env, "Invalid path string");
+                return;
+            }
+        };
         unsafe {
             let router = &*(ptr as *const RiRouter);
-            let handler = std::sync::Arc::new(|_req| {
-                Box::pin(async move {
-                    Ok(crate::gateway::RiGatewayResponse::new(
-                        200,
-                        b"OK".to_vec(),
-                        String::new(),
-                    ))
-                })
-            });
+            let handler: crate::gateway::RiRouteHandler = std::sync::Arc::new(
+                |_req| {
+                    Box::pin(async move {
+                        Ok(crate::gateway::RiGatewayResponse::new(
+                            200,
+                            b"OK".to_vec(),
+                            String::new(),
+                        ))
+                    }) as Pin<Box<dyn Future<Output = RiResult<RiGatewayResponse>> + Send>>
+                },
+            );
             let route = RiRoute::new(method_str, path_str, handler);
             router.add_route(route);
         }
@@ -340,25 +404,34 @@ pub extern "system" fn Java_com_dunimd_ri_gateway_RiRouter_clearRoutes0(
 
 #[no_mangle]
 pub extern "system" fn Java_com_dunimd_ri_gateway_RiRoute_new0(
-    env: JNIEnv,
+    mut env: JNIEnv,
     _class: JClass,
     method: JString,
     path: JString,
 ) -> jlong {
-    let method_str: String = env
-        .get_string(&method)
-        .expect("Invalid method string")
-        .into();
-    let path_str: String = env.get_string(&path).expect("Invalid path string").into();
+    let method_str: String = match env.get_string(&method) {
+        Ok(s) => s.into(),
+        Err(_) => {
+            crate::java::exception::throw_ri_error(&mut env, "Invalid method string");
+            return 0;
+        }
+    };
+    let path_str: String = match env.get_string(&path) {
+        Ok(s) => s.into(),
+        Err(_) => {
+            crate::java::exception::throw_ri_error(&mut env, "Invalid path string");
+            return 0;
+        }
+    };
 
-    let handler = std::sync::Arc::new(|_req| {
+    let handler: crate::gateway::RiRouteHandler = std::sync::Arc::new(|_req| {
         Box::pin(async move {
             Ok(crate::gateway::RiGatewayResponse::new(
                 200,
                 b"OK".to_vec(),
                 String::new(),
             ))
-        })
+        }) as Pin<Box<dyn Future<Output = RiResult<RiGatewayResponse>> + Send>>
     });
 
     let route = Box::new(RiRoute::new(method_str, path_str, handler));
@@ -387,9 +460,10 @@ pub extern "system" fn Java_com_dunimd_ri_gateway_RiRoute_getMethod0(
     if ptr != 0 {
         unsafe {
             let route = &*(ptr as *const RiRoute);
-            env.new_string(&route.method)
-                .expect("Failed to create string")
-                .into_raw()
+            match env.new_string(&route.method) {
+            Ok(s) => s.into_raw(),
+            Err(_) => std::ptr::null_mut(),
+        }
         }
     } else {
         std::ptr::null_mut()
@@ -405,9 +479,10 @@ pub extern "system" fn Java_com_dunimd_ri_gateway_RiRoute_getPath0(
     if ptr != 0 {
         unsafe {
             let route = &*(ptr as *const RiRoute);
-            env.new_string(&route.path)
-                .expect("Failed to create string")
-                .into_raw()
+            match env.new_string(&route.path) {
+            Ok(s) => s.into_raw(),
+            Err(_) => std::ptr::null_mut(),
+        }
         }
     } else {
         std::ptr::null_mut()
@@ -439,6 +514,7 @@ pub extern "system" fn Java_com_dunimd_ri_gateway_RiRateLimitConfig_newWithValue
         requests_per_second: requests_per_second as u32,
         burst_size: burst_size as u32,
         window_seconds: window_seconds as u64,
+        max_keys: 10000,
     });
     Box::into_raw(config) as jlong
 }
@@ -646,14 +722,20 @@ pub extern "system" fn Java_com_dunimd_ri_gateway_RiRateLimiter_free0(
 
 #[no_mangle]
 pub extern "system" fn Java_com_dunimd_ri_gateway_RiRateLimiter_checkRateLimit0(
-    env: JNIEnv,
+    mut env: JNIEnv,
     _class: JClass,
     ptr: jlong,
     key: JString,
     tokens: jint,
 ) -> jboolean {
     if ptr != 0 {
-        let key_str: String = env.get_string(&key).expect("Invalid key string").into();
+        let key_str: String = match env.get_string(&key) {
+            Ok(s) => s.into(),
+            Err(_) => {
+                crate::java::exception::throw_ri_error(&mut env, "Invalid key string");
+                return 0;
+            }
+        };
         unsafe {
             let limiter = &*(ptr as *const RiRateLimiter);
             limiter.check_rate_limit(&key_str, tokens as usize) as jboolean
@@ -665,13 +747,19 @@ pub extern "system" fn Java_com_dunimd_ri_gateway_RiRateLimiter_checkRateLimit0(
 
 #[no_mangle]
 pub extern "system" fn Java_com_dunimd_ri_gateway_RiRateLimiter_getStats0(
-    env: JNIEnv,
+    mut env: JNIEnv,
     _class: JClass,
     ptr: jlong,
     key: JString,
 ) -> jlong {
     if ptr != 0 {
-        let key_str: String = env.get_string(&key).expect("Invalid key string").into();
+        let key_str: String = match env.get_string(&key) {
+            Ok(s) => s.into(),
+            Err(_) => {
+                crate::java::exception::throw_ri_error(&mut env, "Invalid key string");
+                return 0;
+            }
+        };
         unsafe {
             let limiter = &*(ptr as *const RiRateLimiter);
             if let Some(stats) = limiter.get_stats(&key_str) {
@@ -687,13 +775,19 @@ pub extern "system" fn Java_com_dunimd_ri_gateway_RiRateLimiter_getStats0(
 
 #[no_mangle]
 pub extern "system" fn Java_com_dunimd_ri_gateway_RiRateLimiter_getRemaining0(
-    env: JNIEnv,
+    mut env: JNIEnv,
     _class: JClass,
     ptr: jlong,
     key: JString,
 ) -> jdouble {
     if ptr != 0 {
-        let key_str: String = env.get_string(&key).expect("Invalid key string").into();
+        let key_str: String = match env.get_string(&key) {
+            Ok(s) => s.into(),
+            Err(_) => {
+                crate::java::exception::throw_ri_error(&mut env, "Invalid key string");
+                return 0.0;
+            }
+        };
         unsafe {
             let limiter = &*(ptr as *const RiRateLimiter);
             limiter.get_remaining(&key_str).unwrap_or(0.0)
@@ -705,13 +799,19 @@ pub extern "system" fn Java_com_dunimd_ri_gateway_RiRateLimiter_getRemaining0(
 
 #[no_mangle]
 pub extern "system" fn Java_com_dunimd_ri_gateway_RiRateLimiter_resetBucket0(
-    env: JNIEnv,
+    mut env: JNIEnv,
     _class: JClass,
     ptr: jlong,
     key: JString,
 ) {
     if ptr != 0 {
-        let key_str: String = env.get_string(&key).expect("Invalid key string").into();
+        let key_str: String = match env.get_string(&key) {
+            Ok(s) => s.into(),
+            Err(_) => {
+                crate::java::exception::throw_ri_error(&mut env, "Invalid key string");
+                return;
+            }
+        };
         unsafe {
             let limiter = &*(ptr as *const RiRateLimiter);
             limiter.reset_bucket(&key_str);
@@ -1049,7 +1149,7 @@ pub extern "system" fn Java_com_dunimd_ri_gateway_RiCircuitBreakerConfig_setMoni
 
 #[no_mangle]
 pub extern "system" fn Java_com_dunimd_ri_gateway_RiCircuitBreakerMetrics_new0(
-    env: JNIEnv,
+    mut env: JNIEnv,
     _class: JClass,
     state: JString,
     failure_count: jlong,
@@ -1057,7 +1157,13 @@ pub extern "system" fn Java_com_dunimd_ri_gateway_RiCircuitBreakerMetrics_new0(
     consecutive_failures: jlong,
     consecutive_successes: jlong,
 ) -> jlong {
-    let state_str: String = env.get_string(&state).expect("Invalid state string").into();
+    let state_str: String = match env.get_string(&state) {
+        Ok(s) => s.into(),
+        Err(_) => {
+            crate::java::exception::throw_ri_error(&mut env, "Invalid state string");
+            return 0;
+        }
+    };
     let metrics = Box::new(RiCircuitBreakerMetrics {
         state: state_str,
         failure_count: failure_count as usize,
@@ -1090,9 +1196,10 @@ pub extern "system" fn Java_com_dunimd_ri_gateway_RiCircuitBreakerMetrics_getSta
     if ptr != 0 {
         unsafe {
             let metrics = &*(ptr as *const RiCircuitBreakerMetrics);
-            env.new_string(&metrics.state)
-                .expect("Failed to create string")
-                .into_raw()
+            match env.new_string(&metrics.state) {
+            Ok(s) => s.into_raw(),
+            Err(_) => std::ptr::null_mut(),
+        }
         }
     } else {
         std::ptr::null_mut()
@@ -1437,13 +1544,25 @@ pub extern "system" fn Java_com_dunimd_ri_gateway_RiCircuitBreaker_isHalfOpen0(
 
 #[no_mangle]
 pub extern "system" fn Java_com_dunimd_ri_gateway_RiBackendServer_new0(
-    env: JNIEnv,
+    mut env: JNIEnv,
     _class: JClass,
     id: JString,
     url: JString,
 ) -> jlong {
-    let id_str: String = env.get_string(&id).expect("Invalid id string").into();
-    let url_str: String = env.get_string(&url).expect("Invalid url string").into();
+    let id_str: String = match env.get_string(&id) {
+        Ok(s) => s.into(),
+        Err(_) => {
+            crate::java::exception::throw_ri_error(&mut env, "Invalid id string");
+            return 0;
+        }
+    };
+    let url_str: String = match env.get_string(&url) {
+        Ok(s) => s.into(),
+        Err(_) => {
+            crate::java::exception::throw_ri_error(&mut env, "Invalid url string");
+            return 0;
+        }
+    };
     let server = Box::new(RiBackendServer::new(id_str, url_str));
     Box::into_raw(server) as jlong
 }
@@ -1470,9 +1589,10 @@ pub extern "system" fn Java_com_dunimd_ri_gateway_RiBackendServer_getId0(
     if ptr != 0 {
         unsafe {
             let server = &*(ptr as *const RiBackendServer);
-            env.new_string(&server.id)
-                .expect("Failed to create string")
-                .into_raw()
+            match env.new_string(&server.id) {
+            Ok(s) => s.into_raw(),
+            Err(_) => std::ptr::null_mut(),
+        }
         }
     } else {
         std::ptr::null_mut()
@@ -1488,9 +1608,10 @@ pub extern "system" fn Java_com_dunimd_ri_gateway_RiBackendServer_getUrl0(
     if ptr != 0 {
         unsafe {
             let server = &*(ptr as *const RiBackendServer);
-            env.new_string(&server.url)
-                .expect("Failed to create string")
-                .into_raw()
+            match env.new_string(&server.url) {
+            Ok(s) => s.into_raw(),
+            Err(_) => std::ptr::null_mut(),
+        }
         }
     } else {
         std::ptr::null_mut()
@@ -1568,9 +1689,10 @@ pub extern "system" fn Java_com_dunimd_ri_gateway_RiBackendServer_getHealthCheck
     if ptr != 0 {
         unsafe {
             let server = &*(ptr as *const RiBackendServer);
-            env.new_string(&server.health_check_path)
-                .expect("Failed to create string")
-                .into_raw()
+            match env.new_string(&server.health_check_path) {
+            Ok(s) => s.into_raw(),
+            Err(_) => std::ptr::null_mut(),
+        }
         }
     } else {
         std::ptr::null_mut()
@@ -1579,13 +1701,19 @@ pub extern "system" fn Java_com_dunimd_ri_gateway_RiBackendServer_getHealthCheck
 
 #[no_mangle]
 pub extern "system" fn Java_com_dunimd_ri_gateway_RiBackendServer_setHealthCheckPath0(
-    env: JNIEnv,
+    mut env: JNIEnv,
     _class: JClass,
     ptr: jlong,
     path: JString,
 ) {
     if ptr != 0 {
-        let path_str: String = env.get_string(&path).expect("Invalid path string").into();
+        let path_str: String = match env.get_string(&path) {
+            Ok(s) => s.into(),
+            Err(_) => {
+                crate::java::exception::throw_ri_error(&mut env, "Invalid path string");
+                return;
+            }
+        };
         unsafe {
             let server = &mut *(ptr as *mut RiBackendServer);
             server.health_check_path = path_str;
@@ -1755,9 +1883,12 @@ pub extern "system" fn Java_com_dunimd_ri_gateway_RiLoadBalancer_addServer0(
     if ptr != 0 && server_ptr != 0 {
         unsafe {
             let lb = &*(ptr as *const RiLoadBalancer);
-            let server = Box::from_raw(server_ptr as *mut RiBackendServer);
+            // Clone the server: the Java-side RiBackendServer wrapper keeps ownership
+            // of its own native pointer and may free it via close(), so we must not
+            // consume it (Box::from_raw here would cause a double-free on close()).
+            let server = &*(server_ptr as *const RiBackendServer);
             futures::executor::block_on(async {
-                lb.add_server(*server).await;
+                let _ = lb.add_server(server.clone()).await;
             });
         }
     }
@@ -1765,16 +1896,19 @@ pub extern "system" fn Java_com_dunimd_ri_gateway_RiLoadBalancer_addServer0(
 
 #[no_mangle]
 pub extern "system" fn Java_com_dunimd_ri_gateway_RiLoadBalancer_removeServer0(
-    env: JNIEnv,
+    mut env: JNIEnv,
     _class: JClass,
     ptr: jlong,
     server_id: JString,
 ) -> jboolean {
     if ptr != 0 {
-        let server_id_str: String = env
-            .get_string(&server_id)
-            .expect("Invalid server_id string")
-            .into();
+        let server_id_str: String = match env.get_string(&server_id) {
+            Ok(s) => s.into(),
+            Err(_) => {
+                crate::java::exception::throw_ri_error(&mut env, "Invalid server_id string");
+                return 0;
+            }
+        };
         unsafe {
             let lb = &*(ptr as *const RiLoadBalancer);
             futures::executor::block_on(async { lb.remove_server(&server_id_str).await })
@@ -1787,7 +1921,7 @@ pub extern "system" fn Java_com_dunimd_ri_gateway_RiLoadBalancer_removeServer0(
 
 #[no_mangle]
 pub extern "system" fn Java_com_dunimd_ri_gateway_RiLoadBalancer_selectBackend0(
-    env: JNIEnv,
+    mut env: JNIEnv,
     _class: JClass,
     ptr: jlong,
     client_ip: JString,
@@ -1796,11 +1930,7 @@ pub extern "system" fn Java_com_dunimd_ri_gateway_RiLoadBalancer_selectBackend0(
         let client_ip_str: Option<String> = if client_ip.is_null() {
             None
         } else {
-            Some(
-                env.get_string(&client_ip)
-                    .expect("Invalid client_ip string")
-                    .into(),
-            )
+            env.get_string(&client_ip).ok().map(|s| s.into())
         };
         unsafe {
             let lb = &*(ptr as *const RiLoadBalancer);
@@ -1818,16 +1948,19 @@ pub extern "system" fn Java_com_dunimd_ri_gateway_RiLoadBalancer_selectBackend0(
 
 #[no_mangle]
 pub extern "system" fn Java_com_dunimd_ri_gateway_RiLoadBalancer_releaseServer0(
-    env: JNIEnv,
+    mut env: JNIEnv,
     _class: JClass,
     ptr: jlong,
     server_id: JString,
 ) {
     if ptr != 0 {
-        let server_id_str: String = env
-            .get_string(&server_id)
-            .expect("Invalid server_id string")
-            .into();
+        let server_id_str: String = match env.get_string(&server_id) {
+            Ok(s) => s.into(),
+            Err(_) => {
+                crate::java::exception::throw_ri_error(&mut env, "Invalid server_id string");
+                return;
+            }
+        };
         unsafe {
             let lb = &*(ptr as *const RiLoadBalancer);
             futures::executor::block_on(async {
@@ -1839,16 +1972,19 @@ pub extern "system" fn Java_com_dunimd_ri_gateway_RiLoadBalancer_releaseServer0(
 
 #[no_mangle]
 pub extern "system" fn Java_com_dunimd_ri_gateway_RiLoadBalancer_recordServerFailure0(
-    env: JNIEnv,
+    mut env: JNIEnv,
     _class: JClass,
     ptr: jlong,
     server_id: JString,
 ) {
     if ptr != 0 {
-        let server_id_str: String = env
-            .get_string(&server_id)
-            .expect("Invalid server_id string")
-            .into();
+        let server_id_str: String = match env.get_string(&server_id) {
+            Ok(s) => s.into(),
+            Err(_) => {
+                crate::java::exception::throw_ri_error(&mut env, "Invalid server_id string");
+                return;
+            }
+        };
         unsafe {
             let lb = &*(ptr as *const RiLoadBalancer);
             futures::executor::block_on(async {
@@ -1860,17 +1996,20 @@ pub extern "system" fn Java_com_dunimd_ri_gateway_RiLoadBalancer_recordServerFai
 
 #[no_mangle]
 pub extern "system" fn Java_com_dunimd_ri_gateway_RiLoadBalancer_recordResponseTime0(
-    env: JNIEnv,
+    mut env: JNIEnv,
     _class: JClass,
     ptr: jlong,
     server_id: JString,
     response_time_ms: jlong,
 ) {
     if ptr != 0 {
-        let server_id_str: String = env
-            .get_string(&server_id)
-            .expect("Invalid server_id string")
-            .into();
+        let server_id_str: String = match env.get_string(&server_id) {
+            Ok(s) => s.into(),
+            Err(_) => {
+                crate::java::exception::throw_ri_error(&mut env, "Invalid server_id string");
+                return;
+            }
+        };
         unsafe {
             let lb = &*(ptr as *const RiLoadBalancer);
             futures::executor::block_on(async {
@@ -1883,16 +2022,19 @@ pub extern "system" fn Java_com_dunimd_ri_gateway_RiLoadBalancer_recordResponseT
 
 #[no_mangle]
 pub extern "system" fn Java_com_dunimd_ri_gateway_RiLoadBalancer_getServerStats0(
-    env: JNIEnv,
+    mut env: JNIEnv,
     _class: JClass,
     ptr: jlong,
     server_id: JString,
 ) -> jlong {
     if ptr != 0 {
-        let server_id_str: String = env
-            .get_string(&server_id)
-            .expect("Invalid server_id string")
-            .into();
+        let server_id_str: String = match env.get_string(&server_id) {
+            Ok(s) => s.into(),
+            Err(_) => {
+                crate::java::exception::throw_ri_error(&mut env, "Invalid server_id string");
+                return 0;
+            }
+        };
         unsafe {
             let lb = &*(ptr as *const RiLoadBalancer);
             futures::executor::block_on(async {
@@ -1909,17 +2051,20 @@ pub extern "system" fn Java_com_dunimd_ri_gateway_RiLoadBalancer_getServerStats0
 
 #[no_mangle]
 pub extern "system" fn Java_com_dunimd_ri_gateway_RiLoadBalancer_markServerHealthy0(
-    env: JNIEnv,
+    mut env: JNIEnv,
     _class: JClass,
     ptr: jlong,
     server_id: JString,
     healthy: jboolean,
 ) {
     if ptr != 0 {
-        let server_id_str: String = env
-            .get_string(&server_id)
-            .expect("Invalid server_id string")
-            .into();
+        let server_id_str: String = match env.get_string(&server_id) {
+            Ok(s) => s.into(),
+            Err(_) => {
+                crate::java::exception::throw_ri_error(&mut env, "Invalid server_id string");
+                return;
+            }
+        };
         unsafe {
             let lb = &*(ptr as *const RiLoadBalancer);
             futures::executor::block_on(async {
@@ -1931,16 +2076,19 @@ pub extern "system" fn Java_com_dunimd_ri_gateway_RiLoadBalancer_markServerHealt
 
 #[no_mangle]
 pub extern "system" fn Java_com_dunimd_ri_gateway_RiLoadBalancer_performHealthCheck0(
-    env: JNIEnv,
+    mut env: JNIEnv,
     _class: JClass,
     ptr: jlong,
     server_id: JString,
 ) -> jboolean {
     if ptr != 0 {
-        let server_id_str: String = env
-            .get_string(&server_id)
-            .expect("Invalid server_id string")
-            .into();
+        let server_id_str: String = match env.get_string(&server_id) {
+            Ok(s) => s.into(),
+            Err(_) => {
+                crate::java::exception::throw_ri_error(&mut env, "Invalid server_id string");
+                return 0;
+            }
+        };
         unsafe {
             let lb = &*(ptr as *const RiLoadBalancer);
             futures::executor::block_on(async { lb.perform_health_check(&server_id_str).await })

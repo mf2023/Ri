@@ -267,10 +267,7 @@ impl crate::database::RiDatabaseTransaction for PostgresTransaction {
 impl PostgresDatabase {
     #[staticmethod]
     pub fn from_connection_string(conn_string: &str, max_connections: u32) -> Result<Self, pyo3::PyErr> {
-        let rt = tokio::runtime::Runtime::new()
-            .map_err(|e| pyo3::PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(
-                format!("Failed to create Tokio runtime: {}", e),
-            ))?;
+        let rt = crate::py_runtime::py_runtime();
         
         rt.block_on(async {
             let pool = PgPool::connect(conn_string)
@@ -291,24 +288,21 @@ impl PostgresDatabase {
     }
 
     pub fn execute_sync(&self, sql: &str) -> Result<u64, RiError> {
-        let rt = tokio::runtime::Runtime::new()
-            .map_err(|e| RiError::Other(format!("Failed to create Tokio runtime: {}", e)))?;
+        let rt = crate::py_runtime::py_runtime();
         rt.block_on(async {
             self.execute(sql).await
         })
     }
 
     pub fn query_sync(&self, sql: &str) -> Result<RiDBResult, RiError> {
-        let rt = tokio::runtime::Runtime::new()
-            .map_err(|e| RiError::Other(format!("Failed to create Tokio runtime: {}", e)))?;
+        let rt = crate::py_runtime::py_runtime();
         rt.block_on(async {
             self.query(sql).await
         })
     }
 
     pub fn ping_sync(&self) -> Result<bool, RiError> {
-        let rt = tokio::runtime::Runtime::new()
-            .map_err(|e| RiError::Other(format!("Failed to create Tokio runtime: {}", e)))?;
+        let rt = crate::py_runtime::py_runtime();
         rt.block_on(async {
             self.ping().await
         })

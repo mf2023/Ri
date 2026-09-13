@@ -37,6 +37,7 @@
 pub mod jvm;
 pub mod converter;
 pub mod exception;
+pub mod runtime;
 pub mod classes;
 
 pub use jvm::RiJavaContext;

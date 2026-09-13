@@ -162,6 +162,17 @@ multiplexing = true
 # =============================================================================
 # Release Profile Configuration
 # =============================================================================
+# NOTE: [profile] sections are no longer officially recommended in
+# .cargo/config.toml (they belong in Cargo.toml). Kept here in place for
+# minimal-change compatibility, but consider migrating in a future release.
+#
+# Ri 0.2.0 build-memory policy:
+# Full LTO + codegen-units=1 exhausted 16GB machines during builds
+# (rustc OOM / STATUS_STACK_BUFFER_OVERRUN). Thin LTO + codegen-units=16
+# and reduced dev debuginfo keep peak build memory within safe bounds
+# while retaining most of the runtime performance. Reducing build-time
+# and runtime memory consumption is an explicit Ri 0.2.0 goal.
+#
 # Defines optimization settings applied when building with --release flag.
 # These settings produce production-ready binaries with maximum performance,
 # but increase compilation time significantly.
@@ -205,10 +216,12 @@ multiplexing = true
 #   * Not recommended for production
 #
 # Ri Rationale:
-# Full LTO is enabled because Ri is a performance-critical middleware
-# framework where every microsecond matters. The slower compilation is
-# acceptable since release builds are typically done less frequently.
-lto = true
+# Thin LTO is used as the balance point: ~80% of full LTO's runtime
+# benefit at a fraction of its peak linker memory. Full LTO with
+# codegen-units=1 previously exhausted 16GB machines during release
+# builds (rustc OOM / 0xc0000409). Reducing build-time memory
+# consumption is an explicit Ri 0.2.0 goal.
+lto = "thin"
 
 # Number of codegen units for parallel compilation
 # Rust compiler splits compilation into parallel units for faster builds.
@@ -226,10 +239,12 @@ lto = true
 # - Improved constant propagation
 #
 # Ri Rationale:
-# Set to 1 for maximum runtime performance. Ri's middleware nature
-# requires optimal code generation. The longer compilation time is
-# acceptable for release builds.
-codegen-units = 1
+# codegen-units = 1 forces LLVM to hold the entire crate in memory for
+# optimization, which is the single largest contributor to rustc OOM on
+# 16GB machines. 16 preserves parallel codegen and keeps peak memory
+# within safe bounds; runtime loss is negligible when thin LTO already
+# covers cross-crate optimization.
+codegen-units = 16
 
 # Strip debug symbols from binary
 # Debug symbols are used for debugging and stack traces but increase
@@ -251,3 +266,12 @@ codegen-units = 1
 # speeds up deployment, and reduces memory usage. Debug symbols can
 # be preserved separately if needed for production debugging.
 strip = true
+
+# =============================================================================
+# Dev Profile Configuration
+# =============================================================================
+# Ri 0.2.0: line-tables-only keeps backtraces resolvable (file:line) while
+# cutting debuginfo memory sharply. debug=2 with incremental compilation
+# previously exhausted 16GB machines building the full-feature cdylib.
+[profile.dev]
+debug = "line-tables-only"

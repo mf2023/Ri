@@ -249,22 +249,27 @@ class TestProtocolImports:
 
     def test_protocol_types_import(self):
         """Test protocol-related types can be imported"""
-        from ri import (
-            RiProtocolManager,
-            RiProtocolType,
-            RiProtocolConfig,
-            RiProtocolStatus,
-            RiProtocolStats,
-            RiConnectionState,
-            RiConnectionStats,
-            RiProtocolHealth,
-            RiFrame,
-            RiFrameHeader,
-            RiFrameType,
-            RiConnectionInfo,
-            RiMessageFlags,
-            RiSecurityLevel,
-        )
+        # Protocol support is only compiled into the wheel when the
+        # "protocol" cargo feature is enabled; skip when unavailable.
+        import ri
+
+        if not hasattr(ri, "RiProtocolManager"):
+            pytest.skip("protocol feature not compiled into this ri wheel")
+
+        RiProtocolManager = ri.RiProtocolManager
+        RiProtocolType = ri.RiProtocolType
+        RiProtocolConfig = ri.RiProtocolConfig
+        RiProtocolStatus = ri.RiProtocolStatus
+        RiProtocolStats = ri.RiProtocolStats
+        RiConnectionState = ri.RiConnectionState
+        RiConnectionStats = ri.RiConnectionStats
+        RiProtocolHealth = ri.RiProtocolHealth
+        RiFrame = ri.RiFrame
+        RiFrameHeader = ri.RiFrameHeader
+        RiFrameType = ri.RiFrameType
+        RiConnectionInfo = ri.RiConnectionInfo
+        RiMessageFlags = ri.RiMessageFlags
+        RiSecurityLevel = ri.RiSecurityLevel
         assert RiProtocolManager is not None
         assert RiProtocolType is not None
         assert RiProtocolConfig is not None

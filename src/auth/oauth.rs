@@ -71,7 +71,6 @@ use std::collections::HashMap as FxHashMap;
 use std::sync::Arc;
 use tokio::sync::RwLock;
 #[cfg(feature = "pyo3")]
-use tokio::runtime::Runtime;
 
 #[cfg(feature = "pyo3")]
 use pyo3::PyResult;
@@ -114,6 +113,7 @@ pub struct RiOAuthProvider {
 #[pyo3::prelude::pymethods]
 impl RiOAuthProvider {
     #[new]
+    #[pyo3(signature = (id, name, client_id, client_secret, auth_url, token_url, user_info_url, scopes, enabled, redirect_uri=None, allowed_redirect_uris=None))]
     fn py_new(
         id: String,
         name: String,
@@ -800,7 +800,7 @@ impl RiOAuthManager {
     
     #[pyo3(name = "register_provider")]
     fn register_provider_impl(&self, provider: RiOAuthProvider) -> PyResult<bool> {
-        let rt = Runtime::new().map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(e.to_string()))?;
+        let rt = crate::py_runtime::py_runtime();
         rt.block_on(async {
             self.register_provider(provider).await?;
             Ok(true)
@@ -809,7 +809,7 @@ impl RiOAuthManager {
     
     #[pyo3(name = "get_provider")]
     fn get_provider_impl(&self, provider_id: String) -> PyResult<Option<RiOAuthProvider>> {
-        let rt = Runtime::new().map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(e.to_string()))?;
+        let rt = crate::py_runtime::py_runtime();
         rt.block_on(async {
             self.get_provider(&provider_id).await.map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(e.to_string()))
         })
@@ -817,7 +817,7 @@ impl RiOAuthManager {
     
     #[pyo3(name = "get_auth_url")]
     fn get_auth_url_impl(&self, provider_id: String, state: String) -> PyResult<Option<String>> {
-        let rt = Runtime::new().map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(e.to_string()))?;
+        let rt = crate::py_runtime::py_runtime();
         rt.block_on(async {
             self.get_auth_url(&provider_id, &state).await.map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(e.to_string()))
         })
@@ -825,7 +825,7 @@ impl RiOAuthManager {
     
     #[pyo3(name = "exchange_code_for_token")]
     fn exchange_code_for_token_impl(&self, provider_id: String, code: String, redirect_uri: String) -> PyResult<Option<RiOAuthToken>> {
-        let rt = Runtime::new().map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(e.to_string()))?;
+        let rt = crate::py_runtime::py_runtime();
         rt.block_on(async {
             self.exchange_code_for_token(&provider_id, &code, &redirect_uri).await.map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(e.to_string()))
         })
@@ -833,7 +833,7 @@ impl RiOAuthManager {
     
     #[pyo3(name = "get_user_info")]
     fn get_user_info_impl(&self, provider_id: String, access_token: String) -> PyResult<Option<RiOAuthUserInfo>> {
-        let rt = Runtime::new().map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(e.to_string()))?;
+        let rt = crate::py_runtime::py_runtime();
         rt.block_on(async {
             self.get_user_info(&provider_id, &access_token).await.map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(e.to_string()))
         })
@@ -841,7 +841,7 @@ impl RiOAuthManager {
     
     #[pyo3(name = "refresh_token")]
     fn refresh_token_impl(&self, provider_id: String, refresh_token: String) -> PyResult<Option<RiOAuthToken>> {
-        let rt = Runtime::new().map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(e.to_string()))?;
+        let rt = crate::py_runtime::py_runtime();
         rt.block_on(async {
             self.refresh_token(&provider_id, &refresh_token).await.map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(e.to_string()))
         })
@@ -849,7 +849,7 @@ impl RiOAuthManager {
     
     #[pyo3(name = "revoke_token")]
     fn revoke_token_impl(&self, provider_id: String, access_token: String) -> PyResult<bool> {
-        let rt = Runtime::new().map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(e.to_string()))?;
+        let rt = crate::py_runtime::py_runtime();
         rt.block_on(async {
             self.revoke_token(&provider_id, &access_token).await.map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(e.to_string()))
         })
@@ -857,7 +857,7 @@ impl RiOAuthManager {
     
     #[pyo3(name = "list_providers")]
     fn list_providers_impl(&self) -> PyResult<Vec<RiOAuthProvider>> {
-        let rt = Runtime::new().map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(e.to_string()))?;
+        let rt = crate::py_runtime::py_runtime();
         rt.block_on(async {
             self.list_providers().await.map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(e.to_string()))
         })
@@ -865,7 +865,7 @@ impl RiOAuthManager {
     
     #[pyo3(name = "disable_provider")]
     fn disable_provider_impl(&self, provider_id: String) -> PyResult<bool> {
-        let rt = Runtime::new().map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(e.to_string()))?;
+        let rt = crate::py_runtime::py_runtime();
         rt.block_on(async {
             self.disable_provider(&provider_id).await.map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(e.to_string()))
         })
@@ -873,9 +873,10 @@ impl RiOAuthManager {
     
     #[pyo3(name = "enable_provider")]
     fn enable_provider_impl(&self, provider_id: String) -> PyResult<bool> {
-        let rt = Runtime::new().map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(e.to_string()))?;
+        let rt = crate::py_runtime::py_runtime();
         rt.block_on(async {
             self.enable_provider(&provider_id).await.map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(e.to_string()))
         })
     }
 }
+

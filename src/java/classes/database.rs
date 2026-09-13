@@ -24,6 +24,7 @@ use jni::objects::{JClass, JString};
 use jni::sys::{jlong, jboolean, jint, jdouble, jstring};
 use crate::database::{RiDatabaseConfig, RiDatabasePool, RiDatabaseMetrics, RiDynamicPoolConfig, RiDBRow, RiDBResult, RiDatabaseMigration};
 use crate::java::exception::check_not_null;
+use crate::java::exception::throw_ri_error;
 
 // =============================================================================
 // RiDatabaseConfig JNI Bindings
@@ -67,15 +68,18 @@ pub extern "system" fn Java_com_dunimd_ri_database_RiDatabasePool_new0(
 
     let config = unsafe { &*(config_ptr as *const crate::database::RiDatabaseConfig) };
 
-    match crate::database::RiDatabasePool::new(config.clone()) {
-        Ok(pool) => {
+    match crate::java::runtime::block_on_jni(&mut env, "RiDatabasePool::new", async {
+        crate::database::RiDatabasePool::new(config.clone()).await
+    }) {
+        Some(Ok(pool)) => {
             let boxed = Box::new(pool);
             Box::into_raw(boxed) as jlong
         }
-        Err(e) => {
+        Some(Err(e)) => {
             throw_ri_error(&mut env, &e.to_string());
             0
         }
+        None => 0,
     }
 }
 
@@ -90,11 +94,29 @@ pub extern "system" fn Java_com_dunimd_ri_database_RiDatabasePool_execute0(
         return 0;
     }
     
-    let _sql_str: String = env.get_string(&sql)
-        .expect("Failed to get SQL")
-        .into();
+    let sql_str: String = match env.get_string(&sql) {
+        Ok(s) => s.into(),
+        Err(_) => return 0,
+    };
     
-    0
+    let pool = unsafe { &*(ptr as *const RiDatabasePool) };
+    match crate::java::runtime::block_on_local(
+        &mut env,
+        "RiDatabasePool::execute",
+        async {
+            let db = pool.get().await?;
+            let affected = db.execute(&sql_str).await;
+            pool.release(db).await;
+            affected
+        },
+    ) {
+        Some(Ok(affected)) => affected as jlong,
+        Some(Err(e)) => {
+            throw_ri_error(&mut env, &e.to_string());
+            0
+        }
+        None => 0,
+    }
 }
 
 #[no_mangle]
@@ -108,12 +130,29 @@ pub extern "system" fn Java_com_dunimd_ri_database_RiDatabasePool_query0(
         return 0;
     }
     
-    let _sql_str: String = env.get_string(&sql)
-        .expect("Failed to get SQL")
-        .into();
+    let sql_str: String = match env.get_string(&sql) {
+        Ok(s) => s.into(),
+        Err(_) => return 0,
+    };
     
-    let result = Box::new(RiDBResult::new());
-    Box::into_raw(result) as jlong
+    let pool = unsafe { &*(ptr as *const RiDatabasePool) };
+    match crate::java::runtime::block_on_local(
+        &mut env,
+        "RiDatabasePool::query",
+        async {
+            let db = pool.get().await?;
+            let result = db.query(&sql_str).await;
+            pool.release(db).await;
+            result
+        },
+    ) {
+        Some(Ok(result)) => Box::into_raw(Box::new(result)) as jlong,
+        Some(Err(e)) => {
+            throw_ri_error(&mut env, &e.to_string());
+            0
+        }
+        None => 0,
+    }
 }
 
 #[no_mangle]
@@ -126,7 +165,8 @@ pub extern "system" fn Java_com_dunimd_ri_database_RiDatabasePool_getMetrics0(
         return 0;
     }
     
-    let metrics = Box::new(RiDatabaseMetrics::default());
+    let pool = unsafe { &*(ptr as *const RiDatabasePool) };
+    let metrics = Box::new(pool.metrics());
     Box::into_raw(metrics) as jlong
 }
 
@@ -140,7 +180,8 @@ pub extern "system" fn Java_com_dunimd_ri_database_RiDatabasePool_getUtilization
         return 0.0;
     }
     
-    0.0
+    let pool = unsafe { &*(ptr as *const RiDatabasePool) };
+    pool.utilization_rate()
 }
 
 #[no_mangle]
@@ -153,7 +194,8 @@ pub extern "system" fn Java_com_dunimd_ri_database_RiDatabasePool_getDynamicConf
         return 0;
     }
     
-    let config = Box::new(RiDynamicPoolConfig::default());
+    let pool = unsafe { &*(ptr as *const RiDatabasePool) };
+    let config = Box::new(pool.get_dynamic_config());
     Box::into_raw(config) as jlong
 }
 
@@ -185,9 +227,13 @@ pub extern "system" fn Java_com_dunimd_ri_database_RiDBRow_getString0(
         return std::ptr::null_mut();
     }
     
-    let _name_str: String = env.get_string(&name)
-        .expect("Failed to get column name")
-        .into();
+    let _name_str: String = match env.get_string(&name) {
+        Ok(s) => s.into(),
+        Err(_) => {
+            crate::java::exception::throw_ri_error(&mut env, "Failed to get column name");
+            return std::ptr::null_mut();
+        }
+    };
     
     std::ptr::null_mut()
 }
@@ -203,9 +249,13 @@ pub extern "system" fn Java_com_dunimd_ri_database_RiDBRow_getInt0(
         return 0;
     }
     
-    let _name_str: String = env.get_string(&name)
-        .expect("Failed to get column name")
-        .into();
+    let _name_str: String = match env.get_string(&name) {
+        Ok(s) => s.into(),
+        Err(_) => {
+            crate::java::exception::throw_ri_error(&mut env, "Failed to get column name");
+            return 0;
+        }
+    };
     
     0
 }
@@ -221,9 +271,13 @@ pub extern "system" fn Java_com_dunimd_ri_database_RiDBRow_getLong0(
         return 0;
     }
     
-    let _name_str: String = env.get_string(&name)
-        .expect("Failed to get column name")
-        .into();
+    let _name_str: String = match env.get_string(&name) {
+        Ok(s) => s.into(),
+        Err(_) => {
+            crate::java::exception::throw_ri_error(&mut env, "Failed to get column name");
+            return 0;
+        }
+    };
     
     0
 }
@@ -239,9 +293,13 @@ pub extern "system" fn Java_com_dunimd_ri_database_RiDBRow_getDouble0(
         return 0.0;
     }
     
-    let _name_str: String = env.get_string(&name)
-        .expect("Failed to get column name")
-        .into();
+    let _name_str: String = match env.get_string(&name) {
+        Ok(s) => s.into(),
+        Err(_) => {
+            crate::java::exception::throw_ri_error(&mut env, "Failed to get column name");
+            return 0.0;
+        }
+    };
     
     0.0
 }
@@ -257,9 +315,13 @@ pub extern "system" fn Java_com_dunimd_ri_database_RiDBRow_getBoolean0(
         return 0;
     }
     
-    let _name_str: String = env.get_string(&name)
-        .expect("Failed to get column name")
-        .into();
+    let _name_str: String = match env.get_string(&name) {
+        Ok(s) => s.into(),
+        Err(_) => {
+            crate::java::exception::throw_ri_error(&mut env, "Failed to get column name");
+            return 0;
+        }
+    };
     
     0
 }
@@ -275,9 +337,13 @@ pub extern "system" fn Java_com_dunimd_ri_database_RiDBRow_isNull0(
         return 1;
     }
     
-    let _name_str: String = env.get_string(&name)
-        .expect("Failed to get column name")
-        .into();
+    let _name_str: String = match env.get_string(&name) {
+        Ok(s) => s.into(),
+        Err(_) => {
+            crate::java::exception::throw_ri_error(&mut env, "Failed to get column name");
+            return 0;
+        }
+    };
     
     1
 }
@@ -293,9 +359,13 @@ pub extern "system" fn Java_com_dunimd_ri_database_RiDBRow_hasColumn0(
         return 0;
     }
     
-    let _name_str: String = env.get_string(&name)
-        .expect("Failed to get column name")
-        .into();
+    let _name_str: String = match env.get_string(&name) {
+        Ok(s) => s.into(),
+        Err(_) => {
+            crate::java::exception::throw_ri_error(&mut env, "Failed to get column name");
+            return 0;
+        }
+    };
     
     0
 }
@@ -355,7 +425,7 @@ pub extern "system" fn Java_com_dunimd_ri_database_RiDBResult_getAffectedRows0(
     }
     
     let result = unsafe { &*(ptr as *const RiDBResult) };
-    result.affected_rows()
+    result.affected_rows() as jlong
 }
 
 #[no_mangle]
@@ -434,7 +504,7 @@ pub extern "system" fn Java_com_dunimd_ri_database_RiDatabaseMetrics_getActiveCo
     }
     
     let metrics = unsafe { &*(ptr as *const RiDatabaseMetrics) };
-    metrics.active_connections
+    metrics.active_connections as jlong
 }
 
 #[no_mangle]
@@ -448,7 +518,7 @@ pub extern "system" fn Java_com_dunimd_ri_database_RiDatabaseMetrics_getIdleConn
     }
     
     let metrics = unsafe { &*(ptr as *const RiDatabaseMetrics) };
-    metrics.idle_connections
+    metrics.idle_connections as jlong
 }
 
 #[no_mangle]
@@ -462,7 +532,7 @@ pub extern "system" fn Java_com_dunimd_ri_database_RiDatabaseMetrics_getTotalCon
     }
     
     let metrics = unsafe { &*(ptr as *const RiDatabaseMetrics) };
-    metrics.total_connections
+    metrics.total_connections as jlong
 }
 
 #[no_mangle]
@@ -476,7 +546,7 @@ pub extern "system" fn Java_com_dunimd_ri_database_RiDatabaseMetrics_getQueriesE
     }
     
     let metrics = unsafe { &*(ptr as *const RiDatabaseMetrics) };
-    metrics.queries_executed
+    metrics.queries_executed as jlong
 }
 
 #[no_mangle]
@@ -504,7 +574,7 @@ pub extern "system" fn Java_com_dunimd_ri_database_RiDatabaseMetrics_getErrors0(
     }
     
     let metrics = unsafe { &*(ptr as *const RiDatabaseMetrics) };
-    metrics.errors
+    metrics.errors as jlong
 }
 
 #[no_mangle]
@@ -718,16 +788,24 @@ pub extern "system" fn Java_com_dunimd_ri_database_RiDatabaseMigration_new0(
     sql_up: JString,
     sql_down: JString,
 ) -> jlong {
-    let name_str: String = env.get_string(&name)
-        .expect("Failed to get name")
-        .into();
-    let sql_up_str: String = env.get_string(&sql_up)
-        .expect("Failed to get SQL up")
-        .into();
+    let name_str: String = match env.get_string(&name) {
+        Ok(s) => s.into(),
+        Err(_) => {
+            crate::java::exception::throw_ri_error(&mut env, "Failed to get name");
+            return 0;
+        }
+    };
+    let sql_up_str: String = match env.get_string(&sql_up) {
+        Ok(s) => s.into(),
+        Err(_) => {
+            crate::java::exception::throw_ri_error(&mut env, "Failed to get SQL up");
+            return 0;
+        }
+    };
     let sql_down_str: Option<String> = if sql_down.is_null() {
         None
     } else {
-        Some(env.get_string(&sql_down).expect("Failed to get SQL down").into())
+        env.get_string(&sql_down).ok().map(|s| s.into())
     };
     
     let migration = Box::new(RiDatabaseMigration::new(
@@ -764,7 +842,10 @@ pub extern "system" fn Java_com_dunimd_ri_database_RiDatabaseMigration_getName0<
     }
     
     let migration = unsafe { &*(ptr as *const RiDatabaseMigration) };
-    env.new_string(&migration.name).unwrap().into_raw()
+    match env.new_string(&migration.name) {
+        Ok(s) => s.into_raw(),
+        Err(_) => std::ptr::null_mut(),
+    }
 }
 
 #[no_mangle]
@@ -778,7 +859,10 @@ pub extern "system" fn Java_com_dunimd_ri_database_RiDatabaseMigration_getSqlUp0
     }
     
     let migration = unsafe { &*(ptr as *const RiDatabaseMigration) };
-    env.new_string(&migration.sql_up).unwrap().into_raw()
+    match env.new_string(&migration.sql_up) {
+        Ok(s) => s.into_raw(),
+        Err(_) => std::ptr::null_mut(),
+    }
 }
 
 #[no_mangle]
@@ -793,7 +877,10 @@ pub extern "system" fn Java_com_dunimd_ri_database_RiDatabaseMigration_getSqlDow
     
     let migration = unsafe { &*(ptr as *const RiDatabaseMigration) };
     match &migration.sql_down {
-        Some(sql) => env.new_string(sql).unwrap().into_raw(),
+        Some(sql) => match env.new_string(sql) {
+        Ok(s) => s.into_raw(),
+        Err(_) => std::ptr::null_mut(),
+    },
         None => std::ptr::null_mut(),
     }
 }

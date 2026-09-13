@@ -88,6 +88,7 @@ pub use metrics::{RiMetricsRegistry, RiMetric, RiMetricConfig, RiMetricType, RiW
 pub use propagation::{RiTraceContext, RiBaggage, RiContextCarrier, W3CTracePropagator};
 #[cfg(feature = "system_info")]
 pub use metrics_collector::{RiSystemMetricsCollector, RiSystemMetrics, RiCPUMetrics, RiMemoryMetrics, RiDiskMetrics, RiNetworkMetrics};
+pub use metrics_collector::{RiSlidingWindow, RiQuantileCalculator, RiPerformanceCollector};
 
 use crate::core::{RiResult, RiServiceContext};
 

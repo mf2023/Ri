@@ -20,7 +20,7 @@
 //! JNI bindings for Ri queue classes.
 
 use jni::JNIEnv;
-use jni::objects::{JClass, JString, JByteArray};
+use jni::objects::{JClass, JString, JByteArray, JObject};
 use jni::sys::{jlong, jboolean, jint, jstring, jdouble, jbyteArray, jobjectArray};
 use crate::queue::{RiQueueModule, RiQueueConfig, RiQueueManager, RiQueueMessage, RiQueueStats, RiRetryPolicy, RiDeadLetterConfig};
 use crate::java::exception::check_not_null;
@@ -40,21 +40,16 @@ pub extern "system" fn Java_com_dunimd_ri_queue_RiQueueModule_new0(
     }
     
     let config = unsafe { &*(config_ptr as *const RiQueueConfig) };
-    let rt = match tokio::runtime::Runtime::new() {
-        Ok(r) => r,
-        Err(_) => return 0,
-    };
-    
-    let result = rt.block_on(async {
+    let result = crate::java::runtime::block_on_local(&mut env, "RiQueue", async {
         RiQueueModule::new(config.clone()).await
     });
     
     match result {
-        Ok(module) => {
+        Some(Ok(module)) => {
             let boxed = Box::new(module);
             Box::into_raw(boxed) as jlong
         }
-        Err(_) => 0,
+        _ => 0,
     }
 }
 
@@ -133,9 +128,13 @@ pub extern "system" fn Java_com_dunimd_ri_queue_RiQueueConfig_setConnectionStrin
     }
     
     let config = unsafe { &mut *(ptr as *mut RiQueueConfig) };
-    config.connection_string = env.get_string(&connection_string)
-        .expect("Failed to get connection string")
-        .into();
+    config.connection_string = match env.get_string(&connection_string) {
+        Ok(s) => s.into(),
+        Err(_) => {
+            crate::java::exception::throw_ri_error(&mut env, "Invalid connection string");
+            return;
+        }
+    };
 }
 
 #[no_mangle]
@@ -175,12 +174,7 @@ pub extern "system" fn Java_com_dunimd_ri_queue_RiQueueManager_init0(
     }
     
     let manager = unsafe { &*(ptr as *const RiQueueManager) };
-    let rt = match tokio::runtime::Runtime::new() {
-        Ok(r) => r,
-        Err(_) => return,
-    };
-    
-    let _ = rt.block_on(async {
+    let _ = crate::java::runtime::block_on_local(&mut env, "RiQueue", async {
         manager.init().await
     });
 }
@@ -197,24 +191,24 @@ pub extern "system" fn Java_com_dunimd_ri_queue_RiQueueManager_createQueue0(
     }
     
     let manager = unsafe { &*(ptr as *const RiQueueManager) };
-    let name_str: String = env.get_string(&name)
-        .expect("Failed to get queue name")
-        .into();
-    
-    let rt = match tokio::runtime::Runtime::new() {
-        Ok(r) => r,
-        Err(_) => return std::ptr::null_mut(),
+    let name_str: String = match env.get_string(&name) {
+        Ok(s) => s.into(),
+        Err(_) => {
+            crate::java::exception::throw_ri_error(&mut env, "Failed to get queue name");
+            return std::ptr::null_mut();
+        }
     };
     
-    let result = rt.block_on(async {
+    let result = crate::java::runtime::block_on_local(&mut env, "RiQueue", async {
         manager.create_queue(&name_str).await
     });
     
     match result {
-        Ok(_) => env.new_string(&name_str)
-            .expect("Failed to create string")
-            .into_raw(),
-        Err(_) => std::ptr::null_mut(),
+        Some(Ok(_)) => match env.new_string(&name_str) {
+            Ok(s) => s.into_raw(),
+            Err(_) => std::ptr::null_mut(),
+        },
+        _ => std::ptr::null_mut(),
     }
 }
 
@@ -230,19 +224,19 @@ pub extern "system" fn Java_com_dunimd_ri_queue_RiQueueManager_queueExists0(
     }
     
     let manager = unsafe { &*(ptr as *const RiQueueManager) };
-    let name_str: String = env.get_string(&name)
-        .expect("Failed to get queue name")
-        .into();
-    
-    let rt = match tokio::runtime::Runtime::new() {
-        Ok(r) => r,
-        Err(_) => return 0,
+    let name_str: String = match env.get_string(&name) {
+        Ok(s) => s.into(),
+        Err(_) => {
+            crate::java::exception::throw_ri_error(&mut env, "Failed to get queue name");
+            return 0;
+        }
     };
     
-    let exists = rt.block_on(async {
+    let exists = crate::java::runtime::block_on_local(&mut env, "RiQueue", async {
         manager.get_queue(&name_str).await.is_some()
-    });
-    
+    })
+    .unwrap_or(false);
+
     if exists { 1 } else { 0 }
 }
 
@@ -258,21 +252,17 @@ pub extern "system" fn Java_com_dunimd_ri_queue_RiQueueManager_listQueues0(
     
     let manager = unsafe { &*(ptr as *const RiQueueManager) };
     
-    let rt = match tokio::runtime::Runtime::new() {
-        Ok(r) => r,
-        Err(_) => return std::ptr::null_mut(),
-    };
-    
-    let queues = rt.block_on(async {
+    let queues = crate::java::runtime::block_on_local(&mut env, "RiQueue", async {
         manager.list_queues().await
-    });
+    })
+    .unwrap_or_default();
     
     let string_class = match env.find_class("java/lang/String") {
         Ok(c) => c,
         Err(_) => return std::ptr::null_mut(),
     };
     
-    let array = match env.new_object_array(queues.len() as i32, string_class, std::ptr::null_mut()) {
+    let array = match env.new_object_array(queues.len() as i32, &string_class, JObject::null()) {
         Ok(a) => a,
         Err(_) => return std::ptr::null_mut(),
     };
@@ -300,22 +290,21 @@ pub extern "system" fn Java_com_dunimd_ri_queue_RiQueueManager_deleteQueue0(
     }
     
     let manager = unsafe { &*(ptr as *const RiQueueManager) };
-    let name_str: String = env.get_string(&name)
-        .expect("Failed to get queue name")
-        .into();
-    
-    let rt = match tokio::runtime::Runtime::new() {
-        Ok(r) => r,
-        Err(_) => return 0,
+    let name_str: String = match env.get_string(&name) {
+        Ok(s) => s.into(),
+        Err(_) => {
+            crate::java::exception::throw_ri_error(&mut env, "Failed to get queue name");
+            return 0;
+        }
     };
     
-    let result = rt.block_on(async {
+    let result = crate::java::runtime::block_on_local(&mut env, "RiQueue", async {
         manager.delete_queue(&name_str).await
     });
     
     match result {
-        Ok(_) => 1,
-        Err(_) => 0,
+        Some(Ok(_)) => 1,
+        _ => 0,
     }
 }
 
@@ -332,19 +321,18 @@ pub extern "system" fn Java_com_dunimd_ri_queue_RiQueueManager_publish0(
     }
     
     let manager = unsafe { &*(ptr as *const RiQueueManager) };
-    let queue_name_str: String = env.get_string(&queue_name)
-        .expect("Failed to get queue name")
-        .into();
+    let queue_name_str: String = match env.get_string(&queue_name) {
+        Ok(s) => s.into(),
+        Err(_) => {
+            crate::java::exception::throw_ri_error(&mut env, "Failed to get queue name");
+            return;
+        }
+    };
     
     let payload: Vec<u8> = env.convert_byte_array(message)
         .unwrap_or_default();
     
-    let rt = match tokio::runtime::Runtime::new() {
-        Ok(r) => r,
-        Err(_) => return,
-    };
-    
-    let _ = rt.block_on(async {
+    let _ = crate::java::runtime::block_on_local(&mut env, "RiQueue", async {
         if let Some(queue) = manager.get_queue(&queue_name_str).await {
             let producer = queue.create_producer().await;
             if let Ok(producer) = producer {
@@ -367,16 +355,15 @@ pub extern "system" fn Java_com_dunimd_ri_queue_RiQueueManager_consume0(
     }
     
     let manager = unsafe { &*(ptr as *const RiQueueManager) };
-    let queue_name_str: String = env.get_string(&queue_name)
-        .expect("Failed to get queue name")
-        .into();
-    
-    let rt = match tokio::runtime::Runtime::new() {
-        Ok(r) => r,
-        Err(_) => return 0,
+    let queue_name_str: String = match env.get_string(&queue_name) {
+        Ok(s) => s.into(),
+        Err(_) => {
+            crate::java::exception::throw_ri_error(&mut env, "Failed to get queue name");
+            return 0;
+        }
     };
     
-    let result = rt.block_on(async {
+    let result = crate::java::runtime::block_on_local(&mut env, "RiQueue", async {
         if let Some(queue) = manager.get_queue(&queue_name_str).await {
             let consumer = queue.create_consumer("default").await;
             if let Ok(consumer) = consumer {
@@ -387,7 +374,7 @@ pub extern "system" fn Java_com_dunimd_ri_queue_RiQueueManager_consume0(
     });
     
     match result {
-        Ok(Some(msg)) => {
+        Some(Ok(Some(msg))) => {
             let boxed = Box::new(msg);
             Box::into_raw(boxed) as jlong
         }
@@ -407,16 +394,15 @@ pub extern "system" fn Java_com_dunimd_ri_queue_RiQueueManager_stats0(
     }
     
     let manager = unsafe { &*(ptr as *const RiQueueManager) };
-    let queue_name_str: String = env.get_string(&queue_name)
-        .expect("Failed to get queue name")
-        .into();
-    
-    let rt = match tokio::runtime::Runtime::new() {
-        Ok(r) => r,
-        Err(_) => return 0,
+    let queue_name_str: String = match env.get_string(&queue_name) {
+        Ok(s) => s.into(),
+        Err(_) => {
+            crate::java::exception::throw_ri_error(&mut env, "Failed to get queue name");
+            return 0;
+        }
     };
     
-    let result = rt.block_on(async {
+    let result = crate::java::runtime::block_on_local(&mut env, "RiQueue", async {
         if let Some(queue) = manager.get_queue(&queue_name_str).await {
             queue.get_stats().await.ok()
         } else {
@@ -445,12 +431,7 @@ pub extern "system" fn Java_com_dunimd_ri_queue_RiQueueManager_shutdown0(
     
     let manager = unsafe { &*(ptr as *const RiQueueManager) };
     
-    let rt = match tokio::runtime::Runtime::new() {
-        Ok(r) => r,
-        Err(_) => return,
-    };
-    
-    let _ = rt.block_on(async {
+    let _ = crate::java::runtime::block_on_local(&mut env, "RiQueue", async {
         manager.shutdown().await
     });
 }
@@ -474,7 +455,7 @@ pub extern "system" fn Java_com_dunimd_ri_queue_RiQueueManager_free0(
 
 #[no_mangle]
 pub extern "system" fn Java_com_dunimd_ri_queue_RiQueueMessage_new0(
-    mut env: JNIEnv,
+    env: JNIEnv,
     _class: JClass,
     payload: JByteArray,
 ) -> jlong {
@@ -496,9 +477,10 @@ pub extern "system" fn Java_com_dunimd_ri_queue_RiQueueMessage_getId0(
     }
     
     let message = unsafe { &*(ptr as *const RiQueueMessage) };
-    env.new_string(&message.id)
-        .expect("Failed to create string")
-        .into_raw()
+    match env.new_string(&message.id) {
+            Ok(s) => s.into_raw(),
+            Err(_) => std::ptr::null_mut(),
+        }
 }
 
 #[no_mangle]
@@ -534,9 +516,10 @@ pub extern "system" fn Java_com_dunimd_ri_queue_RiQueueMessage_getPayloadString0
     
     let message = unsafe { &*(ptr as *const RiQueueMessage) };
     let payload_str = String::from_utf8_lossy(&message.payload);
-    env.new_string(&payload_str)
-        .expect("Failed to create string")
-        .into_raw()
+    match env.new_string(&payload_str) {
+            Ok(s) => s.into_raw(),
+            Err(_) => std::ptr::null_mut(),
+        }
 }
 
 #[no_mangle]
@@ -624,9 +607,10 @@ pub extern "system" fn Java_com_dunimd_ri_queue_RiQueueStats_getQueueName0(
     }
     
     let stats = unsafe { &*(ptr as *const RiQueueStats) };
-    env.new_string(&stats.queue_name)
-        .expect("Failed to create string")
-        .into_raw()
+    match env.new_string(&stats.queue_name) {
+            Ok(s) => s.into_raw(),
+            Err(_) => std::ptr::null_mut(),
+        }
 }
 
 #[no_mangle]
@@ -979,9 +963,13 @@ pub extern "system" fn Java_com_dunimd_ri_queue_RiDeadLetterConfig_setDeadLetter
     }
     
     let config = unsafe { &mut *(ptr as *mut RiDeadLetterConfig) };
-    config.dead_letter_queue_name = env.get_string(&name)
-        .expect("Failed to get queue name")
-        .into();
+    config.dead_letter_queue_name = match env.get_string(&name) {
+        Ok(s) => s.into(),
+        Err(_) => {
+            crate::java::exception::throw_ri_error(&mut env, "Invalid queue name");
+            return;
+        }
+    };
 }
 
 #[no_mangle]
@@ -995,9 +983,10 @@ pub extern "system" fn Java_com_dunimd_ri_queue_RiDeadLetterConfig_getDeadLetter
     }
     
     let config = unsafe { &*(ptr as *const RiDeadLetterConfig) };
-    env.new_string(&config.dead_letter_queue_name)
-        .expect("Failed to create string")
-        .into_raw()
+    match env.new_string(&config.dead_letter_queue_name) {
+            Ok(s) => s.into_raw(),
+            Err(_) => std::ptr::null_mut(),
+        }
 }
 
 #[no_mangle]

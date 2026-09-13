@@ -32,90 +32,27 @@
 #
 # 2. Python Wheel Packages (.whl): Distributable Python packages with embedded
 #    Rust binaries, installable via pip
+# 2. Python Wheel Packages (.whl): Distributable Python packages with embedded
+#    Rust binaries, installable via pip
 #
-# 3. C Static Libraries (.a/.lib): For C/C++ integration scenarios
-#    - Linux:   .a files (libri.a)
-#    - Windows: .lib files (ri.lib)
-#    - macOS:   .a files (libri.a)
-#
-# 4. C Header Files (.h): C API declarations for direct C/C++ usage
+# 3. Java JAR: Java bindings (JNI) with embedded native libraries
 #
 # ARCHITECTURE OVERVIEW:
 # The build process follows a multi-phase approach:
 #
 #   Phase 1: CLI Tool Compilation
-#   ┌─────────────────────────────────────────────────────────────┐
-#   │  build-cli-linux        → ric (x64)                       │
-#   │  build-cli-linux-arm64  → ric (ARM64)                     │
-#   │  build-cli-windows      → ric.exe (x64)                   │
-#   │  build-cli-windows-arm64→ ric.exe (ARM64)                 │
-#   │  build-cli-macos        → ric (x64)                       │
-#   │  build-cli-macos-arm64  → ric (ARM64)                     │
-#   └─────────────────────────────────────────────────────────────┘
+#     - build-cli-*: ric / ric.exe (x64/ARM64, Linux/Windows/macOS)
+#   Phase 2: Rust Library Compilation (cdylib)
+#     - build-rust-*: libri.so / ri.dll / libri.dylib (x64/ARM64)
+#   Phase 3: Python Wheel Generation
+#     - build-python (matrix job)
+#     - 7 Python versions x 6 platforms = 42 wheel combinations
+#   Phase 4: Java JAR Packaging
+#     - build-java: JAR with embedded native libraries
 #
-#   Phase 2: Rust Library Compilation
-#   ┌─────────────────────────────────────────────────────────────┐
-#   │  build-rust-linux        → libri.so (x64)                │
-#   │  build-rust-linux-arm64  → libri.so (ARM64)              │
-#   │  build-rust-windows      → libri.dll (x64)                │
-#   │  build-rust-macos        → libri.dylib (x64)              │
-#   │  build-rust-macos-arm64  → libri.dylib (ARM64)            │
-#   │  build-rust-windows-arm64→ libri.dll (ARM64)              │
-#   └─────────────────────────────────────────────────────────────┘
-#
-#   Phase 3: C Library Compilation (parallel with Phase 2)
-#   ┌─────────────────────────────────────────────────────────────┐
-#   │  build-c-libs-linux        → libri.a + ri.h             │
-#   │  build-c-libs-linux-arm64  → libri.a + ri.h             │
-#   │  build-c-libs-windows      → ri.lib + ri.h               │
-#   │  build-c-libs-macos        → libri.a + ri.h             │
-#   │  build-c-libs-macos-arm64  → libri.a + ri.h             │
-#   │  build-c-libs-windows-arm64→ ri.lib + ri.h             │
-#   └─────────────────────────────────────────────────────────────┘
-#
-#   Phase 4: Python Wheel Generation
-#   ┌─────────────────────────────────────────────────────────────┐
-#   │  build-python (matrix job)                                   │
-#   │  - 7 Python versions × 6 platforms = 42 wheel combinations   │
-#   │  - Each wheel includes pre-compiled Rust binary              │
-#   └─────────────────────────────────────────────────────────────┘
-#
-# SUPPORTED PLATFORMS AND ARCHITECTURES:
-# ┌─────────────┬──────────┬──────────────────────────────────────┐
-# │ Platform    │ Arch     │ Notes                                │
-# ├─────────────┼──────────┼──────────────────────────────────────┤
-# │ Linux       │ x64      │ glibc 2.17+ (manylinux2014)          │
-# │ Linux       │ ARM64    │ Native build on ubuntu-24.04-arm    │
-# │ Windows     │ x64      │ MSVC toolchain                       │
-# │ Windows     │ ARM64    │ Native build on windows-11-arm       │
-# │ macOS       │ x64      │ Intel Macs (until Aug 2027)         │
-# │ macOS       │ ARM64    │ Apple Silicon (M1/M2/M3/M4)          │
-# └─────────────┴──────────┴──────────────────────────────────────┘
-#
-# SUPPORTED PYTHON VERSIONS: 3.8, 3.9, 3.10, 3.11, 3.12, 3.13, 3.14
-#
-# TRIGGER CONDITIONS:
-# - push to master branch:    Automatic build for all platforms
-# - release published:        Full release pipeline + PyPI publishing
-# - workflow_dispatch:         Manual trigger for testing/verification
-#
-# BUILD TOOLCHAIN:
-# - maturin: Rust/Python integration build tool
-# - cargo:   Rust package manager and build system
-# - CMake:   Build system for C dependencies (rdkafka)
-# - protoc:  Protocol Buffers compiler (etcd-client dependency)
-#
-# KEY DEPENDENCIES:
-# - etcd-client: Service discovery and configuration management
-# - rdkafka:     Kafka message streaming client
-# - PyO3:        Rust/Python bindings generation
-#
-# ARTIFACT RETENTION:
-# - GitHub Actions artifacts: Available for 90 days
-# - PyPI packages: Permanently available after publication
-################################################################################
-
-name: Build and Publish Ri (Rust/C/Python)
+# Note: The C/C++ static library and header (ri.h) builds were removed in Ri 0.2.0
+#       when the C/C++ bindings were dropped.
+name: Build and Publish Ri (Rust/Python/Java)
 
 on:
   push:
@@ -440,7 +377,7 @@ jobs:
         run: cargo update -p oqs
 
       - name: Build
-        run: make build-linux-x64
+        run: make build-java-native-linux-x64
         env:
           # Make cargo more resilient to transient network failures when
           # downloading the new dependency graph from crates.io.
@@ -481,7 +418,7 @@ jobs:
         run: cargo update -p oqs
 
       - name: Build
-        run: make build-linux-arm64
+        run: make build-java-native-linux-arm64
         env:
           CARGO_NET_RETRY: '10'
           CARGO_NET_TIMEOUT: '300'
@@ -541,7 +478,7 @@ jobs:
         run: cargo update -p oqs
 
       - name: Build
-        run: make build-windows-x64
+        run: make build-java-native-windows-x64
         env:
           CARGO_NET_RETRY: '10'
           CARGO_NET_TIMEOUT: '300'
@@ -581,7 +518,7 @@ jobs:
         run: cargo update -p oqs
 
       - name: Build Rust library
-        run: make build-macos-x64
+        run: make build-java-native-macos-x64
         env:
           CARGO_NET_RETRY: '10'
           CARGO_NET_TIMEOUT: '300'
@@ -621,7 +558,7 @@ jobs:
         run: cargo update -p oqs
 
       - name: Build Rust library
-        run: make build-macos-arm64
+        run: make build-java-native-macos-arm64
         env:
           CARGO_NET_RETRY: '10'
           CARGO_NET_TIMEOUT: '300'
@@ -682,7 +619,7 @@ jobs:
         run: cargo update -p oqs
 
       - name: Build Rust library
-        run: make build-windows-arm64
+        run: make build-java-native-windows-arm64
         env:
           CARGO_NET_RETRY: '10'
           CARGO_NET_TIMEOUT: '300'
@@ -692,308 +629,6 @@ jobs:
         with:
           name: rust-windows-arm64
           path: target/aarch64-pc-windows-msvc/release/ri.dll
-
-  ################################################################################
-  # C LIBRARY COMPILATION JOBS
-  ################################################################################
-  # These jobs compile the Rust library as a static library (.a/.lib) for C/C++
-  # integration. Static linking is preferred for C applications as it avoids
-  # runtime library dependencies.
-  #
-  # Build Output: Static library files + C header file
-  # Used by: C/C++ applications linking against Ri
-  ################################################################################
-
-  build-c-libs-linux:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Install protoc
-        uses: arduino/setup-protoc@v3
-        with:
-          version: '33.x'
-          repo-token: ${{ github.token }}
-
-      - name: Install CMake
-        uses: jwlawson/actions-setup-cmake@v2
-        with:
-          cmake-version: '3.28.x'
-
-      - name: Setup Rust
-        uses: dtolnay/rust-toolchain@master
-        with:
-          toolchain: stable
-
-      - name: Install system dependencies
-        run: make setup-deps
-
-      - name: Sync Cargo.lock with Cargo.toml
-        run: cargo update -p oqs
-
-      - name: Build C static library
-        run: make build-c-linux-x64
-        env:
-          CARGO_NET_RETRY: '10'
-          CARGO_NET_TIMEOUT: '300'
-
-      - name: Upload C library artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: c-libs-linux-x64
-          path: |
-            target/x86_64-unknown-linux-gnu/release/libri.a
-            include/ri.h
-
-  build-c-libs-linux-arm64:
-    runs-on: ubuntu-24.04-arm
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Install protoc
-        uses: arduino/setup-protoc@v3
-        with:
-          version: '33.x'
-          repo-token: ${{ github.token }}
-
-      - name: Install CMake
-        uses: jwlawson/actions-setup-cmake@v2
-        with:
-          cmake-version: '3.28.x'
-
-      - name: Setup Rust
-        uses: dtolnay/rust-toolchain@master
-        with:
-          toolchain: stable
-
-      - name: Install system dependencies
-        run: make setup-deps
-
-      - name: Sync Cargo.lock with Cargo.toml
-        run: cargo update -p oqs
-
-      - name: Build C static library
-        run: make build-c-linux-arm64
-        env:
-          CARGO_NET_RETRY: '10'
-          CARGO_NET_TIMEOUT: '300'
-
-      - name: Upload C library artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: c-libs-linux-arm64
-          path: |
-            target/aarch64-unknown-linux-gnu/release/libri.a
-            include/ri.h
-
-  build-c-libs-windows:
-    runs-on: windows-2022
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Install protoc
-        uses: arduino/setup-protoc@v3
-        with:
-          version: '33.x'
-          repo-token: ${{ github.token }}
-
-      - name: Install CMake
-        uses: jwlawson/actions-setup-cmake@v2
-        with:
-          cmake-version: '3.28.x'
-
-      - name: Setup Rust
-        uses: dtolnay/rust-toolchain@master
-        with:
-          toolchain: stable
-
-      - name: Setup MSVC
-        uses: ilammy/msvc-dev-cmd@v1
-
-      - name: Fix PATH for MSVC linker
-        run: |
-          $msvcBin = "C:\Program Files\Microsoft Visual Studio\2022\*\VC\Tools\MSVC\*\bin\Hostx64\x64"
-          $msvcBin = (Get-ChildItem $msvcBin -ErrorAction SilentlyContinue | Select-Object -First 1).FullName
-          if (-not $msvcBin) {
-            $msvcBin = "C:\Program Files (x86)\Microsoft Visual Studio\*\VC\Tools\MSVC\*\bin\Hostx64\x64"
-            $msvcBin = (Get-ChildItem $msvcBin -ErrorAction SilentlyContinue | Select-Object -First 1).FullName
-          }
-          if ($msvcBin) {
-            $env:PATH = "$msvcBin;$env:PATH"
-            echo "Added MSVC bin to PATH: $msvcBin"
-          }
-
-      - name: Install OpenSSL
-        run: |
-          vcpkg install openssl:x64-windows
-          vcpkg integrate install
-          echo "OPENSSL_DIR=C:\vcpkg\installed\x64-windows" >> $env:GITHUB_ENV
-          echo "OPENSSL_NO_VENDOR=1" >> $env:GITHUB_ENV
-
-      - name: Sync Cargo.lock with Cargo.toml
-        shell: bash
-        run: cargo update -p oqs
-
-      - name: Build C static library
-        run: make build-c-windows-x64
-        env:
-          CARGO_NET_RETRY: '10'
-          CARGO_NET_TIMEOUT: '300'
-
-      - name: Upload C library artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: c-libs-windows-x64
-          path: |
-            target/x86_64-pc-windows-msvc/release/ri.lib
-            include/ri.h
-
-  build-c-libs-macos:
-    runs-on: macos-15-intel
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Install protoc
-        uses: arduino/setup-protoc@v3
-        with:
-          version: '33.x'
-          repo-token: ${{ github.token }}
-
-      - name: Install CMake
-        uses: jwlawson/actions-setup-cmake@v2
-        with:
-          cmake-version: '3.28.x'
-
-      - name: Setup Rust
-        uses: dtolnay/rust-toolchain@master
-        with:
-          toolchain: stable
-          targets: x86_64-apple-darwin
-
-      - name: Install dependencies
-        run: brew install --quiet cmake pkg-config openssl
-
-      - name: Sync Cargo.lock with Cargo.toml
-        run: cargo update -p oqs
-
-      - name: Build C static library
-        run: make build-c-macos-x64
-        env:
-          CARGO_NET_RETRY: '10'
-          CARGO_NET_TIMEOUT: '300'
-
-      - name: Upload C library artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: c-libs-macos-x64
-          path: |
-            target/x86_64-apple-darwin/release/libri.a
-            include/ri.h
-
-  build-c-libs-macos-arm64:
-    runs-on: macos-15
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Install protoc
-        uses: arduino/setup-protoc@v3
-        with:
-          version: '33.x'
-          repo-token: ${{ github.token }}
-
-      - name: Install CMake
-        uses: jwlawson/actions-setup-cmake@v2
-        with:
-          cmake-version: '3.28.x'
-
-      - name: Setup Rust
-        uses: dtolnay/rust-toolchain@master
-        with:
-          toolchain: stable
-          targets: aarch64-apple-darwin
-
-      - name: Install dependencies
-        run: brew install --quiet cmake pkg-config openssl
-
-      - name: Sync Cargo.lock with Cargo.toml
-        run: cargo update -p oqs
-
-      - name: Build C static library
-        run: make build-c-macos-arm64
-        env:
-          CARGO_NET_RETRY: '10'
-          CARGO_NET_TIMEOUT: '300'
-
-      - name: Upload C library artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: c-libs-macos-arm64
-          path: |
-            target/aarch64-apple-darwin/release/libri.a
-            include/ri.h
-
-  build-c-libs-windows-arm64:
-    runs-on: windows-11-arm
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Install protoc
-        uses: arduino/setup-protoc@v3
-        with:
-          version: '33.x'
-          repo-token: ${{ github.token }}
-
-      - name: Install CMake
-        uses: jwlawson/actions-setup-cmake@v2
-        with:
-          cmake-version: '3.28.x'
-
-      - name: Setup Rust
-        uses: dtolnay/rust-toolchain@master
-        with:
-          toolchain: stable
-          targets: aarch64-pc-windows-msvc
-
-      - name: Setup MSVC
-        uses: ilammy/msvc-dev-cmd@v1
-
-      - name: Fix PATH for MSVC linker
-        run: |
-          $msvcBin = "C:\Program Files\Microsoft Visual Studio\2022\*\VC\Tools\MSVC\*\bin\Hostx64\arm64"
-          $msvcBin = (Get-ChildItem $msvcBin -ErrorAction SilentlyContinue | Select-Object -First 1).FullName
-          if (-not $msvcBin) {
-            $msvcBin = "C:\Program Files (x86)\Microsoft Visual Studio\*\VC\Tools\MSVC\*\bin\Hostx64\arm64"
-            $msvcBin = (Get-ChildItem $msvcBin -ErrorAction SilentlyContinue | Select-Object -First 1).FullName
-          }
-          if ($msvcBin) {
-            $env:PATH = "$msvcBin;$env:PATH"
-            echo "Added MSVC bin to PATH: $msvcBin"
-          }
-
-      - name: Install OpenSSL
-        run: |
-          vcpkg install openssl:arm64-windows
-          vcpkg integrate install
-          echo "OPENSSL_DIR=C:\vcpkg\installed\arm64-windows" >> $env:GITHUB_ENV
-          echo "OPENSSL_NO_VENDOR=1" >> $env:GITHUB_ENV
-
-      - name: Sync Cargo.lock with Cargo.toml
-        shell: bash
-        run: cargo update -p oqs
-
-      - name: Build C static library
-        run: make build-c-windows-arm64
-        env:
-          CARGO_NET_RETRY: '10'
-          CARGO_NET_TIMEOUT: '300'
-
-      - name: Upload C library artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: c-libs-windows-arm64
-          path: |
-            target/aarch64-pc-windows-msvc/release/ri.lib
-            include/ri.h
 
   ################################################################################
   # JAVA LIBRARY BUILD JOB
@@ -1413,8 +1048,8 @@ jobs:
           mkdir -p .cargo
           cat > .cargo/config.toml << 'CARGO_EOF'
           [profile.release]
-          lto = true
-          codegen-units = 1
+          lto = "thin"
+          codegen-units = 16
           strip = true
           CARGO_EOF
 
@@ -1510,12 +1145,12 @@ jobs:
             export PKG_CONFIG_PATH=/usr/lib64/pkgconfig:/usr/share/pkgconfig
             export PKG_CONFIG_ALLOW_CROSS=1
             # manylinux_2_28 is based on AlmaLinux 8 (dnf). The older
-            # manylinux_2_17 image (CentOS 7) is EOL — its yum repos
+            # manylinux_2_17 image (CentOS 7) is EOL �?its yum repos
             # return 404 from vault.centos.org, so we avoid CentOS Vault
             # entirely and rely on the fresh dnf repos that come with
             # AlmaLinux 8.
             if command -v dnf >/dev/null 2>&1; then
-              # Critical packages — must succeed or cargo build will fail
+              # Critical packages �?must succeed or cargo build will fail
               # with "openssl/opensslv.h: No such file or directory".
               # We disable the `| tail -20 || true` swallow so a real
               # failure (e.g. a stale dnf cache, repo 404, missing
@@ -1535,7 +1170,7 @@ jobs:
                   libcurl-devel \
                   2>&1 | tail -40
               )
-              # Optional packages — failures here are tolerated because
+              # Optional packages �?failures here are tolerated because
               # some are in EPEL/CodeReady that may not be enabled.
               dnf install -y \
                 cmake \
@@ -1598,7 +1233,7 @@ jobs:
               echo "Listing OpenSSL packages installed:"
               rpm -qa 2>/dev/null | grep -i ssl | head -20 || true
             else
-              echo "System OpenSSL found at /usr/include/openssl — using it (OPENSSL_NO_VENDOR=1)"
+              echo "System OpenSSL found at /usr/include/openssl �?using it (OPENSSL_NO_VENDOR=1)"
               /usr/bin/openssl version
             fi
             unset OPENSSL_INCLUDE_DIR
@@ -1612,7 +1247,7 @@ jobs:
               rpm -qa 2>/dev/null | grep -i sasl | head -20 || true
               exit 1
             else
-              echo "SASL headers found — sasl2-sys will link successfully"
+              echo "SASL headers found �?sasl2-sys will link successfully"
             fi
             # Configure correct Python version for maturin
             PYTHON_VER="${{ matrix.python }}"
@@ -1649,8 +1284,8 @@ jobs:
   # PUBLICATION REQUIREMENTS:
   # - GitHub secret PYPI_API_TOKEN must be configured
   # - Release title determines target repository:
-  #   - Contains "Test": → TestPyPI
-  #   - No "Test":        → PyPI (production)
+  #   - Contains "Test": �?TestPyPI
+  #   - No "Test":        �?PyPI (production)
   ################################################################################
 
   publish-pypi:

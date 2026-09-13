@@ -583,6 +583,7 @@ async fn test_rate_limiter_new() {
         requests_per_second: 100,
         burst_size: 200,
         window_seconds: 1,
+        max_keys: 10000,
     };
     
     let rate_limiter = RiRateLimiter::new(config);
@@ -628,12 +629,12 @@ async fn test_circuit_breaker_new() {
     let circuit_breaker = RiCircuitBreaker::new(config);
     
     // Test allowing requests initially
-    let allowed = circuit_breaker.allow_request().await;
+    let allowed = circuit_breaker.allow_request();
     assert!(allowed);
     
     // Test recording success
-    circuit_breaker.record_success().await;
+    circuit_breaker.record_success();
     
     // Test recording failure
-    circuit_breaker.record_failure().await;
+    circuit_breaker.record_failure();
 }

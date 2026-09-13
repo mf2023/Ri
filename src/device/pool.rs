@@ -1073,6 +1073,25 @@ impl RiResourcePoolManager {
         pool
     }
     
+    /// Registers an already-built resource pool with the manager
+    ///
+    /// This method inserts a pre-constructed pool (e.g. one that was populated
+    /// with devices before being shared) into the manager, replacing any
+    /// existing pool with the same name.
+    ///
+    /// # Parameters
+    ///
+    /// - `pool`: The fully built `RiResourcePool` to register
+    ///
+    /// # Returns
+    ///
+    /// An `Arc<RiResourcePool>` sharing the same underlying pool
+    pub fn register_pool(&mut self, pool: RiResourcePool) -> Arc<RiResourcePool> {
+        let shared = Arc::new(pool);
+        self.pools.insert(shared.name().to_string(), shared.clone());
+        shared
+    }
+    
     /// Gets a resource pool by name
     /// 
     /// # Parameters

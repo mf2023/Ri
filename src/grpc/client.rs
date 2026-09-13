@@ -72,8 +72,7 @@ impl RiGrpcClientPy {
     }
 
     fn connect(&mut self) -> PyResult<()> {
-        let rt = tokio::runtime::Runtime::new()
-            .map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(e.to_string()))?;
+        let rt = crate::py_runtime::py_runtime();
         
         rt.block_on(async {
             self.inner.connect().await
@@ -81,17 +80,15 @@ impl RiGrpcClientPy {
     }
 
     fn disconnect(&mut self) {
-        if let Ok(rt) = tokio::runtime::Runtime::new() {
-            rt.block_on(async {
-                self.inner.disconnect().await
-            });
-        }
+        let rt = crate::py_runtime::py_runtime();
+        rt.block_on(async {
+            self.inner.disconnect().await
+        });
     }
 
     #[pyo3(signature = (service_name, method, data))]
     fn call(&mut self, service_name: String, method: String, data: Vec<u8>) -> PyResult<Vec<u8>> {
-        let rt = tokio::runtime::Runtime::new()
-            .map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(e.to_string()))?;
+        let rt = crate::py_runtime::py_runtime();
         
         rt.block_on(async {
             self.inner.call(&service_name, &method, &data).await
@@ -254,11 +251,10 @@ impl RiGrpcClient {
 impl Drop for RiGrpcClient {
     fn drop(&mut self) {
         if self.channel.is_some() {
-            if let Ok(rt) = tokio::runtime::Runtime::new() {
-                rt.block_on(async {
-                    self.disconnect().await;
-                });
-            }
+            let rt = crate::py_runtime::py_runtime();
+            rt.block_on(async {
+                self.disconnect().await;
+            });
         }
     }
 }

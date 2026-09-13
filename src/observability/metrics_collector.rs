@@ -655,6 +655,11 @@ impl RiSystemMetricsCollector {
         }
     }
 
+    /// Refreshes the underlying system information cache.
+    pub fn refresh(&mut self) {
+        self.system.refresh_all();
+    }
+
     /// Collects the current system metrics.
     ///
     /// # Returns

@@ -233,7 +233,9 @@ fn test_device_new() {
     assert_eq!(device.name(), "test_device");
     assert_eq!(device.device_type(), RiDeviceType::CPU);
     assert_eq!(device.status(), RiDeviceStatus::Unknown);
-    assert!(device.is_available());
+    // New devices start in Unknown status: not yet available, not allocated.
+    // Availability requires an explicit status transition to Available.
+    assert!(!device.is_available());
     assert!(!device.is_allocated());
 }
 
@@ -263,6 +265,9 @@ fn test_device_new() {
 /// - After release, allocation ID is cleared
 fn test_device_allocation() {
     let mut device = RiDevice::new("test_device".to_string(), RiDeviceType::CPU);
+    
+    // New devices are Unknown: bring to Available before allocating.
+    device.set_status(RiDeviceStatus::Available);
     
     // Test initial state
     assert!(device.is_available());
@@ -380,11 +385,13 @@ fn test_device_health_score() {
 fn test_device_control_config_default() {
     let config = RiDeviceControlConfig::default();
     
-    assert!(config.discovery_enabled);
-    assert_eq!(config.discovery_interval_secs, 30);
-    assert!(config.auto_scheduling_enabled);
-    assert_eq!(config.max_concurrent_tasks, 100);
-    assert_eq!(config.resource_allocation_timeout_secs, 60);
+    assert!(config.enable_cpu_discovery);
+    assert!(config.enable_gpu_discovery);
+    assert!(config.enable_memory_discovery);
+    assert!(config.enable_storage_discovery);
+    assert!(config.enable_network_discovery);
+    assert_eq!(config.discovery_timeout_secs, 30);
+    assert_eq!(config.max_devices_per_type, 100);
 }
 
 #[tokio::test]
@@ -404,8 +411,8 @@ fn test_device_control_config_default() {
 /// - Module creation succeeds
 async fn test_device_control_module_new() {
     let module = RiDeviceControlModule::new();
-}
     // Just test that creation works without panicking
+    drop(module);
 }
 
 #[tokio::test]
@@ -453,10 +460,13 @@ async fn test_device_control_module_discover_devices() {
 async fn test_device_control_module_get_device_status() {
     let module = RiDeviceControlModule::new();
     
+    // Discover real devices first (module starts empty)
+    module.discover_devices().await.unwrap();
+    
     // Test getting device status
     let devices = module.get_device_status().await.unwrap();
     
-    // Should return some devices (mock devices added in init)
+    // Should return some devices (discovered from system)
     assert!(devices.len() > 0);
 }
 
@@ -485,6 +495,9 @@ async fn test_device_control_module_get_device_status() {
 async fn test_device_control_module_allocate_resource() {
     let module = RiDeviceControlModule::new();
     
+    // Discover real devices first (module starts empty)
+    module.discover_devices().await.unwrap();
+    
     // Test resource allocation
     let request = RiResourceRequest {
         request_id: "test_request_id".to_string(),
@@ -494,6 +507,10 @@ async fn test_device_control_module_allocate_resource() {
             .with_memory_gb(1.0),
         priority: 5,
         timeout_secs: 60,
+        sla_class: None,
+        resource_weights: None,
+        affinity: None,
+        anti_affinity: None,
     };
     
     let allocation = module.allocate_resource(request).await.unwrap();

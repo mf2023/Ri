@@ -67,12 +67,20 @@ pub extern "system" fn Java_com_dunimd_ri_log_RiLogger_debug0(
     }
     
     let logger = unsafe { &*(ptr as *const RiLogger) };
-    let target_str: String = env.get_string(&target)
-        .expect("Failed to get target")
-        .into();
-    let message_str: String = env.get_string(&message)
-        .expect("Failed to get message")
-        .into();
+    let target_str: String = match env.get_string(&target) {
+        Ok(s) => s.into(),
+        Err(_) => {
+            crate::java::exception::throw_ri_error(&mut env, "Failed to get target");
+            return;
+        }
+    };
+    let message_str: String = match env.get_string(&message) {
+        Ok(s) => s.into(),
+        Err(_) => {
+            crate::java::exception::throw_ri_error(&mut env, "Failed to get message");
+            return;
+        }
+    };
     
     let _ = logger.debug(&target_str, &message_str);
 }
@@ -90,12 +98,20 @@ pub extern "system" fn Java_com_dunimd_ri_log_RiLogger_info0(
     }
     
     let logger = unsafe { &*(ptr as *const RiLogger) };
-    let target_str: String = env.get_string(&target)
-        .expect("Failed to get target")
-        .into();
-    let message_str: String = env.get_string(&message)
-        .expect("Failed to get message")
-        .into();
+    let target_str: String = match env.get_string(&target) {
+        Ok(s) => s.into(),
+        Err(_) => {
+            crate::java::exception::throw_ri_error(&mut env, "Failed to get target");
+            return;
+        }
+    };
+    let message_str: String = match env.get_string(&message) {
+        Ok(s) => s.into(),
+        Err(_) => {
+            crate::java::exception::throw_ri_error(&mut env, "Failed to get message");
+            return;
+        }
+    };
     
     let _ = logger.info(&target_str, &message_str);
 }
@@ -113,12 +129,20 @@ pub extern "system" fn Java_com_dunimd_ri_log_RiLogger_warn0(
     }
     
     let logger = unsafe { &*(ptr as *const RiLogger) };
-    let target_str: String = env.get_string(&target)
-        .expect("Failed to get target")
-        .into();
-    let message_str: String = env.get_string(&message)
-        .expect("Failed to get message")
-        .into();
+    let target_str: String = match env.get_string(&target) {
+        Ok(s) => s.into(),
+        Err(_) => {
+            crate::java::exception::throw_ri_error(&mut env, "Failed to get target");
+            return;
+        }
+    };
+    let message_str: String = match env.get_string(&message) {
+        Ok(s) => s.into(),
+        Err(_) => {
+            crate::java::exception::throw_ri_error(&mut env, "Failed to get message");
+            return;
+        }
+    };
     
     let _ = logger.warn(&target_str, &message_str);
 }
@@ -136,12 +160,20 @@ pub extern "system" fn Java_com_dunimd_ri_log_RiLogger_error0(
     }
     
     let logger = unsafe { &*(ptr as *const RiLogger) };
-    let target_str: String = env.get_string(&target)
-        .expect("Failed to get target")
-        .into();
-    let message_str: String = env.get_string(&message)
-        .expect("Failed to get message")
-        .into();
+    let target_str: String = match env.get_string(&target) {
+        Ok(s) => s.into(),
+        Err(_) => {
+            crate::java::exception::throw_ri_error(&mut env, "Failed to get target");
+            return;
+        }
+    };
+    let message_str: String = match env.get_string(&message) {
+        Ok(s) => s.into(),
+        Err(_) => {
+            crate::java::exception::throw_ri_error(&mut env, "Failed to get message");
+            return;
+        }
+    };
     
     let _ = logger.error(&target_str, &message_str);
 }
@@ -237,9 +269,13 @@ pub extern "system" fn Java_com_dunimd_ri_log_RiLogConfig_setFileName0(
     }
     
     let config = unsafe { &mut *(ptr as *mut RiLogConfig) };
-    config.file_name = env.get_string(&file_name)
-        .expect("Failed to get file name")
-        .into();
+    config.file_name = match env.get_string(&file_name) {
+        Ok(s) => s.into(),
+        Err(_) => {
+            crate::java::exception::throw_ri_error(&mut env, "Invalid file_name");
+            return;
+        }
+    };
 }
 
 #[no_mangle]
@@ -269,9 +305,13 @@ pub extern "system" fn Java_com_dunimd_ri_log_RiLogConfig_setRotateWhen0(
     }
     
     let config = unsafe { &mut *(ptr as *mut RiLogConfig) };
-    config.rotate_when = env.get_string(&rotate_when)
-        .expect("Failed to get rotate_when")
-        .into();
+    config.rotate_when = match env.get_string(&rotate_when) {
+        Ok(s) => s.into(),
+        Err(_) => {
+            crate::java::exception::throw_ri_error(&mut env, "Invalid rotate_when");
+            return;
+        }
+    };
 }
 
 #[no_mangle]

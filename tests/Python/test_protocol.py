@@ -24,17 +24,32 @@ Tests for the protocol functionality including frames and connections.
 """
 
 import pytest
-from ri import (
-    RiProtocolManager,
-    RiProtocolConfig,
-    RiFrameBuilder,
-    RiFrameParser,
-    RiFrameHeader,
-    RiFrame,
-    RiConnectionInfo,
-    RiConnectionStats,
-    RiProtocolStats,
+
+# Protocol support is only available when the ri wheel was built with the
+# "protocol" cargo feature (requires the oqs post-quantum dependency, which
+# is not buildable on all platforms). Skip the whole module otherwise.
+pytest.importorskip(
+    "ri",
+    reason="protocol feature not compiled into this ri wheel",
 )
+
+try:
+    from ri import (
+        RiProtocolManager,
+        RiProtocolConfig,
+        RiFrameBuilder,
+        RiFrameParser,
+        RiFrameHeader,
+        RiFrame,
+        RiConnectionInfo,
+        RiConnectionStats,
+        RiProtocolStats,
+    )
+except ImportError:  # pragma: no cover - wheel built without protocol feature
+    pytest.skip(
+        "protocol feature not compiled into this ri wheel",
+        allow_module_level=True,
+    )
 
 
 class TestRiProtocolManager:

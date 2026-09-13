@@ -91,11 +91,12 @@ name = "ri"
 # Path to the library source file
 path = "src/lib.rs"
 
-# Library crate types for different use cases:
+# Library crate types:
 # - "rlib": Rust static library for Rust-to-Rust linking
-# - "cdylib": C dynamic library for FFI and Python bindings via PyO3
-# - "staticlib": C static library for C/C++ linking
-crate-type = ["rlib", "cdylib", "staticlib"]
+# - "cdylib": C dynamic library for FFI and Python/Java bindings via PyO3/JNI
+# Note: "staticlib" (C static library) was removed in 0.2.0 along with the
+# C/C++ API. Ri 0.2.0+ no longer ships a C/C++ binding.
+crate-type = ["rlib", "cdylib"]
 
 # Disable doctest for library
 # Doctests require all example code to compile, which is not practical for
@@ -126,11 +127,6 @@ resolver = "2"
 # Optional to allow pure Rust builds without Python support
 # When enabled, allows Python code to import and use Ri functionality
 pyo3 = { version = "0.27", features = ["extension-module"], optional = true }
-
-# Safer-FFI C/C++ bindings with proc_macros feature for generating C headers
-# Optional to allow pure Rust builds without C API support
-# When enabled, allows C/C++ code to link and use Ri functionality
-safer-ffi = { version = "0.1", features = ["proc_macros"], optional = true }
 
 # JNI bindings for Java support
 # Optional to allow pure Rust builds without Java support
@@ -497,6 +493,7 @@ rdkafka = { version = "0.38", default-features = false, features = ["tokio", "cm
 [features]
 # Default features enabled on fresh installation
 # ALL FEATURES ENABLED - Complete functionality
+# Note: the "c" feature was removed in 0.2.0 (C/C++ API dropped)
 default = [
     "grpc",
     "websocket",
@@ -515,7 +512,6 @@ default = [
     "config_hot_reload",
     "protocol",
     "kafka",
-    "c",
 ]
 
 # Minimal feature set (core functionality only)
@@ -546,9 +542,10 @@ full = [
     "kafka",
 ]
 
-# Language bindings (Python, C/C++, Java)
+# Language bindings (Python, Java)
 # Enable this when building for foreign language integration
-bindings = ["pyo3", "c", "java"]
+# Note: the C/C++ binding was removed in 0.2.0
+bindings = ["pyo3", "java"]
 
 # =============================================================================
 # Individual Feature Definitions
@@ -570,11 +567,12 @@ pyo3 = ["dep:pyo3"]
 # These modules are not yet fully stabilized and may change in future versions
 protocol-advanced = []
 
-# C/C++ API support via safer-ffi
-c = ["dep:safer-ffi"]
-
 # Java binding support via JNI
-java = ["dep:jni", "grpc", "websocket", "rabbitmq", "cache", "queue", "gateway", "service_mesh", "auth", "observability", "postgres", "mysql", "sqlite", "http_client", "system_info", "config_hot_reload", "protocol", "kafka"]
+# Note: protocol/kafka are NOT pulled in by default. The JNI classes for
+# those modules are separately gated (cfg(any(feature = "java", feature =
+# "protocol"/"kafka"))) so Java builds stay possible on toolchains that lack
+# libclang (oqs) or perl (vendored OpenSSL).
+java = ["dep:jni", "grpc", "websocket", "rabbitmq", "cache", "queue", "gateway", "service_mesh", "auth", "observability", "postgres", "mysql", "sqlite", "http_client", "system_info", "config_hot_reload"]
 
 # RabbitMQ message queue support
 rabbitmq = ["dep:lapin"]
@@ -684,7 +682,79 @@ name = "grpc"
 harness = false
 required-features = ["grpc"]
 
-[build-dependencies]
-# Used by build.rs to auto-generate include/ri.h on every `cargo build`,
-# so the C header is produced during normal compilation as well as during release.
-cbindgen = "0.29"
+# =============================================================================
+# Integration Test Configuration
+# =============================================================================
+# Each integration test file under tests/Rust runs with its own harness.
+# protocol.rs requires the `protocol` feature (oqs/libclang); it is skipped
+# when the feature is off.
+
+[[test]]
+name = "auth"
+path = "tests/Rust/auth.rs"
+
+[[test]]
+name = "cache"
+path = "tests/Rust/cache.rs"
+
+[[test]]
+name = "config"
+path = "tests/Rust/config.rs"
+
+[[test]]
+name = "core"
+path = "tests/Rust/core.rs"
+
+[[test]]
+name = "device"
+path = "tests/Rust/device.rs"
+
+[[test]]
+name = "device_discovery_scheduler"
+path = "tests/Rust/device_discovery_scheduler.rs"
+
+[[test]]
+name = "fs"
+path = "tests/Rust/fs.rs"
+
+[[test]]
+name = "gateway"
+path = "tests/Rust/gateway.rs"
+
+[[test]]
+name = "hooks"
+path = "tests/Rust/hooks.rs"
+
+[[test]]
+name = "log"
+path = "tests/Rust/log.rs"
+
+[[test]]
+name = "observability_grafana"
+path = "tests/Rust/observability_grafana.rs"
+
+[[test]]
+name = "observability_metrics_collector"
+path = "tests/Rust/observability_metrics_collector.rs"
+
+[[test]]
+name = "observability_prometheus"
+path = "tests/Rust/observability_prometheus.rs"
+
+[[test]]
+name = "observability_propagation"
+path = "tests/Rust/observability_propagation.rs"
+
+[[test]]
+name = "queue"
+path = "tests/Rust/queue.rs"
+
+[[test]]
+name = "service_mesh"
+path = "tests/Rust/service_mesh.rs"
+
+[[test]]
+name = "protocol"
+path = "tests/Rust/protocol.rs"
+required-features = ["protocol"]
+

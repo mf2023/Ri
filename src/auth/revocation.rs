@@ -366,7 +366,7 @@ impl RiJWTRevocationList {
     ///
     /// - Removes all revocation records where the expiry time has passed
     /// - If capacity is exceeded, removes oldest entries first
-    fn cleanup_expired(&self) {
+    fn cleanup_expired(&self) -> usize {
         let now = SystemTime::now()
             .duration_since(UNIX_EPOCH)
             .map_or(0, |d| d.as_secs());
@@ -382,13 +382,22 @@ impl RiJWTRevocationList {
             self.remove_revoked_token(&token);
         }
 
+        let mut removed = self.revoked_tokens.len().saturating_sub(self.max_tokens);
         while self.revoked_tokens.len() > self.max_tokens {
             if let Some(entry) = self.token_info.iter().next() {
                 self.remove_revoked_token(entry.key());
+                removed += 1;
             } else {
                 break;
             }
         }
+        removed
+    }
+
+    /// Removes all expired revocation records and returns how many were
+    /// removed. Public entry point for bindings and external callers.
+    pub fn cleanup(&self) -> usize {
+        self.cleanup_expired()
     }
 
     /// Returns the current count of revoked tokens.

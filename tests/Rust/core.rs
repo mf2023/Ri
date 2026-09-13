@@ -64,7 +64,7 @@ mod app_builder_tests {
         let result = RiAppBuilder::new().with_config("config.yaml");
         assert!(result.is_ok());
         let builder = result.unwrap();
-        assert!(builder.with_logging(RiLogConfig::default()).is_ok());
+        let _builder = builder.with_logging(RiLogConfig::default());
     }
 
     #[test]
@@ -85,8 +85,8 @@ mod app_builder_tests {
     /// - The builder can be used for further configuration
     fn test_app_builder_with_logging() {
         let config = RiLogConfig::default();
-        let result = RiAppBuilder::new().with_logging(config);
-        assert!(result.is_ok());
+        let builder = RiAppBuilder::new().with_logging(config);
+        let _ = builder;
     }
 
     #[test]
@@ -111,7 +111,6 @@ mod app_builder_tests {
             .with_config("config.yaml")
             .unwrap()
             .with_logging(RiLogConfig::default())
-            .unwrap()
             .build();
         assert!(app.is_ok());
     }
@@ -122,7 +121,7 @@ mod app_builder_tests {
     /// Verifies that custom Ri modules can be registered with the
     /// application builder for extensible functionality.
     ///
-    ## Module Registration
+    /// ## Module Registration
     ///
     /// - Modules implement the RiModule trait
     /// - Modules are registered using Box<dyn RiModule>
@@ -442,7 +441,7 @@ mod lock_tests {
     fn test_lock_error_new() {
         let error = RiLockError::new("test context");
         assert!(!error.is_poisoned());
-        assert_eq!(error.context(), "test context");
+        assert_eq!(error.get_context(), "test context");
     }
 
     #[test]
@@ -464,7 +463,7 @@ mod lock_tests {
     fn test_lock_error_poisoned() {
         let error = RiLockError::poisoned("poisoned lock");
         assert!(error.is_poisoned());
-        assert_eq!(error.context(), "poisoned lock");
+        assert_eq!(error.get_context(), "poisoned lock");
     }
 
     #[test]

@@ -177,14 +177,10 @@ from .ri import (
     # =============================================================================
     # Protocol classes - Multi-protocol support including connection management,
     # frame processing, security levels, and protocol statistics monitoring
+    # NOTE: Imported conditionally below; protocol support is only compiled in
+    # when the "protocol" cargo feature is enabled for the wheel build.
     # =============================================================================
-    RiProtocolManager, RiProtocolType, RiProtocolConfig,
-    RiProtocolStatus, RiProtocolStats, RiConnectionState,
-    RiConnectionStats, RiProtocolHealth,
-    RiFrame, RiFrameHeader, RiFrameType,
-    RiConnectionInfo, RiMessageFlags, RiSecurityLevel,
-    RiFrameParser, RiFrameBuilder,
-    
+
     # =============================================================================
     # Database classes - Database configuration, connection pooling, row-level
     # access, and result set management across different database backends
@@ -215,14 +211,40 @@ from .ri import (
 )
 
 # =============================================================================
+# Optional protocol classes - Multi-protocol support (connection management,
+# frame processing, security levels, protocol statistics). These are only
+# present when the wheel was built with the "protocol" cargo feature; wheels
+# built without it (e.g. Windows builds where the oqs dependency cannot be
+# compiled) simply skip these imports.
+# =============================================================================
+try:
+    from .ri import (
+        RiProtocolManager, RiProtocolType, RiProtocolConfig,
+        RiProtocolStatus, RiProtocolStats, RiConnectionState,
+        RiConnectionStats, RiProtocolHealth,
+        RiFrame, RiFrameHeader, RiFrameType,
+        RiConnectionInfo, RiMessageFlags, RiSecurityLevel,
+        RiFrameParser, RiFrameBuilder,
+    )
+except ImportError:
+    pass
+
+# =============================================================================
 # Submodules - Functional submodules organized by domain area, providing
 # specialized functionality for specific middleware concerns
 # =============================================================================
 from .ri import (
     device, cache, fs, hooks, observability,
-    queue, gateway, service_mesh, auth, protocol, database,
+    queue, gateway, service_mesh, auth, database,
     grpc, ws
 )
+
+# The protocol submodule is also feature-gated on the Rust side; import it
+# optionally so that non-protocol wheels still load cleanly.
+try:
+    from .ri import protocol
+except ImportError:
+    pass
 
 # =============================================================================
 # __all__ export list - Public API surface defining all symbols intended for
@@ -308,12 +330,8 @@ __all__ = [
     'RiSanitizationConfig', 'RiSchemaValidator', 'RiValidationModule',
     
     # Protocol classes - Multi-protocol support and frame processing
-    'RiProtocolManager', 'RiProtocolType', 'RiProtocolConfig',
-    'RiProtocolStatus', 'RiProtocolStats', 'RiConnectionState',
-    'RiConnectionStats', 'RiProtocolHealth',
-    'RiFrame', 'RiFrameHeader', 'RiFrameType',
-    'RiConnectionInfo', 'RiMessageFlags', 'RiSecurityLevel',
-    'RiFrameParser', 'RiFrameBuilder',
+    # (only exported when the wheel was built with the "protocol" feature;
+    # appended dynamically below when available)
 
     # Database classes - Database configuration and connection pooling
     'RiDatabaseConfig', 'RiDatabasePool', 'RiDBRow', 'RiDBResult',
@@ -336,9 +354,26 @@ __all__ = [
 
     # Submodules - Functional submodule references
     'device', 'cache', 'fs', 'hooks', 'observability',
-    'queue', 'gateway', 'service_mesh', 'auth', 'protocol', 'database',
+    'queue', 'gateway', 'service_mesh', 'auth', 'database',
     'grpc', 'ws'
 ]
+
+# Dynamically extend the public API with protocol symbols when the wheel
+# was built with the "protocol" cargo feature. This keeps `from ri import *`
+# and `import ri; ri.RiProtocolManager` working on full builds while allowing
+# reduced-feature wheels (e.g. Windows) to import cleanly.
+_PROTOCOL_SYMBOLS = (
+    'RiProtocolManager', 'RiProtocolType', 'RiProtocolConfig',
+    'RiProtocolStatus', 'RiProtocolStats', 'RiConnectionState',
+    'RiConnectionStats', 'RiProtocolHealth',
+    'RiFrame', 'RiFrameHeader', 'RiFrameType',
+    'RiConnectionInfo', 'RiMessageFlags', 'RiSecurityLevel',
+    'RiFrameParser', 'RiFrameBuilder',
+)
+
+if 'RiProtocolManager' in globals():
+    __all__.extend(_PROTOCOL_SYMBOLS)
+    __all__.append('protocol')
 
 
 class RiAppRuntime:

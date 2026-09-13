@@ -717,9 +717,7 @@ impl RiServiceMesh {
     /// Register a service from Python
     #[pyo3(name = "register_service")]
     fn register_service_impl(&self, service_name: String, endpoint: String, weight: u32) -> PyResult<()> {
-        let rt = tokio::runtime::Runtime::new().map_err(|e| {
-            pyo3::exceptions::PyRuntimeError::new_err(format!("Failed to create runtime: {}", e))
-        })?;
+        let rt = crate::py_runtime::py_runtime();
         
         rt.block_on(async {
             self.register_service(&service_name, &endpoint, weight, None)
@@ -731,9 +729,7 @@ impl RiServiceMesh {
     /// Discover services from Python
     #[pyo3(name = "discover_service")]
     fn discover_service_impl(&self, service_name: String) -> PyResult<Vec<RiServiceEndpoint>> {
-        let rt = tokio::runtime::Runtime::new().map_err(|e| {
-            pyo3::exceptions::PyRuntimeError::new_err(format!("Failed to create runtime: {}", e))
-        })?;
+        let rt = crate::py_runtime::py_runtime();
         
         rt.block_on(async {
             self.discover_service(&service_name)
@@ -745,9 +741,7 @@ impl RiServiceMesh {
     /// Update service health from Python
     #[pyo3(name = "update_service_health")]
     fn update_service_health_impl(&self, service_name: String, endpoint: String, is_healthy: bool) -> PyResult<()> {
-        let rt = tokio::runtime::Runtime::new().map_err(|e| {
-            pyo3::exceptions::PyRuntimeError::new_err(format!("Failed to create runtime: {}", e))
-        })?;
+        let rt = crate::py_runtime::py_runtime();
         
         rt.block_on(async {
             self.update_service_health(&service_name, &endpoint, is_healthy)

@@ -26,8 +26,10 @@ use crate::device::{
     RiDeviceControlModule, RiDeviceControlConfig, RiDevice, RiDeviceType, RiDeviceStatus,
     RiDeviceCapabilities, RiDeviceHealthMetrics, RiDeviceConfig, RiNetworkDeviceInfo,
     RiDiscoveryResult, RiResourceRequest, RiResourceAllocation, RiDeviceSchedulingConfig,
+    RiDeviceController,
 };
-use crate::java::exception::check_not_null;
+use crate::java::exception::{check_not_null, throw_ri_error};
+use crate::java::runtime::block_on_local;
 
 // =============================================================================
 // RiDeviceControlModule JNI Bindings
@@ -39,10 +41,13 @@ pub extern "system" fn Java_com_dunimd_ri_device_RiDeviceControlModule_new0(
     _class: JClass,
     config_ptr: jlong,
 ) -> jlong {
-    if !check_not_null(&mut env, config_ptr, "RiDeviceControlConfig") {
+    if config_ptr == 0 {
+        throw_ri_error(&mut env, "RiDeviceControlConfig pointer is null");
         return 0;
     }
-    0
+    let config = unsafe { (*(config_ptr as *const RiDeviceControlConfig)).clone() };
+    let module = Box::new(RiDeviceControlModule::new().with_config(config));
+    Box::into_raw(module) as jlong
 }
 
 #[no_mangle]
@@ -95,9 +100,13 @@ pub extern "system" fn Java_com_dunimd_ri_device_RiDevice_new0(
     name: JString,
     device_type: jint,
 ) -> jlong {
-    let name_str: String = env.get_string(&name)
-        .expect("Failed to get name")
-        .into();
+    let name_str: String = match env.get_string(&name) {
+        Ok(s) => s.into(),
+        Err(_) => {
+            crate::java::exception::throw_ri_error(&mut env, "Invalid name string");
+            return 0;
+        }
+    };
     
     let dtype = match device_type {
         0 => RiDeviceType::CPU,
@@ -125,7 +134,10 @@ pub extern "system" fn Java_com_dunimd_ri_device_RiDevice_getId0<'local>(
     }
     
     let device = unsafe { &*(ptr as *const RiDevice) };
-    env.new_string(device.id()).unwrap().into_raw()
+    match env.new_string(device.id()) {
+            Ok(s) => s.into_raw(),
+            Err(_) => std::ptr::null_mut(),
+        }
 }
 
 #[no_mangle]
@@ -139,7 +151,10 @@ pub extern "system" fn Java_com_dunimd_ri_device_RiDevice_getName0<'local>(
     }
     
     let device = unsafe { &*(ptr as *const RiDevice) };
-    env.new_string(device.name()).unwrap().into_raw()
+    match env.new_string(device.name()) {
+            Ok(s) => s.into_raw(),
+            Err(_) => std::ptr::null_mut(),
+        }
 }
 
 #[no_mangle]
@@ -1037,15 +1052,27 @@ pub extern "system" fn Java_com_dunimd_ri_device_RiNetworkDeviceInfo_new0(
     device_type: JString,
     source: JString,
 ) -> jlong {
-    let id_str: String = env.get_string(&id)
-        .expect("Failed to get id")
-        .into();
-    let device_type_str: String = env.get_string(&device_type)
-        .expect("Failed to get device type")
-        .into();
-    let source_str: String = env.get_string(&source)
-        .expect("Failed to get source")
-        .into();
+    let id_str: String = match env.get_string(&id) {
+        Ok(s) => s.into(),
+        Err(_) => {
+            crate::java::exception::throw_ri_error(&mut env, "Invalid id string");
+            return 0;
+        }
+    };
+    let device_type_str: String = match env.get_string(&device_type) {
+        Ok(s) => s.into(),
+        Err(_) => {
+            crate::java::exception::throw_ri_error(&mut env, "Invalid device_type string");
+            return 0;
+        }
+    };
+    let source_str: String = match env.get_string(&source) {
+        Ok(s) => s.into(),
+        Err(_) => {
+            crate::java::exception::throw_ri_error(&mut env, "Invalid source string");
+            return 0;
+        }
+    };
     
     let info = Box::new(RiNetworkDeviceInfo {
         id: id_str,
@@ -1070,7 +1097,10 @@ pub extern "system" fn Java_com_dunimd_ri_device_RiNetworkDeviceInfo_getId0<'loc
     }
     
     let info = unsafe { &*(ptr as *const RiNetworkDeviceInfo) };
-    env.new_string(&info.id).unwrap().into_raw()
+    match env.new_string(&info.id) {
+            Ok(s) => s.into_raw(),
+            Err(_) => std::ptr::null_mut(),
+        }
 }
 
 #[no_mangle]
@@ -1084,7 +1114,10 @@ pub extern "system" fn Java_com_dunimd_ri_device_RiNetworkDeviceInfo_getDeviceTy
     }
     
     let info = unsafe { &*(ptr as *const RiNetworkDeviceInfo) };
-    env.new_string(&info.device_type).unwrap().into_raw()
+    match env.new_string(&info.device_type) {
+            Ok(s) => s.into_raw(),
+            Err(_) => std::ptr::null_mut(),
+        }
 }
 
 #[no_mangle]
@@ -1098,7 +1131,10 @@ pub extern "system" fn Java_com_dunimd_ri_device_RiNetworkDeviceInfo_getSource0<
     }
     
     let info = unsafe { &*(ptr as *const RiNetworkDeviceInfo) };
-    env.new_string(&info.source).unwrap().into_raw()
+    match env.new_string(&info.source) {
+            Ok(s) => s.into_raw(),
+            Err(_) => std::ptr::null_mut(),
+        }
 }
 
 #[no_mangle]
@@ -1247,8 +1283,11 @@ pub extern "system" fn Java_com_dunimd_ri_device_RiDiscoveryResult_getDiscovered
     let result = unsafe { &*(ptr as *const RiDiscoveryResult) };
     let devices: Vec<jlong> = result.discovered_devices.iter().map(|_| 0 as jlong).collect();
     
-    let array = env.new_long_array(devices.len() as i32).unwrap();
-    env.set_long_array_region(&array, 0, &devices).unwrap();
+    let array = match env.new_long_array(devices.len() as i32) {
+        Ok(a) => a,
+        Err(_) => return std::ptr::null_mut(),
+    };
+    let _ = env.set_long_array_region(&array, 0, &devices);
     array.into_raw()
 }
 
@@ -1265,8 +1304,11 @@ pub extern "system" fn Java_com_dunimd_ri_device_RiDiscoveryResult_getUpdatedDev
     let result = unsafe { &*(ptr as *const RiDiscoveryResult) };
     let devices: Vec<jlong> = result.updated_devices.iter().map(|_| 0 as jlong).collect();
     
-    let array = env.new_long_array(devices.len() as i32).unwrap();
-    env.set_long_array_region(&array, 0, &devices).unwrap();
+    let array = match env.new_long_array(devices.len() as i32) {
+        Ok(a) => a,
+        Err(_) => return std::ptr::null_mut(),
+    };
+    let _ = env.set_long_array_region(&array, 0, &devices);
     array.into_raw()
 }
 
@@ -1281,12 +1323,21 @@ pub extern "system" fn Java_com_dunimd_ri_device_RiDiscoveryResult_getRemovedDev
     }
     
     let result = unsafe { &*(ptr as *const RiDiscoveryResult) };
-    let string_class = env.find_class("java/lang/String").unwrap();
-    let array = env.new_object_array(result.removed_devices.len() as i32, string_class, JObject::null()).unwrap();
+    let string_class = match env.find_class("java/lang/String") {
+        Ok(c) => c,
+        Err(_) => return std::ptr::null_mut(),
+    };
+    let array = match env.new_object_array(result.removed_devices.len() as i32, string_class, JObject::null()) {
+        Ok(a) => a,
+        Err(_) => return std::ptr::null_mut(),
+    };
     
     for (i, id) in result.removed_devices.iter().enumerate() {
-        let jstr = env.new_string(id).unwrap();
-        env.set_object_array_element(&array, i as i32, jstr).unwrap();
+        let jstr = match env.new_string(id) {
+            Ok(s) => s,
+            Err(_) => continue,
+        };
+        let _ = env.set_object_array_element(&array, i as i32, jstr);
     }
     
     array.into_raw()
@@ -1331,9 +1382,13 @@ pub extern "system" fn Java_com_dunimd_ri_device_RiResourceRequest_new0(
     device_type: jint,
     capabilities_ptr: jlong,
 ) -> jlong {
-    let request_id_str: String = env.get_string(&request_id)
-        .expect("Failed to get request id")
-        .into();
+    let request_id_str: String = match env.get_string(&request_id) {
+        Ok(s) => s.into(),
+        Err(_) => {
+            crate::java::exception::throw_ri_error(&mut env, "Invalid request_id string");
+            return 0;
+        }
+    };
     
     let dtype = match device_type {
         0 => RiDeviceType::CPU,
@@ -1377,7 +1432,10 @@ pub extern "system" fn Java_com_dunimd_ri_device_RiResourceRequest_getRequestId0
     }
     
     let request = unsafe { &*(ptr as *const RiResourceRequest) };
-    env.new_string(&request.request_id).unwrap().into_raw()
+    match env.new_string(&request.request_id) {
+            Ok(s) => s.into_raw(),
+            Err(_) => std::ptr::null_mut(),
+        }
 }
 
 #[no_mangle]
@@ -1495,7 +1553,10 @@ pub extern "system" fn Java_com_dunimd_ri_device_RiResourceAllocation_getAllocat
     }
     
     let allocation = unsafe { &*(ptr as *const RiResourceAllocation) };
-    env.new_string(&allocation.allocation_id).unwrap().into_raw()
+    match env.new_string(&allocation.allocation_id) {
+            Ok(s) => s.into_raw(),
+            Err(_) => std::ptr::null_mut(),
+        }
 }
 
 #[no_mangle]
@@ -1509,7 +1570,10 @@ pub extern "system" fn Java_com_dunimd_ri_device_RiResourceAllocation_getDeviceI
     }
     
     let allocation = unsafe { &*(ptr as *const RiResourceAllocation) };
-    env.new_string(&allocation.device_id).unwrap().into_raw()
+    match env.new_string(&allocation.device_id) {
+            Ok(s) => s.into_raw(),
+            Err(_) => std::ptr::null_mut(),
+        }
 }
 
 #[no_mangle]
@@ -1523,7 +1587,10 @@ pub extern "system" fn Java_com_dunimd_ri_device_RiResourceAllocation_getDeviceN
     }
     
     let allocation = unsafe { &*(ptr as *const RiResourceAllocation) };
-    env.new_string(&allocation.device_name).unwrap().into_raw()
+    match env.new_string(&allocation.device_name) {
+            Ok(s) => s.into_raw(),
+            Err(_) => std::ptr::null_mut(),
+        }
 }
 
 #[no_mangle]
@@ -1537,7 +1604,10 @@ pub extern "system" fn Java_com_dunimd_ri_device_RiResourceAllocation_getAllocat
     }
     
     let allocation = unsafe { &*(ptr as *const RiResourceAllocation) };
-    env.new_string(&allocation.allocated_at.to_rfc3339()).unwrap().into_raw()
+    match env.new_string(&allocation.allocated_at.to_rfc3339()) {
+            Ok(s) => s.into_raw(),
+            Err(_) => std::ptr::null_mut(),
+        }
 }
 
 #[no_mangle]
@@ -1551,7 +1621,10 @@ pub extern "system" fn Java_com_dunimd_ri_device_RiResourceAllocation_getExpires
     }
     
     let allocation = unsafe { &*(ptr as *const RiResourceAllocation) };
-    env.new_string(&allocation.expires_at.to_rfc3339()).unwrap().into_raw()
+    match env.new_string(&allocation.expires_at.to_rfc3339()) {
+            Ok(s) => s.into_raw(),
+            Err(_) => std::ptr::null_mut(),
+        }
 }
 
 #[no_mangle]
@@ -1619,7 +1692,7 @@ pub extern "system" fn Java_com_dunimd_ri_device_RiDeviceController_new0(
     _env: JNIEnv,
     _class: JClass,
 ) -> jlong {
-    0
+    Box::into_raw(Box::new(RiDeviceController::new())) as jlong
 }
 
 #[no_mangle]
@@ -1631,10 +1704,28 @@ pub extern "system" fn Java_com_dunimd_ri_device_RiDeviceController_getAllDevice
     if !check_not_null(&mut env, ptr, "RiDeviceController") {
         return std::ptr::null_mut();
     }
-    
-    let devices: Vec<jlong> = Vec::new();
-    let array = env.new_long_array(0).unwrap();
-    array.into_raw()
+
+    let controller = unsafe { &*(ptr as *const RiDeviceController) };
+    let devices = controller.get_all_devices();
+
+    // Each device is boxed into its own native pointer owned by the Java wrapper.
+    let ptrs: Vec<jlong> = devices
+        .into_iter()
+        .map(|d| Box::into_raw(Box::new(d)) as jlong)
+        .collect();
+
+    match env.new_long_array(ptrs.len() as i32) {
+        Ok(array) => {
+            if ptrs.is_empty() {
+                return array.into_raw();
+            }
+            match env.set_long_array_region(&array, 0, &ptrs) {
+                Ok(()) => array.into_raw(),
+                Err(_) => std::ptr::null_mut(),
+            }
+        }
+        Err(_) => std::ptr::null_mut(),
+    }
 }
 
 #[no_mangle]
@@ -1647,8 +1738,23 @@ pub extern "system" fn Java_com_dunimd_ri_device_RiDeviceController_getDevice0(
     if !check_not_null(&mut env, ptr, "RiDeviceController") {
         return 0;
     }
-    
-    0
+
+    let id: String = match env.get_string(&device_id) {
+        Ok(s) => s.into(),
+        Err(_) => {
+            throw_ri_error(&mut env, "Failed to read device id");
+            return 0;
+        }
+    };
+
+    let controller = unsafe { &*(ptr as *const RiDeviceController) };
+    match block_on_local(&mut env, "RiDeviceController::get_device", async {
+        controller.get_device(&id).await
+    }) {
+        Some(Some(device)) => Box::into_raw(Box::new(device)) as jlong,
+        Some(None) => 0,
+        None => 0,
+    }
 }
 
 #[no_mangle]
@@ -1658,8 +1764,22 @@ pub extern "system" fn Java_com_dunimd_ri_device_RiDeviceController_addDevice0(
     ptr: jlong,
     device_ptr: jlong,
 ) {
-    if !check_not_null(&mut env, ptr, "RiDeviceController") || !check_not_null(&mut env, device_ptr, "RiDevice") {
+    if !check_not_null(&mut env, ptr, "RiDeviceController") {
         return;
+    }
+    if !check_not_null(&mut env, device_ptr, "RiDevice") {
+        return;
+    }
+
+    // Clone the device into the controller; the Java side keeps ownership of its own pointer.
+    let device = unsafe { (*(device_ptr as *const RiDevice)).clone() };
+    let controller = unsafe { &mut *(ptr as *mut RiDeviceController) };
+    if let Some(result) = block_on_local(&mut env, "RiDeviceController::add_device", async {
+        controller.add_device(device, String::new()).await
+    }) {
+        if let Err(e) = result {
+            throw_ri_error(&mut env, &e.to_string());
+        }
     }
 }
 
@@ -1673,8 +1793,26 @@ pub extern "system" fn Java_com_dunimd_ri_device_RiDeviceController_removeDevice
     if !check_not_null(&mut env, ptr, "RiDeviceController") {
         return 0;
     }
-    
-    0
+
+    let id: String = match env.get_string(&device_id) {
+        Ok(s) => s.into(),
+        Err(_) => {
+            throw_ri_error(&mut env, "Failed to read device id");
+            return 0;
+        }
+    };
+
+    let controller = unsafe { &mut *(ptr as *mut RiDeviceController) };
+    match block_on_local(&mut env, "RiDeviceController::remove_device", async {
+        controller.remove_device(&id).await
+    }) {
+        Some(Ok(())) => 1,
+        Some(Err(e)) => {
+            throw_ri_error(&mut env, &e.to_string());
+            0
+        }
+        None => 0,
+    }
 }
 
 #[no_mangle]
@@ -1686,8 +1824,9 @@ pub extern "system" fn Java_com_dunimd_ri_device_RiDeviceController_getDeviceCou
     if !check_not_null(&mut env, ptr, "RiDeviceController") {
         return 0;
     }
-    
-    0
+
+    let controller = unsafe { &*(ptr as *const RiDeviceController) };
+    controller.get_all_devices().len() as jint
 }
 
 #[no_mangle]
@@ -1696,4 +1835,9 @@ pub extern "system" fn Java_com_dunimd_ri_device_RiDeviceController_free0(
     _class: JClass,
     ptr: jlong,
 ) {
+    if ptr != 0 {
+        unsafe {
+            let _ = Box::from_raw(ptr as *mut RiDeviceController);
+        }
+    }
 }

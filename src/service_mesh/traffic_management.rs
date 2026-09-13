@@ -876,9 +876,7 @@ impl RiTrafficManager {
     /// Add traffic route from Python
     #[pyo3(name = "add_traffic_route")]
     fn add_traffic_route_impl(&self, route: RiTrafficRoute) -> PyResult<()> {
-        let rt = tokio::runtime::Runtime::new().map_err(|e| {
-            pyo3::exceptions::PyRuntimeError::new_err(format!("Failed to create runtime: {}", e))
-        })?;
+        let rt = crate::py_runtime::py_runtime();
         
         rt.block_on(async {
             self.add_traffic_route(route)
@@ -890,9 +888,7 @@ impl RiTrafficManager {
     /// Get traffic routes from Python
     #[pyo3(name = "get_traffic_routes")]
     fn get_traffic_routes_impl(&self, service_name: String) -> PyResult<Vec<RiTrafficRoute>> {
-        let rt = tokio::runtime::Runtime::new().map_err(|e| {
-            pyo3::exceptions::PyRuntimeError::new_err(format!("Failed to create runtime: {}", e))
-        })?;
+        let rt = crate::py_runtime::py_runtime();
         
         rt.block_on(async {
             self.get_traffic_routes(&service_name)
@@ -904,9 +900,7 @@ impl RiTrafficManager {
     /// Remove traffic route from Python
     #[pyo3(name = "remove_traffic_route")]
     fn remove_traffic_route_impl(&self, source_service: String, route_name: String) -> PyResult<()> {
-        let rt = tokio::runtime::Runtime::new().map_err(|e| {
-            pyo3::exceptions::PyRuntimeError::new_err(format!("Failed to create runtime: {}", e))
-        })?;
+        let rt = crate::py_runtime::py_runtime();
         
         rt.block_on(async {
             self.remove_traffic_route(&source_service, &route_name)
@@ -918,9 +912,7 @@ impl RiTrafficManager {
     /// Set circuit breaker config from Python
     #[pyo3(name = "set_circuit_breaker_config")]
     fn set_circuit_breaker_config_impl(&self, service: String, config: RiCircuitBreakerConfig) -> PyResult<()> {
-        let rt = tokio::runtime::Runtime::new().map_err(|e| {
-            pyo3::exceptions::PyRuntimeError::new_err(format!("Failed to create runtime: {}", e))
-        })?;
+        let rt = crate::py_runtime::py_runtime();
         
         rt.block_on(async {
             self.set_circuit_breaker_config(&service, config)
@@ -932,9 +924,7 @@ impl RiTrafficManager {
     /// Set rate limit config from Python
     #[pyo3(name = "set_rate_limit_config")]
     fn set_rate_limit_config_impl(&self, service: String, config: RiRateLimitConfig) -> PyResult<()> {
-        let rt = tokio::runtime::Runtime::new().map_err(|e| {
-            pyo3::exceptions::PyRuntimeError::new_err(format!("Failed to create runtime: {}", e))
-        })?;
+        let rt = crate::py_runtime::py_runtime();
         
         rt.block_on(async {
             self.set_rate_limit_config(&service, config)

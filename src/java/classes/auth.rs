@@ -26,7 +26,7 @@ use crate::auth::{
     RiSessionManager,
 };
 use crate::java::exception::check_not_null;
-use jni::objects::{JClass, JObjectArray, JString};
+use jni::objects::{JClass, JObject, JObjectArray, JString};
 use jni::sys::{jboolean, jint, jlong, jobjectArray, jstring};
 use jni::JNIEnv;
 use std::collections::HashSet;
@@ -72,10 +72,9 @@ pub extern "system" fn Java_com_dunimd_ri_auth_RiAuthModule_new0(
     }
 
     let config = unsafe { &*(config_ptr as *const RiAuthConfig) };
-    let rt = tokio::runtime::Runtime::new().expect("Failed to create runtime");
-    match rt.block_on(async { RiAuthModule::new(config.clone()).await }) {
-        Ok(module) => Box::into_raw(Box::new(module)) as jlong,
-        Err(_) => 0,
+    match crate::java::runtime::block_on_local(&mut env, "RiAuth", async { RiAuthModule::new(config.clone()).await }) {
+        Some(Ok(module)) => Box::into_raw(Box::new(module)) as jlong,
+        _ => 0,
     }
 }
 
@@ -104,40 +103,42 @@ pub extern "system" fn Java_com_dunimd_ri_auth_RiJWTClaims_new0(
     roles: JObjectArray,
     permissions: JObjectArray,
 ) -> jlong {
-    let sub_str: String = env.get_string(&sub).expect("Failed to get sub").into();
+    let sub_str: String = match env.get_string(&sub) {
+        Ok(s) => s.into(),
+        Err(_) => {
+            crate::java::exception::throw_ri_error(&mut env, "Failed to get sub");
+            return 0;
+        }
+    };
 
-    let roles_len = env
-        .get_array_length(&roles)
-        .expect("Failed to get roles length");
+    let roles_len = env.get_array_length(&roles).unwrap_or(0);
     let mut roles_vec = Vec::with_capacity(roles_len as usize);
     for i in 0..roles_len {
-        if let Ok(Some(elem)) = env.get_object_array_element(&roles, i) {
-            let role_str: String = env
-                .get_string(&JString::from(elem))
-                .expect("Failed to get role")
-                .into();
+        if let Ok(elem) = env.get_object_array_element(&roles, i) {
+            let role_str: String = match env.get_string(&JString::from(elem)) {
+                Ok(s) => s.into(),
+                Err(_) => { crate::java::exception::throw_ri_error(&mut env, "Failed to read array element"); continue; }
+            };
             roles_vec.push(role_str);
         }
     }
 
-    let perms_len = env
-        .get_array_length(&permissions)
-        .expect("Failed to get permissions length");
+    let perms_len = env.get_array_length(&permissions).unwrap_or(0);
     let mut perms_vec = Vec::with_capacity(perms_len as usize);
     for i in 0..perms_len {
-        if let Ok(Some(elem)) = env.get_object_array_element(&permissions, i) {
-            let perm_str: String = env
-                .get_string(&JString::from(elem))
-                .expect("Failed to get permission")
-                .into();
+        if let Ok(elem) = env.get_object_array_element(&permissions, i) {
+            let perm_str: String = match env.get_string(&JString::from(elem)) {
+                Ok(s) => s.into(),
+                Err(_) => { crate::java::exception::throw_ri_error(&mut env, "Failed to read array element"); continue; }
+            };
             perms_vec.push(perm_str);
         }
     }
 
     let now = std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
-        .expect("System time error")
-        .as_secs();
+        .map(|d| d.as_secs())
+        .unwrap_or(0);
 
     let claims = Box::new(RiJWTClaims {
         sub: sub_str,
@@ -160,9 +161,10 @@ pub extern "system" fn Java_com_dunimd_ri_auth_RiJWTClaims_getSub0(
     }
 
     let claims = unsafe { &*(ptr as *const RiJWTClaims) };
-    env.new_string(&claims.sub)
-        .expect("Failed to create string")
-        .into_raw()
+    match env.new_string(&claims.sub) {
+        Ok(s) => s.into_raw(),
+        Err(_) => std::ptr::null_mut(),
+    }
 }
 
 #[no_mangle]
@@ -206,17 +208,21 @@ pub extern "system" fn Java_com_dunimd_ri_auth_RiJWTClaims_getRoles0(
     let claims = unsafe { &*(ptr as *const RiJWTClaims) };
     let roles: Vec<String> = claims.roles.clone();
 
-    let string_class = env
-        .find_class("java/lang/String")
-        .expect("Failed to find String class");
-    let array = env
-        .new_object_array(roles.len() as jint, string_class, std::ptr::null_mut())
-        .expect("Failed to create array");
+    let string_class = match env.find_class("java/lang/String") {
+        Ok(c) => c,
+        Err(_) => { return std::ptr::null_mut(); }
+    };
+    let array = match env.new_object_array(roles.len() as jint, string_class, JObject::null()) {
+        Ok(a) => a,
+        Err(_) => { return std::ptr::null_mut(); }
+    };
 
     for (i, role) in roles.iter().enumerate() {
-        let jstr = env.new_string(role).expect("Failed to create string");
-        env.set_object_array_element(&array, i as jint, jstr)
-            .expect("Failed to set array element");
+        let jstr = match env.new_string(role) {
+            Ok(s) => s,
+            Err(_) => continue,
+        };
+        let _ = env.set_object_array_element(&array, i as jint, jstr);
     }
 
     array.into_raw()
@@ -235,17 +241,21 @@ pub extern "system" fn Java_com_dunimd_ri_auth_RiJWTClaims_getPermissions0(
     let claims = unsafe { &*(ptr as *const RiJWTClaims) };
     let perms: Vec<String> = claims.permissions.clone();
 
-    let string_class = env
-        .find_class("java/lang/String")
-        .expect("Failed to find String class");
-    let array = env
-        .new_object_array(perms.len() as jint, string_class, std::ptr::null_mut())
-        .expect("Failed to create array");
+    let string_class = match env.find_class("java/lang/String") {
+        Ok(c) => c,
+        Err(_) => { return std::ptr::null_mut(); }
+    };
+    let array = match env.new_object_array(perms.len() as jint, string_class, JObject::null()) {
+        Ok(a) => a,
+        Err(_) => { return std::ptr::null_mut(); }
+    };
 
     for (i, perm) in perms.iter().enumerate() {
-        let jstr = env.new_string(perm).expect("Failed to create string");
-        env.set_object_array_element(&array, i as jint, jstr)
-            .expect("Failed to set array element");
+        let jstr = match env.new_string(perm) {
+            Ok(s) => s,
+            Err(_) => continue,
+        };
+        let _ = env.set_object_array_element(&array, i as jint, jstr);
     }
 
     array.into_raw()
@@ -356,17 +366,21 @@ pub extern "system" fn Java_com_dunimd_ri_auth_RiJWTValidationOptions_getRequire
     let options = unsafe { &*(ptr as *const RiJWTValidationOptions) };
     let roles: Vec<String> = options.required_roles.clone();
 
-    let string_class = env
-        .find_class("java/lang/String")
-        .expect("Failed to find String class");
-    let array = env
-        .new_object_array(roles.len() as jint, string_class, std::ptr::null_mut())
-        .expect("Failed to create array");
+    let string_class = match env.find_class("java/lang/String") {
+        Ok(c) => c,
+        Err(_) => { return std::ptr::null_mut(); }
+    };
+    let array = match env.new_object_array(roles.len() as jint, string_class, JObject::null()) {
+        Ok(a) => a,
+        Err(_) => { return std::ptr::null_mut(); }
+    };
 
     for (i, role) in roles.iter().enumerate() {
-        let jstr = env.new_string(role).expect("Failed to create string");
-        env.set_object_array_element(&array, i as jint, jstr)
-            .expect("Failed to set array element");
+        let jstr = match env.new_string(role) {
+            Ok(s) => s,
+            Err(_) => continue,
+        };
+        let _ = env.set_object_array_element(&array, i as jint, jstr);
     }
 
     array.into_raw()
@@ -384,16 +398,14 @@ pub extern "system" fn Java_com_dunimd_ri_auth_RiJWTValidationOptions_setRequire
     }
 
     let options = unsafe { &mut *(ptr as *mut RiJWTValidationOptions) };
-    let roles_len = env
-        .get_array_length(&roles)
-        .expect("Failed to get roles length");
+    let roles_len = env.get_array_length(&roles).unwrap_or(0);
     let mut roles_vec = Vec::with_capacity(roles_len as usize);
     for i in 0..roles_len {
-        if let Ok(Some(elem)) = env.get_object_array_element(&roles, i) {
-            let role_str: String = env
-                .get_string(&JString::from(elem))
-                .expect("Failed to get role")
-                .into();
+        if let Ok(elem) = env.get_object_array_element(&roles, i) {
+            let role_str: String = match env.get_string(&JString::from(elem)) {
+                Ok(s) => s.into(),
+                Err(_) => { crate::java::exception::throw_ri_error(&mut env, "Failed to read array element"); continue; }
+            };
             roles_vec.push(role_str);
         }
     }
@@ -413,17 +425,21 @@ pub extern "system" fn Java_com_dunimd_ri_auth_RiJWTValidationOptions_getRequire
     let options = unsafe { &*(ptr as *const RiJWTValidationOptions) };
     let perms: Vec<String> = options.required_permissions.clone();
 
-    let string_class = env
-        .find_class("java/lang/String")
-        .expect("Failed to find String class");
-    let array = env
-        .new_object_array(perms.len() as jint, string_class, std::ptr::null_mut())
-        .expect("Failed to create array");
+    let string_class = match env.find_class("java/lang/String") {
+        Ok(c) => c,
+        Err(_) => { return std::ptr::null_mut(); }
+    };
+    let array = match env.new_object_array(perms.len() as jint, string_class, JObject::null()) {
+        Ok(a) => a,
+        Err(_) => { return std::ptr::null_mut(); }
+    };
 
     for (i, perm) in perms.iter().enumerate() {
-        let jstr = env.new_string(perm).expect("Failed to create string");
-        env.set_object_array_element(&array, i as jint, jstr)
-            .expect("Failed to set array element");
+        let jstr = match env.new_string(perm) {
+            Ok(s) => s,
+            Err(_) => continue,
+        };
+        let _ = env.set_object_array_element(&array, i as jint, jstr);
     }
 
     array.into_raw()
@@ -441,16 +457,14 @@ pub extern "system" fn Java_com_dunimd_ri_auth_RiJWTValidationOptions_setRequire
     }
 
     let options = unsafe { &mut *(ptr as *mut RiJWTValidationOptions) };
-    let perms_len = env
-        .get_array_length(&permissions)
-        .expect("Failed to get permissions length");
+    let perms_len = env.get_array_length(&permissions).unwrap_or(0);
     let mut perms_vec = Vec::with_capacity(perms_len as usize);
     for i in 0..perms_len {
-        if let Ok(Some(elem)) = env.get_object_array_element(&permissions, i) {
-            let perm_str: String = env
-                .get_string(&JString::from(elem))
-                .expect("Failed to get permission")
-                .into();
+        if let Ok(elem) = env.get_object_array_element(&permissions, i) {
+            let perm_str: String = match env.get_string(&JString::from(elem)) {
+                Ok(s) => s.into(),
+                Err(_) => { crate::java::exception::throw_ri_error(&mut env, "Failed to read array element"); continue; }
+            };
             perms_vec.push(perm_str);
         }
     }
@@ -496,10 +510,10 @@ pub extern "system" fn Java_com_dunimd_ri_auth_RiJWTManager_generateToken0(
         claims.roles.clone(),
         claims.permissions.clone(),
     ) {
-        Ok(token) => env
-            .new_string(&token)
-            .expect("Failed to create string")
-            .into_raw(),
+        Ok(token) => match env.new_string(&token) {
+        Ok(s) => s.into_raw(),
+        Err(_) => std::ptr::null_mut(),
+    },
         Err(_) => std::ptr::null_mut(),
     }
 }
@@ -516,7 +530,13 @@ pub extern "system" fn Java_com_dunimd_ri_auth_RiJWTManager_validateToken0(
     }
 
     let manager = unsafe { &*(ptr as *const RiJWTManager) };
-    let token_str: String = env.get_string(&token).expect("Failed to get token").into();
+    let token_str: String = match env.get_string(&token) {
+        Ok(s) => s.into(),
+        Err(_) => {
+            crate::java::exception::throw_ri_error(&mut env, "Failed to get token");
+            return 0;
+        }
+    };
 
     match manager.validate_token(&token_str) {
         Ok(claims) => {
@@ -542,9 +562,10 @@ pub extern "system" fn Java_com_dunimd_ri_auth_RiSession_getId0(
     }
 
     let session = unsafe { &*(ptr as *const RiSession) };
-    env.new_string(&session.id)
-        .expect("Failed to create string")
-        .into_raw()
+    match env.new_string(&session.id) {
+        Ok(s) => s.into_raw(),
+        Err(_) => std::ptr::null_mut(),
+    }
 }
 
 #[no_mangle]
@@ -558,9 +579,10 @@ pub extern "system" fn Java_com_dunimd_ri_auth_RiSession_getUserId0(
     }
 
     let session = unsafe { &*(ptr as *const RiSession) };
-    env.new_string(&session.user_id)
-        .expect("Failed to create string")
-        .into_raw()
+    match env.new_string(&session.user_id) {
+        Ok(s) => s.into_raw(),
+        Err(_) => std::ptr::null_mut(),
+    }
 }
 
 #[no_mangle]
@@ -617,10 +639,10 @@ pub extern "system" fn Java_com_dunimd_ri_auth_RiSession_getIpAddress0(
 
     let session = unsafe { &*(ptr as *const RiSession) };
     match &session.ip_address {
-        Some(ip) => env
-            .new_string(ip)
-            .expect("Failed to create string")
-            .into_raw(),
+        Some(ip) => match env.new_string(ip) {
+        Ok(s) => s.into_raw(),
+        Err(_) => std::ptr::null_mut(),
+    },
         None => std::ptr::null_mut(),
     }
 }
@@ -637,10 +659,10 @@ pub extern "system" fn Java_com_dunimd_ri_auth_RiSession_getUserAgent0(
 
     let session = unsafe { &*(ptr as *const RiSession) };
     match &session.user_agent {
-        Some(ua) => env
-            .new_string(ua)
-            .expect("Failed to create string")
-            .into_raw(),
+        Some(ua) => match env.new_string(ua) {
+        Ok(s) => s.into_raw(),
+        Err(_) => std::ptr::null_mut(),
+    },
         None => std::ptr::null_mut(),
     }
 }
@@ -675,13 +697,19 @@ pub extern "system" fn Java_com_dunimd_ri_auth_RiSession_getData0(
     }
 
     let session = unsafe { &*(ptr as *const RiSession) };
-    let key_str: String = env.get_string(&key).expect("Failed to get key").into();
+    let key_str: String = match env.get_string(&key) {
+        Ok(s) => s.into(),
+        Err(_) => {
+            crate::java::exception::throw_ri_error(&mut env, "Failed to get key");
+            return std::ptr::null_mut();
+        }
+    };
 
     match session.get_data(&key_str) {
-        Some(value) => env
-            .new_string(value)
-            .expect("Failed to create string")
-            .into_raw(),
+        Some(value) => match env.new_string(value) {
+        Ok(s) => s.into_raw(),
+        Err(_) => std::ptr::null_mut(),
+    },
         None => std::ptr::null_mut(),
     }
 }
@@ -699,8 +727,20 @@ pub extern "system" fn Java_com_dunimd_ri_auth_RiSession_setData0(
     }
 
     let session = unsafe { &mut *(ptr as *mut RiSession) };
-    let key_str: String = env.get_string(&key).expect("Failed to get key").into();
-    let value_str: String = env.get_string(&value).expect("Failed to get value").into();
+    let key_str: String = match env.get_string(&key) {
+        Ok(s) => s.into(),
+        Err(_) => {
+            crate::java::exception::throw_ri_error(&mut env, "Failed to get key");
+            return;
+        }
+    };
+    let value_str: String = match env.get_string(&value) {
+        Ok(s) => s.into(),
+        Err(_) => {
+            crate::java::exception::throw_ri_error(&mut env, "Failed to get value");
+            return;
+        }
+    };
 
     session.set_data(key_str, value_str);
 }
@@ -746,38 +786,32 @@ pub extern "system" fn Java_com_dunimd_ri_auth_RiSessionManager_createSession0(
     }
 
     let manager = unsafe { &*(ptr as *const RiSessionManager) };
-    let user_id_str: String = env
-        .get_string(&user_id)
-        .expect("Failed to get user_id")
-        .into();
+    let user_id_str: String = match env.get_string(&user_id) {
+        Ok(s) => s.into(),
+        Err(_) => {
+            crate::java::exception::throw_ri_error(&mut env, "Failed to get user_id");
+            return std::ptr::null_mut();
+        }
+    };
 
     let ip_str = if ip_address.is_null() {
         None
     } else {
-        Some(
-            env.get_string(&ip_address)
-                .expect("Failed to get ip")
-                .into(),
-        )
+        env.get_string(&ip_address).ok().map(|s| s.into())
     };
 
     let ua_str = if user_agent.is_null() {
         None
     } else {
-        Some(
-            env.get_string(&user_agent)
-                .expect("Failed to get user_agent")
-                .into(),
-        )
+        env.get_string(&user_agent).ok().map(|s| s.into())
     };
 
-    let rt = tokio::runtime::Runtime::new().expect("Failed to create runtime");
-    match rt.block_on(async { manager.create_session(user_id_str, ip_str, ua_str).await }) {
-        Ok(session_id) => env
-            .new_string(&session_id)
-            .expect("Failed to create string")
-            .into_raw(),
+    match crate::java::runtime::block_on_local(&mut env, "RiAuth", async { manager.create_session(user_id_str, ip_str, ua_str).await }) {
+        Some(Ok(session_id)) => match env.new_string(&session_id) {
+        Ok(s) => s.into_raw(),
         Err(_) => std::ptr::null_mut(),
+    },
+        _ => std::ptr::null_mut(),
     }
 }
 
@@ -793,14 +827,16 @@ pub extern "system" fn Java_com_dunimd_ri_auth_RiSessionManager_getSession0(
     }
 
     let manager = unsafe { &*(ptr as *const RiSessionManager) };
-    let session_id_str: String = env
-        .get_string(&session_id)
-        .expect("Failed to get session_id")
-        .into();
+    let session_id_str: String = match env.get_string(&session_id) {
+        Ok(s) => s.into(),
+        Err(_) => {
+            crate::java::exception::throw_ri_error(&mut env, "Failed to get session_id");
+            return 0;
+        }
+    };
 
-    let rt = tokio::runtime::Runtime::new().expect("Failed to create runtime");
-    match rt.block_on(async { manager.get_session(&session_id_str).await }) {
-        Ok(Some(session)) => {
+    match crate::java::runtime::block_on_local(&mut env, "RiAuth", async { manager.get_session(&session_id_str).await }) {
+        Some(Ok(Some(session))) => {
             let session_box = Box::new(session);
             Box::into_raw(session_box) as jlong
         }
@@ -820,21 +856,23 @@ pub extern "system" fn Java_com_dunimd_ri_auth_RiSessionManager_destroySession0(
     }
 
     let manager = unsafe { &*(ptr as *const RiSessionManager) };
-    let session_id_str: String = env
-        .get_string(&session_id)
-        .expect("Failed to get session_id")
-        .into();
+    let session_id_str: String = match env.get_string(&session_id) {
+        Ok(s) => s.into(),
+        Err(_) => {
+            crate::java::exception::throw_ri_error(&mut env, "Failed to get session_id");
+            return 0;
+        }
+    };
 
-    let rt = tokio::runtime::Runtime::new().expect("Failed to create runtime");
-    match rt.block_on(async { manager.destroy_session(&session_id_str).await }) {
-        Ok(result) => {
+    match crate::java::runtime::block_on_local(&mut env, "RiAuth", async { manager.destroy_session(&session_id_str).await }) {
+        Some(Ok(result)) => {
             if result {
                 1
             } else {
                 0
             }
         }
-        Err(_) => 0,
+        _ => 0,
     }
 }
 
@@ -850,21 +888,23 @@ pub extern "system" fn Java_com_dunimd_ri_auth_RiSessionManager_extendSession0(
     }
 
     let manager = unsafe { &*(ptr as *const RiSessionManager) };
-    let session_id_str: String = env
-        .get_string(&session_id)
-        .expect("Failed to get session_id")
-        .into();
+    let session_id_str: String = match env.get_string(&session_id) {
+        Ok(s) => s.into(),
+        Err(_) => {
+            crate::java::exception::throw_ri_error(&mut env, "Failed to get session_id");
+            return 0;
+        }
+    };
 
-    let rt = tokio::runtime::Runtime::new().expect("Failed to create runtime");
-    match rt.block_on(async { manager.extend_session(&session_id_str).await }) {
-        Ok(result) => {
+    match crate::java::runtime::block_on_local(&mut env, "RiAuth", async { manager.extend_session(&session_id_str).await }) {
+        Some(Ok(result)) => {
             if result {
                 1
             } else {
                 0
             }
         }
-        Err(_) => 0,
+        _ => 0,
     }
 }
 
@@ -880,10 +920,9 @@ pub extern "system" fn Java_com_dunimd_ri_auth_RiSessionManager_cleanupExpired0(
 
     let manager = unsafe { &*(ptr as *const RiSessionManager) };
 
-    let rt = tokio::runtime::Runtime::new().expect("Failed to create runtime");
-    match rt.block_on(async { manager.cleanup_expired().await }) {
-        Ok(count) => count as jint,
-        Err(_) => 0,
+    match crate::java::runtime::block_on_local(&mut env, "RiAuth", async { manager.cleanup_expired().await }) {
+        Some(Ok(count)) => count as jint,
+        _ => 0,
     }
 }
 
@@ -928,20 +967,41 @@ pub extern "system" fn Java_com_dunimd_ri_auth_RiPermission_new0(
     resource: JString,
     action: JString,
 ) -> jlong {
-    let id_str: String = env.get_string(&id).expect("Failed to get id").into();
-    let name_str: String = env.get_string(&name).expect("Failed to get name").into();
-    let desc_str: String = env
-        .get_string(&description)
-        .expect("Failed to get description")
-        .into();
-    let resource_str: String = env
-        .get_string(&resource)
-        .expect("Failed to get resource")
-        .into();
-    let action_str: String = env
-        .get_string(&action)
-        .expect("Failed to get action")
-        .into();
+    let id_str: String = match env.get_string(&id) {
+        Ok(s) => s.into(),
+        Err(_) => {
+            crate::java::exception::throw_ri_error(&mut env, "Failed to get id");
+            return 0;
+        }
+    };
+    let name_str: String = match env.get_string(&name) {
+        Ok(s) => s.into(),
+        Err(_) => {
+            crate::java::exception::throw_ri_error(&mut env, "Failed to get name");
+            return 0;
+        }
+    };
+    let desc_str: String = match env.get_string(&description) {
+        Ok(s) => s.into(),
+        Err(_) => {
+            crate::java::exception::throw_ri_error(&mut env, "Failed to get description");
+            return 0;
+        }
+    };
+    let resource_str: String = match env.get_string(&resource) {
+        Ok(s) => s.into(),
+        Err(_) => {
+            crate::java::exception::throw_ri_error(&mut env, "Failed to get resource");
+            return 0;
+        }
+    };
+    let action_str: String = match env.get_string(&action) {
+        Ok(s) => s.into(),
+        Err(_) => {
+            crate::java::exception::throw_ri_error(&mut env, "Failed to get action");
+            return 0;
+        }
+    };
 
     let permission = Box::new(RiPermission {
         id: id_str,
@@ -964,9 +1024,10 @@ pub extern "system" fn Java_com_dunimd_ri_auth_RiPermission_getId0(
     }
 
     let permission = unsafe { &*(ptr as *const RiPermission) };
-    env.new_string(&permission.id)
-        .expect("Failed to create string")
-        .into_raw()
+    match env.new_string(&permission.id) {
+        Ok(s) => s.into_raw(),
+        Err(_) => std::ptr::null_mut(),
+    }
 }
 
 #[no_mangle]
@@ -980,9 +1041,10 @@ pub extern "system" fn Java_com_dunimd_ri_auth_RiPermission_getName0(
     }
 
     let permission = unsafe { &*(ptr as *const RiPermission) };
-    env.new_string(&permission.name)
-        .expect("Failed to create string")
-        .into_raw()
+    match env.new_string(&permission.name) {
+        Ok(s) => s.into_raw(),
+        Err(_) => std::ptr::null_mut(),
+    }
 }
 
 #[no_mangle]
@@ -996,9 +1058,10 @@ pub extern "system" fn Java_com_dunimd_ri_auth_RiPermission_getDescription0(
     }
 
     let permission = unsafe { &*(ptr as *const RiPermission) };
-    env.new_string(&permission.description)
-        .expect("Failed to create string")
-        .into_raw()
+    match env.new_string(&permission.description) {
+        Ok(s) => s.into_raw(),
+        Err(_) => std::ptr::null_mut(),
+    }
 }
 
 #[no_mangle]
@@ -1012,9 +1075,10 @@ pub extern "system" fn Java_com_dunimd_ri_auth_RiPermission_getResource0(
     }
 
     let permission = unsafe { &*(ptr as *const RiPermission) };
-    env.new_string(&permission.resource)
-        .expect("Failed to create string")
-        .into_raw()
+    match env.new_string(&permission.resource) {
+        Ok(s) => s.into_raw(),
+        Err(_) => std::ptr::null_mut(),
+    }
 }
 
 #[no_mangle]
@@ -1028,9 +1092,10 @@ pub extern "system" fn Java_com_dunimd_ri_auth_RiPermission_getAction0(
     }
 
     let permission = unsafe { &*(ptr as *const RiPermission) };
-    env.new_string(&permission.action)
-        .expect("Failed to create string")
-        .into_raw()
+    match env.new_string(&permission.action) {
+        Ok(s) => s.into_raw(),
+        Err(_) => std::ptr::null_mut(),
+    }
 }
 
 #[no_mangle]
@@ -1060,23 +1125,36 @@ pub extern "system" fn Java_com_dunimd_ri_auth_RiRole_new0(
     permissions: JObjectArray,
     is_system: jboolean,
 ) -> jlong {
-    let id_str: String = env.get_string(&id).expect("Failed to get id").into();
-    let name_str: String = env.get_string(&name).expect("Failed to get name").into();
-    let desc_str: String = env
-        .get_string(&description)
-        .expect("Failed to get description")
-        .into();
+    let id_str: String = match env.get_string(&id) {
+        Ok(s) => s.into(),
+        Err(_) => {
+            crate::java::exception::throw_ri_error(&mut env, "Failed to get id");
+            return 0;
+        }
+    };
+    let name_str: String = match env.get_string(&name) {
+        Ok(s) => s.into(),
+        Err(_) => {
+            crate::java::exception::throw_ri_error(&mut env, "Failed to get name");
+            return 0;
+        }
+    };
+    let desc_str: String = match env.get_string(&description) {
+        Ok(s) => s.into(),
+        Err(_) => {
+            crate::java::exception::throw_ri_error(&mut env, "Failed to get description");
+            return 0;
+        }
+    };
 
-    let perms_len = env
-        .get_array_length(&permissions)
-        .expect("Failed to get permissions length");
+    let perms_len = env.get_array_length(&permissions).unwrap_or(0);
     let mut perms_set = HashSet::with_capacity(perms_len as usize);
     for i in 0..perms_len {
-        if let Ok(Some(elem)) = env.get_object_array_element(&permissions, i) {
-            let perm_str: String = env
-                .get_string(&JString::from(elem))
-                .expect("Failed to get permission")
-                .into();
+        if let Ok(elem) = env.get_object_array_element(&permissions, i) {
+            let perm_str: String = match env.get_string(&JString::from(elem)) {
+                Ok(s) => s.into(),
+                Err(_) => { crate::java::exception::throw_ri_error(&mut env, "Failed to read array element"); continue; }
+            };
             perms_set.insert(perm_str);
         }
     }
@@ -1102,9 +1180,10 @@ pub extern "system" fn Java_com_dunimd_ri_auth_RiRole_getId0(
     }
 
     let role = unsafe { &*(ptr as *const RiRole) };
-    env.new_string(&role.id)
-        .expect("Failed to create string")
-        .into_raw()
+    match env.new_string(&role.id) {
+        Ok(s) => s.into_raw(),
+        Err(_) => std::ptr::null_mut(),
+    }
 }
 
 #[no_mangle]
@@ -1118,9 +1197,10 @@ pub extern "system" fn Java_com_dunimd_ri_auth_RiRole_getName0(
     }
 
     let role = unsafe { &*(ptr as *const RiRole) };
-    env.new_string(&role.name)
-        .expect("Failed to create string")
-        .into_raw()
+    match env.new_string(&role.name) {
+        Ok(s) => s.into_raw(),
+        Err(_) => std::ptr::null_mut(),
+    }
 }
 
 #[no_mangle]
@@ -1134,9 +1214,10 @@ pub extern "system" fn Java_com_dunimd_ri_auth_RiRole_getDescription0(
     }
 
     let role = unsafe { &*(ptr as *const RiRole) };
-    env.new_string(&role.description)
-        .expect("Failed to create string")
-        .into_raw()
+    match env.new_string(&role.description) {
+        Ok(s) => s.into_raw(),
+        Err(_) => std::ptr::null_mut(),
+    }
 }
 
 #[no_mangle]
@@ -1152,17 +1233,21 @@ pub extern "system" fn Java_com_dunimd_ri_auth_RiRole_getPermissions0(
     let role = unsafe { &*(ptr as *const RiRole) };
     let perms: Vec<String> = role.permissions.iter().cloned().collect();
 
-    let string_class = env
-        .find_class("java/lang/String")
-        .expect("Failed to find String class");
-    let array = env
-        .new_object_array(perms.len() as jint, string_class, std::ptr::null_mut())
-        .expect("Failed to create array");
+    let string_class = match env.find_class("java/lang/String") {
+        Ok(c) => c,
+        Err(_) => { return std::ptr::null_mut(); }
+    };
+    let array = match env.new_object_array(perms.len() as jint, string_class, JObject::null()) {
+        Ok(a) => a,
+        Err(_) => { return std::ptr::null_mut(); }
+    };
 
     for (i, perm) in perms.iter().enumerate() {
-        let jstr = env.new_string(perm).expect("Failed to create string");
-        env.set_object_array_element(&array, i as jint, jstr)
-            .expect("Failed to set array element");
+        let jstr = match env.new_string(perm) {
+            Ok(s) => s,
+            Err(_) => continue,
+        };
+        let _ = env.set_object_array_element(&array, i as jint, jstr);
     }
 
     array.into_raw()
@@ -1198,10 +1283,13 @@ pub extern "system" fn Java_com_dunimd_ri_auth_RiRole_hasPermission0(
     }
 
     let role = unsafe { &*(ptr as *const RiRole) };
-    let perm_str: String = env
-        .get_string(&permission_id)
-        .expect("Failed to get permission_id")
-        .into();
+    let perm_str: String = match env.get_string(&permission_id) {
+        Ok(s) => s.into(),
+        Err(_) => {
+            crate::java::exception::throw_ri_error(&mut env, "Failed to get permission_id");
+            return 0;
+        }
+    };
 
     if role.has_permission(&perm_str) {
         1
@@ -1222,10 +1310,13 @@ pub extern "system" fn Java_com_dunimd_ri_auth_RiRole_addPermission0(
     }
 
     let role = unsafe { &mut *(ptr as *mut RiRole) };
-    let perm_str: String = env
-        .get_string(&permission_id)
-        .expect("Failed to get permission_id")
-        .into();
+    let perm_str: String = match env.get_string(&permission_id) {
+        Ok(s) => s.into(),
+        Err(_) => {
+            crate::java::exception::throw_ri_error(&mut env, "Failed to get permission_id");
+            return;
+        }
+    };
 
     role.add_permission(perm_str);
 }
@@ -1273,8 +1364,7 @@ pub extern "system" fn Java_com_dunimd_ri_auth_RiPermissionManager_createPermiss
     let manager = unsafe { &*(ptr as *const RiPermissionManager) };
     let permission = unsafe { &*(permission_ptr as *const RiPermission) };
 
-    let rt = tokio::runtime::Runtime::new().expect("Failed to create runtime");
-    let _ = rt.block_on(async { manager.create_permission(permission.clone()).await });
+    let _ = crate::java::runtime::block_on_local(&mut env, "RiAuth", async { manager.create_permission(permission.clone()).await });
 }
 
 #[no_mangle]
@@ -1289,14 +1379,16 @@ pub extern "system" fn Java_com_dunimd_ri_auth_RiPermissionManager_getPermission
     }
 
     let manager = unsafe { &*(ptr as *const RiPermissionManager) };
-    let perm_id_str: String = env
-        .get_string(&permission_id)
-        .expect("Failed to get permission_id")
-        .into();
+    let perm_id_str: String = match env.get_string(&permission_id) {
+        Ok(s) => s.into(),
+        Err(_) => {
+            crate::java::exception::throw_ri_error(&mut env, "Failed to get permission_id");
+            return 0;
+        }
+    };
 
-    let rt = tokio::runtime::Runtime::new().expect("Failed to create runtime");
-    match rt.block_on(async { manager.get_permission(&perm_id_str).await }) {
-        Ok(Some(perm)) => {
+    match crate::java::runtime::block_on_local(&mut env, "RiAuth", async { manager.get_permission(&perm_id_str).await }) {
+        Some(Ok(Some(perm))) => {
             let perm_box = Box::new(perm);
             Box::into_raw(perm_box) as jlong
         }
@@ -1321,8 +1413,7 @@ pub extern "system" fn Java_com_dunimd_ri_auth_RiPermissionManager_createRole0(
     let manager = unsafe { &*(ptr as *const RiPermissionManager) };
     let role = unsafe { &*(role_ptr as *const RiRole) };
 
-    let rt = tokio::runtime::Runtime::new().expect("Failed to create runtime");
-    let _ = rt.block_on(async { manager.create_role(role.clone()).await });
+    let _ = crate::java::runtime::block_on_local(&mut env, "RiAuth", async { manager.create_role(role.clone()).await });
 }
 
 #[no_mangle]
@@ -1337,14 +1428,16 @@ pub extern "system" fn Java_com_dunimd_ri_auth_RiPermissionManager_getRole0(
     }
 
     let manager = unsafe { &*(ptr as *const RiPermissionManager) };
-    let role_id_str: String = env
-        .get_string(&role_id)
-        .expect("Failed to get role_id")
-        .into();
+    let role_id_str: String = match env.get_string(&role_id) {
+        Ok(s) => s.into(),
+        Err(_) => {
+            crate::java::exception::throw_ri_error(&mut env, "Failed to get role_id");
+            return 0;
+        }
+    };
 
-    let rt = tokio::runtime::Runtime::new().expect("Failed to create runtime");
-    match rt.block_on(async { manager.get_role(&role_id_str).await }) {
-        Ok(Some(role)) => {
+    match crate::java::runtime::block_on_local(&mut env, "RiAuth", async { manager.get_role(&role_id_str).await }) {
+        Some(Ok(Some(role))) => {
             let role_box = Box::new(role);
             Box::into_raw(role_box) as jlong
         }
@@ -1365,25 +1458,30 @@ pub extern "system" fn Java_com_dunimd_ri_auth_RiPermissionManager_assignRoleToU
     }
 
     let manager = unsafe { &*(ptr as *const RiPermissionManager) };
-    let user_id_str: String = env
-        .get_string(&user_id)
-        .expect("Failed to get user_id")
-        .into();
-    let role_id_str: String = env
-        .get_string(&role_id)
-        .expect("Failed to get role_id")
-        .into();
+    let user_id_str: String = match env.get_string(&user_id) {
+        Ok(s) => s.into(),
+        Err(_) => {
+            crate::java::exception::throw_ri_error(&mut env, "Failed to get user_id");
+            return 0;
+        }
+    };
+    let role_id_str: String = match env.get_string(&role_id) {
+        Ok(s) => s.into(),
+        Err(_) => {
+            crate::java::exception::throw_ri_error(&mut env, "Failed to get role_id");
+            return 0;
+        }
+    };
 
-    let rt = tokio::runtime::Runtime::new().expect("Failed to create runtime");
-    match rt.block_on(async { manager.assign_role_to_user(user_id_str, role_id_str).await }) {
-        Ok(result) => {
+    match crate::java::runtime::block_on_local(&mut env, "RiAuth", async { manager.assign_role_to_user(user_id_str, role_id_str).await }) {
+        Some(Ok(result)) => {
             if result {
                 1
             } else {
                 0
             }
         }
-        Err(_) => 0,
+        _ => 0,
     }
 }
 
@@ -1400,29 +1498,34 @@ pub extern "system" fn Java_com_dunimd_ri_auth_RiPermissionManager_removeRoleFro
     }
 
     let manager = unsafe { &*(ptr as *const RiPermissionManager) };
-    let user_id_str: String = env
-        .get_string(&user_id)
-        .expect("Failed to get user_id")
-        .into();
-    let role_id_str: String = env
-        .get_string(&role_id)
-        .expect("Failed to get role_id")
-        .into();
+    let user_id_str: String = match env.get_string(&user_id) {
+        Ok(s) => s.into(),
+        Err(_) => {
+            crate::java::exception::throw_ri_error(&mut env, "Failed to get user_id");
+            return 0;
+        }
+    };
+    let role_id_str: String = match env.get_string(&role_id) {
+        Ok(s) => s.into(),
+        Err(_) => {
+            crate::java::exception::throw_ri_error(&mut env, "Failed to get role_id");
+            return 0;
+        }
+    };
 
-    let rt = tokio::runtime::Runtime::new().expect("Failed to create runtime");
-    match rt.block_on(async {
+    match crate::java::runtime::block_on_local(&mut env, "RiAuth", async {
         manager
             .remove_role_from_user(&user_id_str, &role_id_str)
             .await
     }) {
-        Ok(result) => {
+        Some(Ok(result)) => {
             if result {
                 1
             } else {
                 0
             }
         }
-        Err(_) => 0,
+        _ => 0,
     }
 }
 
@@ -1438,14 +1541,15 @@ pub extern "system" fn Java_com_dunimd_ri_auth_RiPermissionManager_getUserRoles0
     }
 
     let manager = unsafe { &*(ptr as *const RiPermissionManager) };
-    let user_id_str: String = env
-        .get_string(&user_id)
-        .expect("Failed to get user_id")
-        .into();
+    let user_id_str: String = match env.get_string(&user_id) {
+        Ok(s) => s.into(),
+        Err(_) => {
+            crate::java::exception::throw_ri_error(&mut env, "Failed to get user_id");
+            return std::ptr::null_mut();
+        }
+    };
 
-    let rt = tokio::runtime::Runtime::new().expect("Failed to create runtime");
-    let roles = rt
-        .block_on(async { manager.get_user_roles(&user_id_str).await })
+    let roles = crate::java::runtime::block_on_local(&mut env, "RiAuth", async { manager.get_user_roles(&user_id_str).await }).map(|r| r.unwrap_or_default())
         .unwrap_or_default();
 
     let ptrs: Vec<jlong> = roles
@@ -1453,14 +1557,11 @@ pub extern "system" fn Java_com_dunimd_ri_auth_RiPermissionManager_getUserRoles0
         .map(|r| Box::into_raw(Box::new(r)) as jlong)
         .collect();
 
-    let long_class = env
-        .find_class("java/lang/Long")
-        .expect("Failed to find Long class");
-    let array = env
-        .new_long_array(ptrs.len() as jint)
-        .expect("Failed to create array");
-    env.set_long_array_region(&array, 0, &ptrs)
-        .expect("Failed to set array");
+    let array = match env.new_long_array(ptrs.len() as jint) {
+        Ok(a) => a,
+        Err(_) => { return std::ptr::null_mut(); }
+    };
+    let _ = env.set_long_array_region(&array, 0, &ptrs);
 
     array.into_raw()
 }
@@ -1480,25 +1581,30 @@ pub extern "system" fn Java_com_dunimd_ri_auth_RiPermissionManager_hasPermission
     }
 
     let manager = unsafe { &*(ptr as *const RiPermissionManager) };
-    let user_id_str: String = env
-        .get_string(&user_id)
-        .expect("Failed to get user_id")
-        .into();
-    let perm_id_str: String = env
-        .get_string(&permission_id)
-        .expect("Failed to get permission_id")
-        .into();
+    let user_id_str: String = match env.get_string(&user_id) {
+        Ok(s) => s.into(),
+        Err(_) => {
+            crate::java::exception::throw_ri_error(&mut env, "Failed to get user_id");
+            return 0;
+        }
+    };
+    let perm_id_str: String = match env.get_string(&permission_id) {
+        Ok(s) => s.into(),
+        Err(_) => {
+            crate::java::exception::throw_ri_error(&mut env, "Failed to get permission_id");
+            return 0;
+        }
+    };
 
-    let rt = tokio::runtime::Runtime::new().expect("Failed to create runtime");
-    match rt.block_on(async { manager.has_permission(&user_id_str, &perm_id_str).await }) {
-        Ok(result) => {
+    match crate::java::runtime::block_on_local(&mut env, "RiAuth", async { manager.has_permission(&user_id_str, &perm_id_str).await }) {
+        Some(Ok(result)) => {
             if result {
                 1
             } else {
                 0
             }
         }
-        Err(_) => 0,
+        _ => 0,
     }
 }
 
@@ -1514,29 +1620,34 @@ pub extern "system" fn Java_com_dunimd_ri_auth_RiPermissionManager_getUserPermis
     }
 
     let manager = unsafe { &*(ptr as *const RiPermissionManager) };
-    let user_id_str: String = env
-        .get_string(&user_id)
-        .expect("Failed to get user_id")
-        .into();
+    let user_id_str: String = match env.get_string(&user_id) {
+        Ok(s) => s.into(),
+        Err(_) => {
+            crate::java::exception::throw_ri_error(&mut env, "Failed to get user_id");
+            return std::ptr::null_mut();
+        }
+    };
 
-    let rt = tokio::runtime::Runtime::new().expect("Failed to create runtime");
-    let perms = rt
-        .block_on(async { manager.get_user_permissions(&user_id_str).await })
+    let perms = crate::java::runtime::block_on_local(&mut env, "RiAuth", async { manager.get_user_permissions(&user_id_str).await }).map(|r| r.unwrap_or_default())
         .unwrap_or_default();
 
     let perms_vec: Vec<String> = perms.into_iter().collect();
 
-    let string_class = env
-        .find_class("java/lang/String")
-        .expect("Failed to find String class");
-    let array = env
-        .new_object_array(perms_vec.len() as jint, string_class, std::ptr::null_mut())
-        .expect("Failed to create array");
+    let string_class = match env.find_class("java/lang/String") {
+        Ok(c) => c,
+        Err(_) => { return std::ptr::null_mut(); }
+    };
+    let array = match env.new_object_array(perms_vec.len() as jint, string_class, JObject::null()) {
+        Ok(a) => a,
+        Err(_) => { return std::ptr::null_mut(); }
+    };
 
     for (i, perm) in perms_vec.iter().enumerate() {
-        let jstr = env.new_string(perm).expect("Failed to create string");
-        env.set_object_array_element(&array, i as jint, jstr)
-            .expect("Failed to set array element");
+        let jstr = match env.new_string(perm) {
+            Ok(s) => s,
+            Err(_) => continue,
+        };
+        let _ = env.set_object_array_element(&array, i as jint, jstr);
     }
 
     array.into_raw()
@@ -1554,21 +1665,23 @@ pub extern "system" fn Java_com_dunimd_ri_auth_RiPermissionManager_deletePermiss
     }
 
     let manager = unsafe { &*(ptr as *const RiPermissionManager) };
-    let perm_id_str: String = env
-        .get_string(&permission_id)
-        .expect("Failed to get permission_id")
-        .into();
+    let perm_id_str: String = match env.get_string(&permission_id) {
+        Ok(s) => s.into(),
+        Err(_) => {
+            crate::java::exception::throw_ri_error(&mut env, "Failed to get permission_id");
+            return 0;
+        }
+    };
 
-    let rt = tokio::runtime::Runtime::new().expect("Failed to create runtime");
-    match rt.block_on(async { manager.delete_permission(&perm_id_str).await }) {
-        Ok(result) => {
+    match crate::java::runtime::block_on_local(&mut env, "RiAuth", async { manager.delete_permission(&perm_id_str).await }) {
+        Some(Ok(result)) => {
             if result {
                 1
             } else {
                 0
             }
         }
-        Err(_) => 0,
+        _ => 0,
     }
 }
 
@@ -1584,21 +1697,23 @@ pub extern "system" fn Java_com_dunimd_ri_auth_RiPermissionManager_deleteRole0(
     }
 
     let manager = unsafe { &*(ptr as *const RiPermissionManager) };
-    let role_id_str: String = env
-        .get_string(&role_id)
-        .expect("Failed to get role_id")
-        .into();
+    let role_id_str: String = match env.get_string(&role_id) {
+        Ok(s) => s.into(),
+        Err(_) => {
+            crate::java::exception::throw_ri_error(&mut env, "Failed to get role_id");
+            return 0;
+        }
+    };
 
-    let rt = tokio::runtime::Runtime::new().expect("Failed to create runtime");
-    match rt.block_on(async { manager.delete_role(&role_id_str).await }) {
-        Ok(result) => {
+    match crate::java::runtime::block_on_local(&mut env, "RiAuth", async { manager.delete_role(&role_id_str).await }) {
+        Some(Ok(result)) => {
             if result {
                 1
             } else {
                 0
             }
         }
-        Err(_) => 0,
+        _ => 0,
     }
 }
 
@@ -1614,9 +1729,7 @@ pub extern "system" fn Java_com_dunimd_ri_auth_RiPermissionManager_listPermissio
 
     let manager = unsafe { &*(ptr as *const RiPermissionManager) };
 
-    let rt = tokio::runtime::Runtime::new().expect("Failed to create runtime");
-    let perms = rt
-        .block_on(async { manager.list_permissions().await })
+    let perms = crate::java::runtime::block_on_local(&mut env, "RiAuth", async { manager.list_permissions().await }).map(|r| r.unwrap_or_default())
         .unwrap_or_default();
 
     let ptrs: Vec<jlong> = perms
@@ -1624,11 +1737,11 @@ pub extern "system" fn Java_com_dunimd_ri_auth_RiPermissionManager_listPermissio
         .map(|p| Box::into_raw(Box::new(p)) as jlong)
         .collect();
 
-    let array = env
-        .new_long_array(ptrs.len() as jint)
-        .expect("Failed to create array");
-    env.set_long_array_region(&array, 0, &ptrs)
-        .expect("Failed to set array");
+    let array = match env.new_long_array(ptrs.len() as jint) {
+        Ok(a) => a,
+        Err(_) => { return std::ptr::null_mut(); }
+    };
+    let _ = env.set_long_array_region(&array, 0, &ptrs);
 
     array.into_raw()
 }
@@ -1645,9 +1758,7 @@ pub extern "system" fn Java_com_dunimd_ri_auth_RiPermissionManager_listRoles0(
 
     let manager = unsafe { &*(ptr as *const RiPermissionManager) };
 
-    let rt = tokio::runtime::Runtime::new().expect("Failed to create runtime");
-    let roles = rt
-        .block_on(async { manager.list_roles().await })
+    let roles = crate::java::runtime::block_on_local(&mut env, "RiAuth", async { manager.list_roles().await }).map(|r| r.unwrap_or_default())
         .unwrap_or_default();
 
     let ptrs: Vec<jlong> = roles
@@ -1655,11 +1766,11 @@ pub extern "system" fn Java_com_dunimd_ri_auth_RiPermissionManager_listRoles0(
         .map(|r| Box::into_raw(Box::new(r)) as jlong)
         .collect();
 
-    let array = env
-        .new_long_array(ptrs.len() as jint)
-        .expect("Failed to create array");
-    env.set_long_array_region(&array, 0, &ptrs)
-        .expect("Failed to set array");
+    let array = match env.new_long_array(ptrs.len() as jint) {
+        Ok(a) => a,
+        Err(_) => { return std::ptr::null_mut(); }
+    };
+    let _ = env.set_long_array_region(&array, 0, &ptrs);
 
     array.into_raw()
 }
@@ -1696,39 +1807,64 @@ pub extern "system" fn Java_com_dunimd_ri_auth_RiOAuthProvider_new0(
     enabled: jboolean,
     redirect_uri: JString,
 ) -> jlong {
-    let id_str: String = env.get_string(&id).expect("Failed to get id").into();
-    let name_str: String = env.get_string(&name).expect("Failed to get name").into();
-    let client_id_str: String = env
-        .get_string(&client_id)
-        .expect("Failed to get client_id")
-        .into();
-    let client_secret_str: String = env
-        .get_string(&client_secret)
-        .expect("Failed to get client_secret")
-        .into();
-    let auth_url_str: String = env
-        .get_string(&auth_url)
-        .expect("Failed to get auth_url")
-        .into();
-    let token_url_str: String = env
-        .get_string(&token_url)
-        .expect("Failed to get token_url")
-        .into();
-    let user_info_url_str: String = env
-        .get_string(&user_info_url)
-        .expect("Failed to get user_info_url")
-        .into();
+    let id_str: String = match env.get_string(&id) {
+        Ok(s) => s.into(),
+        Err(_) => {
+            crate::java::exception::throw_ri_error(&mut env, "Failed to get id");
+            return 0;
+        }
+    };
+    let name_str: String = match env.get_string(&name) {
+        Ok(s) => s.into(),
+        Err(_) => {
+            crate::java::exception::throw_ri_error(&mut env, "Failed to get name");
+            return 0;
+        }
+    };
+    let client_id_str: String = match env.get_string(&client_id) {
+        Ok(s) => s.into(),
+        Err(_) => {
+            crate::java::exception::throw_ri_error(&mut env, "Failed to get client_id");
+            return 0;
+        }
+    };
+    let client_secret_str: String = match env.get_string(&client_secret) {
+        Ok(s) => s.into(),
+        Err(_) => {
+            crate::java::exception::throw_ri_error(&mut env, "Failed to get client_secret");
+            return 0;
+        }
+    };
+    let auth_url_str: String = match env.get_string(&auth_url) {
+        Ok(s) => s.into(),
+        Err(_) => {
+            crate::java::exception::throw_ri_error(&mut env, "Failed to get auth_url");
+            return 0;
+        }
+    };
+    let token_url_str: String = match env.get_string(&token_url) {
+        Ok(s) => s.into(),
+        Err(_) => {
+            crate::java::exception::throw_ri_error(&mut env, "Failed to get token_url");
+            return 0;
+        }
+    };
+    let user_info_url_str: String = match env.get_string(&user_info_url) {
+        Ok(s) => s.into(),
+        Err(_) => {
+            crate::java::exception::throw_ri_error(&mut env, "Failed to get user_info_url");
+            return 0;
+        }
+    };
 
-    let scopes_len = env
-        .get_array_length(&scopes)
-        .expect("Failed to get scopes length");
+    let scopes_len = env.get_array_length(&scopes).unwrap_or(0);
     let mut scopes_vec = Vec::with_capacity(scopes_len as usize);
     for i in 0..scopes_len {
-        if let Ok(Some(elem)) = env.get_object_array_element(&scopes, i) {
-            let scope_str: String = env
-                .get_string(&JString::from(elem))
-                .expect("Failed to get scope")
-                .into();
+        if let Ok(elem) = env.get_object_array_element(&scopes, i) {
+            let scope_str: String = match env.get_string(&JString::from(elem)) {
+                Ok(s) => s.into(),
+                Err(_) => { crate::java::exception::throw_ri_error(&mut env, "Failed to read array element"); continue; }
+            };
             scopes_vec.push(scope_str);
         }
     }
@@ -1736,11 +1872,7 @@ pub extern "system" fn Java_com_dunimd_ri_auth_RiOAuthProvider_new0(
     let redirect_uri_opt = if redirect_uri.is_null() {
         None
     } else {
-        Some(
-            env.get_string(&redirect_uri)
-                .expect("Failed to get redirect_uri")
-                .into(),
-        )
+        env.get_string(&redirect_uri).ok().map(|s| s.into())
     };
 
     let provider = Box::new(RiOAuthProvider {
@@ -1754,6 +1886,7 @@ pub extern "system" fn Java_com_dunimd_ri_auth_RiOAuthProvider_new0(
         scopes: scopes_vec,
         enabled: enabled != 0,
         redirect_uri: redirect_uri_opt,
+        allowed_redirect_uris: Vec::new(),
     });
     Box::into_raw(provider) as jlong
 }
@@ -1769,9 +1902,10 @@ pub extern "system" fn Java_com_dunimd_ri_auth_RiOAuthProvider_getId0(
     }
 
     let provider = unsafe { &*(ptr as *const RiOAuthProvider) };
-    env.new_string(&provider.id)
-        .expect("Failed to create string")
-        .into_raw()
+    match env.new_string(&provider.id) {
+        Ok(s) => s.into_raw(),
+        Err(_) => std::ptr::null_mut(),
+    }
 }
 
 #[no_mangle]
@@ -1785,9 +1919,10 @@ pub extern "system" fn Java_com_dunimd_ri_auth_RiOAuthProvider_getName0(
     }
 
     let provider = unsafe { &*(ptr as *const RiOAuthProvider) };
-    env.new_string(&provider.name)
-        .expect("Failed to create string")
-        .into_raw()
+    match env.new_string(&provider.name) {
+        Ok(s) => s.into_raw(),
+        Err(_) => std::ptr::null_mut(),
+    }
 }
 
 #[no_mangle]
@@ -1801,9 +1936,10 @@ pub extern "system" fn Java_com_dunimd_ri_auth_RiOAuthProvider_getClientId0(
     }
 
     let provider = unsafe { &*(ptr as *const RiOAuthProvider) };
-    env.new_string(&provider.client_id)
-        .expect("Failed to create string")
-        .into_raw()
+    match env.new_string(&provider.client_id) {
+        Ok(s) => s.into_raw(),
+        Err(_) => std::ptr::null_mut(),
+    }
 }
 
 #[no_mangle]
@@ -1817,9 +1953,10 @@ pub extern "system" fn Java_com_dunimd_ri_auth_RiOAuthProvider_getAuthUrl0(
     }
 
     let provider = unsafe { &*(ptr as *const RiOAuthProvider) };
-    env.new_string(&provider.auth_url)
-        .expect("Failed to create string")
-        .into_raw()
+    match env.new_string(&provider.auth_url) {
+        Ok(s) => s.into_raw(),
+        Err(_) => std::ptr::null_mut(),
+    }
 }
 
 #[no_mangle]
@@ -1833,9 +1970,10 @@ pub extern "system" fn Java_com_dunimd_ri_auth_RiOAuthProvider_getTokenUrl0(
     }
 
     let provider = unsafe { &*(ptr as *const RiOAuthProvider) };
-    env.new_string(&provider.token_url)
-        .expect("Failed to create string")
-        .into_raw()
+    match env.new_string(&provider.token_url) {
+        Ok(s) => s.into_raw(),
+        Err(_) => std::ptr::null_mut(),
+    }
 }
 
 #[no_mangle]
@@ -1849,9 +1987,10 @@ pub extern "system" fn Java_com_dunimd_ri_auth_RiOAuthProvider_getUserInfoUrl0(
     }
 
     let provider = unsafe { &*(ptr as *const RiOAuthProvider) };
-    env.new_string(&provider.user_info_url)
-        .expect("Failed to create string")
-        .into_raw()
+    match env.new_string(&provider.user_info_url) {
+        Ok(s) => s.into_raw(),
+        Err(_) => std::ptr::null_mut(),
+    }
 }
 
 #[no_mangle]
@@ -1866,21 +2005,25 @@ pub extern "system" fn Java_com_dunimd_ri_auth_RiOAuthProvider_getScopes0(
 
     let provider = unsafe { &*(ptr as *const RiOAuthProvider) };
 
-    let string_class = env
-        .find_class("java/lang/String")
-        .expect("Failed to find String class");
-    let array = env
-        .new_object_array(
+    let string_class = match env.find_class("java/lang/String") {
+        Ok(c) => c,
+        Err(_) => { return std::ptr::null_mut(); }
+    };
+    let array = match env.new_object_array(
             provider.scopes.len() as jint,
             string_class,
-            std::ptr::null_mut(),
-        )
-        .expect("Failed to create array");
+            JObject::null(),
+        ) {
+        Ok(a) => a,
+        Err(_) => { return std::ptr::null_mut(); }
+    };
 
     for (i, scope) in provider.scopes.iter().enumerate() {
-        let jstr = env.new_string(scope).expect("Failed to create string");
-        env.set_object_array_element(&array, i as jint, jstr)
-            .expect("Failed to set array element");
+        let jstr = match env.new_string(scope) {
+            Ok(s) => s,
+            Err(_) => continue,
+        };
+        let _ = env.set_object_array_element(&array, i as jint, jstr);
     }
 
     array.into_raw()
@@ -1916,10 +2059,10 @@ pub extern "system" fn Java_com_dunimd_ri_auth_RiOAuthProvider_getRedirectUri0(
 
     let provider = unsafe { &*(ptr as *const RiOAuthProvider) };
     match &provider.redirect_uri {
-        Some(uri) => env
-            .new_string(uri)
-            .expect("Failed to create string")
-            .into_raw(),
+        Some(uri) => match env.new_string(uri) {
+        Ok(s) => s.into_raw(),
+        Err(_) => std::ptr::null_mut(),
+    },
         None => std::ptr::null_mut(),
     }
 }
@@ -1951,27 +2094,29 @@ pub extern "system" fn Java_com_dunimd_ri_auth_RiOAuthToken_new0(
     scope: JString,
     expires_in: jlong,
 ) -> jlong {
-    let access_token_str: String = env
-        .get_string(&access_token)
-        .expect("Failed to get access_token")
-        .into();
-    let token_type_str: String = env
-        .get_string(&token_type)
-        .expect("Failed to get token_type")
-        .into();
+    let access_token_str: String = match env.get_string(&access_token) {
+        Ok(s) => s.into(),
+        Err(_) => {
+            crate::java::exception::throw_ri_error(&mut env, "Failed to get access_token");
+            return 0;
+        }
+    };
+    let token_type_str: String = match env.get_string(&token_type) {
+        Ok(s) => s.into(),
+        Err(_) => {
+            crate::java::exception::throw_ri_error(&mut env, "Failed to get token_type");
+            return 0;
+        }
+    };
     let refresh_token_opt = if refresh_token.is_null() {
         None
     } else {
-        Some(
-            env.get_string(&refresh_token)
-                .expect("Failed to get refresh_token")
-                .into(),
-        )
+        env.get_string(&refresh_token).ok().map(|s| s.into())
     };
     let scope_opt = if scope.is_null() {
         None
     } else {
-        Some(env.get_string(&scope).expect("Failed to get scope").into())
+        env.get_string(&scope).ok().map(|s| s.into())
     };
 
     let token = Box::new(RiOAuthToken {
@@ -1995,9 +2140,10 @@ pub extern "system" fn Java_com_dunimd_ri_auth_RiOAuthToken_getAccessToken0(
     }
 
     let token = unsafe { &*(ptr as *const RiOAuthToken) };
-    env.new_string(&token.access_token)
-        .expect("Failed to create string")
-        .into_raw()
+    match env.new_string(&token.access_token) {
+        Ok(s) => s.into_raw(),
+        Err(_) => std::ptr::null_mut(),
+    }
 }
 
 #[no_mangle]
@@ -2011,9 +2157,10 @@ pub extern "system" fn Java_com_dunimd_ri_auth_RiOAuthToken_getTokenType0(
     }
 
     let token = unsafe { &*(ptr as *const RiOAuthToken) };
-    env.new_string(&token.token_type)
-        .expect("Failed to create string")
-        .into_raw()
+    match env.new_string(&token.token_type) {
+        Ok(s) => s.into_raw(),
+        Err(_) => std::ptr::null_mut(),
+    }
 }
 
 #[no_mangle]
@@ -2028,10 +2175,10 @@ pub extern "system" fn Java_com_dunimd_ri_auth_RiOAuthToken_getRefreshToken0(
 
     let token = unsafe { &*(ptr as *const RiOAuthToken) };
     match &token.refresh_token {
-        Some(rt) => env
-            .new_string(rt)
-            .expect("Failed to create string")
-            .into_raw(),
+        Some(rt) => match env.new_string(rt) {
+        Ok(s) => s.into_raw(),
+        Err(_) => std::ptr::null_mut(),
+    },
         None => std::ptr::null_mut(),
     }
 }
@@ -2048,10 +2195,10 @@ pub extern "system" fn Java_com_dunimd_ri_auth_RiOAuthToken_getScope0(
 
     let token = unsafe { &*(ptr as *const RiOAuthToken) };
     match &token.scope {
-        Some(s) => env
-            .new_string(s)
-            .expect("Failed to create string")
-            .into_raw(),
+        Some(s) => match env.new_string(s) {
+        Ok(s) => s.into_raw(),
+        Err(_) => std::ptr::null_mut(),
+    },
         None => std::ptr::null_mut(),
     }
 }
@@ -2097,26 +2244,37 @@ pub extern "system" fn Java_com_dunimd_ri_auth_RiOAuthUserInfo_new0(
     avatar_url: JString,
     provider: JString,
 ) -> jlong {
-    let id_str: String = env.get_string(&id).expect("Failed to get id").into();
-    let email_str: String = env.get_string(&email).expect("Failed to get email").into();
+    let id_str: String = match env.get_string(&id) {
+        Ok(s) => s.into(),
+        Err(_) => {
+            crate::java::exception::throw_ri_error(&mut env, "Failed to get id");
+            return 0;
+        }
+    };
+    let email_str: String = match env.get_string(&email) {
+        Ok(s) => s.into(),
+        Err(_) => {
+            crate::java::exception::throw_ri_error(&mut env, "Failed to get email");
+            return 0;
+        }
+    };
     let name_opt = if name.is_null() {
         None
     } else {
-        Some(env.get_string(&name).expect("Failed to get name").into())
+        env.get_string(&name).ok().map(|s| s.into())
     };
     let avatar_url_opt = if avatar_url.is_null() {
         None
     } else {
-        Some(
-            env.get_string(&avatar_url)
-                .expect("Failed to get avatar_url")
-                .into(),
-        )
+        env.get_string(&avatar_url).ok().map(|s| s.into())
     };
-    let provider_str: String = env
-        .get_string(&provider)
-        .expect("Failed to get provider")
-        .into();
+    let provider_str: String = match env.get_string(&provider) {
+        Ok(s) => s.into(),
+        Err(_) => {
+            crate::java::exception::throw_ri_error(&mut env, "Failed to get provider");
+            return 0;
+        }
+    };
 
     let user_info = Box::new(RiOAuthUserInfo {
         id: id_str,
@@ -2139,9 +2297,10 @@ pub extern "system" fn Java_com_dunimd_ri_auth_RiOAuthUserInfo_getId0(
     }
 
     let user_info = unsafe { &*(ptr as *const RiOAuthUserInfo) };
-    env.new_string(&user_info.id)
-        .expect("Failed to create string")
-        .into_raw()
+    match env.new_string(&user_info.id) {
+        Ok(s) => s.into_raw(),
+        Err(_) => std::ptr::null_mut(),
+    }
 }
 
 #[no_mangle]
@@ -2155,9 +2314,10 @@ pub extern "system" fn Java_com_dunimd_ri_auth_RiOAuthUserInfo_getEmail0(
     }
 
     let user_info = unsafe { &*(ptr as *const RiOAuthUserInfo) };
-    env.new_string(&user_info.email)
-        .expect("Failed to create string")
-        .into_raw()
+    match env.new_string(&user_info.email) {
+        Ok(s) => s.into_raw(),
+        Err(_) => std::ptr::null_mut(),
+    }
 }
 
 #[no_mangle]
@@ -2172,10 +2332,10 @@ pub extern "system" fn Java_com_dunimd_ri_auth_RiOAuthUserInfo_getName0(
 
     let user_info = unsafe { &*(ptr as *const RiOAuthUserInfo) };
     match &user_info.name {
-        Some(n) => env
-            .new_string(n)
-            .expect("Failed to create string")
-            .into_raw(),
+        Some(n) => match env.new_string(n) {
+        Ok(s) => s.into_raw(),
+        Err(_) => std::ptr::null_mut(),
+    },
         None => std::ptr::null_mut(),
     }
 }
@@ -2192,10 +2352,10 @@ pub extern "system" fn Java_com_dunimd_ri_auth_RiOAuthUserInfo_getAvatarUrl0(
 
     let user_info = unsafe { &*(ptr as *const RiOAuthUserInfo) };
     match &user_info.avatar_url {
-        Some(url) => env
-            .new_string(url)
-            .expect("Failed to create string")
-            .into_raw(),
+        Some(url) => match env.new_string(url) {
+        Ok(s) => s.into_raw(),
+        Err(_) => std::ptr::null_mut(),
+    },
         None => std::ptr::null_mut(),
     }
 }
@@ -2211,9 +2371,10 @@ pub extern "system" fn Java_com_dunimd_ri_auth_RiOAuthUserInfo_getProvider0(
     }
 
     let user_info = unsafe { &*(ptr as *const RiOAuthUserInfo) };
-    env.new_string(&user_info.provider)
-        .expect("Failed to create string")
-        .into_raw()
+    match env.new_string(&user_info.provider) {
+        Ok(s) => s.into_raw(),
+        Err(_) => std::ptr::null_mut(),
+    }
 }
 
 #[no_mangle]
@@ -2263,8 +2424,7 @@ pub extern "system" fn Java_com_dunimd_ri_auth_RiOAuthManager_registerProvider0(
     let manager = unsafe { &*(ptr as *const RiOAuthManager) };
     let provider = unsafe { &*(provider_ptr as *const RiOAuthProvider) };
 
-    let rt = tokio::runtime::Runtime::new().expect("Failed to create runtime");
-    let _ = rt.block_on(async { manager.register_provider(provider.clone()).await });
+    let _ = crate::java::runtime::block_on_local(&mut env, "RiAuth", async { manager.register_provider(provider.clone()).await });
 }
 
 #[no_mangle]
@@ -2279,14 +2439,16 @@ pub extern "system" fn Java_com_dunimd_ri_auth_RiOAuthManager_getProvider0(
     }
 
     let manager = unsafe { &*(ptr as *const RiOAuthManager) };
-    let provider_id_str: String = env
-        .get_string(&provider_id)
-        .expect("Failed to get provider_id")
-        .into();
+    let provider_id_str: String = match env.get_string(&provider_id) {
+        Ok(s) => s.into(),
+        Err(_) => {
+            crate::java::exception::throw_ri_error(&mut env, "Failed to get provider_id");
+            return 0;
+        }
+    };
 
-    let rt = tokio::runtime::Runtime::new().expect("Failed to create runtime");
-    match rt.block_on(async { manager.get_provider(&provider_id_str).await }) {
-        Ok(Some(provider)) => {
+    match crate::java::runtime::block_on_local(&mut env, "RiAuth", async { manager.get_provider(&provider_id_str).await }) {
+        Some(Ok(Some(provider))) => {
             let provider_box = Box::new(provider);
             Box::into_raw(provider_box) as jlong
         }
@@ -2307,18 +2469,26 @@ pub extern "system" fn Java_com_dunimd_ri_auth_RiOAuthManager_getAuthUrl0(
     }
 
     let manager = unsafe { &*(ptr as *const RiOAuthManager) };
-    let provider_id_str: String = env
-        .get_string(&provider_id)
-        .expect("Failed to get provider_id")
-        .into();
-    let state_str: String = env.get_string(&state).expect("Failed to get state").into();
+    let provider_id_str: String = match env.get_string(&provider_id) {
+        Ok(s) => s.into(),
+        Err(_) => {
+            crate::java::exception::throw_ri_error(&mut env, "Failed to get provider_id");
+            return std::ptr::null_mut();
+        }
+    };
+    let state_str: String = match env.get_string(&state) {
+        Ok(s) => s.into(),
+        Err(_) => {
+            crate::java::exception::throw_ri_error(&mut env, "Failed to get state");
+            return std::ptr::null_mut();
+        }
+    };
 
-    let rt = tokio::runtime::Runtime::new().expect("Failed to create runtime");
-    match rt.block_on(async { manager.get_auth_url(&provider_id_str, &state_str).await }) {
-        Ok(Some(url)) => env
-            .new_string(&url)
-            .expect("Failed to create string")
-            .into_raw(),
+    match crate::java::runtime::block_on_local(&mut env, "RiAuth", async { manager.get_auth_url(&provider_id_str, &state_str).await }) {
+        Some(Ok(Some(url))) => match env.new_string(&url) {
+        Ok(s) => s.into_raw(),
+        Err(_) => std::ptr::null_mut(),
+    },
         _ => std::ptr::null_mut(),
     }
 }
@@ -2337,23 +2507,34 @@ pub extern "system" fn Java_com_dunimd_ri_auth_RiOAuthManager_exchangeCodeForTok
     }
 
     let manager = unsafe { &*(ptr as *const RiOAuthManager) };
-    let provider_id_str: String = env
-        .get_string(&provider_id)
-        .expect("Failed to get provider_id")
-        .into();
-    let code_str: String = env.get_string(&code).expect("Failed to get code").into();
-    let redirect_uri_str: String = env
-        .get_string(&redirect_uri)
-        .expect("Failed to get redirect_uri")
-        .into();
+    let provider_id_str: String = match env.get_string(&provider_id) {
+        Ok(s) => s.into(),
+        Err(_) => {
+            crate::java::exception::throw_ri_error(&mut env, "Failed to get provider_id");
+            return 0;
+        }
+    };
+    let code_str: String = match env.get_string(&code) {
+        Ok(s) => s.into(),
+        Err(_) => {
+            crate::java::exception::throw_ri_error(&mut env, "Failed to get code");
+            return 0;
+        }
+    };
+    let redirect_uri_str: String = match env.get_string(&redirect_uri) {
+        Ok(s) => s.into(),
+        Err(_) => {
+            crate::java::exception::throw_ri_error(&mut env, "Failed to get redirect_uri");
+            return 0;
+        }
+    };
 
-    let rt = tokio::runtime::Runtime::new().expect("Failed to create runtime");
-    match rt.block_on(async {
+    match crate::java::runtime::block_on_local(&mut env, "RiAuth", async {
         manager
             .exchange_code_for_token(&provider_id_str, &code_str, &redirect_uri_str)
             .await
     }) {
-        Ok(Some(token)) => {
+        Some(Ok(Some(token))) => {
             let token_box = Box::new(token);
             Box::into_raw(token_box) as jlong
         }
@@ -2374,22 +2555,27 @@ pub extern "system" fn Java_com_dunimd_ri_auth_RiOAuthManager_getUserInfo0(
     }
 
     let manager = unsafe { &*(ptr as *const RiOAuthManager) };
-    let provider_id_str: String = env
-        .get_string(&provider_id)
-        .expect("Failed to get provider_id")
-        .into();
-    let access_token_str: String = env
-        .get_string(&access_token)
-        .expect("Failed to get access_token")
-        .into();
+    let provider_id_str: String = match env.get_string(&provider_id) {
+        Ok(s) => s.into(),
+        Err(_) => {
+            crate::java::exception::throw_ri_error(&mut env, "Failed to get provider_id");
+            return 0;
+        }
+    };
+    let access_token_str: String = match env.get_string(&access_token) {
+        Ok(s) => s.into(),
+        Err(_) => {
+            crate::java::exception::throw_ri_error(&mut env, "Failed to get access_token");
+            return 0;
+        }
+    };
 
-    let rt = tokio::runtime::Runtime::new().expect("Failed to create runtime");
-    match rt.block_on(async {
+    match crate::java::runtime::block_on_local(&mut env, "RiAuth", async {
         manager
             .get_user_info(&provider_id_str, &access_token_str)
             .await
     }) {
-        Ok(Some(user_info)) => {
+        Some(Ok(Some(user_info))) => {
             let user_info_box = Box::new(user_info);
             Box::into_raw(user_info_box) as jlong
         }
@@ -2410,22 +2596,27 @@ pub extern "system" fn Java_com_dunimd_ri_auth_RiOAuthManager_refreshToken0(
     }
 
     let manager = unsafe { &*(ptr as *const RiOAuthManager) };
-    let provider_id_str: String = env
-        .get_string(&provider_id)
-        .expect("Failed to get provider_id")
-        .into();
-    let refresh_token_str: String = env
-        .get_string(&refresh_token)
-        .expect("Failed to get refresh_token")
-        .into();
+    let provider_id_str: String = match env.get_string(&provider_id) {
+        Ok(s) => s.into(),
+        Err(_) => {
+            crate::java::exception::throw_ri_error(&mut env, "Failed to get provider_id");
+            return 0;
+        }
+    };
+    let refresh_token_str: String = match env.get_string(&refresh_token) {
+        Ok(s) => s.into(),
+        Err(_) => {
+            crate::java::exception::throw_ri_error(&mut env, "Failed to get refresh_token");
+            return 0;
+        }
+    };
 
-    let rt = tokio::runtime::Runtime::new().expect("Failed to create runtime");
-    match rt.block_on(async {
+    match crate::java::runtime::block_on_local(&mut env, "RiAuth", async {
         manager
             .refresh_token(&provider_id_str, &refresh_token_str)
             .await
     }) {
-        Ok(Some(token)) => {
+        Some(Ok(Some(token))) => {
             let token_box = Box::new(token);
             Box::into_raw(token_box) as jlong
         }
@@ -2446,29 +2637,34 @@ pub extern "system" fn Java_com_dunimd_ri_auth_RiOAuthManager_revokeToken0(
     }
 
     let manager = unsafe { &*(ptr as *const RiOAuthManager) };
-    let provider_id_str: String = env
-        .get_string(&provider_id)
-        .expect("Failed to get provider_id")
-        .into();
-    let access_token_str: String = env
-        .get_string(&access_token)
-        .expect("Failed to get access_token")
-        .into();
+    let provider_id_str: String = match env.get_string(&provider_id) {
+        Ok(s) => s.into(),
+        Err(_) => {
+            crate::java::exception::throw_ri_error(&mut env, "Failed to get provider_id");
+            return 0;
+        }
+    };
+    let access_token_str: String = match env.get_string(&access_token) {
+        Ok(s) => s.into(),
+        Err(_) => {
+            crate::java::exception::throw_ri_error(&mut env, "Failed to get access_token");
+            return 0;
+        }
+    };
 
-    let rt = tokio::runtime::Runtime::new().expect("Failed to create runtime");
-    match rt.block_on(async {
+    match crate::java::runtime::block_on_local(&mut env, "RiAuth", async {
         manager
             .revoke_token(&provider_id_str, &access_token_str)
             .await
     }) {
-        Ok(result) => {
+        Some(Ok(result)) => {
             if result {
                 1
             } else {
                 0
             }
         }
-        Err(_) => 0,
+        _ => 0,
     }
 }
 
@@ -2484,9 +2680,7 @@ pub extern "system" fn Java_com_dunimd_ri_auth_RiOAuthManager_listProviders0(
 
     let manager = unsafe { &*(ptr as *const RiOAuthManager) };
 
-    let rt = tokio::runtime::Runtime::new().expect("Failed to create runtime");
-    let providers = rt
-        .block_on(async { manager.list_providers().await })
+    let providers = crate::java::runtime::block_on_local(&mut env, "RiAuth", async { manager.list_providers().await }).map(|r| r.unwrap_or_default())
         .unwrap_or_default();
 
     let ptrs: Vec<jlong> = providers
@@ -2494,11 +2688,11 @@ pub extern "system" fn Java_com_dunimd_ri_auth_RiOAuthManager_listProviders0(
         .map(|p| Box::into_raw(Box::new(p)) as jlong)
         .collect();
 
-    let array = env
-        .new_long_array(ptrs.len() as jint)
-        .expect("Failed to create array");
-    env.set_long_array_region(&array, 0, &ptrs)
-        .expect("Failed to set array");
+    let array = match env.new_long_array(ptrs.len() as jint) {
+        Ok(a) => a,
+        Err(_) => { return std::ptr::null_mut(); }
+    };
+    let _ = env.set_long_array_region(&array, 0, &ptrs);
 
     array.into_raw()
 }
@@ -2515,21 +2709,23 @@ pub extern "system" fn Java_com_dunimd_ri_auth_RiOAuthManager_disableProvider0(
     }
 
     let manager = unsafe { &*(ptr as *const RiOAuthManager) };
-    let provider_id_str: String = env
-        .get_string(&provider_id)
-        .expect("Failed to get provider_id")
-        .into();
+    let provider_id_str: String = match env.get_string(&provider_id) {
+        Ok(s) => s.into(),
+        Err(_) => {
+            crate::java::exception::throw_ri_error(&mut env, "Failed to get provider_id");
+            return 0;
+        }
+    };
 
-    let rt = tokio::runtime::Runtime::new().expect("Failed to create runtime");
-    match rt.block_on(async { manager.disable_provider(&provider_id_str).await }) {
-        Ok(result) => {
+    match crate::java::runtime::block_on_local(&mut env, "RiAuth", async { manager.disable_provider(&provider_id_str).await }) {
+        Some(Ok(result)) => {
             if result {
                 1
             } else {
                 0
             }
         }
-        Err(_) => 0,
+        _ => 0,
     }
 }
 
@@ -2545,21 +2741,23 @@ pub extern "system" fn Java_com_dunimd_ri_auth_RiOAuthManager_enableProvider0(
     }
 
     let manager = unsafe { &*(ptr as *const RiOAuthManager) };
-    let provider_id_str: String = env
-        .get_string(&provider_id)
-        .expect("Failed to get provider_id")
-        .into();
+    let provider_id_str: String = match env.get_string(&provider_id) {
+        Ok(s) => s.into(),
+        Err(_) => {
+            crate::java::exception::throw_ri_error(&mut env, "Failed to get provider_id");
+            return 0;
+        }
+    };
 
-    let rt = tokio::runtime::Runtime::new().expect("Failed to create runtime");
-    match rt.block_on(async { manager.enable_provider(&provider_id_str).await }) {
-        Ok(result) => {
+    match crate::java::runtime::block_on_local(&mut env, "RiAuth", async { manager.enable_provider(&provider_id_str).await }) {
+        Some(Ok(result)) => {
             if result {
                 1
             } else {
                 0
             }
         }
-        Err(_) => 0,
+        _ => 0,
     }
 }
 
@@ -2590,22 +2788,24 @@ pub extern "system" fn Java_com_dunimd_ri_auth_RiRevokedTokenInfo_new0(
     expires_at: jlong,
     reason: JString,
 ) -> jlong {
-    let token_id_str: String = env
-        .get_string(&token_id)
-        .expect("Failed to get token_id")
-        .into();
-    let user_id_str: String = env
-        .get_string(&user_id)
-        .expect("Failed to get user_id")
-        .into();
+    let token_id_str: String = match env.get_string(&token_id) {
+        Ok(s) => s.into(),
+        Err(_) => {
+            crate::java::exception::throw_ri_error(&mut env, "Failed to get token_id");
+            return 0;
+        }
+    };
+    let user_id_str: String = match env.get_string(&user_id) {
+        Ok(s) => s.into(),
+        Err(_) => {
+            crate::java::exception::throw_ri_error(&mut env, "Failed to get user_id");
+            return 0;
+        }
+    };
     let reason_opt = if reason.is_null() {
         None
     } else {
-        Some(
-            env.get_string(&reason)
-                .expect("Failed to get reason")
-                .into(),
-        )
+        env.get_string(&reason).ok().map(|s| s.into())
     };
 
     let info = Box::new(RiRevokedTokenInfo {
@@ -2629,9 +2829,10 @@ pub extern "system" fn Java_com_dunimd_ri_auth_RiRevokedTokenInfo_getTokenId0(
     }
 
     let info = unsafe { &*(ptr as *const RiRevokedTokenInfo) };
-    env.new_string(&info.token_id)
-        .expect("Failed to create string")
-        .into_raw()
+    match env.new_string(&info.token_id) {
+        Ok(s) => s.into_raw(),
+        Err(_) => std::ptr::null_mut(),
+    }
 }
 
 #[no_mangle]
@@ -2645,9 +2846,10 @@ pub extern "system" fn Java_com_dunimd_ri_auth_RiRevokedTokenInfo_getUserId0(
     }
 
     let info = unsafe { &*(ptr as *const RiRevokedTokenInfo) };
-    env.new_string(&info.user_id)
-        .expect("Failed to create string")
-        .into_raw()
+    match env.new_string(&info.user_id) {
+        Ok(s) => s.into_raw(),
+        Err(_) => std::ptr::null_mut(),
+    }
 }
 
 #[no_mangle]
@@ -2690,10 +2892,10 @@ pub extern "system" fn Java_com_dunimd_ri_auth_RiRevokedTokenInfo_getReason0(
 
     let info = unsafe { &*(ptr as *const RiRevokedTokenInfo) };
     match &info.reason {
-        Some(r) => env
-            .new_string(r)
-            .expect("Failed to create string")
-            .into_raw(),
+        Some(r) => match env.new_string(r) {
+        Ok(s) => s.into_raw(),
+        Err(_) => std::ptr::null_mut(),
+    },
         None => std::ptr::null_mut(),
     }
 }
@@ -2739,19 +2941,24 @@ pub extern "system" fn Java_com_dunimd_ri_auth_RiJWTRevocationList_revokeToken0(
     }
 
     let list = unsafe { &*(ptr as *const RiJWTRevocationList) };
-    let token_str: String = env.get_string(&token).expect("Failed to get token").into();
-    let user_id_str: String = env
-        .get_string(&user_id)
-        .expect("Failed to get user_id")
-        .into();
+    let token_str: String = match env.get_string(&token) {
+        Ok(s) => s.into(),
+        Err(_) => {
+            crate::java::exception::throw_ri_error(&mut env, "Failed to get token");
+            return;
+        }
+    };
+    let user_id_str: String = match env.get_string(&user_id) {
+        Ok(s) => s.into(),
+        Err(_) => {
+            crate::java::exception::throw_ri_error(&mut env, "Failed to get user_id");
+            return;
+        }
+    };
     let reason_opt = if reason.is_null() {
         None
     } else {
-        Some(
-            env.get_string(&reason)
-                .expect("Failed to get reason")
-                .into(),
-        )
+        env.get_string(&reason).ok().map(|s| s.into())
     };
 
     list.revoke_token(&token_str, &user_id_str, reason_opt, ttl_secs as u64);
@@ -2769,7 +2976,13 @@ pub extern "system" fn Java_com_dunimd_ri_auth_RiJWTRevocationList_isRevoked0(
     }
 
     let list = unsafe { &*(ptr as *const RiJWTRevocationList) };
-    let token_str: String = env.get_string(&token).expect("Failed to get token").into();
+    let token_str: String = match env.get_string(&token) {
+        Ok(s) => s.into(),
+        Err(_) => {
+            crate::java::exception::throw_ri_error(&mut env, "Failed to get token");
+            return 0;
+        }
+    };
 
     if list.is_revoked(&token_str) {
         1
@@ -2790,10 +3003,13 @@ pub extern "system" fn Java_com_dunimd_ri_auth_RiJWTRevocationList_revokeByUser0
     }
 
     let list = unsafe { &*(ptr as *const RiJWTRevocationList) };
-    let user_id_str: String = env
-        .get_string(&user_id)
-        .expect("Failed to get user_id")
-        .into();
+    let user_id_str: String = match env.get_string(&user_id) {
+        Ok(s) => s.into(),
+        Err(_) => {
+            crate::java::exception::throw_ri_error(&mut env, "Failed to get user_id");
+            return 0;
+        }
+    };
 
     let count = list.revoke_all_user_tokens(&user_id_str, None);
     if count > 0 {
@@ -2815,7 +3031,13 @@ pub extern "system" fn Java_com_dunimd_ri_auth_RiJWTRevocationList_getRevocation
     }
 
     let list = unsafe { &*(ptr as *const RiJWTRevocationList) };
-    let token_str: String = env.get_string(&token).expect("Failed to get token").into();
+    let token_str: String = match env.get_string(&token) {
+        Ok(s) => s.into(),
+        Err(_) => {
+            crate::java::exception::throw_ri_error(&mut env, "Failed to get token");
+            return 0;
+        }
+    };
 
     match list.get_revocation_info(&token_str) {
         Some(info) => {
@@ -2851,11 +3073,7 @@ pub extern "system" fn Java_com_dunimd_ri_auth_RiJWTRevocationList_cleanup0(
     }
 
     let list = unsafe { &*(ptr as *const RiJWTRevocationList) };
-
-    let rt = tokio::runtime::Runtime::new().expect("Failed to create runtime");
-    let count = rt.block_on(async { list.cleanup_expired() });
-
-    count as jint
+    list.cleanup() as jint
 }
 
 #[no_mangle]
@@ -2895,16 +3113,19 @@ pub extern "system" fn Java_com_dunimd_ri_auth_RiSecurityManager_encrypt0(
     _class: JClass,
     plaintext: JString,
 ) -> jstring {
-    let plaintext_str: String = env
-        .get_string(&plaintext)
-        .expect("Failed to get plaintext")
-        .into();
+    let plaintext_str: String = match env.get_string(&plaintext) {
+        Ok(s) => s.into(),
+        Err(_) => {
+            crate::java::exception::throw_ri_error(&mut env, "Failed to get plaintext");
+            return std::ptr::null_mut();
+        }
+    };
 
     match RiSecurityManager::encrypt(&plaintext_str) {
-        Ok(encrypted) => env
-            .new_string(&encrypted)
-            .expect("Failed to create string")
-            .into_raw(),
+        Ok(encrypted) => match env.new_string(&encrypted) {
+        Ok(s) => s.into_raw(),
+        Err(_) => std::ptr::null_mut(),
+    },
         Err(_) => std::ptr::null_mut(),
     }
 }
@@ -2915,16 +3136,19 @@ pub extern "system" fn Java_com_dunimd_ri_auth_RiSecurityManager_decrypt0(
     _class: JClass,
     encrypted: JString,
 ) -> jstring {
-    let encrypted_str: String = env
-        .get_string(&encrypted)
-        .expect("Failed to get encrypted")
-        .into();
+    let encrypted_str: String = match env.get_string(&encrypted) {
+        Ok(s) => s.into(),
+        Err(_) => {
+            crate::java::exception::throw_ri_error(&mut env, "Failed to get encrypted");
+            return std::ptr::null_mut();
+        }
+    };
 
     match RiSecurityManager::decrypt(&encrypted_str) {
-        Ok(decrypted) => env
-            .new_string(&decrypted)
-            .expect("Failed to create string")
-            .into_raw(),
+        Ok(decrypted) => match env.new_string(&decrypted) {
+        Ok(s) => s.into_raw(),
+        Err(_) => std::ptr::null_mut(),
+    },
         Err(_) => std::ptr::null_mut(),
     }
 }
@@ -2935,12 +3159,19 @@ pub extern "system" fn Java_com_dunimd_ri_auth_RiSecurityManager_hmacSign0(
     _class: JClass,
     data: JString,
 ) -> jstring {
-    let data_str: String = env.get_string(&data).expect("Failed to get data").into();
+    let data_str: String = match env.get_string(&data) {
+        Ok(s) => s.into(),
+        Err(_) => {
+            crate::java::exception::throw_ri_error(&mut env, "Failed to get data");
+            return std::ptr::null_mut();
+        }
+    };
 
     let signature = RiSecurityManager::hmac_sign(&data_str);
-    env.new_string(&signature)
-        .expect("Failed to create string")
-        .into_raw()
+    match env.new_string(&signature) {
+        Ok(s) => s.into_raw(),
+        Err(_) => std::ptr::null_mut(),
+    }
 }
 
 #[no_mangle]
@@ -2950,11 +3181,20 @@ pub extern "system" fn Java_com_dunimd_ri_auth_RiSecurityManager_hmacVerify0(
     data: JString,
     signature: JString,
 ) -> jboolean {
-    let data_str: String = env.get_string(&data).expect("Failed to get data").into();
-    let signature_str: String = env
-        .get_string(&signature)
-        .expect("Failed to get signature")
-        .into();
+    let data_str: String = match env.get_string(&data) {
+        Ok(s) => s.into(),
+        Err(_) => {
+            crate::java::exception::throw_ri_error(&mut env, "Failed to get data");
+            return 0;
+        }
+    };
+    let signature_str: String = match env.get_string(&signature) {
+        Ok(s) => s.into(),
+        Err(_) => {
+            crate::java::exception::throw_ri_error(&mut env, "Failed to get signature");
+            return 0;
+        }
+    };
 
     if RiSecurityManager::hmac_verify(&data_str, &signature_str) {
         1
@@ -2965,22 +3205,24 @@ pub extern "system" fn Java_com_dunimd_ri_auth_RiSecurityManager_hmacVerify0(
 
 #[no_mangle]
 pub extern "system" fn Java_com_dunimd_ri_auth_RiSecurityManager_generateEncryptionKey0(
-    mut env: JNIEnv,
+    env: JNIEnv,
     _class: JClass,
 ) -> jstring {
     let key = RiSecurityManager::generate_encryption_key();
-    env.new_string(&key)
-        .expect("Failed to create string")
-        .into_raw()
+    match env.new_string(&key) {
+        Ok(s) => s.into_raw(),
+        Err(_) => std::ptr::null_mut(),
+    }
 }
 
 #[no_mangle]
 pub extern "system" fn Java_com_dunimd_ri_auth_RiSecurityManager_generateHmacKey0(
-    mut env: JNIEnv,
+    env: JNIEnv,
     _class: JClass,
 ) -> jstring {
     let key = RiSecurityManager::generate_hmac_key();
-    env.new_string(&key)
-        .expect("Failed to create string")
-        .into_raw()
+    match env.new_string(&key) {
+        Ok(s) => s.into_raw(),
+        Err(_) => std::ptr::null_mut(),
+    }
 }

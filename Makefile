@@ -24,7 +24,7 @@
 # - Local development builds
 # - CI/CD pipeline builds (GitHub Actions)
 # - Cross-platform compilation
-# - Multi-language bindings (Rust, Python, Java, C)
+# - Multi-language bindings (Rust, Python, Java)
 #
 # USAGE:
 #   make <target> [VARIABLE=value]
@@ -33,7 +33,6 @@
 #   make build                    # Build Rust library (default)
 #   make build-cli               # Build CLI tool
 #   make build-python            # Build Python wheel
-#   make build-c                 # Build C static library
 #   make build-java              # Build Java JAR
 #   make test                    # Run tests
 #   make clean                   # Clean build artifacts
@@ -105,6 +104,11 @@ VERBOSE ?= false
 WINDOWS_FEATURES := grpc,websocket,rabbitmq,cache,queue,gateway,service_mesh,auth,observability,postgres,mysql,sqlite,http_client,system_info,config_hot_reload,etcd
 # Same features with ri/ prefix for passing to ric crate (which depends on ri)
 RI_WINDOWS_FEATURES := ri/grpc,ri/websocket,ri/rabbitmq,ri/cache,ri/queue,ri/gateway,ri/service_mesh,ri/auth,ri/observability,ri/postgres,ri/mysql,ri/sqlite,ri/http_client,ri/system_info,ri/config_hot_reload,ri/etcd
+# Feature set for Java-native library builds (all platforms, mirrors the `java`
+# crate feature). Excludes protocol (oqs vendored needs libclang) and kafka
+# (rdkafka needs perl/krb5 toolchains) so JNI libraries build cleanly on every CI
+# platform; excludes etcd to stay aligned with the `java` feature definition.
+JAVA_NATIVE_FEATURES := grpc,websocket,rabbitmq,cache,queue,gateway,service_mesh,auth,observability,postgres,mysql,sqlite,http_client,system_info,config_hot_reload,java
 
 # Build mode
 ifeq ($(RELEASE),true)
@@ -150,7 +154,6 @@ endif
 
 # Output directories
 DIST_DIR := dist
-INCLUDE_DIR := include
 TARGET_DIR := target/$(TARGET)/$(BUILD_DIR)
 
 # Colors for output (if terminal supports it)
@@ -170,7 +173,13 @@ endif
 # Phony Targets
 ################################################################################
 .PHONY: all build clean test help setup-env \
-        build-rust build-cli build-python build-c build-java \
+        build-rust build-native-java build-cli build-python build-java \
+        build-linux-x64 build-linux-arm64 \
+        build-windows-x64 build-windows-arm64 \
+        build-macos-x64 build-macos-arm64 \
+        build-java-native-linux-x64 build-java-native-linux-arm64 \
+        build-java-native-windows-x64 build-java-native-windows-arm64 \
+        build-java-native-macos-x64 build-java-native-macos-arm64 \
         build-all-archs build-all-platforms \
         install install-python install-java \
         doc doc-rust doc-python \
@@ -266,7 +275,7 @@ setup-deps:
 		echo "Using brew (macOS)"; \
 		brew update --quiet 2>/dev/null || true; \
 		brew install --quiet cmake pkg-config openssl liboqs 2>/dev/null || true; \
-		@mkdir -p .cargo; \
+		mkdir -p .cargo; \
 		echo '[target.x86_64-apple-darwin]\nrustflags = ["-C", "link-arg=-undefined", "-C", "link-arg=dynamic_lookup"]\n\n[target.aarch64-apple-darwin]\nrustflags = ["-C", "link-arg=-undefined", "-C", "link-arg=dynamic_lookup"]' > .cargo/config.toml; \
 	else \
 		echo "$(YELLOW)No supported package manager found, skipping system dependencies$(NC)"; \
@@ -290,7 +299,6 @@ help:
 	@echo "  build              Build Rust library (default)"
 	@echo "  build-cli          Build CLI tool (ric)"
 	@echo "  build-python       Build Python wheel"
-	@echo "  build-c            Build C static library and headers"
 	@echo "  build-java         Build Java JAR"
 	@echo "  build-all          Build all components"
 	@echo ""
@@ -341,7 +349,6 @@ help:
 	@echo "  make build                           # Build for current platform"
 	@echo "  make build-python PYTHON_VER=3.12    # Build Python 3.12 wheel"
 	@echo "  make build-linux-arm64               # Cross-compile for Linux ARM64"
-	@echo "  make build-c                         # Build C static library"
 	@echo "  make test FEATURES=full              # Test with all features"
 
 ################################################################################
@@ -362,6 +369,15 @@ else
 	cargo build $(BUILD_MODE) --target $(TARGET) $(if $(FEATURES),--features $(FEATURES),)
 endif
 	@echo "$(GREEN)✓ Build complete: $(TARGET_DIR)/$(LIB_PREFIX)ri.$(LIB_EXT)$(NC)"
+
+# Build native library with JNI exports (for the Java JAR).
+# Used by CI build-rust-* jobs: the resulting libri.so / ri.dll /
+# libri.dylib carries the Java_* JNI symbols that RiAppRuntime loads
+# from the JAR's native/<platform>/ directory.
+build-native-java:
+	@echo "$(GREEN)Building Ri native library with JNI exports for $(PLATFORM) $(ARCH)...$(NC)"
+	cargo build $(BUILD_MODE) --target $(TARGET) --no-default-features --features $(JAVA_NATIVE_FEATURES)
+	@echo "$(GREEN)✓ JNI native build complete: $(TARGET_DIR)/$(LIB_PREFIX)ri.$(LIB_EXT)$(NC)"
 
 # Build CLI tool
 build-cli:
@@ -427,25 +443,6 @@ endif
 	@echo "$(GREEN)✓ Python wheel built: $(DIST_DIR)/$(NC)"
 	@ls -lh $(DIST_DIR)/*.whl 2>/dev/null || echo "No wheels found"
 
-# Build C static library and headers
-build-c:
-	@echo "$(GREEN)Building C static library for $(PLATFORM) $(ARCH)...$(NC)"
-ifeq ($(PLATFORM),linux)
-	@$(MAKE) setup-deps
-endif
-ifeq ($(PLATFORM),windows)
-	cargo build $(BUILD_MODE) --target $(TARGET) --no-default-features --features c
-else
-	cargo build $(BUILD_MODE) --target $(TARGET) --no-default-features --features c
-endif
-	@mkdir -p $(INCLUDE_DIR)
-ifeq ($(PLATFORM),windows)
-	@echo "$(GREEN)✓ C library built: $(TARGET_DIR)/ri.$(STATIC_EXT)$(NC)"
-else
-	@echo "$(GREEN)✓ C library built: $(TARGET_DIR)/$(LIB_PREFIX)ri.$(STATIC_EXT)$(NC)"
-endif
-	@echo "$(GREEN)✓ C header generated: $(INCLUDE_DIR)/ri.h$(NC)"
-
 # Build Java JAR (requires all native libraries)
 build-java:
 	@echo "$(GREEN)Building Java JAR...$(NC)"
@@ -462,7 +459,8 @@ build-java:
 	@echo "$(GREEN)✓ Java JAR built: java/target/ri-*.jar$(NC)"
 
 # Build all components
-build-all: build build-cli build-python build-c
+# Note: C/C++ bindings were removed in Ri 0.2.0
+build-all: build build-cli build-python
 	@echo "$(GREEN)✓ All components built successfully$(NC)"
 
 ################################################################################
@@ -491,6 +489,25 @@ build-macos-x64:
 build-macos-arm64:
 	@$(MAKE) build PLATFORM=macos ARCH=arm64 TARGET=aarch64-apple-darwin
 
+# Java-native (JNI) builds per platform — used by CI build-rust-* jobs
+build-java-native-linux-x64:
+	@$(MAKE) build-native-java PLATFORM=linux ARCH=x64 TARGET=x86_64-unknown-linux-gnu
+
+build-java-native-linux-arm64:
+	@$(MAKE) build-native-java PLATFORM=linux ARCH=arm64 TARGET=aarch64-unknown-linux-gnu
+
+build-java-native-windows-x64:
+	@$(MAKE) build-native-java PLATFORM=windows ARCH=x64 TARGET=x86_64-pc-windows-msvc
+
+build-java-native-windows-arm64:
+	@$(MAKE) build-native-java PLATFORM=windows ARCH=arm64 TARGET=aarch64-pc-windows-msvc
+
+build-java-native-macos-x64:
+	@$(MAKE) build-native-java PLATFORM=macos ARCH=x64 TARGET=x86_64-apple-darwin
+
+build-java-native-macos-arm64:
+	@$(MAKE) build-native-java PLATFORM=macos ARCH=arm64 TARGET=aarch64-apple-darwin
+
 # CLI builds for all platforms
 build-cli-linux-x64:
 	@$(MAKE) build-cli PLATFORM=linux ARCH=x64 TARGET=x86_64-unknown-linux-gnu
@@ -511,25 +528,6 @@ build-cli-macos-x64:
 
 build-cli-macos-arm64:
 	@$(MAKE) build-cli PLATFORM=macos ARCH=arm64 TARGET=aarch64-apple-darwin
-
-# C library builds for all platforms
-build-c-linux-x64:
-	@$(MAKE) build-c PLATFORM=linux ARCH=x64 TARGET=x86_64-unknown-linux-gnu
-
-build-c-linux-arm64:
-	@$(MAKE) build-c PLATFORM=linux ARCH=arm64 TARGET=aarch64-unknown-linux-gnu
-
-build-c-windows-x64:
-	@$(MAKE) build-c PLATFORM=windows ARCH=x64 TARGET=x86_64-pc-windows-msvc
-
-build-c-windows-arm64:
-	@$(MAKE) build-c PLATFORM=windows ARCH=arm64 TARGET=aarch64-pc-windows-msvc
-
-build-c-macos-x64:
-	@$(MAKE) build-c PLATFORM=macos ARCH=x64 TARGET=x86_64-apple-darwin
-
-build-c-macos-arm64:
-	@$(MAKE) build-c PLATFORM=macos ARCH=arm64 TARGET=aarch64-apple-darwin
 
 ################################################################################
 # Testing
@@ -610,14 +608,12 @@ clean:
 	@echo "$(YELLOW)Cleaning build artifacts...$(NC)"
 	cargo clean
 	@rm -rf $(DIST_DIR)
-	@rm -rf $(INCLUDE_DIR)
 	@echo "$(GREEN)✓ Clean complete$(NC)"
 
 clean-all: clean
 	@echo "$(YELLOW)Cleaning all generated files...$(NC)"
 	@rm -rf target
 	@rm -rf dist
-	@rm -rf include
 	@rm -rf java/target
 	@rm -rf native
 	@find . -type d -name "__pycache__" -exec rm -rf {} + 2>/dev/null || true
@@ -657,7 +653,8 @@ docker-clean:
 ################################################################################
 
 # For GitHub Actions - builds all artifacts for a specific platform
-ci-build-all: build build-cli build-python build-c
+# Note: C/C++ artifacts (staticlib/ri.h) were removed in Ri 0.2.0
+ci-build-all: build build-cli build-python
 	@echo "$(GREEN)✓ CI build complete for $(PLATFORM) $(ARCH)$(NC)"
 
 # For GitHub Actions - prepares artifacts for upload
@@ -667,13 +664,10 @@ ci-package:
 ifeq ($(PLATFORM),windows)
 	@cp $(TARGET_DIR)/ric.exe artifacts/ric-$(PLATFORM)-$(ARCH).exe 2>/dev/null || true
 	@cp $(TARGET_DIR)/ri.dll artifacts/ri-$(PLATFORM)-$(ARCH).dll 2>/dev/null || true
-	@cp $(TARGET_DIR)/ri.lib artifacts/ri-$(PLATFORM)-$(ARCH).lib 2>/dev/null || true
 else
 	@cp $(TARGET_DIR)/ric artifacts/ric-$(PLATFORM)-$(ARCH) 2>/dev/null || true
 	@cp $(TARGET_DIR)/$(LIB_PREFIX)ri.$(LIB_EXT) artifacts/ri-$(PLATFORM)-$(ARCH).$(LIB_EXT) 2>/dev/null || true
-	@cp $(TARGET_DIR)/$(LIB_PREFIX)ri.$(STATIC_EXT) artifacts/ri-$(PLATFORM)-$(ARCH).$(STATIC_EXT) 2>/dev/null || true
 endif
-	@cp $(INCLUDE_DIR)/ri.h artifacts/ri.h 2>/dev/null || true
 	@cp -r $(DIST_DIR)/*.whl artifacts/ 2>/dev/null || true
 	@echo "$(GREEN)✓ Artifacts packaged in artifacts/$(NC)"
 
@@ -690,11 +684,9 @@ info:
 	@echo "$(GREEN)Paths:$(NC)"
 	@echo "  Target Dir:   $(TARGET_DIR)"
 	@echo "  Dist Dir:     $(DIST_DIR)"
-	@echo "  Include Dir:  $(INCLUDE_DIR)"
 	@echo ""
 	@echo "$(GREEN)Library Names:$(NC)"
 	@echo "  Dynamic:      $(LIB_PREFIX)ri.$(LIB_EXT)"
-	@echo "  Static:       $(LIB_PREFIX)ri.$(STATIC_EXT)"
 
 ################################################################################
 # Development Helpers

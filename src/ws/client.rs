@@ -259,8 +259,7 @@ impl RiWSClientPy {
     }
 
     fn connect(&mut self) -> PyResult<()> {
-        let rt = tokio::runtime::Runtime::new()
-            .map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(e.to_string()))?;
+        let rt = crate::py_runtime::py_runtime();
         
         rt.block_on(async {
             self.inner.connect().await
@@ -268,8 +267,7 @@ impl RiWSClientPy {
     }
 
     fn send(&self, data: Vec<u8>) -> PyResult<()> {
-        let rt = tokio::runtime::Runtime::new()
-            .map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(e.to_string()))?;
+        let rt = crate::py_runtime::py_runtime();
         
         rt.block_on(async {
             self.inner.send(&data).await
@@ -277,8 +275,7 @@ impl RiWSClientPy {
     }
 
     fn send_text(&self, text: String) -> PyResult<()> {
-        let rt = tokio::runtime::Runtime::new()
-            .map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(e.to_string()))?;
+        let rt = crate::py_runtime::py_runtime();
         
         rt.block_on(async {
             self.inner.send_text(&text).await
@@ -286,8 +283,7 @@ impl RiWSClientPy {
     }
 
     fn close(&mut self) -> PyResult<()> {
-        let rt = tokio::runtime::Runtime::new()
-            .map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(e.to_string()))?;
+        let rt = crate::py_runtime::py_runtime();
         
         rt.block_on(async {
             self.inner.close().await

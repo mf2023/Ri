@@ -194,7 +194,7 @@ async fn test_service_mesh_register_service() {
     let weight = 100;
     
     // Register the service
-    service_mesh.register_service(service_name, endpoint, weight).await.unwrap();
+    service_mesh.register_service(service_name, endpoint, weight, None).await.unwrap();
     
     // Test discovering the service
     let endpoints = service_mesh.discover_service(service_name).await;
@@ -230,7 +230,7 @@ async fn test_service_mesh_update_service_health() {
     let endpoint = "http://localhost:8080";
     let weight = 100;
     
-    service_mesh.register_service(service_name, endpoint, weight).await.unwrap();
+    service_mesh.register_service(service_name, endpoint, weight, None).await.unwrap();
     
     // Update service health to healthy
     service_mesh.update_service_health(service_name, endpoint, true).await.unwrap();

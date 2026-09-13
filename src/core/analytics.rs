@@ -105,6 +105,11 @@ impl RiLogAnalyticsModule {
         }
     }
 
+    /// Returns whether analytics collection is currently enabled.
+    pub fn is_enabled(&self) -> bool {
+        self.enabled
+    }
+
     /// Returns all hook kinds that the analytics module tracks.
     /// 
     /// This method returns a static slice of all hook kinds that the analytics module

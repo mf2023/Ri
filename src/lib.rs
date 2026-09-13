@@ -80,9 +80,6 @@ pub mod grpc;
 /// WebSocket server and client support
 #[cfg(feature = "websocket")]
 pub mod ws;
-/// C/C++ API support
-#[cfg(feature = "c")]
-pub mod c;
 /// Java JNI bindings support
 #[cfg(feature = "java")]
 pub mod java;
@@ -109,6 +106,11 @@ pub mod java;
 ///     }).await
 /// }
 /// ```
+/// Process-wide Tokio runtime shared by language bindings (PyO3 and any core
+/// code that must drive async work from a synchronous context). Lazily
+/// initialized on first use; see `py_runtime` module docs.
+pub mod py_runtime;
+
 pub mod prelude {
     // Re-export commonly used public classes here.
     // Only RiXxxXxx format classes are exposed in prelude

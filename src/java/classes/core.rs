@@ -22,10 +22,11 @@
 use jni::JNIEnv;
 use jni::objects::{JClass, JString};
 use jni::sys::{jlong, jboolean, jstring, jint};
-use crate::core::{RiAppBuilder, RiAppRuntime, RiError, RiServiceContext, RiHealthStatus, RiHealthCheckResult, RiHealthCheckConfig, RiHealthReport, RiHealthChecker, RiErrorChain, RiLockError, RiLifecycleObserver, RiLogAnalyticsModule};
+use crate::core::{RiAppBuilder, RiAppRuntime, RiError, RiServiceContext, RiHealthStatus, RiHealthCheckResult, RiHealthCheckConfig, RiHealthReport, RiHealthChecker, RiErrorChain, RiLockError, RiLifecycleObserver, RiLogAnalyticsModule, ServiceModule};
 use crate::java::exception::{throw_ri_error, check_not_null};
 use crate::config::RiConfig;
 use std::time::Duration;
+use std::sync::Arc;
 
 // =============================================================================
 // RiAppBuilder JNI Bindings
@@ -41,7 +42,7 @@ pub extern "system" fn Java_com_dunimd_ri_RiAppBuilder_new0(
 }
 
 #[no_mangle]
-pub extern "system" fn Java_com_dunimd_ri_RiAppBuilder_withConfig(
+pub extern "system" fn Java_com_dunimd_ri_RiAppBuilder_withConfig0(
     mut env: JNIEnv,
     _class: JClass,
     ptr: jlong,
@@ -50,12 +51,18 @@ pub extern "system" fn Java_com_dunimd_ri_RiAppBuilder_withConfig(
     if !check_not_null(&mut env, ptr, "RiAppBuilder") {
         return 0;
     }
-    
+
+    // Ownership note: withConfig0 ALWAYS consumes the builder (even on error), matching
+    // the Java-side contract that clears nativePtr before/after this call.
     let builder = unsafe { Box::from_raw(ptr as *mut RiAppBuilder) };
-    let path: String = env.get_string(&config_path)
-        .expect("Failed to get config path")
-        .into();
-    
+    let path: String = match env.get_string(&config_path) {
+        Ok(s) => s.into(),
+        Err(e) => {
+            throw_ri_error(&mut env, &format!("Failed to read config path: {e}"));
+            return 0;
+        }
+    };
+
     match builder.with_config(&path) {
         Ok(new_builder) => {
             let boxed = Box::new(new_builder);
@@ -69,7 +76,7 @@ pub extern "system" fn Java_com_dunimd_ri_RiAppBuilder_withConfig(
 }
 
 #[no_mangle]
-pub extern "system" fn Java_com_dunimd_ri_RiAppBuilder_build(
+pub extern "system" fn Java_com_dunimd_ri_RiAppBuilder_build0(
     mut env: JNIEnv,
     _class: JClass,
     ptr: jlong,
@@ -123,7 +130,7 @@ pub extern "system" fn Java_com_dunimd_ri_RiAppRuntime_free0(
 }
 
 #[no_mangle]
-pub extern "system" fn Java_com_dunimd_ri_RiAppRuntime_isRunning(
+pub extern "system" fn Java_com_dunimd_ri_RiAppRuntime_isRunning0(
     mut env: JNIEnv,
     _class: JClass,
     ptr: jlong,
@@ -131,13 +138,13 @@ pub extern "system" fn Java_com_dunimd_ri_RiAppRuntime_isRunning(
     if !check_not_null(&mut env, ptr, "RiAppRuntime") {
         return 0;
     }
-    
-    let _runtime = unsafe { &*(ptr as *const RiAppRuntime) };
-    0
+
+    let runtime = unsafe { &*(ptr as *const RiAppRuntime) };
+    if runtime.is_running() { 1 } else { 0 }
 }
 
 #[no_mangle]
-pub extern "system" fn Java_com_dunimd_ri_RiAppRuntime_shutdown(
+pub extern "system" fn Java_com_dunimd_ri_RiAppRuntime_shutdown0(
     mut env: JNIEnv,
     _class: JClass,
     ptr: jlong,
@@ -145,8 +152,9 @@ pub extern "system" fn Java_com_dunimd_ri_RiAppRuntime_shutdown(
     if !check_not_null(&mut env, ptr, "RiAppRuntime") {
         return;
     }
-    
-    let _runtime = unsafe { &*(ptr as *const RiAppRuntime) };
+
+    let runtime = unsafe { &mut *(ptr as *mut RiAppRuntime) };
+    crate::java::runtime::block_on_jni(&mut env, "RiAppRuntime::shutdown", runtime.shutdown());
 }
 
 // =============================================================================
@@ -176,7 +184,30 @@ pub extern "system" fn Java_com_dunimd_ri_RiConfig_free0(
 }
 
 #[no_mangle]
-pub extern "system" fn Java_com_dunimd_ri_RiConfig_get(
+pub extern "system" fn Java_com_dunimd_ri_RiConfig_fromYaml0(
+    mut env: JNIEnv,
+    _class: JClass,
+    yaml: JString,
+) -> jlong {
+    let yaml_str: String = match env.get_string(&yaml) {
+        Ok(s) => s.into(),
+        Err(e) => {
+            throw_ri_error(&mut env, &format!("Failed to read YAML string: {e}"));
+            return 0;
+        }
+    };
+
+    match RiConfig::from_yaml_str(&yaml_str) {
+        Ok(config) => Box::into_raw(Box::new(config)) as jlong,
+        Err(e) => {
+            throw_ri_error(&mut env, &e.to_string());
+            0
+        }
+    }
+}
+
+#[no_mangle]
+pub extern "system" fn Java_com_dunimd_ri_RiConfig_get0(
     mut env: JNIEnv,
     _class: JClass,
     ptr: jlong,
@@ -185,18 +216,21 @@ pub extern "system" fn Java_com_dunimd_ri_RiConfig_get(
     if !check_not_null(&mut env, ptr, "RiConfig") {
         return std::ptr::null_mut();
     }
-    
+
     let config = unsafe { &*(ptr as *const RiConfig) };
-    let key_str: String = env.get_string(&key)
-        .expect("Failed to get key")
-        .into();
-    
-    match config.get(&key_str) {
-        Some(value) => {
-            env.new_string(value)
-                .expect("Failed to create Java string")
-                .into_raw()
+    let key_str: String = match env.get_string(&key) {
+        Ok(s) => s.into(),
+        Err(e) => {
+            throw_ri_error(&mut env, &format!("Failed to read key: {e}"));
+            return std::ptr::null_mut();
         }
+    };
+
+    match config.get(&key_str) {
+        Some(value) => match env.new_string(value) {
+            Ok(s) => s.into_raw(),
+            Err(_) => std::ptr::null_mut(),
+        },
         None => std::ptr::null_mut(),
     }
 }
@@ -216,9 +250,10 @@ pub extern "system" fn Java_com_dunimd_ri_RiError_getMessage(
     }
     
     let error = unsafe { &*(ptr as *const RiError) };
-    env.new_string(error.to_string())
-        .expect("Failed to create Java string")
-        .into_raw()
+    match env.new_string(error.to_string()) {
+        Ok(s) => s.into_raw(),
+        Err(_) => std::ptr::null_mut(),
+    }
 }
 
 #[no_mangle]
@@ -315,10 +350,9 @@ pub extern "system" fn Java_com_dunimd_ri_RiServiceContext_hooks0(
     }
     
     let ctx = unsafe { &*(ptr as *const RiServiceContext) };
-    let hooks = ctx.hooks();
-    let hooks_inner = (*hooks).clone();
-    let boxed = Box::new(hooks_inner);
-    Box::into_raw(boxed) as jlong
+    // Return a raw pointer to the RiHookBus owned by an Arc that the context
+    // itself keeps alive. This avoids requiring Clone on RiHookBus.
+    Arc::into_raw(ctx.hooks()) as jlong
 }
 
 #[no_mangle]
@@ -346,21 +380,31 @@ pub extern "system" fn Java_com_dunimd_ri_RiHealthCheckResult_new0(
     status: jint,
     message: JString,
 ) -> jlong {
-    let name_str: String = env.get_string(&name)
-        .expect("Failed to get name")
-        .into();
-    
+    let name_str: String = match env.get_string(&name) {
+        Ok(s) => s.into(),
+        Err(e) => {
+            throw_ri_error(&mut env, &format!("Failed to read name: {e}"));
+            return 0;
+        }
+    };
+
     let health_status = match status {
         0 => RiHealthStatus::Healthy,
         1 => RiHealthStatus::Degraded,
         2 => RiHealthStatus::Unhealthy,
         _ => RiHealthStatus::Unknown,
     };
-    
+
     let message_str: Option<String> = if message.is_null() {
         None
     } else {
-        Some(env.get_string(&message).expect("Failed to get message").into())
+        match env.get_string(&message) {
+            Ok(s) => Some(s.into()),
+            Err(e) => {
+                throw_ri_error(&mut env, &format!("Failed to read message: {e}"));
+                return 0;
+            }
+        }
     };
     
     let result = RiHealthCheckResult {
@@ -386,9 +430,10 @@ pub extern "system" fn Java_com_dunimd_ri_RiHealthCheckResult_getName0(
     }
     
     let result = unsafe { &*(ptr as *const RiHealthCheckResult) };
-    env.new_string(&result.name)
-        .expect("Failed to create Java string")
-        .into_raw()
+    match env.new_string(&result.name) {
+        Ok(s) => s.into_raw(),
+        Err(_) => std::ptr::null_mut(),
+    }
 }
 
 #[no_mangle]
@@ -422,9 +467,10 @@ pub extern "system" fn Java_com_dunimd_ri_RiHealthCheckResult_getMessage0(
     
     let result = unsafe { &*(ptr as *const RiHealthCheckResult) };
     match &result.message {
-        Some(msg) => env.new_string(msg)
-            .expect("Failed to create Java string")
-            .into_raw(),
+        Some(msg) => match env.new_string(msg) {
+            Ok(s) => s.into_raw(),
+            Err(_) => std::ptr::null_mut(),
+        },
         None => std::ptr::null_mut(),
     }
 }
@@ -768,10 +814,14 @@ pub extern "system" fn Java_com_dunimd_ri_RiErrorChain_new0(
     _class: JClass,
     message: JString,
 ) -> jlong {
-    let msg: String = env.get_string(&message)
-        .expect("Failed to get message")
-        .into();
-    
+    let msg: String = match env.get_string(&message) {
+        Ok(s) => s.into(),
+        Err(e) => {
+            throw_ri_error(&mut env, &format!("Failed to read message: {e}"));
+            return 0;
+        }
+    };
+
     let error = std::io::Error::other(msg);
     let chain = Box::new(RiErrorChain::new(error));
     Box::into_raw(chain) as jlong
@@ -784,13 +834,21 @@ pub extern "system" fn Java_com_dunimd_ri_RiErrorChain_withContext0(
     message: JString,
     context: JString,
 ) -> jlong {
-    let msg: String = env.get_string(&message)
-        .expect("Failed to get message")
-        .into();
-    let ctx: String = env.get_string(&context)
-        .expect("Failed to get context")
-        .into();
-    
+    let msg: String = match env.get_string(&message) {
+        Ok(s) => s.into(),
+        Err(e) => {
+            throw_ri_error(&mut env, &format!("Failed to read message: {e}"));
+            return 0;
+        }
+    };
+    let ctx: String = match env.get_string(&context) {
+        Ok(s) => s.into(),
+        Err(e) => {
+            throw_ri_error(&mut env, &format!("Failed to read context: {e}"));
+            return 0;
+        }
+    };
+
     let error = std::io::Error::other(msg);
     let chain = Box::new(RiErrorChain::with_context(error, ctx));
     Box::into_raw(chain) as jlong
@@ -807,9 +865,10 @@ pub extern "system" fn Java_com_dunimd_ri_RiErrorChain_getContext0(
     }
     
     let chain = unsafe { &*(ptr as *const RiErrorChain) };
-    env.new_string(chain.get_context())
-        .expect("Failed to create Java string")
-        .into_raw()
+    match env.new_string(chain.get_context()) {
+        Ok(s) => s.into_raw(),
+        Err(_) => std::ptr::null_mut(),
+    }
 }
 
 #[no_mangle]
@@ -823,9 +882,10 @@ pub extern "system" fn Java_com_dunimd_ri_RiErrorChain_getSourceError0(
     }
     
     let chain = unsafe { &*(ptr as *const RiErrorChain) };
-    env.new_string(chain.source_error().to_string())
-        .expect("Failed to create Java string")
-        .into_raw()
+    match env.new_string(chain.source_error().to_string()) {
+        Ok(s) => s.into_raw(),
+        Err(_) => std::ptr::null_mut(),
+    }
 }
 
 #[no_mangle]
@@ -839,9 +899,10 @@ pub extern "system" fn Java_com_dunimd_ri_RiErrorChain_prettyFormat0(
     }
     
     let chain = unsafe { &*(ptr as *const RiErrorChain) };
-    env.new_string(chain.pretty_format())
-        .expect("Failed to create Java string")
-        .into_raw()
+    match env.new_string(chain.pretty_format()) {
+        Ok(s) => s.into_raw(),
+        Err(_) => std::ptr::null_mut(),
+    }
 }
 
 #[no_mangle]
@@ -875,10 +936,14 @@ pub extern "system" fn Java_com_dunimd_ri_RiErrorContext_chainFromMsg0(
     _class: JClass,
     message: JString,
 ) -> jlong {
-    let msg: String = env.get_string(&message)
-        .expect("Failed to get message")
-        .into();
-    
+    let msg: String = match env.get_string(&message) {
+        Ok(s) => s.into(),
+        Err(e) => {
+            throw_ri_error(&mut env, &format!("Failed to read message: {e}"));
+            return 0;
+        }
+    };
+
     let error = std::io::Error::other(msg);
     let chain = Box::new(RiErrorChain::new(error));
     Box::into_raw(chain) as jlong
@@ -902,10 +967,14 @@ pub extern "system" fn Java_com_dunimd_ri_RiLockError_new0(
     _class: JClass,
     context: JString,
 ) -> jlong {
-    let ctx: String = env.get_string(&context)
-        .expect("Failed to get context")
-        .into();
-    
+    let ctx: String = match env.get_string(&context) {
+        Ok(s) => s.into(),
+        Err(e) => {
+            throw_ri_error(&mut env, &format!("Failed to read context: {e}"));
+            return 0;
+        }
+    };
+
     let error = Box::new(RiLockError::new(&ctx));
     Box::into_raw(error) as jlong
 }
@@ -917,10 +986,14 @@ pub extern "system" fn Java_com_dunimd_ri_RiLockError_newWithPoisoned0(
     context: JString,
     is_poisoned: jboolean,
 ) -> jlong {
-    let ctx: String = env.get_string(&context)
-        .expect("Failed to get context")
-        .into();
-    
+    let ctx: String = match env.get_string(&context) {
+        Ok(s) => s.into(),
+        Err(e) => {
+            throw_ri_error(&mut env, &format!("Failed to read context: {e}"));
+            return 0;
+        }
+    };
+
     let error = if is_poisoned != 0 {
         Box::new(RiLockError::poisoned(&ctx))
     } else {
@@ -935,10 +1008,14 @@ pub extern "system" fn Java_com_dunimd_ri_RiLockError_poisoned0(
     _class: JClass,
     context: JString,
 ) -> jlong {
-    let ctx: String = env.get_string(&context)
-        .expect("Failed to get context")
-        .into();
-    
+    let ctx: String = match env.get_string(&context) {
+        Ok(s) => s.into(),
+        Err(e) => {
+            throw_ri_error(&mut env, &format!("Failed to read context: {e}"));
+            return 0;
+        }
+    };
+
     let error = Box::new(RiLockError::poisoned(&ctx));
     Box::into_raw(error) as jlong
 }
@@ -954,9 +1031,10 @@ pub extern "system" fn Java_com_dunimd_ri_RiLockError_getContext0(
     }
     
     let error = unsafe { &*(ptr as *const RiLockError) };
-    env.new_string(error.get_context())
-        .expect("Failed to create Java string")
-        .into_raw()
+    match env.new_string(error.get_context()) {
+        Ok(s) => s.into_raw(),
+        Err(_) => std::ptr::null_mut(),
+    }
 }
 
 #[no_mangle]
@@ -984,9 +1062,10 @@ pub extern "system" fn Java_com_dunimd_ri_RiLockError_getMessage0(
     }
     
     let error = unsafe { &*(ptr as *const RiLockError) };
-    env.new_string(error.to_string())
-        .expect("Failed to create Java string")
-        .into_raw()
+    match env.new_string(error.to_string()) {
+        Ok(s) => s.into_raw(),
+        Err(_) => std::ptr::null_mut(),
+    }
 }
 
 #[no_mangle]
@@ -1026,9 +1105,10 @@ pub extern "system" fn Java_com_dunimd_ri_RiLifecycleObserver_getName0(
     }
     
     let observer = unsafe { &*(ptr as *const RiLifecycleObserver) };
-    env.new_string(observer.name())
-        .expect("Failed to create Java string")
-        .into_raw()
+    match env.new_string(observer.name()) {
+        Ok(s) => s.into_raw(),
+        Err(_) => std::ptr::null_mut(),
+    }
 }
 
 #[no_mangle]
@@ -1082,9 +1162,10 @@ pub extern "system" fn Java_com_dunimd_ri_RiLogAnalyticsModule_getName0(
     }
     
     let module = unsafe { &*(ptr as *const RiLogAnalyticsModule) };
-    env.new_string(module.name())
-        .expect("Failed to create Java string")
-        .into_raw()
+    match env.new_string(module.name()) {
+        Ok(s) => s.into_raw(),
+        Err(_) => std::ptr::null_mut(),
+    }
 }
 
 #[no_mangle]
@@ -1112,7 +1193,7 @@ pub extern "system" fn Java_com_dunimd_ri_RiLogAnalyticsModule_isEnabled0(
     }
     
     let module = unsafe { &*(ptr as *const RiLogAnalyticsModule) };
-    if module.enabled { 1 } else { 0 }
+    if module.is_enabled() { 1 } else { 0 }
 }
 
 #[no_mangle]

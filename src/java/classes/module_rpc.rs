@@ -4,7 +4,7 @@
 //! The Ri project belongs to the Dunimd Team.
 //!
 //! Licensed under the Apache License, Version 2.0 (the "License");
-//! You may not use this file except in compliance with the License.
+//! you may not use this file except in compliance with the License.
 //! You may obtain a copy of the License at
 //!
 //!     http://www.apache.org/licenses/LICENSE-2.0
@@ -19,11 +19,67 @@
 //!
 //! JNI bindings for Ri module RPC classes.
 
+use std::sync::Arc;
+
 use jni::JNIEnv;
 use jni::objects::{JClass, JString};
-use jni::sys::{jlong, jboolean, jbyteArray, jstring};
-use crate::module_rpc::{RiModuleRPC, RiModuleEndpoint, RiMethodCall, RiMethodResponse};
-use crate::java::exception::check_not_null;
+use jni::sys::{jlong, jboolean, jbyteArray, jstring, jobject};
+use jni::objects::JValue;
+use crate::module_rpc::{RiModuleRPC, RiModuleClient, RiModuleEndpoint, RiMethodCall, RiMethodResponse};
+use crate::java::exception::{check_not_null, throw_ri_error};
+
+/// Converts a Java string argument into a `String`, throwing a RiError and
+/// returning `None` when the argument cannot be read.
+fn read_string(env: &mut JNIEnv, value: &JString, arg: &str) -> Option<String> {
+    match env.get_string(value) {
+        Ok(s) => Some(s.into()),
+        Err(e) => {
+            throw_ri_error(env, &format!("Failed to read {arg}: {e}"));
+            None
+        }
+    }
+}
+
+/// Converts a Java byte array argument into a `Vec<u8>`, returning an empty
+/// vector for a null array.
+fn read_byte_array(env: &mut JNIEnv, array: jbyteArray, arg: &str) -> Option<Vec<u8>> {
+    if array.is_null() {
+        return Some(Vec::new());
+    }
+    match env.convert_byte_array(unsafe { jni::objects::JByteArray::from_raw(array) }) {
+        Ok(v) => Some(v),
+        Err(e) => {
+            throw_ri_error(env, &format!("Failed to read {arg}: {e}"));
+            None
+        }
+    }
+}
+
+/// Copies a `Vec<u8>` into a fresh Java byte array, returning a null pointer
+/// when allocation fails.
+fn write_byte_array(env: &mut JNIEnv, data: &[u8]) -> jbyteArray {
+    match env.byte_array_from_slice(data) {
+        Ok(array) => array.into_raw(),
+        Err(_) => std::ptr::null_mut(),
+    }
+}
+
+/// Clones the `Arc<RiModuleRPC>` behind a raw `Arc::into_raw` pointer without
+/// consuming the original reference.
+///
+/// # Safety
+///
+/// `ptr` must have been produced by `Arc::into_raw` over an `Arc<RiModuleRPC>`
+/// that is still alive.
+unsafe fn clone_rpc_arc(ptr: jlong) -> Option<Arc<RiModuleRPC>> {
+    if ptr == 0 {
+        return None;
+    }
+    let arc = Arc::from_raw(ptr as *const RiModuleRPC);
+    let cloned = arc.clone();
+    let _ = Arc::into_raw(arc);
+    Some(cloned)
+}
 
 // =============================================================================
 // RiModuleRPC JNI Bindings
@@ -34,65 +90,7 @@ pub extern "system" fn Java_com_dunimd_ri_modulerpc_RiModuleRPC_new0(
     _env: JNIEnv,
     _class: JClass,
 ) -> jlong {
-    let rpc = Box::new(RiModuleRPC::new());
-    Box::into_raw(rpc) as jlong
-}
-
-#[no_mangle]
-pub extern "system" fn Java_com_dunimd_ri_modulerpc_RiModuleRPC_registerModule0(
-    mut env: JNIEnv,
-    _class: JClass,
-    ptr: jlong,
-    module_name: JString,
-) -> jboolean {
-    if !check_not_null(&mut env, ptr, "RiModuleRPC") {
-        return 0;
-    }
-    
-    let module_name_str: String = env.get_string(&module_name)
-        .expect("Failed to get module name")
-        .into();
-    
-    let rpc = unsafe { &mut *(ptr as *mut RiModuleRPC) };
-    rpc.register_module(&module_name_str).is_ok() as jboolean
-}
-
-#[no_mangle]
-pub extern "system" fn Java_com_dunimd_ri_modulerpc_RiModuleRPC_unregisterModule0(
-    mut env: JNIEnv,
-    _class: JClass,
-    ptr: jlong,
-    module_name: JString,
-) -> jboolean {
-    if !check_not_null(&mut env, ptr, "RiModuleRPC") {
-        return 0;
-    }
-    
-    let module_name_str: String = env.get_string(&module_name)
-        .expect("Failed to get module name")
-        .into();
-    
-    let rpc = unsafe { &mut *(ptr as *mut RiModuleRPC) };
-    rpc.unregister_module(&module_name_str).is_ok() as jboolean
-}
-
-#[no_mangle]
-pub extern "system" fn Java_com_dunimd_ri_modulerpc_RiModuleRPC_isModuleRegistered0(
-    mut env: JNIEnv,
-    _class: JClass,
-    ptr: jlong,
-    module_name: JString,
-) -> jboolean {
-    if !check_not_null(&mut env, ptr, "RiModuleRPC") {
-        return 0;
-    }
-    
-    let module_name_str: String = env.get_string(&module_name)
-        .expect("Failed to get module name")
-        .into();
-    
-    let rpc = unsafe { &*(ptr as *const RiModuleRPC) };
-    rpc.is_module_registered(&module_name_str) as jboolean
+    Arc::into_raw(Arc::new(RiModuleRPC::new())) as jlong
 }
 
 #[no_mangle]
@@ -103,7 +101,7 @@ pub extern "system" fn Java_com_dunimd_ri_modulerpc_RiModuleRPC_free0(
 ) {
     if ptr != 0 {
         unsafe {
-            let _ = Box::from_raw(ptr as *mut RiModuleRPC);
+            let _ = Arc::from_raw(ptr as *const RiModuleRPC);
         }
     }
 }
@@ -118,10 +116,13 @@ pub extern "system" fn Java_com_dunimd_ri_modulerpc_RiModuleClient_new0(
     _class: JClass,
     rpc_ptr: jlong,
 ) -> jlong {
-    if !check_not_null(&mut env, rpc_ptr, "RiModuleRPC") {
-        return 0;
+    match unsafe { clone_rpc_arc(rpc_ptr) } {
+        Some(arc) => Box::into_raw(Box::new(RiModuleClient::new(arc))) as jlong,
+        None => {
+            throw_ri_error(&mut env, "RiModuleRPC pointer is null");
+            0
+        }
     }
-    0
 }
 
 #[no_mangle]
@@ -136,16 +137,20 @@ pub extern "system" fn Java_com_dunimd_ri_modulerpc_RiModuleClient_call0(
     if !check_not_null(&mut env, ptr, "RiModuleClient") {
         return 0;
     }
-    
-    let _module_name_str: String = env.get_string(&module_name)
-        .expect("Failed to get module name")
-        .into();
-    let _method_name_str: String = env.get_string(&method_name)
-        .expect("Failed to get method name")
-        .into();
-    
-    let response = Box::new(RiMethodResponse::success(vec![]));
-    Box::into_raw(response) as jlong
+    let (Some(module), Some(method), Some(params_vec)) = (
+        read_string(&mut env, &module_name, "module name"),
+        read_string(&mut env, &method_name, "method name"),
+        read_byte_array(&mut env, params, "params"),
+    ) else {
+        return 0;
+    };
+
+    let client = unsafe { &*(ptr as *const RiModuleClient) };
+    crate::java::runtime::block_on_jni(&mut env, "RiModuleClient::call", async move {
+        client.call(&module, &method, params_vec).await
+    })
+    .map(|response| Box::into_raw(Box::new(response)) as jlong)
+    .unwrap_or(0)
 }
 
 #[no_mangle]
@@ -161,16 +166,23 @@ pub extern "system" fn Java_com_dunimd_ri_modulerpc_RiModuleClient_callWithTimeo
     if !check_not_null(&mut env, ptr, "RiModuleClient") {
         return 0;
     }
-    
-    let _module_name_str: String = env.get_string(&module_name)
-        .expect("Failed to get module name")
-        .into();
-    let _method_name_str: String = env.get_string(&method_name)
-        .expect("Failed to get method name")
-        .into();
-    
-    let response = Box::new(RiMethodResponse::success(vec![]));
-    Box::into_raw(response) as jlong
+    let (Some(module), Some(method), Some(params_vec)) = (
+        read_string(&mut env, &module_name, "module name"),
+        read_string(&mut env, &method_name, "method name"),
+        read_byte_array(&mut env, params, "params"),
+    ) else {
+        return 0;
+    };
+    let timeout = crate::java::runtime::ttl_from_jlong(timeout_ms).unwrap_or(5000);
+
+    let client = unsafe { &*(ptr as *const RiModuleClient) };
+    crate::java::runtime::block_on_jni(&mut env, "RiModuleClient::call_with_timeout", async move {
+        client
+            .call_with_timeout(&module, &method, params_vec, timeout)
+            .await
+    })
+    .map(|response| Box::into_raw(Box::new(response)) as jlong)
+    .unwrap_or(0)
 }
 
 #[no_mangle]
@@ -179,6 +191,11 @@ pub extern "system" fn Java_com_dunimd_ri_modulerpc_RiModuleClient_free0(
     _class: JClass,
     ptr: jlong,
 ) {
+    if ptr != 0 {
+        unsafe {
+            let _ = Box::from_raw(ptr as *mut RiModuleClient);
+        }
+    }
 }
 
 // =============================================================================
@@ -191,11 +208,11 @@ pub extern "system" fn Java_com_dunimd_ri_modulerpc_RiModuleEndpoint_new0(
     _class: JClass,
     module_name: JString,
 ) -> jlong {
-    let module_name_str: String = env.get_string(&module_name)
-        .expect("Failed to get module name")
-        .into();
-    
-    let endpoint = Box::new(RiModuleEndpoint::new(module_name_str));
+    let Some(module) = read_string(&mut env, &module_name, "module name") else {
+        return 0;
+    };
+
+    let endpoint = Box::new(RiModuleEndpoint::new(&module));
     Box::into_raw(endpoint) as jlong
 }
 
@@ -208,25 +225,43 @@ pub extern "system" fn Java_com_dunimd_ri_modulerpc_RiModuleEndpoint_getModuleNa
     if !check_not_null(&mut env, ptr, "RiModuleEndpoint") {
         return std::ptr::null_mut();
     }
-    
+
     let endpoint = unsafe { &*(ptr as *const RiModuleEndpoint) };
-    env.new_string(endpoint.module_name()).unwrap().into_raw()
+    match env.new_string(endpoint.module_name()) {
+        Ok(s) => s.into_raw(),
+        Err(_) => std::ptr::null_mut(),
+    }
 }
 
 #[no_mangle]
-pub extern "system" fn Java_com_dunimd_ri_modulerpc_RiModuleEndpoint_listMethods0(
-    mut env: JNIEnv,
-    _class: JClass,
+pub extern "system" fn Java_com_dunimd_ri_modulerpc_RiModuleEndpoint_listMethods0<'local>(
+    mut env: JNIEnv<'local>,
+    _class: JClass<'local>,
     ptr: jlong,
-) -> jstring {
+) -> jobject {
     if !check_not_null(&mut env, ptr, "RiModuleEndpoint") {
         return std::ptr::null_mut();
     }
-    
+
     let endpoint = unsafe { &*(ptr as *const RiModuleEndpoint) };
-    let methods = endpoint.list_methods();
-    let json = serde_json::to_string(&methods).unwrap_or("[]".to_string());
-    env.new_string(&json).unwrap().into_raw()
+    let methods = futures::executor::block_on(endpoint.list_methods());
+
+    // Java declares `List<String>` — must return an ArrayList, not a String[].
+    let Ok(list) = env.new_object("java/util/ArrayList", "()V", &[]) else {
+        return std::ptr::null_mut();
+    };
+    for method in methods.iter() {
+        let Ok(s) = env.new_string(method) else {
+            continue;
+        };
+        let _ = env.call_method(
+            &list,
+            "add",
+            "(Ljava/lang/Object;)Z",
+            &[JValue::Object(&s)],
+        );
+    }
+    list.into_raw()
 }
 
 #[no_mangle]
@@ -253,17 +288,14 @@ pub extern "system" fn Java_com_dunimd_ri_modulerpc_RiMethodCall_new0(
     method_name: JString,
     params: jbyteArray,
 ) -> jlong {
-    let method_name_str: String = env.get_string(&method_name)
-        .expect("Failed to get method name")
-        .into();
-    
-    let params_vec: Vec<u8> = if !params.is_null() {
-        env.convert_byte_array(params).unwrap_or_default()
-    } else {
-        Vec::new()
+    let (Some(method), Some(params_vec)) = (
+        read_string(&mut env, &method_name, "method name"),
+        read_byte_array(&mut env, params, "params"),
+    ) else {
+        return 0;
     };
-    
-    let call = Box::new(RiMethodCall::new(method_name_str, params_vec));
+
+    let call = Box::new(RiMethodCall::new(method, params_vec));
     Box::into_raw(call) as jlong
 }
 
@@ -276,9 +308,12 @@ pub extern "system" fn Java_com_dunimd_ri_modulerpc_RiMethodCall_getMethodName0<
     if !check_not_null(&mut env, ptr, "RiMethodCall") {
         return std::ptr::null_mut();
     }
-    
+
     let call = unsafe { &*(ptr as *const RiMethodCall) };
-    env.new_string(call.method_name()).unwrap().into_raw()
+    match env.new_string(&call.method_name) {
+        Ok(s) => s.into_raw(),
+        Err(_) => std::ptr::null_mut(),
+    }
 }
 
 #[no_mangle]
@@ -290,15 +325,9 @@ pub extern "system" fn Java_com_dunimd_ri_modulerpc_RiMethodCall_getParams0(
     if !check_not_null(&mut env, ptr, "RiMethodCall") {
         return std::ptr::null_mut();
     }
-    
+
     let call = unsafe { &*(ptr as *const RiMethodCall) };
-    let params = call.params();
-    
-    let array = env.new_byte_array(params.len() as i32).unwrap();
-    env.set_byte_array_region(&array, 0, unsafe { 
-        std::slice::from_raw_parts(params.as_ptr() as *const i8, params.len()) 
-    }).unwrap();
-    array.into_raw()
+    write_byte_array(&mut env, &call.params)
 }
 
 #[no_mangle]
@@ -310,9 +339,9 @@ pub extern "system" fn Java_com_dunimd_ri_modulerpc_RiMethodCall_getTimeoutMs0(
     if !check_not_null(&mut env, ptr, "RiMethodCall") {
         return 0;
     }
-    
+
     let call = unsafe { &*(ptr as *const RiMethodCall) };
-    call.timeout_ms() as jlong
+    call.timeout_ms as jlong
 }
 
 #[no_mangle]
@@ -325,9 +354,9 @@ pub extern "system" fn Java_com_dunimd_ri_modulerpc_RiMethodCall_setTimeoutMs0(
     if !check_not_null(&mut env, ptr, "RiMethodCall") {
         return;
     }
-    
+
     let call = unsafe { &mut *(ptr as *mut RiMethodCall) };
-    call.set_timeout_ms(timeout_ms as u64);
+    call.timeout_ms = timeout_ms.max(0) as u64;
 }
 
 #[no_mangle]
@@ -356,9 +385,9 @@ pub extern "system" fn Java_com_dunimd_ri_modulerpc_RiMethodResponse_isSuccess0(
     if !check_not_null(&mut env, ptr, "RiMethodResponse") {
         return 0;
     }
-    
+
     let response = unsafe { &*(ptr as *const RiMethodResponse) };
-    response.is_success() as jboolean
+    response.success as jboolean
 }
 
 #[no_mangle]
@@ -370,15 +399,9 @@ pub extern "system" fn Java_com_dunimd_ri_modulerpc_RiMethodResponse_getData0(
     if !check_not_null(&mut env, ptr, "RiMethodResponse") {
         return std::ptr::null_mut();
     }
-    
+
     let response = unsafe { &*(ptr as *const RiMethodResponse) };
-    let data = response.data();
-    
-    let array = env.new_byte_array(data.len() as i32).unwrap();
-    env.set_byte_array_region(&array, 0, unsafe { 
-        std::slice::from_raw_parts(data.as_ptr() as *const i8, data.len()) 
-    }).unwrap();
-    array.into_raw()
+    write_byte_array(&mut env, &response.data)
 }
 
 #[no_mangle]
@@ -390,11 +413,11 @@ pub extern "system" fn Java_com_dunimd_ri_modulerpc_RiMethodResponse_getError0<'
     if !check_not_null(&mut env, ptr, "RiMethodResponse") {
         return std::ptr::null_mut();
     }
-    
+
     let response = unsafe { &*(ptr as *const RiMethodResponse) };
-    match response.error() {
-        Some(err) => env.new_string(err).unwrap().into_raw(),
-        None => std::ptr::null_mut(),
+    match env.new_string(&response.error) {
+        Ok(s) => s.into_raw(),
+        Err(_) => std::ptr::null_mut(),
     }
 }
 
@@ -407,9 +430,9 @@ pub extern "system" fn Java_com_dunimd_ri_modulerpc_RiMethodResponse_isTimeout0(
     if !check_not_null(&mut env, ptr, "RiMethodResponse") {
         return 0;
     }
-    
+
     let response = unsafe { &*(ptr as *const RiMethodResponse) };
-    response.is_timeout() as jboolean
+    response.is_timeout as jboolean
 }
 
 #[no_mangle]

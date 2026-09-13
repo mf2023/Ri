@@ -24,6 +24,7 @@ use jni::objects::{JClass, JString};
 use jni::sys::{jlong, jint, jstring};
 use crate::hooks::{RiHookBus, RiHookEvent, RiHookKind, RiModulePhase};
 use crate::java::exception::check_not_null;
+use std::sync::Arc;
 
 // =============================================================================
 // RiHookBus JNI Bindings
@@ -34,8 +35,9 @@ pub extern "system" fn Java_com_dunimd_ri_hooks_RiHookBus_new0(
     _env: JNIEnv,
     _class: JClass,
 ) -> jlong {
-    let bus = Box::new(RiHookBus::new());
-    Box::into_raw(bus) as jlong
+    // Arc semantics: `hooks0` on RiServiceContext hands out pointers into an Arc
+    // owned by the context, so free0 must use Arc::from_raw to stay compatible.
+    Arc::into_raw(Arc::new(RiHookBus::new())) as jlong
 }
 
 #[no_mangle]
@@ -45,8 +47,10 @@ pub extern "system" fn Java_com_dunimd_ri_hooks_RiHookBus_free0(
     ptr: jlong,
 ) {
     if ptr != 0 {
+        // Drop one Arc reference. If the pointer came from RiServiceContext::hooks0,
+        // the context still holds its own reference and keeps the bus alive.
         unsafe {
-            let _ = Box::from_raw(ptr as *mut RiHookBus);
+            let _ = Arc::from_raw(ptr as *const RiHookBus);
         }
     }
 }
@@ -79,11 +83,11 @@ pub extern "system" fn Java_com_dunimd_ri_hooks_RiHookBus_emit0(
         _ => RiHookKind::Startup,
     };
     
-    let module_str: Option<&str> = if module.is_null() {
+    let module_str: Option<String> = if module.is_null() {
         None
     } else {
         match env.get_string(&module) {
-            Ok(s) => Some(&s.into()),
+            Ok(s) => Some(s.into()),
             Err(_) => None,
         }
     };
@@ -110,7 +114,7 @@ pub extern "system" fn Java_com_dunimd_ri_hooks_RiHookBus_emit0(
         })
     };
     
-    let _ = bus.emit_simple(&kind, module_str, phase);
+    let _ = bus.emit_simple(&kind, module_str.as_deref(), phase);
 }
 
 #[no_mangle]
@@ -170,9 +174,7 @@ pub extern "system" fn Java_com_dunimd_ri_hooks_RiHookEvent_new0(
     let module_str: Option<String> = if module.is_null() {
         None
     } else {
-        Some(env.get_string(&module)
-            .expect("Failed to get module")
-            .into())
+        env.get_string(&module).ok().map(|s| s.into())
     };
     
     let phase = if phase_ordinal < 0 {
@@ -237,9 +239,10 @@ pub extern "system" fn Java_com_dunimd_ri_hooks_RiHookEvent_getModule0(
     
     let event = unsafe { &*(ptr as *const RiHookEvent) };
     match &event.module {
-        Some(module) => env.new_string(module)
-            .expect("Failed to create module string")
-            .into_raw(),
+        Some(module) => match env.new_string(module) {
+            Ok(s) => s.into_raw(),
+            Err(_) => std::ptr::null_mut(),
+        },
         None => std::ptr::null_mut(),
     }
 }

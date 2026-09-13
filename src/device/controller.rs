@@ -131,9 +131,7 @@ impl RiDeviceController {
     
     #[pyo3(name = "discover_devices")]
     fn discover_devices_impl(&mut self) -> PyResult<super::RiDiscoveryResult> {
-        let rt = tokio::runtime::Runtime::new().map_err(|e| {
-            pyo3::exceptions::PyRuntimeError::new_err(format!("Failed to create runtime: {}", e))
-        })?;
+        let rt = crate::py_runtime::py_runtime();
         
         rt.block_on(self.discover_devices()).map_err(|e| {
             pyo3::exceptions::PyRuntimeError::new_err(format!("Device discovery failed: {}", e))
@@ -142,9 +140,7 @@ impl RiDeviceController {
     
     #[pyo3(name = "discover_system_devices")]
     fn discover_system_devices_impl(&mut self, config: &RiDeviceControlConfig) -> PyResult<()> {
-        let rt = tokio::runtime::Runtime::new().map_err(|e| {
-            pyo3::exceptions::PyRuntimeError::new_err(format!("Failed to create runtime: {}", e))
-        })?;
+        let rt = crate::py_runtime::py_runtime();
         
         rt.block_on(self.discover_system_devices(config)).map_err(|e| {
             pyo3::exceptions::PyRuntimeError::new_err(format!("System device discovery failed: {}", e))
@@ -153,9 +149,7 @@ impl RiDeviceController {
     
     #[pyo3(name = "find_suitable_device")]
     fn find_suitable_device_impl(&self, device_type: &RiDeviceType, requirements: &RiDeviceCapabilities) -> PyResult<Option<RiDevice>> {
-        let rt = tokio::runtime::Runtime::new().map_err(|e| {
-            pyo3::exceptions::PyRuntimeError::new_err(format!("Failed to create runtime: {}", e))
-        })?;
+        let rt = crate::py_runtime::py_runtime();
         
         rt.block_on(self.find_suitable_device(device_type, requirements)).map_err(|e| {
             pyo3::exceptions::PyRuntimeError::new_err(format!("Failed to find suitable device: {}", e))
@@ -164,9 +158,7 @@ impl RiDeviceController {
     
     #[pyo3(name = "allocate_device")]
     fn allocate_device_impl(&mut self, device_id: &str, allocation_id: &str) -> PyResult<()> {
-        let rt = tokio::runtime::Runtime::new().map_err(|e| {
-            pyo3::exceptions::PyRuntimeError::new_err(format!("Failed to create runtime: {}", e))
-        })?;
+        let rt = crate::py_runtime::py_runtime();
         
         rt.block_on(self.allocate_device(device_id, allocation_id)).map_err(|e| {
             pyo3::exceptions::PyRuntimeError::new_err(format!("Device allocation failed: {}", e))
@@ -175,9 +167,7 @@ impl RiDeviceController {
     
     #[pyo3(name = "release_device_by_allocation")]
     fn release_device_by_allocation_impl(&mut self, allocation_id: &str) -> PyResult<()> {
-        let rt = tokio::runtime::Runtime::new().map_err(|e| {
-            pyo3::exceptions::PyRuntimeError::new_err(format!("Failed to create runtime: {}", e))
-        })?;
+        let rt = crate::py_runtime::py_runtime();
         
         rt.block_on(self.release_device_by_allocation(allocation_id)).map_err(|e| {
             pyo3::exceptions::PyRuntimeError::new_err(format!("Device release failed: {}", e))
@@ -198,9 +188,7 @@ impl RiDeviceController {
     
     #[pyo3(name = "perform_health_checks")]
     fn perform_health_checks_impl(&mut self) -> PyResult<Vec<(String, u8)>> {
-        let rt = tokio::runtime::Runtime::new().map_err(|e| {
-            pyo3::exceptions::PyRuntimeError::new_err(format!("Failed to create runtime: {}", e))
-        })?;
+        let rt = crate::py_runtime::py_runtime();
         
         rt.block_on(self.perform_health_checks()).map_err(|e| {
             pyo3::exceptions::PyRuntimeError::new_err(format!("Health checks failed: {}", e))
@@ -209,9 +197,7 @@ impl RiDeviceController {
     
     #[pyo3(name = "get_device_health")]
     fn get_device_health_impl(&self, device_id: &str) -> PyResult<super::core::RiDeviceHealthMetrics> {
-        let rt = tokio::runtime::Runtime::new().map_err(|e| {
-            pyo3::exceptions::PyRuntimeError::new_err(format!("Failed to create runtime: {}", e))
-        })?;
+        let rt = crate::py_runtime::py_runtime();
         
         rt.block_on(self.get_device_health(device_id)).map_err(|e| {
             pyo3::exceptions::PyRuntimeError::new_err(format!("Failed to get device health: {}", e))
@@ -220,9 +206,7 @@ impl RiDeviceController {
     
     #[pyo3(name = "get_all_device_health")]
     fn get_all_device_health_impl(&self) -> PyResult<FxHashMap<String, super::core::RiDeviceHealthMetrics>> {
-        let rt = tokio::runtime::Runtime::new().map_err(|e| {
-            pyo3::exceptions::PyRuntimeError::new_err(format!("Failed to create runtime: {}", e))
-        })?;
+        let rt = crate::py_runtime::py_runtime();
         
         rt.block_on(self.get_all_device_health()).map_err(|e| {
             pyo3::exceptions::PyRuntimeError::new_err(format!("Failed to get all device health: {}", e))
@@ -633,8 +617,8 @@ impl RiDeviceController {
     async fn discover_memory_devices(&mut self, _config: &RiDeviceControlConfig) -> RiResult<()> {
         #[cfg(target_os = "windows")]
         {
-            let output = std::process::Command::new("wmic")
-                .args(["memorychip", "get", "Capacity,Speed", "/format:list"])
+            let output = std::process::Command::new("powershell")
+                .args(["-NoProfile", "-Command", "Get-CimInstance Win32_PhysicalMemory | ForEach-Object { 'Capacity=' + $_.Capacity; 'Speed=' + $_.Speed }"])
                 .output()
                 .map_err(|e| RiError::DeviceError(format!("Failed to query memory info: {e}")))?;
                 
@@ -700,12 +684,22 @@ impl RiDeviceController {
     async fn discover_cpu_devices(&mut self, _config: &RiDeviceControlConfig) -> RiResult<()> {
         #[cfg(target_os = "windows")]
         {
-            let output = std::process::Command::new("wmic")
-                .args(["cpu", "get", "Name,NumberOfCores,NumberOfLogicalProcessors", "/format:list"])
+            let output = std::process::Command::new("powershell")
+                .args(["-NoProfile", "-Command", "Get-CimInstance Win32_Processor | ForEach-Object { 'Name=' + $_.Name; 'NumberOfCores=' + $_.NumberOfCores; 'NumberOfLogicalProcessors=' + $_.NumberOfLogicalProcessors }"])
                 .output()
                 .map_err(|e| RiError::DeviceError(format!("Failed to query CPU info: {e}")))?;
                 
             let cpu_info = String::from_utf8_lossy(&output.stdout);
+            
+            // Query total physical memory (GB) so CPU devices advertise the
+            // host RAM they can actually address, instead of a hardcoded 0.0
+            // that fails any memory_gb requirement check.
+            let total_memory_gb: f64 = std::process::Command::new("powershell")
+                .args(["-NoProfile", "-Command", "[math]::Round((Get-CimInstance Win32_ComputerSystem).TotalPhysicalMemory / 1GB, 1)"])
+                .output()
+                .ok()
+                .and_then(|o| String::from_utf8_lossy(&o.stdout).trim().parse::<f64>().ok())
+                .unwrap_or(0.0);
             
             let mut cpu_count = 0;
             let mut total_cores = 0;
@@ -732,7 +726,7 @@ impl RiDeviceController {
                 ).with_capabilities(
                     RiDeviceCapabilities::new()
                         .with_compute_units(total_cores)
-                        .with_memory_gb(0.0)
+                        .with_memory_gb(total_memory_gb)
                 );
                 
                 self.add_device(cpu_device, "System Hardware".to_string()).await?;
@@ -760,6 +754,18 @@ impl RiDeviceController {
             
             let total_threads = cpu_count; // In Linux, processor count equals thread count
             
+            // Total physical memory from /proc/meminfo (MemTotal is in kB)
+            let total_memory_gb: f64 = std::fs::read_to_string("/proc/meminfo")
+                .ok()
+                .and_then(|mem| {
+                    mem.lines().find(|l| l.starts_with("MemTotal:")).and_then(|l| {
+                        l.split_whitespace().nth(1)
+                            .and_then(|kb| kb.parse::<f64>().ok())
+                            .map(|kb| (kb / 1024.0 / 1024.0 * 10.0).round() / 10.0)
+                    })
+                })
+                .unwrap_or(0.0);
+            
             if cpu_count > 0 {
                 let cpu_device = RiDevice::new(
                     format!("CPU-{}-cores-{}-threads", total_cores, total_threads), 
@@ -767,7 +773,7 @@ impl RiDeviceController {
                 ).with_capabilities(
                     RiDeviceCapabilities::new()
                         .with_compute_units(total_cores)
-                        .with_memory_gb(0.0)
+                        .with_memory_gb(total_memory_gb)
                 );
                 
                 self.add_device(cpu_device, "System Hardware".to_string()).await?;
@@ -787,8 +793,8 @@ impl RiDeviceController {
     async fn discover_storage_devices_impl2(&mut self, _config: &RiDeviceControlConfig) -> RiResult<()> {
         #[cfg(target_os = "windows")]
         {
-            let output = std::process::Command::new("wmic")
-                .args(["diskdrive", "get", "Model,Size", "/format:list"])
+            let output = std::process::Command::new("powershell")
+                .args(["-NoProfile", "-Command", "Get-CimInstance Win32_DiskDrive | ForEach-Object { 'Model=' + $_.Model; 'Size=' + $_.Size }"])
                 .output()
                 .map_err(|e| RiError::DeviceError(format!("Failed to query disk info: {e}")))?;
                 
@@ -883,8 +889,8 @@ impl RiDeviceController {
     async fn discover_network_devices(&mut self, _config: &RiDeviceControlConfig) -> RiResult<()> {
         #[cfg(target_os = "windows")]
         {
-            let output = std::process::Command::new("wmic")
-                .args(["nic", "where", "NetEnabled=true", "get", "Name,Speed", "/format:list"])
+            let output = std::process::Command::new("powershell")
+                .args(["-NoProfile", "-Command", "Get-CimInstance Win32_NetworkAdapter -Filter 'NetEnabled=true' | ForEach-Object { 'Name=' + $_.Name; 'Speed=' + $_.Speed }"])
                 .output()
                 .map_err(|e| RiError::DeviceError(format!("Failed to query network info: {e}")))?;
                 

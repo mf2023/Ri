@@ -660,7 +660,7 @@ mod tests {
         Arc::new(|_req| {
             Box::pin(async move {
                 Ok(crate::gateway::RiGatewayResponse::new(200, b"OK".to_vec(), String::new()))
-            }) as Pin<Box<dyn Future<Output = RiResult<crate::gateway::RiGatewayResponse>> + Send>>
+            }) as Pin<Box<dyn Future<Output = crate::core::RiResult<crate::gateway::RiGatewayResponse>> + Send>>
         })
     }
 

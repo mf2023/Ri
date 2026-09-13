@@ -15,7 +15,7 @@
 //! See the License for the specific language governing permissions and
 //! limitations under the License.
 
-use ri::observability::metrics_collector::{RiSlidingWindow, RiQuantileCalculator, RiPerformanceCollector};
+use ri::observability::{RiSlidingWindow, RiQuantileCalculator, RiPerformanceCollector};
 use std::time::Duration;
 
 /// Observability metrics collector test module for performance monitoring.
@@ -57,10 +57,9 @@ use std::time::Duration;
 ///
 /// The performance collector separates timing measurement from metric
 /// computation, enabling flexible analysis windows and aggregation strategies.
-Tests verify that recorded metrics accurately reflect the underlying
+/// Tests verify that recorded metrics accurately reflect the underlying
 /// observations with appropriate precision for alerting purposes.
 
-#[test]
 /// Tests RiSlidingWindow data structure for time-bounded data retention.
 ///
 /// Verifies that the sliding window implementation correctly maintains
@@ -89,6 +88,7 @@ Tests verify that recorded metrics accurately reflect the underlying
 /// - All added data points are retrievable
 /// - Data points within the time window are retained
 /// - The window correctly stores and reports count
+#[test]
 fn test_sliding_window() {
     // Create a sliding window with 10-second total duration and 1-second buckets
     let mut window = RiSlidingWindow::<i32>::new(

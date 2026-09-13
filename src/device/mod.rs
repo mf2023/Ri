@@ -176,6 +176,11 @@ pub struct RiDeviceControlModule {
     discovery_engine: Arc<RwLock<RiResourceScheduler>>,
     /// Map of resource pool names to resource pool instances
     resource_pools: FxHashMap<String, Arc<RiResourcePool>>,
+    /// Shared resource pool manager backing the scheduler
+    ///
+    /// Kept at module level so discovered devices can be registered into
+    /// the same pools the scheduler selects from.
+    pool_manager: Arc<RwLock<RiResourcePoolManager>>,
     /// Device control configuration
     config: RiDeviceControlConfig,
 }
@@ -687,7 +692,7 @@ impl RiDeviceControlModule {
     pub fn new() -> Self {
         let controller = Arc::new(RwLock::new(RiDeviceController::new()));
         let resource_pool_manager = Arc::new(RwLock::new(RiResourcePoolManager::new()));
-        let scheduler = Arc::new(RwLock::new(RiDeviceScheduler::new(resource_pool_manager)));
+        let scheduler = Arc::new(RwLock::new(RiDeviceScheduler::new(resource_pool_manager.clone())));
         let discovery_engine = Arc::new(RwLock::new(RiResourceScheduler::new()));
         
         Self {
@@ -695,6 +700,7 @@ impl RiDeviceControlModule {
             scheduler,
             discovery_engine,
             resource_pools: FxHashMap::default(),
+            pool_manager: resource_pool_manager,
             config: crate::device::core::RiDeviceControlConfig::default(),
         }
     }
@@ -733,8 +739,52 @@ impl RiDeviceControlModule {
             });
         }
         
-        let mut controller = self.controller.write().await;
-        controller.discover_devices().await
+        let result = {
+            let mut controller = self.controller.write().await;
+            controller.discover_devices().await
+        };
+        
+        // Sync discovered devices into the scheduler's resource pools so
+        // allocate_resource can actually select them. Pools are rebuilt per
+        // type on every discovery round; devices still in Unknown state are
+        // marked Available before registration (is_available() requires it).
+        // NOTE: the controller lock must be fully released before touching
+        // the pool manager — allocate_resource acquires these locks in the
+        // opposite order and a nested hold here could deadlock.
+        if result.is_ok() {
+            let all_devices = {
+                let controller = self.controller.read().await;
+                controller.get_all_devices()
+            };
+            
+            if !all_devices.is_empty() {
+                let mut by_type: FxHashMap<RiDeviceType, Vec<RiDevice>> = FxHashMap::default();
+                for mut device in all_devices {
+                    if device.status() == crate::device::core::RiDeviceStatus::Unknown {
+                        device.set_status(crate::device::core::RiDeviceStatus::Available);
+                    }
+                    by_type.entry(device.device_type()).or_default().push(device);
+                }
+                
+                let mut manager = self.pool_manager.write().await;
+                for (device_type, devices) in by_type {
+                    let pool_name = format!("{:?}_pool", device_type).to_lowercase();
+                    // Rebuild the pool from scratch each discovery round
+                    manager.remove_pool(&pool_name);
+                    let mut pool = RiResourcePool::new(RiResourcePoolConfig {
+                        name: pool_name,
+                        device_type,
+                        ..Default::default()
+                    });
+                    for device in devices {
+                        pool.add_device(Arc::new(device));
+                    }
+                    manager.register_pool(pool);
+                }
+            }
+        }
+        
+        result
     }
     
     /// Allocates a device resource based on the given request.

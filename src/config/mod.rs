@@ -101,6 +101,24 @@ impl RiConfig {
         RiConfig { values: FxHashMap::default() }
     }
 
+    /// Creates a configuration from a YAML string.
+    ///
+    /// The YAML document(s) are flattened into dot-notation keys, matching the
+    /// behavior of `RiConfigManager` file loading (e.g. `server.port`).
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the YAML string cannot be parsed.
+    pub fn from_yaml_str(yaml: &str) -> Result<Self, crate::core::RiError> {
+        let docs = yaml_rust::YamlLoader::load_from_str(yaml)
+            .map_err(|e| crate::core::RiError::Other(format!("YAML parse error: {e}")))?;
+        let mut config = RiConfig::new();
+        for doc in &docs {
+            RiConfigManager::flatten_yaml_public(doc, "", &mut config);
+        }
+        Ok(config)
+    }
+
     /// Returns a list of sensitive configuration key patterns.
     ///
     /// # Security
@@ -864,6 +882,15 @@ impl RiConfigManager {
     /// - `prefix`: The current prefix for keys (used for recursion)
     /// - `cfg`: The configuration object to load values into
     fn flatten_yaml(&self, value: &Yaml, prefix: &str, cfg: &mut RiConfig) {
+        Self::flatten_yaml_static(value, prefix, cfg);
+    }
+
+    /// Public wrapper around the YAML flattening logic.
+    ///
+    /// This exposes the same dot-notation flattening used when loading YAML
+    /// configuration files so other components (e.g. `RiConfig::from_yaml_str`)
+    /// can reuse it.
+    pub fn flatten_yaml_public(value: &Yaml, prefix: &str, cfg: &mut RiConfig) {
         Self::flatten_yaml_static(value, prefix, cfg);
     }
 

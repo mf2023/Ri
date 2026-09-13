@@ -317,8 +317,7 @@ impl RiMetric {
         }
     }
     
-    #[allow(dead_code)]
-    fn record(&self, value: f64, labels: Vec<(String, String)>) -> RiResult<()> {
+    pub fn record(&self, value: f64, labels: Vec<(String, String)>) -> RiResult<()> {
         let sample = RiMetricSample {
             timestamp: Self::current_timestamp(),
             value,
@@ -351,8 +350,7 @@ impl RiMetric {
         }
     }
     
-    #[allow(dead_code)]
-    fn get_total_count(&self) -> u64 {
+    pub fn get_total_count(&self) -> u64 {
         match self.total_count.read_safe("total count") {
             Ok(count) => *count,
             Err(_) => 0,
@@ -367,7 +365,7 @@ impl RiMetric {
         }
     }
     
-    fn get_config(&self) -> &RiMetricConfig {
+    pub fn get_config(&self) -> &RiMetricConfig {
         &self.config
     }
 

@@ -580,7 +580,10 @@ pub extern "system" fn Java_com_dunimd_ri_protocol_RiConnectionInfo_getConnectio
     }
     
     let info = unsafe { &*(ptr as *const RiConnectionInfo) };
-    env.new_string(&info.connection_id).unwrap().into_raw()
+    match env.new_string(&info.connection_id) {
+        Ok(s) => s.into_raw(),
+        Err(_) => std::ptr::null_mut(),
+    }
 }
 
 #[no_mangle]
@@ -594,7 +597,10 @@ pub extern "system" fn Java_com_dunimd_ri_protocol_RiConnectionInfo_getDeviceId0
     }
     
     let info = unsafe { &*(ptr as *const RiConnectionInfo) };
-    env.new_string(&info.device_id).unwrap().into_raw()
+    match env.new_string(&info.device_id) {
+        Ok(s) => s.into_raw(),
+        Err(_) => std::ptr::null_mut(),
+    }
 }
 
 #[no_mangle]
@@ -608,7 +614,10 @@ pub extern "system" fn Java_com_dunimd_ri_protocol_RiConnectionInfo_getAddress0<
     }
     
     let info = unsafe { &*(ptr as *const RiConnectionInfo) };
-    env.new_string(&info.address).unwrap().into_raw()
+    match env.new_string(&info.address) {
+        Ok(s) => s.into_raw(),
+        Err(_) => std::ptr::null_mut(),
+    }
 }
 
 #[no_mangle]
@@ -896,10 +905,13 @@ pub extern "system" fn Java_com_dunimd_ri_protocol_RiFrame_getPayload0(
     let frame = unsafe { &*(ptr as *const RiFrame) };
     let payload = &frame.payload;
     
-    let array = env.new_byte_array(payload.len() as i32).unwrap();
-    env.set_byte_array_region(&array, 0, unsafe { 
+    let array = match env.new_byte_array(payload.len() as i32) {
+        Ok(a) => a,
+        Err(_) => return std::ptr::null_mut(),
+    };
+    let _ = env.set_byte_array_region(&array, 0, unsafe { 
         std::slice::from_raw_parts(payload.as_ptr() as *const i8, payload.len()) 
-    }).unwrap();
+    });
     array.into_raw()
 }
 
@@ -935,7 +947,10 @@ pub extern "system" fn Java_com_dunimd_ri_protocol_RiFrame_getSourceId0<'local>(
     }
     
     let frame = unsafe { &*(ptr as *const RiFrame) };
-    env.new_string(&frame.source_id).unwrap().into_raw()
+    match env.new_string(&frame.source_id) {
+        Ok(s) => s.into_raw(),
+        Err(_) => std::ptr::null_mut(),
+    }
 }
 
 #[no_mangle]
@@ -949,9 +964,13 @@ pub extern "system" fn Java_com_dunimd_ri_protocol_RiFrame_setSourceId0(
         return;
     }
     
-    let source_id_str: String = env.get_string(&source_id)
-        .expect("Failed to get source id")
-        .into();
+    let source_id_str: String = match env.get_string(&source_id) {
+        Ok(s) => s.into(),
+        Err(_) => {
+            crate::java::exception::throw_ri_error(&mut env, "Invalid source_id");
+            return;
+        }
+    };
     
     let frame = unsafe { &mut *(ptr as *mut RiFrame) };
     frame.source_id = source_id_str;
@@ -968,7 +987,10 @@ pub extern "system" fn Java_com_dunimd_ri_protocol_RiFrame_getTargetId0<'local>(
     }
     
     let frame = unsafe { &*(ptr as *const RiFrame) };
-    env.new_string(&frame.target_id).unwrap().into_raw()
+    match env.new_string(&frame.target_id) {
+        Ok(s) => s.into_raw(),
+        Err(_) => std::ptr::null_mut(),
+    }
 }
 
 #[no_mangle]
@@ -982,9 +1004,13 @@ pub extern "system" fn Java_com_dunimd_ri_protocol_RiFrame_setTargetId0(
         return;
     }
     
-    let target_id_str: String = env.get_string(&target_id)
-        .expect("Failed to get target id")
-        .into();
+    let target_id_str: String = match env.get_string(&target_id) {
+        Ok(s) => s.into(),
+        Err(_) => {
+            crate::java::exception::throw_ri_error(&mut env, "Invalid target_id");
+            return;
+        }
+    };
     
     let frame = unsafe { &mut *(ptr as *mut RiFrame) };
     frame.target_id = target_id_str;
@@ -1003,10 +1029,13 @@ pub extern "system" fn Java_com_dunimd_ri_protocol_RiFrame_toBytes0(
     let frame = unsafe { &*(ptr as *const RiFrame) };
     let bytes = frame.to_bytes();
     
-    let array = env.new_byte_array(bytes.len() as i32).unwrap();
-    env.set_byte_array_region(&array, 0, unsafe { 
+    let array = match env.new_byte_array(bytes.len() as i32) {
+        Ok(a) => a,
+        Err(_) => return std::ptr::null_mut(),
+    };
+    let _ = env.set_byte_array_region(&array, 0, unsafe { 
         std::slice::from_raw_parts(bytes.as_ptr() as *const i8, bytes.len()) 
-    }).unwrap();
+    });
     array.into_raw()
 }
 
@@ -1136,9 +1165,13 @@ pub extern "system" fn Java_com_dunimd_ri_protocol_RiFrameBuilder_setSourceId0(
         return;
     }
     
-    let source_id_str: String = env.get_string(&source_id)
-        .expect("Failed to get source id")
-        .into();
+    let source_id_str: String = match env.get_string(&source_id) {
+        Ok(s) => s.into(),
+        Err(_) => {
+            crate::java::exception::throw_ri_error(&mut env, "Invalid source_id");
+            return;
+        }
+    };
     
     let builder = unsafe { &mut *(ptr as *mut RiFrameBuilder) };
     builder.source_id = source_id_str;
@@ -1155,9 +1188,13 @@ pub extern "system" fn Java_com_dunimd_ri_protocol_RiFrameBuilder_setTargetId0(
         return;
     }
     
-    let target_id_str: String = env.get_string(&target_id)
-        .expect("Failed to get target id")
-        .into();
+    let target_id_str: String = match env.get_string(&target_id) {
+        Ok(s) => s.into(),
+        Err(_) => {
+            crate::java::exception::throw_ri_error(&mut env, "Invalid target_id");
+            return;
+        }
+    };
     
     let builder = unsafe { &mut *(ptr as *mut RiFrameBuilder) };
     builder.target_id = target_id_str;

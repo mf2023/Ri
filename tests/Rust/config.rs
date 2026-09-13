@@ -476,10 +476,10 @@ fn test_config_manager_config_access() {
     // Test config() method
     let config = manager.config();
     assert!(config.get_str("non_existent_key").is_none());
+    drop(config);
     
     // Test config_mut() method
-    let config_mut = manager.config_mut();
-    config_mut.set("test_key", "test_value");
+    manager.config_mut().set("test_key", "test_value");
     
     // Verify the change is reflected
     assert_eq!(manager.config().get_str("test_key"), Some("test_value"));

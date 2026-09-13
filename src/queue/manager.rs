@@ -639,9 +639,7 @@ impl RiQueueManager {
 impl RiQueueManager {
     #[pyo3(name = "create_queue")]
     fn create_queue_impl(&self, name: String) -> PyResult<String> {
-        let rt = tokio::runtime::Runtime::new().map_err(|e| {
-            pyo3::exceptions::PyRuntimeError::new_err(format!("Failed to create runtime: {}", e))
-        })?;
+        let rt = crate::py_runtime::py_runtime();
         
         rt.block_on(async {
             self.create_queue(&name)
@@ -653,9 +651,7 @@ impl RiQueueManager {
     
     #[pyo3(name = "get_queue")]
     fn get_queue_impl(&self, name: String) -> PyResult<Option<()>> {
-        let rt = tokio::runtime::Runtime::new().map_err(|e| {
-            pyo3::exceptions::PyRuntimeError::new_err(format!("Failed to create runtime: {}", e))
-        })?;
+        let rt = crate::py_runtime::py_runtime();
         
         Ok(rt.block_on(async {
             self.get_queue(&name).await.map(|_| ())
@@ -664,9 +660,7 @@ impl RiQueueManager {
     
     #[pyo3(name = "list_queues")]
     fn list_queues_impl(&self) -> PyResult<Vec<String>> {
-        let rt = tokio::runtime::Runtime::new().map_err(|e| {
-            pyo3::exceptions::PyRuntimeError::new_err(format!("Failed to create runtime: {}", e))
-        })?;
+        let rt = crate::py_runtime::py_runtime();
         
         Ok(rt.block_on(async {
             self.list_queues().await
@@ -675,9 +669,7 @@ impl RiQueueManager {
     
     #[pyo3(name = "delete_queue")]
     fn delete_queue_impl(&self, name: String) -> PyResult<()> {
-        let rt = tokio::runtime::Runtime::new().map_err(|e| {
-            pyo3::exceptions::PyRuntimeError::new_err(format!("Failed to create runtime: {}", e))
-        })?;
+        let rt = crate::py_runtime::py_runtime();
         
         rt.block_on(async {
             self.delete_queue(&name)

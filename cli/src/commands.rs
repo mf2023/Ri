@@ -631,18 +631,10 @@ pub async fn build_project(release: bool, target: Option<&str>) -> Result<()> {
             println!("  {} Output: target/release/", "→".yellow().bold());
         }
         "c" => {
-            pb.set_message("Building C/C++ bindings...");
-            let args = vec!["build", "--release", "--features", "c-api"];
-            let status = std::process::Command::new("cargo")
-                .args(&args)
-                .status()
-                .map_err(|e| RicError::BuildFailed(e.to_string()))?;
             pb.finish();
-            if !status.success() {
-                return Err(RicError::BuildFailed("C/C++ build failed".to_string()));
-            }
-            println!("{} C/C++ bindings built successfully", "✓".green().bold());
-            println!("  {} Output: target/release/", "→".yellow().bold());
+            return Err(RicError::BuildFailed(
+                "C/C++ bindings were removed in Ri 0.2.0. Valid targets: all, python, java, wasm".to_string(),
+            ));
         }
         "wasm" => {
             pb.finish();
@@ -650,13 +642,13 @@ pub async fn build_project(release: bool, target: Option<&str>) -> Result<()> {
             println!("  {} Install wasm-pack: cargo install wasm-pack", "→".yellow().bold());
             println!("  {} Then run: wasm-pack build --target web", "→".yellow().bold());
             return Err(crate::error::RicError::BuildFailed(
-                "WASM build not yet integrated. Use wasm-pack directly.".to_string()
+                "WASM build not yet integrated. Use wasm-pack directly.".to_string(),
             ));
         }
         _ => {
             pb.finish();
             return Err(RicError::BuildFailed(format!(
-                "Unknown target: {}. Valid targets: all, python, java, c, wasm",
+                "Unknown target: {}. Valid targets: all, python, java, wasm",
                 target_name
             )));
         }

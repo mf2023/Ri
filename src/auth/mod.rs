@@ -126,8 +126,6 @@ use std::env;
 use std::sync::Arc;
 use std::time::{SystemTime, UNIX_EPOCH};
 use tokio::sync::RwLock;
-#[cfg(feature = "pyo3")]
-use tokio::runtime::Handle;
 
 const DEFAULT_JWT_SECRET_ENV: &str = "Ri_JWT_SECRET";
 const FALLBACK_SECRET_LENGTH: usize = 64;
@@ -913,8 +911,10 @@ impl RiAuthConfig {
 impl RiAuthModule {
     #[new]
     fn py_new(config: RiAuthConfig) -> PyResult<Self> {
-        let rt = Handle::current();
-        rt.block_on(async {
+        // Python interpreters do not guarantee an ambient Tokio reactor; use
+        // the process-wide runtime shared by all PyO3 bindings instead of
+        // `Handle::current()`, which panics when no reactor is running.
+        crate::py_runtime::py_runtime().block_on(async {
             Self::new(config).await
                 .map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(e.to_string()))
         })

@@ -461,9 +461,7 @@ impl RiCacheManager {
     
     #[pyo3(name = "get")]
     fn get_impl(&self, key: String) -> pyo3::PyResult<Option<String>> {
-        let rt = tokio::runtime::Runtime::new().map_err(|e| {
-            pyo3::exceptions::PyRuntimeError::new_err(format!("Failed to create runtime: {}", e))
-        })?;
+        let rt = crate::py_runtime::py_runtime();
         
         rt.block_on(async {
             self.get::<String>(&key).await.map_err(|e| {
@@ -485,9 +483,7 @@ impl RiCacheManager {
     
     #[pyo3(name = "delete")]
     fn delete_impl(&self, key: String) -> pyo3::PyResult<bool> {
-        let rt = tokio::runtime::Runtime::new().map_err(|e| {
-            pyo3::exceptions::PyRuntimeError::new_err(format!("Failed to create runtime: {}", e))
-        })?;
+        let rt = crate::py_runtime::py_runtime();
         
         rt.block_on(async {
             self.delete(&key).await.map_err(|e| {
@@ -498,9 +494,7 @@ impl RiCacheManager {
     
     #[pyo3(name = "exists")]
     fn exists_impl(&self, key: String) -> pyo3::PyResult<bool> {
-        let rt = tokio::runtime::Runtime::new().map_err(|e| {
-            pyo3::exceptions::PyRuntimeError::new_err(format!("Failed to create runtime: {}", e))
-        })?;
+        let rt = crate::py_runtime::py_runtime();
         
         Ok(rt.block_on(async {
             self.exists(&key).await
@@ -509,9 +503,7 @@ impl RiCacheManager {
     
     #[pyo3(name = "clear")]
     fn clear_impl(&self) -> pyo3::PyResult<()> {
-        let rt = tokio::runtime::Runtime::new().map_err(|e| {
-            pyo3::exceptions::PyRuntimeError::new_err(format!("Failed to create runtime: {}", e))
-        })?;
+        let rt = crate::py_runtime::py_runtime();
         
         rt.block_on(async {
             self.clear().await.map_err(|e| {
@@ -522,9 +514,7 @@ impl RiCacheManager {
     
     #[pyo3(name = "stats")]
     fn stats_impl(&self) -> pyo3::PyResult<RiCacheStats> {
-        let rt = tokio::runtime::Runtime::new().map_err(|e| {
-            pyo3::exceptions::PyRuntimeError::new_err(format!("Failed to create runtime: {}", e))
-        })?;
+        let rt = crate::py_runtime::py_runtime();
         
         Ok(rt.block_on(async {
             self.stats().await
@@ -533,9 +523,7 @@ impl RiCacheManager {
     
     #[pyo3(name = "cleanup_expired")]
     fn cleanup_expired_impl(&self) -> pyo3::PyResult<usize> {
-        let rt = tokio::runtime::Runtime::new().map_err(|e| {
-            pyo3::exceptions::PyRuntimeError::new_err(format!("Failed to create runtime: {}", e))
-        })?;
+        let rt = crate::py_runtime::py_runtime();
         
         rt.block_on(async {
             self.cleanup_expired().await.map_err(|e| {

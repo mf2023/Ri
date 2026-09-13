@@ -261,15 +261,7 @@ impl RiCacheModule {
 impl RiCacheModule {
     #[new]
     fn py_new(config: RiCacheConfig) -> Result<Self, pyo3::PyErr> {
-        let rt = match tokio::runtime::Runtime::new() {
-            Ok(r) => r,
-            Err(e) => {
-                return Err(pyo3::PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(
-                    format!("Failed to create runtime: {}", e),
-                ));
-            }
-        };
-        rt.block_on(async {
+        crate::py_runtime::py_runtime().block_on(async {
             Ok(Self::new(config).await)
         })
     }

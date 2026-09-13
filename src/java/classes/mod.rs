@@ -36,4 +36,5 @@ pub mod hooks;
 pub mod module_rpc;
 pub mod grpc;
 pub mod ws;
+#[cfg(feature = "protocol")]
 pub mod protocol;

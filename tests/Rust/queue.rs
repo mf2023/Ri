@@ -70,7 +70,7 @@
 //! - **Receive Batch**: Multiple messages delivered for batch processing
 //! - **Benefits**: Reduced latency, improved throughput, better resource utilization
 
-use ri::queue::{RiQueueMessage, RiQueue, RiQueueConfig, QueueBackendType, RiQueueManager, RiQueueModule};
+use ri::queue::{RiQueueMessage, RiQueue, RiQueueConfig, RiQueueBackendType, RiQueueManager, RiQueueModule};
 use ri::queue::backends::RiMemoryQueue;
 
 #[test]
@@ -408,7 +408,7 @@ async fn test_queue_config_default() {
     let config = RiQueueConfig::default();
     
     assert!(config.enabled);
-    assert_eq!(config.backend_type, QueueBackendType::Memory);
+    assert_eq!(config.backend_type, RiQueueBackendType::Memory);
     assert_eq!(config.connection_string, "memory://localhost");
     assert_eq!(config.max_connections, 10);
     assert_eq!(config.message_max_size, 1024 * 1024);
@@ -422,7 +422,7 @@ async fn test_queue_config_default() {
 }
 
 #[tokio::test]
-/// Tests QueueBackendType parsing from string identifiers.
+/// Tests RiQueueBackendType parsing from string identifiers.
 ///
 /// Verifies that backend types can be parsed from their string
 /// representations and that invalid inputs are properly rejected.
@@ -446,11 +446,11 @@ async fn test_queue_config_default() {
 /// corresponding enum variants. Unknown strings return an error.
 async fn test_queue_backend_type_from_str() {
     // Test valid backend types
-    assert_eq!("memory".parse::<QueueBackendType>().unwrap(), QueueBackendType::Memory);
-    assert_eq!("rabbitmq".parse::<QueueBackendType>().unwrap(), QueueBackendType::RabbitMQ);
-    assert_eq!("kafka".parse::<QueueBackendType>().unwrap(), QueueBackendType::Kafka);
-    assert_eq!("redis".parse::<QueueBackendType>().unwrap(), QueueBackendType::Redis);
+    assert_eq!("memory".parse::<RiQueueBackendType>().unwrap(), RiQueueBackendType::Memory);
+    assert_eq!("rabbitmq".parse::<RiQueueBackendType>().unwrap(), RiQueueBackendType::RabbitMQ);
+    assert_eq!("kafka".parse::<RiQueueBackendType>().unwrap(), RiQueueBackendType::Kafka);
+    assert_eq!("redis".parse::<RiQueueBackendType>().unwrap(), RiQueueBackendType::Redis);
     
     // Test invalid backend type
-    assert!("invalid".parse::<QueueBackendType>().is_err());
+    assert!("invalid".parse::<RiQueueBackendType>().is_err());
 }

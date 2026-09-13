@@ -20,13 +20,12 @@ use crate::database::{RiDatabase, RiDatabasePool};
 use crate::database::orm::validate_identifier;
 use pyo3::prelude::*;
 use pyo3::types::{PyDict, PyList};
-use tokio::runtime::Runtime;
 
 #[pyclass]
 pub struct RiPyORMRepository {
     pool: RiDatabasePool,
     table_name: String,
-    rt: Runtime,
+    rt: &'static tokio::runtime::Runtime,
 }
 
 #[pymethods]
@@ -40,7 +39,7 @@ impl RiPyORMRepository {
                 format!("Invalid table name '{}': {}. Table names must contain only alphanumeric characters and underscores, start with a letter or underscore, and be 1-128 characters long.", table_name, e)
             ))?;
         
-        let rt = Runtime::new().map_err(|e| pyo3::PyErr::from(crate::core::RiError::Other(e.to_string())))?;
+        let rt = crate::py_runtime::py_runtime();
         Ok(Self {
             pool,
             table_name: table_name.to_string(),

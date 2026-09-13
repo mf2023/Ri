@@ -52,7 +52,16 @@ public class RiAppBuilder {
      * @return a new RiAppBuilder with the configuration applied
      */
     public RiAppBuilder withConfig(String configPath) {
+        long oldPtr = nativePtr;
         long newPtr = withConfig0(nativePtr, configPath);
+        // withConfig0 consumes the old builder; clear our pointer to avoid
+        // a double-free when close()/finalize() runs.
+        if (oldPtr != 0 && oldPtr == nativePtr) {
+            nativePtr = 0;
+        }
+        if (newPtr == 0) {
+            throw new RiError("Failed to apply config to RiAppBuilder");
+        }
         return new RiAppBuilder(newPtr);
     }
     
@@ -65,7 +74,13 @@ public class RiAppBuilder {
      * @throws RiError if the build fails
      */
     public RiAppRuntime build() {
+        long oldPtr = nativePtr;
         long runtimePtr = build0(nativePtr);
+        // build0 consumes the builder; clear our pointer to avoid
+        // a double-free when close()/finalize() runs.
+        if (oldPtr != 0 && oldPtr == nativePtr) {
+            nativePtr = 0;
+        }
         if (runtimePtr == 0) {
             throw new RiError("Failed to build Ri application");
         }

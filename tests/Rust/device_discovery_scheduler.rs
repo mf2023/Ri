@@ -57,7 +57,7 @@ use ri::device::discovery_scheduler::{RiDeviceDiscoveryEngine, RiResourceSchedul
 ///
 /// The resource scheduler implements a best-fit allocation strategy,
 /// selecting devices that satisfy requirements with minimal excess capacity.
-Tests verify that scheduling decisions correctly balance multiple
+/// Tests verify that scheduling decisions correctly balance multiple
 /// requirements including memory, compute, bandwidth, and custom features.
 
 #[test]
